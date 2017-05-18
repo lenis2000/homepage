@@ -2,7 +2,7 @@ url: "http://lpetrov.cc"
 storage_url: "http://lpetrov.cc.storage.s3-website-us-east-1.amazonaws.com"
 
 name: Leonid Petrov
-description: Leonid Petrov's academic homepage
+description: Leonid Petrov's Academic Homepage
 
 markdown: kramdown
 kramdown:
