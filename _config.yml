@@ -1,7 +1,8 @@
 url: "http://lpetrov.cc"
+storage_url: "http://lpetrov.cc.storage.s3-website-us-east-1.amazonaws.com"
 
 name: Leonid Petrov
-description: Leonid Petrov
+description: Leonid Petrov's academic homepage
 
 markdown: kramdown
 kramdown:
@@ -11,8 +12,8 @@ highlighter: rouge
 
 excerpt_separator: <!--more-->
 
-paginate: 8
-paginate_path: "allnews/page:num"
+# paginate: 8
+# paginate_path: "allnews/page:num"
 permalink: /:year/:month/:title/
 
 exclude: [vendor]
