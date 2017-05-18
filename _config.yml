@@ -4,6 +4,9 @@ name: Leonid Petrov
 description: Leonid Petrov
 
 markdown: kramdown
+kramdown:
+  math_engine: nil
+
 highlighter: rouge
 
 excerpt_separator: <!--more-->
