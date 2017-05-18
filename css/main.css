@@ -300,7 +300,7 @@ h6,
   text-transform: uppercase;
 }
 
-a.dept-logo-large:link, a.dept-logo-large:visited
+a.page-logo-large:link, a.page-logo-large:visited
 {
   font-family: "franklingothic-demi", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 36px;
@@ -308,7 +308,7 @@ a.dept-logo-large:link, a.dept-logo-large:visited
   text-transform: uppercase;
 }
 
-a.dept-logo-large:focus, a.dept-logo-large:hover
+a.page-logo-large:focus, a.page-logo-large:hover
 {
   color: #e57200;
   text-decoration: none;
@@ -329,7 +329,7 @@ h4,
 {
   font-family: 'Unna', serif;
   font-style: italic;
-  font-weight: bold;
+  /*font-weight: bold;*/
   line-height: 1.1;
   color: inherit;
   text-transform: uppercase;
@@ -340,7 +340,7 @@ h6,
 {
   font-family: 'Unna', serif;
   font-style: italic;
-  font-weight: bold;
+  /*font-weight: bold;*/
   line-height: 1.1;
   color: inherit;
   text-transform: uppercase;
