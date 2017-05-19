@@ -1,4 +1,4 @@
-<nav class="navbar navbar-toggleable-sm mb-4 navbar-light" style="background-color:red">
+<nav class="navbar navbar-toggleable-sm mb-4 navbar-light" style="background-color:#002f6c">
   <div class="container">
 
     <div class="navbar-brand" style="padding-top: 0 ;padding-bottom: 0;">
@@ -12,7 +12,7 @@
     <div class="collapse navbar-collapse" id="navbarTogglerDemo01">
       <ul class="navbar-nav mr-auto">
         {% assign sorted_pages = site.pages | sort: "nav_weight" %} {% for p in sorted_pages%} {% if p.nav_id != null and p.nav_nesting != true and p.nav_parent == null %}
-        <li class="nav-item {%if p.url == page.url %}active bg-inverse{% endif %}">
+        <li class="ml-1 nav-item {%if p.url == page.url %}active bg-inverse{% endif %}">
           <a class="nav-link" href="{{site.url}}{{p.url}}">{{ p.nav_id }}{%if p.url == page.url %}<span class="sr-only">(current)</span>{% endif %}</a>
         </li>
         {% endif %} {% endfor %}
