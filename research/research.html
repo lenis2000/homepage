@@ -5,3 +5,53 @@ permalink: /research/
 nav_id: Research
 nav_weight: 2
 ---
+
+<div class="row row-offcanvas row-offcanvas-right">
+  <div class="col-md-9">
+
+
+    <h1><a name="preprints">Preprints</a></h1>
+    <hr />
+
+    {% for post in site.posts %}
+    {% if post.categories contains "preprint" %}
+
+    <details>
+      <summary>
+        Abstract
+      </summary>
+        {{ post.content | markdownify }}
+    </details>
+
+    {% endif %}
+    {% endfor %}
+
+
+    <h1  class="mt-4"><a name="published">Published and in print</a></h1>
+    <hr />
+
+
+    <h1 class="mt-4"><a name="slides">Slides of some talks</a></h1>
+    <hr />
+
+  </div>
+  <div class="col-md-3 sidebar-offcanvas">
+    <hr class="hidden-md-up">
+
+    <div class="list-group-sm">
+      <a class="list-group-item list-group-item-action h5" href="#preprints">Preprints</a>
+      <a class="list-group-item list-group-item-action h5" href="#published">Publications</a>
+      <a class="list-group-item list-group-item-action h5" href="#slides">Slides</a>
+    </div>
+    <br />
+    <div class="list-group-sm">
+      <a class="list-group-item list-group-item-action h5" href="https://scholar.google.com/citations?user=pWDfr2YAAAAJ&hl=en" target="_blank">Google scholar</a>
+      <a class="list-group-item list-group-item-action h5" href="{{site.url}}/travel/">Research travel</a>
+    </div>
+    <br />
+    <div class="list-group-sm">
+      <a class="list-group-item list-group-item-action h5  orange-item" href="https://int-prob.github.io" target="_blank">FRG page</a>
+    </div>
+  </div>
+
+</div>
