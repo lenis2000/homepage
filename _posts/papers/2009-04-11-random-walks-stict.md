@@ -1,18 +1,15 @@
 ---
 layout: post
-title:
-coauthors:
-  - name:
-    web:
+title: Limit Behavior of Certain Random Walks on Strict Partitions
 arXiv: 
-date: 2015-04-02 02:00:00
+date: 2009-04-11 02:00:00
 comments: false
 categories: paper
 published: true
 more-text: Full abstract
 show-date: true
-journal-ref:
-journal-web:
+journal-ref: Russian Mathematical Surveys 64 (2009), no.&nbsp;6, 1139-1141
+no-abstract: true
 #image: __STORAGE_URL__/img/papers/
 #image-alt:
 ---
