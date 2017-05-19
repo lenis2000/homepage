@@ -2,4 +2,9 @@
 set -e # halt script on error
 
 bundle exec jekyll build
+
+git clone https://github.com/lenis2000/CV.git ./_site/research/CV
+mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
+rm -Rf _site/research/CV
+
 bundle exec htmlproofer ./_site --disable-external true
