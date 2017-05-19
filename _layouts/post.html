@@ -4,6 +4,8 @@ layout: default
 
 <h1>{{page.title}}</h1>
 
+{% if page.coauthors %}<h2>(with {% for coa in page.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %})</h2>{% endif %}
+
 {% if page.show-date %}<h3 class="mb-4">{{ page.date |  date: "%Y/%m/%d" }}</h3>{% endif %}
 <hr />
 

@@ -12,12 +12,17 @@ nav_weight: 20
       {% for post in paginator.posts %}
       <div class="col-12 col-lg-6 my-bordered-news-snippets">
 
-        {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:280px;height:auto;width:auto;" class="mb-3 mt-2"></a>
+        {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:280px;height:auto;width:auto;" class="mb-3 mt-3"></a>
         {% endif %}
 
-        <h3 class="mb-2 mt-1">{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}" style="color:inherit;">{% endunless %}{{ post.title }}{% unless post.no-page %}</a>{% endunless %}</h3>
+        <h3 class="mb-2 mt-1">{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}" style="color:inherit;">{% endunless %}{{ post.title }}{% unless post.no-page %}</a>{% endunless %}{% if post.coauthors %} (with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}</h3>
 
-        {% if post.show-date %}<div class="mb-4">[{{ post.date |  date: "%Y/%m/%d" }}]</div>{% endif %}
+        {% if post.show-date %}
+        <div class="mb-4">[{{ post.date |  date: "%Y/%m/%d" }}]</div>
+        {% else %}
+        {% endif %}
+
+
 
         {{ post.excerpt | markdownify }}
 
