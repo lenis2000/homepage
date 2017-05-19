@@ -13,19 +13,30 @@ nav_weight: 2
     <h1><a name="preprints">Preprints</a></h1>
     <hr />
 
+    <ol>
     {% for post in site.posts %}
     {% if post.categories contains "preprint" %}
 
-    <details>
-      <summary>
-        Abstract
-      </summary>
-        {{ post.content | markdownify }}
-    </details>
+
+      <li>&nbsp;
+        (with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %})
+        <b><a href="{{site.url}}{{post.url}}">{{post.title}}</a></b> ({{post.date | date: '%Y'}}), <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}">arXiv: {{post.arXiv}}</a>
+        <details>
+          <summary>
+            Abstract
+          </summary>
+          <br />
+            {{ post.content | markdownify }}
+            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+            {% endif %}
+        </details>
+      </li>
+
+
 
     {% endif %}
     {% endfor %}
-
+    </ol>
 
     <h1  class="mt-4"><a name="published">Published and in print</a></h1>
     <hr />
