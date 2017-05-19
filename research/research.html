@@ -40,7 +40,7 @@ nav_weight: 2
     {% endfor %}
     </ol>
 
-    <h1  class="mt-4"><a name="published">Published and accepted</a></h1>
+    <h1  class="mt-4"><a name="published">Accepted and Published</a></h1>
     <hr />
 
     <ol reversed class="my-ul-zebra">
@@ -74,6 +74,31 @@ nav_weight: 2
 
     <h1 class="mt-4"><a name="slides">Slides of some talks</a></h1>
     <hr />
+
+    <ol class="my-ul-zebra">
+    {% for post in site.posts %}
+    {% if post.categories contains "talk" %}
+
+
+      <li class="mb-1">
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF</a>
+
+        {% unless post.no-abstract %}<details>
+          <summary>
+            Description
+          </summary>
+          <br />
+            {{ post.excerpt | markdownify }}
+            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+            {% endif %}
+        </details>{% endunless %}
+      </li>
+
+
+
+    {% endif %}
+    {% endfor %}
+    </ol>
 
   </div>
   <div class="col-md-3 sidebar-offcanvas">
