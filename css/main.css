@@ -275,3 +275,27 @@ h6,
   border-left: 1px dotted #DADADA;
   border-bottom: 1px dotted #DADADA;
 }
+
+a.list-group-item-action:hover, a.list-group-item-action:focus {
+  color: #e57200;
+}
+.list-group-item.active {
+  color: white;
+  background-color: #002F6C;
+  border-color: #002F6C;
+}
+
+a.list-group-item.active,
+button.list-group-item.active {
+  color: white;
+  background-color: #002F6C;
+  border-color: #002F6C;
+}
+
+a:focus.list-group-item.active,
+a:hover.list-group-item.active {
+  color: white;
+  color: #e57200;
+  background-color: #002F6C;
+  border-color: #002F6C;
+}

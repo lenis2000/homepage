@@ -1,8 +1,11 @@
 url: "http://lpetrov.cc"
 storage_url: "http://lpetrov.cc.storage.s3-website-us-east-1.amazonaws.com"
+math_url: "http://math.virginia.edu.s3-website-us-east-1.amazonaws.com"
 
 name: Leonid Petrov
 description: Leonid Petrov's Academic Homepage
+
+timezone: America/New_York
 
 markdown: kramdown
 kramdown:
@@ -12,8 +15,8 @@ highlighter: rouge
 
 excerpt_separator: <!--more-->
 
-# paginate: 8
-# paginate_path: "allnews/page:num"
+paginate: 8
+paginate_path: "posts/page:num"
 permalink: /:year/:month/:title/
 
 exclude: [vendor]

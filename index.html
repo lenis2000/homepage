@@ -15,7 +15,7 @@ nav_weight: 1
     Virginia.
     I got my PhD in 2010 in Moscow with <a href="http://iitp.ru/en/userpages/88/">
       Grigori Olshanski</a>,
-    and in 2011-2014 was a postdoc at <a href="http://www.northeastern.edu/cos/mathematics/">Northeastern University</a>.
+    and in 2011-2014 I was a postdoc at <a href="http://www.northeastern.edu/cos/mathematics/">Northeastern University</a>.
 
     <h3 class="mt-4">Research interests &bull; (<a href="{{site.url}}">papers</a>)</h3>
 
@@ -29,7 +29,21 @@ nav_weight: 1
     <hr />
     <h3>News / links</h3>
 
-    add up to 4 posts with category
+    <ul>
+    {% assign quick-links-counter = 0 %}
+    {% for post in site.posts %}
+    {% if post.categories contains "quick_link" and quick-links-counter < 4 %}
+    {% assign quick-links-counter = quick-links-counter | plus:1 %}
+
+    <li>
+      {{ post.excerpt | markdownify }}
+    </li>
+    {% unless post.no-page %}<p><a class="btn btn-secondary h5" href="{{site.url }}{{ post.url }}" style="white-space: normal" role="button">{% if post.more-text == null %}View details{% else %}{{ post.more-text }}{% endif %} &raquo;</a></p>{%endunless%}
+
+    {% endif %}
+    {% endfor %}
+    </ul>
+
 
   </div>
 
@@ -39,7 +53,8 @@ nav_weight: 1
     <a href="{{ site.url }}"><img width="100%" src="{{ site.storage_url }}/img/blog/heart/Fragment_tn.png" alt="Random tiling" align="center"vspace="5" /></a>
   </div>
 
-  <div class="col-12 mt-4">
+
+  <div class="col-12 mt-1">
     {% include contact.html %}
   </div>
 </div>
