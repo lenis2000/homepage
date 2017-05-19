@@ -22,7 +22,8 @@ specializations of the Macdonald symmetric functions and depend on two
 parameters $(q,t)$, where $0\le q, t < 1$. Our main result is a classification of
 continuous time, nearest neighbor Markov dynamics on the space of interlacing
 arrays that act nicely on Macdonald processes.<!--more-->
-<br />The classification unites known examples of such dynamics and also yields
+
+The classification unites known examples of such dynamics and also yields
 many new ones. When $t = 0$, one dynamics leads to a new integrable interacting
 particle system on the one-dimensional lattice, which is a $q$-deformation of the
 PushTASEP (= long-range TASEP). When $q = t$, the Macdonald processes become the
