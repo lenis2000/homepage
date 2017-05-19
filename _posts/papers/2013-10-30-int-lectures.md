@@ -1,20 +1,21 @@
 ---
 layout: post
-title: 
+title: 'Integrable probability: From representation theory to Macdonald processes'
 coauthors:
   - name: Alexei Borodin
     web: 'http://math.mit.edu/directory/profile.php?pid=1222'
-arXiv: 
+arXiv: 1310.8007 [math-ph]
 date: 2013-10-30 02:00:00
 comments: false
 categories: paper
 published: true
 more-text: Full abstract
 show-date: true
-journal-ref: 
-journal-web: 
+journal-ref: Probability Surveys, 11 (2014), 1-58
+journal-web: 'http://www.i-journals.org/ps/viewarticle.php?id=225&layout=abstract'
 image: __STORAGE_URL__/research_files/img/discr.png
 image-alt: Large scale and long time behavior of a jumping interacting particle system
 ---
 
 
+These are lecture notes for a mini-course given at the Cornell Probability Summer School in July 2013. Topics include lozenge tilings of polygons and their representation theoretic interpretation, the $(q,t)$-deformation of those leading to the Macdonald processes, nearest neighbor dynamics on Macdonald processes, their limit to semi-discrete Brownian polymers, and large time asymptotic analysis of polymer's partition function.

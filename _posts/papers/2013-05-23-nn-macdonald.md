@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  Nearest neighbor Markov dynamics on Macdonald processes
-coauthors: 
+coauthors:
   - name: Alexei Borodin
     web: http://math.mit.edu/directory/profile.php?pid=1222
 arXiv: 1305.5501 [math.PR]
@@ -21,7 +21,7 @@ arrays of interlacing particles introduced by Borodin and Corwin
 specializations of the Macdonald symmetric functions and depend on two
 parameters $(q,t)$, where $0\le q, t < 1$. Our main result is a classification of
 continuous time, nearest neighbor Markov dynamics on the space of interlacing
-arrays that act nicely on Macdonald processes.
+arrays that act nicely on Macdonald processes.<!--more-->
 <br />The classification unites known examples of such dynamics and also yields
 many new ones. When $t = 0$, one dynamics leads to a new integrable interacting
 particle system on the one-dimensional lattice, which is a $q$-deformation of the
