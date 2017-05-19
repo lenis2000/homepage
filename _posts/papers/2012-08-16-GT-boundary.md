@@ -21,7 +21,8 @@ Gelfand-Tsetlin graph can be identified with finite indecomposable (= extreme)
 characters of the infinite-dimensional unitary group. An equivalent description
 identifies the boundary with the set of doubly infinite totally nonnegative
 sequences.
-<br />A principal ingredient of Borodin-Olshanski's proof is a new explicit
+
+A principal ingredient of Borodin-Olshanski's proof is a new explicit
 determinantal formula for the number of semi-standard Young tableaux of a given
 skew shape (or of Gelfand-Tsetlin schemes of trapezoidal shape). We present a
 simpler and more direct derivation of that formula using the Cauchy-Binet
