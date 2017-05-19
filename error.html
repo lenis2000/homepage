@@ -1,17 +1,24 @@
-<html>
-  <head>
-    <title>Hello, World</title>
-  </head>
-  <body bgcolor=white>
+---
+title: Error page
+layout: default
+permalink: /error.html
+---
 
-    <table border="0" cellpadding="10">
-      <tr>
-        <td>
-          <h1>My new website address</h1>
-        </td>
-      </tr>
-    </table>
+<div class="row">
+  <div class="col-md-8 mb-4">
+
+    <h1 class="orange-item mt-5" style="padding:20px">The page you requested does not exist</h1>
+
+  </div>
+
+  <div class="col-md-4">
+    <img class="mb-2" width="100%" src="{{ site.storage_url }}/img/me_tilings_tn.jpg" alt="My Picture with Tilings" align="center" vspace="5" />
+
+    <a href="{{ site.url }}"><img width="100%" src="{{ site.storage_url }}/img/blog/heart/Fragment_tn.png" alt="Random tiling" align="center"vspace="5" /></a>
+  </div>
 
 
-  </body>
-</html>
+  <div class="col-12 mt-1">
+    {% include contact.html %}
+  </div>
+</div>
