@@ -18,9 +18,9 @@ nav_weight: 2
     {% if post.categories contains "preprint" %}
 
 
-      <li> 
+      <li>
         {% if post.coauthors %}(with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
-        <b><a href="{{site.url}}{{post.url}}"  class="orange-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
@@ -40,7 +40,7 @@ nav_weight: 2
     {% endfor %}
     </ol>
 
-    <h1  class="mt-4"><a name="published">Published and in print</a></h1>
+    <h1  class="mt-4"><a name="published">Published and accepted</a></h1>
     <hr />
 
     <ol reversed class="my-ul-zebra">
@@ -48,9 +48,9 @@ nav_weight: 2
     {% if post.categories contains "paper" %}
 
 
-      <li> 
+      <li>
         {% if post.coauthors %}(with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
-        <b><a href="{{site.url}}{{post.url}}"  class="orange-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
           <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
