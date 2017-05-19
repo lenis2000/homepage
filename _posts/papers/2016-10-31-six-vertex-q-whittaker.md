@@ -4,7 +4,7 @@ title:  Stochastic higher spin six vertex model and q-TASEPs
 coauthors:
   - name: Daniel Orr
     web: https://www.math.vt.edu/people/dorr/
-arXiv: arXiv:1610.10080 [math.PR]
+arXiv: 1610.10080 [math.PR]
 date: 2016-10-31 02:00:00
 comments: false
 categories: preprint
