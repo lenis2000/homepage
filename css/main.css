@@ -303,8 +303,8 @@ h6,
 a.page-logo-large:link, a.page-logo-large:visited
 {
   font-family: "franklingothic-demi", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 36px;
-  color: white;
+  font-size: 30px;
+  color: #002f6c;
   text-transform: uppercase;
 }
 
