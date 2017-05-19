@@ -52,7 +52,7 @@ nav_weight: 2
         {% if post.coauthors %}(with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
         <b><a href="{{site.url}}{{post.url}}">{{post.title}}</a></b> ({{post.date | date: '%Y'}}).
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
-          {{post.journal-ref}}{%if post.journal-web%}</a>{%endif%}.
+          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}.
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
