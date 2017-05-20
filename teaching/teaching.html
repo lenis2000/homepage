@@ -5,3 +5,31 @@ permalink: /teaching/
 nav_id: Teaching
 nav_weight: 5
 ---
+
+<h1 class="mb-3">Current teaching</h1>
+
+{% include current_teaching.html %}
+
+<h1 class="mt-4 mb-4">Previous teaching</h1>
+
+<div class="my-row-zebra" style="margin:0px 15px">
+{% for post in site.posts %}
+{% if post.categories contains "teaching" %}
+
+    <div class="row" style="padding:10px">
+      <div class="col-md-2 h5">
+        {{post.semester}}
+      </div>
+      <div class="col-md-4 h5">
+        <a href="{{post.inst-url}}">{{post.inst}}</a>
+      </div>
+      <div class="col-md-6 h5">
+    		{% unless post.no-page %}<a href="{{site.url}}{{post.url}}"  class="highlighted-item">{% endunless %}{{post.title}}{% unless post.no-page %}</a>{% endunless %}
+        {% if post.syllabus %} &bull; <a href="{{post.syllabus | replace: '__STORAGE_URL__', site.storage_url }}">Syllabus</a>{% endif %}
+        {% if post.web %} &bull; <a href="{{post.web | replace: '__SITE_URL__', site.url }}">External course webpage</a>{% endif %}
+      </div>
+    </div>
+
+{% endif %}
+{% endfor %}
+</div>
