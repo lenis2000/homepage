@@ -28,7 +28,7 @@ nav_weight: 5
       <div class="col-md-6 h5">
     		{% unless post.no-page %}<a href="{{site.url}}{{post.url}}"  class="highlighted-item">{% endunless %}{{post.title}}{% unless post.no-page %}</a>{% endunless %}
         {% if post.syllabus %} &bull; <a href="{{post.syllabus | replace: '__STORAGE_URL__', site.storage_url }}">Syllabus</a>{% endif %}
-        {% if post.web %} &bull; <a href="{{post.web | replace: '__SITE_URL__', site.url }}">External course webpage</a>{% endif %}
+        {% if post.web %} &bull; <a href="{{post.web | replace: '__SITE_URL__', site.url }}">Course page on GitHub</a>{% endif %}
       </div>
     </div>
 
