@@ -3,8 +3,15 @@ set -e # halt script on error
 
 bundle exec jekyll build
 
+# get fresh CV from GitHub
 git clone https://github.com/lenis2000/CV.git ./_site/research/CV
 mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
 rm -Rf _site/research/CV
+
+# get fresh githubbed syllabi from GitHub
+git clone https://github.com/lenis2000/Syllabi.git ./_site/teaching/syll
+mv ./_site/teaching/syll/Syllabus_2310_f16.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_3100_s17.pdf ./_site/teaching/
+rm -Rf _site/teaching/syll
 
 bundle exec htmlproofer ./_site --disable-external true
