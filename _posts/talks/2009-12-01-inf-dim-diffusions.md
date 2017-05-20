@@ -1,12 +1,13 @@
 ---
 layout: post
 title: Infinite-Dimensional Diffusion Processes Approximated by Finite Markov Chains on Partitions
-date: 2010-01-01 02:00:00
+date: 2009-12-01 02:00:00
 comments: false
 categories: talk
 talk-url: __STORAGE_URL__/research_files/talks/Kingman_1.pdf
 published: true
 more-text: Download pdf
+pdf-size: '2 MB'
 ---
 
 
@@ -18,4 +19,4 @@ It is based on [[2]][ref2], see also [[4]][ref4], [[8]][ref8]
 
 <!--more-->
 
-<a href="{{ page.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF (2 MB)</a>
+<a href="{{ page.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF ({{page.pdf-size}})</a>

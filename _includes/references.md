@@ -6,20 +6,20 @@
 [ref6]: {{ site.url }}/2010/10/pfaff-dyn/
 [ref7]: {{ site.url }}/2011/07/doubling/
 [ref8]: {{ site.url }}/2011/11/sl2/
-<!-- [ref9]:
-[ref10]:
-[ref11]:
-[ref12]:
-[ref13]:
-[ref14]:
-[ref15]:
-[ref16]:
-[ref17]:
-[ref18]:
-[ref19]:
-[ref20]:
-[ref21]:
-[ref22]:
-[ref23]:
-[ref24]:
-[ref25]: -->
+[ref9]: {{ site.url }}/2012/02/GT/
+[ref10]: {{ site.url }}/2012/06/GFF/
+[ref11]: {{ site.url }}/2012/08/GT-Boundary/
+[ref12]: {{ site.url }}/2013/05/nn-macdonald/
+[ref13]: {{ site.url }}/2013/08/qpush/
+[ref14]: {{ site.url }}/2013/08/BCPS-1/
+[ref15]: {{ site.url }}/2013/10/int-lectures/
+[ref16]: {{ site.url }}/2014/02/HL-RSK/
+[ref17]: {{ site.url }}/2014/07/BCPS-2/
+[ref18]: {{ site.url }}/2015/02/stoch-higher/
+[ref19]: {{ site.url }}/2015/04/qRSK/
+[ref20]: {{ site.url }}/2016/01/inhomogeneous-six-vertex/
+[ref21]: {{ site.url }}/2016/05/lectures-six-vertex/
+[ref22]: {{ site.url }}/2016/08/discrete-sine-universality/
+[ref23]: {{ site.url }}/2016/10/six-vertex-q-whittaker/
+[ref24]: {{ site.url }}/2017/03/q-inhom/
+[ref25]: {{ site.url }}/2017/03/qGUE/
