@@ -7,7 +7,7 @@ coauthors:
 arXiv: 1305.5501 [math.PR]
 date: 2013-05-23 02:00:00
 comments: false
-categories: paper
+categories: paper math blog
 published: true
 more-text: Full abstract
 show-date: true

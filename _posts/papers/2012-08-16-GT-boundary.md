@@ -4,7 +4,7 @@ title: 'The Boundary of the Gelfand-Tsetlin Graph: New Proof of Borodin-Olshansk
 arXiv: 1208.3443 [math.CO]
 date: 2012-08-16 02:00:00
 comments: false
-categories: paper
+categories: paper math blog
 published: true
 more-text: Full abstract
 show-date: true

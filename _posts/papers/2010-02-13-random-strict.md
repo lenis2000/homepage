@@ -4,7 +4,7 @@ title: Random Strict Partitions and Determinantal Point Processes
 arXiv: 1002.2714 [math.PR]
 date: 2010-02-13 02:00:00
 comments: false
-categories: paper
+categories: paper math blog
 published: true
 more-text: Full abstract
 show-date: true
