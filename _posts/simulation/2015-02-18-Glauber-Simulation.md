@@ -27,6 +27,8 @@ Acta Math. 199 263–302, [arXiv:math-ph/0507007](http://arxiv.org/abs/math-ph/0
 
 I've also done some work on local and global asymptotics of uniformly random lozenge tilings [[9]][ref9], [[10]][ref10], [[22]][ref22].
 
+{%include references.md %}
+
 <!--more-->
 
 ### Implementation
@@ -80,4 +82,3 @@ The Python source code, as well as Mathematica files, are available at [GitHub](
 * For the hexagon, there are special _shuffling algorithms_ to sample uniformly random (and even more generally distributed) lozenge tilings, see papers by Borodin, Gorin, and Rains ([1](http://arxiv.org/abs/0804.3071), [2](http://arxiv.org/abs/0905.0679)). See also a gallery [here](http://www.mccme.ru/~vadicgor/research.html).
 
 
-{%include references.md %}
