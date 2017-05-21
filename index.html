@@ -30,19 +30,19 @@ nav_weight: 1
     <h3 class="mb-3">Recent news and links &bull; (<a href="{{ site.url }}/travel-and-events/#events">all events</a>)
     &bull; (<a href="{{ site.url }}/blog/">Blog</a>)</h3>
 
-    <ul>
+    <div class="list-group">
     {% assign quick-links-counter = 0 %}
     {% for post in site.posts %}
     {% if post.categories contains "quick_link" and quick-links-counter < 4 %}
     {% assign quick-links-counter = quick-links-counter | plus:1 %}
 
-    <li>
-        {{ post.excerpt | markdownify }}
-    </li>
+		<li class="list-group-item" style="padding:10px 17px">
+			{{ post.excerpt }}
+		</li>
 
     {% endif %}
     {% endfor %}
-    </ul>
+    </div>
 
 
   </div>
