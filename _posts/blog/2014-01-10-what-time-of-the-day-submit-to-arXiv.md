@@ -4,6 +4,7 @@ title:  "What time of the day should I submit a preprint to arXiv?"
 date:   2014-01-10 13:30:00
 comments: false
 categories: tech math blog
+show-date: true
 published: true
 ---
 
