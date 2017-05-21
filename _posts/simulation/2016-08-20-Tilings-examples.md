@@ -142,7 +142,7 @@ Feel free to use these pictures to illustrate your research in talks and papers,
 <!--more-->
 
 
-<h2 class="mt-4 mb-3">Links to images &bull; (<a href="{{site.url}}/2016/08/Tilings-examples-inline/" target="_blank">All images in one large page</a>)</h2>
+<h2 class="mt-4 mb-3">Links to images</h2>
 
 {% assign img-counter = 0 %}
 <div class="list-group my-ul-zebra mb-4">
@@ -154,3 +154,5 @@ Feel free to use these pictures to illustrate your research in talks and papers,
 </li>
 {% endfor %}
 </div>
+
+<h2 class="mt-4 mb-3">(<a href="{{site.url}}/2016/08/Tilings-examples-inline/" target="_blank">All images in one large page</a>)</h2>
