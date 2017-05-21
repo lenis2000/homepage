@@ -9,7 +9,7 @@ image: __STORAGE_URL__/img/blog/heart/Fragment2.png
 image-alt: A fragment of a random heart
 ---
 
-In the Spring 2017 me and Axel Saenz will continue with the Integrable Probability Reading Seminar. This time the topic will be "From random tilings to Kardar-Parisi-Zhang universality." In terms of content, this is not a continuation of the Fall’s seminar. In the Spring, the seminar’s aim is to give a user-friendly introduction to modern and rapidly developing topics in probability theory with connections to combinatorics, algebra, representation theory on one side, and statistical physics and many other applications on the other side.
+In the Spring 2017 me and [Axel Saenz](http://faculty.virginia.edu/saenz/) will continue with the Integrable Probability Reading Seminar. This time the topic will be "From random tilings to Kardar-Parisi-Zhang universality." In terms of content, this is not a continuation of the Fall’s seminar. In the Spring, the seminar’s aim is to give a user-friendly introduction to modern and rapidly developing topics in probability theory with connections to combinatorics, algebra, representation theory on one side, and statistical physics and many other applications on the other side.
 
 <!--more-->
 
