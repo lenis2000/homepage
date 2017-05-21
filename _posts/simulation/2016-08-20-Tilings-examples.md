@@ -26,38 +26,38 @@ img-bulk:
     alt: Growth of a tiling of a 9-gon
     size: 6 MB
   - web: __STORAGE_URL__/img/blog/12gif.gif
-    alt: Growth of a tiling of a 12-gon (only vertical tiles are shown)
+    alt: Growth of a tiling of a 12-gon of height 200 (only vertical tiles are shown)
     size: 11 MB
   - web: __STORAGE_URL__/img/blog/12gif_result.png
     alt: Result of the previous simulation
     size: 1.5 MB
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
-  - web: __STORAGE_URL__/img/blog/
-    alt: 
-    size: 
+  - web: __STORAGE_URL__/img/blog/12_200_1.gif
+    alt: Growth of a tiling of a 12-gon of height 200 (only vertical tiles are shown). Slower simulation, does not reach equilibrium yet
+    size: 11 MB
+  - web: __STORAGE_URL__/img/blog/12_200_2.gif
+    alt: Growth of a tiling of a 12-gon of height 200 (only vertical tiles are shown). Faster simulation, seems to reach the equilibrium
+    size: 12 MB
+  - web: __STORAGE_URL__/img/blog/hex_qvol1.gif
+    alt: Growth of a random q-weighted tiling of a hexagon of height 100, part 1. Reaching the equilibrium
+    size: 19 MB
+  - web: __STORAGE_URL__/img/blog/hex_qvol2.gif
+    alt: Growth of a random q-weighted tiling of a hexagon of height 100, part 2. Equilibrium dynamics
+    size: 20 MB
+  - web: __STORAGE_URL__/img/blog/hex_qvol_result.png
+    alt: Result of the previous two simulations, q-weighted random tiling of a hexagon of height 100
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/12_qvol1.gif
+    alt: Growth of a random q-weighted tiling of a 12-gon, part 1
+    size: 11 MB
+  - web: __STORAGE_URL__/img/blog/12_qvol2.gif
+    alt: Growth of a random q-weighted tiling of a 12-gon, part 2
+    size: 11 MB
+  - web: __STORAGE_URL__/img/blog/12_qvol3.gif
+    alt: Growth of a random q-weighted tiling of a 12-gon, part 3
+    size: 13 MB
+  - web: __STORAGE_URL__/img/blog/12_qvol_result.png
+    alt: Result of the previous three simulations
+    size: 1 MB
 ---
 
 In Spring 2015 and Summer 2016 I used the Python and Mathematica
