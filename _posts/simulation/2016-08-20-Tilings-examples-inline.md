@@ -141,4 +141,14 @@ Feel free to use these pictures to illustrate your research in talks and papers,
 
 <h2 class="mt-3 mb-4">All tilings images in one place</h2>
 
+<div class="list-group my-ul-zebra mb-4">
+{% for im in page.img-bulk %}
+<li class="list-group-item" style="padding:5px 10px">
+  <img src="{{ im.web | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ im.alt }}" title="{{ im.alt }}" style="max-width:100%;max-height:800px;height:auto;width:auto;" class="mb-2 mt-3">
+  <span class="mb-2">{{im.alt}}</span>
+	</li>
+{% endfor %}
+</div>
+
+
 ---
