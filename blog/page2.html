@@ -5,7 +5,7 @@ permalink: /blog/page2/
 nav_parent: Blog
 ---
 
-<h1 class="mb-3">All entries, page 2</h1>
+<h1 class="mb-3">All entries (with papers and talks), page 2</h1>
 
 <div class="row row-offcanvas row-offcanvas-right">
   <div class="col-md-9">
@@ -49,7 +49,9 @@ nav_parent: Blog
       {% endfor %}
     </div>
 
-
+    <div class="hidden-sm-down mt-4">
+        {% include blog-side-menu.html %}
+      </div>
   </div>
   <div class="col-md-3 sidebar-offcanvas">
     <hr class="hidden-md-up">
