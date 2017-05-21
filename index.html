@@ -30,7 +30,7 @@ nav_weight: 1
     <h3 class="mb-3">Recent news and links &bull; (<a href="{{ site.url }}/travel-and-events/#events">all events</a>)
     &bull; (<a href="{{ site.url }}/blog/">Blog</a>)</h3>
 
-    <div class="list-group">
+    <div class="list-group my-ul-zebra">
     {% assign quick-links-counter = 0 %}
     {% for post in site.posts %}
     {% if post.categories contains "quick_link" and quick-links-counter < 4 %}
