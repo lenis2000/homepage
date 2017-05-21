@@ -1,5 +1,5 @@
 {% if page.comments == true %}
-<div id="disqus_thread"></div>
+<div id="disqus_thread"></div><br><br>
 <script>
 
 /**
