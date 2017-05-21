@@ -14,6 +14,12 @@ more-text: Implementation
 I've implemented the Glauber dynamics to (approximately) sample uniformly random lozenge tilings
 of polygons of Gelfand-Tsetlin type. These polygons are called sawtooth domains by [J. Novak](http://arxiv.org/abs/1407.7578). [This paper](http://arxiv.org/abs/1310.5844) by **B. Laslier** and **F.L. Toninelli** establishes rate of convergence of the Glauber dynamics to the uniformly random lozenge tiling.
 
+[See here the many results of the simulations]({{site.url}}/2016/08/Tilings-examples/).
+
+{%include references.md %}
+
+<!--more-->
+
 Classical references on uniformly random lozenge tilings include (the list below is by no means exhaustive)
 
 * **Cohn, H., Larsen, M. and Propp, J.** (1998). The shape of a typical boxed plane partition.
@@ -26,10 +32,6 @@ J. Amer. Math. Soc. 14 297–346, [link](http://www.ams.org/journals/jams/2001-1
 Acta Math. 199 263–302, [arXiv:math-ph/0507007](http://arxiv.org/abs/math-ph/0507007)
 
 I've also done some work on local and global asymptotics of uniformly random lozenge tilings [[9]][ref9], [[10]][ref10], [[22]][ref22].
-
-{%include references.md %}
-
-<!--more-->
 
 ### Implementation
 

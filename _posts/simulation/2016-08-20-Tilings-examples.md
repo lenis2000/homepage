@@ -58,6 +58,72 @@ img-bulk:
   - web: __STORAGE_URL__/img/blog/12_qvol_result.png
     alt: Result of the previous three simulations
     size: 1 MB
+  - web: __STORAGE_URL__/img/blog/27_sim1.gif
+    alt: Growth of a uniformly random tiling of a 27-gon of height 200, part 1. The starting configuration is not interlacing (easier to code), but the interlacing configurations form an absorbing class for the Glauber Markov chain. Note the two outliers on the right
+    size: 6 MB
+  - web: __STORAGE_URL__/img/blog/27_sim2.gif
+    alt: Growth of a uniformly random tiling of a 27-gon of height 200, part 2
+    size: 14 MB
+  - web: __STORAGE_URL__/img/blog/27_sim3.gif
+    alt: Growth of a uniformly random tiling of a 27-gon of height 200, part 3
+    size: 18 MB
+  - web: __STORAGE_URL__/img/blog/27_sim4.gif
+    alt: Growth of a uniformly random tiling of a 27-gon of height 200, part 4
+    size: 20 MB
+  - web: __STORAGE_URL__/img/blog/27_sim5.gif
+    alt: Growth of a uniformly random tiling of a 27-gon of height 200, part 5
+    size: 22 MB
+  - web: __STORAGE_URL__/img/blog/27_result.png
+    alt: Result of the above five simulations
+    size: 2 MB
+  - web: __STORAGE_URL__/img/blog/sauron_eye.png
+    alt: Sauron's eye - a tiling of a hexagon with a hole
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/sauron_eye_tn.png
+    alt: Sauron's eye on a fully black background
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/sauron_skew_eye.png
+    alt: Skewed Sauron's eye
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/Tiling_Ghost.png
+    alt: Tiling of a ghost (a polygon with 2 holes)
+    size: 2 MB
+  - web: __STORAGE_URL__/img/blog/heart/UVA_colors_small.png
+    alt: Random heart in UVA colors
+    size: 2 MB
+  - web: __STORAGE_URL__/img/blog/heart/2.png
+    alt: Random heart, yet another color version (red-green-white)
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/heart/3.png
+    alt: Random heart, yet another color version (blue-red)
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/heart/1.png
+    alt: Random heart, yet another color version (dark red)
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/heart/4.png
+    alt: Random heart, yet another color version (red-yellow-light green)
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/heart/6.png
+    alt: Random heart, yet another color version (red-yellow-black)
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/heart/5.png
+    alt: Random heart, yet another color version (red-yellow-light blue)
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/ghost/2.png
+    alt: Random ghost, dot variant 1
+    size: 300 KB
+  - web: __STORAGE_URL__/img/blog/ghost/5.png
+    alt: Random ghost, dot variant 2
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/ghost/1.png
+    alt: Random ghost, color version 1
+    size: 1 MB
+  - web: __STORAGE_URL__/img/blog/ghost/3.png
+    alt: Random ghost, color version 2
+    size: 600 KB
+  - web: __STORAGE_URL__/img/blog/ghost/4.png
+    alt: Random ghost, color version 3
+    size: 600 KB
 ---
 
 In Spring 2015 and Summer 2016 I used the Python and Mathematica
@@ -78,10 +144,12 @@ Feel free to use these pictures to illustrate your research in talks and papers,
 
 <h2 class="mt-4 mb-3">Links to images &bull; (<a href="{{site.url}}/2016/08/Tilings-examples-inline/" target="_blank">All images in one large page</a>)</h2>
 
+{% assign img-counter = 0 %}
 <div class="list-group my-ul-zebra mb-4">
 {% for im in page.img-bulk %}
+{% assign img-counter = img-counter | plus:1 %}
 <li class="list-group-item" style="padding:5px 10px">
-{{im.size}}&nbsp;&bull;&nbsp;
+<span class="highlighted-item">[{{img-counter}}]</span>&nbsp;&bull;&nbsp;{{im.size}}&nbsp;&bull;&nbsp;
 <a href="{{im.web | replace: '__STORAGE_URL__', site.storage_url }}" target="_blank">{{im.alt}}</a>
 </li>
 {% endfor %}
