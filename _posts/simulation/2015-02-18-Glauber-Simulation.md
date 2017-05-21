@@ -35,38 +35,41 @@ The simulation is performed in Python and is _surprisingly simple_ because of th
 
 The drawing of tilings is performed in Mathematica, and it can be done in a static or a dynamic way. Here's a relevant Mathematica code for static drawing (please remove backslashes in front of curly brackets before pasting):
 
-	\[Lambda] = ReadList[fileName]
+{% highlight matlab linenos %}
+\[Lambda] = ReadList[fileName]
 
-	n := Length[\[Lambda][[1]]]
+n := Length[\[Lambda][[1]]]
 
-	LozV[x_, y_, eps_] := \{EdgeForm[Thickness[eps]], Blue,
-	  Polygon[\{\{x - 1/2, y \}, \{x - 1/2, y + 1\}, \{x + 1/2, y \}, \{x + 1/2,
-	     y - 1\}, \{x - 1/2, y \}\}]\}
+LozV[x_, y_, eps_] := \{EdgeForm[Thickness[eps]], Blue,
+  Polygon[\{\{x - 1/2, y \}, \{x - 1/2, y + 1\}, \{x + 1/2, y \}, \{x + 1/2,
+     y - 1\}, \{x - 1/2, y \}\}]\}
 
-	LozL[x_, y_, eps_] := \{EdgeForm[Thickness[eps]], Lighter[Yellow],
-	  Polygon[\{\{x - 1/2, y\}, \{x - 3/2, y + 1 \}, \{x - 1/2,
-	     y + 1\}, \{x + 1/2, y \}, \{x - 1/2, y \}\}]\}
+LozL[x_, y_, eps_] := \{EdgeForm[Thickness[eps]], Lighter[Yellow],
+  Polygon[\{\{x - 1/2, y\}, \{x - 3/2, y + 1 \}, \{x - 1/2,
+     y + 1\}, \{x + 1/2, y \}, \{x - 1/2, y \}\}]\}
 
-	LozS[x_, y_, eps_] := \{EdgeForm[Thickness[eps]], Lighter[Red],
-	  Polygon[\{\{x - 1/2, y\}, \{x - 1/2, y + 1\}, \{x + 1/2, y + 1\}, \{x + 1/2,
-	      y \}, \{x - 1/2, y \}\}]\}
+LozS[x_, y_, eps_] := \{EdgeForm[Thickness[eps]], Lighter[Red],
+  Polygon[\{\{x - 1/2, y\}, \{x - 1/2, y + 1\}, \{x + 1/2, y + 1\}, \{x + 1/2,
+      y \}, \{x - 1/2, y \}\}]\}
 
-	FF[x_, k_] :=
-	 Sum[If[x >= \[Lambda][[1]][[k]][[i]] - i, 1, 0], \{i, 1, k\}] -
-	  If[k > 1,
-	   Sum[If[x >= \[Lambda][[1]][[k - 1]][[i]] - i, 1, 0], \{i, 1,
-	     k - 1\}], 0]
+FF[x_, k_] :=
+ Sum[If[x >= \[Lambda][[1]][[k]][[i]] - i, 1, 0], \{i, 1, k\}] -
+  If[k > 1,
+   Sum[If[x >= \[Lambda][[1]][[k - 1]][[i]] - i, 1, 0], \{i, 1,
+     k - 1\}], 0]
 
-	eps := 0.0004
+eps := 0.0004
 
-	t := \{\{1, 1/2\}, \{0, 1\}\}
+t := \{\{1, 1/2\}, \{0, 1\}\}
 
-	Graphics[GeometricTransformation[\{Table[
-	    If[FF[x, k] == 1, LozS[x + 1, k - 1, eps],
-	     If[x + k > 0, LozL[x + 1, k - 1, eps]]], \{k, 1, n\}, \{x, -n + 1,
-	     n - 1\}],
-	   Table[LozV[\[Lambda][[1]][[i]][[j]] - j, i, eps], \{i, 1, n\}, \{j, 1,
-	      i\}]\}, t]]
+Graphics[GeometricTransformation[\{Table[
+    If[FF[x, k] == 1, LozS[x + 1, k - 1, eps],
+     If[x + k > 0, LozL[x + 1, k - 1, eps]]], \{k, 1, n\}, \{x, -n + 1,
+     n - 1\}],
+   Table[LozV[\[Lambda][[1]][[i]][[j]] - j, i, eps], \{i, 1, n\}, \{j, 1,
+      i\}]\}, t]]
+{% endhighlight %}
+
 
 The Python source code, as well as Mathematica files, are available at [GitHub](https://github.com/lenis2000/Glauber_Simulation).
 
