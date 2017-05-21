@@ -43,6 +43,11 @@ on GitHub can be kept small, which also frees some of my own
 precious Dropbox space.
 
 The best part is that I can update the homepage by simply committing to GitHub.
+Moreover, this also allows me to keep current versions 
+of PDF documents (like CV or syllabi) on GitHub, and checkout them 
+to my homepage during builds. In this way the PDFs are hosted at the homepage
+and one does not have to go to GitHub to look at them.
+
 Another good thing is that I switched to a faster
 <script type="math/tex">\mathrm{\TeX}</script> rendering engine,
 [KaTeX](https://github.com/Khan/KaTeX) (instead of [MathJax](https://www.mathjax.org/)),
