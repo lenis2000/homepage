@@ -3,7 +3,7 @@ layout: post
 title: Infinite-dimensional Diffusions Related to the Two-parameter Poisson-Dirichlet Distributions
 date: 2010-01-01 02:00:00
 comments: false
-categories: blog  talk
+categories: blog math talk
 talk-url: __STORAGE_URL__/research_files/talks/Kingman_2.pdf
 published: true
 more-text: Download pdf

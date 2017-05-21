@@ -3,7 +3,7 @@ layout: post
 title: 'Integrable Probability: Random Polymers, Random Tilings, and Interacting Particle Systems'
 date: 2013-11-01 02:00:00
 comments: false
-categories: blog  talk
+categories: blog math talk
 talk-url: __STORAGE_URL__/research_files/talks/integrable.pdf
 published: true
 more-text: Download pdf
