@@ -2,7 +2,7 @@
 layout: post
 title: Homepage udpate
 date: 2017-05-20 03:00:00
-comments: false
+comments: true
 categories: blog math tech
 published: true
 show-date: true
@@ -43,8 +43,8 @@ on GitHub can be kept small, which also frees some of my own
 precious Dropbox space.
 
 The best part is that I can update the homepage by simply committing to GitHub.
-Moreover, this also allows me to keep current versions 
-of PDF documents (like CV or syllabi) on GitHub, and checkout them 
+Moreover, this also allows me to keep current versions
+of PDF documents (like CV or syllabi) on GitHub, and checkout them
 to my homepage during builds. In this way the PDFs are hosted at the homepage
 and one does not have to go to GitHub to look at them.
 

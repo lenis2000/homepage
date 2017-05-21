@@ -17,6 +17,8 @@ layout: default
 
 {{ content }}
 
+{% include disqus.js %}
+
 {% if page.image != null %} {% if page.image-address != null %}<a href="{{ page.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ page.url }}">{% endif %}<img src="{{ page.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ page.image-alt }}" title="{{ page.image-alt }}" style="max-width:100%;max-height:800px;height:auto;width:auto;" class="mb-3 mt-3"></a>
 
 <br />
