@@ -6,3 +6,35 @@ nav_parent: Research
 # nav_id: Gallery
 # nav_weight: 12
 ---
+
+<h1>
+	Gallery of simulations
+</h1>
+<hr>
+
+
+<div class="row my-col-zebra">
+	{% for post in site.posts %}
+	{% if post.categories contains "simulation" %}
+	<div class="col-12 my-bordered-news-snippets">
+
+		{% if post.image != null %} {% if post.image-address != null %}{% unless post.no-page %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% endunless %}{% else %}{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}">{% endunless %}{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:280px;height:auto;width:auto;" class="mb-1 mt-3">{% unless post.no-page %}</a>{% endunless %}
+		{% endif %}
+
+		<h3 class="mb-2 mt-3">{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}" style="color:inherit;">{% endunless %}{{ post.title }}{% unless post.no-page %}</a>{% endunless %}</h3>
+
+		
+	{% if post.show-date %}
+	<div class="mb-4">[{{ post.date |  date: "%Y/%m/%d" }}]</div>
+	{% endif %}
+
+
+
+		{{ post.excerpt | markdownify }}
+
+
+		{% unless post.no-page %}<p><a class="btn btn-secondary h5" href="{{ site.url }}{{ post.url }}" style="white-space: normal" role="button">{% if post.more-text == null %}View details{% else %}{{ post.more-text }}{% endif %} &raquo;</a></p>{% endunless %}
+	</div>
+	{% endif %}
+	{% endfor %}
+</div>
