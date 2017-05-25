@@ -131,7 +131,7 @@ as
 briefly
 described [here]({{site.url}}/2015/02/Glauber-Simulation/)
 to produce a number of pictures and "movies" of random lozenge tilings.
-Some of these pictures even appeared at an [art exhibition](https://www.radcliffe.harvard.edu/event/2016-art-discovery-exhibition).
+Some of these pictures even appeared at an [art exhibition](https://www.radcliffe.harvard.edu/event/2016-art-discovery-exhibition) at Harvard’s Radcliffe Institute accompanying [Alexei Borodin’s fellowship](https://www.radcliffe.harvard.edu/people/alexei-borodin).
 
 These pictures and "movies" of random tilings are collected in this post.
 
