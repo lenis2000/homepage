@@ -277,6 +277,24 @@ Here is the most exciting wrapping part that I will consider seriously.
 The indentation configuration is comprehensive and very configurable
 but it does not make much sense before I start working with `latexindent`.
 
+### condense blank lines set to (almost) off
+
+I do not like to condense blank lines, especially in the end of the file.
+However, I will try to live with this feature since it makes the source better
+visible on the screen
+
+{%highlight yaml linenos%}
+modifyLineBreaks:
+    preserveBlankLines: 1
+    condenseMultipleBlankLinesInto: 1
+{%endhighlight%}
+
+### wrapping
+
+{%highlight yaml linenos%}
+
+{%endhighlight%}
+
 
 <h1 class="mt-5">Calling the script</h1>
 
