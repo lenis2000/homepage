@@ -48,8 +48,17 @@ because of the time it would save me.)
 I am writing this post to document my process of learning `latexindent`. There are
 two main things: configure the tool, and figure out how to call it automatically.
 
-**Note.** I also learned about `arara` ([GitHub repo](https://github.com/cereda/arara))
+**Note.** I also learned about the existence of `arara` ([GitHub repo](https://github.com/cereda/arara))
 but for now I do not think I need it for now.
+
+### Issues
+
+When setting up `latexindent` I found the following issues that I had to resolve manually:
+- first, some `perl` modules needed to be installed. This is done by running something like `sudo perl -MCPAN -e 'install "Unicode::GCString"'` where `Unicode::GCString` is the name of the module
+- My TexLive distribution contained `latexindent` version `3.0` while the current version as of today is `3.1`. 
+The version `3.0` did not wrap text properly, and after updating to `3.1` from GitHub everything started working. 
+Hopefully the autoupdate of TexLive will not break this, but anyway the updating was easy: just replace 
+the old files in `/usr/local/texlive/2016/texmf-dist/scripts/latexindent/` by the new ones.
 
 <h1 class="mt-5">Configuration</h1>
 ---
@@ -230,7 +239,9 @@ but  will not list them for now.
 ### sections/subsection indentation
 
 Here is a cool feature which allows to indent all text within 
-section or subsection etc; it is turned off for now but I can consider using it:
+section or subsection etc; it is turned off for now but I can consider using it.
+If I want to turn it on then set `indentAfterThisHeading:` to `1` (and not an
+integer because it's a true-false config).
 
 {%highlight yaml linenos%}
 # if you want to add indentation after
@@ -251,22 +262,6 @@ indentAfterHeadings:
     section:
        indentAfterThisHeading: 0
        level: 3
-    subsection:
-       indentAfterThisHeading: 0
-       level: 4
-    subsection*:
-       indentAfterThisHeading: 0
-       level: 4
-    subsubsection:
-       indentAfterThisHeading: 0
-       level: 5
-    paragraph:
-       indentAfterThisHeading: 0
-       level: 6
-    subparagraph:
-       indentAfterThisHeading: 0
-       level: 7
-
 {%endhighlight%}
 
 ---
@@ -291,10 +286,13 @@ modifyLineBreaks:
 
 ### wrapping
 
+Adding the following to the configuration will wrap everything at 79 columns, precisely what I need:
+
 {%highlight yaml linenos%}
-
+modifyLineBreaks:
+    textWrapOptions: 
+        columns: 79
 {%endhighlight%}
-
 
 <h1 class="mt-5">Calling the script</h1>
 
