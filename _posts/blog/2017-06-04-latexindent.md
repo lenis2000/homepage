@@ -95,7 +95,7 @@ up any existing wrapping
 - Finally, `wrap` wraps the lines inside paragraphs to 79 (or however number is specified in the config) columns
 
 The first option does not load anything additional, and the second and the third options load
-additional configs which are in the same `~/.vim` folder.
+additional configs which are in the same `~/.vim/latexindent/` folder.
 Therefore, to re-wrap run `remove-breaks` and then `wrap` configs.
 
 ---
