@@ -30,4 +30,4 @@ So, you cannot be the first everywhere.
 
 ---
 
-Update 2017: Since this entry the cutoff time was moved from 4pm to 2pm Eastern time. Also, better to submit on Thursday right before the deadline, do that the paper is up first for the whole weekend. 
+Update 2017: Since this entry the cutoff time was moved from 4pm to 2pm Eastern time. Also, better to submit on Thursday right before the deadline, so that the paper is up first for the whole weekend. 
