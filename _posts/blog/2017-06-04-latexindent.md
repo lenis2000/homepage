@@ -72,7 +72,7 @@ There is a file `.indentconfig.yaml` in my home folder which looks something lik
 
 {% highlight yaml linenos %}
 paths:
-- /path/to/my/homefolder/.vim/latexindent.yaml
+- /path/to/my/homefolder/.vim/latexindent/latexindent.yaml
 {% endhighlight %}
 
 It loads the main configuration file `latexindent.yaml` which is in my `.vim` folder
@@ -94,6 +94,8 @@ I would like to run the script with `nothing`, `wrap`, and `remove-breaks` optio
 up any existing wrapping
 - Finally, `wrap` wraps the lines inside paragraphs to 79 (or however number is specified in the config) columns
 
+The first option does not load anything additional, and the second and the third options load
+additional configs which are in the same `~/.vim` folder.
 Therefore, to re-wrap run `remove-breaks` and then `wrap` configs.
 
 ---
