@@ -382,8 +382,8 @@ nnoremap <C-F17> :silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexinden
 Second, the hotkey for doing the same plus rewrapping is 
 `Left Command + Right Option`:
 {% highlight viml linenos%}
-inoremap <D-F17> <Esc>:silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml}<CR>
-nnoremap <D-F17> :silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml} <CR>
+inoremap <D-F17> <Esc>:silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ;}<CR>
+nnoremap <D-F17> :silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ;} <CR>
 {%endhighlight%}
 
 
