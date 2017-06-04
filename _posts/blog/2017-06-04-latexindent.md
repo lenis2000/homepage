@@ -51,14 +51,14 @@ two main things: configure the tool, and figure out how to call it automatically
 **Note.** I also learned about `arara` ([GitHub repo](https://github.com/cereda/arara))
 but for now I do not think I need it for now.
 
-<h1 class="mt-4">Configuration</h1>
+<h1 class="mt-5">Configuration</h1>
 ---
 
 ## Configuration files
 
 There is a file `.indentconfig.yaml` in my home folder which looks something like this:
 
-{% highlight yaml %}
+{% highlight yaml linenos %}
 paths:
 - /path/to/my/homefolder/.vim/latexindent.yaml
 {% endhighlight %}
@@ -194,20 +194,92 @@ preambleCommandsBeforeEnvironments: 0
 
 ## indentation
 
+### not touching much for now
+
 This is a quite tricky business, and I do not think I want to touch it for now.
 Here is the default value of indentation to be a tab: 
 
-{%highlight yaml  %}
+{%highlight yaml linenos %}
 # Default value of indentation
 defaultIndent: "\t"
+{%endhighlight%}
+
+Also I would like the script to consider the `etaremune` environment:
+
+{%highlight yaml linenos%}
+# if you want the script to look for \item commands 
+# and format it, as follows (for example),
+#       \begin{itemize}
+#           \item content here
+#                 next line is indented
+#                 next line is indented
+#           \item another item
+#       \end{itemize}
+# then populate indentAfterItems. See also itemNames
+indentAfterItems:
+    itemize: 1
+    enumerate: 1
+    etaremune: 1
+    list: 1
 {%endhighlight%}
 
 There are many other 
 parameters of the indentation that I will consider at some point,
 but  will not list them for now.
 
+### sections/subsection indentation
 
-<h1 class="mt-4">Calling the script</h1>
+Here is a cool feature which allows to indent all text within 
+section or subsection etc; it is turned off for now but I can consider using it:
+
+{%highlight yaml linenos%}
+# if you want to add indentation after
+# a heading, such as \part, \chapter, etc
+# then populate it in here - you can add 
+# an indent rule to indentRules if you would 
+# like something other than defaultIndent
+#
+# you can also change the level if you like, 
+# or add your own title command
+indentAfterHeadings:
+    part:
+       indentAfterThisHeading: 0
+       level: 1
+    chapter: 
+       indentAfterThisHeading: 0
+       level: 2
+    section:
+       indentAfterThisHeading: 0
+       level: 3
+    subsection:
+       indentAfterThisHeading: 0
+       level: 4
+    subsection*:
+       indentAfterThisHeading: 0
+       level: 4
+    subsubsection:
+       indentAfterThisHeading: 0
+       level: 5
+    paragraph:
+       indentAfterThisHeading: 0
+       level: 6
+    subparagraph:
+       indentAfterThisHeading: 0
+       level: 7
+
+{%endhighlight%}
+
+---
+
+## modify line breaks
+
+Here is the most exciting wrapping part that I will consider seriously. 
+The indentation configuration is comprehensive and very configurable
+but it does not make much sense before I start working with `latexindent`.
+
+
+<h1 class="mt-5">Calling the script</h1>
+
 
 Whenever I call the script I want it to overwrite, so use `-w` option. Since I
 will be calling it automatically I do not want terminal output, so use `-s`
