@@ -45,8 +45,9 @@ because of the time it would save me.)
 
 ### About this post
 
-I am writing this post to document my process of learning `latexindent`. There are
-two main things: configure the tool, and figure out how to call it automatically.
+I am writing this post to document my process of learning `latexindent`, for
+future reference. There are two main things: configure the tool, and figure out
+how to call it automatically (I guess, from `vim`).
 
 **Note.** I also learned about the existence of `arara` ([GitHub repo](https://github.com/cereda/arara))
 but for now I do not think I need it for now.
@@ -59,6 +60,8 @@ When setting up `latexindent` I found the following issues that I had to resolve
 The version `3.0` did not wrap text properly, and after updating to `3.1` from GitHub everything started working. 
 Hopefully the autoupdate of TexLive will not break this, but anyway the updating was easy: just replace 
 the old files in `/usr/local/texlive/2016/texmf-dist/scripts/latexindent/` by the new ones.
+- I want first to remove paragraph line breaks and then wrap them using `latexindent`. This probably means that 
+I need two passes of the script, with different configs. Fine, let's do this.
 
 <h1 class="mt-5">Configuration</h1>
 ---
@@ -82,6 +85,16 @@ The main configuration file `latexindent.yaml`
 was copied from the default configuration file and modified
 accordingly. The default configuration file is well-documented,
 but the comprehensive PDF documentation is found <a href="http://mirrors.concertpass.com/tex-archive/support/latexindent/documentation/latexindent.pdf" target="_blank">here on CTAN</a>.
+
+### Multiple configurations
+
+I would like to run the script with `nothing`, `wrap`, and `remove-breaks` options:
+- `nothing` does nothing to line breaks/wrapping inside paragraph. It touches math delimiting however
+- `remove-breaks` removes line breaks inside paragraphs which effectively cleans
+up any existing wrapping
+- Finally, `wrap` wraps the lines inside paragraphs to 79 (or however number is specified in the config) columns
+
+Therefore, to re-wrap run `remove-breaks` and then `wrap` configs.
 
 ---
 
@@ -169,9 +182,11 @@ Remove trailing whitespace, nice:
 {%highlight yaml linenos %}
 # remove trailing whitespace from all lines 
 removeTrailingWhitespace:
-    beforeProcessing: 0
+    beforeProcessing: 1
     afterProcessing: 1
 {%endhighlight%}
+
+This is done both before and after processing since I want wrapping to be done automatically.
 
 ### preamble
 
@@ -284,7 +299,7 @@ modifyLineBreaks:
     condenseMultipleBlankLinesInto: 1
 {%endhighlight%}
 
-### wrapping
+### Line breaks and wrapping
 
 Adding the following to the configuration will wrap everything at 79 columns, precisely what I need:
 
@@ -294,8 +309,47 @@ modifyLineBreaks:
         columns: 79
 {%endhighlight%}
 
-<h1 class="mt-5">Calling the script</h1>
+There is an issue however since after the vim wrapping this additional wrapping does not create 
+full paragraphs. Therefore first one needs to delete all relevant line breaks, and wrap only then.
+Let's see how it goes.
 
+First, we need to specify where paragraphs stop:
+{%highlight yaml linenos%}
+modifyLineBreaks:
+    paragraphsStopAt:
+        environments: 1
+        commands: 0
+        ifElseFi: 0
+        items: 1
+        specialBeginEnd: 0
+        heading: 0
+        filecontents: 0
+        comments: 0
+{%endhighlight%}
+
+Then the following removes paragraph line breaks:
+{%highlight yaml linenos%}
+    removeParagraphLineBreaks:
+        all: 1
+{%endhighlight%}
+
+This does the job but I need to do this first and then wrap around 79 as I want. Fine.
+
+### Math delimiting
+
+The following code under `modifyLineBreaks:`
+does a nice job separating math from text:
+{%highlight yaml linenos%}
+    specialBeginEnd:
+        SpecialBeginStartsOnOwnLine: 1
+        SpecialBodyStartsOnOwnLine: 0
+        SpecialEndStartsOnOwnLine: 0
+        SpecialEndFinishesWithLineBreak: 2
+{%endhighlight%}
+I thought about doing this manually at some point but 
+doing this with a script is way nicer.
+
+<h1 class="mt-5">Calling the script</h1>
 
 Whenever I call the script I want it to overwrite, so use `-w` option. Since I
 will be calling it automatically I do not want terminal output, so use `-s`
@@ -304,10 +358,18 @@ use `-m` option, too. By default, `vim` does not automatically wrap anything
 (which is good), and the `gq` command wraps everything at the (probably
 default) length of `79`. So I want `latexindent` to wrap the lines (with
 inserting new lines) at `79`. 
+Sometimes, however, I need to include other local options, so the script should be ran with `-l`
+option, too, and the script will include `localSettings.yaml` to override some of my system-wide defaults.
+
 
 **Note.** There might be an issue because
 `vim` wraps after indenting and I might want to configure `latexindent` to wrap after indenting, too,
-since I want the same behavior everywhere.
+since I want the same behavior everywhere. However, I simply better not use `vim` indentation anymore with 
+this script.
+
+So, overall I've mapped the hotkey `todo` to run `latexindent -w -s -l -m` on the current 
+(<script type="math/tex">\mathrm{\TeX}</script> only) file.
+
 
 
 
