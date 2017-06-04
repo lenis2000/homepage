@@ -369,9 +369,22 @@ option, too, and the script will include `localSettings.yaml` to override some o
 since I want the same behavior everywhere. However, I simply better not use `vim` indentation anymore with 
 this script.
 
-So, overall I've mapped the hotkey `todo` to run `latexindent -w -s -l -m` on the current 
-(<script type="math/tex">\mathrm{\TeX}</script> only) file.
+Since I need to have 3 options of my own while calling the script I 
+will perform this using `.indentconfig.yaml` and manipulating with it.
+So I've mapped the following hotkeys in the special filetype file `/Users/leo/.vim/ftplugin/latex_latexindent.vim`
+(so that these hotkeys only work on <script type="math/tex">\mathrm{\TeX}</script> files).
+First, the hotkey for running the script not touching wrapping is `Left Control + Right Option`:
+{% highlight viml linenos%}
+inoremap <C-F17> <Esc>:silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" %<CR>
+nnoremap <C-F17> :silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" %<CR>
+{%endhighlight%}
 
+Second, the hotkey for doing the same plus rewrapping is 
+`Left Command + Right Option`:
+{% highlight viml linenos%}
+inoremap <D-F17> <Esc:silent !echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ><CR>
+nnoremap <D-F17> :silent !echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml <CR>
+{%endhighlight%}
 
 
 
