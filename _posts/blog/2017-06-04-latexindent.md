@@ -78,6 +78,10 @@ but the comprehensive PDF documentation is found <a href="http://mirrors.concert
 
 ## Details of configuration
 
+Here are the main things which I configure:
+
+### file extensions
+
 This overrides the default behavior (the most recent yaml takes priority), 
 I will only want to indent 
 <script type="math/tex">\mathrm{\TeX}</script>
@@ -87,6 +91,8 @@ source files with `.tex` extension:
 fileExtensionPreference:
     .tex: 1
 {%endhighlight%}
+
+### backups
 
 Since I am using `git`, I do not really need backups and will always overwrite the file. 
 Ok, please create one backup and give it a silly extension which is already in my default 
@@ -99,6 +105,8 @@ onlyOneBackUp: 1
 maxNumberOfBackUps: 0
 cycleThroughBackUps: 0
 {%endhighlight%}
+
+### verbatim environments and commands
 
 Some part of the defaults that I just keep for now:
 
@@ -120,16 +128,83 @@ verbatimEnvironments:
 verbatimCommands:
     verb: 1
     lstinline: 1
+{%endhighlight%}
 
+### no wrapping of special blocks
+
+I will use nolatexindent to mark block I do not want wrapped:
+{%highlight yaml linenos%}
 #  no indent blocks (not necessarily verbatim 
 #  environments) which are marked as %\begin{noindent}
 #  or anything else that the user puts in this hash
 #  table
 noIndentBlock:
-    noindent: 1
-    cmhtest: 1
+    nolatexindent: 1
 {%endhighlight%}
 
+Therefore the following text will not be touched:
+{%highlight latex linenos%}
+% \begin{noindent}
+       this code
+              won't
+be touched
+by
+            latexindent.pl!
+%\end{noindent}
+{%endhighlight%}
+
+### whitespace
+
+Remove trailing whitespace, nice:
+
+{%highlight yaml linenos %}
+# remove trailing whitespace from all lines 
+removeTrailingWhitespace:
+    beforeProcessing: 0
+    afterProcessing: 1
+{%endhighlight%}
+
+### preamble
+
+Here are the default settings for not touching preamble which I keep:
+
+{%highlight yaml linenos %}
+# \begin{document} and \end{document} are treated differently
+# by latexindent within filecontents environments
+fileContentsEnvironments:
+    filecontents: 1
+    filecontents*: 1
+
+# indent preamble
+indentPreamble: 0
+
+# assume no preamble in cls, sty, by default
+lookForPreamble:
+    .tex: 1
+
+# some preambles can contain \begin and \end statements
+# that are not in their 'standard environment block', for example,
+# consider the following key = values:
+#    preheadhook={\begin{mdframed}[style=myframedstyle]},
+#    postfoothook=\end{mdframed},
+preambleCommandsBeforeEnvironments: 0
+{%endhighlight%}
+
+---
+
+## indentation
+
+This is a quite tricky business, and I do not think I want to touch it for now.
+Here is the default value of indentation to be a tab: 
+
+{%highlight yaml  %}
+# Default value of indentation
+defaultIndent: "\t"
+{%endhighlight%}
+
+There are many other 
+parameters of the indentation that I will consider at some point,
+but  will not list them for now.
 
 
 <h1 class="mt-4">Calling the script</h1>
