@@ -345,7 +345,7 @@ does a nice job separating math from text:
     specialBeginEnd:
         SpecialBeginStartsOnOwnLine: 1
         SpecialBodyStartsOnOwnLine: 0
-        SpecialEndStartsOnOwnLine: 0
+        SpecialEndStartsOnOwnLine: 1
         SpecialEndFinishesWithLineBreak: 0
 {%endhighlight%}
 I thought about doing this manually at some point but 
