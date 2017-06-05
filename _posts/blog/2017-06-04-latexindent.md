@@ -346,10 +346,12 @@ does a nice job separating math from text:
         SpecialBeginStartsOnOwnLine: 1
         SpecialBodyStartsOnOwnLine: 0
         SpecialEndStartsOnOwnLine: 0
-        SpecialEndFinishesWithLineBreak: 2
+        SpecialEndFinishesWithLineBreak: 0
 {%endhighlight%}
 I thought about doing this manually at some point but 
 doing this with a script is way nicer.
+
+By the way, `SpecialEndFinishesWithLineBreak: 2` could've been even better but it does not work as intended at all.
 
 <h1 class="mt-5">Calling the script</h1>
 
