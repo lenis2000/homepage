@@ -344,16 +344,18 @@ does a nice job separating math from text:
 {%highlight yaml linenos%}
     specialBeginEnd:
         SpecialBeginStartsOnOwnLine: 0
-        SpecialBodyStartsOnOwnLine: 1
-        SpecialEndStartsOnOwnLine: 1 
+        SpecialBodyStartsOnOwnLine: 0
+        SpecialEndStartsOnOwnLine: 0 
         SpecialEndFinishesWithLineBreak: 0
 {%endhighlight%}
 I thought about doing this manually at some point but 
 doing this with a script is way nicer.
 However, the formatting might not be ideal this way
 so I still would need to work on this.
+The main problem is that there might be expressions like `$q$-TASEP` or `length-$N$` which prevent 
+from formatting all math on separate lines. Therefore the inline math can really stay inline.
 
-By the way, `SpecialEndFinishesWithLineBreak: 2` could've been even better but it does not work as intended at all.
+Also, `SpecialEndFinishesWithLineBreak: 2` could've been even better but it does not work as intended at all.
 
 <h1 class="mt-5">Calling the script</h1>
 
