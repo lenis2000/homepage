@@ -377,17 +377,18 @@ So I've mapped the following hotkeys in the special filetype file `/Users/leo/.v
 (so that these hotkeys only work on <script type="math/tex">\mathrm{\TeX}</script> files).
 First, the hotkey for running the script not touching wrapping is `Left Control + Right Option`:
 {% highlight viml linenos%}
-inoremap <C-F17> <Esc>:silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" %<CR>
-nnoremap <C-F17> :silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" %<CR>
+inoremap <C-F17> <Esc>:w<CR>:silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" %<CR>
+nnoremap <C-F17> :w<CR>:silent !latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" %<CR>
 {%endhighlight%}
 
 Second, the hotkey for doing the same plus rewrapping is 
 `Left Command + Right Option`:
 {% highlight viml linenos%}
-inoremap <D-F17> <Esc>:silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ;}<CR>
-nnoremap <D-F17> :silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ;} <CR>
+inoremap <D-F17> <Esc>:w<CR>:silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ;}<CR>
+nnoremap <D-F17> :w<CR>:silent !{echo "- /Users/leo/.vim/latexindent/latexindent-remove-breaks.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml && echo "- /Users/leo/.vim/latexindent/latexindent-wrap.yaml" >> ~/.indentconfig.yaml && latexindent -s -w -m -l -c="/Users/leo/.vim/latexindent/" % && cp ~/.indentconfig-base.yaml ~/.indentconfig.yaml ;} <CR>
 {%endhighlight%}
 
+The file is saved before the `latexindent` script is applied.
 
 
 <br><br>
