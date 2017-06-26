@@ -14,3 +14,4 @@ env:
 sudo: false # route your build to the container-based infrastructure for a faster build
 
 after_success: s3_website push
+dist: trusty
