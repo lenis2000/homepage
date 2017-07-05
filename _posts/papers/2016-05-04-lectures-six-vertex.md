@@ -12,7 +12,7 @@ published: true
 more-text: Full abstract
 show-date: true
 journal-ref: Lecture Notes of the Les Houches Summer School, to appear
-journal-web:
+journal-web: 'https://global.oup.com/academic/product/stochastic-processes-and-random-matrices-9780198797319?lang=en&cc=us'
 image: __STORAGE_URL__/img/papers/lec-six-vertex.png
 image-alt: Creation operator in a Bethe ansatz representation
 ---
