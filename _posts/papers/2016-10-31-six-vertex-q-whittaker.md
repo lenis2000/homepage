@@ -7,8 +7,10 @@ coauthors:
 arXiv: 1610.10080 [math.PR]
 date: 2016-10-31 02:00:00
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
+journal-ref: Advances in Mathematics, to appear
+journal-web:
 more-text: Full abstract
 show-date: true
 image: __STORAGE_URL__/img/papers/qtasep-coupling.png
