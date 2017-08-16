@@ -62,9 +62,9 @@ logos for some reason).
 
 - My old homepage, in January 2014 (now completely gone from the internet)
 - The [Seminar on Stochastic Processes 2017](http://faculty.virginia.edu/ssp17/) page, around November 2016
-- The [Integrable Probability FRG website](https://int-prob.github.io), in April 2017
+- The [Integrable Probability FRG website](https://frg.int-prob.org), in April and August 2017
 - Helped with my [wife's website](https://albinash-art.github.io), in April 2017
-- The [new Math Department website](https://uva-math.github.io), in April-May 2017. This project is still ongoing, but mostly finished
+- The [new Math Department website](https://math.virginia.edu), in April-May 2017. This project is still ongoing, but mostly finished
 
 So this new homepage is about the fifth website I made. Overall, this was a very interesting technical experience recently, but now I have to get back to doing math. The first step is to review all those papers sitting there
 waiting...
