@@ -1,7 +1,7 @@
 ---
 layout: post
-title: Coarsening model on $\mathbb{Z}^d$ with biased zero-energy flips and an
-  exponential large deviation bound for ASEP
+title: 'Coarsening model on <script type="math/tex">\mathbb{Z}^{d}</script> with biased zero-energy flips and an
+  exponential large deviation bound for ASEP'
 coauthors:
   - name: Michael Damron
     web: http://people.math.gatech.edu/~mdamron6/
