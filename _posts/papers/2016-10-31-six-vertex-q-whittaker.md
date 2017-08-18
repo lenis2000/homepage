@@ -9,8 +9,8 @@ date: 2016-10-31 02:00:00
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Advances in Mathematics, to appear
-journal-web:
+journal-ref: Advances in Mathematics 317 (2017), 473-525
+journal-web: https://doi.org/10.1016/j.aim.2017.07.003
 more-text: Full abstract
 show-date: true
 image: __STORAGE_URL__/img/papers/qtasep-coupling.png
