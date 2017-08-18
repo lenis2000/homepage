@@ -14,7 +14,7 @@ categories: blog math preprint
 published: true
 more-text: Full abstract
 image: __STORAGE_URL__/img/papers/z-coarsening-plot.png
-image-alt: 'This is how the Tracy-Widom/Airy double critical point is deformed in the "easy" large deviations regime'
+image-alt: 'This is how the GUE Tracy-Widom/Airy$_2$ double critical point is deformed in the "easy" large deviations regime. In this case the double critical point is split into two real critical points, and the large deviations function comes from the difference between the values of $S(\cdot)$ at these two new points'
 show-date: true
 ---
 
