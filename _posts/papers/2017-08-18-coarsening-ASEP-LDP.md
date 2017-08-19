@@ -25,6 +25,8 @@ configurations" in which each vertex updates its spin to agree with a majority
 of its neighbors at the arrival times of a Poisson process. If a vertex has
 equally many $+1$ and $-1$ neighbors, then it updates its spin value to $+1$
 with probability $q \in [0,1]$ and to $-1$ with probability $1-q$.
+The initial state of this Markov chain 
+is distributed according to a product measure with probability $p$ for a spin to be $+1$.
 
 <!--more-->
 
