@@ -7,7 +7,7 @@ coauthors:
     web: http://people.math.gatech.edu/~mdamron6/
   - name: David Sivakoff
     web: http://www.stat.osu.edu/~dsivakoff/index/Home.html
-arXiv: 1708.????? [math.PR]
+arXiv: 1708.05806 [math.PR]
 date: 2017-08-18 02:00:00
 comments: false
 categories: blog math preprint
