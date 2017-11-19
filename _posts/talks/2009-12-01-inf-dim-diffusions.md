@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Infinite-Dimensional Diffusion Processes Approximated by Finite Markov Chains on Partitions
-date: 2009-12-01 02:00:00
+date: 2009-12-01 12:00:00
 comments: false
 categories: blog math talk
 talk-url: __STORAGE_URL__/research_files/talks/Kingman_1.pdf

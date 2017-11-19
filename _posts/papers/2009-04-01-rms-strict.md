@@ -2,7 +2,7 @@
 layout: post
 title: Limit Behavior of Certain Random Walks on Strict Partitions
 arXiv:
-date: 2009-04-01 02:00:00
+date: 2009-04-01 12:00:00
 comments: false
 categories: paper math blog
 published: true
