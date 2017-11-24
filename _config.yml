@@ -23,4 +23,11 @@ permalink: /:year/:month/:title/
 
 exclude: [vendor]
 
-gems: [jekyll-paginate]
+plugins:
+  - jekyll-paginate
+  - jekyll-feed
+
+author: Leonid Petrov
+
+feed:
+  path: /posts/feed.xml
