@@ -1,0 +1,42 @@
+---
+title: Events
+layout: default
+permalink: /events/
+nav_id: Events
+nav_weight: 4
+---
+
+<div class="row">
+  <div class="col-md-12">
+
+    <h1><a name="events">Events</a></h1>
+
+    <hr />
+
+    <div class="row my-col-12-zebra">
+      {% for post in site.posts %}
+      {% if post.categories contains "event" %}
+      <div class="col-12 my-bordered-news-snippets">
+
+        <h3 class="mb-2 mt-3">{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}" style="color:inherit;">{% endunless %}{{ post.title }}{% unless post.no-page %}</a>{% endunless %}</h3>
+
+        {% if post.image != null %} {% if post.image-address != null %}{% unless post.no-page %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% endunless %}{% else %}{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}">{% endunless %}{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:140px;height:auto;width:auto;" class="mb-1 mt-3">{% unless post.no-page %}</a>{% endunless %}
+        {% endif %}
+
+        {% if post.show-date %}
+        <div class="mb-4">[{{ post.date |  date: "%Y/%m/%d" }}]</div>
+        {% endif %}
+
+        {% if post.semester %}
+        <div class="mb-4">[{{ post.semester }} semester]</div>
+        {% endif %}
+
+        {{ post.excerpt | markdownify }}
+
+        {% unless post.no-page %}<p><a class="btn btn-secondary h5" href="{{ site.url }}{{ post.url }}" style="white-space: normal" role="button">{% if post.more-text == null %}View details{% else %}{{ post.more-text }}{% endif %} &raquo;</a></p>{% endunless %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+</div>
+</div>
