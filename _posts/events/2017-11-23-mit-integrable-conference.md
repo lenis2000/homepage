@@ -11,4 +11,4 @@ image: __STORAGE_URL__/img/blog/hex_hole_200_cut.jpg
 image-alt: Uniformly random tiling of a hexagon with a hole
 ---
 
-<div>The conference <a href="http://2018.int-prob.org">Integrable Probability Boston 2018</a> is held on <b>May 14-18, 2018</b> at MIT, Cambridge, MA.<div>
+<div>The conference <a href="http://2018.int-prob.org">Integrable Probability Boston 2018</a> will be held on <b>May 14-18, 2018</b> at MIT, Cambridge, MA.<div>
