@@ -23,3 +23,4 @@
 [ref23]: {{ site.url }}/2016/10/six-vertex-q-whittaker/
 [ref24]: {{ site.url }}/2017/03/q-inhom/
 [ref25]: {{ site.url }}/2017/03/qGUE/
+[ref26]: {{ site.url }}/2017/08/coarsening-ASEP-LDP/
