@@ -14,18 +14,18 @@
       <ul class="navbar-nav mr-auto">
         {% assign sorted_pages = site.pages | sort: "nav_weight" %}
         {% for p in sorted_pages%}
-        {% if p.nav_id != null and p.nav_id != "." %}
+        {% if p.nav_id != null and p.nav_id != "Blog" %}
         <li class="nav-item
             {%if p.url == page.url %}active bg-inverse{% endif %}
-            {% if p.nav_id == "." and paginator.page %}active bg-inverse{% endif %}
+            {% if p.nav_id == "Blog" and paginator.page %}active bg-inverse{% endif %}
             {% if page.nav_parent == p.nav_id %}active bg-inverse{% endif %}">
           <a class="nav-link" href="{{site.url}}{{p.url}}">{{ p.nav_id }}{%if p.url == page.url %}<span class="sr-only">(current)</span>{% endif %}</a>
         </li>
         {% endif %}
-        {% if p.nav_id == "." and p.url == "/posts/" %}
-        <!-- <li class="nav-item {% if paginator.page %}active bg-inverse{% endif %}">
-          <a class="nav-link" href="{{site.url}}/posts/">{{ p.nav_id }}{%if paginator.page %}<span class="sr-only">(current)</span>{% endif %}</a> -->
-        <!-- </li> -->
+        {% if p.nav_id == "Blog" and p.url == "/posts/" %}
+        <li class="nav-item {% if paginator.page %}active bg-inverse{% endif %}">
+          <a class="nav-link" href="{{site.url}}/posts/">{{ p.nav_id }}{%if paginator.page %}<span class="sr-only">(current)</span>{% endif %}</a>
+        </li>
         {% endif %}
         {% endfor %}
       </ul>
