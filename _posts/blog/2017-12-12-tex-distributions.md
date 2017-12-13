@@ -47,4 +47,4 @@ Namely, `/Library/TeX/Distributions/.DefaultTeX/Contents`
 is a symlink to the TeXLive distribution used throughout the system,
 and redirecting this link will switch the version.
 
-Bingo, a new paper is submitted to the arXiv!
+Bingo, a new paper is submitted to the arXiv! (will be in the next post when it appears online)
