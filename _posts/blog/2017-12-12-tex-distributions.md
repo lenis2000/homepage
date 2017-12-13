@@ -15,8 +15,8 @@ image-address: https://www.arxiv.org
 Doing bibliography with [BiBLaTeX](https://ctan.org/pkg/biblatex) (and having one huge `.bib` file - mine is [public](https://github.com/lenis2000/BiBTeX), by the way)
 works great for me.
 
-One downside is that [arXiv](https://www.arxiv.org) uses a specific TeXLive
-distribution (2016 as of today), and the distribution on my machine is more up to date.
+One downside is that [arXiv](https://www.arxiv.org) uses a [specific TeXLive
+distribution](https://arxiv.org/help/faq/texlive) (2016 as of today), and the distribution on my machine is more up to date.
 Also, arXiv wants `.bbl` files uploaded instead of huge `.bib` files
 (`.bbl` contains only the references actually included in a given paper, and not all over 900 references which are in my `.bib` file).
 The problem is that `.bbl` files produced by different versions of BiBLaTeX are incompatible (!).
@@ -47,4 +47,4 @@ Namely, `/Library/TeX/Distributions/.DefaultTeX/Contents`
 is a symlink to the TeXLive distribution used throughout the system,
 and redirecting this link will switch the version.
 
-Bingo, a paper is submitted to the arXiv!
+Bingo, a new paper is submitted to the arXiv!
