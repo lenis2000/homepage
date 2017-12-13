@@ -9,6 +9,7 @@ show-date: true
 more-text: How to switch TeXLive versions
 image: https://upload.wikimedia.org/wikipedia/commons/archive/a/a8/20171115134807%21ArXiv_web.svg
 image-alt: arXiv logo
+image-address: https://www.arxiv.org
 ---
 
 Doing bibliography with [BiBLaTeX](https://ctan.org/pkg/biblatex) (and having one huge `.bib` file - mine is [public](https://github.com/lenis2000/BiBTeX), by the way)
