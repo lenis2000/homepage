@@ -6,7 +6,7 @@ comments: true
 categories: blog math tech latex
 published: true
 show-date: true
-more-text:
+more-text: 
 ---
 
 I produce all pictures in my math <script type="math/tex">\mathrm{\LaTeX}</script> writing in [TikZ](http://www.texample.net/tikz/).
@@ -17,6 +17,8 @@ I wondered how I can optimize this.
 
 Following [this stackoverflow discussion](https://stackoverflow.com/questions/2701902/standalone-diagrams-with-tikz), I have now adopted
 a great way of optimizing TikZ pictures by placing them into separate standalone tex files.
+
+<!--more-->
 
 For example, this file
 {%highlight tex linenos%}
