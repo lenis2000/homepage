@@ -26,7 +26,7 @@ So, to upload a paper to arXiv, I need to install a version of TeXLive identical
 I have a Mac.
 To install an older TeXLive version, I use [MacTeX](http://www.tug.org/mactex/).
 To find an appropriate version, one needs to go to the TUG's ftp at
-[ftp://tug.org/historic/systems/mactex/](`ftp://tug.org/historic/systems/mactex/`)
+[`ftp://tug.org/historic/systems/mactex/`](ftp://tug.org/historic/systems/mactex/)
 where they keep all the historic versions.
 The download speed from this ftp might be quite slow.
 When installed, the older version will coexist with the current one,
