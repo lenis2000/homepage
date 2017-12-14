@@ -19,7 +19,7 @@ show-date: true
 
 Employing bijectivisation of summation identities, we introduce local
 stochastic moves based on the Yang-Baxter equation for
-$U_q(\widehat{\mathfrak{sl}_2})$. Combining these moves leads to a new object
+<script type="math/tex">U_q(\widehat{\mathfrak{sl}_2})</script>. Combining these moves leads to a new object
 which we call the spin Hall-Littlewood Yang-Baxter field - a probability
 distribution on two-dimensional arrays of particle configurations on the
 discrete line. We identify joint distributions along down-right paths in the
