@@ -1,0 +1,29 @@
+---
+layout: post
+title: Yang-Baxter field for spin Hall-Littlewood symmetric functions
+coauthors: 
+  - name: Alexey Bufetov
+    web: https://sites.google.com/site/alexeybufetov/home
+arXiv: arXiv:1712.04584 [math.PR]
+date: 2017-12-13 16:00:00
+comments: false
+categories: blog math paper
+published: true
+# journal-ref:
+# journal-web:
+# more-text:
+# image: __STORAGE_URL__/img/papers/
+# image-alt: 
+show-date: true
+---
+
+Employing bijectivisation of summation identities, we introduce local
+stochastic moves based on the Yang-Baxter equation for
+$U_q(\widehat{\mathfrak{sl}_2})$. Combining these moves leads to a new object
+which we call the spin Hall-Littlewood Yang-Baxter field - a probability
+distribution on two-dimensional arrays of particle configurations on the
+discrete line. We identify joint distributions along down-right paths in the
+Yang-Baxter field with spin Hall-Littlewood processes, a generalization of
+Schur processes. We consider various degenerations of the Yang-Baxter field
+leading to new dynamic versions of the stochastic six vertex model and of the
+Asymmetric Simple Exclusion Process.
