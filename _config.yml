@@ -18,6 +18,7 @@ highlighter: rouge
 collections:
   simulations:
     output: true
+    permalink: /simulations/:name/
 
 defaults:
   - scope:
@@ -25,6 +26,7 @@ defaults:
       type: simulations
     values:
       layout: sim_page
+      nav_parent: Simulations
 
 excerpt_separator: <!--more-->
 

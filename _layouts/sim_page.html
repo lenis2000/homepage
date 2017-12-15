@@ -11,11 +11,13 @@
 
   <div class="container">
 
+    <h1 class="mb-4">{{page.title}}</h1>
+
     {{ content }}
 
     <hr>
 
-    <h3>code &bull; (<a href="https://github.com/lenis2000/simulations">GitHub repo</a>)</h3>
+    <h2>code &bull; (<a href="https://github.com/lenis2000/simulations">GitHub repo</a>)</h2>
 
     <ul>
     {%for codepage in page.code%}
@@ -27,23 +29,23 @@
     {%endfor%}
     </ul>
 
-    <h3>simulation results</h3>
+    <h2>simulation results</h2>
 
     <ul>
     {%for res in page.results%}
       <li class="h5">
         {%if res.raw!=null%}
-        <a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">{{res.title}}</a> &bull; (data: {{res.raw-size}}){%if res.image!=null%} &bull; (image: {{res.image-size}}){%endif%}
+        {{res.title}} &bull; (<a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">data: {{res.raw-size}}</a>){%if res.image!=null%} &bull; (<a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}">image: {{res.image-size}}</a>){%endif%}
         {%endif%}
         <br>
         {%if res.image!=null%}
-        <a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}"><img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:30%;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1"></a>
+        <img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:30%;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1">
         {%endif%}
       </li>
     {%endfor%}
     </ul>
 
-    <h3>references</h3>
+    <h2>references</h2>
     <ol>
       {%for paper in page.papers%}
         <li>
