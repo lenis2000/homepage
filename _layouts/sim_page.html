@@ -13,6 +13,48 @@
 
     {{ content }}
 
+    <hr>
+
+    <h3>code &bull; (<a href="https://github.com/lenis2000/simulations">GitHub repo</a>)</h3>
+
+    <ul>
+    {%for codepage in page.code%}
+    <li>
+      <a href="{{codepage}}">
+        <code class="highlighter-rouge">{{codepage}}</code>
+      </a>
+    </li>
+    {%endfor%}
+    </ul>
+
+    <h3>simulation results</h3>
+
+    <ul>
+    {%for res in page.results%}
+      <li class="h5">
+        {%if res.raw!=null%}
+        <a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">{{res.title}}</a> &bull; (data: {{res.raw-size}}){%if res.image!=null%} &bull; (image: {{res.image-size}}){%endif%}
+        {%endif%}
+        <br>
+        {%if res.image!=null%}
+        <a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}"><img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:30%;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1"></a>
+        {%endif%}
+      </li>
+    {%endfor%}
+    </ul>
+
+    <h3>references</h3>
+    <ol>
+      {%for paper in page.papers%}
+        <li>
+          {{ paper.title }}
+          {%if paper.arxiv-url!=null%} &bull; <a href="{{paper.arxiv-url}}"><code class="highlighter-rouge">{{paper.arxiv-url}}</code></a>{%endif%}
+          {%if paper.journal-url!=null%} &bull; <a href="{{paper.journal-url}}"><code class="highlighter-rouge">{{paper.journal-url}}</code></a>{%endif%}
+        </li>
+      {%endfor%}
+    </ol>
+
+
   </div>
 
   {% include footer.html %}
