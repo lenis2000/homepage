@@ -15,6 +15,9 @@ kramdown:
 
 highlighter: rouge
 
+collections:
+  - simulations
+
 excerpt_separator: <!--more-->
 
 paginate: 8

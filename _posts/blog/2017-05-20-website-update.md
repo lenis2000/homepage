@@ -19,7 +19,7 @@ and come up with a website which is easy to manage and update regularly.
 In the process of the update I've moved over almost all content
 from the previous version (also build with [Jekyll](http://jekyllrb.com/),
 but back in January 2014), and in particular created
-a special [gallery of simulations]({{site.url}}/research/gallery/)
+a special [gallery of simulations]({{site.url}}/simulations/)
 instead of a series of posts like in the previous version
 (although these simulations are also displayed in posts).
 
