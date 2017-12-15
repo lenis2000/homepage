@@ -41,7 +41,7 @@
         {{res.params}}
         <br>
         {%if res.image!=null%}
-        <img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:30%;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1">
+        <img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:300px;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1">
         {%endif%}
       </li>
     {%endfor%}
