@@ -33,10 +33,12 @@
 
     <ul>
     {%for res in page.results%}
-      <li class="h5">
-        {%if res.raw!=null%}
-        {{res.title}} &bull; (<a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">data: {{res.raw-size}}</a>){%if res.image!=null%} &bull; (<a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}">image: {{res.image-size}}</a>){%endif%}
+      <li>
+        <h5>
+        {{res.title}}{%if res.raw!=null%} &bull; (<a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">data: {{res.raw-size}}</a>){%endif%}{%if res.image!=null%} &bull; (<a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}">image: {{res.image-size}}</a>)
         {%endif%}
+        </h5>
+        {{res.params}}
         <br>
         {%if res.image!=null%}
         <img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:30%;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1">
