@@ -16,7 +16,15 @@ kramdown:
 highlighter: rouge
 
 collections:
-  - simulations
+  simulations:
+    output: true
+
+defaults:
+  - scope:
+      path: ""
+      type: simulations
+    values:
+      layout: sim_page
 
 excerpt_separator: <!--more-->
 
