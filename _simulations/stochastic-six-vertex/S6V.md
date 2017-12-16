@@ -1,7 +1,7 @@
 ---
 title: Stochastic vertex models simulations
 layout: default
-permalink: /simulations/model/S6V
+permalink: /simulations/model/S6V/
 nav_parent: Simulations
 ---
 
