@@ -2,9 +2,8 @@
 title: Inhomogeneous space PushTASEP and its new multilayer version
 model: TASEPs
 date: 2017-12-15 10:00:00
-#code:
-#  -
-#  -
+code:
+  - https://github.com/lenis2000/simulations/blob/master/2017-12-15-PushTASEP-multilayer/2017-12-15-PushTASEP-multilayer.py
 #results:
 #  - raw: __STORAGE_URL__/simulations/test_Hfout1.txt
 #    raw-size: 720 KB
