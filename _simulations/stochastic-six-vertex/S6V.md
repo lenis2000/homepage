@@ -1,14 +1,11 @@
 ---
-title: Simulations
+title: Stochastic vertex models simulations
 layout: default
-permalink: /simulations/
-nav_id: Simulations
-nav_weight: 19
+permalink: /simulations/model/S6V
+nav_parent: Simulations
 ---
 
-<h1>Gallery / library of simulations</h1>
-
-<h5 class="mb-3">Data, source code, visualizations</h5>
+<h1>Stochastic vertex models simulations</h1>
 
 ---
 
@@ -23,7 +20,10 @@ I can also produce other simulations upon request - email me at <a href="mailto:
 
 ---
 
-<h2 class="mb-3">Categories</h2>
-
-- ##### <a href="{{site.url}}/simulations/model/S6V">Stochastic vertex models</a>
-- ##### more categories to come soon
+<ul>
+{% for item in site.simulations %}
+  {% if item.model == "S6V" %}
+  <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
+  {% endif %}
+{% endfor %}
+</ul>
