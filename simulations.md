@@ -16,6 +16,21 @@ nav_weight: 19
 
 ---
 
+<h2 class="mb-3">Recent</h2>
+
+{% assign simss = site.simulations | sort: "date" %}
+
+<ul>
+{% for item in simss reversed limit:5 %}
+  {% if item.head_page != true %}
+    <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
+  {% endif %}
+{% endfor %}
+</ul>
+
+
+---
+
 <h2 class="mb-3">Categories</h2>
 
 - ##### <a href="{{site.url}}/simulations/model/S6V/">Stochastic vertex models</a>
