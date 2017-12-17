@@ -13,10 +13,12 @@ nav_parent: Simulations
 
 ---
 
+{% assign simss = site.simulations | sort: "date" %}
+
 <ul>
-{% for item in site.simulations %}
+{% for item in simss reversed %}
   {% if item.model == "TASEPs" %}
-  <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
+    <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
   {% endif %}
 {% endfor %}
 </ul>

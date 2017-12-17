@@ -2,6 +2,7 @@
 title: Inhomogeneous space PushTASEP and its new multilayer version
 model: TASEPs
 date: 2017-12-15 10:00:00
+author: Leonid Petrov
 code:
   - https://github.com/lenis2000/simulations/blob/master/2017-12-15-PushTASEP-multilayer/2017-12-15-PushTASEP-multilayer.py
 #results:
@@ -20,8 +21,8 @@ code:
 #    params: |
 #      $\mathrm{size} = 500 \times 500$
 #    title: Test simulation result (no picture)
-#papers:
-#  - title: "A. Bufetov, L. Petrov, Yang-Baxter field for spin Hall-Littlewood symmetric functions (2017)"
-#    arxiv-url: https://arxiv.org/abs/1712.04584
-#    # journal-url:
+papers:
+  - title: A paper is in preparation
+    # arxiv-url: https://arxiv.org/abs/1712.04584
+    # journal-url:
 ---
