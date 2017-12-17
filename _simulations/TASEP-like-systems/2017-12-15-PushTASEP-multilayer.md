@@ -23,6 +23,23 @@ results:
     image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph10472.png'
     image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph10472-tn.png'
     image-size: 86 KB
+  - title: Slow bond at 100
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-49930.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$, $\xi(y)=\mathbf{1}_{y\ne 100}+\frac{\mathbf{1}_{y=100}}{10}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-49930.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-49930-tn.png'
+    image-size: 86 KB
+  - title: Cluster of 5 slow bonds around 100
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-78243.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$, $\xi(y)=\mathbf{1}_{y\notin [96,100]}+\frac{\mathbf{1}_{y\in [96,100]}}{10}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-78243.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-78243-tn.png'
+    image-size: 86 KB
+
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
   arxiv-url: 'https://arxiv.org/abs/0707.2813'
