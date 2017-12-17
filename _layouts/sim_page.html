@@ -28,9 +28,9 @@
     <ul class="mt-2">
     {%for codepage in page.code%}
     <li>
-      <a href="{{codepage}}">
-        <code class="highlighter-rouge">{{codepage}}</code>
-      </a>
+      <a href="{{codepage.link}}">
+        <code class="highlighter-rouge">{{codepage.link}}</code>
+      </a> ({{codepage.txt}})
     </li>
     {%endfor%}
     </ul>
@@ -55,6 +55,7 @@
     {%endfor%}
     </ul>
 
+    {%if page.papers != null%}
     <h2>references</h2>
     <ol>
       {%for paper in page.papers%}
@@ -65,6 +66,7 @@
         </li>
       {%endfor%}
     </ol>
+    {%endif%}
 
 
   </div>
