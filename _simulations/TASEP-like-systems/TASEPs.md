@@ -3,6 +3,7 @@ title: Simulations of TASEP-like systems
 layout: default
 permalink: /simulations/model/TASEPs/
 nav_parent: Simulations
+head_page: true
 ---
 
 <h1>{{page.title}}</h1>

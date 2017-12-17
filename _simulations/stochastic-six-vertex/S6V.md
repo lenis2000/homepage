@@ -3,6 +3,7 @@ title: Stochastic vertex models simulations
 layout: default
 permalink: /simulations/model/S6V/
 nav_parent: Simulations
+head_page: true
 ---
 
 <h1>Stochastic vertex models simulations</h1>
