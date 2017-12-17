@@ -6,22 +6,23 @@ author: Leonid Petrov
 code:
   - link: "https://github.com/lenis2000/simulations/blob/master/2017-12-15-PushTASEP-multilayer/2017-12-15-PushTASEP-multilayer.py"
     txt: "python2, both simulation and drawing"
-#results:
-#  - raw: __STORAGE_URL__/simulations/test_Hfout1.txt
-#    raw-size: 720 KB
-#    params: |
-#      $\mathrm{size} = 200 \times 200$,
-#      $q=\frac1{10}$ (fake number),
-#      $\lambda = 0.542$ (fake number)
-#    image: __STORAGE_URL__/simulations/test_Hfout1.png
-#    image-tn: __STORAGE_URL__/simulations/test_Hfout1-tn.png
-#    image-size: 2.3 MB
-#    title: Test simulation result (picture is fake)
-#  - raw: __STORAGE_URL__/simulations/test_Hfout2.txt
-#    raw-size: 4.5 MB
-#    params: |
-#      $\mathrm{size} = 500 \times 500$
-#    title: Test simulation result (no picture)
+results:
+  - title: Homogeneous case, size 100
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep1.txt
+    raw-size: 20 KB
+    params: |
+      $n=100$, $k=100$, $t=100$, $\xi(y)\equiv 1$
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph1.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph1.png
+    image-size: 5.7 KB
+  - title: Homogeneous case, size 500
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep10472.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$, $\xi(y)\equiv 1$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph10472.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph10472-tn.png'
+    image-size: 86 KB
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
   arxiv-url: 'https://arxiv.org/abs/0707.2813'
@@ -96,3 +97,6 @@ reads the configuration layer by layer, starting from the first layer,
 and shows occupation variables.
 
 There are no spaces or line breaks in the file.
+
+The plots show the first layer on top, layers correspond to horizontals.
+Black squares mean particles, and white squares mean empty space.
