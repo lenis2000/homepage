@@ -39,6 +39,90 @@ results:
     image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-78243.png'
     image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-78243-tn.png'
     image-size: 86 KB
+  - title: Slow bonds at 15, 50, 100, and 150
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-5508.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$, $\xi(y)=1-\frac{9}{10}(\mathbf{1}_{y=15}+\mathbf{1}_{y=50}+\mathbf{1}_{y=100}+\mathbf{1}_{y=150})$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-5508.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-5508-tn.png'
+    image-size: 86 KB
+  - title: Slow zone from 100 to 200
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-20239.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$,
+      $\xi(y)=\mathbf{1}_{y\notin[100,200]}+\frac{\mathbf{1}_{100\le y\le 200}}{10}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-20239.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-20239-tn.png'
+    image-size: 86 KB
+  - title: Fast zone from 100 to 200
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-65203.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$,
+      $\xi(y)=\mathbf{1}_{y\notin[100,200]}+5\cdot \mathbf{1}_{100\le y\le 200}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-65203.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-65203-tn.png'
+    image-size: 86 KB
+  - title: Much faster zone from 100 to 200
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-59818.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=500$,
+      $\xi(y)=\mathbf{1}_{y\notin[100,200]}+25\cdot \mathbf{1}_{100\le y\le 200}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-59818.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-59818-tn.png'
+    image-size: 90 KB
+  - title: Much faster zone from 100 to 200, another simulation
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-32271.txt
+    raw-size: 176 KB
+    params: |
+      $n=300$, $k=300$, $t=500$,
+      $\xi(y)=\mathbf{1}_{y\notin[100,200]}+25\cdot \mathbf{1}_{100\le y\le 200}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-32271.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-32271-tn.png'
+    image-size: 36 KB
+  - title: A mix of fast and slow zones
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-49079.txt
+    raw-size: 396 KB
+    params: |
+      $n=450$, $k=450$, $t=500$,
+      $\xi(y)=\frac{\mathbf{1}_{y\in[50,150]}}5+25\cdot\mathbf{1}_{y\in[300,400]}
+      +\mathbf{1}_{y\notin[50,150]\cup[300,400]}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-49079.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-49079-tn.png'
+    image-size: 74 KB
+  - title: Slow zone followed by a fast
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-11569.txt
+    raw-size: 118 KB
+    params: |
+      $n=200$, $k=300$, $t=150$,
+      $\xi(y)=\mathbf{1}_{y\le 150}+20\cdot \mathbf{1}_{y> 150}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-11569.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-11569-tn.png'
+    image-size: 27 KB
+  - title: Fast bond at 50
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-63672.txt
+    raw-size: 118 KB
+    params: |
+      $n=200$, $k=300$, $t=150$,
+      $\xi(y)=\mathbf{1}_{y\le 150}+20\cdot \mathbf{1}_{y> 150}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-63672.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-63672-tn.png'
+    image-size: 25 KB
+  - title: Periodic rates
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-11773.txt
+    raw-size: 235 KB
+    params: |
+      $n=300$, $k=400$, $t=300$,
+      $\xi(y)=\mathbf{1}_{y\text{ odd}}+5\cdot \mathbf{1}_{y\text{ even}}$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-11773.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-11773-tn.png'
+    image-size: 47 KB
+
+
+
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
