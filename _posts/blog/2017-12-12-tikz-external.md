@@ -9,7 +9,7 @@ show-date: true
 more-text: 
 ---
 
-I produce all pictures in my math <script type="math/tex">\mathrm{\LaTeX}</script> writing in [TikZ](http://www.texample.net/tikz/).
+I produce almost all pictures in my math <script type="math/tex">\mathrm{\LaTeX}</script> writing in [TikZ](http://www.texample.net/tikz/).
 This is a nice library (and I've learned it over the years), which allows for-loops, effects, etc.
 The downside for me always was that compiling inline TikZ pictures takes a lot of time.
 For some months now, while writing a particularly figure-heavy paper,

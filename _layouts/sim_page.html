@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  {% include header.html %}
+</head>
+
+<body>
+
+  {% include navbar.html %}
+
+  <div class="container">
+
+    <h1>{{page.title}}</h1>
+
+    <h4>{{page.author}}</h4>
+
+    <hr class="mb-4">
+
+    {{ content }}
+
+    <hr class="mt-4 mb-4">
+
+    <h2>code &bull; (<a href="https://github.com/lenis2000/simulations">GitHub repo</a>)</h2>
+
+    (note: parameters in the code might differ from the ones in simulation results below)
+
+    <ul class="mt-2">
+    {%for codepage in page.code%}
+    <li>
+      <a href="{{codepage.link}}">
+        <code class="highlighter-rouge">{{codepage.link}}</code>
+      </a> ({{codepage.txt}})
+    </li>
+    {%endfor%}
+    </ul>
+
+
+
+    <h2>simulation results</h2>
+
+    <ol>
+    {%for res in page.results%}
+      <li>
+        <h5>
+        {{res.title}}{%if res.raw!=null%} &bull; (<a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">data: {{res.raw-size}}</a>){%endif%}{%if res.image!=null%} &bull; (<a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}">image: {{res.image-size}}</a>)
+        {%endif%}
+        </h5>
+        {{res.params}}
+        <br>
+        {%if res.image!=null%}
+        <img src="{{ res.image-tn | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ res.title | strip_html }}" title="{{ res.title | strip_html }}" style="max-width:300px;max-height:200px;height:auto;width:auto;" class="mb-2 mt-1">
+        {%endif%}
+      </li>
+    {%endfor%}
+  </ol>
+
+    {%if page.papers != null%}
+    <h2>references</h2>
+    <ol>
+      {%for paper in page.papers%}
+        <li>
+          {{ paper.title }}
+          {%if paper.arxiv-url!=null%} &bull; <a href="{{paper.arxiv-url}}"><code class="highlighter-rouge">{{paper.arxiv-url}}</code></a>{%endif%}
+          {%if paper.journal-url!=null%} &bull; <a href="{{paper.journal-url}}"><code class="highlighter-rouge">{{paper.journal-url}}</code></a>{%endif%}
+        </li>
+      {%endfor%}
+    </ol>
+    {%endif%}
+
+
+  </div>
+
+  {% include footer.html %}
+
+  {% include boot.js %}
+  {% include math.js %}
+  {% include google.js %}
+
+</body>
+
+</html>
