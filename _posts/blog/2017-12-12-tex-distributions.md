@@ -48,3 +48,9 @@ is a symlink to the TeXLive distribution used throughout the system,
 and redirecting this link will switch the version.
 
 Bingo, a new paper is submitted to the arXiv! (will be in the next post when it appears online)
+
+
+##### Update (after trying to update the paper to version 2)
+
+Well, not so fast. After reinstalling TeXLive, the biblatex is not of a correct version. So, I've
+downloaded the package of a required version, and am trying to make it work.
