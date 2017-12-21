@@ -48,3 +48,15 @@ is a symlink to the TeXLive distribution used throughout the system,
 and redirecting this link will switch the version.
 
 Bingo, a new paper is submitted to the arXiv! (will be in the next post when it appears online)
+
+
+##### Update (after trying to update the paper to version 2)
+
+It looks like the TeX distribution should be updated, i.e., the 2016 one should have all the packages up to date.
+There is a TeX Live Utility which is supposed to help, but in my case it did not help.
+So, I had to resort to the command line utility `tlmgr`. It also did not work at first,
+until I updated it via
+
+```
+sudo tlmgr update --self
+```
