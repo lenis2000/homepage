@@ -52,5 +52,8 @@ Bingo, a new paper is submitted to the arXiv! (will be in the next post when it 
 
 ##### Update (after trying to update the paper to version 2)
 
-Well, not so fast. After reinstalling TeXLive, the biblatex is not of a correct version. So, I've
-downloaded the package of a required version, and am trying to make it work.
+Ok, I could not make this work for the second time. Previously I downloaded the basic installation of TeXLive 2016,
+and this did the job. Now I went with the full installation, and somehow it was worse
+(I ended up updating TeXLive 2016 to 2017, so now I have 2 parallel 2017 installations apparently).
+So, I ended up reusing the `.bbl` file from v1, which needed only very minor modifications (despite the version update
+  from 2.8 to 2.9). A conclusion is that biblatex is not too friendly with arXiv, unfortunately.
