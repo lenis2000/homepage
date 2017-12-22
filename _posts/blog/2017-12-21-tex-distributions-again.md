@@ -23,6 +23,7 @@ For this, I need an appropriate version of the biblatex package.
 
 My solution which gives the needed version `2.8` of the `.bbl` file:
 - Download the TeXLive basic 2016 distribution, install it (I'm using MacTeX), from [`ftp://tug.org/historic/systems/mactex/`](ftp://tug.org/historic/systems/mactex/)
+- update the `tlmgr` utility by `sudo tlmgr update --self`
 - Install the needed packages including `biblatex` using `sudo tlmgr install <package>`
 - Then remove `biblatex` with `sudo tlmgr remove biblatex`
 - Use local texmf tree, and install to it the appropriate version of `biblatex` (currently arXiv needs `3.5`), by
