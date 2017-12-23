@@ -23,6 +23,15 @@ results:
     image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph10472.png'
     image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph10472-tn.png'
     image-size: 86 KB
+  - title: A larger homogeneous picture showing that there is no densely packed region on the first layer
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-3535307.txt
+    raw-size: 117 KB
+    params: |
+      $n=400$, $k=150$, $t=100$,
+      $\xi(y)=1$
+    image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-3535307.png'
+    image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-3535307-tn.png'
+    image-size: 21 KB
   - title: Slow bond at 100
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-49930.txt
     raw-size: 489 KB
@@ -120,9 +129,6 @@ results:
     image: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-11773.png'
     image-tn: '__STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-graph-11773-tn.png'
     image-size: 47 KB
-
-
-
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
