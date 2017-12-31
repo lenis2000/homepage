@@ -43,7 +43,7 @@ results:
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-1743650.txt
     raw-size: 313 KB
     params: |
-      $n=400$, $k=400$, $t=100$, $\xi(y)= \mathbf{1}_{y\le 90}+\frac15\cdot\mathbf{1}_{90<y\le 100}+\mathbf{1}_{y>100}$
+      $n=400$, $k=400$, $t=100$, <script type="math/tex">\xi(y)=\mathbf{1}_{y\le90}+\frac15\cdot\mathbf{1}_{90<y\le 100}+\mathbf{1}_{y>100}</script>
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1743650.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1743650-tn.png
     image-size: 139 KB
@@ -51,10 +51,26 @@ results:
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-4838539.txt
     raw-size: 489 KB
     params: |
-      $n=500$, $k=500$, $t=150$, $\xi(y)= \mathbf{1}_{y\le 100}+\frac15\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}$
+      $n=500$, $k=500$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+\frac15\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4838539.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4838539-tn.png
     image-size: 190 KB
+  - title: Fast zone from 100 to 300
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-9624006.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+2\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-9624006.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-9624006-tn.png
+    image-size: 237 KB
+  - title: Very fast zone from 100 to 300
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-4154759.txt
+    raw-size: 489 KB
+    params: |
+      $n=500$, $k=500$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+5\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759-tn.png
+    image-size: 195 KB
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
