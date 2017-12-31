@@ -167,7 +167,7 @@ packed cluster of particles to the right by one.
 
 The dynamics on the first layer <script type="math/tex">\{x_i^{(1)}\}</script> is
 simply the PushTASEP (= long-range TASEP) studied, e.g., in [1].
-The space-inhomogeneous version described above is studied in [2].
+The space-inhomogeneous version of the PushTASEP is studied in [2].
 
 ### Sampling algorithm
 
