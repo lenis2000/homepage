@@ -71,6 +71,14 @@ results:
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759-tn.png
     image-size: 195 KB
+  - title: Very fast zone from 100 to infinity, larger view
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-4154759.txt
+    raw-size: 2.7 MB
+    params: |
+      $n=500$, $k=500$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+5\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759-tn.png
+    image-size: 992 KB
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
