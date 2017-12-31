@@ -72,12 +72,12 @@ results:
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759-tn.png
     image-size: 195 KB
   - title: Very fast zone from 100 to infinity, larger view
-    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-4154759.txt
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5643114.txt
     raw-size: 2.7 MB
     params: |
       $n=500$, $k=500$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+5\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
-    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759.png
-    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-4154759-tn.png
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5643114.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5643114-tn.png
     image-size: 992 KB
 
 papers:
