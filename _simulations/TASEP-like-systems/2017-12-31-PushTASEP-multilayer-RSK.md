@@ -87,22 +87,14 @@ results:
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297-tn.png
     image-size: 298 KB
-  - title: 2-periodic speed function, a part of the picture resembles effects of [3]
-    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5687297.txt
-    raw-size: 704 KB
-    params: |
-      $n=600$, $k=600$, $t=100$, <script type="math/tex">\xi(y)=2\cdot \mathbf{1}_{y\text{ odd}}+\mathbf{1}_{y\text{ even}}</script>
-    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297.png
-    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297-tn.png
-    image-size: 298 KB
   - title: 3-periodic speed function, a part of the picture resembles similar periodic effects
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-1755716.txt
-    raw-size: 704 KB
+    raw-size: 1.2 MB
     params: |
       $n=800$, $k=800$, $t=2a00$, <script type="math/tex">\xi(y)=\mathbf{1}_{y=3m}+2\cdot \mathbf{1}_{y=3m+1}+3\cdot \mathbf{1}_{y=3m+2}</script>
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716-tn.png
-    image-size: 298 KB
+    image-size: 580 KB
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
