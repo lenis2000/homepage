@@ -89,12 +89,12 @@ results:
     image-size: 746 KB
   - title: 3 zones of growing speed, another version
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-7191840.txt
-    raw-size: 2.3 MB
+    raw-size: 783 KB
     params: |
       $n=400$, $k=1000$, $t=100$, <script type="math/tex">\xi(y)= \mathbf{1}_{y< 100}+4\cdot\mathbf{1}_{100\le y< 150}+8\cdot\mathbf{1}_{150\le y}</script>
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-7191840.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-7191840-tn.png
-    image-size: 746 KB
+    image-size: 297 KB
   - title: 2-periodic speed function, a part of the picture resembles effects of [3]
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5687297.txt
     raw-size: 704 KB
@@ -111,6 +111,14 @@ results:
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716-tn.png
     image-size: 580 KB
+  - title: 2-periodic combined with 2 zones
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-6680167.txt
+    raw-size: 1.5 MB
+    params: |
+      $n=400$, $k=2000$, $t=100$, $\xi(y)$ is periodic with speeds $(1,4)$ on $y<50$, and periodic with speeds $(2,8)$ on $[50,+\infty)$
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-6680167.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-6680167-tn.png
+    image-size: 448 KB
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
