@@ -79,12 +79,39 @@ results:
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5643114.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5643114-tn.png
     image-size: 992 KB
+  - title: 2-periodic speed function, a part of the picture resembles effects of [3]
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5687297.txt
+    raw-size: 704 KB
+    params: |
+      $n=600$, $k=600$, $t=100$, <script type="math/tex">\xi(y)=2\cdot \mathbf{1}_{y\text{ odd}}+\mathbf{1}_{y\text{ even}}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297-tn.png
+    image-size: 298 KB
+  - title: 2-periodic speed function, a part of the picture resembles effects of [3]
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5687297.txt
+    raw-size: 704 KB
+    params: |
+      $n=600$, $k=600$, $t=100$, <script type="math/tex">\xi(y)=2\cdot \mathbf{1}_{y\text{ odd}}+\mathbf{1}_{y\text{ even}}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5687297-tn.png
+    image-size: 298 KB
+  - title: 3-periodic speed function, a part of the picture resembles similar periodic effects
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-1755716.txt
+    raw-size: 704 KB
+    params: |
+      $n=800$, $k=800$, $t=2a00$, <script type="math/tex">\xi(y)=\mathbf{1}_{y=3m}+2\cdot \mathbf{1}_{y=3m+1}+3\cdot \mathbf{1}_{y=3m+2}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716-tn.png
+    image-size: 298 KB
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
   arxiv-url: 'https://arxiv.org/abs/0707.2813'
   journal-url: 'http://emis.ams.org/journals/EJP-ECP/article/download/541/541-1801-1-PB.pdf'
 - title: 'L. Petrov, In preparation (2018)'
+- title: 'S. Mkrtchyan, Plane partitions with two-periodic weights. Letters in Mathematical Physics, 104(9):1053-1078, 2014.'
+  journal-url: 'https://link.springer.com/article/10.1007%2Fs11005-014-0696-z'
+  arxiv-url: 'https://arxiv.org/abs/1309.4825'
 ---
 
 
@@ -92,7 +119,7 @@ papers:
 
 This model is a version of the one considered in the [previous simulation]({{site.url}}/simulations/2017-12-15-pushtasep-multilayer/).
 However, the asymptotic behavior is quite different.
-The model in this post is related to the column RSK and Schur measures and 
+The model in this post is related to the column RSK and Schur measures and
 is amenable to asymptotic analysis via exact formulas.
 
 ### The model
@@ -120,8 +147,8 @@ jumps to the right by one, and so on, until an empty spot.
 	- If there is no empty spot, then we simply shift the right-infinite densely
 packed cluster of particles to the right by one, and the update stops.
 	- If there is an empty spot, then the pushed finite cluster of particles
-moves to the right by one, and this generates another jumping impulse 
-at the new empty spot. This jumping impulse propagates to lower layers, and so on, 
+moves to the right by one, and this generates another jumping impulse
+at the new empty spot. This jumping impulse propagates to lower layers, and so on,
 unltil an infinite cluster of particles is pushed.
 - if there is no particle at site $y$ at layer $j=1,\ldots,k$, then nothing happens
 (though by increasing $k$, we can always find the layer at which the dynamics occurs).
