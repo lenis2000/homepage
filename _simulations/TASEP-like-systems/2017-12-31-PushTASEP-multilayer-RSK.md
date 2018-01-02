@@ -75,10 +75,26 @@ results:
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5643114.txt
     raw-size: 2.7 MB
     params: |
-      $n=500$, $k=500$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+5\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
+      $n=700$, $k=3000$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y\le 100}+5\cdot\mathbf{1}_{100<y\le 300}+\mathbf{1}_{y>300}</script>
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5643114.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5643114-tn.png
     image-size: 992 KB
+  - title: 3 zones of growing speed
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5460767.txt
+    raw-size: 2.3 MB
+    params: |
+      $n=600$, $k=2000$, $t=150$, <script type="math/tex">\xi(y)= \mathbf{1}_{y< 200}+4\cdot\mathbf{1}_{200\le y< 400}+8\cdot\mathbf{1}_{400\le y}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5460767.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-5460767-tn.png
+    image-size: 746 KB
+  - title: 3 zones of growing speed, another version
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-7191840.txt
+    raw-size: 2.3 MB
+    params: |
+      $n=400$, $k=1000$, $t=100$, <script type="math/tex">\xi(y)= \mathbf{1}_{y< 100}+4\cdot\mathbf{1}_{100\le y< 150}+8\cdot\mathbf{1}_{150\le y}</script>
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-7191840.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-7191840-tn.png
+    image-size: 746 KB
   - title: 2-periodic speed function, a part of the picture resembles effects of [3]
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-5687297.txt
     raw-size: 704 KB
