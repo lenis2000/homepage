@@ -61,8 +61,8 @@
       {%for paper in page.papers%}
         <li>
           {{ paper.title }}
-          {%if paper.arxiv-url!=null%} &bull; <a href="{{paper.arxiv-url}}"><code class="highlighter-rouge">{{paper.arxiv-url}}</code></a>{%endif%}
-          {%if paper.journal-url!=null%} &bull; <a href="{{paper.journal-url}}"><code class="highlighter-rouge">{{paper.journal-url}}</code></a>{%endif%}
+          {%if paper.arxiv-url!=null%} &bull; <a href="{{paper.arxiv-url}}" target="_blank"><code class="highlighter-rouge">{{paper.arxiv-url}}</code></a>{%endif%}
+          {%if paper.journal-url!=null%} &bull; <a href="{{paper.journal-url}}" target="_blank"><code class="highlighter-rouge">{{paper.journal-url}}</code></a>{%endif%}
         </li>
       {%endfor%}
     </ol>
