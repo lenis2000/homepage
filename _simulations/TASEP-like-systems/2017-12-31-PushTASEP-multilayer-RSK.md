@@ -91,7 +91,7 @@ results:
     raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-1755716.txt
     raw-size: 1.2 MB
     params: |
-      $n=800$, $k=800$, $t=2a00$, <script type="math/tex">\xi(y)=\mathbf{1}_{y=3m}+2\cdot \mathbf{1}_{y=3m+1}+3\cdot \mathbf{1}_{y=3m+2}</script>
+      $n=800$, $k=800$, $t=200$, <script type="math/tex">\xi(y)=\mathbf{1}_{y=3m}+2\cdot \mathbf{1}_{y=3m+1}+3\cdot \mathbf{1}_{y=3m+2}</script>
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1755716-tn.png
     image-size: 580 KB
