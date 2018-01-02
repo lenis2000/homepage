@@ -119,6 +119,14 @@ results:
     image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-6680167.png
     image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-6680167-tn.png
     image-size: 448 KB
+  - title: 2-periodic combined with 2 zones
+    raw: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-1473515.txt
+    raw-size: 1.5 MB
+    params: |
+      $n=400$, $k=2000$, $t=100$, $\xi(y)$ is periodic with speeds $(2,8)$ on $y<50$, and periodic with speeds $(1,4)$ on $[50,+\infty)$
+    image: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1473515.png
+    image-tn: __STORAGE_URL__/simulations/2017-12-pushTASEP/multilayer-pushtasep-RSK-graph-1473515-tn.png
+    image-size: 448 KB
 
 papers:
 - title: 'A. Borodin, P. Ferrari, Large time asymptotics of growth models on space-like paths I: PushASEP, Electron. J. Probab. (2008), vol. 13, 1380-1418'
