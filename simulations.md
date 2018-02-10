@@ -33,7 +33,7 @@ nav_weight: 19
 
 <h2 class="mb-3">Categories</h2>
 
-- ##### <a href="{{site.url}}/simulations/model/S6V/">Stochastic vertex models</a>
+<!-- - ##### <a href="{{site.url}}/simulations/model/S6V/">Stochastic vertex models</a> -->
 - ##### <a href="{{site.url}}/simulations/model/TASEPs/">TASEP-like systems</a>
 - ##### more categories to come soon
 
