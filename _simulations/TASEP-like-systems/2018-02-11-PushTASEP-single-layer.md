@@ -32,20 +32,20 @@ results:
     image-tn: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-200a.png
     image-size: 99 KB
   - title: Speedup
-    raw: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.txt
+    raw: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-300.txt
     raw-size: 4.7 KB
     params: |
       $n=2400$, $t=400$, $\xi(x)\mathbf{1}_{x<800}+2\cdot\mathbf{1}_{x\ge 800}$
-    image: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.pdf
-    image-tn: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.png
+    image: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-300.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-300.png
     image-size: 18 KB
   - title: Speedup, height function adjusted by a linear shift to better see fluctuations
-    raw: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.txt
+    raw: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-300.txt
     raw-size: 4.7 KB
     params: |
       $n=2400$, $t=400$, $\xi(x)\mathbf{1}_{x<800}+2\cdot\mathbf{1}_{x\ge 800}$
-    image: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300a.pdf
-    image-tn: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300a.png
+    image: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-300a.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-300a.png
     image-size: 90 KB
 
 papers:
