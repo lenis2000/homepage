@@ -23,6 +23,14 @@ results:
     image: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-200.pdf
     image-tn: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-200.png
     image-size: 21 KB
+  - title: Slowdown, height function adjusted by a linear shift to better see fluctuations
+    raw: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-200.txt
+    raw-size: 4.7 KB
+    params: |
+      $n=2400$, $t=400$, $\xi(x)=\mathbf{1}_{x<800}+\frac12\cdot\mathbf{1}_{x\ge 800}$
+    image: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-200a.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-02-pushTASEP/single-pushtasep-200a.png
+    image-size: 99 KB
   - title: Speedup
     raw: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.txt
     raw-size: 4.7 KB
@@ -31,6 +39,14 @@ results:
     image: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.pdf
     image-tn: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.png
     image-size: 21 KB
+  - title: Speedup, height function adjusted by a linear shift to better see fluctuations
+    raw: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300.txt
+    raw-size: 4.7 KB
+    params: |
+      $n=2400$, $t=400$, $\xi(x)\mathbf{1}_{x<800}+2\cdot\mathbf{1}_{x\ge 800}$
+    image: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300a.pdf
+    image-tn: __STORAGE_URL__/simulations/simulations/2018-02-pushTASEP/single-pushtasep-300a.png
+    image-size: 99 KB
 
 papers:
 - title: 'L. Petrov, In preparation (2018)'
