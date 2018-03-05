@@ -1,3 +1,5 @@
+<!-- these references correspond to the CV PDF, papers basically in order of arXiv -->
+
 [ref1]: {{ site.url }}/2006/04/syncr/
 [ref2]: {{ site.url }}/2007/08/kingman/
 [ref3]: {{ site.url }}/2009/04/rms-strict/
@@ -24,3 +26,4 @@
 [ref24]: {{ site.url }}/2017/03/q-inhom/
 [ref25]: {{ site.url }}/2017/03/qGUE/
 [ref26]: {{ site.url }}/2017/08/coarsening-ASEP-LDP/
+[ref27]: {{ site.url }}/2017/12/YBfield/
