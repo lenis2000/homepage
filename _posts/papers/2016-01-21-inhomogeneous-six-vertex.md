@@ -11,7 +11,7 @@ categories: paper math blog
 published: true
 more-text: Full abstract
 show-date: true
-journal-ref: Selecta Mathematica, to appear
+journal-ref: Selecta Math. 24 (2018), no. 2, 751-874
 journal-web: https://link.springer.com/article/10.1007/s00029-016-0301-7
 image: __STORAGE_URL__/img/papers/inhom-vertex.png
 image-alt: inhomogeneous stochastic six vertex model
