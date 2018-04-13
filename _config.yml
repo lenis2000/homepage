@@ -1,8 +1,8 @@
-url: "http://lpetrov.cc"
-storage_url: "http://lpetrov.cc.storage.s3-website-us-east-1.amazonaws.com"
+url: "https://lpetrov.cc"
+storage_url: "https://d3m0khvr0ybm92.cloudfront.net"
 math_url: "http://math.virginia.edu"
 
-permanent_url: "http://lpetrov.cc"
+permanent_url: "https://lpetrov.cc"
 
 name: Leonid Petrov
 description: Leonid Petrov. Integrable Probability
