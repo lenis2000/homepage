@@ -92,7 +92,7 @@ site, and $0$ means the absence of such particle.
 The plots display the rescaled height function
 
 $$
-h(t,x)=\#\{\text{number of particles which are $\le x$ at time $t$}\}
+h(t,x)=\#\{\text{number of particles which are } \le x \text{ at time } $t$\}
 $$
 
 with $h$ and $x$ rescaled by $t$, and the corresponding limit shape from [1].
