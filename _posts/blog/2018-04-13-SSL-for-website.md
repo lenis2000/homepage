@@ -1,6 +1,6 @@
 ---
 layout: post
-title: How to enable SSL for your homepage hosted on S3
+title: How to enable SSL for a homepage hosted on S3
 date: 2018-04-13 12:00:00
 comments: true
 categories: blog tech
