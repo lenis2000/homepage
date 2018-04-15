@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -e # halt script on error
 
-bundle exec jekyll build
+# get fresh bib html file from GitHub, before the build
+git clone https://github.com/lenis2000/BiBTeX.git bib-repo && mv bib-repo/bib.html _includes/ && mv bib-repo/bib_bib.html _includes/ && mv bib-repo/petrov.html _includes/ && mv bib-repo/petrov_bib.html _includes/ && rm -Rf bib-repo 
+
+bundle exec jekyll build #build the website
 
 # get fresh CV from GitHub
 git clone https://github.com/lenis2000/CV.git ./_site/research/CV

@@ -318,3 +318,13 @@ a.orange-item:hover, a.orange-item:focus {
 .highlighted-item, a.highlighted-item:link, a.highlighted-item:visited {
   color:#1e6a06;
 }
+
+.bibtexitem {
+
+}
+
+.bibtexnumber
+{
+  padding-right: 10px;
+  font-weight: bold;
+}

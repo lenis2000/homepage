@@ -1,6 +1,6 @@
 ---
 layout: post
-title: A sign in Boston Logan airport commemorating deformed Bosons
+title: "[quick link] A sign in Boston Logan"
 date: 2018-01-01 13:30:00
 comments: false
 categories: quick_link
