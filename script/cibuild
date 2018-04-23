@@ -6,6 +6,8 @@ git clone https://github.com/lenis2000/BiBTeX.git bib-repo && mv bib-repo/bib.ht
 
 bundle exec jekyll build #build the website
 find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.url}}/https\:\/\/lpetrov.cc/g'
+find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.storage_url}}/https\:\/\/d3m0khvr0ybm92.cloudfront.net/g'
+find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.math_url}}/http\:\/\/math.virginia.edu/g'
 
 # get fresh CV from GitHub
 git clone https://github.com/lenis2000/CV.git ./_site/research/CV
