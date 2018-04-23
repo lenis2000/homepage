@@ -31,7 +31,7 @@ In the Spring 2017 me and [Axel Saenz](http://faculty.virginia.edu/saenz/) will 
 1. **January 23, 2017**, 3:30pm in Ker 128
 
     **Leo Petrov** --- Introduction to counting domino tilings
-    &bull; <a href="{{ site.storage_url }}/courses/integrable_seminar/Domino_counting.pdf">Notes (6 MB)</a>
+    &bull; <a href="{{site.storage_url}}/courses/integrable_seminar/Domino_counting.pdf">Notes (6 MB)</a>
 
 2. **January 30, 2017**, 3:30pm in Ker 128
 
@@ -63,7 +63,7 @@ In the Spring 2017 me and [Axel Saenz](http://faculty.virginia.edu/saenz/) will 
 
 9. **March 20, 2017**, 3:30pm in Ker 128
 
-    **Leo Petrov** --- Solving TASEP &bull; <a href="{{ site.storage_url }}/courses/integrable_seminar/TASEP_Schur_notes.pdf">Notes (14 MB)</a>
+    **Leo Petrov** --- Solving TASEP &bull; <a href="{{site.storage_url}}/courses/integrable_seminar/TASEP_Schur_notes.pdf">Notes (14 MB)</a>
 
 10. **March 27, 2017**, 3:30pm in Ker 128
 
