@@ -64,8 +64,8 @@ results:
       $t=1000, \xi(x)=
       0.6\cdot\mathbf{1}_{x=0}+\mathbf{1}_{0 < x<0.1}+0.3\cdot\mathbf{1}_{x\ge 0.1}
       $
-    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dashed.pdf
-    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dashed-tn.png
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dash.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dash-tn.png
     image-size: 15 KB  
   - title: Slower initial stream of particles (roadblock in the beginning), zoom around the Gaussian behavior
     raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000.txt
