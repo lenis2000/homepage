@@ -7,14 +7,80 @@ code:
   - link: "https://github.com/lenis2000/simulations/blob/master/2018-05-13-cont-space-TASEP/cont-space-TASEP.py"
     txt: "python2 for simulations, simple Mathematica for drawing. Mathematica source not present"
 results:
-  - title: title
-    raw: __STORAGE_URL__/simulations/2018-02-PushTASEP/single-pushtasep-100.txt
-    raw-size: ?? KB
+  - title: Fully homogeneous case
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/hom-1000.txt
+    raw-size: 15 KB
     params: |
-      ??
-    image: __STORAGE_URL__/simulations/2018-02-PushTASEP/single-pushtasep-100.pdf
-    image-tn: __STORAGE_URL__/simulations/2018-02-PushTASEP/single-pushtasep-100.png
-    image-size: ?? KB
+      $t=1000, \xi(x)\equiv 1$
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/hom-1000.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/hom-1000-tn.png
+    image-size: 14 KB
+  - title: Fully homogeneous case with limit shape
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/hom-1000.txt
+    raw-size: 15 KB
+    params: |
+      $t=1000, \xi(x)\equiv 1$
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/hom-1000-ls.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/hom-1000-ls-tn.png
+    image-size: 16 KB    
+  - title: Mild slowdown (about critical)
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slowdown-1000.txt
+    raw-size: 16 KB
+    params: |
+      $t=1000, \xi(x)=\mathbf{1}_{x<0.1}+\frac12\mathbf{1}_{x\ge 0.1}$
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slowdown-1000.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slowdown-1000-tn.png
+    image-size: 17 KB
+  - title: Mild slowdown (about critical), zoom around the slowdown
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slowdown-1000.txt
+    raw-size: 16 KB
+    params: |
+      $t=1000, \xi(x)=\mathbf{1}_{x<0.1}+\frac12\mathbf{1}_{x\ge 0.1}$
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slowdown-1000-zoom.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slowdown-1000-zoom-tn.png
+    image-size: 13 KB
+  - title: Harder slowdown
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000.txt
+    raw-size: 15 KB
+    params: |
+      $t=1000, \xi(x)=\mathbf{1}_{x<0.1}+0.3\cdot\mathbf{1}_{x\ge 0.1}$
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000-tn.png
+    image-size: 16 KB
+  - title: Harder slowdown, zoom around the slowdown
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000.txt
+    raw-size: 15 KB
+    params: |
+      $t=1000, \xi(x)=\mathbf{1}_{x<0.1}+0.3\cdot\mathbf{1}_{x\ge 0.1}$
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000-zoom.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000-zoom-tn.png
+    image-size: 12 KB  
+  - title: Slower initial stream of particles
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000.txt
+    raw-size: 9 KB
+    params: |
+      Gaussian behavior for $0 < x < 0.04$. Dashed curve is the limit shape with full initial stream of particles.
+      <br>
+      $t=1000, \xi(x)=
+      0.6\cdot\mathbf{1}_{x=0}+\mathbf{1}_{0 < x<0.1}+0.3\cdot\mathbf{1}_{x\ge 0.1}
+      $
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dashed.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dashed-tn.png
+    image-size: 15 KB  
+  - title: Slower initial stream of particles, zoom around the Gaussian behavior
+    raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000.txt
+    raw-size: 9 KB
+    params: |
+      Gaussian behavior for $0 < x < 0.04$. Dashed curve is the limit shape with full initial stream of particles.
+      <br>
+      $t=1000, \xi(x)=
+      0.6\cdot\mathbf{1}_{x=0}+\mathbf{1}_{0 < x<0.1}+0.3\cdot\mathbf{1}_{x\ge 0.1}
+      $
+    image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-zoom.pdf
+    image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-zoom-tn.png
+    image-size: 13 KB  
+
+
 
 papers:
 - title: 'A. Knizel, L. Petrov, A. Saenz. In preparation (2018)'
@@ -23,7 +89,7 @@ papers:
 # journal-url: 
 ---
 
-### The model
+### The model [1]
 
 The continuous space TASEP is a continuous time
 Markov process <script type="math/tex">\{X(t)\}_{t\ge 0}</script> on the space
@@ -99,11 +165,7 @@ The data files are integer arrays like
 
 {% raw %}
 ```
-{0.0286274477178, 0.0286274477178, 0.210833155189, 
-0.210833155189, 0.210833155189, 0.210833155189, 
-0.38234067478, 0.802020663021, 0.802020663021, 
-.53111271382, 1.53111271382, 3.98713308074, 
-3.98713308074, 8.07247019166, 9.9997745176, }
+{0.0286274477178, 0.0286274477178, 0.210833155189, }
 ```
 {% endraw %}
 
