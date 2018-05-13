@@ -55,7 +55,7 @@ results:
     image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000-zoom.pdf
     image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/harder-slowdown-1000-zoom-tn.png
     image-size: 12 KB  
-  - title: Slower initial stream of particles
+  - title: Slower initial stream of particles (roadblock in the beginning)
     raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000.txt
     raw-size: 9 KB
     params: |
@@ -67,7 +67,7 @@ results:
     image: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dashed.pdf
     image-tn: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000-with-dashed-tn.png
     image-size: 15 KB  
-  - title: Slower initial stream of particles, zoom around the Gaussian behavior
+  - title: Slower initial stream of particles (roadblock in the beginning), zoom around the Gaussian behavior
     raw: __STORAGE_URL__/simulations/2018-05-13-cont-space-TASEP/slow-initial-1000.txt
     raw-size: 9 KB
     params: |
@@ -154,10 +154,6 @@ The simulation is straightforward.
 In continuous time, we choose which particle jumps, then 
 increase the continuous time count by the corresponding
 exponential random variable, and perform the necessary comparisons.
-The roadblocks (if present) are such that the probability 
-of catching a flying particle is exactly 1, that is, $p(b)=0$. 
-This does not affect the limit shape because in the limit the roadblocks
-contain particles with very high probability.
 
 ### Data file format
 
