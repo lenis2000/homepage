@@ -12,6 +12,7 @@ bundle exec jekyll build #build the website
 # get fresh CV from GitHub
 git clone https://github.com/lenis2000/CV.git ./_site/research/CV
 mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
+mv ./_site/research/CV/__petrovCV__short.pdf ./_site/research/petrovCVbrief.pdf
 rm -Rf _site/research/CV
 
 # get fresh githubbed syllabi from GitHub

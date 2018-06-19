@@ -1,0 +1,116 @@
+---
+title: Statements and Publications
+layout: default
+permalink: /statement/
+---
+
+<div class="row">
+    <div class="col-md-8 mb-4">
+
+        <h3>About</h3>
+
+        I am an Assistant Professor at
+        Department of Mathematics, University of
+        Virginia.
+        I got my PhD in 2010 in Moscow with <a href="http://iitp.ru/en/userpages/88/">
+        Grigori Olshanski</a>,
+        and in 2011-2014 I was a postdoc at <a href="http://www.northeastern.edu/cos/mathematics/">Northeastern University</a>.
+        
+        <h3 class="mt-4">
+            CV
+            &bull;
+            (<a href="{{ site.url }}/research/petrovCV.pdf">Full</a>)
+            &bull;
+            (<a href="{{ site.url }}/research/petrovCVbrief.pdf">Brief</a>)
+        </h3>
+        
+        <h3 class="mt-2 mb-3"><a href="{{ site.storage_url }}/research_files/Petrov_research_teaching_statement_Jun2018.pdf">Research and Teaching Statement</a></h3>
+        
+
+        <hr>
+
+        <h2 class="mb-4">Publications with PDF links</h2>
+
+        <h3><a name="preprints">Preprints (completed at UVA)</a></h3>
+        <hr>
+    
+        <ol class="my-ul-zebra">
+        {% for post in site.posts %}
+        {% if post.categories contains "preprint" %}
+    
+    
+          <li class="mb-1"  style="padding:6px">
+            {% if post.coauthors %}(with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
+            <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
+            {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+            &bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>)
+            {% unless post.no-abstract %}<details>
+              <summary>
+                Abstract
+              </summary>
+              <br />
+                {{ post.content | markdownify }}
+                {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+                {% endif %}
+            </details>
+            {% endunless %}
+          </li>
+    
+    
+    
+        {% endif %}
+        {% endfor %}
+        </ol>
+    
+        <h3 class="mt-4"><a name="published">Published or accepted</a></h3>
+        <hr>
+
+        <ol reversed class="my-ul-zebra">
+        {% assign post_counter = 1%}
+        <h3 class="mt-4"><a name="published">Completed at UVA</a></h3>
+        {% for post in site.posts %}
+        {% if post.categories contains "paper" %}
+    
+          <li class="mb-1" style="padding:6px">
+            
+            {% assign post_counter = post_counter | plus: 1 %}
+
+            {% if post.coauthors %}(with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
+            <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
+            {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
+              <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+            {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+            &bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>)
+            {% unless post.no-abstract %}<details>
+              <summary>
+                Abstract
+              </summary>
+              <br />
+                {{ post.content | markdownify }}
+                {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+                {% endif %}
+            </details>{% endunless %}
+          </li>
+        
+        {% if post_counter == 13 %}
+        <h3 class="mt-4"><a name="published">Completed before joining UVA</a></h3>
+        {% endif %}
+          
+        {% endif %}
+        {% endfor %}
+        </ol>
+
+
+
+    </div>
+  
+    <div class="col-md-4">
+      <a href="{{site.url}}/mit_pic_2018/"><img class="mb-2" width="100%" src="{{site.storage_url}}/img/me_MIT_tn.jpg" alt="My Picture at MIT" align="center" vspace="5" /></a>
+    </div>
+  
+
+  <!-- <div class="col-12 mt-1">
+    {% include contact.html %}
+  </div> -->
+
+</div>
