@@ -6,7 +6,7 @@ coauthors:
     web: https://sites.google.com/view/alisaknizel/home
   - name: Axel Saenz
     web: http://faculty.virginia.edu/saenz/
-arXiv: 1808.?????
+arXiv: 1808.09855 [math.PR]
 comments: false
 categories: blog math preprint
 published: true
