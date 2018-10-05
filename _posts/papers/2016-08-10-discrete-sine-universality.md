@@ -7,10 +7,11 @@ coauthors:
 arXiv: 	1608.03243 [math.PR]
 date: 2016-08-10 02:00:00
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
 more-text: Full abstract
 show-date: true
+journal-ref: Ann. Probab., to appear
 image: __STORAGE_URL__/img/papers/discrete-sine-universality.png
 image-alt: Noncolliding Bernoulli random walks
 pdf: 22-publ-petrov-uva.pdf
