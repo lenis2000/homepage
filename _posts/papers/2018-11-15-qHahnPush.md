@@ -6,7 +6,7 @@ coauthors:
     web: http://www.math.columbia.edu/~corwin/
   - name: Konstantin Matveev
     web: "http://www.brandeis.edu/facultyguide/person.html?emplid=6dab03864a2fd23f5d5a08280ff66a845ebc8fa5"
-arXiv: 1811.????? [math.PR]
+arXiv: 1811.06475 [math.PR]
 comments: false
 categories: blog math preprint
 published: true
