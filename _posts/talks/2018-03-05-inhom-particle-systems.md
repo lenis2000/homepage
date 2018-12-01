@@ -10,8 +10,13 @@ more-text: Download pdf
 pdf-size: 5 MB
 ---
 
-This talk describes results in progress on particle systems (PushTASEP and continuous space TASEP)
-in inhomogeneous space. Some earlier results related to the topic of the talk appear in [this paper with Borodin][ref24].
+This talk describes results on continuous space TASEP
+in inhomogeneous space,
+based on papers
+[with Borodin][ref24] 
+and with
+[with Knizel and Saenz][ref29],
+and on some work in progress.
 
 {% include references.md %}
 

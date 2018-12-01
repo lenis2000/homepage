@@ -27,3 +27,6 @@
 [ref25]: {{ site.url }}/2017/03/qGUE/
 [ref26]: {{ site.url }}/2017/08/coarsening-ASEP-LDP/
 [ref27]: {{ site.url }}/2017/12/YBfield/
+[ref28]: {{ site.url }}/2018/04/LPP/
+[ref29]: {{ site.url }}/2018/08/Schur-vertex/
+[ref30]: {{ site.url }}/2018/11/qHahnPush/
