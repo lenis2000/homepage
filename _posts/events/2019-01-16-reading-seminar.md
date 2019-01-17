@@ -30,7 +30,7 @@ We will discuss the classical problem of describing analogues of irreducible rep
 
 1. January 18, 2019, Special location - **Ruffner Hall 127**.
     
-    *Leo Petrov* - Introduction "The many faces of the Edrei-Voiculescu theorem"
+    *Leo Petrov* - Introduction "The many facets of the Edrei-Voiculescu theorem"
 
 2. January 25, 2019
 
