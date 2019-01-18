@@ -36,13 +36,13 @@ The schedule is subject to change as we progress with the topics.
 
 2. January 25, 2019
 
-    *TBA* - $U(N)$: weights, irreducible characters, Schur polynomials, branching
+    *Liron Speyer* - $U(N)$: weights, irreducible characters, Schur polynomials, branching
     <br>
     [standard textbooks like the H. Weyl's], a summary is in [section 2.2 in arXiv:1310.8007]
 
 3. February 1, 2019
 
-    *TBA* - Extreme characters of $U(\infty)$: definition and two elementary examples
+    *George Seelinger* - Extreme characters of $U(\infty)$: definition and two elementary examples
     <br>
     [for example, section 4.1.10 in [these draft lecture notes](https://d3m0khvr0ybm92.cloudfront.net/courses/7382F12/LectureNotes.pdf)]
 
