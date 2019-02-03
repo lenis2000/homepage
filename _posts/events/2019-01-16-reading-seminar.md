@@ -48,7 +48,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. February 8, 2019
 
-    *TBA* - Functional equation for irreducible characters and the ring theorem for extreme characters of $U(\infty)$
+    *Axel Saenz* - Functional equation for irreducible characters and the ring theorem for extreme characters of $U(\infty)$
     <br>
     [G. Olshanski, On semigroups related to infinite-dimensional groups. In: Topics in Representation Theory (A. A. Kirillov, ed.). Advances in Soviet Math.] or [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group", exercises 1.5 and 4.3]
 
