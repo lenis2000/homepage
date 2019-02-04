@@ -42,7 +42,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. February 1, 2019
 
-    *George Seelinger* - Extreme characters of $U(\infty)$: definition and two elementary examples
+    *George Seelinger* - <a href="https://ghseeli.github.io/grad-school-writings/presentations/two-elementary-examples-of-extreme-characters-of-u-infty.pdf">Extreme characters of $U(\infty)$: definition and two elementary examples</a>
     <br>
     [for example, section 4.1.10 in [these draft lecture notes](https://d3m0khvr0ybm92.cloudfront.net/courses/7382F12/LectureNotes.pdf)]
 
