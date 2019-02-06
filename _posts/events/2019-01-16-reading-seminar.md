@@ -66,13 +66,12 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 1, 2019
 
-    *TBA* - Construction of irreducible representations of $U(\infty)$ - I
+    No meeting
     <br>
-    [TBA]
 
 3. March 8, 2019
 
-    *TBA* - Construction of irreducible representations of $U(\infty)$ - II
+    *TBA* - Construction of irreducible representations of $U(\infty)$
     <br>
     [TBA]
 
