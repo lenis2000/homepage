@@ -54,7 +54,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. February 15, 2019
 
-    *TBA* - Projection formula for Gibbs measures on tilings (formula for the number of trapezoidal Gelfand-Tsetlin schemes)
+    *Ethan Zell* - Projection formula for Gibbs measures on tilings (formula for the number of trapezoidal Gelfand-Tsetlin schemes)
     <br>
     [arXiv:1109.1412 and arXiv:1208.3443]
 
@@ -71,7 +71,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 8, 2019
 
-    *TBA* - Construction of irreducible representations of $U(\infty)$
+    *Joseph Eisner* - Irreducible factor representations of $U(\infty)$
     <br>
     [TBA]
 
