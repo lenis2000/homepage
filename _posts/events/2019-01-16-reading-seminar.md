@@ -60,7 +60,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. February 22, 2019
 
-    *TBA* - Proof of Edrei-Voiculescu theorem
+    *Leo Petrov* - Idea of proof of Edrei-Voiculescu theorem
     <br>
     [arXiv:1109.1412]
 
