@@ -29,7 +29,7 @@ redirect_from: /statement
         
         <h3 class="mt-3 mb-3"><a href="{{ site.storage_url }}/research_files/Petrov_research_teaching_statement_Jun2018.pdf">Research and Teaching Statement</a></h3>
 
-        <h3 class="mt-5"><a name="preprints">Preprints (completed at UVA)</a></h3>
+        <h3 class="mt-5"><a name="preprints">Preprints</a></h3>
         <hr>
     
         <ol class="my-ul-zebra">
@@ -64,14 +64,10 @@ redirect_from: /statement
         <hr>
 
         <ol reversed class="my-ul-zebra">
-        {% assign post_counter = 1%}
-        <h3 class="mt-4"><a name="published">Completed at UVA</a></h3>
         {% for post in site.posts %}
         {% if post.categories contains "paper" %}
     
           <li class="mb-1" style="padding:6px">
-            
-            {% assign post_counter = post_counter | plus: 1 %}
 
             {% if post.coauthors %}(with {% for coa in post.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
@@ -89,10 +85,6 @@ redirect_from: /statement
                 {% endif %}
             </details>{% endunless %}
           </li>
-        
-        {% if post_counter == 10 %}
-        <h3 class="mt-4"><a name="published">Completed before joining UVA</a></h3>
-        {% endif %}
           
         {% endif %}
         {% endfor %}
