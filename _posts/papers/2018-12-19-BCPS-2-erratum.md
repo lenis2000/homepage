@@ -14,6 +14,9 @@ published: true
 show-date: true
 no-abstract: true
 pdf: erratum_1407.pdf
+arXiv: 1407.8534 [math-ph]
+journal-ref: Comm. Math. Phys. 339 (2015), no. 3, 1167–1245
+journal-web: 'https://link.springer.com/article/10.1007%2Fs00220-015-2424-7'
 post-pdf: true
 ---
 
