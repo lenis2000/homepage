@@ -20,3 +20,4 @@ journal-web: 'https://link.springer.com/article/10.1007%2Fs00220-015-2424-7'
 post-pdf: true
 ---
 
+<a href="{{site.storage_url}}/research_files/Petrov-publ/erratum_1407.pdf">PDF</a>
