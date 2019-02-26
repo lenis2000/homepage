@@ -71,7 +71,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 8, 2019
 
-    *Joseph Eisner* - Irreducible factor representations of $U(\infty)$
+    *Joseph Eisner* - Characters and factor representations
     <br>
     [TBA]
 
