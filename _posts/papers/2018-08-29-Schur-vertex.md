@@ -13,8 +13,8 @@ published: true
 # journal-ref:
 # journal-web:
 # more-text:
-image: __STORAGE_URL__/img/papers/DGCG.png
-image-alt: Limit shapes in the discrete model interpolating out from the geometric corner growth
+image: __STORAGE_URL__/img/papers/cont_TASEP_phase_transition.png
+image-alt: Emergence of a discontinuity of the height function at a slowdown
 show-date: true
 pdf: 29-publ-petrov-uva.pdf
 ---
