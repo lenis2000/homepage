@@ -71,30 +71,29 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 8, 2019
 
-    *Joseph Eisner* - Characters and factor representations
+    *Joseph Eisner* - Characters and von Neumman factor representations. GNS construction
     <br>
-    [TBA]
 
 3. March 22, 2019
 
-    *TBA*. Future possible topics include (1) $q$-analogs; (2) splines and random matrices; (3) determinantal point processes; (4) Markov dynamics on Gibbs measures; (5) analogous picture for the infinite symmetric group; (6) something else
+    *Joseph Eisner?* - TBA
 
 3. (March 29, 2019)
 
-    *TBA*
+    *TBA* - Pascal triangle and its boundary 1
 
 3. April 5, 2019
 
-    *TBA*
+    *TBA* - Pascal triangle and its boundary 2
 
 3. April 12, 2019
 
-    *TBA*
+    *TBA* - Dynamics on Pascal triangle
 
 3. April 19, 2019
 
-    *TBA*
+    *TBA* - Graph boundaries and irreducible characters of symmetric and unitary groups 1
 
 3. April 26, 2019
 
-    *TBA*
+    *TBA* - Graph boundaries and irreducible characters of symmetric and unitary groups 2
