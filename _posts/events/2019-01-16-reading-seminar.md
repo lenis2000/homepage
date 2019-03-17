@@ -76,7 +76,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 22, 2019
 
-    *TBA* - Pascal triangle and its boundary 1
+    *Edith Zhang* - Pascal triangle as a branching graph
     <br>
     [[Kerov, "Combinatorial examples in the theory of AF-algebras"](https://link.springer.com/article/10.1007%2FBF01480687)],
     [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
