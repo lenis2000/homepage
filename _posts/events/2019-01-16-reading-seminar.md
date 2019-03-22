@@ -42,7 +42,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. February 1, 2019
 
-    *George Seelinger* - <a href="https://ghseeli.github.io/grad-school-writings/presentations/two-elementary-examples-of-extreme-characters-of-u-infty.pdf">Extreme characters of $U(\infty)$: definition and two elementary examples</a>
+    *George Seelinger* - Extreme characters of $U(\infty)$: definition and two elementary examples [<a href="https://ghseeli.github.io/grad-school-writings/presentations/two-elementary-examples-of-extreme-characters-of-u-infty.pdf">PDF notes</a>]
     <br>
     [for example, section 4.1.10 in [these draft lecture notes](https://d3m0khvr0ybm92.cloudfront.net/courses/7382F12/LectureNotes.pdf)]
 
@@ -76,7 +76,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 22, 2019
 
-    *Axel Saenz* - Pascal triangle as a branching graph [[notes]]({{site.storage_url//courses/integrable_seminar/Axel-Pascal-notes.pdf}}) 
+    *Axel Saenz* - Pascal triangle as a branching graph [[PDF notes]]({{site.storage_url}}/courses/integrable_seminar/Axel-Pascal-notes.pdf) 
     <br>
     [[Kerov, "Combinatorial examples in the theory of AF-algebras"](https://link.springer.com/article/10.1007%2FBF01480687)],
     [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
