@@ -86,31 +86,28 @@ The schedule is subject to change as we progress with the topics.
 
     *Arun Kannan* - Diffusions from dynamics on the Pascal triangle
     <br>
-    [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
-    [these draft lecture notes](https://d3m0khvr0ybm92.cloudfront.net/courses/7382F12/LectureNotes.pdf),
-    [[Kerov, "Combinatorial examples in the theory of AF-algebras"](https://link.springer.com/article/10.1007%2FBF01480687)],
-    [S. Kerov, The boundary of Young lattice and random Young tableaux, DIMACS Ser. Discr. Math. Theor. Comp. Sci. 24. Amer. Math. Soc. Providence, RI, 1996, 133–158]
+    [[arXiv:0706.1034](https://arxiv.org/pdf/0706.1034.pdf), section 2],
+    
 
 3. April 5, 2019
 
-    *TBA* - Diffusions from dynamics on the Pascal triangle
+    *TBA* - 
     <br>
-    [[arXiv:0706.1034](https://arxiv.org/pdf/0706.1034.pdf), section 2]
+    [S. Kerov, The boundary of Young lattice and random Young tableaux, DIMACS Ser. Discr. Math. Theor. Comp. Sci. 24. Amer. Math. Soc. Providence, RI, 1996, 133–158],
+    [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
 
 
 3. April 12, 2019
 
-    *TBA* - Graph boundaries and irreducible characters of symmetric and unitary groups 1
+    *TBA* - 
     <br>
-    [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"] or
-    [[arXiv:q-alg/9703037](https://arxiv.org/abs/q-alg/9703037)] 
+    
 
 3. April 19, 2019
 
-    *TBA* - Graph boundaries and irreducible characters of symmetric and unitary groups 2
+    *TBA* - 
     <br>
-    [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"] or
-    [[arXiv:q-alg/9703037](https://arxiv.org/abs/q-alg/9703037)] 
+    
 
 3. April 26, 2019
 
