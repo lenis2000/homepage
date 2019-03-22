@@ -76,7 +76,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 22, 2019
 
-    *Axel Saenz* - Pascal triangle as a branching graph
+    *Axel Saenz* - Pascal triangle as a branching graph [[notes]]({{site.storage_url//courses/integrable_seminar/Axel-Pascal-notes.pdf}}) 
     <br>
     [[Kerov, "Combinatorial examples in the theory of AF-algebras"](https://link.springer.com/article/10.1007%2FBF01480687)],
     [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
@@ -84,7 +84,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. March 29, 2019
 
-    *TBA* - Pascal triangle and its boundary 2
+    *Arun Kannan* - Diffusions from dynamics on the Pascal triangle
     <br>
     [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
     [these draft lecture notes](https://d3m0khvr0ybm92.cloudfront.net/courses/7382F12/LectureNotes.pdf),
