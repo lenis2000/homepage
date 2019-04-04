@@ -91,11 +91,9 @@ The schedule is subject to change as we progress with the topics.
 
 3. April 5, 2019
 
-    *TBA* - 
+    No meeting
     <br>
-    [S. Kerov, The boundary of Young lattice and random Young tableaux, DIMACS Ser. Discr. Math. Theor. Comp. Sci. 24. Amer. Math. Soc. Providence, RI, 1996, 133–158],
-    [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"],
-
+    
 
 3. April 12, 2019
 
