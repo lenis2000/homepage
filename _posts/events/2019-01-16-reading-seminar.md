@@ -86,7 +86,7 @@ The schedule is subject to change as we progress with the topics.
 
     *Arun Kannan* - Diffusions from dynamics on the Pascal triangle
     <br>
-    [[arXiv:0706.1034](https://arxiv.org/pdf/0706.1034.pdf), section 2],
+    [[arXiv:0706.1034](https://arxiv.org/pdf/0706.1034.pdf), section 2]
     
 
 3. April 5, 2019
@@ -97,8 +97,9 @@ The schedule is subject to change as we progress with the topics.
 
 3. April 12, 2019
 
-    *TBA* - 
+    *TBA* - A q-analogue of de Finetti's theorem
     <br>
+    [[arXiv:0905.0367](https://arxiv.org/pdf/0905.0367.pdf)]
     
 
 3. April 19, 2019
