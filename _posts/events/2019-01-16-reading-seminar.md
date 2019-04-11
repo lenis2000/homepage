@@ -97,7 +97,7 @@ The schedule is subject to change as we progress with the topics.
 
 3. April 12, 2019
 
-    *TBA* - A q-analogue of de Finetti's theorem
+    *George Seelinger* - A q-analogue of de Finetti's theorem
     <br>
     [[arXiv:0905.0367](https://arxiv.org/pdf/0905.0367.pdf)]
     
