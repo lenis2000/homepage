@@ -104,8 +104,9 @@ The schedule is subject to change as we progress with the topics.
 
 3. April 19, 2019
 
-    *TBA* - 
+    *Liron Speyer* - Young graph and its boundary
     <br>
+    [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"]
     
 
 3. April 26, 2019
