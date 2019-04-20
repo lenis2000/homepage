@@ -111,4 +111,6 @@ The schedule is subject to change as we progress with the topics.
 
 3. April 26, 2019
 
-    *TBA* 
+    *Joseph Eisner* - Construction of extreme representations of the infinite symmetric group
+    <br>
+    Chapter 10, [A. Borodin, G. Olsahnski "Representations of the Infinite Symmetric Group"]
