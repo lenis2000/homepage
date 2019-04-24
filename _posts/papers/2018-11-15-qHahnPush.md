@@ -8,9 +8,9 @@ coauthors:
     web: "http://www.brandeis.edu/facultyguide/person.html?emplid=6dab03864a2fd23f5d5a08280ff66a845ebc8fa5"
 arXiv: 1811.06475 [math.PR]
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-ref:
+journal-ref: Intern. Math. Research Notices, to appear
 # journal-web:
 # more-text:
 image: __STORAGE_URL__/img/papers/qHahnPush.png
