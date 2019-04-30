@@ -8,9 +8,9 @@ coauthors:
     web: http://faculty.virginia.edu/saenz/
 arXiv: 1808.09855 [math.PR]
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-ref:
+journal-ref: Commun. Math. Phys., to appear
 # journal-web:
 # more-text:
 image: __STORAGE_URL__/img/papers/cont_TASEP_phase_transition.png
