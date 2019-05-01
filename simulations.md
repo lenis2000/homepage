@@ -21,9 +21,13 @@ nav_weight: 19
 {% assign simss = site.simulations | sort: "date" %}
 
 <ul>
-{% for item in simss reversed limit:5 %}
+{% assign counter = 0 %}
+{% for item in simss reversed %}
   {% if item.head_page != true %}
+  {% assign counter = counter | plus:1 %}
+  {% if counter < 5 %}
     <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
+  {% endif %}
   {% endif %}
 {% endfor %}
 </ul>
@@ -35,7 +39,7 @@ nav_weight: 19
 
 <!-- - ##### <a href="{{site.url}}/simulations/model/S6V/">Stochastic vertex models</a> -->
 - ##### <a href="{{site.url}}/simulations/model/TASEPs/">TASEP-like systems</a>
-- ##### more categories to come soon
+- ##### <a href="{{site.url}}/simulations/model/lozenge_tilings/">Lozenge tilings</a>
 
 ---
 

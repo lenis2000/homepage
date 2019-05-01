@@ -43,7 +43,7 @@
     {%for res in page.results%}
       <li>
         <h5>
-        {{res.title}}{%if res.raw!=null%} &bull; (<a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">data: {{res.raw-size}}</a>){%endif%}{%if res.image!=null%} &bull; (<a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}">image: {{res.image-size}}</a>)
+        {{res.title}}{%if res.raw!=null%} &bull; (<a href="{{res.raw | replace: '__STORAGE_URL__', site.storage_url}}">data: {{res.raw-size}}</a>){%endif%}{%if res.image!=null%} &bull; (<a href="{{ res.image | replace: '__STORAGE_URL__', site.storage_url }}">graphics: {{res.image-size}}</a>)
         {%endif%}
         </h5>
         {{res.params}}
