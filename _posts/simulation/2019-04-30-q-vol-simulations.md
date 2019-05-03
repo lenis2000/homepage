@@ -5,7 +5,7 @@ comments: false
 categories: event math blog quick_link
 published: true
 image: __STORAGE_URL__/simulations/2019-05-qvol/qvol_095_50_middle.png
-image-alt: 
+image-alt: A picture of the simulation mid-way
 ---
 
 <div><a href="{{site.url}}/2019/04/q-vol-simulations//">Simulations of the $q$ parameter reversal in $q^{volume}$ lozenge tilings of the hexagon</a></div>
