@@ -1,7 +1,7 @@
 ---
 title: Mirroring deterministic cynamics on q-vol lozenge tilings inverting the parameter q
 model: lozenge_tilings
-date: 2019-04-30 10:00:00
+date: 2019-05-02 10:00:00
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/simulations/tree/master/2019-05-01-qvol-sampler'
