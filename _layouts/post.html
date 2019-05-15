@@ -7,7 +7,7 @@ layout: default
 {% if page.show-date %}<h3 class="mb-4">{{ page.date |  date: "%Y/%m/%d" }}</h3>{% endif %}
 
 
-{% if page.coauthors %}(with {% for coa in page.coauthors %}<a href="{{coa.web}}">{{coa.name}}</a>{% unless forloop.last %}, {% endunless %}{% endfor %})<br>{% endif %}
+{% if page.coauthors %}(with {% for coa in page.coauthors %}{% if coa.noweb != true %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %})<br>{% endif %}
 {%if page.journal-web%}<a href="{{page.journal-web}}" target="_blank">{%endif%}
   <i>{{page.journal-ref}}</i>{%if page.journal-web%}</a>{%endif%}{% if page.journal-ref and page.arXiv %} &bull; {% endif %}
 {% if page.arXiv %}<a href="https://arxiv.org/abs/{{page.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{page.arXiv}}</a>{% endif %}
