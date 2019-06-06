@@ -56,6 +56,7 @@ nav_weight: 2
           <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
         {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>){% endif %}
+        {% if post.erratum %}&bull; (see also erratum <a href="#errata">below</a>){% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
             Abstract

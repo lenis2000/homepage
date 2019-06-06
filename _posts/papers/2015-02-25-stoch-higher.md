@@ -17,6 +17,7 @@ journal-web: 'https://link.springer.com/article/10.1007/s00220-015-2479-5'
 #image-alt: 
 pdf: 18-publ-petrov-uva.pdf
 post-pdf: true
+erratum: true
 ---
 
 We introduce a four-parameter family of interacting particle systems on the
