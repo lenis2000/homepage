@@ -10,7 +10,7 @@ arXiv: 1808.09855 [math.PR]
 comments: false
 categories: blog math paper
 published: true
-journal-ref: 'Commun. Math. Phys., online, DOI: 10.1007/s00220-019-03495-4'
+journal-ref: 'Commun. Math. Phys. (2019), online, DOI: 10.1007/s00220-019-03495-4'
 journal-web: 'https://link.springer.com/article/10.1007%2Fs00220-019-03495-4'
 # more-text:
 image: __STORAGE_URL__/img/papers/cont_TASEP_phase_transition.png
