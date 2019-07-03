@@ -30,7 +30,7 @@ $H(t_i)$ is the array of the values of the TASEP height function.
 
 ### Multitime distributions
 
-In addition to the dynamical simulation, we can generate joint pictures of the height 
+In addition to the dynamical simulation (the movie below), we can generate joint pictures of the height 
 function at different times. Here are the ones for TASEP:
 
 <img src="{{site.storage_url}}/simulations/2019-06-backTASEP/multi_TASEP.png" style="max-width:100%;max-height:800px;height:auto;width:auto;" alt="TASEP multitime">
