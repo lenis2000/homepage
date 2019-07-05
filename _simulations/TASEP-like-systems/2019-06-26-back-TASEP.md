@@ -22,12 +22,6 @@ papers:
 
 This is a simulation illustrating the main result from the paper in preparation [1].
 
-### Data file format
-
-The file contains Mathematica-readable array of the form
-$\{t_i,H(t_i)\}$, where $t_i$ are the timestamps, and 
-$H(t_i)$ is the array of the values of the TASEP height function.
-
 ### Multitime distributions
 
 In addition to the dynamical simulation (the movie below), we can generate joint pictures of the height 
@@ -38,3 +32,9 @@ function at different times. Here are the ones for TASEP:
 And for the backwards dynamics:
 
 <img src="{{site.storage_url}}/simulations/2019-06-backTASEP/multi_BHP.png" style="max-width:100%;max-height:800px;height:auto;width:auto;" alt="Backwards dynamics multitime">
+
+### Data file format for the movie
+
+The file contains Mathematica-readable array of the form
+$\{t_i,H(t_i)\}$, where $t_i$ are the timestamps, and 
+$H(t_i)$ is the array of the values of the TASEP height function.
