@@ -4,7 +4,7 @@ title: Mapping TASEP back in time
 coauthors:
   - name: Axel Saenz
     web: http://faculty.virginia.edu/saenz/
-arXiv: 1907.???? [math.PR]
+arXiv: 1907.09155 [math.PR]
 comments: false
 categories: blog math preprint
 published: true
