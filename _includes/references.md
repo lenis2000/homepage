@@ -30,3 +30,5 @@
 [ref28]: {{ site.url }}/2018/04/LPP/
 [ref29]: {{ site.url }}/2018/08/Schur-vertex/
 [ref30]: {{ site.url }}/2018/11/qHahnPush/
+[ref31]: {{ site.url }}/2019/05/BMP_YB/
+[ref32]: {{ site.url }}/2019/07/backwards_TASEP/
