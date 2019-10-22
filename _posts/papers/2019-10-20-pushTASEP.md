@@ -1,7 +1,7 @@
 ---
 layout: post
 title: PushTASEP in inhomogeneous space
-arXiv: arXiv:1910.08994 [math.PR]
+arXiv: 1910.08994 [math.PR]
 comments: false
 categories: blog math preprint
 published: true
