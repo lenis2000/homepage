@@ -11,7 +11,7 @@ categories: blog math paper
 published: true
 more-text: Full abstract
 show-date: true
-journal-ref: Ann. Probab., to appear
+journal-ref: Ann. Probab. (2019), Vol. 47, No. 5, 2686-2753.
 image: __STORAGE_URL__/img/papers/discrete-sine-universality.png
 image-alt: Noncolliding Bernoulli random walks
 pdf: 22-publ-petrov-uva-j.pdf
