@@ -2,6 +2,9 @@
 layout: post
 title: Parameter symmetry in perturbed GUE corners process and reflected drifted Brownian motions
 arXiv: 1912.??? [math.PR]
+coauthors: 
+  - name: Mikhail Tikhonov
+    web: http://mtikhonov.com/
 comments: false
 categories: blog math preprint
 published: true
