@@ -10,8 +10,8 @@ arXiv: 1811.06475 [math.PR]
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Intern. Math. Research Notices, to appear
-# journal-web:
+journal-ref: Intern. Math. Research Notices (2019),  rnz106
+journal-web: https://doi.org/10.1093/imrn/rnz106
 # more-text:
 image: __STORAGE_URL__/img/papers/qHahnPush.png
 image-alt: The q-Hahn PushTASEP
