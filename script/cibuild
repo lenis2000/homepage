@@ -21,6 +21,8 @@ mv ./_site/teaching/syll/Syllabus_2310_f16.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_3100_s17.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_3100_f18.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_7310_s19.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_7310_s20.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_3340_s20.pdf ./_site/teaching/
 rm -Rf _site/teaching/syll
 
 bundle exec htmlproofer ./_site --disable-external true
