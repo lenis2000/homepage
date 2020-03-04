@@ -2,7 +2,7 @@
 set -e # halt script on error
 
 # get fresh bib html file from GitHub, before the build
-git clone https://github.com/lenis2000/BiBTeX.git bib-repo && mv bib-repo/bib.html _includes/ && mv bib-repo/bib_bib.html _includes/ && mv bib-repo/petrov.html _includes/ && mv bib-repo/petrov_bib.html _includes/ && rm -Rf bib-repo 
+# git clone https://github.com/lenis2000/BiBTeX.git bib-repo && mv bib-repo/bib.html _includes/ && mv bib-repo/bib_bib.html _includes/ && mv bib-repo/petrov.html _includes/ && mv bib-repo/petrov_bib.html _includes/ && rm -Rf bib-repo 
 
 bundle exec jekyll build #build the website
 # find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.url}}/https\:\/\/lpetrov.cc/g'
