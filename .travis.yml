@@ -17,6 +17,7 @@ notifications:
   email:
     recipients:
       - lenia.petrov@gmail.com
+      - petrov@virginia.edu
     on_success: always
     on_failure: always
 
