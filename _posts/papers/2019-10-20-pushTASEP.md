@@ -11,7 +11,7 @@ published: true
 image: __STORAGE_URL__/img/papers/pushTASEP.png
 image-alt: Limit shapes in inhomogeneous PushTASEP
 show-date: true
-pdf: pushTASEP_preprint.pdf
+pdf: 33-publ-petrov-uva.pdf
 post-pdf: true
 ---
 
