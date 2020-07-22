@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Refined Cauchy identity for spin Hall-Littlewood symmetric rational functions
-arXiv: 2007.????? [math.CO]
+arXiv: 2007.10886 [math.CO]
 comments: false
 categories: blog math preprint
 published: true
