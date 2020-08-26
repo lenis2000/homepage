@@ -3,7 +3,7 @@ layout: post
 title: PushTASEP in inhomogeneous space
 arXiv: 1910.08994 [math.PR]
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
 journal-ref: Electronic Journal of Probability, to appear
 # journal-web: 
