@@ -5,7 +5,7 @@ arXiv: 1910.08994 [math.PR]
 comments: false
 categories: blog math preprint
 published: true
-# journal-ref: 
+journal-ref: Electronic Journal of Probability, to appear
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/pushTASEP.png
