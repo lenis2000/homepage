@@ -42,6 +42,7 @@ redirect_from: /statement
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
             {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
             &bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>)
+            {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
             {% unless post.no-abstract %}<details>
               <summary>
                 Abstract
@@ -75,6 +76,7 @@ redirect_from: /statement
               <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
             {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
             &bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>)
+            {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
             {% unless post.no-abstract %}<details>
               <summary>
                 Abstract
