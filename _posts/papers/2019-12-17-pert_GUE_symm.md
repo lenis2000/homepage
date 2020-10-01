@@ -6,9 +6,9 @@ coauthors:
   - name: Mikhail Tikhonov
     web: http://mtikhonov.com/
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-ref: 
+journal-ref: Journal of Statistical Physics, to appear.
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/pert_Dyson.png
