@@ -8,7 +8,7 @@ published: true
 more-text: Download pdf
 image: __STORAGE_URL__/research_files/img/beta-polymers.png
 image-alt: Conjectural orthogonality for N=2
-pdf-size: 10.4 MB
+pdf-size: 10.6 MB
 ---
 
 Surveys integrable random polymers (based on gamma / inverse gamma or beta distributed weights), and explains their connection to symmetric functions. Based on a [joint work with Matteo Mucciconi][ref36].
