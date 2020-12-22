@@ -8,7 +8,7 @@ comments: false
 categories: teaching
 published: true
 more-text: Course webpage
-web-course-github: https://publish.obsidian.md/particle-systems/
+web-course-external: https://publish.obsidian.md/particle-systems/
 no-page: true
 image: __STORAGE_URL__/img/papers/multi_BHP.png
 image-alt: Multitime distribution in the backwards Hammersley-type process
