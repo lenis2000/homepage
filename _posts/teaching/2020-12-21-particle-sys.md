@@ -3,6 +3,7 @@ layout: post
 title: 'MATH 7370 Probability Theory II: Particle Systems'
 inst: University of Virginia
 inst-url: http://math.virginia.edu/
+syllabus: https://publish.obsidian.md/particle-systems/Syllabus
 semester: Spring 2021
 comments: false
 categories: teaching
