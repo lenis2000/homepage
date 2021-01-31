@@ -43,7 +43,7 @@ nav_weight: 1
     <div class="list-group my-ul-zebra">
     {% assign quick-links-counter = 0 %}
     {% for post in site.posts %}
-    {% if post.categories contains "quick_link" and quick-links-counter < 6 %}
+    {% if post.categories contains "quick_link" and quick-links-counter < 1 %}
     {% assign quick-links-counter = quick-links-counter | plus:1 %}
 
 		<li class="list-group-item" style="padding:10px 17px">
