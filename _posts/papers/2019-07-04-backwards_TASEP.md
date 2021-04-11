@@ -6,9 +6,9 @@ coauthors:
     web: http://faculty.virginia.edu/saenz/
 arXiv: 1907.09155 [math.PR]
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-ref: 
+journal-ref: Probability Theory and Related Fields, to appear.
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/multi_BHP.png
