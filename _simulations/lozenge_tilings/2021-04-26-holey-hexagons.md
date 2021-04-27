@@ -11,7 +11,7 @@ results:
       Hexagon of size 100, hole size 15, shift 0.
     image: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/regular.png
     image-tn: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/regular-tn.png
-    image-size: 8.1 MB
+    image-size: 8.7 MB
     raw: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/output40.txt
     raw-size: 57 KB
   - title: Tiling with a skewed hole
@@ -19,7 +19,7 @@ results:
       Hexagon of size 100, hole size 15, shift 4.
     image: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/skewed.png
     image-tn: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/skewed-tn.png
-    image-size: 8.1 MB
+    image-size: 8.7 MB
     raw: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/outputX40.txt
     raw-size: 57 KB
   - title: Tiling with an even more skewed hole
@@ -27,7 +27,7 @@ results:
       Hexagon of size 100, hole size 15, shift 8.
     image: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/skewed-more.png
     image-tn: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/skewed-more-tn.png
-    image-size: 8.1 MB
+    image-size: 8.7 MB
     raw: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/outputXX40.txt
     raw-size: 57 KB
 ---
