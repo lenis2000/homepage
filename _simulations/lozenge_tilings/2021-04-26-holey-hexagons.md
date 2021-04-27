@@ -4,7 +4,7 @@ model: lozenge_tilings
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/Glauber_Simulation/tree/holey-hexagons'
-    txt: 'python code for simulations, simple Mathematica code for drawing'
+    txt: 'python code (Glauber2.py) for simulations, simple Mathematica code (Dynamic.nb) for drawing'
 results:
   - title: Tiling with a symmetric hole
     params: |
