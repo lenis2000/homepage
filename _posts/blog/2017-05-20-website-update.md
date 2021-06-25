@@ -34,7 +34,7 @@ which I am also building.
 ### Technical structure
 
 The source code is hosted on [GitHub](https://github.com/lenis2000/homepage),
-the website is built by [Travis CI](https://travis-ci.org/lenis2000/homepage),
+the website is built by Github Actions,
 and the resulting website is hosted on Amazon S3.
 The resources pertaining to the website
 (images, graphs, etc.) are stored in a separate S3 bucket
