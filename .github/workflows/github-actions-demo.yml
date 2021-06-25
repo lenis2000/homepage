@@ -1,3 +1,6 @@
+name: Build and deploy Jekyll site
+on: [push]
+
 jobs:
   jekyll:
     name: Build and deploy Jekyll site
