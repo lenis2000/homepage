@@ -22,4 +22,4 @@ jobs:
 
     - name: Sync output to S3
       run: |
-        aws s3 sync ./_site/ s3://my-s3-bucket --delete
+        aws s3 sync ./_site/ s3://lpetrov.cc --delete
