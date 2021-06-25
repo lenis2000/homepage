@@ -5,6 +5,7 @@ jobs:
   jekyll:
     name: Build and deploy Jekyll site
     runs-on: ubuntu-latest
+    environment: main
 
     steps:
     - name: Checkout
