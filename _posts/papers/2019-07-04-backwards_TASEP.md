@@ -8,8 +8,8 @@ arXiv: 1907.09155 [math.PR]
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Probability Theory and Related Fields, to appear.
-# journal-web: 
+journal-ref: Probability Theory and Related Fields, online first (2021).
+journal-web: https://doi.org/10.1007/s00440-021-01074-0
 # more-text:
 image: __STORAGE_URL__/img/papers/multi_BHP.png
 image-alt: Multitime distribution in the backwards Hammersley-type process
