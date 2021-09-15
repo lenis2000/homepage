@@ -5,8 +5,8 @@ arXiv: 2007.10886 [math.CO]
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Journal of Combinatorial Theory Ser. A, to appear
-# journal-web: 
+journal-ref: Journal of Combinatorial Theory Ser. A, vol. 184 (2021), 105519
+journal-web: https://doi.org/10.1016/j.jcta.2021.105519
 # more-text:
 image: __STORAGE_URL__/img/papers/refined_sHL.png
 image-alt: Two lattices with equal partition functions. This leads to a refined Cauchy identity
