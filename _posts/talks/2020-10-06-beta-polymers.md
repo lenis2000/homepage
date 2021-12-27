@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Radnom polymers and symmetric functions
+title: Random polymers and symmetric functions
 comments: false
 categories: blog math talk
 talk-url: __STORAGE_URL__/research_files/talks/beta-polymers.pdf
