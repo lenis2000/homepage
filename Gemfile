@@ -5,7 +5,6 @@ source 'https://rubygems.org'
 
 gem "jekyll", "3.8.6"
 gem "jekyll-paginate"
-gem "html-proofer"
 gem 's3_website'
 gem 'jekyll-feed'
 gem 'jekyll-redirect-from'
