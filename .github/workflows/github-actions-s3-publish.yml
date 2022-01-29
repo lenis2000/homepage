@@ -23,10 +23,10 @@ jobs:
 
     - name: Auxiliary actions
       run: |
-        # sudo git clone https://github.com/lenis2000/CV.git ./_site/research/CV
-        # sudo mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
-        # sudo mv ./_site/research/CV/__petrovCV__short.pdf ./_site/research/petrovCVbrief.pdf
-        # sudo rm -Rf _site/research/CV
+        sudo git clone https://github.com/lenis2000/CV.git ./_site/research/CV
+        sudo mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
+        sudo mv ./_site/research/CV/__petrovCV__short.pdf ./_site/research/petrovCVbrief.pdf
+        sudo rm -Rf _site/research/CV
 
         # get fresh githubbed syllabi from GitHub
         sudo git clone https://github.com/lenis2000/Syllabi.git ./_site/teaching/syll
