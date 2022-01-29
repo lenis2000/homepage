@@ -10,7 +10,7 @@ categories: paper math blog
 published: true
 more-text: Full abstract
 show-date: true
-journal-ref: Moscow Mathematical Journal, 14 (2014) no.&nbsp;1, 121-160
+journal-ref: Moscow Mathematical Journal, 14 (2014) no. 1, 121-160
 journal-web: http://www.mathjournals.org/mmj/2014-014-001/2014-014-001-006.html
 pdf: 11-publ-petrov.pdf
 ---
