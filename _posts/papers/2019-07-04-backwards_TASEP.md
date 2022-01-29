@@ -2,6 +2,7 @@
 layout: post
 title: Mapping TASEP back in time
 coauthors:
+  - name: Leonid Petrov
   - name: Axel Saenz
     web: http://faculty.virginia.edu/saenz/
 arXiv: 1907.09155 [math.PR]

@@ -2,6 +2,8 @@
 layout: post
 title: 'The Boundary of the Gelfand-Tsetlin Graph: New Proof of Borodin-Olshanski’s Formula, and its q-analogue'
 arXiv: 1208.3443 [math.CO]
+coauthors:
+  - name: Leonid Petrov
 date: 2012-08-16 02:00:00
 comments: false
 categories: paper math blog

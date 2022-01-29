@@ -4,6 +4,7 @@ title: Stochastic higher spin vertex models on the line
 coauthors:
   - name: Ivan Corwin
     web: 'http://www.math.columbia.edu/~corwin/' 
+  - name: Leonid Petrov
 arXiv: 1502.07374 [math.PR]
 date: 2015-02-25 02:00:00
 comments: false

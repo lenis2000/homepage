@@ -6,6 +6,7 @@ coauthors:
     web: 'http://math.mit.edu/directory/profile.php?pid=1222'
   - name: Ivan Corwin
     web: 'http://www.math.columbia.edu/~corwin/' 
+  - name: Leonid Petrov
   - name: Tomohiro Sasamoto
     web: 'http://www.math.s.chiba-u.ac.jp/~sasamoto/index_e.html'
 comments: false

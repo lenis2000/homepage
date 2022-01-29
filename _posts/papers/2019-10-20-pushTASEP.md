@@ -5,6 +5,8 @@ arXiv: 1910.08994 [math.PR]
 comments: false
 categories: blog math paper
 published: true
+coauthors:
+  - name: Leonid Petrov
 journal-ref: Electronic Journal of Probability, vol. 25 (2020), paper no. 114.
 journal-web: https://doi.org/10.1214/20-EJP517
 # more-text:

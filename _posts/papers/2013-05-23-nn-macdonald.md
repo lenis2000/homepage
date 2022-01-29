@@ -4,6 +4,7 @@ title:  Nearest neighbor Markov dynamics on Macdonald processes
 coauthors:
   - name: Alexei Borodin
     web: http://math.mit.edu/directory/profile.php?pid=1222
+  - name: Leonid Petrov
 arXiv: 1305.5501 [math.PR]
 date: 2013-05-23 02:00:00
 comments: false

@@ -5,6 +5,7 @@ title: 'Coarsening model on <script type="math/tex">\mathbb{Z}^{d}</script> with
 coauthors:
   - name: Michael Damron
     web: http://people.math.gatech.edu/~mdamron6/
+  - name: Leonid Petrov
   - name: David Sivakoff
     web: http://www.stat.osu.edu/~dsivakoff/index/Home.html
 arXiv: 1708.05806 [math.PR]

@@ -3,6 +3,8 @@ layout: post
 title: Refined Cauchy identity for spin Hall-Littlewood symmetric rational functions
 arXiv: 2007.10886 [math.CO]
 comments: false
+coauthors:
+  - name: Leonid Petrov
 categories: blog math paper
 published: true
 journal-ref: Journal of Combinatorial Theory Ser. A, vol. 184 (2021), 105519

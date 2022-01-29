@@ -4,6 +4,7 @@ title: 'Lectures on Integrable probability: Stochastic vertex models and symmetr
 coauthors:
   - name: Alexei Borodin
     web: http://math.mit.edu/directory/profile.php?pid=1222
+  - name: Leonid Petrov
 arXiv: 1605.01349 [math.PR]
 date: 2016-05-04 02:00:00
 comments: false

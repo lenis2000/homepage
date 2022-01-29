@@ -4,6 +4,7 @@ title: Generalizations of TASEP in discrete and continuous inhomogeneous space
 coauthors: 
   - name: Alisa Knizel
     web: https://sites.google.com/view/alisaknizel/home
+  - name: Leonid Petrov
   - name: Axel Saenz
     web: http://faculty.virginia.edu/saenz/
 arXiv: 1808.09855 [math.PR]

@@ -1,6 +1,8 @@
 ---
 layout: post
 title: Limit Behavior of Certain Random Walks on Strict Partitions
+coauthors:
+  - name: Leonid Petrov
 arXiv:
 date: 2009-04-01 12:00:00
 comments: false

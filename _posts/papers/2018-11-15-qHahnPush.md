@@ -6,6 +6,7 @@ coauthors:
     web: http://www.math.columbia.edu/~corwin/
   - name: Konstantin Matveev
     web: "https://math.rutgers.edu/component/comprofiler/userprofile/km1346"
+  - name: Leonid Petrov
 arXiv: 1811.06475 [math.PR]
 comments: false
 categories: blog math paper

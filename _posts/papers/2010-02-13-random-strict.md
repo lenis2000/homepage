@@ -1,6 +1,8 @@
 ---
 layout: post
 title: Random Strict Partitions and Determinantal Point Processes
+coauthors:
+  - name: Leonid Petrov
 arXiv: 1002.2714 [math.PR]
 date: 2010-02-13 02:00:00
 comments: false

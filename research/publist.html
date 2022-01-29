@@ -1,0 +1,19 @@
+---
+permalink: /publist/
+---
+
+<pre>\begin{etaremune}
+\renewcommand{\labelenumi}{[\theenumi]}
+{% for post in site.posts %}
+{% if post.categories contains "preprint" or post.categories contains "paper" %}
+\item {% if post.categories contains "preprint" %}($*$){% endif%}
+{% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}
+<b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
+{% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+{% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>){% endif %}
+
+{% endif %}
+{% endfor %}
+
+</pre>
+

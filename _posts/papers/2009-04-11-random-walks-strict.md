@@ -2,6 +2,8 @@
 layout: post
 title: Random Walks on Strict Partitions
 arXiv: 0904.1823 [math.PR]
+coauthors:
+  - name: Leonid Petrov
 date: 2009-04-11 02:00:00
 comments: false
 categories: paper math blog
