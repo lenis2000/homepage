@@ -25,4 +25,4 @@ also sets cookies so that you see it only once.
 
 <!-- [University of Virginia website privacy information](http://www.virginia.edu/siteinfo/privacy) -->
 
-For questions - <a href="mailto:lenia.petrov@gmail.com">lenia.petrov@gmail.com</a>
+For questions - email <a href="mailto:lenia.petrov@gmail.com">lenia.petrov@gmail.com</a>
