@@ -12,7 +12,7 @@ categories: paper math blog
 published: true
 more-text: Full abstract
 show-date: true
-journal-ref: 'Comm. Math. Phys. 343 (2016), no. 2, 651-700'
+journal-ref: 'Communications in Mathematical Physics 343 (2016), no. 2, 651-700'
 journal-web: 'https://link.springer.com/article/10.1007/s00220-015-2479-5'
 #image: __STORAGE_URL__/img/papers/
 #image-alt: 
