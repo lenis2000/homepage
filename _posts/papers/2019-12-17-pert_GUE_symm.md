@@ -9,7 +9,7 @@ coauthors:
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Journal of Statistical Physics, 181 (2020), 1996–2010.
+journal-ref: Journal of Statistical Physics, 181 (2020), 1996–2010
 journal-web: https://doi.org/10.1007/s10955-020-02652-7
 # more-text:
 image: __STORAGE_URL__/img/papers/pert_Dyson.png
