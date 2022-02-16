@@ -9,7 +9,7 @@ arXiv: 1907.09155 [math.PR]
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Probability Theory and Related Fields, online first (2021)
+journal-ref: Probability Theory and Related Fields, 182, pages 481–530 (2022)
 journal-web: https://doi.org/10.1007/s00440-021-01074-0
 # more-text:
 image: __STORAGE_URL__/img/papers/multi_BHP.png
