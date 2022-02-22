@@ -12,7 +12,7 @@ date: 2017-08-18 02:00:00
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Communications in Mathematical Physics 362 (2018), no. 1, 185–217
+journal-ref: Communications in Mathematical Physics 362 (2018), no. 1, 185-217
 journal-web: https://doi.org/10.1007/s00220-018-3180-2
 more-text: Full abstract
 image: __STORAGE_URL__/img/papers/z-coarsening-plot.png
