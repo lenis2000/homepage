@@ -10,8 +10,8 @@ description: Leonid Petrov. Integrable Probability
 timezone: America/New_York
 
 markdown: kramdown
-kramdown:
-  math_engine: nil
+# kramdown:
+  # math_engine: nil
 
 highlighter: rouge
 
