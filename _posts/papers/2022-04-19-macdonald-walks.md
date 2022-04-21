@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Noncolliding Macdonald walks with an absorbing wall"
-arXiv: 2204.????? [math.PR]
+arXiv: 2204.09206 [math.PR]
 coauthors:
   - name: Leonid Petrov
 comments: false
