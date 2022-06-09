@@ -18,6 +18,7 @@ image: __STORAGE_URL__/img/papers/cont_TASEP_phase_transition.png
 image-alt: Emergence of a discontinuity of the height function at a slowdown
 show-date: true
 pdf: 29-publ-petrov-uva.pdf
+source: 29source.txt
 ---
 
 We investigate a rich new class of exactly solvable particle systems generalizing the Totally Asymmetric Simple Exclusion Process (TASEP). Our particle systems can be thought of as new exactly solvable examples of tandem queues, directed first- or last passage percolation models, or Robinson-Schensted-Knuth type systems with random input. One of the novel features of the particle systems is the presence of spatial inhomogeneity which can lead to the formation of traffic jams.
