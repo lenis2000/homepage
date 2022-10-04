@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 'MATH 7370 Probability Theory II: Particle Systems'
+title: 'MATH 7370 &bull; Probability Theory II: Particle Systems'
 inst: University of Virginia
 inst-url: http://math.virginia.edu/
 syllabus: https://github.com/lenis2000/HTML_ParticleSysS21/blob/main/Syllabus.md
