@@ -5,9 +5,9 @@ arXiv: 2204.09206 [math.PR]
 coauthors:
   - name: Leonid Petrov
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-web: 
+journal-web: SIGMA, to appear
 # more-text:
 image: __STORAGE_URL__/img/papers/mac_noncoll.png
 image-alt: Noncolliding walks, lozenge tilings, and plane partitions
