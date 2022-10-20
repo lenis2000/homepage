@@ -7,7 +7,8 @@ coauthors:
 comments: false
 categories: blog math paper
 published: true
-journal-web: SIGMA, to appear
+journal-web: https://www.emis.de/journals/SIGMA/2022/079/
+journal-ref: SIGMA 18 (2022), 079, 21 pages
 # more-text:
 image: __STORAGE_URL__/img/papers/mac_noncoll.png
 image-alt: Noncolliding walks, lozenge tilings, and plane partitions
