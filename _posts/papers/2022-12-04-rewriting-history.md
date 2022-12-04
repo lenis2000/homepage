@@ -12,13 +12,15 @@ published: true
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
-image-alt: 2-car systems with different cars in front
+image-alt: |
+  Two-car systems with cars of different speeds. In every picture, the blue and the yellow trajectories are of the faster and the slower cars, respectively. <br><b>Top</b>: cars start at neighboring locations, and the trajectory of the second car, $x_2(t)$, is the same in distribution. 
+  <br><b>Bottom</b>: cars start at locations away from each other, and the distributions of the trajectories of the second car are different in the left and the central pictures. However, when we randomize the initial condition, the distribution of the second car in the slow-fast system with the randomized initial condition is the same as in the fast-slow system on the left.
 show-date: true
 pdf: 41-rewriting.pdf
 post-pdf: true
 ---
 
-Many integrable stochastic particle systems in one space dimension (such as TASEP - Totally Asymmetric Simple Exclusion Process - and its $q$-deformation, the $q$-TASEP) remain integrable if we equip each particle with its own speed parameter. In this work, we present intertwining relations between Markov transition operators of particle systems which differ by a permutation of the speed parameters. These relations generalize our previous works [[1]]({{site.url}}/2019/07/backwards_TASEP/), [[2]]({{site.url}}/2019/12/symm_IPS/), but here we employ a novel approach based on the Yang-Baxter equation for the higher spin stochastic six vertex model. Our intertwiners are Markov transition operators, which leads to interesting probabilistic consequences.
+Many integrable stochastic particle systems in one space dimension (such as TASEP --- Totally Asymmetric Simple Exclusion Process --- and its $q$-deformation, the $q$-TASEP) remain integrable if we equip each particle with its own speed parameter. In this work, we present intertwining relations between Markov transition operators of particle systems which differ by a permutation of the speed parameters. These relations generalize our previous works [[1]]({{site.url}}/2019/07/backwards_TASEP/), [[2]]({{site.url}}/2019/12/symm_IPS/), but here we employ a novel approach based on the Yang-Baxter equation for the higher spin stochastic six vertex model. Our intertwiners are Markov transition operators, which leads to interesting probabilistic consequences.
 
 First, we obtain a new Lax-type differential equation for the Markov transition semigroups of homogeneous, continuous-time versions of our particle systems. Our Lax equation encodes the time evolution of multipoint observables of the $q$-TASEP and TASEP in a unified way, which may be of interest for the asymptotic analysis of multipoint observables of these systems.
 
