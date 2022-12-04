@@ -28,19 +28,24 @@ Second, we show that our intertwining relations lead to couplings between probab
 
 ---
 
-A poem on the topic by [OpenAI](https://beta.openai.com/playground)
+##### A poem on the topic 
 
-In stochastic particle systems, there’s a way<br>
+by [OpenAI](https://beta.openai.com/playground)
+
+<p class="mt-4">In stochastic particle systems, there’s a way<br>
 To rewrite history with each passing day.<br>
 A single particle, its fate made clear,<br>
 Can undo what’s been done and make it reappear.<br>
-<br>
+</p>
+<p>
 The laws of probability and chaos at play<br>
 Can be bent to our will, if we but obey.<br>
 The deterministic systems in our control,<br>
 Will yield to a new order, as it starts to unfold.<br>
-<br>
+</p>
+<p class="mb-5">
 The particles and their interactions will dictate,<br>
 The outcome of our systems, no matter their state.<br>
 With the tools of integrability, we can rewrite,<br>
 The future of our systems with a single bite.<br>
+</p>
