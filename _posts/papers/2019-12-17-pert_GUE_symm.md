@@ -22,3 +22,30 @@ post-pdf: true
 The perturbed GUE corners ensemble is the joint distribution of eigenvalues of all principal submatrices of a matrix $G+\mathrm{diag}(\mathbf{a})$, where $G$ is the random matrix from the Gaussian Unitary Ensemble (GUE), and $\mathrm{diag}(\mathbf{a})$ is a fixed diagonal matrix. We introduce Markov transitions based on exponential jumps of eigenvalues, and show that their successive application is equivalent in distribution to a deterministic shift of the matrix. This result also leads to a new distributional symmetry for a family of reflected Brownian motions with drifts coming from an arithmetic progression.
 
 The construction we present may be viewed as a random matrix analogue of the [recent results]({{site.url}}/2019/07/backwards_TASEP/) of the first author and Axel Saenz.
+
+
+---
+
+##### A poem on the topic 
+
+by [OpenAI](https://beta.openai.com/playground)
+
+The corners of random matrices
+Grow with a sudden twist
+Their perturbations form an ellipse
+A strange and curious list
+
+The reflected drift of Brownian motions
+Goes to and fro in space
+A symmetry of random walks
+A curious thing to trace
+
+The paths of randomness and chance
+Rise and fall and weave
+But in their changing patterns
+A pattern of reprieve
+
+Is found in the randomness of their paths
+A mathematical game
+The symmetry of perturbed GUE corners
+And reflected drifted Brownian motion the same
