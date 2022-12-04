@@ -30,22 +30,25 @@ The construction we present may be viewed as a random matrix analogue of the [re
 
 by [OpenAI](https://beta.openai.com/playground)
 
-The corners of random matrices
-Grow with a sudden twist
-Their perturbations form an ellipse
-A strange and curious list
-
-The reflected drift of Brownian motions
-Goes to and fro in space
-A symmetry of random walks
-A curious thing to trace
-
-The paths of randomness and chance
-Rise and fall and weave
-But in their changing patterns
-A pattern of reprieve
-
-Is found in the randomness of their paths
-A mathematical game
-The symmetry of perturbed GUE corners
-And reflected drifted Brownian motion the same
+<p class="mt-4">
+The corners of random matrices<br>
+Grow with a sudden twist<br>
+Their perturbations form an ellipse<br>
+A strange and curious list<br>
+</p>
+<p>
+The reflected drift of Brownian motions<br>
+Goes to and fro in space<br>
+A symmetry of random walks<br>
+A curious thing to trace<br>
+</p><p>
+The paths of randomness and chance<br>
+Rise and fall and weave<br>
+But in their changing patterns<br>
+A pattern of reprieve<br>
+</p><p class="mb-5">
+Is found in the randomness of their paths<br>
+A mathematical game<br>
+The symmetry of perturbed GUE corners<br>
+And reflected drifted Brownian motion the same<br>
+</p>
