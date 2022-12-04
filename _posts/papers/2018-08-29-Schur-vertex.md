@@ -6,7 +6,7 @@ coauthors:
     web: https://sites.google.com/view/alisaknizel/home
   - name: Leonid Petrov
   - name: Axel Saenz
-    web: http://faculty.virginia.edu/saenz/
+    web: https://sites.google.com/view/axelsaenz
 arXiv: 1808.09855 [math.PR]
 comments: false
 categories: blog math paper
