@@ -43,3 +43,40 @@ stretched exponential rates independent of $d$. Two important ingredients in
 our proofs are refinements of block arguments of Fontes-Schonmann-Sidoravicius
 and a novel exponential large deviation bound for the Asymmetric Simple
 Exclusion Process.
+
+---
+
+##### A poem on the topic 
+
+by [OpenAI](https://beta.openai.com/playground)
+
+<p class="mt-4">
+I<br>
+<br>
+A model on Zd with biased flips,<br>
+A balancing of zeroes and tips,<br>
+A measure of lops and shifts,<br>
+An exponential large deviation bound,<br>
+For a one-dimensional ASEP profound.<br>
+</p><p>
+II<br>
+<br>
+The coarsening of the system is seen,<br>
+As the particles move and the zeroes lean,<br>
+The bias of the flips can be seen too,<br>
+As the ASEP system evolves and grows anew.<br>
+</p><p>
+III<br>
+<br>
+The large deviation bound to prove,<br>
+The ASEP is stationary and will move,<br>
+The bias in the flips and the zeroes,<br>
+Is the key to the dynamics of the system, and its foes.<br>
+</p><p class="mb-5">
+IV<br>
+<br>
+The coarsening model on Zd,<br>
+With its biased flips and exponential bounds,<br>
+Will be the key to understanding,<br>
+The ASEP dynamics and its expanding.<br>
+</p>
