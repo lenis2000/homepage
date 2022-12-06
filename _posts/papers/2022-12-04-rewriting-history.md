@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Rewriting History in Integrable Stochastic Particle Systems"
-arXiv: 2212.????? [math.PR]
+arXiv: 2212.01643 [math.PR]
 coauthors:
   - name: Axel Saenz
     web: https://sites.google.com/view/axelsaenz
