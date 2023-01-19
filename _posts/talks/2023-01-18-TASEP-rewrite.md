@@ -11,7 +11,11 @@ image-alt: A slide
 pdf-size: 5.7 MB
 ---
 
+Imagine two cars, slow (S) and fast (F), driving to the right on a discrete 1-dimensional lattice according to some random walk mechanism, and such that the cars cannot pass each other. We consider two systems, SF and FS, depending on which car is ahead. It is known for some time (through connections to symmetric functions and the RSK correspondence) that if at time 0 the cars are immediate neighbors, the trajectory of the car that is behind is the same (in distribution) in both systems. However, this fact fails when the initial locations of the cars are not immediate neighbors. I will explain how to recover the identity in distribution by suitably randomizing the initial condition in one of the systems.
 
+This result arises in our recent work on multiparameter stochastic systems (where the parameters are speeds attached to each car) in which the presence of parameters preserves the quantum integrability. This includes TASEP (totally asymmetric simple exclusion process), its deformations, and stochastic vertex models, which are all integrable through the Yang-Baxter equation (YBE). In the context of car dynamics, we interpret YBEs as Markov operators intertwining the transition semigroups of the dynamics of the processes differing by a parameter swap. We also construct Markov processes on trajectories which "rewrite the history" of the car dynamics, that is, produce an explicit monotone coupling between the trajectories of the systems differing by a parameter swap.
+
+Based on the [joint work with Axel Saenz][ref40].
 
 {% include references.md %}
 
