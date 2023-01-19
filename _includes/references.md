@@ -36,3 +36,7 @@
 [ref34]: {{ site.url }}/2019/12/symm_IPS/
 [ref35]: {{ site.url }}/2019/12/pert_GUE_symm/
 [ref36]: {{ site.url }}/2020/03/sqW/
+
+[ref38]: {{ site.url }}/2021/09/sl11/
+
+[ref40]: {{ site.url }}/2022/12/rewriting-history/
