@@ -8,7 +8,7 @@ published: true
 more-text: Download pdf
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
 image-alt: A slide
-pdf-size: 5.7 MB
+pdf-size: 5.9 MB
 ---
 
 Imagine two cars, slow (S) and fast (F), driving to the right on a discrete 1-dimensional lattice according to some random walk mechanism, and such that the cars cannot pass each other. We consider two systems, SF and FS, depending on which car is ahead. It is known for some time (through connections to symmetric functions and the RSK correspondence) that if at time 0 the cars are immediate neighbors, the trajectory of the car that is behind is the same (in distribution) in both systems. However, this fact fails when the initial locations of the cars are not immediate neighbors. I will explain how to recover the identity in distribution by suitably randomizing the initial condition in one of the systems.
