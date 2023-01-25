@@ -7,7 +7,7 @@ talk-url: __STORAGE_URL__/research_files/talks/Inhomogeneous_Interacting_New.pdf
 published: true
 more-text: Download pdf
 image: __STORAGE_URL__/research_files/img/Inhomogeneous_Interacting_New.png
-image-alt: A slide
+image-alt: Yang-Baxter equation for a vertex model
 pdf-size: 6.7 MB
 ---
 

@@ -7,7 +7,7 @@ talk-url: __STORAGE_URL__/research_files/talks/TASEP_rewriting_2023.pdf
 published: true
 more-text: Download pdf
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
-image-alt: A slide
+image-alt: Trajectories of two cars with different speeds and initial positions
 pdf-size: 5.9 MB
 ---
 
