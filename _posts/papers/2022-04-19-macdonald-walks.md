@@ -15,6 +15,7 @@ image-alt: Noncolliding walks, lozenge tilings, and plane partitions
 show-date: true
 pdf: 40-mac.pdf
 post-pdf: true
+pages: 21
 ---
 
 The branching rule is one of the most fundamental properties of the Macdonald symmetric polynomials. It expresses a Macdonald polynomial as a nonnegative linear combination of Macdonald polynomials with smaller number of variables. Taking a limit of the branching rule under the principal specialization when the number of variables goes to infinity, we obtain a Markov chain of $m$ noncolliding particles with negative drift and an absorbing wall at zero. The chain depends on the Macdonald parameters $(q,t)$ and may be viewed as a discrete deformation of the Dyson Brownian motion. The trajectory of the Markov chain is equivalent to a certain Gibbs ensemble of plane partitions with an arbitrary cascade front wall.

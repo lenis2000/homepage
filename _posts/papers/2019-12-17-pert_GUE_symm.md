@@ -17,6 +17,7 @@ image-alt: Perturbed Dyson Brownian motion - eigenvalue dynamics of a 6x6 matrix
 show-date: true
 pdf: pert_GUE_symm.pdf
 post-pdf: true
+pages: 14
 ---
 
 The perturbed GUE corners ensemble is the joint distribution of eigenvalues of all principal submatrices of a matrix $G+\mathrm{diag}(\mathbf{a})$, where $G$ is the random matrix from the Gaussian Unitary Ensemble (GUE), and $\mathrm{diag}(\mathbf{a})$ is a fixed diagonal matrix. We introduce Markov transitions based on exponential jumps of eigenvalues, and show that their successive application is equivalent in distribution to a deterministic shift of the matrix. This result also leads to a new distributional symmetry for a family of reflected Brownian motions with drifts coming from an arithmetic progression.

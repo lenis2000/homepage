@@ -18,6 +18,7 @@ image-alt: |
 show-date: true
 pdf: 41-rewriting.pdf
 post-pdf: true
+pages: 76
 ---
 
 Many integrable stochastic particle systems in one space dimension (such as TASEP --- Totally Asymmetric Simple Exclusion Process --- and its $q$-deformation, the $q$-TASEP) remain integrable if we equip each particle with its own speed parameter. In this work, we present intertwining relations between Markov transition operators of particle systems which differ by a permutation of the speed parameters. These relations generalize our previous works [[1]]({{site.url}}/2019/07/backwards_TASEP/), [[2]]({{site.url}}/2019/12/symm_IPS/), but here we employ a novel approach based on the Yang-Baxter equation for the higher spin stochastic six vertex model. Our intertwiners are Markov transition operators, which leads to interesting probabilistic consequences.
