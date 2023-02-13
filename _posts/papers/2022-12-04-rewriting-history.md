@@ -3,9 +3,9 @@ layout: post
 title: "Rewriting History in Integrable Stochastic Particle Systems"
 arXiv: 2212.01643 [math.PR]
 coauthors:
+  - name: Leonid Petrov
   - name: Axel Saenz
     web: https://sites.google.com/view/axelsaenz
-  - name: Leonid Petrov
 comments: false
 categories: blog math preprint
 published: true
