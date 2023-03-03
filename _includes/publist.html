@@ -5,7 +5,7 @@
 \item {% if post.categories contains "preprint" %}($*$){% endif%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
 \emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}{{post.journal-ref}}. {%endif%}
-{% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {{post.pages}} pages.
+{% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% if post.pages %}{{post.pages}} pages.{%endif%}
 {% endif %}
 {% endfor %}
 \end{etaremune}
