@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Asymptotics of noncolliding q-exchangeable random walks
-arXiv: 2303.????? [math.PR]
+arXiv: 2303.02380 [math.PR]
 coauthors: 
   - name: Leonid Petrov
   - name: Mikhail Tikhonov
