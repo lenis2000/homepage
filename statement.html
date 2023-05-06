@@ -43,15 +43,18 @@ redirect_from: /statement
           <li><h3><a href="{{ site.url }}/research/petrovCV.pdf">Curriculum Vitae</a></h3></li>
         </ul>
 
-        
-        
-        
+        <hr class="mt-4 mb-3">
 
-        <h3 class="mt-5"><a name="preprints">Preprints</a></h3>
+        <h2 class="mb-3">Work accomplished since the last promotion (Summer 2019)</h2>
+        
+        <b>Note.</b> All items have the same numbering as in the CV.
+
+
+        <h3 class="mt-5">Preprints (3 total, 169 pages)</a></h3>
         <hr>
     
         <ol class="my-ul-zebra">
-        {% for post in site.posts %}
+        {% for post in site.posts  %}
         {% if post.categories contains "preprint" %}
     
     
@@ -59,10 +62,10 @@ redirect_from: /statement
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
             {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages{%endif%} 
+            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
             {% unless post.no-abstract %}<details>
               <summary>
-                Abstract
+                Abstract &raquo;
               </summary>
               <br />
                 {{ post.content | markdownify }}
@@ -78,24 +81,25 @@ redirect_from: /statement
         {% endfor %}
         </ol>
     
-        <h3 class="mt-4"><a name="published">Published or accepted papers</a></h3>
+        <h3 class="mt-4">Published or accepted articles (10 total, 504 pages)</a></h3>
         <hr>
 
         <ol reversed class="my-ul-zebra">
-        {% for post in site.posts %}
-        {% if post.categories contains "paper" %}
+        {% for post in site.posts  %}
+        {% if post.categories contains "paper" and post.cv-number >= 31 %}
     
           <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
 
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-            <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
-            {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
+            <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+            {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
               <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
             {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages{%endif%} 
+            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+            {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
             {% unless post.no-abstract %}<details>
               <summary>
-                Abstract
+                Abstract &raquo;
               </summary>
               <br />
                 {{ post.content | markdownify }}
@@ -107,11 +111,125 @@ redirect_from: /statement
         {% endif %}
         {% endfor %}
         </ol>
+        
+        <h3 class="mt-4"><a name="errata">Errata</a></h3>
+        <hr />
+    
+        <ol class="my-ul-zebra">
+          {% for post in site.posts %}
+          {% if post.categories contains "erratum" %}
+      
+            <li value="{{post.cv-number}}"
+             class="mb-1" style="padding:6px">
+              {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
+              <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+              {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
+                <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+              {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+              {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){% endif %}
+              {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
+              {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+              {% unless post.no-abstract %}<details>
+                <summary>
+                  Abstract &raquo;
+                </summary>
+                <br />
+                  {{ post.content | markdownify }}
+                  {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+                  {% endif %}
+              </details>{% endunless %}
+            </li>
+      
+          {% endif %}
+          {% endfor %}
+          </ol>
+    
+
+          <h3 class="mt-4">Other works</h3>
+          <hr/>
+
+          <ol reversed class="my-ul-zebra">
+              <li class="mb-1" style="padding:6px">
+                Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
+                <i>Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex</i>.
+                <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a> 
+                &bull;
+                (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/nature-comm-publ-petrov-post-tenure-published.pdf">PDF</a>)
+                &bull; 15 pages.
+              </li>
+            </ol>
+      
+            <hr class="mt-2">
+  <h2 class="mb-3 mt-4">Work accomplished before the last promotion</h2>      
+
+
+  <h3 class="mt-4">Published surveys and lecture notes</a></h3>
+  <hr>
+
+<ol reversed class="my-ul-zebra">
+  {% for post in site.posts  %}
+  {% if post.categories contains "lecture-notes" and post.cv-number < 31 %}
+
+    <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
+
+      {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
+      <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+      {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
+        <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+      {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+      &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+      {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
+      {% unless post.no-abstract %}<details>
+        <summary>
+          Abstract &raquo;
+        </summary>
+        <br />
+          {{ post.content | markdownify }}
+          {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+          {% endif %}
+      </details>{% endunless %}
+    </li>
+    
+  {% endif %}
+  {% endfor %}
+  </ol>
+
+
+
+  <h3 class="mt-4">Published articles</a></h3>
+  <hr>
+
+  <ol reversed class="my-ul-zebra">
+    {% for post in site.posts  %}
+    {% if post.categories contains "paper" and post.cv-number < 31 %}
+    {% unless post.categories contains "lecture-notes"%}
+
+      <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
+
+        {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+        {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
+          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+        {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+        &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+        {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
+        {% unless post.no-abstract %}<details>
+          <summary>
+            Abstract &raquo;
+          </summary>
+          <br />
+            {{ post.content | markdownify }}
+            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+            {% endif %}
+        </details>{% endunless %}
+      </li>
+      
+    {% endunless %}
+    {% endif %}
+    {% endfor %}
+    </ol>
 
 
 
     </div>
-  
-  
-
 </div>

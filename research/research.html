@@ -17,7 +17,7 @@ nav_weight: 2
     {% if post.categories contains "preprint" %}
 
 
-      <li class="mb-1"  style="padding:6px">
+      <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
@@ -49,7 +49,7 @@ nav_weight: 2
     {% if post.categories contains "paper" %}
 
 
-      <li class="mb-1" style="padding:6px">
+      <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
@@ -75,16 +75,6 @@ nav_weight: 2
     {% endfor %}
     </ol>
 
-    <h1 class="mt-4">Other works</h1>
-
-    <ol reversed class="my-ul-zebra">
-        <li class="mb-1" style="padding:6px">
-          Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
-	        <i>Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex</i>.
-	        <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a>. 15 pages.
-        </li>
-      </ol>
-
     <h1 class="mt-4"><a name="errata">Errata</a></h1>
     <hr />
 
@@ -92,7 +82,7 @@ nav_weight: 2
       {% for post in site.posts %}
       {% if post.categories contains "erratum" %}
   
-        <li class="mb-1" style="padding:6px">
+        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
           {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
           <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
           {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
@@ -115,6 +105,16 @@ nav_weight: 2
       {% endfor %}
       </ol>
 
+
+    <h1 class="mt-4">Other works</h1>
+
+    <ol reversed class="my-ul-zebra">
+        <li class="mb-1" style="padding:6px">
+          Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
+	        <i>Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex</i>.
+	        <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a>. 15 pages.
+        </li>
+      </ol>
 
 
 
