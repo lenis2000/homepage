@@ -8,7 +8,7 @@ coauthors:
 arXiv: 1310.8007 [math-ph]
 date: 2013-10-30 02:00:00
 comments: false
-categories: paper math blog
+categories: paper math blog lecture-notes
 published: true
 more-text: Full abstract
 show-date: true
@@ -18,6 +18,7 @@ image: __STORAGE_URL__/research_files/img/discr.png
 image-alt: Large scale and long time behavior of a jumping interacting particle system
 pdf: 15-publ-petrov-survey-lecture-notes.pdf
 pages: 58
+cv-number: 15
 ---
 
 

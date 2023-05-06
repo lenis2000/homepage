@@ -10,12 +10,13 @@ coauthors:
   - name: Tomohiro Sasamoto
     web: 'http://www.math.s.chiba-u.ac.jp/~sasamoto/index_e.html'
 comments: false
-categories: math blog erratum
+categories: math blog paper
 published: true
 show-date: true
 no-abstract: true
-pdf: 
+pdf: 17-publ-petrov-uva-erratum.pdf
 post-pdf: true
+cv-number: 17
 ---
 
 This is a correction to Theorems 7.3 and 8.12 in [our paper]({{site.url}}/2014/07/BCPS-2/). These statements claimed to deduce the spatial Plancherel formula (spatial biorthogonality) of the ASEP and XXZ eigenfunctions from the corresponding statements for the eigenfunctions of the q-Hahn system. Such a reduction is wrong.

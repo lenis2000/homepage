@@ -8,7 +8,7 @@ coauthors:
 arXiv: 1605.01349 [math.PR]
 date: 2016-05-04 02:00:00
 comments: false
-categories: paper math blog
+categories: paper math blog lecture-notes
 published: true
 more-text: Full abstract
 show-date: true
@@ -18,6 +18,7 @@ image: __STORAGE_URL__/img/papers/lec-six-vertex.png
 image-alt: Creation operator in a Bethe ansatz representation
 pdf: 21-publ-petrov-uva-survey-lecture-notes.pdf
 pages: 113
+cv-number: 21
 ---
 
 We consider a homogeneous stochastic higher spin six vertex model in a quadrant. For this model we derive concise integral representations for multi-point q-moments of the height function and for the q-correlation functions. At least in the case of the step initial condition, our formulas degenerate in appropriate limits to many known formulas of such type for integrable probabilistic systems in the (1+1)d KPZ universality class, including the stochastic six vertex model, ASEP, various q-TASEPs, and associated zero range processes.<!--more-->

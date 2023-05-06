@@ -55,7 +55,7 @@ redirect_from: /statement
         {% if post.categories contains "preprint" %}
     
     
-          <li class="mb-1"  style="padding:6px">
+          <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px">
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
             {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
@@ -78,14 +78,14 @@ redirect_from: /statement
         {% endfor %}
         </ol>
     
-        <h3 class="mt-4"><a name="published">Published or accepted</a></h3>
+        <h3 class="mt-4"><a name="published">Published or accepted papers</a></h3>
         <hr>
 
         <ol reversed class="my-ul-zebra">
         {% for post in site.posts %}
         {% if post.categories contains "paper" %}
     
-          <li class="mb-1" style="padding:6px">
+          <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
 
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;

@@ -16,4 +16,5 @@ pdf: 03-publ-petrov.pdf
 #image: __STORAGE_URL__/img/papers/
 #image-alt:
 pages: 3
+cv-number: 3
 ---

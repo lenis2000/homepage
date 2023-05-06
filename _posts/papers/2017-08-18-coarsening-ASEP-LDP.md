@@ -20,6 +20,7 @@ image-alt: 'This is how the GUE Tracy-Widom/Airy$_2$ double critical point is de
 show-date: true
 pdf: 26-publ-petrov-uva.pdf
 pages: 33
+cv-number: 26
 ---
 
 We study the coarsening model (zero-temperature Ising Glauber dynamics) on

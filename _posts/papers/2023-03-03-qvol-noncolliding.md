@@ -18,6 +18,7 @@ show-date: true
 pdf: 42-publ-petrov-post-tenure-preprint.pdf
 post-pdf: true
 pages: 34
+cv-number: 42
 ---
 
 We consider a process of noncolliding $q$-exchangeable random walks on $\mathbb{Z}$ making steps $0$ (straight) and $-1$ (down). A single random walk is called $q$-exchangeable if under an elementary transposition of the neighboring steps $ (\textnormal{down},\textnormal{straight}) \to (\textnormal{straight}, \textnormal{down}) $ the probability of the trajectory is multiplied by a parameter $q\in(0,1)$. Our process of $m$ noncolliding $q$-exchangeable random walks is obtained from the independent $q$-exchangeable walks via the Doob's $h$-transform for a certain nonnegative eigenfunction $h$ with the eigenvalue less than $1$.  The system of $m$ walks evolves in the presence of an absorbing wall at $0$.

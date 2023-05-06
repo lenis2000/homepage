@@ -18,6 +18,7 @@ show-date: true
 pdf: 35-publ-petrov-post-tenure-published.pdf
 post-pdf: true
 pages: 15
+cv-number: 35
 ---
 
 The perturbed GUE corners ensemble is the joint distribution of eigenvalues of all principal submatrices of a matrix $G+\mathrm{diag}(\mathbf{a})$, where $G$ is the random matrix from the Gaussian Unitary Ensemble (GUE), and $\mathrm{diag}(\mathbf{a})$ is a fixed diagonal matrix. We introduce Markov transitions based on exponential jumps of eigenvalues, and show that their successive application is equivalent in distribution to a deterministic shift of the matrix. This result also leads to a new distributional symmetry for a family of reflected Brownian motions with drifts coming from an arithmetic progression.

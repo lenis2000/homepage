@@ -18,6 +18,7 @@ show-date: true
 pdf: 32-publ-petrov-post-tenure-published.pdf
 post-pdf: true
 pages: 50
+cv-number: 32
 ---
 
 We obtain a new relation between the distributions $\mu_t$ at different times $t\ge 0$ of the continuous-time TASEP (Totally Asymmetric Simple Exclusion Process) started from the step initial configuration. Namely, we present a continuous-time Markov process with local interactions and particle-dependent rates which maps the TASEP distributions $\mu_t$ backwards in time. Under the backwards process, particles jump to the left, and the dynamics can be viewed as a version of the discrete-space Hammersley process. Combined with the forward TASEP evolution, this leads to an stationary Markov dynamics preserving $\mu_t$ which in turn brings new identities for expectations with respect to $\mu_t$.

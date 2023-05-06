@@ -22,6 +22,7 @@ source: 29source.txt
 post-source: true
 post-pdf: true
 pages: 68
+cv-number: 29
 ---
 
 We investigate a rich new class of exactly solvable particle systems generalizing the Totally Asymmetric Simple Exclusion Process (TASEP). Our particle systems can be thought of as new exactly solvable examples of tandem queues, directed first- or last passage percolation models, or Robinson-Schensted-Knuth type systems with random input. One of the novel features of the particle systems is the presence of spatial inhomogeneity which can lead to the formation of traffic jams.

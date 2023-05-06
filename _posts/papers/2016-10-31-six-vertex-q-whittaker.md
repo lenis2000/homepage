@@ -18,6 +18,7 @@ image: __STORAGE_URL__/img/papers/qtasep-coupling.png
 image-alt: Coupling of q-TASEPs and the stochastic higher spin six vertex model
 pdf: 23-publ-petrov-uva.pdf
 pages: 53
+cv-number: 23
 ---
 
 We present two new connections between the inhomogeneous stochastic higher spin six vertex model in a quadrant and integrable stochastic systems from the Macdonald processes hierarchy.<!--more-->

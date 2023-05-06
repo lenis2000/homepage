@@ -16,6 +16,7 @@ show-date: true
 pdf: 37-publ-petrov-post-tenure-published.pdf
 post-pdf: true
 pages: 40
+cv-number: 37
 ---
 
 Fully inhomogeneous spin Hall-Littlewood symmetric rational functions $$\mathsf{F}_\lambda$$ arise in the context of $\mathfrak{sl}(2)$ higher spin six vertex models, and are multiparameter deformations of the classical Hall-Littlewood symmetric polynomials. We obtain a refined Cauchy identity expressing a weighted sum of the product of two $\mathsf{F}_\lambda$'s as a determinant. The determinant is of Izergin-Korepin type: it is the partition function of the six vertex model with suitably decorated domain wall boundary conditions. The proof of equality of two partition functions is based on the Yang-Baxter equation.
