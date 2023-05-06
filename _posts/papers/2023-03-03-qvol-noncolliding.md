@@ -15,7 +15,7 @@ published: true
 image: __STORAGE_URL__/img/papers/qvol_noncoll.png
 image-alt: Limit shapes of the noncolliding q-exchangeable random walks
 show-date: true
-pdf: 42-qvol-noncolliding.pdf
+pdf: 42-publ-petrov-post-tenure-preprint.pdf
 post-pdf: true
 pages: 34
 ---

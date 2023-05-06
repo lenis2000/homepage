@@ -13,6 +13,7 @@ show-date: true
 journal-ref: Journal of Mathematical Sciences 168 (2010), no. 3, 437-463
 journal-web:
 pdf: 04-publ-petrov.pdf
+pages: 27
 ---
 
 We consider a certain sequence of random walks. The state space of the n-th random walk is the set of all strict partitions of n (that is, partitions without equal parts).

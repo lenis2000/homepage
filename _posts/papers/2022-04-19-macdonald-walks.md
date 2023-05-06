@@ -13,7 +13,7 @@ journal-ref: SIGMA 18 (2022), 079, 21 pages
 image: __STORAGE_URL__/img/papers/mac_noncoll.png
 image-alt: Noncolliding walks, lozenge tilings, and plane partitions
 show-date: true
-pdf: 40-mac.pdf
+pdf: 40-publ-petrov-post-tenure-published.pdf
 post-pdf: true
 pages: 21
 ---

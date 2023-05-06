@@ -13,6 +13,7 @@ show-date: true
 journal-ref: Moscow Mathematical Journal, 14 (2014) no. 1, 121-160
 journal-web: http://www.mathjournals.org/mmj/2014-014-001/2014-014-001-006.html
 pdf: 11-publ-petrov.pdf
+pages: 36
 ---
 
 In the recent paper [<a href="https://arxiv.org/abs/1109.1412">arXiv:1109.1412</a>], Borodin and Olshanski have presented a

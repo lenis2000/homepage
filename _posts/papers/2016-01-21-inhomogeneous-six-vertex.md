@@ -17,6 +17,7 @@ journal-web: https://link.springer.com/article/10.1007/s00029-016-0301-7
 image: __STORAGE_URL__/img/papers/inhom-vertex.png
 image-alt: inhomogeneous stochastic six vertex model
 pdf: 20-publ-petrov-uva.pdf
+pages: 124
 ---
 
 We consider a fully inhomogeneous stochastic higher spin six vertex model in a quadrant. For this model we derive concise integral representations for multi-point q-moments of the height function and for the q-correlation functions. At least in the case of the step initial condition, our formulas degenerate in appropriate limits to many known formulas of such type for integrable probabilistic systems in the (1+1)d KPZ universality class, including the stochastic six vertex model, ASEP, various q-TASEPs, and associated zero range processes.<!--more-->

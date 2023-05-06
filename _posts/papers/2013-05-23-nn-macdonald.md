@@ -15,6 +15,7 @@ show-date: true
 journal-ref: Advances in Mathematics, 300 (2016), 71-155
 journal-web: 'http://www.sciencedirect.com/science/article/pii/S0001870816001201'
 pdf: 12-publ-petrov.pdf
+pages: 85
 ---
 
 Macdonald processes are certain probability measures on two-dimensional

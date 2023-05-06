@@ -19,6 +19,7 @@ image: __STORAGE_URL__/img/papers/z-coarsening-plot.png
 image-alt: 'This is how the GUE Tracy-Widom/Airy$_2$ double critical point is deformed in our large deviations regime. In this case the double critical point is split into two real critical points, and the large deviations function comes from the difference between the values of $S(\cdot)$ at these two new points'
 show-date: true
 pdf: 26-publ-petrov-uva.pdf
+pages: 33
 ---
 
 We study the coarsening model (zero-temperature Ising Glauber dynamics) on

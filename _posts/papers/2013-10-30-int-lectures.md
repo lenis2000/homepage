@@ -16,7 +16,8 @@ journal-ref: Probability Surveys, 11 (2014), 1-58
 journal-web: 'http://www.i-journals.org/ps/viewarticle.php?id=225&layout=abstract'
 image: __STORAGE_URL__/research_files/img/discr.png
 image-alt: Large scale and long time behavior of a jumping interacting particle system
-pdf: 15-publ-petrov.pdf
+pdf: 15-publ-petrov-survey-lecture-notes.pdf
+pages: 58
 ---
 
 

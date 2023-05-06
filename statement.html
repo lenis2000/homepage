@@ -6,28 +6,46 @@ redirect_from: /statement
 ---
 
 <div class="row">
-    <div class="col-md-8 mb-4">
+    <div class="col-md-12 mb-4">
 
         <h3>About</h3>
 
-        I am an Associate Professor at
-        <a href="http://math.virginia.edu">Department of Mathematics, University of
-        Virginia</a>.
-        I got my PhD in 2010 in Moscow with <a href="http://iitp.ru/en/userpages/88/">
-        Grigori Olshanski</a>,
-        and in 2011-2014 I was a postdoc at <a href="http://www.northeastern.edu/cos/mathematics/">Northeastern University</a>.
-        
-        <h3 class="mt-4">
-            CV
-            &bull;
-            (<a href="{{ site.url }}/research/petrovCV.pdf">Full</a>)
-            &bull;
-            (<a href="{{ site.url }}/research/petrovCVbrief.pdf">Brief</a>)
-        </h3>
+        <p><b>Associate Professor of Mathematics, University of
+          Virginia</b>.</p>
+      
+          <p>Leonid Petrov works in integrable probability, an area of mathematical research at the interface between probability / statistical physics on the one hand and representation theory/quantum integrability on the other. He applies tools from integrability (symmetric functions and Yang-Baxter equations for solvable lattice models) to analyze the asymptotic behavior of stochastic models motivated by a wide range of real-world questions, including the structure of ice and other condensed matter, magnetism, quantum spin systems, thermodynamics, traffic models, and directed polymers.</p>
+          
+            
+          <b>Keywords</b>: Integrable probability, KPZ universality, interacting particle systems,
+          six vertex model, Yang-Baxter equation, stochastic vertex models, 
+          Bethe ansatz, Macdonald processes, random tilings, symmetric functions, algebraic combinatorics
 
-        <h3 class="mt-3 mb-3"><a href="https://scholar.google.com/citations?user=pWDfr2YAAAAJ&hl=en">Google scholar</a></h3>
+          
+    <ul class="mt-3">  
+      <li>
+        NSF grant <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2153869">2153869</a> 
+        "<a href="{{ site.storage_url }}/research_files/project-description-2021-publish.pdf">Random Systems from Symmetric Functions and Vertex Models</a>" (2022-2025).
+      </li>
+      <li> <a href="http://frg.int-prob.org/" target="_blank">Focused Research Group in Integrable Probability</a> (2017-2022)
+        supported by the NSF grant <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664617" target="_blank">1664617</a> and companion grants
+          <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664531" target="_blank">1664531</a>,
+          <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664619" target="_blank">1664619</a>,
+          <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664650" target="_blank">1664650</a>.
+        </li>
+      </ul>
         
-        <h3 class="mt-3 mb-3"><a href="{{ site.storage_url }}/research_files/Petrov_research_teaching_statement_Jun2018.pdf">Research and Teaching Statement</a></h3>
+      <hr class="mt-4 mb-3">
+
+        <h1>Materials for Promotion 2023</h1>
+
+        <ul class="mt-4">
+          <li><h3><a href="{{ site.url }}/research_files/Petrov_Candidate_Statement.pdf">Personal Statement on Teaching, Research, and Service</a></h3></li>
+          <li><h3><a href="{{ site.url }}/research/petrovCV.pdf">Curriculum Vitae</a></h3></li>
+        </ul>
+
+        
+        
+        
 
         <h3 class="mt-5"><a name="preprints">Preprints</a></h3>
         <hr>
@@ -41,8 +59,7 @@ redirect_from: /statement
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
             {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>)
-            {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
+            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages{%endif%} 
             {% unless post.no-abstract %}<details>
               <summary>
                 Abstract
@@ -75,8 +92,7 @@ redirect_from: /statement
             {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
               <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
             {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.pdf}}">PDF</a>)
-            {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
+            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages{%endif%} 
             {% unless post.no-abstract %}<details>
               <summary>
                 Abstract
@@ -96,16 +112,6 @@ redirect_from: /statement
 
     </div>
   
-    <div class="col-md-4">
-      <a href="{{site.url}}/mit_pic_2018/"><img class="mb-2" width="100%" src="{{site.storage_url}}/img/me_MIT_tn.jpg" alt="My Picture at MIT" align="center" vspace="5" /></a>
-
-      <!-- <h5 class="mt-4">Interesting papers on arXiv</h5>
-      <a class="twitter-timeline" data-height="900" data-dnt="true" href="https://twitter.com/qtasep?ref_src=twsrc%5Etfw">Interesting papers on arXiv</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> -->
-    </div>
   
-
-  <!-- <div class="col-12 mt-1">
-    {% include contact.html %}
-  </div> -->
 
 </div>
