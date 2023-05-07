@@ -1,5 +1,5 @@
 ---
-title: Statements and Publications
+title: Materials for promotion 2023
 layout: default
 permalink: /statement/
 redirect_from: /statement
@@ -145,6 +145,23 @@ redirect_from: /statement
           {% endfor %}
           </ol>
     
+          <h3 class="mt-4">Unpublished lecture notes</h3>
+          <hr>
+      
+          <ol class="my-ul-zebra">
+            {% for post in site.posts %}
+            {% if post.categories contains "unpublished-lecture-notes" and post.cv-number >4 %}
+        
+              <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+                <b>
+                  {{post.link-description}} &bull;
+                  <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>.
+              </li>
+        
+            {% endif %}
+            {% endfor %}
+            </ol>
+
 
           <h3 class="mt-4">Other works</h3>
           <hr/>
@@ -230,7 +247,22 @@ redirect_from: /statement
     {% endfor %}
     </ol>
 
+    <h3 class="mt-4">Unpublished lecture notes</h3>
+    <hr>
 
+    <ol class="my-ul-zebra">
+      {% for post in site.posts %}
+      {% if post.categories contains "unpublished-lecture-notes" and post.cv-number <=4 %}
+  
+        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+          <b>
+            {{post.link-description}} &bull;
+            <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>.
+        </li>
+  
+      {% endif %}
+      {% endfor %}
+      </ol>
 
     </div>
 </div>
