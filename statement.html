@@ -43,6 +43,7 @@ redirect_from: /statement
         <ul class="mt-4">
           <li><h3><a href="{{ site.url }}/research_files/Petrov_Candidate_Statement.pdf">Personal Statement on Teaching, Research, and Service</a></h3></li>
           <li><h3><a href="{{ site.url }}/research/petrovCV.pdf">Curriculum Vitae</a></h3></li>
+          <li><h3><a href="{{ site.storage_url }}/research_files/publication_pdfs_2023.zip">All publications (zip)</a></h3></li>
         </ul>
 
         <hr class="mt-4 mb-3">
@@ -157,7 +158,7 @@ redirect_from: /statement
               <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
                 <b>
                   {{post.link-description}} &bull;
-                  <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>.
+                  <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b> &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
               </li>
         
             {% endif %}
@@ -259,7 +260,8 @@ redirect_from: /statement
         <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
           <b>
             {{post.link-description}} &bull;
-            <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>.
+            <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
+            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
         </li>
   
       {% endif %}
