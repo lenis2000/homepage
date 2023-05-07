@@ -43,7 +43,7 @@ redirect_from: /statement
         <ul class="mt-4">
           <li><h3><a href="{{ site.url }}/research_files/Petrov_Candidate_Statement.pdf">Personal Statement on Teaching, Research, and Service</a></h3></li>
           <li><h3><a href="{{ site.url }}/research/petrovCV.pdf">Curriculum Vitae</a></h3></li>
-          <li><h3><a href="{{ site.storage_url }}/research_files/publication_pdfs_2023.zip">All publications (zip)</a></h3></li>
+          <li><h3><a href="{{ site.storage_url }}/research_files/publication_pdfs_2023.zip">All published works (zip)</a></h3></li>
         </ul>
 
         <hr class="mt-4 mb-3">
@@ -148,23 +148,7 @@ redirect_from: /statement
           {% endfor %}
           </ol>
     
-          <h3 class="mt-4">Unpublished lecture notes</h3>
-          <hr>
-      
-          <ol class="my-ul-zebra">
-            {% for post in site.posts %}
-            {% if post.categories contains "unpublished-lecture-notes" and post.cv-number >4 %}
-        
-              <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
-                <b>
-                  {{post.link-description}} &bull;
-                  <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b> &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
-              </li>
-        
-            {% endif %}
-            {% endfor %}
-            </ol>
-
+          
 
           <h3 class="mt-4">Other works</h3>
           <hr/>
@@ -180,6 +164,24 @@ redirect_from: /statement
               </li>
             </ol>
       
+            <h3 class="mt-4">Unpublished lecture notes</h3>
+            <hr>
+        
+            <ol class="my-ul-zebra">
+              {% for post in site.posts %}
+              {% if post.categories contains "unpublished-lecture-notes" and post.cv-number >4 %}
+          
+                <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+                  <b>
+                    {{post.link-description}} &bull;
+                    <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b> &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
+                </li>
+          
+              {% endif %}
+              {% endfor %}
+              </ol>
+  
+
             <hr class="mt-2">
   <h2 class="mb-3 mt-4">Work accomplished before the last promotion</h2>      
 

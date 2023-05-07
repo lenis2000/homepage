@@ -106,23 +106,6 @@ nav_weight: 2
       </ol>
 
 
-    <h1 class="mt-4"><a name="lecture-notes">Unpublished lecture notes</a></h1>
-    <hr />
-
-    <ol class="my-ul-zebra">
-      {% for post in site.posts %}
-      {% if post.categories contains "unpublished-lecture-notes" %}
-  
-        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
-          <b>
-            {{post.link-description}} &bull;
-            <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
-            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
-        </li>
-  
-      {% endif %}
-      {% endfor %}
-      </ol>
   
 
     <h1 class="mt-4">Other works</h1>
@@ -136,6 +119,23 @@ nav_weight: 2
       </ol>
 
 
+      <h1 class="mt-4"><a name="lecture-notes">Unpublished lecture notes</a></h1>
+      <hr />
+  
+      <ol class="my-ul-zebra">
+        {% for post in site.posts %}
+        {% if post.categories contains "unpublished-lecture-notes" %}
+    
+          <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+            <b>
+              {{post.link-description}} &bull;
+              <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
+              &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
+          </li>
+    
+        {% endif %}
+        {% endfor %}
+        </ol>
 
     <h1 class="mt-4"><a name="slides">Slides of some talks</a></h1>
     <hr />
