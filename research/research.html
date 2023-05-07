@@ -106,6 +106,24 @@ nav_weight: 2
       </ol>
 
 
+    <h1 class="mt-4"><a name="lecture-notes">Unpublished lecture notes</a></h1>
+    <hr />
+
+    <ol class="my-ul-zebra">
+      {% for post in site.posts %}
+      {% if post.categories contains "unpublished-lecture-notes" %}
+  
+        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+          <b>
+            {{post.link-description}} &bull;
+            <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>.
+        </li>
+  
+      {% endif %}
+      {% endfor %}
+      </ol>
+  
+
     <h1 class="mt-4">Other works</h1>
 
     <ol reversed class="my-ul-zebra">
@@ -154,6 +172,7 @@ nav_weight: 2
       <a class="list-group-item list-group-item-action h5" href="#preprints">Preprints</a>
       <a class="list-group-item list-group-item-action h5" href="#published">Publications</a>
       <a class="list-group-item list-group-item-action h5" href="#errata">Errata</a>
+      <a class="list-group-item list-group-item-action h5" href="#lecture-notes">Lecture notes</a>
       <a class="list-group-item list-group-item-action h5" href="#slides">Slides</a>
 			<a class="list-group-item list-group-item-action h5" href="{{site.url}}/simulations/">Gallery</a>
     </div>
