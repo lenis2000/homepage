@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Tilted biorthogonal ensembles, Grothendieck random partitions, and determinantal tests
-arXiv: 2305.????? [math.PR]
+arXiv: 2305.17747 [math.PR]
 coauthors: 
   - name: Leonid Petrov
   - name: Svetlana Gavrilova
