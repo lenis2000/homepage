@@ -9,7 +9,7 @@ coauthors:
 comments: false
 categories: blog math preprint
 published: true
-# journal-ref: 
+# journal-ref: submitted to Jour Phys A special issue
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/qvol_noncoll.png
