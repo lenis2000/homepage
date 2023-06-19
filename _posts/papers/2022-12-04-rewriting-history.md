@@ -9,7 +9,7 @@ coauthors:
 comments: false
 categories: blog math preprint
 published: true
-# journal-web: 
+# journal-web: submitted to CMP
 # more-text:
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
 image-alt: |
