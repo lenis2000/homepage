@@ -10,7 +10,7 @@ permalink: /vipss2024/
 
 # <a href="{{site.url}}/vipss2024/">Virginia Integrable Probability Summer School 2024</a>
 
-### Monday, June 17 to Friday, June 28, 2024
+### Monday, July 8 to Friday, July 19, 2024
 
 ### University of Virginia, Charlottesville, VA
 
