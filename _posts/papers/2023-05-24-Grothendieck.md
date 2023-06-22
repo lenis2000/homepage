@@ -9,7 +9,7 @@ coauthors:
 comments: false
 categories: blog math preprint
 published: true
-# journal-ref: not submitted yet
+# journal-ref: submitted to Selecta
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/Grothendieck.png
