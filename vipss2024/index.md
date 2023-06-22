@@ -18,6 +18,10 @@ permalink: /vipss2024/
 
 The aim of the school is to educate the participants in recent trends around Integrable Probability - a rapidly developing field at the interface of probability / mathematical physics / statistical physics on the one hand, and representation theory / integrable systems on the other
 
+Organizers:  Leonid Petrov, Daniel Slonim, Mikhail Tikhonov
+
+E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
+
 --- 
 
 ## &bull; <a href="{{site.url}}/vipss2024/schedule/">Full schedule</a> (talks are in TBD)
