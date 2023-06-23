@@ -22,7 +22,7 @@ Organizers:  Leonid Petrov, Daniel Slonim, Mikhail Tikhonov
 
 E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 
-[Previous summer school (2019)](http://frg.int-prob.org/vipss2019/)
+[Previous summer school](http://frg.int-prob.org/vipss2019/)  (2019)
 
 --- 
 
