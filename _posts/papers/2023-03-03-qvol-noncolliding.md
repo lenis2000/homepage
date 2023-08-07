@@ -7,9 +7,9 @@ coauthors:
   - name: Mikhail Tikhonov
     web: http://mtikhonov.com/
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-ref: submitted to Jour Phys A special issue
+journal-ref: Journal of Physics A, to apprear
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/qvol_noncoll.png
