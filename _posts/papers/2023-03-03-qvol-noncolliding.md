@@ -9,8 +9,8 @@ coauthors:
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Journal of Physics A, to apprear
-# journal-web: 
+journal-ref: Accepted at Journal of Physics A
+journal-web: https://iopscience.iop.org/article/10.1088/1751-8121/acedda
 # more-text:
 image: __STORAGE_URL__/img/papers/qvol_noncoll.png
 image-alt: Limit shapes of the noncolliding q-exchangeable random walks
