@@ -9,7 +9,7 @@ image: __STORAGE_URL__/img/blog/heart/Fragment2.png
 image-alt: A fragment of a random heart
 ---
 
-<div><a href="{{site.url}}/reading-2019/">Reading seminar on solvable lattice models</a> in Spring 2023</div>
+<div><a href="{{site.url}}/reading-2023/">Reading seminar on solvable lattice models</a> in Fall 2023</div>
 <!--more-->
 
 <h2 class="mt-4 mb-3">Tuesdays, 11:00am - 12:10pm, Kerchof 111</h2>
