@@ -4,7 +4,7 @@ title: Tilted biorthogonal ensembles, Grothendieck random partitions, and determ
 arXiv: 2305.17747 [math.PR]
 coauthors: 
   - name: Svetlana Gavrilova
-    web: https://www.hse.ru/en/org/persons/208492628
+    web: https://math.mit.edu/directory/profile.html?pid=2588
   - name: Leonid Petrov
 comments: false
 categories: blog math preprint
