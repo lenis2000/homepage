@@ -26,19 +26,23 @@ Solvable lattice models originated in mathematical physics (Ising model, square 
 
 2. September 5, 2023 
 
-    *Nick Sweeney* - The Alternating Sign Matrix conjecture (after Chapter 1 of the book Proofs and Confirmations: The Story of the Alternating Sign Matrix Conjecture by David M. Bressoud)
+    *Nick Sweeney* - The Alternating Sign Matrix conjecture<br>
+    after Chapter 1 of the book Proofs and Confirmations: The Story of the Alternating Sign Matrix Conjecture by David M. Bressoud
 
 3. September 12, 2023 
 
-    *Petch Chueluecha* - Dodgson condensation (after Section 3.5 of the book Proofs and Confirmations: The Story of the Alternating Sign Matrix Conjecture by David M. Bressoud)
+    *Petch Chueluecha* - Dodgson condensation<br>
+    after Section 3.5 of the book Proofs and Confirmations: The Story of the Alternating Sign Matrix Conjecture by David M. Bressoud
 
 4. September 19, 2023 
 
-    *Mikhail Tikhonov* - The Yang-Baxter equation and the Izergin-Korepin determinant (after [Wheeler-Zinn-Justin](https://arxiv.org/abs/1508.02236v2), Section 4.2 with u=1 and [Petrov](https://arxiv.org/abs/2007.10886), Yang-Baxter equation is Proposition 2.1; and the determinant is proven in Section 3.4 with gamma=1, s0=0)
+    *Mikhail Tikhonov* - The Yang-Baxter equation and the Izergin-Korepin determinant
+    <br>
+    after [Wheeler-Zinn-Justin 2015](https://arxiv.org/abs/1508.02236v2) (Section 4.2 with $u=1$) and [Petrov 2020](https://arxiv.org/abs/2007.10886) (Yang-Baxter equation is Proposition 2.1; and the determinant is proven in Section 3.4 with $\gamma=1$, $s_0=0$)
 
 5. September 26, 2023
 
-    *???* - From the Izergin-Korepin determinant to the number of alternating sign matrices 
+    *Leo Petrov* - From the Izergin-Korepin determinant to the number of alternating sign matrices 
 
 6. October 10, 2023
 
