@@ -17,6 +17,8 @@ image-alt: Limit shapes of 2d Schur processes and the corresponding Grothendieck
 show-date: true
 pdf: 43-publ-petrov-post-tenure-preprint.pdf
 post-pdf: true
+source: 43source.txt
+post-source: true
 pages: 47
 cv-number: 43
 ---
