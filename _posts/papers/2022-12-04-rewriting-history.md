@@ -18,6 +18,8 @@ image-alt: |
 show-date: true
 pdf: 41-publ-petrov-post-tenure-preprint.pdf
 post-pdf: true
+source: 41source.txt
+post-source: true
 pages: 76
 cv-number: 41
 ---
