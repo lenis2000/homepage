@@ -40,3 +40,5 @@
 [ref38]: {{ site.url }}/2021/09/sl11/
 
 [ref40]: {{ site.url }}/2022/12/rewriting-history/
+
+[ref44]: {{ site.url }}/2023/09/stat-ring/
