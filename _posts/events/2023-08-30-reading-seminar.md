@@ -46,7 +46,7 @@ Solvable lattice models originated in mathematical physics (Ising model, square 
 
 6. October 10, 2023
 
-    *Jacob Campbell* - Quantim groups and Yang-Baxter equation
+    *Jacob Campbell* - R-matrices from quantum groups (after Kassel "Quantum Groups", 1995, Section 8.1)
 
 7. October 17, 2023
 
