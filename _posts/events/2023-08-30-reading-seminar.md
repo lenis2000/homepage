@@ -46,7 +46,7 @@ Solvable lattice models originated in mathematical physics (Ising model, square 
 
 6. October 10, 2023
 
-    *Jacob Campbell* - R-matrices from quantum groups (after [Kassel "Quantum Groups", 1995, Section 8.1]({{site.url}}/events/Kassel_YBE.pdf))
+    *Jacob Campbell* - R-matrices from quantum groups (after [Kassel "Quantum Groups", 1995, Section 8.1]({{site.url}}/events/Kassel_YBE.pdf)); see also [this part]({{site.url}}/events/kassel Uq.pdf) on the definition of the quantum $sl_2$ 
 
 7. October 17, 2023
 
