@@ -50,7 +50,7 @@ Solvable lattice models originated in mathematical physics (Ising model, square 
 
 7. October 17, 2023
 
-    *Suren Kyurumyan* - The stochastis six-vertex model (after [Gorin-Nicoletti](https://arxiv.org/pdf/2309.12495.pdf)'s lecture notes, Section 4.1)
+    *Suren Kyurumyan* - The stochastic six-vertex model (after [Gorin-Nicoletti](https://arxiv.org/pdf/2309.12495.pdf)'s lecture notes, Section 4.1)
 
 8. October 24, 2023
 
