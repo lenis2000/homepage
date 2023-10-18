@@ -54,7 +54,7 @@ Solvable lattice models originated in mathematical physics (Ising model, square 
 
 8. October 24, 2023
 
-    TBA
+    Break
 
 9. October 31, 2023
 
