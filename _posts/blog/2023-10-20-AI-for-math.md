@@ -7,7 +7,7 @@ categories: math blog quick_link
 published: true
 image: __STORAGE_URL__/img/blog/AI.png
 image-alt: An example of a request to chatGPT (April 2023) which generated the tikz code for a picture I put into a paper with minimal modifications (Figure 5 on page 31 in arXiv:2305.17747)
-published: false
+published: true
 ---
 
 <div><a href="{{site.url}}/AI-math-2023/">Tools for work: not only AI</a> (October 2023)</div>
@@ -90,6 +90,13 @@ So, my combined monthly spending on these tools is around \$20, which is the sam
 
 I usually do all my prose writing in VSCode. This includes grant and proposal writing, where I use copilot autocompletion to break the writing block. Then, I usually polish the final version of the text with Grammarly on the web, as it suggests readability improvements.
 
+Here is an example of me writing a blog post (this one) in VSCode:
+
+<video width="800" height="600" controls max-width="100%">
+  <source src="{{site.storage_url}}/img/blog/vid/3.1_writing.mp4" type="video/mp4" alt="Writing in VSCode">
+  Your browser does not support the video tag.
+</video>
+
 <h5 class="mb-4 mt-4" id="emails">3.2 Answering to emails in VSCode</h5>
 
 A large portion of writing is responding to emails. Would it be nice to 
@@ -117,10 +124,12 @@ end tell
 
 Example usage:
 
-<video width="520" height="420" controls>
+<video width="800" height="600" controls max-width="100%">
   <source src="{{site.storage_url}}/img/blog/vid/3.2_email.mp4" type="video/mp4" alt="Writing emails in VSCode">
   Your browser does not support the video tag.
 </video>
+
+Here, I open Mail.app, I select a message, then run the hotkey in Alfred, then write the response in VSCode. I can then copy the result and put it in the email as an answer.
 
 <h5 class="mb-4 mt-4" id="free-form">3.3 free-form questions for GPT-4</h5>
 
