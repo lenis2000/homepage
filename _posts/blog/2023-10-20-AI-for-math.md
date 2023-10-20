@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Tools for work, including AI
+title: "Tools for work: not only AI"
 comments: false
 permalink: /AI-math-2023/
 categories: math blog quick_link
@@ -10,7 +10,7 @@ image-alt: An example of a request to chatGPT (April 2023) which generated the t
 published: false
 ---
 
-<div><a href="{{site.url}}/AI-math-2023/">Tools for work, including AI</a> (October 2023)</div>
+<div><a href="{{site.url}}/AI-math-2023/">Tools for work: not only AI</a> (October 2023)</div>
 <!--more-->
 
 <br>
@@ -117,7 +117,10 @@ end tell
 
 Example usage:
 
-
+<video width="520" height="420" controls>
+  <source src="{{site.storage_url}}/img/blog/vid/3.2_email.mp4" type="video/mp4" alt="Writing emails in VSCode">
+  Your browser does not support the video tag.
+</video>
 
 <h5 class="mb-4 mt-4" id="free-form">3.3 free-form questions for GPT-4</h5>
 
