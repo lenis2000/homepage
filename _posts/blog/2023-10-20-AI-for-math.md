@@ -7,7 +7,7 @@ categories: math blog quick_link
 published: true
 image: __STORAGE_URL__/img/blog/AI.png
 image-alt: An example of a request to chatGPT (April 2023) which generated the tikz code for a picture I put into a paper with minimal modifications (Figure 5 on page 31 in arXiv:2305.17747)
-published: true
+published: false
 ---
 
 <div><a href="{{site.url}}/AI-math-2023/">Tools for work, including AI</a> (October 2023)</div>
