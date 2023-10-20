@@ -92,7 +92,7 @@ I usually do all my prose writing in VSCode. This includes grant and proposal wr
 
 Here is an example of me writing a blog post (this one) in VSCode:
 
-<video width="800" height="600" controls max-width="100%">
+<video width="800" height="600" controls style="max-width:100%">
   <source src="{{site.storage_url}}/img/blog/vid/3.1_writing.mp4" type="video/mp4" alt="Writing in VSCode">
   Your browser does not support the video tag.
 </video>
@@ -124,7 +124,7 @@ end tell
 
 Example usage:
 
-<video width="800" height="600" controls max-width="100%">
+<video width="800" height="600" controls style="max-width:100%">
   <source src="{{site.storage_url}}/img/blog/vid/3.2_email.mp4" type="video/mp4" alt="Writing emails in VSCode">
   Your browser does not support the video tag.
 </video>
