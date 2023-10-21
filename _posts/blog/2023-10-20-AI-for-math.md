@@ -1,16 +1,13 @@
 ---
 layout: post
-title: "Tools for work: not only AI"
+title: "AI-powered workflows for math teaching and research"
 comments: false
 permalink: /AI-math-2023/
 categories: math blog quick_link
 published: true
-image: __STORAGE_URL__/img/blog/AI.png
-image-alt: An example of a request to chatGPT (April 2023) which generated the tikz code for a picture I put into a paper with minimal modifications (Figure 5 on page 31 in arXiv:2305.17747)
-published: true
 ---
 
-<div><a href="{{site.url}}/AI-math-2023/">Tools for work: not only AI</a> (October 2023)</div>
+<div><a href="{{site.url}}/AI-math-2023/">AI-powered workflows for math teaching and research</a> (October 2023)</div>
 <!--more-->
 
 <br>
@@ -24,16 +21,16 @@ About a year has passed since I became interested in integrating AI tools into m
   <li>
     <a href="#teaching">Teaching</a>
     <ul>
-      <li><a href="#creating-sets">Creating test and problem sets with solutions</a></li>
+      <li><a href="#creating-sets">Creating problems with solutions</a></li>
     </ul>
   </li>
   <li>
     <a href="#research">Research</a>
     <ul>
-      <li><a href="#bibliography">Bibliography entries</a></li>
       <li><a href="#tikz">Tikz pictures</a></li>
       <li><a href="#translate">Translate LaTeX to mathematica and back</a></li>
-      <li><a href="#calendars">Create calendars for conferences</a></li>
+      <li><a href="#bibliography">Bibliography entries</a></li>
+      <li><a href="#calendars">Import conference calendar into my calendar</a></li>
     </ul>
   </li>
   <li>
@@ -61,27 +58,71 @@ Here is the list of tools I use more or less daily:
 
 So, my combined monthly spending on these tools is around \$20, which is the same as the cost of just the single ChatGPT Premium subscription.
 
+---
+
 <h1 class="mb-4 mt-4" id="teaching">1. Teaching</h1>
 
-<h3 class="mb-4 mt-4" id="creating-sets">1.1 Creating test and problem sets with solutions</h3>
+<h3 class="mb-4 mt-4" id="creating-sets">1.1 Creating problems with solutions</h3>
+
+To create a problem with solution for my undergrad probability course, I follow the steps:
+
+- (optional) Use `mathpix` to capture the problem from a textbook or an old exam
+- Paste the problem into `VSCode`
+- Have `copilot` autocomplete the solution
+
+At the solution completion stage, the AI often outputs nonsense. The power of `copilot` vs, `ChatGPT` is that I can direct the AI solution step by step. Here is an example when I copy the problem from another exam. In this example, I have `LaTeX` compilation running in the background in terminal, to update the PDF automatically.
+
+Often, `copilot` even tries to do computations for me, but fails miserably. Thus, I also need `Mathematica` to check computations. For that, I copy the latex code of an expression to compute, and ask `GPT-4` to convert it to `Mathematica` code:
+```
+heygpt --model=gpt-4 "convert this expression to Mathematica, \
+output just the mathematica expression \
+\int_0^{\frac{1}{2}}\int_x^\infty 2\lambda e^{-\lambda y}\,dy\,dx " | tee >(pbcopy)
+```
+This request is automated through `Alfred`. I then copy the expression to `Mathematica`, and get the result. In the video below, even the step of the translation from `LaTeX` to `Mathematica` got wrong at the first try, since the order of integration got messed up. After noticing this and correcting, I got the right answer.
+
+Here is a sample video of this workflow (sped up 2x):
+
+<video width="800" height="500" controls style="max-width:100%">
+  <source src="{{site.storage_url}}/img/blog/vid/1.1_UG_problem.mp4" type="video/mp4" alt="Creating a problem with solution">
+  Your browser does not support the video tag.
+</video>
 
 
-
+---
 
 <h1 class="mb-4 mt-4" id="research">2. Research</h1>
 
+Below is just a sample of tasks where I use AI tools in my research. I am always on the lookout to automate more.
 
-<h3 class="mb-4 mt-4" id="bibliography">2.1 Bibliography entries</h3>
+<h3 class="mb-4 mt-4" id="tikz">2.1 Tikz pictures</h3>
+
+You can ask `GPT-4` or `ChatGPT` to generate `TikZ` code for pictures. Here is an example with an early `ChatGPT-4` (April 2023). It generated the tikz code for a picture using this request. After minimal modifications, I put it into a paper - Figure 5 on page 31 in [arXiv:2305.17747](https://arxiv.org/abs/2305.17747):
+
+<img src="{{site.storage_url}}/img/blog/AI.png" style="width:800px; max-width:100%" alt="An example of a request to chatGPT (April 2023) which generated the tikz code for a picture I put into a paper with minimal modifications (Figure 5 on page 31 in arXiv:2305.17747)">
+
+Unfortunately, this method can only generate rather simple pictures. For example, `generate tikz code for an example of a six vertex configuration with domain wall boundary conditions` does not produce anything meaningful, but `generate tikz code for a 4 times 4 dotted grid with axes (t,x) labeled and a red line from (0,0) to (1,1)` works reasonably fine. Moreover, it can modify your existing `TikZ` pictures on the fly, like changing notation in a complicated table of vertex weights. For this I would use a free-form input from a file workflow, see [Section 3.3](#free-form) below.
+
+<h3 class="mb-4 mt-4" id="translate">2.2 Translate LaTeX to Mathematica and back</h3>
+
+`Mathematica` can output any of its results in `LaTeX` using the option `TeXForm`. However, sometimes this output is not pretty and I can ask `GPT-4` to make it better (for example, remove `\left` and `\right` braces unless this is strictly needed; organize factors in a large product such that they look like `1-q` instead of `-q+1`, and so on). Here is an example of not fully polished `Mathematica` output from a 2015 paper [arXiv:1502.07374](https://arxiv.org/abs/1502.07374) (pages 26-27). I would prefer `1-q^J` instead of `q^J-1`, but got lazy to fix this manually:
+
+<img src="{{site.storage_url}}/img/blog/CP-2015.png" style="width:600px; max-width:100%" alt="An example of an unpolished Mathematica output from a 2015 paper (arXiv:1502.07374)">
+
+Translating from `LaTeX` to `Mathematica` was not generally avaiable to me until AI tools. Now, I can copy a piece of `LaTeX` code from a paper I currently write, and check in `Mathematica` that I did not make any typos. Better yet, I can snap a piece of code from a PDF of **any** paper I find, and use it for `Mathematica` computations. In this example, I look at [arXiv:0905.0679](https://arxiv.org/abs/0905.0679), pick the formula for the weight `w(x)` from Section 4, and check that the expression for `w(x+1)/w(x)` given in Section 8.2 is indeed correct. The video is sped up 2x:
+
+<video width="800" height="500" controls style="max-width:100%">
+  <source src="{{site.storage_url}}/img/blog/vid/2.2_translate.mp4" type="video/mp4" alt="Translating LaTeX to Mathematica and back">
+  Your browser does not support the video tag.
+</video>
 
 
-<h3 class="mb-4 mt-4" id="tikz">2.2 Tikz pictures</h3>
 
 
-<h3 class="mb-4 mt-4" id="translate">2.3 Translate LaTeX to mathematica and back</h3>
+<h3 class="mb-4 mt-4" id="bibliography">2.3 Bibliography entries</h3>
 
+<h3 class="mb-4 mt-4" id="calendars">2.4 Import conference calendar into my calendar</h3>
 
-<h3 class="mb-4 mt-4" id="calendars">2.4 Create calendars for conferences</h3>
-
+---
 
 <h1 class="mb-4 mt-4" id="miscellaneous">3. Miscellaneous</h1>
 
