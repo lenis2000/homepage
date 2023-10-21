@@ -4,7 +4,7 @@ title: "AI-powered workflows for math teaching and research"
 comments: false
 permalink: /AI-math-2023/
 categories: math blog quick_link
-published: true
+published: false
 ---
 
 <div><a href="{{site.url}}/AI-math-2023/">AI-powered workflows for math teaching and research</a> (October 2023)</div>
