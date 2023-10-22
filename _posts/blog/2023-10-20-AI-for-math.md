@@ -245,9 +245,9 @@ Output the ical code only. I need the most complete information about\
 the event or multiple events. Here is the data to process: {query}" | tee >(pbcopy)
 ```
 
-Then I copy the text from the PDF or the webpage using OCR, day by day, and ask to convert it to `.ics`. Here is an example video of how this works:
+Then I copy the text from the PDF or the webpage using OCR, day by day, and ask to convert it to `.ics`. Here is an example video of how this works for one day of a [random conference](https://www.slmath.org/workshops/1082):
 
-<video width="800" height="500" controls style="max-width:100%">
+<video width="800" height="400" controls style="max-width:100%">
   <source src="{{site.storage_url}}/img/blog/vid/2.4_calendar.mp4" type="video/mp4" alt="Importing conference calendar into my calendar">
   Your browser does not support the video tag.
 </video>
