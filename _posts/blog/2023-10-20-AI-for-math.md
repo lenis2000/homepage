@@ -82,7 +82,7 @@ This request is automated through `Alfred`. I then copy the expression to `Mathe
 
 Here is a sample video of this workflow (sped up 2x):
 
-<video width="800" height="500" controls style="max-width:100%">
+<video width="800" height="500" controls style="max-width:100%;max-height:60%">
   <source src="{{site.storage_url}}/img/blog/vid/1.1_UG_problem.mp4" type="video/mp4" alt="Creating a problem with solution">
   Your browser does not support the video tag.
 </video>
@@ -129,7 +129,7 @@ There are of course manual caveats:
 
 Full video of the example is below. It is sped up 2x:
 
-<video width="800" height="500" controls style="max-width:100%">
+<video width="800" height="500" controls style="max-width:100%;max-height:60%">
   <source src="{{site.storage_url}}/img/blog/vid/2.2_translate.mp4" type="video/mp4" alt="Translating LaTeX to Mathematica and back">
   Your browser does not support the video tag.
 </video>
@@ -247,7 +247,7 @@ the event or multiple events. Here is the data to process: {query}" | tee >(pbco
 
 Then I copy the text from the PDF or the webpage using OCR, day by day, and ask to convert it to `.ics`. Here is an example video of how this works for one day of a [random conference](https://www.slmath.org/workshops/1082):
 
-<video width="800" height="400" controls style="max-width:100%">
+<video width="800" height="400" controls style="max-width:100%;max-height:60%">
   <source src="{{site.storage_url}}/img/blog/vid/2.4_calendar.mp4" type="video/mp4" alt="Importing conference calendar into my calendar">
   Your browser does not support the video tag.
 </video>
@@ -263,7 +263,7 @@ I usually do all my prose writing in `VSCode`. This includes grant and proposal 
 
 Here is an example of me writing a blog post (this one) in `VSCode`:
 
-<video width="800" height="600" controls style="max-width:100%">
+<video width="800" height="600" controls style="max-width:100%;max-height:60%">
   <source src="{{site.storage_url}}/img/blog/vid/3.1_writing.mp4" type="video/mp4" alt="Writing in VSCode">
   Your browser does not support the video tag.
 </video>
@@ -295,7 +295,7 @@ end tell
 
 Example usage, where I open `Mail.app`, select a message, and run the hotkey in `Alfred`. Then I write the response in `VSCode`. I can then just copy the result, and put it in the email as an answer (not shown in the video).
 
-<video width="800" height="600" controls style="max-width:100%">
+<video width="800" height="600" controls style="max-width:100%;max-height:60%">
   <source src="{{site.storage_url}}/img/blog/vid/3.2_email.mp4" type="video/mp4" alt="Writing emails in VSCode">
   Your browser does not support the video tag.
 </video>
@@ -318,7 +318,7 @@ heygpt --model=gpt-4 `cat ~/GPT.txt` | tee >(pbcopy)
 
 The `| tee >(pbcopy)` part is responsible for copying the output to the clipboard, while at the same time the terminal shows the output. Here is a sample usage, where I write a request into file `GPT.txt`, run the hotkey in `Alfred`, then topy the result into the same text file, ask for funnier jokes, and run the request again. In the video, `hg` is my alias for `heygpt --model=gpt-4`.
 
-<video width="800" height="480" controls style="max-width:100%">
+<video width="800" height="480" controls style="max-width:100%;max-height:60%">
   <source src="{{site.storage_url}}/img/blog/vid/3.3_questions.mp4" type="video/mp4" alt="Using GPT-4 with text input">
   Your browser does not support the video tag.
 </video>
