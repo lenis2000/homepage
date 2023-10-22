@@ -2,12 +2,12 @@
 layout: post
 title: "AI-powered workflows for math teaching and research"
 comments: false
-permalink: /AI-math-2023/
+permalink: /AI-math/
 categories: math blog quick_link
 published: true
 ---
 
-<div><a href="{{site.url}}/AI-math-2023/">AI-powered workflows for math teaching and research</a> (October 2023)</div>
+<div><a href="{{site.url}}/AI-math/">AI-powered workflows for math teaching and research</a> (October 2023)</div>
 <!--more-->
 
 <br>
