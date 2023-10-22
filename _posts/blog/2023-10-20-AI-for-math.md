@@ -108,7 +108,11 @@ Unfortunately, this method can only generate rather simple pictures. For example
 
 <img src="{{site.storage_url}}/img/blog/CP-2015.png" style="width:600px; max-width:100%" alt="An example of an unpolished Mathematica output from a 2015 paper (arXiv:1502.07374)">
 
-Translating from `LaTeX` to `Mathematica` was not generally avaiable to me until AI tools. Now, I can copy a piece of `LaTeX` code from a paper I currently write, and check in `Mathematica` that I did not make any typos. Better yet, I can snap a piece of code from a PDF of **any** paper I find, and use it for `Mathematica` computations. Here is the GPT API prompt:
+In another direction, translating from `LaTeX` to `Mathematica` was not generally avaiable to me until AI tools. Now, I can copy a piece of `LaTeX` code from a paper I currently write, and check in `Mathematica` that I did not make any typos. Better yet, I can snap a piece of code from a PDF of **any** paper I find, and use it for `Mathematica` computations.
+
+In this example, I look at [arXiv:0905.0679](https://arxiv.org/abs/0905.0679), pick the formula for the weight `w(x)` from Section 4, and check that the expression for `w(x+1)/w(x)` given in Section 8.2 is indeed correct. 
+
+Here is the `GPT-4 API` prompt for the second part of this task, where there is a typo in OCR `w_{t, S}( & +1) / w_{t, S}(x)`, but `GPT-4` does not care, and still produces a decent output:
 ```zsh
 heygpt --model=gpt-4 "convert this expression to Mathematica, output just the mathematica expression\
 $\begin{aligned} w_{t, S}( & +1) / w_{t, S}(x)=\frac{q^{2 N+T-1}\
@@ -119,7 +123,11 @@ $\begin{aligned} w_{t, S}( & +1) / w_{t, S}(x)=\frac{q^{2 N+T-1}\
 \left(1-\kappa^2 q^{x+N-S+1}\right)}\end{aligned}$" | tee >(pbcopy)
 ```
 
-In this example, I look at [arXiv:0905.0679](https://arxiv.org/abs/0905.0679), pick the formula for the weight `w(x)` from Section 4, and check that the expression for `w(x+1)/w(x)` given in Section 8.2 is indeed correct. There is only one manual caveat, that the symbol `N` in `Mathematica` is protected, so I need to replace it with `NN` manually. The video is sped up 2x:
+There are of course manual caveats:
+- I needed to remove the part related to `w_{t, S}( & +1) / w_{t, S}(x)=` from the Mathematica output 
+- The symbol `N` in `Mathematica` is protected, so I need to replace it with `NN` manually. 
+
+Full video of the example is below. It is sped up 2x:
 
 <video width="800" height="500" controls style="max-width:100%">
   <source src="{{site.storage_url}}/img/blog/vid/2.2_translate.mp4" type="video/mp4" alt="Translating LaTeX to Mathematica and back">
