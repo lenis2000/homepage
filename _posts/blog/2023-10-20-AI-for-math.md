@@ -4,7 +4,7 @@ title: "AI-powered workflows for math teaching and research"
 comments: false
 permalink: /AI-math-2023/
 categories: math blog quick_link
-published: false
+published: true
 ---
 
 <div><a href="{{site.url}}/AI-math-2023/">AI-powered workflows for math teaching and research</a> (October 2023)</div>
@@ -12,12 +12,12 @@ published: false
 
 <br>
 
-About a year has passed since I became interested in integrating AI tools into my work tasks (this predated the `GPT-4` hype by several months). Over time, I have developed several workflows around math that could be useful for my colleagues. With the help of these tools, I experience a significant speedup of many mundane tasks. I describe the tools and my workflows here. 
+About a year has passed since I became interested in integrating AI tools into my work tasks (predating the `GPT-4` hype by several months). Over time, I have developed several workflows around math teaching and research that could be useful for my colleagues. With the help of these workflows, I experience a significant speedup of many mundane tasks. I describe my tools and workflows here. 
 
 <h1 class="mb-4 mt-4">Table of contents</h1>
 
 <ol start="0">
-  <li><a href="#tools-list">Tools list</a></li>
+  <li><a href="#tools-list">List of tools</a></li>
   <li>
     <a href="#teaching">Teaching</a>
     <ul>
@@ -43,7 +43,7 @@ About a year has passed since I became interested in integrating AI tools into m
   </li>
 </ol>
 
-<h1 class="mb-4 mt-4" id="tools-list">0. Tools list</h1>
+<h1 class="mb-4 mt-4" id="tools-list">0. List of tools</h1>
 
 Here is the list of tools I use more or less daily:
 
@@ -73,7 +73,7 @@ To create a problem with solution for my undergrad probability course, I follow 
 At the solution completion stage, the AI often outputs nonsense. The power of `copilot` vs, `ChatGPT` is that I can direct the AI solution step by step. Here is an example when I copy the problem from another exam. In this example, I have `LaTeX` compilation running in the background in terminal, to update the PDF automatically.
 
 Often, `copilot` even tries to do computations for me, but fails miserably. Thus, I also need `Mathematica` to check computations. For that, I copy the latex code of an expression to compute, and ask `GPT-4` to convert it to `Mathematica` code:
-```
+```zsh
 heygpt --model=gpt-4 "convert this expression to Mathematica, \
 output just the mathematica expression \
 \int_0^{\frac{1}{2}}\int_x^\infty 2\lambda e^{-\lambda y}\,dy\,dx " | tee >(pbcopy)
@@ -108,7 +108,18 @@ Unfortunately, this method can only generate rather simple pictures. For example
 
 <img src="{{site.storage_url}}/img/blog/CP-2015.png" style="width:600px; max-width:100%" alt="An example of an unpolished Mathematica output from a 2015 paper (arXiv:1502.07374)">
 
-Translating from `LaTeX` to `Mathematica` was not generally avaiable to me until AI tools. Now, I can copy a piece of `LaTeX` code from a paper I currently write, and check in `Mathematica` that I did not make any typos. Better yet, I can snap a piece of code from a PDF of **any** paper I find, and use it for `Mathematica` computations. In this example, I look at [arXiv:0905.0679](https://arxiv.org/abs/0905.0679), pick the formula for the weight `w(x)` from Section 4, and check that the expression for `w(x+1)/w(x)` given in Section 8.2 is indeed correct. The video is sped up 2x:
+Translating from `LaTeX` to `Mathematica` was not generally avaiable to me until AI tools. Now, I can copy a piece of `LaTeX` code from a paper I currently write, and check in `Mathematica` that I did not make any typos. Better yet, I can snap a piece of code from a PDF of **any** paper I find, and use it for `Mathematica` computations. Here is the GPT API prompt:
+```zsh
+heygpt --model=gpt-4 "convert this expression to Mathematica, output just the mathematica expression\
+$\begin{aligned} w_{t, S}( & +1) / w_{t, S}(x)=\frac{q^{2 N+T-1}\
+\left(1-\kappa^2 q^{2 x-t-S+3}\right)}{1-\kappa^2 q^{2 x-t-S+1}}\
+\\ & \times \frac{\left(1-q^{x-t-N+1}\right)\left(1-q^{x-S-N+1}\right)\
+\left(1-\kappa^2 q^{x-T+1}\right)\left(1-\kappa^2 q^{x-t-S+1}\right)}\
+{\left(1-q^{x+1}\right)\left(1-q^{T-S-t+x+1}\right)\left(1-\kappa^2 q^{x+N-t+1}\right)\
+\left(1-\kappa^2 q^{x+N-S+1}\right)}\end{aligned}$" | tee >(pbcopy)
+```
+
+In this example, I look at [arXiv:0905.0679](https://arxiv.org/abs/0905.0679), pick the formula for the weight `w(x)` from Section 4, and check that the expression for `w(x+1)/w(x)` given in Section 8.2 is indeed correct. There is only one manual caveat, that the symbol `N` in `Mathematica` is protected, so I need to replace it with `NN` manually. The video is sped up 2x:
 
 <video width="800" height="500" controls style="max-width:100%">
   <source src="{{site.storage_url}}/img/blog/vid/2.2_translate.mp4" type="video/mp4" alt="Translating LaTeX to Mathematica and back">
@@ -116,11 +127,122 @@ Translating from `LaTeX` to `Mathematica` was not generally avaiable to me until
 </video>
 
 
-
-
 <h3 class="mb-4 mt-4" id="bibliography">2.3 Bibliography entries</h3>
 
+For bibliography, I maintain a [giant bibtex file](https://github.com/lenis2000/BiBTeX/blob/master/bib.bib). For many years, I used `google scholar` bibtex export feature, but it is imprecise:
+
+- I need to add arXiv number (I like to include them when available)
+- The title of the paper should be wrapped in double braces, so that capitalization is correct
+- I like to abbreviate first names of the authors, and `google scholar` is doing it inconsistently
+
+Recently, I stopped using google scholar's bibtex export, and instead wrote my own bibtex prompt. Basically, I give `GPT-4` several examples, and add the info about the paper from two sources which I copypast from the web: arXiv and the journal website. Here is an example of an Alfred workflow which generates and executes a request to `GPT-4`:
+```zsh
+condition="I want you to make bibtex files in a format, from the data provided.\
+Here are examples of my bibtex entries, use this format.\
+IMPORTANT: 1. Abbreviate first names of authors, and journal names.\
+2. Also, use double curly brackets around title. 3. Remove any month entries.
+
+After END EXAMPLE I will give you data, output only bibtex entry for this data. 
+
+BEGIN EXAMPLE
+
+@article{ayyer2022modified,
+author = {Ayyer, A. and Mandelshtam, O. and Martin, J.B.},
+journal = {arXiv preprint},
+note = {arXiv:2209.09859 [math.CO]},
+title = {%raw%}{{Modified Macdonald polynomials and the multispecies zero range process: II}}{%endraw%},
+year = {2022}}
+
+@article{Baxter1972,
+author = {Baxter, R. J.},
+doi = {10.1016/0003-4916(72)90335-1},
+journal = {Annals of Physics},
+number = {1},
+pages = {193--228},
+title = {%raw%}{{Partition function of the Eight-Vertex lattice model}}{%endraw%},
+volume = {70},
+year = {1972}}
+
+@article{onsager1931reciprocal,
+author = {Onsager, L.},
+journal = {Phys. Rev.},
+pages = {405},
+publisher = {American Physical Society},
+title = {%raw%}{{Reciprocal Relations in Irreversible Processes. I.}}{%endraw%},
+volume = {37},
+year = {1931}}
+
+<...A FEW MORE EXAMPLES...>
+
+END EXAMPLE
+
+remember: IMPORTANT: Abbreviate first names of authors, and journal names.\
+Also, double curly brackets around title. And no month entries please.\
+I just need the bibtex entry as output, and no comments.
+"
+
+e_condition=${(q)condition}
+combined_query="${e_condition} {query}"
+
+heygpt --model=gpt-4 "$combined_query" | tee >(pbcopy)
+```
+
+Here is an example of the input as `{query}` to the above script. These are just copypastes of pieces from the [journal webpage](https://link.springer.com/article/10.1007/s00440-013-0482-3) and [arXiv](https://arxiv.org/abs/1111.4408):
+
+```
+Home  Probability Theory and Related Fields  Article
+Published: 30 March 2013
+Macdonald processes
+Alexei Borodin & Ivan Corwin 
+Probability Theory and Related Fields volume 158, pages225–400 (2014)Cite this article
+
+2990 Accesses
+
+264 Citations
+
+Metricsdetails
+
+	arXiv:1111.4408 [math.PR]
+```
+
+You see that this text has lots of garbage data. But ran through the above prompt, this becomes the following bibtex entry:
+
+```bibtex
+@article{BorodinCorwin2014,
+author = {Borodin, A. and Corwin, I.},
+journal = {Prob. Theory Relat. Fields},
+note = {arXiv:1111.4408 [math.PR]},
+pages = {225-400},
+title = {%raw%}{{Macdonald processes}}{%endraw%},
+volume = {158},
+year = {2014}
+}
+```
+
 <h3 class="mb-4 mt-4" id="calendars">2.4 Import conference calendar into my calendar</h3>
+
+When I go to a conference, I like to have its calendar in my icloud. This way, I can always check my watch to see what is the next talk. Conferences rarely provide `.ics` files or google calendars (which would be equally good), and one of the main reasons I see for this is that it's a pain to nicely display a google calendar on the web. So, math conferences typically resort to one of two terrible things:
+
+- Make a PDF of the schedule with `LaTeX` table, which is downloaded on click (and not displayed in browser)
+- Or, make a webpage with the schedule in an `html` table
+
+I do not know which one is worse for machine readability, but thanks to `mathpix` OCR and `GPT-4`, I can convert either of them into `.ics`, which I can then add to my calendar. 
+
+Here is the prompt which more or less works for this conversion:
+
+```zsh
+heygpt --model=gpt-4 "Make ical code for this event.\
+This is in San Francisco, CA time zone, Pacific time, winter, year is 2023.\
+Output the ical code only. I need the most complete information about\
+the event or multiple events. Here is the data to process: {query}" | tee >(pbcopy)
+```
+
+Then I copy the text from the PDF or the webpage using OCR, day by day, and ask to convert it to `.ics`. Here is an example video of how this works:
+
+<video width="800" height="500" controls style="max-width:100%">
+  <source src="{{site.storage_url}}/img/blog/vid/2.4_calendar.mp4" type="video/mp4" alt="Importing conference calendar into my calendar">
+  Your browser does not support the video tag.
+</video>
 
 ---
 
