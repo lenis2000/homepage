@@ -34,19 +34,13 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 
 <h2 class="mb-4">Mini-courses</h2>
 
-##### Week 1
-
 <ul>
-<li> TBD
-</li>
+<li>Natasha Blitvic (QMUL)</li>
+<li>Jeremy Quastel (Toronto)</li>
+<li>Marianna Russkikh (Notre Dame)</li>
+<li>Dominik Schmid (Bonn and Columbia)</li>
 </ul>
 
-##### Week 2
-
-<ul>
-<li> TBD
-</li>
-</ul>
 
 #### &bull; <a href="{{site.url}}/vipss2024/participants/">Participants</a>
 
