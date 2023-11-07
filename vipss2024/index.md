@@ -26,11 +26,6 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 
 --- 
 
-## &bull; <a href="{{site.url}}/vipss2024/schedule/">Full schedule</a> (talks are in TBD)
-
-## &bull; <a href="{{site.url}}/vipss2024/travel_local/">Travel and local details</a>
-
----
 
 <h2 class="mb-4">Mini-courses</h2>
 
@@ -40,6 +35,15 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 <li>Marianna Russkikh (Notre Dame)</li>
 <li>Dominik Schmid (Bonn and Columbia)</li>
 </ul>
+
+---
+
+## &bull; <a href="{{site.url}}/vipss2024/schedule/">Full schedule</a> (talks are in TBD)
+
+## &bull; <a href="{{site.url}}/vipss2024/travel_local/">Travel and local details</a>
+
+---
+
 
 
 #### &bull; <a href="{{site.url}}/vipss2024/participants/">Participants</a>
