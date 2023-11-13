@@ -39,6 +39,8 @@ About a year has passed since I became interested in integrating AI tools into m
       <li><a href="#writing">Writing</a></li>
       <li><a href="#emails">Answering to emails and composing in VSCode</a></li>
       <li><a href="#free-form">Free-form questions for GPT-4</a></li>
+      <li><a href="#pdf-summarize">Summarize PDFs</a></li>
+      <li><a href="#msc">Mathematics Subjects Classification</a></li>
     </ul>
   </li>
 </ol>
@@ -323,6 +325,45 @@ The `| tee >(pbcopy)` part is responsible for copying the output to the clipboar
   Your browser does not support the video tag.
 </video>
 
+<h3 class="mb-4 mt-4" id="pdf-summarize">3.4 Summarize PDFs</h3>
+
+(upcoming)
+
+<h3 class="mb-4 mt-4" id="msc">3.5 MSC classification</h3>
+
+If I need to look up MSC2020 (Math subject classification) codes by code, or have suggestions for such codes for an abstract of a paper, I use the following `heygpt` prompt in `Alfred`:
+
+```zsh
+hg "1. If the input is a code or a few codes, look up in the MSC 2020 (math subject classification database) 
+and output the descriptions of the codes. 
+2. However, if the input is a mathematical text, look up the MSC 2020 (math subject classification database) 
+and output suggested primary and up to 5 secondary MSC codes, with summaries. 
+Here is the input: {query}"
+```
+
+The output on the abstract of [this recent paper]({{site.url}}/papers/2023/09/stat-ring/) is quite appropriate:
+
+```
+Primary MSC code:
+- **60K35** (Interacting random processes; statistical mechanics type models; percolation theory): 
+This code would be appropriate since the paper focuses on stationary measures for interrelated particles 
+in systems from a probabilistic and statistical mechanics perspective.
+
+Secondary MSC codes:
+- **82B23** (Exactly solvable models; Bethe ansatz): 
+Since the paper mentions the use of integrable stochastic vertex models and the Yang-Baxter equation, 
+this code seems relevant.
+- **82C22** (Interacting particle systems in time-dependent statistical mechanics): 
+The work is centered around interacting particle systems, like the mASEP, TAZRP, and q-PushTASEP, 
+making this code appropriate.
+- **81R50** (Quantum groups and related algebraic methods): 
+The paper uses algebraic structures such as the Yang-Baxter equation, which is closely related to quantum groups.
+- **60J27** (Continuous-time Markov processes on discrete state spaces): 
+If the paper discusses Markov processes for modeling the time evolution of the systems, this would be a fitting code.
+- **05E05** (Symmetric functions and generalizations): 
+If the paper details connections with nonsymmetric Macdonald polynomials, 
+which are a generalization of symmetric functions, this code could be relevant.
+```
 
 <br />
 <br />
