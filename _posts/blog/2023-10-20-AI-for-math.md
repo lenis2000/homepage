@@ -7,7 +7,7 @@ categories: math blog quick_link
 published: true
 ---
 
-<div><a href="{{site.url}}/AI-math/">AI-powered workflows for math teaching and research</a> (October 2023)</div>
+<div><a href="{{site.url}}/AI-math/">AI-powered workflows for math teaching and research</a> (updated November 2023)</div>
 <!--more-->
 
 <br>
@@ -429,40 +429,40 @@ Here is the input: {query}"
 The output on the abstract of [this recent paper]({{site.url}}/2023/09/stat-ring/) is quite appropriate:
 
 ```
-Primary MSC code:
-- **60K35** (Interacting random processes; statistical mechanics type models; percolation theory): 
-This code would be appropriate since the paper focuses on stationary measures for interrelated particles 
-in systems from a probabilistic and statistical mechanics perspective.
+      Primary MSC code:
+      - **60K35** (Interacting random processes; statistical mechanics type models; percolation theory): 
+      This code would be appropriate since the paper focuses on stationary measures for interrelated particles 
+      in systems from a probabilistic and statistical mechanics perspective.
 
-Secondary MSC codes:
-- **82B23** (Exactly solvable models; Bethe ansatz): 
-Since the paper mentions the use of integrable stochastic vertex models and the Yang-Baxter equation, 
-this code seems relevant.
-- **82C22** (Interacting particle systems in time-dependent statistical mechanics): 
-The work is centered around interacting particle systems, like the mASEP, TAZRP, and q-PushTASEP, 
-making this code appropriate.
-- **81R50** (Quantum groups and related algebraic methods): 
-The paper uses algebraic structures such as the Yang-Baxter equation, which is closely related to quantum groups.
-- **60J27** (Continuous-time Markov processes on discrete state spaces): 
-If the paper discusses Markov processes for modeling the time evolution of the systems, this would be a fitting code.
-- **05E05** (Symmetric functions and generalizations): 
-If the paper details connections with nonsymmetric Macdonald polynomials, 
-which are a generalization of symmetric functions, this code could be relevant.
+      Secondary MSC codes:
+      - **82B23** (Exactly solvable models; Bethe ansatz): 
+      Since the paper mentions the use of integrable stochastic vertex models and the Yang-Baxter equation, 
+      this code seems relevant.
+      - **82C22** (Interacting particle systems in time-dependent statistical mechanics): 
+      The work is centered around interacting particle systems, like the mASEP, TAZRP, and q-PushTASEP, 
+      making this code appropriate.
+      - **81R50** (Quantum groups and related algebraic methods): 
+      The paper uses algebraic structures such as the Yang-Baxter equation, which is closely related to quantum groups.
+      - **60J27** (Continuous-time Markov processes on discrete state spaces): 
+      If the paper discusses Markov processes for modeling the time evolution of the systems, this would be a fitting code.
+      - **05E05** (Symmetric functions and generalizations): 
+      If the paper details connections with nonsymmetric Macdonald polynomials, 
+      which are a generalization of symmetric functions, this code could be relevant.
 ```
 
 And here is the output if I just ask `Alfred` to execute `cmsc 60K35`:
 
 ```
-1. The code 60K35 from the MSC 2020 database corresponds to:
+      1. The code 60K35 from the MSC 2020 database corresponds to:
 
-**60K35**: Interacting random processes; statistical mechanics type models; percolation theory
+      **60K35**: Interacting random processes; statistical mechanics type models; percolation theory
 
-This area of mathematics concerns with random processes that have interaction terms 
-or dependencies between them, which are often analyzed using methods from statistical mechanics. 
-Examples might include processes such as Ising models, exclusion processes, 
-and various models of percolation. These models and theories help to understand how 
-the structure and behavior at a local level can affect the system's global properties, 
-often studying phenomena like phase transitions and critical behavior.
+      This area of mathematics concerns with random processes that have interaction terms 
+      or dependencies between them, which are often analyzed using methods from statistical mechanics. 
+      Examples might include processes such as Ising models, exclusion processes, 
+      and various models of percolation. These models and theories help to understand how 
+      the structure and behavior at a local level can affect the system's global properties, 
+      often studying phenomena like phase transitions and critical behavior.
 ``````
 
 <br />
