@@ -341,7 +341,7 @@ and output suggested primary and up to 5 secondary MSC codes, with summaries.
 Here is the input: {query}"
 ```
 
-The output on the abstract of [this recent paper]({{site.url}}/papers/2023/09/stat-ring/) is quite appropriate:
+The output on the abstract of [this recent paper]({{site.url}}/2023/09/stat-ring/) is quite appropriate:
 
 ```
 Primary MSC code:
@@ -364,6 +364,21 @@ If the paper discusses Markov processes for modeling the time evolution of the s
 If the paper details connections with nonsymmetric Macdonald polynomials, 
 which are a generalization of symmetric functions, this code could be relevant.
 ```
+
+And here is the output if I just ask `Alfred` to execute `cmsc 60K35`:
+
+```
+1. The code 60K35 from the MSC 2020 database corresponds to:
+
+**60K35**: Interacting random processes; statistical mechanics type models; percolation theory
+
+This area of mathematics concerns with random processes that have interaction terms 
+or dependencies between them, which are often analyzed using methods from statistical mechanics. 
+Examples might include processes such as Ising models, exclusion processes, 
+and various models of percolation. These models and theories help to understand how 
+the structure and behavior at a local level can affect the system's global properties, 
+often studying phenomena like phase transitions and critical behavior.
+``````
 
 <br />
 <br />
