@@ -327,7 +327,13 @@ The `| tee >(pbcopy)` part is responsible for copying the output to the clipboar
 
 <h3 class="mb-4 mt-4" id="pdf-summarize">3.4 Summarize PDFs</h3>
 
-(upcoming; will be based on <a href="https://medium.com/@kapildevkhatik2/the-ultimate-guide-to-pdf-summarization-with-openai-api-simplify-your-reading-process-80021210cd11">this</a>)
+(upcoming; will be loosely based on <a href="https://medium.com/@kapildevkhatik2/the-ultimate-guide-to-pdf-summarization-with-openai-api-simplify-your-reading-process-80021210cd11">this</a>)
+
+
+
+
+
+
 
 <h3 class="mb-4 mt-4" id="msc">3.5 MSC classification</h3>
 
