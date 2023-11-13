@@ -327,12 +327,91 @@ The `| tee >(pbcopy)` part is responsible for copying the output to the clipboar
 
 <h3 class="mb-4 mt-4" id="pdf-summarize">3.4 Summarize PDFs</h3>
 
-(upcoming; will be loosely based on <a href="https://medium.com/@kapildevkhatik2/the-ultimate-guide-to-pdf-summarization-with-openai-api-simplify-your-reading-process-80021210cd11">this</a>)
+I can summarize PDFs by cutting them into several chunks and sending the chunks separately to be summarized. The result is a subsequent summary of all chunks, which I can summarize later one more time to get a high-level overview.
 
+This is achieved with this `python` script (loosely based on <a href="https://medium.com/@kapildevkhatik2/the-ultimate-guide-to-pdf-summarization-with-openai-api-simplify-your-reading-process-80021210cd11">this script</a>, with my modifications which include `heygpt`):
 
+```python
+import sys
+import subprocess
+import fitz  # This is PyMuPDF
+from nltk.tokenize import sent_tokenize
+from io import StringIO
 
+def read_pdf(filename):
+    sys.stderr.write(f"Reading PDF file... {filename}\n")
+    context = ""
+    with fitz.open(filename) as pdf_file:
+        num_pages = len(pdf_file)
+        sys.stderr.write(f"Number of pages in PDF: {num_pages}\n")
+        for page_num in range(num_pages):
+            page = pdf_file[page_num]
+            page_text = page.get_text('text')
+            context += page_text
+            sys.stderr.write(f"Finished reading page {page_num + 1}/{num_pages}\n")
+    return context
 
+def split_text(text, chunk_size=5000):
+    sys.stderr.write("Splitting text into chunks...\n")
+    chunks = []
+    current_chunk = StringIO()
+    current_size = 0
+    sentences = sent_tokenize(text)
+    for sentence in sentences:
+        sentence_size = len(sentence)
+        if sentence_size + current_size <= chunk_size:
+            current_chunk.write(sentence)
+            current_size += sentence_size
+        else:
+            chunks.append(current_chunk.getvalue())
+            current_chunk = StringIO(sentence)
+            current_size = sentence_size
+            sys.stderr.write(f"Created a new chunk. Total chunks so far: {len(chunks)}\n")
+    if current_chunk.getvalue():
+        chunks.append(current_chunk.getvalue())
+    sys.stderr.write(f"Total chunks created: {len(chunks)}\n")
+    return chunks
 
+def heygpt_completion(prompt, model_name="--model=gpt-4-1106-preview"):
+    sys.stderr.write("Sending prompt to 'heygpt' subprocess...\n")
+    try:
+        result = subprocess.run(['heygpt', model_name], input=prompt, text=True, capture_output=True, check=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        error_message = f"heygpt error: {e}\n"
+        sys.stderr.write(error_message)
+        return error_message
+
+def summarize(document):
+    sys.stderr.write("Summarizing document...\n")
+    chunks = split_text(document)
+    summaries = []
+    for chunk in chunks:
+        prompt = "Please summarize the following text:\n" + chunk
+        sys.stderr.write("Sending chunk to be summarized...\n")
+        summary = heygpt_completion(prompt)
+        summaries.append(summary)
+        sys.stderr.write(f"Received summary for chunk: {len(summaries)}\n")
+    sys.stderr.write("Completed summarization of all chunks.\n")
+    return ' '.join(summaries)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        sys.stderr.write("Usage: python script.py <pdf_filename>\n")
+        sys.exit(1)
+
+    pdf_filename = sys.argv[1]
+    try:
+        sys.stderr.write(f"Starting the summarization process for {pdf_filename}\n")
+        document = read_pdf(pdf_filename)
+        summarized_content = summarize(document)
+        print("Final summarized content:\n")
+        print(summarized_content)
+    except FileNotFoundError:
+        sys.stderr.write(f"File '{pdf_filename}' not found.\n")
+    except Exception as e:
+        sys.stderr.write(f"An error occurred: {e}\n")
+```
 
 
 <h3 class="mb-4 mt-4" id="msc">3.5 MSC classification</h3>
