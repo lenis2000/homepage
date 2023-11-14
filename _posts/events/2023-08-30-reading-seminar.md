@@ -60,13 +60,9 @@ Solvable lattice models originated in mathematical physics (Ising model, square 
 
     *Leo Petrov* - From the stochastic six-vertex model to asymptotics (after [Gorin-Nicoletti](https://arxiv.org/pdf/2309.12495.pdf)'s lecture notes, Section 5; and also papers on Schur measures)
 
-10. November 14, 2023
-
-    TBA
-
 11. November 21, 2023
 
-    TBA (may be cancelled)
+    TBA
 
 11. November 28, 2023
 
