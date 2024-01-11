@@ -38,23 +38,23 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 
 ---
 
-## &bull; <a href="{{site.url}}/vipss2024/schedule/">Full schedule</a> (talks are in TBD)
+## &bull; <a href="{{site.url}}/vipss2024/schedule/">Full schedule</a> (room is TBD)
 
-## &bull; <a href="{{site.url}}/vipss2024/travel_local/">Travel and local details</a>
+## &bull; <a href="{{site.url}}/vipss2024/local-info/">Travel and local details</a>
 
 ---
 
-
+<!-- 
 
 #### &bull; <a href="{{site.url}}/vipss2024/participants/">Participants</a>
 
----
+--- -->
 
 <h4 class="mt-3">Registration, financial support, and accommodation deadlines</h4>
 
-- To request residence University of Virginia hall accommodation: **TBD, 2024**
-- To request financial support: **TBD, 2024**
-- General registration: **TBD, 2024**
+- To request University of Virginia residence hall accommodation: **March 15, 2024**
+- To request financial support: **May 1, 2024**
+- General registration: **July 1, 2024**
 
 #### &bull; <a href="{{site.url}}/vipss2024/registration/">Registration form and related information</a>
 
