@@ -32,15 +32,15 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 ### Week 1 (July 8-12)
 
 <ul>
-<li>[Natasha Blitvic](https://www.research.lancs.ac.uk/portal/en/people/natasha-blitvic(2f99caf5-ea62-4906-b06a-2bfae95dcf56).html) (QMUL), TA: TBD</li>
-<li>[Jeremy Quastel](https://www.math.toronto.edu/quastel/) (Toronto), TA: TBD</li>
+<li><a href="https://www.research.lancs.ac.uk/portal/en/people/natasha-blitvic(2f99caf5-ea62-4906-b06a-2bfae95dcf56).html">Natasha Blitvic</a> (QMUL), TA: TBD</li>
+<li><a href="https://www.math.toronto.edu/quastel/">Jeremy Quastel</a> (Toronto), TA: TBD</li>
 </ul>
 
 ### Week 2 (July 15-19)
 
 <ul>
-<li>[Marianna Russkikh](https://math.nd.edu/people/faculty/marianna-russkikh/) (Notre Dame), TA: [Matthew Nicoletti](https://math.mit.edu/~mnicolet/) (MIT)</li>
-<li>[Dominik Schmid](https://sites.google.com/view/dominik-schmid) (Bonn and Columbia), TA: [Zongrui Yang](https://www.semanticscholar.org/author/Zong-Xin-Yang/102849487) (Columbia)</li>
+<li><a href="https://math.nd.edu/people/faculty/marianna-russkikh/">Marianna Russkikh</a> (Notre Dame), TA: <a href="https://math.mit.edu/~mnicolet/">Matthew Nicoletti</a> (MIT)</li>
+<li><a href="https://sites.google.com/view/dominik-schmid">Dominik Schmid</a> (Bonn and Columbia), TA: <a href="https://www.semanticscholar.org/author/Zong-Xin-Yang/102849487">Zongrui Yang</a> (Columbia)</li>
 </ul>
 
 ---
