@@ -29,9 +29,16 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 
 <h2 class="mb-4">Mini-courses</h2>
 
+### Week 1 (July 8-12)
+
 <ul>
 <li>Natasha Blitvic (QMUL)</li>
 <li>Jeremy Quastel (Toronto)</li>
+</ul>
+
+### Week 2 (July 15-19)
+
+<ul>
 <li>Marianna Russkikh (Notre Dame)</li>
 <li>Dominik Schmid (Bonn and Columbia)</li>
 </ul>
