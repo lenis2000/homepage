@@ -39,8 +39,8 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 ### Week 2 (July 15-19)
 
 <ul>
-<li>Marianna Russkikh (Notre Dame)</li>
-<li>Dominik Schmid (Bonn and Columbia)</li>
+<li>Marianna Russkikh (Notre Dame), TA: Matthew Nicoletti (MIT)</li>
+<li>Dominik Schmid (Bonn and Columbia), TA: Zongrui Yang (Columbia)</li>
 </ul>
 
 ---
