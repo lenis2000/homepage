@@ -32,8 +32,8 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 ### Week 1 (July 8-12)
 
 <ul>
-<li>Natasha Blitvic (QMUL)</li>
-<li>Jeremy Quastel (Toronto)</li>
+<li>Natasha Blitvic (QMUL), TA: TBD</li>
+<li>Jeremy Quastel (Toronto), TA: TBD</li>
 </ul>
 
 ### Week 2 (July 15-19)
