@@ -32,7 +32,7 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 ### Week 1 (July 8-12)
 
 <ul>
-<li><a href="https://www.research.lancs.ac.uk/portal/en/people/natasha-blitvic(2f99caf5-ea62-4906-b06a-2bfae95dcf56).html">Natasha Blitvic</a> (QMUL), TA: TBD</li>
+<li><a href="https://www.research.lancs.ac.uk/portal/en/people/natasha-blitvic(2f99caf5-ea62-4906-b06a-2bfae95dcf56).html">Natasha Blitvic</a> (QMUL), TA: [Slim Kammoun](https://sites.google.com/view/slim-kammoun-math/accueil) (ENS)</li>
 <li><a href="https://www.math.toronto.edu/quastel/">Jeremy Quastel</a> (Toronto), TA: TBD</li>
 </ul>
 
