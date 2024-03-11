@@ -7,9 +7,9 @@ coauthors:
     web: https://math.mit.edu/directory/profile.html?pid=2588
   - name: Leonid Petrov
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-ref: submitted to Selecta
+journal-ref: Selecta Math., to appear
 # journal-web: 
 # more-text:
 image: __STORAGE_URL__/img/papers/Grothendieck.png
