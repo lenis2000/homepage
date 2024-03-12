@@ -130,7 +130,7 @@ nav_weight: 2
             <b>
               {{post.link-description}} &bull;
               <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
-              &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
+              &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
           </li>
     
         {% endif %}

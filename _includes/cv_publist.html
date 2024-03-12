@@ -31,7 +31,7 @@
 {% for post in site.posts %}
 {% if post.categories contains "unpublished-lecture-notes" %}
 \item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{% endraw%}
-{{post.link-description}}. {%if post.link-for-cv%}\href{%raw%}{{%endraw%}{{post.link-for-cv}}{%raw%}}{{%endraw%}{{post.link-text}}{%raw%}}{%endraw%}{% endif %}. \href{%raw%}{{%endraw%}{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}.
+{{post.link-description}}. {%if post.link-for-cv%}\href{%raw%}{{%endraw%}{{post.link-for-cv}}{%raw%}}{{%endraw%}{{post.link-text}}{%raw%}}{%endraw%}{% endif %}. \href{%raw%}{{%endraw%}{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%}.
 {% endif %}
 {% endfor %}
 \end{enumerate}
