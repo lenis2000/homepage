@@ -16,6 +16,14 @@ permalink: /vipss2024/local-info/
 
 ---
 
+<h2 class="mb-4 mt-4">Accommodation</h2>
+
+For the participants' <b>accommodation</b>, there are two options:
+- We can provide accommodation at the University of Virginia residence hall ([Bond House](https://housing.virginia.edu/area/1166); very close to the classroom where the shool will be). The deadline to request this accommodation is March 15. <br>
+The occupation is single-bedroom. The halls do not provide bed linens/towels or kitchen pots/pans/utensils for the shared kitchen, so be mindful of this when packing.
+<br><br>
+- Or, you can arrange your own accommodation, and we will reimburse up to \$600 for the duration of the school.
+
 
 
 <h2 class="mb-4 mt-4">Local details</h2>
