@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Virginia Integrable Probability Summer School 2024
+title: Local info - Virginia Integrable Probability Summer School 2024
 # nav_weight: 1000
 # nav_id: Summer School 2024
 permalink: /vipss2024/local-info/
