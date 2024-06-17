@@ -98,7 +98,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 11:30 &bull; <strong>3 Participant Talks</strong>
+        <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -160,7 +160,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 11:30 &bull; <strong>3 Participant Talks</strong>
+        <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -257,7 +257,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 11:30 &bull; <strong>3 Participant Talks</strong>
+        <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -319,7 +319,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 11:30 &bull; <strong>3 Participant Talks</strong>
+        <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
