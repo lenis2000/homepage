@@ -16,7 +16,7 @@ permalink: /vipss2024/schedule/
 
 ## Lectures in Clark 108; Clark 101 is available for collaboration
 
-<h5><a href="{{site.url}}/vipss2024/vipss2024.ics">.ics file - click to add to your calendar</a></h5><br>
+<h5><a href="{{site.url}}/vipss2024/VIPSS2024.ics">.ics file - click to add to your calendar</a></h5><br>
 
 <hr><h3>Week 1</h3>
 
