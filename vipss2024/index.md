@@ -33,23 +33,24 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 ### Week 1 (July 8-12)
 
 <ul>
-<li><details open><summary style="background-color:#d9c9c9; padding:10px"><strong>Positivity Everywhere</strong>&bull; [<a href="{{site.url}}/vipss2024/blitvic/">COURSE PAGE</a>] &bull; <a href="https://www.research.lancs.ac.uk/portal/en/people/natasha-blitvic(2f99caf5-ea62-4906-b06a-2bfae95dcf56).html">Natasha Blitvic</a> (QMUL), TA:
+<li><details open><summary style="background-color:#d9c9c9; padding:10px"><strong>1. Positivity Everywhere</strong>&bull; [<a href="{{site.url}}/vipss2024/blitvic/">COURSE PAGE</a>] &bull; <a href="https://www.research.lancs.ac.uk/portal/en/people/natasha-blitvic(2f99caf5-ea62-4906-b06a-2bfae95dcf56).html">Natasha Blitvic</a> (QMUL), TA:
   <a href="https://sites.google.com/view/slim-kammoun-math/accueil">Slim Kammoun</a> (ENS)</summary>There are many notions of positivity in mathematics, each opening up a window on a different area of current mathematics research. We will focus on the (extensive) interface between positivity and combinatorics, particularly on the algebraic or combinatorial structures that can be seen to "underpin" probability. Examples, techniques, and exercises will drawn from integrable systems, noncommutative probability theories tied to specific types of combinatorial structure, and the modern takes on the classical moment problems.</details></li>
-<li><details open><summary style="background-color:#DCEDC8; padding:10px"><strong>Invariant Measures for Exclusion Processes</strong> &bull; [<a href="{{site.url}}/vipss2024/quastel/">COURSE PAGE</a>] &bull; <a href="https://www.math.toronto.edu/quastel/">Jeremy Quastel</a> (Toronto), TA: <a href="https://arxiv.org/abs/2010.09779">Xincheng Zhang</a> (Toronto)</summary>
+<li><details open><summary style="background-color:#DCEDC8; padding:10px"><strong>2. The KPZ fixed point</strong> &bull; [<a href="{{site.url}}/vipss2024/quastel/">COURSE PAGE</a>] &bull; <a href="https://www.math.toronto.edu/quastel/">Jeremy Quastel</a> (Toronto), TA: <a href="https://arxiv.org/abs/2010.09779">Xincheng Zhang</a> (Toronto)</summary>
 This course will be an introduction to KPZ universal distributions through a special integrable discretization, the polynuclear growth model.</details></li>
 </ul>
 
 ### Week 2 (July 15-19)
 
 <ul>
-<li><details open><summary style="background-color:#DCEDC8; padding:10px"><strong>Embeddings and Statistical Mechanics</strong> &bull; [<a href="{{site.url}}/vipss2024/russkikh/">COURSE PAGE</a>] &bull; <a href="https://math.nd.edu/people/faculty/marianna-russkikh/">Marianna Russkikh</a> (Notre Dame), TA: <a href="https://math.mit.edu/~mnicolet/">Matthew Nicoletti</a> (MIT)</summary>
-</details>
-</li>
 <li>
-<details open><summary style="background-color:#d9c9c9; padding:10px"><strong>Invariant Measures for Exclusion Processes</strong> &bull; [<a href="https://sites.google.com/view/dominik-schmid/virginia-2024">COURSE PAGE</a>] &bull; <a href="https://sites.google.com/view/dominik-schmid">Dominik Schmid</a> (Bonn and Columbia), TA: <a href="https://www.semanticscholar.org/author/Zong-Xin-Yang/102849487">Zongrui Yang</a> (Columbia)</summary>
+<details open><summary style="background-color:#d9c9c9; padding:10px"><strong>3. Invariant Measures for Exclusion Processes</strong> &bull; [<a href="https://sites.google.com/view/dominik-schmid/virginia-2024">COURSE PAGE</a>] &bull; <a href="https://sites.google.com/view/dominik-schmid">Dominik Schmid</a> (Bonn and Columbia), TA: <a href="https://www.semanticscholar.org/author/Zong-Xin-Yang/102849487">Zongrui Yang</a> (Columbia)</summary>
 In this mini-course, we investigate invariant measures for exclusion processes. After a brief introduction to some classical results on the set of invariant measures for the simple exclusion processes on infinite graphs, we turn our focus to the asymmetric simple exclusion process with open boundaries, also called the open ASEP.  We introduction the matrix product ansatz, and show how it can be used to study the stationary distribution of the open ASEP.  We discuss different representations of the matrix product ansatz. Using a particular solution for the matrix product ansatz with Askey-Wilson polynomials, we then introduce (signed) Askey-Wilson measures, and explain how the stationary distribution of the open ASEP can be used to construct stationary solutions to the open Kardar-Parisi-Zhang equation. In the last lecture, we focus on some very recent developments for the special case of the open TASEP: a so-called two-layer Gibbs representation of its invariant measure. 
 </details>
 </li>
+<li><details open><summary style="background-color:#DCEDC8; padding:10px"><strong>4. Embeddings and Statistical Mechanics</strong> &bull; [<a href="{{site.url}}/vipss2024/russkikh/">COURSE PAGE</a>] &bull; <a href="https://math.nd.edu/people/faculty/marianna-russkikh/">Marianna Russkikh</a> (Notre Dame), TA: <a href="https://math.mit.edu/~mnicolet/">Matthew Nicoletti</a> (MIT)</summary>
+</details>
+</li>
+
 </ul>
 
 ---

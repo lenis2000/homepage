@@ -12,3 +12,12 @@ permalink: /vipss2024/russkikh/
 
 ### Monday, July 8 to Friday, July 19, 2024 at University of Virginia, Charlottesville, VA
 
+
+
+---
+
+# Embeddings and Statistical Mechanics
+
+**Abstract**: TBA
+
+---

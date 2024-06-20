@@ -17,6 +17,6 @@ permalink: /vipss2024/quastel/
 
 # The KPZ fixed point
 
-This course will be an introduction to KPZ universal distributions through a special integrable discretization, the polynuclear growth model.
+**Abstract**: This course will be an introduction to KPZ universal distributions through a special integrable discretization, the polynuclear growth model.
 
 ---

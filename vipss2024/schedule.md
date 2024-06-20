@@ -24,21 +24,21 @@ permalink: /vipss2024/schedule/
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Monday, July 8, 2024</h4>  
     <ul>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 1.a</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a (Kammoun)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 2.a</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -57,7 +57,7 @@ permalink: /vipss2024/schedule/
 <div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
     <h4>Tuesday, July 9, 2024</h4>  
     <ul>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.b</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -72,14 +72,14 @@ permalink: /vipss2024/schedule/
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 1.b</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b (Kammoun)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -91,7 +91,7 @@ permalink: /vipss2024/schedule/
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Wednesday, July 10, 2024</h4>  
     <ul>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 1.c</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -106,7 +106,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 1.c</strong>
+        <li>12:00 - 1:30 &bull; <strong> Problem Session 1.c (Kammoun)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -119,7 +119,7 @@ permalink: /vipss2024/schedule/
 <div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
     <h4>Thursday, July 11, 2024</h4>  
     <ul>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.c</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -133,14 +133,14 @@ permalink: /vipss2024/schedule/
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 1.d</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 1.d (Blitvic)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d (Kammoun)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -153,7 +153,7 @@ permalink: /vipss2024/schedule/
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Friday, July 12, 2024</h4>  
     <ul>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.d</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
