@@ -16,28 +16,6 @@ permalink: /vipss2024/
 
 ---
 
-## Weekly schedule [room: Clark 108] &bull; (<a href="{{site.url}}/vipss2024/schedule/">Full schedule</a>)
-
-### Monday, Tuesday, and Thursday 
-
-- *9:00 AM - 10:00 AM* &bull; **Lecture**
-- *10:00 AM - 10:30 AM* &bull; Coffee Break  
-- *10:30 AM - 12:00 PM* &bull; **Problem Session**  
-- *12:00 PM - 2:00 PM* &bull; Lunch Break (on your own)
-- *2:00 PM - 3:00 PM* &bull; **Lecture**  
-- *3:00 PM - 3:30 PM* &bull; Coffee Break  
-- *3:30 PM - 5:00 PM* &bull; **Problem Session**
-
-### Wednesday and Friday
-
-- *9:00 AM - 10:00 AM* &bull; **Lecture**  
-- *10:00 AM - 10:30 AM* &bull; Coffee Break  
-- *10:30 AM - 11:30 AM* &bull; **Participant Talks**
-- *11:30 AM - 12:00 PM* &bull; Coffee Break
-- *12:00 PM - 1:30 PM* &bull; **Problem Session**
-- *1:30 PM* &bull; Lunch (on your own) and free afternoon
-
----
 
 The aim of the school is to educate the participants in recent trends around Integrable Probability - a rapidly developing field at the interface of probability / mathematical physics / statistical physics on the one hand, and representation theory / integrable systems on the other
 
@@ -73,6 +51,31 @@ In this mini-course, we investigate invariant measures for exclusion processes. 
 </details>
 </li>
 </ul>
+
+---
+
+## Weekly schedule [room: Clark 108] &bull; (<a href="{{site.url}}/vipss2024/schedule/">Full schedule</a>)
+
+### Monday, Tuesday, and Thursday 
+
+- *9:00 AM - 10:00 AM* &bull; **Lecture**
+- *10:00 AM - 10:30 AM* &bull; Coffee Break  
+- *10:30 AM - 12:00 PM* &bull; **Problem Session**  
+- *12:00 PM - 2:00 PM* &bull; Lunch Break (on your own)
+- *2:00 PM - 3:00 PM* &bull; **Lecture**  
+- *3:00 PM - 3:30 PM* &bull; Coffee Break  
+- *3:30 PM - 5:00 PM* &bull; **Problem Session**
+
+### Wednesday and Friday
+
+- *9:00 AM - 10:00 AM* &bull; **Lecture**  
+- *10:00 AM - 10:30 AM* &bull; Coffee Break  
+- *10:30 AM - 11:30 AM* &bull; **Participant Talks**
+- *11:30 AM - 12:00 PM* &bull; Coffee Break
+- *12:00 PM - 1:30 PM* &bull; **Problem Session**
+- *1:30 PM* &bull; Lunch (on your own) and free afternoon
+
+
 
 ---
 
