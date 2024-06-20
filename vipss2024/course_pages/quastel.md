@@ -12,3 +12,11 @@ permalink: /vipss2024/quastel/
 
 ### Monday, July 8 to Friday, July 19, 2024 at University of Virginia, Charlottesville, VA
 
+
+---
+
+# The KPZ fixed point
+
+This course will be an introduction to KPZ universal distributions through a special integrable discretization, the polynuclear growth model.
+
+---
