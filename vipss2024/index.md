@@ -64,7 +64,7 @@ This course will be an introduction to KPZ universal distributions through a spe
 ### Week 2 (July 15-19)
 
 <ul>
-<li><details open><summary style="background-color:#DCEDC8; padding:10px">[<a href="{{site.url}}/vipss2024/russkikh/">COURSE PAGE</a>] &bull; <a href="https://math.nd.edu/people/faculty/marianna-russkikh/">Marianna Russkikh</a> (Notre Dame), TA: <a href="https://math.mit.edu/~mnicolet/">Matthew Nicoletti</a> (MIT)</summary>
+<li><details open><summary style="background-color:#DCEDC8; padding:10px"><strong>Embeddings and Statistical Mechanics</strong> &bull; [<a href="{{site.url}}/vipss2024/russkikh/">COURSE PAGE</a>] &bull; <a href="https://math.nd.edu/people/faculty/marianna-russkikh/">Marianna Russkikh</a> (Notre Dame), TA: <a href="https://math.mit.edu/~mnicolet/">Matthew Nicoletti</a> (MIT)</summary>
 </details>
 </li>
 <li>
