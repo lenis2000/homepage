@@ -14,7 +14,7 @@ permalink: /vipss2024/schedule/
 
 ---
 
-## Lectures in Clark 108; Clark 101 is available for collaboration
+## Lectures in <a href="https://maps.app.goo.gl/UG54EAc6uqhjr4qZ9">Clark</a> 108; Clark 101 is available for collaboration
 
 <h5><a href="{{site.url}}/vipss2024/VIPSS2024.ics">.ics file - click to add to your calendar</a></h5><br>
 
@@ -37,7 +37,7 @@ permalink: /vipss2024/schedule/
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>  
-        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at Newcomb</div>
+        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -71,7 +71,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
-        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at Newcomb</div>
+        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
@@ -196,7 +196,7 @@ permalink: /vipss2024/schedule/
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>  
-        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at Newcomb</div>
+        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 4.a (Russkikh)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -230,7 +230,7 @@ permalink: /vipss2024/schedule/
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
-        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at Newcomb</div>
+        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 3.b (Schmid)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
