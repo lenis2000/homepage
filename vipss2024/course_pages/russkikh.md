@@ -16,7 +16,7 @@ permalink: /vipss2024/russkikh/
 
 ---
 
-# Embeddings and Statistical Mechanics
+# Dimers and Embeddings
 
 **Abstract**: TBA
 
