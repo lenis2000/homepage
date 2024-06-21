@@ -62,7 +62,7 @@ In this mini-course, we investigate invariant measures for exclusion processes. 
 - *9:00 AM - 10:00 AM* &bull; **Lecture**
 - *10:00 AM - 10:30 AM* &bull; Coffee Break  
 - *10:30 AM - 12:00 PM* &bull; **Problem Session**  
-- *12:00 PM - 2:00 PM* &bull; Lunch Break (on your own)
+- *12:00 PM - 2:00 PM* &bull; Lunch Break (on your own except Mondays and Tuesdays)
 - *2:00 PM - 3:00 PM* &bull; **Lecture**  
 - *3:00 PM - 3:30 PM* &bull; Coffee Break  
 - *3:30 PM - 5:00 PM* &bull; **Problem Session**
