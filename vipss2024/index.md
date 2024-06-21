@@ -55,7 +55,7 @@ In this mini-course, we investigate invariant measures for exclusion processes. 
 
 ---
 
-## Weekly schedule [room: Clark 108] &bull; (<a href="{{site.url}}/vipss2024/schedule/">Full schedule</a>)
+## Weekly schedule [room: <a href="https://maps.app.goo.gl/UG54EAc6uqhjr4qZ9">Clark</a> 108] &bull; (<a href="{{site.url}}/vipss2024/schedule/">Full schedule</a>)
 
 ### Monday, Tuesday, and Thursday 
 
