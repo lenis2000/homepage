@@ -23,7 +23,10 @@ permalink: /vipss2024/schedule/
 <!-- Week 1 Monday, July 8, 2024 -->  
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Monday, July 8, 2024</h4>  
-    <ul>  
+    <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>  
         <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -56,7 +59,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
     <h4>Tuesday, July 9, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
@@ -90,7 +96,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Wednesday, July 10, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -118,7 +127,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
     <h4>Thursday, July 11, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
@@ -152,7 +164,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Friday, July 12, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -182,7 +197,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Monday, July 15, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 3.a (Schmid)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -215,7 +233,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
     <h4>Tuesday, July 16, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 4.b (Russkikh)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
@@ -249,7 +270,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Wednesday, July 17, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 3.c (Schmid)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
@@ -277,7 +301,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
     <h4>Thursday, July 18, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 4.c (Russkikh)</strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
@@ -311,7 +338,10 @@ permalink: /vipss2024/schedule/
 
 <div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
     <h4>Friday, July 19, 2024</h4>  
-    <ul>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 4.d (Russkikh)</strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
