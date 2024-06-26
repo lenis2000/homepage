@@ -48,6 +48,7 @@ In this mini-course, we investigate invariant measures for exclusion processes. 
 </details>
 </li>
 <li><details open><summary style="background-color:#DCEDC8; padding:10px"><strong>4. Dimers and Embeddings</strong> &bull; [<a href="{{site.url}}/vipss2024/russkikh/">COURSE PAGE</a>] &bull; <a href="https://math.nd.edu/people/faculty/marianna-russkikh/">Marianna Russkikh</a> (Notre Dame), TA: <a href="https://math.mit.edu/~mnicolet/">Matthew Nicoletti</a> (MIT)</summary>
+Dimer model is a probability measure on perfect matchings of a graph. We present several tools to study the dimer model on planar bipartite graphs: Kasteleyn's theory, combinatorial correspondences with other models, discrete complex analysis, and embeddings of planar graphs.
 </details>
 </li>
 
