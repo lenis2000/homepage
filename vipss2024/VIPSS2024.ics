@@ -271,8 +271,8 @@ UID:e5028582-d57e-4e7f-a770-0df7be4cd29e
 DTSTAMP:20231130T161156Z
 DTSTART:20240712T103000
 DTEND:20240712T113000
-SUMMARY:Participant Talks
-DESCRIPTION:
+SUMMARY:Discussion on AI practices
+DESCRIPTION: We will discuss generative AI (chatGPT, etc.) in research, teaching, and administrative tasks. In the first half of the discussion, Everyone is invited to contribute a short AI success story that others can follow. The second half is an open discussion around AI topics.
 END:VEVENT
 BEGIN:VEVENT
 UID:2b3e1866-e90e-4f8a-bafb-6655c71e352d
