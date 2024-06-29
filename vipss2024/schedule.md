@@ -109,7 +109,7 @@ permalink: /vipss2024/schedule/
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
-              <summary>Sergey Berezin (KU Leuven), Samuel McKeown (Wisconsin), Matthew Nicoletti (MIT)</summary>
+              <summary>Sergey Berezin (KU Leuven), Kailun Chen (Leipzig), Samuel McKeown (Wisconsin)</summary>
               <div style="background-color:#d9c9c9;
               padding:10px">
               Sergey Berezin (KU Leuven)
@@ -117,16 +117,18 @@ permalink: /vipss2024/schedule/
               <strong>Functional CLT for Mittag-Leffler Ensemble with Hard Wall</strong>
               <br>
               The Mittag-Leffler ensemble restricted to an origin-centered disk in the bulk of the droplet features a natural hard edge at the boundary of the disk. This boundary is known as the hard wall. We will discuss a recent functional central limit theorem for dynamical additive statistics in the hard-edge scaling, i.e., at the distance O(1/n) from this hard wall.
+<br><br>
+              Kailun Chen (Leipzig)
+<br><strong>
+Mallows product measure</strong>
+<br>
+q-exchangeable ergodic distributions on the infinite symmetric group were classified by Gnedin-Olshanski (2012). In this paper, we study a specific linear combination of the ergodic measures and call it the Mallows product measure. From a particle system perspective, the Mallows product measure is a reversible stationary blocking measure of the infinite-species ASEP and it is a natural multi-species extension of the Bernoulli product blocking measures of the one-species ASEP. Moreover, the Mallows product measure can be viewed as the universal product blocking measure of interacting particle systems coming from random walks on Hecke algebras. For the random infinite permutation distributed according to the Mallows product measure we have computed the joint distribution of its neighbouring displacements, as well as several other observables. The key feature of the obtained formulas is their remarkably simple product structure. We project these formulas to ASEP with finitely many species, which in particular recovers a recent result of Adams-Balazs-Jay, and also to ASEP(q,M). Our main tools are results of Gnedin-Olshanski about ergodic Mallows measures and shift-invariance symmetries of the stochastic colored six vertex model discovered by Borodin-Gorin-Wheeler and Galashin. This is a joint work with Alexey Bufetov.
               <br><br>
               Samuel McKeown (Wisconsin)
 <br>
               <strong>Solvability in a restricted first passage percolation
               </strong>
   <br>Strict-weak first passage percolation (SWFPP) is a model of random plane geometry, introduced by Seppäläinen as a simplification of planar FPP for which explicit formulae can be obtained. It is expected to lie in the KPZ universality class. One can apply many of the same techniques which have been used to study last passage percolation, in particular the systematic use of Busemann functions in describing the model's semi-infinite geodesics. SWFPP has the advantage of being solvable for a wider class of distributions and with expressions that tend to be easier to work with. As an application, we show that the tree of semi-infinite geodesics in exponential SWFPP fails to have a natural density near the axis.
-<br><br>Matthew Nicoletti (MIT)
-<br><strong>Perfect t-embeddings of the uniform Aztec diamond and the uniform hexagon</strong>
-<br>
-Building on a work of Chelkak and Ramassamy, we study the properties of "perfect t-embeddings" of uniform Aztec diamond graphs. We also construct and analyze perfect t-embeddings of a sequence of hexagon-shaped subgraphs of the honeycomb lattice. The dimer models on these graphs are equivalent to uniformly random domino tilings of the Aztec diamond, and uniformly random lozenge tilings of the hexagon, respectively.  In particular, we provide exact formulas for the perfect t-embeddings of these graphs. We use these to analyze asymptotics of the t-embeddings, and check in both cases that we may invoke a recent theorem of Chelkak, Laslier, and Russkikh to prove convergence of height fluctuations to the GFF. As a consequence, we complete a new proof of convergence to the GFF for the dimer model height function in both setups. This is based on joint works with Marianna Russkikh and Tomas Berggren.
               </div>
             </details>
         </li>  
@@ -301,7 +303,7 @@ Building on a work of Chelkak and Ramassamy, we study the properties of "perfect
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
-              <summary>Seok Hyun Byun (Clemson), Kailun Chen (Leipzig), Sabrina Gernholt (Bonn)</summary>
+              <summary>Seok Hyun Byun (Clemson), Sabrina Gernholt (Bonn),  Matthew Nicoletti (MIT)</summary>
               <div style="background-color:#d9c9c9;
               padding:10px">
               Seok Hyun Byun (Clemson)
@@ -310,17 +312,15 @@ Building on a work of Chelkak and Ramassamy, we study the properties of "perfect
 <br>
 In this talk, we first recall a Temperley’s classical bijection (between spanning trees of a graph and dimer configurations of a related graph) and a related dimer bijection. Then, we present a new result, which extends the aforementioned bijections. As an application, we answer a question posed by Corteel, Huang, and Krattenthaler on finding an explicit bijection between domino tilings of two similar regions. If time permits, we also introduce a new combinatorial object that is equinumerous to domino tilings of Aztec triangles. This talk is based on a joint work with Mihai Ciucu.
 <br><br>
-              Kailun Chen (Leipzig)
-<br><strong>
-Mallows product measure</strong>
-<br>
-q-exchangeable ergodic distributions on the infinite symmetric group were classified by Gnedin-Olshanski (2012). In this paper, we study a specific linear combination of the ergodic measures and call it the Mallows product measure. From a particle system perspective, the Mallows product measure is a reversible stationary blocking measure of the infinite-species ASEP and it is a natural multi-species extension of the Bernoulli product blocking measures of the one-species ASEP. Moreover, the Mallows product measure can be viewed as the universal product blocking measure of interacting particle systems coming from random walks on Hecke algebras. For the random infinite permutation distributed according to the Mallows product measure we have computed the joint distribution of its neighbouring displacements, as well as several other observables. The key feature of the obtained formulas is their remarkably simple product structure. We project these formulas to ASEP with finitely many species, which in particular recovers a recent result of Adams-Balazs-Jay, and also to ASEP(q,M). Our main tools are results of Gnedin-Olshanski about ergodic Mallows measures and shift-invariance symmetries of the stochastic colored six vertex model discovered by Borodin-Gorin-Wheeler and Galashin. This is a joint work with Alexey Bufetov.
-<br><br>
 Sabrina Gernholt (Bonn)
 <br>
 <strong>Fluctuations of a tagged particle in TASEP under influence of a deterministic wall</strong>
 <br>
 We consider a totally asymmetric simple exclusion process on Z with step initial condition and with the presence of a rightward-moving wall that prevents the particles from jumping. Our aim is to determine the limiting distribution of a tagged particle whose fluctuations are influenced by the wall around multiple macroscopic times.
+<br><br>Matthew Nicoletti (MIT)
+<br><strong>Perfect t-embeddings of the uniform Aztec diamond and the uniform hexagon</strong>
+<br>
+Building on a work of Chelkak and Ramassamy, we study the properties of "perfect t-embeddings" of uniform Aztec diamond graphs. We also construct and analyze perfect t-embeddings of a sequence of hexagon-shaped subgraphs of the honeycomb lattice. The dimer models on these graphs are equivalent to uniformly random domino tilings of the Aztec diamond, and uniformly random lozenge tilings of the hexagon, respectively.  In particular, we provide exact formulas for the perfect t-embeddings of these graphs. We use these to analyze asymptotics of the t-embeddings, and check in both cases that we may invoke a recent theorem of Chelkak, Laslier, and Russkikh to prove convergence of height fluctuations to the GFF. As a consequence, we complete a new proof of convergence to the GFF for the dimer model height function in both setups. This is based on joint works with Marianna Russkikh and Tomas Berggren.
               </div>
             </details>
         </li>  
