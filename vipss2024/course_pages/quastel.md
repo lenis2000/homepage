@@ -20,3 +20,5 @@ permalink: /vipss2024/quastel/
 **Abstract**: This course will be an introduction to KPZ universal distributions through a special integrable discretization, the polynuclear growth model.
 
 ---
+
+- [Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-02.pdf) (version of 2024-07-02)
