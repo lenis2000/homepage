@@ -153,7 +153,6 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
               <div style="background-color:#d9c9c9;
               padding:10px">We will discuss generative AI (chatGPT, etc.) in research, teaching, and administrative tasks. In the first half of the discussion, 
               Everyone is invited to contribute a short AI success story that others can follow. The second half is an open discussion around AI topics.</div>
-              </div>
             </details>
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
