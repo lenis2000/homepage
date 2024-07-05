@@ -28,31 +28,19 @@ permalink: /vipss2024/schedule/
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>  
         <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a (Kammoun)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
         <li>3:30 - 5:00 &bull; <strong> Problem Session 2.a (Zhang)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -64,32 +52,20 @@ permalink: /vipss2024/schedule/
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 12:00 &bull; <strong> Problem Session 2.b (Zhang)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
         <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b (Kammoun)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -101,10 +77,7 @@ permalink: /vipss2024/schedule/
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
@@ -134,11 +107,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
         <li>12:00 - 1:30 &bull; <strong> Problem Session 1.c (Kammoun)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9;
-               padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -150,31 +119,19 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 12:00 &bull; <strong> Problem Session 2.c (Zhang)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 1.d (Blitvic)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
         <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d (Kammoun)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -187,10 +144,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Discussion on AI practices</strong>
@@ -204,11 +158,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
         <li>12:00 - 1:30 &bull; <strong> Problem Session 2.d (Zhang)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9;
-               padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -222,31 +172,19 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 3.a (Schmid)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 12:00 &bull; <strong> Problem Session 3.a (Yang)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 4.a (Russkikh)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
         <li>3:30 - 5:00 &bull; <strong> Problem Session 4.a (Nicoletti)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -258,32 +196,20 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 4.b (Russkikh)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 12:00 &bull; <strong> Problem Session 4.b (Nicoletti)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 3.b (Schmid)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
         <li>3:30 - 5:00 &bull; <strong> Problem Session 3.b (Yang)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -295,10 +221,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 3.c (Schmid)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
@@ -326,11 +249,7 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
         <li>12:00 - 1:30 &bull; <strong> Problem Session 3.c (Yang)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9;
-               padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -342,31 +261,19 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 4.c (Russkikh)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 12:00 &bull; <strong> Problem Session 4.c (Nicoletti)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 3.d (Schmid)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
         <li>3:30 - 5:00 &bull; <strong> Problem Session 3.d (Yang)</strong>
-            <details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
@@ -379,10 +286,7 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
         <li>9:00 - 10:00 &bull; <strong>Lecture 4.d (Russkikh)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>
+            
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
@@ -406,11 +310,7 @@ The totally asymmetric exclusion process(TASEP) is one of the solvable models in
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
         <li>12:00 - 1:30 &bull; <strong> Problem Session 4.d (Nicoletti)</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9;
-               padding:10px">Decsription</div>
-            </details>
+            
         </li>  
     </ul>  
 </div>
