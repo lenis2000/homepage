@@ -1,6 +1,5 @@
 url: "https://lpetrov.cc"
 storage_url: "https://storage.lpetrov.cc"
-math_url: "http://math.virginia.edu"
 
 permanent_url: "https://lpetrov.cc"
 
@@ -11,7 +10,7 @@ timezone: America/New_York
 
 markdown: kramdown
 # kramdown:
-  # math_engine: nil
+# math_engine: nil
 
 highlighter: rouge
 
