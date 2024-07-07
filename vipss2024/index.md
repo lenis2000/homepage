@@ -28,7 +28,7 @@ E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
 --- 
 
 
-<h2 class="mb-4">Mini-courses</h2>
+<h2 class="mb-4">Mini-courses&bull; (<a href="{{site.url}}/vipss2024/schedule/">Full schedule</a>)</h2>
 
 ### Week 1 (July 8-12)
 

@@ -41,14 +41,14 @@ permalink: /vipss2024/schedule/
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel)</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 2.a (Zhang)</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 2.a (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -63,14 +63,14 @@ permalink: /vipss2024/schedule/
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.b (Zhang)</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.b (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -149,14 +149,14 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.c (Zhang)</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.c (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -186,7 +186,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -202,7 +202,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
             </details>
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 2.d (Zhang)</strong>
+        <li>12:00 - 1:30 &bull; <strong> Problem Session 2.d (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;

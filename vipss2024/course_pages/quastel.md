@@ -21,4 +21,4 @@ permalink: /vipss2024/quastel/
 
 ---
 
-- [Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-06.pdf) (version of 2024-07-02)
+- [Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-06.pdf) (version of 2024-07-06)
