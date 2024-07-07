@@ -27,14 +27,14 @@ permalink: /vipss2024/schedule/
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a (Kammoun)</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -78,14 +78,14 @@ permalink: /vipss2024/schedule/
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic)</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b (Kammoun)</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -100,7 +100,7 @@ permalink: /vipss2024/schedule/
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -133,7 +133,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
             </details>
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 1.c (Kammoun)</strong>
+        <li>12:00 - 1:30 &bull; <strong> Problem Session 1.c (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -163,14 +163,14 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 1.d (Blitvic)</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 1.d (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d (Kammoun)</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -220,28 +220,28 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 3.a (Schmid)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 3.a (Schmid): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 3.a (Yang)</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 3.a (Yang): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 4.a (Russkikh)</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 4.a (Russkikh): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 4.a (Nicoletti)</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 4.a (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -256,14 +256,14 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 4.b (Russkikh)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 4.b (Russkikh): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 4.b (Nicoletti)</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 4.b (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -271,14 +271,14 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 3.b (Schmid)</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 3.b (Schmid): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 3.b (Yang)</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 3.b (Yang): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -293,7 +293,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 3.c (Schmid)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 3.c (Schmid): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -324,7 +324,7 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
             </details>
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 3.c (Yang)</strong>
+        <li>12:00 - 1:30 &bull; <strong> Problem Session 3.c (Yang): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -340,28 +340,28 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 4.c (Russkikh)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 4.c (Russkikh): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 4.c (Nicoletti)</strong>
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 4.c (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>  
         <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 3.d (Schmid)</strong>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 3.d (Schmid): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>
         </li>
         <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 3.d (Yang)</strong>
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 3.d (Yang): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <details style="background-color:#bccea8">
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
@@ -377,7 +377,7 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
     <li>
     8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
     </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 4.d (Russkikh)</strong>
+        <li>9:00 - 10:00 &bull; <strong>Lecture 4.d (Russkikh): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
@@ -404,7 +404,7 @@ The totally asymmetric exclusion process(TASEP) is one of the solvable models in
             </details>
         </li>  
         <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 4.d (Nicoletti)</strong>
+        <li>12:00 - 1:30 &bull; <strong> Problem Session 4.d (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
