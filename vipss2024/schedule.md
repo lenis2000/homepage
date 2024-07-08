@@ -109,20 +109,20 @@ permalink: /vipss2024/schedule/
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
-              <summary>Sergey Berezin (KU Leuven), Kailun Chen (Leipzig), Samuel McKeown (Wisconsin)</summary>
+              <summary>Kailun Chen (Leipzig), Barkat Mian (Mississippi), Samuel McKeown (Wisconsin)</summary>
               <div style="background-color:#d9c9c9;
               padding:10px">
-              Sergey Berezin (KU Leuven)
-              <br>
-              <strong>Functional CLT for Mittag-Leffler Ensemble with Hard Wall</strong>
-              <br>
-              The Mittag-Leffler ensemble restricted to an origin-centered disk in the bulk of the droplet features a natural hard edge at the boundary of the disk. This boundary is known as the hard wall. We will discuss a recent functional central limit theorem for dynamical additive statistics in the hard-edge scaling, i.e., at the distance O(1/n) from this hard wall.
-<br><br>
               Kailun Chen (Leipzig)
 <br><strong>
 Mallows product measure</strong>
 <br>
 q-exchangeable ergodic distributions on the infinite symmetric group were classified by Gnedin-Olshanski (2012). In this paper, we study a specific linear combination of the ergodic measures and call it the Mallows product measure. From a particle system perspective, the Mallows product measure is a reversible stationary blocking measure of the infinite-species ASEP and it is a natural multi-species extension of the Bernoulli product blocking measures of the one-species ASEP. Moreover, the Mallows product measure can be viewed as the universal product blocking measure of interacting particle systems coming from random walks on Hecke algebras. For the random infinite permutation distributed according to the Mallows product measure we have computed the joint distribution of its neighbouring displacements, as well as several other observables. The key feature of the obtained formulas is their remarkably simple product structure. We project these formulas to ASEP with finitely many species, which in particular recovers a recent result of Adams-Balazs-Jay, and also to ASEP(q,M). Our main tools are results of Gnedin-Olshanski about ergodic Mallows measures and shift-invariance symmetries of the stochastic colored six vertex model discovered by Borodin-Gorin-Wheeler and Galashin. This is a joint work with Alexey Bufetov.
+              <br><br>
+              Barkat Mian (Mississippi)
+<br>
+              <strong>TBA</strong>
+              <br>
+TBA
               <br><br>
               Samuel McKeown (Wisconsin)
 <br>
@@ -386,9 +386,15 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
-              <summary>Trung Vu (Illinois Urbana-Champaign), Xincheng Zhang (Toronto)</summary>
+              <summary>Sergey Berezin (KU Leuven), Trung Vu (Illinois Urbana-Champaign), Xincheng Zhang (Toronto)</summary>
               <div style="background-color:#d9c9c9;
               padding:10px">
+              Sergey Berezin (KU Leuven)
+              <br>
+              <strong>Functional CLT for Mittag-Leffler Ensemble with Hard Wall</strong>
+              <br>
+              The Mittag-Leffler ensemble restricted to an origin-centered disk in the bulk of the droplet features a natural hard edge at the boundary of the disk. This boundary is known as the hard wall. We will discuss a recent functional central limit theorem for dynamical additive statistics in the hard-edge scaling, i.e., at the distance O(1/n) from this hard wall.
+<br><br>
               Trung Vu (Illinois Urbana-Champaign)
 <br><strong>
 Arctic curves of the T-system with Slanted Initial Data
