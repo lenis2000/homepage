@@ -20,3 +20,11 @@ permalink: /vipss2024/blitvic/
 **Abstract**: There are many notions of positivity in mathematics, each opening up a window on a different area of current mathematics research. We will focus on the (extensive) interface between positivity and combinatorics, particularly on the algebraic or combinatorial structures that can be seen to "underpin" probability. Examples, techniques, and exercises will be drawn from integrable systems, noncommutative probability theories tied to specific types of combinatorial structure, and the modern takes on the classical moment problems.
 
 ---
+
+### Lectures
+
+- [Lecture 1]({{site.url}}/vipss2024/course_pages/Positivity_L1.pdf) 
+
+### Problem sets
+
+- [Problem set 1]({{site.url}}/vipss2024/course_pages/Positivity_PS1.pdf)
