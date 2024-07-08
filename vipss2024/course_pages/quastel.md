@@ -21,4 +21,10 @@ permalink: /vipss2024/quastel/
 
 ---
 
-- [Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-06.pdf) (version of 2024-07-06)
+### Lectures
+
+- [Full Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-06.pdf) (version of 2024-07-06)
+
+### Problem sets
+
+- [Problem set 1]({{site.url}}/vipss2024/course_pages/KPZ_PS1.pdf), Monday, July 8, 2024
