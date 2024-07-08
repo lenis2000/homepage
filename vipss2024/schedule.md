@@ -120,7 +120,8 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
               <br><br>
               Barkat Mian (Mississippi)
 <br>
-              <strong>TBA</strong>
+              <strong>On planar Brownian motion singularly tilted through a point potential</strong>
+              We will discuss a special family of two-dimensional diffusions defined over a finite time interval [0, T]. These diffusions have transition density functions that are given by the integral kernels of the semigroup corresponding to the two-dimensional Schr ̈odinger operator with a point potential at the origin. Although, in a few ways, our processes of interest are closely related to two- dimensional Brownian motion, they have a singular drift pointing in the direction of the origin that is strong enough to enable the possibility of visiting there with positive probability. Our main focus is on characterizing a local time process at the origin for these diffusions analogous to that for a one-dimensional Brownian motion.
               <br>
 TBA
               <br><br>
