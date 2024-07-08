@@ -28,3 +28,7 @@ permalink: /vipss2024/quastel/
 ### Problem sets
 
 - [Problem set 1]({{site.url}}/vipss2024/course_pages/KPZ_PS1.pdf), Monday, July 8, 2024
+
+### Other resources
+
+- [Ballistic aggregation and other models animation](https://empiricalzeal.com/2013/03/01/the-universal-laws-behind-growth-patterns-or-what-tetris-can-teach-us-about-coffee-stains/)
