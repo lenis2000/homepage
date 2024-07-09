@@ -24,6 +24,7 @@ permalink: /vipss2024/blitvic/
 ### Lectures
 
 - [Lecture 1]({{site.url}}/vipss2024/course_pages/Positivity_L1.pdf), Monday, July 8, 2024
+- [Lecture 2]({{site.url}}/vipss2024/course_pages/Positivity_L2.pdf), Tuesday, July 9, 2024
 
 ### Problem sets
 
