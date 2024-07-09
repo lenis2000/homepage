@@ -33,3 +33,5 @@ permalink: /vipss2024/quastel/
 ### Other resources
 
 - [Animation of ballistic aggregation and some other models](https://empiricalzeal.com/2013/03/01/the-universal-laws-behind-growth-patterns-or-what-tetris-can-teach-us-about-coffee-stains/)
+- Board from Tuesday, July 9, 2024:
+<img src="{{site.url}}/vipss2024/course_pages/KPZ_board_2024-07-09.png" style="max-width:100%" alt="Board from Tuesday, July 9, 2024">
