@@ -75,8 +75,7 @@ permalink: /vipss2024/schedule/
               <summary>TBD Details</summary>
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>-->
-        </li>  
-        <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
+        </li>
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <!--<details style="background-color:#bccea8">
@@ -106,6 +105,7 @@ permalink: /vipss2024/schedule/
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>-->
         </li>
+        <li style="font-weight:bold">Group photo</li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
