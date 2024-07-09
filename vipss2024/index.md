@@ -6,26 +6,6 @@ nav_id: Summer School 2024
 permalink: /vipss2024/
 ---
 
-<img src="{{site.url}}/vipss2024/color-vertex.jpg" style="max-width:100%" alt="Colored vertex model">
-
-# <a href="{{site.url}}/vipss2024/">Virginia Integrable Probability Summer School 2024</a>
-
-### Monday, July 8 to Friday, July 19, 2024
-
-### University of Virginia, Charlottesville, VA
-
----
-
-
-The aim of the school is to educate the participants in recent trends around Integrable Probability - a rapidly developing field at the interface of probability / mathematical physics / statistical physics on the one hand, and representation theory / integrable systems on the other
-
-Organizers:  Leonid Petrov, Daniel Slonim, Mikhail Tikhonov
-
-E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
-
-[Previous summer school](http://frg.int-prob.org/vipss2019/)  (2019)
-
---- 
 
 
 <h2 class="mb-4">Mini-courses&bull; (<a href="{{site.url}}/vipss2024/schedule/">Full schedule</a>)</h2>
@@ -82,6 +62,28 @@ Dimer model is a probability measure on perfect matchings of a graph. We present
 
 
 ---
+
+<img src="{{site.url}}/vipss2024/color-vertex.jpg" style="max-width:100%" alt="Colored vertex model">
+
+# <a href="{{site.url}}/vipss2024/">Virginia Integrable Probability Summer School 2024</a>
+
+### Monday, July 8 to Friday, July 19, 2024
+
+### University of Virginia, Charlottesville, VA
+
+---
+
+
+The aim of the school is to educate the participants in recent trends around Integrable Probability - a rapidly developing field at the interface of probability / mathematical physics / statistical physics on the one hand, and representation theory / integrable systems on the other
+
+Organizers:  Leonid Petrov, Daniel Slonim, Mikhail Tikhonov
+
+E-mail: [lenia.petrov+vipss@gmail.com](mailto:lenia.petrov+vipss@gmail.com)
+
+[Previous summer school](http://frg.int-prob.org/vipss2019/)  (2019)
+
+--- 
+
 
 ## &bull; <a href="{{site.url}}/vipss2024/local-info/">Travel and local details</a>
 
