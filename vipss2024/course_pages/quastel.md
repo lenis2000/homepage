@@ -23,7 +23,7 @@ permalink: /vipss2024/quastel/
 
 ### Lectures
 
-- [Full Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-06.pdf) (version of 2024-07-06)
+- [Full Notes]({{site.url}}/vipss2024/course_pages/KPZNotes_2024-07-09.pdf) 
 
 ### Problem sets
 
