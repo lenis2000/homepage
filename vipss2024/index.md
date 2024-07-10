@@ -55,9 +55,9 @@ Dimer model is a probability measure on perfect matchings of a graph. We present
 - *9:00 AM - 10:00 AM* &bull; **Lecture**  
 - *10:00 AM - 10:30 AM* &bull; Coffee Break  
 - *10:30 AM - 11:30 AM* &bull; **Participant Talks / AI Discussion (Jul 12)**
-- *11:30 AM - 12:00 PM* &bull; Coffee Break
-- *12:00 PM - 1:30 PM* &bull; **Problem Session**
-- *1:30 PM* &bull; Lunch (on your own) and free afternoon
+- *11:30 AM - 11:35 PM* &bull; Coffee Break
+- *11:35 PM - 1:00 PM* &bull; **Problem Session**
+- *1:00 PM* &bull; Lunch (on your own) and free afternoon
 
 
 

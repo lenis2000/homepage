@@ -131,8 +131,8 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
               </div>
             </details>
         </li>  
-        <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 1.c (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
+        <li>11:35 - 1:00 &bull; <strong> Problem Session 1.c (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
             <!--<details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -200,8 +200,8 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
               Everyone is invited to contribute a short AI success story that others can follow. The second half is an open discussion around AI topics.</div>
             </details>
         </li>  
-        <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 2.d (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
+        <li>11:35 - 1:00 &bull; <strong> Problem Session 2.d (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <!--<details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -268,7 +268,6 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
               <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
             </details>-->
         </li>  
-        <div class="mb-2 mt-2" style="font-weight:bold">Group photo</div>
         <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
         <li>2:00 - 3:00 &bull; <strong>Lecture 3.b (Schmid): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <!--<details style="background-color:#bccea8">
@@ -298,6 +297,7 @@ q-exchangeable ergodic distributions on the infinite symmetric group were classi
               <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
             </details>-->
         </li>
+        <li style="font-weight:bold">Group photo</li>
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
@@ -322,8 +322,8 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
               </div>
             </details>
         </li>  
-        <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 3.c (Yang): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
+        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
+        <li>11:35 - 1:00 &bull; <strong> Problem Session 3.c (Yang): <a href="https://sites.google.com/view/dominik-schmid/virginia-2024">Invariant Measures for Exclusion Processes</a></strong>
             <!--<details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
@@ -408,8 +408,8 @@ The totally asymmetric exclusion process(TASEP) is one of the solvable models in
               </div>
             </details>
         </li>  
-        <li>11:30 - 12:00 &bull; <strong>Coffee Break</strong></li>  
-        <li>12:00 - 1:30 &bull; <strong> Problem Session 4.d (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
+        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
+        <li>11:35 - 1:00 &bull; <strong> Problem Session 4.d (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
             <!--<details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
