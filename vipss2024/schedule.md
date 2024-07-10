@@ -109,7 +109,8 @@ permalink: /vipss2024/schedule/
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
-              <summary><a href="{{site.url}}/vipss2024/course_pages/Chen.pdf">Kailun Chen (Leipzig)</a>, Barkat Mian (Mississippi), Samuel McKeown (Wisconsin)</summary>
+              <summary>Kailun Chen (Leipzig; <a href="{{site.url}}/vipss2024/course_pages/Chen.pdf">slides</a>), 
+              Samuel McKeown (Wisconsin; <a href="{{site.url}}/vipss2024/course_pages/McKeown.pdf">slides</a>), Barkat Mian (Mississippi; <a href="{{site.url}}/vipss2024/course_pages/Mian.pdf">slides</a>)</summary>
               <div style="background-color:#d9c9c9;
               padding:10px">
               Kailun Chen (Leipzig)
