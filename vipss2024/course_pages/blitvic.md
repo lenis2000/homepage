@@ -32,3 +32,4 @@ permalink: /vipss2024/blitvic/
 - [Problem set 1]({{site.url}}/vipss2024/course_pages/Positivity_PS1.pdf), Monday, July 8, 2024
 - [Problem set 2]({{site.url}}/vipss2024/course_pages/Positivity_PS2.pdf), Tuesday, July 9, 2024
 - [Problem set 3]({{site.url}}/vipss2024/course_pages/Positivity_PS3.pdf), Wednesday, July 10, 2024
+- [Problem set 4]({{site.url}}/vipss2024/course_pages/Positivity_PS4.pdf), Thursday, July 11, 2024
