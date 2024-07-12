@@ -30,6 +30,7 @@ permalink: /vipss2024/quastel/
 - [Problem set 1]({{site.url}}/vipss2024/course_pages/KPZ_PS1.pdf), Monday, July 8, 2024
 - [Problem set 2]({{site.url}}/vipss2024/course_pages/KPZ_PS2.pdf), Tuesday, July 9, 2024
 - [Problem set 3]({{site.url}}/vipss2024/course_pages/KPZ_PS3.pdf), Thursday, July 11, 2024
+- [Problem set 4]({{site.url}}/vipss2024/course_pages/KPZ_PS4.pdf), Friday, July 12, 2024
 
 ### Other resources
 
