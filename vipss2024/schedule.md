@@ -18,199 +18,7 @@ permalink: /vipss2024/schedule/
 
 <h5><a href="{{site.url}}/vipss2024/VIPSS2024.ics">.ics file - click to add to your calendar</a></h5><br>
 
-<hr><h3>Week 1</h3>
 
-<!-- Week 1 Monday, July 8, 2024 -->  
-<div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
-    <h4>Monday, July 8, 2024</h4>  
-    <ul>
-    <li>
-    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
-    </li>  
-        <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 2.a (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-    </ul>  
-</div>
-
-<div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
-    <h4>Tuesday, July 9, 2024</h4>  
-        <ul>
-    <li>
-    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
-    </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.b (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-    </ul>  
-</div>
-
-<div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
-    <h4>Wednesday, July 10, 2024</h4>  
-        <ul>
-    <li>
-    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
-    </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li style="font-weight:bold">Group photo</li>
-        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>Kailun Chen (Leipzig; <a href="{{site.url}}/vipss2024/course_pages/Chen.pdf">slides</a>), 
-              Samuel McKeown (Wisconsin; <a href="{{site.url}}/vipss2024/course_pages/McKeown.pdf">slides</a>), Barkat Mian (Mississippi; <a href="{{site.url}}/vipss2024/course_pages/Mian.pdf">slides</a>)</summary>
-              <div style="background-color:#d9c9c9;
-              padding:10px">
-              Kailun Chen (Leipzig)
-<br><strong>
-Mallows product measure</strong>
-<br>
-q-exchangeable ergodic distributions on the infinite symmetric group were classified by Gnedin-Olshanski (2012). In this paper, we study a specific linear combination of the ergodic measures and call it the Mallows product measure. From a particle system perspective, the Mallows product measure is a reversible stationary blocking measure of the infinite-species ASEP and it is a natural multi-species extension of the Bernoulli product blocking measures of the one-species ASEP. Moreover, the Mallows product measure can be viewed as the universal product blocking measure of interacting particle systems coming from random walks on Hecke algebras. For the random infinite permutation distributed according to the Mallows product measure we have computed the joint distribution of its neighbouring displacements, as well as several other observables. The key feature of the obtained formulas is their remarkably simple product structure. We project these formulas to ASEP with finitely many species, which in particular recovers a recent result of Adams-Balazs-Jay, and also to ASEP(q,M). Our main tools are results of Gnedin-Olshanski about ergodic Mallows measures and shift-invariance symmetries of the stochastic colored six vertex model discovered by Borodin-Gorin-Wheeler and Galashin. This is a joint work with Alexey Bufetov.
-              <br><br>
-              Barkat Mian (Mississippi)
-<br>
-              <strong>On planar Brownian motion singularly tilted through a point potential</strong><br>
-              We will discuss a special family of two-dimensional diffusions defined over a finite time interval [0, T]. These diffusions have transition density functions that are given by the integral kernels of the semigroup corresponding to the two-dimensional Schr ̈odinger operator with a point potential at the origin. Although, in a few ways, our processes of interest are closely related to two- dimensional Brownian motion, they have a singular drift pointing in the direction of the origin that is strong enough to enable the possibility of visiting there with positive probability. Our main focus is on characterizing a local time process at the origin for these diffusions analogous to that for a one-dimensional Brownian motion.
-              <br><br>
-              Samuel McKeown (Wisconsin)
-<br>
-              <strong>Solvability in a restricted first passage percolation
-              </strong>
-  <br>Strict-weak first passage percolation (SWFPP) is a model of random plane geometry, introduced by Seppäläinen as a simplification of planar FPP for which explicit formulae can be obtained. It is expected to lie in the KPZ universality class. One can apply many of the same techniques which have been used to study last passage percolation, in particular the systematic use of Busemann functions in describing the model's semi-infinite geodesics. SWFPP has the advantage of being solvable for a wider class of distributions and with expressions that tend to be easier to work with. As an application, we show that the tree of semi-infinite geodesics in exponential SWFPP fails to have a natural density near the axis.
-              </div>
-            </details>
-        </li>  
-        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
-        <li>11:35 - 1:00 &bull; <strong> Problem Session 1.c (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9;
-               padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-    </ul>  
-</div>
-
-<div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
-    <h4>Thursday, July 11, 2024</h4>  
-        <ul>
-    <li>
-    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
-    </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.c (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-        <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
-        <li>2:00 - 3:00 &bull; <strong>Lecture 1.d (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
-            <!--<details style="background-color:#bccea8">
-              <summary>TBD Details</summary>
-              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-    </ul>  
-</div>
-
-
-<div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
-    <h4>Friday, July 12, 2024</h4>  
-        <ul>
-    <li>
-    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
-    </li>    
-        <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
-            </details>-->
-        </li>
-        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
-        <li>10:30 - 11:30 &bull; <strong>Discussion on AI practices</strong>
-            <details style="background-color:#b9a9a9">
-              <summary>Description</summary>
-              <div style="background-color:#d9c9c9;
-              padding:10px">We will discuss generative AI (chatGPT, etc.) in research, teaching, and administrative tasks. In the first half of the discussion, 
-              Everyone is invited to contribute a short AI success story that others can follow. The second half is an open discussion around AI topics.</div>
-            </details>
-        </li>  
-        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
-        <li>11:35 - 1:00 &bull; <strong> Problem Session 2.d (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
-            <!--<details style="background-color:#b9a9a9">
-              <summary>TBD Details</summary>
-              <div style="background-color:#d9c9c9;
-               padding:10px">Decsription</div>
-            </details>-->
-        </li>  
-    </ul>  
-</div>
 
 <hr><h3>Week 2</h3>
 
@@ -411,6 +219,200 @@ The totally asymmetric exclusion process(TASEP) is one of the solvable models in
         </li>  
         <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
         <li>11:35 - 1:00 &bull; <strong> Problem Session 4.d (Nicoletti): <a href="{{site.url}}/vipss2024/russkikh/">Dimers and Embeddings</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9;
+               padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+    </ul>  
+</div>
+
+<hr><h3>Week 1</h3>
+
+<!-- Week 1 Monday, July 8, 2024 -->  
+<div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
+    <h4>Monday, July 8, 2024</h4>  
+    <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>  
+        <li>9:00 - 10:00 &bull; <strong>Lecture 1.a (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 1.a (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 2.a (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 2.a (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+    </ul>  
+</div>
+
+<div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
+    <h4>Tuesday, July 9, 2024</h4>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.b (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.b (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <div class="mb-2 mt-2" style="font-weight:bold">Organized lunch at <a href="https://maps.app.goo.gl/r9dSBHdRg8t7csUq5">Newcomb</a></div>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 1.b (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.b (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+    </ul>  
+</div>
+
+<div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
+    <h4>Wednesday, July 10, 2024</h4>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
+        <li>9:00 - 10:00 &bull; <strong>Lecture 1.c (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li style="font-weight:bold">Group photo</li>
+        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
+            <details style="background-color:#b9a9a9">
+              <summary>Kailun Chen (Leipzig; <a href="{{site.url}}/vipss2024/course_pages/Chen.pdf">slides</a>), 
+              Samuel McKeown (Wisconsin; <a href="{{site.url}}/vipss2024/course_pages/McKeown.pdf">slides</a>), Barkat Mian (Mississippi; <a href="{{site.url}}/vipss2024/course_pages/Mian.pdf">slides</a>)</summary>
+              <div style="background-color:#d9c9c9;
+              padding:10px">
+              Kailun Chen (Leipzig)
+<br><strong>
+Mallows product measure</strong>
+<br>
+q-exchangeable ergodic distributions on the infinite symmetric group were classified by Gnedin-Olshanski (2012). In this paper, we study a specific linear combination of the ergodic measures and call it the Mallows product measure. From a particle system perspective, the Mallows product measure is a reversible stationary blocking measure of the infinite-species ASEP and it is a natural multi-species extension of the Bernoulli product blocking measures of the one-species ASEP. Moreover, the Mallows product measure can be viewed as the universal product blocking measure of interacting particle systems coming from random walks on Hecke algebras. For the random infinite permutation distributed according to the Mallows product measure we have computed the joint distribution of its neighbouring displacements, as well as several other observables. The key feature of the obtained formulas is their remarkably simple product structure. We project these formulas to ASEP with finitely many species, which in particular recovers a recent result of Adams-Balazs-Jay, and also to ASEP(q,M). Our main tools are results of Gnedin-Olshanski about ergodic Mallows measures and shift-invariance symmetries of the stochastic colored six vertex model discovered by Borodin-Gorin-Wheeler and Galashin. This is a joint work with Alexey Bufetov.
+              <br><br>
+              Barkat Mian (Mississippi)
+<br>
+              <strong>On planar Brownian motion singularly tilted through a point potential</strong><br>
+              We will discuss a special family of two-dimensional diffusions defined over a finite time interval [0, T]. These diffusions have transition density functions that are given by the integral kernels of the semigroup corresponding to the two-dimensional Schr ̈odinger operator with a point potential at the origin. Although, in a few ways, our processes of interest are closely related to two- dimensional Brownian motion, they have a singular drift pointing in the direction of the origin that is strong enough to enable the possibility of visiting there with positive probability. Our main focus is on characterizing a local time process at the origin for these diffusions analogous to that for a one-dimensional Brownian motion.
+              <br><br>
+              Samuel McKeown (Wisconsin)
+<br>
+              <strong>Solvability in a restricted first passage percolation
+              </strong>
+  <br>Strict-weak first passage percolation (SWFPP) is a model of random plane geometry, introduced by Seppäläinen as a simplification of planar FPP for which explicit formulae can be obtained. It is expected to lie in the KPZ universality class. One can apply many of the same techniques which have been used to study last passage percolation, in particular the systematic use of Busemann functions in describing the model's semi-infinite geodesics. SWFPP has the advantage of being solvable for a wider class of distributions and with expressions that tend to be easier to work with. As an application, we show that the tree of semi-infinite geodesics in exponential SWFPP fails to have a natural density near the axis.
+              </div>
+            </details>
+        </li>  
+        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
+        <li>11:35 - 1:00 &bull; <strong> Problem Session 1.c (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9;
+               padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+    </ul>  
+</div>
+
+<div style="background-color:#DCEDC8;padding:10px" class="mb-3">  
+    <h4>Thursday, July 11, 2024</h4>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.c (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>10:30 - 12:00 &bull; <strong> Problem Session 2.c (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+        <div class="mb-2 mt-2" style="font-weight:bold">Lunch &mdash; on your own</div>
+        <li>2:00 - 3:00 &bull; <strong>Lecture 1.d (Blitvic): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>3:00 - 3:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>3:30 - 5:00 &bull; <strong> Problem Session 1.d (Kammoun): <a href="{{site.url}}/vipss2024/blitvic/">Positivity everywhere</a></strong>
+            <!--<details style="background-color:#bccea8">
+              <summary>TBD Details</summary>
+              <div style="background-color:#DCEDC8; padding:10px">Decsription</div>
+            </details>-->
+        </li>  
+    </ul>  
+</div>
+
+
+<div style="background-color:#d9c9c9;padding:10px" class="mb-3">  
+    <h4>Friday, July 12, 2024</h4>  
+        <ul>
+    <li>
+    8:00 - 9:00 &bull; <strong>Breakfast and coffee (in front of the lecture room)</strong>
+    </li>    
+        <li>9:00 - 10:00 &bull; <strong>Lecture 2.d (Quastel): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
+            <!--<details style="background-color:#b9a9a9">
+              <summary>TBD Details</summary>
+              <div style="background-color:#d9c9c9; padding:10px">Decsription</div>
+            </details>-->
+        </li>
+        <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
+        <li>10:30 - 11:30 &bull; <strong>Discussion on AI practices</strong>
+            <details style="background-color:#b9a9a9">
+              <summary>Description</summary>
+              <div style="background-color:#d9c9c9;
+              padding:10px">We will discuss generative AI (chatGPT, etc.) in research, teaching, and administrative tasks. In the first half of the discussion, 
+              Everyone is invited to contribute a short AI success story that others can follow. The second half is an open discussion around AI topics.</div>
+            </details>
+        </li>  
+        <li>11:30 - 11:35 &bull; <strong>Coffee Break</strong></li>  
+        <li>11:35 - 1:00 &bull; <strong> Problem Session 2.d (Zhang): <a href="{{site.url}}/vipss2024/quastel/">The KPZ fixed point</a></strong>
             <!--<details style="background-color:#b9a9a9">
               <summary>TBD Details</summary>
               <div style="background-color:#d9c9c9;
