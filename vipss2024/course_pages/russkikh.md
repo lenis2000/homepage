@@ -16,11 +16,16 @@ permalink: /vipss2024/russkikh/
 
 ---
 
+
 # Dimers and Embeddings
 
 **Abstract**: Dimer model is a probability measure on perfect matchings of a graph. We present several tools to study the dimer model on planar bipartite graphs: Kasteleyn's theory, combinatorial correspondences with other models, discrete complex analysis, and embeddings of planar graphs.
 
 ---
+
+### Lectures
+
+- [Lecture 1]({{site.url}}/vipss2024/course_pages/Dimers_L1.pdf), Monday, July 15, 2024
 
 ### Problem sets
 
