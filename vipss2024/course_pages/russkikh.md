@@ -30,3 +30,7 @@ permalink: /vipss2024/russkikh/
 ### Problem sets
 
 - [Problem set 1]({{site.url}}/vipss2024/course_pages/Dimers_PS1.pdf), Monday, July 15, 2024
+
+### Other resources
+
+- [3D representation of domino tilings on the square lattice](https://math.mit.edu/~borodin/aztec.html)
