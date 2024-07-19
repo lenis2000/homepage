@@ -28,6 +28,7 @@ permalink: /vipss2024/russkikh/
 - [Lecture 1]({{site.url}}/vipss2024/course_pages/Dimers_L1.pdf), Monday, July 15, 2024
 - [Lecture 2]({{site.url}}/vipss2024/course_pages/Dimers_L2.pdf), Tuesday, July 16, 2024
 - [Lecture 3]({{site.url}}/vipss2024/course_pages/Dimers_L3.pdf), Thursday, July 18, 2024
+- [Lecture 4]({{site.url}}/vipss2024/course_pages/Dimers_L4.pdf), Friday, July 19, 2024
 
 ### Problem sets
 
