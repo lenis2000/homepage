@@ -7,6 +7,7 @@ coauthors:
     web: https://professeurs.uqam.ca/professeur/morales_borrero.alejandro/
   - name: Greta Panova
     web: https://sites.google.com/usc.edu/gpanova/home?authuser=0
+  - name: Leonid Petrov
   - name: Damir Yeliussizov
     web: http://www.damir.xyz/
 comments: false
