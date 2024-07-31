@@ -387,7 +387,7 @@ We construct and study the asymptotic properties of "perfect t-embeddings" of un
         <li>10:00 - 10:30 &bull; <strong>Coffee Break</strong></li>  
         <li>10:30 - 11:30 &bull; <strong>Participant Talks</strong>
             <details style="background-color:#b9a9a9">
-              <summary>Sergey Berezin (KU Leuven; <a href="{{site.url}}/vipss2024/course_pages/Berezin.pdf">slides</a>), 
+              <summary>Sergey Berezin (KU Leuven), 
               Trung Vu (Illinois Urbana-Champaign; <a href="{{site.url}}/vipss2024/course_pages/Vu.pdf">slides</a>)</summary>
               <div style="background-color:#d9c9c9;
               padding:10px">
