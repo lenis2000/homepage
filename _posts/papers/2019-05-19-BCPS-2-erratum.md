@@ -16,7 +16,7 @@ journal-ref: Commun. Math. Phys. 370, 1069–1072 (2019)
 journal-web: https://link.springer.com/article/10.1007/s00220-019-03528-y
 show-date: true
 no-abstract: true
-pdf: 17-publ-petrov-uva-erratum.pdf
+pdf: 17-correction_to_spectral.pdf
 post-pdf: true
 cv-number: 17
 pages: 4

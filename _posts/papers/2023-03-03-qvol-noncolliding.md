@@ -15,7 +15,7 @@ journal-web: https://iopscience.iop.org/article/10.1088/1751-8121/acedda
 image: __STORAGE_URL__/img/papers/qvol_noncoll.png
 image-alt: Limit shapes of the noncolliding q-exchangeable random walks
 show-date: true
-pdf: 42-publ-petrov-post-tenure-preprint.pdf
+pdf: 42-asymptotics_of_noncolliding.pdf
 post-pdf: true
 pages: 34
 cv-number: 42

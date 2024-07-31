@@ -15,7 +15,7 @@ journal-web: https://link.springer.com/article/10.1007/s00029-024-00945-3
 image: __STORAGE_URL__/img/papers/Grothendieck.png
 image-alt: Limit shapes of 2d Schur processes and the corresponding Grothendieck random partitions
 show-date: true
-pdf: 43-publ-petrov-post-tenure-preprint.pdf
+pdf: 43-tilted_biorthogonal_ensembles.pdf
 post-pdf: true
 source: 43source.txt
 post-source: true

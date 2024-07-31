@@ -12,7 +12,7 @@ more-text: Full abstract
 show-date: true
 journal-ref: Electronic Communications in Probability 15 (2010), 162-175
 journal-web: http://projecteuclid.org/euclid.ecp/1465243959
-pdf: 05-publ-petrov.pdf
+pdf: 05-random_strict_partitions.pdf
 pages: 14
 cv-number: 5
 ---

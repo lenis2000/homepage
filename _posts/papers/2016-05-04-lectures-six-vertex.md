@@ -16,7 +16,7 @@ journal-ref: Lecture Notes of the Les Houches Summer School, Volume 104, July 20
 journal-web: 'https://global.oup.com/academic/product/stochastic-processes-and-random-matrices-9780198797319?lang=en&cc=us'
 image: __STORAGE_URL__/img/papers/lec-six-vertex.png
 image-alt: Creation operator in a Bethe ansatz representation
-pdf: 21-publ-petrov-uva-survey-lecture-notes.pdf
+pdf: 21-lectures_on_integrable.pdf
 pages: 113
 cv-number: 21
 ---

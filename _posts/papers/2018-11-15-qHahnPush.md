@@ -17,7 +17,7 @@ journal-web: https://doi.org/10.1093/imrn/rnz106
 image: __STORAGE_URL__/img/papers/qHahnPush.png
 image-alt: The q-Hahn PushTASEP
 show-date: true
-pdf: 30-publ-petrov-uva.pdf
+pdf: 30-the_qhahn_pushtasep.pdf
 pages: 40
 cv-number: 30
 ---

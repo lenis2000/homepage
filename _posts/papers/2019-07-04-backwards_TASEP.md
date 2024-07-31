@@ -15,7 +15,7 @@ journal-web: https://doi.org/10.1007/s00440-021-01074-0
 image: __STORAGE_URL__/img/papers/multi_BHP.png
 image-alt: Multitime distribution in the backwards Hammersley-type process
 show-date: true
-pdf: 32-publ-petrov-post-tenure-published.pdf
+pdf: 32-mapping_tasep_back.pdf
 post-pdf: true
 pages: 50
 cv-number: 32

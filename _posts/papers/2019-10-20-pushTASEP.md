@@ -13,7 +13,7 @@ journal-web: https://doi.org/10.1214/20-EJP517
 image: __STORAGE_URL__/img/papers/pushTASEP.png
 image-alt: Limit shapes in inhomogeneous PushTASEP
 show-date: true
-pdf: 33-publ-petrov-post-tenure-published.pdf
+pdf: 33-pushtasep_in_inhomogeneous.pdf
 post-pdf: false
 pages: 26
 cv-number: 33

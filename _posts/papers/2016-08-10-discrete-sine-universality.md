@@ -15,7 +15,7 @@ show-date: true
 journal-ref: Annals of Probability (2019), Vol. 47, No. 5, 2686-2753
 image: __STORAGE_URL__/img/papers/discrete-sine-universality.png
 image-alt: Noncolliding Bernoulli random walks
-pdf: 22-publ-petrov-uva.pdf
+pdf: 22-universality_of_local.pdf
 post-pdf: true
 pages: 68
 cv-number: 22

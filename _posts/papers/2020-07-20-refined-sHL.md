@@ -13,7 +13,7 @@ journal-web: https://doi.org/10.1016/j.jcta.2021.105519
 image: __STORAGE_URL__/img/papers/refined_sHL.png
 image-alt: Two lattices with equal partition functions. This leads to a refined Cauchy identity
 show-date: true
-pdf: 37-publ-petrov-post-tenure-published.pdf
+pdf: 37-refined_cauchy_identity.pdf
 source: 37source.txt
 post-source: true
 post-pdf: true

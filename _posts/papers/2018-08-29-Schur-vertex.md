@@ -17,7 +17,7 @@ journal-web: 'https://link.springer.com/article/10.1007%2Fs00220-019-03495-4'
 image: __STORAGE_URL__/img/papers/cont_TASEP_phase_transition.png
 image-alt: Emergence of a discontinuity of the height function at a slowdown
 show-date: true
-pdf: 29-publ-petrov-uva.pdf
+pdf: 29-generalizations_of_tasep.pdf
 source: 29source.txt
 post-source: true
 post-pdf: true

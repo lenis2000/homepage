@@ -16,7 +16,7 @@ more-text: Full abstract
 show-date: true
 image: __STORAGE_URL__/img/papers/qtasep-coupling.png
 image-alt: Coupling of q-TASEPs and the stochastic higher spin six vertex model
-pdf: 23-publ-petrov-uva.pdf
+pdf: 23-stochastic_higher_spin.pdf
 pages: 53
 cv-number: 23
 ---

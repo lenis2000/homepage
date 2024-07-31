@@ -15,7 +15,7 @@ journal-web: https://doi.org/10.1007/s10955-020-02652-7
 image: __STORAGE_URL__/img/papers/pert_Dyson.png
 image-alt: Perturbed Dyson Brownian motion - eigenvalue dynamics of a 6x6 matrix of Brownian motions, with no drift off the diagonal, and an arithmetic progression of drifts on the diagonal
 show-date: true
-pdf: 35-publ-petrov-post-tenure-published.pdf
+pdf: 35-parameter_symmetry_in.pdf
 post-pdf: true
 pages: 15
 cv-number: 35
