@@ -66,7 +66,7 @@ redirect_from: /statement
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
             {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+            &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
             {% unless post.no-abstract %}<details>
               <summary>
                 Abstract &raquo;
@@ -99,7 +99,7 @@ redirect_from: /statement
             {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
               <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
             {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+            &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
             {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
             {% unless post.no-abstract %}<details>
               <summary>
@@ -130,7 +130,7 @@ redirect_from: /statement
               {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
                 <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
               {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-              {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){% endif %}
+              {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
               {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
               {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
               {% unless post.no-abstract %}<details>
@@ -159,7 +159,7 @@ redirect_from: /statement
                 <i>Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex</i>.
                 <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a> 
                 &bull;
-                (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/nature-comm-publ-petrov-post-tenure-published.pdf">PDF</a>)
+                (<a href="{{site.storage_url}}/papers/nature-comm-publ-petrov-post-tenure-published.pdf">PDF</a>)
                 &bull; 15 pages.
               </li>
             </ol>
@@ -174,7 +174,7 @@ redirect_from: /statement
                 <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
                   <b>
                     {{post.link-description}} &bull;
-                    <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b> &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
+                    <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b> &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
                 </li>
           
               {% endif %}
@@ -200,7 +200,7 @@ redirect_from: /statement
       {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
         <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
       {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-      &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+      &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
       {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
       {% unless post.no-abstract %}<details>
         <summary>
@@ -234,7 +234,7 @@ redirect_from: /statement
         {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
           <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
         {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-        &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+        &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
         {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
@@ -263,7 +263,7 @@ redirect_from: /statement
           <b>
             {{post.link-description}} &bull;
             <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
-            &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>)
+            &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>)
         </li>
   
       {% endif %}

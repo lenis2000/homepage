@@ -21,7 +21,7 @@ nav_weight: 2
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){% endif %}
+        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
         {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
@@ -55,7 +55,7 @@ nav_weight: 2
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
           <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){% endif %}
+        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
         {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
         {% if post.erratum %}&bull; (see also erratum <a href="#errata">below</a>){% endif %}
         {% unless post.no-abstract %}<details>
@@ -88,7 +88,7 @@ nav_weight: 2
           {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
             <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
           {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-          {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.pdf}}">PDF</a>){% endif %}
+          {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
           {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
           {% unless post.no-abstract %}<details>
             <summary>
@@ -130,7 +130,7 @@ nav_weight: 2
             <b>
               {{post.link-description}} &bull;
               <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
-              &bull; (<a href="{{site.storage_url}}/research_files/publication_pdfs_2023/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
+              &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
           </li>
     
         {% endif %}
