@@ -42,3 +42,7 @@
 [ref40]: {{ site.url }}/2022/12/rewriting-history/
 
 [ref44]: {{ site.url }}/2023/09/stat-ring/
+
+
+[ref45]: {{ site.url }}/2024/07/Grothendieck-shenanigans/
+
