@@ -2,30 +2,14 @@ name: Build and deploy Jekyll site
 on: [push]
 
 jobs:
-login:
-  runs-on: ubuntu-latest
-  - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
   jekyll:
     name: Build and deploy Jekyll site
     runs-on: ubuntu-latest
-    environment: main
+    # environment: main
 
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    
-    - name: Auxiliary actions
-      run: |
-        echo "Chekout done"
-
-    - name: Auxiliary actions
-      run: |
-        echo "Docker login done"
 
     - name: Build
       uses: jerryjvl/jekyll-build-action@v1
