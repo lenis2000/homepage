@@ -1,15 +1,7 @@
-#!/usr/bin/env bash
-set -e # halt script on error
+#!/bin/zsh
 
-# get fresh bib html file from GitHub, before the build
-# git clone https://github.com/lenis2000/BiBTeX.git bib-repo && mv bib-repo/bib.html _includes/ && mv bib-repo/bib_bib.html _includes/ && mv bib-repo/petrov.html _includes/ && mv bib-repo/petrov_bib.html _includes/ && rm -Rf bib-repo 
+bundle exec jekyll build
 
-bundle exec jekyll build #build the website
-# find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.url}}/https\:\/\/lpetrov.cc/g'
-# find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.storage_url}}/https\:\/\/d3m0khvr0ybm92.cloudfront.net/g'
-# find _site/ -type f -print0 | xargs -0 sed -i 's/{{site.math_url}}/http\:\/\/math.virginia.edu/g'
-
-# get fresh CV from GitHub
 git clone https://github.com/lenis2000/CV.git ./_site/research/CV
 mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
 mv ./_site/research/CV/__petrovCV__short.pdf ./_site/research/petrovCVbrief.pdf
@@ -24,6 +16,12 @@ mv ./_site/teaching/syll/Syllabus_7310_s19.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_7310_s20.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_3340_s20.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_3100_f20.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_3100_s22.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_3100_f22.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_3340_s23.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_3100_f23.pdf ./_site/teaching/
+mv ./_site/teaching/syll/Syllabus_2310_f24.pdf ./_site/teaching/
 rm -Rf _site/teaching/syll
 
-bundle exec htmlproofer ./_site --disable-external true
+
+aws s3 sync ./_site/ s3://lpetrov.cc --delete
