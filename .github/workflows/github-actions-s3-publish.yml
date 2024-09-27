@@ -11,15 +11,20 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Build
-      uses: jerryjvl/jekyll-build-action@v1
+    - name: Build and Deploy
+      uses: kshehadeh/jekyll-s3-action@master
+      env: 
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        S3_BUCKET_NAME: "lpetrov.cc"
+        S3_BUCKET_PATH: "/"  
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+    # - name: Configure AWS credentials
+      # uses: aws-actions/configure-aws-credentials@v1
+      # with:
+        # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        # aws-region: us-east-1
 
     - name: Auxiliary actions
       run: |
@@ -52,6 +57,6 @@ jobs:
     #     # The arguments to pass to HTMLProofer
     #     arguments: --disable-external
           
-    - name: Sync output to S3
-      run: |
-        aws s3 sync ./_site/ s3://lpetrov.cc --delete
+    # - name: Sync output to S3
+      # run: |
+        # aws s3 sync ./_site/ s3://lpetrov.cc --delete
