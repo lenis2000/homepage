@@ -23,5 +23,4 @@ mv ./_site/teaching/syll/Syllabus_3100_f23.pdf ./_site/teaching/
 mv ./_site/teaching/syll/Syllabus_2310_f24.pdf ./_site/teaching/
 rm -Rf _site/teaching/syll
 
-
 aws s3 sync ./_site/ s3://lpetrov.cc --delete
