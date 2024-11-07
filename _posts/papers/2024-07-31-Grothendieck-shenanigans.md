@@ -12,7 +12,7 @@ coauthors:
     web: http://www.damir.xyz/
 comments: false
 categories: blog math preprint
-# journal-ref: submitted to ???
+# journal-ref: submitted to Adv. Math.
 # journal-web: 
 published: true
 image: __STORAGE_URL__/img/papers/grothendieck-shenanigans.png

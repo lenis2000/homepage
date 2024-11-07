@@ -7,9 +7,9 @@ coauthors:
   - name: Axel Saenz
     web: https://sites.google.com/view/axelsaenz
 comments: false
-categories: blog math preprint
+categories: blog math paper
 published: true
-# journal-web: submitted to CMP, May 2023
+journal-ref: Commun. Math. Phys., to appear
 # more-text:
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
 image-alt: |
