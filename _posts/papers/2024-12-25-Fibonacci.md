@@ -1,9 +1,10 @@
 ---
 layout: post
 title: "Random Fibonacci Words via Clone Schur Functions"
-arXiv: ??? [math.PR]
+arXiv: ????.????? [math.PR]
 coauthors:
   - name: Jeanne Scott
+    noweb: true
   - name: Leonid Petrov
 comments: false
 categories: blog math preprint
@@ -12,8 +13,8 @@ categories: blog math preprint
 image: __STORAGE_URL__/img/papers/YF.png
 image-alt: The Young-Fibonacci lattice and cotransition weights defined by an arbitrary harmonic function
 show-date: true
-pdf: 47-random-fibonacci-words.pdf
-post-pdf: true
+# pdf: 47-random-fibonacci-words.pdf
+post-pdf: false
 pages: 71
 cv-number: 47
 published: false
