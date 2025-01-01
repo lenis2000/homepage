@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Random Fibonacci Words via Clone Schur Functions"
-arXiv: 2412.????? [math.PR]
+arXiv: 2412.21126 [math.PR]
 coauthors:
   - name: Jeanne Scott
     noweb: true
