@@ -165,6 +165,12 @@ Random matrices significantly impact representation theory, linking to integrals
 RMT utilizes a broad range of tools ranging across all of mathematics, including probability theory, combinatorics, analysis (classical and modern), algebra, representation theory, and number theory.
 The theory of random matrices is a rich source of problems and techniques for all of mathematics.
 
+The main content of this course is to explore the toolbox
+around random matrices, including going into discrete models
+like dimers and statistical mechanics. Some of this will be included
+in the lectures, and some other topics will be covered in the
+reading course component, which is individualized.
+
 \paragraph{Applications.}
 Random matrix theory finds applications across a diverse set
 of fields. In nuclear physics, random matrix ensembles serve
@@ -260,7 +266,62 @@ We also have the distribution of $X_1+\cdots+X_n$:
 	\qquad k = 0, 1, \ldots, n.
 \end{equation*}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{local CLT via Stirling}}
+Introduce the normalized quantity
+\begin{equation}
+	\label{eq:z_normalized_quantity}
+	z = \frac{k - np}{\sqrt{np(1-p)}},
+\end{equation}
+and assume that throughout the asymptotic analysis,
+this quantity stays finite.
+
+Our aim is to show that, for $k$ such that $z$ remains bounded as $n\to\infty$, the following holds:
+\[
+\operatorname{\mathbb{P}}(S_n = k) = \frac{1}{\sqrt{2\pi np(1-p)}} \exp\Bigl( -\frac{z^2}{2} \Bigr) (1+o(1)).
+\]
+
+For large $n$, Stirling's formula gives
+\[
+m! \sim \sqrt{2\pi m}\, m^m e^{-m}, \quad \text{as } m\to\infty.
+\]
+Apply Stirling's approximation to $n!$, $k!$, and $(n-k)!$:
+\[
+n! \sim \sqrt{2\pi n}\, n^n e^{-n}, \quad
+k! \sim \sqrt{2\pi k}\, k^k e^{-k}, \quad
+(n-k)! \sim \sqrt{2\pi (n-k)}\,(n-k)^{n-k} e^{-(n-k)}.
+\]
+Thus,
+\[
+\binom{n}{k} \sim \frac{\sqrt{2\pi n}\, n^n e^{-n}}{\sqrt{2\pi k}\, k^k e^{-k}\sqrt{2\pi (n-k)}\,(n-k)^{n-k} e^{-(n-k)}}
+= \frac{n^n}{k^k (n-k)^{n-k}}
+\frac{1}{\sqrt{2\pi\, k(n-k)/n}}.
+\]
+More precisely, one often writes
+\[
+\binom{n}{k} \sim \frac{1}{\sqrt{2\pi np(1-p)}} \exp\Bigl( n\ln n - k\ln k - (n-k)\ln (n-k) \Bigr),
+\]
+where $p\approx k/n$ thanks to the fact that 
+$z$ \eqref{eq:z_normalized_quantity} is assumed to be finite.
+
+We have
+\[
+k = np+ z\sqrt{np(1-p)}.
+\]
+Then, consider the second-order Taylor expansion. We have
+\[
+n\ln n - k\ln k - (n-k)\ln (n-k) \sim n H -\frac{z^2}{2},
+\]
+where $H=-[p\ln p+(1-p)\ln(1-p)]+c(z;p)/\sqrt n$
+(for an explicit function $c(z;p)$)
+is the 
+``entropy'' term which exactly cancels with the prefactors coming from $p^k (1-p)^{n-k}$.
+
+After combining the approximations from the binomial coefficient and the probability weights, one arrives at
+\[
+\operatorname{\mathbb{P}}(S_n = k)
+\sim \frac{1}{\sqrt{2\pi np(1-p)}} \exp\left( -\frac{z^2}{2} \right),
+\]
+as desired.
+
 
 \end{example}
 
@@ -299,9 +360,138 @@ This gives us a recursive formula, and completes the proof.
 \end{proof}
 
 
-
-
 \subsection{Moments of sums of iid random variables}
+
+Let us now show the CLT by moments.
+\begin{remark}
+	This proof requires an additional assumption
+	that all moments of the random variables are finite.
+	This is quite a strong assumption, and while the CLT holds
+	without it, this proof by moments is more algebraic, and
+	will translate to random matrices more directly.
+\end{remark}
+
+\subsubsection{Computation of moments}
+
+Denote $Y_i=X_i-\mu$, these are also iid, but have mean $0$.
+We consider
+\begin{equation*}
+	\operatorname{\mathbb{E}}\left[ \left( \sum_{i=1}^n Y_i \right)^k \right].
+\end{equation*}
+Expanding the $k$-th power using the multinomial theorem, we obtain:
+\begin{equation*}
+\left( \sum_{i=1}^n Y_i \right)^k = \sum_{j_1 + j_2 + \dots + j_n = k} \frac{k!}{j_1! j_2! \dots j_n!} Y_1^{j_1} Y_2^{j_2} \dots Y_n^{j_n}.
+\end{equation*}
+Taking the expectation and using linearity, we have:
+\begin{align*}
+ \mathbb{E}\left[ \left( \sum_{i=1}^n Y_i \right)^k \right]
+ &=
+ \sum_{j_1 + j_2 + \dots + j_n = k}
+ \frac{k!}{j_1! j_2! \dots j_n!} \mathbb{E}\left[Y_1^{j_1}\right]
+ \mathbb{E}\left[Y_2^{j_2}\right] \dots
+ \mathbb{E}\left[Y_n^{j_n}\right] \\
+ &=
+ \sum_{j_1 + j_2 + \dots + j_n = k}
+ \frac{k!}{j_1! j_2! \dots j_n!}
+ \mathsf{m}_{j_1}\ldots \mathsf{m}_{j_n},
+\end{align*}
+where $\mathsf{m}_j=\mathbb{E}[Y^j]$ (recall the identical distribution of $Y_i$).
+Note that 
+$\mathsf{m}_0 = 1$ and
+$\mathsf{m}_1 = 0$.
+
+The sum over all $j_1, \ldots, j_n$ with $j_1 + \ldots + j_n = k$ is the number of ways to partition $k$ into $n$ non-negative integers.
+We can order these integers, and thus 
+obtain the sum over all partitions of $k$ into $\le n$ parts.
+Since $n$ is large, we simply sum over all partitions of $k$.
+For each partition $\lambda$ of $k$
+(where $k=\lambda_1+\lambda_2+\ldots+\lambda_n $ and 
+$\lambda_1\geq \lambda_2\geq \ldots\geq \lambda_n\geq 0$),
+the corresponding term in the sum is
+\begin{equation*}
+	\frac{k!}{\lambda_1! \lambda_2! \ldots }
+	\mathsf{m}_{\lambda_1}\mathsf{m}_{\lambda_2}\ldots.
+\end{equation*}
+We now continue the proof by ``unordering'' the partitions. In other words, for a given partition 
+\[
+\lambda=(\lambda_1,\lambda_2,\ldots,\lambda_n)
+\]
+of the exponent \( k \), we must count the number of distinct multisets of indices \((j_1,j_2,\ldots,j_n)\) that yield the same collection \(\{\lambda_1,\lambda_2,\ldots\}\). Denote by 
+\[
+b_r = \#\{i : \lambda_i=r\}
+\]
+the number of parts equal to \( r \) in \(\lambda\). Then there are
+
+\colorbox{yellow}{\parbox{.7\textwidth}{continue here}}
+
+\[
+\binom{n}{b_0,b_1,b_2,\ldots}
+\]
+ways of choosing which of the \( n \) slots correspond to which values. (Strictly speaking, there are only finitely many nonzero \( b_r \), and we have \( b_0 = n-\sum_{r\ge 1} b_r \).) 
+
+Thus, the contribution of all terms corresponding to a given partition \(\lambda\) is
+\[
+\binom{n}{b_0,b_1,b_2,\ldots} \; \frac{k!}{\lambda_1! \lambda_2! \cdots} \; \mathsf{m}_{\lambda_1}\mathsf{m}_{\lambda_2}\cdots.
+\]
+Thus,
+\[
+\mathbb{E}\left[\left( \sum_{i=1}^n Y_i\right)^k\right]= \sum_{\lambda \vdash k} \binom{n}{b_0,b_1,b_2,\ldots} \; \frac{k!}{\lambda_1! \lambda_2! \cdots} \; \prod_{r\ge 0} (\mathsf{m}_r)^{\,b_r},
+\]
+where the notation $\lambda \vdash k$ means that $\lambda$ is a partition of $k$.
+
+
+
+\subsubsection{Asymptotics of moments}
+
+Now we consider the leading term of the asymptotics 
+as $n\to+\infty$.
+
+
+the dominant contribution comes from those partitions for which the number of indices with \(\lambda_i\ge 3\) is as small as possible. (The terms in which some \( j_i \geq 3 \) have factors \(\mathsf{m}_r\) that are asymptotically negligible, when compared with the contributions coming from partitions all of whose nonzero parts are \(2\).)
+
+Since \(\mathsf{m}_1=0\), the only nonzero contributions come from partitions with no parts equal to \( 1 \). Among these, the largest contribution arises from the partition in which exactly \( k/2 \) of the \( j_i \) equal 2 (with the remainder zero) when \( k \) is even (if \( k \) is odd the moment is asymptotically zero, as required by the symmetry of the limit distribution). More precisely, for even \( k \) the dominating term is
+
+\[
+\binom{n}{k/2} \; \frac{k!}{(2!)^{k/2}} \; (\mathsf{m}_2)^{k/2}.
+\]
+
+Normalizing by the variance, we compare with the moment of a standard normal, using \(\sigma^2 = \mathsf{m}_2\). Recall that for a standard normal random variable \( Z \),
+\[
+\mathbb{E}[Z^k]=
+\begin{cases}
+\frac{k!}{2^{k/2}(k/2)!}, & \text{if } k \text{ is even}, \\
+0, & \text{if } k \text{ is odd.}
+\end{cases}
+\]
+
+When we normalize 
+\[
+S_n=\frac{Y_1+\cdots+Y_n}{\sqrt{n \,\mathsf{m}_2}},
+\]
+its \( k \)th moment (for even \( k \)) is given by
+\[
+\mathbb{E}[S_n^k]=\frac{1}{(n\,\mathsf{m}_2)^{k/2}}\,\mathbb{E}\left[\left(\sum_{i=1}^{n}Y_i\right)^k\right].
+\]
+Substituting the dominant term we have approximately
+\[
+\mathbb{E}[S_n^k]\approx \frac{1}{(n\,\mathsf{m}_2)^{k/2}} \; \binom{n}{k/2}\; \frac{k!}{(2!)^{k/2}} \; (\mathsf{m}_2)^{k/2}.
+\]
+Noting that
+\[
+\binom{n}{k/2}\sim \frac{n^{k/2}}{(k/2)!}
+\]
+for large \( n \) and fixed \( k \), the powers of \( n \) and \(\mathsf{m}_2\) cancel, yielding
+\[
+\mathbb{E}[S_n^k]\sim \frac{k!}{2^{k/2}(k/2)!},
+\]
+which is exactly the \( k \)th moment of the standard normal distribution. A similar (but simpler) argument shows that the moments for odd \( k \) vanish.
+
+Thus, by the method of moments, the distribution of the normalized sum \( S_n \) converges to the standard normal law as \( n\to\infty \). This completes the moment-based proof of the central limit theorem.
+
+\medskip
+
+\textbf{Summary:} We expanded the \( k \)th moment of \(\sum_{i=1}^n Y_i\) by the multinomial theorem, then identified the dominant contributions coming from partitions with as many parts equal to \( 2 \) as possible (since \(\mathsf{m}_1=0\) and higher moments produce negligible contributions after normalization). After “unordering” the partitions correctly by counting multiplicities, we found that the normalized moments converge to those of the standard Gaussian, which by the method of moments implies the central limit theorem.
+
 
 
 
