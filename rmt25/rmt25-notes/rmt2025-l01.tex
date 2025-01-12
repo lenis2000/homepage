@@ -222,9 +222,10 @@ if:
 	Let $\{X_i\}_{i=1}^{\infty}$ be a sequence of iid random variables with finite mean $\mu = \operatorname{\mathbb{E}}[X_i]$ and finite
 	variance $\sigma^2 = \operatorname{\mathrm{Var}}(X_i)$.
 	Define the normalized sum
-\[
-Z_n = \frac{1}{\sqrt{n}} \sum_{i=1}^n \left(X_i - \mu\right).
-\]
+\begin{equation}
+	\label{eq:normalized-sum}
+	Z_n = \frac{1}{\sqrt{n}} \sum_{i=1}^n \left(X_i - \mu\right).
+\end{equation}
 Then, as $n \to \infty$, the distribution of $Z_n$ converges in distribution to a normal random variable with mean $0$ and variance $\sigma^2$, i.e.,
 \[
 Z_n \xrightarrow{d} \mathcal{N}(0, \sigma^2).
@@ -299,7 +300,7 @@ More precisely, one often writes
 \[
 \binom{n}{k} \sim \frac{1}{\sqrt{2\pi np(1-p)}} \exp\Bigl( n\ln n - k\ln k - (n-k)\ln (n-k) \Bigr),
 \]
-where $p\approx k/n$ thanks to the fact that 
+where $p\approx k/n$ thanks to the fact that
 $z$ \eqref{eq:z_normalized_quantity} is assumed to be finite.
 
 We have
@@ -312,7 +313,7 @@ n\ln n - k\ln k - (n-k)\ln (n-k) \sim n H -\frac{z^2}{2},
 \]
 where $H=-[p\ln p+(1-p)\ln(1-p)]+c(z;p)/\sqrt n$
 (for an explicit function $c(z;p)$)
-is the 
+is the
 ``entropy'' term which exactly cancels with the prefactors coming from $p^k (1-p)^{n-k}$.
 
 After combining the approximations from the binomial coefficient and the probability weights, one arrives at
@@ -322,6 +323,10 @@ After combining the approximations from the binomial coefficient and the probabi
 \]
 as desired.
 
+
+(Note that this is a \emph{local} CLT as opposed to the convergence
+\eqref{eq:conv-in-dist} in the classical CLT; but one can get the latter
+from the local CLT by integration.)
 
 \end{example}
 
@@ -363,6 +368,11 @@ This gives us a recursive formula, and completes the proof.
 \subsection{Moments of sums of iid random variables}
 
 Let us now show the CLT by moments.
+For example, the source is 
+\cite[Section~30]{billingsley1995probability}
+or \cite{filmus2010two}.
+
+
 \begin{remark}
 	This proof requires an additional assumption
 	that all moments of the random variables are finite.
@@ -387,121 +397,141 @@ Taking the expectation and using linearity, we have:
  \mathbb{E}\left[ \left( \sum_{i=1}^n Y_i \right)^k \right]
  &=
  \sum_{j_1 + j_2 + \dots + j_n = k}
- \frac{k!}{j_1! j_2! \dots j_n!} \mathbb{E}\left[Y_1^{j_1}\right]
+ \mathbb{E}\left[Y_1^{j_1}\right]
  \mathbb{E}\left[Y_2^{j_2}\right] \dots
  \mathbb{E}\left[Y_n^{j_n}\right] \\
  &=
  \sum_{j_1 + j_2 + \dots + j_n = k}
- \frac{k!}{j_1! j_2! \dots j_n!}
  \mathsf{m}_{j_1}\ldots \mathsf{m}_{j_n},
 \end{align*}
 where $\mathsf{m}_j=\mathbb{E}[Y^j]$ (recall the identical distribution of $Y_i$).
-Note that 
+Note that
 $\mathsf{m}_0 = 1$ and
 $\mathsf{m}_1 = 0$.
 
 The sum over all $j_1, \ldots, j_n$ with $j_1 + \ldots + j_n = k$ is the number of ways to partition $k$ into $n$ non-negative integers.
-We can order these integers, and thus 
+We can order these integers, and thus
 obtain the sum over all partitions of $k$ into $\le n$ parts.
 Since $n$ is large, we simply sum over all partitions of $k$.
 For each partition $\lambda$ of $k$
-(where $k=\lambda_1+\lambda_2+\ldots+\lambda_n $ and 
+(where $k=\lambda_1+\lambda_2+\ldots+\lambda_n $ and
 $\lambda_1\geq \lambda_2\geq \ldots\geq \lambda_n\geq 0$),
-the corresponding term in the sum is
+we must count the number of distinct multisets of indices
+\((j_1,j_2,\ldots,j_n)\) that yield the same collection
+\(\{\lambda_1,\lambda_2,\ldots\}\). Let us start by an
+example.
+\begin{example}
+	For $k=4$, there are only two partitions
+	which have no parts equal to $1$:
+	$\lambda=(4)$ and $\lambda=(2,2)$.
+	The number of ways to get $(4)$ is to just
+	assign one of the $j_p$ to be $4$,
+	this can be done in $n$ ways.
+
+	The number of ways to get $(2,2)$ is to assign
+	two of the $j_p$ to be $2$ and the other two to be $0$, this can be done in $\binom{n}{2}$ ways,
+	but there are also 6 permutations of the indices
+	$j_p=(i,j)$ which give the same partition $(2,2)$:
+	$(i,i,j,j)$, $(j,j,i,i)$, $(i,j,i,j)$, $(j,i,j,i)$, $(i,j,j,i)$, $(j,i,i,j)$.
+	Thus, the total number of ways to get $(2,2)$ is $6\binom{n}{2}\sim 3n^2$.
+
+	So, we see that there is an $n$-dependent factor,
+	and a ``combinatorial'' factor for each partition.
+\end{example}
+
+\subsubsection{$n$-dependent factor}
+\label{subsub:n-dependent-factor}
+
+Consider first the $n$-dependent factor.
+In the case $k$ is even and $\lambda=(2,2,\ldots,2 )$, the power
+of $n$ is $n^{k/2}$.
+In the case $k$ is even and $\lambda$ has at least one
+part $\ge 3$, the power of $n$ is at most $n^{k/2-1}$,
+which is subleading in the limit $n\to\infty$.
+When $k$ is odd, the ``best'' we can do
+(without parts equal to $1$)
+is going to be
+$\lambda=(3,2,\ldots, 2)$ with $(k-1)/2$ parts,
+so the power of $n$ is $n^{(k-1)/2}$. This is also subleading
+in the limit $n\to\infty$.
+
+
+\subsubsection{Combinatorial factor}
+
+Now, we see that we only need to consider the
+case when $k$ is even and all parts of $\lambda$ are $2$.
+Then, the $n$-dependent factor is $\binom{n}{k/2}\sim
+n^{k/2}/(k/2)!$.
+The combinatorial factor is
+equal to the number of ways to partition $k$ into
+pairs, which is the double factorial:
 \begin{equation*}
-	\frac{k!}{\lambda_1! \lambda_2! \ldots }
-	\mathsf{m}_{\lambda_1}\mathsf{m}_{\lambda_2}\ldots.
+	(k-1)!!=(k-1)(k-3)\ldots 1,
 \end{equation*}
-We now continue the proof by ``unordering'' the partitions. In other words, for a given partition 
-\[
-\lambda=(\lambda_1,\lambda_2,\ldots,\lambda_n)
-\]
-of the exponent \( k \), we must count the number of distinct multisets of indices \((j_1,j_2,\ldots,j_n)\) that yield the same collection \(\{\lambda_1,\lambda_2,\ldots\}\). Denote by 
-\[
-b_r = \#\{i : \lambda_i=r\}
-\]
-the number of parts equal to \( r \) in \(\lambda\). Then there are
+times the number of permutations
+of the $k/2$ indices which are assigned to the pairs,
+so $(k/2)!$.
+In particular, for $k=4$ this is $6$.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{continue here}}
+\subsubsection{Putting it all together}
 
-\[
-\binom{n}{b_0,b_1,b_2,\ldots}
-\]
-ways of choosing which of the \( n \) slots correspond to which values. (Strictly speaking, there are only finitely many nonzero \( b_r \), and we have \( b_0 = n-\sum_{r\ge 1} b_r \).) 
+We have as $n\to\infty$:
+\begin{equation*}
+	\mathbb{E}\left[ \left( \sum_{i=1}^n Y_i \right)^k \right]
+	=
+	n^{k/2}
+	\frac{(k-1)!!}{(k/2)!}\cdot (k/2)!
+	\sigma^k
+	+o(n^{k/2})=
+	n^{k/2}
+	(k-1)!!
+	\sigma^k
+	+o(n^{k/2}).
+\end{equation*}
 
-Thus, the contribution of all terms corresponding to a given partition \(\lambda\) is
-\[
-\binom{n}{b_0,b_1,b_2,\ldots} \; \frac{k!}{\lambda_1! \lambda_2! \cdots} \; \mathsf{m}_{\lambda_1}\mathsf{m}_{\lambda_2}\cdots.
-\]
-Thus,
-\[
-\mathbb{E}\left[\left( \sum_{i=1}^n Y_i\right)^k\right]= \sum_{\lambda \vdash k} \binom{n}{b_0,b_1,b_2,\ldots} \; \frac{k!}{\lambda_1! \lambda_2! \cdots} \; \prod_{r\ge 0} (\mathsf{m}_r)^{\,b_r},
-\]
-where the notation $\lambda \vdash k$ means that $\lambda$ is a partition of $k$.
-
-
-
-\subsubsection{Asymptotics of moments}
-
-Now we consider the leading term of the asymptotics 
-as $n\to+\infty$.
-
-
-the dominant contribution comes from those partitions for which the number of indices with \(\lambda_i\ge 3\) is as small as possible. (The terms in which some \( j_i \geq 3 \) have factors \(\mathsf{m}_r\) that are asymptotically negligible, when compared with the contributions coming from partitions all of whose nonzero parts are \(2\).)
-
-Since \(\mathsf{m}_1=0\), the only nonzero contributions come from partitions with no parts equal to \( 1 \). Among these, the largest contribution arises from the partition in which exactly \( k/2 \) of the \( j_i \) equal 2 (with the remainder zero) when \( k \) is even (if \( k \) is odd the moment is asymptotically zero, as required by the symmetry of the limit distribution). More precisely, for even \( k \) the dominating term is
-
-\[
-\binom{n}{k/2} \; \frac{k!}{(2!)^{k/2}} \; (\mathsf{m}_2)^{k/2}.
-\]
-
-Normalizing by the variance, we compare with the moment of a standard normal, using \(\sigma^2 = \mathsf{m}_2\). Recall that for a standard normal random variable \( Z \),
-\[
-\mathbb{E}[Z^k]=
-\begin{cases}
-\frac{k!}{2^{k/2}(k/2)!}, & \text{if } k \text{ is even}, \\
-0, & \text{if } k \text{ is odd.}
-\end{cases}
-\]
-
-When we normalize 
-\[
-S_n=\frac{Y_1+\cdots+Y_n}{\sqrt{n \,\mathsf{m}_2}},
-\]
-its \( k \)th moment (for even \( k \)) is given by
-\[
-\mathbb{E}[S_n^k]=\frac{1}{(n\,\mathsf{m}_2)^{k/2}}\,\mathbb{E}\left[\left(\sum_{i=1}^{n}Y_i\right)^k\right].
-\]
-Substituting the dominant term we have approximately
-\[
-\mathbb{E}[S_n^k]\approx \frac{1}{(n\,\mathsf{m}_2)^{k/2}} \; \binom{n}{k/2}\; \frac{k!}{(2!)^{k/2}} \; (\mathsf{m}_2)^{k/2}.
-\]
-Noting that
-\[
-\binom{n}{k/2}\sim \frac{n^{k/2}}{(k/2)!}
-\]
-for large \( n \) and fixed \( k \), the powers of \( n \) and \(\mathsf{m}_2\) cancel, yielding
-\[
-\mathbb{E}[S_n^k]\sim \frac{k!}{2^{k/2}(k/2)!},
-\]
-which is exactly the \( k \)th moment of the standard normal distribution. A similar (but simpler) argument shows that the moments for odd \( k \) vanish.
-
-Thus, by the method of moments, the distribution of the normalized sum \( S_n \) converges to the standard normal law as \( n\to\infty \). This completes the moment-based proof of the central limit theorem.
-
-\medskip
-
-\textbf{Summary:} We expanded the \( k \)th moment of \(\sum_{i=1}^n Y_i\) by the multinomial theorem, then identified the dominant contributions coming from partitions with as many parts equal to \( 2 \) as possible (since \(\mathsf{m}_1=0\) and higher moments produce negligible contributions after normalization). After “unordering” the partitions correctly by counting multiplicities, we found that the normalized moments converge to those of the standard Gaussian, which by the method of moments implies the central limit theorem.
+Now, we need to consider the normalization of the sum
+$\sum_{i=1}^n Y_i$ by $\sqrt{n}$:
+\begin{equation*}
+	\mathbb{E}\left[ \left( \frac{1}{\sqrt{n}} \sum_{i=1}^n Y_i \right)^k \right]
+	=
+	\frac{1}{n^{k/2}}
+	\mathbb{E}\left[ \left( \sum_{i=1}^n Y_i \right)^k \right]
+	=
+	(k-1)!!
+	\sigma^k
+	+o(1).
+\end{equation*}
+Therefore, the moments of
+$Z_n$ \eqref{eq:normalized-sum}
+converge to the moments of the standard normal distribution.
 
 
+\subsection{Convergence in distribution}
 
+Is convergence of moments enough to imply convergence in distribution?
+Not necessarily.
+First, note that the functions $x\mapsto x^k$
+are not even bounded on $\mathbb{R}$
+(cf. \Cref{sub:conv-in-dist-problem}).
 
+In general, convergence of moments does \emph{not} necessarily imply convergence in distribution. Indeed, the classical method of moments in probability
+theory 
+\cite[Theorem~30.2]{billingsley1995probability}
+states that if a sequence of random variables \(X_n\) has
+moments (of all orders) converging to the moments of a
+random variable \(X\), then \(X_n\) converges in
+distribution to \(X\), provided that the distribution of
+\(X\) is uniquely determined by its moments (also known as
+being moment-determinate).
 
+The normal distribution is indeed uniquely determined by its
+moments, so the CLT holds in this case, provided that the
+original iid random variables $X_i$ have finite moments of
+all orders.
 
+\section{Random matrices}
 
-
-
-
-
+\subsection{Real Wigner matrices}
 
 
 
@@ -549,8 +579,33 @@ and is may have several parts.
 		\end{equation*}
 \end{enumerate}
 
+\subsection{Convergence in distribution}
+\label{sub:conv-in-dist-problem}
 
+Convergence in distribution $X_n\to X$
+for real random variables $X_n$ and $X$ means, by definition,
+that
+\begin{equation*}
+	\operatorname{\mathbb{E}}[f(X_n)] \to \operatorname{\mathbb{E}}[f(X)]
+\end{equation*}
+for all bounded continuous functions $f$.
+Show that convergence in distribution
+is equivalent to the condition outlined in \eqref{eq:conv-in-dist}:
+\begin{equation*}
+	\lim_{n \to \infty} \operatorname{\mathbb{P}}(X_n \leq x) = \operatorname{\mathbb{P}}(X \leq x)
+\end{equation*}
+for all $x$ at which the cumulative distribution function of $X$ is continuous.
 
+\subsection{Moments of sum justification}
+
+Justify the computations of the power of $n$ in
+\Cref{subsub:n-dependent-factor}.
+
+\subsection{Distribution not determined by moments}
+
+Show that the log-normal random variable 
+$e^{Z}$ (where $Z\sim \mathcal{N}(0,1)$)
+is not determined by its moments.
 
 
 
