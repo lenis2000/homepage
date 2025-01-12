@@ -26,6 +26,7 @@
 \usepackage{cleveref}
 \usepackage{enumerate}
 \usepackage{datetime}
+\usepackage{comment}
 
 %paper geometry
 \usepackage[DIV=12]{typearea}
@@ -51,6 +52,10 @@
 \newtheorem{example}[proposition]{Example}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
+
+% \excludecomment{lnotes}
+
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
@@ -69,6 +74,67 @@ Updated at \currenttime, \today}}
 
 
 \maketitle
+
+\begin{lnotes}
+
+``If you find something nice or beautiful or efficient in
+RMT or computing/numerics around RMT, please share with me.''
+
+\medskip
+
+
+\textbf{Course Meetings:}
+\begin{itemize}
+				\item Classes are scheduled for 2:00-3:15 PM in Kerchof 326 on Wednesdays and some Mondays.
+				\item Lecture notes, including problem sets, will be available online.
+\end{itemize}
+
+\textbf{Lecture Schedule:}
+\begin{itemize}
+				\item (Mon) January 13: Moments of random variables and matrices.
+				\item (Wed) January 15: Wigner's semicircle law.
+				\item (Wed) January 22: Eigenvalue densities, Dyson Brownian motion.
+				\item Additional lectures are scheduled for the following dates:
+				\begin{itemize}
+								\item (Wed) January 29
+								\item (Wed) February 5
+								\item (Wed) February 12
+								\item (Wed) February 19
+								\item (Wed) February 26
+								\item (Wed) March 5
+								\item (Mon) March 24
+								\item (Wed) March 26
+								\item (Wed) April 2
+								\item (Wed) April 9
+								\item (Wed) April 16
+								\item (Wed) April 23
+				\end{itemize}
+\end{itemize}
+
+\textbf{Student Presentations:}
+\begin{itemize}
+				\item To be held on Mondays in April:
+				\begin{itemize}
+								\item (Mon) April 7
+								\item (Mon) April 14
+								\item (Mon) April 21
+								\item (Mon) April 28 (tentative - dependent on student enrollment)
+				\end{itemize}
+\end{itemize}
+
+\textbf{Weekly Individual Meetings:}
+\begin{itemize}
+				\item The course covers a span of 12 full weeks, excluding the first week, the final week, and the week following Spring break, during which I will be traveling.
+				\item Students will have one-on-one meetings at least 8 times during this period, each lasting approximately 45 minutes. While in-person meetings are preferred, a Zoom option is available.
+				\item These meetings are vital to the reading course component, allowing discussions on lectures, homework problems, student presentations, and research topics related to random matrices.
+\end{itemize}
+During the first week, a regular weekly meeting time will be set up for each student. Consistency throughout the semester is highly encouraged, although some flexibility is possible.
+
+
+
+
+
+\end{lnotes}
 
 
 \section{Why study random matrices?}
@@ -269,7 +335,29 @@ This gives us a recursive formula, and completes the proof.
 
 
 
+\newpage
+\appendix
+\setcounter{section}{0}
 
+\section{Problems (due 2025-02-13)}
+
+Each problem is a subsection (like \ref{sub:normal-approximation}),
+and is may have several parts.
+
+\subsection{Normal approximation}
+\label{sub:normal-approximation}
+
+\begin{enumerate}
+	\item In \Cref{fig:uniform_pdfs}, which color is
+		the normal curve and which is the sum of three uniform random variables?
+	\item Show that the sum of 12 iid uniform random variables on $[-1,1]$
+		(without normalization) is approximately standard normal.
+	\item Find (numerically is okay)
+		the maximum discrepancy between the distribution of the sum of 12 iid uniform random variables on $[-1,1]$ and the standard normal distribution:
+		\begin{equation*}
+			\sup_{x \in \mathbb{R}} \left| \operatorname{\mathbb{P}}\left(  \sum_{i=1}^{12} U_i \leq x \right) - \operatorname{\mathbb{P}}\left( Z \leq x \right) \right|.
+		\end{equation*}
+\end{enumerate}
 
 
 
