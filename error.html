@@ -5,20 +5,32 @@ permalink: /error.html
 ---
 
 <div class="row">
-  <div class="col-md-8 mb-4">
+    <div class="col-md-8 mb-4">
+        <h1 class="orange-item mt-5" style="padding: 20px">
+            The page you requested does not exist
+        </h1>
+    </div>
 
-    <h1 class="orange-item mt-5" style="padding:20px">The page you requested does not exist</h1>
+    <div class="col-md-4">
+        <a href="{{site.url}}/mit_pic_2018/"
+            ><img
+                class="mb-2"
+                width="100%"
+                src="{{site.storage_url}}/img/me_MIT_tn.jpg"
+                alt="My Picture at MIT"
+                align="center"
+                vspace="5"
+        /></a>
 
-  </div>
+        <a href="{{site.url}}/simulations/"
+            ><img
+                width="100%"
+                src="{{site.storage_url}}/img/blog/heart/Fragment_tn.png"
+                alt="Random tiling"
+                align="center"
+                vspace="5"
+        /></a>
+    </div>
 
-  <div class="col-md-4">
-    <img class="mb-2" width="100%" src="{{site.storage_url}}/img/me_tilings_tn.jpg" alt="My Picture with Tilings" align="center" vspace="5" />
-
-    <a href="{{site.url}}/simulations/"><img width="100%" src="{{site.storage_url}}/img/blog/heart/Fragment_tn.png" alt="Random tiling" align="center"vspace="5" /></a>
-  </div>
-
-
-  <div class="col-12 mt-1">
-    {% include contact.html %}
-  </div>
+    <div class="col-12 mt-1">{% include contact.html %}</div>
 </div>
