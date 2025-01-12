@@ -123,6 +123,14 @@ where $Z \sim \mathcal{N}(0, \sigma^2)$ is the Gaussian random variable.
 	\eqref{eq:conv-in-dist} holds only for $x$ at which the cumulative distribution function of $Z$ is continuous.
 	Since the normal distribution is absolutely continuous (has density), the convergence holds for all $x$.
 \end{remark}
+\begin{figure}[htpb]
+	\centering
+	\includegraphics[width=0.5\textwidth]{./pictures/uniform_pdfs.pdf}
+	\caption{Densities of $U_1$, $U_1+U_2$, $U_1+U_2+U_3$ (where $U_i$ are iid uniform on $[0,1]$), 
+		and $\mathcal{N}(0,1)$, 
+		normalized to have the same mean and variance.}
+	\label{fig:uniform_pdfs}
+\end{figure}
 
 \begin{example}
 Let $\{X_i\}_{i=1}^{\infty}$ be a sequence of i.i.d. Bernoulli random variables with parameter $p$, meaning that each $X_i$ takes the value $1$ with probability $p$ and $0$ with probability $1 - p$. The mean and variance of each $X_i$ are given by:
@@ -135,7 +143,11 @@ We also have the distribution of $X_1+\cdots+X_n$:
 	\qquad k = 0, 1, \ldots, n.
 \end{equation*}
 
+\colorbox{yellow}{\parbox{.7\textwidth}{local CLT via Stirling}}
+
 \end{example}
+
+
 
 
 
