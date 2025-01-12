@@ -1,0 +1,10 @@
+https://chatgpt.com/g/g-6769db0aa91c8191bf46eeac95f5e055-system-prompt-generator-for-reasoning-models/c/6783aba5-d5fc-800d-a56e-072ba9dcc71e
+
+I am teaching random matrices, graduate topics course for advanced graduate students. I need prompt to help me generate plans of talking about topics, example: I give topic (central limit theorem, recall) and the model o1 gives the detailed plan for the lecture. Then the plan goes into a basic model like GPT 4o and the model implements the plan step by step, in latex. 
+
+The o1 model should deeply think about math concepts and topic progression, and also suggest ideas for examples and problems (exercise). The o1 model should also be able to generate theorems.
+
+The basic model 4o should then answer step by step, and give pieces of the lecture one at a time (size of a page), befoe continuing to the next part.
+
+///
+
