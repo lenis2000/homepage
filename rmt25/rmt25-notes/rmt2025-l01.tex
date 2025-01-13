@@ -82,6 +82,12 @@ RMT or computing/numerics around RMT, please share with me.''
 
 \medskip
 
+``Each problem set is due for a month.
+You need to solve about 2 problems in each set. Attempt more,
+and do not always pick the easiest ones.''
+
+\medskip
+
 
 \textbf{Course Meetings:}
 \begin{itemize}
@@ -368,7 +374,7 @@ This gives us a recursive formula, and completes the proof.
 \subsection{Moments of sums of iid random variables}
 
 Let us now show the CLT by moments.
-For example, the source is 
+For example, the source is
 \cite[Section~30]{billingsley1995probability}
 or \cite{filmus2010two}.
 
@@ -515,7 +521,7 @@ are not even bounded on $\mathbb{R}$
 (cf. \Cref{sub:conv-in-dist-problem}).
 
 In general, convergence of moments does \emph{not} necessarily imply convergence in distribution. Indeed, the classical method of moments in probability
-theory 
+theory
 \cite[Theorem~30.2]{billingsley1995probability}
 states that if a sequence of random variables \(X_n\) has
 moments (of all orders) converging to the moments of a
@@ -529,18 +535,177 @@ moments, so the CLT holds in this case, provided that the
 original iid random variables $X_i$ have finite moments of
 all orders.
 
-\section{Random matrices}
+\section{Random matrices and semicircle law}
+
+We now turn to random matrices.
+
+\subsection{Where can randomness in a matrix come from?}
+
+
+The study of random matrices begins with understanding how randomness can be introduced into matrix structures. We consider three primary sources:
+\begin{enumerate}
+\item \textbf{iid entries:}
+The simplest form of randomness comes from filling matrix entries independently with samples from a fixed probability distribution. For an $n \times n$ matrix, this gives us $n^2$ independent random variables.
+If we do not impose any additional structure on the matrix, then the eigenvalues
+will be complex. So, often we consider real symmetric, complex Hermitian, or quaternionic matrices with
+symplectic symmetry.\footnote{Real symmetric means $A^\top=A$, complex Hermitian means $A^\dagger=A$ (conjugate transpose).
+	Let us briefly discuss the quaternionic case. It can be modeled over $\mathbb{C}$. A quaternion
+	$q = a + b\,\mathbf{i} + c\,\mathbf{j} + d\,\mathbf{k}$
+	can be represented by the complex $2\times 2$ matrix
+	\[
+	q \;\longmapsto\;
+	\begin{pmatrix}
+	a + \mathbf{i}b & c + \mathbf{i}d \\
+	-c + \mathbf{i}d & a - \mathbf{i}b
+	\end{pmatrix}.
+	\]
+	The entries $a,b,c,d$ for the quaternion matrix case must be real, and the matrix
+$A$ of size $2n\times 2n$ should also be Hermitian in the usual complex sense.\label{fn:quaternion}}
+
+
+\item \textbf{Correlated Entries:}
+In many physical systems, especially those modeling local interactions, matrix entries are not independent but show correlation patterns. Common examples include:
+\begin{itemize}
+\item Band matrices, where entries become negligible far from the diagonal
+\item Matrices with correlation decay based on the distance between indices
+\item Structured random matrices arising from specific physical models
+\item Sparse matrices, where most entries are zero
+\end{itemize}
+\item \textbf{Haar Measure on Matrix Groups:}
+Randomness can come from considering matrices sampled according to the Haar measure on compact matrix group,
+for example, the orthogonal $O(n)$, unitary $U(n)$, or symplectic group $Sp(n)$.\footnote{The
+	orthogonal and unitary groups are defined
+	in the usual way, by $OO^\top=O^\top O=I$ and $UU^\dagger
+	=U^\dagger U=I$, respectively.
+	The
+	group $Sp(n)$ is the compact real form of the full symplectic group $Sp(2n, \mathbb{C})$,
+	consisting of $2n\times 2n$ matrices $A$ such that $A^\top JA=J$, where
+	$J$ is the skew-symmetric form.}
+One can think of this as a generalization of
+the uniform distribution (Lebesgue measure) on the unit circle in $\mathbb{C}$,
+or a unit sphere in $\mathbb{R}^n$.
+One can also mix and match: one
+of the most interesting families of random matrices is the one
+with constant eigenvalues, but random eigenvectors:
+\begin{equation*}
+	A=UD_\lambda U^\dagger,\qquad U\in U(n), \quad U\sim \mathrm{Haar}.
+\end{equation*}
+Here $D_\lambda$ is a diagonal matrix with constant eigenvalues $\lambda=(\lambda_1,\ldots,\lambda_n)$.
+The random matrix $A$ is the ``uniform'' random variable
+taking values in the set of all Hermitian matrices with fixed real eigenvalues $\lambda$.
+Here we may assume that $\lambda_1\ge \ldots\ge \lambda_n $,
+since the unitary conjugation can permute the eigenvalues.
+\end{enumerate}
 
 \subsection{Real Wigner matrices}
 
 
+\begin{definition}[Real Wigner Matrix]
+An $n \times n$ random matrix $W=W_n = (X_{ij})_{1 \leq i,j \leq n}$ is called a \emph{real Wigner matrix} if:
+\begin{enumerate}
+    \item $W$ is symmetric: $X_{ij} = X_{ji}$ for all $i,j$;
+    \item The upper triangular entries $\{X_{ij}: 1 \leq i \leq j \leq n\}$ are independent;
+    \item The diagonal entries $\{X_{ii}\}$ are i.i.d. real random variables with mean $0$ and variance $\sigma_d$;
+    \item The upper triangular entries $\{X_{ij}: i < j\}$ are i.i.d.
+			(possibly with a distribution different from the diagonal entries) real random variables
+			with mean $0$ and variance $\sigma$;
+		\item (optional, but we assume this) All entries have finite moments of all orders.
+\end{enumerate}
+\end{definition}
+
+\begin{example}[Gaussian Wigner Matrices, Gaussian Orthogonal Ensemble (GOE)]
+Let $W$ be a real Wigner matrix where:
+\begin{itemize}
+    \item Diagonal entries $X_{ii} \sim \mathcal{N}(0, 2)$;
+		\item Upper triangular entries $X_{ij} \sim \mathcal{N}(0, 1)$ for $i < j$.
+\end{itemize}
+We can model $W$ as $(Y+Y^\top)/2$,
+where $Y$ is a matrix with i.i.d. Gaussian entries $Y_{ij} \sim \mathcal{N}(0, 1)$.
+The matrix distribution of $W$ is called
+the \emph{Gaussian Orthogonal Ensemble} (\emph{GOE}).
+\end{example}
+
+
+\subsection{Empirical spectral distribution}
+
+For an arbitrary random matrix of size $n\times n$ with real eigenvalues,
+the \emph{empirical spectral distribution} (\emph{ESD}) is defined as the
+random probability measure on $\mathbb{R}$:
+\begin{equation}
+	\label{eq:esd-defintion}
+	\mu_n = \frac{1}{n} \sum_{i=1}^n \delta_{\lambda_i},
+\end{equation}
+which puts point masses of size $1/n$ at the eigenvalues $\lambda_i$ of the matrix.
+
+If you sample the ESD for a large real Wigner matrix,
+and take a histogram (to cluster the eigenvalues into boxes),
+you will see the semi-circular pattern. This pattern
+does not change over several samples. Hence, one can
+conjecture that the
+ESD \eqref{eq:esd-defintion} converges to a nonrandom
+measure, after rescaling.
+
+We can guess the rescaling by looking at the first two moments of the ESD.
+The first moment is
+\begin{equation*}
+	\int_{\mathbb{R}} x \, \mu_n(dx) = \frac{1}{n} \sum_{i=1}^n \lambda_i=
+	\frac{1}{n} \operatorname{Tr}(W) =
+	\frac{1}{n}\sum_{i=1}^n X_{ii},
+\end{equation*}
+and this sum has mean zero (and small variance), so it converges to zero.
+The second moment is
+\begin{equation*}
+	\int_{\mathbb{R}} x^2 \, \mu_n(dx) = \frac{1}{n} \sum_{i=1}^n \lambda_i^2=
+	\frac{1}{n} \operatorname{Tr}(W^2) =
+	\frac{1}{n}
+	\sum_{i,j=1}^n X_{ij}^2.
+\end{equation*}
+This sum has mean $\sim \sigma^2 n$, so it goes to infinity.
+If we normalize as $W/\sqrt{n}$, then the second moment
+becomes bounded, and one can convince oneself that the
+ESD of the normalized Wishart matrix has a limit.
+
+\begin{theorem}[Wigner's Semicircle Law]
+	\label{thm:esd-semicircle}
+	Let $W$ be a real Wigner matrix of size $n\times n$
+	(with entries having a fixed variance, independent of $n$).
+	Then
+	as $n\to\infty$,
+	the ESD $W/\sqrt{n}$ converges in distribution to the semicircular law:
+	\begin{equation}
+		\label{eq:thm-esd-semicircle}
+		\nu_n\coloneqq \frac{1}{n}\sum_{i=1}^{n}\delta_{\lambda_i/\sqrt{n}}
+		\longrightarrow \mu_{\mathrm{sc}},
+	\end{equation}
+	where $\mu_{\mathrm{sc}}$ is the semicircular distribution with density
+	with respect to the Lebesgue measure:
+	\begin{equation}
+		\label{eq:semicircle-density-defintion}
+		\mu_{\mathrm{sc}}(dx) \coloneqq \frac{1}{2\pi} \sqrt{4-x^2} \ssp \mathbf{1}_{|x| \leq 2}\ssp
+		dx.
+	\end{equation}
+\end{theorem}
+
+\begin{remark}
+	The convergence in \eqref{eq:thm-esd-semicircle} is
+	\emph{weakly in probability}, that is,
+	for every bounded continuous function $f$,
+	we have
+	\begin{equation}
+		\label{eq:weak-convergence-in-prob}
+		\int_{\mathbb{R}} f(x) \, \nu_n(dx) \longrightarrow \int_{\mathbb{R}} f(x) \, \mu_{\mathrm{sc}}(dx),\qquad  n\to\infty,
+	\end{equation}
+	where in \eqref{eq:weak-convergence-in-prob} the convergence is in probability.
+	Indeed, the left-hand side of \eqref{eq:weak-convergence-in-prob}
+	is a random variable, so we need to qualify which sense of convergence we mean.
+\end{remark}
 
 
 
 
 
 
-
+\subsection{Moments of traces of random matrices}
 
 
 
@@ -603,9 +768,50 @@ Justify the computations of the power of $n$ in
 
 \subsection{Distribution not determined by moments}
 
-Show that the log-normal random variable 
+Show that the log-normal random variable
 $e^{Z}$ (where $Z\sim \mathcal{N}(0,1)$)
 is not determined by its moments.
+
+\subsection{Quaternions}
+
+Show that the $2\times 2$ matrix representation of a quaternion
+given in Footnote~\ref{fn:quaternion}
+indeed satisfies the quaternion multiplication rules.
+Hint: Use linearity and distributive law.
+
+\subsection{Ensemble $UD_\lambda U^\dagger$}
+
+Let $U$ be the random Haar-distributed unitary matrix of size $N\times N$.
+Let $D_\lambda$ be the diagonal matrix with constant real eigenvalues
+$\lambda=(\lambda_1,\ldots,\lambda_N)$,
+$\lambda_1\ge \ldots\ge \lambda_N$.
+Let us fix $\lambda$ to be, say, $\lambda=(1,1,\ldots,1,0,0,\ldots,0  )$,
+for some proportion of $1$'s and $0$'s (you can start with half
+ones and half zeros).
+
+Use a computer algebra system to
+sample the eigenvalues of the matrix
+obtained from $UD_\lambda U^\dagger$
+by taking only its top-left corner of size $k\times k$,
+where $k=1,2,\ldots,N $.
+For a fixed $k$, let
+$\lambda_1^{(k)}\ge \ldots\ge \lambda_k^{(k)}$
+be the eigenvalues of the top-left corner of size $k\times k$.
+Plot the two-dimensional array
+\begin{equation*}
+	\left\{ (\lambda_i^{(k)},k)\colon i=1,\ldots,k  \right\}\subset \mathbb{R}\times
+	\mathbb{Z}_{\ge1}.
+\end{equation*}
+
+\subsection{Invariance of the GOE}
+
+Show that the distribution of the GOE is invariant under
+conjugation by orthogonal matrices:
+\begin{equation*}
+	\operatorname{\mathbb{P}}(O W O^\top \in \mathrm{A}) = \operatorname{\mathbb{P}}(W \in \mathrm{A})
+\end{equation*}
+for all orthogonal matrices $O$ and Borel sets $\mathrm{A}$.
+
 
 
 
