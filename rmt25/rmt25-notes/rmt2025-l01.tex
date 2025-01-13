@@ -54,7 +54,7 @@
 
 \newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
 
-% \excludecomment{lnotes}
+\excludecomment{lnotes}
 
 \begin{document}
 \title{Lectures on Random Matrices
@@ -518,7 +518,7 @@ Is convergence of moments enough to imply convergence in distribution?
 Not necessarily.
 First, note that the functions $x\mapsto x^k$
 are not even bounded on $\mathbb{R}$
-(cf. \Cref{sub:conv-in-dist-problem}).
+(cf. \Cref{prob:conv-in-dist-problem}).
 
 In general, convergence of moments does \emph{not} necessarily imply convergence in distribution. Indeed, the classical method of moments in probability
 theory
@@ -629,9 +629,9 @@ the \emph{Gaussian Orthogonal Ensemble} (\emph{GOE}).
 	\label{rmk:wishart-matrices}
 	There are other ways to define random matrices,
 	most notably, \emph{sample covariance matrices}.
-	Let $A = [a_{i,j}]_{i,j=1}^{n,m}$ be an $n \times m$ matrix ($n \leq m$), where entries are iid real random variables with 
+	Let $A = [a_{i,j}]_{i,j=1}^{n,m}$ be an $n \times m$ matrix ($n \leq m$), where entries are iid real random variables with
 	mean $0$ and finite variance.
-	Then $M = AA^\top$ is a positive symmetric random matrix of 
+	Then $M = AA^\top$ is a positive symmetric random matrix of
 	size $n \times n$. It almost surely has full rank.
 \end{remark}
 
@@ -657,23 +657,28 @@ measure, after rescaling.
 
 We can guess the rescaling by looking at the first two moments of the ESD.
 The first moment is
-\begin{equation*}
+\begin{equation}
+	\label{eq:first-moment-esd}
 	\int_{\mathbb{R}} x \, \mu_n(dx) = \frac{1}{n} \sum_{i=1}^n \lambda_i=
 	\frac{1}{n} \operatorname{Tr}(W) =
 	\frac{1}{n}\sum_{i=1}^n X_{ii},
-\end{equation*}
+\end{equation}
 and this sum has mean zero (and small variance), so it converges to zero.
 The second moment is
-\begin{equation*}
+\begin{equation}
+	\label{eq:second-moment-esd}
 	\int_{\mathbb{R}} x^2 \, \mu_n(dx) = \frac{1}{n} \sum_{i=1}^n \lambda_i^2=
 	\frac{1}{n} \operatorname{Tr}(W^2) =
 	\frac{1}{n}
 	\sum_{i,j=1}^n X_{ij}^2.
-\end{equation*}
-This sum has mean $\sim \sigma^2 n$, so it goes to infinity.
-If we normalize as $W/\sqrt{n}$, then the second moment
+\end{equation}
+This sum has mean $\sim \sigma^2 n^2$, so even normalized by $n$,
+it still goes to infinity.
+But, if we normalize the matrix as $\frac{1}{\sqrt n}W$,
+then the second moment
 becomes bounded, and one can convince oneself that the
 ESD of the normalized Wishart matrix has a limit.
+Indeed, this is the case:
 
 \begin{theorem}[Wigner's Semicircle Law]
 	\label{thm:esd-semicircle}
@@ -719,7 +724,7 @@ ESD of the normalized Wishart matrix has a limit.
 	\cite{MarchenkoPastur}.
 \end{remark}
 
-\subsection{Moments of traces of random matrices}
+\subsection{Expected moments of traces of random matrices}
 
 The main computation in the proof of
 \Cref{thm:esd-semicircle} is the computation of
@@ -728,13 +733,133 @@ This computation of moments is somewhat similar
 to the one in the proof of the CLT by moments,
 but has its own random matrix flavor.
 
+\begin{definition}[Normalized Moments]
+For each $k\geq 1$, the normalized $k$-th moment of the empirical spectral distribution of $W_n/\sqrt{n}$ is given by
+\[
+m_k^{(n)}=\int_{\mathbb{R}} x^k\,\nu_n(dx)
+=\frac{1}{n^{k/2+1}}\operatorname{Tr}(W^k).
+\]
+\end{definition}
+Our first goal is to study the asymptotic behavior of
+$\operatorname{\mathbb{E}}[m_k^{(n)}]$ as $n\to\infty$ for each fixed
+$k\geq 1$, just like we did in
+\eqref{eq:first-moment-esd}--\eqref{eq:second-moment-esd}
+for $k=1,2$:
+\begin{equation*}
+	\operatorname{\mathbb{E}}[m_1^{(n)}] = 0, \qquad
+	\operatorname{\mathbb{E}}[m_2^{(n)}] \to \sigma^2.
+\end{equation*}
+Note that $\operatorname{\mathbb{E}}[m_2^{(n)}]$
+is not exactly equal to $\sigma^2$ because of the presence of the
+diagonal elements which have a different distribution.
+In general, we will see that the contribution
+of the diagonal elements to the moments is negligible
+in the limit $n\to\infty$.
 
+\begin{lemma}[Convergence of Expected Moments]
+\label{lemma:moments_convergence}
+For each fixed $k \geq 1$, we have
+\[
+\lim_{n \to \infty} \operatorname{\mathbb{E}}[m_k^{(n)}] =
+\begin{cases}
+0 & \text{if $k$ is odd}, \\
+\sigma^k C_{k/2} & \text{if $k$ is even},
+\end{cases}
+\]
+where $C_m = \frac{1}{m+1}\binom{2m}{m}$ is the $m$-th Catalan number.
+\end{lemma}
 
+The even moments are scaled by powers of $\sigma$ just as in the case $k=2$,
+while the odd moments vanish due to the symmetry of the limiting distribution
+around zero.
+As we will see, the appearance of Catalan numbers is not accidental,
+but it is due to the underlying combinatorics.
 
+\begin{proof}[Proof of \Cref{lemma:moments_convergence}]
+	The trace of $W^k$ expands as a sum over all possible index sequences:
+	\begin{equation}
+		\operatorname{Tr}(W^k) = \sum_{i_1,\ldots,i_k=1}^n X_{i_1i_2}X_{i_2i_3}\cdots X_{i_{k-1}i_k}X_{i_ki_1}.
+	\end{equation}
+	Due to independence and the fact that
+	$\mathbb{E}[X_{ij}]=0$ for all $i,j$, the only nonzero
+	contributions come from index sequences
+	where each matrix element appears least twice.
 
+	As in the CLT proof, there is a power-$n$ factor and a combinatorial factor.
 
+	For $k$ odd, let us count the power of $n$ first. As
+	in the CLT proof, the
+	maximum power comes from index sequences where all matrix
+	elements appear exactly twice except for one which appears
+	three times. Indeed, this corresponds to the maximum
+	freedom of choosing $k$ indices among the large number $n$
+	of indices, and thus to the maximum power of $n$.
+	This maximum power of $n$ is $n^{1+\lfloor k/2 \rfloor }$
+	(note that there is an extra factor $n$ compared to the CLT proof,
+	as now we have $\sim n^2$ random variables in the matrix instead of $n$).
+	Since this is strictly less than the
+	normalization $n^{k/2+1}$ in $m_k^{(n)}$, the term with odd $k$
+	vanish in the limit $n\to\infty$.
 
+	Assume now that $k$ is even.
+	Then the maximum power of $n$ comes from index sequences where each matrix element appears exactly twice.
+	This power of $n$ is $n^{k/2+1}$, which exactly
+	matches the normalization in $m_k^{(n)}$.
 
+	It remains to count the combinatorial factor,
+	assuming that $k$ is even.
+	For each term in the trace expansion, we can represent the sequence of indices $(i_1,\ldots,i_k)$ as a directed closed path with vertices $\{1,\ldots,n\}$ and edges given by the matrix entries $X_{i_ai_{a+1}}$. For example, if $k=4$ and we have a term $X_{12}X_{23}X_{34}X_{41}$, this corresponds to the path $1\to 2\to 3\to 4\to 1$. Recall that our path must have each
+	matrix entry exactly twice (within the symmetry $X_{ij}=X_{ji}$),
+	and the path must be closed.
+	The condition that each edge appears exactly twice
+	means that if we forget the direction of the edges and the multiplicities,
+	we must get a \emph{tree}, with $k/2$ edges.
+	This implies that the combinatorial
+	factor is equal to $\sigma^k$ times the
+	number of \emph{rooted trees} with $k/2$ edges.
+	The rooted condition comes from the fact that
+	we are free to choose fix the starting point of the path
+	to be $1$ (this ambiguity is taken into account by the
+	power-$n$ factor).
+
+	In \Cref{prob:counting-trees}, we show that the number of these rooted trees is the $k/2$-th Catalan number $C_{k/2}$.
+	This completes the proof of \Cref{lemma:moments_convergence}.
+\end{proof}
+
+\subsection{Moments of the semicircle law}
+
+We also need to match the Catalan numbers to the moments of the semicircle law.
+Let $k=2m$, and we need to compute
+the integral
+\begin{equation*}
+	\int_{-2}^{2} x^{2m} \frac{1}{2\pi} \sqrt{4-x^2} \, dx.
+\end{equation*}
+
+By symmetry, we write:
+\[
+\int_{-2}^2 x^{2m}\rho(x)\, dx = \frac{2}{\pi} \int_0^2 x^{2m} \sqrt{4-x^2}\, dx.
+\]
+
+Using the substitution \(x = 2\sin\theta\), we have \(dx = 2\cos\theta\, d\theta\). The integral becomes:
+\[
+\frac{2}{\pi} \int_0^{\pi/2} (2\sin\theta)^{2m} (2\cos\theta) (2\cos\theta\, d\theta)
+= \frac{2^{2m+2}}{\pi} \int_0^{\pi/2} \sin^{2m}\theta \cos^2\theta\, d\theta.
+\]
+Using \(\cos^2\theta = 1 - \sin^2\theta\), we split the integral:
+\[
+\frac{2^{2m+2}}{\pi} \left( \int_0^{\pi/2} \sin^{2m}\theta\, d\theta - \int_0^{\pi/2} \sin^{2m+2}\theta\, d\theta \right).
+\]
+Using the standard formula
+\begin{equation}
+	\label{eq:sin-integral}
+\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2},
+\end{equation}
+we compute each term:
+\[
+\frac{2^{2m+2}}{\pi} \left( \frac{\pi}{2} \frac{(2m)!}{2^{2m}(m!)^2} - \frac{\pi}{2} \frac{(2m+2)!}{2^{2m+2}((m+1)!)^2} \right).
+\]
+After simplification, this becomes
+$C_m$, the $m$-th Catalan number.
 
 
 
@@ -744,11 +869,11 @@ but has its own random matrix flavor.
 
 \section{Problems (due 2025-02-13)}
 
-Each problem is a subsection (like \ref{sub:normal-approximation}),
+Each problem is a subsection (like \ref{prob:normal-approximation}),
 and is may have several parts.
 
 \subsection{Normal approximation}
-\label{sub:normal-approximation}
+\label{prob:normal-approximation}
 
 \begin{enumerate}
 	\item In \Cref{fig:uniform_pdfs}, which color is
@@ -763,7 +888,7 @@ and is may have several parts.
 \end{enumerate}
 
 \subsection{Convergence in distribution}
-\label{sub:conv-in-dist-problem}
+\label{prob:conv-in-dist-problem}
 
 Convergence in distribution $X_n\to X$
 for real random variables $X_n$ and $X$ means, by definition,
@@ -829,6 +954,21 @@ conjugation by orthogonal matrices:
 	\operatorname{\mathbb{P}}(O W O^\top \in \mathrm{A}) = \operatorname{\mathbb{P}}(W \in \mathrm{A})
 \end{equation*}
 for all orthogonal matrices $O$ and Borel sets $\mathrm{A}$.
+
+\subsection{Counting trees}
+\label{prob:counting-trees}
+
+Show that the number of rooted trees with $m$ edges is the $m$-th Catalan number:
+\begin{equation*}
+	C_m = \frac{1}{m+1}\binom{2m}{m}.
+\end{equation*}
+
+\subsection{Standard formula}
+
+Prove formula \eqref{eq:sin-integral}:
+\begin{equation*}
+	\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2}.
+\end{equation*}
 
 
 
