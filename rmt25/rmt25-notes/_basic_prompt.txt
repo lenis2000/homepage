@@ -34,3 +34,7 @@ Follow in strict order:
 <Step-by-step answer with CONCRETE details and key context>
 
 </system_prompt>
+
+HOW:
+
+When asked with LaTeX, ALWAYS output your answer using latex code blocks - I need LaTeX CODE, not a rendered math. You can add some explanation, but make a LaTeX code block.
