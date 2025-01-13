@@ -605,8 +605,8 @@ An $n \times n$ random matrix $W=W_n = (X_{ij})_{1 \leq i,j \leq n}$ is called a
 \begin{enumerate}
     \item $W$ is symmetric: $X_{ij} = X_{ji}$ for all $i,j$;
     \item The upper triangular entries $\{X_{ij}: 1 \leq i \leq j \leq n\}$ are independent;
-    \item The diagonal entries $\{X_{ii}\}$ are i.i.d. real random variables with mean $0$ and variance $\sigma_d$;
-    \item The upper triangular entries $\{X_{ij}: i < j\}$ are i.i.d.
+    \item The diagonal entries $\{X_{ii}\}$ are iid real random variables with mean $0$ and variance $\sigma_d$;
+    \item The upper triangular entries $\{X_{ij}: i < j\}$ are iid
 			(possibly with a distribution different from the diagonal entries) real random variables
 			with mean $0$ and variance $\sigma$;
 		\item (optional, but we assume this) All entries have finite moments of all orders.
@@ -620,10 +620,20 @@ Let $W$ be a real Wigner matrix where:
 		\item Upper triangular entries $X_{ij} \sim \mathcal{N}(0, 1)$ for $i < j$.
 \end{itemize}
 We can model $W$ as $(Y+Y^\top)/2$,
-where $Y$ is a matrix with i.i.d. Gaussian entries $Y_{ij} \sim \mathcal{N}(0, 1)$.
+where $Y$ is a matrix with iid Gaussian entries $Y_{ij} \sim \mathcal{N}(0, 1)$.
 The matrix distribution of $W$ is called
 the \emph{Gaussian Orthogonal Ensemble} (\emph{GOE}).
 \end{example}
+
+\begin{remark}[Wishart Matrices]
+	\label{rmk:wishart-matrices}
+	There are other ways to define random matrices,
+	most notably, \emph{sample covariance matrices}.
+	Let $A = [a_{i,j}]_{i,j=1}^{n,m}$ be an $n \times m$ matrix ($n \leq m$), where entries are iid real random variables with 
+	mean $0$ and finite variance.
+	Then $M = AA^\top$ is a positive symmetric random matrix of 
+	size $n \times n$. It almost surely has full rank.
+\end{remark}
 
 
 \subsection{Empirical spectral distribution}
@@ -700,11 +710,18 @@ ESD of the normalized Wishart matrix has a limit.
 	is a random variable, so we need to qualify which sense of convergence we mean.
 \end{remark}
 
-
+\begin{remark}
+	There exists a version of the limiting
+	ESD for the Wishart matrices
+	(\Cref{rmk:wishart-matrices}).
+	In this case, the limiting distribution is the
+	\emph{Marchenko-Pastur law}
+	\cite{MarchenkoPastur}.
+\end{remark}
 
 \subsection{Moments of traces of random matrices}
 
-The main computation in the proof of 
+The main computation in the proof of
 \Cref{thm:esd-semicircle} is the computation of
 expected moments of the ESD.
 This computation of moments is somewhat similar
