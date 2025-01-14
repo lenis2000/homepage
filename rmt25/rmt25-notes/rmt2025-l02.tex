@@ -346,7 +346,7 @@ Let us remember that so far, we showed that
 	\lim_{n\to\infty}
 	\frac{1}{n^{k/2+1}}
 	\operatorname{\mathbb{E}}
-	\left[ 
+	\left[
 		\operatorname{Tr} W^k
 	\right]
 	=
@@ -372,16 +372,16 @@ the known Carleman's criterion for the uniqueness of a distribution by its momen
 	$X$ is uniquely determined by its moments $(m_k)_{k\geq 1}$.
 \end{proposition}
 \begin{remark}
-	By the Stone-Wierstrass theorem, 
+	By the Stone-Wierstrass theorem,
 	the semicircle distribution is the unique distribution
 	with compact support with these moments.
-	However, we need to guarantee that there are no 
+	However, we need to guarantee that there are no
 	distributions on $\mathbb{R}$ with the same moments.
 \end{remark}
 
 Now, the moments satisfy the asymptotics
 \begin{equation*}
-	m_{2k}=C_k \sigma^{2k} \sim 
+	m_{2k}=C_k \sigma^{2k} \sim
 	\frac{4^k}{k^{3/2}\sqrt{\pi}} \sigma^{2k},
 \end{equation*}
 so
@@ -389,7 +389,7 @@ so
 	\sum_{k=1}^{\infty} (m_{2k})^{-1/(2k)} \sim
 	\sum_{k=1}^{\infty} \left( \frac{k^{3/2}\sqrt{\pi}}{4^k} \right)^{1/2k} \sigma^{-1}.
 \end{equation*}
-The $k$-th summands converges to $1/(2\sigma)$, so the 
+The $k$-th summands converges to $1/(2\sigma)$, so the
 series diverges.
 
 \begin{remark}
@@ -398,9 +398,9 @@ series diverges.
 
 \subsection{Convergence to the semicircle law}
 
-Recall 
+Recall
 \cite[Theorem~30.2]{billingsley1995probability}
-that convergence 
+that convergence
 of random variables
 in moments plus the fact that the
 limiting distribution is uniquely determined by its moments
@@ -411,6 +411,120 @@ which deals with random variables
 	\int_{\mathbb{R}} f(x) \nu_n(dx),\qquad f\in C_b(\mathbb{R}),
 \end{equation*}
 and we did not compute the moments of these random variables.
+
+To complete the argument, let us show that for each fixed integer \(k\ge1\),
+we have almost sure convergence of the moments (of a
+random distribution, so that the $Y_{n,k}$'s are random variables):
+\[
+	Y_{n,k}\coloneqq\int_{\mathbb{R}}x^k\,d\nu_n(x)
+  \;\xrightarrow[n\to\infty]{\text{a.s.}}\;
+	m_{k},
+	\qquad n\to\infty,
+\]
+where $m_k$ are the moments of the semicircle distribution,
+and $\nu_n$ is the ESD corresponding to the scaling of the
+eigenvalues as $\lambda_i/\sqrt n$.
+
+As typical in asymptotic probability, we not only need the
+expectation of $Y_{n,k}$, but also their variances,
+to control the almost sure convergence.
+Recall that
+we showed $\operatorname{\mathbb{E}}(Y_{n,k})\to m_k$.
+Let us assume the following:
+\begin{proposition}[Variance bound]
+	\label{prop:variance-bound}
+	For each fixed integer \(k\ge1\) and large enough \(n\),
+	we have
+	\begin{equation*}
+		\operatorname{Var}(Y_{n,k})\le \frac{m_k}{n^2}.
+	\end{equation*}
+\end{proposition}
+We will prove \Cref{prop:variance-bound} in \Cref{sub:variance-bound-proof}
+below.
+Let us finish the proof of convergence to the semicircle law modulo \Cref{prop:variance-bound}.
+
+
+\subsubsection{A concentration bound and the Borel--Cantelli lemma}
+From Chebyshev's inequality,
+\[
+  \mathbb{P}\Bigl(\bigl|Y_{n,k} - \mathbb{E}[Y_{n,k}]\bigr|
+	\ge n^{-\frac{1}{4}}\Bigr)
+  \le
+  \mathrm{Var}[Y_{n,k}]\sqrt{n}
+	=O(n^{-\frac{3}{2}}),
+\]
+where in the last step we used \Cref{prop:variance-bound}.
+
+Hence the probability that \(\lvert Y_{n,k} - \mathbb{E}[Y_{n,k}]\rvert > n^{-\frac{1}{4}}\) is summable in \(n\).  By the Borel--Cantelli lemma, with probability \(1\) only finitely many of these events occur.  Since \(\mathbb{E}[Y_{n,k}]\to m_k\), we conclude
+\[
+  \bigl|Y_{n,k} - m_k\bigr|
+  \;\le\;\bigl|Y_{n,k}-\mathbb{E}[Y_{n,k}]\bigr|
+  +\bigl|\mathbb{E}[Y_{n,k}]-m_k\bigr|
+  \;\xrightarrow[n\to\infty]{}\;0
+  \quad
+  \text{almost surely.}
+\]
+
+\subsubsection{Tightness of \(\{\nu_n\}\) and subsequential limits}
+Since \(\lvert Y_{n,k}\rvert = \bigl|\int x^k\,d\nu_n(x)\bigr|\) stays bounded for each \(k\), one readily checks
+(Problem \ref{prob:chebyshev-like})
+that
+\begin{equation}
+	\label{eq:chebyshev-like}
+  \nu_n\bigl(\{x\,:\,|x|>M\}\bigr)
+  \;\le\; \frac{C}{M^k}
+\end{equation}
+for any positive integer \(k\).  By choosing \(k\) large, we see that \(\nu_n\) puts arbitrarily little mass outside any large interval \([-m,m]\).  Thus, the
+sequence of probability measures
+\(\{\nu_n\}\) is \emph{tight}.
+By Prokhorov’s theorem \cite[Theorem~25.10]{billingsley1995probability},
+there exists a subsequence \(\nu_{n_j}\) converging weakly to some probability measure \(\nu^*\).
+
+\subsubsection{Characterizing the limit measure}
+
+We claim that \(\nu^*=\mu_{\mathrm{sc}}\), the semicircle distribution.
+Indeed, fix \(k\).  Since \(x^k\) is a bounded function on a sufficiently large interval, and \(\nu_{n_j}\to\nu^*\) weakly, we have
+\[
+   \int x^k\,d\nu_{n_j}(x) \;\to\;\int x^k\,d\nu^*(x).
+\]
+On the other hand, we have already shown
+\[
+   \int x^k\,d\nu_{n_j}(x)
+   \;=\;
+   Y_{n_j,k}
+   \;\xrightarrow[j\to\infty]{\text{a.s.}}
+   m_k
+   \;=\;\int x^k\,d\mu_{\mathrm{sc}}(x).
+\]
+Thus
+\[
+   \int x^k\,d\nu^*(x)
+   \;=\;
+   m_k
+   \;=\;
+   \int x^k\,d\mu_{\mathrm{sc}}(x)
+   \qquad
+   \text{for all $k\ge1$.}
+\]
+By \emph{Carleman’s criterion} (\Cref{prop:carleman}), the measure \(\nu^*\) is uniquely determined by its moments.  Hence \(\nu^*\) must coincide with \(\mu_{\mathrm{sc}}\).
+
+\smallskip
+
+\noindent
+\textbf{Conclusion.}
+Any subsequence of \(\{\nu_n\}\) has a further sub-subsequence convergent to \(\nu\).  By a standard diagonal argument, this forces \(\nu_n\to\nu\) in the weak topology.  This completes the proof that the ESD of our Wigner matrix (rescaled by \(\sqrt{n}\)) converges to the semicircle distribution almost surely.
+
+
+\section{Proof of \Cref{prop:variance-bound}: bounding the variance}
+\label{sub:variance-bound-proof}
+
+There is one more ``combinatorial'' step in the proof of the
+semicircle law: we need to show that the variance of the
+moments of the ESD is bounded by \(m_k/n^2\).
+
+
+
+
 
 
 
@@ -436,7 +550,10 @@ Prove formula \eqref{eq:sin-integral}:
 
 Suppose candidate \(A\) receives \(p\) votes and candidate \(B\) receives \(q\) votes, where \(p > q \geq 0\). In how many ways can these votes be counted such that \(A\) is always strictly ahead of \(B\) in partial tallies?
 
+\subsection{Bounding probability in the proof}
+\label{prob:chebyshev-like}
 
+Show inequality \eqref{eq:chebyshev-like}.
 
 
 \bibliographystyle{alpha}
