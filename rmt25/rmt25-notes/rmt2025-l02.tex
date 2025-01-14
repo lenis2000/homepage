@@ -364,7 +364,8 @@ where its off-diagonal entries are iid with variance $\sigma^2$.
 
 We use (without proof)
 the known Carleman's criterion for the uniqueness of a distribution by its moments.
-\begin{proposition}[{\cite[Theorem~1.10]{shohat1943problem}}, \cite{Akhiezer1965Moment}]
+\begin{proposition}[Carleman's criterion
+	{\cite[Theorem~1.10]{shohat1943problem}}, \cite{Akhiezer1965Moment}]
 	\label{prop:carleman}
 	Let $X$ be a real-valued random variable with moments $m_k
 	= \mathbb{E}[X^k]$ of all orders. If \[\sum_{k=1}^{\infty}
@@ -466,53 +467,79 @@ Hence the probability that \(\lvert Y_{n,k} - \mathbb{E}[Y_{n,k}]\rvert > n^{-\f
 \]
 
 \subsubsection{Tightness of \(\{\nu_n\}\) and subsequential limits}
-Since \(\lvert Y_{n,k}\rvert = \bigl|\int x^k\,\nu_n(dx)\bigr|\) stays bounded for each \(k\), one readily checks
+\label{subsub:semicircle-tightness}
+
+Since \(\lvert Y_{n,k}\rvert = \bigl|\int x^k\,\nu_n(dx)\bigr|\) stays
+almost surely
+bounded for each \(k\), one readily checks
 (Problem \ref{prob:chebyshev-like})
-that
+that almost surely, for each fixed \(k\),
 \begin{equation}
 	\label{eq:chebyshev-like}
   \nu_n\bigl(\{x\,:\,|x|>M\}\bigr)
-  \;\le\; \frac{C}{M^k}
+	\;\le\; \frac{C}{M^k}.
 \end{equation}
-for any positive integer \(k\).  By choosing \(k\) large, we see that \(\nu_n\) puts arbitrarily little mass outside any large interval \([-m,m]\).  Thus, the
+By choosing \(k\) large, we see that \(\nu_n\) puts
+arbitrarily little mass outside any large interval
+\([-m,m]\).  Thus, the
 sequence of probability measures
 \(\{\nu_n\}\) is \emph{tight}.
 By Prokhorov’s theorem \cite[Theorem~25.10]{billingsley1995probability},
 there exists a subsequence \(\nu_{n_j}\) converging weakly to some probability measure \(\nu^*\).
+We will now characterize all subsequential limits $\nu^*$ of $\nu_n$. 
 
 \subsubsection{Characterizing the limit measure}
+\label{subsub:semicircle-characterization}
 
-We claim that \(\nu^*=\mu_{\mathrm{sc}}\), the semicircle distribution.
+We claim that \(\nu^*=\mu_{\mathrm{sc}}\), the semicircle distribution
+(and in particular, this measure is not random).
 Indeed, fix \(k\).  Since \(x^k\) is a bounded function on a sufficiently large interval, and \(\nu_{n_j}\to\nu^*\) weakly, we have
 \[
-\int x^k\,\nu_{n_j}(dx) \;\to\;\int x^k\,\nu^*(dx).
+\int_{\mathbb{R}} x^k\,\nu_{n_j}(dx) \;\to\;\int_{\mathbb{R}} x^k\,\nu^*(dx).
 \]
 On the other hand, we have already shown
 \[
-\int x^k \, \nu_{n_j}(dx)
+\int_{\mathbb{R}} x^k \, \nu_{n_j}(dx)
    \;=\;
    Y_{n_j,k}
    \;\xrightarrow[j\to\infty]{\text{a.s.}}
    m_k
-   \;=\;\int x^k\,\mu_{\mathrm{sc}}(dx).
+   \;=\;\int_{\mathbb{R}} x^k\,\mu_{\mathrm{sc}}(dx).
 \]
 Thus
 \[
-\int x^k\,\nu^*(dx)
+\int_{\mathbb{R}} x^k\,\nu^*(dx)
    \;=\;
    m_k
    \;=\;
-   \int x^k\,\mu_{\mathrm{sc}}(dx)
+   \int_{\mathbb{R}} x^k\,\mu_{\mathrm{sc}}(dx)
    \qquad
    \text{for all $k\ge1$.}
 \]
-By \emph{Carleman’s criterion} (\Cref{prop:carleman}), the measure \(\nu^*\) is uniquely determined by its moments.  Hence \(\nu^*\) must coincide with \(\mu_{\mathrm{sc}}\).
+By \Cref{prop:carleman}, the measure \(\nu^*\) is uniquely
+determined by its moments.  Hence \(\nu^*\) must coincide
+with \(\mu_{\mathrm{sc}}\).
 
-\smallskip
+\begin{remark}
+	In \Cref{subsub:semicircle-tightness,subsub:semicircle-characterization}
+	we tacitly assumed that we choose an elementary outcome $\omega$,
+	and view $\nu_n$ as measures depending on $\omega$. 
+	Then, since the convergence of moments is almost sure, 
+	$\omega$ belongs to a set of full probability.
+	The limiting measure $\nu^*$ must coincide 
+	with $\mu_{\mathrm{sc}}$ for this $\omega$,
+	and thus, $\nu^*$ is almost surely nonrandom.
+\end{remark}
 
-\noindent
-\textbf{Conclusion.}
-Any subsequence of \(\{\nu_n\}\) has a further sub-subsequence convergent to \(\nu\).  By a standard diagonal argument, this forces \(\nu_n\to\nu\) in the weak topology.  This completes the proof that the ESD of our Wigner matrix (rescaled by \(\sqrt{n}\)) converges to the semicircle distribution almost surely.
+Any subsequence of \(\{\nu_n\}\) has a further
+sub-subsequence convergent to \(\nu\).  By a standard
+diagonal argument, this forces \(\nu_n\to\nu\) in the weak
+topology (almost surely).  This completes the proof that the ESD of our
+Wigner matrix (rescaled by \(\sqrt{n}\)) converges to the
+semicircle distribution weakly almost surely,
+modulo \Cref{prop:variance-bound}.
+(See also Problem \ref{prob:almost-sure-convergence}
+for the weakly in probability convergence.)
 
 
 \section{Proof of \Cref{prop:variance-bound}: bounding the variance}
@@ -554,6 +581,14 @@ Suppose candidate \(A\) receives \(p\) votes and candidate \(B\) receives \(q\) 
 \label{prob:chebyshev-like}
 
 Show inequality \eqref{eq:chebyshev-like}.
+
+\subsubsection{Almost sure convergence and convergence in probability}
+\label{prob:almost-sure-convergence}
+
+Show that in Wigner's semicircle law,
+the weakly almost sure convergence 
+of random measures $\nu_n$ to $\mu_{\mathrm{sc}}$
+implies weak convergence in probability.
 
 
 \bibliographystyle{alpha}
