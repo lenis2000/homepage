@@ -623,7 +623,7 @@ Indeed, for example if \(X_{i_1 i_2}\) appears only in \(X_I\), then
 
 \noindent
 Thus, the only way we could get a nonzero covariance is if \emph{every} edge that appears in \(I\cup J\) appears at least twice overall.
-Graphically, let us represent each \(k\)-tuple \(I\) by a directed closed walk in the complete graph on~\([n]\).  Then the union \(I\cup J\) must be a subgraph in which every directed edge has total multiplicity \(\ge2\).
+Graphically, let us represent each \(k\)-tuple \(I\) by a directed closed walk in the complete graph on~\([n]\).  The union \(I\cup J\) must be a connected subgraph in which every directed edge has total multiplicity \(\ge2\).
 
 \medskip
 
@@ -644,9 +644,14 @@ $O(n^{-2})$, as desired.
 
 \item
 \(\boldsymbol{q\ge k+1.}\)
-To use at most \(k\) edges in each of the two walks when \(q\ge k+1\), \(I\) and \(J\) must give a connected graph where each edge appears at least twice. This implies that the skeleton of the graph for \(I \cup J\) contains at most \(k\) edges, and since \(q \ge k + 1\), we must have \(q = k + 1\), implying \(I \cup J\) forms a double tree structure: the same edge is traced in both \(I\) and \(J\), with each vertex having in-degree and out-degree equal to 2. Geometrically, by removing vertices not belonging to $I$ shows that \(I\) is a double tree (and so is $J$). 
-
-Thus, there is an edge which appears in both $I$ and $J$, and 
+Ignoring directions and multiplicities, 
+we see that the subgraph corresponding to $I\cup J$
+contains at most \(k\) edges. Since \(q \ge k + 1\), we must have \(q = k + 1\)
+(by connectedness). Thus,
+\(I \cup J\) is a double tree. 
+Since $I$ and $J$ are subsets of this double tree and $q=k+1$,
+they also must be double trees.
+Thus, there exists an edge which appears in both $I$ and $J$, and 
 at least twice in $I$ and twice in $J$, so four times in $I\cup J$.
 This contradicts the assumption that $I\cup J$ is a double tree.
 
