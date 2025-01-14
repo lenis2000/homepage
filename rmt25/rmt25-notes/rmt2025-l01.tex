@@ -813,10 +813,14 @@ but it is due to the underlying combinatorics.
 	and the path must be closed.
 	The condition that each edge appears exactly twice
 	means that if we forget the direction of the edges and the multiplicities,
-	we must get a \emph{tree}, with $k/2$ edges.
-	This implies that the combinatorial
-	factor is equal to $\sigma^k$ times the
-	number of \emph{rooted trees} with $k/2$ edges.
+	we must get a \emph{tree}, with $k/2$ edges and $k/2+1$ vertices.
+	The complete justification of this counting is the
+	problem in \Cref{prob:counting-n-powers}.
+
+	The $n$-powers counting implies that the combinatorial
+	factor (for even $k$)
+	is equal to $\sigma^k$ times the
+	number of \emph{rooted} (\emph{planar}) \emph{trees} with $k/2$ edges.
 	The rooted condition comes from the fact that
 	we are free to choose fix the starting point of the path
 	to be $1$ (this ambiguity is taken into account by the
@@ -826,40 +830,7 @@ but it is due to the underlying combinatorics.
 	This completes the proof of \Cref{lemma:moments_convergence}.
 \end{proof}
 
-\subsection{Moments of the semicircle law}
 
-We also need to match the Catalan numbers to the moments of the semicircle law.
-Let $k=2m$, and we need to compute
-the integral
-\begin{equation*}
-	\int_{-2}^{2} x^{2m} \frac{1}{2\pi} \sqrt{4-x^2} \, dx.
-\end{equation*}
-
-By symmetry, we write:
-\[
-\int_{-2}^2 x^{2m}\rho(x)\, dx = \frac{2}{\pi} \int_0^2 x^{2m} \sqrt{4-x^2}\, dx.
-\]
-
-Using the substitution \(x = 2\sin\theta\), we have \(dx = 2\cos\theta\, d\theta\). The integral becomes:
-\[
-\frac{2}{\pi} \int_0^{\pi/2} (2\sin\theta)^{2m} (2\cos\theta) (2\cos\theta\, d\theta)
-= \frac{2^{2m+2}}{\pi} \int_0^{\pi/2} \sin^{2m}\theta \cos^2\theta\, d\theta.
-\]
-Using \(\cos^2\theta = 1 - \sin^2\theta\), we split the integral:
-\[
-\frac{2^{2m+2}}{\pi} \left( \int_0^{\pi/2} \sin^{2m}\theta\, d\theta - \int_0^{\pi/2} \sin^{2m+2}\theta\, d\theta \right).
-\]
-Using the standard formula
-\begin{equation}
-	\label{eq:sin-integral}
-\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2},
-\end{equation}
-we compute each term:
-\[
-\frac{2^{2m+2}}{\pi} \left( \frac{\pi}{2} \frac{(2m)!}{2^{2m}(m!)^2} - \frac{\pi}{2} \frac{(2m+2)!}{2^{2m+2}((m+1)!)^2} \right).
-\]
-After simplification, this becomes
-$C_m$, the $m$-th Catalan number.
 
 
 
@@ -955,6 +926,20 @@ conjugation by orthogonal matrices:
 \end{equation*}
 for all orthogonal matrices $O$ and Borel sets $\mathrm{A}$.
 
+\subsection{Counting $n$-powers in the real Wigner matrix}
+\label{prob:counting-n-powers}
+
+Show that in the expansion of the expected trace of the
+$k$-th power of the real Wigner matrix, the maximum power of
+$n$ is $k/2+1$ for even $k$ and less for odd $k$. For even
+$k$, the power $k/2+1$ comes from index sequences where each
+off-diagonal matrix element appears exactly twice, and no
+diagonal elements are present. 
+
+
+
+
+
 \subsection{Counting trees}
 \label{prob:counting-trees}
 
@@ -963,12 +948,7 @@ Show that the number of rooted trees with $m$ edges is the $m$-th Catalan number
 	C_m = \frac{1}{m+1}\binom{2m}{m}.
 \end{equation*}
 
-\subsection{Standard formula}
 
-Prove formula \eqref{eq:sin-integral}:
-\begin{equation*}
-	\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2}.
-\end{equation*}
 
 
 

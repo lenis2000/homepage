@@ -76,6 +76,9 @@ Updated at \currenttime, \today}}
 \begin{lnotes}
 	PREP:
 	\begin{enumerate}
+		\item Start:
+			Catalan number formula
+		\item Moments of SC need to be computed
 		\item 
 			SC is uniquely determined by its moments; need Carleman criterion to show that the moments determine the distribution.
 		\item from expected moments to the full convergence, some analysis needed
@@ -110,11 +113,57 @@ Updated at \currenttime, \today}}
 
 
 
+\subsection{Moments of the semicircle law}
+
+We also need to match the Catalan numbers to the moments of the semicircle law.
+Let $k=2m$, and we need to compute
+the integral
+\begin{equation*}
+	\int_{-2}^{2} x^{2m} \frac{1}{2\pi} \sqrt{4-x^2} \, dx.
+\end{equation*}
+
+By symmetry, we write:
+\[
+\int_{-2}^2 x^{2m}\rho(x)\, dx = \frac{2}{\pi} \int_0^2 x^{2m} \sqrt{4-x^2}\, dx.
+\]
+
+Using the substitution \(x = 2\sin\theta\), we have \(dx = 2\cos\theta\, d\theta\). The integral becomes:
+\[
+\frac{2}{\pi} \int_0^{\pi/2} (2\sin\theta)^{2m} (2\cos\theta) (2\cos\theta\, d\theta)
+= \frac{2^{2m+2}}{\pi} \int_0^{\pi/2} \sin^{2m}\theta \cos^2\theta\, d\theta.
+\]
+Using \(\cos^2\theta = 1 - \sin^2\theta\), we split the integral:
+\[
+\frac{2^{2m+2}}{\pi} \left( \int_0^{\pi/2} \sin^{2m}\theta\, d\theta - \int_0^{\pi/2} \sin^{2m+2}\theta\, d\theta \right).
+\]
+Using the standard formula
+\begin{equation}
+	\label{eq:sin-integral}
+\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2},
+\end{equation}
+we compute each term:
+\[
+\frac{2^{2m+2}}{\pi} \left( \frac{\pi}{2} \frac{(2m)!}{2^{2m}(m!)^2} - \frac{\pi}{2} \frac{(2m+2)!}{2^{2m+2}((m+1)!)^2} \right).
+\]
+After simplification, this becomes
+$C_m$, the $m$-th Catalan number.
 
 
 
 
 
+
+\appendix
+\setcounter{section}{0}
+
+\section{Problems (due 2025-02-15)}
+
+\subsection{Standard formula}
+
+Prove formula \eqref{eq:sin-integral}:
+\begin{equation*}
+	\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2}.
+\end{equation*}
 
 
 
