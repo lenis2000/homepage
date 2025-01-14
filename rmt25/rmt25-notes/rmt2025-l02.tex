@@ -629,44 +629,36 @@ Graphically, let us represent each \(k\)-tuple \(I\) by a directed closed walk i
 
 \noindent
 \textbf{Step 2. Counting the contributions to the sum.}
-Denote by \(q=\lvert V(I\cup J)\rvert\) the number of distinct vertices (out of the possible~\(n\)) involved in the union \(I\cup J\).  We can pick which \(q\) vertices are in the union in \(\binom{n}{q}\approx n^q\) ways (times some constant), and then specify how the edges form \emph{two} closed walks of length \(k\).
+Denote by \(q=\lvert V(I\cup J)\rvert\) the number of
+distinct vertices involved in the union \(I\cup J\).
+In principle, there are $O(n^q)$ ways to choose $q$ vertices from $[n]$.
+Then we need to specify how the edges form two closed walks of length $k$.
 
 We split into two cases:
-\begin{itemize}
+\begin{enumerate}
 \item
 \(\boldsymbol{q\le k.}\)
-In this situation, each pair \((I,J)\) with \(\lvert V(I\cup J)\rvert=q\) contributes a term to
-\(\sum_{I,J}\operatorname{\mathrm{Cov}}(X_I,X_J)\).  However, because each edge is used at least twice in the union \(I\cup J\), and each walk has length \(k\), there are at most \(k\) edges in a single walk.
-One can check that such ``doubly used edges'' cannot produce too large a contribution.  A more direct combinatorial check (cf. the argument in the lecture notes) shows these terms together are of order \(O(n^{k})\).
+Then the $n$-power in the sum over $I,J$ is at most
+$n^k$, which yields the overall contribution
+$O(n^{-2})$, as desired.
 
 \item
 \(\boldsymbol{q\ge k+1.}\)
-In this case, to use at most \(k\) edges in each of the two walks, one sees that the union \(I\cup J\) \emph{must} form a ``double tree'' structure: the same edge is traced out in both \(I\) and~\(J\), and each vertex has total in-degree and out-degree equal to~2 when counting both walks.  Geometrically, removing extra edges shows that \(I\) is (itself) a double tree, and so is \(J\).  Then one verifies (see the lecture notes) that this forces at least one single edge to appear exactly once---which we already saw makes the covariance vanish!
+To use at most \(k\) edges in each of the two walks when \(q\ge k+1\), \(I\) and \(J\) must give a connected graph where each edge appears at least twice. This implies that the skeleton of the graph for \(I \cup J\) contains at most \(k\) edges, and since \(q \ge k + 1\), we must have \(q = k + 1\), implying \(I \cup J\) forms a double tree structure: the same edge is traced in both \(I\) and \(J\), with each vertex having in-degree and out-degree equal to 2. Geometrically, by removing vertices not belonging to $I$ shows that \(I\) is a double tree (and so is $J$). 
 
-Hence no further nontrivial contributions appear from the case \(q\ge k+1\).
-\end{itemize}
+Thus, there is an edge which appears in both $I$ and $J$, and 
+at least twice in $I$ and twice in $J$, so four times in $I\cup J$.
+This contradicts the assumption that $I\cup J$ is a double tree.
 
-Combining these two cases, we conclude that the total number of pairs \((I,J)\) with nonzero covariance is of order at most \(n^k\), and each covariance is at most a bounded constant in absolute value.
-Thus
-\[
-	\sum_{I,J\in[n]^k}
-	\operatorname{\mathrm{Cov}}\bigl(X_I,X_J\bigr)
-	= O(n^k).
-\]
-Multiplying by \(1/n^{2+k}\) completes the proof:
-\[
-\operatorname{\mathrm{Var}}(Y_{n,k})
-	=
-	\frac{1}{n^{2+k}}
-	\sum_{I,J\in[n]^k}
-	\operatorname{\mathrm{Cov}}\bigl(X_I,X_J\bigr)
-	\le
-	\frac{C\,n^k}{n^{2+k}}
-	=
-	\frac{C}{n^2}.
-	\quad
-	\qedsymbol
-\]
+This implies that
+there are no leading contributions to the sum when \(q\ge k+1\).
+\end{enumerate}
+
+Combining these two cases, we conclude that the total number of pairs \((I,J)\) with nonzero covariance is of order at most \(n^k\), 
+This yields the desired bound on the variance, and completes the proof of \Cref{prop:variance-bound}.
+
+With that, we are done with the Wigner semicircle law proof for real 
+Wigner matrices.  
 
 \appendix
 \setcounter{section}{1}
@@ -695,13 +687,26 @@ Suppose candidate \(A\) receives \(p\) votes and candidate \(B\) receives \(q\) 
 
 Show inequality \eqref{eq:chebyshev-like}.
 
-\subsubsection{Almost sure convergence and convergence in probability}
+\subsection{Almost sure convergence and convergence in probability}
 \label{prob:almost-sure-convergence}
 
 Show that in Wigner's semicircle law,
 the weakly almost sure convergence
 of random measures $\nu_n$ to $\mu_{\mathrm{sc}}$
 implies weak convergence in probability.
+
+\subsection{Wigner's semicircle law for complex Wigner matrices}
+
+Complex Wigner matrices are Hermitian symmetric, with iid complex off-diagonal
+entries, and real iid diagonal entries (all mean zero). 
+Each complex random variable has independent real and imaginary parts.
+
+\begin{enumerate}
+	\item Compute the expected trace of powers of a complex Wigner matrix.
+	\item Outline the remaining steps in the proof of 
+		Wigner's semicircle law for complex Wigner matrices.
+\end{enumerate}
+
 
 
 \bibliographystyle{alpha}
