@@ -341,7 +341,23 @@ We are done with combinatorics, and it remains to justify that
 the computations lead to the desired semicircle law
 from \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1}.
 
-
+Let us remember that so far, we showed that
+\begin{equation*}
+	\lim_{n\to\infty}
+	\frac{1}{n^{k/2+1}}
+	\operatorname{\mathbb{E}}
+	\left[ 
+		\operatorname{Tr} W^k
+	\right]
+	=
+	\begin{cases}
+		\sigma^{2m} C_{m} & \text{if $k=2m$ is even}, \\
+		0 & \text{if $k$ is odd}.
+	\end{cases}
+\end{equation*}
+Here, $W$ is real Wigner,
+unnormalized, with mean $0$,
+where its off-diagonal entries are iid with variance $\sigma^2$.
 
 
 \appendix
@@ -355,6 +371,10 @@ Prove formula \eqref{eq:sin-integral}:
 \begin{equation*}
 	\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2}.
 \end{equation*}
+
+
+\subsection{Tree profiles}
+	Show that the expected height of a uniformly random Dyck path of semilength $m$ is of order~$\sqrt{m}$.
 
 
 
