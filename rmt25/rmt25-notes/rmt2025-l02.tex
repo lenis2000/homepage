@@ -107,7 +107,7 @@ We are working on the Wigner semicircle law.
 	\item Computation of expected traces of powers of $W$. We
 		showed that
 		\begin{equation*}
-			\int_{\mathbb{R}}x^k \nu_n(dx)\to
+		\int_{\mathbb{R}} x^k \, \nu_n(dx) \to
 			\#\left\{ \textnormal{rooted planar trees with $k/2$ edges} \right\}.
 		\end{equation*}
 \end{enumerate}
@@ -408,7 +408,7 @@ implies convergence in distribution.
 However, we need weak in probability convergence,
 which deals with random variables
 \begin{equation*}
-	\int_{\mathbb{R}} f(x) \nu_n(dx),\qquad f\in C_b(\mathbb{R}),
+\int_{\mathbb{R}} f(x) \, \nu_n(dx),\qquad f\in C_b(\mathbb{R}),
 \end{equation*}
 and we did not compute the moments of these random variables.
 
@@ -416,7 +416,7 @@ To complete the argument, let us show that for each fixed integer \(k\ge1\),
 we have almost sure convergence of the moments (of a
 random distribution, so that the $Y_{n,k}$'s are random variables):
 \[
-	Y_{n,k}\coloneqq\int_{\mathbb{R}}x^k\,d\nu_n(x)
+Y_{n,k}\coloneqq\int_{\mathbb{R}}x^k\,\nu_n(dx)
   \;\xrightarrow[n\to\infty]{\text{a.s.}}\;
 	m_{k},
 	\qquad n\to\infty,
@@ -466,7 +466,7 @@ Hence the probability that \(\lvert Y_{n,k} - \mathbb{E}[Y_{n,k}]\rvert > n^{-\f
 \]
 
 \subsubsection{Tightness of \(\{\nu_n\}\) and subsequential limits}
-Since \(\lvert Y_{n,k}\rvert = \bigl|\int x^k\,d\nu_n(x)\bigr|\) stays bounded for each \(k\), one readily checks
+Since \(\lvert Y_{n,k}\rvert = \bigl|\int x^k\,\nu_n(dx)\bigr|\) stays bounded for each \(k\), one readily checks
 (Problem \ref{prob:chebyshev-like})
 that
 \begin{equation}
@@ -485,24 +485,24 @@ there exists a subsequence \(\nu_{n_j}\) converging weakly to some probability m
 We claim that \(\nu^*=\mu_{\mathrm{sc}}\), the semicircle distribution.
 Indeed, fix \(k\).  Since \(x^k\) is a bounded function on a sufficiently large interval, and \(\nu_{n_j}\to\nu^*\) weakly, we have
 \[
-   \int x^k\,d\nu_{n_j}(x) \;\to\;\int x^k\,d\nu^*(x).
+\int x^k\,\nu_{n_j}(dx) \;\to\;\int x^k\,\nu^*(dx).
 \]
 On the other hand, we have already shown
 \[
-   \int x^k\,d\nu_{n_j}(x)
+\int x^k \, \nu_{n_j}(dx)
    \;=\;
    Y_{n_j,k}
    \;\xrightarrow[j\to\infty]{\text{a.s.}}
    m_k
-   \;=\;\int x^k\,d\mu_{\mathrm{sc}}(x).
+   \;=\;\int x^k\,\mu_{\mathrm{sc}}(dx).
 \]
 Thus
 \[
-   \int x^k\,d\nu^*(x)
+\int x^k\,\nu^*(dx)
    \;=\;
    m_k
    \;=\;
-   \int x^k\,d\mu_{\mathrm{sc}}(x)
+   \int x^k\,\mu_{\mathrm{sc}}(dx)
    \qquad
    \text{for all $k\ge1$.}
 \]
