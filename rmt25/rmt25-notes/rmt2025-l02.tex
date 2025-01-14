@@ -360,6 +360,7 @@ Here, $W$ is real Wigner
 where its off-diagonal entries are iid with variance $\sigma^2$.
 
 \subsection{The semicircle distribution is determined by its moments}
+\label{sub:carleman-semicircle}
 
 We use (without proof)
 the known Carleman's criterion for the uniqueness of a distribution by its moments.
@@ -396,6 +397,21 @@ series diverges.
 \end{remark}
 
 \subsection{Convergence to the semicircle law}
+
+Recall 
+\cite[Theorem~30.2]{billingsley1995probability}
+that convergence 
+of random variables
+in moments plus the fact that the
+limiting distribution is uniquely determined by its moments
+implies convergence in distribution.
+However, we need weak in probability convergence,
+which deals with random variables
+\begin{equation*}
+	\int_{\mathbb{R}} f(x) \nu_n(dx),\qquad f\in C_b(\mathbb{R}),
+\end{equation*}
+and we did not compute the moments of these random variables.
+
 
 
 \appendix
