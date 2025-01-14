@@ -514,24 +514,22 @@ converge to the moments of the standard normal distribution.
 
 \subsection{Convergence in distribution}
 
-Is convergence of moments enough to imply convergence in distribution?
-Not necessarily.
-First, note that the functions $x\mapsto x^k$
-are not even bounded on $\mathbb{R}$
-(cf. \Cref{prob:conv-in-dist-problem}).
+Is convergence of moments enough to imply convergence in
+distribution? Not necessarily. First, note that the functions
+$x\mapsto x^k$ are not even bounded on $\mathbb{R}$.
 
-In general, convergence of moments does \emph{not} necessarily imply convergence in distribution. Indeed, the classical method of moments in probability
-theory
-\cite[Theorem~30.2]{billingsley1995probability}
-states that if a sequence of random variables \(X_n\) has
-moments (of all orders) converging to the moments of a
-random variable \(X\), then \(X_n\) converges in
-distribution to \(X\), provided that the distribution of
-\(X\) is uniquely determined by its moments (also known as
-being moment-determinate).
+A sufficient condition for convergence in distribution is
+found in the
+classical method of moments in
+probability theory \cite[Theorem~30.2]{billingsley1995probability}.
+This theorem
+states that
+if the limiting distribution $X$ is uniquely determined by its moments,
+then convergence in moments implies convergence in distribution.
 
 The normal distribution is indeed uniquely determined by its
-moments, so the CLT holds in this case, provided that the
+moments (Problem \ref{prob:uniqueness-normal}),
+so the CLT holds in this case, provided that the
 original iid random variables $X_i$ have finite moments of
 all orders.
 
@@ -815,7 +813,7 @@ but it is due to the underlying combinatorics.
 	means that if we forget the direction of the edges and the multiplicities,
 	we must get a \emph{tree}, with $k/2$ edges and $k/2+1$ vertices.
 	The complete justification of this counting is the
-	problem in \Cref{prob:counting-n-powers}.
+	problem in Problem \ref{prob:counting-n-powers}.
 
 	The $n$-powers counting implies that the combinatorial
 	factor (for even $k$)
@@ -826,7 +824,7 @@ but it is due to the underlying combinatorics.
 	to be $1$ (this ambiguity is taken into account by the
 	power-$n$ factor).
 
-	In \Cref{prob:counting-trees}, we show that the number of these rooted trees is the $k/2$-th Catalan number $C_{k/2}$.
+	In Problem \ref{prob:counting-trees}, we show that the number of these rooted trees is the $k/2$-th Catalan number $C_{k/2}$.
 	This completes the proof of \Cref{lemma:moments_convergence}.
 \end{proof}
 
@@ -838,7 +836,7 @@ Immediate next steps are:
 \begin{enumerate}
 	\item Show that the number of rooted trees with $k/2$ edges is the $k/2$-th Catalan number, and give the exact formula for the Catalan numbers.
 	\item Compute the moments of the semicircular distribution.
-	\item Make sure that the moment computation suffice to show the 
+	\item Make sure that the moment computation suffice to show the
 		weak in probability convergence of the ESD to the semicircular law.
 \end{enumerate}
 
@@ -848,7 +846,7 @@ Immediate next steps are:
 
 \section{Problems (due 2025-02-13)}
 
-Each problem is a subsection (like \ref{prob:normal-approximation}),
+Each problem is a subsection (like Problem \ref{prob:normal-approximation}),
 and is may have several parts.
 
 \subsection{Normal approximation}
@@ -893,6 +891,11 @@ Justify the computations of the power of $n$ in
 Show that the log-normal random variable
 $e^{Z}$ (where $Z\sim \mathcal{N}(0,1)$)
 is not determined by its moments.
+
+\subsection{Uniqueness of the normal distribution}
+\label{prob:uniqueness-normal}
+
+Show that the normal distribution is uniquely determined by its moments.
 
 \subsection{Quaternions}
 
@@ -942,7 +945,7 @@ $k$-th power of the real Wigner matrix, the maximum power of
 $n$ is $k/2+1$ for even $k$ and less for odd $k$. For even
 $k$, the power $k/2+1$ comes from index sequences where each
 off-diagonal matrix element appears exactly twice, and no
-diagonal elements are present. 
+diagonal elements are present.
 
 
 

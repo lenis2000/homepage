@@ -141,7 +141,7 @@ Using \(\cos^2\theta = 1 - \sin^2\theta\), we split the integral:
 \[
 \frac{2^{2m+2}}{\pi} \left( \int_0^{\pi/2} \sin^{2m}\theta\, d\theta - \int_0^{\pi/2} \sin^{2m+2}\theta\, d\theta \right).
 \]
-Using the standard formula
+Using the standard formula (cf. Problem \ref{prob:sin-integral})
 \begin{equation}
 	\label{eq:sin-integral}
 \int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2},
@@ -355,9 +355,47 @@ Let us remember that so far, we showed that
 		0 & \text{if $k$ is odd}.
 	\end{cases}
 \end{equation*}
-Here, $W$ is real Wigner,
-unnormalized, with mean $0$,
+Here, $W$ is real Wigner
+(unnormalized) with mean $0$,
 where its off-diagonal entries are iid with variance $\sigma^2$.
+
+\subsection{The semicircle distribution is determined by its moments}
+
+We use (without proof)
+the known Carleman's criterion for the uniqueness of a distribution by its moments.
+\begin{proposition}[{\cite[Theorem~1.10]{shohat1943problem}}, \cite{Akhiezer1965Moment}]
+	\label{prop:carleman}
+	Let $X$ be a real-valued random variable with moments $m_k
+	= \mathbb{E}[X^k]$ of all orders. If \[\sum_{k=1}^{\infty}
+	(m_{2k})^{-1/(2k)} = \infty,\] then the distribution of
+	$X$ is uniquely determined by its moments $(m_k)_{k\geq 1}$.
+\end{proposition}
+\begin{remark}
+	By the Stone-Wierstrass theorem, 
+	the semicircle distribution is the unique distribution
+	with compact support with these moments.
+	However, we need to guarantee that there are no 
+	distributions on $\mathbb{R}$ with the same moments.
+\end{remark}
+
+Now, the moments satisfy the asymptotics
+\begin{equation*}
+	m_{2k}=C_k \sigma^{2k} \sim 
+	\frac{4^k}{k^{3/2}\sqrt{\pi}} \sigma^{2k},
+\end{equation*}
+so
+\begin{equation*}
+	\sum_{k=1}^{\infty} (m_{2k})^{-1/(2k)} \sim
+	\sum_{k=1}^{\infty} \left( \frac{k^{3/2}\sqrt{\pi}}{4^k} \right)^{1/2k} \sigma^{-1}.
+\end{equation*}
+The $k$-th summands converges to $1/(2\sigma)$, so the 
+series diverges.
+
+\begin{remark}
+	See also Problem A.4 from \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1} on an example of a distribution not determined by its moments.
+\end{remark}
+
+\subsection{Convergence to the semicircle law}
 
 
 \appendix
@@ -366,6 +404,7 @@ where its off-diagonal entries are iid with variance $\sigma^2$.
 \section{Problems (due 2025-02-15)}
 
 \subsection{Standard formula}
+\label{prob:sin-integral}
 
 Prove formula \eqref{eq:sin-integral}:
 \begin{equation*}
@@ -375,6 +414,11 @@ Prove formula \eqref{eq:sin-integral}:
 
 \subsection{Tree profiles}
 	Show that the expected height of a uniformly random Dyck path of semilength $m$ is of order~$\sqrt{m}$.
+
+\subsection{Ballot problem}
+
+
+Suppose candidate \(A\) receives \(p\) votes and candidate \(B\) receives \(q\) votes, where \(p > q \geq 0\). In how many ways can these votes be counted such that \(A\) is always strictly ahead of \(B\) in partial tallies?
 
 
 
