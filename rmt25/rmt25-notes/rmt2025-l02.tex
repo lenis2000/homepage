@@ -437,7 +437,7 @@ Let us assume the following:
 	For each fixed integer \(k\ge1\) and large enough \(n\),
 	we have
 	\begin{equation*}
-		\operatorname{Var}(Y_{n,k})\le \frac{m_k}{n^2}.
+	\operatorname{\mathrm{Var}}(Y_{n,k})\le \frac{m_k}{n^2}.
 	\end{equation*}
 \end{proposition}
 We will prove \Cref{prop:variance-bound} in \Cref{sub:variance-bound-proof}
@@ -451,7 +451,7 @@ From Chebyshev's inequality,
   \mathbb{P}\Bigl(\bigl|Y_{n,k} - \mathbb{E}[Y_{n,k}]\bigr|
 	\ge n^{-\frac{1}{4}}\Bigr)
   \le
-  \mathrm{Var}[Y_{n,k}]\sqrt{n}
+  \operatorname{\mathrm{Var}}[Y_{n,k}]\sqrt{n}
 	=O(n^{-\frac{3}{2}}),
 \]
 where in the last step we used \Cref{prop:variance-bound}.
@@ -486,7 +486,7 @@ sequence of probability measures
 \(\{\nu_n\}\) is \emph{tight}.
 By Prokhorov’s theorem \cite[Theorem~25.10]{billingsley1995probability},
 there exists a subsequence \(\nu_{n_j}\) converging weakly to some probability measure \(\nu^*\).
-We will now characterize all subsequential limits $\nu^*$ of $\nu_n$. 
+We will now characterize all subsequential limits $\nu^*$ of $\nu_n$.
 
 \subsubsection{Characterizing the limit measure}
 \label{subsub:semicircle-characterization}
@@ -523,10 +523,10 @@ with \(\mu_{\mathrm{sc}}\).
 \begin{remark}
 	In \Cref{subsub:semicircle-tightness,subsub:semicircle-characterization}
 	we tacitly assumed that we choose an elementary outcome $\omega$,
-	and view $\nu_n$ as measures depending on $\omega$. 
-	Then, since the convergence of moments is almost sure, 
+	and view $\nu_n$ as measures depending on $\omega$.
+	Then, since the convergence of moments is almost sure,
 	$\omega$ belongs to a set of full probability.
-	The limiting measure $\nu^*$ must coincide 
+	The limiting measure $\nu^*$ must coincide
 	with $\mu_{\mathrm{sc}}$ for this $\omega$,
 	and thus, $\nu^*$ is almost surely nonrandom.
 \end{remark}
@@ -549,11 +549,124 @@ There is one more ``combinatorial'' step in the proof of the
 semicircle law: we need to show that the variance of the
 moments of the ESD is bounded by \(m_k/n^2\).
 
+Recall that
+\[
+	Y_{n,k}
+	=\int_{\mathbb{R}}x^k\,\nu_n(dx)
+	=\frac{1}{n^{1+\frac{k}{2}}}
+	\sum_{i_1,\ldots,i_k=1}^{n} X_I,
+	\quad
+	\text{where}
+	\quad
+	X_I=X_{i_1 i_2}X_{i_2 i_3}\cdots X_{i_{k}i_1}.
+\]
+Here we use the notation $I$ for the multi-index $(i_1,\ldots,i_k)$,
+and throughout the computation below,
+we use the notation $I\in[n]^k$,
+where $[n]=\{1,\ldots,n\}$.
+We have
+\[
+\operatorname{\mathrm{Var}}\bigl(Y_{n,k}\bigr)
+	=
+	\frac{1}{n^{2+k}}
+	\operatorname{\mathrm{Var}}
+	\Bigl(\sum_{I\in[n]^k}X_I\Bigr)
+	=
+	\frac{1}{n^{2+k}}
+	\sum_{I,J\in[n]^k}
+	\operatorname{\mathrm{Cov}}\bigl(X_I,X_J\bigr).
+\]
+We claim that the sum of all covariances is bounded by a constant times~\(n^k\), which then implies
+\(\operatorname{\mathrm{Var}}\bigl(Y_{n,k}\bigr)\le \mathrm{const}\cdot n^k / n^{2+k}=O\bigl(\tfrac{1}{n^2}\bigr)\).
 
+\medskip
 
+\noindent
+\textbf{Step 1. Identifying when \(\operatorname{\mathrm{Cov}}\bigl(X_I,X_J\bigr)\) can be nonzero.}
+For each \(k\)-tuple \(I=(i_1,i_2,\dots,i_k)\in[n]^k,\) the product
+\[
+	X_I = X_{i_1i_2}\,X_{i_2i_3}\,\dots \,X_{i_k i_1}
+\]
+is the product of the entries of our Wigner matrix corresponding to the directed ``edges''
+\((i_1 \to i_2), (i_2 \to i_3),\dots,(i_k \to i_1)\).
+Similarly, \(X_J\) is determined by the edges of another closed directed walk~\(J\).
 
+\begin{enumerate}
+\item
+If \(I\) and \(J\) use disjoint collections of matrix entries, then \(X_I\) and \(X_J\) are independent, and hence $\operatorname{\mathrm{Cov}}(X_I,X_J)=0$.
 
+\item
+	If there is an edge (say, \(X_{i_1 i_2}\)) which appears
+	\emph{only once}
+	in exactly one of \(I\) or \(J\) but not both, then that
+	edge factor is independent and forces
+	$\operatorname{\mathrm{Cov}}(X_I,X_J)=0$ since
+	$\operatorname{\mathbb{E}}[X_{i_1 i_2}]=0$.
+Indeed, for example if \(X_{i_1 i_2}\) appears only in \(X_I\), then
+\[
+	\operatorname{\mathbb{E}}\left[ X_I \right]
+	=
+	\operatorname{\mathbb{E}}\left[ X_{i_1 i_2} \right]
+	\cdot
+	\operatorname{\mathbb{E}}\left[ \text{other factors} \right]
+	=0,
+	\qquad
+	\mathbb{E}\bigl[X_I X_J\bigr]
+	=
+	\mathbb{E}[X_{i_1 i_2}]
+	\cdot
+	\mathbb{E}\bigl[\text{other factors}\bigr]
+	=0.
+\]
 
+\end{enumerate}
+
+\noindent
+Thus, the only way we could get a nonzero covariance is if \emph{every} edge that appears in \(I\cup J\) appears at least twice overall.
+Graphically, let us represent each \(k\)-tuple \(I\) by a directed closed walk in the complete graph on~\([n]\).  Then the union \(I\cup J\) must be a subgraph in which every directed edge has total multiplicity \(\ge2\).
+
+\medskip
+
+\noindent
+\textbf{Step 2. Counting the contributions to the sum.}
+Denote by \(q=\lvert V(I\cup J)\rvert\) the number of distinct vertices (out of the possible~\(n\)) involved in the union \(I\cup J\).  We can pick which \(q\) vertices are in the union in \(\binom{n}{q}\approx n^q\) ways (times some constant), and then specify how the edges form \emph{two} closed walks of length \(k\).
+
+We split into two cases:
+\begin{itemize}
+\item
+\(\boldsymbol{q\le k.}\)
+In this situation, each pair \((I,J)\) with \(\lvert V(I\cup J)\rvert=q\) contributes a term to
+\(\sum_{I,J}\operatorname{\mathrm{Cov}}(X_I,X_J)\).  However, because each edge is used at least twice in the union \(I\cup J\), and each walk has length \(k\), there are at most \(k\) edges in a single walk.
+One can check that such ``doubly used edges'' cannot produce too large a contribution.  A more direct combinatorial check (cf. the argument in the lecture notes) shows these terms together are of order \(O(n^{k})\).
+
+\item
+\(\boldsymbol{q\ge k+1.}\)
+In this case, to use at most \(k\) edges in each of the two walks, one sees that the union \(I\cup J\) \emph{must} form a ``double tree'' structure: the same edge is traced out in both \(I\) and~\(J\), and each vertex has total in-degree and out-degree equal to~2 when counting both walks.  Geometrically, removing extra edges shows that \(I\) is (itself) a double tree, and so is \(J\).  Then one verifies (see the lecture notes) that this forces at least one single edge to appear exactly once---which we already saw makes the covariance vanish!
+
+Hence no further nontrivial contributions appear from the case \(q\ge k+1\).
+\end{itemize}
+
+Combining these two cases, we conclude that the total number of pairs \((I,J)\) with nonzero covariance is of order at most \(n^k\), and each covariance is at most a bounded constant in absolute value.
+Thus
+\[
+	\sum_{I,J\in[n]^k}
+	\operatorname{\mathrm{Cov}}\bigl(X_I,X_J\bigr)
+	= O(n^k).
+\]
+Multiplying by \(1/n^{2+k}\) completes the proof:
+\[
+\operatorname{\mathrm{Var}}(Y_{n,k})
+	=
+	\frac{1}{n^{2+k}}
+	\sum_{I,J\in[n]^k}
+	\operatorname{\mathrm{Cov}}\bigl(X_I,X_J\bigr)
+	\le
+	\frac{C\,n^k}{n^{2+k}}
+	=
+	\frac{C}{n^2}.
+	\quad
+	\qedsymbol
+\]
 
 \appendix
 \setcounter{section}{1}
@@ -586,7 +699,7 @@ Show inequality \eqref{eq:chebyshev-like}.
 \label{prob:almost-sure-convergence}
 
 Show that in Wigner's semicircle law,
-the weakly almost sure convergence 
+the weakly almost sure convergence
 of random measures $\nu_n$ to $\mu_{\mathrm{sc}}$
 implies weak convergence in probability.
 
