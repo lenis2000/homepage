@@ -86,32 +86,37 @@ Updated at \currenttime, \today}}
 \end{lnotes}
 
 
+\section{Recap}
 
+We are working on the Wigner semicircle law. 
+\begin{enumerate}
+	\item Wigner matrices $W$:
+		real symmetric random matrices with iid entries 
+		$X_{ij}$, $i>j$ (mean 0, variance $\sigma^2$);
+		and iid diagonal entries $X_{ii}$ (mean 0, some other variance and distribution).
+	\item Empirical spectral distribution (ESD)
+		\begin{equation*}
+			\nu_n = \frac{1}{n} \sum_{i=1}^{n} \delta_{\lambda_i/\sqrt{n}},
+		\end{equation*}
+		which is a random probability measure on $\mathbb{R}$.
+	\item Semicircle distribution $\mu_{\mathrm{sc}}$:
+		\begin{equation*}
+			\mu_{\mathrm{sc}}(dx) = \frac{1}{2\pi} \sqrt{4-x^2} \, dx,
+			\qquad x \in [-2,2].
+		\end{equation*}
+	\item Computation of expected traces of powers of $W$. We
+		showed that
+		\begin{equation*}
+			\int_{\mathbb{R}}x^k \nu_n(dx)\to
+			\#\left\{ \textnormal{rooted planar trees with $k/2$ edges} \right\}.
+		\end{equation*}
+\end{enumerate}
 
+\section{Two computations}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+First, we finish the combinatorial part,
+and match the limiting expected traces of powers of $W$
+to moments of the semicircle law.
 
 \subsection{Moments of the semicircle law}
 
@@ -148,7 +153,16 @@ we compute each term:
 After simplification, this becomes
 $C_m$, the $m$-th Catalan number.
 
+\subsection{Counting trees and Catalan numbers}
 
+
+
+
+\section{Analysis steps in the proof}
+
+We are done with combinatorics, and it remains to justify that
+the computations lead to the desired semicircle law
+from \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1}.
 
 
 
