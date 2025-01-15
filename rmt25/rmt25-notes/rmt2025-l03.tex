@@ -62,12 +62,9 @@
 
 
 \date{Wednesday, January 22, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
-$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.tex}{\texttt{TeX Source}}
+$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l03.tex}{\texttt{TeX Source}}
 $\bullet$
 Updated at \currenttime, \today}}
-
-
-
 
 \author{Leonid Petrov}
 
@@ -79,10 +76,23 @@ Updated at \currenttime, \today}}
 
 
 \begin{lnotes}
-
 	TBD
 \end{lnotes}
 
+\section{Recap}
+
+We have established the semicircle law for
+real Wigner random matrices.
+If $W$ is an $n\times n$ real symmetric matrix with
+independent entries $X_{ij}$ above the main diagonal
+(mean zero, variance $1$), and mean zero diagonal entries,
+then the empirical spectral distribution of $W/\sqrt{n}$
+converges to the semicircle law as $n\to\infty$:
+\begin{equation*}
+	\lim_{n\to\infty} \frac{1}{n} \sum_{i=1}^n \delta_{\lambda_i/\sqrt n} =
+	\mu_{\mathrm{sc}}.
+\end{equation*}
+The convergence is weakly almost sure.
 
 
 
@@ -105,8 +115,10 @@ Updated at \currenttime, \today}}
 
 
 
+\appendix
+\setcounter{section}{2}
 
-
+\section{Problems (due 2025-02-22)}
 
 
 
