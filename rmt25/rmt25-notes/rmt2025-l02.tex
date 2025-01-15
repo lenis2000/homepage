@@ -184,7 +184,9 @@ The sequence of \emph{Catalan numbers} $\{C_m\}_{m\geq 0}$ is defined recursivel
 	\label{eq:catalan-recurrence}
     C_0 = 1, \quad C_{m+1} = \sum_{j=0}^m C_j C_{m-j} \quad \text{for } m \geq 0.
 \end{equation}
-Alternatively, they have the closed form:
+Alternatively, they have the closed form\footnote{See 
+	Problem \ref{prob:reflection-principle} for a combinatorial proof
+of the second inequality.}
 \begin{equation}
 	\label{eq:catalan-closed}
     C_m = \frac{1}{m+1}\binom{2m}{m} =
@@ -736,6 +738,7 @@ Then, as $n \to \infty$, the ESD of $W_n$ converges to the semicircle law.
 There are variants of this theorem without the assumption
 that all moments of the entries are finite.
 \begin{theorem}[\cite{benaych-georges2016lectures}]
+	\label{thm:benaych-georges}
 Let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with random entries such that:
 \begin{itemize}
 				\item The off-diagonal elements $X_{ij}$, for $i < j$, are i.i.d. random variables with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
@@ -745,9 +748,11 @@ Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law
 \end{theorem}
 
 \begin{theorem}
-For each $n \in \mathbb{Z}_+$, let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with random entries satisfying the following conditions:
+For each $n \in \mathbb{Z}_+$, let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with real random entries satisfying the following conditions:
 \begin{itemize}
-				\item The entries $X_{ij}$ are independent with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
+				\item The entries $X_{ij}$ are independent 
+	(but not necessarily identically distributed) random variables
+					with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
 				\item There exists a constant $C$ such that $\sup_{i,j,n} \operatorname{\mathbb{E}}\big[|X_{ij}|^4\big] < C$.
 \end{itemize}
 Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law almost surely. The second condition can also be replaced by a uniform integrability condition on the variances.
@@ -788,6 +793,23 @@ Prove formula \eqref{eq:sin-integral}:
 
 Suppose candidate \(A\) receives \(p\) votes and candidate \(B\) receives \(q\) votes, where \(p > q \geq 0\). In how many ways can these votes be counted such that \(A\) is always strictly ahead of \(B\) in partial tallies?
 
+\subsection{Reflection principle}
+\label{prob:reflection-principle}
+
+Show the equality
+\begin{equation*}
+	C_m=\binom{2m}{m}-\binom{2m}{m-1},
+\end{equation*}
+where $C_m$ counts the number of lattice paths 
+from $(0,0)$ to $(2m,0)$ with steps $(1,1)$ and $(1,-1)$
+that never go below the $x$-axis,
+and binomial coefficients count 
+arbitrary lattice paths from $(0,0)$ to $(2m,0)$ or 
+to $(2m,2)$ with steps $(1,1)$ and $(1,-1)$.
+In other words, show that the difference between the number of paths
+to $(2m,0)$ and to $(2m,2)$ is $C_m$, the number of paths
+that never go below the $x$-axis.
+
 \subsection{Bounding probability in the proof}
 \label{prob:chebyshev-like}
 
@@ -814,7 +836,10 @@ Each complex random variable has independent real and imaginary parts.
 		Wigner's semicircle law for complex Wigner matrices.
 \end{enumerate}
 
+\subsection{Semicircle law without the moment condition}
+\label{prob:generalized-semicircle}
 
+Prove \Cref{thm:benaych-georges}.
 
 \bibliographystyle{alpha}
 \bibliography{bib}
