@@ -681,10 +681,10 @@ Indeed, this is the case:
 \begin{theorem}[Wigner's Semicircle Law]
 	\label{thm:esd-semicircle}
 	Let $W$ be a real Wigner matrix of size $n\times n$
-	(with entries having a fixed variance, independent of $n$).
+	(with off-diagonal entries having a fixed variance $\sigma^2$, independent of $n$).
 	Then
 	as $n\to\infty$,
-	the ESD $W/\sqrt{n}$ converges in distribution to the semicircular law:
+	the ESD of $W/(\sigma\sqrt{n})$ converges in distribution to the semicircular law:
 	\begin{equation}
 		\label{eq:thm-esd-semicircle}
 		\nu_n\coloneqq \frac{1}{n}\sum_{i=1}^{n}\delta_{\lambda_i/\sqrt{n}}
