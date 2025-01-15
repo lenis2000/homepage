@@ -645,14 +645,14 @@ $O(n^{-2})$, as desired.
 
 \item
 \(\boldsymbol{q\ge k+1.}\)
-Ignoring directions and multiplicities, 
+Ignoring directions and multiplicities,
 we see that the subgraph corresponding to $I\cup J$
 contains at most \(k\) edges. Since \(q \ge k + 1\), we must have \(q = k + 1\)
 (by connectedness). Thus,
-\(I \cup J\) is a double tree. 
+\(I \cup J\) is a double tree.
 Since $I$ and $J$ are subsets of this double tree and $q=k+1$,
 they also must be double trees.
-Thus, there exists an edge which appears in both $I$ and $J$, and 
+Thus, there exists an edge which appears in both $I$ and $J$, and
 at least twice in $I$ and twice in $J$, so four times in $I\cup J$.
 This contradicts the assumption that $I\cup J$ is a double tree.
 
@@ -660,19 +660,100 @@ This implies that
 there are no leading contributions to the sum when \(q\ge k+1\).
 \end{enumerate}
 
-Combining these two cases, we conclude that the total number of pairs \((I,J)\) with nonzero covariance is of order at most \(n^k\), 
+Combining these two cases, we conclude that the total number of pairs \((I,J)\) with nonzero covariance is of order at most \(n^k\),
 This yields the desired bound on the variance, and completes the proof of \Cref{prop:variance-bound}.
 
-With that, we are done with the Wigner semicircle law proof for real 
+With that, we are done with the Wigner semicircle law proof for real
 Wigner matrices.  See Problem~\ref{prob:complex-wigner} for the complex case.
 
 \section{Remark: Variants of the semicircle law}
 
-Let us briefly outline a few versions 
+Let us briefly outline a few examples
 of the semicircle law for real/complex
-Wigner matrices which relax the iid conditions and the 
+Wigner matrices which relax the iid conditions and the
 conditions that all moments of the entries must be finite.
+This list is not comprehensive, it is presented as an illustration of the
+universality / robustness of the semicircle law.
+\begin{theorem}[Gaussian $\beta$-Ensembles \cite{Johansson_BGG_1998}, \cite{Forrester-LogGas}]
+	Let $\beta > 0$, and consider an $n \times n$ random matrix ensemble with joint eigenvalue density:
+\begin{equation}
+	\label{eq:beta-density}
+	p_n(\lambda_1,\ldots,\lambda_n) = \frac{1}{Z_{n,\beta}} \exp\left(-\frac{\beta}{4}\sum_{i=1}^n \lambda_i^2\right) \prod_{1\leq i<j\leq n} |\lambda_i-\lambda_j|^\beta
+\end{equation}
+where $Z_{n,\beta}$ is the normalization constant.\footnote{For
+	$\beta=1,2,4$, this is the joint
+eigenvalue density of the Gaussian Orthogonal, Unitary, and Symplectic Ensembles, respectively.
+For general $\beta$, there is no invariant random matrix distribution
+(while the eigenvalue density \eqref{eq:beta-density} makes sense), and
+we can still treat all the $\beta$ cases in a unified manner.}
+Then the ESD of the normalized eigenvalues $\lambda_i/\sqrt n$
+converges weakly almost surely to the semicircle law.
+\end{theorem}
+\begin{theorem}[Correlated entries \cite{schenker2005semicircle}]
+Let $W_n = \left(\frac{1}{\sqrt{n}} X_{pq}\right)_{1 \leq p,q \leq n}$
+be a sequence of $n \times n$ Hermitian random matrices where:
 
+\begin{enumerate}
+\item The entries $X_{pq}$ are complex random variables that are:
+		\begin{itemize}
+		\item \textit{Centered:} $\operatorname{\mathbb{E}}[X_{pq}] = 0$,
+		\item \textit{Unit variance:} $\operatorname{\mathbb{E}}[|X_{pq}|^2] = 1$,
+		\item \textit{Moment bound:}
+				$\displaystyle \sup_n \max_{p,q=1,\ldots,n} \operatorname{\mathbb{E}}\big[|X_{pq}|^k\big] < \infty$
+				for all $k \in \mathbb{N}$.
+		\end{itemize}
+
+\item There exists an equivalence relation $\sim_n$ on pairs of indices $(p,q)$ in $\{1,\ldots,n\}^2$ such that:
+		\begin{itemize}
+		\item Entries $X_{p_1q_1},\ldots,X_{p_jq_j}$ are independent when
+				$(p_1,q_1),\ldots,(p_j,q_j)$ belong to distinct equivalence classes.
+		\item The relation satisfies the following bounds:
+				\begin{enumerate}
+			\item $\max_p \#\big\{(q,p',q') \in \{1,\ldots,n\}^3 \mid (p,q) \sim_n (p',q')\big\} = o(n^2)$,
+				\item $\max_{p,q,p'} \#\big\{q' \in \{1,\ldots,n\} \mid (p,q) \sim_n (p',q')\big\} \leq B$ for some constant $B$,
+				\item $\#\big\{(p,q,p') \in \{1,\ldots,n\}^3 \mid (p,q) \sim_n (q,p') \text{ and } p \neq p'\big\} = o(n^2)$.
+				\end{enumerate}
+		\end{itemize}
+
+\item The matrices are Hermitian: $X_{pq} = \overline{X_{qp}}$.
+	In particular, $(p,q)\sim_n (q,p)$, and this is consistent with the
+	conditions on the equivalence relation.
+\end{enumerate}
+
+Then, as $n \to \infty$, the ESD of $W_n$ converges to the semicircle law.
+\end{theorem}
+
+There are variants of this theorem without the assumption
+that all moments of the entries are finite.
+\begin{theorem}[\cite{benaych-georges2016lectures}]
+Let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with random entries such that:
+\begin{itemize}
+				\item The off-diagonal elements $X_{ij}$, for $i < j$, are i.i.d. random variables with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
+				\item The diagonal elements $X_{ii}$ are i.i.d. random variables with $\operatorname{\mathbb{E}}[X_{ii}] = 0$ and a finite second moment, $\operatorname{\mathbb{E}}[X_{ii}^2] < \infty$, for $1 \leq i \leq n$.
+\end{itemize}
+Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law.
+\end{theorem}
+
+\begin{theorem}
+For each $n \in \mathbb{Z}_+$, let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with random entries satisfying the following conditions:
+\begin{itemize}
+				\item The entries $X_{ij}$ are independent with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
+				\item There exists a constant $C$ such that $\sup_{i,j,n} \operatorname{\mathbb{E}}\big[|X_{ij}|^4\big] < C$.
+\end{itemize}
+Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law almost surely. The second condition can also be replaced by a uniform integrability condition on the variances.
+\end{theorem}
+
+\begin{theorem}[For example, see \cite{silverstein1995empirical}]
+Let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with random entries. Assume that the expected matrix $\operatorname{\mathbb{E}}[M_n]$ has rank $r(n)$, where
+\[
+\lim_{n \to \infty} \frac{r(n)}{n} = 0.
+\]
+Additionally, suppose $\operatorname{\mathbb{E}}[X_{ij}] = 0$, $\operatorname{\mathrm{Var}}(X_{ij}) = 1$, and
+\[
+\sup_{i,j,n} \operatorname{\mathbb{E}}\big[|X_{ij} - \operatorname{\mathbb{E}}[X_{ij}]|^4\big] < \infty.
+\]
+Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law almost surely.
+\end{theorem}
 
 
 \appendix
@@ -714,12 +795,12 @@ implies weak convergence in probability.
 \label{prob:complex-wigner}
 
 Complex Wigner matrices are Hermitian symmetric, with iid complex off-diagonal
-entries, and real iid diagonal entries (all mean zero). 
+entries, and real iid diagonal entries (all mean zero).
 Each complex random variable has independent real and imaginary parts.
 
 \begin{enumerate}
 	\item Compute the expected trace of powers of a complex Wigner matrix.
-	\item Outline the remaining steps in the proof of 
+	\item Outline the remaining steps in the proof of
 		Wigner's semicircle law for complex Wigner matrices.
 \end{enumerate}
 
