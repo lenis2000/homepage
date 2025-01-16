@@ -101,6 +101,124 @@ The convergence is weakly almost sure.
 
 
 
+\section{Eigenvalue Distributions for Classical Ensembles}
+
+We begin by studying eigenvalue distributions for the three fundamental classes of random matrices. These distributions arise from matrices with different symmetry properties and correspond to the real, complex, and quaternionic cases.
+
+\subsection{Matrix Ensembles with Different Symmetries}
+
+Let $X$ be an $N\times N$ matrix. We consider three cases of random matrices with i.i.d. matrix elements:
+
+\begin{enumerate}[a)]
+\item \textbf{Real case:} $X_{ij} \sim \mathcal{N}(0,1)$
+\item \textbf{Complex case:} $X_{ij} \sim \mathcal{N}(0,1) + i\mathcal{N}(0,1)$
+\item \textbf{Quaternion case:} $X_{ij} \sim \mathcal{N}(0,1) + i\mathcal{N}(0,1) + j\mathcal{N}(0,1) + k\mathcal{N}(0,1)$
+\end{enumerate}
+
+For each case, we form a self-adjoint matrix:
+\[ M = \frac{1}{2}(X + X^*) \]
+where $X^*$ denotes the appropriate adjoint. This construction ensures real eigenvalues and proper spectral properties.
+
+\begin{theorem}[Joint Eigenvalue Distribution]
+\label{thm:joint_density}
+The eigenvalues $\lambda_1 \leq \lambda_2 \leq \cdots \leq \lambda_N$ of the matrix $M$ have joint probability density:
+\[ \frac{1}{Z} \prod_{i<j} |\lambda_i-\lambda_j|^\beta \prod_{i=1}^N \exp\left(-\frac{\lambda_i^2}{2}\right) \]
+where:
+\begin{itemize}
+\item $\beta = 1,2,4$ for cases (a), (b), (c) respectively
+\item $Z$ is the normalization constant given by:
+\[ Z = \frac{(2\pi)^{N/2}}{N!} \prod_{j=1}^{N-1} \frac{\Gamma(1+\beta(j+1)/2)}{\Gamma(1+\beta/2)} \]
+\end{itemize}
+This density is often called the "multivariate Gaussian" distribution in this context.
+\end{theorem}
+
+\subsection{Proof Strategy}
+
+We will prove this theorem for $\beta=1$ (the real case) and outline the modifications needed for other cases. The proof proceeds in three main steps.
+
+\begin{proof}[Step 1: Matrix Density]
+The probability density of the matrix $M$ is proportional to:
+\[ \exp\left(-\frac{1}{2}\operatorname{Tr}(M^2)\right) \]
+
+Indeed, we can expand the trace:
+\[ \operatorname{Tr}(M^2) = \sum_{i,j} |M_{ij}|^2 = \sum_{i=1}^N M_{ii}^2 + 2\sum_{i<j} |M_{ij}|^2 \]
+Each element of $M$ is formed from the corresponding elements of $X$ according to the self-adjointness condition.
+\end{proof}
+
+\begin{proof}[Step 2: Eigenvalue Transformation]
+Using the spectral decomposition $M = ODO^*$ where $D$ is diagonal with eigenvalues $\lambda_i$ and $O$ is orthogonal/unitary/symplectic (depending on $\beta$), we have:
+\[ \exp\left(-\frac{1}{2}\operatorname{Tr}(M^2)\right) = \exp\left(-\frac{1}{2}\sum_{i=1}^N \lambda_i^2\right) = \prod_{i=1}^N \exp\left(-\frac{\lambda_i^2}{2}\right) \]
+\end{proof}
+
+
+\begin{proof}[Step 3: Jacobian Calculation]
+The key step is computing the Jacobian of the transformation from matrix elements to eigenvalues and eigenvectors. Consider the map:
+\[ \Pi: W_N \times \mathcal{G}(N) \to \mathfrak{sl}_N \]
+where:
+\begin{itemize}
+\item $W_N$ is the space of diagonal matrices with ordered eigenvalues
+\item $\mathcal{G}(N)$ is $O(N)$, $U(N)$, or $Sp(N)$ depending on $\beta$
+\item $\mathfrak{sl}_N$ is the space of self-adjoint matrices
+\end{itemize}
+
+This map is given by:
+\[ (\lambda, g) \mapsto g\begin{pmatrix}\lambda_1 & & \\ & \ddots & \\ & & \lambda_N\end{pmatrix}g^* \]
+
+Near the identity element of $\mathcal{G}(N)$, we can write:
+\[ g = \exp(B) \approx I + B + \frac{B^2}{2} + \cdots \]
+where $B$ is skew-symmetric/skew-Hermitian/skew-quaternionic.
+
+The Jacobian computation yields:
+\[ \prod_{i<j} |\lambda_i-\lambda_j|^\beta \]
+which explains the appearance of this term in the joint density.
+\end{proof}
+
+\section{Laguerre/Wishart Ensemble}
+
+Consider a matrix $X$ of size $N \times M$ with $N < M$ having singular value decomposition:
+\[ X = U\begin{pmatrix}s_1 & & 0 \\ & \ddots & \\ 0 & & s_N\end{pmatrix}V \]
+where $U$ and $V$ are orthogonal/unitary/symplectic matrices of appropriate sizes.
+
+\begin{theorem}[Wishart Distribution]
+Let $X$ be an $N\times M$ matrix with i.i.d. Gaussian elements as in Theorem~\ref{thm:joint_density}. Then the eigenvalues $\lambda_i = s_i^2$ of $XX^*$ have joint density proportional to:
+\[ \prod_{i<j} (\lambda_i-\lambda_j)^\beta \prod_{i=1}^N \lambda_i^{\frac{\beta}{2}(M-N+1)-1} e^{-\lambda_i/2} \]
+This is known as the "multivariate $\Gamma$-distribution."
+\end{theorem}
+
+\section{Jacobi/MANOVA/CCA Ensemble}
+
+Consider two rectangular arrays:
+\begin{align*}
+X &: N\times T \\
+Y &: K\times T \qquad N\leq K\leq T
+\end{align*}
+
+Define:
+\begin{itemize}
+\item $P_X$ = projector onto $N$-dimensional subspace spanned by rows of $X$
+\item $P_Y$ = projector onto $K$-dimensional subspace spanned by rows of $Y$
+\end{itemize}
+
+The squared canonical correlations are $\min(N,K)$ non-zero eigenvalues of $P_XP_Y$.
+
+\begin{theorem}[Canonical Correlations]
+Assume $X$ and $Y$ are independent with i.i.d. Gaussian elements. Then the eigenvalues of $P_XP_Y$ have density proportional to:
+\[ \prod_{i<j} (\lambda_i-\lambda_j)^\beta \prod_{i=1}^N \lambda_i^{\frac{\beta}{2}(K-N+1)-1} (1-\lambda_i)^{\frac{\beta}{2}(T-K+1)-1} \]
+where $0\leq \lambda_i\leq 1$. This is the "multivariate Beta distribution."
+\end{theorem}
+
+\section{General Pattern}
+
+A remarkable feature emerges across these classical ensembles. The eigenvalue distributions consistently take the form:
+\[ \prod_{i<j} |\lambda_j-\lambda_i|^\beta \prod_{i=1}^N V(\lambda_i) \]
+where:
+\begin{itemize}
+\item The first term represents logarithmic pairwise interaction
+\item $V(\lambda)$ is an appropriate potential function
+\item $\beta$ represents the symmetry class (1, 2, or 4)
+\end{itemize}
+
+This structure appears in various contexts in random matrix theory and is often referred to as a "log-gas" or "$\beta$-ensemble" system.
 
 
 
