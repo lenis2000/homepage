@@ -419,7 +419,8 @@ of random variables
 in moments plus the fact that the
 limiting distribution is uniquely determined by its moments
 implies convergence in distribution.
-However, we need weak in probability convergence,
+However, we need weak convergence in probability or almost surely (see the
+previous \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1}).
 which deals with random variables
 \begin{equation*}
 \int_{\mathbb{R}} f(x) \, \nu_n(dx),\qquad f\in C_b(\mathbb{R}),
@@ -676,7 +677,13 @@ Combining these two cases, we conclude that the total number of pairs \((I,J)\) 
 This yields the desired bound on the variance, and completes the proof of \Cref{prop:variance-bound}.
 
 With that, we are done with the Wigner semicircle law proof for real
-Wigner matrices.  See Problem~\ref{prob:complex-wigner} for the complex case.
+Wigner matrices
+(with weakly almost sure convergence; 
+see \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1} 
+for the definitions).
+
+Also, see Problem~\ref{prob:complex-wigner} for the complex case of 
+the Wigner semicircle law.
 
 \section{Remark: Variants of the semicircle law}
 

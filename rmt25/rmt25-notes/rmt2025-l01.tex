@@ -699,8 +699,9 @@ Indeed, this is the case:
 \end{theorem}
 
 \begin{remark}
-	The convergence in \eqref{eq:thm-esd-semicircle} is
-	\emph{weakly in probability}, that is,
+	The convergence in \eqref{eq:thm-esd-semicircle} may mean either
+	\emph{weakly in probability} or \emph{weakly almost surely}.
+	The first notion, weak convergence in probability, means that
 	for every bounded continuous function $f$,
 	we have
 	\begin{equation}
@@ -710,6 +711,14 @@ Indeed, this is the case:
 	where in \eqref{eq:weak-convergence-in-prob} the convergence is in probability.
 	Indeed, the left-hand side of \eqref{eq:weak-convergence-in-prob}
 	is a random variable, so we need to qualify which sense of convergence we mean.
+
+	The weakly almost sure convergence means that
+	the convergence in \eqref{eq:weak-convergence-in-prob}
+	holds for almost all realizations of the random matrix $W$,
+	that is, for every bounded continuous function $f$,
+	the random variable
+	$\int_{\mathbb{R}} f(x) \, \nu_n(dx)$ converges almost surely to
+	$\int_{\mathbb{R}} f(x) \, \mu_{\mathrm{sc}}(dx)$.
 \end{remark}
 
 \begin{remark}
