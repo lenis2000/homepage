@@ -3,9 +3,9 @@ layout: post
 title: "Random Fibonacci Words via Clone Schur Functions"
 arXiv: 2412.21126 [math.PR]
 coauthors:
+  - name: Leonid Petrov
   - name: Jeanne Scott
     noweb: true
-  - name: Leonid Petrov
 comments: false
 categories: blog math preprint
 # journal-ref: submitted to ???
