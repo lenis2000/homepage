@@ -23,4 +23,6 @@ pdftk $(cat "$temp_file") cat output rmt2025-lectures-combined.pdf
 # Clean up the temporary file
 rm "$temp_file"
 
+aws s3 cp rmt2025-lectures-combined.pdf s3://lpetrov.cc.storage/papers/lec07-rmt2025-lectures-combined.pdf
+
 echo "PDFs have been combined into rmt2025-lectures-combined.pdf"
