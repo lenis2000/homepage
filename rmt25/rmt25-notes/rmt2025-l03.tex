@@ -114,8 +114,10 @@ of the empirical spectral measures.
 Today, we are going to focus on Gaussian ensembles. The plan is:
 \begin{enumerate}[$\bullet$]
 	\item Definition and spectral density for real symmetric Gaussian matrices (GOE).
+	\item Other random matrix ensembles with explicit eigenvalue densities:
+		Wishart (Laguerre) and Jacobi (MANOVA/CCA) ensembles.
 	\item Tridiagonalization and general beta ensemble.
-	\item Wigner's semicircle law via tridiagonalization.
+	\item (next week, not today) Wigner's semicircle law via tridiagonalization.
 \end{enumerate}
 
 \section{Gaussian ensembles}
@@ -697,8 +699,6 @@ hypergeometric distribution from probability theory.
 
 Any real symmetric matrix can be orthogonally transformed into a tridiagonal matrix. This fact is standard in numerical linear algebra (the ``Householder reduction'') and also central in random matrix theory---notably in the Dumitriu--Edelman approach \cite{dumitriu2002matrix} for Gaussian ensembles.
 
-\subsection{Statement}
-
 \begin{theorem}
 \label{thm:tridiagonal}
 Any real symmetric matrix \(W \in \mathbb{R}^{n\times n}\) can be represented as
@@ -720,27 +720,22 @@ where \(T\) is real symmetric tridiagonal.  Concretely, \(T\) has nonzero entrie
 \]
 \end{theorem}
 
-\subsection{Householder Reflections: A Detailed Algorithm}
-
-\begin{definition}[Householder Reflection]
+\begin{definition}[Householder reflection]
 A \emph{Householder reflection} in \(\mathbb{R}^n\) is a matrix \(H\) of the form
 \[
   H \;=\; I \;-\; 2\,\frac{v\,v^\top}{\|v\|^2},
   \quad
-  v\in \mathbb{R}^n \text{ nonzero}.
+  v\in \mathbb{R}^n \text{ nonzero column vector}.
 \]
 One checks that \(H^\top = H\), \(H^2 = I\), and \(H\) is orthogonal (i.e.\ \(H^\top H = I\)).  Geometrically, \(H\) is the reflection across the hyperplane orthogonal to~\(v\).
 \end{definition}
 
-\medskip
-\noindent
-\textbf{Goal.}
+\begin{proof}[Proof of \Cref{thm:tridiagonal}]
 We want to apply successive Householder reflections to ``zero out'' all entries below the first subdiagonal (and by symmetry, above the first superdiagonal), leaving only the tridiagonal part possibly nonzero.
 
-\begin{enumerate}[1.]
-\item \textbf{Start with }\(W^{(0)} = W\).
+\smallskip\noindent\textbf{Start with }\(W^{(0)} = W\).
 
-\item \textbf{Step \(k=1\).}
+\smallskip\noindent\textbf{Step \(k=1\).}
    We aim to zero out the entries \(W^{(0)}_{2,1}, W^{(0)}_{3,1}, \dots, W^{(0)}_{n,1}\).  Define the vector
    \[
      x \;=\; \bigl(W^{(0)}_{2,1},\,W^{(0)}_{3,1},\,\dots,\,W^{(0)}_{n,1}\bigr)^\top
@@ -762,13 +757,13 @@ We want to apply successive Householder reflections to ``zero out'' all entries 
    \]
    By construction, \(H_1\) is orthogonal and symmetric, and it will force all sub-subdiagonal entries below row~2 in column~1 to vanish when we do \(H_1\,W^{(0)}\,H_1\).
 
-\item \textbf{Step \(k=2,\dots,n-2\).}
+\smallskip\noindent\textbf{Step \(k=2,\dots,n-2\).}
    Inductively, we zero out the \((k+2)\)-th through \(n\)-th entries in the \(k\)-th column (and by symmetry, the same row).  Each step uses a smaller Householder matrix \(H_k\) acting nontrivially in the lower-right \((n-k+1)\times(n-k+1)\) sub-block.  We set
    \[
      W^{(k)} \;=\; H_k \, W^{(k-1)} \, H_k.
    \]
 
-\item \textbf{End result.}
+\smallskip\noindent\textbf{End result.}
    After \(n-2\) steps, we obtain \(W^{(n-2)}\), which is tridiagonal.  Define
    \[
      Q \;=\; H_1 \,H_2\,\cdots\,H_{n-2}.
@@ -786,29 +781,25 @@ We want to apply successive Householder reflections to ``zero out'' all entries 
      Q \,W \,Q^\top
    \]
    has the desired tridiagonal form.
-\end{enumerate}
+\end{proof}
 
 \begin{remark}
 This Householder procedure is also used in practical numerical methods for eigenvalue computations: once a real symmetric matrix is reduced to tridiagonal form, specialized algorithms (such as the QR algorithm) can then be applied more efficiently.
+Overall, computations with tridiagonal matrices are much simpler and with better numerical stability than with general dense matrices.
 \end{remark}
-
-\begin{proof}[Proof of \Cref{thm:tridiagonal}]
-The algorithmic construction above completes the argument.  At each step, note that
-\(\bigl[H\,(\text{symmetric})\,H\bigr]\) remains symmetric because \(H\) itself is symmetric.  Moreover, each step enforces the vanishing of sub-subdiagonal (and super-subdiagonal) entries in the targeted row and column.  In the end, we get the desired real symmetric tridiagonal matrix
-\(\,W^{(n-2)}\).  By construction, the product \(Q = \prod_{k=1}^{n-2}H_k\) is orthogonal, giving \(W^{(n-2)} = Q\,W\,Q^\top\).
-\end{proof}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Wigner’s Semicircle Law via Tridiagonalization}
+\section{Tridiagonalization of random matrices}
 \label{sec:Wigner-SC-detailed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We now present a more detailed outline of how one proves the Wigner semicircle law for the GOE by using its \emph{random tridiagonal model}. This method, due to Dumitriu and Edelman \cite{dumitriu2002matrix}, is often viewed as more direct than Wigner’s original moment method.
+Here we discuss the tridiagonal form of the GOE random matrices,
+and extend it to the general beta case.
 
-\subsection{Dumitriu–Edelman Tridiagonal Model}
+\subsection{Dumitriu–Edelman tridiagonal model for GOE}
 
-\begin{theorem}[Tridiagonal Representation of GOE]
+\begin{theorem}
 \label{thm:DE-model}
 Let \(W\) be an \(n\times n\) GOE matrix (real symmetric) with variances chosen so that each off-diagonal entry has variance \(1/2\) and each diagonal entry has variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
 \[
@@ -829,82 +820,76 @@ and the random variables \(\{d_i,\alpha_j\}_{1 \le i \le n,\;1\le j\le n-1}\) ar
   \qquad
   \alpha_j \;=\; \sqrt{\frac{\chi^2_{\,n-j}}{2}},
 \]
-where \(\chi^2_{\nu}\) is a chi-square distribution with \(\nu\) degrees of freedom.  Equivalently, \(\sqrt{\tfrac{\chi^2_\nu}{2}}\) is (up to a factor) the norm of a Gaussian vector in~\(\mathbb{R}^\nu\).
+where \(\chi^2_{\nu}\) is a chi-square distribution with \(\nu\) degrees of freedom.
 \end{theorem}
 
-\begin{remark}
-To restate succinctly:
-\begin{itemize}
-\item The diagonal entries \(d_1,\dots,d_n\) are i.i.d.\ \(\mathcal{N}(0,1)\).
-\item The subdiagonal entries \(\alpha_1,\dots,\alpha_{n-1}\) are independent, each distributed as \(\sqrt{\tfrac{1}{2}\chi^2_{n-j}}\).
-\item All higher off-diagonal entries above the first superdiagonal are zero, so \(T\) has only \(2n-1\) nontrivial entries.
-\end{itemize}
+\begin{remark}[Chi-square distributions]
+The \emph{chi-square distribution} with \(\nu\) degrees of
+freedom, denoted by \(\chi^2_{\nu}\), is a fundamental
+distribution in statistics and probability theory. It arises
+naturally as the distribution of the sum of the squares of
+\(\nu\) independent standard normal random variables.
+Formally, if \(Z_1, Z_2, \ldots, Z_{\nu}\) are independent
+random variables with \(Z_i \sim \mathcal{N}(0,1)\), then
+the random variable
+\[
+  Q = \sum_{i=1}^{\nu} Z_i^2
+\]
+follows a chi-square distribution with \(\nu\) degrees of
+freedom, i.e., \(Q \sim \chi^2_{\nu}\). In the context of
+the Dumitriu–Edelman tridiagonal model
+(\Cref{thm:DE-model}), the subdiagonal entries \(\alpha_j\)
+are defined as \(\alpha_j = \sqrt{\frac{\chi^2_{n-j}}{2}}\).
+This scaling ensures that each \(\alpha_j^2\) has the
+appropriate variance required for the GOE ensemble,
+specifically matching the variance structure of the original
+Wigner matrix. The chi-square distribution's properties,
+such as its mean being \(\nu\) and its variance being
+\(2\nu\), play a crucial role in maintaining the tridiagonal
+matrix's spectral characteristics that lead to the
+semicircle law.
+
+The parameter $\nu$ does not need to be an integer, and the
+chi-square distribution is well defined for any positive
+real $\nu$, by continuation of the density formula.
 \end{remark}
 
-\begin{proof}[Sketch of Construction]
-This construction is essentially a specialized version of the Householder reduction in \Cref{sec:householder}, set up so that each step matches precisely the distributions \(\alpha_j\sim \sqrt{\tfrac{\chi^2_{n-j}}{2}}\) and \(d_i\sim\mathcal{N}(0,1)\).  One uses the rotational invariance of Gaussian matrices to ensure at each step that the ``residual vector'' is isotropic.  The norm of that vector yields the \(\chi^2\)-type variables.  Full details appear in \cite{dumitriu2002matrix} and advanced RMT texts.
+\begin{proof}[Idea of proof of \Cref{thm:DE-model}]
+	This construction is essentially a specialized version of
+	the Householder reduction in \Cref{sec:householder}, set up
+	so that each step matches precisely the distributions
+	\(\alpha_j\sim \sqrt{\tfrac{\chi^2_{n-j}}{2}}\) and
+	\(d_i\sim\mathcal{N}(0,1)\).  One uses the rotational
+	invariance of Gaussian matrices to ensure at each step that
+	the ``residual vector'' is isotropic (i.e., its distribution
+	is invariant under orthogonal transformations).  The norm
+	of that vector yields the \(\chi^2\)-type variables.
 \end{proof}
 
 Thus, to study the eigenvalues of a GOE matrix \(W\), one can equivalently study the (much sparser) random tridiagonal matrix \(T\).
 
-\subsection{Characteristic Polynomial and Three-Term Recurrence}
+\subsection{Generalization to \(\beta\)-ensembles}
 
-Consider \(p_n(\lambda) = \det(T - \lambda I)\).  Because \(T\) is tridiagonal, we have the classical three-term recurrence for these characteristic polynomials:
-\[
-  p_0(\lambda) := 1,\quad
-  p_1(\lambda) := d_1 - \lambda,
-\]
-\[
-  p_{k+1}(\lambda)
-  \;=\;
-  (d_{k+1} - \lambda)\,p_k(\lambda)
-  \;-\;\alpha_k^2\,p_{k-1}(\lambda),
-  \quad
-  (k=1,\dots,n-1).
-\]
-The eigenvalues of \(T\) are precisely the roots of \(p_n(\lambda)\).
 
-\subsection{Sketch of the Semicircle Limit Proof}
 
-We want to show that the empirical distribution
-\[
-  L_n
-  \;=\;
-  \frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i}
-\]
-(where \(\lambda_1,\dots,\lambda_n\) are the eigenvalues of \(T\)) converges weakly to the semicircle law
-\[
-  \mu_{\mathrm{sc}}(dx)
-  \;=\;
-  \frac{1}{2\pi}\sqrt{4 - x^2}\,\mathbf{1}_{|x|\le 2}\,dx
-\]
-as \(n\to\infty\).  A typical outline:
 
-\begin{enumerate}[1.]
-\item \textbf{Law of Large Numbers for \(\alpha_j\).}
-   Since \(\alpha_j^2 = \tfrac12\,\chi^2_{\,n-j}\) has mean \(\tfrac{n-j}{2}\), it is typically of order \(n/2\).  More precisely, for large \(n\), \(\alpha_j \approx \sqrt{\tfrac{n-j}{2}}\) with high probability.
 
-\item \textbf{Scaling by \(\sqrt{n}\).}
-   One rescales \(T\) by \(\tfrac{1}{\sqrt{n}}\).  This gives subdiagonal entries
-   \[
-     \frac{\alpha_j}{\sqrt{n}}
-     \;\approx\;
-     \sqrt{\frac{n-j}{2n}}
-     \;\approx\;
-     \sqrt{\frac{1 - j/n}{2}},
-   \]
-   while the diagonal entries become \(\tfrac{d_i}{\sqrt{n}}\), which vanish in the large-\(n\) limit.  So effectively, the subdiagonal structure drives the main spectral behavior in the bulk, producing the semicircle shape in the limit.
 
-\item \textbf{Orthogonal Polynomial / Recurrence Analysis.}
-   The polynomial \(p_n(\lambda)\) satisfies a discrete three-term recurrence whose ``continuum limit'' yields a certain integral equation (specifically the Stieltjes transform for the measure) whose solution is precisely the semicircle distribution.  In more detailed treatments, one shows that the moments or the Cauchy transform of \(L_n\) converge to that of \(\mu_{\mathrm{sc}}\).  The relevant PDE or integral equation is exactly solvable, producing the semicircle.
 
-\end{enumerate}
 
-Hence, with probability 1, as \(n\to\infty\), the empirical spectrum of \(\tfrac{1}{\sqrt{n}}\,W\) converges to the semicircle distribution on \([-2,2]\).  This precisely recovers \emph{Wigner’s semicircle law}.
 
-\begin{remark}[Extensions]
-A very similar approach works for the Gaussian Unitary Ensemble (\(\beta=2\)), leading to a random \emph{complex Hermitian} tridiagonal matrix.  For \(\beta=4\), there is a quaternionic block-tridiagonal model.  All of these point toward the same semicircle law for the global spectral distribution.
-\end{remark}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
