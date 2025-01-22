@@ -757,6 +757,8 @@ We want to apply successive Householder reflections to ``zero out'' all entries 
    \]
    By construction, \(H_1\) is orthogonal and symmetric, and it will force all sub-subdiagonal entries below row~2 in column~1 to vanish when we do \(H_1\,W^{(0)}\,H_1\).
 
+	 \colorbox{yellow}{\parbox{.7\textwidth}{MORE DETAILS ON THE HOUSEHOLDER REFLECTIONS NEEDED HERE.}}
+
 \smallskip\noindent\textbf{Step \(k=2,\dots,n-2\).}
    Inductively, we zero out the \((k+2)\)-th through \(n\)-th entries in the \(k\)-th column (and by symmetry, the same row).  Each step uses a smaller Householder matrix \(H_k\) acting nontrivially in the lower-right \((n-k+1)\times(n-k+1)\) sub-block.  We set
    \[
@@ -1013,6 +1015,8 @@ value
 decomposition
 of \(X\) and the properties of the Wishart ensemble.
 
+
+\colorbox{yellow}{\parbox{.7\textwidth}{Householder basic properties exercises}}
 
 \subsection{Distribution of the Householder vector in random tridiagonalization}
 \label{prob:householder-vector}
