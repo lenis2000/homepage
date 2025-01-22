@@ -117,7 +117,7 @@ Today, we are going to focus on Gaussian ensembles. The plan is:
 	\item Wigner's semicircle law via tridiagonalization.
 \end{enumerate}
 
-\section{Gaussian Ensembles}
+\section{Gaussian ensembles}
 
 \subsection{Definitions}
 \label{sub:GOE_GUE_definitons}
@@ -128,11 +128,12 @@ Recall that a real Wigner matrix $W$ can be modeled as
 \end{equation*}
 where $Y$ is an $n\times n$ matrix with independent entries $Y_{ij}$,
 $1\le i,j\le n$, such that $Y_{ij}$ are mean zero, variance~$1$.
-Then for $1\le i<j\le n$, we have
+Then for $1\le i<j\le n$, we have for the matrix
+$W=(X_{ij})$:
 \begin{equation*}
-	\operatorname{\mathrm{Var}}\left( W_{ii} \right)=
+	\operatorname{\mathrm{Var}}\left( X_{ii} \right)=
 	\operatorname{\mathrm{Var}}( \sqrt 2\ssp Y_{ii} )=2,\qquad
-	\operatorname{\mathrm{Var}}\left( W_{ij} \right)=
+	\operatorname{\mathrm{Var}}\left( X_{ij} \right)=
 	\operatorname{\mathrm{Var}}\left( \frac{Y_{ij}+Y_{ji}}{\sqrt 2} \right)=1.
 \end{equation*}
 
@@ -164,133 +165,143 @@ distributed as $Z$, then the random matrix\footnote{$Y^\dagger$ denotes the tran
 	W=\frac{Y+Y^\dagger}{\sqrt 2}
 \end{equation*}
 is said to have the \emph{Gaussian Unitary Ensemble} (GUE) distribution.
-For GUE,
+For the GUE matrix $W=(X_{ij})$, 
 we have for $1\le i<j\le n$:
 \begin{equation*}
-	\operatorname{\mathrm{Var}}_{\mathbb{C}}(W_{ii})=2,
-	\qquad 
-	\operatorname{\mathrm{Var}}_{\mathbb{C}}(W_{ij})
+	\operatorname{\mathrm{Var}}_{\mathbb{C}}(X_{ii})=2,
+	\qquad
+	\operatorname{\mathrm{Var}}_{\mathbb{C}}(X_{ij})
 	=\frac{1}{4}
-	\bigl[ \operatorname{\mathbb{E}}(Z_{ij}^R
+	\Bigl[ \operatorname{\mathbb{E}}(Z_{ij}^R
 			+
 		Z_{ji}^R)^2
 		+
 		\operatorname{\mathbb{E}}(Z_{ij}^I
 			+
 		Z_{ji}^I)^2
-	\bigr]
+	\Bigr]
 	=1.
 \end{equation*}
 
+Both GOE and GUE have real eigenvalues $\lambda_1 \ge \ldots \ge \lambda_n$.
+We are going to describe the joint distribution of these eigenvalues.
+Despite the fact that the map from a matrix to its eigenvalues
+is quite complicated and nonlinear (you need to solve an equation of degree $n$),
+the distribution of eigenvalues in the Gaussian cases is fully explicit.
+
+See Problem \ref{prob:invariance_GOE_GUE}
+for invariance of GOE/GUE under orthogonal/unitary conjugation
+(this is where the names ``orthogonal'' and ``unitary'' come from).
+
+\begin{remark}
+	There is a third player in the game, the \emph{Gaussian
+	Symplectic Ensemble} (GSE),which we will mainly ignore in
+	this course
+	due to its less intuitive quaternionic nature.
+\end{remark}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Joint Eigenvalue Distribution for GOE (\(\beta = 1\))}
+\subsection{Joint eigenvalue distribution for GOE}
 \label{sub:GOE-derivation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In this section, we give a derivation of the joint probability density for the eigenvalues of a real-symmetric Gaussian matrix, commonly known as the \emph{Gaussian Orthogonal Ensemble} (GOE). Our primary goal is to show:
+In this section, we give a derivation of the joint probability density for the GOE.
 
 \begin{theorem}[GOE Joint Eigenvalue Density]
 \label{thm:GOE-joint-eigs-detailed}
-Let \(M\) be an \(N\times N\) real-symmetric matrix with distribution defined by
-\begin{itemize}
-\item Off-diagonal entries \(M_{ij}\), \(i<j\), i.i.d.\ \(\mathcal{N}(0,\sigma^2)\).
-\item Diagonal entries \(M_{ii}\) i.i.d.\ \(\mathcal{N}(0,2\sigma^2)\).
-\end{itemize}
-Then its ordered real eigenvalues \(\lambda_1 \le \cdots \le \lambda_N\) have a joint probability density function given by:
+Let \(W\) be an \(n\times n\) real-symmetric matrix with
+the GOE distribution (\Cref{sub:GOE_GUE_definitons}).
+Then its ordered real eigenvalues \(\lambda_1 \le \cdots \le
+\lambda_n\) 
+of $W/\sqrt 2$
+have a joint probability density function
+on $\mathbb{R}^n$
+given by:
 \[
-  p(\lambda_1,\ldots,\lambda_N)
-  \;=\;\frac{1}{Z_{N,\sigma}}
-  \,\prod_{1 \le i < j \le N}
+  p(\lambda_1,\ldots,\lambda_n)
+  \;=\;\frac{1}{Z_{n}}
+  \,\prod_{1 \le i < j \le n}
   \!\!\bigl|\lambda_i - \lambda_j\bigr|\,
-  \exp\!\Bigl(
-    -\frac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2
+  \exp\Bigl(
+    -\frac{1}{2}\sum_{k=1}^n \lambda_k^2
   \Bigr),
 \]
-where \(Z_{N,\sigma}\) is a constant (depending on \(N\) and \(\sigma\) but not on \(\lambda_i\)) ensuring the density integrates to 1.
+where \(Z_{n}\) is a constant (depending on \(n\) but not on \(\lambda_i\)) ensuring the density integrates to 1:
+\begin{equation*}
+	Z_n=Z_n^{GOE}=\frac{(2\pi)^{n/2}}{n!}
+	\prod_{j=0}^{n-1}\frac{\Gamma(1+(j+1)\beta/2)}{\Gamma(1+\beta/2)}, \qquad 
+	\beta=1.
+\end{equation*}
 \end{theorem}
-
 \begin{remark}
-Often one takes \(\sigma^2=1/2\), in which case the exponent becomes \(\exp(-\frac12\sum \lambda_k^2)\). We will keep a general \(\sigma\) for clarity.
+	We renormalized the GOE by a factor of $\sqrt 2$ to make the 
+	Gaussian part of the density, $\exp(-\frac{1}{2}\sum_{k=1}^n \lambda_k^2)$,
+	standard. In the GUE case, no normalization is required.
 \end{remark}
 
-We break the proof into four major steps:
+We break the proof into four major steps,
+considered in
+\Cref{subsec:density-entries,subsec:spectral,subsec:jacobian,subsec:final-form}
+below.
 
-\subsection{Step A: Joint Density of Matrix Entries}
+\subsection{Step A. Joint density of matrix entries}
 \label{subsec:density-entries}
 
-Let us label all independent entries of \(M\):
+Let us label all independent entries of \(W/\sqrt 2\):
 \[
-  \{\underbrace{M_{12}, M_{13},\dots}_{\text{above diag}},
-  \underbrace{M_{22}, M_{33},\dots}_{\text{diag}}, \ldots \}.
+	\{\underbrace{X_{12}, X_{13},\dots, X_{23},\ldots }_{\text{above diag}},
+	\underbrace{X_{22}, X_{33},\dots}_{\text{diag}}\}.
 \]
-There are \(\frac{N(N-1)}{2}\) off-diagonal entries and \(N\) diagonal entries. By definition:
+There are \(\frac{n(n-1)}{2}\) off-diagonal entries
+with variance $1/2$, 
+and \(n\) diagonal entries with variance $1$.
+The joint density of these entries (ignoring normalization for a moment) is
+proportional to
+\begin{equation}
+	\label{eq:GOE-density-entries-first}
+	f(x_{12},x_{13},\ldots,x_{22},x_{33},\ldots ) 
+  \propto\exp\Bigl(
+    - \sum_{i<j} x_{ij}^2
+    -\frac{1}{2} \sum_{i=1}^n x_{ii}^2
+  \Bigr)=
+	\exp
+	\Bigl( -\frac{1}{2}\sum_{i,j=1}^n x_{ij}^2 \Bigr),
+\end{equation}
+where in the right-hand side, we have
+$x_{ij}=x_{ji}$ for $i\ne j$.
+We then recognize 
 \[
-  M_{ij} = M_{ji}, \quad
-  M_{ij}\sim \mathcal{N}(0,\sigma^2)\text{ for } i<j,
-  \quad
-  M_{ii}\sim \mathcal{N}(0,2\sigma^2).
+	\sum_{i,j=1}^n x_{ij}^2=\operatorname{Tr}(W^2)=\sum_{k=1}^n \lambda_k^2.
 \]
-
-Thus the joint density of these entries (ignoring normalization for a moment) is
+Including the normalization for Gaussians, one arrives at
+the density on $\mathbb{R}^{n(n+1)/2}$:
 \[
-  f(M) \;\propto\;
-  \exp\Bigl(
-    -\frac{1}{2\sigma^2} \sum_{i<j} M_{ij}^2
-    -\frac{1}{4\sigma^2} \sum_{i=1}^N M_{ii}^2
-  \Bigr).
-\]
-One can rewrite \(\sum_{i<j}M_{ij}^2 + \tfrac12\sum_i M_{ii}^2\) as \(\tfrac12 \sum_{i,j} M_{ij}^2\). Indeed,
-\[
-  \operatorname{Tr}(M^2) = \sum_{i,j} M_{ij}^2
-  \quad \text{for real-symmetric } M.
-\]
-But each off-diagonal term \(M_{ij}^2\) for \(i<j\) appears exactly once in \(\sum_{i,j}\), while each diagonal term \(M_{ii}^2\) appears once. Hence
-\[
-  \sum_{i<j}M_{ij}^2 + \tfrac12\sum_i M_{ii}^2
+  f(W)\,dW
   \;=\;
-  \tfrac12 \sum_{i,j} M_{ij}^2
-  \;=\; \tfrac12\,\operatorname{Tr}(M^2).
+  \pi^{-\tfrac{n(n-1)}{4}}
+  \,\bigl(2\pi\bigr)^{-\tfrac{n}{4}}
+  \,\exp\Bigl(-\tfrac{1}{2}\operatorname{Tr}(W^2)\Bigr)\; dW,
 \]
-Thus
-\[
-  f(M)
-  \;=\; \text{(constant)} \times
-  \exp\!\Bigl(-\tfrac{1}{4\sigma^2}\operatorname{Tr}(M^2)\Bigr).
-\]
-Including the correct normalization for Gaussians, one arrives at
-\[
-  f(M)\,dM
-  \;=\;
-  \bigl(2\pi\sigma^2\bigr)^{-\tfrac{N(N-1)}{4}}
-  \,\bigl(4\pi\sigma^2\bigr)^{-\tfrac{N}{4}}
-  \,\exp\Bigl(-\tfrac{1}{4\sigma^2}\operatorname{Tr}(M^2)\Bigr)\; dM,
-\]
-where \(dM\) is the product measure over the \(\tfrac{N(N+1)}{2}\) independent entries.
+where \(dW\) is the product measure over the \(\tfrac{n(n+1)}{2}\) independent entries.
 
-\subsection{Step B: Spectral Decomposition \(\,M=Q\Lambda Q^T\)}
+\subsection{Step B. Spectral decomposition}
 \label{subsec:spectral}
 
-Since \(M\) is real-symmetric, it can be orthogonally diagonalized:
+Since \(W\) is real-symmetric, it can be orthogonally diagonalized:
 \[
-  M = Q\,\Lambda\,Q^T,\quad
-  Q \in O(N),
+  W = Q\,\Lambda\,Q^T,\quad
+  Q \in O(n),
 \]
-where \(\Lambda = \mathrm{diag}(\lambda_1,\ldots,\lambda_N)\) has the eigenvalues.  Then:
+where \(\Lambda = \mathrm{diag}(\lambda_1,\ldots,\lambda_n)\) has the eigenvalues.  Then, as we saw before, we have
 \[
-  \operatorname{Tr}(M^2)
+  \operatorname{Tr}(W^2)
   = \operatorname{Tr}\bigl(Q\,\Lambda\,Q^T Q\,\Lambda\,Q^T\bigr)
   = \operatorname{Tr}(\Lambda^2)
-  = \sum_{k=1}^N \lambda_k^2.
+  = \sum_{k=1}^n \lambda_k^2.
 \]
-So
-\[
-  f(M)
-  \;=\;\text{(constant)}\,\exp\!\Bigl(
-    -\tfrac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2
-  \Bigr).
-\]
+It remains to make the change of variables from \(W\) to \(\Lambda\), which involves the Jacobian.
 
-\subsection{Step C: The Orthogonal-Group Volume \(\,dQ\) and Jacobian Calculation}
+\subsection{Step C. Jacobian}
 \label{subsec:jacobian}
 
 We now examine how the measure \(dM\) in the space of real-symmetric matrices factors into a piece depending on \(\{\lambda_i\}\) and a piece depending on \(Q\).  Formally,
@@ -390,6 +401,7 @@ If we track the rank-1 changes \(\delta\lambda_i\) and the \(\tfrac{N(N-1)}{2}\)
 One can find many standard treatments of this in random matrix textbooks (e.g., Mehta’s \emph{Random Matrices}, Forrester’s \emph{Log-Gases and Random Matrices}, or Tao’s \emph{Topics in Random Matrix Theory}). This completes the proof of \Cref{thm:Jacobian-GOE}.
 
 \subsection{Step D: Integration Over \(O(N)\) and Final Form of the PDF}
+\label{subsec:final-form}
 
 Putting Steps A--C together, we find:
 \[
@@ -657,6 +669,31 @@ A very similar approach works for the Gaussian Unitary Ensemble (\(\beta=2\)), y
 \end{remark}
 
 
+\appendix
+\setcounter{section}{2}
+
+\section{Problems (due 2025-02-22)}
+
+\subsection{Invariance of GOE and GUE}
+\label{prob:invariance_GOE_GUE}
+
+Show that the distribution of the GOE and GUE is
+invariant under, respectively, orthogonal and unitary conjugation.
+For GOE, this means that if \(W\)
+is a random GOE matrix and \(Q\) is a fixed orthogonal
+matrix of order $n$, then the distribution
+of \(QWQ^\top\) is the same as the distribution of \(W\).
+(Similarly for GUE.)
+
+\medskip
+\noindent
+Hint: write the joint density of all entries of GOE/GUE (for instance, GOE
+is determined by $n(n+1)/2$ real random independent variables)
+in a coordinate-free way.
+
+
+
+
 
 
 \newpage
@@ -792,10 +829,7 @@ This structure appears in various contexts in random matrix theory and is often 
 
 
 
-\appendix
-\setcounter{section}{2}
 
-\section{Problems (due 2025-02-22)}
 
 
 
