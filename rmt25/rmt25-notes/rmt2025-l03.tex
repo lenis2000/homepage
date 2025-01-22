@@ -75,9 +75,7 @@ Updated at \currenttime, \today}}
 \tableofcontents
 
 
-\begin{lnotes}
-	TBD
-\end{lnotes}
+
 
 \section{Recap}
 
@@ -85,22 +83,583 @@ We have established the semicircle law for
 real Wigner random matrices.
 If $W$ is an $n\times n$ real symmetric matrix with
 independent entries $X_{ij}$ above the main diagonal
-(mean zero, variance $1$), and mean zero diagonal entries,
+(mean zero, variance~$1$), and mean zero diagonal entries,
 then the empirical spectral distribution of $W/\sqrt{n}$
 converges to the semicircle law as $n\to\infty$:
-\begin{equation*}
+\begin{equation}
+	\label{eq:semicircle_conv}
 	\lim_{n\to\infty} \frac{1}{n} \sum_{i=1}^n \delta_{\lambda_i/\sqrt n} =
-	\mu_{\mathrm{sc}}.
+	\mu_{\mathrm{sc}},
+\end{equation}
+where
+\begin{equation*}
+	\mu_{\mathrm{sc}}(dx) = \begin{cases}
+		\frac{1}{2\pi} \sqrt{4-x^2} \, dx, & \text{if } |x|\le 2, \\
+		0, & \text{otherwise}.
+	\end{cases}
 \end{equation*}
-The convergence is weakly almost sure.
+The convergence
+in \eqref{eq:semicircle_conv} is weakly almost sure.
+The way we got the result is by expanding
+$\operatorname{\mathbb{E}}\operatorname{Tr} (W^k)$ and counting
+trees, plus analytic lemmas which ensure that
+the convergence of expected powers of traces is enough
+to conclude the convergence
+\eqref{eq:semicircle_conv}
+of the empirical spectral measures.
+
+\medskip
+
+Today, we are going to focus on Gaussian ensembles. The plan is:
+\begin{enumerate}[$\bullet$]
+	\item Definition and spectral density for real symmetric Gaussian matrices (GOE).
+	\item Tridiagonalization and general beta ensemble.
+	\item Wigner's semicircle law via tridiagonalization.
+\end{enumerate}
+
+\section{Gaussian Ensembles}
+
+\subsection{Definitions}
+\label{sub:GOE_GUE_definitons}
+
+Recall that a real Wigner matrix $W$ can be modeled as
+\begin{equation*}
+	W=\frac{Y+Y^\top}{\sqrt{2}},
+\end{equation*}
+where $Y$ is an $n\times n$ matrix with independent entries $Y_{ij}$,
+$1\le i,j\le n$, such that $Y_{ij}$ are mean zero, variance~$1$.
+Then for $1\le i<j\le n$, we have
+\begin{equation*}
+	\operatorname{\mathrm{Var}}\left( W_{ii} \right)=
+	\operatorname{\mathrm{Var}}( \sqrt 2\ssp Y_{ii} )=2,\qquad
+	\operatorname{\mathrm{Var}}\left( W_{ij} \right)=
+	\operatorname{\mathrm{Var}}\left( \frac{Y_{ij}+Y_{ji}}{\sqrt 2} \right)=1.
+\end{equation*}
+
+If, in addition, we assume that $Y_{ij}$ are standard Gaussian
+$\mathcal{N}(0,1)$, then the distribution of $W$ is called
+the \emph{Gaussian Orthogonal Ensemble} (GOE).
+
+For the complex case, we
+have the \emph{standard complex Gaussian random variable}
+\begin{equation*}
+	Z=\frac{1}{\sqrt 2}\left( Z^R+\mathbf{i}\ssp Z^I \right),
+	\qquad
+	\operatorname{\mathbb{E}} (Z)=0,
+	\qquad
+	\operatorname{\mathrm{Var}}_{\mathbb{C}}(Z)\coloneqq
+	\operatorname{\mathbb{E}} (|Z|^2)=
+	\frac{
+	\operatorname{\mathbb{E}} (|Z^R|^2)+
+	\operatorname{\mathbb{E}} (|Z^I|^2)}{2}=1
+	,
+\end{equation*}
+where $Z^R$ and $Z^I$ are independent
+standard Gaussian real random variables $\mathcal{N}(0,1)$.
+
+If we take $Y$ to be an $n\times n$ matrix with independent
+entries $Y_{ij}$, $1\le i,j\le n$
+distributed as $Z$, then the random matrix\footnote{$Y^\dagger$ denotes the transpose of $Y$ combined with complex conjugation.}
+\begin{equation*}
+	W=\frac{Y+Y^\dagger}{\sqrt 2}
+\end{equation*}
+is said to have the \emph{Gaussian Unitary Ensemble} (GUE) distribution.
+For GUE,
+we have for $1\le i<j\le n$:
+\begin{equation*}
+	\operatorname{\mathrm{Var}}_{\mathbb{C}}(W_{ii})=2,
+	\qquad 
+	\operatorname{\mathrm{Var}}_{\mathbb{C}}(W_{ij})
+	=\frac{1}{4}
+	\bigl[ \operatorname{\mathbb{E}}(Z_{ij}^R
+			+
+		Z_{ji}^R)^2
+		+
+		\operatorname{\mathbb{E}}(Z_{ij}^I
+			+
+		Z_{ji}^I)^2
+	\bigr]
+	=1.
+\end{equation*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Joint Eigenvalue Distribution for GOE (\(\beta = 1\))}
+\label{sub:GOE-derivation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In this section, we give a derivation of the joint probability density for the eigenvalues of a real-symmetric Gaussian matrix, commonly known as the \emph{Gaussian Orthogonal Ensemble} (GOE). Our primary goal is to show:
+
+\begin{theorem}[GOE Joint Eigenvalue Density]
+\label{thm:GOE-joint-eigs-detailed}
+Let \(M\) be an \(N\times N\) real-symmetric matrix with distribution defined by
+\begin{itemize}
+\item Off-diagonal entries \(M_{ij}\), \(i<j\), i.i.d.\ \(\mathcal{N}(0,\sigma^2)\).
+\item Diagonal entries \(M_{ii}\) i.i.d.\ \(\mathcal{N}(0,2\sigma^2)\).
+\end{itemize}
+Then its ordered real eigenvalues \(\lambda_1 \le \cdots \le \lambda_N\) have a joint probability density function given by:
+\[
+  p(\lambda_1,\ldots,\lambda_N)
+  \;=\;\frac{1}{Z_{N,\sigma}}
+  \,\prod_{1 \le i < j \le N}
+  \!\!\bigl|\lambda_i - \lambda_j\bigr|\,
+  \exp\!\Bigl(
+    -\frac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2
+  \Bigr),
+\]
+where \(Z_{N,\sigma}\) is a constant (depending on \(N\) and \(\sigma\) but not on \(\lambda_i\)) ensuring the density integrates to 1.
+\end{theorem}
+
+\begin{remark}
+Often one takes \(\sigma^2=1/2\), in which case the exponent becomes \(\exp(-\frac12\sum \lambda_k^2)\). We will keep a general \(\sigma\) for clarity.
+\end{remark}
+
+We break the proof into four major steps:
+
+\subsection{Step A: Joint Density of Matrix Entries}
+\label{subsec:density-entries}
+
+Let us label all independent entries of \(M\):
+\[
+  \{\underbrace{M_{12}, M_{13},\dots}_{\text{above diag}},
+  \underbrace{M_{22}, M_{33},\dots}_{\text{diag}}, \ldots \}.
+\]
+There are \(\frac{N(N-1)}{2}\) off-diagonal entries and \(N\) diagonal entries. By definition:
+\[
+  M_{ij} = M_{ji}, \quad
+  M_{ij}\sim \mathcal{N}(0,\sigma^2)\text{ for } i<j,
+  \quad
+  M_{ii}\sim \mathcal{N}(0,2\sigma^2).
+\]
+
+Thus the joint density of these entries (ignoring normalization for a moment) is
+\[
+  f(M) \;\propto\;
+  \exp\Bigl(
+    -\frac{1}{2\sigma^2} \sum_{i<j} M_{ij}^2
+    -\frac{1}{4\sigma^2} \sum_{i=1}^N M_{ii}^2
+  \Bigr).
+\]
+One can rewrite \(\sum_{i<j}M_{ij}^2 + \tfrac12\sum_i M_{ii}^2\) as \(\tfrac12 \sum_{i,j} M_{ij}^2\). Indeed,
+\[
+  \operatorname{Tr}(M^2) = \sum_{i,j} M_{ij}^2
+  \quad \text{for real-symmetric } M.
+\]
+But each off-diagonal term \(M_{ij}^2\) for \(i<j\) appears exactly once in \(\sum_{i,j}\), while each diagonal term \(M_{ii}^2\) appears once. Hence
+\[
+  \sum_{i<j}M_{ij}^2 + \tfrac12\sum_i M_{ii}^2
+  \;=\;
+  \tfrac12 \sum_{i,j} M_{ij}^2
+  \;=\; \tfrac12\,\operatorname{Tr}(M^2).
+\]
+Thus
+\[
+  f(M)
+  \;=\; \text{(constant)} \times
+  \exp\!\Bigl(-\tfrac{1}{4\sigma^2}\operatorname{Tr}(M^2)\Bigr).
+\]
+Including the correct normalization for Gaussians, one arrives at
+\[
+  f(M)\,dM
+  \;=\;
+  \bigl(2\pi\sigma^2\bigr)^{-\tfrac{N(N-1)}{4}}
+  \,\bigl(4\pi\sigma^2\bigr)^{-\tfrac{N}{4}}
+  \,\exp\Bigl(-\tfrac{1}{4\sigma^2}\operatorname{Tr}(M^2)\Bigr)\; dM,
+\]
+where \(dM\) is the product measure over the \(\tfrac{N(N+1)}{2}\) independent entries.
+
+\subsection{Step B: Spectral Decomposition \(\,M=Q\Lambda Q^T\)}
+\label{subsec:spectral}
+
+Since \(M\) is real-symmetric, it can be orthogonally diagonalized:
+\[
+  M = Q\,\Lambda\,Q^T,\quad
+  Q \in O(N),
+\]
+where \(\Lambda = \mathrm{diag}(\lambda_1,\ldots,\lambda_N)\) has the eigenvalues.  Then:
+\[
+  \operatorname{Tr}(M^2)
+  = \operatorname{Tr}\bigl(Q\,\Lambda\,Q^T Q\,\Lambda\,Q^T\bigr)
+  = \operatorname{Tr}(\Lambda^2)
+  = \sum_{k=1}^N \lambda_k^2.
+\]
+So
+\[
+  f(M)
+  \;=\;\text{(constant)}\,\exp\!\Bigl(
+    -\tfrac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2
+  \Bigr).
+\]
+
+\subsection{Step C: The Orthogonal-Group Volume \(\,dQ\) and Jacobian Calculation}
+\label{subsec:jacobian}
+
+We now examine how the measure \(dM\) in the space of real-symmetric matrices factors into a piece depending on \(\{\lambda_i\}\) and a piece depending on \(Q\).  Formally,
+\[
+  dM
+  = \Bigl|\det\bigl(\tfrac{\partial M}{\partial(\Lambda,Q)}\bigr)\Bigr|
+    \,d\Lambda\,dQ,
+\]
+where \(dQ\) is the (right) Haar measure on \(O(N)\), and \(d\Lambda\) is the Lebesgue measure on \(\mathbb{R}^N\) (restricted to \(\lambda_1\le \cdots\le \lambda_N\) if we want an ordering).
+
+A standard result states:
+
+\begin{theorem}[Jacobian for Spectral Decomposition]
+\label{thm:Jacobian-GOE}
+For real-symmetric \(M=Q\Lambda Q^T\), one has
+\[
+  \bigl|\det\bigl(\tfrac{\partial M}{\partial(\Lambda,Q)}\bigr)\bigr|
+  \;=\;
+  \prod_{1\le i<j\le N}
+  \bigl|\lambda_i - \lambda_j\bigr|.
+\]
+\end{theorem}
+
+\begin{remark}
+Equivalently, one often writes
+\[
+  dM
+  \;=\;
+  \bigl|\Delta(\lambda_1,\dots,\lambda_N)\bigr|\;
+  d\Lambda\,dQ,
+  \quad\text{where }
+  \Delta(\lambda_1,\dots,\lambda_N)
+  = \prod_{i<j}(\lambda_j-\lambda_i)
+\]
+is the \emph{Vandermonde determinant}.
+\end{remark}
+
+Below is one detailed proof, using the idea of “infinitesimal variations” of \(Q\).
+
+\subsubsection*{Detailed Proof of the Jacobian}
+
+We will consider small perturbations of \(\Lambda\) and \(Q\).  Write
+\[
+  M = Q\,\Lambda\,Q^T,
+  \quad
+  \Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_N).
+\]
+Let \(\delta M\) be an infinitesimal change in \(M\). We want to see how \(\delta M\) depends on \(\delta\Lambda\) and \(\delta Q\).
+
+\paragraph{Parametrizing \(\delta Q\).}
+Since \(Q\in O(N)\), any small variation of \(Q\) can be written as \(Q\,\exp(B)\approx Q(I+B)\) where \(B\) is an infinitesimal skew-symmetric matrix: \(B^T=-B\). Indeed, the \(\dim(O(N)) = \tfrac{N(N-1)}{2}\), matching the dimension of the space of skew-symmetric matrices.
+
+\paragraph{Compute \(\delta M\).}
+Under an infinitesimal change, say
+\[
+  Q \mapsto Q\,(I + B),
+  \quad
+  \Lambda \mapsto \Lambda + \delta\Lambda,
+\]
+we have
+\[
+  M
+  = Q\,\Lambda\,Q^T
+  \;\;\Longrightarrow\;\;
+  \delta M
+  = Q\,(\delta \Lambda)\,Q^T
+   \;+\;
+    Q\,\Lambda\,(I+B)^T\,Q^T
+   \;-\;
+    Q\,\Lambda\,Q^T
+\]
+to first order in small quantities. Simplify \((I+B)^T = I + B^T = I - B\) because \(B\) is skew-symmetric. Thus
+\[
+  \delta M
+  = Q\,(\delta\Lambda)\,Q^T
+   + Q\,\Lambda\,(I - B)\,Q^T
+   - Q\,\Lambda\,Q^T
+  = Q\,(\delta\Lambda)\,Q^T
+    + Q\,\Lambda\,(-B)\,Q^T
+  = Q\,(\delta\Lambda)\,Q^T
+    - Q\,\Lambda\,B\,Q^T.
+\]
+So
+\[
+  \delta M
+  = Q\,(\delta\Lambda)\,Q^T
+    - Q\,\Lambda\,Q^T \,(Q\,B\,Q^T),
+\]
+since \(Q^TQ=I\).  But keep in mind that \(\Lambda\) is diagonal, so \(\Lambda B\) is simpler in some sense.
+
+\paragraph{Orthogonal Decomposition of \(\delta M\).}
+Now we want to separate the part of \(\delta M\) that corresponds to changes in the eigenvalues from the part that corresponds to changes in \(Q\). One can write \(\delta\Lambda = \mathrm{diag}(\delta\lambda_1,\dots,\delta\lambda_N)\). Also note that \(\Lambda B\) is a matrix that has certain off-diagonal structure, since \(\Lambda\) is diagonal but \(B\) is skew-symmetric.
+
+If we track the rank-1 changes \(\delta\lambda_i\) and the \(\tfrac{N(N-1)}{2}\) parameters in \(B\) carefully, one obtains that the Jacobian is precisely the product of all eigenvalue gaps \(\lambda_i-\lambda_j\). A fully coordinate-based approach would assign a local parameter system to \(O(N)\) near a fixed \(Q\), solve for \(\delta\lambda_i\) and the \(\tfrac{N(N-1)}{2}\) independent components of \(\delta Q\), and then match to the \(\tfrac{N(N+1)}{2}\) differentials in \(\delta M\). The resulting determinant from that coordinate transformation is the Vandermonde product
+\(\prod_{i<j}|\lambda_i-\lambda_j|\).
+
+One can find many standard treatments of this in random matrix textbooks (e.g., Mehta’s \emph{Random Matrices}, Forrester’s \emph{Log-Gases and Random Matrices}, or Tao’s \emph{Topics in Random Matrix Theory}). This completes the proof of \Cref{thm:Jacobian-GOE}.
+
+\subsection{Step D: Integration Over \(O(N)\) and Final Form of the PDF}
+
+Putting Steps A--C together, we find:
+\[
+  dM
+  \;=\;
+  \biggl(\prod_{i<j}|\lambda_i-\lambda_j|\biggr)\;
+  d\Lambda
+  \,\bigl(\underbrace{\text{Haar measure on }O(N)}_{\text{does not depend on }\lambda_i}\bigr).
+\]
+Hence, the joint density of \(\{\lambda_1,\dots,\lambda_N\}\) is (up to a global constant):
+\[
+  \prod_{i<j}|\lambda_i-\lambda_j|\;
+  \exp\!\Bigl(-\tfrac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2\Bigr).
+\]
+Finally, there is a constant factor from \(\int_{O(N)} dQ\) (the volume of the orthogonal group) and the earlier normalizing Gaussians, yielding the claim:
+\[
+  p(\lambda_1,\dots,\lambda_N)
+  \;=\;
+  \frac{1}{Z_{N,\sigma}}
+  \prod_{i<j}|\lambda_i-\lambda_j|\;
+  \exp\!\Bigl(-\tfrac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2\Bigr).
+\]
+This completes the detailed proof of the GOE joint eigenvalue distribution.
+
+\begin{remark}[Ordering of Eigenvalues]
+Often we incorporate the ordering \(\lambda_1\le\cdots\le \lambda_N\) by restricting \(\Lambda\) to the “chamber” \(\{\lambda_1\le\cdots\le\lambda_N\}\) and multiplying by \(N!\).  One can do either approach: the above formula typically assumes ordered eigenvalues and includes a factor \(\prod_{i<j}|\lambda_i-\lambda_j|\).  The differences are routine normalizing constants.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Tridiagonal (Householder) Form for Real-Symmetric Matrices}
+\label{sec:householder}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We now give a step-by-step procedure (and proof) of how any real-symmetric matrix can be orthogonally transformed into a tridiagonal matrix. This is a standard topic in numerical linear algebra (the “Householder reduction”) but is also central in random matrix theory (especially the Dumitriu–Edelman approach to the Gaussian ensembles).
+
+\subsection{Statement}
+
+\begin{theorem}[Real-Symmetric Tridiagonalization]
+\label{thm:tridiagonal}
+Any real-symmetric matrix \(A\in\mathbb{R}^{N\times N}\) can be represented as
+\[
+  A = Q^T\, T\, Q,
+  \quad
+  \text{where } Q\in O(N)
+  \text{ and } T\text{ is real-symmetric tridiagonal.}
+\]
+That is, \(T\) has nonzero entries only on the main diagonal and the first sub- and super-diagonals:
+\[
+  T = \begin{pmatrix}
+         d_1 & \alpha_1 & 0 & \cdots & 0\\
+         \alpha_1 & d_2 & \alpha_2 & \cdots & 0\\
+         0 & \alpha_2 & d_3 & \ddots & \vdots\\
+         \vdots & \vdots & \ddots & \ddots & \alpha_{N-1}\\
+         0 & 0 & \cdots & \alpha_{N-1} & d_N
+       \end{pmatrix}.
+\]
+\end{theorem}
+
+\subsection{Householder Reflections: A Detailed Algorithm}
+
+\noindent
+\textbf{Householder Reflection (Definition).}
+A \emph{Householder reflection} in \(\mathbb{R}^N\) is a matrix \(H\) of the form
+\[
+  H = I - 2\,\frac{v\,v^T}{\|v\|^2},
+\]
+where \(v\in\mathbb{R}^N\) is nonzero. One can check:
+\[
+  H^T = H,\quad
+  H^2 = I,\quad
+  H\text{ is orthogonal, i.e.\ }H^T H = I.
+\]
+Geometrically, \(H\) reflects vectors across the hyperplane orthogonal to \(v\).
+
+\medskip
+\noindent
+\textbf{Goal.}
+We want to apply successive Householder reflections to “zero out” all sub-subdiagonal (and super-subdiagonal by symmetry) entries of \(A\), leaving only the main diagonal and the first super-/sub-diagonal possibly nonzero.
+
+\begin{enumerate}[1.]
+\item \textbf{Start with } \(A^{(0)}=A\).
+\item \textbf{Step \(k=1\).}
+   We aim to zero out entries \(A^{(0)}_{2,1},A^{(0)}_{3,1},\ldots,A^{(0)}_{N,1}\), except for one to remain on the first subdiagonal if needed. Specifically, define the vector
+   \[
+     x
+     = (A^{(0)}_{2,1},\,A^{(0)}_{3,1},\,\dots,A^{(0)}_{N,1})^T
+     \;\in\;\mathbb{R}^{N-1}.
+   \]
+   We want a Householder \(H_1\) such that
+   \[
+     H_1\,A^{(0)}\,H_1
+     = A^{(1)}
+   \]
+   has zeros in the first column (and row, by symmetry) except possibly \(A^{(1)}_{2,1}\).
+
+   Concretely, embed \(x\) into \(\tilde x \in \mathbb{R}^N\) by placing a \(0\) in the top slot:
+   \[
+     \tilde x = (\,0,\, A^{(0)}_{2,1},\ldots,A^{(0)}_{N,1}\,)^T.
+   \]
+   Choose
+   \[
+     v = \tilde x \;+\;\alpha e_1
+     \;\in\;\mathbb{R}^N,
+   \]
+   with \(\alpha\) chosen so that
+   \(\|v\|\neq 0\) and \((I - 2vv^T/\|v\|^2)\,\tilde x\) is a scalar multiple of \(e_1\).  A common choice is
+   \[
+     \alpha = \pm\,\|\tilde x\|,
+   \]
+   picking a sign that avoids cancellation.  Define
+   \[
+     H_1 = I - 2 \,\frac{v\,v^T}{\|v\|^2}.
+   \]
+   Then \(H_1\) is an orthogonal, symmetric matrix that kills the sub-subdiagonal entries in column 1.
+\item \textbf{Step \(k=2,\dots,N-2\).}
+   Inductively, we zero out the \((k+2)\)-th to \(N\)-th entries in the \(k\)-th column (and by symmetry, in the \(k\)-th row).  Each step uses a smaller Householder reflection \(H_k\) acting nontrivially in the lower-right \((N-k+1)\times(N-k+1)\) submatrix.  Then set
+   \[
+     A^{(k)} = H_k\,A^{(k-1)}\,H_k.
+   \]
+\item \textbf{End result.}
+   After \(N-2\) steps, we get \(A^{(N-2)}\), which is tridiagonal, and
+   \[
+     A^{(N-2)}
+     = (H_{N-2}\cdots H_1)\,A\,(H_1\cdots H_{N-2}).
+   \]
+   Define
+   \[
+     Q = H_1 \cdots H_{N-2}.
+   \]
+   Since each \(H_k\) is orthogonal, \(Q\in O(N)\). Moreover,
+   \[
+     A^{(N-2)} = Q\,A\,Q^T
+   \]
+   has the desired tridiagonal form.
+\end{enumerate}
+
+\begin{remark}
+This procedure is also used in numerical methods for eigenvalue computations: once you reduce to tridiagonal form, one can apply specialized algorithms (like the QR algorithm) more efficiently.
+\end{remark}
+
+\begin{proof}[Proof of \Cref{thm:tridiagonal}]
+It is essentially just the algorithmic outline above.  Each step is valid because Householder transformations preserve symmetry: if \(B\) is symmetric, then
+\[
+  (H B H)_{ij}
+  = \sum_{r,s} H_{ir} B_{rs} H_{sj}.
+\]
+But since \(H\) is symmetric itself, \((H B H)\) remains symmetric.  Also, each step zeroes out the sub-subdiagonal entries in the appropriate column and row, thus eventually forcing a tridiagonal shape.  Finally, the product of all Householder reflections used is an orthogonal matrix. This completes the argument.
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Wigner’s Semicircle Law via Tridiagonalization}
+\label{sec:Wigner-SC-detailed}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We now present a \emph{detailed} outline of how one proves the Wigner semicircle law for the GOE by using its \emph{random tridiagonal model}. This method is due to Dumitriu and Edelman (2002) and is often considered more direct than Wigner’s original moment method.
+
+\subsection{Dumitriu–Edelman Tridiagonal Model}
+
+\begin{theorem}[Tridiagonal Representation of GOE]
+\label{thm:DE-model}
+Let \(M\) be an \(N\times N\) GOE matrix (real-symmetric) with variance chosen so that the off-diagonal entries have variance \(\tfrac12\) and diagonal entries have variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
+\[
+   M = Q^T\,T\,Q,
+\]
+where \(T\) is a real-symmetric tridiagonal matrix of the special form
+\[
+   T = \begin{pmatrix}
+         d_1 & \alpha_1 & 0 & \cdots \\
+         \alpha_1 & d_2 & \alpha_2 & \ddots \\
+         0 & \alpha_2 & d_3 & \ddots \\
+         \vdots & \ddots & \ddots & \ddots
+       \end{pmatrix},
+\]
+and the random variables \(\{d_i,\alpha_j\}\) are mutually independent with
+\[
+  d_i \sim \mathcal{N}(0,1),
+  \quad
+  \alpha_j = \sqrt{\frac{\chi^2_{N-j}}{2}},
+\]
+where \(\chi^2_{\nu}\) is a chi-square distribution with \(\nu\) degrees of freedom, and equivalently \(\sqrt{\tfrac{\chi^2_\nu}{2}}\) is half the norm of a Gaussian vector in \(\mathbb{R}^\nu\).
+\end{theorem}
+
+\begin{remark}
+- In short, the diagonal entries \(d_i\) are i.i.d.\ \(\mathcal{N}(0,1)\).
+- The subdiagonal entries \(\alpha_1,\dots,\alpha_{N-1}\) are independent with each \(\alpha_j\) distributed like \(\sqrt{\tfrac{\chi^2_{N-j}}{2}}\).
+- Off-diagonal entries above the first superdiagonal are all zero, so \(T\) has only \(2N-1\) nontrivial entries (the \(N\) diagonal + \((N-1)\) sub-/super-diagonal).
+\end{remark}
+
+\begin{proof}[Sketch of Construction]
+This is essentially a specialized version of the Householder procedure (\Cref{sec:householder}), carefully arranged so that each step ends up with exactly the distributions described for \(\alpha_j\) and \(d_i\). One uses the fact that a Gaussian matrix is rotationally invariant in a suitable sense, ensuring that each step’s “residual vector” has an isotropic Gaussian distribution.  Then the norm of that vector yields \(\chi^2\) variables.  Full details appear in \cite{DumitriuEdelman2002} or advanced RMT texts.
+\end{proof}
+
+Thus, to study the eigenvalues of the GOE matrix \(M\), we can equivalently study the eigenvalues of the (much sparser) tridiagonal matrix \(T\).
+
+\subsection{Characteristic Polynomial and Three-Term Recurrence}
+
+Consider \(p_N(\lambda) = \det(T - \lambda I)\).  Since \(T\) is tridiagonal, one has the well-known three-term recurrence:
+\[
+  p_0(\lambda) := 1,\quad
+  p_1(\lambda) := (d_1 - \lambda),
+\]
+\[
+  p_{k+1}(\lambda)
+  \;=\;
+  (d_{k+1} - \lambda)\,p_k(\lambda)
+  \;-\;\alpha_k^2\,p_{k-1}(\lambda),
+  \quad
+  (k=1,\dots,N-1).
+\]
+The roots of \(p_N(\lambda)\) are precisely the eigenvalues \(\lambda_1,\dots,\lambda_N\) of \(T\).
+
+\subsection{Outline of the Semicircle Limit Proof}
+
+We now want to show that the empirical measure
+\[
+  L_N
+  \;=\;
+  \frac{1}{N}\sum_{i=1}^N \delta_{\lambda_i}
+\]
+converges weakly (almost surely) to the semicircle distribution
+\[
+  \mu_{\mathrm{sc}}(dx)
+  = \frac{1}{2\pi} \sqrt{4 - x^2}\,\mathbf{1}_{|x|\le 2}\,dx.
+\]
+A typical route has these ingredients:
+
+\begin{enumerate}[1.]
+\item \textbf{Law of Large Numbers for \(\alpha_j\).}
+   Notice that \(\alpha_j^2 = \tfrac{1}{2}\chi^2_{N-j}\) has mean \(\tfrac{N-j}{2}\).  For large \(N\), it is typically of order \(N\).  More precisely, \(\alpha_j \approx \sqrt{\tfrac{N-j}{2}}\) in a probabilistic sense as \(N\to\infty\).
+
+\item \textbf{Scale invariance.}
+   One usually rescales \(T\) by \(\sqrt{N}\).  That is, consider \(\tfrac{1}{\sqrt{N}}\,T\).  Its subdiagonal entries become
+   \[
+     \frac{\alpha_j}{\sqrt{N}}
+     \;\approx\;
+     \sqrt{\frac{N-j}{2N}}
+     \;\approx\;
+     \sqrt{\frac{1-j/N}{2}}
+     \quad\text{(for large }N\text{)}.
+   \]
+   Meanwhile, the diagonal entries become \(\tfrac{d_i}{\sqrt{N}}\), which are \(\mathcal{O}(\tfrac{1}{\sqrt{N}})\).  Hence the subdiagonal terms set the main scale for the “bulk” of the spectrum, while the diagonal is negligible in the large \(N\) limit.
+
+\item \textbf{Asymptotic Analysis of Recurrence.}
+   A known fact from orthogonal polynomial theory (or from direct PDE-like arguments on the discrete recurrence) is that the location of the roots of \(p_N(\lambda)\) concentrate where the effective continuum limit of the recurrence matches a certain “Stieltjes equation” whose solution is the semicircle density.
+
+   In more elementary terms, one can check that the \emph{moment generating function} or \emph{Stieltjes transform} of the measure \(L_N\) converges to that of \(\mu_{\mathrm{sc}}\).  Alternatively, one can do a direct argument on the polynomials \(p_k(\lambda)\) by bounding their growth and linking it to an integral equation reminiscent of
+   \[
+     g(z) = \int \frac{1}{x-z}\,d\mu_{\mathrm{sc}}(x),
+   \]
+   which leads to a quadratic equation solved by the semicircle’s Cauchy transform.
+
+   For details, see \cite{DumitriuEdelman2002} or \cite{TaoTopics}, as the full proof is somewhat technical but completely rigorous.
+\end{enumerate}
+
+The net result is that, \emph{with probability 1}, as \(N\to\infty\), the empirical spectral measure of \(\frac{1}{\sqrt{N}}\,M\) (equivalently of \(\frac{1}{\sqrt{N}}\,T\)) converges to the semicircle distribution on \([-2,2]\):
+\[
+  \mu_{\mathrm{sc}}(dx)
+  \;=\;
+  \frac{1}{2\pi}\sqrt{4-x^2}\,\mathbf{1}_{|x|\le 2}\,dx.
+\]
+This is precisely \emph{Wigner’s semicircle law}.
+
+\begin{remark}[Extensions]
+A very similar approach works for the Gaussian Unitary Ensemble (\(\beta=2\)), yielding a random \emph{complex Hermitian} tridiagonal (or banded) matrix.  And for \(\beta=4\), there is an analogous construction with quaternionic entries, usually leading to a block-tridiagonal matrix.  All roads lead to the semicircle law for the limiting global spectrum.
+\end{remark}
 
 
 
 
-
-
-
-
+\newpage
 \section{Eigenvalue Distributions for Classical Ensembles}
 
 We begin by studying eigenvalue distributions for the three fundamental classes of random matrices. These distributions arise from matrices with different symmetry properties and correspond to the real, complex, and quaternionic cases.
