@@ -165,7 +165,7 @@ distributed as $Z$, then the random matrix\footnote{$Y^\dagger$ denotes the tran
 	W=\frac{Y+Y^\dagger}{\sqrt 2}
 \end{equation*}
 is said to have the \emph{Gaussian Unitary Ensemble} (GUE) distribution.
-For the GUE matrix $W=(X_{ij})$, 
+For the GUE matrix $W=(X_{ij})$,
 we have for $1\le i<j\le n$:
 \begin{equation*}
 	\operatorname{\mathrm{Var}}_{\mathbb{C}}(X_{ii})=2,
@@ -209,10 +209,10 @@ In this section, we give a derivation of the joint probability density for the G
 
 \begin{theorem}[GOE Joint Eigenvalue Density]
 \label{thm:GOE-joint-eigs-detailed}
-Let \(W\) be an \(n\times n\) real-symmetric matrix with
+Let \(W\) be an \(n\times n\) real symmetric matrix with
 the GOE distribution (\Cref{sub:GOE_GUE_definitons}).
 Then its ordered real eigenvalues \(\lambda_1 \le \cdots \le
-\lambda_n\) 
+\lambda_n\)
 of $W/\sqrt 2$
 have a joint probability density function
 on $\mathbb{R}^n$
@@ -229,12 +229,12 @@ given by:
 where \(Z_{n}\) is a constant (depending on \(n\) but not on \(\lambda_i\)) ensuring the density integrates to 1:
 \begin{equation*}
 	Z_n=Z_n^{GOE}=\frac{(2\pi)^{n/2}}{n!}
-	\prod_{j=0}^{n-1}\frac{\Gamma(1+(j+1)\beta/2)}{\Gamma(1+\beta/2)}, \qquad 
+	\prod_{j=0}^{n-1}\frac{\Gamma(1+(j+1)\beta/2)}{\Gamma(1+\beta/2)}, \qquad
 	\beta=1.
 \end{equation*}
 \end{theorem}
 \begin{remark}
-	We renormalized the GOE by a factor of $\sqrt 2$ to make the 
+	We renormalized the GOE by a factor of $\sqrt 2$ to make the
 	Gaussian part of the density, $\exp(-\frac{1}{2}\sum_{k=1}^n \lambda_k^2)$,
 	standard. In the GUE case, no normalization is required.
 \end{remark}
@@ -253,13 +253,13 @@ Let us label all independent entries of \(W/\sqrt 2\):
 	\underbrace{X_{22}, X_{33},\dots}_{\text{diag}}\}.
 \]
 There are \(\frac{n(n-1)}{2}\) off-diagonal entries
-with variance $1/2$, 
+with variance $1/2$,
 and \(n\) diagonal entries with variance $1$.
 The joint density of these entries (ignoring normalization for a moment) is
 proportional to
 \begin{equation}
 	\label{eq:GOE-density-entries-first}
-	f(x_{12},x_{13},\ldots,x_{22},x_{33},\ldots ) 
+	f(x_{12},x_{13},\ldots,x_{22},x_{33},\ldots )
   \propto\exp\Bigl(
     - \sum_{i<j} x_{ij}^2
     -\frac{1}{2} \sum_{i=1}^n x_{ii}^2
@@ -269,7 +269,7 @@ proportional to
 \end{equation}
 where in the right-hand side, we have
 $x_{ij}=x_{ji}$ for $i\ne j$.
-We then recognize 
+We then recognize
 \[
 	\sum_{i,j=1}^n x_{ij}^2=\operatorname{Tr}(W^2)=\sum_{k=1}^n \lambda_k^2.
 \]
@@ -287,7 +287,7 @@ where \(dW\) is the product measure over the \(\tfrac{n(n+1)}{2}\) independent e
 \subsection{Step B. Spectral decomposition}
 \label{subsec:spectral}
 
-Since \(W\) is real-symmetric, it can be orthogonally diagonalized:
+Since \(W\) is real symmetric, it can be orthogonally diagonalized:
 \[
   W = Q\,\Lambda\,Q^T,\quad
   Q \in O(n),
@@ -304,36 +304,48 @@ It remains to make the change of variables from \(W\) to \(\Lambda\), which invo
 \subsection{Step C. Jacobian}
 \label{subsec:jacobian}
 
-We now examine how the measure \(dM\) in the space of real-symmetric matrices factors into a piece depending on \(\{\lambda_i\}\) and a piece depending on \(Q\).  Formally,
+We now examine how the measure \(dW\) in the space of real symmetric matrices factors into a piece depending on \(\{\lambda_i\}\) and a piece depending on \(Q\).  Formally,
 \[
-  dM
-  = \Bigl|\det\bigl(\tfrac{\partial M}{\partial(\Lambda,Q)}\bigr)\Bigr|
+  dW
+  = \Bigl|\det\bigl(\tfrac{\partial W}{\partial(\Lambda,Q)}\bigr)\Bigr|
     \,d\Lambda\,dQ,
 \]
-where \(dQ\) is the (right) Haar measure on \(O(N)\), and \(d\Lambda\) is the Lebesgue measure on \(\mathbb{R}^N\) (restricted to \(\lambda_1\le \cdots\le \lambda_N\) if we want an ordering).
+where \(dQ\) is the Haar measure\footnote{Recall that the
+	Haar measure on \(O(n)\) is the unique
+	(up to a constant factor) measure that is invariant under
+	group shifts (in this situation, both left and right shifts
+	work). In probabilistic terms,
+	if a random orthogonal matrix $Q$ is Haar-distributed,
+	then $QR$ and $RQ$ are also Haar-distributed for any fixed orthogonal
+matrix $R$.}
+on \(O(n)\), and
+\(d\Lambda\) is the Lebesgue measure on \(\mathbb{R}^n\).
+The Lebesgue measure later needs to be restricted
+to the ``Weyl chamber''
+\(\lambda_1\le \cdots\le \lambda_n\) if we want an ordering,
+this introduces the simple factor \(n!\) in the final density.
 
-A standard result states:
 
-\begin{theorem}[Jacobian for Spectral Decomposition]
+\begin{lemma}[Jacobian for Spectral Decomposition]
 \label{thm:Jacobian-GOE}
-For real-symmetric \(M=Q\Lambda Q^T\), one has
+For real symmetric \(W=Q\Lambda Q^T\), one has
 \[
-  \bigl|\det\bigl(\tfrac{\partial M}{\partial(\Lambda,Q)}\bigr)\bigr|
+  \bigl|\det\bigl(\tfrac{\partial W}{\partial(\Lambda,Q)}\bigr)\bigr|
   \;=\;
-  \prod_{1\le i<j\le N}
+  \prod_{1\le i<j\le n}
   \bigl|\lambda_i - \lambda_j\bigr|.
 \]
-\end{theorem}
+\end{lemma}
 
 \begin{remark}
 Equivalently, one often writes
 \[
-  dM
+  dW
   \;=\;
-  \bigl|\Delta(\lambda_1,\dots,\lambda_N)\bigr|\;
+  \bigl|\Delta(\lambda_1,\dots,\lambda_n)\bigr|\;
   d\Lambda\,dQ,
   \quad\text{where }
-  \Delta(\lambda_1,\dots,\lambda_N)
+  \Delta(\lambda_1,\dots,\lambda_n)
   = \prod_{i<j}(\lambda_j-\lambda_i)
 \]
 is the \emph{Vandermonde determinant}.
@@ -431,22 +443,22 @@ Often we incorporate the ordering \(\lambda_1\le\cdots\le \lambda_N\) by restric
 \end{remark}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Tridiagonal (Householder) Form for Real-Symmetric Matrices}
+\section{Tridiagonal (Householder) Form for real symmetric Matrices}
 \label{sec:householder}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We now give a step-by-step procedure (and proof) of how any real-symmetric matrix can be orthogonally transformed into a tridiagonal matrix. This is a standard topic in numerical linear algebra (the “Householder reduction”) but is also central in random matrix theory (especially the Dumitriu–Edelman approach to the Gaussian ensembles).
+We now give a step-by-step procedure (and proof) of how any real symmetric matrix can be orthogonally transformed into a tridiagonal matrix. This is a standard topic in numerical linear algebra (the “Householder reduction”) but is also central in random matrix theory (especially the Dumitriu–Edelman approach to the Gaussian ensembles).
 
 \subsection{Statement}
 
-\begin{theorem}[Real-Symmetric Tridiagonalization]
+\begin{theorem}[real symmetric Tridiagonalization]
 \label{thm:tridiagonal}
-Any real-symmetric matrix \(A\in\mathbb{R}^{N\times N}\) can be represented as
+Any real symmetric matrix \(A\in\mathbb{R}^{N\times N}\) can be represented as
 \[
   A = Q^T\, T\, Q,
   \quad
   \text{where } Q\in O(N)
-  \text{ and } T\text{ is real-symmetric tridiagonal.}
+  \text{ and } T\text{ is real symmetric tridiagonal.}
 \]
 That is, \(T\) has nonzero entries only on the main diagonal and the first sub- and super-diagonals:
 \[
@@ -562,11 +574,11 @@ We now present a \emph{detailed} outline of how one proves the Wigner semicircle
 
 \begin{theorem}[Tridiagonal Representation of GOE]
 \label{thm:DE-model}
-Let \(M\) be an \(N\times N\) GOE matrix (real-symmetric) with variance chosen so that the off-diagonal entries have variance \(\tfrac12\) and diagonal entries have variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
+Let \(M\) be an \(N\times N\) GOE matrix (real symmetric) with variance chosen so that the off-diagonal entries have variance \(\tfrac12\) and diagonal entries have variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
 \[
    M = Q^T\,T\,Q,
 \]
-where \(T\) is a real-symmetric tridiagonal matrix of the special form
+where \(T\) is a real symmetric tridiagonal matrix of the special form
 \[
    T = \begin{pmatrix}
          d_1 & \alpha_1 & 0 & \cdots \\
