@@ -48,7 +48,13 @@
 \theoremstyle{definition}
 \newtheorem{definition}[proposition]{Definition}
 \newtheorem{remark}[proposition]{Remark}
+\newtheorem{example}[proposition]{Example}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
+% \excludecomment{lnotes}
+
 
 \begin{document}
 \title{Lectures on Random Matrices
@@ -57,7 +63,7 @@
 
 
 \date{DATE, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
-$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l04.tex}{\texttt{TeX Source}} 
+$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l04.tex}{\texttt{TeX Source}}
 $\bullet$
 Updated at \currenttime, \today}}
 
@@ -69,7 +75,68 @@ Updated at \currenttime, \today}}
 \maketitle
 
 
+\begin{lnotes}
+\subsection{Characteristic Polynomial and Three-Term Recurrence}
 
+Consider \(p_n(\lambda) = \det(T - \lambda I)\).  Because \(T\) is tridiagonal, we have the classical three-term recurrence for these characteristic polynomials:
+\[
+  p_0(\lambda) := 1,\quad
+  p_1(\lambda) := d_1 - \lambda,
+\]
+\[
+  p_{k+1}(\lambda)
+  \;=\;
+  (d_{k+1} - \lambda)\,p_k(\lambda)
+  \;-\;\alpha_k^2\,p_{k-1}(\lambda),
+  \quad
+  (k=1,\dots,n-1).
+\]
+The eigenvalues of \(T\) are precisely the roots of \(p_n(\lambda)\).
+
+\subsection{Sketch of the Semicircle Limit Proof}
+
+We want to show that the empirical distribution
+\[
+  L_n
+  \;=\;
+  \frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i}
+\]
+(where \(\lambda_1,\dots,\lambda_n\) are the eigenvalues of \(T\)) converges weakly to the semicircle law
+\[
+  \mu_{\mathrm{sc}}(dx)
+  \;=\;
+  \frac{1}{2\pi}\sqrt{4 - x^2}\,\mathbf{1}_{|x|\le 2}\,dx
+\]
+as \(n\to\infty\).  A typical outline:
+
+\begin{enumerate}[1.]
+\item \textbf{Law of Large Numbers for \(\alpha_j\).}
+   Since \(\alpha_j^2 = \tfrac12\,\chi^2_{\,n-j}\) has mean \(\tfrac{n-j}{2}\), it is typically of order \(n/2\).  More precisely, for large \(n\), \(\alpha_j \approx \sqrt{\tfrac{n-j}{2}}\) with high probability.
+
+\item \textbf{Scaling by \(\sqrt{n}\).}
+   One rescales \(T\) by \(\tfrac{1}{\sqrt{n}}\).  This gives subdiagonal entries
+   \[
+     \frac{\alpha_j}{\sqrt{n}}
+     \;\approx\;
+     \sqrt{\frac{n-j}{2n}}
+     \;\approx\;
+     \sqrt{\frac{1 - j/n}{2}},
+   \]
+   while the diagonal entries become \(\tfrac{d_i}{\sqrt{n}}\), which vanish in the large-\(n\) limit.  So effectively, the subdiagonal structure drives the main spectral behavior in the bulk, producing the semicircle shape in the limit.
+
+\item \textbf{Orthogonal Polynomial / Recurrence Analysis.}
+   The polynomial \(p_n(\lambda)\) satisfies a discrete three-term recurrence whose ``continuum limit'' yields a certain integral equation (specifically the Stieltjes transform for the measure) whose solution is precisely the semicircle distribution.  In more detailed treatments, one shows that the moments or the Cauchy transform of \(L_n\) converge to that of \(\mu_{\mathrm{sc}}\).  The relevant PDE or integral equation is exactly solvable, producing the semicircle.
+
+\end{enumerate}
+
+Hence, with probability 1, as \(n\to\infty\), the empirical spectrum of \(\tfrac{1}{\sqrt{n}}\,W\) converges to the semicircle distribution on \([-2,2]\).  This precisely recovers \emph{Wigner’s semicircle law}.
+
+\begin{remark}[Extensions]
+A very similar approach works for the Gaussian Unitary Ensemble (\(\beta=2\)), leading to a random \emph{complex Hermitian} tridiagonal matrix.  For \(\beta=4\), there is a quaternionic block-tridiagonal model.  All of these point toward the same semicircle law for the global spectral distribution.
+\end{remark}
+
+
+\end{lnotes}
 
 
 
