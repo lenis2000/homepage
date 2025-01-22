@@ -529,7 +529,7 @@ In this subsection, we describe another classical family of random matrices whos
 
 \subsubsection{Definition via SVD}
 
-Let $X$ be an $n\times m$ random matrix with i.i.d.\ entries drawn from a real/complex/quaternionic normal distribution. We assume $n \leq m$.
+Let $X$ be an $n\times m$ random matrix with iid\ entries drawn from a real/complex/quaternionic normal distribution. We assume $n \leq m$.
 We can perform the \emph{singular value decomposition} (SVD) of $X$:
 \[
     X = U
@@ -594,7 +594,7 @@ The \emph{Jacobi} (sometimes called \emph{MANOVA} or \emph{CCA}) ensemble arises
 
 \subsubsection{Setup}
 
-Let \(X\) be an \(n\times t\) real (or complex) matrix and \(Y\) be a \(k\times t\) matrix, with \(n\le k \le t\).  Assume \(X\) and \(Y\) have i.i.d.\ Gaussian entries (real or complex) of mean 0 and variance 1 and are independent of each other.
+Let \(X\) be an \(n\times t\) real (or complex) matrix and \(Y\) be a \(k\times t\) matrix, with \(n\le k \le t\).  Assume \(X\) and \(Y\) have iid\ Gaussian entries (real or complex) of mean 0 and variance 1 and are independent of each other.
 
 \begin{definition}[Projectors and canonical correlations]
 Denote by
@@ -628,7 +628,7 @@ Since \(\mathrm{rank}(P_X P_Y)\le \min(n,k)\), there are at most \(\min(n,k)\) n
 
 \begin{theorem}[Jacobi/MANOVA/CCA Distribution]
 \label{thm:Jacobi_distribution}
-Let \(X\) and \(Y\) be as above, each having i.i.d.\ (real
+Let \(X\) and \(Y\) be as above, each having iid\ (real
 or complex) Gaussian entries of size \(n\times t\) and
 \(k\times t\), respectively, with \(n\le k \le t\).  Assume
 further that \(X\) and \(Y\) are independent of each other
@@ -840,14 +840,8 @@ freedom, i.e., \(Q \sim \chi^2_{\nu}\). In the context of
 the Dumitriu–Edelman tridiagonal model
 (\Cref{thm:DE-model}), the subdiagonal entries \(\alpha_j\)
 are defined as \(\alpha_j = \sqrt{\frac{\chi^2_{n-j}}{2}}\).
-This scaling ensures that each \(\alpha_j^2\) has the
-appropriate variance required for the GOE ensemble,
-specifically matching the variance structure of the original
-Wigner matrix. The chi-square distribution's properties,
-such as its mean being \(\nu\) and its variance being
-\(2\nu\), play a crucial role in maintaining the tridiagonal
-matrix's spectral characteristics that lead to the
-semicircle law.
+One can call this a \emph{chi random variable},
+as this is a square root of a chi-square variable.
 
 The parameter $\nu$ does not need to be an integer, and the
 chi-square distribution is well defined for any positive
@@ -870,26 +864,51 @@ Thus, to study the eigenvalues of a GOE matrix \(W\), one can equivalently study
 
 \subsection{Generalization to \(\beta\)-ensembles}
 
+The tridiagonal GOE construction (\Cref{thm:DE-model})
+extends to a whole family of ensembles, parametrized by
+\(\beta>0\).  In particular, for \(\beta = 1, 2, 4\) we get
+the classical Orthogonal, Unitary, and Symplectic
+(GOE/GUE/GSE) ensembles, respectively.  The general
+$\beta$ case is known as the \(\beta\)-ensemble; 
+outside of the classical cases $\beta=1,2,4$, there
+is no matrix ensemble interpretation with iid entries,
+but the tridiagonal form model still works.
 
+We saw that
+the \(\beta\)-ensembles arise naturally as
+\emph{log-gases} in physics, with density 
+proportional to
+\[
+  \exp\Bigl(-\,\sum_{i=1}^n V(\lambda_i)\Bigr)
+  \;\prod_{1\le i<j\le n}\bigl|\lambda_i - \lambda_j\bigr|^\beta
+\]
+for some potential \(V\).  The simplest choice, \(V(\lambda)=\tfrac12\,\lambda^2\), corresponds to Gaussian \(\beta\)-ensembles, which in the classical cases reproduce GOE/GUE/GSE.
 
+\begin{remark}[Tridiagonal Construction for General \(\beta\)]
+	A breakthrough \cite{dumitriu2002matrix} showed that the
+	Gaussian \(\beta\)-ensembles (for \emph{any} \(\beta>0\))
+	can be represented 
+	as eigenvalues of real symmetric
+	\emph{tridiagonal} matrices
+	whose entries
+	are independent 
+	(but not identically distributed), and have 
+	Gaussian and chi distributions: 
+\begin{itemize}
+\item The diagonal entries are iid\ 
+	standard normal random variables $\mathcal{N}(0,1)$.
+\item The subdiagonal entries are
+	$\alpha_j = \sqrt{\frac{\chi^2_{(n-j)\beta}}{2}}$,
+	where $\chi^2_{\nu}$ is a chi-square distribution with $\nu$ degrees of freedom.
+	Here we use the fact that the parameter $\nu$ in the chi-square distribution does not need to be an integer.
+\item The superdiagonal entries are
+	determined by symmetry.
+\end{itemize}
+\end{remark}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+In the next lecture, we will see how the tridiagonal form
+allows to prove the Wigner's semicircle law for the
+Gaussian \(\beta\)-ensembles.
 
 
 
@@ -969,6 +988,24 @@ by using the singular
 value
 decomposition
 of \(X\) and the properties of the Wishart ensemble.
+
+\subsection{Householder reflection for GUE}
+
+Modify the tridiagonalization procedure which was discussed 
+for the GOE case, and show that the 
+GUE random matrix can be transformed (by a unitary conjugation)
+into
+\begin{equation*}
+	\begin{pmatrix}
+		\mathcal{N}(0,1) & \chi_{2(n-1)}/\sqrt{2} & 0 & 0 & \cdots \\
+		\chi_{2(n-1)}/\sqrt{2} & \mathcal{N}(0,1) & \chi_{2(n-2)}/\sqrt{2} & 0 & \cdots \\
+		0 & \chi_{2(n-2)}/\sqrt{2} & \mathcal{N}(0,1) & \chi_{2(n-3)}/\sqrt{2} & \cdots \\
+		0 & 0 & \chi_{2(n-3)}/\sqrt{2} & \mathcal{N}(0,1) & \cdots \\
+		\vdots & \vdots & \vdots & \vdots & \ddots
+	\end{pmatrix}
+\end{equation*}
+(this matrix is symmetric, and in the entries, we list the
+distributions).
 
 
 
