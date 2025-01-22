@@ -342,6 +342,7 @@ For real symmetric \(W=Q\Lambda Q^\top\), one has
   \;=\;
 	\mathrm{const}
   \prod_{1\le i<j\le n}
+	\!\!
 	\bigl|\lambda_i - \lambda_j\bigr|,
 \]
 where the constant is independent of the \(\lambda_i\)'s and
@@ -475,39 +476,28 @@ $Q^\top \ssp \delta W \ssp Q$.
 
 This completes the proof of 
 \Cref{lemma:Jacobian-GOE}.
-See also Problem~\ref{prob:Jacobian-GUE} for the GUE computation.
+See also Problem~\ref{prob:Jacobian-GUE} for the GUE Jacobian.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{HERE}}
-
-\subsection{Step D: Integration Over \(O(N)\) and Final Form of the PDF}
+\subsection{Step D. Final Form of the density}
 \label{subsec:final-form}
 
 Putting Steps A--C together, we find:
 \[
-  dM
+  dW
   \;=\;
-  \biggl(\prod_{i<j}|\lambda_i-\lambda_j|\biggr)\;
+	\mathrm{const}\cdot
+  \prod_{i<j}|\lambda_i-\lambda_j|\ssp
   d\Lambda
-  \,\bigl(\underbrace{\text{Haar measure on }O(N)}_{\text{does not depend on }\lambda_i}\bigr).
+  \,\bigl(\underbrace{\text{Haar measure on }O(n)}_{\text{does not depend on }\lambda_i}\bigr).
 \]
-Hence, the joint density of \(\{\lambda_1,\dots,\lambda_N\}\) is (up to a global constant):
+Hence, the joint density of \(\{\lambda_1,\dots,\lambda_n\}\) is,
+up to normalization depending only on \(n\), equal to
 \[
   \prod_{i<j}|\lambda_i-\lambda_j|\;
-  \exp\!\Bigl(-\tfrac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2\Bigr).
+  \exp\Bigl(-\tfrac{1}{2}\sum_{k=1}^n \lambda_k^2\Bigr).
 \]
-Finally, there is a constant factor from \(\int_{O(N)} dQ\) (the volume of the orthogonal group) and the earlier normalizing Gaussians, yielding the claim:
-\[
-  p(\lambda_1,\dots,\lambda_N)
-  \;=\;
-  \frac{1}{Z_{N,\sigma}}
-  \prod_{i<j}|\lambda_i-\lambda_j|\;
-  \exp\!\Bigl(-\tfrac{1}{4\sigma^2}\sum_{k=1}^N \lambda_k^2\Bigr).
-\]
-This completes the detailed proof of the GOE joint eigenvalue distribution.
-
-\begin{remark}[Ordering of Eigenvalues]
-Often we incorporate the ordering \(\lambda_1\le\cdots\le \lambda_N\) by restricting \(\Lambda\) to the “chamber” \(\{\lambda_1\le\cdots\le\lambda_N\}\) and multiplying by \(N!\).  One can do either approach: the above formula typically assumes ordered eigenvalues and includes a factor \(\prod_{i<j}|\lambda_i-\lambda_j|\).  The differences are routine normalizing constants.
-\end{remark}
+We leave the computation of the normalization constant in
+\Cref{thm:GOE-joint-eigs-detailed} as Problem~\ref{prob:GOE-normalization}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Tridiagonal (Householder) Form for real symmetric Matrices}
@@ -520,7 +510,7 @@ We now give a step-by-step procedure (and proof) of how any real symmetric matri
 
 \begin{theorem}[real symmetric Tridiagonalization]
 \label{thm:tridiagonal}
-Any real symmetric matrix \(A\in\mathbb{R}^{N\times N}\) can be represented as
+Any real symmetric matrix \(A\in\mathbb{R}^{n\times n}\) can be represented as
 \[
   A = Q^\top\, T\, Q,
   \quad
@@ -799,6 +789,20 @@ of a complex Hermitian matrix is proportional to
 \end{equation*}
 In particular, make sure you understand 
 where the factor $2$ comes from in the complex case.
+
+\subsection{Normalization for GOE}
+\label{prob:GOE-normalization}
+
+Compute the $n$-dimensional integral
+\begin{equation*}
+	\int_{\lambda_1<\ldots<\lambda_n } \prod_{i<j}(\lambda_i-\lambda_j)
+	\ssp
+	\exp\Bigl(-\tfrac{1}{2}\sum_{k=1}^n \lambda_k^2\Bigr)\,d\lambda_1\cdots d\lambda_n.=
+	\frac{1}{n!}
+	\int_{\mathbb{R}^n}
+	\prod_{i<j}|\lambda_i-\lambda_j|\ssp
+	\exp\Bigl(-\tfrac{1}{2}\sum_{k=1}^n \lambda_k^2\Bigr)\,d\lambda_1\cdots d\lambda_n.
+\end{equation*}
 
 
 
