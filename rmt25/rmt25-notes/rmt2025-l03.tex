@@ -951,6 +951,24 @@ that give the same matrix $W$.
 Show that under GOE and GUE, almost surely,
 all eigenvalues are distinct.
 
+
+\subsection{Testing distinctness of eigenvalues via rank-1 perturbations}
+\label{prob:distinct-eigs-rank1}
+  Suppose \(\lambda\) is an eigenvalue of a fixed matrix
+	\(W\) with multiplicity \(\ell\). Consider the rank-1 perturbation
+  \[
+     W_{\varepsilon} \;=\; W \;+\;\alpha \, u \, u^\top,
+     \quad \alpha \sim \mathcal{N}(0,\varepsilon),
+  \]
+  where \(u \in \mathbb{R}^n\) is fixed. Prove that with probability one (in \(\alpha\)), the eigenvalue \(\lambda\) \emph{splits} into \(\ell\) distinct eigenvalues of \(W_{\varepsilon}\). 
+
+\medskip
+\noindent
+\emph{Hint:}
+Write the characteristic polynomial of \(W_{\varepsilon}\) as \(\det(W_{\varepsilon}-\mu I)\). Show that the infinitesimal change in \(\alpha\) moves the roots in a non-degenerate way, splitting a repeated root.
+
+
+
 \subsection{Jacobian for GUE}
 \label{prob:Jacobian-GUE}
 
@@ -995,6 +1013,30 @@ value
 decomposition
 of \(X\) and the properties of the Wishart ensemble.
 
+
+\subsection{Distribution of the Householder vector in random tridiagonalization}
+\label{prob:householder-vector}
+
+Consider the first step of the Householder tridiagonalization of a GOE matrix \(W\). Denote the first column by \(x \in \mathbb{R}^n\), and let
+\[
+   v \;=\; x \;+\;\alpha \,e_1,\quad 
+   \alpha \;=\; \pm\,\|x\|.
+\]
+Then the first Householder reflection is given by 
+\[
+   H_1 \;=\; I \;-\; 2 \,\frac{v\,v^\top}{\langle v,v\rangle}.
+\]
+Prove that:
+\begin{enumerate}
+  \item \(\|v\|^2\) follows a \(\chi^2_{\,\nu}\) distribution with \(\nu\) degrees of freedom (determine \(\nu\) in terms of \(n\)).
+  \item The direction \(v / \|v\|\) is uniformly distributed on the unit sphere \(\mathbb{S}^{n-1}\) and is independent of \(\|v\|\).
+\end{enumerate}
+
+\medskip
+\noindent
+\emph{Hint:}
+View \(x\) as a Gaussian vector in \(\mathbb{R}^n\), using the fact that the first column of a GOE matrix (including its diagonal entry) is an isotropic normal vector (up to small adjustments for the diagonal). Orthogonal invariance of the underlying distribution ensures the direction is uniform on \(\mathbb{S}^{n-1}\).
+
 \subsection{Householder reflection for GUE}
 
 Modify the tridiagonalization procedure which was discussed 
@@ -1014,6 +1056,34 @@ into
 distributions).
 
 
+
+
+
+
+\subsection{Jacobi ensemble is related to two Wisharts}
+\label{prob:jacobi-two-wisharts}
+
+Let \(X\) be an \(n\times m\) and \(Y\) be a \(k\times m\) real Gaussian matrices with iid \(\mathcal{N}(0,1)\) entries, independent of each other, and assume \(n \le k \le m\). Consider the matrix
+\[
+  \bigl(X\,X^\top + Y\,Y^\top \bigr)^{-1}\,
+  \bigl(X\,X^\top \bigr)
+  \quad \in \mathbb{R}^{n\times n}.
+\]
+\begin{enumerate}
+  \item Prove that it is well-defined (invertible denominator) with probability 1, and that it is symmetric and diagonalizable in \(\mathbb{R}^n\).  
+  \item Show that its eigenvalues lie in \([0,1]\) and follow a Jacobi (MANOVA) distribution of parameters \(\beta=1\) and \(\bigl(n,k,m\bigr)\).  
+  \item Identify explicitly how these parameters match the shape parameters in the standard multivariate Beta / Jacobi pdf
+  \[
+     \prod_{i<j} |\lambda_i - \lambda_j| \,\prod_{i=1}^n 
+     \lambda_i^{\,\alpha}\,(1-\lambda_i)^{\,\gamma},
+  \]
+  with appropriate \(\alpha,\gamma\) in terms of \(n,k,m\).
+\end{enumerate}
+
+\noindent
+\emph{Hint:}
+Use that \(X\,X^\top\) and \(Y\,Y^\top\) are (independent) Wishart matrices. Rewrite 
+\[\bigl(X\,X^\top + Y\,Y^\top\bigr)^{-1}X\,X^\top\] via block-inversion or projector-based arguments to see it is related to the product of two orthogonal projectors in \(\mathbb{R}^{m}\). The Jacobi distribution then emerges from the overlapping subspace geometry.
 
 
 
