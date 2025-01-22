@@ -184,7 +184,7 @@ The sequence of \emph{Catalan numbers} $\{C_m\}_{m\geq 0}$ is defined recursivel
 	\label{eq:catalan-recurrence}
     C_0 = 1, \quad C_{m+1} = \sum_{j=0}^m C_j C_{m-j} \quad \text{for } m \geq 0.
 \end{equation}
-Alternatively, they have the closed form\footnote{See 
+Alternatively, they have the closed form\footnote{See
 	Problem \ref{prob:reflection-principle} for a combinatorial proof
 of the second inequality.}
 \begin{equation}
@@ -381,14 +381,39 @@ the known Carleman's criterion for the uniqueness of a distribution by its momen
 	{\cite[Theorem~1.10]{shohat1943problem}}, \cite{Akhiezer1965Moment}]
 	\label{prop:carleman}
 	Let $X$ be a real-valued random variable with moments $m_k
-	= \mathbb{E}[X^k]$ of all orders. If \[\sum_{k=1}^{\infty}
-	(m_{2k})^{-1/(2k)} = \infty,\] then the distribution of
+	= \mathbb{E}[X^k]$ of all orders. If 
+	\begin{equation}
+		\label{eq:Carleman}
+		\sum_{k=1}^{\infty}
+		(m_{2k})^{-1/(2k)} = \infty,
+	\end{equation}
+	then the distribution of
 	$X$ is uniquely determined by its moments $(m_k)_{k\geq 1}$.
 \end{proposition}
 \begin{remark}
+Note that we do not assume that the measure is symmetric,
+but use only even moments for the Carleman criterion.
+Indeed, 
+in determining uniqueness, the decisive aspect is how the
+distribution mass ``escapes'' to \(\pm \infty\). Since
+\(\int |x|^n d\mu(x)\) can be bounded by twice \(\int x^{2
+\lfloor n/2 \rfloor} d\mu(x)\) (roughly speaking),
+controlling \(\int x^{2n} d\mu(x)\) also controls \(\int
+|x|^n d\mu(x)\). Thus, one does not need to worry about
+positive or negative signs in \(x\); the even powers handle
+both sides of the real line at once.
+
+Moreover, the convergence of \eqref{eq:Carleman},
+as for any infinite series, is only determined
+by arbitrarily large moments, for the same reason.
+\end{remark}
+\begin{remark}
 	By the Stone-Wierstrass theorem,
-	the semicircle distribution is the unique distribution
-	with compact support with these moments.
+	the semicircle distribution on $[-2,2]$ is 
+	unique among distributions 
+	with an 
+	arbitrary, but fixed compact support with the moments
+	$\sigma^{2k} C_k$.
 	However, we need to guarantee that there are no
 	distributions on $\mathbb{R}$ with the same moments.
 \end{remark}
@@ -678,11 +703,11 @@ This yields the desired bound on the variance, and completes the proof of \Cref{
 
 With that, we are done with the Wigner semicircle law proof for real
 Wigner matrices
-(with weakly almost sure convergence; 
-see \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1} 
+(with weakly almost sure convergence;
+see \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1}
 for the definitions).
 
-Also, see Problem~\ref{prob:complex-wigner} for the complex case of 
+Also, see Problem~\ref{prob:complex-wigner} for the complex case of
 the Wigner semicircle law.
 
 \section{Remark: Variants of the semicircle law}
@@ -757,7 +782,7 @@ Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law
 \begin{theorem}
 For each $n \in \mathbb{Z}_+$, let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with real random entries satisfying the following conditions:
 \begin{itemize}
-				\item The entries $X_{ij}$ are independent 
+				\item The entries $X_{ij}$ are independent
 	(but not necessarily identically distributed) random variables
 					with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
 				\item There exists a constant $C$ such that $\sup_{i,j,n} \operatorname{\mathbb{E}}\big[|X_{ij}|^4\big] < C$.
@@ -807,11 +832,11 @@ Show the equality
 \begin{equation*}
 	C_m=\binom{2m}{m}-\binom{2m}{m-1},
 \end{equation*}
-where $C_m$ counts the number of lattice paths 
+where $C_m$ counts the number of lattice paths
 from $(0,0)$ to $(2m,0)$ with steps $(1,1)$ and $(1,-1)$
 that never go below the $x$-axis,
-and binomial coefficients count 
-arbitrary lattice paths from $(0,0)$ to $(2m,0)$ or 
+and binomial coefficients count
+arbitrary lattice paths from $(0,0)$ to $(2m,0)$ or
 to $(2m,2)$ with steps $(1,1)$ and $(1,-1)$.
 In other words, show that the difference between the number of paths
 to $(2m,0)$ and to $(2m,2)$ is $C_m$, the number of paths
