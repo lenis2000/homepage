@@ -507,6 +507,171 @@ We leave the computation of the normalization constant in
 	$\frac{1}{2}$ off the diagonal. 
 \end{remark}
 
+\section{Other classical ensembles with explicit eigenvalue densities}
+\label{sec:other-ensembles}
+
+Let us briefly discuss other classical ensembles with explicit eigenvalue densities,
+which are not necessarily Gaussian,
+but are related to other classical structures
+like orthogonal polynomials. These ensembles
+also have 
+a built-in parameter $\beta$ (and in the cases $\beta=1,2,4$, they have 
+invariance under orthogonal/unitary/symplectic conjugation).
+
+
+\subsection{Wishart (Laguerre) ensemble}
+\label{sec:Wishart}
+
+In this subsection, we describe another classical family of random matrices whose eigenvalues form a fundamental example of a $\beta$-ensemble with a ``logarithmic'' pairwise interaction. These are called the \emph{Wishart} or \emph{Laguerre} ensembles. Their importance arises in statistics (covariance estimation, principal component analysis), signal processing, and many other areas.
+
+\subsubsection{Definition via SVD}
+
+Let $X$ be an $n\times m$ random matrix with i.i.d.\ entries drawn from a real/complex/quaternionic normal distribution. We assume $n \leq m$.
+We can perform the \emph{singular value decomposition} (SVD) of $X$:
+\[
+    X = U
+    \begin{pmatrix}
+        s_1 &        & 0 \\
+             &\ddots &    \\
+         0  &        & s_n
+    \end{pmatrix} 
+    V^\dagger,
+\]
+where $U,V$ are orthogonal/unitary/symplectic matrices (depending on $\beta$), $s_1,\dots,s_n\geq 0$ are the singular values of $X$, and $\dagger$
+means the corresponding conjugation.
+For example, in the real case, $s_1,\ldots,s_n $ are
+the square roots of the eigenvalues of $X X^\top$.
+
+Moreover, let $W=XX^\dagger$; this is called the Wishart
+random matrix ensemble. We have
+\[
+    \lambda_i = s_i^2,\qquad i=1,\ldots,n;
+		\qquad 
+		\lambda_1\ge \cdots \ge \lambda_n\ge 0.
+\]
+These eigenvalues admit a closed-form joint probability density function (pdf) in complete analogy with the GOE/GUE calculations from previous subsections.
+
+\subsubsection{Joint density of eigenvalues}
+
+\begin{theorem}[Wishart eigenvalue density]
+\label{thm:Wishart-Distribution}
+The ordered eigenvalues $\lambda_1,\dots,\lambda_n \geq 0$ of
+the $n\times n$ Wishart matrix
+$W$ have the joint density on $\{\lambda_i\geq 0\}$ proportional to
+\[
+    \prod_{1 \leq i < j \leq n}
+    (\lambda_i - \lambda_j)^\beta
+    \prod_{i=1}^n
+    \lambda_i^{\frac{\beta}{2}(m - n + 1)-1}
+    \exp\Bigl(-\tfrac{\lambda_i}{2}\Bigr),
+\]
+where $\beta=1,2,4$ corresponds to the real, complex, or
+quaternionic case, respectively. 
+\end{theorem}
+
+
+
+\begin{proof}[Idea of proof (sketch)]
+The proof is a variant of the derivation for the joint eigenvalue density in the GOE/GUE case (see \Cref{sub:GOE-derivation}).  One writes down the joint distribution of all entries of \(X\), changes variables to singular values and orthogonal/unitary transformations, and identifies the Jacobian factor as
+\(\prod_{i<j}|s_i^2 - s_j^2|^\beta = \prod_{i<j}| \lambda_i - \lambda_j |^\beta\).
+The extra factors in front arise from the powers of \(\lambda_i\) (i.e.\ from \(\prod_i s_i\)) and the Gaussian exponential \(\exp\bigl(-\frac12\sum s_i^2\bigr)\) when reshaped to \(\exp\bigl(-\frac12\sum \lambda_i\bigr)\). 
+\end{proof}
+\begin{remark}
+The exponent of \(\lambda_i\) in the product is often written as
+\(\alpha = \frac{\beta}{2}(m-n+1)-1\).  One also sees the name ``multivariate Gamma distribution'' in statistics.  For \(\beta=1\) the ensemble is sometimes called the real Wishart (or Laguerre Orthogonal) ensemble; for \(\beta=2\) it is the complex Wishart (or Laguerre Unitary) ensemble; and \(\beta=4\) (not discussed in detail here) is the symplectic version.
+\end{remark}
+
+
+\subsection{Jacobi (MANOVA/CCA) ensemble}
+\label{sec:Jacobi_MANOVA_CCA}
+
+The \emph{Jacobi} (sometimes called \emph{MANOVA} or \emph{CCA}) ensemble arises when one looks at the interaction between two independent rectangular Gaussian matrices that share the same number of columns.  Statistically, this corresponds to questions of canonical correlations or multivariate Beta distributions.  In random matrix theory, it appears as yet another fundamental example of a \(\beta\)-ensemble.
+
+\subsubsection{Setup}
+
+Let \(X\) be an \(n\times t\) real (or complex) matrix and \(Y\) be a \(k\times t\) matrix, with \(n\le k \le t\).  Assume \(X\) and \(Y\) have i.i.d.\ Gaussian entries (real or complex) of mean 0 and variance 1 and are independent of each other.
+
+\begin{definition}[Projectors and canonical correlations]
+Denote by
+\[
+  P_X \;=\; X^\top\!(X\,X^\top)^{-1}X
+  \quad\bigl(\text{or }X^\dagger(X\,X^\dagger)^{-1}X\bigr),
+\]
+the (orthogonal/unitary) projector onto the row span of \(X\).
+Similarly, define
+\[
+  P_Y \;=\; Y^\top\!(Y\,Y^\top)^{-1}Y.
+\]
+These are \(t\times t\) projection matrices of ranks \(n\) and \(k\), respectively, embedded in a space of dimension \(t\).  One checks that \(P_X\) and \(P_Y\) commute if and only if the row spaces of \(X\) and \(Y\) are aligned in certain ways.  The \emph{canonical correlations} between these two subspaces are the singular values of \(P_X P_Y\).  Equivalently, the \emph{squared} canonical correlations are the nonzero eigenvalues of \(P_X P_Y\).
+\end{definition}
+
+Since \(\mathrm{rank}(P_X P_Y)\le \min(n,k)\), there are at most \(\min(n,k)\) nonzero eigenvalues of \(P_X P_Y\).  In fact, generically there are exactly \(\min(n,k)\) nonzero eigenvalues when the subspaces are in ``general position.''
+
+\subsubsection{Jacobi ensemble}
+
+\begin{theorem}[Jacobi/MANOVA/CCA Distribution]
+\label{thm:Jacobi_distribution}
+Let \(X\) and \(Y\) be as above, each having i.i.d.\ (real or complex) Gaussian entries of size \(n\times t\) and \(k\times t\), respectively, with \(n\le k \le t\).  Assume further that \(X\) and \(Y\) are independent of each other.
+
+Then the nonzero eigenvalues \(\lambda_1,\ldots,\lambda_n\) of the matrix \(P_X P_Y\) lie in the interval \([0,1]\) and have a joint density function on \(\{\lambda_i\in[0,1]\}\) of the form
+\[
+  \prod_{i<j} |\lambda_i - \lambda_j|^\beta
+  \;\prod_{i=1}^n
+  \lambda_i^{\,\frac{\beta}{2}(k-n+1)\,-1}
+  \,\bigl(1-\lambda_i\bigr)^{\,\frac{\beta}{2}(t-k+1)\,-1},
+\]
+up to a normalization constant that depends on \(n,k,t\) (but not on \(\{\lambda_i\}\)).  This distribution is called the \emph{Jacobi} (or \emph{MANOVA}, or \emph{CCA}) ensemble, and it is also known in statistics as the \emph{multivariate Beta distribution}.
+
+Here again \(\beta=1\) for the real case and \(\beta=2\) for the complex case.
+\end{theorem}
+
+\begin{remark}
+The derivation is again parallel to that in the GOE/GUE context, but one now keeps track of the row spaces and the relevant rectangular dimensions.  The matrix \((X\,X^\top)\) (or \((X\,X^\dagger)\)) is invertible with high probability whenever \(n\le t\) and \(X\) is in general position.  The distribution above reflects the geometry of overlapping projectors in a higher-dimensional space \(\mathbb{R}^t\) (or \(\mathbb{C}^t\)).
+\end{remark}
+
+
+
+
+
+
+\subsection{The General $\beta$-ensemble pattern}
+\label{sec:general-beta-pattern}
+
+We have now seen several classical ``named'' random matrix ensembles:
+\begin{itemize}
+    \item \textbf{Wigner (GOE/GUE/GSE):} eigenvalues live on the real line $\mathbb{R}$
+    \item \textbf{Wishart (Laguerre) ensemble:} eigenvalues live on $[0,\infty)$
+    \item \textbf{Jacobi (MANOVA/CCA) ensemble:} eigenvalues live on $[0,1]$
+\end{itemize}
+
+In all these cases, the \textbf{joint distribution of eigenvalues} can be written (up to a normalizing constant) in the universal form
+\[
+    \prod_{1\leq i<j\leq n}
+    \!\bigl|\lambda_i-\lambda_j\bigr|^\beta
+    \times
+    \prod_{i=1}^n
+    V\bigl(\lambda_i\bigr),
+\]
+where $\beta\in\{1,2,4\}$ (real/complex/quaternionic symmetry) and $V(\lambda)$ is some one-variable weight (often of the form $e^{-\lambda^2/2}$, $\lambda^\alpha e^{-\lambda}$, $\lambda^\alpha (1-\lambda)^\gamma$, etc.). This ``universal'' structure, with the product
+$\prod_{i<j}|\lambda_i-\lambda_j|^\beta$ (the Vandermonde to a power), arises from the \textbf{Jacobian} (or measure) factor in the change of variables from the matrix entries to the spectral decomposition.
+
+Such ensembles are often called \textbf{$\beta$-ensembles} or \textbf{log-gases}, because one can interpret
+\[
+    -\log\bigl|\lambda_i-\lambda_j\bigr|
+\]
+as a pairwise ``logarithmic repulsion'' potential between charges $\lambda_i$.
+
+\subsubsection{Concluding remarks}
+
+\begin{itemize}
+    \item \textbf{Spectral measures.} For large $n$, the empirical spectral distributions of Wishart and Jacobi ensembles converge to known limits (the Marchenko–Pastur law, and the Wachter or Beta law, respectively). These parallel the semicircle law for Wigner.
+    
+    \item \textbf{Applications.} Jacobi/Wishart models arise in various advanced statistical contexts (covariance matrices, canonical correlation analysis, principal components, etc.). Their exact solvability and the presence of the $\beta$-ensemble structure make them powerful tools for both theoretical and applied work.
+\end{itemize}
+
+In subsequent subsections, we will see how the tridiagonal approach extends to these ensembles, giving alternative derivations of their spect
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Tridiagonal (Householder) Form for real symmetric Matrices}
@@ -816,7 +981,13 @@ Compute the $n$-dimensional integral
 
 
 
+\subsection{Wishart eigenvalue density}
 
+Prove \Cref{thm:Wishart-Distribution} (in the real case $\beta=1$)
+by using the singular
+value
+decomposition
+of \(X\) and the properties of the Wishart ensemble.
 
 
 
