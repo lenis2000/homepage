@@ -289,13 +289,13 @@ where \(dW\) is the product measure over the \(\tfrac{n(n+1)}{2}\) independent e
 
 Since \(W\) is real symmetric, it can be orthogonally diagonalized:
 \[
-  W = Q\,\Lambda\,Q^T,\quad
+  W = Q\,\Lambda\,Q\top,\quad
   Q \in O(n),
 \]
 where \(\Lambda = \mathrm{diag}(\lambda_1,\ldots,\lambda_n)\) has the eigenvalues.  Then, as we saw before, we have
 \[
   \operatorname{Tr}(W^2)
-  = \operatorname{Tr}\bigl(Q\,\Lambda\,Q^T Q\,\Lambda\,Q^T\bigr)
+  = \operatorname{Tr}\bigl(Q\,\Lambda\,Q\top Q\,\Lambda\,Q\top\bigr)
   = \operatorname{Tr}(\Lambda^2)
   = \sum_{k=1}^n \lambda_k^2.
 \]
@@ -328,7 +328,7 @@ this introduces the simple factor \(n!\) in the final density.
 
 \begin{lemma}[Jacobian for Spectral Decomposition]
 \label{thm:Jacobian-GOE}
-For real symmetric \(W=Q\Lambda Q^T\), one has
+For real symmetric \(W=Q\Lambda Q\top\), one has
 \[
   \bigl|\det\bigl(\tfrac{\partial W}{\partial(\Lambda,Q)}\bigr)\bigr|
   \;=\;
@@ -357,14 +357,14 @@ Below is one detailed proof, using the idea of “infinitesimal variations” of
 
 We will consider small perturbations of \(\Lambda\) and \(Q\).  Write
 \[
-  M = Q\,\Lambda\,Q^T,
+  M = Q\,\Lambda\,Q\top,
   \quad
   \Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_N).
 \]
 Let \(\delta M\) be an infinitesimal change in \(M\). We want to see how \(\delta M\) depends on \(\delta\Lambda\) and \(\delta Q\).
 
 \paragraph{Parametrizing \(\delta Q\).}
-Since \(Q\in O(N)\), any small variation of \(Q\) can be written as \(Q\,\exp(B)\approx Q(I+B)\) where \(B\) is an infinitesimal skew-symmetric matrix: \(B^T=-B\). Indeed, the \(\dim(O(N)) = \tfrac{N(N-1)}{2}\), matching the dimension of the space of skew-symmetric matrices.
+Since \(Q\in O(N)\), any small variation of \(Q\) can be written as \(Q\,\exp(B)\approx Q(I+B)\) where \(B\) is an infinitesimal skew-symmetric matrix: \(B\top=-B\). Indeed, the \(\dim(O(N)) = \tfrac{N(N-1)}{2}\), matching the dimension of the space of skew-symmetric matrices.
 
 \paragraph{Compute \(\delta M\).}
 Under an infinitesimal change, say
@@ -376,33 +376,33 @@ Under an infinitesimal change, say
 we have
 \[
   M
-  = Q\,\Lambda\,Q^T
+  = Q\,\Lambda\,Q\top
   \;\;\Longrightarrow\;\;
   \delta M
-  = Q\,(\delta \Lambda)\,Q^T
+  = Q\,(\delta \Lambda)\,Q\top
    \;+\;
-    Q\,\Lambda\,(I+B)^T\,Q^T
+    Q\,\Lambda\,(I+B)\top\,Q\top
    \;-\;
-    Q\,\Lambda\,Q^T
+    Q\,\Lambda\,Q\top
 \]
-to first order in small quantities. Simplify \((I+B)^T = I + B^T = I - B\) because \(B\) is skew-symmetric. Thus
+to first order in small quantities. Simplify \((I+B)\top = I + B\top = I - B\) because \(B\) is skew-symmetric. Thus
 \[
   \delta M
-  = Q\,(\delta\Lambda)\,Q^T
-   + Q\,\Lambda\,(I - B)\,Q^T
-   - Q\,\Lambda\,Q^T
-  = Q\,(\delta\Lambda)\,Q^T
-    + Q\,\Lambda\,(-B)\,Q^T
-  = Q\,(\delta\Lambda)\,Q^T
-    - Q\,\Lambda\,B\,Q^T.
+  = Q\,(\delta\Lambda)\,Q\top
+   + Q\,\Lambda\,(I - B)\,Q\top
+   - Q\,\Lambda\,Q\top
+  = Q\,(\delta\Lambda)\,Q\top
+    + Q\,\Lambda\,(-B)\,Q\top
+  = Q\,(\delta\Lambda)\,Q\top
+    - Q\,\Lambda\,B\,Q\top.
 \]
 So
 \[
   \delta M
-  = Q\,(\delta\Lambda)\,Q^T
-    - Q\,\Lambda\,Q^T \,(Q\,B\,Q^T),
+  = Q\,(\delta\Lambda)\,Q\top
+    - Q\,\Lambda\,Q\top \,(Q\,B\,Q\top),
 \]
-since \(Q^TQ=I\).  But keep in mind that \(\Lambda\) is diagonal, so \(\Lambda B\) is simpler in some sense.
+since \(Q\topQ=I\).  But keep in mind that \(\Lambda\) is diagonal, so \(\Lambda B\) is simpler in some sense.
 
 \paragraph{Orthogonal Decomposition of \(\delta M\).}
 Now we want to separate the part of \(\delta M\) that corresponds to changes in the eigenvalues from the part that corresponds to changes in \(Q\). One can write \(\delta\Lambda = \mathrm{diag}(\delta\lambda_1,\dots,\delta\lambda_N)\). Also note that \(\Lambda B\) is a matrix that has certain off-diagonal structure, since \(\Lambda\) is diagonal but \(B\) is skew-symmetric.
@@ -455,7 +455,7 @@ We now give a step-by-step procedure (and proof) of how any real symmetric matri
 \label{thm:tridiagonal}
 Any real symmetric matrix \(A\in\mathbb{R}^{N\times N}\) can be represented as
 \[
-  A = Q^T\, T\, Q,
+  A = Q\top\, T\, Q,
   \quad
   \text{where } Q\in O(N)
   \text{ and } T\text{ is real symmetric tridiagonal.}
@@ -478,13 +478,13 @@ That is, \(T\) has nonzero entries only on the main diagonal and the first sub- 
 \textbf{Householder Reflection (Definition).}
 A \emph{Householder reflection} in \(\mathbb{R}^N\) is a matrix \(H\) of the form
 \[
-  H = I - 2\,\frac{v\,v^T}{\|v\|^2},
+  H = I - 2\,\frac{v\,v\top}{\|v\|^2},
 \]
 where \(v\in\mathbb{R}^N\) is nonzero. One can check:
 \[
-  H^T = H,\quad
+  H\top = H,\quad
   H^2 = I,\quad
-  H\text{ is orthogonal, i.e.\ }H^T H = I.
+  H\text{ is orthogonal, i.e.\ }H\top H = I.
 \]
 Geometrically, \(H\) reflects vectors across the hyperplane orthogonal to \(v\).
 
@@ -499,7 +499,7 @@ We want to apply successive Householder reflections to “zero out” all sub-su
    We aim to zero out entries \(A^{(0)}_{2,1},A^{(0)}_{3,1},\ldots,A^{(0)}_{N,1}\), except for one to remain on the first subdiagonal if needed. Specifically, define the vector
    \[
      x
-     = (A^{(0)}_{2,1},\,A^{(0)}_{3,1},\,\dots,A^{(0)}_{N,1})^T
+     = (A^{(0)}_{2,1},\,A^{(0)}_{3,1},\,\dots,A^{(0)}_{N,1})\top
      \;\in\;\mathbb{R}^{N-1}.
    \]
    We want a Householder \(H_1\) such that
@@ -511,7 +511,7 @@ We want to apply successive Householder reflections to “zero out” all sub-su
 
    Concretely, embed \(x\) into \(\tilde x \in \mathbb{R}^N\) by placing a \(0\) in the top slot:
    \[
-     \tilde x = (\,0,\, A^{(0)}_{2,1},\ldots,A^{(0)}_{N,1}\,)^T.
+     \tilde x = (\,0,\, A^{(0)}_{2,1},\ldots,A^{(0)}_{N,1}\,)\top.
    \]
    Choose
    \[
@@ -519,13 +519,13 @@ We want to apply successive Householder reflections to “zero out” all sub-su
      \;\in\;\mathbb{R}^N,
    \]
    with \(\alpha\) chosen so that
-   \(\|v\|\neq 0\) and \((I - 2vv^T/\|v\|^2)\,\tilde x\) is a scalar multiple of \(e_1\).  A common choice is
+   \(\|v\|\neq 0\) and \((I - 2vv\top/\|v\|^2)\,\tilde x\) is a scalar multiple of \(e_1\).  A common choice is
    \[
      \alpha = \pm\,\|\tilde x\|,
    \]
    picking a sign that avoids cancellation.  Define
    \[
-     H_1 = I - 2 \,\frac{v\,v^T}{\|v\|^2}.
+     H_1 = I - 2 \,\frac{v\,v\top}{\|v\|^2}.
    \]
    Then \(H_1\) is an orthogonal, symmetric matrix that kills the sub-subdiagonal entries in column 1.
 \item \textbf{Step \(k=2,\dots,N-2\).}
@@ -545,7 +545,7 @@ We want to apply successive Householder reflections to “zero out” all sub-su
    \]
    Since each \(H_k\) is orthogonal, \(Q\in O(N)\). Moreover,
    \[
-     A^{(N-2)} = Q\,A\,Q^T
+     A^{(N-2)} = Q\,A\,Q\top
    \]
    has the desired tridiagonal form.
 \end{enumerate}
@@ -576,7 +576,7 @@ We now present a \emph{detailed} outline of how one proves the Wigner semicircle
 \label{thm:DE-model}
 Let \(M\) be an \(N\times N\) GOE matrix (real symmetric) with variance chosen so that the off-diagonal entries have variance \(\tfrac12\) and diagonal entries have variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
 \[
-   M = Q^T\,T\,Q,
+   M = Q\top\,T\,Q,
 \]
 where \(T\) is a real symmetric tridiagonal matrix of the special form
 \[
