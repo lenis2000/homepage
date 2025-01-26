@@ -9,24 +9,19 @@ code:
     txt: 'c code for the simulation of heatmaps, runs faster'
 ---
 
-<!--
-  By removing the "border" class from the container and setting
-  "overflow: visible;", we avoid illusions of clipping and ensure
-  the entire point cloud is visible.
--->
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <div class="container mt-4 mb-3" style="overflow: visible;">
   <p>
-    This page simulates random permutations arising from
-    nonsymmetric Grothendieck polynomials. For more details,
-    see our paper <a href="{{site.url}}/2024/07/Grothendieck-shenanigans/">[45]</a>. Use the controls below to choose
-    $N$, $p$, and $q$,
-    then view the resulting permutation matrix drawn via D3.
+    This page simulates random permutations arising from nonsymmetric
+    Grothendieck polynomials. For more details, see our paper
+    <a href="{{site.url}}/2024/07/Grothendieck-shenanigans/">[45]</a>.
+    Use the controls below to choose $N$, $p$, and $q$,
+    then view the resulting permutation matrix drawn via <code>D3.js</code>.
   </p>
 
   <!-- Outer container with no "border" class -->
   <div class="my-3 p-3 bg-light" style="overflow: visible;">
-
     <h2 class="h4 mb-3">Simulation Controls</h2>
 
     <div class="row mb-3">
@@ -44,11 +39,11 @@ code:
           style="max-width: 90px;"
         />
         <button id="runBtn" class="btn btn-sm btn-primary">
-        Change $N$
+          Change $N$
         </button>
       </div>
 
-      <!-- Slider for PROB -->
+      <!-- Slider for p -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
         <label for="probInput" class="me-2 mb-0">$p$:&nbsp;</label>
         <input
@@ -69,7 +64,7 @@ code:
         </span>
       </div>
 
-      <!-- Slider for Q -->
+      <!-- Slider for q -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
         <label for="qInput" class="me-2 mb-0">$q$:&nbsp;</label>
         <input
@@ -108,23 +103,17 @@ code:
       "
     ></div>
 
-    <!-- SVG container for the matrix -->
+    <!-- Responsive SVG container for the matrix -->
     <svg
       id="plot"
-      style="
-        display:block;
-        width:100%;
-        max-width:800px;
-        height:auto;
-        overflow: visible;
-      "
+      style="width: 100%; height: auto; display: block;"
+      preserveAspectRatio="xMidYMid meet"
     ></svg>
   </div>
 </div>
 
-<!-- Load D3 (local) -->
-<script src="/js/d3.v7.min.js"></script>
-
+<!-- Load D3 from a CDN (can also use local version if desired) -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script>
 // ==============================
 // 1) Global Variables
@@ -196,35 +185,35 @@ function runSimulation(N, PROB, Q) {
 }
 
 // ==============================
-// 5) Draw with D3 (No Clipping)
+// 5) Draw with D3 (Responsive)
 // ==============================
 function drawPermutationMatrix(sigma) {
   const N = sigma.length;
   const svg = d3.select("#plot");
   svg.selectAll("*").remove(); // Clear old
 
-  // Expand margins + domain shift
+  // We'll define a dimension in "data space"
   const margin = 30;
-  const maxSize = 800;
-  const width   = maxSize + margin * 2;
-  const height  = maxSize + margin * 2;
+  const chartSize = 800; // Logical size
+  const width  = chartSize + margin * 2;
+  const height = chartSize + margin * 2;
 
+  // Use a viewBox for full responsiveness
   svg
-    .attr("width", width)
-    .attr("height", height)
+    .attr("viewBox", [0, 0, width, height])
     .style("border", "none");
 
-  // Keep circle radius small (2)
+  // Circle radius
   const radius = 2;
 
-  // Shift domain to avoid clipping at edges
+  // Scales
   const xScale = d3.scaleLinear()
     .domain([-0.5, N - 0.5])
-    .range([margin + radius, margin + maxSize - radius]);
+    .range([margin + radius, margin + chartSize - radius]);
 
   const yScale = d3.scaleLinear()
     .domain([-0.5, N - 0.5])
-    .range([margin + radius, margin + maxSize - radius]);
+    .range([margin + radius, margin + chartSize - radius]);
 
   // Build data
   const data = sigma.map((val, i) => ({row: i, col: val - 1}));
@@ -308,5 +297,9 @@ updateSliderDisplay("qValue",   document.getElementById("qInput").value);
   simulateAndDraw(nVal, probVal, qVal);
 })();
 </script>
+
+The initial pipe dream boundary condition (where the pipe dreams live) is as follows:
+<img src="{{site.storage_url}}/img/papers/grothendieck-shenanigans.png" alt="Initial pipe dream boundary condition diagram showing where pipe dreams are located" width="100%"/>
+
 
 {% include references.md %}
