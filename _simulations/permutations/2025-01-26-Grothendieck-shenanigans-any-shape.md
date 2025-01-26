@@ -1,5 +1,5 @@
 ---
-title: Simulation of random permutations from arbitrary reduced words
+title: Simulation of random permutations from arbitrary reduced words (EXPERIMENTAL)
 model: permutations
 author: "Leonid Petrov"
 code:
