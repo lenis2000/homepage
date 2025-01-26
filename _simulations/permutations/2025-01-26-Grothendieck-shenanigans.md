@@ -34,7 +34,7 @@ code:
           class="form-control form-control-sm me-2"
           value="1000"
           min="1"
-          max="20000"
+          max="12000"
           step="1"
           style="max-width: 90px;"
         />
@@ -257,8 +257,8 @@ function simulateAndDraw(N, PROB, Q) {
 // ==============================
 document.getElementById("runBtn").addEventListener("click", () => {
   const nVal = parseInt(document.getElementById("nInput").value, 10);
-  if (isNaN(nVal) || nVal < 1 || nVal > 20000) {
-    alert("Please enter a valid integer N in [1..20000].");
+  if (isNaN(nVal) || nVal < 1 || nVal > 12000) {
+    alert("Please enter a valid integer N in [1..12000].");
     return;
   }
   currentN = nVal;
