@@ -37,7 +37,7 @@ code:
           id="nInput"
           type="number"
           class="form-control form-control-sm me-2"
-          value="2000"
+          value="1000"
           min="1"
           max="10000"
           step="1"
