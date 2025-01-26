@@ -5,25 +5,26 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-01-26-Grothendieck-shenanigans.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
-  - link: ''
-    txt: 'c code for the simulation of heatmaps (runs faster)'
+  - link: 'https://github.com/lenis2000/simulations/blob/master/2025-01-26-Grothendieck-c-code/Grothendieck-swaps.c'
+    txt: 'c code for the simulation of heatmaps, runs faster'
 ---
 
 <!--
-  1) We remove the "border" class from the outer div to avoid illusions of clipping.
-  2) We ensure overflow is visible so the SVG won't get cut by parent containers.
+  By removing the "border" class from the container and setting
+  "overflow: visible;", we avoid illusions of clipping and ensure
+  the entire point cloud is visible.
 -->
 
 <div class="container mt-4 mb-3" style="overflow: visible;">
   <p>
     This page simulates random permutations arising from
     nonsymmetric Grothendieck polynomials. For more details,
-    see our paper[[45]][ref45]. Use the controls below to choose
+    see our paper <a href="{{site.url}}/2024/07/Grothendieck-shenanigans/">[45]</a>. Use the controls below to choose
     <code>N</code>, <code>PROB</code>, and <code>Q</code>,
     then view the resulting permutation matrix drawn via D3.
   </p>
 
-  <!-- Removed the "border" class from this outer container -->
+  <!-- Outer container with no "border" class -->
   <div class="my-3 p-3 bg-light" style="overflow: visible;">
 
     <h2 class="h4 mb-3">Simulation Controls</h2>
@@ -42,7 +43,9 @@ code:
           step="1"
           style="max-width: 90px;"
         />
-        <button id="runBtn" class="btn btn-sm btn-primary">Run Simulation</button>
+        <button id="runBtn" class="btn btn-sm btn-primary">
+          Run Simulation
+        </button>
       </div>
 
       <!-- Slider for PROB -->
@@ -105,12 +108,17 @@ code:
       "
     ></div>
 
-    <!-- SVG container for the matrix (no visible border, overflow visible) -->
+    <!-- SVG container for the matrix -->
     <svg
       id="plot"
-      style="display:block; width:100%; max-width:800px; height:auto; overflow: visible;"
+      style="
+        display:block;
+        width:100%;
+        max-width:800px;
+        height:auto;
+        overflow: visible;
+      "
     ></svg>
-
   </div>
 </div>
 
@@ -176,7 +184,7 @@ function applyRandomSwap(sigma, swaps, N, PROB, Q) {
 // 4) Run Simulation
 // ==============================
 function runSimulation(N, PROB, Q) {
-  const T_MAX = 2*N - 3;
+  const T_MAX = 2 * N - 3;
   const sigma = Array.from({length: N}, (_, i) => i+1);
   const swaps = new Array(N - 1).fill(0);
 
@@ -204,10 +212,12 @@ function drawPermutationMatrix(sigma) {
   svg
     .attr("width", width)
     .attr("height", height)
-    // We set 'overflow: visible' in the style attribute above
     .style("border", "none");
 
+  // Keep circle radius small (2)
   const radius = 2;
+
+  // Shift domain to avoid clipping at edges
   const xScale = d3.scaleLinear()
     .domain([-0.5, N - 0.5])
     .range([margin + radius, margin + maxSize - radius]);
@@ -216,30 +226,33 @@ function drawPermutationMatrix(sigma) {
     .domain([-0.5, N - 0.5])
     .range([margin + radius, margin + maxSize - radius]);
 
+  // Build data
   const data = sigma.map((val, i) => ({row: i, col: val - 1}));
   const tooltip = d3.select("#tooltip");
 
   svg.selectAll(".dot")
     .data(data)
     .join("circle")
-    .attr("class", "dot")
-    .attr("cx", d => xScale(d.row))
-    .attr("cy", d => yScale(d.col))
-    .attr("r", radius)
-    .style("fill", "steelblue")
-    .on("mouseover", (evt, d) => {
-      tooltip
-        .style("opacity", 1)
-        .style("left", (evt.pageX + 10) + "px")
-        .style("top", (evt.pageY + 10) + "px")
-        .html(`row = ${d.row}, col = ${d.col}`);
-    })
-    .on("mousemove", evt => {
-      tooltip
-        .style("left", (evt.pageX + 10) + "px")
-        .style("top", (evt.pageY + 10) + "px");
-    })
-    .on("mouseout", () => tooltip.style("opacity", 0));
+      .attr("class", "dot")
+      .attr("cx", d => xScale(d.row))
+      .attr("cy", d => yScale(d.col))
+      .attr("r", radius)
+      .style("fill", "steelblue")
+      .on("mouseover", (evt, d) => {
+        tooltip
+          .style("opacity", 1)
+          .style("left", (evt.pageX + 10) + "px")
+          .style("top", (evt.pageY + 10) + "px")
+          .html(`row = ${d.row}, col = ${d.col}`);
+      })
+      .on("mousemove", evt => {
+        tooltip
+          .style("left", (evt.pageX + 10) + "px")
+          .style("top", (evt.pageY + 10) + "px");
+      })
+      .on("mouseout", () => {
+        tooltip.style("opacity", 0);
+      });
 }
 
 // ==============================
@@ -280,6 +293,20 @@ document.getElementById("qInput").addEventListener("input", (e) => {
 // Initialize slider text
 updateSliderDisplay("probValue", document.getElementById("probInput").value);
 updateSliderDisplay("qValue",   document.getElementById("qInput").value);
+
+// ==============================
+// 8) Automatically Run Simulation on Page Load
+// ==============================
+(function autoRunOnLoad() {
+  // Use the current default values from the DOM
+  const nVal = parseInt(document.getElementById("nInput").value, 10);
+  currentN = nVal;
+
+  const probVal = parseFloat(document.getElementById("probInput").value);
+  const qVal    = parseFloat(document.getElementById("qInput").value);
+
+  simulateAndDraw(nVal, probVal, qVal);
+})();
 </script>
 
 {% include references.md %}
