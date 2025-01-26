@@ -35,7 +35,7 @@ code:
           value="1000"
           min="1"
           max="12000"
-          step="1"
+          step="100"
           style="max-width: 90px;"
         />
         <button id="runBtn" class="btn btn-sm btn-primary">
