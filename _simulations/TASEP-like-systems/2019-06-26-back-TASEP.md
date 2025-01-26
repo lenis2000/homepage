@@ -17,7 +17,7 @@ results:
     raw-size: 125 MB
 
 papers:
-- title: 'L. Petrov, A. Saenz. In preparation (2019)'
+- title: 'L. Petrov, A. Saenz. Mapping TASEP back in time (2019) • Probability Theory and Related Fields, 182, pages 481-530 (2022) • arXiv:1907.09155 [math.PR]'
 ---
 
 This is a simulation illustrating the main result from the paper in preparation [1].
