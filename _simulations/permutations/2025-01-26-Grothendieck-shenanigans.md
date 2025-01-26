@@ -30,15 +30,15 @@ code:
         <label for="nInput" class="me-2 mb-0">$N$:&nbsp;</label>
         <input
           id="nInput"
-          type="number"
-          class="form-control form-control-sm me-2"
+          type="range"
+          class="form-range"
           value="1000"
-          min="1"
+          min="0"
           max="12000"
           step="100"
-          style="max-width: 90px;"
         />
-        <button id="runBtn" class="btn btn-sm btn-primary">
+        &nbsp;<span id="nValue" class="ms-2" style="text-align:right;">1000</span>&nbsp;&nbsp;
+        <button id="runBtn" class="btn btn-sm btn-primary ms-2">
           Change $N$
         </button>
       </div>
@@ -125,9 +125,12 @@ let debounceTimer = null;
 // 2) Utility: Update Slider Text
 // ==============================
 function updateSliderDisplay(spanId, val) {
-  document.getElementById(spanId).textContent = parseFloat(val).toFixed(2);
+  if (spanId === "nValue") {
+    document.getElementById(spanId).textContent = parseInt(val);
+  } else {
+    document.getElementById(spanId).textContent = parseFloat(val).toFixed(2);
+  }
 }
-
 // Debounce function to avoid re-running sim on every small slider move
 function debounceSimulate() {
   clearTimeout(debounceTimer);
@@ -255,6 +258,8 @@ function simulateAndDraw(N, PROB, Q) {
 // ==============================
 // 7) Event Listeners
 // ==============================
+
+
 document.getElementById("runBtn").addEventListener("click", () => {
   const nVal = parseInt(document.getElementById("nInput").value, 10);
   if (isNaN(nVal) || nVal < 1 || nVal > 12000) {
@@ -277,6 +282,10 @@ document.getElementById("probInput").addEventListener("input", (e) => {
 document.getElementById("qInput").addEventListener("input", (e) => {
   updateSliderDisplay("qValue", e.target.value);
   debounceSimulate();
+});
+
+document.getElementById("nInput").addEventListener("input", (e) => {
+  updateSliderDisplay("nValue", e.target.value);
 });
 
 // Initialize slider text
