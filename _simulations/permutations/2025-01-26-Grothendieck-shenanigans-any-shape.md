@@ -5,7 +5,6 @@ author: "Leonid Petrov"
 code:
     - link: "https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-01-26-Grothendieck-shenanigans-any-shape.md"
       txt: "This simulation is interactive, written in JavaScript."
-published: false
 ---
 
 <div class="container mt-4 mb-3" style="overflow: visible">
