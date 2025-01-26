@@ -13,7 +13,7 @@ coauthors:
 comments: false
 categories: blog math preprint
 # journal-ref: submitted to Adv. Math.
-# journal-web: 
+# journal-web:
 published: true
 image: __STORAGE_URL__/img/papers/grothendieck-shenanigans.png
 image-alt: Reduction of a pipe dream leading to the permutation w(D) = 241653.
@@ -22,6 +22,7 @@ pdf: 45-grothendieck-shenanigans-permutons.pdf
 post-pdf: true
 pages: 46
 cv-number: 45
+simulations: simulations/2025-01-26-grothendieck-shenanigans/
 ---
 
 We study random permutations arising from reduced pipe dreams. Our main model is motivated by Grothendieck polynomials with parameter $\beta=1$ arising in K-theory of the flag variety. The probability weight of a permutation is proportional to the principal specialization (setting all variables to 1) of the corresponding Grothendieck polynomial. By mapping this random permutation to a version of TASEP (Totally Asymmetric Simple Exclusion Process), we describe the limiting permuton and fluctuations around it as the order $n$ of the permutation grows to infinity. The fluctuations are of order $n^{\frac{1}{3}}$ and have the Tracy-Widom GUE distribution, which places this algebraic (K-theoretic) model into the Kardar-Parisi-Zhang universality class.

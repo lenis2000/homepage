@@ -12,18 +12,18 @@ redirect_from: /statement
 
         <p><b>Associate Professor of Mathematics, University of
           Virginia</b>.</p>
-      
+
           <p>Leonid Petrov works in integrable probability, an area of mathematical research at the interface between probability / statistical physics on the one hand and representation theory/quantum integrability on the other. He applies tools from integrability (symmetric functions and Yang-Baxter equations for solvable lattice models) to analyze the asymptotic behavior of stochastic models motivated by a wide range of real-world questions, including the structure of ice and other condensed matter, magnetism, quantum spin systems, thermodynamics, traffic models, and directed polymers.</p>
-          
-            
+
+
           <b>Keywords</b>: Integrable probability, KPZ universality, interacting particle systems,
-          six vertex model, Yang-Baxter equation, stochastic vertex models, 
+          six vertex model, Yang-Baxter equation, stochastic vertex models,
           Bethe ansatz, Macdonald processes, random tilings, symmetric functions, algebraic combinatorics
 
-          
-    <ul class="mt-3">  
+
+    <ul class="mt-3">
       <li>
-        NSF grant <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2153869">2153869</a> 
+        NSF grant <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=2153869">2153869</a>
         "Random Systems from Symmetric Functions and Vertex Models" (2022-2025).
       </li>
       <li> <a href="http://frg.int-prob.org/" target="_blank">Focused Research Group in Integrable Probability</a> (2017-2022)
@@ -33,7 +33,7 @@ redirect_from: /statement
           <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664650" target="_blank">1664650</a>.
         </li>
       </ul>
-        
+
       {%include students.html%}
 
       <hr class="mt-4 mb-3">
@@ -49,24 +49,24 @@ redirect_from: /statement
         <hr class="mt-4 mb-3">
 
         <h2 class="mb-3">Work accomplished since the last promotion (Summer 2019)</h2>
-        
-        <b>Note.</b> All items have the same numbering as in the CV and the 
+
+        <b>Note.</b> All items have the same numbering as in the CV and the
         <a href="{{ site.url }}/research/">research page</a>.
 
 
         <h3 class="mt-5">Preprints</h3>
         <hr>
-    
+
         <ol class="my-ul-zebra">
         {% for post in site.posts  %}
         {% if post.categories contains "preprint" %}
-    
-    
+
+
           <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px">
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
             <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
             {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+            &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){%if post.pages %} &bull; {{post.pages}} pages.{%endif%}
             {% unless post.no-abstract %}<details>
               <summary>
                 Abstract &raquo;
@@ -78,28 +78,28 @@ redirect_from: /statement
             </details>
             {% endunless %}
           </li>
-    
-    
-    
+
+
+
         {% endif %}
         {% endfor %}
         </ol>
-    
+
         <h3 class="mt-4">Published or accepted articles</h3>
         <hr>
 
         <ol reversed class="my-ul-zebra">
         {% for post in site.posts  %}
         {% if post.categories contains "paper" and post.cv-number >= 31 %}
-    
+
           <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
 
             {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-            <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+            <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
             {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
-              <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+              <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}
             {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-            &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+            &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%}
             {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
             {% unless post.no-abstract %}<details>
               <summary>
@@ -111,28 +111,29 @@ redirect_from: /statement
                 {% endif %}
             </details>{% endunless %}
           </li>
-          
+
         {% endif %}
         {% endfor %}
         </ol>
-        
+
         <h3 class="mt-4"><a name="errata">Errata</a></h3>
         <hr />
-    
+
         <ol class="my-ul-zebra">
           {% for post in site.posts %}
           {% if post.categories contains "erratum" %}
-      
+
             <li value="{{post.cv-number}}"
              class="mb-1" style="padding:6px">
               {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-              <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+              <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
               {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
-                <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+                <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}
               {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
               {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
+              {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Simulations</a>){% endif %}
               {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
-              {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+              {%if post.pages %} &bull; {{post.pages}} pages.{%endif%}
               {% unless post.no-abstract %}<details>
                 <summary>
                   Abstract &raquo;
@@ -143,12 +144,12 @@ redirect_from: /statement
                   {% endif %}
               </details>{% endunless %}
             </li>
-      
+
           {% endif %}
           {% endfor %}
           </ol>
-    
-          
+
+
 
           <h3 class="mt-4">Other works</h3>
           <hr/>
@@ -157,33 +158,33 @@ redirect_from: /statement
               <li class="mb-1" style="padding:6px">
                 Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
                 <i>Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex</i>.
-                <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a> 
+                <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a>
                 &bull;
                 (<a href="{{site.storage_url}}/papers/nature-comm.pdf">PDF</a>)
                 &bull; 15 pages.
               </li>
             </ol>
-      
+
             <h3 class="mt-4">Unpublished lecture notes</h3>
             <hr>
-        
+
             <ol class="my-ul-zebra">
               {% for post in site.posts %}
               {% if post.categories contains "unpublished-lecture-notes" and post.cv-number >4 %}
-          
+
                 <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
                   <b>
                     {{post.link-description}} &bull;
                     <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b> &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
                 </li>
-          
+
               {% endif %}
               {% endfor %}
               </ol>
-  
+
 
             <hr class="mt-2">
-  <h2 class="mb-3 mt-4">Work accomplished before the last promotion</h2>      
+  <h2 class="mb-3 mt-4">Work accomplished before the last promotion</h2>
 
 
   <h3 class="mt-4">Published surveys and lecture notes (2 total)</h3>
@@ -196,11 +197,11 @@ redirect_from: /statement
     <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
 
       {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-      <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+      <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
       {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
-        <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+        <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}
       {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-      &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+      &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%}
       {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
       {% unless post.no-abstract %}<details>
         <summary>
@@ -212,7 +213,7 @@ redirect_from: /statement
           {% endif %}
       </details>{% endunless %}
     </li>
-    
+
   {% endif %}
   {% endfor %}
   </ol>
@@ -230,11 +231,11 @@ redirect_from: /statement
       <li value="{{post.cv-number}} class="mb-1" style="padding:6px">
 
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) 
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
         {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
-          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} 
+          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}
         {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-        &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%} 
+        &bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>) {%if post.pages %} &bull; {{post.pages}} pages.{%endif%}
         {% if post.erratum %}&bull; (with <a href="#errata">erratum</a>){% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
@@ -246,7 +247,7 @@ redirect_from: /statement
             {% endif %}
         </details>{% endunless %}
       </li>
-      
+
     {% endunless %}
     {% endif %}
     {% endfor %}
@@ -258,14 +259,14 @@ redirect_from: /statement
     <ol class="my-ul-zebra">
       {% for post in site.posts %}
       {% if post.categories contains "unpublished-lecture-notes" and post.cv-number <=4 %}
-  
+
         <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
           <b>
             {{post.link-description}} &bull;
             <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
             &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>)
         </li>
-  
+
       {% endif %}
       {% endfor %}
       </ol>
