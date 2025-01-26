@@ -32,7 +32,7 @@
 [ref30]: {{ site.url }}/2018/11/qHahnPush/
 [ref31]: {{ site.url }}/2019/05/BMP_YB/
 [ref32]: {{ site.url }}/2019/07/backwards_TASEP/
-[ref33]: {{ site.url }}/2019/10/pushTASEP/ 
+[ref33]: {{ site.url }}/2019/10/pushTASEP/
 [ref34]: {{ site.url }}/2019/12/symm_IPS/
 [ref35]: {{ site.url }}/2019/12/pert_GUE_symm/
 [ref36]: {{ site.url }}/2020/03/sqW/
@@ -45,4 +45,3 @@
 
 
 [ref45]: {{ site.url }}/2024/07/Grothendieck-shenanigans/
-
