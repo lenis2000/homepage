@@ -1,5 +1,5 @@
 ---
-title: Grothendieck shenanigans - simulation of random permutations
+title: Grothendieck shenanigans - simulation of random permutations from staircase reduced word
 model: permutations
 author: 'Leonid Petrov'
 code:
