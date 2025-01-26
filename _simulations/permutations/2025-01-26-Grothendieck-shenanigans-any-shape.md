@@ -15,6 +15,10 @@ code:
         we allow arbitrary reduced words, not just the staircase one.
     </p>
 
+<h3>
+    Warning: the drawing feature is EXPERIMENTAL, and simulations may not work correctly.
+</h3>
+
    <div class="flexRow" style="display: flex;">
     <!-- ========================= LEFT: Controls ========================= -->
     <div class="controlsBox">
