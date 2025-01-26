@@ -20,7 +20,7 @@ code:
     This page simulates random permutations arising from
     nonsymmetric Grothendieck polynomials. For more details,
     see our paper <a href="{{site.url}}/2024/07/Grothendieck-shenanigans/">[45]</a>. Use the controls below to choose
-    <code>N</code>, <code>PROB</code>, and <code>Q</code>,
+    $N$, $p$, and $q$,
     then view the resulting permutation matrix drawn via D3.
   </p>
 
@@ -32,7 +32,7 @@ code:
     <div class="row mb-3">
       <!-- Control for N -->
       <div class="col-12 col-md-4 d-flex align-items-center mb-2">
-        <label for="nInput" class="me-2 mb-0">N:</label>
+        <label for="nInput" class="me-2 mb-0">$N$:&nbsp;</label>
         <input
           id="nInput"
           type="number"
@@ -44,13 +44,13 @@ code:
           style="max-width: 90px;"
         />
         <button id="runBtn" class="btn btn-sm btn-primary">
-          Run Simulation
+        Change $N$
         </button>
       </div>
 
       <!-- Slider for PROB -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
-        <label for="probInput" class="me-2 mb-0">PROB:</label>
+        <label for="probInput" class="me-2 mb-0">$p$:&nbsp;</label>
         <input
           id="probInput"
           type="range"
@@ -71,7 +71,7 @@ code:
 
       <!-- Slider for Q -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
-        <label for="qInput" class="me-2 mb-0">Q:</label>
+        <label for="qInput" class="me-2 mb-0">$q$:&nbsp;</label>
         <input
           id="qInput"
           type="range"
