@@ -395,7 +395,7 @@ We consider
 \end{equation*}
 Expanding the $k$-th power using the multinomial theorem, we obtain:
 \begin{equation*}
-\left( \sum_{i=1}^n Y_i \right)^k = \sum_{j_1 + j_2 + \dots + j_n = k} 
+\left( \sum_{i=1}^n Y_i \right)^k = \sum_{j_1 + j_2 + \dots + j_n = k}
 Y_{j_1} Y_{j_2} \dots Y_{j_n}.
 \end{equation*}
 Taking the expectation and using linearity, we have:
@@ -403,7 +403,7 @@ Taking the expectation and using linearity, we have:
  \mathbb{E}\left[ \left( \sum_{i=1}^n Y_i \right)^k \right]
  =
  \sum_{j_1 + j_2 + \dots + j_n = k}
- \operatorname{\mathbb{E}}\left[ 
+ \operatorname{\mathbb{E}}\left[
 	 Y_{j_1} Y_{j_2} \dots Y_{j_n}
  \right].
 \end{equation*}
@@ -416,10 +416,10 @@ For each partition $\lambda$ of $k$
 $\lambda_1\geq \lambda_2\geq \ldots\geq \lambda_n\geq 0$),
 we must count the number of distinct multisets of indices
 \((j_1,j_2,\ldots,j_n)\) that yield the same collection
-\(\{\lambda_1,\lambda_2,\ldots\}\). 
-Then, 
+\(\{\lambda_1,\lambda_2,\ldots\}\).
+Then,
 \begin{equation*}
-	\operatorname{\mathbb{E}}\left[ 
+	\operatorname{\mathbb{E}}\left[
 		Y_{j_1} Y_{j_2} \dots Y_{j_n}
 	\right]=
 	\mathsf{m}_{\lambda_1}\mathsf{m}_{\lambda_2}\ldots \mathsf{m}_{\lambda_n},
@@ -435,18 +435,18 @@ example.
 	For $k=4$, there are only two partitions
 	which have no parts equal to $1$:
 	$\lambda=(4)$ and $\lambda=(2,2)$.
-	The number of ways to get $(4)$ 
-	(so that 
+	The number of ways to get $(4)$
+	(so that
 	$\operatorname{\mathbb{E}}[Y_{j_1} Y_{j_2} Y_{j_3} Y_{j_4}] = \mathsf{m}_4$)
 	is to just
 	assign one of the $j_p$ to be $4$,
 	this can be done in $n$ ways.
 
-	The number of ways to get $(2,2)$ 
-	(so that 
+	The number of ways to get $(2,2)$
+	(so that
 	$\operatorname{\mathbb{E}}[Y_{j_1} Y_{j_2} Y_{j_3} Y_{j_4}] = \mathsf{m}_2^2$)
 	is to assign
-	two of the $j_p$ to be $2$ and the other two to be $0$, this can be done in $\binom{n}{2}$ ways. Moreover, 
+	two of the $j_p$ to be $2$ and the other two to be $0$, this can be done in $\binom{n}{2}$ ways. Moreover,
 	there are also 6 permutations of the indices
 	$j_p=(i,j)$ which give the same partition $(2,2)$:
 	$(i,i,j,j)$, $(j,j,i,i)$, $(i,j,i,j)$, $(j,i,j,i)$, $(i,j,j,i)$, $(j,i,i,j)$.
@@ -944,7 +944,7 @@ $\lambda_1^{(k)}\ge \ldots\ge \lambda_k^{(k)}$
 be the eigenvalues of the top-left corner of size $k\times k$.
 Plot the two-dimensional array
 \begin{equation*}
-	\left\{ (\lambda_i^{(k)},k)\colon i=1,\ldots,k  \right\}\subset \mathbb{R}\times
+	\left\{ (\lambda_i^{(k)},k)\colon i=1,\ldots,k,\ k=1,\ldots,N  \right\}\subset \mathbb{R}\times
 	\mathbb{Z}_{\ge1}.
 \end{equation*}
 
