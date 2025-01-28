@@ -40,9 +40,18 @@ code:
       <label for="thetaInput">θ:</label>
       <input id="thetaInput" type="range" min="-5" max="5" step="0.02" value="0" />
       <span id="thetaValue">0</span>
+      <button id="decreaseTheta" class="btn btn-sm btn-secondary">-0.01</button>
+           <button id="increaseTheta" class="btn btn-sm btn-secondary">+0.01</button>
     </div>
   </div>
+</div>
 
+<div class="row">
+  <!-- Matrix corner display -->
+  <div class="col-12 col-lg-8 mb-3">
+    <h5>Upper 10×10 Corner of Matrix:</h5>
+    <div id="matrixCorner" style="font-family: monospace; white-space: pre"></div>
+  </div>
 </div>
 
 <div class="row">
@@ -108,6 +117,25 @@ code:
         }
     }
 
+    function displayMatrixCorner() {
+        // Get the corner data from WASM
+        const cornerPtr = Module._getMatrixCorner();
+        const cornerSize = Module._getCornerSize();
+        const cornerData = new Float64Array(Module.HEAPF64.buffer, cornerPtr, 100); // 10x10 array
+
+        // Format the corner as a string
+        let output = '';
+        for (let i = 0; i < cornerSize; i++) {
+            for (let j = 0; j < cornerSize; j++) {
+                output += cornerData[i * 10 + j].toFixed(3).padStart(8) + ' ';
+            }
+            output += '\n';
+        }
+
+        // Display in the div
+        document.getElementById('matrixCorner').textContent = output;
+    }
+
     function runSimulation() {
         const N = parseInt(document.getElementById("nInput").value, 10);
         const theta = parseFloat(document.getElementById("thetaInput").value);
@@ -123,6 +151,9 @@ code:
 
         // Render aggregated heatmap
         // drawHeatmap();
+
+      // Update matrix corner display
+           displayMatrixCorner();
 
         // Draw top 10 as a point process with tooltips
         const top10 = getTop10Eigenvals(eigenvals);
@@ -362,6 +393,25 @@ code:
     // Slider for theta - call runSimulation() so that only rank-1 shift is reapplied
     document.getElementById("thetaInput").addEventListener("input", (e) => {
         document.getElementById("thetaValue").textContent = e.target.value;
+        runSimulation();
+    });
+
+    // Fine control buttons for theta
+    document.getElementById("increaseTheta").addEventListener("click", () => {
+        const thetaInput = document.getElementById("thetaInput");
+        const currentTheta = parseFloat(thetaInput.value);
+        const newTheta = Math.min(5, currentTheta + 0.01);
+        thetaInput.value = newTheta;
+        document.getElementById("thetaValue").textContent = newTheta.toFixed(2);
+        runSimulation();
+    });
+
+    document.getElementById("decreaseTheta").addEventListener("click", () => {
+        const thetaInput = document.getElementById("thetaInput");
+        const currentTheta = parseFloat(thetaInput.value);
+        const newTheta = Math.max(-5, currentTheta - 0.01);
+        thetaInput.value = newTheta;
+        document.getElementById("thetaValue").textContent = newTheta.toFixed(2);
         runSimulation();
     });
 

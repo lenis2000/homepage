@@ -6,7 +6,7 @@ To compile, you need to have Emscripten installed and the Eigen library availabl
 
 emcc 2025-01-28-BBP-transition.cpp -o 2025-01-28-BBP-transition.js \
     -s WASM=1 \
-    -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main', '_setTheta']" \
+    -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main', '_setTheta', '_getMatrixCorner', '_getCornerSize']" \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s TOTAL_MEMORY=268435456 \
@@ -59,6 +59,40 @@ extern "C" double randn() {
 EMSCRIPTEN_KEEPALIVE
 extern "C" void setTheta(double theta) {
     currentTheta = theta;
+}
+
+// New function to get the upper 10x10 corner of the matrix
+EMSCRIPTEN_KEEPALIVE
+extern "C" double* getMatrixCorner() {
+    static std::vector<double> cornerData(100); // 10x10 = 100 elements
+
+    int displaySize = std::min(10, currentN); // Don't exceed matrix bounds
+
+    // Copy the upper corner in row-major order
+    for (int i = 0; i < displaySize; i++) {
+        for (int j = 0; j < displaySize; j++) {
+            cornerData[i * 10 + j] = matrixData[i * currentN + j];
+        }
+        // Fill remaining row with zeros if matrix is smaller than 10x10
+        for (int j = displaySize; j < 10; j++) {
+            cornerData[i * 10 + j] = 0.0;
+        }
+    }
+
+    // Fill remaining rows with zeros if matrix is smaller than 10x10
+    for (int i = displaySize; i < 10; i++) {
+        for (int j = 0; j < 10; j++) {
+            cornerData[i * 10 + j] = 0.0;
+        }
+    }
+
+    return cornerData.data();
+}
+
+// Get the size of the corner display (will be 10 or less)
+EMSCRIPTEN_KEEPALIVE
+extern "C" int getCornerSize() {
+    return std::min(10, currentN);
 }
 
 /*
