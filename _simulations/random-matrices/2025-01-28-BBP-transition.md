@@ -16,7 +16,9 @@ code:
   <div class="col-12 mb-3">
     <p>
       This simulation uses <code>WebAssembly</code> and the <code>Eigen</code> library to compute eigenvalues
-      of a Gaussian Orthogonal Ensemble (GOE) matrix. The visualization is done with <code>d3.js</code>.
+      of a (modified) Gaussian Orthogonal Ensemble (GOE) matrix. We introduce a rank-1 perturbation governed by
+      a parameter <code>θ</code> to demonstrate the BBP phase transition phenomenon: for large enough <code>θ</code>,
+      the top eigenvalue “spikes” out of the traditional GOE spectrum.
     </p>
   </div>
 </div>
@@ -49,7 +51,7 @@ code:
   </div>
 </div>
 
-<!-- NEW ROW for point processes above histogram and heatmap -->
+<!-- Row 4 with the new theta control and the point processes -->
 <div class="row">
   <div class="col-12 col-lg-6">
     <h5 class="mt-4">Top 10 Eigenvalues (Point Process):</h5>
@@ -59,6 +61,13 @@ code:
   <div class="col-12 col-lg-6">
     <h5 class="mt-4">20 Eigenvalues Around Zero (Point Process):</h5>
     <svg id="zero20EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
+  </div>
+
+  <!-- NEW theta slider control in row 4 -->
+  <div class="col-12 mt-3">
+    <label for="thetaInput">θ:</label>
+    <input id="thetaInput" type="range" min="-3" max="3" step="0.05" value="0" />
+    <span id="thetaValue">0</span>
   </div>
 </div>
 
@@ -85,9 +94,12 @@ code:
                 else Module.onRuntimeInitialized = resolve;
             });
 
-            // NEW: Automatically simulate one 100x100 matrix on page load
+            // Auto-generate once after loading
             document.getElementById("nInput").value = 100;
             document.getElementById("nValue").textContent = 100;
+            document.getElementById("thetaInput").value = 0;
+            document.getElementById("thetaValue").textContent = 0;
+
             runSimulation(); // auto-run once the WASM is ready
 
         } catch (error) {
@@ -98,6 +110,11 @@ code:
 
     function runSimulation() {
         const N = parseInt(document.getElementById("nInput").value, 10);
+        const theta = parseFloat(document.getElementById("thetaInput").value);
+
+        // Update the WASM side with current theta
+        Module.ccall('setTheta', null, ['number'], [theta]);
+
         const eigenvals = getEigenvalues(N);
 
         drawHistogram(eigenvals);
@@ -127,7 +144,7 @@ code:
         }
     }
 
-    // Not strictly needed for the heatmap anymore but left in place:
+    // Not strictly needed for the heatmap but left here for reference
     function getMatrixData() {
         const N = Module._getCurrentN();
         const ptr = Module._getMatrixData();
@@ -218,7 +235,6 @@ code:
         const sortedEigenvals = eigenvals.slice().sort((a, b) => a - b);
         const zeroIndex = sortedEigenvals.findIndex(x => x >= 0);
 
-        // Edge case if zeroIndex is near the boundaries
         const startIndex = Math.max(0, zeroIndex - 2);
         const endIndex   = Math.min(sortedEigenvals.length, zeroIndex + 3);
         const values = sortedEigenvals.slice(startIndex, endIndex);
@@ -248,7 +264,7 @@ code:
         return sorted.slice(startIndex, endIndex);
     }
 
-    // Replacing the bar chart function with a point process scatterplot + tooltips
+    // Draw a point process scatterplot + tooltips
     function drawEigenvaluePointProcess(eigenvalsSubset, containerId, title) {
         const svg = d3.select(containerId);
         svg.selectAll("*").remove();
@@ -257,13 +273,11 @@ code:
         const width = svg.node().getBoundingClientRect().width;
         const height = svg.node().getBoundingClientRect().height;
 
-        // x-axis: index from 1..subset.length
         const xScale = d3.scaleBand()
             .domain(eigenvalsSubset.map((_, i) => i.toString()))
             .range([margin.left, width - margin.right])
             .padding(0.2);
 
-        // y-axis: from min to max of the subset
         const minVal = d3.min(eigenvalsSubset);
         const maxVal = d3.max(eigenvalsSubset);
         const yScale = d3.scaleLinear()
@@ -288,7 +302,7 @@ code:
             .style("font-size", "14px")
             .text(title);
 
-        // Prepare tooltip
+        // Tooltip
         const tooltip = d3.select("body")
           .append("div")
           .style("position", "absolute")
@@ -299,7 +313,7 @@ code:
           .style("pointer-events", "none")
           .style("display", "none");
 
-        // Circles
+        // Points
         svg.selectAll("circle")
             .data(eigenvalsSubset)
             .join("circle")
@@ -321,7 +335,7 @@ code:
                 tooltip.style("display", "none");
             });
 
-        // Optional: a horizontal line at y=0 if negative values exist
+        // Optional horizontal line at y=0
         if (minVal < 0 && maxVal > 0) {
             svg.append("line")
                 .attr("x1", margin.left)
@@ -334,20 +348,17 @@ code:
         }
     }
 
-    // Draw a heatmap image using RGBA data aggregated in C++ (max size = 100x100)
+    // Draw a heatmap image using RGBA data aggregated in C++
     function drawHeatmap() {
-        const dim = Module._getHeatMapDim(); // M = min(N, 100)
+        const dim = Module._getHeatMapDim();
         const ptr = Module._getHeatMapData();
         if (!ptr || dim <= 0) return;
 
-        // Build a Uint8ClampedArray view over the WASM memory
         const heatmapArray = new Uint8ClampedArray(Module.HEAPU8.buffer, ptr, 4 * dim * dim);
 
         const container = d3.select("#heatmap");
         container.selectAll("*").remove();
 
-        // Create a canvas for the MxM RGBA image
-        // We'll scale it to about 400px for visibility
         const scalePixels = 400;
         const canvas = container.append("canvas")
             .attr("width", dim)
@@ -356,20 +367,24 @@ code:
             .style("height", scalePixels + "px")
             .node();
 
-        // Put image data onto the canvas
         const ctx = canvas.getContext("2d");
         const imageData = new ImageData(heatmapArray, dim, dim);
         ctx.putImageData(imageData, 0, 0);
     }
 
-    // Generate & plot on button press
+    // Button to resample
     document.getElementById("runBtn").addEventListener("click", () => {
         runSimulation();
     });
 
-    // Display slider value dynamically
+    // Slider for N
     document.getElementById("nInput").addEventListener("input", (e) => {
         document.getElementById("nValue").textContent = e.target.value;
+    });
+
+    // Slider for theta
+    document.getElementById("thetaInput").addEventListener("input", (e) => {
+        document.getElementById("thetaValue").textContent = e.target.value;
     });
 
     // Initialize WASM after page loads

@@ -6,7 +6,7 @@ To compile, you need to have Emscripten installed and the Eigen library availabl
 
 emcc 2025-01-28-BBP-transition.cpp -o 2025-01-28-BBP-transition.js \
     -s WASM=1 \
-    -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main']" \
+    -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main', '_setTheta']" \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s TOTAL_MEMORY=268435456 \
@@ -35,6 +35,9 @@ static std::vector<unsigned char> heatMapData; // RGBA data for 100x100 (max) or
 static int currentN = 0;
 static int heatMapDim = 0; // Actual dimension of the aggregated heat map
 
+// NEW: Global storage for the "theta" parameter
+static double currentTheta = 0.0;
+
 // Simple exponential transform: x -> sign(x)*(exp(|x|)-1)
 inline double exponentialTransform(double x) {
     double ax = std::fabs(x);
@@ -48,6 +51,12 @@ extern "C" double randn() {
     static std::mt19937 rng(42);  // Fixed seed for reproducibility
     static std::normal_distribution<double> dist(0.0, 1.0);
     return dist(rng);
+}
+
+// NEW: Set the theta parameter
+EMSCRIPTEN_KEEPALIVE
+extern "C" void setTheta(double theta) {
+    currentTheta = theta;
 }
 
 // Main eigenvalue computation function
@@ -67,6 +76,12 @@ extern "C" double* computeEigenvalues(int N) {
             A(i, j) = value;
             A(j, i) = value;
         }
+    }
+
+    // BBP "spike": Add theta to a single diagonal element (rank-one perturbation)
+    if (N > 1) {
+        // In 0-based indexing, A(0,0) is the second row, second column
+        A(0,0) += currentTheta;
     }
 
     // Copy matrix values into matrixData (row-major)
@@ -103,12 +118,10 @@ extern "C" double* computeEigenvalues(int N) {
     std::vector<double> blockVals(M * M, 0.0);
 
     // Integer block size in each dimension
-    // (some leftover rows/cols may be ignored for simplicity if N not multiple of M)
     int blockSize = N / M;
     if (blockSize < 1) blockSize = 1; // for safety if N < M
 
     // We'll fill each of the MxM blocks by averaging the blockSize x blockSize region
-    // (any leftover region if N % M != 0 won't significantly affect the aggregated map)
     for (int bi = 0; bi < M; bi++) {
         for (int bj = 0; bj < M; bj++) {
             double sum = 0.0;
@@ -136,7 +149,6 @@ extern "C" double* computeEigenvalues(int N) {
         for (int j = 0; j < M; j++) {
             double val = blockVals[i * M + j];
 
-            // ratio in [0,1] for reversed scale
             double ratio;
             if (std::fabs(maxVal - minVal) < 1e-14) {
                 // Avoid divide by zero if matrix is nearly constant
