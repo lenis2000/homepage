@@ -17,7 +17,9 @@ code:
     <p>
       This simulation uses <code>WebAssembly</code> and the <code>Eigen</code> library to compute eigenvalues
       of a (modified) Gaussian Orthogonal Ensemble (GOE) matrix. We introduce a rank-1 perturbation governed by
-      a parameter <code>θ</code> to demonstrate the BBP phase transition phenomenon: for large enough <code>θ</code>,
+      a parameter $\theta$:
+      $$A\mapsto A + \theta \cdot e_1e_1^T,$$ where $A$ is the original GOE matrix, and $e_1$ is the first basis vector.
+      There is the <a href="https://arxiv.org/abs/math/0403022">BBP</a> phase transition phenomenon: for large enough $|\theta|$,
       the top eigenvalue “spikes” out of the traditional GOE spectrum.
     </p>
   </div>
@@ -27,12 +29,20 @@ code:
   <!-- Controls -->
   <div class="col-12 col-lg-8">
     <div class="controls mb-3">
-      <label for="nInput">Matrix size N:</label>
-      <input id="nInput" type="range" min="2" max="2000" step="1" value="50" />
-      <span id="nValue">50</span>
-      <button id="runBtn" class="btn btn-primary">Generate & Plot Eigenvalues</button>
+      <label for="nInput">$N$:</label>
+      <input id="nInput" type="range" min="2" max="2000" step="1" value="100" />
+      <span id="nValue">100</span>&nbsp;
+
+
+      <button id="runBtn" class="btn btn-primary">Set $N$</button>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <label for="thetaInput">θ:</label>
+      <input id="thetaInput" type="range" min="-5" max="5" step="0.05" value="0" />
+      <span id="thetaValue">0</span>
     </div>
   </div>
+
 </div>
 
 <div class="row">
@@ -63,26 +73,16 @@ code:
     <svg id="zero20EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
   </div>
 
-  <!-- NEW theta slider control in row 4 -->
-  <div class="col-12 mt-3">
-    <label for="thetaInput">θ:</label>
-    <input id="thetaInput" type="range" min="-3" max="3" step="0.05" value="0" />
-    <span id="thetaValue">0</span>
-  </div>
+
 </div>
 
 <div class="row align-items-center">
   <!-- Histogram on the left -->
-  <div class="col-12 col-lg-6">
+  <div class="col-12">
       <h5>Histogram of eigenvalues:</h5>
       <svg id="plot" width="100%" style="min-height: 400px;"></svg>
   </div>
 
-  <!-- Heatmap on the right -->
-  <div class="col-12 col-lg-6" style="min-height: 400px;">
-      <h5>Heatmap of matrix elements:</h5>
-      <div id="heatmap" style="margin-top: 1rem;"></div>
-  </div>
 </div>
 
 <script>
@@ -122,7 +122,7 @@ code:
         displayEigenvaluesAroundZero(eigenvals);
 
         // Render aggregated heatmap
-        drawHeatmap();
+        // drawHeatmap();
 
         // Draw top 10 as a point process with tooltips
         const top10 = getTop10Eigenvals(eigenvals);
@@ -161,7 +161,7 @@ code:
         const height = svg.node().getBoundingClientRect().height;
 
         const xScale = d3.scaleLinear()
-            .domain([-2.5, 2.5])
+            .domain([-4, 4])
             .range([margin.left, width - margin.right]);
 
         const N = eigenvals.length;
@@ -348,29 +348,6 @@ code:
         }
     }
 
-    // Draw a heatmap image using RGBA data aggregated in C++
-    function drawHeatmap() {
-        const dim = Module._getHeatMapDim();
-        const ptr = Module._getHeatMapData();
-        if (!ptr || dim <= 0) return;
-
-        const heatmapArray = new Uint8ClampedArray(Module.HEAPU8.buffer, ptr, 4 * dim * dim);
-
-        const container = d3.select("#heatmap");
-        container.selectAll("*").remove();
-
-        const scalePixels = 400;
-        const canvas = container.append("canvas")
-            .attr("width", dim)
-            .attr("height", dim)
-            .style("width", scalePixels + "px")
-            .style("height", scalePixels + "px")
-            .node();
-
-        const ctx = canvas.getContext("2d");
-        const imageData = new ImageData(heatmapArray, dim, dim);
-        ctx.putImageData(imageData, 0, 0);
-    }
 
     // Button to resample
     document.getElementById("runBtn").addEventListener("click", () => {
@@ -382,9 +359,10 @@ code:
         document.getElementById("nValue").textContent = e.target.value;
     });
 
-    // Slider for theta
+    // Slider for theta - call runSimulation() so that only rank-1 shift is reapplied
     document.getElementById("thetaInput").addEventListener("input", (e) => {
         document.getElementById("thetaValue").textContent = e.target.value;
+        runSimulation();
     });
 
     // Initialize WASM after page loads
