@@ -1,5 +1,6 @@
 /*
-Compiles into a WebAssembly module.
+Compiles into a WebAssembly module that computes the eigenvalues of a random
+Gaussian Orthogonal Ensemble (GOE) matrix.
 
 To compile, you need to have Emscripten installed and the Eigen library available
 
