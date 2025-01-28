@@ -112,8 +112,8 @@ code:
   </div>
 </div>
 
-<!-- Load D3 from a CDN (can also use local version if desired) -->
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+<script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script>
 // ==============================
 // 1) Global Variables

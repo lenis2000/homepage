@@ -94,7 +94,7 @@ code:
   <svg id="permSVG" width="400" height="400"></svg>
 </div>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script>
 ////////////////////////////////////////
 // 1) Small grid for user drawing
