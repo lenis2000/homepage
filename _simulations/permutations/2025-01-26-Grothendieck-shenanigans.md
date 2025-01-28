@@ -229,7 +229,7 @@ function drawPermutationMatrix(sigma) {
       .attr("cx", d => xScale(d.row))
       .attr("cy", d => yScale(d.col))
       .attr("r", radius)
-      .style("fill", "steelblue")
+      .style("fill", "#00204E")
       .on("mouseover", (evt, d) => {
         tooltip
           .style("opacity", 1)

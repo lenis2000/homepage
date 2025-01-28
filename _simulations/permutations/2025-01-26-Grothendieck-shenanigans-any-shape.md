@@ -351,7 +351,7 @@ function drawPermutationMatrix(sigma) {
     .attr("cx", d => xScale(d.row))
     .attr("cy", d => yScale(d.col))
     .attr("r", radius)
-    .attr("fill", "steelblue");
+    .attr("fill", "#002D62");
 }
 
 ////////////////////////////////////////
