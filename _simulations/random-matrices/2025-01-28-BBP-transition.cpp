@@ -1,10 +1,9 @@
 /*
-Compiles into a WebAssembly module that computes the eigenvalues of a random
-Gaussian Orthogonal Ensemble (GOE) matrix.
+Compiles into a WebAssembly module.
 
 To compile, you need to have Emscripten installed and the Eigen library available
 
-emcc 2025-01-28-GOE.cpp -o 2025-01-28-GOE.js \
+emcc 2025-01-28-BBP-transition.cpp -o 2025-01-28-BBP-transition.js \
     -s WASM=1 \
     -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main']" \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
@@ -14,7 +13,7 @@ emcc 2025-01-28-GOE.cpp -o 2025-01-28-GOE.js \
     -s ASSERTIONS=1 \
     -I ../../eigen-3.4-rc1 \
     -s SINGLE_FILE=1 \
-    && mv 2025-01-28-GOE.js ../../js/
+    && mv 2025-01-28-BBP-transition.js ../../js/
 
 then move the js file into the /js/ folder
 */

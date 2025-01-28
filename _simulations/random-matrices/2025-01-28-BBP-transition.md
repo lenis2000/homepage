@@ -1,22 +1,21 @@
 ---
-title: GOE eigenvalues
+title: BBP transition
 model: random-matrices
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-01-28-GOE.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-01-28-BBP-transition.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-01-28-GOE.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-01-28-BBP-transition.cpp'
     txt: 'C++ code for the simulation'
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
-<script src="{{site.url}}/js/2025-01-28-GOE.js"></script>
+<script src="{{site.url}}/js/2025-01-28-BBP-transition.js"></script>
 
 <div class="row">
   <div class="col-12 mb-3">
     <p>
-      This simulation uses <code>WebAssembly</code> and the <code>Eigen</code> library to compute eigenvalues
-      of a Gaussian Orthogonal Ensemble (GOE) matrix. The visualization is done with <code>d3.js</code>.
+      This simulation uses <code>WebAssembly</code> and the <code>Eigen</code> library. The visualization is done with <code>d3.js</code>.
     </p>
   </div>
 </div>
@@ -143,7 +142,7 @@ code:
             .attr("height", d => yScale(0) - yScale(d.normalizedLength))
             .attr("fill", "#00204E");
 
-        // Semicircle overlay (Wigner semicircle distribution for GOE)
+        // Semicircle overlay (Wigner semicircle distribution)
         const semicircleData = Array.from({ length: 200 }, (_, i) => {
             const x = -2 + (i / 199) * 4;
             const y = Math.abs(x) <= 2 ? Math.sqrt(4 - x ** 2) / (2 * Math.PI) : 0;
