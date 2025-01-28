@@ -38,7 +38,7 @@ code:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <label for="thetaInput">θ:</label>
-      <input id="thetaInput" type="range" min="-5" max="5" step="0.05" value="0" />
+      <input id="thetaInput" type="range" min="-5" max="5" step="0.02" value="0" />
       <span id="thetaValue">0</span>
     </div>
   </div>
