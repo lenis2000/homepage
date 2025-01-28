@@ -25,7 +25,7 @@ nav_weight: 19
 {% for item in simss reversed %}
   {% if item.head_page != true %}
   {% assign counter = counter | plus:1 %}
-  {% if counter < 5 %}
+  {% if counter < 10 %}
     <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
   {% endif %}
   {% endif %}
