@@ -96,7 +96,7 @@ code:
   <div class="col-12">
     <div class="controls">
       <label for="nInput2">$N$:</label>
-      <input id="nInput2" type="range" min="2" max="2000" step="1" value="100" />
+      <input id="nInput2" type="range" min="2" max="1000" step="1" value="100" />
       <span id="nValue2">100</span>&nbsp;
       <button id="runBtn2" class="btn btn-primary">Set $N$  and resample matrix</button>
 
