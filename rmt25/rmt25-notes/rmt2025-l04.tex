@@ -268,7 +268,7 @@ the original paper \cite{dumitriu2002matrix}.
 \subsection{The case \texorpdfstring{$\beta=2$}{beta=2}}
 \label{subsec:beta2-case}
 
-For many questions involving \emph{local eigenvalue statistics}, 
+For many questions involving \emph{local eigenvalue statistics},
 the case \(\beta=2\) (the GUE, Gaussian Unitary Ensemble) is the most tractable.
 This is because the joint density of the eigenvalues
 admits a determinantal structure coming from
@@ -277,7 +277,7 @@ a \emph{square} Vandermonde factor
 and the Gaussian exponential
 \(\,\exp\bigl(-\tfrac12 \sum \lambda_j^2\bigr)\).
 Moreover, for \(\beta=2\), the random matrix model
-and its correlation functions 
+and its correlation functions
 can be expressed explicitly through determinants involving
 \emph{orthogonal polynomials}, namely, the \emph{Hermite polynomials}.
 
@@ -286,10 +286,10 @@ can be expressed explicitly through determinants involving
   Consider the GUE (Gaussian Unitary Ensemble) random matrix model, i.e.\ an
   \(n\times n\) complex Hermitian matrix whose entries
   are i.i.d.\ up to the Hermitian condition, with each
-  off-diagonal entry distributed as 
+  off-diagonal entry distributed as
   \(\mathcal{N}(0,\tfrac12)+\mathrm{i}\,\mathcal{N}(0,\tfrac12)\)
   and each diagonal entry \(\mathcal{N}(0,1)\).
-  The ordered eigenvalues \(\lambda_1 \ge \cdots \ge \lambda_n\) 
+  The ordered eigenvalues \(\lambda_1 \ge \cdots \ge \lambda_n\)
   (or, without ordering, thought of as an unordered set)
   satisfy the joint probability density
   \begin{equation}
@@ -300,14 +300,14 @@ can be expressed explicitly through determinants involving
     \prod_{j=1}^n e^{-\frac12 \lambda_j^2}
     \;\prod_{1\le i<j\le n} (\lambda_i - \lambda_j)^2,
   \end{equation}
-  where \(Z_{n,2}\) is a normalization constant. 
+  where \(Z_{n,2}\) is a normalization constant.
 
-	Moreover, if 
-  \(\{\psi_k(\lambda)\}_{k=0}^\infty\) 
+	Moreover, if
+  \(\{\psi_k(\lambda)\}_{k=0}^\infty\)
 	is the family of Hermite polynomials, orthonormal
-  with respect to the measure 
+  with respect to the measure
   \(w(\lambda)\,d\lambda = e^{-\lambda^2/2}\,d\lambda\)
-  on \(\mathbb{R}\) (i.e., 
+  on \(\mathbb{R}\) (i.e.,
 	\(\displaystyle\int_{-\infty}^{\infty} \psi_k(\lambda)\,\psi_\ell(\lambda)\,w(\lambda)\,d\lambda = \mathbf{1}_{k=\ell}\)),
   then one can also write
   \begin{equation}
@@ -322,15 +322,15 @@ can be expressed explicitly through determinants involving
 \end{proposition}
 The \emph{square determinant} structure is extremely useful.
 It is
-precisely the \(\beta=2\) counterpart 
-of the squared Vandermonde factor 
+precisely the \(\beta=2\) counterpart
+of the squared Vandermonde factor
 \(\,\prod_{i<j}(\lambda_i-\lambda_j)^2\).
 
 
 \begin{remark}[Hermite polynomials]
-  There are various normalizations of Hermite polynomials. 
-  In random matrix theory for the Gaussian ensembles, 
-  we often use the \emph{probabilists' Hermite polynomials} 
+  There are various normalizations of Hermite polynomials.
+  In random matrix theory for the Gaussian ensembles,
+  we often use the \emph{probabilists' Hermite polynomials}
 	(sometimes called \(\mathrm{He}_k\), but we use the notation $H_k$).
 	There are various normalizations due to the factor in the exponent
 	of $x^2$.
@@ -342,40 +342,40 @@ of the squared Vandermonde factor
     (-1)^k\, e^{\tfrac{x^2}{2}}
     \frac{d^k}{dx^k}
     \Bigl(e^{-\tfrac{x^2}{2}}\Bigr),
-		\qquad 
+		\qquad
 		k=0,1,\ldots,
   \]
-  whose leading term is \(x^k\). 
+  whose leading term is \(x^k\).
 	Polynomials with the leading coeffient \(1\) are called \emph{monic}.
 	The first few monic Hermite polynomials are
 	\[
 		H_0(x) = 1,\qquad
 		H_1(x) = x,\qquad
 		H_2(x) = x^2 - 1,\qquad
-		H_3(x) = x^3 - 3x,\qquad 
+		H_3(x) = x^3 - 3x,\qquad
 		H_4(x) = x^4 - 6x^2 + 3.
 	\]
 	The difference between $H_k$ and $\psi_k$ entering \Cref{prop:gue-joint-density}
 	is in a constant normalization,
-	since $H_k$ are monic but not orthonormal, 
+	since $H_k$ are monic but not orthonormal,
 	while $\psi_k$ are orthonormal but not monic.
 \end{remark}
 
 \begin{proof}[Sketch of the determinantal representation]
-  In brief, one observes that the factor 
-  \(\prod_{i<j}(\lambda_i - \lambda_j)\) 
-  is exactly the Vandermonde determinant 
-  \(\Delta(\lambda_1,\dots,\lambda_n) 
+  In brief, one observes that the factor
+  \(\prod_{i<j}(\lambda_i - \lambda_j)\)
+  is exactly the Vandermonde determinant
+  \(\Delta(\lambda_1,\dots,\lambda_n)
   = \det\bigl[\lambda_k^{j-1}\bigr]_{j,k=1}^n\).
-	Next, the Vandermonde determinant is also equal to 
+	Next, the Vandermonde determinant is also equal to
 	the determinant built out of any monic family of polynomials of the corresponding
 	degrees (by linear transformations), and so we get the desired
 	representation.
 \end{proof}
 
-We will work with Hermite polynomials 
-and the determinantal structure in \Cref{prop:gue-joint-density} 
-in the next 
+We will work with Hermite polynomials
+and the determinantal structure in \Cref{prop:gue-joint-density}
+in the next
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5}).
 
 \section{Wigner semicircle law via tridiagonalization}
@@ -392,11 +392,11 @@ semicircle distribution:
   \;=\;
   \frac{1}{2\pi}\,\sqrt{4 - x^2}\,\mathbf{1}_{|x|\le2}\,dx.
 \]
-We already derived this in 
+We already derived this in
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2}
 by a direct combinatorial argument on the trace. Now we present another proof by using the tridiagonal form of $W$.  The argument is conceptually simpler in some steps, because the matrix is sparser (only tridiagonal).
 At the same time, we will establish the Wigner
-semicircle law for the general G$\beta$E case (but only Gaussian), and 
+semicircle law for the general G$\beta$E case (but only Gaussian), and
 thus it will apply to GUE and GSE.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -404,8 +404,8 @@ thus it will apply to GUE and GSE.
 \label{sub:tridiag-moments}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Consider 
-the rescaled 
+Consider
+the rescaled
 G$\beta$E
 matrix $T/\sqrt{n}$:
 \[
@@ -419,57 +419,255 @@ matrix $T/\sqrt{n}$:
   \end{pmatrix},
 \]
 where $d_i \sim \mathcal{N}(0,1)$ and $\alpha_j \sim \frac{1}{\sqrt 2}\chi_{\beta(n-j)}$.  We want to show that the ESD of $T/\sqrt{n}$ converges to the semicircle law.
-We will consider expected traces of powers, and leave the analytic parts of the 
+We will mostly consider expected traces of powers, and leave the analytic parts of the
 argument to the reader.
 
-The $k$-th moment of the ESD is
-\[
+The $k$-th (random) moment of the ESD
+$\frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i/\sqrt{n}}$ is
+\begin{equation}
+	\label{eq:tridiagonal-moments-expansion}
   \frac{1}{n}\operatorname{Tr}\Bigl(\tfrac{T}{\sqrt{n}}\Bigr)^k
   \;=\;
   \frac{1}{n^{1 + \frac{k}{2}}}
-  \sum_{i_1,\dots,i_k=1}^n 
-     \Bigl(\prod_{\ell=1}^k t_{\,i_\ell,\,i_{\ell+1}}\Bigr)
-     \quad\text{where }(i_{k+1}=i_1).
-\]
-But now $t_{ij}$ is nonzero only if $\lvert i-j\rvert \le1$, i.e.\ the $(i,j)$ entry is on the main or first super-/subdiagonal.  Therefore, in order for $t_{i_\ell,i_{\ell+1}}$ to be nonzero, we must have $i_{\ell+1} \in \{i_{\ell}-1,i_{\ell},i_{\ell}+1\}$ \emph{and} $i_{\ell+1} \neq i_\ell$ if it’s an off-diagonal entry.  In a closed product $t_{i_1 i_2}\cdots t_{i_k i_1}$, we thus get a \emph{closed walk} in a linear graph on the vertex set $\{1,2,\dots,n\}$ with edges only between consecutive indices.
+  \sum_{i_1,\dots,i_k=1}^n
+	t_{i_1,i_2}\cdots t_{i_k,i_1},
+\end{equation}
+where $t_{ij}$ are the non-rescaled entries of $T$.
+But now $t_{ij}$ is nonzero only if $\lvert i-j\rvert \le1$,
+i.e.\ the $(i,j)$ entry is on the main or first
+super-/subdiagonal.
+In a closed product $t_{i_1 i_2}\cdots t_{i_k i_1}$, we thus get a \emph{closed walk} in a linear graph on the vertex set $\{1,2,\dots,n\}$ with edges only between consecutive indices.
 
-Hence the relevant combinatorial objects become \emph{Motzkin paths}, sometimes also referred to as the set of ways to walk up, stay (diagonal step), or down within a one-dimensional band, forming a closed loop.  The counting is simpler than in the fully-connected Wigner case, but the main phenomenon remains: the leading order in $n$ for the moment expansions arises from certain matchings or “pairings” that produce subdiagonal factors squared, ensuring independence and nonzero means.  
+The relevant combinatorial objects encoding these walks are
+\emph{Motzkin
+paths}: lattice walks in $\mathbb{Z}^2_{\ge0}$
+starting at $(0,0)$, ending at $(k,0)$, and consisting of steps
+\((1,0)\), \((1,1)\), and \((1,-1)\).  The steps \((1,0)\) correspond to
+picking the diagonal element; steps
+\((1,1)\) correspond to picking $i_{\ell+1}=i_\ell+1$, and
+steps \((1,-1)\) correspond to $i_{\ell+1}=i_\ell-1$.
+See \Cref{fig:motzkin} for an illustration of a Motzkin path.
 
-We do not go into the full detail of the Motzkin path enumeration here, but the essence is:
-\begin{enumerate}
-\item Each diagonal entry $d_i$ has mean 0, so to get a nonzero expectation, $d_i$ must appear an even number of times in the product.  
-\item Each subdiagonal factor $\alpha_j$ also has mean zero if it appears an odd number of times (since $\alpha_j$ has distribution with zero-mean sign if it appears singly).  So each $\alpha_j$ must appear at least twice. 
-\item The subleading terms vanish in the $n\to\infty$ limit. The main contributing terms produce the Catalan structure and lead to the same limiting sequence of moments as in Wigner’s classical argument.  
-\end{enumerate}
-Thus the moment expansions for $T/\sqrt{n}$ recover the same limit as in the classical Wigner result, i.e.\ the semicircle moment sequence. 
+\begin{figure}[htb]
+ \begin{center}
+  \begin{tikzpicture}[scale=0.7]
+   \draw[help lines, color=gray!30, dashed] (0,0) grid (8,4);
+   \draw[->,thick] (-0.2,0) -- (8.5,0) node[right] {$x$};
+   \draw[->,thick] (0,-0.2) -- (0,4.5) node[above] {$y$};
+   \draw[ultra thick,blue] (0,0) -- (1,1) -- (2,2) -- (3,2) -- (4,1) -- (5,1) -- (6,0) -- (7,0) -- (8,0);
+   \foreach \x/\y in {0/0,1/1,2/2,3/2,4/1,5/1,6/0,7/0,8/0} {
+    \fill[red] (\x,\y) circle (3pt);
+   }
+  \end{tikzpicture}
+	\caption{Example of a Motzkin path.}
+  \label{fig:motzkin}
+ \end{center}
+\end{figure}
+
+Now, each term in the sum in \eqref{eq:tridiagonal-moments-expansion}
+corresponds to a Motzkin path. Moreover, for each Motzkin path,
+there are $O(n)$ summands corresponding to it. The number of
+Motzkin paths of length $k$ is finite (independent of $n$),
+so we need to look more closely at the asymptotics of the product
+in \eqref{eq:tridiagonal-moments-expansion}. This product
+involves chi random variables which depend on $n$, too.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Asymptotics of chi random variables}
 \label{sub:chi-asymptotics}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-One additional technical point in analyzing $T/\sqrt{n}$ is to note that $\alpha_j$ is roughly $\sqrt{(n-j)/2}$ for large $n$.  Indeed, $\chi^2_{n-j}$ is the sum of $(n-j)$ squared standard Gaussians, so it is typically around $n-j$.  More precisely, by the law of large numbers and a standard concentration bound (large deviations for $\chi^2$ distributions), we have with high probability
+One additional technical point in analyzing $T/\sqrt{n}$ is to note that $\alpha_j$
+is roughly $\sqrt{\beta(n-j)/2}$ for large $n$.
+Indeed, we have
+\begin{equation*}
+	\chi^2_\nu=\sum_{i=1}^\nu Z_i^2,\qquad
+	\operatorname{\mathbb{E}}[\chi^2_\nu]=\nu,\qquad
+	\operatorname{Var}[\chi^2_\nu]=2\nu.
+\end{equation*}
+Now, since we are dividing by $\sqrt n$, we have
+\begin{equation*}
+	\frac{\alpha_j}{\sqrt n}\sim \sqrt{\frac{\beta}{2}}\sqrt{1-\theta},\qquad
+	\theta=\frac{j}{n}\in [0,1].
+\end{equation*}
+This estimate is valid in the ``bulk'' region, that is, when $\theta$ is strictly between $0$ and $1$.
+
+Let us make these estimates more precise.  We have:
+\begin{proposition}[Pointwise asymptotics in the bulk]
+\label{prop:alpha-bulk}
+Fix any $\delta \in (0,1)$ and let $j$ range so that $\theta_j := j/n \in [\delta,\, 1-\delta]$.
+Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a term that is stochastically bounded at the indicated order as $n\to\infty$. That is, $X_n = O_p(a_n)$ means that for any $\epsilon>0$, there exists $M>0$ such that $\Pr(|X_n/a_n| > M) < \epsilon$ for all sufficiently large $n$.}
 \[
-  \frac{\chi^2_{n-j}}{n-j} \;\approx\;1
-  \;\;\Longrightarrow\;\;
-  \alpha_j \;=\;\sqrt{\frac{\chi^2_{n-j}}{2}}
-  \;\approx\;\sqrt{\frac{n-j}{2}}.
+  \frac{\alpha_j}{\sqrt{n}}
+  \;=\; \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
+  \;+\; O_p\Bigl(\frac{1}{\sqrt{n}}\Bigr),
 \]
-Hence for $j$ in the “bulk” region, say $j\approx\theta n$ for $\theta\in(0,1)$, we get 
+In particular,
 \[
-  \alpha_j/\sqrt{n}\;\approx\;\sqrt{\frac{1-\theta}{2}}.
+  \lim_{n\to\infty} \frac{\alpha_j}{\sqrt{n}}
+  \;=\; \sqrt{\beta\Bigl(1-\theta_j\Bigr)}
+  \quad\text{in probability.}
 \]
-Meanwhile, on the diagonal, $d_i/\sqrt{n}$ vanishes in the limit ($\sim n^{-1/2}$).  So the main structure for large $n$ is that the subdiagonal couplings are of order 1, while the diagonal part is negligible.
+\end{proposition}
+
+
+\begin{remark}
+Outside the bulk region (i.e.\ very close to $j=0$ or $j=n$), one would need a different statement to handle the case $\beta(n-j)$ is not large. 
+In our application, we only need the bulk behavior.
+\end{remark}
+
+Meanwhile, on the diagonal, $d_i/\sqrt{n}$ 
+almost surely vanishes in the limit as $n\to\infty$,
+because $d_i$ is standard Gaussian and does not depend on $n$.
+
+
+\begin{remark}[Diagonal entries]
+For completeness, note that in many random matrix models with real/complex/Quaternion Gaussian entries, one also has diagonal terms $d_i \sim N(0,1)$ (independent of $n$).  Then
+\[
+  \frac{d_i}{\sqrt{n}} \;\to\; 0
+  \quad\text{almost surely},
+\]
+because $d_i$ does not scale with $n$.  Hence on the diagonal, $\alpha_j$-type behavior is irrelevant (or replaced by $d_i$ that vanish in $\sqrt{n}$ scaling).
+\end{remark}
+
+\subsection{Bounds on products in the bulk}
+
+We now give a couple of corollaries/lemmas that control products of the form
+\[
+  \prod_{j=a}^{b} \frac{\alpha_j}{\sqrt{n}}.
+\]
+Whether you need deterministic bounds or stochastically dominating bounds, these simple expansions
+(and standard large-deviation arguments around the $O_p(\cdot)$ notation) usually suffice.
+
+\begin{corollary}[Finite product bound]
+\label{cor:finite-product}
+Fix a finite integer $m$, and let $1 \le j \le m$ with $j/n \in [0,1]$.  Then
+\[
+  \prod_{j=1}^m \frac{\alpha_j}{\sqrt{n}}
+  \;=\;
+  \prod_{j=1}^m
+    \Bigl(\sqrt{\beta\bigl(1 - \tfrac{j}{n}\bigr)} + O_p(\tfrac{1}{\sqrt{n}})\Bigr)
+  \;=\;
+  \prod_{j=1}^m \sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)}
+  \;\Bigl(1 + O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)\Bigr).
+\]
+In particular, as $n\to\infty$ (with $m$ fixed),
+\[
+  \prod_{j=1}^m \frac{\alpha_j}{\sqrt{n}}
+  \;=\;
+  \beta^{m/2}
+  \prod_{j=1}^m \sqrt{1 - \frac{j}{n}}
+  \;\Bigl(1 + O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)\Bigr).
+\]
+\end{corollary}
+
+\begin{proof}
+By Proposition~\ref{prop:alpha-bulk} (even applied naively for small $j$),
+\[
+  \frac{\alpha_j}{\sqrt{n}}
+  =
+  \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)} + O_p\Bigl(\tfrac{1}{\sqrt{n}}\Bigr).
+\]
+Hence each factor in the product equals
+\(\sqrt{\beta(1 - j/n)}\times\bigl[1 + O_p(\tfrac{1}{\sqrt{n}})\bigr]\).
+Since $m$ is fixed, the product of $m$ such terms introduces only another
+$1 + O_p(\tfrac{1}{\sqrt{n}})$ factor overall.
+\end{proof}
+
+\begin{lemma}[Product bounds on a bulk interval]
+\label{lem:prod-bulk}
+Let $\delta \in (0,1)$ be fixed, and consider indices $j$ such that $j/n \in [\delta,1-\delta]$.
+For any integer interval $[a,b]\subset \{\lceil \delta n\rceil,\dots,\lfloor(1-\delta)n\rfloor\}$, we have
+\[
+  \prod_{j=a}^b \frac{\alpha_j}{\sqrt{n}}
+  \;=\;
+  \exp\Bigl(\sum_{j=a}^b
+    \ln\Bigl[\sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)} + O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)\Bigr]
+  \Bigr).
+\]
+Moreover, using the expansion
+\[
+  \ln\!\Bigl[\sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)} + \epsilon_j\Bigr]
+  \;=\;
+  \ln\sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)} \;+\; O_p\!\Bigl(\tfrac{|\epsilon_j|}{\sqrt{\beta(1-j/n)}}\Bigr),
+\]
+one finds that with high probability,
+\[
+  \prod_{j=a}^b \frac{\alpha_j}{\sqrt{n}}
+  \;=\;
+  \prod_{j=a}^b \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
+  \;\exp\Bigl( O_p\bigl(\tfrac{b-a+1}{\sqrt{n}}\bigr)\Bigr).
+\]
+\end{lemma}
+
+\begin{proof}
+Applying Proposition~\ref{prop:alpha-bulk} in the bulk region, each factor satisfies
+\[
+  \frac{\alpha_j}{\sqrt{n}}
+  =
+  \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)} + O_p\Bigl(\tfrac{1}{\sqrt{n}}\Bigr).
+\]
+Denote $\epsilon_j = O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)$.  Then
+\[
+  \ln\Bigl[\sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)} + \epsilon_j\Bigr]
+  \;=\;
+  \ln\sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
+    \;+\; \ln\!\Bigl[1 + \frac{\epsilon_j}{\sqrt{\beta(1-j/n)}}\Bigr].
+\]
+As long as $j/n \in [\delta, 1-\delta]$, the denominator $\sqrt{\beta(1-j/n)}$ is bounded away from zero, so
+\[
+  \ln\!\bigl[1 + \tfrac{\epsilon_j}{\sqrt{\beta(1-j/n)}}\bigr]
+  \;=\;
+  O_p\!\Bigl(\tfrac{|\epsilon_j|}{\sqrt{\beta(1-j/n)}}\Bigr)
+  \;=\;
+  O_p\Bigl(\tfrac{1}{\sqrt{n}}\Bigr).
+\]
+Hence summing from $j=a$ to $j=b$ (and noting that $b-a+1 \le n$ but is often smaller or on the order of $n$) gives the claimed product expansion.
+\end{proof}
+
+\begin{remark}
+	Lemma~\ref{lem:prod-bulk} can be refined to a local law or large-deviation style bound where one shows that with overwhelming probability (exponentially high), the deviation from $\prod_{j=a}^b \sqrt{\beta(1-j/n)}$ is at most $\exp\bigl(C(b-a+1)/\sqrt{n}\bigr)$ for some constant $C$.  Such results require standard concentration inequalities for $\chi^2$ random variables (or normal approximations) rather than just the $O_p(\cdot)$ expansions.
+\end{remark}
+
+\section{Conclusion}
+
+In summary:
+
+\begin{itemize}
+\item For large $n$, each $\alpha_j = \sqrt{\chi^2_{\beta(n-j)}}$
+is on the order of $\sqrt{\beta(n-j)}$ with a Gaussian fluctuation of size $O_p(1)$.
+\item Consequently, $\alpha_j/\sqrt{n}$ concentrates near $\sqrt{\beta(1-j/n)}$,
+and the diagonal entries (if they are standard Gaussians independent of $n$)
+vanish at order $n^{-1/2}$.
+\item Products $\prod_{j=a}^b (\alpha_j/\sqrt{n})$ in the bulk regime
+are therefore very close (in probability or even with high probability)
+to the corresponding product of deterministic factors $\prod_{j=a}^b \sqrt{\beta(1-j/n)}$,
+up to multiplicative corrections of order $\exp(O_p((b-a)/\sqrt{n}))$.
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Completing the proof: global semicircle behavior}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Putting the above pieces together, we see that $T/\sqrt{n}$ behaves—globally—like a “Jacobi-type matrix” whose main diagonal is small and whose subdiagonal is roughly $\sqrt{(n-j)/2n}$.  One can then do a continuum limit of the characteristic polynomial or use the combinatorial expansion (Motzkin path argument) or the resolvent method (Stieltjes transform approach) to find that the limiting eigenvalue distribution is exactly Wigner’s semicircle law.  Thus:
+Putting the above pieces together, we see that $T/\sqrt{n}$
+is asymptotic to
+\begin{equation*}
+	\sum_{\textnormal{Motzkin\ paths
+	of length\ $k$}}
+	\prod_{\ell=1}^k
+		\frac
+	{t_{i_\ell,i_{\ell+1}}}{\sqrt{n}}
+\end{equation*}
+
+
+
+
+behaves—globally—like a “Jacobi-type matrix” whose main diagonal is small and whose subdiagonal is roughly $\sqrt{(n-j)/2n}$.  One can then do a continuum limit of the characteristic polynomial or use the combinatorial expansion (Motzkin path argument) or the resolvent method (Stieltjes transform approach) to find that the limiting eigenvalue distribution is exactly Wigner’s semicircle law.  Thus:
 
 \begin{theorem}[Semicircle Law via Tridiagonalization]
 \label{thm:sc-via-tridiag}
-Let $W$ be an $n\times n$ real Wigner matrix with off-diagonal variance $1$. Then $W$ can be unitarily conjugated into a real symmetric tridiagonal matrix $T$ whose diagonal entries are i.i.d.\ $\mathcal{N}(0,1)$ and subdiagonal entries are chi-type with typical value $\sqrt{\tfrac{n-j}{2}}$.  By examining $T/\sqrt{n}$ and counting or bounding its trace moments (or via its resolvent), one concludes that the ESD converges almost surely to the semicircle distribution on $[-2,2]$. 
+Let $W$ be an $n\times n$ real Wigner matrix with off-diagonal variance $1$. Then $W$ can be unitarily conjugated into a real symmetric tridiagonal matrix $T$ whose diagonal entries are i.i.d.\ $\mathcal{N}(0,1)$ and subdiagonal entries are chi-type with typical value $\sqrt{\tfrac{n-j}{2}}$.  By examining $T/\sqrt{n}$ and counting or bounding its trace moments (or via its resolvent), one concludes that the ESD converges almost surely to the semicircle distribution on $[-2,2]$.
 \end{theorem}
 
 This completes the second proof of Wigner’s semicircle law.
@@ -478,7 +676,7 @@ This completes the second proof of Wigner’s semicircle law.
 
 
 \section{Wigner semicircle law via Stieltjes transform}
-\label{sec:semicircle-tridiagonal}
+
 
 
 
@@ -739,11 +937,15 @@ Write a small program (in Python, MATLAB, or another language):
 
 \subsection{Eigenvalue density of G$\beta$E}
 
-Read and understand the main principles of the 
+Read and understand the main principles of the
 proof of \Cref{thm:DE-joint-eigenvalue-density}
 in \cite{dumitriu2002matrix}.
 
+\subsection{Chi-square mean and variance}
 
+Let $X$ be a random variable with $\chi^2_\nu$ distribution. Compute the mean and variance of $X$.
+(If $\nu$ is an integer, you can use the fact that $\chi^2_\nu$ is a sum of $\nu$ independent squares of standard normal random variables.
+How to extend this to non-integer \(\nu\)?)
 
 
 
