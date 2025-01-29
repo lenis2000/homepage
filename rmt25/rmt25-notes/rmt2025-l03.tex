@@ -742,9 +742,14 @@ Write $A$ in block form as
     r      & B
   \end{pmatrix},
 \]
-where $r\in \mathbb{R}^{n-1}$ is the rest of the first column below $a_{11}$, and $B$ is $(n-1)\times(n-1)$.  
-We seek an orthogonal matrix $H_1$ that ``annihilates'' the subdiagonal part of this first column.  Specifically, $H_1$ is a \emph{Householder reflection} chosen so that
-$H_1$ when acting in the $(n-1)$-dimensional subspace spanned by $r$ zeroes out all but the first entry of $r$. Also, we require $H_1$ to have a block form, so 
+where $r\in \mathbb{R}^{n-1}$ is the rest of the first column below $a_{11}$, and $B$ is $(n-1)\times(n-1)$.
+We seek an orthogonal matrix $H_1$ acting on $\mathbb{R}^{n-1}$ (and in the full space $\mathbb{R}^n$ it preserves the first
+basis vector $e_1$ and its orthogonal complement)
+that ``annihilates'' the part of this first column below the subdiagonal.
+Specifically, $H_1$ is a Householder reflection chosen so that
+$H_1$ when acting in the $(n-1)$-dimensional subspace spanned by $r$ zeroes out all but the first entry of $r$. In the ambient
+space $\mathbb{R}^n$,
+$H_1$ has a block form, so
 that it does not touch the $11$-entry of the matrix $A$.
 Since $A$ is symmetric, conjugating $A$ by $H_1$ also zeroes out the corresponding superdiagonal entries in the first row.  Concretely,
 \[
