@@ -378,10 +378,125 @@ and the determinantal structure in \Cref{prop:gue-joint-density}
 in the next 
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5}).
 
+\section{Wigner semicircle law via tridiagonalization}
+\label{sec:semicircle-tridiagonal}
+
+
+If $W$ is an $n\times n$ real Wigner matrix with entries of
+mean zero and variance $1$ on the off-diagonal, then as
+$n\to\infty$, the empirical spectral distribution (ESD) of
+$W/\sqrt{n}$ converges weakly almost surely to the Wigner
+semicircle distribution:
+\[
+  \mu_{\mathrm{sc}}(dx)
+  \;=\;
+  \frac{1}{2\pi}\,\sqrt{4 - x^2}\,\mathbf{1}_{|x|\le2}\,dx.
+\]
+We already derived this in 
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2}
+by a direct combinatorial argument on the trace. Now we present another proof by using the tridiagonal form of $W$.  The argument is conceptually simpler in some steps, because the matrix is sparser (only tridiagonal).
+At the same time, we will establish the Wigner
+semicircle law for the general G$\beta$E case (but only Gaussian), and 
+thus it will apply to GUE and GSE.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Moments for tridiagonal matrices}
+\label{sub:tridiag-moments}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Consider 
+the rescaled 
+G$\beta$E
+matrix $T/\sqrt{n}$:
+\[
+  \frac{T}{\sqrt{n}}
+  \;=\;
+  \begin{pmatrix}
+    d_1/\sqrt{n} & \alpha_1/\sqrt{n} & 0 & \cdots \\
+    \alpha_1/\sqrt{n} & d_2/\sqrt{n} & \alpha_2/\sqrt{n} & \ddots \\
+    0 & \alpha_2/\sqrt{n} & d_3/\sqrt{n} & \ddots \\
+    \vdots & \ddots & \ddots & \ddots
+  \end{pmatrix},
+\]
+where $d_i \sim \mathcal{N}(0,1)$ and $\alpha_j \sim \frac{1}{\sqrt 2}\chi_{\beta(n-j)}$.  We want to show that the ESD of $T/\sqrt{n}$ converges to the semicircle law.
+We will consider expected traces of powers, and leave the analytic parts of the 
+argument to the reader.
+
+The $k$-th moment of the ESD is
+\[
+  \frac{1}{n}\operatorname{Tr}\Bigl(\tfrac{T}{\sqrt{n}}\Bigr)^k
+  \;=\;
+  \frac{1}{n^{1 + \frac{k}{2}}}
+  \sum_{i_1,\dots,i_k=1}^n 
+     \Bigl(\prod_{\ell=1}^k t_{\,i_\ell,\,i_{\ell+1}}\Bigr)
+     \quad\text{where }(i_{k+1}=i_1).
+\]
+But now $t_{ij}$ is nonzero only if $\lvert i-j\rvert \le1$, i.e.\ the $(i,j)$ entry is on the main or first super-/subdiagonal.  Therefore, in order for $t_{i_\ell,i_{\ell+1}}$ to be nonzero, we must have $i_{\ell+1} \in \{i_{\ell}-1,i_{\ell},i_{\ell}+1\}$ \emph{and} $i_{\ell+1} \neq i_\ell$ if it’s an off-diagonal entry.  In a closed product $t_{i_1 i_2}\cdots t_{i_k i_1}$, we thus get a \emph{closed walk} in a linear graph on the vertex set $\{1,2,\dots,n\}$ with edges only between consecutive indices.
+
+Hence the relevant combinatorial objects become \emph{Motzkin paths}, sometimes also referred to as the set of ways to walk up, stay (diagonal step), or down within a one-dimensional band, forming a closed loop.  The counting is simpler than in the fully-connected Wigner case, but the main phenomenon remains: the leading order in $n$ for the moment expansions arises from certain matchings or “pairings” that produce subdiagonal factors squared, ensuring independence and nonzero means.  
+
+We do not go into the full detail of the Motzkin path enumeration here, but the essence is:
+\begin{enumerate}
+\item Each diagonal entry $d_i$ has mean 0, so to get a nonzero expectation, $d_i$ must appear an even number of times in the product.  
+\item Each subdiagonal factor $\alpha_j$ also has mean zero if it appears an odd number of times (since $\alpha_j$ has distribution with zero-mean sign if it appears singly).  So each $\alpha_j$ must appear at least twice. 
+\item The subleading terms vanish in the $n\to\infty$ limit. The main contributing terms produce the Catalan structure and lead to the same limiting sequence of moments as in Wigner’s classical argument.  
+\end{enumerate}
+Thus the moment expansions for $T/\sqrt{n}$ recover the same limit as in the classical Wigner result, i.e.\ the semicircle moment sequence. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Asymptotics of chi random variables}
+\label{sub:chi-asymptotics}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One additional technical point in analyzing $T/\sqrt{n}$ is to note that $\alpha_j$ is roughly $\sqrt{(n-j)/2}$ for large $n$.  Indeed, $\chi^2_{n-j}$ is the sum of $(n-j)$ squared standard Gaussians, so it is typically around $n-j$.  More precisely, by the law of large numbers and a standard concentration bound (large deviations for $\chi^2$ distributions), we have with high probability
+\[
+  \frac{\chi^2_{n-j}}{n-j} \;\approx\;1
+  \;\;\Longrightarrow\;\;
+  \alpha_j \;=\;\sqrt{\frac{\chi^2_{n-j}}{2}}
+  \;\approx\;\sqrt{\frac{n-j}{2}}.
+\]
+Hence for $j$ in the “bulk” region, say $j\approx\theta n$ for $\theta\in(0,1)$, we get 
+\[
+  \alpha_j/\sqrt{n}\;\approx\;\sqrt{\frac{1-\theta}{2}}.
+\]
+Meanwhile, on the diagonal, $d_i/\sqrt{n}$ vanishes in the limit ($\sim n^{-1/2}$).  So the main structure for large $n$ is that the subdiagonal couplings are of order 1, while the diagonal part is negligible.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Completing the proof: global semicircle behavior}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Putting the above pieces together, we see that $T/\sqrt{n}$ behaves—globally—like a “Jacobi-type matrix” whose main diagonal is small and whose subdiagonal is roughly $\sqrt{(n-j)/2n}$.  One can then do a continuum limit of the characteristic polynomial or use the combinatorial expansion (Motzkin path argument) or the resolvent method (Stieltjes transform approach) to find that the limiting eigenvalue distribution is exactly Wigner’s semicircle law.  Thus:
+
+\begin{theorem}[Semicircle Law via Tridiagonalization]
+\label{thm:sc-via-tridiag}
+Let $W$ be an $n\times n$ real Wigner matrix with off-diagonal variance $1$. Then $W$ can be unitarily conjugated into a real symmetric tridiagonal matrix $T$ whose diagonal entries are i.i.d.\ $\mathcal{N}(0,1)$ and subdiagonal entries are chi-type with typical value $\sqrt{\tfrac{n-j}{2}}$.  By examining $T/\sqrt{n}$ and counting or bounding its trace moments (or via its resolvent), one concludes that the ESD converges almost surely to the semicircle distribution on $[-2,2]$. 
+\end{theorem}
+
+This completes the second proof of Wigner’s semicircle law.
 
 
 
 
+\section{Wigner semicircle law via Stieltjes transform}
+\label{sec:semicircle-tridiagonal}
+
+
+
+
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+BEGIN DRAFT
+
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Characteristic Polynomial and Three-Term Recurrence}
 \label{sec:3term}
@@ -511,6 +626,12 @@ This completes the proof by tridiagonal methods.
 \begin{remark}[Universality]
 The argument here specifically used the Gaussian Wigner distribution for off-diagonal entries to get an explicit $\chi^2$ structure. However, the final result (semicircle law) remains true under vastly weaker assumptions on the entries. The \emph{universality principle} states that the global spectral behavior is insensitive to fine details of the distribution (e.g.\ it depends primarily on the first two moments).
 \end{remark}
+
+
+
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Exercises (Due 2025-02-28)}
