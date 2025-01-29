@@ -223,7 +223,7 @@ code:
             .range([margin.left, width - margin.right]);
 
         const N = eigenvals.length;
-        const numBins = N < 100 ? 20 : 80;
+        const numBins = N <= 100 ? 20 : 80;
         const bins = d3.bin()
             .domain(xScale.domain())
             .thresholds(numBins)(eigenvals);
