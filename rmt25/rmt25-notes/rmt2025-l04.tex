@@ -573,257 +573,195 @@ This completes the proof.
 
 \section{Wigner semicircle law via Stieltjes transform}
 
-Let us stay 
+Let us stay in the tridiagonal setting, and explore a more analytic
+method to derive the Wigner semicircle law.
 
 
 
+In this supplemental note, we elaborate on the \emph{Stieltjes transform} (resolvent) approach to proving the Wigner semicircle law for Gaussian and, more generally, Wigner-type matrices.  We base our discussion on a key simplification: \emph{tridiagonalization} of real symmetric matrices.  
 
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+The argument proceeds in several steps:
+\begin{enumerate}[\(\bullet\)]
+\item We recall from the previous lectures that any real symmetric matrix \(W\) can be conjugated by an orthogonal transformation to a real tridiagonal matrix \(T\).  For a GOE random matrix, the distribution of \(T\) is explicitly known (Dumitriu--Edelman form).
+\item We rewrite spectral questions about \(W\) in terms of the (much sparser) tridiagonal matrix \(T\).  In particular, the matrix resolvent \((T - zI)^{-1}\) is easier to analyze through a recurrence relation.
+\item By taking traces of the resolvent, we obtain the Stieltjes transform of the empirical eigenvalue distribution (ESD).  Its \emph{large \(n\) limit} is forced to satisfy a known algebraic equation whose unique solution is the semicircle law.
+\end{enumerate}
 
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-BEGIN DRAFT
+We will thus see a more direct linear-algebraic interpretation of the random matrix’s global spectral behavior, complementing the combinatorial ``moment-counting'' method from earlier.
 
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Characteristic Polynomial and Three-Term Recurrence}
-\label{sec:3term}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Tridiagonal Structure and Characteristic Polynomials}
+\label{sec:tridiag-charpoly}
 
-Once we have $T = (t_{ij})$ tridiagonal, the characteristic polynomial of $T$ takes a well-known form governed by a three-term recurrence. Denote
+We consider a real symmetric tridiagonal matrix 
 \[
-  T - \lambda I \;=\;
+  T \;=\;
   \begin{pmatrix}
-    d_1 - \lambda & \alpha_1 & 0 & \cdots & 0 \\
-    \alpha_1 & d_2 - \lambda & \alpha_2 & \cdots & 0 \\
-    0        & \alpha_2 & d_3 - \lambda & \ddots & \vdots \\
-    \vdots   & \vdots   & \ddots & \ddots & \alpha_{n-1} \\
-    0        & 0        & \cdots & \alpha_{n-1} & d_n - \lambda
+    d_1 & \alpha_1 & 0 & \cdots & 0 \\
+    \alpha_1 & d_2 & \alpha_2 & \ddots & \vdots \\
+    0 & \alpha_2 & d_3 & \ddots & 0 \\
+    \vdots & \ddots & \ddots & \ddots & \alpha_{n-1} \\
+    0 & \cdots & 0 & \alpha_{n-1} & d_n
+  \end{pmatrix},
+\]
+of size \(n\times n\).  We let
+\[
+  T - \lambda I = 
+  \begin{pmatrix}
+    d_1 - \lambda & \alpha_1 & 0 & \cdots \\
+    \alpha_1 & d_2 - \lambda & \alpha_2 & \ddots \\
+    0 & \alpha_2 & d_3 - \lambda & \ddots \\
+    \vdots & \ddots & \ddots & \ddots
   \end{pmatrix}.
 \]
+We want to understand its eigenvalues, or equivalently, its characteristic polynomial.  
 
-\begin{definition}[Characteristic Polynomials $p_k(\lambda)$]
-For $1 \le k \le n$, let $T_k$ be the top-left $k \times k$ submatrix of $T$. Define
+\subsection{Three-Term Recurrence for the Characteristic Polynomial}
+
+For each \(k=1,\dots,n\), denote by \(T_k\) the top-left \(k\times k\) submatrix of \(T\).  Define the \emph{characteristic polynomial} of that block:
 \[
   p_k(\lambda) \;=\; \det\bigl(T_k - \lambda I_k\bigr).
 \]
-Moreover, set $p_0(\lambda):=1$ by convention.
-\end{definition}
+By convention, set \(p_0(\lambda)\coloneqq 1\).  Then a basic determinant expansion argument along the last row or column shows:
 
 \begin{lemma}[Three-Term Recurrence]
-\label{lem:3term-recurrence}
-Let $p_k(\lambda)$ be as above, with $p_1(\lambda) = d_1 - \lambda$. Then for $k \ge 1$,
+\label{lem:3term}
+For each \(k\ge1\), we have
 \[
   p_{k+1}(\lambda)
   \;=\;
-  (d_{k+1} - \lambda)\,p_k(\lambda)
+  (d_{k+1}-\lambda)\,p_k(\lambda)
   \;-\;\alpha_k^2\,p_{k-1}(\lambda).
 \]
+Equivalently, we have 
+\[
+  p_1(\lambda) = (d_1 - \lambda), 
+  \qquad
+  p_2(\lambda) = (d_2 - \lambda)\,(d_1-\lambda)\,-\,\alpha_1^2,
+\]
+and in general one proceeds by induction. 
 \end{lemma}
 
-\begin{proof}[Idea of proof]
-One checks the base case $k=1,2$ directly by computing determinants of $1\times1$ and $2\times2$ blocks. For the general step, expand $\det(T_{k+1}-\lambda I_{k+1})$ by minors along the last row or column. The block structure ensures exactly the claimed recurrence.
-\end{proof}
+Thus the characteristic polynomial \(\det(T - \lambda I)\) satisfies a simple linear recurrence in \(k\).  In orthogonal polynomial language, one may think of \(\{p_k(\lambda)\}\) as a family of monic polynomials in \(\lambda\) with a three-term recursion and certain initial conditions.
 
-\begin{remark}
-This is analogous to recurrences in orthogonal polynomials, e.g.\ the three-term recursion for polynomials orthonormal with respect to certain measures. In fact, the polynomial $p_n(\lambda)$ can be viewed as an orthogonal polynomial if $\alpha_j>0$. This interplay is vital in random matrix theory.
-\end{remark}
+\subsection{Spectral Connection and Eigenvalues}
 
+The eigenvalues \(\lambda_1,\dots,\lambda_n\) of \(T\) are exactly the roots of \(p_n(\lambda)\).  For any \(\lambda \in \mathbb{C}\), if \(\lambda\) is not an eigenvalue, then \(\bigl(T - \lambda I\bigr)\) is invertible.  
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Semicircle Law via the Tridiagonal Form}
-\label{sec:semicircle-tridiag}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+When \(\lambda\) is close to a real eigenvalue, the behavior of the resolvent \(\bigl(T-\lambda I\bigr)^{-1}\) becomes large.  Tracking these poles in the complex plane is the key to the resolvent or Stieltjes transform approach.
 
-We now present a fairly detailed sketch (or roadmap) for how the tridiagonal form yields the Wigner semicircle law. Recall we aim to show:
+\section{Stieltjes Transform / Resolvent}
+\label{sec:stieltjes-def}
 
-\[
-  \frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i/\sqrt{n}}
-  \;\longrightarrow\;
-  \mu_{\mathrm{sc}}(dx)\;=\;\frac{1}{2\pi}\sqrt{4 - x^2}\; 1_{|x|\le2}\,
-  \quad\text{almost surely}.
-\]
-
-\subsection{The Scaling and Law of Large Numbers in \(\alpha_j\)}
-
-Write
-\[
-  T = \begin{pmatrix}
-    d_1 & \alpha_1 & & \\
-    \alpha_1 & d_2 & \alpha_2 & \\
-    & \alpha_2 & d_3 & \ddots \\
-    & & \ddots & \ddots
-  \end{pmatrix}.
-\]
-In the Dumitriu--Edelman setting, $\alpha_j^2 = \frac{1}{2}\,\chi^2_{(n-j)}$, so $ E[\alpha_j^2]=(n-j)/2$ and $\alpha_j^2$ is tightly concentrated around its mean for large $n$. Precisely, for any $\varepsilon>0$,
-\[
-  \Pr\Bigl(\bigl|\alpha_j^2 - \tfrac{n-j}{2}\bigr| > \varepsilon (n-j)\Bigr)
-  \;\le\; e^{-c(n-j)}
-\]
-for some $c>0$, or a similar bound from large deviation estimates. Hence, with overwhelming probability,
-\[
-  \alpha_j \;\approx\; \sqrt{\frac{n-j}{2}}.
-\]
-
-\subsection{Diagonal vs.\ Subdiagonal Entries}
-
-When we examine $\frac{1}{\sqrt{n}}\,T$, the diagonal entries become $\frac{d_i}{\sqrt{n}}$. Since $d_i \sim \mathcal{N}(0,1)$ i.i.d., with probability going to 1 these entries lie within $O(n^{-1/2})$, so they vanish in the large-$n$ limit. Meanwhile,
-\[
-  \frac{\alpha_j}{\sqrt{n}}
-  \;\approx\;
-  \sqrt{\frac{n-j}{2n}}
-  \;\approx\;
-  \sqrt{\frac{1 - j/n}{2}}.
-\]
-In the bulk region (i.e.\ $j\approx \theta n$ for $\theta\in (0,1)$), we have $\alpha_j/\sqrt{n} \approx \sqrt{\frac{1-\theta}{2}}$. In short, the subdiagonal elements (scaled by $1/\sqrt{n}$) remain of order $1$, while the diagonal elements vanish.
-
-\subsection{Characteristic Polynomial and Recurrence Analysis}
-
-Denote
-\[
-  p_n(\lambda) \;=\;
-  \det\Bigl(\tfrac1{\sqrt{n}}\,T - \lambda I\Bigr).
-\]
-Equivalently, $\lambda$ is an eigenvalue of $\frac{1}{\sqrt{n}}\,T$ if and only if $\mu = \sqrt{n}\,\lambda$ is an eigenvalue of $T$. We want to understand the distribution of the roots $\lambda_i(\frac{1}{\sqrt{n}}\,T)$ as $n\to\infty$. The three-term recurrence for $p_n(\lambda)$ can be viewed in the limit as $n\to\infty$, turning into an integral equation for the Stieltjes transform of the limiting measure.
-
-\paragraph{Stieltjes Transform Argument (Sketch).}
-Set
+Recall that for a matrix \(A\) with real eigenvalues \(\lambda_1,\dots,\lambda_n\), the \emph{Stieltjes transform} (or Green’s function, or resolvent trace) is
 \[
   G_n(z)
-  = \frac{1}{n}Tr\Bigl(\bigl(\tfrac{1}{\sqrt{n}}\,T - z\Bigr)^{-1}\Bigr),
+  \;=\;
+  \frac{1}{n}\,\mathrm{Tr}\bigl[(A - zI)^{-1}\bigr],
+  \quad
+  z\in \mathbb{C}\setminus\mathbb{R}.
 \]
-the Stieltjes transform. As $n$ grows, the main input is that $\alpha_j\approx \sqrt{\frac{1-j/n}{2}}$; substituting this approximate profile into the recursion for Green’s functions (a linear difference equation akin to orthogonal polynomials) yields a limiting functional equation. Solving that equation for $G(z)$ leads to
+If \(z=x+\mathrm{i}y\) is in the upper half-plane (\(y>0\)), this $G_n(z)$ can be seen as
 \[
-  G(z) = \frac{z \pm \sqrt{z^2-4}}{2},
+  G_n(z) 
+  \;=\;
+  \int_{\mathbb{R}}\!\!\frac{d\mu_n(\lambda)}{\lambda - z},
 \]
-with the appropriate branch cut. This is the well-known Stieltjes transform for the semicircle law on $[-2,2]$. (See advanced texts, e.g.\ \emph{Deift} or \emph{Tao’s} books on RMT for a full rigorous derivation.)
+where \(\mu_n = \frac{1}{n}\sum_{k=1}^n \delta_{\lambda_k}\) is the empirical spectral measure.  Equivalently, \(\mathrm{Im}\,G_n(x+\mathrm{i}0^+)\) encodes the density of eigenvalues around \(x\).  Thus, understanding $G_n(z)$ for large $n$ pinpoints the limiting spectral distribution.
 
-\paragraph{Moment Argument (Sketch).}
-One can also proceed by computing or bounding the moments $ E\bigl[\frac{1}{n}Tr(\frac{1}{\sqrt{n}}\,T)^k\bigr]$ and showing that they match the semicircle moments. Indeed, as $n\to\infty$, the diagonal part becomes negligible, while the subdiagonal structure essentially forces closed loops in the sum expansions, reproducing the Catalan numbers that appear in the Wigner moment method (Lectures 1--2). The advantage of tridiagonalization is a simpler combinatorial interpretation of the entries used in each closed loop.
+\subsection{Resolvent of a Tridiagonal Matrix: Recurrence Relations}
 
-\subsection{Conclusion: Wigner’s Semicircle Law}
-
-Putting these ingredients together, we conclude that with probability 1,
+Let us apply this to \(A = T/\sqrt{n}\) (an $n\times n$ tridiagonal matrix).  We want 
 \[
-  \frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i(\frac1{\sqrt{n}}\,W)}
-  \;\;\longrightarrow\;\;
-  \mu_{\mathrm{sc}}(dx) \;=\; \frac{1}{2\pi}\sqrt{4-x^2}\; 1_{|x|\le2}
+  \bigl(T/\sqrt{n} - zI\bigr)^{-1},
 \]
-This completes the proof by tridiagonal methods.
+for complex \(z\).  Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries of the resolvent.  
 
-\begin{remark}[Universality]
-The argument here specifically used the Gaussian Wigner distribution for off-diagonal entries to get an explicit $\chi^2$ structure. However, the final result (semicircle law) remains true under vastly weaker assumptions on the entries. The \emph{universality principle} states that the global spectral behavior is insensitive to fine details of the distribution (e.g.\ it depends primarily on the first two moments).
+Concretely, let us denote \(\bigl(T/\sqrt{n}-zI\bigr)^{-1} = (R_{ij})\).  Then from the definition
+\[
+  \bigl(T/\sqrt{n} - zI\bigr)\,(R_{ij}) 
+  \;=\;
+  I,
+\]
+one gets for each row $k$:
+\[
+   \frac{d_k}{\sqrt{n}}\,R_{kj}
+   \;-\;z\,R_{kj}
+   \;+\;
+   \frac{\alpha_{k-1}}{\sqrt{n}}\,R_{k-1,j}\,\mathbf{1}_{(k>1)}
+   \;+\;
+   \frac{\alpha_{k}}{\sqrt{n}}\,R_{k+1,j}\,\mathbf{1}_{(k<n)}
+   \;=\;\delta_{k=j}.
+\]
+This can be reorganized into a second-order \emph{linear difference equation} in $k$ for each fixed column index $j$.  Similarly, one obtains boundary conditions.  
+
+Because the $\alpha_k$ and $d_k$ are random but \emph{independent and identically distributed} in a suitable sense (for the GOE or general $\beta$ tridiagonal form), the coefficients in this difference equation become “stationary” for large $n$ except near the boundaries.  In fact, up to small fluctuations, $\alpha_{k}/\sqrt{n}$ stays near $\alpha$ for some constant $\alpha$ (like $\alpha\approx 1/\sqrt{2}$ if off-diagonal variance is $\frac12$), and $d_k/\sqrt{n}\to0$ with $k$.  One can then guess that 
+\[
+  G_n(z) \;=\; \frac{1}{n}\sum_{k=1}^n R_{kk}
+\]
+has a continuum limit satisfying a certain \emph{algebraic} equation.
+
+\section{Functional Equation for the Limit and the Semicircle Law}
+\label{sec:functional-eq}
+
+Let us sketch more precisely how $G_n(z)$ converges to the semicircle transform.  
+
+\begin{enumerate}[(1)]
+\item \textbf{Asymptotic stationarity.}  By a law of large numbers or a concentration argument on $\chi^2_{\,n-j}$ (when we do the Dumitriu--Edelman version), the subdiagonal $\alpha_j$ is close to $\sqrt{(n-j)/2}$, hence $\alpha_j/\sqrt{n}\approx \sqrt{\frac{1-j/n}{2}}$.  In the bulk of the index range (where $j\approx \theta n$ for some $\theta\in(0,1)$), this is about $\sqrt{\tfrac{1-\theta}{2}}$.  Meanwhile $d_i/\sqrt{n}\approx 0$.  
+
+\item \textbf{Discrete difference to continuous ODE.}  The second-order difference equation for $R_{k+1,k\pm1}$ is roughly
+\[
+  -z\,R_{k,j} \;+\; \bigl(\alpha_k/\sqrt{n}\bigr)\,R_{k+1,j}
+         \;+\;\bigl(\alpha_{k-1}/\sqrt{n}\bigr)\,R_{k-1,j}
+  \;=\; \delta_{k=j},
+\]
+neglecting the small diagonal $d_k/\sqrt{n}$ term.  In the limit $n\to\infty$, if we interpret $k/n$ as $x\in[0,1]$, then $R_{k\pm1,j}$ becomes $R(x\pm \tfrac1n)$, and $\alpha_{k}/\sqrt{n}\approx \alpha(x)$ for some function $\alpha$.  This difference equation becomes an approximate differential equation in $x$, from which one solves for $R(x,\theta)$ (thinking of $j$ as $\theta n$).  
+
+\item \textbf{Solving for $G(z)$.}  Summing $R_{k,k}$ over $k$ becomes an integral of $R(x,x)$ over $x\in[0,1]$.  One obtains an algebraic equation in $G(z)$ akin to
+\[
+  G(z)^2 + z\,G(z) + 1 = 0.
+\]
+(Here we used normalizations that match the classical semicircle radius 2 or $\pm\sqrt{z^2-4}$ form.)  Solving for $G(z)$, we get
+\[
+   G(z) \;=\; \frac{-z \pm \sqrt{z^2 - 4}}{2},
+\]
+and the negative branch is selected by the imaginary part condition (i.e.\ $G(z)\sim -1/z$ for large $|z|$).  
+
+\item \textbf{Back to the real axis.}  From $G(z)$ in the upper half-plane, one extracts the limit distribution by looking at $\mathrm{Im}\,(G(x+\mathrm{i}0^+))$ for real $x$.  The square-root $\sqrt{x^2-4}$ is purely imaginary for $|x|<2$, giving the semicircle density on $[-2,2]$.  
+
+\end{enumerate}
+
+Thus, in the limit, the spectral measure is forced to match the one whose Stieltjes transform is $G(z)$.  Since that is exactly the Wigner semicircle distribution, we conclude:
+
+\begin{theorem}[Semicircle Law via Resolvent]
+\label{thm:stieltjes-semicircle}
+Let $T$ be the Dumitriu--Edelman G$\beta$E tridiagonal matrix (in particular, the GOE case when $\beta=1$) with diagonal $d_i/\sqrt{n}$ and subdiagonals $\alpha_j/\sqrt{n}$.  Then as $n\to\infty$, its empirical spectral distribution converges weakly (almost surely) to the Wigner semicircle law on $[-2,2]$.  Equivalently, its Stieltjes transform $G_n(z)$ converges for each $z\in\mathbb{C}^+$ to the unique solution of $G(z)^2 + zG(z) + 1=0$, which yields the semicircle density.
+\end{theorem}
+
+\begin{remark}
+One can make this rigorous by carefully bounding the difference between $(\alpha_j/\sqrt{n})$ and its limiting profile, as well as controlling the diagonal $(d_i/\sqrt{n})$.  The approach is an archetype for many \emph{local laws} in random matrix theory, where one obtains more precise estimates on the resolvent entries for $z$ in small neighborhoods near the real axis \cite{erdHos2017dynamical,tao2012topics}.
 \end{remark}
 
+\section{Concluding Remarks}
 
+We have now seen \emph{two main proof strategies} for deriving the Wigner semicircle law:
 
+\begin{enumerate}[\(\bullet\)]
+\item \textbf{Moment expansions and Catalan counting}: Expand $\operatorname{Tr}((W/\sqrt{n})^k)$, interpret it as a sum over closed walks, identify the main combinatorial configurations, show that the expected moments converge to the Catalan numbers that match the semicircle distribution.
 
+\item \textbf{Stieltjes transform and resolvent analysis}: Tridiagonalize $W$, then exploit the near one-dimensional recurrence for the inverse $(T/\sqrt{n}-zI)^{-1}$.  In the large-$n$ limit, show that $G_n(z)$ satisfies a deterministic algebraic equation forcing the semicircle $G(z)$.
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Exercises (Due 2025-02-28)}
-\label{sec:exercises}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Below are problems elaborating on the main concepts. They range from verifying computations to exploring deeper aspects of tridiagonalization and simulations.
-
-\subsection*{1. Detailed Householder Steps and Reflection Properties}
-
-\begin{enumerate}[(a)]
-\item {\bf Constructing a Reflection that Maps One Vector to Another.}
-  Let $x,y\in \mathbb{R}^n$ be nonzero. Show how to pick $v$ so that $Hx=y$, where $H=I-2\frac{v\,v^\top}{\|v\|^2}$ is a Householder reflection. Why does $H$ remain orthogonal?
-\item {\bf Eliminating Below-Diagonal Entries.}
-  In the first step of the tridiagonalization algorithm, pick a reflection $H_1$ that modifies the subspace spanned by $a_{21},\dots,a_{n1}$. Show explicitly how $H_1$ zeroes out all these subdiagonal entries while keeping $a_{11}$ unchanged (aside from possibly a sign).
-\item {\bf Symmetry and Superdiagonal.}
-  Why does $H_1 (A) H_1^\top$ also have the corresponding superdiagonal entries zeroed out in row 1? (Hint: Use $A$ is symmetric: $A_{ij}=A_{ji}$.)
 \end{enumerate}
 
-\subsection*{2. Three-Term Recurrence Warmup}
-
-\begin{enumerate}[(a)]
-\item {\bf Base Cases.} Compute $p_1(\lambda)$ and $p_2(\lambda)$ for a $2\times2$ matrix
-\[
-  \begin{pmatrix}
-    d_1-\lambda & \alpha_1 \\
-    \alpha_1 & d_2-\lambda
-  \end{pmatrix}.
-\]
-Verify that $p_2(\lambda) = (d_2-\lambda)\,p_1(\lambda) - \alpha_1^2\,p_0(\lambda)$.
-\item {\bf Inductive Step.} Using determinant expansion along the $(k+1)$-st row or column, outline why $p_{k+1}(\lambda) = (d_{k+1}-\lambda)p_k(\lambda) - \alpha_k^2 p_{k-1}(\lambda)$ for $k\ge1$.
-\end{enumerate}
-
-\subsection*{3. Tridiagonal Model for GOE and GUE}
-
-\begin{enumerate}[(a)]
-\item {\bf Real Case (GOE).} Starting with a real Wigner matrix $W$ ($X_{ij}\sim \mathcal{N}(0,1)$ for $i<j$, $X_{ii}\sim \mathcal{N}(0,2)$), show that the Householder steps produce a tridiagonal $T$ whose diagonal entries are $d_i\sim \mathcal{N}(0,1)$ and subdiagonals $\alpha_j^2 = \frac12 \chi^2_{(n-j)}$.
-\item {\bf Complex Case (GUE).} For a complex Hermitian $W$, the off-diagonal entries are $\mathcal{N}(0,\tfrac12)+ i\,\mathcal{N}(0,\tfrac12)$. Sketch how the same approach yields a complex Hermitian tridiagonal form with $d_i$ real normal and $\alpha_j$ drawn from appropriate $\chi$ distributions. (You do not need a fully rigorous proof; just highlight the changes in dimension counting for real vs.\ complex parts.)
-\end{enumerate}
-
-\subsection*{4. Semicircle Law via Stieltjes Transform}
-
-\begin{enumerate}[(a)]
-\item {\bf Defining the Green’s Function.} For $z\in C\setminus\mathbb{R}$, let
-\[
-  G_n(z) = \frac{1}{n} \,Tr\Bigl(\bigl(\tfrac1{\sqrt{n}} T - z I\bigr)^{-1}\Bigr).
-\]
-Argue (informally) that $G_n(z)$ converges to a limit $G(z)$ which must satisfy an algebraic equation derived from the tridiagonal structure and the typical size of $\alpha_j$.
-\item {\bf Solving for $G(z)$.} Show that $G(z)$ satisfies
-\[
-  G(z)^2 + z\,G(z) + 1 = 0,
-\]
-and deduce that
-\[
-  G(z) = \frac{-z + \sqrt{z^2-4}}{2}.
-\]
-Hence identify the imaginary part of $G(z)$ on the real interval $(-2,2)$, concluding that the limiting distribution is the semicircle law.
-\end{enumerate}
-
-\subsection*{5. Simulation of Tridiagonal vs.\ Dense Wigner}
-
-Write a small program (in Python, MATLAB, or another language):
-\begin{enumerate}[(a)]
-\item Generate a dense GOE matrix $W$ of size $n=1000$ and scale by $\frac{1}{\sqrt{n}}$. Compute eigenvalues and plot a histogram.
-\item Generate the corresponding tridiagonal matrix $T$ from the Dumitriu--Edelman approach (diagonal $d_i\sim \mathcal{N}(0,1)$, subdiag $\alpha_j= \sqrt{\tfrac12\,\chi^2_{n-j}}$). Compute eigenvalues of $\frac{1}{\sqrt{n}}T$ and compare histograms. They should match well with the semicircle shape for sufficiently large $n$.
-\item (Optional) Investigate how large $n$ must be before the histogram looks convincingly semicircular.
-\end{enumerate}
-
-\subsection*{6. Wishart and MANOVA Exercises}
-
-\begin{enumerate}[(a)]
-\item {\bf Wishart from Data Matrix.} Generate an $n\times m$ data matrix $X$ with iid $\mathcal{N}(0,1)$. Form $W=X\,X^\top$. Plot the normalized eigenvalues $\lambda_i$ vs. the Marchenko–Pastur distribution $\mu_{MP}$ (with aspect ratio $m/n$). Discuss approximate agreement for moderate $n,m$.
-\item {\bf Jacobi (MANOVA).} Let $X$ be $n\times t$ and $Y$ be $k\times t$ independent $\mathcal{N}(0,1)$. Form the matrix $M=(X\,X^\top +Y\,Y^\top)^{-1} (X\,X^\top)$ and find its eigenvalues in $[0,1]$. Plot their histogram and compare with the Jacobi Beta distribution.
-\end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Further Reading and Next Steps}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{itemize}
-\item {\bf Local Laws and Universality.} After establishing the global semicircle distribution, one may delve into local spectral laws (e.g.\ the sine kernel or GOE Tracy–Widom distribution at the edge). The \emph{local semicircle law} refines the analysis of the Green’s function in small intervals.
-\item {\bf Dyson Brownian Motion.} Another approach interprets the eigenvalues as particles with logarithmic repulsion and uses stochastic differential equations to show that equilibrium distributions converge to the $\beta$-ensembles.
-\item {\bf Other Ensembles.} Beyond Wigner, Wishart, and Jacobi, one finds many integrable and combinatorial random matrices (e.g.\ discrete random partitions, polynomial ensembles, random tilings). Orthogonal polynomial techniques remain central in these broader contexts.
-\item {\bf References.}
-  - I. Dumitriu and A. Edelman, \emph{Matrix models for beta ensembles}, J. Math. Phys., 2002.
-  - T. Tao, \emph{Topics in Random Matrix Theory}, 2012.
-  - P. Deift, \emph{Orthogonal Polynomials and Random Matrices}, 2000.
-  - M. Mehta, \emph{Random Matrices}, 3rd ed., Elsevier, 2004.
-  - T. Anderson, \emph{An Introduction to Multivariate Statistical Analysis}, for Wishart and MANOVA.
-\end{itemize}
+Both lead to the same final statement of the global spectral distribution being the semicircle law.  The resolvent method paves the way for refined \emph{local} analysis (spectrum on small intervals) and \emph{universality proofs}.
 
 
-\bigskip
-\noindent
-\textbf{End of Lecture 4.} In this expanded lecture, we detailed how any real symmetric matrix is tridiagonalized, derived the three-term recurrence for the characteristic polynomial, and showed how this structure underlies a clean proof of Wigner’s semicircle law for random Wigner matrices. We also saw how these ideas extend to Wishart and Jacobi ensembles, bridging us toward the broader \(\beta\)-ensemble world. Upcoming lectures will further explore local eigenvalue statistics, universality results, and connections with integrable probability.
 
 
+\section{Determinantal point processes}
+\label{sec:determinantal}
+
+We are now going to start the discussion of the local eigenvalue 
+behavior at $\beta=2$, started in \Cref{subsec:beta2-case}.
 
 
 
@@ -852,79 +790,6 @@ in \eqref{eq:tridiagonal-moments-discussion}
 do not contribute to the limit of the moments.
 
 
-\begin{lnotes}
-
-	Add / finish up the discussion about tridiagonalization. The notes for L3 are updated, but
-	mention it here.
-
-	The reflection is mapping any vector into any other vector (unit vectors);
-	Also, we apply it in $(n-1)$-dimensional space in the first pass.
-
-
-\colorbox{yellow}{\parbox{.7\textwidth}{maybe make a simulation for Wishart and MANOVA in L4}}
-
-
-\subsection{Characteristic Polynomial and Three-Term Recurrence}
-
-Consider \(p_n(\lambda) = \det(T - \lambda I)\).  Because \(T\) is tridiagonal, we have the classical three-term recurrence for these characteristic polynomials:
-\[
-  p_0(\lambda) := 1,\quad
-  p_1(\lambda) := d_1 - \lambda,
-\]
-\[
-  p_{k+1}(\lambda)
-  \;=\;
-  (d_{k+1} - \lambda)\,p_k(\lambda)
-  \;-\;\alpha_k^2\,p_{k-1}(\lambda),
-  \quad
-  (k=1,\dots,n-1).
-\]
-The eigenvalues of \(T\) are precisely the roots of \(p_n(\lambda)\).
-
-\subsection{Sketch of the Semicircle Limit Proof}
-
-We want to show that the empirical distribution
-\[
-  L_n
-  \;=\;
-  \frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i}
-\]
-(where \(\lambda_1,\dots,\lambda_n\) are the eigenvalues of \(T\)) converges weakly to the semicircle law
-\[
-  \mu_{\mathrm{sc}}(dx)
-  \;=\;
-  \frac{1}{2\pi}\sqrt{4 - x^2}\,\mathbf{1}_{|x|\le 2}\,dx
-\]
-as \(n\to\infty\).  A typical outline:
-
-\begin{enumerate}[1.]
-\item \textbf{Law of Large Numbers for \(\alpha_j\).}
-   Since \(\alpha_j^2 = \tfrac12\,\chi^2_{\,n-j}\) has mean \(\tfrac{n-j}{2}\), it is typically of order \(n/2\).  More precisely, for large \(n\), \(\alpha_j \approx \sqrt{\tfrac{n-j}{2}}\) with high probability.
-
-\item \textbf{Scaling by \(\sqrt{n}\).}
-   One rescales \(T\) by \(\tfrac{1}{\sqrt{n}}\).  This gives subdiagonal entries
-   \[
-     \frac{\alpha_j}{\sqrt{n}}
-     \;\approx\;
-     \sqrt{\frac{n-j}{2n}}
-     \;\approx\;
-     \sqrt{\frac{1 - j/n}{2}},
-   \]
-   while the diagonal entries become \(\tfrac{d_i}{\sqrt{n}}\), which vanish in the large-\(n\) limit.  So effectively, the subdiagonal structure drives the main spectral behavior in the bulk, producing the semicircle shape in the limit.
-
-\item \textbf{Orthogonal Polynomial / Recurrence Analysis.}
-   The polynomial \(p_n(\lambda)\) satisfies a discrete three-term recurrence whose ``continuum limit'' yields a certain integral equation (specifically the Stieltjes transform for the measure) whose solution is precisely the semicircle distribution.  In more detailed treatments, one shows that the moments or the Cauchy transform of \(L_n\) converge to that of \(\mu_{\mathrm{sc}}\).  The relevant PDE or integral equation is exactly solvable, producing the semicircle.
-
-\end{enumerate}
-
-Hence, with probability 1, as \(n\to\infty\), the empirical spectrum of \(\tfrac{1}{\sqrt{n}}\,W\) converges to the semicircle distribution on \([-2,2]\).  This precisely recovers \emph{Wigner’s semicircle law}.
-
-\begin{remark}[Extensions]
-A very similar approach works for the Gaussian Unitary Ensemble (\(\beta=2\)), leading to a random \emph{complex Hermitian} tridiagonal matrix.  For \(\beta=4\), there is a quaternionic block-tridiagonal model.  All of these point toward the same semicircle law for the global spectral distribution.
-\end{remark}
-
-
-\end{lnotes}
 
 
 
