@@ -153,6 +153,42 @@ A very similar approach works for the Gaussian Unitary Ensemble (\(\beta=2\)), l
 
 
 
+\section{Recap}
+
+\subsection{Gaussian ensembles}
+
+We introduced Gaussian ensembles,
+and for GOE ($\beta=1$) we computed the joint eigenvalue density.
+The normalization is so that 
+
+\subsection{Tridiagonalization}
+
+We showed that any real symmetric matrix \(A\) can be tridiagonalized by an orthogonal transformation \(Q\):
+\[
+	Q^\top\,A\,Q \;=\; T,
+\]
+where \(T\) is real symmetric tridiagonal, having nonzero entries only on the main diagonal and the first super-/subdiagonals:
+\begin{equation*}
+	T \;=\;
+	\begin{pmatrix}
+		 d_1 & \alpha_1 & 0 & \cdots & 0\\
+		 \alpha_1 & d_2 & \alpha_2 & \cdots & 0\\
+		 0 & \alpha_2 & d_3 & \ddots & \vdots\\
+		 \vdots & \vdots & \ddots & \ddots & \alpha_{n-1}\\
+		 0 & 0 & \cdots & \alpha_{n-1} & d_n
+	\end{pmatrix}.
+\end{equation*}
+In the proof, each time we need to act in the orthogonal complement to the 
+subspace $e_1,\ldots,e_{k-1}$ (starting from $e_1$),
+and apply a Householder reflection to zero out everything strictly 
+below the subdiagonal. (We apply the transformations like
+$A\mapso H A H^{\top}$, so that the first row transforms 
+in the same way as the first column of $A$).
+
+
+
+
+
 
 
 
