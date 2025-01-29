@@ -33,7 +33,7 @@ code:
       <input id="nInput" type="range" min="2" max="2000" step="1" value="100" />
       <span id="nValue">100</span>&nbsp;
 
-      <button id="runBtn" class="btn btn-primary">Set $N$</button>
+      <button id="runBtn" class="btn btn-primary">Set $N$ and resample matrix</button>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <label for="thetaInput">θ:</label>
@@ -98,7 +98,7 @@ code:
       <label for="nInput2">$N$:</label>
       <input id="nInput2" type="range" min="2" max="2000" step="1" value="100" />
       <span id="nValue2">100</span>&nbsp;
-      <button id="runBtn2" class="btn btn-primary">Set $N$</button>
+      <button id="runBtn2" class="btn btn-primary">Set $N$  and resample matrix</button>
 
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <label for="thetaInput2">θ:</label>
