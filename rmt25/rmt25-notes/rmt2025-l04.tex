@@ -426,47 +426,6 @@ One checks the base case $k=1,2$ directly by computing determinants of $1\times1
 This is analogous to recurrences in orthogonal polynomials, e.g.\ the three-term recursion for polynomials orthonormal with respect to certain measures. In fact, the polynomial $p_n(\lambda)$ can be viewed as an orthogonal polynomial if $\alpha_j>0$. This interplay is vital in random matrix theory.
 \end{remark}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Dumitriu--Edelman Tridiagonal Model for Wigner Ensembles}
-\label{sec:dumitriu-edelman}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-An influential result by Dumitriu and Edelman (2002) shows that if you have a real Wigner matrix $W$ with the “right” Gaussian and $\chi$-distribution structure, then in the process of Householder reduction to a tridiagonal matrix, the diagonal and subdiagonal entries themselves become \emph{mutually independent} random variables. This leads to a direct handle on eigenvalue asymptotics.
-
-\subsection{Construction}
-
-\begin{theorem}[Dumitriu--Edelman Representation]
-\label{thm:DE-representation}
-Let $W$ be an $n \times n$ real Wigner matrix whose entries are:
-\begin{enumerate}[(i)]
-\item Off-diagonal entries $X_{ij}$, for $i<j$, are iid $\mathcal{N}(0,1)$.
-\item Diagonal entries $X_{ii}$ are iid $\mathcal{N}(0,2)$.
-\end{enumerate}
-Then there is an orthogonal matrix $Q \in O(n)$ such that
-\[
-  W \;=\; Q^\top \, T\, Q,
-\]
-where $T$ is real symmetric tridiagonal, with:
-\begin{itemize}
-\item Diagonal entries $d_i \sim \mathcal{N}(0,1)$, i.i.d.
-\item Subdiagonal entries $\displaystyle \alpha_j = \sqrt{\frac12 \,\chi^2_{(n-j)}}$, independent over $j=1,\ldots,n-1$.
-\end{itemize}
-\end{theorem}
-
-\begin{remark}[General $\beta$-Ensembles]
-For $\beta>0$, one can construct a tridiagonal matrix $T_\beta$ with diagonal entries $d_i \sim \mathcal{N}(0,2/\beta)$ and subdiagonal entries $\alpha_j = \sqrt{\frac{1}{\beta}\chi^2_{\beta(n-j)}}$, all independent, whose eigenvalues match the “Gaussian $\beta$-ensemble.” In classical settings $\beta=1,2,4$, these correspond to GOE, GUE, and GSE, respectively.
-\end{remark}
-
-\subsection{Key Points in the Proof}
-
-\begin{itemize}
-\item The Householder transformation at each step is chosen so that the random “residual vector” is isotropic, enabling the reflection to produce $\chi$-type random lengths.
-\item By induction, one shows that each subdiagonal element of $T$ is the length of a Gaussian vector in $\mathbb{R}^{n-j}$, leading to $\chi_{n-j}$ distributions, and that each step is independent from the preceding ones.
-\end{itemize}
-
-\begin{remark}
-This tridiagonal structure is extremely sparse compared to the original dense Wigner matrix but carries the entire spectral data. The independence among $d_i$ and $\alpha_j$ is the critical simplification.
-\end{remark}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Semicircle Law via the Tridiagonal Form}
@@ -552,88 +511,6 @@ This completes the proof by tridiagonal methods.
 \begin{remark}[Universality]
 The argument here specifically used the Gaussian Wigner distribution for off-diagonal entries to get an explicit $\chi^2$ structure. However, the final result (semicircle law) remains true under vastly weaker assumptions on the entries. The \emph{universality principle} states that the global spectral behavior is insensitive to fine details of the distribution (e.g.\ it depends primarily on the first two moments).
 \end{remark}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Extended Discussions}
-\label{sec:extended-discussion}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-This section offers broader perspectives and more detailed commentary on topics related to the tridiagonal approach.
-
-\subsection{General \texorpdfstring{$\beta$}{beta}-Ensembles and Log-Gases}
-
-The Dumitriu--Edelman framework extends naturally to general $\beta$-ensembles (where $\beta>0$). In that model, one has a random tridiagonal matrix
-\[
-  T_\beta
-  =
-  \begin{pmatrix}
-   d_1 & \alpha_1 & 0 & \cdots \\
-   \alpha_1 & d_2 & \alpha_2 & \ddots \\
-   0 & \alpha_2 & d_3 & \ddots \\
-   \vdots & \ddots & \ddots & \ddots
-  \end{pmatrix}
-\]
-with $d_i \sim N(0,2/\beta)$ and
-\[
-  \alpha_j
-  = \sqrt{\frac{1}{\beta}\,\chi^2_{\bigl(\beta(n-j)\bigr)}},
-  \quad j=1,\ldots,n-1,
-\]
-all independent. The joint law of eigenvalues is exactly the \emph{Gaussian $\beta$-ensemble}:
-\[
-  p(\lambda_1,\dots,\lambda_n)
-  \;\propto\;
-  \exp\Bigl(-\frac{\beta}{4}\sum_{i=1}^n \lambda_i^2\Bigr)
-  \;\prod_{i<j}|\lambda_i - \lambda_j|^\beta,
-\]
-which generalizes GOE ($\beta=1$), GUE ($\beta=2$), and GSE ($\beta=4$).
-
-\subsection{PDE Approach to the Semicircle}
-
-An alternative viewpoint is to treat the density of eigenvalues as evolving under a certain “continuum limit of discrete recursion,” which can be recast as a partial differential equation. In particular, the moment generating function or Stieltjes transform satisfies an algebraic equation,
-\[
-  G(z)^2 + z\,G(z)+1=0,
-\]
-leading to the arcsine or semicircle distribution. While the PDE approach can be quite technical, it strongly parallels how Dyson Brownian motion arguments are used to derive the local spectral statistics.
-
-\subsection{Weak vs.\ Almost Sure Convergence}
-
-In many statements of the semicircle law, we see:
-\[
-  \mu_n = \frac1n \sum_{i=1}^n \delta_{\lambda_i/\sqrt{n}}
-  \;\longrightarrow\;
-  \mu_{\mathrm{sc}}
-\]
-either \emph{weakly in probability} or \emph{weakly almost surely}. The difference:
-\begin{itemize}
-\item \emph{Weak in probability:} For each bounded continuous test function $f$, the random variable $\int f\,d \mu_n$ converges in probability to $\int f\,d \mu_{\mathrm{sc}}$.
-\item \emph{Weak almost sure:} Convergence occurs with probability 1, i.e.\ \(\int f\,d \mu_n \to \int f\,d \mu_{\mathrm{sc}}\) almost surely for all bounded $f$.
-\end{itemize}
-For the classical Wigner ensembles, the results typically hold in the stronger almost sure sense.
-
-\subsection{A Note on Fluctuations Beyond the Law of Large Numbers}
-
-While the global limit of the eigenvalue distribution is the semicircle, one can also ask about fluctuations around it, e.g.\ the central limit theorem for linear statistics $\frac{1}{n}\sum f(\lambda_i)$. There's an extensive theory describing these fluctuations: for example, we get Gaussian fluctuations in many cases, related to so-called \emph{trace identities} and the \emph{loop equations} in $\beta$-ensembles.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Wishart and MANOVA: Simulation Discussions}
-\label{sec:wishart-manova}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Although we have focused on Wigner (symmetric) matrices, very similar tridiagonal or block-tridiagonal models exist for:
-\begin{enumerate}[(1)]
-\item \emph{Wishart (Laguerre) ensembles:} $X$ is $n\times m$ (real Gaussian). Then $W=XX^\top$ is $n\times n$ and the eigenvalues $\lambda_i$ follow the Marchenko–Pastur distribution in the large-$n,m$ limit.
-\item \emph{Jacobi (MANOVA) ensembles:} $X$ is $n\times t$ and $Y$ is $k\times t$, both real Gaussian. The matrix $\bigl(X X^\top + Y Y^\top\bigr)^{-1}(X X^\top)$ has eigenvalues in $[0,1]$ that follow the Jacobi Beta distribution.
-\end{enumerate}
-
-In practice, simulating these models is straightforward:
-
-\begin{enumerate}[(a)]
-\item Generate data $X$, $Y$ from Gaussian distributions.
-\item Form $W$ or the relevant matrix $(X X^\top + Y Y^\top)^{-1} (X X^\top)$.
-\item Compute eigenvalues via a standard routine (e.g.\ \texttt{numpy.linalg.eigvalsh} in Python).
-\item Plot the empirical distribution of these eigenvalues; compare to known limiting PDFs such as Marchenko–Pastur or Jacobi Beta, which have known closed forms.
-\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Exercises (Due 2025-02-28)}
