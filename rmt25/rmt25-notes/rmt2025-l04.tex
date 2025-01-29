@@ -265,39 +265,118 @@ change of variables from the matrix entries to the
 eigenvalues in the tridiagonal setting.  It can be found in
 the original paper \cite{dumitriu2002matrix}.
 
-\subsection{The case $\beta=2$}
+\subsection{The case \texorpdfstring{$\beta=2$}{beta=2}}
+\label{subsec:beta2-case}
 
-For computation of the local statistics of trandom matricxe, 
-th ecase beta=2 is the begst
+For many questions involving \emph{local eigenvalue statistics}, 
+the case \(\beta=2\) (the GUE, Gaussian Unitary Ensemble) is the most tractable.
+This is because the joint density of the eigenvalues
+admits a determinantal structure coming from
+a \emph{square} Vandermonde factor
+\(\,\prod_{i<j} (\lambda_i - \lambda_j)^2\)
+and the Gaussian exponential
+\(\,\exp\bigl(-\tfrac12 \sum \lambda_j^2\bigr)\).
+Moreover, for \(\beta=2\), the random matrix model
+and its correlation functions 
+can be expressed explicitly through determinants involving
+\emph{orthogonal polynomials}, namely, the \emph{Hermite polynomials}.
 
-it hinges on the repres with square vandermonde
+\begin{proposition}[Joint density for GUE and orthogonal polynomials]
+  \label{prop:gue-joint-density}
+  Consider the GUE (Gaussian Unitary Ensemble) random matrix model, i.e.\ an
+  \(n\times n\) complex Hermitian matrix whose entries
+  are i.i.d.\ up to the Hermitian condition, with each
+  off-diagonal entry distributed as 
+  \(\mathcal{N}(0,\tfrac12)+\mathrm{i}\,\mathcal{N}(0,\tfrac12)\)
+  and each diagonal entry \(\mathcal{N}(0,1)\).
+  The ordered eigenvalues \(\lambda_1 \ge \cdots \ge \lambda_n\) 
+  (or, without ordering, thought of as an unordered set)
+  satisfy the joint probability density
+  \begin{equation}
+  	\label{eq:gue-joint-density}
+    p(\lambda_1,\ldots,\lambda_n)
+    \;=\;
+    \frac{1}{Z_{n,2}}
+    \prod_{j=1}^n e^{-\frac12 \lambda_j^2}
+    \;\prod_{1\le i<j\le n} (\lambda_i - \lambda_j)^2,
+  \end{equation}
+  where \(Z_{n,2}\) is a normalization constant. 
 
-proposuition: fact about hte Vandermonde determinant and product
+	Moreover, if 
+  \(\{\psi_k(\lambda)\}_{k=0}^\infty\) 
+	is the family of Hermite polynomials, orthonormal
+  with respect to the measure 
+  \(w(\lambda)\,d\lambda = e^{-\lambda^2/2}\,d\lambda\)
+  on \(\mathbb{R}\) (i.e., 
+	\(\displaystyle\int_{-\infty}^{\infty} \psi_k(\lambda)\,\psi_\ell(\lambda)\,w(\lambda)\,d\lambda = \mathbf{1}_{k=\ell}\)),
+  then one can also write
+  \begin{equation}
+  	\label{eq:gue-joint-OP}
+    p(\lambda_1,\ldots,\lambda_n)
+    \;=\;
+		\mathrm{const}\cdot
+		\det\Bigl[\psi_{j-1}(\lambda_k)e^{-\frac{\lambda_k^2}{4}}\Bigr]_{j,k=1}^n
+		\;\det\Bigl[\psi_{j-1}(\lambda_k)e^{-\frac{\lambda_k^2}{4}}\Bigr]_{j,k=1}^n
+  \end{equation}
+	(the two determinants are identical, but let us keep this notation for future convenience).
+\end{proposition}
+The \emph{square determinant} structure is extremely useful.
+It is
+precisely the \(\beta=2\) counterpart 
+of the squared Vandermonde factor 
+\(\,\prod_{i<j}(\lambda_i-\lambda_j)^2\).
 
-why ios this, this is because th4e density can be represented as a product of 
-two determinants, involving
-orthogonal polynomials (Hermite ones)
 
-GIVE the main formula
+\begin{remark}[Hermite polynomials]
+  There are various normalizations of Hermite polynomials. 
+  In random matrix theory for the Gaussian ensembles, 
+  we often use the \emph{probabilists' Hermite polynomials} 
+	(sometimes called \(\mathrm{He}_k\), but we use the notation $H_k$).
+	There are various normalizations due to the factor in the exponent
+	of $x^2$.
 
-and write out hjte formula for the GUE density in terms of two Hermite polynomials
+  A convenient definition for use with the weight \(e^{-x^2/2}\) is:
+  \[
+    H_k(x)
+    \;=\;
+    (-1)^k\, e^{\tfrac{x^2}{2}}
+    \frac{d^k}{dx^k}
+    \Bigl(e^{-\tfrac{x^2}{2}}\Bigr),
+		\qquad 
+		k=0,1,\ldots,
+  \]
+  whose leading term is \(x^k\). 
+	Polynomials with the leading coeffient \(1\) are called \emph{monic}.
+	The first few monic Hermite polynomials are
+	\[
+		H_0(x) = 1,\qquad
+		H_1(x) = x,\qquad
+		H_2(x) = x^2 - 1,\qquad
+		H_3(x) = x^3 - 3x,\qquad 
+		H_4(x) = x^4 - 6x^2 + 3.
+	\]
+	The difference between $H_k$ and $\psi_k$ entering \Cref{prop:gue-joint-density}
+	is in a constant normalization,
+	since $H_k$ are monic but not orthonormal, 
+	while $\psi_k$ are orthonormal but not monic.
+\end{remark}
 
-also give a def of Hermite polynomials, e.g. by differentiating exponent. 
+\begin{proof}[Sketch of the determinantal representation]
+  In brief, one observes that the factor 
+  \(\prod_{i<j}(\lambda_i - \lambda_j)\) 
+  is exactly the Vandermonde determinant 
+  \(\Delta(\lambda_1,\dots,\lambda_n) 
+  = \det\bigl[\lambda_k^{j-1}\bigr]_{j,k=1}^n\).
+	Next, the Vandermonde determinant is also equal to 
+	the determinant built out of any monic family of polynomials of the corresponding
+	degrees (by linear transformations), and so we get the desired
+	representation.
+\end{proof}
 
-MAKE SURE to preserve the same probability normalization of exponent fo x^2/2
-
-
-
-
-
-
-
-
-
-
-
-
-
+We will work with Hermite polynomials 
+and the determinantal structure in \Cref{prop:gue-joint-density} 
+in the next 
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5}).
 
 
 
