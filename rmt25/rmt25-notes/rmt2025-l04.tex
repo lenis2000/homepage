@@ -463,7 +463,7 @@ See \Cref{fig:motzkin} for an illustration of a path.
 Now, each term in the sum in \eqref{eq:tridiagonal-moments-expansion}
 corresponds to a path. Moreover, for each path shape,
 there are $O(n)$ summands corresponding to it. The number of
-paths of length $k$ starting from a fixed $m$ 
+paths of length $k$ starting from a fixed $m$
 is finite (independent of $n$ for $m\gg 1$),
 so we need to look more closely at the asymptotics of the product
 in \eqref{eq:tridiagonal-moments-expansion}. This product
@@ -493,7 +493,7 @@ Let us make these estimates more precise.  We have:
 \begin{proposition}[Pointwise asymptotics in the bulk]
 \label{prop:alpha-bulk}
 Fix any $\delta \in (0,1)$ and let $j$ range so that $\theta_j := j/n \in [\delta,\, 1-\delta]$.
-Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a term that is stochastically bounded at the indicated order as $n\to\infty$. That is, $X_n = O_p(a_n)$ means that for any $\epsilon>0$, there exists $M>0$ such that $\Pr(|X_n/a_n| > M) < \epsilon$ for all sufficiently large $n$.}
+Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a term that is stochastically bounded at the indicated order as $n\to\infty$. That is, $X_n = O_p(a_n)$ means that for any $\epsilon>0$, there exists $M>0$ such that $\operatorname{\mathbb{P}}(|X_n/a_n| > M) < \epsilon$ for all sufficiently large $n$.}
 \[
   \frac{\alpha_j}{\sqrt{n}}
   \;=\; \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
@@ -543,7 +543,7 @@ the case of edges does not contribute (see Problem~\ref{prob:edges-in-tridiagona
 If at least one of the $t_{ij}$'s in \eqref{eq:tridiagonal-moments-discussion} is
 on the diagonal, the term vanishes in the limit. Therefore,
 it suffices to consider only the off-diagonal $\alpha_j$'s. The
-number of length $k$ walks starting from $m=\theta n$ for $\theta>\delta$ is 
+number of length $k$ walks starting from $m=\theta n$ for $\theta>\delta$ is
 just the number of lattice walks with steps $(1,\pm 1)$. This number is $\binom{k}{k/2}$.\footnote{Not Catalan yet!}
 (From now on till the end of the section, we assume that
 $k$ is even --- the moments become zero for odd $k$).
@@ -559,7 +559,7 @@ which is interpreted as transforming the sum over $i_1,\ldots,i_k $
 into an integral in $\theta$. We thus see that the moments converge to
 \begin{equation*}
 	\beta^{k/2}\binom{k}{k/2}\int_0^1 (1-\theta)^{k/2} \, d\theta=
-	\beta^{k/2}\binom{k}{k/2}\cdot \frac{1}{1+k/2}, 
+	\beta^{k/2}\binom{k}{k/2}\cdot \frac{1}{1+k/2},
 \end{equation*}
 and we recover our favorite
 Catalan moments of the semicircle distribution.
@@ -568,7 +568,7 @@ This completes the proof.
 
 \begin{remark}[The factor $\beta^{k/2}$]
 	Note that the factor $\beta^{k/2}$ refers just to the scaling of the Wigner
-	semicircle law, and does not affect the semicircle shape. More precisely, 
+	semicircle law, and does not affect the semicircle shape. More precisely,
 	the limiting semicircle distribution lies from $[-2\sqrt{\beta},2\sqrt{\beta}]$.
 \end{remark}
 
@@ -582,7 +582,7 @@ method to derive the Wigner semicircle law.
 
 We let
 \[
-  T - \lambda I = 
+  T - \lambda I =
   \begin{pmatrix}
     d_1 - \lambda & \alpha_1 & 0 & \cdots \\
     \alpha_1 & d_2 - \lambda & \alpha_2 & \ddots \\
@@ -590,8 +590,8 @@ We let
     \vdots & \ddots & \ddots & \ddots
   \end{pmatrix}.
 \]
-We want to understand 
-eigenvalues, that is, 
+We want to understand
+eigenvalues, that is,
 zeros of the characteristic polynomial
 $\det(T - \lambda I)$.
 
@@ -618,7 +618,7 @@ See also Problem~\ref{prob:Hermite-3-term}.
 
 \subsubsection{Spectral Connection and Eigenvalues}
 
-The eigenvalues \(\lambda_1,\dots,\lambda_n\) of \(T\) are exactly the roots of \(p_n(\lambda)\).  For any \(\lambda \in \mathbb{C}\), if \(\lambda\) is not an eigenvalue, then \(\bigl(T - \lambda I\bigr)\) is invertible.  
+The eigenvalues \(\lambda_1,\dots,\lambda_n\) of \(T\) are exactly the roots of \(p_n(\lambda)\).  For any \(\lambda \in \mathbb{C}\), if \(\lambda\) is not an eigenvalue, then \(\bigl(T - \lambda I\bigr)\) is invertible.
 
 When \(\lambda\) is close to a real eigenvalue, the behavior of the resolvent \(\bigl(T-\lambda I\bigr)^{-1}\) becomes large.  Tracking these poles in the complex plane is the key to the resolvent or Stieltjes transform approach.
 
@@ -635,7 +635,7 @@ Recall that for a matrix \(A\) with real eigenvalues \(\lambda_1,\dots,\lambda_n
 \]
 If \(z=x+\mathrm{i}y\) is in the upper half-plane (\(y>0\)), this $G_n(z)$ can be seen as
 \[
-  G_n(z) 
+  G_n(z)
   \;=\;
   \int_{\mathbb{R}}\!\!\frac{d\mu_n(\lambda)}{\lambda - z},
 \]
@@ -643,21 +643,21 @@ where \(\mu_n = \frac{1}{n}\sum_{k=1}^n \delta_{\lambda_k}\) is the empirical sp
 
 \subsubsection{Resolvent of a Tridiagonal Matrix: Recurrence Relations}
 
-Let us apply this to \(A = T/\sqrt{n}\) (an $n\times n$ tridiagonal matrix).  We want 
+Let us apply this to \(A = T/\sqrt{n}\) (an $n\times n$ tridiagonal matrix).  We want
 \[
   \bigl(T/\sqrt{n} - zI\bigr)^{-1},
 \]
-for complex \(z\).  Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries of the resolvent.  
+for complex \(z\).  Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries of the resolvent.
 
 Concretely, let us denote \(\bigl(T/\sqrt{n}-zI\bigr)^{-1} = (R_{ij})\).  Then from the definition
 \[
-  \bigl(T/\sqrt{n} - zI\bigr)\,(R_{ij}) 
+  \bigl(T/\sqrt{n} - zI\bigr)\,(R_{ij})
   \;=\;
   I,
 \]
 one gets for each row $k$:
 
-\colorbox{yellow}{\parbox{.7\textwidth}{to continue writing from here}}
+\colorbox{yellow}{\parbox{.7\textwidth}{to continue improvement from here}}
 \[
    \frac{d_k}{\sqrt{n}}\,R_{kj}
    \;-\;z\,R_{kj}
@@ -667,7 +667,7 @@ one gets for each row $k$:
    \frac{\alpha_{k}}{\sqrt{n}}\,R_{k+1,j}\,\mathbf{1}_{(k<n)}
    \;=\;\delta_{k=j}.
 \]
-This can be reorganized into a second-order \emph{linear difference equation} in $k$ for each fixed column index $j$.  Similarly, one obtains boundary conditions.  
+This can be reorganized into a second-order \emph{linear difference equation} in $k$ for each fixed column index $j$.  Similarly, one obtains boundary conditions.
 
 Because the $\alpha_k$ and $d_k$ are random but
 \emph{independent}, the coefficients in this difference
@@ -676,7 +676,7 @@ boundaries.  In fact, up to small fluctuations,
 $\alpha_{k}/\sqrt{n}$ stays near $\alpha$ for some constant
 $\alpha$ (like $\alpha\approx 1/\sqrt{2}$ if off-diagonal
 variance is $\frac12$), and $d_k/\sqrt{n}\to0$ with $k$.
-One can then guess that 
+One can then guess that
 \[
   G_n(z) \;=\; \frac{1}{n}\sum_{k=1}^n R_{kk}
 \]
@@ -685,10 +685,10 @@ has a continuum limit satisfying a certain \emph{algebraic} equation.
 \subsection{Functional Equation for the Limit and the Semicircle Law}
 \label{sec:functional-eq}
 
-Let us sketch more precisely how $G_n(z)$ converges to the semicircle transform.  
+Let us sketch more precisely how $G_n(z)$ converges to the semicircle transform.
 
 \begin{enumerate}[(1)]
-\item \textbf{Asymptotic stationarity.}  By a law of large numbers or a concentration argument on $\chi^2_{\,n-j}$ (when we do the Dumitriu--Edelman version), the subdiagonal $\alpha_j$ is close to $\sqrt{(n-j)/2}$, hence $\alpha_j/\sqrt{n}\approx \sqrt{\frac{1-j/n}{2}}$.  In the bulk of the index range (where $j\approx \theta n$ for some $\theta\in(0,1)$), this is about $\sqrt{\tfrac{1-\theta}{2}}$.  Meanwhile $d_i/\sqrt{n}\approx 0$.  
+\item \textbf{Asymptotic stationarity.}  By a law of large numbers or a concentration argument on $\chi^2_{\,n-j}$ (when we do the Dumitriu--Edelman version), the subdiagonal $\alpha_j$ is close to $\sqrt{(n-j)/2}$, hence $\alpha_j/\sqrt{n}\approx \sqrt{\frac{1-j/n}{2}}$.  In the bulk of the index range (where $j\approx \theta n$ for some $\theta\in(0,1)$), this is about $\sqrt{\tfrac{1-\theta}{2}}$.  Meanwhile $d_i/\sqrt{n}\approx 0$.
 
 \item \textbf{Discrete difference to continuous ODE.}  The second-order difference equation for $R_{k+1,k\pm1}$ is roughly
 \[
@@ -696,7 +696,7 @@ Let us sketch more precisely how $G_n(z)$ converges to the semicircle transform.
          \;+\;\bigl(\alpha_{k-1}/\sqrt{n}\bigr)\,R_{k-1,j}
   \;=\; \delta_{k=j},
 \]
-neglecting the small diagonal $d_k/\sqrt{n}$ term.  In the limit $n\to\infty$, if we interpret $k/n$ as $x\in[0,1]$, then $R_{k\pm1,j}$ becomes $R(x\pm \tfrac1n)$, and $\alpha_{k}/\sqrt{n}\approx \alpha(x)$ for some function $\alpha$.  This difference equation becomes an approximate differential equation in $x$, from which one solves for $R(x,\theta)$ (thinking of $j$ as $\theta n$).  
+neglecting the small diagonal $d_k/\sqrt{n}$ term.  In the limit $n\to\infty$, if we interpret $k/n$ as $x\in[0,1]$, then $R_{k\pm1,j}$ becomes $R(x\pm \tfrac1n)$, and $\alpha_{k}/\sqrt{n}\approx \alpha(x)$ for some function $\alpha$.  This difference equation becomes an approximate differential equation in $x$, from which one solves for $R(x,\theta)$ (thinking of $j$ as $\theta n$).
 
 \item \textbf{Solving for $G(z)$.}  Summing $R_{k,k}$ over $k$ becomes an integral of $R(x,x)$ over $x\in[0,1]$.  One obtains an algebraic equation in $G(z)$ akin to
 \[
@@ -706,9 +706,9 @@ neglecting the small diagonal $d_k/\sqrt{n}$ term.  In the limit $n\to\infty$, i
 \[
    G(z) \;=\; \frac{-z \pm \sqrt{z^2 - 4}}{2},
 \]
-and the negative branch is selected by the imaginary part condition (i.e.\ $G(z)\sim -1/z$ for large $|z|$).  
+and the negative branch is selected by the imaginary part condition (i.e.\ $G(z)\sim -1/z$ for large $|z|$).
 
-\item \textbf{Back to the real axis.}  From $G(z)$ in the upper half-plane, one extracts the limit distribution by looking at $\mathrm{Im}\,(G(x+\mathrm{i}0^+))$ for real $x$.  The square-root $\sqrt{x^2-4}$ is purely imaginary for $|x|<2$, giving the semicircle density on $[-2,2]$.  
+\item \textbf{Back to the real axis.}  From $G(z)$ in the upper half-plane, one extracts the limit distribution by looking at $\mathrm{Im}\,(G(x+\mathrm{i}0^+))$ for real $x$.  The square-root $\sqrt{x^2-4}$ is purely imaginary for $|x|<2$, giving the semicircle density on $[-2,2]$.
 
 \end{enumerate}
 
@@ -742,73 +742,73 @@ Both lead to the same final statement of the global spectral distribution being 
 \section{Determinantal point processes (discrete)}
 \label{sec:determinantal}
 
-We are now going to start the discussion of the local eigenvalue 
+We are now going to start the discussion of the local eigenvalue
 behavior at $\beta=2$, started in \Cref{subsec:beta2-case}.
 We begin with a general discussion of \emph{determinantal point processes} (DPPs),
-starting in discrete world. The continuous world is going to be considered in the next 
+starting in discrete world. The continuous world is going to be considered in the next
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5}.
 
-In this section, we introduce \emph{determinantal point processes (DPPs)} 
-over a discrete state space and explore some of their properties. 
+In this section, we introduce \emph{determinantal point processes (DPPs)}
+over a discrete state space and explore some of their properties.
 Our main reference is \cite{Borodin2009}.
 
 \medskip
 
-\noindent\textbf{Setup.} Let \(\X\) be a (finite or countably infinite) 
-discrete set endowed with the counting measure \(\mu\). 
-A \emph{point configuration} on \(\X\) is any subset \(X\subset \X\), 
-finite or infinite, with no repeated points.\footnote{Some texts allow 
-multiplicities, but we disallow them here.} 
-We write \(\Conf(\X)\) for the set of all point configurations, 
-which carries the natural \(\sigma\)-algebra generated by the functions 
-\(\mathbf{1}_{\{x\in X\}}\), \(x\in\X\). A \emph{random point process} \(\P\) 
-on \(\X\) is a probability measure on \(\Conf(\X)\).
+\noindent\textbf{Setup.} Let \(\mathfrak{X}\) be a (finite or countably infinite)
+discrete set endowed with the counting measure \(\mu\).
+A \emph{point configuration} on \(\mathfrak{X}\) is any subset \(X\subset \mathfrak{X}\),
+finite or infinite, with no repeated points.\footnote{Some texts allow
+multiplicities, but we disallow them here.}
+We write \(Conf(\mathfrak{X})\) for the set of all point configurations,
+which carries the natural \(\sigma\)-algebra generated by the functions
+\(\mathbf{1}_{\{x\in X\}}\), \(x\in\mathfrak{X}\). A \emph{random point process} \(P\)
+on \(\mathfrak{X}\) is a probability measure on \(Conf(\mathfrak{X})\).
 
 \begin{definition}[Determinantal point process]
 \label{def:dpp-discrete}
-A random point process \(\P\) on a discrete set \(\X\) is \emph{determinantal} 
-if there exists a kernel function \(K:\X\times\X \to \mathbb{C}\) such that 
-for every finite collection of pairwise distinct points \(x_1,\dots,x_n\in \X\),
+A random point process \(P\) on a discrete set \(\mathfrak{X}\) is \emph{determinantal}
+if there exists a kernel function \(K:\mathfrak{X}\times\mathfrak{X} \to \mathbb{C}\) such that
+for every finite collection of pairwise distinct points \(x_1,\dots,x_n\in \mathfrak{X}\),
 \begin{equation}
 \label{eq:DPP-def}
-\Pr\{x_1,\dots,x_n\in X\} = \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^n.
+\operatorname{\mathbb{P}}\{x_1,\dots,x_n\in X\} = \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^n.
 \end{equation}
-That is, all finite-dimensional distributions of \(\P\) take a determinantal form. 
-The function \(K\) is called a \emph{correlation kernel} for \(\P\).
+That is, all finite-dimensional distributions of \(P\) take a determinantal form.
+The function \(K\) is called a \emph{correlation kernel} for \(P\).
 \end{definition}
 
 \noindent\textbf{Correlation functions and the kernel.}
-The condition \eqref{eq:DPP-def} captures all finite-dimensional distributions of \(\P\).
-Equivalently, let 
+The condition \eqref{eq:DPP-def} captures all finite-dimensional distributions of \(P\).
+Equivalently, let
 \[
-\rho_n(x_1,\dots,x_n) \coloneqq \Pr\{\text{there is a particle at each }x_i\}
+	\rho_n(x_1,\dots,x_n) \coloneqq \operatorname{\mathbb{P}}\{\text{there is a particle at each }x_i\}
 \]
-for distinct \(x_1,\dots,x_n\). In the discrete setting, \(\rho_n\) is 
-sometimes called the \emph{(unordered) correlation function}. The process is 
+for distinct \(x_1,\dots,x_n\). In the discrete setting, \(\rho_n\) is
+sometimes called the \emph{(unordered) correlation function}. The process is
 determinantal if and only if
 \[
 \rho_n(x_1,\dots,x_n) = \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^n
-\quad 
+\quad
 \text{for each }n\ge1.
 \]
 
-\noindent\textbf{Basic properties.} If \(\P\) is a DPP with correlation kernel 
-\(K\colon \X\times\X\to\mathbb{C}\), then for any subset \(I\subset \X\),
+\noindent\textbf{Basic properties.} If \(P\) is a DPP with correlation kernel
+\(K\colon \mathfrak{X}\times\mathfrak{X}\to\mathbb{C}\), then for any subset \(I\subset \mathfrak{X}\),
 \begin{equation}
 \label{eq:prob-empty-set-DPP}
-\Pr\{X\cap I = \varnothing\} = \det\bigl[\mathbf{1} - K_I\bigr],
+\operatorname{\mathbb{P}}\{X\cap I = \varnothing\} = \det\bigl[\mathbf{1} - K_I\bigr],
 \end{equation}
-where \(K_I\) is the operator \(\bigl[K(x,y)\bigr]_{x,y\in I}\) 
-(viewed as a matrix if \(\X\) is finite, or an infinite matrix if \(\X\) is 
-countably infinite with convergent sums). More generally, if \(I_1,\dots,I_m\subset \X\) 
-are disjoint subsets, then the joint event \(\{|X\cap I_k|=n_k\text{ for }1\le k\le m\}\) 
-can be expressed via the determinant 
+where \(K_I\) is the operator \(\bigl[K(x,y)\bigr]_{x,y\in I}\)
+(viewed as a matrix if \(\mathfrak{X}\) is finite, or an infinite matrix if \(\mathfrak{X}\) is
+countably infinite with convergent sums). More generally, if \(I_1,\dots,I_m\subset \mathfrak{X}\)
+are disjoint subsets, then the joint event \(\{|X\cap I_k|=n_k\text{ for }1\le k\le m\}\)
+can be expressed via the determinant
 \(\det\bigl[\mathbf{1}-\sum_{k=1}^m z_k K_{I_k}\bigr]\)
 and its derivatives.
 
 \begin{remark}
-For any function \(\phi:\X\to\mathbb{C}\) such that the operator 
-\(\bigl[(1-\phi(x))K(x,y)\bigr]_{x,y\in\X}\) is trace class, the 
+For any function \(\phi:\mathfrak{X}\to\mathbb{C}\) such that the operator
+\(\bigl[(1-\phi(x))K(x,y)\bigr]_{x,y\in\mathfrak{X}}\) is trace class, the
 exponential generating function for \(\phi\) is
 \[
 \mathbb{E}\Bigl[\prod_{x\in X}\phi(x)\Bigr] = \det\bigl[\mathbf{1} - (1-\phi)K\bigr].
@@ -816,27 +816,28 @@ exponential generating function for \(\phi\) is
 This identity makes determinantal point processes more tractable than general processes.
 \end{remark}
 
-\subsubsection*{A key example: one-dependent processes on \texorpdfstring{$\Z$}{}}
-We highlight an important application from \cite{Bor09} that connects 
-\emph{1-dependent} processes on an integer segment (or a finite subset of \(\Z\)) 
-to determinantal processes. A point process \(\P\) on \(\Z\) is \emph{1-dependent} if, 
-for any two disjoint finite sets \(A,B\subset\Z\) with \(\mathrm{dist}(A,B)\ge2\), 
+\subsubsection*{A key example: one-dependent processes on \texorpdfstring{$\mathbb{Z}$}{}}
+We highlight an important application from \cite{borodin2010adding} that connects
+\emph{1-dependent} processes on an integer segment (or a finite subset of \(\mathbb{Z}\))
+to determinantal processes. A point process \(P\) on \(\mathbb{Z}\) is \emph{1-dependent} if,
+for any two disjoint finite sets \(A,B\subset\mathbb{Z}\) with \(\mathrm{dist}(A,B)\ge2\),
 the correlation function factorizes:
 \[
 \rho_{|A|+|B|}(A\cup B) = \rho_{|A|}(A)\,\rho_{|B|}(B).
 \]
 
-\begin{theorem}[{\cite[Thm.~1.1]{Bor09}}]
+
+\begin{theorem}[{\cite[Thm.~1.1]{borodin2010adding}]}]
 \label{thm:1-dependent-implies-dpp}
-Any one-dependent point process on a finite segment of \(\Z\) is a determinantal process. 
+Any one-dependent point process on a finite segment of \(\mathbb{Z}\) is a determinantal process.
 Moreover, its correlation kernel \(K\) can be explicitly computed.
 \end{theorem}
 
 \begin{example}[Adding a list of numbers]
 \label{ex:adding-numbers}
 Consider an i.i.d.\ sequence of random variables \(\{\xi_j\}\) (each taking values in \(\{0,1\}\)),
-and define the partial sums \(S_n = \sum_{j=1}^n \xi_j\). The occupancy process, 
-marking site \(S_n\) as “occupied,” forms a 1-dependent sequence. By \Cref{thm:1-dependent-implies-dpp}, 
+and define the partial sums \(S_n = \sum_{j=1}^n \xi_j\). The occupancy process,
+marking site \(S_n\) as “occupied,” forms a 1-dependent sequence. By \Cref{thm:1-dependent-implies-dpp},
 it is thus determinantal.
 \end{example}
 
