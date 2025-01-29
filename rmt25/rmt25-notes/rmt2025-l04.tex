@@ -336,7 +336,8 @@ of the squared Vandermonde factor
 	of $x^2$.
 
   A convenient definition for use with the weight \(e^{-x^2/2}\) is:
-  \[
+	\begin{equation}
+		\label{eq:hermite-polynomial}
     H_k(x)
     \;=\;
     (-1)^k\, e^{\tfrac{x^2}{2}}
@@ -344,7 +345,7 @@ of the squared Vandermonde factor
     \Bigl(e^{-\tfrac{x^2}{2}}\Bigr),
 		\qquad
 		k=0,1,\ldots,
-  \]
+\end{equation}
   whose leading term is \(x^k\).
 	Polynomials with the leading coeffient \(1\) are called \emph{monic}.
 	The first few monic Hermite polynomials are
@@ -576,34 +577,10 @@ This completes the proof.
 Let us stay in the tridiagonal setting, and explore a more analytic
 method to derive the Wigner semicircle law.
 
-
-
-In this supplemental note, we elaborate on the \emph{Stieltjes transform} (resolvent) approach to proving the Wigner semicircle law for Gaussian and, more generally, Wigner-type matrices.  We base our discussion on a key simplification: \emph{tridiagonalization} of real symmetric matrices.  
-
-The argument proceeds in several steps:
-\begin{enumerate}[\(\bullet\)]
-\item We recall from the previous lectures that any real symmetric matrix \(W\) can be conjugated by an orthogonal transformation to a real tridiagonal matrix \(T\).  For a GOE random matrix, the distribution of \(T\) is explicitly known (Dumitriu--Edelman form).
-\item We rewrite spectral questions about \(W\) in terms of the (much sparser) tridiagonal matrix \(T\).  In particular, the matrix resolvent \((T - zI)^{-1}\) is easier to analyze through a recurrence relation.
-\item By taking traces of the resolvent, we obtain the Stieltjes transform of the empirical eigenvalue distribution (ESD).  Its \emph{large \(n\) limit} is forced to satisfy a known algebraic equation whose unique solution is the semicircle law.
-\end{enumerate}
-
-We will thus see a more direct linear-algebraic interpretation of the random matrix’s global spectral behavior, complementing the combinatorial ``moment-counting'' method from earlier.
-
-\section{Tridiagonal Structure and Characteristic Polynomials}
+\subsection{Tridiagonal Structure and Characteristic Polynomials}
 \label{sec:tridiag-charpoly}
 
-We consider a real symmetric tridiagonal matrix 
-\[
-  T \;=\;
-  \begin{pmatrix}
-    d_1 & \alpha_1 & 0 & \cdots & 0 \\
-    \alpha_1 & d_2 & \alpha_2 & \ddots & \vdots \\
-    0 & \alpha_2 & d_3 & \ddots & 0 \\
-    \vdots & \ddots & \ddots & \ddots & \alpha_{n-1} \\
-    0 & \cdots & 0 & \alpha_{n-1} & d_n
-  \end{pmatrix},
-\]
-of size \(n\times n\).  We let
+We let
 \[
   T - \lambda I = 
   \begin{pmatrix}
@@ -613,9 +590,12 @@ of size \(n\times n\).  We let
     \vdots & \ddots & \ddots & \ddots
   \end{pmatrix}.
 \]
-We want to understand its eigenvalues, or equivalently, its characteristic polynomial.  
+We want to understand 
+eigenvalues, that is, 
+zeros of the characteristic polynomial
+$\det(T - \lambda I)$.
 
-\subsection{Three-Term Recurrence for the Characteristic Polynomial}
+\subsubsection{Three-Term Recurrence for the Characteristic Polynomial}
 
 For each \(k=1,\dots,n\), denote by \(T_k\) the top-left \(k\times k\) submatrix of \(T\).  Define the \emph{characteristic polynomial} of that block:
 \[
@@ -632,24 +612,17 @@ For each \(k\ge1\), we have
   (d_{k+1}-\lambda)\,p_k(\lambda)
   \;-\;\alpha_k^2\,p_{k-1}(\lambda).
 \]
-Equivalently, we have 
-\[
-  p_1(\lambda) = (d_1 - \lambda), 
-  \qquad
-  p_2(\lambda) = (d_2 - \lambda)\,(d_1-\lambda)\,-\,\alpha_1^2,
-\]
-and in general one proceeds by induction. 
 \end{lemma}
 
-Thus the characteristic polynomial \(\det(T - \lambda I)\) satisfies a simple linear recurrence in \(k\).  In orthogonal polynomial language, one may think of \(\{p_k(\lambda)\}\) as a family of monic polynomials in \(\lambda\) with a three-term recursion and certain initial conditions.
+See also Problem~\ref{prob:Hermite-3-term}.
 
-\subsection{Spectral Connection and Eigenvalues}
+\subsubsection{Spectral Connection and Eigenvalues}
 
 The eigenvalues \(\lambda_1,\dots,\lambda_n\) of \(T\) are exactly the roots of \(p_n(\lambda)\).  For any \(\lambda \in \mathbb{C}\), if \(\lambda\) is not an eigenvalue, then \(\bigl(T - \lambda I\bigr)\) is invertible.  
 
 When \(\lambda\) is close to a real eigenvalue, the behavior of the resolvent \(\bigl(T-\lambda I\bigr)^{-1}\) becomes large.  Tracking these poles in the complex plane is the key to the resolvent or Stieltjes transform approach.
 
-\section{Stieltjes Transform / Resolvent}
+\subsection{Stieltjes Transform / Resolvent}
 \label{sec:stieltjes-def}
 
 Recall that for a matrix \(A\) with real eigenvalues \(\lambda_1,\dots,\lambda_n\), the \emph{Stieltjes transform} (or Green’s function, or resolvent trace) is
@@ -668,7 +641,7 @@ If \(z=x+\mathrm{i}y\) is in the upper half-plane (\(y>0\)), this $G_n(z)$ can b
 \]
 where \(\mu_n = \frac{1}{n}\sum_{k=1}^n \delta_{\lambda_k}\) is the empirical spectral measure.  Equivalently, \(\mathrm{Im}\,G_n(x+\mathrm{i}0^+)\) encodes the density of eigenvalues around \(x\).  Thus, understanding $G_n(z)$ for large $n$ pinpoints the limiting spectral distribution.
 
-\subsection{Resolvent of a Tridiagonal Matrix: Recurrence Relations}
+\subsubsection{Resolvent of a Tridiagonal Matrix: Recurrence Relations}
 
 Let us apply this to \(A = T/\sqrt{n}\) (an $n\times n$ tridiagonal matrix).  We want 
 \[
@@ -683,6 +656,8 @@ Concretely, let us denote \(\bigl(T/\sqrt{n}-zI\bigr)^{-1} = (R_{ij})\).  Then f
   I,
 \]
 one gets for each row $k$:
+
+\colorbox{yellow}{\parbox{.7\textwidth}{to continue writing from here}}
 \[
    \frac{d_k}{\sqrt{n}}\,R_{kj}
    \;-\;z\,R_{kj}
@@ -694,13 +669,20 @@ one gets for each row $k$:
 \]
 This can be reorganized into a second-order \emph{linear difference equation} in $k$ for each fixed column index $j$.  Similarly, one obtains boundary conditions.  
 
-Because the $\alpha_k$ and $d_k$ are random but \emph{independent and identically distributed} in a suitable sense (for the GOE or general $\beta$ tridiagonal form), the coefficients in this difference equation become “stationary” for large $n$ except near the boundaries.  In fact, up to small fluctuations, $\alpha_{k}/\sqrt{n}$ stays near $\alpha$ for some constant $\alpha$ (like $\alpha\approx 1/\sqrt{2}$ if off-diagonal variance is $\frac12$), and $d_k/\sqrt{n}\to0$ with $k$.  One can then guess that 
+Because the $\alpha_k$ and $d_k$ are random but
+\emph{independent}, the coefficients in this difference
+equation become “stationary” for large $n$ except near the
+boundaries.  In fact, up to small fluctuations,
+$\alpha_{k}/\sqrt{n}$ stays near $\alpha$ for some constant
+$\alpha$ (like $\alpha\approx 1/\sqrt{2}$ if off-diagonal
+variance is $\frac12$), and $d_k/\sqrt{n}\to0$ with $k$.
+One can then guess that 
 \[
   G_n(z) \;=\; \frac{1}{n}\sum_{k=1}^n R_{kk}
 \]
 has a continuum limit satisfying a certain \emph{algebraic} equation.
 
-\section{Functional Equation for the Limit and the Semicircle Law}
+\subsection{Functional Equation for the Limit and the Semicircle Law}
 \label{sec:functional-eq}
 
 Let us sketch more precisely how $G_n(z)$ converges to the semicircle transform.  
@@ -738,10 +720,10 @@ Let $T$ be the Dumitriu--Edelman G$\beta$E tridiagonal matrix (in particular, th
 \end{theorem}
 
 \begin{remark}
-One can make this rigorous by carefully bounding the difference between $(\alpha_j/\sqrt{n})$ and its limiting profile, as well as controlling the diagonal $(d_i/\sqrt{n})$.  The approach is an archetype for many \emph{local laws} in random matrix theory, where one obtains more precise estimates on the resolvent entries for $z$ in small neighborhoods near the real axis \cite{erdHos2017dynamical,tao2012topics}.
+One can make this rigorous by carefully bounding the difference between $(\alpha_j/\sqrt{n})$ and its limiting profile, as well as controlling the diagonal $(d_i/\sqrt{n})$.  The approach is an archetype for many \emph{local laws} in random matrix theory, where one obtains more precise estimates on the resolvent entries for $z$ in small neighborhoods near the real axis.
 \end{remark}
 
-\section{Concluding Remarks}
+\subsection{Concluding Remarks}
 
 We have now seen \emph{two main proof strategies} for deriving the Wigner semicircle law:
 
@@ -757,13 +739,106 @@ Both lead to the same final statement of the global spectral distribution being 
 
 
 
-\section{Determinantal point processes}
+\section{Determinantal point processes (discrete)}
 \label{sec:determinantal}
 
 We are now going to start the discussion of the local eigenvalue 
 behavior at $\beta=2$, started in \Cref{subsec:beta2-case}.
+We begin with a general discussion of \emph{determinantal point processes} (DPPs),
+starting in discrete world. The continuous world is going to be considered in the next 
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5}.
 
+In this section, we introduce \emph{determinantal point processes (DPPs)} 
+over a discrete state space and explore some of their properties. 
+Our main reference is \cite{Borodin2009}.
 
+\medskip
+
+\noindent\textbf{Setup.} Let \(\X\) be a (finite or countably infinite) 
+discrete set endowed with the counting measure \(\mu\). 
+A \emph{point configuration} on \(\X\) is any subset \(X\subset \X\), 
+finite or infinite, with no repeated points.\footnote{Some texts allow 
+multiplicities, but we disallow them here.} 
+We write \(\Conf(\X)\) for the set of all point configurations, 
+which carries the natural \(\sigma\)-algebra generated by the functions 
+\(\mathbf{1}_{\{x\in X\}}\), \(x\in\X\). A \emph{random point process} \(\P\) 
+on \(\X\) is a probability measure on \(\Conf(\X)\).
+
+\begin{definition}[Determinantal point process]
+\label{def:dpp-discrete}
+A random point process \(\P\) on a discrete set \(\X\) is \emph{determinantal} 
+if there exists a kernel function \(K:\X\times\X \to \mathbb{C}\) such that 
+for every finite collection of pairwise distinct points \(x_1,\dots,x_n\in \X\),
+\begin{equation}
+\label{eq:DPP-def}
+\Pr\{x_1,\dots,x_n\in X\} = \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^n.
+\end{equation}
+That is, all finite-dimensional distributions of \(\P\) take a determinantal form. 
+The function \(K\) is called a \emph{correlation kernel} for \(\P\).
+\end{definition}
+
+\noindent\textbf{Correlation functions and the kernel.}
+The condition \eqref{eq:DPP-def} captures all finite-dimensional distributions of \(\P\).
+Equivalently, let 
+\[
+\rho_n(x_1,\dots,x_n) \coloneqq \Pr\{\text{there is a particle at each }x_i\}
+\]
+for distinct \(x_1,\dots,x_n\). In the discrete setting, \(\rho_n\) is 
+sometimes called the \emph{(unordered) correlation function}. The process is 
+determinantal if and only if
+\[
+\rho_n(x_1,\dots,x_n) = \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^n
+\quad 
+\text{for each }n\ge1.
+\]
+
+\noindent\textbf{Basic properties.} If \(\P\) is a DPP with correlation kernel 
+\(K\colon \X\times\X\to\mathbb{C}\), then for any subset \(I\subset \X\),
+\begin{equation}
+\label{eq:prob-empty-set-DPP}
+\Pr\{X\cap I = \varnothing\} = \det\bigl[\mathbf{1} - K_I\bigr],
+\end{equation}
+where \(K_I\) is the operator \(\bigl[K(x,y)\bigr]_{x,y\in I}\) 
+(viewed as a matrix if \(\X\) is finite, or an infinite matrix if \(\X\) is 
+countably infinite with convergent sums). More generally, if \(I_1,\dots,I_m\subset \X\) 
+are disjoint subsets, then the joint event \(\{|X\cap I_k|=n_k\text{ for }1\le k\le m\}\) 
+can be expressed via the determinant 
+\(\det\bigl[\mathbf{1}-\sum_{k=1}^m z_k K_{I_k}\bigr]\)
+and its derivatives.
+
+\begin{remark}
+For any function \(\phi:\X\to\mathbb{C}\) such that the operator 
+\(\bigl[(1-\phi(x))K(x,y)\bigr]_{x,y\in\X}\) is trace class, the 
+exponential generating function for \(\phi\) is
+\[
+\mathbb{E}\Bigl[\prod_{x\in X}\phi(x)\Bigr] = \det\bigl[\mathbf{1} - (1-\phi)K\bigr].
+\]
+This identity makes determinantal point processes more tractable than general processes.
+\end{remark}
+
+\subsubsection*{A key example: one-dependent processes on \texorpdfstring{$\Z$}{}}
+We highlight an important application from \cite{Bor09} that connects 
+\emph{1-dependent} processes on an integer segment (or a finite subset of \(\Z\)) 
+to determinantal processes. A point process \(\P\) on \(\Z\) is \emph{1-dependent} if, 
+for any two disjoint finite sets \(A,B\subset\Z\) with \(\mathrm{dist}(A,B)\ge2\), 
+the correlation function factorizes:
+\[
+\rho_{|A|+|B|}(A\cup B) = \rho_{|A|}(A)\,\rho_{|B|}(B).
+\]
+
+\begin{theorem}[{\cite[Thm.~1.1]{Bor09}}]
+\label{thm:1-dependent-implies-dpp}
+Any one-dependent point process on a finite segment of \(\Z\) is a determinantal process. 
+Moreover, its correlation kernel \(K\) can be explicitly computed.
+\end{theorem}
+
+\begin{example}[Adding a list of numbers]
+\label{ex:adding-numbers}
+Consider an i.i.d.\ sequence of random variables \(\{\xi_j\}\) (each taking values in \(\{0,1\}\)),
+and define the partial sums \(S_n = \sum_{j=1}^n \xi_j\). The occupancy process, 
+marking site \(S_n\) as “occupied,” forms a 1-dependent sequence. By \Cref{thm:1-dependent-implies-dpp}, 
+it is thus determinantal.
+\end{example}
 
 \appendix
 \setcounter{section}{3}
@@ -789,6 +864,16 @@ Show that the cases when the $i_{\ell}$'s are close to the edge ($\theta=0$ or $
 in \eqref{eq:tridiagonal-moments-discussion}
 do not contribute to the limit of the moments.
 
+\subsection{Hermite polynomials and three-term recurrence}
+\label{prob:Hermite-3-term}
+
+Show that the monic Hermite polynomials $H_k(x)$
+\eqref{eq:hermite-polynomial}
+satisfy the three-term recurrence relation
+\begin{equation*}
+	\label{eq:hermite-3-term}
+	H_k(x) = x H_{k-1}(x) - (k-1) H_{k-2}(x).
+\end{equation*}
 
 
 
