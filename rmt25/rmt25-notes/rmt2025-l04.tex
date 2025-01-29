@@ -245,10 +245,46 @@ The same holds for the two other classical betas:
 Moreover, for all $\beta$, the joint eigenvalue density of G$\beta$E is
 explicit:
 \begin{theorem}[\cite{dumitriu2002matrix}]
+	\label{thm:DE-joint-eigenvalue-density}
+	Let \(T\) be a G$\beta$E matrix as in \Cref{def:tridiagonal-model-general-beta}.
+	Then the joint eigenvalue density is given by
+	\begin{equation*}
+		p(\lambda_1,\ldots,\lambda_n)
+		=
+		\frac{1}{Z_{n,\beta}}\,
+		e^{-\frac{1}{2}\sum_{i=1}^n \lambda_i^2}
+		\prod_{1\le i<j\le n}|\lambda_i - \lambda_j|^\beta,
+		\qquad
+		\lambda_1\ge \lambda_2\ge \ldots \ge \lambda_n.
+	\end{equation*}
 \end{theorem}
 
+This theorem is also given without proof. The proof involves
+linear algebra and computation of the Jacobians of the
+change of variables from the matrix entries to the
+eigenvalues in the tridiagonal setting.  It can be found in
+the original paper \cite{dumitriu2002matrix}.
 
+\subsection{The case $\beta=2$}
 
+For computation of the local statistics of trandom matricxe, 
+th ecase beta=2 is the begst
+
+it hinges on the repres with square vandermonde
+
+proposuition: fact about hte Vandermonde determinant and product
+
+why ios this, this is because th4e density can be represented as a product of 
+two determinants, involving
+orthogonal polynomials (Hermite ones)
+
+GIVE the main formula
+
+and write out hjte formula for the GUE density in terms of two Hermite polynomials
+
+also give a def of Hermite polynomials, e.g. by differentiating exponent. 
+
+MAKE SURE to preserve the same probability normalization of exponent fo x^2/2
 
 
 
@@ -624,7 +660,11 @@ Write a small program (in Python, MATLAB, or another language):
 
 \section{Problems (due 2025-02-28)}
 
+\subsection{Eigenvalue density of G$\beta$E}
 
+Read and understand the main principles of the 
+proof of \Cref{thm:DE-joint-eigenvalue-density}
+in \cite{dumitriu2002matrix}.
 
 
 
