@@ -439,35 +439,31 @@ super-/subdiagonal.
 In a closed product $t_{i_1 i_2}\cdots t_{i_k i_1}$, we thus get a \emph{closed walk} in a linear graph on the vertex set $\{1,2,\dots,n\}$ with edges only between consecutive indices.
 
 The relevant combinatorial objects encoding these walks are
-\emph{Motzkin
-paths}: lattice walks in $\mathbb{Z}^2_{\ge0}$
-starting at $(0,0)$, ending at $(k,0)$, and consisting of steps
+lattice walks in $\mathbb{Z}^2_{\ge0}$
+starting at $(0,m)$, ending at $(k,m)$, and consisting of steps
 \((1,0)\), \((1,1)\), and \((1,-1)\).  The steps \((1,0)\) correspond to
 picking the diagonal element; steps
 \((1,1)\) correspond to picking $i_{\ell+1}=i_\ell+1$, and
 steps \((1,-1)\) correspond to $i_{\ell+1}=i_\ell-1$.
-See \Cref{fig:motzkin} for an illustration of a Motzkin path.
-
+See \Cref{fig:motzkin} for an illustration of a path.
 \begin{figure}[htb]
- \begin{center}
-  \begin{tikzpicture}[scale=0.7]
-   \draw[help lines, color=gray!30, dashed] (0,0) grid (8,4);
-   \draw[->,thick] (-0.2,0) -- (8.5,0) node[right] {$x$};
-   \draw[->,thick] (0,-0.2) -- (0,4.5) node[above] {$y$};
-   \draw[ultra thick,blue] (0,0) -- (1,1) -- (2,2) -- (3,2) -- (4,1) -- (5,1) -- (6,0) -- (7,0) -- (8,0);
-   \foreach \x/\y in {0/0,1/1,2/2,3/2,4/1,5/1,6/0,7/0,8/0} {
-    \fill[red] (\x,\y) circle (3pt);
-   }
-  \end{tikzpicture}
-	\caption{Example of a Motzkin path.}
-  \label{fig:motzkin}
- \end{center}
+	\begin{center}
+		\begin{tikzpicture}[scale=0.7]
+			\draw[help lines, color=gray!30, dashed] (0,0) grid (8,4);
+			\draw[->,thick] (-0.2,0) -- (8.5,0) node[right] {$x$};
+			\draw[->,thick] (0,-0.2) -- (0,4.5) node[above] {$y$};
+			\draw[ultra thick,blue] (0,3)--++(1,0)--++(1,1)--++(2,-2)--++(2,0)--++(1,1)--++(1,-1);
+		\end{tikzpicture}
+	\caption{Example of a lattice path starting at height 3.}
+		\label{fig:motzkin}
+	\end{center}
 \end{figure}
 
 Now, each term in the sum in \eqref{eq:tridiagonal-moments-expansion}
-corresponds to a Motzkin path. Moreover, for each Motzkin path,
+corresponds to a path. Moreover, for each path shape,
 there are $O(n)$ summands corresponding to it. The number of
-Motzkin paths of length $k$ is finite (independent of $n$),
+paths of length $k$ starting from a fixed $m$ 
+is finite (independent of $n$ for $m\gg 1$),
 so we need to look more closely at the asymptotics of the product
 in \eqref{eq:tridiagonal-moments-expansion}. This product
 involves chi random variables which depend on $n$, too.
@@ -512,171 +508,72 @@ In particular,
 
 
 \begin{remark}
-Outside the bulk region (i.e.\ very close to $j=0$ or $j=n$), one would need a different statement to handle the case $\beta(n-j)$ is not large. 
+Outside the bulk region (i.e.\ very close to $j=0$ or $j=n$), one would need a different statement to handle the case $\beta(n-j)$ is not large.
 In our application, we only need the bulk behavior.
 \end{remark}
 
-Meanwhile, on the diagonal, $d_i/\sqrt{n}$ 
+Meanwhile, on the diagonal, $d_i/\sqrt{n}$
 almost surely vanishes in the limit as $n\to\infty$,
 because $d_i$ is standard Gaussian and does not depend on $n$.
 
-
-\begin{remark}[Diagonal entries]
-For completeness, note that in many random matrix models with real/complex/Quaternion Gaussian entries, one also has diagonal terms $d_i \sim N(0,1)$ (independent of $n$).  Then
-\[
-  \frac{d_i}{\sqrt{n}} \;\to\; 0
-  \quad\text{almost surely},
-\]
-because $d_i$ does not scale with $n$.  Hence on the diagonal, $\alpha_j$-type behavior is irrelevant (or replaced by $d_i$ that vanish in $\sqrt{n}$ scaling).
-\end{remark}
-
-\subsection{Bounds on products in the bulk}
-
-We now give a couple of corollaries/lemmas that control products of the form
-\[
-  \prod_{j=a}^{b} \frac{\alpha_j}{\sqrt{n}}.
-\]
-Whether you need deterministic bounds or stochastically dominating bounds, these simple expansions
-(and standard large-deviation arguments around the $O_p(\cdot)$ notation) usually suffice.
-
-\begin{corollary}[Finite product bound]
-\label{cor:finite-product}
-Fix a finite integer $m$, and let $1 \le j \le m$ with $j/n \in [0,1]$.  Then
-\[
-  \prod_{j=1}^m \frac{\alpha_j}{\sqrt{n}}
-  \;=\;
-  \prod_{j=1}^m
-    \Bigl(\sqrt{\beta\bigl(1 - \tfrac{j}{n}\bigr)} + O_p(\tfrac{1}{\sqrt{n}})\Bigr)
-  \;=\;
-  \prod_{j=1}^m \sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)}
-  \;\Bigl(1 + O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)\Bigr).
-\]
-In particular, as $n\to\infty$ (with $m$ fixed),
-\[
-  \prod_{j=1}^m \frac{\alpha_j}{\sqrt{n}}
-  \;=\;
-  \beta^{m/2}
-  \prod_{j=1}^m \sqrt{1 - \frac{j}{n}}
-  \;\Bigl(1 + O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)\Bigr).
-\]
-\end{corollary}
-
-\begin{proof}
-By Proposition~\ref{prop:alpha-bulk} (even applied naively for small $j$),
-\[
-  \frac{\alpha_j}{\sqrt{n}}
-  =
-  \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)} + O_p\Bigl(\tfrac{1}{\sqrt{n}}\Bigr).
-\]
-Hence each factor in the product equals
-\(\sqrt{\beta(1 - j/n)}\times\bigl[1 + O_p(\tfrac{1}{\sqrt{n}})\bigr]\).
-Since $m$ is fixed, the product of $m$ such terms introduces only another
-$1 + O_p(\tfrac{1}{\sqrt{n}})$ factor overall.
-\end{proof}
-
-\begin{lemma}[Product bounds on a bulk interval]
-\label{lem:prod-bulk}
-Let $\delta \in (0,1)$ be fixed, and consider indices $j$ such that $j/n \in [\delta,1-\delta]$.
-For any integer interval $[a,b]\subset \{\lceil \delta n\rceil,\dots,\lfloor(1-\delta)n\rfloor\}$, we have
-\[
-  \prod_{j=a}^b \frac{\alpha_j}{\sqrt{n}}
-  \;=\;
-  \exp\Bigl(\sum_{j=a}^b
-    \ln\Bigl[\sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)} + O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)\Bigr]
-  \Bigr).
-\]
-Moreover, using the expansion
-\[
-  \ln\!\Bigl[\sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)} + \epsilon_j\Bigr]
-  \;=\;
-  \ln\sqrt{\beta\bigl(1-\tfrac{j}{n}\bigr)} \;+\; O_p\!\Bigl(\tfrac{|\epsilon_j|}{\sqrt{\beta(1-j/n)}}\Bigr),
-\]
-one finds that with high probability,
-\[
-  \prod_{j=a}^b \frac{\alpha_j}{\sqrt{n}}
-  \;=\;
-  \prod_{j=a}^b \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
-  \;\exp\Bigl( O_p\bigl(\tfrac{b-a+1}{\sqrt{n}}\bigr)\Bigr).
-\]
-\end{lemma}
-
-\begin{proof}
-Applying Proposition~\ref{prop:alpha-bulk} in the bulk region, each factor satisfies
-\[
-  \frac{\alpha_j}{\sqrt{n}}
-  =
-  \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)} + O_p\Bigl(\tfrac{1}{\sqrt{n}}\Bigr).
-\]
-Denote $\epsilon_j = O_p\bigl(\tfrac{1}{\sqrt{n}}\bigr)$.  Then
-\[
-  \ln\Bigl[\sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)} + \epsilon_j\Bigr]
-  \;=\;
-  \ln\sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
-    \;+\; \ln\!\Bigl[1 + \frac{\epsilon_j}{\sqrt{\beta(1-j/n)}}\Bigr].
-\]
-As long as $j/n \in [\delta, 1-\delta]$, the denominator $\sqrt{\beta(1-j/n)}$ is bounded away from zero, so
-\[
-  \ln\!\bigl[1 + \tfrac{\epsilon_j}{\sqrt{\beta(1-j/n)}}\bigr]
-  \;=\;
-  O_p\!\Bigl(\tfrac{|\epsilon_j|}{\sqrt{\beta(1-j/n)}}\Bigr)
-  \;=\;
-  O_p\Bigl(\tfrac{1}{\sqrt{n}}\Bigr).
-\]
-Hence summing from $j=a$ to $j=b$ (and noting that $b-a+1 \le n$ but is often smaller or on the order of $n$) gives the claimed product expansion.
-\end{proof}
-
-\begin{remark}
-	Lemma~\ref{lem:prod-bulk} can be refined to a local law or large-deviation style bound where one shows that with overwhelming probability (exponentially high), the deviation from $\prod_{j=a}^b \sqrt{\beta(1-j/n)}$ is at most $\exp\bigl(C(b-a+1)/\sqrt{n}\bigr)$ for some constant $C$.  Such results require standard concentration inequalities for $\chi^2$ random variables (or normal approximations) rather than just the $O_p(\cdot)$ expansions.
-\end{remark}
-
-\section{Conclusion}
-
-In summary:
-
-\begin{itemize}
-\item For large $n$, each $\alpha_j = \sqrt{\chi^2_{\beta(n-j)}}$
-is on the order of $\sqrt{\beta(n-j)}$ with a Gaussian fluctuation of size $O_p(1)$.
-\item Consequently, $\alpha_j/\sqrt{n}$ concentrates near $\sqrt{\beta(1-j/n)}$,
-and the diagonal entries (if they are standard Gaussians independent of $n$)
-vanish at order $n^{-1/2}$.
-\item Products $\prod_{j=a}^b (\alpha_j/\sqrt{n})$ in the bulk regime
-are therefore very close (in probability or even with high probability)
-to the corresponding product of deterministic factors $\prod_{j=a}^b \sqrt{\beta(1-j/n)}$,
-up to multiplicative corrections of order $\exp(O_p((b-a)/\sqrt{n}))$.
-\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Completing the proof: global semicircle behavior}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Putting the above pieces together, we see that $T/\sqrt{n}$
-is asymptotic to
-\begin{equation*}
-	\sum_{\textnormal{Motzkin\ paths
-	of length\ $k$}}
+Putting the above pieces together, we see that
+\begin{equation}
+	\label{eq:tridiagonal-moments-discussion}
+	\frac{T}{\sqrt n}=
+	\frac{1}{n}
+	\sum_{i_1,\dots,i_k=1}^n
 	\prod_{\ell=1}^k
-		\frac
-	{t_{i_\ell,i_{\ell+1}}}{\sqrt{n}}
+	\frac{t_{i_\ell i_{\ell+1}}}{\sqrt n},\quad
+	i_{k+1}=i_1 \textnormal{ by agreement}.
+\end{equation}
+The terms in the sum have all $i_{\ell}$'s close together
+(there are $k$ indices, and they differ by $\pm1$ from each other).
+We
+may think that they are close to some $\theta n$, where $\theta\in [0,1]$.
+We can consider only the case when $\delta<\theta<1-\delta$ for some fixed small $\delta>0$;
+the case of edges does not contribute (see Problem~\ref{prob:edges-in-tridiagonal}).
+
+If at least one of the $t_{ij}$'s in \eqref{eq:tridiagonal-moments-discussion} is
+on the diagonal, the term vanishes in the limit. Therefore,
+it suffices to consider only the off-diagonal $\alpha_j$'s. The
+number of length $k$ walks starting from $m=\theta n$ for $\theta>\delta$ is 
+just the number of lattice walks with steps $(1,\pm 1)$. This number is $\binom{k}{k/2}$.\footnote{Not Catalan yet!}
+(From now on till the end of the section, we assume that
+$k$ is even --- the moments become zero for odd $k$).
+
+Fixing the starting location $\theta=\frac{i_\ell}{n}\in(\delta,1-\delta)$, we have
+\begin{equation*}
+	\prod_{\ell=1}^k
+	\frac{t_{i_\ell i_{\ell+1}}}{\sqrt n}\to \beta^{k/2}(1-\theta)^{k/2}.
 \end{equation*}
 
+There is an extra factor $1/n$ in front in \eqref{eq:tridiagonal-moments-discussion},
+which is interpreted as transforming the sum over $i_1,\ldots,i_k $
+into an integral in $\theta$. We thus see that the moments converge to
+\begin{equation*}
+	\beta^{k/2}\binom{k}{k/2}\int_0^1 (1-\theta)^{k/2} \, d\theta=
+	\beta^{k/2}\binom{k}{k/2}\cdot \frac{1}{1+k/2}, 
+\end{equation*}
+and we recover our favorite
+Catalan moments of the semicircle distribution.
 
+This completes the proof.
 
-
-behaves—globally—like a “Jacobi-type matrix” whose main diagonal is small and whose subdiagonal is roughly $\sqrt{(n-j)/2n}$.  One can then do a continuum limit of the characteristic polynomial or use the combinatorial expansion (Motzkin path argument) or the resolvent method (Stieltjes transform approach) to find that the limiting eigenvalue distribution is exactly Wigner’s semicircle law.  Thus:
-
-\begin{theorem}[Semicircle Law via Tridiagonalization]
-\label{thm:sc-via-tridiag}
-Let $W$ be an $n\times n$ real Wigner matrix with off-diagonal variance $1$. Then $W$ can be unitarily conjugated into a real symmetric tridiagonal matrix $T$ whose diagonal entries are i.i.d.\ $\mathcal{N}(0,1)$ and subdiagonal entries are chi-type with typical value $\sqrt{\tfrac{n-j}{2}}$.  By examining $T/\sqrt{n}$ and counting or bounding its trace moments (or via its resolvent), one concludes that the ESD converges almost surely to the semicircle distribution on $[-2,2]$.
-\end{theorem}
-
-This completes the second proof of Wigner’s semicircle law.
-
-
-
+\begin{remark}[The factor $\beta^{k/2}$]
+	Note that the factor $\beta^{k/2}$ refers just to the scaling of the Wigner
+	semicircle law, and does not affect the semicircle shape. More precisely, 
+	the limiting semicircle distribution lies from $[-2\sqrt{\beta},2\sqrt{\beta}]$.
+\end{remark}
 
 \section{Wigner semicircle law via Stieltjes transform}
 
+Let us stay 
 
 
 
@@ -947,7 +844,12 @@ Let $X$ be a random variable with $\chi^2_\nu$ distribution. Compute the mean an
 (If $\nu$ is an integer, you can use the fact that $\chi^2_\nu$ is a sum of $\nu$ independent squares of standard normal random variables.
 How to extend this to non-integer \(\nu\)?)
 
+\subsection{Edge contributions in the tridiagonal moment computation}
+\label{prob:edges-in-tridiagonal}
 
+Show that the cases when the $i_{\ell}$'s are close to the edge ($\theta=0$ or $1$)
+in \eqref{eq:tridiagonal-moments-discussion}
+do not contribute to the limit of the moments.
 
 
 \begin{lnotes}
