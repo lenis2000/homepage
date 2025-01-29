@@ -33,15 +33,14 @@ code:
       <input id="nInput" type="range" min="2" max="2000" step="1" value="100" />
       <span id="nValue">100</span>&nbsp;
 
-
       <button id="runBtn" class="btn btn-primary">Set $N$</button>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <label for="thetaInput">θ:</label>
-      <input id="thetaInput" type="range" min="-5" max="5" step="0.01" value="0" />
+      <input id="thetaInput" type="range" min="-10" max="10" step="0.01" value="0" />
       <span id="thetaValue">0</span>
       <button id="decreaseTheta" class="btn btn-sm btn-secondary">-0.01</button>
-           <button id="increaseTheta" class="btn btn-sm btn-secondary">+0.01</button>
+      <button id="increaseTheta" class="btn btn-sm btn-secondary">+0.01</button>
     </div>
   </div>
 </div>
@@ -54,35 +53,61 @@ code:
   </div>
 </div>
 
+<!-- Three columns for top, zero, and lowest eigenvalues -->
 <div class="row">
-  <!-- Top & zero eigenvalue listings -->
-  <div id="topEigenvals" class="mb-3 col-6 col-lg-6">
-      <h5>Top 5 Eigenvalues:</h5>
-      <ol id="eigenvalList">
+
+  <div id="lowestEigenvals" class="mb-3 col-12 col-lg-4">
+      <h5>Lowest 5 Eigenvalues:</h5>
+      <ol id="eigenvalList_lowest">
           <!-- Populated by JavaScript -->
       </ol>
   </div>
-  <div id="zeroEigenvals" class="mb-3 col-6 col-lg-6">
+  <div id="zeroEigenvals" class="mb-3 col-12 col-lg-4">
       <h5>5 Eigenvalues around zero:</h5>
       <ol id="eigenvalList_zero">
           <!-- Populated by JavaScript -->
       </ol>
   </div>
+  <div id="topEigenvals" class="mb-3 col-12 col-lg-4">
+      <h5>Top 5 Eigenvalues:</h5>
+      <ol id="eigenvalList">
+          <!-- Populated by JavaScript -->
+      </ol>
+  </div>
 </div>
 
-<!-- Row 4 with the new theta control and the point processes -->
+<!-- Row with three point-process plots: top, zero, and lowest -->
 <div class="row">
-  <div class="col-12 col-lg-6">
-    <h5 class="mt-4">Top 10 Eigenvalues (Point Process):</h5>
-    <svg id="top10EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
-  </div>
-
-  <div class="col-12 col-lg-6">
-    <h5 class="mt-4">20 Eigenvalues Around Zero (Point Process):</h5>
+    <div class="col-12 col-lg-4">
+      <h5 class="mt-4">Lowest 10 Eigenvalues:</h5>
+      <svg id="lowest10EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
+    </div>
+  <div class="col-12 col-lg-4">
+    <h5 class="mt-4">20 Eigenvalues Around Zero:</h5>
     <svg id="zero20EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
   </div>
+  <div class="col-12 col-lg-4">
+    <h5 class="mt-4">Top 10 Eigenvalues:</h5>
+    <svg id="top10EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
+  </div>
+</div>
 
+<div class="row align-items-center mb-3">
+  <div class="col-12">
+    <div class="controls">
+      <label for="nInput2">$N$:</label>
+      <input id="nInput2" type="range" min="2" max="2000" step="1" value="100" />
+      <span id="nValue2">100</span>&nbsp;
+      <button id="runBtn2" class="btn btn-primary">Set $N$</button>
 
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <label for="thetaInput2">θ:</label>
+      <input id="thetaInput2" type="range" min="-10" max="10" step="0.01" value="0" />
+      <span id="thetaValue2">0</span>
+      <button id="decreaseTheta2" class="btn btn-sm btn-secondary">-0.01</button>
+      <button id="increaseTheta2" class="btn btn-sm btn-secondary">+0.01</button>
+    </div>
+  </div>
 </div>
 
 <div class="row align-items-center">
@@ -103,11 +128,17 @@ code:
                 else Module.onRuntimeInitialized = resolve;
             });
 
-            // Auto-generate once after loading
+            // Set initial slider values
             document.getElementById("nInput").value = 100;
             document.getElementById("nValue").textContent = 100;
             document.getElementById("thetaInput").value = 0;
             document.getElementById("thetaValue").textContent = 0;
+
+            // Also sync second set
+            document.getElementById("nInput2").value = 100;
+            document.getElementById("nValue2").textContent = 100;
+            document.getElementById("thetaInput2").value = 0;
+            document.getElementById("thetaValue2").textContent = 0;
 
             runSimulation(); // auto-run once the WASM is ready
 
@@ -137,6 +168,7 @@ code:
     }
 
     function runSimulation() {
+        // We'll rely on the first set of sliders as the canonical source for N & theta
         const N = parseInt(document.getElementById("nInput").value, 10);
         const theta = parseFloat(document.getElementById("thetaInput").value);
 
@@ -148,20 +180,22 @@ code:
         drawHistogram(eigenvals);
         displayTopEigenvalues(eigenvals);
         displayEigenvaluesAroundZero(eigenvals);
+        displayLowestEigenvalues(eigenvals);
 
-        // Render aggregated heatmap
-        // drawHeatmap();
-
-      // Update matrix corner display
-           displayMatrixCorner();
+        // Update matrix corner display
+        displayMatrixCorner();
 
         // Draw top 10 as a point process with tooltips
         const top10 = getTop10Eigenvals(eigenvals);
         drawEigenvaluePointProcess(top10, "#top10EigenvalsPlot", "Top 10 Eigenvalues");
 
-        // Draw 20 around zero as a point process with tooltips
+        // Draw 20 around zero as a point process
         const zero20 = getZero20Eigenvals(eigenvals);
         drawEigenvaluePointProcess(zero20, "#zero20EigenvalsPlot", "20 Around Zero");
+
+        // Draw lowest 10 as a point process
+        const lowest10 = getLowest10Eigenvals(eigenvals);
+        drawEigenvaluePointProcess(lowest10, "#lowest10EigenvalsPlot", "Lowest 10 Eigenvalues");
     }
 
     function getEigenvalues(N) {
@@ -173,13 +207,6 @@ code:
             console.error('Error computing eigenvalues:', error);
             return [];
         }
-    }
-
-    // Not strictly needed for the heatmap but left here for reference
-    function getMatrixData() {
-        const N = Module._getCurrentN();
-        const ptr = Module._getMatrixData();
-        return Array.from(new Float64Array(Module.HEAPF64.buffer, ptr, N * N));
     }
 
     // Create a histogram of the eigenvalues
@@ -196,7 +223,7 @@ code:
             .range([margin.left, width - margin.right]);
 
         const N = eigenvals.length;
-        const numBins = N <= 100 ? 10 : 40;
+        const numBins = N < 100 ? 20 : 80;
         const bins = d3.bin()
             .domain(xScale.domain())
             .thresholds(numBins)(eigenvals);
@@ -231,7 +258,7 @@ code:
             .attr("height", d => yScale(0) - yScale(d.normalizedLength))
             .attr("fill", "#00204E");
 
-        // Semicircle overlay (Wigner semicircle distribution for GOE)
+        // Semicircle overlay (approx Wigner semicircle for GOE)
         const semicircleData = Array.from({ length: 200 }, (_, i) => {
             const x = -2 + (i / 199) * 4;
             const y = Math.abs(x) <= 2 ? Math.sqrt(4 - x ** 2) / (2 * Math.PI) : 0;
@@ -279,6 +306,18 @@ code:
         });
     }
 
+    function displayLowestEigenvalues(eigenvals) {
+        const sortedEigenvals = eigenvals.slice().sort((a, b) => a - b);
+        const lowestList = sortedEigenvals.slice(0, 5);
+        const listElement = document.getElementById("eigenvalList_lowest");
+        listElement.innerHTML = "";
+        lowestList.forEach(val => {
+            const li = document.createElement("li");
+            li.textContent = val.toFixed(4);
+            listElement.appendChild(li);
+        });
+    }
+
     // Extract 10 largest eigenvalues
     function getTop10Eigenvals(eigenvals) {
         return eigenvals.slice().sort((a, b) => b - a).slice(0, 10);
@@ -288,11 +327,14 @@ code:
     function getZero20Eigenvals(eigenvals) {
         const sorted = eigenvals.slice().sort((a, b) => a - b);
         const zeroIndex = sorted.findIndex(x => x >= 0);
-
-        // We want 10 below zero and 10 above zero if possible
         const startIndex = Math.max(0, zeroIndex - 10);
         const endIndex   = Math.min(sorted.length, zeroIndex + 10);
         return sorted.slice(startIndex, endIndex);
+    }
+
+    // Extract 10 lowest eigenvalues
+    function getLowest10Eigenvals(eigenvals) {
+        return eigenvals.slice().sort((a, b) => a - b).slice(0, 10);
     }
 
     // Draw a point process scatterplot + tooltips
@@ -379,42 +421,143 @@ code:
         }
     }
 
+    // -----------------------------------------------------------
+    // N Sliders & Buttons
+    // -----------------------------------------------------------
 
-    // Button to resample
+    // 1) "Set N" button #1: force resample
     document.getElementById("runBtn").addEventListener("click", () => {
+        Module.ccall('setForceResample', null, ['number'], [1]);
         runSimulation();
     });
 
-    // Slider for N
+    // 2) "Set N" button #2: also force resample
+    document.getElementById("runBtn2").addEventListener("click", () => {
+        Module.ccall('setForceResample', null, ['number'], [1]);
+        runSimulation();
+    });
+
+    // 3) Slider #1 for N => update its displayed label & sync #2
     document.getElementById("nInput").addEventListener("input", (e) => {
-        document.getElementById("nValue").textContent = e.target.value;
+        const value = e.target.value;
+        document.getElementById("nValue").textContent = value;
+
+        // Now sync second slider & label
+        document.getElementById("nInput2").value = value;
+        document.getElementById("nValue2").textContent = value;
     });
 
-    // Slider for theta - call runSimulation() so that only rank-1 shift is reapplied
+    // 4) Slider #2 for N => update its displayed label & sync #1
+    document.getElementById("nInput2").addEventListener("input", (e) => {
+        const value = e.target.value;
+        document.getElementById("nValue2").textContent = value;
+
+        // Now sync first slider & label
+        document.getElementById("nInput").value = value;
+        document.getElementById("nValue").textContent = value;
+    });
+
+    // -----------------------------------------------------------
+    // Theta Sliders & ±0.01 Buttons
+    // -----------------------------------------------------------
+
+    // 1) First Theta slider => sync second
     document.getElementById("thetaInput").addEventListener("input", (e) => {
-        document.getElementById("thetaValue").textContent = e.target.value;
+        const value = e.target.value;
+        document.getElementById("thetaValue").textContent = value;
+
+        // Sync second slider & label
+        document.getElementById("thetaInput2").value = value;
+        document.getElementById("thetaValue2").textContent = value;
+
         runSimulation();
     });
 
-    // Fine control buttons for theta
+    // 2) Second Theta slider => sync first
+    document.getElementById("thetaInput2").addEventListener("input", (e) => {
+        const value = e.target.value;
+        document.getElementById("thetaValue2").textContent = value;
+
+        // Sync first slider & label
+        document.getElementById("thetaInput").value = value;
+        document.getElementById("thetaValue").textContent = value;
+
+        runSimulation();
+    });
+
+    // 3) First Theta +0.01 button
     document.getElementById("increaseTheta").addEventListener("click", () => {
         const thetaInput = document.getElementById("thetaInput");
-        const currentTheta = parseFloat(thetaInput.value);
-        const newTheta = Math.min(5, currentTheta + 0.01);
+        let currentTheta = parseFloat(thetaInput.value);
+        const newTheta = Math.min(10, currentTheta + 0.01);
+
+        // Update #1 slider + label
         thetaInput.value = newTheta;
         document.getElementById("thetaValue").textContent = newTheta.toFixed(2);
+
+        // Sync #2 slider + label
+        document.getElementById("thetaInput2").value = newTheta;
+        document.getElementById("thetaValue2").textContent = newTheta.toFixed(2);
+
         runSimulation();
     });
 
+    // 4) First Theta -0.01 button
     document.getElementById("decreaseTheta").addEventListener("click", () => {
         const thetaInput = document.getElementById("thetaInput");
-        const currentTheta = parseFloat(thetaInput.value);
-        const newTheta = Math.max(-5, currentTheta - 0.01);
+        let currentTheta = parseFloat(thetaInput.value);
+        const newTheta = Math.max(-10, currentTheta - 0.01);
+
+        // Update #1 slider + label
         thetaInput.value = newTheta;
         document.getElementById("thetaValue").textContent = newTheta.toFixed(2);
+
+        // Sync #2 slider + label
+        document.getElementById("thetaInput2").value = newTheta;
+        document.getElementById("thetaValue2").textContent = newTheta.toFixed(2);
+
         runSimulation();
     });
 
-    // Initialize WASM after page loads
+    // 5) Second Theta +0.01 button
+    document.getElementById("increaseTheta2").addEventListener("click", () => {
+        const thetaInput = document.getElementById("thetaInput2");
+        let currentTheta = parseFloat(thetaInput.value);
+        const newTheta = Math.min(10, currentTheta + 0.01);
+
+        // Update #2 slider + label
+        thetaInput.value = newTheta;
+        document.getElementById("thetaValue2").textContent = newTheta.toFixed(2);
+
+        // Sync #1 slider + label
+        document.getElementById("thetaInput").value = newTheta;
+        document.getElementById("thetaValue").textContent = newTheta.toFixed(2);
+
+        runSimulation();
+    });
+
+    // 6) Second Theta -0.01 button
+    document.getElementById("decreaseTheta2").addEventListener("click", () => {
+        const thetaInput = document.getElementById("thetaInput2");
+        let currentTheta = parseFloat(thetaInput.value);
+        const newTheta = Math.max(-10, currentTheta - 0.01);
+
+        // Update #2 slider + label
+        thetaInput.value = newTheta;
+        document.getElementById("thetaValue2").textContent = newTheta.toFixed(2);
+
+        // Sync #1 slider + label
+        document.getElementById("thetaInput").value = newTheta;
+        document.getElementById("thetaValue").textContent = newTheta.toFixed(2);
+
+        runSimulation();
+    });
+
+    // Initialize WASM after DOM loads
+    document.addEventListener('DOMContentLoaded', () => {
+        // Values are already initialized above
+    });
+
+    // Start everything
     initWasm();
 </script>

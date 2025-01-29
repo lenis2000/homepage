@@ -6,7 +6,7 @@ To compile, you need to have Emscripten installed and the Eigen library availabl
 
 emcc 2025-01-28-BBP-transition.cpp -o 2025-01-28-BBP-transition.js \
     -s WASM=1 \
-    -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main', '_setTheta', '_getMatrixCorner', '_getCornerSize']" \
+    -s "EXPORTED_FUNCTIONS=['_computeEigenvalues', '_getMatrixData', '_getCurrentN', '_getHeatMapData', '_getHeatMapDim', '_main', '_setTheta', '_getMatrixCorner', '_getCornerSize', '_setForceResample']" \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s TOTAL_MEMORY=268435456 \
@@ -28,15 +28,16 @@ then move the js file into the /js/ folder
 
 using Matrix = Eigen::MatrixXd;
 
-// We keep a base random GOE matrix (without the rank-1 shift) in memory
+// Data storage
 static std::vector<double> baseMatrixData;
 static std::vector<double> matrixData;
 static std::vector<double> eigenvalues;
 static std::vector<unsigned char> heatMapData;
-static int currentN = 0;
-static int heatMapDim = 0; // dimension of the aggregated heat map
 
-static double currentTheta = 0.0;
+static int currentN = 0;            // Current dimension
+static int heatMapDim = 0;          // Dimension for the aggregated heat map
+static double currentTheta = 0.0;   // Rank-1 shift parameter
+static bool forceResample = false;  // Flag to force matrix regeneration
 
 // Simple exponential transform: x -> sign(x)*(exp(|x|)-1)
 inline double exponentialTransform(double x) {
@@ -61,25 +62,27 @@ extern "C" void setTheta(double theta) {
     currentTheta = theta;
 }
 
-// New function to get the upper 10x10 corner of the matrix
+// Exposed to JavaScript: set or clear the force-resample flag
+EMSCRIPTEN_KEEPALIVE
+extern "C" void setForceResample(int val) {
+    forceResample = (val != 0);
+}
+
+// Return the upper 10x10 corner of the matrix
 EMSCRIPTEN_KEEPALIVE
 extern "C" double* getMatrixCorner() {
     static std::vector<double> cornerData(100); // 10x10 = 100 elements
 
-    int displaySize = std::min(10, currentN); // Don't exceed matrix bounds
+    int displaySize = std::min(10, currentN);
 
-    // Copy the upper corner in row-major order
     for (int i = 0; i < displaySize; i++) {
         for (int j = 0; j < displaySize; j++) {
             cornerData[i * 10 + j] = matrixData[i * currentN + j];
         }
-        // Fill remaining row with zeros if matrix is smaller than 10x10
         for (int j = displaySize; j < 10; j++) {
             cornerData[i * 10 + j] = 0.0;
         }
     }
-
-    // Fill remaining rows with zeros if matrix is smaller than 10x10
     for (int i = displaySize; i < 10; i++) {
         for (int j = 0; j < 10; j++) {
             cornerData[i * 10 + j] = 0.0;
@@ -89,27 +92,28 @@ extern "C" double* getMatrixCorner() {
     return cornerData.data();
 }
 
-// Get the size of the corner display (will be 10 or less)
+// Get the size of the displayed corner
 EMSCRIPTEN_KEEPALIVE
 extern "C" int getCornerSize() {
     return std::min(10, currentN);
 }
 
 /*
-  We only re-generate the random matrix if N changes or if we haven't allocated yet.
-  Otherwise, we reuse the same random matrix and simply add (currentTheta) to A(0,0)
-  to get the rank-1 shift, then compute eigenvalues.
+  We regenerate the random GOE matrix only if:
+   - N != currentN, or
+   - forceResample == true.
+  Otherwise, we reuse the existing baseMatrixData.
 */
 EMSCRIPTEN_KEEPALIVE
 extern "C" double* computeEigenvalues(int N) {
-    // Check if we need to regenerate the base random matrix
-    if (N != currentN || baseMatrixData.size() != size_t(N*N)) {
+    if (N != currentN || forceResample) {
         currentN = N;
-        baseMatrixData.resize(N * N);
+        forceResample = false;  // Reset after use
 
+        baseMatrixData.resize(N * N);
         double scale = 1.0 / std::sqrt(N);
 
-        // Generate GOE matrix (store in baseMatrixData)
+        // Generate GOE matrix
         for (int i = 0; i < N; i++) {
             for (int j = i; j < N; j++) {
                 double value = randn() * scale;
@@ -119,15 +123,15 @@ extern "C" double* computeEigenvalues(int N) {
         }
     }
 
-    // Now copy baseMatrixData to matrixData
+    // Copy baseMatrixData -> matrixData
     matrixData = baseMatrixData;
 
-    // Add rank-1 spike: A(0,0) += currentTheta
+    // Add rank-1 shift: A(0,0) += currentTheta
     if (N > 1) {
         matrixData[0] += currentTheta;
     }
 
-    // Map matrixData into an Eigen::Matrix for eigenvalue computation
+    // Eigenvalue computation
     Eigen::Map<Matrix> A(matrixData.data(), N, N);
 
     Eigen::SelfAdjointEigenSolver<Matrix> solver(A);
@@ -140,16 +144,15 @@ extern "C" double* computeEigenvalues(int N) {
               solver.eigenvalues().data() + N,
               eigenvalues.data());
 
-    // HEAT MAP LOGIC with absolute color scale [-5, 5]
-    // 1. Determine dimension M for aggregated heat map
+    // Build heat map
     int M = (N < 100) ? N : 100;
     heatMapDim = M;
     heatMapData.resize(4 * M * M);
 
-    // 2. Precompute block averages from matrixData
     std::vector<double> blockVals(M * M, 0.0);
     int blockSize = (N / M > 0) ? (N / M) : 1;
 
+    // Compute block averages
     for (int bi = 0; bi < M; bi++) {
         for (int bj = 0; bj < M; bj++) {
             double sum = 0.0;
@@ -164,26 +167,22 @@ extern "C" double* computeEigenvalues(int N) {
                 }
             }
             double avg = (count > 0) ? (sum / count) : 0.0;
-            // Use exponential transform if you wish, or skip. The original logic had it:
             blockVals[bi * M + bj] = exponentialTransform(avg);
         }
     }
 
-    // 3. Fixed absolute range: [-5, 5]
+    // Fixed absolute range for coloring
     double minAbs = -5.0;
     double maxAbs =  5.0;
 
-    // 4. Fill in heatMapData with that fixed color scale
+    // Convert to RGBA
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < M; j++) {
             double val = blockVals[i * M + j];
-
-            // clamp val into [-5, 5]
             if (val < minAbs) val = minAbs;
             if (val > maxAbs) val = maxAbs;
 
             double ratio = (val - minAbs) / (maxAbs - minAbs);
-            // ratio=0 => Blue, ratio=1 => Red
             unsigned char r = static_cast<unsigned char>(255.0 * ratio);
             unsigned char g = 0;
             unsigned char b = static_cast<unsigned char>(255.0 * (1.0 - ratio));
@@ -200,7 +199,7 @@ extern "C" double* computeEigenvalues(int N) {
     return eigenvalues.data();
 }
 
-// Access the stored matrix data (row-major)
+// Access the current matrix data
 EMSCRIPTEN_KEEPALIVE
 extern "C" double* getMatrixData() {
     return matrixData.data();
@@ -212,19 +211,19 @@ extern "C" int getCurrentN() {
     return currentN;
 }
 
-// Get the RGBA heatmap data
+// Get the RGBA heat map data
 EMSCRIPTEN_KEEPALIVE
 extern "C" unsigned char* getHeatMapData() {
     return heatMapData.data();
 }
 
-// Get the dimension M of the heatmap
+// Get the dimension of the heat map
 EMSCRIPTEN_KEEPALIVE
 extern "C" int getHeatMapDim() {
     return heatMapDim;
 }
 
-// Required dummy main function
+// Required dummy main
 int main() {
     return 0;
 }
