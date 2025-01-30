@@ -90,7 +90,7 @@ code:
   </div><!-- end flexRow -->
 
   <!-- ========================= Final Permutation ========================= -->
-  <h3 style="clear:both; margin-top:2em">Permutation Result</h3>
+  <h3 style="clear:both; margin-top:2em">Permutation Result (EXPERIMENTAL: MIGHT NOT BE CORRECT IN ALL CASES)</h3>
   <svg id="permSVG" width="400" height="400"></svg>
 </div>
 
