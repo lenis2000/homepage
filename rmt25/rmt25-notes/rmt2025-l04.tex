@@ -573,7 +573,7 @@ This completes the proof.
 	the limiting semicircle distribution lies from $[-\sqrt{2\beta},\sqrt{2\beta}]$.
 
 	The density of the semicircle distribution on $[-\sqrt{2\beta},\sqrt{2\beta}]$
-	is 
+	is
 	\begin{equation*}
 		\frac{\sqrt{2-\frac{x^2}{\beta }}}{\pi  \sqrt{\beta }},\qquad |x|<\sqrt{2\beta},
 	\end{equation*}
@@ -585,7 +585,7 @@ This completes the proof.
 Let us stay in the tridiagonal setting, and explore a more analytic
 method to derive the Wigner semicircle law.
 
-\subsection{Tridiagonal Structure and Characteristic Polynomials}
+\subsection{Tridiagonal structure and characteristic polynomials}
 \label{sec:tridiag-charpoly}
 
 We let
@@ -603,7 +603,7 @@ eigenvalues, that is,
 zeros of the characteristic polynomial
 $\det(T - \lambda I)$.
 
-\subsubsection{Three-Term Recurrence for the Characteristic Polynomial}
+\subsubsection{Three-term recurrence for the characteristic polynomial}
 
 As a warm-up, let us consider the characteristic polynomial of a tridiagonal matrix.
 
@@ -611,28 +611,30 @@ For each \(k=1,\dots,n\), denote by \(T_k\) the top-left \(k\times k\) submatrix
 \[
   p_k(\lambda) \;=\; \det\bigl(T_k - \lambda I_k\bigr).
 \]
-By convention, set \(p_0(\lambda)\coloneqq 1\).  Then a basic determinant expansion argument along the last row or column shows:
+By convention, set \(p_0(\lambda)\coloneqq 1\).  Then a determinant expansion argument along the first column gives the following three-term recurrence relation:
 
 \begin{lemma}[Three-Term Recurrence]
 \label{lem:3term}
-For each \(k\ge1\), we have
+The characteristic polynomial \(p_k(\lambda)\) of the \(k\times k\) tridiagonal matrix \(T_k\) satisfies the three-term recurrence
 \[
-  p_{k+1}(\lambda)
-  \;=\;
-  (d_{k+1}-\lambda)\,p_k(\lambda)
-  \;-\;\alpha_k^2\,p_{k-1}(\lambda).
-\]
+	p_{k+1}(\lambda)
+	\;=\;
+	(d_{k+1} - \lambda)\,p_k(\lambda) - \alpha_k^2\,p_{k-1}(\lambda),
+	\quad
+	k=1,\dots,n-1,
+\]µ
+
 \end{lemma}
 
 See also Problem~\ref{prob:Hermite-3-term}.
 
-\subsubsection{Spectral Connection and Eigenvalues}
+\subsubsection{Spectral connection and eigenvalues}
 
 The eigenvalues \(\lambda_1,\dots,\lambda_n\) of \(T\) are exactly the roots of \(p_n(\lambda)\).  For any \(\lambda \in \mathbb{C}\), if \(\lambda\) is not an eigenvalue, then \(\bigl(T - \lambda I\bigr)\) is invertible.
 
 When \(\lambda\) is close to a real eigenvalue, the behavior of the resolvent \(\bigl(T-\lambda I\bigr)^{-1}\) becomes large.  Tracking these poles in the complex plane is the key to the resolvent or Stieltjes transform approach.
 
-\subsection{Stieltjes Transform / Resolvent}
+\subsection{Stieltjes transform / resolvent}
 \label{sec:stieltjes-def}
 
 Recall that for a matrix \(A\) with real eigenvalues \(\lambda_1,\dots,\lambda_n\), the \emph{Stieltjes transform} (or Green’s function, or resolvent trace) is
@@ -651,15 +653,16 @@ If \(z=x+\mathrm{i}y\) is in the upper half-plane (\(y>0\)), this $G_n(z)$ can b
 \]
 where \(\mu_n = \frac{1}{n}\sum_{k=1}^n \delta_{\lambda_k}\) is the empirical spectral measure.  Equivalently, \(\mathrm{Im}\,G_n(x+\mathrm{i}0^+)\) encodes the density of eigenvalues around \(x\).  Thus, understanding $G_n(z)$ for large $n$ pinpoints the limiting spectral distribution.
 
-\subsubsection{Resolvent of a Tridiagonal Matrix: Recurrence Relations}
 
 Let us apply this to \(A = T/\sqrt{n}\) (an $n\times n$ tridiagonal matrix).  We want
+to investigate
 \[
-	\frac{1}{n}
+	G_n(z)\coloneqq \frac{1}{n}
 	\operatorname{Tr}
   \bigl(T/\sqrt{n} - zI\bigr)^{-1},
 \]
-for complex \(z\).  Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries
+for complex \(z\).
+ Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries
 $R_{ij}$
 of the resolvent
 $R(z)=(T/\sqrt{n}-z I)^{-1}$,
@@ -691,26 +694,26 @@ Then the above equation becomes
 \end{equation*}
 Scaling with $n$ (and ignoring the boundary conditions and convergence issues), we get
 a differential equation for $f_u(\theta)$:
-\begin{equation*}
+\begin{equation}
+	\label{eq:resolvent-diff-eq}
 	-z f_u(\theta)+\sqrt{\frac{\beta(1-\theta)}{2}}
-	\left[f_u''(\theta)+2f(\theta)\right]=\delta(\theta-u).
-\end{equation*}
-
+	\left[f_u''(\theta)+2f_u(\theta)\right]=\delta(\theta-u).
+\end{equation}
 The resolvent trace (the Stieltjes transform)
 is then the integral of the solution:
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^{n}R_{ii}
 	\sim
 	G(z)\coloneqq
-	\int_0^1 f_u(\theta)\,d\theta.
+	\int_0^1 f_\theta(\theta)\,d\theta.
 \end{equation*}
 
+\colorbox{green}{\parbox{.7\textwidth}{At this point, I am stuck on how to pass from
+\eqref{eq:resolvent-diff-eq} to the Stieltjes transform $G(z)$.
+This would be an excellent topic to explore for a presentation.
+See~Problem~\ref{prob:resolvent-diff-eq}.}}
 
 
-
-
-
-\newpage
 
 \section{Determinantal point processes (discrete)}
 \label{sec:determinantal}
@@ -814,6 +817,88 @@ marking site \(S_n\) as “occupied,” forms a 1-dependent sequence. By \Cref{t
 it is thus determinantal.
 \end{example}
 
+\section{Application of determinantal processes to random matrices at \texorpdfstring{$\beta=2$}{beta=2}}
+
+In this final section of the lecture, we illustrate how the theory of determinantal point processes (DPPs)
+introduced in \Cref{sec:determinantal}
+applies to the study of local eigenvalue statistics of random matrices.
+We concentrate on the \(\beta=2\) setting, where DPPs typically
+govern the joint behavior of eigenvalues at microscopic (local)
+scales in the \emph{bulk} and at the \emph{edge} of the spectrum.
+We also include a simpler example of a Poisson process to highlight
+the role of correlation functions.
+
+\subsection{Local eigenvalue statistics (bulk and edge scaling limits)}
+\label{subsec:local-stats-intro}
+
+Given an \(n\times n\) random Hermitian matrix \(W\) whose eigenvalues
+\(\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_n\) are real,
+we often want to study the \emph{local arrangement} of the eigenvalues:
+\begin{itemize}
+	\item \emph{Bulk regime:}
+		eigenvalues near some interior point \(\alpha\)
+		of the limiting (global) spectral support, rescaled so that we see
+		``microscopic'' spacing on the order of \(O(\tfrac1n)\).
+		For Wigner or Gaussian ensembles, one typically looks at a point
+		\(\alpha\) in the interior \((-2,2)\) of the semicircle support
+		and then rescales eigenvalues around \(\alpha\) by the typical local spacing \(1/(n\rho(\alpha))\). Here $\rho(\alpha)$ is the density of eigenvalues at \(\alpha\),
+		which is semicircle density in the Wigner case.
+	\item \emph{Edge regime:}
+		eigenvalues near an endpoint of the support
+		(for instance, near \(x=2\) for the semicircle distribution).
+		One then uses a rescaling of order \(n^{2/3}\) (in many classical models)
+		to see nontrivial statistics describing how eigenvalues ``peel off'' near the boundary.
+\end{itemize}
+
+In both cases, one replaces the original sequence of eigenvalues \(\{\lambda_i\}\) by
+a \emph{point process} on \(\mathbb{R}\).  The \emph{bulk scaling} leads to the sine-kernel process (e.g.\ \(\sin(\pi(x-y))/(\pi(x-y))\) in the GUE) or more generally to other determinantal processes.
+The \emph{edge scaling} typically leads to the Airy-kernel process.
+For Gaussian ensembles at \(\beta=2\), these processes are determinantal, and one can explicitly
+write correlation kernels involving special functions (sine, Airy, and more generally Hermite polynomials).
+
+\subsection{Correlation functions and densities}
+\label{subsec:correlation-functions}
+
+We recall from \Cref{sec:determinantal} (in the discrete setting) that a point process \(\mathcal{X}\) on a space \(\mathfrak{X}\) can be described by its \emph{correlation functions} \(\{\rho_k\}_{k=1}^\infty\). In the continuous setting (e.g.\ \(\mathfrak{X}=\mathbb{R}\) or an interval), these are defined so that
+\begin{equation}
+  \rho_k(x_1,\dots,x_k)\,dx_1\cdots dx_k
+  \;=\;
+  \text{(probability that there is a particle in each small set $dx_i$ near $x_i$, for $1\le i\le k$)}.
+\end{equation}
+Equivalently, \(\rho_k\) is the \(k\)-th \emph{(unordered) joint density} of the process.  In particular,
+\[
+  \rho_1(x)\,dx
+  \;=\;
+  \text{expected number of particles in a small interval of length $dx$ near $x$.}
+\]
+For a \emph{determinantal} point process in the continuous setting, there is a kernel \(K(x,y)\) such that
+\begin{equation}
+  \label{eq:rho-k-dpp-cont}
+  \rho_k(x_1,\dots,x_k)
+  \;=\;
+  \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^k
+  \quad
+  \text{for each $k\ge1$}.
+\end{equation}
+The simplest example is the \emph{Poisson process} (see \Cref{subsec:poisson-example}), which in fact is \emph{not} determinantal but helps illustrate how correlation functions characterize clustering or repulsion of points.
+
+\subsection{Poisson process example}
+\label{subsec:poisson-example}
+
+A \emph{Poisson point process with intensity} \(\lambda>0\) on \(\mathbb{R}\) is defined by:
+\begin{itemize}
+	\item Particles are scattered independently over real line,
+	\item The expected number of particles in an interval \(I\subset \mathbb{R}\) is \(\lambda|I|\).
+\end{itemize}
+Equivalently, one often states that the number of points in any interval \(I\) follows a Poisson(\(\lambda|I|\)) distribution, and disjoint intervals are filled independently.  One can also check that the correlation functions factorize completely:
+\[
+\rho_k(x_1,\dots,x_k) \;=\; \lambda^k.
+\]
+Hence, in the Poisson process, there is no ``interaction'' or ``repulsion'' between points: the position of one particle does not affect the probability of having other particles nearby.  In contrast, a determinantal point process typically exhibits \emph{repulsion}: if you know a particle is present near \(x\), it lowers the density of particles nearby.  This effect is crucial in random matrix ensembles at \(\beta=2\).
+
+
+
+
 \appendix
 \setcounter{section}{3}
 
@@ -854,7 +939,7 @@ satisfy the three-term recurrence relation
 
 Compute the determinant
 \begin{equation*}
-	\det\left[ 
+	\det\left[
 		\begin{array}{cccc}
 			1 & 1 & \cdots & 1 \\
 			x_1 & x_2 & \cdots & x_n \\
@@ -865,6 +950,26 @@ Compute the determinant
 	\right].
 \end{equation*}
 
+\subsection{Gap probabilities}
+
+\begin{enumerate}
+	\item 
+Prove identity 
+\eqref{eq:prob-empty-set-DPP} for DPPs.
+\item Prove the generalization computing 
+	\(\{|X\cap I_k|=n_k\text{ for }1\le k\le m\}\).
+\end{enumerate}
+
+
+\subsection{Stieltjes transform approach for tridiagonal matrices}
+\label{prob:resolvent-diff-eq}
+
+Complete the derivation from \Cref{sec:stieltjes-def} to obtain the limiting Stieltjes transform $G(z)$ for the tridiagonal matrix $T/\sqrt{n}$.
+
+\begin{remark}
+	This is more of a literature search. It is extensive, and 
+	would make an excellent topic for a presentation.
+\end{remark}
 
 \bibliographystyle{alpha}
 \bibliography{bib}
