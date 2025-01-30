@@ -496,13 +496,13 @@ Fix any $\delta \in (0,1)$ and let $j$ range so that $\theta_j := j/n \in [\delt
 Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a term that is stochastically bounded at the indicated order as $n\to\infty$. That is, $X_n = O_p(a_n)$ means that for any $\epsilon>0$, there exists $M>0$ such that $\operatorname{\mathbb{P}}(|X_n/a_n| > M) < \epsilon$ for all sufficiently large $n$.}
 \[
   \frac{\alpha_j}{\sqrt{n}}
-  \;=\; \sqrt{\beta\Bigl(1 - \frac{j}{n}\Bigr)}
+	\;=\; \sqrt{\frac{\beta}{2}\Bigl(1 - \frac{j}{n}\Bigr)}
   \;+\; O_p\Bigl(\frac{1}{\sqrt{n}}\Bigr),
 \]
 In particular,
 \[
   \lim_{n\to\infty} \frac{\alpha_j}{\sqrt{n}}
-  \;=\; \sqrt{\beta\Bigl(1-\theta_j\Bigr)}
+	\;=\; \sqrt{\frac{\beta}{2}(1-\theta_j\Bigr)}
   \quad\text{in probability.}
 \]
 \end{proposition}
@@ -511,6 +511,7 @@ In particular,
 \begin{remark}
 Outside the bulk region (i.e.\ very close to $j=0$ or $j=n$), one would need a different statement to handle the case $\beta(n-j)$ is not large.
 In our application, we only need the bulk behavior.
+See also Problem~\ref{prob:edges-in-tridiagonal}.
 \end{remark}
 
 Meanwhile, on the diagonal, $d_i/\sqrt{n}$
@@ -551,25 +552,32 @@ $k$ is even --- the moments become zero for odd $k$).
 Fixing the starting location $\theta=\frac{i_\ell}{n}\in(\delta,1-\delta)$, we have
 \begin{equation*}
 	\prod_{\ell=1}^k
-	\frac{t_{i_\ell i_{\ell+1}}}{\sqrt n}\to \beta^{k/2}(1-\theta)^{k/2}.
+	\frac{t_{i_\ell i_{\ell+1}}}{\sqrt n}\to (\beta/2)^{k/2}(1-\theta)^{k/2}.
 \end{equation*}
 
 There is an extra factor $1/n$ in front in \eqref{eq:tridiagonal-moments-discussion},
 which is interpreted as transforming the sum over $i_1,\ldots,i_k $
 into an integral in $\theta$. We thus see that the moments converge to
 \begin{equation*}
-	\beta^{k/2}\binom{k}{k/2}\int_0^1 (1-\theta)^{k/2} \, d\theta=
-	\beta^{k/2}\binom{k}{k/2}\cdot \frac{1}{1+k/2},
+	(\beta/2)^{k/2}\binom{k}{k/2}\int_0^1 (1-\theta)^{k/2} \, d\theta=
+	(\beta/2)^{k/2}\binom{k}{k/2}\cdot \frac{1}{1+k/2},
 \end{equation*}
 and we recover our favorite
 Catalan moments of the semicircle distribution.
 
 This completes the proof.
 
-\begin{remark}[The factor $\beta^{k/2}$]
+\begin{remark}[The factor $(\beta/2)^{k/2}$]
 	Note that the factor $\beta^{k/2}$ refers just to the scaling of the Wigner
 	semicircle law, and does not affect the semicircle shape. More precisely,
-	the limiting semicircle distribution lies from $[-2\sqrt{\beta},2\sqrt{\beta}]$.
+	the limiting semicircle distribution lies from $[-\sqrt{2\beta},\sqrt{2\beta}]$.
+
+	The density of the semicircle distribution on $[-\sqrt{2\beta},\sqrt{2\beta}]$
+	is 
+	\begin{equation*}
+		\frac{\sqrt{2-\frac{x^2}{\beta }}}{\pi  \sqrt{\beta }},\qquad |x|<\sqrt{2\beta},
+	\end{equation*}
+	and the moments are precisely $(\beta/2)^{k/2}C_{k/2}$ (for even $k$).
 \end{remark}
 
 \section{Wigner semicircle law via Stieltjes transform}
@@ -596,6 +604,8 @@ zeros of the characteristic polynomial
 $\det(T - \lambda I)$.
 
 \subsubsection{Three-Term Recurrence for the Characteristic Polynomial}
+
+As a warm-up, let us consider the characteristic polynomial of a tridiagonal matrix.
 
 For each \(k=1,\dots,n\), denote by \(T_k\) the top-left \(k\times k\) submatrix of \(T\).  Define the \emph{characteristic polynomial} of that block:
 \[
@@ -645,99 +655,62 @@ where \(\mu_n = \frac{1}{n}\sum_{k=1}^n \delta_{\lambda_k}\) is the empirical sp
 
 Let us apply this to \(A = T/\sqrt{n}\) (an $n\times n$ tridiagonal matrix).  We want
 \[
+	\frac{1}{n}
+	\operatorname{Tr}
   \bigl(T/\sqrt{n} - zI\bigr)^{-1},
 \]
-for complex \(z\).  Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries of the resolvent.
-
-Concretely, let us denote \(\bigl(T/\sqrt{n}-zI\bigr)^{-1} = (R_{ij})\).  Then from the definition
+for complex \(z\).  Since $T/\sqrt{n}$ has nonzero entries only on the main and first off-diagonals, one can write down a linear recurrence for the entries
+$R_{ij}$
+of the resolvent
+$R(z)=(T/\sqrt{n}-z I)^{-1}$,
+from the equation
 \[
-  \bigl(T/\sqrt{n} - zI\bigr)\,(R_{ij})
-  \;=\;
-  I,
+	\sum_{k}
+	\bigl(T/\sqrt{n} - zI\bigr)_{ik}\,R_{kj}
+  =
+	\mathbf{1}_{i=j}.
 \]
-one gets for each row $k$:
+We have
+\begin{equation*}
+	\left(\frac{d_i}{\sqrt{n}}-z\right)R_{ij}
+	+
+	\frac{\alpha_i}{\sqrt{n}}R_{i+1,j}
+	+
+	\frac{\alpha_{i-1}}{\sqrt{n}}R_{i-1,j}=
+	\mathbf{1}_{i=j}.
+\end{equation*}
+Let $f_u(\theta)\coloneqq R_{\lfloor n\theta \rfloor ,\lfloor nu \rfloor }$.
+Then the above equation becomes
+\begin{equation*}
+	\left(\frac{d_{\lfloor n\theta \rfloor }}{\sqrt{n}}-z\right)f_u(\theta)
+	+
+	\frac{\alpha_{\lfloor n\theta \rfloor }}{\sqrt{n}}f_u(\theta+1/n)
+	+
+	\frac{\alpha_{\lfloor n \theta \rfloor -1}}{\sqrt{n}}f_u(\theta-1/n)=
+	\mathbf{1}_{\theta=u}.
+\end{equation*}
+Scaling with $n$ (and ignoring the boundary conditions and convergence issues), we get
+a differential equation for $f_u(\theta)$:
+\begin{equation*}
+	-z f_u(\theta)+\sqrt{\frac{\beta(1-\theta)}{2}}
+	\left[f_u''(\theta)+2f(\theta)\right]=\delta(\theta-u).
+\end{equation*}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{to continue improvement from here}}
-\[
-   \frac{d_k}{\sqrt{n}}\,R_{kj}
-   \;-\;z\,R_{kj}
-   \;+\;
-   \frac{\alpha_{k-1}}{\sqrt{n}}\,R_{k-1,j}\,\mathbf{1}_{(k>1)}
-   \;+\;
-   \frac{\alpha_{k}}{\sqrt{n}}\,R_{k+1,j}\,\mathbf{1}_{(k<n)}
-   \;=\;\delta_{k=j}.
-\]
-This can be reorganized into a second-order \emph{linear difference equation} in $k$ for each fixed column index $j$.  Similarly, one obtains boundary conditions.
-
-Because the $\alpha_k$ and $d_k$ are random but
-\emph{independent}, the coefficients in this difference
-equation become “stationary” for large $n$ except near the
-boundaries.  In fact, up to small fluctuations,
-$\alpha_{k}/\sqrt{n}$ stays near $\alpha$ for some constant
-$\alpha$ (like $\alpha\approx 1/\sqrt{2}$ if off-diagonal
-variance is $\frac12$), and $d_k/\sqrt{n}\to0$ with $k$.
-One can then guess that
-\[
-  G_n(z) \;=\; \frac{1}{n}\sum_{k=1}^n R_{kk}
-\]
-has a continuum limit satisfying a certain \emph{algebraic} equation.
-
-\subsection{Functional Equation for the Limit and the Semicircle Law}
-\label{sec:functional-eq}
-
-Let us sketch more precisely how $G_n(z)$ converges to the semicircle transform.
-
-\begin{enumerate}[(1)]
-\item \textbf{Asymptotic stationarity.}  By a law of large numbers or a concentration argument on $\chi^2_{\,n-j}$ (when we do the Dumitriu--Edelman version), the subdiagonal $\alpha_j$ is close to $\sqrt{(n-j)/2}$, hence $\alpha_j/\sqrt{n}\approx \sqrt{\frac{1-j/n}{2}}$.  In the bulk of the index range (where $j\approx \theta n$ for some $\theta\in(0,1)$), this is about $\sqrt{\tfrac{1-\theta}{2}}$.  Meanwhile $d_i/\sqrt{n}\approx 0$.
-
-\item \textbf{Discrete difference to continuous ODE.}  The second-order difference equation for $R_{k+1,k\pm1}$ is roughly
-\[
-  -z\,R_{k,j} \;+\; \bigl(\alpha_k/\sqrt{n}\bigr)\,R_{k+1,j}
-         \;+\;\bigl(\alpha_{k-1}/\sqrt{n}\bigr)\,R_{k-1,j}
-  \;=\; \delta_{k=j},
-\]
-neglecting the small diagonal $d_k/\sqrt{n}$ term.  In the limit $n\to\infty$, if we interpret $k/n$ as $x\in[0,1]$, then $R_{k\pm1,j}$ becomes $R(x\pm \tfrac1n)$, and $\alpha_{k}/\sqrt{n}\approx \alpha(x)$ for some function $\alpha$.  This difference equation becomes an approximate differential equation in $x$, from which one solves for $R(x,\theta)$ (thinking of $j$ as $\theta n$).
-
-\item \textbf{Solving for $G(z)$.}  Summing $R_{k,k}$ over $k$ becomes an integral of $R(x,x)$ over $x\in[0,1]$.  One obtains an algebraic equation in $G(z)$ akin to
-\[
-  G(z)^2 + z\,G(z) + 1 = 0.
-\]
-(Here we used normalizations that match the classical semicircle radius 2 or $\pm\sqrt{z^2-4}$ form.)  Solving for $G(z)$, we get
-\[
-   G(z) \;=\; \frac{-z \pm \sqrt{z^2 - 4}}{2},
-\]
-and the negative branch is selected by the imaginary part condition (i.e.\ $G(z)\sim -1/z$ for large $|z|$).
-
-\item \textbf{Back to the real axis.}  From $G(z)$ in the upper half-plane, one extracts the limit distribution by looking at $\mathrm{Im}\,(G(x+\mathrm{i}0^+))$ for real $x$.  The square-root $\sqrt{x^2-4}$ is purely imaginary for $|x|<2$, giving the semicircle density on $[-2,2]$.
-
-\end{enumerate}
-
-Thus, in the limit, the spectral measure is forced to match the one whose Stieltjes transform is $G(z)$.  Since that is exactly the Wigner semicircle distribution, we conclude:
-
-\begin{theorem}[Semicircle Law via Resolvent]
-\label{thm:stieltjes-semicircle}
-Let $T$ be the Dumitriu--Edelman G$\beta$E tridiagonal matrix (in particular, the GOE case when $\beta=1$) with diagonal $d_i/\sqrt{n}$ and subdiagonals $\alpha_j/\sqrt{n}$.  Then as $n\to\infty$, its empirical spectral distribution converges weakly (almost surely) to the Wigner semicircle law on $[-2,2]$.  Equivalently, its Stieltjes transform $G_n(z)$ converges for each $z\in\mathbb{C}^+$ to the unique solution of $G(z)^2 + zG(z) + 1=0$, which yields the semicircle density.
-\end{theorem}
-
-\begin{remark}
-One can make this rigorous by carefully bounding the difference between $(\alpha_j/\sqrt{n})$ and its limiting profile, as well as controlling the diagonal $(d_i/\sqrt{n})$.  The approach is an archetype for many \emph{local laws} in random matrix theory, where one obtains more precise estimates on the resolvent entries for $z$ in small neighborhoods near the real axis.
-\end{remark}
-
-\subsection{Concluding Remarks}
-
-We have now seen \emph{two main proof strategies} for deriving the Wigner semicircle law:
-
-\begin{enumerate}[\(\bullet\)]
-\item \textbf{Moment expansions and Catalan counting}: Expand $\operatorname{Tr}((W/\sqrt{n})^k)$, interpret it as a sum over closed walks, identify the main combinatorial configurations, show that the expected moments converge to the Catalan numbers that match the semicircle distribution.
-
-\item \textbf{Stieltjes transform and resolvent analysis}: Tridiagonalize $W$, then exploit the near one-dimensional recurrence for the inverse $(T/\sqrt{n}-zI)^{-1}$.  In the large-$n$ limit, show that $G_n(z)$ satisfies a deterministic algebraic equation forcing the semicircle $G(z)$.
-
-\end{enumerate}
-
-Both lead to the same final statement of the global spectral distribution being the semicircle law.  The resolvent method paves the way for refined \emph{local} analysis (spectrum on small intervals) and \emph{universality proofs}.
+The resolvent trace (the Stieltjes transform)
+is then the integral of the solution:
+\begin{equation*}
+	\frac{1}{n}\sum_{i=1}^{n}R_{ii}
+	\sim
+	G(z)\coloneqq
+	\int_0^1 f_u(\theta)\,d\theta.
+\end{equation*}
 
 
 
+
+
+
+\newpage
 
 \section{Determinantal point processes (discrete)}
 \label{sec:determinantal}
@@ -876,7 +849,21 @@ satisfy the three-term recurrence relation
 	H_k(x) = x H_{k-1}(x) - (k-1) H_{k-2}(x).
 \end{equation*}
 
+\subsection{}
+\label{prob:Vandermonde-determinant}
 
+Compute the determinant
+\begin{equation*}
+	\det\left[ 
+		\begin{array}{cccc}
+			1 & 1 & \cdots & 1 \\
+			x_1 & x_2 & \cdots & x_n \\
+			x_1^2 & x_2^2 & \cdots & x_n^2 \\
+			\vdots & \vdots & \ddots & \vdots \\
+			x_1^{n-1} & x_2^{n-1} & \cdots & x_n^{n-1}
+		\end{array}
+	\right].
+\end{equation*}
 
 
 \bibliographystyle{alpha}
