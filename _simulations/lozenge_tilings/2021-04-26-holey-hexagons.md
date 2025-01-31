@@ -1,6 +1,6 @@
 ---
-title: Holey hexagons with holes at different heights 
-model: lozenge_tilings
+title: Holey hexagons with holes at different heights
+model: lozenge-tilings
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/Glauber_Simulation/tree/holey-hexagons'
@@ -38,7 +38,7 @@ What happens if we sample a uniformly random tiling of a hexagon with a hole, bu
 
 The data file is a list of lists of lists in Mathematica-readable format, of the form
 $$\{ \lambda(1),\lambda(2),\ldots,\lambda(T) \},$$
-where each $\lambda(t)$ is a list of weakly interlacing 
+where each $\lambda(t)$ is a list of weakly interlacing
 integer coordinates of the form
 $$\{ \{ 47,0,0,0,\ldots \},\{ 50,47,0,0,\ldots \} , \{ 50,49,47,0,\ldots \} ,\ldots, \} .$$
 This list is a square array, and each $\lambda(i)$ is appended by zeroes.

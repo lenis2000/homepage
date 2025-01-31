@@ -1,6 +1,6 @@
 ---
 title: Mirroring deterministic dynamics on q-vol lozenge tilings inverting the parameter q
-model: lozenge_tilings
+model: lozenge-tilings
 date: 2019-05-02 10:00:00
 author: 'Leonid Petrov'
 code:
@@ -9,7 +9,7 @@ code:
 results:
   - title: Movie, size 10
     params: |
-      Hexagon $10\times 10\times 10$, $q=0.85$. 
+      Hexagon $10\times 10\times 10$, $q=0.85$.
     image: __STORAGE_URL__/simulations/2019-05-qvol/q_vol_085_10_mirroring.m4v
     image-tn: __STORAGE_URL__/simulations/2019-05-qvol/q_vol_085_10_mirroring_middle.png
     image-size: 500 KB
@@ -25,18 +25,18 @@ papers:
   arxiv-url: 'https://arxiv.org/abs/1712.04584'
 ---
 
-Continuing with the setup of 
+Continuing with the setup of
 the previous simulation (see [here]({{site.url}}/simulations/2019-04-30-qvol/)),
-we consider a simple, deterministic transformation of the 
-tiling, when at each step on one of the levels the vertical lozenges are 
+we consider a simple, deterministic transformation of the
+tiling, when at each step on one of the levels the vertical lozenges are
 mirrored with respect to the middle of the segment [min,max] to which each of them belong.
 The dynamics starts from an exact sample of the measure $q^{-volume}$
 (which is produced by <a href="https://www.mccme.ru/~vadicgor/research.html">Vadim Gorin's program</a> [2]).
-Then, by mirroring vetical lozenges to the left, the measure $q^{-volume}$ becomes the 
-measure $q^{volume}$. 
-At each step, the distribution of the tiling is the same 
-as in the previous simulation with random moves. 
-However, under the mirroring dynamics the vertical tiles can move both 
+Then, by mirroring vetical lozenges to the left, the measure $q^{-volume}$ becomes the
+measure $q^{volume}$.
+At each step, the distribution of the tiling is the same
+as in the previous simulation with random moves.
+However, under the mirroring dynamics the vertical tiles can move both
 left and right, and the Markovian nature of the behavior on the left edge is lost.
 
 Here are three states of the tiling in the beginning, the middle of the simulation, and the end.
@@ -52,9 +52,9 @@ We see that the beginning and the ending configuration are exactly the same, up 
 
 The data file is a list of lists of lists in Mathematica-readable format, of the form
 $$\{ \lambda(1),\lambda(2),\ldots,\lambda(T) \},$$
-where each $\lambda(t)$ is a list of weakly interlacing 
+where each $\lambda(t)$ is a list of weakly interlacing
 integer coordinates of the form
 $$\{ \{ 47 \},\{ 50,47 \} , \{ 50,49,47 \} ,\ldots, \} .$$
 Here $t$ is the time variable.
-The simulation data can be "coarse" in larger tilings, or 
+The simulation data can be "coarse" in larger tilings, or
 finer with every step of the Markov chain recorded.

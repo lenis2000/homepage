@@ -40,7 +40,7 @@ nav_weight: 19
 <!-- - ##### <a href="{{site.url}}/simulations/model/S6V/">Stochastic vertex models</a> -->
 - ##### <a href="{{site.url}}/simulations/model/permutations/">Random permutations</a>
 - ##### <a href="{{site.url}}/simulations/model/TASEPs/">TASEP-like systems</a>
-- ##### <a href="{{site.url}}/simulations/model/lozenge_tilings/">Lozenge tilings</a>
+- ##### <a href="{{site.url}}/simulations/model/lozenge-tilings/">Lozenge tilings</a>
 
 
 ---
