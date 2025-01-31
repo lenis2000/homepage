@@ -1,7 +1,7 @@
 ---
 title: Domino tilings and dynamics on them
 layout: default
-permalink: /simulations/model/domino_tilings/
+permalink: /simulations/model/domino-tilings/
 nav_parent: Simulations
 head_page: true
 ---
@@ -18,7 +18,7 @@ head_page: true
 
 <ul>
 {% for item in simss reversed %}
-  {% if item.model == "domino_tilings" %}
+  {% if item.model == "domino-tilings" %}
     <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
   {% endif %}
 {% endfor %}
