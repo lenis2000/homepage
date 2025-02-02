@@ -15,13 +15,13 @@ code:
 This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a uniform measure to generate random tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
 
 The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
-I set the upper bound at $n=200$ to avoid freezing your browser.
+I set the upper bound at $n=300$ to avoid freezing your browser.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 200$): </label>
-  <!-- Updated input: starting value 50, even numbers only (step=2), three-digit window (size=3), maximum 200 -->
-  <input id="n-input" type="number" value="50" min="2" step="2" max="200" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
+  <!-- Updated input: starting value 50, even numbers only (step=2), three-digit window (size=3), maximum 300 -->
+  <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
 </div>
 
@@ -128,8 +128,8 @@ Module.onRuntimeInitialized = async function() {
       alert("Please enter an even number for n.");
       return;
     }
-    if (n > 200) {
-      alert("Please enter a number no greater than 200.");
+    if (n > 300) {
+      alert("Please enter a number no greater than 300.");
       return;
     }
     updateVisualization(n);
