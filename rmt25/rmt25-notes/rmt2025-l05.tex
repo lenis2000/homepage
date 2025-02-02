@@ -342,7 +342,7 @@ Now, change the functions $\phi_j(x)$ to the orthonormal functions $\psi_j(x)$ u
 \[
 \phi_j(x)=\sqrt{h_j}\,\psi_j(x).
 \]
-This substitution yields 
+This substitution yields
 \[
 \int_{\mathbb{R}} \phi_{\sigma(j)-1}(x)\phi_{\tau(j)-1}(x)\,dx = \sqrt{h_{\sigma(j)-1}h_{\tau(j)-1}} \int_{\mathbb{R}} \psi_{\sigma(j)-1}(x)\psi_{\tau(j)-1}(x)\,dx.
 \]
@@ -522,7 +522,7 @@ The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 
 
 \subsection{Gap Probability for Discrete DPPs}
-Let \(\mathfrak{X}\) be a (finite or countably infinite) discrete set and suppose that a point process on \(\mathfrak{X}\) is determinantal with kernel 
+Let \(\mathfrak{X}\) be a (finite or countably infinite) discrete set and suppose that a point process on \(\mathfrak{X}\) is determinantal with kernel
 \[
 K : \mathfrak{X}\times\mathfrak{X}\to\mathbb{C},
 \]
@@ -534,7 +534,7 @@ Show that for any subset \(I\subset\mathfrak{X}\) (finite or such that the Fredh
 \[
 \mathbb{P}\{X\cap I=\varnothing\}=\det\Bigl[I-K_I\Bigr],
 \]
-where \(K_I\) is the restriction of \(K\) to \(I\times I\).  
+where \(K_I\) is the restriction of \(K\) to \(I\times I\).
 
 
 \subsection{Generating Functions for Multiplicative Statistics}
@@ -542,7 +542,7 @@ Let \(f:\mathfrak{X}\to\mathbb{C}\) be a function such that the support of \(f-1
 \[
 \mathbb{E}\Bigl[\prod_{x\in X} f(x)\Bigr] = \det\Bigl[I+(\Delta_f-I)K\Bigr]
 \]
-holds, where \(\Delta_f\) is the multiplication operator defined by \((\Delta_f g)(x)=f(x)g(x)\).  
+holds, where \(\Delta_f\) is the multiplication operator defined by \((\Delta_f g)(x)=f(x)g(x)\).
 \emph{Hint:} Expand the Fredholm determinant series and compare with the definition of the correlation functions.
 
 \subsection{Variance}
@@ -556,21 +556,21 @@ in terms of the kernel $K(x,y)$.
 
 \subsection{Formula for the Hermite polynomials}
 
-Show that the monic Hermite polynomials \(p_j(x)\) are given by 
+Show that the monic Hermite polynomials \(p_j(x)\) are given by
 \begin{equation*}
 	p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}e^{-x^2/2}.
 \end{equation*}
 
 \subsection{Generating function for the Hermite polynomials}
 
-Show that 
+Show that
 \begin{equation*}
 	\sum_{n=0}^\infty \frac{t^n}{n!} \ssp p_n(x)=e^{tx-t^2/2}.
 \end{equation*}
 
 
 \subsection{Projection Property of the GUE Kernel}
-Show that the kernel 
+Show that the kernel
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
 \]
@@ -580,8 +580,39 @@ K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
 \]
 
 
+\subsection{Recurrence Relation for the Hermite Polynomials}
+Show that the monic Hermite polynomials defined by
+\[
+	p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}e^{-x^2/2}
+\]
+satisfy the three-term recurrence relation
+\[
+p_{n+1}(x)=x\,p_n(x)-n\,p_{n-1}(x),
+\]
+with the convention \(p_{-1}(x)=0\).
 
+\subsection{Differential Equation for the Hermite Polynomials}
+Prove that the monic Hermite polynomials \(p_n(x)\) satisfy the second-order differential equation
+\[
+p_n''(x)-x\,p_n'(x)+n\,p_n(x)=0.
+\]
 
+\subsection{Existence of Determinantal Point Processes with a Given Kernel}
+Let \(X\) be a locally compact Polish space equipped with a reference measure \(\mu\), and let \(K(x,y)\) be the kernel of an integral operator \(K\) acting on \(L^2(X,\mu)\). Suppose that:
+\begin{enumerate}
+	\item \(K\) is Hermitian (i.e. \(K(x,y)=\overline{K(y,x)}\)),
+	\item \(K\) is locally trace class, and
+	\item \(0\le K\le I\) as an operator, that is, both the operator \(K\) and the operator \(I-K\) are nonnegative definite. For $K$, this condition is
+	\[
+	\int_X\int_X f(x)\overline{K(x,y)}f(y)\,d\mu(x)\,d\mu(y)\ge0
+	\]
+	for all \(f\in L^2(X,\mu)\).
+\end{enumerate}
+Under these conditions there exists a unique determinantal point process on \(X\) with correlation functions given by
+\[
+\rho_n(x_1,\dots,x_n)=\det\Bigl[K(x_i,x_j)\Bigr]_{i,j=1}^n.
+\]
+Explain why the condition \(0\le K\le I\) is necessary.
 
 \bibliographystyle{alpha}
 \bibliography{bib}
