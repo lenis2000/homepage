@@ -503,7 +503,7 @@ Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a 
 In particular,
 \[
   \lim_{n\to\infty} \frac{\alpha_j}{\sqrt{n}}
-	\;=\; \sqrt{\frac{\beta}{2}(1-\theta_j\Bigr)}
+	\;=\; \sqrt{\frac{\beta}{2}(1-\theta_j)}
   \quad\text{in probability.}
 \]
 \end{proposition}
@@ -713,6 +713,137 @@ is then the integral of the solution:
 \eqref{eq:resolvent-diff-eq} to the Stieltjes transform $G(z)$.
 This would be an excellent topic to explore for a presentation.
 See~Problem~\ref{prob:resolvent-diff-eq}.}}
+
+
+\subsection{Approach via continued fractions}
+\label{sub:continued-fractions}
+
+We derive the Wigner semicircle law using the continued
+fraction representation of the Stieltjes transform (or
+Green's function) associated with a tridiagonal (Jacobi)
+matrix. In the Dumitriu--Edelman model for the GUE (let us
+assume \(\beta=2\) for simplicity) after appropriate
+rescaling, the matrix’s diagonal entries vanish and the
+off-diagonal entries become essentially constant in the
+bulk. This leads to a homogeneous three-term recurrence for
+the corresponding monic orthogonal polynomials. We then show
+that the Stieltjes transform of the limiting measure may be
+written as an infinite continued fraction, which yields a
+quadratic self--consistent equation. Solving that equation
+and applying the Stieltjes inversion formula recovers the
+semicircle density.
+
+A real symmetric tridiagonal matrix (a \emph{Jacobi matrix}) has the form
+\[
+J = \begin{pmatrix}
+a_0 & b_1 & 0 & \cdots & 0 \\
+b_1 & a_1 & b_2 & \ddots & \vdots \\
+0 & b_2 & a_2 & \ddots & 0 \\
+\vdots & \ddots & \ddots & \ddots & b_{n-1} \\
+0 & \cdots & 0 & b_{n-1} & a_{n-1}
+\end{pmatrix},
+\]
+with \(b_j>0\). Associated with \(J\) is a sequence of monic polynomials \(\{p_n(z)\}_{n\ge0}\) defined by the three--term recurrence
+\begin{equation}\label{eq:three-term}
+\begin{split}
+p_0(z)&=1,\\[1mm]
+p_1(z)&=z-a_0,\\[1mm]
+p_{n+1}(z)&=(z-a_n)p_n(z)-b_n^2\,p_{n-1}(z),\quad n\ge1.
+\end{split}
+\end{equation}
+It is well known that there exists a probability measure \(\mu\) on \(\mathbb{R}\) such that the polynomials \(\{p_n(z)\}\) are orthogonal with respect to \(\mu\).
+
+\medskip
+
+In the Dumitriu--Edelman tridiagonal model for the GUE (with \(\beta=2\)) the matrix is constructed so that, after rescaling by \(\sqrt{n}\), one obtains
+\[
+\frac{T}{\sqrt{n}} = \begin{pmatrix}
+d_1/\sqrt{n} & \alpha_1/\sqrt{n} & 0 & \cdots\\[1mm]
+\alpha_1/\sqrt{n} & d_2/\sqrt{n} & \alpha_2/\sqrt{n} & \ddots\\[1mm]
+0 & \alpha_2/\sqrt{n} & d_3/\sqrt{n} & \ddots\\[1mm]
+\vdots & \ddots & \ddots & \ddots
+\end{pmatrix},
+\]
+with
+\[
+d_i\sim\mathcal{N}(0,1),\qquad \alpha_j\sim\frac{1}{\sqrt{2}}\chi_{2(n-j)}.
+\]
+In the large \(n\) limit, the diagonal entries \(d_i/\sqrt{n}\) vanish and (in the bulk) one has
+\[
+\frac{\alpha_j^2}{n}\to 1.
+\]
+Thus, in the limit the recurrence coefficients become
+\[
+a_n=0,\quad b_n=1,
+\]
+for all \(n\). In this homogeneous case the three-term recurrence \eqref{eq:three-term} reduces to
+\[
+p_0(z)=1,\quad p_1(z)=z,\quad p_{n+1}(z)=z\,p_n(z)-p_{n-1}(z).
+\]
+
+\medskip
+The \emph{Stieltjes transform} of the measure \(\mu\) is defined by
+\[
+m(z)=\int_{\mathbb{R}}\frac{d\mu(x)}{z-x},\qquad z\in\mathbb{C}\setminus\mathbb{R}.
+\]
+A \textbf{classical result in the theory of orthogonal polynomials}
+(e.g., see \cite{sokal2020euler}) 
+is that \(m(z)\) may be written as the continued fraction
+\begin{equation}\label{eq:CF}
+m(z)=\cfrac{1}{z-a_0-\cfrac{b_1^2}{z-a_1-\cfrac{b_2^2}{z-a_2-\cfrac{b_3^2}{z-a_3-\cdots}}}}.
+\end{equation}
+In our case, since \(a_n=0\) for all \(n\) and \(b_n=1\) for all \(n\), this simplifies to
+\begin{equation}\label{eq:CF_homogeneous}
+m(z)=\cfrac{1}{z-\cfrac{1}{z-\cfrac{1}{z-\cfrac{1}{\ddots}}}}.
+\end{equation}
+
+
+Observe that the infinite continued fraction in \eqref{eq:CF_homogeneous} is self--similar; that is, if we denote the entire continued fraction by \(m(z)\), then the tail of the continued fraction is again \(m(z)\). Thus we have the relation
+\[
+m(z)=\frac{1}{z-m(z)}.
+\]
+Multiplying both sides by the denominator yields
+\[
+m(z)\Bigl(z-m(z)\Bigr)=1.
+\]
+Expanding the left--hand side we obtain the quadratic equation
+\begin{equation}\label{eq:quadratic}
+m(z)^2-z\,m(z)+1=0.
+\end{equation}
+
+
+The quadratic \eqref{eq:quadratic} has the solutions
+\[
+m(z)=\frac{z\pm\sqrt{z^2-4}}{2}.
+\]
+To determine the correct branch, recall that for \(z\) in the upper half--plane (\(\operatorname{Im}(z)>0\)) we must have \(\operatorname{Im}\,m(z)>0\). The proper solution is
+\begin{equation}\label{eq:m_solution}
+m(z)=\frac{z-\sqrt{z^2-4}}{2},
+\end{equation}
+where the square root is defined so that \(\sqrt{z^2-4}\sim z\) as \(z\to\infty\) and \(\operatorname{Im}\sqrt{z^2-4}>0\) when \(\operatorname{Im}(z)>0\).
+
+
+The density \(\rho(x)\) of the measure \(\mu\) is recovered from the Stieltjes transform via the inversion formula:
+\[
+\rho(x)=\frac{1}{\pi}\lim_{\epsilon\to0^+}\operatorname{Im}\,m(x+i\epsilon).
+\]
+For \(x\) in the interval \((-2,2)\) one computes that
+\[
+\sqrt{(x+i\epsilon)^2-4}\;\xrightarrow[\epsilon\to0^+]{}\; i\sqrt{4-x^2}.
+\]
+Thus, from \eqref{eq:m_solution} we have, for \(x\in(-2,2)\),
+\[
+m(x+i0)=\frac{x-\mathrm{i}\sqrt{4-x^2}}{2}.
+\]
+Taking the imaginary part gives
+\[
+\operatorname{Im}\,m(x+i0)=\frac{\sqrt{4-x^2}}{2},
+\]
+so that
+\[
+\rho(x)=\frac{1}{\pi}\operatorname{Im}\,m(x+i0)=\frac{1}{2\pi}\sqrt{4-x^2},\quad x\in(-2,2).
+\]
+This is precisely the celebrated Wigner semicircle law.
 
 
 
