@@ -521,6 +521,65 @@ The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 \section{Problems (due 2025-03-09)}
 
 
+\subsection{Gap Probability for Discrete DPPs}
+Let \(\mathfrak{X}\) be a (finite or countably infinite) discrete set and suppose that a point process on \(\mathfrak{X}\) is determinantal with kernel 
+\[
+K : \mathfrak{X}\times\mathfrak{X}\to\mathbb{C},
+\]
+so that for any finite collection of distinct points \(x_1,\dots,x_n\in \mathfrak{X}\) the joint probability that these points belong to the configuration is
+\[
+\mathbb{P}\{x_1,\dots,x_n\in X\}=\det\Bigl[K(x_i,x_j)\Bigr]_{i,j=1}^n.
+\]
+Show that for any subset \(I\subset\mathfrak{X}\) (finite or such that the Fredholm determinant makes sense) the gap probability
+\[
+\mathbb{P}\{X\cap I=\varnothing\}=\det\Bigl[I-K_I\Bigr],
+\]
+where \(K_I\) is the restriction of \(K\) to \(I\times I\).  
+
+
+\subsection{Generating Functions for Multiplicative Statistics}
+Let \(f:\mathfrak{X}\to\mathbb{C}\) be a function such that the support of \(f-1\) is finite. Prove that for a determinantal point process on \(\mathfrak{X}\) with kernel \(K\) the generating function
+\[
+\mathbb{E}\Bigl[\prod_{x\in X} f(x)\Bigr] = \det\Bigl[I+(\Delta_f-I)K\Bigr]
+\]
+holds, where \(\Delta_f\) is the multiplication operator defined by \((\Delta_f g)(x)=f(x)g(x)\).  
+\emph{Hint:} Expand the Fredholm determinant series and compare with the definition of the correlation functions.
+
+\subsection{Variance}
+
+Let $I$ be a finite interval,
+and let $N(I)$ be the number of points of a determinantal point process in $I$
+with the kernel $K(x,y)$.
+Find $\operatorname{Var}(I)$
+in terms of the kernel $K(x,y)$.
+
+
+\subsection{Formula for the Hermite polynomials}
+
+Show that the monic Hermite polynomials \(p_j(x)\) are given by 
+\begin{equation*}
+	p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}e^{-x^2/2}.
+\end{equation*}
+
+\subsection{Generating function for the Hermite polynomials}
+
+Show that 
+\begin{equation*}
+	\sum_{n=0}^\infty \frac{t^n}{n!} \ssp p_n(x)=e^{tx-t^2/2}.
+\end{equation*}
+
+
+\subsection{Projection Property of the GUE Kernel}
+Show that the kernel 
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
+\]
+(with the orthonormal functions \(\psi_j\) defined as in the lecture) acts as an orthogonal projection operator on \(L^2(\mathbb{R})\). In other words, prove that for all \(x,y\in\mathbb{R}\)
+\[
+\int_{-\infty}^\infty K_n(x,z)K_n(z,y)\,dz = K_n(x,y).
+\]
+
+
 
 
 
