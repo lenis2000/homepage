@@ -399,11 +399,12 @@ This completes the proof of the theorem.
 
 \subsection{Christoffel--Darboux formula}
 
+
+
 \begin{theorem}[Christoffel--Darboux Formula]
-\label{thm:CD}
-Let \(\{p_j(x)\}_{j\ge0}\) be a family of orthogonal polynomials with respect to a weight function \(w(x)\) on an interval \(I\subset\mathbb{R}\). Denote by \(\gamma_j\) the leading coefficient of \(p_j(x)\) (so that for monic polynomials, \(\gamma_j=1\)) and by \(h_j\) their squared norms,
+Let \(\{p_j(x)\}_{j\ge0}\) be a family of \emph{monic} orthogonal polynomials with respect to a weight function \(w(x)\) on an interval \(I\subset\mathbb{R}\). Their squared norms are given by
 \[
-\int_I p_j(x)p_k(x)w(x)\,dx = h_j\,\delta_{jk}.
+\int_I p_j(x)\,p_k(x)\,w(x)\,dx = h_j\,\delta_{jk}.
 \]
 Define the orthonormal functions
 \[
@@ -417,13 +418,13 @@ K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y)
 admits the closed-form representation
 \begin{equation}
 \label{eq:CD}
-K_n(x,y)=\sqrt{w(x)w(y)}\,\frac{\gamma_{n-1}}{\gamma_n}\,\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
+K_n(x,y)=\sqrt{w(x)w(y)}\,\frac{1}{h_{n-1}}\,\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
 \end{equation}
 with the obvious continuous extension when \(x=y\).
 \end{theorem}
 
 \begin{proof}
-We begin by defining
+Define
 \[
 S_n(x,y)=\sum_{j=0}^{n-1}\frac{p_j(x)p_j(y)}{h_j},
 \]
@@ -431,59 +432,60 @@ so that
 \[
 K_n(x,y)=\sqrt{w(x)w(y)}\,S_n(x,y).
 \]
-Our goal is to show that
+Our goal is to prove that
 \begin{equation}
 \label{eq:telescoping}
 (x-y)S_n(x,y)=\frac{1}{h_{n-1}}\Bigl[p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)\Bigr].
 \end{equation}
 
-To establish \eqref{eq:telescoping}, we use the three-term recurrence relation satisfied by the orthogonal polynomials. In its standard form (with \(p_j(x)\) monic), the recurrence is
+Since the polynomials are monic and orthogonal, they satisfy the three-term recurrence relation
 \[
-x\,p_j(x)=p_{j+1}(x)+\alpha_j\,p_j(x)+\beta_j\,p_{j-1}(x),\qquad j\ge0,
+x\,p_j(x)=p_{j+1}(x)+\alpha_j\,p_j(x)+\beta_j\,p_{j-1}(x),\quad j\ge0,
 \]
-with the convention \(p_{-1}(x)=0\). (One has \(\beta_j=\frac{h_j}{h_{j-1}}\) for monic orthogonal polynomials.)
-This recurrence comes from the two facts:
+with the convention \(p_{-1}(x)=0\) and where \(\beta_j = \frac{h_j}{h_{j-1}}\).
+This recurrence comes from the three facts:
 \begin{enumerate}
 	\item The polynomials are orthogonal with respect to the weight function \(w(x)\) supported on the real line;
 	\item The operator of multiplication by \(x\) is self-adjoint with respect to the inner product induced by \(w(x)\).
+	\item The multiplication by $x$ of $p_j$ gives $p_{j+1}$ plus a correction of degree $\le j$.
 \end{enumerate}
 
-Write the recurrence for both \(p_j(x)\) and \(p_j(y)\):
+
+Writing the recurrence for both \(p_j(x)\) and \(p_j(y)\) yields:
 \[
 \begin{aligned}
 x\,p_j(x)&=p_{j+1}(x)+\alpha_j\,p_j(x)+\beta_j\,p_{j-1}(x),\\[1mm]
 y\,p_j(y)&=p_{j+1}(y)+\alpha_j\,p_j(y)+\beta_j\,p_{j-1}(y).
 \end{aligned}
 \]
-Multiplying the first equation by \(p_j(y)\) and the second by \(p_j(x)\) and then subtracting, we obtain
+Multiplying the first equation by \(p_j(y)\) and the second by \(p_j(x)\), and then subtracting, we obtain:
 \[
-(x-y)\,p_j(x)p_j(y)=p_{j+1}(x)p_j(y)-p_j(x)p_{j+1}(y)
+(x-y)p_j(x)p_j(y)=p_{j+1}(x)p_j(y)-p_j(x)p_{j+1}(y)
 +\beta_j\Bigl[p_{j-1}(x)p_j(y)-p_j(x)p_{j-1}(y)\Bigr].
 \]
-Dividing by \(h_j\) and summing over \(j=0,\ldots,n-1\) yields
+Dividing by \(h_j\) and summing over \(j=0,\ldots,n-1\) gives:
 \[
 (x-y)S_n(x,y)
 =\sum_{j=0}^{n-1}\frac{1}{h_j}\Bigl[p_{j+1}(x)p_j(y)-p_j(x)p_{j+1}(y)\Bigr]
 +\sum_{j=0}^{n-1}\frac{\beta_j}{h_j}\Bigl[p_{j-1}(x)p_j(y)-p_j(x)p_{j-1}(y)\Bigr].
 \]
-A reindexing of the sums shows that they telescope, leaving only the boundary term at \(j=n-1\). In particular, one finds
+A reindexing of the sums shows that the series telescopes, leaving only the boundary terms. In particular, one finds
 \[
 (x-y)S_n(x,y)=\frac{1}{h_{n-1}}\Bigl[p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)\Bigr].
 \]
-This proves \eqref{eq:telescoping}.
-
-Finally, the factor \(1/h_{n-1}\) may be expressed in terms of the leading coefficients by the relation
-\[
-\frac{1}{h_{n-1}}=\frac{\gamma_{n-1}}{\gamma_n},
-\]
-which completes the derivation of \eqref{eq:CD}.
+This establishes \eqref{eq:telescoping}, and hence the representation \eqref{eq:CD} for \(K_n(x,y)\).
 
 The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 \end{proof}
 
 
+\section{Double contour integral expression for the GUE kernel}
 
+\colorbox{yellow}{\parbox{.7\textwidth}{next: contour integrals for Hermites}}
 
+\colorbox{yellow}{\parbox{.7\textwidth}{Double contour integral}}
+
+\colorbox{yellow}{\parbox{.7\textwidth}{steepest descent}}
 
 
 
