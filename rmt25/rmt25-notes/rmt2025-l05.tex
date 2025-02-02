@@ -275,78 +275,129 @@ Note that here the weight splits as $e^{-x^2/2}=e^{-x^2/4}e^{-x^2/4}$, which is 
 
 Substituting the determinant form into the joint density \eqref{eq:gue-joint-density}, we have
 \[
-p(\lambda_1,\dots,\lambda_n)= \frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-\lambda_j^2/2} \Bigl[\det\Bigl[p_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n\Bigr]^2.
+p(x_1,\dots,x_n)= \frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-x_j^2/2} \Bigl[\det\Bigl[p_{j-1}(x_i)\Bigr]_{i,j=1}^n\Bigr]^2.
 \]
 Incorporate the weight factors into the determinant by writing
 \[
-\prod_{i=1}^n e^{-\lambda_i^2/2} = \prod_{i=1}^n \left(e^{-\lambda_i^2/4}\cdot e^{-\lambda_i^2/4}\right),
+\prod_{i=1}^n e^{-x_i^2/2} = \prod_{i=1}^n \left(e^{-x_i^2/4}\cdot e^{-x_i^2/4}\right),
 \]
 so that
 \[
-\prod_{i=1}^n e^{-\lambda_i^2/4}\det\Bigl[p_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n = \det\Bigl[\phi_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n.
+\prod_{i=1}^n e^{-x_i^2/4}\det\Bigl[p_{j-1}(x_i)\Bigr]_{i,j=1}^n = \det\Bigl[\phi_{j-1}(x_i)\Bigr]_{i,j=1}^n.
 \]
 Thus, the joint density becomes
 \[
-p(\lambda_1,\dots,\lambda_n)=\frac{1}{\tilde{Z}_{n,2}} \Bigl[\det\Bigl[\phi_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n\Bigr]^2.
+p(x_1,\dots,x_n)=\frac{1}{\tilde{Z}_{n,2}} \Bigl[\det\Bigl[\phi_{j-1}(x_i)\Bigr]_{i,j=1}^n\Bigr]^2.
 \]
 This squared-determinant structure is characteristic of determinantal point processes.
 
-A classical result (via the Andr\'eief integration formula) shows that if a joint density is expressed as the square of a determinant, then the marginal $k$-point correlation function can be written as a determinant with a kernel given by
-\[
-K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
-\]
-
-\subsection*{4. Integrating Out the Other Points and Permutation Considerations}
-
-The $k$-point correlation function is defined by integrating out the remaining $n-k$ variables:
-\[
-\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n) \,dx_{k+1}\cdots dx_n.
-\]
-Here, the factor $\frac{n!}{(n-k)!}$ accounts for the different ways of choosing $k$ eigenvalues from $n$. When the determinant is expanded, one encounters sums over permutations:
-\[
-\det\Bigl[\phi_{j-1}(\lambda_i)\Bigr]^2 = \sum_{\sigma,\tau\in S_n} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \prod_{i=1}^n \phi_{\sigma(i)-1}(\lambda_i)\phi_{\tau(i)-1}(\lambda_i).
-\]
-Due to the orthogonality
-\[
-\int_{-\infty}^{\infty}\psi_j(x)\psi_k(x)\,dx=\delta_{jk},
-\]
-integration over the $n-k$ unobserved eigenvalues forces the indices corresponding to these variables to match (i.e., $\sigma(i)=\tau(i)$ for $i=k+1,\dots,n$). This pairing effectively reduces the double sum over permutations and results in the kernel
-\[
-K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
-\]
-Thus, after integrating out the unobserved eigenvalues and properly accounting for the combinatorial factors and permutation symmetry, the $k$-point correlation function is given by
-\[
-\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k.
-\]
-
-\subsection*{Conclusion}
-
-In summary, starting from the joint eigenvalue density \eqref{eq:gue-joint-density} for the GUE, we performed the following steps:
-\begin{enumerate}[(i)]
-    \item Represented the Vandermonde product as a determinant.
-    \item Replaced the monomials by an orthogonal family of monic Hermite polynomials via linear operations.
-    \item Incorporated the weight factors to recast the density in a squared-determinant form.
-    \item Integrated out the unobserved eigenvalues while handling permutation symmetry, leading to the determinantal representation for the $k$-point correlation functions.
-\end{enumerate}
-This derivation culminates in the formula:
-\[
-\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,\qquad K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
-\]
-which elegantly encapsulates the correlations among eigenvalues in the GUE.
-
-
-
-\subsection{Christoffel--Darboux Formula}
-A major advantage of the determinantal representation is that the sum in \eqref{eq:gue-kernel-sum} can be rewritten in closed form using the Christoffel--Darboux formula. In our context, one obtains
-\begin{equation}
-\label{eq:CD}
-K_n(x,y)=\sqrt{w(x)w(y)}\frac{\gamma_{n-1}}{\gamma_n}\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
-\end{equation}
-where $\gamma_n$ denotes the leading coefficient of $p_n(x)$ (for monic polynomials, $\gamma_n=1$ but if one uses an alternate normalization this factor appears).
-
+We now compute the $k$-point correlation function by integrating out the remaining $n-k$ variables:
+\begin{equation*}
+	\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n) \,dx_{k+1}\cdots dx_n.
+\end{equation*}
 \begin{remark}
-The derivation of the Christoffel--Darboux formula is standard in the theory of orthogonal polynomials; see, e.g., \cite{szego1975orthogonal}. The key idea is that the sum in \eqref{eq:gue-kernel-sum} satisfies a three-term recurrence which then telescopes when writing the difference quotient.
+When defining the \(k\)-point correlation function, one might initially expect a combinatorial factor corresponding to the number of ways of choosing \(k\) variables out of \(n\), namely \(\binom{n}{k} = \frac{n!}{k!(n-k)!}\).
+The absence of an extra \(k!\) in the denominator is due to the fact that $x_1,\ldots,x_k $
+are fixed, and we are not integrating over all permutations of these variables.
 \end{remark}
+
+
+
+
+\begin{theorem}[Determinantal structure for squared-determinant densities]
+\label{thm:determinantal}
+We have
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
+\]
+with the correlation kernel given by
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
+\]
+\end{theorem}
+
+\begin{proof}
+We begin by writing the joint density as
+\[
+p(x_1,\dots,x_n)=\frac{1}{\tilde{Z}_{n,2}} \left[\det\Bigl[\phi_{j-1}(x_i)\Bigr]_{i,j=1}^n\right]^2.
+\]
+Expanding the square of the determinant, we have
+\[
+\left[\det\Bigl[\phi_{j-1}(x_i)\Bigr]_{i,j=1}^n\right]^2 = \sum_{\sigma,\tau\in S_n} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \prod_{i=1}^n \phi_{\sigma(i)-1}(x_i)\phi_{\tau(i)-1}(x_i),
+\]
+where $S_n$ denotes the symmetric group on $n$ elements.
+
+Next, to obtain the $k$-point correlation function $\rho_k(x_1,\dots,x_k)$, we integrate out the remaining $n-k$ variables:
+\[
+\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n)\,dx_{k+1}\cdots dx_n.
+\]
+Since the joint density is symmetric under permutations of the variables, we may assume without loss of generality that the first $k$ variables are the ones being fixed.
+
+Substituting the expansion of the squared determinant into the expression for $\rho_k$, we have
+\begin{multline*}
+\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!\,\tilde{Z}_{n,2}} \sum_{\sigma,\tau\in S_n} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \\
+\left\{ \prod_{i=1}^k \phi_{\sigma(i)-1}(x_i)\phi_{\tau(i)-1}(x_i) \prod_{j=k+1}^n \int_{\mathbb{R}} \phi_{\sigma(j)-1}(x)\phi_{\tau(j)-1}(x)\,dx \right\}.
+\end{multline*}
+Now, change the functions $\phi_j(x)$ to the orthonormal functions $\psi_j(x)$ using the relation
+\[
+\phi_j(x)=\sqrt{h_j}\,\psi_j(x).
+\]
+This substitution yields 
+\[
+\int_{\mathbb{R}} \phi_{\sigma(j)-1}(x)\phi_{\tau(j)-1}(x)\,dx = \sqrt{h_{\sigma(j)-1}h_{\tau(j)-1}} \int_{\mathbb{R}} \psi_{\sigma(j)-1}(x)\psi_{\tau(j)-1}(x)\,dx.
+\]
+By the orthonormality of the $\psi_j$'s, we have
+\[
+\int_{\mathbb{R}} \psi_{\sigma(j)-1}(x)\psi_{\tau(j)-1}(x)\,dx = \delta_{\sigma(j),\tau(j)}.
+\]
+Therefore, for the indices $j=k+1,\dots,n$, the integrals enforce the condition $\sigma(j)=\tau(j)$. As a result, the double sum over $\sigma$ and $\tau$ reduces to a single sum over permutations on the first $k$ indices, and the factors for the remaining indices simply contribute to the normalization constant.
+
+Collecting these results, one deduces that
+\[
+\rho_k(x_1,\dots,x_k)=
+\mathrm{const}\cdot
+\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
+\]
+where the kernel is given by
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
+\]
+To complete the proof, one must verify that the normalization constant is indeed $1$.
+We can achieve this by using the fact that $p_n$ is the same as $\rho_n$.
+Then, integrating $\rho_n$ over all variables gives the normalization constant,
+and we have
+\begin{equation}
+	\label{eq:gue-normalization}
+	\int_{\mathbb{R}^n} \det\Bigl[\sum_{\ell=0}^{n-1}\psi_\ell(x_i)\psi_\ell(x_j)\Bigr]_{i,j=1}^n \,dx_1\cdots dx_n = n!,
+\end{equation}
+and the integral over $x_1>\cdots>x_n$ is equal to $1$, as it should be.
+
+To prove \eqref{eq:gue-normalization},
+define the \(n\times n\) matrix
+\[
+A=\Bigl[\psi_{j-1}(x_i)\Bigr]_{i,j=1}^n.
+\]
+Then, by the Cauchy--Binet formula,
+\[
+\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^n = \det\Bigl[AA^\top\Bigr]
+=\det\Bigl[A\Bigr]^2.
+\]
+The Andreief integration formula tells us that
+\[
+\int_{\mathbb{R}^n} \det\Bigl[A\Bigr]^2\,dx_1\cdots dx_n = n! \det\Bigl[\int_{\mathbb{R}} \psi_{i-1}(x)\psi_{j-1}(x)\,dx\Bigr]_{i,j=1}^n.
+\]
+Since the \(\psi_j\)'s are orthonormal,
+\[
+\int_{\mathbb{R}} \psi_{i-1}(x)\psi_{j-1}(x)\,dx = \delta_{ij},
+\]
+and hence
+\[
+\det\Bigl[\delta_{ij}\Bigr]_{i,j=1}^n = 1.
+\]
+This completes the proof of the theorem.
+\end{proof}
+
+
 
 \subsection{Double Contour Integral Representation and Steepest Descent}
 For asymptotic analysis (for example, to derive the sine kernel in the bulk or the Airy kernel at the edge), it is extremely useful to represent the kernel in the form of a double contour integral. One classical route is as follows.
