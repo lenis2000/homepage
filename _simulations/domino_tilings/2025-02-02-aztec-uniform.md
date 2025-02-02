@@ -1,0 +1,128 @@
+---
+layout: default
+title: Aztec Diamond Demo
+---
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- Load only one Emscripten module -->
+<script src="/js/2025-02-02-aztec-uniform.js"></script>
+
+<!-- Controls to change n -->
+<div style="margin-bottom: 10px;">
+  <label for="n-input">Aztec Diamond Order (n): </label>
+  <!-- Updated input: starting value 50, even numbers only (step=2), three-digit window (size=3), maximum 200 -->
+  <input id="n-input" type="number" value="50" min="2" step="2" max="200" size="3">
+  <button id="update-btn">Update</button>
+</div>
+
+<!-- Progress indicator (polling progress from the C++ code via getProgress) -->
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+
+<svg id="aztec-svg" width="800" height="800"></svg>
+<script>
+Module.onRuntimeInitialized = async function() {
+  // Wrap exported functions asynchronously.
+  const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number'], {async: true});
+  const freeString = Module.cwrap('freeString', null, ['number']);
+  const getProgress = Module.cwrap('getProgress', 'number', []);
+
+  const svg = d3.select("#aztec-svg");
+  const progressElem = document.getElementById("progress-indicator");
+  let progressInterval;
+
+  // Start polling the progress counter from C++.
+  function startProgressPolling() {
+    progressElem.innerText = "Sampling... (0%)";
+    progressInterval = setInterval(() => {
+      const progress = getProgress();
+      progressElem.innerText = "Sampling... (" + progress + "%)";
+      if (progress >= 100) {
+        clearInterval(progressInterval);
+      }
+    }, 100);
+  }
+
+  // Update the visualization for a given n.
+  async function updateVisualization(n) {
+    // Clear any previous simulation.
+    svg.selectAll("g").remove();
+    // Start the progress indicator.
+    startProgressPolling();
+
+    // Await the asynchronous simulation.
+    const ptr = await simulateAztec(n);
+    const jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+
+    let dominoes;
+    try {
+      dominoes = JSON.parse(jsonStr);
+    } catch (e) {
+      console.error("Error parsing JSON:", e, jsonStr);
+      progressElem.innerText = "Error during sampling";
+      clearInterval(progressInterval);
+      return;
+    }
+
+    // Compute bounding box of dominoes.
+    const minX = d3.min(dominoes, d => d.x);
+    const minY = d3.min(dominoes, d => d.y);
+    const maxX = d3.max(dominoes, d => d.x + d.w);
+    const maxY = d3.max(dominoes, d => d.y + d.h);
+    const widthDominoes = maxX - minX;
+    const heightDominoes = maxY - minY;
+
+    // Get SVG dimensions.
+    const svgWidth = +svg.attr("width");
+    const svgHeight = +svg.attr("height");
+    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+
+    // Append a group for the dominoes.
+    const group = svg.append("g")
+                     .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+    // Render each domino piece.
+    group.selectAll("rect")
+         .data(dominoes)
+         .enter()
+         .append("rect")
+         .attr("x", d => d.x)
+         .attr("y", d => d.y)
+         .attr("width", d => d.w)
+         .attr("height", d => d.h)
+         .attr("fill", d => d.color)
+         .attr("stroke", "#000")
+         .attr("stroke-width", 0.5);
+
+    // Clear progress indicator once done.
+    progressElem.innerText = "";
+  }
+
+  // Setup the update button.
+  document.getElementById("update-btn").addEventListener("click", () => {
+    const inputField = document.getElementById("n-input");
+    const n = parseInt(inputField.value, 10);
+
+    // Check for a valid positive even number.
+    if (isNaN(n) || n < 2) {
+      alert("Please enter a valid positive even number for n (n ≥ 2).");
+      return;
+    }
+    if (n % 2 !== 0) {
+      alert("Please enter an even number for n.");
+      return;
+    }
+    if (n > 200) {
+      alert("Please enter a number no greater than 200.");
+      return;
+    }
+    updateVisualization(n);
+  });
+
+  // Run an initial simulation.
+  const initialN = parseInt(document.getElementById("n-input").value, 10);
+  updateVisualization(initialN);
+};
+</script>
