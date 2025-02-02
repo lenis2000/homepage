@@ -1,10 +1,15 @@
 ---
-layout: default
-title: Aztec Diamond Demo
+title: Domino tilings of the Aztec diamond
+model: domino-tilings
+author: 'Leonid Petrov'
+code:
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino-tilings/2025-02-02-aztec-uniform.md'
+    txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino-tilings/2025-02-02-aztec-uniform.cpp'
+    txt: 'C++ code for the simulation'
 ---
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<!-- Load only one Emscripten module -->
+<script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-02-02-aztec-uniform.js"></script>
 
 <!-- Controls to change n -->
