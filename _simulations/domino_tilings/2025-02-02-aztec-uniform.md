@@ -9,6 +9,21 @@ code:
     txt: 'C++ code for the simulation'
 ---
 
+<style>
+  /* Ensure the SVG scales fully on wide screens and remains responsive on mobile */
+  #aztec-svg {
+    width: 100%;
+    height: 80vh; /* Use 80% of viewport height on large screens */
+    vertical-align: top; /* Align media to the top */
+  }
+  @media (max-width: 576px) {
+    #aztec-svg {
+      height: 60vh; /* Reduce height on smaller devices */
+      vertical-align: top; /* Maintain top alignment on mobile */
+    }
+  }
+</style>
+
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-02-02-aztec-uniform.js"></script>
 
@@ -29,9 +44,11 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 <div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
 
 <div class="row">
-<div class="col-12">
-<svg id="aztec-svg" width="800" height="800"></svg>
-</div>
+  <div class="col-12">
+    <!-- The SVG now scales with the container.
+         Its height is controlled via CSS for larger screens and mobile devices alike. -->
+    <svg id="aztec-svg"></svg>
+  </div>
 </div>
 <script>
 Module.onRuntimeInitialized = async function() {
@@ -86,9 +103,13 @@ Module.onRuntimeInitialized = async function() {
     const widthDominoes = maxX - minX;
     const heightDominoes = maxY - minY;
 
-    // Get SVG dimensions.
-    const svgWidth = +svg.attr("width");
-    const svgHeight = +svg.attr("height");
+    // Use the computed dimensions of the SVG (which now scales with the container).
+    // This hack ensures that on large screens we use the full available width and on mobile the SVG remains responsive.
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
     const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
     const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
     const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
