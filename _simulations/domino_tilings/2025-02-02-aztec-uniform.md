@@ -28,7 +28,11 @@ I set the upper bound at $n=200$ to avoid freezing your browser.
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
 <div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
 
+<div class="row">
+<div class="col-12">
 <svg id="aztec-svg" width="800" height="800"></svg>
+</div>
+</div>
 <script>
 Module.onRuntimeInitialized = async function() {
   // Wrap exported functions asynchronously.
