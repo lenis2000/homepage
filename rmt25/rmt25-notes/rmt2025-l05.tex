@@ -105,25 +105,62 @@ points). A random point process is a probability measure on
 the space of such configurations.
 
 \begin{definition}[Determinantal Point Process]
-A random point process $P$ on $\mathfrak{X}$ is called \emph{determinantal} if there exists a function (the \emph{correlation kernel}) $K:\mathfrak{X}\times\mathfrak{X}\to\mathbb{C}$ such that for every finite collection of distinct points $x_1,\dots,x_n\in \mathfrak{X}$, the joint probability that these points belong to the random configuration is
+A random point process $P$ on $\mathfrak{X}$ is called
+\emph{determinantal} if there exists a function (the
+\emph{correlation kernel})
+$K:\mathfrak{X}\times\mathfrak{X}\to\mathbb{C}$ such that
+for any $n$ and every finite collection of distinct points
+$x_1,\dots,x_n\in \mathfrak{X}$, the joint probability that
+these points belong to the random configuration is
 \[
 \operatorname{\mathbb{P}}\{x_1,\dots,x_n\in X\}=\det\Bigl[K(x_i,x_j)\Bigr]_{i,j=1}^n.
 \]
 \end{definition}
 
-A standard consequence is that all $k$-point \emph{correlation functions} (or joint intensities) are given by
-\[
-\rho_k(x_1,\dots,x_k)=\det\Bigl[K(x_i,x_j)\Bigr]_{i,j=1}^k.
-\]
+Determinantal processes are very useful in probability theory and random matrices.
+They are a natural extension of Poisson processes, and have some parallel properties.
+Many properties of determinantal processes can be derived from ``linear algebra'' (broadly
+understood) applied to the kernel $K$.
+There are a few surveys on them:
+\cite{Soshnikov2000}, \cite{peres2006determinantal},
+\cite{Borodin2009}, 
+\cite{kulesza2012determinantal}.
+Let us just mention two useful properties.
 
-Another important property is the \emph{gap probability}. If $I\subset\mathfrak{X}$ is a finite subset, then one may show (see, e.g., \cite{Borodin2009})
-\[
-\operatorname{\mathbb{P}}\{X\cap I=\varnothing\}=\det\Bigl[I-K_I\Bigr],
-\]
-where $K_I$ is the restriction of the kernel to $I$. This formula plays a crucial role in describing spacing statistics.
+\begin{proposition}[Gap Probability]
+	If $I\subset\mathfrak{X}$ is a subset, then 
+	\[
+	\operatorname{\mathbb{P}}\{X\cap I=\varnothing\}=\det\Bigl[I-K_I\Bigr],
+	\]
+	where $K_I$ is the restriction of the kernel to $I$. 
+	If $I$ is infinite, then the determinant is understood as a 
+	Fredholm determinant.
+\end{proposition}
+\begin{remark}
+	The Fredholm determinant
+	might ``diverge'' (equal to $0$ or $1$).	
+\end{remark}
 
-\subsection{Example: One-Dependent Processes}
-An interesting application (see \cite{borodin2010adding}) is that any one-dependent point process on a finite segment of $\mathbb{Z}$ is determinantal. (A process is one-dependent if events on sets separated by at least two indices are independent.) This fact illustrates the natural appearance of DPPs in problems with a built-in repulsion between points.
+\begin{proposition}[Generating functions]
+	\label{prop:gen-func}
+	Let $f:\mathfrak{X}\to\mathbb{C}$ be a function such that the support of $f-1$ is finite. Then the generating function of the multiplicative statistics of the determinantal point process is given by
+	\[
+	\mathbb{E}\left[\ssp\prod_{x\in X} f(x)\right] 
+	=\det\Bigl[I + (\Delta_f - I)K\Bigr],
+	\]
+	where the expectation is over the random point configuration $X\subseteq\mathfrak{X}$,
+	$\Delta_f$ denotes the operator of multiplication by $f$ (i.e., $(\Delta_f g)(x)=f(x)g(x)$)
+	and the determinant is interpreted as a Fredholm determinant if $\mathfrak{X}$ is infinite.
+\end{proposition}
+
+\begin{remark}[Fredholm Determinant --- Series Definition]
+	The Fredholm determinant of an operator $A$ on $\ell^2(\mathfrak{X})$ is given by the series
+	\[
+	\det(I+A)=\sum_{n=0}^\infty \frac{1}{n!}\sum_{x_1,\dots,x_n\in\mathfrak{X}} \det\bigl[A(x_i,x_j)\bigr]_{i,j=1}^n,
+	\]
+	where the term corresponding to $n=0$ is defined to be $1$.
+\end{remark}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Determinantal Structure in the GUE}
