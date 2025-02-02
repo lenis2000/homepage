@@ -74,9 +74,9 @@ Updated at \currenttime, \today}}
 
 
 \section{Recap}
-In 
+In
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l04.pdf}{Lecture 4}
-we discussed global spectral behavior of 
+we discussed global spectral behavior of
 tridiagonal G$\beta$E random matrices,
 and obtained the Wigert semicircle law for the eigenvalue density.
 
@@ -94,9 +94,9 @@ double contour integral—an expression well suited for
 steepest descent analysis in the large-$n$ limit.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Discrete Determinantal Point Processes}
+\section{Discrete determinantal point processes}
 \label{sec:dpp-discrete}
-\subsection{Definition and Basic Properties}
+\subsection{Definition and basic properties}
 
 Let $\mathfrak{X}$ be a (finite or countably infinite)
 discrete set. A \emph{point configuration} on $\mathfrak{X}$
@@ -123,29 +123,29 @@ Many properties of determinantal processes can be derived from ``linear algebra'
 understood) applied to the kernel $K$.
 There are a few surveys on them:
 \cite{Soshnikov2000}, \cite{peres2006determinantal},
-\cite{Borodin2009}, 
+\cite{Borodin2009},
 \cite{kulesza2012determinantal}.
 Let us just mention two useful properties.
 
 \begin{proposition}[Gap Probability]
-	If $I\subset\mathfrak{X}$ is a subset, then 
+	If $I\subset\mathfrak{X}$ is a subset, then
 	\[
 	\operatorname{\mathbb{P}}\{X\cap I=\varnothing\}=\det\Bigl[I-K_I\Bigr],
 	\]
-	where $K_I$ is the restriction of the kernel to $I$. 
-	If $I$ is infinite, then the determinant is understood as a 
+	where $K_I$ is the restriction of the kernel to $I$.
+	If $I$ is infinite, then the determinant is understood as a
 	Fredholm determinant.
 \end{proposition}
 \begin{remark}
 	The Fredholm determinant
-	might ``diverge'' (equal to $0$ or $1$).	
+	might ``diverge'' (equal to $0$ or $1$).
 \end{remark}
 
 \begin{proposition}[Generating functions]
 	\label{prop:gen-func}
 	Let $f:\mathfrak{X}\to\mathbb{C}$ be a function such that the support of $f-1$ is finite. Then the generating function of the multiplicative statistics of the determinantal point process is given by
 	\[
-	\mathbb{E}\left[\ssp\prod_{x\in X} f(x)\right] 
+	\mathbb{E}\left[\ssp\prod_{x\in X} f(x)\right]
 	=\det\Bigl[I + (\Delta_f - I)K\Bigr],
 	\]
 	where the expectation is over the random point configuration $X\subseteq\mathfrak{X}$,
@@ -163,32 +163,178 @@ Let us just mention two useful properties.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Determinantal Structure in the GUE}
+\section{Determinantal structure in the GUE}
 \label{sec:gue-dpp}
-\subsection{GUE Joint Density and Orthogonal Polynomials}
-Recall that the joint eigenvalue density for the Gaussian Unitary Ensemble (GUE) is given by
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Correlation functions as densities with respect to Lebesgue measure}
+\label{sec:corr-functions-lebesgue}
+
+In the discrete setting discussed above the joint probabilities of finding points in specified subsets of $\mathfrak{X}$ are given by determinants of the kernel evaluated at those points. When the underlying space is continuous (typically a subset of $\mathbb{R}$ or $\mathbb{R}^d$), one works instead with correlation functions which serve as densities with respect to the Lebesgue measure.
+
+Let $X\subset \mathbb{R}$ be a random point configuration. The \emph{$n$-point correlation function} $\rho_n(x_1,\dots,x_n)$ is defined by the relation
+\begin{multline*}
+\mathbb{P}\{\text{there is a point in each of the infinitesimal intervals } [x_i, x_i+dx_i], \, i=1,\dots,n\}
+\\
+=\rho_n(x_1,\dots,x_n)\,dx_1\cdots dx_n.
+\end{multline*}
+For a determinantal point process the correlation functions take a determinantal form:
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K(x_i,x_j)\Bigr]_{i,j=1}^k.
+\]
+\begin{remark}
+	The reference measure does not necessarily have to be the Lebesgue measure.
+	For example, in the discrete setting, we can also talk about the
+	reference measure, it is the counting measure.
+	The correlation kernel $K(x,y)$ is better understood not as a function of two variables, but as an operator on the Hilbert space
+	$L^2(\mathfrak{X},d\mu)$, where $\mu$ is the reference measure.
+	One can also write $K(x,y)\ssp\mu(dy)$ or $K(x,y)\sqrt{\mu(dx)\ssp \mu(dy)}$ to emphasize this structure.
+\end{remark}
+
+This formulation is particularly useful in the continuous setting, as it allows one to express statistical properties of the point process in terms of integrals over the kernel. For example, the expected number of points in a measurable set $A\subset \mathbb{R}$ is given by
+\[
+\mathbb{E}[\#(X\cap A)]=\int_A \rho_1(x)\,dx,
+\]
+while higher order joint intensities provide information about correlations between points.
+
+\subsection{The GUE eigenvalues as DPP}
+
+\subsubsection{Setup}
+
+We start from the joint eigenvalue density for the Gaussian Unitary Ensemble (GUE)
 \begin{equation}
 \label{eq:gue-joint-density}
-p(\lambda_1,\dots,\lambda_n)=\frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-\lambda_j^2/2}\prod_{1\le i<j\le n} (\lambda_i-\lambda_j)^2.
+p(x_1,\dots,x_n)
+\ssp dx_1\cdots dx_n
+=\frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-x_j^2/2}\prod_{1\le i<j\le n} (x_i-x_j)^2
+\ssp dx_1\cdots dx_n.
 \end{equation}
-This density, although seemingly complicated, can be rewritten in determinantal form by using the theory of orthogonal polynomials. Namely, if we denote by $\{p_j(x)\}_{j\ge0}$ the family of monic Hermite polynomials orthogonal with respect to the weight
+We will show step by step why this is a determinantal point process,
 \[
-w(x)=e^{-x^2/2},
+	\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k, \qquad k\ge1,
 \]
-and define the corresponding orthonormal functions
+with the kernel defined as
 \[
-\psi_j(x)=\frac{1}{\sqrt{h_j}}p_j(x) \sqrt{w(x)},
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
 \]
-where $h_j$ are the squared norms, then one obtains the famous determinantal representation for the $k$-point correlation functions:
-\begin{equation}
-\label{eq:gue-correlation}
-\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
-\end{equation}
-with the correlation kernel
-\begin{equation}
-\label{eq:gue-kernel-sum}
+where the functions
+\[
+\psi_j(x)=\frac{1}{\sqrt{h_j}}\,p_j(x)\sqrt{w(x)},\qquad w(x)=e^{-x^2/2},
+\]
+are constructed from the monic Hermite polynomials $\{p_j(x)\}$ which are orthogonal with respect to the weight $w(x)$:
+\[
+\int_{-\infty}^\infty p_j(x)p_k(x)e^{-x^2/2}\,dx = h_j\,\delta_{jk}.
+\]
+Recall that ``monic'' means that the leading coefficient of $p_j(x)$ is $1$,
+and we divide by the norm to make the polynomials orthonormal.
+
+\subsubsection{Writing the Vandermonde as a determinant}
+The product
+\[
+\prod_{1\le i<j\le n} (x_i-x_j)^2
+\]
+is the square of the Vandermonde determinant. Recall that the Vandermonde determinant is given by
+\[
+\Delta(x_1,\dots,x_n) = \prod_{1\le i<j\le n} (x_j-x_i) = \det\begin{pmatrix}
+1 & x_1 & x_1^2 & \cdots & x_1^{n-1}\\[1mm]
+1 & x_2 & x_2^2 & \cdots & x_2^{n-1}\\[1mm]
+\vdots & \vdots & \vdots & \ddots & \vdots\\[1mm]
+1 & x_n & x_n^2 & \cdots & x_n^{n-1}
+\end{pmatrix}.
+\]
+Thus, we have
+\[
+\prod_{1\le i<j\le n} (x_i-x_j)^2 = \left(\det\Bigl[x_i^{j-1}\Bigr]_{i,j=1}^n\right)^2.
+\]
+
+\subsubsection{Orthogonalization by linear operations}
+
+Since determinants are invariant under elementary row or column
+operations, we can replace the monomials $x^{j-1}$ by
+any sequence of monic polynomials of degree $j-1$. In
+particular, we choose the monic Hermite polynomials
+$p_{j-1}(x)$ and obtain
+\[
+\det\Bigl[x_i^{j-1}\Bigr]_{i,j=1}^n = \det\Bigl[p_{j-1}(x_i)\Bigr]_{i,j=1}^n.
+\]
+The orthogonality condition for these polynomials is
+\[
+\int_{-\infty}^\infty p_j(x)p_k(x)e^{-x^2/2}\,dx = h_j\,\delta_{jk}.
+\]
+We define the functions
+\[
+\phi_j(x)=p_j(x)e^{-x^2/4},
+\]
+and then introduce the orthonormal functions
+\[
+\psi_j(x)=\frac{1}{\sqrt{h_j}}\phi_j(x)=\frac{1}{\sqrt{h_j}}\,p_j(x)e^{-x^2/4}.
+\]
+Note that here the weight splits as $e^{-x^2/2}=e^{-x^2/4}e^{-x^2/4}$, which is useful in the next step.
+
+\subsubsection{Rewriting the density in determinantal form}
+
+Substituting the determinant form into the joint density \eqref{eq:gue-joint-density}, we have
+\[
+p(\lambda_1,\dots,\lambda_n)= \frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-\lambda_j^2/2} \Bigl[\det\Bigl[p_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n\Bigr]^2.
+\]
+Incorporate the weight factors into the determinant by writing
+\[
+\prod_{i=1}^n e^{-\lambda_i^2/2} = \prod_{i=1}^n \left(e^{-\lambda_i^2/4}\cdot e^{-\lambda_i^2/4}\right),
+\]
+so that
+\[
+\prod_{i=1}^n e^{-\lambda_i^2/4}\det\Bigl[p_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n = \det\Bigl[\phi_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n.
+\]
+Thus, the joint density becomes
+\[
+p(\lambda_1,\dots,\lambda_n)=\frac{1}{\tilde{Z}_{n,2}} \Bigl[\det\Bigl[\phi_{j-1}(\lambda_i)\Bigr]_{i,j=1}^n\Bigr]^2.
+\]
+This squared-determinant structure is characteristic of determinantal point processes.
+
+A classical result (via the Andr\'eief integration formula) shows that if a joint density is expressed as the square of a determinant, then the marginal $k$-point correlation function can be written as a determinant with a kernel given by
+\[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
-\end{equation}
+\]
+
+\subsection*{4. Integrating Out the Other Points and Permutation Considerations}
+
+The $k$-point correlation function is defined by integrating out the remaining $n-k$ variables:
+\[
+\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n) \,dx_{k+1}\cdots dx_n.
+\]
+Here, the factor $\frac{n!}{(n-k)!}$ accounts for the different ways of choosing $k$ eigenvalues from $n$. When the determinant is expanded, one encounters sums over permutations:
+\[
+\det\Bigl[\phi_{j-1}(\lambda_i)\Bigr]^2 = \sum_{\sigma,\tau\in S_n} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \prod_{i=1}^n \phi_{\sigma(i)-1}(\lambda_i)\phi_{\tau(i)-1}(\lambda_i).
+\]
+Due to the orthogonality
+\[
+\int_{-\infty}^{\infty}\psi_j(x)\psi_k(x)\,dx=\delta_{jk},
+\]
+integration over the $n-k$ unobserved eigenvalues forces the indices corresponding to these variables to match (i.e., $\sigma(i)=\tau(i)$ for $i=k+1,\dots,n$). This pairing effectively reduces the double sum over permutations and results in the kernel
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
+\]
+Thus, after integrating out the unobserved eigenvalues and properly accounting for the combinatorial factors and permutation symmetry, the $k$-point correlation function is given by
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k.
+\]
+
+\subsection*{Conclusion}
+
+In summary, starting from the joint eigenvalue density \eqref{eq:gue-joint-density} for the GUE, we performed the following steps:
+\begin{enumerate}[(i)]
+    \item Represented the Vandermonde product as a determinant.
+    \item Replaced the monomials by an orthogonal family of monic Hermite polynomials via linear operations.
+    \item Incorporated the weight factors to recast the density in a squared-determinant form.
+    \item Integrated out the unobserved eigenvalues while handling permutation symmetry, leading to the determinantal representation for the $k$-point correlation functions.
+\end{enumerate}
+This derivation culminates in the formula:
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,\qquad K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
+\]
+which elegantly encapsulates the correlations among eigenvalues in the GUE.
+
+
 
 \subsection{Christoffel--Darboux Formula}
 A major advantage of the determinantal representation is that the sum in \eqref{eq:gue-kernel-sum} can be rewritten in closed form using the Christoffel--Darboux formula. In our context, one obtains
