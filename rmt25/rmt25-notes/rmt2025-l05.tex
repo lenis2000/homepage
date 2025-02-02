@@ -397,37 +397,91 @@ and hence
 This completes the proof of the theorem.
 \end{proof}
 
+\subsection{Christoffel--Darboux formula}
 
-
-\subsection{Double Contour Integral Representation and Steepest Descent}
-For asymptotic analysis (for example, to derive the sine kernel in the bulk or the Airy kernel at the edge), it is extremely useful to represent the kernel in the form of a double contour integral. One classical route is as follows.
-
-One first expresses the Hermite polynomials via a contour integral representation (see, e.g., the generating function or integral representation for Hermite polynomials):
+\begin{theorem}[Christoffel--Darboux Formula]
+\label{thm:CD}
+Let \(\{p_j(x)\}_{j\ge0}\) be a family of orthogonal polynomials with respect to a weight function \(w(x)\) on an interval \(I\subset\mathbb{R}\). Denote by \(\gamma_j\) the leading coefficient of \(p_j(x)\) (so that for monic polynomials, \(\gamma_j=1\)) and by \(h_j\) their squared norms,
 \[
-H_n(z)=\frac{n!}{2\pi i}\oint_\Gamma e^{2zw-w^2}\frac{dw}{w^{n+1}},
+\int_I p_j(x)p_k(x)w(x)\,dx = h_j\,\delta_{jk}.
 \]
-with an appropriate choice of contour $\Gamma$. Inserting this representation into the Christoffel--Darboux formula \eqref{eq:CD} and interchanging summation and integration (justified by uniform convergence) one obtains a representation of the kernel as
+Define the orthonormal functions
+\[
+\psi_j(x)=\frac{1}{\sqrt{h_j}}\,p_j(x)\sqrt{w(x)}.
+\]
+Then the kernel
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y)
+=\sqrt{w(x)w(y)}\sum_{j=0}^{n-1}\frac{p_j(x)p_j(y)}{h_j},
+\]
+admits the closed-form representation
 \begin{equation}
-\label{eq:double-contour}
-K_n(x,y)=\frac{1}{(2\pi i)^2}\int_{C_1}\int_{C_2} \frac{e^{n\Phi(x,\xi)-n\Phi(y,\eta)}}{\xi-\eta}\,d\xi\,d\eta,
+\label{eq:CD}
+K_n(x,y)=\sqrt{w(x)w(y)}\,\frac{\gamma_{n-1}}{\gamma_n}\,\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
 \end{equation}
-where $\Phi$ is a certain phase function and the contours $C_1,C_2$ are chosen so that the integrals converge. (The precise form of $\Phi$ depends on the rescaling and normalization.) The representation \eqref{eq:double-contour} is well suited to a steepest descent (saddle point) analysis in the large-$n$ limit, allowing one to derive universal kernels (such as the sine kernel in the bulk)
+with the obvious continuous extension when \(x=y\).
+\end{theorem}
+
+\begin{proof}
+We begin by defining
 \[
-K_{\mathrm{sine}}(x,y)=\frac{\sin\pi(x-y)}{\pi(x-y)},
+S_n(x,y)=\sum_{j=0}^{n-1}\frac{p_j(x)p_j(y)}{h_j},
 \]
-or the Airy kernel at the spectral edge.
+so that
+\[
+K_n(x,y)=\sqrt{w(x)w(y)}\,S_n(x,y).
+\]
+Our goal is to show that
+\begin{equation}
+\label{eq:telescoping}
+(x-y)S_n(x,y)=\frac{1}{h_{n-1}}\Bigl[p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)\Bigr].
+\end{equation}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Summary and Outlook}
-In this lecture we:
-\begin{itemize}
-  \item Recalled the resolvent (Stieltjes transform) method from Lecture~4 and noted that its analytic completion remains open.
-  \item Introduced discrete determinantal point processes and outlined key properties such as the determinantal form of correlation functions and gap probabilities.
-  \item Derived (via the orthogonal polynomial method) the determinantal kernel for the GUE, first as a finite sum \eqref{eq:gue-kernel-sum} and then using the Christoffel--Darboux formula \eqref{eq:CD} for a more compact representation.
-  \item Indicated how one can represent the kernel as a double contour integral (see \eqref{eq:double-contour}) and how steepest descent techniques are then used to obtain the universal limiting kernels.
-\end{itemize}
+To establish \eqref{eq:telescoping}, we use the three-term recurrence relation satisfied by the orthogonal polynomials. In its standard form (with \(p_j(x)\) monic), the recurrence is
+\[
+x\,p_j(x)=p_{j+1}(x)+\alpha_j\,p_j(x)+\beta_j\,p_{j-1}(x),\qquad j\ge0,
+\]
+with the convention \(p_{-1}(x)=0\). (One has \(\beta_j=\frac{h_j}{h_{j-1}}\) for monic orthogonal polynomials.)
+This recurrence comes from the two facts:
+\begin{enumerate}
+	\item The polynomials are orthogonal with respect to the weight function \(w(x)\) supported on the real line;
+	\item The operator of multiplication by \(x\) is self-adjoint with respect to the inner product induced by \(w(x)\).
+\end{enumerate}
 
-In subsequent lectures we will use these results to study local eigenvalue statistics (the sine and Airy kernels) and discuss further universality aspects of random matrices.
+Write the recurrence for both \(p_j(x)\) and \(p_j(y)\):
+\[
+\begin{aligned}
+x\,p_j(x)&=p_{j+1}(x)+\alpha_j\,p_j(x)+\beta_j\,p_{j-1}(x),\\[1mm]
+y\,p_j(y)&=p_{j+1}(y)+\alpha_j\,p_j(y)+\beta_j\,p_{j-1}(y).
+\end{aligned}
+\]
+Multiplying the first equation by \(p_j(y)\) and the second by \(p_j(x)\) and then subtracting, we obtain
+\[
+(x-y)\,p_j(x)p_j(y)=p_{j+1}(x)p_j(y)-p_j(x)p_{j+1}(y)
++\beta_j\Bigl[p_{j-1}(x)p_j(y)-p_j(x)p_{j-1}(y)\Bigr].
+\]
+Dividing by \(h_j\) and summing over \(j=0,\ldots,n-1\) yields
+\[
+(x-y)S_n(x,y)
+=\sum_{j=0}^{n-1}\frac{1}{h_j}\Bigl[p_{j+1}(x)p_j(y)-p_j(x)p_{j+1}(y)\Bigr]
++\sum_{j=0}^{n-1}\frac{\beta_j}{h_j}\Bigl[p_{j-1}(x)p_j(y)-p_j(x)p_{j-1}(y)\Bigr].
+\]
+A reindexing of the sums shows that they telescope, leaving only the boundary term at \(j=n-1\). In particular, one finds
+\[
+(x-y)S_n(x,y)=\frac{1}{h_{n-1}}\Bigl[p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)\Bigr].
+\]
+This proves \eqref{eq:telescoping}.
+
+Finally, the factor \(1/h_{n-1}\) may be expressed in terms of the leading coefficients by the relation
+\[
+\frac{1}{h_{n-1}}=\frac{\gamma_{n-1}}{\gamma_n},
+\]
+which completes the derivation of \eqref{eq:CD}.
+
+The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
+\end{proof}
+
+
 
 
 
@@ -462,7 +516,7 @@ In subsequent lectures we will use these results to study local eigenvalue stati
 \appendix
 \setcounter{section}{4}
 
-\section{Problems (due DATE)}
+\section{Problems (due 2025-03-09)}
 
 
 
