@@ -493,7 +493,7 @@ This estimate is valid in the ``bulk'' region, that is, when $\theta$ is strictl
 Let us make these estimates more precise.  We have:
 \begin{proposition}[Pointwise asymptotics in the bulk]
 \label{prop:alpha-bulk}
-Fix any $\delta \in (0,1)$ and let $j$ range so that $\theta_j := j/n \in [\delta,\, 1-\delta]$.
+Fix small $\delta>0$, and let $j$ range so that $\theta_j := j/n \in [\delta,\, 1-\delta]$.
 Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a term that is stochastically bounded at the indicated order as $n\to\infty$. That is, $X_n = O_p(a_n)$ means that for any $\epsilon>0$, there exists $M>0$ such that $\operatorname{\mathbb{P}}(|X_n/a_n| > M) < \epsilon$ for all sufficiently large $n$.}
 \[
   \frac{\alpha_j}{\sqrt{n}}
@@ -787,7 +787,7 @@ The \emph{Stieltjes transform} of the measure \(\mu\) is defined by
 m(z)=\int_{\mathbb{R}}\frac{d\mu(x)}{z-x},\qquad z\in\mathbb{C}\setminus\mathbb{R}.
 \]
 A \textbf{classical result in the theory of orthogonal polynomials}
-(e.g., see \cite{sokal2020euler}) 
+(e.g., see \cite{sokal2020euler})
 is that \(m(z)\) may be written as the continued fraction
 \begin{equation}\label{eq:CF}
 m(z)=\cfrac{1}{z-a_0-\cfrac{b_1^2}{z-a_1-\cfrac{b_2^2}{z-a_2-\cfrac{b_3^2}{z-a_3-\cdots}}}}.
@@ -1085,10 +1085,10 @@ Compute the determinant
 \subsection{Gap probabilities}
 
 \begin{enumerate}
-	\item 
-Prove identity 
+	\item
+Prove identity
 \eqref{eq:prob-empty-set-DPP} for DPPs.
-\item Prove the generalization computing 
+\item Prove the generalization computing
 	\(\{|X\cap I_k|=n_k\text{ for }1\le k\le m\}\).
 \end{enumerate}
 
@@ -1099,7 +1099,7 @@ Prove identity
 Complete the derivation from \Cref{sec:stieltjes-def} to obtain the limiting Stieltjes transform $G(z)$ for the tridiagonal matrix $T/\sqrt{n}$.
 
 \begin{remark}
-	This is more of a literature search. It is extensive, and 
+	This is more of a literature search. It is extensive, and
 	would make an excellent topic for a presentation.
 \end{remark}
 
