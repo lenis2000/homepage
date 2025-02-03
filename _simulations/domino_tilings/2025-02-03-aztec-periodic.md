@@ -21,6 +21,11 @@ code:
   }
 </style>
 
+This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a measure with $2\times 2$ periodic weights, as in the <a href="https://arxiv.org/abs/1410.2385">paper</a> by Chhita and Johansson. The simulation uses the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
+
+The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
+I set the upper bound at $n=300$ to avoid freezing your browser.
+
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="/js/2025-02-03-aztec-periodic.js"></script>
 
