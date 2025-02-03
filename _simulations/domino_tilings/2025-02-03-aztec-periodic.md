@@ -1,6 +1,6 @@
 ---
 title: Domino tilings of the Aztec diamond with periodic weights
-model: domino-tilings-periodic
+model: domino-tilings
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic.md'
@@ -32,8 +32,10 @@ code:
 </div>
 
 <div class="controls">
-  <input type="checkbox" id="periodic-checkbox" checked>
-  <label for="periodic-checkbox">Use periodic weights (period 2×2: a = 0.5, b = 1.0)</label>
+  <label for="a-input">a:</label>
+  <input id="a-input" type="number" value="0.5" step="0.1">
+  <label for="b-input">b:</label>
+  <input id="b-input" type="number" value="1.0" step="0.1">
 </div>
 
 <div class="controls">
@@ -62,48 +64,39 @@ function grayHex(brightness) {
 }
 
 // Pre-compute grayscale palettes for the four original colors.
-// The keys must be normalized (lowercase) hex strings.
 const palettes = {
-"#ff0000": d3.range(0,8).map(i => grayHex(30*i+5)), // red: brightness from 240 downwards
-"#00ff00": d3.range(0,8).map(i => grayHex(30*i+10)), // green
-"#0000ff": d3.range(0,8).map(i => grayHex(30*i+12)), // blue
-"#ffff00": d3.range(0,8).map(i => grayHex(30*i+18))  // yellow
+"#ff0000": d3.range(0,8).map(i => grayHex(30*i+5)),
+"#00ff00": d3.range(0,8).map(i => grayHex(30*i+10)),
+"#0000ff": d3.range(0,8).map(i => grayHex(30*i+12)),
+"#ffff00": d3.range(0,8).map(i => grayHex(30*i+18))
 };
 
-// Compute a position index between 0 and 7 based on domino coordinates,
-// using the orientation of the domino: for horizontal dominoes (w > h), use the x-coordinate modulo 4;
-// for vertical dominoes, use the y-coordinate modulo 4 and add 4.
 function getPos(d) {
-    if (d.w > d.h) { // horizontal domino
+    if (d.w > d.h) {
         return ((Math.floor(d.x) % 8) + 8) % 8;
-    } else { // vertical domino
+    } else {
         return ((Math.floor(d.y) % 8) + 8) % 8;
     }
 }
 
-// Updated grayscale helper: given the original domino color and domino data,
-// return one of eight grayscale shades.
 function getGrayscaleColor(originalColor, d) {
   let c = d3.color(originalColor);
-  if (!c) return originalColor; // fallback if parsing fails
+  if (!c) return originalColor;
   let normHex = c.formatHex().toLowerCase();
-  let pos = getPos(d); // index from 0 to 7
+  let pos = getPos(d);
   if (palettes[normHex]) {
     return palettes[normHex][pos];
   }
-  // Fallback: generic luminance conversion.
   let r = c.r, g = c.g, b = c.b;
   let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
-  // Adjust brightness linearly based on pos.
   let offset = ((pos / 7) - 0.5) * 80;
   let newLum = Math.max(0, Math.min(255, lum + offset));
   return grayHex(newLum);
 }
 
-// Wait for the WASM module to initialize.
+// Wrap exported functions after module is initialized.
 Module.onRuntimeInitialized = async function() {
-  // Wrap exported functions.
-  const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number', 'number'], {async: true});
+  const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number','number','number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
@@ -120,18 +113,15 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
-  // Main visualization update function.
-  // When called from the update button, it re-samples dominoes and caches them.
   async function updateVisualization(n) {
     svg.selectAll("g").remove();
     startProgressPolling();
 
-    const periodicCheckbox = document.getElementById("periodic-checkbox");
-    const grayscaleCheckbox = document.getElementById("grayscale-checkbox");
-    const periodic = periodicCheckbox.checked ? 1 : 0;
-    const useGrayscale = grayscaleCheckbox.checked;
+    const aVal = parseFloat(document.getElementById("a-input").value);
+    const bVal = parseFloat(document.getElementById("b-input").value);
+    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
 
-    const ptr = await simulateAztec(n, periodic);
+    const ptr = await simulateAztec(n, aVal, bVal);
     const jsonStr = Module.UTF8ToString(ptr);
     freeString(ptr);
 
@@ -144,9 +134,8 @@ Module.onRuntimeInitialized = async function() {
       clearInterval(progressInterval);
       return;
     }
-    cachedDominoes = dominoes; // cache the simulation result
+    cachedDominoes = dominoes;
 
-    // Compute bounding box.
     const minX = d3.min(dominoes, d => d.x);
     const minY = d3.min(dominoes, d => d.y);
     const maxX = d3.max(dominoes, d => d.x + d.w);
@@ -181,7 +170,6 @@ Module.onRuntimeInitialized = async function() {
     progressElem.innerText = "";
   }
 
-  // "Update" button: re-sample and redraw.
   document.getElementById("update-btn").addEventListener("click", () => {
     const n = parseInt(document.getElementById("n-input").value, 10);
     if (isNaN(n) || n < 2 || n > 300 || n % 2 !== 0) {
@@ -191,7 +179,6 @@ Module.onRuntimeInitialized = async function() {
     updateVisualization(n);
   });
 
-  // When the grayscale checkbox is toggled, simply update the fill colors using the cached dominoes.
   document.getElementById("grayscale-checkbox").addEventListener("change", () => {
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
     if (cachedDominoes) {
@@ -200,7 +187,6 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
-  // Run the initial simulation.
   const initialN = parseInt(document.getElementById("n-input").value, 10);
   updateVisualization(initialN);
 };

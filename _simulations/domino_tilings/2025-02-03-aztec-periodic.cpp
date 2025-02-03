@@ -10,7 +10,6 @@ emcc 2025-02-03-aztec-periodic.cpp -o 2025-02-03-aztec-periodic.js \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
   mv 2025-02-03-aztec-periodic.js ../../js/
- Note: When testing locally, serve these files over HTTP rather than via file://.
 */
 
 #include <emscripten.h>
@@ -29,8 +28,6 @@ emcc 2025-02-03-aztec-periodic.cpp -o 2025-02-03-aztec-periodic.js \
 using namespace std;
 
 static std::mt19937 rng(std::random_device{}()); // Global RNG
-
-// Global progress counter (0 to 100)
 volatile int progressCounter = 0;
 
 struct Cell {
@@ -42,7 +39,6 @@ using Matrix = vector<vector<Cell>>;
 using MatrixDouble = vector<vector<double>>;
 using MatrixInt = vector<vector<int>>;
 
-// d3p: builds a vector of matrices from x1.
 vector<Matrix> d3p(const MatrixDouble &x1) {
     int n = (int)x1.size();
     Matrix A(n, vector<Cell>(n));
@@ -54,7 +50,7 @@ vector<Matrix> d3p(const MatrixDouble &x1) {
     vector<Matrix> AA;
     AA.push_back(A);
 
-    int iterations = n / 2 - 1; // Assumes n is even.
+    int iterations = n / 2 - 1;
     for (int k = 0; k < iterations; k++){
         int nk = n - 2 * k - 2;
         Matrix C(nk, vector<Cell>(nk));
@@ -89,7 +85,6 @@ vector<Matrix> d3p(const MatrixDouble &x1) {
     return AA;
 }
 
-// probs2: compute probability matrices from the d3p output.
 vector<MatrixDouble> probs2(const MatrixDouble &x1) {
     vector<Matrix> a0 = d3p(x1);
     int n = (int)a0.size();
@@ -123,7 +118,6 @@ vector<MatrixDouble> probs2(const MatrixDouble &x1) {
     return A;
 }
 
-// delslide: deletion-slide procedure.
 MatrixInt delslide(const MatrixInt &x1) {
     int n = (int)x1.size();
     MatrixInt a0(n + 2, vector<int>(n + 2, 0));
@@ -166,7 +160,6 @@ MatrixInt delslide(const MatrixInt &x1) {
     return a0;
 }
 
-// create: decide domino orientation in each 2x2 block using probabilities.
 MatrixInt create(MatrixInt x0, const MatrixDouble &p) {
     int n = (int)x0.size();
     int half = n / 2;
@@ -201,12 +194,10 @@ MatrixInt create(MatrixInt x0, const MatrixDouble &p) {
     return x0;
 }
 
-// aztecgen: iterate deletion-slide and creation steps.
 MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     int n = (int)x0.size();
     std::uniform_real_distribution<> dis(0.0, 1.0);
     MatrixInt a1;
-    // Initialize with a 2x2 configuration using the first probability.
     if (dis(rng) < x0[0][0][0])
         a1 = { {1, 0}, {0, 1} };
     else
@@ -221,51 +212,31 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     return a1;
 }
 
-// ---------------------------------------------------------------------
-// simulateAztec
-//
-// Exported function callable from JavaScript.
-// It creates a 2*n x 2*n weight matrix and, based on the flag "periodic",
-// uses either uniform weights (all ones) or periodic weights (with period 2×2)
-// with a = 0.5 and b = 1.0. Then it runs the simulation and returns a JSON string
-// with domino placements.
-// ---------------------------------------------------------------------
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
-char* simulateAztec(int n, int periodic) {
-    progressCounter = 0; // Reset progress.
+char* simulateAztec(int n, double a, double b) {
+    progressCounter = 0;
 
     int dim = 2 * n;
-    MatrixDouble A1a;
-    if (periodic == 1) {
-        // Use periodic weights: period 2×2 (implemented via mod 4 conditions)
-        double a = 0.5, b = 1.0;
-        A1a = MatrixDouble(dim, vector<double>(dim, 0.0));
-        for (int i = 0; i < dim; i++){
-            for (int j = 0; j < dim; j++){
-                int im = i % 4;
-                int jm = j % 4;
-                if ((im < 2 && jm < 2) || (im >= 2 && jm >= 2))
-                    A1a[i][j] = b;
-                else
-                    A1a[i][j] = a;
-            }
+    MatrixDouble A1a(dim, vector<double>(dim, 0.0));
+    for (int i = 0; i < dim; i++){
+        for (int j = 0; j < dim; j++){
+            int im = i % 4;
+            int jm = j % 4;
+            if ((im < 2 && jm < 2) || (im >= 2 && jm >= 2))
+                A1a[i][j] = b;
+            else
+                A1a[i][j] = a;
         }
-    } else {
-        // Uniform weights.
-        A1a = MatrixDouble(dim, vector<double>(dim, 1.0));
     }
 
-    // Compute probability matrices.
     vector<MatrixDouble> prob = probs2(A1a);
     progressCounter = 10;
 
-    // Generate domino configuration.
     MatrixInt dominoConfig = aztecgen(prob);
     progressCounter = 90;
 
-    // Build JSON output.
     int size = (int)dominoConfig.size();
     double scale = 10.0;
     ostringstream oss;
@@ -276,25 +247,25 @@ char* simulateAztec(int n, int periodic) {
             if (dominoConfig[i][j] == 1) {
                 double x, y, w, h;
                 string color;
-                if ((i & 1) && (j & 1)) { // Green
+                if ((i & 1) && (j & 1)) {
                     color = "green";
                     x = j - i - 2;
                     y = size + 1 - (i + j) - 1;
                     w = 4;
                     h = 2;
-                } else if ((i & 1) && !(j & 1)) { // Blue
+                } else if ((i & 1) && !(j & 1)) {
                     color = "blue";
                     x = j - i - 1;
                     y = size + 1 - (i + j) - 2;
                     w = 2;
                     h = 4;
-                } else if (!(i & 1) && !(j & 1)) { // Red
+                } else if (!(i & 1) && !(j & 1)) {
                     color = "red";
                     x = j - i - 2;
                     y = size + 1 - (i + j) - 1;
                     w = 4;
                     h = 2;
-                } else if (!(i & 1) && (j & 1)) { // Yellow
+                } else if (!(i & 1) && (j & 1)) {
                     color = "yellow";
                     x = j - i - 1;
                     y = size + 1 - (i + j) - 2;
@@ -334,4 +305,4 @@ int getProgress() {
     return progressCounter;
 }
 
-} // extern "C"
+}
