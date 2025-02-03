@@ -64,10 +64,10 @@ function grayHex(brightness) {
 // Pre-compute grayscale palettes for the four original colors.
 // The keys must be normalized (lowercase) hex strings.
 const palettes = {
-  "#ff0000": d3.range(0,8).map(i => grayHex(240 - 20*i)), // red: brightness from 240 downwards
-  "#00ff00": d3.range(0,8).map(i => grayHex(230 - 20*i)), // green
-  "#0000ff": d3.range(0,8).map(i => grayHex(220 - 20*i)), // blue
-  "#ffff00": d3.range(0,8).map(i => grayHex(250 - 20*i))  // yellow
+"#ff0000": d3.range(0,8).map(i => grayHex(30*i+5)), // red: brightness from 240 downwards
+"#00ff00": d3.range(0,8).map(i => grayHex(30*i+10)), // green
+"#0000ff": d3.range(0,8).map(i => grayHex(30*i+12)), // blue
+"#ffff00": d3.range(0,8).map(i => grayHex(30*i+18))  // yellow
 };
 
 // Compute a position index between 0 and 7 based on domino coordinates,
