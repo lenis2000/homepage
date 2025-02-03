@@ -51,8 +51,54 @@ code:
 </div>
 
 <script>
-// Global variable to store the current simulation data.
+// Global variable to cache the simulation sample.
 let cachedDominoes = null;
+
+// Helper: convert a brightness value (0–255) to a hex grayscale string.
+function grayHex(brightness) {
+  let hex = Math.round(brightness).toString(16);
+  if(hex.length < 2) hex = "0" + hex;
+  return "#" + hex + hex + hex;
+}
+
+// Pre-compute grayscale palettes for the four original colors.
+// The keys must be normalized (lowercase) hex strings.
+const palettes = {
+  "#ff0000": d3.range(0,8).map(i => grayHex(240 - 20*i)), // red: brightness from 240 downwards
+  "#00ff00": d3.range(0,8).map(i => grayHex(230 - 20*i)), // green
+  "#0000ff": d3.range(0,8).map(i => grayHex(220 - 20*i)), // blue
+  "#ffff00": d3.range(0,8).map(i => grayHex(250 - 20*i))  // yellow
+};
+
+// Compute a position index between 0 and 7 based on domino coordinates,
+// using the orientation of the domino: for horizontal dominoes (w > h), use the x-coordinate modulo 4;
+// for vertical dominoes, use the y-coordinate modulo 4 and add 4.
+function getPos(d) {
+    if (d.w > d.h) { // horizontal domino
+        return ((Math.floor(d.x) % 8) + 8) % 8;
+    } else { // vertical domino
+        return ((Math.floor(d.y) % 8) + 8) % 8;
+    }
+}
+
+// Updated grayscale helper: given the original domino color and domino data,
+// return one of eight grayscale shades.
+function getGrayscaleColor(originalColor, d) {
+  let c = d3.color(originalColor);
+  if (!c) return originalColor; // fallback if parsing fails
+  let normHex = c.formatHex().toLowerCase();
+  let pos = getPos(d); // index from 0 to 7
+  if (palettes[normHex]) {
+    return palettes[normHex][pos];
+  }
+  // Fallback: generic luminance conversion.
+  let r = c.r, g = c.g, b = c.b;
+  let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
+  // Adjust brightness linearly based on pos.
+  let offset = ((pos / 7) - 0.5) * 80;
+  let newLum = Math.max(0, Math.min(255, lum + offset));
+  return grayHex(newLum);
+}
 
 // Wait for the WASM module to initialize.
 Module.onRuntimeInitialized = async function() {
@@ -74,44 +120,8 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
-  // Helper function to compute a position index based on domino coordinates.
-  // Use mod 4 for both x and y; then define:
-  //    pos = (x_mod_4 * 2) + (if y_mod_4 >= 2 then 1 else 0)
-  // This gives a value from 0 to 7.
-  function getPos(d) {
-    let xMod = ((Math.floor(d.x) % 4) + 4) % 4;
-    let yMod = ((Math.floor(d.y) % 4) + 4) % 4;
-    return xMod * 2 + (yMod >= 2 ? 1 : 0);
-  }
-
-  // Updated grayscale helper function.
-  // For four specific original colors, we map each to an array of 8 grayscale shades.
-  // Otherwise, we compute a generic grayscale value based on luminance and adjust based on pos.
-  function getGrayscaleColor(originalColor, d) {
-    let c = d3.color(originalColor);
-    if (!c) return originalColor; // fallback if parsing fails
-    let normHex = c.formatHex().toLowerCase();
-    let pos = getPos(d); // value between 0 and 7
-    const mapping = {
-      "#ff0000": ["#f8f8f8", "#e8e8e8", "#d8d8d8", "#c8c8c8", "#b8b8b8", "#a8a8a8", "#989898", "#888888"],
-      "#00ff00": ["#f0f0f0", "#e0e0e0", "#d0d0d0", "#c0c0c0", "#b0b0b0", "#a0a0a0", "#909090", "#808080"],
-      "#0000ff": ["#e8e8e8", "#d8d8d8", "#c8c8c8", "#b8b8b8", "#a8a8a8", "#989898", "#888888", "#787878"],
-      "#ffff00": ["#fcfcfc", "#ececec", "#dcdcdc", "#cccccc", "#bcbcbc", "#acacac", "#9c9c9c", "#8c8c8c"]
-    };
-    if (mapping[normHex]) {
-      return mapping[normHex][pos];
-    }
-    // Fallback: compute luminance and adjust by an offset that depends on pos.
-    let r = c.r, g = c.g, b = c.b;
-    let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
-    // Let offset vary linearly from -40 to +40 over 8 steps.
-    let offset = ((pos / 7) - 0.5) * 80;
-    let newLum = Math.max(0, Math.min(255, lum + offset));
-    let gray = Math.round(newLum).toString(16).padStart(2, "0");
-    return "#" + gray + gray + gray;
-  }
-
-  // Main visualization update function: re-samples (if necessary) and draws the dominoes.
+  // Main visualization update function.
+  // When called from the update button, it re-samples dominoes and caches them.
   async function updateVisualization(n) {
     svg.selectAll("g").remove();
     startProgressPolling();
@@ -121,7 +131,6 @@ Module.onRuntimeInitialized = async function() {
     const periodic = periodicCheckbox.checked ? 1 : 0;
     const useGrayscale = grayscaleCheckbox.checked;
 
-    // Sample the dominoes from the simulation.
     const ptr = await simulateAztec(n, periodic);
     const jsonStr = Module.UTF8ToString(ptr);
     freeString(ptr);
@@ -135,9 +144,7 @@ Module.onRuntimeInitialized = async function() {
       clearInterval(progressInterval);
       return;
     }
-
-    // Cache the simulation result.
-    cachedDominoes = dominoes;
+    cachedDominoes = dominoes; // cache the simulation result
 
     // Compute bounding box.
     const minX = d3.min(dominoes, d => d.x);
@@ -174,7 +181,7 @@ Module.onRuntimeInitialized = async function() {
     progressElem.innerText = "";
   }
 
-  // When the update button is clicked, re-sample and redraw.
+  // "Update" button: re-sample and redraw.
   document.getElementById("update-btn").addEventListener("click", () => {
     const n = parseInt(document.getElementById("n-input").value, 10);
     if (isNaN(n) || n < 2 || n > 300 || n % 2 !== 0) {
@@ -184,11 +191,9 @@ Module.onRuntimeInitialized = async function() {
     updateVisualization(n);
   });
 
-  // When the grayscale checkbox is toggled, do not re-sample.
-  // Instead, simply update the fill colors of the already drawn dominoes.
+  // When the grayscale checkbox is toggled, simply update the fill colors using the cached dominoes.
   document.getElementById("grayscale-checkbox").addEventListener("change", () => {
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-    // If we have a cached sample, update the fill attribute.
     if (cachedDominoes) {
       d3.select("#aztec-svg").select("g").selectAll("rect")
         .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
