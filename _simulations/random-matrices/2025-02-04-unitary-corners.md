@@ -37,14 +37,15 @@ code:
   <div class="col-12">
       <h5>Simulation Regime:</h5>
       <div class="mb-3">
-        <label>
-          <input type="radio" name="regime" value="goe" id="regimeGOE" checked>
+
+      <label>
+        <input type="radio" name="regime" value="discrete" id="regimeDiscrete" checked>
+        Discrete Top Eigenvalue Profile
+      </label>
+      &nbsp;&nbsp;
+      <label>
+          <input type="radio" name="regime" value="goe" id="regimeGOE">
           GOE
-        </label>
-        &nbsp;&nbsp;
-        <label>
-          <input type="radio" name="regime" value="discrete" id="regimeDiscrete">
-          Discrete Top Eigenvalue Profile
         </label>
       </div>
   </div>
