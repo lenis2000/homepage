@@ -4,7 +4,7 @@ Wigner matrix, or of a matrix with a prescribed diagonal spectrum.
 
 To compile, you need to have Emscripten installed and the Eigen library available
 
-emcc 2025-02-04-unitary-corners.cpp -o 2025-02-04-unitary-corners.js \
+emcc 2025-02-04-orthogonal-corners.cpp -o 2025-02-04-orthogonal-corners.js \
     -s WASM=1 \
     -s "EXPORTED_FUNCTIONS=['_computeCornerEigenvalues','_computeCornerEigenvaluesDiscrete','_malloc','_free']" \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
@@ -15,7 +15,7 @@ emcc 2025-02-04-unitary-corners.cpp -o 2025-02-04-unitary-corners.js \
     -s ASSERTIONS=1 \
     -I ../../eigen-3.4-rc1 \
     -s SINGLE_FILE=1 \
-    && mv 2025-02-04-unitary-corners.js ../../js/
+    && mv 2025-02-04-orthogonal-corners.js ../../js/
 
 then move the js file into the /js/ folder
 

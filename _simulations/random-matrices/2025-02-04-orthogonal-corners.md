@@ -3,14 +3,14 @@ title: Corner eigenvalues of orthogonally invariant random matrices with fixed s
 model: random-matrices
 author: 'Connor MacMahon, Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-02-04-unitary-corners.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-02-04-orthogonal-corners.md'
     txt: 'This simulation is interactive, written in JavaScript – see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-02-04-unitary-corners.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-02-04-orthogonal-corners.cpp'
     txt: 'C++ code for the simulation'
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
-<script src="{{site.url}}/js/2025-02-04-unitary-corners.js"></script>
+<script src="{{site.url}}/js/2025-02-04-orthogonal-corners.js"></script>
 
 <div class="row">
   <div class="col-12 mb-3">
