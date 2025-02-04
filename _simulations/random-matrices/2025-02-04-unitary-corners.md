@@ -24,7 +24,7 @@ code:
       </li>
       <li>
         <strong>Discrete Top Eigenvalue Profile:</strong> A diagonal matrix with 10 distinct eigenvalues (each with high multiplicity) is conjugated by a random Haar matrix.
-        You can adjust the 10 discrete eigenvalues by dragging the red points.
+        You can adjust the 10 discrete eigenvalues by dragging the red points or by using the numeric fields below.
       </li>
     </ul>
     <p>
@@ -50,16 +50,69 @@ code:
   </div>
 </div>
 
+<!-- Discrete density plot container with responsive SVG -->
 <div class="row" id="discreteDensityContainer">
   <div class="col-12">
       <h5>Discrete Top Eigenvalue Profile (Drag the red points):</h5>
-      <svg id="discreteDensitySVG" width="600" height="150" style="border:1px solid #ccc;"></svg>
+      <!-- The SVG now uses a viewBox and 100% width so that it fits Bootstrap’s grid -->
+      <svg id="discreteDensitySVG" viewBox="0 0 600 150" style="border:1px solid #ccc; width: 100%; height: auto;"></svg>
       <button id="clearDensityBtn" class="btn btn-secondary mt-2">Clear Discrete Profile</button>
       <p class="mt-2">
         Drag the 10 red points horizontally to set the 10 distinct eigenvalues.
       </p>
   </div>
 </div>
+
+<!-- New row: Numeric input fields for the discrete profile -->
+<div class="row" id="discreteFieldsContainer">
+  <div class="col-12">
+    <h5>Discrete Profile Values</h5>
+    <div class="row">
+      <!-- Here we create 10 numeric fields.
+           On larger screens each will take a small column (col-md-1) while on extra-small screens they take half the width (col-6). -->
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField0" class="form-label">1</label>
+              <input type="number" id="discreteField0" class="form-control" step="10" value="100.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField1" class="form-label">2</label>
+              <input type="number" id="discreteField1" class="form-control" step="10" value="140.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField2" class="form-label">3</label>
+              <input type="number" id="discreteField2" class="form-control" step="10" value="180.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField3" class="form-label">4</label>
+              <input type="number" id="discreteField3" class="form-control" step="10" value="220.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField4" class="form-label">5</label>
+              <input type="number" id="discreteField4" class="form-control" step="10" value="260.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField5" class="form-label">6</label>
+              <input type="number" id="discreteField5" class="form-control" step="10" value="300.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField6" class="form-label">7</label>
+              <input type="number" id="discreteField6" class="form-control" step="10" value="340.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField7" class="form-label">8</label>
+              <input type="number" id="discreteField7" class="form-control" step="10" value="380.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField8" class="form-label">9</label>
+              <input type="number" id="discreteField8" class="form-control" step="10" value="420.0" style="width: 5em">
+           </div>
+           <div class="col-6 col-md-1 mb-2 text-center">
+              <label for="discreteField9" class="form-label">10</label>
+              <input type="number" id="discreteField9" class="form-control" step="10" value="460.0" style="width: 5em">
+           </div>
+         </div>
+       </div>
+     </div>
 
 <!-- Only one button: Resample -->
 <div class="row">
@@ -92,6 +145,8 @@ const discreteSVG = d3.select("#discreteDensitySVG");
 const numDiscretePoints = 10;
 let discretePoints = d3.range(numDiscretePoints).map(i => ({ x: 100 + i * 40, y: 75 }));
 
+// Function to update the red circles in the discrete density plot.
+// Also updates the numeric fields.
 function updateDiscreteDrawing() {
     const circles = discreteSVG.selectAll("circle").data(discretePoints);
     circles.enter().append("circle")
@@ -99,22 +154,36 @@ function updateDiscreteDrawing() {
         .attr("fill", "red")
         .call(d3.drag()
             .on("drag", function(event, d) {
+                // Clamp the x coordinate between 0 and 600.
                 d.x = Math.max(0, Math.min(600, event.x));
-                d.y = 75;
                 d3.select(this).attr("cx", d.x);
+                updateDiscreteFields();
             })
         )
         .merge(circles)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y);
     circles.exit().remove();
+    updateDiscreteFields();
+}
+
+// Update the numeric fields to match the current discretePoints values.
+function updateDiscreteFields() {
+    discretePoints.forEach((pt, i) => {
+        const field = document.getElementById("discreteField" + i);
+        if (field) {
+            field.value = pt.x.toFixed(1);
+        }
+    });
 }
 
 function updateRegimeDisplay() {
     if (document.getElementById("regimeGOE").checked) {
         d3.select("#discreteDensityContainer").style("display", "none");
+        d3.select("#discreteFieldsContainer").style("display", "none");
     } else {
         d3.select("#discreteDensityContainer").style("display", "block");
+        d3.select("#discreteFieldsContainer").style("display", "block");
         updateDiscreteDrawing();
     }
 }
@@ -125,6 +194,18 @@ document.getElementById("clearDensityBtn").addEventListener("click", () => {
     discretePoints = d3.range(numDiscretePoints).map(i => ({ x: 100 + i * 40, y: 75 }));
     updateDiscreteDrawing();
 });
+
+// Set up change listeners for the numeric input fields so that when a field is modified,
+// the corresponding discrete point is updated and the drawing is refreshed.
+for (let i = 0; i < numDiscretePoints; i++) {
+    const field = document.getElementById("discreteField" + i);
+    if (field) {
+        field.addEventListener("change", function() {
+            discretePoints[i].x = parseFloat(this.value);
+            updateDiscreteDrawing();
+        });
+    }
+}
 
 async function initWasm() {
     try {
@@ -139,10 +220,8 @@ async function initWasm() {
         // Allocate persistent buffer for discrete mode (10 doubles) once.
         const malloc = Module["malloc"] || Module._malloc;
         discreteBufferPtr = malloc(10 * Float64Array.BYTES_PER_ELEMENT);
-        // console.log("Persistent discrete buffer allocated at:", discreteBufferPtr);
         updateSimulation();
     } catch (error) {
-        // console.error('Failed to load WASM:', error);
         document.body.innerHTML += `<p style="color: red">Error loading WASM: ${error.message}</p>`;
     }
 }
@@ -155,6 +234,7 @@ function updateSimulation() {
     if (document.getElementById("regimeGOE").checked) {
          ptr = Module._computeCornerEigenvalues(N);
     } else {
+         // Sort the discrete eigenvalues from the numeric fields (via discretePoints.x).
          let sortedPoints = discretePoints.map(d => d.x).sort((a, b) => a - b);
          let eigenArray = new Float64Array(sortedPoints);
          // Use the persistent discreteBufferPtr.
@@ -162,11 +242,7 @@ function updateSimulation() {
          ptr = Module._computeCornerEigenvaluesDiscrete(N, discreteBufferPtr);
     }
     const expectedBytes = 2 * totalPoints * 8;
-    // console.log("Returned pointer:", ptr);
-    // console.log("Expected bytes:", expectedBytes);
-    // console.log("Current HEAPF64 buffer size:", Module.HEAPF64.buffer.byteLength);
     if (ptr + expectedBytes > Module.HEAPF64.buffer.byteLength) {
-        // console.error("Error: Returned pointer plus expected data size exceed available memory!");
         return;
     }
     computedData = Array.from(new Float64Array(Module.HEAPF64.buffer, ptr, 2 * totalPoints));
