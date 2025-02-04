@@ -70,45 +70,45 @@ code:
     <div class="row">
       <!-- Here we create 10 numeric fields.
            On larger screens each will take a small column (col-md-1) while on extra-small screens they take half the width (col-6). -->
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField0" class="form-label">1</label>
-              <input type="number" id="discreteField0" class="form-control" step="10" value="100.0" style="width: 5em">
+              <input type="number" id="discreteField0" class="form-control" step="10" value="100" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField1" class="form-label">2</label>
-              <input type="number" id="discreteField1" class="form-control" step="10" value="140.0" style="width: 5em">
+              <input type="number" id="discreteField1" class="form-control" step="10" value="140" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField2" class="form-label">3</label>
-              <input type="number" id="discreteField2" class="form-control" step="10" value="180.0" style="width: 5em">
+              <input type="number" id="discreteField2" class="form-control" step="10" value="180" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField3" class="form-label">4</label>
-              <input type="number" id="discreteField3" class="form-control" step="10" value="220.0" style="width: 5em">
+              <input type="number" id="discreteField3" class="form-control" step="10" value="220" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField4" class="form-label">5</label>
-              <input type="number" id="discreteField4" class="form-control" step="10" value="260.0" style="width: 5em">
+              <input type="number" id="discreteField4" class="form-control" step="10" value="260" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField5" class="form-label">6</label>
-              <input type="number" id="discreteField5" class="form-control" step="10" value="300.0" style="width: 5em">
+              <input type="number" id="discreteField5" class="form-control" step="10" value="300" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField6" class="form-label">7</label>
-              <input type="number" id="discreteField6" class="form-control" step="10" value="340.0" style="width: 5em">
+              <input type="number" id="discreteField6" class="form-control" step="10" value="340" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField7" class="form-label">8</label>
-              <input type="number" id="discreteField7" class="form-control" step="10" value="380.0" style="width: 5em">
+              <input type="number" id="discreteField7" class="form-control" step="10" value="380" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField8" class="form-label">9</label>
-              <input type="number" id="discreteField8" class="form-control" step="10" value="420.0" style="width: 5em">
+              <input type="number" id="discreteField8" class="form-control" step="10" value="420" style="width: 5em">
            </div>
-           <div class="col-6 col-md-1 mb-2 text-center">
+           <div class="col-4 col-md-1 mb-2 text-center">
               <label for="discreteField9" class="form-label">10</label>
-              <input type="number" id="discreteField9" class="form-control" step="10" value="460.0" style="width: 5em">
+              <input type="number" id="discreteField9" class="form-control" step="10" value="460" style="width: 5em">
            </div>
          </div>
        </div>
