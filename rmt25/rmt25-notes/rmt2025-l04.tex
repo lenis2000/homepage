@@ -709,10 +709,14 @@ is then the integral of the solution:
 	\int_0^1 f_\theta(\theta)\,d\theta.
 \end{equation*}
 
-\colorbox{green}{\parbox{.7\textwidth}{At this point, I am stuck on how to pass from
+\colorbox{green}{\parbox{.7\textwidth}{At this point (2025-01-30), I am stuck on how to pass from
 \eqref{eq:resolvent-diff-eq} to the Stieltjes transform $G(z)$.
 This would be an excellent topic to explore for a presentation.
 See~Problem~\ref{prob:resolvent-diff-eq}.}}
+
+\colorbox{yellow}{\parbox{.7\textwidth}{Update 2025-02-05: Probably,
+the limit of $\alpha_j/\sqrt n$ should be taken as $1$ and not as a function of $\tau$.
+At least this is what is done in the next approach in \Cref{sub:continued-fractions}.}}
 
 
 \subsection{Approach via continued fractions}
@@ -776,7 +780,15 @@ Thus, in the limit the recurrence coefficients become
 \[
 a_n=0,\quad b_n=1,
 \]
-for all \(n\). In this homogeneous case the three-term recurrence \eqref{eq:three-term} reduces to
+for all \(n\). 
+
+\colorbox{yellow}{\parbox{.7\textwidth}{Note 2025-02-05:
+This is probably the correct way to approach the global asymptotic behavior of 
+$T$'s spectrum in connection with the Stieltjes transform. 
+This should be justified; however, this idea should help to unstick 
+the argument in \Cref{sec:stieltjes-def}.}}
+
+In this homogeneous case the three-term recurrence \eqref{eq:three-term} reduces to
 \[
 p_0(z)=1,\quad p_1(z)=z,\quad p_{n+1}(z)=z\,p_n(z)-p_{n-1}(z).
 \]
