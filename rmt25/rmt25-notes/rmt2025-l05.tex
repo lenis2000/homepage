@@ -257,19 +257,35 @@ $p_{j-1}(x)$ and obtain
 \[
 \det\Bigl[x_i^{j-1}\Bigr]_{i,j=1}^n = \det\Bigl[p_{j-1}(x_i)\Bigr]_{i,j=1}^n.
 \]
+The first few monic Hermite polynomials are
+\begin{equation*}
+	p_0(x)=1,\qquad
+	p_1(x)=x,\qquad
+	p_2(x)=x^2-1,\qquad
+	p_3(x)=x^3-3x,\qquad
+	p_4(x)=x^4-6x^2+3.
+\end{equation*}
+
+
 The orthogonality condition for these polynomials is
 \[
 \int_{-\infty}^\infty p_j(x)p_k(x)e^{-x^2/2}\,dx = h_j\,\delta_{jk}.
 \]
 We define the functions
-\[
+\begin{equation}
+\label{eq:phi_j}
 \phi_j(x)=p_j(x)e^{-x^2/4},
-\]
+\end{equation}
 and then introduce the orthonormal functions
-\[
+\begin{equation}
+\label{eq:psi_j}
 \psi_j(x)=\frac{1}{\sqrt{h_j}}\phi_j(x)=\frac{1}{\sqrt{h_j}}\,p_j(x)e^{-x^2/4}.
-\]
+\end{equation}
 Note that here the weight splits as $e^{-x^2/2}=e^{-x^2/4}e^{-x^2/4}$, which is useful in the next step.
+The functions $\psi_j$ form an orhtonormal basis of the Hilbert space $L^2(\mathbb{R},dx)$:
+\begin{equation*}
+	\int_{-\infty}^\infty \psi_j(x)\psi_k(x)\,dx = \delta_{jk},\qquad j,k=0,1,\dots.
+\end{equation*}
 
 \subsubsection{Rewriting the density in determinantal form}
 
@@ -292,9 +308,10 @@ p(x_1,\dots,x_n)=\frac{1}{\tilde{Z}_{n,2}} \Bigl[\det\Bigl[\phi_{j-1}(x_i)\Bigr]
 This squared-determinant structure is characteristic of determinantal point processes.
 
 We now compute the $k$-point correlation function by integrating out the remaining $n-k$ variables:
-\begin{equation*}
+\begin{equation}
+\label{eq:k-point-corr}
 	\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n) \,dx_{k+1}\cdots dx_n.
-\end{equation*}
+\end{equation}
 \begin{remark}
 When defining the \(k\)-point correlation function, one might initially expect a combinatorial factor corresponding to the number of ways of choosing \(k\) variables out of \(n\), namely \(\binom{n}{k} = \frac{n!}{k!(n-k)!}\).
 The absence of an extra \(k!\) in the denominator is due to the fact that $x_1,\ldots,x_k $
@@ -327,17 +344,14 @@ Expanding the square of the determinant, we have
 \]
 where $S_n$ denotes the symmetric group on $n$ elements.
 
-Next, to obtain the $k$-point correlation function $\rho_k(x_1,\dots,x_k)$, we integrate out the remaining $n-k$ variables:
-\[
-\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n)\,dx_{k+1}\cdots dx_n.
-\]
-Since the joint density is symmetric under permutations of the variables, we may assume without loss of generality that the first $k$ variables are the ones being fixed.
-
+Next, to obtain the $k$-point correlation function $\rho_k(x_1,\dots,x_k)$, we integrate out the remaining $n-k$ variables
+using \eqref{eq:k-point-corr}.
 Substituting the expansion of the squared determinant into the expression for $\rho_k$, we have
-\begin{multline*}
+\begin{multline}
+	\label{eq:rho_k_computation_1}
 \rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!\,\tilde{Z}_{n,2}} \sum_{\sigma,\tau\in S_n} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \\
 \left\{ \prod_{i=1}^k \phi_{\sigma(i)-1}(x_i)\phi_{\tau(i)-1}(x_i) \prod_{j=k+1}^n \int_{\mathbb{R}} \phi_{\sigma(j)-1}(x)\phi_{\tau(j)-1}(x)\,dx \right\}.
-\end{multline*}
+\end{multline}
 Now, change the functions $\phi_j(x)$ to the orthonormal functions $\psi_j(x)$ using the relation
 \[
 \phi_j(x)=\sqrt{h_j}\,\psi_j(x).
@@ -352,49 +366,94 @@ By the orthonormality of the $\psi_j$'s, we have
 \]
 Therefore, for the indices $j=k+1,\dots,n$, the integrals enforce the condition $\sigma(j)=\tau(j)$. As a result, the double sum over $\sigma$ and $\tau$ reduces to a single sum over permutations on the first $k$ indices, and the factors for the remaining indices simply contribute to the normalization constant.
 
+Let us add more details here.
+In \eqref{eq:rho_k_computation_1}, we get, using the symmetry over $x_1,\ldots,x_k $:
+\begin{multline}
+	\label{eq:rho_k_computation_2}
+	\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!\,\tilde{Z}_{n,2}}
+	\sum_{\substack{\sigma,\tau\in S_n\\
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \\
+	\left\{ \prod_{i=1}^k \phi_{\sigma(i)-1}(x_i)\phi_{\tau(i)-1}(x_i)
+	h_{\sigma(k+1)-1}\cdots h_{\sigma(n)-1}  \right\} .
+\end{multline}
+By Problem~\ref{prob:norm}, we have $h_j=\sqrt{2\pi}\ssp j!$.
+
+To continue with \eqref{eq:rho_k_computation_2}, we need two general lemmas.
+\begin{lemma}[Cauchy--Binet formula]
+	\label{lemma:Cauchy_Binet}
+	Let $A_{ij}$ and $B_{ij}$ be rectangular matrices of size \(m\times p\) and \(p\times m\), respectively,
+	with
+	$m\le p$.
+	Then
+	\begin{equation*}
+		\det\left[ \sum_{\ell=1}^p A_{i\ell}B_{\ell j}
+		\right]_{i,j=1}^m=
+		\sum_{\ell_1<\ell_2<\cdots<\ell_p} \det\Bigl[A_{i,\ell_j}\Bigr]_{i,j=1}^m \det\Bigl[B_{\ell_i, j}\Bigr]_{j=1}^m.
+	\end{equation*}
+\end{lemma}
+\begin{proof}
+For any $1 \leq k \leq p$, the coefficient of $z^{p-k}$ in the polynomial $\det(zI_p+X)$ is the sum of the $k \times k$ principal minors of $X$. If $m \leq p$ and $A$ is an $m \times p$ matrix and $B$ is an $p \times m$ matrix, then
+\begin{equation}
+\label{eq:det_polynomial}
+\det(zI_p+BA)=z^{p-m}\det(zI_m+AB).
+\end{equation}
+If we compare the coefficient of $z^{p-m}$ in
+\eqref{eq:det_polynomial}, the left hand side will give the
+sum of the principal minors of $BA$ while the right hand
+side will give the constant term of $\det(zI_m+AB)$, which
+is simply $\det(AB)$. This yields the desired result.
+\end{proof}
+\begin{lemma}[Andreief identity]
+	\label{lemma:Andreief}
+	Let $f_i(x),g_i(x)\in L^1(\mathbb{R})$ for \(i=1,\ldots,n\).
+	Then
+	\[
+	\int_{\mathbb{R}^n}
+	\det[f_i(x_j)]_{i,j=1}^n
+	\det[g_i(x_j)]_{i,j=1}^n
+	dx_1\cdots dx_n
+	=
+	n! \det\Bigl[\int_{\mathbb{R}}
+		f_i(x)g_j(x)\,dx
+	\Bigr]_{i,j=1}^n.
+	\]
+\end{lemma}
+\begin{proof}
+	We have by expanding the determinants in the left-hand side:
+	\begin{equation*}
+		\int_{\mathbb{R}^n}
+		\sum_{\sigma,\tau\in S_n}
+		\operatorname{sgn}(\sigma)\operatorname{sgn}(\tau)
+		\prod_{i=1}^n f_{\sigma(i)}(x_i)g_{\tau(i)}(x_i)
+		dx_1\cdots dx_n.
+	\end{equation*}
+	Now, we can sum over $\sigma\tau^{-1}$, and use the fact that
+	the operation of integration over $\mathbb{R}^n$
+	is symmetric in the variables \(x_1,\ldots,x_n\).
+	We thus need to integrate the products of $f_{(\sigma\tau^{-1})(i)}(x_i)$,
+	yielding the desired determinant in the right-hand side.
+	The factor $n!$ comes from the fact that for each fixed $\sigma\tau^{-1}$, there
+	are $n!$ different pairs $(\sigma,\tau)$. This completes the proof.
+\end{proof}
+
+
+
 Collecting these results, one deduces that
-\[
+\begin{equation}
 \rho_k(x_1,\dots,x_k)=
 \mathrm{const}\cdot
-\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
-\]
+\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k, \label{eq:rho_k_determinantal_final_result}
+\end{equation}
 where the kernel is given by
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
 \]
-To complete the proof, one must verify that the normalization constant is indeed $1$.
-We can achieve this by using the fact that $p_n$ is the same as $\rho_n$.
-Then, integrating $\rho_n$ over all variables gives the normalization constant,
-and we have
-\begin{equation}
-	\label{eq:gue-normalization}
-	\int_{\mathbb{R}^n} \det\Bigl[\sum_{\ell=0}^{n-1}\psi_\ell(x_i)\psi_\ell(x_j)\Bigr]_{i,j=1}^n \,dx_1\cdots dx_n = n!,
-\end{equation}
-and the integral over $x_1>\cdots>x_n$ is equal to $1$, as it should be.
-
-To prove \eqref{eq:gue-normalization},
-define the \(n\times n\) matrix
-\[
-A=\Bigl[\psi_{j-1}(x_i)\Bigr]_{i,j=1}^n.
-\]
-Then, by the Cauchy--Binet formula,
-\[
-\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^n = \det\Bigl[AA^\top\Bigr]
-=\det\Bigl[A\Bigr]^2.
-\]
-The Andreief integration formula tells us that
-\[
-\int_{\mathbb{R}^n} \det\Bigl[A\Bigr]^2\,dx_1\cdots dx_n = n! \det\Bigl[\int_{\mathbb{R}} \psi_{i-1}(x)\psi_{j-1}(x)\,dx\Bigr]_{i,j=1}^n.
-\]
-Since the \(\psi_j\)'s are orthonormal,
-\[
-\int_{\mathbb{R}} \psi_{i-1}(x)\psi_{j-1}(x)\,dx = \delta_{ij},
-\]
-and hence
-\[
-\det\Bigl[\delta_{ij}\Bigr]_{i,j=1}^n = 1.
-\]
-This completes the proof of the theorem.
+The fact that the normalization constant 
+in \eqref{eq:rho_k_determinantal_final_result}
+is indeed $1$ follows from \Cref{lemma:Andreief}.
+Indeed, once the integral of $\rho_n$ over $\mathbb{R}^n$ is equal to \(n!\),
+the integral over $x_1>\cdots>x_n$ becomes $1$ by symmetry, as it should be.
+This completes the proof of \Cref{thm:determinantal}.
 \end{proof}
 
 \subsection{Christoffel--Darboux formula}
@@ -480,130 +539,6 @@ The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Double Contour Integral Representation for the GUE Kernel}
-\label{sec:double-contour}
-
-\subsection{One contour integral representation for Hermite polynomials}
-
-Recall that the GUE kernel is defined by
-\[
-K_N(x,y)=\sum_{n=0}^{N-1}\psi_n(x)\psi_n(y),
-\]
-with the orthonormal functions
-\[
-\psi_n(x)=\frac{1}{\sqrt{h_n}}\,p_n(x)\,e^{-x^2/4},
-\]
-where the (monic, probabilists') Hermite polynomials are given by
-\[
-p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}\,e^{-x^2/2},
-\]
-and satisfy the generating function
-\[
-\exp\Bigl(xt-\frac{t^2}{2}\Bigr)=\sum_{n\ge0}p_n(x)\frac{t^n}{n!}.
-\]
-
-By Cauchy's integral formula we can write
-\[
-p_n(x)=\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt,
-\]
-where the contour \(C\) is a simple closed curve encircling the origin.
-Therefore,
-\begin{equation*}
-	\psi_n(x)=\frac{1}{\sqrt{h_n}}\,p_n(x)\,e^{-x^2/4}=
-	\frac{e^{-x^2/4}}{\sqrt{h_n}}\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt.
-\end{equation*}
-
-
-\subsection{Another contour integral representation for Hermite polynomials}
-
-Note also that
-\[
-\int_{-\infty}^{\infty} e^{-t^2+\sqrt{2} i\,t\,x}\,dt
-=\sqrt{\pi}\,e^{-x^2/2}.
-\]
-Differentiating both sides \(n\) times with respect to \(x\) (and using the fact that in our convention the Gaussian appears with \(x^2/2\)) yields
-\[
-\frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr)
-=\frac{1}{\sqrt{\pi}}\int_{-\infty}^{\infty} \Bigl(\sqrt{2}i\,t\Bigr)^n
-e^{-t^2+\sqrt{2} i\,t\,x}\,dt.
-\]
-Changing variables via \(s=i\,t\) (so that \(t=-i\,s\) and \(dt=-i\,ds\)) one obtains
-\[
-\frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr)
-=\frac{(\sqrt{2})^n}{i\sqrt{\pi}}
-\int_{-i\infty}^{i\infty} s^n\,e^{s^2+\sqrt{2}\,s\,x}\,ds.
-\]
-Multiplying by \((-1)^n e^{x^2/2}\) we deduce that
-\begin{equation}
-\label{eq:pn-contour}
-p_n(x)
-=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr)
-=\frac{i\,(\sqrt{2})^n\,e^{x^2/2}}{\sqrt{\pi}}
-\int_{-i\infty}^{i\infty} s^n\,e^{s^2-\sqrt{2}\,s\,x}\,ds.
-\end{equation}
-
-Now, recall that the orthonormal functions are defined as
-\[
-\psi_n(x)=\frac{1}{\sqrt{h_n}}\,p_n(x)\,e^{-x^2/4},
-\]
-so that by \eqref{eq:pn-contour}
-\[
-\psi_n(x)
-=\frac{i\,e^{x^2/4}}{\sqrt{\pi\,h_n}}
-\int_{-i\infty}^{i\infty}(\sqrt2 s)^n\,e^{s^2-\sqrt{2}\,s\,x}\,ds
-=
-\frac{i\,e^{x^2/4}}{\sqrt{2\pi\,h_n}}
-\int_{-i\infty}^{i\infty}s^n\,e^{s^2/2-s\,x}\,ds.
-\]
-
-\subsection{Double contour integral representation for the GUE kernel}
-
-We have (Problem~\ref{prob:norm})
-\begin{equation*}
-	h_n=\int_{-\infty}^{\infty} p_n(x)^2\,e^{-x^2/2}\,dx=n!\sqrt{2\pi}.
-\end{equation*}
-Therefore, we can sum up the kernel (another proof of the Christoffel--Darboux formula):
-\begin{align*}
-	K_n(x,y)&=
-	\sum_{k=0}^{n-1}\psi_k(x)\psi_k(y)
-	\\&=
-	\sum_{k=0}^{n-1}
-	\frac{e^{-x^2/4}}{\sqrt{h_k}}\frac{k!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{k+1}}\,dt
-	\frac{i\,e^{y^2/4}}{\sqrt{2\pi\,h_k}}
-	\int_{-i\infty}^{i\infty}s^k\,e^{s^2/2-s\,y}\,ds
-	\\&=
-	e^{(y^2-x^2)/4}
-	\sum_{k=0}^{n-1}
-	\frac{1}{4\pi^2}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{k+1}}\,dt
-	\int_{-i\infty}^{i\infty}s^k\,e^{s^2/2-s\,y}\,ds.
-\end{align*}
-We can now extend the sum to
-$k=-\infty$, and get a formula for the
-GUE kernel as a double contour integral:
-\begin{equation*}
-	K_n(x,y)=\frac{e^{(y^2-x^2)/4}}{4\pi^2}
-	\oint_C
-	\int_{-\mathbf{i}\infty}^{\mathbf{i}\infty}
-	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n\ssp ds\ssp dt.
-\end{equation*}
-Details will be in the next
-\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.pdf}{Lecture 6}.
-
-\begin{remark}
-Many other versions of the GUE / unitary invariant ensembles admit determinantal structure:
-\begin{enumerate}
-	\item The GUE corners process \cite{johansson2006eigenvalues}
-    \item The Dyson Brownian motion (e.g., add a GUE to a diagonal matrix)
-			\cite{nagao1998multilevel}
-		\item GUE corners plus a fixed matrix \cite{Ferrari2014PerturbedGUE}
-    \item Corners invariant ensembles with fixed eigenvalues $UDU^\dagger$, where $D$ is a fixed diagonal matrix and $U$ is Haar distributed
-			on the unitary group \cite{Metcalfe2011GT}
-	\end{enumerate}
-\end{remark}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
