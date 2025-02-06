@@ -368,15 +368,21 @@ Therefore, for the indices $j=k+1,\dots,n$, the integrals enforce the condition 
 
 Let us add more details here.
 In \eqref{eq:rho_k_computation_1}, we get, using the symmetry over $x_1,\ldots,x_k $:
-\begin{multline}
+\begin{equation}
 	\label{eq:rho_k_computation_2}
-	\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!\,\tilde{Z}_{n,2}}
+	\rho_k(x_1,\dots,x_k)=\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
 	\sum_{\substack{\sigma,\tau\in S_n\\
-	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \\
-	\left\{ \prod_{i=1}^k \phi_{\sigma(i)-1}(x_i)\phi_{\tau(i)-1}(x_i)
-	h_{\sigma(k+1)-1}\cdots h_{\sigma(n)-1}  \right\} .
-\end{multline}
-By Problem~\ref{prob:norm}, we have $h_j=\sqrt{2\pi}\ssp j!$.
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
+	\prod_{i=1}^k \psi_{\sigma(i)-1}(x_i)\psi_{\tau(i)-1}(x_i)  .
+\end{equation}
+Indeed, here we integrated over $x_{k+1},\ldots,x_n $, and passed
+from the functions $\phi_0,\phi_1,\ldots,\phi_{n-1} $
+to
+$\psi_0,\psi_1,\ldots,\psi_{n-1} $.
+The passage to the orthonormal functions only introduces the constant 
+$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the 
+normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and 
+we later will show that the final normalization becomes $1$.
 
 To continue with \eqref{eq:rho_k_computation_2}, we need two general lemmas.
 \begin{lemma}[Cauchy--Binet formula]
@@ -436,9 +442,30 @@ is simply $\det(AB)$. This yields the desired result.
 	are $n!$ different pairs $(\sigma,\tau)$. This completes the proof.
 \end{proof}
 
-
-
-Collecting these results, one deduces that
+Let us now continue with \eqref{eq:rho_k_computation_2}, and finish the proof of Theorem \ref{thm:determinantal}.
+To sum over $\sigma,\tau$, let us denote
+$I=\{\sigma(1),\ldots,\sigma(k) \}\subseteq [n]=\{1,\ldots,n \}$.
+The set $[n]\setminus I$ can be ordered in $(n-k)!$ ways, and since
+$\sigma $ and $\tau$ must coincide on $[n]\setminus I$, the product of their
+(partial) signs is $+1$ there. Thus, we have
+\begin{equation*}
+	\eqref{eq:rho_k_computation_2}=
+	\mathrm{const}_n\sum_{I\subseteq [n],\,|I|=k}
+	\sum_{\sigma',\tau'\in S(I)}
+	\operatorname{sgn}(\sigma')\operatorname{sgn}(\tau')
+	\prod_{i=1}^k \psi_{\sigma'(i)-1}(x_i)\psi_{\tau'(i)-1}(x_i)  .
+\end{equation*}
+where $S(I)$ is the set of all permutations of \(I\).
+The sum over $\sigma',\tau'$ is actually a product of two
+sums over two independent permutations, and thus we get the product
+of two determinants:
+\begin{equation*}
+	\det\Bigl[\psi_{\ell_i-1}(x_j)\Bigr]_{i=1}^k}
+	\det\Bigl[\psi_{\ell_i-1}(x_j)\Bigr]_{i=1}^k},\qquad I=\{\ell_1<\ell_2<\cdots<\ell_k \}.
+\end{equation*}
+By \Cref{lemma:Cauchy_Binet}, we can rewrite the sum (over $I$)
+of products
+of two determinants as a single determinant of the sum. Thus, we have
 \begin{equation}
 \rho_k(x_1,\dots,x_k)=
 \mathrm{const}\cdot
