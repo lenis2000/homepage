@@ -72,9 +72,9 @@ Updated at \currenttime, \today}}
 \begin{lnotes}
 	1. GUE det structure
 
-	2. Formulate Cauchy--Binet and Andreief 
+	2. Formulate Cauchy--Binet and Andreief
 
-	3. Recall that $\rho_n=P_n$ and it is 
+	3. Recall that $\rho_n=P_n$ and it is
 	$\left( \det[\psi_i(x_j)]_{n\times n} \right)^2$, then reproduce the proofs here.
 \end{lnotes}
 
@@ -87,11 +87,11 @@ The GUE correlation functions are given by
 \[
 \rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
 \]
-with the correlation kernel 
+with the correlation kernel
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
 \]
-Here 
+Here
 \begin{equation*}
 	\psi_j(x)=\frac{1}{\sqrt{h_j}}\ssp p_j(x)\,e^{-x^2/4},
 \end{equation*}
@@ -108,14 +108,14 @@ replaced by integration). Having these, we can write
 	&=
 	\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
 	\sum_{\substack{\sigma,\tau\in S_n\\
-	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau)
 	\prod_{i=1}^k \psi_{\sigma(i)-1}(x_i)\psi_{\tau(i)-1}(x_i)
 	\\
 	&=
 	\mathrm{const}_n\sum_{I\subseteq [n],\,|I|=k}
 	\sum_{\sigma',\tau'\in S(I)}
 	\operatorname{sgn}(\sigma')\operatorname{sgn}(\tau')
-	\prod_{i=1}^k \psi_{\sigma'(i)-1}(x_i)\psi_{\tau'(i)-1}(x_i)  
+	\prod_{i=1}^k \psi_{\sigma'(i)-1}(x_i)\psi_{\tau'(i)-1}(x_i)
 	\\
 	&=
 	\mathrm{const}_n\sum_{I\subseteq [n],\,|I|=k}
@@ -123,7 +123,7 @@ replaced by integration). Having these, we can write
 	\det\left[ \psi_{i_\alpha}(x_j) \right]_{\alpha,j=1}^k,
 \end{align*}
 where \(I=\{i_1,\ldots,i_k\}\) is a subset of \([n]\) of size \(k\), and \(S(I)\) is the set of permutations of \(I\).
-The last sum of products of two determinants is 
+The last sum of products of two determinants is
 written by the Cauchy--Binet formula as
 \begin{equation*}
 	\mathrm{const}_n\cdot \det\left[ \sum_{j=0}^{n-1}\psi_j(x_\alpha)\psi_j(x_\beta) \right]_{\alpha,\beta=1}^k,
@@ -146,19 +146,63 @@ with the orthonormal functions
 \psi_n(x)=\frac{1}{\sqrt{h_n}}\,p_n(x)\,e^{-x^2/4},
 \]
 where the (monic, probabilists') Hermite polynomials are given by
+\begin{equation}
+\label{eq:hermite_def}
+	p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}\,e^{-x^2/2}.
+\end{equation}
+Note that the monic Hermite polynomials are uniquely defined by the
+orthogonality property. We are not proving \eqref{eq:hermite_def} here,
+it is an exercise.
+\begin{lemma}[Generator function for Hermite polynomials]
+	\label{lem:hermite_gen}
+	We have
+	\[
+		\exp\Bigl(xt-\frac{t^2}{2}\Bigr)=\sum_{n\ge0}p_n(x)\frac{t^n}{n!}.
+	\]
+	The series converges for all \(t\) since the left-hand side is an entire function of \(t\).
+\end{lemma}
+\begin{proof}
+Write the generating function as
 \[
-p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}\,e^{-x^2/2},
+	\sum_{n\ge0}p_n(x)\frac{t^n}{n!}
+	=\sum_{n\ge0}\frac{(-1)^n t^n}{n!}\,e^{x^2/2}\frac{d^n}{dx^n}\,e^{-x^2/2}.
 \]
-and satisfy the generating function
+Since the factor \(e^{x^2/2}\) does not depend on \(n\), we can factor it out:
 \[
-\exp\Bigl(xt-\frac{t^2}{2}\Bigr)=\sum_{n\ge0}p_n(x)\frac{t^n}{n!}.
+	\sum_{n\ge0}p_n(x)\frac{t^n}{n!}= e^{x^2/2}\sum_{n\ge0}\frac{(-t)^n}{n!}\frac{d^n}{dx^n}\,e^{-x^2/2}.
 \]
+Now, recall Taylor's theorem: for any analytic function \(f\) we have
+\[
+	f(x-t)=\sum_{n\ge0}\frac{(-t)^n}{n!}f^{(n)}(x).
+\]
+Applying this with \(f(x)=e^{-x^2/2}\), we deduce that
+\[
+	\sum_{n\ge0}\frac{(-t)^n}{n!}\frac{d^n}{dx^n}\,e^{-x^2/2}= e^{-(x-t)^2/2}.
+\]
+Thus, our generating function becomes
+\[
+	\sum_{n\ge0}p_n(x)\frac{t^n}{n!} = e^{x^2/2}\, e^{-(x-t)^2/2},
+\]
+as desired.
+\end{proof}
 
-By Cauchy's integral formula we can write
-\[
+
+By Cauchy's integral formula we can write using \Cref{lem:hermite_gen}:
+\begin{equation}
+\label{eq:pn-formula}
 p_n(x)=\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt,
-\]
+\end{equation}
 where the contour \(C\) is a simple closed curve encircling the origin.
+Indeed, here we use the complex analysis property
+\begin{equation*}
+	\frac{1}{2\pi i}\oint_C \frac{1}{z^{k+1}}\ssp dz=\begin{cases}
+		1,&\text{ if }k=0,\\
+		0,&\text{ if }k\neq0,
+	\end{cases}
+\end{equation*}
+so \eqref{eq:pn-formula} is simply a complex analysis version of the
+operation of extracting the coefficient of \(t^n\) in the Taylor expansion.
+
 Therefore,
 \begin{equation*}
 	\psi_n(x)=\frac{1}{\sqrt{h_n}}\,p_n(x)\,e^{-x^2/4}=
