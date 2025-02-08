@@ -50,10 +50,14 @@
 \newtheorem{remark}[proposition]{Remark}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
+
+% \excludecomment{lnotes}
+
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 6: Steepest descent and local statistics}
+\\Lecture 6: Double contour integral kernel. Steepest descent and local statistics}
 
 \date{February 12, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
@@ -61,33 +65,70 @@ $\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.tex}{\texttt{Te
 $\bullet$
 Updated at \currenttime, \today}}
 
-
-
 \author{Leonid Petrov}
-
 
 \maketitle
 
+\begin{lnotes}
+	1. GUE det structure
 
-\section{Recap}
+	2. Formulate Cauchy--Binet and Andreief 
 
-\subsection{Determinantal structure of the GUE}
+	3. Recall that $\rho_n=P_n$ and it is 
+	$\left( \det[\psi_i(x_j)]_{n\times n} \right)^2$, then reproduce the proofs here.
+\end{lnotes}
+
+\section{Recap: Determinantal structure of the GUE}
 
 Last time, we proved the following result:
 \begin{theorem}
 \label{thm:determinantal_GUE}
+The GUE correlation functions are given by
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
+\]
+with the correlation kernel 
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
+\]
+Here 
+\begin{equation*}
+	\psi_j(x)=\frac{1}{\sqrt{h_j}}\ssp p_j(x)\,e^{-x^2/4},
+\end{equation*}
+where \(p_j(x)\) are the monic Hermite polynomials, and \(h_j\) are the normalization constants so that
+$\psi_j(x)$ are orthonormal in $L^2(\mathbb{R})$.
 \end{theorem}
 
-
-
-
-
-
-
-
-
-
-
+For this theorem, we need Cauchy--Binet summation formula
+and Andreief identity (which is essentially the same as Cauchy--Binet, but when summation is
+replaced by integration). Having these, we can write
+\begin{align*}
+	\rho_k(x_1,\dots,x_k)&=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n) \,dx_{k+1}\cdots dx_n
+	\\
+	&=
+	\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
+	\sum_{\substack{\sigma,\tau\in S_n\\
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
+	\prod_{i=1}^k \psi_{\sigma(i)-1}(x_i)\psi_{\tau(i)-1}(x_i)
+	\\
+	&=
+	\mathrm{const}_n\sum_{I\subseteq [n],\,|I|=k}
+	\sum_{\sigma',\tau'\in S(I)}
+	\operatorname{sgn}(\sigma')\operatorname{sgn}(\tau')
+	\prod_{i=1}^k \psi_{\sigma'(i)-1}(x_i)\psi_{\tau'(i)-1}(x_i)  
+	\\
+	&=
+	\mathrm{const}_n\sum_{I\subseteq [n],\,|I|=k}
+	\det\left[ \psi_{i_\alpha}(x_j) \right]_{\alpha,j=1}^k
+	\det\left[ \psi_{i_\alpha}(x_j) \right]_{\alpha,j=1}^k,
+\end{align*}
+where \(I=\{i_1,\ldots,i_k\}\) is a subset of \([n]\) of size \(k\), and \(S(I)\) is the set of permutations of \(I\).
+The last sum of products of two determinants is 
+written by the Cauchy--Binet formula as
+\begin{equation*}
+	\mathrm{const}_n\cdot \det\left[ \sum_{j=0}^{n-1}\psi_j(x_\alpha)\psi_j(x_\beta) \right]_{\alpha,\beta=1}^k,
+\end{equation*}
+and finally the constant is equal to $1$ by Andreief identity.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
