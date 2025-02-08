@@ -209,55 +209,123 @@ Therefore,
 	\frac{e^{-x^2/4}}{\sqrt{h_n}}\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt.
 \end{equation*}
 
-
 \subsection{Another contour integral representation for Hermite polynomials}
 
-Note also that
+We start with the Fourier transform identity
 \[
-\int_{-\infty}^{\infty} e^{-t^2+\sqrt{2} i\,t\,x}\,dt
-=\sqrt{\pi}\,e^{-x^2/2}.
+\int_{-\infty}^{\infty} \exp\Bigl(-\frac{t^2}{2} + i\,t\,x\Bigr)\,dt
+=\sqrt{2\pi}\,e^{-x^2/2}.
 \]
-Differentiating both sides \(n\) times with respect to \(x\) (and using the fact that in our convention the Gaussian appears with \(x^2/2\)) yields
-\[
-\frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr)
-=\frac{1}{\sqrt{\pi}}\int_{-\infty}^{\infty} \Bigl(\sqrt{2}i\,t\Bigr)^n
-e^{-t^2+\sqrt{2} i\,t\,x}\,dt.
-\]
-Changing variables via \(s=i\,t\) (so that \(t=-i\,s\) and \(dt=-i\,ds\)) one obtains
+Differentiating both sides \(n\) times with respect to \(x\) yields
 \[
 \frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr)
-=\frac{(\sqrt{2})^n}{i\sqrt{\pi}}
-\int_{-i\infty}^{i\infty} s^n\,e^{s^2+\sqrt{2}\,s\,x}\,ds.
+=\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} (i\,t)^n\,e^{-t^2/2+ i\,t\,x}\,dt.
 \]
-Multiplying by \((-1)^n e^{x^2/2}\) we deduce that
-\begin{equation}
-\label{eq:pn-contour}
-p_n(x)
-=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr)
-=\frac{i\,(\sqrt{2})^n\,e^{x^2/2}}{\sqrt{\pi}}
-\int_{-i\infty}^{i\infty} s^n\,e^{s^2-\sqrt{2}\,s\,x}\,ds.
-\end{equation}
+Recalling the definition
+\[
+p_n(x)=(-1)^n\,e^{x^2/2}\,\frac{d^n}{dx^n}\Bigl(e^{-x^2/2}\Bigr),
+\]
+we obtain
+\[
+p_n(x)=\frac{(-1)^n\,e^{x^2/2}}{\sqrt{2\pi}}\int_{-\infty}^{\infty}(i\,t)^n\,e^{-t^2/2+ i\,t\,x}\,dt.
+\]
 
-Now, recall that the orthonormal functions are defined as
+Next, perform the change of variable
 \[
-\psi_n(x)=\frac{1}{\sqrt{h_n}}\,p_n(x)\,e^{-x^2/4},
+s=i\,t,\quad\text{so that}\quad t=-i\,s,\quad dt=-i\,ds.
 \]
-so that by \eqref{eq:pn-contour}
+Under this substitution the factors transform as follows:
 \[
-\psi_n(x)
-=\frac{i\,e^{x^2/4}}{\sqrt{\pi\,h_n}}
-\int_{-i\infty}^{i\infty}(\sqrt2 s)^n\,e^{s^2-\sqrt{2}\,s\,x}\,ds
-=
-\frac{i\,e^{x^2/4}}{\sqrt{2\pi\,h_n}}
-\int_{-i\infty}^{i\infty}s^n\,e^{s^2/2-s\,x}\,ds.
+(i\,t)^n = s^n,
+\]
+and the exponent becomes
+\[
+-\frac{t^2}{2}+ i\,t\,x
+= -\frac{(-i\,s)^2}{2}+ i\,(-i\,s)\,x
+= \frac{s^2}{2}+ s\,x.
+\]
+Thus, the integral transforms into
+\[
+\int_{-\infty}^{\infty}(i\,t)^n\,e^{-t^2/2+ i\,t\,x}\,dt
+= -i \int_{-i\infty}^{i\infty} s^n\,e^{s^2/2+ s\,x}\,ds.
+\]
+Substituting back we have
+\[
+p_n(x)=\frac{(-1)^n\,e^{x^2/2}}{\sqrt{2\pi}}\;(-i)
+\int_{-i\infty}^{i\infty} s^n\,e^{s^2/2+ s\,x}\,ds.
+\]
+That is,
+\[
+p_n(x)=\frac{i\,(-1)^{n+1}\,e^{x^2/2}}{\sqrt{2\pi}}
+\int_{-i\infty}^{i\infty} s^n\,e^{s^2/2+ s\,x}\,ds.
+\]
+Finally, change the sign of $s$, and we get:
+\[
+p_n(x)=\frac{i\,e^{x^2/2}}{\sqrt{2\pi}}
+\int_{-i\infty}^{i\infty} s^n\,e^{s^2/2- s\,x}\,ds.
+\]
+Therefore,
+\[
+\psi_n(x)=\frac{i\,e^{x^2/4}}{\sqrt{2\pi\,h_n}}
+\int_{-i\infty}^{i\infty} s^n\,e^{s^2/2- s\,x}\,ds.
 \]
 
 \subsection{Double contour integral representation for the GUE kernel}
 
-We have (Problem~\ref{prob:norm})
-\begin{equation*}
-	h_n=\int_{-\infty}^{\infty} p_n(x)^2\,e^{-x^2/2}\,dx=n!\sqrt{2\pi}.
-\end{equation*}
+\begin{lemma}
+	We have 
+	\begin{equation*}
+		h_n=\int_{-\infty}^{\infty} p_n(x)^2\,e^{-x^2/2}\,dx=n!\sqrt{2\pi}.
+	\end{equation*}
+\end{lemma}
+\begin{proof}
+Multiply the generating function
+\[
+	\exp\Bigl(xt-\frac{t^2}{2}\Bigr)=\sum_{n\ge0}p_n(x)\frac{t^n}{n!}
+\]
+with a second copy (with parameter \(s\)):
+\[
+	\exp\Bigl(xs-\frac{s^2}{2}\Bigr)=\sum_{m\ge0}p_m(x)\frac{s^m}{m!}.
+\]
+Then,
+\[
+	\exp\Bigl(xt-\frac{t^2}{2}\Bigr)\exp\Bigl(xs-\frac{s^2}{2}\Bigr)
+	=\sum_{n,m\ge0}p_n(x)p_m(x)\frac{t^n s^m}{n!m!}.
+\]
+Integrate both sides against \(e^{-x^2/2}\,dx\). Using the orthogonality
+\[
+	\int_{-\infty}^{\infty}p_n(x)p_m(x)e^{-x^2/2}dx=h_n\delta_{nm},
+\]
+the right-hand side becomes
+\[
+	\sum_{n\ge0}\frac{h_n}{(n!)^2}(ts)^n.
+\]
+On the left-hand side, we have
+\[
+	\int_{-\infty}^{\infty}e^{-x^2/2}\exp\Bigl(x(t+s)-\frac{t^2+s^2}{2}\Bigr)dx.
+\]
+Completing the square in \(x\) or recalling the standard Gaussian integral yields
+\[
+	\sqrt{2\pi}\exp\Bigl(\frac{(t+s)^2-(t^2+s^2)}{2}\Bigr)
+	=\sqrt{2\pi}\exp(ts).
+\]
+Thus, we obtain
+\[
+	\sqrt{2\pi}\exp(ts)=\sum_{n\ge0}\frac{h_n}{(n!)^2}(ts)^n.
+\]
+Expanding the left side as
+\[
+	\sqrt{2\pi}\sum_{n\ge0}\frac{(ts)^n}{n!},
+\]
+and comparing coefficients, we conclude that
+\[
+	\frac{h_n}{(n!)^2}=\frac{\sqrt{2\pi}}{n!}\quad\Longrightarrow\quad h_n=n!\sqrt{2\pi}.
+\]
+This completes the proof.
+\end{proof}
+
+\colorbox{yellow}{\parbox{.7\textwidth}{HERE}}
+
 Therefore, we can sum up the kernel (another proof of the Christoffel--Darboux formula):
 \begin{align*}
 	K_n(x,y)&=
