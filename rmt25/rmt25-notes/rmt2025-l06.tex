@@ -882,11 +882,80 @@ We have established the following result:
 	See Problem~\ref{prob:imaginary-critical-points}.
 \end{remark}
 
-\subsection{Real critical points: $|X|>2$, ``edge''}
+\subsection{Real critical points: $|X|>2$, ``large deviations''}
 \label{sub:real-critical-points}
 
+For \(X^2>4\), both solutions 
+\eqref{eq:critical-points}
+are real. Let us assume $X>2$, the case \(X<2\) is similar.
+For $X>2$, both solutions are positive.
+Label these solutions as
 
-\subsection{Double critical point: $|X|=2$, ''large deviations''}
+\colorbox{yellow}{\parbox{.7\textwidth}{here!}}
+
+\[
+	z_+ \;=\;\frac{X + \sqrt{X^2-4}}{2},
+	\qquad
+	z_- \;=\;\frac{X - \sqrt{X^2-4}}{2},
+	\quad
+	\text{so that}\quad z_+z_-=1.
+\]
+A straightforward check reveals that \(z_+\!>\!1\) and \(z_-\!<\!1\) (for \(X>2\)), and hence
+\begin{equation}
+	\label{eq:S-doubleder}
+	S''(z)\;=\;1-\frac{1}{z^2}.
+\end{equation}
+In particular, at \(z_+=\frac{X+\sqrt{X^2-4}}{2}\),
+we have \(z_+^2>1\), so \(S''(z_+)>0\), and thus \(z_+\) is a local \emph{minimum} for \(\operatorname{Re}\bigl(S(z)\bigr)\). 
+At \(z_-=\frac{X-\sqrt{X^2-4}}{2}\), one gets \(z_-^2<1\), so \(S''(z_-)<0\), making \(z_-\) a local \emph{maximum}.
+
+\paragraph{Behavior of the integral and exponential decay.}
+Returning to the double contour representation for the kernel
+\[
+	K_n(X\sqrt{n} + \Delta x/\sqrt{n},\,X\sqrt{n} + \Delta y/\sqrt{n})
+	\;=\;
+	\frac{\sqrt{n}}{(2\pi)^2}
+	\oint_C \!dz\;\int_{-i\infty}^{i\infty}\!dw\,
+	\frac{\exp\!\Bigl\{
+		n \,\bigl[\,S(w)\;-\;S(z)\bigr]
+		\;+\; z\,\frac{\Delta x}{n}\;-\;w\,\frac{\Delta y}{n}
+	\Bigr\}}{\,w-z\,}\,,
+\]
+we see that the real part of
+\(
+	S(w)\;-\;S(z)
+\)
+will govern whether the integrand is exponentially large or small when \(\,n\to+\infty\).
+
+- On the \(z\)-contour (of smaller radius in the rescaled plane), one might try to deform so that \(\operatorname{Re}\bigl(S(z)\bigr)\) is \emph{maximized}.  However, when \(|X|>2\), the natural real critical points \(z_-\!<1\) and \(z_+>1\) show that along any circle or path with \(|z|<1\), we cannot make the contour pass \emph{through} \(z_+\).  Thus, in typical steepest descent deformations, the point \(z_-\!<1\) is a local maximum that remains unreachable if we insist \(|z|<|w|\).  Pushing the contour in an attempt to capture \(z_-\) instead forces us to cross the line \(z=w\), incurring a residue and changing the structure of the integral (cf.\ the discussion in the bulk case \S\ref{sub:imaginary-critical-points}).
+
+- Meanwhile, on the \(w\)-contour (of larger radius), the real solution \(w=z_+>1\) may lie on or inside the contour; but since \(S''(z_+)>0\), \(z_+\) is a \emph{local minimum} for \(\operatorname{Re}\bigl(S(w)\bigr)\).  This implies that \(\operatorname{Re}\bigl(S(w)-S(z)\bigr)\) cannot be \emph{increased} near \(z_+\) when \(z\) is restricted to \(|z|<1\).  In effect, passing the \(w\)-contour near \(z_+\) yields an exponential damping of the integrand in the limit \(n\to\infty\).
+
+A more precise argument (similar in spirit to the bulk analysis) confirms that, under these deformations, the key exponential factor
+\[
+	\exp\Bigl\{\,n\bigl[\operatorname{Re}\bigl(S(w)\bigr)\;-\;\operatorname{Re}\bigl(S(z)\bigr)\bigr] \Bigr\}
+\]
+never achieves a substantial positive exponent when \(|X|>2\).  In fact, the difference \(\operatorname{Re}\bigl(S(w)\bigr)-\operatorname{Re}\bigl(S(z)\bigr)\) stays strictly negative away from possible residue crossings (and those can be arranged to lie in regions where \(\operatorname{Re}\bigl(S(w)\bigr)-\operatorname{Re}\bigl(S(z)\bigr)\le0\)).  Therefore, \emph{the entire double integral is suppressed by an exponentially small factor in \(n\)}.
+
+\begin{proposition}[Exponential decay for \(\,\lvert X\rvert>2\)]
+	\label{prop:outside-bulk}
+	Under the scaling \(x=X\sqrt{n} + \Delta x/\sqrt{n}\), \(y=X\sqrt{n}+\Delta y/\sqrt{n}\) with any fixed real \(\Delta x,\Delta y\), the GUE correlation kernel \(K_n(x,y)\) satisfies
+	\[
+		K_n(x,y)
+		\;=\;
+		O\!\bigl(e^{-\,c\,n}\bigr),
+		\quad n\to+\infty,
+	\]
+	for some constant \(c>0\) depending on \(\,X\) but not on \(\Delta x,\Delta y\).  Consequently, all correlation functions in the regime \(\,\lvert X\rvert>2\) vanish \emph{exponentially fast} as \(n\to\infty\).
+\end{proposition}
+
+This outcome reflects the fact that the Wigner semicircle law places all eigenvalues inside the interval \(\lvert X\rvert \le 2\); being \emph{outside} that support forces probability events that require an eigenvalue to appear at \(X\sqrt{n}\) (with \(\lvert X\rvert>2\)) to decay on an exponential scale.  In the language of large deviations, the probability cost of planting a spectral point in that forbidden region is highly suppressed, and the correlation kernel inherits that decay.
+
+\begin{remark}
+	We will handle separately, in \S\ref{sub:double-critical-points}, the \emph{boundary} case \(\,\lvert X\rvert=2\), which is subtler.  There, the two real critical points of \(S(z)\) \emph{merge} into one (i.e., a \emph{double} critical point), causing a cubic term to appear in the local expansion.  This leads to \emph{soft edge} fluctuations governed by an Airy-type kernel.
+\end{remark}
+
+\subsection{Double critical point: $|X|=2$, ``edge''}
 \label{sub:double-critical-points}
 
 
