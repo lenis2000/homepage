@@ -682,7 +682,8 @@ contours as we wish, while keeping $|z|<|w|$
 and the general shape as in \Cref{fig:contours}.
 
 We thus have:
-\begin{multline*}
+\begin{multline}
+	\label{eq:K_n_scaling}
 	K_n(X\sqrt n+\Delta x,X\sqrt n+\Delta y)\\=
 	\frac{\sqrt n}{(2\pi)^2}
 	\oint_C dz\int_{-i\infty}^{i\infty}dw\ssp
@@ -695,7 +696,7 @@ We thus have:
 			\right)
 		\right\}
 	}{w-z}.
-\end{multline*}
+\end{multline}
 \begin{remark}
 	\label{rmk:log-harmless}
 	The logarithms in the exponent are harmless, since for the 
@@ -703,6 +704,10 @@ We thus have:
 	and for the main contributions, we will have $z\approx w$, so 
 	any phases of the logarithms would cancel.
 \end{remark}
+
+The asymptotic analysis of double contour integrals like 
+\eqref{eq:K_n_scaling} in the context of determinantal point processes
+was pioneered in \cite[Section~3]{Okounkov2002}.
 
 \subsection{Critical points}
 \label{sub:critical-points}
@@ -720,13 +725,30 @@ Moreover, the new $w$ contour should maximize the real part of $S(z)$
 at $z_{cr}$, and the new $z$ contour should minimize it.
 If $S''(z_{cr})\ne 0$, it is possible to locally choose such contours,
 they will be perpendicular to each other at $z_{cr}$.
+
 Thus, we need to find the critical points of $S(z)$.
+They are found from the quadratic equation:
+\begin{equation*}
+	S'(z)=z+\frac{1}{z}-X=0,\qquad 
+	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
+\end{equation*}
+Depending on whether $|X|<2$, there are three cases.
+We will consider them in 
+\Cref{sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
+below.
+
+\subsection{Imaginary critical points: $|X|<2$}
+\label{sub:imaginary-critical-points}
 
 
 
 
+\subsection{Real critical points: $|X|>2$}
+\label{sub:real-critical-points}
 
 
+\subsection{Double critical points: $|X|=2$}
+\label{sub:double-critical-points}
 
 
 
