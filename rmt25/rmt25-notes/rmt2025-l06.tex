@@ -421,6 +421,26 @@ With this extension of the sum, formula \eqref{eq:K_n_sum} becomes
 	Therefore, there is no difference where the $s$ contour passes with respect to the $t$ contour.
 \end{remark}
 
+\subsection{Conjugation of the kernel}
+
+The kernel $K_n(x,y)$ contains a factor $e^{\frac{y^2-x^2}{4}}=g(x)/g(y)$, 
+where $g(\cdot)$ is a nonvanishing function. This factor can be safely removed, since
+in all determinants
+$\det[K_n(x_i,x_j)]_{i,j=1}^k$
+representing the correlation functions, the 
+conjugation factors $g(x_i)/g(x_j)$ do not affect the value of the determinant.
+Thus, we can and will deal with the correlation kernel
+\begin{equation}
+	\label{eq:K_n_conjugated}
+	K_n(x,y)=\frac{1}{(2\pi)^2}
+	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
+	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
+	,
+\end{equation}
+and will use the same notation for it. 
+Throughout the asymptotic analysis in \Cref{sec:steepest-descent-GUE} below,
+other conjugation factors may appear, but we can similarly
+remove them.
 
 \subsection{Extensions}
 
@@ -616,6 +636,22 @@ Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+\section{Steepest descent for the GUE kernel}
+\label{sec:steepest-descent-GUE}
+
+\subsection{Critical points}
+\label{sub:GUE-critical-points}
+
+Let us now consider the GUE kernel
+\begin{equation*}
+	K_n(x,y)=\frac{1}{(2\pi)^2}
+	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
+	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
+	,
+\end{equation*}
+where the integration contours are as in \Cref{fig:contours}.
 
 
 
