@@ -641,10 +641,11 @@ Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a
 \section{Steepest descent for the GUE kernel}
 \label{sec:steepest-descent-GUE}
 
-\subsection{Critical points}
-\label{sub:GUE-critical-points}
+\subsection{Scaling}
+\label{sub:scaling}
 
-Let us now consider the GUE kernel
+Let us now consider the GUE kernel 
+\eqref{eq:K_n_conjugated},
 \begin{equation*}
 	K_n(x,y)=\frac{1}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
@@ -653,13 +654,73 @@ Let us now consider the GUE kernel
 \end{equation*}
 where the integration contours are as in \Cref{fig:contours}.
 
+We know from the Wigner semicircle law
+(established for real symmetric matrices with general iid entries in
+in \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2},
+and for the GUE in \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l04.pdf}{Lecture 4})
+that the eigenvalues live on the scare $\sqrt n$. This means that to capture the local asymptotics,
+we need to scale
+\begin{equation}
+	\label{eq:scaling_x-y}
+	x=X\sqrt n+\Delta x,\qquad y=Y\sqrt n+\Delta y,\qquad 
+	\Delta x,\Delta y\in\mathbb{R}.
+\end{equation}
+Moreover, if $X\ne Y$ (i.e., different global positions), one can check that the kernel
+vanishes. In other words, the local behaviors at different global positions are independent.
+See Problem~\ref{prob:different-global-positions}.
+In what follows, we take $Y=X$.
 
+Let us also make a change of the integration variables:
+\begin{equation*}
+	t=z\sqrt n,\qquad s=w\sqrt n.
+\end{equation*}
+The integration contours for $z$ and $w$ look the same as in 
+\Cref{fig:contours}, up to a rescaling. However, as $0$ 
+and $t=s$
+are the only singularities in the integrand, we can deform the $z,w$
+contours as we wish, while keeping $|z|<|w|$
+and the general shape as in \Cref{fig:contours}.
 
+We thus have:
+\begin{multline*}
+	K_n(X\sqrt n+\Delta x,X\sqrt n+\Delta y)\\=
+	\frac{\sqrt n}{(2\pi)^2}
+	\oint_C dz\int_{-i\infty}^{i\infty}dw\ssp
+	\frac{\exp
+		\left\{ 
+			n\left( 
+				\log w -\log z
+				+\frac{w^2}{2}-\frac{z^2}{2}
+				+X(z-w)+\frac{z \Delta x-w \Delta y}{\sqrt n}
+			\right)
+		\right\}
+	}{w-z}.
+\end{multline*}
+\begin{remark}
+	\label{rmk:log-harmless}
+	The logarithms in the exponent are harmless, since for the 
+	estimates we only need the real parts of the logarithms, 
+	and for the main contributions, we will have $z\approx w$, so 
+	any phases of the logarithms would cancel.
+\end{remark}
 
+\subsection{Critical points}
+\label{sub:critical-points}
 
-
-
-
+Let us define
+\begin{equation*}
+	S(z)\coloneqq 
+	\frac{z^2}{2}+\log z -X z.
+\end{equation*}
+Then the exponent contains $n \left( S(w)-S(z) \right)$.
+According to the steepest descent ideology, we 
+should deform the integration contours
+to pass through the critical point(s) $z_{cr}$ of $S(z)$.
+Moreover, the new $w$ contour should maximize the real part of $S(z)$ 
+at $z_{cr}$, and the new $z$ contour should minimize it.
+If $S''(z_{cr})\ne 0$, it is possible to locally choose such contours,
+they will be perpendicular to each other at $z_{cr}$.
+Thus, we need to find the critical points of $S(z)$.
 
 
 
@@ -676,7 +737,12 @@ where the integration contours are as in \Cref{fig:contours}.
 
 \section{Problems (due 2025-03-12)}
 
+\subsection{Different global positions}
+\label{prob:different-global-positions}
 
+Show that if in \eqref{eq:scaling_x-y} we take $X\ne Y$, then
+$K_n(x,y)$ vanishes as $n\to+\infty$. Moreover, 
+establish that the decay is exponential in $n$.
 
 
 
