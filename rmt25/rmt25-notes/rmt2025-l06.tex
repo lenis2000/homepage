@@ -70,12 +70,23 @@ Updated at \currenttime, \today}}
 \maketitle
 
 \begin{lnotes}
-	1. GUE det structure
+	
+\begin{itemize}
+	\item GUE det structure
 
-	2. Formulate Cauchy--Binet and Andreief
+	\item Formulate Cauchy--Binet and Andreief
 
-	3. Recall that $\rho_n=P_n$ and it is
+	\item Recall that $\rho_n=P_n$ and it is
 	$\left( \det[\psi_i(x_j)]_{n\times n} \right)^2$, then reproduce the proofs here.
+
+	\item Recall the Christoffel--Darboux formula:
+	\begin{equation*}
+		K_n(x,y)=\frac{e^{-\frac{x^2+y^2}{4}}}{\sqrt{2\pi}
+		h_{n-1}}\,\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
+	\end{equation*}
+	here $h_{n-1}=\sqrt{2\pi}(n-1)!$.
+\end{itemize}
+
 \end{lnotes}
 
 \section{Recap: Determinantal structure of the GUE}
@@ -352,12 +363,12 @@ cancellation.
 Let us now move the $s$ contour to be to the left of the $t$ contour,
 as in \Cref{fig:contours}.
 On the new contours, we have $|s|>|t|$.
-Now we can add the summands $s^k t^{-k-1}$ 
+Now we can add the summands $s^k t^{-k-1}$
 for all $k\le -1$
 into the sum in
-\eqref{eq:K_n_sum}. 
-Indeed, for $|s|>|t|$, the series in $k$ converges, while the 
-summand $s^kt^{-k-1}$ has zero residue at $0$ and thus adding the 
+\eqref{eq:K_n_sum}.
+Indeed, for $|s|>|t|$, the series in $k$ converges, while the
+summand $s^kt^{-k-1}$ has zero residue at $0$ and thus adding the
 summands does not change the value of the integral.
 
 \begin{figure}[htpb]
@@ -391,10 +402,23 @@ With this extension of the sum, formula \eqref{eq:K_n_sum} becomes
 	\label{eq:K_n_GUE_kernel}
 	K_n(x,y)=\frac{e^{(y^2-x^2)/4}}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
-	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n\ssp .
+	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
+	.
 \end{equation}
 
-
+\begin{remark}
+	The $s$ contour passes to the right of the $t$ contour, but it might as well
+	pass to the left of it. Indeed, one can deform the $s$ contour to the left
+	while picking the residue at $s=t$:
+	\begin{equation*}
+		\operatorname{Res}\limits_{s=t}
+		\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
+		=-e^{t(x-y)}.
+	\end{equation*}
+	This function is entire in $t$, and its
+	integral over the $t$ contour is zero.
+	Therefore, there is no difference where the $s$ contour passes with respect to the $t$ contour.
+\end{remark}
 
 
 \subsection{Extensions}
@@ -408,6 +432,10 @@ Many other versions of the GUE / unitary invariant ensembles admit determinantal
     \item Corners invariant ensembles with fixed eigenvalues $UDU^\dagger$, where $D$ is a fixed diagonal matrix and $U$ is Haar distributed
 			on the unitary group \cite{Metcalfe2011GT}
 	\end{enumerate}
+
+We will discuss the corners process structure 
+in the next
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
