@@ -270,10 +270,11 @@ Therefore,
 \int_{-i\infty}^{i\infty} s^n\,e^{s^2/2- s\,x}\,ds.
 \]
 
-\subsection{Double contour integral representation for the GUE kernel}
+\subsection{Normalization of Hermite polynomials}
 
 \begin{lemma}
-	We have 
+	\label{lem:hermite_norm}
+	We have
 	\begin{equation*}
 		h_n=\int_{-\infty}^{\infty} p_n(x)^2\,e^{-x^2/2}\,dx=n!\sqrt{2\pi}.
 	\end{equation*}
@@ -324,36 +325,80 @@ and comparing coefficients, we conclude that
 This completes the proof.
 \end{proof}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{HERE}}
+\subsection{Double contour integral representation for the GUE kernel}
 
-Therefore, we can sum up the kernel (another proof of the Christoffel--Darboux formula):
-\begin{align*}
+We can sum up the kernel (essentially, this is
+another proof of the Christoffel--Darboux formula):
+\begin{equation}\begin{split}
 	K_n(x,y)&=
 	\sum_{k=0}^{n-1}\psi_k(x)\psi_k(y)
 	\\&=
-	\sum_{k=0}^{n-1}
-	\frac{e^{-x^2/4}}{\sqrt{h_k}}\frac{k!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{k+1}}\,dt
-	\frac{i\,e^{y^2/4}}{\sqrt{2\pi\,h_k}}
-	\int_{-i\infty}^{i\infty}s^k\,e^{s^2/2-s\,y}\,ds
-	\\&=
-	e^{(y^2-x^2)/4}
-	\sum_{k=0}^{n-1}
-	\frac{1}{4\pi^2}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{k+1}}\,dt
-	\int_{-i\infty}^{i\infty}s^k\,e^{s^2/2-s\,y}\,ds.
-\end{align*}
-We can now extend the sum to
-$k=-\infty$, and get a formula for the
-GUE kernel as a double contour integral:
-\begin{equation*}
-	K_n(x,y)=\frac{e^{(y^2-x^2)/4}}{4\pi^2}
-	\oint_C
-	\int_{-\mathbf{i}\infty}^{\mathbf{i}\infty}
-	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n\ssp ds\ssp dt.
-\end{equation*}
-Details will be in the next
-\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.pdf}{Lecture 6}.
+	\frac{e^{\frac{x^2-y^2}{4}}}{(2\pi)^2}
+	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
+	\exp\left\{ -\frac{t^2}{2}+xt+\frac{s^2}{2}-ys \right\}
+	\underbrace{\sum_{k=0}^{n-1}
+	s^k t^{-k-1}}_{\frac{1-(s/t)^n}{t-s}}.
+\end{split}\label{eq:K_n_sum}\end{equation}
+Here we used the two contour integral representations for Hermite polynomials,
+and the explicit norm (\Cref{lem:hermite_norm}).
+At this point, the $t$ contour is a small circle around $0$, and
+the $s$ contour is a vertical line in the complex plane.
+Their mutual position can be arbitrary at this point --- the $s$ contour
+goes along the imaginary line.
+Indeed, the fraction
+$\frac{1-(s/t)^n}{t-s}$ does not have a singularity at $s=t$ due to the
+cancellation.
 
-\begin{remark}
+Let us now move the $s$ contour to be to the left of the $t$ contour,
+as in \Cref{fig:contours}.
+On the new contours, we have $|s|>|t|$.
+Now we can add the summands $s^k t^{-k-1}$ 
+for all $k\le -1$
+into the sum in
+\eqref{eq:K_n_sum}. 
+Indeed, for $|s|>|t|$, the series in $k$ converges, while the 
+summand $s^kt^{-k-1}$ has zero residue at $0$ and thus adding the 
+summands does not change the value of the integral.
+
+\begin{figure}[htpb]
+	\centering
+	\begin{tikzpicture}[scale=1]
+		% Draw coordinate axes
+		\draw[->] (-2,0) -- (3,0);
+		\draw[->] (0,-3) -- (0,3);
+
+		% t contour: unit circle, counterclockwise
+		\draw[ultra thick,->] (1,0) arc (0:360:1);
+		% Place the t label near the contour (at 45° outside the circle)
+		\coordinate (TLabel) at (.5,.5);
+		\node at (TLabel) {\(t\)};
+
+		% s contour: vertical line (imaginary axis) with a detour near the origin
+		% It starts at (0,-3), goes vertically to (0,-2), then detours to (0,2)
+		% via a Bézier curve (pushed to the right), and finally resumes vertically to (0,3).
+		\draw[ultra thick,->,red]
+			(0,-3)
+			-- (0,-2)
+			.. controls (1.8,-2) and (1.8,2) .. node[midway, above right] {\(s\)} (0,2)
+			-- (0,3);
+	\end{tikzpicture}
+	\caption{Integration contours for the GUE kernel \eqref{eq:K_n_GUE_kernel}.}
+	\label{fig:contours}
+\end{figure}
+
+With this extension of the sum, formula \eqref{eq:K_n_sum} becomes
+\begin{equation}
+	\label{eq:K_n_GUE_kernel}
+	K_n(x,y)=\frac{e^{(y^2-x^2)/4}}{(2\pi)^2}
+	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
+	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n\ssp .
+\end{equation}
+
+
+
+
+\subsection{Extensions}
+
 Many other versions of the GUE / unitary invariant ensembles admit determinantal structure:
 \begin{enumerate}
 	\item The GUE corners process \cite{johansson2006eigenvalues}
@@ -363,8 +408,6 @@ Many other versions of the GUE / unitary invariant ensembles admit determinantal
     \item Corners invariant ensembles with fixed eigenvalues $UDU^\dagger$, where $D$ is a fixed diagonal matrix and $U$ is Haar distributed
 			on the unitary group \cite{Metcalfe2011GT}
 	\end{enumerate}
-\end{remark}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -391,7 +434,7 @@ Many other versions of the GUE / unitary invariant ensembles admit determinantal
 \appendix
 \setcounter{section}{5}
 
-\section{Problems (due DATE)}
+\section{Problems (due 2025-03-12)}
 
 
 
