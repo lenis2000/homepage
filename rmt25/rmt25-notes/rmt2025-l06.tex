@@ -71,7 +71,7 @@ Updated at \currenttime, \today}}
 \tableofcontents
 
 \begin{lnotes}
-	
+
 \begin{itemize}
 	\item GUE det structure
 
@@ -183,7 +183,7 @@ Since the factor \(e^{x^2/2}\) does not depend on \(n\), we can factor it out:
 \[
 	\sum_{n\ge0}p_n(x)\frac{t^n}{n!}= e^{x^2/2}\sum_{n\ge0}\frac{(-t)^n}{n!}\frac{d^n}{dx^n}\,e^{-x^2/2}.
 \]
-Now, recall Taylor's theorem: for any analytic function \(f\) we have
+Now, recall Taylor's theorem: for any holomorphic function \(f\) we have
 \[
 	f(x-t)=\sum_{n\ge0}\frac{(-t)^n}{n!}f^{(n)}(x).
 \]
@@ -434,47 +434,92 @@ Many other versions of the GUE / unitary invariant ensembles admit determinantal
 			on the unitary group \cite{Metcalfe2011GT}
 	\end{enumerate}
 
-We will discuss the corners process structure 
+We will discuss the corners process structure
 in the next
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Steepest descent --- generalities}
+\section{Steepest descent --- generalities for single integrals}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Setup}
 
 In many problems arising in random matrix theory—as well as in asymptotic analysis more generally—it is necessary to evaluate integrals of the form
 \begin{equation}
 	\label{eq:general-integral}
-	I(\lambda)=\int_{\gamma} e^{\lambda f(z)}\ssp \phi(z)\,dz,
+	I(\Lambda)=\int_{\gamma} e^{\Lambda f(z)}\ssp \phi(z)\,dz,
 \end{equation}
-where 
+where
 \begin{itemize}
-	\item $\lambda>0$ is a large parameter,
-	\item $f(z)$ and $\phi(z)$ are analytic functions in a neighborhood of the contour $\gamma\subset\mathbb{C}$,
+	\item $\Lambda>0$ is a large parameter,
+	\item $f(z)$ and $\phi(z)$ are holomorphic functions in a neighborhood of the contour $\gamma\subset\mathbb{C}$,
 	\item and the contour $\gamma$ is chosen in such a way that the integral converges.
 \end{itemize}
-The \emph{method of steepest descent} (also known as the \emph{saddle point method}) provides a systematic procedure for obtaining the asymptotic behavior of $I(\lambda)$ as $\lambda\to+\infty$.
+The \emph{method of steepest descent} (also known as the \emph{saddle point method}) provides a systematic procedure for obtaining the asymptotic behavior of $I(\Lambda)$ as $\Lambda\to+\infty$.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Motivation and setup}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The key observation is that for large $\Lambda$, the
+exponential term $e^{\Lambda f(z)}$ is highly oscillatory or
+decaying, so that the main contributions to the integral
+come from small neighborhoods of points where the real part
+of $f(z)$ is maximal.
+Moreover, since we can deform the integration contour $\gamma$
+to pick points where $\operatorname{Re}f(z)$ is even bigger, it makes sense to find
+points \emph{not only on the original contour}
+where $\operatorname{Re}f(z)$ is maximal.
+Such \emph{critical} (or \emph{saddle}) points are
+found from the equation with the complex derivative:
+\begin{equation*}
+	f'(z)=0
+\end{equation*}
+Indeed, since $\operatorname{Re}f(z)$
+is harmonic and $f(z)$ satisfies the Cauchy--Riemann equations,
+the condition $f'(z)=0$ is equivalent to the condition that $\operatorname{Re}f(z)$
+has zero gradient. Moreover, by harmonicity, all critical points of
+$\operatorname{Re}f(z)$ are saddle-like.
 
-The key observation is that for large $\lambda$, the exponential term $e^{\lambda f(z)}$ is highly oscillatory or decaying, so that the main contributions to the integral come from small neighborhoods of points where the real part of $f(z)$ is maximal. 
-When $f$ is analytic, these critical points are found by solving
-\[
-	f'(z)=0.
-\]
-Any solution $z_0\in\mathbb{C}$ of $f'(z)=0$ is called a \emph{saddle point} of $f$. (In our context, the term “saddle point” is used because, in the complex plane, the level sets of $\Re(f)$ near $z_0$ have a saddle‐like geometry.)
+Once the saddle points are identified, one deforms the
+contour $\gamma$ to $\Gamma$ so that $\Gamma$ passes
+through the saddle point(s)
+with the maximal value of $\operatorname{Re}f(z)$, and, moreover,
+such that on the rest of the new contour $\Gamma$ the
+real part of $f(z)$ is strictly less than the value(s) at the saddle point(s).
+The decrease of $\operatorname{Re}f(z)$ along $\Gamma$ may be ensured
+if one picks $\Gamma$ to be \emph{steepest descent} for $\operatorname{Re}f(z)$.
+By holomorphicity of $f(z)$, the steepest descent
+of $\operatorname{Re}$ is equivalent to the condition that
+the imaginary part of $f(z)$ is constant along $\Gamma$.
 
-Once the saddle points are identified, one deforms the contour $\gamma$ (using Cauchy’s theorem) so that it passes through the saddle points along the \emph{steepest descent paths} (which we now define).
+\begin{remark}
+	\label{rem:steepest-descent}
+	In practical applications, one does not
+	need $\Gamma$ to be fully steepest descent (it is usually hard to control).
+	One can either choose $\Gamma$ to be steepest descent
+	in a neighborhood of the critical point and estimate the real part outside,
+	or simply estimate the change of $\operatorname{Re}f(z)$ directly along a given contour.
+\end{remark}
+
+\begin{remark}
+	\label{rem:residues}
+	The function $\phi(z)$ might not be holomorphic, and might have poles. The
+	deformation of the contour from $\gamma$ to $\Gamma$ might pick residues
+	at these poles. These residues can be harmless (easy to account for) or
+	not (hard to account for; or affect the asymptotics of the integral),
+	and one has to be careful with the contour deformation.
+\end{remark}
+
+Despite the caveats in \Cref{rem:steepest-descent,rem:residues},
+in what follows in this section we will discuss the
+easiest case of steepest descent analysis.
+We also assume that there is only one saddle point $z_0$
+to take care of.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Saddle points and steepest descent paths}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{definition}[Saddle Point]
+\begin{definition}[Saddle point]
 	A point $z_0\in\mathbb{C}$ is called a \emph{saddle point} of $f(z)$ if
 	\[
 		f'(z_0)=0.
@@ -485,20 +530,20 @@ Once the saddle points are identified, one deforms the contour $\gamma$ (using C
 	\]
 \end{definition}
 
-\begin{definition}[Steepest Descent Path]
-	Let $z_0$ be a saddle point of $f(z)$. A curve $\Gamma\subset\mathbb{C}$ passing through $z_0$ is called a \emph{steepest descent path} for $f(z)$ if along $\Gamma$ the imaginary part of $f(z)$ is constant (i.e., 
-	\[
-		\Im\bigl(f(z)\bigr)=\Im\bigl(f(z_0)\bigr)
-	\]
-	for all $z\in\Gamma$) and the real part $\Re\bigl(f(z)\bigr)$ decreases most rapidly away from $z_0$.
+\begin{definition}[Steepest descent path]
+	Let $z_0$ be a saddle point of $f(z)$. A curve $\Gamma\subset\mathbb{C}$ passing through $z_0$ is called a \emph{steepest descent path} for $f(z)$ if along $\Gamma$ the imaginary part of $f(z)$ is constant (i.e.,
+	\(
+		\operatorname{Im}\bigl(f(z)\bigr)=\operatorname{Im}\bigl(f(z_0)\bigr)
+	\)
+	for all $z\in\Gamma$), which implies that the real part
+	$\operatorname{Re}\bigl(f(z)\bigr)$ decreases away from
+	$z_0$.
 \end{definition}
 
-A standard local analysis shows that in a neighborhood of a saddle point $z_0$, if we write
+In a neighborhood of a saddle point $z_0$,
 \[
 	z=z_0+w,
-\]
-then by the Taylor expansion
-\[
+	\qquad 
 	f(z)=f(z_0)+\frac{1}{2}f''(z_0)w^2 + O(w^3).
 \]
 If we denote
@@ -509,16 +554,22 @@ then writing $w=r\,e^{i\varphi}$, we obtain
 \[
 	f(z)=f(z_0)+\frac{1}{2}|f''(z_0)|r^2e^{i(2\varphi+\theta_0)}+O(r^3).
 \]
-For the imaginary part to remain constant (that is, for the phase of the quadratic term to be $\pi$ modulo $2\pi$), one must choose $\varphi$ so that
+For the imaginary part to remain constant in a neighborhood
+of $z_0$, and, moreover,
+for the phase of the quadratic term to be $\pi$ modulo $2\pi$, one must choose $\varphi$ so that
 \begin{equation}
 	\label{eq:steepest-descent-direction}
 	2\varphi+\theta_0=\pi \quad (\operatorname{mod}\,2\pi).
 \end{equation}
-There are two such directions through $z_0$. Along these directions, one finds that
+We need the phase $\pi$ so that the exponent is negative, for the integral to converge.
+
+There are two directions satisfying \eqref{eq:steepest-descent-direction}
+through $z_0$, and we use both of them for our contour $\Gamma$.
+Along these directions, one finds that
 \[
-	\Re\bigl(f(z)\bigr)=\Re\bigl(f(z_0)\bigr)-\frac{1}{2}|f''(z_0)|r^2+O(r^3),
+	\operatorname{Re}\bigl(f(z)\bigr)=\operatorname{Re}\bigl(f(z_0)\bigr)-\frac{1}{2}|f''(z_0)|r^2+O(r^3),
 \]
-so that $\Re(f(z))$ is maximal at $z=z_0$ and decays quadratically as one moves away from $z_0$ along the steepest descent paths.
+so that $\operatorname{Re}(f(z))$ is maximal at $z=z_0$ and decays quadratically as one moves away from $z_0$ along the steepest descent paths.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Local asymptotic evaluation near a saddle point}
@@ -528,61 +579,40 @@ Assume now that the contour $\gamma$ in \eqref{eq:general-integral} has been def
 \[
 	z=z_0+w,
 \]
-and expand
-\[
-	f(z)=f(z_0)+\frac{1}{2}f''(z_0)w^2+O(w^3),\qquad \phi(z)=\phi(z_0)+O(w).
-\]
-Thus, the local contribution of a neighborhood of $z_0$ to the integral is
+so the local contribution of a neighborhood of $z_0$ to the integral is
 \begin{equation}
 	\label{eq:local-contribution}
-	I_{z_0}(\lambda)=e^{\lambda f(z_0)}\phi(z_0)
-	\int_{-\infty}^{\infty} e^{\lambda\frac{1}{2}f''(z_0)w^2}\,dw
-	\Bigl(1+O\Bigl(\frac{1}{\lambda}\Bigr)\Bigr).
+	I_{z_0}(\Lambda)=e^{\Lambda f(z_0)}\phi(z_0)
+	\int_{-\infty}^{\infty} e^{\Lambda\frac{1}{2}f''(z_0)w^2}\,dw
+	\Bigl(1+O\Bigl(\frac{1}{\Lambda}\Bigr)\Bigr).
 \end{equation}
-Here the integration is taken along the steepest descent direction, so that the quadratic term in the exponent is real and negative. (That is, by the choice \eqref{eq:steepest-descent-direction}, we have $\Re\bigl(f''(z_0)w^2\bigr)=-|f''(z_0)|r^2$.) Then the Gaussian integral evaluates to
+Here the integration is taken along the steepest descent direction, so that the quadratic term in the exponent is real and negative. (That is, by the choice \eqref{eq:steepest-descent-direction}, we have $\operatorname{Re}\bigl(f''(z_0)w^2\bigr)=-|f''(z_0)|r^2$.) Then the Gaussian integral evaluates to
 \[
-	\int_{-\infty}^{\infty} e^{-\lambda\frac{|f''(z_0)|}{2}r^2}\,dr
-	=\sqrt{\frac{2\pi}{\lambda |f''(z_0)|}},
+	\int_{-\infty}^{\infty} e^{-\Lambda\frac{|f''(z_0)|}{2}r^2}\,dr
+	=\sqrt{\frac{2\pi}{\Lambda |f''(z_0)|}}.
 \]
-up to a phase factor which is determined by the precise orientation of the steepest descent contour. Hence, we arrive at the following fundamental result.
+Hence, we
+arrive at the following fundamental result.
 
-\begin{theorem}[Local Asymptotics via Steepest Descent]
+\begin{theorem}[Local asymptotics via steepest descent]
 	\label{thm:steepest-descent}
-	Let $z_0$ be a saddle point of $f(z)$ with $f'(z_0)=0$ and $f''(z_0)\neq 0$, and assume that $\phi(z)$ is analytic in a neighborhood of $z_0$. Then, as $\lambda\to+\infty$, the contribution of a small neighborhood of $z_0$ to the integral \eqref{eq:general-integral} is given by
+	Let $z_0$ be a saddle point of $f(z)$ with $f'(z_0)=0$ and $f''(z_0)\neq 0$, and assume that $\phi(z)$ is holomorphic in a neighborhood of $z_0$. Then, as $\Lambda\to+\infty$, the contribution of a small neighborhood of $z_0$ to the integral \eqref{eq:general-integral} is given by
 	\begin{equation}
 		\label{eq:local-asymptotics}
-		I_{z_0}(\lambda)
-		\sim e^{\lambda f(z_0)}\ssp \phi(z_0)
-		\sqrt{\frac{2\pi}{\lambda\,f''(z_0)}},
+		I_{z_0}(\Lambda)
+		\sim e^{\Lambda f(z_0)}\ssp \phi(z_0)
+		\sqrt{\frac{2\pi}{\Lambda\,|f''(z_0)|}},\qquad \Lambda\to+\infty.
 	\end{equation}
-	where the square root is defined by choosing the branch so that the integration contour coincides with the path of steepest descent.
+	Moreover, the behavior \eqref{eq:local-asymptotics}
+	captures the full asymptotic behavior of the 
+	integral \eqref{eq:general-integral} 
+	as long as on the new contour $\Gamma$,
+	the real part of $f(z)$ is maximized at $z_0$ and is separated
+	from $\operatorname{Re}f(z_0)$ everywhere else on $\Gamma$ outside of a 
+	small neighborhood of $z_0$.
 \end{theorem}
 
-\begin{proof}
-	As outlined above, write $z=z_0+w$, expand
-	\[
-	f(z)=f(z_0)+\frac{1}{2}f''(z_0)w^2+O(w^3),\qquad \phi(z)=\phi(z_0)+O(w).
-	\]
-	By restricting the integration to a small neighborhood of $z_0$ (which contributes the main term as $\lambda\to\infty$), one obtains
-	\[
-	I_{z_0}(\lambda)=e^{\lambda f(z_0)}\ssp \phi(z_0)
-	\int_{-\delta}^{\delta} e^{\lambda\frac{1}{2}f''(z_0)w^2}\,dw
-	+O\Bigl(e^{\lambda f(z_0)}\lambda^{-3/2}\Bigr).
-	\]
-	By the steepest descent property the contour can be locally rotated so that the quadratic form in the exponent is real and negative. After this change of variable, the standard Gaussian integral yields the stated result.
-\end{proof}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Global asymptotic evaluation and deformation of the contour}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-In many applications, the original contour $\gamma$ does not pass through any saddle points. However, because $f$ is analytic, one may continuously deform $\gamma$ (without crossing any singularities) to a new contour $\widetilde{\gamma}$ that does pass through one or several saddle points along the corresponding steepest descent paths. If there are several saddle points, one must check that the contribution of each (and any possible end‐point contributions) is asymptotically negligible except for the saddle point(s) that maximize $\Re(f(z))$. Then one sums the contributions from each relevant saddle point.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Error estimates}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Under appropriate assumptions (typically, if $f$ and $\phi$ are analytic on a neighborhood that can be reached by the deformed contour and if the contributions away from the saddle points are exponentially small), one may show that the error in approximating the full integral by the sum of the local contributions is itself exponentially small relative to the leading order terms. In many cases, the next-order corrections can be computed by carrying the expansion in \eqref{eq:local-contribution} to higher order in $w$. (See, e.g., \cite{olver1974asymptotics} for a systematic treatment.)
+Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a neighborhood that can be reached by the deformed contour and if the contributions away from the saddle points are exponentially small), one may show that the error in approximating the full integral by the sum of the local contributions is itself exponentially small relative to the leading order terms. In many cases, the next-order corrections can be computed by carrying the expansion in \eqref{eq:local-contribution} to higher order in $w$. (See, e.g., \cite{olver1974asymptotics} for a systematic treatment.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
