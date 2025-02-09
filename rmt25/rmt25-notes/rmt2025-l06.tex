@@ -26,6 +26,7 @@
 \usepackage{cleveref}
 \usepackage{enumerate}
 \usepackage{datetime}
+\usepackage{esint}
 
 %paper geometry
 \usepackage[DIV=12]{typearea}
@@ -412,6 +413,7 @@ With this extension of the sum, formula \eqref{eq:K_n_sum} becomes
 	pass to the left of it. Indeed, one can deform the $s$ contour to the left
 	while picking the residue at $s=t$:
 	\begin{equation*}
+		2\pi i\ssp
 		\operatorname{Res}\limits_{s=t}
 		\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
 		=-e^{t(x-y)}.
@@ -662,7 +664,7 @@ that the eigenvalues live on the scare $\sqrt n$. This means that to capture the
 we need to scale
 \begin{equation}
 	\label{eq:scaling_x-y}
-	x=X\sqrt n+\Delta x,\qquad y=Y\sqrt n+\Delta y,\qquad 
+	x=X\sqrt n+\frac{\Delta x}{\sqrt n},\qquad y=Y\sqrt n+\frac{\Delta y}{\sqrt n},\qquad 
 	\Delta x,\Delta y\in\mathbb{R}.
 \end{equation}
 Moreover, if $X\ne Y$ (i.e., different global positions), one can check that the kernel
@@ -684,7 +686,7 @@ and the general shape as in \Cref{fig:contours}.
 We thus have:
 \begin{multline}
 	\label{eq:K_n_scaling}
-	K_n(X\sqrt n+\Delta x,X\sqrt n+\Delta y)\\=
+	K_n(X\sqrt n+\Delta x/\sqrt n,X\sqrt n+\Delta y/\sqrt n)\\=
 	\frac{\sqrt n}{(2\pi)^2}
 	\oint_C dz\int_{-i\infty}^{i\infty}dw\ssp
 	\frac{\exp
@@ -692,7 +694,7 @@ We thus have:
 			n\left( 
 				\log w -\log z
 				+\frac{w^2}{2}-\frac{z^2}{2}
-				+X(z-w)+\frac{z \Delta x-w \Delta y}{\sqrt n}
+				+X(z-w)+\frac{z \Delta x-w \Delta y}{n}
 			\right)
 		\right\}
 	}{w-z}.
@@ -728,26 +730,163 @@ they will be perpendicular to each other at $z_{cr}$.
 
 Thus, we need to find the critical points of $S(z)$.
 They are found from the quadratic equation:
-\begin{equation*}
+\begin{equation}
+	\label{eq:critical-points}
 	S'(z)=z+\frac{1}{z}-X=0,\qquad 
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
-\end{equation*}
+\end{equation}
 Depending on whether $|X|<2$, there are three cases.
-We will consider them in 
+Unless $|X|=2$, equation \eqref{eq:critical-points} has a single root, and
+thus $S''(z_{cr})\ne 0$.
+We will consider the three cases in 
 \Cref{sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
 below.
 
-\subsection{Imaginary critical points: $|X|<2$}
+\subsection{Imaginary critical points: $|X|<2$, ``bulk''}
 \label{sub:imaginary-critical-points}
 
+When $|X|<2$, the critical points are complex conjugate.
+Denote them by $z_{cr}$ and $\overline{z_{cr}}$.
+Since $S(z)$ has real coefficients, we have
+\begin{equation*}
+	\operatorname{Re}S(z_{cr})=\operatorname{Re}S(\overline{z_{cr}}).
+\end{equation*}
+Thus, we need to consider the contribution from both points. 
+For simplicity of the computations, let us consider only the case $X=0$.
+See Problem~\ref{prob:imaginary-critical-points}.
+We have
+\begin{equation*}
+	z_{cr}=i,\qquad 
+	S''(z_{cr})=2.
+\end{equation*}
+The behavior of $\operatorname{Re}S(z)$ on the complex plane 
+can be illustrated by a 3D plot or by a region plot of the regions
+where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ has constant sign.
+See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
+(We take $X\ne 0$ to break symmetry, for a better intuition.)
 
+\begin{figure}[htpb]
+	\centering
+	\includegraphics[height=.3\textwidth]{pictures/ReS_imaginary_3D.pdf}
+	\qquad 
+	\includegraphics[height=.3\textwidth]{pictures/ReS_imaginary_region.pdf}
+	\caption{A 3D plot and a region plot of the 
+	regions where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ is positive 
+	(highlighted) or negative, in the case $X=\frac{1}{2}$.
+	In this case, $z_{cr}\approx 0.25+0.96 i$.}
+	\label{fig:ReS_imaginary}
+\end{figure}
 
+From the region plot, we see that the new $z$ contour should 
+pass through the shaded region $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})>0$,
+and the new $w$ contour should pass through the unshaded region
+$\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})<0$.
 
-\subsection{Real critical points: $|X|>2$}
+Deforming the contours from \Cref{fig:contours} to the new contours
+is impossible without passing through the residue at $w=z$.
+Moreover, this residue appears only for certain values of $z$. Namely, for $X=0$,
+let us first make the $z$ contour to be the positively (counterclockwise) oriented 
+unit circle.
+It passes through the critical points $z_{cr}=i$ and $\overline{z_{cr}}=-i$.
+Since the original $w$ contour is to the right of the $z$ contour, we only 
+encounter the residue when $z$ is in the right half of the circle.
+
+Thus, we can write
+\begin{equation}
+	\label{eq:K_n_bulk_deformation}
+	\oiint_{\textnormal{old contours}}=
+	\oiint_{\textnormal{new contours}}
+	+
+	\int_{-i}^i 2\pi i\ssp \operatorname{Res}\limits_{w=z}\ssp dz,
+\end{equation}
+where in the single integral, the $z$ contour passes to the right of the origin,
+along the right half of the unit circle.
+
+It remains to consider the two integrals in the right-hand side 
+of \eqref{eq:K_n_bulk_deformation}.
+Recall that the correlation functions are 
+defined relative to a reference measure, and the right object to scale is
+\begin{equation*}
+	K_n(x,y)dy=\frac{1}{\sqrt n}\ssp d\left( \Delta y \right).
+\end{equation*}
+The extra factor $n^{-1/2}$
+compensates the prefactor $\sqrt n$ in 
+\eqref{eq:K_n_scaling}.
+
+The single integral takes the form
+\begin{equation}
+	\label{eq:K_n_bulk_single}
+	\frac{-i}{2\pi}
+	\int_{-i}^i 
+	e^{z (\Delta x -\Delta y)}
+	\ssp 
+	dz
+	=\frac{\sin\left( \Delta x-\Delta y \right)}{\pi(\Delta x-\Delta y)},
+	\qquad \Delta x,\Delta y\in\mathbb{R}.
+\end{equation}
+\begin{definition}
+	\label{def:sine-kernel}
+	The \emph{sine kernel} is defined as
+	\begin{equation*}
+		K_{\mathrm{sine}}(x,y)\coloneqq
+		\begin{cases}
+			\dfrac{\sin (x-y)}{\pi (x-y)},&\qquad x\ne 0,\\[10pt]
+			\dfrac{1}{\pi},&\qquad x=0.
+		\end{cases}
+	\end{equation*}
+	(The value at $x=y$ is defined by continuity.)
+
+	This kernel is translation invariant, and is often 
+	defined with a single argument, as 
+	$K_{\mathrm{sine}}(x-y)$.
+\end{definition}
+
+The double integral has both contours
+in the ``steepest descent'' regime, which means that
+the main contribution is 
+\begin{equation*}
+	\mathrm{const}\cdot
+	\frac{e^{n\left( \operatorname{Re}S(z_{cr})-\operatorname{Re}S(z_{cr}) \right)}}{\sqrt n}
+	\sim \frac{\mathrm{const}}{\sqrt n}.
+\end{equation*}
+At this rate, the double integral over the new contours
+\emph{does not} contribute to the asymptotics of the correlation functions.
+Recall that the correlation functions are expressed as finite-dimensional
+determinants of the kernel $K_n(x,y)$, and the error $O(n^{-1/2})$ is 
+negligible in the limit $n\to+\infty$.
+This is because the main term comes from the single integral, 
+which does not vanish.
+
+We have established the following result:
+\begin{proposition}[Bulk asymptotics at $X=0$]
+	\label{prop:bulk}
+	The correlation kernel $K_n$ of the GUE has the following asymptotics
+	close to zero as $n\to+\infty$:
+	\begin{equation*}
+		\lim_{n\to \infty}
+		\frac{1}{\sqrt n}
+		K_n\left( \frac{\Delta x}{\sqrt n},\frac{\Delta y}{\sqrt n} \right)
+		=
+		K_{\mathrm{sine}}\left( \Delta x,\Delta y \right),
+		\qquad \Delta x,\Delta y\in\mathbb{R}.
+	\end{equation*}
+	Consequently, the eigenvalues of the GUE converge to the sine process
+	determined by the sine kernel (\Cref{def:sine-kernel}),
+	in the sense of finite-dimensional distributions.
+\end{proposition}
+
+\begin{remark}
+	Beyond $X=0$, the local correlations are essentially the same, 
+	up to rescaling of the real line by a constant factor (depending
+	on the semicircle density).
+	See Problem~\ref{prob:imaginary-critical-points}.
+\end{remark}
+
+\subsection{Real critical points: $|X|>2$, ``edge''}
 \label{sub:real-critical-points}
 
 
-\subsection{Double critical points: $|X|=2$}
+\subsection{Double critical point: $|X|=2$, ''large deviations''}
 \label{sub:double-critical-points}
 
 
@@ -765,6 +904,50 @@ below.
 Show that if in \eqref{eq:scaling_x-y} we take $X\ne Y$, then
 $K_n(x,y)$ vanishes as $n\to+\infty$. Moreover, 
 establish that the decay is exponential in $n$.
+
+\subsection{Sine kernel}
+\label{prob:sine-kernel}
+
+Compute the integral 
+\eqref{eq:K_n_bulk_single}.
+
+\subsection{General bulk case}
+\label{prob:imaginary-critical-points}
+
+Perform the asymptotic analysis of the correlation
+kernel as in \Cref{sub:imaginary-critical-points},
+but in the general case $-2<X<2$.
+
+\subsection{Discrete sine process}
+\label{prob:discrete-sine-process}
+
+Define the discrete sine kernel on $\mathbb{Z}$ by
+\begin{equation*}
+	K_{\mathrm{dsine}}(x,y)\coloneqq
+	\begin{cases}
+		\dfrac{\sin \rho(x-y)}{\pi (x-y)},&\qquad x\ne y,\\[10pt]
+		\dfrac{\rho}{\pi},&\qquad x=y,
+	\end{cases}
+\end{equation*}
+where $\rho\in[0,1]$ is the density parameter.
+
+Let $\rho=1/2$.
+Compute (numerically) the asymptotics of the two events under the discrete sine process:
+\begin{equation*}
+	\operatorname{\mathbb{P}}
+	\Bigl( 
+		\underbrace{\circ \circ\ldots\circ}_{n\text{ times}}
+		\underbrace{\bullet \bullet\ldots\bullet}_{n\text{ times}}
+	\Bigr),\qquad 
+	\operatorname{\mathbb{P}}
+	\Bigl( 
+		\underbrace{\circ\bullet\circ\bullet\ldots\circ\bullet}_{2n\text{ points}}
+	\Bigr),\qquad 
+\end{equation*}
+If the sine process was of independent random points (with the same density $1/2$), 
+both events
+would have the same probability $2^{-2n}$.
+Which event is more favored by the sine process?
 
 
 
