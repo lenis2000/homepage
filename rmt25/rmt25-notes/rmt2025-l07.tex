@@ -71,6 +71,139 @@ Updated at \currenttime, \today}}
 
 
 
+\tableofcontents
+
+\section{Recap and Preview}
+
+In the previous lectures, we explored the global and local spectral behaviors of random matrices, focusing on the Wigner and Gaussian Unitary Ensemble (GUE) cases. We also introduced the tridiagonal and determinantal point process perspectives, culminating in the derivation of the sine and Airy kernels. 
+
+\medskip
+
+\noindent
+\textbf{Today's Goal.} We now turn our attention to the \emph{corners} (or minors) of GUE matrices. Specifically, we address how principal minors of a GUE matrix yield nested spectra that display remarkable interlacing properties and, simultaneously, admit determinantal representations. This phenomenon is often referred to as the \emph{GUE corners process}.
+
+\section{Principal Minors and Corner Processes}
+
+\subsection{Definition and Basic Properties}
+
+Let \(H\) be an \(n\times n\) GUE matrix (complex Hermitian with iid off-diagonal entries, each having variance \(1/2\), and diagonal entries each having variance \(1\)). Define, for \(k=1,\dots,n\), the \emph{top-left corner} of size \(k\):
+\[
+	H^{(k)} \;\coloneqq\; [H_{ij}]_{1\le i,j\le k}.
+\]
+Then \(H^{(k)}\) is itself an \emph{Hermitian} random matrix (though not independent of the other corners). Its eigenvalues will be denoted by
+\[
+	\lambda_1^{(k)} \;\ge\; \lambda_2^{(k)} \;\ge\; \cdots \;\ge\; \lambda_k^{(k)}.
+\]
+The entire collection of eigenvalues
+\[
+	\bigl\{\lambda_j^{(k)}: 1 \le j \le k \le n\bigr\}
+\]
+is called the \emph{GUE corners spectrum}. We refer to any arrangement \(\{\lambda_j^{(k)}\}\) with the natural partial ordering (by rows and columns) as a \emph{corner process} or \emph{minor process}.
+
+\begin{remark}
+	For each fixed \(k\), the distribution of \(H^{(k)}\) is \emph{not} exactly an independent GUE\((k)\) matrix. However, it is closely related (and has similar local/determinantal properties). The joint law of all corners \(H^{(1)},H^{(2)},\dots,H^{(n)}\) is referred to as the GUE corners process.
+\end{remark}
+
+\subsection{Interlacing Patterns}
+
+A well-known property of principal minors of Hermitian matrices is the \emph{interlacing} of eigenvalues:
+\[
+\lambda_1^{(k)} \;\ge\; \lambda_1^{(k+1)} \;\ge\; \lambda_2^{(k)} \;\ge\; \lambda_2^{(k+1)} \;\ge\; \dots \;\ge\; \lambda_k^{(k)} \;\ge\; \lambda_k^{(k+1)} \;\ge\; \lambda_{k+1}^{(k+1)}.
+\]
+Graphically, one can represent this via a triangular or Gelfand--Tsetlin pattern. The interlacing can be viewed as a finite version of the \emph{Cauchy interlacing theorem}.
+
+\begin{lemma}[Cauchy Interlacing]
+	Let \(A\) be a Hermitian \(n\times n\) matrix, and consider its top-left corner \(A^{(k)}\) of size \(k\). Denote by \(\mu_1\ge\dots\ge\mu_k\) the eigenvalues of \(A^{(k)}\) and by \(\nu_1\ge\dots\ge\nu_n\) the eigenvalues of \(A\). Then the interlacing pattern
+	\[
+		\nu_1\;\ge\;\mu_1\;\ge\;\nu_2\;\ge\;\mu_2\;\ge\;\dots\;\ge\;\nu_k\;\ge\;\mu_k\;\ge\;\nu_{k+1}
+	\]
+	holds. Equivalently, each eigenvalue of the corner \(A^{(k)}\) fits strictly between the surrounding eigenvalues of the full matrix \(A\).
+\end{lemma}
+
+\begin{remark}
+This lemma is sometimes described more generally for rank-\(1\) updates of a Hermitian matrix, leading to the so-called \emph{interlacing} or \emph{Weilandt--Hoffman} inequalities. In random matrix theory, the main takeaways are these elegant interlacing patterns that appear when cutting corners.
+\end{remark}
+
+\section{Joint Distribution of GUE Corners}
+
+\subsection{Spectral Decomposition and the Schur Complement}
+
+Let \(H\sim \mathrm{GUE}(n)\). It can be diagonalized as
+\[
+	H \;=\; U \,\Lambda \,U^\dagger, \quad
+	\Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_n),
+\]
+where \(\lambda_1\ge\cdots\ge \lambda_n\) are the eigenvalues of \(H\) and \(U\) is Haar-distributed from \(\mathrm{U}(n)\). We aim to describe the law of the top-left corners \(H^{(1)},H^{(2)},\dots,H^{(n-1)}\). This is a complicated question because these minors depend on both \(\Lambda\) and \(U\).
+
+However, a key trick is to rewrite each corner \(\,H^{(k)}\) via a \emph{Schur complement}:
+\[
+	H^{(k)} 
+	=\left[ U\,\Lambda\,U^\dagger \right]^{(k)}
+	=\bigl(U^{(k)}\bigr)\,\Lambda\,\bigl(U^{(k)}\bigr)^\dagger
+	+\text{(some rank-1 or rank-2 update)}.
+\]
+One can then attempt to integrate out parts of the Haar measure. The matrix \(\bigl(U^{(k)}\bigr)\) is the sub-block of \(U\) restricted to its first \(k\) rows, which is no longer Haar on \(\mathrm{U}(k)\) but still retains a special rotational invariance property. This leads to interesting invariance arguments and to the realization that all corners together form another determinantal structure---the \emph{GUE corners process}.
+
+\subsection{Determinantal Structure and Extended Kernel}
+
+Similar to the single GUE matrix whose eigenvalue correlation kernel is built from Hermite polynomials, the corners process is also determinantal. One sees an \emph{extended kernel} acting on a two-dimensional set of coordinates \(\{(k,x)\}\), with \(k=1,\dots,n\) (the corner index) and \(x\in \mathbb{R}\) (the spectral variable). The correlation functions for the entire family \(\{(\lambda_i^{(k)})\}\) is given by a multi-dimensional determinant. 
+
+\begin{theorem}[GUE Corners as a 2D Determinantal Process {\cite{johansson2006eigenvalues}}]
+The collection of all eigenvalues of the top-left corners \(H^{(1)},H^{(2)},\dots\) of a GUE matrix \(H\) forms a determinantal point process on the index-spectral space \(\{1,\dots,n\}\times \mathbb{R}\). The correlation kernel is given by an extension of the Hermite polynomial construction, sometimes referred to as the \emph{two-matrix kernel} or an \emph{interlacing kernel}.
+\end{theorem}
+
+While the explicit formula for the extended kernel is more involved than the single GUE kernel, one can still derive local limits (bulk and edge) for each corner, as well as interesting transitional regimes between corners of different sizes. The nested structure also implies a variety of interlacing constraints reminiscent of Gelfand--Tsetlin patterns.
+
+\section{Applications and Further Directions}
+
+\subsection{Random Sampling from Unitary Groups}
+
+As we discussed briefly, any GUE matrix can be decomposed (spectrally) into \(U \Lambda U^\dagger\) with \(U\sim \mathrm{Haar}(U(n))\). The top-left corners of \(U\) then inherit their own random distribution. This connects to the theme of \emph{partial isometries} from unitary operators and to \emph{partial Haar unitaries}. These objects also appear in the study of multivariate statistics and quantum information.
+
+\subsection{Representation Theory of \texorpdfstring{\(\mathrm{U}(n)\)}{}}
+
+The corner process of GUE arises in representation theory as well. Specifically, Gelfand--Tsetlin patterns parameterize irreducible representations of \(\mathrm{U}(n)\). Random partitions governed by measures on these patterns can exhibit GUE corners behavior in their limiting shapes and fluctuations. This perspective unifies random matrix theory with combinatorics and representation theory.
+
+\subsection{Continuous and Discrete Minors}
+
+The corner or minor process perspective extends to other random matrix ensembles and even to discretized analogs (e.g., certain random tableau distributions). For instance, the Wishart (Laguerre) and Jacobi (MANOVA) ensembles also possess corner minor processes with interlacing relationships. The determinantal structures remain, though the precise kernels change.
+
+\section{Problems (due 2025-03-19)}
+
+\begin{enumerate}[1.]
+
+\item \textbf{Interlacing via Schur Complements.} \\
+Let \(A\) be Hermitian of size \(n\times n\). Write the \((n-1)\times (n-1)\) top-left corner as
+\[
+A^{(n-1)} = \begin{pmatrix}
+A_{11} & \cdots & A_{1,n-1}\\
+\vdots & \ddots & \vdots\\
+A_{n-1,1} & \cdots & A_{n-1,n-1}
+\end{pmatrix}.
+\]
+Express \(A^{(n-1)}\) as the Schur complement of the last row/column in \(A\). Deduce the interlacing property for the eigenvalues of \(A^{(n-1)}\) and \(A\).
+
+\item \textbf{GUE Corners for \(2\times 2\) and \(3\times 3\) Examples.} \\
+Work out explicitly (symbolically if possible, or numerically) the joint eigenvalue distribution of
+\[
+H^{(1)} \quad\text{and}\quad H=\begin{pmatrix}
+H^{(1)} & *\\
+* & *
+\end{pmatrix}
+\]
+in the GUE \((n=2)\) setting. Then do the same in the \((n=3)\) setting for
+\(\,H^{(1)},H^{(2)},H^{(3)}=H\), at least partially (the formulas may get involved). Identify the interlacing pattern, and see if you can check the determinantal structure.
+
+\item \textbf{Limit Laws for the Smallest Corner.} \\
+In the GUE corners process, consider only the top-left corner \(H^{(1)}\), which is a single random entry (mean zero, variance \(1\)). Show how, under standard normalization, the distribution of \(H^{(1)}\) is \(\mathcal{N}(0,1)\). Then check how the next corner \(H^{(2)}\) modifies the distribution of the \((1,1)\) entry (which is the same random variable!). Comment on the interplay between the diagonal entry in \(H^{(1)}\) and the rest of the \((n-1)\times(n-1)\) block.
+
+\item \textbf{Convergence of the Largest Eigenvalue in Each Corner.} \\
+Let \(\lambda_{\max}^{(k)}\) be the largest eigenvalue of the top-left \(k\times k\) corner of an \(n\times n\) GUE matrix. Describe (in words or by references to earlier results) how \(\lambda_{\max}^{(k)}\) behaves in the limit \(n\to\infty\) with \(k\sim \alpha n\). Do you expect the local edge scaling (Tracy--Widom distribution) to remain valid at each corner size?
+
+\item \textbf{Connections to Gelfand--Tsetlin Patterns.} \\
+In representation theory, a Gelfand--Tsetlin pattern of depth \(n\) is an array of interlacing integers (or real numbers in a continuous setting). Show how the spectra \(\{\lambda_j^{(k)}\}\) of the corners \(H^{(k)}\) fits precisely into a Gelfand--Tsetlin pattern. Is there an exact bijection? Are there boundary conditions in the pattern that reflect the top or bottom corner constraints?
+
+\end{enumerate}
 
 
 
@@ -108,7 +241,7 @@ Updated at \currenttime, \today}}
 \appendix
 \setcounter{section}{6}
 
-\section{Problems (due DATE)}
+\section{Problems (due 2025-03-25)}
 
 
 
