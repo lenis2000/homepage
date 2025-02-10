@@ -1052,9 +1052,50 @@ show the convergence in distribution:
 	\mathbb{P}(\mathfrak{a}_1\le x).
 \end{equation}
 Both events \eqref{eq:TW_GUE_convergence} are so-called
-\emph{gap probabilities}
+\emph{gap probabilities}, for example,
+\begin{equation*}
+	\operatorname{P}(\mathfrak{a}_1\le x)=
+	\operatorname{P}(\textnormal{there are no eigenvalues in the interval $(x,\infty)$}),
+\end{equation*}
+which is expressed as
+the Fredholm determinant
+\begin{equation}
+	\label{eq:gap-probability-Ai-Fredholm}
+	\det\left( 1-K_{\mathrm{Ai}} \right)_{(x,\infty)}=
+	1+\sum_{m=1}^{\infty}\frac{(-1)^m}{m!}
+	\int_x^{\infty}dy_1\int_x^{\infty}dy_2\cdots
+	\int_x^{\infty}dy_m
+	\ssp
+	\det\limits_{i,j=1}^m
+	K_{\mathrm{Ai}}(y_i,y_j).
+\end{equation}
+Thus, to get \eqref{eq:TW_GUE_convergence}), one needs to show the convergence
+of sums like this for the GUE kernel
+to the corresponding sums for the Airy kernel. This is doable, but tedious.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{here}}
+Moreover, to get convergence in distribution of random variables,
+one would also have to argue either \emph{tightness},
+or independently show that 
+\eqref{eq:gap-probability-Ai-Fredholm} defines a
+cumulative probability
+distribution function in $x$:
+\begin{equation}
+	\label{eq:TW_GUE_cdf}
+	F_2(x)=\det\left( 1-K_{\mathrm{Ai}} \right)_{(x,\infty)}.
+\end{equation}
+The distribution \eqref{eq:TW_GUE_cdf} is known as the \emph{GUE Tracy--Widom distribution}.
+The subscript $2$ indicates that $\beta=2$. There are distributions
+$F_\beta$ for all beta, most notably, the GOE and GSE distributions.
+The classical distributions $F_1,F_2,F_4$ also appear as fluctuation distributions
+in interacting particle systems, while other beta values do
+not quite appear in the particle systems
+domain.
+
+More details 
+may be found in the original papers
+\cite{tracy1993level},
+\cite{Forrester1993},
+\cite{tracy_widom1994level_airy}.
 
 
 
