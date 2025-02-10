@@ -935,17 +935,13 @@ See also Problem~\ref{prob:large-deviation}.
 \subsection{Double critical point: $|X|=2$, ``edge''}
 \label{sub:double-critical-points}
 
-When \(X=2\) the two solutions in \eqref{eq:critical-points} merge into a double critical point. In this case the equation
+Throughout the subsection, we assume that $X=2$. The case $X=-2$ is symmetric.
+
+When \(X=2\), the two solutions in \eqref{eq:critical-points} merge into a double critical point
+$z_{cr}=1$.
+We have
 \[
-z+\frac{1}{z}-2=0
-\]
-has the unique solution \(z_{cr}=1\). One readily checks that
-\[
-S(z)=\frac{z^2}{2}+\log z-2z,\qquad S'(z)=z+\frac{1}{z}-2,
-\]
-satisfies
-\[
-S'(1)=0,\qquad S''(1)=1-1=0,\qquad S'''(1)=\frac{2}{1^3}=2.
+S'(1)=0,\qquad S''(1)=0,\qquad S'''(1)=2.
 \]
 Thus, the usual quadratic approximation fails and one must expand to third order. Writing
 \[
@@ -958,7 +954,7 @@ S(1+u)=S(1)+\frac{S'''(1)}{6}\,u^3+O(u^4)
 \]
 and similarly for \(S(1+v)\). Hence, the difference in the exponents becomes
 \[
-S(1+v)-S(1+u)=\frac{v^3-u^3}{3}+O(u^4,v^4).
+S(1+v)-S(1+u)=\frac{v^3-u^3}{3}+O(u^4+v^4).
 \]
 
 To capture the correct asymptotics, we rescale the local variables by setting
@@ -973,48 +969,93 @@ Moreover, the correct edge scaling for the spatial variables is obtained by writ
 \[
 x=2\sqrt{n}+\frac{\xi}{n^{1/6}},\qquad y=2\sqrt{n}+\frac{\eta}{n^{1/6}},\qquad \xi,\eta\in\mathbb{R}.
 \]
-A short computation shows that the additional linear terms in the exponent (arising from the factors \(tx\) and \(sy\) in \eqref{eq:K_n_scaling}) contribute, after the change of variables, a factor
-\[
-\exp\Bigl\{U\,\xi-V\,\eta\Bigr\}.
-\]
-Taking into account the Jacobians of the rescalings and the prefactor in \eqref{eq:K_n_scaling}, one deduces that the rescaled kernel
-\[
-\widetilde{K}_n(\xi,\eta)=\frac{1}{n^{1/6}}K_n\Bigl(2\sqrt{n}+\frac{\xi}{n^{1/6}},\,2\sqrt{n}+\frac{\eta}{n^{1/6}}\Bigr)
-\]
-admits the asymptotic representation
-\[
-\widetilde{K}_n(\xi,\eta)
-=\frac{1}{(2\pi i)^2}\int_{\Gamma_V}dV\int_{\Gamma_U}dU\,
-\frac{\exp\Bigl\{\frac{V^3-U^3}{3}+U\,\xi-V\,\eta\Bigr\}}{V-U}\Bigl(1+O\Bigl(n^{-1/3}\Bigr)\Bigr),
-\]
-where \(\Gamma_U\) and \(\Gamma_V\) are appropriate contours in the complex plane, chosen so that the integrals are convergent (with \(\Gamma_U\) a steepest descent contour for \(U\) and \(\Gamma_V\) a steepest ascent contour for \(V\)).
+We have
+\begin{equation*}
+	n\left( S(w)-S(z) \right)=n^{1/3}(\xi-\eta)+
+	\frac{V^3-U^3}{3}+\xi U-\eta V+O\Bigl(n^{-1/3}\Bigr).
+\end{equation*}
+The terms $n^{1/3}(\xi-\eta)$ are harmless as they can be removed
+by conjugation. 
 
-The double contour integral above is recognized as a standard representation for the \emph{Airy kernel}
-\[
-K_{\mathrm{Ai}}(\xi,\eta)=\frac{1}{(2\pi i)^2}\int_{\Gamma_V}dV\int_{\Gamma_U}dU\,
-\frac{\exp\Bigl\{\frac{V^3-U^3}{3}+U\,\xi-V\,\eta\Bigr\}}{V-U}.
-\]
-An equivalent formulation is given by
-\[
-K_{\mathrm{Ai}}(\xi,\eta)=\frac{\mathrm{Ai}(\xi)\mathrm{Ai}'(\eta)-\mathrm{Ai}'(\xi)\mathrm{Ai}(\eta)}{\xi-\eta},
-\]
-with \(\mathrm{Ai}(\cdot)\) denoting the Airy function.
+The region plot of $\operatorname{Re}S(z)-\operatorname{Re}S(1)$
+(shown in \Cref{fig:ReS_edge})
+makes sure that we can deform the $z$ contour so that it passes through $z_{cr}=1$
+as the new $U$ contour at the angles $\pm \frac{2\pi}{3}$ (where $\operatorname{Re}U^3>0$),
+we can deform the $w$ contour so that it passes through $z_{cr}=1$
+as the new $V$ contour at the angles $\pm \frac{\pi}{3}$ (where $\operatorname{Re}V^3<0$).
+This will ensure the convergence of the new double integral.
 
-We thus arrive at the following result.
+\begin{figure}[htpb]
+	\centering
+	\includegraphics[height=.3\textwidth]{pictures/ReS_edge.pdf}
+	\caption{The plot of the region $\operatorname{Re}S(z)-\operatorname{Re}S(1)>0$ for $X=2$.}
+	\label{fig:ReS_edge}
+\end{figure}
 
-\begin{proposition}[Edge asymptotics]
-\label{prop:edge}
-For the GUE kernel \(K_n(x,y)\) one has
-\[
-\lim_{n\to\infty}\frac{1}{n^{1/6}}K_n\Bigl(2\sqrt{n}+\frac{\xi}{n^{1/6}},\,2\sqrt{n}+\frac{\eta}{n^{1/6}}\Bigr)
-=K_{\mathrm{Ai}}(\xi,\eta),
-\]
-for all \(\xi,\eta\in\mathbb{R}\). Consequently, the eigenvalue statistics at the edge of the spectrum converge to the Airy point process.
+Thus, we have shown that under the rescaling, the GUE correlation kernel
+$K_n(x,y)\ssp dy$ converges to a new kernel.
+\begin{definition}
+	\label{def:Airy_kernel}
+	Define the \emph{Airy kernel} on $\mathbb{R}$ by
+	\begin{equation*}
+		K_{\mathrm{Ai}}(\xi,\eta)=\frac{1}{(2\pi i)^2}
+		\int_{e^{-\frac{\pi i}{3}}\infty}^{e^{\frac{\pi i}{3}}\infty}dV
+		\int_{e^{-\frac{2\pi i}{3}}\infty}^{e^{2\frac{\pi i}{3}}\infty}dU
+		\ssp
+		\frac{\exp\Bigl\{\frac{V^3-U^3}{3}+U\,\xi-V\,\eta\Bigr\}}{V-U}.
+	\end{equation*}
+	For another formula for the Airy kernel
+	which does not involve integrals,
+	see 
+	Problem~\ref{prob:airy}.
+\end{definition}
+
+\begin{proposition}
+	\label{prop:edge}
+	We have
+	\begin{equation*}
+		\lim_{n\to\infty}
+		\frac{1}{n^{1/6}}K_n\Bigl(2\sqrt{n}+\frac{\xi}{n^{1/6}},\,2\sqrt{n}+\frac{\eta}{n^{1/6}}\Bigr)
+		\to
+		K_{\mathrm{Ai}}(\xi,\eta).
+	\end{equation*}
+	Consequently, the eigenvalue statistics at the edge of the spectrum converge to the Airy point process, in the sense of fine-dimensional distributions.
 \end{proposition}
 
-\begin{remark}
-A rigorous justification of the above asymptotic analysis requires uniform estimates on the error terms in the expansion and careful control of the contour deformations. We refer the interested reader to standard texts on steepest descent methods for such details.
-\end{remark}
+\subsection{Airy kernel, Tracy--Widom distribution, and convergence of the maximal
+eigenvalue}
+
+Let us make a few remarks on the asymptotic results of 
+\Cref{prop:bulk,prop:edge}.
+First, 
+a rigorous justification of convergence
+of contour integrals requires some estimates on the error terms 
+in the steepest descent analysis, but these
+estimates are mild and not hard to obtain.
+
+Second, the GUE has the maximal eigenvalue $\lambda_{max}$. It is reasonable
+to assume that the Airy process also (almost surely) admits a maximal point 
+(usually denoted by $\mathfrak{a}_1$),
+and that $\lambda_{max}$
+converges to $\mathfrak{a}_1$ under appropriate rescaling:
+\begin{equation}
+	\label{eq:TW_GUE}
+	\lim_{n\to\infty}n^{\frac{1}{6}}\bigl(\lambda_{max}-2\sqrt{n}\bigr)=\mathfrak{a}_1.
+\end{equation}
+This is indeed the case, but to show \eqref{eq:TW_GUE}, one needs to
+show the convergence in distribution:
+\begin{equation}
+	\label{eq:TW_GUE_convergence}
+	\lim_{n\to \infty}
+	\mathbb{P}\Bigl(n^{1/6}(\lambda_{max}-2\sqrt{n})\le x\Bigr)
+	\to
+	\mathbb{P}(\mathfrak{a}_1\le x).
+\end{equation}
+Both events \eqref{eq:TW_GUE_convergence} are so-called
+\emph{gap probabilities}
+
+\colorbox{yellow}{\parbox{.7\textwidth}{here}}
+
 
 
 
@@ -1103,6 +1144,44 @@ maximal eigenvalue of \(W_n\) outside the bulk.
 		use the limit theorems for maxima of independent random variables to generalize the
 		\emph{lower bound} of $\operatorname{\mathbb{P}}(E_{n,\eta})$.
 \end{enumerate}
+
+\subsection{Airy kernel}
+\label{prob:airy}
+
+Define the Airy function by 
+\begin{equation*}
+	Ai(\xi)\coloneqq
+	\frac{1}{2\pi}\int_{-\infty}^\infty
+	e^{i U^3/3+i\xi U} dU=
+	\frac{1}{\pi}\int_0^\infty 
+	\cos\left( \frac{U^3}{3}+\xi U \right)\ssp dU.
+\end{equation*}
+This integral converges, but only conditionally. To improve convergence, 
+one should instead integrate 
+along a complex contour,
+from $e^{\frac{5 \pi i}{6}}\infty$ to $0$ to 
+$e^{\frac{\pi i}{6}}\infty$.
+
+Show that
+\begin{equation*}
+	K_{\mathrm{Ai}}(\xi,\eta)=
+	\frac{Ai(\xi)\ssp Ai'(\eta)-Ai(\eta)\ssp Ai'(\xi)}{\xi-\eta}.
+\end{equation*}
+Note that this expression is parallel to the sine kernel,
+\begin{equation*}
+	\frac{\sin(x-y)}{\pi(x-y)}=\frac{\sin x\cos y-\cos x\sin y}{\pi(x-y)},\qquad 
+	\cos x=(\sin x)'.
+\end{equation*}
+These correlation kernels are called \emph{integrable}
+\cite{its1990differential}.
+
+Hint for the problem: observe that 
+\begin{equation*}
+	\exp\left\{ -i z x+iwy \right\}=\frac{i}{x-y}\left( \frac{\partial}{\partial z}+
+	\frac{\partial}{\partial w}\right)\exp\left\{ -i z x+iwy \right\},
+\end{equation*}
+and use integration by parts in $K_{\mathrm{Ai}}(\xi,\eta)$
+from \Cref{def:Airy_kernel}.
 
 
 \bibliographystyle{alpha}
