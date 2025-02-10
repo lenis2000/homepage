@@ -425,11 +425,11 @@ With this extension of the sum, formula \eqref{eq:K_n_sum} becomes
 
 \subsection{Conjugation of the kernel}
 
-The kernel $K_n(x,y)$ contains a factor $e^{\frac{y^2-x^2}{4}}=g(x)/g(y)$, 
+The kernel $K_n(x,y)$ contains a factor $e^{\frac{y^2-x^2}{4}}=g(x)/g(y)$,
 where $g(\cdot)$ is a nonvanishing function. This factor can be safely removed, since
 in all determinants
 $\det[K_n(x_i,x_j)]_{i,j=1}^k$
-representing the correlation functions, the 
+representing the correlation functions, the
 conjugation factors $g(x_i)/g(x_j)$ do not affect the value of the determinant.
 Thus, we can and will deal with the correlation kernel
 \begin{equation}
@@ -439,7 +439,7 @@ Thus, we can and will deal with the correlation kernel
 	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
 	,
 \end{equation}
-and will use the same notation for it. 
+and will use the same notation for it.
 Throughout the asymptotic analysis in \Cref{sec:steepest-descent-GUE} below,
 other conjugation factors may appear, but we can similarly
 remove them.
@@ -565,7 +565,7 @@ to take care of.
 In a neighborhood of a saddle point $z_0$,
 \[
 	z=z_0+w,
-	\qquad 
+	\qquad
 	f(z)=f(z_0)+\frac{1}{2}f''(z_0)w^2 + O(w^3).
 \]
 If we denote
@@ -626,11 +626,11 @@ arrive at the following fundamental result.
 		\sqrt{\frac{2\pi}{\Lambda\,|f''(z_0)|}},\qquad \Lambda\to+\infty.
 	\end{equation}
 	Moreover, the behavior \eqref{eq:local-asymptotics}
-	captures the full asymptotic behavior of the 
-	integral \eqref{eq:general-integral} 
+	captures the full asymptotic behavior of the
+	integral \eqref{eq:general-integral}
 	as long as on the new contour $\Gamma$,
 	the real part of $f(z)$ is maximized at $z_0$ and is separated
-	from $\operatorname{Re}f(z_0)$ everywhere else on $\Gamma$ outside of a 
+	from $\operatorname{Re}f(z_0)$ everywhere else on $\Gamma$ outside of a
 	small neighborhood of $z_0$.
 \end{theorem}
 
@@ -646,7 +646,7 @@ Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a
 \subsection{Scaling}
 \label{sub:scaling}
 
-Let us now consider the GUE kernel 
+Let us now consider the GUE kernel
 \eqref{eq:K_n_conjugated},
 \begin{equation*}
 	K_n(x,y)=\frac{1}{(2\pi)^2}
@@ -664,7 +664,7 @@ that the eigenvalues live on the scare $\sqrt n$. This means that to capture the
 we need to scale
 \begin{equation}
 	\label{eq:scaling_x-y}
-	x=X\sqrt n+\frac{\Delta x}{\sqrt n},\qquad y=Y\sqrt n+\frac{\Delta y}{\sqrt n},\qquad 
+	x=X\sqrt n+\frac{\Delta x}{\sqrt n},\qquad y=Y\sqrt n+\frac{\Delta y}{\sqrt n},\qquad
 	\Delta x,\Delta y\in\mathbb{R}.
 \end{equation}
 Moreover, if $X\ne Y$ (i.e., different global positions), one can check that the kernel
@@ -676,8 +676,8 @@ Let us also make a change of the integration variables:
 \begin{equation*}
 	t=z\sqrt n,\qquad s=w\sqrt n.
 \end{equation*}
-The integration contours for $z$ and $w$ look the same as in 
-\Cref{fig:contours}, up to a rescaling. However, as $0$ 
+The integration contours for $z$ and $w$ look the same as in
+\Cref{fig:contours}, up to a rescaling. However, as $0$
 and $t=s$
 are the only singularities in the integrand, we can deform the $z,w$
 contours as we wish, while keeping $|z|<|w|$
@@ -690,8 +690,8 @@ We thus have:
 	\frac{\sqrt n}{(2\pi)^2}
 	\oint_C dz\int_{-i\infty}^{i\infty}dw\ssp
 	\frac{\exp
-		\left\{ 
-			n\left( 
+		\left\{
+			n\left(
 				\log w -\log z
 				+\frac{w^2}{2}-\frac{z^2}{2}
 				+X(z-w)+\frac{z \Delta x-w \Delta y}{n}
@@ -701,13 +701,13 @@ We thus have:
 \end{multline}
 \begin{remark}
 	\label{rmk:log-harmless}
-	The logarithms in the exponent are harmless, since for the 
-	estimates we only need the real parts of the logarithms, 
-	and for the main contributions, we will have $z\approx w$, so 
+	The logarithms in the exponent are harmless, since for the
+	estimates we only need the real parts of the logarithms,
+	and for the main contributions, we will have $z\approx w$, so
 	any phases of the logarithms would cancel.
 \end{remark}
 
-The asymptotic analysis of double contour integrals like 
+The asymptotic analysis of double contour integrals like
 \eqref{eq:K_n_scaling} in the context of determinantal point processes
 was pioneered in \cite[Section~3]{Okounkov2002}.
 
@@ -716,14 +716,14 @@ was pioneered in \cite[Section~3]{Okounkov2002}.
 
 Let us define
 \begin{equation*}
-	S(z)\coloneqq 
+	S(z)\coloneqq
 	\frac{z^2}{2}+\log z -X z.
 \end{equation*}
 Then the exponent contains $n \left( S(w)-S(z) \right)$.
-According to the steepest descent ideology, we 
+According to the steepest descent ideology, we
 should deform the integration contours
 to pass through the critical point(s) $z_{cr}$ of $S(z)$.
-Moreover, the new $w$ contour should maximize the real part of $S(z)$ 
+Moreover, the new $w$ contour should maximize the real part of $S(z)$
 at $z_{cr}$, and the new $z$ contour should minimize it.
 If $S''(z_{cr})\ne 0$, it is possible to locally choose such contours,
 they will be perpendicular to each other at $z_{cr}$.
@@ -732,13 +732,13 @@ Thus, we need to find the critical points of $S(z)$.
 They are found from the quadratic equation:
 \begin{equation}
 	\label{eq:critical-points}
-	S'(z)=z+\frac{1}{z}-X=0,\qquad 
+	S'(z)=z+\frac{1}{z}-X=0,\qquad
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
 \end{equation}
 Depending on whether $|X|<2$, there are three cases.
 Unless $|X|=2$, equation \eqref{eq:critical-points} has a single root, and
 thus $S''(z_{cr})\ne 0$.
-We will consider the three cases in 
+We will consider the three cases in
 \Cref{sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
 below.
 
@@ -751,15 +751,15 @@ Since $S(z)$ has real coefficients, we have
 \begin{equation*}
 	\operatorname{Re}S(z_{cr})=\operatorname{Re}S(\overline{z_{cr}}).
 \end{equation*}
-Thus, we need to consider the contribution from both points. 
+Thus, we need to consider the contribution from both points.
 For simplicity of the computations, let us consider only the case $X=0$.
 See Problem~\ref{prob:imaginary-critical-points}.
 We have
 \begin{equation*}
-	z_{cr}=i,\qquad 
+	z_{cr}=i,\qquad
 	S''(z_{cr})=2.
 \end{equation*}
-The behavior of $\operatorname{Re}S(z)$ on the complex plane 
+The behavior of $\operatorname{Re}S(z)$ on the complex plane
 can be illustrated by a 3D plot or by a region plot of the regions
 where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ has constant sign.
 See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
@@ -768,16 +768,16 @@ See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
 \begin{figure}[htpb]
 	\centering
 	\includegraphics[height=.3\textwidth]{pictures/ReS_imaginary_3D.pdf}
-	\qquad 
+	\qquad
 	\includegraphics[height=.3\textwidth]{pictures/ReS_imaginary_region.pdf}
-	\caption{A 3D plot and a region plot of the 
-	regions where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ is positive 
+	\caption{A 3D plot and a region plot of the
+	regions where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ is positive
 	(highlighted) or negative, in the case $X=\frac{1}{2}$.
 	In this case, $z_{cr}\approx 0.25+0.96 i$.}
 	\label{fig:ReS_imaginary}
 \end{figure}
 
-From the region plot, we see that the new $z$ contour should 
+From the region plot, we see that the new $z$ contour should
 pass through the shaded region $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})>0$,
 and the new $w$ contour should pass through the unshaded region
 $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})<0$.
@@ -785,10 +785,10 @@ $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})<0$.
 Deforming the contours from \Cref{fig:contours} to the new contours
 is impossible without passing through the residue at $w=z$.
 Moreover, this residue appears only for certain values of $z$. Namely, for $X=0$,
-let us first make the $z$ contour to be the positively (counterclockwise) oriented 
+let us first make the $z$ contour to be the positively (counterclockwise) oriented
 unit circle.
 It passes through the critical points $z_{cr}=i$ and $\overline{z_{cr}}=-i$.
-Since the original $w$ contour is to the right of the $z$ contour, we only 
+Since the original $w$ contour is to the right of the $z$ contour, we only
 encounter the residue when $z$ is in the right half of the circle.
 
 Thus, we can write
@@ -802,24 +802,24 @@ Thus, we can write
 where in the single integral, the $z$ contour passes to the right of the origin,
 along the right half of the unit circle.
 
-It remains to consider the two integrals in the right-hand side 
+It remains to consider the two integrals in the right-hand side
 of \eqref{eq:K_n_bulk_deformation}.
-Recall that the correlation functions are 
+Recall that the correlation functions are
 defined relative to a reference measure, and the right object to scale is
 \begin{equation*}
 	K_n(x,y)dy=\frac{1}{\sqrt n}\ssp d\left( \Delta y \right).
 \end{equation*}
 The extra factor $n^{-1/2}$
-compensates the prefactor $\sqrt n$ in 
+compensates the prefactor $\sqrt n$ in
 \eqref{eq:K_n_scaling}.
 
 The single integral takes the form
 \begin{equation}
 	\label{eq:K_n_bulk_single}
 	\frac{-i}{2\pi}
-	\int_{-i}^i 
+	\int_{-i}^i
 	e^{z (\Delta x -\Delta y)}
-	\ssp 
+	\ssp
 	dz
 	=\frac{\sin\left( \Delta x-\Delta y \right)}{\pi(\Delta x-\Delta y)},
 	\qquad \Delta x,\Delta y\in\mathbb{R}.
@@ -836,14 +836,14 @@ The single integral takes the form
 	\end{equation*}
 	(The value at $x=y$ is defined by continuity.)
 
-	This kernel is translation invariant, and is often 
-	defined with a single argument, as 
+	This kernel is translation invariant, and is often
+	defined with a single argument, as
 	$K_{\mathrm{sine}}(x-y)$.
 \end{definition}
 
 The double integral has both contours
 in the ``steepest descent'' regime, which means that
-the main contribution is 
+the main contribution is
 \begin{equation*}
 	\mathrm{const}\cdot
 	\frac{e^{n\left( \operatorname{Re}S(z_{cr})-\operatorname{Re}S(z_{cr}) \right)}}{\sqrt n}
@@ -852,9 +852,9 @@ the main contribution is
 At this rate, the double integral over the new contours
 \emph{does not} contribute to the asymptotics of the correlation functions.
 Recall that the correlation functions are expressed as finite-dimensional
-determinants of the kernel $K_n(x,y)$, and the error $O(n^{-1/2})$ is 
+determinants of the kernel $K_n(x,y)$, and the error $O(n^{-1/2})$ is
 negligible in the limit $n\to+\infty$.
-This is because the main term comes from the single integral, 
+This is because the main term comes from the single integral,
 which does not vanish.
 
 We have established the following result:
@@ -876,7 +876,7 @@ We have established the following result:
 \end{proposition}
 
 \begin{remark}
-	Beyond $X=0$, the local correlations are essentially the same, 
+	Beyond $X=0$, the local correlations are essentially the same,
 	up to rescaling of the real line by a constant factor (depending
 	on the semicircle density).
 	See Problem~\ref{prob:imaginary-critical-points}.
@@ -885,14 +885,11 @@ We have established the following result:
 \subsection{Real critical points: $|X|>2$, ``large deviations''}
 \label{sub:real-critical-points}
 
-For \(X^2>4\), both solutions 
+For \(X^2>4\), both solutions
 \eqref{eq:critical-points}
 are real. Let us assume $X>2$, the case \(X<2\) is similar.
 For $X>2$, both solutions are positive.
 Label these solutions as
-
-\colorbox{yellow}{\parbox{.7\textwidth}{here!}}
-
 \[
 	z_+ \;=\;\frac{X + \sqrt{X^2-4}}{2},
 	\qquad
@@ -900,60 +897,40 @@ Label these solutions as
 	\quad
 	\text{so that}\quad z_+z_-=1.
 \]
-A straightforward check reveals that \(z_+\!>\!1\) and \(z_-\!<\!1\) (for \(X>2\)), and hence
+A straightforward check reveals that \(z_+\!>\!1\) and \(z_-\!<\!1\) (for \(X>2\)).
+Note that $S''(z)=1-z^{-2}$, which is positive for \(z_+>1\) and negative for \(z_-<1\).  Thus, the critical points \(z_+\) and \(z_-\) are a local minimum and a local maximum.
+A crucial observation is that
+\begin{equation*}
+	S(z_+)<S(z_-).
+\end{equation*}
+One can deform the $z$ integration contour to pass through
+$z_-$ and the $w$ contour to pass through $z_+$.
+Then, on these contours, one can show that
+\begin{equation*}
+	\operatorname{Re}S(w)-\operatorname{Re}S(z)<0.
+\end{equation*}
+According to the steepest descent ideology,
+we see that the main exponential behavior of the double contour integral is
 \begin{equation}
-	\label{eq:S-doubleder}
-	S''(z)\;=\;1-\frac{1}{z^2}.
+	\label{eq:Oexp}
+	\exp\left\{ n\left(
+		\operatorname{Re}S(z_+)-\operatorname{Re}S(z_-)
+\right) \right\}=O( e^{-\delta(X)n} ), \qquad |X|>2.
 \end{equation}
-In particular, at \(z_+=\frac{X+\sqrt{X^2-4}}{2}\),
-we have \(z_+^2>1\), so \(S''(z_+)>0\), and thus \(z_+\) is a local \emph{minimum} for \(\operatorname{Re}\bigl(S(z)\bigr)\). 
-At \(z_-=\frac{X-\sqrt{X^2-4}}{2}\), one gets \(z_-^2<1\), so \(S''(z_-)<0\), making \(z_-\) a local \emph{maximum}.
+Here $\delta(X)>0$ for $|X|>2$, and $\delta(X)\to0$ when $|X|\to2$.
 
-\paragraph{Behavior of the integral and exponential decay.}
-Returning to the double contour representation for the kernel
-\[
-	K_n(X\sqrt{n} + \Delta x/\sqrt{n},\,X\sqrt{n} + \Delta y/\sqrt{n})
-	\;=\;
-	\frac{\sqrt{n}}{(2\pi)^2}
-	\oint_C \!dz\;\int_{-i\infty}^{i\infty}\!dw\,
-	\frac{\exp\!\Bigl\{
-		n \,\bigl[\,S(w)\;-\;S(z)\bigr]
-		\;+\; z\,\frac{\Delta x}{n}\;-\;w\,\frac{\Delta y}{n}
-	\Bigr\}}{\,w-z\,}\,,
-\]
-we see that the real part of
-\(
-	S(w)\;-\;S(z)
-\)
-will govern whether the integrand is exponentially large or small when \(\,n\to+\infty\).
+The outcome \eqref{eq:Oexp} reflects the fact that the
+Wigner semicircle law places all eigenvalues inside the
+interval \(\lvert X\rvert \le 2\).
+The probability to see even a single eigenvalue outside $[-2,2]$
+is exponentially small.
 
-- On the \(z\)-contour (of smaller radius in the rescaled plane), one might try to deform so that \(\operatorname{Re}\bigl(S(z)\bigr)\) is \emph{maximized}.  However, when \(|X|>2\), the natural real critical points \(z_-\!<1\) and \(z_+>1\) show that along any circle or path with \(|z|<1\), we cannot make the contour pass \emph{through} \(z_+\).  Thus, in typical steepest descent deformations, the point \(z_-\!<1\) is a local maximum that remains unreachable if we insist \(|z|<|w|\).  Pushing the contour in an attempt to capture \(z_-\) instead forces us to cross the line \(z=w\), incurring a residue and changing the structure of the integral (cf.\ the discussion in the bulk case \S\ref{sub:imaginary-critical-points}).
+This exponential decay corresponds to a large deviation regime.
+Indeed, if at least one of the diagonal entries of the matrix
+is unusually large, this corresponds to 
+the maximal eigenvalue to get outside the interval \([-2,2]\).
+See also Problem~\ref{prob:large-deviation}.
 
-- Meanwhile, on the \(w\)-contour (of larger radius), the real solution \(w=z_+>1\) may lie on or inside the contour; but since \(S''(z_+)>0\), \(z_+\) is a \emph{local minimum} for \(\operatorname{Re}\bigl(S(w)\bigr)\).  This implies that \(\operatorname{Re}\bigl(S(w)-S(z)\bigr)\) cannot be \emph{increased} near \(z_+\) when \(z\) is restricted to \(|z|<1\).  In effect, passing the \(w\)-contour near \(z_+\) yields an exponential damping of the integrand in the limit \(n\to\infty\).
-
-A more precise argument (similar in spirit to the bulk analysis) confirms that, under these deformations, the key exponential factor
-\[
-	\exp\Bigl\{\,n\bigl[\operatorname{Re}\bigl(S(w)\bigr)\;-\;\operatorname{Re}\bigl(S(z)\bigr)\bigr] \Bigr\}
-\]
-never achieves a substantial positive exponent when \(|X|>2\).  In fact, the difference \(\operatorname{Re}\bigl(S(w)\bigr)-\operatorname{Re}\bigl(S(z)\bigr)\) stays strictly negative away from possible residue crossings (and those can be arranged to lie in regions where \(\operatorname{Re}\bigl(S(w)\bigr)-\operatorname{Re}\bigl(S(z)\bigr)\le0\)).  Therefore, \emph{the entire double integral is suppressed by an exponentially small factor in \(n\)}.
-
-\begin{proposition}[Exponential decay for \(\,\lvert X\rvert>2\)]
-	\label{prop:outside-bulk}
-	Under the scaling \(x=X\sqrt{n} + \Delta x/\sqrt{n}\), \(y=X\sqrt{n}+\Delta y/\sqrt{n}\) with any fixed real \(\Delta x,\Delta y\), the GUE correlation kernel \(K_n(x,y)\) satisfies
-	\[
-		K_n(x,y)
-		\;=\;
-		O\!\bigl(e^{-\,c\,n}\bigr),
-		\quad n\to+\infty,
-	\]
-	for some constant \(c>0\) depending on \(\,X\) but not on \(\Delta x,\Delta y\).  Consequently, all correlation functions in the regime \(\,\lvert X\rvert>2\) vanish \emph{exponentially fast} as \(n\to\infty\).
-\end{proposition}
-
-This outcome reflects the fact that the Wigner semicircle law places all eigenvalues inside the interval \(\lvert X\rvert \le 2\); being \emph{outside} that support forces probability events that require an eigenvalue to appear at \(X\sqrt{n}\) (with \(\lvert X\rvert>2\)) to decay on an exponential scale.  In the language of large deviations, the probability cost of planting a spectral point in that forbidden region is highly suppressed, and the correlation kernel inherits that decay.
-
-\begin{remark}
-	We will handle separately, in \S\ref{sub:double-critical-points}, the \emph{boundary} case \(\,\lvert X\rvert=2\), which is subtler.  There, the two real critical points of \(S(z)\) \emph{merge} into one (i.e., a \emph{double} critical point), causing a cubic term to appear in the local expansion.  This leads to \emph{soft edge} fluctuations governed by an Airy-type kernel.
-\end{remark}
 
 \subsection{Double critical point: $|X|=2$, ``edge''}
 \label{sub:double-critical-points}
@@ -971,13 +948,13 @@ This outcome reflects the fact that the Wigner semicircle law places all eigenva
 \label{prob:different-global-positions}
 
 Show that if in \eqref{eq:scaling_x-y} we take $X\ne Y$, then
-$K_n(x,y)$ vanishes as $n\to+\infty$. Moreover, 
+$K_n(x,y)$ vanishes as $n\to+\infty$. Moreover,
 establish that the decay is exponential in $n$.
 
 \subsection{Sine kernel}
 \label{prob:sine-kernel}
 
-Compute the integral 
+Compute the integral
 \eqref{eq:K_n_bulk_single}.
 
 \subsection{General bulk case}
@@ -1004,19 +981,22 @@ Let $\rho=1/2$.
 Compute (numerically) the asymptotics of the two events under the discrete sine process:
 \begin{equation*}
 	\operatorname{\mathbb{P}}
-	\Bigl( 
+	\Bigl(
 		\underbrace{\circ \circ\ldots\circ}_{n\text{ times}}
 		\underbrace{\bullet \bullet\ldots\bullet}_{n\text{ times}}
-	\Bigr),\qquad 
+	\Bigr),\qquad
 	\operatorname{\mathbb{P}}
-	\Bigl( 
+	\Bigl(
 		\underbrace{\circ\bullet\circ\bullet\ldots\circ\bullet}_{2n\text{ points}}
-	\Bigr),\qquad 
+	\Bigr),\qquad
 \end{equation*}
-If the sine process was of independent random points (with the same density $1/2$), 
+If the sine process was of independent random points (with the same density $1/2$),
 both events
 would have the same probability $2^{-2n}$.
 Which event is more favored by the sine process?
+
+\subsection{Large deviations}
+\label{prob:large-deviation}
 
 
 
