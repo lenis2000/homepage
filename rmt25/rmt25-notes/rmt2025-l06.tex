@@ -60,7 +60,7 @@
 (Spring 2025)
 \\Lecture 6: Double contour integral kernel. Steepest descent and local statistics}
 
-\date{February 12, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
+\date{Wednesday, February 19, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
 $\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.tex}{\texttt{TeX Source}}
 $\bullet$
@@ -927,7 +927,7 @@ is exponentially small.
 
 This exponential decay corresponds to a large deviation regime.
 Indeed, if at least one of the diagonal entries of the matrix
-is unusually large, this corresponds to 
+is unusually large, this corresponds to
 the maximal eigenvalue to get outside the interval \([-2,2]\).
 See also Problem~\ref{prob:large-deviation}.
 
@@ -975,7 +975,7 @@ We have
 	\frac{V^3-U^3}{3}+\xi U-\eta V+O\Bigl(n^{-1/3}\Bigr).
 \end{equation*}
 The terms $n^{1/3}(\xi-\eta)$ are harmless as they can be removed
-by conjugation. 
+by conjugation.
 
 The region plot of $\operatorname{Re}S(z)-\operatorname{Re}S(1)$
 (shown in \Cref{fig:ReS_edge})
@@ -1006,7 +1006,7 @@ $K_n(x,y)\ssp dy$ converges to a new kernel.
 	\end{equation*}
 	For another formula for the Airy kernel
 	which does not involve integrals,
-	see 
+	see
 	Problem~\ref{prob:airy}.
 \end{definition}
 
@@ -1025,16 +1025,16 @@ $K_n(x,y)\ssp dy$ converges to a new kernel.
 \subsection{Airy kernel, Tracy--Widom distribution, and convergence of the maximal
 eigenvalue}
 
-Let us make a few remarks on the asymptotic results of 
+Let us make a few remarks on the asymptotic results of
 \Cref{prop:bulk,prop:edge}.
-First, 
+First,
 a rigorous justification of convergence
-of contour integrals requires some estimates on the error terms 
+of contour integrals requires some estimates on the error terms
 in the steepest descent analysis, but these
 estimates are mild and not hard to obtain.
 
 Second, the GUE has the maximal eigenvalue $\lambda_{max}$. It is reasonable
-to assume that the Airy process also (almost surely) admits a maximal point 
+to assume that the Airy process also (almost surely) admits a maximal point
 (usually denoted by $\mathfrak{a}_1$),
 and that $\lambda_{max}$
 converges to $\mathfrak{a}_1$ under appropriate rescaling:
@@ -1075,7 +1075,7 @@ to the corresponding sums for the Airy kernel. This is doable, but tedious.
 
 Moreover, to get convergence in distribution of random variables,
 one would also have to argue either \emph{tightness},
-or independently show that 
+or independently show that
 \eqref{eq:gap-probability-Ai-Fredholm} defines a
 cumulative probability
 distribution function in $x$:
@@ -1091,7 +1091,7 @@ in interacting particle systems, while other beta values do
 not quite appear in the particle systems
 domain.
 
-More details 
+More details
 may be found in the original papers
 \cite{tracy1993level},
 \cite{Forrester1993},
@@ -1103,7 +1103,7 @@ may be found in the original papers
 \appendix
 \setcounter{section}{5}
 
-\section{Problems (due 2025-03-12)}
+\section{Problems (due 2025-03-19)}
 
 \subsection{Different global positions}
 \label{prob:different-global-positions}
@@ -1159,7 +1159,7 @@ Which event is more favored by the sine process?
 \subsection{Large deviations}
 \label{prob:large-deviation}
 
-Let \(W_n\) be an \(n\times n\) Wigner real or Hermitian matrix with finite variance entries. Assume that the matrix is normalized so that the variance of each diagonal entry is 1. 
+Let \(W_n\) be an \(n\times n\) Wigner real or Hermitian matrix with finite variance entries. Assume that the matrix is normalized so that the variance of each diagonal entry is 1.
 
 \medskip
 
@@ -1176,12 +1176,12 @@ entry \(W_{ii}\) is unusually large, it will push the
 maximal eigenvalue of \(W_n\) outside the bulk.
 
 \begin{enumerate}
-	\item Assuming that the 
-		entries are Gaussian, 
+	\item Assuming that the
+		entries are Gaussian,
 		\emph{lower bound} the probability of the event \(E_{n,\eta}\) for large \(n\).
 	\item
-		Assuming another tail behavior of the diagonal entries (exponential or 
-		power-law tails), 
+		Assuming another tail behavior of the diagonal entries (exponential or
+		power-law tails),
 		use the limit theorems for maxima of independent random variables to generalize the
 		\emph{lower bound} of $\operatorname{\mathbb{P}}(E_{n,\eta})$.
 \end{enumerate}
@@ -1189,18 +1189,18 @@ maximal eigenvalue of \(W_n\) outside the bulk.
 \subsection{Airy kernel}
 \label{prob:airy}
 
-Define the Airy function by 
+Define the Airy function by
 \begin{equation*}
 	Ai(\xi)\coloneqq
 	\frac{1}{2\pi}\int_{-\infty}^\infty
 	e^{i U^3/3+i\xi U} dU=
-	\frac{1}{\pi}\int_0^\infty 
+	\frac{1}{\pi}\int_0^\infty
 	\cos\left( \frac{U^3}{3}+\xi U \right)\ssp dU.
 \end{equation*}
-This integral converges, but only conditionally. To improve convergence, 
-one should instead integrate 
+This integral converges, but only conditionally. To improve convergence,
+one should instead integrate
 along a complex contour,
-from $e^{\frac{5 \pi i}{6}}\infty$ to $0$ to 
+from $e^{\frac{5 \pi i}{6}}\infty$ to $0$ to
 $e^{\frac{\pi i}{6}}\infty$.
 
 Show that
@@ -1210,13 +1210,13 @@ Show that
 \end{equation*}
 Note that this expression is parallel to the sine kernel,
 \begin{equation*}
-	\frac{\sin(x-y)}{\pi(x-y)}=\frac{\sin x\cos y-\cos x\sin y}{\pi(x-y)},\qquad 
+	\frac{\sin(x-y)}{\pi(x-y)}=\frac{\sin x\cos y-\cos x\sin y}{\pi(x-y)},\qquad
 	\cos x=(\sin x)'.
 \end{equation*}
 These correlation kernels are called \emph{integrable}
 \cite{its1990differential}.
 
-Hint for the problem: observe that 
+Hint for the problem: observe that
 \begin{equation*}
 	\exp\left\{ -i z x+iwy \right\}=\frac{i}{x-y}\left( \frac{\partial}{\partial z}+
 	\frac{\partial}{\partial w}\right)\exp\left\{ -i z x+iwy \right\},

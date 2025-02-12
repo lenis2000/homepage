@@ -56,7 +56,7 @@
 \\Lecture 7: Cutting corners}
 
 
-\date{February 19, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
+\date{Monday, February 24, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
 $\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.tex}{\texttt{TeX Source}}
 $\bullet$
@@ -74,7 +74,7 @@ Updated at \currenttime, \today}}
 \section{Introduction and Motivation}
 
 
-In random matrix theory, one often studies the entire spectrum of an $n\times n$ matrix ensemble such as the Gaussian Unitary Ensemble (GUE), the Gaussian Orthogonal Ensemble (GOE), or, more generally, $\beta$-ensembles. However, it is also natural to examine the spectra of \emph{principal minors} of such matrices. 
+In random matrix theory, one often studies the entire spectrum of an $n\times n$ matrix ensemble such as the Gaussian Unitary Ensemble (GUE), the Gaussian Orthogonal Ensemble (GOE), or, more generally, $\beta$-ensembles. However, it is also natural to examine the spectra of \emph{principal minors} of such matrices.
 
 When we say ``cutting corners,'' we typically refer to extracting a top-left $k\times k$ submatrix (or \emph{corner}) out of an $n\times n$ random matrix $H$ and then looking at the interplay among the eigenvalues of all corners $k=1,\dots,n$. This forms a \emph{nested} family of spectra, often described by interlacing (or Gelfand--Tsetlin) patterns.
 
@@ -83,13 +83,13 @@ The \emph{GUE corners process} is a classical example of this phenomenon. Concre
 \subsection{Outline}
 These notes proceed as follows:
 \begin{itemize}
-\item[\S\ref{sec:preliminaries}] \textbf{Preliminaries.} We recall the GUE definition, its diagonalization, and the general $\beta$-ensembles. 
+\item[\S\ref{sec:preliminaries}] \textbf{Preliminaries.} We recall the GUE definition, its diagonalization, and the general $\beta$-ensembles.
 \item[\S\ref{sec:corners-definition}] \textbf{Corners of Random Matrices.} We define the corner (minor) processes and recall the fundamental interlacing property.
-\item[\S\ref{sec:gue-corners}] \textbf{GUE Corners: Joint Distribution and Determinantal Structure.} We outline how to compute the joint distribution of the spectra of all corners, show the interlacing, and discuss the determinantal kernel. 
-\item[\S\ref{sec:generalbeta}] \textbf{General $\beta$ Corners.} We show how the GUE corners result has a natural extension to the tridiagonal $\beta$-ensembles (Dumitriu--Edelman) and mention connections to Wishart/Laguerre and Jacobi corners. 
-\item[\S\ref{sec:local-limits}] \textbf{Local Limits.} We review the bulk (sine) and edge (Airy) universality in each corner and highlight how the entire triangular array has consistent local limits. 
+\item[\S\ref{sec:gue-corners}] \textbf{GUE Corners: Joint Distribution and Determinantal Structure.} We outline how to compute the joint distribution of the spectra of all corners, show the interlacing, and discuss the determinantal kernel.
+\item[\S\ref{sec:generalbeta}] \textbf{General $\beta$ Corners.} We show how the GUE corners result has a natural extension to the tridiagonal $\beta$-ensembles (Dumitriu--Edelman) and mention connections to Wishart/Laguerre and Jacobi corners.
+\item[\S\ref{sec:local-limits}] \textbf{Local Limits.} We review the bulk (sine) and edge (Airy) universality in each corner and highlight how the entire triangular array has consistent local limits.
 \item[\S\ref{sec:applications}] \textbf{Connections and Applications.} We discuss ties to Gelfand--Tsetlin patterns, representation theory, partial Haar unitaries, and beyond.
-\item[\S\ref{sec:problems}] \textbf{Exercises.} We present problem sets illustrating these concepts. 
+\item[\S\ref{sec:problems}] \textbf{Exercises.} We present problem sets illustrating these concepts.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -130,11 +130,11 @@ An important way to realize the $\beta$-ensembles (with Gaussian potential) is v
 \label{sec:corners-definition}
 
 \subsection{Principal Corners (Minors)}
-Let $H$ be an $n\times n$ Hermitian matrix. For each $1\le k\le n$, define the \emph{top-left $k\times k$ corner} $H^{(k)}$ by 
+Let $H$ be an $n\times n$ Hermitian matrix. For each $1\le k\le n$, define the \emph{top-left $k\times k$ corner} $H^{(k)}$ by
 \[
 	H^{(k)} \;=\; \bigl[H_{ij}\bigr]_{1\le i,j \le k}.
 \]
-Since $H$ is Hermitian, each $H^{(k)}$ is also Hermitian. Let 
+Since $H$ is Hermitian, each $H^{(k)}$ is also Hermitian. Let
 \[
 	\lambda_1^{(k)} \;\ge\;\lambda_2^{(k)}\;\ge\;\cdots\;\ge\;\lambda_k^{(k)}
 \]
@@ -170,7 +170,7 @@ Consider now the \emph{joint} distribution of all corners of a GUE$_n$ matrix $H
 \[
 	H^{(1)},\,H^{(2)},\,\dots,\,H^{(n)}=H,
 \]
-and want to understand the collection $\{\lambda_j^{(k)}\}$ for $1\le j\le k\le n$ as a single random point process. 
+and want to understand the collection $\{\lambda_j^{(k)}\}$ for $1\le j\le k\le n$ as a single random point process.
 
 \subsection{Spectral Decomposition and Haar Unitary}
 Recall that $H$ can be diagonalized:
@@ -179,9 +179,9 @@ Recall that $H$ can be diagonalized:
 	\quad
 	\Lambda = diag(\lambda_1,\dots,\lambda_n),
 \]
-where $\Lambda$ is the real diagonal matrix of $H$'s eigenvalues (in descending order) and $U$ is Haar-distributed on the unitary group $\mathrm{U}(n)$. The top-left $k\times k$ corner $H^{(k)}$ can be written in terms of sub-blocks of $U$ and $\Lambda$. In principle, one then integrates over the Haar measure to derive the joint law of $(H^{(1)},\dots,H^{(n)})$. 
+where $\Lambda$ is the real diagonal matrix of $H$'s eigenvalues (in descending order) and $U$ is Haar-distributed on the unitary group $\mathrm{U}(n)$. The top-left $k\times k$ corner $H^{(k)}$ can be written in terms of sub-blocks of $U$ and $\Lambda$. In principle, one then integrates over the Haar measure to derive the joint law of $(H^{(1)},\dots,H^{(n)})$.
 
-While the resulting distribution is complicated, it is nevertheless highly structured and, in fact, forms a \emph{determinantal point process} (DPP) in the two-dimensional space of ``row index $k$'' and ``spectral variable $x$.'' 
+While the resulting distribution is complicated, it is nevertheless highly structured and, in fact, forms a \emph{determinantal point process} (DPP) in the two-dimensional space of ``row index $k$'' and ``spectral variable $x$.''
 
 \subsection{Determinantal Form: GUE Corners Process}
 The formal statement (see, e.g., \cite{Johansson-2005,Johansson-2006,baryshnikov2001gues,forrester2010log} for references) is:
@@ -193,10 +193,10 @@ Let $H$ be an $n\times n$ GUE matrix and let $\{\lambda_j^{(k)}\}_{1\le j\le k\l
 	\mathbb{P}\bigl[(k_1,x_1),\dots,(k_m,x_m)\in \text{the process}\bigr]
 	= \det\!\Bigl[K\bigl((k_i,x_i),(k_j,x_j)\bigr)\Bigr]_{i,j=1}^m,
 \]
-where $K$ is the \emph{extended correlation kernel}. In particular, correlation functions for the entire triangular array are given by minors of $K$. 
+where $K$ is the \emph{extended correlation kernel}. In particular, correlation functions for the entire triangular array are given by minors of $K$.
 \end{theorem}
 
-Explicit formulas for $K\bigl((k,x),(k',y)\bigr)$ exist, but are somewhat more involved than the single-size GUE kernel. Nevertheless, one can still identify them in terms of \emph{orthogonal polynomials} (Hermite polynomials) and certain additional matrix integrals. 
+Explicit formulas for $K\bigl((k,x),(k',y)\bigr)$ exist, but are somewhat more involved than the single-size GUE kernel. Nevertheless, one can still identify them in terms of \emph{orthogonal polynomials} (Hermite polynomials) and certain additional matrix integrals.
 
 \begin{remark}
 For $k=n$ (the largest corner), we recover the usual 1D GUE correlation kernel restricted to the $\lambda_i^{(n)}$ alone. The extended 2D kernel encapsulates how these GUE eigenvalues relate to the smaller corners.
@@ -260,7 +260,7 @@ The corner spectra of a GUE matrix can be viewed as generating a random Gelfand-
 	\lambda_1^{(n)} \\
 	\lambda_1^{(n-1)} & \lambda_2^{(n-1)} & \dots & \lambda_{n-1}^{(n-1)} \\
 	\vdots & & \ddots & \vdots \\
-	\lambda_1^{(1)} 
+	\lambda_1^{(1)}
 	\end{matrix}
 \]
 with $\lambda_{j}^{(k)}\ge \lambda_{j+1}^{(k+1)}\ge \cdots$. This is directly analogous to the discrete Gelfand--Tsetlin patterns that parametrize irreducible representations of $\mathrm{U}(n)$ (or $\mathrm{SU}(n)$). The random matrix approach suggests that these continuous patterns are natural objects carrying determinantal/Pfaffian structures, leading to connections with \emph{asymptotic representation theory} and \emph{integrable probability}.
@@ -281,7 +281,7 @@ Given a Hermitian matrix $A$ of size $n\times n$, show that its $(n-1)\times(n-1
 \medskip
 
 \item \textbf{Determinantal / Pfaffian Structures for $\beta=1,2,4$.} \\
-Explain why for $\beta=1,4$ (the GOE and GSE), one gets \emph{Pfaffian} structures rather than purely determinantal ones. Sketch how the presence of real symmetry ($\beta=1$) or symplectic symmetry ($\beta=4$) modifies the joint law of eigenvalues. 
+Explain why for $\beta=1,4$ (the GOE and GSE), one gets \emph{Pfaffian} structures rather than purely determinantal ones. Sketch how the presence of real symmetry ($\beta=1$) or symplectic symmetry ($\beta=4$) modifies the joint law of eigenvalues.
 \medskip
 
 \item \textbf{GUE Corners for $n=2$ and $n=3$.} \\
