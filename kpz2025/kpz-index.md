@@ -13,9 +13,11 @@ permalink: /kpz2025/
 
 ## Workshop at American Institute of Mathematics, Pasadena, CA
 
-## Organized by Axel Saenz (Oregon State University) and Leonid Petrov (University of Virginia)
-
 ### March 17-21, 2025
+
+##### Organized by Axel Saenz (Oregon State) and Leonid Petrov (UVA)
+
+
 
 ---
 
