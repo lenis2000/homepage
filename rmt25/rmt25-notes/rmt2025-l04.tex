@@ -936,30 +936,6 @@ exponential generating function for \(\phi\) is
 This identity makes determinantal point processes more tractable than general processes.
 \end{remark}
 
-\subsubsection*{A key example: one-dependent processes on \texorpdfstring{$\mathbb{Z}$}{}}
-We highlight an important application from \cite{borodin2010adding} that connects
-\emph{1-dependent} processes on an integer segment (or a finite subset of \(\mathbb{Z}\))
-to determinantal processes. A point process \(P\) on \(\mathbb{Z}\) is \emph{1-dependent} if,
-for any two disjoint finite sets \(A,B\subset\mathbb{Z}\) with \(\mathrm{dist}(A,B)\ge2\),
-the correlation function factorizes:
-\[
-\rho_{|A|+|B|}(A\cup B) = \rho_{|A|}(A)\,\rho_{|B|}(B).
-\]
-
-
-\begin{theorem}[{\cite[Thm.~1.1]{borodin2010adding}]}]
-\label{thm:1-dependent-implies-dpp}
-Any one-dependent point process on a finite segment of \(\mathbb{Z}\) is a determinantal process.
-Moreover, its correlation kernel \(K\) can be explicitly computed.
-\end{theorem}
-
-\begin{example}[Adding a list of numbers]
-\label{ex:adding-numbers}
-Consider an i.i.d.\ sequence of random variables \(\{\xi_j\}\) (each taking values in \(\{0,1\}\)),
-and define the partial sums \(S_n = \sum_{j=1}^n \xi_j\). The occupancy process,
-marking site \(S_n\) as “occupied,” forms a 1-dependent sequence. By \Cref{thm:1-dependent-implies-dpp},
-it is thus determinantal.
-\end{example}
 
 \section{Application of determinantal processes to random matrices at \texorpdfstring{$\beta=2$}{beta=2}}
 
@@ -1024,7 +1000,7 @@ For a \emph{determinantal} point process in the continuous setting, there is a k
   \quad
   \text{for each $k\ge1$}.
 \end{equation}
-The simplest example is the \emph{Poisson process} (see \Cref{subsec:poisson-example}), which in fact is \emph{not} determinantal but helps illustrate how correlation functions characterize clustering or repulsion of points.
+The simplest example is the \emph{Poisson process} (see \Cref{subsec:poisson-example}).
 
 \subsection{Poisson process example}
 \label{subsec:poisson-example}
