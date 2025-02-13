@@ -19,7 +19,7 @@ permalink: /kpz2025/
 
 ---
 
-## Readings
+## Readings ([PDF]({{site.url}}/kpz2025/reading_list.pdf) )
 
 <b>Foundations</b><br/>
 <a href="as.html#5">[KPZ86]&#160;</a>The&#160;seminal&#160;paper&#160;introducing&#160;the&#160;KPZ&#160;equation,&#160;which&#160;describes&#160;the&#160;evolution&#160;of&#160;a&#160;grow-<br/>ing&#160;interface&#160;in&#160;terms&#160;of&#160;a&#160;stochastic&#160;PDE.<br/>
