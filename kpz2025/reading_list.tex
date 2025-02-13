@@ -1,0 +1,306 @@
+\documentclass[10pt]{article}
+\usepackage{palatino}
+
+\usepackage{etex}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+
+\usepackage{amsmath,dsfont}
+\usepackage{graphicx}%used for the figures
+\usepackage{caption}%to caption side by side figures
+\usepackage{subcaption}%to caption side by side figures
+\usepackage{sidecap} %for side captions
+\sidecaptionvpos{figure}{c}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{authblk}
+\usepackage{dcpic}
+\usepackage[hang,flushmargin]{footmisc}
+\usepackage[left=1.0in,right=1.1in,top=1.0in,bottom=1.0in]{geometry}
+%\usepackage{showframe}
+\usepackage[
+	ocgcolorlinks,
+	linkcolor=linkblue,
+	citecolor=linkred,
+	urlcolor=linkred]
+{hyperref}
+\usepackage{MnSymbol}
+\usepackage{pictexwd}
+\usepackage{tikz-cd}
+\usepackage{verbatim}
+\usepackage{xcolor}
+%\usepackage{natbib}
+\usepackage{bibentry}
+\usepackage{tocloft}
+\usepackage{cleveref}
+
+%\usepackage{hyperref}
+%\let\Contentsline\contentsline
+%\renewcommand\contentsline[3]{\Contentsline{#1}{#2}{}}
+
+%\usepackage{nopageno}
+
+\renewcommand\cftsubsecafterpnum{\vskip4pt}
+
+\numberwithin{equation}{section}
+
+\definecolor{linkred}{rgb}{0.75,0,0}
+\definecolor{linkblue}{rgb}{0,0,0.75}
+
+\theoremstyle{plain}
+\newtheorem{maintheorem}{Theorem}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{project}[theorem]{Project}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{rem}[theorem]{Remark}
+
+\newcommand{\s}{\sigma}
+\newcommand{\B}{\overline{B}}
+
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\linespread{1}
+
+%%%%
+
+
+\usepackage{framed}
+\usepackage{lipsum}
+\renewenvironment{shaded}{%
+  \def\FrameCommand{\fboxsep=\FrameSep \colorbox{shadecolor}}%
+  \MakeFramed{\advance\hsize-\width \FrameRestore\FrameRestore}}%
+ {\endMakeFramed}
+\definecolor{shadecolor}{gray}{0.85}
+
+
+
+%%%%
+
+\usepackage{tcolorbox}
+\tcbuselibrary{theorems}
+
+\makeatletter
+\crefformat{tcb@cnt@projects}{project~#2#1#3}
+\Crefformat{tcb@cnt@projects}{Project~#2#1#3}
+\crefformat{tcb@cnt@goals}{goal~#2#1#3}
+\Crefformat{tcb@cnt@goals}{Goal~#2#1#3}
+\crefformat{tcb@cnt@challenge}{challenge~#2#1#3}
+\Crefformat{tcb@cnt@challenge}{Challenge~#2#1#3}
+\makeatother
+
+\newtcbtheorem[]{projects}{Project}%
+{colback=green!5,colframe=green!35!black,fonttitle=\bfseries}{pr}
+
+\newtcbtheorem[]{goals}{Objective}%
+{colback=blue!5,colframe=blue!35!black,fonttitle=\bfseries}{gl}
+
+\newtcbtheorem[]{challenge}{Challenge}%
+{colback=yellow!5,colframe=yellow!35!black,fonttitle=\bfseries}{ch}
+
+\def\bull{\vrule height 1ex width .8ex depth -.2ex}
+\renewcommand{\labelitemi}{\bull}
+
+
+\usepackage{footmisc}
+%\renewcommand*{\footnotelayout}{\normalsize\rmfamily}
+\renewcommand*{\footnotelayout}{\normalsize}
+
+%\interfootnotelinepenalty=10000
+
+% \usepackage[backend=biber,style=alphabetic,sorting=nyt,maxbibnames=99]{biblatex}
+% \addbibresource{Untitled.bib}
+\usepackage{csquotes}
+
+%\setlength\bibitemsep{1.65\itemsep}
+
+%\pagestyle{plain}
+\pagestyle{empty}
+
+
+%\fancyhf{}
+%\rhead{Project Description \thepage}
+%\lhead{Axel Iv\'an S\'aenz Rodr\'iguez}
+%\rfoot{}
+%\pagenumbering{gobble}%no page number
+
+\flushbottom
+
+\title{AIM Workshop proposal:\\ All roads to the KPZ universality class}
+\author{Organizers:\\Axel Saenz (Oregon State University) and Leonid Petrov (University of Virginia)}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+% \section*{Participants and Reading list}
+%
+% \begin{enumerate}
+%     \item Alexei Borodin (DECLINED)\\
+%     -ASEP via Mallows coloring\\
+%     -Colored Line Ensembles for Stochastic Vertex Models
+%     \item Ofer Busani\\
+%     -Partial yet definite emergence of the Kardar-Parisi-Zhang class in isotropic spin chains\\
+%     -Non-existence of three non-coalescing infinite geodesics with the same direction in the directed landscape\\
+%     -Scaling limit of the TASEP speed process\\
+%     -The stationary horizon and semi-infinite geodesics in the directed landscape
+%     \item Kailun Chen (applicant)
+%     \item Evgeni Dimitrov (local)\\
+%     -Global asymptotics for $\beta$-Krawtchouk corners processes via multi-level loop equations\\
+%     -One-point asymptotics for half-flat ASEP
+%     \item Nikolaus Elsaesser
+%     \item Yu Gu\\
+%     -Effective diffusivities in periodic KPZ
+%     \item Milind Hegde\\
+%     -KPZ fixed point convergence of the ASEP and stochastic six-vertex models.\\
+%     -Scaling limit of the colored ASEP and stochastic six-vertex models.
+%     \item Zoe Himwich\\
+%     -The Directed Landscape is a Black Noise\\
+%     -Stationary Measure of the Open KPZ Equation through the Enaud-Derrida Representation
+%     \item Jhih-Huang Li (applicant)\\
+%     -Contour integral formulas for PushASEP on the ring
+%     \item Zhipeng Liu\\
+%     -An upper tail field of the KPZ fixed point\\
+%     -Pinched-up periodic KPZ fixed point
+%     \item Konstantin Matetski\\
+%     -Exact solution of TASEP and variants with inhomogeneous speeds and memory lengths\\
+%     -Exceptional times when the KPZ fixed point violates Johansson’s conjecture on maximizer uniqueness
+%     \item Matteo Mucciconi\\
+%     -The Symplectic Schur Process\\
+%     -Large deviations for the q-deformed polynuclear growth
+%     \item Leonid Petrov
+%     \item Daniel Remenik\\
+%     - Integrable fluctuations in the KPZ universality class.\\
+%     - KP governs random growth off a one dimensional substrate.
+%     \item Alexander Rodriguez (applicant)\\
+%     -???
+%     \item Axel Saenz
+%     \item Tomohiro Sasamoto
+%     \item Timo Seppalainen
+%     \item Xiao Shen (applicant)
+%     \item Guilherme Silva (applicant)
+%     \item Evan Sorensen
+%     \item Yiming Tang (applicant)
+%     \item Mikhail Tikhonov
+%     \item Li-Cheng Tsai
+%     \item Hieu Trung Pham Vu (applicant)
+%     \item Xuan Wu
+%     \item Zongrui Yang (applicant)
+%     \item Jiyue Zeng (applicant)
+%     \item Xinyi Zhang (applicant)
+%     \item Lingfu Zhang (local)
+%     \item Zhengye Zhou (applicant)
+% \end{enumerate}
+%
+
+\section*{Reading list}
+\subsection*{Foundations}
+\begin{itemize}
+
+	\item \cite{KPZ1986} The seminal paper introducing the KPZ equation, which describes the evolution of a growing interface in terms of a stochastic PDE.
+
+\item
+	\cite{CorwinKPZ} A comprehensive survey explaining key breakthroughs leading to the exact one-point distribution for the KPZ equation with narrow-wedge initial data.
+
+\item \cite{Hairer11}
+    A groundbreaking work that rigorously constructs a solution to the KPZ stochastic PDE using the theory of regularity structures, resolving longstanding analytical challenges.
+
+	\item \cite{AmirCorwinQuastel2011}
+    A seminal paper that computes the one-point distribution of the KPZ equation, linking KPZ fluctuations to Tracy--Widom statistics through integrable probability methods.
+\end{itemize}
+
+\subsection*{Recent advances}
+
+\begin{itemize}
+	\item
+		\cite{corwin2014brownian},
+		\cite{CorwinHammond2013}
+		Develop the Brownian Gibbs property for the Airy and KPZ line ensembles.
+	\item
+		\cite{matetski2017kpz}
+		Constructs the KPZ fixed point—the universal Markov process limit of KPZ-class models—with explicit Fredholm determinant formulas for multi-point distributions.
+	\item \cite{quastel2019kp}
+		Develops the KP equation for the KPZ fixed point distributions.
+		This and the previous paper are
+		summarized in
+		\cite{remenik2023integrable}.
+
+
+	\item
+		\cite{directed_landscape}
+		Establishes the directed landscape as the scaling limit of last-passage percolation models, serving as the universal random geometry underpinning KPZ growth.
+
+	\item
+		\cite{Busani2022}
+		Introduces the stationary horizon as the unique invariant coupling for the KPZ fixed point, linking it to the structure of semi-infinite geodesics in the directed landscape.
+
+	\item
+		\cite{BarraquandCorwinYang2023}
+		Develop a framework of two-layered Gibbs measures to describe stationary measures for geometric LPP and log-gamma polymer models, providing a unified description of the open KPZ stationary measure.
+
+
+\end{itemize}
+
+\subsection*{Cutting edge work by participants (in no particular order)}
+
+\begin{itemize}
+	\item \cite{borodin2024asep} {ASEP via Mallows coloring}
+	\item \cite{bufetov2024mallows} {Mallows Product Measure}
+	\item \cite{aggarwal2024colored} {Colored Line Ensembles for Stochastic Vertex Models}
+	\item \cite{aggarwal_corwin_hegde2024scaling} {Scaling limit of the colored ASEP and stochastic six-vertex models}
+	\item \cite{aggarwal2024kpz} {KPZ fixed point convergence of the ASEP and stochastic six-vertex models}
+	\item \cite{li2023contour} {Contour integral formulas for PushASEP on the ring}
+	\item \cite{matetski2023exact} {Exact solution of TASEP and variants with inhomogeneous speeds and memory lengths}
+	\item \cite{AggarwalNicolettiPetrov2023colored} {Colored Interacting Particle Systems on the Ring: Stationary Measures from Yang--Baxter Equation}
+	\item \cite{Zhang2023} {Shift-invariance of the colored TASEP and finishing times of the oriented swap process}
+	\item \cite{Kuan2024} {Asymptotics of dynamic ASEP using duality}
+	\item \cite{Franceschini2024} {Orthogonal polynomial duality and unitary symmetries of multi-species ASEP$(q,\theta)$ and higher-spin vertex models via $*$-bialgebra structure of higher rank quantum groups}
+	\item \cite{AggarwalHuang2023Characterization} {Strong Characterization for the Airy Line Ensemble}
+	\item \cite{das2023large} {Large deviations for the $q$-deformed polynuclear growth}
+	\item \cite{corwin2023exceptional} {Exceptional times when the KPZ fixed point violates Johansson's conjecture on maximizer uniqueness}
+	\item \cite{baik2024pinchedup} {Pinched-up periodic KPZ fixed point}
+	\item \cite{liu2025upper} {An upper tail field of the KPZ fixed point}
+	\item \cite{takeuchi2024partial} {Partial yet definite emergence of the Kardar-Parisi-Zhang class in isotropic spin chains}
+	\item \cite{Janjigian2022} {Ergodicity and synchronization of the KPZ equation}
+	\item \cite{groathouse2023jointly} {Jointly invariant measures for the KPZ equation}
+	\item \cite{Shen2023a} {Independence property of the Busemann function in exactly solvable KPZ models}
+	\item \cite{Shen2023b} {Time correlations in KPZ models with diffusive initial conditions}
+	\item \cite{Baik2022} {Limiting one-point distribution of periodic TASEP}
+	\item \cite{Baik2023} {Differential equations for the KPZ and periodic KPZ fixed points}
+	\item \cite{Dunlap2024} {Viscous shock fluctuations in KPZ}
+	\item \cite{Tang2024} {An invariance principle of 1D KPZ with Robin boundary conditions}
+	\item \cite{Tsai2022} {Exact lower-tail large deviations of the KPZ equation}
+	\item \cite{Lin2021} {Short time large deviations of the KPZ equation}
+	\item \cite{Wang2024} {From asymmetric simple exclusion processes with open boundaries to stationary measures of open KPZ fixed point: the shock region}
+	\item \cite{busani2023nonexistence} {Non-existence of three non-coalescing infinite geodesics with the same direction in the directed landscape}
+	\item \cite{dauvergne2024characterization} {Characterization of the directed landscape from the KPZ fixed point}
+	\item \cite{himwich2024directed} {The Directed Landscape is a Black Noise}
+	\item \cite{Wu2023} {The KPZ equation and the directed landscape}
+	\item \cite{GrothendieckShenanigans2024} {Grothendieck Shenanigans: Permutons from pipe dreams via integrable probability}
+	\item \cite{petrov2022rewriting} {Rewriting History in Integrable Stochastic Particle Systems}
+	\item \cite{dimitrov2024global} {Global asymptotics for $\beta$-Krawtchouk corners processes via multi-level loop equations}
+	\item \cite{cuenca2024symplectic} {The Symplectic Schur Process}
+	\item \cite{Imamura2022} {Solvable models in the KPZ class: approach through periodic and free boundary Schur measures}
+	\item \cite{Imamura2023} {New approach to KPZ models through free fermions at positive temperature}
+	\item \cite{DiFrancesco2024b} {Arctic curves of the T-system with slanted initial data}
+\end{itemize}
+
+
+
+
+\bibliographystyle{alpha}
+\bibliography{bib}
+
+\end{document}
