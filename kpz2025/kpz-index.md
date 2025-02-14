@@ -21,174 +21,243 @@ permalink: /kpz2025/
 
 ---
 
-## Readings ([PDF]({{site.url}}/kpz2025/reading_list.pdf) )
+## Readings ([PDF]({{site.url}}/kpz2025/reading_list.pdf))
 
-<b>Foundations</b><br/>
-<a href="as.html#5">[KPZ86]&#160;</a>The&#160;seminal&#160;paper&#160;introducing&#160;the&#160;KPZ&#160;equation,&#160;which&#160;describes&#160;the&#160;evolution&#160;of&#160;a&#160;grow-<br/>ing&#160;interface&#160;in&#160;terms&#160;of&#160;a&#160;stochastic&#160;PDE.<br/>
-<a href="as.html#4">[Cor12]&#160;</a>A&#160;comprehensive&#160;survey&#160;explaining&#160;key&#160;breakthroughs&#160;leading&#160;to&#160;the&#160;exact&#160;one-point&#160;dis-<br/>tribution&#160;for&#160;the&#160;KPZ&#160;equation&#160;with&#160;narrow-wedge&#160;initial&#160;data.<br/>
-<a href="as.html#4">[Hai14]&#160;</a>A&#160;groundbreaking&#160;work&#160;that&#160;rigorously&#160;constructs&#160;a&#160;solution&#160;to&#160;the&#160;KPZ&#160;stochastic&#160;PDE<br/>using&#160;the&#160;theory&#160;of&#160;regularity&#160;structures,&#160;resolving&#160;longstanding&#160;analytical&#160;challenges.<br/>
-<a href="as.html#3">[ACQ11]&#160;</a>A&#160;seminal&#160;paper&#160;that&#160;computes&#160;the&#160;one-point&#160;distribution&#160;of&#160;the&#160;KPZ&#160;equation,&#160;linking<br/>KPZ&#160;fluctuations&#160;to&#160;Tracy–Widom&#160;statistics&#160;through&#160;integrable&#160;probability&#160;methods.<br/>
-<b>Recent&#160;advances</b><br/>
-<a href="as.html#4">[CH14],&#160;[CH16]&#160;</a>Develop&#160;the&#160;Brownian&#160;Gibbs&#160;property&#160;for&#160;the&#160;Airy&#160;and&#160;KPZ&#160;line&#160;ensembles.<br/>
-<a href="as.html#5">[MQR21]&#160;</a>Constructs&#160;the&#160;KPZ&#160;fixed&#160;point—the&#160;universal&#160;Markov&#160;process&#160;limit&#160;of&#160;KPZ-class&#160;mod-<br/>els—with&#160;explicit&#160;Fredholm&#160;determinant&#160;formulas&#160;for&#160;multi-point&#160;distributions.<br/>
-<a href="as.html#5">[QR22]&#160;</a>Develops&#160;the&#160;KP&#160;equation&#160;for&#160;the&#160;KPZ&#160;fixed&#160;point&#160;distributions.&#160;This&#160;and&#160;the&#160;previous&#160;paper<br/>are&#160;summarized&#160;in&#160;<a href="as.html#5">[Rem22].</a><br/>
-<a href="as.html#4">[DOV22]&#160;</a>Establishes&#160;the&#160;directed&#160;landscape&#160;as&#160;the&#160;scaling&#160;limit&#160;of&#160;last-passage&#160;percolation&#160;models,<br/>serving&#160;as&#160;the&#160;universal&#160;random&#160;geometry&#160;underpinning&#160;KPZ&#160;growth.<br/>
-<a href="as.html#3">[BSS24]&#160;</a>Introduces&#160;the&#160;stationary&#160;horizon&#160;as&#160;the&#160;unique&#160;invariant&#160;coupling&#160;for&#160;the&#160;KPZ&#160;fixed&#160;point,<br/>linking&#160;it&#160;to&#160;the&#160;structure&#160;of&#160;semi-infinite&#160;geodesics&#160;in&#160;the&#160;directed&#160;landscape.<br/>
-<a href="as.html#3">[BCY24]&#160;</a>Develop&#160;a&#160;framework&#160;of&#160;two-layered&#160;Gibbs&#160;measures&#160;to&#160;describe&#160;stationary&#160;measures&#160;for<br/>geometric&#160;LPP&#160;and&#160;log-gamma&#160;polymer&#160;models,&#160;providing&#160;a&#160;unified&#160;description&#160;of&#160;the&#160;open&#160;KPZ<br/>stationary&#160;measure.<br/>
-<b>Cutting&#160;edge&#160;work&#160;by&#160;participants&#160;(in&#160;no&#160;particular&#160;order)</b><br/>
-<a href="as.html#3">[BB24]&#160;</a>ASEP&#160;via&#160;Mallows&#160;coloring<br/>
-<a href="as.html#3">[BC24]&#160;</a>Mallows&#160;Product&#160;Measure<br/>
-1<br/>
-<hr/>
-<a name=2></a><a href="as.html#3">[AB24]&#160;</a>Colored&#160;Line&#160;Ensembles&#160;for&#160;Stochastic&#160;Vertex&#160;Models<br/>
-<a href="as.html#3">[ACH24b]&#160;</a>Scaling&#160;limit&#160;of&#160;the&#160;colored&#160;ASEP&#160;and&#160;stochastic&#160;six-vertex&#160;models<br/>
-<a href="as.html#3">[ACH24a]&#160;</a>KPZ&#160;fixed&#160;point&#160;convergence&#160;of&#160;the&#160;ASEP&#160;and&#160;stochastic&#160;six-vertex&#160;models<br/>
-<a href="as.html#5">[LS23]&#160;</a>Contour&#160;integral&#160;formulas&#160;for&#160;PushASEP&#160;on&#160;the&#160;ring<br/>
-<a href="as.html#5">[MR23]&#160;</a>Exact&#160;solution&#160;of&#160;TASEP&#160;and&#160;variants&#160;with&#160;inhomogeneous&#160;speeds&#160;and&#160;memory&#160;lengths<br/>
-<a href="as.html#3">[ANP23]&#160;</a>Colored&#160;Interacting&#160;Particle&#160;Systems&#160;on&#160;the&#160;Ring:&#160;Stationary&#160;Measures&#160;from&#160;Yang–Baxter<br/>Equation<br/>
-<a href="as.html#5">[Zha23]&#160;</a>Shift-invariance&#160;of&#160;the&#160;colored&#160;TASEP&#160;and&#160;finishing&#160;times&#160;of&#160;the&#160;oriented&#160;swap&#160;process<br/>
-<a href="as.html#5">[KZ24]&#160;</a>Asymptotics&#160;of&#160;dynamic&#160;ASEP&#160;using&#160;duality<br/>
-<a href="as.html#4">[FKZ24]&#160;</a>Orthogonal&#160;polynomial&#160;duality&#160;and&#160;unitary&#160;symmetries&#160;of&#160;multi-species&#160;ASEP(q,&#160;θ)&#160;and<br/>higher-spin&#160;vertex&#160;models&#160;via&#160;∗-bialgebra&#160;structure&#160;of&#160;higher&#160;rank&#160;quantum&#160;groups<br/>
-<a href="as.html#3">[AH23]&#160;</a>Strong&#160;Characterization&#160;for&#160;the&#160;Airy&#160;Line&#160;Ensemble<br/>
-<a href="as.html#4">[DLM23]&#160;</a>Large&#160;deviations&#160;for&#160;the&#160;q-deformed&#160;polynuclear&#160;growth<br/>
-<a href="as.html#4">[CHHM23]&#160;</a>Exceptional&#160;times&#160;when&#160;the&#160;KPZ&#160;fixed&#160;point&#160;violates&#160;Johansson’s&#160;conjecture&#160;on&#160;maxi-<br/>mizer&#160;uniqueness<br/>
-<a href="as.html#3">[BL24]&#160;</a>Pinched-up&#160;periodic&#160;KPZ&#160;fixed&#160;point<br/>
-<a href="as.html#5">[LZ25]&#160;</a>An&#160;upper&#160;tail&#160;field&#160;of&#160;the&#160;KPZ&#160;fixed&#160;point<br/>
-<a href="as.html#5">[TTB+</a><br/>
-<a href="as.html#5">TTB&#160;24]&#160;</a>Partial&#160;yet&#160;definite&#160;emergence&#160;of&#160;the&#160;Kardar-Parisi-Zhang&#160;class&#160;in&#160;isotropic&#160;spin&#160;chains<br/>
-<a href="as.html#4">[JRAS22]&#160;</a>Ergodicity&#160;and&#160;synchronization&#160;of&#160;the&#160;KPZ&#160;equation<br/>
-<a href="as.html#4">[GRASS23]&#160;</a>Jointly&#160;invariant&#160;measures&#160;for&#160;the&#160;KPZ&#160;equation<br/>
-<a href="as.html#5">[She23]&#160;</a>Independence&#160;property&#160;of&#160;the&#160;Busemann&#160;function&#160;in&#160;exactly&#160;solvable&#160;KPZ&#160;models<br/>
-<a href="as.html#3">[BS23]&#160;</a>Time&#160;correlations&#160;in&#160;KPZ&#160;models&#160;with&#160;diffusive&#160;initial&#160;conditions<br/>
-<a href="as.html#3">[BLS22]&#160;</a>Limiting&#160;one-point&#160;distribution&#160;of&#160;periodic&#160;TASEP<br/>
-<a href="as.html#3">[BPS23]&#160;</a>Differential&#160;equations&#160;for&#160;the&#160;KPZ&#160;and&#160;periodic&#160;KPZ&#160;fixed&#160;points<br/>
-<a href="as.html#4">[DS24]&#160;</a>Viscous&#160;shock&#160;fluctuations&#160;in&#160;KPZ<br/>
-<a href="as.html#5">[Tan24]&#160;</a>An&#160;invariance&#160;principle&#160;of&#160;1D&#160;KPZ&#160;with&#160;Robin&#160;boundary&#160;conditions<br/>
-<a href="as.html#5">[Tsa22]&#160;</a>Exact&#160;lower-tail&#160;large&#160;deviations&#160;of&#160;the&#160;KPZ&#160;equation<br/>
-<a href="as.html#5">[LT21]&#160;</a>Short&#160;time&#160;large&#160;deviations&#160;of&#160;the&#160;KPZ&#160;equation<br/>
-<a href="as.html#5">[WY24]&#160;</a>From&#160;asymmetric&#160;simple&#160;exclusion&#160;processes&#160;with&#160;open&#160;boundaries&#160;to&#160;stationary&#160;measures<br/>of&#160;open&#160;KPZ&#160;fixed&#160;point:&#160;the&#160;shock&#160;region<br/>
-<a href="as.html#4">[Bus23]&#160;</a>Non-existence&#160;of&#160;three&#160;non-coalescing&#160;infinite&#160;geodesics&#160;with&#160;the&#160;same&#160;direction&#160;in&#160;the&#160;di-<br/>rected&#160;landscape<br/>
-<a href="as.html#4">[DZ24]&#160;</a>Characterization&#160;of&#160;the&#160;directed&#160;landscape&#160;from&#160;the&#160;KPZ&#160;fixed&#160;point<br/>
-<a href="as.html#4">[HP24]&#160;</a>The&#160;Directed&#160;Landscape&#160;is&#160;a&#160;Black&#160;Noise<br/>
-<a href="as.html#5">[Wu23]&#160;</a>The&#160;KPZ&#160;equation&#160;and&#160;the&#160;directed&#160;landscape<br/>
-<hr/>
-<a name=3></a><a href="as.html#5">[MPPY24]&#160;</a>Grothendieck&#160;Shenanigans:&#160;Permutons&#160;from&#160;pipe&#160;dreams&#160;via&#160;integrable&#160;probability<br/>
-<a href="as.html#5">[PS24]&#160;</a>Rewriting&#160;History&#160;in&#160;Integrable&#160;Stochastic&#160;Particle&#160;Systems<br/>
-<a href="as.html#4">[DK24]&#160;</a>Global&#160;asymptotics&#160;for&#160;β-Krawtchouk&#160;corners&#160;processes&#160;via&#160;multi-level&#160;loop&#160;equations<br/>
-<a href="as.html#4">[CM24]&#160;</a>The&#160;Symplectic&#160;Schur&#160;Process<br/>
-<a href="as.html#4">[IMS22]&#160;</a>Solvable&#160;models&#160;in&#160;the&#160;KPZ&#160;class:&#160;approach&#160;through&#160;periodic&#160;and&#160;free&#160;boundary&#160;Schur<br/>measures<br/>
-<a href="as.html#4">[IMS23]&#160;</a>New&#160;approach&#160;to&#160;KPZ&#160;models&#160;through&#160;free&#160;fermions&#160;at&#160;positive&#160;temperature<br/>
-<a href="as.html#4">[DFV24]&#160;</a>Arctic&#160;curves&#160;of&#160;the&#160;T-system&#160;with&#160;slanted&#160;initial&#160;data<br/>
-<b>References</b><br/>
-[AB24]<br/>
-A.&#160;Aggarwal&#160;and&#160;A.&#160;Borodin.&#160;Colored&#160;Line&#160;Ensembles&#160;for&#160;Stochastic&#160;Vertex&#160;Models.&#160;arXiv<br/>preprint,&#160;2024.&#160;arXiv:2402.06868&#160;[math.PR].<br/>
-[ACH24a]&#160;A.&#160;Aggarwal,&#160;I.&#160;Corwin,&#160;and&#160;M.&#160;Hegde.&#160;KPZ&#160;fixed&#160;point&#160;convergence&#160;of&#160;the&#160;ASEP&#160;and<br/>
-stochastic&#160;six-vertex&#160;models.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2412.18117&#160;[math.PR].<br/>
-[ACH24b]&#160;A.&#160;Aggarwal,&#160;I.&#160;Corwin,&#160;and&#160;M.&#160;Hegde.&#160;Scaling&#160;limit&#160;of&#160;the&#160;colored&#160;ASEP&#160;and&#160;stochastic<br/>
-six-vertex&#160;models.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2403.01341&#160;[math.PR].<br/>
-[ACQ11]<br/>
-G.&#160;Amir,&#160;I.&#160;Corwin,&#160;and&#160;J.&#160;Quastel.&#160;Probability&#160;distribution&#160;of&#160;the&#160;free&#160;energy&#160;of&#160;the&#160;continuum<br/>directed&#160;random&#160;polymer&#160;in&#160;1+&#160;1&#160;dimensions.&#160;Comm.&#160;Pure&#160;Appl.&#160;Math.,&#160;64(4):466–537,&#160;2011.<br/>arXiv:1003.0443&#160;[math.PR].<br/>
-[AH23]<br/>
-A.&#160;Aggarwal&#160;and&#160;J.&#160;Huang.&#160;Strong&#160;Characterization&#160;for&#160;the&#160;Airy&#160;Line&#160;Ensemble.&#160;arXiv<br/>preprint,&#160;2023.&#160;arXiv:2308.11908.<br/>
-[ANP23]<br/>
-A.&#160;Aggarwal,&#160;M.&#160;Nicoletti,&#160;and&#160;L.&#160;Petrov.&#160;Colored&#160;Interacting&#160;Particle&#160;Systems&#160;on&#160;the&#160;Ring:<br/>Stationary&#160;Measures&#160;from&#160;Yang–Baxter&#160;Equation.&#160;arXiv&#160;preprint,&#160;2023.&#160;arXiv:2309.11865<br/>[math.PR],&#160;to&#160;appear&#160;in&#160;Compositio&#160;Math.<br/>
-[BB24]<br/>
-A.&#160;Borodin&#160;and&#160;A.&#160;Bufetov.&#160;ASEP&#160;via&#160;Mallows&#160;coloring.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2408.16585<br/>[math.PR].<br/>
-[BC24]<br/>
-A.&#160;Bufetov&#160;and&#160;K.&#160;Chen.&#160;Mallows&#160;Product&#160;Measure.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2402.09892<br/>[math.PR].<br/>
-[BCY24]<br/>
-G.&#160;Barraquand,&#160;I.&#160;Corwin,&#160;and&#160;Z.&#160;Yang.&#160;Stationary&#160;measures&#160;for&#160;integrable&#160;polymers&#160;on&#160;a<br/>strip.&#160;Invent.&#160;Math.,&#160;237:1567–1641,&#160;2024.&#160;arXiv:2306.05983&#160;[math.PR].<br/>
-[BL24]<br/>
-J.&#160;Baik&#160;and&#160;Z.&#160;Liu.&#160;Pinched-up&#160;periodic&#160;KPZ&#160;fixed&#160;point.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2403.01624<br/>[math.PR].<br/>
-[BLS22]<br/>
-J.&#160;Baik,&#160;Z.&#160;Liu,&#160;and&#160;G.&#160;L.&#160;F.&#160;Silva.&#160;Limiting&#160;one-point&#160;distribution&#160;of&#160;periodic&#160;TASEP.&#160;Ann.<br/>Inst.&#160;Henri&#160;Poincar´e&#160;Probab.&#160;Stat.,&#160;58(1):248–302,&#160;2022.&#160;arXiv:2008.07024&#160;[math.PR].<br/>
-[BPS23]<br/>
-J.&#160;Baik,&#160;A.&#160;Prokhorov,&#160;and&#160;G.&#160;L.&#160;F.&#160;Silva.&#160;Differential&#160;equations&#160;for&#160;the&#160;KPZ&#160;and&#160;periodic&#160;KPZ<br/>fixed&#160;points.&#160;Commun.&#160;Math.&#160;Phys.,&#160;401:1753–1806,&#160;2023.&#160;arXiv:2208.11638&#160;[math.PR].<br/>
-[BS23]<br/>
-R.&#160;Basu&#160;and&#160;X.&#160;Shen.&#160;Time&#160;correlations&#160;in&#160;KPZ&#160;models&#160;with&#160;diffusive&#160;initial&#160;conditions.&#160;arXiv<br/>preprint,&#160;2023.&#160;arXiv:2308.03473&#160;[math.PR].<br/>
-[BSS24]<br/>
-O.&#160;Busani,&#160;T.&#160;Sepp¨al¨ainen,&#160;and&#160;E.&#160;Sorensen.<br/>
-The&#160;stationary&#160;horizon&#160;and&#160;semi-infinite<br/>
-geodesics&#160;in&#160;the&#160;directed&#160;landscape.&#160;Ann.&#160;Probab.,&#160;52:1–66,&#160;2024.&#160;arXiv:2203.13242&#160;[math.PR].<br/>
-<hr/>
-<a name=4></a>[Bus23]<br/>
-O.&#160;Busani.&#160;Non-existence&#160;of&#160;three&#160;non-coalescing&#160;infinite&#160;geodesics&#160;with&#160;the&#160;same&#160;direction<br/>in&#160;the&#160;directed&#160;landscape.&#160;arXiv&#160;preprint,&#160;2023.&#160;arXiv:2401.00513&#160;[math.PR].<br/>
-[CH14]<br/>
-I.&#160;Corwin&#160;and&#160;A.&#160;Hammond.&#160;Brownian&#160;Gibbs&#160;property&#160;for&#160;Airy&#160;line&#160;ensembles.&#160;Invent.&#160;math.,<br/>195(2):441–508,&#160;2014.&#160;arXiv:1108.2291&#160;[math.PR].<br/>
-[CH16]<br/>
-I.&#160;Corwin&#160;and&#160;A.&#160;Hammond.&#160;KPZ&#160;line&#160;ensemble.&#160;Probability&#160;Theory&#160;and&#160;Related&#160;Fields,&#160;166(1-<br/>2):67–185,&#160;2016.&#160;arXiv:1312.2600&#160;[math.PR].<br/>
-[CHHM23]&#160;I.&#160;Corwin,&#160;A.&#160;Hammond,&#160;M.&#160;Hegde,&#160;and&#160;K.&#160;Matetski.&#160;Exceptional&#160;times&#160;when&#160;the&#160;KPZ&#160;fixed<br/>
-point&#160;violates&#160;Johansson’s&#160;conjecture&#160;on&#160;maximizer&#160;uniqueness.&#160;Electron.&#160;J.&#160;Probab.,&#160;28:1–81,<br/>2023.&#160;arXiv:2101.04205&#160;[math.PR].<br/>
-[CM24]<br/>
-C.&#160;Cuenca&#160;and&#160;M.&#160;Mucciconi.<br/>
-The&#160;Symplectic&#160;Schur&#160;Process.<br/>
-arXiv&#160;preprint,&#160;2024.<br/>
-arXiv:2407.02415&#160;[math.PR].<br/>
-[Cor12]<br/>
-I.&#160;Corwin.&#160;The&#160;Kardar-Parisi-Zhang&#160;equation&#160;and&#160;universality&#160;class.&#160;Random&#160;Matrices&#160;Theory<br/>Appl.,&#160;1:1130001,&#160;2012.&#160;arXiv:1106.1596&#160;[math.PR].<br/>
-[DFV24]<br/>
-P.&#160;Di&#160;Francesco&#160;and&#160;H.&#160;T.&#160;P.&#160;Vu.&#160;Arctic&#160;curves&#160;of&#160;the&#160;T-system&#160;with&#160;slanted&#160;initial&#160;data.&#160;arXiv<br/>preprint,&#160;2024.&#160;arXiv:2403.02479&#160;[math-ph].<br/>
-[DK24]<br/>
-E.&#160;Dimitrov&#160;and&#160;A.&#160;Knizel.&#160;Global&#160;asymptotics&#160;for&#160;β-Krawtchouk&#160;corners&#160;processes&#160;via&#160;multi-<br/>level&#160;loop&#160;equations.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2403.17895&#160;[math.PR].<br/>
-[DLM23]<br/>
-S.&#160;Das,&#160;Y.&#160;Liao,&#160;and&#160;M.&#160;Mucciconi.&#160;Large&#160;deviations&#160;for&#160;the&#160;q-deformed&#160;polynuclear&#160;growth.<br/>arXiv&#160;preprint,&#160;2023.&#160;arXiv:2307.01179&#160;[math.PR].<br/>
-[DOV22]<br/>
-D.&#160;Dauvergne,&#160;J.&#160;Ortmann,&#160;and&#160;B.&#160;Vir´ag.&#160;The&#160;directed&#160;landscape.&#160;Acta&#160;Math.,&#160;229:201–285,<br/>2022.&#160;arXiv:1812.00309&#160;[math.PR].<br/>
-[DS24]<br/>
-A.&#160;Dunlap&#160;and&#160;E.&#160;Sorensen.<br/>
-Viscous&#160;shock&#160;fluctuations&#160;in&#160;KPZ.<br/>
-arXiv&#160;preprint,&#160;2024.<br/>
-arXiv:2406.06502&#160;[math.PR].<br/>
-[DZ24]<br/>
-D.&#160;Dauvergne&#160;and&#160;L.&#160;Zhang.&#160;Characterization&#160;of&#160;the&#160;directed&#160;landscape&#160;from&#160;the&#160;KPZ&#160;fixed<br/>point.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2412.13032&#160;[math.PR].<br/>
-[FKZ24]<br/>
-C.&#160;Franceschini,&#160;J.&#160;Kuan,&#160;and&#160;Z.&#160;Zhou.&#160;Orthogonal&#160;polynomial&#160;duality&#160;and&#160;unitary&#160;symme-<br/>tries&#160;of&#160;multi-species&#160;ASEP(q,&#160;θ)&#160;and&#160;higher-spin&#160;vertex&#160;models&#160;via&#160;∗-bialgebra&#160;structure&#160;of<br/>higher&#160;rank&#160;quantum&#160;groups.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2209.03531&#160;[math.PR].<br/>
-[GRASS23]&#160;S.&#160;Groathouse,&#160;F.&#160;Rassoul-Agha,&#160;T.&#160;Sepp¨al¨ainen,&#160;and&#160;E.&#160;Sorensen.&#160;Jointly&#160;invariant&#160;measures<br/>
-for&#160;the&#160;Kardar-Parisi-Zhang&#160;Equation.&#160;arXiv&#160;preprint,&#160;2023.&#160;arXiv:2309.17276&#160;[math.PR].<br/>
-[Hai14]<br/>
-M.&#160;Hairer.&#160;Solving&#160;the&#160;KPZ&#160;equation.&#160;Ann.&#160;Math.&#160;(2),&#160;178(2):559–664,&#160;2014.&#160;arXiv:1109.6811<br/>[math.PR].<br/>
-[HP24]<br/>
-Z.&#160;Himwich&#160;and&#160;S.&#160;Parekh.&#160;The&#160;Directed&#160;Landscape&#160;is&#160;a&#160;Black&#160;Noise.&#160;arXiv&#160;preprint,&#160;2024.<br/>arXiv:2404.16801&#160;[math.PR].<br/>
-[IMS22]<br/>
-T.&#160;Imamura,&#160;M.&#160;Mucciconi,&#160;and&#160;T.&#160;Sasamoto.&#160;Solvable&#160;models&#160;in&#160;the&#160;KPZ&#160;class:&#160;approach<br/>through&#160;periodic&#160;and&#160;free&#160;boundary&#160;Schur&#160;measures.&#160;arXiv&#160;preprint,&#160;2022.&#160;arXiv:2204.08420<br/>[math.PR].<br/>
-[IMS23]<br/>
-T.&#160;Imamura,&#160;M.&#160;Mucciconi,&#160;and&#160;T.&#160;Sasamoto.&#160;New&#160;approach&#160;to&#160;KPZ&#160;models&#160;through&#160;free<br/>fermions&#160;at&#160;positive&#160;temperature.&#160;J.&#160;Math.&#160;Phys.,&#160;64(8):083301,&#160;2023.<br/>
-[JRAS22]<br/>
-C.&#160;Janjigian,&#160;F.&#160;Rassoul-Agha,&#160;and&#160;T.&#160;Sepp¨al¨ainen.&#160;Ergodicity&#160;and&#160;synchronization&#160;of&#160;the&#160;KPZ<br/>equation.&#160;arXiv&#160;preprint,&#160;2022.&#160;arXiv:2211.06779&#160;[math.PR].<br/>
-<hr/>
-<a name=5></a>[KPZ86]<br/>
-M.&#160;Kardar,&#160;G.&#160;Parisi,&#160;and&#160;Y.&#160;Zhang.&#160;Dynamic&#160;scaling&#160;of&#160;growing&#160;interfaces.&#160;Physical&#160;Review<br/>Letters,&#160;56(9):889,&#160;1986.<br/>
-[KZ24]<br/>
-J.&#160;Kuan&#160;and&#160;Z.&#160;Zhou.&#160;Asymptotics&#160;of&#160;dynamic&#160;ASEP&#160;using&#160;duality.&#160;arXiv&#160;preprint,&#160;2024.<br/>arXiv:2408.15785&#160;[math.PR].<br/>
-[LS23]<br/>
-J.-H.&#160;Li&#160;and&#160;A.&#160;Saenz.&#160;Contour&#160;integral&#160;formulas&#160;for&#160;PushASEP&#160;on&#160;the&#160;ring.&#160;arXiv&#160;preprint,<br/>2023.&#160;arXiv:2308.05372&#160;[math.PR].<br/>
-[LT21]<br/>
-Y.&#160;Lin&#160;and&#160;L.-C.&#160;Tsai.&#160;Short&#160;time&#160;large&#160;deviations&#160;of&#160;the&#160;KPZ&#160;equation.&#160;Commun.&#160;Math.&#160;Phys.,<br/>386(1):359–393,&#160;2021.&#160;arXiv:2009.10787&#160;[math.PR].<br/>
-[LZ25]<br/>
-Z.&#160;Liu&#160;and&#160;R.&#160;Zhang.&#160;An&#160;upper&#160;tail&#160;field&#160;of&#160;the&#160;KPZ&#160;fixed&#160;point.&#160;arXiv&#160;preprint,&#160;2025.<br/>arXiv:2501.00932&#160;[math.PR].<br/>
-[MPPY24]&#160;A.H.&#160;Morales,&#160;G.&#160;Panova,&#160;L.&#160;Petrov,&#160;and&#160;D.&#160;Yeliussizov.&#160;Grothendieck&#160;Shenanigans:&#160;Per-<br/>
-mutons&#160;from&#160;pipe&#160;dreams&#160;via&#160;integrable&#160;probability.&#160;arXiv&#160;preprint,&#160;2024.&#160;arXiv:2407.21653<br/>[math.PR].<br/>
-[MQR21]<br/>
-K.&#160;Matetski,&#160;J.&#160;Quastel,&#160;and&#160;D.&#160;Remenik.&#160;The&#160;KPZ&#160;fixed&#160;point.&#160;Acta&#160;Math.,&#160;227(1):115–203,<br/>2021.&#160;arXiv:1701.00018&#160;[math.PR].<br/>
-[MR23]<br/>
-K.&#160;Matetski&#160;and&#160;D.&#160;Remenik.&#160;Exact&#160;solution&#160;of&#160;TASEP&#160;and&#160;variants&#160;with&#160;inhomogeneous<br/>speeds&#160;and&#160;memory&#160;lengths.&#160;arXiv&#160;preprint,&#160;2023.&#160;arXiv:2301.13739&#160;[math.PR].<br/>
-[PS24]<br/>
-L.&#160;Petrov&#160;and&#160;A.&#160;Saenz.&#160;Rewriting&#160;History&#160;in&#160;Integrable&#160;Stochastic&#160;Particle&#160;Systems.&#160;Commun.<br/>Math.&#160;Phys.,&#160;405:300,&#160;2024.<br/>
-[QR22]<br/>
-J.&#160;Quastel&#160;and&#160;D.&#160;Remenik.&#160;KP&#160;governs&#160;random&#160;growth&#160;off&#160;a&#160;1-dimensional&#160;substrate.&#160;Forum<br/>of&#160;Mathematics,&#160;Pi,&#160;10:E10,&#160;2022.&#160;arXiv:1908.10353&#160;[math.PR].<br/>
-[Rem22]<br/>
-D.&#160;Remenik.&#160;Integrable&#160;fluctuations&#160;in&#160;the&#160;KPZ&#160;universality&#160;class.&#160;Proc.&#160;Int.&#160;Congr.&#160;Math.&#160;2022,<br/>pages&#160;4426–4450,&#160;2022.&#160;arXiv:2205.01433&#160;[math.PR].<br/>
-[She23]<br/>
-X.&#160;Shen.&#160;Independence&#160;property&#160;of&#160;the&#160;Busemann&#160;function&#160;in&#160;exactly&#160;solvable&#160;KPZ&#160;models.<br/>arXiv&#160;preprint,&#160;2023.&#160;arXiv:2308.11347&#160;[math.PR].<br/>
-[Tan24]<br/>
-Y.&#160;Tang.&#160;An&#160;invariance&#160;principle&#160;of&#160;1D&#160;KPZ&#160;with&#160;Robin&#160;boundary&#160;conditions.&#160;arXiv&#160;preprint,<br/>2024.&#160;arXiv:2404.19215&#160;[math.PR].<br/>
-[Tsa22]<br/>
-L.-C.&#160;Tsai.&#160;Exact&#160;lower-tail&#160;large&#160;deviations&#160;of&#160;the&#160;KPZ&#160;equation.&#160;Duke&#160;Math.&#160;J.,&#160;171(9):1879–<br/>1922,&#160;2022.&#160;arXiv:1809.03410&#160;[math.PR].<br/>
-[TTB+24]<br/>
-K.&#160;A.&#160;Takeuchi,&#160;K.&#160;Takasan,&#160;O.&#160;Busani,&#160;P.&#160;L.&#160;Ferrari,&#160;R.&#160;Vasseur,&#160;and&#160;J.&#160;De&#160;Nardis.&#160;Partial&#160;yet<br/>definite&#160;emergence&#160;of&#160;the&#160;Kardar-Parisi-Zhang&#160;class&#160;in&#160;isotropic&#160;spin&#160;chains.&#160;arXiv&#160;preprint,<br/>2024.&#160;arXiv:2406.07150&#160;[cond-mat.stat-mech].<br/>
-[Wu23]<br/>
-X.&#160;Wu.&#160;The&#160;KPZ&#160;equation&#160;and&#160;the&#160;directed&#160;landscape.&#160;arXiv&#160;preprint,&#160;2023.&#160;arXiv:2301.00547<br/>[math.PR].<br/>
-[WY24]<br/>
-Y.&#160;Wang&#160;and&#160;Z.&#160;Yang.&#160;From&#160;asymmetric&#160;simple&#160;exclusion&#160;processes&#160;with&#160;open&#160;boundaries<br/>to&#160;stationary&#160;measures&#160;of&#160;open&#160;KPZ&#160;fixed&#160;point:&#160;the&#160;shock&#160;region.&#160;arXiv&#160;preprint,&#160;2024.<br/>arXiv:2406.09252&#160;[math.PR].<br/>
-[Zha23]<br/>
-L.&#160;Zhang.&#160;Shift-invariance&#160;of&#160;the&#160;colored&#160;TASEP&#160;and&#160;finishing&#160;times&#160;of&#160;the&#160;oriented&#160;swap<br/>process.&#160;Adv.&#160;Math.,&#160;415:108884,&#160;2023.&#160;arXiv:2107.06350&#160;[math.PR].<br/>
+<!-- Foundations -->
+
+<h5 class="mt-4">Foundations</h5>
+<ul>
+<li><span style="color:darkred">[KPZ86]&nbsp;</span>The&nbsp;seminal&nbsp;paper&nbsp;introducing&nbsp;the&nbsp;KPZ&nbsp;equation,&nbsp;which&nbsp;describes&nbsp;the&nbsp;evolution&nbsp;of&nbsp;a&nbsp;growing&nbsp;interface&nbsp;in&nbsp;terms&nbsp;of&nbsp;a&nbsp;stochastic&nbsp;PDE.</li>
+<li><span style="color:darkred">[Cor12]&nbsp;</span>A&nbsp;comprehensive&nbsp;survey&nbsp;explaining&nbsp;key&nbsp;breakthroughs&nbsp;leading&nbsp;to&nbsp;the&nbsp;exact&nbsp;one-point&nbsp;distribution&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;equation&nbsp;with&nbsp;narrow-wedge&nbsp;initial&nbsp;data.</li>
+<li><span style="color:darkred">[Hai14]&nbsp;</span>A&nbsp;groundbreaking&nbsp;work&nbsp;that&nbsp;rigorously&nbsp;constructs&nbsp;a&nbsp;solution&nbsp;to&nbsp;the&nbsp;KPZ&nbsp;stochastic&nbsp;PDE
+using&nbsp;the&nbsp;theory&nbsp;of&nbsp;regularity&nbsp;structures,&nbsp;resolving&nbsp;longstanding&nbsp;analytical&nbsp;challenges.</li>
+<li><span style="color:darkred">[ACQ11]&nbsp;</span>A&nbsp;seminal&nbsp;paper&nbsp;that&nbsp;computes&nbsp;the&nbsp;one-point&nbsp;distribution&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;equation,&nbsp;linking
+KPZ&nbsp;fluctuations&nbsp;to&nbsp;Tracy–Widom&nbsp;statistics&nbsp;through&nbsp;integrable&nbsp;probability&nbsp;methods.</li>
+</ul>
+
+
+  <!-- Recent advances -->
+  <section>
+    <h5 >Recent advances</h5>
+    <ul>
+    <li><span style="color:darkred">[CH14],&nbsp;[CH16]&nbsp;</span>Develop&nbsp;the&nbsp;Brownian&nbsp;Gibbs&nbsp;property&nbsp;for&nbsp;the&nbsp;Airy&nbsp;and&nbsp;KPZ&nbsp;line&nbsp;ensembles.</li>
+    <li><span style="color:darkred">[MQR21]&nbsp;</span>Constructs&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point—the&nbsp;universal&nbsp;Markov&nbsp;process&nbsp;limit&nbsp;of&nbsp;KPZ-class&nbsp;models—with&nbsp;explicit&nbsp;Fredholm&nbsp;determinant&nbsp;formulas&nbsp;for&nbsp;multi-point&nbsp;distributions.</li>
+    <li><span style="color:darkred">[QR22]&nbsp;</span>Develops&nbsp;the&nbsp;KP&nbsp;equation&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point&nbsp;distributions.&nbsp;This&nbsp;and&nbsp;the&nbsp;previous&nbsp;paper
+    are&nbsp;summarized&nbsp;in&nbsp;<span style="color:darkred">[Rem22].</span></li>
+    <li><span style="color:darkred">[DOV22]&nbsp;</span>Establishes&nbsp;the&nbsp;directed&nbsp;landscape&nbsp;as&nbsp;the&nbsp;scaling&nbsp;limit&nbsp;of&nbsp;last-passage&nbsp;percolation&nbsp;models,
+    serving&nbsp;as&nbsp;the&nbsp;universal&nbsp;random&nbsp;geometry&nbsp;underpinning&nbsp;KPZ&nbsp;growth.</li>
+    <li><span style="color:darkred">[BSS24]&nbsp;</span>Introduces&nbsp;the&nbsp;stationary&nbsp;horizon&nbsp;as&nbsp;the&nbsp;unique&nbsp;invariant&nbsp;coupling&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point,
+    linking&nbsp;it&nbsp;to&nbsp;the&nbsp;structure&nbsp;of&nbsp;semi-infinite&nbsp;geodesics&nbsp;in&nbsp;the&nbsp;directed&nbsp;landscape.</li>
+    <li><span style="color:darkred">[BCY24]&nbsp;</span>Develop&nbsp;a&nbsp;framework&nbsp;of&nbsp;two-layered&nbsp;Gibbs&nbsp;measures&nbsp;to&nbsp;describe&nbsp;stationary&nbsp;measures&nbsp;for
+    geometric&nbsp;LPP&nbsp;and&nbsp;log-gamma&nbsp;polymer&nbsp;models,&nbsp;providing&nbsp;a&nbsp;unified&nbsp;description&nbsp;of&nbsp;the&nbsp;open&nbsp;KPZ
+    stationary&nbsp;measure.</li>
+    </ul>
+  </section>
+
+  <!-- Cutting edge work by participants -->
+
+<h5>Cutting edge work by participants (in no particular order)</h5>
+<ol>
+    <li><span style="color:darkred">[BB24]&nbsp;</span>ASEP&nbsp;via&nbsp;Mallows&nbsp;coloring</li>
+    <li><span style="color:darkred">[BC24]&nbsp;</span>Mallows&nbsp;Product&nbsp;Measure</li>
+    <li><span style="color:darkred">[AB24]&nbsp;</span>Colored&nbsp;Line&nbsp;Ensembles&nbsp;for&nbsp;Stochastic&nbsp;Vertex&nbsp;Models</li>
+    <li><span style="color:darkred">[ACH24b]&nbsp;</span>Scaling&nbsp;limit&nbsp;of&nbsp;the&nbsp;colored&nbsp;ASEP&nbsp;and&nbsp;stochastic&nbsp;six-vertex&nbsp;models</li>
+    <li><span style="color:darkred">[ACH24a]&nbsp;</span>KPZ&nbsp;fixed&nbsp;point&nbsp;convergence&nbsp;of&nbsp;the&nbsp;ASEP&nbsp;and&nbsp;stochastic&nbsp;six-vertex&nbsp;models</li>
+    <li><span style="color:darkred">[LS23]&nbsp;</span>Contour&nbsp;integral&nbsp;formulas&nbsp;for&nbsp;PushASEP&nbsp;on&nbsp;the&nbsp;ring</li>
+    <li><span style="color:darkred">[MR23]&nbsp;</span>Exact&nbsp;solution&nbsp;of&nbsp;TASEP&nbsp;and&nbsp;variants&nbsp;with&nbsp;inhomogeneous&nbsp;speeds&nbsp;and&nbsp;memory&nbsp;lengths</li>
+    <li><span style="color:darkred">[ANP23]&nbsp;</span>Colored&nbsp;Interacting&nbsp;Particle&nbsp;Systems&nbsp;on&nbsp;the&nbsp;Ring:&nbsp;Stationary&nbsp;Measures&nbsp;from&nbsp;Yang–Baxter Equation</li>
+    <li><span style="color:darkred">[Zha23]&nbsp;</span>Shift-invariance&nbsp;of&nbsp;the&nbsp;colored&nbsp;TASEP&nbsp;and&nbsp;finishing&nbsp;times&nbsp;of&nbsp;the&nbsp;oriented&nbsp;swap&nbsp;process</li>
+    <li><span style="color:darkred">[KZ24]&nbsp;</span>Asymptotics&nbsp;of&nbsp;dynamic&nbsp;ASEP&nbsp;using&nbsp;duality</li>
+    <li><span style="color:darkred">[FKZ24]&nbsp;</span>Orthogonal&nbsp;polynomial&nbsp;duality&nbsp;and&nbsp;unitary&nbsp;symmetries&nbsp;of&nbsp;multi-species&nbsp;ASEP(q,&nbsp;θ)&nbsp;and higher-spin&nbsp;vertex&nbsp;models&nbsp;via&nbsp;∗-bialgebra&nbsp;structure&nbsp;of&nbsp;higher&nbsp;rank&nbsp;quantum&nbsp;groups</li>
+    <li><span style="color:darkred">[AH23]&nbsp;</span>Strong&nbsp;Characterization&nbsp;for&nbsp;the&nbsp;Airy&nbsp;Line&nbsp;Ensemble</li>
+    <li><span style="color:darkred">[DLM23]&nbsp;</span>Large&nbsp;deviations&nbsp;for&nbsp;the&nbsp;q-deformed&nbsp;polynuclear&nbsp;growth</li>
+    <li><span style="color:darkred">[CHHM23]&nbsp;</span>Exceptional&nbsp;times&nbsp;when&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point&nbsp;violates&nbsp;Johansson's&nbsp;conjecture&nbsp;on&nbsp;maximizer&nbsp;uniqueness</li>
+    <li><span style="color:darkred">[BL24]&nbsp;</span>Pinched-up&nbsp;periodic&nbsp;KPZ&nbsp;fixed&nbsp;point</li>
+    <li><span style="color:darkred">[LZ25]&nbsp;</span>An&nbsp;upper&nbsp;tail&nbsp;field&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point</li>
+    <li><span style="color:darkred">[TTB+TTB&nbsp;24]&nbsp;</span>Partial&nbsp;yet&nbsp;definite&nbsp;emergence&nbsp;of&nbsp;the&nbsp;Kardar-Parisi-Zhang&nbsp;class&nbsp;in&nbsp;isotropic&nbsp;spin&nbsp;chains</li>
+    <li><span style="color:darkred">[JRAS22]&nbsp;</span>Ergodicity&nbsp;and&nbsp;synchronization&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;equation</li>
+    <li><span style="color:darkred">[GRASS23]&nbsp;</span>Jointly&nbsp;invariant&nbsp;measures&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;equation</li>
+    <li><span style="color:darkred">[She23]&nbsp;</span>Independence&nbsp;property&nbsp;of&nbsp;the&nbsp;Busemann&nbsp;function&nbsp;in&nbsp;exactly&nbsp;solvable&nbsp;KPZ&nbsp;models</li>
+    <li><span style="color:darkred">[BS23]&nbsp;</span>Time&nbsp;correlations&nbsp;in&nbsp;KPZ&nbsp;models&nbsp;with&nbsp;diffusive&nbsp;initial&nbsp;conditions</li>
+    <li><span style="color:darkred">[BLS22]&nbsp;</span>Limiting&nbsp;one-point&nbsp;distribution&nbsp;of&nbsp;periodic&nbsp;TASEP</li>
+    <li><span style="color:darkred">[BPS23]&nbsp;</span>Differential&nbsp;equations&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;and&nbsp;periodic&nbsp;KPZ&nbsp;fixed&nbsp;points</li>
+    <li><span style="color:darkred">[DS24]&nbsp;</span>Viscous&nbsp;shock&nbsp;fluctuations&nbsp;in&nbsp;KPZ</li>
+    <li><span style="color:darkred">[Tan24]&nbsp;</span>An&nbsp;invariance&nbsp;principle&nbsp;of&nbsp;1D&nbsp;KPZ&nbsp;with&nbsp;Robin&nbsp;boundary&nbsp;conditions</li>
+    <li><span style="color:darkred">[Tsa22]&nbsp;</span>Exact&nbsp;lower-tail&nbsp;large&nbsp;deviations&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;equation</li>
+    <li><span style="color:darkred">[LT21]&nbsp;</span>Short&nbsp;time&nbsp;large&nbsp;deviations&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;equation</li>
+    <li><span style="color:darkred">[WY24]&nbsp;</span>From&nbsp;asymmetric&nbsp;simple&nbsp;exclusion&nbsp;processes&nbsp;with&nbsp;open&nbsp;boundaries&nbsp;to&nbsp;stationary&nbsp;measures of&nbsp;open&nbsp;KPZ&nbsp;fixed&nbsp;point:&nbsp;the&nbsp;shock&nbsp;region</li>
+    <li><span style="color:darkred">[Bus23]&nbsp;</span>Non-existence&nbsp;of&nbsp;three&nbsp;non-coalescing&nbsp;infinite&nbsp;geodesics&nbsp;with&nbsp;the&nbsp;same&nbsp;direction&nbsp;in&nbsp;the&nbsp;directed&nbsp;landscape</li>
+    <li><span style="color:darkred">[DZ24]&nbsp;</span>Characterization&nbsp;of&nbsp;the&nbsp;directed&nbsp;landscape&nbsp;from&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point</li>
+    <li><span style="color:darkred">[HP24]&nbsp;</span>The&nbsp;Directed&nbsp;Landscape&nbsp;is&nbsp;a&nbsp;Black&nbsp;Noise</li>
+    <li><span style="color:darkred">[Wu23]&nbsp;</span>The&nbsp;KPZ&nbsp;equation&nbsp;and&nbsp;the&nbsp;directed&nbsp;landscape</li>
+    <li><span style="color:darkred">[MPPY24]&nbsp;</span>Grothendieck&nbsp;Shenanigans:&nbsp;Permutons&nbsp;from&nbsp;pipe&nbsp;dreams&nbsp;via&nbsp;integrable&nbsp;probability</li>
+    <li><span style="color:darkred">[PS24]&nbsp;</span>Rewriting&nbsp;History&nbsp;in&nbsp;Integrable&nbsp;Stochastic&nbsp;Particle&nbsp;Systems</li>
+    <li><span style="color:darkred">[DK24]&nbsp;</span>Global&nbsp;asymptotics&nbsp;for&nbsp;β-Krawtchouk&nbsp;corners&nbsp;processes&nbsp;via&nbsp;multi-level&nbsp;loop&nbsp;equations</li>
+    <li><span style="color:darkred">[CM24]&nbsp;</span>The&nbsp;Symplectic&nbsp;Schur&nbsp;Process</li>
+    <li><span style="color:darkred">[IMS22]&nbsp;</span>Solvable&nbsp;models&nbsp;in&nbsp;the&nbsp;KPZ&nbsp;class:&nbsp;approach&nbsp;through&nbsp;periodic&nbsp;and&nbsp;free&nbsp;boundary&nbsp;Schur measures</li>
+    <li><span style="color:darkred">[IMS23]&nbsp;</span>New&nbsp;approach&nbsp;to&nbsp;KPZ&nbsp;models&nbsp;through&nbsp;free&nbsp;fermions&nbsp;at&nbsp;positive&nbsp;temperature</li>
+    <li><span style="color:darkred">[DFV24]&nbsp;</span>Arctic&nbsp;curves&nbsp;of&nbsp;the&nbsp;T-system&nbsp;with&nbsp;slanted&nbsp;initial&nbsp;data</li>
+</ol>
+
+  <!-- References in a collapsible details block -->
+  <details>
+      <summary><b>References</b></summary>
+      <ul>
+      <li>[AB24]
+      A.&nbsp;Aggarwal&nbsp;and&nbsp;A.&nbsp;Borodin.&nbsp;Colored&nbsp;Line&nbsp;Ensembles&nbsp;for&nbsp;Stochastic&nbsp;Vertex&nbsp;Models.&nbsp;arXiv
+      preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2402.06868">arXiv:2402.06868</a>&nbsp;[math.PR].</li>
+      <li>[ACH24a]&nbsp;A.&nbsp;Aggarwal,&nbsp;I.&nbsp;Corwin,&nbsp;and&nbsp;M.&nbsp;Hegde.&nbsp;KPZ&nbsp;fixed&nbsp;point&nbsp;convergence&nbsp;of&nbsp;the&nbsp;ASEP&nbsp;and
+      stochastic&nbsp;six-vertex&nbsp;models.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2412.18117">arXiv:2412.18117</a>&nbsp;[math.PR].</li>
+      <li>[ACH24b]&nbsp;A.&nbsp;Aggarwal,&nbsp;I.&nbsp;Corwin,&nbsp;and&nbsp;M.&nbsp;Hegde.&nbsp;Scaling&nbsp;limit&nbsp;of&nbsp;the&nbsp;colored&nbsp;ASEP&nbsp;and&nbsp;stochastic
+      six-vertex&nbsp;models.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2403.01341">arXiv:2403.01341</a>&nbsp;[math.PR].</li>
+      <li>[ACQ11]
+      G.&nbsp;Amir,&nbsp;I.&nbsp;Corwin,&nbsp;and&nbsp;J.&nbsp;Quastel.&nbsp;Probability&nbsp;distribution&nbsp;of&nbsp;the&nbsp;free&nbsp;energy&nbsp;of&nbsp;the&nbsp;continuum
+      directed&nbsp;random&nbsp;polymer&nbsp;in&nbsp;1+&nbsp;1&nbsp;dimensions.&nbsp;Comm.&nbsp;Pure&nbsp;Appl.&nbsp;Math.,&nbsp;64(4):466–537,&nbsp;2011.
+      <a href="https://arxiv.org/abs/1003.0443">arXiv:1003.0443</a>&nbsp;[math.PR].</li>
+      <li>[AH23]
+      A.&nbsp;Aggarwal&nbsp;and&nbsp;J.&nbsp;Huang.&nbsp;Strong&nbsp;Characterization&nbsp;for&nbsp;the&nbsp;Airy&nbsp;Line&nbsp;Ensemble.&nbsp;arXiv
+      preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2308.11908">arXiv:2308.11908</a>.</li>
+      <li>[ANP23]
+      A.&nbsp;Aggarwal,&nbsp;M.&nbsp;Nicoletti,&nbsp;and&nbsp;L.&nbsp;Petrov.&nbsp;Colored&nbsp;Interacting&nbsp;Particle&nbsp;Systems&nbsp;on&nbsp;the&nbsp;Ring:
+      Stationary&nbsp;Measures&nbsp;from&nbsp;Yang–Baxter&nbsp;Equation.&nbsp;arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2309.11865">arXiv:2309.11865</a>
+      [math.PR],&nbsp;to&nbsp;appear&nbsp;in&nbsp;Compositio&nbsp;Math.</li>
+      <li>[BB24]
+      A.&nbsp;Borodin&nbsp;and&nbsp;A.&nbsp;Bufetov.&nbsp;ASEP&nbsp;via&nbsp;Mallows&nbsp;coloring.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2408.16585">arXiv:2408.16585</a>
+      [math.PR].</li>
+      <li>[BC24]
+      A.&nbsp;Bufetov&nbsp;and&nbsp;K.&nbsp;Chen.&nbsp;Mallows&nbsp;Product&nbsp;Measure.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2402.09892">arXiv:2402.09892</a>
+      [math.PR].</li>
+      <li>[BCY24]
+      G.&nbsp;Barraquand,&nbsp;I.&nbsp;Corwin,&nbsp;and&nbsp;Z.&nbsp;Yang.&nbsp;Stationary&nbsp;measures&nbsp;for&nbsp;integrable&nbsp;polymers&nbsp;on&nbsp;a
+      strip.&nbsp;Invent.&nbsp;Math.,&nbsp;237:1567–1641,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2306.05983">arXiv:2306.05983</a>&nbsp;[math.PR].</li>
+      <li>[BL24]
+      J.&nbsp;Baik&nbsp;and&nbsp;Z.&nbsp;Liu.&nbsp;Pinched-up&nbsp;periodic&nbsp;KPZ&nbsp;fixed&nbsp;point.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2403.01624">arXiv:2403.01624</a>
+      [math.PR].</li>
+      <li>[BLS22]
+      J.&nbsp;Baik,&nbsp;Z.&nbsp;Liu,&nbsp;and&nbsp;G.&nbsp;L.&nbsp;F.&nbsp;Silva.&nbsp;Limiting&nbsp;one-point&nbsp;distribution&nbsp;of&nbsp;periodic&nbsp;TASEP.&nbsp;Ann.
+      Inst.&nbsp;Henri&nbsp;Poincaré&nbsp;Probab.&nbsp;Stat.,&nbsp;58(1):248–302,&nbsp;2022.&nbsp;<a href="https://arxiv.org/abs/2008.07024">arXiv:2008.07024</a>&nbsp;[math.PR].</li>
+      <li>[BPS23]
+      J.&nbsp;Baik,&nbsp;A.&nbsp;Prokhorov,&nbsp;and&nbsp;G.&nbsp;L.&nbsp;F.&nbsp;Silva.&nbsp;Differential&nbsp;equations&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;and&nbsp;periodic&nbsp;KPZ
+      fixed&nbsp;points.&nbsp;Commun.&nbsp;Math.&nbsp;Phys.,&nbsp;401:1753–1806,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2208.11638">arXiv:2208.11638</a>&nbsp;[math.PR].</li>
+      <li>[BS23]
+      R.&nbsp;Basu&nbsp;and&nbsp;X.&nbsp;Shen.&nbsp;Time&nbsp;correlations&nbsp;in&nbsp;KPZ&nbsp;models&nbsp;with&nbsp;diffusive&nbsp;initial&nbsp;conditions.&nbsp;arXiv
+      preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2308.03473">arXiv:2308.03473</a>&nbsp;[math.PR].</li>
+      <li>[BSS24]
+      O.&nbsp;Busani,&nbsp;T.&nbsp;Seppäläinen,&nbsp;and&nbsp;E.&nbsp;Sorensen.
+      The&nbsp;stationary&nbsp;horizon&nbsp;and&nbsp;semi-infinite
+      geodesics&nbsp;in&nbsp;the&nbsp;directed&nbsp;landscape.&nbsp;Ann.&nbsp;Probab.,&nbsp;52:1–66,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2203.13242">arXiv:2203.13242</a>&nbsp;[math.PR].</li>
+      <li><a name="4"></a>[Bus23]
+      O.&nbsp;Busani.&nbsp;Non-existence&nbsp;of&nbsp;three&nbsp;non-coalescing&nbsp;infinite&nbsp;geodesics&nbsp;with&nbsp;the&nbsp;same&nbsp;direction
+      in&nbsp;the&nbsp;directed&nbsp;landscape.&nbsp;arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2401.00513">arXiv:2401.00513</a>&nbsp;[math.PR].</li>
+      <li>[CH14]
+      I.&nbsp;Corwin&nbsp;and&nbsp;A.&nbsp;Hammond.&nbsp;Brownian&nbsp;Gibbs&nbsp;property&nbsp;for&nbsp;Airy&nbsp;line&nbsp;ensembles.&nbsp;Invent.&nbsp;math.,
+      195(2):441–508,&nbsp;2014.&nbsp;<a href="https://arxiv.org/abs/1108.2291">arXiv:1108.2291</a>&nbsp;[math.PR].</li>
+      <li>[CH16]
+      I.&nbsp;Corwin&nbsp;and&nbsp;A.&nbsp;Hammond.&nbsp;KPZ&nbsp;line&nbsp;ensemble.&nbsp;Probability&nbsp;Theory&nbsp;and&nbsp;Related&nbsp;Fields,&nbsp;166(1-2):67–185,&nbsp;2016.&nbsp;<a href="https://arxiv.org/abs/1312.2600">arXiv:1312.2600</a>&nbsp;[math.PR].</li>
+      <li>[CHHM23]&nbsp;I.&nbsp;Corwin,&nbsp;A.&nbsp;Hammond,&nbsp;M.&nbsp;Hegde,&nbsp;and&nbsp;K.&nbsp;Matetski.&nbsp;Exceptional&nbsp;times&nbsp;when&nbsp;the&nbsp;KPZ&nbsp;fixed
+      point&nbsp;violates&nbsp;Johansson's&nbsp;conjecture&nbsp;on&nbsp;maximizer&nbsp;uniqueness.&nbsp;Electron.&nbsp;J.&nbsp;Probab.,&nbsp;28:1–81,
+      2023.&nbsp;<a href="https://arxiv.org/abs/2101.04205">arXiv:2101.04205</a>&nbsp;[math.PR].</li>
+      <li>[CM24]
+      C.&nbsp;Cuenca&nbsp;and&nbsp;M.&nbsp;Mucciconi.
+      The&nbsp;Symplectic&nbsp;Schur&nbsp;Process.
+      arXiv&nbsp;preprint,&nbsp;2024.
+      <a href="https://arxiv.org/abs/2407.02415">arXiv:2407.02415</a>&nbsp;[math.PR].</li>
+      <li>[Cor12]
+      I.&nbsp;Corwin.&nbsp;The&nbsp;Kardar-Parisi-Zhang&nbsp;equation&nbsp;and&nbsp;universality&nbsp;class.&nbsp;Random&nbsp;Matrices&nbsp;Theory
+      Appl.,&nbsp;1:1130001,&nbsp;2012.&nbsp;<a href="https://arxiv.org/abs/1106.1596">arXiv:1106.1596</a>&nbsp;[math.PR].</li>
+      <li>[DFV24]
+      P.&nbsp;Di&nbsp;Francesco&nbsp;and&nbsp;H.&nbsp;T.&nbsp;P.&nbsp;Vu.&nbsp;Arctic&nbsp;curves&nbsp;of&nbsp;the&nbsp;T-system&nbsp;with&nbsp;slanted&nbsp;initial&nbsp;data.&nbsp;arXiv
+      preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2403.02479">arXiv:2403.02479</a>&nbsp;[math-ph].</li>
+      <li>[DK24]
+      E.&nbsp;Dimitrov&nbsp;and&nbsp;A.&nbsp;Knizel.&nbsp;Global&nbsp;asymptotics&nbsp;for&nbsp;β-Krawtchouk&nbsp;corners&nbsp;processes&nbsp;via&nbsp;multilevel&nbsp;loop&nbsp;equations.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2403.17895">arXiv:2403.17895</a>&nbsp;[math.PR].</li>
+      <li>[DLM23]
+      S.&nbsp;Das,&nbsp;Y.&nbsp;Liao,&nbsp;and&nbsp;M.&nbsp;Mucciconi.&nbsp;Large&nbsp;deviations&nbsp;for&nbsp;the&nbsp;q-deformed&nbsp;polynuclear&nbsp;growth.
+      arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2307.01179">arXiv:2307.01179</a>&nbsp;[math.PR].</li>
+      <li>[DOV22]
+      D.&nbsp;Dauvergne,&nbsp;J.&nbsp;Ortmann,&nbsp;and&nbsp;B.&nbsp;Virág.&nbsp;The&nbsp;directed&nbsp;landscape.&nbsp;Acta&nbsp;Math.,&nbsp;229:201–285,
+      2022.&nbsp;<a href="https://arxiv.org/abs/1812.00309">arXiv:1812.00309</a>&nbsp;[math.PR].</li>
+      <li>[DS24]
+      A.&nbsp;Dunlap&nbsp;and&nbsp;E.&nbsp;Sorensen.
+      Viscous&nbsp;shock&nbsp;fluctuations&nbsp;in&nbsp;KPZ.
+      arXiv&nbsp;preprint,&nbsp;2024.
+      <a href="https://arxiv.org/abs/2406.06502">arXiv:2406.06502</a>&nbsp;[math.PR].</li>
+      <li>[DZ24]
+      D.&nbsp;Dauvergne&nbsp;and&nbsp;L.&nbsp;Zhang.&nbsp;Characterization&nbsp;of&nbsp;the&nbsp;directed&nbsp;landscape&nbsp;from&nbsp;the&nbsp;KPZ&nbsp;fixed
+      point.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2412.13032">arXiv:2412.13032</a>&nbsp;[math.PR].</li>
+      <li>[FKZ24]
+      C.&nbsp;Franceschini,&nbsp;J.&nbsp;Kuan,&nbsp;and&nbsp;Z.&nbsp;Zhou.&nbsp;Orthogonal&nbsp;polynomial&nbsp;duality&nbsp;and&nbsp;unitary&nbsp;symmetries&nbsp;of&nbsp;multi-species&nbsp;ASEP(q,&nbsp;θ)&nbsp;and&nbsp;higher-spin&nbsp;vertex&nbsp;models&nbsp;via&nbsp;∗-bialgebra&nbsp;structure&nbsp;of
+      higher&nbsp;rank&nbsp;quantum&nbsp;groups.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2209.03531">arXiv:2209.03531</a>&nbsp;[math.PR].</li>
+      <li>[GRASS23]&nbsp;S.&nbsp;Groathouse,&nbsp;F.&nbsp;Rassoul-Agha,&nbsp;T.&nbsp;Seppäläinen,&nbsp;and&nbsp;E.&nbsp;Sorensen.&nbsp;Jointly&nbsp;invariant&nbsp;measures
+      for&nbsp;the&nbsp;Kardar-Parisi-Zhang&nbsp;Equation.&nbsp;arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2309.17276">arXiv:2309.17276</a>&nbsp;[math.PR].</li>
+      <li>[Hai14]
+      M.&nbsp;Hairer.&nbsp;Solving&nbsp;the&nbsp;KPZ&nbsp;equation.&nbsp;Ann.&nbsp;Math.&nbsp;(2),&nbsp;178(2):559–664,&nbsp;2014.&nbsp;<a href="https://arxiv.org/abs/1109.6811">arXiv:1109.6811</a>
+      [math.PR].</li>
+      <li>[HP24]
+      Z.&nbsp;Himwich&nbsp;and&nbsp;S.&nbsp;Parekh.&nbsp;The&nbsp;Directed&nbsp;Landscape&nbsp;is&nbsp;a&nbsp;Black&nbsp;Noise.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.
+      <a href="https://arxiv.org/abs/2404.16801">arXiv:2404.16801</a>&nbsp;[math.PR].</li>
+      <li>[IMS22]
+      T.&nbsp;Imamura,&nbsp;M.&nbsp;Mucciconi,&nbsp;and&nbsp;T.&nbsp;Sasamoto.&nbsp;Solvable&nbsp;models&nbsp;in&nbsp;the&nbsp;KPZ&nbsp;class:&nbsp;approach
+      through&nbsp;periodic&nbsp;and&nbsp;free&nbsp;boundary&nbsp;Schur&nbsp;measures.&nbsp;arXiv&nbsp;preprint,&nbsp;2022.&nbsp;<a href="https://arxiv.org/abs/2204.08420">arXiv:2204.08420</a>
+      [math.PR].</li>
+      <li>[IMS23]
+      T.&nbsp;Imamura,&nbsp;M.&nbsp;Mucciconi,&nbsp;and&nbsp;T.&nbsp;Sasamoto.&nbsp;New&nbsp;approach&nbsp;to&nbsp;KPZ&nbsp;models&nbsp;through&nbsp;free
+      fermions&nbsp;at&nbsp;positive&nbsp;temperature.&nbsp;J.&nbsp;Math.&nbsp;Phys.,&nbsp;64(8):083301,&nbsp;2023.</li>
+      <li>[JRAS22]
+      C.&nbsp;Janjigian,&nbsp;F.&nbsp;Rassoul-Agha,&nbsp;and&nbsp;T.&nbsp;Seppäläinen.&nbsp;Ergodicity&nbsp;and&nbsp;synchronization&nbsp;of&nbsp;the&nbsp;KPZ
+      equation.&nbsp;arXiv&nbsp;preprint,&nbsp;2022.&nbsp;<a href="https://arxiv.org/abs/2211.06779">arXiv:2211.06779</a>&nbsp;[math.PR].</li>
+      <li><a name="5"></a>[KPZ86]
+      M.&nbsp;Kardar,&nbsp;G.&nbsp;Parisi,&nbsp;and&nbsp;Y.&nbsp;Zhang.&nbsp;Dynamic&nbsp;scaling&nbsp;of&nbsp;growing&nbsp;interfaces.&nbsp;Physical&nbsp;Review
+      Letters,&nbsp;56(9):889,&nbsp;1986.</li>
+      <li>[KZ24]
+      J.&nbsp;Kuan&nbsp;and&nbsp;Z.&nbsp;Zhou.&nbsp;Asymptotics&nbsp;of&nbsp;dynamic&nbsp;ASEP&nbsp;using&nbsp;duality.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.
+      <a href="https://arxiv.org/abs/2408.15785">arXiv:2408.15785</a>&nbsp;[math.PR].</li>
+      <li>[LS23]
+      J.-H.&nbsp;Li&nbsp;and&nbsp;A.&nbsp;Saenz.&nbsp;Contour&nbsp;integral&nbsp;formulas&nbsp;for&nbsp;PushASEP&nbsp;on&nbsp;the&nbsp;ring.&nbsp;arXiv&nbsp;preprint,
+      2023.&nbsp;<a href="https://arxiv.org/abs/2308.05372">arXiv:2308.05372</a>&nbsp;[math.PR].</li>
+      <li>[LT21]
+      Y.&nbsp;Lin&nbsp;and&nbsp;L.-C.&nbsp;Tsai.&nbsp;Short&nbsp;time&nbsp;large&nbsp;deviations&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;equation.&nbsp;Commun.&nbsp;Math.&nbsp;Phys.,
+      386(1):359–393,&nbsp;2021.&nbsp;<a href="https://arxiv.org/abs/2009.10787">arXiv:2009.10787</a>&nbsp;[math.PR].</li>
+      <li>[LZ25]
+      Z.&nbsp;Liu&nbsp;and&nbsp;R.&nbsp;Zhang.&nbsp;An&nbsp;upper&nbsp;tail&nbsp;field&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point.&nbsp;arXiv&nbsp;preprint,&nbsp;2025.
+      <a href="https://arxiv.org/abs/2501.00932">arXiv:2501.00932</a>&nbsp;[math.PR].</li>
+      <li>[MPPY24]&nbsp;A.H.&nbsp;Morales,&nbsp;G.&nbsp;Panova,&nbsp;L.&nbsp;Petrov,&nbsp;and&nbsp;D.&nbsp;Yeliussizov.&nbsp;Grothendieck&nbsp;Shenanigans:&nbsp;Permutons&nbsp;from&nbsp;pipe&nbsp;dreams&nbsp;via&nbsp;integrable&nbsp;probability.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.&nbsp;<a href="https://arxiv.org/abs/2407.21653">arXiv:2407.21653</a>
+      [math.PR].</li>
+      <li>[MQR21]
+      K.&nbsp;Matetski,&nbsp;J.&nbsp;Quastel,&nbsp;and&nbsp;D.&nbsp;Remenik.&nbsp;The&nbsp;KPZ&nbsp;fixed&nbsp;point.&nbsp;Acta&nbsp;Math.,&nbsp;227(1):115–203,
+      2021.&nbsp;<a href="https://arxiv.org/abs/1701.00018">arXiv:1701.00018</a>&nbsp;[math.PR].</li>
+      <li>[MR23]
+      K.&nbsp;Matetski&nbsp;and&nbsp;D.&nbsp;Remenik.&nbsp;Exact&nbsp;solution&nbsp;of&nbsp;TASEP&nbsp;and&nbsp;variants&nbsp;with&nbsp;inhomogeneous
+      speeds&nbsp;and&nbsp;memory&nbsp;lengths.&nbsp;arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2301.13739">arXiv:2301.13739</a>&nbsp;[math.PR].</li>
+      <li>[PS24]
+      L.&nbsp;Petrov&nbsp;and&nbsp;A.&nbsp;Saenz.&nbsp;Rewriting&nbsp;History&nbsp;in&nbsp;Integrable&nbsp;Stochastic&nbsp;Particle&nbsp;Systems.&nbsp;Commun.
+      Math.&nbsp;Phys.,&nbsp;405:300,&nbsp;2024.</li>
+      <li>[QR22]
+      J.&nbsp;Quastel&nbsp;and&nbsp;D.&nbsp;Remenik.&nbsp;KP&nbsp;governs&nbsp;random&nbsp;growth&nbsp;off&nbsp;a&nbsp;1-dimensional&nbsp;substrate.&nbsp;Forum
+      of&nbsp;Mathematics,&nbsp;Pi,&nbsp;10:E10,&nbsp;2022.&nbsp;<a href="https://arxiv.org/abs/1908.10353">arXiv:1908.10353</a>&nbsp;[math.PR].</li>
+      <li>[Rem22]
+      D.&nbsp;Remenik.&nbsp;Integrable&nbsp;fluctuations&nbsp;in&nbsp;the&nbsp;KPZ&nbsp;universality&nbsp;class.&nbsp;Proc.&nbsp;Int.&nbsp;Congr.&nbsp;Math.&nbsp;2022,
+      pages&nbsp;4426–4450,&nbsp;2022.&nbsp;<a href="https://arxiv.org/abs/2205.01433">arXiv:2205.01433</a>&nbsp;[math.PR].</li>
+      <li>[She23]
+      X.&nbsp;Shen.&nbsp;Independence&nbsp;property&nbsp;of&nbsp;the&nbsp;Busemann&nbsp;function&nbsp;in&nbsp;exactly&nbsp;solvable&nbsp;KPZ&nbsp;models.
+      arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2308.11347">arXiv:2308.11347</a>&nbsp;[math.PR].</li>
+      <li>[Tan24]
+      Y.&nbsp;Tang.&nbsp;An&nbsp;invariance&nbsp;principle&nbsp;of&nbsp;1D&nbsp;KPZ&nbsp;with&nbsp;Robin&nbsp;boundary&nbsp;conditions.&nbsp;arXiv&nbsp;preprint,
+      2024.&nbsp;<a href="https://arxiv.org/abs/2404.19215">arXiv:2404.19215</a>&nbsp;[math.PR].</li>
+      <li>[Tsa22]
+      L.-C.&nbsp;Tsai.&nbsp;Exact&nbsp;lower-tail&nbsp;large&nbsp;deviations&nbsp;of&nbsp;the&nbsp;KPZ&nbsp;equation.&nbsp;Duke&nbsp;Math.&nbsp;J.,&nbsp;171(9):1879–
+      1922,&nbsp;2022.&nbsp;<a href="https://arxiv.org/abs/1809.03410">arXiv:1809.03410</a>&nbsp;[math.PR].</li>
+      <li>[TTB+24]
+      K.&nbsp;A.&nbsp;Takeuchi,&nbsp;K.&nbsp;Takasan,&nbsp;O.&nbsp;Busani,&nbsp;P.&nbsp;L.&nbsp;Ferrari,&nbsp;R.&nbsp;Vasseur,&nbsp;and&nbsp;J.&nbsp;De&nbsp;Nardis.&nbsp;Partial&nbsp;yet
+      definite&nbsp;emergence&nbsp;of&nbsp;the&nbsp;Kardar-Parisi-Zhang&nbsp;class&nbsp;in&nbsp;isotropic&nbsp;spin&nbsp;chains.&nbsp;arXiv&nbsp;preprint,
+      2024.&nbsp;<a href="https://arxiv.org/abs/2406.07150">arXiv:2406.07150</a>&nbsp;[cond-mat.stat-mech].</li>
+      <li>[Wu23]
+      X.&nbsp;Wu.&nbsp;The&nbsp;KPZ&nbsp;equation&nbsp;and&nbsp;the&nbsp;directed&nbsp;landscape.&nbsp;arXiv&nbsp;preprint,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2301.00547">arXiv:2301.00547</a>
+      [math.PR].</li>
+      <li>[WY24]
+      Y.&nbsp;Wang&nbsp;and&nbsp;Z.&nbsp;Yang.&nbsp;From&nbsp;asymmetric&nbsp;simple&nbsp;exclusion&nbsp;processes&nbsp;with&nbsp;open&nbsp;boundaries
+      to&nbsp;stationary&nbsp;measures&nbsp;of&nbsp;open&nbsp;KPZ&nbsp;fixed&nbsp;point:&nbsp;the&nbsp;shock&nbsp;region.&nbsp;arXiv&nbsp;preprint,&nbsp;2024.
+      <a href="https://arxiv.org/abs/2406.09252">arXiv:2406.09252</a>&nbsp;[math.PR].</li>
+      <li>[Zha23]
+      L.&nbsp;Zhang.&nbsp;Shift-invariance&nbsp;of&nbsp;the&nbsp;colored&nbsp;TASEP&nbsp;and&nbsp;finishing&nbsp;times&nbsp;of&nbsp;the&nbsp;oriented&nbsp;swap process.&nbsp;Adv.&nbsp;Math.,&nbsp;415:108884,&nbsp;2023.&nbsp;<a href="https://arxiv.org/abs/2107.06350">arXiv:2107.06350</a>&nbsp;[math.PR].</li>
+      </ul>
+  </details>
