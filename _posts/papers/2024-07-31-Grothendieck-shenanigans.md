@@ -13,7 +13,7 @@ coauthors:
 comments: false
 categories: blog math preprint
 # journal-ref: submitted to Adv. Math.
-journal-ref: Accepted at FPSAC 2025 as a poster. Pending decision at a journal.
+journal-ref: Accepted at FPSAC 2025 as a poster. Full version submitted to a journal.
 # journal-web:
 published: true
 image: __STORAGE_URL__/img/papers/grothendieck-shenanigans.png
