@@ -216,7 +216,7 @@ function drawPermutationMatrix(sigma) {
 
   const yScale = d3.scaleLinear()
     .domain([-0.5, N - 0.5])
-    .range([margin + radius, margin + chartSize - radius]);
+    .range([margin + chartSize - radius, margin + radius]);
 
   // Build data
   const data = sigma.map((val, i) => ({row: i, col: val - 1}));

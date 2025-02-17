@@ -340,7 +340,8 @@ function drawPermutationMatrix(sigma) {
                    .range([margin, margin + chartSize]);
   const yScale = d3.scaleLinear()
                    .domain([-0.5, N-0.5])
-                   .range([margin, margin + chartSize]);
+                   .range([margin + chartSize, margin]);
+
 
   const radius = (N > 2000) ? 1 : 2;
   const data = sigma.map((val, i) => ({ row: i, col: val - 1 }));
