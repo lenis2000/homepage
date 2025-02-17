@@ -52,7 +52,7 @@ code:
           class="form-range"
           min="0"
           max="1"
-          step="0.01"
+          step="0.0001"
           value="0.5"
         />
         <span
@@ -73,7 +73,7 @@ code:
           class="form-range"
           min="0"
           max="1"
-          step="0.01"
+          step="0.0001"
           value="0"
         />
         <span
@@ -128,7 +128,7 @@ function updateSliderDisplay(spanId, val) {
   if (spanId === "nValue") {
     document.getElementById(spanId).textContent = parseInt(val);
   } else {
-    document.getElementById(spanId).textContent = parseFloat(val).toFixed(2);
+    document.getElementById(spanId).textContent = parseFloat(val).toFixed(4);
   }
 }
 // Debounce function to avoid re-running sim on every small slider move
