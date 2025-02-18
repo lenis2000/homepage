@@ -159,11 +159,11 @@ $$
 \end{cases}
 $$
 
-Here, \( s \in (\sqrt{q}, 1) \), \( r \in (0,1/s) \), and \( q \in (0,1) \) is a fixed parameter. Let \( G_{N,N} \) denote the last passage percolation from \((1,1)\) to \((N,N)\).
+Here, $$s \in (\sqrt{q}, 1)$$, $$r \in (0,1/s)$$, and $$q \in (0,1)$$ is a fixed parameter. Let $$G_{N,N}$$ denote the last passage percolation from $$(1,1)$$ to $$(N,N)$$.
 
-We have found a formula for the distribution of \( G_{N,N} \) by using a shift argument and analytic continuation. We took the critical scaling and found the formula for the limiting distribution. We have the following phase diagrams. These results will be released possibly in a month.
+We have found a formula for the distribution of $$G_{N,N}$$ by using a shift argument and analytic continuation. We took the critical scaling and found the formula for the limiting distribution. We have the following phase diagrams. These results will be released possibly in a month.
 
-Now, we would like to find the diagonal distribution if we scale \( s \) and \( r \) differently. We want to discover, for example, some Gaussian fluctuation if we do not scale \( s \) and \( r \) to \( 1 \). We want to find a complete phase diagram.
+Now, we would like to find the diagonal distribution if we scale $$s$$ and $$r$$ differently. We want to discover, for example, some Gaussian fluctuation if we do not scale $$s$$ and $$r$$ to $$1$$. We want to find a complete phase diagram.
 
 ---
 
