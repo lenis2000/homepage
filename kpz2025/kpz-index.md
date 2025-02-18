@@ -9,15 +9,17 @@ permalink: /kpz2025/
 
 <img src="{{site.url}}/kpz2025/AIM.jpg" style="max-width:100%" alt="Colored vertex model">
 
-# <a href="https://aimath.org/workshops/upcoming/roadtokpz/">All roads to the KPZ universality class</a>
+# <a href="{{site.url}}/kpz2025/">All roads to the KPZ universality class</a>
 
-## Workshop at American Institute of Mathematics, Pasadena, CA
+## Workshop at <a href="https://aimath.org/workshops/upcoming/roadtokpz/">American Institute of Mathematics, Pasadena, CA</a>
 
 ### March 17-21, 2025
 
 ##### Organized by Axel Saenz (Oregon State) and Leonid Petrov (UVA)
 
+---
 
+## Participant contributions ([link]({{site.url}}/kpz2025/participant_contributions/))
 
 ---
 
