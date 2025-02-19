@@ -125,8 +125,13 @@ This space is a convex set, moreover, it is a simplex.
 
 Extreme points of the simplex corresponding to the Pascal triangle
 are given by iid sequences,
-that is, Bernoulli product measures on $\left\{ 0,1 \right\}^\infty$.
+that is, Bernoulli product measures on $\left\{ 0,1 \right\}^\infty$ with
+parameter $p\in[0,1]$.
 This is de Finetti's theorem.
+
+Any coherent measure corresponds to a convex combination of the iid measures,
+which is expressed as the mixing distribution, i.e., a Borel
+probability measure $\mu$ on $[0,1]$.
 
 \subsection{}
 
@@ -391,12 +396,12 @@ but \textbf{they are not extremal} (except for the Plancherel case).
 
 We get the following main results:
 \begin{enumerate}
-	\item Complete classification of 
-		clone coherent measures which are positive. 
+	\item Complete classification of
+		clone coherent measures which are positive.
 		This is related to total positivity of tridiagonal matrices and Stieltjes moment
 		problems.
 		In fact, we obtain a new, narrower notion of tridiagonal
-		positivity called \emph{Fibonacci positivity}. 
+		positivity called \emph{Fibonacci positivity}.
 	\item We describe a number of examples of Fibonacci positive specializations.
 	\item For several Fibonacci positive specializations, we consider the large-scale behavior of random Fibonacci words.
 \end{enumerate}
@@ -456,9 +461,9 @@ and the order in the sequences $(x_1,x_2,\ldots)$ and $(y_1,y_2,\ldots)$ is impo
 \subsection{Positivity problem: reduction to tridiagonal matrices}
 
 For the positivity of the functions
-$s_w(\vec{x} \mid \vec{y}\ssp)$, it is necessary that the 
+$s_w(\vec{x} \mid \vec{y}\ssp)$, it is necessary that the
 infinite
-tridiagonal matrix 
+tridiagonal matrix
 \begin{equation}
 	\label{eq:tridiagonal_matrix}
 	\begin{pmatrix}
@@ -475,7 +480,7 @@ Total positivity of tridiagonal matrices is a well-known phenomenon
 \cite{FominZelevinsky1999}.
 We have a stronger requirement than just the total positivity
 of \eqref{eq:tridiagonal_matrix} --- we need the total positivity of
-another family of matrices, 
+another family of matrices,
 \begin{equation*}
 		\mathcal{B}_r \big( \, \vec{x} \, \big| \, \vec{y} \, \big) \, \coloneqq \
 		\begin{pmatrix}
@@ -486,13 +491,13 @@ another family of matrices,
 	\end{pmatrix},
 \end{equation*}
 for all $r$. The tridiagonal matrix \eqref{eq:tridiagonal_matrix} is a good starting point,
-though: it allows us to reparameterize
+though: it allows us to reparametrize
 \begin{equation*}
 	x_k=1+t_{k-1},\qquad y_k=t_k,\qquad t_0=0, \qquad t_j>0, \quad j\ge 1.
 \end{equation*}
-(There are some obvious renormalizations of the parameters 
+(There are some obvious renormalizations of the parameters
 $\vec x,\vec y$
-which we ignore, and 
+which we ignore, and
 focus only on the primary case.)
 
 \subsection{Fibonacci positivity: result}
@@ -536,13 +541,13 @@ specializations of clone Schur functions are positive.
 \end{theorem}
 
 A divergent type sequence can be written
-as 
+as
 \begin{equation*}
 	t_k=k+\varepsilon_1+\ldots+\varepsilon_k ,
 \end{equation*}
 where $\varepsilon_j\ge 0$. Then the matrices
-\eqref{eq:tridiagonal_matrix} and $\mathcal{B}_r$ 
-have all minors either identically zero, 
+\eqref{eq:tridiagonal_matrix} and $\mathcal{B}_r$
+have all minors either identically zero,
 or element of $\mathbb{Z}[\varepsilon_1,\varepsilon_2,\ldots ]$
 with \emph{positive coefficients}.
 
@@ -557,12 +562,291 @@ with \emph{positive coefficients}.
 Other examples come from orthogonal polynomials
 in the (q-)Askey scheme. We describe the framework next.
 
+Examples with convergent series are, for example, $t_k=\alpha/k^\gamma$, $\gamma>1$.
+
 \subsection{Stieltjes moment problem}
 
 
+Recall that a sequence
+$\vec{a}=(a_0, a_1, a_2, \dots)$ of real numbers is called a
+\emph{strong Stieltjes moment
+sequence} if there exists a nonnegative Borel measure $\upnu(dt)$ on $[0,\infty)$
+with \emph{infinite support} such that
+$a_n = \int_0^\infty t^n  \upnu(dt)$ for each $n \geq 0$.
+The following result may be found, e.g.,
+in
+\cite{sokal2020euler}:
+
+\begin{theorem}
+\label{thm:stieltjes-moments-theorem}
+A sequence of real numbers $\vec{a} = (a_0, a_1, a_2, \dots)$ is a strong Stieltjes moment sequence if and only if there exist two real number sequences, $\vec{x}$ and $\vec{y}$, such that the matrix $\mathcal{A} \big( \, \vec{x} \, | \, \vec{y} \, \big)$ defined in \eqref{eq:tridiagonal_matrix} is totally positive, and the (normalized) ordinary moment generating function of $\vec a$,
+\begin{equation}
+	\label{eq:moment-generating-function_theorem}
+	M(z) = \sum_{n \geq 0} \frac{a_n}{a_0} z^n,
+\end{equation}
+is expressed by the Jacobi continued fraction
+depending on $( \, \vec{x} \, | \, \vec{y} \, )$ as
+\begin{equation}
+	\label{eq:Jacobi-continued-fraction_theorem}
+	M(z)=
+	J_{\, \vec{x}, \vec{y}} \,(z) \coloneqq
+{1 \over {1 - x_1z - {\displaystyle y_1z^2 \over {\displaystyle 1 - x_2 z - {\displaystyle y_2z^2 \over
+{\displaystyle 1 - x_3 z - {\displaystyle y_3z^2 \over {\ddots } } } } } } } }
+\end{equation}
+
+Moreover,
+the equality between the
+generating function $M(z)$ \eqref{eq:moment-generating-function_theorem}
+and the continued fraction
+$J_{\, \vec{x}, \vec{y}} \,(z)$ \eqref{eq:Jacobi-continued-fraction_theorem}
+is witnessed by the recursion
+\begin{equation*}
+	P_{n+1}(t) = (t - x_{n+1})P_n(t) - y_n P_{n-1}(t),
+	\quad n \geq 1,
+	\qquad
+	P_0(t) = 1, \quad P_1(t) = t - x_1.
+\end{equation*}
+responsible for generating the polynomials
+$P_n(t)$ which are orthogonal with respect to the nonnegative
+Borel measure $\upnu(dt)$
+on $[0,\infty)$ whose moment sequence is
+$\vec{a}$.
+\end{theorem}
+
+An open problem stands:
+\begin{quote}
+	White the ordinary tridiagonal positivity is parametrized by
+	nonnegative
+	Borel measures on $[0,\infty)$, the Fibonacci positivity
+	truncates a subclass of these measures. This
+	subclass is mysterious and not well-understood.
+\end{quote}
+
+\subsection{Orthogonal polynomials}
+
+In ``integrable'' cases, when the
+parameters $x_j,y_j$ are related to orthogonal polynomials
+from the (q-)Askey scheme,
+the moments $a_n$ can be expressed combinatorially
+as sums of certain statistics over set partitions.
+For example, for $\sigma=1$, we have
+$a_n=B_n(\rho)=\sum_\pi \rho^{\#\text{blocks}(\pi)}$,
+which are the Bell (Touchard) polynomials.
+The associated measure is the Poisson distribution
+with parameter $\rho$.
+
+We also have a number of other ``classical'' polynomials
+(Al-Salam--Chihara, Al-Salam--Carlitz, etc.; but sometimes with $q>1$ and
+weird reparametrizations compared to \cite{Koekoek1996}),
+and some new phenomena. For example, for general $(\rho,\sigma)$,
+the orthogonality measure is
+a certain discrete distribution with atoms at nontrivial locations, and
+\begin{equation}
+	\label{eq:MGF_shifted_charlier_solution}
+	M\big(z;\rho, \sigma\big)
+	= \frac{
+	{_1F_1}\left(\sigma  ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
+	}{
+	{_1F_1}\left(\sigma - 1 ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
+	- z (\sigma - 1) \, {_1F_1}\left(\sigma  ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
+	}.
+\end{equation}
 
 
+\section{Asymptotics}
 
+\subsection{Convergent type}
+
+We define $\mu_I(1^\infty w)$ as the limit of
+$M_{n+|w|}(1^n w)$ as $n\to\infty$.
+This is (in general, sub-)probability measure on $1^\infty\mathbb{YF}$, the
+discrete part of the boundary of the Young--Fibonacci lattice.
+We have
+\begin{equation*}
+	\mu_I(1^\infty)=\prod_{i=0}^{\infty}(1+t_i)^{-1},
+\end{equation*}
+and when this infinite product converges, we have
+\begin{equation*}
+	\mu_I(1^\infty \mathbb{YF})=1.
+\end{equation*}
+That is, in convergent type, under an
+additional convergence assumption,
+we can conclude that the weighting measure
+on the boundary is fully supported on the
+``discrete'' component.
+
+\subsection{Divergent type}
+
+We have scaling limits for the measures
+$\rho=1$, $\sigma\ge1$
+and
+$\sigma=1$, $0<\rho\le 1$.
+Both of these regimes recover the Plancherel measure
+result of \cite{gnedin2000plancherel}.
+
+\subsubsection{}
+
+Consider the Charlier specialization
+\begin{equation}
+	x_k = k + \rho - 1 \quad \text{and} \quad y_k = k \rho ,\qquad  \rho \in (0, 1].
+\end{equation}
+
+\begin{definition}
+	For any $0<\rho<1$,
+	let $\eta_{\rho}$ be a random variable on $[0,1]$ with the distribution
+	\begin{equation}
+			\rho \ssp\delta_0(\alpha) + (1 - \rho)\ssp \rho (1 - \alpha)^{\rho - 1} \ssp d\alpha,\qquad
+			\alpha\in[0,1].
+	\end{equation}
+	In words, $\eta_\rho$ is
+	the convex combination of the point mass at $0$ and the Beta
+	random variable $\mathrm{beta}(1, \rho)$, with weights
+	$\rho$ and $1 - \rho$.
+\end{definition}
+
+Write a Fibonacci word as $w=1^{r_1}21^{r_2}\ldots $.
+
+\begin{theorem}
+	Let $w\in \mathbb{YF}_n$ be a random Fibonacci word distributed
+	according to the deformed Plancherel measure $M_n$ with $0<\rho<1$.
+	For any fixed $k\ge 1$, the joint distribution of the
+	runs $(r_1(w), \ldots, r_k(w))$ has the scaling limit
+	\begin{equation*}
+		\frac{r_j(w)}{n-\sum_{i=1}^{j-1}r_i(w)}\xrightarrow[n\to\infty]{d}\eta_{\rho;j},\qquad j=1,\ldots,k,
+	\end{equation*}
+	where $\eta_{\rho;j}$ are independent copies of $\eta_\rho$.
+\end{theorem}
+
+We can
+reformulate
+this statement
+in terms of the
+residual allocation (stick-breaking) process:
+\begin{equation*}
+	\Bigl( \frac{r_1(w)}{n}, \frac{r_2(w)}{n}, \ldots \Bigr)
+	\stackrel{d}{\longrightarrow}
+	X=(X_1,X_2,\ldots ),
+\end{equation*}
+where $X_1=U_1$, $X_k=(1-U_1)\cdots (1-U_{k-1})U_k $ for $k\ge2$, and $U_k$
+are independent copies of~$\eta_\rho$.
+Unlike in the classical $\mathrm{GEM}$ distribution family, here
+the variables $U_k$ can be equal to zero with positive probability $\rho$.
+Thus, the random Fibonacci word
+under the Charlier (deformed Plancherel) measure asymptotically
+develops hikes of 2's of bounded length
+(namely, these lengths are geometrically distributed with parameter~$\rho)$.
+On the other hand, if we remove all
+zero entries from the sequence
+$X=(X_1,X_2,\ldots )$, then the resulting sequence is
+distributed simply as $\mathrm{GEM}(\rho)$.
+
+(GEM is a fundamental distribution in probability modeling and such.)
+
+
+\subsubsection{}
+
+
+Consider
+the shifted Plancherel specialization
+\begin{equation}
+	\label{eq:shifted_Plancherel_specialization}
+	x_k=y_k=k+\sigma-1,\qquad \sigma\in[1,\infty).
+\end{equation}
+
+\begin{definition}
+	\label{def:xi_sigma}
+	Let
+	\begin{equation}
+		\label{eq:beta_1_sigma_2_density}
+		G(\alpha)\coloneqq 1-(1-\alpha)^{\frac{\sigma}{2}},\qquad
+		g(\alpha)\coloneqq \frac{\sigma}{2}(1-\alpha)^{\frac{\sigma}{2}-1},
+		\qquad
+		\alpha\in [0,1],
+	\end{equation}
+	be the cumulative and density functions of the Beta distribution $\mathrm{beta}(1,\sigma/2)$.
+	For any $\sigma\ge1$,
+	let $\xi_{\sigma;1},\xi_{\sigma;2},\ldots $ be the sequence of random variables
+	with the following joint cumulative distribution function (cdf):
+	\begin{equation}
+		\label{eq:joint_cdf}
+		\operatorname{\mathbb{P}}
+		\left( \xi_{\sigma;1}\le \alpha_1,\ldots,\xi_{\sigma;n}\le \alpha_n  \right)\coloneqq
+		\sigma^{-n+1}G(\alpha_1)\cdots G(\alpha_n)
+		+
+		(\sigma-1)
+		\sum_{j=1}^{n-1}\sigma^{-n+j}G(\alpha_1)\cdots G(\alpha_{n-j}).
+	\end{equation}
+	Denote the right-hand side by
+	$F_n^{(\sigma)}(\alpha_1,\ldots,\alpha_n )$.
+\end{definition}
+\begin{remark}
+	Alternatively, the random variables
+	$\xi_{\sigma;k}$ can be constructed iteratively as follows.
+	Toss a sequence of independent coins with probabilities of
+	success $1,\sigma^{-1},\sigma^{-2},\ldots $.
+	Let $N$ be the (random) number of successes until the first
+	failure. We have
+	\begin{equation}
+		\operatorname{\mathbb{P}}(N=n)=\sigma^{-\binom n2}\ssp(1-\sigma^{-n}),\qquad n\ge1.
+	\end{equation}
+	Then, sample $N$ independent
+	$\mathrm{beta}(1,\sigma/2)$ random variables.
+	Set $\xi_{\sigma;k}$,
+	$k=1,\ldots,N $, to be these random variables,
+	while $\xi_{\sigma;k}=0$ for $k>N$.
+	It is worth noting
+	that the random variables $\xi_{\sigma;k}$ are not
+	independent, but $\xi_{\sigma;1},\ldots,\xi_{\sigma;n} $
+	are conditionally independent given $N=n$.
+\end{remark}
+
+Write $w=2^{h_1}12^{h_2}1\ldots $.
+
+\begin{theorem}
+	Let $w\in \mathbb{YF}_n$ be a random Fibonacci word with distributed
+	according to the shifted Plancherel measure $M_n$ with $\sigma\ge1$.
+	For any fixed $k\ge 1$, the joint distribution of the
+	hikes $(\tilde h_1(w), \ldots, \tilde h_k(w))$ has the scaling limit
+	\begin{equation*}
+		\frac{\tilde h_j(w)}{n-\sum_{i=1}^{j-1}\tilde h_i(w)}\xrightarrow[n\to\infty]{d}\xi_{\sigma;j},\qquad j=1,\ldots,k,
+	\end{equation*}
+	where $\xi_{\sigma;j}$ are as constructed above.
+\end{theorem}
+
+
+For this model, we also note that there are noncommuting limits for $\sigma>1$:
+\begin{enumerate}
+	\item If we first take the limit as $n\to \infty$, we only see finitely
+		many hikes of 2's.
+	\item However, if we consider the total sum of the 2's, the scaling limit of the
+		quantity $\sum_{i=1}^n \tilde h_i(w)/n$ has expectation $1/(\sigma+1)$,
+		which is strictly greater than the quantity obtained from GEM-like distribution. 
+
+	We have, using the fact that
+	$\operatorname{\mathbb{E}}(\mathrm{beta}(1,\sigma/2))=\frac{2}{2+\sigma}$:
+	\begin{equation*}
+		\operatorname{\mathbb{E}}\biggl[\,
+		\prod_{j=1}^{\infty}(1-\xi_{\sigma;j})
+		\biggr]
+		=
+		\sum_{m=1}^{\infty}
+		\operatorname{\mathbb{P}}(N=m)\ssp
+		\Bigl( \frac{\sigma}{2+\sigma} \Bigr)^m
+		=
+		\sum_{m=1}^{\infty}
+		\sigma^{-\binom m2}(1-\sigma^{-m})
+		\Bigl( \frac{\sigma}{2+\sigma} \Bigr)^m.
+	\end{equation*}
+	One can check that
+	\begin{equation}
+		\label{eq:expectation_to_compare}
+		\frac{1}{2}\operatorname{\mathbb{E}}\biggl[\,\sum_{j=1}^{\infty}X_j\biggr]
+		\le \frac{1}{\sigma+1},
+	\end{equation}
+	with equality at $\sigma=1$,
+	where the difference between the two sides of the inequality
+	is at most $\approx 0.015$, and vanishes as $\sigma\to\infty$.
+\end{enumerate}
 
 
 \bibliographystyle{alpha}
