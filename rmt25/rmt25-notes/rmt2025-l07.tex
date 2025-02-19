@@ -130,8 +130,7 @@ This representation is especially useful for performing asymptotic analysis (for
 \subsection{Scaling}
 \label{sub:scaling}
 
-Let us now consider the GUE kernel
-\eqref{eq:K_n_conjugated},
+Let us now consider the GUE kernel,
 \begin{equation*}
 	K_n(x,y)=\frac{1}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
@@ -152,15 +151,42 @@ we need to scale
 \end{equation}
 Moreover, if $X\ne Y$ (i.e., different global positions), one can check that the kernel
 vanishes. In other words, the local behaviors at different global positions are independent.
-See Problem~\ref{prob:different-global-positions}.
 In what follows, we take $Y=X$.
+
+
+\begin{figure}[htpb]
+	\centering
+	\begin{tikzpicture}[scale=1]
+		% Draw coordinate axes
+		\draw[->] (-2,0) -- (3,0);
+		\draw[->] (0,-3) -- (0,3);
+
+		% t contour: unit circle, counterclockwise
+		\draw[ultra thick,->] (1,0) arc (0:360:1);
+		% Place the t label near the contour (at 45° outside the circle)
+		\coordinate (TLabel) at (.5,.5);
+		\node at (TLabel) {\(z\)};
+
+		% s contour: vertical line (imaginary axis) with a detour near the origin
+		% It starts at (0,-3), goes vertically to (0,-2), then detours to (0,2)
+		% via a Bézier curve (pushed to the right), and finally resumes vertically to (0,3).
+		\draw[ultra thick,->,red]
+			(0,-3)
+			-- (0,-2)
+			.. controls (1.8,-2) and (1.8,2) .. node[midway, above right] {\(w\)} (0,2)
+			-- (0,3);
+	\end{tikzpicture}
+	\caption{Integration contours for the GUE kernel.}
+	\label{fig:contours}
+\end{figure}
+
 
 Let us also make a change of the integration variables:
 \begin{equation*}
 	t=z\sqrt n,\qquad s=w\sqrt n.
 \end{equation*}
-The integration contours for $z$ and $w$ look the same as in
-\Cref{fig:contours}, up to a rescaling. However, as $0$
+The integration contours for $z$ and $w$ look the same as for $t$ and $s$, up to a rescaling
+(\Cref{fig:contours}). However, as $0$
 and $t=s$
 are the only singularities in the integrand, we can deform the $z,w$
 contours as we wish, while keeping $|z|<|w|$
@@ -585,7 +611,15 @@ may be found in the original papers
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Introduction and Motivation}
+\section{Cutting corners}
+
+
+
+
+
+
+
+\colorbox{yellow}{\parbox{.7\textwidth}{new material from here}}
 
 
 In random matrix theory, one often studies the entire spectrum of an $n\times n$ matrix ensemble such as the Gaussian Unitary Ensemble (GUE), the Gaussian Orthogonal Ensemble (GOE), or, more generally, $\beta$-ensembles. However, it is also natural to examine the spectra of \emph{principal minors} of such matrices.
@@ -858,6 +892,46 @@ Prove (or outline why) the sequence of eigenvalue vectors $(\lambda_1^{(k)},\dot
 \setcounter{section}{6}
 
 \section{Problems (due 2025-03-25)}
+
+\subsection{General bulk case}
+\label{prob:imaginary-critical-points}
+
+Perform the asymptotic analysis of the correlation
+kernel as in \Cref{sub:imaginary-critical-points},
+but in the general case $-2<X<2$.
+
+
+\subsection{Large deviations}
+\label{prob:large-deviation}
+
+Let \(W_n\) be an \(n\times n\) Wigner real or Hermitian matrix with finite variance entries. Assume that the matrix is normalized so that the variance of each diagonal entry is 1.
+
+\medskip
+
+\textbf{Assumption \cite{BBP2005phase}.} \textit{If a Wigner matrix is normalized to have diagonal variance 1, then a rank 1 perturbation of magnitude $c>0$ is sufficient to shoot the maximum eigenvalue outside the support of the Wigner semicircle law. (For a simulation of this phenomenon, see \href{https://lpetrov.cc/simulations/2025-01-28-bbp-transition/}{here}.)}
+
+\medskip
+
+Consider the following large deviation event. For a fixed \(\eta>0\), let
+\[
+E_{n,\eta}\coloneqq \Bigl\{ \exists\, i\in\{1,\dots,n\} \text{ such that } W_{ii}\ge \eta \Bigr\}.
+\]
+Under the above assumption, if for some \(i\) the diagonal
+entry \(W_{ii}\) is unusually large, it will push the
+maximal eigenvalue of \(W_n\) outside the bulk.
+
+\begin{enumerate}
+	\item Assuming that the
+		entries are Gaussian,
+		\emph{lower bound} the probability of the event \(E_{n,\eta}\) for large \(n\).
+	\item
+		Assuming another tail behavior of the diagonal entries (exponential or
+		power-law tails),
+		use the limit theorems for maxima of independent random variables to generalize the
+		\emph{lower bound} of $\operatorname{\mathbb{P}}(E_{n,\eta})$.
+\end{enumerate}
+
+
 
 \subsection{Airy kernel}
 \label{prob:airy}
