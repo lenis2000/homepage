@@ -71,7 +71,7 @@
 These are notes for a chalk talk, prepared based on the paper
 \cite{PetrovScott2024Fibonacci}, in the ``extended lecture notes''
 style, similar to my \href{https://lpetrov.cc/rmt25/}{random matrix course}.
-Along the notes, there are numerous skipped details,
+Along the notes, there are numerous skipped details, 
 which are left as exercises for the reader.
 
 \section{Motivation 1. De Finetti's theorem and Pascal triangle}
@@ -110,17 +110,7 @@ One can convince oneself that the space of coherent measures is
 the same as the space of exchangeable random sequences of 0's and 1's.
 This space is a convex set, moreover, it is a simplex.
 
-\begin{definition}
-	A point $A$ in a convex linear set is called
-	\emph{extremal} if it cannot be written as a convex combination of other points in the set.
-	A simplex is a convex set in which every point is a unique
-	convex combination of extremal points.
-
-	Examples: triangle vs square vs disc.
-\end{definition}
-
-Extreme points of the simplex corresponding to the Pascal triangle
-are given by iid sequences,
+Extreme points of this simplex are given by iid sequences,
 that is, Bernoulli product measures on $\left\{ 0,1 \right\}^\infty$.
 This is de Finetti's theorem.
 
@@ -148,14 +138,6 @@ property that \cite{KerovGoodman1997}
 \end{quote}
 These paths correspond to the extreme measures
 with $\mu=\delta_0$ and $\mu=\delta_1$, respectively.
-
-It turns out that all other extreme measures on the Pascal triangle
-are obtained by a \emph{``convex interpolation'' of these two lonely path measures}.
-Note that this interpolation is \emph{not} the same as the convex combination
-of coherent measures, so the points $p\in(0,1)$ are still extremal
-for the space of coherent measures. However, the boundary
-of the Pascal triangle clearly contains the linear
-piece between $\delta_0$ and $\delta_1$.
 
 
 \section{Motivation 2. Young lattice}
@@ -205,22 +187,6 @@ for all $\lambda$.
 Schur functions are (essentially) determinants, and
 for the Young lattice, we have a great match between these multiparameter functions and
 extreme coherent measures.
-The algebraic combinatorial property of the Schur
-polynomials which connects them to the Young lattice
-is the Pieri rule:
-\begin{equation*}
-	p_1 s_\lambda=\sum_{\nu\colon \nu=\lambda+\square}s_\nu.
-\end{equation*}
-
-\begin{remark}
-	The parameters $\vec \alpha;\vec \beta;\gamma$ encode the law of large
-	numbers for the growing random Young diagram.
-	The parameters $\alpha_i$ and $\beta_i$ are the lengths of the $i$-th row and column
-	scaled by $n^{-1}$,
-	and $\gamma$ is the scaled excess $1-\sum(\alpha_i+\beta_i)$. For
-	the Plancherel measure, rows and columns grow as $\sqrt n$,
-	so $\alpha_i=\beta_i=0$ and $\gamma=1$.
-\end{remark}
 
 
 \section{Another differential poset --- the Young--Fibonacci lattice}
@@ -230,17 +196,17 @@ is the Pieri rule:
 A natural question arises: do other differential posets exist?
 Indeed, there exists another fundamental example, denoted $\mathbb{YF}$, which, upon first examination,
 might seem contrived and unnatural.
-(While there also
+(While there also 
 exists a family of posets interpolating between
 $\mathbb{YF}$ and $\mathbb{Y}$, we shall not explore that
 here.)
 
 \subsection{}
 
-The Young--Fibonacci lattice $\mathbb{YF}$
+The Young--Fibonacci lattice $\mathbb{YF}$ 
 can be formed starting from the single edge $\varnothing\to 1$,
-by successive reflection. We then encode the new vertices as starting from $1$ (followed by the
-old vertex index from the level $n-1$), and the
+by successive reflection. We then encode the new vertices as starting from $1$ (followed by the 
+old vertex index from the level $n-1$), and the 
 reflected vertices as starting from $2$ (followed by the
 old vertex index from the level $n-2$).
 
@@ -253,7 +219,7 @@ old vertex index from the level $n-2$).
 
 $\mathbb{YF}$ is a graded poset formed
 by Fibonacci words (binary words whose digits lie in
-$\{1,2\}$), graded by the sum of their digits.
+$\{1,2\}$), graded by the total sum of the digits.
 
 We denote the set of all Fibonacci words of weight $n$ by
 $\mathbb{YF}_n$. Clearly, the total number of such words is
@@ -263,101 +229,97 @@ $\mathbb{YF}_n$ for $n = 0,1,2,\ldots,$ with rank function
 given by the weight $|w| = n$. We always identify the empty
 word $\varnothing$ with $\mathbb{YF}_0$.
 
+
 \begin{definition}[Young--Fibonacci Partial Order]
 \label{def:YF-partial-order}
 We say a Fibonacci word $w$ \emph{covers} another Fibonacci word $v$ if $|v| = |w| - 1$ and one can transform $w$ to $v$ by one of the following rules:
 \begin{enumerate}
 \item If $w = 1 \,v$, then we delete the leftmost $1$ to obtain $v$.
-\item If $w = 2 \,u$ for some $u$, then we obtain $v$ by turning the leftmost $2$ into a $1$ or by removing the leftmost inserted $1$ after a $2$.
+\item If $w = 2 \,u$ for some $u$, then we obtain $v$ by turning the leftmost $2$ into a $1$ or by removing an inserted $1$ after a $2$ in some initial segment.
 \end{enumerate}
+In this situation we write $w \searrow v$ or equivalently $v \nearrow w$. Hence, for $w \in \mathbb{YF}_n$ and $v \in \mathbb{YF}_{n-1}$, we have $w \searrow v$ if and only if $v$ can be obtained from $w$ via exactly one of the above operations.
 \end{definition}
 
-\subsection{}
+\noindent
+It is not difficult to check that these rules indeed give a partial order on the set of Fibonacci words. A concise (though somewhat recursive) way to view this order is:
+\[
+w \;\;=\;\;
+\begin{cases}
+1\,v, & \text{if the leftmost letter is } 1,
+\\[4pt]
+2\,u, & \text{if the leftmost letter is } 2,
+\end{cases}
+\quad
+\text{where } u,v \text{ are shorter Fibonacci words;}
+\]
+one descends $w \searrow v$ by altering or removing part of the leftmost digit or its next neighbor. We encourage the reader to compare this with the usual rules of forming and dismantling integer partitions in the Young lattice. The resulting graded set is the Young--Fibonacci lattice $\mathbb{YF}$.
 
-The Young--Fibonacci lattice is a differential poset. Hence, we have
-\begin{equation*}
-	\sum_{|w|=n}(\dim w)^2=n!,
-\end{equation*}
-and we can define the \emph{Plancherel measure}
-\begin{equation*}
-	M_n(\lambda)\coloneqq \frac{(\dim \lambda)^2}{n!}.
-\end{equation*}
-Note that the $\mathbb{YF}$-dimension is very
-different from the Young lattice one.
+Below is the Hasse diagram for $\mathbb{YF}$ up to rank $n=3$. Notice how each vertex $w \in \mathbb{YF}_n$ has $n$ distinct upward extensions in rank $n+1$, reflecting that $\mathbb{YF}$ is a $1$-differential poset (see Lecture~2 for the general definition of a differential poset):
+\[
+\xymatrixrowsep{0.40in}
+\xymatrixcolsep{0.28in}
+\xymatrix{
+& \varnothing \ar@{-}[dl] \ar@{-}[dr] & \\
+1 \ar@{-}[d] & & 2 \ar@{-}[d] \\
+11 \ar@{-}[d] & & 12 \ar@{-}[dll] \ar@{-}[d] \\
+111 & 21 & 112
+}
+\]
+Each Fibonacci word $w$ of rank $n$ has a single downward step $\varnothing \searrow \ldots \searrow w$, along with a prescribed set of $n$ upward neighbors $w' \in \mathbb{YF}_{n+1}$. This will be crucial in our later constructions of Markov chains on $\mathbb{YF}$.
+
+\subsection{Counting Paths and Dimension Formula}
+
+One essential property of $\mathbb{YF}$ is that it is a \emph{$1$-differential poset}, just like the Young lattice. In particular, the total number of upward paths from $\varnothing$ to any $w \in \mathbb{YF}_n$ is given by the following closed form.
+
+\begin{definition}[Dimension of a Fibonacci Word]
+\label{def:dimension_of_word}
 For $w \in \mathbb{YF}_n$ of the form
-$w = a_1 \, a_2 \cdots a_\ell$, we have
+$w = a_1 \, a_2 \cdots a_\ell$ with each $a_j \in \{1,2\}$, let $\dim(w)$ denote the number of saturated chains $\varnothing = w_0 \nearrow w_1 \nearrow \cdots \nearrow w_n = w$. Specifically, define
 \[
 \dim(w)
 \;=\;
 \prod_{\substack{1 \,\leq\, j \,\leq\, \ell \\ a_j \,=\, 2}}
 \bigl( |u_j| + 1 \bigr),
 \]
-where $u_j$ is the subword to the right of the $j$-th digit.
+where $u_j$ is the subword to the right of the $j$-th digit. Equivalently, if $w = 2^{k_1} 1 \;2^{k_2} 1 \cdots 1 \; 2^{k_r}$ for some $r$ (allowing some $k_j=0$ and possibly $k_r = 0$), then
+\[
+\dim(w) \;=\;\;
+\prod_{j=1}^r \bigl(1 + \sum_{t=1}^j k_t \bigr).
+\]
+\end{definition}
 
-The Plancherel measure is extremal.
+\begin{theorem}[Dimension Formula]
+\label{thm:dimension-formula}
+The function $w \mapsto \dim(w)$ agrees with the number of upward paths from the minimal element $\varnothing$ to $w$ in the poset $\mathbb{YF}$. In particular, for $n \ge 1$,
+\[
+\sum_{w \,\in\, \mathbb{YF}_n} \dim^2(w)
+\;=\;
+n!.
+\]
+\end{theorem}
 
-\subsection{Boundary problem}
+\begin{proof}
+The equality of $\dim(w)$ with the number of saturated chains from $\varnothing$ to $w$ follows by checking the local covering rules in Definition \ref{def:YF-partial-order}. Specifically, to create a new ``digit 2'' in any upward step, one has $1 + k$ ways if $k$ copies of 2 lie to the left. The $1$-differential property then enforces that each saturated chain collectively contributes the described product factor. The standard double-counting argument (as in the Young lattice case) then shows
+\[
+\sum_{w \,\in\, \mathbb{YF}_n} \dim^2(w)
+\,=\,
+\bigl(\boldsymbol{\mathcal{D}}\boldsymbol{\mathcal{U}}\bigr)^n (\delta_\varnothing)(\varnothing)
+\,=\,
+n!,
+\]
+where $\boldsymbol{\mathcal{U}}, \boldsymbol{\mathcal{D}}$ are the usual up/down operators on $\mathbb{YF}$ (see Lecture~2). This completes the proof.
+\end{proof}
 
-We would like to understand the boundary of $\mathbb{YF}$.
-As in the Young and Pascal cases, the boundary should capture the law of
-large numbers for the growing Fibonacci words.
+\begin{remark}
+Fibonacci words thus manifest many characteristics parallel to integer partitions. However, as we will see, the Young--Fibonacci lattice displays new and subtler phenomena in its harmonic functions and representation theory. This richer behavior arises in part because each rank $n$ in $\mathbb{YF}$ has the Fibonacci number of elements, rather than the partition number $p(n)$. We now turn to how these enumerative features shape the structure of clone Schur functions and their associated probability measures.
+\end{remark}
 
-\subsection{Lonely paths}
 
-In contrast with the Young lattice and the Pascal triangle,
-the Young--Fibonacci lattice has many lonely paths.
-Namely, there is a lonely path from each Fibonacci word $w$:
-\begin{equation*}
-	1w, \quad 11w, \quad 111w, \quad \ldots
-\end{equation*}
-We denote it by $1^\infty w$.
-Lonely paths correspond to extreme measures,
-so the boundary has a ``discrete component''
-$1^\infty\mathbb{YF}$.
 
-The full boundary looks as the Plancherel point,
-connected to all points $1^\infty w$, $w\in\mathbb{YF}$,
-by linear segments (via the ``convex interpolation'' as in the
-Pascal case --- recall that these segments are still extremal
-for coherent measures).
-Graphically, the boundary is a ``star'' with the Plancherel point
-in the center.
 
-\subsection{Boundary description --- references}
 
-The boundary of the Young--Fibonacci lattice
-was established in the following works:
-\begin{itemize}
-	\item \cite{KerovGoodman1997} described the Martin
-		boundary, which is the set of all coherent measures
-		obtained by finite rank approximation. It remained an
-		open problem to show that this list is of extreme measures.
-	\item \cite{gnedin2000plancherel}, shown that the Plancherel measure is extremal
-		(ergodic), by considering the scaling limit of
-		Plancherel random Fibonacci words. They essentially show that this limit is incompatible
-		with any other possible point from the Martin boundary, thus
-		leading to the extremality.
-	\item Preprints
-		\cite{BochkovEvtushevsky2020},
-		\cite{Evtushevsky2020PartII}
-		established the full boundary description by showing
-		the extremality (ergodicity) of all coherent measures.
-\end{itemize}
 
-\subsection{How about Schur functions?}
 
-While we now understand the boundary's structure, a natural question arises: are there
-elegant functions, analogous to determinantal Schur functions, that capture the
-combinatorial properties of this lattice? Indeed, such functions exist - the
-\emph{clone Schur functions} introduced by Okada \cite{okada1994algebras}. These
-functions were specifically developed to provide an algebraic framework for the
-Young--Fibonacci lattice, paralleling how classical Schur functions encode the
-structure of the Young lattice.
-
-The clone Schur functions $s_w$ satisfy a Pieri rule:
-\begin{equation*}
-	asd
-\end{equation*}
 
 
 
