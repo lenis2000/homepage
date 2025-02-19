@@ -1,0 +1,215 @@
+\documentclass[letterpaper,11pt,oneside,reqno]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[pdftex,backref=page,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
+\usepackage[alphabetic,nobysame]{amsrefs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%main packages
+\usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools}
+\usepackage{graphicx,color}
+\usepackage{upgreek}
+\usepackage[mathscr]{euscript}
+
+%equations
+\allowdisplaybreaks
+\numberwithin{equation}{section}
+
+%tikz
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,decorations.markings}
+
+%conveniences
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{cleveref}
+\usepackage{enumerate}
+
+%paper geometry
+\usepackage[DIV=12]{typearea}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%draft-specific
+\synctex=1
+% \usepackage{refcheck,comment}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%this paper specific
+\newcommand{\ssp}{\hspace{1pt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}[proposition]{Lemma}
+\newtheorem{corollary}[proposition]{Corollary}
+\newtheorem{theorem}[proposition]{Theorem}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{definition}
+\newtheorem{definition}[proposition]{Definition}
+\newtheorem{remark}[proposition]{Remark}
+\newtheorem{exercise}[proposition]{Exercise}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\title{Random Fibonacci Words}
+
+% OTHER AUTHORS
+
+\author{Leonid Petrov}
+
+\date{Talk at University of Illinois at Urbana-Champaign, Integrability \& Representation Theory (IRT) Seminar, February 20, 2025}
+
+
+\maketitle
+
+\section{Motivation 1. De Finetti's theorem and Pascal triangle}
+
+\subsection{}
+
+\begin{definition}
+	A sequence $X_1,X_2,\ldots $
+	of binary random variables 
+	(taking values in $\{0,1\}$)
+	is called \emph{exchangeable}
+	if for any $n$ and any permutation $\sigma$ of $\{1,2,\ldots,n\}$ the joint distribution of $X_1,X_2,\ldots,X_n$ is the same as the joint distribution of $X_{\sigma(1)},X_{\sigma(2)},\ldots,X_{\sigma(n)}$.
+\end{definition}
+
+Exchangeable sequences are more than just Bernoulli iid sequences with some
+parameter $p\in[0,1]$. Consider the Polya urn scheme.
+
+Start with an urn containing $b$ black and $w$ white balls.
+At each step, draw a ball uniformly at random from the urn
+and put it back along with another ball of the same color.
+
+\begin{exercise}
+	The sequence of ball colors drawn from the urn is exchangeable.
+\end{exercise}
+
+At time $n$, there are $n$ new balls in the urn, and the distribution of the number of, say, 
+black balls, 
+\begin{equation*}
+	\operatorname{\mathbb{P}}\left( \textnormal{black}=k \right) = M_n(k),
+	\qquad k=0,1,\ldots,n,
+\end{equation*}
+is called the ($n$-th) \emph{coherent measure}.
+We can talk about $S_n$, the random variable which is the number of black balls drawn by time $n$.
+The coherent measures $M_n$ for various $n$ satisfy certain linear 
+recurrence relations.
+
+One can convince oneself that the space of coherent measures is 
+the same as the space of exchangeable random sequences of 0's and 1's.
+This space is a convex set, moreover, it is a simplex.
+
+Extreme points of this simplex are given by iid sequences, 
+that is, Bernoulli product measures on $\left\{ 0,1 \right\}^\infty$.
+This is de Finetti's theorem.
+
+\subsection{}
+
+Coherent measures on Pascal triangle are related to exchangeable
+sequences of 0's and 1's. The \emph{boundary} of the Pascal
+triangle encodes all possible coherent measures via the law of large numbers,
+\begin{equation*}
+	\frac{S_n}{n}\to \mu \quad \textnormal{on} \quad [0,1].
+\end{equation*}
+Extreme measures correspond to delta point masses.
+For example, the Polya urn for $a=b=1$ corresponds to $\mu$ being the
+uniform measure on $[0,1]$.
+
+\subsection{Lonely paths}
+
+There are two distinguished paths in the Pascal triangle, the 
+\emph{lonely paths} $0\to00\to000\to\ldots $
+and 
+$1\to 11\to111\to\ldots $, which are characterized by the 
+property that \cite{KerovGoodman1997}
+\begin{quote}
+	All but finitely many vertices in the path have a single immediate predecessor.
+\end{quote}
+These paths correspond to the extreme measures 
+with $\mu=\delta_0$ and $\mu=\delta_1$, respectively.
+
+
+\section{Motivation 2. Young lattice}
+
+The Young lattice $\mathbb{Y}$ of integer partitions ordered
+by the relation ``adding a box''
+encodes another meaningful structure --- irreducible representations of the symmetric groups.
+The boundary encodes the irreducible representations of the infinite symmetric group $S(\infty)$.
+
+\subsection{}
+The Young lattice is a \emph{differential poset} \cite{stanley1988differential},
+\cite{fomin1994duality}, 
+in the sense that 
+\begin{quote}
+	for each $\lambda$, there is one more element in the set
+	$\left\{ \nu\colon\nu=\lambda+\square \right\}$ than
+	in the set $\left\{ \mu\colon\mu=\lambda-\square \right\}$. 
+\end{quote}
+Differential poset 
+property implies that 
+for $f^\lambda$ the number of paths from $\varnothing$ to $\lambda$, we have
+\begin{equation*}
+	\sum_{|\lambda|=n}(f^\lambda)^2=n!, \qquad \textnormal{define}\qquad
+	M_n(\lambda)\coloneqq\frac{(f^\lambda)^2}{n!}.
+\end{equation*}
+The measure $M_n$ is called \emph{Plancherel}, it is coherent
+and extremal. It corresponds to the regular representation of $S(\infty)$,
+which is irreducible.
+
+\subsection{}
+
+There are two lonely paths here, as well --- corresponding to growing 
+one-row and one-column partitions.
+
+\subsection{}
+
+All extreme coherent measures on the Young lattice are given by specializations
+of Schur symmetric functions, and have the form
+\begin{equation*}
+	M_n(\lambda)=s_\lambda(\vec \alpha;\vec \beta;\gamma)\cdot f^\lambda.
+\end{equation*}
+The problem of describing the boundary of $\mathbb{Y}$ is equivalent to
+the problem of finding parameters $\vec \alpha,\vec \beta,\gamma$ such that
+the Schur functions $s_\lambda(\vec \alpha;\vec \beta;\gamma)$ are nonnegative
+for all $\lambda$.
+
+Schur functions are (essentially) determinants, and 
+for the Young lattice, we have a great match between these multiparameter functions and 
+extreme coherent measures.
+
+
+\section{Another differential poset --- the Young--Fibonacci lattice}
+
+\subsection{}
+
+Are there any other differential posets?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\bibliographystyle{alpha}
+\bibliography{bib}
+
+\end{document}
