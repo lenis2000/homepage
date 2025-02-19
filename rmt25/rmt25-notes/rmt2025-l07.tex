@@ -26,6 +26,8 @@
 \usepackage{cleveref}
 \usepackage{enumerate}
 \usepackage{datetime}
+\usepackage{esint}
+
 
 %paper geometry
 \usepackage[DIV=12]{typearea}
@@ -74,6 +76,57 @@ Updated at \currenttime, \today}}
 \section{Steepest descent for the GUE kernel}
 \label{sec:steepest-descent-GUE}
 
+\subsection{Recap}
+
+We continue the asymptotic analysis of the GUE kernel. 
+
+The GUE correlation kernel is defined by
+\[
+K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y),
+\]
+where the functions
+\[
+\psi_j(x)=\frac{1}{\sqrt{h_j}}\,p_j(x)\,e^{-x^2/4}
+\]
+are built from the monic Hermite polynomials \(p_j(x)\) with normalization constants \(h_j\) ensuring that the \(\psi_j\)'s form an orthonormal system in \(L^2(\mathbb{R})\).
+
+Using the generating function
+\[
+\exp\Bigl(xt-\frac{t^2}{2}\Bigr)=\sum_{n\ge0}p_n(x)\frac{t^n}{n!},
+\]
+one obtains by Cauchy’s integral formula
+\[
+p_n(x)=\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt,
+\]
+which leads to
+\[
+\psi_n(x)=\frac{e^{-x^2/4}}{\sqrt{h_n}}\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt.
+\]
+
+Starting from the Fourier transform identity
+\[
+\int_{-\infty}^{\infty} \exp\Bigl(-\frac{t^2}{2}+i\,t\,x\Bigr)\,dt
+=\sqrt{2\pi}\,e^{-x^2/2},
+\]
+and differentiating with respect to \(x\), then changing variables, one obtains
+\[
+\psi_n(x)=\frac{i\,e^{x^2/4}}{\sqrt{2\pi\,h_n}}
+\int_{-i\infty}^{i\infty} s^n\,e^{s^2/2- s\,x}\,ds.
+\]
+
+By inserting the above representations for \(\psi_n(x)\) into the kernel sum, one arrives at the double contour integral formula
+(after conjugation and the trick with removing $1 / (s-t)$):
+\[
+K_n(x,y)=\frac{1}{(2\pi)^2}
+\oint_C dt\int_{-i\infty}^{i\infty}ds\,
+\frac{\exp\Bigl\{\frac{s^2}{2}-sy-\frac{t^2}{2}+tx\Bigr\}}{s-t}\left(\frac{s}{t}\right)^n.
+\]
+The integration contour $C$ is a small contour around $0$, and 
+$s$ is passing to the right of $C$.
+
+This representation is especially useful for performing asymptotic analysis (for example, via the steepest descent method) and for deriving results such as the semicircle law.
+
+
 \subsection{Scaling}
 \label{sub:scaling}
 
@@ -83,9 +136,8 @@ Let us now consider the GUE kernel
 	K_n(x,y)=\frac{1}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
 	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
-	,
+	.
 \end{equation*}
-where the integration contours are as in \Cref{fig:contours}.
 
 We know from the Wigner semicircle law
 (established for real symmetric matrices with general iid entries in
