@@ -45,3 +45,5 @@
 
 
 [ref45]: {{ site.url }}/2024/07/Grothendieck-shenanigans/
+
+[ref47]: {{ site.url }}/2024/12/Fibonacci/
