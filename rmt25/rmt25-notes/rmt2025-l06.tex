@@ -58,7 +58,7 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 6: Double contour integral kernel. Steepest descent and local statistics}
+\\Lecture 6: Double contour integral kernel. Steepest descent and semicircle law}
 
 \date{Wednesday, February 19, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
@@ -639,7 +639,6 @@ Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
 \section{Steepest descent for the GUE kernel}
 \label{sec:steepest-descent-GUE}
 
@@ -738,9 +737,10 @@ They are found from the quadratic equation:
 Depending on whether $|X|<2$, there are three cases.
 Unless $|X|=2$, equation \eqref{eq:critical-points} has a single root, and
 thus $S''(z_{cr})\ne 0$.
-We will consider the three cases in
-\Cref{sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
-below.
+
+In this lecture, we focus on the density function, which is obtained by taking the asymptotics of the
+kernel $K(x,x)$. In the next \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7},
+we discuss limits of the correlation functions.
 
 \subsection{Imaginary critical points: $|X|<2$, ``bulk''}
 \label{sub:imaginary-critical-points}
@@ -752,18 +752,10 @@ Since $S(z)$ has real coefficients, we have
 	\operatorname{Re}S(z_{cr})=\operatorname{Re}S(\overline{z_{cr}}).
 \end{equation*}
 Thus, we need to consider the contribution from both points.
-For simplicity of the computations, let us consider only the case $X=0$.
-See Problem~\ref{prob:imaginary-critical-points}.
-We have
-\begin{equation*}
-	z_{cr}=i,\qquad
-	S''(z_{cr})=2.
-\end{equation*}
 The behavior of $\operatorname{Re}S(z)$ on the complex plane
 can be illustrated by a 3D plot or by a region plot of the regions
 where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ has constant sign.
 See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
-(We take $X\ne 0$ to break symmetry, for a better intuition.)
 
 \begin{figure}[htpb]
 	\centering
@@ -784,12 +776,12 @@ $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})<0$.
 
 Deforming the contours from \Cref{fig:contours} to the new contours
 is impossible without passing through the residue at $w=z$.
-Moreover, this residue appears only for certain values of $z$. Namely, for $X=0$,
+Moreover, this residue appears only for certain values of $z$. Namely,
 let us first make the $z$ contour to be the positively (counterclockwise) oriented
 unit circle.
-It passes through the critical points $z_{cr}=i$ and $\overline{z_{cr}}=-i$.
+It passes through the critical points $z_{cr}$ and $\overline{z_{cr}}$.
 Since the original $w$ contour is to the right of the $z$ contour, we only
-encounter the residue when $z$ is in the right half of the circle.
+encounter the residue when $z$ is in the right half of the arc.
 
 Thus, we can write
 \begin{equation}
@@ -797,7 +789,8 @@ Thus, we can write
 	\oiint_{\textnormal{old contours}}=
 	\oiint_{\textnormal{new contours}}
 	+
-	\int_{-i}^i 2\pi i\ssp \operatorname{Res}\limits_{w=z}\ssp dz,
+	\int_{\overline{z_{cr}}}^{z_{cr}}
+	2\pi i\ssp \operatorname{Res}\limits_{w=z}\ssp dz,
 \end{equation}
 where in the single integral, the $z$ contour passes to the right of the origin,
 along the right half of the unit circle.
@@ -807,7 +800,10 @@ of \eqref{eq:K_n_bulk_deformation}.
 Recall that the correlation functions are
 defined relative to a reference measure, and the right object to scale is
 \begin{equation*}
-	K_n(x,y)dy=\frac{1}{\sqrt n}\ssp d\left( \Delta y \right).
+	K_n(x,y)dy=\frac{1}{\sqrt n}
+	\ssp
+	K_n(X\sqrt n+\Delta x/\sqrt n,X\sqrt n+\Delta y/\sqrt n)
+	\ssp d\left( \Delta y \right).
 \end{equation*}
 The extra factor $n^{-1/2}$
 compensates the prefactor $\sqrt n$ in
@@ -817,31 +813,14 @@ The single integral takes the form
 \begin{equation}
 	\label{eq:K_n_bulk_single}
 	\frac{-i}{2\pi}
-	\int_{-i}^i
-	e^{z (\Delta x -\Delta y)}
-	\ssp
+	\int_{\overline{z_{cr}}}^{z_{cr}}
 	dz
-	=\frac{\sin\left( \Delta x-\Delta y \right)}{\pi(\Delta x-\Delta y)},
-	\qquad \Delta x,\Delta y\in\mathbb{R}.
+	=\frac{\sin(\arg z_{cr})}{\pi}.
 \end{equation}
-\begin{definition}
-	\label{def:sine-kernel}
-	The \emph{sine kernel} is defined as
-	\begin{equation*}
-		K_{\mathrm{sine}}(x,y)\coloneqq
-		\begin{cases}
-			\dfrac{\sin (x-y)}{\pi (x-y)},&\qquad x\ne 0,\\[10pt]
-			\dfrac{1}{\pi},&\qquad x=0.
-		\end{cases}
-	\end{equation*}
-	(The value at $x=y$ is defined by continuity.)
 
-	This kernel is translation invariant, and is often
-	defined with a single argument, as
-	$K_{\mathrm{sine}}(x-y)$.
-\end{definition}
-
-The double integral has both contours
+The double integral 
+in \eqref{eq:K_n_bulk_deformation}
+has both contours
 in the ``steepest descent'' regime, which means that
 the main contribution is
 \begin{equation*}
@@ -857,247 +836,22 @@ negligible in the limit $n\to+\infty$.
 This is because the main term comes from the single integral,
 which does not vanish.
 
-We have established the following result:
-\begin{proposition}[Bulk asymptotics at $X=0$]
-	\label{prop:bulk}
-	The correlation kernel $K_n$ of the GUE has the following asymptotics
-	close to zero as $n\to+\infty$:
-	\begin{equation*}
-		\lim_{n\to \infty}
-		\frac{1}{\sqrt n}
-		K_n\left( \frac{\Delta x}{\sqrt n},\frac{\Delta y}{\sqrt n} \right)
-		=
-		K_{\mathrm{sine}}\left( \Delta x,\Delta y \right),
-		\qquad \Delta x,\Delta y\in\mathbb{R}.
-	\end{equation*}
-	Consequently, the eigenvalues of the GUE converge to the sine process
-	determined by the sine kernel (\Cref{def:sine-kernel}),
-	in the sense of finite-dimensional distributions.
-\end{proposition}
+Note that
+\begin{equation*}
+	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2},
+	\qquad 
+	\sin(\arg z_{cr})=\frac{\sqrt{4-X^2}}{2}.
+\end{equation*}
+This again establishes the \emph{Wigner semicircle law} for the GUE kernel.
 
 \begin{remark}
-	Beyond $X=0$, the local correlations are essentially the same,
-	up to rescaling of the real line by a constant factor (depending
-	on the semicircle density).
-	See Problem~\ref{prob:imaginary-critical-points}.
+	This is already the third proof --- we worked with trees, the tridiagonal form, 
+	and now via steepest descent. The steepest descent method is the least general one,
+	but it allows to access local correlations in the bulk and at the edge.
 \end{remark}
 
-\subsection{Real critical points: $|X|>2$, ``large deviations''}
-\label{sub:real-critical-points}
-
-For \(X^2>4\), both solutions
-\eqref{eq:critical-points}
-are real. Let us assume $X>2$, the case \(X<2\) is similar.
-For $X>2$, both solutions are positive.
-Label these solutions as
-\[
-	z_+ \;=\;\frac{X + \sqrt{X^2-4}}{2},
-	\qquad
-	z_- \;=\;\frac{X - \sqrt{X^2-4}}{2},
-	\quad
-	\text{so that}\quad z_+z_-=1.
-\]
-A straightforward check reveals that \(z_+\!>\!1\) and \(z_-\!<\!1\) (for \(X>2\)).
-Note that $S''(z)=1-z^{-2}$, which is positive for \(z_+>1\) and negative for \(z_-<1\).  Thus, the critical points \(z_+\) and \(z_-\) are a local minimum and a local maximum.
-A crucial observation is that
-\begin{equation*}
-	S(z_+)<S(z_-).
-\end{equation*}
-One can deform the $z$ integration contour to pass through
-$z_-$ and the $w$ contour to pass through $z_+$.
-Then, on these contours, one can show that
-\begin{equation*}
-	\operatorname{Re}S(w)-\operatorname{Re}S(z)<0.
-\end{equation*}
-According to the steepest descent ideology,
-we see that the main exponential behavior of the double contour integral is
-\begin{equation}
-	\label{eq:Oexp}
-	\exp\left\{ n\left(
-		\operatorname{Re}S(z_+)-\operatorname{Re}S(z_-)
-\right) \right\}=O( e^{-\delta(X)n} ), \qquad |X|>2.
-\end{equation}
-Here $\delta(X)>0$ for $|X|>2$, and $\delta(X)\to0$ when $|X|\to2$.
-
-The outcome \eqref{eq:Oexp} reflects the fact that the
-Wigner semicircle law places all eigenvalues inside the
-interval \(\lvert X\rvert \le 2\).
-The probability to see even a single eigenvalue outside $[-2,2]$
-is exponentially small.
-
-This exponential decay corresponds to a large deviation regime.
-Indeed, if at least one of the diagonal entries of the matrix
-is unusually large, this corresponds to
-the maximal eigenvalue to get outside the interval \([-2,2]\).
-See also Problem~\ref{prob:large-deviation}.
-
-
-\subsection{Double critical point: $|X|=2$, ``edge''}
-\label{sub:double-critical-points}
-
-Throughout the subsection, we assume that $X=2$. The case $X=-2$ is symmetric.
-
-When \(X=2\), the two solutions in \eqref{eq:critical-points} merge into a double critical point
-$z_{cr}=1$.
-We have
-\[
-S'(1)=0,\qquad S''(1)=0,\qquad S'''(1)=2.
-\]
-Thus, the usual quadratic approximation fails and one must expand to third order. Writing
-\[
-z=1+u,\qquad w=1+v,
-\]
-with \(u,v\) small, we have
-\[
-S(1+u)=S(1)+\frac{S'''(1)}{6}\,u^3+O(u^4)
-=S(1)+\frac{u^3}{3}+O(u^4),
-\]
-and similarly for \(S(1+v)\). Hence, the difference in the exponents becomes
-\[
-S(1+v)-S(1+u)=\frac{v^3-u^3}{3}+O(u^4+v^4).
-\]
-
-To capture the correct asymptotics, we rescale the local variables by setting
-\[
-u=\frac{U}{n^{1/3}},\qquad v=\frac{V}{n^{1/3}},
-\]
-so that
-\[
-n\Bigl[S(1+v)-S(1+u)\Bigr]=\frac{V^3-U^3}{3}+O\Bigl(n^{-1/3}\Bigr).
-\]
-Moreover, the correct edge scaling for the spatial variables is obtained by writing
-\[
-x=2\sqrt{n}+\frac{\xi}{n^{1/6}},\qquad y=2\sqrt{n}+\frac{\eta}{n^{1/6}},\qquad \xi,\eta\in\mathbb{R}.
-\]
-We have
-\begin{equation*}
-	n\left( S(w)-S(z) \right)=n^{1/3}(\xi-\eta)+
-	\frac{V^3-U^3}{3}+\xi U-\eta V+O\Bigl(n^{-1/3}\Bigr).
-\end{equation*}
-The terms $n^{1/3}(\xi-\eta)$ are harmless as they can be removed
-by conjugation.
-
-The region plot of $\operatorname{Re}S(z)-\operatorname{Re}S(1)$
-(shown in \Cref{fig:ReS_edge})
-makes sure that we can deform the $z$ contour so that it passes through $z_{cr}=1$
-as the new $U$ contour at the angles $\pm \frac{2\pi}{3}$ (where $\operatorname{Re}U^3>0$),
-we can deform the $w$ contour so that it passes through $z_{cr}=1$
-as the new $V$ contour at the angles $\pm \frac{\pi}{3}$ (where $\operatorname{Re}V^3<0$).
-This will ensure the convergence of the new double integral.
-
-\begin{figure}[htpb]
-	\centering
-	\includegraphics[height=.3\textwidth]{pictures/ReS_edge.pdf}
-	\caption{The plot of the region $\operatorname{Re}S(z)-\operatorname{Re}S(1)>0$ for $X=2$.}
-	\label{fig:ReS_edge}
-\end{figure}
-
-Thus, we have shown that under the rescaling, the GUE correlation kernel
-$K_n(x,y)\ssp dy$ converges to a new kernel.
-\begin{definition}
-	\label{def:Airy_kernel}
-	Define the \emph{Airy kernel} on $\mathbb{R}$ by
-	\begin{equation*}
-		K_{\mathrm{Ai}}(\xi,\eta)=\frac{1}{(2\pi i)^2}
-		\int_{e^{-\frac{\pi i}{3}}\infty}^{e^{\frac{\pi i}{3}}\infty}dV
-		\int_{e^{-\frac{2\pi i}{3}}\infty}^{e^{2\frac{\pi i}{3}}\infty}dU
-		\ssp
-		\frac{\exp\Bigl\{\frac{V^3-U^3}{3}+U\,\xi-V\,\eta\Bigr\}}{V-U}.
-	\end{equation*}
-	For another formula for the Airy kernel
-	which does not involve integrals,
-	see
-	Problem~\ref{prob:airy}.
-\end{definition}
-
-\begin{proposition}
-	\label{prop:edge}
-	We have
-	\begin{equation*}
-		\lim_{n\to\infty}
-		\frac{1}{n^{1/6}}K_n\Bigl(2\sqrt{n}+\frac{\xi}{n^{1/6}},\,2\sqrt{n}+\frac{\eta}{n^{1/6}}\Bigr)
-		\to
-		K_{\mathrm{Ai}}(\xi,\eta).
-	\end{equation*}
-	Consequently, the eigenvalue statistics at the edge of the spectrum converge to the Airy point process, in the sense of fine-dimensional distributions.
-\end{proposition}
-
-\subsection{Airy kernel, Tracy--Widom distribution, and convergence of the maximal
-eigenvalue}
-
-Let us make a few remarks on the asymptotic results of
-\Cref{prop:bulk,prop:edge}.
-First,
-a rigorous justification of convergence
-of contour integrals requires some estimates on the error terms
-in the steepest descent analysis, but these
-estimates are mild and not hard to obtain.
-
-Second, the GUE has the maximal eigenvalue $\lambda_{max}$. It is reasonable
-to assume that the Airy process also (almost surely) admits a maximal point
-(usually denoted by $\mathfrak{a}_1$),
-and that $\lambda_{max}$
-converges to $\mathfrak{a}_1$ under appropriate rescaling:
-\begin{equation}
-	\label{eq:TW_GUE}
-	\lim_{n\to\infty}n^{\frac{1}{6}}\bigl(\lambda_{max}-2\sqrt{n}\bigr)=\mathfrak{a}_1.
-\end{equation}
-This is indeed the case, but to show \eqref{eq:TW_GUE}, one needs to
-show the convergence in distribution:
-\begin{equation}
-	\label{eq:TW_GUE_convergence}
-	\lim_{n\to \infty}
-	\mathbb{P}\Bigl(n^{1/6}(\lambda_{max}-2\sqrt{n})\le x\Bigr)
-	\to
-	\mathbb{P}(\mathfrak{a}_1\le x).
-\end{equation}
-Both events \eqref{eq:TW_GUE_convergence} are so-called
-\emph{gap probabilities}, for example,
-\begin{equation*}
-	\operatorname{P}(\mathfrak{a}_1\le x)=
-	\operatorname{P}(\textnormal{there are no eigenvalues in the interval $(x,\infty)$}),
-\end{equation*}
-which is expressed as
-the Fredholm determinant
-\begin{equation}
-	\label{eq:gap-probability-Ai-Fredholm}
-	\det\left( 1-K_{\mathrm{Ai}} \right)_{(x,\infty)}=
-	1+\sum_{m=1}^{\infty}\frac{(-1)^m}{m!}
-	\int_x^{\infty}dy_1\int_x^{\infty}dy_2\cdots
-	\int_x^{\infty}dy_m
-	\ssp
-	\det\limits_{i,j=1}^m
-	K_{\mathrm{Ai}}(y_i,y_j).
-\end{equation}
-Thus, to get \eqref{eq:TW_GUE_convergence}), one needs to show the convergence
-of sums like this for the GUE kernel
-to the corresponding sums for the Airy kernel. This is doable, but tedious.
-
-Moreover, to get convergence in distribution of random variables,
-one would also have to argue either \emph{tightness},
-or independently show that
-\eqref{eq:gap-probability-Ai-Fredholm} defines a
-cumulative probability
-distribution function in $x$:
-\begin{equation}
-	\label{eq:TW_GUE_cdf}
-	F_2(x)=\det\left( 1-K_{\mathrm{Ai}} \right)_{(x,\infty)}.
-\end{equation}
-The distribution \eqref{eq:TW_GUE_cdf} is known as the \emph{GUE Tracy--Widom distribution}.
-The subscript $2$ indicates that $\beta=2$. There are distributions
-$F_\beta$ for all beta, most notably, the GOE and GSE distributions.
-The classical distributions $F_1,F_2,F_4$ also appear as fluctuation distributions
-in interacting particle systems, while other beta values do
-not quite appear in the particle systems
-domain.
-
-More details
-may be found in the original papers
-\cite{tracy1993level},
-\cite{Forrester1993},
-\cite{tracy_widom1994level_airy}.
-
-
+We will consider other regimes, $|X|>2$ and $|X|=2$, in the next 
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
 
 
 \appendix
@@ -1110,7 +864,7 @@ may be found in the original papers
 
 Show that if in \eqref{eq:scaling_x-y} we take $X\ne Y$, then
 $K_n(x,y)$ vanishes as $n\to+\infty$. Moreover,
-establish that the decay is exponential in $n$.
+establish the rate of decay in $n$. Is it power-law or exponential?
 
 \subsection{Sine kernel}
 \label{prob:sine-kernel}
@@ -1118,12 +872,6 @@ establish that the decay is exponential in $n$.
 Compute the integral
 \eqref{eq:K_n_bulk_single}.
 
-\subsection{General bulk case}
-\label{prob:imaginary-critical-points}
-
-Perform the asymptotic analysis of the correlation
-kernel as in \Cref{sub:imaginary-critical-points},
-but in the general case $-2<X<2$.
 
 \subsection{Discrete sine process}
 \label{prob:discrete-sine-process}
@@ -1186,43 +934,7 @@ maximal eigenvalue of \(W_n\) outside the bulk.
 		\emph{lower bound} of $\operatorname{\mathbb{P}}(E_{n,\eta})$.
 \end{enumerate}
 
-\subsection{Airy kernel}
-\label{prob:airy}
 
-Define the Airy function by
-\begin{equation*}
-	Ai(\xi)\coloneqq
-	\frac{1}{2\pi}\int_{-\infty}^\infty
-	e^{i U^3/3+i\xi U} dU=
-	\frac{1}{\pi}\int_0^\infty
-	\cos\left( \frac{U^3}{3}+\xi U \right)\ssp dU.
-\end{equation*}
-This integral converges, but only conditionally. To improve convergence,
-one should instead integrate
-along a complex contour,
-from $e^{\frac{5 \pi i}{6}}\infty$ to $0$ to
-$e^{\frac{\pi i}{6}}\infty$.
-
-Show that
-\begin{equation*}
-	K_{\mathrm{Ai}}(\xi,\eta)=
-	\frac{Ai(\xi)\ssp Ai'(\eta)-Ai(\eta)\ssp Ai'(\xi)}{\xi-\eta}.
-\end{equation*}
-Note that this expression is parallel to the sine kernel,
-\begin{equation*}
-	\frac{\sin(x-y)}{\pi(x-y)}=\frac{\sin x\cos y-\cos x\sin y}{\pi(x-y)},\qquad
-	\cos x=(\sin x)'.
-\end{equation*}
-These correlation kernels are called \emph{integrable}
-\cite{its1990differential}.
-
-Hint for the problem: observe that
-\begin{equation*}
-	\exp\left\{ -i z x+iwy \right\}=\frac{i}{x-y}\left( \frac{\partial}{\partial z}+
-	\frac{\partial}{\partial w}\right)\exp\left\{ -i z x+iwy \right\},
-\end{equation*}
-and use integration by parts in $K_{\mathrm{Ai}}(\xi,\eta)$
-from \Cref{def:Airy_kernel}.
 
 
 \bibliographystyle{alpha}
