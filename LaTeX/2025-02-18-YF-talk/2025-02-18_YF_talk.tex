@@ -74,6 +74,10 @@ style, similar to my \href{https://lpetrov.cc/rmt25/}{random matrix course}.
 Along the notes, there are numerous skipped details,
 which are left as exercises for the reader.
 
+\setcounter{tocdepth}{1}
+\tableofcontents
+\setcounter{tocdepth}{3}
+
 \section{Motivation 1. De Finetti's theorem and Pascal triangle}
 
 \subsection{}
@@ -272,6 +276,23 @@ We say a Fibonacci word $w$ \emph{covers} another Fibonacci word $v$ if $|v| = |
 \end{enumerate}
 \end{definition}
 
+\begin{figure}[htpb]
+	\centering
+	\begin{equation*}
+		\xymatrixrowsep{0.3in}
+		\xymatrixcolsep{0.15in}
+		\xymatrix{ \varnothing \ar@{-}[d] & & & & & & &  \\
+		1 \ar@{-}[d] \ar@{-}[drrrrrrr] & & & & & & & \\
+		11  \ar@{-}[d] \ar@{-}[drrrr] & & & & & & & 2  \ar@{-}[d] \ar@{-}[dlll] \\
+		111  \ar@{-}[d] \ar@{-}[drr] & & & & 21 \ar@{-}[d] \ar@{-}[dll] \ar@{-}[dr] & & & 12  \ar@{-}[d] \ar@{-}[dll] \\
+		1111  \ar@{-}[d] \ar@{-}[dr]  & &211  \ar@{-}[d] \ar@{-}[dl] \ar@{-}[dr] & &121 \ar@{-}[d] \ar@{-}[dl]  &22 \ar@{-}[d] \ar@{-}[dll]|\hole \ar@{-}[dr]
+		& &112  \ar@{-}[d] \ar@{-}[dl]  \\
+		11111 & 2111 & 1211 & 221 & 1121 & 122 & 212 & 1112 }
+	\end{equation*}
+	\caption{The Young--Fibonacci lattice up to level $n=5$.}
+	\label{fig:YF_lattice}
+\end{figure}
+
 \subsection{}
 
 The Young--Fibonacci lattice is a differential poset. Hence, we have
@@ -280,7 +301,7 @@ The Young--Fibonacci lattice is a differential poset. Hence, we have
 \end{equation*}
 and we can define the \emph{Plancherel measure}
 \begin{equation*}
-	M_n(\lambda)\coloneqq \frac{(\dim \lambda)^2}{n!}.
+	M_n(w)\coloneqq \frac{(\dim w)^2}{n!}.
 \end{equation*}
 Note that the $\mathbb{YF}$-dimension is very
 different from the Young lattice one.
@@ -354,19 +375,189 @@ functions were specifically developed to provide an algebraic framework for the
 Young--Fibonacci lattice, paralleling how classical Schur functions encode the
 structure of the Young lattice.
 
-The clone Schur functions $s_w$ satisfy a Pieri rule:
+The clone Schur functions $s_w(\vec x\mid \vec y)$
+(definition later)
+satisfy a Pieri rule:
 \begin{equation*}
-	asd
+	x_{|w|+1}s_w(\vec x\mid \vec y)=\sum_{v\colon v\nearrow w}s_v(\vec x\mid \vec y).
 \end{equation*}
+There are \emph{clone coherent measures} defined from clone Schur functions,
+\begin{equation*}
+	M_n(w)=s_w(\vec \alpha;\vec \beta;\gamma)\cdot \dim w,
+\end{equation*}
+but \textbf{they are not extremal} (except for the Plancherel case).
+
+\subsection{Now, briefly, what we do with this}
+
+We get the following main results:
+\begin{enumerate}
+	\item Complete classification of 
+		clone coherent measures which are positive. 
+		This is related to total positivity of tridiagonal matrices and Stieltjes moment
+		problems.
+		In fact, we obtain a new, narrower notion of tridiagonal
+		positivity called \emph{Fibonacci positivity}. 
+	\item We describe a number of examples of Fibonacci positive specializations.
+	\item For several Fibonacci positive specializations, we consider the large-scale behavior of random Fibonacci words.
+\end{enumerate}
+
+\section{Clone Schur functions and positivity}
+
+\subsection{Definition}
+
+Let $\vec x=(x_1,x_2,\ldots )$ and $\vec y=(y_1,y_2,\ldots)$ be two families of indeterminates.
+Define two sequences of tridiagonal determinants as follows:
+\begin{equation}
+	\label{eq:A_B_dets}
+	A_\ell (\vec{x} \mid \vec{y}\ssp) \coloneqq
+	\det
+	\underbrace{\begin{pmatrix}
+	x_1 & y_1 & 0 & \cdots\\
+	1 & x_2 & y_2 &\\
+	0 & 1 & x_3  & \\
+	\vdots & & & \ddots
+	\end{pmatrix}}_{\text{$\ell \times \ell $ tridiagonal matrix}} ,
+	\qquad
+	B_{\ell -1} (\vec{x} \mid \vec{y}\ssp) \coloneqq
+	\det
+	\underbrace{\begin{pmatrix}
+	y_1 & x_1y_2 & 0 & \cdots\\
+	1 & x_3 & y_3 &\\
+	0 & 1 & x_4 & \\
+	\vdots & & & \ddots
+	\end{pmatrix}}_{\text{$\ell \times \ell$ tridiagonal matrix}} .
+\end{equation}
+Here $\ell\ge0$.
+For a sequence $\vec u=(u_1,u_2,\ldots)$,
+denote its
+\emph{shift} by $\vec u+ \ell = (u_{1+\ell} \, ,u_{2+\ell} \, ,\ldots)$, where $\ell\in \mathbb{Z}_{\ge0}$.
 
 
+\begin{definition}
+	\label{def:clone_Schur}
+	For any Fibonacci word $w$,
+	define the
+	(\emph{biserial})
+	\emph{clone Schur function} $s_w(\vec{x} \mid \vec{y}\ssp)$ through the following recurrence:
+	\begin{equation}
+		\label{eq:clone_Schur_recurrence_def}
+		s_w (\vec{x} \mid \vec{y}\ssp)
+		\coloneqq
+		\begin{cases}
+			A_k(\vec{x} \mid \vec{y}\ssp), & \textnormal{if $w=1^{k}$ for some $k\ge 0$},\\
+			B_k\bigl( \vec{x}+|u| \mid \vec{y}+|u| \bigr)\cdot s_u (\vec{x} \mid \vec{y}\ssp)
+			, & \textnormal{if $w=1^k2u$ for some $k\ge 0$}.
+		\end{cases}
+	\end{equation}
+\end{definition}
+Note that these functions are not symmetric in the variables,
+and the order in the sequences $(x_1,x_2,\ldots)$ and $(y_1,y_2,\ldots)$ is important.
 
+\subsection{Positivity problem: reduction to tridiagonal matrices}
 
+For the positivity of the functions
+$s_w(\vec{x} \mid \vec{y}\ssp)$, it is necessary that the 
+infinite
+tridiagonal matrix 
+\begin{equation}
+	\label{eq:tridiagonal_matrix}
+	\begin{pmatrix}
+	x_1 & y_1 & 0 & \cdots\\
+	1 & x_2 & y_2 &\\
+	0 & 1 & x_3  & \\
+	\vdots & & & \ddots
+	\end{pmatrix}
+\end{equation}
+is totally positive (that is, all its minors that are not
+identically zero must be positive).
 
+Total positivity of tridiagonal matrices is a well-known phenomenon
+\cite{FominZelevinsky1999}.
+We have a stronger requirement than just the total positivity
+of \eqref{eq:tridiagonal_matrix} --- we need the total positivity of
+another family of matrices, 
+\begin{equation*}
+		\mathcal{B}_r \big( \, \vec{x} \, \big| \, \vec{y} \, \big) \, \coloneqq \
+		\begin{pmatrix}
+		y_{r+1} & x_{r+1} y_{r+2} & 0 & \cdots\\
+		1 & x_{r+3} & y_{r+3} &\\
+		0 & 1 & x_{r+4}  & \\
+		\vdots & & & \ddots
+	\end{pmatrix},
+\end{equation*}
+for all $r$. The tridiagonal matrix \eqref{eq:tridiagonal_matrix} is a good starting point,
+though: it allows us to reparameterize
+\begin{equation*}
+	x_k=1+t_{k-1},\qquad y_k=t_k,\qquad t_0=0, \qquad t_j>0, \quad j\ge 1.
+\end{equation*}
+(There are some obvious renormalizations of the parameters 
+$\vec x,\vec y$
+which we ignore, and 
+focus only on the primary case.)
 
+\subsection{Fibonacci positivity: result}
 
+There are two classes of $\vec t$-sequences for which the
+specializations of clone Schur functions are positive.
+\begin{theorem}
+	All Fibonacci positive sequences
+	$(\vec x,\vec{y}\ssp)$
+	have the form
+	\begin{equation*}
+		x_k=c_k\ssp (1+t_{k-1}),\qquad y_k=c_k\ssp c_{k+1}\ssp t_k, \qquad k\ge1,
+	\end{equation*}
+	where $\vec c$ is an
+	arbitrary positive sequence,
+	and $\vec t=(t_1,t_2,\ldots )$ (with $t_0=0$, for convenience) is
+	a positive real sequence of one of the two types:
+	\begin{enumerate}[$\bullet$]
+		\item (divergent type)
+			The infinite series
+			\begin{equation}
+				\label{eq:divergent_type_A1}
+				1+t_1+t_1t_2+t_1t_2t_3+\ldots
+			\end{equation}
+			diverges, and
+			$t_{m+1}\ge 1+t_m$ for all $m\ge 1$;
+		\item (convergent type)
+			The series \eqref{eq:divergent_type_A1} converges, and
+			\begin{equation*}
+				 1+t_{m+3}+t_{m+3}t_{m+4}+
+				t_{m+3}t_{m+4}t_{m+5}+\ldots
+				\ge
+				\frac{t_{m+1}}{t_{m+2}(1+t_m-t_{m+1})}
+				,
+				\qquad
+				\textnormal{for all }
+				m\ge0.
+			\end{equation*}
+	\end{enumerate}
+	The sequences $\vec c$ and $\vec t$ are determined by $(\vec x,\vec{y}\ssp)$ uniquely.
+\end{theorem}
 
+A divergent type sequence can be written
+as 
+\begin{equation*}
+	t_k=k+\varepsilon_1+\ldots+\varepsilon_k ,
+\end{equation*}
+where $\varepsilon_j\ge 0$. Then the matrices
+\eqref{eq:tridiagonal_matrix} and $\mathcal{B}_r$ 
+have all minors either identically zero, 
+or element of $\mathbb{Z}[\varepsilon_1,\varepsilon_2,\ldots ]$
+with \emph{positive coefficients}.
 
+\subsection{Examples for which we do scaling limits}
+
+\begin{itemize}
+	\item Plancherel: $x_k=y_k=k$, so $t_k=k$;
+	\item A two-parameter deformation:
+		$x_k=k+\rho+\sigma-2$, $y_k=(k+\sigma-1)\rho$,
+		where $\sigma\ge 1$ and $0<\rho\le 1$.
+\end{itemize}
+Other examples come from orthogonal polynomials
+in the (q-)Askey scheme. We describe the framework next.
+
+\subsection{Stieltjes moment problem}
 
 
 
