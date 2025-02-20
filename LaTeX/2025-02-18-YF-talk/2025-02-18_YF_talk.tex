@@ -48,6 +48,7 @@
 \theoremstyle{definition}
 \newtheorem{definition}[proposition]{Definition}
 \newtheorem{remark}[proposition]{Remark}
+\newtheorem{exercise}[proposition]{Exercise}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
@@ -77,6 +78,20 @@ which are left as exercises for the reader.
 \setcounter{tocdepth}{1}
 \tableofcontents
 \setcounter{tocdepth}{3}
+\newpage
+\section{Roadmap}
+\begin{itemize}
+\item First, I gently introduce concepts related to branching graphs and their boundaries,
+starting with one familiar and one maybe less familiar example ---
+the Pascal triangle and the Young lattice.
+
+\item Then, I discuss the Young--Fibonacci lattice, a differential poset, and its boundary. This object
+is not exactly easy to digest, so I'll spend some time describing it.
+
+\item Finally, driving from parallels with the Young lattice, I introduce clone Schur functions,
+and briefly discuss our own results on positivity of coherent measures on the Young--Fibonacci lattice,
+and the large-scale behavior of random Fibonacci words.
+\end{itemize}
 
 \section{Motivation 1. De Finetti's theorem and Pascal triangle}
 
@@ -165,6 +180,22 @@ of coherent measures, so the points $p\in(0,1)$ are still extremal
 for the space of coherent measures. However, the boundary
 of the Pascal triangle clearly contains the linear
 piece between $\delta_0$ and $\delta_1$.
+
+\begin{remark}
+	\emph{Convex interpolation} here is an elementary version of the 
+	Kerov--Goodman flow \cite{KerovGoodman1997}
+	which exists between Plancherel and other coherent measures on both 
+	Young and Young--Fibonacci lattices (we do not mention it below, just mention it here).
+	For Pascal triangle, the flow essentially reduces to the elementary coupling between iid sequences:
+	If you have an iid coin flip sequence with probability $p$, then you can pick a proportion of $1$'s and turn them
+	into zeros --- this will clearly create an iid sequence with a smaller $p$.
+\end{remark}
+
+\begin{exercise}
+	Write this flow on the Pascal triangle in terms of coherent measures, as a formula for 
+	$(C_\tau M_n)(k)$, where for $M_n$ an iid Bernoulli coherent measure with parameter $p$, $C_\tau$ produces
+	a coherent measure with parameter $p \tau$ (or $p(1-\tau)$ maybe).
+\end{exercise}
 
 
 \section{Motivation 2. Young lattice}
@@ -820,7 +851,7 @@ For this model, we also note that there are noncommuting limits for $\sigma>1$:
 		many hikes of 2's.
 	\item However, if we consider the total sum of the 2's, the scaling limit of the
 		quantity $\sum_{i=1}^n \tilde h_i(w)/n$ has expectation $1/(\sigma+1)$,
-		which is strictly greater than the quantity obtained from GEM-like distribution. 
+		which is strictly greater than the quantity obtained from GEM-like distribution.
 
 	We have, using the fact that
 	$\operatorname{\mathbb{E}}(\mathrm{beta}(1,\sigma/2))=\frac{2}{2+\sigma}$:
