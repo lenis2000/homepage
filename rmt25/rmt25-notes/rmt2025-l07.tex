@@ -78,7 +78,7 @@ Updated at \currenttime, \today}}
 
 \subsection{Recap}
 
-We continue the asymptotic analysis of the GUE kernel. 
+We continue the asymptotic analysis of the GUE kernel.
 
 The GUE correlation kernel is defined by
 \[
@@ -121,7 +121,7 @@ K_n(x,y)=\frac{1}{(2\pi)^2}
 \oint_C dt\int_{-i\infty}^{i\infty}ds\,
 \frac{\exp\Bigl\{\frac{s^2}{2}-sy-\frac{t^2}{2}+tx\Bigr\}}{s-t}\left(\frac{s}{t}\right)^n.
 \]
-The integration contour $C$ is a small contour around $0$, and 
+The integration contour $C$ is a small contour around $0$, and
 $s$ is passing to the right of $C$.
 
 This representation is especially useful for performing asymptotic analysis (for example, via the steepest descent method) and for deriving results such as the semicircle law.
@@ -606,6 +606,35 @@ may be found in the original papers
 \cite{Forrester1993},
 \cite{tracy_widom1994level_airy}.
 
+
+
+\subsection{Remark: what happens for general $\beta$?}
+
+\begin{itemize}
+    \item The determinantal structure exploited above is special to the $\beta=2$ case. In contrast, for $\beta=1$ (GOE) and $\beta=4$ (GSE) the eigenvalue correlations are expressed in terms of \emph{Pfaffians} rather than determinants.
+			This happens before and after the scaling limit.
+		\item
+			Earlier attempts to extend the $\beta=2$ techniques
+			were determinantal. For example, one can replace the
+			squared Vandermonde $\prod_{i<j} (x_i-x_j)^2$ with
+			\begin{equation*}
+			 \prod_{i<j} (x_i-x_j)(x_i^{\beta/2}-x_j^{\beta/2}).
+			\end{equation*}
+			This is known as the \emph{Muttalib--Borodin} ensemble
+			\cite{forrester2017},
+			and the kernel can be computed in a similar way using (bi)orthogonalization.
+		\item Local eigenvalue statistics of general $\beta$-ensembles converge to the so-called
+			\emph{general $\beta$ sine process}
+			and
+			\emph{general $\beta$ Airy process}
+			in the bulk and at the edge, respectively.
+			Detailed analyses of this convergence can be found in
+			\cite{RamirezRiderVirag2006RandomAiry},
+			\cite{valko2009continuum},
+			\cite{gorin2018stochastic},
+			and the literature referenced in the recent work 
+			\cite{gorin2024airy}.
+\end{itemize}
 
 
 
