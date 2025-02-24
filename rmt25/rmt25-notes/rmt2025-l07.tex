@@ -651,7 +651,8 @@ the top-left $k\times k$ corners (for $1\le k\le n$) have
 jointly distributed eigenvalues that exhibit a
 determinantal structure. We will employ the
 technique of \emph{polynomial equations} and
-then \emph{loop equations} to study limits.
+then \emph{loop equations} to study global limits
+(note that they are not suitable to get local limits like sine and Airy processes).
 
 So far, we have the following access to eigenvalues and corners:
 \begin{enumerate}
@@ -732,8 +733,90 @@ The same interlacing property holds for real symmetric matrices ($\beta=1$),
 and in the case $\beta=4$.
 Therefore, it is natural to require this property for all $\beta$-ensembles.
 
+\subsection{Orbital measure}
+
+It is natural to consider an extended setup, and
+take the matrix $H$ to not just be GUE, but instead fix its eigenvalues.
+Let
+\begin{equation*}
+	H=U\Lambda U^\dagger,\qquad \Lambda=\operatorname{diag}(\lambda_1,\dots,\lambda_n),
+\end{equation*}
+where $\Lambda$ is fixed and $U\in U(n)$ is Haar (uniformly) distributed.
+Denote the set of all such $H$
+by $\mathrm{Orbit}(\lambda)$, $\lambda=(\lambda_1,\dots,\lambda_n)\in \mathbb{R}^n$,
+$\lambda_1\ge \cdots\ge \lambda_n$.
+
+Then, if we understand the distribution structure
+of all corners of a random $H\in \mathrm{Orbit}(\lambda)$,
+we can then ``average over'' the GUE eigenvalue ensemble distribution of $\lambda$
+to get the GUE corners process.
+
+\begin{remark}
+	The setting with orbits presents a bridge into ``asymptotic representation theory''.
+	Namely, as $n\to\infty$, how does the corners distribution look like?
+	We may ask for a characterization of \emph{all the ways} how
+	$\lambda^{(n)}=( \lambda_1^{(n)}\ge \ldots \lambda^{(n)}_n  )$
+	goes to infinity, in such a way that the corners
+	spectrum converges on all levels $k=1,\ldots,K $ for arbitrary $K$ (independent of
+	$n$).
+	This problem was solved in \cite{OlVer1996}.
+	More direct formulas for projections of orbital measures
+	were obtained in \cite{olshanski2013projections}.
+\end{remark}
 
 
+\section{Polynomial equations}
+
+Fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$.
+Let $H\in \mathrm{Orbit}(\lambda)$ be a random matrix
+(in the case $\beta=2$, but the proof works for $\beta=1,4$ as well).
+Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner $H^{(n-1)}$.
+\begin{lemma}
+	The distribution of $\mu_1,\ldots,\mu_{n-1}$ is the same as the distribution of
+	the roots of the polynomial equation
+	\begin{equation*}
+		\sum_{i=1}^n \frac{\xi_i}{z-\lambda_i}=0,
+	\end{equation*}
+	where $\xi_i$ are i.i.d.\ random variables with the distribution $\chi^2_\beta$.
+\end{lemma}
+\begin{proof}
+	$\mu_1,\ldots,\mu_{n-1} $ are the roots of the following
+	equation with the determinant of
+	order $n+1$:
+	\begin{equation*}
+		\det\begin{pmatrix}
+			U\operatorname{\mathrm{diag}}(\lambda)U^\dagger-z I_N & v^\top\\
+			v & 0
+		\end{pmatrix}=0,
+		\qquad 
+		v=\begin{pmatrix}
+			0\\0\\\vdots\\0\\1
+		\end{pmatrix}.
+	\end{equation*}
+	Indeed, expanding the determinant along the last row, we get the $(n-1)$th
+	determinant, which corresponds to cutting the corner. 
+	
+	Next, multiply the determinant by $\begin{pmatrix} U^\dagger&0\\0&1 \end{pmatrix}$
+	on the left 
+	and $\begin{pmatrix} U & 0\\0&1 \end{pmatrix}$ on the right:
+	\begin{equation*}
+		\det\begin{pmatrix}
+			\operatorname{\mathrm{diag}}(\lambda)-z I_N & u^\dagger\\
+			u & 0
+		\end{pmatrix}=0,
+	\end{equation*}
+	where $u^\dagger=U^\dagger v^\top$ is the last row of $U^\dagger$.
+	The determinant now can be expressed as
+	\begin{equation*}
+		\det=-\prod_{i=1}^n(\lambda_i-z)\sum_{i=1}^{n}\frac{|u_i|^2}{\lambda_i-z}.
+	\end{equation*}
+	Since $u$ is a row of a Haar unitary matrix, 
+	it is distributed uniformly on the unit sphere in $\mathbb{C}^n$.
+	However, we can identify it with a normalized vector from a 
+	rotationally invariant measure on $\mathbb{C}^n$,
+	the best of which is Gaussian.
+	This completes the proof.
+\end{proof}
 
 
 
