@@ -105,9 +105,20 @@ to construct the full array of eigenvalues of the corners of $H$.
 For $\beta=\infty$, this map is deterministic, and is equivalent to successive differentiating the 
 characteristic polynomial of $H$.
 
+\subsection{Extension to general $\beta$}
+
+We extend the polynomial equations to general $\beta$,
+by \emph{declaring} (defining) that the general $\beta$ corners distribution
+is powered by the passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n)$ to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1})$,
+where $\mu$ solves \eqref{eq:polynomial_equation} with $\xi_i$ i.i.d.\ $\chi^2_\beta$.
+In this way, $\mu$ interlaces with $\lambda$.
+For $\beta=1,2,4$, this definition reduces to the one with invariant ensembles
+with fixed eigenvalues $\lambda$.
+
+
 \subsection{Distribution of the eigenvalues of the corners}
 
-
+Let $\mu$ be obtained from $\lambda$ by the general $\beta$ corners operation.
 
 \begin{theorem}
 	\label{thm:corner_step}
@@ -120,7 +131,9 @@ characteristic polynomial of $H$.
 	\end{equation*}
 \end{theorem}
 \begin{proof}
-	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$. The joint
+	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$. 
+	It is well-known\footnote{See Problem~\ref{prob:dirichlet}.} 
+	the joint
 	density of $(\varphi_1,\ldots,\varphi_n )$ is the
 	(symmetric) Dirichlet density
 	\begin{equation*}
@@ -179,13 +192,25 @@ uniform distribution on the interlacing array. This is the \emph{uniform Gibbs p
 which is important for other models, including discrete ensembles.
 
 
+\section{Loop equations}
+
+Let us write down the \emph{loop equations} for the passage from the 
+eigenvalues $\lambda$ to the eigenvalues $\mu$.
+These loop equations are due to \cite{gorin2022dynamical} 
+by a limit from a discrete system (related to Jack
+symmetric polynomials). Note that despite the name, these are not \textbf{equations}, 
+but rather a statement that some expectations are holomorphic.
+
+\subsection{Formulation}
 
 
 
 
+\subsection{Proof}
 
 
 
+\section{Applications of loop equations}
 
 
 
@@ -225,6 +250,15 @@ Prove the Cauchy determinant formula:
 	\det\left( \frac{1}{x_i-y_j} \right)_{1\le i,j\le n}=
 	\frac{\prod_{i<j}(x_i-x_j)(y_i-y_j)}{\prod_{i,j}(x_i-y_j)}.
 \end{equation*}
+
+
+\subsection{Dirichlet density}
+\label{prob:dirichlet}
+
+Find or prove the first statement in the proof of 
+\Cref{thm:corner_step} about the symmetric Dirichlet density arising from 
+normalizing the $\xi_i$'s to $\varphi_i$'s.
+
 
 
 
