@@ -606,7 +606,7 @@ so the local contribution of a neighborhood of $z_0$ to the integral is
 	\label{eq:local-contribution}
 	I_{z_0}(\Lambda)=e^{\Lambda f(z_0)}\phi(z_0)
 	\int_{-\infty}^{\infty} e^{\Lambda\frac{1}{2}f''(z_0)w^2}\,dw
-	\Bigl(1+O\Bigl(\frac{1}{\Lambda}\Bigr)\Bigr).
+	\Bigl(1+O\Bigl(\frac{1}{\Lambda^{\frac12}}\Bigr)\Bigr).
 \end{equation}
 Here the integration is taken along the steepest descent direction, so that the quadratic term in the exponent is real and negative. (That is, by the choice \eqref{eq:steepest-descent-direction}, we have $\operatorname{Re}\bigl(f''(z_0)w^2\bigr)=-|f''(z_0)|r^2$.) Then the Gaussian integral evaluates to
 \[
@@ -659,7 +659,7 @@ We know from the Wigner semicircle law
 (established for real symmetric matrices with general iid entries in
 in \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2},
 and for the GUE in \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l04.pdf}{Lecture 4})
-that the eigenvalues live on the scare $\sqrt n$. This means that to capture the local asymptotics,
+that the eigenvalues live on the scale $\sqrt n$. This means that to capture the local asymptotics,
 we need to scale
 \begin{equation}
 	\label{eq:scaling_x-y}
@@ -735,8 +735,8 @@ They are found from the quadratic equation:
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
 \end{equation}
 Depending on whether $|X|<2$, there are three cases.
-Unless $|X|=2$, equation \eqref{eq:critical-points} has a single root, and
-thus $S''(z_{cr})\ne 0$.
+Unless $|X|=2$ (when equation \eqref{eq:critical-points} has a single root), we have
+$S''(z_{cr})\ne 0$.
 
 In this lecture, we focus on the density function, which is obtained by taking the asymptotics of the
 kernel $K(x,x)$. In the next \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7},
@@ -818,7 +818,7 @@ The single integral takes the form
 	=\frac{\sin(\arg z_{cr})}{\pi}.
 \end{equation}
 
-The double integral 
+The double integral
 in \eqref{eq:K_n_bulk_deformation}
 has both contours
 in the ``steepest descent'' regime, which means that
@@ -839,18 +839,18 @@ which does not vanish.
 Note that
 \begin{equation*}
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2},
-	\qquad 
+	\qquad
 	\sin(\arg z_{cr})=\frac{\sqrt{4-X^2}}{2}.
 \end{equation*}
 This again establishes the \emph{Wigner semicircle law} for the GUE kernel.
 
 \begin{remark}
-	This is already the third proof --- we worked with trees, the tridiagonal form, 
+	This is already the third proof --- we worked with trees, the tridiagonal form,
 	and now via steepest descent. The steepest descent method is the least general one,
 	but it allows to access local correlations in the bulk and at the edge.
 \end{remark}
 
-We will consider other regimes, $|X|>2$ and $|X|=2$, in the next 
+We will consider other regimes, $|X|>2$ and $|X|=2$, in the next
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
 
 

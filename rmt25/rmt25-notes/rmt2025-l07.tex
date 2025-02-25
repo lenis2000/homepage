@@ -245,8 +245,8 @@ They are found from the quadratic equation:
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
 \end{equation}
 Depending on whether $|X|<2$, there are three cases.
-Unless $|X|=2$, equation \eqref{eq:critical-points} has a single root, and
-thus $S''(z_{cr})\ne 0$.
+Unless $|X|=2$ (when equation \eqref{eq:critical-points} has a single root), we have
+$S''(z_{cr})\ne 0$.
 We will consider the three cases in
 \Cref{sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
 below.
@@ -824,7 +824,7 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 	provides another proof of the eigenvalue interlacing property.
 	Indeed, assume that all $\xi_i$ are rational. Then
 	equation
-	\eqref{eq:polynomial_equation} is essentially $P'(z)=0$, 
+	\eqref{eq:polynomial_equation} is essentially $P'(z)=0$,
 	where $P(z)$ is a product of powers of the $(z-\lambda_i)$'s
 	(the powers depend on the $\xi_i$'s).
 	As the roots of the derivative of a polynomial interlace with the roots of the polynomial,
@@ -844,25 +844,25 @@ Let us now compute the distribution of $\mu_i$ explicitly:
 \end{theorem}
 \begin{proof}
 	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$. The joint
-	density of $(\varphi_1,\ldots,\varphi_n )$ is the 
+	density of $(\varphi_1,\ldots,\varphi_n )$ is the
 	(symmetric) Dirichlet density
 	\begin{equation*}
 		\frac{\Gamma(N \beta/2)}{\Gamma(\beta/2)^n}
 		\ssp
 		w_1^{\beta/2-1}\ldots  w_n^{\beta/2-1}
 		\ssp
-		dw_1\ldots dw_{n-1} 
+		dw_1\ldots dw_{n-1}
 	\end{equation*}
 	(note that the density is $(n-1)$-dimensional).
 
-	We need to compute the Jacobian of the transformation from $\varphi$ to $\mu$, 
+	We need to compute the Jacobian of the transformation from $\varphi$ to $\mu$,
 	if we write
 	\begin{equation*}
 		\sum_{i=1}^n\frac{\varphi_i}{z-\lambda_i}=
 		\frac{\prod_{i=1}^{n-1}(z-\mu_i)}
 		{\prod_{i=1}^n(z-\lambda_i)},
 	\end{equation*}
-	and compute 
+	and compute
 	(as a decomposition into partial fractions):
 	\begin{equation*}
 		\varphi_a=
@@ -875,7 +875,7 @@ Let us now compute the distribution of $\mu_i$ explicitly:
 		\ssp\frac{1}{\mu_b-\lambda_a}.
 	\end{equation*}
 	The Jacobian is essentially the determinant of the matrix $1/(\mu_b-\lambda_a)$,
-	which is the Cauchy determinant 
+	which is the Cauchy determinant
 	(Problem~\ref{prob:cauchy}).
 	The final density is obtained from the symmetric Dirichlet density,
 	but we plug in $w=\varphi$, and also multiply by the Jacobian.
@@ -888,7 +888,7 @@ Let us now compute the distribution of $\mu_i$ explicitly:
 	\label{cor:corners_density}
 	The eigenvalues $\lambda^(k)_j$, $1\le j\le k\le n$,
 	of a random matrix from $\mathrm{Orbit}(\lambda)$
-	form an interlacing array, with the joint density 
+	form an interlacing array, with the joint density
 	\begin{equation*}
 		\propto
 		\prod_{k=1}^n
