@@ -68,16 +68,23 @@ Updated at \currenttime, \today}}
 
 
 \maketitle
+\tableofcontents
 
 
 \section{Cutting corners: polynomial equations and distribution}
 
-\subsection{Recap}
+\subsection{Recap: polynomial equations}
 
 Recall the polynomial equation we proved in the last \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
 Fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$.
-Let $H\in \mathrm{Orbit}(\lambda)$ be a random matrix
-(in the case $\beta=2$, but the proof works for $\beta=1,4$ as well).
+Let $H\in \mathrm{Orbit}(\lambda)$ be a random Hermitian matrix
+defined as 
+\begin{equation*}
+	H=U\ssp \mathrm{\operatorname{diag}}(\lambda_1,\ldots,\lambda_n)\ssp U^\dagger,
+\end{equation*}
+where $U$ is Haar-distributed unitary matrix from $U(n)$.
+This is the case $\beta=2$, 
+but the statement holds for the cases $\beta=1,4$ with appropriate modifications.
 Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner $H^{(n-1)}$.
 \begin{lemma}
 	\label{lemma:corner_step}
@@ -89,6 +96,16 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 	\end{equation}
 	where $\xi_i$ are i.i.d.\ random variables with the distribution $\chi^2_\beta$.
 \end{lemma}
+Recall also that this passage from $\lambda$ to $\mu$ works inductively, and 
+the distribution of the next level eigenvalues $\nu=(\nu_1\ge \ldots \ge \nu_{n-2})$
+is given by the same polynomial equation, but with $\lambda$ replaced by $\mu$.
+In this way, we can define a \emph{Markov map} from $\lambda$ to $\mu$, which is then iterated
+to construct the full array of eigenvalues of the corners of $H$.
+
+For $\beta=\infty$, this map is deterministic, and is equivalent to successive differentiating the 
+characteristic polynomial of $H$.
+
+\subsection{Distribution of the eigenvalues of the corners}
 
 
 
@@ -200,6 +217,14 @@ which is important for other models, including discrete ensembles.
 \section{Problems (due 2025-03-25)}
 
 
+\subsection{Cauchy determinant}
+\label{prob:cauchy}
+
+Prove the Cauchy determinant formula:
+\begin{equation*}
+	\det\left( \frac{1}{x_i-y_j} \right)_{1\le i,j\le n}=
+	\frac{\prod_{i<j}(x_i-x_j)(y_i-y_j)}{\prod_{i,j}(x_i-y_j)}.
+\end{equation*}
 
 
 
