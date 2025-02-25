@@ -55,7 +55,7 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 7: Double contour integral kernel. Steepest descent and local statistics}
+\\Lecture 7: Steepest descent and local statistics. Cutting corners}
 
 
 \date{Monday, February 24, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
@@ -767,6 +767,8 @@ to get the GUE corners process.
 
 \section{Polynomial equations and joint distribution}
 
+\subsection{Derivation of polynomial equations}
+
 Fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$.
 Let $H\in \mathrm{Orbit}(\lambda)$ be a random matrix
 (in the case $\beta=2$, but the proof works for $\beta=1,4$ as well).
@@ -831,75 +833,55 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 	we get the interlacing property.
 \end{remark}
 
-Let us now compute the distribution of $\mu_i$ explicitly:
-\begin{theorem}
-	\label{thm:corner_step}
-	The density of $\mu$ with respect to the Lebesgue measure is given by
-	\begin{equation*}
-		\frac{\Gamma(N \beta/2)}{\Gamma(\beta/2)^n}
-		\prod_{1\le i<j\le n-1}(\mu_i-\mu_j)
-		\prod_{i=1}^{n-1}\prod_{j=1}^n |\mu_i-\lambda_j|^{\beta/2-1}
-		\prod_{1\le i<j\le n}(\lambda_i-\lambda_j)^{1-\beta}.
-	\end{equation*}
-\end{theorem}
-\begin{proof}
-	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$. The joint
-	density of $(\varphi_1,\ldots,\varphi_n )$ is the
-	(symmetric) Dirichlet density
-	\begin{equation*}
-		\frac{\Gamma(N \beta/2)}{\Gamma(\beta/2)^n}
-		\ssp
-		w_1^{\beta/2-1}\ldots  w_n^{\beta/2-1}
-		\ssp
-		dw_1\ldots dw_{n-1}
-	\end{equation*}
-	(note that the density is $(n-1)$-dimensional).
+\subsection{Inductive nature of the transition}
 
-	We need to compute the Jacobian of the transformation from $\varphi$ to $\mu$,
-	if we write
-	\begin{equation*}
-		\sum_{i=1}^n\frac{\varphi_i}{z-\lambda_i}=
-		\frac{\prod_{i=1}^{n-1}(z-\mu_i)}
-		{\prod_{i=1}^n(z-\lambda_i)},
-	\end{equation*}
-	and compute
-	(as a decomposition into partial fractions):
-	\begin{equation*}
-		\varphi_a=
-		\frac{\prod_{i=1}^{n-1}(\lambda_a-\mu_i)}{\prod_{i\ne a}(\lambda_a-\lambda_i)}.
-	\end{equation*}
-	Therefore,
-	\begin{equation*}
-		\frac{\partial\varphi_a}{\partial\mu_b}=
-		\frac{\prod_{i=1}^{n-1}(\lambda_a-\mu_i)}{\prod_{i\ne a}(\lambda_a-\lambda_i)}
-		\ssp\frac{1}{\mu_b-\lambda_a}.
-	\end{equation*}
-	The Jacobian is essentially the determinant of the matrix $1/(\mu_b-\lambda_a)$,
-	which is the Cauchy determinant
-	(Problem~\ref{prob:cauchy}).
-	The final density is obtained from the symmetric Dirichlet density,
-	but we plug in $w=\varphi$, and also multiply by the Jacobian.
-	This completes the proof.
-\end{proof}
+Note that when we fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
+and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving 
+\eqref{eq:polynomial_equation}, we can then fix $\mu$ and get random
+$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on. 
+Here, $\nu$ corresponds to the $(n-2)\times(n-2)$ corner of $H$.
+Indeed, we can condition on $\mu$, and conjugate $H$ again by a
+unitary matrix of the form $U=\begin{pmatrix}
+	U'&0\\0&1
+\end{pmatrix}$, where $U'\in U(n-1)$ is Haar distributed.
+Since $U\in U(n)$, this extra conjugation does not change the distribution of $H\in \mathrm{Orbit}(\lambda)$,
+but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the 
+passage from $\lambda$ to $\mu$.
+
+This implies that in order to understand the full corners process, it is enough to understand the transition from $\lambda$ to $\mu$,
+where $\lambda$ is fixed, and $\mu$ is obtained by solving \eqref{eq:polynomial_equation}.
+
+
+\subsection{Case $\beta=\infty$}
+
+In the limit $\beta\to+\infty$, the $\chi^2_\beta$ distribution
+obeys the law of large numbers:
+\begin{equation*}
+	\frac{\chi^2_\beta}{\beta}\to 1,\qquad \beta\to+\infty.
+\end{equation*}
+Thus, the equation \eqref{eq:polynomial_equation} becomes
+deterministic:
+\begin{equation*}
+	\sum_{i=1}^n \frac{1}{z-\lambda_i}=0.
+\end{equation*}
+Denote 
+\begin{equation}
+	\label{eq:P_z_definition}
+	P(z)=\prod_{i=1}^n(z-\lambda_i).
+\end{equation}
+Then 
+\begin{proposition}
+	The passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
+	to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ in the limit as $\beta=\infty$
+	is deterministic, and it the same as the passage from the 
+	roots of the polynomial $P(z)$ \eqref{eq:P_z_definition} to the roots of its derivative $P'(z)$.
+\end{proposition}
 
 
 
-\begin{corollary}[Joint density of the corners]
-	\label{cor:corners_density}
-	The eigenvalues $\lambda^(k)_j$, $1\le j\le k\le n$,
-	of a random matrix from $\mathrm{Orbit}(\lambda)$
-	form an interlacing array, with the joint density
-	\begin{equation*}
-		\propto
-		\prod_{k=1}^n
-		\prod_{1\le i<j\le k}\left(\lambda_j^{(k)}-\lambda_i^{(k)}\right)^{2-\beta}
-		\prod_{a=1}^{k+1}\prod_{b=1}^k
-		\left|\lambda_a^{(k+1)}-\lambda_b^{(k)}\right|^{\beta/2-1}.
-	\end{equation*}
-\end{corollary}
-For $\beta=2$, all factors disappear, and we get the
-uniform distribution on the interlacing array. This is the \emph{uniform Gibbs property}
-which is important for other models, including discrete ensembles.
+
+
+
 
 
 \appendix
