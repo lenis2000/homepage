@@ -218,7 +218,7 @@ present a formulation and a proof given by \cite{gorin2025private}.
  Take any \emph{polynomial} $W(z)$ and consider the complex function:
  \begin{equation}
  \label{eq_loop_observable}
-   f_W(z)=\mathbb{E}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right].
+ f_W(z)=\operatorname{\mathbb{E}}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right].
  \end{equation}
  Then $f_W(z)$ is an \emph{entire function} of $z$, in the following sense:
  \begin{itemize}
@@ -254,7 +254,7 @@ We also assume that $\lambda_1>\ldots>\lambda_n $.
 
 
 We begin by observing that for $z \in \mathbb{C} \setminus [\lambda_{n+1}, \lambda_1]$, the expectation in \eqref{eq_loop_observable} is well-defined and holomorphic in $z$. This follows since for such $z$, the denominators $z-\lambda_i$ and $z-\mu_j$ are bounded away from zero with probability 1.
-The key challenge is to show that $f_W(z)$ can be analytically continued to an entire function. 
+The key challenge is to show that $f_W(z)$ can be analytically continued to an entire function.
 Potential singularities of $f_W(z)$ are inside the intervals $(\lambda_{i+1}, \lambda_{1})$. We will show that these singularities do not actually occur.
 
 Consider a specific interval $(\lambda_2, \lambda_{1})$. We need to show that $f_W(z)$ has no singularities in this interval.
@@ -265,7 +265,7 @@ From \Cref{thm:corner_step}, the probability distribution of $\mu = (\mu_1, \ldo
 
 Let us analyze the function in \eqref{eq_loop_observable}. For $z \in (\lambda_2, \lambda_{1})$, we need to demonstrate that the expectation
 \begin{equation*}
-    \mathbb{E}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right]
+	\operatorname{\mathbb{E}}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right]
 \end{equation*}
 is holomorphic.
 We need to show that the integral
@@ -290,15 +290,84 @@ This completes the proof of \Cref{Theorem_loop_equation} for $\beta>2$.
 
 \section{Applications of loop equations}
 
+The loop equations provide a powerful tool for analyzing the spectral properties of random matrices through their eigenvalue distributions. Let us derive an equation for the Stieltjes transform of the empirical measures.
+
+\subsection{Stieltjes transform equations}
+Starting from Theorem \ref{Theorem_loop_equation} with $W=0$, we have:
+\begin{equation} \label{eq:loop_eq_base}
+	\operatorname{\mathbb{E}}\left[\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)}\left(\sum_{i=1}^{n+1}\frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n\frac{1}{z-\mu_j}\right)\right] = \frac{(n+1)\beta}{2}-1.
+\end{equation}
+Let us introduce the empirical Stieltjes transforms:
+\begin{align*}
+G_\lambda(z) &= \frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i}, \\
+G_\mu(z) &= \frac{1}{n}\sum_{j=1}^n\frac{1}{z-\mu_j}.
+\end{align*}
+We also define the logarithmic potentials (indefinite integrals of the Stieltjes transforms):
+\begin{align*}
+\int G_\lambda(z)dz &= \frac{1}{n}\sum_{i=1}^{n+1}\ln(z-\lambda_i), \\
+\int G_\mu(z)dz &= \frac{1}{n}\sum_{j=1}^n\ln(z-\mu_j).
+\end{align*}
+
+Noting that
+\begin{equation*}
+	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)} = \exp\left(n\left(\int G_\lambda(z) - \int G_\mu(z)\right)\right),
+\end{equation*}
+we can rewrite equation \eqref{eq:loop_eq_base} as:
+\begin{equation} \label{eq:stieltjes_transform_eq}
+	\operatorname{\mathbb{E}}\left[\exp\left(n\left(\int G_\lambda(z)\,dz - \int G_\mu(z)\,dz\right)\right)\left(\left(\frac{\beta}{2}-1\right)G_\lambda(z) + G_\mu(z)\right)\right] = \frac{\beta}{2} + \frac{1}{n}\left(\frac{\beta}{2}-1\right).
+\end{equation}
 
 
 
 
 
+\subsection{Asymptotic behavior}
 
+Equation \eqref{eq:stieltjes_transform_eq} can be reinterpreted in terms of a time evolution of eigenvalue distributions. This perspective offers significant insights into the asymptotic behavior of the corners process.
 
+If we think of $\lambda$ as configuration at time $t=1$ and $\mu$ as configuration at time $t=1-\frac{1}{n}$, then denoting the general time parameter as $t$ and setting $G_\lambda = G_1$, $G_\mu = G_{1-\frac{1}{n}}$, we obtain a continuous time evolution of Stieltjes transforms.
+(And similarly for all $t$, of course.)
 
+As $n \to \infty$, equation \eqref{eq:stieltjes_transform_eq} transforms into:
+\begin{equation*}
+\frac{\beta}{2} \exp\left(\frac{\partial}{\partial t}\int G_t(z)\,dz\right) \cdot G_t(z) = \frac{\beta}{2}.
+\end{equation*}
+This implies
+\begin{equation*}
+\frac{\partial}{\partial t}\int G_t(z)\,dz + \ln G_t(z) = 0.
+\end{equation*}
+Taking the derivative with respect to $z$, we get:
+\begin{equation}
+\label{eq:burgers_equation}
+\frac{\partial}{\partial t}G_t(z) + \frac{1}{G_t(z)}\frac{\partial}{\partial z}G_t(z) = 0.
+\end{equation}
 
+This is precisely the inviscid Burgers equation, a
+fundamental nonlinear PDE in fluid dynamics. The appearance
+of this equation indicates that the eigenvalue distributions
+evolve according to a hydrodynamic flow as we move through
+the corners of the random matrix
+from full size down to zero.
+
+\begin{remark}
+	We see that the Burgers equation \eqref{eq:burgers_equation} does not depend on $\beta$,
+	which is expected. Indeed, for example, G$\beta$E eigenvalues
+	have the same Wigner semicircle law as $\beta=2$, up to an overall
+	rescaling.
+\end{remark}
+
+\subsection{Example with semicircle law}
+
+The Stieltjes transform of the semicircular law is given by:
+\begin{equation*}
+	G(z) = \int\limits_{-2}^{2}\frac{1}{z-x}\frac{\sqrt{4-x^2}}{2\pi}dx =
+	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
+\end{equation*}
+Let us define
+\begin{equation*}
+	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
+\end{equation*}
+this is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 
 
@@ -333,10 +402,21 @@ Prove the Cauchy determinant formula:
 \subsection{Dirichlet density}
 \label{prob:dirichlet}
 
-Find or prove the first statement in the proof of
+Find in the literature or prove on your own
+the first statement in the proof of
 \Cref{thm:corner_step} about the symmetric Dirichlet density arising from
 normalizing the $\xi_i$'s to $\varphi_i$'s.
 
+\subsection{General $\beta$ Corners Process Simulation}
+\label{prob:corners_simulation}
+
+This problem explores computational aspects of the general $\beta$ corners process.
+
+\begin{enumerate}[(a)]
+\item Write code for generating a sample from the distribution of $\mu = (\mu_1, \ldots, \mu_{n-1})$ given $\lambda = (\lambda_1, \ldots, \lambda_n)$ for arbitrary $\beta > 0$, using the polynomial equation characterization.
+
+\item Let $\lambda = (n, n-1, \ldots, 2, 1)$. For $n = 7$, compute (numerically) the expected values $\mathbb{E}[\mu_i]$ for each $i$, when $\beta = 1, 2, 4,$ and $10$. Describe the behavior as $\beta$ increases.
+\end{enumerate}
 
 
 
