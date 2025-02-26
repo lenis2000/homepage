@@ -200,10 +200,13 @@ These loop equations are due to \cite{gorin2022dynamical}
 by a limit from a discrete system (related to Jack
 symmetric polynomials). Note that despite the name, these are not \textbf{equations},
 but rather a statement that some expectations are holomorphic.
+We stick to the random matrix setting, and
+present a formulation and a proof given by \cite{gorin2025private}.
 
 \subsection{Formulation}
 
-\begin{theorem} \label{Theorem_loop_equation}
+\begin{theorem}
+	\label{Theorem_loop_equation}
  We fix $n=1,2,\dots$ and $n+1$ real numbers $\lambda_1\ge\dots\ge\lambda_{n+1}$. For $\beta>0$, consider $n+1$ i.i.d.\ $\chi^2_\beta$ random variables $\xi_i$ and set
  $$
   w_i=\frac{\xi_i}{\sum_{j=1}^{n+1} \xi_j}, \qquad 1\le i \le n+1.
@@ -224,16 +227,65 @@ but rather a statement that some expectations are holomorphic.
  \end{itemize}
 \end{theorem}
 \begin{remark}
- Note that for $z$ in 
+ Note that for $z$ in
  $[\lambda_{n+1},\lambda_1]$, the integral determining
  \eqref{eq_loop_observable} might be divergent, and,
  therefore, analytic continuation is the proper way to
- define $f_W(z)$, $z\in \Omega$. 
+ define $f_W(z)$, $z\in [\lambda_{n+1},\lambda_1]$.
 \end{remark}
 
+\begin{corollary}
+	We have
+\begin{equation*}
+	f_0(z)=\frac{(n+1)\beta}{2}-1.
+\end{equation*}
+Here $f_0$ means $f_W$ with $W\equiv 0$.
+\end{corollary}
+\begin{proof}
+This is obtained by sending $z\to \infty$ in
+	\eqref{eq_loop_observable}.
+\end{proof}
 
-\subsection{Proof}
+\subsection{Proof of \Cref{Theorem_loop_equation} for $\beta>2$}
 
+\Cref{Theorem_loop_equation} remains
+valid for $\beta>0$, but we only prove it for $\beta>2$ here.
+We also assume that $\lambda_1>\ldots>\lambda_n $.
+
+
+We begin by observing that for $z \in \mathbb{C} \setminus [\lambda_{n+1}, \lambda_1]$, the expectation in \eqref{eq_loop_observable} is well-defined and holomorphic in $z$. This follows since for such $z$, the denominators $z-\lambda_i$ and $z-\mu_j$ are bounded away from zero with probability 1.
+The key challenge is to show that $f_W(z)$ can be analytically continued to an entire function. 
+Potential singularities of $f_W(z)$ are inside the intervals $(\lambda_{i+1}, \lambda_{1})$. We will show that these singularities do not actually occur.
+
+Consider a specific interval $(\lambda_2, \lambda_{1})$. We need to show that $f_W(z)$ has no singularities in this interval.
+From \Cref{thm:corner_step}, the probability distribution of $\mu = (\mu_1, \ldots, \mu_n)$ has density proportional to:
+\begin{equation*}
+	\prod_{i<j} (\mu_i - \mu_j) \prod_{i=1}^{n} \prod_{j=1}^{n+1} |\mu_i - \lambda_j|^{\beta/2-1}.
+\end{equation*}
+
+Let us analyze the function in \eqref{eq_loop_observable}. For $z \in (\lambda_2, \lambda_{1})$, we need to demonstrate that the expectation
+\begin{equation*}
+    \mathbb{E}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right]
+\end{equation*}
+is holomorphic.
+We need to show that the integral
+\begin{multline*}
+\int\limits_{\mu_i \in [\lambda_{i+1}, \lambda_i]} \prod_{i<j}(\mu_i-\mu_j) \prod\prod(\mu_j-\lambda_i)^{\beta/2-1} \prod e^{W(\mu_j)} \frac{\prod(z-\lambda_i)}{\prod(z-\mu_j)} \\
+\times \left(W'(z) + \sum \frac{\beta/2-1}{z-\lambda_i} + \sum \frac{1}{z-\mu_j}\right) d\mu_1 \ldots d\mu_n
+\end{multline*}
+is holomorphic for $z \in (\lambda_2, \lambda_1)$.
+Note that (here we are using the fact that $\beta>2$)
+\begin{multline*}
+	0 = \int\limits_{\mu_i \in [\lambda_{i+1}, \lambda_i]} \frac{\partial}{\partial \mu_1}\left(\underbrace{\prod_{i<j}(\mu_i-\mu_j) \prod\prod(\mu_j-\lambda_i)^{\beta/2-1} \prod e^{W(\mu_j)} \frac{\prod(z-\lambda_i)}{\prod(z-\mu_j)}}_{(*)}\right) d\mu_1 \ldots d\mu_n \\
+= \int\limits_{\mu_i \in [\lambda_{i+1}, \lambda_i]} (*) \cdot \left[\sum_{j=2}^n \frac{1}{\mu_1-\mu_j} + \sum_{i=1}^{n+1} \frac{\beta/2-1}{\mu_1-\lambda_i} + W'(\mu_1) + \frac{1}{z-\mu_1}\right] d\mu_1 \ldots d\mu_n
+\end{multline*}
+
+Subtracting this expression from our original integral and noting that
+\begin{equation*}
+\left(W'(z) + \sum \frac{\beta/2-1}{z-\lambda_i} + \sum \frac{1}{z-\mu_j}\right) - \left(\sum_{j=2}^n \frac{1}{\mu_1-\mu_j} + \sum_{i=1}^{n+1} \frac{\beta/2-1}{\mu_1-\lambda_i} + W'(\mu_1) + \frac{1}{z-\mu_1}\right)
+\end{equation*}
+has zero at $z = \mu_1$, we conclude that our integral has no singularity at $\mu_1$, and therefore no singularities in the $[\lambda_2, \lambda_1]$ interval.
+This completes the proof of \Cref{Theorem_loop_equation} for $\beta>2$.
 
 
 \section{Applications of loop equations}
