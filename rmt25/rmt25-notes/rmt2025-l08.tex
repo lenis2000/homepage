@@ -78,12 +78,12 @@ Updated at \currenttime, \today}}
 Recall the polynomial equation we proved in the last \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
 Fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$.
 Let $H\in \mathrm{Orbit}(\lambda)$ be a random Hermitian matrix
-defined as 
+defined as
 \begin{equation*}
 	H=U\ssp \mathrm{\operatorname{diag}}(\lambda_1,\ldots,\lambda_n)\ssp U^\dagger,
 \end{equation*}
 where $U$ is Haar-distributed unitary matrix from $U(n)$.
-This is the case $\beta=2$, 
+This is the case $\beta=2$,
 but the statement holds for the cases $\beta=1,4$ with appropriate modifications.
 Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner $H^{(n-1)}$.
 \begin{lemma}
@@ -96,13 +96,13 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 	\end{equation}
 	where $\xi_i$ are i.i.d.\ random variables with the distribution $\chi^2_\beta$.
 \end{lemma}
-Recall also that this passage from $\lambda$ to $\mu$ works inductively, and 
+Recall also that this passage from $\lambda$ to $\mu$ works inductively, and
 the distribution of the next level eigenvalues $\nu=(\nu_1\ge \ldots \ge \nu_{n-2})$
 is given by the same polynomial equation, but with $\lambda$ replaced by $\mu$.
 In this way, we can define a \emph{Markov map} from $\lambda$ to $\mu$, which is then iterated
 to construct the full array of eigenvalues of the corners of $H$.
 
-For $\beta=\infty$, this map is deterministic, and is equivalent to successive differentiating the 
+For $\beta=\infty$, this map is deterministic, and is equivalent to successive differentiating the
 characteristic polynomial of $H$.
 
 \subsection{Extension to general $\beta$}
@@ -131,8 +131,8 @@ Let $\mu$ be obtained from $\lambda$ by the general $\beta$ corners operation.
 	\end{equation*}
 \end{theorem}
 \begin{proof}
-	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$. 
-	It is well-known\footnote{See Problem~\ref{prob:dirichlet}.} 
+	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$.
+	It is well-known\footnote{See Problem~\ref{prob:dirichlet}.}
 	the joint
 	density of $(\varphi_1,\ldots,\varphi_n )$ is the
 	(symmetric) Dirichlet density
@@ -194,16 +194,42 @@ which is important for other models, including discrete ensembles.
 
 \section{Loop equations}
 
-Let us write down the \emph{loop equations} for the passage from the 
+Let us write down the \emph{loop equations} for the passage from the
 eigenvalues $\lambda$ to the eigenvalues $\mu$.
-These loop equations are due to \cite{gorin2022dynamical} 
+These loop equations are due to \cite{gorin2022dynamical}
 by a limit from a discrete system (related to Jack
-symmetric polynomials). Note that despite the name, these are not \textbf{equations}, 
+symmetric polynomials). Note that despite the name, these are not \textbf{equations},
 but rather a statement that some expectations are holomorphic.
 
 \subsection{Formulation}
 
-
+\begin{theorem} \label{Theorem_loop_equation}
+ We fix $n=1,2,\dots$ and $n+1$ real numbers $\lambda_1\ge\dots\ge\lambda_{n+1}$. For $\beta>0$, consider $n+1$ i.i.d.\ $\chi^2_\beta$ random variables $\xi_i$ and set
+ $$
+  w_i=\frac{\xi_i}{\sum_{j=1}^{n+1} \xi_j}, \qquad 1\le i \le n+1.
+ $$
+ We define $n$ random points $\{\mu_1,\dots,\mu_n\}$ as $n$ solutions to the equation
+ \begin{equation} \label{eq_mu_equation}
+  \sum_{i=1}^{n+1} \frac{w_i}{z-\lambda_i}=0.
+ \end{equation}
+ Take any \emph{polynomial} $W(z)$ and consider the complex function:
+ \begin{equation}
+ \label{eq_loop_observable}
+   f_W(z)=\mathbb{E}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right].
+ \end{equation}
+ Then $f_W(z)$ is an \emph{entire function} of $z$, in the following sense:
+ \begin{itemize}
+	 \item For $z\in \mathbb{C}\setminus [\lambda_{n+1},\lambda_1]$, the expectation in \eqref{eq_loop_observable} defines a holomorphic function of $z$.
+  \item This function has an analytic continuation to $\mathbb{C}$, which has no singularities.
+ \end{itemize}
+\end{theorem}
+\begin{remark}
+ Note that for $z$ in 
+ $[\lambda_{n+1},\lambda_1]$, the integral determining
+ \eqref{eq_loop_observable} might be divergent, and,
+ therefore, analytic continuation is the proper way to
+ define $f_W(z)$, $z\in \Omega$. 
+\end{remark}
 
 
 \subsection{Proof}
@@ -255,8 +281,8 @@ Prove the Cauchy determinant formula:
 \subsection{Dirichlet density}
 \label{prob:dirichlet}
 
-Find or prove the first statement in the proof of 
-\Cref{thm:corner_step} about the symmetric Dirichlet density arising from 
+Find or prove the first statement in the proof of
+\Cref{thm:corner_step} about the symmetric Dirichlet density arising from
 normalizing the $\xi_i$'s to $\varphi_i$'s.
 
 
