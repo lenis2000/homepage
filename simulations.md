@@ -43,6 +43,7 @@ nav_weight: 19
 - ##### <a href="{{site.url}}/simulations/model/TASEPs/">TASEP-like systems</a>
 - ##### <a href="{{site.url}}/simulations/model/domino-tilings/">Domino tilings</a>
 - ##### <a href="{{site.url}}/simulations/model/lozenge-tilings/">Lozenge tilings</a>
+- ##### <a href="{{site.url}}/simulations/model/misc/">Miscellaneous models</a>
 
 
 ---
