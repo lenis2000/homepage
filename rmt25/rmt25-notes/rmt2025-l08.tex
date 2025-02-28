@@ -263,7 +263,7 @@ Potential singularities of $f_W(z)$ are inside the intervals $(\lambda_{i+1}, \l
 Consider a specific interval $(\lambda_2, \lambda_{1})$. We need to show that $f_W(z)$ has no singularities in this interval.
 From \Cref{thm:corner_step}, the probability distribution of $\mu = (\mu_1, \ldots, \mu_n)$ has density proportional to:
 \begin{equation*}
-	\prod_{1\le i<j\le n-1} (\mu_i - \mu_j) \prod_{i=1}^{n} \prod_{j=1}^{n+1} |\mu_i - \lambda_j|^{\beta/2-1}.
+	\prod_{1\le i<j\le n} (\mu_i - \mu_j) \prod_{i=1}^{n} \prod_{j=1}^{n+1} |\mu_i - \lambda_j|^{\beta/2-1}.
 \end{equation*}
 
 Let us analyze the function in \eqref{eq_loop_observable}. For $z \in (\lambda_2, \lambda_{1})$, we need to demonstrate that the expectation
@@ -280,18 +280,18 @@ need to consider the integral
 \label{eq:integral_original}
 \begin{split}
 	&\int\limits_{\lambda_2}^{\lambda_1}
-	\prod_{i<j}(\mu_i-\mu_j) \prod\prod(\mu_j-\lambda_i)^{\beta/2-1} \prod e^{W(\mu_j)} \frac{\prod(z-\lambda_i)}{\prod(z-\mu_j)} \\
+	\prod_{1 \leq i<j \leq n}(\mu_i-\mu_j) \prod_{j=1}^{n}\prod_{i=1}^{n+1}(\mu_j-\lambda_i)^{\beta/2-1} \prod_{j=1}^{n} e^{W(\mu_j)} \frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^{n}(z-\mu_j)} \\
 	&\hspace{150pt}\times
-	\left(W'(z) + \sum \frac{\beta/2-1}{z-\lambda_i} + \sum \frac{1}{z-\mu_j}\right) d\mu_2.
+	\left(W'(z) + \sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^{n} \frac{1}{z-\mu_j}\right) d\mu_2.
 \end{split}
 \end{equation}
 Note that (here we are using the fact that $\beta>2$)
 \begin{multline*}
 	0 = \int_{\lambda_2}^{\lambda_1}d\mu_1
 	\frac{\partial}{\partial
-	\mu_1}\left(\underbrace{\prod_{i<j}(\mu_i-\mu_j)
-	\prod\prod(\mu_j-\lambda_i)^{\beta/2-1} \prod e^{W(\mu_j)}
-	\frac{\prod(z-\lambda_i)}{\prod(z-\mu_j)}}_{(*)}\right)
+	\mu_1}\left(\underbrace{\prod_{1 \leq i<j \leq n}(\mu_i-\mu_j)
+	\prod_{j=1}^{n}\prod_{i=1}^{n+1}(\mu_j-\lambda_i)^{\beta/2-1} \prod_{j=1}^{n} e^{W(\mu_j)}
+	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^{n}(z-\mu_j)}}_{(*)}\right)
 	\\
 	=
 	\int_{\lambda_2}^{\lambda_1}d\mu_1\ssp
@@ -305,7 +305,7 @@ Subtracting this expression from our original integral
 \eqref{eq:integral_original}
 and noting that
 \begin{equation*}
-\left(W'(z) + \sum \frac{\beta/2-1}{z-\lambda_i} + \sum \frac{1}{z-\mu_j}\right) - \left(\sum_{j=2}^n \frac{1}{\mu_1-\mu_j} + \sum_{i=1}^{n+1} \frac{\beta/2-1}{\mu_1-\lambda_i} + W'(\mu_1) + \frac{1}{z-\mu_1}\right)
+\left(W'(z) + \sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^{n} \frac{1}{z-\mu_j}\right) - \left(\sum_{j=2}^n \frac{1}{\mu_1-\mu_j} + \sum_{i=1}^{n+1} \frac{\beta/2-1}{\mu_1-\lambda_i} + W'(\mu_1) + \frac{1}{z-\mu_1}\right)
 \end{equation*}
 has zero at $z = \mu_1$, we conclude that our integral has no singularity at $\mu_1$, and therefore no singularities in the $[\lambda_2, \lambda_1]$ interval.
 This completes the proof of \Cref{Theorem_loop_equation} for $\beta>2$.
@@ -325,17 +325,17 @@ Let us introduce the empirical Stieltjes transforms:
 G_\lambda(z) &= \frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i}, \\
 G_\mu(z) &= \frac{1}{n}\sum_{j=1}^n\frac{1}{z-\mu_j}.
 \end{align*}
-We also define the logarithmic potentials (indefinite integrals of the Stieltjes transforms):
+We also define the ``logarithmic potentials'' (indefinite integrals of the Stieltjes transforms):
 \begin{align*}
 \int G_\lambda(z)dz &= \frac{1}{n}\sum_{i=1}^{n+1}\ln(z-\lambda_i), \\
 \int G_\mu(z)dz &= \frac{1}{n}\sum_{j=1}^n\ln(z-\mu_j).
 \end{align*}
-
-Noting that
+We understand the integrals up to the same integration constant (and branch), so the exponent of the difference
+yields the original product:
 \begin{equation*}
-	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)} = \exp\left(n\left(\int G_\lambda(z) - \int G_\mu(z)\right)\right),
+	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)} = \exp\left(n\left(\int G_\lambda(z) - \int G_\mu(z)\right)\right)
 \end{equation*}
-we can rewrite equation \eqref{eq:loop_eq_base} as:
+We can rewrite equation \eqref{eq:loop_eq_base} as:
 \begin{equation} \label{eq:stieltjes_transform_eq}
 	\operatorname{\mathbb{E}}\left[\exp\left(n\left(\int G_\lambda(z)\,dz - \int G_\mu(z)\,dz\right)\right)\left(\left(\frac{\beta}{2}-1\right)G_\lambda(z) + G_\mu(z)\right)\right] = \frac{\beta}{2} + \frac{1}{n}\left(\frac{\beta}{2}-1\right).
 \end{equation}
@@ -365,12 +365,11 @@ Taking the derivative with respect to $z$, we get:
 \frac{\partial}{\partial t}G_t(z) + \frac{1}{G_t(z)}\frac{\partial}{\partial z}G_t(z) = 0.
 \end{equation}
 
-This is precisely the inviscid Burgers equation, a
-fundamental nonlinear PDE in fluid dynamics. The appearance
-of this equation indicates that the eigenvalue distributions
-evolve according to a hydrodynamic flow as we move through
-the corners of the random matrix
-from full size down to zero.
+This is the inviscid Burgers equation, a
+fundamental nonlinear PDE in fluid dynamics --- but with complex $z$.
+The complex Burgers equation has appeared in descriptions of
+limit shapes of models in statistical mechanics, such as lozenge tilings
+\cite{OkounkovKenyon2007Limit}.
 
 \begin{remark}
 	We see that the Burgers equation \eqref{eq:burgers_equation} does not depend on $\beta$,
@@ -379,20 +378,34 @@ from full size down to zero.
 	rescaling.
 \end{remark}
 
-\subsection{Example with semicircle law}
+\subsection{Example: G$\beta$E and the semicircle law}
 
 The Stieltjes transform of the semicircular law is given by:
 \begin{equation*}
 	G(z) = \int\limits_{-2}^{2}\frac{1}{z-x}\frac{\sqrt{4-x^2}}{2\pi}dx =
 	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
 \end{equation*}
-Let us define
+We take this as the function $G_t(z)$ for $t=1$.
+Then, for each $0\le t\le 1$, the 
+G$\beta$E solution should be 
+\begin{equation*}
+	\frac{1}{n}\sum_{i=1}^{\lfloor nt \rfloor }\frac{1}{z-\lambda_i^{(\lfloor nt \rfloor )}}
+	\to t\ssp G^{(\sqrt t)}(z),
+\end{equation*}
+where 
 \begin{equation*}
 	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
 \end{equation*}
-this is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
+is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
-
+\begin{lemma}
+	\label{lemma:semicircle_and_burgers}
+	The function $G_t(z)\coloneqq t\ssp G^{(\sqrt t)}(z)$
+	satisfies the Burgers equation \eqref{eq:burgers_equation}.
+\end{lemma}
+\begin{proof}
+	Straightforward verification.
+\end{proof}
 
 
 
@@ -438,6 +451,16 @@ Find in the literature or prove on your own
 the first statement in the proof of
 \Cref{thm:corner_step} about the symmetric Dirichlet density arising from
 normalizing the $\xi_i$'s to $\varphi_i$'s.
+
+\subsection{General beta Gaussian density and cutting corners}
+
+Show that if $\lambda_1,\ldots,\lambda_{n+1} $ have the Gaussian beta density of order $n+1$,
+\begin{equation*}
+	\propto \prod_{1\le i<j\le n+1}(\lambda_i-\lambda_j)^{\beta} \prod_{i=1}^{n+1}e^{-\beta\lambda_i^2/2},
+\end{equation*}
+and $\mu_1,\ldots,\mu_n $ are obtained from $\lambda_1,\ldots,\lambda_{n+1}$
+by cutting the corner (so have the conditional density as in \Cref{thm:corner_step}),
+then $\mu_1,\ldots,\mu_n$ have the Gaussian beta density of order $n$.
 
 \subsection{General $\beta$ Corners Process Simulation}
 \label{prob:corners_simulation}
