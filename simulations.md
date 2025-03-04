@@ -16,7 +16,7 @@ nav_weight: 19
 
 ---
 
-<h2 class="mb-3">Recent</h2>
+<!-- <h2 class="mb-3">Recent</h2> -->
 
 {% assign simss = site.simulations | sort: "date" %}
 
@@ -25,7 +25,7 @@ nav_weight: 19
 {% for item in simss reversed %}
   {% if item.head_page != true %}
   {% assign counter = counter | plus:1 %}
-  {% if counter < 10 %}
+  {% if counter < 30 %}
     <li>[{{item.date | date: "%Y/%m/%d"}}] <a href="{{ item.url }}">{{ item.title }}</a></li >
   {% endif %}
   {% endif %}
