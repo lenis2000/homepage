@@ -370,7 +370,7 @@ Let us define the \emph{height function} using the corners process
 $\{ \lambda^{(k)}_j\colon 1\le j\le k\le n \}$:
 \begin{equation*}
 	h(t,x)\coloneqq \#
-	\{ \textnormal{eigenvalues $\lambda^{\lfloor tn \rfloor }_j$ which 
+	\{ \textnormal{eigenvalues $\lambda^{(\lfloor nt \rfloor )}_j$ which 
 	are $\leq x$} \}.
 \end{equation*}
 Recall that in our regime, we do not scale $x$.
@@ -378,6 +378,32 @@ Throughout the following, we will interchangeably use
 the parameters $n$ and
 $\varepsilon\coloneqq 1/n$.
 
+Our goal is to understand the asymptotic behavior of the centered height function
+$$
+\sqrt{\pi}\left(
+h(\varepsilon^{-1}t, x) - \mathbb{E}[h(\varepsilon^{-1}t, x)]
+\right),
+$$
+defined inside the region of the $(t,x)$ plane.
+Note that in contrast with the usual Central Limit Theorem,
+the fluctuations are not scaled by $\varepsilon^{1/2}$, 
+but rather are unscaled. 
+Note that the law of large numbers is going to be
+\begin{equation*}
+	\varepsilon
+	\ssp h(\varepsilon^{-1}t, x) \to
+	\mathfrak{h}(t,x),
+\end{equation*}
+where $\mathfrak{h}(t,x)$ is the limiting height function
+(for a fixed $t$, this is the cumulative distribution function
+of the measure $\mathfrak{m}_t$).
+We will see that these unscaled fluctuations are
+converging to a Gaussian Free Field. Thus,
+the unscaled fluctuations
+are ``just barely'' going to infinity,
+while retaining nontrivial and bounded correlations.
+
+\colorbox{yellow}{\parbox{.7\textwidth}{continue here}}
 
 
 
@@ -389,34 +415,8 @@ $\varepsilon\coloneqq 1/n$.
 
 
 \newpage
-\section{Introduction to fluctuations}
 
-In the previous lecture, we derived the loop equations for corners processes and explored how they lead to deterministic limiting laws for the eigenvalue density. Today, we'll extend this investigation to study fluctuations around these limiting laws.
 
-Recall that we established a law of large numbers for the eigenvalue density: as $n \to \infty$, the empirical density $\rho(s; x(t/\varepsilon))$ converges in probability to a deterministic limit $\rho_t(s)$. This convergence can be formulated as:
-
-$$\sup_{(t,x) \in P} |\varepsilon h(\varepsilon^{-1}t, \varepsilon^{-1}x) - h(t,x)| \to 0,$$
-
-where $h$ is the height function. However, this description doesn't capture the random fluctuations around the limiting shape. Intuitively, we expect these fluctuations to exist on a scale of $\varepsilon^{1/2}$, which is a common phenomenon in many random matrix and random tiling models.
-
-Our goal is to understand the asymptotic behavior of the centered and rescaled height function
-$$\sqrt{\pi}(h(\varepsilon^{-1}t, \varepsilon^{-1}x) - \mathbb{E}[h(\varepsilon^{-1}t, \varepsilon^{-1}x)]).$$
-
-As we'll see, these fluctuations converge to a Gaussian random field, specifically the Gaussian Free Field with an appropriate complex structure.
-
-\section{The scale of fluctuations}
-
-Let's begin with a heuristic argument for why the fluctuations should scale with $\varepsilon^{1/2}$. Consider a single time-slice of our corners process. The empirical density at time $t$ is defined as:
-
-$$\rho(s; x(t)) = \frac{1}{\theta}\sum_{i=1}^n 1(\varepsilon x_i \leq s \leq \varepsilon x_i + \varepsilon\theta).$$
-
-For large $n$, if we integrate this density against a smooth test function $f$, we get
-
-$$\int_{l(t)}^{r(t)} f(s)\rho(s; x(t))ds \approx \frac{1}{n}\sum_{i=1}^n f(\varepsilon x_i).$$
-
-This is a sum of $n$ terms, each of order $1/n$, and we can view it as an average of $n$ weakly dependent random variables. By a central limit theorem type of argument, we expect that the fluctuations of this sum around its mean should be of order $1/\sqrt{n} \approx \varepsilon^{1/2}$.
-
-This intuition aligns with the results from random matrix theory. For example, in Gaussian Unitary Ensembles and similar models, the centered linear statistics (integrals of the empirical spectral density against test functions) exhibit Gaussian fluctuations of order $1/\sqrt{n}$.
 
 \section{Dynamical loop equations for fluctuations}
 
