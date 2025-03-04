@@ -8,7 +8,7 @@ coauthors:
     noweb: true
 comments: false
 categories: blog math preprint
-# journal-ref: submitted to ???
+# journal-ref: submitted to AJM
 # journal-web:
 image: __STORAGE_URL__/img/papers/YF.png
 image-alt: The Young-Fibonacci lattice and cotransition weights defined by an arbitrary harmonic function
