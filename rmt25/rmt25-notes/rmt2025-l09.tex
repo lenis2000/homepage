@@ -279,104 +279,6 @@ The covariance structure of the mean zero Gaussian random variables
 $\Phi(f_1), \ldots, \Phi(f_n)$ is given by a certain bilinear
 form determined by the domain $D$.
 
-\subsection{Orthogonal expansions and relation to Brownian bridge}
-\label{subsec:orthonormal_series_GFF}
-
-One of the clearest ways to construct the GFF on a domain $D$ is through \emph{orthonormal expansions}. Let $\{\psi_k\}_{k=1}^{\infty}$ be an orthonormal basis of eigenfunctions for the (negative) Laplacian $-\Delta$ on $D$ with Dirichlet boundary conditions:
-\[
-   -\Delta \,\psi_k \;=\; \lambda_k\, \psi_k,
-   \qquad \psi_k\bigl|_{\partial D} \;=\; 0.
-\]
-We assume $0 < \lambda_1 \le \lambda_2 \le \cdots$ with $\lambda_k \to \infty$. Then the \emph{Green's function} $G(x,y)$ (see below in \S\ref{subsec:GFF_covariance_Green}) can be used to decompose a Gaussian field with covariance given by $G(x,y)$. Concretely, one may write
-\[
-  \phi(x) \;=\; \sum_{k=1}^{\infty} \eta_k \,\frac{\psi_k(x)}{\sqrt{\lambda_k}},
-\]
-where $\{\eta_k\}$ are i.i.d.\ standard normal random variables $\sim \mathcal{N}(0,1)$. 
-
-\begin{remark}
-In dimension $1$, taking $D=[0,1]$, with boundary conditions $\phi(0)=\phi(1)=0$, the GFF is essentially the \emph{Brownian bridge} (or equivalently, the stationary random function with covariance $\min(x,y)-xy$). Thus the one-dimensional GFF is a usual function (a continuous function on $[0,1]$ with probability 1). In contrast, in dimension $2$ and higher, the analogous random surface $\phi(x)$ is only a distribution almost surely, much rougher than a continuous function.
-\end{remark}
-
-\paragraph{Brownian bridge as a 1D GFF.}
-In the case $D = [0,L]$ in one dimension, the eigenfunctions of $-\frac{d^2}{dx^2}$ on $[0,L]$ with zero boundary conditions are
-\[
-   \psi_k(x) \;=\; \sqrt{\frac{2}{L}} \,\sin\Bigl(\frac{\pi k\,x}{L}\Bigr),
-   \qquad \lambda_k \;=\; \Bigl(\tfrac{\pi k}{L}\Bigr)^2,\quad k=1,2,\dots.
-\]
-Hence one recovers the usual expansion of the Brownian bridge in a sine basis, revealing that “GFF in 1D” is just the familiar Brownian bridge.
-
-\subsection{Covariance via the Green's function of the Laplacian}
-\label{subsec:GFF_covariance_Green}
-
-The hallmark of the Gaussian Free Field in $D \subset \mathbb{R}^2$ (or more generally $\mathbb{R}^d$ for $d\ge 2$) is that its covariance is the \emph{Green's function} $G_D(x,y)$ associated with the Laplacian (subject to given boundary conditions, e.g.\ Dirichlet). Concretely, the GFF $\phi$ in $D$ satisfies:
-\[
-   \mathbb{E}\bigl[\phi(x)\bigr] \;=\; 0, 
-   \qquad
-   \mathbb{E}\bigl[\phi(x)\,\phi(y)\bigr] \;=\; G_D(x,y).
-\]
-The function $G_D(x,y)$ is characterized as the unique solution (on $D$) of the boundary value problem
-\[
-   -\Delta G_D(\,\cdot\,,y) \;=\; \delta_y(\,\cdot\,),
-   \qquad
-   G_D(x,y)\bigl|_{\partial D} \;=\; 0,
-\]
-where $\delta_y$ is the Dirac delta at $y$. Equivalently, in terms of eigenfunctions $\{\psi_k\}$,
-\[
-   G_D(x,y)
-   \;=\;
-   \sum_{k=1}^{\infty} \frac{\psi_k(x)\,\psi_k(y)}{\lambda_k}.
-\]
-In particular, if we define 
-\[
-   \phi(x) \;=\; \sum_{k=1}^{\infty} \eta_k \,\frac{\psi_k(x)}{\sqrt{\lambda_k}}
-   \quad \text{with } \eta_k \sim \mathcal{N}(0,1)\text{ i.i.d.},
-\]
-then a direct computation shows that $\mathrm{Cov}(\phi(x),\phi(y)) = G_D(x,y)$.
-
-\subsection{Integration against test functions}
-\label{subsec:gff_test_functions}
-
-A rigorous definition of the GFF $\phi$ must treat it as a random element of a suitable Sobolev space or, even more weakly, as a random distribution. The main idea is to specify how $\phi$ acts on test functions $f$ in (say) $C_c^\infty(D)$, the space of smooth functions compactly supported in $D$. One defines:
-\[
-   \langle \phi, f\rangle
-   \;=\;
-   \int_{D} \phi(x)\, f(x)\, dx,
-\]
-which is a well-defined Gaussian random variable because each $\phi(x)$ is a linear functional in the expansions described above. By linearity and the standard Gaussian properties, one can check that
-\[
-   \mathbb{E}\Bigl[\langle \phi, f\rangle\Bigr] \;=\; 0,
-   \qquad
-   \mathrm{Cov}\Bigl(\langle \phi, f\rangle, \langle \phi, g\rangle\Bigr)
-   \;=\;
-   \int_{D}\int_{D} f(x)\, G_D(x,y)\, g(y)\, dx\, dy.
-\]
-Thus, to specify the GFF is precisely to specify this bilinear form in $f,g$, given by the Green’s function. The field $\phi$ as a random distribution is thus the unique (in law) Gaussian measure on distributions whose integrals against test functions have the above covariance.
-
-\paragraph{Summary.}
-\begin{itemize}
-  \item A (finite- or infinite-dimensional) Gaussian system is determined by its covariance structure.
-  \item For the GFF, the covariance is the Green’s function $G_D(x,y)$ for the Laplacian in a domain $D$.
-  \item In 1D, this construction recovers the usual Brownian bridge; in 2D or higher, the field is so rough that it is only a distribution almost surely.
-  \item A practical way to \emph{construct} the GFF is via the orthonormal eigenfunctions of $-\Delta$ with Dirichlet boundary conditions.
-\end{itemize}
-
-As we have seen throughout these lectures, Gaussian structures and their covariance operators (or matrices, in finite dimension) play a central role in describing fluctuations in high-dimensional random processes. The Gaussian Free Field stands out as a particularly important universal object in 2D statistical mechanics, conformal field theory, and random geometry.
-
-
-\section{Gaussian Free Field}
-
-The Gaussian Free Field (GFF) is a fundamental object in probability theory and mathematical physics. It emerges naturally in the study of random matrices, serving as a limit of various random surface models. In particular, it describes fluctuations of eigenvalues in certain scaling limits.
-
-\subsection{Gaussian correlated vectors}
-
-Let us begin with a finite-dimensional setting. A random vector $X = (X_1, \ldots, X_n) \in \mathbb{R}^n$ is a \emph{Gaussian vector} if every linear combination $\sum_{i=1}^n a_i X_i$ follows a one-dimensional Gaussian distribution. Equivalently, $X$ has a joint probability density function of the form:
-\begin{equation}
-    p(x) = \frac{1}{(2\pi)^{n/2} \sqrt{\det(C)}} \exp\left(-\frac{1}{2} x^T C^{-1} x\right),
-\end{equation}
-where $C$ is the covariance matrix with entries $C_{ij} = \mathbb{E}[(X_i - \mathbb{E}[X_i])(X_j - \mathbb{E}[X_j])]$.
-
-For simplicity, we will focus on centered Gaussian vectors (i.e., $\mathbb{E}[X_i] = 0$ for all $i$). In this case, the distribution is completely determined by the covariance matrix $C$. This is a crucial property: the entire law of a Gaussian process is determined by its mean and covariance structure.
-
 
 \subsection{Concrete treatment via orthogonal functions}
 
@@ -405,14 +307,14 @@ which is a well-defined Gaussian random variable.
 
 The Gaussian Free Field in one dimension is closely related to the Brownian bridge. Consider the interval $[0,1]$ with the Dirichlet Laplacian. The eigenfunctions are $f_n(x) = \sqrt{2} \sin(n\pi x)$ with eigenvalues $\lambda_n = n^2 \pi^2$. The Gaussian Free Field on $[0,1]$ can be expressed as:
 \begin{equation}
+	\label{eq:Phi_1d}
     \Phi(x) = \sqrt{2} \sum_{n=1}^{\infty} \frac{\alpha_n}{n\pi} \sin(n\pi x).
 \end{equation}
-
 This series representation converges to a continuous function, which is precisely the Brownian bridge on $[0,1]$. The Brownian bridge is a Gaussian process $B_t$ with mean zero and covariance function:
 \begin{equation}
+	\label{eq:covariance_1d}
     \mathbb{E}[B_s B_t] = \min(s, t) - st.
 \end{equation}
-
 The key difference between the one-dimensional and higher-dimensional cases is that in one dimension, the Gaussian Free Field is a continuous function, whereas in dimensions two and higher, it is a genuine distribution (not a function). This reflects the fact that Brownian motion is a continuous path in one dimension but becomes increasingly irregular in higher dimensions.
 
 \subsection{Covariance structure and Green's function}
@@ -422,7 +324,6 @@ The covariance structure of the Gaussian Free Field is intimately connected to t
     \mathbb{E}[\Phi(f) \Phi(g)] &= \mathbb{E}\left[\sum_{n,m=1}^{\infty} \frac{\alpha_n \alpha_m}{\sqrt{\lambda_n \lambda_m}} \int_D f_n(x) f(x) \, dx \int_D f_m(y) g(y) \, dy\right] \\
     &= \sum_{n=1}^{\infty} \frac{1}{\lambda_n} \int_D f_n(x) f(x) \, dx \int_D f_n(y) g(y) \, dy.
 \end{align}
-
 Define the Green's function $G_D(x, y)$ for the Dirichlet Laplacian on $D$ as the solution to:
 \begin{equation}
     \begin{cases}
@@ -430,68 +331,41 @@ Define the Green's function $G_D(x, y)$ for the Dirichlet Laplacian on $D$ as th
         G_D(x, y) = 0 & \text{for } x \in \partial D \text{ or } y \in \partial D.
     \end{cases}
 \end{equation}
-
 The Green's function has the eigenfunction expansion:
 \begin{equation}
     G_D(x, y) = \sum_{n=1}^{\infty} \frac{f_n(x) f_n(y)}{\lambda_n}.
 \end{equation}
-
 Using this, we can rewrite the covariance as:
 \begin{equation}
-    \mathbb{E}[\Phi(f) \Phi(g)] = \int_D \int_D G_D(x, y) f(x) g(y) \, dx \, dy.
+	\operatorname{\mathbb{E}}[\Phi(f) \Phi(g)] = \int_D \int_D G_D(x, y) f(x) g(y) \, dx \, dy.
 \end{equation}
-
 This relationship between the covariance of the GFF and the Green's function is fundamental. It shows that the GFF can be viewed as a random solution to the equation $-\Delta \Phi = W$, where $W$ is white noise.
+Here the white noise is the Gaussian 
+field with covariance $\delta(x-y)$ --- the object which is the
+correct way of constructing a Gaussian field with i.i.d. 
+values at all points. 
 
-In two dimensions, the Green's function for the Laplacian on the whole plane has the form $G(x, y) = -\frac{1}{2\pi} \log|x - y|$. This logarithmic behavior leads to important properties of the 2D GFF, such as its connection to SLE curves and conformal invariance.
+\subsection{The GFF on the upper half-plane}
 
-\subsection{Integrals on test functions}
+In the complex upper half-plane 
+$\left\{ \operatorname{Im}z>0 \right\}$
+with $\mathbb{R}$ as the boundary,
+the Green function has the form
+\begin{equation*}
+	G(z,w) = -\frac{1}{\pi}\ln|z-w| + \frac{1}{\pi}\ln|z-\overline{w}|.
+\end{equation*}
+The covariance is
+\begin{equation*}
+	\operatorname{\mathbb{E}}
+	\left[ \Phi(f)\ssp \Phi(g) \right]=
+	\int\int|dz|^2\ssp |dw|^2
+	f(z)g(w) G(z,w) .
+\end{equation*}
 
-Since the GFF is defined as a distribution, we understand it through its action on test functions. For any test function $f \in C_0^{\infty}(D)$, the random variable $\Phi(f)$ is well-defined and Gaussian with variance:
-\begin{equation}
-    \operatorname{Var}[\Phi(f)] = \int_D \int_D G_D(x, y) f(x) f(y) \, dx \, dy.
-\end{equation}
 
-This can also be expressed in terms of the Dirichlet energy of $f$:
-\begin{equation}
-    \operatorname{Var}[\Phi(f)] = \int_D |\nabla (-\Delta)^{-1/2} f|^2 \, dx.
-\end{equation}
 
-While we cannot evaluate the GFF at points, we can define its average over regions. For a bounded measurable set $A \subset D$, we can consider:
-\begin{equation}
-    \Phi_A = \frac{1}{|A|} \int_A \Phi(x) \, dx,
-\end{equation}
-which is a well-defined Gaussian random variable. The variance of $\Phi_A$ is related to the electrostatic capacity of $A$.
 
-\subsection{Connection to random matrices}
-
-The Gaussian Free Field appears naturally in the study of random matrices. For instance, consider the fluctuations of eigenvalues in the GUE around their limiting semicircle distribution. In the appropriate scaling limit, these fluctuations converge to a Gaussian process whose covariance structure is related to the Green's function of the Laplacian.
-
-More precisely, define the linear statistic:
-\begin{equation}
-    X_n(f) = \sum_{i=1}^n f(\lambda_i) - n \int_{-2}^{2} f(x) \frac{\sqrt{4 - x^2}}{2\pi} \, dx,
-\end{equation}
-where $\lambda_1, \ldots, \lambda_n$ are the eigenvalues of an $n \times n$ GUE matrix. As $n \to \infty$, the random variable $X_n(f)$ converges to a Gaussian random variable with variance:
-\begin{equation}
-    \operatorname{Var}[X_\infty(f)] = \frac{1}{2\pi^2} \int_{-2}^{2} \int_{-2}^{2} \frac{f'(x) f'(y)}{(x - y)^2} \sqrt{4 - x^2} \sqrt{4 - y^2} \, dx \, dy.
-\end{equation}
-
-This variance is related to the Dirichlet energy, suggesting a connection to the Gaussian Free Field. Indeed, the limiting field of eigenvalue fluctuations can be viewed as a one-dimensional projection of a two-dimensional Gaussian Free Field.
-
-\subsection{Perspectives and applications}
-
-The Gaussian Free Field has numerous applications beyond random matrices:
-
-1. In statistical mechanics, it describes the scaling limit of various models, such as the height function of the dimer model.
-
-2. In quantum field theory, it corresponds to the Euclidean free scalar field.
-
-3. In probability theory, it is related to SLE curves and conformally invariant processes.
-
-4. In complex geometry, it appears in the study of random Kähler metrics.
-
-The connections between the GFF and random matrices continue to be an active area of research, particularly in understanding the fluctuations of eigenvalues and their relationship to random geometry.
-
+\colorbox{yellow}{\parbox{.7\textwidth}{here}}
 
 
 
@@ -615,7 +489,11 @@ In the next lecture, we'll explore further applications of loop equations to spe
 
 \section{Problems (due 2025-04-29)}
 
+\subsection{Brownian bridge}
 
+Derive the covariance structure of the Brownian bridge
+\eqref{eq:covariance_1d} from the series representation
+\eqref{eq:Phi_1d}.
 
 
 
