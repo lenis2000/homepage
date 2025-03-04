@@ -53,22 +53,444 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 9: Title TBD}
+\\Lecture 9: Loop equations and asymptotics}
 
 
-\date{DATE, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
+\date{Wednesday, March 5, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
 $\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l09.tex}{\texttt{TeX Source}} 
 $\bullet$
 Updated at \currenttime, \today}}
 
 
-
 \author{Leonid Petrov}
-
 
 \maketitle
 
+\section{Recap}
+
+\subsection{(Dynamical) loop equations}
+
+\begin{theorem}
+	\label{Theorem_loop_equation}
+ We fix $n=1,2,\dots$ and $n+1$ real numbers $\lambda_1\ge\dots\ge\lambda_{n+1}$. For $\beta>0$, consider $n+1$ i.i.d.\ $\chi^2_\beta$ random variables $\xi_i$ and set
+ $$
+  w_i=\frac{\xi_i}{\sum_{j=1}^{n+1} \xi_j}, \qquad 1\le i \le n+1.
+ $$
+ We define $n$ random points $\{\mu_1,\dots,\mu_n\}$ as $n$ solutions to the equation
+ \begin{equation} \label{eq_mu_equation}
+  \sum_{i=1}^{n+1} \frac{w_i}{z-\lambda_i}=0.
+ \end{equation}
+ Take any \emph{polynomial} $W(z)$ and consider the complex function:
+ \begin{equation}
+ \label{eq_loop_observable}
+ f_W(z)=\operatorname{\mathbb{E}}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right].
+ \end{equation}
+ Then $f_W(z)$ is an \emph{entire function} of $z$, in the following sense:
+ \begin{itemize}
+	 \item For $z\in \mathbb{C}\setminus [\lambda_{n+1},\lambda_1]$, the expectation in \eqref{eq_loop_observable} defines a holomorphic function of $z$.
+  \item This function has an analytic continuation to $\mathbb{C}$, which has no singularities.
+ \end{itemize}
+\end{theorem}
+
+
+\subsection{Loop equations for $W=0$}
+
+When $W=0$, the loop equation \eqref{eq_loop_observable} becomes
+\begin{equation*}
+	f_0(z)=\frac{(n+1)\beta}{2}-1,
+\end{equation*}
+so 
+\begin{equation*}
+		\operatorname{\mathbb{E}}\left[\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)}\left(\sum_{i=1}^{n+1}\frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n\frac{1}{z-\mu_j}\right)\right] = \frac{(n+1)\beta}{2}-1.
+\end{equation*}
+
+Recall that we defined
+\begin{align*}
+G_\lambda(z) = \frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i}, 
+\qquad 
+G_\mu(z) = \frac{1}{n}\sum_{j=1}^n\frac{1}{z-\mu_j}.
+\end{align*}
+We also define the ``logarithmic potentials'' (indefinite integrals of the Stieltjes transforms):
+\begin{align*}
+\int G_\lambda(z)dz = \frac{1}{n}\sum_{i=1}^{n+1}\ln(z-\lambda_i), \qquad
+\int G_\mu(z)dz = \frac{1}{n}\sum_{j=1}^n\ln(z-\mu_j).
+\end{align*}
+We understand the integrals up to the same integration constant (and branch), so the exponent of the difference
+yields the original product:
+\begin{equation*}
+	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)} = \exp\left(n\left(\int G_\lambda(z) - \int G_\mu(z)\right)\right)
+\end{equation*}
+We can rewrite 
+the loop equation
+as:
+\begin{equation} \label{eq:stieltjes_transform_eq}
+	\operatorname{\mathbb{E}}\left[\exp\left(n\left(\int G_\lambda(z)\,dz - \int G_\mu(z)\,dz\right)\right)\left(\left(\frac{\beta}{2}-1\right)G_\lambda(z) + G_\mu(z)\right)\right] = \frac{\beta}{2} + \frac{1}{n}\left(\frac{\beta}{2}-1\right).
+\end{equation}
+
+\subsection{The full corners process}
+
+Assume $n$ is going to infinity, and we fix a sequence of 
+top-level eigenvalues $\lambda^{(n)}_j$, $1\le j \le n$,
+growing in some way. This sequence can be random 
+(like G$\beta$E rescaled to have eigenvalues in a bounded interval)
+or deterministic 
+(for example, $\lambda^{(n)}$ has $n/10$ points at $0$,
+$n/10$ points at $1$, and $8n/10$ points at $2$, 
+see \Cref{fig:corners}).
+\begin{figure}[htpb]
+	\centering
+	\includegraphics[width=\textwidth]{./pictures/corners.png}
+	\caption{Corners process for $n=300$,
+	$\beta=1$, with $n/10$ points at $0$,
+	$n/10$ points at $1$, and $8n/10$ points at $2$ on the top level.}
+	\label{fig:corners}
+\end{figure}
+
+Denote the eigenvalues
+of the $k\times k$ beta corner (that is, 
+obtained by successively solving the polynomial equation
+\eqref{eq_mu_equation} 
+$n-k$ times) by $\lambda^{(k)}_j$, $1\le j \le k$.
+As $n\to\infty$, we postulate that
+\begin{quote}
+	The empirical distribution of $\lambda^{(k)}_j$
+	converges to some deterministic probability measure
+	$\mathfrak{m}_t$, where $k/n\to t\in[0,1]$.
+	Consequently, the Stieltjes transform $G_{\lambda^{(k)}}(z)$
+	converges to $G_t(z)$, for $z$ in a complex domain
+	outside of the support of $\mathfrak{m}_t$.
+\end{quote}
+Note that we do not assume the scaling of the
+$\lambda^{(k)}_j$'s, for convenience.
+
+Denote by $\displaystyle
+G_t(z)=\int_{\mathbb{R}}\frac{\mathfrak{m}_t(dx)}{z-x}$
+the Stieltjes transform of the measure $\mathfrak{m}_t$.
+
+\begin{proposition}
+	The functions $G_t(z)$ satisfy the complex Burgers equation
+	\begin{equation*}
+		\frac{\partial}{\partial t}G_t(z) +
+		\frac{1}{G_t(z)}\frac{\partial}{\partial z}G_t(z) = 0.
+	\end{equation*}
+\end{proposition}
+\begin{proof}
+	We have in \eqref{eq:stieltjes_transform_eq},
+	if $\lambda$ and $\mu$ live on levels $t$ and $t-\frac{1}{n}$, 
+	respectively:
+	\begin{equation*}
+		G_\lambda(z)-G_\mu(z)\approx 
+		\frac{1}{n}\ssp\frac{\partial}{\partial t}G_t(z),
+		\qquad 
+		\left( \frac{\beta}{2}-1 \right)G_\lambda(z) + G_\mu(z) \approx
+		\frac{\beta}{2}\ssp G_t(z) - \frac{1}{n}\ssp\frac{\partial}{\partial t}G_t(z)
+		\approx
+		\frac{\beta}{2}\ssp G_t(z) .
+	\end{equation*}
+	Due to the concentration assumption, we can ignore the expectation.
+	Then, taking the logarithm of \eqref{eq:stieltjes_transform_eq},
+	and differentiating with respect to $z$, 
+	we get the Burgers equation.
+\end{proof}
+
+\subsection{Example: G$\beta$E and the semicircle law}
+
+The Stieltjes transform of the semicircular law is given by:
+\begin{equation*}
+	G(z) = \int\limits_{-2}^{2}\frac{1}{z-x}\frac{\sqrt{4-x^2}}{2\pi}dx =
+	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
+\end{equation*}
+We take this as the function $G_t(z)$ for $t=1$.
+Then, for each $0\le t\le 1$, the 
+G$\beta$E solution should be 
+\begin{equation*}
+	\frac{1}{n}\sum_{i=1}^{\lfloor nt \rfloor }\frac{1}{z-\lambda_i^{(\lfloor nt \rfloor )}}
+	\to t\ssp G^{(\sqrt t)}(z),
+\end{equation*}
+where 
+\begin{equation*}
+	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
+\end{equation*}
+is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
+
+\begin{lemma}
+	\label{lemma:semicircle_and_burgers}
+	The function $G_t(z)\coloneqq t\ssp G^{(\sqrt t)}(z)$
+	satisfies the Burgers equation.
+\end{lemma}
+\begin{proof}
+	Straightforward verification.
+\end{proof}
+
+
+
+\section{Gaussian Free Field}
+\label{sec:GFF}
+
+The \emph{Gaussian Free Field} (GFF) is a fundamental object in probability theory and mathematical physics. Roughly speaking, it can be viewed as a multi-dimensional analog of Brownian motion: instead of one-dimensional “time,” the underlying parameter space is a multi-dimensional domain (often two-dimensional). In one dimension, the GFF reduces to an ordinary Brownian bridge (or motion). In higher dimensions, it becomes a random generalized function (a “distribution”) whose covariance structure is governed by the appropriate Green's function of the Laplacian. Below we provide an introduction, starting from finite-dimensional Gaussian vectors and culminating in the GFF as a random distribution.
+
+\subsection{Gaussian correlated vectors and random fields}
+\label{subsec:gauss_vectors_random_fields}
+
+Recall that an $n$-dimensional real-valued random vector $X = (X_1,\dots, X_n)$ is called \emph{Gaussian} if every linear combination
+\[
+\alpha_1 X_1 + \cdots + \alpha_n X_n
+\]
+of its components is a univariate Gaussian random variable. The law of such a vector is completely determined by its mean vector $m \in \mathbb{R}^n$ and its covariance matrix $\Sigma \in \mathbb{R}^{n\times n}$. The density function, for invertible $\Sigma$, is
+\[
+f_{X}(x) \;=\; \frac{1}{\sqrt{(2\pi)^n \det \Sigma}}
+\exp\Bigl(-\tfrac{1}{2}\,(x - m)^\top \Sigma^{-1}(x - m)\Bigr).
+\]
+For simplicity, we will assume that $m = 0$ (the centered case).
+
+\subsection{Gaussian fields as random generalized functions}
+
+A natural extension from finite-dimensional Gaussian vectors to infinite-dimensional settings leads us to Gaussian fields. Informally, a Gaussian field is a collection of Gaussian random variables indexed by points in some space.
+
+For a domain $D \subset \mathbb{R}^d$, we might wish to
+define a random function $\Phi: D \rightarrow \mathbb{R}$
+such that for any finite collection of points $x_1, \ldots,
+x_n \in q$, the vector $(\Phi(x_1), \ldots, \Phi(x_n))$ is a
+Gaussian vector. However, such a random function may not
+exist as a proper function in the usual sense.
+The reason is that we would like to consider analogues of linear combinations 
+of the form
+\begin{equation}
+	\label{eq:Phi_test_function}
+    \Phi(f) = \int_D \Phi(x) f(x) \, dx,
+\end{equation}
+For example, if we wish the vector $(\Phi(x_1), \ldots, \Phi(x_n))$ to have independent components, we would need to assign a value to each point in $D$. This means that the hypothetical function $\Phi$ would be too irregular, and even non-measurable, and the integral
+\eqref{eq:Phi_test_function} would not be well-defined.
+
+Instead, for the field with independent values at all points, we would like $\Phi(f)$ to be normal 
+with mean zero and variance (paralleling the finite-dimensional story)
+\begin{equation*}
+	\operatorname{\mathrm{Var}}\left(  
+	\Phi(f)\right) = \|f\|^2_{L^2(D)} \;=\; \int_D f(x)^2 \, dx.
+\end{equation*}
+So, Gaussian fields (in particular, our topic, the \emph{Gaussian Free Field})a
+are defined as random distributions, not as functions.
+That is, rather than assigning a value to each point, 
+we assign a random value to each test function $f$ in some appropriate space
+via \eqref{eq:Phi_test_function}.
+
+The covariance structure of the mean zero Gaussian random variables
+$\Phi(f_1), \ldots, \Phi(f_n)$ is given by a certain bilinear
+form determined by the domain $D$.
+
+\subsection{Orthogonal expansions and relation to Brownian bridge}
+\label{subsec:orthonormal_series_GFF}
+
+One of the clearest ways to construct the GFF on a domain $D$ is through \emph{orthonormal expansions}. Let $\{\psi_k\}_{k=1}^{\infty}$ be an orthonormal basis of eigenfunctions for the (negative) Laplacian $-\Delta$ on $D$ with Dirichlet boundary conditions:
+\[
+   -\Delta \,\psi_k \;=\; \lambda_k\, \psi_k,
+   \qquad \psi_k\bigl|_{\partial D} \;=\; 0.
+\]
+We assume $0 < \lambda_1 \le \lambda_2 \le \cdots$ with $\lambda_k \to \infty$. Then the \emph{Green's function} $G(x,y)$ (see below in \S\ref{subsec:GFF_covariance_Green}) can be used to decompose a Gaussian field with covariance given by $G(x,y)$. Concretely, one may write
+\[
+  \phi(x) \;=\; \sum_{k=1}^{\infty} \eta_k \,\frac{\psi_k(x)}{\sqrt{\lambda_k}},
+\]
+where $\{\eta_k\}$ are i.i.d.\ standard normal random variables $\sim \mathcal{N}(0,1)$. 
+
+\begin{remark}
+In dimension $1$, taking $D=[0,1]$, with boundary conditions $\phi(0)=\phi(1)=0$, the GFF is essentially the \emph{Brownian bridge} (or equivalently, the stationary random function with covariance $\min(x,y)-xy$). Thus the one-dimensional GFF is a usual function (a continuous function on $[0,1]$ with probability 1). In contrast, in dimension $2$ and higher, the analogous random surface $\phi(x)$ is only a distribution almost surely, much rougher than a continuous function.
+\end{remark}
+
+\paragraph{Brownian bridge as a 1D GFF.}
+In the case $D = [0,L]$ in one dimension, the eigenfunctions of $-\frac{d^2}{dx^2}$ on $[0,L]$ with zero boundary conditions are
+\[
+   \psi_k(x) \;=\; \sqrt{\frac{2}{L}} \,\sin\Bigl(\frac{\pi k\,x}{L}\Bigr),
+   \qquad \lambda_k \;=\; \Bigl(\tfrac{\pi k}{L}\Bigr)^2,\quad k=1,2,\dots.
+\]
+Hence one recovers the usual expansion of the Brownian bridge in a sine basis, revealing that “GFF in 1D” is just the familiar Brownian bridge.
+
+\subsection{Covariance via the Green's function of the Laplacian}
+\label{subsec:GFF_covariance_Green}
+
+The hallmark of the Gaussian Free Field in $D \subset \mathbb{R}^2$ (or more generally $\mathbb{R}^d$ for $d\ge 2$) is that its covariance is the \emph{Green's function} $G_D(x,y)$ associated with the Laplacian (subject to given boundary conditions, e.g.\ Dirichlet). Concretely, the GFF $\phi$ in $D$ satisfies:
+\[
+   \mathbb{E}\bigl[\phi(x)\bigr] \;=\; 0, 
+   \qquad
+   \mathbb{E}\bigl[\phi(x)\,\phi(y)\bigr] \;=\; G_D(x,y).
+\]
+The function $G_D(x,y)$ is characterized as the unique solution (on $D$) of the boundary value problem
+\[
+   -\Delta G_D(\,\cdot\,,y) \;=\; \delta_y(\,\cdot\,),
+   \qquad
+   G_D(x,y)\bigl|_{\partial D} \;=\; 0,
+\]
+where $\delta_y$ is the Dirac delta at $y$. Equivalently, in terms of eigenfunctions $\{\psi_k\}$,
+\[
+   G_D(x,y)
+   \;=\;
+   \sum_{k=1}^{\infty} \frac{\psi_k(x)\,\psi_k(y)}{\lambda_k}.
+\]
+In particular, if we define 
+\[
+   \phi(x) \;=\; \sum_{k=1}^{\infty} \eta_k \,\frac{\psi_k(x)}{\sqrt{\lambda_k}}
+   \quad \text{with } \eta_k \sim \mathcal{N}(0,1)\text{ i.i.d.},
+\]
+then a direct computation shows that $\mathrm{Cov}(\phi(x),\phi(y)) = G_D(x,y)$.
+
+\subsection{Integration against test functions}
+\label{subsec:gff_test_functions}
+
+A rigorous definition of the GFF $\phi$ must treat it as a random element of a suitable Sobolev space or, even more weakly, as a random distribution. The main idea is to specify how $\phi$ acts on test functions $f$ in (say) $C_c^\infty(D)$, the space of smooth functions compactly supported in $D$. One defines:
+\[
+   \langle \phi, f\rangle
+   \;=\;
+   \int_{D} \phi(x)\, f(x)\, dx,
+\]
+which is a well-defined Gaussian random variable because each $\phi(x)$ is a linear functional in the expansions described above. By linearity and the standard Gaussian properties, one can check that
+\[
+   \mathbb{E}\Bigl[\langle \phi, f\rangle\Bigr] \;=\; 0,
+   \qquad
+   \mathrm{Cov}\Bigl(\langle \phi, f\rangle, \langle \phi, g\rangle\Bigr)
+   \;=\;
+   \int_{D}\int_{D} f(x)\, G_D(x,y)\, g(y)\, dx\, dy.
+\]
+Thus, to specify the GFF is precisely to specify this bilinear form in $f,g$, given by the Green’s function. The field $\phi$ as a random distribution is thus the unique (in law) Gaussian measure on distributions whose integrals against test functions have the above covariance.
+
+\paragraph{Summary.}
+\begin{itemize}
+  \item A (finite- or infinite-dimensional) Gaussian system is determined by its covariance structure.
+  \item For the GFF, the covariance is the Green’s function $G_D(x,y)$ for the Laplacian in a domain $D$.
+  \item In 1D, this construction recovers the usual Brownian bridge; in 2D or higher, the field is so rough that it is only a distribution almost surely.
+  \item A practical way to \emph{construct} the GFF is via the orthonormal eigenfunctions of $-\Delta$ with Dirichlet boundary conditions.
+\end{itemize}
+
+As we have seen throughout these lectures, Gaussian structures and their covariance operators (or matrices, in finite dimension) play a central role in describing fluctuations in high-dimensional random processes. The Gaussian Free Field stands out as a particularly important universal object in 2D statistical mechanics, conformal field theory, and random geometry.
+
+
+\section{Gaussian Free Field}
+
+The Gaussian Free Field (GFF) is a fundamental object in probability theory and mathematical physics. It emerges naturally in the study of random matrices, serving as a limit of various random surface models. In particular, it describes fluctuations of eigenvalues in certain scaling limits.
+
+\subsection{Gaussian correlated vectors}
+
+Let us begin with a finite-dimensional setting. A random vector $X = (X_1, \ldots, X_n) \in \mathbb{R}^n$ is a \emph{Gaussian vector} if every linear combination $\sum_{i=1}^n a_i X_i$ follows a one-dimensional Gaussian distribution. Equivalently, $X$ has a joint probability density function of the form:
+\begin{equation}
+    p(x) = \frac{1}{(2\pi)^{n/2} \sqrt{\det(C)}} \exp\left(-\frac{1}{2} x^T C^{-1} x\right),
+\end{equation}
+where $C$ is the covariance matrix with entries $C_{ij} = \mathbb{E}[(X_i - \mathbb{E}[X_i])(X_j - \mathbb{E}[X_j])]$.
+
+For simplicity, we will focus on centered Gaussian vectors (i.e., $\mathbb{E}[X_i] = 0$ for all $i$). In this case, the distribution is completely determined by the covariance matrix $C$. This is a crucial property: the entire law of a Gaussian process is determined by its mean and covariance structure.
+
+
+\subsection{Concrete treatment via orthogonal functions}
+
+Let us now construct the Gaussian Free Field more concretely. Consider a bounded domain $D \subset \mathbb{R}^d$ with smooth boundary. Let $\{f_n\}_{n=1}^{\infty}$ be an orthonormal basis of $L^2(D)$ consisting of eigenfunctions of the Laplacian with Dirichlet boundary conditions:
+\begin{equation}
+    \begin{cases}
+        -\Delta f_n = \lambda_n f_n & \text{in } D, \\
+        f_n = 0 & \text{on } \partial D,
+    \end{cases}
+\end{equation}
+where $0 < \lambda_1 \leq \lambda_2 \leq \ldots$ are the corresponding eigenvalues.
+
+We can now define the Gaussian Free Field on $D$ as:
+\begin{equation}
+    \Phi = \sum_{n=1}^{\infty} \frac{\alpha_n}{\sqrt{\lambda_n}} f_n,
+\end{equation}
+where $\{\alpha_n\}_{n=1}^{\infty}$ are independent standard Gaussian random variables. This series does not converge pointwise, but it does converge in the space of distributions almost surely.
+
+For any test function $g \in C_0^{\infty}(D)$, we have:
+\begin{equation}
+    \Phi(g) = \int_D \Phi(x) g(x) \, dx = \sum_{n=1}^{\infty} \frac{\alpha_n}{\sqrt{\lambda_n}} \int_D f_n(x) g(x) \, dx,
+\end{equation}
+which is a well-defined Gaussian random variable.
+
+\subsection{Connection to Brownian bridge}
+
+The Gaussian Free Field in one dimension is closely related to the Brownian bridge. Consider the interval $[0,1]$ with the Dirichlet Laplacian. The eigenfunctions are $f_n(x) = \sqrt{2} \sin(n\pi x)$ with eigenvalues $\lambda_n = n^2 \pi^2$. The Gaussian Free Field on $[0,1]$ can be expressed as:
+\begin{equation}
+    \Phi(x) = \sqrt{2} \sum_{n=1}^{\infty} \frac{\alpha_n}{n\pi} \sin(n\pi x).
+\end{equation}
+
+This series representation converges to a continuous function, which is precisely the Brownian bridge on $[0,1]$. The Brownian bridge is a Gaussian process $B_t$ with mean zero and covariance function:
+\begin{equation}
+    \mathbb{E}[B_s B_t] = \min(s, t) - st.
+\end{equation}
+
+The key difference between the one-dimensional and higher-dimensional cases is that in one dimension, the Gaussian Free Field is a continuous function, whereas in dimensions two and higher, it is a genuine distribution (not a function). This reflects the fact that Brownian motion is a continuous path in one dimension but becomes increasingly irregular in higher dimensions.
+
+\subsection{Covariance structure and Green's function}
+
+The covariance structure of the Gaussian Free Field is intimately connected to the Green's function of the Laplacian. For test functions $f, g \in C_0^{\infty}(D)$, we have:
+\begin{align}
+    \mathbb{E}[\Phi(f) \Phi(g)] &= \mathbb{E}\left[\sum_{n,m=1}^{\infty} \frac{\alpha_n \alpha_m}{\sqrt{\lambda_n \lambda_m}} \int_D f_n(x) f(x) \, dx \int_D f_m(y) g(y) \, dy\right] \\
+    &= \sum_{n=1}^{\infty} \frac{1}{\lambda_n} \int_D f_n(x) f(x) \, dx \int_D f_n(y) g(y) \, dy.
+\end{align}
+
+Define the Green's function $G_D(x, y)$ for the Dirichlet Laplacian on $D$ as the solution to:
+\begin{equation}
+    \begin{cases}
+        -\Delta_x G_D(x, y) = \delta(x - y) & \text{for } x, y \in D, \\
+        G_D(x, y) = 0 & \text{for } x \in \partial D \text{ or } y \in \partial D.
+    \end{cases}
+\end{equation}
+
+The Green's function has the eigenfunction expansion:
+\begin{equation}
+    G_D(x, y) = \sum_{n=1}^{\infty} \frac{f_n(x) f_n(y)}{\lambda_n}.
+\end{equation}
+
+Using this, we can rewrite the covariance as:
+\begin{equation}
+    \mathbb{E}[\Phi(f) \Phi(g)] = \int_D \int_D G_D(x, y) f(x) g(y) \, dx \, dy.
+\end{equation}
+
+This relationship between the covariance of the GFF and the Green's function is fundamental. It shows that the GFF can be viewed as a random solution to the equation $-\Delta \Phi = W$, where $W$ is white noise.
+
+In two dimensions, the Green's function for the Laplacian on the whole plane has the form $G(x, y) = -\frac{1}{2\pi} \log|x - y|$. This logarithmic behavior leads to important properties of the 2D GFF, such as its connection to SLE curves and conformal invariance.
+
+\subsection{Integrals on test functions}
+
+Since the GFF is defined as a distribution, we understand it through its action on test functions. For any test function $f \in C_0^{\infty}(D)$, the random variable $\Phi(f)$ is well-defined and Gaussian with variance:
+\begin{equation}
+    \operatorname{Var}[\Phi(f)] = \int_D \int_D G_D(x, y) f(x) f(y) \, dx \, dy.
+\end{equation}
+
+This can also be expressed in terms of the Dirichlet energy of $f$:
+\begin{equation}
+    \operatorname{Var}[\Phi(f)] = \int_D |\nabla (-\Delta)^{-1/2} f|^2 \, dx.
+\end{equation}
+
+While we cannot evaluate the GFF at points, we can define its average over regions. For a bounded measurable set $A \subset D$, we can consider:
+\begin{equation}
+    \Phi_A = \frac{1}{|A|} \int_A \Phi(x) \, dx,
+\end{equation}
+which is a well-defined Gaussian random variable. The variance of $\Phi_A$ is related to the electrostatic capacity of $A$.
+
+\subsection{Connection to random matrices}
+
+The Gaussian Free Field appears naturally in the study of random matrices. For instance, consider the fluctuations of eigenvalues in the GUE around their limiting semicircle distribution. In the appropriate scaling limit, these fluctuations converge to a Gaussian process whose covariance structure is related to the Green's function of the Laplacian.
+
+More precisely, define the linear statistic:
+\begin{equation}
+    X_n(f) = \sum_{i=1}^n f(\lambda_i) - n \int_{-2}^{2} f(x) \frac{\sqrt{4 - x^2}}{2\pi} \, dx,
+\end{equation}
+where $\lambda_1, \ldots, \lambda_n$ are the eigenvalues of an $n \times n$ GUE matrix. As $n \to \infty$, the random variable $X_n(f)$ converges to a Gaussian random variable with variance:
+\begin{equation}
+    \operatorname{Var}[X_\infty(f)] = \frac{1}{2\pi^2} \int_{-2}^{2} \int_{-2}^{2} \frac{f'(x) f'(y)}{(x - y)^2} \sqrt{4 - x^2} \sqrt{4 - y^2} \, dx \, dy.
+\end{equation}
+
+This variance is related to the Dirichlet energy, suggesting a connection to the Gaussian Free Field. Indeed, the limiting field of eigenvalue fluctuations can be viewed as a one-dimensional projection of a two-dimensional Gaussian Free Field.
+
+\subsection{Perspectives and applications}
+
+The Gaussian Free Field has numerous applications beyond random matrices:
+
+1. In statistical mechanics, it describes the scaling limit of various models, such as the height function of the dimer model.
+
+2. In quantum field theory, it corresponds to the Euclidean free scalar field.
+
+3. In probability theory, it is related to SLE curves and conformally invariant processes.
+
+4. In complex geometry, it appears in the study of random Kähler metrics.
+
+The connections between the GFF and random matrices continue to be an active area of research, particularly in understanding the fluctuations of eigenvalues and their relationship to random geometry.
 
 
 
@@ -85,30 +507,113 @@ Updated at \currenttime, \today}}
 
 
 
+\section{Introduction to fluctuations}
 
+In the previous lecture, we derived the loop equations for corners processes and explored how they lead to deterministic limiting laws for the eigenvalue density. Today, we'll extend this investigation to study fluctuations around these limiting laws.
 
+Recall that we established a law of large numbers for the eigenvalue density: as $n \to \infty$, the empirical density $\rho(s; x(t/\varepsilon))$ converges in probability to a deterministic limit $\rho_t(s)$. This convergence can be formulated as:
 
+$$\sup_{(t,x) \in P} |\varepsilon h(\varepsilon^{-1}t, \varepsilon^{-1}x) - h(t,x)| \to 0,$$
 
+where $h$ is the height function. However, this description doesn't capture the random fluctuations around the limiting shape. Intuitively, we expect these fluctuations to exist on a scale of $\varepsilon^{1/2}$, which is a common phenomenon in many random matrix and random tiling models.
 
+Our goal is to understand the asymptotic behavior of the centered and rescaled height function
+$$\sqrt{\pi}(h(\varepsilon^{-1}t, \varepsilon^{-1}x) - \mathbb{E}[h(\varepsilon^{-1}t, \varepsilon^{-1}x)]).$$
 
+As we'll see, these fluctuations converge to a Gaussian random field, specifically the Gaussian Free Field with an appropriate complex structure.
 
+\section{The scale of fluctuations}
 
+Let's begin with a heuristic argument for why the fluctuations should scale with $\varepsilon^{1/2}$. Consider a single time-slice of our corners process. The empirical density at time $t$ is defined as:
 
+$$\rho(s; x(t)) = \frac{1}{\theta}\sum_{i=1}^n 1(\varepsilon x_i \leq s \leq \varepsilon x_i + \varepsilon\theta).$$
 
+For large $n$, if we integrate this density against a smooth test function $f$, we get
 
+$$\int_{l(t)}^{r(t)} f(s)\rho(s; x(t))ds \approx \frac{1}{n}\sum_{i=1}^n f(\varepsilon x_i).$$
 
+This is a sum of $n$ terms, each of order $1/n$, and we can view it as an average of $n$ weakly dependent random variables. By a central limit theorem type of argument, we expect that the fluctuations of this sum around its mean should be of order $1/\sqrt{n} \approx \varepsilon^{1/2}$.
 
+This intuition aligns with the results from random matrix theory. For example, in Gaussian Unitary Ensembles and similar models, the centered linear statistics (integrals of the empirical spectral density against test functions) exhibit Gaussian fluctuations of order $1/\sqrt{n}$.
 
+\section{Dynamical loop equations for fluctuations}
 
+To analyze these fluctuations rigorously, we'll use the dynamical loop equations developed in the previous lecture. Recall that we derived the following loop equation:
 
+$$\mathbb{E}\left[\phi_+(z) \prod_{j=1}^n \frac{b(z + \theta) - b(x_j + \theta e_j)}{b(z) - b(x_j)} + \phi_-(z) \prod_{j=1}^n \frac{b(z) - b(x_j + \theta e_j)}{b(z) - b(x_j)}\right]$$
 
+is a holomorphic function of $z$.
+
+To study fluctuations, we introduce the random field:
+
+$$G_t(z) = \int_{l(t)}^{r(t)} \frac{b'_t(z)\rho(s; x(t))}{b_t(z) - b_t(s)}ds - \mathbb{E}\left[\int_{l(t)}^{r(t)} \frac{b'_t(z)\rho(s; x(t))}{b_t(z) - b_t(s)}ds\right].$$
+
+This field $G_t(z)$ captures the fluctuations of a modified Stieltjes transform of the empirical density. By analyzing the evolution of this field through the dynamical loop equations, we can derive its asymptotic behavior.
+
+Let's introduce the martingale difference:
+
+$$\Delta M_t(z) = \frac{1}{\varepsilon}[G_{t+\varepsilon}(z) - G_t(z) - \text{deterministic drift}].$$
+
+Under appropriate conditions, these martingale differences converge to a Gaussian random field as $\varepsilon \to 0$. The covariance structure of this field is given by:
+
+$$\mathbb{E}[\Delta M_t(z_1)\Delta M_t(z_2)] = \frac{1}{2\pi i\theta} \oint_{\omega_-} \frac{\tilde{f}_t(w)}{\tilde{f}_t(w) - 1} \frac{b'_t(w)b'_t(z_1)}{(b_t(w) - b_t(z_1))^2} \frac{b'_t(w)b'_t(z_2)}{(b_t(w) - b_t(z_2))^2}dw,$$
+
+where $\omega_-$ is a contour enclosing $[l(t), r(t)]$ but not $z_1$ or $z_2$, and $\tilde{f}_t$ is related to the complex slope of the limiting shape.
+
+\section{Connection to the Gaussian Free Field}
+
+The fluctuations of the height function can be expressed in terms of the fluctuations of the integrated empirical density. For a test function $f(x) = \partial_x[F(b_t(x))]$, where $F$ is analytic, we have:
+
+$$\sqrt{\pi}\int_{l(t)}^{r(t)} f(x)(h(\varepsilon^{-1}t, \varepsilon^{-1}x) - \mathbb{E}[h(\varepsilon^{-1}t, \varepsilon^{-1}x)])dx = \frac{\varepsilon^{-1}}{2\pi i} \oint_{\Upsilon} F(b_t(z))G_{\varepsilon^{-1}t}(z)dz,$$
+
+where $\Upsilon$ is an appropriate contour enclosing $[l(t), r(t)]$.
+
+One of the remarkable results is that these fluctuations converge to the Gaussian Free Field (GFF) in an appropriate complex structure. To make this precise, we introduce a bijection $\Omega$ between the liquid region $L(P)$ and the upper half-plane $\mathbb{H}_+$, defined via the non-real solutions to equation (19).
+
+The main theorem states that inside the liquid region $(t,x) \in L(P)$, we have:
+
+$$\lim_{\varepsilon \to 0} \sqrt{\pi}(h(\varepsilon^{-1}t, \varepsilon^{-1}x) - \mathbb{E}[h(\varepsilon^{-1}t, \varepsilon^{-1}x)]) = \bar{\Omega}\text{-pullback of GFF in } \mathbb{H}_+,$$
+
+in the sense of convergence of joint moments for pairings with appropriate test measures.
+
+\section{Computation of the covariance structure}
+
+Let's now calculate the covariance structure of the limiting Gaussian field more explicitly. For test functions $f_1, f_2$ satisfying the conditions above, the covariance between the corresponding linear statistics of the height function is given by:
+
+$$\lim_{\varepsilon \to 0} \mathbb{E}\left[\sqrt{\pi}\int f_1(h - \mathbb{E}[h]) \cdot \sqrt{\pi}\int f_2(h - \mathbb{E}[h])\right] = -\frac{1}{4\pi} \iint_{C_1 \times C_2} \partial_{w_1}\partial_{w_2}\log(w_1 - w_2) F_1(w(t_1,w_1))F_2(w(t_2,w_2))dw_1 dw_2,$$
+
+where $C_1, C_2$ are appropriate contours.
+
+This can be rewritten in terms of the Gaussian Free Field. If we define the GFF in the upper half-plane $\mathbb{H}_+$ as a generalized Gaussian field with covariance kernel
+
+$$K(z,w) = -\frac{1}{2\pi}\log\frac{z-w}{z-\bar{w}},$$
+
+then the covariance above is precisely the covariance of the pullback of this GFF under the map $\bar{\Omega}$.
+
+\section{Example: Gaussian $\beta$-ensemble}
+
+Let's illustrate these results with the Gaussian $\beta$-ensemble (G$\beta$E). In this case, the limiting density follows the semicircle law:
+
+$$\rho_{sc}(x) = \frac{\sqrt{4-x^2}}{2\pi}, \quad x \in [-2, 2].$$
+
+The Stieltjes transform of this density is $G(z) = \frac{1}{2}(z - \sqrt{z^2-4})$, and we can compute the complex slope $f_t(z)$ explicitly.
+
+For the G$\beta$E, the fluctuations of the height function converge to the Gaussian Free Field with covariance structure determined by the complex slope. This provides a concrete example of how the abstract machinery we've developed applies to a well-studied random matrix ensemble.
+
+\section{Outlook and open problems}
+
+The connection between dynamical loop equations and Gaussian Free Field fluctuations extends beyond the models we've discussed. A natural conjecture is that for many integrable probability models, including $(q,\kappa)$-distributed random lozenge tilings of arbitrary domains, the macroscopic fluctuations in the liquid region are asymptotically described by the Gaussian Free Field in a complex structure given by the first integrals of the corresponding complex Burgers equation.
+
+This perspective unifies many seemingly different models under a common framework, suggesting deep connections between random matrix theory, statistical mechanics, and conformal field theory.
+
+In the next lecture, we'll explore further applications of loop equations to specific models and discuss more detailed properties of the fluctuation fields.
 
 
 
 \appendix
 \setcounter{section}{8}
 
-\section{Problems (due DATE)}
+\section{Problems (due 2025-04-29)}
 
 
 
