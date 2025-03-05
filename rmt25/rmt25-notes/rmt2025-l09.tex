@@ -446,11 +446,13 @@ This is a discrete analogue of the $x$-derivative of $h(t,x)$.
 %
 % Here $f_t,\tilde f_t$ are certain functions constructed explicitly from the model, to be seen later.
 %
-\subsection{Key theorem on the way to the main result}
+\subsection{Deformed ensemble}
 
-This subsection recreates the argument analogous to 
+The rest of this section recreates the argument analogous to 
 \cite[Theorem~4.5]{gorin2022dynamical},
 but in the random matrix setting.
+In the interest of time, we are following the main steps in a non-rigorous manner,
+as outlined in \cite[Section~4.2]{gorin2022dynamical} before the actual proof.
 
 This theorem is an asymptotic expansion of the Stieltjes transform
 of the one-step transition from $\lambda$ to $\mu$.
@@ -490,7 +492,9 @@ The first summand is the leading term, and the second summand will be
 negligible. Indeed, it contains the difference of $G_\mu(z)$ and $G_\lambda(z)$, 
 and these Stieltjes transforms are close to each other, so the difference is $O(\varepsilon)$.
 
-Next, denote
+\subsection{Wiener-Hopf like factorization}
+
+Denote
 \begin{equation*}
 	\mathcal{B}(z)=W'(z)+\frac{\beta}{2}G_\lambda(z).
 \end{equation*}
@@ -551,6 +555,54 @@ The factorization is valid in an annulus between the two contours $\omega_+$ and
 	\caption{Positively oriented contours $\omega_+$ and $\omega_-$ in the complex plane.}
 	\label{fig:contours}
 \end{figure}
+
+\subsection{First order asymptotics of $\mathcal{A}(z)$}
+
+The next step is to understand the asymptotics of $\mathcal{A}(z)$. Recall that 
+\begin{equation}
+	\label{eq:A_definition}
+	\mathcal{A}(z)=\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{\Pi_\mu(z)} \right].
+\end{equation}
+From the loop equation, we know that $\mathcal{C}(z)$ is entire, and the leading term involves $\mathcal{A}(z)\mathcal{B}(z)$. That is,
+\begin{equation}
+	\label{eq:loop_eq_A_times_B}
+	\mathcal{A}(z)\mathcal{B}(z) = \textnormal{entire function} + O(\varepsilon).
+\end{equation}
+
+Using the Wiener-Hopf factorization of $\mathcal{B}(z)$, let
+us multiply \eqref{eq:loop_eq_A_times_B}
+by $e^{-h_+(z)}$. The entire function remains entire in a complex
+neighborhood of $[l,r]$. Therefore, we can integrate over $\omega_-$, and get
+\begin{align*}
+	0=
+	\frac{1}{2\pi i}\oint_{\omega_-}\frac{\mathcal{C}(w)e^{-h_+(w)}dw}{w-z}
+	&=
+	\frac{1}{2\pi i}\oint_{\omega_-}\frac{\mathcal{A}(w)e^{-h_-(w)}dw}{w-z}+O(\varepsilon)
+	\\&=
+	-\mathcal{A}(z)e^{-h_-(z)}+\frac{1}{2\pi i}\oint_{\omega_+}
+	\frac{\mathcal{A}(w)e^{-h_-(w)}}{w-z}dw+O(\varepsilon).
+\end{align*}
+In the last equality, we took a residue at $w=z$, and replaced the integral
+by an integral over $\omega_+$.
+
+The integrand has no singularities outside $\omega_+$, and thus is just the residue at 
+infinity.
+Using the fact that 
+$e^{-h_-(u)}=e^{1+O(1/u)}=1+O(1/u)$, $u\to\infty$
+and the fact that the expectation $\mathcal{A}(u)$ is balanced in $u$
+(hence it is $1+O(1/u)$), 
+we see that 
+the residue at infinity is simply equal to $1$.
+Therefore, 
+\begin{equation*}
+	0=-\mathcal{A}(z)\ssp e^{-h_-(z)}+1+O(\varepsilon),\qquad 
+	\ln \mathcal{A}(z)=h_-(z)+O(\varepsilon).
+\end{equation*}
+
+
+
+
+
 
 
 \newpage
