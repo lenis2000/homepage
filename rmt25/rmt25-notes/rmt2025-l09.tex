@@ -53,12 +53,12 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 9: Loop equations and asymptotics}
+\\Lecture 9: Loop equations and asymptotics to Gaussian Free Field}
 
 
 \date{Wednesday, March 5, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
-$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l09.tex}{\texttt{TeX Source}} 
+$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l09.tex}{\texttt{TeX Source}}
 $\bullet$
 Updated at \currenttime, \today}}
 
@@ -93,6 +93,7 @@ Updated at \currenttime, \today}}
  \end{itemize}
 \end{theorem}
 
+We proved this statement for $\beta>2$, but it is valid for all $\beta>0$.
 
 \subsection{Loop equations for $W=0$}
 
@@ -100,15 +101,15 @@ When $W=0$, the loop equation \eqref{eq_loop_observable} becomes
 \begin{equation*}
 	f_0(z)=\frac{(n+1)\beta}{2}-1,
 \end{equation*}
-so 
+so
 \begin{equation*}
 		\operatorname{\mathbb{E}}\left[\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)}\left(\sum_{i=1}^{n+1}\frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n\frac{1}{z-\mu_j}\right)\right] = \frac{(n+1)\beta}{2}-1.
 \end{equation*}
 
 Recall that we defined
 \begin{align*}
-G_\lambda(z) = \frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i}, 
-\qquad 
+G_\lambda(z) = \frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i},
+\qquad
 G_\mu(z) = \frac{1}{n}\sum_{j=1}^n\frac{1}{z-\mu_j}.
 \end{align*}
 We also define the ``logarithmic potentials'' (indefinite integrals of the Stieltjes transforms):
@@ -121,7 +122,7 @@ yields the original product:
 \begin{equation*}
 	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)} = \exp\left(n\left(\int G_\lambda(z) - \int G_\mu(z)\right)\right)
 \end{equation*}
-We can rewrite 
+We can rewrite
 the loop equation
 as:
 \begin{equation} \label{eq:stieltjes_transform_eq}
@@ -130,13 +131,13 @@ as:
 
 \subsection{The full corners process}
 
-Assume $n$ is going to infinity, and we fix a sequence of 
+Assume $n$ is going to infinity, and we fix a sequence of
 top-level eigenvalues $\lambda^{(n)}_j$, $1\le j \le n$,
-growing in some way. This sequence can be random 
+growing in some way. This sequence can be random
 (like G$\beta$E rescaled to have eigenvalues in a bounded interval)
-or deterministic 
+or deterministic
 (for example, $\lambda^{(n)}$ has $n/10$ points at $0$,
-$n/10$ points at $1$, and $8n/10$ points at $2$, 
+$n/10$ points at $1$, and $8n/10$ points at $2$,
 see \Cref{fig:corners}).
 \begin{figure}[htpb]
 	\centering
@@ -148,9 +149,9 @@ see \Cref{fig:corners}).
 \end{figure}
 
 Denote the eigenvalues
-of the $k\times k$ beta corner (that is, 
+of the $k\times k$ beta corner (that is,
 obtained by successively solving the polynomial equation
-\eqref{eq_mu_equation} 
+\eqref{eq_mu_equation}
 $n-k$ times) by $\lambda^{(k)}_j$, $1\le j \le k$.
 As $n\to\infty$, we postulate that
 \begin{quote}
@@ -177,12 +178,12 @@ the Stieltjes transform of the measure $\mathfrak{m}_t$.
 \end{proposition}
 \begin{proof}
 	We have in \eqref{eq:stieltjes_transform_eq},
-	if $\lambda$ and $\mu$ live on levels $t$ and $t-\frac{1}{n}$, 
+	if $\lambda$ and $\mu$ live on levels $t$ and $t-\frac{1}{n}$,
 	respectively:
 	\begin{equation*}
-		G_\lambda(z)-G_\mu(z)\approx 
+		G_\lambda(z)-G_\mu(z)\approx
 		\frac{1}{n}\ssp\frac{\partial}{\partial t}G_t(z),
-		\qquad 
+		\qquad
 		\left( \frac{\beta}{2}-1 \right)G_\lambda(z) + G_\mu(z) \approx
 		\frac{\beta}{2}\ssp G_t(z) - \frac{1}{n}\ssp\frac{\partial}{\partial t}G_t(z)
 		\approx
@@ -190,7 +191,7 @@ the Stieltjes transform of the measure $\mathfrak{m}_t$.
 	\end{equation*}
 	Due to the concentration assumption, we can ignore the expectation.
 	Then, taking the logarithm of \eqref{eq:stieltjes_transform_eq},
-	and differentiating with respect to $z$, 
+	and differentiating with respect to $z$,
 	we get the Burgers equation.
 \end{proof}
 
@@ -202,13 +203,13 @@ The Stieltjes transform of the semicircular law is given by:
 	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
 \end{equation*}
 We take this as the function $G_t(z)$ for $t=1$.
-Then, for each $0\le t\le 1$, the 
-G$\beta$E solution should be 
+Then, for each $0\le t\le 1$, the
+G$\beta$E solution should be
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^{\lfloor nt \rfloor }\frac{1}{z-\lambda_i^{(\lfloor nt \rfloor )}}
 	\to t\ssp G^{(\sqrt t)}(z),
 \end{equation*}
-where 
+where
 \begin{equation*}
 	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
 \end{equation*}
@@ -254,7 +255,7 @@ such that for any finite collection of points $x_1, \ldots,
 x_n \in q$, the vector $(\Phi(x_1), \ldots, \Phi(x_n))$ is a
 Gaussian vector. However, such a random function may not
 exist as a proper function in the usual sense.
-The reason is that we would like to consider analogues of linear combinations 
+The reason is that we would like to consider analogues of linear combinations
 of the form
 \begin{equation}
 	\label{eq:Phi_test_function}
@@ -263,15 +264,15 @@ of the form
 For example, if we wish the vector $(\Phi(x_1), \ldots, \Phi(x_n))$ to have independent components, we would need to assign a value to each point in $D$. This means that the hypothetical function $\Phi$ would be too irregular, and even non-measurable, and the integral
 \eqref{eq:Phi_test_function} would not be well-defined.
 
-Instead, for the field with independent values at all points, we would like $\Phi(f)$ to be normal 
+Instead, for the field with independent values at all points, we would like $\Phi(f)$ to be normal
 with mean zero and variance (paralleling the finite-dimensional story)
 \begin{equation*}
-	\operatorname{\mathrm{Var}}\left(  
+	\operatorname{\mathrm{Var}}\left(
 	\Phi(f)\right) = \|f\|^2_{L^2(D)} \;=\; \int_D f(x)^2 \, dx.
 \end{equation*}
 So, Gaussian fields (in particular, our topic, the \emph{Gaussian Free Field})a
 are defined as random distributions, not as functions.
-That is, rather than assigning a value to each point, 
+That is, rather than assigning a value to each point,
 we assign a random value to each test function $f$ in some appropriate space
 via \eqref{eq:Phi_test_function}.
 
@@ -340,14 +341,14 @@ Using this, we can rewrite the covariance as:
 	\operatorname{\mathbb{E}}[\Phi(f) \Phi(g)] = \int_D \int_D G_D(x, y) f(x) g(y) \, dx \, dy.
 \end{equation}
 This relationship between the covariance of the GFF and the Green's function is fundamental. It shows that the GFF can be viewed as a random solution to the equation $-\Delta \Phi = W$, where $W$ is white noise.
-Here the white noise is the Gaussian 
+Here the white noise is the Gaussian
 field with covariance $\delta(x-y)$ --- the object which is the
-correct way of constructing a Gaussian field with i.i.d. 
-values at all points. 
+correct way of constructing a Gaussian field with i.i.d.
+values at all points.
 
 \subsection{The GFF on the upper half-plane}
 
-In the complex upper half-plane 
+In the complex upper half-plane
 $\left\{ \operatorname{Im}z>0 \right\}$
 with $\mathbb{R}$ as the boundary,
 the Green function has the form
@@ -364,13 +365,13 @@ The covariance is
 
 \section{Fluctuations}
 
-\subsection{Height function}
+\subsection{Height function and related definitions}
 
 Let us define the \emph{height function} using the corners process
 $\{ \lambda^{(k)}_j\colon 1\le j\le k\le n \}$:
 \begin{equation*}
 	h(t,x)\coloneqq \#
-	\{ \textnormal{eigenvalues $\lambda^{(\lfloor nt \rfloor )}_j$ which 
+	\{ \textnormal{eigenvalues $\lambda^{(\lfloor nt \rfloor )}_j$ which
 	are $\leq x$} \}.
 \end{equation*}
 Recall that in our regime, we do not scale $x$.
@@ -380,14 +381,13 @@ $\varepsilon\coloneqq 1/n$.
 
 Our goal is to understand the asymptotic behavior of the centered height function
 $$
-\sqrt{\pi}\left(
 h(\varepsilon^{-1}t, x) - \mathbb{E}[h(\varepsilon^{-1}t, x)]
-\right),
+,
 $$
 defined inside the region of the $(t,x)$ plane.
 Note that in contrast with the usual Central Limit Theorem,
-the fluctuations are not scaled by $\varepsilon^{1/2}$, 
-but rather are unscaled. 
+the fluctuations are not scaled by $\varepsilon^{1/2}$,
+but rather are unscaled.
 Note that the law of large numbers is going to be
 \begin{equation*}
 	\varepsilon
@@ -403,92 +403,64 @@ the unscaled fluctuations
 are ``just barely'' going to infinity,
 while retaining nontrivial and bounded correlations.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{continue here}}
+Define
+\begin{equation}
+	\label{eq:rho_definition}
+	\rho(t,x) \coloneqq h(t,x-\varepsilon)-h(t,x)= \sum_{i=1}^{\lfloor nt \rfloor }
+	\mathbf{1}_{\lambda_i^{(\lfloor nt \rfloor )}\le x\le \lambda_{i}^{(\lfloor nt \rfloor )}+\varepsilon},\qquad \textnormal{where $\mathbf{1}_A$ is the indicator of the event $A$.}
+\end{equation}
+This is a discrete analogue of the $x$-derivative of $h(t,x)$.
+
+Let the support of $\mathfrak{m}_t$ be compact, $[l(t),r(t)]$.
+The pre-limit centered Stieltjes transform is
+\begin{equation*}
+	\overline G_t(z)\coloneqq \int_{l(t)}^{r(t)}\frac{\rho(t,x)}{z-x}dx-
+	\operatorname{\mathbb{E}}\left[
+	\int_{l(t)}^{r(t)}\frac{\rho(t,x)}{z-x}dx
+	\right],\qquad z\in \mathbb{C}\setminus [l(t),r(t)].
+\end{equation*}
+
+\subsection{Main result \cite[Section~6]{gorin2022dynamical}}
+
+As $\varepsilon\to0$, we have
+\begin{equation*}
+	\frac{\overline G_{t+\varepsilon}(z)-\overline G_t(\varepsilon)}{\varepsilon}
+	=
+	\frac{\partial}{\partial z}\left[
+		\overline
+		G_t(z)\frac{\operatorname{\mathbb{E}}\tilde f_t(z)}{1-\operatorname{\mathbb{E}}\tilde f_t(z)}
+	\right]+
+	\Delta M_t(z)+R,
+\end{equation*}
+where the remainder is small, and $\Delta M_t(z)$ are mean zero,
+and $\varepsilon^{-1/2}\Delta M_t(z)$ are asymptotically Gaussian with the limiting covariance
+\begin{equation*}
+	\frac{\operatorname{\mathbb{E}}\left[ \Delta M_t(z_1)\Delta M_{t'}(z_2) \right]}{\varepsilon}
+	=
+	\frac{\delta_{t=t'}}{2\pi i}\oint
+	\frac{f_t(w)}{f_t(w)-1}
+	\frac{1}{(w-z_1)^2(w-z_2)^2}\ssp dw+o(1).
+\end{equation*}
+In other words, we have lots of Gaussian observables, and this hints at the Gaussian Free Field
+limit.
+
+Here $f_t,\tilde f_t$ are certain functions constructed explicitly from the model, to be seen later.
+
+\subsection{Key theorem on the way to the main result \cite[Theorem~4.5]{gorin2022dynamical}}
+
+This theorem is an asymptotic expansion of the Stieltjes transform
+of the one-step transition from $\lambda$ to $\mu$.
+We assume that the support of $\mu$ is in $[l,r]$.
+
+Let $\rho_\mu(x)$ stand for \eqref{eq:rho_definition} with $\mu$ instead of $\lambda^{(\lfloor nt \rfloor )}$. Define
+\begin{equation*}
+	\mathcal{G}_\mu(z)=\exp\left[ \frac{\beta}{2}\int_{l}^{r} \frac{\rho_\mu(x)}{z-x}\ssp dx\right],
+	\qquad 
+	\mathcal{B}_\mu(z)=
+\end{equation*}
 
 
 
-
-
-
-
-
-
-
-\newpage
-
-
-
-\section{Dynamical loop equations for fluctuations}
-
-To analyze these fluctuations rigorously, we'll use the dynamical loop equations developed in the previous lecture. Recall that we derived the following loop equation:
-
-$$\mathbb{E}\left[\phi_+(z) \prod_{j=1}^n \frac{b(z + \theta) - b(x_j + \theta e_j)}{b(z) - b(x_j)} + \phi_-(z) \prod_{j=1}^n \frac{b(z) - b(x_j + \theta e_j)}{b(z) - b(x_j)}\right]$$
-
-is a holomorphic function of $z$.
-
-To study fluctuations, we introduce the random field:
-
-$$G_t(z) = \int_{l(t)}^{r(t)} \frac{b'_t(z)\rho(s; x(t))}{b_t(z) - b_t(s)}ds - \mathbb{E}\left[\int_{l(t)}^{r(t)} \frac{b'_t(z)\rho(s; x(t))}{b_t(z) - b_t(s)}ds\right].$$
-
-This field $G_t(z)$ captures the fluctuations of a modified Stieltjes transform of the empirical density. By analyzing the evolution of this field through the dynamical loop equations, we can derive its asymptotic behavior.
-
-Let's introduce the martingale difference:
-
-$$\Delta M_t(z) = \frac{1}{\varepsilon}[G_{t+\varepsilon}(z) - G_t(z) - \text{deterministic drift}].$$
-
-Under appropriate conditions, these martingale differences converge to a Gaussian random field as $\varepsilon \to 0$. The covariance structure of this field is given by:
-
-$$\mathbb{E}[\Delta M_t(z_1)\Delta M_t(z_2)] = \frac{1}{2\pi i\theta} \oint_{\omega_-} \frac{\tilde{f}_t(w)}{\tilde{f}_t(w) - 1} \frac{b'_t(w)b'_t(z_1)}{(b_t(w) - b_t(z_1))^2} \frac{b'_t(w)b'_t(z_2)}{(b_t(w) - b_t(z_2))^2}dw,$$
-
-where $\omega_-$ is a contour enclosing $[l(t), r(t)]$ but not $z_1$ or $z_2$, and $\tilde{f}_t$ is related to the complex slope of the limiting shape.
-
-\section{Connection to the Gaussian Free Field}
-
-The fluctuations of the height function can be expressed in terms of the fluctuations of the integrated empirical density. For a test function $f(x) = \partial_x[F(b_t(x))]$, where $F$ is analytic, we have:
-
-$$\sqrt{\pi}\int_{l(t)}^{r(t)} f(x)(h(\varepsilon^{-1}t, \varepsilon^{-1}x) - \mathbb{E}[h(\varepsilon^{-1}t, \varepsilon^{-1}x)])dx = \frac{\varepsilon^{-1}}{2\pi i} \oint_{\Upsilon} F(b_t(z))G_{\varepsilon^{-1}t}(z)dz,$$
-
-where $\Upsilon$ is an appropriate contour enclosing $[l(t), r(t)]$.
-
-One of the remarkable results is that these fluctuations converge to the Gaussian Free Field (GFF) in an appropriate complex structure. To make this precise, we introduce a bijection $\Omega$ between the liquid region $L(P)$ and the upper half-plane $\mathbb{H}_+$, defined via the non-real solutions to equation (19).
-
-The main theorem states that inside the liquid region $(t,x) \in L(P)$, we have:
-
-$$\lim_{\varepsilon \to 0} \sqrt{\pi}(h(\varepsilon^{-1}t, \varepsilon^{-1}x) - \mathbb{E}[h(\varepsilon^{-1}t, \varepsilon^{-1}x)]) = \bar{\Omega}\text{-pullback of GFF in } \mathbb{H}_+,$$
-
-in the sense of convergence of joint moments for pairings with appropriate test measures.
-
-\section{Computation of the covariance structure}
-
-Let's now calculate the covariance structure of the limiting Gaussian field more explicitly. For test functions $f_1, f_2$ satisfying the conditions above, the covariance between the corresponding linear statistics of the height function is given by:
-
-$$\lim_{\varepsilon \to 0} \mathbb{E}\left[\sqrt{\pi}\int f_1(h - \mathbb{E}[h]) \cdot \sqrt{\pi}\int f_2(h - \mathbb{E}[h])\right] = -\frac{1}{4\pi} \iint_{C_1 \times C_2} \partial_{w_1}\partial_{w_2}\log(w_1 - w_2) F_1(w(t_1,w_1))F_2(w(t_2,w_2))dw_1 dw_2,$$
-
-where $C_1, C_2$ are appropriate contours.
-
-This can be rewritten in terms of the Gaussian Free Field. If we define the GFF in the upper half-plane $\mathbb{H}_+$ as a generalized Gaussian field with covariance kernel
-
-$$K(z,w) = -\frac{1}{2\pi}\log\frac{z-w}{z-\bar{w}},$$
-
-then the covariance above is precisely the covariance of the pullback of this GFF under the map $\bar{\Omega}$.
-
-\section{Example: Gaussian $\beta$-ensemble}
-
-Let's illustrate these results with the Gaussian $\beta$-ensemble (G$\beta$E). In this case, the limiting density follows the semicircle law:
-
-$$\rho_{sc}(x) = \frac{\sqrt{4-x^2}}{2\pi}, \quad x \in [-2, 2].$$
-
-The Stieltjes transform of this density is $G(z) = \frac{1}{2}(z - \sqrt{z^2-4})$, and we can compute the complex slope $f_t(z)$ explicitly.
-
-For the G$\beta$E, the fluctuations of the height function converge to the Gaussian Free Field with covariance structure determined by the complex slope. This provides a concrete example of how the abstract machinery we've developed applies to a well-studied random matrix ensemble.
-
-\section{Outlook and open problems}
-
-The connection between dynamical loop equations and Gaussian Free Field fluctuations extends beyond the models we've discussed. A natural conjecture is that for many integrable probability models, including $(q,\kappa)$-distributed random lozenge tilings of arbitrary domains, the macroscopic fluctuations in the liquid region are asymptotically described by the Gaussian Free Field in a complex structure given by the first integrals of the corresponding complex Burgers equation.
-
-This perspective unifies many seemingly different models under a common framework, suggesting deep connections between random matrix theory, statistical mechanics, and conformal field theory.
-
-In the next lecture, we'll explore further applications of loop equations to specific models and discuss more detailed properties of the fluctuation fields.
 
 
 
