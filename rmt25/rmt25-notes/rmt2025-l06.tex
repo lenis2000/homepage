@@ -599,19 +599,20 @@ so that $\operatorname{Re}(f(z))$ is maximal at $z=z_0$ and decays quadratically
 
 Assume now that the contour $\gamma$ in \eqref{eq:general-integral} has been deformed so that it passes through a saddle point $z_0$ along a steepest descent path. In a small neighborhood of $z_0$, we write
 \[
-	z=z_0+w,
+	z=z_0+w/\sqrt{\Lambda},
 \]
 so the local contribution of a neighborhood of $z_0$ to the integral is
 \begin{equation}
 	\label{eq:local-contribution}
-	I_{z_0}(\Lambda)=e^{\Lambda f(z_0)}\phi(z_0)
-	\int_{-\infty}^{\infty} e^{\Lambda\frac{1}{2}f''(z_0)w^2}\,dw
-	\Bigl(1+O\Bigl(\frac{1}{\Lambda^{\frac12}}\Bigr)\Bigr).
+	I_{z_0}(\Lambda)=e^{\Lambda f(z_0)}\phi(z_0)\frac{1}{\sqrt{\Lambda}}
+	\Bigl(1+O\Bigl(\frac{1}{\Lambda^{\frac12}}\Bigr)\Bigr)
+	\int_{-\infty}^{\infty} e^{\frac{1}{2}f''(z_0)w^2}\,dw
+	.
 \end{equation}
 Here the integration is taken along the steepest descent direction, so that the quadratic term in the exponent is real and negative. (That is, by the choice \eqref{eq:steepest-descent-direction}, we have $\operatorname{Re}\bigl(f''(z_0)w^2\bigr)=-|f''(z_0)|r^2$.) Then the Gaussian integral evaluates to
 \[
-	\int_{-\infty}^{\infty} e^{-\Lambda\frac{|f''(z_0)|}{2}r^2}\,dr
-	=\sqrt{\frac{2\pi}{\Lambda |f''(z_0)|}}.
+	\int_{-\infty}^{\infty} e^{-\frac{|f''(z_0)|}{2}w^2}\,dw
+	=\sqrt{\frac{2\pi}{|f''(z_0)|}}.
 \]
 Hence, we
 arrive at the following fundamental result.
