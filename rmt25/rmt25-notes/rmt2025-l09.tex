@@ -411,54 +411,106 @@ Define
 \end{equation}
 This is a discrete analogue of the $x$-derivative of $h(t,x)$.
 
-Let the support of $\mathfrak{m}_t$ be compact, $[l(t),r(t)]$.
-The pre-limit centered Stieltjes transform is
-\begin{equation*}
-	\overline G_t(z)\coloneqq \int_{l(t)}^{r(t)}\frac{\rho(t,x)}{z-x}dx-
-	\operatorname{\mathbb{E}}\left[
-	\int_{l(t)}^{r(t)}\frac{\rho(t,x)}{z-x}dx
-	\right],\qquad z\in \mathbb{C}\setminus [l(t),r(t)].
-\end{equation*}
+% Let the support of $\mathfrak{m}_t$ be compact, $[l(t),r(t)]$.
+% The pre-limit centered Stieltjes transform is
+% \begin{equation*}
+%   \overline G_t(z)\coloneqq \int_{l(t)}^{r(t)}\frac{\rho(t,x)}{z-x}dx-
+%   \operatorname{\mathbb{E}}\left[
+%   \int_{l(t)}^{r(t)}\frac{\rho(t,x)}{z-x}dx
+%   \right],\qquad z\in \mathbb{C}\setminus [l(t),r(t)].
+% \end{equation*}
 
-\subsection{Main result \cite[Section~6]{gorin2022dynamical}}
+% \subsection{Main result \cite[Section~6]{gorin2022dynamical}}
+%
+% As $\varepsilon\to0$, we have
+% \begin{equation*}
+%   \frac{\overline G_{t+\varepsilon}(z)-\overline G_t(\varepsilon)}{\varepsilon}
+%   =
+%   \frac{\partial}{\partial z}\left[
+%     \overline
+%     G_t(z)\frac{\operatorname{\mathbb{E}}\tilde f_t(z)}{1-\operatorname{\mathbb{E}}\tilde f_t(z)}
+%   \right]+
+%   \Delta M_t(z)+R,
+% \end{equation*}
+% where the remainder is small, and $\Delta M_t(z)$ are mean zero,
+% and $\varepsilon^{-1/2}\Delta M_t(z)$ are asymptotically Gaussian with the limiting covariance
+% \begin{equation*}
+%   \frac{\operatorname{\mathbb{E}}\left[ \Delta M_t(z_1)\Delta M_{t'}(z_2) \right]}{\varepsilon}
+%   =
+%   \frac{\delta_{t=t'}}{2\pi i}\oint
+%   \frac{f_t(w)}{f_t(w)-1}
+%   \frac{1}{(w-z_1)^2(w-z_2)^2}\ssp dw+o(1).
+% \end{equation*}
+% In other words, we have lots of Gaussian observables, and this hints at the Gaussian Free Field
+% limit.
+%
+% Here $f_t,\tilde f_t$ are certain functions constructed explicitly from the model, to be seen later.
+%
+\subsection{Key theorem on the way to the main result}
 
-As $\varepsilon\to0$, we have
-\begin{equation*}
-	\frac{\overline G_{t+\varepsilon}(z)-\overline G_t(\varepsilon)}{\varepsilon}
-	=
-	\frac{\partial}{\partial z}\left[
-		\overline
-		G_t(z)\frac{\operatorname{\mathbb{E}}\tilde f_t(z)}{1-\operatorname{\mathbb{E}}\tilde f_t(z)}
-	\right]+
-	\Delta M_t(z)+R,
-\end{equation*}
-where the remainder is small, and $\Delta M_t(z)$ are mean zero,
-and $\varepsilon^{-1/2}\Delta M_t(z)$ are asymptotically Gaussian with the limiting covariance
-\begin{equation*}
-	\frac{\operatorname{\mathbb{E}}\left[ \Delta M_t(z_1)\Delta M_{t'}(z_2) \right]}{\varepsilon}
-	=
-	\frac{\delta_{t=t'}}{2\pi i}\oint
-	\frac{f_t(w)}{f_t(w)-1}
-	\frac{1}{(w-z_1)^2(w-z_2)^2}\ssp dw+o(1).
-\end{equation*}
-In other words, we have lots of Gaussian observables, and this hints at the Gaussian Free Field
-limit.
-
-Here $f_t,\tilde f_t$ are certain functions constructed explicitly from the model, to be seen later.
-
-\subsection{Key theorem on the way to the main result \cite[Theorem~4.5]{gorin2022dynamical}}
+This subsection recreates the argument analogous to 
+\cite[Theorem~4.5]{gorin2022dynamical},
+but in the random matrix setting.
 
 This theorem is an asymptotic expansion of the Stieltjes transform
 of the one-step transition from $\lambda$ to $\mu$.
-We assume that the support of $\mu$ is in $[l,r]$.
+We assume that the support of $\lambda$ is in $[l,r]$.
+Denote 
+\begin{equation*}
+	\Pi_\lambda(z)\coloneqq \prod_{i=1}^{n+1}(z-\lambda_i),\qquad 
+	\Pi_\mu(z)\coloneqq \prod_{j=1}^{n}(z-\mu_j).
+\end{equation*}
+Also assume that $W(z)$ is fixed and nice, and that $\mu_j$ are 
+distributed according to a modified 
+density, which includes $W(z)$:
+\begin{equation*}
+	\frac{1}{Z}
+		\prod_{1\le i<j\le n}(\mu_i-\mu_j)
+		\prod_{i=1}^{n}\prod_{j=1}^{n+1} |\mu_i-\lambda_j|^{\beta/2-1}
+		\prod_{1\le i<j\le n+1}(\lambda_i-\lambda_j)^{1-\beta}\prod_{j=1}^n e^{W(\mu_j)}.
+\end{equation*}
+From now on, all expectations will be over the modified density.
+
+We aim to analyze the quantity
+\begin{equation*}
+	\mathcal{A}(z)\coloneqq\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{\Pi_\mu(z)} \right],
+\end{equation*}
+which enters the loop equation. Moreover, the loop equation
+states the holomorphicity of
+\begin{equation*}
+	\mathcal{C}(z)=
+	\mathcal{A}(z)\Biggl[ W'(z)+ \frac{\beta}{2}\frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i} \Biggr]+
+	\operatorname{\mathbb{E}}
+	\Biggl[ 
+		\frac{\Pi_\lambda(z)}{\Pi_\mu(z)}\Biggl(\frac{1}{n}\sum_{j=1}^{n}\frac{1}{z-\mu_j}-
+		\frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i}\Biggr)
+	\Biggr].
+\end{equation*}
+It will turn out that the first summand is the leading term, and the second summand will be 
+negligible.
+
+
+
+\newpage
+\colorbox{yellow}{\parbox{.7\textwidth}{rewrite}}
 
 Let $\rho_\mu(x)$ stand for \eqref{eq:rho_definition} with $\mu$ instead of $\lambda^{(\lfloor nt \rfloor )}$. Define
 \begin{equation*}
-	\mathcal{G}_\mu(z)=\exp\left[ \frac{\beta}{2}\int_{l}^{r} \frac{\rho_\mu(x)}{z-x}\ssp dx\right],
+	\mathcal{G}_\mu(z)=\exp\left[ \int_{l}^{r} \frac{\rho_\mu(x)}{z-x}\ssp dx\right],
 	\qquad 
 	\mathcal{B}_\mu(z)=1+\mathcal{G}_\mu(z)\colorbox{yellow}{\parbox{.7\textwidth}{loop eq}}
 \end{equation*}
-
+We have
+\begin{equation*}
+	\int_l^r\frac{\rho_\mu(x)}{z-x}dx=\sum_{i=1}^n
+	\sum_{i=1}^n\int_{\mu_i}^{\mu_i+\varepsilon}\frac{dx}{z-x}=
+	\sum_{i=1}^n\left( \ln(z-\mu_i+\varepsilon)-\ln(z-\mu_i) \right), 
+\end{equation*}
+so
+\begin{equation*}
+	\mathcal{G}_\mu(z)=\prod_{i=1}^{n}\frac{z-\mu_i+\varepsilon}{z-\mu_i}=
+	1+\varepsilon\sum_{i=1}^{n}\frac{1}{z-\mu_i}+O(\varepsilon^2)..
+\end{equation*}
 
 \begin{theorem}
 	We have as $\varepsilon\to0$:
