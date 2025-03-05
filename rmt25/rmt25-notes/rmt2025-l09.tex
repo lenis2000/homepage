@@ -381,17 +381,17 @@ $\varepsilon\coloneqq 1/n$.
 
 Our goal is to understand the asymptotic behavior of the centered height function
 $$
-h(\varepsilon^{-1}t, x) - \mathbb{E}[h(\varepsilon^{-1}t, x)]
+h(t, x) - \mathbb{E}[h(t, x)]
 ,
 $$
 defined inside the region of the $(t,x)$ plane.
 Note that in contrast with the usual Central Limit Theorem,
-the fluctuations are not scaled by $\varepsilon^{1/2}$,
-but rather are unscaled.
+\textbf{the fluctuations are not scaled by $\varepsilon^{1/2}$,
+but rather converge to a certain object without any scaling}.
 Note that the law of large numbers is going to be
 \begin{equation*}
 	\varepsilon
-	\ssp h(\varepsilon^{-1}t, x) \to
+	\ssp h(t, x) \to
 	\mathfrak{h}(t,x),
 \end{equation*}
 where $\mathfrak{h}(t,x)$ is the limiting height function
@@ -414,6 +414,14 @@ while retaining nontrivial and bounded correlations.
 
 \subsection{Main results on Gaussian fluctuations}
 
+Recall that our main assumption is that the distribution at the top row converges 
+(with a good control) to a deterministic measure $\mathfrak{m}_1$:
+\begin{equation*}
+	\frac{1}{n}\sum_{i=1}^n \delta_{\lambda^{(n)}_i} \to \mathfrak{m}_1.
+\end{equation*}
+For example, in \Cref{fig:corners}, the measure $\mathfrak{m}_1$ has 
+three atoms.
+
 Denote the centered Stieltjes transforms by 
 \begin{equation*}
 	\tilde G_{\lambda}(z)\coloneqq G_\lambda(z)-\mathbb{E}[G_\lambda(z)].
@@ -427,7 +435,9 @@ Consider the random variables
 \quad 1\le i\le k,
 \]
 where \(z(\cdot,\cdot)\) is 
-a conformal structure on the liquid region in the corners process.
+a conformal structure on the liquid region in the corners process.\footnote{It 
+exists, and can be characterized rather explicitly, but we will not go into
+details here.}
 
 Then, as \(\varepsilon \to 0\), these \(k\) random variables converge (in the sense of moments, uniformly over \((t_i,u_i)\) in compact sets) to a \(k\)-dimensional Gaussian vector of mean zero.  Their limiting covariances are 
 \[
@@ -552,13 +562,13 @@ From now on, all expectations will be over the $W$-modified density.
 
 We aim to analyze the quantity
 \begin{equation*}
-	\mathcal{A}(z)\coloneqq\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{\Pi_\mu(z)} \right],
+	\mathcal{A}(z)\coloneqq\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{z\ssp \Pi_\mu(z)} \right],
 \end{equation*}
 which enters the loop equation. Moreover, the loop equation
 states the holomorphicity of
 \begin{equation*}
 	\mathcal{C}(z)=
-	\mathcal{A}(z)\Biggl[ W'(z)+ \frac{\beta}{2}\frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i} \Biggr]+
+	\mathcal{A}(z)\Biggl[z W'(z)+ \frac{\beta}{2}\frac{1}{n}\sum_{i=1}^{n+1}\frac{z}{z-\lambda_i} \Biggr]+
 	\operatorname{\mathbb{E}}
 	\Biggl[ 
 		\frac{\Pi_\lambda(z)}{\Pi_\mu(z)}\Biggl(\frac{1}{n}\sum_{j=1}^{n}\frac{1}{z-\mu_j}-
@@ -573,9 +583,8 @@ and these Stieltjes transforms are close to each other, so the difference is $O(
 
 Denote
 \begin{equation*}
-	\mathcal{B}(z)=W'(z)+\frac{\beta}{2}G_\lambda(z).
+	\mathcal{B}(z)=z\ssp W'(z)+\frac{z\ssp\beta}{2}G_\lambda(z).
 \end{equation*}
-
 Decompose $\mathcal{B}(z)$ using the Cauchy residue formula:
 \begin{equation*}
 	\ln \mathcal{B}(z)=\frac{1}{2\pi i}\oint_{\omega_+}
@@ -638,7 +647,7 @@ The factorization is valid in an annulus between the two contours $\omega_+$ and
 The next step is to understand the asymptotics of $\mathcal{A}(z)$. Recall that 
 \begin{equation}
 	\label{eq:A_definition}
-	\mathcal{A}(z)=\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{\Pi_\mu(z)} \right].
+	\mathcal{A}(z)=\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{z\Pi_\mu(z)} \right].
 \end{equation}
 From the loop equation, we know that $\mathcal{C}(z)$ is entire, and the leading term involves $\mathcal{A}(z)\mathcal{B}(z)$. That is,
 \begin{equation}
@@ -686,7 +695,7 @@ undeformed expectation over the G$\beta$E corner:
 	\label{eq:final_A}
 	\operatorname{\mathbb{E}}_0
 	\left[ 
-		\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^{n}e^{-W(\mu_j)}(z-\mu_j)}
+		\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{z\ssp \prod_{j=1}^{n}e^{-W(\mu_j)}(z-\mu_j)}
 	\right]
 	=
 	\frac{1}{2 \pi i}\oint_{\omega_-}
