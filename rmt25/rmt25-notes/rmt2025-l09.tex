@@ -456,11 +456,33 @@ Let $\rho_\mu(x)$ stand for \eqref{eq:rho_definition} with $\mu$ instead of $\la
 \begin{equation*}
 	\mathcal{G}_\mu(z)=\exp\left[ \frac{\beta}{2}\int_{l}^{r} \frac{\rho_\mu(x)}{z-x}\ssp dx\right],
 	\qquad 
-	\mathcal{B}_\mu(z)=
+	\mathcal{B}_\mu(z)=1+\mathcal{G}_\mu(z)\colorbox{yellow}{\parbox{.7\textwidth}{loop eq}}
 \end{equation*}
 
 
-
+\begin{theorem}
+	We have as $\varepsilon\to0$:
+	\begin{equation*}
+		\frac{1}{\varepsilon}\int_l^r \frac{\rho_\mu(x)-\rho_\lambda(x)}{z-x}\ssp dx
+		=
+		\frac{1}{\pi i \beta}\oint_{\omega_-} \frac{\ln \mathcal{B}_\mu(z)}{(w-z)^2}\ssp dw
+		+
+		\varepsilon\cdot\left( \textnormal{explicit expression} \right)
+		+\Delta M(z)+O(\varepsilon^2),
+	\end{equation*}
+	where the contour $\omega_-$ encloses $[l,r]$ but not $z$,
+	and $\Delta M(z)$ are mean $0$ random variables such that $\varepsilon^{-1/2}\Delta M(z)$,
+	for $z\mathbb{C}\setminus [l,r]$, are asymptotically Gaussian with the limiting covariance
+	\begin{equation*}
+		\frac{\operatorname{\mathbb{E}}\left[ 
+		\Delta M(z_1)\Delta M(z_2) \right]}{\varepsilon}
+			=
+		\frac{1}{\pi i \beta}\oint_{\omega_-}
+		\frac{\mathcal{G}(w)\varphi^+(w)}{\mathcal{B}(w)}\frac{dw}{(w-z_1)^2(w-z_2)^2}+o(1).
+	\end{equation*}
+	The higher order joint moments of $\varepsilon^{-1/2}\Delta M(z)$ 
+	also converge as $\varepsilon\to0$ to Gaussian moments.
+\end{theorem}
 
 
 
