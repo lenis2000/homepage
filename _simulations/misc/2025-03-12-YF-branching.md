@@ -47,41 +47,40 @@ code:
     font-size: 14px;
   }
 </style>
-
 <div class="container mt-5">
   <div class="row">
     <div class="col-md-12">
-      <h2>Young-Fibonacci Lattice Explorer</h2>
-      <p>
-        The Young-Fibonacci lattice YF is the union of all sets YF_n, n ≥ 0, where YF_n is the set of all Fibonacci words (binary words whose digits lie in {1,2}) of weight n.
-      </p>
-      <p>
-        In this lattice, a Fibonacci word w in YF_n is connected to w' in YF_{n+1} if w' can be obtained from w by one of the following operations:
-        <ul>
-          <li><b>F1:</b> w' = 1w (prepend 1 to w)</li>
-          <li><b>F2:</b> w' = 2^{k+1}v if w = 2^k1v for some k ≥ 0 and an arbitrary Fibonacci word v</li>
-          <li><b>F3:</b> w' = 2^ℓ12^{k-ℓ}v if w = 2^kv for some k ≥ 1 and an arbitrary Fibonacci word v, where ℓ = 1,...,k</li>
-        </ul>
-      </p>
-      <p>
-        <b>Dimension formula:</b> For w ∈ YF, the dimension dim(w) counts the number of saturated chains from ∅ to w and obeys the recursion:
-        <ul>
-          <li>dim(∅) = 1</li>
-          <li>dim(1v) = dim(v) for a Fibonacci word v</li>
-          <li>dim(2v) = (weight(v) + 1) × dim(v) for a Fibonacci word v</li>
-        </ul>
-        where weight(v) is the sum of digits in v.
-      </p>
-      <p>
-        For example, dim(22121) = 70 calculated as: 7 × 5 × 2 = 70, where:
-        <ul>
-          <li>First 2: tail is "2121" with weight 6, so factor is 6+1 = 7</li>
-          <li>Second 2: tail is "121" with weight 4, so factor is 4+1 = 5</li>
-          <li>Third 2: tail is "1" with weight 1, so factor is 1+1 = 2</li>
-        </ul>
-      </p>
+        <h2>Young-Fibonacci Lattice Explorer</h2>
+        <p>
+          The Young-Fibonacci lattice $\text{YF}$ is the union of all sets $\text{YF}_n$, $n \geq 0$, where $\text{YF}_n$ is the set of all Fibonacci words (binary words whose digits lie in $\{1,2\}$) of weight $n$.
+        </p>
+        <p>
+          In this lattice, a Fibonacci word $w$ in $\text{YF}_n$ is connected to $w'$ in $\text{YF}_{n+1}$ if $w'$ can be obtained from $w$ by one of the following operations:
+          <ul>
+            <li><b>F1:</b> $w' = 1w$ (prepend 1 to $w$)</li>
+            <li><b>F2:</b> $w' = 2^{k+1}v$ if $w = 2^k1v$ for some $k \geq 0$ and an arbitrary Fibonacci word $v$</li>
+            <li><b>F3:</b> $w' = 2^{\ell}12^{k-\ell}v$ if $w = 2^kv$ for some $k \geq 1$ and an arbitrary Fibonacci word $v$, where $\ell = 1,...,k$</li>
+          </ul>
+        </p>
+        <p>
+          <b>Dimension formula:</b> For $w \in \text{YF}$, the dimension $\dim(w)$ counts the number of saturated chains from $\emptyset$ to $w$ and obeys the recursion:
+          <ul>
+            <li>$\dim(\emptyset) = 1$</li>
+            <li>$\dim(1v) = \dim(v)$ for a Fibonacci word $v$</li>
+            <li>$\dim(2v) = (\text{weight}(v) + 1) \times \dim(v)$ for a Fibonacci word $v$</li>
+          </ul>
+          where $\text{weight}(v)$ is the sum of digits in $v$.
+        </p>
+        <p>
+          For example, $\dim(22121) = 70$ calculated as: $7 \times 5 \times 2 = 70$, where:
+          <ul>
+            <li>First 2: tail is "$2121$" with weight 6, so factor is $6+1 = 7$</li>
+            <li>Second 2: tail is "$121$" with weight 4, so factor is $4+1 = 5$</li>
+            <li>Third 2: tail is "$1$" with weight 1, so factor is $1+1 = 2$</li>
+          </ul>
+        </p>
+      </div>
     </div>
-  </div>
 
   <div class="row mt-4">
     <div class="col-md-4">
@@ -162,6 +161,37 @@ code:
               <div class="word-list" id="words-below"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complete Young-Fibonacci Lattice Visualization -->
+  <div class="row mt-5">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="card-title mb-0">Complete Young-Fibonacci Lattice</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="max-level" class="form-label">Maximum Level:</label>
+            <select class="form-select" id="max-level" style="width: 200px;">
+              <option value="5">Level 5</option>
+              <option value="6">Level 6</option>
+              <option value="7">Level 7</option>
+              <option value="8" selected>Level 8</option>
+              <option value="9">Level 9</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <div class="btn-group" role="group">
+              <button id="zoom-in" class="btn btn-outline-primary">Zoom In</button>
+              <button id="zoom-out" class="btn btn-outline-primary">Zoom Out</button>
+              <button id="reset-zoom" class="btn btn-outline-secondary">Reset View</button>
+            </div>
+          </div>
+          <div class="complete-lattice-container" id="complete-lattice-container" style="height: 600px; border: 1px solid #ccc;"></div>
         </div>
       </div>
     </div>
@@ -702,4 +732,396 @@ code:
       form.dispatchEvent(new Event('submit'));
     }
   });
+
+
+
+// Complete Young-Fibonacci Lattice Visualization with Zoom-Responsive Labels
+(function() {
+  // Wait for DOM to be fully loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initCompleteLattice, 1000);
+  });
+
+  // Also try window load event as a backup
+  window.addEventListener('load', function() {
+    setTimeout(initCompleteLattice, 1000);
+  });
+
+  function initCompleteLattice() {
+    // Set up event listeners for controls
+    const maxLevelSelect = document.getElementById('max-level');
+    if (maxLevelSelect) {
+      maxLevelSelect.addEventListener('change', renderCompleteLattice);
+    }
+
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+    const resetZoomBtn = document.getElementById('reset-zoom');
+
+    if (zoomInBtn && zoomOutBtn && resetZoomBtn) {
+      console.log("Zoom controls found");
+    }
+
+    // Initial render
+    renderCompleteLattice();
+  }
+
+  function renderCompleteLattice() {
+    console.log("Rendering complete lattice...");
+    const maxLevelSelect = document.getElementById('max-level');
+    const maxLevel = maxLevelSelect ? parseInt(maxLevelSelect.value) : 8;
+
+    // Get container
+    const container = document.getElementById('complete-lattice-container');
+    if (!container) {
+      console.error("Could not find container element for complete lattice");
+      return;
+    }
+
+    // Clear previous content
+    container.innerHTML = '';
+
+    // Set up dimensions
+    const margin = {top: 40, right: 40, bottom: 40, left: 40};
+    const width = container.clientWidth - margin.left - margin.right;
+    const height = container.clientHeight - margin.top - margin.bottom;
+
+    // Create SVG
+    const svg = d3.select('#complete-lattice-container')
+      .append('svg')
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`);
+
+    // Create main group
+    const g = svg.append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Add zoom behavior with label visibility control
+    let currentZoomScale = 1;
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 5])
+      .on('zoom', function(event) {
+        g.attr('transform', event.transform);
+        currentZoomScale = event.transform.k;
+        updateLabelVisibility(currentZoomScale);
+      });
+
+    svg.call(zoom);
+
+    // Set up zoom button event handlers
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+    const resetZoomBtn = document.getElementById('reset-zoom');
+
+    if (zoomInBtn) {
+      zoomInBtn.onclick = function() {
+        svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+      };
+    }
+
+    if (zoomOutBtn) {
+      zoomOutBtn.onclick = function() {
+        svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+      };
+    }
+
+    if (resetZoomBtn) {
+      resetZoomBtn.onclick = function() {
+        svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+      };
+    }
+
+    // Generate all words for each level
+    let allWords = [];
+    for (let level = 0; level <= maxLevel; level++) {
+      allWords.push(generateFibWords(level));
+    }
+
+    // Create nodes data structure
+    const nodes = [];
+    const nodeMap = new Map(); // For quick lookup
+
+    // Add nodes for each level
+    const levelHeight = height / (maxLevel + 1);
+
+    allWords.forEach((words, level) => {
+      const levelWidth = width;
+      const spacing = levelWidth / (words.length || 1);
+
+      words.forEach((word, index) => {
+        const nodeId = `${level}_${word}`; // Using underscore to avoid selector issues
+        nodes.push({
+          id: nodeId,
+          word: word,
+          label: word === '' ? 'Ø' : word,
+          level: level,
+          x: (index + 0.5) * spacing,
+          y: level * levelHeight
+        });
+
+        // Add to lookup map
+        nodeMap.set(nodeId, true);
+      });
+    });
+
+    // Create links data
+    const links = [];
+
+    // Add links between levels with careful validation
+    for (let level = 1; level <= maxLevel; level++) {
+      allWords[level].forEach(word => {
+        const sourceId = `${level}_${word}`;
+
+        if (!nodeMap.has(sourceId)) {
+          console.error(`Source node not found: ${sourceId}`);
+          return;
+        }
+
+        const wordsBelow = findConnectedWordsBelow(word);
+
+        wordsBelow.forEach(wordBelow => {
+          const targetId = `${level-1}_${wordBelow}`;
+
+          if (!nodeMap.has(targetId)) {
+            console.warn(`Target node not found: ${targetId}, word below "${wordBelow}" for "${word}"`);
+            return;
+          }
+
+          links.push({
+            source: sourceId,
+            target: targetId
+          });
+        });
+      });
+    }
+
+    console.log(`Created ${nodes.length} nodes and ${links.length} links`);
+
+    // Apply force simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(levelHeight * 0.8))
+      .force('x', d3.forceX(d => width / 2).strength(0.05))
+      .force('y', d3.forceY(d => d.level * levelHeight).strength(1))
+      .force('collide', d3.forceCollide().radius(12))
+      .stop();
+
+    // Run simulation manually
+    for (let i = 0; i < 100; i++) simulation.tick();
+
+    // Create links with curved paths
+    const link = g.append('g')
+      .selectAll('path')
+      .data(links)
+      .enter()
+      .append('path')
+      .attr('d', d => {
+        // Safe access to source and target nodes
+        const sourceNode = nodes.find(node => node.id === d.source.id || node.id === d.source);
+        const targetNode = nodes.find(node => node.id === d.target.id || node.id === d.target);
+
+        if (!sourceNode || !targetNode) {
+          console.warn("Could not find source or target node for link", d);
+          return '';
+        }
+
+        const sourceX = sourceNode.x;
+        const sourceY = sourceNode.y;
+        const targetX = targetNode.x;
+        const targetY = targetNode.y;
+
+        // Create a curved path
+        const midY = (sourceY + targetY) / 2;
+        return `M ${sourceX} ${sourceY} C ${sourceX} ${midY}, ${targetX} ${midY}, ${targetX} ${targetY}`;
+      })
+      .attr('fill', 'none')
+      .attr('stroke', '#999')
+      .attr('stroke-opacity', 0.6)
+      .attr('stroke-width', 1.5);
+
+    // Create nodes
+    const node = g.append('g')
+      .selectAll('g')
+      .data(nodes)
+      .enter()
+      .append('g')
+      .attr('transform', d => `translate(${d.x},${d.y})`)
+      .on('click', function(event, d) {
+        const fibWordInput = document.getElementById('fibonacci-word');
+        if (fibWordInput) {
+          fibWordInput.value = d.word;
+          const form = document.getElementById('fibonacci-form');
+          if (form) {
+            form.dispatchEvent(new Event('submit'));
+          }
+          const chartContainer = document.getElementById('chart-container');
+          if (chartContainer) {
+            chartContainer.scrollIntoView({
+              behavior: 'smooth'
+            });
+          }
+        }
+      });
+
+    // Add circles to nodes with dynamic size based on level
+    node.append('circle')
+      .attr('r', d => Math.max(4, 12 - d.level))
+      .attr('fill', d => {
+        const levelColors = [
+          '#dc3545', // Level 0: Red
+          '#fd7e14', // Level 1: Orange
+          '#ffc107', // Level 2: Yellow
+          '#28a745', // Level 3: Green
+          '#20c997', // Level 4: Teal
+          '#17a2b8', // Level 5: Cyan
+          '#007bff', // Level 6: Blue
+          '#6f42c1', // Level 7: Purple
+          '#e83e8c'  // Level 8: Pink
+        ];
+        return levelColors[d.level % levelColors.length];
+      });
+
+    // Add hover tooltip for all nodes
+    node.append('title')
+      .text(d => d.label);
+
+    // Add text labels to all nodes (with visibility control)
+    const nodeLabels = node.append('text')
+      .attr('class', 'node-label')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.3em')
+      .attr('font-size', d => {
+        // More aggressive font size reduction for higher levels
+        if (d.level <= 2) return 12;
+        if (d.level <= 4) return 10;
+        if (d.level <= 6) return 8;
+        return 6; // Very small text for the highest levels
+      })
+      .text(d => d.label)
+      .style('opacity', 0); // Start with all labels hidden
+
+    // Function to update label visibility based on zoom level
+    function updateLabelVisibility(scale) {
+      nodeLabels.style('opacity', function(d) {
+        // Progressive label visibility based on zoom and level
+        if (scale <= 0.5) {
+          // At lowest zoom, only show level 0-1
+          return d.level <= 1 ? 1 : 0;
+        } else if (scale <= 1.0) {
+          // At normal zoom, show level 0-3
+          return d.level <= 3 ? 1 : 0;
+        } else if (scale <= 1.5) {
+          // At medium zoom, show level 0-5
+          return d.level <= 5 ? 1 : 0;
+        } else if (scale <= 2.0) {
+          // At high zoom, show level 0-7
+          return d.level <= 7 ? 1 : 0;
+        } else {
+          // At highest zoom, show all labels
+          return 1;
+        }
+      });
+    }
+
+    // Set initial label visibility
+    updateLabelVisibility(currentZoomScale);
+
+    // Add level labels
+    g.append('g')
+      .selectAll('text')
+      .data([...Array(maxLevel + 1).keys()])
+      .enter()
+      .append('text')
+      .attr('x', 10)
+      .attr('y', d => d * levelHeight)
+      .attr('font-size', 14)
+      .attr('font-weight', 'bold')
+      .text(d => `Level ${d}`);
+
+    console.log("Complete lattice visualization rendered successfully");
+  }
+
+  // Utility functions
+
+  // Generate all Fibonacci words of weight n
+  function generateFibWords(n) {
+    if (n === 0) return [''];  // Empty word for weight 0
+    if (n === 1) return ['1'];
+    if (n === 2) return ['2', '11'];
+
+    let words = [];
+
+    // Add words starting with 1
+    generateFibWords(n - 1).forEach(word => {
+      words.push('1' + word);
+    });
+
+    // Add words starting with 2
+    generateFibWords(n - 2).forEach(word => {
+      words.push('2' + word);
+    });
+
+    return words;
+  }
+
+  // Calculate weight of a Fibonacci word
+  function calculateWeight(word) {
+    return word.split('').reduce((sum, digit) => sum + parseInt(digit || 0), 0);
+  }
+
+  // Find all words that are below a given word in the lattice
+  function findConnectedWordsBelow(word) {
+    const below = [];
+
+    // Reverse of Rule F1: If w' starts with 1, remove it
+    if (word.startsWith('1')) {
+      below.push(word.substring(1));
+    }
+
+    // Reverse of Rule F2: If word starts with 2, try replacements
+    if (word.startsWith('2')) {
+      below.push('1' + word.substring(1));
+
+      // Count leading 2's
+      let k = 0;
+      while (k < word.length && word[k] === '2') {
+        k++;
+      }
+
+      const v = word.substring(k);
+
+      // If k>1, we also add 2^(k-1)1v
+      if (k > 1) {
+        below.push('2'.repeat(k-1) + '1' + v);
+      }
+    }
+
+    // Reverse of Rule F3: Search for pattern 2^ℓ12^(k-ℓ)v
+    for (let i = 0; i < word.length; i++) {
+      if (word[i] === '1') {
+        // Count 2's before the 1
+        let l = 0;
+        for (let j = 0; j < i; j++) {
+          if (word[j] === '2') l++;
+        }
+
+        // Count 2's after the 1 before any non-2
+        let m = 0;
+        for (let j = i + 1; j < word.length && word[j] === '2'; j++) {
+          m++;
+        }
+
+        // If we found a pattern 2^ℓ12^m v with at least one 2
+        if (l + m > 0) {
+          const v = word.substring(i + 1 + m);
+          // Create w = 2^(ℓ+m)v
+          below.push('2'.repeat(l + m) + v);
+        }
+      }
+    }
+
+    // Remove duplicates
+    return [...new Set(below)];
+  }
+})();
 </script>
