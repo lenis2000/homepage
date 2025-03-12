@@ -1,5 +1,5 @@
 ---
-title: Simulations of miscellaneous models
+title: Simulations of miscellaneous models and other tools
 layout: default
 permalink: /simulations/model/misc/
 nav_parent: Simulations

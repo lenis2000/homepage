@@ -6,7 +6,7 @@ nav_id: Simulations
 nav_weight: 19
 ---
 
-<h1>Gallery / library of simulations</h1>
+<h1>Simulations and other computational tools</h1>
 
 <h5 class="mb-3">Data, source code, visualizations</h5>
 
@@ -43,7 +43,7 @@ nav_weight: 19
 - ##### <a href="{{site.url}}/simulations/model/TASEPs/">TASEP-like systems</a>
 - ##### <a href="{{site.url}}/simulations/model/domino-tilings/">Domino tilings</a>
 - ##### <a href="{{site.url}}/simulations/model/lozenge-tilings/">Lozenge tilings</a>
-- ##### <a href="{{site.url}}/simulations/model/misc/">Miscellaneous simulations</a>
+- ##### <a href="{{site.url}}/simulations/model/misc/">Miscellaneous simulations and tools</a>
 
 
 ---
