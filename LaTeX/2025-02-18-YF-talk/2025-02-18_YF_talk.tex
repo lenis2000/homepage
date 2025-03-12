@@ -112,18 +112,41 @@ Start with an urn containing $b$ black and $w$ white balls.
 At each step, draw a ball uniformly at random from the urn
 and put it back along with another ball of the same color.
 
-The sequence of ball colors drawn from the urn is exchangeable.
+\begin{exercise}
+	Show that the sequence of ball colors drawn from the urn is exchangeable.
+\end{exercise}
 
 At time $n$, there are $n$ new balls in the urn, and the distribution of the number of, say,
-black balls,
+new black balls,
 \begin{equation*}
 	\operatorname{\mathbb{P}}\left( \textnormal{black}=k \right) = M_n(k),
 	\qquad k=0,1,\ldots,n,
 \end{equation*}
 is called the ($n$-th) \emph{coherent measure}.
-We can talk about $S_n$, the random variable which is the number of black balls drawn by time $n$.
-The coherent measures $M_n$ for various $n$ satisfy certain linear
-recurrence relations.
+In fact, we define the coherent measures
+$M_n$ for each $n$ as the distribution of
+$S_n=X_1+\ldots+X_n $:
+\begin{equation*}
+	M_n(k)=\operatorname{\mathbb{P}}\left( 
+	X_1+\ldots+X_n=k\right),\qquad k=0,1,\ldots,n.
+\end{equation*}
+Note that the distribution of 
+$(X_1,\ldots,X_n )$ depends only on 
+$S_n$, this is exchangeability.
+
+The coherent measures $M_n$ for various $n$ satisfy linear
+recurrence relations:
+\begin{equation}
+	\label{eq:coherent_recurrence}
+	M_n(k)=
+	\frac{k+1}{n+1}\ssp M_{n+1}(k+1)
+	+
+	\frac{n-k+1}{n+1}\ssp M_{n+1}(k+1).
+\end{equation}
+\begin{exercise}
+	Prove the relation \eqref{eq:coherent_recurrence}
+	using exchangeability.
+\end{exercise}
 
 One can convince oneself that the space of coherent measures is
 the same as the space of exchangeable random sequences of 0's and 1's.
@@ -148,7 +171,7 @@ Any coherent measure corresponds to a convex combination of the iid measures,
 which is expressed as the mixing distribution, i.e., a Borel
 probability measure $\mu$ on $[0,1]$.
 
-\subsection{}
+\subsection{Coherent measures and the law of large numbers}
 
 Coherent measures on Pascal triangle are related to exchangeable
 sequences of 0's and 1's. The \emph{boundary} of the Pascal
@@ -156,8 +179,16 @@ triangle encodes all possible coherent measures via the law of large numbers,
 \begin{equation*}
 	\frac{S_n}{n}\to \mu \quad \textnormal{on} \quad [0,1].
 \end{equation*}
+Here
+$S_n=X_1+\ldots+X_n$, 
+and in the Polya urn scheme, 
+$S_n$ is simply the
+number of black balls drawn by time $n$,
+that is, the number of extra black balls added to the urn
+by time $n$.
+
 Extreme measures correspond to delta point masses.
-For example, the Polya urn for $a=b=1$ corresponds to $\mu$ being the
+In another example, for the Polya urn for $b=w=1$, the mixing measure $\mu$ is the
 uniform measure on $[0,1]$.
 
 \subsection{Lonely paths}
