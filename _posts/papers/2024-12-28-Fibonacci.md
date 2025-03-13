@@ -18,7 +18,7 @@ post-pdf: true
 pages: 71
 cv-number: 47
 published: true
-simulations: simulations/2025-03-12-YF-branching/
+simulations: simulations/2025-03-12-yf-branching/
 ---
 
 
