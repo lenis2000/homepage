@@ -14,6 +14,7 @@ code:
     width: 100%;
     border: 1px solid #ccc;
     margin-top: 20px;
+    position: relative;
   }
   .word-info {
     margin-top: 20px;
@@ -46,7 +47,49 @@ code:
     border-radius: 5px;
     font-size: 14px;
   }
+  .zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+  }
+  .zoom-btn {
+    width: 30px;
+    height: 30px;
+    margin: 2px;
+    font-size: 16px;
+    line-height: 1;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    background-color: white;
+    cursor: pointer;
+  }
+  .zoom-btn:hover {
+    background-color: #f0f0f0;
+  }
+  .zoom-reset {
+    width: 62px;
+    height: 30px;
+    margin: 2px;
+    font-size: 12px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    background-color: white;
+    cursor: pointer;
+  }
+  .node rect {
+    stroke: #fff;
+    stroke-width: 1.5px;
+  }
+  .node text {
+    pointer-events: none;
+  }
 </style>
+
 <div class="container mt-5">
   <div class="row">
     <div class="col-md-12">
@@ -137,7 +180,13 @@ code:
           <h5 class="card-title mb-0">Young-Fibonacci Lattice</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container" id="chart-container"></div>
+          <div class="chart-container" id="chart-container">
+            <div class="zoom-controls">
+              <button class="zoom-btn" id="zoom-in">+</button>
+              <button class="zoom-btn" id="zoom-out">-</button>
+              <button class="zoom-reset" id="zoom-reset">Reset</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -434,7 +483,7 @@ code:
   // Function to create the visualization
   function createVisualization(currentWord, wordsAbove, wordsBelow) {
     const container = document.getElementById('chart-container');
-    container.innerHTML = '';
+    container.querySelector('svg')?.remove(); // Remove existing SVG if any
 
     // Set up dimensions
     const margin = {top: 20, right: 30, bottom: 20, left: 30};
@@ -446,8 +495,20 @@ code:
       .append('svg')
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)
+      .call(d3.zoom().on("zoom", function(event) {
+        g.attr("transform", event.transform);
+      }))
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Add a background rect for zoom panning area
+    svg.append('rect')
+      .attr('width', width)
+      .attr('height', height)
+      .attr('fill', 'transparent');
+
+    // Create a group for all the elements to be zoomed together
+    const g = svg.append('g');
 
     // Create data structure for visualization
     const nodes = [];
@@ -493,25 +554,30 @@ code:
       });
     });
 
-    // Helper function to calculate radius (defined both here and for node use)
-    function calculateRadius(text) {
-      return Math.max(30, 12 + text.length * 5); // Min radius 30, scales with text length
+    // Calculate dimensions for the rectangles
+    function calculateRectDimensions(label) {
+      const baseWidth = 20 + label.length * 10; // Width based on text length
+      const baseHeight = 40; // Fixed height
+      return { width: baseWidth, height: baseHeight };
     }
 
     // Set up force simulation
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(150)) // Increased distance
-      .force('charge', d3.forceManyBody().strength(-400)) // Stronger repulsion
+      .force('charge', d3.forceManyBody().strength(-500)) // Stronger repulsion
       .force('y', d3.forceY(d => {
         if (d.level === 0) return height * 0.25;
         if (d.level === 1) return height * 0.5;
         return height * 0.75;
       }).strength(1))
       .force('x', d3.forceX(width / 2).strength(0.1))
-      .force('collision', d3.forceCollide().radius(d => calculateRadius(d.label) + 5)); // Dynamic collision radius
+      .force('collision', d3.forceCollide().radius(d => {
+        const dims = calculateRectDimensions(d.label);
+        return Math.sqrt(dims.width * dims.width + dims.height * dims.height) / 2 + 5;
+      }));
 
     // Create links
-    const link = svg.append('g')
+    const link = g.append('g')
       .selectAll('line')
       .data(links)
       .enter()
@@ -522,7 +588,7 @@ code:
       .attr('marker-end', 'url(#arrowhead)');
 
     // Create nodes
-    const node = svg.append('g')
+    const node = g.append('g')
       .selectAll('g')
       .data(nodes)
       .enter()
@@ -537,14 +603,14 @@ code:
         document.getElementById('fibonacci-form').dispatchEvent(new Event('submit'));
       });
 
-    // Calculate dynamic radius based on text length
-    function calculateRadius(text) {
-      return Math.max(30, 12 + text.length * 5); // Min radius 30, scales with text length
-    }
-
-    // Add circles to nodes
-    node.append('circle')
-      .attr('r', d => calculateRadius(d.label))
+    // Add rectangles to nodes instead of circles
+    node.append('rect')
+      .attr('width', d => calculateRectDimensions(d.label).width)
+      .attr('height', d => calculateRectDimensions(d.label).height)
+      .attr('x', d => -calculateRectDimensions(d.label).width / 2)
+      .attr('y', d => -calculateRectDimensions(d.label).height / 2)
+      .attr('rx', 5) // rounded corners
+      .attr('ry', 5)
       .attr('fill', d => {
         if (d.type === 'current') return '#fd7e14';
         if (d.type === 'above') return '#20c997';
@@ -560,10 +626,10 @@ code:
       .text(d => d.label);
 
     // Add arrowhead marker
-    svg.append('defs').append('marker')
+    g.append('defs').append('marker')
       .attr('id', 'arrowhead')
       .attr('viewBox', '-0 -5 10 10')
-      .attr('refX', 35) // Increased to account for larger circles
+      .attr('refX', 35) // Increased to account for larger rectangles
       .attr('refY', 0)
       .attr('orient', 'auto')
       .attr('markerWidth', 6)
@@ -601,6 +667,28 @@ code:
       d.fx = null;
       d.fy = null;
     }
+
+    // Set up zoom controls
+    const zoom = d3.zoom()
+      .scaleExtent([0.2, 5])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+
+    d3.select('#chart-container svg').call(zoom);
+
+    // Add zoom control event handlers
+    document.getElementById('zoom-in').addEventListener('click', () => {
+      d3.select('#chart-container svg').transition().call(zoom.scaleBy, 1.5);
+    });
+
+    document.getElementById('zoom-out').addEventListener('click', () => {
+      d3.select('#chart-container svg').transition().call(zoom.scaleBy, 0.75);
+    });
+
+    document.getElementById('zoom-reset').addEventListener('click', () => {
+      d3.select('#chart-container svg').transition().call(zoom.transform, d3.zoomIdentity);
+    });
   }
 
   // Function to update the display based on the current word
