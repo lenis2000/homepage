@@ -137,6 +137,7 @@ My research interests in this workshop include the following:
 
 My interest in the workshop comes from the paper *Anisotropic growth of random surfaces in 2+1 dimensions* by Borodin and Ferrari. In this paper, they constructed a class of (2+1)-dimensional interacting particle systems, some of which have the property that their fixed-time projections can be viewed as a random tiling model, while certain (1+1)-dimensional projections represent models in the Kardar–Parisi–Zhang universality class of stochastic growth models. In 2024, we found the asymptotic curves separating various phases of a family of dimer models. The approach used was also from a system of recurrence relations that can be understood as a 2+1-dimensional discrete evolution equation. Our approach, however, has not shown any direct connection with the point of view of interacting particle systems and KPZ. My goal is to find an interacting particle system corresponding to this dimer model and confirm whether their (1+1)-projection represents any model in the KPZ universality class.
 
+<!--
 ---
 
 ### Jiyue Zeng
@@ -164,6 +165,7 @@ Here, $$s \in (\sqrt{q}, 1)$$, $$r \in (0,1/s)$$, and $$q \in (0,1)$$ is a fixed
 We have found a formula for the distribution of $$G_{N,N}$$ by using a shift argument and analytic continuation. We took the critical scaling and found the formula for the limiting distribution. We have the following phase diagrams. These results will be released possibly in a month.
 
 Now, we would like to find the diagonal distribution if we scale $$s$$ and $$r$$ differently. We want to discover, for example, some Gaussian fluctuation if we do not scale $$s$$ and $$r$$ to $$1$$. We want to find a complete phase diagram.
+-->
 
 ---
 
