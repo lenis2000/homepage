@@ -1,0 +1,416 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\usepackage[utf8]{inputenc}
+\usepackage{subcaption}
+\usepackage{epstopdf}
+\usepackage{float}
+\usepackage{epsfig}
+\usepackage{framed}
+\usepackage{dsfont}
+% \usepackage{xr}
+%\usepackage{pstricks}
+\usepackage{csquotes}
+
+
+\usepackage{microtype}
+% \usepackage{bbm}
+% \usepackage[style=ieee, backend=biber]{biblatex}
+\usepackage{grffile}
+\usepackage{extarrows}
+\usepackage{nicematrix}
+\usepackage{bbm}
+\usepackage{adjustbox}
+\usepackage{bmpsize}
+% \usepackage{epstopdf}
+\usepackage{bbold}
+\usepackage{array, url, tcolorbox, xcolor, titlesec}
+\usepackage{amsthm,amssymb}
+\usepackage{float}
+% \usepackage[bookmarksdepth=3,linktoc=all,colorlinks=true,urlcolor=blue,linkcolor=blue,citecolor=blue]{hyperref}
+
+\newcommand{\bmb}{\left( \begin{array}{rr}}
+\newcommand{\enm}{\end{array}\right)}
+% end rk's matrix commands{}
+\newcommand{\rt}{{\rm t}}
+\newcommand{\cQ}{\mathcal Q}
+\newcommand{\cT}{\mathcal T}
+\newcommand{\HH}{{\mathbb H}}
+\newcommand{\cM}{\mathcal M}
+\newcommand{\cD}{\mathcal D}
+\newcommand{\cO}{\mathcal O}
+\newcommand{\cG}{\mathcal G}
+\newcommand{\wy}{\widehat{y}}
+\newcommand{\cI}{\mathcal I}
+\newcommand{\cS}{\mathcal S}
+\newcommand{\g}{{\mathfrak{g}}}
+\newcommand{\h}{{\mathfrak{h}}}
+\newcommand{\gl}{{\mathfrak{gl}}}
+\newcommand{\n}{{\mathfrak{n}}}
+\newcommand{\ti}{{\tilde i}}
+\newcommand{\tj}{{\tilde j}}
+\newcommand{\bi}{{\textbf{i}}}
+\newcommand{\tk}{{\tilde k}}
+\newcommand{\tl}{{\tilde l}}
+\newcommand{\tm}{{\tilde m}}
+\newcommand{\tn}{{\tilde n}}
+\newcommand{\expect}{\mathop{\mathbb{E}}}
+% \newcommand{\expect}{{\mathbbm {E}}}
+\newcommand{\tphi}{{\tilde \phi}}
+\newcommand{\w}{\omega}
+\newcommand{\slopen}{\frac{N_s+2}{2}n}
+\newcommand{\slopeep}{\frac{N_s}{2}\epsilon}
+\newcommand{\NsoverNs}{\frac{N_s+2}{N_s}}
+\newcommand{\floorNsm}{\left \lfloor \frac{2}{N_s}m\right \rfloor}
+\newcommand{\Nshalf}{\frac{N_s}{2}}
+%
+\newcommand{\cP}{\mathcal P}
+\newcommand{\cA}{\mathcal A}
+
+\newcommand{\bM}{{\mathbf M}}
+\newcommand{\bZ}{{\mathbf Z}}
+\newcommand{\bI}{{\mathbf I}}
+\newcommand{\bP}{{\mathbf P}}
+
+%
+\renewcommand{\sl}{{\mathfrak{sl}}}
+\newcommand{\KR}{{{\rm KR}}}
+\newcommand{\ch}{{\rm ch}}
+\newcommand{\C}{{\mathbb C}}
+\newcommand{\Z}{{\mathbb Z}}
+\newcommand{\Q}{{\mathbb Q}}
+\newcommand{\R}{{\mathbb R}}
+\newcommand{\N}{{\mathbb N}}
+\newcommand{\Prob}{{\mathbb P}}
+
+\newcommand{\T}{{\mathbb T}}
+
+
+\newcommand{\Hom}{{\rm Hom}}
+\newcommand{\bF}{{\mathbf F}}
+\newcommand{\bG}{{\mathbf G}}
+\newcommand{\bT}{{\mathbf T}}
+\newcommand{\ba}{{\mathbf a}}
+\newcommand{\bc}{{\mathbf c}}
+\newcommand{\bd}{{\mathbf d}}
+\newcommand{\be}{{\mathbf e}}
+\newcommand{\bbf}{{\mathbf f}}
+\newcommand{\bb}{{\mathbf b}}
+\newcommand{\bm}{{\mathbf m}}
+\newcommand{\bn}{{\mathbf n}}
+\newcommand{\bk}{{\mathbf k}}
+\newcommand{\bx}{{\mathbf x}}
+\newcommand{\by}{{\mathbf y}}
+\newcommand{\bt}{{\mathbf t}}
+\newcommand{\bu}{{\mathbf u}}
+\newcommand{\bv}{{\mathbf v}}
+\newcommand{\bw}{{\mathbf w}}
+\newcommand{\bs}{{\mathbf s}}
+\newcommand{\bR}{{\mathbf R}}
+\newcommand{\bS}{{\mathbf S}}
+\newcommand{\bB}{{\mathbf B}}
+\newcommand{\bX}{{\mathbf X}}
+\newcommand{\bJ}{{\mathbf J}}
+\newcommand{\bC}{{\mathbf C}}
+\newcommand{\bK}{{\mathbf K}}
+\newcommand{\bL}{{\mathbf L}}
+\newcommand{\bz}{{\mathbf z}}
+\newcommand{\bbw}{{\mathbf w}}
+\newcommand{\bW}{{\mathbf W}}
+\newcommand{\ind}{{\mathbb{1}}}
+\newcommand{\bone}{{\mathbf 1}}
+\newcommand{\coupling}{K^{-1}}
+\newcommand{\al}{{\alpha}}
+\newcommand{\wG}{\widetilde{G}}
+\newcommand{\tQ}{{\widetilde{Q}}}
+\newcommand{\tD}{{\widetilde{D}}}
+\newcommand{\tU}{{\widetilde{U}}}
+\newcommand{\tM}{{\widetilde{M}}}
+% \newcommand{\philippe}[1]{\textcolor{blue}{[Philippe: #1]}}
+\newcommand{\trung}[1]{\textcolor{red}{[Trung: #1]}}
+\newcommand{\sgn}{{\rm sgn}}
+\newcommand{\ds}{\displaystyle}
+\newcommand\scalemath[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}}
+% \newcommand{\d}{{\operatorname{d}}}
+% \usepackage{ruledchapters}  % example of compliant heading format, uncomment to use
+\theoremstyle{definition}
+\newtheorem{thm}[subsection]{Theorem}
+\newtheorem{prop}[subsection]{Proposition}
+\newtheorem{lemma}[subsection]{Lemma}
+\newtheorem{conj}[subsection]{Conjecture}
+\newtheorem{cor}[subsection]{Corollary}
+\newtheorem{property}[subsection]{Property}
+\newtheorem{conjecture}[subsection]{Conjecture}
+\newtheorem{claim}[subsection]{Claim}
+\newtheorem{example}[subsection]{Example}
+\newtheorem{defn}[subsection]{Definition}
+\newtheorem{remark}[subsection]{Remark}
+\newtheorem{assumption}[subsection]{Assumption}
+
+
+
+\title{AIM Workshop: All roads to KPZ Universality Open Problems}
+\author{Leonid Petrov \and Axel Saenz \and  Hieu Trung Vu (scribe) }
+
+\begin{document}
+\maketitle
+
+
+
+\section{Multilayer models and multilayer KPZ FP}
+\begin{itemize}
+	\item There has been success in finding exact formulas for PNG with arbitrary initial conditions
+		\cite{matetski2022polynuclear}.
+		Can this be extended to multilayer PNG?
+		What class of initial conditions can we consider?
+	\item Find the scaling limit of the multilayer PNG in the spirit of KPZ FP
+		\cite{matetski2017kpz}, \cite{matetski2022polynuclear}.
+	\item More generally, consider multilayer models such as the multi-path partition functions in the
+		O'Connell-Yor semi-discrete directed Brownian polymer
+		\cite[Theorem~3.1 and subsequent SDEs]{Oconnell2009_Toda}, \cite[Definition~4.1.26]{BorodinCorwin2011Macdonald},
+		\cite[Section~8.4]{BorodinPetrov2013NN}.
+		At the edge, this model scales to the KPZ equation
+		and further to the KPZ fixed point. What is the scaling limit in the bulk?
+		Potential related models include Macdonald processes and general beta random matrix ensembles (both dynamical --- Dyson
+		Brownian motion --- and the corners process).
+		One reference is on the $q$-deformed bulk dynamics \cite{corwin2015stationary}.
+\end{itemize}
+
+\section{Two-dimensional particle systems and continuous growth models}
+
+\subsection{2d ASEP}
+\begin{itemize}
+    \item Study the two-dimensional asymmetric simple exclusion process (ASEP) on the lattice $\mathbb{Z}^2$, where particles attempt hops to the four cardinal directions (N, S, E, W) with differing asymmetric rates. A key question is whether the resulting fluctuations can be linked to the two-dimensional KPZ universality class.
+    \item An essential step is to define a suitable height function that maps particle configurations to a continuous interface. The challenge is to capture the local imbalance in particle flows and to ensure that the macroscopic limit is well-defined.
+		One idea involves studying the exit time required for a particle to exit a fixed ball in $\mathbb{Z}^2$.
+    \item Investigate how various initial conditions (e.g., a half-plane fully occupied by particles) influence the hydrodynamic scaling limits and the fluctuation behavior.
+    \item A long-term goal is to rigorously derive the continuum stochastic partial differential equations (SPDEs) that govern the evolution of current fluctuations and stationary measures in the scaling limit.
+\end{itemize}
+
+\subsection{Isotropic 2d KPZ}
+\begin{itemize}
+    \item The isotropic two-dimensional KPZ problem remains largely open. A central challenge is to identify the fluctuation exponents and to characterize the fixed point process that would parallel the one-dimensional KPZ FP.
+\end{itemize}
+
+\subsection{Anisotropic models}
+\begin{itemize}
+	\item In contrast to the isotropic case, anisotropic KPZ models \cite{BorFerr2008DF}, \cite{borodin2016stochastic},
+		\cite{borodin2018two} are expected to exhibit different scaling behaviors. A key question is whether these models converge to a distinct fixed point under appropriate scaling limits.
+    \item One potential approach involves analyzing the coupling of Gaussian free fields (GFFs) with varying slopes to understand the invariant measures of the hypothetical two-dimensional anisotropic KPZ~FP.
+\end{itemize}
+
+
+
+\section{Log-concavity}
+
+
+
+\begin{itemize}
+\item A function $f$ is log-concave if
+$$f(a)f(b) \leq f\left(\frac{a+b}{2}\right)^2.$$
+One example of such function is the Gaussian density function.
+Note that the variables $a,b$ might be vectors or matrices.
+Log-concavity is fundamental in probability theory and combinatorics, e.g.,
+\cite{bagnoli2005log},
+\cite{huh2022logarithmic}.
+		\item Consider continuous-time TASEP with step initial
+			condition.  There is an associated transition
+			probability function $f(a)$ into the configuration
+			$a$.  A question arises whether $f(a)$ is log-concave.
+			While log-concavity appears in many probabilistic
+			models, it remains unclear how to establish it in this
+			context.  The motivation includes connections to
+			symmetric functions.
+
+	\item The density of the
+		Tracy--Widom random variable is itself log-concave \cite{bona2017longest}.
+		For a large permutation of size $n$, the
+		longest increasing subsequence length $L_n$ often (after
+		suitable centering and scaling) converges to the
+		Tracy--Widom distribution. Does
+		Tracy--Widom log-concavity extend to the finite, discrete models
+		that approximate or `discretize' the Tracy--Widom
+		distribution?
+		Such discrete distributions count
+		permutations by fixed longest increasing subsequence length
+		and may exhibit log-concavity under certain conditions.
+		For a recent development, see \cite{baslingker2024log}.
+\end{itemize}
+
+\section{KPZ behavior in quantum spin chains}
+
+\begin{itemize}
+    \item Compute the large-time current fluctuations for the XXZ spin-$1/2$ chain on a 1D lattice.
+    \item The edge fluctuations for $\Delta=0$ with domain wall initial conditions were computed in \cite{SaenzTracyWidom2022} and shown to have Tracy-Widom GUE distribution. Partial asymptotic computations for $\Delta\neq 0$ were carried out, resulting on a precise conjecture for the fluctuations.
+    \item The edge fluctuations for $\Delta \gg 1$ with alternating domain wall initial conditions were considered in \cite{fujimotoSasamoto2024quantum}. The authors gave strong numerical evidence that the edge fluctuations have Tracy-Widom GUE distribution. In the limit $\Delta \rightarrow \infty$, the authors show that the edge fluctuations have Tracy-Widom GUE fluctuations.
+		\item Other current observables were also considered in \cite{takeuchi2024partial}. By extensive numerical analysis, the authors show that the characteristic length of the system scales as $t^{2/3}$, in agreement with models in the KPZ universality class.
+\end{itemize}
+
+\section{Colored particles on the ring}
+
+\begin{itemize}
+	\item Can one derive an analogue of the TASEP speed process \cite{amir2011tasep},
+		\cite{aggarwal2023asep} for colored particle systems (TASEP or ASEP, for starters) evolving on a ring?
+
+\item
+	Does a color-position symmetry exist in particle systems on a ring? (Model particular case: Half-open systems?)
+	For models on the full space or in half-space geometries, such symmetries have been crucial for deriving exact formulas and understanding integrable structures. There are many references
+	on color-position symmetry and the related property of shift-invariance, e.g.,
+	\cite{BorodinBufetov2021ColorPosition}, \cite{bufetov2020interacting},
+	\cite{galashin2020symmetries},
+	\cite{corwin2020invariance},
+	\cite{dauvergne2020hidden}.
+
+\item
+	Can the dynamics of colored particles on a ring be recast in terms of an (affine) Hecke algebra structure?
+
+\item
+	Is there an analogue of color-position symmetry within the framework of LPP models?
+	Recent works on ``hidden invariance'' cited above hint at deep invariance properties that might extend to colored systems.
+
+
+\item
+	Within the known stationary measures of ASEP, can we investigate correlations?
+	Consider the asymmetric simple exclusion process (ASEP) on a
+	large ring with two particle colors, with particle densities
+	$\rho_1$ and $\rho_2$. Define $\eta_i(x)$ as the indicator
+	for the presence of a particle of color $i$ at site $x$
+	under stationarity. A key question is to understand how the
+	covariance between particle occupations decays with
+	increasing spatial separation. When densities are close to
+	$1/2$, one could leverage the convergence to Brownian
+	motions with drift and known stationary horizon properties
+	to conjecture explicit forms for the correlation decay. For
+	general densities, connections with known ASEP or TASEP
+	analogues, such as speed processes or hidden invariances,
+	may provide valuable insights.
+\end{itemize}
+
+
+\section{Longest common subsequence}
+
+\begin{itemize}
+\item
+Consider two independent random sequences (strings) of i.i.d.\ Bernoulli(0,1) variables, or more generally, i.i.d.\ variables taking values in a finite alphabet. The main question is to understand the typical size and the fluctuations of their longest common subsequence (LCS). Recent works have studied various regimes of this problem.
+
+\item One central object of study is the almost-sure growth rate (or \emph{time constant}) of the LCS as the string lengths grow. Determining this constant precisely remains an open problem in many cases.
+	A potential approach would be to rephrase the LCS problem in the language close to LPP, and potentially use
+	Busemann functions.
+
+\item In the special setting where one of the two sequences is purely periodic and the other is random, more progress has been made. In particular, the papers
+\cite{bukh2019periodic}, \cite{briggs2024frogs}
+relate the LCS problem to a version of the
+PushTASEP on the ring.
+\end{itemize}
+
+
+\section{KPZ line ensemble and random permutations}
+
+\begin{itemize}
+    \item Take a vertical slice of the KPZ line ensemble \cite{CorwinHammond2013}, how close is the permutation of $\mathbb{Z}_{\ge1}$ to the identity permutation? Is the permutation finite at all? In the Airy line ensemble, the permutation is trivial with probability 1.
+		\item Note that there are two versions of the KPZ line ensemble: the one where the $k$-th curve escapes to $+\infty$ (when the Gibbs property is independent of $k$), and the one where the deep curves stabilize (but the Gibbs property depends on $k$; this second version is the one arising as scaling limits).
+\end{itemize}
+
+
+
+\section{Busemann functions and LPP}
+
+\begin{itemize}
+    \item 
+    A key theme is to explore connections between multipath LPP 
+		partition functions
+		and Busemann functions defined in several directions. 
+		Busemann functions have long been instrumental in the study of geodesics, current fluctuations, and stationary measures in exactly solvable models such as TASEP and exponential/geometric LPP.
+		Suitable multipath analogues of Busemann functions might prove fruitful in scaling limits of 
+		LPP/polymer models.
+		
+    \item
+			The Airy line ensemble and its Gibbs property \cite{corwin2014brownian} play a central role in integrable probability. 
+			One intriguing question is what happens when random path
+			segments are resampled using the Brownian Gibbs property.
+			As DL is a functional of the Airy line ensemble, it is
+			natural to ask how the DL changes under such resamplings.
+    
+    \item 
+    Beyond the original construction via Brownian last passage percolation, alternate descriptions of the DL have begun to emerge, leveraging tools such as Busemann functions, Airy line ensembles, and stationary variants of LPP. 
+		Each of these viewpoints can shed light on the universality and rich geometric behavior inherent in the KPZ class.
+    In discrete integrable systems, ``melon'' constructions often refer to nonintersecting
+		random walks obtained as a functional of independent random walks.
+		These naturally have connections to the Robinson–Schensted–Knuth (RSK) correspondence and its various extensions.
+		Investigating how ``stationary melons'' behave under a
+		Busemann-oriented perspective and how they embed in the
+		directed landscape is an interesting direction.
+\end{itemize}
+
+
+\section{Relaxing/perturbing integrable models}
+\begin{itemize}
+	\item 
+    Can one can relax the iid Bernoulli random walks that underlie 
+		the nontrivial structure in integrable models like PNG or TASEP,
+		in formulas around the KPZ FP \cite{matetski2017kpz}, \cite{matetski2022polynuclear}?
+		Another example includes the 
+		two-layer Gibbs measures (again, relying on simple random walks) that provide
+		descriptions of stationary distributions in open particle systems
+		\cite{BarraquandCorwinYang2023}.
+
+    \item 
+    It is natural to attempt a characterization of 
+		stochastic processes that one can put into 
+		formulas instead of random walks.
+\end{itemize}
+
+\section{ASEP on graphs or trees}
+
+\begin{itemize}
+        \item On finite trees or graphs, ASEP is an irreducible Markov chain with a unique stationary distribution. Unlike the one-dimensional case, no simple product form generally exists.
+        In infinite random trees, a nonzero flow can persist if branch capacities exceed the injection rate at the root; otherwise, the system becomes fully jammed \cite{Gantert2021}.
+
+        \item Classical one-dimensional ASEP maps to the inviscid Burgers equation in the hydrodynamic limit. On general graphs, each edge follows a Burgers-type PDE, subject to coupling constraints at vertices (junctions).
+        Simple merges (e.g., 2-to-1 lanes) already exhibit nontrivial shock and rarefaction waves, influencing phase diagrams and throughput \cite{Zhang2019}.
+
+        \item While large deviation principles for current fluctuations are well-understood in 1D, explicit formulas on general graphs remain scarce.
+        Macroscopic fluctuation theory suggests bottlenecks dominate rare-event statistics, and phase separation can occur if certain edges saturate.
+
+        \item Road networks with on- and off-ramps, intersections, or multi-lane traffic can be modeled by ASEP on graphs. Key phenomena include traffic jams localized around bottlenecks.
+				In intracellular transport, motor proteins on complex filament networks create dense or jammed regions. Mathematical models align with observations of phase heterogeneity and spontaneous symmetry breaking \cite{Neri2013}, \cite{AppertRolland2015}.
+\end{itemize}
+
+
+\appendix
+\section{Abbreviations}
+
+\begin{itemize}
+		\item USC: Upper semi-continuous function
+		\item KPZ FP: KPZ Fixed Point
+		\item ASEP: Asymmetric simple exclusion process
+		\item PNG: Polynuclear growth
+		\item KPZ: Kardar-Parisi-Zhang
+		\item LPP: Last passage percolation
+		\item FPP: First passage percolation
+		\item GUE: Gaussian unitary ensemble
+		\item XXZ: Anisotropic Heisenberg model
+        \item LCS: Longest common subsequence
+		\item RSK: Robinson-Schensted-Knuth
+		\item GFF: Gaussian free field
+		\item DL: Directed landscape
+	\end{itemize}
+
+
+
+\bibliographystyle{alpha}
+\bibliography{bib}
+
+\end{document}
