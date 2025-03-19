@@ -23,6 +23,12 @@ permalink: /kpz2025/
 
 ---
 
+## Open problems list ([PDF]({{site.url}}/LaTeX/2025-03-19-AIM-KPZ/2025-03-19-AIM-KPZ.pdf))
+
+---
+
+
+
 ## Readings ([PDF]({{site.url}}/kpz2025/reading_list.pdf))
 
 <!-- Foundations -->
