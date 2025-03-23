@@ -69,6 +69,12 @@ Updated at \currenttime, \today}}
 
 \maketitle
 
+\begin{abstract}
+	This lecture begins the second half of the course after the Spring Break, and
+	here we start with the Dyson Brownian Motion. 
+	In the later lectures we explore random growth models and their universal scaling limits
+	which are closely connected to random matrix theory.
+\end{abstract}
 
 \section{Motivations}
 \subsection{Why introduce time?}
@@ -154,105 +160,187 @@ the same dynamics. This proves the Markov property.
 \end{proof}
 
 \section{Dyson Brownian Motion}
-We now describe the SDE for $\lambda(t)$ explicitly, following the classical result due to Dyson
-\cite{dyson1962brownian}.
+We now describe the stochastic differential equation (SDE)
+for $\lambda(t)$ explicitly, following the classical result due to Dyson
+\cite{dyson1962brownian}. Let us first briefly discuss what is an SDE.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{here}}
+\subsection{Stochastic differential equations}
 
-\subsection{Statement: the Dyson SDE}
-\begin{theorem}
-\label{thm:Dyson_SDE}
-For $\beta>0$, the ordered eigenvalues $\lambda_1(t)\ge \cdots \ge \lambda_N(t)$ of $\mathcal{M}(t)$ solve the system of stochastic differential equations:
+
+
+
+
+
+
+
+\subsection{Heuristic Derivation of the SDE}
+
+Let \(\mathcal{M}(t)\) be an \(N\times N\) Hermitian matrix-valued process defined by
+\[
+\mathcal{M}(t)=\mathcal{M}(0)+X(t),
+\]
+where \(X(t)\) is a matrix Brownian motion (for example, in the GUE case, \(X(t)=B(t)+i\tilde{B}(t)\) with independent real Brownian motions in the appropriate entries).
+
+Denote by \(\lambda_1(t) \le \lambda_2(t) \le \cdots \le \lambda_N(t)\) the ordered eigenvalues of \(\mathcal{M}(t)\). We wish to understand how a small time increment affects these eigenvalues. For a very small time increment \(\Delta t\), one can write
+\[
+\mathcal{M}(t+\Delta t)=\mathcal{M}(t)+\Delta \mathcal{M},
+\]
+where the increment \(\Delta \mathcal{M}\) has (approximately) independent Gaussian entries of order \(\sqrt{\Delta t}\).
+
+Assume that at time \(t\) the matrix is diagonalized as
+\[
+\mathcal{M}(t)=U \Lambda(t) U^*,
+\]
+with \(\Lambda(t)=\operatorname{diag}(\lambda_1(t),\dots,\lambda_N(t))\) and \(U\) unitary. By standard perturbation theory for Hermitian matrices (see, e.g., Rayleigh–Schrödinger perturbation theory), the first–order change in an eigenvalue \(\lambda_i\) due to a perturbation \(\Delta \mathcal{M}\) is given by
+\[
+\Delta\lambda_i = \langle u_i,\,\Delta \mathcal{M}\,u_i \rangle,
+\]
+where \(u_i\) is the normalized eigenvector corresponding to \(\lambda_i(t)\).
+
+However, in addition to this linear term, one must take into account the second-order correction (the Itô correction) coming from the randomness of the off–diagonal elements. A careful analysis (which we outline below) shows that, after averaging, the drift term involves a sum over \(j\neq i\) with reciprocal differences. In particular, one obtains
+\[
+\Delta\lambda_i = \Delta B_i + \frac{1}{2}\Delta t\,\sum_{j\neq i}\frac{1}{\lambda_i(t)-\lambda_j(t)} + o(\Delta t),
+\]
+where \(\Delta B_i\) represents the contribution from the independent Brownian motions (with variance \(\Delta t\)) and the second term arises from the Itô correction due to the off–diagonal fluctuations.
+
+Passing to the limit \(\Delta t\to 0\) and noting that the variance in the diagonal increments matches that of standard Brownian motion, we conclude that the eigenvalues satisfy the following SDE:
 \begin{equation}
-\label{eq:Dyson_SDE}
-d\lambda_i(t)\;=\;\sqrt{2}\,dB_i(t)\;+\;\beta\sum_{\substack{j=1\\j\neq i}}^{N}\frac{dt}{\lambda_i(t)-\lambda_j(t)},
-\quad 1\le i \le N,
+\label{eq:DBM_final}
+d\lambda_i(t)=\frac{\beta}{2}\sum_{\substack{j=1\\ j\neq i}}^N \frac{dt}{\lambda_j(t)-\lambda_i(t)}+dW_i(t), \quad i=1,\dots,N.
 \end{equation}
-where $B_1(t),\dots,B_N(t)$ are independent standard Brownian motions.
-For $\beta=1,2,4$, this matches the matrix picture. More generally, \eqref{eq:Dyson_SDE} is well-defined for all $\beta>0$ (with a notion of strong solutions avoiding collisions).
+Here, \(W_i(t)\) are independent standard Brownian motions, and the parameter \(\beta>0\) arises from the symmetry class (with \(\beta=1\) for GOE, \(\beta=2\) for GUE, and \(\beta=4\) for GSE).
+
+\begin{remark}
+The drift term in \eqref{eq:DBM_final} is singular when eigenvalues approach each other. This strong repulsion prevents collisions of eigenvalues and ensures that the ordering is preserved for all \(t>0\).
+\end{remark}
+
+\begin{exercise}
+Using first–order perturbation theory and the Itô formula, derive heuristically the SDE \eqref{eq:DBM_final} for the case \(\beta=1\). (Hint: Expand the determinant condition for eigenvalues and collect terms up to order \(\Delta t\).)
+\end{exercise}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Invariant Distribution and Transition Probabilities}
+
+One of the striking features of Dyson Brownian Motion is that it has a well–understood invariant (or stationary) distribution. In particular, if the eigenvalue process is started from a “degenerate” initial condition (e.g., \(\lambda(0)=(0,\dots,0)\)), then for each fixed \(t>0\) the density of \(\lambda(t)=(\lambda_1(t),\dots,\lambda_N(t))\) is given by
+\[
+p_t(\lambda_1,\dots,\lambda_N) \propto \prod_{1\le i<j\le N}|\lambda_i-\lambda_j|^\beta \exp\left(-\frac{1}{2t}\sum_{i=1}^N\lambda_i^2\right).
+\]
+In other words, for \(\beta=2\) this is exactly the joint eigenvalue density of the GUE (up to a scaling factor).
+
+The transition probability from an initial configuration \(\lambda(0)=(a_1,\dots,a_N)\) to a configuration \(\lambda(t)=(x_1,\dots,x_N)\) (with \(x_1<x_2<\cdots<x_N\) and similarly for \(a_i\)) can also be written explicitly. In fact, one obtains the following result for the \(\beta=2\) case:
+
+\begin{theorem}[Transition Density for \(\beta=2\)]
+Let \(\lambda(0)=(a_1,\dots,a_N)\) and let \(\lambda(t)=(x_1,\dots,x_N)\) with \(a_1<\cdots<a_N\) and \(x_1<\cdots<x_N\). Then the transition probability density is given by
+\[
+P\bigl(\lambda(t)=\vec{x}\mid \lambda(0)=\vec{a}\bigr)
+=N! \left(\frac{1}{\sqrt{2\pi t}}\right)^N \prod_{1\le i<j\le N}\frac{x_j-x_i}{a_j-a_i} \det\Biggl[\exp\Bigl(-\frac{(x_i-a_j)^2}{2t}\Bigr)\Biggr]_{i,j=1}^N.
+\]
+\end{theorem}
+
+This formula is obtained by interpreting the matrix process as \(A+\sqrt{t}\,\text{GUE}\) and applying the Harish-Chandra--Itzykson--Zuber (HCIZ) formula to integrate over the unitary group.
+
+\begin{exercise}
+Show that as \(t\to 0\) the above transition density converges (in the sense of distributions) to a delta–function on \(\vec{x}=\vec{a}\).
+\end{exercise}
+
+\begin{remark}
+For general \(\beta\) the invariant density is given by the same form (with exponent \(\beta\)) and these densities are central in studying the universality of eigenvalue statistics.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Determinantal Structure for \(\beta=2\): The Correlation Kernel}
+
+For the special case \(\beta=2\), the process of eigenvalues is \emph{determinantal}; that is, for any fixed time \(t>0\) the \(k\)-point correlation functions can be written as
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K_t(x_i,x_j)\Bigr]_{i,j=1}^k,
+\]
+for a suitable correlation kernel \(K_t(x,y)\).
+
+One standard derivation of this determinantal structure is via the explicit form of the joint density (which is a Vandermonde determinant squared times a Gaussian weight) and the use of orthogonal polynomial techniques. Alternatively, one may derive the transition kernel directly from the HCIZ formula.
+
+In our context, one obtains the following explicit double contour integral representation for the correlation kernel:
+
+\begin{theorem}[Determinantal Kernel for \(\beta=2\)]
+\label{thm:det_kernel}
+Assume the eigenvalue process starts at \(\lambda(0)=(a_1,\dots,a_N)\). Then for time \(t>0\), the correlation kernel is given by
+\begin{equation}
+\label{eq:det_kernel_explicit}
+K_t(x,y)=\frac{1}{(2\pi i)^2\,t}\iint_{\Gamma_z,\Gamma_w} \frac{\exp\Bigl(\frac{w^2-2yw}{2t}\Bigr)}{\exp\Bigl(\frac{z^2-2xz}{2t}\Bigr)}
+\prod_{i=1}^N \frac{w-a_i}{z-a_i}\,\frac{dw\,dz}{w-z},
+\end{equation}
+where the contours \(\Gamma_z\) and \(\Gamma_w\) are chosen as follows:
+\begin{itemize}
+    \item The \(z\)-contour, \(\Gamma_z\), is a closed contour encircling the points \(a_1,\dots,a_N\).
+    \item The \(w\)-contour, \(\Gamma_w\), is chosen such that it encloses \(\Gamma_z\) (or is deformed appropriately) and the integral converges.
+\end{itemize}
 \end{theorem}
 
 \begin{remark}
-The factor $\sqrt{2}$ here is consistent with the real/complex/quaternionic normalization. Some references place $\beta/2$ in front of the drift instead of $\beta$. These are minor variations of normalization.
+The determinantal structure implies that for any \(k\ge1\),
+\[
+\rho_k(x_1,\dots,x_k)=\det\Bigl[K_t(x_i,x_j)\Bigr]_{i,j=1}^k.
+\]
+This representation is fundamental in the asymptotic analysis (e.g., for proving the sine kernel or Airy kernel limits) and in establishing universality.
 \end{remark}
 
-\subsection{Idea of the proof}
-\label{sub:sde_proof_idea}
-We outline the argument for $\beta=1$ (GOE). For small $\Delta t$, examine $\mathcal{M}(T+\Delta t)$ in terms of $\mathcal{M}(T)$ plus a small random perturbation with i.i.d.\ $\mathcal{N}(0,\Delta t)$ entries on the diagonal. By computing how each eigenvalue $\lambda_i(T)$ shifts to $\lambda_i(T)+\Delta\lambda_i$, one obtains
-\[
-\Delta \lambda_i = \underbrace{\sqrt{2}\,\Delta B_i}_\text{white noise} \;+\;\sum_{j\neq i}\frac{\beta \,\Delta t}{\lambda_i-\lambda_j} + \text{smaller order terms},
-\]
-which becomes \eqref{eq:Dyson_SDE} in the limit $\Delta t\to 0$. A classical approach is to expand the determinant for the $(n\times n)$ matrix $\bigl(\mathcal{M}(T)+\Delta\mathcal{M}\bigr)$ near $\lambda_i(T)$, picking up rational drift terms from partial fractions $\frac{1}{\lambda_i-\lambda_j}$. Full details can be found in many references (e.g.\ \cite{AndersonGuionnetZeitouni2010}).
+\begin{exercise}
+Show that in the limit \(t\to 0\) the kernel \(K_t(x,y)\) from \eqref{eq:det_kernel_explicit} converges (after appropriate rescaling) to a kernel that recovers the initial condition \(\lambda(0)=(a_1,\dots,a_N)\). (Hint: Examine the asymptotics of the Gaussian factors.)
+\end{exercise}
 
-\subsection{Interpretation of drift}
-\label{sub:interpretation_drift}
-The repulsion among eigenvalues is visible in the drift term:
-\[
-\beta\sum_{j\neq i}\frac{1}{\lambda_i-\lambda_j}.
-\]
-When $\lambda_i$ approaches $\lambda_{i+1}$ from above, the denominator is negative, forcing a negative drift, which pushes $\lambda_i$ back upward. Similarly, from below, it is pushed up. This is the hallmark of \emph{no crossing} or \emph{no collision} phenomena: the eigenvalues typically do not intersect (unless $\beta<1$, in which collisions become more subtle but still typically avoided).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Non-Colliding Brownian Motions and Their Equivalence to DBM for \(\beta=2\)}
 
-\section{Invariant Distributions and Short-Time Transitions}
-\label{sec:invariant_laws}
-
-\subsection{Fixed time distribution with drift to center}
-\Cref{lemma:time_fixed_law} states that for each fixed $t$, the distribution of $\mathcal{M}(t)$ is $\mathcal{M}(0) + \sqrt{t}\,G_\beta$. In particular, if $\mathcal{M}(0)=0$, then
-\[
-\lambda(0) = (0,\dots,0),\quad \lambda(t)\stackrel{d}{=} \text{eigs}\bigl(\sqrt{t}\,G_\beta\bigr).
-\]
-The law of the eigenvalues thus becomes the usual $\beta$-ensemble with the Gaussian potential, rescaled by $\sqrt{t}$. In SDE form, we can also check directly that the drift term in \eqref{eq:Dyson_SDE} combined with the Gaussian term ensures an exponential factor $\exp\bigl(-\frac{(\lambda_i)^2}{2t}\bigr)$.
-
-\begin{proposition}
-\label{prop:beta_invariant}
-For $\beta>0$, the solution to \eqref{eq:Dyson_SDE} with the initial condition $\lambda(0)=0$ has the joint density at time $t$ proportional to
-\[
-\prod_{1\le i<j\le N}\bigl|\lambda_i-\lambda_j\bigr|^\beta \cdot \exp\!\Bigl(-\frac{1}{2t}\sum_{i=1}^N \lambda_i^2\Bigr).
-\]
-This is (up to a scale factor) exactly the $\beta$-Hermite ensemble.
-\end{proposition}
-\begin{proof}[Sketch]
-For $\beta=1,2,4$, it follows from \Cref{lemma:time_fixed_law}. For other $\beta>0$, one can define the process as the unique strong solution to \eqref{eq:Dyson_SDE}, and verify the forward Kolmogorov equation to see that the indicated density is preserved.
-\end{proof}
-
-\subsection{Transition probabilities and the Harish-Chandra--Itzykson--Zuber formula (\texorpdfstring{$\beta=2$}{beta=2})}
-For $\beta=2$, the process $\lambda(t)$ has explicit transition densities known from matrix integrals. Indeed, if the initial matrix is $\mathcal{M}(0)=A$, then $\mathcal{M}(t)\stackrel{d}{=} A + \sqrt{t}\,G_2$. The joint law of the eigenvalues $\lambda(t)$ can be written using the Harish-Chandra--Itzykson--Zuber (HCIZ) formula. We only state one typical result:
+An important and beautiful result is that for \(\beta=2\) the process defined by the SDE \eqref{eq:DBM_final} is identical in law to \(N\) independent Brownian motions conditioned never to collide. In other words, the repulsion between eigenvalues in DBM exactly mimics the effect of conditioning independent particles to remain ordered.
 
 \begin{theorem}
-\label{thm:DBM_transition_beta2}
-For $\beta=2$, the transition probability density of $\lambda(t)$ from initial positions $\bigl(a_1\ge \cdots \ge a_N\bigr)$ at $t=0$ to $\bigl(x_1\ge \cdots \ge x_N\bigr)$ at time $t$ has a closed-form expression:
-\begin{align*}
-P\bigl(\lambda(t)=x\mid \lambda(0)=a\bigr) \;\propto\;
-&\exp\Bigl(-\tfrac1{2t}\sum_{i=1}^N x_i^2 - \tfrac1{2t}\sum_{i=1}^N a_i^2\Bigr)\;
-\frac{\det\bigl[e^{\tfrac{x_i a_j}{t}}\bigr]_{i,j=1}^N}{\prod_{i<j}(x_i-x_j)(a_i-a_j)},
-\end{align*}
-where $\propto$ means up to a factor depending on $t$ and $N$ only.
-\end{theorem}
-This result is a matrix version of the convolution of Gaussians plus a unitary conjugation integral. For references, see \cite{Mehta2004,AndersonGuionnetZeitouni2010,Forrester2010}.
-
-\section{Non-colliding Brownian motions for \texorpdfstring{$\beta=2$}{beta=2}}
-\label{sec:noncolliding_BM}
-
-\subsection{Interpretation as non-intersecting paths}
-An equivalent description of the $\beta=2$ Dyson Brownian motion is via \emph{non-colliding} or \emph{non-intersecting} real Brownian motions. Concretely, if one takes $N$ independent Brownian motions started at $a_1,\dots,a_N$, the probability that they remain strictly ordered for all times is (formally)
+For \(\beta=2\), let \(B_1(t), \dots, B_N(t)\) be \(N\) independent Brownian motions starting from \(a_1< a_2< \cdots < a_N\). Then the law of these processes conditioned on the event that
 \[
-\prod_{1\le i<j\le N}\bigl(B_i(t)-B_j(t)\bigr)\ge0\quad\forall t>0.
+B_1(t) < B_2(t) < \cdots < B_N(t) \quad \text{for all } t>0
 \]
-Conditioning on this strict ordering event yields exactly the same distribution as Dyson Brownian motion for $\beta=2$. See e.g.\ \cite{Fisher1961,KarlinMcGregor1959,LinstrGesselViennot1985}.
-
-\begin{theorem}
-\label{thm:nonintersecting_equivalence}
-When $\beta=2$, the ordered process $\lambda_1(t)\ge \cdots \ge \lambda_N(t)$ is the same in distribution as $N$ real Brownian motions started at $a_1,\dots,a_N$, conditioned never to intersect.
+coincides with the law of the eigenvalue process \(\lambda(t)\) given by Dyson Brownian Motion.
 \end{theorem}
 
-\begin{remark}
-The reflection principle implies that two independent real Brownian motions a.s.\ intersect at some random time. The conditioning to remain ordered is an event of zero probability in the unconditioned system, but can be given a rigorous meaning by a limiting procedure with finite endpoints and the Girsanov transform or the Karlin--McGregor formula for determinants of transition densities.
-\end{remark}
+A standard way to justify this result is via the Karlin–McGregor formula (or Lindström–Gessel–Viennot lemma), which expresses the probability that independent Brownian paths do not intersect as a determinant of single–particle transition densities.
 
-\subsection{Limit shape perspective}
-The combinatorial approach via non-intersecting paths also leads to various limit shape phenomena for collections of Brownian motions with constraints. For instance, in a large $N$ regime, one obtains certain free-boundary problems reminiscent of those arising in random matrix global limits.
+\begin{exercise}
+For \(N=2\), derive the Karlin–McGregor formula for the probability that two independent Brownian motions started at \(a_1\) and \(a_2\) and ending at \(x_1\) and \(x_2\) (with \(a_1<x_1\) and \(a_2<x_2\)) do not collide. Verify that the result can be written as
+\[
+P(\text{non-intersection}) = P_t(a_1\to x_1)P_t(a_2\to x_2)-P_t(a_1\to x_2)P_t(a_2\to x_1),
+\]
+where \(P_t(x\to y)=\frac{1}{\sqrt{2\pi t}}\exp\left(-\frac{(y-x)^2}{2t}\right)\).
+\end{exercise}
 
-\section{Further directions and references}
-Dyson Brownian motion is a major tool in random matrix theory proofs of universality: one can start with an ensemble whose joint density is an \emph{arbitrary} $\beta$-ensemble, then slowly add an infinitesimal Brownian motion so that in the large $t$ limit, the system tends to G$\beta$E. Along the way, key spectral statistics do not change much, revealing that local universality is the same as that of the Gaussian ensemble. This approach is a pillar of rigorous random matrix universality results (see \cite{ErdosYau2017Dynamical}).
+\begin{exercise}
+Explain why two independent Brownian motions started at distinct points intersect almost surely, and thus conditioning on non-intersection is a nontrivial event.
+\end{exercise}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Concluding Remarks and Further Directions}
+
+We have now seen in detail how the eigenvalue evolution of Hermitian matrix Brownian motion (Dyson Brownian Motion) is described by a system of interacting diffusions given by \eqref{eq:DBM_final}. For the \(\beta=2\) (GUE) case, the eigenvalue process enjoys a determinantal structure; its transition probabilities can be written in closed form via the HCIZ formula, and its correlation functions are given by a determinantal kernel (see \eqref{eq:det_kernel_explicit}). Moreover, the equivalence of DBM with non-colliding Brownian motions in the \(\beta=2\) case deepens our understanding of the repulsion between eigenvalues.
+
+These results have far-reaching implications. In particular:
+\begin{itemize}
+    \item The determinantal structure allows one to rigorously prove universality of local eigenvalue statistics (leading to the sine kernel in the bulk and the Airy kernel at the edge).
+    \item The DBM formulation provides a dynamical approach to many problems in random matrix theory, and has applications in combinatorics, integrable systems, and mathematical physics.
+    \item The connection to non-colliding processes links DBM with models in interacting particle systems and stochastic growth.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 \appendix
 \setcounter{section}{9}
@@ -337,10 +425,6 @@ Verify formally that the density from \Cref{prop:beta_invariant} is stationary f
 
 
 
-\appendix
-\setcounter{section}{9}
-
-\section{Problems (due 2025-04-29)}
 
 
 
