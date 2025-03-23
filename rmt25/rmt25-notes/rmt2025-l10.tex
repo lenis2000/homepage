@@ -137,7 +137,7 @@ We now focus on $\lambda_i(t)$, the (ordered) eigenvalues of $\mathcal{M}(t)$. D
 As $t$ varies, the process $\lambda(t)$ is a continuous-time Markov process in $\mathbb{R}^N$.
 \end{theorem}
 \begin{proof}[Sketch of proof]
-	Assume $\beta=2$, the case $\beta=1$ is similar. 
+	Assume $\beta=2$, the case $\beta=1$ is similar.
 We need to show that $\lambda(t)$ depends on its future and past only through its instantaneous value. Using the independent increment property of $X(t)$, consider times $0< u< t$. We have
 \[
 \mathcal{M}(t) \;=\; \mathcal{M}(u)\;+\;\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr).
@@ -146,15 +146,18 @@ Since $\mathcal{M}(u)$ diagonalizes to $\mathrm{diag}\bigl(\lambda_1(u),\ldots,\
 \[
 U_u^\dagger\,\mathcal{M}(t)\,U_u \;=\;\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;+\; U_u^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)\,U_u.
 \]
-The second term again has i.i.d.\ random entries (due to unitary invariance of 
-GUE), independent of $\mathcal{M}(s)$ for $s\le u$. 
-Therefore, conditioned on $\mathcal{M}(s)$, $s\le u$, the dependence only 
+The second term again has i.i.d.\ random entries (due to unitary invariance of
+GUE), independent of $\mathcal{M}(s)$ for $s\le u$.
+Therefore, conditioned on $\mathcal{M}(s)$, $s\le u$, the dependence only
 comes through $\lambda(u)$, and the eigenvalues $\lambda_i(s)$ for $s\ge u$ follow
 the same dynamics. This proves the Markov property.
 \end{proof}
 
-\section{Dyson Brownian Motion as an SDE}
-We now describe the SDE for $\lambda(t)$ explicitly, following the classical result due to Dyson.
+\section{Dyson Brownian Motion}
+We now describe the SDE for $\lambda(t)$ explicitly, following the classical result due to Dyson
+\cite{dyson1962brownian}.
+
+\colorbox{yellow}{\parbox{.7\textwidth}{here}}
 
 \subsection{Statement: the Dyson SDE}
 \begin{theorem}
