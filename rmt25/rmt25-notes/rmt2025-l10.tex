@@ -53,7 +53,7 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 10: Title TBD}
+\\Lecture 10: Dyson Brownian Motion}
 
 
 \date{Monday, March 24, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
@@ -70,7 +70,236 @@ Updated at \currenttime, \today}}
 \maketitle
 
 
+\section{Motivations}
+\subsection{Why introduce time?}
+Our previous lectures dealt with static matrix ensembles (e.g., GUE, GOE, and so on). However, there are both \emph{physical} and \emph{mathematical} reasons to study a dynamical model for random matrices. For instance:
+\begin{enumerate}
+\item In physics, one often interprets random matrices as Hamiltonians of quantum systems. It is natural to let these Hamiltonians vary in time and to describe how spectra evolve.
+\item Such time-dependent models are vital for studying \emph{universality results} in random matrix theory. Rigorous proofs of local eigenvalue correlations often involve coupling or evolving an ensemble toward (or away from) a known reference ensemble.
+\item Dynamical extensions yield intriguing connections to 2D statistical mechanics, representation theory, and Markov chain interpretations such as \emph{nonintersecting path ensembles}.
+\end{enumerate}
 
+\subsection{Simple example: $1\times1$ case}
+When $N=1$, an $N\times N$ Hermitian matrix is just a single real entry. Thus GUE/GOE/GSE distributions each reduce to a real Gaussian variable with mean $0$ and variance $1$. If we allow \emph{time}, the natural time evolution is standard \emph{Brownian motion} $B(t)$ on $\mathbb{R}$.
+
+Recall that a standard one--dimensional Brownian motion \(B(t)\) is a continuous stochastic process with the following key properties:
+\begin{enumerate}
+    \item \textbf{Continuity:} \(t\mapsto B(t)\) is almost surely continuous.
+    \item \textbf{Independent increments:} For any \(0\leq s < t\), the increment \(B(t)-B(s)\) is independent of the past \(\{B(u): 0\le u \le s\}\).
+    \item \textbf{Gaussian increments:} \(B(t)-B(s)\) is normally distributed with mean \(0\) and variance \(t-s\); that is,
+    \[
+    B(t)-B(s) \sim \mathcal{N}(0,\,t-s).
+    \]
+\end{enumerate}
+Thus, if the process starts at \(B(0)=a\), then for any fixed \(t>0\),
+\[
+B(t)\sim \mathcal{N}(a,\,t).
+\]
+
+Our goal is to generalize this to the case of \emph{matrix-valued} Brownian motion and, ultimately, to see how the \emph{eigenvalues} of such a matrix evolve.
+
+\section{Matrix Brownian motion and its eigenvalues}
+\label{sec:matrix_BM}
+
+\subsection{Definition}
+Let $X(t)$ be an $N\times N$ matrix whose entries are i.i.d.\ real/complex Brownian motions (depending on $\beta=1,2$). For instance:
+\begin{itemize}
+\item If $\beta=1$: $X(t)$ has entries that are i.i.d.\ real Brownian motions.
+\item If $\beta=2$: $X(t)$ has entries that are i.i.d.\ complex Brownian motions (independent real and imaginary parts).
+\end{itemize}
+Since $X(t)$ may not be Hermitian, define
+\[
+	\mathcal{M}(t) \;=\; \frac{1}{\sqrt{2}}\bigl(X(t) + X^\dagger(t)\bigr).
+\]
+Here $X^\dagger(t)$ is the conjugate transpose. Then $\mathcal{M}(t)$ is an \emph{Hermitian} matrix (or real symmetric for $\beta=1$).
+
+\begin{lemma}
+\label{lemma:time_fixed_law}
+If $\mathcal{M}(0) = A$ is a fixed deterministic matrix, then $\mathcal{M}(t)$ at time $t$ is distributed as
+\[
+A \;+\;\sqrt{t}\, G_{\beta},
+\]
+where $G_{\beta}$ is a random Hermitian matrix from the Gaussian ensemble with $\beta=1$ or $2$.
+\end{lemma}
+\begin{proof}[Sketch of proof]
+	Straightforward observation.
+\end{proof}
+
+For the one-dimensional case, notice that $a+\sqrt t\ssp Z$, where $Z\sim \mathcal{N}(0,1)$, is a Gaussian random variable with mean $a$ and variance $t$, and every such Gaussian variable can be represented in this form.
+
+\subsection{Eigenvalues as Markov process}
+We now focus on $\lambda_i(t)$, the (ordered) eigenvalues of $\mathcal{M}(t)$. Denote
+\[
+\lambda(t) = \bigl(\lambda_1(t)\ge \dots \ge \lambda_N(t)\bigr).
+\]
+\begin{theorem}
+\label{thm:lambda_is_markov}
+As $t$ varies, the process $\lambda(t)$ is a continuous-time Markov process in $\mathbb{R}^N$.
+\end{theorem}
+\begin{proof}[Sketch of proof]
+	Assume $\beta=2$, the case $\beta=1$ is similar. 
+We need to show that $\lambda(t)$ depends on its future and past only through its instantaneous value. Using the independent increment property of $X(t)$, consider times $0< u< t$. We have
+\[
+\mathcal{M}(t) \;=\; \mathcal{M}(u)\;+\;\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr).
+\]
+Since $\mathcal{M}(u)$ diagonalizes to $\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)$ by some unitary $U_u$, we can write
+\[
+U_u^\dagger\,\mathcal{M}(t)\,U_u \;=\;\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;+\; U_u^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)\,U_u.
+\]
+The second term again has i.i.d.\ random entries (due to unitary invariance of 
+GUE), independent of $\mathcal{M}(s)$ for $s\le u$. 
+Therefore, conditioned on $\mathcal{M}(s)$, $s\le u$, the dependence only 
+comes through $\lambda(u)$, and the eigenvalues $\lambda_i(s)$ for $s\ge u$ follow
+the same dynamics. This proves the Markov property.
+\end{proof}
+
+\section{Dyson Brownian Motion as an SDE}
+We now describe the SDE for $\lambda(t)$ explicitly, following the classical result due to Dyson.
+
+\subsection{Statement: the Dyson SDE}
+\begin{theorem}
+\label{thm:Dyson_SDE}
+For $\beta>0$, the ordered eigenvalues $\lambda_1(t)\ge \cdots \ge \lambda_N(t)$ of $\mathcal{M}(t)$ solve the system of stochastic differential equations:
+\begin{equation}
+\label{eq:Dyson_SDE}
+d\lambda_i(t)\;=\;\sqrt{2}\,dB_i(t)\;+\;\beta\sum_{\substack{j=1\\j\neq i}}^{N}\frac{dt}{\lambda_i(t)-\lambda_j(t)},
+\quad 1\le i \le N,
+\end{equation}
+where $B_1(t),\dots,B_N(t)$ are independent standard Brownian motions.
+For $\beta=1,2,4$, this matches the matrix picture. More generally, \eqref{eq:Dyson_SDE} is well-defined for all $\beta>0$ (with a notion of strong solutions avoiding collisions).
+\end{theorem}
+
+\begin{remark}
+The factor $\sqrt{2}$ here is consistent with the real/complex/quaternionic normalization. Some references place $\beta/2$ in front of the drift instead of $\beta$. These are minor variations of normalization.
+\end{remark}
+
+\subsection{Idea of the proof}
+\label{sub:sde_proof_idea}
+We outline the argument for $\beta=1$ (GOE). For small $\Delta t$, examine $\mathcal{M}(T+\Delta t)$ in terms of $\mathcal{M}(T)$ plus a small random perturbation with i.i.d.\ $\mathcal{N}(0,\Delta t)$ entries on the diagonal. By computing how each eigenvalue $\lambda_i(T)$ shifts to $\lambda_i(T)+\Delta\lambda_i$, one obtains
+\[
+\Delta \lambda_i = \underbrace{\sqrt{2}\,\Delta B_i}_\text{white noise} \;+\;\sum_{j\neq i}\frac{\beta \,\Delta t}{\lambda_i-\lambda_j} + \text{smaller order terms},
+\]
+which becomes \eqref{eq:Dyson_SDE} in the limit $\Delta t\to 0$. A classical approach is to expand the determinant for the $(n\times n)$ matrix $\bigl(\mathcal{M}(T)+\Delta\mathcal{M}\bigr)$ near $\lambda_i(T)$, picking up rational drift terms from partial fractions $\frac{1}{\lambda_i-\lambda_j}$. Full details can be found in many references (e.g.\ \cite{AndersonGuionnetZeitouni2010}).
+
+\subsection{Interpretation of drift}
+\label{sub:interpretation_drift}
+The repulsion among eigenvalues is visible in the drift term:
+\[
+\beta\sum_{j\neq i}\frac{1}{\lambda_i-\lambda_j}.
+\]
+When $\lambda_i$ approaches $\lambda_{i+1}$ from above, the denominator is negative, forcing a negative drift, which pushes $\lambda_i$ back upward. Similarly, from below, it is pushed up. This is the hallmark of \emph{no crossing} or \emph{no collision} phenomena: the eigenvalues typically do not intersect (unless $\beta<1$, in which collisions become more subtle but still typically avoided).
+
+\section{Invariant Distributions and Short-Time Transitions}
+\label{sec:invariant_laws}
+
+\subsection{Fixed time distribution with drift to center}
+\Cref{lemma:time_fixed_law} states that for each fixed $t$, the distribution of $\mathcal{M}(t)$ is $\mathcal{M}(0) + \sqrt{t}\,G_\beta$. In particular, if $\mathcal{M}(0)=0$, then
+\[
+\lambda(0) = (0,\dots,0),\quad \lambda(t)\stackrel{d}{=} \text{eigs}\bigl(\sqrt{t}\,G_\beta\bigr).
+\]
+The law of the eigenvalues thus becomes the usual $\beta$-ensemble with the Gaussian potential, rescaled by $\sqrt{t}$. In SDE form, we can also check directly that the drift term in \eqref{eq:Dyson_SDE} combined with the Gaussian term ensures an exponential factor $\exp\bigl(-\frac{(\lambda_i)^2}{2t}\bigr)$.
+
+\begin{proposition}
+\label{prop:beta_invariant}
+For $\beta>0$, the solution to \eqref{eq:Dyson_SDE} with the initial condition $\lambda(0)=0$ has the joint density at time $t$ proportional to
+\[
+\prod_{1\le i<j\le N}\bigl|\lambda_i-\lambda_j\bigr|^\beta \cdot \exp\!\Bigl(-\frac{1}{2t}\sum_{i=1}^N \lambda_i^2\Bigr).
+\]
+This is (up to a scale factor) exactly the $\beta$-Hermite ensemble.
+\end{proposition}
+\begin{proof}[Sketch]
+For $\beta=1,2,4$, it follows from \Cref{lemma:time_fixed_law}. For other $\beta>0$, one can define the process as the unique strong solution to \eqref{eq:Dyson_SDE}, and verify the forward Kolmogorov equation to see that the indicated density is preserved.
+\end{proof}
+
+\subsection{Transition probabilities and the Harish-Chandra--Itzykson--Zuber formula (\texorpdfstring{$\beta=2$}{beta=2})}
+For $\beta=2$, the process $\lambda(t)$ has explicit transition densities known from matrix integrals. Indeed, if the initial matrix is $\mathcal{M}(0)=A$, then $\mathcal{M}(t)\stackrel{d}{=} A + \sqrt{t}\,G_2$. The joint law of the eigenvalues $\lambda(t)$ can be written using the Harish-Chandra--Itzykson--Zuber (HCIZ) formula. We only state one typical result:
+
+\begin{theorem}
+\label{thm:DBM_transition_beta2}
+For $\beta=2$, the transition probability density of $\lambda(t)$ from initial positions $\bigl(a_1\ge \cdots \ge a_N\bigr)$ at $t=0$ to $\bigl(x_1\ge \cdots \ge x_N\bigr)$ at time $t$ has a closed-form expression:
+\begin{align*}
+P\bigl(\lambda(t)=x\mid \lambda(0)=a\bigr) \;\propto\;
+&\exp\Bigl(-\tfrac1{2t}\sum_{i=1}^N x_i^2 - \tfrac1{2t}\sum_{i=1}^N a_i^2\Bigr)\;
+\frac{\det\bigl[e^{\tfrac{x_i a_j}{t}}\bigr]_{i,j=1}^N}{\prod_{i<j}(x_i-x_j)(a_i-a_j)},
+\end{align*}
+where $\propto$ means up to a factor depending on $t$ and $N$ only.
+\end{theorem}
+This result is a matrix version of the convolution of Gaussians plus a unitary conjugation integral. For references, see \cite{Mehta2004,AndersonGuionnetZeitouni2010,Forrester2010}.
+
+\section{Non-colliding Brownian motions for \texorpdfstring{$\beta=2$}{beta=2}}
+\label{sec:noncolliding_BM}
+
+\subsection{Interpretation as non-intersecting paths}
+An equivalent description of the $\beta=2$ Dyson Brownian motion is via \emph{non-colliding} or \emph{non-intersecting} real Brownian motions. Concretely, if one takes $N$ independent Brownian motions started at $a_1,\dots,a_N$, the probability that they remain strictly ordered for all times is (formally)
+\[
+\prod_{1\le i<j\le N}\bigl(B_i(t)-B_j(t)\bigr)\ge0\quad\forall t>0.
+\]
+Conditioning on this strict ordering event yields exactly the same distribution as Dyson Brownian motion for $\beta=2$. See e.g.\ \cite{Fisher1961,KarlinMcGregor1959,LinstrGesselViennot1985}.
+
+\begin{theorem}
+\label{thm:nonintersecting_equivalence}
+When $\beta=2$, the ordered process $\lambda_1(t)\ge \cdots \ge \lambda_N(t)$ is the same in distribution as $N$ real Brownian motions started at $a_1,\dots,a_N$, conditioned never to intersect.
+\end{theorem}
+
+\begin{remark}
+The reflection principle implies that two independent real Brownian motions a.s.\ intersect at some random time. The conditioning to remain ordered is an event of zero probability in the unconditioned system, but can be given a rigorous meaning by a limiting procedure with finite endpoints and the Girsanov transform or the Karlin--McGregor formula for determinants of transition densities.
+\end{remark}
+
+\subsection{Limit shape perspective}
+The combinatorial approach via non-intersecting paths also leads to various limit shape phenomena for collections of Brownian motions with constraints. For instance, in a large $N$ regime, one obtains certain free-boundary problems reminiscent of those arising in random matrix global limits.
+
+\section{Further directions and references}
+Dyson Brownian motion is a major tool in random matrix theory proofs of universality: one can start with an ensemble whose joint density is an \emph{arbitrary} $\beta$-ensemble, then slowly add an infinitesimal Brownian motion so that in the large $t$ limit, the system tends to G$\beta$E. Along the way, key spectral statistics do not change much, revealing that local universality is the same as that of the Gaussian ensemble. This approach is a pillar of rigorous random matrix universality results (see \cite{ErdosYau2017Dynamical}).
+
+\appendix
+\setcounter{section}{9}
+\section{Problems (due 2025-04-29)}
+
+\subsection{Collisions}
+
+Show that two independent standard 1D Brownian motions, started at $a_1\neq a_2$, almost surely intersect.
+
+\subsection{Estimate on the modulus of continuity}
+
+Let $B(t)$ be a standard 1D Brownian motion with $B(0)=0$,
+defined as a process with independent increments and $B(t)-B(s)\sim \mathcal{N}(0,t-s)$,
+without any continuity assumptions.
+
+Show that
+\begin{equation*}
+	\operatorname{\mathbb{E}}|B(t)-B(s)|^2 \;\le\; |t-s|
+\end{equation*}
+implies that
+that one can take an almost
+surely continuous modification of the function $t\mapsto B(t)$.
+
+
+\subsection{}
+
+\begin{enumerate}[1.]
+
+
+
+\item \textbf{Generator for the Dyson SDE.} For $\beta>0$, write the generator $\mathcal{L}$ of the Markov process \eqref{eq:Dyson_SDE} in differential form. That is, show that for any $C^2$ test function $f(\lambda_1,\dots,\lambda_N)$,
+\[
+\frac{d}{dt}\,\mathbb{E}\bigl[f(\lambda(t))\bigr]
+\;=\;\mathbb{E}\bigl[\mathcal{L}f(\lambda(t))\bigr],
+\]
+where
+\[
+\mathcal{L} \;=\; \sum_{i=1}^N \bigl(2\,\tfrac{\partial^2}{\partial \lambda_i^2}\bigr)
+\;+\;2\beta\sum_{i<j}\,\frac{1}{\lambda_i-\lambda_j}\bigl(\tfrac{\partial}{\partial \lambda_i}-\tfrac{\partial}{\partial \lambda_j}\bigr).
+\]
+Verify formally that the density from \Cref{prop:beta_invariant} is stationary for $\mathcal{L}$ when $\lambda(0)=0$.
+
+
+
+\item \textbf{Limit shape for Non-Intersecting Bridges.} Let $b_1(t),\dots,b_N(t)$ be $N$ real Brownian bridges from $a_1<\dots<a_N$ at $t=0$ to $z_1<\dots<z_N$ at $t=1$, conditioned on no intersections. Simulate numerically for $N=10$ and $a_i=i,\,z_i=2i$. Describe visually how the paths arrange themselves and how they may approximate a continuous shape as $N$ grows.
+
+\item \textbf{Determinantal representation of transition densities (general $\beta=2$).} Fill in details for the matrix integral approach that leads to the transition probability formula in \Cref{thm:DBM_transition_beta2}, including the key use of the unitary integral (the HCIZ formula). You may take the HCIZ formula as known or provide a reference. Make explicit the factor by which $P(\lambda(t)=x\,|\,\lambda(0)=a)$ is normalized.
+
+\item \textbf{DBM short time expansions.} Let $\lambda_i(0)=0$ for all $i$, and consider \eqref{eq:Dyson_SDE} for small $t$. Expand the drift and diffusion terms to second order in $t$, and compare with the approach in \Cref{sub:sde_proof_idea}. Why do the $\tfrac{1}{\lambda_i-\lambda_j}$ terms not blow up when $\lambda_i\approx \lambda_j$ for small $t$?
+\end{enumerate}
 
 
 
