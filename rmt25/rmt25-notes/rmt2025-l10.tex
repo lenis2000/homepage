@@ -393,11 +393,95 @@ See Problem~\ref{prob:generator}.
 
 
 
+\begin{theorem}[\(\beta=2\) Dyson Brownian Motion Transition Probabilities]
+For \(\beta=2\), let \(\lambda(t)=(\lambda_1(t)\ge \cdots \ge \lambda_N(t))\) follow Dyson Brownian Motion starting at \(\lambda(0)=\mathbf{a}=(a_1\ge \cdots \ge a_N)\).  Then for each fixed time \(t>0\),
+\[
+P\bigl(\lambda(t) = \mathbf{x}\;\big|\;\lambda(0)=\mathbf{a}\bigr)
+\;=\;
+N!\,\bigl(\frac{1}{\sqrt{2\pi t}}\bigr)^{\!N}
+\;\prod_{1\le i<j\le N}\!\frac{x_i - x_j}{a_i - a_j}
+\;\det\!\Bigl[\exp\!\Bigl(-\frac{(x_i - a_j)^2}{2t}\Bigr)\Bigr]_{i,j=1}^N,
+\]
+where \(x_1 \ge \dots \ge x_N\).
+\end{theorem}
+
+\begin{proof}
+Consider an \(N\times N\) Hermitian matrix process \(X(t)\) whose entries perform independent complex Brownian motions (so that \(X(t)\) is distributed as \(A + \sqrt{t}\,\mathrm{GUE}\) at each fixed time, with \(A=\mathrm{diag}(a_1,\dots,a_N)\)).  Its eigenvalues \(\lambda_1(t)\ge \cdots \ge \lambda_N(t)\) evolve exactly according to the \(\beta=2\) Dyson Brownian Motion.
+
+The density of \(X\) at time \(t\), viewed as a random matrix, is proportional to
+\[
+\exp\Bigl(-\tfrac{1}{2t}\,\mathrm{Tr}\bigl(X-A\bigr)^2\Bigr).
+\]
+If we replace \(A\) by \(U\,A\,U^\dagger\) for any fixed unitary \(U\), the law of \(X\) remains the same (this follows from the unitary invariance of the GUE).  Thus the distribution of the eigenvalues of \(X\) is unchanged by such conjugation.
+
+One writes
+\[
+\int_{U(N)} 
+\exp\Bigl(-\tfrac{1}{2t}\,\mathrm{Tr}\bigl(X-U\,A\,U^\dagger\bigr)^2\Bigr)\,dU
+\;=\;
+\text{(const.)} \times 
+\text{[HCIZ integral in the variables }(X,A)\text{]},
+\]
+which by the Harish--Chandra--Itzykson--Zuber formula leads to a product of determinants and a factor that is precisely
+\[
+\exp\Bigl(-\tfrac{1}{2t}\sum_{i=1}^N x_i^2 
+- \tfrac{1}{2t}\sum_{i=1}^N a_i^2\Bigr)\,
+\frac{\det\Bigl[\exp\bigl(\tfrac{x_i\,a_j}{t}\bigr)\Bigr]}{\prod_{i<j}(x_i - x_j)\,(a_i - a_j)},
+\]
+where \(x_1,\dots,x_N\) are the eigenvalues of \(X\).
+
+To convert this matrix distribution into a distribution on eigenvalues alone, we multiply by the usual Vandermonde Jacobian
+\(\prod_{i<j}(x_i - x_j)^2\)
+(which comes from integrating out the unitary degrees of freedom).  This produces exactly
+\[
+N!\,\bigl(\tfrac{1}{\sqrt{2\pi t}}\bigr)^{\!N}\,
+\prod_{i<j}\frac{x_i - x_j}{a_i - a_j}
+\,\det\Bigl[\exp\!\Bigl(-\tfrac{(x_i - a_j)^2}{2t}\Bigr)\Bigr].
+\]
+Hence we obtain the stated transition probability for the Dyson Brownian Motion at \(\beta=2\).
+\end{proof}
+
+\begin{remark}
+The factor \(N!\,(\tfrac{1}{\sqrt{2\pi t}})^N\) arises naturally from normalizing the Gaussian increments and accounts for the ordering \(\lambda_1\ge\cdots\ge \lambda_N\).  The determinant and product factors encode the eigenvalue ``repulsion'' characteristic of \(\beta=2\) random matrices.
+\end{remark}
 
 
+\subsection{Determinantal correlations}
 
+\begin{theorem}[Determinantal structure for $\beta=2$ DBM]
+\label{thm:dbm-det-kernel}
+Let $\{x_1(t),\dots,x_n(t)\}$ be the eigenvalues at time $t>0$ of the $\beta=2$ Dyson Brownian Motion started at initial locations $(a_1,\dots,a_n)$ at time $0$.  Equivalently, these $x_i(t)$ are the eigenvalues of
+\[
+A + \sqrt{t}\,G,
+\]
+where $A=\mathrm{diag}(a_1,\dots,a_n)$ and $G$ is a random Hermitian matrix from the GUE.  Then the (random) point configuration $\{x_i(t)\}$ forms a determinantal point process with correlation kernel
+\[
+K(x,y)
+=
+\frac{1}{(2\pi i)^2\,t}
+\oint \oint
+\exp\Bigl(\frac{w^2 - 2\,y\,w}{2\,t}\Bigr)\,
+\biggl/
+\exp\Bigl(\frac{z^2 - 2\,x\,z}{2\,t}\Bigr)
+\;\prod_{i=1}^n \frac{w - a_i}{z - a_i}
+\;\frac{dw\,dz}{w - z}.
+\]
+Here $z$ goes around all the points $a_1,\ldots,a_n $, 
+and the $w$ contour
+passes from $-i\infty$ to $i\infty$, to the right of the $z$ contour.
+\end{theorem}
 
-
+\begin{itemize}
+	\item If $a_1=\dots=a_n=0$ and $t=1$, this kernel reduces to the familiar correlation kernel of the GUE (see \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.pdf}{Lecture 6}).
+\item 
+	One can use this formula to study the Baik--Ben
+	Arous--P\'ech\'e (BBP)
+	\cite{BBP2005phase}
+	phase transition for $\beta=2$, 
+	which deals with finite rank perturbations of the GUE random matrix ensemble.
+	Indeed, rank $r$ perturbation corresponds to taking $a_1,\ldots,a_r\ne0 $,
+	and $a_{r+1}=\dots=a_n=0$.
+\end{itemize}
 
 
 
