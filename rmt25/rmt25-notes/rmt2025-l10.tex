@@ -4,9 +4,6 @@
 
 \usepackage[pdftex,backref=page,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
 \usepackage[alphabetic,nobysame]{amsrefs}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%main packages
 \usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools}
 \usepackage{graphicx,color}
 \usepackage{upgreek}
@@ -182,7 +179,7 @@ where \(\sigma\) is a nonnegative constant. This equation may be formally interp
 \[
 \frac{dx(t)}{dt} \;=\; \sigma\,\frac{dW(t)}{dt},
 \]
-but it should be emphasized that \(\tfrac{dW}{dt}\) does not exist in the usual sense of classical calculus (Brownian motion is nowhere differentiable almost surely). Instead, one interprets the equation via the \emph{Itô integral}
+but it should be emphasized that \(\tfrac{dW}{dt}\) does not exist in the usual sense of classical calculus (Brownian motion is nowhere differentiable almost surely). Instead, one interprets the equation via the \emph{It\^{o} integral}
 \[
 x(t) \;=\; x(0)\;+\;\int_0^t \sigma\, dW(s).
 \]
@@ -208,7 +205,7 @@ This scheme converges to the true solution pathwise under standard Lipschitz con
 
 
 \medskip
-A major utility of SDEs is in performing \emph{Itô calculus}. Suppose \(x(t)\) solves the SDE \eqref{eq:1D_SDE_general} and let \(f\colon\mathbb{R}\to\mathbb{R}\) be a sufficiently smooth function. One might try to apply the usual chain rule to \(f(x(t))\), but must account for the extra “noise” term. The correct extension is the \emph{Itô formula}:
+A major utility of SDEs is in performing \emph{It\^{o} calculus}. Suppose \(x(t)\) solves the SDE \eqref{eq:1D_SDE_general} and let \(f\colon\mathbb{R}\to\mathbb{R}\) be a sufficiently smooth function. One might try to apply the usual chain rule to \(f(x(t))\), but must account for the extra "noise" term. The correct extension is the \emph{It\^{o} formula}:
 \[
 df\bigl(x(t)\bigr)
 \;=\;
@@ -237,13 +234,13 @@ b\bigl(X(t)\bigr)\,dt
 \;+\;
 \sigma\bigl(X(t)\bigr)\,dW(t),
 \]
-where \(b(\cdot)\colon\mathbb{R}^n\to\mathbb{R}^n\) and \(\sigma(\cdot)\colon\mathbb{R}^n\to \mathbb{R}^{n\times n}\). Here \(W(t)\) is an \(n\)-dimensional Brownian motion, and the product \(\sigma\bigl(X(t)\bigr)\,dW(t)\) is understood as a matrix-vector multiplication in each small time increment. Existence, uniqueness, and Itô’s formula all generalize naturally under suitable regularity assumptions.
+where \(b(\cdot)\colon\mathbb{R}^n\to\mathbb{R}^n\) and \(\sigma(\cdot)\colon\mathbb{R}^n\to \mathbb{R}^{n\times n}\). Here \(W(t)\) is an \(n\)-dimensional Brownian motion, and the product \(\sigma\bigl(X(t)\bigr)\,dW(t)\) is understood as a matrix-vector multiplication in each small time increment. Existence, uniqueness, and It\^{o}’s formula all generalize naturally under suitable regularity assumptions.
 
 \paragraph{Summary}
 Although SDEs can be introduced rigorously via measure-theoretic tools, the above \emph{informal} derivation and discussion provide a workable framework for many typical computations. The key points are:
 \begin{itemize}
-\item Brownian motion’s roughness prevents classical differential calculus, so new techniques (Itô integrals) are needed.
-\item The Itô formula extends the classical chain rule by adding a second-order correction term.
+\item Brownian motion’s roughness prevents classical differential calculus, so new techniques (It\^{o} integrals) are needed.
+\item The It\^{o} formula extends the classical chain rule by adding a second-order correction term.
 \item Existence and uniqueness theorems ensure that SDEs define well-posed dynamical systems in a stochastic setting.
 \item Extending to matrix-valued (or multi-dimensional) settings is conceptually straightforward but requires careful linear algebraic bookkeeping and additional regularity arguments.
 \end{itemize}
@@ -322,7 +319,7 @@ o(\Delta t)
 Hence, to leading order in small $\Delta t$,
 we can ignore $\Delta\lambda$ in the denominator,
 replace $B_{ji}^2(\Delta t)$ by $\Delta t$ as its expectation, ignore
-the random correction (as in Itô calculus), and obtain the desired SDE.
+the random correction (as in It\^{o} calculus), and obtain the desired SDE.
 We do not go into further details here, but the details are abundant in the literature,
 including the original work of Dyson \cite{dyson1962brownian}.
 \end{proof}
@@ -390,11 +387,27 @@ For larger $N$, one needs to write down the corresponding generator and check
 that the same type of equation is satisfied.
 See Problem~\ref{prob:generator}.
 
-
-
-
-
 \section{Determinantal structure for $\beta=2$}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -494,7 +507,8 @@ If $a_i = a_j$ for some $i \neq j$, then $f(A,B)$ must be invariant under permut
 When eigenvalues coincide, the corresponding eigenvectors can be chosen arbitrarily within the degenerate subspace. This means that when $a_i = a_j$, we can apply a unitary transformation that effectively swaps the roles of $b_i$ and $b_j$ without changing the integral.
 \end{proof}
 
-\subsection{Scaling behavior and completion of the proof}
+\textit{Remark on rigor.} 
+To make these symmetry arguments fully rigorous, one notes that $f(A,B)$ can be extended to an analytic function of the eigenvalues (even when they are treated as complex variables close to the real axis). Moreover, if some $a_i = a_j$, the existence of a unitary acting within the degenerate subspace justifies the required symmetry in $(b_i,b_j)$. One also checks that $f(A,B)$ remains finite in the limit $(a_j-a_i)\to 0$ or $(b_j-b_i)\to 0$, enforcing vanishing at a rate that compensates for the factor in the denominator.
 
 This constraint, combined with analyticity, forces $f(A,B)$ to vanish as $(a_j-a_i) \to 0$ or $(b_j-b_i) \to 0$ at a rate that exactly cancels the denominator's singularity. The form of the answer must therefore be:
 \[
@@ -502,22 +516,30 @@ This constraint, combined with analyticity, forces $f(A,B)$ to vanish as $(a_j-a
 \]
 where $g(A,B)$ is analytic and antisymmetric in the $\{a_i\}$ and in the $\{b_i\}$ variables.
 
+\subsection{Conclusion of the argument}
 
-By the fundamental theorem of antisymmetric polynomials, $g(A,B)$ must be expressible as a product of the Vandermonde determinants and a symmetric function. Moreover, by examining the behavior under scaling $A \mapsto tA$ and $B \mapsto B/t$, one can show that the only function with the correct analytical properties and scaling behavior is:
+By the fundamental theorem of antisymmetric polynomials, $g(A,B)$ must be expressible as a product of the Vandermonde determinants and a symmetric function. Moreover, by examining the behavior under the scaling $A \mapsto tA$ and $B \mapsto B/t$, one shows that the only function with the correct analytic properties and scaling behavior is
 \[
    g(A,B) = C_N \cdot \det[e^{\,a_i b_j}]_{i,j=1}^N,
 \]
-where $C_N$ is a constant depending only on $N$.
+where $C_N$ is a constant depending only on $N$. One can alternatively pin this down by checking that $f(A,B)$ satisfies a certain heat equation in $A$ (or $B$), and thus matches the known solution $\det[e^{\,a_i b_j}]$ up to a constant.
 
-Therefore, we have established that:
+Therefore, we have established that
 \[
    \int_{U(N)} e^{\,\mathrm{Tr}(A\,U\,B\,U^\dagger)}\,dU
    \;=\;
    \Phi_N
    \,\frac{\det[e^{\,a_i b_j}]_{i,j=1}^N}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)},
 \]
-where $\Phi_N = C_N$ is a normalization constant independent of the eigenvalues. Through a separate calculation involving the heat equation on the unitary group, one can determine that $\Phi_N = \prod_{k=1}^{N-1} k!$.
-
+where $\Phi_N = C_N$ is a normalization constant independent
+of the eigenvalues. Through a separate calculation
+(see Problem~\ref{prob:PhiN}), often
+involving either a small-time heat-kernel expansion or a
+rank-one reduction, one can determine that 
+\begin{equation}
+	\label{eq:PhiN}
+   \Phi_N = \prod_{k=1}^{N-1} k!.
+ \end{equation}
 
 
 
@@ -573,8 +595,31 @@ i}
 \frac{1}{\lambda_i-\lambda_j} \rho
 \right),
 \end{equation*}
-and verify that it indeed annihilates $p_{\beta}.
+and verify that it indeed annihilates $p_{\beta}$.
 
+\subsection{Constant in the HCIZ formula}
+\label{prob:PhiN}
+
+Show that in the Harish--Chandra--Itzykson--Zuber formula, the constant $\Phi_N$ is given by
+\[
+   \Phi_N = \prod_{k=1}^{N-1} k!,
+\]
+by \emph{directly} evaluating the left-hand side for the special case
+\[
+   A=\mathrm{diag}(x,0,\dots,0),
+   \quad
+   B=\mathrm{diag}(y,0,\dots,0).
+\]
+In this rank-one case, note that
+\[
+   \mathrm{Tr}(A\,U\,B\,U^\dagger)
+   \;=\;
+   x\,y \,\bigl|U_{11}\bigr|^2.
+\]
+You can then reduce the integral to one over the distribution of the first column of $U$, 
+which is a vector uniformly distributed on the complex unit sphere $\mathbb{C}^N$ (under the normalized Haar measure). 
+Use the known Jacobian for this parametrization to perform the integral and match it with 
+the right-hand side evaluated at $(a_1,b_1)=(x,y)$ and $(a_2=\dots=a_N=b_2=\dots=b_N=0)$.
 
 
 \newpage
