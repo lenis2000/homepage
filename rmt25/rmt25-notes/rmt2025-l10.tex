@@ -273,7 +273,7 @@ Search for the $i$-th eigenvalue of the form
 \noindent
 We want to solve
 \[
-\det\!\begin{pmatrix}
+\det\begin{pmatrix}
 \lambda_{1}(T) - \lambda_{i}(T) + B_{1}(\Delta t) - \Delta\lambda
   & \cdots
   & -\,\Delta\lambda\,B_{i1}(\Delta t) \\[6pt]
@@ -394,13 +394,14 @@ See Problem~\ref{prob:generator}.
 
 
 \begin{theorem}[\(\beta=2\) Dyson Brownian Motion Transition Probabilities]
+	\label{thm:dbm-transition}
 For \(\beta=2\), let \(\lambda(t)=(\lambda_1(t)\ge \cdots \ge \lambda_N(t))\) follow Dyson Brownian Motion starting at \(\lambda(0)=\mathbf{a}=(a_1\ge \cdots \ge a_N)\).  Then for each fixed time \(t>0\),
 \[
 P\bigl(\lambda(t) = \mathbf{x}\;\big|\;\lambda(0)=\mathbf{a}\bigr)
 \;=\;
-N!\,\bigl(\frac{1}{\sqrt{2\pi t}}\bigr)^{\!N}
-\;\prod_{1\le i<j\le N}\!\frac{x_i - x_j}{a_i - a_j}
-\;\det\!\Bigl[\exp\!\Bigl(-\frac{(x_i - a_j)^2}{2t}\Bigr)\Bigr]_{i,j=1}^N,
+N!\,\bigl(\frac{1}{\sqrt{2\pi t}}\bigr)^{N}
+\;\prod_{1\le i<j\le N}\frac{x_i - x_j}{a_i - a_j}
+\;\det\Bigl[\exp\Bigl(-\frac{(x_i - a_j)^2}{2t}\Bigr)\Bigr]_{i,j=1}^N,
 \]
 where \(x_1 \ge \dots \ge x_N\).
 \end{theorem}
@@ -416,15 +417,15 @@ If we replace \(A\) by \(U\,A\,U^\dagger\) for any fixed unitary \(U\), the law 
 
 One writes
 \[
-\int_{U(N)} 
+\int_{U(N)}
 \exp\Bigl(-\tfrac{1}{2t}\,\mathrm{Tr}\bigl(X-U\,A\,U^\dagger\bigr)^2\Bigr)\,dU
 \;=\;
-\text{(const.)} \times 
+\text{(const.)} \times
 \text{[HCIZ integral in the variables }(X,A)\text{]},
 \]
 which by the Harish--Chandra--Itzykson--Zuber formula leads to a product of determinants and a factor that is precisely
 \[
-\exp\Bigl(-\tfrac{1}{2t}\sum_{i=1}^N x_i^2 
+\exp\Bigl(-\tfrac{1}{2t}\sum_{i=1}^N x_i^2
 - \tfrac{1}{2t}\sum_{i=1}^N a_i^2\Bigr)\,
 \frac{\det\Bigl[\exp\bigl(\tfrac{x_i\,a_j}{t}\bigr)\Bigr]}{\prod_{i<j}(x_i - x_j)\,(a_i - a_j)},
 \]
@@ -434,9 +435,9 @@ To convert this matrix distribution into a distribution on eigenvalues alone, we
 \(\prod_{i<j}(x_i - x_j)^2\)
 (which comes from integrating out the unitary degrees of freedom).  This produces exactly
 \[
-N!\,\bigl(\tfrac{1}{\sqrt{2\pi t}}\bigr)^{\!N}\,
+N!\,\bigl(\tfrac{1}{\sqrt{2\pi t}}\bigr)^{N}\,
 \prod_{i<j}\frac{x_i - x_j}{a_i - a_j}
-\,\det\Bigl[\exp\!\Bigl(-\tfrac{(x_i - a_j)^2}{2t}\Bigr)\Bigr].
+\,\det\Bigl[\exp\Bigl(-\tfrac{(x_i - a_j)^2}{2t}\Bigr)\Bigr].
 \]
 Hence we obtain the stated transition probability for the Dyson Brownian Motion at \(\beta=2\).
 \end{proof}
@@ -456,7 +457,7 @@ A + \sqrt{t}\,G,
 \]
 where $A=\mathrm{diag}(a_1,\dots,a_n)$ and $G$ is a random Hermitian matrix from the GUE.  Then the (random) point configuration $\{x_i(t)\}$ forms a determinantal point process with correlation kernel
 \[
-K(x,y)
+K_t(x,y)
 =
 \frac{1}{(2\pi i)^2\,t}
 \oint \oint
@@ -466,28 +467,131 @@ K(x,y)
 \;\prod_{i=1}^n \frac{w - a_i}{z - a_i}
 \;\frac{dw\,dz}{w - z}.
 \]
-Here $z$ goes around all the points $a_1,\ldots,a_n $, 
+Here $z$ goes around all the points $a_1,\ldots,a_n $,
 and the $w$ contour
 passes from $-i\infty$ to $i\infty$, to the right of the $z$ contour.
 \end{theorem}
 
 \begin{itemize}
 	\item If $a_1=\dots=a_n=0$ and $t=1$, this kernel reduces to the familiar correlation kernel of the GUE (see \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.pdf}{Lecture 6}).
-\item 
+\item
 	One can use this formula to study the Baik--Ben
 	Arous--P\'ech\'e (BBP)
 	\cite{BBP2005phase}
-	phase transition for $\beta=2$, 
+	phase transition for $\beta=2$,
 	which deals with finite rank perturbations of the GUE random matrix ensemble.
 	Indeed, rank $r$ perturbation corresponds to taking $a_1,\ldots,a_r\ne0 $,
 	and $a_{r+1}=\dots=a_n=0$.
 \end{itemize}
 
+\subsection{On the proof of determinantal structure}
 
+The idea of the proof of \Cref{thm:dbm-det-kernel} is to
+represent the measure (the transition density) as a
+product of determinants. In general,
+if a measure is given as a product of determinants,
+there is a well-studied method (biorthogonal ensembles and,
+more generally, the Eynard--Mehta theorem)
+to compute the determinantal correlation kernel.
+We refer to
+\cite{borodin2005eynard},
+\cite{Borodin2009} for a detailed exposition
+in the discrete case (which is arguably more transparent).
+The first step for the Dyson Brownian Motion is as follows.
 
+\begin{lemma}[Density representation]
+\label{lem:density_representation}
+Let $P_t(x\to y)$ be the transition probability kernel of standard Brownian motion,
+\[
+   P_t(x\to y) \;=\; \frac{1}{\sqrt{2\pi\,t}}\,
+   \exp\Bigl(-\tfrac{(x-y)^2}{2\,t}\Bigr).
+\]
+Then the density of the eigenvalues $(x_1,\dots,x_N)$
+of DBM started at $(a_1,\dots,a_N)$ at time $0$
+admits the representation
+\begin{equation}
+	\label{eq:density_representation}
+   \lim_{s\to\infty}
+   \biggl(\frac1Z\biggr)\,
+   \det\Bigl[P_t\bigl(a_i\to x_j\bigr)\Bigr]_{i,j=1}^N
+   \,\det\Bigl[P_s\bigl(x_i\to k-1\bigr)\Bigr]_{i,k=1}^N.
+ \end{equation}
+\end{lemma}
+\begin{remark}
+	This representation
+	\eqref{eq:density_representation}
+	is related to an alternative description of the
+	$\beta=2$ Dyson Brownian Motion as
+	an ensemble of noncolliding Brownian motions
+	(that is, independent Brownian motions, conditioned to never collide).
+\end{remark}
 
+\begin{proof}[Proof of \Cref{lem:density_representation}]
+The first determinant (as $s\to\infty$) matches the determinant
+we have in \Cref{thm:dbm-transition}.
+It remains to analyze the second determinant
+\[
+   \det\Bigl[
+      P_s\bigl(x_j \to k-1\bigr)
+   \Bigr]_{j,k=1}^N
+   \;=\;
+   \det\Bigl[
+      \tfrac{1}{\sqrt{2\pi\,s}}\,
+      \exp\Bigl(-\tfrac{\bigl((k-1) - x_j\bigr)^2}{2\,s}\Bigr)
+   \Bigr]_{j,k=1}^N.
+\]
+We may ignore the factor \(\tfrac{1}{\sqrt{2\pi\,s}}\) in each entry since it does not depend on \(x_j\).  Inside the exponential,
+\[
+   -\,\frac{\bigl((k-1) - x_j\bigr)^2}{2\,s}
+   \;=\;
+   -\,\frac{x_j^2}{2\,s}
+   \;+\;\frac{x_j\,(k-1)}{s}
+   \;-\;\frac{(k-1)^2}{2\,s}.
+\]
+Thus, up to the factor
+\(\exp\bigl(-\,\tfrac{(k-1)^2}{2\,s}\bigr)\)
+(which depends only on \(k\) and hence is independent of each \(x_j\)),
+we can factor out
+\(\exp\bigl(-\,\tfrac{x_j^2}{2\,s}\bigr)\)
+from row \(j\).  Consequently, the nontrivial part of the determinant becomes
+\[
+   \det\Bigl[
+      e^{\,\frac{x_j\,(k-1)}{s}}
+   \Bigr]_{j,k=1}^N.
+\]
+Recognize this as a Vandermonde-type determinant in the variables \(e^{\,x_j/s}\).  Indeed,
+\[
+   \det\Bigl[
+      e^{\,\frac{x_j\,(k-1)}{s}}
+   \Bigr]_{j,k=1}^N
+   \;=\;
+   \prod_{1 \le i<j \le N}
+   \Bigl(e^{\,\frac{x_i}{s}} - e^{\,\frac{x_j}{s}}\Bigr).
+\]
+As \(s \to \infty\), we expand
+\(e^{\,\frac{x_i}{s}} = 1 + \frac{x_i}{s} + O\bigl(\tfrac{1}{s^2}\bigr)\),
+so each difference
+\(\bigl(e^{\,\frac{x_i}{s}} - e^{\,\frac{x_j}{s}}\bigr)
+ \sim \tfrac{x_i - x_j}{s}\).
+Hence,
+\[
+   \prod_{1 \le i<j \le N}
+   \Bigl(e^{\,\frac{x_i}{s}} - e^{\,\frac{x_j}{s}}\Bigr)
+   \;\sim\;
+   \frac{1}{s^{\,\frac{N(N-1)}{2}}}
+   \prod_{1 \le i<j \le N} (x_i - x_j).
+\]
+Combining all these factors and matching with the first determinant (as $s\to\infty$) verifies the claimed product form, up to overall constants that do not depend on the variables \(x_j\).  This completes the proof.
+\end{proof}
 
-
+Then, the product of determinants idea
+(biorthogonal ensembles)
+applies
+to the density \eqref{eq:density_representation}
+before the limit $s\to\infty$,
+and simplifies after taking the limit.
+We omit the details here,
+see~Problem~\ref{prob:biorthogonal}.
 
 
 
@@ -530,7 +634,7 @@ The Harish--Chandra--Itzykson--Zuber formula states that
    \,dU
    \;=\;
    \Bigl(\prod_{k=1}^{N-1} k!\Bigr)\,
-   \frac{\det\!\bigl[e^{\,a_i b_j}\bigr]_{i,j=1}^N}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)},
+   \frac{\det\bigl[e^{\,a_i b_j}\bigr]_{i,j=1}^N}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)},
 \]
 up to conventions for the normalization of the Haar measure. Many references fix
 the normalization constant
@@ -575,7 +679,7 @@ Hence
 
 \subsection{Symmetry}
 
-Let \(f(A,B)\) denote the 
+Let \(f(A,B)\) denote the
 right-hand side of \eqref{eq:HCIZ_to_compute}.
 We have established that $f(A,B)$ must be:
 \begin{enumerate}
@@ -592,7 +696,7 @@ If $a_i = a_j$ for some $i \neq j$, then $f(A,B)$ must be invariant under permut
 When eigenvalues coincide, the corresponding eigenvectors can be chosen arbitrarily within the degenerate subspace. This means that when $a_i = a_j$, we can apply a unitary transformation that effectively swaps the roles of $b_i$ and $b_j$ without changing the integral.
 \end{proof}
 
-\textit{Remark on rigor.} 
+\textit{Remark on rigor.}
 To make these symmetry arguments fully rigorous, one notes that $f(A,B)$ can be extended to an analytic function of the eigenvalues (even when they are treated as complex variables close to the real axis). Moreover, if some $a_i = a_j$, the existence of a unitary acting within the degenerate subspace justifies the required symmetry in $(b_i,b_j)$. One also checks that $f(A,B)$ remains finite in the limit $(a_j-a_i)\to 0$ or $(b_j-b_i)\to 0$, enforcing vanishing at a rate that compensates for the factor in the denominator.
 
 This constraint, combined with analyticity, forces $f(A,B)$ to vanish as $(a_j-a_i) \to 0$ or $(b_j-b_i) \to 0$ at a rate that exactly cancels the denominator's singularity. The form of the answer must therefore be:
@@ -620,7 +724,7 @@ where $\Phi_N = C_N$ is a normalization constant independent
 of the eigenvalues. Through a separate calculation
 (see Problem~\ref{prob:PhiN}), often
 involving either a small-time heat-kernel expansion or a
-rank-one reduction, one can determine that 
+rank-one reduction, one can determine that
 \begin{equation}
 	\label{eq:PhiN}
    \Phi_N = \prod_{k=1}^{N-1} k!.
@@ -701,38 +805,29 @@ In this rank-one case, note that
    \;=\;
    x\,y \,\bigl|U_{11}\bigr|^2.
 \]
-You can then reduce the integral to one over the distribution of the first column of $U$, 
-which is a vector uniformly distributed on the complex unit sphere $\mathbb{C}^N$ (under the normalized Haar measure). 
-Use the known Jacobian for this parametrization to perform the integral and match it with 
+You can then reduce the integral to one over the distribution of the first column of $U$,
+which is a vector uniformly distributed on the complex unit sphere $\mathbb{C}^N$ (under the normalized Haar measure).
+Use the known Jacobian for this parametrization to perform the integral and match it with
 the right-hand side evaluated at $(a_1,b_1)=(x,y)$ and $(a_2=\dots=a_N=b_2=\dots=b_N=0)$.
 
 
-\newpage
+\subsection{Biorthogonal ensembles}
+\label{prob:biorthogonal}
 
-\begin{enumerate}[1.]
+Derive \Cref{thm:dbm-det-kernel} from
+\Cref{lem:density_representation}
+using the orthogonalization process similar
+to~\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5},
+and then taking the limit as $s\to\infty$.
 
+\subsection{Scaling of the kernel}
+\label{prob:scaling}
 
+Let $a_i=0$ in \Cref{thm:dbm-det-kernel}.
+Find $\alpha$ such that
+$t^\alpha K_t(x/\sqrt{t},y/\sqrt{t})$ is independent of $t$.
+Can you explain this value of $\alpha$?
 
-\item \textbf{Generator for the Dyson SDE.} For $\beta>0$, write the generator $\mathcal{L}$ of the Markov process \eqref{eq:Dyson_SDE} in differential form. That is, show that for any $C^2$ test function $f(\lambda_1,\dots,\lambda_N)$,
-\[
-\frac{d}{dt}\,\mathbb{E}\bigl[f(\lambda(t))\bigr]
-\;=\;\mathbb{E}\bigl[\mathcal{L}f(\lambda(t))\bigr],
-\]
-where
-\[
-\mathcal{L} \;=\; \sum_{i=1}^N \bigl(2\,\tfrac{\partial^2}{\partial \lambda_i^2}\bigr)
-\;+\;2\beta\sum_{i<j}\,\frac{1}{\lambda_i-\lambda_j}\bigl(\tfrac{\partial}{\partial \lambda_i}-\tfrac{\partial}{\partial \lambda_j}\bigr).
-\]
-Verify formally that the density from \Cref{prop:beta_invariant} is stationary for $\mathcal{L}$ when $\lambda(0)=0$.
-
-
-
-\item \textbf{Limit shape for Non-Intersecting Bridges.} Let $b_1(t),\dots,b_N(t)$ be $N$ real Brownian bridges from $a_1<\dots<a_N$ at $t=0$ to $z_1<\dots<z_N$ at $t=1$, conditioned on no intersections. Simulate numerically for $N=10$ and $a_i=i,\,z_i=2i$. Describe visually how the paths arrange themselves and how they may approximate a continuous shape as $N$ grows.
-
-\item \textbf{Determinantal representation of transition densities (general $\beta=2$).} Fill in details for the matrix integral approach that leads to the transition probability formula in \Cref{thm:DBM_transition_beta2}, including the key use of the unitary integral (the HCIZ formula). You may take the HCIZ formula as known or provide a reference. Make explicit the factor by which $P(\lambda(t)=x\,|\,\lambda(0)=a)$ is normalized.
-
-\item \textbf{DBM short time expansions.} Let $\lambda_i(0)=0$ for all $i$, and consider \eqref{eq:Dyson_SDE} for small $t$. Expand the drift and diffusion terms to second order in $t$, and compare with the approach in \Cref{sub:sde_proof_idea}. Why do the $\tfrac{1}{\lambda_i-\lambda_j}$ terms not blow up when $\lambda_i\approx \lambda_j$ for small $t$?
-\end{enumerate}
 
 
 
