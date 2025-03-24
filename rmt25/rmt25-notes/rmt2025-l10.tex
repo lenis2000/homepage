@@ -319,9 +319,9 @@ o(\Delta t)
 \frac{\tfrac12\,B_{ji}^2(\Delta t)}{\lambda_{j}(T) - \lambda_{i}(T)
       + B_{j}(\Delta t) - \Delta\lambda}.
 \]
-Hence, to leading order in small $\Delta t$, 
-we can ignore $\Delta\lambda$ in the denominator, 
-replace $B_{ji}^2(\Delta t)$ by $\Delta t$ as its expectation, ignore 
+Hence, to leading order in small $\Delta t$,
+we can ignore $\Delta\lambda$ in the denominator,
+replace $B_{ji}^2(\Delta t)$ by $\Delta t$ as its expectation, ignore
 the random correction (as in Itô calculus), and obtain the desired SDE.
 We do not go into further details here, but the details are abundant in the literature,
 including the original work of Dyson \cite{dyson1962brownian}.
@@ -348,11 +348,7 @@ with the $W_i(t)$ being independent real standard Brownian motions. For $\beta=1
 	that eigenvalues will not cross (and thus remain ordered) with probability one.
 \end{remark}
 
-
-
-\section{Transition densities}
-
-\subsection{Starting from zero}
+\section{Mapping the G$\beta$E densities with the Dyson Brownian Motion}
 
 If the Dyson Brownian motion starts from zero\footnote{And then the particles immediately
 repel each other and stay ordered for the whole time.}
@@ -364,8 +360,35 @@ is G$\beta$E,
 	\exp\left\{ -\frac{1}{2t}\sum_{i}\lambda_i^2 \right\}.
 \end{equation*}
 This is evident for $\beta=1,2,4$, when we have a matrix model, but not so
-much for other $\beta$. For other $\beta$, we would like to show that
+much for other $\beta$. For other $\beta$, we would like to
+\begin{itemize}
+\item Make sense of the SDE and its solutions. We skip this part in the course.
+\item Make a computation checking that the above density is preserved under the SDE
+\eqref{eq:Dyson_SDE}.
+\end{itemize}
 
+For example,
+in the $N=1$ case, $d\lambda = dW(t)$ is a Markov process and one wants to show that
+\[
+p(t,\lambda) \;=\; \frac{1}{\sqrt{2\pi\,t}}\,
+\exp\Bigl(-\frac{\lambda^{2}}{2\,t}\Bigr)
+\]
+is preserved in the evolution.  To verify this, one computes the generator
+of the semigroup, which for Brownian motion is
+\[
+\frac{1}{2}\,\frac{\partial^{2}}{\partial\lambda^{2}}.
+\]
+One then checks that
+\[
+\frac{\partial}{\partial t}\,p(t,\lambda)
+\;=\;
+\frac{1}{2}\,\frac{\partial^{2}}{\partial\lambda^{2}}\,p(t,\lambda).
+\]
+This is a direct computation.
+
+For larger $N$, one needs to write down the corresponding generator and check
+that the same type of equation is satisfied.
+See Problem~\ref{prob:generator}.
 
 
 
@@ -443,58 +466,58 @@ Therefore, we may assume \(A=\mathrm{diag}(a)\) and \(B=\mathrm{diag}(b)\).  In 
    \sum_{i,j=1}^N a_i\,b_j\,|U_{ij}|^2.
 \]
 Hence
-\[
+\begin{equation}
+	\label{eq:HCIZ_to_compute}
    \int_{U(N)}
    \exp\Bigl(\mathrm{Tr}(A\,U\,B\,U^\dagger)\Bigr)\,dU
    \;=\;
    \int_{U(N)}
    \exp\Bigl(\sum_{i,j=1}^N a_i\,b_j\,|U_{ij}|^2\Bigr)\,dU.
-\]
+ \end{equation}
 
 \subsection{Symmetry}
 
-\begin{itemize}
-   \item The expression must be symmetric in the eigenvalues \(\{a_1,\dots,a_N\}\) (since any permutation of those entries can be achieved by a suitable unitary conjugation).
-   \item Similarly, it is symmetric in the eigenvalues \(\{b_1,\dots,b_N\}\).
-   \item One can argue that if \(a_i=a_j\) for some \(i\neq j\) but \(b_i\neq b_j\), the integral must vanish (or degenerate) appropriately, which implies the presence of Vandermonde factors in the denominator.
-\end{itemize}
-By general principles of polynomial (or analytic) symmetry, one shows
-\[
-   \int_{U(N)} e^{\,\mathrm{Tr}(A\,U\,B\,U^\dagger)}\,dU
-   \;=\;
-   \Phi_N
-   \,\frac{\det[e^{\,a_i b_j}]}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)},
-\]
-where \(\Phi_N\) is a constant (independent of the specific eigenvalues).
-
-\subsection*{4. Determining the Constant \(\Phi_N\)}
-
-One standard method to fix \(\Phi_N\):
+Let \(f(A,B)\) denote the 
+right-hand side of \eqref{eq:HCIZ_to_compute}.
+We have established that $f(A,B)$ must be:
 \begin{enumerate}
-   \item Set some \(\{a_i\}\) or \(\{b_j\}\) to special values (e.g.\ let one subset go to 0 or let all but one eigenvalue be 0).
-   \item Expand both sides in power series, compare coefficients, or use known integrals from representation theory or from the ``Weingarten formula'' approach.
+   \item Symmetric in the eigenvalues $\{a_1,\ldots,a_N\}$ of $A$
+   \item Symmetric in the eigenvalues $\{b_1,\ldots,b_N\}$ of $B$
+   \item Analytic in all variables when the eigenvalues are distinct
 \end{enumerate}
-It is well known that the result is
+
+When some eigenvalues coincide, the function must behave appropriately. Specifically:
+\begin{lemma}
+If $a_i = a_j$ for some $i \neq j$, then $f(A,B)$ must be invariant under permuting the corresponding $b_i$ and $b_j$.
+\end{lemma}
+\begin{proof}
+When eigenvalues coincide, the corresponding eigenvectors can be chosen arbitrarily within the degenerate subspace. This means that when $a_i = a_j$, we can apply a unitary transformation that effectively swaps the roles of $b_i$ and $b_j$ without changing the integral.
+\end{proof}
+
+\subsection{Scaling behavior and completion of the proof}
+
+This constraint, combined with analyticity, forces $f(A,B)$ to vanish as $(a_j-a_i) \to 0$ or $(b_j-b_i) \to 0$ at a rate that exactly cancels the denominator's singularity. The form of the answer must therefore be:
 \[
-   \Phi_N
-   \;=\;
-   \prod_{k=1}^{N-1} k!
-   \quad\Longrightarrow\quad
+   f(A,B) = \frac{g(A,B)}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)},
+\]
+where $g(A,B)$ is analytic and antisymmetric in the $\{a_i\}$ and in the $\{b_i\}$ variables.
+
+
+By the fundamental theorem of antisymmetric polynomials, $g(A,B)$ must be expressible as a product of the Vandermonde determinants and a symmetric function. Moreover, by examining the behavior under scaling $A \mapsto tA$ and $B \mapsto B/t$, one can show that the only function with the correct analytical properties and scaling behavior is:
+\[
+   g(A,B) = C_N \cdot \det[e^{\,a_i b_j}]_{i,j=1}^N,
+\]
+where $C_N$ is a constant depending only on $N$.
+
+Therefore, we have established that:
+\[
    \int_{U(N)} e^{\,\mathrm{Tr}(A\,U\,B\,U^\dagger)}\,dU
    \;=\;
-   \Bigl(\prod_{k=1}^{N-1} k!\Bigr)\,
-   \frac{\det\!\bigl[e^{\,a_i b_j}\bigr]}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)}.
+   \Phi_N
+   \,\frac{\det[e^{\,a_i b_j}]_{i,j=1}^N}{\prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)},
 \]
+where $\Phi_N = C_N$ is a normalization constant independent of the eigenvalues. Through a separate calculation involving the heat equation on the unitary group, one can determine that $\Phi_N = \prod_{k=1}^{N-1} k!$.
 
-\subsection*{5. Connection to Dyson Brownian Motion}
-
-In the context of Dyson Brownian Motion (for \(\beta=2\)), one writes the law of
-\(\mathcal{M}(t)=A+\sqrt{t}\,G_{\mathrm{UE}}\) and integrates out the angular parts via
-\[
-   \int_{U(N)}
-   \exp\!\bigl(\mathrm{Tr}(A\,U\,\Lambda\,U^\dagger)\bigr)\,dU,
-\]
-where \(\Lambda\) is diagonal with eigenvalues \(\{\lambda_1,\dots,\lambda_N\}\).  The HCIZ formula then produces the classic determinant--Vandermonde factor, yielding the transition density for the eigenvalues of \(\mathcal{M}(t)\).  This leads to the ``\(\exp(a_i\lambda_j)\)'' structure in the joint density or correlation kernels discussed in Lecture~10.
 
 
 
@@ -529,8 +552,32 @@ implies that
 that one can take an almost
 surely continuous modification of the function $t\mapsto B(t)$.
 
+\subsection{Generator for Dyson Brownian Motion}
+\label{prob:generator}
 
-\subsection{}
+Consider the Dyson Brownian Motion(\Cref{def:DBM}) for general $\beta > 0$. The invariant measure for this process when started from zero is expected to be the distribution with density proportional to:
+\begin{equation*}
+p_{\beta}(\lambda_1,\ldots,\lambda_N) \propto \prod_{i<j}|\lambda_i-\lambda_j|^{\beta} \exp\left\{-\frac{1}{2}\sum_{i=1}^N \lambda_i^2\right\}.
+\end{equation*}
+Prove that this density is invariant under the Dyson SDE \eqref{eq:Dyson_SDE} by showing
+\begin{equation*}
+\mathcal{L}p_{\beta} = 0,
+\end{equation*}
+where $\mathcal{L}$ is the infinitesimal generator of the process. Specifically, compute:
+\begin{equation*}
+\mathcal{L}\rho = \frac{1}{2}\sum_{i=1}^N
+\frac{\partial^2}{\partial \lambda_i^2} \rho-
+\frac{\beta}{2}\sum_{i=1}^N\sum_{j\neq
+i}
+\frac{\partial}{\partial\lambda_i}\left(
+\frac{1}{\lambda_i-\lambda_j} \rho
+\right),
+\end{equation*}
+and verify that it indeed annihilates $p_{\beta}.
+
+
+
+\newpage
 
 \begin{enumerate}[1.]
 
