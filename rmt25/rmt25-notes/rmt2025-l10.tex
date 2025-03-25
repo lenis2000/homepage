@@ -248,10 +248,9 @@ Equipped with these ideas, we can rigorously address how the eigenvalues of a ra
 
 \subsection{Heuristic derivation of the SDE for the Dyson Brownian Motion}
 
-
-Let $\mathcal{M}(t)$ be an $N\times N$ Hermitian matrix evolving as $\mathcal{M}(0)=A$ plus i.i.d.\ Gaussian increments in time. Denote its ordered eigenvalues at time $t$ by
+Let $\mathcal{M}(t)$ be an $n\times n$ Hermitian matrix evolving as $\mathcal{M}(0)=A$ plus i.i.d.\ Gaussian increments in time. Denote its ordered eigenvalues at time $t$ by
 \[
-\lambda_1(t)\;\ge\;\dots\;\ge\;\lambda_N(t).
+\lambda_1(t)\;\ge\;\dots\;\ge\;\lambda_n(t).
 \]
 We aim to find an SDE for $\lambda_i(t)$.
 
@@ -261,7 +260,7 @@ For a small increment $\Delta t$, we have
 \;=\;
 \mathcal{M}(t)\;+\;\Delta \mathcal{M},
 \]
-where the entries of $\Delta \mathcal{M}$ are (approximately) independent $\mathcal{N}(0,\Delta t)$ random variables (real or complex). Suppose we diagonalize $\mathcal{M}(t)=U\,\mathrm{diag}(\lambda_1(t),\dots,\lambda_N(t))\,U^\dagger$.
+where the entries of $\Delta \mathcal{M}$ are (approximately) independent $\mathcal{N}(0,\Delta t)$ random variables (real or complex). Suppose we diagonalize $\mathcal{M}(t)=U\,\mathrm{diag}(\lambda_1(t),\dots,\lambda_n(t))\,U^\dagger$.
 
 \begin{proof}[Sketch of the computation]
 Search for the $i$-th eigenvalue of the form
@@ -274,51 +273,54 @@ Search for the $i$-th eigenvalue of the form
 We want to solve
 \[
 \det\begin{pmatrix}
-\lambda_{1}(T) - \lambda_{i}(T) + B_{1}(\Delta t) - \Delta\lambda
-  & \cdots
-  & -\,\Delta\lambda\,B_{i1}(\Delta t) \\[6pt]
+\lambda_{1}(T) - \lambda_{i}(T) + B_{11}(\Delta t) - \Delta\lambda
+		& \cdots
+		& \frac{1}{\sqrt2}\,B_{i1}(\Delta t) \\[6pt]
 \vdots
-  & \ddots
-  & \vdots \\[6pt]
--\,\Delta\lambda\,B_{1i}(\Delta t)
-  & \cdots
-  & \lambda_{N}(T) - \lambda_{i}(T) + B_{N}(\Delta t) - \Delta\lambda
+		& \ddots
+		& \vdots \\[6pt]
+		\frac{1}{\sqrt2}\,B_{1i}(\Delta t)
+		& \cdots
+		& \lambda_{n}(T) - \lambda_{i}(T) + B_{nn}(\Delta t) - \Delta\lambda
 \end{pmatrix}
 \;=\;0.
 \]
-In this matrix only $N-1$ diagonal elements --- excluding the $(i,i)$ entry ---
-are of finite size; the remaining off-diagonal elements are small.
+In this matrix only $n-1$ diagonal elements --- excluding the $(i,i)$ entry ---
+are bounded away from zero; the remaining $(i,i)$-th off-diagonal element is small.
 We have
 \[
 \det
-= \prod_{m=1}^{N}\Bigl[\lambda_{m}(T) - \lambda_{i}(T) + B_{m}(\Delta t) - \Delta\lambda\Bigr]
+= \prod_{m=1}^{n}\Bigl[\lambda_{m}(T) - \lambda_{i}(T) + B_{mm}(\Delta t) - \Delta\lambda\Bigr]
 \;-\;
 \sum_{j\neq i} \biggl(\,\prod_{\substack{m \neq j \\ m \neq i}}
-   \bigl[\lambda_{m}(T) - \lambda_{i}(T) + B_{m}(\Delta t) - \Delta\lambda\bigr]
+			\bigl[\lambda_{m}(T) - \lambda_{i}(T) + B_{mm}(\Delta t) - \Delta\lambda\bigr]
 \biggr)\,\frac{1}{2}\,B_{ji}^{2}(\Delta t)
 \;+\;o(\Delta t).
 \]
-Here, the first product (diagonal part) involves all $N$ diagonal-like terms,
-and the sum over $j \neq i$ ($N-1$ diagonal elements) accounts for corrections
+Here, the first product (diagonal part) involves all $n$ diagonal-like terms,
+and the sum over $j \neq i$ ($n-1$ diagonal elements) accounts for corrections
 from the off-diagonal blocks.
 Higher-order terms are $o(\Delta t)$.
 
 Divide by
 \(\displaystyle \prod_{m \neq i}\bigl[\lambda_{m}(T) - \lambda_{i}(T)
-     + B_{m}(\Delta t) - \Delta\lambda\bigr]\)
+					+ B_{m}(\Delta t) - \Delta\lambda\bigr]\)
 to obtain
 \[
 o(\Delta t)
 \;=\;
 -\,\Delta\lambda
-\;+\; B_{i}(\Delta t)
+\;+\; B_{ii}(\Delta t)
 \;-\;\sum_{j\neq i}\;
 \frac{\tfrac12\,B_{ji}^2(\Delta t)}{\lambda_{j}(T) - \lambda_{i}(T)
-      + B_{j}(\Delta t) - \Delta\lambda}.
+						+ B_{j}(\Delta t) - \Delta\lambda}.
 \]
 Hence, to leading order in small $\Delta t$,
 we can ignore $\Delta\lambda$ in the denominator,
-replace $B_{ji}^2(\Delta t)$ by $\Delta t$ as its expectation, ignore
+replace $B_{ji}^2(\Delta t)$ by $\Delta t$ as its expectation,\footnote{For
+other $\beta$, this will be $\beta \Delta t$, due to the dimensionality of the
+Brownian motion on the full rank matrix.}
+ignore
 the random correction (as in It\^{o} calculus), and obtain the desired SDE.
 We do not go into further details here, but the details are abundant in the literature,
 including the original work of Dyson \cite{dyson1962brownian}.
@@ -326,7 +328,7 @@ including the original work of Dyson \cite{dyson1962brownian}.
 
 \begin{definition}[Dyson Brownian Motion]
 \label{def:DBM}
-Fix $\beta>0$ and initial data $\bigl(\lambda_1(0)\ge \dots \ge \lambda_N(0)\bigr)$. The \emph{Dyson Brownian Motion} is the unique strong solution to the system of SDEs
+Fix $\beta>0$ and initial data $\bigl(\lambda_1(0)\ge \dots \ge \lambda_n(0)\bigr)$. The \emph{Dyson Brownian Motion} is the unique strong solution to the system of SDEs
 \begin{equation}
 \label{eq:Dyson_SDE}
 d\lambda_i(t)
@@ -335,7 +337,7 @@ d\lambda_i(t)
 \;+\;
 dW_i(t),
 \quad
-i=1,\dots,N,
+i=1,\dots,n,
 \end{equation}
 with the $W_i(t)$ being independent real standard Brownian motions. For $\beta=1,2,4$, this coincides with the eigenvalue process of matrix Brownian motion (GOE, GUE, GSE).
 \end{definition}
@@ -389,11 +391,10 @@ See Problem~\ref{prob:generator}.
 
 \section{Determinantal structure for $\beta=2$}
 
-\subsection{Transition density}
+To understand the determinantal structure of the Dyson Brownian Motion, we 
+first need the explicit transition probabilities:
 
-
-
-\begin{theorem}[\(\beta=2\) Dyson Brownian Motion Transition Probabilities]
+\begin{theorem}[\(\beta=2\) Dyson Brownian Motion transition probabilities]
 	\label{thm:dbm-transition}
 For \(\beta=2\), let \(\lambda(t)=(\lambda_1(t)\ge \cdots \ge \lambda_N(t))\) follow Dyson Brownian Motion starting at \(\lambda(0)=\mathbf{a}=(a_1\ge \cdots \ge a_N)\).  Then for each fixed time \(t>0\),
 \[
@@ -406,207 +407,13 @@ N!\,\bigl(\frac{1}{\sqrt{2\pi t}}\bigr)^{N}
 where \(x_1 \ge \dots \ge x_N\).
 \end{theorem}
 
-\begin{proof}
-Consider an \(N\times N\) Hermitian matrix process \(X(t)\) whose entries perform independent complex Brownian motions (so that \(X(t)\) is distributed as \(A + \sqrt{t}\,\mathrm{GUE}\) at each fixed time, with \(A=\mathrm{diag}(a_1,\dots,a_N)\)).  Its eigenvalues \(\lambda_1(t)\ge \cdots \ge \lambda_N(t)\) evolve exactly according to the \(\beta=2\) Dyson Brownian Motion.
-
-The density of \(X\) at time \(t\), viewed as a random matrix, is proportional to
-\[
-\exp\Bigl(-\tfrac{1}{2t}\,\mathrm{Tr}\bigl(X-A\bigr)^2\Bigr).
-\]
-If we replace \(A\) by \(U\,A\,U^\dagger\) for any fixed unitary \(U\), the law of \(X\) remains the same (this follows from the unitary invariance of the GUE).  Thus the distribution of the eigenvalues of \(X\) is unchanged by such conjugation.
-
-One writes
-\[
-\int_{U(N)}
-\exp\Bigl(-\tfrac{1}{2t}\,\mathrm{Tr}\bigl(X-U\,A\,U^\dagger\bigr)^2\Bigr)\,dU
-\;=\;
-\text{(const.)} \times
-\text{[HCIZ integral in the variables }(X,A)\text{]},
-\]
-which by the Harish--Chandra--Itzykson--Zuber formula leads to a product of determinants and a factor that is precisely
-\[
-\exp\Bigl(-\tfrac{1}{2t}\sum_{i=1}^N x_i^2
-- \tfrac{1}{2t}\sum_{i=1}^N a_i^2\Bigr)\,
-\frac{\det\Bigl[\exp\bigl(\tfrac{x_i\,a_j}{t}\bigr)\Bigr]}{\prod_{i<j}(x_i - x_j)\,(a_i - a_j)},
-\]
-where \(x_1,\dots,x_N\) are the eigenvalues of \(X\).
-
-To convert this matrix distribution into a distribution on eigenvalues alone, we multiply by the usual Vandermonde Jacobian
-\(\prod_{i<j}(x_i - x_j)^2\)
-(which comes from integrating out the unitary degrees of freedom).  This produces exactly
-\[
-N!\,\bigl(\tfrac{1}{\sqrt{2\pi t}}\bigr)^{N}\,
-\prod_{i<j}\frac{x_i - x_j}{a_i - a_j}
-\,\det\Bigl[\exp\Bigl(-\tfrac{(x_i - a_j)^2}{2t}\Bigr)\Bigr].
-\]
-Hence we obtain the stated transition probability for the Dyson Brownian Motion at \(\beta=2\).
-\end{proof}
-
-\begin{remark}
-The factor \(N!\,(\tfrac{1}{\sqrt{2\pi t}})^N\) arises naturally from normalizing the Gaussian increments and accounts for the ordering \(\lambda_1\ge\cdots\ge \lambda_N\).  The determinant and product factors encode the eigenvalue ``repulsion'' characteristic of \(\beta=2\) random matrices.
-\end{remark}
+The proof of this theorem is given in the next
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l11.pdf}{Lecture 11},
+based on the Harish--Chandra--Itzykson--Zuber formula that we
+outline next.
 
 
-\subsection{Determinantal correlations}
-
-\begin{theorem}[Determinantal structure for $\beta=2$ DBM]
-\label{thm:dbm-det-kernel}
-Let $\{x_1(t),\dots,x_n(t)\}$ be the eigenvalues at time $t>0$ of the $\beta=2$ Dyson Brownian Motion started at initial locations $(a_1,\dots,a_n)$ at time $0$.  Equivalently, these $x_i(t)$ are the eigenvalues of
-\[
-A + \sqrt{t}\,G,
-\]
-where $A=\mathrm{diag}(a_1,\dots,a_n)$ and $G$ is a random Hermitian matrix from the GUE.  Then the (random) point configuration $\{x_i(t)\}$ forms a determinantal point process with correlation kernel
-\[
-K_t(x,y)
-=
-\frac{1}{(2\pi i)^2\,t}
-\oint \oint
-\exp\Bigl(\frac{w^2 - 2\,y\,w}{2\,t}\Bigr)\,
-\biggl/
-\exp\Bigl(\frac{z^2 - 2\,x\,z}{2\,t}\Bigr)
-\;\prod_{i=1}^n \frac{w - a_i}{z - a_i}
-\;\frac{dw\,dz}{w - z}.
-\]
-Here $z$ goes around all the points $a_1,\ldots,a_n $,
-and the $w$ contour
-passes from $-i\infty$ to $i\infty$, to the right of the $z$ contour.
-\end{theorem}
-
-\begin{itemize}
-	\item If $a_1=\dots=a_n=0$ and $t=1$, this kernel reduces to the familiar correlation kernel of the GUE (see \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l06.pdf}{Lecture 6}).
-\item
-	One can use this formula to study the Baik--Ben
-	Arous--P\'ech\'e (BBP)
-	\cite{BBP2005phase}
-	phase transition for $\beta=2$,
-	which deals with finite rank perturbations of the GUE random matrix ensemble.
-	Indeed, rank $r$ perturbation corresponds to taking $a_1,\ldots,a_r\ne0 $,
-	and $a_{r+1}=\dots=a_n=0$.
-\end{itemize}
-
-\subsection{On the proof of determinantal structure}
-
-The idea of the proof of \Cref{thm:dbm-det-kernel} is to
-represent the measure (the transition density) as a
-product of determinants. In general,
-if a measure is given as a product of determinants,
-there is a well-studied method (biorthogonal ensembles and,
-more generally, the Eynard--Mehta theorem)
-to compute the determinantal correlation kernel.
-We refer to
-\cite{borodin2005eynard},
-\cite{Borodin2009} for a detailed exposition
-in the discrete case (which is arguably more transparent).
-The first step for the Dyson Brownian Motion is as follows.
-
-\begin{lemma}[Density representation]
-\label{lem:density_representation}
-Let $P_t(x\to y)$ be the transition probability kernel of standard Brownian motion,
-\[
-   P_t(x\to y) \;=\; \frac{1}{\sqrt{2\pi\,t}}\,
-   \exp\Bigl(-\tfrac{(x-y)^2}{2\,t}\Bigr).
-\]
-Then the density of the eigenvalues $(x_1,\dots,x_N)$
-of DBM started at $(a_1,\dots,a_N)$ at time $0$
-admits the representation
-\begin{equation}
-	\label{eq:density_representation}
-   \lim_{s\to\infty}
-   \biggl(\frac1Z\biggr)\,
-   \det\Bigl[P_t\bigl(a_i\to x_j\bigr)\Bigr]_{i,j=1}^N
-   \,\det\Bigl[P_s\bigl(x_i\to k-1\bigr)\Bigr]_{i,k=1}^N.
- \end{equation}
-\end{lemma}
-\begin{remark}
-	This representation
-	\eqref{eq:density_representation}
-	is related to an alternative description of the
-	$\beta=2$ Dyson Brownian Motion as
-	an ensemble of noncolliding Brownian motions
-	(that is, independent Brownian motions, conditioned to never collide).
-\end{remark}
-
-\begin{proof}[Proof of \Cref{lem:density_representation}]
-The first determinant (as $s\to\infty$) matches the determinant
-we have in \Cref{thm:dbm-transition}.
-It remains to analyze the second determinant
-\[
-   \det\Bigl[
-      P_s\bigl(x_j \to k-1\bigr)
-   \Bigr]_{j,k=1}^N
-   \;=\;
-   \det\Bigl[
-      \tfrac{1}{\sqrt{2\pi\,s}}\,
-      \exp\Bigl(-\tfrac{\bigl((k-1) - x_j\bigr)^2}{2\,s}\Bigr)
-   \Bigr]_{j,k=1}^N.
-\]
-We may ignore the factor \(\tfrac{1}{\sqrt{2\pi\,s}}\) in each entry since it does not depend on \(x_j\).  Inside the exponential,
-\[
-   -\,\frac{\bigl((k-1) - x_j\bigr)^2}{2\,s}
-   \;=\;
-   -\,\frac{x_j^2}{2\,s}
-   \;+\;\frac{x_j\,(k-1)}{s}
-   \;-\;\frac{(k-1)^2}{2\,s}.
-\]
-Thus, up to the factor
-\(\exp\bigl(-\,\tfrac{(k-1)^2}{2\,s}\bigr)\)
-(which depends only on \(k\) and hence is independent of each \(x_j\)),
-we can factor out
-\(\exp\bigl(-\,\tfrac{x_j^2}{2\,s}\bigr)\)
-from row \(j\).  Consequently, the nontrivial part of the determinant becomes
-\[
-   \det\Bigl[
-      e^{\,\frac{x_j\,(k-1)}{s}}
-   \Bigr]_{j,k=1}^N.
-\]
-Recognize this as a Vandermonde-type determinant in the variables \(e^{\,x_j/s}\).  Indeed,
-\[
-   \det\Bigl[
-      e^{\,\frac{x_j\,(k-1)}{s}}
-   \Bigr]_{j,k=1}^N
-   \;=\;
-   \prod_{1 \le i<j \le N}
-   \Bigl(e^{\,\frac{x_i}{s}} - e^{\,\frac{x_j}{s}}\Bigr).
-\]
-As \(s \to \infty\), we expand
-\(e^{\,\frac{x_i}{s}} = 1 + \frac{x_i}{s} + O\bigl(\tfrac{1}{s^2}\bigr)\),
-so each difference
-\(\bigl(e^{\,\frac{x_i}{s}} - e^{\,\frac{x_j}{s}}\bigr)
- \sim \tfrac{x_i - x_j}{s}\).
-Hence,
-\[
-   \prod_{1 \le i<j \le N}
-   \Bigl(e^{\,\frac{x_i}{s}} - e^{\,\frac{x_j}{s}}\Bigr)
-   \;\sim\;
-   \frac{1}{s^{\,\frac{N(N-1)}{2}}}
-   \prod_{1 \le i<j \le N} (x_i - x_j).
-\]
-Combining all these factors and matching with the first determinant (as $s\to\infty$) verifies the claimed product form, up to overall constants that do not depend on the variables \(x_j\).  This completes the proof.
-\end{proof}
-
-Then, the product of determinants idea
-(biorthogonal ensembles)
-applies
-to the density \eqref{eq:density_representation}
-before the limit $s\to\infty$,
-and simplifies after taking the limit.
-We omit the details here,
-see~Problem~\ref{prob:biorthogonal}.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\section{Derivation of the HCIZ integral}
+\section{Harish-Chandra--Itzykson--Zuber (HCIZ) integral}
 
 In this section, we give a self-contained derivation of the Harish--Chandra--Itzykson--Zuber (HCIZ) integral from first principles, in a form commonly used in Random Matrix Theory and particularly in the derivation of Dyson Brownian Motion transition densities.
 
@@ -810,23 +617,6 @@ which is a vector uniformly distributed on the complex unit sphere $\mathbb{C}^N
 Use the known Jacobian for this parametrization to perform the integral and match it with
 the right-hand side evaluated at $(a_1,b_1)=(x,y)$ and $(a_2=\dots=a_N=b_2=\dots=b_N=0)$.
 
-
-\subsection{Biorthogonal ensembles}
-\label{prob:biorthogonal}
-
-Derive \Cref{thm:dbm-det-kernel} from
-\Cref{lem:density_representation}
-using the orthogonalization process similar
-to~\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture 5},
-and then taking the limit as $s\to\infty$.
-
-\subsection{Scaling of the kernel}
-\label{prob:scaling}
-
-Let $a_i=0$ in \Cref{thm:dbm-det-kernel}.
-Find $\alpha$ such that
-$t^\alpha K_t(x/\sqrt{t},y/\sqrt{t})$ is independent of $t$.
-Can you explain this value of $\alpha$?
 
 
 
