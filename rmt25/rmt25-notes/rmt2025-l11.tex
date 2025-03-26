@@ -118,24 +118,6 @@ matching the Gaussian \(\beta\)-Ensemble (G\(\beta\)E) law.  Hence DBM provides
 a dynamical realization of G\(\beta\)E.  Invariance can be checked by verifying
 that this density is annihilated by the generator of the SDE.
 
-\subsection{Transition density for \(\beta=2\)}
-When \(\beta=2\), the DBM corresponds to GUE Brownian motion and admits an
-explicit formula for the transition probabilities.  If
-\(\lambda(0) = (a_1\ge\dots\ge a_N)\) and
-\(\lambda(t) = (x_1\ge\dots\ge x_N)\), then
-\[
-P\bigl[\lambda(t)=\mathbf{x}\;|\;\lambda(0)=\mathbf{a}\bigr]
-\;=\;
-N!\;\bigl(\tfrac{1}{\sqrt{2\pi t}}\bigr)^{\!N}
-\;\prod_{1\le i<j\le N}\frac{x_i - x_j}{a_i - a_j}\;
-\det\!\Bigl[
-\exp\Bigl(-\tfrac{(x_i - a_j)^2}{2t}\Bigr)
-\Bigr]_{i,j=1}^N.
-\]
-A derivation of this formula uses the
-\emph{Harish--Chandra--Itzykson--Zuber (HCIZ) integral}
-detailed in the previous \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l10.pdf}{Lecture~10}.
-
 \subsection{Harish--Chandra--Itzykson--Zuber (HCIZ) integral}
 The HCIZ integral is a key tool for computing matrix integrals involving traces.
 For two Hermitian matrices \(A\) and \(B\) with eigenvalues
@@ -150,6 +132,10 @@ normalization):
 \]
 This formula is instrumental in deriving transition densities for
 \(\beta=2\) Dyson Brownian Motion.  
+
+\section{Optional: proof of HCIZ integral via representation theory}
+
+
 
 \section{Determinantal structure for $\beta=2$}
 
