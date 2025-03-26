@@ -55,7 +55,7 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 11: Some universal asymptotics of Dyson Brownian Motion}
+\\Lecture 11: Asymptotics of Dyson Brownian Motion with an outlier}
 
 
 \date{March 26, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
@@ -725,7 +725,7 @@ K^{(2)}(\xi,\eta)
 \int\!\int
 \exp\!\Bigl(\tfrac12(Z^2-W^2)+\xi Z-\eta W\Bigr)\,\frac{1}{W-Z}\,dW\,dZ.
 \end{align*}
-The term $K^{(1)}$ has a factor $\frac{1}{Z}$ independent of $W-Z$, 
+The term $K^{(1)}$ has a factor $\frac{1}{Z}$ independent of $W-Z$,
 while $K^{(2)}$ contains the remaining part $\frac{1}{\,W-Z\,}$.
 
 \medskip
@@ -791,10 +791,10 @@ In operator form on suitable spaces,
 this reads $K^{(2)}=A\,B$, and one checks $B\,A=I$
 (\emph{identity on the $t$-variable space}),
 so $A\,B$ and $B\,A$ share the same nonzero spectrum.
-Indeed, 
+Indeed,
 \begin{equation*}
 	BA(s,t)=\frac{1}{(2\pi i)^2}
-	\int_{\mathbb{R}}d\xi 
+	\int_{\mathbb{R}}d\xi
 	\int dW\, dZ
 	e^{-\frac{1}{2}W^2+\frac{1}{2}Z^2}
 	e^{-(s+\xi)W+(\xi+t)Z}.
@@ -806,12 +806,38 @@ Integrating over $\xi$ in the Fourier sense yields the delta:
 Integrating in $W$ is again an integral of $e^{(t-s)W}$, and thus, the second $2\pi$ disappears,
 and we arrive at $BA(s,t)=\delta(s-t)$, which is the kernel of the identity operator.
 
+We conclude that $AB$ is a projection, since
+$(AB)^2=ABAB=AB$.
+
 \medskip
 \noindent\textbf{Step 4. Conclusion.}
 We then have
 \begin{equation*}
-	\det\left( 1-K_G \right)_{\ge x}=
+	\det\left( 1-K_G \right)_{\ge x}=\det(I-K^{(1)}-K^{(2)})_{\ge x}.
 \end{equation*}
+The operators $K^{(1)}$ and $K^{(2)}$ have a special structure. As shown above, $K^{(2)}=AB$ is a projection operator, satisfying $(K^{(2)})^2=K^{(2)}$. This means its eigenvalues are either 0 or 1, corresponding to the inactive and active subspaces, respectively. Let $\mathcal{V}=\mathrm{Ran}(B)$ be the active subspace.
+
+Meanwhile, $K^{(1)}$ is a rank-1 operator, which we can write as $K^{(1)}=u\otimes v$ for some functions $u,v$ (as already defined above). One can verify that the range of $K^{(1)}$ is contained in $\mathcal{V}$, meaning that $K^{(1)}$ maps into the same subspace where $K^{(2)}$ acts as identity.
+
+The full operator $I-K_G$ differs from identity only in a one-dimensional subspace. To compute the Fredholm determinant, we need only the one non-trivial eigenvalue, which comes from the action of $K_G$ on the direction of $u$ within $\mathcal{V}$. This eigenvalue equals the trace, $\lambda_{\text{special}}=\langle v,u\rangle$.
+Therefore, the Fredholm determinant reduces to:
+\begin{equation*}
+	\det\left(1-K_G\right)_{\ge x}=(1-\lambda_{\text{special}})=(1-\langle v,u\rangle).
+\end{equation*}
+
+Direct computation of this inner product, using the explicit forms of $u$ and $v$ from the partial fraction decomposition, yields:
+\begin{equation*}
+	\langle v,u\rangle=\int_{x}^{\infty}v(w)u(w)\,dw=1-\Phi(x),
+\end{equation*}
+where $\Phi(x)$ is the standard Gaussian cumulative distribution function.
+
+This gives us the final result:
+\begin{equation*}
+	\det\left(1-K_G\right)_{\ge x}=(1-(1-\Phi(x)))=\Phi(x).
+\end{equation*}
+
+Thus, the Fredholm determinant exactly matches the Gaussian CDF, confirming that the distribution of the outlier eigenvalue in the $a>1$ regime is precisely Gaussian.
+
 
 \section{Airy line ensemble}
 
@@ -819,7 +845,7 @@ We then have
 
 \begin{theorem}[Edge scaling limit to Airy line ensemble]
 	Consider an $N\times N$ GUE (Gaussian Unitary Ensemble) Dyson Brownian motion, i.e., the stochastic process of eigenvalues $(\lambda_1(t)\ge \cdots\ge \lambda_N(t))_{t\in\mathbb{R}}$ evolving under Dyson's eigenvalue dynamics. After centering at the spectral edge parallel to the vector $\mathbf{v}_t$ and applying the
-Airy scaling (tangent axis scaled by $N^{-1/3}$ and fluctuations scaled by $N^{-1/6}$), the top $k$ eigenvalue trajectories converge as $N\to\infty$ to the \textbf{Airy line ensemble}. In particular, for each fixed $k\ge1$ the rescaled process $$(N^{1/6}[\lambda_i(\langle  
+Airy scaling (tangent axis scaled by $N^{-1/3}$ and fluctuations scaled by $N^{-1/6}$), the top $k$ eigenvalue trajectories converge as $N\to\infty$ to the \textbf{Airy line ensemble}. In particular, for each fixed $k\ge1$ the rescaled process $$(N^{1/6}[\lambda_i(\langle
 			N^{-1/3},N^{-1/6}
 \rangle \cdot \mathbf{v})-c_{N,t}])_{1\le i\le k}$$ converges in distribution (uniformly on compact $t$-intervals) to $(\mathcal{P}_i(t))_{1\le i\le k}$, where $\{\mathcal{P}_i(t)\}_{i\ge1}$ is the parabolic Airy line ensemble. Consequently, the top curve $\mathcal{L}_1(t)$ is the \textbf{Airy$_2$ process}, which is the $t$-stationary scaling limit of the largest eigenvalue process.
 \end{theorem}
@@ -866,9 +892,9 @@ Can you explain this value of $\alpha$?
 
 \subsection{Gaussian regime and integration contours}
 
-Check that the contour deformation 
+Check that the contour deformation
 from $(z,w)$ to $(Z,W)$ passing through $a$
-described in 
+described in
 \Cref{sec:gaussian-regime} is valid.
 
 \subsection{GUE kernel}
@@ -883,13 +909,13 @@ from \Cref{sec:gaussian-regime}:
 	\exp\left\{
 		\frac{1}{2}(Z^2-W^2)-\eta W+\xi Z
 	\right\}\cdot
-	\left( 
+	\left(
 	\frac{W}{Z}
 \right)^{m}
 \frac{dW\,dZ}{W-Z},
 \end{equation*}
 where $m\ge1$ is an integer and the contours are as in \Cref{fig:ReS_Gauss}.
-Show that the Fredholm determinant 
+Show that the Fredholm determinant
 $\det\left( 1-K_G^m \right)_{L^2(x,+\infty)}$
 is the cumulative distribution function of the largest eigenvalue
 of the $m\times m$ GUE matrix.
