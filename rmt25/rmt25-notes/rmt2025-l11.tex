@@ -325,7 +325,7 @@ where $A=\mathrm{diag}(a_1,\dots,a_n)$ and $G$ is a random Hermitian matrix from
 K_t(x,y)
 =
 \frac{1}{(2\pi)^2\,t}
-\oint \oint
+\int \int
 \exp\Bigl(\frac{w^2 - 2\,y\,w}{2\,t}\Bigr)\,
 \biggl/
 \exp\Bigl(\frac{z^2 - 2\,x\,z}{2\,t}\Bigr)
@@ -471,7 +471,11 @@ A = \mathrm{diag}(a,0,\dots,0)
 \quad\text{with }a\in\mathbb{R},
 \]
 affects the large-$n$ and large-time behavior of the Dyson Brownian Motion at $\beta=2$.
-See the simulation at \url{https://lpetrov.cc/simulations/2025-01-28-bbp-transition/}.
+See the simulation at
+\url{https://lpetrov.cc/simulations/2025-01-28-bbp-transition/}.\footnote{Note
+that the simulation has $\beta=1$ (real matrices),
+so the edge is at $\sqrt 2$, and the critical
+value of the spike is at $1/\sqrt 2$.}
 
 We set $a_1=a\sqrt n$ and $a_2=a_3=\dots=a_n=0$, which simplifies the product:
 \[
@@ -491,7 +495,7 @@ Hence, the correlation kernel becomes
 K_t(x,y)
 =
 \frac{\sqrt n}{(2\pi)^2}
-\oint \oint
+\int \int
 \exp\Bigl(\frac{nw^2 - 2\,y\,w\sqrt n}{2}\Bigr)\,
 \biggl/
 \exp\Bigl(\frac{nz^2 - 2\,x\,z\sqrt n}{2}\Bigr)
@@ -519,7 +523,7 @@ double critical point.
 Any crossing from $z$- to $w$-contour may pick up residues, which account for separate contributions (leading, for instance, to the Airy kernel in the unperturbed GUE).
 We track how the spike $a$ changes these deformations.
 
-\subsection{Exponent form and critical points}
+\subsection{Asymptotics}
 
 Set
 \[
@@ -548,149 +552,291 @@ Note however that the old $z$ contour must encircle $z=a$ and $z=0$,
 and $z=a$ is a pole of the integrand. The $w$ contour must always be to the right of
 the $z$ contour.
 
-We see that there are three regimes:
-\begin{itemize}
-	\item If $a<1$, we can deform the $z$ contour to encircle $z=0$ and $z=a$,
+We see that there are three regimes, which we consider in the next three subsections.
+\subsection{Airy kernel}
+	If $a<1$, we can deform the $z$ contour to encircle $z=0$ and $z=a$,
 		and the $w$ contour to pass through $w=1$. This will lead to the Airy kernel,
 		and the derivation is the same as in
 		\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
-		We obtain
+		We obtain\footnote{Here and below, we understand the convergence
+			of the kernels is up to a gauge transformation of the form
+		$K(x,y)\mapsto\frac{f(x)}{f(y)}K(x,y)$.}
 		\begin{equation*}
-			z=1+\frac{Z}{n^{1/3}},\qquad w=1+\frac{W}{n^{1/3}},\qquad
-		\end{equation*}<++>
-	\item If $a=1$, the behavior is going to be critical --- we still will
+			z=1+\frac{Z}{n^{1/3}},\quad w=1+\frac{W}{n^{1/3}},\qquad
+			x'=\frac{\xi}{n^{1/6}}, \quad y'=\frac{\eta}{n^{1/6}},
+			\qquad
+			\frac{1}{n^{1/6}}K_n\to K_{\mathrm{Airy}}(\xi,\eta).
+		\end{equation*}
+		Here
+		\[
+			K_{\mathrm{Airy}}(\xi,\eta)=
+			\frac{1}{(2\pi i)^2}\iint \frac{\exp\left\{ \frac{W^3}{3}-\xi W-\frac{Z^3}{3}+\eta Z \right\}}{W-Z}\,dW\,dZ.
+		\]
+		Indeed, the only one new thing that happens here is that $a<1$, and so
+		\begin{equation}
+			\label{eq:z-w-extra-factor}
+			\frac{w-a}{z-a}=\frac{1-a+W/n^{1/3}}{1-a+Z/n^{1/3}}=1+O(n^{-1/3}),
+		\end{equation}
+		so this term does not contribute to the asymptotics of the kernel.
+
+\subsection{BBP transition and the deformed Airy kernel}
+
+		If $a=1$, the behavior is going to be critical --- we still will
 		be able to get the same scaling, but the limiting kernel will be different.
-	\item Finally,
-\end{itemize}
+		Moreover, looking at \eqref{eq:z-w-extra-factor}, we see that
+		we need to critically rescale $a$, so
+		\begin{equation*}
+			a=1+A n^{-1/3},
+			\qquad
+			\frac{w-a}{z-a}=\frac{W-A}{Z-A}+O(n^{-4/3}),
+			\qquad
+			\frac{1}{n^{1/6}}K_n\to \tilde K_{\mathrm{Airy}}(\xi,\eta),
+		\end{equation*}
+		where
+		\begin{equation*}
+			\tilde K_{\mathrm{Airy}}(\xi,\eta)=
+			\frac{1}{(2\pi i)^2}\iint \frac{\exp\left\{
+			\frac{W^3}{3}-\xi W-\frac{Z^3}{3}+\eta Z
+			\right\}}{W-Z}
+			\frac{W-A}{Z-A}
+			\,dW\,dZ.
+		\end{equation*}
+		This kernel is the BBP transition kernel,
+		first obtained in the seminal paper by
+		Baik--Ben Arous--P\'ech\'e~\cite{BBP2005phase}.
+		The spiked top eigenvalue distribution (and the Tracy--Widom distribution)
+		are widely used in statistics of high-dimensional,
+		highly correlated data.
 
+\subsection{Gaussian regime}
+\label{sec:gaussian-regime}
 
+Finally, for $a>1$, we cannot deform the integration contours so that they
+pass through the double critical point $w_c=1$.
+Instead, we can make the contours pass through the point $a$ itself,
+and scale the integration variables $w,z$ around $a$ on the scale $n^{-1/2}$ and
+not $n^{-1/3}$.
 
+Moreover, we need to make $x,y$ to scale around a different location
+instead of $2\sqrt n$. We can find this location by first considering
+$x=c\sqrt n$ and expanding as $n\to\infty$:
+\begin{multline*}
+	n\left( \frac{w^2}{2}-yw/\sqrt{n}+\log w \right)\Big\vert_{w=a+W/\sqrt n,\ y=c\sqrt n+\eta}\\=
+	n \left(\frac{a^2}{2}-a c+\log (a)\right)+\sqrt{n} \left(-a \eta +a W+\frac{W}{a}-c W\right)-
+	\frac{W^2}{2 a^2}+\frac{W^2}{2}-\eta  W.
+\end{multline*}
+The term by $n$ is the same in $S(w)$ and $S(z)$ and thus cancels out.
+The term by $\sqrt n$ depends on $W$ and cannot be simply removed by a gauge transformation,
+so we need to match $c$. We have
+\begin{equation*}
+	c=a+\frac{1}{a}.
+\end{equation*}
 \begin{remark}
-For $\beta=2$ and $a=0$, we typically expand about $z\approx 1$, $w\approx 1$ to capture the top edge at $2\sqrt{t\,n}$.  Indeed, setting $z=1+u,n\to\infty$ leads to the cubic expansions in $u$.
-Once $a\neq0$, we get an extra shift in $z$, $w$ that might solve
+	You can go to \url{https://lpetrov.cc/simulations/2025-01-28-bbp-transition/}
+	and set the parameter $\theta$ (which is the same as $a$)
+	to an integer, make $N$ large, and check that the location of the top or bottom eigenvalue
+	becomes exactly $a+1/a$. (Despite the fact that the simulation at the link is for $\beta=1$.)
+\end{remark}
+Setting $c=a+1/a$, we have
+\begin{equation*}
+	n\ssp S\sim -\frac{W^2}{2 a^2}+\frac{W^2}{2}-\eta  W,
+\end{equation*}
+and thus the distribution of the top eigenvalue is given by
+a Fredholm determinant with the kernel
+\begin{equation*}
+	K_G(\xi,\eta)=
+	\frac{1}{(2\pi)^2}
+	\int \int
+	\exp\left\{
+		\frac{a^{-2}-1}{2}(Z^2-W^2)-\eta W+\xi Z
+	\right\}\cdot
+	\frac{W}{Z}\cdot
+	\frac{dW\,dZ}{W-Z}
+\end{equation*}
+Note that the factor $\sqrt n$ in front of $K_t$ is precisely
+removed by the scaling of $w,z$, and there is no additional scaling
+coming from the map $(x,y)\mapsto (\xi,\eta)$.
+The contribution
+from $(w-a)/(z-a)$ becomes $W/Z$.
+
+The integration contours in $K_G$ are
+such that $Re (W^2)>0$ and $Re (Z^2)<0$ on them, and this can be achieved by
+the contour deformation.
+Indeed, in the new variables, the
+behavior at $W=Z=0$ is quadratic, so the
+$Z$ contour must pass on the left, and the $W$ contour must be on the right.
+One can check that this contour deformation is possible.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[height=.4\textwidth]{pictures/ReS_Gauss.png}
+    \caption{The contour plot of
+		$\Re(Z^2)$ around zero. Blue shades correspond to negative values, and yellow to positive. The
+		$Z$ contour must pass through the blue region and becomes vertical, and the
+		$W$ contour must stay in the yellow region, and becomes a union of two half-lines,
+		which are at the angle $<\frac{\pi}{4}$ from the real line.}
+		\label{fig:ReS_Gauss}
+\end{figure}
+
+\subsection{Matching Fredholm determinant to the Gaussian distribution}
+
+Let us renormalize the integration variables
+to remove the factor $a^{-2}-1$ in front of the squares,
+and match $\det\left( 1-K_G \right)_{\ge x}$ to the Gaussian distribution
+(see also Problem~\ref{prob:GUE-kernel} for another way to match).
+We will work with
+\begin{equation*}
+	K_G(\xi,\eta)=
+	\frac{1}{(2\pi)^2}
+	\int \int
+	\exp\left\{
+		\frac{1}{2}(Z^2-W^2)-\eta W+\xi Z
+	\right\}\cdot
+	\frac{W}{Z}\cdot
+	\frac{dW\,dZ}{W-Z}
+\end{equation*}
+The discussion below is informal, but can be easily made rigorous.
+
+\medskip
+
+\noindent\textbf{Step 1. Partial fractions and decomposition.}
+Observe that
 \[
-\partial_z\,\Phi_{t,a}=0,
+\frac{W}{Z(W-Z)} \;=\;
+\frac{1}{Z}\;+\;\frac{1}{\,W-Z\,}.
+\]
+Thus we can write
+\[
+K_G(\xi,\eta)
+=
+K^{(1)}(\xi,\eta)+K^{(2)}(\xi,\eta),
+\]
+where
+\begin{align*}
+K^{(1)}(\xi,\eta)
+&=
+\frac{1}{(2\pi)^2}
+\int\!\int
+\exp\!\Bigl(\tfrac12(Z^2-W^2)+\xi Z-\eta W\Bigr)\,\frac{1}{Z}\,dW\,dZ,
+\\
+K^{(2)}(\xi,\eta)
+&=
+\frac{1}{(2\pi)^2}
+\int\!\int
+\exp\!\Bigl(\tfrac12(Z^2-W^2)+\xi Z-\eta W\Bigr)\,\frac{1}{W-Z}\,dW\,dZ.
+\end{align*}
+The term $K^{(1)}$ has a factor $\frac{1}{Z}$ independent of $W-Z$, 
+while $K^{(2)}$ contains the remaining part $\frac{1}{\,W-Z\,}$.
+
+\medskip
+
+\noindent\textbf{Step 2. Analysis of $K^{(1)}$.}
+Focus on
+\[
+K^{(1)}(\xi,\eta)
+=
+\frac{1}{(2\pi)^2}
+\Bigl(\int
+e^{\frac12Z^2+\xi Z}\,\frac{dZ}{Z}\Bigr)
+\Bigl(\int
+e^{-\frac12W^2-\eta W}\,dW\Bigr).
+\]
+The operator $K^{(1)}$ is a rank-1 operator in the variables $\xi,\eta$:
+\[
+K^{(1)}(\xi,\eta)
+=
+u(\xi)\,v(\eta)
+\]
+for some functions $u(\cdot)$ and $v(\cdot)$ of one variable each.
+Hence $K^{(1)}$ has at most one nonzero eigenvalue (its trace).
+
+\medskip
+
+\noindent\textbf{Step 3. Representation of $K^{(2)}$ and the key identity.}
+For $K^{(2)}$, we use
+\[
+\frac{1}{\,W-Z\,}=\int_0^{\infty} e^{-t(W-Z)}\,dt
+\]
+(again justified by the choice of integration contours). Then
+\[
+K^{(2)}(\xi,\eta)
+=
+\int_0^\infty
+\Bigl[
+\frac{1}{2\pi i}\!\int
+e^{\frac12Z^2+(\xi+t)Z}\,dZ
+\Bigr]
+\Bigl[
+\frac{1}{2\pi i}\!\int
+e^{-\frac12W^2-(\eta+t)W}\,dW
+\Bigr]dt.
+\]
+Denote
+\[
+A(\xi,t)
+=
+\frac{1}{2\pi i}\int
+e^{\frac12Z^2+(\xi+t)Z}\,dZ,
 \quad
-\partial_w\,\Phi_{t,a}=0.
+B(t,\eta)
+=
+\frac{1}{2\pi i}\int
+e^{-\tfrac12W^2-(\eta+t)W}\,dW.
 \]
-We find solutions near $z=1$, $w=1$ if $|a|<2$, but new solutions appear if $|a|>2$.
-\end{remark}
+Hence
+\(
+K^{(2)}(\xi,\eta)=\int_0^\infty A(\xi,t)\,B(t,\eta)\,dt.
+\)
+In operator form on suitable spaces,
+this reads $K^{(2)}=A\,B$, and one checks $B\,A=I$
+(\emph{identity on the $t$-variable space}),
+so $A\,B$ and $B\,A$ share the same nonzero spectrum.
+Indeed, 
+\begin{equation*}
+	BA(s,t)=\frac{1}{(2\pi i)^2}
+	\int_{\mathbb{R}}d\xi 
+	\int dW\, dZ
+	e^{-\frac{1}{2}W^2+\frac{1}{2}Z^2}
+	e^{-(s+\xi)W+(\xi+t)Z}.
+\end{equation*}
+Integrating over $\xi$ in the Fourier sense yields the delta:
+\begin{equation*}
+	\int_{\mathbb{R}}d\xi e^{\xi(Z-W)}=2\pi\delta(Z-W).
+\end{equation*}
+Integrating in $W$ is again an integral of $e^{(t-s)W}$, and thus, the second $2\pi$ disappears,
+and we arrive at $BA(s,t)=\delta(s-t)$, which is the kernel of the identity operator.
 
-\vspace{5pt}
+\medskip
+\noindent\textbf{Step 4. Conclusion.}
+We then have
+\begin{equation*}
+	\det\left( 1-K_G \right)_{\ge x}=
+\end{equation*}
 
-\noindent\textbf{Scaling near the top.}
-We know from the unperturbed case $(a=0)$ that $x,y$ near $2\sqrt{t\,n}$ is relevant.  Let us adopt the usual \emph{edge scaling}:
-\begin{equation}
-\label{eq:xy-edge-scaling}
-x \;=\; 2\sqrt{t\,n} \;+\;\frac{\xi}{n^{1/6}},
-\qquad
-y \;=\; 2\sqrt{t\,n} \;+\;\frac{\eta}{n^{1/6}}.
-\end{equation}
-Then one can attempt expansions $z=1+u\,n^{-1/3}$, $w=1+v\,n^{-1/3}$ (plus additional shifts if $a\neq0$).  Indeed, if $|a|<2$, the main location for $z_{\mathrm{cr}},w_{\mathrm{cr}}$ remains close to $1$.  Conversely, if $|a|>2$, we get a separate solution.
-
-Let us isolate the product factor first.  Suppose we rewrite
-\[
-(w-a)\,w^{n-1}
-\;=\;
-(w-a)\,\exp\bigl((n-1)\ln w\bigr),
-\qquad
-(z-a)\,z^{n-1}
-\;=\;
-(z-a)\,\exp\bigl((n-1)\ln z\bigr).
-\]
-Then
-\[
-\ln\bigl[(w-a)\,w^{n-1}\bigr] \;=\; (n-1)\ln w \;+\;\ln(w-a).
-\]
-Hence these combined terms become
-\[
-(n-1)\,[\ln w-\ln z]
-\;+\;
-\ln(w-a) \;-\;\ln(z-a).
-\]
-Because $|a|<2$ or $|a|>2$ drastically changes the location(s) $z-a=0$ or $w-a=0$, the steepest descent approach tries to see where the real part of $\Phi_{t,a}(w,z)$ is stationary.
-
-\subsection{Controlling the integral: subcritical and supercritical analyses}
-
-\subsubsection{Residue crossing and main contributions}
-
-As usual in the $\beta=2$ story, we must deform the $z$-contour outward so that it crosses the $w$-contour.  This can pick up a residue from the simple pole at $w=z$.  In the pure GUE case $(a=0)$, that residue is known to yield the sine or Airy kernel asymptotics after expansions.  Now, with the rank-1 spike, we get an additional factor from $(w-a)/(z-a)$.  The upshot is that \emph{if} the $z$ contour crosses $w$ in a certain region that does not include $w=a$, one obtains a residue that will lead to the same sine/Airy factor.
-
-However, we must also check whether the $z$-contour encloses $z=a$ \emph{and} the $w$-contour encloses $w=a$.  The spike can produce an outlier contribution if $|a|$ is large enough for the new saddle point to dominate.
-
-\subsubsection{Case 1: \texorpdfstring{$|a|<2$}{|a| < 2} (subcritical)}
-
-For $\lvert a\rvert<2$, one can show that the exponent $\Phi_{t,a}(w,z)$ remains effectively minimized near $z,w\approx 1$, and the presence of $(w-a)$ vs.\ $(z-a)$ does not shift that minimizer significantly.  In more precise terms, one writes expansions:
-\[
-z \;=\; 1 + \frac{u}{n^{1/3}},
-\qquad
-w \;=\; 1 + \frac{v}{n^{1/3}},
-\]
-with $x,y$ as in \eqref{eq:xy-edge-scaling}, and obtains a leading cubic term in $u,v$.  The “$a$” correction modifies subleading expansions but does \emph{not} cause a different order in $n$.  Repeating the same steps as in the standard GUE edge analysis (cf.\ \S\ref{sub:double-critical-points}), one sees that the limit of $\frac{1}{n^{1/6}}\,K_t\bigl(x,y\bigr)$ is the Airy kernel
-\[
-K_{\mathrm{Ai}}(\xi,\eta)
-\;=\;
-\int_0^\infty \cdots
-\]
-(as in the usual expression, see \Cref{def:Airy_kernel} for one common form).
-
-Consequently, in the subcritical regime $|a|<2$, the top eigenvalue
-\[
-x_{\max}(t)= x_1(t)
-\]
-stays merged in the main bulk near $2\sqrt{t\,n}$ and has \emph{Tracy--Widom} fluctuations on the $n^{-1/6}$ scale.  The factor $a$ only shifts lower-order terms in that expansion.
-
-\subsubsection{Case 2: \texorpdfstring{$|a|>2$}{|a| > 2} (supercritical)}
-
-When $|a|>2$, the spike is large.  One expects an \emph{outlier} eigenvalue near $x\approx a\,\sqrt{t\,}$ (rather than near $2\sqrt{t\,n}$).  Indeed, analyzing $\Phi_{t,a}$ in that scenario, one finds a separate solution to $\partial\Phi/\partial w=0$ near $w\approx a\neq 1$ (and similarly for $z$).  The portion of the $z$-contour around $z= a$ then yields a new local expansion.
-
-Concretely, if $a>2$ (the case $a<-2$ is similar), the factor $(w-a)$ can be near zero, so that the exponent can develop a more favorable real part at $w\approx a$.  Meanwhile, the factor $w^{n-1}$ is enormous if $|w|>1$, but $a>2$ means $|a|>1$.  As a result, the outlier solution with $w\approx a$ can produce a stable stationary phase.  Indeed, one obtains a local \emph{quadratic} expansion around $w=a$ and $z=a$, thus leading to a \emph{Gaussian} fluctuation scale of the resulting outlier eigenvalue, typically $\sigma\,n^{-1/2}$ for some $\sigma>0$.
-
-Hence, in the supercritical regime $|a|>2$, the top eigenvalue $x_{\max}(t)$ \emph{detaches} from $2\sqrt{t\,n}$.  Its leading order becomes $a\sqrt{t\,}$ plus smaller corrections, and the local fluctuations are usually governed by a (shifted) Gaussian (or in some references, an incomplete gamma distribution, depending on subtle normalizations).  The remaining $n-1$ eigenvalues fill out the usual semicircle from $-2\sqrt{t\,n}$ to $2\sqrt{t\,n}$, with an Airy edge near $2\sqrt{t\,n}$.
-
-\subsubsection{Case 3: \texorpdfstring{$|a|=2$}{|a|=2} (critical)}
-
-At the boundary $|a|=2$, the system is at a ``double root'' transition.  One finds that $z=1$ (the standard GUE edge) merges with $z=a$ in a certain sense, leading to a triple or quartic expansion if $a=2$, for instance.  Careful expansions show that the outlier is \emph{just} beginning to separate from the main bulk.  The correlation kernel in this regime is a special transition “higher-order” Airy-like kernel, often described as a \emph{crossover kernel} in the BBP (Baik--Ben~Arous--P\'ech\'e) transition \cite{BBP2005phase}.  The top eigenvalue distribution is neither purely Tracy--Widom nor purely Gaussian but an interpolating limit distribution.
-
-\subsection{Summary of the BBP transition from \texorpdfstring{$K_t(x,y)$}{Kt(x,y)}}
-
-Putting the above cases together, we see that analyzing the DBM correlation kernel
-\eqref{eq:K_t_a_expanded} under the spiked initial condition $(a_1=a)\neq0$, $(a_2=\dots=a_n=0)$
-reveals:
-
-\begin{itemize}
-\item \textbf{If $|a|<2$:}
-  The spike is \emph{subcritical}.  The top eigenvalue remains at the GUE edge $\approx 2\sqrt{t\,n}$, with Tracy--Widom fluctuations on scale $n^{-1/6}$.
-
-\item \textbf{If $|a|>2$:}
-  The spike is \emph{supercritical}.  An outlier eigenvalue emerges near $a\sqrt{t\,}$, detaching from the main bulk.  The fluctuation scale around that outlier is typically $n^{-1/2}$ and converges (after centering and scaling) to a simpler, often Gaussian-type limit.  The remainder of the spectrum still exhibits the semicircle on $[-2\sqrt{t\,n},2\sqrt{t\,n}]$.
-
-\item \textbf{If $|a|=2$:}
-  \emph{Critical regime}.  The top eigenvalue experiences a BBP crossover distribution, with a kernel that can be viewed as a limit of the general \eqref{eq:K_t_a_expanded} by carefully choosing the saddle point expansions.
-\end{itemize}
-
-This completes the steepest descent derivation of the rank-1 BBP phase transition from the Dyson Brownian Motion correlation kernel in \Cref{thm:dbm-det-kernel}.  Detailed error estimates and rigorous Fredholm determinant limits (turning kernel statements into actual distributional statements about $x_{\max}(t)$) can be found in \cite{BBP2005phase}, \cite{BloemendalVirag}, and other references cited therein.
-
-\begin{remark}
-For $r$-rank spikes (i.e.\ $a_1,\dots,a_r\neq0$), one can repeat the same argument: the factor
-$\prod_{i=1}^n (w-a_i)/(z-a_i)$
-in \eqref{eq:K_t_a_expanded} splits into a product $(w-a_1)\cdots(w-a_r)\,w^{n-r}$ vs.\ $(z-a_1)\cdots(z-a_r)\,z^{n-r}$.
-Each $|a_i|>2$ can produce a distinct outlier, while any $|a_i|<2$ merges with the main bulk.
-\end{remark}
+\section{Airy line ensemble}
 
 
 
+\begin{theorem}[Edge scaling limit to Airy line ensemble]
+	Consider an $N\times N$ GUE (Gaussian Unitary Ensemble) Dyson Brownian motion, i.e., the stochastic process of eigenvalues $(\lambda_1(t)\ge \cdots\ge \lambda_N(t))_{t\in\mathbb{R}}$ evolving under Dyson's eigenvalue dynamics. After centering at the spectral edge parallel to the vector $\mathbf{v}_t$ and applying the
+Airy scaling (tangent axis scaled by $N^{-1/3}$ and fluctuations scaled by $N^{-1/6}$), the top $k$ eigenvalue trajectories converge as $N\to\infty$ to the \textbf{Airy line ensemble}. In particular, for each fixed $k\ge1$ the rescaled process $$(N^{1/6}[\lambda_i(\langle  
+			N^{-1/3},N^{-1/6}
+\rangle \cdot \mathbf{v})-c_{N,t}])_{1\le i\le k}$$ converges in distribution (uniformly on compact $t$-intervals) to $(\mathcal{P}_i(t))_{1\le i\le k}$, where $\{\mathcal{P}_i(t)\}_{i\ge1}$ is the parabolic Airy line ensemble. Consequently, the top curve $\mathcal{L}_1(t)$ is the \textbf{Airy$_2$ process}, which is the $t$-stationary scaling limit of the largest eigenvalue process.
+\end{theorem}
 
+Let us define $\mathcal{L}_i(t)=\mathcal{P}_i(t)+t^2$, and call $\mathcal{L}$ the Airy Line Ensemble
+(without the word ``parabolic''). One can (correctly) think that the parabola comes
+from the scaling window, which is of different proportions in the horizontal and vertical directions.
 
+\begin{theorem}[Airy line ensemble is Brownian Gibbsian \cite{CorwinHammond2013}]
+The parabolic Airy line ensemble $\{\mathcal{P}_i(t)\}_{i\ge1}$ satisfies the \textbf{Brownian Gibbs property}. Namely, for any fixed index $k\ge1$ and any finite time interval $[a,b]$, conditioning on the outside portions of the ensemble (i.e., $\{\mathcal{P}_j(t): t\notin[a,b]\}$ for all $j$, and $\{\mathcal{P}_j(t): j\neq k\}$ for $t\in[a,b]$), the conditional law of the $k$th curve on $[a,b]$ is that of a \textbf{Brownian bridge} from $(a,\mathcal{P}_k(a))$ to $(b,\mathcal{P}_k(b))$ \textbf{conditioned} to stay above the $(k+1)$th curve and below the $(k-1)$th curve on $[a,b]$. In particular, the Airy line ensemble is invariant under this resampling of a single curve by a conditioned Brownian bridge.
+\end{theorem}
 
+At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
-
-
-
-
-
-
-
+\begin{theorem}[Unique characterization of ALE \cite{AggarwalHuang2023Characterization}]
+	The parabolic Airy line ensemble is the \textbf{unique} Brownian Gibbs line ensemble satisfying a natural parabolic curvature condition on the top curve. More precisely, let $\boldsymbol{\mathcal{P}}=(\mathcal{P}_1,\mathcal{P}_2,\ldots)$ be any line ensemble that satisfies the Brownian Gibbs property. Suppose in addition that the top line $\mathcal{P}_1(t)$ \textbf{approaches a parabola} of curvature $1/\sqrt{2}$ at infinity. Then $\boldsymbol{\mathcal{L}}$ must coincide (in law) with the \textbf{parabolic Airy line ensemble}, up to an overall affine shift of the entire ensemble.
+\end{theorem}
 
 
 
@@ -718,7 +864,35 @@ Find $\alpha$ such that
 $t^\alpha K_t(x/\sqrt{t},y/\sqrt{t})$ is independent of $t$.
 Can you explain this value of $\alpha$?
 
+\subsection{Gaussian regime and integration contours}
 
+Check that the contour deformation 
+from $(z,w)$ to $(Z,W)$ passing through $a$
+described in 
+\Cref{sec:gaussian-regime} is valid.
+
+\subsection{GUE kernel}
+\label{prob:GUE-kernel}
+
+Consider the following generalization of the kernel $K_G$
+from \Cref{sec:gaussian-regime}:
+\begin{equation*}
+	K_G^m(\xi,\eta)=
+	\frac{1}{(2\pi)^2}
+	\int \int
+	\exp\left\{
+		\frac{1}{2}(Z^2-W^2)-\eta W+\xi Z
+	\right\}\cdot
+	\left( 
+	\frac{W}{Z}
+\right)^{m}
+\frac{dW\,dZ}{W-Z},
+\end{equation*}
+where $m\ge1$ is an integer and the contours are as in \Cref{fig:ReS_Gauss}.
+Show that the Fredholm determinant 
+$\det\left( 1-K_G^m \right)_{L^2(x,+\infty)}$
+is the cumulative distribution function of the largest eigenvalue
+of the $m\times m$ GUE matrix.
 
 
 
