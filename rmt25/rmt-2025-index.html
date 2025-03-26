@@ -48,33 +48,664 @@ available at
 <br><br>
 
 Lecture notes (problem sets are at the end of each lecture):
-
 <ol>
-    <li><b>(Mon) January 13</b>. <a href="{{site.url}}/rmt25/rmt25-notes/rmt2025-l01.pdf">Moments of random variables and
-    random matrices</a>
-    </li>
-        <li><b>(Wed) January 15</b>.
-						<a
-								href="{{site.url}}/rmt25/rmt25-notes/rmt2025-l02.pdf">Wigner's
-								semicircle law</a>
-    </li>
-        <li><b>(Wed) January 22</b>.
-            <a href="/rmt25/rmt25-notes/rmt2025-l03.pdf">Gaussian and tridiagonal matrices</a>
+  <!-- Lecture 1 -->
+  <li>
+    <b>(Mon) January 13</b>.
+    <a href="{{site.url}}/rmt25/rmt25-notes/rmt2025-l01.pdf">
+      Moments of random variables and random matrices
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>
+          1: Why study random matrices?
+          <ul>
+            <li>On the history.</li>
+            <li>Classical groups and Lie theory.</li>
+            <li>Toolbox.</li>
+            <li>Applications.</li>
+          </ul>
         </li>
-        <li><b>(Wed) January 29</b>. <a href="/rmt25/rmt25-notes/rmt2025-l04.pdf">Semicircle law for G$\beta$E via tridiagonalization. Beginning determiantal processes</a>
+        <li>
+          2: Recall Central Limit Theorem
+          <ul>
+            <li>2.1: Central Limit Theorem and examples</li>
+            <li>2.2: Moments of the normal distribution</li>
+            <li>
+              2.3: Moments of sums of iid random variables
+              <ul>
+                <li>2.3.1: Computation of moments</li>
+                <li>2.3.2: \(n\)-dependent factor</li>
+                <li>2.3.3: Combinatorial factor</li>
+                <li>2.3.4: Putting it all together</li>
+              </ul>
+            </li>
+            <li>2.4: Convergence in distribution</li>
+          </ul>
         </li>
-        <li><b>(Wed) February 5</b>. <a href="/rmt25/rmt25-notes/rmt2025-l05.pdf">Determinantal Point Processes and the GUE</a></li>
-        <li><b>(Wed) February 19</b>. <a href="/rmt25/rmt25-notes/rmt2025-l06.pdf">Double contour integral kernel.
-            Steepest descent and semicircle law</a></li>
-        <li><b>(Mon) February 24</b>. <a href="/rmt25/rmt25-notes/rmt2025-l07.pdf">Steepest descent and local statistics. Cutting corners</a></li>
-        <li><b>(Wed) February 26</b>. <a href="/rmt25/rmt25-notes/rmt2025-l08.pdf">Cutting corners and loop equations</a></li>
-        <li><b>(Wed) March 5</b>. <a href="/rmt25/rmt25-notes/rmt2025-l09.pdf">Loop equations and asymptotics to Gaussian Free Field</a></li>
-        <li><b>(Mon) March 24</b>. <a href="/rmt25/rmt25-notes/rmt2025-l10.pdf">Dyson Brownian Motion</a></li>
-        <li><b>(Wed) March 26</b>. <a href="/rmt25/rmt25-notes/rmt2025-l11.pdf">Some universal asymptotics of Dyson Brownian Motion</a></li>
-        <li><b>(Wed) April 2</b>. <a href="/rmt25/rmt25-notes/rmt2025-l12.pdf">Title TBD</a></li>
-        <li><b>(Wed) April 9</b>. <a href="/rmt25/rmt25-notes/rmt2025-l13.pdf">Title TBD</a></li>
-        <li><b>(Wed) April 16</b>. <a href="/rmt25/rmt25-notes/rmt2025-l14.pdf">Title TBD</a></li>
-        <li><b>(Wed) April 23</b>. <a href="/rmt25/rmt25-notes/rmt2025-l15.pdf">Title TBD</a></li>
+        <li>
+          3: Random matrices and semicircle law
+          <ul>
+            <li>3.1: Where can randomness in a matrix come from?</li>
+            <li>3.2: Real Wigner matrices</li>
+            <li>3.3: Empirical spectral distribution</li>
+            <li>3.4: Expected moments of traces of random matrices</li>
+            <li>3.5: Immediate next steps</li>
+          </ul>
+        </li>
+        <li>
+          A: Problems (due 2025-02-13)
+          <ul>
+            <li>A.1: Normal approximation</li>
+            <li>A.2: Convergence in distribution</li>
+            <li>A.3: Moments of sum justification</li>
+            <li>A.4: Distribution not determined by moments</li>
+            <li>A.5: Uniqueness of the normal distribution</li>
+            <li>A.6: Quaternions</li>
+            <li>A.7: Ensemble \(UD_\lambda U^\dagger\)</li>
+            <li>A.8: Invariance of the GOE</li>
+            <li>A.9: Counting \(n\)-powers in the real Wigner matrix</li>
+            <li>A.10: Counting trees</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 2 -->
+  <li>
+    <b>(Wed) January 15</b>.
+    <a href="{{site.url}}/rmt25/rmt25-notes/rmt2025-l02.pdf">
+      Wigner's semicircle law
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>1: Recap</li>
+        <li>
+          2: Two computations
+          <ul>
+            <li>2.1: Moments of the semicircle law</li>
+            <li>2.2: Counting trees and Catalan numbers</li>
+          </ul>
+        </li>
+        <li>
+          3: Analysis steps in the proof
+          <ul>
+            <li>3.1: The semicircle distribution is determined by its moments</li>
+            <li>3.2: Convergence to the semicircle law
+              <ul>
+                <li>3.2.1: A concentration bound and the Borel--Cantelli lemma</li>
+                <li>3.2.2: Tightness of \(\{\nu_n\}\) and subsequential limits</li>
+                <li>3.2.3: Characterizing the limit measure</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>
+          4: Proof of Proposition (variance bound): bounding the variance
+        </li>
+        <li>
+          5: Remark: Variants of the semicircle law
+        </li>
+        <li>
+          B: Problems (due 2025-02-15)
+          <ul>
+            <li>B.1: Standard formula</li>
+            <li>B.2: Tree profiles</li>
+            <li>B.3: Ballot problem</li>
+            <li>B.4: Reflection principle</li>
+            <li>B.5: Bounding probability in the proof</li>
+            <li>B.6: Almost sure convergence and convergence in probability</li>
+            <li>B.7: Wigner's semicircle law for complex Wigner matrices</li>
+            <li>B.8: Semicircle law without the moment condition</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 3 -->
+  <li>
+    <b>(Wed) January 22</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l03.pdf">Gaussian and tridiagonal matrices</a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>1: Recap</li>
+        <li>
+          2: Gaussian ensembles
+          <ul>
+            <li>2.1: Definitions</li>
+            <li>2.2: Joint eigenvalue distribution for GOE</li>
+            <li>2.3: Step A. Joint density of matrix entries</li>
+            <li>2.4: Step B. Spectral decomposition</li>
+            <li>2.5: Step C. Jacobian
+              <ul>
+                <li>Parametrizing \(\delta Q\).</li>
+                <li>Computing \(\delta W\).</li>
+                <li>Local structure of the map.</li>
+              </ul>
+            </li>
+            <li>2.6: Step D. Final Form of the density</li>
+          </ul>
+        </li>
+        <li>
+          3: Other classical ensembles with explicit eigenvalue densities
+          <ul>
+            <li>
+              3.1: Wishart (Laguerre) ensemble
+              <ul>
+                <li>3.1.1: Definition via SVD</li>
+                <li>3.1.2: Joint density of eigenvalues</li>
+              </ul>
+            </li>
+            <li>
+              3.2: Jacobi (MANOVA/CCA) ensemble
+              <ul>
+                <li>3.2.1: Setup</li>
+                <li>3.2.2: Jacobi ensemble</li>
+              </ul>
+            </li>
+            <li>3.3: General Pattern and \(\beta\)-Ensembles</li>
+          </ul>
+        </li>
+        <li>
+          4: Tridiagonal form for real symmetric matrices
+          <ul>
+            <li>Step 1: Zeroing out subdiagonal entries in the first column.</li>
+            <li>Step 2: Inductive reduction on the trailing principal submatrix.</li>
+            <li>Step 3: Repeat for columns (and rows) 3, 4, etc.</li>
+          </ul>
+        </li>
+        <li>
+          5: Tridiagonalization of random matrices
+          <ul>
+            <li>5.1: Dumitriu–Edelman tridiagonal model for GOE</li>
+            <li>5.2: Generalization to \(\beta\)-ensembles</li>
+          </ul>
+        </li>
+        <li>
+          C: Problems (due 2025-02-22)
+          <ul>
+            <li>C.1: Invariance of GOE and GUE</li>
+            <li>C.2: Preimage size for spectral decomposition</li>
+            <li>C.3: Distinct eigenvalues</li>
+            <li>C.4: Testing distinctness of eigenvalues via rank-1 perturbations</li>
+            <li>C.5: Jacobian for GUE</li>
+            <li>C.6: Normalization for GOE</li>
+            <li>C.7: Wishart eigenvalue density</li>
+            <li>C.8: Householder reflection properties</li>
+            <li>C.9: Distribution of the Householder vector in random tridiagonalization</li>
+            <li>C.10: Householder reflection for GUE</li>
+            <li>C.11: Jacobi ensemble is related to two Wisharts</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 4 -->
+  <li>
+    <b>(Wed) January 29</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l04.pdf">
+      Semicircle law for G$\beta$E via tridiagonalization. Beginning determinantal processes
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>1: Recap
+          <ul>
+            <li>1.1: Gaussian ensembles</li>
+            <li>1.2: Tridiagonalization</li>
+          </ul>
+        </li>
+        <li>
+          2: Tridiagonal random matrices
+          <ul>
+            <li>2.1: Distribution of the tridiagonal form of the GOE</li>
+            <li>2.2: Dumitriu--Edelman G\(\beta\)E tridiagonal random matrices</li>
+            <li>2.3: The case \(\beta = 2\)</li>
+          </ul>
+        </li>
+        <li>
+          3: Wigner semicircle law via tridiagonalization
+          <ul>
+            <li>3.1: Moments for tridiagonal matrices</li>
+            <li>3.2: Asymptotics of chi random variables</li>
+            <li>3.3: Completing the proof: global semicircle behavior</li>
+          </ul>
+        </li>
+        <li>
+          4: Wigner semicircle law via Stieltjes transform
+          <ul>
+            <li>4.1: Tridiagonal structure and characteristic polynomials
+              <ul>
+                <li>4.1.1: Three-term recurrence for the characteristic polynomial</li>
+                <li>4.1.2: Spectral connection and eigenvalues</li>
+              </ul>
+            </li>
+            <li>4.2: Stieltjes transform / resolvent</li>
+            <li>4.3: Approach via continued fractions</li>
+          </ul>
+        </li>
+        <li>5: Determinantal point processes (discrete)</li>
+        <li>
+          6: Application of determinantal processes to random matrices at \(\beta = 2\)
+          <ul>
+            <li>6.1: Local eigenvalue statistics (bulk and edge scaling limits)</li>
+            <li>6.2: Correlation functions and densities</li>
+            <li>6.3: Poisson process example</li>
+          </ul>
+        </li>
+        <li>
+          D: Problems (due 2025-02-28)
+          <ul>
+            <li>D.1: Eigenvalue density of G\(\beta\)E</li>
+            <li>D.2: Chi-square mean and variance</li>
+            <li>D.3: Edge contributions in the tridiagonal moment computation</li>
+            <li>D.4: Hermite polynomials and three-term recurrence</li>
+            <li>D.5 (unnumbered title)</li>
+            <li>D.6: Gap probabilities</li>
+            <li>D.7: Stieltjes transform approach for tridiagonal matrices</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 5 -->
+  <li>
+    <b>(Wed) February 5</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l05.pdf">
+      Determinantal Point Processes and the GUE
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>1: Recap</li>
+        <li>
+          2: Discrete determinantal point processes
+          <ul>
+            <li>2.1: Definition and basic properties</li>
+          </ul>
+        </li>
+        <li>
+          3: Determinantal structure in the GUE
+          <ul>
+            <li>3.1: Correlation functions as densities with respect to Lebesgue measure</li>
+            <li>
+              3.2: The GUE eigenvalues as DPP
+              <ul>
+                <li>3.2.1: Setup</li>
+                <li>3.2.2: Writing the Vandermonde as a determinant</li>
+                <li>3.2.3: Orthogonalization by linear operations</li>
+                <li>3.2.4: Rewriting the density in determinantal form</li>
+              </ul>
+            </li>
+            <li>3.3: Christoffel--Darboux formula</li>
+          </ul>
+        </li>
+        <li>
+          E: Problems (due 2025-03-09)
+          <ul>
+            <li>E.1: Gap Probability for Discrete DPPs</li>
+            <li>E.2: Generating Functions for Multiplicative Statistics</li>
+            <li>E.3: Variance</li>
+            <li>E.4: Formula for the Hermite polynomials</li>
+            <li>E.5: Generating function for the Hermite polynomials</li>
+            <li>E.6: Projection Property of the GUE Kernel</li>
+            <li>E.7: Recurrence Relation for the Hermite Polynomials</li>
+            <li>E.8: Differential Equation for the Hermite Polynomials</li>
+            <li>E.9: Norm of the Hermite Polynomials</li>
+            <li>E.10: Existence of Determinantal Point Processes with a Given Kernel</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 6 -->
+  <li>
+    <b>(Wed) February 19</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l06.pdf">
+      Double contour integral kernel. Steepest descent and semicircle law
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>1: Recap: Determinantal structure of the GUE</li>
+        <li>
+          2: Double Contour Integral Representation for the GUE Kernel
+          <ul>
+            <li>2.1: One contour integral representation for Hermite polynomials</li>
+            <li>2.2: Another contour integral representation for Hermite polynomials</li>
+            <li>2.3: Normalization of Hermite polynomials</li>
+            <li>2.4: Double contour integral representation for the GUE kernel</li>
+            <li>2.5: Conjugation of the kernel</li>
+            <li>2.6: Extensions</li>
+          </ul>
+        </li>
+        <li>
+          3: Steepest descent — generalities for single integrals
+          <ul>
+            <li>3.1: Setup</li>
+            <li>3.2: Saddle points and steepest descent paths</li>
+            <li>3.3: Local asymptotic evaluation near a saddle point</li>
+          </ul>
+        </li>
+        <li>
+          4: Steepest descent for the GUE kernel
+          <ul>
+            <li>4.1: Scaling</li>
+            <li>4.2: Critical points</li>
+            <li>4.3: Imaginary critical points: \(\lvert X\rvert < 2\), "bulk"</li>
+          </ul>
+        </li>
+        <li>
+          F: Problems (due 2025-03-25)
+          <ul>
+            <li>F.1: Different global positions</li>
+            <li>F.2: Sine kernel</li>
+            <li>F.3: Discrete sine process</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 7 -->
+  <li>
+    <b>(Mon) February 24</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l07.pdf">
+      Steepest descent and local statistics. Cutting corners
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>
+          1: Steepest descent for the GUE kernel
+          <ul>
+            <li>1.1: Recap</li>
+            <li>1.2: Scaling</li>
+            <li>1.3: Critical points</li>
+            <li>1.4: Imaginary critical points: \(\lvert X\rvert < 2\), "bulk"</li>
+            <li>1.5: Real critical points: \(\lvert X\rvert > 2\), "large deviations"</li>
+            <li>1.6: Double critical point: \(\lvert X\rvert=2\), "edge"</li>
+            <li>1.7: Airy kernel, Tracy–Widom distribution, and convergence of the maximal eigenvalue</li>
+            <li>1.8: Remark: what happens for general \(\beta\)?</li>
+          </ul>
+        </li>
+        <li>2: Cutting corners: setup</li>
+        <li>
+          3: Corners of Hermitian matrices
+          <ul>
+            <li>3.1: Principal corners</li>
+            <li>3.2: Interlacing</li>
+            <li>3.3: Orbital measure</li>
+          </ul>
+        </li>
+        <li>
+          4: Polynomial equation and joint distribution
+          <ul>
+            <li>4.1: Derivation</li>
+            <li>4.2: Inductive nature of the transition</li>
+            <li>4.3: Case \(\beta = \infty\)</li>
+          </ul>
+        </li>
+        <li>
+          G: Problems (due 2025-03-25)
+          <ul>
+            <li>G.1: General bulk case</li>
+            <li>G.2: Large deviations</li>
+            <li>G.3: Airy kernel</li>
+            <li>G.4: Interlacing proof</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 8 -->
+  <li>
+    <b>(Wed) February 26</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l08.pdf">
+      Cutting corners and loop equations
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>
+          1: Cutting corners: polynomial equation and distribution
+          <ul>
+            <li>1.1: Recap: polynomial equation</li>
+            <li>1.2: Extension to general \(\beta\)</li>
+            <li>1.3: Distribution of the eigenvalues of the corners</li>
+          </ul>
+        </li>
+        <li>
+          2: Loop equations
+          <ul>
+            <li>2.1: Formulation</li>
+            <li>2.2: Proof of Theorem (loop equation) for \(\beta > 2\)</li>
+          </ul>
+        </li>
+        <li>
+          3: Applications of loop equations
+          <ul>
+            <li>3.1: Stieltjes transform equations</li>
+            <li>3.2: Asymptotic behavior</li>
+            <li>3.3: Example: G\(\beta\)E and the semicircle law</li>
+          </ul>
+        </li>
+        <li>
+          H: Problems (due 2025-03-25)
+          <ul>
+            <li>H.1: Cauchy determinant</li>
+            <li>H.2: Jacobian from \(n-1\) to \(n\) dependent variables</li>
+            <li>H.3: Dirichlet density</li>
+            <li>H.4: General beta Gaussian density and cutting corners</li>
+            <li>H.5: General \(\beta\) Corners Process Simulation</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 9 -->
+  <li>
+    <b>(Wed) March 5</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l09.pdf">
+      Loop equations and asymptotics to Gaussian Free Field
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>
+          1: Recap
+          <ul>
+            <li>(Dynamical) loop equations</li>
+            <li>Loop equations for \(W=0\)</li>
+            <li>The full corners process</li>
+            <li>Example: G\(\beta\)E and the semicircle law</li>
+          </ul>
+        </li>
+        <li>
+          2: Gaussian Free Field
+          <ul>
+            <li>2.1: Gaussian correlated vectors and random fields</li>
+            <li>2.2: Gaussian fields as random generalized functions</li>
+            <li>2.3: Concrete treatment via orthogonal functions</li>
+            <li>2.4: Connection to Brownian bridge</li>
+            <li>2.5: Covariance structure and Green's function</li>
+            <li>2.6: The GFF on the upper half-plane</li>
+          </ul>
+        </li>
+        <li>
+          3: Fluctuations
+          <ul>
+            <li>3.1: Height function and related definitions</li>
+            <li>3.2: Main results on Gaussian fluctuations</li>
+            <li>3.3: Deformed ensemble</li>
+            <li>3.4: Wiener-Hopf like factorization</li>
+            <li>3.5: First order asymptotics of \(\mathcal{A}(z)\)</li>
+            <li>3.6: Outlook of further steps</li>
+          </ul>
+        </li>
+        <li>
+          I: Problems (due 2025-04-29)
+          <ul>
+            <li>I.1: Brownian bridge</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 10 -->
+  <li>
+    <b>(Mon) March 24</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l10.pdf">
+      Dyson Brownian Motion
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>
+          1: Motivations
+          <ul>
+            <li>1.1: Why introduce time?</li>
+            <li>1.2: Simple example: 1×1 case</li>
+          </ul>
+        </li>
+        <li>
+          2: Matrix Brownian motion and its eigenvalues
+          <ul>
+            <li>2.1: Definition</li>
+            <li>2.2: Eigenvalues as Markov process</li>
+          </ul>
+        </li>
+        <li>
+          3: Dyson Brownian Motion
+          <ul>
+            <li>3.1: Stochastic differential equations — an informal introduction
+              <ul>
+                <li>Summary</li>
+              </ul>
+            </li>
+            <li>3.2: Heuristic derivation of the SDE for the Dyson Brownian Motion</li>
+          </ul>
+        </li>
+        <li>
+          4: Mapping the G\(\beta\)E densities with the Dyson Brownian Motion
+        </li>
+        <li>5: Determinantal structure for \(\beta = 2\)</li>
+        <li>
+          6: Harish-Chandra–Itzykson–Zuber (HCIZ) integral
+          <ul>
+            <li>6.1: Statement of the HCIZ formula</li>
+            <li>6.2: Reduction to the diagonal case</li>
+            <li>6.3: Symmetry</li>
+            <li>6.4: Conclusion of the argument</li>
+          </ul>
+        </li>
+        <li>
+          J: Problems (due 2025-04-29)
+          <ul>
+            <li>J.1: Collisions</li>
+            <li>J.2: Estimate on the modulus of continuity</li>
+            <li>J.3: Generator for Dyson Brownian Motion</li>
+            <li>J.4: Constant in the HCIZ formula</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+  <!-- Lecture 11 -->
+  <li>
+    <b>(Wed) March 26</b>.
+    <a href="/rmt25/rmt25-notes/rmt2025-l11.pdf">
+      Some universal asymptotics of Dyson Brownian Motion
+    </a>
+    <details>
+      <summary>Table of Contents</summary>
+      <ul>
+        <li>
+          1: Recap
+          <ul>
+            <li>1.1: Dyson Brownian Motion (DBM)</li>
+            <li>1.2: Eigenvalue SDE</li>
+            <li>1.3: Preservation of G\(\boldsymbol{\beta}\)E density</li>
+            <li>1.4: Harish–Chandra–Itzykson–Zuber (HCIZ) integral</li>
+          </ul>
+        </li>
+        <li>
+          2: Optional: proof of HCIZ integral via representation theory
+        </li>
+        <li>
+          3: Determinantal structure for \(\beta = 2\)
+          <ul>
+            <li>3.1: Transition density</li>
+            <li>3.2: Determinantal correlations</li>
+            <li>3.3: On the proof of determinantal structure</li>
+          </ul>
+        </li>
+        <li>
+          4: Asymptotic analysis: signal plus noise
+        </li>
+        <li>
+          K: Problems (due 2025-04-29)
+          <ul>
+            <li>K.1: Biorthogonal ensembles</li>
+            <li>K.2: Scaling of the kernel</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
+  </li>
+
+<li>
+  <b>(Wed) April 2</b>.
+  <a href="/rmt25/rmt25-notes/rmt2025-l12.pdf">Title TBD</a>
+  <details>
+    <summary>Table of Contents</summary>
+    <ul>
+      <li>Content to be added</li>
+    </ul>
+  </details>
+</li>
+<li>
+  <b>(Wed) April 9</b>.
+  <a href="/rmt25/rmt25-notes/rmt2025-l13.pdf">Title TBD</a>
+  <details>
+    <summary>Table of Contents</summary>
+    <ul>
+      <li>Content to be added</li>
+    </ul>
+  </details>
+</li>
+<li>
+  <b>(Wed) April 16</b>.
+  <a href="/rmt25/rmt25-notes/rmt2025-l14.pdf">Title TBD</a>
+  <details>
+    <summary>Table of Contents</summary>
+    <ul>
+      <li>Content to be added</li>
+    </ul>
+  </details>
+</li>
+<li>
+  <b>(Wed) April 23</b>.
+  <a href="/rmt25/rmt25-notes/rmt2025-l15.pdf">Title TBD</a>
+  <details>
+    <summary>Table of Contents</summary>
+    <ul>
+      <li>Content to be added</li>
+    </ul>
+  </details>
+</li>
 </ol>
 
 <ul>

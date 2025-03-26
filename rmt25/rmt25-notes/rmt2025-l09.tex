@@ -66,6 +66,7 @@ Updated at \currenttime, \today}}
 \author{Leonid Petrov}
 
 \maketitle
+\tableofcontents
 
 \section{Recap}
 
@@ -414,34 +415,34 @@ while retaining nontrivial and bounded correlations.
 
 \subsection{Main results on Gaussian fluctuations}
 
-Recall that our main assumption is that the distribution at the top row converges 
+Recall that our main assumption is that the distribution at the top row converges
 (with a good control) to a deterministic measure $\mathfrak{m}_1$:
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^n \delta_{\lambda^{(n)}_i} \to \mathfrak{m}_1.
 \end{equation*}
-For example, in \Cref{fig:corners}, the measure $\mathfrak{m}_1$ has 
+For example, in \Cref{fig:corners}, the measure $\mathfrak{m}_1$ has
 three atoms.
 
-Denote the centered Stieltjes transforms by 
+Denote the centered Stieltjes transforms by
 \begin{equation*}
 	\tilde G_{\lambda}(z)\coloneqq G_\lambda(z)-\mathbb{E}[G_\lambda(z)].
 \end{equation*}
 
 \begin{theorem}
-Fix an integer \(k \ge 1\) and pick \(k\) pairs \(\bigl(t_i,u_i\bigr)\), \(1 \le i \le k\).  
+Fix an integer \(k \ge 1\) and pick \(k\) pairs \(\bigl(t_i,u_i\bigr)\), \(1 \le i \le k\).
 Consider the random variables
 \[
 	\varepsilon^{-1}\tilde G_{\lambda^{([n t_i])}}\bigl(z(t_i,u_i)\bigr),
 \quad 1\le i\le k,
 \]
-where \(z(\cdot,\cdot)\) is 
-a conformal structure on the liquid region in the corners process.\footnote{It 
+where \(z(\cdot,\cdot)\) is
+a conformal structure on the liquid region in the corners process.\footnote{It
 exists, and can be characterized rather explicitly, but we will not go into
 details here.}
 
-Then, as \(\varepsilon \to 0\), these \(k\) random variables converge (in the sense of moments, uniformly over \((t_i,u_i)\) in compact sets) to a \(k\)-dimensional Gaussian vector of mean zero.  Their limiting covariances are 
+Then, as \(\varepsilon \to 0\), these \(k\) random variables converge (in the sense of moments, uniformly over \((t_i,u_i)\) in compact sets) to a \(k\)-dimensional Gaussian vector of mean zero.  Their limiting covariances are
 \[
-\lim_{\varepsilon \to 0} 
+\lim_{\varepsilon \to 0}
 \varepsilon^{-2}\mathbb{E}\Bigl[
 \tilde G_{\varepsilon^{-1}t_i}\bigl(z(t_i,u_i)\bigr)\,
 \tilde G_{\varepsilon^{-1}t_j}\bigl(z(t_j,u_j)\bigr)
@@ -478,7 +479,7 @@ h\bigl(t_i,\,\varepsilon^{-1}x\bigr)
 \]
 where $[l(t_i),r(t_i)]$ contains the support of the $t_i$-th slice of the corners process.
 
-As \(\varepsilon \to 0\), this random \(k\)-vector converges (in the sense of moments) to a centered Gaussian vector, whose covariance is 
+As \(\varepsilon \to 0\), this random \(k\)-vector converges (in the sense of moments) to a centered Gaussian vector, whose covariance is
 \[
 -\;\frac{1}{4\pi}
 \;\oint_{C_i}\!\oint_{C_j}\!
@@ -531,26 +532,26 @@ where \(C_i\) and \(C_j\) are positively oriented contours enclosing the real in
 %
 \subsection{Deformed ensemble}
 
-The rest of this section 
+The rest of this section
 illustrates the beginning of the argument in
 \cite{gorin2022dynamical},
 but in our random matrix setting.
 In the interest of time, we are following the main steps in a non-rigorous manner,
-(in particular, following \cite[Section~4.2]{gorin2022dynamical}), and do 
+(in particular, following \cite[Section~4.2]{gorin2022dynamical}), and do
 not present a complete proof.
-The goal here is to illustrate the main idea how the loop equation can be useful for 
+The goal here is to illustrate the main idea how the loop equation can be useful for
 analyzing asymptotics.
 
 This theorem is an asymptotic expansion of the Stieltjes transform
 of the one-step transition from $\lambda$ to $\mu$.
 We assume that the support of $\lambda$ is in $[l,r]$.
-Denote 
+Denote
 \begin{equation*}
-	\Pi_\lambda(z)\coloneqq \prod_{i=1}^{n+1}(z-\lambda_i),\qquad 
+	\Pi_\lambda(z)\coloneqq \prod_{i=1}^{n+1}(z-\lambda_i),\qquad
 	\Pi_\mu(z)\coloneqq \prod_{j=1}^{n}(z-\mu_j).
 \end{equation*}
-Also assume that $W(z)$ is fixed and nice, and that $\mu_j$ are 
-distributed according to a modified 
+Also assume that $W(z)$ is fixed and nice, and that $\mu_j$ are
+distributed according to a modified
 density, which includes $W(z)$:
 \begin{equation*}
 	\frac{1}{Z}
@@ -570,13 +571,13 @@ states the holomorphicity of
 	\mathcal{C}(z)=
 	\mathcal{A}(z)\Biggl[z W'(z)+ \frac{\beta}{2}\frac{1}{n}\sum_{i=1}^{n+1}\frac{z}{z-\lambda_i} \Biggr]+
 	\operatorname{\mathbb{E}}
-	\Biggl[ 
+	\Biggl[
 		\frac{\Pi_\lambda(z)}{\Pi_\mu(z)}\Biggl(\frac{1}{n}\sum_{j=1}^{n}\frac{1}{z-\mu_j}-
 		\frac{1}{n}\sum_{i=1}^{n+1}\frac{1}{z-\lambda_i}\Biggr)
 	\Biggr].
 \end{equation*}
-The first summand is the leading term, and the second summand will be 
-negligible. Indeed, it contains the difference of $G_\mu(z)$ and $G_\lambda(z)$, 
+The first summand is the leading term, and the second summand will be
+negligible. Indeed, it contains the difference of $G_\mu(z)$ and $G_\lambda(z)$,
 and these Stieltjes transforms are close to each other, so the difference is $O(\varepsilon)$.
 
 \subsection{Wiener-Hopf like factorization}
@@ -597,7 +598,7 @@ while $\omega_-$ is also positively oriented and encloses $[l,r]$ but not $z$.
 Then define
 \begin{equation*}
 	h_+(u)\coloneqq \frac{1}{2\pi i}\oint_{\omega_+}
-	\frac{\ln \mathcal{B}(w)}{w-u}dw,\qquad 
+	\frac{\ln \mathcal{B}(w)}{w-u}dw,\qquad
 	h_-(u)\coloneqq \frac{1}{2\pi i}\oint_{\omega_-}
 	\frac{\ln \mathcal{B}(w)}{w-u}dw.
 \end{equation*}
@@ -605,7 +606,7 @@ Thus, we get the Wiener-Hopf like factorization
 \begin{equation*}
 	\mathcal{B}(z)=e^{h_+(z)}e^{-h_-(z)},
 \end{equation*}
-where $h_+$ is holomorphic in a neighborhood of $[l,r]$, and 
+where $h_+$ is holomorphic in a neighborhood of $[l,r]$, and
 $h_-$ is holomorphic in a neighborhood of $\infty$, with behavior $O(1/u)$ at infinity.
 The factorization is valid in an annulus between the two contours $\omega_+$ and $\omega_-$.
 
@@ -614,29 +615,29 @@ The factorization is valid in an annulus between the two contours $\omega_+$ and
 		\begin{tikzpicture}
 				% Draw the outer elliptical contour (green)
 				\draw[green!80!black, thick, ->] (0,0) ellipse (3cm and 2cm);
-				
+
 				% Draw the inner elliptical contour (gray)
 				\draw[gray, ->] (0,0) ellipse (2cm and 0.8cm);
-				
+
 				% Add labels for the contours
 				\node[green!80!black] at (3.1,1.3) {$\omega_+$};
 				\node[gray] at (1.3,-0.9) {$\omega_-$};
-				
+
 				% Draw the interval on the real axis
 				\draw[thick] (-1,0) -- (1,0);
-				
+
 				% Draw the tick marks for the interval
 				\draw[thick] (-1,0.15) -- (-1,-0.15);
 				\draw[thick] (1,0.15) -- (1,-0.15);
-				
+
 				% Add labels for the interval endpoints
 				\node at (-1,-0.3) {$l$};
 				\node at (1,-0.3) {$r$};
-				
+
 				% Add a point z in the complex plane
 				\filldraw[blue!80!black] (-1.5,1) circle (0.1cm);
 				\node[blue!80!black] at (-1.2,1.2) {$z$};
-				
+
 		\end{tikzpicture}
 	\caption{Positively oriented contours $\omega_+$ and $\omega_-$ in the complex plane.}
 	\label{fig:contours}
@@ -644,7 +645,7 @@ The factorization is valid in an annulus between the two contours $\omega_+$ and
 
 \subsection{First order asymptotics of $\mathcal{A}(z)$}
 
-The next step is to understand the asymptotics of $\mathcal{A}(z)$. Recall that 
+The next step is to understand the asymptotics of $\mathcal{A}(z)$. Recall that
 \begin{equation}
 	\label{eq:A_definition}
 	\mathcal{A}(z)=\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{z\Pi_\mu(z)} \right].
@@ -671,36 +672,36 @@ neighborhood of $[l,r]$. Therefore, we can integrate over $\omega_-$, and get
 In the last equality, we took a residue at $w=z$, and replaced the integral
 by an integral over $\omega_+$.
 
-The integrand has no singularities outside $\omega_+$, and thus is just the residue at 
+The integrand has no singularities outside $\omega_+$, and thus is just the residue at
 infinity.
-Using the fact that 
+Using the fact that
 $e^{-h_-(u)}=e^{1+O(1/u)}=1+O(1/u)$, $u\to\infty$
 and the fact that the expectation $\mathcal{A}(u)$ is balanced in $u$
-(hence it is $1+O(1/u)$), 
-we see that 
+(hence it is $1+O(1/u)$),
+we see that
 the residue at infinity is simply equal to $1$.
-Therefore, 
+Therefore,
 \begin{equation*}
-	0=-\mathcal{A}(z)\ssp e^{-h_-(z)}+1+O(\varepsilon),\qquad 
+	0=-\mathcal{A}(z)\ssp e^{-h_-(z)}+1+O(\varepsilon),\qquad
 	\ln \mathcal{A}(z)=h_-(z)+O(\varepsilon).
 \end{equation*}
 We emphasize that this equation stays valid for all functions $W(z)$.
 
 \subsection{Outlook of further steps}
 
-Let us rewrite the last equation explicitly, inserting $W$ into the 
-expectation, and taking $\operatorname{\mathbb{E}}_0$ to be the 
+Let us rewrite the last equation explicitly, inserting $W$ into the
+expectation, and taking $\operatorname{\mathbb{E}}_0$ to be the
 undeformed expectation over the G$\beta$E corner:
 \begin{equation}
 	\label{eq:final_A}
 	\operatorname{\mathbb{E}}_0
-	\left[ 
+	\left[
 		\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{z\ssp \prod_{j=1}^{n}e^{-W(\mu_j)}(z-\mu_j)}
 	\right]
 	=
 	\frac{1}{2 \pi i}\oint_{\omega_-}
 	\frac{\ln
-	\left( 
+	\left(
 		W'(w)+\frac{\beta}{2}G_\lambda(w)
 	\right)}{w-z}\ssp dw+O(\varepsilon).
 \end{equation}
@@ -708,14 +709,14 @@ There are the following extra steps required to complete the proofs of the main
 results:
 \begin{itemize}
 	\item Continue the expansion \eqref{eq:final_A} to higher orders of $\varepsilon$.
-	\item Extract probabilistic information from the formula in the left-hand side of 
+	\item Extract probabilistic information from the formula in the left-hand side of
 		\eqref{eq:final_A}.
 	\item Carefully execute the analysis, including all the required estimates,
 		to get the asymptotic behavior of the Stieltjes transforms.
 	\item From the Stieltjes transforms, extract the asymptotic behavior of the height function.
 \end{itemize}
 
-We do not perform this analysis here, but 
+We do not perform this analysis here, but
 direct the reader to \cite{gorin2022dynamical} for the full details,
 in a setting of lozenge tilings with $q$-Racah weights.
 

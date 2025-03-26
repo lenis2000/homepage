@@ -68,6 +68,7 @@ Updated at \currenttime, \today}}
 
 
 \maketitle
+\tableofcontents
 
 \section{Recap}
 
@@ -131,11 +132,125 @@ normalization):
 \prod_{1\le i<j\le N}(a_j-a_i)\,\prod_{1\le i<j\le N}(b_j-b_i)}\,.
 \]
 This formula is instrumental in deriving transition densities for
-\(\beta=2\) Dyson Brownian Motion.  
+\(\beta=2\) Dyson Brownian Motion.
 
 \section{Optional: proof of HCIZ integral via representation theory}
 
 
+In this section, we outline a standard argument (adapted from the theory of symmetric functions and representation theory of the unitary group) that leads to a proof of the Harish--Chandra--Itzykson--Zuber formula.  It is often referred to as the ``orbital integral'' or ``character expansion'' approach.
+
+\smallskip
+
+\noindent
+\textbf{Step 1. Setting up the integral and Schur expansions.}
+Let \(A\) and \(B\) be two \(N\times N\) diagonalizable matrices, with eigenvalues \(a_1,\ldots,a_N\) and \(\lambda_1,\ldots,\lambda_N\) respectively.  Denote by \(D_a = \mathrm{diag}(a_1,\ldots,a_N)\) and \(D_\lambda = \mathrm{diag}(\lambda_1,\ldots,\lambda_N)\).  We want to evaluate the integral
+\[
+I \;=\; \int_{U(N)} \exp\bigl(\mathrm{Tr}(D_a\,U\,D_\lambda\,U^\dagger)\bigr)\,dU
+\]
+over the Haar measure on \(U(N)\).
+
+Since \(\mathrm{Tr}(B) = p_1(B)\) in the language of power sums
+(where \(p_1(x_1,x_2,\dots) = x_1 + x_2 + \dots\)),
+we have
+\[
+\exp\bigl(\mathrm{Tr}(B)\bigr) \;=\; \exp\bigl(p_1(B)\bigr).
+\]
+One can use a known expansion
+\cite{Macdonald1995}
+\[
+e^{p_1(B)} \;=\;
+\sum_{m=0}^{\infty} \frac{p_1^m(B)}{m!}
+\;=\;
+\sum_{m=0}^\infty \frac{1}{m!}\,
+\sum_{\substack{\mu: |\mu|=m}}
+\dim(\mu)\,s_\mu(B),
+\]
+where the sum is over all partitions \(\mu\) of size \(m\),
+and \(s_\mu(\cdot)\) is the Schur polynomial (or Schur function) indexed by \(\mu\).  The coefficient \(\dim(\mu)\) is the dimension of the corresponding representation of \(S_m\).
+
+We set \(B = D_a\,U\,D_\lambda\,U^\dagger\) and write
+\[
+I \;=\;
+\int_{U(N)}
+\exp\Bigl(\mathrm{Tr}(D_a\,U\,D_\lambda\,U^\dagger)\Bigr)\,dU
+\;=\;
+\int_{U(N)}
+\sum_{m=0}^\infty
+\frac{1}{m!}
+\;\sum_{\substack{\mu:|\mu|=m}}
+\dim(\mu)\;
+s_\mu\bigl(D_a\,U\,D_\lambda\,U^\dagger\bigr)\,dU.
+\]
+One can exchange the integral and the sum (the series converges absolutely for all matrix arguments), giving
+\begin{equation}
+	\label{eq:HCIZ-I-start}
+	I
+	\;=\;
+	\sum_{m=0}^\infty\;
+	\sum_{\substack{\mu:|\mu|=m}}\;
+	\frac{\dim(\mu)}{m!}
+	\;\int_{U(N)} s_\mu(D_a\,U\,D_\lambda\,U^\dagger)\;dU.
+\end{equation}
+
+\smallskip
+
+\noindent
+\textbf{Step 2. Orthogonality of characters and the Unitary group.}
+The Schur functions \(s_\mu(\cdot)\) can be seen as irreducible characters of the unitary group \(U(N)\) (up to a normalization factor) when restricted to \(N\)-tuples of eigenvalues.\footnote{$s_\mu$ for $\ell(\mu)\le N$ can be viewed as the character of the corresponding polynomial representation of $GL(N,\mathbb{C})$, then restricted to $U(N)$.  If $\ell(\mu) > N$, the function $s_\mu$ vanishes on $U(N)$. Thus,
+we need to impose the condition \(|a_i|=|\lambda_i|=1\) (so that \(D_a,D_\lambda\in U(N)\)) to ensure immediate applicability of representation theory of $U(N)$, then extend to general \(\{a_i\}\) and \(\{\lambda_i\}\) by analytic continuation.}
+
+\begin{proposition}[Functional equation for characters
+	of compact groups]
+	\label{prop:character-functional}
+Let $G$ be a compact group with normalized Haar measure $dh$, and let $\chi$ be an irreducible character of a finite-dimensional representation of $G$. Then for any elements $g_1, g_2 \in G$, the following relation holds:
+\begin{equation}
+	\int_G \chi(g_1hg_2h^{-1})dh = \frac{\chi(g_1)\chi(g_2)}{\dim V},
+\end{equation}
+where $\dim V = \chi(e)$ is the dimension of the representation space.
+\end{proposition}
+\begin{remark}
+	A similar relation holds for characters of finite groups.
+\end{remark}
+By \Cref{prop:character-functional}, the integral over $U(N)$ in \eqref{eq:HCIZ-I-start} can be evaluated as
+\[
+\int_{U(N)} s_\mu(D_a\,U\,D_\lambda\,U^\dagger)\,dU
+\;=\;
+\frac{1}{\mathrm{Dim}_N(\mu)}
+\;s_\mu(a)\,s_\mu(\lambda),
+\]
+where
+\(\mathrm{Dim}_N(\mu)\) is the dimension of the corresponding irreducible representation of $U(N)$.  Substituting back into \eqref{eq:HCIZ-I-start} yields
+\[
+I \;=\;
+\sum_{m=0}^\infty\;
+\sum_{\substack{\mu:|\mu|=m,\;\ell(\mu)\le N}}
+\frac{\dim(\mu)}{m!}
+\;\frac{1}{\mathrm{Dim}_N(\mu)}
+\;s_\mu(a)\,s_\mu(\lambda),
+\]
+where \(\ell(\mu)\le N\) is needed for $s_\mu(\cdot)$ not to vanish on $U(N)$.
+
+\smallskip
+
+\noindent
+\textbf{Step 3. Hook-length formulas and the final determinant.}
+Next, one applies the hook-length formula
+and the hook-content formula to dimensions:
+\begin{equation*}
+	\dim \mu=\frac{|\mu|!}{\prod_{\square\in\mu} h(\square)},
+	\qquad
+	\mathrm{Dim}_N(\mu)=\frac{\prod_{\square\in \mu}(N+c(\square))}{\prod_{\square\in\mu} h(\square)},
+\end{equation*}
+We have
+\begin{equation*}
+	\prod_{\square\in \mu}(N+c(\square))=\prod_{i=1}^{N}\frac{(\mu_i+N-i)!}{(N-i)!},
+\end{equation*}
+so identifying $m_i=\mu_i+N-i$ gives
+\begin{equation*}
+	I=0! 1! \cdots (N-1)!
+	\sum_{m_1>\ldots>m_N\ge0 }\frac{s_\mu(a)s_\mu(\lambda)}{m_1!\cdots m_N!},
+\end{equation*}
+which yields the HCIZ formula by the Cauchy-Binet summation.
 
 \section{Determinantal structure for $\beta=2$}
 
@@ -342,8 +457,189 @@ We omit the details here,
 see~Problem~\ref{prob:biorthogonal}.
 
 
+\section{Asymptotic analysis: signal plus noise}
 
+\subsection{Setup}
 
+\label{sec:rank1-spike-detailed}
+In this section, we provide a detailed derivation of how the rank-1 spike 
+\[
+	A+\sqrt G,\qquad 
+A = \mathrm{diag}(a,0,\dots,0)
+\quad\text{with }a\in\mathbb{R},
+\]
+affects the large-$n$ and large-time behavior of the Dyson Brownian Motion at $\beta=2$.  
+
+We now set $a_1=a$ and $a_2=a_3=\dots=a_n=0$, which simplifies the product:
+\[
+\prod_{i=1}^n\,(w - a_i)\;=\;(w-a)\,w^{\,n-1}, 
+\qquad
+\prod_{i=1}^n\,(z - a_i)\;=\;(z-a)\,z^{\,n-1}.
+\]
+Hence, the correlation kernel becomes
+\begin{equation}
+\label{eq:K_t_a_expanded}
+K_t(x,y)
+\;=\;
+\frac{1}{(2\pi i)^2\,t}
+\oint \oint
+\exp\!\Bigl(\tfrac{w^2 - 2\,y\,w}{2\,t}\Bigr)\;\Big/\;\exp\!\Bigl(\tfrac{z^2 - 2\,x\,z}{2\,t}\Bigr)
+\;\frac{(w-a)\,w^{n-1}}{(z-a)\,z^{n-1}}
+\;\frac{dw\,dz}{(w - z)}.
+\end{equation}
+Here:
+\begin{itemize}
+\item The $z$-contour is a small positively oriented loop around $z=a$, and also around $z=0$, so that it encircles these two singularities but excludes $w$.  
+\item The $w$-contour is a vertical line (or an equivalent contour from $-i\infty$ to $i\infty$) passing to the right of all singularities (i.e.\ to the right of $z$).  
+\end{itemize}
+Let us also take $t=1$ for simplicity.
+
+\subsection{Outline of the steepest descent approach}
+
+We aim to understand the behavior of 
+\eqref{eq:K_t_a_expanded} in the regime $n\to\infty$, especially near the largest eigenvalue $\lambda_1(t)$.  Recall from standard GUE (i.e.\ $a=0$) that the top of the spectrum is about $2\sqrt{n}$.  The presence of the rank-1 spike $a$ can drastically modify the top eigenvalue if $a$ is large enough to produce an ``outlier.''  Our goal is to detect precisely how this occurs by analyzing the double contour integral via steepest descent.
+
+For large $n$, the integral localizes around these points.  Any crossing from $z$- to $w$-contour may pick up residues, which account for separate contributions (leading, for instance, to the sine or Airy kernel in the unperturbed GUE).  We track how the spike $a$ changes these deformations.  
+
+We now carry out these steps in detail for \eqref{eq:K_t_a_expanded}.  
+
+\subsection{Exponent form and critical points}
+
+Set 
+\[
+\Phi_{t,a}(w,z)\;=\;
+-\;\frac{1}{t}\Bigl[\tfrac{z^2}{2}-x\,z\Bigr]
+\;+\;
+\frac{1}{t}\Bigl[\tfrac{w^2}{2}-y\,w\Bigr]
+\;+\;
+(n-1)\,\bigl[\ln(w)-\ln(z)\bigr]
+\;+\;
+\ln(w-a)-\ln(z-a).
+\]
+Then the integrand in \eqref{eq:K_t_a_expanded} is essentially
+\[
+\exp\bigl(\Phi_{t,a}(w,z)\bigr)\,\frac{1}{w-z},
+\]
+up to the constant factor $\frac{1}{(2\pi i)^2\,t}$.  Note that $\Phi_{t,a}$ contains the GUE-like portion 
+\[
+\frac{1}{t}\Bigl(\tfrac{w^2}{2}-y\,w - \tfrac{z^2}{2}+x\,z\Bigr)
+\;+\;
+(n-1)\bigl[\ln(w)-\ln(z)\bigr],
+\]
+plus the spike portion $\ln(w-a)-\ln(z-a)$.  
+
+\begin{remark}
+For $\beta=2$ and $a=0$, we typically expand about $z\approx 1$, $w\approx 1$ to capture the top edge at $2\sqrt{t\,n}$.  Indeed, setting $z=1+u,n\to\infty$ leads to the cubic expansions in $u$.  
+Once $a\neq0$, we get an extra shift in $z$, $w$ that might solve
+\[
+\partial_z\,\Phi_{t,a}=0,
+\quad
+\partial_w\,\Phi_{t,a}=0.
+\]
+We find solutions near $z=1$, $w=1$ if $|a|<2$, but new solutions appear if $|a|>2$.  
+\end{remark}
+
+\vspace{5pt}
+
+\noindent\textbf{Scaling near the top.}  
+We know from the unperturbed case $(a=0)$ that $x,y$ near $2\sqrt{t\,n}$ is relevant.  Let us adopt the usual \emph{edge scaling}:
+\begin{equation}
+\label{eq:xy-edge-scaling}
+x \;=\; 2\sqrt{t\,n} \;+\;\frac{\xi}{n^{1/6}},
+\qquad
+y \;=\; 2\sqrt{t\,n} \;+\;\frac{\eta}{n^{1/6}}.
+\end{equation}
+Then one can attempt expansions $z=1+u\,n^{-1/3}$, $w=1+v\,n^{-1/3}$ (plus additional shifts if $a\neq0$).  Indeed, if $|a|<2$, the main location for $z_{\mathrm{cr}},w_{\mathrm{cr}}$ remains close to $1$.  Conversely, if $|a|>2$, we get a separate solution.  
+
+Let us isolate the product factor first.  Suppose we rewrite 
+\[
+(w-a)\,w^{n-1}
+\;=\;
+(w-a)\,\exp\bigl((n-1)\ln w\bigr),
+\qquad
+(z-a)\,z^{n-1}
+\;=\;
+(z-a)\,\exp\bigl((n-1)\ln z\bigr).
+\]
+Then
+\[
+\ln\bigl[(w-a)\,w^{n-1}\bigr] \;=\; (n-1)\ln w \;+\;\ln(w-a).
+\]
+Hence these combined terms become
+\[
+(n-1)\,[\ln w-\ln z]
+\;+\;
+\ln(w-a) \;-\;\ln(z-a).
+\]
+Because $|a|<2$ or $|a|>2$ drastically changes the location(s) $z-a=0$ or $w-a=0$, the steepest descent approach tries to see where the real part of $\Phi_{t,a}(w,z)$ is stationary.  
+
+\subsection{Controlling the integral: subcritical and supercritical analyses}
+
+\subsubsection{Residue crossing and main contributions}
+
+As usual in the $\beta=2$ story, we must deform the $z$-contour outward so that it crosses the $w$-contour.  This can pick up a residue from the simple pole at $w=z$.  In the pure GUE case $(a=0)$, that residue is known to yield the sine or Airy kernel asymptotics after expansions.  Now, with the rank-1 spike, we get an additional factor from $(w-a)/(z-a)$.  The upshot is that \emph{if} the $z$ contour crosses $w$ in a certain region that does not include $w=a$, one obtains a residue that will lead to the same sine/Airy factor.  
+
+However, we must also check whether the $z$-contour encloses $z=a$ \emph{and} the $w$-contour encloses $w=a$.  The spike can produce an outlier contribution if $|a|$ is large enough for the new saddle point to dominate.  
+
+\subsubsection{Case 1: \texorpdfstring{$|a|<2$}{|a| < 2} (subcritical)}
+
+For $\lvert a\rvert<2$, one can show that the exponent $\Phi_{t,a}(w,z)$ remains effectively minimized near $z,w\approx 1$, and the presence of $(w-a)$ vs.\ $(z-a)$ does not shift that minimizer significantly.  In more precise terms, one writes expansions:
+\[
+z \;=\; 1 + \frac{u}{n^{1/3}},
+\qquad
+w \;=\; 1 + \frac{v}{n^{1/3}},
+\]
+with $x,y$ as in \eqref{eq:xy-edge-scaling}, and obtains a leading cubic term in $u,v$.  The “$a$” correction modifies subleading expansions but does \emph{not} cause a different order in $n$.  Repeating the same steps as in the standard GUE edge analysis (cf.\ \S\ref{sub:double-critical-points}), one sees that the limit of $\frac{1}{n^{1/6}}\,K_t\bigl(x,y\bigr)$ is the Airy kernel
+\[
+K_{\mathrm{Ai}}(\xi,\eta)
+\;=\;
+\int_0^\infty \cdots
+\]
+(as in the usual expression, see \Cref{def:Airy_kernel} for one common form).
+
+Consequently, in the subcritical regime $|a|<2$, the top eigenvalue 
+\[
+x_{\max}(t)= x_1(t)
+\]
+stays merged in the main bulk near $2\sqrt{t\,n}$ and has \emph{Tracy--Widom} fluctuations on the $n^{-1/6}$ scale.  The factor $a$ only shifts lower-order terms in that expansion.  
+
+\subsubsection{Case 2: \texorpdfstring{$|a|>2$}{|a| > 2} (supercritical)}
+
+When $|a|>2$, the spike is large.  One expects an \emph{outlier} eigenvalue near $x\approx a\,\sqrt{t\,}$ (rather than near $2\sqrt{t\,n}$).  Indeed, analyzing $\Phi_{t,a}$ in that scenario, one finds a separate solution to $\partial\Phi/\partial w=0$ near $w\approx a\neq 1$ (and similarly for $z$).  The portion of the $z$-contour around $z= a$ then yields a new local expansion.  
+
+Concretely, if $a>2$ (the case $a<-2$ is similar), the factor $(w-a)$ can be near zero, so that the exponent can develop a more favorable real part at $w\approx a$.  Meanwhile, the factor $w^{n-1}$ is enormous if $|w|>1$, but $a>2$ means $|a|>1$.  As a result, the outlier solution with $w\approx a$ can produce a stable stationary phase.  Indeed, one obtains a local \emph{quadratic} expansion around $w=a$ and $z=a$, thus leading to a \emph{Gaussian} fluctuation scale of the resulting outlier eigenvalue, typically $\sigma\,n^{-1/2}$ for some $\sigma>0$.  
+
+Hence, in the supercritical regime $|a|>2$, the top eigenvalue $x_{\max}(t)$ \emph{detaches} from $2\sqrt{t\,n}$.  Its leading order becomes $a\sqrt{t\,}$ plus smaller corrections, and the local fluctuations are usually governed by a (shifted) Gaussian (or in some references, an incomplete gamma distribution, depending on subtle normalizations).  The remaining $n-1$ eigenvalues fill out the usual semicircle from $-2\sqrt{t\,n}$ to $2\sqrt{t\,n}$, with an Airy edge near $2\sqrt{t\,n}$.  
+
+\subsubsection{Case 3: \texorpdfstring{$|a|=2$}{|a|=2} (critical)}
+
+At the boundary $|a|=2$, the system is at a ``double root'' transition.  One finds that $z=1$ (the standard GUE edge) merges with $z=a$ in a certain sense, leading to a triple or quartic expansion if $a=2$, for instance.  Careful expansions show that the outlier is \emph{just} beginning to separate from the main bulk.  The correlation kernel in this regime is a special transition “higher-order” Airy-like kernel, often described as a \emph{crossover kernel} in the BBP (Baik--Ben~Arous--P\'ech\'e) transition \cite{BBP2005phase}.  The top eigenvalue distribution is neither purely Tracy--Widom nor purely Gaussian but an interpolating limit distribution.  
+
+\subsection{Summary of the BBP transition from \texorpdfstring{$K_t(x,y)$}{Kt(x,y)}}
+
+Putting the above cases together, we see that analyzing the DBM correlation kernel 
+\eqref{eq:K_t_a_expanded} under the spiked initial condition $(a_1=a)\neq0$, $(a_2=\dots=a_n=0)$ 
+reveals:
+
+\begin{itemize}
+\item \textbf{If $|a|<2$:} 
+  The spike is \emph{subcritical}.  The top eigenvalue remains at the GUE edge $\approx 2\sqrt{t\,n}$, with Tracy--Widom fluctuations on scale $n^{-1/6}$.  
+
+\item \textbf{If $|a|>2$:} 
+  The spike is \emph{supercritical}.  An outlier eigenvalue emerges near $a\sqrt{t\,}$, detaching from the main bulk.  The fluctuation scale around that outlier is typically $n^{-1/2}$ and converges (after centering and scaling) to a simpler, often Gaussian-type limit.  The remainder of the spectrum still exhibits the semicircle on $[-2\sqrt{t\,n},2\sqrt{t\,n}]$.  
+
+\item \textbf{If $|a|=2$:} 
+  \emph{Critical regime}.  The top eigenvalue experiences a BBP crossover distribution, with a kernel that can be viewed as a limit of the general \eqref{eq:K_t_a_expanded} by carefully choosing the saddle point expansions.  
+\end{itemize}
+
+This completes the steepest descent derivation of the rank-1 BBP phase transition from the Dyson Brownian Motion correlation kernel in \Cref{thm:dbm-det-kernel}.  Detailed error estimates and rigorous Fredholm determinant limits (turning kernel statements into actual distributional statements about $x_{\max}(t)$) can be found in \cite{BBP2005phase}, \cite{BloemendalVirag}, and other references cited therein.
+
+\begin{remark}
+For $r$-rank spikes (i.e.\ $a_1,\dots,a_r\neq0$), one can repeat the same argument: the factor 
+$\prod_{i=1}^n (w-a_i)/(z-a_i)$ 
+in \eqref{eq:K_t_a_expanded} splits into a product $(w-a_1)\cdots(w-a_r)\,w^{n-r}$ vs.\ $(z-a_1)\cdots(z-a_r)\,z^{n-r}$.  
+Each $|a_i|>2$ can produce a distinct outlier, while any $|a_i|<2$ merges with the main bulk.  
+\end{remark}
 
 
 
