@@ -19,6 +19,8 @@
 %tikz
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,decorations.markings}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 
 %conveniences
 \usepackage{array}
@@ -322,7 +324,7 @@ where $A=\mathrm{diag}(a_1,\dots,a_n)$ and $G$ is a random Hermitian matrix from
 \[
 K_t(x,y)
 =
-\frac{1}{(2\pi i)^2\,t}
+\frac{1}{(2\pi)^2\,t}
 \oint \oint
 \exp\Bigl(\frac{w^2 - 2\,y\,w}{2\,t}\Bigr)\,
 \biggl/
@@ -330,7 +332,7 @@ K_t(x,y)
 \;\prod_{i=1}^n \frac{w - a_i}{z - a_i}
 \;\frac{dw\,dz}{w - z}.
 \]
-Here $z$ goes around all the points $a_1,\ldots,a_n $,
+Here $z$ goes around all the points $a_1,\ldots,a_n $ in the positive direction,
 and the $w$ contour
 passes from $-i\infty$ to $i\infty$, to the right of the $z$ contour.
 \end{theorem}
@@ -462,86 +464,121 @@ see~Problem~\ref{prob:biorthogonal}.
 \subsection{Setup}
 
 \label{sec:rank1-spike-detailed}
-In this section, we provide a detailed derivation of how the rank-1 spike 
+In this section, we provide a detailed derivation of how the rank-1 spike
 \[
-	A+\sqrt G,\qquad 
+	A+\sqrt G,\qquad
 A = \mathrm{diag}(a,0,\dots,0)
 \quad\text{with }a\in\mathbb{R},
 \]
-affects the large-$n$ and large-time behavior of the Dyson Brownian Motion at $\beta=2$.  
+affects the large-$n$ and large-time behavior of the Dyson Brownian Motion at $\beta=2$.
+See the simulation at \url{https://lpetrov.cc/simulations/2025-01-28-bbp-transition/}.
 
-We now set $a_1=a$ and $a_2=a_3=\dots=a_n=0$, which simplifies the product:
+We set $a_1=a\sqrt n$ and $a_2=a_3=\dots=a_n=0$, which simplifies the product:
 \[
-\prod_{i=1}^n\,(w - a_i)\;=\;(w-a)\,w^{\,n-1}, 
+\prod_{i=1}^n\,(w - a_i)\;=\;(w-a\sqrt n)\,w^{\,n-1},
 \qquad
-\prod_{i=1}^n\,(z - a_i)\;=\;(z-a)\,z^{\,n-1}.
+\prod_{i=1}^n\,(z - a_i)\;=\;(z-a\sqrt n)\,z^{\,n-1}.
 \]
+Let us also take $t=1$ for simplicity,
+so that the limit shape (at least in the case $a=0$, but also in general)
+is supported by $[-2\sqrt n,2\sqrt n]$.
+Let us also make the change of the integration variables $w\to w\sqrt n$,
+$z\to z\sqrt n$.
+
 Hence, the correlation kernel becomes
 \begin{equation}
 \label{eq:K_t_a_expanded}
 K_t(x,y)
-\;=\;
-\frac{1}{(2\pi i)^2\,t}
+=
+\frac{\sqrt n}{(2\pi)^2}
 \oint \oint
-\exp\!\Bigl(\tfrac{w^2 - 2\,y\,w}{2\,t}\Bigr)\;\Big/\;\exp\!\Bigl(\tfrac{z^2 - 2\,x\,z}{2\,t}\Bigr)
-\;\frac{(w-a)\,w^{n-1}}{(z-a)\,z^{n-1}}
-\;\frac{dw\,dz}{(w - z)}.
+\exp\Bigl(\frac{nw^2 - 2\,y\,w\sqrt n}{2}\Bigr)\,
+\biggl/
+\exp\Bigl(\frac{nz^2 - 2\,x\,z\sqrt n}{2}\Bigr)
+\;\frac{w - a}{z - a}
+\left( \frac{w}{z} \right)^{n-1}
+\;\frac{dw\,dz}{w - z}.
 \end{equation}
 Here:
 \begin{itemize}
-\item The $z$-contour is a small positively oriented loop around $z=a$, and also around $z=0$, so that it encircles these two singularities but excludes $w$.  
-\item The $w$-contour is a vertical line (or an equivalent contour from $-i\infty$ to $i\infty$) passing to the right of all singularities (i.e.\ to the right of $z$).  
+\item The $z$-contour is a small positively oriented loop around $z=a$, and also around $z=0$, so that it encircles these two singularities but excludes $w$.
+\item The $w$-contour is a vertical line (or an equivalent contour from $-i\infty$ to $i\infty$) passing to the right of all singularities (i.e.\ to the right of $z$).
 \end{itemize}
-Let us also take $t=1$ for simplicity.
+Note that to capture the edge behavior, we need to set $x=y=2$ plus lower order terms.
+Let us make this substitution $x=2\sqrt n+x'$, $y=2\sqrt n+y'$, and the
+scale of $x',y'$ will be determined later (but for now we assume that they are
+$o(\sqrt n)$).
 
 \subsection{Outline of the steepest descent approach}
 
-We aim to understand the behavior of 
+We aim to understand the behavior of
 \eqref{eq:K_t_a_expanded} in the regime $n\to\infty$, especially near the largest eigenvalue $\lambda_1(t)$.  Recall from standard GUE (i.e.\ $a=0$) that the top of the spectrum is about $2\sqrt{n}$.  The presence of the rank-1 spike $a$ can drastically modify the top eigenvalue if $a$ is large enough to produce an ``outlier.''  Our goal is to detect precisely how this occurs by analyzing the double contour integral via steepest descent.
 
-For large $n$, the integral localizes around these points.  Any crossing from $z$- to $w$-contour may pick up residues, which account for separate contributions (leading, for instance, to the sine or Airy kernel in the unperturbed GUE).  We track how the spike $a$ changes these deformations.  
-
-We now carry out these steps in detail for \eqref{eq:K_t_a_expanded}.  
+For large $n$, the integral localizes around these
+double critical point.
+Any crossing from $z$- to $w$-contour may pick up residues, which account for separate contributions (leading, for instance, to the Airy kernel in the unperturbed GUE).
+We track how the spike $a$ changes these deformations.
 
 \subsection{Exponent form and critical points}
 
-Set 
+Set
 \[
-\Phi_{t,a}(w,z)\;=\;
--\;\frac{1}{t}\Bigl[\tfrac{z^2}{2}-x\,z\Bigr]
+S(w;y')\;=\;
+\tfrac{w^2}{2}-2\,w-y' w/\sqrt n
 \;+\;
-\frac{1}{t}\Bigl[\tfrac{w^2}{2}-y\,w\Bigr]
-\;+\;
-(n-1)\,\bigl[\ln(w)-\ln(z)\bigr]
-\;+\;
-\ln(w-a)-\ln(z-a).
+\frac{n-1}{n}\ln(w).
 \]
-Then the integrand in \eqref{eq:K_t_a_expanded} is essentially
+Then the integrand in \eqref{eq:K_t_a_expanded} is
 \[
-\exp\bigl(\Phi_{t,a}(w,z)\bigr)\,\frac{1}{w-z},
+	\frac{\exp\left\{ n\bigl[S(w;y')-S(z;x')\bigr] \right\}}{w-z}\frac{w-a}{z-a}.
 \]
-up to the constant factor $\frac{1}{(2\pi i)^2\,t}$.  Note that $\Phi_{t,a}$ contains the GUE-like portion 
-\[
-\frac{1}{t}\Bigl(\tfrac{w^2}{2}-y\,w - \tfrac{z^2}{2}+x\,z\Bigr)
-\;+\;
-(n-1)\bigl[\ln(w)-\ln(z)\bigr],
-\]
-plus the spike portion $\ln(w-a)-\ln(z-a)$.  
+To capture the Airy behavior, we can ignore $y'$, and find the double critical
+point of $S(w;0)$. It is equal to $w_c=1$,
+and we would like to bring the $z$ and $w$ contours to intersect at $w_c=1$.
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[height=.3\textwidth]{pictures/ReS_edge.pdf}
+    \caption{The plot of the region $\operatorname{Re}S(z)-\operatorname{Re}S(1)>0$
+			at the edge, in the neighborhood of the double critical point $w_c=1$.
+			The new $w$ contour should pass through the shaded region,
+		and the new $z$ must stay in the non-shaded region.}
+    \label{fig:ReS_edge}
+\end{figure}
+Note however that the old $z$ contour must encircle $z=a$ and $z=0$,
+and $z=a$ is a pole of the integrand. The $w$ contour must always be to the right of
+the $z$ contour.
+
+We see that there are three regimes:
+\begin{itemize}
+	\item If $a<1$, we can deform the $z$ contour to encircle $z=0$ and $z=a$,
+		and the $w$ contour to pass through $w=1$. This will lead to the Airy kernel,
+		and the derivation is the same as in
+		\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l07.pdf}{Lecture 7}.
+		We obtain
+		\begin{equation*}
+			z=1+\frac{Z}{n^{1/3}},\qquad w=1+\frac{W}{n^{1/3}},\qquad
+		\end{equation*}<++>
+	\item If $a=1$, the behavior is going to be critical --- we still will
+		be able to get the same scaling, but the limiting kernel will be different.
+	\item Finally,
+\end{itemize}
+
+
 
 \begin{remark}
-For $\beta=2$ and $a=0$, we typically expand about $z\approx 1$, $w\approx 1$ to capture the top edge at $2\sqrt{t\,n}$.  Indeed, setting $z=1+u,n\to\infty$ leads to the cubic expansions in $u$.  
+For $\beta=2$ and $a=0$, we typically expand about $z\approx 1$, $w\approx 1$ to capture the top edge at $2\sqrt{t\,n}$.  Indeed, setting $z=1+u,n\to\infty$ leads to the cubic expansions in $u$.
 Once $a\neq0$, we get an extra shift in $z$, $w$ that might solve
 \[
 \partial_z\,\Phi_{t,a}=0,
 \quad
 \partial_w\,\Phi_{t,a}=0.
 \]
-We find solutions near $z=1$, $w=1$ if $|a|<2$, but new solutions appear if $|a|>2$.  
+We find solutions near $z=1$, $w=1$ if $|a|<2$, but new solutions appear if $|a|>2$.
 \end{remark}
 
 \vspace{5pt}
 
-\noindent\textbf{Scaling near the top.}  
+\noindent\textbf{Scaling near the top.}
 We know from the unperturbed case $(a=0)$ that $x,y$ near $2\sqrt{t\,n}$ is relevant.  Let us adopt the usual \emph{edge scaling}:
 \begin{equation}
 \label{eq:xy-edge-scaling}
@@ -549,9 +586,9 @@ x \;=\; 2\sqrt{t\,n} \;+\;\frac{\xi}{n^{1/6}},
 \qquad
 y \;=\; 2\sqrt{t\,n} \;+\;\frac{\eta}{n^{1/6}}.
 \end{equation}
-Then one can attempt expansions $z=1+u\,n^{-1/3}$, $w=1+v\,n^{-1/3}$ (plus additional shifts if $a\neq0$).  Indeed, if $|a|<2$, the main location for $z_{\mathrm{cr}},w_{\mathrm{cr}}$ remains close to $1$.  Conversely, if $|a|>2$, we get a separate solution.  
+Then one can attempt expansions $z=1+u\,n^{-1/3}$, $w=1+v\,n^{-1/3}$ (plus additional shifts if $a\neq0$).  Indeed, if $|a|<2$, the main location for $z_{\mathrm{cr}},w_{\mathrm{cr}}$ remains close to $1$.  Conversely, if $|a|>2$, we get a separate solution.
 
-Let us isolate the product factor first.  Suppose we rewrite 
+Let us isolate the product factor first.  Suppose we rewrite
 \[
 (w-a)\,w^{n-1}
 \;=\;
@@ -571,15 +608,15 @@ Hence these combined terms become
 \;+\;
 \ln(w-a) \;-\;\ln(z-a).
 \]
-Because $|a|<2$ or $|a|>2$ drastically changes the location(s) $z-a=0$ or $w-a=0$, the steepest descent approach tries to see where the real part of $\Phi_{t,a}(w,z)$ is stationary.  
+Because $|a|<2$ or $|a|>2$ drastically changes the location(s) $z-a=0$ or $w-a=0$, the steepest descent approach tries to see where the real part of $\Phi_{t,a}(w,z)$ is stationary.
 
 \subsection{Controlling the integral: subcritical and supercritical analyses}
 
 \subsubsection{Residue crossing and main contributions}
 
-As usual in the $\beta=2$ story, we must deform the $z$-contour outward so that it crosses the $w$-contour.  This can pick up a residue from the simple pole at $w=z$.  In the pure GUE case $(a=0)$, that residue is known to yield the sine or Airy kernel asymptotics after expansions.  Now, with the rank-1 spike, we get an additional factor from $(w-a)/(z-a)$.  The upshot is that \emph{if} the $z$ contour crosses $w$ in a certain region that does not include $w=a$, one obtains a residue that will lead to the same sine/Airy factor.  
+As usual in the $\beta=2$ story, we must deform the $z$-contour outward so that it crosses the $w$-contour.  This can pick up a residue from the simple pole at $w=z$.  In the pure GUE case $(a=0)$, that residue is known to yield the sine or Airy kernel asymptotics after expansions.  Now, with the rank-1 spike, we get an additional factor from $(w-a)/(z-a)$.  The upshot is that \emph{if} the $z$ contour crosses $w$ in a certain region that does not include $w=a$, one obtains a residue that will lead to the same sine/Airy factor.
 
-However, we must also check whether the $z$-contour encloses $z=a$ \emph{and} the $w$-contour encloses $w=a$.  The spike can produce an outlier contribution if $|a|$ is large enough for the new saddle point to dominate.  
+However, we must also check whether the $z$-contour encloses $z=a$ \emph{and} the $w$-contour encloses $w=a$.  The spike can produce an outlier contribution if $|a|$ is large enough for the new saddle point to dominate.
 
 \subsubsection{Case 1: \texorpdfstring{$|a|<2$}{|a| < 2} (subcritical)}
 
@@ -597,48 +634,48 @@ K_{\mathrm{Ai}}(\xi,\eta)
 \]
 (as in the usual expression, see \Cref{def:Airy_kernel} for one common form).
 
-Consequently, in the subcritical regime $|a|<2$, the top eigenvalue 
+Consequently, in the subcritical regime $|a|<2$, the top eigenvalue
 \[
 x_{\max}(t)= x_1(t)
 \]
-stays merged in the main bulk near $2\sqrt{t\,n}$ and has \emph{Tracy--Widom} fluctuations on the $n^{-1/6}$ scale.  The factor $a$ only shifts lower-order terms in that expansion.  
+stays merged in the main bulk near $2\sqrt{t\,n}$ and has \emph{Tracy--Widom} fluctuations on the $n^{-1/6}$ scale.  The factor $a$ only shifts lower-order terms in that expansion.
 
 \subsubsection{Case 2: \texorpdfstring{$|a|>2$}{|a| > 2} (supercritical)}
 
-When $|a|>2$, the spike is large.  One expects an \emph{outlier} eigenvalue near $x\approx a\,\sqrt{t\,}$ (rather than near $2\sqrt{t\,n}$).  Indeed, analyzing $\Phi_{t,a}$ in that scenario, one finds a separate solution to $\partial\Phi/\partial w=0$ near $w\approx a\neq 1$ (and similarly for $z$).  The portion of the $z$-contour around $z= a$ then yields a new local expansion.  
+When $|a|>2$, the spike is large.  One expects an \emph{outlier} eigenvalue near $x\approx a\,\sqrt{t\,}$ (rather than near $2\sqrt{t\,n}$).  Indeed, analyzing $\Phi_{t,a}$ in that scenario, one finds a separate solution to $\partial\Phi/\partial w=0$ near $w\approx a\neq 1$ (and similarly for $z$).  The portion of the $z$-contour around $z= a$ then yields a new local expansion.
 
-Concretely, if $a>2$ (the case $a<-2$ is similar), the factor $(w-a)$ can be near zero, so that the exponent can develop a more favorable real part at $w\approx a$.  Meanwhile, the factor $w^{n-1}$ is enormous if $|w|>1$, but $a>2$ means $|a|>1$.  As a result, the outlier solution with $w\approx a$ can produce a stable stationary phase.  Indeed, one obtains a local \emph{quadratic} expansion around $w=a$ and $z=a$, thus leading to a \emph{Gaussian} fluctuation scale of the resulting outlier eigenvalue, typically $\sigma\,n^{-1/2}$ for some $\sigma>0$.  
+Concretely, if $a>2$ (the case $a<-2$ is similar), the factor $(w-a)$ can be near zero, so that the exponent can develop a more favorable real part at $w\approx a$.  Meanwhile, the factor $w^{n-1}$ is enormous if $|w|>1$, but $a>2$ means $|a|>1$.  As a result, the outlier solution with $w\approx a$ can produce a stable stationary phase.  Indeed, one obtains a local \emph{quadratic} expansion around $w=a$ and $z=a$, thus leading to a \emph{Gaussian} fluctuation scale of the resulting outlier eigenvalue, typically $\sigma\,n^{-1/2}$ for some $\sigma>0$.
 
-Hence, in the supercritical regime $|a|>2$, the top eigenvalue $x_{\max}(t)$ \emph{detaches} from $2\sqrt{t\,n}$.  Its leading order becomes $a\sqrt{t\,}$ plus smaller corrections, and the local fluctuations are usually governed by a (shifted) Gaussian (or in some references, an incomplete gamma distribution, depending on subtle normalizations).  The remaining $n-1$ eigenvalues fill out the usual semicircle from $-2\sqrt{t\,n}$ to $2\sqrt{t\,n}$, with an Airy edge near $2\sqrt{t\,n}$.  
+Hence, in the supercritical regime $|a|>2$, the top eigenvalue $x_{\max}(t)$ \emph{detaches} from $2\sqrt{t\,n}$.  Its leading order becomes $a\sqrt{t\,}$ plus smaller corrections, and the local fluctuations are usually governed by a (shifted) Gaussian (or in some references, an incomplete gamma distribution, depending on subtle normalizations).  The remaining $n-1$ eigenvalues fill out the usual semicircle from $-2\sqrt{t\,n}$ to $2\sqrt{t\,n}$, with an Airy edge near $2\sqrt{t\,n}$.
 
 \subsubsection{Case 3: \texorpdfstring{$|a|=2$}{|a|=2} (critical)}
 
-At the boundary $|a|=2$, the system is at a ``double root'' transition.  One finds that $z=1$ (the standard GUE edge) merges with $z=a$ in a certain sense, leading to a triple or quartic expansion if $a=2$, for instance.  Careful expansions show that the outlier is \emph{just} beginning to separate from the main bulk.  The correlation kernel in this regime is a special transition “higher-order” Airy-like kernel, often described as a \emph{crossover kernel} in the BBP (Baik--Ben~Arous--P\'ech\'e) transition \cite{BBP2005phase}.  The top eigenvalue distribution is neither purely Tracy--Widom nor purely Gaussian but an interpolating limit distribution.  
+At the boundary $|a|=2$, the system is at a ``double root'' transition.  One finds that $z=1$ (the standard GUE edge) merges with $z=a$ in a certain sense, leading to a triple or quartic expansion if $a=2$, for instance.  Careful expansions show that the outlier is \emph{just} beginning to separate from the main bulk.  The correlation kernel in this regime is a special transition “higher-order” Airy-like kernel, often described as a \emph{crossover kernel} in the BBP (Baik--Ben~Arous--P\'ech\'e) transition \cite{BBP2005phase}.  The top eigenvalue distribution is neither purely Tracy--Widom nor purely Gaussian but an interpolating limit distribution.
 
 \subsection{Summary of the BBP transition from \texorpdfstring{$K_t(x,y)$}{Kt(x,y)}}
 
-Putting the above cases together, we see that analyzing the DBM correlation kernel 
-\eqref{eq:K_t_a_expanded} under the spiked initial condition $(a_1=a)\neq0$, $(a_2=\dots=a_n=0)$ 
+Putting the above cases together, we see that analyzing the DBM correlation kernel
+\eqref{eq:K_t_a_expanded} under the spiked initial condition $(a_1=a)\neq0$, $(a_2=\dots=a_n=0)$
 reveals:
 
 \begin{itemize}
-\item \textbf{If $|a|<2$:} 
-  The spike is \emph{subcritical}.  The top eigenvalue remains at the GUE edge $\approx 2\sqrt{t\,n}$, with Tracy--Widom fluctuations on scale $n^{-1/6}$.  
+\item \textbf{If $|a|<2$:}
+  The spike is \emph{subcritical}.  The top eigenvalue remains at the GUE edge $\approx 2\sqrt{t\,n}$, with Tracy--Widom fluctuations on scale $n^{-1/6}$.
 
-\item \textbf{If $|a|>2$:} 
-  The spike is \emph{supercritical}.  An outlier eigenvalue emerges near $a\sqrt{t\,}$, detaching from the main bulk.  The fluctuation scale around that outlier is typically $n^{-1/2}$ and converges (after centering and scaling) to a simpler, often Gaussian-type limit.  The remainder of the spectrum still exhibits the semicircle on $[-2\sqrt{t\,n},2\sqrt{t\,n}]$.  
+\item \textbf{If $|a|>2$:}
+  The spike is \emph{supercritical}.  An outlier eigenvalue emerges near $a\sqrt{t\,}$, detaching from the main bulk.  The fluctuation scale around that outlier is typically $n^{-1/2}$ and converges (after centering and scaling) to a simpler, often Gaussian-type limit.  The remainder of the spectrum still exhibits the semicircle on $[-2\sqrt{t\,n},2\sqrt{t\,n}]$.
 
-\item \textbf{If $|a|=2$:} 
-  \emph{Critical regime}.  The top eigenvalue experiences a BBP crossover distribution, with a kernel that can be viewed as a limit of the general \eqref{eq:K_t_a_expanded} by carefully choosing the saddle point expansions.  
+\item \textbf{If $|a|=2$:}
+  \emph{Critical regime}.  The top eigenvalue experiences a BBP crossover distribution, with a kernel that can be viewed as a limit of the general \eqref{eq:K_t_a_expanded} by carefully choosing the saddle point expansions.
 \end{itemize}
 
 This completes the steepest descent derivation of the rank-1 BBP phase transition from the Dyson Brownian Motion correlation kernel in \Cref{thm:dbm-det-kernel}.  Detailed error estimates and rigorous Fredholm determinant limits (turning kernel statements into actual distributional statements about $x_{\max}(t)$) can be found in \cite{BBP2005phase}, \cite{BloemendalVirag}, and other references cited therein.
 
 \begin{remark}
-For $r$-rank spikes (i.e.\ $a_1,\dots,a_r\neq0$), one can repeat the same argument: the factor 
-$\prod_{i=1}^n (w-a_i)/(z-a_i)$ 
-in \eqref{eq:K_t_a_expanded} splits into a product $(w-a_1)\cdots(w-a_r)\,w^{n-r}$ vs.\ $(z-a_1)\cdots(z-a_r)\,z^{n-r}$.  
-Each $|a_i|>2$ can produce a distinct outlier, while any $|a_i|<2$ merges with the main bulk.  
+For $r$-rank spikes (i.e.\ $a_1,\dots,a_r\neq0$), one can repeat the same argument: the factor
+$\prod_{i=1}^n (w-a_i)/(z-a_i)$
+in \eqref{eq:K_t_a_expanded} splits into a product $(w-a_1)\cdots(w-a_r)\,w^{n-r}$ vs.\ $(z-a_1)\cdots(z-a_r)\,z^{n-r}$.
+Each $|a_i|>2$ can produce a distinct outlier, while any $|a_i|<2$ merges with the main bulk.
 \end{remark}
 
 
