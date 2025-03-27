@@ -10,7 +10,7 @@
      -s WASM=1 \
      -s ASYNCIFY=1 \
      -s "EXPORTED_FUNCTIONS=['_doTembJSON','_freeString']" \
-     -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
      -s ALLOW_MEMORY_GROWTH=1 \
      -s INITIAL_MEMORY=64MB \
      -s ENVIRONMENT=web \
@@ -31,7 +31,7 @@
 #include <cstdlib>
 #include <cstring>
 
-static const int bign = 111;   // largest n we allow
+static const int bign = 200;   // largest n we allow
 static const double a = 1.0;   // scale factor used below
 
 // Tarray[n][k+bign][j+bign], Oarray[n][k+bign][j+bign]
