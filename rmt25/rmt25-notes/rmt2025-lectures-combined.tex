@@ -1,4 +1,4 @@
-\documentclass[letterpaper,11pt,twoside,reqno]{book}
+\documentclass[letterpaper,11pt,oneside,reqno]{book}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Packages from the original lectures
@@ -62,7 +62,7 @@
 \maketitle
 \tableofcontents
 
-\chapter{Lecture 1: Moments of random variables and random
+\chapter{Moments of random variables and random
 matrices}
 \label{chap:lecture1}
 
@@ -136,6 +136,8 @@ During the first week, a regular weekly meeting time will be set up for each stu
 
 
 \section{Why study random matrices?}
+
+TODO FOR BOOK FORMAT: add ref to git and live sims as below
 
 \paragraph{On the history.}
 Random matrix theory (RMT) is a fascinating field that
@@ -857,7 +859,7 @@ Immediate next steps are:
 
 
 
-\section{Problems (due 2025-02-13)}
+\section{Problems}
 
 Each problem is a subsection (like Problem \ref{prob:normal-approximation}),
 and may have several parts.
@@ -988,7 +990,7 @@ Show that the number of rooted trees with $m$ edges is the $m$-th Catalan number
 
 
 
-\chapter{Lecture 2: Wigner semicircle law}
+\chapter{Wigner semicircle law}
 \label{chap:lecture2}
 
 
@@ -1439,7 +1441,7 @@ that almost surely, for each fixed \(k\),
   \nu_n\bigl(\{x\,:\,|x|>M\}\bigr)
 	\;\le\; \frac{C}{M^k}.
 \end{equation}
-Here, $C$ may depend on $k$, but 
+Here, $C$ may depend on $k$, but
 its growth is at most exponential in \(k\)
 due to the Catalan number moments.
 By choosing \(k\) large, we see that \(\nu_n\) puts
@@ -1730,7 +1732,7 @@ Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law
 
 
 
-\section{Problems (due 2025-02-15)}
+\section{Problems}
 
 \subsection{Standard formula}
 \label{prob:sin-integral}
@@ -1808,7 +1810,7 @@ Prove \Cref{thm:benaych-georges}.
 
 
 
-\chapter{Lecture 3: Gaussian and tridiagonal matrices}
+\chapter{Gaussian and tridiagonal matrices}
 \label{chap:lecture3}
 
 
@@ -2665,7 +2667,7 @@ Gaussian \(\beta\)-ensembles.
 
 
 
-\section{Problems (due 2025-02-22)}
+\section{Problems}
 
 \subsection{Invariance of GOE and GUE}
 \label{prob:invariance_GOE_GUE}
@@ -2880,7 +2882,7 @@ Use that \(X\,X^\top\) and \(Y\,Y^\top\) are (independent) Wishart matrices. Rew
 
 
 
-\chapter{Lecture 4: Semicircle law for G$\beta$E via tridiagonalization. Beginning determiantal processes}
+\chapter{Semicircle law for G$\beta$E via tridiagonalization. Beginning determiantal processes}
 \label{chap:lecture4}
 
 
@@ -3831,7 +3833,7 @@ Hence, in the Poisson process, there is no ``interaction'' or ``repulsion'' betw
 
 
 
-\section{Problems (due 2025-02-28)}
+\section{Problems}
 
 \subsection{Eigenvalue density of G$\beta$E}
 
@@ -3911,7 +3913,7 @@ Complete the derivation from \Cref{sec:stieltjes-def} to obtain the limiting Sti
 
 
 
-\chapter{Lecture 5: Determinantal Point Processes and the GUE}
+\chapter{Determinantal Point Processes and the GUE}
 \label{chap:lecture5}
 
 
@@ -4219,16 +4221,16 @@ In \eqref{eq:rho_k_computation_1}, we get, using the symmetry over $x_1,\ldots,x
 	\label{eq:rho_k_computation_2}
 	\rho_k(x_1,\dots,x_k)=\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
 	\sum_{\substack{\sigma,\tau\in S_n\\
-	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau)
 	\prod_{i=1}^k \psi_{\sigma(i)-1}(x_i)\psi_{\tau(i)-1}(x_i)  .
 \end{equation}
 Indeed, here we integrated over $x_{k+1},\ldots,x_n $, and passed
 from the functions $\phi_0,\phi_1,\ldots,\phi_{n-1} $
 to
 $\psi_0,\psi_1,\ldots,\psi_{n-1} $.
-The passage to the orthonormal functions only introduces the constant 
-$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the 
-normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and 
+The passage to the orthonormal functions only introduces the constant
+$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the
+normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and
 we later will show that the final normalization becomes $1$.
 
 To continue with \eqref{eq:rho_k_computation_2}, we need two general lemmas.
@@ -4323,7 +4325,7 @@ where the kernel is given by
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
 \]
-The fact that the normalization constant 
+The fact that the normalization constant
 in \eqref{eq:rho_k_determinantal_final_result}
 is indeed $1$ follows from \Cref{lemma:Andreief}.
 Indeed, once the integral of $\rho_n$ over $\mathbb{R}^n$ is equal to \(n!\),
@@ -4447,7 +4449,7 @@ The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 
 
 
-\section{Problems (due 2025-03-09)}
+\section{Problems}
 
 
 \subsection{Gap Probability for Discrete DPPs}
@@ -4567,7 +4569,7 @@ For the proof of the existence and uniqueness of the determinantal point process
 
 
 
-\chapter{Lecture 6: Double contour integral kernel. Steepest descent and semicircle law}
+\chapter{Double contour integral kernel. Steepest descent and semicircle law}
 \label{chap:lecture6}
 
 
@@ -5360,7 +5362,7 @@ We will consider other regimes, $|X|>2$ and $|X|=2$, in the next
 
 
 
-\section{Problems (due 2025-03-25)}
+\section{Problems}
 
 \subsection{Different global positions}
 \label{prob:different-global-positions}
@@ -5422,7 +5424,7 @@ Which event is more favored by the sine process?
 
 
 
-\chapter{Lecture 7: Steepest descent and local statistics. Cutting corners}
+\chapter{Steepest descent and local statistics. Cutting corners}
 \label{chap:lecture7}
 
 
@@ -6192,25 +6194,25 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 \subsection{Inductive nature of the transition}
 
 Note that when we fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
-and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving 
+and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving
 \eqref{eq:polynomial_equation}, we can then fix $\mu$ and get random
-$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on. 
+$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on.
 Here, $\nu$ corresponds to the $(n-2)\times(n-2)$ corner of $H$.
 Indeed, we can condition on $\mu$, and conjugate $H$ again by a
 unitary matrix of the form $U=\begin{pmatrix}
 	U'&0\\0&1
 \end{pmatrix}$, where $U'\in U(n-1)$ is Haar distributed.
 Since $U\in U(n)$, this extra conjugation does not change the distribution of $H\in \mathrm{Orbit}(\lambda)$,
-but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the 
+but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the
 passage from $\lambda$ to $\mu$.
 
 \begin{remark}
-	In more detail, since the homogeneous space $U(n)/U(n-1)$ 
+	In more detail, since the homogeneous space $U(n)/U(n-1)$
 	can be identified with $S^{2n-1}$, the $(2n-1)$-dimensional real sphere,
 	we can construct a Haar-distributed unitary matrix $U\in U(n)$
 	by first picking a Haar-distributed unitary matrix $U'\in U(n-1)$,
 	and then picking a random point on the sphere $S^{2n-1}$.
-	Restricting $H$ to $\mathbb{C}^{n-1}$ fixes the last component on the sphere 
+	Restricting $H$ to $\mathbb{C}^{n-1}$ fixes the last component on the sphere
 	(up to a complex phase), but the eigenbasis of the restriction $H^{(n-1)}$
 	is still Haar distributed, but now in $U(n-1)$.
 \end{remark}
@@ -6231,16 +6233,16 @@ deterministic:
 \begin{equation*}
 	\sum_{i=1}^n \frac{1}{z-\lambda_i}=0.
 \end{equation*}
-Denote 
+Denote
 \begin{equation}
 	\label{eq:P_z_definition}
 	P(z)=\prod_{i=1}^n(z-\lambda_i).
 \end{equation}
-Then 
+Then
 \begin{proposition}
 	The passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
 	to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ in the limit as $\beta=\infty$
-	is deterministic, and it the same as the passage from the 
+	is deterministic, and it the same as the passage from the
 	roots of the polynomial $P(z)$ \eqref{eq:P_z_definition} to the roots of its derivative $P'(z)$.
 \end{proposition}
 
@@ -6254,7 +6256,7 @@ Then
 
 
 
-\section{Problems (due 2025-03-25)}
+\section{Problems}
 
 \subsection{General bulk case}
 \label{prob:imaginary-critical-points}
@@ -6353,7 +6355,7 @@ Finish the proof of \Cref{prop:interlacing}.
 
 
 
-\chapter{Lecture 8: Cutting corners and loop equations}
+\chapter{Cutting corners and loop equations}
 \label{chap:lecture8}
 
 
@@ -6675,13 +6677,13 @@ The Stieltjes transform of the semicircular law is given by:
 	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
 \end{equation*}
 We take this as the function $G_t(z)$ for $t=1$.
-Then, for each $0\le t\le 1$, the 
-G$\beta$E solution should be 
+Then, for each $0\le t\le 1$, the
+G$\beta$E solution should be
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^{\lfloor nt \rfloor }\frac{1}{z-\lambda_i^{(\lfloor nt \rfloor )}}
 	\to t\ssp G^{(\sqrt t)}(z),
 \end{equation*}
-where 
+where
 \begin{equation*}
 	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
 \end{equation*}
@@ -6711,7 +6713,7 @@ is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 
 
-\section{Problems (due 2025-03-25)}
+\section{Problems}
 
 
 \subsection{Cauchy determinant}
@@ -6775,7 +6777,7 @@ This problem explores computational aspects of the general $\beta$ corners proce
 
 
 
-\chapter{Lecture 9: Loop equations and asymptotics to Gaussian Free Field}
+\chapter{Loop equations and asymptotics to Gaussian Free Field}
 \label{chap:lecture9}
 
 
@@ -7438,7 +7440,7 @@ in a setting of lozenge tilings with $q$-Racah weights.
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 \subsection{Brownian bridge}
 
@@ -7459,7 +7461,7 @@ Derive the covariance structure of the Brownian bridge
 
 
 
-\chapter{Lecture 10: Dyson Brownian Motion}
+\chapter{Dyson Brownian Motion}
 \label{chap:lecture10}
 
 
@@ -7944,7 +7946,7 @@ rank-one reduction, one can determine that
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 \subsection{Collisions}
 
@@ -8062,7 +8064,7 @@ the right-hand side evaluated at $(a_1,b_1)=(x,y)$ and $(a_2=\dots=a_N=b_2=\dots
 
 
 
-\chapter{Lecture 11: Asymptotics of Dyson Brownian Motion with an outlier}
+\chapter{Asymptotics of Dyson Brownian Motion with an outlier}
 \label{chap:lecture11}
 
 
@@ -8807,7 +8809,7 @@ We conclude that $AB$ is a projection, since
 $(AB)^2=ABAB=AB$.
 
 \medskip
-For the rest of 
+For the rest of
 the analysis, continue to
 Problem~\ref{prob:Gaussian_kernel}.
 
@@ -8819,7 +8821,7 @@ Problem~\ref{prob:Gaussian_kernel}.
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 
 \subsection{Biorthogonal ensembles}
@@ -8891,7 +8893,7 @@ that is, $\operatorname{\mathbb{P}}(\lambda_{\max}^{(m\times m)}\le x)$.
 
 
 
-\chapter{Lecture 12: Title TBD}
+\chapter{Title TBD}
 \label{chap:lecture12}
 
 
@@ -8994,7 +8996,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 
 
@@ -9011,7 +9013,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\chapter{Lecture 13: Title TBD}
+\chapter{Title TBD}
 \label{chap:lecture13}
 
 
@@ -9055,7 +9057,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 
 
@@ -9072,7 +9074,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\chapter{Lecture 14: Title TBD}
+\chapter{Title TBD}
 \label{chap:lecture14}
 
 
@@ -9116,7 +9118,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 
 
@@ -9133,7 +9135,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\chapter{Lecture 15: Random matrices and topology}
+\chapter{Random matrices and topology}
 \label{chap:lecture15}
 
 
@@ -9177,7 +9179,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\section{Problems (due 2025-04-29)}
+\section{Problems}
 
 
 
