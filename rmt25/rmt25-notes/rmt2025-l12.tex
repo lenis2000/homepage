@@ -109,10 +109,11 @@ Through asymptotic analysis using steepest descent methods, we identified three 
 \end{enumerate}
 
 
+\colorbox{yellow}{\parbox{.7\textwidth}{
 plan: start the actual content with corners process with outliers, so that we can get GUE and tangent method.
 
 Then, discuss the Airy-2 line ensemble.
-
+}}
 
 
 
@@ -149,7 +150,7 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 \section{KPZ Universality Class: Scaling and Fluctuations}
 
-In the $(1+1)$-dimensional \textbf{KPZ universality class}, random growth models exhibit a distinctive scale of fluctuations fundamentally different from classical Gaussian behavior. Kardar, Parisi, and Zhang predicted that such interfaces have \emph{roughness exponent} $1/2$ and \emph{growth exponent} $1/3$, meaning that if time is scaled by a factor $T$, horizontal distances scale by $T^{2/3}$ and vertical height fluctuations scale by $T^{1/3}$ \cite{remenik2023integrable}. Equivalently, the interface height $h(t,x)$ (after subtracting its deterministic mean growth) satisfies the \emph{$1:2:3$ scaling}:
+In the $(1+1)$-dimensional \textbf{KPZ universality class}, random growth models exhibit a distinctive scale of fluctuations fundamentally different from classical Gaussian behavior. Kardar, Parisi, and Zhang \cite{KPZ1986} predicted that such interfaces have \emph{roughness exponent} $1/2$ and \emph{growth exponent} $1/3$, meaning that if time is scaled by a factor $T$, horizontal distances scale by $T^{2/3}$ and vertical height fluctuations scale by $T^{1/3}$ \cite{remenik2023integrable}. Equivalently, the interface height $h(t,x)$ (after subtracting its deterministic mean growth) satisfies the \emph{$1:2:3$ scaling}:
 \[ x \sim t^{2/3}, \qquad h(t,x)-\mathbb{E}[h(t,x)] \sim t^{1/3}. \]
 These exponents $2/3$ and $1/3$ are universal in one-dimensional growth with local randomness, distinguishing the KPZ class from, e.g., diffusive (Edwards–Wilkinson) interfaces. Intuitively, the interface develops random peaks of size $O(t^{1/3})$, and correlations spread over a spatial range $O(t^{2/3})$—a highly nontrivial, super-diffusive scaling.
 
@@ -239,64 +240,6 @@ Beyond one-point distributions, the narrow wedge initial condition also allows t
 A related fundamental result is the construction of the \textbf{directed landscape} by Dauvergne, Ortmann, and Virág (2022) \cite{directed_landscape}. The directed landscape is a random continuous function $L(x,t; y,s)$ (for $s<t$) which arises as the scaling limit of random planar last-passage percolation. It can be thought of as a random metric on the plane, and it is the space-time interpolation between the Airy processes. For example, if one slices the directed landscape at two fixed times, one obtains an Airy process as the spatial profile of maximal paths. The Airy$_2$ process at a single time is extracted from the directed landscape with narrow wedge initial data, and the Airy$_{1}$ process arises from the directed landscape with two parallel boundary conditions. The directed landscape provides a unified framework for understanding all these limit objects (Airy processes, KPZ fixed point) as different aspects of one structure. It also allows coupling of different initial conditions in the same probability space, and thus is an essential object in proving convergence and universality.
 
 In summary, the narrow wedge initial condition has played a central role in the theory of KPZ: it is the scenario where the deepest links to random matrix theory appear and where one can obtain exact formulas. Through those formulas, one can rigorously verify the KPZ $1/3$–$2/3$ scaling, identify the Tracy–Widom GUE distribution in the fluctuations, and even describe the entire spatial fluctuation process as the Airy$_2$ process. Moreover, advances like the KPZ fixed point and directed landscape have solidified our understanding that the long-time behavior from narrow wedge initial data is universal and leads to a rich integrable structure. Other initial conditions (such as flat or stationary) are generally not exactly solvable to the same extent, but they are related by various symmetry or limiting relationships (for instance, flat initial data’s Airy$_1$ process can be obtained as a special limit or symmetry of two copies of Airy$_2$). Thus, narrow wedge serves as the cornerstone for both exact results and conceptual understanding in the KPZ universality class.
-
-%%% Bibliography entries for cited references %%%
-@article{CorwinHammond2013,
-  author    = {Corwin, Ivan and Hammond, Alan},
-  title     = {Brownian Gibbs property for Airy line ensembles},
-  journal   = {Invent. Math.},
-  volume    = {195},
-  number    = {2},
-  pages     = {441--508},
-  year      = {2014}
-}
-
-@article{AggarwalHuang2023Characterization,
-  author    = {Aggarwal, Amol and Huang, Jiaoyang},
-  title     = {Strong Characterization for the Airy Line Ensemble},
-  journal   = {arXiv preprint arXiv:2308.11908},
-  year      = {2023}
-}
-
-@article{MatetskiQuastelRemenik2017,
-  author    = {Matetski, Konstantin and Quastel, Jeremy and Remenik, Daniel},
-  title     = {The {KPZ} fixed point},
-  journal   = {Acta Math.},
-  volume    = {227},
-  number    = {1},
-  pages     = {115--203},
-  year      = {2021}
-}
-
-@article{DauvergneOrtmannVirag2022,
-  author    = {Dauvergne, Duncan and Ortmann, Janosch and Vir{\'a}g, B{\'a}lint},
-  title     = {The directed landscape},
-  journal   = {Acta Math.},
-  volume    = {229},
-  number    = {2},
-  pages     = {201--285},
-  year      = {2022}
-}
-
-@article{Johansson2000,
-  author    = {Johansson, Kurt},
-  title     = {Shape fluctuations and random matrices},
-  journal   = {Comm. Math. Phys.},
-  volume    = {209},
-  number    = {2},
-  pages     = {437--476},
-  year      = {2000}
-}
-
-@article{Hairer2013,
-  author    = {Hairer, Martin},
-  title     = {Solving the {KPZ} equation},
-  journal   = {Ann. of Math. (2)},
-  volume    = {178},
-  number    = {2},
-  pages     = {559--664},
-  year      = {2013}
-}
 
 
 
