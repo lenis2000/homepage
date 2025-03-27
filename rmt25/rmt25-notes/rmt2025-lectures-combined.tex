@@ -1,26 +1,24 @@
 \documentclass[letterpaper,11pt,twoside,reqno]{book}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages from the original lectures
 
+% Core packages
 \usepackage[pdftex,backref=page,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
 \usepackage[alphabetic,nobysame]{amsrefs}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%main packages
+% Math packages
 \usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools}
-\usepackage{graphicx,color}
 \usepackage{upgreek}
 \usepackage[mathscr]{euscript}
+\usepackage{esint}  % For special integrals
 
-%equations
-\allowdisplaybreaks
-\numberwithin{equation}{section}
-
-%tikz
+% Graphics packages
+\usepackage{graphicx,color}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,decorations.markings}
 
-%conveniences
+% Convenience packages
 \usepackage{array}
 \usepackage{adjustbox}
 \usepackage{cleveref}
@@ -28,34 +26,33 @@
 \usepackage{datetime}
 \usepackage{comment}
 
-%paper geometry
+% Page layout
 \usepackage[DIV=12]{typearea}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%draft-specific
-\synctex=1
-% \usepackage{refcheck,comment}
+% Equations
+\allowdisplaybreaks
+\numberwithin{equation}{chapter}  % Changed from section to chapter
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%this paper specific
+% This paper specific
 \newcommand{\ssp}{\hspace{1pt}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newtheorem{proposition}{Proposition}[section]
+% Theorem environments
+\newtheorem{proposition}{Proposition}[chapter]  % Changed from section to chapter
 \newtheorem{lemma}[proposition]{Lemma}
 \newtheorem{corollary}[proposition]{Corollary}
 \newtheorem{theorem}[proposition]{Theorem}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \theoremstyle{definition}
 \newtheorem{definition}[proposition]{Definition}
 \newtheorem{remark}[proposition]{Remark}
 \newtheorem{example}[proposition]{Example}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Exclude lecture notes for the final book
 \newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
-
 \excludecomment{lnotes}
-
 
 \begin{document}
 
@@ -857,8 +854,8 @@ Immediate next steps are:
 \end{enumerate}
 
 
-\appendix
-\setcounter{section}{0}
+
+
 
 \section{Problems (due 2025-02-13)}
 
@@ -980,15 +977,13 @@ Show that the number of rooted trees with $m$ edges is the $m$-th Catalan number
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -1732,8 +1727,8 @@ Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law
 \end{theorem}
 
 
-\appendix
-\setcounter{section}{1}
+
+
 
 \section{Problems (due 2025-02-15)}
 
@@ -1802,15 +1797,13 @@ Each complex random variable has independent real and imaginary parts.
 
 Prove \Cref{thm:benaych-georges}.
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -2669,8 +2662,8 @@ Gaussian \(\beta\)-ensembles.
 
 
 
-\appendix
-\setcounter{section}{2}
+
+
 
 \section{Problems (due 2025-02-22)}
 
@@ -2876,15 +2869,13 @@ Use that \(X\,X^\top\) and \(Y\,Y^\top\) are (independent) Wishart matrices. Rew
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -3837,8 +3828,8 @@ Hence, in the Poisson process, there is no ``interaction'' or ``repulsion'' betw
 
 
 
-\appendix
-\setcounter{section}{3}
+
+
 
 \section{Problems (due 2025-02-28)}
 
@@ -3909,15 +3900,13 @@ Complete the derivation from \Cref{sec:stieltjes-def} to obtain the limiting Sti
 	would make an excellent topic for a presentation.
 \end{remark}
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -4455,8 +4444,8 @@ The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 
 
 
-\appendix
-\setcounter{section}{4}
+
+
 
 \section{Problems (due 2025-03-09)}
 
@@ -4567,15 +4556,13 @@ Explain why the condition \(0\le K\le I\) is necessary.
 For the proof of the existence and uniqueness of the determinantal point process, see \cite{Soshnikov2000}.
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -5302,7 +5289,7 @@ encounter the residue when $z$ is in the right half of the arc.
 Thus, we can write
 \begin{equation}
 	\label{eq:K_n_bulk_deformation}
-	\oiint_{\textnormal{old contours}}=
+	\iint_{\textnormal{old contours}}=
 	\oiint_{\textnormal{new contours}}
 	+
 	\int_{\overline{z_{cr}}}^{z_{cr}}
@@ -5370,8 +5357,8 @@ We will consider other regimes, $|X|>2$ and $|X|=2$, in the next
 \Cref{chap:lecture7}.
 
 
-\appendix
-\setcounter{section}{5}
+
+
 
 \section{Problems (due 2025-03-25)}
 
@@ -5424,15 +5411,13 @@ Which event is more favored by the sine process?
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -5674,7 +5659,7 @@ encounter the residue when $z$ is in the right half of the circle.
 Thus, we can write
 \begin{equation}
 	\label{eq:K_n_bulk_deformation}
-	\oiint_{\textnormal{old contours}}=
+	\iint_{\textnormal{old contours}}=
 	\oiint_{\textnormal{new contours}}
 	+
 	\int_{-i}^i 2\pi i\ssp \operatorname{Res}\limits_{w=z}\ssp dz,
@@ -6266,8 +6251,8 @@ Then
 
 
 
-\appendix
-\setcounter{section}{6}
+
+
 
 \section{Problems (due 2025-03-25)}
 
@@ -6357,15 +6342,13 @@ Finish the proof of \Cref{prop:interlacing}.
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -6725,8 +6708,8 @@ is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 
 
-\appendix
-\setcounter{section}{7}
+
+
 
 \section{Problems (due 2025-03-25)}
 
@@ -6781,15 +6764,13 @@ This problem explores computational aspects of the general $\beta$ corners proce
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -7454,8 +7435,8 @@ in a setting of lozenge tilings with $q$-Racah weights.
 
 
 
-\appendix
-\setcounter{section}{8}
+
+
 
 \section{Problems (due 2025-04-29)}
 
@@ -7467,15 +7448,13 @@ Derive the covariance structure of the Brownian bridge
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -7486,12 +7465,7 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 
 
 
-\begin{abstract}
-	This lecture begins the second half of the course after the Spring Break, and
-	here we start with the Dyson Brownian Motion.
-	In the later lectures we explore random growth models and their universal scaling limits
-	which are closely connected to random matrix theory.
-\end{abstract}
+
 
 \section{Motivations}
 \subsection{Why introduce time?}
@@ -7968,8 +7942,8 @@ rank-one reduction, one can determine that
 
 
 
-\appendix
-\setcounter{section}{9}
+
+
 \section{Problems (due 2025-04-29)}
 
 \subsection{Collisions}
@@ -8077,15 +8051,13 @@ the right-hand side evaluated at $(a_1,b_1)=(x,y)$ and $(a_2=\dots=a_N=b_2=\dots
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -8844,8 +8816,8 @@ Problem~\ref{prob:Gaussian_kernel}.
 
 
 
-\appendix
-\setcounter{section}{10}
+
+
 
 \section{Problems (due 2025-04-29)}
 
@@ -8908,15 +8880,13 @@ that is, $\operatorname{\mathbb{P}}(\lambda_{\max}^{(m\times m)}\le x)$.
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -9021,8 +8991,8 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\appendix
-\setcounter{section}{11}
+
+
 
 \section{Problems (due 2025-04-29)}
 
@@ -9030,15 +9000,13 @@ At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -9084,8 +9052,8 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 
 
 
-\appendix
-\setcounter{section}{12}
+
+
 
 \section{Problems (due 2025-04-29)}
 
@@ -9093,15 +9061,13 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -9147,8 +9113,8 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 
 
 
-\appendix
-\setcounter{section}{13}
+
+
 
 \section{Problems (due 2025-04-29)}
 
@@ -9156,15 +9122,13 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 
 
 
-\bibliographystyle{alpha}
-\bibliography{bib}
 
 
-\medskip
 
-\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
-E-mail: \texttt{lenia.petrov@gmail.com}
+
+
+
 
 
 
@@ -9210,10 +9174,21 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 
 
 
-\appendix
-\setcounter{section}{14}
+
+
 
 \section{Problems (due 2025-04-29)}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9222,14 +9197,10 @@ E-mail: \texttt{lenia.petrov@gmail.com}
 \bibliographystyle{alpha}
 \bibliography{bib}
 
-
 \medskip
 
 \textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
 
 E-mail: \texttt{lenia.petrov@gmail.com}
-
-
-
 
 \end{document}
