@@ -102,14 +102,6 @@ def sanitize_problem_sections(content):
 
     return content
 
-def fix_special_commands(content):
-    """Fix special LaTeX commands that might cause issues"""
-    # Replace \oiint with a safer command
-    content = re.sub(r'\\oiint_\{\\textnormal\{old contours\}\}',
-                    r'\\iint_{\\textnormal{old contours}}', content)
-
-    return content
-
 def create_book():
     """Create a unified book from lecture files"""
     # Get the list of existing lecture files
@@ -208,7 +200,6 @@ def create_book():
             content = extract_lecture_content(lecture_file)
             content = update_lecture_references(content, lecture_num)
             content = sanitize_problem_sections(content)
-            content = fix_special_commands(content)
             book.write(content)
             book.write("\n\n")
 
