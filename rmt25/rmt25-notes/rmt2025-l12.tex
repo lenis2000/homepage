@@ -56,9 +56,9 @@
 \\Lecture 12: Title TBD}
 
 
-\date{DATE, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
+\date{Wednesday, April 2, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
 $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}
-$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l12.tex}{\texttt{TeX Source}} 
+$\bullet$ \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l12.tex}{\texttt{TeX Source}}
 $\bullet$
 Updated at \currenttime, \today}}
 
@@ -68,13 +68,72 @@ Updated at \currenttime, \today}}
 
 
 \maketitle
+\tableofcontents
 
 
+\section{Recap}
 
+In our last lecture, we explored the asymptotics of Dyson Brownian Motion with an outlier. We specifically focused on the phase transition that occurs when a rank-1 perturbation is applied to a random matrix ensemble.
 
+\subsection{Dyson Brownian Motion with Determinantal Structure}
 
+We established that for $\beta=2$, the eigenvalues of the time-evolved process form a determinantal point process. The transition probability from an initial configuration $\mathbf{a} = (a_1 \geq \cdots \geq a_N)$ to a configuration $\mathbf{x} = (x_1 \geq \cdots \geq x_N)$ at time $t$ is given by:
+\begin{equation}
+P(\lambda(t) = \mathbf{x} \mid \lambda(0) = \mathbf{a}) = N! \Big(\frac{1}{\sqrt{2\pi t}}\Big)^N \prod_{1\leq i<j\leq N}\frac{x_i - x_j}{a_i - a_j} \det\Big[\exp\Big(-\frac{(x_i - a_j)^2}{2t}\Big)\Big]_{i,j=1}^N
+\end{equation}
 
+This determinantal structure enabled us to derive the correlation kernel:
+\begin{equation}
+K_t(x,y) = \frac{1}{(2\pi)^2 t} \int\int \exp\Big(\frac{w^2 - 2yw}{2t}\Big) \bigg/ \exp\Big(\frac{z^2 - 2xz}{2t}\Big) \prod_{i=1}^n \frac{w-a_i}{z-a_i} \frac{dw\,dz}{w-z}
+\end{equation}
+where the contours of integration are specified to maintain analytical properties.
 
+\subsection{The BBP Phase Transition}
+
+The central focus was the Baik-Ben Arous-Péché (BBP) phase transition that occurs with finite-rank perturbations of GUE matrices. For the rank-1 case, we analyzed:
+\begin{equation}
+A + \sqrt{t}G, \quad \text{where } A = \text{diag}(a\sqrt{n},0,\ldots,0)
+\end{equation}
+
+Through asymptotic analysis using steepest descent methods, we identified three distinct regimes:
+
+\begin{enumerate}
+\item \textbf{Airy regime} ($a < 1$): The largest eigenvalue follows the Tracy-Widom GUE distribution, just as in the unperturbed case. The spike is too weak to escape the bulk.
+
+\item \textbf{Critical regime} ($a = 1$): A transitional behavior occurs when $a = 1 + An^{-1/3}$, leading to a deformed Airy kernel:
+\begin{equation}
+\tilde{K}_{\text{Airy}}(\xi,\eta) = \frac{1}{(2\pi i)^2}\iint \frac{\exp\left\{\frac{W^3}{3}-\xi W-\frac{Z^3}{3}+\eta Z\right\}}{W-Z} \frac{W-A}{Z-A} dW\,dZ
+\end{equation}
+
+\item \textbf{Gaussian regime} ($a > 1$): The largest eigenvalue separates from the bulk, becoming an "outlier" centered at $a + 1/a$. Its fluctuations follow a Gaussian distribution rather than the Tracy-Widom law.
+\end{enumerate}
+
+\section{A window into universality: Airy line ensemble}
+
+The edge scaling limit of Dyson Brownian Motion is a universal object for $\beta=2$ models and determinantal structures (and far beyond); which includes the GUE Tracy-Widom distribution as a marginal. This is also intimately related to the KPZ universality class, which we will touch upon in the next few lectures.
+GUE formulas
+provide us with a powerful lens through which to examine these universality phenomena. In this section, we discuss the limiting behavior of Dyson Brownian Motion near the spectral edge, highlighting two of its fundamental properties: Brownian Gibbs property and characterization.
+
+\begin{theorem}[Edge scaling limit to Airy line ensemble]
+	Consider an $N\times N$ GUE (Gaussian Unitary Ensemble) Dyson Brownian motion, i.e., the stochastic process of eigenvalues $(\lambda_1(t)\ge \cdots\ge \lambda_N(t))_{t\in\mathbb{R}}$ evolving under Dyson's eigenvalue dynamics. After centering at the spectral edge parallel to the vector $\mathbf{v}_t$ and applying the
+Airy scaling (tangent axis scaled by $N^{-1/3}$ and fluctuations scaled by $N^{-1/6}$), the top $k$ eigenvalue trajectories converge as $N\to\infty$ to the \textbf{Airy line ensemble}. In particular, for each fixed $k\ge1$ the rescaled process $$(N^{1/6}[\lambda_i(\langle
+			N^{-1/3},N^{-1/6}
+\rangle \cdot \mathbf{v})-c_{N,t}])_{1\le i\le k}$$ converges in distribution (uniformly on compact $t$-intervals) to $(\mathcal{P}_i(t))_{1\le i\le k}$, where $\{\mathcal{P}_i(t)\}_{i\ge1}$ is the parabolic Airy line ensemble. Consequently, the top curve $\mathcal{L}_1(t)$ is the \textbf{Airy$_2$ process}, which is the $t$-stationary scaling limit of the largest eigenvalue process.
+\end{theorem}
+
+Let us define $\mathcal{L}_i(t)=\mathcal{P}_i(t)+t^2$, and call $\mathcal{L}$ the Airy Line Ensemble
+(without the word ``parabolic''). One can (correctly) think that the parabola comes
+from the scaling window, which is of different proportions in the horizontal and vertical directions.
+
+\begin{theorem}[Airy line ensemble is Brownian Gibbsian \cite{CorwinHammond2013}]
+The parabolic Airy line ensemble $\{\mathcal{P}_i(t)\}_{i\ge1}$ satisfies the \textbf{Brownian Gibbs property}. Namely, for any fixed index $k\ge1$ and any finite time interval $[a,b]$, conditioning on the outside portions of the ensemble (i.e., $\{\mathcal{P}_j(t): t\notin[a,b]\}$ for all $j$, and $\{\mathcal{P}_j(t): j\neq k\}$ for $t\in[a,b]$), the conditional law of the $k$th curve on $[a,b]$ is that of a \textbf{Brownian bridge} from $(a,\mathcal{P}_k(a))$ to $(b,\mathcal{P}_k(b))$ \textbf{conditioned} to stay above the $(k+1)$th curve and below the $(k-1)$th curve on $[a,b]$. In particular, the Airy line ensemble is invariant under this resampling of a single curve by a conditioned Brownian bridge.
+\end{theorem}
+
+At the same time, the Airy line ensemble $\mathcal{L}$ is time-stationary.
+
+\begin{theorem}[Unique characterization of ALE \cite{AggarwalHuang2023Characterization}]
+	The parabolic Airy line ensemble is the \textbf{unique} Brownian Gibbs line ensemble satisfying a natural parabolic curvature condition on the top curve. More precisely, let $\boldsymbol{\mathcal{P}}=(\mathcal{P}_1,\mathcal{P}_2,\ldots)$ be any line ensemble that satisfies the Brownian Gibbs property. Suppose in addition that the top line $\mathcal{P}_1(t)$ \textbf{approaches a parabola} of curvature $1/\sqrt{2}$ at infinity. Then $\boldsymbol{\mathcal{L}}$ must coincide (in law) with the \textbf{parabolic Airy line ensemble}, up to an overall affine shift of the entire ensemble.
+\end{theorem}
 
 
 
@@ -108,7 +167,7 @@ Updated at \currenttime, \today}}
 \appendix
 \setcounter{section}{11}
 
-\section{Problems (due DATE)}
+\section{Problems (due 2025-04-29)}
 
 
 
