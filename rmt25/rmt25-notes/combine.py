@@ -20,7 +20,7 @@ def extract_lecture_content(filename):
 
     content = match.group(1)
 
-    # Remove title, date, author and maketitle
+    # Remove title, date, author, maketitle
     content = re.sub(r'\\title\{.*?\}.*?\\maketitle', '', content, flags=re.DOTALL)
 
     # Remove TOC if present
@@ -29,8 +29,7 @@ def extract_lecture_content(filename):
     # Remove abstract environment
     content = re.sub(r'\\begin\{abstract\}(.*?)\\end\{abstract\}', '', content, flags=re.DOTALL)
 
-    # Find and remove bibliography and author information
-    # This takes a more careful approach to remove any bibliographystyle/bibliography commands
+    # Remove bibliography and author information
     content = re.sub(r'\\bibliographystyle\{[^}]*\}', '', content)
     content = re.sub(r'\\bibliography\{[^}]*\}', '', content)
     content = re.sub(r'\\medskip\s+\\textsc\{L\.\s+Petrov[^}]*\}', '', content, flags=re.DOTALL)
@@ -39,180 +38,224 @@ def extract_lecture_content(filename):
     # Remove appendix commands
     content = re.sub(r'\\appendix', '', content)
 
-    # Fix label issues
-    content = re.sub(r'\\label\{([^{}]*)\{([^{}]*)\}', r'\\label{\1\2}', content)
-    content = re.sub(r'\\label\{([^{}]*\{[^{}]*)\}', r'\\label{fixed-\1}', content)
-    content = re.sub(r'\\label\{\{A\.(\d+)', r'\\label{appA\1', content)
+    # We do NOT do any partial fixes to labels here, since we
+    # will systematically rename them with a new function.
 
-    # Fix any remaining problematic labels with double braces
-    while '\\label{{' in content:
-        content = content.replace('\\label{{', '\\label{fixed-')
+    return content
+
+def rename_labels_and_refs(content, lecture_num):
+    """
+    Systematically rename all labels from \label{XYZ} to \label{lectureN:XYZ}
+    for the current lecture. Also rename any references to match.
+    This ensures there are no duplicate labels across different lectures.
+    """
+
+    # 1. Rename labels (except chapter labels like \label{chap:lectureN})
+    label_pattern = re.compile(
+        r'(\\label\{)(?!chap:lecture)([^}]+)\}'
+    )
+    def label_replacer(m):
+        prefix = f'lecture{lecture_num}:'
+        old_label = m.group(2)
+        # If it already has the correct prefix, leave it
+        if old_label.startswith(prefix):
+            return m.group(1) + old_label + '}'
+        return m.group(1) + prefix + old_label + '}'
+
+    content = label_pattern.sub(label_replacer, content)
+
+    # 2. Rename references: \ref, \eqref, \Cref, \cref, \autoref, \pageref, etc.
+    #    We skip references to chap:lectureN, as those are the chapter labels.
+    ref_pattern = re.compile(
+        r'(\\(ref|Cref|cref|autoref|eqref|pageref)\{)([^}]+)\}'
+    )
+    def ref_replacer(m):
+        prefix = f'lecture{lecture_num}:'
+        old_label = m.group(3)
+        if old_label.startswith("chap:lecture") or old_label.startswith(prefix):
+            # Already references the chapter or has our prefix -> leave unchanged
+            return m.group(1) + old_label + '}'
+        # Otherwise add the lecture-based prefix
+        return m.group(1) + prefix + old_label + '}'
+
+    content = ref_pattern.sub(ref_replacer, content)
 
     return content
 
 def update_lecture_references(content, lecture_num):
-    """Convert href references to other lectures into proper LaTeX \Cref references"""
-
+    """Convert href references to other lectures into \Cref{chap:lectureX} references."""
     # Pattern for href references to lecture PDFs
     pattern = r'\\href\{https://lpetrov\.cc/rmt25/rmt25-notes/rmt2025-l(\d+)\.pdf\}\{([^{}]*)\}'
-
     def replacement(match):
         target_lecture_num = int(match.group(1))
         link_text = match.group(2)
-
-        # If it's a reference to the TeX Source, keep that reference
+        # If it's a reference to the TeX Source, keep that reference as is
         if "TeX Source" in link_text:
             return match.group(0)
-
-        # Use \Cref instead of \hyperref for better consistency
+        # Otherwise, reference the chapter label of that lecture
         return f'\\Cref{{chap:lecture{target_lecture_num}}}'
 
-    # Replace PDF references
-    updated_content = re.sub(pattern, replacement, content)
-
-    return updated_content
+    return re.sub(pattern, replacement, content)
 
 def extract_lecture_title(filename):
     """Extract the title of a lecture from the file"""
     with open(filename, 'r') as f:
         content = f.read()
 
-    # Look for title in the format "Lectures on Random Matrices\n(Spring 2025)\n\\Lecture X: Title"
+    # Pattern 1: \title{... \\Lecture X: Title}
     title_match = re.search(r'\\title\{.*?\\\\Lecture \d+: (.*?)\}', content, flags=re.DOTALL)
     if title_match:
         return title_match.group(1).strip()
 
-    # Alternative pattern if the first one fails
+    # Pattern 2: \title{... Lecture X: Title}
     alt_title_match = re.search(r'\\title\{.*?Lecture \d+: (.*?)\}', content, flags=re.DOTALL)
     if alt_title_match:
         return alt_title_match.group(1).strip()
 
-    return "Lecture Content"  # Default if no title found
+    return "Lecture Content"  # Fallback
 
 def sanitize_problem_sections(content):
     """Fix common LaTeX errors in problem sections and remove due dates"""
-    # Fix section counters related to problems
+    # Remove any \setcounter{section}{...}
     content = re.sub(r'\\setcounter\{section\}\{\d+\}', '', content)
 
     # Remove due dates from problem sections
     content = re.sub(r'\\section\{Problems \(due [^)]*\)\}', r'\\section{Problems}', content)
 
-    # Clean up any remaining problematic labels
+    # Clean up any leftover weird nested braces in labels, if they exist
     content = re.sub(r'\\label\{(\{+)(.*?)(\}*)\}', r'\\label{\2}', content)
 
     return content
 
 def create_book():
     """Create a unified book from lecture files"""
-    # Get the list of existing lecture files
+    # Identify which lecture files exist
     existing_files = [f for f in lecture_files if os.path.exists(f)]
     if not existing_files:
         print("Error: No lecture files found")
         return False
 
-    # Create book content with a manually defined preamble
     with open(output_file, 'w') as book:
-        # Write a unified preamble
-        book.write("""\\documentclass[letterpaper,11pt,oneside,reqno]{book}
+        # -----------------
+        # Unified preamble
+        # -----------------
+        book.write(r"""\documentclass[letterpaper,11pt,oneside,reqno]{book}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Packages from the original lectures
 
 % Core packages
-\\usepackage[pdftex,backref=page,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
-\\usepackage[alphabetic,nobysame]{amsrefs}
+\usepackage[pdftex,backref=page,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
+\usepackage[alphabetic,nobysame]{amsrefs}
 
 % Math packages
-\\usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools}
-\\usepackage{upgreek}
-\\usepackage[mathscr]{euscript}
-\\usepackage{esint}  % For special integrals
+\usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools}
+\usepackage{upgreek}
+\usepackage[mathscr]{euscript}
+\usepackage{esint}  % For special integrals
 
 % Graphics packages
-\\usepackage{graphicx,color}
-\\usepackage{tikz}
-\\usetikzlibrary{shapes,arrows,positioning,decorations.markings}
+\usepackage{graphicx,color}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,decorations.markings}
 
 % Convenience packages
-\\usepackage{array}
-\\usepackage{adjustbox}
-\\usepackage{cleveref}
-\\usepackage{enumerate}
-\\usepackage{datetime}
-\\usepackage{comment}
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{cleveref}
+\usepackage{enumerate}
+\usepackage{datetime}
+\usepackage{comment}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Equations
-\\allowdisplaybreaks
-\\numberwithin{equation}{chapter}  % Changed from section to chapter
+\allowdisplaybreaks
+\numberwithin{equation}{chapter}  % Changed from section to chapter
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This paper specific
-\\newcommand{\\ssp}{\\hspace{1pt}}
+\newcommand{\ssp}{\hspace{1pt}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Theorem environments
-\\newtheorem{proposition}{Proposition}[chapter]  % Changed from section to chapter
-\\newtheorem{lemma}[proposition]{Lemma}
-\\newtheorem{corollary}[proposition]{Corollary}
-\\newtheorem{theorem}[proposition]{Theorem}
+\newtheorem{proposition}{Proposition}[chapter]  % Changed from section to chapter
+\newtheorem{lemma}[proposition]{Lemma}
+\newtheorem{corollary}[proposition]{Corollary}
+\newtheorem{theorem}[proposition]{Theorem}
 
-\\theoremstyle{definition}
-\\newtheorem{definition}[proposition]{Definition}
-\\newtheorem{remark}[proposition]{Remark}
-\\newtheorem{example}[proposition]{Example}
+\theoremstyle{definition}
+\newtheorem{definition}[proposition]{Definition}
+\newtheorem{remark}[proposition]{Remark}
+\newtheorem{example}[proposition]{Example}
 
 % Exclude lecture notes for the final book
-\\newenvironment{lnotes}{\\section*{Notes for the lecturer}}{}
-\\excludecomment{lnotes}
+\newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
+\excludecomment{lnotes}
 """)
 
-        # Begin document
         book.write("\n\\begin{document}\n\n")
 
-        # Add book title and TOC
+        # Title, author, date, and TOC for the combined book
         book.write("\\title{Lectures on Random Matrices (Spring 2025)}\n")
         book.write("\\author{Leonid Petrov}\n")
         book.write("\\date{Spring 2025}\n")
         book.write("\\maketitle\n")
         book.write("\\tableofcontents\n\n")
 
-        # Get the last lecture file for bibliography handling
+        # Track the last lecture for where we might get the final bibliography
         last_lecture_file = existing_files[-1] if existing_files else None
-        last_lecture_num = int(re.search(r'l(\d+)', last_lecture_file).group(1)) if last_lecture_file else None
 
-        # Process each lecture
+        # -----------------
+        # Combine Lectures
+        # -----------------
         for lecture_file in existing_files:
-            print(f"Processing {lecture_file}")
+            print(f"Processing {lecture_file} ...")
 
-            # Extract lecture title and number
-            lecture_num = int(re.search(r'l(\d+)', lecture_file).group(1))
+            # Extract lecture number from filename
+            lecture_num_match = re.search(r'l(\d+)', lecture_file)
+            if not lecture_num_match:
+                continue  # skip if we can't parse a number
+            lecture_num = int(lecture_num_match.group(1))
+
+            # Extract the lecture title (string only)
             title = extract_lecture_title(lecture_file)
 
-            # Set chapter title (without "Lecture X:")
-            chapter_title = title
-
-            # Add chapter heading and label
-            book.write(f"\\chapter{{{chapter_title}}}\n")
+            # Insert a new chapter for each lecture
+            book.write(f"\\chapter{{{title}}}\n")
             book.write(f"\\label{{chap:lecture{lecture_num}}}\n")
 
-            # Add lecture content with updated references
+            # Extract raw content
             content = extract_lecture_content(lecture_file)
+
+            # Convert any \href references to \Cref
             content = update_lecture_references(content, lecture_num)
+
+            # Fix problem section formatting
             content = sanitize_problem_sections(content)
+
+            # **Crucially** rename labels & references to avoid duplicates
+            content = rename_labels_and_refs(content, lecture_num)
+
+            # Finally, write to the combined file
             book.write(content)
             book.write("\n\n")
 
-        # Add bibliography at the very end, after all lectures
+        # -----------------
+        # Bibliography
+        # -----------------
         book.write("\\bibliographystyle{alpha}\n")
         book.write("\\bibliography{bib}\n\n")
 
-        # Add author information
+        # -----------------
+        # Author Info
+        # -----------------
         book.write("\\medskip\n\n")
         book.write("\\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}\n\n")
         book.write("E-mail: \\texttt{lenia.petrov@gmail.com}\n\n")
 
-        # End document
+        # -----------------
+        # End of document
+        # -----------------
         book.write("\\end{document}\n")
 
     print(f"Book LaTeX file created: {output_file}")
@@ -222,7 +265,6 @@ def compile_book():
     """Compile the book using latexmk"""
     print("Compiling book...")
     try:
-        # Run latexmk which handles pdflatex, bibtex, and multiple runs automatically
         subprocess.run(["latexmk", "-pdf", output_file], check=True)
         print(f"Book compiled successfully: {output_file.replace('.tex', '.pdf')}")
         return True

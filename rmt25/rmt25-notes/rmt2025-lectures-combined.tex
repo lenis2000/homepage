@@ -220,7 +220,7 @@ if:
 	variance $\sigma^2 = \operatorname{\mathrm{Var}}(X_i)$.
 	Define the normalized sum
 \begin{equation}
-	\label{eq:normalized-sum}
+	\label{lecture1:eq:normalized-sum}
 	Z_n = \frac{1}{\sqrt{n}} \sum_{i=1}^n \left(X_i - \mu\right).
 \end{equation}
 Then, as $n \to \infty$, the distribution of $Z_n$ converges in distribution to a normal random variable with mean $0$ and variance $\sigma^2$, i.e.,
@@ -230,7 +230,7 @@ Z_n \xrightarrow{d} \mathcal{N}(0, \sigma^2).
 \end{theorem}
 Convergence in distribution means
 \begin{equation}
-	\label{eq:conv-in-dist}
+	\label{lecture1:eq:conv-in-dist}
 	\lim_{n \to \infty} \operatorname{\mathbb{P}}(Z_n \leq x) = \operatorname{\mathbb{P}}(Z \leq x)
 		= \int_{-\infty}^x \frac{1}{\sqrt{2\pi \sigma^2}}\ssp e^{-\frac{t^2}{2\sigma^2}} \, dt
 	\qquad
@@ -241,7 +241,7 @@ where $Z \sim \mathcal{N}(0, \sigma^2)$ is the Gaussian random variable.
 \begin{remark}
 	For a general random variable instead of
 	$Z\sim \mathcal{N}(0, \sigma^2)$, the convergence in distribution
-	\eqref{eq:conv-in-dist} holds only for $x$ at which the cumulative distribution function of $Z$ is continuous.
+	\eqref{lecture1:eq:conv-in-dist} holds only for $x$ at which the cumulative distribution function of $Z$ is continuous.
 	Since the normal distribution is absolutely continuous (has density), the convergence holds for all $x$.
 \end{remark}
 \begin{figure}[htpb]
@@ -250,7 +250,7 @@ where $Z \sim \mathcal{N}(0, \sigma^2)$ is the Gaussian random variable.
 	\caption{Densities of $U_1$, $U_1+U_2$, $U_1+U_2+U_3$ (where $U_i$ are iid uniform on $[0,1]$),
 		and $\mathcal{N}(0,1)$,
 		normalized to have the same mean and variance.}
-	\label{fig:uniform_pdfs}
+	\label{lecture1:fig:uniform_pdfs}
 \end{figure}
 
 \begin{example}
@@ -266,7 +266,7 @@ We also have the distribution of $X_1+\cdots+X_n$:
 
 Introduce the normalized quantity
 \begin{equation}
-	\label{eq:z_normalized_quantity}
+	\label{lecture1:eq:z_normalized_quantity}
 	z = \frac{k - np}{\sqrt{np(1-p)}},
 \end{equation}
 and assume that throughout the asymptotic analysis,
@@ -298,7 +298,7 @@ More precisely, one often writes
 \binom{n}{k} \sim \frac{1}{\sqrt{2\pi np(1-p)}} \exp\Bigl( n\ln n - k\ln k - (n-k)\ln (n-k) \Bigr),
 \]
 where $p\approx k/n$ thanks to the fact that
-$z$ \eqref{eq:z_normalized_quantity} is assumed to be finite.
+$z$ \eqref{lecture1:eq:z_normalized_quantity} is assumed to be finite.
 
 We have
 \[
@@ -322,7 +322,7 @@ as desired.
 
 
 (Note that this is a \emph{local} CLT as opposed to the convergence
-\eqref{eq:conv-in-dist} in the classical CLT; but one can get the latter
+\eqref{lecture1:eq:conv-in-dist} in the classical CLT; but one can get the latter
 from the local CLT by integration.)
 
 \end{example}
@@ -333,7 +333,7 @@ from the local CLT by integration.)
 \begin{proposition}
 The moments of a random variable $Z \sim \mathcal{N}(0, \sigma^2)$ are given by:
 \begin{equation}
-	\label{eq:normal-moments}
+	\label{lecture1:eq:normal-moments}
 	\operatorname{\mathbb{E}}[Z^k] = \begin{cases}
 		0, & \text{if } k \text{ is odd}, \\
 		\sigma^k (k-1)!! = \sigma^k \cdot (k-1)(k-3) \cdots 1, & \text{if } k \text{ is even}.
@@ -449,7 +449,7 @@ example.
 \end{example}
 
 \subsubsection{$n$-dependent factor}
-\label{subsub:n-dependent-factor}
+\label{lecture1:subsub:n-dependent-factor}
 
 Consider first the $n$-dependent factor.
 In the case $k$ is even and $\lambda=(2,2,\ldots,2 )$, the power
@@ -511,7 +511,7 @@ $\sum_{i=1}^n Y_i$ by $\sqrt{n}$:
 	+o(1).
 \end{equation*}
 Therefore, the moments of
-$Z_n$ \eqref{eq:normalized-sum}
+$Z_n$ \eqref{lecture1:eq:normalized-sum}
 converge to the moments of the standard normal distribution.
 
 
@@ -531,7 +531,7 @@ if the limiting distribution $X$ is uniquely determined by its moments,
 then convergence in moments implies convergence in distribution.
 
 The normal distribution is indeed uniquely determined by its
-moments (Problem \ref{prob:uniqueness-normal}),
+moments (Problem \ref{lecture1:prob:uniqueness-normal}),
 so the CLT holds in this case, provided that the
 original iid random variables $X_i$ have finite moments of
 all orders.
@@ -561,7 +561,7 @@ symplectic symmetry.\footnote{Real symmetric means $A^\top=A$, complex Hermitian
 	\end{pmatrix}.
 	\]
 	The entries $a,b,c,d$ for the quaternion matrix case must be real, and the matrix
-$A$ of size $2n\times 2n$ should also be Hermitian in the usual complex sense.\label{fn:quaternion}}
+$A$ of size $2n\times 2n$ should also be Hermitian in the usual complex sense.\label{lecture1:fn:quaternion}}
 
 
 \item \textbf{Correlated entries:}
@@ -627,7 +627,7 @@ the \emph{Gaussian Orthogonal Ensemble} (\emph{GOE}).
 \end{example}
 
 \begin{remark}[Wishart Matrices]
-	\label{rmk:wishart-matrices}
+	\label{lecture1:rmk:wishart-matrices}
 	There are other ways to define random matrices,
 	most notably, \emph{sample covariance matrices}.
 	Let $A = [a_{i,j}]_{i,j=1}^{n,m}$ be an $n \times m$ matrix ($n \leq m$), where entries are iid real random variables with
@@ -643,7 +643,7 @@ For an arbitrary random matrix of size $n\times n$ with real eigenvalues,
 the \emph{empirical spectral distribution} (\emph{ESD}) is defined as the
 random probability measure on $\mathbb{R}$:
 \begin{equation}
-	\label{eq:esd-defintion}
+	\label{lecture1:eq:esd-defintion}
 	\mu_n = \frac{1}{n} \sum_{i=1}^n \delta_{\lambda_i},
 \end{equation}
 which puts point masses of size $1/n$ at the eigenvalues $\lambda_i$ of the matrix.
@@ -653,13 +653,13 @@ and take a histogram (to cluster the eigenvalues into boxes),
 you will see the semi-circular pattern. This pattern
 does not change over several samples. Hence, one can
 conjecture that the
-ESD \eqref{eq:esd-defintion} converges to a nonrandom
+ESD \eqref{lecture1:eq:esd-defintion} converges to a nonrandom
 measure, after rescaling.
 
 We can guess the rescaling by looking at the first two moments of the ESD.
 The first moment is
 \begin{equation}
-	\label{eq:first-moment-esd}
+	\label{lecture1:eq:first-moment-esd}
 	\int_{\mathbb{R}} x \, \mu_n(dx) = \frac{1}{n} \sum_{i=1}^n \lambda_i=
 	\frac{1}{n} \operatorname{Tr}(W) =
 	\frac{1}{n}\sum_{i=1}^n X_{ii},
@@ -667,7 +667,7 @@ The first moment is
 and this sum has mean zero (and small variance), so it converges to zero.
 The second moment is
 \begin{equation}
-	\label{eq:second-moment-esd}
+	\label{lecture1:eq:second-moment-esd}
 	\int_{\mathbb{R}} x^2 \, \mu_n(dx) = \frac{1}{n} \sum_{i=1}^n \lambda_i^2=
 	\frac{1}{n} \operatorname{Tr}(W^2) =
 	\frac{1}{n}
@@ -682,42 +682,42 @@ ESD of the normalized Wishart matrix has a limit.
 Indeed, this is the case:
 
 \begin{theorem}[Wigner's Semicircle Law]
-	\label{thm:esd-semicircle}
+	\label{lecture1:thm:esd-semicircle}
 	Let $W$ be a real Wigner matrix of size $n\times n$
 	(with off-diagonal entries having a fixed variance $\sigma^2$, independent of $n$).
 	Then
 	as $n\to\infty$,
 	the ESD of $W/(\sigma\sqrt{n})$ converges in distribution to the semicircular law:
 	\begin{equation}
-		\label{eq:thm-esd-semicircle}
+		\label{lecture1:eq:thm-esd-semicircle}
 		\nu_n\coloneqq \frac{1}{n}\sum_{i=1}^{n}\delta_{\lambda_i/\sqrt{n}}
 		\longrightarrow \mu_{\mathrm{sc}},
 	\end{equation}
 	where $\mu_{\mathrm{sc}}$ is the semicircular distribution with density
 	with respect to the Lebesgue measure:
 	\begin{equation}
-		\label{eq:semicircle-density-defintion}
+		\label{lecture1:eq:semicircle-density-defintion}
 		\mu_{\mathrm{sc}}(dx) \coloneqq \frac{1}{2\pi} \sqrt{4-x^2} \ssp \mathbf{1}_{|x| \leq 2}\ssp
 		dx.
 	\end{equation}
 \end{theorem}
 
 \begin{remark}
-	The convergence in \eqref{eq:thm-esd-semicircle} may mean either
+	The convergence in \eqref{lecture1:eq:thm-esd-semicircle} may mean either
 	\emph{weakly in probability} or \emph{weakly almost surely}.
 	The first notion, weak convergence in probability, means that
 	for every bounded continuous function $f$,
 	we have
 	\begin{equation}
-		\label{eq:weak-convergence-in-prob}
+		\label{lecture1:eq:weak-convergence-in-prob}
 		\int_{\mathbb{R}} f(x) \, \nu_n(dx) \longrightarrow \int_{\mathbb{R}} f(x) \, \mu_{\mathrm{sc}}(dx),\qquad  n\to\infty,
 	\end{equation}
-	where in \eqref{eq:weak-convergence-in-prob} the convergence is in probability.
-	Indeed, the left-hand side of \eqref{eq:weak-convergence-in-prob}
+	where in \eqref{lecture1:eq:weak-convergence-in-prob} the convergence is in probability.
+	Indeed, the left-hand side of \eqref{lecture1:eq:weak-convergence-in-prob}
 	is a random variable, so we need to qualify which sense of convergence we mean.
 
 	The weakly almost sure convergence means that
-	the convergence in \eqref{eq:weak-convergence-in-prob}
+	the convergence in \eqref{lecture1:eq:weak-convergence-in-prob}
 	holds for almost all realizations of the random matrix $W$,
 	that is, for every bounded continuous function $f$,
 	the random variable
@@ -728,7 +728,7 @@ Indeed, this is the case:
 \begin{remark}
 	There exists a version of the limiting
 	ESD for the Wishart matrices
-	(\Cref{rmk:wishart-matrices}).
+	(\Cref{lecture1:rmk:wishart-matrices}).
 	In this case, the limiting distribution is the
 	\emph{Marchenko-Pastur law}
 	\cite{MarchenkoPastur}.
@@ -737,7 +737,7 @@ Indeed, this is the case:
 \subsection{Expected moments of traces of random matrices}
 
 The main computation in the proof of
-\Cref{thm:esd-semicircle} is the computation of
+\Cref{lecture1:thm:esd-semicircle} is the computation of
 expected moments of the ESD.
 This computation of moments is somewhat similar
 to the one in the proof of the CLT by moments,
@@ -753,7 +753,7 @@ m_k^{(n)}=\int_{\mathbb{R}} x^k\,\nu_n(dx)
 Our first goal is to study the asymptotic behavior of
 $\operatorname{\mathbb{E}}[m_k^{(n)}]$ as $n\to\infty$ for each fixed
 $k\geq 1$, just like we did in
-\eqref{eq:first-moment-esd}--\eqref{eq:second-moment-esd}
+\eqref{lecture1:eq:first-moment-esd}--\eqref{lecture1:eq:second-moment-esd}
 for $k=1,2$:
 \begin{equation*}
 	\operatorname{\mathbb{E}}[m_1^{(n)}] = 0, \qquad
@@ -767,7 +767,7 @@ of the diagonal elements to the moments is negligible
 in the limit $n\to\infty$.
 
 \begin{lemma}[Convergence of Expected Moments]
-\label{lemma:moments_convergence}
+\label{lecture1:lemma:moments_convergence}
 For each fixed $k \geq 1$, we have
 \[
 \lim_{n \to \infty} \operatorname{\mathbb{E}}[m_k^{(n)}] =
@@ -785,7 +785,7 @@ around zero.
 As we will see, the appearance of Catalan numbers is not accidental,
 but it is due to the underlying combinatorics.
 
-\begin{proof}[Proof of \Cref{lemma:moments_convergence}]
+\begin{proof}[Proof of \Cref{lecture1:lemma:moments_convergence}]
 	The trace of $W^k$ expands as a sum over all possible index sequences:
 	\begin{equation}
 		\operatorname{Tr}(W^k) = \sum_{i_1,\ldots,i_k=1}^n X_{i_1i_2}X_{i_2i_3}\cdots X_{i_{k-1}i_k}X_{i_ki_1}.
@@ -825,7 +825,7 @@ but it is due to the underlying combinatorics.
 	means that if we forget the direction of the edges and the multiplicities,
 	we must get a \emph{tree}, with $k/2$ edges and $k/2+1$ vertices.
 	The complete justification of this counting is the
-	problem in Problem \ref{prob:counting-n-powers}.
+	problem in Problem \ref{lecture1:prob:counting-n-powers}.
 
 	The $n$-powers counting implies that the combinatorial
 	factor (for even $k$)
@@ -836,13 +836,13 @@ but it is due to the underlying combinatorics.
 	to be $1$ (this ambiguity is taken into account by the
 	power-$n$ factor).
 
-	In Problem \ref{prob:counting-trees}, we show that the number of these rooted trees is the $k/2$-th Catalan number $C_{k/2}$.
-	This completes the proof of \Cref{lemma:moments_convergence}.
+	In Problem \ref{lecture1:prob:counting-trees}, we show that the number of these rooted trees is the $k/2$-th Catalan number $C_{k/2}$.
+	This completes the proof of \Cref{lecture1:lemma:moments_convergence}.
 \end{proof}
 
 \subsection{Immediate next steps}
 
-The proof of \Cref{thm:esd-semicircle} is continued in the next
+The proof of \Cref{lecture1:thm:esd-semicircle} is continued in the next
 \Cref{chap:lecture2}.
 Immediate next steps are:
 \begin{enumerate}
@@ -858,14 +858,14 @@ Immediate next steps are:
 
 \section{Problems}
 
-Each problem is a subsection (like Problem \ref{prob:normal-approximation}),
+Each problem is a subsection (like Problem \ref{lecture1:prob:normal-approximation}),
 and may have several parts.
 
 \subsection{Normal approximation}
-\label{prob:normal-approximation}
+\label{lecture1:prob:normal-approximation}
 
 \begin{enumerate}
-	\item In \Cref{fig:uniform_pdfs}, which color is
+	\item In \Cref{lecture1:fig:uniform_pdfs}, which color is
 		the normal curve and which is the sum of three uniform random variables?
 	\item Show that the sum of 12 iid uniform random variables on $[-1,1]$
 		(without normalization) is approximately standard normal.
@@ -877,7 +877,7 @@ and may have several parts.
 \end{enumerate}
 
 \subsection{Convergence in distribution}
-\label{prob:conv-in-dist-problem}
+\label{lecture1:prob:conv-in-dist-problem}
 
 Convergence in distribution $X_n\to X$
 for real random variables $X_n$ and $X$ means, by definition,
@@ -887,7 +887,7 @@ that
 \end{equation*}
 for all bounded continuous functions $f$.
 Show that convergence in distribution
-is equivalent to the condition outlined in \eqref{eq:conv-in-dist}:
+is equivalent to the condition outlined in \eqref{lecture1:eq:conv-in-dist}:
 \begin{equation*}
 	\lim_{n \to \infty} \operatorname{\mathbb{P}}(X_n \leq x) = \operatorname{\mathbb{P}}(X \leq x)
 \end{equation*}
@@ -896,7 +896,7 @@ for all $x$ at which the cumulative distribution function of $X$ is continuous.
 \subsection{Moments of sum justification}
 
 Justify the computations of the power of $n$ in
-\Cref{subsub:n-dependent-factor}.
+\Cref{lecture1:subsub:n-dependent-factor}.
 
 \subsection{Distribution not determined by moments}
 
@@ -905,14 +905,14 @@ $e^{Z}$ (where $Z\sim \mathcal{N}(0,1)$)
 is not determined by its moments.
 
 \subsection{Uniqueness of the normal distribution}
-\label{prob:uniqueness-normal}
+\label{lecture1:prob:uniqueness-normal}
 
 Show that the normal distribution is uniquely determined by its moments.
 
 \subsection{Quaternions}
 
 Show that the $2\times 2$ matrix representation of a quaternion
-given in Footnote~\ref{fn:quaternion}
+given in Footnote~\ref{lecture1:fn:quaternion}
 indeed satisfies the quaternion multiplication rules.
 Hint: Use linearity and distributive law.
 
@@ -950,7 +950,7 @@ conjugation by orthogonal matrices:
 for all orthogonal matrices $O$ and Borel sets $\mathrm{A}$.
 
 \subsection{Counting $n$-powers in the real Wigner matrix}
-\label{prob:counting-n-powers}
+\label{lecture1:prob:counting-n-powers}
 
 Show that in the expansion of the expected trace of the
 $k$-th power of the real Wigner matrix, the maximum power of
@@ -964,7 +964,7 @@ diagonal elements are present.
 
 
 \subsection{Counting trees}
-\label{prob:counting-trees}
+\label{lecture1:prob:counting-trees}
 
 Show that the number of rooted trees with $m$ edges is the $m$-th Catalan number:
 \begin{equation*}
@@ -1072,9 +1072,9 @@ Using \(\cos^2\theta = 1 - \sin^2\theta\), we split the integral:
 \[
 \frac{2^{2m+2}}{\pi} \left( \int_0^{\pi/2} \sin^{2m}\theta\, d\theta - \int_0^{\pi/2} \sin^{2m+2}\theta\, d\theta \right).
 \]
-Using the standard formula (cf. Problem \ref{prob:sin-integral})
+Using the standard formula (cf. Problem \ref{lecture2:prob:sin-integral})
 \begin{equation}
-	\label{eq:sin-integral}
+	\label{lecture2:eq:sin-integral}
 \int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2},
 \end{equation}
 we compute each term:
@@ -1101,14 +1101,14 @@ A \emph{rooted plane tree} is a tree with a designated root vertex where the chi
 \begin{definition}[Catalan Numbers]
 The sequence of \emph{Catalan numbers} $\{C_m\}_{m\geq 0}$ is defined recursively by:
 \begin{equation}
-	\label{eq:catalan-recurrence}
+	\label{lecture2:eq:catalan-recurrence}
     C_0 = 1, \quad C_{m+1} = \sum_{j=0}^m C_j C_{m-j} \quad \text{for } m \geq 0.
 \end{equation}
 Alternatively, they have the closed form\footnote{See
-	Problem \ref{prob:reflection-principle} for a combinatorial proof
+	Problem \ref{lecture2:prob:reflection-principle} for a combinatorial proof
 of the second inequality.}
 \begin{equation}
-	\label{eq:catalan-closed}
+	\label{lecture2:eq:catalan-closed}
     C_m = \frac{1}{m+1}\binom{2m}{m} =
 		\binom{2m}{m} - \binom{2m}{m+1}.
 \end{equation}
@@ -1116,14 +1116,14 @@ These numbers appear naturally in the moments of random matrices, where $m=k/2$ 
 \end{definition}
 
 \begin{lemma}
-	\label{lemma:equivalence-catalan}
+	\label{lecture2:lemma:equivalence-catalan}
 	Formulas
-	\eqref{eq:catalan-recurrence} and \eqref{eq:catalan-closed} are equivalent.
+	\eqref{lecture2:eq:catalan-recurrence} and \eqref{lecture2:eq:catalan-closed} are equivalent.
 \end{lemma}
 \begin{proof}
 	One can check that the closed form satisfies the recurrence relation by direct substitution. The other direction
 	involves generating functions. Namely,
-	\eqref{eq:catalan-recurrence} can be rewritten for the
+	\eqref{lecture2:eq:catalan-recurrence} can be rewritten for the
 	generating function
 	\begin{equation*}
 		C(z)=\sum_{m=0}^\infty C_m z^m
@@ -1134,31 +1134,31 @@ These numbers appear naturally in the moments of random matrices, where $m=k/2$ 
 	\end{equation*}
 	Solving for $C(z)$, we get
 	\begin{equation}
-		\label{eq:catalan-generating}
+		\label{lecture2:eq:catalan-generating}
 		C(z)=\frac{1\pm \sqrt{1-4z}}{2z}.
 	\end{equation}
 	We need to pick the solution which is nonsingular at $z=0$,
 	and it corresponds to the minus sign.
 	Taylor expansion of the right-hand side of
-	\eqref{eq:catalan-generating}
+	\eqref{lecture2:eq:catalan-generating}
 	at $z=0$
 	gives the closed form.
 \end{proof}
 
 \begin{remark}
-	\label{rmk:stanley-catalans}
+	\label{lecture2:rmk:stanley-catalans}
 	Catalan numbers enumerate many (too many!) combinatorial objects. For a comprehensive treatment, see \cite{stanley2015catalan}.
 \end{remark}
 
 \begin{proposition}[Dyck Path--Rooted Tree Correspondence]
-	\label{prop:dyck-tree}
+	\label{lecture2:prop:dyck-tree}
 For any $m$, there exists a bijection between
 the set of Dyck paths of semilength $m$ and the set of rooted plane trees with $m$ edges.
 \end{proposition}
 
 \begin{proof}
 Given a Dyck path of semilength $m$, we build the corresponding rooted plane tree as follows
-(see \Cref{fig:dyck_paths_m2} for an illustration):
+(see \Cref{lecture2:fig:dyck_paths_m2} for an illustration):
 \begin{enumerate}
     \item Start with a single root vertex
     \item Read the Dyck path from left to right:
@@ -1221,20 +1221,20 @@ This is clearly a bijection, and we are done.
     \end{scope}
 \end{tikzpicture}
 \caption{The two possible Dyck paths of semilength $m=2$ and their corresponding rooted plane trees.}
-\label{fig:dyck_paths_m2}
+\label{lecture2:fig:dyck_paths_m2}
 \end{figure}
 
 It remains to show that the Dyck paths or rooted plane trees are counted by the Catalan numbers, by verifying
-the recursion \eqref{eq:catalan-recurrence} for them.
-By \Cref{prop:dyck-tree}, it suffices to
+the recursion \eqref{lecture2:eq:catalan-recurrence} for them.
+By \Cref{lecture2:prop:dyck-tree}, it suffices to
 consider only Dyck paths.
 
 \begin{proposition}
-	\label{prop:dyck-recurrence}
-	The number of Dyck paths of semilength $m$ satisfies the Catalan recurrence \eqref{eq:catalan-recurrence}.
+	\label{lecture2:prop:dyck-recurrence}
+	The number of Dyck paths of semilength $m$ satisfies the Catalan recurrence \eqref{lecture2:eq:catalan-recurrence}.
 \end{proposition}
 \begin{proof}
-	We need to show that the number of Dyck paths of semilength $m+1$ is given by the sum in the right-hand side of \eqref{eq:catalan-recurrence}.
+	We need to show that the number of Dyck paths of semilength $m+1$ is given by the sum in the right-hand side of \eqref{lecture2:eq:catalan-recurrence}.
 	Consider a Dyck path of semilength $m+1$,
 	and let the \emph{first} time it
 	returns to zero be at semilength $j+1$,
@@ -1263,8 +1263,8 @@ consider only Dyck paths.
 		\draw[line width=2pt,red] (0,0) -- (1,1);
 		\draw[line width=2pt,red] (5,1) -- (6,0);
 	\end{tikzpicture}
-	\caption{Illustration of a Dyck path decomposition for the proof of \Cref{prop:dyck-recurrence}.}
-	\label{fig:dyck_recurrence}
+	\caption{Illustration of a Dyck path decomposition for the proof of \Cref{lecture2:prop:dyck-recurrence}.}
+	\label{lecture2:fig:dyck_recurrence}
 \end{figure}
 
 
@@ -1293,17 +1293,17 @@ Here, $W$ is real Wigner
 where its off-diagonal entries are iid with variance $\sigma^2$.
 
 \subsection{The semicircle distribution is determined by its moments}
-\label{sub:carleman-semicircle}
+\label{lecture2:sub:carleman-semicircle}
 
 We use (without proof)
 the known Carleman's criterion for the uniqueness of a distribution by its moments.
 \begin{proposition}[Carleman's criterion
 	{\cite[Theorem~1.10]{shohat1943problem}}, \cite{Akhiezer1965Moment}]
-	\label{prop:carleman}
+	\label{lecture2:prop:carleman}
 	Let $X$ be a real-valued random variable with moments $m_k
 	= \mathbb{E}[X^k]$ of all orders. If
 	\begin{equation}
-		\label{eq:Carleman}
+		\label{lecture2:eq:Carleman}
 		\sum_{k=1}^{\infty}
 		(m_{2k})^{-1/(2k)} = \infty,
 	\end{equation}
@@ -1323,7 +1323,7 @@ controlling \(\int x^{2n} d\mu(x)\) also controls \(\int
 positive or negative signs in \(x\); the even powers handle
 both sides of the real line at once.
 
-Moreover, the convergence of \eqref{eq:Carleman},
+Moreover, the convergence of \eqref{lecture2:eq:Carleman},
 as for any infinite series, is only determined
 by arbitrarily large moments, for the same reason.
 \end{remark}
@@ -1392,16 +1392,16 @@ Recall that
 we showed $\operatorname{\mathbb{E}}(Y_{n,k})\to m_k$.
 Let us assume the following:
 \begin{proposition}[Variance bound]
-	\label{prop:variance-bound}
+	\label{lecture2:prop:variance-bound}
 	For each fixed integer \(k\ge1\) and large enough \(n\),
 	we have
 	\begin{equation*}
 	\operatorname{\mathrm{Var}}(Y_{n,k})\le \frac{m_k}{n^2}.
 	\end{equation*}
 \end{proposition}
-We will prove \Cref{prop:variance-bound} in \Cref{sub:variance-bound-proof}
+We will prove \Cref{lecture2:prop:variance-bound} in \Cref{lecture2:sub:variance-bound-proof}
 below.
-Let us finish the proof of convergence to the semicircle law modulo \Cref{prop:variance-bound}.
+Let us finish the proof of convergence to the semicircle law modulo \Cref{lecture2:prop:variance-bound}.
 
 
 \subsubsection{A concentration bound and the Borel--Cantelli lemma}
@@ -1413,7 +1413,7 @@ From Chebyshev's inequality,
   \operatorname{\mathrm{Var}}[Y_{n,k}]\sqrt{n}
 	=O(n^{-\frac{3}{2}}),
 \]
-where in the last step we used \Cref{prop:variance-bound}.
+where in the last step we used \Cref{lecture2:prop:variance-bound}.
 
 Hence the probability that \(\lvert Y_{n,k} - \mathbb{E}[Y_{n,k}]\rvert > n^{-\frac{1}{4}}\) is summable in \(n\).  By the Borel--Cantelli lemma, with probability \(1\) only finitely many of these events occur.  Since \(\mathbb{E}[Y_{n,k}]\to m_k\), we conclude
 \[
@@ -1426,15 +1426,15 @@ Hence the probability that \(\lvert Y_{n,k} - \mathbb{E}[Y_{n,k}]\rvert > n^{-\f
 \]
 
 \subsubsection{Tightness of \(\{\nu_n\}\) and subsequential limits}
-\label{subsub:semicircle-tightness}
+\label{lecture2:subsub:semicircle-tightness}
 
 Since \(\lvert Y_{n,k}\rvert = \bigl|\int x^k\,\nu_n(dx)\bigr|\) stays
 almost surely
 bounded for each \(k\), one readily checks
-(Problem \ref{prob:chebyshev-like})
+(Problem \ref{lecture2:prob:chebyshev-like})
 that almost surely, for each fixed \(k\),
 \begin{equation}
-	\label{eq:chebyshev-like}
+	\label{lecture2:eq:chebyshev-like}
   \nu_n\bigl(\{x\,:\,|x|>M\}\bigr)
 	\;\le\; \frac{C}{M^k}.
 \end{equation}
@@ -1451,7 +1451,7 @@ there exists a subsequence \(\nu_{n_j}\) converging weakly to some probability m
 We will now characterize all subsequential limits $\nu^*$ of $\nu_n$.
 
 \subsubsection{Characterizing the limit measure}
-\label{subsub:semicircle-characterization}
+\label{lecture2:subsub:semicircle-characterization}
 
 We claim that \(\nu^*=\mu_{\mathrm{sc}}\), the semicircle distribution
 (and in particular, this measure is not random).
@@ -1478,12 +1478,12 @@ Thus
    \qquad
    \text{for all $k\ge1$.}
 \]
-By \Cref{prop:carleman}, the measure \(\nu^*\) is uniquely
+By \Cref{lecture2:prop:carleman}, the measure \(\nu^*\) is uniquely
 determined by its moments.  Hence \(\nu^*\) must coincide
 with \(\mu_{\mathrm{sc}}\).
 
 \begin{remark}
-	In \Cref{subsub:semicircle-tightness,subsub:semicircle-characterization}
+	In \Cref{lecture2:subsub:semicircle-tightness,subsub:semicircle-characterization}
 	we tacitly assumed that we choose an elementary outcome $\omega$,
 	and view $\nu_n$ as measures depending on $\omega$.
 	Then, since the convergence of moments is almost sure,
@@ -1499,13 +1499,13 @@ diagonal argument, this forces \(\nu_n\to\nu\) in the weak
 topology (almost surely).  This completes the proof that the ESD of our
 Wigner matrix (rescaled by \(\sqrt{n}\)) converges to the
 semicircle distribution weakly almost surely,
-modulo \Cref{prop:variance-bound}.
-(See also Problem \ref{prob:almost-sure-convergence}
+modulo \Cref{lecture2:prop:variance-bound}.
+(See also Problem \ref{lecture2:prob:almost-sure-convergence}
 for the weakly in probability convergence.)
 
 
-\section{Proof of \Cref{prop:variance-bound}: bounding the variance}
-\label{sub:variance-bound-proof}
+\section{Proof of \Cref{lecture2:prop:variance-bound}: bounding the variance}
+\label{lecture2:sub:variance-bound-proof}
 
 There is one more ``combinatorial'' step in the proof of the
 semicircle law: we need to show that the variance of the
@@ -1622,7 +1622,7 @@ there are no leading contributions to the sum when \(q\ge k+1\).
 \end{enumerate}
 
 Combining these two cases, we conclude that the total number of pairs \((I,J)\) with nonzero covariance is of order at most \(n^k\),
-This yields the desired bound on the variance, and completes the proof of \Cref{prop:variance-bound}.
+This yields the desired bound on the variance, and completes the proof of \Cref{lecture2:prop:variance-bound}.
 
 With that, we are done with the Wigner semicircle law proof for real
 Wigner matrices
@@ -1630,7 +1630,7 @@ Wigner matrices
 see \Cref{chap:lecture1}
 for the definitions).
 
-Also, see Problem~\ref{prob:complex-wigner} for the complex case of
+Also, see Problem~\ref{lecture2:prob:complex-wigner} for the complex case of
 the Wigner semicircle law.
 
 \section{Remark: Variants of the semicircle law}
@@ -1644,14 +1644,14 @@ universality / robustness of the semicircle law.
 \begin{theorem}[Gaussian $\beta$-Ensembles \cite{Johansson_BGG_1998}, \cite{Forrester-LogGas}]
 	Let $\beta > 0$, and consider an $n \times n$ random matrix ensemble with joint eigenvalue density:
 \begin{equation}
-	\label{eq:beta-density}
+	\label{lecture2:eq:beta-density}
 	p_n(\lambda_1,\ldots,\lambda_n) = \frac{1}{Z_{n,\beta}} \exp\left(-\frac{\beta}{4}\sum_{i=1}^n \lambda_i^2\right) \prod_{1\leq i<j\leq n} |\lambda_i-\lambda_j|^\beta
 \end{equation}
 where $Z_{n,\beta}$ is the normalization constant.\footnote{For
 	$\beta=1,2,4$, this is the joint
 eigenvalue density of the Gaussian Orthogonal, Unitary, and Symplectic Ensembles, respectively.
 For general $\beta$, there is no invariant random matrix distribution
-(while the eigenvalue density \eqref{eq:beta-density} makes sense), and
+(while the eigenvalue density \eqref{lecture2:eq:beta-density} makes sense), and
 we can still treat all the $\beta$ cases in a unified manner.}
 Then the ESD of the normalized eigenvalues $\lambda_i/\sqrt n$
 converges weakly almost surely to the semicircle law.
@@ -1693,7 +1693,7 @@ Then, as $n \to \infty$, the ESD of $W_n$ converges to the semicircle law.
 There are variants of this theorem without the assumption
 that all moments of the entries are finite.
 \begin{theorem}[\cite{benaych-georges2016lectures}]
-	\label{thm:benaych-georges}
+	\label{lecture2:thm:benaych-georges}
 Let $M_n = [X_{ij}]_{i,j=1}^n$ be a symmetric $n \times n$ matrix with random entries such that:
 \begin{itemize}
 				\item The off-diagonal elements $X_{ij}$, for $i < j$, are i.i.d. random variables with $\operatorname{\mathbb{E}}[X_{ij}] = 0$ and $\operatorname{\mathbb{E}}[X_{ij}^2] = 1$.
@@ -1732,9 +1732,9 @@ Then the ESD of $M_n$, normalized by $\sqrt{n}$, converges to the semicircle law
 \section{Problems}
 
 \subsection{Standard formula}
-\label{prob:sin-integral}
+\label{lecture2:prob:sin-integral}
 
-Prove formula \eqref{eq:sin-integral}:
+Prove formula \eqref{lecture2:eq:sin-integral}:
 \begin{equation*}
 	\int_0^{\pi/2} \sin^{2n}\theta\, d\theta = \frac{\pi}{2} \frac{(2n)!}{2^{2n} (n!)^2}.
 \end{equation*}
@@ -1749,7 +1749,7 @@ Prove formula \eqref{eq:sin-integral}:
 Suppose candidate \(A\) receives \(p\) votes and candidate \(B\) receives \(q\) votes, where \(p > q \geq 0\). In how many ways can these votes be counted such that \(A\) is always strictly ahead of \(B\) in partial tallies?
 
 \subsection{Reflection principle}
-\label{prob:reflection-principle}
+\label{lecture2:prob:reflection-principle}
 
 Show the equality
 \begin{equation*}
@@ -1766,12 +1766,12 @@ to $(2m,0)$ and to $(2m,2)$ is $C_m$, the number of paths
 that never go below the $x$-axis.
 
 \subsection{Bounding probability in the proof}
-\label{prob:chebyshev-like}
+\label{lecture2:prob:chebyshev-like}
 
-Show inequality \eqref{eq:chebyshev-like}.
+Show inequality \eqref{lecture2:eq:chebyshev-like}.
 
 \subsection{Almost sure convergence and convergence in probability}
-\label{prob:almost-sure-convergence}
+\label{lecture2:prob:almost-sure-convergence}
 
 Show that in Wigner's semicircle law,
 the weakly almost sure convergence
@@ -1779,7 +1779,7 @@ of random measures $\nu_n$ to $\mu_{\mathrm{sc}}$
 implies weak convergence in probability.
 
 \subsection{Wigner's semicircle law for complex Wigner matrices}
-\label{prob:complex-wigner}
+\label{lecture2:prob:complex-wigner}
 
 Complex Wigner matrices are Hermitian symmetric, with iid complex off-diagonal
 entries, and real iid diagonal entries (all mean zero).
@@ -1792,9 +1792,9 @@ Each complex random variable has independent real and imaginary parts.
 \end{enumerate}
 
 \subsection{Semicircle law without the moment condition}
-\label{prob:generalized-semicircle}
+\label{lecture2:prob:generalized-semicircle}
 
-Prove \Cref{thm:benaych-georges}.
+Prove \Cref{lecture2:thm:benaych-georges}.
 
 
 
@@ -1828,7 +1828,7 @@ independent entries $X_{ij}$ above the main diagonal
 then the empirical spectral distribution of $W/\sqrt{n}$
 converges to the semicircle law as $n\to\infty$:
 \begin{equation}
-	\label{eq:semicircle_conv}
+	\label{lecture3:eq:semicircle_conv}
 	\lim_{n\to\infty} \frac{1}{n} \sum_{i=1}^n \delta_{\lambda_i/\sqrt n} =
 	\mu_{\mathrm{sc}},
 \end{equation}
@@ -1840,13 +1840,13 @@ where
 	\end{cases}
 \end{equation*}
 The convergence
-in \eqref{eq:semicircle_conv} is weakly almost sure.
+in \eqref{lecture3:eq:semicircle_conv} is weakly almost sure.
 The way we got the result is by expanding
 $\operatorname{\mathbb{E}}\operatorname{Tr} (W^k)$ and counting
 trees, plus analytic lemmas which ensure that
 the convergence of expected powers of traces is enough
 to conclude the convergence
-\eqref{eq:semicircle_conv}
+\eqref{lecture3:eq:semicircle_conv}
 of the empirical spectral measures.
 
 \medskip
@@ -1863,7 +1863,7 @@ Today, we are going to focus on Gaussian ensembles. The plan is:
 \section{Gaussian ensembles}
 
 \subsection{Definitions}
-\label{sub:GOE_GUE_definitons}
+\label{lecture3:sub:GOE_GUE_definitons}
 
 Recall that a real Wigner matrix $W$ can be modeled as
 \begin{equation*}
@@ -1932,7 +1932,7 @@ Despite the fact that the map from a matrix to its eigenvalues
 is quite complicated and nonlinear (you need to solve an equation of degree $n$),
 the distribution of eigenvalues in the Gaussian cases is fully explicit.
 
-See Problem \ref{prob:invariance_GOE_GUE}
+See Problem \ref{lecture3:prob:invariance_GOE_GUE}
 for invariance of GOE/GUE under orthogonal/unitary conjugation
 (this is where the names ``orthogonal'' and ``unitary'' come from).
 
@@ -1945,15 +1945,15 @@ for invariance of GOE/GUE under orthogonal/unitary conjugation
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Joint eigenvalue distribution for GOE}
-\label{sub:GOE-derivation}
+\label{lecture3:sub:GOE-derivation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In this section, we give a derivation of the joint probability density for the GOE.
 
 \begin{theorem}[GOE Joint Eigenvalue Density]
-\label{thm:GOE-joint-eigs-detailed}
+\label{lecture3:thm:GOE-joint-eigs-detailed}
 Let \(W\) be an \(n\times n\) real symmetric matrix with
-the GOE distribution (\Cref{sub:GOE_GUE_definitons}).
+the GOE distribution (\Cref{lecture3:sub:GOE_GUE_definitons}).
 Then its ordered real eigenvalues \(\lambda_1 \le \cdots \le
 \lambda_n\)
 of $W/\sqrt 2$
@@ -1984,11 +1984,11 @@ where \(Z_{n}\) is a constant (depending on \(n\) but not on \(\lambda_i\)) ensu
 
 We break the proof into four major steps,
 considered in
-\Cref{subsec:density-entries,subsec:spectral,subsec:jacobian,subsec:final-form}
+\Cref{lecture3:subsec:density-entries,subsec:spectral,subsec:jacobian,subsec:final-form}
 below.
 
 \subsection{Step A. Joint density of matrix entries}
-\label{subsec:density-entries}
+\label{lecture3:subsec:density-entries}
 
 Let us label all independent entries of \(W/\sqrt 2\):
 \[
@@ -2001,7 +2001,7 @@ and \(n\) diagonal entries with variance $1$.
 The joint density of these entries (ignoring normalization for a moment) is
 proportional to
 \begin{equation}
-	\label{eq:GOE-density-entries-first}
+	\label{lecture3:eq:GOE-density-entries-first}
 	f(x_{12},x_{13},\ldots,x_{22},x_{33},\ldots )
   \propto\exp\Bigl(
     - \sum_{i<j} x_{ij}^2
@@ -2028,7 +2028,7 @@ the density on $\mathbb{R}^{n(n+1)/2}$:
 where \(dW\) is the product measure over the \(\tfrac{n(n+1)}{2}\) independent entries.
 
 \subsection{Step B. Spectral decomposition}
-\label{subsec:spectral}
+\label{lecture3:subsec:spectral}
 
 Since \(W\) is real symmetric, it can be orthogonally diagonalized:
 \[
@@ -2047,13 +2047,13 @@ from $W$ to $(\Lambda,Q)$ is not one-to one,
 but in case $W$ has distinct eigenvalues,
 the preimage of $(\Lambda,Q)$
 contains $2^n$ elements.
-See Problems~\ref{prob:GOE-preimage} and \ref{prob:distinct-eigenvalues}.
+See Problems~\ref{lecture3:prob:GOE-preimage} and \ref{lecture3:prob:distinct-eigenvalues}.
 \medskip
 
 It remains to make the change of variables from \(W\) to \(\Lambda\), which involves the Jacobian.
 
 \subsection{Step C. Jacobian}
-\label{subsec:jacobian}
+\label{lecture3:subsec:jacobian}
 
 We now examine how the measure \(dW\) in the space of real symmetric matrices factors into a piece depending on \(\{\lambda_i\}\) and a piece depending on \(Q\).  Formally,
 \[
@@ -2078,7 +2078,7 @@ this introduces the simple factor \(n!\) in the final density.
 
 
 \begin{lemma}[Jacobian for Spectral Decomposition]
-\label{lemma:Jacobian-GOE}
+\label{lecture3:lemma:Jacobian-GOE}
 For real symmetric \(W=Q\Lambda Q^\top\), one has
 \[
   \bigl|\det\bigl(\tfrac{\partial W}{\partial(\Lambda,Q)}\bigr)\bigr|
@@ -2106,7 +2106,7 @@ Equivalently, one often writes
 is the \emph{Vandermonde determinant}.
 \end{remark}
 
-We prove \Cref{lemma:Jacobian-GOE} in the rest of this subsection.
+We prove \Cref{lecture3:lemma:Jacobian-GOE} in the rest of this subsection.
 \medskip
 
 Consider small perturbations of \(\Lambda\) and \(Q\).  Write
@@ -2218,11 +2218,11 @@ Therefore, this factor is the same in
 $Q^\top \ssp \delta W \ssp Q$.
 
 This completes the proof of
-\Cref{lemma:Jacobian-GOE}.
-See also Problem~\ref{prob:Jacobian-GUE} for the GUE Jacobian.
+\Cref{lecture3:lemma:Jacobian-GOE}.
+See also Problem~\ref{lecture3:prob:Jacobian-GUE} for the GUE Jacobian.
 
 \subsection{Step D. Final Form of the density}
-\label{subsec:final-form}
+\label{lecture3:subsec:final-form}
 
 Putting Steps A--C together, we find:
 \[
@@ -2236,22 +2236,22 @@ Putting Steps A--C together, we find:
 Hence, the joint density of \(\{\lambda_1,\dots,\lambda_n\}\) is,
 up to normalization depending only on \(n\), equal to
 \begin{equation}
-	\label{eq:GOE_proportional}
+	\label{lecture3:eq:GOE_proportional}
   \prod_{i<j}|\lambda_i-\lambda_j|\;
   \exp\Bigl(-\tfrac{1}{2}\sum_{k=1}^n \lambda_k^2\Bigr).
 \end{equation}
 We leave the computation of the normalization constant in
-\Cref{thm:GOE-joint-eigs-detailed} as Problem~\ref{prob:GOE-normalization}.
+\Cref{lecture3:thm:GOE-joint-eigs-detailed} as Problem~\ref{lecture3:prob:GOE-normalization}.
 
 \begin{remark}
 	We emphasize that in the GOE case, the normalization $W/\sqrt 2$ for
-	\eqref{eq:GOE_proportional}
+	\eqref{lecture3:eq:GOE_proportional}
 	is so that the variance is $1$ on the diagonal and
 	$\frac{1}{2}$ off the diagonal.
 \end{remark}
 
 \section{Other classical ensembles with explicit eigenvalue densities}
-\label{sec:other-ensembles}
+\label{lecture3:sec:other-ensembles}
 
 Let us briefly discuss other classical ensembles with explicit eigenvalue densities,
 which are not necessarily Gaussian,
@@ -2263,7 +2263,7 @@ invariance under orthogonal/unitary/symplectic conjugation).
 
 
 \subsection{Wishart (Laguerre) ensemble}
-\label{sec:Wishart}
+\label{lecture3:sec:Wishart}
 
 In this subsection, we describe another classical family of random matrices whose eigenvalues form a fundamental example of a $\beta$-ensemble with a ``logarithmic'' pairwise interaction. These are called the \emph{Wishart} or \emph{Laguerre} ensembles. Their importance arises in statistics (covariance estimation, principal component analysis), signal processing, and many other areas.
 
@@ -2297,7 +2297,7 @@ These eigenvalues admit a closed-form joint probability density function (pdf) i
 \subsubsection{Joint density of eigenvalues}
 
 \begin{theorem}[Wishart eigenvalue density]
-\label{thm:Wishart-Distribution}
+\label{lecture3:thm:Wishart-Distribution}
 The ordered eigenvalues $\lambda_1,\dots,\lambda_n \geq 0$ of
 the $n\times n$ Wishart matrix
 $W$ have the joint density on $\{\lambda_i\geq 0\}$ proportional to
@@ -2315,7 +2315,7 @@ quaternionic case, respectively.
 
 
 \begin{proof}[Idea of proof (sketch)]
-The proof is a variant of the derivation for the joint eigenvalue density in the GOE/GUE case (see \Cref{sub:GOE-derivation}).  One writes down the joint distribution of all entries of \(X\), changes variables to singular values and orthogonal/unitary transformations, and identifies the Jacobian factor as
+The proof is a variant of the derivation for the joint eigenvalue density in the GOE/GUE case (see \Cref{lecture3:sub:GOE-derivation}).  One writes down the joint distribution of all entries of \(X\), changes variables to singular values and orthogonal/unitary transformations, and identifies the Jacobian factor as
 \(\prod_{i<j}|s_i^2 - s_j^2|^\beta = \prod_{i<j}| \lambda_i - \lambda_j |^\beta\).
 The extra factors in front arise from the powers of \(\lambda_i\) (i.e.\ from \(\prod_i s_i\)) and the Gaussian exponential \(\exp\bigl(-\frac12\sum s_i^2\bigr)\) when reshaped to \(\exp\bigl(-\frac12\sum \lambda_i\bigr)\).
 \end{proof}
@@ -2328,7 +2328,7 @@ also referred to as the \emph{Laguerre orthogonal polynomial ensemble}.
 
 
 \subsection{Jacobi (MANOVA/CCA) ensemble}
-\label{sec:Jacobi_MANOVA_CCA}
+\label{lecture3:sec:Jacobi_MANOVA_CCA}
 
 The \emph{Jacobi} (sometimes called \emph{MANOVA} or \emph{CCA}) ensemble arises when one looks at the interaction between two independent rectangular Gaussian matrices that share the same number of columns.  Statistically, this corresponds to questions of canonical correlations or multivariate Beta distributions.  In random matrix theory, it appears as yet another fundamental example of a \(\beta\)-ensemble with an explicit eigenvalue density.
 
@@ -2367,7 +2367,7 @@ Since \(\mathrm{rank}(P_X P_Y)\le \min(n,k)\), there are at most \(\min(n,k)\) n
 \subsubsection{Jacobi ensemble}
 
 \begin{theorem}[Jacobi/MANOVA/CCA Distribution]
-\label{thm:Jacobi_distribution}
+\label{lecture3:thm:Jacobi_distribution}
 Let \(X\) and \(Y\) be as above, each having iid\ (real
 or complex) Gaussian entries of size \(n\times t\) and
 \(k\times t\), respectively, with \(n\le k \le t\).  Assume
@@ -2397,7 +2397,7 @@ The derivation is again parallel to that in the GOE/GUE context, but one now kee
 
 
 \subsection{General Pattern and \texorpdfstring{\(\beta\)}{beta}-Ensembles}
-\label{sec:general_pattern_log_gas}
+\label{lecture3:sec:general_pattern_log_gas}
 
 We have now seen three classical examples:
 \begin{enumerate}[\(\bullet\)]
@@ -2434,13 +2434,13 @@ hypergeometric distribution from probability theory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Tridiagonal form for real symmetric matrices}
-\label{sec:householder}
+\label{lecture3:sec:householder}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Any real symmetric matrix can be orthogonally transformed into a tridiagonal matrix. This fact is standard in numerical linear algebra (the ``Householder reduction'') and also central in random matrix theory---notably in the Dumitriu--Edelman approach \cite{dumitriu2002matrix} for Gaussian ensembles.
 
 \begin{theorem}
-\label{thm:tridiagonal}
+\label{lecture3:thm:tridiagonal}
 Any real symmetric matrix \(W \in \mathbb{R}^{n\times n}\) can be represented as
 \[
   W \;=\; Q^\top\, T\, Q,
@@ -2470,7 +2470,7 @@ A \emph{Householder reflection} in \(\mathbb{R}^n\) is a matrix \(H\) of the for
 One checks that \(H^\top = H\), \(H^2 = I\), and \(H\) is orthogonal (i.e.\ \(H^\top H = I\)).  Geometrically, \(H\) is the reflection across the hyperplane orthogonal to~\(v\).
 \end{definition}
 
-\begin{proof}[Proof of \Cref{thm:tridiagonal}]
+\begin{proof}[Proof of \Cref{lecture3:thm:tridiagonal}]
 Let $A\in \mathbb{R}^{n\times n}$ be a symmetric matrix. We will show how to orthogonally conjugate $A$ into a tridiagonal matrix $T$.
 
 \paragraph{Step 1: Zeroing out subdiagonal entries in the first column.}
@@ -2540,7 +2540,7 @@ Overall, computations with tridiagonal matrices are much simpler and with better
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Tridiagonalization of random matrices}
-\label{sec:Wigner-SC-detailed}
+\label{lecture3:sec:Wigner-SC-detailed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here we discuss the tridiagonal form of the GOE random matrices,
@@ -2549,7 +2549,7 @@ and extend it to the general beta case.
 \subsection{Dumitriu–Edelman tridiagonal model for GOE}
 
 \begin{theorem}
-\label{thm:DE-model}
+\label{lecture3:thm:DE-model}
 Let \(W\) be an \(n\times n\) GOE matrix (real symmetric) with variances chosen so that each off-diagonal entry has variance \(1/2\) and each diagonal entry has variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
 \[
    W \;=\; Q^\top\,T\,Q,
@@ -2587,7 +2587,7 @@ the random variable
 follows a chi-square distribution with \(\nu\) degrees of
 freedom, i.e., \(Q \sim \chi^2_{\nu}\). In the context of
 the Dumitriu–Edelman tridiagonal model
-(\Cref{thm:DE-model}), the subdiagonal entries \(\alpha_j\)
+(\Cref{lecture3:thm:DE-model}), the subdiagonal entries \(\alpha_j\)
 are defined as \(\alpha_j = \sqrt{\frac{\chi^2_{n-j}}{2}}\).
 One can call this a \emph{chi random variable},
 as this is a square root of a chi-square variable.
@@ -2597,9 +2597,9 @@ chi-square distribution is well defined for any positive
 real $\nu$, by continuation of the density formula.
 \end{remark}
 
-\begin{proof}[Idea of proof of \Cref{thm:DE-model}]
+\begin{proof}[Idea of proof of \Cref{lecture3:thm:DE-model}]
 	This construction is essentially a specialized version of
-	the Householder reduction in \Cref{sec:householder}, set up
+	the Householder reduction in \Cref{lecture3:sec:householder}, set up
 	so that each step matches precisely the distributions
 	\(\alpha_j\sim \sqrt{\tfrac{\chi^2_{n-j}}{2}}\) and
 	\(d_i\sim\mathcal{N}(0,1)\).  One uses the rotational
@@ -2613,7 +2613,7 @@ Thus, to study the eigenvalues of a GOE matrix \(W\), one can equivalently study
 
 \subsection{Generalization to \(\beta\)-ensembles}
 
-The tridiagonal GOE construction (\Cref{thm:DE-model})
+The tridiagonal GOE construction (\Cref{lecture3:thm:DE-model})
 extends to a whole family of ensembles, parametrized by
 \(\beta>0\).  In particular, for \(\beta = 1, 2, 4\) we get
 the classical Orthogonal, Unitary, and Symplectic
@@ -2667,7 +2667,7 @@ Gaussian \(\beta\)-ensembles.
 \section{Problems}
 
 \subsection{Invariance of GOE and GUE}
-\label{prob:invariance_GOE_GUE}
+\label{lecture3:prob:invariance_GOE_GUE}
 
 Show that the distribution of the GOE and GUE is
 invariant under, respectively, orthogonal and unitary conjugation.
@@ -2685,7 +2685,7 @@ in a coordinate-free way.
 
 
 \subsection{Preimage size for spectral decomposition}
-\label{prob:GOE-preimage}
+\label{lecture3:prob:GOE-preimage}
 
 Show that for a real symmetric matrix $W$ with distinct eigenvalues,
 if $W=Q\Lambda Q^\top$ is its spectral decomposition
@@ -2695,14 +2695,14 @@ then there are exactly $2^n$ different choices of $Q$
 that give the same matrix $W$.
 
 \subsection{Distinct eigenvalues}
-\label{prob:distinct-eigenvalues}
+\label{lecture3:prob:distinct-eigenvalues}
 
 Show that under GOE and GUE, almost surely,
 all eigenvalues are distinct.
 
 
 \subsection{Testing distinctness of eigenvalues via rank-1 perturbations}
-\label{prob:distinct-eigs-rank1}
+\label{lecture3:prob:distinct-eigs-rank1}
   Suppose \(\lambda\) is an eigenvalue of a fixed matrix
 	\(W\) with multiplicity \(\ell\). Consider the rank-1 perturbation
   \[
@@ -2719,10 +2719,10 @@ Write the characteristic polynomial of \(W_{\varepsilon}\) as \(\det(W_{\varepsi
 
 
 \subsection{Jacobian for GUE}
-\label{prob:Jacobian-GUE}
+\label{lecture3:prob:Jacobian-GUE}
 
 Arguing similarly to
-\Cref{subsec:jacobian},
+\Cref{lecture3:subsec:jacobian},
 show that the Jacobian for the spectral decomposition
 of a complex Hermitian matrix is proportional to
 \begin{equation*}
@@ -2732,7 +2732,7 @@ In particular, make sure you understand
 where the factor $2$ comes from in the complex case.
 
 \subsection{Normalization for GOE}
-\label{prob:GOE-normalization}
+\label{lecture3:prob:GOE-normalization}
 
 Compute the $n$-dimensional integral
 (in the ordered on unordered form):
@@ -2756,7 +2756,7 @@ Hint: The following identity might be useful:
 
 \subsection{Wishart eigenvalue density}
 
-Prove \Cref{thm:Wishart-Distribution} (in the real case $\beta=1$)
+Prove \Cref{lecture3:thm:Wishart-Distribution} (in the real case $\beta=1$)
 by using the singular
 value
 decomposition
@@ -2764,7 +2764,7 @@ of \(X\) and the properties of the Wishart ensemble.
 
 
 \subsection{Householder reflection properties}
-\label{prob:householder-properties}
+\label{lecture3:prob:householder-properties}
 
 Show that the Householder reflection \(H = I - 2\,v\,v^\top/\|v\|^2\) has the following properties:
 \begin{enumerate}
@@ -2775,7 +2775,7 @@ Show that the Householder reflection \(H = I - 2\,v\,v^\top/\|v\|^2\) has the fo
 \end{enumerate}
 
 \subsection{Distribution of the Householder vector in random tridiagonalization}
-\label{prob:householder-vector}
+\label{lecture3:prob:householder-vector}
 
 Consider the first step of the Householder tridiagonalization of a GOE matrix \(W\). Denote the first column by \(x \in \mathbb{R}^n\), and let
 \[
@@ -2821,7 +2821,7 @@ distributions).
 
 
 \subsection{Jacobi ensemble is related to two Wisharts}
-\label{prob:jacobi-two-wisharts}
+\label{lecture3:prob:jacobi-two-wisharts}
 
 Let \(X\) be an \(n\times m\) and \(Y\) be a \(k\times m\) real Gaussian matrices with iid \(\mathcal{N}(0,1)\) entries, independent of each other, and assume \(n \le k \le m\). Consider the matrix
 \[
@@ -2942,14 +2942,14 @@ Applying the tridiagonalization to GOE, we obtain the following
 random matrix model.
 
 \begin{theorem}
-\label{thm:DE-model}
+\label{lecture4:thm:DE-model}
 Let \(W\) be an \(n\times n\) GOE matrix (real symmetric) with variances chosen so that each off-diagonal entry has variance \(1/2\) and each diagonal entry has variance \(1\).  Then there exists an orthogonal matrix \(Q\) such that
 \[
    W \;=\; Q^\top\,T\,Q,
 \]
 where \(T\) is a real symmetric tridiagonal matrix
 \begin{equation}
-	\label{eq:tridiagonal-form}
+	\label{lecture4:eq:tridiagonal-form}
    T \;=\; \begin{pmatrix}
          d_1 & \alpha_1 & 0 & \cdots \\
          \alpha_1 & d_2 & \alpha_2 & \ddots \\
@@ -2980,7 +2980,7 @@ the random variable
 \]
 follows a chi-square distribution with \(\nu\) degrees of
 freedom, i.e., \(Q \sim \chi^2_{\nu}\). In the context of
-\Cref{thm:DE-model}, the $\alpha_j$'s can be called \emph{chi random variables}.
+\Cref{lecture4:thm:DE-model}, the $\alpha_j$'s can be called \emph{chi random variables}.
 
 The parameter $\nu$ does not need to be an integer, and the
 chi-square distribution is well defined for any positive
@@ -2992,7 +2992,7 @@ The probability density is
 \end{equation*}
 \end{remark}
 
-\begin{proof}[Proof of \Cref{thm:DE-model}]
+\begin{proof}[Proof of \Cref{lecture4:thm:DE-model}]
 	In the process of tridiagonalization,
 	we apply Householder reflections.
 	Note that the diagonal entries stay fixed,
@@ -3024,12 +3024,12 @@ Let us define a general $\beta$ extension of the tridiagonal model for the
 GOE.
 
 \begin{definition}
-	\label{def:tridiagonal-model-general-beta}
+	\label{lecture4:def:tridiagonal-model-general-beta}
 	Let $\beta>0$ be a parameter.
 	The tridiagonal G$\beta$E is a random $n\times n$
 	tridiagonal real symmetric
 	matrix $T$ as in
-	\eqref{eq:tridiagonal-form},
+	\eqref{lecture4:eq:tridiagonal-form},
 	where $d_i\sim \mathcal{N}(0,1)$ are independent standard Gaussians,
 	and
 	\begin{equation*}
@@ -3043,7 +3043,7 @@ We showed that for $\beta=1$,
 the G$\beta$E is the tridiagonal form of the GOE random matrix model.
 The same holds for the two other classical betas:
 \begin{proposition}[Without proof]
-	\label{prop:tridiagonal-model-beta-classical}
+	\label{lecture4:prop:tridiagonal-model-beta-classical}
 	For $\beta=2$, the G$\beta$E is the tridiagonal form of the GUE random matrix model,
 	which is the random complex Hermitian matrix with Gaussian entries and maximal
 	independence. Similarly, for $\beta=4$,
@@ -3054,8 +3054,8 @@ The same holds for the two other classical betas:
 Moreover, for all $\beta$, the joint eigenvalue density of G$\beta$E is
 explicit:
 \begin{theorem}[\cite{dumitriu2002matrix}]
-	\label{thm:DE-joint-eigenvalue-density}
-	Let \(T\) be a G$\beta$E matrix as in \Cref{def:tridiagonal-model-general-beta}.
+	\label{lecture4:thm:DE-joint-eigenvalue-density}
+	Let \(T\) be a G$\beta$E matrix as in \Cref{lecture4:def:tridiagonal-model-general-beta}.
 	Then the joint eigenvalue density is given by
 	\begin{equation*}
 		p(\lambda_1,\ldots,\lambda_n)
@@ -3075,7 +3075,7 @@ eigenvalues in the tridiagonal setting.  It can be found in
 the original paper \cite{dumitriu2002matrix}.
 
 \subsection{The case \texorpdfstring{$\beta=2$}{beta=2}}
-\label{subsec:beta2-case}
+\label{lecture4:subsec:beta2-case}
 
 For many questions involving \emph{local eigenvalue statistics},
 the case \(\beta=2\) (the GUE, Gaussian Unitary Ensemble) is the most tractable.
@@ -3091,7 +3091,7 @@ can be expressed explicitly through determinants involving
 \emph{orthogonal polynomials}, namely, the \emph{Hermite polynomials}.
 
 \begin{proposition}[Joint density for GUE and orthogonal polynomials]
-  \label{prop:gue-joint-density}
+  \label{lecture4:prop:gue-joint-density}
   Consider the GUE (Gaussian Unitary Ensemble) random matrix model, i.e.\ an
   \(n\times n\) complex Hermitian matrix whose entries
   are i.i.d.\ up to the Hermitian condition, with each
@@ -3102,7 +3102,7 @@ can be expressed explicitly through determinants involving
   (or, without ordering, thought of as an unordered set)
   satisfy the joint probability density
   \begin{equation}
-  	\label{eq:gue-joint-density}
+  	\label{lecture4:eq:gue-joint-density}
     p(\lambda_1,\ldots,\lambda_n)
     \;=\;
     \frac{1}{Z_{n,2}}
@@ -3120,7 +3120,7 @@ can be expressed explicitly through determinants involving
 	\(\displaystyle\int_{-\infty}^{\infty} \psi_k(\lambda)\,\psi_\ell(\lambda)\,w(\lambda)\,d\lambda = \mathbf{1}_{k=\ell}\)),
   then one can also write
   \begin{equation}
-  	\label{eq:gue-joint-OP}
+  	\label{lecture4:eq:gue-joint-OP}
     p(\lambda_1,\ldots,\lambda_n)
     \;=\;
 		\mathrm{const}\cdot
@@ -3146,7 +3146,7 @@ of the squared Vandermonde factor
 
   A convenient definition for use with the weight \(e^{-x^2/2}\) is:
 	\begin{equation}
-		\label{eq:hermite-polynomial}
+		\label{lecture4:eq:hermite-polynomial}
     H_k(x)
     \;=\;
     (-1)^k\, e^{\tfrac{x^2}{2}}
@@ -3165,7 +3165,7 @@ of the squared Vandermonde factor
 		H_3(x) = x^3 - 3x,\qquad
 		H_4(x) = x^4 - 6x^2 + 3.
 	\]
-	The difference between $H_k$ and $\psi_k$ entering \Cref{prop:gue-joint-density}
+	The difference between $H_k$ and $\psi_k$ entering \Cref{lecture4:prop:gue-joint-density}
 	is in a constant normalization,
 	since $H_k$ are monic but not orthonormal,
 	while $\psi_k$ are orthonormal but not monic.
@@ -3184,12 +3184,12 @@ of the squared Vandermonde factor
 \end{proof}
 
 We will work with Hermite polynomials
-and the determinantal structure in \Cref{prop:gue-joint-density}
+and the determinantal structure in \Cref{lecture4:prop:gue-joint-density}
 in the next
 \Cref{chap:lecture5}).
 
 \section{Wigner semicircle law via tridiagonalization}
-\label{sec:semicircle-tridiagonal}
+\label{lecture4:sec:semicircle-tridiagonal}
 
 
 If $W$ is an $n\times n$ real Wigner matrix with entries of
@@ -3211,7 +3211,7 @@ thus it will apply to GUE and GSE.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Moments for tridiagonal matrices}
-\label{sub:tridiag-moments}
+\label{lecture4:sub:tridiag-moments}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Consider
@@ -3235,7 +3235,7 @@ argument to the reader.
 The $k$-th (random) moment of the ESD
 $\frac{1}{n}\sum_{i=1}^n \delta_{\lambda_i/\sqrt{n}}$ is
 \begin{equation}
-	\label{eq:tridiagonal-moments-expansion}
+	\label{lecture4:eq:tridiagonal-moments-expansion}
   \frac{1}{n}\operatorname{Tr}\Bigl(\tfrac{T}{\sqrt{n}}\Bigr)^k
   \;=\;
   \frac{1}{n^{1 + \frac{k}{2}}}
@@ -3255,7 +3255,7 @@ starting at $(0,m)$, ending at $(k,m)$, and consisting of steps
 picking the diagonal element; steps
 \((1,1)\) correspond to picking $i_{\ell+1}=i_\ell+1$, and
 steps \((1,-1)\) correspond to $i_{\ell+1}=i_\ell-1$.
-See \Cref{fig:motzkin} for an illustration of a path.
+See \Cref{lecture4:fig:motzkin} for an illustration of a path.
 \begin{figure}[htb]
 	\begin{center}
 		\begin{tikzpicture}[scale=0.7]
@@ -3265,22 +3265,22 @@ See \Cref{fig:motzkin} for an illustration of a path.
 			\draw[ultra thick,blue] (0,3)--++(1,0)--++(1,1)--++(2,-2)--++(2,0)--++(1,1)--++(1,-1);
 		\end{tikzpicture}
 	\caption{Example of a lattice path starting at height 3.}
-		\label{fig:motzkin}
+		\label{lecture4:fig:motzkin}
 	\end{center}
 \end{figure}
 
-Now, each term in the sum in \eqref{eq:tridiagonal-moments-expansion}
+Now, each term in the sum in \eqref{lecture4:eq:tridiagonal-moments-expansion}
 corresponds to a path. Moreover, for each path shape,
 there are $O(n)$ summands corresponding to it. The number of
 paths of length $k$ starting from a fixed $m$
 is finite (independent of $n$ for $m\gg 1$),
 so we need to look more closely at the asymptotics of the product
-in \eqref{eq:tridiagonal-moments-expansion}. This product
+in \eqref{lecture4:eq:tridiagonal-moments-expansion}. This product
 involves chi random variables which depend on $n$, too.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Asymptotics of chi random variables}
-\label{sub:chi-asymptotics}
+\label{lecture4:sub:chi-asymptotics}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 One additional technical point in analyzing $T/\sqrt{n}$ is to note that $\alpha_j$
@@ -3300,7 +3300,7 @@ This estimate is valid in the ``bulk'' region, that is, when $\theta$ is strictl
 
 Let us make these estimates more precise.  We have:
 \begin{proposition}[Pointwise asymptotics in the bulk]
-\label{prop:alpha-bulk}
+\label{lecture4:prop:alpha-bulk}
 Fix small $\delta>0$, and let $j$ range so that $\theta_j := j/n \in [\delta,\, 1-\delta]$.
 Then for each such $j$, we have\footnote{Here and below, $O_p(\cdot)$ denotes a term that is stochastically bounded at the indicated order as $n\to\infty$. That is, $X_n = O_p(a_n)$ means that for any $\epsilon>0$, there exists $M>0$ such that $\operatorname{\mathbb{P}}(|X_n/a_n| > M) < \epsilon$ for all sufficiently large $n$.}
 \[
@@ -3320,7 +3320,7 @@ In particular,
 \begin{remark}
 Outside the bulk region (i.e.\ very close to $j=0$ or $j=n$), one would need a different statement to handle the case $\beta(n-j)$ is not large.
 In our application, we only need the bulk behavior.
-See also Problem~\ref{prob:edges-in-tridiagonal}.
+See also Problem~\ref{lecture4:prob:edges-in-tridiagonal}.
 \end{remark}
 
 Meanwhile, on the diagonal, $d_i/\sqrt{n}$
@@ -3335,7 +3335,7 @@ because $d_i$ is standard Gaussian and does not depend on $n$.
 
 Putting the above pieces together, we see that
 \begin{equation}
-	\label{eq:tridiagonal-moments-discussion}
+	\label{lecture4:eq:tridiagonal-moments-discussion}
 	\frac{T}{\sqrt n}=
 	\frac{1}{n}
 	\sum_{i_1,\dots,i_k=1}^n
@@ -3348,9 +3348,9 @@ The terms in the sum have all $i_{\ell}$'s close together
 We
 may think that they are close to some $\theta n$, where $\theta\in [0,1]$.
 We can consider only the case when $\delta<\theta<1-\delta$ for some fixed small $\delta>0$;
-the case of edges does not contribute (see Problem~\ref{prob:edges-in-tridiagonal}).
+the case of edges does not contribute (see Problem~\ref{lecture4:prob:edges-in-tridiagonal}).
 
-If at least one of the $t_{ij}$'s in \eqref{eq:tridiagonal-moments-discussion} is
+If at least one of the $t_{ij}$'s in \eqref{lecture4:eq:tridiagonal-moments-discussion} is
 on the diagonal, the term vanishes in the limit. Therefore,
 it suffices to consider only the off-diagonal $\alpha_j$'s. The
 number of length $k$ walks starting from $m=\theta n$ for $\theta>\delta$ is
@@ -3364,7 +3364,7 @@ Fixing the starting location $\theta=\frac{i_\ell}{n}\in(\delta,1-\delta)$, we h
 	\frac{t_{i_\ell i_{\ell+1}}}{\sqrt n}\to (\beta/2)^{k/2}(1-\theta)^{k/2}.
 \end{equation*}
 
-There is an extra factor $1/n$ in front in \eqref{eq:tridiagonal-moments-discussion},
+There is an extra factor $1/n$ in front in \eqref{lecture4:eq:tridiagonal-moments-discussion},
 which is interpreted as transforming the sum over $i_1,\ldots,i_k $
 into an integral in $\theta$. We thus see that the moments converge to
 \begin{equation*}
@@ -3395,7 +3395,7 @@ Let us stay in the tridiagonal setting, and explore a more analytic
 method to derive the Wigner semicircle law.
 
 \subsection{Tridiagonal structure and characteristic polynomials}
-\label{sec:tridiag-charpoly}
+\label{lecture4:sec:tridiag-charpoly}
 
 We let
 \[
@@ -3423,7 +3423,7 @@ For each \(k=1,\dots,n\), denote by \(T_k\) the top-left \(k\times k\) submatrix
 By convention, set \(p_0(\lambda)\coloneqq 1\).  Then a determinant expansion argument along the first column gives the following three-term recurrence relation:
 
 \begin{lemma}[Three-Term Recurrence]
-\label{lem:3term}
+\label{lecture4:lem:3term}
 The characteristic polynomial \(p_k(\lambda)\) of the \(k\times k\) tridiagonal matrix \(T_k\) satisfies the three-term recurrence
 \[
 	p_{k+1}(\lambda)
@@ -3435,7 +3435,7 @@ The characteristic polynomial \(p_k(\lambda)\) of the \(k\times k\) tridiagonal 
 
 \end{lemma}
 
-See also Problem~\ref{prob:Hermite-3-term}.
+See also Problem~\ref{lecture4:prob:Hermite-3-term}.
 
 \subsubsection{Spectral connection and eigenvalues}
 
@@ -3444,7 +3444,7 @@ The eigenvalues \(\lambda_1,\dots,\lambda_n\) of \(T\) are exactly the roots of 
 When \(\lambda\) is close to a real eigenvalue, the behavior of the resolvent \(\bigl(T-\lambda I\bigr)^{-1}\) becomes large.  Tracking these poles in the complex plane is the key to the resolvent or Stieltjes transform approach.
 
 \subsection{Stieltjes transform / resolvent}
-\label{sec:stieltjes-def}
+\label{lecture4:sec:stieltjes-def}
 
 Recall that for a matrix \(A\) with real eigenvalues \(\lambda_1,\dots,\lambda_n\), the \emph{Stieltjes transform} (or Green’s function, or resolvent trace) is
 \[
@@ -3504,7 +3504,7 @@ Then the above equation becomes
 Scaling with $n$ (and ignoring the boundary conditions and convergence issues), we get
 a differential equation for $f_u(\theta)$:
 \begin{equation}
-	\label{eq:resolvent-diff-eq}
+	\label{lecture4:eq:resolvent-diff-eq}
 	-z f_u(\theta)+\sqrt{\frac{\beta(1-\theta)}{2}}
 	\left[f_u''(\theta)+2f_u(\theta)\right]=\delta(\theta-u).
 \end{equation}
@@ -3518,17 +3518,17 @@ is then the integral of the solution:
 \end{equation*}
 
 \colorbox{green}{\parbox{.7\textwidth}{At this point (2025-01-30), I am stuck on how to pass from
-\eqref{eq:resolvent-diff-eq} to the Stieltjes transform $G(z)$.
+\eqref{lecture4:eq:resolvent-diff-eq} to the Stieltjes transform $G(z)$.
 This would be an excellent topic to explore for a presentation.
-See~Problem~\ref{prob:resolvent-diff-eq}.}}
+See~Problem~\ref{lecture4:prob:resolvent-diff-eq}.}}
 
 \colorbox{yellow}{\parbox{.7\textwidth}{Update 2025-02-05: Probably,
 the limit of $\alpha_j/\sqrt n$ should be taken as $1$ and not as a function of $\tau$.
-At least this is what is done in the next approach in \Cref{sub:continued-fractions}.}}
+At least this is what is done in the next approach in \Cref{lecture4:sub:continued-fractions}.}}
 
 
 \subsection{Approach via continued fractions}
-\label{sub:continued-fractions}
+\label{lecture4:sub:continued-fractions}
 
 We derive the Wigner semicircle law using the continued
 fraction representation of the Stieltjes transform (or
@@ -3556,7 +3556,7 @@ b_1 & a_1 & b_2 & \ddots & \vdots \\
 \end{pmatrix},
 \]
 with \(b_j>0\). Associated with \(J\) is a sequence of monic polynomials \(\{p_n(z)\}_{n\ge0}\) defined by the three--term recurrence
-\begin{equation}\label{eq:three-term}
+\begin{equation}\label{lecture4:eq:three-term}
 \begin{split}
 p_0(z)&=1,\\[1mm]
 p_1(z)&=z-a_0,\\[1mm]
@@ -3594,9 +3594,9 @@ for all \(n\).
 This is probably the correct way to approach the global asymptotic behavior of
 $T$'s spectrum in connection with the Stieltjes transform.
 This should be justified; however, this idea should help to unstick
-the argument in \Cref{sec:stieltjes-def}.}}
+the argument in \Cref{lecture4:sec:stieltjes-def}.}}
 
-In this homogeneous case the three-term recurrence \eqref{eq:three-term} reduces to
+In this homogeneous case the three-term recurrence \eqref{lecture4:eq:three-term} reduces to
 \[
 p_0(z)=1,\quad p_1(z)=z,\quad p_{n+1}(z)=z\,p_n(z)-p_{n-1}(z).
 \]
@@ -3609,16 +3609,16 @@ m(z)=\int_{\mathbb{R}}\frac{d\mu(x)}{z-x},\qquad z\in\mathbb{C}\setminus\mathbb{
 A \textbf{classical result in the theory of orthogonal polynomials}
 (e.g., see \cite{sokal2020euler})
 is that \(m(z)\) may be written as the continued fraction
-\begin{equation}\label{eq:CF}
+\begin{equation}\label{lecture4:eq:CF}
 m(z)=\cfrac{1}{z-a_0-\cfrac{b_1^2}{z-a_1-\cfrac{b_2^2}{z-a_2-\cfrac{b_3^2}{z-a_3-\cdots}}}}.
 \end{equation}
 In our case, since \(a_n=0\) for all \(n\) and \(b_n=1\) for all \(n\), this simplifies to
-\begin{equation}\label{eq:CF_homogeneous}
+\begin{equation}\label{lecture4:eq:CF_homogeneous}
 m(z)=\cfrac{1}{z-\cfrac{1}{z-\cfrac{1}{z-\cfrac{1}{\ddots}}}}.
 \end{equation}
 
 
-Observe that the infinite continued fraction in \eqref{eq:CF_homogeneous} is self--similar; that is, if we denote the entire continued fraction by \(m(z)\), then the tail of the continued fraction is again \(m(z)\). Thus we have the relation
+Observe that the infinite continued fraction in \eqref{lecture4:eq:CF_homogeneous} is self--similar; that is, if we denote the entire continued fraction by \(m(z)\), then the tail of the continued fraction is again \(m(z)\). Thus we have the relation
 \[
 m(z)=\frac{1}{z-m(z)}.
 \]
@@ -3627,17 +3627,17 @@ Multiplying both sides by the denominator yields
 m(z)\Bigl(z-m(z)\Bigr)=1.
 \]
 Expanding the left--hand side we obtain the quadratic equation
-\begin{equation}\label{eq:quadratic}
+\begin{equation}\label{lecture4:eq:quadratic}
 m(z)^2-z\,m(z)+1=0.
 \end{equation}
 
 
-The quadratic \eqref{eq:quadratic} has the solutions
+The quadratic \eqref{lecture4:eq:quadratic} has the solutions
 \[
 m(z)=\frac{z\pm\sqrt{z^2-4}}{2}.
 \]
 To determine the correct branch, recall that for \(z\) in the upper half--plane (\(\operatorname{Im}(z)>0\)) we must have \(\operatorname{Im}\,m(z)>0\). The proper solution is
-\begin{equation}\label{eq:m_solution}
+\begin{equation}\label{lecture4:eq:m_solution}
 m(z)=\frac{z-\sqrt{z^2-4}}{2},
 \end{equation}
 where the square root is defined so that \(\sqrt{z^2-4}\sim z\) as \(z\to\infty\) and \(\operatorname{Im}\sqrt{z^2-4}>0\) when \(\operatorname{Im}(z)>0\).
@@ -3651,7 +3651,7 @@ For \(x\) in the interval \((-2,2)\) one computes that
 \[
 \sqrt{(x+i\epsilon)^2-4}\;\xrightarrow[\epsilon\to0^+]{}\; i\sqrt{4-x^2}.
 \]
-Thus, from \eqref{eq:m_solution} we have, for \(x\in(-2,2)\),
+Thus, from \eqref{lecture4:eq:m_solution} we have, for \(x\in(-2,2)\),
 \[
 m(x+i0)=\frac{x-\mathrm{i}\sqrt{4-x^2}}{2}.
 \]
@@ -3668,10 +3668,10 @@ This is precisely the celebrated Wigner semicircle law.
 
 
 \section{Determinantal point processes (discrete)}
-\label{sec:determinantal}
+\label{lecture4:sec:determinantal}
 
 We are now going to start the discussion of the local eigenvalue
-behavior at $\beta=2$, started in \Cref{subsec:beta2-case}.
+behavior at $\beta=2$, started in \Cref{lecture4:subsec:beta2-case}.
 We begin with a general discussion of \emph{determinantal point processes} (DPPs),
 starting in discrete world. The continuous world is going to be considered in the next
 \Cref{chap:lecture5}.
@@ -3693,12 +3693,12 @@ which carries the natural \(\sigma\)-algebra generated by the functions
 on \(\mathfrak{X}\) is a probability measure on \(Conf(\mathfrak{X})\).
 
 \begin{definition}[Determinantal point process]
-\label{def:dpp-discrete}
+\label{lecture4:def:dpp-discrete}
 A random point process \(P\) on a discrete set \(\mathfrak{X}\) is \emph{determinantal}
 if there exists a kernel function \(K:\mathfrak{X}\times\mathfrak{X} \to \mathbb{C}\) such that
 for every finite collection of pairwise distinct points \(x_1,\dots,x_n\in \mathfrak{X}\),
 \begin{equation}
-\label{eq:DPP-def}
+\label{lecture4:eq:DPP-def}
 \operatorname{\mathbb{P}}\{x_1,\dots,x_n\in X\} = \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^n.
 \end{equation}
 That is, all finite-dimensional distributions of \(P\) take a determinantal form.
@@ -3706,7 +3706,7 @@ The function \(K\) is called a \emph{correlation kernel} for \(P\).
 \end{definition}
 
 \noindent\textbf{Correlation functions and the kernel.}
-The condition \eqref{eq:DPP-def} captures all finite-dimensional distributions of \(P\).
+The condition \eqref{lecture4:eq:DPP-def} captures all finite-dimensional distributions of \(P\).
 Equivalently, let
 \[
 	\rho_n(x_1,\dots,x_n) \coloneqq \operatorname{\mathbb{P}}\{\text{there is a particle at each }x_i\}
@@ -3723,7 +3723,7 @@ determinantal if and only if
 \noindent\textbf{Basic properties.} If \(P\) is a DPP with correlation kernel
 \(K\colon \mathfrak{X}\times\mathfrak{X}\to\mathbb{C}\), then for any subset \(I\subset \mathfrak{X}\),
 \begin{equation}
-\label{eq:prob-empty-set-DPP}
+\label{lecture4:eq:prob-empty-set-DPP}
 \operatorname{\mathbb{P}}\{X\cap I = \varnothing\} = \det\bigl[\mathbf{1} - K_I\bigr],
 \end{equation}
 where \(K_I\) is the operator \(\bigl[K(x,y)\bigr]_{x,y\in I}\)
@@ -3748,7 +3748,7 @@ This identity makes determinantal point processes more tractable than general pr
 \section{Application of determinantal processes to random matrices at \texorpdfstring{$\beta=2$}{beta=2}}
 
 In this final section of the lecture, we illustrate how the theory of determinantal point processes (DPPs)
-introduced in \Cref{sec:determinantal}
+introduced in \Cref{lecture4:sec:determinantal}
 applies to the study of local eigenvalue statistics of random matrices.
 We concentrate on the \(\beta=2\) setting, where DPPs typically
 govern the joint behavior of eigenvalues at microscopic (local)
@@ -3757,7 +3757,7 @@ We also include a simpler example of a Poisson process to highlight
 the role of correlation functions.
 
 \subsection{Local eigenvalue statistics (bulk and edge scaling limits)}
-\label{subsec:local-stats-intro}
+\label{lecture4:subsec:local-stats-intro}
 
 Given an \(n\times n\) random Hermitian matrix \(W\) whose eigenvalues
 \(\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_n\) are real,
@@ -3785,9 +3785,9 @@ For Gaussian ensembles at \(\beta=2\), these processes are determinantal, and on
 write correlation kernels involving special functions (sine, Airy, and more generally Hermite polynomials).
 
 \subsection{Correlation functions and densities}
-\label{subsec:correlation-functions}
+\label{lecture4:subsec:correlation-functions}
 
-We recall from \Cref{sec:determinantal} (in the discrete setting) that a point process \(\mathcal{X}\) on a space \(\mathfrak{X}\) can be described by its \emph{correlation functions} \(\{\rho_k\}_{k=1}^\infty\). In the continuous setting (e.g.\ \(\mathfrak{X}=\mathbb{R}\) or an interval), these are defined so that
+We recall from \Cref{lecture4:sec:determinantal} (in the discrete setting) that a point process \(\mathcal{X}\) on a space \(\mathfrak{X}\) can be described by its \emph{correlation functions} \(\{\rho_k\}_{k=1}^\infty\). In the continuous setting (e.g.\ \(\mathfrak{X}=\mathbb{R}\) or an interval), these are defined so that
 \begin{equation}
   \rho_k(x_1,\dots,x_k)\,dx_1\cdots dx_k
   \;=\;
@@ -3801,17 +3801,17 @@ Equivalently, \(\rho_k\) is the \(k\)-th \emph{(unordered) joint density} of the
 \]
 For a \emph{determinantal} point process in the continuous setting, there is a kernel \(K(x,y)\) such that
 \begin{equation}
-  \label{eq:rho-k-dpp-cont}
+  \label{lecture4:eq:rho-k-dpp-cont}
   \rho_k(x_1,\dots,x_k)
   \;=\;
   \det\bigl[K(x_i,x_j)\bigr]_{i,j=1}^k
   \quad
   \text{for each $k\ge1$}.
 \end{equation}
-The simplest example is the \emph{Poisson process} (see \Cref{subsec:poisson-example}).
+The simplest example is the \emph{Poisson process} (see \Cref{lecture4:subsec:poisson-example}).
 
 \subsection{Poisson process example}
-\label{subsec:poisson-example}
+\label{lecture4:subsec:poisson-example}
 
 A \emph{Poisson point process with intensity} \(\lambda>0\) on \(\mathbb{R}\) is defined by:
 \begin{itemize}
@@ -3835,7 +3835,7 @@ Hence, in the Poisson process, there is no ``interaction'' or ``repulsion'' betw
 \subsection{Eigenvalue density of G$\beta$E}
 
 Read and understand the main principles of the
-proof of \Cref{thm:DE-joint-eigenvalue-density}
+proof of \Cref{lecture4:thm:DE-joint-eigenvalue-density}
 in \cite{dumitriu2002matrix}.
 
 \subsection{Chi-square mean and variance}
@@ -3845,25 +3845,25 @@ Let $X$ be a random variable with $\chi^2_\nu$ distribution. Compute the mean an
 How to extend this to non-integer \(\nu\)?)
 
 \subsection{Edge contributions in the tridiagonal moment computation}
-\label{prob:edges-in-tridiagonal}
+\label{lecture4:prob:edges-in-tridiagonal}
 
 Show that the cases when the $i_{\ell}$'s are close to the edge ($\theta=0$ or $1$)
-in \eqref{eq:tridiagonal-moments-discussion}
+in \eqref{lecture4:eq:tridiagonal-moments-discussion}
 do not contribute to the limit of the moments.
 
 \subsection{Hermite polynomials and three-term recurrence}
-\label{prob:Hermite-3-term}
+\label{lecture4:prob:Hermite-3-term}
 
 Show that the monic Hermite polynomials $H_k(x)$
-\eqref{eq:hermite-polynomial}
+\eqref{lecture4:eq:hermite-polynomial}
 satisfy the three-term recurrence relation
 \begin{equation*}
-	\label{eq:hermite-3-term}
+	\label{lecture4:eq:hermite-3-term}
 	H_k(x) = x H_{k-1}(x) - (k-1) H_{k-2}(x).
 \end{equation*}
 
 \subsection{}
-\label{prob:Vandermonde-determinant}
+\label{lecture4:prob:Vandermonde-determinant}
 
 Compute the determinant
 \begin{equation*}
@@ -3883,16 +3883,16 @@ Compute the determinant
 \begin{enumerate}
 	\item
 Prove identity
-\eqref{eq:prob-empty-set-DPP} for DPPs.
+\eqref{lecture4:eq:prob-empty-set-DPP} for DPPs.
 \item Prove the generalization computing
 	\(\{|X\cap I_k|=n_k\text{ for }1\le k\le m\}\).
 \end{enumerate}
 
 
 \subsection{Stieltjes transform approach for tridiagonal matrices}
-\label{prob:resolvent-diff-eq}
+\label{lecture4:prob:resolvent-diff-eq}
 
-Complete the derivation from \Cref{sec:stieltjes-def} to obtain the limiting Stieltjes transform $G(z)$ for the tridiagonal matrix $T/\sqrt{n}$.
+Complete the derivation from \Cref{lecture4:sec:stieltjes-def} to obtain the limiting Stieltjes transform $G(z)$ for the tridiagonal matrix $T/\sqrt{n}$.
 
 \begin{remark}
 	This is more of a literature search. It is extensive, and
@@ -3941,7 +3941,7 @@ steepest descent analysis in the large-$n$ limit.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discrete determinantal point processes}
-\label{sec:dpp-discrete}
+\label{lecture5:sec:dpp-discrete}
 \subsection{Definition and basic properties}
 
 Let $\mathfrak{X}$ be a (finite or countably infinite)
@@ -3988,7 +3988,7 @@ Let us just mention two useful properties.
 \end{remark}
 
 \begin{proposition}[Generating functions]
-	\label{prop:gen-func}
+	\label{lecture5:prop:gen-func}
 	Let $f:\mathfrak{X}\to\mathbb{C}$ be a function such that the support of $f-1$ is finite. Then the generating function of the multiplicative statistics of the determinantal point process is given by
 	\[
 	\mathbb{E}\left[\ssp\prod_{x\in X} f(x)\right]
@@ -4010,11 +4010,11 @@ Let us just mention two useful properties.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Determinantal structure in the GUE}
-\label{sec:gue-dpp}
+\label{lecture5:sec:gue-dpp}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Correlation functions as densities with respect to Lebesgue measure}
-\label{sec:corr-functions-lebesgue}
+\label{lecture5:sec:corr-functions-lebesgue}
 
 In the discrete setting discussed above the joint probabilities of finding points in specified subsets of $\mathfrak{X}$ are given by determinants of the kernel evaluated at those points. When the underlying space is continuous (typically a subset of $\mathbb{R}$ or $\mathbb{R}^d$), one works instead with correlation functions which serve as densities with respect to the Lebesgue measure.
 
@@ -4049,7 +4049,7 @@ while higher order joint intensities provide information about correlations betw
 
 We start from the joint eigenvalue density for the Gaussian Unitary Ensemble (GUE)
 \begin{equation}
-\label{eq:gue-joint-density}
+\label{lecture5:eq:gue-joint-density}
 p(x_1,\dots,x_n)
 \ssp dx_1\cdots dx_n
 =\frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-x_j^2/2}\prod_{1\le i<j\le n} (x_i-x_j)^2
@@ -4119,12 +4119,12 @@ The orthogonality condition for these polynomials is
 \]
 We define the functions
 \begin{equation}
-\label{eq:phi_j}
+\label{lecture5:eq:phi_j}
 \phi_j(x)=p_j(x)e^{-x^2/4},
 \end{equation}
 and then introduce the orthonormal functions
 \begin{equation}
-\label{eq:psi_j}
+\label{lecture5:eq:psi_j}
 \psi_j(x)=\frac{1}{\sqrt{h_j}}\phi_j(x)=\frac{1}{\sqrt{h_j}}\,p_j(x)e^{-x^2/4}.
 \end{equation}
 Note that here the weight splits as $e^{-x^2/2}=e^{-x^2/4}e^{-x^2/4}$, which is useful in the next step.
@@ -4135,7 +4135,7 @@ The functions $\psi_j$ form an orhtonormal basis of the Hilbert space $L^2(\math
 
 \subsubsection{Rewriting the density in determinantal form}
 
-Substituting the determinant form into the joint density \eqref{eq:gue-joint-density}, we have
+Substituting the determinant form into the joint density \eqref{lecture5:eq:gue-joint-density}, we have
 \[
 p(x_1,\dots,x_n)= \frac{1}{Z_{n,2}}\prod_{j=1}^n e^{-x_j^2/2} \Bigl[\det\Bigl[p_{j-1}(x_i)\Bigr]_{i,j=1}^n\Bigr]^2.
 \]
@@ -4155,7 +4155,7 @@ This squared-determinant structure is characteristic of determinantal point proc
 
 We now compute the $k$-point correlation function by integrating out the remaining $n-k$ variables:
 \begin{equation}
-\label{eq:k-point-corr}
+\label{lecture5:eq:k-point-corr}
 	\rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!}\int_{\mathbb{R}^{n-k}} p(x_1,\dots,x_n) \,dx_{k+1}\cdots dx_n.
 \end{equation}
 \begin{remark}
@@ -4168,7 +4168,7 @@ are fixed, and we are not integrating over all permutations of these variables.
 
 
 \begin{theorem}[Determinantal structure for squared-determinant densities]
-\label{thm:determinantal}
+\label{lecture5:thm:determinantal}
 We have
 \[
 \rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
@@ -4191,10 +4191,10 @@ Expanding the square of the determinant, we have
 where $S_n$ denotes the symmetric group on $n$ elements.
 
 Next, to obtain the $k$-point correlation function $\rho_k(x_1,\dots,x_k)$, we integrate out the remaining $n-k$ variables
-using \eqref{eq:k-point-corr}.
+using \eqref{lecture5:eq:k-point-corr}.
 Substituting the expansion of the squared determinant into the expression for $\rho_k$, we have
 \begin{multline}
-	\label{eq:rho_k_computation_1}
+	\label{lecture5:eq:rho_k_computation_1}
 \rho_k(x_1,\dots,x_k)=\frac{n!}{(n-k)!\,\tilde{Z}_{n,2}} \sum_{\sigma,\tau\in S_n} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) \\
 \left\{ \prod_{i=1}^k \phi_{\sigma(i)-1}(x_i)\phi_{\tau(i)-1}(x_i) \prod_{j=k+1}^n \int_{\mathbb{R}} \phi_{\sigma(j)-1}(x)\phi_{\tau(j)-1}(x)\,dx \right\}.
 \end{multline}
@@ -4213,9 +4213,9 @@ By the orthonormality of the $\psi_j$'s, we have
 Therefore, for the indices $j=k+1,\dots,n$, the integrals enforce the condition $\sigma(j)=\tau(j)$. As a result, the double sum over $\sigma$ and $\tau$ reduces to a single sum over permutations on the first $k$ indices, and the factors for the remaining indices simply contribute to the normalization constant.
 
 Let us add more details here.
-In \eqref{eq:rho_k_computation_1}, we get, using the symmetry over $x_1,\ldots,x_k $:
+In \eqref{lecture5:eq:rho_k_computation_1}, we get, using the symmetry over $x_1,\ldots,x_k $:
 \begin{equation}
-	\label{eq:rho_k_computation_2}
+	\label{lecture5:eq:rho_k_computation_2}
 	\rho_k(x_1,\dots,x_k)=\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
 	\sum_{\substack{\sigma,\tau\in S_n\\
 	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
@@ -4230,9 +4230,9 @@ $h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it int
 normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and 
 we later will show that the final normalization becomes $1$.
 
-To continue with \eqref{eq:rho_k_computation_2}, we need two general lemmas.
+To continue with \eqref{lecture5:eq:rho_k_computation_2}, we need two general lemmas.
 \begin{lemma}[Cauchy--Binet formula]
-	\label{lemma:Cauchy_Binet}
+	\label{lecture5:lemma:Cauchy_Binet}
 	Let $A_{ij}$ and $B_{ij}$ be rectangular matrices of size \(m\times p\) and \(p\times m\), respectively,
 	with
 	$m\le p$.
@@ -4246,17 +4246,17 @@ To continue with \eqref{eq:rho_k_computation_2}, we need two general lemmas.
 \begin{proof}
 For any $1 \leq k \leq p$, the coefficient of $z^{p-k}$ in the polynomial $\det(zI_p+X)$ is the sum of the $k \times k$ principal minors of $X$. If $m \leq p$ and $A$ is an $m \times p$ matrix and $B$ is an $p \times m$ matrix, then
 \begin{equation}
-\label{eq:det_polynomial}
+\label{lecture5:eq:det_polynomial}
 \det(zI_p+BA)=z^{p-m}\det(zI_m+AB).
 \end{equation}
 If we compare the coefficient of $z^{p-m}$ in
-\eqref{eq:det_polynomial}, the left hand side will give the
+\eqref{lecture5:eq:det_polynomial}, the left hand side will give the
 sum of the principal minors of $BA$ while the right hand
 side will give the constant term of $\det(zI_m+AB)$, which
 is simply $\det(AB)$. This yields the desired result.
 \end{proof}
 \begin{lemma}[Andreief identity]
-	\label{lemma:Andreief}
+	\label{lecture5:lemma:Andreief}
 	Let $f_i(x),g_i(x)\in L^1(\mathbb{R})$ for \(i=1,\ldots,n\).
 	Then
 	\[
@@ -4288,14 +4288,14 @@ is simply $\det(AB)$. This yields the desired result.
 	are $n!$ different pairs $(\sigma,\tau)$. This completes the proof.
 \end{proof}
 
-Let us now continue with \eqref{eq:rho_k_computation_2}, and finish the proof of Theorem \ref{thm:determinantal}.
+Let us now continue with \eqref{lecture5:eq:rho_k_computation_2}, and finish the proof of Theorem \ref{lecture5:thm:determinantal}.
 To sum over $\sigma,\tau$, let us denote
 $I=\{\sigma(1),\ldots,\sigma(k) \}\subseteq [n]=\{1,\ldots,n \}$.
 The set $[n]\setminus I$ can be ordered in $(n-k)!$ ways, and since
 $\sigma $ and $\tau$ must coincide on $[n]\setminus I$, the product of their
 (partial) signs is $+1$ there. Thus, we have
 \begin{equation*}
-	\eqref{eq:rho_k_computation_2}=
+	\eqref{lecture5:eq:rho_k_computation_2}=
 	\mathrm{const}_n\sum_{I\subseteq [n],\,|I|=k}
 	\sum_{\sigma',\tau'\in S(I)}
 	\operatorname{sgn}(\sigma')\operatorname{sgn}(\tau')
@@ -4310,24 +4310,24 @@ of two determinants:
 	\det\Bigl[\psi_{\ell_i-1}(x_j)\Bigr]_{i=1}^{k},
 	\qquad I=\{\ell_1<\ell_2<\cdots<\ell_k \}.
 \end{equation*}
-By \Cref{lemma:Cauchy_Binet}, we can rewrite the sum (over $I$)
+By \Cref{lecture5:lemma:Cauchy_Binet}, we can rewrite the sum (over $I$)
 of products
 of two determinants as a single determinant of the sum. Thus, we have
 \begin{equation}
 \rho_k(x_1,\dots,x_k)=
 \mathrm{const}\cdot
-\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k, \label{eq:rho_k_determinantal_final_result}
+\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k, \label{lecture5:eq:rho_k_determinantal_final_result}
 \end{equation}
 where the kernel is given by
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
 \]
 The fact that the normalization constant 
-in \eqref{eq:rho_k_determinantal_final_result}
-is indeed $1$ follows from \Cref{lemma:Andreief}.
+in \eqref{lecture5:eq:rho_k_determinantal_final_result}
+is indeed $1$ follows from \Cref{lecture5:lemma:Andreief}.
 Indeed, once the integral of $\rho_n$ over $\mathbb{R}^n$ is equal to \(n!\),
 the integral over $x_1>\cdots>x_n$ becomes $1$ by symmetry, as it should be.
-This completes the proof of \Cref{thm:determinantal}.
+This completes the proof of \Cref{lecture5:thm:determinantal}.
 \end{proof}
 
 \subsection{Christoffel--Darboux formula}
@@ -4350,7 +4350,7 @@ K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y)
 \]
 admits the closed-form representation
 \begin{equation}
-\label{eq:CD}
+\label{lecture5:eq:CD}
 K_n(x,y)=\sqrt{w(x)w(y)}\,\frac{1}{h_{n-1}}\,\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
 \end{equation}
 with the obvious continuous extension when \(x=y\).
@@ -4367,7 +4367,7 @@ K_n(x,y)=\sqrt{w(x)w(y)}\,S_n(x,y).
 \]
 Our goal is to prove that
 \begin{equation}
-\label{eq:telescoping}
+\label{lecture5:eq:telescoping}
 (x-y)S_n(x,y)=\frac{1}{h_{n-1}}\Bigl[p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)\Bigr].
 \end{equation}
 
@@ -4406,7 +4406,7 @@ A reindexing of the sums shows that the series telescopes, leaving only the boun
 \[
 (x-y)S_n(x,y)=\frac{1}{h_{n-1}}\Bigl[p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)\Bigr].
 \]
-This establishes \eqref{eq:telescoping}, and hence the representation \eqref{eq:CD} for \(K_n(x,y)\).
+This establishes \eqref{lecture5:eq:telescoping}, and hence the representation \eqref{lecture5:eq:CD} for \(K_n(x,y)\).
 
 The continuous extension to \(x=y\) is obtained via l’Hôpital’s rule.
 \end{proof}
@@ -4526,7 +4526,7 @@ p_n''(x)-x\,p_n'(x)+n\,p_n(x)=0.
 \]
 
 \subsection{Norm of the Hermite Polynomials}
-\label{prob:norm}
+\label{lecture5:prob:norm}
 
 Show that
 \begin{equation*}
@@ -4596,7 +4596,7 @@ For the proof of the existence and uniqueness of the determinantal point process
 
 Last time, we proved the following result:
 \begin{theorem}
-\label{thm:determinantal_GUE}
+\label{lecture6:thm:determinantal_GUE}
 The GUE correlation functions are given by
 \[
 \rho_k(x_1,\dots,x_k)=\det\Bigl[K_n(x_i,x_j)\Bigr]_{i,j=1}^k,
@@ -4647,7 +4647,7 @@ and finally the constant is equal to $1$ by Andreief identity.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Double Contour Integral Representation for the GUE Kernel}
-\label{sec:double-contour}
+\label{lecture6:sec:double-contour}
 
 \subsection{One contour integral representation for Hermite polynomials}
 
@@ -4661,14 +4661,14 @@ with the orthonormal functions
 \]
 where the (monic, probabilists') Hermite polynomials are given by
 \begin{equation}
-\label{eq:hermite_def}
+\label{lecture6:eq:hermite_def}
 	p_n(x)=(-1)^n e^{x^2/2}\frac{d^n}{dx^n}\,e^{-x^2/2}.
 \end{equation}
 Note that the monic Hermite polynomials are uniquely defined by the
-orthogonality property. We are not proving \eqref{eq:hermite_def} here,
+orthogonality property. We are not proving \eqref{lecture6:eq:hermite_def} here,
 it is an exercise.
 \begin{lemma}[Generator function for Hermite polynomials]
-	\label{lem:hermite_gen}
+	\label{lecture6:lem:hermite_gen}
 	We have
 	\[
 		\exp\Bigl(xt-\frac{t^2}{2}\Bigr)=\sum_{n\ge0}p_n(x)\frac{t^n}{n!}.
@@ -4701,9 +4701,9 @@ as desired.
 \end{proof}
 
 
-By Cauchy's integral formula we can write using \Cref{lem:hermite_gen}:
+By Cauchy's integral formula we can write using \Cref{lecture6:lem:hermite_gen}:
 \begin{equation}
-\label{eq:pn-formula}
+\label{lecture6:eq:pn-formula}
 p_n(x)=\frac{n!}{2\pi i}\oint_C\frac{\exp\Bigl(xt-\frac{t^2}{2}\Bigr)}{t^{n+1}}\,dt,
 \end{equation}
 where the contour \(C\) is a simple closed curve encircling the origin.
@@ -4714,7 +4714,7 @@ Indeed, here we use the complex analysis property
 		0,&\text{ if }k\neq0,
 	\end{cases}
 \end{equation*}
-so \eqref{eq:pn-formula} is simply a complex analysis version of the
+so \eqref{lecture6:eq:pn-formula} is simply a complex analysis version of the
 operation of extracting the coefficient of \(t^n\) in the Taylor expansion.
 
 Therefore,
@@ -4787,7 +4787,7 @@ Therefore,
 \subsection{Normalization of Hermite polynomials}
 
 \begin{lemma}
-	\label{lem:hermite_norm}
+	\label{lecture6:lem:hermite_norm}
 	We have
 	\begin{equation*}
 		h_n=\int_{-\infty}^{\infty} p_n(x)^2\,e^{-x^2/2}\,dx=n!\sqrt{2\pi}.
@@ -4852,9 +4852,9 @@ another proof of the Christoffel--Darboux formula):
 	\exp\left\{ -\frac{t^2}{2}+xt+\frac{s^2}{2}-ys \right\}
 	\underbrace{\sum_{k=0}^{n-1}
 	s^k t^{-k-1}}_{\frac{1-(s/t)^n}{t-s}}.
-\end{split}\label{eq:K_n_sum}\end{equation}
+\end{split}\label{lecture6:eq:K_n_sum}\end{equation}
 Here we used the two contour integral representations for Hermite polynomials,
-and the explicit norm (\Cref{lem:hermite_norm}).
+and the explicit norm (\Cref{lecture6:lem:hermite_norm}).
 At this point, the $t$ contour is a small circle around $0$, and
 the $s$ contour is a vertical line in the complex plane.
 Their mutual position can be arbitrary at this point --- the $s$ contour
@@ -4864,12 +4864,12 @@ $\frac{1-(s/t)^n}{t-s}$ does not have a singularity at $s=t$ due to the
 cancellation.
 
 Let us now move the $s$ contour to be to the left of the $t$ contour,
-as in \Cref{fig:contours}.
+as in \Cref{lecture6:fig:contours}.
 On the new contours, we have $|s|>|t|$.
 Now we can add the summands $s^k t^{-k-1}$
 for all $k\le -1$
 into the sum in
-\eqref{eq:K_n_sum}.
+\eqref{lecture6:eq:K_n_sum}.
 Indeed, for $|s|>|t|$, the series in $k$ converges, while the
 summand $s^kt^{-k-1}$ has zero residue at $0$ and thus adding the
 summands does not change the value of the integral.
@@ -4896,13 +4896,13 @@ summands does not change the value of the integral.
 			.. controls (1.8,-2) and (1.8,2) .. node[midway, above right] {\(s\)} (0,2)
 			-- (0,3);
 	\end{tikzpicture}
-	\caption{Integration contours for the GUE kernel \eqref{eq:K_n_GUE_kernel}.}
-	\label{fig:contours}
+	\caption{Integration contours for the GUE kernel \eqref{lecture6:eq:K_n_GUE_kernel}.}
+	\label{lecture6:fig:contours}
 \end{figure}
 
-With this extension of the sum, formula \eqref{eq:K_n_sum} becomes
+With this extension of the sum, formula \eqref{lecture6:eq:K_n_sum} becomes
 \begin{equation}
-	\label{eq:K_n_GUE_kernel}
+	\label{lecture6:eq:K_n_GUE_kernel}
 	K_n(x,y)=\frac{e^{(y^2-x^2)/4}}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
 	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
@@ -4934,14 +4934,14 @@ representing the correlation functions, the
 conjugation factors $g(x_i)/g(x_j)$ do not affect the value of the determinant.
 Thus, we can and will deal with the correlation kernel
 \begin{equation}
-	\label{eq:K_n_conjugated}
+	\label{lecture6:eq:K_n_conjugated}
 	K_n(x,y)=\frac{1}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
 	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
 	,
 \end{equation}
 and will use the same notation for it.
-Throughout the asymptotic analysis in \Cref{sec:steepest-descent-GUE} below,
+Throughout the asymptotic analysis in \Cref{lecture6:sec:steepest-descent-GUE} below,
 other conjugation factors may appear, but we can similarly
 remove them.
 
@@ -4971,7 +4971,7 @@ in the next
 
 In many problems arising in random matrix theory—as well as in asymptotic analysis more generally—it is necessary to evaluate integrals of the form
 \begin{equation}
-	\label{eq:general-integral}
+	\label{lecture6:eq:general-integral}
 	I(\Lambda)=\int_{\gamma} e^{\Lambda f(z)}\ssp \phi(z)\,dz,
 \end{equation}
 where
@@ -5015,7 +5015,7 @@ of $\operatorname{Re}$ is equivalent to the condition that
 the imaginary part of $f(z)$ is constant along $\Gamma$.
 
 \begin{remark}
-	\label{rem:steepest-descent}
+	\label{lecture6:rem:steepest-descent}
 	In practical applications, one does not
 	need $\Gamma$ to be fully steepest descent (it is usually hard to control).
 	One can either choose $\Gamma$ to be steepest descent
@@ -5024,7 +5024,7 @@ the imaginary part of $f(z)$ is constant along $\Gamma$.
 \end{remark}
 
 \begin{remark}
-	\label{rem:residues}
+	\label{lecture6:rem:residues}
 	The function $\phi(z)$ might not be holomorphic, and might have poles. The
 	deformation of the contour from $\gamma$ to $\Gamma$ might pick residues
 	at these poles. These residues can be harmless (easy to account for) or
@@ -5032,7 +5032,7 @@ the imaginary part of $f(z)$ is constant along $\Gamma$.
 	and one has to be careful with the contour deformation.
 \end{remark}
 
-Despite the caveats in \Cref{rem:steepest-descent,rem:residues},
+Despite the caveats in \Cref{lecture6:rem:steepest-descent,rem:residues},
 in what follows in this section we will discuss the
 easiest case of steepest descent analysis.
 We also assume that there is only one saddle point $z_0$
@@ -5081,12 +5081,12 @@ For the imaginary part to remain constant in a neighborhood
 of $z_0$, and, moreover,
 for the phase of the quadratic term to be $\pi$ modulo $2\pi$, one must choose $\varphi$ so that
 \begin{equation}
-	\label{eq:steepest-descent-direction}
+	\label{lecture6:eq:steepest-descent-direction}
 	2\varphi+\theta_0=\pi \quad (\operatorname{mod}\,2\pi).
 \end{equation}
 We need the phase $\pi$ so that the exponent is negative, for the integral to converge.
 
-There are two directions satisfying \eqref{eq:steepest-descent-direction}
+There are two directions satisfying \eqref{lecture6:eq:steepest-descent-direction}
 through $z_0$, and we use both of them for our contour $\Gamma$.
 Along these directions, one finds that
 \[
@@ -5098,19 +5098,19 @@ so that $\operatorname{Re}(f(z))$ is maximal at $z=z_0$ and decays quadratically
 \subsection{Local asymptotic evaluation near a saddle point}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Assume now that the contour $\gamma$ in \eqref{eq:general-integral} has been deformed so that it passes through a saddle point $z_0$ along a steepest descent path. In a small neighborhood of $z_0$, we write
+Assume now that the contour $\gamma$ in \eqref{lecture6:eq:general-integral} has been deformed so that it passes through a saddle point $z_0$ along a steepest descent path. In a small neighborhood of $z_0$, we write
 \[
 	z=z_0+w/\sqrt{\Lambda},
 \]
 so the local contribution of a neighborhood of $z_0$ to the integral is
 \begin{equation}
-	\label{eq:local-contribution}
+	\label{lecture6:eq:local-contribution}
 	I_{z_0}(\Lambda)=e^{\Lambda f(z_0)}\phi(z_0)\frac{1}{\sqrt{\Lambda}}
 	\Bigl(1+O\Bigl(\frac{1}{\Lambda^{\frac12}}\Bigr)\Bigr)
 	\int_{-\infty}^{\infty} e^{\frac{1}{2}f''(z_0)w^2}\,dw
 	.
 \end{equation}
-Here the integration is taken along the steepest descent direction, so that the quadratic term in the exponent is real and negative. (That is, by the choice \eqref{eq:steepest-descent-direction}, we have $\operatorname{Re}\bigl(f''(z_0)w^2\bigr)=-|f''(z_0)|r^2$.) Then the Gaussian integral evaluates to
+Here the integration is taken along the steepest descent direction, so that the quadratic term in the exponent is real and negative. (That is, by the choice \eqref{lecture6:eq:steepest-descent-direction}, we have $\operatorname{Re}\bigl(f''(z_0)w^2\bigr)=-|f''(z_0)|r^2$.) Then the Gaussian integral evaluates to
 \[
 	\int_{-\infty}^{\infty} e^{-\frac{|f''(z_0)|}{2}w^2}\,dw
 	=\sqrt{\frac{2\pi}{|f''(z_0)|}}.
@@ -5119,43 +5119,43 @@ Hence, we
 arrive at the following fundamental result.
 
 \begin{theorem}[Local asymptotics via steepest descent]
-	\label{thm:steepest-descent}
-	Let $z_0$ be a saddle point of $f(z)$ with $f'(z_0)=0$ and $f''(z_0)\neq 0$, and assume that $\phi(z)$ is holomorphic in a neighborhood of $z_0$. Then, as $\Lambda\to+\infty$, the contribution of a small neighborhood of $z_0$ to the integral \eqref{eq:general-integral} is given by
+	\label{lecture6:thm:steepest-descent}
+	Let $z_0$ be a saddle point of $f(z)$ with $f'(z_0)=0$ and $f''(z_0)\neq 0$, and assume that $\phi(z)$ is holomorphic in a neighborhood of $z_0$. Then, as $\Lambda\to+\infty$, the contribution of a small neighborhood of $z_0$ to the integral \eqref{lecture6:eq:general-integral} is given by
 	\begin{equation}
-		\label{eq:local-asymptotics}
+		\label{lecture6:eq:local-asymptotics}
 		I_{z_0}(\Lambda)
 		\sim e^{\Lambda f(z_0)}\ssp \phi(z_0)
 		\sqrt{\frac{2\pi}{\Lambda\,|f''(z_0)|}},\qquad \Lambda\to+\infty.
 	\end{equation}
-	Moreover, the behavior \eqref{eq:local-asymptotics}
+	Moreover, the behavior \eqref{lecture6:eq:local-asymptotics}
 	captures the full asymptotic behavior of the
-	integral \eqref{eq:general-integral}
+	integral \eqref{lecture6:eq:general-integral}
 	as long as on the new contour $\Gamma$,
 	the real part of $f(z)$ is maximized at $z_0$ and is separated
 	from $\operatorname{Re}f(z_0)$ everywhere else on $\Gamma$ outside of a
 	small neighborhood of $z_0$.
 \end{theorem}
 
-Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a neighborhood that can be reached by the deformed contour and if the contributions away from the saddle points are exponentially small), one may show that the error in approximating the full integral by the sum of the local contributions is itself exponentially small relative to the leading order terms. In many cases, the next-order corrections can be computed by carrying the expansion in \eqref{eq:local-contribution} to higher order in $w$. (See, e.g., \cite{olver1974asymptotics} for a systematic treatment.)
+Under appropriate assumptions (typically, if $f$ and $\phi$ are holomorphic on a neighborhood that can be reached by the deformed contour and if the contributions away from the saddle points are exponentially small), one may show that the error in approximating the full integral by the sum of the local contributions is itself exponentially small relative to the leading order terms. In many cases, the next-order corrections can be computed by carrying the expansion in \eqref{lecture6:eq:local-contribution} to higher order in $w$. (See, e.g., \cite{olver1974asymptotics} for a systematic treatment.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 \section{Steepest descent for the GUE kernel}
-\label{sec:steepest-descent-GUE}
+\label{lecture6:sec:steepest-descent-GUE}
 
 \subsection{Scaling}
-\label{sub:scaling}
+\label{lecture6:sub:scaling}
 
 Let us now consider the GUE kernel
-\eqref{eq:K_n_conjugated},
+\eqref{lecture6:eq:K_n_conjugated},
 \begin{equation*}
 	K_n(x,y)=\frac{1}{(2\pi)^2}
 	\oint_C dt\int_{-i\infty}^{i\infty}ds\ssp
 	\frac{\exp\left\{ \frac{s^2}{2}-sy-\frac{t^2}{2}+tx \right\}}{s-t}\left( \frac{s}{t} \right)^n
 	,
 \end{equation*}
-where the integration contours are as in \Cref{fig:contours}.
+where the integration contours are as in \Cref{lecture6:fig:contours}.
 
 We know from the Wigner semicircle law
 (established for real symmetric matrices with general iid entries in
@@ -5164,13 +5164,13 @@ and for the GUE in \Cref{chap:lecture4})
 that the eigenvalues live on the scale $\sqrt n$. This means that to capture the local asymptotics,
 we need to scale
 \begin{equation}
-	\label{eq:scaling_x-y}
+	\label{lecture6:eq:scaling_x-y}
 	x=X\sqrt n+\frac{\Delta x}{\sqrt n},\qquad y=Y\sqrt n+\frac{\Delta y}{\sqrt n},\qquad
 	\Delta x,\Delta y\in\mathbb{R}.
 \end{equation}
 Moreover, if $X\ne Y$ (i.e., different global positions), one can check that the kernel
 vanishes. In other words, the local behaviors at different global positions are independent.
-See Problem~\ref{prob:different-global-positions}.
+See Problem~\ref{lecture6:prob:different-global-positions}.
 In what follows, we take $Y=X$.
 
 Let us also make a change of the integration variables:
@@ -5178,15 +5178,15 @@ Let us also make a change of the integration variables:
 	t=z\sqrt n,\qquad s=w\sqrt n.
 \end{equation*}
 The integration contours for $z$ and $w$ look the same as in
-\Cref{fig:contours}, up to a rescaling. However, as $0$
+\Cref{lecture6:fig:contours}, up to a rescaling. However, as $0$
 and $t=s$
 are the only singularities in the integrand, we can deform the $z,w$
 contours as we wish, while keeping $|z|<|w|$
-and the general shape as in \Cref{fig:contours}.
+and the general shape as in \Cref{lecture6:fig:contours}.
 
 We thus have:
 \begin{multline}
-	\label{eq:K_n_scaling}
+	\label{lecture6:eq:K_n_scaling}
 	K_n(X\sqrt n+\Delta x/\sqrt n,X\sqrt n+\Delta y/\sqrt n)\\=
 	\frac{\sqrt n}{(2\pi)^2}
 	\oint_C dz\int_{-i\infty}^{i\infty}dw\ssp
@@ -5201,7 +5201,7 @@ We thus have:
 	}{w-z}.
 \end{multline}
 \begin{remark}
-	\label{rmk:log-harmless}
+	\label{lecture6:rmk:log-harmless}
 	The logarithms in the exponent are harmless, since for the
 	estimates we only need the real parts of the logarithms,
 	and for the main contributions, we will have $z\approx w$, so
@@ -5209,11 +5209,11 @@ We thus have:
 \end{remark}
 
 The asymptotic analysis of double contour integrals like
-\eqref{eq:K_n_scaling} in the context of determinantal point processes
+\eqref{lecture6:eq:K_n_scaling} in the context of determinantal point processes
 was pioneered in \cite[Section~3]{Okounkov2002}.
 
 \subsection{Critical points}
-\label{sub:critical-points}
+\label{lecture6:sub:critical-points}
 
 Let us define
 \begin{equation*}
@@ -5232,12 +5232,12 @@ they will be perpendicular to each other at $z_{cr}$.
 Thus, we need to find the critical points of $S(z)$.
 They are found from the quadratic equation:
 \begin{equation}
-	\label{eq:critical-points}
+	\label{lecture6:eq:critical-points}
 	S'(z)=z+\frac{1}{z}-X=0,\qquad
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
 \end{equation}
 Depending on whether $|X|<2$, there are three cases.
-Unless $|X|=2$ (when equation \eqref{eq:critical-points} has a single root), we have
+Unless $|X|=2$ (when equation \eqref{lecture6:eq:critical-points} has a single root), we have
 $S''(z_{cr})\ne 0$.
 
 In this lecture, we focus on the density function, which is obtained by taking the asymptotics of the
@@ -5245,7 +5245,7 @@ kernel $K(x,x)$. In the next \Cref{chap:lecture7},
 we discuss limits of the correlation functions.
 
 \subsection{Imaginary critical points: $|X|<2$, ``bulk''}
-\label{sub:imaginary-critical-points}
+\label{lecture6:sub:imaginary-critical-points}
 
 When $|X|<2$, the critical points are complex conjugate.
 Denote them by $z_{cr}$ and $\overline{z_{cr}}$.
@@ -5257,7 +5257,7 @@ Thus, we need to consider the contribution from both points.
 The behavior of $\operatorname{Re}S(z)$ on the complex plane
 can be illustrated by a 3D plot or by a region plot of the regions
 where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ has constant sign.
-See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
+See \Cref{lecture6:fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
 
 \begin{figure}[htpb]
 	\centering
@@ -5268,7 +5268,7 @@ See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
 	regions where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ is positive
 	(highlighted) or negative, in the case $X=\frac{1}{2}$.
 	In this case, $z_{cr}\approx 0.25+0.96 i$.}
-	\label{fig:ReS_imaginary}
+	\label{lecture6:fig:ReS_imaginary}
 \end{figure}
 
 From the region plot, we see that the new $z$ contour should
@@ -5276,7 +5276,7 @@ pass through the shaded region $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})
 and the new $w$ contour should pass through the unshaded region
 $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})<0$.
 
-Deforming the contours from \Cref{fig:contours} to the new contours
+Deforming the contours from \Cref{lecture6:fig:contours} to the new contours
 is impossible without passing through the residue at $w=z$.
 Moreover, this residue appears only for certain values of $z$. Namely,
 let us first make the $z$ contour to be the positively (counterclockwise) oriented
@@ -5287,8 +5287,8 @@ encounter the residue when $z$ is in the right half of the arc.
 
 Thus, we can write
 \begin{equation}
-	\label{eq:K_n_bulk_deformation}
-	\iint_{\textnormal{old contours}}=
+	\label{lecture6:eq:K_n_bulk_deformation}
+	\oiint_{\textnormal{old contours}}=
 	\oiint_{\textnormal{new contours}}
 	+
 	\int_{\overline{z_{cr}}}^{z_{cr}}
@@ -5298,7 +5298,7 @@ where in the single integral, the $z$ contour passes to the right of the origin,
 along the right half of the unit circle.
 
 It remains to consider the two integrals in the right-hand side
-of \eqref{eq:K_n_bulk_deformation}.
+of \eqref{lecture6:eq:K_n_bulk_deformation}.
 Recall that the correlation functions are
 defined relative to a reference measure, and the right object to scale is
 \begin{equation*}
@@ -5309,11 +5309,11 @@ defined relative to a reference measure, and the right object to scale is
 \end{equation*}
 The extra factor $n^{-1/2}$
 compensates the prefactor $\sqrt n$ in
-\eqref{eq:K_n_scaling}.
+\eqref{lecture6:eq:K_n_scaling}.
 
 The single integral takes the form
 \begin{equation}
-	\label{eq:K_n_bulk_single}
+	\label{lecture6:eq:K_n_bulk_single}
 	\frac{-i}{2\pi}
 	\int_{\overline{z_{cr}}}^{z_{cr}}
 	dz
@@ -5321,7 +5321,7 @@ The single integral takes the form
 \end{equation}
 
 The double integral
-in \eqref{eq:K_n_bulk_deformation}
+in \eqref{lecture6:eq:K_n_bulk_deformation}
 has both contours
 in the ``steepest descent'' regime, which means that
 the main contribution is
@@ -5362,21 +5362,21 @@ We will consider other regimes, $|X|>2$ and $|X|=2$, in the next
 \section{Problems}
 
 \subsection{Different global positions}
-\label{prob:different-global-positions}
+\label{lecture6:prob:different-global-positions}
 
-Show that if in \eqref{eq:scaling_x-y} we take $X\ne Y$, then
+Show that if in \eqref{lecture6:eq:scaling_x-y} we take $X\ne Y$, then
 $K_n(x,y)$ vanishes as $n\to+\infty$. Moreover,
 establish the rate of decay in $n$. Is it power-law or exponential?
 
 \subsection{Sine kernel}
-\label{prob:sine-kernel}
+\label{lecture6:prob:sine-kernel}
 
 Compute the integral
-\eqref{eq:K_n_bulk_single}.
+\eqref{lecture6:eq:K_n_bulk_single}.
 
 
 \subsection{Discrete sine process}
-\label{prob:discrete-sine-process}
+\label{lecture6:prob:discrete-sine-process}
 
 Define the discrete sine kernel on $\mathbb{Z}$ by
 \begin{equation*}
@@ -5429,7 +5429,7 @@ Which event is more favored by the sine process?
 
 
 \section{Steepest descent for the GUE kernel}
-\label{sec:steepest-descent-GUE}
+\label{lecture7:sec:steepest-descent-GUE}
 
 \subsection{Recap}
 
@@ -5483,7 +5483,7 @@ This representation is especially useful for performing asymptotic analysis (for
 
 
 \subsection{Scaling}
-\label{sub:scaling}
+\label{lecture7:sub:scaling}
 
 Let us now consider the GUE kernel,
 \begin{equation*}
@@ -5500,7 +5500,7 @@ and for the GUE in \Cref{chap:lecture4})
 that the eigenvalues live on the scare $\sqrt n$. This means that to capture the local asymptotics,
 we need to scale
 \begin{equation}
-	\label{eq:scaling_x-y}
+	\label{lecture7:eq:scaling_x-y}
 	x=X\sqrt n+\frac{\Delta x}{\sqrt n},\qquad y=Y\sqrt n+\frac{\Delta y}{\sqrt n},\qquad
 	\Delta x,\Delta y\in\mathbb{R}.
 \end{equation}
@@ -5532,7 +5532,7 @@ In what follows, we take $Y=X$.
 			-- (0,3);
 	\end{tikzpicture}
 	\caption{Integration contours for the GUE kernel.}
-	\label{fig:contours}
+	\label{lecture7:fig:contours}
 \end{figure}
 
 
@@ -5541,15 +5541,15 @@ Let us also make a change of the integration variables:
 	t=z\sqrt n,\qquad s=w\sqrt n.
 \end{equation*}
 The integration contours for $z$ and $w$ look the same as for $t$ and $s$, up to a rescaling
-(\Cref{fig:contours}). However, as $0$
+(\Cref{lecture7:fig:contours}). However, as $0$
 and $t=s$
 are the only singularities in the integrand, we can deform the $z,w$
 contours as we wish, while keeping $|z|<|w|$
-and the general shape as in \Cref{fig:contours}.
+and the general shape as in \Cref{lecture7:fig:contours}.
 
 We thus have:
 \begin{multline}
-	\label{eq:K_n_scaling}
+	\label{lecture7:eq:K_n_scaling}
 	K_n(X\sqrt n+\Delta x/\sqrt n,X\sqrt n+\Delta y/\sqrt n)\\=
 	\frac{\sqrt n}{(2\pi)^2}
 	\oint_C dz\int_{-i\infty}^{i\infty}dw\ssp
@@ -5564,7 +5564,7 @@ We thus have:
 	}{w-z}.
 \end{multline}
 \begin{remark}
-	\label{rmk:log-harmless}
+	\label{lecture7:rmk:log-harmless}
 	The logarithms in the exponent are harmless, since for the
 	estimates we only need the real parts of the logarithms,
 	and for the main contributions, we will have $z\approx w$, so
@@ -5572,11 +5572,11 @@ We thus have:
 \end{remark}
 
 The asymptotic analysis of double contour integrals like
-\eqref{eq:K_n_scaling} in the context of determinantal point processes
+\eqref{lecture7:eq:K_n_scaling} in the context of determinantal point processes
 was pioneered in \cite[Section~3]{Okounkov2002}.
 
 \subsection{Critical points}
-\label{sub:critical-points}
+\label{lecture7:sub:critical-points}
 
 Let us define
 \begin{equation*}
@@ -5595,19 +5595,19 @@ they will be perpendicular to each other at $z_{cr}$.
 Thus, we need to find the critical points of $S(z)$.
 They are found from the quadratic equation:
 \begin{equation}
-	\label{eq:critical-points}
+	\label{lecture7:eq:critical-points}
 	S'(z)=z+\frac{1}{z}-X=0,\qquad
 	z_{cr}=\frac{X\pm \sqrt{X^2-4}}{2}.
 \end{equation}
 Depending on whether $|X|<2$, there are three cases.
-Unless $|X|=2$ (when equation \eqref{eq:critical-points} has a single root), we have
+Unless $|X|=2$ (when equation \eqref{lecture7:eq:critical-points} has a single root), we have
 $S''(z_{cr})\ne 0$.
 We will consider the three cases in
-\Cref{sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
+\Cref{lecture7:sub:imaginary-critical-points,sub:real-critical-points,sub:double-critical-points}
 below.
 
 \subsection{Imaginary critical points: $|X|<2$, ``bulk''}
-\label{sub:imaginary-critical-points}
+\label{lecture7:sub:imaginary-critical-points}
 
 When $|X|<2$, the critical points are complex conjugate.
 Denote them by $z_{cr}$ and $\overline{z_{cr}}$.
@@ -5617,7 +5617,7 @@ Since $S(z)$ has real coefficients, we have
 \end{equation*}
 Thus, we need to consider the contribution from both points.
 For simplicity of the computations, let us consider only the case $X=0$.
-See Problem~\ref{prob:imaginary-critical-points}.
+See Problem~\ref{lecture7:prob:imaginary-critical-points}.
 We have
 \begin{equation*}
 	z_{cr}=i,\qquad
@@ -5626,7 +5626,7 @@ We have
 The behavior of $\operatorname{Re}S(z)$ on the complex plane
 can be illustrated by a 3D plot or by a region plot of the regions
 where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ has constant sign.
-See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
+See \Cref{lecture7:fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
 (We take $X\ne 0$ to break symmetry, for a better intuition.)
 
 \begin{figure}[htpb]
@@ -5638,7 +5638,7 @@ See \Cref{fig:ReS_imaginary} for an illustration in the case $X=\frac{1}{2}$.
 	regions where $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})$ is positive
 	(highlighted) or negative, in the case $X=\frac{1}{2}$.
 	In this case, $z_{cr}\approx 0.25+0.96 i$.}
-	\label{fig:ReS_imaginary}
+	\label{lecture7:fig:ReS_imaginary}
 \end{figure}
 
 From the region plot, we see that the new $z$ contour should
@@ -5646,7 +5646,7 @@ pass through the shaded region $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})
 and the new $w$ contour should pass through the unshaded region
 $\operatorname{Re}S(z)-\operatorname{Re}S(z_{cr})<0$.
 
-Deforming the contours from \Cref{fig:contours} to the new contours
+Deforming the contours from \Cref{lecture7:fig:contours} to the new contours
 is impossible without passing through the residue at $w=z$.
 Moreover, this residue appears only for certain values of $z$. Namely, for $X=0$,
 let us first make the $z$ contour to be the positively (counterclockwise) oriented
@@ -5657,8 +5657,8 @@ encounter the residue when $z$ is in the right half of the circle.
 
 Thus, we can write
 \begin{equation}
-	\label{eq:K_n_bulk_deformation}
-	\iint_{\textnormal{old contours}}=
+	\label{lecture7:eq:K_n_bulk_deformation}
+	\oiint_{\textnormal{old contours}}=
 	\oiint_{\textnormal{new contours}}
 	+
 	\int_{-i}^i 2\pi i\ssp \operatorname{Res}\limits_{w=z}\ssp dz,
@@ -5667,7 +5667,7 @@ where in the single integral, the $z$ contour passes to the right of the origin,
 along the right half of the unit circle.
 
 It remains to consider the two integrals in the right-hand side
-of \eqref{eq:K_n_bulk_deformation}.
+of \eqref{lecture7:eq:K_n_bulk_deformation}.
 Recall that the correlation functions are
 defined relative to a reference measure, and the right object to scale is
 \begin{equation*}
@@ -5675,11 +5675,11 @@ defined relative to a reference measure, and the right object to scale is
 \end{equation*}
 The extra factor $n^{-1/2}$
 compensates the prefactor $\sqrt n$ in
-\eqref{eq:K_n_scaling}.
+\eqref{lecture7:eq:K_n_scaling}.
 
 The single integral takes the form
 \begin{equation}
-	\label{eq:K_n_bulk_single}
+	\label{lecture7:eq:K_n_bulk_single}
 	\frac{-i}{2\pi}
 	\int_{-i}^i
 	e^{z (\Delta x -\Delta y)}
@@ -5689,7 +5689,7 @@ The single integral takes the form
 	\qquad \Delta x,\Delta y\in\mathbb{R}.
 \end{equation}
 \begin{definition}
-	\label{def:sine-kernel}
+	\label{lecture7:def:sine-kernel}
 	The \emph{sine kernel} is defined as
 	\begin{equation*}
 		K_{\mathrm{sine}}(x,y)\coloneqq
@@ -5723,7 +5723,7 @@ which does not vanish.
 
 We have established the following result:
 \begin{proposition}[Bulk asymptotics at $X=0$]
-	\label{prop:bulk}
+	\label{lecture7:prop:bulk}
 	The correlation kernel $K_n$ of the GUE has the following asymptotics
 	close to zero as $n\to+\infty$:
 	\begin{equation*}
@@ -5735,7 +5735,7 @@ We have established the following result:
 		\qquad \Delta x,\Delta y\in\mathbb{R}.
 	\end{equation*}
 	Consequently, the eigenvalues of the GUE converge to the sine process
-	determined by the sine kernel (\Cref{def:sine-kernel}),
+	determined by the sine kernel (\Cref{lecture7:def:sine-kernel}),
 	in the sense of finite-dimensional distributions.
 \end{proposition}
 
@@ -5743,14 +5743,14 @@ We have established the following result:
 	Beyond $X=0$, the local correlations are essentially the same,
 	up to rescaling of the real line by a constant factor (depending
 	on the semicircle density).
-	See Problem~\ref{prob:imaginary-critical-points}.
+	See Problem~\ref{lecture7:prob:imaginary-critical-points}.
 \end{remark}
 
 \subsection{Real critical points: $|X|>2$, ``large deviations''}
-\label{sub:real-critical-points}
+\label{lecture7:sub:real-critical-points}
 
 For \(X^2>4\), both solutions
-\eqref{eq:critical-points}
+\eqref{lecture7:eq:critical-points}
 are real. Let us assume $X>2$, the case \(X<2\) is similar.
 For $X>2$, both solutions are positive.
 Label these solutions as
@@ -5776,14 +5776,14 @@ Then, on these contours, one can show that
 According to the steepest descent ideology,
 we see that the main exponential behavior of the double contour integral is
 \begin{equation}
-	\label{eq:Oexp}
+	\label{lecture7:eq:Oexp}
 	\exp\left\{ n\left(
 		\operatorname{Re}S(z_+)-\operatorname{Re}S(z_-)
 \right) \right\}=O( e^{-\delta(X)n} ), \qquad |X|>2.
 \end{equation}
 Here $\delta(X)>0$ for $|X|>2$, and $\delta(X)\to0$ when $|X|\to2$.
 
-The outcome \eqref{eq:Oexp} reflects the fact that the
+The outcome \eqref{lecture7:eq:Oexp} reflects the fact that the
 Wigner semicircle law places all eigenvalues inside the
 interval \(\lvert X\rvert \le 2\).
 The probability to see even a single eigenvalue outside $[-2,2]$
@@ -5793,15 +5793,15 @@ This exponential decay corresponds to a large deviation regime.
 Indeed, if at least one of the diagonal entries of the matrix
 is unusually large, this corresponds to
 the maximal eigenvalue to get outside the interval \([-2,2]\).
-See also Problem~\ref{prob:large-deviation}.
+See also Problem~\ref{lecture7:prob:large-deviation}.
 
 
 \subsection{Double critical point: $|X|=2$, ``edge''}
-\label{sub:double-critical-points}
+\label{lecture7:sub:double-critical-points}
 
 Throughout the subsection, we assume that $X=2$. The case $X=-2$ is symmetric.
 
-When \(X=2\), the two solutions in \eqref{eq:critical-points} merge into a double critical point
+When \(X=2\), the two solutions in \eqref{lecture7:eq:critical-points} merge into a double critical point
 $z_{cr}=1$.
 We have
 \[
@@ -5842,7 +5842,7 @@ The terms $n^{1/3}(\xi-\eta)$ are harmless as they can be removed
 by conjugation.
 
 The region plot of $\operatorname{Re}S(z)-\operatorname{Re}S(1)$
-(shown in \Cref{fig:ReS_edge})
+(shown in \Cref{lecture7:fig:ReS_edge})
 makes sure that we can deform the $z$ contour so that it passes through $z_{cr}=1$
 as the new $U$ contour at the angles $\pm \frac{2\pi}{3}$ (where $\operatorname{Re}U^3>0$),
 we can deform the $w$ contour so that it passes through $z_{cr}=1$
@@ -5853,13 +5853,13 @@ This will ensure the convergence of the new double integral.
 	\centering
 	\includegraphics[height=.3\textwidth]{pictures/ReS_edge.pdf}
 	\caption{The plot of the region $\operatorname{Re}S(z)-\operatorname{Re}S(1)>0$ for $X=2$.}
-	\label{fig:ReS_edge}
+	\label{lecture7:fig:ReS_edge}
 \end{figure}
 
 Thus, we have shown that under the rescaling, the GUE correlation kernel
 $K_n(x,y)\ssp dy$ converges to a new kernel.
 \begin{definition}
-	\label{def:Airy_kernel}
+	\label{lecture7:def:Airy_kernel}
 	Define the \emph{Airy kernel} on $\mathbb{R}$ by
 	\begin{equation*}
 		K_{\mathrm{Ai}}(\xi,\eta)=\frac{1}{(2\pi i)^2}
@@ -5871,11 +5871,11 @@ $K_n(x,y)\ssp dy$ converges to a new kernel.
 	For another formula for the Airy kernel
 	which does not involve integrals,
 	see
-	Problem~\ref{prob:airy}.
+	Problem~\ref{lecture7:prob:airy}.
 \end{definition}
 
 \begin{proposition}
-	\label{prop:edge}
+	\label{lecture7:prop:edge}
 	We have
 	\begin{equation*}
 		\lim_{n\to\infty}
@@ -5890,7 +5890,7 @@ $K_n(x,y)\ssp dy$ converges to a new kernel.
 eigenvalue}
 
 Let us make a few remarks on the asymptotic results of
-\Cref{prop:bulk,prop:edge}.
+\Cref{lecture7:prop:bulk,prop:edge}.
 First,
 a rigorous justification of convergence
 of contour integrals requires some estimates on the error terms
@@ -5903,19 +5903,19 @@ to assume that the Airy process also (almost surely) admits a maximal point
 and that $\lambda_{max}$
 converges to $\mathfrak{a}_1$ under appropriate rescaling:
 \begin{equation}
-	\label{eq:TW_GUE}
+	\label{lecture7:eq:TW_GUE}
 	\lim_{n\to\infty}n^{\frac{1}{6}}\bigl(\lambda_{max}-2\sqrt{n}\bigr)=\mathfrak{a}_1.
 \end{equation}
-This is indeed the case, but to show \eqref{eq:TW_GUE}, one needs to
+This is indeed the case, but to show \eqref{lecture7:eq:TW_GUE}, one needs to
 show the convergence in distribution:
 \begin{equation}
-	\label{eq:TW_GUE_convergence}
+	\label{lecture7:eq:TW_GUE_convergence}
 	\lim_{n\to \infty}
 	\mathbb{P}\Bigl(n^{1/6}(\lambda_{max}-2\sqrt{n})\le x\Bigr)
 	\to
 	\mathbb{P}(\mathfrak{a}_1\le x).
 \end{equation}
-Both events \eqref{eq:TW_GUE_convergence} are so-called
+Both events \eqref{lecture7:eq:TW_GUE_convergence} are so-called
 \emph{gap probabilities}, for example,
 \begin{equation*}
 	\operatorname{P}(\mathfrak{a}_1\le x)=
@@ -5924,7 +5924,7 @@ Both events \eqref{eq:TW_GUE_convergence} are so-called
 which is expressed as
 the Fredholm determinant
 \begin{equation}
-	\label{eq:gap-probability-Ai-Fredholm}
+	\label{lecture7:eq:gap-probability-Ai-Fredholm}
 	\det\left( 1-K_{\mathrm{Ai}} \right)_{(x,\infty)}=
 	1+\sum_{m=1}^{\infty}\frac{(-1)^m}{m!}
 	\int_x^{\infty}dy_1\int_x^{\infty}dy_2\cdots
@@ -5933,21 +5933,21 @@ the Fredholm determinant
 	\det\limits_{i,j=1}^m
 	K_{\mathrm{Ai}}(y_i,y_j).
 \end{equation}
-Thus, to get \eqref{eq:TW_GUE_convergence}), one needs to show the convergence
+Thus, to get \eqref{lecture7:eq:TW_GUE_convergence}), one needs to show the convergence
 of sums like this for the GUE kernel
 to the corresponding sums for the Airy kernel. This is doable, but tedious.
 
 Moreover, to get convergence in distribution of random variables,
 one would also have to argue either \emph{tightness},
 or independently show that
-\eqref{eq:gap-probability-Ai-Fredholm} defines a
+\eqref{lecture7:eq:gap-probability-Ai-Fredholm} defines a
 cumulative probability
 distribution function in $x$:
 \begin{equation}
-	\label{eq:TW_GUE_cdf}
+	\label{lecture7:eq:TW_GUE_cdf}
 	F_2(x)=\det\left( 1-K_{\mathrm{Ai}} \right)_{(x,\infty)}.
 \end{equation}
-The distribution \eqref{eq:TW_GUE_cdf} is known as the \emph{GUE Tracy--Widom distribution}.
+The distribution \eqref{lecture7:eq:TW_GUE_cdf} is known as the \emph{GUE Tracy--Widom distribution}.
 The subscript $2$ indicates that $\beta=2$. There are distributions
 $F_\beta$ for all beta, most notably, the GOE and GSE distributions.
 The classical distributions $F_1,F_2,F_4$ also appear as fluctuation distributions
@@ -6028,7 +6028,7 @@ of all corners is $O(n^2)$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Corners of Hermitian matrices}
-\label{sec:corners-definition}
+\label{lecture7:sec:corners-definition}
 
 \subsection{Principal corners}
 Let $H$ be an $n\times n$ Hermitian matrix. For each $1\le k\le n$, define the \emph{top-left $k\times k$ corner} $H^{(k)}$ by
@@ -6051,7 +6051,7 @@ two-dimensional set $\{1,\dots,n\}\times \mathbb{R}$.
 \subsection{Interlacing}
 A fundamental feature of Hermitian matrices is that the eigenvalues of corners interlace with the eigenvalues of the full matrix:
 \begin{proposition}
-	\label{prop:interlacing}
+	\label{lecture7:prop:interlacing}
 If $\nu_1\ge\dots\ge \nu_n$ are the eigenvalues of $H$ itself (i.e., the full $n\times n$ matrix), and $\mu_1\ge\cdots\ge\mu_{n-1}$ are the eigenvalues of $H^{(n-1)}$, then we have:
 \[
 \nu_1\;\ge\;\mu_1\;\ge\;\nu_2\;\ge\;\mu_2\;\ge\;\dots\;\ge\;\mu_{n-1}\;\ge\;\nu_n.
@@ -6081,7 +6081,7 @@ characterization
 where \(\mathbb{F}\) is \(\mathbb{R}\), \(\mathbb{C}\), or
 the quaternions (depending on \(\beta=1,2,4\),
 respectively).
-We leave this as Problem~\ref{prob:interlacing}.
+We leave this as Problem~\ref{lecture7:prob:interlacing}.
 \end{proof}
 
 The same interlacing property holds for real symmetric matrices ($\beta=1$),
@@ -6129,11 +6129,11 @@ Let $H\in \mathrm{Orbit}(\lambda)$ be a random matrix
 (in the case $\beta=2$, but the proof works for $\beta=1,4$ as well).
 Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner $H^{(n-1)}$.
 \begin{lemma}
-	\label{lemma:corner_step}
+	\label{lecture7:lemma:corner_step}
 	The distribution of $\mu_1,\ldots,\mu_{n-1}$ is the same as the distribution of
 	the roots of the polynomial equation
 	\begin{equation}
-		\label{eq:polynomial_equation}
+		\label{lecture7:eq:polynomial_equation}
 		\sum_{i=1}^n \frac{\xi_i}{z-\lambda_i}=0,
 	\end{equation}
 	where $\xi_i$ are i.i.d.\ random variables with the distribution $\chi^2_\beta$.
@@ -6177,11 +6177,11 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 	This completes the proof.
 \end{proof}
 \begin{remark}
-	\Cref{lemma:corner_step}
+	\Cref{lecture7:lemma:corner_step}
 	provides another proof of the eigenvalue interlacing property.
 	Indeed, assume that all $\xi_i$ are rational. Then
 	equation
-	\eqref{eq:polynomial_equation} is essentially $P'(z)=0$,
+	\eqref{lecture7:eq:polynomial_equation} is essentially $P'(z)=0$,
 	where $P(z)$ is a product of powers of the $(z-\lambda_i)$'s
 	(the powers depend on the $\xi_i$'s).
 	As the roots of the derivative of a polynomial interlace with the roots of the polynomial,
@@ -6192,7 +6192,7 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 
 Note that when we fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
 and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving 
-\eqref{eq:polynomial_equation}, we can then fix $\mu$ and get random
+\eqref{lecture7:eq:polynomial_equation}, we can then fix $\mu$ and get random
 $\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on. 
 Here, $\nu$ corresponds to the $(n-2)\times(n-2)$ corner of $H$.
 Indeed, we can condition on $\mu$, and conjugate $H$ again by a
@@ -6215,7 +6215,7 @@ passage from $\lambda$ to $\mu$.
 \end{remark}
 
 This implies that in order to understand the full corners process, it is enough to understand the transition from $\lambda$ to $\mu$,
-where $\lambda$ is fixed, and $\mu$ is obtained by solving \eqref{eq:polynomial_equation}.
+where $\lambda$ is fixed, and $\mu$ is obtained by solving \eqref{lecture7:eq:polynomial_equation}.
 
 
 \subsection{Case $\beta=\infty$}
@@ -6225,14 +6225,14 @@ obeys the law of large numbers:
 \begin{equation*}
 	\frac{\chi^2_\beta}{\beta}\to 1,\qquad \beta\to+\infty.
 \end{equation*}
-Thus, the equation \eqref{eq:polynomial_equation} becomes
+Thus, the equation \eqref{lecture7:eq:polynomial_equation} becomes
 deterministic:
 \begin{equation*}
 	\sum_{i=1}^n \frac{1}{z-\lambda_i}=0.
 \end{equation*}
 Denote 
 \begin{equation}
-	\label{eq:P_z_definition}
+	\label{lecture7:eq:P_z_definition}
 	P(z)=\prod_{i=1}^n(z-\lambda_i).
 \end{equation}
 Then 
@@ -6240,7 +6240,7 @@ Then
 	The passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
 	to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ in the limit as $\beta=\infty$
 	is deterministic, and it the same as the passage from the 
-	roots of the polynomial $P(z)$ \eqref{eq:P_z_definition} to the roots of its derivative $P'(z)$.
+	roots of the polynomial $P(z)$ \eqref{lecture7:eq:P_z_definition} to the roots of its derivative $P'(z)$.
 \end{proposition}
 
 
@@ -6256,15 +6256,15 @@ Then
 \section{Problems}
 
 \subsection{General bulk case}
-\label{prob:imaginary-critical-points}
+\label{lecture7:prob:imaginary-critical-points}
 
 Perform the asymptotic analysis of the correlation
-kernel as in \Cref{sub:imaginary-critical-points},
+kernel as in \Cref{lecture7:sub:imaginary-critical-points},
 but in the general case $-2<X<2$.
 
 
 \subsection{Large deviations}
-\label{prob:large-deviation}
+\label{lecture7:prob:large-deviation}
 
 Let \(W_n\) be an \(n\times n\) Wigner real or Hermitian matrix with finite variance entries. Assume that the matrix is normalized so that the variance of each diagonal entry is 1.
 
@@ -6296,7 +6296,7 @@ maximal eigenvalue of \(W_n\) outside the bulk.
 
 
 \subsection{Airy kernel}
-\label{prob:airy}
+\label{lecture7:prob:airy}
 
 Define the Airy function by
 \begin{equation*}
@@ -6331,12 +6331,12 @@ Hint for the problem: observe that
 	\frac{\partial}{\partial w}\right)\exp\left\{ -i z x+iwy \right\},
 \end{equation*}
 and use integration by parts in $K_{\mathrm{Ai}}(\xi,\eta)$
-from \Cref{def:Airy_kernel}.
+from \Cref{lecture7:def:Airy_kernel}.
 
 \subsection{Interlacing proof}
-\label{prob:interlacing}
+\label{lecture7:prob:interlacing}
 
-Finish the proof of \Cref{prop:interlacing}.
+Finish the proof of \Cref{lecture7:prop:interlacing}.
 
 
 
@@ -6375,11 +6375,11 @@ This is the case $\beta=2$,
 but the statement holds for the cases $\beta=1,4$ with appropriate modifications.
 Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner $H^{(n-1)}$.
 \begin{lemma}
-	\label{lemma:corner_step}
+	\label{lecture8:lemma:corner_step}
 	The distribution of $\mu_1,\ldots,\mu_{n-1}$ is the same as the distribution of
 	the roots of the polynomial equation
 	\begin{equation}
-		\label{eq:polynomial_equation}
+		\label{lecture8:eq:polynomial_equation}
 		\sum_{i=1}^n \frac{\xi_i}{z-\lambda_i}=0,
 	\end{equation}
 	where $\xi_i$ are i.i.d.\ random variables with the distribution $\chi^2_\beta$.
@@ -6398,7 +6398,7 @@ characteristic polynomial of $H$.
 We extend the polynomial equation to general $\beta$,
 by \emph{declaring} (defining) that the general $\beta$ corners distribution
 is powered by the passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n)$ to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1})$,
-where $\mu$ solves \eqref{eq:polynomial_equation} with $\xi_i$ i.i.d.\ $\chi^2_\beta$.
+where $\mu$ solves \eqref{lecture8:eq:polynomial_equation} with $\xi_i$ i.i.d.\ $\chi^2_\beta$.
 In this way, $\mu$ interlaces with $\lambda$.
 For $\beta=1,2,4$, this definition reduces to the one with invariant ensembles
 with fixed eigenvalues $\lambda$.
@@ -6409,7 +6409,7 @@ with fixed eigenvalues $\lambda$.
 Let $\mu$ be obtained from $\lambda$ by the general $\beta$ corners operation.
 
 \begin{theorem}
-	\label{thm:corner_step}
+	\label{lecture8:thm:corner_step}
 	The density of $\mu$ with respect to the Lebesgue measure is given by
 	\begin{equation*}
 		\frac{\Gamma(N \beta/2)}{\Gamma(\beta/2)^n}
@@ -6420,7 +6420,7 @@ Let $\mu$ be obtained from $\lambda$ by the general $\beta$ corners operation.
 \end{theorem}
 \begin{proof}
 	Let $\varphi_i=\xi_i/\sum_{j=1}^n \xi_j$.
-	It is well-known\footnote{See Problem~\ref{prob:dirichlet}.}
+	It is well-known\footnote{See Problem~\ref{lecture8:prob:dirichlet}.}
 	the joint
 	density of $(\varphi_1,\ldots,\varphi_n )$ is the
 	(symmetric) Dirichlet density
@@ -6448,7 +6448,7 @@ Let $\mu$ be obtained from $\lambda$ by the general $\beta$ corners operation.
 	\end{equation*}
 	Therefore,
 	\begin{equation}
-		\label{eq:Jacobian}
+		\label{lecture8:eq:Jacobian}
 		\frac{\partial\varphi_a}{\partial\mu_b}=
 		\frac{\prod_{i=1}^{n-1}(\lambda_a-\mu_i)}{\prod_{i\ne a}(\lambda_a-\lambda_i)}
 		\ssp\frac{1}{\mu_b-\lambda_a},
@@ -6457,16 +6457,16 @@ Let $\mu$ be obtained from $\lambda$ by the general $\beta$ corners operation.
 	\end{equation}
 	The Jacobian is essentially the determinant of the matrix $1/(\mu_b-\lambda_a)$,
 	which is the Cauchy determinant
-	(Problems~\ref{prob:cauchy} and~\ref{prob:n_n_1}).
+	(Problems~\ref{lecture8:prob:cauchy} and~\ref{lecture8:prob:n_n_1}).
 	The final density is obtained from the symmetric Dirichlet density,
-	but we plug in $w=\varphi$, and also multiply by the inverse of the Jacobian determinant~\eqref{eq:Jacobian}.
+	but we plug in $w=\varphi$, and also multiply by the inverse of the Jacobian determinant~\eqref{lecture8:eq:Jacobian}.
 	After the necessary simplifications, this completes the proof.
 \end{proof}
 
 
 
 \begin{corollary}[Joint density of the corners]
-	\label{cor:corners_density}
+	\label{lecture8:cor:corners_density}
 	The eigenvalues $\lambda^(k)_j$, $1\le j\le k\le n$,
 	of a random matrix from $\mathrm{Orbit}(\lambda)$
 	form an interlacing array, with the joint density
@@ -6497,30 +6497,30 @@ present a formulation and a proof given by \cite{gorin2025private}.
 \subsection{Formulation}
 
 \begin{theorem}
-	\label{Theorem_loop_equation}
+	\label{lecture8:Theorem_loop_equation}
  We fix $n=1,2,\dots$ and $n+1$ real numbers $\lambda_1\ge\dots\ge\lambda_{n+1}$. For $\beta>0$, consider $n+1$ i.i.d.\ $\chi^2_\beta$ random variables $\xi_i$ and set
  $$
   w_i=\frac{\xi_i}{\sum_{j=1}^{n+1} \xi_j}, \qquad 1\le i \le n+1.
  $$
  We define $n$ random points $\{\mu_1,\dots,\mu_n\}$ as $n$ solutions to the equation
- \begin{equation} \label{eq_mu_equation}
+ \begin{equation} \label{lecture8:eq_mu_equation}
   \sum_{i=1}^{n+1} \frac{w_i}{z-\lambda_i}=0.
  \end{equation}
  Take any \emph{polynomial} $W(z)$ and consider the complex function:
  \begin{equation}
- \label{eq_loop_observable}
+ \label{lecture8:eq_loop_observable}
  f_W(z)=\operatorname{\mathbb{E}}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right].
  \end{equation}
  Then $f_W(z)$ is an \emph{entire function} of $z$, in the following sense:
  \begin{itemize}
-	 \item For $z\in \mathbb{C}\setminus [\lambda_{n+1},\lambda_1]$, the expectation in \eqref{eq_loop_observable} defines a holomorphic function of $z$.
+	 \item For $z\in \mathbb{C}\setminus [\lambda_{n+1},\lambda_1]$, the expectation in \eqref{lecture8:eq_loop_observable} defines a holomorphic function of $z$.
   \item This function has an analytic continuation to $\mathbb{C}$, which has no singularities.
  \end{itemize}
 \end{theorem}
 \begin{remark}
  Note that for $z$ in
  $[\lambda_{n+1},\lambda_1]$, the integral determining
- \eqref{eq_loop_observable} might be divergent, and,
+ \eqref{lecture8:eq_loop_observable} might be divergent, and,
  therefore, analytic continuation is the proper way to
  define $f_W(z)$, $z\in [\lambda_{n+1},\lambda_1]$.
 \end{remark}
@@ -6534,27 +6534,27 @@ Here $f_0$ means $f_W$ with $W\equiv 0$.
 \end{corollary}
 \begin{proof}
 This is obtained by sending $z\to \infty$ in
-	\eqref{eq_loop_observable}.
+	\eqref{lecture8:eq_loop_observable}.
 \end{proof}
 
-\subsection{Proof of \Cref{Theorem_loop_equation} for $\beta>2$}
+\subsection{Proof of \Cref{lecture8:Theorem_loop_equation} for $\beta>2$}
 
-\Cref{Theorem_loop_equation} remains
+\Cref{lecture8:Theorem_loop_equation} remains
 valid for $\beta>0$, but we only prove it for $\beta>2$ here.
 We also assume that $\lambda_1>\ldots>\lambda_n $.
 
 
-We begin by observing that for $z \in \mathbb{C} \setminus [\lambda_{n+1}, \lambda_1]$, the expectation in \eqref{eq_loop_observable} is well-defined and holomorphic in $z$. This follows since for such $z$, the denominators $z-\lambda_i$ and $z-\mu_j$ are bounded away from zero with probability 1.
+We begin by observing that for $z \in \mathbb{C} \setminus [\lambda_{n+1}, \lambda_1]$, the expectation in \eqref{lecture8:eq_loop_observable} is well-defined and holomorphic in $z$. This follows since for such $z$, the denominators $z-\lambda_i$ and $z-\mu_j$ are bounded away from zero with probability 1.
 The key challenge is to show that $f_W(z)$ can be analytically continued to an entire function.
 Potential singularities of $f_W(z)$ are inside the intervals $(\lambda_{i+1}, \lambda_{1})$. We will show that these singularities do not actually occur.
 
 Consider a specific interval $(\lambda_2, \lambda_{1})$. We need to show that $f_W(z)$ has no singularities in this interval.
-From \Cref{thm:corner_step}, the probability distribution of $\mu = (\mu_1, \ldots, \mu_n)$ has density proportional to:
+From \Cref{lecture8:thm:corner_step}, the probability distribution of $\mu = (\mu_1, \ldots, \mu_n)$ has density proportional to:
 \begin{equation*}
 	\prod_{1\le i<j\le n} (\mu_i - \mu_j) \prod_{i=1}^{n} \prod_{j=1}^{n+1} |\mu_i - \lambda_j|^{\beta/2-1}.
 \end{equation*}
 
-Let us analyze the function in \eqref{eq_loop_observable}. For $z \in (\lambda_2, \lambda_{1})$, we need to demonstrate that the expectation
+Let us analyze the function in \eqref{lecture8:eq_loop_observable}. For $z \in (\lambda_2, \lambda_{1})$, we need to demonstrate that the expectation
 \begin{equation*}
 	\operatorname{\mathbb{E}}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right]
 \end{equation*}
@@ -6565,7 +6565,7 @@ the one-dimensional integral over $\mu_1$ is already holomorphic,
 and the remaining integrals are over domains which do not encounter singularities in $z$. We
 need to consider the integral
 \begin{equation}
-\label{eq:integral_original}
+\label{lecture8:eq:integral_original}
 \begin{split}
 	&\int\limits_{\lambda_2}^{\lambda_1}
 	\prod_{1 \leq i<j \leq n}(\mu_i-\mu_j) \prod_{j=1}^{n}\prod_{i=1}^{n+1}(\mu_j-\lambda_i)^{\beta/2-1} \prod_{j=1}^{n} e^{W(\mu_j)} \frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^{n}(z-\mu_j)} \\
@@ -6590,13 +6590,13 @@ Note that (here we are using the fact that $\beta>2$)
 \end{multline*}
 
 Subtracting this expression from our original integral
-\eqref{eq:integral_original}
+\eqref{lecture8:eq:integral_original}
 and noting that
 \begin{equation*}
 \left(W'(z) + \sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^{n} \frac{1}{z-\mu_j}\right) - \left(\sum_{j=2}^n \frac{1}{\mu_1-\mu_j} + \sum_{i=1}^{n+1} \frac{\beta/2-1}{\mu_1-\lambda_i} + W'(\mu_1) + \frac{1}{z-\mu_1}\right)
 \end{equation*}
 has zero at $z = \mu_1$, we conclude that our integral has no singularity at $\mu_1$, and therefore no singularities in the $[\lambda_2, \lambda_1]$ interval.
-This completes the proof of \Cref{Theorem_loop_equation} for $\beta>2$.
+This completes the proof of \Cref{lecture8:Theorem_loop_equation} for $\beta>2$.
 
 
 \section{Applications of loop equations}
@@ -6604,8 +6604,8 @@ This completes the proof of \Cref{Theorem_loop_equation} for $\beta>2$.
 The loop equations provide a powerful tool for analyzing the spectral properties of random matrices through their eigenvalue distributions. Let us derive an equation for the Stieltjes transform of the empirical measures.
 
 \subsection{Stieltjes transform equations}
-Starting from Theorem \ref{Theorem_loop_equation} with $W=0$, we have:
-\begin{equation} \label{eq:loop_eq_base}
+Starting from Theorem \ref{lecture8:Theorem_loop_equation} with $W=0$, we have:
+\begin{equation} \label{lecture8:eq:loop_eq_base}
 	\operatorname{\mathbb{E}}\left[\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)}\left(\sum_{i=1}^{n+1}\frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n\frac{1}{z-\mu_j}\right)\right] = \frac{(n+1)\beta}{2}-1.
 \end{equation}
 Let us introduce the empirical Stieltjes transforms:
@@ -6623,8 +6623,8 @@ yields the original product:
 \begin{equation*}
 	\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{\prod_{j=1}^n(z-\mu_j)} = \exp\left(n\left(\int G_\lambda(z) - \int G_\mu(z)\right)\right)
 \end{equation*}
-We can rewrite equation \eqref{eq:loop_eq_base} as:
-\begin{equation} \label{eq:stieltjes_transform_eq}
+We can rewrite equation \eqref{lecture8:eq:loop_eq_base} as:
+\begin{equation} \label{lecture8:eq:stieltjes_transform_eq}
 	\operatorname{\mathbb{E}}\left[\exp\left(n\left(\int G_\lambda(z)\,dz - \int G_\mu(z)\,dz\right)\right)\left(\left(\frac{\beta}{2}-1\right)G_\lambda(z) + G_\mu(z)\right)\right] = \frac{\beta}{2} + \frac{1}{n}\left(\frac{\beta}{2}-1\right).
 \end{equation}
 
@@ -6634,12 +6634,12 @@ We can rewrite equation \eqref{eq:loop_eq_base} as:
 
 \subsection{Asymptotic behavior}
 
-Equation \eqref{eq:stieltjes_transform_eq} can be reinterpreted in terms of a time evolution of eigenvalue distributions. This perspective offers significant insights into the asymptotic behavior of the corners process.
+Equation \eqref{lecture8:eq:stieltjes_transform_eq} can be reinterpreted in terms of a time evolution of eigenvalue distributions. This perspective offers significant insights into the asymptotic behavior of the corners process.
 
 If we think of $\lambda$ as configuration at time $t=1$ and $\mu$ as configuration at time $t=1-\frac{1}{n}$, then denoting the general time parameter as $t$ and setting $G_\lambda = G_1$, $G_\mu = G_{1-\frac{1}{n}}$, we obtain a continuous time evolution of Stieltjes transforms.
 (And similarly for all $t$, of course.)
 
-As $n \to \infty$, equation \eqref{eq:stieltjes_transform_eq} transforms into:
+As $n \to \infty$, equation \eqref{lecture8:eq:stieltjes_transform_eq} transforms into:
 \begin{equation*}
 \frac{\beta}{2} \exp\left(\frac{\partial}{\partial t}\int G_t(z)\,dz\right) \cdot G_t(z) = \frac{\beta}{2}.
 \end{equation*}
@@ -6649,7 +6649,7 @@ This implies
 \end{equation*}
 Taking the derivative with respect to $z$, we get:
 \begin{equation}
-\label{eq:burgers_equation}
+\label{lecture8:eq:burgers_equation}
 \frac{\partial}{\partial t}G_t(z) + \frac{1}{G_t(z)}\frac{\partial}{\partial z}G_t(z) = 0.
 \end{equation}
 
@@ -6660,7 +6660,7 @@ limit shapes of models in statistical mechanics, such as lozenge tilings
 \cite{OkounkovKenyon2007Limit}.
 
 \begin{remark}
-	We see that the Burgers equation \eqref{eq:burgers_equation} does not depend on $\beta$,
+	We see that the Burgers equation \eqref{lecture8:eq:burgers_equation} does not depend on $\beta$,
 	which is expected. Indeed, for example, G$\beta$E eigenvalues
 	have the same Wigner semicircle law as $\beta=2$, up to an overall
 	rescaling.
@@ -6687,9 +6687,9 @@ where
 is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 \begin{lemma}
-	\label{lemma:semicircle_and_burgers}
+	\label{lecture8:lemma:semicircle_and_burgers}
 	The function $G_t(z)\coloneqq t\ssp G^{(\sqrt t)}(z)$
-	satisfies the Burgers equation \eqref{eq:burgers_equation}.
+	satisfies the Burgers equation \eqref{lecture8:eq:burgers_equation}.
 \end{lemma}
 \begin{proof}
 	Straightforward verification.
@@ -6714,7 +6714,7 @@ is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 
 \subsection{Cauchy determinant}
-\label{prob:cauchy}
+\label{lecture8:prob:cauchy}
 
 Prove the Cauchy determinant formula:
 \begin{equation*}
@@ -6723,21 +6723,21 @@ Prove the Cauchy determinant formula:
 \end{equation*}
 
 \subsection{Jacobian from $n-1$ to $n$ dependent variables}
-\label{prob:n_n_1}
+\label{lecture8:prob:n_n_1}
 
 Explain how the factor $\prod_{i=1}^{n-1}\prod_{j=1}^n|\mu_i-\lambda_j|$
 appears from the Jacobian of the transformation from $\varphi$ to $\mu$
-\eqref{eq:Jacobian},
+\eqref{lecture8:eq:Jacobian},
 even though $\partial\varphi_a/\partial\mu_b$ is defined for
 $a=1,\ldots,n  $, $b=1,\ldots,n-1$,
 but the $\varphi_i$'s are not independent.
 
 \subsection{Dirichlet density}
-\label{prob:dirichlet}
+\label{lecture8:prob:dirichlet}
 
 Find in the literature or prove on your own
 the first statement in the proof of
-\Cref{thm:corner_step} about the symmetric Dirichlet density arising from
+\Cref{lecture8:thm:corner_step} about the symmetric Dirichlet density arising from
 normalizing the $\xi_i$'s to $\varphi_i$'s.
 
 \subsection{General beta Gaussian density and cutting corners}
@@ -6747,11 +6747,11 @@ Show that if $\lambda_1,\ldots,\lambda_{n+1} $ have the Gaussian beta density of
 	\propto \prod_{1\le i<j\le n+1}(\lambda_i-\lambda_j)^{\beta} \prod_{i=1}^{n+1}e^{-\beta\lambda_i^2/2},
 \end{equation*}
 and $\mu_1,\ldots,\mu_n $ are obtained from $\lambda_1,\ldots,\lambda_{n+1}$
-by cutting the corner (so have the conditional density as in \Cref{thm:corner_step}),
+by cutting the corner (so have the conditional density as in \Cref{lecture8:thm:corner_step}),
 then $\mu_1,\ldots,\mu_n$ have the Gaussian beta density of order $n$.
 
 \subsection{General $\beta$ Corners Process Simulation}
-\label{prob:corners_simulation}
+\label{lecture8:prob:corners_simulation}
 
 This problem explores computational aspects of the general $\beta$ corners process.
 
@@ -6785,23 +6785,23 @@ This problem explores computational aspects of the general $\beta$ corners proce
 \subsection{(Dynamical) loop equations}
 
 \begin{theorem}
-	\label{Theorem_loop_equation}
+	\label{lecture9:Theorem_loop_equation}
  We fix $n=1,2,\dots$ and $n+1$ real numbers $\lambda_1\ge\dots\ge\lambda_{n+1}$. For $\beta>0$, consider $n+1$ i.i.d.\ $\chi^2_\beta$ random variables $\xi_i$ and set
  $$
   w_i=\frac{\xi_i}{\sum_{j=1}^{n+1} \xi_j}, \qquad 1\le i \le n+1.
  $$
  We define $n$ random points $\{\mu_1,\dots,\mu_n\}$ as $n$ solutions to the equation
- \begin{equation} \label{eq_mu_equation}
+ \begin{equation} \label{lecture9:eq_mu_equation}
   \sum_{i=1}^{n+1} \frac{w_i}{z-\lambda_i}=0.
  \end{equation}
  Take any \emph{polynomial} $W(z)$ and consider the complex function:
  \begin{equation}
- \label{eq_loop_observable}
+ \label{lecture9:eq_loop_observable}
  f_W(z)=\operatorname{\mathbb{E}}\left[\prod_{j=1}^n \exp\bigl(W(\mu_j)\bigr) \frac{\prod_{i=1}^{n+1} (z-\lambda_i)}{\prod_{j=1}^n (z-\mu_j)} \left( W'(z)+\sum_{i=1}^{n+1} \frac{\beta/2-1}{z-\lambda_i} + \sum_{j=1}^n \frac{1}{z-\mu_j}\right)\right].
  \end{equation}
  Then $f_W(z)$ is an \emph{entire function} of $z$, in the following sense:
  \begin{itemize}
-	 \item For $z\in \mathbb{C}\setminus [\lambda_{n+1},\lambda_1]$, the expectation in \eqref{eq_loop_observable} defines a holomorphic function of $z$.
+	 \item For $z\in \mathbb{C}\setminus [\lambda_{n+1},\lambda_1]$, the expectation in \eqref{lecture9:eq_loop_observable} defines a holomorphic function of $z$.
   \item This function has an analytic continuation to $\mathbb{C}$, which has no singularities.
  \end{itemize}
 \end{theorem}
@@ -6810,7 +6810,7 @@ We proved this statement for $\beta>2$, but it is valid for all $\beta>0$.
 
 \subsection{Loop equations for $W=0$}
 
-When $W=0$, the loop equation \eqref{eq_loop_observable} becomes
+When $W=0$, the loop equation \eqref{lecture9:eq_loop_observable} becomes
 \begin{equation*}
 	f_0(z)=\frac{(n+1)\beta}{2}-1,
 \end{equation*}
@@ -6838,7 +6838,7 @@ yields the original product:
 We can rewrite
 the loop equation
 as:
-\begin{equation} \label{eq:stieltjes_transform_eq}
+\begin{equation} \label{lecture9:eq:stieltjes_transform_eq}
 	\operatorname{\mathbb{E}}\left[\exp\left(n\left(\int G_\lambda(z)\,dz - \int G_\mu(z)\,dz\right)\right)\left(\left(\frac{\beta}{2}-1\right)G_\lambda(z) + G_\mu(z)\right)\right] = \frac{\beta}{2} + \frac{1}{n}\left(\frac{\beta}{2}-1\right).
 \end{equation}
 
@@ -6851,20 +6851,20 @@ growing in some way. This sequence can be random
 or deterministic
 (for example, $\lambda^{(n)}$ has $n/10$ points at $0$,
 $n/10$ points at $1$, and $8n/10$ points at $2$,
-see \Cref{fig:corners}).
+see \Cref{lecture9:fig:corners}).
 \begin{figure}[htpb]
 	\centering
 	\includegraphics[width=\textwidth]{./pictures/corners.png}
 	\caption{Corners process for $n=300$,
 	$\beta=1$, with $n/10$ points at $0$,
 	$n/10$ points at $1$, and $8n/10$ points at $2$ on the top level.}
-	\label{fig:corners}
+	\label{lecture9:fig:corners}
 \end{figure}
 
 Denote the eigenvalues
 of the $k\times k$ beta corner (that is,
 obtained by successively solving the polynomial equation
-\eqref{eq_mu_equation}
+\eqref{lecture9:eq_mu_equation}
 $n-k$ times) by $\lambda^{(k)}_j$, $1\le j \le k$.
 As $n\to\infty$, we postulate that
 \begin{quote}
@@ -6890,7 +6890,7 @@ the Stieltjes transform of the measure $\mathfrak{m}_t$.
 	\end{equation*}
 \end{proposition}
 \begin{proof}
-	We have in \eqref{eq:stieltjes_transform_eq},
+	We have in \eqref{lecture9:eq:stieltjes_transform_eq},
 	if $\lambda$ and $\mu$ live on levels $t$ and $t-\frac{1}{n}$,
 	respectively:
 	\begin{equation*}
@@ -6903,7 +6903,7 @@ the Stieltjes transform of the measure $\mathfrak{m}_t$.
 		\frac{\beta}{2}\ssp G_t(z) .
 	\end{equation*}
 	Due to the concentration assumption, we can ignore the expectation.
-	Then, taking the logarithm of \eqref{eq:stieltjes_transform_eq},
+	Then, taking the logarithm of \eqref{lecture9:eq:stieltjes_transform_eq},
 	and differentiating with respect to $z$,
 	we get the Burgers equation.
 \end{proof}
@@ -6929,7 +6929,7 @@ where
 is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 \begin{lemma}
-	\label{lemma:semicircle_and_burgers}
+	\label{lecture9:lemma:semicircle_and_burgers}
 	The function $G_t(z)\coloneqq t\ssp G^{(\sqrt t)}(z)$
 	satisfies the Burgers equation.
 \end{lemma}
@@ -6940,12 +6940,12 @@ is the Stieltjes transform of the semicircular law on $[-2c, 2c]$.
 
 
 \section{Gaussian Free Field}
-\label{sec:GFF}
+\label{lecture9:sec:GFF}
 
 The \emph{Gaussian Free Field} (GFF) is a fundamental object in probability theory and mathematical physics. Roughly speaking, it can be viewed as a multi-dimensional analog of Brownian motion: instead of one-dimensional “time,” the underlying parameter space is a multi-dimensional domain (often two-dimensional). In one dimension, the GFF reduces to an ordinary Brownian bridge (or motion). In higher dimensions, it becomes a random generalized function (a “distribution”) whose covariance structure is governed by the appropriate Green's function of the Laplacian. Below we provide an introduction, starting from finite-dimensional Gaussian vectors and culminating in the GFF as a random distribution.
 
 \subsection{Gaussian correlated vectors and random fields}
-\label{subsec:gauss_vectors_random_fields}
+\label{lecture9:subsec:gauss_vectors_random_fields}
 
 Recall that an $n$-dimensional real-valued random vector $X = (X_1,\dots, X_n)$ is called \emph{Gaussian} if every linear combination
 \[
@@ -6971,11 +6971,11 @@ exist as a proper function in the usual sense.
 The reason is that we would like to consider analogues of linear combinations
 of the form
 \begin{equation}
-	\label{eq:Phi_test_function}
+	\label{lecture9:eq:Phi_test_function}
     \Phi(f) = \int_D \Phi(x) f(x) \, dx,
 \end{equation}
 For example, if we wish the vector $(\Phi(x_1), \ldots, \Phi(x_n))$ to have independent components, we would need to assign a value to each point in $D$. This means that the hypothetical function $\Phi$ would be too irregular, and even non-measurable, and the integral
-\eqref{eq:Phi_test_function} would not be well-defined.
+\eqref{lecture9:eq:Phi_test_function} would not be well-defined.
 
 Instead, for the field with independent values at all points, we would like $\Phi(f)$ to be normal
 with mean zero and variance (paralleling the finite-dimensional story)
@@ -6987,7 +6987,7 @@ So, Gaussian fields (in particular, our topic, the \emph{Gaussian Free Field})a
 are defined as random distributions, not as functions.
 That is, rather than assigning a value to each point,
 we assign a random value to each test function $f$ in some appropriate space
-via \eqref{eq:Phi_test_function}.
+via \eqref{lecture9:eq:Phi_test_function}.
 
 The covariance structure of the mean zero Gaussian random variables
 $\Phi(f_1), \ldots, \Phi(f_n)$ is given by a certain bilinear
@@ -7021,12 +7021,12 @@ which is a well-defined Gaussian random variable.
 
 The Gaussian Free Field in one dimension is closely related to the Brownian bridge. Consider the interval $[0,1]$ with the Dirichlet Laplacian. The eigenfunctions are $f_n(x) = \sqrt{2} \sin(n\pi x)$ with eigenvalues $\lambda_n = n^2 \pi^2$. The Gaussian Free Field on $[0,1]$ can be expressed as:
 \begin{equation}
-	\label{eq:Phi_1d}
+	\label{lecture9:eq:Phi_1d}
     \Phi(x) = \sqrt{2} \sum_{n=1}^{\infty} \frac{\alpha_n}{n\pi} \sin(n\pi x).
 \end{equation}
 This series representation converges to a continuous function, which is precisely the Brownian bridge on $[0,1]$. The Brownian bridge is a Gaussian process $B_t$ with mean zero and covariance function:
 \begin{equation}
-	\label{eq:covariance_1d}
+	\label{lecture9:eq:covariance_1d}
     \mathbb{E}[B_s B_t] = \min(s, t) - st.
 \end{equation}
 The key difference between the one-dimensional and higher-dimensional cases is that in one dimension, the Gaussian Free Field is a continuous function, whereas in dimensions two and higher, it is a genuine distribution (not a function). This reflects the fact that Brownian motion is a continuous path in one dimension but becomes increasingly irregular in higher dimensions.
@@ -7118,7 +7118,7 @@ while retaining nontrivial and bounded correlations.
 
 % Define
 % \begin{equation}
-%   \label{eq:rho_definition}
+%   \label{lecture9:eq:rho_definition}
 %   \rho(t,x) \coloneqq h(t,x-\varepsilon)-h(t,x)= \sum_{i=1}^{\lfloor nt \rfloor }
 %   \mathbf{1}_{\lambda_i^{(\lfloor nt \rfloor )}\le x\le \lambda_{i}^{(\lfloor nt \rfloor )}+\varepsilon},\qquad \textnormal{where $\mathbf{1}_A$ is the indicator of the event $A$.}
 % \end{equation}
@@ -7132,7 +7132,7 @@ Recall that our main assumption is that the distribution at the top row converge
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^n \delta_{\lambda^{(n)}_i} \to \mathfrak{m}_1.
 \end{equation*}
-For example, in \Cref{fig:corners}, the measure $\mathfrak{m}_1$ has
+For example, in \Cref{lecture9:fig:corners}, the measure $\mathfrak{m}_1$ has
 three atoms.
 
 Denote the centered Stieltjes transforms by
@@ -7174,7 +7174,7 @@ where \(\tau = \min(t_i,t_j)\).
 \end{theorem}
 
 \begin{corollary}
-\label{cor:corollary6.9-specialized}
+\label{lecture9:cor:corollary6.9-specialized}
 Again assuming \(b(z)=z\) for all \(z\), fix an integer \(k>0\) and real parameters
 \[
 0 < t_1 \;\le\; t_2 \;\le\;\cdots\;\le\; t_k < T,
@@ -7352,24 +7352,24 @@ The factorization is valid in an annulus between the two contours $\omega_+$ and
 
 		\end{tikzpicture}
 	\caption{Positively oriented contours $\omega_+$ and $\omega_-$ in the complex plane.}
-	\label{fig:contours}
+	\label{lecture9:fig:contours}
 \end{figure}
 
 \subsection{First order asymptotics of $\mathcal{A}(z)$}
 
 The next step is to understand the asymptotics of $\mathcal{A}(z)$. Recall that
 \begin{equation}
-	\label{eq:A_definition}
+	\label{lecture9:eq:A_definition}
 	\mathcal{A}(z)=\operatorname{\mathbb{E}}\left[ \frac{\Pi_\lambda(z)}{z\Pi_\mu(z)} \right].
 \end{equation}
 From the loop equation, we know that $\mathcal{C}(z)$ is entire, and the leading term involves $\mathcal{A}(z)\mathcal{B}(z)$. That is,
 \begin{equation}
-	\label{eq:loop_eq_A_times_B}
+	\label{lecture9:eq:loop_eq_A_times_B}
 	\mathcal{A}(z)\mathcal{B}(z) = \textnormal{entire function} + O(\varepsilon).
 \end{equation}
 
 Using the Wiener-Hopf factorization of $\mathcal{B}(z)$, let
-us multiply \eqref{eq:loop_eq_A_times_B}
+us multiply \eqref{lecture9:eq:loop_eq_A_times_B}
 by $e^{-h_+(z)}$. The entire function remains entire in a complex
 neighborhood of $[l,r]$. Therefore, we can integrate over $\omega_-$, and get
 \begin{align*}
@@ -7405,7 +7405,7 @@ Let us rewrite the last equation explicitly, inserting $W$ into the
 expectation, and taking $\operatorname{\mathbb{E}}_0$ to be the
 undeformed expectation over the G$\beta$E corner:
 \begin{equation}
-	\label{eq:final_A}
+	\label{lecture9:eq:final_A}
 	\operatorname{\mathbb{E}}_0
 	\left[
 		\frac{\prod_{i=1}^{n+1}(z-\lambda_i)}{z\ssp \prod_{j=1}^{n}e^{-W(\mu_j)}(z-\mu_j)}
@@ -7420,9 +7420,9 @@ undeformed expectation over the G$\beta$E corner:
 There are the following extra steps required to complete the proofs of the main
 results:
 \begin{itemize}
-	\item Continue the expansion \eqref{eq:final_A} to higher orders of $\varepsilon$.
+	\item Continue the expansion \eqref{lecture9:eq:final_A} to higher orders of $\varepsilon$.
 	\item Extract probabilistic information from the formula in the left-hand side of
-		\eqref{eq:final_A}.
+		\eqref{lecture9:eq:final_A}.
 	\item Carefully execute the analysis, including all the required estimates,
 		to get the asymptotic behavior of the Stieltjes transforms.
 	\item From the Stieltjes transforms, extract the asymptotic behavior of the height function.
@@ -7442,8 +7442,8 @@ in a setting of lozenge tilings with $q$-Racah weights.
 \subsection{Brownian bridge}
 
 Derive the covariance structure of the Brownian bridge
-\eqref{eq:covariance_1d} from the series representation
-\eqref{eq:Phi_1d}.
+\eqref{lecture9:eq:covariance_1d} from the series representation
+\eqref{lecture9:eq:Phi_1d}.
 
 
 
@@ -7495,7 +7495,7 @@ B(t)\sim \mathcal{N}(a,\,t).
 Our goal is to generalize this to the case of \emph{matrix-valued} Brownian motion and, ultimately, to see how the \emph{eigenvalues} of such a matrix evolve.
 
 \section{Matrix Brownian motion and its eigenvalues}
-\label{sec:matrix_BM}
+\label{lecture10:sec:matrix_BM}
 
 \subsection{Definition}
 Let $X(t)$ be an $N\times N$ matrix whose entries are i.i.d.\ real/complex Brownian motions (depending on $\beta=1,2$). For instance:
@@ -7510,7 +7510,7 @@ Since $X(t)$ may not be Hermitian, define
 Here $X^\dagger(t)$ is the conjugate transpose. Then $\mathcal{M}(t)$ is an \emph{Hermitian} matrix (or real symmetric for $\beta=1$).
 
 \begin{lemma}
-\label{lemma:time_fixed_law}
+\label{lecture10:lemma:time_fixed_law}
 If $\mathcal{M}(0) = A$ is a fixed deterministic matrix, then $\mathcal{M}(t)$ at time $t$ is distributed as
 \[
 A \;+\;\sqrt{t}\, G_{\beta},
@@ -7529,7 +7529,7 @@ We now focus on $\lambda_i(t)$, the (ordered) eigenvalues of $\mathcal{M}(t)$. D
 \lambda(t) = \bigl(\lambda_1(t)\ge \dots \ge \lambda_N(t)\bigr).
 \]
 \begin{theorem}
-\label{thm:lambda_is_markov}
+\label{lecture10:thm:lambda_is_markov}
 As $t$ varies, the process $\lambda(t)$ is a continuous-time Markov process in $\mathbb{R}^N$.
 \end{theorem}
 \begin{proof}[Sketch of proof]
@@ -7581,7 +7581,7 @@ This integral is defined carefully through a limit of sums involving the increme
 \medskip
 More generally, one allows both \emph{drift} and \emph{diffusion} terms:
 \begin{equation}
-\label{eq:1D_SDE_general}
+\label{lecture10:eq:1D_SDE_general}
 dx(t) \;=\; b\bigl(x(t)\bigr)\,dt \;+\; \sigma\bigl(x(t)\bigr)\,dW(t).
 \end{equation}
 Here,
@@ -7589,7 +7589,7 @@ Here,
 \item \(b(\cdot)\) is the \emph{drift coefficient}, capturing deterministic motion;
 \item \(\sigma(\cdot)\) is the \emph{diffusion coefficient}, encoding how strongly the process is randomized by Brownian motion.
 \end{itemize}
-Under suitable Lipschitz and growth conditions on \(b\) and \(\sigma\), one can show \emph{existence and pathwise uniqueness} of strong solutions to \eqref{eq:1D_SDE_general}. Concretely, this means there is almost surely a unique process \(x(t)\) satisfying \eqref{eq:1D_SDE_general} for each realization of the Brownian motion \(W(t)\). One constructs such a solution, for example, by an iterative limit of approximations.
+Under suitable Lipschitz and growth conditions on \(b\) and \(\sigma\), one can show \emph{existence and pathwise uniqueness} of strong solutions to \eqref{lecture10:eq:1D_SDE_general}. Concretely, this means there is almost surely a unique process \(x(t)\) satisfying \eqref{lecture10:eq:1D_SDE_general} for each realization of the Brownian motion \(W(t)\). One constructs such a solution, for example, by an iterative limit of approximations.
 The simplest discrete-time approximation, analogous to Euler’s method for ordinary differential equations. Over a small time step \(\Delta t\), one approximates
 \[
 x_{n+1} \;=\; x_n \;+\; b(x_n)\,\Delta t \;+\; \sigma(x_n)\,\bigl(W(t_{n+1}) - W(t_n)\bigr).
@@ -7598,7 +7598,7 @@ This scheme converges to the true solution pathwise under standard Lipschitz con
 
 
 \medskip
-A major utility of SDEs is in performing \emph{It\^{o} calculus}. Suppose \(x(t)\) solves the SDE \eqref{eq:1D_SDE_general} and let \(f\colon\mathbb{R}\to\mathbb{R}\) be a sufficiently smooth function. One might try to apply the usual chain rule to \(f(x(t))\), but must account for the extra "noise" term. The correct extension is the \emph{It\^{o} formula}:
+A major utility of SDEs is in performing \emph{It\^{o} calculus}. Suppose \(x(t)\) solves the SDE \eqref{lecture10:eq:1D_SDE_general} and let \(f\colon\mathbb{R}\to\mathbb{R}\) be a sufficiently smooth function. One might try to apply the usual chain rule to \(f(x(t))\), but must account for the extra "noise" term. The correct extension is the \emph{It\^{o} formula}:
 \[
 df\bigl(x(t)\bigr)
 \;=\;
@@ -7606,7 +7606,7 @@ df\bigl(x(t)\bigr)
 \;+\;\frac12\,
 \frac{\partial^2 f}{\partial x^2}\bigl(x(t)\bigr)\,\bigl(dW(t)\bigr)^2,
 \]
-where \((dW(t))^2\) is interpreted as \(dt\) in a formal sense. Substituting \eqref{eq:1D_SDE_general} yields:
+where \((dW(t))^2\) is interpreted as \(dt\) in a formal sense. Substituting \eqref{lecture10:eq:1D_SDE_general} yields:
 \[
 df\bigl(x(t)\bigr)
 \;=\;
@@ -7619,7 +7619,7 @@ b\bigl(x(t)\bigr)\,\frac{\partial f}{\partial x}\bigl(x(t)\bigr)\,dt
 This identity is an indispensable tool for analyzing stochastic processes, both in theoretical and applied contexts.
 
 \medskip
-To handle matrix-valued processes, one must consider multi-dimensional (or matrix-dimensional) analogs of \eqref{eq:1D_SDE_general}. For instance, if \(X(t)\in\mathbb{R}^n\) is an \(n\)-dimensional stochastic process, the SDE becomes
+To handle matrix-valued processes, one must consider multi-dimensional (or matrix-dimensional) analogs of \eqref{lecture10:eq:1D_SDE_general}. For instance, if \(X(t)\in\mathbb{R}^n\) is an \(n\)-dimensional stochastic process, the SDE becomes
 \[
 dX(t)
 \;=\;
@@ -7720,10 +7720,10 @@ including the original work of Dyson \cite{dyson1962brownian}.
 \end{proof}
 
 \begin{definition}[Dyson Brownian Motion]
-\label{def:DBM}
+\label{lecture10:def:DBM}
 Fix $\beta>0$ and initial data $\bigl(\lambda_1(0)\ge \dots \ge \lambda_n(0)\bigr)$. The \emph{Dyson Brownian Motion} is the unique strong solution to the system of SDEs
 \begin{equation}
-\label{eq:Dyson_SDE}
+\label{lecture10:eq:Dyson_SDE}
 d\lambda_i(t)
 \;=\;
 \frac{\beta}{2}\sum_{j\neq i}\frac{dt}{\lambda_i(t)-\lambda_j(t)}
@@ -7736,7 +7736,7 @@ with the $W_i(t)$ being independent real standard Brownian motions. For $\beta=1
 \end{definition}
 
 \begin{remark}
-	Equation \eqref{eq:Dyson_SDE} succinctly captures the key idea that the eigenvalues repel each other. Note the singular drift term $\frac{1}{\lambda_i-\lambda_j}$ which pushes $\lambda_i$ away from collisions with $\lambda_j$. This repulsion is so strong (for all $\beta>0$)
+	Equation \eqref{lecture10:eq:Dyson_SDE} succinctly captures the key idea that the eigenvalues repel each other. Note the singular drift term $\frac{1}{\lambda_i-\lambda_j}$ which pushes $\lambda_i$ away from collisions with $\lambda_j$. This repulsion is so strong (for all $\beta>0$)
 	that eigenvalues will not cross (and thus remain ordered) with probability one.
 \end{remark}
 
@@ -7756,7 +7756,7 @@ much for other $\beta$. For other $\beta$, we would like to
 \begin{itemize}
 \item Make sense of the SDE and its solutions. We skip this part in the course.
 \item Make a computation checking that the above density is preserved under the SDE
-\eqref{eq:Dyson_SDE}.
+\eqref{lecture10:eq:Dyson_SDE}.
 \end{itemize}
 
 For example,
@@ -7780,7 +7780,7 @@ This is a direct computation.
 
 For larger $N$, one needs to write down the corresponding generator and check
 that the same type of equation is satisfied.
-See Problem~\ref{prob:generator}.
+See Problem~\ref{lecture10:prob:generator}.
 
 \section{Determinantal structure for $\beta=2$}
 
@@ -7788,7 +7788,7 @@ To understand the determinantal structure of the Dyson Brownian Motion, we
 first need the explicit transition probabilities:
 
 \begin{theorem}[\(\beta=2\) Dyson Brownian Motion transition probabilities]
-	\label{thm:dbm-transition}
+	\label{lecture10:thm:dbm-transition}
 For \(\beta=2\), let \(\lambda(t)=(\lambda_1(t)\ge \cdots \ge \lambda_N(t))\) follow Dyson Brownian Motion starting at \(\lambda(0)=\mathbf{a}=(a_1\ge \cdots \ge a_N)\).  Then for each fixed time \(t>0\),
 \[
 P\bigl(\lambda(t) = \mathbf{x}\;\big|\;\lambda(0)=\mathbf{a}\bigr)
@@ -7869,7 +7869,7 @@ Therefore, we may assume \(A=\mathrm{diag}(a)\) and \(B=\mathrm{diag}(b)\).  In 
 \]
 Hence
 \begin{equation}
-	\label{eq:HCIZ_to_compute}
+	\label{lecture10:eq:HCIZ_to_compute}
    \int_{U(N)}
    \exp\Bigl(\mathrm{Tr}(A\,U\,B\,U^\dagger)\Bigr)\,dU
    \;=\;
@@ -7880,7 +7880,7 @@ Hence
 \subsection{Symmetry}
 
 Let \(f(A,B)\) denote the
-right-hand side of \eqref{eq:HCIZ_to_compute}.
+right-hand side of \eqref{lecture10:eq:HCIZ_to_compute}.
 We have established that $f(A,B)$ must be:
 \begin{enumerate}
    \item Symmetric in the eigenvalues $\{a_1,\ldots,a_N\}$ of $A$
@@ -7922,11 +7922,11 @@ Therefore, we have established that
 \]
 where $\Phi_N = C_N$ is a normalization constant independent
 of the eigenvalues. Through a separate calculation
-(see Problem~\ref{prob:PhiN}), often
+(see Problem~\ref{lecture10:prob:PhiN}), often
 involving either a small-time heat-kernel expansion or a
 rank-one reduction, one can determine that
 \begin{equation}
-	\label{eq:PhiN}
+	\label{lecture10:eq:PhiN}
    \Phi_N = \prod_{k=1}^{N-1} k!.
  \end{equation}
 
@@ -7964,13 +7964,13 @@ that one can take an almost
 surely continuous modification of the function $t\mapsto B(t)$.
 
 \subsection{Generator for Dyson Brownian Motion}
-\label{prob:generator}
+\label{lecture10:prob:generator}
 
-Consider the Dyson Brownian Motion(\Cref{def:DBM}) for general $\beta > 0$. The invariant measure for this process when started from zero is expected to be the distribution with density proportional to:
+Consider the Dyson Brownian Motion(\Cref{lecture10:def:DBM}) for general $\beta > 0$. The invariant measure for this process when started from zero is expected to be the distribution with density proportional to:
 \begin{equation*}
 p_{\beta}(\lambda_1,\ldots,\lambda_N) \propto \prod_{i<j}|\lambda_i-\lambda_j|^{\beta} \exp\left\{-\frac{1}{2}\sum_{i=1}^N \lambda_i^2\right\}.
 \end{equation*}
-Prove that this density is invariant under the Dyson SDE \eqref{eq:Dyson_SDE} by showing
+Prove that this density is invariant under the Dyson SDE \eqref{lecture10:eq:Dyson_SDE} by showing
 \begin{equation*}
 \mathcal{L}p_{\beta} = 0,
 \end{equation*}
@@ -7987,7 +7987,7 @@ i}
 and verify that it indeed annihilates $p_{\beta}$.
 
 \subsection{Constant in the HCIZ formula}
-\label{prob:PhiN}
+\label{lecture10:prob:PhiN}
 
 Show that in the Harish--Chandra--Itzykson--Zuber formula, the constant $\Phi_N$ is given by
 \[
@@ -8180,7 +8180,7 @@ s_\mu\bigl(D_a\,U\,D_\lambda\,U^\dagger\bigr)\,dU.
 \]
 One can exchange the integral and the sum (the series converges absolutely for all matrix arguments), giving
 \begin{equation}
-	\label{eq:HCIZ-I-start}
+	\label{lecture11:eq:HCIZ-I-start}
 	I
 	\;=\;
 	\sum_{m=0}^\infty\;
@@ -8198,7 +8198,7 @@ we need to impose the condition \(|a_i|=|\lambda_i|=1\) (so that \(D_a,D_\lambda
 
 \begin{proposition}[Functional equation for characters
 	of compact groups]
-	\label{prop:character-functional}
+	\label{lecture11:prop:character-functional}
 Let $G$ be a compact group with normalized Haar measure $dh$, and let $\chi$ be an irreducible character of a finite-dimensional representation of $G$. Then for any elements $g_1, g_2 \in G$, the following relation holds:
 \begin{equation}
 	\int_G \chi(g_1hg_2h^{-1})dh = \frac{\chi(g_1)\chi(g_2)}{\dim V},
@@ -8208,7 +8208,7 @@ where $\dim V = \chi(e)$ is the dimension of the representation space.
 \begin{remark}
 	A similar relation holds for characters of finite groups.
 \end{remark}
-By \Cref{prop:character-functional}, the integral over $U(N)$ in \eqref{eq:HCIZ-I-start} can be evaluated as
+By \Cref{lecture11:prop:character-functional}, the integral over $U(N)$ in \eqref{lecture11:eq:HCIZ-I-start} can be evaluated as
 \[
 \int_{U(N)} s_\mu(D_a\,U\,D_\lambda\,U^\dagger)\,dU
 \;=\;
@@ -8216,7 +8216,7 @@ By \Cref{prop:character-functional}, the integral over $U(N)$ in \eqref{eq:HCIZ-
 \;s_\mu(a)\,s_\mu(\lambda),
 \]
 where
-\(\mathrm{Dim}_N(\mu)\) is the dimension of the corresponding irreducible representation of $U(N)$.  Substituting back into \eqref{eq:HCIZ-I-start} yields
+\(\mathrm{Dim}_N(\mu)\) is the dimension of the corresponding irreducible representation of $U(N)$.  Substituting back into \eqref{lecture11:eq:HCIZ-I-start} yields
 \[
 I \;=\;
 \sum_{m=0}^\infty\;
@@ -8254,7 +8254,7 @@ which yields the HCIZ formula by the Cauchy-Binet summation.
 \subsection{Transition density}
 
 \begin{theorem}[\(\beta=2\) Dyson Brownian Motion Transition Probabilities]
-	\label{thm:dbm-transition}
+	\label{lecture11:thm:dbm-transition}
 For \(\beta=2\), let \(\lambda(t)=(\lambda_1(t)\ge \cdots \ge \lambda_N(t))\) follow Dyson Brownian Motion starting at \(\lambda(0)=\mathbf{a}=(a_1\ge \cdots \ge a_N)\).  Then for each fixed time \(t>0\),
 \[
 P\bigl(\lambda(t) = \mathbf{x}\;\big|\;\lambda(0)=\mathbf{a}\bigr)
@@ -8310,7 +8310,7 @@ The factor \(N!\,(\tfrac{1}{\sqrt{2\pi t}})^N\) arises naturally from normalizin
 \subsection{Determinantal correlations}
 
 \begin{theorem}[Determinantal structure for $\beta=2$ DBM]
-\label{thm:dbm-det-kernel}
+\label{lecture11:thm:dbm-det-kernel}
 Let $\{x_1(t),\dots,x_n(t)\}$ be the eigenvalues at time $t>0$ of the $\beta=2$ Dyson Brownian Motion started at initial locations $(a_1,\dots,a_n)$ at time $0$.  Equivalently, these $x_i(t)$ are the eigenvalues of
 \[
 A + \sqrt{t}\,G,
@@ -8346,7 +8346,7 @@ passes from $-i\infty$ to $i\infty$, to the right of the $z$ contour.
 
 \subsection{On the proof of determinantal structure}
 
-The idea of the proof of \Cref{thm:dbm-det-kernel} is to
+The idea of the proof of \Cref{lecture11:thm:dbm-det-kernel} is to
 represent the measure (the transition density) as a
 product of determinants. In general,
 if a measure is given as a product of determinants,
@@ -8360,7 +8360,7 @@ in the discrete case (which is arguably more transparent).
 The first step for the Dyson Brownian Motion is as follows.
 
 \begin{lemma}[Density representation]
-\label{lem:density_representation}
+\label{lecture11:lem:density_representation}
 Let $P_t(x\to y)$ be the transition probability kernel of standard Brownian motion,
 \[
    P_t(x\to y) \;=\; \frac{1}{\sqrt{2\pi\,t}}\,
@@ -8370,7 +8370,7 @@ Then the density of the eigenvalues $(x_1,\dots,x_N)$
 of DBM started at $(a_1,\dots,a_N)$ at time $0$
 admits the representation
 \begin{equation}
-	\label{eq:density_representation}
+	\label{lecture11:eq:density_representation}
    \lim_{s\to\infty}
    \biggl(\frac1Z\biggr)\,
    \det\Bigl[P_t\bigl(a_i\to x_j\bigr)\Bigr]_{i,j=1}^N
@@ -8379,16 +8379,16 @@ admits the representation
 \end{lemma}
 \begin{remark}
 	This representation
-	\eqref{eq:density_representation}
+	\eqref{lecture11:eq:density_representation}
 	is related to an alternative description of the
 	$\beta=2$ Dyson Brownian Motion as
 	an ensemble of noncolliding Brownian motions
 	(that is, independent Brownian motions, conditioned to never collide).
 \end{remark}
 
-\begin{proof}[Proof of \Cref{lem:density_representation}]
+\begin{proof}[Proof of \Cref{lecture11:lem:density_representation}]
 The first determinant (as $s\to\infty$) matches the determinant
-we have in \Cref{thm:dbm-transition}.
+we have in \Cref{lecture11:thm:dbm-transition}.
 It remains to analyze the second determinant
 \[
    \det\Bigl[
@@ -8447,18 +8447,18 @@ Combining all these factors and matching with the first determinant (as $s\to\in
 Then, the product of determinants idea
 (biorthogonal ensembles)
 applies
-to the density \eqref{eq:density_representation}
+to the density \eqref{lecture11:eq:density_representation}
 before the limit $s\to\infty$,
 and simplifies after taking the limit.
 We omit the details here,
-see~Problem~\ref{prob:biorthogonal}.
+see~Problem~\ref{lecture11:prob:biorthogonal}.
 
 
 \section{Asymptotic analysis: signal plus noise}
 
 \subsection{Setup}
 
-\label{sec:rank1-spike-detailed}
+\label{lecture11:sec:rank1-spike-detailed}
 In this section, we provide a detailed derivation of how the rank-1 spike
 \[
 	A+\sqrt G,\qquad
@@ -8486,7 +8486,7 @@ $z\to z\sqrt n$.
 
 Hence, the correlation kernel becomes
 \begin{equation}
-\label{eq:K_t_a_expanded}
+\label{lecture11:eq:K_t_a_expanded}
 K_t(x,y)
 =
 \frac{\sqrt n}{(2\pi)^2}
@@ -8511,7 +8511,7 @@ $o(\sqrt n)$).
 \subsection{Outline of the steepest descent approach}
 
 We aim to understand the behavior of
-\eqref{eq:K_t_a_expanded} in the regime $n\to\infty$, especially near the largest eigenvalue $\lambda_1(t)$.  Recall from standard GUE (i.e.\ $a=0$) that the top of the spectrum is about $2\sqrt{n}$.  The presence of the rank-1 spike $a$ can drastically modify the top eigenvalue if $a$ is large enough to produce an ``outlier.''  Our goal is to detect precisely how this occurs by analyzing the double contour integral via steepest descent.
+\eqref{lecture11:eq:K_t_a_expanded} in the regime $n\to\infty$, especially near the largest eigenvalue $\lambda_1(t)$.  Recall from standard GUE (i.e.\ $a=0$) that the top of the spectrum is about $2\sqrt{n}$.  The presence of the rank-1 spike $a$ can drastically modify the top eigenvalue if $a$ is large enough to produce an ``outlier.''  Our goal is to detect precisely how this occurs by analyzing the double contour integral via steepest descent.
 
 For large $n$, the integral localizes around these
 double critical point.
@@ -8527,7 +8527,7 @@ S(w;y')\;=\;
 \;+\;
 \frac{n-1}{n}\ln(w).
 \]
-Then the integrand in \eqref{eq:K_t_a_expanded} is
+Then the integrand in \eqref{lecture11:eq:K_t_a_expanded} is
 \[
 	\frac{\exp\left\{ n\bigl[S(w;y')-S(z;x')\bigr] \right\}}{w-z}\frac{w-a}{z-a}.
 \]
@@ -8541,7 +8541,7 @@ and we would like to bring the $z$ and $w$ contours to intersect at $w_c=1$.
 			at the edge, in the neighborhood of the double critical point $w_c=1$.
 			The new $w$ contour should pass through the shaded region,
 		and the new $z$ must stay in the non-shaded region.}
-    \label{fig:ReS_edge}
+    \label{lecture11:fig:ReS_edge}
 \end{figure}
 Note however that the old $z$ contour must encircle $z=a$ and $z=0$,
 and $z=a$ is a pole of the integrand. The $w$ contour must always be to the right of
@@ -8569,7 +8569,7 @@ We see that there are three regimes, which we consider in the next three subsect
 		\]
 		Indeed, the only one new thing that happens here is that $a<1$, and so
 		\begin{equation}
-			\label{eq:z-w-extra-factor}
+			\label{lecture11:eq:z-w-extra-factor}
 			\frac{w-a}{z-a}=\frac{1-a+W/n^{1/3}}{1-a+Z/n^{1/3}}=1+O(n^{-1/3}),
 		\end{equation}
 		so this term does not contribute to the asymptotics of the kernel.
@@ -8578,7 +8578,7 @@ We see that there are three regimes, which we consider in the next three subsect
 
 		If $a=1$, the behavior is going to be critical --- we still will
 		be able to get the same scaling, but the limiting kernel will be different.
-		Moreover, looking at \eqref{eq:z-w-extra-factor}, we see that
+		Moreover, looking at \eqref{lecture11:eq:z-w-extra-factor}, we see that
 		we need to critically rescale $a$, so
 		\begin{equation*}
 			a=1+A n^{-1/3},
@@ -8604,7 +8604,7 @@ We see that there are three regimes, which we consider in the next three subsect
 		highly correlated data.
 
 \subsection{Gaussian regime}
-\label{sec:gaussian-regime}
+\label{lecture11:sec:gaussian-regime}
 
 Finally, for $a>1$, we cannot deform the integration contours so that they
 pass through the double critical point $w_c=1$.
@@ -8670,16 +8670,16 @@ One can check that this contour deformation is possible.
 		$Z$ contour must pass through the blue region and becomes vertical, and the
 		$W$ contour must stay in the yellow region, and becomes a union of two half-lines,
 		which are at the angle $<\frac{\pi}{4}$ from the real line.}
-		\label{fig:ReS_Gauss}
+		\label{lecture11:fig:ReS_Gauss}
 \end{figure}
 
 \subsection{Matching Fredholm determinant to the Gaussian distribution}
-\label{sec:matching-Gaussian}
+\label{lecture11:sec:matching-Gaussian}
 
 Let us renormalize the integration variables
 to remove the factor $a^{-2}-1$ in front of the squares,
 and match $\det\left( 1-K_G \right)_{\ge x}$ to the Gaussian distribution
-(see also Problem~\ref{prob:GUE-kernel} for another way to match).
+(see also Problem~\ref{lecture11:prob:GUE-kernel} for another way to match).
 We will work with
 \begin{equation*}
 	K_G(\xi,\eta)=
@@ -8808,7 +8808,7 @@ $(AB)^2=ABAB=AB$.
 \medskip
 For the rest of 
 the analysis, continue to
-Problem~\ref{prob:Gaussian_kernel}.
+Problem~\ref{lecture11:prob:Gaussian_kernel}.
 
 
 
@@ -8822,18 +8822,18 @@ Problem~\ref{prob:Gaussian_kernel}.
 
 
 \subsection{Biorthogonal ensembles}
-\label{prob:biorthogonal}
+\label{lecture11:prob:biorthogonal}
 
-Derive \Cref{thm:dbm-det-kernel} from
-\Cref{lem:density_representation}
+Derive \Cref{lecture11:thm:dbm-det-kernel} from
+\Cref{lecture11:lem:density_representation}
 using the orthogonalization process similar
 to~\Cref{chap:lecture5},
 and then taking the limit as $s\to\infty$.
 
 \subsection{Scaling of the kernel}
-\label{prob:scaling}
+\label{lecture11:prob:scaling}
 
-Let $a_i=0$ in \Cref{thm:dbm-det-kernel}.
+Let $a_i=0$ in \Cref{lecture11:thm:dbm-det-kernel}.
 Find $\alpha$ such that
 $t^\alpha K_t(x/\sqrt{t},y/\sqrt{t})$ is independent of $t$.
 Can you explain this value of $\alpha$?
@@ -8843,21 +8843,21 @@ Can you explain this value of $\alpha$?
 Check that the contour deformation
 from $(z,w)$ to $(Z,W)$ passing through $a$
 described in
-\Cref{sec:gaussian-regime} is valid.
+\Cref{lecture11:sec:gaussian-regime} is valid.
 
 \subsection{Gaussian kernel}
-\label{prob:Gaussian_kernel}
+\label{lecture11:prob:Gaussian_kernel}
 
 Finish the proof of the Fredholm determinant representation
 of the Gaussian cumulative distribution function
 by manipulation with Fredholm determinants, which was started in
-\Cref{sec:matching-Gaussian}.
+\Cref{lecture11:sec:matching-Gaussian}.
 
 \subsection{GUE kernel}
-\label{prob:GUE-kernel}
+\label{lecture11:prob:GUE-kernel}
 
 Consider the following generalization of the kernel $K_G$
-from \Cref{sec:gaussian-regime}:
+from \Cref{lecture11:sec:gaussian-regime}:
 \begin{equation*}
 	K_G^m(\xi,\eta)=
 	\frac{1}{(2\pi)^2}
@@ -8870,7 +8870,7 @@ from \Cref{sec:gaussian-regime}:
 \right)^{m}
 \frac{dW\,dZ}{W-Z},
 \end{equation*}
-where $m\ge1$ is an integer and the contours are as in \Cref{fig:ReS_Gauss}.
+where $m\ge1$ is an integer and the contours are as in \Cref{lecture11:fig:ReS_Gauss}.
 Show that the Fredholm determinant
 $\det\left( 1-K_G^m \right)_{L^2(x,+\infty)}$
 is the cumulative distribution function of the largest eigenvalue
