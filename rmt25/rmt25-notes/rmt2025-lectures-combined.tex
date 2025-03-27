@@ -26,9 +26,6 @@
 \usepackage{datetime}
 \usepackage{comment}
 
-% Page layout
-\usepackage[DIV=12]{typearea}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Equations
 \allowdisplaybreaks
@@ -1441,7 +1438,7 @@ that almost surely, for each fixed \(k\),
   \nu_n\bigl(\{x\,:\,|x|>M\}\bigr)
 	\;\le\; \frac{C}{M^k}.
 \end{equation}
-Here, $C$ may depend on $k$, but
+Here, $C$ may depend on $k$, but 
 its growth is at most exponential in \(k\)
 due to the Catalan number moments.
 By choosing \(k\) large, we see that \(\nu_n\) puts
@@ -4221,16 +4218,16 @@ In \eqref{eq:rho_k_computation_1}, we get, using the symmetry over $x_1,\ldots,x
 	\label{eq:rho_k_computation_2}
 	\rho_k(x_1,\dots,x_k)=\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
 	\sum_{\substack{\sigma,\tau\in S_n\\
-	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau)
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
 	\prod_{i=1}^k \psi_{\sigma(i)-1}(x_i)\psi_{\tau(i)-1}(x_i)  .
 \end{equation}
 Indeed, here we integrated over $x_{k+1},\ldots,x_n $, and passed
 from the functions $\phi_0,\phi_1,\ldots,\phi_{n-1} $
 to
 $\psi_0,\psi_1,\ldots,\psi_{n-1} $.
-The passage to the orthonormal functions only introduces the constant
-$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the
-normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and
+The passage to the orthonormal functions only introduces the constant 
+$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the 
+normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and 
 we later will show that the final normalization becomes $1$.
 
 To continue with \eqref{eq:rho_k_computation_2}, we need two general lemmas.
@@ -4325,7 +4322,7 @@ where the kernel is given by
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
 \]
-The fact that the normalization constant
+The fact that the normalization constant 
 in \eqref{eq:rho_k_determinantal_final_result}
 is indeed $1$ follows from \Cref{lemma:Andreief}.
 Indeed, once the integral of $\rho_n$ over $\mathbb{R}^n$ is equal to \(n!\),
@@ -6194,25 +6191,25 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 \subsection{Inductive nature of the transition}
 
 Note that when we fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
-and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving
+and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving 
 \eqref{eq:polynomial_equation}, we can then fix $\mu$ and get random
-$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on.
+$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on. 
 Here, $\nu$ corresponds to the $(n-2)\times(n-2)$ corner of $H$.
 Indeed, we can condition on $\mu$, and conjugate $H$ again by a
 unitary matrix of the form $U=\begin{pmatrix}
 	U'&0\\0&1
 \end{pmatrix}$, where $U'\in U(n-1)$ is Haar distributed.
 Since $U\in U(n)$, this extra conjugation does not change the distribution of $H\in \mathrm{Orbit}(\lambda)$,
-but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the
+but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the 
 passage from $\lambda$ to $\mu$.
 
 \begin{remark}
-	In more detail, since the homogeneous space $U(n)/U(n-1)$
+	In more detail, since the homogeneous space $U(n)/U(n-1)$ 
 	can be identified with $S^{2n-1}$, the $(2n-1)$-dimensional real sphere,
 	we can construct a Haar-distributed unitary matrix $U\in U(n)$
 	by first picking a Haar-distributed unitary matrix $U'\in U(n-1)$,
 	and then picking a random point on the sphere $S^{2n-1}$.
-	Restricting $H$ to $\mathbb{C}^{n-1}$ fixes the last component on the sphere
+	Restricting $H$ to $\mathbb{C}^{n-1}$ fixes the last component on the sphere 
 	(up to a complex phase), but the eigenbasis of the restriction $H^{(n-1)}$
 	is still Haar distributed, but now in $U(n-1)$.
 \end{remark}
@@ -6233,16 +6230,16 @@ deterministic:
 \begin{equation*}
 	\sum_{i=1}^n \frac{1}{z-\lambda_i}=0.
 \end{equation*}
-Denote
+Denote 
 \begin{equation}
 	\label{eq:P_z_definition}
 	P(z)=\prod_{i=1}^n(z-\lambda_i).
 \end{equation}
-Then
+Then 
 \begin{proposition}
 	The passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
 	to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ in the limit as $\beta=\infty$
-	is deterministic, and it the same as the passage from the
+	is deterministic, and it the same as the passage from the 
 	roots of the polynomial $P(z)$ \eqref{eq:P_z_definition} to the roots of its derivative $P'(z)$.
 \end{proposition}
 
@@ -6677,13 +6674,13 @@ The Stieltjes transform of the semicircular law is given by:
 	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
 \end{equation*}
 We take this as the function $G_t(z)$ for $t=1$.
-Then, for each $0\le t\le 1$, the
-G$\beta$E solution should be
+Then, for each $0\le t\le 1$, the 
+G$\beta$E solution should be 
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^{\lfloor nt \rfloor }\frac{1}{z-\lambda_i^{(\lfloor nt \rfloor )}}
 	\to t\ssp G^{(\sqrt t)}(z),
 \end{equation*}
-where
+where 
 \begin{equation*}
 	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
 \end{equation*}
@@ -8809,7 +8806,7 @@ We conclude that $AB$ is a projection, since
 $(AB)^2=ABAB=AB$.
 
 \medskip
-For the rest of
+For the rest of 
 the analysis, continue to
 Problem~\ref{prob:Gaussian_kernel}.
 
