@@ -1,14 +1,15 @@
 /*
-Compiles into a WebAssembly module that computes the eigenvalues of successive corners of:
-  1) A random Gaussian (GUE-style) Hermitian matrix (for simplicity we’ll still generate a real symmetric matrix, matching the code structure).
-  2) A matrix with a prescribed 10-point atomic spectrum.
-  3) A matrix with the same 10-point atomic spectrum but also up to 5 outliers (here, all set to 0).
+Compiles into a WebAssembly module that computes the eigenvalues of successive corners
+of three types of random matrices (all size N):
+1) "GUE" (actually a real-symmetric Wigner matrix) with up to 5 outliers on the diagonal.
+2) A 10-point atomic diagonal distribution, Haar-conjugated, with up to 5 outliers on the last diagonal entries.
+3) A truly complex Hermitian GUE plus a rank-5 diagonal perturbation U D U^\dagger.
 
-To compile (assuming Emscripten and Eigen are installed and available), run something like:
+To compile with Emscripten (and Eigen 3.x), something like:
 
 emcc 2025-03-27-orthogonal-corners-outliers.cpp -o 2025-03-27-orthogonal-corners-outliers.js \
     -s WASM=1 \
-    -s "EXPORTED_FUNCTIONS=['_computeCornerEigenvalues','_computeCornerEigenvaluesDiscrete','_computeCornerEigenvaluesDiscreteOutliers','_malloc','_free']" \
+    -s "EXPORTED_FUNCTIONS=['_computeCornerEigenvaluesGUEOutliers','_computeCornerEigenvaluesDiscreteOutliers','_computeCornerEigenvaluesRotatedGUE','_malloc','_free']" \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s TOTAL_MEMORY=268435456 \
@@ -19,196 +20,232 @@ emcc 2025-03-27-orthogonal-corners-outliers.cpp -o 2025-03-27-orthogonal-corners
     -s SINGLE_FILE=1 \
     && mv 2025-03-27-orthogonal-corners-outliers.js ../../js/
 
-This will produce a single-file JS+Wasm. Then move the generated .js file to the desired folder, e.g. /js/.
 */
 
 #include <emscripten/emscripten.h>
 #include <Eigen/Dense>
 #include <Eigen/QR>
-#include <vector>
+#include <Eigen/SVD>
+#include <complex>
 #include <random>
-#include <cmath>
+#include <vector>
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
-using Matrix = Eigen::MatrixXd;
+static const int MAX_N = 300; // Maximum matrix size we support
+static std::vector<double> cornerEigenData; // global buffer for corner eigenvalues
 
-// Global storage for the computed corner eigenvalue data.
-// Always allocate enough space for maximum N = 300.
-static std::vector<double> cornerEigenData;
-static const int MAX_N = 300;  // Maximum allowed N
-
-// ---------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------
-
-// Generate a random number from a normal distribution (fixed seed for reproducibility).
-EMSCRIPTEN_KEEPALIVE
-extern "C" double randn() {
+// A small helper for normal(0,1) random
+static double randn() {
     static std::mt19937 rng(42);
     static std::normal_distribution<double> dist(0.0, 1.0);
     return dist(rng);
 }
 
-// Generate a random Haar orthogonal matrix of size N (real orthogonal version).
-Matrix randomHaarMatrix(int N) {
-    Matrix X(N, N);
+/**
+ * Return a random real-symmetric Wigner matrix (like GOE) of size N,
+ * with each (i<j) entry ~ Normal(0,1/sqrt(N)) and diagonal ~ Normal(0,1/sqrt(N)).
+ */
+Eigen::MatrixXd randomRealWigner(int N) {
+    Eigen::MatrixXd A(N, N);
+    double scale = 1.0 / std::sqrt((double)N);
+    for (int i = 0; i < N; i++) {
+        for (int j = i; j < N; j++) {
+            double val = randn() * scale;
+            A(i, j) = val;
+            A(j, i) = val;
+        }
+    }
+    return A;
+}
+
+/**
+ * Return a random complex Hermitian GUE matrix of size N,
+ * each off-diagonal ~ complex Normal(0,1/2) so that Re and Im each ~ Normal(0,1/(2*sqrt(N))).
+ * We scale by 1/sqrt(N). Diagonal is purely real normal(0,1/sqrt(N)).
+ */
+Eigen::MatrixXcd randomComplexGUE(int N) {
+    using namespace std::complex_literals;
+    Eigen::MatrixXcd G(N, N);
+    double scale = 1.0 / std::sqrt((double)N);
+    for (int i = 0; i < N; i++) {
+        // diagonal is real
+        double diagReal = randn() * scale;
+        G(i, i) = std::complex<double>(diagReal, 0.0);
+        for (int j = i+1; j < N; j++) {
+            double re = randn() * scale / std::sqrt(2.0); // factor 1/sqrt(2)
+            double im = randn() * scale / std::sqrt(2.0);
+            // Hermitian means M(i,j) = conj(M(j,i))
+            G(i, j) = std::complex<double>(re, im);
+            G(j, i) = std::complex<double>(re, -im);
+        }
+    }
+    return G;
+}
+
+/**
+ * Return a random real Haar orthogonal matrix (N x N).
+ */
+Eigen::MatrixXd randomHaarOrthogonal(int N) {
+    // Generate random N x N with i.i.d. N(0,1)
+    Eigen::MatrixXd X(N, N);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             X(i, j) = randn();
         }
     }
-    Eigen::HouseholderQR<Matrix> qr(X);
-    Matrix Q = qr.householderQ() * Matrix::Identity(N, N);
-    Matrix R = qr.matrixQR().triangularView<Eigen::Upper>();
+    // QR factorization
+    Eigen::HouseholderQR<Eigen::MatrixXd> qr(X);
+    Eigen::MatrixXd Q = qr.householderQ() * Eigen::MatrixXd::Identity(N, N);
+    // Fix sign of R's diagonal
+    Eigen::MatrixXd R = qr.matrixQR().triangularView<Eigen::Upper>();
     for (int i = 0; i < N; i++) {
-        if (R(i, i) < 0)
+        if (R(i, i) < 0) {
             Q.col(i) = -Q.col(i);
+        }
     }
     return Q;
 }
 
-// ---------------------------------------------------------------------
-// 1) computeCornerEigenvalues: random symmetric Gaussian matrix (GUE-style, but real-symmetric).
-// ---------------------------------------------------------------------
-
-// Compute eigenvalues for successive corners of a Wigner-like N×N random Gaussian matrix.
-// The code normalizes by 1/sqrt(N). Fills cornerEigenData with 2*(N*(N+1)/2) doubles:
-// [ (k, λ_{k,1}), (k, λ_{k,2}), ..., (k, λ_{k,k}) ] for k=1..N,
-// where λ_{k,1} >= λ_{k,2} >= ... >= λ_{k,k} are the k eigenvalues of the top-left k×k corner.
-EMSCRIPTEN_KEEPALIVE
-extern "C" double* computeCornerEigenvalues(int N) {
-    // Ensure cornerEigenData is big enough for the maximum N, to keep pointer stable.
-    int maxTotalPoints = MAX_N * (MAX_N + 1) / 2;
-    if (cornerEigenData.capacity() < 2 * maxTotalPoints)
-        cornerEigenData.reserve(2 * maxTotalPoints);
-    cornerEigenData.resize(2 * maxTotalPoints);
-
-    int totalPoints = N * (N + 1) / 2;
-
-    // Create a random symmetric matrix with variance ~ 1/N.
-    Matrix A = Matrix::Zero(N, N);
-    double scale = 1.0 / std::sqrt((double)N);
+/**
+ * Return a random complex unitary (N x N).
+ * We do SVD of a random complex matrix X = U * S * V^*, then return U.
+ */
+Eigen::MatrixXcd randomUnitary(int N) {
+    Eigen::MatrixXcd X(N, N);
     for (int i = 0; i < N; i++) {
-        for (int j = i; j < N; j++) {
-            double value = randn() * scale;
-            A(i, j) = value;
-            A(j, i) = value;
+        for (int j = 0; j < N; j++) {
+            double re = randn();
+            double im = randn();
+            X(i, j) = std::complex<double>(re, im);
         }
     }
+    // SVD
+    // BDCSVD can handle larger matrices efficiently, or JacobiSVD might suffice for smaller N
+    Eigen::BDCSVD<Eigen::MatrixXcd> svd(X, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    return svd.matrixU();
+}
 
-    // For each corner size k, compute eigenvalues and sort descending.
+
+/**
+ * Fill the global cornerEigenData with the corner eigenvalues from matrix M (which must be NxN hermitian).
+ * We call SelfAdjointEigenSolver on each top-left k x k corner, sorted descending.
+ * Return cornerEigenData.data().
+ */
+template<typename MatrixType>
+double* fillCornerEigenDataHermitian(const MatrixType& M, int N)
+{
+    int maxTotalPoints = MAX_N*(MAX_N+1)/2;
+    if (cornerEigenData.capacity() < 2*maxTotalPoints) {
+        cornerEigenData.reserve(2*maxTotalPoints);
+    }
+    cornerEigenData.resize(2*maxTotalPoints);
+
     int index = 0;
     for (int k = 1; k <= N; k++) {
-        Matrix A_corner = A.topLeftCorner(k, k);
-        Eigen::SelfAdjointEigenSolver<Matrix> solver(A_corner);
+        auto corner = M.block(0, 0, k, k);
+        Eigen::SelfAdjointEigenSolver<MatrixType> solver(corner);
         if (solver.info() != Eigen::Success) {
-            // If solver fails, fill with zeros
             for (int j = 0; j < k; j++) {
                 cornerEigenData[index++] = (double)k;
                 cornerEigenData[index++] = 0.0;
             }
             continue;
         }
-        Eigen::VectorXd eigs = solver.eigenvalues();
-        std::vector<double> eigs_vec(eigs.data(), eigs.data() + k);
-        std::sort(eigs_vec.begin(), eigs_vec.end());
-        std::reverse(eigs_vec.begin(), eigs_vec.end());
+        Eigen::VectorXd vals = solver.eigenvalues();
+        std::vector<double> eigs(vals.data(), vals.data() + k);
+        std::sort(eigs.begin(), eigs.end());
+        std::reverse(eigs.begin(), eigs.end());
         for (int j = 0; j < k; j++) {
             cornerEigenData[index++] = (double)k;
-            cornerEigenData[index++] = eigs_vec[j];
+            cornerEigenData[index++] = eigs[j];
         }
     }
-
     return cornerEigenData.data();
 }
 
-// ---------------------------------------------------------------------
-// 2) computeCornerEigenvaluesDiscrete: random orthogonal conjugation of a diagonal with 10 distinct values.
-// ---------------------------------------------------------------------
 
-// Compute eigenvalues for successive corners of M = H * D * H^T, where D is diagonal
-// with 10 distinct values repeated proportionally to their index among N.
-// (Group = floor((i*10)/N), i=0..N-1).
+extern "C" {
+
+/**
+ * 1) "GUE" outliers (really real-symmetric Wigner),
+ *    plus up to 5 outlier diagonals in the first 5 diagonal entries.
+ */
 EMSCRIPTEN_KEEPALIVE
-extern "C" double* computeCornerEigenvaluesDiscrete(int N, double* discreteVals) {
-    // Ensure cornerEigenData is big enough for the maximum N.
-    int maxTotalPoints = MAX_N * (MAX_N + 1) / 2;
-    if (cornerEigenData.capacity() < 2 * maxTotalPoints)
-        cornerEigenData.reserve(2 * maxTotalPoints);
-    cornerEigenData.resize(2 * maxTotalPoints);
+double* computeCornerEigenvaluesGUEOutliers(int N, double* outliers) {
+    // Build random real-symmetric "GUE"
+    Eigen::MatrixXd G = randomRealWigner(N);
 
-    Matrix D = Matrix::Zero(N, N);
+    // Overwrite first 5 diagonal entries with outliers
+    for (int i = 0; i < 5 && i < N; i++) {
+        G(i, i) = outliers[i];
+    }
+    return fillCornerEigenDataHermitian(G, N);
+}
+
+/**
+ * 2) 10-point atomic distribution, plus up to 5 outlier diagonals in the LAST 5 diagonal entries,
+ *    then conjugate by a random Haar orthogonal matrix.
+ */
+EMSCRIPTEN_KEEPALIVE
+double* computeCornerEigenvaluesDiscreteOutliers(int N, double* discreteVals, double* outliers) {
+    // Build diagonal D of size N x N
+    Eigen::MatrixXd D = Eigen::MatrixXd::Zero(N, N);
     for (int i = 0; i < N; i++) {
-        // group goes from 0..9
         int group = std::min((i * 10) / N, 9);
         D(i, i) = discreteVals[group];
     }
-
-    Matrix H = randomHaarMatrix(N);
-    Matrix M = H * D * H.transpose();
-
-    int index = 0;
-    for (int k = 1; k <= N; k++) {
-        Matrix M_corner = M.topLeftCorner(k, k);
-        Eigen::SelfAdjointEigenSolver<Matrix> solver(M_corner);
-        if (solver.info() != Eigen::Success) {
-            for (int j = 0; j < k; j++) {
-                cornerEigenData[index++] = (double)k;
-                cornerEigenData[index++] = 0.0;
-            }
-            continue;
-        }
-        Eigen::VectorXd eigs = solver.eigenvalues();
-        std::vector<double> eigs_vec(eigs.data(), eigs.data() + k);
-        std::sort(eigs_vec.begin(), eigs_vec.end());
-        std::reverse(eigs_vec.begin(), eigs_vec.end());
-        for (int j = 0; j < k; j++) {
-            cornerEigenData[index++] = (double)k;
-            cornerEigenData[index++] = eigs_vec[j];
-        }
+    // Overwrite last 5 diagonal entries with outliers
+    for (int i = 0; i < 5 && i < N; i++) {
+        int idx = N - 1 - i;
+        D(idx, idx) = outliers[i];
     }
-
-    return cornerEigenData.data();
+    // Conjugate by random Haar
+    Eigen::MatrixXd Q = randomHaarOrthogonal(N);
+    Eigen::MatrixXd M = Q * D * Q.transpose();
+    return fillCornerEigenDataHermitian(M, N);
 }
 
-// ---------------------------------------------------------------------
-// 3) computeCornerEigenvaluesDiscreteOutliers: same as above, but add up to 5 outliers (fixed = 0).
-// ---------------------------------------------------------------------
-
-// Compute eigenvalues for a matrix M = H * D * H^T, where
-//   - The first up to 5 diagonal entries are outliers (value = 0 here).
-//   - The remaining diagonal entries are assigned among the 10 discreteVals groups.
+/**
+ * 3) "Rotated GUE": Generate a truly complex Hermitian G,
+ *    plus rank-5 diagonal outliers D. Then form M = G + U D U^dagger,
+ *    and compute corner eigenvalues.
+ *
+ *    - G is NxN complex Hermitian (classic GUE).
+ *    - D is NxN diagonal with outliers in first 5 entries.
+ *    - U is a random NxN unitary from SVD of a random complex matrix.
+ */
 EMSCRIPTEN_KEEPALIVE
-extern "C" double* computeCornerEigenvaluesDiscreteOutliers(int N, double* discreteVals) {
-    // Ensure cornerEigenData is big enough for the maximum N.
-    int maxTotalPoints = MAX_N * (MAX_N + 1) / 2;
-    if (cornerEigenData.capacity() < 2 * maxTotalPoints)
-        cornerEigenData.reserve(2 * maxTotalPoints);
-    cornerEigenData.resize(2 * maxTotalPoints);
+double* computeCornerEigenvaluesRotatedGUE(int N, double* outliers) {
+    // Build complex GUE
+    Eigen::MatrixXcd G = randomComplexGUE(N);
 
-    // Fill the diagonal with 0 for first 5 outliers (or fewer if N < 5).
-    Matrix D = Matrix::Zero(N, N);
-    int outlierCount = std::min(5, N);  // up to 5
-    // outliers are set to zero, so no need to do anything special here beyond that.
-
-    // Fill the rest of the diagonal according to the 10 discrete values.
-    // i runs from outlierCount..(N-1).
-    // We skip the first outlierCount positions (already 0) and group the rest among the 10 values.
-    for (int i = outlierCount; i < N; i++) {
-        // fraction = (i - outlierCount)/(N - outlierCount)
-        // group is in 0..9
-        int group = std::min(((i - outlierCount) * 10) / (N - outlierCount), 9);
-        D(i, i) = discreteVals[group];
+    // Build diagonal outlier matrix D
+    Eigen::MatrixXcd D = Eigen::MatrixXcd::Zero(N, N);
+    for (int i = 0; i < 5 && i < N; i++) {
+        D(i, i) = std::complex<double>(outliers[i], 0.0);
     }
 
-    Matrix H = randomHaarMatrix(N);
-    Matrix M = H * D * H.transpose();
+    // Build random unitary U
+    Eigen::MatrixXcd U = randomUnitary(N);
+
+    // M = G + U D U^dagger
+    Eigen::MatrixXcd M = G + U * D * U.adjoint();
+
+    // For corners, we do a self-adjoint solver of M(0:k, 0:k).
+    // We'll write a specialized version for complex Hermitian:
+    int maxTotalPoints = MAX_N*(MAX_N+1)/2;
+    if (cornerEigenData.capacity() < 2*maxTotalPoints) {
+        cornerEigenData.reserve(2*maxTotalPoints);
+    }
+    cornerEigenData.resize(2*maxTotalPoints);
 
     int index = 0;
     for (int k = 1; k <= N; k++) {
-        Matrix M_corner = M.topLeftCorner(k, k);
-        Eigen::SelfAdjointEigenSolver<Matrix> solver(M_corner);
+        // top-left corner
+        Eigen::MatrixXcd corner = M.block(0, 0, k, k);
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXcd> solver(corner);
         if (solver.info() != Eigen::Success) {
             for (int j = 0; j < k; j++) {
                 cornerEigenData[index++] = (double)k;
@@ -216,20 +253,21 @@ extern "C" double* computeCornerEigenvaluesDiscreteOutliers(int N, double* discr
             }
             continue;
         }
-        Eigen::VectorXd eigs = solver.eigenvalues();
-        std::vector<double> eigs_vec(eigs.data(), eigs.data() + k);
-        std::sort(eigs_vec.begin(), eigs_vec.end());
-        std::reverse(eigs_vec.begin(), eigs_vec.end());
+        // sort descending
+        Eigen::VectorXd vals = solver.eigenvalues();
+        std::vector<double> eigs(vals.data(), vals.data() + k);
+        std::sort(eigs.begin(), eigs.end());
+        std::reverse(eigs.begin(), eigs.end());
         for (int j = 0; j < k; j++) {
             cornerEigenData[index++] = (double)k;
-            cornerEigenData[index++] = eigs_vec[j];
+            cornerEigenData[index++] = eigs[j];
         }
     }
-
     return cornerEigenData.data();
 }
 
-// Dummy main for Emscripten
+} // extern "C"
+
 int main() {
     return 0;
 }
