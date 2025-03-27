@@ -22,10 +22,10 @@ code:
         <strong>10-Point Atomic</strong>: a diagonal matrix with 10 distinct eigenvalues (each repeated proportionally in size \(N\)), plus 5 outliers in the last 5 diagonal entries, all conjugated by a random complex unitary.
       </li>
       <li>
-        <strong>GUE</strong>: a truly complex Hermitian GUE matrix + 5 diagonal outliers in the first 5 diagonal entries.
+        <strong>GUE</strong>: a complex Hermitian GUE matrix + a rank $\le 5$ perturbation in the first 5 diagonal entries.
       </li>
       <li>
-        <strong>Rotated GUE</strong>: a random complex Hermitian GUE matrix + a rank-5 diagonal perturbation \(U D U^\dagger\), where \(D\) has your 5 outliers.
+        <strong>Rotated GUE</strong>: a random complex Hermitian GUE matrix + a rank-5 diagonal perturbation \(U D U^\dagger\), where \(D\) has up to 5 outliers. The difference with the previous ensemble is that the perturbation is <strong>free</strong> with respect to the original GUE matrix.
       </li>
     </ul>
     <p>
