@@ -1,5 +1,5 @@
 ---
-title: Corner eigenvalues with optional outliers (three regimes)
+title: Corner processes with unitary invariance and outliers
 model: random-matrices
 author: 'Leonid Petrov'
 code:
@@ -15,17 +15,17 @@ code:
 <div class="row">
   <div class="col-12 mb-3">
     <p>
-      This page computes eigenvalues of successive top-left corners of three different random-matrix ensembles (each with an option to add up to five outliers).
+      This page computes eigenvalues of successive top-left corners of three different complex Hermitian random-matrix ensembles (each with an option to add up to five outliers).
     </p>
     <ul>
       <li>
-        <strong>10-Point Atomic</strong>: a diagonal matrix with 10 distinct eigenvalues (each repeated proportionally in size \(N\)), Haar-conjugated, plus 5 outliers in the last 5 diagonal entries.
-      </li>
-    <li>
-        <strong>GUE</strong> (actually real-symmetric Wigner in this code) + 5 diagonal outliers in the first 5 diagonal entries.
+        <strong>10-Point Atomic</strong>: a diagonal matrix with 10 distinct eigenvalues (each repeated proportionally in size \(N\)), plus 5 outliers in the last 5 diagonal entries, all conjugated by a random complex unitary.
       </li>
       <li>
-        <strong>Rotated GUE</strong>: a truly complex Hermitian GUE matrix + a rank-5 diagonal perturbation \(U D U^\dagger\), where \(D\) has your 5 outliers.
+        <strong>GUE</strong>: a truly complex Hermitian GUE matrix + 5 diagonal outliers in the first 5 diagonal entries.
+      </li>
+      <li>
+        <strong>Rotated GUE</strong>: a random complex Hermitian GUE matrix + a rank-5 diagonal perturbation \(U D U^\dagger\), where \(D\) has your 5 outliers.
       </li>
     </ul>
     <p>
@@ -302,7 +302,7 @@ function updateSimulation() {
         Module.HEAPF64.set(sortedPoints, discreteBufferPtr / 8);
         ptr = Module._computeCornerEigenvaluesDiscreteOutliers(N, discreteBufferPtr, outlierBufferPtr);
     } else {
-        // "Rotated GUE" (true complex Hermitian)
+        // "Rotated GUE"
         ptr = Module._computeCornerEigenvaluesRotatedGUE(N, outlierBufferPtr);
     }
 
