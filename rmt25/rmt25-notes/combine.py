@@ -50,9 +50,39 @@ def extract_lecture_content(filename):
 
     return content
 
+def prefix_labels(content, lecture_num):
+    """Add lecture-specific prefix to all labels in the content"""
+    # Match all \label commands and add lecture prefix
+    pattern = r'\\label\{([^}]*)\}'
+    replacement = r'\\label{lec' + f'{lecture_num:02d}' + r'-\1}'
+    return re.sub(pattern, replacement, content)
+
+def update_references(content, lecture_num):
+    """Update references to match prefixed labels"""
+    ref_patterns = [r'\\ref\{([^}]*)\}', r'\\eqref\{([^}]*)\}', r'\\cref\{([^}]*)\}']
+    for pattern in ref_patterns:
+        content = re.sub(pattern, lambda m: m.group(0).replace(m.group(1), f'lec{lecture_num:02d}-{m.group(1)}'), content)
+    return content
+
+def sanitize_titles(content):
+    """Replace math expressions in section/chapter titles with text versions for PDF bookmarks"""
+    patterns = [
+        (r'\\section\{([^}]*\$[^}]*\$[^}]*)\}', r'\\section{\\texorpdfstring{\1}{\1}}'),
+        (r'\\chapter\{([^}]*\$[^}]*\$[^}]*)\}', r'\\chapter{\\texorpdfstring{\1}{\1}}')
+    ]
+    for pattern, replacement in patterns:
+        content = re.sub(pattern, replacement, content)
+
+    # Fix common math expressions in titles for bookmarks
+    content = re.sub(r'\\section\{([^}]*)(\\beta)([^}]*)\}',
+                    r'\\section{\\texorpdfstring{\1$\\beta$\3}{\1beta\3}}', content)
+    content = re.sub(r'\\chapter\{([^}]*)(\\beta)([^}]*)\}',
+                    r'\\chapter{\\texorpdfstring{\1$\\beta$\3}{\1beta\3}}', content)
+
+    return content
+
 def update_lecture_references(content, lecture_num):
     """Convert href references to other lectures into proper LaTeX \Cref references"""
-
     # Pattern for href references to lecture PDFs
     pattern = r'\\href\{https://lpetrov\.cc/rmt25/rmt25-notes/rmt2025-l(\d+)\.pdf\}\{([^{}]*)\}'
 
@@ -69,7 +99,6 @@ def update_lecture_references(content, lecture_num):
 
     # Replace PDF references
     updated_content = re.sub(pattern, replacement, content)
-
     return updated_content
 
 def extract_lecture_title(filename):
@@ -90,12 +119,12 @@ def extract_lecture_title(filename):
     return "Lecture Content"  # Default if no title found
 
 def sanitize_problem_sections(content):
-    """Fix common LaTeX errors in problem sections"""
+    """Fix common LaTeX errors in problem sections and remove due dates"""
     # Fix section counters related to problems
     content = re.sub(r'\\setcounter\{section\}\{\d+\}', '', content)
 
-    # Fix problem section formatting
-    content = re.sub(r'\\section\{Problems \(due', r'\\section{Problems (due', content)
+    # Remove due dates from problem sections
+    content = re.sub(r'\\section\{Problems \(due [^)]*\)\}', r'\\section{Problems}', content)
 
     # Clean up any remaining problematic labels
     content = re.sub(r'\\label\{(\{+)(.*?)(\}*)\}', r'\\label{\2}', content)
@@ -107,6 +136,10 @@ def fix_special_commands(content):
     # Replace \oiint with a safer command
     content = re.sub(r'\\oiint_\{\\textnormal\{old contours\}\}',
                     r'\\iint_{\\textnormal{old contours}}', content)
+
+    # Fix other common issues that appeared in the log
+    content = re.sub(r'\\new@ifnextchar', r'\\protect\\new@ifnextchar', content)
+    content = re.sub(r'\\begingroup', r'\\protect\\begingroup', content)
 
     return content
 
@@ -121,7 +154,7 @@ def create_book():
     # Create book content with a manually defined preamble
     with open(output_file, 'w') as book:
         # Write a unified preamble
-        book.write("""\\documentclass[letterpaper,11pt,twoside,reqno]{book}
+        book.write("""\\documentclass[letterpaper,11pt,oneside,reqno]{book}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Packages from the original lectures
@@ -151,6 +184,31 @@ def create_book():
 
 % Page layout
 \\usepackage[DIV=12]{typearea}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fix math in bookmarks
+\\usepackage{etoolbox}
+\\pdfstringdefDisableCommands{%
+  \\def\\beta{beta}%
+  \\def\\times{x}%
+  \\def\\begingroup{}%
+  \\def\\endgroup{}%
+  \\def\\mathsurround{}%
+}
+
+% Improve typography
+\\usepackage{microtype}
+
+% Fix overfull boxes
+\\setlength{\\emergencystretch}{3em}
+
+% For shorter running headers
+\\usepackage{fancyhdr}
+\\pagestyle{fancy}
+\\renewcommand{\\chaptermark}[1]{\\markboth{\\chaptername\\ \\thechapter. #1}{}}
+\\renewcommand{\\sectionmark}[1]{\\markright{\\thesection\\ #1}}
+\\fancyhfoffset[L]{0pt}
+\\fancyhfoffset[R]{0pt}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Equations
@@ -199,18 +257,20 @@ def create_book():
             # Extract lecture title and number
             lecture_num = int(re.search(r'l(\d+)', lecture_file).group(1))
             title = extract_lecture_title(lecture_file)
+            # Set chapter title (without "Lecture X:") and remove newlines
+            chapter_title = title.replace('\n', ' ').strip()
 
-            # Set chapter title
-            chapter_title = f"Lecture {lecture_num}: {title}"
-
-            # Add chapter heading and label
+            # Add chapter heading
             book.write(f"\\chapter{{{chapter_title}}}\n")
             book.write(f"\\label{{chap:lecture{lecture_num}}}\n")
 
             # Add lecture content with updated references
             content = extract_lecture_content(lecture_file)
+            content = prefix_labels(content, lecture_num)
+            content = update_references(content, lecture_num)
             content = update_lecture_references(content, lecture_num)
             content = sanitize_problem_sections(content)
+            content = sanitize_titles(content)
             content = fix_special_commands(content)
             book.write(content)
             book.write("\n\n")
@@ -242,6 +302,20 @@ def compile_book():
         print(f"Error compiling book: {e}")
         return False
 
+def upload_to_aws():
+    """Upload the compiled PDF to AWS S3"""
+    pdf_file = output_file.replace('.tex', '.pdf')
+    s3_destination = "s3://lpetrov.cc.storage/papers/lec07-rmt2025-lectures-combined.pdf"
+
+    print(f"Uploading {pdf_file} to AWS S3...")
+    try:
+        subprocess.run(["aws", "s3", "cp", pdf_file, s3_destination], check=True)
+        print(f"Successfully uploaded to {s3_destination}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error uploading to AWS: {e}")
+        return False
+
 if __name__ == "__main__":
-    if create_book():
-        compile_book()
+    if create_book() and compile_book():
+        upload_to_aws()
