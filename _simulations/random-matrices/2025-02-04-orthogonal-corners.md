@@ -1,5 +1,5 @@
 ---
-title: Corner eigenvalues of orthogonally invariant random matrices with fixed spectrum
+title: Corner eigenvalues of GOEs and orthogonally invariant random matrices with fixed spectrum
 model: random-matrices
 author: 'Connor MacMahon, Leonid Petrov'
 code:
