@@ -87,9 +87,9 @@ nav_weight: 19
           <div class="col">
             <div class="card h-100 shadow-sm">
               <div class="card-body">
-                <strong class="card-title mb-2">
+                <h5 class="card-title mb-2">
                   <a href="{{ sim.url }}">{{ sim.title | truncate: 50 }}</a>
-                </strong>
+                </h5>
                 <p class="card-text text-muted">
                   {{ sim.date | date: "%Y-%m-%d" }}
                 </p>
