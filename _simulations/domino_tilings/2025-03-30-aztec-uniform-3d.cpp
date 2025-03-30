@@ -1,6 +1,6 @@
 /*
 
-emcc 2025-03-29-aztec-uniform-3d.cpp -o 2025-03-29-aztec-uniform-3d.js \
+emcc 2025-03-30-aztec-uniform-3d.cpp -o 2025-03-30-aztec-uniform-3d.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
@@ -10,7 +10,7 @@ emcc 2025-03-29-aztec-uniform-3d.cpp -o 2025-03-29-aztec-uniform-3d.js \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
-  mv 2025-03-29-aztec-uniform-3d.js ../../js/
+  mv 2025-03-30-aztec-uniform-3d.js ../../js/
 
 Note: When testing locally, serve these files over HTTP rather than via file://.
 */
@@ -27,10 +27,6 @@ Note: When testing locally, serve these files over HTTP rather than via file://.
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
-#include <queue>
-#include <set>
-#include <map>
-#include <climits>
 
 using namespace std;
 
@@ -44,24 +40,9 @@ struct Cell {
     int flag;
 };
 
-// Structure to represent a vertex position in the grid
-struct Vertex {
-    int i, j;
-    Vertex(int _i, int _j) : i(_i), j(_j) {}
-    bool operator<(const Vertex& other) const {
-        return i < other.i || (i == other.i && j < other.j);
-    }
-    bool operator==(const Vertex& other) const {
-        return i == other.i && j == other.j;
-    }
-};
-
 using Matrix = vector<vector<Cell>>;
 using MatrixDouble = vector<vector<double>>;
 using MatrixInt = vector<vector<int>>;
-
-// Forward declaration for helper function
-int computeHeightChange(const MatrixInt& dominoConfig, const Vertex& from, int direction);
 
 // d3p: builds a vector of matrices from x1.
 vector<Matrix> d3p(const MatrixDouble &x1) {
@@ -238,192 +219,10 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
         a1 = delslide(a1);
         a1 = create(a1, x0[i + 1]);
         // Update progress: scale from 10 to 90 over these iterations.
-        progressCounter = 10 + (int)(((double)(i + 1) / totalIterations) * 70);
+        progressCounter = 10 + (int)(((double)(i + 1) / totalIterations) * 80);
         emscripten_sleep(0); // Yield control so that progress updates are visible.
     }
     return a1;
-}
-
-// Calculate height function for a given domino configuration
-// The height function is defined on vertices, and the calculation begins
-// from a reference vertex with height 0, then propagates to other vertices
-std::map<Vertex, int> computeHeightFunction(const MatrixInt& dominoConfig) {
-    int size = dominoConfig.size();
-    // We need a slightly larger grid for vertices
-    int vertexSize = size + 1;
-
-    // Initialize heights
-    std::map<Vertex, int> heights;
-
-    // Find the bottom-left corner of the Aztec diamond (or start from a designated corner)
-    int startI = 0, startJ = size / 2;
-    while (startJ > 0 && startJ < size && dominoConfig[0][startJ-1] == 0) startJ--;
-    Vertex startVertex(startI, startJ);
-
-    // Set the height of the starting vertex to 0
-    heights[startVertex] = 0;
-
-    // BFS to compute heights
-    std::queue<Vertex> q;
-    std::set<Vertex> visited;
-    q.push(startVertex);
-    visited.insert(startVertex);
-
-    // Directions: right, up, left, down
-    int di[] = {0, 1, 0, -1};
-    int dj[] = {1, 0, -1, 0};
-
-    while (!q.empty()) {
-        progressCounter = 80 + (int)((float)heights.size() / (float)(vertexSize * vertexSize) * 15);
-        Vertex current = q.front();
-        q.pop();
-
-        // Process each neighboring vertex
-        for (int d = 0; d < 4; d++) {
-            int newI = current.i + di[d];
-            int newJ = current.j + dj[d];
-
-            // Check if the new vertex is within bounds
-            if (newI < 0 || newI >= vertexSize || newJ < 0 || newJ >= vertexSize) {
-                continue;
-            }
-
-            Vertex next(newI, newJ);
-
-            // If we've already visited this vertex, skip
-            if (visited.find(next) != visited.end()) {
-                continue;
-            }
-
-            // Calculate height change
-            int heightChange = 0;
-
-            // Edge between (i,j) and (i,j+1) - horizontal edge
-            if (d == 0) {  // Moving right
-                // Check if the square below this edge is in the Aztec diamond and has a domino
-                if (current.i > 0 && current.j < size && current.i - 1 < size && current.j < size && dominoConfig[current.i-1][current.j] > 0) {
-                    // This is a black square (assuming checkerboard coloring)
-                    if ((current.i + current.j) % 2 == 0) {
-                        heightChange = 1;
-                    } else {
-                        heightChange = -1;
-                    }
-                } else {
-                    // No domino or outside the Aztec diamond
-                    if ((current.i + current.j) % 2 == 0) {
-                        heightChange = -1;
-                    } else {
-                        heightChange = 1;
-                    }
-                }
-            }
-            // Edge between (i,j) and (i+1,j) - vertical edge
-            else if (d == 1) {  // Moving up
-                // Check if the square to the left of this edge is in the Aztec diamond and has a domino
-                if (current.i < size && current.j > 0 && current.i < size && current.j - 1 < size && dominoConfig[current.i][current.j-1] > 0) {
-                    // This is a black square (assuming checkerboard coloring)
-                    if ((current.i + current.j) % 2 == 0) {
-                        heightChange = -1;
-                    } else {
-                        heightChange = 1;
-                    }
-                } else {
-                    // No domino or outside the Aztec diamond
-                    if ((current.i + current.j) % 2 == 0) {
-                        heightChange = 1;
-                    } else {
-                        heightChange = -1;
-                    }
-                }
-            }
-            // Use symmetry for the other directions
-            else if (d == 2) {  // Moving left (opposite of right)
-                if (next.i > 0 && next.j < size && next.i - 1 < size && next.j < size && dominoConfig[next.i-1][next.j] > 0) {
-                    // Square below has a domino
-                    if ((next.i + next.j) % 2 == 0) {
-                        heightChange = -1;
-                    } else {
-                        heightChange = 1;
-                    }
-                } else {
-                    // No domino or outside
-                    if ((next.i + next.j) % 2 == 0) {
-                        heightChange = 1;
-                    } else {
-                        heightChange = -1;
-                    }
-                }
-            }
-            else if (d == 3) {  // Moving down (opposite of up)
-                if (next.i < size && next.j > 0 && next.i < size && next.j - 1 < size && dominoConfig[next.i][next.j-1] > 0) {
-                    // Square to the left has a domino
-                    if ((next.i + next.j) % 2 == 0) {
-                        heightChange = 1;
-                    } else {
-                        heightChange = -1;
-                    }
-                } else {
-                    // No domino or outside
-                    if ((next.i + next.j) % 2 == 0) {
-                        heightChange = -1;
-                    } else {
-                        heightChange = 1;
-                    }
-                }
-            }
-
-            // Set the height of the next vertex
-            heights[next] = heights[current] + heightChange;
-
-            // Add to the queue for further propagation
-            q.push(next);
-            visited.insert(next);
-        }
-    }
-
-    return heights;
-}
-
-// Helper function to compute height change when moving in a direction
-int computeHeightChange(const MatrixInt& dominoConfig, const Vertex& from, int direction) {
-    int size = dominoConfig.size();
-
-    // Direction: 0 = right, 1 = up
-    if (direction == 0) {  // Moving right
-        if (from.i > 0 && from.j < size && dominoConfig[from.i-1][from.j] > 0) {
-            // Square below has a domino
-            if ((from.i + from.j) % 2 == 0) {
-                return 1;
-            } else {
-                return -1;
-            }
-        } else {
-            // No domino or outside
-            if ((from.i + from.j) % 2 == 0) {
-                return -1;
-            } else {
-                return 1;
-            }
-        }
-    } else if (direction == 1) {  // Moving up
-        if (from.i < size && from.j > 0 && dominoConfig[from.i][from.j-1] > 0) {
-            // Square to the left has a domino
-            if ((from.i + from.j) % 2 == 0) {
-                return -1;
-            } else {
-                return 1;
-            }
-        } else {
-            // No domino or outside
-            if ((from.i + from.j) % 2 == 0) {
-                return 1;
-            } else {
-                return -1;
-            }
-        }
-    }
-
-    return 0;
 }
 
 // ---------------------------------------------------------------------
@@ -431,7 +230,7 @@ int computeHeightChange(const MatrixInt& dominoConfig, const Vertex& from, int d
 //
 // Exported function callable from JavaScript.
 // It creates a 2*n x 2*n weight matrix, runs the simulation,
-// and returns a JSON string with domino placements and height function.
+// and returns a JSON string with domino placements.
 // ---------------------------------------------------------------------
 extern "C" {
 
@@ -449,28 +248,13 @@ char* simulateAztec(int n) {
 
     // Generate domino configuration.
     MatrixInt dominoConfig = aztecgen(prob);
-    progressCounter = 80; // Simulation steps complete.
+    progressCounter = 90; // Simulation steps complete.
 
-    // Compute the height function
-    std::map<Vertex, int> heightFunction = computeHeightFunction(dominoConfig);
-
-    // Find the min and max height values to normalize the 3D display
-    int minHeight = INT_MAX;
-    int maxHeight = INT_MIN;
-    for (const auto& pair : heightFunction) {
-        minHeight = std::min(minHeight, pair.second);
-        maxHeight = std::max(maxHeight, pair.second);
-    }
-
-    // Build JSON output for dominoes and height function
+    // Build JSON output.
     int size = (int)dominoConfig.size();
     double scale = 10.0;
     ostringstream oss;
-
-    // Start the JSON object and dominoes array
-    oss << "{\"dominoes\":[";
-
-    // Add dominoes to the JSON
+    oss << "[";
     bool first = true;
     for (int i = 0; i < size; i++){
         for (int j = 0; j < size; j++){
@@ -516,28 +300,7 @@ char* simulateAztec(int n) {
             }
         }
     }
-
-    // Close dominoes array and start heightFunction array
-    oss << "],\"heightFunction\":[";
-
-    // Add height function vertices to the JSON
-    first = true;
-    for (const auto& pair : heightFunction) {
-        int i = pair.first.i;
-        int j = pair.first.j;
-        double x = (j - i) * scale;
-        double y = (size - (i + j)) * scale;
-        double z = (pair.second - minHeight) * scale * 0.5; // Scale the height for visualization
-
-        if (!first) oss << ",";
-        else first = false;
-
-        oss << "{\"x\":" << x << ",\"y\":" << y << ",\"z\":" << z << "}";
-    }
-
-    // Close the heightFunction array and the JSON object
-    oss << "]}";
-
+    oss << "]";
     progressCounter = 100; // Finished.
 
     string json = oss.str();
