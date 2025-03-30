@@ -53,14 +53,14 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 
 <!-- View toggle buttons -->
 <div style="margin-bottom: 10px;">
-  <span id="toggle-2d" class="view-toggle active">2D Tiling</span>
-  <span id="toggle-3d" class="view-toggle">3D Height Function</span>
+  <span id="toggle-2d" class="view-toggle">2D Tiling</span>
+  <span id="toggle-3d" class="view-toggle active">3D Height Function</span>
 </div>
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
-  <!-- Updated input: starting value 50, even numbers only (step=2), three-digit window (size=3), maximum 300 -->
+  <!-- Updated input: starting value 10, even numbers only (step=2), three-digit window (size=3), maximum 300 -->
   <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
 </div>
@@ -213,43 +213,131 @@ Module.onRuntimeInitialized = async function() {
     return heights;
   }
 
+  // Create 3D visualization of the height function
+  // Modified function to create the 3D height function with slanted dominoes
+  function createHeightFunctionMesh(heights, dominoes) {
+    if (heightMesh) {
+      scene.remove(heightMesh);
+      if (heightGeometry) heightGeometry.dispose();
+    }
 
+    // Clear any previous meshes in the scene
+    while(scene.children.length > 0) {
+      const object = scene.children[0];
+      if (object.geometry) object.geometry.dispose();
+      if (object.material) object.material.dispose();
+      scene.remove(object);
+    }
 
-    // Set geometry attributes
-    heightGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    heightGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    heightGeometry.setIndex(indices);
-    heightGeometry.computeVertexNormals();
+    const n = heights.length;
+    const centerOffset = Math.floor((n-1) / 2);
 
-    // Create mesh with material that uses vertex colors
-    const material = new THREE.MeshLambertMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide,
-      wireframe: false
+    // Create a group to hold all domino meshes
+    const dominoGroup = new THREE.Group();
+
+    // Create materials for each domino color
+    const materials = {
+      horizontal: {
+        yellow: new THREE.MeshLambertMaterial({ color: 0xffff00, side: THREE.DoubleSide }),
+        red: new THREE.MeshLambertMaterial({ color: 0xff0000, side: THREE.DoubleSide })
+      },
+      vertical: {
+        green: new THREE.MeshLambertMaterial({ color: 0x00ff00, side: THREE.DoubleSide }),
+        blue: new THREE.MeshLambertMaterial({ color: 0x0000ff, side: THREE.DoubleSide })
+      }
+    };
+
+    // Process each domino
+    dominoes.forEach(domino => {
+      // Convert domino coordinates to scene coordinates (centered)
+      const x = domino.x - centerOffset;
+      const y = domino.y - centerOffset;
+      const w = domino.w;
+      const h = domino.h;
+
+      // Safely get height values at the corners of the domino with bounds checking
+      // Add offset of 2 to get correct index in heights array
+      const safeGetHeight = (row, col) => {
+        // Ensure coordinates are within bounds
+        const safeRow = Math.max(0, Math.min(n-1, row + 2));
+        const safeCol = Math.max(0, Math.min(n-1, col + 2));
+
+        if (!heights[safeRow] || heights[safeRow][safeCol] === undefined) {
+          console.warn(`Invalid height access at [${safeRow}][${safeCol}]`);
+          return 0; // Default height
+        }
+
+        return heights[safeRow][safeCol];
+      };
+
+      // Get height values with safety checks
+      const h00 = safeGetHeight(domino.y, domino.x);
+      const h10 = safeGetHeight(domino.y, domino.x + w);
+      const h01 = safeGetHeight(domino.y + h, domino.x);
+      const h11 = safeGetHeight(domino.y + h, domino.x + w);
+
+      // Create geometry for the domino
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const indices = [];
+
+      // Define the vertices for the domino (adjusted for height function)
+      vertices.push(
+        x, y, h00 * 0.5,           // 0: bottom-left
+        x + w, y, h10 * 0.5,       // 1: bottom-right
+        x, y + h, h01 * 0.5,       // 2: top-left
+        x + w, y + h, h11 * 0.5    // 3: top-right
+      );
+
+      // Create triangles (two per domino)
+      indices.push(0, 1, 2, 1, 3, 2);
+
+      // Set geometry attributes
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+
+      // Determine material based on domino type and color
+      let material;
+      if (w === 2 && h === 1) {
+        // Horizontal domino
+        material = domino.color.includes('yellow') ? materials.horizontal.yellow : materials.horizontal.red;
+      } else {
+        // Vertical domino
+        material = domino.color.includes('green') ? materials.vertical.green : materials.vertical.blue;
+      }
+
+      // Create mesh and add to group
+      const mesh = new THREE.Mesh(geometry, material);
+      dominoGroup.add(mesh);
     });
 
-    heightMesh = new THREE.Mesh(heightGeometry, material);
-    scene.add(heightMesh);
+    // Add the domino group to the scene
+    scene.add(dominoGroup);
 
-    // Add a wireframe for better visualization of the surface
-    const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.15
-    });
+    // Add a wireframe grid for reference
+    const gridHelper = new THREE.GridHelper(n, n);
+    gridHelper.rotation.x = Math.PI / 2;
+    gridHelper.material.opacity = 0.2;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
 
-    const wireframe = new THREE.Mesh(heightGeometry, wireframeMaterial);
-    scene.add(wireframe);
+    // Add lighting
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
 
-    // Reset camera to view the entire mesh
-    const boundingBox = new THREE.Box3().setFromObject(heightMesh);
-    const center = boundingBox.getCenter(new THREE.Vector3());
-    const size = boundingBox.getSize(new THREE.Vector3());
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+
+    // Adjust camera to view the entire model
+    const box = new THREE.Box3().setFromObject(dominoGroup);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
 
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov * (Math.PI / 180);
-    let cameraDistance = Math.abs(maxDim / Math.sin(fov / 2));
+    const cameraDistance = Math.abs(maxDim / Math.sin(fov / 2));
 
     camera.position.set(center.x, center.y - cameraDistance, center.z + cameraDistance/2);
     camera.lookAt(center);
@@ -269,6 +357,7 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
+  // Update the visualization for a given n.
   // Update the visualization for a given n.
   async function updateVisualization(n) {
     // Clear any previous simulation.
@@ -297,7 +386,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Update 3D visualization
     const heights = calculateHeightFunction(dominoes, n);
-    createHeightFunctionMesh(heights,n);
+    createHeightFunctionMesh(heights, dominoes); // Pass dominoes instead of n
 
     // Clear progress indicator once done.
     progressElem.innerText = "";
@@ -360,6 +449,9 @@ Module.onRuntimeInitialized = async function() {
     // Trigger resize event to ensure Three.js canvas resizes properly
     window.dispatchEvent(new Event('resize'));
   });
+
+  // Show 3D view by default
+  document.getElementById("toggle-3d").click();
 
   // Setup the update button.
   document.getElementById("update-btn").addEventListener("click", () => {
