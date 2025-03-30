@@ -1,9 +1,6 @@
 import random
-import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.patches as patches
-import datetime
-import string
+import json
 
 
 def d3p(x1):
@@ -18,7 +15,6 @@ def d3p(x1):
     AA = [A]
 
     for k in range(int(n/2)-1):
-        print(k)
         nk = n - 2*k - 2  # Adjusted size for the new matrix
         C = np.zeros((nk, nk, 2))
         for i in range(nk):
@@ -48,7 +44,6 @@ def probs(x1):
     A = []
 
     for k in range(n):
-        print(k)
         nk = a0[n-k-1].shape[0]
         C = np.zeros((nk//2, nk//2))
 
@@ -76,7 +71,6 @@ def probs(x1):
     A = []
     B = []
     for k in range(n):
-        print(k)
         C = []
         for i in range(k+1):
             row = []
@@ -170,7 +164,6 @@ def aztecgen(x0):
     else:
         a1 = [[0, 1], [1, 0]]
     for i in range(n-1):
-        print(i)
         a1 = delslide(a1)
         a1 = create(a1, x0[i+1])
     return a1
@@ -182,38 +175,43 @@ def pretty2(m, filename):
             f.write(""+str(m[i][j])+"     ")
         f.write("\n")
 
-def aztec_printer(x0,n):
+def aztec_printer(x0, n):
     size = len(x0)
-    fig, ax = plt.subplots()
+    rectangles = []
 
     for i in range(size):
-        print(i)
         for j in range(size):
             if x0[i][j] == 1:
-                if i % 2 == 1 and j % 2 == 1: # Green
-                    rect = patches.Rectangle((j - i - 2, size + 1 - (i + j) - 1), 4, 2, edgecolor='none', facecolor='green')
-                elif i % 2 == 1 and j % 2 == 0: # Blue
-                    rect = patches.Rectangle((j - i - 1, size + 1 - (i + j) - 2), 2, 4, edgecolor='none', facecolor='blue')
-                elif i % 2 == 0 and j % 2 == 0: # Red
-                    rect = patches.Rectangle((j - i - 2, size + 1 - (i + j) - 1), 4, 2, edgecolor='none', facecolor='red')
-                elif i % 2 == 0 and j % 2 == 1: # Yellow
-                    rect = patches.Rectangle((j - i - 1, size + 1 - (i + j) - 2), 2, 4, edgecolor='none', facecolor='yellow')
-                ax.add_patch(rect)
+                if i % 2 == 1 and j % 2 == 1:  # Green
+                    x = j - i - 2
+                    y = size + 1 - (i + j) - 1
+                    w = 4
+                    h = 2
+                    color = "green"
+                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                elif i % 2 == 1 and j % 2 == 0:  # Blue
+                    x = j - i - 1
+                    y = size + 1 - (i + j) - 2
+                    w = 2
+                    h = 4
+                    color = "blue"
+                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                elif i % 2 == 0 and j % 2 == 0:  # Red
+                    x = j - i - 2
+                    y = size + 1 - (i + j) - 1
+                    w = 4
+                    h = 2
+                    color = "red"
+                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                elif i % 2 == 0 and j % 2 == 1:  # Yellow
+                    x = j - i - 1
+                    y = size + 1 - (i + j) - 2
+                    w = 2
+                    h = 4
+                    color = "yellow"
+                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
 
-    ax.set_xlim([min(-size, -2), max(size, 2)])
-    ax.set_ylim([min(-size, -2), max(size, 2)+2])
-    ax.set_aspect('equal')
-    plt.axis('off')
-
-    # Generate current timestamp
-    current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Generate 4 random symbols
-    random_symbols = ''.join(random.choices(string.ascii_letters + string.digits, k=4))
-    # Construct the filename
-    filename = f"{n}_regime_5_sim_test_{current_time}_{random_symbols}.pdf"
-    plt.savefig(filename, bbox_inches='tight') # ACTUAL_SIM: FILE NAME
-    plt.close()
-
+    print(json.dumps(rectangles))
 
 
 n = 12 # ACTUAL_SIM: PARAMETERS
@@ -228,4 +226,4 @@ for i in range(2*n):
 
 A2a=aztecgen(probs(A1a))
 # A3d=pretty2(A2a,'tmp')
-aztec_printer(A2a,n)
+aztec_printer(A2a, n)
