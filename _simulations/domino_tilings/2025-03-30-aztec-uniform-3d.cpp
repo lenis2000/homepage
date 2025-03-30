@@ -26,6 +26,7 @@ Note: When testing locally, serve these files over HTTP rather than via file://.
 #include <tuple>
 #include <ctime>
 #include <cstdlib>
+#include <queue>
 #include <cstring>
 
 using namespace std;
@@ -234,80 +235,179 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
 // ---------------------------------------------------------------------
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE
-char* simulateAztec(int n) {
-    progressCounter = 0; // Reset progress.
+    EMSCRIPTEN_KEEPALIVE
+    char* simulateAztec(int n) {
+        progressCounter = 0; // Reset progress.
 
-    // Create weight matrix A1a: dimensions 2*n x 2*n, filled with ones.
-    int dim = 2 * n;
-    MatrixDouble A1a(dim, vector<double>(dim, 1.0));
+        // Create weight matrix A1a: dimensions 2*n x 2*n, filled with ones.
+        int dim = 2 * n;
+        MatrixDouble A1a(dim, vector<double>(dim, 1.0));
 
-    // Compute probability matrices.
-    vector<MatrixDouble> prob = probs2(A1a);
-    progressCounter = 10; // Probabilities computed.
+        // Compute probability matrices.
+        vector<MatrixDouble> prob = probs2(A1a);
+        progressCounter = 10; // Probabilities computed.
 
-    // Generate domino configuration.
-    MatrixInt dominoConfig = aztecgen(prob);
-    progressCounter = 90; // Simulation steps complete.
+        // Generate domino configuration.
+        MatrixInt dominoConfig = aztecgen(prob);
+        progressCounter = 90; // Simulation steps complete.
 
-    // Build JSON output.
-    int size = (int)dominoConfig.size();
-    double scale = 10.0;
-    ostringstream oss;
-    oss << "[";
-    bool first = true;
-    for (int i = 0; i < size; i++){
-        for (int j = 0; j < size; j++){
-            if (dominoConfig[i][j] == 1) {
-                double x, y, w, h;
-                string color;
-                if ((i & 1) && (j & 1)) { // i odd, j odd: Green
-                    color = "yellow";
-                    x = j - i - 2;
-                    y = size + 1 - (i + j) - 1;
-                    w = 4;
-                    h = 2;
-                } else if ((i & 1) && !(j & 1)) { // i odd, j even: Blue
-                    color = "blue";
-                    x = j - i - 1;
-                    y = size + 1 - (i + j) - 2;
-                    w = 2;
-                    h = 4;
-                } else if (!(i & 1) && !(j & 1)) { // i even, j even: Red
-                    color = "red";
-                    x = j - i - 2;
-                    y = size + 1 - (i + j) - 1;
-                    w = 4;
-                    h = 2;
-                } else if (!(i & 1) && (j & 1)) { // i even, j odd: Yellow
-                    color = "green";
-                    x = j - i - 1;
-                    y = size + 1 - (i + j) - 2;
-                    w = 2;
-                    h = 4;
-                } else {
-                    continue;
+        // Build JSON output.
+        int size = (int)dominoConfig.size();
+        double scale = 10.0;
+
+        // Create height function grid (vertices)
+        // Height grid is one larger in each dimension since heights are defined on vertices
+        vector<vector<int>> heightGrid(size + 1, vector<int>(size + 1, -9999)); // Initialize with sentinel value
+
+        // Initialize a reference height value at center of the grid
+        int centerX = size / 2;
+        int centerY = size / 2;
+        heightGrid[centerY][centerX] = 0; // Set reference height h=0 at center
+
+        // Build domino list first
+        vector<tuple<int, int, string, double, double, double, double>> dominoes;
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig[i][j] == 1) {
+                    double x, y, w, h;
+                    string color;
+                    if ((i & 1) && (j & 1)) { // i odd, j odd: Yellow (horizontal)
+                        color = "yellow";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4;
+                        h = 2;
+                        dominoes.push_back(make_tuple(i, j, color, x, y, w, h));
+                    } else if ((i & 1) && !(j & 1)) { // i odd, j even: Blue (vertical)
+                        color = "blue";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                        dominoes.push_back(make_tuple(i, j, color, x, y, w, h));
+                    } else if (!(i & 1) && !(j & 1)) { // i even, j even: Red (horizontal)
+                        color = "red";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4;
+                        h = 2;
+                        dominoes.push_back(make_tuple(i, j, color, x, y, w, h));
+                    } else if (!(i & 1) && (j & 1)) { // i even, j odd: Green (vertical)
+                        color = "green";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                        dominoes.push_back(make_tuple(i, j, color, x, y, w, h));
+                    }
                 }
-                x *= scale;
-                y *= scale;
-                w *= scale;
-                h *= scale;
-                if (!first) oss << ",";
-                else first = false;
-                oss << "{\"x\":" << x << ",\"y\":" << y
-                    << ",\"w\":" << w << ",\"h\":" << h
-                    << ",\"color\":\"" << color << "\"}";
             }
         }
-    }
-    oss << "]";
-    progressCounter = 100; // Finished.
 
-    string json = oss.str();
-    char* out = (char*)malloc(json.size() + 1);
-    strcpy(out, json.c_str());
-    return out;
-}
+        // Compute height function using BFS approach
+        // We start from center vertex and propagate heights
+        queue<pair<int, int>> q;
+        q.push({centerY, centerX});
+
+        // Directions to adjacent vertices: right, down, left, up
+        int dx[4] = {1, 0, -1, 0};
+        int dy[4] = {0, 1, 0, -1};
+
+        while (!q.empty()) {
+            auto [y, x] = q.front();
+            q.pop();
+
+            for (int dir = 0; dir < 4; dir++) {
+                int nx = x + dx[dir];
+                int ny = y + dy[dir];
+
+                // Check if within bounds
+                if (nx < 0 || ny < 0 || nx > size || ny > size)
+                    continue;
+
+                // Skip if height already computed
+                if (heightGrid[ny][nx] != -9999)
+                    continue;
+
+                // Determine the height change
+                // For each direction, we need to figure out if we're crossing a black or white square
+                // in the checkerboard pattern
+
+                // The square to the left of the edge is at:
+                int squareX = (dir == 0) ? x : (dir == 2) ? nx : (dir == 1) ? x : x;
+                int squareY = (dir == 0) ? y : (dir == 2) ? y : (dir == 1) ? y : ny;
+
+                // Check if this position is valid
+                if (squareX < 0 || squareY < 0 || squareX >= size || squareY >= size)
+                    continue;
+
+                // Determine if the square is black in checkerboard pattern ((x+y) % 2 == 0 for black)
+                bool isBlack = ((squareX + squareY) % 2 == 0);
+
+                // Apply height change rule
+                if (isBlack)
+                    heightGrid[ny][nx] = heightGrid[y][x] + 1;
+                else
+                    heightGrid[ny][nx] = heightGrid[y][x] - 1;
+
+                // Add newly computed vertex to queue
+                q.push({ny, nx});
+            }
+        }
+
+        // Start building JSON
+        ostringstream oss;
+        oss << "{\"dominoes\":[";
+        bool first = true;
+
+        // Add dominoes to JSON
+        for (const auto& domino : dominoes) {
+            int i, j;
+            string color;
+            double x, y, w, h;
+            tie(i, j, color, x, y, w, h) = domino;
+
+            x *= scale;
+            y *= scale;
+            w *= scale;
+            h *= scale;
+
+            if (!first) oss << ",";
+            else first = false;
+
+            oss << "{\"x\":" << x << ",\"y\":" << y
+                << ",\"w\":" << w << ",\"h\":" << h
+                << ",\"color\":\"" << color << "\"}";
+        }
+
+        // Add height function to JSON
+        oss << "],\"heights\":[";
+        first = true;
+
+        // Transform coordinates to match the domino coordinate system
+        for (int i = 0; i <= size; i++) {
+            for (int j = 0; j <= size; j++) {
+                if (heightGrid[i][j] != -9999) {
+                    double vx = (j - i - 1) * scale;  // Adjusted to match domino coordinates
+                    double vy = (size + 1 - (i + j)) * scale;
+
+                    if (!first) oss << ",";
+                    else first = false;
+
+                    oss << "{\"x\":" << vx << ",\"y\":" << vy
+                        << ",\"height\":" << heightGrid[i][j] << "}";
+                }
+            }
+        }
+
+        oss << "]}";
+        progressCounter = 100; // Finished.
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
 
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) {
