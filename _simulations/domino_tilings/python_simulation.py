@@ -182,75 +182,6 @@ def pretty2(m, filename):
             f.write(""+str(m[i][j])+"     ")
         f.write("\n")
 
-# def aztec_printer(x0):
-#     size = len(x0)
-#     fig, ax = plt.subplots(figsize=(10, 10))  # Adjusting figure size for better resolution
-#     ax.set_aspect('equal')  # Ensuring equal aspect ratio
-
-#     # After analyzing, there seems no explicit error in the logic for different colors & shapes.
-#     # However, enhancement for better visualization can include adjusting shapes' sizes & positions if necessary.
-#     # The provided positions and sizes for rectangles appear to be an attempt at a creative layout, rather than a standard grid.
-#     # Thus, this interpretation will remain as provided unless a specific adjustment is requested.
-
-
-#     for i in range(size):
-#         for j in range(size):
-#             x, y = j - i, size + 1 - (i + j)
-#             if x0[i][j] == 1:
-#                 if i % 2 == 1 and j % 2 == 1:  # Green
-#                     color = 'green'
-#                     rect = patches.Rectangle((x-2, y-2), 4, 4, linewidth=1, edgecolor='none', facecolor=color)
-#                 elif i % 2 == 1 and j % 2 == 0:  # Blue
-#                     color = 'blue'
-#                     rect = patches.Rectangle((x-1, y-3), 2, 6, linewidth=1, edgecolor='none', facecolor=color)
-#                 elif i % 2 == 0 and j % 2 == 0:  # Yellow
-#                     color = 'yellow'
-#                     rect = patches.Rectangle((x-2, y-2), 4, 4, linewidth=1, edgecolor='none', facecolor=color)
-#                 elif i % 2 == 0 and j % 2 == 1:  # Red
-#                     color = 'red'
-#                     rect = patches.Rectangle((x-1, y-3), 2, 6, linewidth=1, edgecolor='none', facecolor=color)
-#                 ax.add_patch(rect)
-
-#     plt.xlim([-size, 2*size])
-#     plt.ylim([-size, 2*size])
-#     plt.axis('equal')
-#     plt.axis('off')  # Ensuring axes are hidden for neat visualization
-
-#     plt.show()
-
-# This assignment creates two-periodic Aztec diamond with gas:
-# b = 1
-# a = 0.5
-# A1a=[]
-# for i in range(2*n):
-#     row=[]
-#     for j in range(2*n):
-#         if( (i%4 == 0 or i%4 == 1) and (j%4 == 0 or j%4 == 1)):
-#             row.append(b)
-#         if( (i%4 == 0 or i%4 == 1) and (j%4 == 2 or j%4 == 3)):
-#             row.append(a)
-#         if( (i%4 == 2 or i%4 == 3) and (j%4 == 0 or j%4 == 1)):
-#             row.append(a)
-#         if( (i%4 == 2 or i%4 == 3) and (j%4 == 2 or j%4 == 3)):
-#             row.append(b)
-#     A1a.append(row)
-
-
-
-# This assignment creates Schur process with 1 outlier in the beginning:
-# A1a=[]
-# for i in range(2*n):
-#     row=[]
-#     for j in range(2*n):
-#         if( (i+j)%2 == 0):
-#             row.append(1)
-#         if( (i+j)%2 == 1):
-#             if(i<=1):
-#                 row.append(4)
-#             else:
-#                 row.append(1)
-#     A1a.append(row)
-
 def aztec_printer(x0,n):
     size = len(x0)
     fig, ax = plt.subplots()
@@ -287,76 +218,13 @@ def aztec_printer(x0,n):
 
 n = 12 # ACTUAL_SIM: PARAMETERS
 
-# regime1
-# random_variables = [random.choices([1 + 2 / np.sqrt(n), 1 - 1 / np.sqrt(n)], weights=[1/2, 1/2])[0] for _ in range(n)]
-# regime2
-# random_variables = [random.choices([2, 1], weights=[1/np.sqrt(n), (np.sqrt(n)-1)/np.sqrt(n)])[0] for _ in range(n)]
-# regime3
-# random_variables = [random.choices([2, 0.5], weights=[1/2, 1/2])[0] for _ in range(n)]
-# regime3.5
-# random_variables = [random.choices([5, 0.2], weights=[1/2, 1/2])[0] for _ in range(n)]
-# regime4
-# random_variables = [random.uniform(0, 1) for _ in range(n)]
-# regime4.5
-# random_variables = [random.uniform(0, 2) for _ in range(n)]
 
-# A1a=[]
-# for i in range(2*n): # ACTUAL_SIM: DEFINE ALL WEIGHTS
-#     row=[]
-#     for j in range(2*n):
-#         if( (i+j)%2 == 0):
-#             row.append( random_variables[ i // 2 ] )
-#         if( (i+j)%2 == 1):
-#             row.append(1)
-#     A1a.append(row)
-
-# regime5 - absolutely all edges are random uniform on [0,2]
-# regime5_5 - Set all edges as independent Bernoulli variables -- with probability 0.5 equal to 0.2, with probability 0.5 equal to 5
 A1a = []
 for i in range(2*n):
     row = []
     for j in range(2*n):
-        # row.append(random.uniform(0, 2))  # Set absolutely all edges as random uniform on [0,2]
-        row.append(random.choice([0.2, 5]))  # Set all edges as independent Bernoulli variables -- with probability 0.5 equal to 0.2, with probability 0.5 equal to 5
+        row.append(1)  # Set all edges to 1
     A1a.append(row)
-
-# regime6 - doubly periodic Aztec diamond
-# This assignment creates two-periodic Aztec diamond with gas:
-# b = 1
-# a = 0.5
-# A1a=[]
-# for i in range(2*n):
-#     row=[]
-#     for j in range(2*n):
-#         if( (i%4 == 0 or i%4 == 1) and (j%4 == 0 or j%4 == 1)):
-#             row.append(b)
-#         if( (i%4 == 0 or i%4 == 1) and (j%4 == 2 or j%4 == 3)):
-#             row.append(a)
-#         if( (i%4 == 2 or i%4 == 3) and (j%4 == 0 or j%4 == 1)):
-#             row.append(a)
-#         if( (i%4 == 2 or i%4 == 3) and (j%4 == 2 or j%4 == 3)):
-#             row.append(b)
-#     A1a.append(row)
-
-# a = 0.5
-# A1a = []
-
-# for i in range(2 * n):
-#     row = []
-#     for j in range(2 * n):
-#         # condition for "b" block
-#         if ((i % 4 == 0 or i % 4 == 1) and (j % 4 == 0 or j % 4 == 1)) \
-#            or ((i % 4 == 2 or i % 4 == 3) and (j % 4 == 2 or j % 4 == 3)):
-#             # Instead of a fixed b = 1, choose a random number each time
-#             random_b = random.choices([1, 2], weights=[2/3, 1/3])[0]  # Bernoulli with 1 having probability 2/3 and 2 having probability 1/3
-#             row.append(random_b)
-#         else:
-#             # still use a fixed a = 0.5 in the "a" block
-#             random_a = random.choices([a, 0.3], weights=[0.5, 0.5])[0]  # Bernoulli with a = 0.5 having probability 0.5 and 0.3 having probability 0.5
-#             row.append(random_a)
-#     A1a.append(row)
-
-
 
 A2a=aztecgen(probs(A1a))
 # A3d=pretty2(A2a,'tmp')
