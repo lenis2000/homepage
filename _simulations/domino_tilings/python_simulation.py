@@ -175,10 +175,100 @@ def pretty2(m, filename):
             f.write(""+str(m[i][j])+"     ")
         f.write("\n")
 
-def aztec_printer(x0, n):
-    size = len(x0)
-    rectangles = []
+def compute_height_function(tiling):
+    """
+    Compute the height function for a domino tiling.
+    The height function is defined on vertices of the grid.
+    Starting from h=0 at the origin (0,0), the height changes
+    as we move along edges based on the rules shown in the image.
+    """
+    size = len(tiling)
+    heights = np.zeros((size + 1, size + 1), dtype=int)
+    visited = np.zeros((size + 1, size + 1), dtype=bool)
 
+    # Start at the bottom-left corner with height 0
+    queue = [(0, 0)]
+    visited[0, 0] = True
+
+    while queue:
+        i, j = queue.pop(0)
+
+        # Check neighbors
+        for ni, nj, direction in [(i+1, j, "up"), (i, j+1, "right"), (i-1, j, "down"), (i, j-1, "left")]:
+            if 0 <= ni <= size and 0 <= nj <= size and not visited[ni, nj]:
+                height_change = 0
+
+                if direction == "right":
+                    if (i+j) % 2 == 0:
+                        # Default: height increases by 1
+                        height_change = 1
+                    else:
+                        # Default: height decreases by 1
+                        height_change = -1
+
+                    # Check if there's a vertical domino crossing this edge
+                    if 0 <= i < size and 0 <= j < size:
+                        if ((i % 2 == 0 and j % 2 == 1) or (i % 2 == 1 and j % 2 == 0)) and tiling[i][j] == 1:
+                            # Crossing a vertical domino edge, invert the height change
+                            height_change = -height_change
+
+                elif direction == "up":
+                    if (i+j) % 2 == 0:
+                        # Default: height decreases by 1
+                        height_change = -1
+                    else:
+                        # Default: height increases by 1
+                        height_change = 1
+
+                    # Check if there's a horizontal domino crossing this edge
+                    if 0 <= i < size and 0 <= j < size:
+                        if ((i % 2 == 0 and j % 2 == 0) or (i % 2 == 1 and j % 2 == 1)) and tiling[i][j] == 1:
+                            # Crossing a horizontal domino edge, invert the height change
+                            height_change = -height_change
+
+                elif direction == "left":
+                    if (i+nj) % 2 == 0:
+                        # Default: height increases by 1 (opposite of moving right)
+                        height_change = -1
+                    else:
+                        # Default: height decreases by 1 (opposite of moving right)
+                        height_change = 1
+
+                    # Check if there's a vertical domino crossing this edge
+                    if 0 <= i < size and 0 <= nj < size:
+                        if ((i % 2 == 0 and nj % 2 == 1) or (i % 2 == 1 and nj % 2 == 0)) and tiling[i][nj] == 1:
+                            # Crossing a vertical domino edge, invert the height change
+                            height_change = -height_change
+
+                elif direction == "down":
+                    if (ni+j) % 2 == 0:
+                        # Default: height decreases by 1 (opposite of moving up)
+                        height_change = 1
+                    else:
+                        # Default: height increases by 1 (opposite of moving up)
+                        height_change = -1
+
+                    # Check if there's a horizontal domino crossing this edge
+                    if 0 <= ni < size and 0 <= j < size:
+                        if ((ni % 2 == 0 and j % 2 == 0) or (ni % 2 == 1 and j % 2 == 1)) and tiling[ni][j] == 1:
+                            # Crossing a horizontal domino edge, invert the height change
+                            height_change = -height_change
+
+                heights[ni, nj] = heights[i, j] + height_change
+                visited[ni, nj] = True
+                queue.append((ni, nj))
+
+    return heights
+
+def aztec_printer_with_height(x0, heights):
+    """
+    Extended version of aztec_printer that also includes height function values.
+    Returns a dictionary with both domino rectangles and height function values.
+    """
+    size = len(x0)
+    result = {"rectangles": [], "heights": []}
+
+    # Visualize dominoes (same as original aztec_printer)
     for i in range(size):
         for j in range(size):
             if x0[i][j] == 1:
@@ -188,34 +278,41 @@ def aztec_printer(x0, n):
                     w = 4
                     h = 2
                     color = "green"
-                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
                 elif i % 2 == 1 and j % 2 == 0:  # Blue
                     x = j - i - 1
                     y = size + 1 - (i + j) - 2
                     w = 2
                     h = 4
                     color = "blue"
-                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
                 elif i % 2 == 0 and j % 2 == 0:  # Red
                     x = j - i - 2
                     y = size + 1 - (i + j) - 1
                     w = 4
                     h = 2
                     color = "red"
-                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
                 elif i % 2 == 0 and j % 2 == 1:  # Yellow
                     x = j - i - 1
                     y = size + 1 - (i + j) - 2
                     w = 2
                     h = 4
                     color = "yellow"
-                    rectangles.append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
 
-    print(json.dumps(rectangles))
+    # Add height function values at each vertex
+    for i in range(size+1):
+        for j in range(size+1):
+            x = j - i
+            y = size + 1 - (i + j)
+            result["heights"].append({"x": x, "y": y, "height": int(heights[i][j])})
+
+    return result
+
 
 
 n = 12 # ACTUAL_SIM: PARAMETERS
-
 
 A1a = []
 for i in range(2*n):
@@ -224,6 +321,7 @@ for i in range(2*n):
         row.append(1)  # Set all edges to 1
     A1a.append(row)
 
-A2a=aztecgen(probs(A1a))
-# A3d=pretty2(A2a,'tmp')
-aztec_printer(A2a, n)
+A2a = aztecgen(probs(A1a))
+heights = compute_height_function(A2a)
+result = aztec_printer_with_height(A2a, heights)
+print(json.dumps(result))
