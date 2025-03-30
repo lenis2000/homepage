@@ -262,7 +262,7 @@ char* simulateAztec(int n) {
                 double x, y, w, h;
                 string color;
                 if ((i & 1) && (j & 1)) { // i odd, j odd: Green
-                    color = "green";
+                    color = "yellow";
                     x = j - i - 2;
                     y = size + 1 - (i + j) - 1;
                     w = 4;
@@ -280,7 +280,7 @@ char* simulateAztec(int n) {
                     w = 4;
                     h = 2;
                 } else if (!(i & 1) && (j & 1)) { // i even, j odd: Yellow
-                    color = "yellow";
+                    color = "green";
                     x = j - i - 1;
                     y = size + 1 - (i + j) - 2;
                     w = 2;
