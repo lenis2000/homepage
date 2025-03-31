@@ -66,9 +66,12 @@ Module.onRuntimeInitialized = async function() {
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
+  const inputField = document.getElementById("n-input");
   let progressInterval;
   let useColors = true; // Track coloring state
   let currentDominoes = []; // Store current dominoes for toggling colors
+  let isProcessing = false; // Flag to prevent multiple simultaneous updates
+  let lastValue = parseInt(inputField.value, 10); // Track last processed value
 
   // Start polling the progress counter from C++.
   function startProgressPolling() {
@@ -82,7 +85,7 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
-  // Handle color toggle
+  // Handle color toggle - only toggle colors, don't resample
   document.getElementById("color-toggle").addEventListener("change", function() {
     useColors = this.checked;
     if (currentDominoes.length > 0) {
@@ -133,55 +136,85 @@ Module.onRuntimeInitialized = async function() {
 
   // Update the visualization for a given n.
   async function updateVisualization(n) {
+    // If already processing, don't start another one
+    if (isProcessing) return;
+
+    isProcessing = true;
+
     // Clear any previous simulation.
     svg.selectAll("g").remove();
     // Start the progress indicator.
     startProgressPolling();
 
-    // Await the asynchronous simulation.
-    const ptr = await simulateAztec(n);
-    const jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
-
     try {
-      currentDominoes = JSON.parse(jsonStr); // Store for later toggling
-    } catch (e) {
-      console.error("Error parsing JSON:", e, jsonStr);
+      // Await the asynchronous simulation.
+      const ptr = await simulateAztec(n);
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+
+      try {
+        currentDominoes = JSON.parse(jsonStr); // Store for later toggling
+      } catch (e) {
+        console.error("Error parsing JSON:", e, jsonStr);
+        progressElem.innerText = "Error during sampling";
+        clearInterval(progressInterval);
+        isProcessing = false;
+        return;
+      }
+
+      // Render the dominoes
+      renderDominoes(currentDominoes);
+
+      // Clear progress indicator once done.
+      progressElem.innerText = "";
+
+      // Update last processed value
+      lastValue = n;
+    } catch (error) {
+      console.error("Error in updateVisualization:", error);
       progressElem.innerText = "Error during sampling";
       clearInterval(progressInterval);
-      return;
+    } finally {
+      isProcessing = false;
     }
-
-    // Render the dominoes
-    renderDominoes(currentDominoes);
-
-    // Clear progress indicator once done.
-    progressElem.innerText = "";
   }
 
-  // Setup the update button.
-  document.getElementById("update-btn").addEventListener("click", () => {
-    const inputField = document.getElementById("n-input");
+  // Validate and process the input
+  function processInput() {
     const n = parseInt(inputField.value, 10);
+
+    // Skip if the value hasn't changed
+    if (n === lastValue) return;
 
     // Check for a valid positive even number.
     if (isNaN(n) || n < 2) {
-      alert("Please enter a valid positive even number for n (n ≥ 2).");
+      progressElem.innerText = "Please enter a valid positive even number for n (n ≥ 2).";
       return;
     }
     if (n % 2 !== 0) {
-      alert("Please enter an even number for n.");
+      progressElem.innerText = "Please enter an even number for n.";
       return;
     }
     if (n > 300) {
-      alert("Please enter a number no greater than 300.");
+      progressElem.innerText = "Please enter a number no greater than 300.";
       return;
     }
+
     updateVisualization(n);
+  }
+
+  // Set up event listeners for input changes
+  inputField.addEventListener("input", processInput);
+  inputField.addEventListener("change", processInput);
+
+  // Make sure the update button always triggers a new sample, even if value hasn't changed
+  document.getElementById("update-btn").addEventListener("click", function() {
+    // Force a resample even if the value hasn't changed
+    updateVisualization(parseInt(inputField.value, 10));
   });
 
   // Run an initial simulation.
-  const initialN = parseInt(document.getElementById("n-input").value, 10);
+  const initialN = parseInt(inputField.value, 10);
   updateVisualization(initialN);
 };
 </script>
