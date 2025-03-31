@@ -272,33 +272,33 @@ def aztec_printer_with_height(x0, heights):
     for i in range(size):
         for j in range(size):
             if x0[i][j] == 1:
-                if i % 2 == 1 and j % 2 == 1:  # Green
+                if i % 2 == 1 and j % 2 == 1:  # Blue
+                    x = j - i - 2
+                    y = size + 1 - (i + j) - 1
+                    w = 4
+                    h = 2
+                    color = "blue"
+                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                elif i % 2 == 1 and j % 2 == 0:  # Yellow
+                    x = j - i - 1
+                    y = size + 1 - (i + j) - 2
+                    w = 2
+                    h = 4
+                    color = "yellow"
+                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
+                elif i % 2 == 0 and j % 2 == 0:  # Green
                     x = j - i - 2
                     y = size + 1 - (i + j) - 1
                     w = 4
                     h = 2
                     color = "green"
                     result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
-                elif i % 2 == 1 and j % 2 == 0:  # Blue
+                elif i % 2 == 0 and j % 2 == 1:  # Red
                     x = j - i - 1
                     y = size + 1 - (i + j) - 2
                     w = 2
                     h = 4
-                    color = "blue"
-                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
-                elif i % 2 == 0 and j % 2 == 0:  # Red
-                    x = j - i - 2
-                    y = size + 1 - (i + j) - 1
-                    w = 4
-                    h = 2
                     color = "red"
-                    result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
-                elif i % 2 == 0 and j % 2 == 1:  # Yellow
-                    x = j - i - 1
-                    y = size + 1 - (i + j) - 2
-                    w = 2
-                    h = 4
-                    color = "yellow"
                     result["rectangles"].append({"x": x, "y": y, "w": w, "h": h, "color": color})
 
     # Add height function values at each vertex
@@ -310,9 +310,38 @@ def aztec_printer_with_height(x0, heights):
 
     return result
 
+def height_to_mathematica(heights, size):
+    """
+    Convert the height function to Mathematica format.
 
+    Args:
+        heights: A 2D numpy array containing the height function values.
+        size: The size of the Aztec diamond.
 
-n = 12 # ACTUAL_SIM: PARAMETERS
+    Returns:
+        String representation of the height function in Mathematica format
+        suitable for plotting in Mathematica.
+    """
+    # Create a list of {x, y, height} points for 3D plotting
+    points = []
+    for i in range(heights.shape[0]):
+        for j in range(heights.shape[1]):
+            # Use the same coordinate transformation as in aztec_printer_with_height
+            x = j - i
+            y = size + 1 - (i + j)
+            h = int(heights[i][j])
+            points.append(f"{{{x}, {y}, {h}}}")
+
+    # Format as a Mathematica list
+    points_str = "heightPoints = {" + ", ".join(points) + "};"
+
+    # Add sample Mathematica commands for visualization
+    plot_cmd = "ListPlot3D[heightPoints, AxesLabel -> {\"x\", \"y\", \"height\"}, PlotRange -> All]"
+    density_cmd = "ListDensityPlot[heightPoints, AxesLabel -> {\"x\", \"y\"}, PlotLegends -> Automatic]"
+
+    return points_str + "\n\n" + "(*For 3D visualization:*)\n" + plot_cmd + "\n\n" + "(*For 2D density plot:*)\n" + density_cmd
+
+n = 6 # ACTUAL_SIM: PARAMETERS
 
 A1a = []
 for i in range(2*n):
@@ -323,5 +352,10 @@ for i in range(2*n):
 
 A2a = aztecgen(probs(A1a))
 heights = compute_height_function(A2a)
-result = aztec_printer_with_height(A2a, heights)
-print(json.dumps(result))
+# result = aztec_printer_with_height(A2a, heights)
+# print(json.dumps(result))
+
+# Print the height function in Mathematica format
+math_height = height_to_mathematica(heights, 2*n)
+print("\nMathematica format of height function:")
+print(math_height)
