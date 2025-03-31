@@ -203,13 +203,7 @@ def aztec_printer(x0, n):
                 print(f"{{EdgeForm[None], {color}, {rect}}},")
 
     # Close the Graphics list
-    print("}]")
-
-    # Add PlotRange and AspectRatio settings
-    min_limit = min(-size, -2)
-    max_limit = max(size, 2)
-    print(f"PlotRange -> {{{{{min_limit}, {max_limit}}}, {{{min_limit}, {max_limit + 2}}}}}")
-    print("AspectRatio -> 1")
+    print("},ImageSize->800]")
 
 
 n = 20
