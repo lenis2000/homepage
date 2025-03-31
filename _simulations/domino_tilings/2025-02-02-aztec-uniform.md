@@ -224,7 +224,7 @@ function toggleCheckerboard() {
       .attr("height", d => d.h)
       .attr("fill", d => useColors ? d.color : "#eee") // Use color from data or gray if colors disabled
       .attr("stroke", "#000")
-      .attr("stroke-width", 2.5);
+      .attr("stroke-width", d => useCheckerboard || !useColors ? 4.5 : 0.5);
 
     // Add checkerboard if enabled
     if (useCheckerboard) {
