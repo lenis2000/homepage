@@ -232,14 +232,14 @@ def aztec_printer3d(x0, n):
                     ]
                 elif i % 2 == 1 and j % 2 == 0:  # Red (vertical)
                     color = "Red"
-                    # Define vertices of the 3D surface with the specified heights
+                    # Define vertices of the 3D surface with the specified heights - 90 degree rotation of green
                     points = [
-                        f"{{{x_coord-1}, {y_coord+2}, {h-1}}}",  # top-left
-                        f"{{{x_coord+1}, {y_coord+2}, {h-1}}}",  # top-right
-                        f"{{{x_coord+1}, {y_coord-2}, {h-2}}}",  # bottom-right
-                        f"{{{x_coord-1}, {y_coord-2}, {h-2}}}",  # bottom-left
-                        f"{{{x_coord}, {y_coord+2}, {h}}}",      # top-middle
-                        f"{{{x_coord}, {y_coord-2}, {h-3}}}"     # bottom-middle
+                        f"{{{x_coord-1}, {y_coord+2}, {h+1}}}",  # top-left
+                        f"{{{x_coord-1}, {y_coord-2}, {h+1}}}",  # top-right
+                        f"{{{x_coord+1}, {y_coord-2}, {h+2}}}",  # bottom-right
+                        f"{{{x_coord+1}, {y_coord+2}, {h+2}}}",  # bottom-left
+                        f"{{{x_coord-1}, {y_coord}, {h}}}",      # top-middle
+                        f"{{{x_coord+1}, {y_coord}, {h+3}}}"     # bottom-middle
                     ]
 
                 elif i % 2 == 0 and j % 2 == 0:  # Blue (horizontal)
@@ -256,14 +256,14 @@ def aztec_printer3d(x0, n):
 
                 elif i % 2 == 0 and j % 2 == 1:  # Yellow (vertical)
                     color = "Yellow"
-                    # Define vertices of the 3D surface with the specified heights
+                    # Define vertices of the 3D surface with the specified heights - 90 degree rotation of blue
                     points = [
-                        f"{{{x_coord-1}, {y_coord-2}, {h-2}}}",  # top-left
-                        f"{{{x_coord+1}, {y_coord-2}, {h-1}}}",  # top-right
-                        f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",  # bottom-right
-                        f"{{{x_coord-1}, {y_coord+2}, {h-3}}}",  # bottom-left
-                        f"{{{x_coord}, {y_coord-2}, {h-2}}}",    # middle-top
-                        f"{{{x_coord}, {y_coord+2}, {h-3}}}"     # middle-bottom
+                        f"{{{x_coord-1}, {y_coord+2}, {h-1}}}",  # top-left
+                        f"{{{x_coord-1}, {y_coord-2}, {h-1}}}",  # top-right
+                        f"{{{x_coord+1}, {y_coord-2}, {h-2}}}",  # bottom-right
+                        f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",  # bottom-left
+                        f"{{{x_coord-1}, {y_coord}, {h}}}",      # top-middle
+                        f"{{{x_coord+1}, {y_coord}, {h-3}}}"     # bottom-middle
                     ]
 
                 # Create a 3D surface using the points
@@ -276,7 +276,7 @@ def aztec_printer3d(x0, n):
 
 
 
-n = 4
+n = 6
 A1a = []
 for i in range(2*n):
     row = []
