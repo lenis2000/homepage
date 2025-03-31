@@ -205,8 +205,79 @@ def aztec_printer(x0, n):
     # Close the Graphics list
     print("},ImageSize->800]")
 
+def aztec_printer3d(x0, n):
+    size = len(x0)
 
-n = 20
+    # Create Mathematica output - print to stdout
+    print("Graphics3D[{")
+
+    h = 0  # Base height
+
+    for i in range(size):
+        for j in range(size):
+            if x0[i][j] == 1:
+                x_coord = j - i
+                y_coord = size + 1 - (i + j)
+
+                if i % 2 == 1 and j % 2 == 1:  # Green (horizontal)
+                    color = "Green"
+                    # Define vertices of the 3D surface with the specified heights
+                    points = [
+                        f"{{{x_coord-2}, {y_coord+1}, {h+1}}}",  # top-left
+                        f"{{{x_coord+2}, {y_coord+1}, {h+1}}}",  # top-right
+                        f"{{{x_coord+2}, {y_coord-1}, {h+2}}}",  # bottom-right
+                        f"{{{x_coord-2}, {y_coord-1}, {h+2}}}",  # bottom-left
+                        f"{{{x_coord}, {y_coord+1}, {h}}}",      # top-middle
+                        f"{{{x_coord}, {y_coord-1}, {h+3}}}"     # bottom-middle
+                    ]
+# !!! HERE IS GOOD
+                elif i % 2 == 1 and j % 2 == 0:  # Blue (horizontal)
+                    color = "Blue"
+                    # Define vertices of the 3D surface with the specified heights
+                    points = [
+                        f"{{{x_coord-1}, {y_coord-2}, {h-1}}}",  # top-left
+                        f"{{{x_coord+1}, {y_coord-2}, {h-1}}}",  # top-right
+                        f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",  # bottom-right
+                        f"{{{x_coord-1}, {y_coord+2}, {h-2}}}",  # bottom-left
+                        f"{{{x_coord}, {y_coord-2}, {h}}}",      # top-middle
+                        f"{{{x_coord}, {y_coord+2}, {h-3}}}"     # bottom-middle
+                    ]
+
+                elif i % 2 == 0 and j % 2 == 0:  # Red (vertical)
+                    color = "Red"
+                    # Define vertices of the 3D surface with the specified heights
+                    points = [
+                        f"{{{x_coord-2}, {y_coord-1}, {h+2}}}",  # top-left
+                        f"{{{x_coord}, {y_coord-1}, {h+1}}}",    # top-right
+                        f"{{{x_coord}, {y_coord+1}, {h+2}}}",    # bottom-right
+                        f"{{{x_coord-2}, {y_coord+1}, {h+3}}}",  # bottom-left
+                        f"{{{x_coord-2}, {y_coord}, {h+2}}}",    # middle-left
+                        f"{{{x_coord}, {y_coord}, {h}}}"         # middle-right
+                    ]
+
+                elif i % 2 == 0 and j % 2 == 1:  # Yellow (vertical)
+                    color = "Yellow"
+                    # Define vertices of the 3D surface with the specified heights
+                    points = [
+                        f"{{{x_coord-1}, {y_coord-2}, {h-2}}}",  # top-left
+                        f"{{{x_coord+1}, {y_coord-2}, {h-1}}}",  # top-right
+                        f"{{{x_coord+1}, {y_coord}, {h-2}}}",    # bottom-right
+                        f"{{{x_coord-1}, {y_coord}, {h-3}}}",    # bottom-left
+                        f"{{{x_coord-1}, {y_coord+2}, {h-2}}}",  # far-bottom-left
+                        f"{{{x_coord+1}, {y_coord+2}, {h-1}}}"   # far-bottom-right
+                    ]
+
+                # Create a 3D surface using the points
+                print(f"{{EdgeForm[Black], {color}, Polygon[{{{points[0]}, {points[1]}, {points[2]}, {points[3]}}}]}},")
+                print(f"{{EdgeForm[Black], {color}, Polygon[{{{points[0]}, {points[4]}, {points[1]}}}]}},")
+                print(f"{{EdgeForm[Black], {color}, Polygon[{{{points[3]}, {points[5]}, {points[2]}}}]}},")
+
+    # Close the Graphics3D list
+    print("},Boxed->False,ImageSize->800]")
+
+
+
+n = 4
 A1a = []
 for i in range(2*n):
     row = []
@@ -216,4 +287,4 @@ for i in range(2*n):
 
 
 A2a = aztecgen(probs(A1a))
-aztec_printer(A2a, n)
+aztec_printer3d(A2a, n)
