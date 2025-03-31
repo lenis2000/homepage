@@ -82,6 +82,9 @@ Module.onRuntimeInitialized = async function() {
   let lastValue = parseInt(inputField.value, 10); // Track last processed value
   let checkerboardGroup; // Group for checkerboard squares
 
+  // Define n in the broader scope so it's accessible to all functions
+  let n = parseInt(inputField.value, 10);
+
   // Start polling the progress counter from C++.
   function startProgressPolling() {
     progressElem.innerText = "Sampling... (0%)";
@@ -111,41 +114,48 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // Create or update checkerboard overlay
-  function toggleCheckerboard() {
+
+
+function toggleCheckerboard() {
     // Remove existing checkerboard if it exists
     if (checkerboardGroup) {
       checkerboardGroup.remove();
       checkerboardGroup = null;
     }
-
     // If checkerboard is not enabled, just return
     if (!useCheckerboard) return;
-
     // Compute bounding box of dominoes
     const minX = d3.min(currentDominoes, d => d.x);
     const minY = d3.min(currentDominoes, d => d.y);
     const maxX = d3.max(currentDominoes, d => d.x + d.w);
     const maxY = d3.max(currentDominoes, d => d.y + d.h);
-
     // Use the computed dimensions of the SVG
     const bbox = svg.node().getBoundingClientRect();
     const svgWidth = bbox.width;
     const svgHeight = bbox.height;
-
     const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
     const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
     const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
-
     // Create a new group for the checkerboard
     checkerboardGroup = svg.append("g")
       .attr("class", "checkerboard")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+    // Now n is accessible here because it's defined in the broader scope
+    const K = (maxX - minX) / (2*n); // Size of each checkerboard square
+    const squares = [];
+    // Calculate center coordinates
+    const centerX = (minX + maxX-2) / 2;
+    const centerY = (minY + maxY-2) / 2;
 
-      // Create checkerboard squares (KxK units, where K is the size of the checkerboard square)
-      const K = (maxX - minX) / (2*n); // Size of each checkerboard square
-      const squares = [];
-      for (let x = minX; x < maxX; x += K) {
-        for (let y = minY; y < maxY; y += K) {
+    // Create a grid that fully covers the Aztec diamond
+    for (let x = minX; x < maxX; x += K) {
+      for (let y = minY; y < maxY; y += K) {
+        // For each square, check if its center is within the Aztec diamond
+        // The +0.5 ensures we include squares that are exactly on the boundary
+        const normX = Math.abs((x + K/2) - centerX) / K;
+        const normY = Math.abs((y + K/2) - centerY) / K;
+
+        if (normX + normY <= n + 0.5) {  // Adjusted boundary condition
           squares.push({
             x: x,
             y: y,
@@ -155,6 +165,7 @@ Module.onRuntimeInitialized = async function() {
           });
         }
       }
+    }
 
     // Render checkerboard squares with some transparency
     checkerboardGroup.selectAll("rect.checkerboard")
@@ -164,15 +175,14 @@ Module.onRuntimeInitialized = async function() {
       .attr("class", "checkerboard")
       .attr("x", d => d.x)
       .attr("y", d => d.y)
-      .attr("width", 1)
-      .attr("height", 1)
+      .attr("width", K)
+      .attr("height", K)
       .attr("fill", d => d.color)
-      .attr("stroke", "rgba(0,0,0,0.3)")
-      .attr("stroke-width", 0.1);
-
+      .attr("stroke", "rgba(0,0,0,0.1)")
+      .attr("stroke-width", 0.05);
     // Move checkerboard on top of dominoes
     checkerboardGroup.raise();
-  }
+}
 
   // Render the dominoes with or without colors
   function renderDominoes(dominoes) {
@@ -214,7 +224,7 @@ Module.onRuntimeInitialized = async function() {
       .attr("height", d => d.h)
       .attr("fill", d => useColors ? d.color : "#eee") // Use color from data or gray if colors disabled
       .attr("stroke", "#000")
-      .attr("stroke-width", 0.5);
+      .attr("stroke-width", 1.5);
 
     // Add checkerboard if enabled
     if (useCheckerboard) {
@@ -223,7 +233,10 @@ Module.onRuntimeInitialized = async function() {
   }
 
   // Update the visualization for a given n.
-  async function updateVisualization(n) {
+  async function updateVisualization(newN) {
+    // Update the global n value
+    n = newN;
+
     // If already processing, don't start another one
     if (isProcessing) return;
 
@@ -271,26 +284,26 @@ Module.onRuntimeInitialized = async function() {
 
   // Validate and process the input
   function processInput() {
-    const n = parseInt(inputField.value, 10);
+    const newN = parseInt(inputField.value, 10);
 
     // Skip if the value hasn't changed
-    if (n === lastValue) return;
+    if (newN === lastValue) return;
 
     // Check for a valid positive even number.
-    if (isNaN(n) || n < 2) {
+    if (isNaN(newN) || newN < 2) {
       progressElem.innerText = "Please enter a valid positive even number for n (n ≥ 2).";
       return;
     }
-    if (n % 2 !== 0) {
+    if (newN % 2 !== 0) {
       progressElem.innerText = "Please enter an even number for n.";
       return;
     }
-    if (n > 300) {
+    if (newN > 300) {
       progressElem.innerText = "Please enter a number no greater than 300.";
       return;
     }
 
-    updateVisualization(n);
+    updateVisualization(newN);
   }
 
   // Set up event listeners for input changes
