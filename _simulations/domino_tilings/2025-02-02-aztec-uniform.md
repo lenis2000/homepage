@@ -45,6 +45,13 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
       <input type="checkbox" id="color-toggle" checked> Show colors
     </label>
   </div>
+
+  <!-- Checkerboard toggle -->
+  <div style="margin-top: 8px;">
+    <label for="checkerboard-toggle">
+      <input type="checkbox" id="checkerboard-toggle"> Show checkerboard overlay
+    </label>
+  </div>
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
@@ -69,9 +76,11 @@ Module.onRuntimeInitialized = async function() {
   const inputField = document.getElementById("n-input");
   let progressInterval;
   let useColors = true; // Track coloring state
+  let useCheckerboard = false; // Track checkerboard state
   let currentDominoes = []; // Store current dominoes for toggling colors
   let isProcessing = false; // Flag to prevent multiple simultaneous updates
   let lastValue = parseInt(inputField.value, 10); // Track last processed value
+  let checkerboardGroup; // Group for checkerboard squares
 
   // Start polling the progress counter from C++.
   function startProgressPolling() {
@@ -92,6 +101,78 @@ Module.onRuntimeInitialized = async function() {
       renderDominoes(currentDominoes);
     }
   });
+
+  // Handle checkerboard toggle
+  document.getElementById("checkerboard-toggle").addEventListener("change", function() {
+    useCheckerboard = this.checked;
+    if (currentDominoes.length > 0) {
+      toggleCheckerboard();
+    }
+  });
+
+  // Create or update checkerboard overlay
+  function toggleCheckerboard() {
+    // Remove existing checkerboard if it exists
+    if (checkerboardGroup) {
+      checkerboardGroup.remove();
+      checkerboardGroup = null;
+    }
+
+    // If checkerboard is not enabled, just return
+    if (!useCheckerboard) return;
+
+    // Compute bounding box of dominoes
+    const minX = d3.min(currentDominoes, d => d.x);
+    const minY = d3.min(currentDominoes, d => d.y);
+    const maxX = d3.max(currentDominoes, d => d.x + d.w);
+    const maxY = d3.max(currentDominoes, d => d.y + d.h);
+
+    // Use the computed dimensions of the SVG
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+
+    const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
+    const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
+
+    // Create a new group for the checkerboard
+    checkerboardGroup = svg.append("g")
+      .attr("class", "checkerboard")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+      // Create checkerboard squares (KxK units, where K is the size of the checkerboard square)
+      const K = (maxX - minX) / (2*n); // Size of each checkerboard square
+      const squares = [];
+      for (let x = minX; x < maxX; x += K) {
+        for (let y = minY; y < maxY; y += K) {
+          squares.push({
+            x: x,
+            y: y,
+            width: K,
+            height: K,
+            color: ((Math.floor(x/K) + Math.floor(y/K)) % 2 === 0) ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.05)"
+          });
+        }
+      }
+
+    // Render checkerboard squares with some transparency
+    checkerboardGroup.selectAll("rect.checkerboard")
+      .data(squares)
+      .enter()
+      .append("rect")
+      .attr("class", "checkerboard")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("width", 1)
+      .attr("height", 1)
+      .attr("fill", d => d.color)
+      .attr("stroke", "rgba(0,0,0,0.3)")
+      .attr("stroke-width", 0.1);
+
+    // Move checkerboard on top of dominoes
+    checkerboardGroup.raise();
+  }
 
   // Render the dominoes with or without colors
   function renderDominoes(dominoes) {
@@ -115,23 +196,30 @@ Module.onRuntimeInitialized = async function() {
 
     // Clear previous rendering
     svg.selectAll("g").remove();
+    checkerboardGroup = null;
 
     // Append a group for the dominoes.
     const group = svg.append("g")
-                    .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+      .attr("class", "dominoes")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
 
     // Render each domino piece.
     group.selectAll("rect")
-        .data(dominoes)
-        .enter()
-        .append("rect")
-        .attr("x", d => d.x)
-        .attr("y", d => d.y)
-        .attr("width", d => d.w)
-        .attr("height", d => d.h)
-        .attr("fill", d => useColors ? d.color : "#eee") // Use color from data or gray if colors disabled
-        .attr("stroke", "#000")
-        .attr("stroke-width", 0.5);
+      .data(dominoes)
+      .enter()
+      .append("rect")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("width", d => d.w)
+      .attr("height", d => d.h)
+      .attr("fill", d => useColors ? d.color : "#eee") // Use color from data or gray if colors disabled
+      .attr("stroke", "#000")
+      .attr("stroke-width", 0.5);
+
+    // Add checkerboard if enabled
+    if (useCheckerboard) {
+      toggleCheckerboard();
+    }
   }
 
   // Update the visualization for a given n.
@@ -143,6 +231,8 @@ Module.onRuntimeInitialized = async function() {
 
     // Clear any previous simulation.
     svg.selectAll("g").remove();
+    checkerboardGroup = null;
+
     // Start the progress indicator.
     startProgressPolling();
 
