@@ -242,6 +242,9 @@ def compute_height_function(domino_grid):
 def aztec_printer(x0, n):
     size = len(x0)
 
+    # Calculate height function
+    height = compute_height_function(x0)
+
     # Create Mathematica output - print to stdout
     print("Graphics[{")
 
@@ -249,6 +252,7 @@ def aztec_printer(x0, n):
     domino_count = 0
     total_dominoes = sum(row.count(1) for row in x0)
 
+    # First draw all dominoes
     for i in range(size):
         for j in range(size):
             if x0[i][j] == 1:
@@ -266,10 +270,26 @@ def aztec_printer(x0, n):
                     color = "Red"
                     rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
 
-                if domino_count == total_dominoes:
-                    print(f"{{EdgeForm[None], {color}, {rect}}}", end="")
+                print(f"{{EdgeForm[None], {color}, {rect}}},", end="")
+
+    # Add height function values at each vertex
+    for i in range(size + 1):
+        for j in range(size + 1):
+            if height[i][j] is not None:
+                x = j - i
+                y = size + 2 - (i + j)
+
+                # Draw the height value as text at each vertex
+                vertex_drawing = f"{{Black, Text[Style[\"{height[i][j]}\", Bold, 24], {{{x}, {y}}}]}}"
+
+                # Add a point to mark the vertex
+                # point_drawing = f"{{PointSize[0.01], Point[{{{x}, {y}}}]}}"
+
+                # For all but the last vertex, add a comma
+                if i == size and j == size:
+                    print(f"{vertex_drawing}", end="")
                 else:
-                    print(f"{{EdgeForm[None], {color}, {rect}}},", end="")
+                    print(f"{vertex_drawing},", end="")
 
     # Close the Graphics list
     print("},ImageSize->1000]")
@@ -298,7 +318,7 @@ def aztec_printer(x0, n):
 #     print("}]")
 
 
-n = 4
+n = 2
 A1a = []
 for i in range(2*n):
     row = []
@@ -309,4 +329,3 @@ for i in range(2*n):
 
 A2a = aztecgen(probs(A1a))
 aztec_printer(A2a, n)
-plot_3d_height_function(A2a)
