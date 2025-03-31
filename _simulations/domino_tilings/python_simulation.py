@@ -230,29 +230,28 @@ def aztec_printer3d(x0, n):
                         f"{{{x_coord}, {y_coord+1}, {h}}}",      # top-middle
                         f"{{{x_coord}, {y_coord-1}, {h+3}}}"     # bottom-middle
                     ]
-# !!! HERE IS GOOD
-                elif i % 2 == 1 and j % 2 == 0:  # Blue (horizontal)
-                    color = "Blue"
-                    # Define vertices of the 3D surface with the specified heights
-                    points = [
-                        f"{{{x_coord-1}, {y_coord-2}, {h-1}}}",  # top-left
-                        f"{{{x_coord+1}, {y_coord-2}, {h-1}}}",  # top-right
-                        f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",  # bottom-right
-                        f"{{{x_coord-1}, {y_coord+2}, {h-2}}}",  # bottom-left
-                        f"{{{x_coord}, {y_coord-2}, {h}}}",      # top-middle
-                        f"{{{x_coord}, {y_coord+2}, {h-3}}}"     # bottom-middle
-                    ]
-
-                elif i % 2 == 0 and j % 2 == 0:  # Red (vertical)
+                elif i % 2 == 1 and j % 2 == 0:  # Red (vertical)
                     color = "Red"
                     # Define vertices of the 3D surface with the specified heights
                     points = [
-                        f"{{{x_coord-2}, {y_coord-1}, {h+2}}}",  # top-left
-                        f"{{{x_coord}, {y_coord-1}, {h+1}}}",    # top-right
-                        f"{{{x_coord}, {y_coord+1}, {h+2}}}",    # bottom-right
-                        f"{{{x_coord-2}, {y_coord+1}, {h+3}}}",  # bottom-left
-                        f"{{{x_coord-2}, {y_coord}, {h+2}}}",    # middle-left
-                        f"{{{x_coord}, {y_coord}, {h}}}"         # middle-right
+                        f"{{{x_coord-1}, {y_coord+2}, {h-1}}}",  # top-left
+                        f"{{{x_coord+1}, {y_coord+2}, {h-1}}}",  # top-right
+                        f"{{{x_coord+1}, {y_coord-2}, {h-2}}}",  # bottom-right
+                        f"{{{x_coord-1}, {y_coord-2}, {h-2}}}",  # bottom-left
+                        f"{{{x_coord}, {y_coord+2}, {h}}}",      # top-middle
+                        f"{{{x_coord}, {y_coord-2}, {h-3}}}"     # bottom-middle
+                    ]
+
+                elif i % 2 == 0 and j % 2 == 0:  # Blue (horizontal)
+                    color = "Blue"
+                    # Define vertices of the 3D surface with the specified heights
+                    points = [
+                        f"{{{x_coord-2}, {y_coord+1}, {h-1}}}",  # top-left
+                        f"{{{x_coord+2}, {y_coord+1}, {h-1}}}",  # top-right
+                        f"{{{x_coord+2}, {y_coord-1}, {h-2}}}",  # bottom-right
+                        f"{{{x_coord-2}, {y_coord-1}, {h-2}}}",  # bottom-left
+                        f"{{{x_coord}, {y_coord+1}, {h}}}",      # top-middle
+                        f"{{{x_coord}, {y_coord-1}, {h-3}}}"     # bottom-middle
                     ]
 
                 elif i % 2 == 0 and j % 2 == 1:  # Yellow (vertical)
@@ -261,10 +260,10 @@ def aztec_printer3d(x0, n):
                     points = [
                         f"{{{x_coord-1}, {y_coord-2}, {h-2}}}",  # top-left
                         f"{{{x_coord+1}, {y_coord-2}, {h-1}}}",  # top-right
-                        f"{{{x_coord+1}, {y_coord}, {h-2}}}",    # bottom-right
-                        f"{{{x_coord-1}, {y_coord}, {h-3}}}",    # bottom-left
-                        f"{{{x_coord-1}, {y_coord+2}, {h-2}}}",  # far-bottom-left
-                        f"{{{x_coord+1}, {y_coord+2}, {h-1}}}"   # far-bottom-right
+                        f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",  # bottom-right
+                        f"{{{x_coord-1}, {y_coord+2}, {h-3}}}",  # bottom-left
+                        f"{{{x_coord}, {y_coord-2}, {h-2}}}",    # middle-top
+                        f"{{{x_coord}, {y_coord+2}, {h-3}}}"     # middle-bottom
                     ]
 
                 # Create a 3D surface using the points
