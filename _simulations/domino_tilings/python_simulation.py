@@ -177,48 +177,136 @@ def pretty2(m, filename):
         for j in range(len(m)):
             f.write(""+str(m[i][j])+"     ")
         f.write("\n")
-        def aztec_printer(x0,n):
-            size = len(x0)
 
-            # Create Mathematica output - print to console
-            print("Graphics[{")
+def compute_height_function(domino_grid):
+    size = len(domino_grid)
 
-            for i in range(size):
-                for j in range(size):
-                    if x0[i][j] == 1:
-                        if i % 2 == 1 and j % 2 == 1: # Green
-                            color = "Green"
-                            rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
-                        elif i % 2 == 1 and j % 2 == 0: # Blue
-                            color = "Blue"
-                            rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
-                        elif i % 2 == 0 and j % 2 == 0: # Red
-                            color = "Red"
-                            rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
-                        elif i % 2 == 0 and j % 2 == 1: # Yellow
-                            color = "Yellow"
-                            rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
+    # Height function is defined on vertices, so it's one larger in each dimension
+    height = [[None for _ in range(size + 1)] for _ in range(size + 1)]
 
-                        print(f"{{EdgeForm[None], {color}, {rect}}},")
+    # Set a reference height (e.g., top-left corner to 0)
+    height[0][0] = 0
 
-            # Close the Graphics list
-            print("}]")
+    # Use BFS to propagate heights across the grid
+    from collections import deque
+    queue = deque([(0, 0)])
+    visited = set([(0, 0)])
 
-            # Add PlotRange and AspectRatio settings
-            min_limit = min(-size, -2)
-            max_limit = max(size, 2)
-            print(f"PlotRange -> {{{{{min_limit}, {max_limit}}}, {{{min_limit}, {max_limit + 2}}}}}")
-            print("AspectRatio -> 1")
+    while queue:
+        i, j = queue.popleft()
+
+        # Propagate to the right
+        if j + 1 <= size and (i, j + 1) not in visited:
+            # Check if we're crossing a domino
+            if i < size and j < size and domino_grid[i][j] == 1:
+                # Determine the type of domino and apply the appropriate height change
+                if i % 2 == 0 and j % 2 == 0:  # BLUE (horizontal)
+                    height_change = -1
+                elif i % 2 == 1 and j % 2 == 1:  # GREEN (horizontal)
+                    height_change = 1
+                elif i % 2 == 0 and j % 2 == 1:  # RED (vertical)
+                    height_change = 1
+                elif i % 2 == 1 and j % 2 == 0:  # YELLOW (vertical)
+                    height_change = -1
+            else:
+                # No domino, so no height change
+                height_change = 0
+
+            height[i][j + 1] = height[i][j] + height_change
+            queue.append((i, j + 1))
+            visited.add((i, j + 1))
+
+        # Propagate downward
+        if i + 1 <= size and (i + 1, j) not in visited:
+            # Check if we're crossing a domino
+            if i < size and j < size and domino_grid[i][j] == 1:
+                # Determine the type of domino and apply the appropriate height change
+                if i % 2 == 0 and j % 2 == 0:  # BLUE (horizontal)
+                    height_change = -1
+                elif i % 2 == 1 and j % 2 == 1:  # GREEN (horizontal)
+                    height_change = 1
+                elif i % 2 == 0 and j % 2 == 1:  # RED (vertical)
+                    height_change = -1
+                elif i % 2 == 1 and j % 2 == 0:  # YELLOW (vertical)
+                    height_change = 1
+            else:
+                # No domino, so no height change
+                height_change = 0
+
+            height[i + 1][j] = height[i][j] + height_change
+            queue.append((i + 1, j))
+            visited.add((i + 1, j))
+
+    return height
+
+def aztec_printer(x0, n):
+    size = len(x0)
+
+    # Create Mathematica output - print to stdout
+    print("Graphics[{")
+
+    # Track the number of dominoes processed
+    domino_count = 0
+    total_dominoes = sum(row.count(1) for row in x0)
+
+    for i in range(size):
+        for j in range(size):
+            if x0[i][j] == 1:
+                domino_count += 1
+                if i % 2 == 1 and j % 2 == 1:
+                    color = "Green"
+                    rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
+                elif i % 2 == 1 and j % 2 == 0:
+                    color = "Yellow"
+                    rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
+                elif i % 2 == 0 and j % 2 == 0:
+                    color = "Blue"
+                    rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
+                elif i % 2 == 0 and j % 2 == 1:
+                    color = "Red"
+                    rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
+
+                if domino_count == total_dominoes:
+                    print(f"{{EdgeForm[None], {color}, {rect}}}", end="")
+                else:
+                    print(f"{{EdgeForm[None], {color}, {rect}}},", end="")
+
+    # Close the Graphics list
+    print("},ImageSize->1000]")
+    print("\n")
+
+# def plot_3d_height_function(height):
+#     size = len(height) - 1
+
+#     # Print the Mathematica code for the 3D plot
+#     print("ListPlot3D[{", end="")
+
+#     # Print the height values at each vertex
+#     for i in range(size + 1):
+#         for j in range(size + 1):
+#             if height[i][j] is not None:
+#                 x = j - i - 1
+#                 y = size + 1 - (i + j) - 1
+#                 z = height[i][j]
+#                 # Check if this is the last valid point to avoid trailing comma
+#                 if i == size and j == size:
+#                     print(f"{{{x}, {y}, {z}}}", end="")
+#                 else:
+#                     print(f"{{{x}, {y}, {z}}},", end="")
+
+#     # Close the list
+#     print("}]")
 
 
-        n = 80
-        A1a = []
-        for i in range(2*n):
-            row = []
-            for j in range(2*n):
-                row.append(1)
-            A1a.append(row)
+n = 4
+A1a = []
+for i in range(2*n):
+    row = []
+    for j in range(2*n):
+        row.append(1)
+    A1a.append(row)
 
 
-        A2a=aztecgen(probs(A1a))
-        aztec_printer(A2a,n)
+A2a = aztecgen(probs(A1a))
+aztec_printer(A2a, n)
+plot_3d_height_function(A2a)
