@@ -38,6 +38,13 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
   <!-- Updated input: starting value 50, even numbers only (step=2), three-digit window (size=3), maximum 300 -->
   <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
+
+  <!-- Color toggle -->
+  <div style="margin-top: 8px;">
+    <label for="color-toggle">
+      <input type="checkbox" id="color-toggle" checked> Show colors
+    </label>
+  </div>
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
@@ -60,6 +67,8 @@ Module.onRuntimeInitialized = async function() {
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
   let progressInterval;
+  let useColors = true; // Track coloring state
+  let currentDominoes = []; // Store current dominoes for toggling colors
 
   // Start polling the progress counter from C++.
   function startProgressPolling() {
@@ -71,6 +80,55 @@ Module.onRuntimeInitialized = async function() {
         clearInterval(progressInterval);
       }
     }, 100);
+  }
+
+  // Handle color toggle
+  document.getElementById("color-toggle").addEventListener("change", function() {
+    useColors = this.checked;
+    if (currentDominoes.length > 0) {
+      renderDominoes(currentDominoes);
+    }
+  });
+
+  // Render the dominoes with or without colors
+  function renderDominoes(dominoes) {
+    // Compute bounding box of dominoes.
+    const minX = d3.min(dominoes, d => d.x);
+    const minY = d3.min(dominoes, d => d.y);
+    const maxX = d3.max(dominoes, d => d.x + d.w);
+    const maxY = d3.max(dominoes, d => d.y + d.h);
+    const widthDominoes = maxX - minX;
+    const heightDominoes = maxY - minY;
+
+    // Use the computed dimensions of the SVG (which now scales with the container).
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+
+    // Clear previous rendering
+    svg.selectAll("g").remove();
+
+    // Append a group for the dominoes.
+    const group = svg.append("g")
+                    .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+    // Render each domino piece.
+    group.selectAll("rect")
+        .data(dominoes)
+        .enter()
+        .append("rect")
+        .attr("x", d => d.x)
+        .attr("y", d => d.y)
+        .attr("width", d => d.w)
+        .attr("height", d => d.h)
+        .attr("fill", d => useColors ? d.color : "#eee") // Use color from data or gray if colors disabled
+        .attr("stroke", "#000")
+        .attr("stroke-width", 0.5);
   }
 
   // Update the visualization for a given n.
@@ -85,9 +143,8 @@ Module.onRuntimeInitialized = async function() {
     const jsonStr = Module.UTF8ToString(ptr);
     freeString(ptr);
 
-    let dominoes;
     try {
-      dominoes = JSON.parse(jsonStr);
+      currentDominoes = JSON.parse(jsonStr); // Store for later toggling
     } catch (e) {
       console.error("Error parsing JSON:", e, jsonStr);
       progressElem.innerText = "Error during sampling";
@@ -95,41 +152,8 @@ Module.onRuntimeInitialized = async function() {
       return;
     }
 
-    // Compute bounding box of dominoes.
-    const minX = d3.min(dominoes, d => d.x);
-    const minY = d3.min(dominoes, d => d.y);
-    const maxX = d3.max(dominoes, d => d.x + d.w);
-    const maxY = d3.max(dominoes, d => d.y + d.h);
-    const widthDominoes = maxX - minX;
-    const heightDominoes = maxY - minY;
-
-    // Use the computed dimensions of the SVG (which now scales with the container).
-    // This hack ensures that on large screens we use the full available width and on mobile the SVG remains responsive.
-    const bbox = svg.node().getBoundingClientRect();
-    const svgWidth = bbox.width;
-    const svgHeight = bbox.height;
-    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
-
-    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
-    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
-    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
-
-    // Append a group for the dominoes.
-    const group = svg.append("g")
-                     .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
-
-    // Render each domino piece.
-    group.selectAll("rect")
-         .data(dominoes)
-         .enter()
-         .append("rect")
-         .attr("x", d => d.x)
-         .attr("y", d => d.y)
-         .attr("width", d => d.w)
-         .attr("height", d => d.h)
-         .attr("fill", d => d.color)
-         .attr("stroke", "#000")
-         .attr("stroke-width", 0.5);
+    // Render the dominoes
+    renderDominoes(currentDominoes);
 
     // Clear progress indicator once done.
     progressElem.innerText = "";

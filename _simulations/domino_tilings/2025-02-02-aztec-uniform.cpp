@@ -4,7 +4,7 @@ emcc 2025-02-02-aztec-uniform.cpp -o 2025-02-02-aztec-uniform.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
- -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+ -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web \
@@ -261,26 +261,26 @@ char* simulateAztec(int n) {
             if (dominoConfig[i][j] == 1) {
                 double x, y, w, h;
                 string color;
-                if ((i & 1) && (j & 1)) { // i odd, j odd: Green
+                if ((i & 1) && (j & 1)) { // i odd, j odd: Blue
+                    color = "blue";
+                    x = j - i - 2;
+                    y = size + 1 - (i + j) - 1;
+                    w = 4;
+                    h = 2;
+                } else if ((i & 1) && !(j & 1)) { // i odd, j even: Yellow
+                    color = "yellow";
+                    x = j - i - 1;
+                    y = size + 1 - (i + j) - 2;
+                    w = 2;
+                    h = 4;
+                } else if (!(i & 1) && !(j & 1)) { // i even, j even: Green
                     color = "green";
                     x = j - i - 2;
                     y = size + 1 - (i + j) - 1;
                     w = 4;
                     h = 2;
-                } else if ((i & 1) && !(j & 1)) { // i odd, j even: Blue
-                    color = "blue";
-                    x = j - i - 1;
-                    y = size + 1 - (i + j) - 2;
-                    w = 2;
-                    h = 4;
-                } else if (!(i & 1) && !(j & 1)) { // i even, j even: Red
+                } else if (!(i & 1) && (j & 1)) { // i even, j odd: Red
                     color = "red";
-                    x = j - i - 2;
-                    y = size + 1 - (i + j) - 1;
-                    w = 4;
-                    h = 2;
-                } else if (!(i & 1) && (j & 1)) { // i even, j odd: Yellow
-                    color = "yellow";
                     x = j - i - 1;
                     y = size + 1 - (i + j) - 2;
                     w = 2;
