@@ -223,35 +223,35 @@ def aztec_printer3d(x0, n):
                     color = "Green"
                     # Define vertices of the 3D surface with the specified heights
                     points = [
-                        f"{{{x_coord-2}, {y_coord+1}, {h+1}}}",  
-                        f"{{{x_coord+2}, {y_coord+1}, {h+1}}}",  
-                        f"{{{x_coord+2}, {y_coord-1}, {h+2}}}",  
-                        f"{{{x_coord-2}, {y_coord-1}, {h+2}}}",  
-                        f"{{{x_coord}, {y_coord+1}, {h}}}",      
-                        f"{{{x_coord}, {y_coord-1}, {h+3}}}"     
+                        f"{{{x_coord-2}, {y_coord+1}, {h+1}}}",
+                        f"{{{x_coord+2}, {y_coord+1}, {h+1}}}",
+                        f"{{{x_coord+2}, {y_coord-1}, {h+2}}}",
+                        f"{{{x_coord-2}, {y_coord-1}, {h+2}}}",
+                        f"{{{x_coord}, {y_coord+1}, {h}}}",
+                        f"{{{x_coord}, {y_coord-1}, {h+3}}}"
                     ]
                 elif i % 2 == 1 and j % 2 == 0:  # Red (vertical)
                     color = "Red"
                     # Define vertices of the 3D surface with the specified heights - 90 degree rotation of green
                     points = [
-                        f"{{{x_coord-1}, {y_coord+2}, {h+1}}}",  
-                        f"{{{x_coord-1}, {y_coord-2}, {h+1}}}",  
-                        f"{{{x_coord+1}, {y_coord-2}, {h+2}}}",  
-                        f"{{{x_coord+1}, {y_coord+2}, {h+2}}}",  
-                        f"{{{x_coord-1}, {y_coord}, {h}}}",      
-                        f"{{{x_coord+1}, {y_coord}, {h+3}}}"     
+                        f"{{{x_coord-1}, {y_coord+2}, {h+1}}}",
+                        f"{{{x_coord-1}, {y_coord-2}, {h+1}}}",
+                        f"{{{x_coord+1}, {y_coord-2}, {h+2}}}",
+                        f"{{{x_coord+1}, {y_coord+2}, {h+2}}}",
+                        f"{{{x_coord-1}, {y_coord}, {h}}}",
+                        f"{{{x_coord+1}, {y_coord}, {h+3}}}"
                     ]
 
                 elif i % 2 == 0 and j % 2 == 0:  # Blue (horizontal)
                     color = "Blue"
                     # Define vertices of the 3D surface with the specified heights
                     points = [
-                        f"{{{x_coord-2}, {y_coord+1}, {h-1}}}", 
-                        f"{{{x_coord+2}, {y_coord+1}, {h-1}}}", 
-                        f"{{{x_coord+2}, {y_coord-1}, {h-2}}}", 
-                        f"{{{x_coord-2}, {y_coord-1}, {h-2}}}", 
-                        f"{{{x_coord}, {y_coord+1}, {h}}}",     
-                        f"{{{x_coord}, {y_coord-1}, {h-3}}}"    
+                        f"{{{x_coord-2}, {y_coord+1}, {h-1}}}",
+                        f"{{{x_coord+2}, {y_coord+1}, {h-1}}}",
+                        f"{{{x_coord+2}, {y_coord-1}, {h-2}}}",
+                        f"{{{x_coord-2}, {y_coord-1}, {h-2}}}",
+                        f"{{{x_coord}, {y_coord+1}, {h}}}",
+                        f"{{{x_coord}, {y_coord-1}, {h-3}}}"
                     ]
 
                 elif i % 2 == 0 and j % 2 == 1:  # Yellow (vertical)
@@ -262,8 +262,8 @@ def aztec_printer3d(x0, n):
                         f"{{{x_coord-1}, {y_coord-2}, {h-1}}}",
                         f"{{{x_coord+1}, {y_coord-2}, {h-2}}}",
                         f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",
-                        f"{{{x_coord-1}, {y_coord}, {h}}}",    
-                        f"{{{x_coord+1}, {y_coord}, {h-3}}}"   
+                        f"{{{x_coord-1}, {y_coord}, {h}}}",
+                        f"{{{x_coord+1}, {y_coord}, {h-3}}}"
                     ]
 
                 # Create a 3D surface using the points
