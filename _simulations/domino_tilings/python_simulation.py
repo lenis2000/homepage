@@ -182,60 +182,74 @@ def compute_height_function(domino_grid):
     size = len(domino_grid)
 
     # Height function is defined on vertices, so it's one larger in each dimension
-    height = [[None for _ in range(size + 1)] for _ in range(size + 1)]
+    height = [[0 for _ in range(size + 1)] for _ in range(size + 1)]
 
     # Set a reference height (e.g., top-left corner to 0)
     height[0][0] = 0
 
-    # Use BFS to propagate heights across the grid
-    from collections import deque
-    queue = deque([(0, 0)])
-    visited = set([(0, 0)])
+    # Compute heights systematically based on domino types
+    # First, fill in the top row and leftmost column as reference
+    for j in range(1, size + 1):
+        if j % 2 == 1:  # Odd column
+            height[0][j] = height[0][j-1]
+        else:  # Even column
+            height[0][j] = height[0][j-1]
 
-    while queue:
-        i, j = queue.popleft()
+    for i in range(1, size + 1):
+        if i % 2 == 1:  # Odd row
+            height[i][0] = height[i-1][0]
+        else:  # Even row
+            height[i][0] = height[i-1][0]
 
-        # Propagate to the right
-        if j + 1 <= size and (i, j + 1) not in visited:
-            # Check if we're crossing a domino
-            if i < size and j < size and domino_grid[i][j] == 1:
-                # Determine the type of domino and apply the appropriate height change
-                if i % 2 == 0 and j % 2 == 0:  # BLUE (horizontal)
-                    height_change = -1
-                elif i % 2 == 1 and j % 2 == 1:  # GREEN (horizontal)
-                    height_change = 1
-                elif i % 2 == 0 and j % 2 == 1:  # RED (vertical)
-                    height_change = 1
-                elif i % 2 == 1 and j % 2 == 0:  # YELLOW (vertical)
-                    height_change = -1
+    # Now compute the rest of the height function
+    for i in range(1, size + 1):
+        for j in range(1, size + 1):
+            # Check the domino at (i-1, j-1) if it exists
+            if i-1 < size and j-1 < size and domino_grid[i-1][j-1] == 1:
+                # Determine domino type and apply appropriate height changes
+                if (i-1) % 2 == 0 and (j-1) % 2 == 0:  # BLUE (horizontal)
+                    if i % 2 == 1 and j % 2 == 1:  # Bottom-right corner
+                        height[i][j] = height[i-1][j-1] - 3
+                    elif i % 2 == 1 and j % 2 == 0:  # Bottom-left corner
+                        height[i][j] = height[i-1][j] - 2
+                    elif i % 2 == 0 and j % 2 == 1:  # Top-right corner
+                        height[i][j] = height[i][j-1] - 1
+                    # Top-left corner is the reference
+
+                elif (i-1) % 2 == 1 and (j-1) % 2 == 1:  # GREEN (horizontal)
+                    if i % 2 == 0 and j % 2 == 0:  # Bottom-right corner
+                        height[i][j] = height[i-1][j-1] + 3
+                    elif i % 2 == 0 and j % 2 == 1:  # Bottom-left corner
+                        height[i][j] = height[i-1][j] + 2
+                    elif i % 2 == 1 and j % 2 == 0:  # Top-right corner
+                        height[i][j] = height[i][j-1] + 1
+                    # Top-left corner is the reference
+
+                elif (i-1) % 2 == 0 and (j-1) % 2 == 1:  # RED (vertical)
+                    if i % 2 == 0 and j % 2 == 0:  # Bottom-left corner
+                        height[i][j] = height[i-1][j] + 3
+                    elif i % 2 == 0 and j % 2 == 1:  # Bottom-right corner
+                        height[i][j] = height[i][j-1] + 1
+                    elif i % 2 == 1 and j % 2 == 0:  # Top-left corner
+                        height[i][j] = height[i-1][j] + 2
+                    # Top-right corner is the reference
+
+                elif (i-1) % 2 == 1 and (j-1) % 2 == 0:  # YELLOW (vertical)
+                    if i % 2 == 1 and j % 2 == 1:  # Bottom-left corner
+                        height[i][j] = height[i-1][j] - 3
+                    elif i % 2 == 1 and j % 2 == 0:  # Bottom-right corner
+                        height[i][j] = height[i][j-1] - 1
+                    elif i % 2 == 0 and j % 2 == 1:  # Top-left corner
+                        height[i][j] = height[i-1][j] - 2
+                    # Top-right corner is the reference
             else:
-                # No domino, so no height change
-                height_change = 0
-
-            height[i][j + 1] = height[i][j] + height_change
-            queue.append((i, j + 1))
-            visited.add((i, j + 1))
-
-        # Propagate downward
-        if i + 1 <= size and (i + 1, j) not in visited:
-            # Check if we're crossing a domino
-            if i < size and j < size and domino_grid[i][j] == 1:
-                # Determine the type of domino and apply the appropriate height change
-                if i % 2 == 0 and j % 2 == 0:  # BLUE (horizontal)
-                    height_change = -1
-                elif i % 2 == 1 and j % 2 == 1:  # GREEN (horizontal)
-                    height_change = 1
-                elif i % 2 == 0 and j % 2 == 1:  # RED (vertical)
-                    height_change = -1
-                elif i % 2 == 1 and j % 2 == 0:  # YELLOW (vertical)
-                    height_change = 1
-            else:
-                # No domino, so no height change
-                height_change = 0
-
-            height[i + 1][j] = height[i][j] + height_change
-            queue.append((i + 1, j))
-            visited.add((i + 1, j))
+                # No domino at this position, use the average of known neighbors
+                if height[i-1][j] is not None and height[i][j-1] is not None:
+                    height[i][j] = (height[i-1][j] + height[i][j-1]) // 2
+                elif height[i-1][j] is not None:
+                    height[i][j] = height[i-1][j]
+                elif height[i][j-1] is not None:
+                    height[i][j] = height[i][j-1]
 
     return height
 
@@ -295,30 +309,7 @@ def aztec_printer(x0, n):
     print("},ImageSize->1000]")
     print("\n")
 
-# def plot_3d_height_function(height):
-#     size = len(height) - 1
-
-#     # Print the Mathematica code for the 3D plot
-#     print("ListPlot3D[{", end="")
-
-#     # Print the height values at each vertex
-#     for i in range(size + 1):
-#         for j in range(size + 1):
-#             if height[i][j] is not None:
-#                 x = j - i - 1
-#                 y = size + 1 - (i + j) - 1
-#                 z = height[i][j]
-#                 # Check if this is the last valid point to avoid trailing comma
-#                 if i == size and j == size:
-#                     print(f"{{{x}, {y}, {z}}}", end="")
-#                 else:
-#                     print(f"{{{x}, {y}, {z}}},", end="")
-
-#     # Close the list
-#     print("}]")
-
-
-n = 2
+n = 4
 A1a = []
 for i in range(2*n):
     row = []

@@ -1,5 +1,5 @@
 ---
-title: Domino tilings of the Aztec diamond
+title: '[testing] Domino tilings of the Aztec diamond'
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
