@@ -244,27 +244,27 @@ def aztec_edge_printer(x0, n):
                     y1 = (size - i - j) // 2
                     x2 = x1 + 1
                     y2 = y1
-                    ax.plot([x1, x2], [y1, y2], 'green', linewidth=3)
+                    ax.plot([x1, x2], [y1, y2], 'green', linewidth=4)
 
                 elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
                     x1 = (j - i) // 2
                     y1 = (size - i - j) // 2
                     x2 = x1
                     y2 = y1 + 1
-                    ax.plot([x1, x2], [y1, y2], 'blue', linewidth=3)
+                    ax.plot([x1, x2], [y1, y2], 'blue', linewidth=4)
 
                 elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
                     x1 = (j - i) // 2 - 1
                     y1 = (size - i - j) // 2
                     x2 = x1 + 1
                     y2 = y1
-                    ax.plot([x1, x2], [y1, y2], 'red', linewidth=3)
+                    ax.plot([x1, x2], [y1, y2], 'red', linewidth=4)
                 elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
                     x1 = (j - i) // 2
                     y1 = (size - i - j) // 2
                     x2 = x1
                     y2 = y1 + 1
-                    ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=3)
+                    ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=4)
 
     # Set aspect ratio to be equal and remove axes
     ax.set_aspect('equal')
