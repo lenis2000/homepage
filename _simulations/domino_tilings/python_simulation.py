@@ -220,40 +220,44 @@ def aztec_edge_printer(x0, n):
                 # Draw vertex
                 ax.plot(i, j, 'ko', markersize=3)
 
-                # # Draw horizontal edge to the right
-                # if abs(i+1) + abs(j) <= n:
-                #     ax.plot([i, i+1], [j, j], 'k-', linewidth=0.5, alpha=0.3)
+    # Draw horizontal edges
+    for i in range(-n, n+1):
+        for j in range(-n, n+1):
+            if abs(i) + abs(j) <= n+1 and i+j<=n and i-j<n and -j-i<n+1:
+                # Draw horizontal edge to the right
+                if abs(i+1) + abs(j) <= n+1 and (i+1)+j<=n and (i+1)-j<n and -j-(i+1)<n+1:
+                    ax.plot([i, i+1], [j, j], 'k-', linewidth=0.5, alpha=0.3)
 
-                # # Draw vertical edge up
-                # if abs(i) + abs(j+1) <= n:
-                #     ax.plot([i, i], [j, j+1], 'k-', linewidth=0.5, alpha=0.3)
+                # Draw vertical edge up
+                if abs(i) + abs(j+1) <= n+1 and i+(j+1)<=n and i-(j+1)<n and -(j+1)-i<n+1:
+                    ax.plot([i, i], [j, j+1], 'k-', linewidth=0.5, alpha=0.3)
 
-    # # Place dimers based on the tiling in x0
-    # for i in range(size):
-    #     for j in range(size):
-    #         if x0[i][j] == 1:
-    #             # Convert matrix coordinates to Aztec diamond coordinates
-    #             # The conversion needs to map the matrix position to the correct edge in the diamond
-    #             if i % 2 == 1 and j % 2 == 1:  # Green horizontal
-    #                 # Calculate vertex coords of the domino's endpoints
-    #                 x1, y1 = (j - i) // 2, (size - i - j) // 2
-    #                 x2, y2 = (j - i) // 2 + 1, (size - i - j) // 2
-    #                 ax.plot([x1, x2], [y1, y2], 'green', linewidth=3)
+    # Place dimers based on the tiling in x0
+    for i in range(size):
+        for j in range(size):
+            if x0[i][j] == 1:
+                # Convert matrix coordinates to Aztec diamond coordinates
+                # The conversion needs to map the matrix position to the correct edge in the diamond
+                if i % 2 == 1 and j % 2 == 1:  # Green horizontal
+                    # Calculate vertex coords of the domino's endpoints
+                    x1, y1 = (j - i) // 2, (size - i - j) // 2
+                    x2, y2 = (j - i) // 2 + 1, (size - i - j) // 2
+                    ax.plot([x1, x2], [y1, y2], 'green', linewidth=3)
 
-    #             elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
-    #                 x1, y1 = (j - i) // 2, (size - i - j) // 2
-    #                 x2, y2 = (j - i) // 2, (size - i - j) // 2 + 1
-    #                 ax.plot([x1, x2], [y1, y2], 'blue', linewidth=3)
+                elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
+                    x1, y1 = (j - i) // 2, (size - i - j) // 2
+                    x2, y2 = (j - i) // 2, (size - i - j) // 2 + 1
+                    ax.plot([x1, x2], [y1, y2], 'blue', linewidth=3)
 
-    #             elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
-    #                 x1, y1 = (j - i) // 2 - 1, (size - i - j) // 2
-    #                 x2, y2 = (j - i) // 2, (size - i - j) // 2
-    #                 ax.plot([x1, x2], [y1, y2], 'red', linewidth=3)
+                elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
+                    x1, y1 = (j - i) // 2 - 1, (size - i - j) // 2
+                    x2, y2 = (j - i) // 2, (size - i - j) // 2
+                    ax.plot([x1, x2], [y1, y2], 'red', linewidth=3)
 
-    #             elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
-    #                 x1, y1 = (j - i) // 2, (size - i - j) // 2 - 1
-    #                 x2, y2 = (j - i) // 2, (size - i - j) // 2
-    #                 ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=3)
+                elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
+                    x1, y1 = (j - i) // 2, (size - i - j) // 2 - 1
+                    x2, y2 = (j - i) // 2, (size - i - j) // 2
+                    ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=3)
 
     # Set aspect ratio to be equal and remove axes
     ax.set_aspect('equal')
