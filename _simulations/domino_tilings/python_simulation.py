@@ -187,16 +187,16 @@ def aztec_printer(x0, n):
     for i in range(size):
         for j in range(size):
             if x0[i][j] == 1:
-                if i % 2 == 1 and j % 2 == 1:  # Green
+                if i % 2 == 1 and j % 2 == 1:  # Green horizontal
                     color = "Green"
                     rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
-                elif i % 2 == 1 and j % 2 == 0:  # Blue
+                elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
                     color = "Blue"
                     rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
-                elif i % 2 == 0 and j % 2 == 0:  # Red
+                elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
                     color = "Red"
                     rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
-                elif i % 2 == 0 and j % 2 == 1:  # Yellow
+                elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
                     color = "Yellow"
                     rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
 
@@ -205,78 +205,71 @@ def aztec_printer(x0, n):
     # Close the Graphics list
     print("},ImageSize->800]")
 
-def aztec_printer3d(x0, n):
+
+def aztec_edge_printer(x0, n):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     size = len(x0)
+    fig, ax = plt.subplots(figsize=(10, 10))
 
-    # Create Mathematica output - print to stdout
-    print("Graphics3D[{")
+    # Draw the Aztec diamond grid vertices and edges
+    for i in range(-n, n+1):
+        for j in range(-n, n+1):
+            if abs(i) + abs(j) <= n+1 and i+j<=n and i-j<n and -j-i<n+1:
+                # Draw vertex
+                ax.plot(i, j, 'ko', markersize=3)
 
-    h = 0  # Base height
+                # # Draw horizontal edge to the right
+                # if abs(i+1) + abs(j) <= n:
+                #     ax.plot([i, i+1], [j, j], 'k-', linewidth=0.5, alpha=0.3)
 
-    for i in range(size):
-        for j in range(size):
-            if x0[i][j] == 1:
-                x_coord = j - i
-                y_coord = size + 1 - (i + j)
+                # # Draw vertical edge up
+                # if abs(i) + abs(j+1) <= n:
+                #     ax.plot([i, i], [j, j+1], 'k-', linewidth=0.5, alpha=0.3)
 
-                if i % 2 == 1 and j % 2 == 1:  # Green (horizontal)
-                    color = "Green"
-                    # Define vertices of the 3D surface with the specified heights
-                    points = [
-                        f"{{{x_coord-2}, {y_coord+1}, {h+1}}}",
-                        f"{{{x_coord+2}, {y_coord+1}, {h+1}}}",
-                        f"{{{x_coord+2}, {y_coord-1}, {h+2}}}",
-                        f"{{{x_coord-2}, {y_coord-1}, {h+2}}}",
-                        f"{{{x_coord}, {y_coord+1}, {h}}}",
-                        f"{{{x_coord}, {y_coord-1}, {h+3}}}"
-                    ]
-                elif i % 2 == 1 and j % 2 == 0:  # Red (vertical)
-                    color = "Red"
-                    # Define vertices of the 3D surface with the specified heights - 90 degree rotation of green
-                    points = [
-                        f"{{{x_coord-1}, {y_coord+2}, {h+1}}}",
-                        f"{{{x_coord-1}, {y_coord-2}, {h+1}}}",
-                        f"{{{x_coord+1}, {y_coord-2}, {h+2}}}",
-                        f"{{{x_coord+1}, {y_coord+2}, {h+2}}}",
-                        f"{{{x_coord-1}, {y_coord}, {h}}}",
-                        f"{{{x_coord+1}, {y_coord}, {h+3}}}"
-                    ]
+    # # Place dimers based on the tiling in x0
+    # for i in range(size):
+    #     for j in range(size):
+    #         if x0[i][j] == 1:
+    #             # Convert matrix coordinates to Aztec diamond coordinates
+    #             # The conversion needs to map the matrix position to the correct edge in the diamond
+    #             if i % 2 == 1 and j % 2 == 1:  # Green horizontal
+    #                 # Calculate vertex coords of the domino's endpoints
+    #                 x1, y1 = (j - i) // 2, (size - i - j) // 2
+    #                 x2, y2 = (j - i) // 2 + 1, (size - i - j) // 2
+    #                 ax.plot([x1, x2], [y1, y2], 'green', linewidth=3)
 
-                elif i % 2 == 0 and j % 2 == 0:  # Blue (horizontal)
-                    color = "Blue"
-                    # Define vertices of the 3D surface with the specified heights
-                    points = [
-                        f"{{{x_coord-2}, {y_coord+1}, {h-1}}}",
-                        f"{{{x_coord+2}, {y_coord+1}, {h-1}}}",
-                        f"{{{x_coord+2}, {y_coord-1}, {h-2}}}",
-                        f"{{{x_coord-2}, {y_coord-1}, {h-2}}}",
-                        f"{{{x_coord}, {y_coord+1}, {h}}}",
-                        f"{{{x_coord}, {y_coord-1}, {h-3}}}"
-                    ]
+    #             elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
+    #                 x1, y1 = (j - i) // 2, (size - i - j) // 2
+    #                 x2, y2 = (j - i) // 2, (size - i - j) // 2 + 1
+    #                 ax.plot([x1, x2], [y1, y2], 'blue', linewidth=3)
 
-                elif i % 2 == 0 and j % 2 == 1:  # Yellow (vertical)
-                    color = "Yellow"
-                    # Define vertices of the 3D surface with the specified heights - 90 degree rotation of blue
-                    points = [
-                        f"{{{x_coord-1}, {y_coord+2}, {h-1}}}",
-                        f"{{{x_coord-1}, {y_coord-2}, {h-1}}}",
-                        f"{{{x_coord+1}, {y_coord-2}, {h-2}}}",
-                        f"{{{x_coord+1}, {y_coord+2}, {h-2}}}",
-                        f"{{{x_coord-1}, {y_coord}, {h}}}",
-                        f"{{{x_coord+1}, {y_coord}, {h-3}}}"
-                    ]
+    #             elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
+    #                 x1, y1 = (j - i) // 2 - 1, (size - i - j) // 2
+    #                 x2, y2 = (j - i) // 2, (size - i - j) // 2
+    #                 ax.plot([x1, x2], [y1, y2], 'red', linewidth=3)
 
-                # Create a 3D surface using the points
-                print(f"{{EdgeForm[Black], {color}, Polygon[{{{points[0]}, {points[1]}, {points[2]}, {points[3]}}}]}},")
-                print(f"{{EdgeForm[Black], {color}, Polygon[{{{points[0]}, {points[4]}, {points[1]}}}]}},")
-                print(f"{{EdgeForm[Black], {color}, Polygon[{{{points[3]}, {points[5]}, {points[2]}}}]}},")
+    #             elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
+    #                 x1, y1 = (j - i) // 2, (size - i - j) // 2 - 1
+    #                 x2, y2 = (j - i) // 2, (size - i - j) // 2
+    #                 ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=3)
 
-    # Close the Graphics3D list
-    print("},Boxed->False,ImageSize->800]")
+    # Set aspect ratio to be equal and remove axes
+    ax.set_aspect('equal')
+    ax.set_axis_off()
+
+    # Set plot limits with some padding
+    ax.set_xlim(-n-1, n+1)
+    ax.set_ylim(-n-1, n+1)
+
+    # Display the plot
+    plt.title(f'Aztec Diamond Edge Representation (n={n})')
+    plt.tight_layout()
+    plt.show()
 
 
-
-n = 6
+n = 4
 A1a = []
 for i in range(2*n):
     row = []
@@ -286,4 +279,4 @@ for i in range(2*n):
 
 
 A2a = aztecgen(probs(A1a))
-aztec_printer3d(A2a, n)
+aztec_edge_printer(A2a, n)
