@@ -68,8 +68,8 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
-  <!-- Updated input: starting value 50, even numbers only (step=2), three-digit window (size=3), maximum 300 -->
-  <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
+  <!-- Updated input: starting value 24, even numbers only (step=2), three-digit window (size=3), maximum 300 -->
+  <input id="n-input" type="number" value="24" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
 </div>
 
@@ -149,16 +149,29 @@ Module.onRuntimeInitialized = async function() {
     }
     document.getElementById(viewName).style.display = "block";
     evt.currentTarget.className += " active";
+
+    // If switching to dimer view, force a redraw
+    if (viewName === "dimer-view") {
+      resizeDimerView();
+    }
   }
-  
+
   // Function to properly render dimer view when tab becomes visible
   window.resizeDimerView = function() {
     // This fixes a common issue where SVG doesn't render properly in hidden tabs
     setTimeout(() => {
-      if (currentDominoes.length > 0) {
+      if (currentDominoes && currentDominoes.length > 0) {
+
+        // First get the DOM node dimensions
+        const dimerSvgNode = document.getElementById("dimer-svg");
+        if (dimerSvgNode) {
+          const rect = dimerSvgNode.getBoundingClientRect();
+        }
+
         renderDimerView(currentDominoes);
+      } else {
       }
-    }, 10);
+    }, 100); // Longer timeout to ensure DOM is ready
   }
 
   // Start polling the progress counter from C++.
@@ -312,6 +325,8 @@ Module.onRuntimeInitialized = async function() {
 
   // Render the dimer view based on Python's aztec_edge_printer
   function renderDimerView(dominoes) {
+
+
     // Clear previous rendering
     dimerSvg.selectAll("*").remove();
 
@@ -338,6 +353,7 @@ Module.onRuntimeInitialized = async function() {
     const scale = Math.min(svgWidth, svgHeight) / (2 * n + 4) * 0.85;
 
     // Draw the Aztec diamond grid vertices (points)
+    let vertexCount = 0;
     for (let i = -n; i <= n; i++) {
       for (let j = -n; j <= n; j++) {
         if (Math.abs(i) + Math.abs(j) <= n + 1 &&
@@ -349,11 +365,13 @@ Module.onRuntimeInitialized = async function() {
             .attr("cy", j * scale)
             .attr("r", 1.5)
             .attr("fill", "black");
+          vertexCount++;
         }
       }
     }
 
     // Draw background grid lines with low opacity
+    let edgeCount = 0;
     for (let i = -n; i <= n; i++) {
       for (let j = -n; j <= n; j++) {
         if (Math.abs(i) + Math.abs(j) <= n + 1 &&
@@ -373,6 +391,7 @@ Module.onRuntimeInitialized = async function() {
               .attr("stroke", "black")
               .attr("stroke-width", 0.5)
               .attr("opacity", 0.3);
+            edgeCount++;
           }
 
           // Draw vertical edge up if in bounds
@@ -388,111 +407,80 @@ Module.onRuntimeInitialized = async function() {
               .attr("stroke", "black")
               .attr("stroke-width", 0.5)
               .attr("opacity", 0.3);
+            edgeCount++;
           }
         }
       }
     }
 
-    // First create a grid representation to match the Python code's approach
-    const size = 2 * n;
-    const grid = Array(size).fill().map(() => Array(size).fill(0));
+    // Direct rendering of dimers without using a grid
+  let dimerCount = 0;
 
-    // Fill the grid with information about domino positions and types
-    dominoes.forEach(domino => {
-      const startI = domino.y;
-      const startJ = domino.x;
-      
-      if (startI < size && startJ < size) {
-        // Mark this cell as occupied
-        grid[startI][startJ] = 1;
-        
-        // Set the direction: 1 for horizontal, 2 for vertical
-        if (domino.w === 2) { // Horizontal domino
-          if (startJ + 1 < size) {
-            grid[startI][startJ + 1] = 1; // Mark the second cell
-          }
-        } else if (domino.h === 2) { // Vertical domino
-          if (startI + 1 < size) {
-            grid[startI + 1][startJ] = 1; // Mark the second cell
-          }
-        }
-      }
-    });
-    
-    // Now draw the dimers based on the grid, following Python's approach exactly
-    const dimers = [];
+  // The size value used for scaling
+  const size = 2 * n;
 
-    // Now identify and create dimers, following python_simulation.py exactly
-    for (let i = 0; i < size; i++) {
-      for (let j = 0; j < size; j++) {
-        if (grid[i][j] === 1) {
-          let color, x1, y1, x2, y2;
-          
-          // Check for horizontal dominoes (matching Python exactly)
-          if (j + 1 < size && grid[i][j + 1] === 1) {
-            // Check domino type based on parity
-            if (i % 2 === 1 && j % 2 === 1) {
-              // Green horizontal
-              color = useColors ? "green" : "black";
-              x1 = Math.floor((j - i) / 2) - 1;
-              y1 = Math.floor((size - i - j) / 2);
-              x2 = x1 + 1;
-              y2 = y1;
-            } else if (i % 2 === 0 && j % 2 === 0) {
-              // Red horizontal
-              color = useColors ? "red" : "black";
-              x1 = Math.floor((j - i) / 2) - 1;
-              y1 = Math.floor((size - i - j) / 2);
-              x2 = x1 + 1;
-              y2 = y1;
-            }
-            
-            // Mark these cells as processed
-            grid[i][j] = 0;
-            grid[i][j + 1] = 0;
-          }
-          // Check for vertical dominoes
-          else if (i + 1 < size && grid[i + 1][j] === 1) {
-            // Check domino type based on parity
-            if (i % 2 === 1 && j % 2 === 0) {
-              // Blue vertical
-              color = useColors ? "blue" : "black";
-              x1 = Math.floor((j - i) / 2);
-              y1 = Math.floor((size - i - j) / 2);
-              x2 = x1;
-              y2 = y1 + 1;
-            } else if (i % 2 === 0 && j % 2 === 1) {
-              // Yellow vertical
-              color = useColors ? "yellow" : "black";
-              x1 = Math.floor((j - i) / 2);
-              y1 = Math.floor((size - i - j) / 2);
-              x2 = x1;
-              y2 = y1 + 1;
-            }
-            
-            // Mark these cells as processed
-            grid[i][j] = 0;
-            grid[i + 1][j] = 0;
-          }
-          
-          // Save dimer if we identified one
-          if (color && x1 !== undefined) {
-            dimers.push({x1, y1, x2, y2, color});
-          }
-        }
-      }
+  // Draw dimers directly from the domino data
+  dominoes.forEach(domino => {
+    // Based on the logs, dominoes look like: {"x":-20,"y":1000,"w":40,"h":20,"color":"green"}
+
+    // Only attempt to draw dimers that are within reasonable bounds
+    if (Math.abs(domino.x) > 1000 || Math.abs(domino.y) > 1000) {
+      return;
     }
 
-    // Draw all the dimers
-    dimers.forEach(dimer => {
-      dimerGroup.append("line")
-        .attr("x1", dimer.x1 * scale)
-        .attr("y1", dimer.y1 * scale)
-        .attr("x2", dimer.x2 * scale)
-        .attr("y2", dimer.y2 * scale)
-        .attr("stroke", dimer.color)
-        .attr("stroke-width", 4);
-    });
+    // Determine if it's a horizontal or vertical domino
+    const isHorizontal = domino.w > domino.h;
+
+    // Get color from the domino or use black if colors disabled
+    const color = useColors ? domino.color : "black";
+
+    // Calculate center point for the domino
+    const centerX = domino.x / 20;
+    const centerY = -domino.y / 20;  // Flip Y since our coordinate system is inverted
+
+    // Calculate dimer endpoints based on orientation
+    let x1, y1, x2, y2;
+
+    if (isHorizontal) {
+      // For horizontal dominos
+      x1 = centerX - 0.5;
+      y1 = centerY;
+      x2 = centerX + 0.5;
+      y2 = centerY;
+    } else {
+      // For vertical dominos
+      x1 = centerX;
+      y1 = centerY - 0.5;
+      x2 = centerX;
+      y2 = centerY + 0.5;
+    }
+
+    // Draw the dimer on the grid
+    dimerGroup.append("line")
+      .attr("x1", isHorizontal ? (x1+1/2) * scale : x1 * scale)
+      .attr("y1", isHorizontal ? (y1+1) * scale : (y1 + 1/2) * scale)
+      .attr("x2", isHorizontal ? (x2+1/2) * scale : x2 * scale)
+      .attr("y2", isHorizontal ? (y2+1) * scale : (y2 + 1/2) * scale)
+      .attr("stroke", "black")
+      .attr("stroke-width", 6)
+      .attr("class", isHorizontal ? "dimer-edge-h" : "dimer-edge-v");
+
+    // Add circles at endpoints for better visibility
+    dimerGroup.append("circle")
+      .attr("cx", isHorizontal ? (x1+1/2) * scale : x1 * scale)
+      .attr("cy", isHorizontal ? (y1+1) * scale : (y1 + 1/2) * scale)
+      .attr("r", 6)
+      .attr("fill", "black");
+
+    dimerGroup.append("circle")
+      .attr("cx", isHorizontal ? (x2+1/2) * scale : x2 * scale)
+      .attr("cy", isHorizontal ? (y2+1) * scale : (y2 + 1/2) * scale)
+      .attr("r", 6)
+      .attr("fill", "black");
+
+    dimerCount++;
+  });
+
   }
 
   // Update the visualization for a given n.
@@ -522,7 +510,6 @@ Module.onRuntimeInitialized = async function() {
       try {
         currentDominoes = JSON.parse(jsonStr); // Store for later toggling
       } catch (e) {
-        console.error("Error parsing JSON:", e, jsonStr);
         progressElem.innerText = "Error during sampling";
         clearInterval(progressInterval);
         isProcessing = false;
@@ -538,7 +525,6 @@ Module.onRuntimeInitialized = async function() {
       // Update last processed value
       lastValue = n;
     } catch (error) {
-      console.error("Error in updateVisualization:", error);
       progressElem.innerText = "Error during sampling";
       clearInterval(progressInterval);
     } finally {
@@ -583,5 +569,15 @@ Module.onRuntimeInitialized = async function() {
   // Run an initial simulation.
   const initialN = parseInt(inputField.value, 10);
   updateVisualization(initialN);
+
+  // Make sure both tab views are properly initialized once
+  setTimeout(() => {
+    if (currentDominoes && currentDominoes.length > 0) {
+      renderDimerView(currentDominoes);
+
+      // Make the first tab (domino view) active by default
+      document.querySelector('.tablinks').click();
+    }
+  }, 1000);
 };
 </script>
