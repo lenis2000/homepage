@@ -112,7 +112,7 @@ Through asymptotic analysis using steepest descent methods, we identified three 
 \subsection{Remark: Corners process with outliers}
 
 One can also perturb the corners process structure, and get
-correlation kernels similar to \eqref{eq:correlation-kernel} 
+correlation kernels similar to \eqref{eq:correlation-kernel}
 which we had for the Dyson Brownian Motion.
 The perturbed corners process is
 considered in \cite{Ferrari2014PerturbedGUE},
@@ -153,18 +153,18 @@ but has a significant effect on the whole corners process).
 
 Today, the goal is to survey various objects which arise in the KPZ universality class:
 \begin{itemize}
-	\item 
-		The Airy line ensemble, which is 
+	\item
+		The Airy line ensemble, which is
 		the universal edge scaling limit of Dyson Brownian Motion,
 		the corners process, and numerous statistical physics models.
-	\item 
-		Moreover, the Airy line ensemble arises and 
+	\item
+		Moreover, the Airy line ensemble arises and
 		is fundamental for a class of random growth models
 		in one space and one time dimensions, which is known as the KPZ universality class.
-	\item 
-		The Airy line ensemble can be both found in the KPZ equation, and 
-		more fundamentally, in the long-time limit of the KPZ equation --- the 
-		KPZ fixed point Markov dynamics. 
+	\item
+		The Airy line ensemble can be both found in the KPZ equation, and
+		more fundamentally, in the long-time limit of the KPZ equation --- the
+		KPZ fixed point Markov dynamics.
 	\item We will also briefly mention how the Gaussian Free Field (GFF) arises in the KPZ class
 		models in two space dimensions.
 \end{itemize}
@@ -172,7 +172,7 @@ Today, the goal is to survey various objects which arise in the KPZ universality
 \section{A window into universality: Airy line ensemble}
 
 The edge scaling limit of Dyson Brownian Motion
-and the corners process\footnote{Both without outliers --- the presence of 
+and the corners process\footnote{Both without outliers --- the presence of
 critical outliers may add a few extra lines (wanderers) to the Airy line ensemble,
 and we will not consider this complication here.}
 is a universal object for $\beta=2$ models and determinantal structures (and far beyond).
@@ -183,7 +183,7 @@ provide us with a powerful lens through which to examine these universality phen
 	Consider an $N\times N$ GUE (Gaussian Unitary Ensemble) Dyson Brownian motion, i.e., the stochastic process of eigenvalues $(\lambda_1(t)\ge \cdots\ge \lambda_N(t))_{t\in\mathbb{R}}$ evolving under Dyson's eigenvalue dynamics. After centering at the spectral edge parallel to the vector $\mathbf{v}_t$ and applying the
 Airy scaling (tangent axis scaled by $N^{-1/3}$ and fluctuations scaled by $N^{-1/6}$), the top $k$ eigenvalue trajectories converge as $N\to\infty$ to the \textbf{Airy line ensemble}. In particular, for each fixed $k\ge1$ the rescaled process $$(N^{1/6}[\lambda_i(\langle
 			N^{-1/3},N^{-1/6}
-\rangle \cdot \mathbf{v})-c_{N,t}])_{1\le i\le k}$$ converges in distribution (uniformly on compact $t$-intervals) to $(\mathcal{P}_i(t))_{1\le i\le k}$, where $\{\mathcal{P}_i(t)\}_{i\ge1}$ is the parabolic Airy line ensemble. 
+\rangle \cdot \mathbf{v})-c_{N,t}])_{1\le i\le k}$$ converges in distribution (uniformly on compact $t$-intervals) to $(\mathcal{P}_i(t))_{1\le i\le k}$, where $\{\mathcal{P}_i(t)\}_{i\ge1}$ is the parabolic Airy line ensemble.
 \end{theorem}
 
 \begin{remark}
@@ -191,11 +191,35 @@ Airy scaling (tangent axis scaled by $N^{-1/3}$ and fluctuations scaled by $N^{-
 \end{remark}
 
 \begin{theorem}[Airy line ensemble is Brownian Gibbsian \cite{CorwinHammond2013}]
-The parabolic Airy line ensemble $\{\mathcal{P}_i(t)\}_{i\ge1}$ satisfies the \textbf{Brownian Gibbs property}. Namely, for any fixed index $k\ge1$ and any finite time interval $[a,b]$, conditioning on the outside portions of the ensemble (i.e., $\{\mathcal{P}_j(t): t\notin[a,b]\}$ for all $j$, and $\{\mathcal{P}_j(t): j\neq k\}$ for $t\in[a,b]$), the conditional law of the $k$th curve on $[a,b]$ is that of a \textbf{Brownian bridge} from $(a,\mathcal{P}_k(a))$ to $(b,\mathcal{P}_k(b))$ \textbf{conditioned} to stay above the $(k+1)$th curve and below the $(k-1)$th curve on $[a,b]$. In particular, the Airy line ensemble is invariant under this resampling of a single curve by a conditioned Brownian bridge.
+The parabolic Airy line ensemble
+$\{\mathcal{P}_i(t)\}_{i\ge1}$ satisfies the
+\textbf{Brownian Gibbs property}. Namely, for any fixed
+index $k\ge1$ and any finite time interval $[a,b]$,
+conditioning on the outside portions of the ensemble (i.e.,
+$\{\mathcal{P}_j(t): t\notin[a,b]\}$ for all $j$, and
+$\{\mathcal{P}_j(t): j\neq k\}$ for $t\in[a,b]$), the
+conditional law of the $k$th curve on $[a,b]$ is that of a
+\textbf{Brownian bridge} from $(a,\mathcal{P}_k(a))$ to
+$(b,\mathcal{P}_k(b))$ \textbf{conditioned} to stay above
+the $(k+1)$th curve and below the $(k-1)$th curve on
+$[a,b]$. In particular, the Airy line ensemble is invariant
+under this resampling of a single curve by a conditioned
+Brownian bridge.
 \end{theorem}
 
 \begin{theorem}[Characterization of ALE \cite{AggarwalHuang2023Characterization}]
-	The parabolic Airy line ensemble is the \textbf{unique} Brownian Gibbs line ensemble satisfying a natural parabolic curvature condition on the top curve. More precisely, let $\boldsymbol{\mathcal{P}}=(\mathcal{P}_1,\mathcal{P}_2,\ldots)$ be any line ensemble that satisfies the Brownian Gibbs property. Suppose in addition that the top line $\mathcal{P}_1(t)$ \textbf{approaches a parabola} of curvature $1/\sqrt{2}$ at infinity. Then $\boldsymbol{\mathcal{L}}$ must coincide (in law) with the \textbf{parabolic Airy line ensemble}, up to an overall affine shift of the entire ensemble.
+	The parabolic Airy line ensemble is the \textbf{unique}
+	Brownian Gibbs line ensemble satisfying a natural
+	parabolic curvature condition on the top curve. More
+	precisely, let
+	$\boldsymbol{\mathcal{P}}=(\mathcal{P}_1,\mathcal{P}_2,\ldots)$
+	be any line ensemble that satisfies the Brownian Gibbs
+	property. Suppose in addition that the top line
+	$\mathcal{P}_1(t)$ \textbf{approaches a parabola} of
+	curvature $1/\sqrt{2}$ at infinity. Then
+	$\boldsymbol{\mathcal{L}}$ must coincide (in law) with the
+	\textbf{parabolic Airy line ensemble}, up to an overall
+	affine shift of the entire ensemble.
 \end{theorem}
 
 Let us define $\mathcal{L}_i(t)=\mathcal{P}_i(t)+t^2$, and
@@ -205,35 +229,103 @@ from the scaling window, which is of different proportions
 in the horizontal and vertical directions.The non-parabolic
 Airy line ensemble $\mathcal{L}$ is time-stationary.
 
+\section{KPZ universality class: Scaling and fluctuations}
 
-\section{KPZ Universality Class: Scaling and Fluctuations}
+\subsection{Universality of random growth}
 
-In the $(1+1)$-dimensional \textbf{KPZ universality class}, random growth models exhibit a distinctive scale of fluctuations fundamentally different from classical Gaussian behavior. Kardar, Parisi, and Zhang \cite{KPZ1986} predicted that such interfaces have \emph{roughness exponent} $1/2$ and \emph{growth exponent} $1/3$, meaning that if time is scaled by a factor $T$, horizontal distances scale by $T^{2/3}$ and vertical height fluctuations scale by $T^{1/3}$ \cite{remenik2023integrable}. Equivalently, the interface height $h(t,x)$ (after subtracting its deterministic mean growth) satisfies the \emph{$1:2:3$ scaling}:
-\[ x \sim t^{2/3}, \qquad h(t,x)-\mathbb{E}[h(t,x)] \sim t^{1/3}. \]
-These exponents $2/3$ and $1/3$ are universal in one-dimensional growth with local randomness, distinguishing the KPZ class from, e.g., diffusive (Edwards–Wilkinson) interfaces. Intuitively, the interface develops random peaks of size $O(t^{1/3})$, and correlations spread over a spatial range $O(t^{2/3})$—a highly nontrivial, super-diffusive scaling.
+In the $(1+1)$-dimensional \textbf{KPZ universality class},
+random growth models exhibit a distinctive scale of
+fluctuations fundamentally different from classical Gaussian
+behavior. Kardar, Parisi, and Zhang \cite{KPZ1986} predicted
+that such interfaces have \emph{roughness exponent} $1/2$
+and \emph{growth exponent} $1/3$, meaning that if time is
+scaled by a factor $T$, then horizontal distances scale by
+$T^{2/3}$ and vertical height fluctuations scale by
+$T^{1/3}$ \cite{remenik2023integrable}, as $T\to\infty$.
+Equivalently, the interface height $h(t,x)$ (after subtracting its deterministic mean growth) satisfies the \emph{$1:2:3$ scaling}:
+\[ t^{-1/3}\left(
+h(t,\chi t^{2/3})-\mathbb{E}[h(t, \chi t^{2/3})]
+\right)\qquad \textnormal{converges in law as } t\to\infty.
+\]
+These exponents $2/3$ and $1/3$ are universal in
+one-dimensional growth with local randomness, distinguishing
+the KPZ class from, e.g., diffusive (Edwards–Wilkinson)
+interfaces. Intuitively, the interface develops random peaks
+of size $O(t^{1/3})$, and correlations spread over a spatial
+range $O(t^{2/3})$—a highly nontrivial, super-diffusive
+scaling.
 
-One of the most striking discoveries is that the \textbf{one-point distribution} of these fluctuations is governed by the \emph{Tracy–Widom law} from random matrix theory, rather than a normal law. The \textbf{Tracy–Widom distribution} (for Gaussian Unitary Ensemble, GUE) describes the fluctuations of the largest eigenvalue of a random Hermitian matrix. In the KPZ class, the same distribution emerges in the long-time limit for a wide range of models and initial conditions. For example, Johansson (2000) proved that in the Totally Asymmetric Simple Exclusion Process (TASEP) with step (droplet) initial data, the height at the origin, when centered and scaled by $t^{1/3}$, converges in law to the Tracy–Widom GUE distribution \cite{remenik2023integrable}. More precisely, for TASEP one has the asymptotic result
-\[ \mathbb{P}\!\Big( \frac{h(t,0)+ct}{(\Gamma t)^{1/3}} \le r \Big) \xrightarrow[t\to\infty]{} F_{\mathrm{GUE}}(r), \]
-for appropriate model-dependent constants $c,\Gamma>0$, where $F_{\mathrm{GUE}}$ is the cumulative distribution function of the GUE Tracy–Widom law \cite{remenik2023integrable}. This was the first rigorous confirmation of $1/3$ fluctuations and Tracy–Widom statistics in a growth model \cite{johansson2000shape}. Such behavior is believed to be \emph{universal}: many other integrable models (polynuclear growth, last-passage percolation, directed polymers, etc.) exhibit the same long-time distribution and scaling exponents \cite{johansson2000shape}.
+\subsection{First discoveries}
 
-Crucially, the exact form of the Tracy–Widom limit depends on the \emph{initial condition} of the growth process. Different symmetry classes of random matrices appear:
-- **Curved (droplet) initial data:** Starting from a narrow peak (often called \emph{narrow wedge} or droplet initial condition), the height fluctuations follow the Tracy–Widom GUE distribution in the $t\to\infty$ limit \cite{remenik2023integrable}. This corresponds to the \emph{orthogonal unitary} symmetry class (e.g. complex Hermitian matrices).
-- **Flat initial data:** Starting from a flat interface (e.g. all zero initial height), fluctuations converge to the Tracy–Widom GOE distribution \cite{remenik2023integrable}, which is the law of the largest eigenvalue of a random symmetric (Gaussian orthogonal ensemble) matrix. Thus flat interfaces fall in a different sub-class of KPZ with the $1/3$ exponent but a GOE fluctuation law.
-- **Stationary initial data:** Starting from a two-sided Brownian or otherwise stationary initial profile (so that the interface is statistically invariant in law), the fluctuation distribution is again non-Gaussian but neither GOE nor GUE. In this case one obtains the \emph{Baik–Rains distribution}, often denoted $F_0$, which was first derived by Baik and Rains for a stationary last passage percolation model. This distribution governs the long-time height fluctuations in the stationary KPZ regime (with $1/3$ scaling as well).
+One of the most striking discoveries is that the
+\textbf{one-point distribution} of these fluctuations,
+when the growth starts from the so-called
+\emph{droplet} (or \emph{narrow wedge}) initial condition,
+is
+governed by the GUE \emph{Tracy–Widom law},
+rather than a normal law. The \textbf{Tracy–Widom
+distribution} (for Gaussian Unitary Ensemble, GUE) describes
+the fluctuations of the largest eigenvalue of a random
+Hermitian matrix. In the KPZ class, the same distribution
+emerges in the long-time limit for a wide range of models
+and initial conditions. For example,
+in the Totally Asymmetric Simple Exclusion Process
+(TASEP) with step initial data (corresponding to the narrow wedge), the height at the
+origin, when centered and scaled by $t^{1/3}$, converges in
+law to the Tracy–Widom GUE distribution
+\cite{johansson2000shape},
+\cite{remenik2023integrable}.
+This was the first rigorous confirmation of $1/3$
+fluctuations in a random growth model.
+Such behavior is believed
+to be \emph{universal}: many other integrable models
+(polynuclear growth, last-passage percolation, directed
+polymers, etc.) exhibit the same long-time distribution and
+scaling exponents.
 
-These three cases (curved, flat, stationary) are the canonical universality subclasses of KPZ, sometimes referred to as the GUE, GOE, and Baik–Rains subclasses respectively. All share the same spatial $2/3$ exponent and temporal $1/3$ exponent, but with different limiting laws reflecting the initial condition's symmetry.
+\subsection{Effect of initial conditions}
+
+Crucially, the exact form of the Tracy--Widom limit depends on the \emph{initial condition} of the growth process. Different symmetry classes of random matrices appear:
+\begin{itemize}
+		\item \textbf{Curved (droplet) initial data:} Starting
+			from a narrow peak (often called \emph{narrow wedge}
+			or droplet initial condition), the height fluctuations
+			follow the Tracy--Widom GUE distribution in the
+			$t\to\infty$ limit. This
+			corresponds to the \emph{unitary} symmetry
+			class (e.g. complex Hermitian matrices).
+
+		\item \textbf{Flat initial data:} Starting from a flat
+			interface (e.g. all zero initial height), fluctuations
+			converge to the Tracy--Widom GOE distribution,
+			which is the law of the
+			largest eigenvalue of a random real symmetric (Gaussian
+			orthogonal ensemble) matrices, with \emph{orthogonal} symmetry.
+
+		\item \textbf{Stationary initial data:} Starting from a
+			two-sided Brownian or otherwise stationary initial
+			profile (so that the interface is statistically
+			invariant in law), the fluctuation distribution is
+			again non-Gaussian but neither GOE nor GUE. In this
+			case one obtains the \emph{Baik--Rains distribution},
+			often denoted $F_0$, which was first derived by Baik
+			and Rains for a stationary last passage percolation
+			model \cite{baik2000limiting_BR_distribution}.
+\end{itemize}
+
+These three cases (curved, flat, stationary) are the canonical universality subclasses of KPZ, sometimes referred to as the GUE, GOE, and Baik--Rains subclasses respectively. All share the same spatial $2/3$ exponent and temporal $1/3$ exponent, but with different limiting laws reflecting the initial condition's symmetry.
 
 Beyond one-point fluctuations, the KPZ class is characterized by rich \textbf{spatio-temporal processes} in the scaling limit. Instead of converging merely to a random variable, the entire growing interface (appropriately rescaled) converges to a non-degenerate random function. In particular, for curved initial conditions one obtains the \textbf{Airy$_2$ process} as the scaling limit of the height profile. Similarly, flat initial conditions give rise to the \textbf{Airy$_1$ process}. These \emph{Airy processes} are universal stochastic processes capturing the spatial fluctuation patterns of KPZ interfaces.
 
 \begin{definition}[Airy$_2$ and Airy$_1$ processes]
-The \emph{Airy$_2$ process}, denoted $\mathcal{A}_2(x)$, is a stationary\footnote{Here “stationary” means that $\mathcal{A}_2(x)$, after subtracting a parabola $x^2$, has stationary increments. Equivalently, $\mathcal{A}_2(x) + x^2$ is a stationary process in $x$.} stochastic process with continuous sample paths, which arises as the $t\to\infty$ scaling limit of KPZ-class interfaces with curved (droplet) initial data. Its one-point distribution is the Tracy–Widom GUE law. Likewise, the \emph{Airy$_1$ process}, $\mathcal{A}_1(x)$, is the corresponding scaling limit for flat initial data, with one-point marginal following the Tracy–Widom GOE law.
+The \emph{Airy$_2$ process}, denoted $\mathcal{A}_2(x)$, is a stationary\footnote{Here ``stationary'' means that $\mathcal{A}_2(x)$, after subtracting a parabola $x^2$, has stationary increments. Equivalently, $\mathcal{A}_2(x) + x^2$ is a stationary process in $x$.} stochastic process with continuous sample paths, which arises as the $t\to\infty$ scaling limit of KPZ-class interfaces with curved (droplet) initial data. Its one-point distribution is the Tracy--Widom GUE law. Likewise, the \emph{Airy$_1$ process}, $\mathcal{A}_1(x)$, is the corresponding scaling limit for flat initial data, with one-point marginal following the Tracy--Widom GOE law.
 \end{definition}
 
-\noindent In less formal terms, $\mathcal{A}_2(x)$ describes the centered height fluctuations of a curved KPZ interface viewed on the $x$-scale of $t^{2/3}$, while $\mathcal{A}_1(x)$ does the same for a flat interface. These processes were first identified in exactly solvable models: $\mathcal{A}_2$ was introduced by Prähofer and Spohn, who showed that the polynuclear growth (PNG) model with droplet initial condition converges to $\mathcal{A}_2$ in the appropriate scaling limit \cite{remenik2023integrable}. The Airy$_2$ process can be defined via its finite-dimensional distributions, given by a determinantal formula with the extended Airy kernel. In particular, any fixed $x$ gives $\mathcal{A}_2(x)\stackrel{d}{=}\chi_2$, where $\chi_2$ has the GUE Tracy–Widom distribution. Similarly, the Airy$_1$ process (Sasamoto, 2005) describes the scaling limit for flat interfaces, and one-point $\mathcal{A}_1(0)$ has the GOE Tracy–Widom law (up to a constant factor). Another member of this family, the \emph{Airy$_{\mathrm{stat}}$ process}, arises from stationary initial conditions and has the Baik–Rains distribution at each point.
+\noindent In less formal terms, $\mathcal{A}_2(x)$ describes the centered height fluctuations of a curved KPZ interface viewed on the $x$-scale of $t^{2/3}$, while $\mathcal{A}_1(x)$ does the same for a flat interface. These processes were first identified in exactly solvable models: $\mathcal{A}_2$ was introduced by Prähofer and Spohn, who showed that the polynuclear growth (PNG) model with droplet initial condition converges to $\mathcal{A}_2$ in the appropriate scaling limit \cite{remenik2023integrable}. The Airy$_2$ process can be defined via its finite-dimensional distributions, given by a determinantal formula with the extended Airy kernel. In particular, any fixed $x$ gives $\mathcal{A}_2(x)\stackrel{d}{=}\chi_2$, where $\chi_2$ has the GUE Tracy--Widom distribution. Similarly, the Airy$_1$ process (Sasamoto, 2005) describes the scaling limit for flat interfaces, and one-point $\mathcal{A}_1(0)$ has the GOE Tracy--Widom law (up to a constant factor). Another member of this family, the \emph{Airy$_{\mathrm{stat}}$ process}, arises from stationary initial conditions and has the Baik--Rains distribution at each point.
 
-The Airy processes can be coupled together as an \emph{Airy line ensemble} – an infinite collection of continuous curves $\{\mathcal{A}_1(x) > \mathcal{A}_2(x) > \mathcal{A}_3(x) > \cdots\}$ with a special spatial Markov property. This \textbf{Airy line ensemble} enjoys the so-called \emph{Brownian Gibbs property} \cite{CorwinHammond2013}: informally, if one conditionally “freezes” all but a finite segment of one of the curves, that segment redistributes as a Brownian motion conditioned not to cross the curves above or below it. The Brownian Gibbs property uniquely characterizes the Airy line ensemble among all line ensembles with similar Brownian regularity assumptions \cite{AggarwalHuang2023Characterization}. In particular, the top curve of this ensemble is (after a parabolic shift) the Airy$_2$ process. Thus, the Airy$_2$ and Airy$_1$ processes are not only limits of certain growth models but also canonical objects characterized by a rich integrable structure.
+The Airy processes can be coupled together as an \emph{Airy line ensemble} -- an infinite collection of continuous curves $\{\mathcal{A}_1(x) > \mathcal{A}_2(x) > \mathcal{A}_3(x) > \cdots\}$ with a special spatial Markov property. This \textbf{Airy line ensemble} enjoys the so-called \emph{Brownian Gibbs property} \cite{CorwinHammond2013}: informally, if one conditionally ``freezes'' all but a finite segment of one of the curves, that segment redistributes as a Brownian motion conditioned not to cross the curves above or below it. The Brownian Gibbs property uniquely characterizes the Airy line ensemble among all line ensembles with similar Brownian regularity assumptions \cite{AggarwalHuang2023Characterization}. In particular, the top curve of this ensemble is (after a parabolic shift) the Airy$_2$ process. Thus, the Airy$_2$ and Airy$_1$ processes are not only limits of certain growth models but also canonical objects characterized by a rich integrable structure.
 
-In summary, the KPZ universality class in $1+1$ dimensions is marked by \textbf{(i)} $1/3$ power-law fluctuations in height, \textbf{(ii)} $2/3$ spatial correlation scaling, \textbf{(iii)} non-Gaussian fluctuation distributions (Tracy–Widom GUE/GOE or Baik–Rains) depending on initial data, and \textbf{(iv)} emergent universal processes like the Airy$_2$ and Airy$_1$ processes for the spatial fluctuations. These phenomena have been verified in a number of exactly solvable models and are conjectured to hold universally for all models in the KPZ class.
+In summary, the KPZ universality class in $1+1$ dimensions is marked by \textbf{(i)} $1/3$ power-law fluctuations in height, \textbf{(ii)} $2/3$ spatial correlation scaling, \textbf{(iii)} non-Gaussian fluctuation distributions (Tracy--Widom GUE/GOE or Baik--Rains) depending on initial data, and \textbf{(iv)} emergent universal processes like the Airy$_2$ and Airy$_1$ processes for the spatial fluctuations. These phenomena have been verified in a number of exactly solvable models and are conjectured to hold universally for all models in the KPZ class.
 
 \section{The KPZ Equation and the Cole--Hopf Transformation}
 The Kardar–Parisi–Zhang (KPZ) equation is a stochastic partial differential equation that is widely regarded as the canonical continuum model for the KPZ universality class. It describes the evolution of a random height function $h(t,x)$ (an interface) subject to surface tension, lateral growth, and stochastic forcing. In its standard form, the KPZ equation is written as
