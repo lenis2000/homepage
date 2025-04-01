@@ -237,26 +237,33 @@ def aztec_edge_printer(x0, n):
         for j in range(size):
             if x0[i][j] == 1:
                 # Convert matrix coordinates to Aztec diamond coordinates
-                # The conversion needs to map the matrix position to the correct edge in the diamond
+                # These mapping calculations align with the vertex grid defined above
                 if i % 2 == 1 and j % 2 == 1:  # Green horizontal
                     # Calculate vertex coords of the domino's endpoints
-                    x1, y1 = (j - i) // 2, (size - i - j) // 2
-                    x2, y2 = (j - i) // 2 + 1, (size - i - j) // 2
+                    x1 = (j - i) // 2 - 1
+                    y1 = (size - i - j) // 2
+                    x2 = x1 + 1
+                    y2 = y1
                     ax.plot([x1, x2], [y1, y2], 'green', linewidth=3)
 
                 elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
-                    x1, y1 = (j - i) // 2, (size - i - j) // 2
-                    x2, y2 = (j - i) // 2, (size - i - j) // 2 + 1
+                    x1 = (j - i) // 2
+                    y1 = (size - i - j) // 2
+                    x2 = x1
+                    y2 = y1 + 1
                     ax.plot([x1, x2], [y1, y2], 'blue', linewidth=3)
 
                 elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
-                    x1, y1 = (j - i) // 2 - 1, (size - i - j) // 2
-                    x2, y2 = (j - i) // 2, (size - i - j) // 2
+                    x1 = (j - i) // 2 - 1
+                    y1 = (size - i - j) // 2
+                    x2 = x1 + 1
+                    y2 = y1
                     ax.plot([x1, x2], [y1, y2], 'red', linewidth=3)
-
                 elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
-                    x1, y1 = (j - i) // 2, (size - i - j) // 2 - 1
-                    x2, y2 = (j - i) // 2, (size - i - j) // 2
+                    x1 = (j - i) // 2
+                    y1 = (size - i - j) // 2
+                    x2 = x1
+                    y2 = y1 + 1
                     ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=3)
 
     # Set aspect ratio to be equal and remove axes
@@ -273,7 +280,8 @@ def aztec_edge_printer(x0, n):
     plt.show()
 
 
-n = 4
+n = 40
+n = 40
 A1a = []
 for i in range(2*n):
     row = []
