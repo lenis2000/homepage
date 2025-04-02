@@ -53,7 +53,7 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 12: Title TBD}
+\\Lecture 12: Random Growth Models}
 
 
 \date{Wednesday, April 2, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
@@ -390,12 +390,27 @@ solvable growth models in this class (e.g., \cite{BorFerr2008DF}),
 which have logarithmic fluctuations. Moreover, their fluctuations
 are governed by the Gaussian Free Field (GFF), which we encountered earlier in
 \href{https://lpetrov.cc/rmt25/rmt2025-l9.pdf}{Lecture 9}.
+Moreover, the GFF should be the stationary distribution for the anisotropic
+KPZ fixed point (Markov process which should be the long-time scaling limit
+of the anisotropic KPZ equation).
 
+Back to random matrices, consider the following question:
+\begin{quote}
+	Can we imagine a 2-dimensional random growth model
+	on random matrices, which will look like the 2-dimensional anisotropic KPZ equation?
+	It would have random growth features, where some 2-dimensional surface is growing,
+	and will have the GFF fluctuations.
+\end{quote}
 
-
-
-
-
+We know an object in random matrices
+with GFF fluctuations --- the height function of the corners process.
+So, a natural guess is to take the Brownian motion on matrix elements,
+and look at the evolution of the corners eigenvalues. However,
+the evolution of the eigenvalues of all corners is \emph{not}
+going to be Markov.
+A workaround is the construction by Warren \cite{warren2005dyson},
+which produces the relevant Markov process on the full
+interlacing corners configuration.
 
 \section{Polynuclear Growth and Last Passage Percolation}
 \label{sec:PNG}
