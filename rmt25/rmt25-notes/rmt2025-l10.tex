@@ -136,25 +136,90 @@ We now focus on $\lambda_i(t)$, the (ordered) eigenvalues of $\mathcal{M}(t)$. D
 \[
 \lambda(t) = \bigl(\lambda_1(t)\ge \dots \ge \lambda_N(t)\bigr).
 \]
+% \begin{theorem}
+% \label{thm:lambda_is_markov}
+% As $t$ varies, the process $\lambda(t)$ is a continuous-time Markov process in $\mathbb{R}^N$.
+% \end{theorem}
+% \begin{proof}[Sketch of proof]
+%   Assume $\beta=2$, the case $\beta=1$ is similar.
+% We need to show that $\lambda(t)$ depends on its future and past only through its instantaneous value. Using the independent increment property of $X(t)$, consider times $0< u< t$. We have
+% \[
+% \mathcal{M}(t) \;=\; \mathcal{M}(u)\;+\;\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr).
+% \]
+% Since $\mathcal{M}(u)$ diagonalizes to $\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)$ by some unitary $U_u$, we can write
+% \[
+% U_u^\dagger\,\mathcal{M}(t)\,U_u \;=\;\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;+\; U_u^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)\,U_u.
+% \]
+% The second term again has i.i.d.\ random entries (due to unitary invariance of
+% GUE), independent of $\mathcal{M}(s)$ for $s\le u$.
+% Therefore, conditioned on $\mathcal{M}(s)$, $s\le u$, the dependence only
+% comes through $\lambda(u)$, and the eigenvalues $\lambda_i(s)$ for $s\ge u$ follow
+% the same dynamics. This proves the Markov property.
+% \end{proof}
+
 \begin{theorem}
 \label{thm:lambda_is_markov}
 As $t$ varies, the process $\lambda(t)$ is a continuous-time Markov process in $\mathbb{R}^N$.
 \end{theorem}
-\begin{proof}[Sketch of proof]
-	Assume $\beta=2$, the case $\beta=1$ is similar.
-We need to show that $\lambda(t)$ depends on its future and past only through its instantaneous value. Using the independent increment property of $X(t)$, consider times $0< u< t$. We have
+
+\begin{lemma}
+	\label{lemma:U_V_Haar_indep}
+	Let $U\in U(n)$ be an arbitrary fixed or random, and let $V\in U(n)$
+	be Haar distributed and independent of $U$. Then the matrices $U$ and $UV$ are independent
+	and distributed as $(U,V)$.
+\end{lemma}
+\begin{proof}
+	We have
+	\[
+	\begin{aligned}
+		\mathbb{P}(U\in A, UV\in B)
+		&\;=\;
+		\int_{U(n)}\int_{U(n)}\mathbf{1}_{A}(U)\mathbf{1}_{B}(UV)\,dU\,dV
+		\\
+		&\;=\;
+		\int_{U(n)}\int_{U(n)}\mathbf{1}_{A}(U)\mathbf{1}_{B}(U)\,dU\,dV
+		\\
+		&\;=\;
+		\int_{U(n)}\mathbf{1}_{A}(U)\,dU\cdot\int_{U(n)}\mathbf{1}_{B}(U)\,dV
+		\\
+		&\;=\;
+		\mathbb{P}(U\in A)\cdot\mathbb{P}(V\in B).
+	\end{aligned}
+	\]
+	Here we used the fact that for any fixed $U$, the distribution of $VU$ is the same as the distribution of $V$. This is because the Haar measure is invariant under left multiplication by unitary matrices. Thus, we get independence.
+\end{proof}
+
+\begin{proof}[Sketch of proof of \Cref{thm:lambda_is_markov}]
+Assume $\beta=2$, the case $\beta=1$ is similar.
+We need to show that $\lambda(t)$ depends on its past only through its instantaneous value. Using the independent increment property of the Brownian motion on matrices,
+consider times $0< u< t$. We have
 \[
-\mathcal{M}(t) \;=\; \mathcal{M}(u)\;+\;\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr).
+	\mathcal{M}(t) \;=\; \mathcal{M}(u)\;+\;\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr),
 \]
-Since $\mathcal{M}(u)$ diagonalizes to $\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)$ by some unitary $U_u$, we can write
+Where the second term is independent of all information up to $u$.
+Since $\mathcal{M}(u)$ diagonalizes to $\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)$ by some unitary $U_u$:
+\begin{equation*}
+	\mathcal{M}(u)=U_u\,\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\,U_u^\dagger.
+\end{equation*}
+Now take another independent Haar-distributed unitary matrix $V$ and 
+write
 \[
-U_u^\dagger\,\mathcal{M}(t)\,U_u \;=\;\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;+\; U_u^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)\,U_u.
+	V^\dagger\mathcal{M}(t)\,V=V^\dagger\;U_u^\dagger\,\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;U_u V\;+V^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)V.
 \]
-The second term again has i.i.d.\ random entries (due to unitary invariance of
-GUE), independent of $\mathcal{M}(s)$ for $s\le u$.
-Therefore, conditioned on $\mathcal{M}(s)$, $s\le u$, the dependence only
-comes through $\lambda(u)$, and the eigenvalues $\lambda_i(s)$ for $s\ge u$ follow
-the same dynamics. This proves the Markov property.
+Here, $U_uV$ is Haar distributed and independent of $U_u$ by \Cref{lemma:U_V_Haar_indep}.
+Therefore, $U_uV$ carries no information from the times $s\le u$.
+Thus, after conjugation by $U_uV$, we have
+\[
+U_u\,\mathcal{M}(t)\,U_u^\dagger\;=\;\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;+\; U_u V\bigl(V^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)V\bigr)\,V^\dagger U_u^\dagger.
+\]
+The left-hand side 
+has eigenvalues $\lambda_j(t)$, which are obtained from $\lambda_j(u)$
+by adding a random term. 
+This random term is a GUE matrix with variance $t-u$
+(the matrix $V^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)V$ which has the GUE distribution
+by the unitary invariance of the GUE),
+conjugated by a matrix $U_uV$ which is independent of the times $s \le u$.
+This completes the proof.
 \end{proof}
 
 \section{Dyson Brownian Motion}
@@ -198,7 +263,7 @@ Here,
 \item \(\sigma(\cdot)\) is the \emph{diffusion coefficient}, encoding how strongly the process is randomized by Brownian motion.
 \end{itemize}
 Under suitable Lipschitz and growth conditions on \(b\) and \(\sigma\), one can show \emph{existence and pathwise uniqueness} of strong solutions to \eqref{eq:1D_SDE_general}. Concretely, this means there is almost surely a unique process \(x(t)\) satisfying \eqref{eq:1D_SDE_general} for each realization of the Brownian motion \(W(t)\). One constructs such a solution, for example, by an iterative limit of approximations.
-The simplest discrete-time approximation, analogous to Euler’s method for ordinary differential equations. Over a small time step \(\Delta t\), one approximates
+The simplest discrete-time approximation, analogous to Euler's method for ordinary differential equations. Over a small time step \(\Delta t\), one approximates
 \[
 x_{n+1} \;=\; x_n \;+\; b(x_n)\,\Delta t \;+\; \sigma(x_n)\,\bigl(W(t_{n+1}) - W(t_n)\bigr).
 \]
@@ -235,12 +300,12 @@ b\bigl(X(t)\bigr)\,dt
 \;+\;
 \sigma\bigl(X(t)\bigr)\,dW(t),
 \]
-where \(b(\cdot)\colon\mathbb{R}^n\to\mathbb{R}^n\) and \(\sigma(\cdot)\colon\mathbb{R}^n\to \mathbb{R}^{n\times n}\). Here \(W(t)\) is an \(n\)-dimensional Brownian motion, and the product \(\sigma\bigl(X(t)\bigr)\,dW(t)\) is understood as a matrix-vector multiplication in each small time increment. Existence, uniqueness, and It\^{o}’s formula all generalize naturally under suitable regularity assumptions.
+where \(b(\cdot)\colon\mathbb{R}^n\to\mathbb{R}^n\) and \(\sigma(\cdot)\colon\mathbb{R}^n\to \mathbb{R}^{n\times n}\). Here \(W(t)\) is an \(n\)-dimensional Brownian motion, and the product \(\sigma\bigl(X(t)\bigr)\,dW(t)\) is understood as a matrix-vector multiplication in each small time increment. Existence, uniqueness, and It\^{o}'s formula all generalize naturally under suitable regularity assumptions.
 
 \paragraph{Summary}
 Although SDEs can be introduced rigorously via measure-theoretic tools, the above \emph{informal} derivation and discussion provide a workable framework for many typical computations. The key points are:
 \begin{itemize}
-\item Brownian motion’s roughness prevents classical differential calculus, so new techniques (It\^{o} integrals) are needed.
+\item Brownian motion's roughness prevents classical differential calculus, so new techniques (It\^{o} integrals) are needed.
 \item The It\^{o} formula extends the classical chain rule by adding a second-order correction term.
 \item Existence and uniqueness theorems ensure that SDEs define well-posed dynamical systems in a stochastic setting.
 \item Extending to matrix-valued (or multi-dimensional) settings is conceptually straightforward but requires careful linear algebraic bookkeeping and additional regularity arguments.
