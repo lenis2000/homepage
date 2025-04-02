@@ -526,7 +526,6 @@ Let us compare the single-layer PNG growth with the ingredients of the KPZ equat
 
 Let us now describe the height function $h_1(t,x)$ of the top layer of the PNG model as a
 percolation problem in the Poisson environment.
-
 Consider a Cartesian coordinate system with axes $u$ and
 $v$. Let $t$
 represent the diagonal ``time'' axis, defined as $t = u + v$.
@@ -541,18 +540,15 @@ it collects along the way.
 
 The last passage time $\mathcal{P}[(u_1, v_1) \to (u_2, v_2)]$ is defined as the maximum weight among all up-right paths from $(u_1, v_1)$ to $(u_2, v_2)$:
 \begin{equation*}
-\mathcal{P}[(u_1, v_1) \to (u_2, v_2)] = \max_{\pi: (u_1, v_1) \to (u_2, v_2)} \#\{\pi \cap \mathcal{P}\}
+\mathcal{P}[(u_1, v_1) \to (u_2, v_2)] = \max_{\pi: (u_1, v_1) \to (u_2, v_2)} \#\{\text{Poisson points collected by }\pi\}
 \end{equation*}
-Clearly, the maximum is attained on piecewise linear paths. The maximum is a random variable
-depending on the environment.
+This maximum is always attained by some piecewise linear path and represents a random variable that depends on the Poisson environment $\mathcal{P}$.
 
 For the PNG model with the droplet initial condition, the height function $h_1(t,x)$ at position $x$ and time $t$ can be expressed as:
 \begin{equation*}
-h_1(t,x) = L((0,0) \to (u,v))
+h_1(t,x) = \mathcal{P}[(0,0) \to (u,v)]
 \end{equation*}
-where $(u,v)$ is chosen such that $u + v = t$ and $u - v = x$. In other words, the point $(u,v)$ lies on the diagonal "time" line $t = u + v$ at position $x = u - v$.
-
-
+where the coordinates $(u,v)$ satisfy $u + v = t$ and $u - v = x$. In other words, the point $(u,v)$ lies on the diagonal "time" line $t = u + v$ at the spatial position corresponding to $x = u - v$.
 
 
 \newpage
