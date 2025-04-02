@@ -415,6 +415,195 @@ interlacing corners configuration.
 \section{Polynuclear Growth and Last Passage Percolation}
 \label{sec:PNG}
 
+\subsection{Definition and single-layer PNG}
+\label{sub:PNG-definition}
+We start with the \emph{single-layer} PNG model on the real line. The interface height $h(t,x)$ evolves in continuous time $t\ge0$ over the spatial coordinate $x\in\mathbb{R}$ and has piecewise-constant plateaus with sharp upward steps.
+In other words, $h(t,x)$ is piecewise constant in $x$, and takes integer values.
+
+\smallskip
+
+\noindent\textbf{Dynamics.} The evolution is described by two basic ingredients:
+\begin{enumerate}
+\item \emph{Nucleation events:} At random times and locations $(t,x)$ in the plane, a new ``island'' of height 1 is born atop the existing surface. Each newly born island sits just above $h(t,x)$, creating a step of height $1$ at the precise point $x$ and time $t$.
+	We assume that the nucleation events form a Poisson process in space-time $(t,x)$.
+\item \emph{Lateral spread:} Once an island is created at height $k+1$, its boundaries spread outward (to the left and right in $x$) with speed $1$. Thus a step boundary moves in both directions until it merges with another step boundary or nucleation event.
+	When the islands merge, the height becomes flat at this point.
+\end{enumerate}
+See \Cref{fig:PNG} for an illustration of the single-layer PNG model.
+See also \Cref{fig:png-single} 
+for an evolution 
+of the nucleation events, each of which 
+spreads at speed $1$.
+
+\begin{figure}[htb]
+ \centering
+ \begin{tikzpicture}[scale=0.9]
+ % Axes
+ \draw[->] (-4,0) -- (4,0) node[right] {$x$};
+ \draw[->] (0,0) -- (0,4) node[above] {$t$};
+
+ % PNG Interface at time t=2 (with up and down steps)
+ \draw[thick, blue] (-4,2) -- (-3.5,2) -- (-3.5,2.6) -- (-2,2.6)--++(0,-.6)--++(.1,0)--++(0,-.6)
+ --++(1,0)--++(0,.6)--++(1.5,0)--++(0,-0.8)--++(1,0)--++(0,.6)--++(.2,0)--++(0,.6)--++(1.5,0);
+
+
+ \end{tikzpicture}
+ \caption{Polynuclear Growth (PNG) model interface.}
+ \label{fig:PNG}
+\end{figure}
+
+
+\begin{figure}[htpb]
+\centering
+\begin{tikzpicture}[scale=0.85,>=stealth, line cap=round, line join=round]
+% time axis
+\draw[->] (-4.2,0) -- (4.2,0) node[right] {$x$};
+\draw[->] (0,0) -- (0,3.5) node[above] {$t$};
+% nucleation events
+\node[circle, fill=black, inner sep=1pt] (n1) at (1.5,1.1) {};
+\node[circle, fill=black, inner sep=1pt] (n2) at (-2.5,1.9) {};
+\node[circle, fill=black, inner sep=1pt] (n3) at (-0.5,2.4) {};
+% arcs for lateral spread
+\draw[thick] plot [domain=1.5-1.1:1.5+1.1] (\x,{1.1+abs(\x-1.5)});
+\draw[thick] plot [domain=-2.5-1.6:-2.5+1.6] (\x,{1.9+abs(\x+2.5)});
+\draw[thick] plot [domain=-0.5-0.4:-0.5+0.4] (\x,{2.4+abs(\x+0.5)});
+% partial interface shape for demonstration
+% we only draw several "steps" at certain time slices
+% time slice t=3
+\draw[dashed] (-4,3) -- (4,3);
+\node at (4.25,3) {$t=3$};
+% some example step boundary: from roughly -3.5 to -2.5, height 1
+% (for illustration only, not exact solution)
+\end{tikzpicture}
+\caption{Single-layer PNG: Nucleations (black dots) appear randomly in the $(t,x)$ plane
+according to a Poisson process. Each nucleation creates an upward step of height $1$. The boundary of each newly created island expands laterally at speed $1$.}
+\label{fig:png-single}
+\end{figure}
+
+\smallskip
+
+\noindent\textbf{Initialization.} One typically imposes an initial condition $h(0,x)$ on the spatial axis (e.g., a single spike or droplet, or a flat interface).
+The flat interface is $h(0,x)=0$ for all $x\in\mathbb{R}$, and the droplet is a single upward step at $x=0$ with height $1$. In the droplet case, we also set $h(0,x)=-\infty$ for $x\ne 0$, for
+convenience.
+
+\subsection{Multiline PNG}
+\label{sub:multiline-png}
+
+The \emph{multiline} version of PNG tracks multiple height levels by stacking interfaces
+at multiple layers, $h_k(t,x)$. A merging event 
+at layer $k$ produces a nucleation event at layer $k+1$.
+So, the nucleation at $h_1$ is powered by the Poisson process,
+while the nucleation at each $h_k$, $k\ge 2$, is powered by the merges at $h_{k-1}$.
+The initial condition is assumed to satisfy 
+\begin{equation*}
+	h_1(0,x) \ge h_2(0,x) \ge \cdots ,\qquad \textnormal{for all } x\in\mathbb{R}.
+\end{equation*}
+This ordering is preserved by the evolution,
+see Problem~\ref{prob:multiline-png}.
+
+We see that the evolution of $h_2,h_3,\ldots $ is 
+just a function of the full space-time evolution of $h_1$.
+However, at fixed time $t$, 
+the functions $h_k(t,\cdot)$ cannot be determined
+just by $h_1(t,\cdot)$.
+
+
+\subsection{KPZ mechanisms in the PNG growth}
+
+Let us compare the single-layer PNG growth with the ingredients of the KPZ equation
+\eqref{eq:KPZ}:
+\begin{itemize}
+	\item 
+\end{itemize}
+
+
+
+
+\newpage
+\subsection{Mapping PNG to last passage percolation}
+\label{sub:PNG-LPP-connection}
+One of the most important viewpoints is that a single-layer PNG interface can be encoded by a \emph{directed last passage percolation} (LPP) model in a \emph{Poisson} random environment. Concretely, suppose that nucleations occur according to a homogeneous Poisson point process of intensity $1$ in the upper half-plane $\{(t,x):t>0,x\in\mathbb{R}\}$. Then each point $(t,x)$ is the birth of an island at height $1$ above the existing interface.
+
+\smallskip
+
+\noindent\textbf{Steps as up-right paths.} Define a time-axis $t$ (vertical) and space-axis $x$ (horizontal). If we track one upward step boundary from the moment of nucleation at $(t,x)$, it extends leftward with speed $1$ (slope $-1$) and rightward with speed $1$ (slope $+1$). For the boundary to persist until some later time $T>t$, it must not collide with any other step boundary that is seeded at a point $(t',x')$ with $t'<T$.
+
+\smallskip
+
+\noindent\textbf{LPP interpretation.} For an up-right path $\pi$ in the plane, let $\pi$ pass only through space-time points with slope $1$ or vertical steps. Then the ``weight'' of $\pi$ can be defined as the number of Poisson points (nucleations) it encounters along the way. In last passage percolation, we seek a path that collects as many Poisson points as possible between given initial and final locations in the $(t,x)$ plane. The maximal weight over all up-right paths is the \emph{last passage time}. Figure \ref{fig:png-lpp-map} shows how Poisson points might lie in the plane, and how an up-right path might pass through them.
+
+\begin{figure}[htpb]
+\centering
+\begin{tikzpicture}[scale=0.9]
+\draw[->] (0,0) -- (7,0) node[right] {$x$};
+\draw[->] (0,0) -- (0,3.5) node[above] {$t$};
+% Poisson points
+\node[circle, fill=black, inner sep=1pt] at (1.1,0.5) {};
+\node[circle, fill=black, inner sep=1pt] at (3.2,1.0) {};
+\node[circle, fill=black, inner sep=1pt] at (2.4,1.5) {};
+\node[circle, fill=black, inner sep=1pt] at (5.2,2.1) {};
+\node[circle, fill=black, inner sep=1pt] at (1.9,2.6) {};
+% sample up-right path
+\draw[thick,blue] (0,0) .. controls (0,1) and (1,1) .. (1,1) -- (2,2) .. controls (2,2.5) and (3,2.5) .. (3,2.5) -- (5,2.5);
+\end{tikzpicture}
+\caption{A Poisson scattering of nucleation points in the upper half-plane. An up-right path (blue) collects those points it passes through. The maximum number of points collected by a path from $(t,x)=(0,0)$ to $(T,X)$ encodes the PNG height above $X$ at time $T$.}
+\label{fig:png-lpp-map}
+\end{figure}
+
+\smallskip
+
+\noindent\textbf{Equivalence of height and last passage time.} In a classical result (sometimes called the Robinson--Schensted correspondence in continuous form), one finds that the PNG height at a given location/time is exactly the maximal number of Poisson points an up-right path can collect on its way to that location/time. This equivalence extends to \emph{multipath} last passage percolation, mirroring how multiline PNG arises from multiple nested up-right paths that do not intersect.
+
+\subsection{Multipath LPP and the multilayer PNG}
+\label{sub:multi-lpp-multi-png}
+We now see how the \emph{multi-layer} PNG from Subsection \ref{sub:multiline-png} matches a \emph{multipath} version of LPP. Suppose we fix $M$ layers in the PNG, or equivalently fix $M$ nonintersecting up-right paths in the Poisson environment. Each path tries to collect as many Poisson points as possible, subject to the constraint that the paths remain strictly nonintersecting (e.g., we can number them from top to bottom).
+
+\begin{itemize}
+\item The bottom path corresponds to the first layer $h_1(t,x)$. It accumulates a maximal number of Poisson points among all up-right paths from, say, $(0,-\infty)$ to $(t,x)$.
+\item The second path is forced to stay above the first path and thus sees fewer available points. This path corresponds to the second PNG layer $h_2(t,x)$, etc.
+\end{itemize}
+
+We have thus a bijection between these nonintersecting LPP paths and multiline PNG interfaces. Such a direct connection is a key source of \emph{integrable structure}: the nonintersecting property implies determinantal formulas for correlation functions, reminiscent of the GUE corner processes or noncolliding random walks.
+
+\subsection{Convergence to the Airy line ensemble}
+\label{sub:PNG-airy-convergence}
+A celebrated result is that \emph{one-dimensional PNG} with droplet (narrow wedge) initial condition has a natural large-time scaling limit in which the top interfaces (equivalently, the highest LPP paths) converge in distribution to the Airy line ensemble. Precisely, one considers the interface height $h(t,x)$ around its deterministic shape function (the “hydrodynamic limit”) and rescales time, space, and fluctuations by the $t^{2/3}$/$t^{1/3}$ exponents of the KPZ class. More explicitly:
+
+\begin{itemize}
+\item Let $t$ be large, and recenter the interface $h(t,x)$ about its mean shape $H_{\text{det}}(t,x)$ (which is on the order of $t$).
+\item Rescale $x$ by $t^{2/3}$ and $h$ by $t^{1/3}$.
+\item Track the top several layers as $i=1,2,\dots$.
+\end{itemize}
+Under these scalings, the joint distribution of $(h_i(t,x) - H_{\text{det}}(t,x))_{i\ge1}$ converges as $t\to\infty$ to the parabolic Airy line ensemble. Consequently, the top layer’s fluctuations at a single spatial point converge to the GUE Tracy--Widom distribution, matching the predictions of the KPZ universality class.
+
+\subsection{Space-time limit and the directed landscape}
+\label{sub:space-time-limit}
+While the convergence to the Airy line ensemble describes \emph{fixed} time $t$ (or equivalently a single horizontal slice in last passage percolation), one can pose the deeper question: can we capture the full \emph{two-dimensional} limiting field $h(t,x)$ in space and time simultaneously?
+
+Specifically, define
+\[
+H^\mathrm{PNG}_t(x) \;=\; h(t,\,x\sqrt{2}) - (\text{deterministic parabola}),
+\]
+then rescale $t,x$ in the KPZ $1:2:3$ fashion. One expects that
+\[
+\Bigl(H^\mathrm{PNG}_t(x)\Bigr)_{x\in\mathbb{R},\,t\ge0}
+\;\Longrightarrow\;
+\Bigl(\mathcal{H}(T,X)\Bigr)_{X\in\mathbb{R},\,T\ge0},
+\]
+where $\mathcal{H}(T,X)$ is a random field capturing the universal space-time geometry of KPZ fluctuations. We desire a description of $\mathcal{H}$ by some universal stochastic partial differential equation or otherwise.
+
+\subsection{Convergence to the directed landscape}
+\label{sub:PNG-directed-landscape}
+The limiting object conjectured (and now proven in many integrable models) is the \emph{directed landscape}, a continuous random function of $(t_1,x_1;t_2,x_2)$ with $t_2>t_1$, representing the \emph{limiting last passage percolation} metric in the plane. Concretely:
+\begin{itemize}
+\item The directed landscape $\mathcal{L}$ assigns a “length” $\mathcal{L}(t_1,x_1;t_2,x_2)$ to every up-right path from $(t_1,x_1)$ to $(t_2,x_2)$.
+\item This $\mathcal{L}$ is the universal scaling limit of planar LPP and PNG with Poisson or geometric weights, capturing the entire space-time evolution (not just single-time slices).
+\item Restricting to a single time $t_2$ with initial time $t_1=0$, one recovers the top layer fluctuations converging to the Airy line ensemble. Thus the directed landscape is an enrichment that glues all times together consistently.
+\end{itemize}
+For the PNG model started from a droplet initial condition, the interface height converges under the $1:2:3$ scaling to $\max_{x_1}\{\mathcal{L}(0,x_1;t,x)\}$, providing a universal limit shape and fluctuation field.
+
+\medskip
+Thus the polynuclear growth viewpoint not only reproduces the core Tracy--Widom and Airy line ensemble phenomena (from single-time slices) but also paves the way to the more refined \emph{directed landscape}, which describes all space-time evolution in a single universal object.
 
 
 
@@ -434,12 +623,22 @@ interlacing corners configuration.
 
 
 
-% \appendix
-% \setcounter{section}{11}
-%
-% \section{Problems (due 2025-04-29)}
 
 
+\appendix
+\setcounter{section}{11}
+
+\section{Problems (due 2025-04-29)}
+
+
+\subsection{PNG ordering}
+\label{prob:multiline-png}
+
+If the initial conditions at time $0$ of the multiline PNG satisfy
+\begin{equation*}
+	h_1(0,x) \ge h_2(0,x) \ge \cdots ,\qquad \textnormal{for all } x\in\mathbb{R},
+\end{equation*}
+then show that they continue to satisfy the same ordering at all times $t>0$.
 
 
 
