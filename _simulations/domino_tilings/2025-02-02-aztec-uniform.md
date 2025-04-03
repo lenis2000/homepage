@@ -347,7 +347,7 @@ Module.onRuntimeInitialized = async function() {
     // Create group for dimer elements with appropriate transformation
     const dimerGroup = dimerSvg.append("g")
       .attr("class", "dimer-elements")
-      .attr("transform", `translate(${svgWidth/2},${svgHeight/2})`);
+      .attr("transform", `translate(${svgWidth/2},${svgHeight/2}) scale(1,-1)`);  // Flip vertically with scale(1,-1)
 
     // Scale factor based on the SVG size and the diamond size
     const scale = Math.min(svgWidth, svgHeight) / (2 * n + 4) * 0.85;
