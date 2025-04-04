@@ -43,46 +43,32 @@ code:
         </button>
       </div>
 
-      <!-- Slider for p -->
+      <!-- Text input with arrows for p -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
         <label for="probInput" class="me-2 mb-0">$p$:&nbsp;</label>
+        <button id="probDecBtn" class="btn btn-sm btn-outline-secondary me-1">&#9660;</button>
         <input
           id="probInput"
-          type="range"
-          class="form-range"
-          min="0"
-          max="1"
-          step="0.0001"
-          value="0.5"
+          type="text"
+          class="form-control text-center"
+          style="width:8rem;"
+          value="0.5000000"
         />
-        <span
-          id="probValue"
-          class="ms-2"
-          style="width:2.5rem; text-align:right;"
-        >
-          0.50
-        </span>
+        <button id="probIncBtn" class="btn btn-sm btn-outline-secondary ms-1">&#9650;</button>
       </div>
 
-      <!-- Slider for q -->
+      <!-- Text input with arrows for q -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
         <label for="qInput" class="me-2 mb-0">$q$:&nbsp;</label>
+        <button id="qDecBtn" class="btn btn-sm btn-outline-secondary me-1">&#9660;</button>
         <input
           id="qInput"
-          type="range"
-          class="form-range"
-          min="0"
-          max="1"
-          step="0.0001"
-          value="0"
+          type="text"
+          class="form-control text-center"
+          style="width:8rem;"
+          value="0.0000000"
         />
-        <span
-          id="qValue"
-          class="ms-2"
-          style="width:2.5rem; text-align:right;"
-        >
-          0.00
-        </span>
+        <button id="qIncBtn" class="btn btn-sm btn-outline-secondary ms-1">&#9650;</button>
       </div>
     </div>
 
@@ -120,24 +106,64 @@ code:
 // ==============================
 let currentN = null;
 let debounceTimer = null;
+const INCREMENT_STEP = 0.05;
 
 // ==============================
-// 2) Utility: Update Slider Text
+// 2) Utility: Update Parameters
 // ==============================
-function updateSliderDisplay(spanId, val) {
-  if (spanId === "nValue") {
-    document.getElementById(spanId).textContent = parseInt(val);
-  } else {
-    document.getElementById(spanId).textContent = parseFloat(val).toFixed(4);
-  }
+function updateNValue(val) {
+  document.getElementById("nValue").textContent = parseInt(val);
 }
-// Debounce function to avoid re-running sim on every small slider move
+
+function updateParameterValue(id, val) {
+  // Clamp value between 0 and 1
+  val = Math.max(0, Math.min(1, val));
+  
+  // Format to 7 decimal places and update the input
+  const formattedVal = val.toFixed(7);
+  document.getElementById(id).value = formattedVal;
+  
+  // Trigger simulation update
+  debounceSimulate();
+  
+  return val; // Return the clamped value
+}
+
+// Increase or decrease parameter value by the step amount
+function incrementParameter(id, increment) {
+  const currentVal = parseFloat(document.getElementById(id).value);
+  const newVal = currentVal + (increment ? INCREMENT_STEP : -INCREMENT_STEP);
+  return updateParameterValue(id, newVal);
+}
+
+// Validate and handle manual text input
+function handleParameterInput(id) {
+  let val = document.getElementById(id).value;
+  
+  // First replace any commas with dots
+  val = val.replace(',', '.');
+  
+  // Parse as float
+  val = parseFloat(val);
+  
+  // If not a valid number, reset to default
+  if (isNaN(val)) {
+    val = (id === "probInput") ? 0.5 : 0;
+  }
+  
+  console.log("Processing input for " + id + ": " + val);
+  
+  // Update and clamp the value
+  updateParameterValue(id, val);
+}
+
+// Debounce function to avoid re-running sim on every small change
 function debounceSimulate() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     if (currentN === null) return;
     const probVal = parseFloat(document.getElementById("probInput").value);
-    const qVal    = parseFloat(document.getElementById("qInput").value);
+    const qVal = parseFloat(document.getElementById("qInput").value);
     simulateAndDraw(currentN, probVal, qVal);
   }, 300);
 }
@@ -269,28 +295,52 @@ document.getElementById("runBtn").addEventListener("click", () => {
   currentN = nVal;
 
   const probVal = parseFloat(document.getElementById("probInput").value);
-  const qVal    = parseFloat(document.getElementById("qInput").value);
+  const qVal = parseFloat(document.getElementById("qInput").value);
 
   simulateAndDraw(currentN, probVal, qVal);
 });
 
-document.getElementById("probInput").addEventListener("input", (e) => {
-  updateSliderDisplay("probValue", e.target.value);
-  debounceSimulate();
-});
-
-document.getElementById("qInput").addEventListener("input", (e) => {
-  updateSliderDisplay("qValue", e.target.value);
-  debounceSimulate();
-});
-
+// Add event listeners for N slider
 document.getElementById("nInput").addEventListener("input", (e) => {
-  updateSliderDisplay("nValue", e.target.value);
+  updateNValue(e.target.value);
 });
 
-// Initialize slider text
-updateSliderDisplay("probValue", document.getElementById("probInput").value);
-updateSliderDisplay("qValue",   document.getElementById("qInput").value);
+// Add event listeners for p controls
+document.getElementById("probInput").addEventListener("keyup", (e) => {
+  if (e.key === "Enter") {
+    handleParameterInput("probInput");
+    e.target.blur();
+  }
+});
+document.getElementById("probInput").addEventListener("change", () => {
+  handleParameterInput("probInput");
+});
+document.getElementById("probIncBtn").addEventListener("click", () => {
+  incrementParameter("probInput", true);
+});
+document.getElementById("probDecBtn").addEventListener("click", () => {
+  incrementParameter("probInput", false);
+});
+
+// Add event listeners for q controls
+document.getElementById("qInput").addEventListener("keyup", (e) => {
+  if (e.key === "Enter") {
+    handleParameterInput("qInput");
+    e.target.blur();
+  }
+});
+document.getElementById("qInput").addEventListener("change", () => {
+  handleParameterInput("qInput");
+});
+document.getElementById("qIncBtn").addEventListener("click", () => {
+  incrementParameter("qInput", true);
+});
+document.getElementById("qDecBtn").addEventListener("click", () => {
+  incrementParameter("qInput", false);
+});
+
+// Initialize parameter values
+updateNValue(document.getElementById("nInput").value);
 
 // ==============================
 // 8) Automatically Run Simulation on Page Load
@@ -300,8 +350,13 @@ updateSliderDisplay("qValue",   document.getElementById("qInput").value);
   const nVal = parseInt(document.getElementById("nInput").value, 10);
   currentN = nVal;
 
+  // Force proper formatting of p and q values
+  updateParameterValue("probInput", 0.5);
+  updateParameterValue("qInput", 0.0);
+
+  // Get the formatted values
   const probVal = parseFloat(document.getElementById("probInput").value);
-  const qVal    = parseFloat(document.getElementById("qInput").value);
+  const qVal = parseFloat(document.getElementById("qInput").value);
 
   simulateAndDraw(nVal, probVal, qVal);
 })();
