@@ -34,7 +34,7 @@ code:
           class="form-range"
           value="1000"
           min="0"
-          max="12000"
+          max="20000"
           step="100"
         />
         &nbsp;<span id="nValue" class="ms-2" style="text-align:right;">1000</span>&nbsp;&nbsp;
@@ -118,14 +118,14 @@ function updateNValue(val) {
 function updateParameterValue(id, val) {
   // Clamp value between 0 and 1
   val = Math.max(0, Math.min(1, val));
-  
+
   // Format to 7 decimal places and update the input
   const formattedVal = val.toFixed(7);
   document.getElementById(id).value = formattedVal;
-  
+
   // Trigger simulation update
   debounceSimulate();
-  
+
   return val; // Return the clamped value
 }
 
@@ -139,20 +139,20 @@ function incrementParameter(id, increment) {
 // Validate and handle manual text input
 function handleParameterInput(id) {
   let val = document.getElementById(id).value;
-  
+
   // First replace any commas with dots
   val = val.replace(',', '.');
-  
+
   // Parse as float
   val = parseFloat(val);
-  
+
   // If not a valid number, reset to default
   if (isNaN(val)) {
     val = (id === "probInput") ? 0.5 : 0;
   }
-  
+
   console.log("Processing input for " + id + ": " + val);
-  
+
   // Update and clamp the value
   updateParameterValue(id, val);
 }
@@ -288,8 +288,8 @@ function simulateAndDraw(N, PROB, Q) {
 
 document.getElementById("runBtn").addEventListener("click", () => {
   const nVal = parseInt(document.getElementById("nInput").value, 10);
-  if (isNaN(nVal) || nVal < 1 || nVal > 12000) {
-    alert("Please enter a valid integer N in [1..12000].");
+  if (isNaN(nVal) || nVal < 1 || nVal > 20000) {
+    alert("Please enter a valid integer N in [1..20000].");
     return;
   }
   currentN = nVal;
