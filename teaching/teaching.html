@@ -15,29 +15,54 @@ nav_weight: 5
 <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script> -->
 <!-- Calendly inline widget end -->
 
-<hr class="mt-4">
+<hr class="mt-4" />
 
 <h1 class="mt-3 mb-4">Previous teaching</h1>
 
-<div class="my-row-zebra" style="margin:0px 15px">
-{% for post in site.posts %}
-{% if post.categories contains "teaching" %}
+<div class="my-row-zebra" style="margin: 0px 15px">
+    {% for post in site.posts %} {% if post.categories contains "teaching" %}
 
-    <div class="row" style="padding:10px">
-      <div class="col-md-2 h5">
-        {{post.semester}}
-      </div>
-      <div class="col-md-4 h5">
-        <a href="{{post.inst-url}}">{{post.inst}}</a>
-      </div>
-      <div class="col-md-6 h5">
-    		{% unless post.no-page %}<a href="{{site.url}}{{post.url}}"  class="highlighted-item">{% endunless %}{{post.title}}{% unless post.no-page %}</a>{% endunless %}
-        {% if post.syllabus %} &bull; <a href="{{post.syllabus | replace: '__STORAGE_URL__', site.storage_url }}">Syllabus</a>{% endif %}
-        {% if post.web-course-github %} &bull; <a href="{{ post.web-course-github | replace: '__SITE_URL__', site.url }}">Course page on GitHub</a>{% endif %}
-        {% if post.web-course-external %} &bull; <a href="{{ post.web-course-external | replace: '__SITE_URL__', site.url }}">Course webpage</a>{% endif %}
-      </div>
+    <div class="row" style="padding: 10px">
+        <div class="col-md-2 h5">{{post.semester}}</div>
+        <div class="col-md-10 h5">
+            {% unless post.no-page %}<a
+                href="{{site.url}}{{post.url}}"
+                class="highlighted-item"
+                >{% endunless %}{{post.title}}{% unless post.no-page %}</a
+            >{% endunless %} {% if post.syllabus %} &bull;
+            <a
+                href="{{post.syllabus | replace: '__STORAGE_URL__', site.storage_url }}"
+                >Syllabus</a
+            >{% endif %} {% if post.web-course-github %} &bull;
+            <a
+                href="{{ post.web-course-github | replace: '__SITE_URL__', site.url }}"
+                >Course page on GitHub</a
+            >{% endif %} {% if post.web-course-external %} &bull;
+            <a
+                href="{{ post.web-course-external | replace: '__SITE_URL__', site.url }}"
+                >Course webpage</a
+            >{% endif %}
+        </div>
     </div>
 
-{% endif %}
-{% endfor %}
+    {% endif %} {% endfor %}
+</div>
+
+<div class="mt-5">
+    <table class="table table-striped">
+        <tbody>
+            <tr>
+                <td>Since Fall 2014</td>
+                <td>University of Virginia</td>
+            </tr>
+            <tr>
+                <td>Fall 2011 - Spring 2014</td>
+                <td>Northeastern University</td>
+            </tr>
+            <tr>
+                <td>Spring 2011</td>
+                <td>Math in Moscow</td>
+            </tr>
+        </tbody>
+    </table>
 </div>
