@@ -223,32 +223,53 @@ $x\in \mathbb{W}^n$ given as the eigenvalue vector of
 $M(t-1)$, $Q^{\pi,\hat\pi}_{t-1,t}(x,\cdot)$ is the
 distribution of $\operatorname{sp}(M(t))$.
 
-The null case $\pi_i=1$ and $\hat\pi_j=0$ of $Q^{\pi,\hat\pi}_{t-1,t}(x,dy)$ 
-was computed in \cite{defosseux2010orbit}, see also 
+The null case $\pi_i=1$ and $\hat\pi_j=0$ of $Q^{\pi,\hat\pi}_{t-1,t}(x,dy)$
+was computed in \cite{defosseux2010orbit}, see also
 \cite{forrester2006jacobians}.
 
-\begin{theorem}[Markov chain for spiked Wishart eigenvalues]\label{thm:MarkovChain}
-For any fixed $n$, any strictly positive $n$-vector
-$\pi=(\pi_1,\dots,\pi_n)$, and any nonnegative sequence
-$\hat\pi=(\hat\pi_1,\hat\pi_2,\dots)$, the process
-$\{\operatorname{sp}(M(t)):t\ge0\}$ is a Markov chain in
-$\mathbb{W}^n$ under $P^{\pi,\hat\pi}$. Moreover, its one-step
-transition law from time $t-1$ to $t$ is given by an
-explicit density $Q^{\pi,\hat\pi}_{t-1,t}(x, y)$ on $\mathbb{W}^n$
-which factorizes in terms of $\pi$ and $\hat\pi_t$. In
-particular, if $x=(x_1\ge\cdots\ge x_n)$ are the eigenvalues
-at time $t-1$, and $y=(y_1\ge\cdots\ge y_n)$ at time $t$,
-then $Q^{\pi,\hat\pi}_{t-1,t}(x, y)$ is supported on
-interlacing configurations ($x$ and $y$ satisfying
-\eqref{eq:interlace}) and can be written in closed form as
-\begin{equation}\label{eq:transition-density}
-Q^{\pi,\hat\pi}_{t-1,t}(x,y) \;=\; \frac{1}{\displaystyle h_\pi(x) } \; \frac{1}{\displaystyle h_\pi(y) } \; \prod_{i=1}^n (y_i - x_i) \prod_{i<j} \frac{y_i - x_j}{x_i - x_j}\; \exp\!\Big(-\hat\pi_t \sum_{i=1}^n (y_i - x_i)\Big)\,,
+\begin{theorem}
+\label{thm:MarkovChain}
+Fix an integer \(n\ge1\).  Let \(\pi=(\pi_1,\dots,\pi_n)\) be a strictly positive \(n\)‐vector, and let \(\widehat\pi=(\widehat\pi_1,\widehat\pi_2,\dots)\) be any sequence of nonnegative real parameters.  Under the probability measure \(P^{\pi,\widehat\pi}\), the eigenvalues of the \(n\times n\) generalized Wishart matrices \(\{M(t)\}_{t\ge0}\) form a time‐inhomogeneous Markov chain \(\{\mathrm{sp}(M(t))\}_{t\ge0}\) in the Weyl chamber
+\[
+\mathbb{W}^n
+\;=\;
+\bigl\{\,x=(x_1,\dots,x_n)\in\mathbb{R}^n_{\ge0}:
+x_1\ge x_2\ge\cdots\ge x_n\bigr\}.
+\]
+More precisely, writing \(x=\mathrm{sp}(M(t-1))\) and \(y=\mathrm{sp}(M(t))\), the one‐step transition law from time \((t-1)\) to \(t\) is absolutely continuous on the interior of \(\mathbb{W}^n\) and can be factored as
+\begin{equation}
+\label{eq:transition-density}
+Q_{t-1,t}^{\pi,\widehat\pi}(x,\,dy)
+\;=\;
+\Bigl[\,
+\prod_{i=1}^n \bigl(\pi_i+\widehat\pi_{t}\bigr)
+\Bigr]
+\cdot
+\frac{h_{\pi}(y)}{h_{\pi}(x)}
+\;\exp\Bigl(-(\widehat\pi_{t}-1)\sum_{i=1}^n (y_i - x_i)\Bigr)
+\;\times\;Q^{(0)}\bigl(x,\,dy\bigr),
 \end{equation}
-for $y$ interlacing $x$, where $h_\pi(z) := \prod_{i=1}^n \prod_{j=1}^n (\pi_i + \hat\pi_j + z_i)$ is a symmetric Harish-Chandra (orbit integral) function.  Consequently, $\operatorname{sp}(M(t))$ has a smooth density on $\mathbb{W}^n$ for each $t$, and the joint distribution of $(\operatorname{sp}(M(1)),\dots,\operatorname{sp}(M(t)))$ can be written as the product of these kernels:
-\begin{equation}\label{eq:chain-factorization}
-P^{\pi,\hat\pi}\{\operatorname{sp}(M(1))\in dx^{(1)}, \dots, \operatorname{sp}(M(t))\in dx^{(t)}\} = Q^{\pi,\hat\pi}_{0,1}(0, dx^{(1)}) \prod_{m=2}^t Q^{\pi,\hat\pi}_{m-1,m}(x^{(m-1)}, dx^{(m)})\,,
-\end{equation}
-with $x^{(0)}=0$ (all eigenvalues zero initially).
+where
+\begin{itemize}
+\item \(\displaystyle Q^{(0)}\bigl(x,\,dy\bigr)\) is the \emph{standard} (null‐spike) Wishart transition kernel, given explicitly by
+\[
+Q^{(0)}(x,\,dy)
+\;=\;
+\frac{\Delta(y)}{\Delta(x)}\;\exp\Bigl(\,-\sum_{i=1}^n (y_i - x_i)\Bigr)\,
+\mathbf{1}_{\{x\prec y\}}\;dy,
+\]
+with \(\Delta(z)=\prod_{1\le i<j\le n}(z_i - z_j)\) the Vandermonde determinant.
+
+\item The function \(h_{\pi}\) is the (continuous) Harish‐Chandra orbit‐integral factor
+\[
+h_{\pi}(z)
+\;=\;
+\frac{\det\bigl(e^{-\pi_i\,z_j}\bigr)_{i,j=1}^n}{\,\Delta(\pi)\,\Delta(z)\,}
+\;,
+\]
+where \(\Delta(\pi)=\prod_{1\le i<j\le n}(\pi_i-\pi_j)\).
+\end{itemize}
+In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix). 
 \end{theorem}
 
 \begin{proof}[Proof Sketch]
@@ -256,11 +277,11 @@ A full proof of this result can be found in \cite{dieker2008largest} (Theorem~3.
 
 To extend to general $(\pi,\hat\pi)$, one performs a tilt of measure. Observe that under $P^{\pi,\hat\pi}$, the joint density of the entire trajectory $(M(0)=0,\;M(1),\dots,M(t))$ is absolutely continuous w.r.t. the law $P^{\mathbf{1},0}$ of the standard case (with $\mathbf{1}=(1,\dots,1)$). In fact, each entry $A_{ij}$ under $P^{\pi,\hat\pi}$ has variance $\frac{1}{\pi_i+\hat\pi_j}$, whereas under the standard case it has variance $1$. By the Gaussian change-of-variance formula, we have
 \[
-\frac{dP^{\pi,\hat\pi}}{dP^{\mathbf{1},0}}\Big|_{\sigma(M(0),\ldots,M(t))} = \prod_{i=1}^n \prod_{m=1}^t \frac{1}{\sqrt{2\pi(\pi_i+\hat\pi_m)}} \exp\!\Big\{-\frac{|A_{im}|^2}{2}\Big(\frac{1}{1} - \frac{1}{\pi_i+\hat\pi_m}\Big)\Big\}\,,
+\frac{dP^{\pi,\hat\pi}}{dP^{\mathbf{1},0}}\Big|_{\sigma(M(0),\ldots,M(t))} = \prod_{i=1}^n \prod_{m=1}^t \frac{1}{\sqrt{2\pi(\pi_i+\hat\pi_m)}} \exp\Big\{-\frac{|A_{im}|^2}{2}\Big(\frac{1}{1} - \frac{1}{\pi_i+\hat\pi_m}\Big)\Big\}\,,
 \]
 which simplifies to
 \[
-\frac{dP^{\pi,\hat\pi}}{dP^{\mathbf{1},0}} = \prod_{m=1}^t \prod_{i=1}^n \frac{1}{\sqrt{\pi_i+\hat\pi_m}} \cdot \exp\!\Big\{-\frac{\pi_i+\hat\pi_m - 1}{\pi_i+\hat\pi_m}\frac{|A_{im}|^2}{2}\Big\}\,.
+\frac{dP^{\pi,\hat\pi}}{dP^{\mathbf{1},0}} = \prod_{m=1}^t \prod_{i=1}^n \frac{1}{\sqrt{\pi_i+\hat\pi_m}} \cdot \exp\Big\{-\frac{\pi_i+\hat\pi_m - 1}{\pi_i+\hat\pi_m}\frac{|A_{im}|^2}{2}\Big\}\,.
 \]
 Now, conditioning on the eigenvalue processes, one can integrate out the angular parts using the fact that $(M(m-1),M(m))$ in the standard case has a density invariant under conjugation by a unitary matrix (the eigenvectors are Haar-distributed due to unitary invariance of the Wishart ensemble). Applying the Harish-Chandra--Itzykson--Zuber integral for the exponential term and simplifying yields exactly the ratio of symmetric polynomials in \eqref{eq:transition-density} (see \cite[Sec.~3]{dieker2008largest} for details). The upshot is that the tilted process $\operatorname{sp}(M(t))$ remains Markov with the modified transition kernel given by \eqref{eq:transition-density}. The lengthy algebraic verification that \eqref{eq:transition-density} indeed defines a valid transition density (satisfying appropriate normalization and consistency conditions) is omitted here.
 \end{proof}
@@ -375,7 +396,7 @@ It is noteworthy that the above theorem provides an \emph{exact distributional i
 \subsection*{The law of the top eigenvalue and asymptotic distribution}
 Having established the equivalence in law of $\lambda_1(n)$ and $Y(N,n)$, we can leverage known results from either side to describe the distribution of the top eigenvalue in the spiked model. One convenient consequence is an explicit formula for the distribution function of $\lambda_1(n)$ in terms of a combinatorial sum (or equivalently a Fredholm determinant). Indeed, from the LPP perspective, we have by definition
 \[ \{\lambda_1(n) \le t\} = \{Y(N,n) \le t\} = \{\text{there exists no path from $(1,1)$ to $(N,n)$ of total weight $>t$}\}.\]
-This event is easier to complement: $\{\lambda_1(n) > t\}$ means there is \emph{at least one path of weight $>t$}. By inclusion-exclusion, one can sum over all up-right paths $\Gamma$ (there are finitely many) the probabilities $\mathbb{P}\{\mathcal{W}(\Gamma) > t\}$, subtract the overlaps where two specific paths have weight $>t$, and so on. Because the $\{W_{ij}\}$ are independent exponentials, the probability that a \emph{given path} $\Gamma$ has weight $>\!t$ is
+This event is easier to complement: $\{\lambda_1(n) > t\}$ means there is \emph{at least one path of weight $>t$}. By inclusion-exclusion, one can sum over all up-right paths $\Gamma$ (there are finitely many) the probabilities $\mathbb{P}\{\mathcal{W}(\Gamma) > t\}$, subtract the overlaps where two specific paths have weight $>t$, and so on. Because the $\{W_{ij}\}$ are independent exponentials, the probability that a \emph{given path} $\Gamma$ has weight $>t$ is
 \[ \mathbb{P}\Big\{\sum_{(i,j)\in\Gamma} W_{ij} > t\Big\} = e^{-(\pi_1+\hat\pi_1+\cdots+\pi_N+\hat\pi_n) t} \sum_{k=0}^{N+n-2} \frac{t^k}{k!} \prod_{(i,j)\in\Gamma} (\pi_i+\hat\pi_j)^k,\]
 essentially because the sum of $(N+n-1)$ independent exponentials can be written as an Erlang (Gamma) distribution. Summing over all $\binom{N+n-2}{N-1}$ paths from $(1,1)$ to $(N,n)$ yields an expression involving symmetric sums of the $\pi_i+\hat\pi_j$. After cancellation, one ends up with a formula:
 \begin{equation}\label{eq:TWfiniteFredholm}
