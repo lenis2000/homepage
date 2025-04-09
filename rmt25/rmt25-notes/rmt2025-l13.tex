@@ -99,6 +99,7 @@ Throughout the discussion, we will consider the ``spiked'', multiparameter model
 which naturally include finite-rank deformations.
 
 \section{The spiked Wishart ensemble}
+\label{sec:Wishart}
 
 \subsection{Definition of the spiked Wishart process}
 \label{sub:Wishart_process}
@@ -270,7 +271,7 @@ h_{\pi}(z)
 \]
 Note that $h_\pi(0)=1$.
 \end{itemize}
-In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix). 
+In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix).
 \end{theorem}
 
 \begin{proof}[Sketch of proof; see \cite{dieker2008largest}]
@@ -278,11 +279,11 @@ In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix).
 	\cite{defosseux2010orbit}, \cite{forrester2006jacobians} show that the
 	theorem holds for the null case $\pi_i=1$ and $\hat\pi_j=0$.
 	The Radon-Nikodym derivative of the transition kernel
-	factors through the diagonal entries of the matrix, 
+	factors through the diagonal entries of the matrix,
 	and can be written in terms of the eigenvalues via
 	the HCIZ integral.
 	This yields an explicit factor multiplying the null-case
-	transition density. 
+	transition density.
 \end{proof}
 
 
@@ -307,7 +308,7 @@ along with the Cauchy--Binet (or Andr\'eief) identity:
 \xi_i(z)\,\psi_j(z)\,dz
 \Bigr].
 \]
-Applying this to  
+Applying this to
 \eqref{eq:transition-density}--\eqref{eq:Q0}
 yields an integral over the Gelfand--Tsetlin polytope
 of certain exponential weights, which yields something like $h_{\hat \pi}(y)$.
@@ -338,32 +339,138 @@ For the non-null case, see Problem~\ref{prob:Wishart_non_null}.
 
 \subsection{Definition of the model}
 
-We now turn to a seemingly different probabilistic model: a model of random paths in a grid with random weights. Fix the same dimension $N$ as above. Consider an infinite array of independent, nonnegative random weights $\{W_{ij}: 1\le i\le N,\; j\ge 1\}$ defined under the probability measure $P^{\pi,\hat\pi}$ as follows:
-\begin{itemize}\item Each $W_{ij}$ is an independent random variable with an \emph{exponential} distribution of rate $(\pi_i + \hat\pi_j)$.
-\end{itemize}
-In other words, $\mathbb{P}\{W_{ij} > w\} = \exp\{-(\pi_i+\hat\pi_j) w\}$ for $w\ge0$. Equivalently $\mathbb{E}[W_{ij}] = \frac{1}{\pi_i+\hat\pi_j}$. These rates $(\pi_i+\hat\pi_j)$ are chosen deliberately to mirror the variance parameters of $A_{ij}$ in the generalized Wishart model (Definition \ref{def:Wishart}). Indeed, note that $\mathrm{Var}(A_{ij}) = \mathbb{E}[W_{ij}]$ under our definitions -- this is not a coincidence but a clue that $W_{ij}$ will serve as a sort of ``geometric analogue'' of $|A_{ij}|^2$.
+We now turn to a seemingly different probabilistic model: a
+model of random paths in a grid with random weights. Fix an
+integer $n$. Consider an infinite array of independent,
+nonnegative random weights $\{W_{ij}: 1\le i\le n,\; j\ge
+1\}$ defined under the probability measure $P^{\pi,\hat\pi}$,
+where each $W_{ij}$ is an independent random variable with
+an \emph{exponential} distribution of rate $(\pi_i +
+\hat\pi_j)$.
+Note that $\mathbb{E}[W_{ij}] = \frac{1}{\pi_i+\hat\pi_j}$.
+These rates $(\pi_i+\hat\pi_j)$ are chosen deliberately to
+mirror the variance parameters of $A_{ij}$ in the
+generalized Wishart model (Definition \ref{def:Wishart}).
 
 We interpret $\{W_{ij}\}$ as random weights on the vertices of a directed lattice in the first quadrant. Specifically, consider the set of lattice points
-\[ \{(i,j): i=1,\dots,N,\ j=1,2,\dots\}.\]
-We say a path $\Gamma$ is an \textbf{up-right path} from $(1,1)$ to $(N,n)$ if it is a sequence of lattice points starting at $(1,1)$ and ending at $(N,n)$, with steps either one step to the right or one step down. Since each step either increases the column index by 1 or the row index by 1, any such path from $(1,1)$ to $(N,n)$ must consist of $(N-1)$ down-steps and $(n-1)$ right-steps, for a total of $(N+n-2)$ steps. We define the \textbf{weight} of a path $\Gamma$ to be the sum of the $W_{ij}$ along its vertices:
+\[ \{(i,j): i=1,\dots,n,\ j=1,2,\dots\}.\]
+We say a path $\Gamma$ is an \emph{up-right path} from
+$(1,1)$ to $(n,t)$ if it is a sequence of lattice points
+starting at $(1,1)$ and ending at $(n,t)$, with steps either
+one step to the right or one step down. Since each step
+either increases the column index by 1 or the row index by
+1, any such path from $(1,1)$ to $(n,t)$ must consist of
+$(n-1)$ down-steps and $(t-1)$ right-steps, for a total of
+$(n+t-2)$ steps. We define the \emph{weight} of a path
+$\Gamma$ to be the sum of the $W_{ij}$ along its vertices:
 \[ \mathcal{W}(\Gamma) := \sum_{(i,j)\in \Gamma} W_{ij}, \]
 where by $(i,j)\in \Gamma$ we mean that the vertex $(i,j)$ is visited by the path $\Gamma$. The random variable of interest is the \emph{maximum total weight achievable among all such paths}, i.e.
 \begin{equation}\label{eq:LPPdef}
-Y(N,n) := \max_{\Gamma:\, (1,1)\to(N,n)} \; \mathcal{W}(\Gamma)\,.
+Y(n,t) := \max_{\Gamma:\, (1,1)\to(n,t)} \; \mathcal{W}(\Gamma)\,.
 \end{equation}
-We call $Y(N,n)$ the \textbf{last-passage time} to $(N,n)$, in analogy with the usual terminology of growth models (if we interpret $W_{ij}$ as random passage times on a lattice, then the longest time to reach a certain site is given by the maximal weight path).
+We call $Y(n,t)$ the \emph{last-passage time} to $(n,t)$, in analogy with the usual terminology of growth models (if we interpret $W_{ij}$ as random passage times on a lattice, then the longest time to reach a certain site is given by the maximal weight path).
 
-The random field $\{Y(i,j): 1\le i\le N,\ j\ge 1\}$ can be computed recursively by dynamic programming, using the so-called \emph{Robinson--Schensted--Knuth (RSK) growth rule} or equivalently the Bellman equation for LPP. Indeed, it is immediate from the definition that
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=1.2,>=stealth]
+    % Draw a 4 (rows) by 5 (columns) grid of nodes.
+    % We'll place row i = 1 at the bottom and i = 4 at the top,
+    % and columns j=1..5 from left to right.
+    % Each node is labeled with W_{i,j}.
+    \foreach \i in {1,2,3,4} {
+        \foreach \j in {1,2,3,4,5} {
+            % Position nodes so that i=1 is bottom row, i=4 top row.
+            \node[circle,draw,fill=white,inner sep=1pt]
+                  (n\i-\j)
+                  at (\j,\i)
+                  {\tiny $W_{\i,\j}$};
+        }
+    }
+
+    % Draw one example of an up-right path from (1,1) to (4,5).
+    % It has exactly 3 "up" steps (increasing i) and 4 "right" steps (increasing j).
+    \draw[ultra thick, red,->]
+        (n1-1) -- (n2-1) -- (n3-1) -- % three steps up
+        (n3-2) -- (n3-3) --           % two steps right
+        (n4-3) --                     % one step up
+        (n4-4) -- (n4-5);             % two steps right
+
+    % Optionally, you can add arrows for all edges (to the right and upward)
+    % if you want to depict the entire directed lattice structure.
+    % E.g.:
+    % \foreach \i in {1,...,4}{
+    %   \foreach \j in {1,...,4}{
+    %       \draw[->,black!30] (n\i-\j) -- (n\i-\the\numexpr\j+1\relax);
+    %   }
+    % }
+    % \foreach \i in {1,...,3}{
+    %   \foreach \j in {1,...,5}{
+    %       \draw[->,black!30] (n\i-\j) -- (n\the\numexpr\i+1\relax-\j);
+    %   }
+    % }
+\end{tikzpicture}
+\caption{A portion of the lattice with vertex-weights $W_{i,j}$ and one up-right path.}
+\end{figure}
+
+
+Indeed, it is immediate from the definition that the random
+variables $Y(n,t)$ satisfy the following random recursion:
 \begin{equation}\label{eq:LPP-recursion}
 Y(i,j) = W_{ij} + \max\{\, Y(i-1,j),\; Y(i,j-1)\,\}\,,
 \end{equation}
-for $i>1, j>1$, with boundary conditions $Y(1,j) = \sum_{k=1}^j W_{1k}$ (since from $(1,1)$ to $(1,j)$ one must move right $j-1$ times along the top row) and $Y(i,1) = \sum_{\ell=1}^i W_{\ell,1}$ (moving down along the first column). The recursion \eqref{eq:LPP-recursion} expresses that the optimal path to $(i,j)$ either comes from above (then last step is down, contributing $W_{ij}$ plus the optimal weight to $(i-1,j)$) or from the left (last step is right from $(i,j-1)$). It is the fundamental equation of integrable growth models, equivalent to the so-called \emph{Robinson--Schensted--Knuth insertion algorithm} in combinatorics. We will describe the RSK algorithm more explicitly in the next subsection.
+for $i>1, j>1$, with boundary conditions $Y(1,j) =
+\sum_{k=1}^j W_{1k}$ and $Y(i,1) =
+\sum_{\ell=1}^i W_{\ell,1}$.
+The recursion \eqref{eq:LPP-recursion} expresses
+that the optimal path to $(i,j)$ either comes from above
+(then last step is down, contributing $W_{ij}$ plus the
+optimal weight to $(i-1,j)$) or from the left (last step is
+right from $(i,j-1)$). It is the fundamental equation of
+integrable growth models, which is a part of the
+\emph{Robinson--Schensted--Knuth insertion algorithm} in
+combinatorics. 
 
-The quantity $Y(N,n)$ appears in many contexts: it is the length of the longest increasing path in a random $N\times n$ array (if $W_{ij}$ were thought of as lengths or as indicator of a path's presence), it is also the total service time in a series of $N$ exponential queueing servers with $n$ customers (the \emph{Jackson network} interpretation \cite{Baryshnikov_GUE2001}), and it is a prototype of models in the KPZ universality class (often called the \emph{exponential corner growth model} or directed percolation). Standard references on the connections between random matrices and such growth models include Baryshnikov (2001) \cite{Baryshnikov_GUE2001} and Johansson (2000) \cite{Johansson2000}. In particular, when all $\pi_i=1$ and $\hat\pi_j=0$ (the homogeneous case where all $W_{ij}\sim \mathrm{Exp}(1)$ i.i.d.), it is known that $Y(N,n)$ (for large $N,n$ with $N/n$ fixed) has fluctuations of order $N^{1/3}$ and converges to the Tracy--Widom GUE distribution after centering and scaling \cite{Johansson2000}. This is the same limiting law as the largest eigenvalue of an $N\times N$ GUE matrix. In fact, Baryshnikov \cite{Baryshnikov_GUE2001} showed that for the homogeneous case, the entire sequence $\{Y(k,n):1\le k\le N\}$ (for fixed $n$) has the same distribution as the ordered eigenvalues $(\lambda_1,\dots,\lambda_N)$ of an $N\times N$ GUE (Gaussian unitary ensemble) matrix. This was one of the first precise links between random matrix spectra and last-passage percolation. In our present setting, the weights are not identically distributed but have rates $\pi_i+\hat\pi_j$, which introduces a spatial inhomogeneity (often called \emph{boundary deformation} of the LPP model). As we will see, even in this deformed case, one can relate the LPP times to random matrix eigenvalues --- in fact, exactly to the spiked Wishart eigenvalues introduced in Section 2.
 
-Let us define the whole \textbf{vector of last-passage times to the bottom row} at column $j$ as
-\[ Z(j) := \big( Y(1,j),\, Y(2,j),\, \dots,\, Y(N,j)\big)\,\in W^N, \]
-where we list the values in increasing order $Y(1,j)\le Y(2,j)\le \cdots \le Y(N,j)$.\footnote{We have $Y(1,j)\le \cdots\le Y(N,j)$ almost surely because giving the path more freedom to move down can only increase the maximum weight. This is easily checked from \eqref{eq:LPP-recursion}. Thus $Z(j)\in W^N$ indeed.} In particular, $Y(N,n)$ is the largest component of $Z(n)$. The sequence $\{Z(n):n\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random process in $W^N$. We will now describe how the RSK correspondence shows that $Z(n)$ is an inhomogeneous Markov chain and, crucially, has the \emph{same transition kernel} as the eigenvalue chain $\operatorname{sp}(M(n))$ from Section 2. This will pave the way to prove the equality in distribution.
+\begin{remark}
+The quantity $Y(n,t)$ appears in many contexts: it is the
+length of the longest increasing path in a random $n\times
+t$ array (if $W_{ij}$ were thought of as lengths or as
+indicator of a path's presence), it is also the total
+service time in a series of $n$ exponential queueing servers
+with $t$ customers (the \emph{Jackson network}
+interpretation \cite{Baryshnikov_GUE2001}), and it is a
+prototype of models in the KPZ universality class (often
+called the \emph{exponential corner growth model} or
+directed percolation). Standard references on the
+connections between random matrices and such growth models
+include Baryshnikov (2001) \cite{Baryshnikov_GUE2001} and
+Johansson (2000) \cite{Johansson2000}. In particular, when
+all $\pi_i=1$ and $\hat\pi_j=0$ (the homogeneous case where
+all $W_{ij}\sim \mathrm{Exp}(1)$ i.i.d.), it is known that
+$Y(n,t)$ (for large $n,t$ with $n/t$ fixed) has fluctuations
+of order $n^{1/3}$ and converges to the Tracy--Widom GUE
+distribution after centering and scaling
+\cite{Johansson2000}. This is the same limiting law as the
+largest eigenvalue of an $n\times n$ GUE matrix. In fact,
+Baryshnikov \cite{Baryshnikov_GUE2001} showed that for the
+homogeneous case, the entire sequence $\{Y(k,t):1\le k\le
+n\}$ (for fixed $t$) has the same distribution as the
+ordered eigenvalues $(\lambda_1,\dots,\lambda_n)$ of an
+$n\times n$ GUE (Gaussian unitary ensemble) matrix. This was
+one of the first precise links between random matrix spectra
+and last-passage percolation. In our present setting, the
+weights are not identically distributed but have rates
+$\pi_i+\hat\pi_j$, which introduces a spatial inhomogeneity
+(often called \emph{boundary deformation} of the LPP model).
+As we will see, even in this deformed case, one can relate
+the LPP times to random matrix eigenvalues --- in fact,
+exactly to the spiked Wishart eigenvalues introduced in 
+\Cref{sec:Wishart}.
+\end{remark}
+
+Let us define the whole \emph{vector of last-passage times to the bottom row} at column $j$ as
+\[ Z(j) := \big( Y(1,j),\, Y(2,j),\, \dots,\, Y(n,j)\big)\,\in W^n, \]
+where we list the values in increasing order $Y(1,j)\le Y(2,j)\le \cdots \le Y(n,j)$.\footnote{We have $Y(1,j)\le \cdots\le Y(n,j)$ almost surely because giving the path more freedom to move down can only increase the maximum weight. This is easily checked from \eqref{eq:LPP-recursion}. Thus $Z(j)\in W^n$ indeed.} In particular, $Y(n,t)$ is the largest component of $Z(t)$. The sequence $\{Z(t):t\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random process in $W^n$. We will now describe how the RSK correspondence shows that $Z(t)$ is an inhomogeneous Markov chain and, crucially, has the \emph{same transition kernel} as the eigenvalue chain $\operatorname{sp}(M(t))$ from Section 2. This will pave the way to prove the equality in distribution.
 
 \subsection{The Robinson--Schensted--Knuth (RSK) correspondence}
 The RSK algorithm is a combinatorial bijection that associates to any matrix of nonnegative integers a pair of Young Tableaux of the same shape. We refer to standard texts (e.g. Fulton \cite{fulton1997young}) for background on Young Tableaux and the classical (unweighted) RSK correspondence. Here we will use a more probabilistic perspective suitable for our random weights. Specifically, RSK can be described as a procedure that takes an $N\times n$ array of weights (for example $W_{ij}$ for $1\le i\le N,\,1\le j\le n$) and outputs a \textbf{Gelfand--Tsetlin (GT) pattern} of depth $N$ and width $n$. A GT pattern of depth $N$ is a triangular array $x=(x_i^k)_{1\le i\le k \le N}$ of real numbers with $k$ entries in row $k$, satisfying the interlacing constraints
@@ -551,7 +658,7 @@ integrate to one in $y$.
 \subsection{Distribution of the eigenvalues}
 \label{prob:Wishart_non_null}
 
-Find the density 
+Find the density
 $\operatorname{Prob}\left( \operatorname{sp}(M(t))\in dy \right)/dy$
 of the spiked Wishart ensemble
 at an arbitrary fixed time $t$.
@@ -562,8 +669,8 @@ $Q^{\pi,\hat\pi}_{t-1,t}$ from \Cref{thm:MarkovChain}.
 
 
 
-\subsection{Generalized RSK and LPP}
-Consider the inhomogeneous geometric LPP model with site rates \(\{a_i b_j\}\).  Show directly (without passing to the continuous limit) that the vector of last-passage times \(\{Y(i,n)\}\) forms a Markov chain in the Gelfand--Tsetlin cone, and write down its transition probability in factorized form.
+% \subsection{Generalized RSK and LPP}
+% Consider the inhomogeneous geometric LPP model with site rates \(\{a_i b_j\}\).  Show directly (without passing to the continuous limit) that the vector of last-passage times \(\{Y(i,n)\}\) forms a Markov chain in the Gelfand--Tsetlin cone, and write down its transition probability in factorized form.
 
 \subsection{Asymptotics: BBP phase transition}
 Review the proof of the BBP transition for a rank-1 spiked
