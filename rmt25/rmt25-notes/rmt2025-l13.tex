@@ -86,61 +86,157 @@ In this lecture, we are going to explore a different
 LPP model which is defined on cells of $\mathbb{Z}_{\ge1}^{2}$, and
 match it \emph{exactly} to the Wishart random matrix model which we have seen before in passing.
 This matching is due to Dieker and Warren (2009)
-\cite{diekerWarren2008determinantal}, who proved it 
+\cite{diekerWarren2008determinantal}, who proved it
 in the context
-of deformed random matrix spectra, 
+of deformed random matrix spectra,
 as suggested in
 \cite{BorodinPeche2009}.
-The key to this matching is a \emph{dynamical} perspective 
+The key to this matching is a \emph{dynamical} perspective
 on both the LPP and the random matrix models, which allows us to
 match Markov chains in the two models, and not simply the distributions.
 
+Throughout the discussion, we will consider the ``spiked'', multiparameter models,
+which naturally include finite-rank deformations.
 
 \section{The spiked Wishart ensemble}
 
 \subsection{Definition of the spiked Wishart process}
+\label{sub:Wishart_process}
 
-Recall that a (complex) \emph{Wishart matrix} of dimension $N$ with $n$ degrees of freedom (and identity covariance) can be represented as $M = X X^*$, where $X$ is an $N\times n$ random matrix with independent complex Gaussian entries $X_{ij}\sim \mathcal{CN}(0,1)$ (mean zero, variance 1). In that classical case, $M$ is an $N\times N$ positive-semidefinite Hermitian matrix. Its eigenvalues $(\lambda_1,\dots,\lambda_N)$ (with $\lambda_1\ge \cdots \ge \lambda_N \ge 0$) have the joint density of the \emph{Laguerre ensemble} (beta $=2$) and the largest eigenvalue $\lambda_1$ has the well-known Tracy--Widom$_{\rm F}$ (Fisher or Laguerre) distribution in the limit $N,n\to\infty$ with $N/n\to\gamma$. Now we introduce a more general model where the covariance of the underlying Gaussian matrix is not identity but has a finite-rank perturbation (a ``spike'').
+Recall that a (complex) \emph{Wishart matrix} $M$ of dimension
+$n$ with $t$ degrees of freedom (and identity covariance)
+can be represented as $M = X X^*$, where $X$ is an $n\times
+t$ random matrix with independent complex Gaussian entries.
+Clearly, $M$ is a positive-semidefinite Hermitian matrix of
+size $n\times n$. The eigenvalues
+$(\lambda_1,\dots,\lambda_N)$ (with $\lambda_1\ge \cdots \ge
+\lambda_N \ge 0$) have the joint density of the
+\emph{Laguerre orthogonal polynomial ensemble} ($\beta=2$).
+Now we introduce a more
+general model where the covariance of the underlying
+Gaussian matrix is not identity but has a
+perturbation (a ``spike'').
 
 \begin{definition}[Generalized Wishart ensemble with parameters $(\pi,\hat\pi)$]\label{def:Wishart}
-Fix a positive integer $N$. Let $\pi=(\pi_1,\dots,\pi_N)$ be a fixed $N$-tuple of \emph{positive} real parameters, and let $\hat\pi = (\hat\pi_1,\hat\pi_2,\dots)$ be a sequence of \emph{nonnegative} real parameters (possibly infinite in length). We define an array of complex random variables $\{A_{ij}: 1\le i\le N, j\ge 1\}$ such that under the probability measure $P^{\pi,\hat\pi}$:
-\begin{itemize}\item The $A_{ij}$ are independent for all $1\le i\le N$ and $j\ge 1$.
+Fix a positive integer $n$. Let $\pi=(\pi_1,\dots,\pi_n)$ be a fixed $n$-tuple of \emph{positive} real parameters, and let $\hat\pi = (\hat\pi_1,\hat\pi_2,\dots)$ be a sequence of \emph{nonnegative} real parameters (possibly infinite in length). We define an array of complex random variables $\{A_{ij}: 1\le i\le n, j\ge 1\}$ such that under the probability measure $P^{\pi,\hat\pi}$:
+\begin{itemize}\item The $A_{ij}$ are independent for all $1\le i\le n$ and $j\ge 1$.
 \item Each $A_{ij}$ is a complex Gaussian with mean $0$ and variance $\mathrm{Var}(A_{ij}) = \frac{1}{\pi_i + \hat\pi_j}$ (i.e. $\Re A_{ij}, \Im A_{ij} \sim N(0,\frac{1}{2(\pi_i+\hat\pi_j)})$ independent).
 \end{itemize}
-For each integer $n\ge 0$, let $A(n)$ denote the $N\times n$ sub-matrix consisting of the first $n$ columns of $A$. We then define an $N\times N$ random Hermitian matrix
-\[ M(n) := A(n)\,A(n)^*, \qquad n\ge 0, \]
-with the convention $M(0)$ is the zero matrix. We call $\{M(n): n\ge 0\}$ the \textbf{generalized Wishart random-matrix process} with parameters $(\pi,\hat\pi)$.
+For each integer $t\ge 0$, let $A(t)$ denote the $n\times t$ sub-matrix consisting of the first $t$ columns of $A$. We then define an $n\times n$ random Hermitian matrix
+\[ M(t) := A(t)\,A(t)^*, \qquad t\ge 0, \]
+with the convention $M(0)$ is the zero matrix. We call $\{M(t): t\ge 0\}$ the \textbf{generalized Wishart random-matrix process} with parameters $(\pi,\hat\pi)$.
 \end{definition}
 
-In particular, $M(n)$ has the form
-\[ M(n) = \sum_{m=1}^n A^{(m)} (A^{(m)})^*, \]
-where $A^{(m)}$ denotes the $m$-th column of $A$ (an $N$-dimensional complex random vector with independent entries of variance $1/(\pi_i+\hat\pi_m)$). Thus $M(n)$ can be viewed as the sample covariance matrix of $n$ i.i.d. observations in $\mathbb{C}^N$, where the $j$-th observation has covariance $\mathrm{diag}(1/\hat\pi_j)$ in the basis that diagonalizes $\mathrm{diag}(\pi_1,\dots,\pi_N)$. Equivalently, if we define $\Sigma = \mathrm{diag}(1/\pi_1,\dots,1/\pi_N)$ as a \emph{population covariance matrix} and generate data $X_j \sim \mathcal{CN}(0,\Sigma)$ independently for $j=1,\dots,n$, then $M(n)$ has the same distribution as $\sum_{m=1}^n X_m X_m^*$ conditioned on certain independent exponential weighing factors $\hat\pi_j$ for each sample. We will not need this data interpretation explicitly, but it may help to think of $\pi_i$ as parameters controlling the variance in direction $i$, and $\hat\pi_j$ as parameters controlling the variance of sample $j$. When all $\pi_i=1$ and all $\hat\pi_j=0$, $M(n)$ reduces to the classical complex Wishart($N,n$) with identity covariance.
+In particular, $M(t)$ has the form
+\[ M(t) = \sum_{m=1}^t A^{(m)} (A^{(m)})^*, \]
+where $A^{(m)}$ denotes the $m$-th column of $A$ (an
+$n$-dimensional complex random vector with independent
+entries of variance $1/(\pi_i+\hat\pi_m)$). When all $\pi_i=1$ and all
+$\hat\pi_j=0$, $M(t)$ reduces to the classical complex
+Wishart($n,t$) with identity covariance.
 
-The introduction of parameters $\pi$ and $\hat\pi$ allows for \textbf{finite-rank deformations of the covariance}: one can think of the $\pi_i$'s as baseline values (say $\pi_i=1$ for all but a few coordinates), and a finite number of them being different from 1 corresponds to a finite-rank perturbation of the identity covariance matrix $\Sigma$ (the directions in which $\pi_i\neq 1$ are "spiked" eigen-directions). Similarly, $\hat\pi_j$ can be viewed as adding a rank-one perturbation associated with each column; if only finitely many of the $\hat\pi_j$ are nonzero, that corresponds to having a finite number of distinguished samples (or boundary inhomogeneities in the equivalent percolation model, as we will see). In summary, the above general definition covers the case of a spiked Wishart ensemble in full generality. We emphasize that $M(n)$ depends on $n$ in a way that $M(n)$ and $M(n-1)$ are not independent but are coupled through shared columns. Indeed $M(n) = M(n-1) + A^{(n)}(A^{(n)})^*$, which is a rank-1 update of $M(n-1)$.
+\begin{remark}
+	The introduction of parameters $\pi$ and $\hat\pi$ allows
+	for \textbf{finite-rank deformations of the covariance}: one
+	can think of the $\pi_i$'s as baseline values (say $\pi_i=1$
+	for all but a few coordinates), and a finite number of them
+	being different from 1 corresponds to a finite-rank
+	perturbation of the identity covariance matrix $\Sigma$ (the
+	directions in which $\pi_i\neq 1$ are "spiked"
+	eigen-directions). Similarly, $\hat\pi_j$ can be viewed as
+	adding a rank-one perturbation associated with each column;
+	if only finitely many of the $\hat\pi_j$ are nonzero, that
+	corresponds to having a finite number of distinguished
+	samples (or boundary inhomogeneities in the equivalent
+	percolation model, as we will see).
+\end{remark}
 
-Let us denote by $\lambda_1(n)\ge \lambda_2(n)\ge \cdots \ge \lambda_N(n)\ge 0$ the eigenvalues of $M(n)$ in non-increasing order (padded with zeros if $n < N$, since $\mathrm{rank}(M(n)) \le n$). We will use the notation $\operatorname{sp}(M(n)) = (\lambda_1(n),\dots,\lambda_N(n))$ for the \emph{spectrum} of $M(n)$, viewed as a vector in the \emph{Weyl chamber} $W^N = \{x=(x_1,\dots,x_N)\in\mathbb{R}^N: x_1 \ge x_2 \ge \cdots \ge x_N\}$. We are particularly interested in the \textbf{largest eigenvalue process} $\{\lambda_1(n):n\ge0\}$, i.e. the sequence of the top eigenvalue as the number of samples $n$ grows. Our goal is to describe the law of this process and to identify it with a combinatorial growth model.
+We emphasize that $M(t)$
+depends on $t$ in a way that $M(t)$ and $M(t-1)$ are not
+independent but are coupled through shared columns. Indeed
+$M(t) = M(t-1) + A^{(t)}(A^{(t)})^*$, which is a rank-1
+update of $M(t-1)$.
 
-Before stating the main result, we need a fundamental property of the eigenvalue sequence $\operatorname{sp}(M(n))$ as $n$ increases, namely that it forms a \emph{Markov chain} in $W^N$. Intuitively, this is because $M(n)$ evolves by adding independent ``increments'' $A^{(n)}(A^{(n)})^*$ at each step. Moreover, the interlacing constraints from linear algebra (Cauchy interlacing theorem) imply that the eigenvalues of $M(n)$ interlace with those of $M(n-1)$. Indeed, since $M(n) = M(n-1) +$ (rank-$1$ positive semidef. matrix), it is known that
-\begin{equation}\label{eq:interlace}
-\lambda_1(n) \ge \lambda_1(n-1) \ge \lambda_2(n) \ge \lambda_2(n-1) \ge \cdots \ge \lambda_N(n-1) \ge \lambda_N(n),
+\medskip
+Let us denote by $\lambda_1(t)\ge \lambda_2(t)\ge \cdots \ge
+\lambda_n(t)\ge 0$ the eigenvalues of $M(t)$ in
+non-increasing order (padded with zeros if $t < n$, since
+$\mathrm{rank}(M(t)) \le t$). We will use the notation
+$\operatorname{sp}(M(t)) =
+(\lambda_1(t),\dots,\lambda_n(t))$ for the \emph{spectrum}
+of $M(t)$, viewed as a vector in the \emph{Weyl chamber}
+$\mathbb{W}^n = \{x=(x_1,\dots,x_n)\in\mathbb{R}^n: x_1 \ge x_2 \ge
+\cdots \ge x_n\}$. We are particularly interested in the
+\emph{largest eigenvalue process}
+$\{\lambda_1(t):t\ge0\}$, i.e. the sequence of the top
+eigenvalue as the number of samples $t$ grows. Our goal is
+to describe the law of this process and to identify it with
+a combinatorial growth model.
+
+Before stating the main result, we need a fundamental
+property of the eigenvalue sequence
+$\operatorname{sp}(M(t))$ as $t$ increases, namely that it
+forms a \emph{Markov chain} in $\mathbb{W}^n$.
+See Problem~\ref{prob:Markov}.
+
+We need another statement:
+\begin{lemma}[Interlacing; Problem~\ref{prob:interlacing}]
+\label{lemma:interlacing}
+For each $t\geq 1$, the eigenvalues of $M(t)$ and $M(t-1)$ satisfy the interlacing property:
+\begin{equation}
+	\label{eq:interlace}
+	\lambda_1(t) \geq \lambda_1(t-1) \geq \lambda_2(t) \geq \lambda_2(t-1) \geq \cdots \geq \lambda_n(t-1) \geq \lambda_n(t) \geq 0.
 \end{equation}
-with the convention $\lambda_{N+1}(n) := 0$ and $\lambda_{N+1}(n-1):=0$. In other words, $\operatorname{sp}(M(n-1))$ and $\operatorname{sp}(M(n))$ form an \emph{interlacing sequence} in $W^N$. Such sequences are often pictorially arranged as a \textbf{Gelfand--Tsetlin pattern}: a triangular array of real numbers
-\[
-\begin{matrix}
-\lambda_N(n) \\
-\lambda_{N-1}(n) & \lambda_{N-1}(n-1) \\
-\vdots & & \vdots \\
-\lambda_{2}(n) & \lambda_{2}(n-1) & \cdots & \lambda_{2}(1)\\
-\lambda_{1}(n) & \lambda_{1}(n-1) & \cdots & \lambda_{1}(1) & \lambda_{1}(0)
-\end{matrix}
-\]
-with each row interlacing the next. This triangular representation will become important later when we connect to the RSK correspondence. For now, we proceed to formalize the Markov property of $\{\operatorname{sp}(M(n))\}_{n\ge0}$.
+\end{lemma}
+We denote the relation \eqref{eq:interlace} by
+\begin{equation}
+	\label{eq:interlace-notation}
+	\lambda(t) \succ \lambda(t-1).
+\end{equation}
+
+In other words, the eigenvalue \emph{Markov processes}
+$\lambda(t)$, $t=0,1,2,\ldots $ 
+form an interlacing array, where at each step of the Markov process, 
+a new row of the array is ``revealed''.
+The interlacing property is parallel to 
+the uniform conditioning (Gibbs) property in the $\beta=2$ corners. Moreover, 
+one can check (Problem~\ref{prob:Gibbs}) that 
+in the null case
+$\pi_i=1$ and $\hat\pi_j=0$, 
+the Wishart eigenvalue process satisfies the 
+uniform Gibbs property as well.
 
 \subsection{Markov chain and transition kernel for eigenvalues}
-We say a random process $\{X(n):n\ge0\}$ taking values in $W^N$ is an \emph{inhomogeneous Markov chain} if for each $m<n$, the conditional law of $X(n)$ given $(X(n-1)=x_{n-1},\;X(n-2)=x_{n-2},\dots,X(m)=x_m)$ depends only on $x_{n-1}$ (and possibly on $n$). In other words, the process has the Markov property but the transition kernel may depend on the time step $n$. In our case, since at each step $n$ a new column $A^{(n)}$ with variance parameters $\{\pi_i+\hat\pi_n:1\le i\le N\}$ is added, the transition law from $M(n-1)$ to $M(n)$ will indeed depend on the index $n$ through $\hat\pi_n$. We denote by $Q^{\pi,\hat\pi}_{n-1,n}(x,dy)$ the transition kernel: for $x\in W^N$ given as the eigenvalue vector of $M(n-1)$, $Q^{\pi,\hat\pi}_{n-1,n}(x,\cdot)$ is the distribution of $\operatorname{sp}(M(n))$.
+We say a random process $\{X(n):n\ge0\}$ taking values in
+$\mathbb{W}^N$ is an \emph{inhomogeneous Markov chain} if
+for each $m<n$, the conditional law of $X(n)$ given
+$(X(n-1)=x_{n-1},\;X(n-2)=x_{n-2},\dots,X(m)=x_m)$ depends
+only on $x_{n-1}$ (and possibly on $n$). In other words, the
+process has the Markov property but the transition kernel
+may depend on the time step $n$. In our case, since at each
+step $n$ a new column $A^{(n)}$ with variance parameters
+$\{\pi_i+\hat\pi_n:1\le i\le N\}$ is added, the transition
+law from $M(n-1)$ to $M(n)$ will indeed depend on the index
+$n$ through $\hat\pi_n$. We denote by
+$Q^{\pi,\hat\pi}_{n-1,n}(x,dy)$ the transition kernel: for
+$x\in \mathbb{W}^N$ given as the eigenvalue vector of
+$M(n-1)$, $Q^{\pi,\hat\pi}_{n-1,n}(x,\cdot)$ is the
+distribution of $\operatorname{sp}(M(n))$.
 
 \begin{theorem}[Markov chain for spiked Wishart eigenvalues]\label{thm:MarkovChain}
-For any fixed $N$, any strictly positive $N$-vector $\pi=(\pi_1,\dots,\pi_N)$, and any nonnegative sequence $\hat\pi=(\hat\pi_1,\hat\pi_2,\dots)$, the process $\{\operatorname{sp}(M(n)):n\ge0\}$ is a Markov chain in $W^N$ under $P^{\pi,\hat\pi}$. Moreover, its one-step transition law from time $n-1$ to $n$ is given by an explicit density $Q^{\pi,\hat\pi}_{n-1,n}(x, y)$ on $W^N$ which factorizes in terms of $\pi$ and $\hat\pi_n$. In particular, if $x=(x_1\ge\cdots\ge x_N)$ are the eigenvalues at time $n-1$, and $y=(y_1\ge\cdots\ge y_N)$ at time $n$, then $Q^{\pi,\hat\pi}_{n-1,n}(x, y)$ is supported on interlacing configurations ($x$ and $y$ satisfying \eqref{eq:interlace}) and can be written in closed form as
+For any fixed $N$, any strictly positive $N$-vector
+$\pi=(\pi_1,\dots,\pi_N)$, and any nonnegative sequence
+$\hat\pi=(\hat\pi_1,\hat\pi_2,\dots)$, the process
+$\{\operatorname{sp}(M(n)):n\ge0\}$ is a Markov chain in
+$W^N$ under $P^{\pi,\hat\pi}$. Moreover, its one-step
+transition law from time $n-1$ to $n$ is given by an
+explicit density $Q^{\pi,\hat\pi}_{n-1,n}(x, y)$ on $W^N$
+which factorizes in terms of $\pi$ and $\hat\pi_n$. In
+particular, if $x=(x_1\ge\cdots\ge x_N)$ are the eigenvalues
+at time $n-1$, and $y=(y_1\ge\cdots\ge y_N)$ at time $n$,
+then $Q^{\pi,\hat\pi}_{n-1,n}(x, y)$ is supported on
+interlacing configurations ($x$ and $y$ satisfying
+\eqref{eq:interlace}) and can be written in closed form as
 \begin{equation}\label{eq:transition-density}
 Q^{\pi,\hat\pi}_{n-1,n}(x,y) \;=\; \frac{1}{\displaystyle h_\pi(x) } \; \frac{1}{\displaystyle h_\pi(y) } \; \prod_{i=1}^N (y_i - x_i) \prod_{i<j} \frac{y_i - x_j}{x_i - x_j}\; \exp\!\Big(-\hat\pi_n \sum_{i=1}^N (y_i - x_i)\Big)\,,
 \end{equation}
@@ -342,14 +438,53 @@ In closing, we have demonstrated in this lecture how a finite-$N$ identity betwe
 
 \section{Problems (due 2025-04-29)}
 
+\subsection{Wishart Markov chain}
+\label{prob:Markov}
+
+Show that the
+process $\operatorname{sp}(M(t))$
+defined in \Cref{sub:Wishart_process}
+is a Markov chain.
+
+\medskip
+\noindent
+\textbf{Hint:} Use diagonalization and
+the fact that the Wishart matrix distribution is invariant under
+conjugations by unitary matrices,
+similarly to how we did it for the Dyson Brownian motion in
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l10.pdf}{Lecture 10}.
+
+
+\subsection{Interlacing}
+\label{prob:interlacing}
+
+Prove \Cref{lemma:interlacing}.
+
+\subsection{Gibbs property}
+\label{prob:Gibbs}
+
+Show that in the null case \(\pi_i = \hat\pi_j = 0\), the
+Wishart eigenvalue process 
+from \Cref{sub:Wishart_process}
+has the Gibbs conditioning property:
+when conditioned on the values of
+$\lambda(t)$, the joint distribution of
+all the eigenvalues 
+$\left\{ \lambda(s)\colon s=0,1,\ldots,t-1  \right\}$
+is uniform in the Gelfand--Tsetlin polytope
+determined by $\lambda(t)$ and the interlacing.
+
 \subsection{Generalized RSK and LPP}
 Consider the inhomogeneous geometric LPP model with site rates \(\{a_i b_j\}\).  Show directly (without passing to the continuous limit) that the vector of last-passage times \(\{Y(i,n)\}\) forms a Markov chain in the Gelfand--Tsetlin cone, and write down its transition probability in factorized form.
 
-\subsection{Corner growth--Wishart equivalence}
-Explain carefully why the bottom row of the RSK Gelfand--Tsetlin pattern (applied to a random matrix of i.i.d.\ exponentials) is exactly the ordered eigenvalues of a Wishart matrix with the same rate parameters \(\{\pi_i+\hat\pi_j\}\).  (Hint:  Use the bijectivity of RSK and the Harish-Chandra integral to handle the Gaussian angles.)
-
 \subsection{Asymptotics: BBP phase transition}
-Review the proof of the BBP transition for a rank-1 spiked Wishart matrix (or the rank-1 inhomogeneous corner-growth model).  Show how to compute the large-\(n\) limiting distribution of the top eigenvalue in the supercritical case (spike size~$>\sqrt{\gamma}$).  In particular, identify the limit law as a \emph{deformed Airy kernel} (or equivalently a shifted Airy$_2$ process).
+Review the proof of the BBP transition for a rank-1 spiked
+Wishart matrix (or the rank-1 inhomogeneous corner-growth
+model).  Show how to compute the large-\(n\) limiting
+distribution of the top eigenvalue in the critical case
+Identify the
+limit law as a \emph{deformed Airy kernel} (or equivalently
+a shifted Airy$_2$ process).
 
 
 
