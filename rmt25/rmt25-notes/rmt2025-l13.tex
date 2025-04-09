@@ -272,35 +272,17 @@ where \(\Delta(\pi)=\prod_{1\le i<j\le n}(\pi_i-\pi_j)\).
 In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix). 
 \end{theorem}
 
-\begin{proof}[Proof Sketch]
-A full proof of this result can be found in \cite{dieker2008largest} (Theorem~3.1) and references therein. The idea is to derive the transition density via a \emph{change-of-measure} from the well-known case of the standard Wishart ensemble (all $\pi_i=1$, $\hat\pi_j=0$). In the standard case, the Markov property and transition kernel have been established earlier by Defosseux (2008) and by Forrester and Rains (2007) \cite{ForresterRains2007} (for real matrices) using intertwining of dynamics on Gelfand--Tsetlin patterns. In fact, for $\pi_i\equiv1$ and $\hat\pi_j\equiv0$, $M(t)$ can be realized as the principal $n\times n$ minor of an $(n+t)\times(n+t)$ GUE random matrix (by adding $t$ trivial eigenvalues at zero), which immediately implies the eigenvalue process is Markov with transition law expressible in terms of Jacobi polynomials (the well-known $\beta=2$ random birth process). The explicit factorized form \eqref{eq:transition-density} is essentially a multivariate extension of the Beta distribution for interlacing eigenvalues (sometimes called the \emph{Kaneko--Macdonald--Meixner ensemble}), and can be derived by conditioning on the eigenvectors (using the Harish-Chandra/Itzykson--Zuber integral formula for unitary integrals) or via the oriented swap interactions in the Gelfand--Tsetlin pattern (see O'Connell \cite{OConnell2003} for the discrete version).
+\subsection{Fixed-time distribution of eigenvalues}
 
-To extend to general $(\pi,\hat\pi)$, one performs a tilt of measure. Observe that under $P^{\pi,\hat\pi}$, the joint density of the entire trajectory $(M(0)=0,\;M(1),\dots,M(t))$ is absolutely continuous w.r.t. the law $P^{\mathbf{1},0}$ of the standard case (with $\mathbf{1}=(1,\dots,1)$). In fact, each entry $A_{ij}$ under $P^{\pi,\hat\pi}$ has variance $\frac{1}{\pi_i+\hat\pi_j}$, whereas under the standard case it has variance $1$. By the Gaussian change-of-variance formula, we have
-\[
-\frac{dP^{\pi,\hat\pi}}{dP^{\mathbf{1},0}}\Big|_{\sigma(M(0),\ldots,M(t))} = \prod_{i=1}^n \prod_{m=1}^t \frac{1}{\sqrt{2\pi(\pi_i+\hat\pi_m)}} \exp\Big\{-\frac{|A_{im}|^2}{2}\Big(\frac{1}{1} - \frac{1}{\pi_i+\hat\pi_m}\Big)\Big\}\,,
-\]
-which simplifies to
-\[
-\frac{dP^{\pi,\hat\pi}}{dP^{\mathbf{1},0}} = \prod_{m=1}^t \prod_{i=1}^n \frac{1}{\sqrt{\pi_i+\hat\pi_m}} \cdot \exp\Big\{-\frac{\pi_i+\hat\pi_m - 1}{\pi_i+\hat\pi_m}\frac{|A_{im}|^2}{2}\Big\}\,.
-\]
-Now, conditioning on the eigenvalue processes, one can integrate out the angular parts using the fact that $(M(m-1),M(m))$ in the standard case has a density invariant under conjugation by a unitary matrix (the eigenvectors are Haar-distributed due to unitary invariance of the Wishart ensemble). Applying the Harish-Chandra--Itzykson--Zuber integral for the exponential term and simplifying yields exactly the ratio of symmetric polynomials in \eqref{eq:transition-density} (see \cite[Sec.~3]{dieker2008largest} for details). The upshot is that the tilted process $\operatorname{sp}(M(t))$ remains Markov with the modified transition kernel given by \eqref{eq:transition-density}. The lengthy algebraic verification that \eqref{eq:transition-density} indeed defines a valid transition density (satisfying appropriate normalization and consistency conditions) is omitted here.
-\end{proof}
 
-\begin{remark}
-The factorized kernel \eqref{eq:transition-density} may seem complicated, but it has a nice interpretation in terms of symmetric functions. In fact, $h_\pi(x)$ is proportional to the \emph{multivariate Laguerre weight} with external source $\pi$; specifically $h_\pi(x) = \prod_{i=1}^n \prod_{j=1}^n (\pi_i + \hat\pi_j + x_i) = \prod_{i=1}^n \prod_{j=1}^n (\pi_i + \hat\pi_j) \prod_{i=1}^n \prod_{j=1}^n (1 + x_i/(\pi_i + \hat\pi_j))$. Expanding the second product via Weyl's integration formula yields a Schur polynomial $s_\lambda(x)$ in $x$ times a factor that depends only on $\pi,\hat\pi$. Thus one can rewrite the kernel in terms of ratios of Schur polynomials (or alternately, Jack or Meixner symmetric polynomials), which links it to the Meixner orthogonal ensemble studied by Johansson. We will see a discrete analogue of this factorization in Proposition \ref{prop:RSK-Markov} when we derive the transition probabilities from the RSK correspondence.
-\end{remark}
 
-The Markov chain $\operatorname{sp}(M(t))$ starts from $\operatorname{sp}(M(0)) = (0,\dots,0)\in \mathbb{W}^n$. For each fixed $t$, the law of $\operatorname{sp}(M(t))$ is just the eigenvalue distribution of an $n\times n$ Wishart matrix with $t$ degrees of freedom and covariance parameters $\pi_1,\dots,\pi_n$ (sometimes called the \emph{generalized Laguerre ensemble}). The joint density of eigenvalues $(\lambda_1,\dots,\lambda_n)$ of $M(t)$ (with $\lambda_1\ge\cdots\ge\lambda_n$) can be obtained by marginalizing the chain up to time $t$. Specifically, integrating \eqref{eq:chain-factorization} over the intermediate steps $x^{(1)},\dots,x^{(t-1)}$ yields
-\[
-P^{\pi,\hat\pi}\{\operatorname{sp}(M(t)) \in dy\} = \frac{h_\pi(y)}{\prod_{i=1}^n \prod_{m=1}^t (\pi_i+\hat\pi_m)} \cdot \prod_{1\le i<j\le n} (y_i - y_j)^2 \, \prod_{i=1}^n e^{-y_i}\, dy_1\cdots dy_n\,,
-\]
-which is exactly the known Laguerre ensemble density (with parameters $\pi_i$ entering through a shift in the weight $e^{-y}$) --- see e.g. \cite{mehta2004random}. In particular, the marginal law of the \textbf{largest eigenvalue} $\lambda_1(t)$ can be written as
-\begin{equation}\label{eq:Fredholm}
-\mathbb{P}\{\lambda_1(t) \le s\} = \det(I - K_{t,s})_{L^2(0,\infty)}\,,
-\end{equation}
-for a certain integrable kernel $K_{t,s}$ known from random matrix theory (it is an $n$-point Laguerre kernel with parameters $(\pi,\hat\pi)$, often expressible in terms of confluent hypergeometric functions). We will not need the explicit form of this Fredholm determinant, but we mention it because it is one way to derive the asymptotic law of $\lambda_1(t)$ as $n,t\to\infty$. Instead, we will obtain the asymptotic law later by using the coupling with a last-passage percolation model, which is more tractable from the point of view of KPZ universality.
 
-\section{Directed Last-Passage Percolation (LPP) and the RSK Correspondence}
+
+
+
+
+\section{The lattice LPP model}
+
 \subsection{Definition of the LPP model with exponential/geometric weights}
 We now turn to a seemingly different probabilistic model: a model of random paths in a grid with random weights. Fix the same dimension $N$ as above. Consider an infinite array of independent, nonnegative random weights $\{W_{ij}: 1\le i\le N,\; j\ge 1\}$ defined under the probability measure $P^{\pi,\hat\pi}$ as follows:
 \begin{itemize}\item Each $W_{ij}$ is an independent random variable with an \emph{exponential} distribution of rate $(\pi_i + \hat\pi_j)$.
