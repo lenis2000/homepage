@@ -229,14 +229,14 @@ was computed in \cite{defosseux2010orbit}, see also
 
 \begin{theorem}
 \label{thm:MarkovChain}
-Fix an integer \(n\ge1\).  Let \(\pi=(\pi_1,\dots,\pi_n)\) be a strictly positive \(n\)‐vector, and let \(\widehat\pi=(\widehat\pi_1,\widehat\pi_2,\dots)\) be any sequence of nonnegative real parameters.  Under the probability measure \(P^{\pi,\widehat\pi}\), the eigenvalues of the \(n\times n\) generalized Wishart matrices \(\{M(t)\}_{t\ge0}\) form a time‐inhomogeneous Markov chain \(\{\mathrm{sp}(M(t))\}_{t\ge0}\) in the Weyl chamber
+Fix an integer \(n\ge1\).  Let \(\pi=(\pi_1,\dots,\pi_n)\) be a strictly positive \(n\)-vector, and let \(\widehat\pi=(\widehat\pi_1,\widehat\pi_2,\dots)\) be any sequence of nonnegative real parameters.  Under the probability measure \(P^{\pi,\widehat\pi}\), the eigenvalues of the \(n\times n\) generalized Wishart matrices \(\{M(t)\}_{t\ge0}\) form a time-inhomogeneous Markov chain \(\{\mathrm{sp}(M(t))\}_{t\ge0}\) in the Weyl chamber
 \[
 \mathbb{W}^n
 \;=\;
 \bigl\{\,x=(x_1,\dots,x_n)\in\mathbb{R}^n_{\ge0}:
 x_1\ge x_2\ge\cdots\ge x_n\bigr\}.
 \]
-More precisely, writing \(x=\mathrm{sp}(M(t-1))\) and \(y=\mathrm{sp}(M(t))\), the one‐step transition law from time \((t-1)\) to \(t\) is absolutely continuous on the interior of \(\mathbb{W}^n\) and can be factored as
+More precisely, writing \(x=\mathrm{sp}(M(t-1))\) and \(y=\mathrm{sp}(M(t))\), the one-step transition law from time \((t-1)\) to \(t\) is absolutely continuous on the interior of \(\mathbb{W}^n\) and can be factored as
 \begin{equation}
 \label{eq:transition-density}
 Q_{t-1,t}^{\pi,\widehat\pi}(x,\,dy)
@@ -251,39 +251,93 @@ Q_{t-1,t}^{\pi,\widehat\pi}(x,\,dy)
 \end{equation}
 where
 \begin{itemize}
-\item \(\displaystyle Q^{(0)}\bigl(x,\,dy\bigr)\) is the \emph{standard} (null‐spike) Wishart transition kernel, given explicitly by
-\[
+\item \(\displaystyle Q^{(0)}\bigl(x,\,dy\bigr)\) is the \emph{standard} (null-spike) Wishart transition kernel, given explicitly by
+	\begin{equation}
+		\label{eq:Q0}
 Q^{(0)}(x,\,dy)
 \;=\;
 \frac{\Delta(y)}{\Delta(x)}\;\exp\Bigl(\,-\sum_{i=1}^n (y_i - x_i)\Bigr)\,
 \mathbf{1}_{\{x\prec y\}}\;dy,
-\]
+\end{equation}
 with \(\Delta(z)=\prod_{1\le i<j\le n}(z_i - z_j)\) the Vandermonde determinant.
 
-\item The function \(h_{\pi}\) is the (continuous) Harish‐Chandra orbit‐integral factor
+\item The function \(h_{\pi}\) is the (continuous) Harish-Chandra orbit integral factor
 \[
 h_{\pi}(z)
 \;=\;
-\frac{\det\bigl(e^{-\pi_i\,z_j}\bigr)_{i,j=1}^n}{\,\Delta(\pi)\,\Delta(z)\,}
-\;,
+\frac{(-1)^{\binom n2}}{0! 1! \cdots (n-1)! }
+\frac{\det\bigl(e^{-\pi_i\,z_j}\bigr)_{i,j=1}^n}{\Delta(\pi)\,\Delta(z)}.
 \]
-where \(\Delta(\pi)=\prod_{1\le i<j\le n}(\pi_i-\pi_j)\).
+Note that $h_\pi(0)=1$.
 \end{itemize}
 In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix). 
 \end{theorem}
 
-\subsection{Fixed-time distribution of eigenvalues}
+\begin{proof}[Sketch of proof; see \cite{dieker2008largest}]
+	First of all, random-matrix arguments
+	\cite{defosseux2010orbit}, \cite{forrester2006jacobians} show that the
+	theorem holds for the null case $\pi_i=1$ and $\hat\pi_j=0$.
+	The Radon-Nikodym derivative of the transition kernel
+	factors through the diagonal entries of the matrix, 
+	and can be written in terms of the eigenvalues via
+	the HCIZ integral.
+	This yields an explicit factor multiplying the null-case
+	transition density. 
+\end{proof}
 
 
 
+\begin{remark}[Problem~\ref{prob:CauchyBinet}]
+\label{rem:CauchyBinet}
+In order to see directly that the family $\bigl\{Q^{\pi,\hat{\pi}}_{t-1,t}\bigr\}$ of transition kernels does indeed define Markov transitions (that is, each $Q^{\pi,\hat{\pi}}_{t-1,t}(x,\cdot)$ is a probability measure for every $x$), one can use the fact that
+\[
+	\mathbf{1}_{z \prec z'}
+\;=\;
+\det\bigl[\mathbf{1}_{z_i < z'_j}\bigr],
+\]
+along with the Cauchy--Binet (or Andr\'eief) identity:
+\[
+\int_{\mathbb{W}^N}
+\det[\xi_i(z_j)]\,
+\det[\psi_j(z_i)]
+\,dz
+\;=\;
+\det\Bigl[
+\int_{\mathbb{R}}
+\xi_i(z)\,\psi_j(z)\,dz
+\Bigr].
+\]
+Applying this to  
+\eqref{eq:transition-density}--\eqref{eq:Q0}
+yields an integral over the Gelfand--Tsetlin polytope
+of certain exponential weights, which yields something like $h_{\hat \pi}(y)$.
+Then, using Andr\'eief's identity, we need to integrate
+exponential densities of the form $e^{-(\pi_i+\hat \pi_j)y}$.
+Finally, the determinant of $\dfrac{1}{\pi_i+\hat \pi_j}$ is the Cauchy determinant,
+and yields the normalizing factor
+$\prod_{i,j}(\pi_i+\hat \pi_j)$.
+This should
+confirm that each transition kernel
+integrates to one, in line with the notation and
+factorization in Theorem~\ref{thm:MarkovChain}.
+\end{remark}
 
-
-
-
+The fixed-time distribution of the eigenvalues
+in the null case $\pi_i=1$ and $\hat\pi_j=0$ is
+given by the Laguerre orthogonal polynomial ensemble. For example, for $t\ge n$, we have
+\begin{equation}
+	\label{eq:Laguerre}
+	\operatorname{Prob}(\operatorname{sp}(M(t))\in dy)
+	=
+	\frac{1}{Z}\prod_{i<j}(y_i-y_j)^2
+	\prod_{i=1}^n y_i^{t-n} e^{-y_i}.
+\end{equation}
+For the non-null case, see Problem~\ref{prob:Wishart_non_null}.
 
 \section{The lattice LPP model}
 
-\subsection{Definition of the LPP model with exponential/geometric weights}
+\subsection{Definition of the model}
+
 We now turn to a seemingly different probabilistic model: a model of random paths in a grid with random weights. Fix the same dimension $N$ as above. Consider an infinite array of independent, nonnegative random weights $\{W_{ij}: 1\le i\le N,\; j\ge 1\}$ defined under the probability measure $P^{\pi,\hat\pi}$ as follows:
 \begin{itemize}\item Each $W_{ij}$ is an independent random variable with an \emph{exponential} distribution of rate $(\pi_i + \hat\pi_j)$.
 \end{itemize}
@@ -467,6 +521,10 @@ similarly to how we did it for the Dyson Brownian motion in
 
 Prove \Cref{lemma:interlacing}.
 
+\medskip
+\noindent
+\textbf{Hint:} You can use the minimax definition of the eigenvalues to show the interlacing.
+
 \subsection{Gibbs property}
 \label{prob:Gibbs}
 
@@ -480,6 +538,29 @@ all the eigenvalues
 $\left\{ \lambda(s)\colon s=0,1,\ldots,t-1  \right\}$
 is uniform in the Gelfand--Tsetlin polytope
 determined by $\lambda(t)$ and the interlacing.
+
+
+\subsection{Transition kernels integrate to one}
+\label{prob:CauchyBinet}
+
+Complete the argument outlined in \Cref{rem:CauchyBinet}
+that the transition densities $Q^{\pi,\hat\pi}_{t-1,t}(x,dy)$
+integrate to one in $y$.
+
+
+\subsection{Distribution of the eigenvalues}
+\label{prob:Wishart_non_null}
+
+Find the density 
+$\operatorname{Prob}\left( \operatorname{sp}(M(t))\in dy \right)/dy$
+of the spiked Wishart ensemble
+at an arbitrary fixed time $t$.
+For this, you can multiply the transition operators
+$Q^{\pi,\hat\pi}_{t-1,t}$ from \Cref{thm:MarkovChain}.
+
+
+
+
 
 \subsection{Generalized RSK and LPP}
 Consider the inhomogeneous geometric LPP model with site rates \(\{a_i b_j\}\).  Show directly (without passing to the continuous limit) that the vector of last-passage times \(\{Y(i,n)\}\) forms a Markov chain in the Gelfand--Tsetlin cone, and write down its transition probability in factorized form.
