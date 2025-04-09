@@ -316,7 +316,7 @@ Then, using Andr\'eief's identity, we need to integrate
 exponential densities of the form $e^{-(\pi_i+\hat \pi_t)y}$.
 This yields the normalizing factor
 $\prod_{i,j}(\pi_i+\hat \pi_j)$,
-and confirms 
+and confirms
 that each transition kernel
 integrates to one, in line with the notation and
 factorization in Theorem~\ref{thm:MarkovChain}.
@@ -334,9 +334,7 @@ given by the Laguerre orthogonal polynomial ensemble. For example, for $t\ge n$,
 \end{equation}
 For the non-null case, see Problem~\ref{prob:Wishart_non_null}.
 
-\section{The lattice LPP model}
-
-\subsection{Definition of the model}
+\section{The exponential LPP model}
 
 We now turn to a seemingly different probabilistic model: a
 model of random paths in a grid with random weights. Fix an
@@ -468,7 +466,9 @@ $\{Z(t):t\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random
 process in $\mathbb{W}^n$. We will now show that $Z(t)$ is an inhomogeneous Markov
 chain and, crucially, has the \emph{same transition kernel}
 as the eigenvalue chain $\operatorname{sp}(M(t))$ from
-\Cref{sec:Wishart}.
+\Cref{sec:Wishart}. Our goal is to prove this identity in distribution.
+
+\section{Geometric LPP and Robinson-Schensted-Knuth correspondence}
 
 \subsection{Bijective mapping of arrays via toggles}
 \label{sub:toggle}
