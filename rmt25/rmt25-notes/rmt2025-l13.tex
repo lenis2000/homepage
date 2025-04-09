@@ -53,7 +53,7 @@
 \begin{document}
 \title{Lectures on Random Matrices
 (Spring 2025)
-\\Lecture 13: Title TBD}
+\\Lecture 13: Matching a Random Matrix Model to a Random Growth Model}
 
 
 \date{Wednesday, April 9, 2025\footnote{\href{https://lpetrov.cc/rmt25/}{\texttt{Course webpage}}
@@ -69,14 +69,84 @@ Updated at \currenttime, \today}}
 
 \maketitle
 
+\section{Recap}
+
+In the last lecture, we discussed various random growth models, and universal KPZ objects:
+\begin{itemize}
+	\item \textbf{Airy Line Ensemble} which arises as the scaling limit of the Dyson Brownian motion.
+	\item
+\end{itemize}
 
 
 \section{Introduction and Motivation}
-In this lecture, we explore a remarkable connection between random matrix theory and integrable probability: an \emph{equality in law} between the largest eigenvalue process of a spiked Wishart matrix ensemble and a directed last-passage percolation (LPP) model. This connection was first conjectured by Borodin and P\'ech\'e (2008) in their study of deformed random matrix spectra \cite{BorodinPeche2009}, and was later proved by Dieker and Warren (2009) \cite{diekerWarren2008determinantal} via a clever change-of-measure and a combinatorial bijection (the Robinson--Schensted--Knuth correspondence). In essence, one can construct a stochastic process $\{M(n)\}_{n\ge1}$ of random matrices (the ``generalized Wishart'' process with a finite-rank perturbation to the covariance), and another process $\{Y(N,n)\}_{n\ge1}$ of random times from a directed percolation model. The startling result is that the law of the top eigenvalue of $M(n)$ is identical to the law of the last-passage time $Y(N,n)$, not only for each fixed $n$ but as a joint process in $n$.
+In this lecture, we explore a remarkable connection between
+random matrix theory and integrable probability: an
+\emph{equality in law} between the largest eigenvalue
+process of a spiked Wishart matrix ensemble and a directed
+last-passage percolation (LPP) model. This connection was
+first conjectured by Borodin and P\'ech\'e (2008) in their
+study of deformed random matrix spectra
+\cite{BorodinPeche2009}, and was later proved by Dieker and
+Warren (2009) \cite{diekerWarren2008determinantal} via a
+clever change-of-measure and a combinatorial bijection (the
+Robinson--Schensted--Knuth correspondence). In essence, one
+can construct a stochastic process $\{M(n)\}_{n\ge1}$ of
+random matrices (the ``generalized Wishart'' process with a
+finite-rank perturbation to the covariance), and another
+process $\{Y(N,n)\}_{n\ge1}$ of random times from a directed
+percolation model. The startling result is that the law of
+the top eigenvalue of $M(n)$ is identical to the law of the
+last-passage time $Y(N,n)$, not only for each fixed $n$ but
+as a joint process in $n$.
 
-This result provides a deep bridge between random matrix eigenvalue fluctuations and probabilistic growth models in the Kardar--Parisi--Zhang (KPZ) universality class. In particular, it allows us to interpret the distribution of the largest eigenvalue in a \emph{spiked Wishart ensemble} (also called a finite-rank deformation of Wishart or Laguerre ensemble) in terms of directed LPP with random weights. Through this connection, integrable probability techniques (such as the RSK bijection and known exact formulas for LPP) can be used to analyze spiked random matrices, and vice versa. One immediate consequence is a precise description of the \textbf{limiting distribution of the top eigenvalue} in the spiked Wishart model: depending on the strength of the spike, the top eigenvalue either follows the Tracy--Widom law of the GOE/GUE, or, if an outlier emerges, converges to a new distribution given by a deformed Airy kernel (the so-called \emph{BBP transition} \cite{BBP2005phase, BorodinPeche2009}). We will give the precise statements of these results and outline their proofs in this lecture. The style and notation will follow that of Lectures 1--11, providing full rigor, motivation, and detailed proofs of the key theorems.
+This result provides a deep bridge between random matrix
+eigenvalue fluctuations and probabilistic growth models in
+the Kardar--Parisi--Zhang (KPZ) universality class. In
+particular, it allows us to interpret the distribution of
+the largest eigenvalue in a \emph{spiked Wishart ensemble}
+(also called a finite-rank deformation of Wishart or
+Laguerre ensemble) in terms of directed LPP with random
+weights. Through this connection, integrable probability
+techniques (such as the RSK bijection and known exact
+formulas for LPP) can be used to analyze spiked random
+matrices, and vice versa. One immediate consequence is a
+precise description of the \textbf{limiting distribution of
+the top eigenvalue} in the spiked Wishart model: depending
+on the strength of the spike, the top eigenvalue either
+follows the Tracy--Widom law of the GOE/GUE, or, if an
+outlier emerges, converges to a new distribution given by a
+deformed Airy kernel (the so-called \emph{BBP transition}
+\cite{BBP2005phase, BorodinPeche2009}). We will give the
+precise statements of these results and outline their proofs
+in this lecture. The style and notation will follow that of
+Lectures 1--11, providing full rigor, motivation, and
+detailed proofs of the key theorems.
 
-The lecture is organized as follows. In Section 2, we define the generalized (spiked) Wishart random matrix ensemble with a finite-rank perturbation to the covariance. We describe the \emph{largest eigenvalue process} as the number of sample vectors $n$ increases, and state the Markov property and transition kernel for this eigenvalue process (Theorem \ref{thm:MarkovChain}), following \cite{diekerWarren2008determinantal}. In Section 3, we introduce the directed last-passage percolation (LPP) model with geometric/exponential weights, and recall the Robinson--Schensted--Knuth (RSK) correspondence. We state how RSK produces an interlacing array (Gelfand--Tsetlin pattern) from the random LPP environment, and how this implies a Markov property for the vector of last-passage times (Proposition \ref{prop:RSK-Markov}). In Section 4, we prove the main equality-in-law result (Theorem \ref{thm:MainEquality}) by combining the Markov descriptions from Sections 2 and 3. We then discuss the implications for the distribution of the top eigenvalue, including the identification of its scaling limit with known distributions from random matrix theory and KPZ universality (Tracy--Widom and its deformations). A careful statement of the asymptotic law of the spiked Wishart top eigenvalue (following Borodin--P\'ech\'e \cite{BorodinPeche2009}) is given in Theorem \ref{thm:BP-limit}.
+The lecture is organized as follows. In Section 2, we define
+the generalized (spiked) Wishart random matrix ensemble with
+a finite-rank perturbation to the covariance. We describe
+the \emph{largest eigenvalue process} as the number of
+sample vectors $n$ increases, and state the Markov property
+and transition kernel for this eigenvalue process (Theorem
+\ref{thm:MarkovChain}), following
+\cite{diekerWarren2008determinantal}. In Section 3, we
+introduce the directed last-passage percolation (LPP) model
+with geometric/exponential weights, and recall the
+Robinson--Schensted--Knuth (RSK) correspondence. We state
+how RSK produces an interlacing array (Gelfand--Tsetlin
+pattern) from the random LPP environment, and how this
+implies a Markov property for the vector of last-passage
+times (Proposition \ref{prop:RSK-Markov}). In Section 4, we
+prove the main equality-in-law result (Theorem
+\ref{thm:MainEquality}) by combining the Markov descriptions
+from Sections 2 and 3. We then discuss the implications for
+the distribution of the top eigenvalue, including the
+identification of its scaling limit with known distributions
+from random matrix theory and KPZ universality (Tracy--Widom
+and its deformations). A careful statement of the asymptotic
+law of the spiked Wishart top eigenvalue (following
+Borodin--P\'ech\'e \cite{BorodinPeche2009}) is given in
+Theorem \ref{thm:BP-limit}.
 
 \section{The Generalized Wishart Ensemble with Finite-Rank Perturbations}
 \subsection{Definition of the spiked Wishart process}
