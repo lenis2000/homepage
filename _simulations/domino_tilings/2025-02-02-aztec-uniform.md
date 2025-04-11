@@ -78,8 +78,8 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 
 <!-- Tabs -->
 <div class="tab">
-  <button class="tablinks active" onclick="openView(event, 'domino-view')">Domino View</button>
-  <button class="tablinks" onclick="openView(event, 'dimer-view'); resizeDimerView();">Dimer View</button>
+  <button class="tablinks active" onclick="openView(event, 'domino-view')">Dominos</button>
+  <button class="tablinks" onclick="openView(event, 'dimer-view'); resizeDimerView();">Dimers on the Dual Grid</button>
 </div>
 
 <!-- Domino View -->
@@ -97,11 +97,18 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
       <input type="checkbox" id="checkerboard-toggle"> Show checkerboard overlay
     </label>
   </div>
-  
+
   <!-- Paths toggle -->
   <div style="margin-bottom: 8px;">
     <label for="paths-toggle">
       <input type="checkbox" id="paths-toggle"> Show nonintersecting paths
+    </label>
+  </div>
+
+  <!-- Dimers toggle -->
+  <div style="margin-bottom: 8px;">
+    <label for="dimers-toggle">
+      <input type="checkbox" id="dimers-toggle"> Show dimers
     </label>
   </div>
 
@@ -136,11 +143,13 @@ Module.onRuntimeInitialized = async function() {
   let useColors = true; // Track coloring state
   let useCheckerboard = false; // Track checkerboard state
   let usePaths = false; // Track nonintersecting paths state
+  let useDimers = false; // Track dimers visibility state
   let currentDominoes = []; // Store current dominoes for toggling colors
   let isProcessing = false; // Flag to prevent multiple simultaneous updates
   let lastValue = parseInt(inputField.value, 10); // Track last processed value
   let checkerboardGroup; // Group for checkerboard squares
   let pathsGroup; // Group for nonintersecting paths
+  let dimersGroup; // Group for dimers overlay
 
   // Define n in the broader scope so it's accessible to all functions
   let n = parseInt(inputField.value, 10);
@@ -211,12 +220,20 @@ Module.onRuntimeInitialized = async function() {
       toggleCheckerboard();
     }
   });
-  
+
   // Handle paths toggle
   document.getElementById("paths-toggle").addEventListener("change", function() {
     usePaths = this.checked;
     if (currentDominoes.length > 0) {
       togglePaths();
+    }
+  });
+
+  // Handle dimers toggle
+  document.getElementById("dimers-toggle").addEventListener("change", function() {
+    useDimers = this.checked;
+    if (currentDominoes.length > 0) {
+      toggleDimers();
     }
   });
 
@@ -296,16 +313,16 @@ Module.onRuntimeInitialized = async function() {
       pathsGroup.remove();
       pathsGroup = null;
     }
-    
+
     // If paths are not enabled, just return
     if (!usePaths) return;
-    
+
     // Compute bounding box of dominoes
     const minX = d3.min(currentDominoes, d => d.x);
     const minY = d3.min(currentDominoes, d => d.y);
     const maxX = d3.max(currentDominoes, d => d.x + d.w);
     const maxY = d3.max(currentDominoes, d => d.y + d.h);
-    
+
     // Use the computed dimensions of the SVG
     const bbox = svg.node().getBoundingClientRect();
     const svgWidth = bbox.width;
@@ -313,18 +330,18 @@ Module.onRuntimeInitialized = async function() {
     const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
     const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
     const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
-    
+
     // Create a new group for the paths
     pathsGroup = svg.append("g")
       .attr("class", "paths")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
-    
+
     // Draw paths for each domino based on its color and orientation
     currentDominoes.forEach(domino => {
       const centerX = domino.x + domino.w / 2;
       const centerY = domino.y + domino.h / 2;
       const isHorizontal = domino.w > domino.h;
-      
+
       // Draw different paths based on domino color
       if (domino.color === "green") {
         // Green: Horizontal line through center
@@ -335,16 +352,16 @@ Module.onRuntimeInitialized = async function() {
           .attr("y2", centerY)
           .attr("stroke", "black")
           .attr("stroke-width", 5.5);
-      } 
+      }
       else if (domino.color === "yellow") {
         // Yellow: path parallel to vector (1,-1) through the center
         // Calculate the line endpoints based on center point and direction vector (1,-1)
         const length = Math.min(domino.w, domino.h) * 0.7; // Scale length to fit inside domino
-        
+
         // Direction vector (1,-1) normalized and scaled
         const dx = length / Math.sqrt(2);
         const dy = length / Math.sqrt(2);
-        
+
         pathsGroup.append("line")
           .attr("x1", centerX - dx)
           .attr("y1", centerY + dy)
@@ -357,11 +374,11 @@ Module.onRuntimeInitialized = async function() {
         // Red: path parallel to vector (1,1) through the center
         // Calculate the line endpoints based on center point and direction vector (1,1)
         const length = Math.min(domino.w, domino.h) * 0.7; // Scale length to fit inside domino
-        
+
         // Direction vector (1,1) normalized and scaled
         const dx = length / Math.sqrt(2);
         const dy = length / Math.sqrt(2);
-        
+
         pathsGroup.append("line")
           .attr("x1", centerX - dx)
           .attr("y1", centerY - dy)
@@ -372,12 +389,99 @@ Module.onRuntimeInitialized = async function() {
       }
       // Blue dominos don't get paths
     });
-    
+
     // Move paths on top of dominoes but below checkerboard if it exists
     pathsGroup.raise();
     if (checkerboardGroup) {
       checkerboardGroup.raise();
     }
+    if (dimersGroup) {
+      dimersGroup.raise();
+    }
+  }
+
+  // Function to toggle dimers on/off in the domino view
+  function toggleDimers() {
+    // Remove existing dimers if they exist
+    if (dimersGroup) {
+      dimersGroup.remove();
+      dimersGroup = null;
+    }
+
+    // If dimers are not enabled, just return
+    if (!useDimers) return;
+
+    // Compute bounding box of dominoes
+    const minX = d3.min(currentDominoes, d => d.x);
+    const minY = d3.min(currentDominoes, d => d.y);
+    const maxX = d3.max(currentDominoes, d => d.x + d.w);
+    const maxY = d3.max(currentDominoes, d => d.y + d.h);
+
+    // Use the computed dimensions of the SVG
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
+    const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
+
+    // Create a new group for the dimers
+    dimersGroup = svg.append("g")
+      .attr("class", "dimers-overlay")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+    // Draw dimers for each domino
+    currentDominoes.forEach(domino => {
+      const centerX = domino.x + domino.w / 2;
+      const centerY = domino.y + domino.h / 2;
+      const isHorizontal = domino.w > domino.h;
+
+      // Determine line endpoints based on orientation
+      let x1, y1, x2, y2;
+
+      if (isHorizontal) {
+        // For horizontal dominos
+        x1 = centerX - domino.w / 4;
+        y1 = centerY;
+        x2 = centerX + domino.w / 4;
+        y2 = centerY;
+      } else {
+        // For vertical dominos
+        x1 = centerX;
+        y1 = centerY - domino.h / 4;
+        x2 = centerX;
+        y2 = centerY + domino.h / 4;
+      }
+
+      // Draw dimer line
+      dimersGroup.append("line")
+        .attr("x1", x1)
+        .attr("y1", y1)
+        .attr("x2", x2)
+        .attr("y2", y2)
+        .attr("stroke", "black")
+        .attr("stroke-width", 4.5)
+        .attr("stroke-opacity", 0.8);
+
+      // Add circles at endpoints
+      const circleRadius = 4.5;
+      dimersGroup.append("circle")
+        .attr("cx", x1)
+        .attr("cy", y1)
+        .attr("r", circleRadius)
+        .attr("fill", "black")
+        .attr("fill-opacity", 0.8);
+
+      dimersGroup.append("circle")
+        .attr("cx", x2)
+        .attr("cy", y2)
+        .attr("r", circleRadius)
+        .attr("fill", "black")
+        .attr("fill-opacity", 0.8);
+    });
+
+    // Make dimers appear on top of everything else
+    dimersGroup.raise();
   }
 
   // Render the dominoes with or without colors
@@ -404,6 +508,7 @@ Module.onRuntimeInitialized = async function() {
     svg.selectAll("g").remove();
     checkerboardGroup = null;
     pathsGroup = null;
+    dimersGroup = null;
 
     // Append a group for the dominoes.
     const group = svg.append("g")
@@ -427,7 +532,7 @@ Module.onRuntimeInitialized = async function() {
     if (usePaths) {
       togglePaths();
     }
-    
+
     // Add checkerboard if enabled
     if (useCheckerboard) {
       toggleCheckerboard();
@@ -435,6 +540,11 @@ Module.onRuntimeInitialized = async function() {
 
     // Also render the dimer view
     renderDimerView(dominoes);
+
+    // Add dimers if enabled
+    if (useDimers) {
+      toggleDimers();
+    }
   }
 
   // Render the dimer view based on Python's aztec_edge_printer
@@ -653,6 +763,7 @@ Module.onRuntimeInitialized = async function() {
     dimerSvg.selectAll("*").remove();
     checkerboardGroup = null;
     pathsGroup = null;
+    dimersGroup = null;
 
     // Start the progress indicator.
     startProgressPolling();
