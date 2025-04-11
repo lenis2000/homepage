@@ -419,6 +419,28 @@ Module.onRuntimeInitialized = async function() {
   // The size value used for scaling
   const size = 2 * n;
 
+  // Check if n is too large for dimer view
+  if (n >= 52) {
+    // Display message for large n values as an overlay on top of SVG
+    dimerSvg.append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", svgWidth)
+      .attr("height", svgHeight)
+      .attr("fill", "rgba(255, 255, 255, 0.8)");
+
+    dimerSvg.append("text")
+      .attr("x", svgWidth / 2)
+      .attr("y", svgHeight / 2)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .style("font-size", "20px")
+      .style("font-weight", "bold")
+      .style("z-index", "100")
+      .text("This n is too large to see individual dimers");
+    return;
+  }
+
   // Draw dimers directly from the domino data
   dominoes.forEach(domino => {
     // Based on the logs, dominoes look like: {"x":-20,"y":1000,"w":40,"h":20,"color":"green"}
@@ -455,6 +477,25 @@ Module.onRuntimeInitialized = async function() {
       y2 = centerY + 0.5;
     }
 
+    // Determine stroke width based on n (decreasing with larger n)
+    let strokeWidth, circleRadius;
+    if (n <= 20) {
+      strokeWidth = 6;
+      circleRadius = 6;
+    } else if (n <= 30) {
+      strokeWidth = 5;
+      circleRadius = 5;
+    } else if (n <= 40) {
+      strokeWidth = 3;
+      circleRadius = 3;
+    } else if (n <= 50) {
+      strokeWidth = 2;
+      circleRadius = 2;
+    } else {
+      strokeWidth = 1.5;
+      circleRadius = 1.5;
+    }
+
     // Draw the dimer on the grid
     dimerGroup.append("line")
       .attr("x1", isHorizontal ? (x1+1/2) * scale : x1 * scale)
@@ -462,20 +503,20 @@ Module.onRuntimeInitialized = async function() {
       .attr("x2", isHorizontal ? (x2+1/2) * scale : x2 * scale)
       .attr("y2", isHorizontal ? (y2+1) * scale : (y2 + 1/2) * scale)
       .attr("stroke", "black")
-      .attr("stroke-width", 6)
+      .attr("stroke-width", strokeWidth)
       .attr("class", isHorizontal ? "dimer-edge-h" : "dimer-edge-v");
 
     // Add circles at endpoints for better visibility
     dimerGroup.append("circle")
       .attr("cx", isHorizontal ? (x1+1/2) * scale : x1 * scale)
       .attr("cy", isHorizontal ? (y1+1) * scale : (y1 + 1/2) * scale)
-      .attr("r", 6)
+      .attr("r", circleRadius)
       .attr("fill", "black");
 
     dimerGroup.append("circle")
       .attr("cx", isHorizontal ? (x2+1/2) * scale : x2 * scale)
       .attr("cy", isHorizontal ? (y2+1) * scale : (y2 + 1/2) * scale)
-      .attr("r", 6)
+      .attr("r", circleRadius)
       .attr("fill", "black");
 
     dimerCount++;
