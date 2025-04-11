@@ -461,7 +461,7 @@ Module.onRuntimeInitialized = async function() {
         .attr("y2", y2)
         .attr("stroke", "black")
         .attr("stroke-width", 4.5)
-        .attr("stroke-opacity", 0.8);
+        .attr("stroke-opacity", 1);
 
       // Add circles at endpoints
       const circleRadius = 4.5;
@@ -470,14 +470,14 @@ Module.onRuntimeInitialized = async function() {
         .attr("cy", y1)
         .attr("r", circleRadius)
         .attr("fill", "black")
-        .attr("fill-opacity", 0.8);
+        .attr("fill-opacity", 1);
 
       dimersGroup.append("circle")
         .attr("cx", x2)
         .attr("cy", y2)
         .attr("r", circleRadius)
         .attr("fill", "black")
-        .attr("fill-opacity", 0.8);
+        .attr("fill-opacity", 1);
     });
 
     // Make dimers appear on top of everything else
