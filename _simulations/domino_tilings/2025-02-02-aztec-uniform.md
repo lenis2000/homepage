@@ -97,6 +97,13 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
       <input type="checkbox" id="checkerboard-toggle"> Show checkerboard overlay
     </label>
   </div>
+  
+  <!-- Paths toggle -->
+  <div style="margin-bottom: 8px;">
+    <label for="paths-toggle">
+      <input type="checkbox" id="paths-toggle"> Show nonintersecting paths
+    </label>
+  </div>
 
   <div class="row">
     <div class="col-12">
@@ -128,10 +135,12 @@ Module.onRuntimeInitialized = async function() {
   let progressInterval;
   let useColors = true; // Track coloring state
   let useCheckerboard = false; // Track checkerboard state
+  let usePaths = false; // Track nonintersecting paths state
   let currentDominoes = []; // Store current dominoes for toggling colors
   let isProcessing = false; // Flag to prevent multiple simultaneous updates
   let lastValue = parseInt(inputField.value, 10); // Track last processed value
   let checkerboardGroup; // Group for checkerboard squares
+  let pathsGroup; // Group for nonintersecting paths
 
   // Define n in the broader scope so it's accessible to all functions
   let n = parseInt(inputField.value, 10);
@@ -200,6 +209,14 @@ Module.onRuntimeInitialized = async function() {
     useCheckerboard = this.checked;
     if (currentDominoes.length > 0) {
       toggleCheckerboard();
+    }
+  });
+  
+  // Handle paths toggle
+  document.getElementById("paths-toggle").addEventListener("change", function() {
+    usePaths = this.checked;
+    if (currentDominoes.length > 0) {
+      togglePaths();
     }
   });
 
@@ -272,6 +289,97 @@ Module.onRuntimeInitialized = async function() {
     checkerboardGroup.raise();
   }
 
+  // Function to toggle paths on/off
+  function togglePaths() {
+    // Remove existing paths if they exist
+    if (pathsGroup) {
+      pathsGroup.remove();
+      pathsGroup = null;
+    }
+    
+    // If paths are not enabled, just return
+    if (!usePaths) return;
+    
+    // Compute bounding box of dominoes
+    const minX = d3.min(currentDominoes, d => d.x);
+    const minY = d3.min(currentDominoes, d => d.y);
+    const maxX = d3.max(currentDominoes, d => d.x + d.w);
+    const maxY = d3.max(currentDominoes, d => d.y + d.h);
+    
+    // Use the computed dimensions of the SVG
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
+    const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
+    
+    // Create a new group for the paths
+    pathsGroup = svg.append("g")
+      .attr("class", "paths")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+    
+    // Draw paths for each domino based on its color and orientation
+    currentDominoes.forEach(domino => {
+      const centerX = domino.x + domino.w / 2;
+      const centerY = domino.y + domino.h / 2;
+      const isHorizontal = domino.w > domino.h;
+      
+      // Draw different paths based on domino color
+      if (domino.color === "green") {
+        // Green: Horizontal line through center
+        pathsGroup.append("line")
+          .attr("x1", domino.x)
+          .attr("y1", centerY)
+          .attr("x2", domino.x + domino.w)
+          .attr("y2", centerY)
+          .attr("stroke", "black")
+          .attr("stroke-width", 5.5);
+      } 
+      else if (domino.color === "yellow") {
+        // Yellow: path parallel to vector (1,-1) through the center
+        // Calculate the line endpoints based on center point and direction vector (1,-1)
+        const length = Math.min(domino.w, domino.h) * 0.7; // Scale length to fit inside domino
+        
+        // Direction vector (1,-1) normalized and scaled
+        const dx = length / Math.sqrt(2);
+        const dy = length / Math.sqrt(2);
+        
+        pathsGroup.append("line")
+          .attr("x1", centerX - dx)
+          .attr("y1", centerY + dy)
+          .attr("x2", centerX + dx)
+          .attr("y2", centerY - dy)
+          .attr("stroke", "black")
+          .attr("stroke-width", 5.5);
+      }
+      else if (domino.color === "red") {
+        // Red: path parallel to vector (1,1) through the center
+        // Calculate the line endpoints based on center point and direction vector (1,1)
+        const length = Math.min(domino.w, domino.h) * 0.7; // Scale length to fit inside domino
+        
+        // Direction vector (1,1) normalized and scaled
+        const dx = length / Math.sqrt(2);
+        const dy = length / Math.sqrt(2);
+        
+        pathsGroup.append("line")
+          .attr("x1", centerX - dx)
+          .attr("y1", centerY - dy)
+          .attr("x2", centerX + dx)
+          .attr("y2", centerY + dy)
+          .attr("stroke", "black")
+          .attr("stroke-width", 5.5);
+      }
+      // Blue dominos don't get paths
+    });
+    
+    // Move paths on top of dominoes but below checkerboard if it exists
+    pathsGroup.raise();
+    if (checkerboardGroup) {
+      checkerboardGroup.raise();
+    }
+  }
+
   // Render the dominoes with or without colors
   function renderDominoes(dominoes) {
     // Compute bounding box of dominoes.
@@ -295,6 +403,7 @@ Module.onRuntimeInitialized = async function() {
     // Clear previous rendering
     svg.selectAll("g").remove();
     checkerboardGroup = null;
+    pathsGroup = null;
 
     // Append a group for the dominoes.
     const group = svg.append("g")
@@ -312,8 +421,13 @@ Module.onRuntimeInitialized = async function() {
       .attr("height", d => d.h)
       .attr("fill", d => useColors ? d.color : "#eee") // Use color from data or gray if colors disabled
       .attr("stroke", "#000")
-      .attr("stroke-width", d => useCheckerboard || !useColors ? 4.5 : 0.5);
+      .attr("stroke-width", d => useCheckerboard ? 4.5 : (useColors ? 0.5 : 0.8));
 
+    // Add paths if enabled (must be added before checkerboard)
+    if (usePaths) {
+      togglePaths();
+    }
+    
     // Add checkerboard if enabled
     if (useCheckerboard) {
       toggleCheckerboard();
@@ -538,6 +652,7 @@ Module.onRuntimeInitialized = async function() {
     svg.selectAll("g").remove();
     dimerSvg.selectAll("*").remove();
     checkerboardGroup = null;
+    pathsGroup = null;
 
     // Start the progress indicator.
     startProgressPolling();
