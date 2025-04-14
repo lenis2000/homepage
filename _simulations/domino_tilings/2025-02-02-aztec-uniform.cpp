@@ -13,6 +13,12 @@ emcc 2025-02-02-aztec-uniform.cpp -o 2025-02-02-aztec-uniform.js \
   mv 2025-02-02-aztec-uniform.js ../../js/
 
 Note: When testing locally, serve these files over HTTP rather than via file://.
+
+Features:
+- Uniform random domino tilings of Aztec diamond
+- Supports both domino and dimer view modes
+- Includes nonintersecting paths visualization
+- Added TikZ export functionality (April 2025)
 */
 
 #include <emscripten.h>

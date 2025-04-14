@@ -7,6 +7,8 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-02-aztec-uniform.cpp'
     txt: 'C++ code for the simulation'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py'
+    txt: 'Python script for TikZ export (now integrated directly in the web page)'
 ---
 
 <style>
@@ -67,7 +69,25 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
 ### Update 2025-04-14: TikZ Code Generation
 
-You can now get a TikZ code for the sampled Aztec diamond (supporting dominoes and nonintersecting paths) using [this Python script](https://github.com/lenis2000/homepage/blob/master/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py).
+You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports:
+
+- Dominoes with appropriate coloring
+- Nonintersecting paths (when enabled with the checkbox)
+- Automatic scaling for optimal LaTeX output
+- View, copy, or download the generated LaTeX code
+
+To use this feature:
+1. Generate the Aztec diamond with your desired settings
+2. Enable/disable paths as needed using the checkbox
+3. Click the "Get TikZ Code" button
+4. A new window will open with the TikZ code, where you can:
+   - View the formatted code
+   - Copy the code to clipboard
+   - Download as a .tex file if needed
+
+<div style="margin-top: 10px; margin-bottom: 10px;">
+  <button id="tikz-btn" class="btn btn-primary">Get TikZ Code</button>
+</div>
 
 ---
 
@@ -852,5 +872,254 @@ Module.onRuntimeInitialized = async function() {
       document.querySelector('.tablinks').click();
     }
   }, 1000);
+
+  // SVG to TikZ conversion function - directly adapted from the Python script at
+  // /Users/leo/Homepage/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py
+  function svgToTikZ() {
+    if (!currentDominoes || currentDominoes.length === 0) {
+      alert("Please generate a domino tiling first.");
+      return;
+    }
+
+    // Create an SVG string from the current display
+    // We'll generate a temporary SVG that exactly matches what would be processed by the Python script
+    let svgContent = '<svg xmlns="http://www.w3.org/2000/svg">\n';
+    
+    // Add all domino rectangles to the SVG content
+    currentDominoes.forEach(domino => {
+      svgContent += `<rect x="${domino.x}" y="${domino.y}" width="${domino.w}" height="${domino.h}" `;
+      svgContent += `fill="${domino.color}" stroke="black" stroke-width="4.5"></rect>\n`;
+    });
+    
+    // Add path lines if enabled
+    if (usePaths) {
+      // Draw paths for each domino based on its color
+      currentDominoes.forEach(domino => {
+        const centerX = domino.x + domino.w / 2;
+        const centerY = domino.y + domino.h / 2;
+        const isHorizontal = domino.w > domino.h;
+        
+        if (domino.color === "green") {
+          // Green: Horizontal line through center
+          svgContent += `<line x1="${domino.x}" y1="${centerY}" x2="${domino.x + domino.w}" y2="${centerY}" `;
+          svgContent += `stroke="black" stroke-width="5.5"></line>\n`;
+        } 
+        else if (domino.color === "yellow") {
+          // Yellow: path parallel to vector (1,-1) through the center
+          const length = Math.min(domino.w, domino.h) * 0.7;
+          const dx = length / Math.sqrt(2);
+          const dy = length / Math.sqrt(2);
+          
+          svgContent += `<line x1="${centerX - dx}" y1="${centerY + dy}" x2="${centerX + dx}" y2="${centerY - dy}" `;
+          svgContent += `stroke="black" stroke-width="5.5"></line>\n`;
+        }
+        else if (domino.color === "red") {
+          // Red: path parallel to vector (1,1) through the center
+          const length = Math.min(domino.w, domino.h) * 0.7;
+          const dx = length / Math.sqrt(2);
+          const dy = length / Math.sqrt(2);
+          
+          svgContent += `<line x1="${centerX - dx}" y1="${centerY - dy}" x2="${centerX + dx}" y2="${centerY + dy}" `;
+          svgContent += `stroke="black" stroke-width="5.5"></line>\n`;
+        }
+        // Blue dominos don't get paths
+      });
+    }
+    
+    svgContent += '</svg>';
+    
+    // Now extract using similar logic to the Python script
+    const rectangles = [];
+    const rectPattern = /<rect x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)" fill="([^"]+)" stroke="([^"]+)" stroke-width="([^"]+)"><\/rect>/g;
+    let match;
+    while ((match = rectPattern.exec(svgContent)) !== null) {
+      const [_, x, y, width, height, fill, stroke, strokeWidth] = match;
+      rectangles.push({
+        x: parseFloat(x) / 10,
+        y: parseFloat(y) / 10,
+        width: parseFloat(width) / 10,
+        height: parseFloat(height) / 10,
+        fill: fill,
+        stroke: stroke,
+        strokeWidth: parseFloat(strokeWidth) / 10
+      });
+    }
+    
+    // Extract lines (paths)
+    const lines = [];
+    const linePattern = /<line x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)" stroke="([^"]+)" stroke-width="([^"]+)"><\/line>/g;
+    while ((match = linePattern.exec(svgContent)) !== null) {
+      const [_, x1, y1, x2, y2, stroke, strokeWidth] = match;
+      lines.push({
+        x1: parseFloat(x1) / 10,
+        y1: parseFloat(y1) / 10,
+        x2: parseFloat(x2) / 10,
+        y2: parseFloat(y2) / 10,
+        stroke: stroke,
+        strokeWidth: parseFloat(strokeWidth) / 10
+      });
+    }
+    
+    if (rectangles.length === 0 && lines.length === 0) {
+      alert("No elements found in the SVG.");
+      return;
+    }
+    
+    // Find the bounds of the drawing (exact algorithm from the Python script)
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    
+    if (rectangles.length > 0) {
+      minX = Math.min(minX, Math.min(...rectangles.map(rect => rect.x)));
+      maxX = Math.max(maxX, Math.max(...rectangles.map(rect => rect.x + rect.width)));
+      minY = Math.min(minY, Math.min(...rectangles.map(rect => rect.y)));
+      maxY = Math.max(maxY, Math.max(...rectangles.map(rect => rect.y + rect.height)));
+    }
+    
+    if (lines.length > 0) {
+      minX = Math.min(minX, Math.min(...lines.map(line => Math.min(line.x1, line.x2))));
+      maxX = Math.max(maxX, Math.max(...lines.map(line => Math.max(line.x1, line.x2))));
+      minY = Math.min(minY, Math.min(...lines.map(line => Math.min(line.y1, line.y2))));
+      maxY = Math.max(maxY, Math.max(...lines.map(line => Math.max(line.y1, line.y2))));
+    }
+    
+    // Calculate a good scale factor (same as Python script)
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const maxDimension = Math.max(width, height);
+    const scaleFactor = 15.0 / maxDimension;
+    
+    // Generate TikZ code (exact format from Python script)
+    let tikzCode = `\\documentclass{standalone}
+\\usepackage{tikz}
+\\usepackage{xcolor}
+
+% Define colors to match SVG
+\\definecolor{svggreen}{RGB}{0, 128, 0}
+\\definecolor{svgred}{RGB}{255, 0, 0}
+\\definecolor{svgyellow}{RGB}{255, 255, 0}
+\\definecolor{svgblue}{RGB}{0, 0, 255}
+
+\\begin{document}
+\\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
+
+% Dominoes (rectangles)
+`;
+    
+    // Add rectangles to TikZ code (exact algorithm from Python script)
+    rectangles.forEach(rect => {
+      // Map SVG colors to TikZ colors
+      let fillColor = rect.fill;
+      if (fillColor === 'green') fillColor = 'svggreen';
+      else if (fillColor === 'red') fillColor = 'svgred';
+      else if (fillColor === 'yellow') fillColor = 'svgyellow';
+      else if (fillColor === 'blue') fillColor = 'svgblue';
+      
+      // Shift coordinates to keep everything positive
+      const x1 = rect.x - minX;
+      const y1 = maxY - rect.y - rect.height;  // Invert y and adjust for height
+      const x2 = rect.x - minX + rect.width;
+      const y2 = maxY - rect.y;
+      
+      tikzCode += `\\filldraw[fill=${fillColor}, draw=black, line width=${rect.strokeWidth}pt] `;
+      tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+    });
+    
+    tikzCode += "\n% Paths (lines)\n";
+    
+    // Add lines to TikZ code (exact algorithm from Python script)
+    lines.forEach(line => {
+      // Shift and invert coordinates
+      const x1 = line.x1 - minX;
+      const y1 = maxY - line.y1;
+      const x2 = line.x2 - minX;
+      const y2 = maxY - line.y2;
+      
+      tikzCode += `\\draw[black, line width=${line.strokeWidth}pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+    });
+    
+    tikzCode += `
+\\end{tikzpicture}
+\\end{document}`;
+    
+    // Display the TikZ code in a new window
+    const newWindow = window.open();
+    newWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Aztec Diamond n=${n} - TikZ Code</title>
+        <style>
+          body {
+            font-family: monospace;
+            white-space: pre;
+            padding: 20px;
+            line-height: 1.5;
+            background-color: #f5f5f5;
+          }
+          .code-container {
+            background-color: white;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow-x: auto;
+          }
+          .header {
+            margin-bottom: 20px;
+          }
+          .button-row {
+            margin-top: 15px;
+            margin-bottom: 15px;
+          }
+          button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+          }
+          button:hover {
+            background-color: #45a049;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>TikZ Code for Aztec Diamond (n=${n})</h2>
+          <p>Copy this code into a .tex file and compile with LaTeX.</p>
+        </div>
+        <div class="button-row">
+          <button onclick="copyToClipboard()">Copy to Clipboard</button>
+          <button onclick="downloadCode()">Download .tex File</button>
+        </div>
+        <div class="code-container">${tikzCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <script>
+          function copyToClipboard() {
+            const codeText = \`${tikzCode.replace(/`/g, '\\`')}\`;
+            navigator.clipboard.writeText(codeText)
+              .then(() => alert('TikZ code copied to clipboard!'))
+              .catch(err => console.error('Error copying text: ', err));
+          }
+          
+          function downloadCode() {
+            const codeText = \`${tikzCode.replace(/`/g, '\\`')}\`;
+            const blob = new Blob([codeText], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.download = 'aztec_diamond_n${n}_tikz.tex';
+            a.href = URL.createObjectURL(blob);
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }
+        </script>
+      </body>
+      </html>
+    `);
+    newWindow.document.close();
+  }
+  
+  // Add event listener for the TikZ button
+  document.getElementById("tikz-btn").addEventListener("click", svgToTikZ);
 };
 </script>
