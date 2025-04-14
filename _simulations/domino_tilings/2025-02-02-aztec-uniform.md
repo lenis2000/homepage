@@ -881,28 +881,38 @@ Module.onRuntimeInitialized = async function() {
       return;
     }
 
-    // Create an SVG string from the current display
-    // We'll generate a temporary SVG that exactly matches what would be processed by the Python script
-    let svgContent = '<svg xmlns="http://www.w3.org/2000/svg">\n';
-    
-    // Add all domino rectangles to the SVG content
-    currentDominoes.forEach(domino => {
-      svgContent += `<rect x="${domino.x}" y="${domino.y}" width="${domino.w}" height="${domino.h}" `;
-      svgContent += `fill="${domino.color}" stroke="black" stroke-width="4.5"></rect>\n`;
+    // We'll use the domino data directly instead of parsing SVG
+    // Convert domino objects to rectangle objects with the format needed for TikZ conversion
+    const rectangles = currentDominoes.map(domino => {
+      return {
+        x: domino.x / 10,
+        y: domino.y / 10,
+        width: domino.w / 10,
+        height: domino.h / 10,
+        fill: domino.color,
+        stroke: "black",
+        strokeWidth: 0.45 // Scaled down like in the Python script
+      };
     });
     
-    // Add path lines if enabled
+    // Create lines array for paths if enabled
+    const lines = [];
     if (usePaths) {
-      // Draw paths for each domino based on its color
+      // Add lines based on domino colors and positions
       currentDominoes.forEach(domino => {
-        const centerX = domino.x + domino.w / 2;
-        const centerY = domino.y + domino.h / 2;
-        const isHorizontal = domino.w > domino.h;
+        const centerX = domino.x + domino.w/2;
+        const centerY = domino.y + domino.h/2;
         
         if (domino.color === "green") {
           // Green: Horizontal line through center
-          svgContent += `<line x1="${domino.x}" y1="${centerY}" x2="${domino.x + domino.w}" y2="${centerY}" `;
-          svgContent += `stroke="black" stroke-width="5.5"></line>\n`;
+          lines.push({
+            x1: domino.x / 10,
+            y1: centerY / 10,
+            x2: (domino.x + domino.w) / 10,
+            y2: centerY / 10,
+            stroke: "black",
+            strokeWidth: 0.55 // Scaled down from 5.5
+          });
         } 
         else if (domino.color === "yellow") {
           // Yellow: path parallel to vector (1,-1) through the center
@@ -910,8 +920,14 @@ Module.onRuntimeInitialized = async function() {
           const dx = length / Math.sqrt(2);
           const dy = length / Math.sqrt(2);
           
-          svgContent += `<line x1="${centerX - dx}" y1="${centerY + dy}" x2="${centerX + dx}" y2="${centerY - dy}" `;
-          svgContent += `stroke="black" stroke-width="5.5"></line>\n`;
+          lines.push({
+            x1: (centerX - dx) / 10,
+            y1: (centerY + dy) / 10,
+            x2: (centerX + dx) / 10,
+            y2: (centerY - dy) / 10,
+            stroke: "black",
+            strokeWidth: 0.55
+          });
         }
         else if (domino.color === "red") {
           // Red: path parallel to vector (1,1) through the center
@@ -919,67 +935,45 @@ Module.onRuntimeInitialized = async function() {
           const dx = length / Math.sqrt(2);
           const dy = length / Math.sqrt(2);
           
-          svgContent += `<line x1="${centerX - dx}" y1="${centerY - dy}" x2="${centerX + dx}" y2="${centerY + dy}" `;
-          svgContent += `stroke="black" stroke-width="5.5"></line>\n`;
+          lines.push({
+            x1: (centerX - dx) / 10,
+            y1: (centerY - dy) / 10,
+            x2: (centerX + dx) / 10,
+            y2: (centerY + dy) / 10,
+            stroke: "black",
+            strokeWidth: 0.55
+          });
         }
         // Blue dominos don't get paths
       });
     }
     
-    svgContent += '</svg>';
+    // Print debug info
+    console.log("Rectangles:", rectangles.length);
+    console.log("Lines:", lines.length);
     
-    // Now extract using similar logic to the Python script
-    const rectangles = [];
-    const rectPattern = /<rect x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)" fill="([^"]+)" stroke="([^"]+)" stroke-width="([^"]+)"><\/rect>/g;
-    let match;
-    while ((match = rectPattern.exec(svgContent)) !== null) {
-      const [_, x, y, width, height, fill, stroke, strokeWidth] = match;
-      rectangles.push({
-        x: parseFloat(x) / 10,
-        y: parseFloat(y) / 10,
-        width: parseFloat(width) / 10,
-        height: parseFloat(height) / 10,
-        fill: fill,
-        stroke: stroke,
-        strokeWidth: parseFloat(strokeWidth) / 10
-      });
-    }
-    
-    // Extract lines (paths)
-    const lines = [];
-    const linePattern = /<line x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)" stroke="([^"]+)" stroke-width="([^"]+)"><\/line>/g;
-    while ((match = linePattern.exec(svgContent)) !== null) {
-      const [_, x1, y1, x2, y2, stroke, strokeWidth] = match;
-      lines.push({
-        x1: parseFloat(x1) / 10,
-        y1: parseFloat(y1) / 10,
-        x2: parseFloat(x2) / 10,
-        y2: parseFloat(y2) / 10,
-        stroke: stroke,
-        strokeWidth: parseFloat(strokeWidth) / 10
-      });
-    }
-    
-    if (rectangles.length === 0 && lines.length === 0) {
-      alert("No elements found in the SVG.");
+    if (rectangles.length === 0) {
+      alert("No domino elements found to convert.");
       return;
     }
     
-    // Find the bounds of the drawing (exact algorithm from the Python script)
+    // Find the bounds of the drawing
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     
-    if (rectangles.length > 0) {
-      minX = Math.min(minX, Math.min(...rectangles.map(rect => rect.x)));
-      maxX = Math.max(maxX, Math.max(...rectangles.map(rect => rect.x + rect.width)));
-      minY = Math.min(minY, Math.min(...rectangles.map(rect => rect.y)));
-      maxY = Math.max(maxY, Math.max(...rectangles.map(rect => rect.y + rect.height)));
+    // Process rectangles
+    for (const rect of rectangles) {
+      minX = Math.min(minX, rect.x);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      minY = Math.min(minY, rect.y);
+      maxY = Math.max(maxY, rect.y + rect.height);
     }
     
-    if (lines.length > 0) {
-      minX = Math.min(minX, Math.min(...lines.map(line => Math.min(line.x1, line.x2))));
-      maxX = Math.max(maxX, Math.max(...lines.map(line => Math.max(line.x1, line.x2))));
-      minY = Math.min(minY, Math.min(...lines.map(line => Math.min(line.y1, line.y2))));
-      maxY = Math.max(maxY, Math.max(...lines.map(line => Math.max(line.y1, line.y2))));
+    // Process lines if they exist
+    for (const line of lines) {
+      minX = Math.min(minX, line.x1, line.x2);
+      maxX = Math.max(maxX, line.x1, line.x2);
+      minY = Math.min(minY, line.y1, line.y2);
+      maxY = Math.max(maxY, line.y1, line.y2);
     }
     
     // Calculate a good scale factor (same as Python script)
@@ -1041,8 +1035,15 @@ Module.onRuntimeInitialized = async function() {
 \\end{tikzpicture}
 \\end{document}`;
     
-    // Display the TikZ code in a new window
-    const newWindow = window.open();
+    // Let's use a simpler and more reliable approach to display the code
+    // First, create a new window
+    const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    if (!newWindow) {
+      alert("Pop-up blocked! Please allow pop-ups for this site to view the TikZ code.");
+      return;
+    }
+    
+    // Write the HTML structure first without the dynamic content
     newWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -1050,11 +1051,11 @@ Module.onRuntimeInitialized = async function() {
         <title>Aztec Diamond n=${n} - TikZ Code</title>
         <style>
           body {
-            font-family: monospace;
-            white-space: pre;
+            font-family: 'Courier New', monospace;
             padding: 20px;
             line-height: 1.5;
             background-color: #f5f5f5;
+            margin: 0;
           }
           .code-container {
             background-color: white;
@@ -1062,13 +1063,16 @@ Module.onRuntimeInitialized = async function() {
             border: 1px solid #ccc;
             border-radius: 4px;
             overflow-x: auto;
+            white-space: pre;
+            font-size: 14px;
+            max-height: 70vh;
+            overflow-y: auto;
           }
           .header {
             margin-bottom: 20px;
           }
           .button-row {
-            margin-top: 15px;
-            margin-bottom: 15px;
+            margin: 15px 0;
           }
           button {
             padding: 8px 16px;
@@ -1083,6 +1087,12 @@ Module.onRuntimeInitialized = async function() {
           button:hover {
             background-color: #45a049;
           }
+          .success-message {
+            color: green;
+            margin-left: 10px;
+            display: none;
+            font-weight: bold;
+          }
         </style>
       </head>
       <body>
@@ -1091,32 +1101,53 @@ Module.onRuntimeInitialized = async function() {
           <p>Copy this code into a .tex file and compile with LaTeX.</p>
         </div>
         <div class="button-row">
-          <button onclick="copyToClipboard()">Copy to Clipboard</button>
-          <button onclick="downloadCode()">Download .tex File</button>
+          <button id="copy-btn">Copy to Clipboard</button>
+          <button id="download-btn">Download .tex File</button>
+          <span id="success-msg" class="success-message">Copied!</span>
         </div>
-        <div class="code-container">${tikzCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        <script>
-          function copyToClipboard() {
-            const codeText = \`${tikzCode.replace(/`/g, '\\`')}\`;
-            navigator.clipboard.writeText(codeText)
-              .then(() => alert('TikZ code copied to clipboard!'))
-              .catch(err => console.error('Error copying text: ', err));
-          }
-          
-          function downloadCode() {
-            const codeText = \`${tikzCode.replace(/`/g, '\\`')}\`;
-            const blob = new Blob([codeText], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.download = 'aztec_diamond_n${n}_tikz.tex';
-            a.href = URL.createObjectURL(blob);
-            a.click();
-            URL.revokeObjectURL(a.href);
-          }
-        </script>
+        <div id="code-container" class="code-container"></div>
       </body>
       </html>
     `);
+    
+    // Close the document to apply changes
     newWindow.document.close();
+    
+    // Now add the code content with proper escaping
+    const codeContainer = newWindow.document.getElementById('code-container');
+    codeContainer.textContent = tikzCode; // This properly escapes HTML entities
+    
+    // Add the event handlers
+    newWindow.document.getElementById('copy-btn').addEventListener('click', function() {
+      // Create a text area to copy from (more reliable cross-browser)
+      const textArea = newWindow.document.createElement('textarea');
+      textArea.value = tikzCode;
+      textArea.style.position = 'fixed';  // Prevent scrolling to bottom
+      newWindow.document.body.appendChild(textArea);
+      textArea.select();
+      
+      try {
+        newWindow.document.execCommand('copy');
+        const msg = newWindow.document.getElementById('success-msg');
+        msg.style.display = 'inline';
+        setTimeout(() => {
+          msg.style.display = 'none';
+        }, 2000);
+      } catch (err) {
+        newWindow.alert('Failed to copy to clipboard. Please try again or select and copy manually.');
+      }
+      
+      newWindow.document.body.removeChild(textArea);
+    });
+    
+    newWindow.document.getElementById('download-btn').addEventListener('click', function() {
+      const blob = new Blob([tikzCode], { type: 'text/plain' });
+      const a = newWindow.document.createElement('a');
+      a.download = `aztec_diamond_n${n}_tikz.tex`;
+      a.href = newWindow.URL.createObjectURL(blob);
+      a.click();
+      newWindow.URL.revokeObjectURL(a.href);
+    });
   }
   
   // Add event listener for the TikZ button
