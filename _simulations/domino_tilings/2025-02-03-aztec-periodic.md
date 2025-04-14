@@ -232,10 +232,10 @@ Module.onRuntimeInitialized = async function() {
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = cachedDominoes.map(domino => {
       return {
-        x: domino.x / 10,
-        y: domino.y / 10,
-        width: domino.w / 10,
-        height: domino.h / 10,
+        x: domino.x / 100,
+        y: domino.y / 100,
+        width: domino.w / 100,
+        height: domino.h / 100,
         fill: domino.color,
         stroke: "black",
         strokeWidth: 0.45 // Scaled down

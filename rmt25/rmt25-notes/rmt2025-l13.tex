@@ -516,14 +516,13 @@ the same as in the exponential case.
 
 We are now going to present the Robinson-Schensted-Knuth
 correspondence via the operation called \emph{toggle}.
-This exposition is different from the usual discussions in e.g., 
-\cite{sagan2001symmetric}, \cite{fulton1997young}, 
-and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes} by 
+This exposition is different from the usual discussions in e.g.,
+\cite{sagan2001symmetric}, \cite{fulton1997young},
+and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes} by
 Sam Hopkins.
-
 Fix $t,n$, and consider the array $W=\{W_{ij}\}_{1\le i\le n, 1\le j\le t}$ of
 nonnegative integers. We can think of $W$ as a realization of the geometric
-environment, but for now let us assume that $W$ is a fixed array. See 
+environment, but for now let us assume that $W$ is a fixed array. See
 \Cref{fig:LPP_array} for the order of indices.
 
 We are going to inductively construct a bijection $\operatorname{RSK}$ between the array $W$ and another
@@ -534,7 +533,7 @@ array $R=\{R_{ij}\}_{1\le i\le n, 1\le j\le t}$ of nonnegative integers, which i
 \end{equation*}
 Note that this ordering means that the diagonals in $R$ interlace.
 
-To define $\operatorname{RSK}$, we first define an elementary 
+To define $\operatorname{RSK}$, we first define an elementary
 operation called \emph{toggle} and denoted by $\operatorname{T}$.
 
 \begin{definition}[Toggle]
@@ -548,7 +547,7 @@ operation called \emph{toggle} and denoted by $\operatorname{T}$.
 	The lengths of the sequences are differ by $0$ or $1$, and if necessary, we pad the
 	sequences with $0$'s to make the interlacing make sense.
 	The output of $\operatorname{T}$ is a triple $(\lambda,\nu,\mu)$, where
-	$\lambda$ and $\mu$ are not changed, and $\nu$ is obtained from $\lambda,\mu,\kappa$,  
+	$\lambda$ and $\mu$ are not changed, and $\nu$ is obtained from $\lambda,\mu,\kappa$,
 	and $w$ as follows:
 	\begin{equation*}
 		\nu_1=w+\max(\lambda_1,\mu_1),\qquad
@@ -569,6 +568,66 @@ $\lambda,\mu,\nu$.
 \begin{proof}
 	See Problem~\ref{prob:toggle_weight_preservation}.
 \end{proof}
+
+
+Now, define $R=\operatorname{RSK}(W)$ as follows.
+We will build $R$
+by sequentially modifying the array $W$,
+starting from the bottom-left corner $(1,1)$ and moving
+by adding one box at a time.
+We represent the partially filled $R$ array as a collection of interlacing sequences.
+Let $R^{(i,j)}$ denote the already constructed part of $R$, where we are adding a
+box $(i,j)$. Then, we modify the diagonal containing
+$(i,j)$ by applying the toggle operation to the weight $w=W_{i,j}$ and the three diagonals
+\begin{equation*}
+	\lambda^{(i,j)} = \{R^{(i,j)}_{i-k+1,j-k}\}_{k\ge1}, \quad
+	\mu^{(i,j)} = \{R^{(i,j)}_{i-k,j-k+1}\}_{k\ge1}, \quad
+	\kappa^{(i,j)} = \{R^{(i,j)}_{i-k,j-k}\}_{k\ge1}.
+\end{equation*}
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=0.9]
+				% Draw the shape of the R array with 4 boxes in bottom row, 3 in middle, 2 in top
+				% Bottom row (i=3)
+				\foreach \j in {1,2,3,4} {
+												\node[rectangle,draw,minimum size=0.9cm] (R3\j) at (\j,1) {$R_{3\j}$};
+				}
+				% Middle row (i=2) - including the box being added
+				\foreach \j in {1,2,3} {
+												\node[rectangle,draw,minimum size=0.9cm] (R2\j) at (\j,2) {$R_{2\j}$};
+				}
+				% Top row (i=1)
+				\foreach \j in {1,2} {
+												\node[rectangle,draw,minimum size=0.9cm] (R1\j) at (\j,3) {$R_{1\j}$};
+				}
+
+				% Highlight the current position (2,3) where toggle is applied (the new box in middle row)
+				\node[rectangle,draw,fill=yellow!30,minimum size=0.9cm] at (3,2) {$R_{2,3}$};
+
+				% Highlight the diagonal λ (from left)
+				\draw[->,thick,blue] (2,2) -- (2.6,2);
+				\node[rectangle,draw,fill=blue!20,minimum size=0.9cm] at (2,2) {$R_{2,2}$};
+				\node[blue] at (1.3,2) {$\lambda^{(2,3)}$};
+
+				% Highlight the diagonal μ (from above)
+				\draw[->,thick,red] (3,3) -- (3,2.4);
+				\node[dashed,rectangle,draw,fill=red!20,minimum size=0.9cm] at (3,3) {$R_{1,3}$};
+				\node[red] at (3,3.7) {$\mu^{(2,3)}$};
+
+				% Highlight the diagonal κ (from above-left)
+				\draw[->,thick,green] (2,3) -- (2.6,2.6);
+				\node[rectangle,draw,fill=green!20,minimum size=0.9cm] at (2,3) {$R_{1,2}$};
+				\node[green] at (1.3,3) {$\kappa^{(2,3)}$};
+
+				% Show the weight W being applied
+				\node[circle,draw,fill=gray!20] at (5,2) {$W_{2,3}$};
+				\draw[->,thick] (5,2) -- (3.7,2);
+\end{tikzpicture}
+\caption{Illustration of the RSK toggle operation. The colored cells represent the three diagonals involved in computing the new value at position $(2,2)$.}
+\label{fig:toggle_operation}
+\end{figure}
+
+
 
 \subsection{Weight preservation}
 

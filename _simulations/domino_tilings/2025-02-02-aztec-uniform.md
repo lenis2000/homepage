@@ -891,10 +891,10 @@ Module.onRuntimeInitialized = async function() {
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = currentDominoes.map(domino => {
       return {
-        x: domino.x / 10,
-        y: domino.y / 10,
-        width: domino.w / 10,
-        height: domino.h / 10,
+        x: domino.x / 100,
+        y: domino.y / 100,
+        width: domino.w / 100,
+        height: domino.h / 100,
         fill: domino.color,
         stroke: "black",
         strokeWidth: 0.45 // Scaled down like in the Python script
@@ -912,10 +912,10 @@ Module.onRuntimeInitialized = async function() {
         if (domino.color === "green") {
           // Green: Horizontal line through center
           lines.push({
-            x1: domino.x / 10,
-            y1: centerY / 10,
-            x2: (domino.x + domino.w) / 10,
-            y2: centerY / 10,
+            x1: domino.x / 100,
+            y1: centerY / 100,
+            x2: (domino.x + domino.w) / 100,
+            y2: centerY / 100,
             stroke: "black",
             strokeWidth: 0.55 // Scaled down from 5.5
           });
@@ -927,10 +927,10 @@ Module.onRuntimeInitialized = async function() {
           const dy = length / Math.sqrt(2);
 
           lines.push({
-            x1: (centerX - dx) / 10,
-            y1: (centerY + dy) / 10,
-            x2: (centerX + dx) / 10,
-            y2: (centerY - dy) / 10,
+            x1: (centerX - dx) / 100,
+            y1: (centerY + dy) / 100,
+            x2: (centerX + dx) / 100,
+            y2: (centerY - dy) / 100,
             stroke: "black",
             strokeWidth: 0.55
           });
@@ -942,10 +942,10 @@ Module.onRuntimeInitialized = async function() {
           const dy = length / Math.sqrt(2);
 
           lines.push({
-            x1: (centerX - dx) / 10,
-            y1: (centerY - dy) / 10,
-            x2: (centerX + dx) / 10,
-            y2: (centerY + dy) / 10,
+            x1: (centerX - dx) / 100,
+            y1: (centerY - dy) / 100,
+            x2: (centerX + dx) / 100,
+            y2: (centerY + dy) / 100,
             stroke: "black",
             strokeWidth: 0.55
           });
