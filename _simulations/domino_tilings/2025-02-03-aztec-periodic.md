@@ -28,7 +28,19 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 
 ### Update 2025-04-14: TikZ Code Generation
 
-You can now get a TikZ code for the sampled Aztec diamond (supporting dominoes and nonintersecting paths) using [this Python script](https://github.com/lenis2000/homepage/blob/master/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py).
+You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports dominoes with appropriate coloring.
+
+<div style="margin-top: 10px; margin-bottom: 10px;">
+  <button id="tikz-btn" class="btn btn-primary">Generate TikZ Code</button>
+  <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
+    <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
+    <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
+    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+  </div>
+</div>
+
+<!-- TikZ code container that will be updated dynamically -->
+<div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 
 ---
 
@@ -128,6 +140,18 @@ Module.onRuntimeInitialized = async function() {
     svg.selectAll("g").remove();
     startProgressPolling();
 
+    // Hide the TikZ code container if it's visible
+    const codeContainer = document.getElementById('tikz-code-container');
+    if (codeContainer) {
+      codeContainer.style.display = 'none';
+    }
+
+    // Hide the buttons container
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'none';
+    }
+
     const aVal = parseFloat(document.getElementById("a-input").value);
     const bVal = parseFloat(document.getElementById("b-input").value);
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
@@ -196,6 +220,158 @@ Module.onRuntimeInitialized = async function() {
       d3.select("#aztec-svg").select("g").selectAll("rect")
         .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
     }
+  });
+
+  // Function to convert SVG dominoes to TikZ code
+  function svgToTikZ() {
+    if (!cachedDominoes || cachedDominoes.length === 0) {
+      alert("Please generate a domino tiling first.");
+      return;
+    }
+
+    // Convert domino objects to rectangle objects with the format needed for TikZ conversion
+    const rectangles = cachedDominoes.map(domino => {
+      return {
+        x: domino.x / 10,
+        y: domino.y / 10,
+        width: domino.w / 10,
+        height: domino.h / 10,
+        fill: domino.color,
+        stroke: "black",
+        strokeWidth: 0.45 // Scaled down
+      };
+    });
+
+    // Find the bounds of the drawing
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+    // Process rectangles
+    for (const rect of rectangles) {
+      minX = Math.min(minX, rect.x);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      minY = Math.min(minY, rect.y);
+      maxY = Math.max(maxY, rect.y + rect.height);
+    }
+
+    // Calculate a good scale factor
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const maxDimension = Math.max(width, height);
+    const scaleFactor = 15.0 / maxDimension;
+
+    // Get current parameters
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    const a = parseFloat(document.getElementById("a-input").value);
+    const b = parseFloat(document.getElementById("b-input").value);
+    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
+
+    // Generate TikZ code
+    let tikzCode = `\\documentclass{standalone}
+\\usepackage{tikz}
+\\usepackage{xcolor}
+
+% Define colors to match SVG
+\\definecolor{svggreen}{RGB}{0, 128, 0}
+\\definecolor{svgred}{RGB}{255, 0, 0}
+\\definecolor{svgyellow}{RGB}{255, 255, 0}
+\\definecolor{svgblue}{RGB}{0, 0, 255}
+
+\\begin{document}
+% Aztec Diamond with 2x2 periodic weights
+% n = ${n}, a = ${a}, b = ${b}, grayscale = ${useGrayscale}
+\\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
+
+% Dominoes (rectangles)
+`;
+
+    // Add rectangles to TikZ code
+    rectangles.forEach(rect => {
+      // Map SVG colors to TikZ colors
+      let fillColor = rect.fill;
+      if (fillColor === '#00ff00') fillColor = 'svggreen';
+      else if (fillColor === '#ff0000') fillColor = 'svgred';
+      else if (fillColor === '#ffff00') fillColor = 'svgyellow';
+      else if (fillColor === '#0000ff') fillColor = 'svgblue';
+      else if (fillColor.startsWith('#')) {
+        // For grayscale mode, we extract the intensity and use it
+        const intensity = parseInt(fillColor.substring(1, 3), 16);
+        fillColor = `black!${Math.round((intensity/255)*100)}`;
+      }
+
+      // Shift coordinates to keep everything positive
+      const x1 = rect.x - minX;
+      const y1 = maxY - rect.y - rect.height;  // Invert y and adjust for height
+      const x2 = rect.x - minX + rect.width;
+      const y2 = maxY - rect.y;
+
+      tikzCode += `\\filldraw[fill=${fillColor}, draw=black, line width=${rect.strokeWidth}pt] `;
+      tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+    });
+
+    tikzCode += `
+\\end{tikzpicture}
+\\end{document}`;
+
+    // Update the TikZ code in the code container
+    const tikzCodeContainer = document.getElementById('tikz-code-container');
+    if (tikzCodeContainer) {
+      tikzCodeContainer.textContent = tikzCode;
+      tikzCodeContainer.style.display = 'block';
+    } else {
+      console.error("TikZ code container not found");
+    }
+
+    // Show the copy/download buttons
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'block';
+    }
+  }
+
+  // Add event listeners for the TikZ buttons
+  document.getElementById("tikz-btn").addEventListener("click", function() {
+    svgToTikZ();
+  });
+
+  // Add event listener for the copy button
+  document.getElementById("copy-tikz-btn").addEventListener("click", function() {
+    const codeContainer = document.getElementById('tikz-code-container');
+    const successMsg = document.getElementById('copy-success-msg');
+
+    // Create a text area to copy from (more reliable cross-browser)
+    const textArea = document.createElement('textarea');
+    textArea.value = codeContainer.textContent;
+    textArea.style.position = 'fixed';  // Prevent scrolling to bottom
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    try {
+      document.execCommand('copy');
+      successMsg.style.display = 'inline';
+      setTimeout(() => {
+        successMsg.style.display = 'none';
+      }, 2000);
+    } catch (err) {
+      alert('Failed to copy to clipboard. Please try again or select and copy manually.');
+    }
+
+    document.body.removeChild(textArea);
+  });
+
+  // Add event listener for the download button
+  document.getElementById("download-tikz-btn").addEventListener("click", function() {
+    const codeContainer = document.getElementById('tikz-code-container');
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    const a = parseFloat(document.getElementById("a-input").value);
+    const b = parseFloat(document.getElementById("b-input").value);
+
+    const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
+    const fileNameBase = `aztec_periodic_n${n}_a${a}_b${b}`;
+    const downloadLink = document.createElement('a');
+    downloadLink.download = `${fileNameBase.replace(/\./g, "_")}_tikz.tex`;
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.click();
+    URL.revokeObjectURL(downloadLink.href);
   });
 
   const initialN = parseInt(document.getElementById("n-input").value, 10);
