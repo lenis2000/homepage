@@ -1,3 +1,18 @@
+###
+# SVG to TikZ Converter for Domino Tilings and Nonintersecting Paths
+#
+# USAGE:
+# 1. Generate an SVG file containing domino tilings (rectangles) and/or
+#    nonintersecting paths (lines) using the webpage
+#    at https://lpetrov.cc/simulations/2025-02-02-aztec-uniform/
+#    or https://lpetrov.cc/simulations/2025-02-03-aztec-periodic/
+# 2. Copy the generated SVG content to a file named 'tiling_SVG.txt'
+# 3. Run this script to convert the SVG to TikZ code
+#
+# The script will process both domino tilings (represented as rectangles)
+# and nonintersecting paths (represented as lines) from the SVG.
+###
+
 import re
 import sys
 
@@ -111,7 +126,7 @@ def svg_to_tikz(svg_content):
     return tikz_code
 
 # Read the SVG content from the file
-with open('tiling_code', 'r') as f:
+with open('tiling_SVG.txt', 'r') as f:
     svg_content = f.read()
 
 # Convert to TikZ
