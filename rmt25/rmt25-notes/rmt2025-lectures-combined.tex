@@ -9567,6 +9567,7 @@ Throughout the discussion, we will consider the ``spiked'', multiparameter model
 which naturally include finite-rank deformations.
 
 \section{The spiked Wishart ensemble}
+\label{lecture13:sec:Wishart}
 
 \subsection{Definition of the spiked Wishart process}
 \label{lecture13:sub:Wishart_process}
@@ -9738,7 +9739,7 @@ h_{\pi}(z)
 \]
 Note that $h_\pi(0)=1$.
 \end{itemize}
-In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix). 
+In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix).
 \end{theorem}
 
 \begin{proof}[Sketch of proof; see \cite{dieker2008largest}]
@@ -9746,11 +9747,11 @@ In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix).
 	\cite{defosseux2010orbit}, \cite{forrester2006jacobians} show that the
 	theorem holds for the null case $\pi_i=1$ and $\hat\pi_j=0$.
 	The Radon-Nikodym derivative of the transition kernel
-	factors through the diagonal entries of the matrix, 
+	factors through the diagonal entries of the matrix,
 	and can be written in terms of the eigenvalues via
 	the HCIZ integral.
 	This yields an explicit factor multiplying the null-case
-	transition density. 
+	transition density.
 \end{proof}
 
 
@@ -9775,17 +9776,15 @@ along with the Cauchy--Binet (or Andr\'eief) identity:
 \xi_i(z)\,\psi_j(z)\,dz
 \Bigr].
 \]
-Applying this to  
+Applying this to
 \eqref{lecture13:eq:transition-density}--\eqref{lecture13:eq:Q0}
-yields an integral over the Gelfand--Tsetlin polytope
-of certain exponential weights, which yields something like $h_{\hat \pi}(y)$.
-Then, using Andr\'eief's identity, we need to integrate
-exponential densities of the form $e^{-(\pi_i+\hat \pi_j)y}$.
-Finally, the determinant of $\dfrac{1}{\pi_i+\hat \pi_j}$ is the Cauchy determinant,
-and yields the normalizing factor
-$\prod_{i,j}(\pi_i+\hat \pi_j)$.
-This should
-confirm that each transition kernel
+yields a sequence of integrals
+of the exponential densities
+of the form $e^{-(\pi_i+\hat \pi_t)y}$.
+This yields the normalizing factor
+$\prod_{i,j}(\pi_i+\hat \pi_j)$,
+and confirms
+that each transition kernel
 integrates to one, in line with the notation and
 factorization in Theorem~\ref{lecture13:thm:MarkovChain}.
 \end{remark}
@@ -9802,164 +9801,393 @@ given by the Laguerre orthogonal polynomial ensemble. For example, for $t\ge n$,
 \end{equation}
 For the non-null case, see Problem~\ref{lecture13:prob:Wishart_non_null}.
 
-\section{The lattice LPP model}
+\section{The exponential LPP model}
 
-\subsection{Definition of the model}
-
-We now turn to a seemingly different probabilistic model: a model of random paths in a grid with random weights. Fix the same dimension $N$ as above. Consider an infinite array of independent, nonnegative random weights $\{W_{ij}: 1\le i\le N,\; j\ge 1\}$ defined under the probability measure $P^{\pi,\hat\pi}$ as follows:
-\begin{itemize}\item Each $W_{ij}$ is an independent random variable with an \emph{exponential} distribution of rate $(\pi_i + \hat\pi_j)$.
-\end{itemize}
-In other words, $\mathbb{P}\{W_{ij} > w\} = \exp\{-(\pi_i+\hat\pi_j) w\}$ for $w\ge0$. Equivalently $\mathbb{E}[W_{ij}] = \frac{1}{\pi_i+\hat\pi_j}$. These rates $(\pi_i+\hat\pi_j)$ are chosen deliberately to mirror the variance parameters of $A_{ij}$ in the generalized Wishart model (Definition \ref{lecture13:def:Wishart}). Indeed, note that $\mathrm{Var}(A_{ij}) = \mathbb{E}[W_{ij}]$ under our definitions -- this is not a coincidence but a clue that $W_{ij}$ will serve as a sort of ``geometric analogue'' of $|A_{ij}|^2$.
+We now turn to a seemingly different probabilistic model: a
+model of random paths in a grid with random weights. Fix an
+integer $n$. Consider an infinite array of independent,
+nonnegative random weights $\{W_{ij}: i\ge 1,\ 1\le j\le n\}$ defined under the probability measure $P^{\pi,\hat\pi}$,
+where each $W_{ij}$ is an independent random variable with
+an \emph{exponential} distribution of rate $(\pi_i +
+\hat\pi_j)$.
+Note that $\mathbb{E}[W_{ij}] = \frac{1}{\pi_j+\hat\pi_i}$.
+These rates $(\pi_j+\hat\pi_i)$ are chosen deliberately to
+mirror the variance parameters of $A_{ij}$ in the
+generalized Wishart model (Definition \ref{lecture13:def:Wishart}).
 
 We interpret $\{W_{ij}\}$ as random weights on the vertices of a directed lattice in the first quadrant. Specifically, consider the set of lattice points
-\[ \{(i,j): i=1,\dots,N,\ j=1,2,\dots\}.\]
-We say a path $\Gamma$ is an \textbf{up-right path} from $(1,1)$ to $(N,n)$ if it is a sequence of lattice points starting at $(1,1)$ and ending at $(N,n)$, with steps either one step to the right or one step down. Since each step either increases the column index by 1 or the row index by 1, any such path from $(1,1)$ to $(N,n)$ must consist of $(N-1)$ down-steps and $(n-1)$ right-steps, for a total of $(N+n-2)$ steps. We define the \textbf{weight} of a path $\Gamma$ to be the sum of the $W_{ij}$ along its vertices:
+\[ \{(i,j): i=1,\ldots,t,\ldots ,\ j=1,\dots,n\}.\]
+We say a path $\Gamma$ is an \emph{up-right path} from
+$(1,1)$ to $(t,n)$ if it is a sequence of lattice points
+starting at $(1,1)$ and ending at $(t,n)$, with steps either
+one step to the right or one step up. Since each step
+either increases the column index by 1 or the row index by
+1, any such path from $(1,1)$ to $(t,n)$ must consist of
+$(t-1)$ right-steps and $(n-1)$ up-steps, for a total of
+$(t+n-2)$ steps. We define the \emph{weight} of a path
+$\Gamma$ to be the sum of the $W_{ij}$ along its vertices:
 \[ \mathcal{W}(\Gamma) := \sum_{(i,j)\in \Gamma} W_{ij}, \]
 where by $(i,j)\in \Gamma$ we mean that the vertex $(i,j)$ is visited by the path $\Gamma$. The random variable of interest is the \emph{maximum total weight achievable among all such paths}, i.e.
-\begin{equation}\label{lecture13:eq:LPPdef}
-Y(N,n) := \max_{\Gamma:\, (1,1)\to(N,n)} \; \mathcal{W}(\Gamma)\,.
+\begin{equation}\label{lecture13:eq:last-passage-time}
+L(t,n) := \max_{\Gamma:\, (1,1)\to(t,n)} \; \mathcal{W}(\Gamma)\,.
 \end{equation}
-We call $Y(N,n)$ the \textbf{last-passage time} to $(N,n)$, in analogy with the usual terminology of growth models (if we interpret $W_{ij}$ as random passage times on a lattice, then the longest time to reach a certain site is given by the maximal weight path).
+We call $L(t,n)$ the \emph{last-passage time} to $(t,n)$, in analogy with the usual terminology of growth models (if we interpret $W_{ij}$ as random passage times on a lattice, then the longest time to reach a certain site is given by the maximal weight path).
 
-The random field $\{Y(i,j): 1\le i\le N,\ j\ge 1\}$ can be computed recursively by dynamic programming, using the so-called \emph{Robinson--Schensted--Knuth (RSK) growth rule} or equivalently the Bellman equation for LPP. Indeed, it is immediate from the definition that
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=1.2,>=stealth]
+				% Draw a 4 (rows) by 5 (columns) grid of nodes.
+				% We'll place row i = 1 at the bottom and i = 4 at the top,
+				% and columns j=1..5 from left to right.
+				% Each node is labeled with W_{i,j}.
+				\foreach \i in {1,2,3,4} {
+								\foreach \j in {1,2,3,4,5} {
+												% Position nodes so that i=1 is bottom row, i=4 top row.
+												\node[circle,draw,fill=white,inner sep=1pt]
+																		(n\i-\j)
+																		at (\j,\i)
+																		{\tiny $W_{\i,\j}$};
+								}
+				}
+
+				% Draw one example of an up-right path from (1,1) to (4,5).
+				% It has exactly 3 "up" steps (increasing i) and 4 "right" steps (increasing j).
+				\draw[ultra thick, red,->]
+								(n1-1) -- (n2-1) -- (n3-1) -- % three steps up
+								(n3-2) -- (n3-3) --           % two steps right
+								(n4-3) --                     % one step up
+								(n4-4) -- (n4-5);             % two steps right
+
+				% Optionally, you can add arrows for all edges (to the right and upward)
+				% if you want to depict the entire directed lattice structure.
+				% E.g.:
+				% \foreach \i in {1,...,4}{
+				%   \foreach \j in {1,...,4}{
+				%       \draw[->,black!30] (n\i-\j) -- (n\i-\the\numexpr\j+1\relax);
+				%   }
+				% }
+				% \foreach \i in {1,...,3}{
+				%   \foreach \j in {1,...,5}{
+				%       \draw[->,black!30] (n\i-\j) -- (n\the\numexpr\i+1\relax-\j);
+				%   }
+				% }
+\end{tikzpicture}
+\caption{A portion of the lattice with vertex-weights $W_{i,j}$ and one up-right path.}
+\label{lecture13:fig:LPP_array}
+\end{figure}
+
+
+Indeed, it is immediate from the definition that the random
+variables $L(t,n)$ satisfy the following random recursion:
 \begin{equation}\label{lecture13:eq:LPP-recursion}
-Y(i,j) = W_{ij} + \max\{\, Y(i-1,j),\; Y(i,j-1)\,\}\,,
+L(i,j) = W_{ij} + \max\{\, L(i,j-1),\; L(i-1,j)\,\}\,,
 \end{equation}
-for $i>1, j>1$, with boundary conditions $Y(1,j) = \sum_{k=1}^j W_{1k}$ (since from $(1,1)$ to $(1,j)$ one must move right $j-1$ times along the top row) and $Y(i,1) = \sum_{\ell=1}^i W_{\ell,1}$ (moving down along the first column). The recursion \eqref{lecture13:eq:LPP-recursion} expresses that the optimal path to $(i,j)$ either comes from above (then last step is down, contributing $W_{ij}$ plus the optimal weight to $(i-1,j)$) or from the left (last step is right from $(i,j-1)$). It is the fundamental equation of integrable growth models, equivalent to the so-called \emph{Robinson--Schensted--Knuth insertion algorithm} in combinatorics. We will describe the RSK algorithm more explicitly in the next subsection.
+for $i>1, j>1$, with boundary conditions $L(t,1) =
+\sum_{k=1}^t W_{k,1}$ and $L(1,i) =
+\sum_{\ell=1}^i W_{1,\ell}$.
+The recursion \eqref{lecture13:eq:LPP-recursion} expresses
+that the optimal path to $(i,j)$ either comes from below
+(then last step is down, contributing $W_{ij}$ plus the
+optimal weight to $(i,j-1)$) or from the left (last step is
+right from $(i-1,j)$). It is the fundamental equation of
+growth models, which is a part of the
+\emph{Robinson--Schensted--Knuth insertion algorithm} in
+combinatorics.
 
-The quantity $Y(N,n)$ appears in many contexts: it is the length of the longest increasing path in a random $N\times n$ array (if $W_{ij}$ were thought of as lengths or as indicator of a path's presence), it is also the total service time in a series of $N$ exponential queueing servers with $n$ customers (the \emph{Jackson network} interpretation \cite{Baryshnikov_GUE2001}), and it is a prototype of models in the KPZ universality class (often called the \emph{exponential corner growth model} or directed percolation). Standard references on the connections between random matrices and such growth models include Baryshnikov (2001) \cite{Baryshnikov_GUE2001} and Johansson (2000) \cite{Johansson2000}. In particular, when all $\pi_i=1$ and $\hat\pi_j=0$ (the homogeneous case where all $W_{ij}\sim \mathrm{Exp}(1)$ i.i.d.), it is known that $Y(N,n)$ (for large $N,n$ with $N/n$ fixed) has fluctuations of order $N^{1/3}$ and converges to the Tracy--Widom GUE distribution after centering and scaling \cite{Johansson2000}. This is the same limiting law as the largest eigenvalue of an $N\times N$ GUE matrix. In fact, Baryshnikov \cite{Baryshnikov_GUE2001} showed that for the homogeneous case, the entire sequence $\{Y(k,n):1\le k\le N\}$ (for fixed $n$) has the same distribution as the ordered eigenvalues $(\lambda_1,\dots,\lambda_N)$ of an $N\times N$ GUE (Gaussian unitary ensemble) matrix. This was one of the first precise links between random matrix spectra and last-passage percolation. In our present setting, the weights are not identically distributed but have rates $\pi_i+\hat\pi_j$, which introduces a spatial inhomogeneity (often called \emph{boundary deformation} of the LPP model). As we will see, even in this deformed case, one can relate the LPP times to random matrix eigenvalues --- in fact, exactly to the spiked Wishart eigenvalues introduced in Section 2.
 
-Let us define the whole \textbf{vector of last-passage times to the bottom row} at column $j$ as
-\[ Z(j) := \big( Y(1,j),\, Y(2,j),\, \dots,\, Y(N,j)\big)\,\in W^N, \]
-where we list the values in increasing order $Y(1,j)\le Y(2,j)\le \cdots \le Y(N,j)$.\footnote{We have $Y(1,j)\le \cdots\le Y(N,j)$ almost surely because giving the path more freedom to move down can only increase the maximum weight. This is easily checked from \eqref{lecture13:eq:LPP-recursion}. Thus $Z(j)\in W^N$ indeed.} In particular, $Y(N,n)$ is the largest component of $Z(n)$. The sequence $\{Z(n):n\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random process in $W^N$. We will now describe how the RSK correspondence shows that $Z(n)$ is an inhomogeneous Markov chain and, crucially, has the \emph{same transition kernel} as the eigenvalue chain $\operatorname{sp}(M(n))$ from Section 2. This will pave the way to prove the equality in distribution.
+\begin{remark}
+	The quantity $L(t,n)$ appears in many contexts besides the LPP.
+	Namely,
+it is also the total
+service time in a series of $n$ exponential queueing servers
+with $t$ customers (the \emph{Jackson network}
+interpretation \cite{Baryshnikov_GUE2001}), and it is a
+prototype of models in the KPZ universality class (often
+called the \emph{exponential corner growth model}).
+For the random growth interpretation \cite{johansson2000shape},
+define the growing percolation cluster as
+\begin{equation*}
+\begin{split}
+F_\tau\coloneqq
+\left\{ (i,j)\colon L(j,i)\le t \right\} \subseteq \mathbb{Z}_{\ge1}^2,
+\qquad \tau \in \mathbb{R}_{\ge0}.
+\end{split}
+\end{equation*}
+Then this cluster grows by adding $1\times 1$ boxes
+after exponential random times, when
+each rate $\pi_j+\hat \pi_i$
+exponential clock starts ticking
+when the cluster reaches the two adjacent vertices
+to $(i,j)$.
+\end{remark}
 
-\subsection{The Robinson--Schensted--Knuth (RSK) correspondence}
-The RSK algorithm is a combinatorial bijection that associates to any matrix of nonnegative integers a pair of Young Tableaux of the same shape. We refer to standard texts (e.g. Fulton \cite{fulton1997young}) for background on Young Tableaux and the classical (unweighted) RSK correspondence. Here we will use a more probabilistic perspective suitable for our random weights. Specifically, RSK can be described as a procedure that takes an $N\times n$ array of weights (for example $W_{ij}$ for $1\le i\le N,\,1\le j\le n$) and outputs a \textbf{Gelfand--Tsetlin (GT) pattern} of depth $N$ and width $n$. A GT pattern of depth $N$ is a triangular array $x=(x_i^k)_{1\le i\le k \le N}$ of real numbers with $k$ entries in row $k$, satisfying the interlacing constraints
-\[ x^k_i \;\ge\; x^{k-1}_i \;\ge\; x^k_{i+1} \qquad \text{for each $1\le i < k \le N$.} \]
-We denote by $\mathcal{GT}_{N}$ the set of all GT patterns with $N$ levels. It is well-known that there is a bijection between $\mathcal{GT}_N$ and the set of pairs of \emph{semi-standard Young Tableaux} of a certain shape with entries in $\{1,\dots,N\}$ (the shape is given by the bottom row of the GT pattern). In fact, the classical RSK correspondence says that if $(P,Q)$ is the pair of SSYTs associated with the matrix, then the shape $\lambda$ (a partition of some integer) satisfies $\lambda_1 = Y(N,n)$, $\lambda_2 = Y(N-1,n)$, ..., $\lambda_N = Y(1,n)$, where $Y(k,n)$ are exactly the LPP times defined earlier (this is a consequence of Greene's theorem, which generalizes the Schensted theorem on longest increasing subsequences to the case of $k$ disjoint increasing subsequences) \cite{Greene1974, fulton1997young}. In other words, the shape of the tableau (or equivalently the bottom row $(x^N_1,\dots,x^N_N)$ of the GT pattern) is precisely the sorted vector of last-passage times to $(k,n)$ for $k=1,\dots,N$. Thus we have:
-\begin{equation}\label{lecture13:eq:RSK-property}
-x^N_i(n) \;=\; Y(i,n)\qquad \text{for $i=1,\dots,N$},
-\end{equation}
-where we use the notation $x^N_i(n)$ to denote the $i$-th entry of the bottom row of the GT pattern produced by applying RSK to the submatrix of weights $\{W_{ij}: 1\le i\le N, 1\le j\le n\}$.
+Let us define the whole \emph{vector of last-passage times to the bottom row} at column $t$ as
+\[ Z(t) := \big( L(t,1),\, L(t,2),\, \dots,\, L(t,n)\big)\,\in \mathbb{W}^n, \]
+where we list the values in increasing order $L(t,1)\le
+L(t,2)\le \cdots \le L(t,n)$.\footnote{We have $L(t,1)\le
+\cdots\le L(t,n)$ almost surely because giving the path more
+freedom to move down can only increase the maximum weight.
+This is easily checked from \eqref{lecture13:eq:LPP-recursion}. Thus
+$Z(t)\in \mathbb{W}^n$ indeed.} In particular, $L(t,n)$ is
+the largest component of $Z(t)$. The sequence
+$\{Z(t):t\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random
+process in $\mathbb{W}^n$.
 
-In our context, the $W_{ij}$ are not integers a.s., but the RSK algorithm can be extended to real-valued matrices as well, by an appropriate limiting procedure. Essentially, one can approximate the $W_{ij}$ by rationals or by increments of small integers and apply the discrete RSK, then take a limit (this is sometimes called the \emph{greedy algorithm} or \emph{greene's algorithm} for continuous input). For our purposes, we take \eqref{lecture13:eq:RSK-property} as the defining property linking the LPP values to the GT pattern generated by RSK. Equation \eqref{lecture13:eq:RSK-property} is precisely the statement of (the weighted version of) Greene's theorem: it asserts that the maximum weight of an up-right path that uses $i$ down-steps (i.e. reaches row $i$) is equal to the $i$-th smallest entry in the RSK output shape. For completeness, we note that in the unweighted case ($W_{ij}=1$ for all entries in some submatrix), $Y(i,n)$ would simply be the length of the longest path using $i$ down-steps, which is exactly the length of the $i$-th longest increasing subsequence of a corresponding sequence --- Greene's theorem then says this equals the sum of the first $i$ parts of the Young diagram (the shape's first $i$ row lengths), which recovers the Schensted correspondence in the case $i=1$.
+\begin{remark}
+	The process $Z(t)$ is \textbf{not} the same as the
+	Markov process of the spectra of the Wishart matrices
+	$M(t)$. Instead, we should look at the maximal eigenvalues
+	$\operatorname{sp}(M(t))_{\max}$
+	of the $n\times n$ matrices $M(t)$, $t=0,1,\ldots$,
+	and match them to the last-passage times
+	$L(t,n)$, $t=0,1,\ldots$.
+\end{remark}
 
-Now, a crucial property of RSK is that it is a \emph{bijection}. This means that given the output GT pattern, one can reconstruct the input matrix (or rather, the multiset of input entries). In particular, if we feed in a random matrix $\{W_{ij}:1\le i\le N, 1\le j\le n\}$, the distribution of the output pattern $X(n)\in \mathcal{GT}_N$ (where $X(n)$ denotes the GT pattern after processing $n$ columns of the matrix) can be characterized by this bijectivity. For example, suppose $W_{ij}$ are geometric random variables taking values in $\mathbb{Z}_{\ge0}$ (the discrete analogue of our exponential weights). Specifically, assume each $W_{ij}$ is independent with $\mathbb{P}\{W_{ij}=k\} = (1-a_i b_j) (a_i b_j)^k$ for $k\in\{0,1,2,\dots\}$, where $0<a_i, b_j <1$ are parameters. This is a geometric distribution with mean $\frac{a_i b_j}{1-a_i b_j}$. In the special case $a_i = a$ for all $i$ and $b_j=b$ for all $j$, such a model is equivalent (after a certain mapping) to the totally asymmetric simple exclusion process (TASEP) with certain initial conditions, and RSK provides a coupling to the Poissonized Plancherel measure (see \cite{OConnell2003}). In our more general case with distinct $a_i, b_j$, the distribution of the GT pattern $X(n)$ can be described by known results: it turns out that \emph{the bottom row of the GT pattern $X(n)$ evolves as an inhomogeneous Markov chain in $W^N$ with an explicit transition probability depending on $a_i, b_j$}. Indeed, the following proposition is essentially proved by O'Connell \cite{OConnell2003}:
-
-\begin{proposition}[Markov property of LPP via RSK]\label{lecture13:prop:RSK-Markov}
-Apply the RSK algorithm column-by-column to the infinite array of geometric random variables $\{\xi_{ij}: 1\le i\le N,\ j\ge1\}$ with $\mathbb{P}\{\xi_{ij}=k\} = (1-a_i b_j) (a_i b_j)^k$. After inserting $n$ columns, let $X(n) = (x_i^k(n))_{1\le i\le k\le N}$ be the resulting GT pattern. Then the sequence of bottom rows $\{x^N(n): n\ge0\}$ is an inhomogeneous Markov chain in $W^N$. Moreover, its one-step transition probability from $x^{N}(n-1)=\lambda$ to $x^N(n)=\lambda'$ is given by
-\begin{equation}\label{lecture13:eq:RSK-transition}
-\mathbb{P}\{x^N(n) = \lambda' \mid x^N(n-1)=\lambda\} \;=\; \prod_{i=1}^N (1 - a_i b_{\lambda_i - \lambda'_{i-1}})\; (a_i b_{\lambda_i - \lambda'_i})\,,
-\end{equation}
-for any interlacing nondecreasing sequences $\lambda=(\lambda_1\le \cdots\le \lambda_N)$ and $\lambda'=(\lambda'_1\le \cdots\le \lambda'_N)$ in $\mathbb{Z}_{\ge0}^N$. Here we interpret $\lambda_0= -\infty$ and $\lambda'_{N+1}=+\infty$ in the above product. (Equivalently, one can express \eqref{lecture13:eq:RSK-transition} in the symmetric form $\displaystyle \mathbb{P}_{\lambda\to\lambda'} = \frac{s_\alpha(\lambda')\, s_\alpha(\lambda/\lambda')}{s_\alpha(\lambda)}$, where $s_\alpha$ is the Schur polynomial in variables $\alpha_i = a_i$ and $\alpha_{N+j}=b_j^{-1}$ and $s_\alpha(\lambda/\lambda')$ is a skew Schur function corresponding to the interlacing $\lambda'/\lambda$ \cite{OConnell2003}.)
-\end{proposition}
-
-We will not derive formula \eqref{lecture13:eq:RSK-transition} here. Intuitively, it comes from the fact that RSK is bijective: each possible new bottom row $\lambda'$ that interlaces with the previous $\lambda$ corresponds to exactly one way of inserting the new column of geometric weights into the existing GT pattern, and the probability of that insertion is the product of probabilities of each $\xi_{ij}$ that entered the shape. The result is a product formula of simple factors $(1- a_i b_j)$ or $(a_i b_j)$ for each unit increase or non-increase in the shape at a given row. We refer to \cite{OConnell2003} for a rigorous proof.
-
-Now, Proposition \ref{lecture13:prop:RSK-Markov} demonstrates an important fact: the bottom-row process of the random GT pattern is Markov with a \emph{factorized transition probability}. In fact, comparing \eqref{lecture13:eq:RSK-transition} with the transition density \eqref{lecture13:eq:transition-density} for the eigenvalue process, one sees a clear correspondence upon identifying $a_i = \frac{\pi_i}{1+\pi_i}$ and $b_j = \frac{\hat\pi_j}{1+\hat\pi_j}$ (so that $a_i b_j = \frac{\pi_i \hat\pi_j}{(1+\pi_i)(1+\hat\pi_j)}$). Indeed, if we formally take $\xi_{ij}\sim$ Geometric$(a_i b_j)$ and let $a_i,b_j \to0$ such that $\frac{a_i}{b_j}\to \frac{\pi_i}{\hat\pi_j}$ and $a_i b_j \to \frac{\pi_i \hat\pi_j}{M}$ for some scaling $M\to\infty$, then $\xi_{ij}/M$ converges in distribution to an exponential random variable of mean $\frac{1}{\pi_i + \hat\pi_j}$. Under this limit, the product form \eqref{lecture13:eq:RSK-transition} exactly matches (the discrete analogue of) the continuous transition kernel $Q^{\pi,\hat\pi}_{n-1,n}$ in Theorem \ref{lecture13:thm:MarkovChain}. By this reasoning (which can be made rigorous by appropriate limit transitions on the generating functions), we conclude that the bottom-row process $Z(n) = (Y(1,n),\dots,Y(N,n))$ of our exponential LPP model $\{Y(i,j)\}$ is a Markov chain on $W^N$, and its one-step transition law from $Z(n-1)=x$ to $Z(n)=y$ coincides with $Q^{\pi,\hat\pi}_{n-1,n}(x,y)$ given in \eqref{lecture13:eq:transition-density}. In particular, the largest component $Y(N,n)$ evolves according to the same mechanism as the largest eigenvalue $\lambda_1(n)$ of $M(n)$.
-
-We summarize the above argument in a lemma for clarity:
-
-\begin{lemma}\label{lecture13:lem:LPP-Markov}
-For the directed LPP model with exponential rates $\{\pi_i + \hat\pi_j\}$ defined in \eqref{lecture13:eq:LPPdef}, the process $\{Z(n) = (Y(1,n),\dots,Y(N,n)) : n\ge0\}$ is an inhomogeneous Markov chain on $W^N$ under $P^{\pi,\hat\pi}$. Its transition kernel $P\{Z(n)=y \mid Z(n-1)=x\}$ is identical to the kernel $Q^{\pi,\hat\pi}_{n-1,n}(x,y)$ of Theorem \ref{lecture13:thm:MarkovChain}. Equivalently, for any fixed $n$, the joint distribution of $(Y(1,n),\dots,Y(N,n))$ is the same as the joint distribution of the ordered eigenvalues $(\lambda_1(n),\dots,\lambda_N(n))$ of the generalized Wishart matrix $M(n)$.
-\end{lemma}
-
-\begin{proof}[Proof (Sketch)]
-The Markov property and transition probabilities have been explained above via RSK and Proposition \ref{lecture13:prop:RSK-Markov}. We rigorously justify that the exponential case can be obtained as a limit of the geometric case. One approach is to note that the generating function of the transition probability $\mathbb{P}\{x^N(n)=\lambda' \mid x^N(n-1)=\lambda\}$ has the Schur polynomial form indicated in the parenthetical remark after \eqref{lecture13:eq:RSK-transition}. By substituting $\alpha_i = \frac{\pi_i}{1+\pi_i}$ and $\alpha_{N+j} = \frac{1}{1+\hat\pi_j}$ into that expression (which corresponds to taking $a_i = \frac{\pi_i}{1+\pi_i}$ and letting $b_j\to 1/(1+\hat\pi_j)$ as geometric parameter tends to continuous exponential), it is known \cite[Eq.~(4.2)]{dieker2008largest} that one recovers exactly the Laplace transform of the continuous transition density \eqref{lecture13:eq:transition-density}. This proves that the discrete Markov chain converges to the continuous one, hence establishing the claim. Another approach is to discretize time, replacing each exponential $W_{ij}$ by a geometric random variable $\lfloor W_{ij}/\epsilon \rfloor$ for small $\epsilon$, apply Proposition \ref{lecture13:prop:RSK-Markov}, and then let $\epsilon\to0$. We omit the technical details. Finally, the statement about the joint distribution for fixed $n$ follows from a simple induction on $n$. Both processes $Z(n)$ and $\operatorname{sp}(M(n))$ start at $(0,\dots,0)$ for $n=0$ and share the same one-step transition kernels for each $1\le m\le n$. Hence by the chain factorization \eqref{lecture13:eq:chain-factorization}, their distributions coincide for each $n$.
-\end{proof}
-
-\section{Equality in Law of the Largest Eigenvalue Process and LPP}
-We are now in position to state and prove the main theorem of this lecture, which establishes the coupling between spiked Wishart eigenvalues and directed last-passage percolation.
-
-\begin{theorem}[Dieker--Warren \cite{dieker2008largest} equality in law]\label{lecture13:thm:MainEquality}
-For any fixed $N\in \mathbb{N}$, any strictly positive parameters $\pi_1,\dots,\pi_N$, and any nonnegative sequence $\hat\pi_1,\hat\pi_2,\dots$, the law of the entire process $\{\lambda_1(n): n\ge0\}$ of the top eigenvalue of the generalized Wishart matrix $M(n)$ is the same as the law of the process $\{Y(N,n): n\ge0\}$ of the last-passage time to $(N,n)$ in the directed percolation model. Equivalently, the finite-dimensional distributions coincide: for any $0<n_1<n_2<\cdots<n_k$,
-\[ \mathbb{P}\{\lambda_1(n_1)\le x_1,\, \lambda_1(n_2)\le x_2,\,\dots, \lambda_1(n_k)\le x_k \} = \mathbb{P}\{Y(N,n_1)\le x_1,\, Y(N,n_2)\le x_2,\,\dots, Y(N,n_k)\le x_k \}. \]
-In particular, for each fixed $n$, $\lambda_1(n)$ and $Y(N,n)$ are identically distributed.
+In the next section, we will consider a discrete version of the
+LPP model, and consider a crucial bijection --- the celebrated
+\emph{Robinson--Schensted--Knuth (RSK) correspondence}.
+In the next \Cref{chap:lecture14}, we will
+use this to complete the proof of the matching between the
+Wishart process and the LPP with exponential weights.
+That is, we are after the following result:
+\begin{theorem}[\cite{dieker2008largest}]
+	\label{lecture13:thm:matching}
+	The joint distribution of the last-passage times
+	\begin{equation*}
+		L(1,n),\;L(2,n),\ldots,L(t,n)
+	\end{equation*}
+	is the same as the joint distribution of the largest
+	eigenvalues
+	of the $n\times n$ Wishart matrices
+	\begin{equation*}
+		\operatorname{sp}(M(1))_{\max},\;\operatorname{sp}(M(2))_{\max},\ldots,\operatorname{sp}(M(t))_{\max}.
+	\end{equation*}
 \end{theorem}
 
-\begin{proof}
-In fact, we will prove a stronger statement: not only the largest eigenvalue processes, but the \emph{entire eigenvalue vector processes} coincide in law with the LPP time vector processes. That is, $\{\operatorname{sp}(M(n)):n\ge0\}$ has the same distribution as $\{Z(n)=(Y(1,n),\dots,Y(N,n)):n\ge0\}$ under $P^{\pi,\hat\pi}$. The largest eigenvalue corresponds to the last component of these vectors, so this implies the theorem. To prove the vector equality, we use the Markov chain characterizations. By Theorem \ref{lecture13:thm:MarkovChain} and Lemma \ref{lecture13:lem:LPP-Markov}, we know both processes are Markov on $W^N$ with identical one-step transition kernels $Q^{\pi,\hat\pi}_{n-1,n}(x,y)$. Furthermore, at time $n=0$, both $\operatorname{sp}(M(0))$ and $Z(0)$ are deterministically $(0,\dots,0)$ (because $M(0)$ is the zero matrix and by definition $Y(i,0)=0$ for all $i$). Therefore, the two processes are in fact the same Markov chain in law, since a Markov chain is completely determined by its initial distribution and transition kernels. More formally, one can show by induction on $n$ that for any $n\ge0$ and any Borel set $B\subseteq ( \mathbb{R}_{\ge0})^N$,
-\[
-P^{\pi,\hat\pi}\{\operatorname{sp}(M(n))\in B\} = \int_{(\mathbb{R}_{\ge0})^N} P^{\pi,\hat\pi}\{\operatorname{sp}(M(n-1))\in dx\}\, Q^{\pi,\hat\pi}_{n-1,n}(x, B) ,
-\]
-and
-\[
-P^{\pi,\hat\pi}\{Z(n)\in B\} = \int_{(\mathbb{R}_{\ge0})^N} P^{\pi,\hat\pi}\{Z(n-1)\in dx\}\, Q^{\pi,\hat\pi}_{n-1,n}(x, B) .
-\]
-For $n=0$, we have equality since $P^{\pi,\hat\pi}\{\operatorname{sp}(M(0))\in B\} = \mathbf{1}_{\{0\in B\}} = P^{\pi,\hat\pi}\{Z(0)\in B\}$. Assuming the equality holds for $n-1$, the above integral equations and $Q$-kernel equality imply it holds for $n$ as well. This completes the induction and yields $P^{\pi,\hat\pi}\{\operatorname{sp}(M(n))\in B\} = P^{\pi,\hat\pi}\{Z(n)\in B\}$ for all $n$. Restricting to the largest components (since $\lambda_1(n)=Y(N,n)$ as elements of the same pattern) proves the stated equality in law for the largest eigenvalue processes.
 
-An alternative argument (which is essentially equivalent but couched in a different language) is to explicitly construct a joint probability space on which the two processes can be coupled to be equal almost surely. This is hinted at by our initial construction: we defined both the matrix array $\{A_{ij}\}$ and the weight array $\{W_{ij}\}$ on the \emph{same probability space} $P^{\pi,\hat\pi}$ in Section 2. Indeed, under $P^{\pi,\hat\pi}$, $A_{ij}$ and $W_{ij}$ are independent with the given distributions. Now consider running the RSK algorithm on the infinite array $\{\xi_{ij}\}$ defined by $\xi_{ij} = \lfloor |A_{ij}|^2\rfloor$ (the integer part of $|A_{ij}|^2$). Since $|A_{ij}|^2$ has mean $1/(\pi_i+\hat\pi_j)$ and decays exponentially in the tail, for small $\epsilon>0$ we have $\mathbb{P}\{|A_{ij}|^2\in [k\epsilon,(k+1)\epsilon)\} \approx (\pi_i+\hat\pi_j)\epsilon$ for infinitesimal $\epsilon$. Thus $\xi_{ij}$ is approximately geometric with parameter $a_i b_j$ as in Proposition~\ref{lecture13:prop:RSK-Markov}. By RSK, for each $n$ we get a GT pattern $X(n)$ whose bottom row $x^N(n)$ is exactly the sorted list of $\{\sum_{(i,j)\in\Gamma} \xi_{ij}: \Gamma: (1,1)\to(N,n)\}$, i.e. the last-passage times in the \emph{discretized} weight array $\xi$. But note that $\xi_{ij} \le |A_{ij}|^2 \le \xi_{ij}+1$. Summing along any path yields
-\[ \mathcal{W}(\Gamma) = \sum_{(i,j)\in\Gamma} W_{ij} = \sum_{(i,j)\in\Gamma} |A_{ij}|^2 \le \sum_{(i,j)\in\Gamma} \xi_{ij} + (N+n) \le \mathcal{W}(\Gamma)+ (N+n). \]
-Since any path from $(1,1)$ to $(N,n)$ uses exactly $N+n-1$ edges, the difference between $\sum \xi_{ij}$ and $\sum |A_{ij}|^2$ is at most $N+n-1$ for that path. Therefore the maximizing path for $\sum \xi_{ij}$ is also the maximizing path for $\sum |A_{ij}|^2$, and so $Y(N,n) = \max_{\Gamma} \sum |A_{ij}|^2 = \max_{\Gamma} \sum \xi_{ij}$ (at least for $n\ge1$; the case $n=0$ is trivial). This shows that $Y(N,n) = x^N_N(n)$ (the largest entry of the bottom row of $X(n)$) exactly. On the other hand, by properties of RSK (Greene's theorem weighted version), the entire bottom row $x^N(n)$ of $X(n)$ is nothing but the ordered eigenvalues of $M(n) = A(n)A(n)^*$. This is because the joint distribution of eigenvalues of $A(n)A(n)^*$ and the joint distribution of path weights $\{\sum |A_{ij}|^2\}$ are both given by the same Schur polynomial structure (in fact, one can check these measures satisfy the same Gibbs property as in Proposition \ref{lecture13:prop:RSK-Markov}). Hence we can identify $x^N_i(n) = \lambda_i(n)$ for each $i=1,\dots,N$. In particular, taking $i=N$ we get $\lambda_1(n) = x^N_N(n) = Y(N,n)$ as an equality on this coupling. This coupling argument is essentially the one given in \cite{dieker2008largest} via a change-of-measure and RSK. We do not formalize it further here, as the Markov chain argument is sufficient to conclude equivalence in law.
+\section{Geometric LPP and Robinson-Schensted-Knuth correspondence}
+
+\subsection{Geometric LPP}
+
+Throughout this section, we are interested in the
+last-passage percolation with discrete weights $W_{ij}\in \mathbb{Z}_{\ge0}$,
+which have the geometric distribution
+\begin{equation}
+	\label{lecture13:eq:geometric}
+	\operatorname{Prob}(W_{ij}=k) = \frac{(a_i b_j)^{k}}{(1 - a_ib_j)^{k+1}}, \qquad k=0,1,\ldots
+\end{equation}
+The last-passage times are defined by \eqref{lecture13:eq:LPP-recursion},
+the same as in the exponential case.
+
+\subsection{Bijective mapping of arrays via toggles}
+\label{lecture13:sub:toggle}
+
+We are now going to present the Robinson-Schensted-Knuth
+correspondence via the operation called \emph{toggle}.
+This exposition is different from the usual discussions in e.g.,
+\cite{sagan2001symmetric}, \cite{fulton1997young},
+and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes by Sam Hopkins}.
+Fix $t,n$, and consider the array $W=\{W_{ij}\}_{1\le i\le t, 1\le j\le n}$ of
+nonnegative integers. We can think of $W$ as a realization of the geometric
+environment, but for now let us assume that $W$ is a fixed array. See
+\Cref{lecture13:fig:LPP_array} for the order of indices.
+
+We are going to inductively construct a bijection $\operatorname{RSK}$ between the array $W$ and another
+array $R=\{R_{ij}\}_{1\le i\le t, 1\le j\le n}$ of nonnegative integers, which is
+\emph{ordered}:
+\begin{equation*}
+	R_{i,j} \le R_{i,j+1}, \qquad R_{i,j} \le R_{i+1,j},\qquad \text{for all } i,j.
+\end{equation*}
+Note that this ordering means that the diagonals in $R$ interlace.
+
+To define $\operatorname{RSK}$, we first define an elementary
+operation called \emph{toggle} and denoted by $\operatorname{T}$.
+
+\begin{definition}[Toggle]
+	The toggle operation is a map $\operatorname{T}$ which takes in
+	a nonnegative integer $w$ and
+	a triple $(\lambda,\kappa,\mu)$ of sequences of nonnegative integers
+	satisfying interlacing
+	\begin{equation*}
+		\lambda\succ \kappa\prec \mu.
+	\end{equation*}
+	The lengths of the sequences are differ by $0$ or $1$, and if necessary, we pad the
+	sequences with $0$'s to make the interlacing make sense.
+	The output of $\operatorname{T}$ is a triple $(\lambda,\nu,\mu)$, where
+	$\lambda$ and $\mu$ are not changed, and $\nu$ is obtained from $\lambda,\mu,\kappa$,
+	and $w$ as follows:
+	\begin{equation*}
+		\nu_1=w+\max(\lambda_1,\mu_1),\qquad
+		\nu_i=\max(\lambda_{i},\mu_i)+\min(\lambda_{i-1},\mu_{i-1})-\kappa_{i-1},\qquad
+		\text{for } i\ge 2.
+	\end{equation*}
+\end{definition}
+Define $|\kappa|\coloneqq \kappa_1+\kappa_2+\cdots$, and similarly for
+$\lambda,\mu,\nu$.
+
+\begin{proposition}
+	\label{lecture13:prop:toggle_weight_preservation}
+	If $(\lambda,\nu,\mu)=\operatorname{T}(w;\lambda,\kappa,\mu)$, then
+	$\lambda\prec\nu\succ \mu$, and
+	\begin{equation*}
+		|\nu|=w+|\lambda|+|\mu|-|\kappa|.
+	\end{equation*}
+\end{proposition}
+\begin{proof}
+	See Problem~\ref{lecture13:prob:toggle_weight_preservation}.
+\end{proof}
+
+
+Now, define $R=\operatorname{RSK}(W)$ as follows.
+We will build $R$
+by sequentially modifying the array $W$,
+starting from the bottom-left corner $(1,1)$ and moving
+by adding one box at a time.
+We represent the partially filled $R$ array as a collection of interlacing sequences.
+Let $R^{(i,j)}$ denote the already constructed part of $R$, where we are adding a
+box $(i,j)$. Then, we modify the diagonal containing
+$(i,j)$ by applying the toggle operation to the weight $w=W_{i,j}$ and the three diagonals
+\begin{equation*}
+	\lambda^{(i,j)} = \{R^{(i,j)}_{i-k+1,j-k}\}_{k\ge1}, \quad
+	\mu^{(i,j)} = \{R^{(i,j)}_{i-k,j-k+1}\}_{k\ge1}, \quad
+	\kappa^{(i,j)} = \{R^{(i,j)}_{i-k,j-k}\}_{k\ge1}.
+\end{equation*}
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=1.1]
+% Draw coordinate axes
+\draw[->] (0,0) -- (5.5,0) node[right] {$j$};
+\draw[->] (0,0) -- (0,4) node[above] {$i$};
+
+% Bottom row (i=1)
+\foreach \j in {1,2,3,4} {
+	\node[rectangle,draw,minimum size=1.1cm] (R1\j) at (\j,1) {$R_{1\j}$};
+}
+% Middle row (i=2) - including the box being added
+\foreach \j in {1,2,3} {
+					\node[rectangle,draw,minimum size=1.1cm] (R2\j) at (\j,2) {$R_{2\j}$};
+				}
+				% Top row (i=1)
+				\foreach \j in {1,2} {
+					\node[rectangle,draw,minimum size=1.1cm] (R3\j) at (\j,3) {$R_{3\j}$};
+					}
+
+					\node[circle,draw] at (4,2) {$W_{24}$};
+
+																	% Highlight lambda cells
+																	\node[rectangle,draw,fill=blue!20,minimum size=1.1cm] at (3,2) {$R_{23}$};
+																	\node[rectangle,draw,fill=blue!20,minimum size=1.1cm] at (2,1) {$R_{12}$};
+
+																	% Highlight kappa cells
+																	\node[rectangle,draw,fill=green!20,minimum size=1.1cm] at (3,1) {$R_{13}$};
+
+																	% Highlight mu cells
+																	\node[rectangle,draw,fill=red!20,minimum size=1.1cm] at (4,1) {$R_{14}$};
+
+																	% Add a legend
+																	\node[draw,fill=blue!20] at (5,3.5) {\small $\lambda$};
+																	\node[draw,fill=green!20] at (5,3) {\small $\kappa$};
+																	\node[draw,fill=red!20] at (5,2.5) {\small $\mu$};
+
+				\end{tikzpicture}
+				\caption{Illustration of the RSK toggle operation,
+					with $w=W_{24}$ being added to the array $R$,
+					and $\lambda=(R_{23},R_{12})$,
+					$\kappa=(R_{13})$, $\mu=(R_{14})$.}
+					\label{lecture13:fig:toggle}
+\end{figure}
+
+The next statement is straightforward:
+\begin{proposition}
+	The toggle operation $\operatorname{T}$ is a bijection
+	\begin{equation*}
+		\mathbb{Z}_{\ge0}\times
+		\left\{ (\lambda,\kappa,\mu)\colon \lambda\succ \kappa\prec \mu \right\}
+		\leftrightarrow
+		\left\{ (\nu,\lambda,\mu)\colon \lambda\prec\nu \succ \mu \right\}.
+	\end{equation*}
+	Consequently, the map $\operatorname{RSK}$ is a bijection
+	between nonnegative
+	arrays $W$ and ordered nonnegative arrays $R$.
+\end{proposition}
+
+\begin{proposition}
+\label{lecture13:prop:RSK_independence_of_order}
+	The bijection $\operatorname{RSK}$ does not depend on the order
+	of adding the boxes to the array $R$.
+\end{proposition}
+\begin{proof}
+	See Problem~\ref{lecture13:prob:RSK_independence_of_order}.
 \end{proof}
 
 \begin{remark}
-It is noteworthy that the above theorem provides an \emph{exact distributional identity} between two very different probabilistic systems. Many special cases of this identity were known before. For instance, when $\pi_i\equiv1$ and $\hat\pi_j\equiv0$ (no spike, homogeneous case), the result reduces to $Y(N,n) \stackrel{d}{=} \lambda_1(n)$ for a standard Wishart($N,n$) matrix. In particular, taking $n=N$ yields $Y(N,N) \stackrel{d}{=} \lambda_1(N)$ for an $N\times N$ Wishart matrix, which (for complex entries) has the same distribution as $\lambda_1$ of an $N\times N$ GUE matrix (Laguerre and GUE largest eigenvalues coincide in distribution up to parameter). Therefore $Y(N,N)$ has Tracy--Widom GUE fluctuations asymptotically by Forrester and Johansson \cite{johansson2000shape}. But $Y(N,N)$ is also the last-passage time in an $N\times N$ i.i.d. exponential grid, which was independently proved to have Tracy--Widom fluctuations by Johansson \cite{johansson2000shape}. Our theorem explains that these are two manifestations of the same law. Another special case: if one takes $N=1$, then $\lambda_1(n)$ is simply a sum of $n$ exponential random variables of rates $(\pi_1+\hat\pi_j)$, and $Y(1,n)$ is the same sum, so trivially the equality in law holds. The first nontrivial case is $N=2$. Then $\lambda_1(n)$ for Wishart($2,n$) and the longest path weight in a $2\times n$ grid are equal in distribution, a fact that can be checked by direct calculation as well (both have a Beta--Binomial type distribution). The full generality of Theorem \ref{lecture13:thm:MainEquality} is due to Dieker \& Warren \cite{dieker2008largest}. We emphasize that the theorem holds for finite $N$ and $n$, not just in the limit.
+	The map $\operatorname{RSK}$
+	is transposition-equivariant, meaning that
+	if $R=\operatorname{RSK}(W)$, then
+	$R^{\top}=\operatorname{RSK}(W^{\top})$.
 \end{remark}
 
-\subsection*{The law of the top eigenvalue and asymptotic distribution}
-Having established the equivalence in law of $\lambda_1(n)$ and $Y(N,n)$, we can leverage known results from either side to describe the distribution of the top eigenvalue in the spiked model. One convenient consequence is an explicit formula for the distribution function of $\lambda_1(n)$ in terms of a combinatorial sum (or equivalently a Fredholm determinant). Indeed, from the LPP perspective, we have by definition
-\[ \{\lambda_1(n) \le t\} = \{Y(N,n) \le t\} = \{\text{there exists no path from $(1,1)$ to $(N,n)$ of total weight $>t$}\}.\]
-This event is easier to complement: $\{\lambda_1(n) > t\}$ means there is \emph{at least one path of weight $>t$}. By inclusion-exclusion, one can sum over all up-right paths $\Gamma$ (there are finitely many) the probabilities $\mathbb{P}\{\mathcal{W}(\Gamma) > t\}$, subtract the overlaps where two specific paths have weight $>t$, and so on. Because the $\{W_{ij}\}$ are independent exponentials, the probability that a \emph{given path} $\Gamma$ has weight $>t$ is
-\[ \mathbb{P}\Big\{\sum_{(i,j)\in\Gamma} W_{ij} > t\Big\} = e^{-(\pi_1+\hat\pi_1+\cdots+\pi_N+\hat\pi_n) t} \sum_{k=0}^{N+n-2} \frac{t^k}{k!} \prod_{(i,j)\in\Gamma} (\pi_i+\hat\pi_j)^k,\]
-essentially because the sum of $(N+n-1)$ independent exponentials can be written as an Erlang (Gamma) distribution. Summing over all $\binom{N+n-2}{N-1}$ paths from $(1,1)$ to $(N,n)$ yields an expression involving symmetric sums of the $\pi_i+\hat\pi_j$. After cancellation, one ends up with a formula:
-\begin{equation}\label{lecture13:eq:TWfiniteFredholm}
-\mathbb{P}\{\lambda_1(n) \le t\} \;=\; \sum_{k=0}^{N(n-1)} c_{k}(\pi,\hat\pi)\, e^{-t (\pi_1+\cdots+\pi_N+\hat\pi_1+\cdots+\hat\pi_n)}\, \frac{t^k}{k!}\,,
-\end{equation}
-for some coefficients $c_k(\pi,\hat\pi)$ depending on the parameters but not on $t$. This is recognized as the beginning of the Laplace transform expansion of a \emph{Fredholm determinant} of an integrable kernel (or equivalently the generating function of some determinantal point process). Indeed, one can show
-\[ \mathbb{P}\{\lambda_1(n) \le t\} = \det\big(I - K_{N,n}\big)_{L^2(0,t)}\,,\]
-where $K_{N,n}(x,y)$ is a kernel of the form $\sum_{i=1}^{N} \sum_{j=1}^{N} e^{-\pi_i x} P_{ij}(x,y) e^{-\pi_j y}$ for some polynomial/exponential term $P_{ij}$, see \cite{BorodinPeche2009}. The precise form of $K_{N,n}$ is not too important for us; what matters is that the top eigenvalue distribution can be characterized as such a determinant and thus amenable to asymptotic analysis using steepest-descent methods (Riemann--Hilbert for the kernel or the known results about Laguerre polynomials).
 
-We mention one important asymptotic regime: let $N$ and $n$ tend to infinity such that $N/n \to \gamma \in(0,1]$ (the aspect ratio tends to $\gamma$). If all $\pi_i=1$ (no spike) and all $\hat\pi_j=0$ (homogeneous), then $\lambda_1(n)$ after centering at $n+(N-1)$ and scaling by $n^{1/3}$ converges to the Tracy--Widom distribution for $\beta=2$ (GUE). If one $\pi_i$ is different, say $\pi_N=1+\theta$ with $\theta>0$ fixed and $\pi_1=\cdots=\pi_{N-1}=1$, then this corresponds to a rank-1 spike in the covariance matrix. It is known from the Baik--Ben~Arous--P\'ech\'e (BBP) phase transition \cite{BBP2005phase} that if $\theta$ is small (specifically, $\theta < \sqrt{\gamma}$), then $\lambda_1(n)$ still lies at the edge of the Marchenko--Pastur bulk and has Tracy--Widom fluctuations. But if $\theta > \sqrt{\gamma}$, then an \emph{outlier} eigenvalue separates from the bulk and its fluctuations are no longer Tracy--Widom; instead, $\lambda_1(n)$ approaches the limit $(1+\theta)(1+\frac{\gamma}{\theta}) n$ in expectation and has $\mathcal{O}(1)$ fluctuations around that limit (i.e. it converges to a certain distribution independent of $n$). Borodin and P\'ech\'e \cite{BorodinPeche2009} identified this limiting distribution for the outlier: it is given by a Fredholm determinant with a \emph{deformed Airy kernel}, often called the ``Airy kernel with two sets of parameters'' \cite{BBP2005phase}. We state their result in our notation:
+\subsection{Weight preservation}
 
-\begin{theorem}[Borodin--P\'ech\'e asymptotic law for spiked eigenvalue]\label{lecture13:thm:BP-limit}
-Consider the spiked Wishart ensemble with one spike: $\pi_1=\cdots=\pi_{N-1}=1$ and $\pi_N = 1+\theta$ for some $\theta>0$, and $\hat\pi_j=0$ for all $j$. Let $c = \sqrt{\gamma}$, where $\gamma = \lim_{N,n\to\infty} N/n \in(0,1]$. Define the critical value $\theta_c = c$ (so if $\theta>\theta_c$, the spike is supercritical and produces an outlier eigenvalue). Then:
-\begin{itemize}\item If $0<\theta < \theta_c$, then the top eigenvalue $\lambda_1(N)$ (with $N,n\to\infty$, $\gamma$ fixed) has fluctuations governed by the Tracy--Widom distribution of type~2 (GUE). Specifically,
-\[ \mathbb{P}\left\{\frac{\lambda_1(N) - \mu_{N,n}}{\sigma_{N,n}} \le x\right\} \to F_2(x) \qquad \text{as $N,n\to\infty$,}\]
-where $\mu_{N,n} = (1+\sqrt{\gamma})^2 n$ and $\sigma_{N,n} = (\sqrt{\gamma}+1)(\gamma^{-1/6}+\gamma^{1/6})\, n^{1/3}$ are the usual centering and scaling for the Laguerre ensemble edge.
-\item If $\theta = \theta_c = c$, the spike is critical and the top eigenvalue still lies at the edge of the bulk but the fluctuations are enlarged (of order $n^{2/3}$). In fact, one finds
-\[ \mathbb{P}\left\{\frac{\lambda_1(N) - \mu_{N,n}}{\tilde\sigma_{N,n}} \le x\right\} \to F_2^{(1)}(x) \]
-where $F_2^{(1)}(x)$ is the distribution of $\max(A(t)-t^2,0)$ for the Airy$_2$ process $A(t)$ (this is sometimes called the BBP crossover distribution of order 1).
-\item If $\theta > \theta_c$, the spike is supercritical and $\lambda_1(N)$ separates from the bulk. In this regime,
-\[ \mathbb{P}\{\lambda_1(N) \le (1+\theta)(1+\frac{\gamma}{\theta})\, n + s\} \to \det(I - K_{\rm Ai}^{(\theta)})_{L^2((-\infty,\,s])},\]
-where the limit law on the right is given by a deformed Airy kernel $K_{\rm Ai}^{(\theta)}$ whose exact form is specified in \cite{BorodinPeche2009}. This is the distribution of the outlier, which can be understood as the law of the maximum of the Airy$_2$ process with a parabolic shift $-t^2 + \omega |t|$ where $\omega$ is related to $\theta$. In particular, as $\theta\to\infty$, the outlier distribution converges to a GOE Tracy--Widom law (since a very large spike essentially decouples the top eigenvalue which then behaves like the edge of a one-dimensional Gaussian).
-\end{itemize}
-\end{theorem}
+Define
+the row and column sums in $W=(W_{ij})_{1\le i\le t, 1\le j\le n}$ by
+\begin{equation*}
+	\mathrm{row}_i\coloneqq \sum_{j=1}^n W_{ij}, \qquad
+	\mathrm{col}_j \coloneqq \sum_{i=1}^t W_{ij}.
+\end{equation*}
+Also define the diagonal sums in $R$ by
+\begin{equation*}
+	\mathrm{diag}_{i,j}\coloneqq \sum_{k=0}^{\min(i,j)-1}R_{i-k,j-k}.
+\end{equation*}
 
-We will not derive this result here, as it involves significant asymptotic analysis. However, we can offer some intuition via the LPP coupling: a spike $\pi_N = 1+\theta$ means the $N$-th row of the weight lattice has systematically \emph{lower} weights (since $\mathbb{E}W_{Nj} = 1/(1+\theta + \hat\pi_j) < 1$), so paths that spend a lot of time in the bottom row accumulate less weight and might not be optimal unless the spike is small. If $\theta$ is below threshold, the effect is minor and a typical maximal path will still snake through all $N$ rows (the bottom row included), picking up typical Tracy--Widom fluctuations. If $\theta$ is above threshold, however, the optimal path might avoid the bottom row altogether for most of its length, effectively traveling through an $(N-1)\times n$ subgrid of heavier weights. In that case, the last-passage time is essentially the sum of weights in a smaller grid plus possibly a final segment dropping down at the end; this combinatorial picture leads to the deformed Airy kernel. Borodin \& P\'ech\'e used a rigorous steepest descent approach on the Fredholm determinant to compute this limit.
+\begin{proposition}[RSK weight preservation]
+	\label{lecture13:prop:RSK_weight_preservation}
+	Under the bijection $\operatorname{RSK}$, we have
+	\begin{equation*}
+		\mathrm{diag}_{t,j}=\sum_{j'=1}^j\mathrm{col}_{j'},\qquad
+		\mathrm{diag}_{i,n}=\sum_{i'=1}^i\mathrm{row}_{i'}.
+	\end{equation*}
+\end{proposition}
+In particular, the last diagonal sum $\mathrm{diag}_{t,n}$
+is equal to the total weight of the array $W$, which is the
+aggregate of the row sums or the column sums, as it should
+be.
+\begin{proof}[Proof of \Cref{lecture13:prop:RSK_weight_preservation}]
+	We can prove this by induction by adding one box at a time.
+	Define the partial row and column sums
+	as
+	\begin{equation*}
+		\mathrm{row}_{i,k}\coloneqq \sum_{j=1}^k W_{ij}, \qquad
+		\mathrm{col}_{k,j} \coloneqq \sum_{i=1}^k W_{ij}.
+	\end{equation*}
+	We claim that for partial arrays in the process of $\operatorname{RSK}$,
+	the equalities between aggregated partial row/column sums and diagonal sums hold,
+	where we take the column sum if the boundary of a partial array is horizontal,
+	and the row sum if the boundary is vertical. This is our induction
+	claim, and it clearly holds for the empty array.
 
-In closing, we have demonstrated in this lecture how a finite-$N$ identity between two processes can yield powerful insights about the distributions involved. The interplay of random matrix theory, symmetric function theory (RSK, Schur polynomials), and integrable probability (determinantal processes, KPZ universality) exemplified by this result is a hallmark of modern probability in the context of random growth models. We have focused on one example (spiked Wishart vs. directed percolation), but many other such correspondences exist (e.g., GUE minors vs. polynuclear growth, or stochastic six-vertex model vs. $q$-TASEP). The methodology is often similar: identify a Markov or determinantal structure and then apply combinatorial bijections or analytic continuation in parameters. The result is a web of equivalences that allow us to transport results from one domain to another, as we did here by equating $\lambda_1(n)$ with $Y(N,n)$.
+	Now, consider adding a box $(i,j)$ to the array $R$.
+	For the diagonal sums, we have the identity
+	due to \Cref{lecture13:prop:toggle_weight_preservation}:
+	\begin{equation}
+		\label{lecture13:eq:diag_identity}
+		\mathrm{diag}_{i,j} = \mathrm{diag}_{i,j-1} + \mathrm{diag}_{i-1,j} - \mathrm{diag}_{i-1,j-1} + W_{ij}.
+	\end{equation}
+	Now, using the induction hypothesis for 
+	$\mathrm{diag}_{i,j-1}$, $\mathrm{diag}_{i-1,j}$,
+	and $\mathrm{diag}_{i-1,j-1}$, we see that 
+	identity \eqref{lecture13:eq:diag_identity} 
+	simply represents the fact that
+	$\mathrm{diag}_{ij}$ is the ``cumulative distribution function'' of the
+	array $W$, or, which is the same, that $W$ is the second 
+	mixed partial (discrete) derivative of the diagonal sums.
+	This completes the proof.
+\end{proof}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+In the next
+\Cref{chap:lecture14}, we will consider the effect of applying the RSK
+to the array $W$ of independent geometric random variables.
 
 
 
@@ -9970,7 +10198,8 @@ In closing, we have demonstrated in this lecture how a finite-$N$ identity betwe
 \subsection{Wishart Markov chain}
 \label{lecture13:prob:Markov}
 
-Show that the
+In the null case $\pi_i = 1$ and $\hat\pi_j = 0$,
+show that the
 process $\operatorname{sp}(M(t))$
 defined in \Cref{lecture13:sub:Wishart_process}
 is a Markov chain.
@@ -10019,7 +10248,7 @@ integrate to one in $y$.
 \subsection{Distribution of the eigenvalues}
 \label{lecture13:prob:Wishart_non_null}
 
-Find the density 
+Find the density
 $\operatorname{Prob}\left( \operatorname{sp}(M(t))\in dy \right)/dy$
 of the spiked Wishart ensemble
 at an arbitrary fixed time $t$.
@@ -10027,11 +10256,25 @@ For this, you can multiply the transition operators
 $Q^{\pi,\hat\pi}_{t-1,t}$ from \Cref{lecture13:thm:MarkovChain}.
 
 
+\subsection{Weight preservation under toggle}
+\label{lecture13:prob:toggle_weight_preservation}
+
+Prove \Cref{lecture13:prop:toggle_weight_preservation}.
+
+
+\subsection{RSK independence of order}
+\label{lecture13:prob:RSK_independence_of_order}
+
+Prove Proposition \ref{lecture13:prop:RSK_independence_of_order}, which states that the bijection $\operatorname{RSK}$ does not depend on the order of adding the boxes to the array $R$.
+
+\medskip
+\noindent
+\textbf{Hint:} Toggle operations commute when they act on non-overlapping diagonals.
 
 
 
-\subsection{Generalized RSK and LPP}
-Consider the inhomogeneous geometric LPP model with site rates \(\{a_i b_j\}\).  Show directly (without passing to the continuous limit) that the vector of last-passage times \(\{Y(i,n)\}\) forms a Markov chain in the Gelfand--Tsetlin cone, and write down its transition probability in factorized form.
+% \subsection{Generalized RSK and LPP}
+% Consider the inhomogeneous geometric LPP model with site rates \(\{a_i b_j\}\).  Show directly (without passing to the continuous limit) that the vector of last-passage times \(\{Y(i,n)\}\) forms a Markov chain in the Gelfand--Tsetlin cone, and write down its transition probability in factorized form.
 
 \subsection{Asymptotics: BBP phase transition}
 Review the proof of the BBP transition for a rank-1 spiked
@@ -10062,7 +10305,15 @@ a shifted Airy$_2$ process).
 
 
 
+recap:
 
+1. what are we proving
+
+2. what is the RSK toggle doing
+
+3. weight preservation (new)
+
+4. now, apply this to the geometric LPP weights
 
 
 
