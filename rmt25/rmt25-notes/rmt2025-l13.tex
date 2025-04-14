@@ -519,13 +519,13 @@ correspondence via the operation called \emph{toggle}.
 This exposition is different from the usual discussions in e.g.,
 \cite{sagan2001symmetric}, \cite{fulton1997young},
 and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes by Sam Hopkins}.
-Fix $t,n$, and consider the array $W=\{W_{ij}\}_{1\le i\le n, 1\le j\le t}$ of
+Fix $t,n$, and consider the array $W=\{W_{ij}\}_{1\le i\le t, 1\le j\le n}$ of
 nonnegative integers. We can think of $W$ as a realization of the geometric
 environment, but for now let us assume that $W$ is a fixed array. See
 \Cref{fig:LPP_array} for the order of indices.
 
 We are going to inductively construct a bijection $\operatorname{RSK}$ between the array $W$ and another
-array $R=\{R_{ij}\}_{1\le i\le n, 1\le j\le t}$ of nonnegative integers, which is
+array $R=\{R_{ij}\}_{1\le i\le t, 1\le j\le n}$ of nonnegative integers, which is
 \emph{ordered}:
 \begin{equation*}
 	R_{i,j} \le R_{i,j+1}, \qquad R_{i,j} \le R_{i+1,j},\qquad \text{for all } i,j.
@@ -652,13 +652,21 @@ The next statement is straightforward:
 	See Problem~\ref{prob:RSK_independence_of_order}.
 \end{proof}
 
+\begin{remark}
+	The map $\operatorname{RSK}$
+	is transposition-equivariant, meaning that
+	if $R=\operatorname{RSK}(W)$, then
+	$R^{\top}=\operatorname{RSK}(W^{\top})$.
+\end{remark}
+
+
 \subsection{Weight preservation}
 
 Define
-the row and column sums in $W$ by 
+the row and column sums in $W=(W_{ij})_{1\le i\le t, 1\le j\le n}$ by
 \begin{equation*}
-	\mathrm{row}_i\coloneqq \sum_{j=1}^t W_{ij}, \qquad
-	\mathrm{col}_j \coloneqq \sum_{i=1}^n W_{ij}.
+	\mathrm{row}_i\coloneqq \sum_{j=1}^n W_{ij}, \qquad
+	\mathrm{col}_j \coloneqq \sum_{i=1}^t W_{ij}.
 \end{equation*}
 Also define the diagonal sums in $R$ by
 \begin{equation*}
@@ -667,6 +675,10 @@ Also define the diagonal sums in $R$ by
 
 \begin{proposition}[RSK weight preservation]
 	Under the bijection $\operatorname{RSK}$, we have
+	\begin{equation*}
+		\mathrm{diag}_{t,j}=\mathrm{col}_j,\qquad
+		\mathrm{diag}_{i,n}=\mathrm{row}_i.
+	\end{equation*}
 \end{proposition}
 \begin{proof}
 	
@@ -674,7 +686,7 @@ Also define the diagonal sums in $R$ by
 
 In the next
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l14.pdf}{Lecture
-14}, we will consider the effect of applying the RSK 
+14}, we will consider the effect of applying the RSK
 to the array $W$ of independent geometric random variables.
 
 
