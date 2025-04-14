@@ -310,7 +310,7 @@ along with the Cauchy--Binet (or Andr\'eief) identity:
 \]
 Applying this to
 \eqref{eq:transition-density}--\eqref{eq:Q0}
-yields a sequence of integrals 
+yields a sequence of integrals
 of the exponential densities
 of the form $e^{-(\pi_i+\hat \pi_t)y}$.
 This yields the normalizing factor
@@ -405,6 +405,7 @@ We call $L(t,n)$ the \emph{last-passage time} to $(t,n)$, in analogy with the us
 				% }
 \end{tikzpicture}
 \caption{A portion of the lattice with vertex-weights $W_{i,j}$ and one up-right path.}
+\label{fig:LPP_array}
 \end{figure}
 
 
@@ -462,21 +463,114 @@ This is easily checked from \eqref{eq:LPP-recursion}. Thus
 $Z(t)\in \mathbb{W}^n$ indeed.} In particular, $L(t,n)$ is
 the largest component of $Z(t)$. The sequence
 $\{Z(t):t\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random
-process in $\mathbb{W}^n$. We will now show that $Z(t)$ is an inhomogeneous Markov
-chain and, crucially, has the \emph{same transition kernel}
-as the eigenvalue chain $\operatorname{sp}(M(t))$ from
-\Cref{sec:Wishart}. Our goal is to prove this identity in distribution.
+process in $\mathbb{W}^n$.
+
+\begin{remark}
+	The process $Z(t)$ is \textbf{not} the same as the
+	Markov process of the spectra of the Wishart matrices
+	$M(t)$. Instead, we should look at the maximal eigenvalues
+	$\operatorname{sp}(M(t))_{\max}$
+	of the $n\times n$ matrices $M(t)$, $t=0,1,\ldots$,
+	and match them to the last-passage times
+	$L(t,n)$, $t=0,1,\ldots$.
+\end{remark}
+
+In the next section, we will consider a discrete version of the
+LPP model, and consider a crucial bijection --- the celebrated
+\emph{Robinson--Schensted--Knuth (RSK) correspondence}.
+In the next \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l14.pdf}{Lecture 14}, we will
+use this to complete the proof of the matching between the
+Wishart process and the LPP with exponential weights.
+That is, we are after the following result:
+\begin{theorem}[\cite{dieker2008largest}]
+	\label{thm:matching}
+	The joint distribution of the last-passage times
+	\begin{equation*}
+		L(1,n),\;L(2,n),\ldots,L(t,n)
+	\end{equation*}
+	is the same as the joint distribution of the largest
+	eigenvalues
+	of the $n\times n$ Wishart matrices
+	\begin{equation*}
+		\operatorname{sp}(M(1))_{\max},\;\operatorname{sp}(M(2))_{\max},\ldots,\operatorname{sp}(M(t))_{\max}.
+	\end{equation*}
+\end{theorem}
+
 
 \section{Geometric LPP and Robinson-Schensted-Knuth correspondence}
+
+\subsection{Geometric LPP}
+
+Throughout this section, we are interested in the
+last-passage percolation with discrete weights $W_{ij}\in \mathbb{Z}_{\ge0}$,
+which have the geometric distribution
+\begin{equation}
+	\label{eq:geometric}
+	\operatorname{Prob}(W_{ij}=k) = \frac{(a_i b_j)^{k}}{(1 - a_ib_j)^{k+1}}, \qquad k=0,1,\ldots
+\end{equation}
+The last-passage times are defined by \eqref{eq:LPP-recursion},
+the same as in the exponential case.
 
 \subsection{Bijective mapping of arrays via toggles}
 \label{sub:toggle}
 
-\colorbox{red!60!white}{\parbox{.7\textwidth}{to be continued}}
+We are now going to present the Robinson-Schensted-Knuth
+correspondence via the operation called \emph{toggle}.
+This exposition is different from the usual discussions in e.g., 
+\cite{sagan2001symmetric}, \cite{fulton1997young}, 
+and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes} by 
+Sam Hopkins.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{define the toggle operation}}
+Fix $t,n$, and consider the array $W=\{W_{ij}\}_{1\le i\le n, 1\le j\le t}$ of
+nonnegative integers. We can think of $W$ as a realization of the geometric
+environment, but for now let us assume that $W$ is a fixed array. See 
+\Cref{fig:LPP_array} for the order of indices.
 
-\colorbox{yellow}{\parbox{.7\textwidth}{this is RSK}}
+We are going to inductively construct a bijection $\operatorname{RSK}$ between the array $W$ and another
+array $R=\{R_{ij}\}_{1\le i\le n, 1\le j\le t}$ of nonnegative integers, which is
+\emph{ordered}:
+\begin{equation*}
+	R_{i,j} \le R_{i,j+1}, \qquad R_{i,j} \le R_{i+1,j},\qquad \text{for all } i,j.
+\end{equation*}
+Note that this ordering means that the diagonals in $R$ interlace.
+
+To define $\operatorname{RSK}$, we first define an elementary 
+operation called \emph{toggle} and denoted by $\operatorname{T}$.
+
+\begin{definition}[Toggle]
+	The toggle operation is a map $\operatorname{T}$ which takes in
+	a nonnegative integer $w$ and
+	a triple $(\lambda,\kappa,\mu)$ of sequences of nonnegative integers
+	satisfying interlacing
+	\begin{equation*}
+		\lambda\succ \kappa\prec \mu.
+	\end{equation*}
+	The lengths of the sequences are differ by $0$ or $1$, and if necessary, we pad the
+	sequences with $0$'s to make the interlacing make sense.
+	The output of $\operatorname{T}$ is a triple $(\lambda,\nu,\mu)$, where
+	$\lambda$ and $\mu$ are not changed, and $\nu$ is obtained from $\lambda,\mu,\kappa$,  
+	and $w$ as follows:
+	\begin{equation*}
+		\nu_1=w+\max(\lambda_1,\mu_1),\qquad
+		\nu_i=\max(\lambda_{i},\mu_i)+\min(\lambda_{i-1},\mu_{i-1})-\kappa_{i-1},\qquad
+		\text{for } i\ge 2.
+	\end{equation*}
+\end{definition}
+Define $|\kappa|\coloneqq \kappa_1+\kappa_2+\cdots$, and similarly for
+$\lambda,\mu,\nu$.
+
+\begin{proposition}
+	\label{prop:toggle_weight_preservation}
+	If $(\lambda,\nu,\mu)=\operatorname{T}(w;\lambda,\kappa,\mu)$, then
+	\begin{equation*}
+		|\nu|=w+|\lambda|+|\mu|-|\kappa|.
+	\end{equation*}
+\end{proposition}
+\begin{proof}
+	See Problem~\ref{prob:toggle_weight_preservation}.
+\end{proof}
+
+\subsection{Weight preservation}
 
 \colorbox{yellow}{\parbox{.7\textwidth}{weight preservation}}
 
@@ -585,6 +679,10 @@ For this, you can multiply the transition operators
 $Q^{\pi,\hat\pi}_{t-1,t}$ from \Cref{thm:MarkovChain}.
 
 
+\subsection{Weight preservation under toggle}
+\label{prob:toggle_weight_preservation}
+
+Prove \Cref{prop:toggle_weight_preservation}.
 
 
 
