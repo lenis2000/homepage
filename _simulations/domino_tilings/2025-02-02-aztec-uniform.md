@@ -1024,17 +1024,241 @@ Module.onRuntimeInitialized = async function() {
       tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
     });
 
-    tikzCode += "\n% Paths (lines)\n";
+    tikzCode += "\n% Paths (lines) - Optimized\n";
 
-    // Add lines to TikZ code (exact algorithm from Python script)
+    // Extract all line segments
+    const segments = [];
+
+    // Process lines to get path segments with coordinate adjustments
     lines.forEach(line => {
       // Shift and invert coordinates
       const x1 = line.x1 - minX;
       const y1 = maxY - line.y1;
       const x2 = line.x2 - minX;
       const y2 = maxY - line.y2;
+      segments.push([x1, y1, x2, y2]);
+    });
 
-      tikzCode += `\\draw[black, line width=${line.strokeWidth}pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+    console.log(`Extracted ${segments.length} line segments for optimization`);
+    
+    // Organize the data for processing
+    const linePattern = /\\draw\[black, line width=.+?\] \((.+?), (.+?)\) -- \((.+?), (.+?)\);/;
+    const parsedSegments = [];
+    
+    // Convert each segment to start/end point format
+    segments.forEach(segment => {
+      const [x1, y1, x2, y2] = segment;
+      const start = [x1, y1];
+      const end = [x2, y2];
+      parsedSegments.push([start, end]);
+    });
+
+    // Function to check if two points are the same (within a small tolerance)
+    function samePoint(p1, p2, tolerance = 0.02) { // Increased tolerance for better matching
+      return Math.abs(p1[0] - p2[0]) < tolerance && Math.abs(p1[1] - p2[1]) < tolerance;
+    }
+
+    // Function to optimize paths with better debugging
+    function optimizePaths(segments) {
+      // Debug lines
+      console.log("First few segments:");
+      for (let i = 0; i < Math.min(5, segments.length); i++) {
+        console.log(`  ${i}: [${segments[i][0]}] to [${segments[i][1]}]`);
+      }
+      
+      // Create an adjacency list for easier path finding
+      // For each endpoint, store all segments that connect to it
+      const adjacencyMap = new Map();
+      
+      // Add a pair to the adjacency map
+      function addToAdjacencyMap(point, segmentIndex, isStart) {
+        // Convert point to string for use as a map key (with reduced precision)
+        const key = `${point[0].toFixed(2)},${point[1].toFixed(2)}`;
+        if (!adjacencyMap.has(key)) {
+          adjacencyMap.set(key, []);
+        }
+        adjacencyMap.get(key).push({ segmentIndex, isStart });
+      }
+      
+      // Build the adjacency map
+      segments.forEach((segment, index) => {
+        addToAdjacencyMap(segment[0], index, true);  // Start point
+        addToAdjacencyMap(segment[1], index, false); // End point
+      });
+      
+      // Debug the adjacency map
+      console.log("Adjacency map (sample):");
+      let count = 0;
+      for (const [key, connections] of adjacencyMap.entries()) {
+        if (count++ > 5) break; // Just show a few entries
+        console.log(`  ${key}: ${connections.map(c => c.segmentIndex).join(', ')}`);
+      }
+      
+      // Track which segments have been used
+      const used = new Set();
+      const paths = [];
+      
+      // Find all paths
+      while (used.size < segments.length) {
+        // Find an unused segment to start a new path
+        let currentIndex = -1;
+        for (let i = 0; i < segments.length; i++) {
+          if (!used.has(i)) {
+            currentIndex = i;
+            break;
+          }
+        }
+        
+        if (currentIndex === -1) break; // All segments used
+        
+        // Start building the path
+        const startSegment = segments[currentIndex];
+        let currentPath = [...startSegment[0], ...startSegment[1]]; // Flatten to [x1,y1,x2,y2]
+        used.add(currentIndex);
+        
+        // Keep extending the path as long as possible
+        let foundExtension = true;
+        while (foundExtension) {
+          foundExtension = false;
+          
+          // Get current endpoints
+          const n = currentPath.length;
+          const headPoint = [currentPath[0], currentPath[1]];
+          const tailPoint = [currentPath[n-2], currentPath[n-1]];
+          
+          // Try to find a segment connecting to the tail
+          const tailKey = `${tailPoint[0].toFixed(2)},${tailPoint[1].toFixed(2)}`;
+          if (adjacencyMap.has(tailKey)) {
+            for (const connection of adjacencyMap.get(tailKey)) {
+              if (used.has(connection.segmentIndex)) continue;
+              
+              const segment = segments[connection.segmentIndex];
+              let newPoint;
+              
+              if (connection.isStart) {
+                // Tail connects to start of segment, add the end
+                newPoint = segment[1];
+              } else {
+                // Tail connects to end of segment, add the start
+                newPoint = segment[0];
+              }
+              
+              // Add the new point
+              currentPath.push(newPoint[0], newPoint[1]);
+              used.add(connection.segmentIndex);
+              foundExtension = true;
+              break;
+            }
+          }
+          
+          // If we didn't find a tail extension, try the head
+          if (!foundExtension) {
+            const headKey = `${headPoint[0].toFixed(2)},${headPoint[1].toFixed(2)}`;
+            if (adjacencyMap.has(headKey)) {
+              for (const connection of adjacencyMap.get(headKey)) {
+                if (used.has(connection.segmentIndex)) continue;
+                
+                const segment = segments[connection.segmentIndex];
+                let newPoint;
+                
+                if (connection.isStart) {
+                  // Head connects to start of segment, add the end at the beginning
+                  newPoint = segment[1];
+                } else {
+                  // Head connects to end of segment, add the start at the beginning
+                  newPoint = segment[0];
+                }
+                
+                // Add to the beginning of the path
+                currentPath.unshift(newPoint[0], newPoint[1]);
+                used.add(connection.segmentIndex);
+                foundExtension = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Convert flat array [x1,y1,x2,y2,...] to points [[x1,y1],[x2,y2],...]
+        const pointPath = [];
+        for (let i = 0; i < currentPath.length; i += 2) {
+          pointPath.push([currentPath[i], currentPath[i+1]]);
+        }
+        
+        paths.push(pointPath);
+      }
+      
+      // Debug info about the result
+      console.log(`Found ${paths.length} paths`);
+      for (let i = 0; i < Math.min(5, paths.length); i++) {
+        console.log(`  Path ${i}: ${paths[i].length} points`);
+      }
+      
+      return paths;
+    }
+
+    // Function to format point for TikZ
+    function formatPoint(point) {
+      return `(${point[0].toFixed(2)}, ${point[1].toFixed(2)})`;
+    }
+
+    // Optimize the paths
+    const optimizedPaths = optimizePaths(parsedSegments);
+
+    // Calculate optimization statistics
+    console.log(`Original: ${segments.length} separate line segments`);
+    console.log(`Optimized: ${optimizedPaths.length} combined paths`);
+    
+    // Calculate reduction percentage
+    const reductionPercent = ((segments.length - optimizedPaths.length) / segments.length * 100).toFixed(2);
+    console.log(`Reduced by ${reductionPercent}%`);
+    
+    // Find the longest path
+    const longestPath = optimizedPaths.reduce((longest, current) => 
+      current.length > longest.length ? current : longest, { length: 0 });
+    console.log(`Longest path has ${longestPath.length} points`);
+    
+    // Distribution of path lengths
+    const lengthCounts = {};
+    optimizedPaths.forEach(path => {
+      const len = path.length;
+      lengthCounts[len] = (lengthCounts[len] || 0) + 1;
+    });
+    
+    console.log("Path length distribution:");
+    const sortedLengths = Object.keys(lengthCounts).sort((a, b) => parseInt(a) - parseInt(b));
+    sortedLengths.forEach(len => {
+      console.log(`Length ${len}: ${lengthCounts[len]} paths`);
+    });
+    
+    // Add statistics to the TikZ code as comments
+    tikzCode += `% Original: ${segments.length} separate line segments\n`;
+    tikzCode += `% Optimized into ${optimizedPaths.length} combined paths\n`;
+    tikzCode += `% Reduced by ${reductionPercent}%\n`;
+    tikzCode += `% Longest path has ${longestPath.length} points\n\n`;
+    
+    // Add distribution info
+    tikzCode += "% Path length distribution:\n";
+    sortedLengths.forEach(len => {
+      tikzCode += `% Length ${len}: ${lengthCounts[len]} paths\n`;
+    });
+    tikzCode += "\n";
+
+    // Generate the optimized TikZ code
+    optimizedPaths.forEach((path, i) => {
+      // Add path info comment
+      tikzCode += `% Path ${i+1}, ${path.length} points\n`;
+      
+      // Generate the draw command
+      tikzCode += `\\draw[black, line width=2.5pt]`;
+      path.forEach((point, j) => {
+        if (j === 0) {
+          tikzCode += ` ${formatPoint(point)}`;
+        } else {
+          tikzCode += ` -- ${formatPoint(point)}`;
+        }
+      });
+      tikzCode += ";\n\n";
     });
 
     tikzCode += `
