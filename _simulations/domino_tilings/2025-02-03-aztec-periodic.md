@@ -26,6 +26,12 @@ This simulation demonstrates random domino tilings of an <a href="https://mathwo
 The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
 I set the upper bound at $n=300$ to avoid freezing your browser.
 
+### Update 2025-04-14: TikZ Code Generation
+
+You can now get a TikZ code for the sampled Aztec diamond (supporting dominoes and nonintersecting paths) using [this Python script](https://github.com/lenis2000/homepage/blob/master/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py).
+
+---
+
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="/js/2025-02-03-aztec-periodic.js"></script>
 
