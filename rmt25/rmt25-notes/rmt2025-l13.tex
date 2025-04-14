@@ -674,14 +674,47 @@ Also define the diagonal sums in $R$ by
 \end{equation*}
 
 \begin{proposition}[RSK weight preservation]
+	\label{prop:RSK_weight_preservation}
 	Under the bijection $\operatorname{RSK}$, we have
 	\begin{equation*}
-		\mathrm{diag}_{t,j}=\mathrm{col}_j,\qquad
-		\mathrm{diag}_{i,n}=\mathrm{row}_i.
+		\mathrm{diag}_{t,j}=\sum_{j'=1}^j\mathrm{col}_{j'},\qquad
+		\mathrm{diag}_{i,n}=\sum_{i'=1}^i\mathrm{row}_{i'}.
 	\end{equation*}
 \end{proposition}
-\begin{proof}
-	
+In particular, the last diagonal sum $\mathrm{diag}_{t,n}$
+is equal to the total weight of the array $W$, which is the
+aggregate of the row sums or the column sums, as it should
+be.
+\begin{proof}[Proof of \Cref{prop:RSK_weight_preservation}]
+	We can prove this by induction by adding one box at a time.
+	Define the partial row and column sums
+	as
+	\begin{equation*}
+		\mathrm{row}_{i,k}\coloneqq \sum_{j=1}^k W_{ij}, \qquad
+		\mathrm{col}_{k,j} \coloneqq \sum_{i=1}^k W_{ij}.
+	\end{equation*}
+	We claim that for partial arrays in the process of $\operatorname{RSK}$,
+	the equalities between aggregated partial row/column sums and diagonal sums hold,
+	where we take the column sum if the boundary of a partial array is horizontal,
+	and the row sum if the boundary is vertical. This is our induction
+	claim, and it clearly holds for the empty array.
+
+	Now, consider adding a box $(i,j)$ to the array $R$.
+	For the diagonal sums, we have the identity
+	due to \Cref{prop:toggle_weight_preservation}:
+	\begin{equation}
+		\label{eq:diag_identity}
+		\mathrm{diag}_{i,j} = \mathrm{diag}_{i,j-1} + \mathrm{diag}_{i-1,j} - \mathrm{diag}_{i-1,j-1} + W_{ij}.
+	\end{equation}
+	Now, using the induction hypothesis for 
+	$\mathrm{diag}_{i,j-1}$, $\mathrm{diag}_{i-1,j}$,
+	and $\mathrm{diag}_{i-1,j-1}$, we see that 
+	identity \eqref{eq:diag_identity} 
+	simply represents the fact that
+	$\mathrm{diag}_{ij}$ is the ``cumulative distribution function'' of the
+	array $W$, or, which is the same, that $W$ is the second 
+	mixed partial (discrete) derivative of the diagonal sums.
+	This completes the proof.
 \end{proof}
 
 In the next
