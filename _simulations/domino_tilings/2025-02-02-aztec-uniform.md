@@ -69,25 +69,19 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
 ### Update 2025-04-14: TikZ Code Generation
 
-You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports:
-
-- Dominoes with appropriate coloring
-- Nonintersecting paths (when enabled with the checkbox)
-- Automatic scaling for optimal LaTeX output
-- View, copy, or download the generated LaTeX code
-
-To use this feature:
-1. Generate the Aztec diamond with your desired settings
-2. Enable/disable paths as needed using the checkbox
-3. Click the "Get TikZ Code" button
-4. A new window will open with the TikZ code, where you can:
-   - View the formatted code
-   - Copy the code to clipboard
-   - Download as a .tex file if needed
+You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports <b>dominoes</b> and <b>nonintersecting paths</b> only.
 
 <div style="margin-top: 10px; margin-bottom: 10px;">
-  <button id="tikz-btn" class="btn btn-primary">Get TikZ Code</button>
+  <button id="tikz-btn" class="btn btn-primary">Generate TikZ Code</button>
+  <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
+    <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
+    <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
+    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+  </div>
 </div>
+
+<!-- TikZ code container that will be updated dynamically -->
+<div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 
 ---
 
@@ -791,6 +785,18 @@ Module.onRuntimeInitialized = async function() {
     pathsGroup = null;
     dimersGroup = null;
 
+    // Hide the TikZ code container if it's visible
+    const codeContainer = document.getElementById('tikz-code-container');
+    if (codeContainer) {
+      codeContainer.style.display = 'none';
+    }
+
+    // Hide the buttons container
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'none';
+    }
+
     // Start the progress indicator.
     startProgressPolling();
 
@@ -894,7 +900,7 @@ Module.onRuntimeInitialized = async function() {
         strokeWidth: 0.45 // Scaled down like in the Python script
       };
     });
-    
+
     // Create lines array for paths if enabled
     const lines = [];
     if (usePaths) {
@@ -902,7 +908,7 @@ Module.onRuntimeInitialized = async function() {
       currentDominoes.forEach(domino => {
         const centerX = domino.x + domino.w/2;
         const centerY = domino.y + domino.h/2;
-        
+
         if (domino.color === "green") {
           // Green: Horizontal line through center
           lines.push({
@@ -913,13 +919,13 @@ Module.onRuntimeInitialized = async function() {
             stroke: "black",
             strokeWidth: 0.55 // Scaled down from 5.5
           });
-        } 
+        }
         else if (domino.color === "yellow") {
           // Yellow: path parallel to vector (1,-1) through the center
           const length = Math.min(domino.w, domino.h) * 0.7;
           const dx = length / Math.sqrt(2);
           const dy = length / Math.sqrt(2);
-          
+
           lines.push({
             x1: (centerX - dx) / 10,
             y1: (centerY + dy) / 10,
@@ -934,7 +940,7 @@ Module.onRuntimeInitialized = async function() {
           const length = Math.min(domino.w, domino.h) * 0.7;
           const dx = length / Math.sqrt(2);
           const dy = length / Math.sqrt(2);
-          
+
           lines.push({
             x1: (centerX - dx) / 10,
             y1: (centerY - dy) / 10,
@@ -947,19 +953,19 @@ Module.onRuntimeInitialized = async function() {
         // Blue dominos don't get paths
       });
     }
-    
+
     // Print debug info
     console.log("Rectangles:", rectangles.length);
     console.log("Lines:", lines.length);
-    
+
     if (rectangles.length === 0) {
       alert("No domino elements found to convert.");
       return;
     }
-    
+
     // Find the bounds of the drawing
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    
+
     // Process rectangles
     for (const rect of rectangles) {
       minX = Math.min(minX, rect.x);
@@ -967,7 +973,7 @@ Module.onRuntimeInitialized = async function() {
       minY = Math.min(minY, rect.y);
       maxY = Math.max(maxY, rect.y + rect.height);
     }
-    
+
     // Process lines if they exist
     for (const line of lines) {
       minX = Math.min(minX, line.x1, line.x2);
@@ -975,13 +981,13 @@ Module.onRuntimeInitialized = async function() {
       minY = Math.min(minY, line.y1, line.y2);
       maxY = Math.max(maxY, line.y1, line.y2);
     }
-    
+
     // Calculate a good scale factor (same as Python script)
     const width = maxX - minX;
     const height = maxY - minY;
     const maxDimension = Math.max(width, height);
     const scaleFactor = 15.0 / maxDimension;
-    
+
     // Generate TikZ code (exact format from Python script)
     let tikzCode = `\\documentclass{standalone}
 \\usepackage{tikz}
@@ -998,7 +1004,7 @@ Module.onRuntimeInitialized = async function() {
 
 % Dominoes (rectangles)
 `;
-    
+
     // Add rectangles to TikZ code (exact algorithm from Python script)
     rectangles.forEach(rect => {
       // Map SVG colors to TikZ colors
@@ -1007,19 +1013,19 @@ Module.onRuntimeInitialized = async function() {
       else if (fillColor === 'red') fillColor = 'svgred';
       else if (fillColor === 'yellow') fillColor = 'svgyellow';
       else if (fillColor === 'blue') fillColor = 'svgblue';
-      
+
       // Shift coordinates to keep everything positive
       const x1 = rect.x - minX;
       const y1 = maxY - rect.y - rect.height;  // Invert y and adjust for height
       const x2 = rect.x - minX + rect.width;
       const y2 = maxY - rect.y;
-      
+
       tikzCode += `\\filldraw[fill=${fillColor}, draw=black, line width=${rect.strokeWidth}pt] `;
       tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
     });
-    
+
     tikzCode += "\n% Paths (lines)\n";
-    
+
     // Add lines to TikZ code (exact algorithm from Python script)
     lines.forEach(line => {
       // Shift and invert coordinates
@@ -1027,130 +1033,74 @@ Module.onRuntimeInitialized = async function() {
       const y1 = maxY - line.y1;
       const x2 = line.x2 - minX;
       const y2 = maxY - line.y2;
-      
+
       tikzCode += `\\draw[black, line width=${line.strokeWidth}pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
     });
-    
+
     tikzCode += `
 \\end{tikzpicture}
 \\end{document}`;
-    
-    // Let's use a simpler and more reliable approach to display the code
-    // First, create a new window
-    const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-    if (!newWindow) {
-      alert("Pop-up blocked! Please allow pop-ups for this site to view the TikZ code.");
-      return;
+
+      // Update the TikZ code in the code container
+    const tikzCodeContainer = document.getElementById('tikz-code-container');
+    if (tikzCodeContainer) {
+      tikzCodeContainer.textContent = tikzCode;
+    } else {
+      console.error("TikZ code container not found");
     }
-    
-    // Write the HTML structure first without the dynamic content
-    newWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Aztec Diamond n=${n} - TikZ Code</title>
-        <style>
-          body {
-            font-family: 'Courier New', monospace;
-            padding: 20px;
-            line-height: 1.5;
-            background-color: #f5f5f5;
-            margin: 0;
-          }
-          .code-container {
-            background-color: white;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            overflow-x: auto;
-            white-space: pre;
-            font-size: 14px;
-            max-height: 70vh;
-            overflow-y: auto;
-          }
-          .header {
-            margin-bottom: 20px;
-          }
-          .button-row {
-            margin: 15px 0;
-          }
-          button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 10px;
-          }
-          button:hover {
-            background-color: #45a049;
-          }
-          .success-message {
-            color: green;
-            margin-left: 10px;
-            display: none;
-            font-weight: bold;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h2>TikZ Code for Aztec Diamond (n=${n})</h2>
-          <p>Copy this code into a .tex file and compile with LaTeX.</p>
-        </div>
-        <div class="button-row">
-          <button id="copy-btn">Copy to Clipboard</button>
-          <button id="download-btn">Download .tex File</button>
-          <span id="success-msg" class="success-message">Copied!</span>
-        </div>
-        <div id="code-container" class="code-container"></div>
-      </body>
-      </html>
-    `);
-    
-    // Close the document to apply changes
-    newWindow.document.close();
-    
-    // Now add the code content with proper escaping
-    const codeContainer = newWindow.document.getElementById('code-container');
-    codeContainer.textContent = tikzCode; // This properly escapes HTML entities
-    
-    // Add the event handlers
-    newWindow.document.getElementById('copy-btn').addEventListener('click', function() {
-      // Create a text area to copy from (more reliable cross-browser)
-      const textArea = newWindow.document.createElement('textarea');
-      textArea.value = tikzCode;
-      textArea.style.position = 'fixed';  // Prevent scrolling to bottom
-      newWindow.document.body.appendChild(textArea);
-      textArea.select();
-      
-      try {
-        newWindow.document.execCommand('copy');
-        const msg = newWindow.document.getElementById('success-msg');
-        msg.style.display = 'inline';
-        setTimeout(() => {
-          msg.style.display = 'none';
-        }, 2000);
-      } catch (err) {
-        newWindow.alert('Failed to copy to clipboard. Please try again or select and copy manually.');
-      }
-      
-      newWindow.document.body.removeChild(textArea);
-    });
-    
-    newWindow.document.getElementById('download-btn').addEventListener('click', function() {
-      const blob = new Blob([tikzCode], { type: 'text/plain' });
-      const a = newWindow.document.createElement('a');
-      a.download = `aztec_diamond_n${n}_tikz.tex`;
-      a.href = newWindow.URL.createObjectURL(blob);
-      a.click();
-      newWindow.URL.revokeObjectURL(a.href);
-    });
+
+    // Show the copy/download buttons
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'block';
+    }
   }
-  
-  // Add event listener for the TikZ button
-  document.getElementById("tikz-btn").addEventListener("click", svgToTikZ);
+
+  // Add event listeners for the TikZ buttons
+  document.getElementById("tikz-btn").addEventListener("click", function() {
+    svgToTikZ();
+
+    // Show the TikZ code container
+    const codeContainer = document.getElementById('tikz-code-container');
+    if (codeContainer) {
+      codeContainer.style.display = 'block';
+    }
+  });
+
+  // Add event listener for the copy button
+  document.getElementById("copy-tikz-btn").addEventListener("click", function() {
+    const codeContainer = document.getElementById('tikz-code-container');
+    const successMsg = document.getElementById('copy-success-msg');
+
+    // Create a text area to copy from (more reliable cross-browser)
+    const textArea = document.createElement('textarea');
+    textArea.value = codeContainer.textContent;
+    textArea.style.position = 'fixed';  // Prevent scrolling to bottom
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    try {
+      document.execCommand('copy');
+      successMsg.style.display = 'inline';
+      setTimeout(() => {
+        successMsg.style.display = 'none';
+      }, 2000);
+    } catch (err) {
+      alert('Failed to copy to clipboard. Please try again or select and copy manually.');
+    }
+
+    document.body.removeChild(textArea);
+  });
+
+  // Add event listener for the download button
+  document.getElementById("download-tikz-btn").addEventListener("click", function() {
+    const codeContainer = document.getElementById('tikz-code-container');
+    const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.download = `aztec_diamond_n${n}_tikz.tex`;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
 };
 </script>
