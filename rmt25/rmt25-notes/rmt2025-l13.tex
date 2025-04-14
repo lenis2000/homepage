@@ -518,8 +518,7 @@ We are now going to present the Robinson-Schensted-Knuth
 correspondence via the operation called \emph{toggle}.
 This exposition is different from the usual discussions in e.g.,
 \cite{sagan2001symmetric}, \cite{fulton1997young},
-and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes} by
-Sam Hopkins.
+and follows these \href{https://www.samuelfhopkins.com/docs/rsk.pdf}{notes by Sam Hopkins}.
 Fix $t,n$, and consider the array $W=\{W_{ij}\}_{1\le i\le n, 1\le j\le t}$ of
 nonnegative integers. We can think of $W$ as a realization of the geometric
 environment, but for now let us assume that $W$ is a fixed array. See
@@ -561,6 +560,7 @@ $\lambda,\mu,\nu$.
 \begin{proposition}
 	\label{prop:toggle_weight_preservation}
 	If $(\lambda,\nu,\mu)=\operatorname{T}(w;\lambda,\kappa,\mu)$, then
+	$\lambda\prec\nu\succ \mu$, and
 	\begin{equation*}
 		|\nu|=w+|\lambda|+|\mu|-|\kappa|.
 	\end{equation*}
@@ -586,90 +586,96 @@ $(i,j)$ by applying the toggle operation to the weight $w=W_{i,j}$ and the three
 \end{equation*}
 \begin{figure}[ht]
 \centering
-\begin{tikzpicture}[scale=0.9]
-				% Draw the shape of the R array with 4 boxes in bottom row, 3 in middle, 2 in top
-				% Bottom row (i=3)
-				\foreach \j in {1,2,3,4} {
-												\node[rectangle,draw,minimum size=0.9cm] (R3\j) at (\j,1) {$R_{3\j}$};
-				}
-				% Middle row (i=2) - including the box being added
-				\foreach \j in {1,2,3} {
-												\node[rectangle,draw,minimum size=0.9cm] (R2\j) at (\j,2) {$R_{2\j}$};
+\begin{tikzpicture}[scale=1.1]
+% Draw coordinate axes
+\draw[->] (0,0) -- (5.5,0) node[right] {$j$};
+\draw[->] (0,0) -- (0,4) node[above] {$i$};
+
+% Bottom row (i=1)
+\foreach \j in {1,2,3,4} {
+	\node[rectangle,draw,minimum size=1.1cm] (R1\j) at (\j,1) {$R_{1\j}$};
+}
+% Middle row (i=2) - including the box being added
+\foreach \j in {1,2,3} {
+					\node[rectangle,draw,minimum size=1.1cm] (R2\j) at (\j,2) {$R_{2\j}$};
 				}
 				% Top row (i=1)
 				\foreach \j in {1,2} {
-												\node[rectangle,draw,minimum size=0.9cm] (R1\j) at (\j,3) {$R_{1\j}$};
-				}
+					\node[rectangle,draw,minimum size=1.1cm] (R3\j) at (\j,3) {$R_{3\j}$};
+					}
 
-				% Highlight the current position (2,3) where toggle is applied (the new box in middle row)
-				\node[rectangle,draw,fill=yellow!30,minimum size=0.9cm] at (3,2) {$R_{2,3}$};
+					\node[circle,draw] at (4,2) {$W_{24}$};
 
-				% Highlight the diagonal λ (from left)
-				\draw[->,thick,blue] (2,2) -- (2.6,2);
-				\node[rectangle,draw,fill=blue!20,minimum size=0.9cm] at (2,2) {$R_{2,2}$};
-				\node[blue] at (1.3,2) {$\lambda^{(2,3)}$};
+																	% Highlight lambda cells
+																	\node[rectangle,draw,fill=blue!20,minimum size=1.1cm] at (3,2) {$R_{23}$};
+																	\node[rectangle,draw,fill=blue!20,minimum size=1.1cm] at (2,1) {$R_{12}$};
 
-				% Highlight the diagonal μ (from above)
-				\draw[->,thick,red] (3,3) -- (3,2.4);
-				\node[dashed,rectangle,draw,fill=red!20,minimum size=0.9cm] at (3,3) {$R_{1,3}$};
-				\node[red] at (3,3.7) {$\mu^{(2,3)}$};
+																	% Highlight kappa cells
+																	\node[rectangle,draw,fill=green!20,minimum size=1.1cm] at (3,1) {$R_{13}$};
 
-				% Highlight the diagonal κ (from above-left)
-				\draw[->,thick,green] (2,3) -- (2.6,2.6);
-				\node[rectangle,draw,fill=green!20,minimum size=0.9cm] at (2,3) {$R_{1,2}$};
-				\node[green] at (1.3,3) {$\kappa^{(2,3)}$};
+																	% Highlight mu cells
+																	\node[rectangle,draw,fill=red!20,minimum size=1.1cm] at (4,1) {$R_{14}$};
 
-				% Show the weight W being applied
-				\node[circle,draw,fill=gray!20] at (5,2) {$W_{2,3}$};
-				\draw[->,thick] (5,2) -- (3.7,2);
-\end{tikzpicture}
-\caption{Illustration of the RSK toggle operation. The colored cells represent the three diagonals involved in computing the new value at position $(2,2)$.}
-\label{fig:toggle_operation}
+																	% Add a legend
+																	\node[draw,fill=blue!20] at (5,3.5) {\small $\lambda$};
+																	\node[draw,fill=green!20] at (5,3) {\small $\kappa$};
+																	\node[draw,fill=red!20] at (5,2.5) {\small $\mu$};
+
+				\end{tikzpicture}
+				\caption{Illustration of the RSK toggle operation,
+					with $w=W_{24}$ being added to the array $R$,
+					and $\lambda=(R_{23},R_{12})$,
+					$\kappa=(R_{13})$, $\mu=(R_{14})$.}
+					\label{fig:toggle}
 \end{figure}
 
+The next statement is straightforward:
+\begin{proposition}
+	The toggle operation $\operatorname{T}$ is a bijection
+	\begin{equation*}
+		\mathbb{Z}_{\ge0}\times
+		\left\{ (\lambda,\kappa,\mu)\colon \lambda\succ \kappa\prec \mu \right\}
+		\leftrightarrow
+		\left\{ (\nu,\lambda,\mu)\colon \lambda\prec\nu \succ \mu \right\}.
+	\end{equation*}
+	Consequently, the map $\operatorname{RSK}$ is a bijection
+	between nonnegative
+	arrays $W$ and ordered nonnegative arrays $R$.
+\end{proposition}
 
+\begin{proposition}
+\label{prop:RSK_independence_of_order}
+	The bijection $\operatorname{RSK}$ does not depend on the order
+	of adding the boxes to the array $R$.
+\end{proposition}
+\begin{proof}
+	See Problem~\ref{prob:RSK_independence_of_order}.
+\end{proof}
 
 \subsection{Weight preservation}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{weight preservation}}
+Define
+the row and column sums in $W$ by 
+\begin{equation*}
+	\mathrm{row}_i\coloneqq \sum_{j=1}^t W_{ij}, \qquad
+	\mathrm{col}_j \coloneqq \sum_{i=1}^n W_{ij}.
+\end{equation*}
+Also define the diagonal sums in $R$ by
+\begin{equation*}
+	\mathrm{diag}_{i,j}\coloneqq \sum_{k=0}^{\min(i,j)-1}R_{i-k,j-k}.
+\end{equation*}
 
-\subsection{Joint distributions}
-\label{sub:joint}
+\begin{proposition}[RSK weight preservation]
+	Under the bijection $\operatorname{RSK}$, we have
+\end{proposition}
+\begin{proof}
+	
+\end{proof}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{when we look at joint distributions,
-we need weight preservation}}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+In the next
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l14.pdf}{Lecture
+14}, we will consider the effect of applying the RSK 
+to the array $W$ of independent geometric random variables.
 
 
 \appendix
@@ -742,6 +748,16 @@ $Q^{\pi,\hat\pi}_{t-1,t}$ from \Cref{thm:MarkovChain}.
 \label{prob:toggle_weight_preservation}
 
 Prove \Cref{prop:toggle_weight_preservation}.
+
+
+\subsection{RSK independence of order}
+\label{prob:RSK_independence_of_order}
+
+Prove Proposition \ref{prop:RSK_independence_of_order}, which states that the bijection $\operatorname{RSK}$ does not depend on the order of adding the boxes to the array $R$.
+
+\medskip
+\noindent
+\textbf{Hint:} Toggle operations commute when they act on non-overlapping diagonals.
 
 
 
