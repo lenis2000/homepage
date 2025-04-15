@@ -556,8 +556,188 @@ in the exponential LPP model.
 
 \subsection{Scaling the Schur polynomials}
 
+Recall that for a partition $\lambda = (\lambda_1, \ldots, \lambda_n)$, the Schur polynomial $s_\lambda(x_1, \ldots, x_n)$ can be expressed using the Weyl character formula as:
+\begin{equation}
+    s_\lambda(x_1, \ldots, x_n) = \frac{\det(x_i^{\lambda_j+n-j})_{1 \leq i,j \leq n}}{\det(x_i^{n-j})_{1 \leq i,j \leq n}}.
+\end{equation}
+
+We now establish the appropriate scaling. With $M$ as our scaling parameter, we define:
+\begin{align}
+    \hat{\lambda}_i &= \frac{\lambda_i}{M} \quad \text{for } i=1,\ldots,n,\\
+    b_j &= 1 - \frac{\beta_j}{M} \quad \text{for } j=1,\ldots,n,
+\end{align}
+where $\hat{\lambda}_i$ are the scaled partition coordinates and $\beta_j$ are fixed positive parameters.
+
+We now compute the asymptotics of the Schur polynomial under this scaling:
+\begin{align}
+    s_\lambda(b_1, \ldots, b_n) &= s_\lambda\left(1-\frac{\beta_1}{M}, \ldots, 1-\frac{\beta_n}{M}\right)\\
+		&= \frac{\det\left(\left(1-\frac{\beta_i}{M}\right)^{\lambda_j+n-j}\right)}{\det\left(\left(1-\frac{\beta_i}{M}\right)^{n-j}\right)}.
+\end{align}
+
+As $M \to \infty$, using the asymptotic expansion $\left(1-\frac{\beta}{M}\right)^{\lambda M} \sim e^{-\beta \lambda}$, we obtain:
+\begin{align}
+    s_\lambda(b_1, \ldots, b_n) &= \frac{\det\left(\left(1-\frac{\beta_i}{M}\right)^{\lambda_j+n-j}\right)}{\prod_{1 \leq i < j \leq n}\left(b_i-b_j\right)}\\
+    &= \frac{\det\left(\left(1-\frac{\beta_i}{M}\right)^{\lambda_j+n-j}\right)}{\prod_{1 \leq i < j \leq n}\left(\frac{\beta_j-\beta_i}{M}\right)}\\
+		&\sim \frac{\det\left(e^{-\beta_i\hat{\lambda}_j } \right)}{M^{-\binom{n}{2}}\prod_{1 \leq i < j \leq n}(\beta_j-\beta_i)}.
+\end{align}
+
+\subsection{Scaling the transition formula}
+
+Now we show how the conditional law \eqref{eq:conditional_law_mu} for the discrete geometric RSK model scales to the continuous transition kernel \eqref{eq:transition-density} of the spiked Wishart ensemble.
+
+Recall the conditional law:
+\begin{equation}
+	\tag{\ref{eq:conditional_law_mu} revisited}
+	\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu \mid \mu^{(t,n)} = \mu \right) = \mathbf{1}_{\mu \prec \nu} \cdot \prod_{j=1}^n (1-a_{t+1}b_j) \cdot a_{t+1}^{|\nu|-|\mu|} \cdot \frac{s_{\nu}(b_1,\ldots,b_n)}{s_\mu(b_1,\ldots,b_n)}.
+\end{equation}
+We use the scaling:
+\begin{equation*}
+	a_{t+1}=1-\frac{\widehat\pi_{t+1}}{M}, \qquad b_j=1-\frac{\pi_j}{M},\qquad M\to\infty.
+\end{equation*}
+We also scale the partitions (eigenvalues):
+\[
+\mu \;\approx\; M\cdot x,\qquad \nu \;\approx\; M\cdot y,
+\]
+where $x=(x_1,\dots,x_n)$ and $y=(y_1,\dots,y_n)$ are points in the continuous Weyl chamber $\mathbb{W}^n$. The interlacing condition $\mu \prec \nu$ naturally translates to the continuous interlacing condition $x \prec y$, which is part of the standard kernel $Q^{(0)}(x, dy)$ in \eqref{eq:Q0}.
+
+Let's analyze the terms in \eqref{eq:conditional_law_mu} under this scaling.
+
+\paragraph{Prefactor}
+\begin{equation*}
+	\prod_{j=1}^n (1-a_{t+1}b_j) = \prod_{j=1}^n \left(1 - \left(1-\frac{\widehat\pi_{t+1}}{M}\right)\left(1-\frac{\pi_j}{M}\right)\right)
+	= \prod_{j=1}^n \left( \frac{\widehat\pi_{t+1}+\pi_j}{M} + O(M^{-2}) \right).
+\end{equation*}
+In the limit, this term corresponds to the measure scaling factor. When considering the probability density, this factor needs to be combined with the scaling of the volume element $dy$.
+
+\paragraph{Exponential term}
+Let $|\nu|-|\mu| = \sum_{i=1}^n (\nu_i - \mu_i) \approx M \sum_{i=1}^n (y_i - x_i)$. Then
+\begin{equation*}
+	a_{t+1}^{|\nu|-|\mu|} = \left(1-\frac{\widehat\pi_{t+1}}{M}\right)^{|\nu|-|\mu|}
+	\approx \left(1-\frac{\widehat\pi_{t+1}}{M}\right)^{M \sum (y_i-x_i)}
+	\xrightarrow{M\to\infty} \exp\left(-\widehat\pi_{t+1} \sum_{i=1}^n (y_i - x_i)\right).
+\end{equation*}
+This matches the exponential dependence on $\widehat\pi_{t+1}$ in \eqref{eq:transition-density}.
+
+\paragraph{Ratio of Schur polynomials}
+This is the most involved part. We need the asymptotic behavior of $s_\lambda(1-\pi_1/M, \dots, 1-\pi_n/M)$ as $M\to\infty$ and $\lambda \approx M \cdot z$.
+Using the determinantal formula \eqref{eq:Schur_polynomial} for $s_\lambda(b_1,\dots,b_n)$, we have
+\begin{align*}
+	s_\lambda(b_1,\dots,b_n) &= \frac{\det(b_i^{\lambda_j+n-j})}{\Delta(b)}
+	= \frac{\det\left( (1-\pi_i/M)^{\lambda_j+n-j} \right)}{\prod_{1\le i<k\le n}(b_i-b_k)} \\
+	&\approx \frac{\det\left( (1-\pi_i/M)^{M z_j} \right)}{\prod_{1\le i<k\le n}(\pi_k/M-\pi_i/M)} \\
+	&\approx \frac{\det\left( e^{-\pi_i z_j} \right)}{M^{-n(n-1)/2} \Delta(\pi)}.
+\end{align*}
+Therefore, the ratio scales as:
+\begin{equation*}
+	\frac{s_{\nu}(b_1,\ldots,b_n)}{s_\mu(b_1,\ldots,b_n)}
+	\approx \frac{\det(e^{-\pi_i y_j}) / (M^{-n(n-1)/2} \Delta(\pi))}{\det(e^{-\pi_i x_j}) / (M^{-n(n-1)/2} \Delta(\pi))}
+	= \frac{\det(e^{-\pi_i y_j})}{\det(e^{-\pi_i x_j})}.
+\end{equation*}
+Recalling the definition of the Harish-Chandra integral factor $h_\pi(z)$:
+\[
+h_{\pi}(z)
+\;=\;
+C_n
+\frac{\det\bigl(e^{-\pi_i\,z_j}\bigr)_{i,j=1}^n}{\Delta(\pi)\,\Delta(z)},
+\quad\text{where } C_n = \frac{(-1)^{\binom n2}}{0! 1! \cdots (n-1)! },
+\]
+we see that
+\begin{equation*}
+	\frac{\det(e^{-\pi_i y_j})}{\det(e^{-\pi_i x_j})}
+	= \frac{h_\pi(y) \Delta(y)}{h_\pi(x) \Delta(x)}.
+\end{equation*}
+
+\paragraph{Combining the terms}
+Putting everything together, the conditional probability mass function $\operatorname{Prob}(\nu | \mu)$ scales approximately as:
+\begin{multline*}
+	\operatorname{Prob}(\nu | \mu) \approx \mathbf{1}_{x \prec y} \cdot \left( \prod_{j=1}^n \frac{\widehat\pi_{t+1}+\pi_j}{M} \right) \cdot \exp\left(-\widehat\pi_{t+1} \sum (y_i - x_i)\right) \cdot \frac{h_\pi(y) \Delta(y)}{h_\pi(x) \Delta(x)}.
+\end{multline*}
+To get the probability density $Q_{t,t+1}^{\pi,\widehat\pi}(x, dy)$, we need to consider the measure transformation. The discrete measure on partitions scales like $M^{-n}$ times the Lebesgue measure $dy$: $\text{Vol}(\nu) \approx M^{-n} dy$.
+The transition density $p(x,y)$ relates to the probability mass function $P(\nu|\mu)$ via $P(\nu|\mu) \approx p(x,y) \cdot \text{Vol}(\nu)$.
+Thus,
+\begin{align*}
+	p(x,y) &\approx \frac{P(\nu|\mu)}{\text{Vol}(\nu)} \\
+	&\approx \mathbf{1}_{x \prec y} \cdot \left( \prod_{j=1}^n (\widehat\pi_{t+1}+\pi_j) M^{-1} \right) \cdot e^{-\widehat\pi_{t+1} \sum (y_i - x_i)} \cdot \frac{h_\pi(y) \Delta(y)}{h_\pi(x) \Delta(x)} \cdot M^n \\
+	&= \left( \prod_{j=1}^n (\widehat\pi_{t+1}+\pi_j) \right) \cdot \frac{h_\pi(y)}{h_\pi(x)} \cdot \frac{\Delta(y)}{\Delta(x)} \cdot e^{-\widehat\pi_{t+1} \sum (y_i - x_i)} \cdot \mathbf{1}_{x \prec y} \cdot M^{n-n} \\
+	&= \left( \prod_{j=1}^n (\widehat\pi_{t+1}+\pi_j) \right) \cdot \frac{h_\pi(y)}{h_\pi(x)} \cdot e^{-(\widehat\pi_{t+1}-1) \sum (y_i - x_i)} \cdot \left( \frac{\Delta(y)}{\Delta(x)} e^{\sum (y_i - x_i)} e^{-\sum (y_i - x_i)} \mathbf{1}_{x \prec y} \right) \\
+	&= \left( \prod_{j=1}^n (\widehat\pi_{t+1}+\pi_j) \right) \cdot \frac{h_\pi(y)}{h_\pi(x)} \cdot e^{-(\widehat\pi_{t+1}-1) \sum (y_i - x_i)} \cdot \left( \frac{\Delta(y)}{\Delta(x)} e^{-\sum (y_i - x_i)} \mathbf{1}_{x \prec y} \right).
+\end{align*}
+The last term in parentheses is exactly the standard kernel density $Q^{(0)}(x, dy)/dy$ from \eqref{eq:Q0}. Comparing this with \eqref{eq:transition-density} (with $t$ replaced by $t+1$), we see perfect agreement. This confirms the scaling limit.
 
 
+\subsection{Conclusion}
+
+We have established the following result:
+
+\begin{theorem}[Correspondence Between Spiked Wishart and Exponential LPP]
+\label{thm:correspondence}
+Let $\{M(t)\}_{t\ge0}$ be the spiked Wishart ensemble with parameters $\pi=(\pi_1,\dots,\pi_n)$ and $\hat\pi=(\hat\pi_1,\hat\pi_2,\dots)$, and let $\{\lambda_i(t)\}_{i=1}^n$ be its eigenvalues at time $t$. Let $\{W_{i,j}\}_{i,j\ge1}$ be independent exponential random variables with rates $\pi_i + \hat\pi_j$, and let $L(t,k)$ be the last-passage time from $(1,1)$ to $(t,k)$ in this environment. Then, for all $t \ge 1$, the following joint distributions are identical:
+\[
+\bigl(L(1,n),\,L(2,n),\,\dots,\,L(t,n)\bigr)
+\;\;\stackrel{d}{=}\;\;
+\bigl(\lambda_1(1),\,\lambda_1(2),\,\dots,\,\lambda_1(t)\bigr).
+\]
+\end{theorem}
+
+
+\section{PushTASEP in the geometric LPP model}
+
+The joint distribution of the last-passage times $(L(t,1), L(t,2), \ldots, L(t,n))$ in the geometric LPP model corresponds directly to the particle positions in the pushTASEP (pushing totally asymmetric simple exclusion process) with geometric jumps.
+
+To see this correspondence, we interpret $L(t,i) - L(t,i-1)$ (with the convention $L(t,0) = 0$) as the gap between consecutive particles in a one-dimensional lattice. Under this mapping, we obtain the following result:
+
+\begin{proposition}
+				The evolution of the last-passage times $(L(t,1), L(t,2), \ldots, L(t,n))$ in the geometric LPP model with parameters $a_t$ and $b_i$ corresponds precisely to the dynamics of a pushTASEP where:
+				\begin{itemize}
+			\item Particles attempt to jump to the right according to geometric distributions with parameter $a_t b_i$.
+				\item When a particle jumps, it pushes all particles ahead of it that would block its path.
+				\end{itemize}
+\end{proposition}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.8]
+				% Before pushTASEP state
+				\draw[thick] (0,2) -- (10,2);
+				\foreach \x in {0,1,...,10}
+								\draw[thick] (\x,2) -- (\x,1.8);
+
+				% Particles before jump
+				\node[circle, fill=blue, minimum size=0.5cm] at (2,2) {};
+				\node[circle, fill=blue, minimum size=0.5cm] at (5,2) {};
+				\node[circle, fill=blue, minimum size=0.5cm] at (6,2) {};
+				\node[circle, fill=blue, minimum size=0.5cm] at (8,2) {};
+
+				% Labels for before state
+				\node[above] at (5,2.2) {Before jump};
+
+				% Arrow indicating the jump
+				\draw[->, very thick, red] (5,1.7) .. controls (5,1) and (7,1) .. (7,1.7);
+				\node[right] at (6,1.3) {Jump by 2};
+
+				% After pushTASEP state
+				\draw[thick] (0,0) -- (10,0);
+				\foreach \x in {0,1,...,10}
+								\draw[thick] (\x,0) -- (\x,-0.2);
+
+				% Particles after jump (particle at position 5 jumped and pushed the one at position 6)
+				\node[circle, fill=blue, minimum size=0.5cm] at (2,0) {};
+				\node[circle, fill=blue, minimum size=0.5cm] at (7,0) {};
+				\node[circle, fill=blue, minimum size=0.5cm] at (8,0) {};
+				\node[circle, fill=blue, minimum size=0.5cm] at (9,0) {};
+
+				% Labels for after state
+				\node[below] at (5,-0.3) {After jump};
+
+				% Highlight pushed particles
+				\draw[<->, dashed, orange] (7,-0.5) -- (8,-0.5) node[midway, below] {pushed};
+				\draw[<->, dashed, orange] (8,-0.8) -- (9,-0.8) node[midway, below] {pushed};
+
+\end{tikzpicture}
+\caption{Illustration of a pushTASEP jump. The particle attempts to jump by 2. 
+It pushes two particles in a cascade of pushes.}
+\end{figure}
+This connection completes the circle of relationships between random matrix theory, interacting particle systems, and last-passage percolation / random growth, demonstrating the deep unity of integrable probability models.
 
 \appendix
 \setcounter{section}{13}
