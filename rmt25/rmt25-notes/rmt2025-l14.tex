@@ -352,7 +352,7 @@ We are after the distribution of the random Young diagram $\lambda$.
 	where $T(\lambda)$ is the set of all semistandard Young tableaux of shape $\lambda$ with entries from $\{1,2,\ldots,n\}$, and $m_i(T)$ is the number of occurrences of $i$ in the tableau $T$.
 \end{definition}
 
-From \eqref{eq:Schur_polynomial}, it is evident that $s_\lambda(x_1,\ldots,x_n )$ is a 
+From \eqref{eq:Schur_polynomial}, it is evident that $s_\lambda(x_1,\ldots,x_n )$ is a
 symmetric polynomial in $x_1,\ldots,x_n$.
 This is highly non-obvious from the combinatorial definition \eqref{eq:Schur_polynomial_combinatorial}.
 See~Problem~\ref{prob:Schur_polynomials_equivalence} for a proof of the equivalence of the two definitions.
@@ -369,9 +369,27 @@ The Schur polynomials satisfy the stability property:
 
 \begin{theorem}
 	\label{thm:Schur_measure}
-	For a fixed Young diagram $\lambda$ and the random array
+	Let $\mu=(\mu_1,\ldots,\mu_n)$ be a fixed Young diagram.
+	Then, for $R=\operatorname{RSK}(W)$, where $W$ is the array of independent geometric random variables,
+	we have
+	\begin{equation}
+		\label{eq:Schur_measure}
+		\operatorname{Prob}\left( R_{t,n}=\mu_1, \ldots, R_{t-n+1,1}=\mu_n \right)
+		=
+		\prod_{i=1}^t\prod_{j=1}^n
+		(1-a_i b_j)\cdot s_\mu(a_1,\ldots,a_t )s_\mu(b_1,\ldots,b_n ).
+	\end{equation}
 \end{theorem}
-\begin{proof}
+Note that if $t<n$, then $\mu_{t+1}=\ldots=\mu_n=0 $, as it should be.
+Note also that the statement of the theorem implies that the
+expressions in the right-hand side of \eqref{eq:Schur_measure}
+sum to one over all $\mu_1\ge \ldots\ge \mu_n\ge0 $,
+which is the celebrated \emph{Cauchy identity} for Schur polynomials.
+One can alternatively establish the Cauchy identity from the
+Cauchy-Binet formula, using the determinantal formulas
+\eqref{eq:Schur_polynomial}. See Problem~\ref{prob:Cauchy_identity}.
+\begin{proof}[Proof of \Cref{thm:Schur_measure}]
+
 
 \end{proof}
 
@@ -444,24 +462,42 @@ Wishart matrices $M(1),M(2),\dots,M(t)$ is \textbf{not} a Markov chain either.
 \subsection{Schur polynomials --- equivalence of definitions}
 \label{prob:Schur_polynomials_equivalence}
 
-Show the equivalence of the two definitions of Schur polynomials \eqref{eq:Schur_polynomial} and \eqref{eq:Schur_polynomial_combinatorial}. 
+Show the equivalence of the two definitions of Schur polynomials \eqref{eq:Schur_polynomial} and \eqref{eq:Schur_polynomial_combinatorial}.
 
 \medskip
 \noindent
-\textbf{Hint:} 
-Substitute $x_n=1$ and consider how both formulas 
+\textbf{Hint:}
+Substitute $x_n=1$ and consider how both formulas
 expand as linear combinations of Schur
 polynomials
-$s_\mu(x_1,\ldots,x_{n-1} )$ 
+$s_\mu(x_1,\ldots,x_{n-1} )$
 in $n-1$ variables.
-This induction (together with the fact that 
+This induction (together with the fact that
 Schur polynomials are a linear basis in the ring
-of symmetric polynomials in a given fixed number of variables) 
+of symmetric polynomials in a given fixed number of variables)
 will show that the two definitions are equivalent.
 
 \subsection{Schur polynomials --- stability property}
 
 Show the stability property of Schur polynomials \eqref{eq:stability_property_Schur}.
+
+
+\subsection{Cauchy identity for Schur polynomials}
+\label{prob:Cauchy_identity}
+
+Let $a_1, \ldots, a_t$ and $b_1, \ldots, b_n$ be positive parameters satisfying $a_i b_j < 1$ for all pairs $(i,j)$. Prove the Cauchy identity for Schur polynomials:
+\begin{equation*}
+	\sum_{\mu: \mu_1 \geq \mu_2 \geq \cdots \geq \mu_n \geq 0} s_\mu(a_1,\ldots,a_t)s_\mu(b_1,\ldots,b_n) = \prod_{i=1}^t\prod_{j=1}^n \frac{1}{1-a_i b_j}.
+\end{equation*}
+
+
+
+
+
+
+
+
+
 
 
 
