@@ -117,8 +117,8 @@ Here, $\pi=(\pi_1,\dots,\pi_n)$ and $\hat\pi=(\hat\pi_1,\hat\pi_2,\dots)$ are po
 \]
 \end{enumerate}
 
-In \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13}, 
-we wrote down the 
+In \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13},
+we wrote down the
 transition kernel
 from $\lambda(t-1)$ to $\lambda(t)$:
 
@@ -189,63 +189,41 @@ L(i,j)
 W_{i,j}\;+\;\max\bigl\{\,L(i-1,j),\;L(i,j-1)\bigr\},
 \]
 The main claim which we show in today's lecture is the equality in distribution:
-\[
+\begin{equation}
+	\label{eq:main-claim}
 \bigl(L(1,n),\,L(2,n),\,\dots,\,L(t,n)\bigr)
 \;\;\stackrel{d}{=}\;\;
 \bigl(\lambda_1(1),\,\lambda_1(2),\,\dots,\,\lambda_1(t)\bigr).
-\]
+\end{equation}
 
 \subsection{RSK via toggles: definitions and weight preservation}
 
-The \emph{Robinson--Schensted--Knuth} correspondence (RSK) was the main new mechanism in Lecture~13.  In our setup, we adopt a \emph{toggle-based} viewpoint: we encode arrays by diagonals and successively \emph{toggle} the diagonals to achieve a fully \emph{ordered} array $R$.  Concretely:
+The \emph{Robinson--Schensted--Knuth} correspondence (RSK) was the main new mechanism in
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13}.
+In our setup, we adopt a \emph{toggle-based} viewpoint: we
+encode arrays by diagonals and successively \emph{toggle}
+the diagonals to achieve a fully \emph{ordered} array $R$.
+The key to how RSK links LPP and random matrices is its \emph{weight preservation} property.
 
-\begin{definition}[Nonnegative and ordered arrays]
-For integers $t,n\ge1$:
-\begin{itemize}
-\item A \emph{nonnegative array} $W$ is a collection of integers $W_{i,j}\in \mathbb{Z}_{\ge 0}$, $1\le i\le t$, $1\le j\le n$.
-\item An \emph{ordered array} $R$ (of the same size) satisfies $R_{i,j}\le R_{i,j+1}$ and $R_{i,j}\le R_{i+1,j}$ for all valid $i,j$.
-\end{itemize}
-\end{definition}
+We work with arrays $W=\left\{ W_{ij} \right\}_{1\le i\le,\ 1\le j\le n}$
+and $R=\left\{ R_{ij} \right\}_{1\le i\le,\ 1\le j\le n}$,
+where $W$ is a nonnegative integer array and $R$ is an ordered array, that is,
+$R_{i,j}\le R_{i,j+1}$ and $R_{i,j}\le R_{i+1,j}$ for all $i,j$. Using RSK,
+we showed in \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13} that
+there is a bijection which maps $W$ to $R$.
 
-\begin{definition}[Toggle operation]
-Let $w\in\mathbb{Z}_{\ge0}$ and let $(\lambda,\kappa,\mu)$ be three interlacing sequences of nonnegative integers, symbolically written as $\lambda\succ\kappa\prec\mu$.  Then
-\[
-\mathrm{T}\bigl(w;\,\lambda,\kappa,\mu\bigr) \;=\; (\lambda,\nu,\mu)
-\]
-is defined by leaving $\lambda,\mu$ unchanged and setting
-\[
-\nu_{1} \;=\; w + \max(\lambda_{1},\,\mu_{1}),
-\qquad
-\nu_{i} \;=\;\max(\lambda_{i},\,\mu_{i})
-\;+\;\min(\lambda_{i-1},\,\mu_{i-1})
-\;-\;\kappa_{i-1},
-\quad i\ge 2.
-\]
-\end{definition}
+We also started to prove the following result, which we now complete:
 
-From a straightforward check (Problem~13.7), toggling preserves total weights in a precise sense, and we always end up with $\lambda\prec \nu\succ \mu$.
-
-\begin{theorem}[RSK is a bijection, cf.\ Lecture~13]
-\label{thm:RSK_bijectionRecap}
-Given a nonnegative array $W$ of size $t\times n$, the \emph{RSK map} outputs an ordered array $R=\mathrm{RSK}(W)$ by the following procedure:
-\begin{itemize}
-\item Process the cells $(i,j)$ of $W$ in an arbitrary order (e.g.\ row by row from bottom to top).
-\item For each cell $(i,j)$, \emph{toggle} the diagonal containing that cell in the partial $R$, inserting weight $w = W_{i,j}$.
-\end{itemize}
-All toggles commute on different diagonals, so the final ordered array $R$ does not depend on the insertion order.  Moreover, $W\mapsto R$ is a bijection between nonnegative arrays and ordered arrays.
-\end{theorem}
-
-The key to how RSK links LPP and random matrices is its \emph{weight preservation} property, which we restate in a concise form here:
-
-\begin{theorem}[Weight preservation, cf.\ Proposition~13.25]
+\begin{theorem}[Weight preservation]
 \label{thm:WeightPreservationRecap}
 Let $W=\{W_{i,j}\}$ be a nonnegative integer array, and $R=\mathrm{RSK}(W)$.  Denote
 \[
 \mathrm{row}_i \;=\; \sum_{j=1}^{n} W_{i,j},
 \quad
-\mathrm{col}_j \;=\; \sum_{i=1}^{t} W_{i,j},
+\mathrm{col}_j \;=\; \sum_{i=1}^{t} W_{i,j}
 \]
-and for $R$ define the diagonal sums
+(which are essentially the cdf's of the array $W$\/),
+and for $R$ define the diagonal sums starting at each $(i,j)$ and going diagonally down and to the right:
 \[
 \mathrm{diag}_{i,j}
 \;=\;
@@ -260,13 +238,15 @@ Then for each $1\le j\le n$ and $1\le i\le t$, we have
 \qquad
 \mathrm{diag}_{i,n}
 \;=\;
-\sum_{m=1}^{i}\mathrm{row}_{m},
+\sum_{m=1}^{i}\mathrm{row}_{m}.
 \end{equation}
-ensuring that the total sum of $W$ over all cells equals the total sum of $R$ over all cells.
+In particular,
+the total sum of $W$ over all cells equals the total sum of $R$ over all cells.
 \end{theorem}
 
 \begin{proof}[Proof (sketch)]
-One inductively builds $R$ by adding the sites $(i,j)$ one at a time.  Each toggle modifies exactly one diagonal and preserves an inclusion--exclusion count on neighboring diagonals.  Concretely, after adding a box $(i,j)$, the diagonal-sum identity
+	One inductively builds $R$ by adding the sites $(i,j)$ one at a time.  Each toggle modifies exactly one diagonal.
+	After adding a box $(i,j)$, the diagonal-sum identity
 \[
 \mathrm{diag}_{i,j}
 \;=\;
@@ -276,20 +256,16 @@ One inductively builds $R$ by adding the sites $(i,j)$ one at a time.  Each togg
 \;+\;
 W_{i,j}
 \]
-holds, expressing that $R$ captures the discrete ``second difference'' of $W$.  Since toggles commute on disjoint diagonals, the partial sums assemble to match the row and column sums of $W$ regardless of the order of addition.
+holds, expressing that $W$ captures the discrete ``mixed second differences'' of the diagonal sums in $R$.
+Thus, the cdf's of $W$ must coincide with the diagonal sums of $R$, as desired.
 \end{proof}
 
-Thus, applying RSK to random arrays $W$ (in particular, to a geometric LPP environment) yields an ordered array $R$ whose interlacing diagonals reflect precisely the combinatorial structure of the LPP.  By interpreting each diagonal as encoding eigenvalue increments, one connects $R$ to the same interlacing patterns arising in Hermitian random matrices of $\beta=2$ type.  This observation is what ultimately shows the distributional identity between $\bigl(L(1,n),\dots,L(t,n)\bigr)$ and $\bigl(\lambda_1(1),\dots,\lambda_1(t)\bigr)$ under appropriate limiting and deformation parameters.
+\section{Distributions of last-passage times in geometric LPP}
+\label{sec:distributions_geometric_LPP}
 
-\subsection*{Outline of Next Steps}
+\subsection{}
 
-In the upcoming lecture, we will:
-\begin{itemize}
-\item Translate the RSK interlacing arrays directly into a form resembling eigenvalue distributions.
-\item Show how the parameter choices \((\pi,\hat\pi)\) in the geometric version correspond to the spiked Wishart setup.
-\item Conclude the proof of Theorem~13.10 (the exact matching of the largest eigenvalues of spiked Wishart and the last-passage times in the exponential LPP).
-\end{itemize}
-These steps will complete our new perspective on why matrix spectra in the Wishart class align so precisely with the maximum-weight growth in an LPP model.
+
 
 
 
@@ -329,6 +305,21 @@ These steps will complete our new perspective on why matrix spectra in the Wisha
 
 \section{Problems (due 2025-04-29)}
 
+\subsection{Non-Markovianity}
+
+Show that the sequence of random variables defined in the exponential LPP model,
+\[
+L(1,n),L(2,n),\dots,L(t,n),
+\]
+is \textbf{not} a Markov chain.
+By virtue of the equivalence with the spiked Wishart ensemble \eqref{eq:main-claim},
+you may alternatively show that the sequence
+of maximal eigenvalues
+\[
+\lambda_1(1),\lambda_1(2),\dots,\lambda_1(t)
+\]
+of successive
+Wishart matrices $M(1),M(2),\dots,M(t)$ is \textbf{not} a Markov chain either.
 
 
 
