@@ -347,9 +347,15 @@ We are after the distribution of the random Young diagram $\lambda$.
 	Alternatively, the Schur polynomial has a combinatorial interpretation as a sum over semistandard Young tableaux:
 	\begin{equation}
 		\label{eq:Schur_polynomial_combinatorial}
-		s_\lambda(x_1,\ldots,x_n) = \sum_{T \in T(\lambda)} \prod_{i=1}^n x_i^{m_i(T)}
+		s_\lambda(x_1,\ldots,x_n) = \sum_{T \in T(\lambda)}
+		x_n^{\lambda_1+\ldots+\lambda+n }
+		\left( \frac{x_{n-1}}{x_n} \right)^{r_{t,n-1}+r_{t-1,n-2}+\ldots+r_{t-n+2,1} }
+		\ldots
+		\left( \frac{x_2}{x_3} \right)^{r_{t,2}+r_{t-1,1}}
+		\left( \frac{x_1}{x_2} \right)^{r_{t,1}},
 	\end{equation}
-	where $T(\lambda)$ is the set of all semistandard Young tableaux of shape $\lambda$ with entries from $\{1,2,\ldots,n\}$, and $m_i(T)$ is the number of occurrences of $i$ in the tableau $T$.
+	where $T(\lambda)$ is the set of all semistandard Young tableaux of shape $\lambda$,
+	as defined above.
 \end{definition}
 
 From \eqref{eq:Schur_polynomial}, it is evident that $s_\lambda(x_1,\ldots,x_n )$ is a
@@ -389,8 +395,48 @@ One can alternatively establish the Cauchy identity from the
 Cauchy-Binet formula, using the determinantal formulas
 \eqref{eq:Schur_polynomial}. See Problem~\ref{prob:Cauchy_identity}.
 \begin{proof}[Proof of \Cref{thm:Schur_measure}]
+	To get the probability
+	\eqref{eq:Schur_measure}, we need to sum the probability weights of all
+	ordered arrays $R=(R_{ij})_{1\le i\le t,\ 1\le j\le n}$, such that
+	\begin{equation*}
+		R_{t,j}=\mu_1,\quad R_{t-1,j-1}=\mu_2,\ldots,
+		R_{t-n+1,1}=\mu_n.
+	\end{equation*}
+	Denote the set of such arrays by $\mathcal{R}(\mu)$.
+	Each $R\in \mathcal{R}(\mu)$ has a probability weight which we can express (thanks to the
+	RSK bijection) in terms of the original array $W$,
+	so in terms of the parameters $a_i$ and $b_j$.
 
-
+	Our first observation is that the probability weight of $R=\operatorname{RSK}(W)$ depends only on its
+	diagonal sums $\mathrm{diag}_{1,n},\ldots,\mathrm{diag}_{t,n},\mathrm{diag}_{t,n-1},\ldots,\mathrm{diag}_{t,1} $
+	along the right and the top borders.
+	Indeed, knowing these diagonal sums, we know (by the weight-preservation property of RSK, \Cref{thm:WeightPreservationRecap})
+	the row and column sums of $W$. However, the joint distribution of all
+	elements of $W$ has the following form:
+	\begin{equation}
+		\label{eq:Prob_W}
+		\begin{split}
+			\operatorname{Prob}\left( W_{ij}=k_{ij}
+			\ \textnormal{for all } i,j \right)
+			&=
+			\prod_{i=1}^t\prod_{j=1}^n
+			(1-a_i b_j)\cdot (a_ib_j)^{k_{ij}} \\
+			&=
+			\Biggl(\prod_{i=1}^t\prod_{j=1}^n
+			(1-a_i b_j)\Biggr)
+			\cdot
+			\prod_{i=1}^t a_i^{k_{i1}+\ldots+k_{in}}
+			\prod_{j=1}^n b_j^{k_{1j}+\ldots+k_{tj}}.
+		\end{split}
+	\end{equation}
+	Thus, we now need to sum expressions
+	\eqref{eq:Prob_W} 
+	over all $R\in \mathcal{R}(\mu)$,
+	and we use the fact that the row/column sums in $W$
+	are differences of diagonal sums in $R$, to get the Schur polynomials
+	in the combinatorial form 
+	\eqref{eq:Schur_polynomial_combinatorial}.
+	This completes the proof of \Cref{thm:Schur_measure}.
 \end{proof}
 
 
