@@ -263,7 +263,7 @@ Thus, the cdf's of $W$ must coincide with the diagonal sums of $R$, as desired.
 \section{Distributions of last-passage times in geometric LPP}
 \label{sec:distributions_geometric_LPP}
 
-\subsection{Conditional distribution}
+\subsection{Matching RSK to last-passage percolation}
 
 Recall that we are working with the independent geometric random variables
 \begin{equation*}
@@ -271,18 +271,118 @@ Recall that we are working with the independent geometric random variables
 \end{equation*}
 The parameters $a_1,\ldots,a_t $ and $b_1,\ldots,b_n$ are positive real numbers, and we assume that $a_i b_j<1$ for all $i,j$,
 so that the random variables $W_{ij}$ are well-defined.
+Let $R=\operatorname{RSK}(W)$.
+\begin{lemma}
+	\label{lemma:L_as_R}
+	The distribution of the top row of the array $R$,
+	$R_{t,1},\ldots,R_{t,n}$,
+	is the same as the distribution of the last-passage times
+	$L(t,1),\ldots,L(t,n)$, defined in the same environment $W=\{W_{ij}\}$.
+\end{lemma}
+Note that this statement does not rely on the exact distribution of $W$,
+and holds for any fixed or random nonnegative integer array $W$.
+\begin{proof}[Proof of \Cref{lemma:L_as_R}]
+	The values in $R$ update according to the toggle rule.
+	Denote by $R^{(i)}$ the array obtained after toggling the $i$-th row (and all previous rows) of $W$.
+	Then, the top row of $R^{(i)}$ updates as
+	\begin{equation*}
+		R^{(i)}_{i,j}=
+		W_{i,j}+\max\big\{R^{(i-1)}_{i-1,j},
+		R^{(i)}_{i,j-1}\big\}.
+	\end{equation*}
+	By the induction hypothesis, we have
+	\begin{equation*}
+		R^{(i-1)}_{i-1,j}=L(i-1,j),\qquad R^{(i)}_{i,j-1}=L(i,j-1).
+	\end{equation*}
+	This implies that $L(i,j)=R^{(i)}_{i,j}$,
+	and we may proceed by induction on $j$ and then on $i$.
+\end{proof}
 
-Recall the notation
+\begin{remark}
+	The correspondence between $R_{t,j}$ and $L(t,j)$
+	holds only for the top row of the final array
+	$R=R^{(t)}$. For rows below the top row (i.e., for
+	$R_{k,j}$ with $k < t$), there is no such direct
+	correspondence with one-path last-passage times.
+	On the other hand, the whole array $R$ can be defined
+	through multipath last-passage times. This is
+	known as \emph{Greene's theorem} \cite{sagan2001symmetric} for RSK,
+	and falls outside the scope of this course.
+\end{remark}
+
+\subsection{Distributions in RSK}
+\label{sub:distribution_RSK}
+
+Fix $t,n$, and consider the following quantities
+in a diagonal of the array $R=\mathrm{RSK}(W)$:
 \begin{equation*}
-	Z(t)=\left( L(t,1),\ldots,L(t,n)  \right),\qquad t\in\mathbb{Z}_{\ge0}.
+	\lambda_1\coloneqq R_{t,n},
+	\lambda_2\coloneqq R_{t-1,n-1},\ldots,
+	\lambda_n\coloneqq R_{t-n+1,1}.
 \end{equation*}
-Using the weight-preservation property (\Cref{thm:WeightPreservationRecap}), we can now 
-compute the conditional distribution of 
-$Z(t)$ given $Z(t-1)$, and, in particular, show that this is a Markov chain.
+Clearly, $\lambda_1\ge\lambda_2\ge\cdots\ge\lambda_n$ (we pad $\mathrm{diag}$'s by zeroes if necessary),
+and these are integers. We regard $\lambda=(\lambda_1,\ldots,\lambda_n)$ as an integer partition,
+or a Young diagram.
+Denote by $T(\lambda)$ the
+space of all \emph{semistandard Young tableaux} (SSYT) of shape $\lambda$, that is,
+all collections of numbers $r_{ij}$ which interlace as
+\begin{equation*}
+	r_{i,j}\le r_{i,j+1},\quad r_{i,j}\le r_{i+1,j},
+	\quad
+	i=1,\ldots,t,\ j=1,\ldots,n;
+	\qquad
+	r_{t-k+1,n-k+1}=\lambda_k,\quad k=1,\ldots,n.
+\end{equation*}
+We are after the distribution of the random Young diagram $\lambda$.
+
+\begin{definition}[Schur polynomial]
+	For a partition $\lambda=(\lambda_1,\ldots,\lambda_n)$ with $\lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_n \geq 0$, the Schur polynomial $s_\lambda(x_1,\ldots,x_n)$ in $n$ variables is defined as:
+	\begin{equation}
+		\label{eq:Schur_polynomial}
+		s_\lambda(x_1,\ldots,x_n) =
+		\frac{\det(x_i^{\lambda_j+n-j})_{i,j=1}^n}{\det(x_i^{n-j})_{i,j=1}^n}
+		= \frac{\det(x_i^{\lambda_j+n-j})_{i,j=1}^n}{\prod_{1
+		\leq i < j \leq n}(x_i-x_j)}.
+	\end{equation}
+	Alternatively, the Schur polynomial has a combinatorial interpretation as a sum over semistandard Young tableaux:
+	\begin{equation}
+		\label{eq:Schur_polynomial_combinatorial}
+		s_\lambda(x_1,\ldots,x_n) = \sum_{T \in T(\lambda)} \prod_{i=1}^n x_i^{m_i(T)}
+	\end{equation}
+	where $T(\lambda)$ is the set of all semistandard Young tableaux of shape $\lambda$ with entries from $\{1,2,\ldots,n\}$, and $m_i(T)$ is the number of occurrences of $i$ in the tableau $T$.
+\end{definition}
+
+From \eqref{eq:Schur_polynomial}, it is evident that $s_\lambda(x_1,\ldots,x_n )$ is a 
+symmetric polynomial in $x_1,\ldots,x_n$.
+This is highly non-obvious from the combinatorial definition \eqref{eq:Schur_polynomial_combinatorial}.
+See~Problem~\ref{prob:Schur_polynomials_equivalence} for a proof of the equivalence of the two definitions.
+
+The Schur polynomials satisfy the stability property:
+\begin{equation}
+	\label{eq:stability_property_Schur}
+	s_\lambda(x_1,\ldots,x_{n-1},x_n)\big\vert_{x_n=0} =
+	\begin{cases}
+		s_\lambda(x_1,\ldots,x_{n-1}) & \text{if } \lambda_n=0,\\
+		0 & \text{otherwise.}
+	\end{cases}
+\end{equation}
 
 \begin{theorem}
-	\label{thm:conditional_distribution_Z}
+	\label{thm:Schur_measure}
+	For a fixed Young diagram $\lambda$ and the random array
 \end{theorem}
+\begin{proof}
+
+\end{proof}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -340,6 +440,28 @@ of maximal eigenvalues
 of successive
 Wishart matrices $M(1),M(2),\dots,M(t)$ is \textbf{not} a Markov chain either.
 
+
+\subsection{Schur polynomials --- equivalence of definitions}
+\label{prob:Schur_polynomials_equivalence}
+
+Show the equivalence of the two definitions of Schur polynomials \eqref{eq:Schur_polynomial} and \eqref{eq:Schur_polynomial_combinatorial}. 
+
+\medskip
+\noindent
+\textbf{Hint:} 
+Substitute $x_n=1$ and consider how both formulas 
+expand as linear combinations of Schur
+polynomials
+$s_\mu(x_1,\ldots,x_{n-1} )$ 
+in $n-1$ variables.
+This induction (together with the fact that 
+Schur polynomials are a linear basis in the ring
+of symmetric polynomials in a given fixed number of variables) 
+will show that the two definitions are equivalent.
+
+\subsection{Schur polynomials --- stability property}
+
+Show the stability property of Schur polynomials \eqref{eq:stability_property_Schur}.
 
 
 
