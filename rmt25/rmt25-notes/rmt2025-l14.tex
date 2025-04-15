@@ -310,7 +310,7 @@ and holds for any fixed or random nonnegative integer array $W$.
 	and falls outside the scope of this course.
 \end{remark}
 
-\subsection{Distributions in RSK}
+\subsection{Distribution in RSK}
 \label{sub:distribution_RSK}
 
 Fix $t,n$, and consider the following quantities
@@ -430,58 +430,72 @@ Cauchy-Binet formula, using the determinantal formulas
 		\end{split}
 	\end{equation}
 	Thus, we now need to sum expressions
-	\eqref{eq:Prob_W} 
+	\eqref{eq:Prob_W}
 	over all $R\in \mathcal{R}(\mu)$,
 	and we use the fact that the row/column sums in $W$
 	are differences of diagonal sums in $R$, to get the Schur polynomials
-	in the combinatorial form 
+	in the combinatorial form
 	\eqref{eq:Schur_polynomial_combinatorial}.
 	This completes the proof of \Cref{thm:Schur_measure}.
 \end{proof}
 
+\subsection{Conditional law in RSK}
+\label{sub:conditional_law_RSK}
 
+\begin{theorem}[Conditional law of $\mu$ in $(t,n)$ and $(t+1,n)$ arrays]
+\label{thm:conditional_law_mu}
+Let $W$ be an array of independent geometric random variables with parameters $a_i b_j$, and $R=\operatorname{RSK}(W)$. Define the Young diagrams $\mu^{(t,n)}=(\mu_1,\ldots,\mu_n)$ and $\mu^{(t+1,n)}=(\nu_1,\ldots,\nu_n)$ from the diagonals of $R$ as:
+\begin{align*}
+\mu_1^{(t,n)} &= R_{t,n}, \quad \mu_2^{(t,n)} = R_{t-1,n-1}, \quad \ldots, \quad \mu_n^{(t,n)} = R_{t-n+1,1} \\
+\mu_1^{(t+1,n)} &= R_{t+1,n}, \quad \mu_2^{(t+1,n)} = R_{t,n-1}, \quad \ldots, \quad \mu_n^{(t+1,n)} = R_{t+2-n,1}
+\end{align*}
 
+Then the conditional law of $\mu^{(t+1,n)} = \nu$ given $\mu^{(t,n)} = \mu$ is given by:
+\begin{equation}
+\label{eq:conditional_law_mu}
+\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu \mid \mu^{(t,n)} = \mu \right) = \mathbf{1}_{\mu \prec \nu} \cdot \prod_{j=1}^n (1-a_{t+1}b_j) \cdot a_{t+1}^{|\nu|-|\mu|} \cdot \frac{s_{\nu}(b_1,\ldots,b_n)}{s_\mu(b_1,\ldots,b_n)}
+\end{equation}
+where $\mathbf{1}_{\mu \prec \nu}$ is the indicator that $\nu$ interlaces with $\mu$, and
+$|\mu|=\sum_{i=1}^n \mu_i$ is the total number of boxes in the Young diagram $\mu$,
+and same for $\nu$.
+\end{theorem}
 
+\begin{proof}
+	We begin with the unconditional distributions from Theorem \ref{thm:Schur_measure}:
+	\begin{align}
+		\label{eq:unconditional_law_mu}
+	\operatorname{Prob}\left( \mu^{(t,n)} = \mu \right) &= \prod_{i=1}^t\prod_{j=1}^n (1-a_i b_j)\cdot s_\mu(a_1,\ldots,a_t)s_\mu(b_1,\ldots,b_n) \\
+	\label{eq:unconditional_law_nu}
+	\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu \right) &= \prod_{i=1}^{t+1}\prod_{j=1}^n (1-a_i b_j)\cdot s_\nu(a_1,\ldots,a_{t+1})s_\nu(b_1,\ldots,b_n)
+	\end{align}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	When moving from $(t,n)$ to $(t+1,n)$, the resulting Young diagrams must interlace.
+	Indeed, this is a consequence of the ordering in the array $R$.
+	To derive the conditional law, we start with
+	\begin{equation*}
+		\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu \mid \mu^{(t,n)} = \mu \right) = \frac{\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu, \mu^{(t,n)} = \mu \right)}{\operatorname{Prob}\left( \mu^{(t,n)} = \mu \right)}.
+	\end{equation*}
+	It remains to compute the joint probability $\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu, \mu^{(t,n)} = \mu \right)$.
+	This joint probability readily follows from
+	an argument as in the proof of \Cref{thm:Schur_measure} (while keeping in mind the combinatorial
+	formula for the Schur polynomial \eqref{eq:Schur_polynomial_combinatorial}).
+	Namely, we sum over arrays $R^{(t+1)}$ of size $(t+1)\times n$,
+	and thus we have
+	\begin{equation*}
+		\begin{split}
+		\operatorname{Prob}\left( \mu^{(t+1,n)} = \nu, \mu^{(t,n)} = \mu \right) &=
+		\prod_{i=1}^{t+1}\prod_{j=1}^n (1-a_i b_j)
+		\\\times
+		s_\nu(b_1,\ldots,b_n)
+		s_\mu(a_1,\ldots,a_{t})
+		\cdot a_{t+1}^{|\nu|-|\mu|} \cdot \mathbf{1}_{\mu \prec \nu}.
+		\end{split}
+	\end{equation*}
+	In particular, summing over $\mu$, we get the marginal distribution 
+	\eqref{eq:unconditional_law_nu} for $\nu$.
+	To complete the proof, we simply divide the joint probability by the unconditional probability
+	\eqref{eq:unconditional_law_mu} for $\mu$.
+\end{proof}
 
 \appendix
 \setcounter{section}{13}
