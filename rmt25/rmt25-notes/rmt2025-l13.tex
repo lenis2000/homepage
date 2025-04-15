@@ -461,18 +461,22 @@ L(t,2)\le \cdots \le L(t,n)$.\footnote{We have $L(t,1)\le
 freedom to move down can only increase the maximum weight.
 This is easily checked from \eqref{eq:LPP-recursion}. Thus
 $Z(t)\in \mathbb{W}^n$ indeed.} In particular, $L(t,n)$ is
-the largest component of $Z(t)$. The sequence
-$\{Z(t):t\ge0\}$, with $Z(0)=(0,\dots,0)$, is a random
+the largest component of $Z(t)$.
+One readily sees from the recursion \eqref{eq:LPP-recursion} that
+the sequence
+$\{Z(t):t\ge0\}$ is a Markov 
 process in $\mathbb{W}^n$.
 
 \begin{remark}
+	\label{rem:Z_not_Markov}
 	The process $Z(t)$ is \textbf{not} the same as the
 	Markov process of the spectra of the Wishart matrices
-	$M(t)$. Instead, we should look at the maximal eigenvalues
-	$\operatorname{sp}(M(t))_{\max}$
-	of the $n\times n$ matrices $M(t)$, $t=0,1,\ldots$,
-	and match them to the last-passage times
-	$L(t,n)$, $t=0,1,\ldots$.
+	$M(t)$.
+	% Instead, we should look at the maximal eigenvalues
+	% $\operatorname{sp}(M(t))_{\max}$
+	% of the $n\times n$ matrices $M(t)$, $t=0,1,\ldots$,
+	% and match them to the last-passage times
+	% $L(t,n)$, $t=0,1,\ldots$.
 \end{remark}
 
 In the next section, we will consider a discrete version of the
@@ -481,20 +485,30 @@ LPP model, and consider a crucial bijection --- the celebrated
 In the next \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l14.pdf}{Lecture 14}, we will
 use this to complete the proof of the matching between the
 Wishart process and the LPP with exponential weights.
-That is, we are after the following result:
+That is, we are after the following result (cf. \Cref{rem:Z_not_Markov}):
 \begin{theorem}[\cite{dieker2008largest}]
 	\label{thm:matching}
 	The joint distribution of the last-passage times
-	\begin{equation*}
+	\begin{equation}
+		\label{eq:matching}
 		L(1,n),\;L(2,n),\ldots,L(t,n)
-	\end{equation*}
+	\end{equation}
 	is the same as the joint distribution of the largest
 	eigenvalues
 	of the $n\times n$ Wishart matrices
-	\begin{equation*}
+	\begin{equation}
+		\label{eq:matching-eigenvalues}
 		\operatorname{sp}(M(1))_{\max},\;\operatorname{sp}(M(2))_{\max},\ldots,\operatorname{sp}(M(t))_{\max}.
-	\end{equation*}
+	\end{equation}
 \end{theorem}
+
+\begin{remark}
+    It is important to note 
+		that 
+		neither sequence
+		\eqref{eq:matching} nor \eqref{eq:matching-eigenvalues}
+		is a Markov process. 
+\end{remark}
 
 
 \section{Geometric LPP and Robinson-Schensted-Knuth correspondence}
@@ -706,13 +720,13 @@ be.
 		\label{eq:diag_identity}
 		\mathrm{diag}_{i,j} = \mathrm{diag}_{i,j-1} + \mathrm{diag}_{i-1,j} - \mathrm{diag}_{i-1,j-1} + W_{ij}.
 	\end{equation}
-	Now, using the induction hypothesis for 
+	Now, using the induction hypothesis for
 	$\mathrm{diag}_{i,j-1}$, $\mathrm{diag}_{i-1,j}$,
-	and $\mathrm{diag}_{i-1,j-1}$, we see that 
-	identity \eqref{eq:diag_identity} 
+	and $\mathrm{diag}_{i-1,j-1}$, we see that
+	identity \eqref{eq:diag_identity}
 	simply represents the fact that
 	$\mathrm{diag}_{ij}$ is the ``cumulative distribution function'' of the
-	array $W$, or, which is the same, that $W$ is the second 
+	array $W$, or, which is the same, that $W$ is the second
 	mixed partial (discrete) derivative of the diagonal sums.
 	This completes the proof.
 \end{proof}

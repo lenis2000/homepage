@@ -74,20 +74,28 @@ Updated at \currenttime, \today}}
 
 \section{Recap}
 
+\subsection{Main goal}
+
 In the previous
-\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13}, we established a remarkable correspondence between two a~priori different objects:
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13}, we began establishing a remarkable correspondence between two a~priori different objects:
 
 \begin{itemize}
 \item The \emph{spiked Wishart ensemble}: an $n\times n$ Hermitian random-matrix process $\{M(t)\}_{t\ge0}$ whose entries come from columns of independent Gaussian random vectors of suitably chosen covariance.
-\item An \emph{inhomogeneous last-passage percolation (LPP)} model: an array $\{W_{i,j}\}$ of exponential (or geometric) random weights on a portion of the two-dimensional lattice, whose last-passage times $L(t,n)$ relate closely to the largest eigenvalues of $M(t)$.
+\item An \emph{inhomogeneous last-passage percolation (LPP)} model: an array $\{W_{i,j}\}$ of exponential random weights on a portion of the two-dimensional lattice, whose last-passage times $L(t,n)$ match the largest eigenvalues of $M(t)$, jointly for all $t\in \mathbb{Z}_{\ge0}$.
 \end{itemize}
 
-Our goal was to demonstrate that under certain parameter choices $(\pi,\hat\pi)$ determining both the Wishart covariances and the LPP rates, the \emph{joint} distributions of $\{\lambda_1(1),\dots,\lambda_1(t)\}$ (the largest eigenvalue of each $M(s)$ for $s=1,\dots,t$) coincide exactly with those of $\{L(1,n),\dots,L(t,n)\}$ (the last-passage times along the top row of the LPP model). This equivalence, originally demonstrated by Dieker--Warren (2009), can be fully understood by passing to a \emph{discrete} version of LPP with geometric site-weights and then applying the \emph{Robinson--Schensted--Knuth} (RSK) correspondence.
+This equivalence, originally due to
+\cite{dieker2008largest} (following
+\cite{defosseux2010orbit}, \cite{forrester2006jacobians};
+see also
+\cite{Baryshnikov_GUE2001},
+\cite{johansson2000shape} for earlier results of this kind),
+can be fully understood by passing to a
+\emph{discrete} version of LPP with geometric site-weights
+and then applying the \emph{Robinson--Schensted--Knuth}
+(RSK) correspondence.
 
-\vspace{6pt}
-\noindent
-\textbf{1. Spiked Wishart ensembles and the largest eigenvalue process.}
-\vspace{4pt}
+\subsection{Spiked Wishart ensembles and the largest eigenvalue process}
 
 We defined the \emph{generalized} (or spiked) Wishart matrix $M(t)$ of size $n\times n$ by setting
 \[
@@ -109,35 +117,85 @@ Here, $\pi=(\pi_1,\dots,\pi_n)$ and $\hat\pi=(\hat\pi_1,\hat\pi_2,\dots)$ are po
 \]
 \end{enumerate}
 
-By writing down the transition kernels and normalizing appropriately (see Theorem~13.6 in Lecture~13), one obtains explicit factorized forms for $Q^{\pi,\hat\pi}_{t-1,t}(\,\cdot\,,\,\cdot)$, the one-step law from $\lambda(t-1)$ to $\lambda(t)$.  Notably, for $\pi_i=1$ and $\hat\pi_j=0$ (the \emph{null} Wishart case), one recovers the classical Laguerre orthogonal polynomial ensemble at fixed times.
+In \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13}, 
+we wrote down the 
+transition kernel
+from $\lambda(t-1)$ to $\lambda(t)$:
 
-\vspace{6pt}
-\noindent
-\textbf{2. Inhomogeneous last-passage percolation with exponential (or geometric) weights.}
-\vspace{4pt}
+\begin{theorem}[\cite{dieker2008largest}]
+\label{thm:MarkovChain}
+Fix an integer \(n\ge1\).  Let \(\pi=(\pi_1,\dots,\pi_n)\) be a strictly positive \(n\)-vector, and let \(\widehat\pi=(\widehat\pi_1,\widehat\pi_2,\dots)\) be any sequence of nonnegative real parameters.  Under the probability measure \(P^{\pi,\widehat\pi}\), the eigenvalues of the \(n\times n\) generalized Wishart matrices \(\{M(t)\}_{t\ge0}\) form a time-inhomogeneous Markov chain \(\{\mathrm{sp}(M(t))\}_{t\ge0}\) in the Weyl chamber
+\[
+\mathbb{W}^n
+\;=\;
+\bigl\{\,x=(x_1,\dots,x_n)\in\mathbb{R}^n_{\ge0}:
+x_1\ge x_2\ge\cdots\ge x_n\bigr\}.
+\]
+More precisely, writing \(x=\mathrm{sp}(M(t-1))\) and \(y=\mathrm{sp}(M(t))\), the one-step transition law from time \((t-1)\) to \(t\) is absolutely continuous on the interior of \(\mathbb{W}^n\) and can be factored as
+\begin{equation}
+\label{eq:transition-density}
+Q_{t-1,t}^{\pi,\widehat\pi}(x,\,dy)
+\;=\;
+\Bigl[\,
+\prod_{i=1}^n \bigl(\pi_i+\widehat\pi_{t}\bigr)
+\Bigr]
+\cdot
+\frac{h_{\pi}(y)}{h_{\pi}(x)}
+\;\exp\Bigl(-(\widehat\pi_{t}-1)\sum_{i=1}^n (y_i - x_i)\Bigr)
+\;\times\;Q^{(0)}\bigl(x,\,dy\bigr),
+\end{equation}
+where
+\begin{itemize}
+\item \(\displaystyle Q^{(0)}\bigl(x,\,dy\bigr)\) is the \emph{standard} (null-spike) Wishart transition kernel, given explicitly by
+	\begin{equation}
+		\label{eq:Q0}
+Q^{(0)}(x,\,dy)
+\;=\;
+\frac{\Delta(y)}{\Delta(x)}\;\exp\Bigl(\,-\sum_{i=1}^n (y_i - x_i)\Bigr)\,
+\mathbf{1}_{\{x\prec y\}}\;dy,
+\end{equation}
+with \(\Delta(z)=\prod_{1\le i<j\le n}(z_i - z_j)\) the Vandermonde determinant.
 
-On the combinatorial side, we considered an array of site-weights $\{W_{i,j}\}_{i,j\ge1}$ such that each $W_{i,j}$ is exponentially distributed with rate $\pi_i + \hat\pi_j$.  For every integer $t\ge1$, we define $L(t,n)$ to be the maximum total weight of all up-right paths from $(1,1)$ to $(t,n)$.  Formally,
+\item The function \(h_{\pi}\) is the (continuous) Harish-Chandra orbit integral factor
+\[
+h_{\pi}(z)
+\;=\;
+\frac{(-1)^{\binom n2}}{0! 1! \cdots (n-1)! }
+\frac{\det\bigl(e^{-\pi_i\,z_j}\bigr)_{i,j=1}^n}{\Delta(\pi)\,\Delta(z)}.
+\]
+Note that $h_\pi(0)=1$.
+\end{itemize}
+In particular, the chain starts from \(\mathrm{sp}(M(0))=0\) (the zero matrix).
+\end{theorem}
+
+
+
+
+\subsection{Inhomogeneous last-passage percolation}
+
+On the random growth side, we considered an array of
+site-weights $\{W_{i,j}\}_{i,j\ge1}$ such that each
+$W_{i,j}$ is exponentially distributed with rate $\pi_i +
+\hat\pi_j$.  For every integer $t\ge1$, we define $L(t,n)$
+to be the maximum total weight of all up-right paths from
+$(1,1)$ to $(t,n)$:
 \[
 L(t,n)\;=\;\max_{\Gamma:\,(1,1)\to(t,n)} \;\sum_{(i,j)\in\Gamma}\; W_{i,j}.
 \]
-One checks that $L(\,\cdot\,,n)$ satisfies a simple additive recursion, plus boundary conditions:
+One checks that $L(\,\cdot\,,n)$ satisfies a simple additive recursion:
 \[
 L(i,j)
 \;=\;
 W_{i,j}\;+\;\max\bigl\{\,L(i-1,j),\;L(i,j-1)\bigr\},
 \]
-with $L(1,j)=\sum_{k=1}^j W_{1,k}$ and $L(i,1)=\sum_{k=1}^i W_{k,1}$.  As $t$ grows, $\{L(t,n)\}_{t\ge1}$ also forms a process in $\mathbb{R}$.  The main claim, to be completed in subsequent arguments, is that
+The main claim which we show in today's lecture is the equality in distribution:
 \[
 \bigl(L(1,n),\,L(2,n),\,\dots,\,L(t,n)\bigr)
 \;\;\stackrel{d}{=}\;\;
-\bigl(\lambda_1(1),\,\lambda_1(2),\,\dots,\,\lambda_1(t)\bigr),
+\bigl(\lambda_1(1),\,\lambda_1(2),\,\dots,\,\lambda_1(t)\bigr).
 \]
-i.e.\ they share the same joint law across all times.  The proof route: discretize the exponential random variables to geometric ones, and then use the RSK insertion \emph{bijection} to see how LPP times map into eigenvalue-like data.
 
-\vspace{6pt}
-\noindent
-\textbf{3. RSK via toggles: definitions and weight preservation.}
-\vspace{4pt}
+\subsection{RSK via toggles: definitions and weight preservation}
 
 The \emph{Robinson--Schensted--Knuth} correspondence (RSK) was the main new mechanism in Lecture~13.  In our setup, we adopt a \emph{toggle-based} viewpoint: we encode arrays by diagonals and successively \emph{toggle} the diagonals to achieve a fully \emph{ordered} array $R$.  Concretely:
 
