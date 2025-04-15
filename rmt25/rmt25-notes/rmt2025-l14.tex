@@ -491,11 +491,73 @@ and same for $\nu$.
 		\cdot a_{t+1}^{|\nu|-|\mu|} \cdot \mathbf{1}_{\mu \prec \nu}.
 		\end{split}
 	\end{equation*}
-	In particular, summing over $\mu$, we get the marginal distribution 
+	In particular, summing over $\mu$, we get the marginal distribution
 	\eqref{eq:unconditional_law_nu} for $\nu$.
 	To complete the proof, we simply divide the joint probability by the unconditional probability
 	\eqref{eq:unconditional_law_mu} for $\mu$.
 \end{proof}
+
+\section{Passage to the continuous limit}
+\label{sec:passage_to_continuous_limit}
+
+\subsection{Key elementary lemma}
+
+In this section, we will pass from the geometric LPP to the exponential LPP. The
+key elementary lemma is the following scaling limit of the geometric random variables:
+\begin{lemma}
+	\label{lemma:scaling_limit}
+	Let $W$ be
+	a geometric random variable with parameter $p$,
+	that is,
+	\begin{equation*}
+		\operatorname{Prob}(W=k)=(1-p)p^k,\qquad k=0,1,\ldots.
+	\end{equation*}
+	Then, as $p \to 1$, we have
+	\begin{equation}
+		\label{eq:scaling_limit}
+		(1-p)W \xrightarrow{d} \operatorname{Exp}(1),
+	\end{equation}
+	where $\operatorname{Exp}(1)$ is an exponential random variable with parameter $1$.
+\end{lemma}
+\begin{proof}
+	This immediately follows from
+	the reverse cdf's:
+	\begin{equation*}
+		\operatorname{Prob}( (1-p)W \geq x ) = \operatorname{Prob}(W \geq \frac{x}{1-p}) =  p^{\frac{x}{1-p}}
+		\xrightarrow{p \to 1}  e^{-x},\qquad  x\geq 0.
+	\end{equation*}
+	This completes the proof.
+\end{proof}
+
+Observe that if $X$ is an exponential random variable with parameter $1$, then
+$a X$ is an exponential random variable with parameter $1/a$.
+
+\subsection{Scaling the environment $W$}
+
+Let us scale the parameters of the environment $a_i$, $i=1,\ldots,t$ and $b_j$, $j=1,\ldots,n$,
+as follows:
+\begin{equation*}
+	a_i=1-\frac{\hat \pi_i}{M}, \qquad b_j=1-\frac{\pi_j}{M},\qquad M\to\infty.
+\end{equation*}
+Then, the independent scaled geometric random variables $M^{-1}\cdot W_{ij}$
+jointly converge to independent exponential random variables, since
+\begin{equation*}
+	1-a_ib_j=\frac{\hat \pi_i+\pi_j}{M}+O(M^{-2})\quad \Rightarrow\quad
+	(1-a_i b_j)W_{ij} \xrightarrow{d} \operatorname{Exp}(1),
+\end{equation*}
+which implies that
+\begin{equation*}
+	M^{-1}W_{ij} \xrightarrow{d} (\hat \pi_i+\pi_j)\operatorname{Exp}(1)\sim \operatorname{Exp}(\hat \pi_i+\pi_j).
+\end{equation*}
+
+Thus, the scaled last-passage times $M^{-1}\cdot L(t,n)$
+in the geometric LPP model converge to the last-passage times
+in the exponential LPP model.
+
+\subsection{Scaling the Schur polynomials}
+
+
+
 
 \appendix
 \setcounter{section}{13}
