@@ -205,8 +205,8 @@ encode arrays by diagonals and successively \emph{toggle}
 the diagonals to achieve a fully \emph{ordered} array $R$.
 The key to how RSK links LPP and random matrices is its \emph{weight preservation} property.
 
-We work with arrays $W=\left\{ W_{ij} \right\}_{1\le i\le,\ 1\le j\le n}$
-and $R=\left\{ R_{ij} \right\}_{1\le i\le,\ 1\le j\le n}$,
+We work with arrays $W=\left\{ W_{ij} \right\}_{1\le i\le t,\ 1\le j\le n}$
+and $R=\left\{ R_{ij} \right\}_{1\le i\le t,\ 1\le j\le n}$,
 where $W$ is a nonnegative integer array and $R$ is an ordered array, that is,
 $R_{i,j}\le R_{i,j+1}$ and $R_{i,j}\le R_{i+1,j}$ for all $i,j$. Using RSK,
 we showed in \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l13.pdf}{Lecture 13} that
@@ -263,7 +263,26 @@ Thus, the cdf's of $W$ must coincide with the diagonal sums of $R$, as desired.
 \section{Distributions of last-passage times in geometric LPP}
 \label{sec:distributions_geometric_LPP}
 
-\subsection{}
+\subsection{Conditional distribution}
+
+Recall that we are working with the independent geometric random variables
+\begin{equation*}
+	\operatorname{Prob}\left( W_{ij}=k \right)=(a_ib_j)^k(1-a_ib_j),\qquad k=0,1,\ldots.
+\end{equation*}
+The parameters $a_1,\ldots,a_t $ and $b_1,\ldots,b_n$ are positive real numbers, and we assume that $a_i b_j<1$ for all $i,j$,
+so that the random variables $W_{ij}$ are well-defined.
+
+Recall the notation
+\begin{equation*}
+	Z(t)=\left( L(t,1),\ldots,L(t,n)  \right),\qquad t\in\mathbb{Z}_{\ge0}.
+\end{equation*}
+Using the weight-preservation property (\Cref{thm:WeightPreservationRecap}), we can now 
+compute the conditional distribution of 
+$Z(t)$ given $Z(t-1)$, and, in particular, show that this is a Markov chain.
+
+\begin{theorem}
+	\label{thm:conditional_distribution_Z}
+\end{theorem}
 
 
 
