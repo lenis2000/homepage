@@ -144,7 +144,10 @@ Module.onRuntimeInitialized = async function() {
             // vertices: 6 entries [x,y,z]
             const pos = [];
             for(const v of f.vertices){
-              pos.push(v[0]*scale, v[2]*scale, v[1]*scale);
+              // For red and yellow dominoes, make vertical coordinate negative
+              const isRedOrYellow = (f.color === 'red' || f.color === 'yellow');
+              const heightFactor = isRedOrYellow ? -1 : 1;
+              pos.push(v[0]*scale, v[2]*scale*heightFactor, v[1]*scale);
             }
             geom.setAttribute(
               'position',
