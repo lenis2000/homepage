@@ -9,7 +9,7 @@
     emcc 2025-03-25-t-emb-json.cpp -o 2025-03-25-t-emb-json.js \
      -s WASM=1 \
      -s ASYNCIFY=1 \
-     -s "EXPORTED_FUNCTIONS=['_doTembJSON','_freeString']" \
+     -s "EXPORTED_FUNCTIONS=['_doTembJSON','_freeString','_getProgress','_resetProgress']" \
      -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
      -s ALLOW_MEMORY_GROWTH=1 \
      -s INITIAL_MEMORY=64MB \
@@ -37,6 +37,9 @@ static const double a = 1.0;   // scale factor used below
 // Tarray[n][k+bign][j+bign], Oarray[n][k+bign][j+bign]
 static std::vector<std::vector<std::vector<std::complex<double>>>> Tarray;
 static std::vector<std::vector<std::vector<std::complex<double>>>> Oarray;
+
+// Track progress for the UI
+static int currentProgress = 0;
 
 // Some small helper “piecewise” factors from the references:
 static inline std::complex<double> alpha(int n) {
@@ -74,6 +77,10 @@ static void buildArraysIfNeeded() {
     if (!Tarray.empty() && !Oarray.empty()) {
         return; // done already
     }
+    
+    // Reset progress counter
+    currentProgress = 0;
+    
     Tarray.resize(bign + 1, std::vector<std::vector<std::complex<double>>>(
                                  2*bign + 1,
                                  std::vector<std::complex<double>>(2*bign + 1,{0,0})));
@@ -98,6 +105,8 @@ static void buildArraysIfNeeded() {
 
     // Fill Tarray and Oarray recursively
     for (int n = 1; n < bign; n++) {
+        // Update progress based on current loop (0-100)
+        currentProgress = (n * 100) / bign;
         //=============================================
         //  T array pass 1
         for (int k = -n; k <= n; k++) {
@@ -276,6 +285,18 @@ static void buildArraysIfNeeded() {
 
 extern "C" {
 
+// Function to update and get the current progress
+EMSCRIPTEN_KEEPALIVE
+int getProgress() {
+    return currentProgress;
+}
+
+// Function to reset progress
+EMSCRIPTEN_KEEPALIVE
+void resetProgress() {
+    currentProgress = 0;
+}
+
 /*
   doTembJSON(n):
     Returns a JSON with keys "T", "O", and "B":
@@ -294,20 +315,49 @@ extern "C" {
 */
 EMSCRIPTEN_KEEPALIVE
 char* doTembJSON(int n) {
+    // Reset progress counter
+    resetProgress();
+    
+    // Initial progress update - arrays building starts
+    currentProgress = 5;
+    
     buildArraysIfNeeded();
     if (n < 1)  n = 1;
     if (n > bign) n = bign;
+    
+    // Set progress to 60% after arrays are built
+    currentProgress = 60;
 
     std::ostringstream oss;
     oss << "{";
+    
+    // Progress update - starting JSON generation
+    currentProgress = 65;
+
+    // Calculate total points once for progress tracking
+    int totalPoints = 0;
+    for (int k = -n; k <= n; k++) {
+      for (int j = -n; j <= n; j++) {
+        if (std::abs(k)+std::abs(j) <= n) {
+          totalPoints++;
+        }
+      }
+    }
 
     //============ T array
     oss << "\"T\":[";
     {
       bool first = true;
+      int processedPoints = 0;
+      // Now process each point
       for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
           if (std::abs(k)+std::abs(j) <= n) {
+            // Update progress occasionally - T array phase (65-75%)
+            processedPoints++;
+            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
+              currentProgress = 65 + (processedPoints * 10 / totalPoints);
+            }
             if (!first) oss << ",";
             first=false;
             double re = Tarray[n][k+bign][j+bign].real();
@@ -325,11 +375,19 @@ char* doTembJSON(int n) {
 
     //============ O array
     oss << "\"O\":[";
+    // Progress update - starting O array
+    currentProgress = 75;
     {
       bool first = true;
+      int processedPoints = 0; // Reuse totalPoints from T array
       for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
           if (std::abs(k)+std::abs(j) <= n) {
+            // Update progress occasionally - O array phase (75-85%)
+            processedPoints++;
+            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
+              currentProgress = 75 + (processedPoints * 10 / totalPoints);
+            }
             if (!first) oss << ",";
             first=false;
             double re = Oarray[n][k+bign][j+bign].real();
@@ -353,6 +411,8 @@ char* doTembJSON(int n) {
     //   from (0,-n) back to (-n,0).
     // Each segment has (n+1) points, so total of 4*(n+1) points.
     oss << "\"B\":[";
+    // Progress update - starting boundary array
+    currentProgress = 85;
     {
       std::vector<std::complex<double>> boundary;
       boundary.reserve(4*(n+1));
@@ -391,7 +451,16 @@ char* doTembJSON(int n) {
       }
 
       bool first = true;
+      int boundaryCount = boundary.size();
+      int boundaryProcessed = 0;
+      
       for (auto &z : boundary) {
+         // Update progress during boundary processing (85-95%)
+         boundaryProcessed++;
+         if (boundaryProcessed % (boundaryCount/5 + 1) == 0) { // Update ~5 times
+           currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
+         }
+         
          if (!first) oss << ",";
          first=false;
          double re = z.real();
@@ -403,6 +472,9 @@ char* doTembJSON(int n) {
     oss << "]";
 
     oss << "}";
+
+    // Set progress to 100% when complete
+    currentProgress = 100;
 
     // convert to char*
     std::string jsonStr = oss.str();
