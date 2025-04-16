@@ -233,313 +233,179 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     return a1;
 }
 
-// Calculate the height function using predefined height patterns for each domino type
+using DominoVertex = pair<int,int>;
+struct Domino {
+    vector<DominoVertex> coords;    // 6 vertices: 4 corners + 2 mids
+    vector<double> relH;            // their relative heights
+};
+
 HeightMap calculateHeightFunction(const MatrixInt &dominoConfig, int n) {
-    // Create height map to store heights at vertices
-    HeightMap heightMap;
-
-    try {
-        // Show progress at the start of height calculation
-        progressCounter = 96;
-        emscripten_sleep(0);
-
-        // Initialize the height map with a reference height
-        heightMap[{0, 0}] = 0.0;
-
-        // Get the size of the domino configuration matrix
-        int size = dominoConfig.size();
-
-        // Process each domino in the configuration
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig[i][j] == 1) {
-                    int vi, vj;
-                    double h = 0.0; // Reference height for this domino
-
-                    // Blue horizontal domino (i odd, j odd)
-                    if ((i & 1) && (j & 1)) {
-                        // Calculate vertex coordinates
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-
-                        // Define vertices for the blue horizontal domino
-                        Vertex v1 = {vi, vj};         // Top-left
-                        Vertex v2 = {vi + 4, vj};     // Top-right
-                        Vertex v3 = {vi + 4, vj - 2}; // Bottom-right
-                        Vertex v4 = {vi, vj - 2};     // Bottom-left
-                        // Middle vertices
-                        Vertex vm1 = {vi + 2, vj};    // Middle-top
-                        Vertex vm2 = {vi + 2, vj - 2}; // Middle-bottom
-
-                        // Assign heights according to the pattern for blue horizontal dominoes
-                        heightMap[v1] = h - 1;
-                        heightMap[v2] = h - 1;
-                        heightMap[v3] = h - 2;
-                        heightMap[v4] = h - 2;
-                        heightMap[vm1] = h;
-                        heightMap[vm2] = h - 3;
-
-                    // Yellow vertical domino (i odd, j even)
-                    } else if ((i & 1) && !(j & 1)) {
-                        // Calculate vertex coordinates
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-
-                        // Define vertices for the yellow vertical domino
-                        Vertex v1 = {vi, vj};         // Top-left
-                        Vertex v2 = {vi, vj + 4};     // Bottom-left
-                        Vertex v3 = {vi + 2, vj + 4}; // Bottom-right
-                        Vertex v4 = {vi + 2, vj};     // Top-right
-                        // Middle vertices
-                        Vertex vm1 = {vi, vj + 2};    // Middle-left
-                        Vertex vm2 = {vi + 2, vj + 2}; // Middle-right
-
-                        // Assign heights according to the pattern for yellow vertical dominoes
-                        heightMap[v1] = h - 2;
-                        heightMap[v2] = h - 2;
-                        heightMap[v3] = h - 1;
-                        heightMap[v4] = h - 1;
-                        heightMap[vm1] = h - 3;
-                        heightMap[vm2] = h;
-
-                    // Green horizontal domino (i even, j even)
-                    } else if (!(i & 1) && !(j & 1)) {
-                        // Calculate vertex coordinates
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-
-                        // Define vertices for the green horizontal domino
-                        Vertex v1 = {vi, vj};         // Top-left
-                        Vertex v2 = {vi + 4, vj};     // Top-right
-                        Vertex v3 = {vi + 4, vj - 2}; // Bottom-right
-                        Vertex v4 = {vi, vj - 2};     // Bottom-left
-                        // Middle vertices
-                        Vertex vm1 = {vi + 2, vj};    // Middle-top
-                        Vertex vm2 = {vi + 2, vj - 2}; // Middle-bottom
-
-                        // Assign heights according to the pattern for green horizontal dominoes
-                        heightMap[v1] = h + 1;
-                        heightMap[v2] = h + 1;
-                        heightMap[v3] = h + 2;
-                        heightMap[v4] = h + 2;
-                        heightMap[vm1] = h;
-                        heightMap[vm2] = h + 3;
-
-                    // Red vertical domino (i even, j odd)
-                    } else if (!(i & 1) && (j & 1)) {
-                        // Calculate vertex coordinates
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-
-                        // Define vertices for the red vertical domino
-                        Vertex v1 = {vi, vj};         // Top-left
-                        Vertex v2 = {vi, vj + 4};     // Bottom-left
-                        Vertex v3 = {vi + 2, vj + 4}; // Bottom-right
-                        Vertex v4 = {vi + 2, vj};     // Top-right
-                        // Middle vertices
-                        Vertex vm1 = {vi, vj + 2};    // Middle-left
-                        Vertex vm2 = {vi + 2, vj + 2}; // Middle-right
-
-                        // Assign heights according to the pattern for red vertical dominoes
-                        heightMap[v1] = h + 2;
-                        heightMap[v2] = h + 2;
-                        heightMap[v3] = h + 1;
-                        heightMap[v4] = h + 1;
-                        heightMap[vm1] = h + 3;
-                        heightMap[vm2] = h;
-                    }
-                }
-            }
-
-            // Update progress occasionally (distribute progress from 96% to 98%)
-            if (i % 10 == 0) {
-                progressCounter = 96 + (i * 2 / size);
-                emscripten_sleep(0);
-            }
-        }
-
-        progressCounter = 98;
-        emscripten_sleep(0);
-
-    } catch (const std::exception& e) {
-        // If an exception occurs, return a simple height map with minimal vertices
-        cerr << "Error in fixed height function calculation: " << e.what() << endl;
-        HeightMap fallbackMap;
-        fallbackMap[{0, 0}] = 0.0;
-        return fallbackMap;
-    }
-
-    return heightMap;
-}
-
-// Get the domino face vertices in 3D with heights
-vector<tuple<string, vector<vector<double>>>> getDominoFaces(const MatrixInt &dominoConfig, const HeightMap &heightMap, int n) {
-    // Hardcoded correct shift values
-    const double x_shift = -0.5;
-    const double y_shift = 1.5;
-    vector<tuple<string, vector<vector<double>>>> faces;
     int size = dominoConfig.size();
+    vector<Domino> dominos;
+    dominos.reserve(size * size / 4);
 
-    // Update progress to indicate we're starting face generation
-    progressCounter = 99;
-    emscripten_sleep(0);
-
-    // Reserve space to avoid reallocation (vector can use reserve)
-    faces.reserve(size * size / 4); // Rough estimate
-
+    // --- 1) Gather each domino’s local pattern (coords & rel heights) ---
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
-            if (dominoConfig[i][j] == 1) {
-                try {
-                    string color;
-                    vector<vector<double>> vertices(4, vector<double>(3));
+            if (dominoConfig[i][j] != 1) continue;
 
-                    // Standard grid coordinates of domino corners (using even coordinates)
-                    int vi, vj, width, height;
+            // Determine type by parity as before:
+            bool oddI = (i & 1), oddJ = (j & 1);
+            vector<DominoVertex> v(6);
+            vector<double> h(6, 0.0);
+            int vi = (j - i - 2);
+            int vj = 2*n - (i + j);
+            // We'll fill v[0..3]=corners, v[4..5]=midpoints; h[...] from the old patterns
+            if ( oddI &&  oddJ) {
+                // Blue horizontal domino
+                // corners:
+                v[0] = {vi,     vj};     h[0] = -1;
+                v[1] = {vi + 4, vj};     h[1] = -1;
+                v[2] = {vi + 4, vj - 2}; h[2] = -2;
+                v[3] = {vi,     vj - 2}; h[3] = -2;
+                // mids:
+                v[4] = {vi + 2, vj};     h[4] =  0;
+                v[5] = {vi + 2, vj - 2}; h[5] = -3;
 
-                    if ((i & 1) && (j & 1)) { // Blue - horizontal domino (i odd, j odd)
-                        color = "blue";
-                        // Use consistent coordinate calculation
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-                        width = 4;
-                        height = 2;
+            } else if ( oddI && !oddJ) {
+                // Yellow vertical domino
+                v[0] = {vi,     vj};     h[0] = -2;
+                v[1] = {vi,     vj + 4}; h[1] = -2;
+                v[2] = {vi + 2, vj + 4}; h[2] = -1;
+                v[3] = {vi + 2, vj};     h[3] = -1;
+                v[4] = {vi,     vj + 2}; h[4] = -3;
+                v[5] = {vi + 2, vj + 2}; h[5] =  0;
 
-                        // Define the four corners in counterclockwise order (for proper face normal)
-                        Vertex v1 = {vi, vj};
-                        Vertex v2 = {vi + width, vj};
-                        Vertex v3 = {vi + width, vj - height};
-                        Vertex v4 = {vi, vj - height};
+            } else if (!oddI && !oddJ) {
+                // Green horizontal domino
+                v[0] = {vi,     vj};     h[0] =  1;
+                v[1] = {vi + 4, vj};     h[1] =  1;
+                v[2] = {vi + 4, vj - 2}; h[2] =  2;
+                v[3] = {vi,     vj - 2}; h[3] =  2;
+                v[4] = {vi + 2, vj};     h[4] =  0;
+                v[5] = {vi + 2, vj - 2}; h[5] =  3;
 
-                        // Get heights with fallback to 0 if vertex not found
-                        double h1 = (heightMap.find(v1) != heightMap.end()) ? heightMap.at(v1) : 0.0;
-                        double h2 = (heightMap.find(v2) != heightMap.end()) ? heightMap.at(v2) : 0.0;
-                        double h3 = (heightMap.find(v3) != heightMap.end()) ? heightMap.at(v3) : 0.0;
-                        double h4 = (heightMap.find(v4) != heightMap.end()) ? heightMap.at(v4) : 0.0;
+            } else {
+                // Red vertical domino
+                v[0] = {vi,     vj};     h[0] =  2;
+                v[1] = {vi,     vj + 4}; h[1] =  2;
+                v[2] = {vi + 2, vj + 4}; h[2] =  1;
+                v[3] = {vi + 2, vj};     h[3] =  1;
+                v[4] = {vi,     vj + 2}; h[4] =  3;
+                v[5] = {vi + 2, vj + 2}; h[5] =  0;
+            }
 
-                        // Scale coordinates back to normal range for display
-                        // Apply adjustable shift parameters for blue horizontal dominoes
-                        vertices[0] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h1};
-                        vertices[1] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h2};
-                        vertices[2] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h3};
-                        vertices[3] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h4};
+            dominos.push_back({v, h});
+        }
+    }
 
-                    } else if ((i & 1) && !(j & 1)) { // Yellow - vertical domino (i odd, j even)
-                        color = "yellow";
-                        // Match horizontal domino coordinate system
-                        vi = (j - i - 2); // Changed from -1 to -2 for consistency
-                        vj = 2*n - (i + j); // Removed -2 for consistency
-                        width = 2;
-                        height = 4;
+    int D = dominos.size();
+    vector<double> offsets(D, 0.0);
+    vector<bool> seen(D, false);
 
-                        // Define the four corners in counterclockwise order (for proper face normal)
-                        Vertex v1 = {vi, vj};
-                        Vertex v2 = {vi, vj + height};
-                        Vertex v3 = {vi + width, vj + height};
-                        Vertex v4 = {vi + width, vj};
+    // Build map from vertex → domino indices
+    map<DominoVertex, vector<int>> byVertex;
+    for (int d = 0; d < D; d++)
+        for (auto &coord : dominos[d].coords)
+            byVertex[coord].push_back(d);
 
-                        // Get heights with fallback to 0 if vertex not found
-                        double h1 = (heightMap.find(v1) != heightMap.end()) ? heightMap.at(v1) : 0.0;
-                        double h2 = (heightMap.find(v2) != heightMap.end()) ? heightMap.at(v2) : 0.0;
-                        double h3 = (heightMap.find(v3) != heightMap.end()) ? heightMap.at(v3) : 0.0;
-                        double h4 = (heightMap.find(v4) != heightMap.end()) ? heightMap.at(v4) : 0.0;
+    // --- 2) BFS each connected component of the domino graph ---
+    for (int start = 0; start < D; start++) {
+        if (seen[start]) continue;
+        queue<int> q;
+        seen[start] = true;
+        offsets[start] = 0.0;
+        q.push(start);
 
-                        // Scale coordinates back to normal range for display
-                        // No offset for vertical dominoes
-                        vertices[0] = {static_cast<double>(vi) / 2.0, static_cast<double>(vj) / 2.0, h1};
-                        vertices[1] = {static_cast<double>(vi) / 2.0, static_cast<double>(vj + height) / 2.0, h2};
-                        vertices[2] = {static_cast<double>(vi + width) / 2.0, static_cast<double>(vj + height) / 2.0, h3};
-                        vertices[3] = {static_cast<double>(vi + width) / 2.0, static_cast<double>(vj) / 2.0, h4};
-
-                    } else if (!(i & 1) && !(j & 1)) { // Green - horizontal domino (i even, j even)
-                        color = "green";
-                        // Use consistent coordinate calculation
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-                        width = 4;
-                        height = 2;
-
-                        // Define the four corners in counterclockwise order (for proper face normal)
-                        Vertex v1 = {vi, vj};
-                        Vertex v2 = {vi + width, vj};
-                        Vertex v3 = {vi + width, vj - height};
-                        Vertex v4 = {vi, vj - height};
-
-                        // Get heights with fallback to 0 if vertex not found
-                        double h1 = (heightMap.find(v1) != heightMap.end()) ? heightMap.at(v1) : 0.0;
-                        double h2 = (heightMap.find(v2) != heightMap.end()) ? heightMap.at(v2) : 0.0;
-                        double h3 = (heightMap.find(v3) != heightMap.end()) ? heightMap.at(v3) : 0.0;
-                        double h4 = (heightMap.find(v4) != heightMap.end()) ? heightMap.at(v4) : 0.0;
-
-                        // Scale coordinates back to normal range for display
-                        // Apply adjustable shift parameters for blue horizontal dominoes
-                        vertices[0] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h1};
-                        vertices[1] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h2};
-                        vertices[2] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h3};
-                        vertices[3] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h4};
-
-                    } else if (!(i & 1) && (j & 1)) { // Red - vertical domino (i even, j odd)
-                        color = "red";
-                        // Match horizontal domino coordinate system
-                        vi = (j - i - 2); // Changed from -1 to -2 for consistency
-                        vj = 2*n - (i + j); // Removed -2 for consistency
-                        width = 2;
-                        height = 4;
-
-                        // Define the four corners in counterclockwise order (for proper face normal)
-                        Vertex v1 = {vi, vj};
-                        Vertex v2 = {vi, vj + height};
-                        Vertex v3 = {vi + width, vj + height};
-                        Vertex v4 = {vi + width, vj};
-
-                        // Get heights with fallback to 0 if vertex not found
-                        double h1 = (heightMap.find(v1) != heightMap.end()) ? heightMap.at(v1) : 0.0;
-                        double h2 = (heightMap.find(v2) != heightMap.end()) ? heightMap.at(v2) : 0.0;
-                        double h3 = (heightMap.find(v3) != heightMap.end()) ? heightMap.at(v3) : 0.0;
-                        double h4 = (heightMap.find(v4) != heightMap.end()) ? heightMap.at(v4) : 0.0;
-
-                        // Scale coordinates back to normal range for display
-                        // No offset for vertical dominoes
-                        vertices[0] = {static_cast<double>(vi) / 2.0, static_cast<double>(vj) / 2.0, h1};
-                        vertices[1] = {static_cast<double>(vi) / 2.0, static_cast<double>(vj + height) / 2.0, h2};
-                        vertices[2] = {static_cast<double>(vi + width) / 2.0, static_cast<double>(vj + height) / 2.0, h3};
-                        vertices[3] = {static_cast<double>(vi + width) / 2.0, static_cast<double>(vj) / 2.0, h4};
-                    } else {
-                        continue;
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            // For each vertex of u, any other domino sharing it is a neighbor
+            for (int k = 0; k < 6; k++) {
+                auto coord = dominos[u].coords[k];
+                for (int v : byVertex[coord]) {
+                    if (seen[v]) continue;
+                    // find which index l in dominos[v].coords matches coord
+                    int l = 0;
+                    while (l < 6 && dominos[v].coords[l] != coord) ++l;
+                    if (l < 6) {
+                        // offset_v = offset_u + (h_u[k] - h_v[l])
+                        offsets[v] = offsets[u] + (dominos[u].relH[k] - dominos[v].relH[l]);
+                        seen[v] = true;
+                        q.push(v);
                     }
-
-                    faces.push_back(make_tuple(color, vertices));
-
-                    // Update progress occasionally
-                    if ((i * size + j) % 1000 == 0) {
-                        float progress = 99 + (float)(i * size + j) / (size * size);
-                        if (progress < 100) {
-                            progressCounter = static_cast<int>(progress);
-                            emscripten_sleep(0);
-                        }
-                    }
-                } catch (const std::exception& e) {
-                    // Skip problematic faces silently
-                    continue;
                 }
             }
         }
     }
 
-    // Ensure we have at least some faces to render
-    if (faces.empty()) {
-        // Create a simple placeholder face if no valid faces were generated
-        vector<vector<double>> vertices = {
-            {-n/2.0, -n/2.0, 0.0},
-            {n/2.0, -n/2.0, 0.0},
-            {n/2.0, n/2.0, 0.0},
-            {-n/2.0, n/2.0, 0.0}
-        };
-        faces.push_back(make_tuple("blue", vertices));
+    // --- 3) Assemble global heightMap ---
+    HeightMap hmap;
+    for (int d = 0; d < D; d++) {
+        for (int k = 0; k < 6; k++) {
+            double absH = offsets[d] + dominos[d].relH[k];
+            hmap[ dominos[d].coords[k] ] = absH;
+        }
     }
+    return hmap;
+}
 
-    progressCounter = 100;
-    emscripten_sleep(0);
+// ---------------------------------------------------------------------
+// getDominoFaces now emits 6‐vertex polygons (4 corners + 2 mids),
+// embedding the absolute height into the JSON so the JS can render
+// continuous surfaces directly.
+// ---------------------------------------------------------------------
+vector<tuple<string, vector<vector<double>>>> getDominoFaces(
+    const MatrixInt &dominoConfig,
+    const HeightMap &heightMap,
+    int n
+) {
+    const double x_shift = -0.5, y_shift = 1.5;
+    vector<tuple<string,vector<vector<double>>>> faces;
+    faces.reserve(dominoConfig.size()*dominoConfig.size()/4);
+
+    for (int i = 0; i < (int)dominoConfig.size(); i++) {
+        for (int j = 0; j < (int)dominoConfig.size(); j++) {
+            if (dominoConfig[i][j] != 1) continue;
+
+            bool oddI = (i & 1), oddJ = (j & 1);
+            string color;
+            int vi = (j - i - 2), vj = 2*n - (i + j);
+            int w = oddI == oddJ ? 4 : 2;
+            int h = oddI != oddJ ? 4 : 2;
+            if ( oddI &&  oddJ) color="blue";
+            if ( oddI && !oddJ) color="yellow";
+            if (!oddI && !oddJ) color="green";
+            if (!oddI &&  oddJ) color="red";
+
+            // List corners + mids:
+            vector<DominoVertex> pts = {
+                {vi,     vj},
+                {vi + w, vj},
+                {vi + w, vj - h},
+                {vi,     vj - h},
+                // mids:
+                oddI == oddJ
+                  ? DominoVertex{vi + w/2, vj}      // horizontal top mid
+                  : DominoVertex{vi,     vj + h/2}, // vertical left mid
+                oddI == oddJ
+                  ? DominoVertex{vi + w/2, vj - h}  // horizontal bottom mid
+                  : DominoVertex{vi + w, vj + h/2}  // vertical right mid
+            };
+            vector<vector<double>> verts;
+            verts.reserve(6);
+            for (auto [x0,y0]: pts) {
+                double z0 = 0.0;
+                auto it = heightMap.find({x0,y0});
+                if (it != heightMap.end()) z0 = it->second;
+                verts.push_back({
+                    x0/2.0 + x_shift,
+                    y0/2.0 + y_shift,
+                    z0
+                });
+            }
+            faces.emplace_back(color, verts);
+        }
+    }
     return faces;
 }
 
