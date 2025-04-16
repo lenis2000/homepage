@@ -1,3 +1,22 @@
+/*
+
+emcc 2025-03-31-aztec-uniform-3d.cpp -o 2025-03-31-aztec-uniform-3d.js \
+ -s WASM=1 \
+ -s ASYNCIFY=1 \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
+ -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+ -s ALLOW_MEMORY_GROWTH=1 \
+ -s INITIAL_MEMORY=64MB \
+ -s ENVIRONMENT=web \
+ -s SINGLE_FILE=1 \
+ -O3 -ffast-math
+mv 2025-03-31-aztec-uniform-3d.js ../../js/
+
+
+
+*/
+
+
 #include <emscripten.h>
 #include <iostream>
 #include <vector>
