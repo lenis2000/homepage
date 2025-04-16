@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-03-31-aztec-uniform-3d.cpp'
     txt: 'C++ code for the simulation'
-published: false
+published: true
 ---
 
 <style>

@@ -13,7 +13,7 @@
   emcc 2025-03-28-t-emb-3d-json.cpp -o 2025-03-28-t-emb-3d-json.js \
    -s WASM=1 \
    -s ASYNCIFY=1 \
-   -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString']" \
+   -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress']" \
    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
    -s ALLOW_MEMORY_GROWTH=1 \
    -s INITIAL_MEMORY=64MB \
@@ -46,6 +46,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+
+// Track progress for the UI
+static int currentProgress = 0;
 
 static inline std::complex<double> alphaVal(int m, double a) {
     // if m%2==1 => 1
@@ -99,11 +102,41 @@ static inline std::complex<double> gammaVal(int j, int k, int m, double a) {
 
 extern "C" {
 
+// Function to update and get the current progress
+EMSCRIPTEN_KEEPALIVE
+int getProgress() {
+    return currentProgress;
+}
+
+// Function to reset progress
+EMSCRIPTEN_KEEPALIVE
+void resetProgress() {
+    currentProgress = 0;
+}
+
 EMSCRIPTEN_KEEPALIVE
 char* doTembJSONwithA(int n, double a) {
+    // Reset progress counter
+    resetProgress();
+    
+    // Initial progress update - starting computation
+    currentProgress = 5;
+    
     if (n < 1)  n = 1;
     if (n > 200) n = 200;
     if (a <= 0.0) a = 1.0;
+    
+    // Add small delays with visible progress
+    for (int i = 0; i < 1000000; i++) { 
+        // Simple loop to create some CPU work for progress visualization
+        if (i % 100000 == 0) {
+            // Update progress slowly from 5% to 15%
+            currentProgress = 5 + (i / 100000);
+        }
+    }
+    
+    // Update progress for array preparation
+    currentProgress = 15;
 
     // 3D arrays: Tarray[m][k+n][j+n], Oarray[m][k+n][j+n]
     std::vector<std::vector<std::vector<std::complex<double>>>> Tarray(
@@ -118,9 +151,19 @@ char* doTembJSONwithA(int n, double a) {
           std::vector<std::complex<double>>(2*n + 1, {0,0})
         )
     );
+    
+    // Progress update after arrays are prepared
+    currentProgress = 20;
 
     // Initialize boundary conditions for m=1..n
+    // Progress update for initialization phase
+    currentProgress = 25;
+    
     for (int m = 1; m <= n; m++) {
+        // Update progress during initialization (25-30%)
+        if (m % ((n/10) + 1) == 0) { // Update ~10 times
+            currentProgress = 25 + (m * 5 / n);
+        }
         // T(-m,0) = -1, T(m,0)=+1, T(0,-m)= i*a, T(0,m)=-i*a
         Tarray[m][(-m + n)][(0 + n)] = std::complex<double>(-1.0, 0.0);
         Tarray[m][( m + n)][(0 + n)] = std::complex<double>(+1.0, 0.0);
@@ -135,7 +178,12 @@ char* doTembJSONwithA(int n, double a) {
     }
 
     // Fill T, O for m=1..(n-1)
+    // Progress update for recursive filling phase
+    currentProgress = 30;
+    
     for (int m = 1; m < n; m++) {
+        // Update progress during recursive filling (30-65%)
+        currentProgress = 30 + (m * 35 / n);
         // pass 1 (T)
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
@@ -301,16 +349,36 @@ char* doTembJSONwithA(int n, double a) {
     }
 
     // Prepare JSON
+    
+    // Progress update for JSON generation
+    currentProgress = 65;
+    
     std::ostringstream oss;
     oss << "{";
 
     // T array
     oss << "\"T\":[";
+    // Calculate total points for progress tracking
+    int totalPoints = 0;
+    for (int k = -n; k <= n; k++) {
+      for (int j = -n; j <= n; j++) {
+        if (std::abs(k)+std::abs(j) <= n) {
+          totalPoints++;
+        }
+      }
+    }
+    
     {
       bool first = true;
+      int processedPoints = 0;
       for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
           if (std::abs(k)+std::abs(j) <= n) {
+            // Update progress for T array (65-75%)
+            processedPoints++;
+            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
+              currentProgress = 65 + (processedPoints * 10 / totalPoints);
+            }
             if (!first) oss << ",";
             first=false;
             double re = Tarray[n][k + n][j + n].real();
@@ -328,11 +396,20 @@ char* doTembJSONwithA(int n, double a) {
 
     // O array
     oss << "\"O\":[";
+    // Progress update for O array
+    currentProgress = 75;
+    
     {
       bool first = true;
+      int processedPoints = 0; // Reuse totalPoints from T array
       for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
           if (std::abs(k)+std::abs(j) <= n) {
+            // Update progress for O array (75-85%)
+            processedPoints++;
+            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
+              currentProgress = 75 + (processedPoints * 10 / totalPoints);
+            }
             // We won't skip (0,0) here in the data (the 3D code filters if needed).
             if (!first) oss << ",";
             first = false;
@@ -352,6 +429,8 @@ char* doTembJSONwithA(int n, double a) {
     // B array (boundary T_{k,j} + O_{k,j})
     // We'll do the same perimeter approach in 4 segments
     oss << "\"B\":[";
+    // Progress update for boundary array
+    currentProgress = 85;
     {
       auto getT = [&](int K, int J){return Tarray[n][K + n][J + n];};
       auto getO = [&](int K, int J){return Oarray[n][K + n][J + n];};
@@ -385,7 +464,16 @@ char* doTembJSONwithA(int n, double a) {
       }
 
       bool first = true;
+      int boundaryCount = boundary.size();
+      int boundaryProcessed = 0;
+      
       for (auto &z : boundary) {
+         // Update progress during boundary processing (85-95%)
+         boundaryProcessed++;
+         if (boundaryProcessed % (boundaryCount/5 + 1) == 0) { // Update ~5 times
+           currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
+         }
+         
          if (!first) oss << ",";
          first=false;
          double re = z.real();
@@ -397,6 +485,10 @@ char* doTembJSONwithA(int n, double a) {
     oss << "]";
 
     oss << "}";
+    
+    // Set progress to 100% when complete
+    currentProgress = 100;
+    
     std::string jsonStr = oss.str();
 
     char* out = (char*) std::malloc(jsonStr.size()+1);
