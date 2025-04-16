@@ -13,6 +13,7 @@
 #include <map>
 #include <queue>
 #include <utility>
+#include <array>
 
 using namespace std;
 
@@ -213,143 +214,185 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     return a1;
 }
 
-// Calculate the height function directly based on the domino configuration
+// Calculate the height function based on the domino configuration using strict BFS
 HeightMap calculateHeightFunction(const MatrixInt &dominoConfig, int n) {
     // Create height map to store heights at vertices
     HeightMap heightMap;
-
+    
     try {
-        // First, set up the reference heights for the entire grid
-        // We'll use a more direct approach focusing on corners of the dominoes
-        
         progressCounter = 91;
         emscripten_sleep(0);
         
-        // Set the reference height at origin (0,0) to 0
-        heightMap[{0, 0}] = 0.0;
+        // Create a modified domino-to-square mapping
+        // For each domino, we'll store its orientation and type
+        struct DominoInfo {
+            string color;
+            bool isHorizontal;
+        };
         
-        // Pre-compute a uniform height field using a simple rule:
-        // For each vertex (i,j), if i+j is even, set height to 0
-        // Otherwise, use the parity of the coordinates to determine height
-        for (int i = -2*n; i <= 2*n; i += 2) {
-            for (int j = -2*n; j <= 2*n; j += 2) {
-                if (abs(i) + abs(j) <= 2*n) { // Inside diamond boundary
-                    // For even coordinates, the height depends on whether we're in a white or black square
-                    heightMap[{i, j}] = ((i/2 + j/2) % 2 == 0) ? 0 : 1;
+        map<pair<int, int>, DominoInfo> dominoSquares; // Maps square coordinates to domino info
+        int size = dominoConfig.size();
+        
+        // Process each domino and record the squares it covers
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig[i][j] == 1) {
+                    int vi, vj;
+                    string color;
+                    bool isHorizontal;
+                    
+                    if ((i & 1) && (j & 1)) { // Blue - horizontal domino (i odd, j odd)
+                        color = "blue";
+                        isHorizontal = true;
+                        vi = (j - i - 2);
+                        vj = 2*n - (i + j);
+                        
+                        // Record both squares covered by this domino
+                        dominoSquares[{vi + 1, vj - 1}] = {color, isHorizontal};
+                        dominoSquares[{vi + 3, vj - 1}] = {color, isHorizontal};
+                    } else if ((i & 1) && !(j & 1)) { // Yellow - vertical domino (i odd, j even)
+                        color = "yellow";
+                        isHorizontal = false;
+                        vi = (j - i - 2);
+                        vj = 2*n - (i + j);
+                        
+                        // Record both squares covered by this domino
+                        dominoSquares[{vi + 1, vj + 1}] = {color, isHorizontal};
+                        dominoSquares[{vi + 1, vj + 3}] = {color, isHorizontal};
+                    } else if (!(i & 1) && !(j & 1)) { // Green - horizontal domino (i even, j even)
+                        color = "green";
+                        isHorizontal = true;
+                        vi = (j - i - 2);
+                        vj = 2*n - (i + j);
+                        
+                        // Record both squares covered by this domino
+                        dominoSquares[{vi + 1, vj - 1}] = {color, isHorizontal};
+                        dominoSquares[{vi + 3, vj - 1}] = {color, isHorizontal};
+                    } else if (!(i & 1) && (j & 1)) { // Red - vertical domino (i even, j odd)
+                        color = "red";
+                        isHorizontal = false;
+                        vi = (j - i - 2);
+                        vj = 2*n - (i + j);
+                        
+                        // Record both squares covered by this domino
+                        dominoSquares[{vi + 1, vj + 1}] = {color, isHorizontal};
+                        dominoSquares[{vi + 1, vj + 3}] = {color, isHorizontal};
+                    }
                 }
             }
         }
         
         progressCounter = 92;
         emscripten_sleep(0);
+
+        // === FUNDAMENTAL HEIGHT FUNCTION APPROACH ===
+        // The height function is defined on vertices, with basic rules:
+        // 1. A reference vertex has height 0
+        // 2. Crossing a white square adds +1 to height
+        // 3. Crossing a black square adds -1 to height
+        // 4. Special rules for dominoes:
+        //    - Moving along a horizontal domino adds +3 (green) or -3 (blue)
+        //    - Moving along a vertical domino adds +3 (red) or -3 (yellow)
         
-        // Apply the height increments caused by each domino
-        int size = dominoConfig.size();
-        int processed = 0;
-        int totalToProcess = (size * size) / 4; // Estimate of number of dominoes
+        // Initialize the height at the reference vertex (chose 0,0 for simplicity)
+        heightMap[{0, 0}] = 0.0;
         
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig[i][j] == 1) {
-                    // Define vertices in grid coordinates and adjust heights
+        // Define a BFS queue for propagation
+        queue<Vertex> bfsQueue;
+        bfsQueue.push({0, 0});
+        
+        // Helper function to check if a vertex is within the Aztec diamond boundary
+        auto isInDiamond = [n](int vi, int vj) {
+            return (abs(vi) + abs(vj) <= 2*n) && ((vi + vj) % 2 == 0);
+        };
+        
+        // Process BFS queue until all reachable vertices have assigned heights
+        while (!bfsQueue.empty()) {
+            // Get the next vertex to process
+            Vertex current = bfsQueue.front();
+            bfsQueue.pop();
+            
+            int vi = current.first;
+            int vj = current.second;
+            double currentHeight = heightMap[current];
+            
+            // Check all four possible neighbors (vertices at distance 2 in grid coordinates)
+            const array<pair<int, int>, 4> neighbors = {
+                make_pair(vi + 2, vj),    // Right
+                make_pair(vi - 2, vj),    // Left
+                make_pair(vi, vj + 2),    // Up
+                make_pair(vi, vj - 2)     // Down
+            };
+            
+            for (const auto& neighbor : neighbors) {
+                int ni = neighbor.first;
+                int nj = neighbor.second;
+                
+                // Skip if outside diamond or already processed
+                if (!isInDiamond(ni, nj) || heightMap.find({ni, nj}) != heightMap.end()) {
+                    continue;
+                }
+                
+                // Calculate the square coordinates between current vertex and neighbor
+                // Square centers are at odd coordinates
+                int si = (vi + ni) / 2;
+                int sj = (vj + nj) / 2;
+                
+                // Check if we're moving horizontally or vertically
+                bool isHorizontalMove = (vj == nj);
+                
+                // Determine if this is a white or black square based on checkerboard pattern
+                bool isWhiteSquare = ((si + sj) % 2 == 0);
+                
+                // Check if this square is covered by a domino
+                auto it = dominoSquares.find({si, sj});
+                double heightChange;
+                
+                if (it == dominoSquares.end()) {
+                    // Standard rule for squares not covered by dominoes
+                    heightChange = isWhiteSquare ? 1 : -1;
+                } else {
+                    // Square is covered by a domino - apply special rules
+                    const DominoInfo& domino = it->second;
                     
-                    // Standard grid coordinates of domino corners
-                    int vi, vj, width, height;
-                    string color;
+                    // Check if we're moving along or across the domino
+                    bool movingAlongDomino = (domino.isHorizontal && isHorizontalMove) || 
+                                           (!domino.isHorizontal && !isHorizontalMove);
                     
-                    if ((i & 1) && (j & 1)) { // Blue - horizontal domino (i odd, j odd)
-                        color = "blue";
-                        // Use consistent coordinate calculation
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-                        width = 4;
-                        height = 2;
-                        
-                        // Impact on height field:
-                        // Horizontal dominoes add or subtract 2 to heights on one side
-                        for (int x = vi; x <= vi + width; x += 2) {
-                            for (int y = vj - height; y <= vj; y += 2) {
-                                if (heightMap.find({x, y}) != heightMap.end()) {
-                                    // Adjust heights based on position relative to domino
-                                    if (y < vj) { // Bottom side of horizontal domino
-                                        heightMap[{x, y}] += 2;
-                                    }
-                                }
-                            }
+                    if (movingAlongDomino) {
+                        // Moving along the domino - apply color-specific height changes
+                        if (domino.color == "blue") {
+                            heightChange = -3;
+                        } else if (domino.color == "green") {
+                            heightChange = 3;
+                        } else if (domino.color == "red") {
+                            heightChange = 3;
+                        } else { // yellow
+                            heightChange = -3;
                         }
-                    } else if ((i & 1) && !(j & 1)) { // Yellow - vertical domino (i odd, j even)
-                        color = "yellow";
-                        // Match horizontal domino coordinate system
-                        vi = (j - i - 2); // Changed from -1 to -2 for consistency
-                        vj = 2*n - (i + j); // Removed -2 for consistency
-                        width = 2;
-                        height = 4;
-                        
-                        // Impact on height field:
-                        // Vertical dominoes add or subtract 2 to heights on one side
-                        for (int x = vi; x <= vi + width; x += 2) {
-                            for (int y = vj; y <= vj + height; y += 2) {
-                                if (heightMap.find({x, y}) != heightMap.end()) {
-                                    // Adjust heights based on position relative to domino
-                                    if (x > vi) { // Right side of vertical domino
-                                        heightMap[{x, y}] += 2;
-                                    }
-                                }
-                            }
-                        }
-                    } else if (!(i & 1) && !(j & 1)) { // Green - horizontal domino (i even, j even)
-                        color = "green";
-                        // Use consistent coordinate calculation
-                        vi = (j - i - 2);
-                        vj = 2*n - (i + j);
-                        width = 4;
-                        height = 2;
-                        
-                        // Impact on height field:
-                        // Horizontal dominoes add or subtract 2 to heights on one side
-                        for (int x = vi; x <= vi + width; x += 2) {
-                            for (int y = vj - height; y <= vj; y += 2) {
-                                if (heightMap.find({x, y}) != heightMap.end()) {
-                                    // Adjust heights based on position relative to domino
-                                    if (y < vj) { // Bottom side of horizontal domino
-                                        heightMap[{x, y}] -= 2;
-                                    }
-                                }
-                            }
-                        }
-                    } else if (!(i & 1) && (j & 1)) { // Red - vertical domino (i even, j odd)
-                        color = "red";
-                        // Match horizontal domino coordinate system
-                        vi = (j - i - 2); // Changed from -1 to -2 for consistency
-                        vj = 2*n - (i + j); // Removed -2 for consistency
-                        width = 2;
-                        height = 4;
-                        
-                        // Impact on height field:
-                        // Vertical dominoes add or subtract 2 to heights on one side
-                        for (int x = vi; x <= vi + width; x += 2) {
-                            for (int y = vj; y <= vj + height; y += 2) {
-                                if (heightMap.find({x, y}) != heightMap.end()) {
-                                    // Adjust heights based on position relative to domino
-                                    if (x > vi) { // Right side of vertical domino
-                                        heightMap[{x, y}] -= 2;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    processed++;
-                    if (processed % 50 == 0) {
-                        // Update progress from 92 to 95
-                        int progress = 92 + (processed * 3) / totalToProcess;
-                        if (progress > 95) progress = 95;
-                        progressCounter = progress;
-                        emscripten_sleep(0);
+                    } else {
+                        // Moving across the domino - use standard square color rule
+                        heightChange = isWhiteSquare ? 1 : -1;
                     }
                 }
+                
+                // Calculate and store the height for the neighbor
+                heightMap[{ni, nj}] = currentHeight + heightChange;
+                
+                // Add the neighbor to the queue for further processing
+                bfsQueue.push({ni, nj});
+            }
+            
+            // Update progress periodically
+            if (bfsQueue.size() % 100 == 0) {
+                progressCounter = 93 + (heightMap.size() % 3); // Varies between 93-95
+                emscripten_sleep(0);
             }
         }
+        
+        progressCounter = 95;
+        emscripten_sleep(0);
+        
     } catch (const std::exception& e) {
         // If an exception occurs, return a simple height map with minimal vertices
         cerr << "Error in height function calculation: " << e.what() << endl;
