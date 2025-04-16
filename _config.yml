@@ -33,7 +33,9 @@ paginate: 8
 paginate_path: "posts/page:num"
 permalink: /:year/:month/:title/
 
-exclude: [vendor]
+exclude:
+  - vendor
+  - "_simulations/domino_tilings/myenv/"
 
 plugins:
   - jekyll-paginate
