@@ -349,19 +349,21 @@ HeightMap calculateHeightFunction(const MatrixInt &dominoConfig, int n) {
     return hmap;
 }
 
+
 // ---------------------------------------------------------------------
-// getDominoFaces now emits 6‐vertex polygons (4 corners + 2 mids),
-// embedding the absolute height into the JSON so the JS can render
-// continuous surfaces directly.
+// Revised getDominoFaces: fixes the vertical (red/yellow) orientation
+// so that vertical dominos grow “up” (+y) instead of “down” (−y).
 // ---------------------------------------------------------------------
 vector<tuple<string, vector<vector<double>>>> getDominoFaces(
     const MatrixInt &dominoConfig,
     const HeightMap &heightMap,
     int n
 ) {
-    const double x_shift = -0.5, y_shift = 1.5;
-    vector<tuple<string,vector<vector<double>>>> faces;
-    faces.reserve(dominoConfig.size()*dominoConfig.size()/4);
+    const double x_shift = -0.5;
+    const double y_shift = 1.5;
+
+    vector<tuple<string, vector<vector<double>>>> faces;
+    faces.reserve(dominoConfig.size() * dominoConfig.size() / 4);
 
     for (int i = 0; i < (int)dominoConfig.size(); i++) {
         for (int j = 0; j < (int)dominoConfig.size(); j++) {
@@ -369,45 +371,66 @@ vector<tuple<string, vector<vector<double>>>> getDominoFaces(
 
             bool oddI = (i & 1), oddJ = (j & 1);
             string color;
-            int vi = (j - i - 2), vj = 2*n - (i + j);
-            int w = oddI == oddJ ? 4 : 2;
-            int h = oddI != oddJ ? 4 : 2;
-            if ( oddI &&  oddJ) color="blue";
-            if ( oddI && !oddJ) color="yellow";
-            if (!oddI && !oddJ) color="green";
-            if (!oddI &&  oddJ) color="red";
+            int vi = (j - i - 2);
+            int vj = 2 * n - (i + j);
 
-            // List corners + mids:
-            vector<DominoVertex> pts = {
-                {vi,     vj},
-                {vi + w, vj},
-                {vi + w, vj - h},
-                {vi,     vj - h},
-                // mids:
-                oddI == oddJ
-                  ? DominoVertex{vi + w/2, vj}      // horizontal top mid
-                  : DominoVertex{vi,     vj + h/2}, // vertical left mid
-                oddI == oddJ
-                  ? DominoVertex{vi + w/2, vj - h}  // horizontal bottom mid
-                  : DominoVertex{vi + w, vj + h/2}  // vertical right mid
-            };
+            vector<pair<int,int>> pts;
+            if (oddI == oddJ) {
+                // horizontal domino (blue or green)
+                color = oddI ? "blue" : "green";
+                int w = 4, h = 2;
+                pts = {
+                    {vi,     vj},       // top‑left
+                    {vi + w, vj},       // top‑right
+                    {vi + w, vj - h},   // bottom‑right
+                    {vi,     vj - h},   // bottom‑left
+                    {vi + w/2, vj},     // top‑mid
+                    {vi + w/2, vj - h}  // bottom‑mid
+                };
+            } else {
+                // vertical domino (yellow or red)
+                color = oddI ? "yellow" : "red";
+                int w = 2, h = 4;
+                pts = {
+                    {vi,     vj},       // left‑bottom
+                    {vi,     vj + h},   // left‑top
+                    {vi + w, vj + h},   // right‑top
+                    {vi + w, vj},       // right‑bottom
+                    {vi,     vj + h/2}, // left‑mid
+                    {vi + w, vj + h/2}  // right‑mid
+                };
+            }
+
             vector<vector<double>> verts;
             verts.reserve(6);
-            for (auto [x0,y0]: pts) {
+
+            for (auto [x0, y0] : pts) {
                 double z0 = 0.0;
-                auto it = heightMap.find({x0,y0});
-                if (it != heightMap.end()) z0 = it->second;
+                auto it = heightMap.find({x0, y0});
+                if (it != heightMap.end()) {
+                    z0 = it->second;
+                }
+
+                // Apply different shifts based on oddI
+                double adjustedXShift = oddI == oddJ ? x_shift : x_shift + 0.5;
+                double adjustedYShift = oddI == oddJ ? y_shift : y_shift - 1.5;
+                double adjustedZ = oddI == oddJ ? z0 : -z0;
+
                 verts.push_back({
-                    x0/2.0 + x_shift,
-                    y0/2.0 + y_shift,
+                    x0 / 2.0 + adjustedXShift,
+                    y0 / 2.0 + adjustedYShift,
                     z0
                 });
             }
+
             faces.emplace_back(color, verts);
         }
     }
+
     return faces;
 }
+
+
 
 // ---------------------------------------------------------------------
 // simulateAztec
