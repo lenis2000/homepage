@@ -48,7 +48,7 @@ I set the upper bound at $n=120$ to avoid freezing your browser.
 <!-- Height Function Controls -->
 <div style="margin-bottom: 10px; border: 1px solid #ccc; padding: 10px; background-color: #f8f8f8;">
   <h4 style="margin-top: 0;">Height Offset Controls</h4>
-  
+
   <div style="display: flex; flex-wrap: wrap; gap: 20px;">
     <!-- Blue Domino Height Controls -->
     <div style="flex: 1; min-width: 250px;">
@@ -197,7 +197,7 @@ Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
-  
+
   // Height offsets for each domino type
   let heightOffsets = {
     blue: {
@@ -423,20 +423,20 @@ Module.onRuntimeInitialized = async function() {
             // Extract vertices and color
             const origVertices = face.vertices;
             const color = face.color;
-            
+
             // We need to create a new geometry with 6 vertices instead of 4
             // We'll use the 4 corners plus 2 middle points
-            
+
             // Determine if horizontal or vertical domino
             const isHorizontal = (color === "blue" || color === "green");
-            
+
             // First process the four corner vertices with our custom heights
             const cornerPositions = [];
             const corners = [];
-            
+
             for (let i = 0; i < origVertices.length; i++) {
               const vertex = [...origVertices[i]]; // Clone to avoid modifying original
-              
+
               // Get the correct height based on vertex position and color
               let heightOffset = 0;
               if (color === "blue") {
@@ -468,19 +468,19 @@ Module.onRuntimeInitialized = async function() {
                   case 3: heightOffset = heightOffsets.yellow.v4; break; // Top-Right
                 }
               }
-              
+
               // Set the height
               vertex[2] = heightOffset;
               corners.push(vertex);
-              
+
               // Store position
               cornerPositions.push(vertex[0] * scale, vertex[2] * scale, vertex[1] * scale);
             }
-            
+
             // Now create the middle vertices
             let middleVertex1, middleVertex2;
             let vm1Height, vm2Height;
-            
+
             if (isHorizontal) {
               // For horizontal dominoes (blue/green)
               // Middle-top is between vertices 0 and 1
@@ -489,14 +489,14 @@ Module.onRuntimeInitialized = async function() {
                 corners[0][1], // y is same as top
                 0 // height is set below
               ];
-              
+
               // Middle-bottom is between vertices 3 and 2
               middleVertex2 = [
                 (corners[3][0] + corners[2][0]) / 2, // x is average
                 corners[3][1], // y is same as bottom
                 0 // height is set below
               ];
-              
+
               // Set heights
               if (color === "blue") {
                 vm1Height = heightOffsets.blue.vm1; // Middle-top
@@ -513,14 +513,14 @@ Module.onRuntimeInitialized = async function() {
                 (corners[0][1] + corners[1][1]) / 2, // y is average
                 0 // height is set below
               ];
-              
+
               // Middle-right is between vertices 3 and 2
               middleVertex2 = [
                 corners[3][0], // x is same as right
                 (corners[3][1] + corners[2][1]) / 2, // y is average
                 0 // height is set below
               ];
-              
+
               // Set heights
               if (color === "red") {
                 vm1Height = heightOffsets.red.vm1; // Middle-left
@@ -530,14 +530,14 @@ Module.onRuntimeInitialized = async function() {
                 vm2Height = heightOffsets.yellow.vm2; // Middle-right
               }
             }
-            
+
             // Apply heights
             middleVertex1[2] = vm1Height;
             middleVertex2[2] = vm2Height;
-            
+
             // Start with the 4 corners
             const positions = [...cornerPositions];
-            
+
             // Add the 2 middle positions
             positions.push(
               middleVertex1[0] * scale, middleVertex1[2] * scale, middleVertex1[1] * scale,
@@ -547,31 +547,37 @@ Module.onRuntimeInitialized = async function() {
             // Set position attribute
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
-            // Create triangulation using the middle vertices
-            // Instead of one quad (two triangles), we'll have 4 triangles
-            // We have 6 vertices: 0,1,2,3 = corners, 4,5 = middle vertices
-            
-            if (isHorizontal) {
-              // For horizontal dominoes (blue/green):
-              // - Middle-top is vertex 4
-              // - Middle-bottom is vertex 5
-              geometry.setIndex([
-                0, 4, 3, // Left triangle: top-left, middle-top, bottom-left
-                1, 2, 4, // Right triangle: top-right, bottom-right, middle-top
-                4, 2, 5, // Bottom-middle triangle: middle-top, bottom-right, middle-bottom 
-                3, 5, 2  // Bottom-left triangle: bottom-left, middle-bottom, bottom-right
-              ]);
-            } else {
-              // For vertical dominoes (red/yellow):
-              // - Middle-left is vertex 4
-              // - Middle-right is vertex 5
-              geometry.setIndex([
-                0, 1, 4, // Top-left triangle: top-left, bottom-left, middle-left
-                1, 2, 5, // Bottom-right triangle: bottom-left, bottom-right, middle-right
-                4, 5, 3, // Middle-right triangle: middle-left, middle-right, top-right
-                1, 5, 4  // Middle-left triangle: bottom-left, middle-right, middle-left
-              ]);
-            }
+// Create triangulation using the middle vertices
+// We have 6 vertices: 0,1,2,3 = corners, 4,5 = middle vertices
+
+// Create triangulation using the 6 vertices
+// 0,1,2,3 = corners (0=topleft, 1=topright, 2=bottomright, 3=bottomleft)
+// 4,5 = middle vertices (for horizontal: 4=topmiddle, 5=bottommiddle)
+//                       (for vertical: 4=leftmiddle, 5=rightmiddle)
+
+if (isHorizontal) {
+  // For horizontal dominoes (blue/green):
+  geometry.setIndex([
+    // Main rectangle (2 triangles)
+    0, 1, 3, // Triangle 1: topleft-topright-bottomleft
+    3, 2, 1, // Triangle 2: bottomleft-bottomright-topright
+
+    // Additional triangles with middle vertices
+    0, 1, 4, // Triangle 3: topleft-topright-topmiddle
+    3, 2, 5  // Triangle 4: bottomleft-bottomright-bottommiddle
+  ]);
+} else {
+  // For vertical dominoes (red/yellow):
+  geometry.setIndex([
+    // Main rectangle (2 triangles)
+    0, 1, 3, // Triangle 1: topleft-topright-bottomleft
+    3, 2, 1, // Triangle 2: bottomleft-bottomright-topright
+
+    // Additional triangles with middle vertices
+    0, 1, 4, // Triangle 3: topleft-bottomleft-leftmiddle
+    3, 2, 5  // Triangle 4: topright-bottomright-rightmiddle
+  ]);
+}
 
             // Calculate face normal
             geometry.computeVertexNormals();
@@ -613,10 +619,10 @@ Module.onRuntimeInitialized = async function() {
 
         // Only adjust camera if we're not preserving position (initial load or regular update)
         if (!window.preserveCameraPosition) {
-          camera.position.set(n * scale, n * scale, n * scale);
+          camera.position.set(0, n * scale * 2, 0); // Position directly above, higher for larger diamonds
           camera.lookAt(0, 0, 0);
         }
-        
+
         controls.update();
 
         // Clear progress indicator once done.
@@ -658,7 +664,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Read current height values from input fields
     readHeightValues();
-    
+
     // Update with current settings
     updateVisualization(n);
   });
@@ -672,7 +678,7 @@ Module.onRuntimeInitialized = async function() {
     heightOffsets.blue.v4 = parseFloat(document.getElementById("blue-v4").value);
     heightOffsets.blue.vm1 = parseFloat(document.getElementById("blue-vm1").value);
     heightOffsets.blue.vm2 = parseFloat(document.getElementById("blue-vm2").value);
-    
+
     // Green domino heights
     heightOffsets.green.v1 = parseFloat(document.getElementById("green-v1").value);
     heightOffsets.green.v2 = parseFloat(document.getElementById("green-v2").value);
@@ -680,7 +686,7 @@ Module.onRuntimeInitialized = async function() {
     heightOffsets.green.v4 = parseFloat(document.getElementById("green-v4").value);
     heightOffsets.green.vm1 = parseFloat(document.getElementById("green-vm1").value);
     heightOffsets.green.vm2 = parseFloat(document.getElementById("green-vm2").value);
-    
+
     // Red domino heights
     heightOffsets.red.v1 = parseFloat(document.getElementById("red-v1").value);
     heightOffsets.red.v2 = parseFloat(document.getElementById("red-v2").value);
@@ -688,7 +694,7 @@ Module.onRuntimeInitialized = async function() {
     heightOffsets.red.v4 = parseFloat(document.getElementById("red-v4").value);
     heightOffsets.red.vm1 = parseFloat(document.getElementById("red-vm1").value);
     heightOffsets.red.vm2 = parseFloat(document.getElementById("red-vm2").value);
-    
+
     // Yellow domino heights
     heightOffsets.yellow.v1 = parseFloat(document.getElementById("yellow-v1").value);
     heightOffsets.yellow.v2 = parseFloat(document.getElementById("yellow-v2").value);
@@ -696,10 +702,10 @@ Module.onRuntimeInitialized = async function() {
     heightOffsets.yellow.v4 = parseFloat(document.getElementById("yellow-v4").value);
     heightOffsets.yellow.vm1 = parseFloat(document.getElementById("yellow-vm1").value);
     heightOffsets.yellow.vm2 = parseFloat(document.getElementById("yellow-vm2").value);
-    
+
     console.log("Updated height offsets:", heightOffsets);
   }
-  
+
   // Function to reset height values to defaults
   function resetHeightValues() {
     // Blue domino heights
@@ -709,7 +715,7 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("blue-v4").value = -2;
     document.getElementById("blue-vm1").value = 0;
     document.getElementById("blue-vm2").value = -3;
-    
+
     // Green domino heights
     document.getElementById("green-v1").value = 1;
     document.getElementById("green-v2").value = 1;
@@ -717,7 +723,7 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("green-v4").value = 2;
     document.getElementById("green-vm1").value = 0;
     document.getElementById("green-vm2").value = 3;
-    
+
     // Red domino heights
     document.getElementById("red-v1").value = 2;
     document.getElementById("red-v2").value = 2;
@@ -725,7 +731,7 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("red-v4").value = 1;
     document.getElementById("red-vm1").value = 3;
     document.getElementById("red-vm2").value = 0;
-    
+
     // Yellow domino heights
     document.getElementById("yellow-v1").value = -2;
     document.getElementById("yellow-v2").value = -2;
@@ -733,48 +739,48 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("yellow-v4").value = -1;
     document.getElementById("yellow-vm1").value = -3;
     document.getElementById("yellow-vm2").value = 0;
-    
+
     // Apply the reset values
     readHeightValues();
   }
-  
+
   // Update heights only without re-running the simulation
   function updateHeightsOnly() {
     // Read height values from input fields
     readHeightValues();
-    
+
     // Update existing meshes with new height values
     for (let i = 0; i < dominoGroup.children.length; i++) {
       const mesh = dominoGroup.children[i];
-      
+
       // Skip non-mesh objects
       if (!(mesh instanceof THREE.Mesh)) continue;
-      
+
       // Get material to determine domino color
       let colorName = "unknown";
       if (mesh.material.color.getHex() === 0x4363d8) colorName = "blue";
       else if (mesh.material.color.getHex() === 0x3cb44b) colorName = "green";
       else if (mesh.material.color.getHex() === 0xe6194b) colorName = "red";
       else if (mesh.material.color.getHex() === 0xffe119) colorName = "yellow";
-      
+
       // Skip unknown colors
       if (colorName === "unknown") continue;
-      
+
       // Determine if horizontal or vertical domino
       const isHorizontal = (colorName === "blue" || colorName === "green");
-      
+
       // Get the current vertices positions
       const positionAttribute = mesh.geometry.getAttribute('position');
-      
+
       // The position attribute is a flat array: [x0,y0,z0, x1,y1,z1, ...]
       // Our geometry has 6 vertices (4 corners + 2 middle vertices)
       const currentN = parseInt(document.getElementById("n-input").value, 10);
       const scale = 60 / (2 * currentN);
-      
+
       // Handle the 4 corner vertices (indices 0-3)
       for (let j = 0; j < 4; j++) {
         let heightValue = 0;
-        
+
         if (colorName === "blue") {
           switch(j) {
             case 0: heightValue = heightOffsets.blue.v1; break; // Top-Left
@@ -804,16 +810,16 @@ Module.onRuntimeInitialized = async function() {
             case 3: heightValue = heightOffsets.yellow.v4; break; // Top-Right
           }
         }
-        
+
         // Set the new height (y component in WebGL)
         positionAttribute.setY(j, heightValue * scale);
       }
-      
+
       // Handle the 2 middle vertices (indices 4-5)
       if (isHorizontal) {
         // For blue and green dominoes, vertices 4-5 are middle-top and middle-bottom
         let middleTopHeight, middleBottomHeight;
-        
+
         if (colorName === "blue") {
           middleTopHeight = heightOffsets.blue.vm1;
           middleBottomHeight = heightOffsets.blue.vm2;
@@ -821,15 +827,15 @@ Module.onRuntimeInitialized = async function() {
           middleTopHeight = heightOffsets.green.vm1;
           middleBottomHeight = heightOffsets.green.vm2;
         }
-        
+
         // Set middle vertex heights
         positionAttribute.setY(4, middleTopHeight * scale);     // Middle-top
         positionAttribute.setY(5, middleBottomHeight * scale);  // Middle-bottom
-        
+
       } else {
         // For red and yellow dominoes, vertices 4-5 are middle-left and middle-right
         let middleLeftHeight, middleRightHeight;
-        
+
         if (colorName === "red") {
           middleLeftHeight = heightOffsets.red.vm1;
           middleRightHeight = heightOffsets.red.vm2;
@@ -837,28 +843,28 @@ Module.onRuntimeInitialized = async function() {
           middleLeftHeight = heightOffsets.yellow.vm1;
           middleRightHeight = heightOffsets.yellow.vm2;
         }
-        
+
         // Set middle vertex heights
         positionAttribute.setY(4, middleLeftHeight * scale);   // Middle-left
         positionAttribute.setY(5, middleRightHeight * scale);  // Middle-right
       }
-      
+
       // Mark the attribute as needing an update
       positionAttribute.needsUpdate = true;
-      
+
       // Update the geometry
       mesh.geometry.computeVertexNormals();
     }
-    
+
     // Force a render update
     renderer.render(scene, camera);
   }
-  
+
   // Apply height changes button - only updates heights without regenerating
   document.getElementById("apply-heights-btn").addEventListener("click", () => {
     updateHeightsOnly();
   });
-  
+
   // Reset heights button - resets heights and updates visualization
   document.getElementById("reset-heights-btn").addEventListener("click", () => {
     resetHeightValues();
@@ -867,7 +873,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Initialize height values from input fields
   readHeightValues();
-  
+
   // Run an initial simulation.
   const initialN = parseInt(document.getElementById("n-input").value, 10);
   updateVisualization(initialN);
