@@ -414,7 +414,6 @@ vector<tuple<string, vector<vector<double>>>> getDominoFaces(
                 // Apply different shifts based on oddI
                 double adjustedXShift = oddI == oddJ ? x_shift : x_shift + 0.5;
                 double adjustedYShift = oddI == oddJ ? y_shift : y_shift - 1.5;
-                double adjustedZ = oddI == oddJ ? z0 : -z0;
 
                 verts.push_back({
                     x0 / 2.0 + adjustedXShift,
