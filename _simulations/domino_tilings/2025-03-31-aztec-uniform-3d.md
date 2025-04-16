@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-03-31-aztec-uniform-3d.cpp'
     txt: 'C++ code for the simulation'
-published: true
+published: false
 ---
 
 <style>
@@ -41,7 +41,7 @@ I set the upper bound at $n=120$ to avoid freezing your browser.
   <label for="n-input">Aztec Diamond Order ($n\le 120$): </label>
   <!-- Updated input: starting value 4, even numbers only (step=2), three-digit window (size=3), maximum 120 -->
   <input id="n-input" type="number" value="4" min="2" step="2" max="120" size="3">
-  
+
   <button id="update-btn">Update</button>
 </div>
 
@@ -64,97 +64,97 @@ Module.onRuntimeInitialized = async function() {
 
   const progressElem = document.getElementById("progress-indicator");
   let progressInterval;
-  
+
   // Three.js variables
   let scene, camera, renderer, controls;
   let dominoGroup; // Group to hold all domino meshes
-  
+
   // Initialize Three.js scene
   function initThreeJS() {
     // Create scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
-    
+
     // Get canvas container and its dimensions
     const container = document.getElementById('aztec-canvas');
     const width = container.clientWidth;
     const height = container.clientHeight;
-    
+
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
-    
+
     // Create camera (orthographic for isometric-like view)
     const frustumSize = 100;
     const aspect = width / height;
     camera = new THREE.OrthographicCamera(
-      frustumSize * aspect / -2, 
-      frustumSize * aspect / 2, 
-      frustumSize / 2, 
-      frustumSize / -2, 
-      1, 
+      frustumSize * aspect / -2,
+      frustumSize * aspect / 2,
+      frustumSize / 2,
+      frustumSize / -2,
+      1,
       1000
     );
     camera.position.set(50, 50, 50);
     camera.lookAt(0, 0, 0);
-    
+
     // Add lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
-    
+
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(1, 1, 1).normalize();
     scene.add(directionalLight);
-    
+
     // Add orbit controls for user interaction
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.screenSpacePanning = true;
-    
+
     // Create a group for all domino meshes
     dominoGroup = new THREE.Group();
     scene.add(dominoGroup);
-    
+
     // Add axes helper for orientation
     const axesHelper = new THREE.AxesHelper(10);
     scene.add(axesHelper);
-    
+
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
-    
+
     // Start animation loop
     animate();
   }
-  
+
   // Window resize handler
   function onWindowResize() {
     const container = document.getElementById('aztec-canvas');
     const width = container.clientWidth;
     const height = container.clientHeight;
-    
+
     const aspect = width / height;
     const frustumSize = 100;
-    
+
     camera.left = frustumSize * aspect / -2;
     camera.right = frustumSize * aspect / 2;
     camera.top = frustumSize / 2;
     camera.bottom = frustumSize / -2;
-    
+
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
   }
-  
+
   // Animation loop
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
   }
-  
+
   // Initialize Three.js on page load
   initThreeJS();
 
@@ -179,14 +179,14 @@ Module.onRuntimeInitialized = async function() {
       mesh.geometry.dispose();
       mesh.material.dispose();
     }
-    
+
     // Start the progress indicator.
     startProgressPolling();
-    
+
     // Set a timeout to handle potential freezes
     const timeoutMs = 60000; // 60 seconds timeout
     let timeoutId;
-    
+
     try {
       // Create a timeout promise that rejects after timeoutMs
       const timeout = new Promise((_, reject) => {
@@ -194,7 +194,7 @@ Module.onRuntimeInitialized = async function() {
           reject(new Error("Simulation timed out"));
         }, timeoutMs);
       });
-      
+
       // Race the simulation against the timeout
       const ptrPromise = simulateAztec(n);
       let ptr;
@@ -203,15 +203,15 @@ Module.onRuntimeInitialized = async function() {
       } catch (error) {
         throw new Error(`WebAssembly error: n=${n} is too large. Try a smaller value.`);
       }
-      
+
       // Clear the timeout since we didn't hit it
       clearTimeout(timeoutId);
-      
+
       // Check if ptr is valid
       if (!ptr) {
         throw new Error(`Invalid memory pointer returned. Try a smaller value of n.`);
       }
-      
+
       // Get string from memory
       let jsonStr;
       try {
@@ -230,51 +230,51 @@ Module.onRuntimeInitialized = async function() {
         clearInterval(progressInterval);
         return;
       }
-      
+
       // Check if the response contains an error message
       if (dominoFaces.error) {
         throw new Error(`Simulation error: ${dominoFaces.error}`);
       }
-      
+
       // Validate the data structure
       if (!Array.isArray(dominoFaces) || dominoFaces.length === 0) {
         throw new Error("Invalid simulation data: empty or not an array");
       }
-      
+
       // Determine the scale based on the size of the diamond
       const scale = 60 / (2 * n); // Scale to fit nicely within the camera view
-      
+
       // Create face colors
       const colors = {
         "blue": 0x4363d8,
-        "green": 0x3cb44b, 
+        "green": 0x3cb44b,
         "red": 0xe6194b,
         "yellow": 0xffe119
       };
-      
+
       // Create meshes for each domino face
       let facesProcessed = 0;
       const totalFaces = dominoFaces.length;
       const batchSize = 500; // Process faces in batches to avoid UI freezing
-      
+
       function processBatch(startIdx) {
         const endIdx = Math.min(startIdx + batchSize, totalFaces);
-        
+
         for (let i = startIdx; i < endIdx; i++) {
           const face = dominoFaces[i];
-          
+
           // Skip faces with missing or invalid data
           if (!face || !face.color || !Array.isArray(face.vertices) || face.vertices.length !== 4) {
             console.warn("Skipping invalid face at index", i);
             continue;
           }
-          
+
           try {
             const geometry = new THREE.BufferGeometry();
-            
+
             // Extract vertices
             const vertices = face.vertices;
-            
+
             // Create flatten array for the position attribute
             const positions = [];
             for (const vertex of vertices) {
@@ -283,23 +283,23 @@ Module.onRuntimeInitialized = async function() {
               }
               positions.push(vertex[0] * scale, vertex[2] * scale, vertex[1] * scale); // Note: y and z are swapped for better 3D view
             }
-            
+
             // Set position attribute
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            
+
             // Set indices for the face triangulation (assuming vertices are in counter-clockwise order)
             geometry.setIndex([0, 1, 2, 0, 2, 3]);
-            
+
             // Calculate face normal
             geometry.computeVertexNormals();
-            
+
             // Create material with the specified color
             const material = new THREE.MeshStandardMaterial({
               color: colors[face.color] || 0x808080,
               side: THREE.DoubleSide,
               flatShading: true
             });
-            
+
             // Create mesh and add it to the group
             const mesh = new THREE.Mesh(geometry, material);
             dominoGroup.add(mesh);
@@ -307,9 +307,9 @@ Module.onRuntimeInitialized = async function() {
             console.error("Error processing face at index", i, error);
           }
         }
-        
+
         facesProcessed = endIdx;
-        
+
         // Update progress based on face processing
         if (facesProcessed < totalFaces) {
           progressElem.innerText = `Rendering... (${Math.floor((facesProcessed / totalFaces) * 100)}%)`;
@@ -319,20 +319,20 @@ Module.onRuntimeInitialized = async function() {
           finishVisualization();
         }
       }
-      
+
       // Start processing faces in batches
       progressElem.innerText = "Rendering... (0%)";
       processBatch(0);
-      
+
       function finishVisualization() {
         // Center the domino group
         dominoGroup.position.set(0, 0, 0);
-        
+
         // Adjust camera for the new model
         camera.position.set(n * scale, n * scale, n * scale);
         camera.lookAt(0, 0, 0);
         controls.update();
-        
+
         // Clear progress indicator once done.
         progressElem.innerText = "";
         clearInterval(progressInterval);
@@ -342,7 +342,7 @@ Module.onRuntimeInitialized = async function() {
       clearTimeout(timeoutId);
       clearInterval(progressInterval);
       progressElem.innerText = `Error: ${error.message}. Try a smaller value of n.`;
-      
+
       // Create a basic placeholder visualization
       const geometry = new THREE.BoxGeometry(10, 1, 10);
       const material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
@@ -369,7 +369,7 @@ Module.onRuntimeInitialized = async function() {
       alert("Please enter a number no greater than 120.");
       return;
     }
-    
+
     updateVisualization(n);
   });
 
