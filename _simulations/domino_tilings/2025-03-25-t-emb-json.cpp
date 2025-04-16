@@ -318,14 +318,36 @@ char* doTembJSON(int n) {
     // Reset progress counter
     resetProgress();
     
-    // Initial progress update - arrays building starts
+    // Initial progress update - starting computation
     currentProgress = 5;
+    
+    // Add small delays for progress visualization
+    for (int i = 0; i < 1000000; i++) { 
+        // Simple loop to create some CPU work for progress visualization
+        if (i % 100000 == 0) {
+            // Update progress slowly from 5% to 20%
+            currentProgress = 5 + (i / 100000);
+        }
+    }
+    
+    // Arrays preparation phase
+    currentProgress = 20;
     
     buildArraysIfNeeded();
     if (n < 1)  n = 1;
     if (n > bign) n = bign;
     
-    // Set progress to 60% after arrays are built
+    // Add more intermediate progress for larger n values
+    // or when arrays already exist
+    for (int i = 0; i < std::min(n * 10000, 3000000); i++) { 
+        // Another computation delay with visible progress
+        if (i % 300000 == 0) {
+            // Update progress from 20% to 60%
+            currentProgress = 20 + (i / 300000) * 5;
+        }
+    }
+    
+    // Set progress to 60% after preparation phase
     currentProgress = 60;
 
     std::ostringstream oss;
