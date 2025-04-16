@@ -250,7 +250,7 @@ Module.onRuntimeInitialized = async function() {
       1,
       1000
     );
-    camera.position.set(50, 50, 50);
+    camera.position.set(0, 100, 0); // Position directly above (vertical view)
     camera.lookAt(0, 0, 0);
 
     // Add lighting
@@ -270,10 +270,6 @@ Module.onRuntimeInitialized = async function() {
     // Create a group for all domino meshes
     dominoGroup = new THREE.Group();
     scene.add(dominoGroup);
-
-    // Add axes helper for orientation
-    const axesHelper = new THREE.AxesHelper(10);
-    scene.add(axesHelper);
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
@@ -460,7 +456,7 @@ Module.onRuntimeInitialized = async function() {
               } else if (color === "red") {
                 switch(i) {
                   case 0: heightOffset = heightOffsets.red.v1; break; // Top-Left
-                  case 1: heightOffset = heightOffsets.red.v2; break; // Bottom-Left 
+                  case 1: heightOffset = heightOffsets.red.v2; break; // Bottom-Left
                   case 2: heightOffset = heightOffsets.red.v3; break; // Bottom-Right
                   case 3: heightOffset = heightOffsets.red.v4; break; // Top-Right
                 }
