@@ -126,15 +126,6 @@ char* doTembJSONwithA(int n, double a) {
     if (n > 200) n = 200;
     if (a <= 0.0) a = 1.0;
     
-    // Add small delays with visible progress
-    for (int i = 0; i < 1000000; i++) { 
-        // Simple loop to create some CPU work for progress visualization
-        if (i % 100000 == 0) {
-            // Update progress slowly from 5% to 15%
-            currentProgress = 5 + (i / 100000);
-        }
-    }
-    
     // Update progress for array preparation
     currentProgress = 15;
 
@@ -161,9 +152,7 @@ char* doTembJSONwithA(int n, double a) {
     
     for (int m = 1; m <= n; m++) {
         // Update progress during initialization (25-30%)
-        if (m % ((n/10) + 1) == 0) { // Update ~10 times
-            currentProgress = 25 + (m * 5 / n);
-        }
+        currentProgress = 25 + (m * 5 / n);
         // T(-m,0) = -1, T(m,0)=+1, T(0,-m)= i*a, T(0,m)=-i*a
         Tarray[m][(-m + n)][(0 + n)] = std::complex<double>(-1.0, 0.0);
         Tarray[m][( m + n)][(0 + n)] = std::complex<double>(+1.0, 0.0);
@@ -182,7 +171,7 @@ char* doTembJSONwithA(int n, double a) {
     currentProgress = 30;
     
     for (int m = 1; m < n; m++) {
-        // Update progress during recursive filling (30-65%)
+        // Update progress at the start of each iteration for recursive filling (30-65%)
         currentProgress = 30 + (m * 35 / n);
         // pass 1 (T)
         for (int k = -m; k <= m; k++) {
@@ -376,9 +365,8 @@ char* doTembJSONwithA(int n, double a) {
           if (std::abs(k)+std::abs(j) <= n) {
             // Update progress for T array (65-75%)
             processedPoints++;
-            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
-              currentProgress = 65 + (processedPoints * 10 / totalPoints);
-            }
+            // Update more frequently for smoother progress
+            currentProgress = 65 + (processedPoints * 10 / totalPoints);
             if (!first) oss << ",";
             first=false;
             double re = Tarray[n][k + n][j + n].real();
@@ -407,9 +395,8 @@ char* doTembJSONwithA(int n, double a) {
           if (std::abs(k)+std::abs(j) <= n) {
             // Update progress for O array (75-85%)
             processedPoints++;
-            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
-              currentProgress = 75 + (processedPoints * 10 / totalPoints);
-            }
+            // Update more frequently for smoother progress
+            currentProgress = 75 + (processedPoints * 10 / totalPoints);
             // We won't skip (0,0) here in the data (the 3D code filters if needed).
             if (!first) oss << ",";
             first = false;
@@ -470,9 +457,8 @@ char* doTembJSONwithA(int n, double a) {
       for (auto &z : boundary) {
          // Update progress during boundary processing (85-95%)
          boundaryProcessed++;
-         if (boundaryProcessed % (boundaryCount/5 + 1) == 0) { // Update ~5 times
-           currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
-         }
+         // Update more frequently for smoother progress
+         currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
          
          if (!first) oss << ",";
          first=false;
