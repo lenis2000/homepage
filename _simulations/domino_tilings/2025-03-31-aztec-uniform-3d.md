@@ -41,6 +41,7 @@ I set the upper bound at $n=120$ to avoid freezing your browser.
   <label for="n-input">Aztec Diamond Order ($n\le 120$): </label>
   <!-- Updated input: starting value 4, even numbers only (step=2), three-digit window (size=3), maximum 120 -->
   <input id="n-input" type="number" value="4" min="2" step="2" max="120" size="3">
+  
   <button id="update-btn">Update</button>
 </div>
 
@@ -368,6 +369,7 @@ Module.onRuntimeInitialized = async function() {
       alert("Please enter a number no greater than 120.");
       return;
     }
+    
     updateVisualization(n);
   });
 

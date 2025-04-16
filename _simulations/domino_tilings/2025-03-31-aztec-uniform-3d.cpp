@@ -363,6 +363,9 @@ HeightMap calculateHeightFunction(const MatrixInt &dominoConfig, int n) {
 
 // Get the domino face vertices in 3D with heights
 vector<tuple<string, vector<vector<double>>>> getDominoFaces(const MatrixInt &dominoConfig, const HeightMap &heightMap, int n) {
+    // Hardcoded correct shift values
+    const double x_shift = -0.5;
+    const double y_shift = 1.5;
     vector<tuple<string, vector<vector<double>>>> faces;
     int size = dominoConfig.size();
 
@@ -404,11 +407,11 @@ vector<tuple<string, vector<vector<double>>>> getDominoFaces(const MatrixInt &do
                         double h4 = (heightMap.find(v4) != heightMap.end()) ? heightMap.at(v4) : 0.0;
                         
                         // Scale coordinates back to normal range for display
-                        // Shift all blue horizontal dominoes by -1/2 left (x-axis) and -3/2 down (y-axis)
-                        vertices[0] = {static_cast<double>(vi) / 2.0 - 0.5, static_cast<double>(vj) / 2.0 - 1.5, h1};
-                        vertices[1] = {static_cast<double>(vi + width) / 2.0 - 0.5, static_cast<double>(vj) / 2.0 - 1.5, h2};
-                        vertices[2] = {static_cast<double>(vi + width) / 2.0 - 0.5, static_cast<double>(vj - height) / 2.0 - 1.5, h3};
-                        vertices[3] = {static_cast<double>(vi) / 2.0 - 0.5, static_cast<double>(vj - height) / 2.0 - 1.5, h4};
+                        // Apply adjustable shift parameters for blue horizontal dominoes
+                        vertices[0] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h1};
+                        vertices[1] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h2};
+                        vertices[2] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h3};
+                        vertices[3] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h4};
                         
                     } else if ((i & 1) && !(j & 1)) { // Yellow - vertical domino (i odd, j even)
                         color = "yellow";
@@ -458,11 +461,11 @@ vector<tuple<string, vector<vector<double>>>> getDominoFaces(const MatrixInt &do
                         double h4 = (heightMap.find(v4) != heightMap.end()) ? heightMap.at(v4) : 0.0;
                         
                         // Scale coordinates back to normal range for display
-                        // Shift all blue horizontal dominoes by -1/2 left (x-axis) and -3/2 down (y-axis)
-                        vertices[0] = {static_cast<double>(vi) / 2.0 - 0.5, static_cast<double>(vj) / 2.0 - 1.5, h1};
-                        vertices[1] = {static_cast<double>(vi + width) / 2.0 - 0.5, static_cast<double>(vj) / 2.0 - 1.5, h2};
-                        vertices[2] = {static_cast<double>(vi + width) / 2.0 - 0.5, static_cast<double>(vj - height) / 2.0 - 1.5, h3};
-                        vertices[3] = {static_cast<double>(vi) / 2.0 - 0.5, static_cast<double>(vj - height) / 2.0 - 1.5, h4};
+                        // Apply adjustable shift parameters for blue horizontal dominoes
+                        vertices[0] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h1};
+                        vertices[1] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj) / 2.0 + y_shift, h2};
+                        vertices[2] = {static_cast<double>(vi + width) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h3};
+                        vertices[3] = {static_cast<double>(vi) / 2.0 + x_shift, static_cast<double>(vj - height) / 2.0 + y_shift, h4};
                         
                     } else if (!(i & 1) && (j & 1)) { // Red - vertical domino (i even, j odd)
                         color = "red";
@@ -589,7 +592,7 @@ char* simulateAztec(int n) {
         progressCounter = 95; // Height function computed
         emscripten_sleep(0); // Yield to update UI
 
-        // Get 3D faces with heights
+        // Get 3D faces with heights, using hardcoded shift values
         vector<tuple<string, vector<vector<double>>>> faces;
         try {
             faces = getDominoFaces(dominoConfig, heightMap, n);
