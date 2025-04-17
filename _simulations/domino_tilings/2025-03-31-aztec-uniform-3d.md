@@ -1,5 +1,5 @@
 ---
-title: '[testing] 3D Height Function Visualization of Domino Tilings of the Aztec Diamond'
+title: '3D Height of Uniform Domino Tilings of the Aztec Diamond'
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-03-31-aztec-uniform-3d.cpp'
     txt: 'C++ code for the simulation'
-published: false
+published: true
 ---
 
 <style>
@@ -28,7 +28,7 @@ published: false
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="/js/2025-03-31-aztec-uniform-3d.js"></script>
 
-This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, now with a truly continuous height function: each tile’s vertices share exactly matching heights with their neighbors. The C++ backend computes per‑domino offsets to enforce continuity, and emits all 6 vertices (4 corners + 2 mids) with absolute heights.
+This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, via its three-dimentional height function. The simulation is inspired by Alexei and Matvey Borodins' <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
