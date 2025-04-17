@@ -925,6 +925,19 @@ Module.onRuntimeInitialized = async function() {
     pathsGroup = null;
     dimersGroup = null;
     heightGroup = null;
+    
+    // Show or hide height function checkbox based on n value
+    const heightToggleDiv = document.querySelector('label[for="height-toggle"]').parentNode;
+    if (n > 30) {
+      heightToggleDiv.style.display = 'none';
+      // If height function was enabled, disable it
+      if (useHeightFunction) {
+        useHeightFunction = false;
+        document.getElementById("height-toggle").checked = false;
+      }
+    } else {
+      heightToggleDiv.style.display = 'block';
+    }
 
     // Hide the TikZ code container if it's visible
     const codeContainer = document.getElementById('tikz-code-container');
