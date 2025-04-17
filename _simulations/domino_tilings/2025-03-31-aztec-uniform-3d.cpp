@@ -57,9 +57,6 @@ struct Domino {
     vector<double> relH;            // their relative heights
 };
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
 HeightMap calculateHeightFunction(const MatrixInt &dominoConfig, int n) {
     int size = dominoConfig.size();
     vector<Domino> dominos;
