@@ -165,80 +165,73 @@ def aztecgen(x0):
         a1 = create(a1, x0[i+1])
     return a1
 
-def aztec_edge_printer(x0, n):
-    import matplotlib.pyplot as plt
-    import numpy as np
-
+def aztec_printer(x0, n):
+    """
+    Draw the domino tiling *and* label every lattice vertex with a stub
+    height‑function value (currently 0).  All vertices, including the
+    “mid‑edge” ones on border dominoes, are now covered.
+    """
     size = len(x0)
+
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    # Draw the Aztec diamond grid vertices and edges
-    for i in range(-n, n+1):
-        for j in range(-n, n+1):
-            if abs(i) + abs(j) <= n+1 and i+j<=n and i-j<n and -j-i<n+1:
-                # Draw vertex
-                ax.plot(i, j, 'ko', markersize=3)
+    vertices = set()          # ← will hold *every* lattice vertex
 
-    # Draw horizontal edges
-    for i in range(-n, n+1):
-        for j in range(-n, n+1):
-            if abs(i) + abs(j) <= n+1 and i+j<=n and i-j<n and -j-i<n+1:
-                # Draw horizontal edge to the right
-                if abs(i+1) + abs(j) <= n+1 and (i+1)+j<=n and (i+1)-j<n and -j-(i+1)<n+1:
-                    ax.plot([i, i+1], [j, j], 'k-', linewidth=0.5, alpha=0.3)
-
-                # Draw vertical edge up
-                if abs(i) + abs(j+1) <= n+1 and i+(j+1)<=n and i-(j+1)<n and -(j+1)-i<n+1:
-                    ax.plot([i, i], [j, j+1], 'k-', linewidth=0.5, alpha=0.3)
-
-    # Place dimers based on the tiling in x0
     for i in range(size):
         for j in range(size):
-            if x0[i][j] == 1:
-                # Convert matrix coordinates to Aztec diamond coordinates
-                # These mapping calculations align with the vertex grid defined above
-                if i % 2 == 1 and j % 2 == 1:  # Green horizontal
-                    # Calculate vertex coords of the domino's endpoints
-                    x1 = (j - i) // 2 - 1
-                    y1 = (size - i - j) // 2
-                    x2 = x1 + 1
-                    y2 = y1
-                    ax.plot([x1, x2], [y1, y2], 'green', linewidth=4)
+            if x0[i][j] != 1:
+                continue
 
-                elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
-                    x1 = (j - i) // 2
-                    y1 = (size - i - j) // 2
-                    x2 = x1
-                    y2 = y1 + 1
-                    ax.plot([x1, x2], [y1, y2], 'blue', linewidth=4)
+            # Domino type → colour, width, height, lower‑left corner
+            if (i & 1) and (j & 1):            # green horizontal
+                colour, w, h = "green", 4, 2
+                x = j - i - 2
+                y = size + 1 - (i + j) - 1
+            elif (i & 1) and not (j & 1):      # blue vertical
+                colour, w, h = "blue", 2, 4
+                x = j - i - 1
+                y = size + 1 - (i + j) - 2
+            elif not (i & 1) and not (j & 1):  # red horizontal
+                colour, w, h = "red", 4, 2
+                x = j - i - 2
+                y = size + 1 - (i + j) - 1
+            else:                              # yellow vertical
+                colour, w, h = "yellow", 2, 4
+                x = j - i - 1
+                y = size + 1 - (i + j) - 2
 
-                elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
-                    x1 = (j - i) // 2 - 1
-                    y1 = (size - i - j) // 2
-                    x2 = x1 + 1
-                    y2 = y1
-                    ax.plot([x1, x2], [y1, y2], 'red', linewidth=4)
-                elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
-                    x1 = (j - i) // 2
-                    y1 = (size - i - j) // 2
-                    x2 = x1
-                    y2 = y1 + 1
-                    ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=4)
+            # Draw the domino
+            ax.add_patch(
+                patches.Rectangle((x, y), w, h, linewidth=0,
+                                  edgecolor=None, facecolor=colour)
+            )
 
-    # Set aspect ratio to be equal and remove axes
-    ax.set_aspect('equal')
-    ax.set_axis_off()
+            # Register *all* lattice vertices touched by this domino:
+            # grid spacing is 2, so step through 0,2,…,w (or h)
+            for dx in range(0, w + 1, 2):
+                for dy in range(0, h + 1, 2):
+                    vertices.add((x + dx, y + dy))
 
-    # Set plot limits with some padding
-    ax.set_xlim(-n-1, n+1)
-    ax.set_ylim(-n-1, n+1)
+    # Label every vertex with a stub 0
+    for vx, vy in vertices:
+        ax.text(vx, vy, "0", ha="center", va="center",
+                fontsize=26, color="black", zorder=5)
 
-    # Display the plot
-    plt.title(f'Aztec Diamond Edge Representation (n={n})')
+    # Aesthetics --------------------------------------------------------------
+    ax.set_xlim(-size, size)
+    ax.set_ylim(-size + 2, size + 2)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    plt.title(f"Aztec Diamond (n={n}) – vertex height stub (0 everywhere)")
     plt.tight_layout()
     plt.show()
 
-n = 20
+
+
+
+
+n = 4
 A1a = []
 for i in range(2*n):
     row = []
@@ -248,4 +241,4 @@ for i in range(2*n):
 
 
 A2a = aztecgen(probs(A1a))
-aztec_edge_printer(A2a, n)
+aztec_printer(A2a, n)
