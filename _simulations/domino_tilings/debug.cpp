@@ -133,7 +133,7 @@ int main()
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
-    int n=4;
+    int n=3;
 
     int dim = 2*n;
     MatrixDouble W(dim,std::vector<double>(dim,1.0));   // unit weights
