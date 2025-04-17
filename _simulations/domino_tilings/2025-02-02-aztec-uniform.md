@@ -547,7 +547,7 @@ Module.onRuntimeInitialized = async function() {
         .attr("stroke", "white")
         .attr("stroke-width", "3px")
         .attr("paint-order", "stroke")
-        .text(h);
+        .text(-h);
     });
 
     heightGroup.raise();   // keep on top
