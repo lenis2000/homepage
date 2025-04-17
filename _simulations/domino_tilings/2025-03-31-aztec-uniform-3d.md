@@ -35,9 +35,9 @@ This simulation demonstrates random domino tilings of an <a href="https://mathwo
   <label for="n-input">Aztec Diamond Order ($n\le 120$): </label>
   <input id="n-input" type="number" value="4" min="2" step="2" max="120" size="3">
   <button id="update-btn">Update</button>
+  <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 </div>
 
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
 <div id="aztec-canvas"></div>
 
 <script>
@@ -125,7 +125,7 @@ Module.onRuntimeInitialized = async function() {
       freeString(ptr);
       const data = JSON.parse(raw);
       if(data.error) throw new Error(data.error);
-      
+
       // Heights are now integrated directly into the vertex data
       const faces = data.faces || [];
 
@@ -163,7 +163,7 @@ Module.onRuntimeInitialized = async function() {
             const indices = isH
               ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
               : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-              
+
             // Use 32-bit indices if needed (either based on flag from backend or total count)
             if (data.use32BitIndices || total > 65535 / 6) { // 6 vertices per domino
               geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
