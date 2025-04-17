@@ -267,7 +267,7 @@ def aztec_printer(x0, n):
 
     for (vx, vy), h in heights.items():
         ax.text(vx, vy, f"{h}", ha="center", va="center",
-                fontsize=26, color="black", zorder=5)
+                fontsize=6, color="black", zorder=5)
 
     ax.set_xlim(-size, size)
     ax.set_ylim(-size + 2, size + 2)
@@ -353,7 +353,7 @@ def aztec_edge_printer(x0, n):
     plt.show()
 
 
-n = 4
+n = 20
 A1a = []
 for i in range(2*n):
     row = []

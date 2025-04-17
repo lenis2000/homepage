@@ -132,6 +132,13 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
     </label>
   </div>
 
+  <!-- Height function toggle -->
+  <div style="margin-bottom: 8px;">
+    <label for="height-toggle">
+      <input type="checkbox" id="height-toggle"> Show height function
+    </label>
+  </div>
+
   <div class="row">
     <div class="col-12">
       <svg id="aztec-svg"></svg>
@@ -164,12 +171,14 @@ Module.onRuntimeInitialized = async function() {
   let useCheckerboard = false; // Track checkerboard state
   let usePaths = false; // Track nonintersecting paths state
   let useDimers = false; // Track dimers visibility state
+  let useHeightFunction = false; // Track height function visibility state
   let currentDominoes = []; // Store current dominoes for toggling colors
   let isProcessing = false; // Flag to prevent multiple simultaneous updates
   let lastValue = parseInt(inputField.value, 10); // Track last processed value
   let checkerboardGroup; // Group for checkerboard squares
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
+  let heightGroup; // Group for height function display
 
   // Define n in the broader scope so it's accessible to all functions
   let n = parseInt(inputField.value, 10);
@@ -254,6 +263,14 @@ Module.onRuntimeInitialized = async function() {
     useDimers = this.checked;
     if (currentDominoes.length > 0) {
       toggleDimers();
+    }
+  });
+
+  // Handle height function toggle
+  document.getElementById("height-toggle").addEventListener("change", function() {
+    useHeightFunction = this.checked;
+    if (currentDominoes.length > 0) {
+      toggleHeightFunction();
     }
   });
 
@@ -420,6 +437,123 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
+  // Function to toggle height function on/off
+  function toggleHeightFunction() {
+    /* ────────────────────────────────────────────────────────────── 0. clear */
+    if (heightGroup) { heightGroup.remove(); heightGroup = null; }
+    if (!useHeightFunction) return;
+    if (currentDominoes.length === 0) return;
+
+    /* ─────────────────────────────── 1. determine one lattice unit in pixels */
+    //  Every rectangle is either 4×2 or 2×4 lattice units.
+    const minSidePx = d3.min(currentDominoes, d => Math.min(d.w, d.h));
+    const unit      = minSidePx / 2;              // 2 lattice units → 1 short side
+    if (unit <= 0) { console.error("unit ≤ 0"); return; }
+
+    /* ─────────────────────────────── 2. viewport transform for the new group */
+    const minX = d3.min(currentDominoes, d => d.x);
+    const minY = d3.min(currentDominoes, d => d.y);
+    const maxX = d3.max(currentDominoes, d => d.x + d.w);
+    const maxY = d3.max(currentDominoes, d => d.y + d.h);
+
+    const { width: svgW, height: svgH } = svg.node().getBoundingClientRect();
+    const scale = Math.min(svgW / (maxX - minX), svgH / (maxY - minY)) * 0.9;
+    const tx    = (svgW - (maxX - minX) * scale) / 2 - minX * scale;
+    const ty    = (svgH - (maxY - minY) * scale) / 2 - minY * scale;
+
+    heightGroup = svg.append("g")
+      .attr("class", "height-function")
+      .attr("transform", `translate(${tx},${ty}) scale(${scale})`);
+
+    /* ───────────────────── 3. convert each domino → (orient, sign, gx, gy)  */
+    //     orient 0 = horizontal , 1 = vertical
+    //     sign   +1 = blue|red  , −1 = green|yellow
+    const dominoData = currentDominoes.map(d => {
+      const horiz  = d.w > d.h;
+      const orient = horiz ? 0 : 1;
+      const sign   = horiz
+          ? (d.color === "green"  ? -1 :  1)   // horizontal: green = −1, blue = +1
+          : (d.color === "yellow" ? -1 :  1);  // vertical:   yellow = −1, red  = +1
+      const gx = Math.round(d.x / unit);       // lattice coordinates
+      const gy = Math.round(d.y / unit);
+      return [orient, sign, gx, gy];
+    });
+
+    /* ─────────────────────────────── 4. build graph with height increments  */
+    const adj = new Map();                      // key → [[nbrKey, Δh], …]
+    const edge = (v1, v2, dh) => {
+      if (!adj.has(v1)) adj.set(v1, []);
+      if (!adj.has(v2)) adj.set(v2, []);
+      adj.get(v1).push([v2, dh]);
+      adj.get(v2).push([v1, -dh]);
+    };
+
+    dominoData.forEach(([o, s, x, y]) => {
+      if (o === 0) {                      /* horizontal  (4×2)  */
+        const TL = `${x},${y+2}`, TM = `${x+2},${y+2}`, TR = `${x+4},${y+2}`;
+        const BL = `${x},${y}`,   BM = `${x+2},${y}`,   BR = `${x+4},${y}`;
+        edge(TL, TM, -s);   edge(TM, TR,  s);
+        edge(BL, BM,  s);   edge(BM, BR, -s);
+        edge(TL, BL,  s);   edge(TM, BM,  3*s);
+        edge(TR, BR,  s);
+      } else {                            /* vertical    (2×4)  */
+        const TL = `${x},${y+4}`, TR = `${x+2},${y+4}`;
+        const ML = `${x},${y+2}`, MR = `${x+2},${y+2}`;
+        const BL = `${x},${y}`,   BR = `${x+2},${y}`;
+        edge(TL, TR, -s);  edge(ML, MR, -3*s);  edge(BL, BR, -s);
+        edge(TL, ML,  s);  edge(ML, BL,  -s);
+        edge(TR, MR, -s);  edge(MR, BR,  s);
+      }
+    });
+
+    /* ─────────────────────────────── 5. breadth‑first integration of heights */
+    const verts = Array.from(adj.keys())
+          .map(k => { const [gx, gy] = k.split(',').map(Number); return {k, gx, gy}; });
+
+    const root = verts.reduce((a, b) =>
+          (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b).k;
+
+    const H = new Map([[root, 0]]);
+    const queue = [root];
+    while (queue.length) {
+      const v = queue.shift();
+      for (const [w, dh] of adj.get(v)) {
+        if (!H.has(w)) { H.set(w, H.get(v) + dh); queue.push(w); }
+        else if (H.get(w) !== H.get(v) + dh)
+          console.warn(`height inconsistency on edge ${v}↔${w}`);
+      }
+    }
+
+    /* ─────────────────────────────── 6. render dots + numbers (in pixels)  */
+    const fontSize = Math.max(8, Math.min(12, 36 - n / 2));   // n = order
+
+    H.forEach((h, key) => {
+      const [gx, gy] = key.split(',').map(Number);
+      const px = gx * unit, py = gy * unit;                   // back to pixels
+
+      heightGroup.append("circle")
+        .attr("cx", px)
+        .attr("cy", py)
+        .attr("r", fontSize / 6)
+        .attr("fill", "black");
+
+      heightGroup.append("text")
+        .attr("x", px)
+        .attr("y", py)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", `${fontSize}px`)
+        .attr("fill", "black")
+        .attr("stroke", "white")
+        .attr("stroke-width", "3px")
+        .attr("paint-order", "stroke")
+        .text(h);
+    });
+
+    heightGroup.raise();   // keep on top
+  }
+
+
   // Function to toggle dimers on/off in the domino view
   function toggleDimers() {
     // Remove existing dimers if they exist
@@ -529,6 +663,7 @@ Module.onRuntimeInitialized = async function() {
     checkerboardGroup = null;
     pathsGroup = null;
     dimersGroup = null;
+    heightGroup = null;
 
     // Append a group for the dominoes.
     const group = svg.append("g")
@@ -564,6 +699,11 @@ Module.onRuntimeInitialized = async function() {
     // Add dimers if enabled
     if (useDimers) {
       toggleDimers();
+    }
+
+    // Add height function if enabled
+    if (useHeightFunction) {
+      toggleHeightFunction();
     }
   }
 
@@ -784,6 +924,7 @@ Module.onRuntimeInitialized = async function() {
     checkerboardGroup = null;
     pathsGroup = null;
     dimersGroup = null;
+    heightGroup = null;
 
     // Hide the TikZ code container if it's visible
     const codeContainer = document.getElementById('tikz-code-container');
@@ -1040,11 +1181,11 @@ Module.onRuntimeInitialized = async function() {
     });
 
     console.log(`Extracted ${segments.length} line segments for optimization`);
-    
+
     // Organize the data for processing
     const linePattern = /\\draw\[black, line width=.+?\] \((.+?), (.+?)\) -- \((.+?), (.+?)\);/;
     const parsedSegments = [];
-    
+
     // Convert each segment to start/end point format
     segments.forEach(segment => {
       const [x1, y1, x2, y2] = segment;
@@ -1065,11 +1206,11 @@ Module.onRuntimeInitialized = async function() {
       for (let i = 0; i < Math.min(5, segments.length); i++) {
         console.log(`  ${i}: [${segments[i][0]}] to [${segments[i][1]}]`);
       }
-      
+
       // Create an adjacency list for easier path finding
       // For each endpoint, store all segments that connect to it
       const adjacencyMap = new Map();
-      
+
       // Add a pair to the adjacency map
       function addToAdjacencyMap(point, segmentIndex, isStart) {
         // Convert point to string for use as a map key (with reduced precision)
@@ -1079,13 +1220,13 @@ Module.onRuntimeInitialized = async function() {
         }
         adjacencyMap.get(key).push({ segmentIndex, isStart });
       }
-      
+
       // Build the adjacency map
       segments.forEach((segment, index) => {
         addToAdjacencyMap(segment[0], index, true);  // Start point
         addToAdjacencyMap(segment[1], index, false); // End point
       });
-      
+
       // Debug the adjacency map
       console.log("Adjacency map (sample):");
       let count = 0;
@@ -1093,11 +1234,11 @@ Module.onRuntimeInitialized = async function() {
         if (count++ > 5) break; // Just show a few entries
         console.log(`  ${key}: ${connections.map(c => c.segmentIndex).join(', ')}`);
       }
-      
+
       // Track which segments have been used
       const used = new Set();
       const paths = [];
-      
+
       // Find all paths
       while (used.size < segments.length) {
         // Find an unused segment to start a new path
@@ -1108,33 +1249,33 @@ Module.onRuntimeInitialized = async function() {
             break;
           }
         }
-        
+
         if (currentIndex === -1) break; // All segments used
-        
+
         // Start building the path
         const startSegment = segments[currentIndex];
         let currentPath = [...startSegment[0], ...startSegment[1]]; // Flatten to [x1,y1,x2,y2]
         used.add(currentIndex);
-        
+
         // Keep extending the path as long as possible
         let foundExtension = true;
         while (foundExtension) {
           foundExtension = false;
-          
+
           // Get current endpoints
           const n = currentPath.length;
           const headPoint = [currentPath[0], currentPath[1]];
           const tailPoint = [currentPath[n-2], currentPath[n-1]];
-          
+
           // Try to find a segment connecting to the tail
           const tailKey = `${tailPoint[0].toFixed(2)},${tailPoint[1].toFixed(2)}`;
           if (adjacencyMap.has(tailKey)) {
             for (const connection of adjacencyMap.get(tailKey)) {
               if (used.has(connection.segmentIndex)) continue;
-              
+
               const segment = segments[connection.segmentIndex];
               let newPoint;
-              
+
               if (connection.isStart) {
                 // Tail connects to start of segment, add the end
                 newPoint = segment[1];
@@ -1142,7 +1283,7 @@ Module.onRuntimeInitialized = async function() {
                 // Tail connects to end of segment, add the start
                 newPoint = segment[0];
               }
-              
+
               // Add the new point
               currentPath.push(newPoint[0], newPoint[1]);
               used.add(connection.segmentIndex);
@@ -1150,17 +1291,17 @@ Module.onRuntimeInitialized = async function() {
               break;
             }
           }
-          
+
           // If we didn't find a tail extension, try the head
           if (!foundExtension) {
             const headKey = `${headPoint[0].toFixed(2)},${headPoint[1].toFixed(2)}`;
             if (adjacencyMap.has(headKey)) {
               for (const connection of adjacencyMap.get(headKey)) {
                 if (used.has(connection.segmentIndex)) continue;
-                
+
                 const segment = segments[connection.segmentIndex];
                 let newPoint;
-                
+
                 if (connection.isStart) {
                   // Head connects to start of segment, add the end at the beginning
                   newPoint = segment[1];
@@ -1168,7 +1309,7 @@ Module.onRuntimeInitialized = async function() {
                   // Head connects to end of segment, add the start at the beginning
                   newPoint = segment[0];
                 }
-                
+
                 // Add to the beginning of the path
                 currentPath.unshift(newPoint[0], newPoint[1]);
                 used.add(connection.segmentIndex);
@@ -1178,22 +1319,22 @@ Module.onRuntimeInitialized = async function() {
             }
           }
         }
-        
+
         // Convert flat array [x1,y1,x2,y2,...] to points [[x1,y1],[x2,y2],...]
         const pointPath = [];
         for (let i = 0; i < currentPath.length; i += 2) {
           pointPath.push([currentPath[i], currentPath[i+1]]);
         }
-        
+
         paths.push(pointPath);
       }
-      
+
       // Debug info about the result
       console.log(`Found ${paths.length} paths`);
       for (let i = 0; i < Math.min(5, paths.length); i++) {
         console.log(`  Path ${i}: ${paths[i].length} points`);
       }
-      
+
       return paths;
     }
 
@@ -1208,35 +1349,35 @@ Module.onRuntimeInitialized = async function() {
     // Calculate optimization statistics
     console.log(`Original: ${segments.length} separate line segments`);
     console.log(`Optimized: ${optimizedPaths.length} combined paths`);
-    
+
     // Calculate reduction percentage
     const reductionPercent = ((segments.length - optimizedPaths.length) / segments.length * 100).toFixed(2);
     console.log(`Reduced by ${reductionPercent}%`);
-    
+
     // Find the longest path
-    const longestPath = optimizedPaths.reduce((longest, current) => 
+    const longestPath = optimizedPaths.reduce((longest, current) =>
       current.length > longest.length ? current : longest, { length: 0 });
     console.log(`Longest path has ${longestPath.length} points`);
-    
+
     // Distribution of path lengths
     const lengthCounts = {};
     optimizedPaths.forEach(path => {
       const len = path.length;
       lengthCounts[len] = (lengthCounts[len] || 0) + 1;
     });
-    
+
     console.log("Path length distribution:");
     const sortedLengths = Object.keys(lengthCounts).sort((a, b) => parseInt(a) - parseInt(b));
     sortedLengths.forEach(len => {
       console.log(`Length ${len}: ${lengthCounts[len]} paths`);
     });
-    
+
     // Add statistics to the TikZ code as comments
     tikzCode += `% Original: ${segments.length} separate line segments\n`;
     tikzCode += `% Optimized into ${optimizedPaths.length} combined paths\n`;
     tikzCode += `% Reduced by ${reductionPercent}%\n`;
     tikzCode += `% Longest path has ${longestPath.length} points\n\n`;
-    
+
     // Add distribution info
     tikzCode += "% Path length distribution:\n";
     sortedLengths.forEach(len => {
@@ -1248,7 +1389,7 @@ Module.onRuntimeInitialized = async function() {
     optimizedPaths.forEach((path, i) => {
       // Add path info comment
       tikzCode += `% Path ${i+1}, ${path.length} points\n`;
-      
+
       // Generate the draw command
       tikzCode += `\\draw[black, line width=2.5pt]`;
       path.forEach((point, j) => {
