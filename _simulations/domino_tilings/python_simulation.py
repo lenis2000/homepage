@@ -228,7 +228,77 @@ def aztec_printer(x0, n):
     plt.show()
 
 
+def aztec_edge_printer(x0, n):
+    import matplotlib.pyplot as plt
+    import numpy as np
 
+    size = len(x0)
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    # Draw the Aztec diamond grid vertices and edges
+    for i in range(-n, n+1):
+        for j in range(-n, n+1):
+            if abs(i) + abs(j) <= n+1 and i+j<=n and i-j<n and -j-i<n+1:
+                # Draw vertex
+                ax.plot(i, j, 'ko', markersize=3)
+
+    # Draw horizontal edges
+    for i in range(-n, n+1):
+        for j in range(-n, n+1):
+            if abs(i) + abs(j) <= n+1 and i+j<=n and i-j<n and -j-i<n+1:
+                # Draw horizontal edge to the right
+                if abs(i+1) + abs(j) <= n+1 and (i+1)+j<=n and (i+1)-j<n and -j-(i+1)<n+1:
+                    ax.plot([i, i+1], [j, j], 'k-', linewidth=0.5, alpha=0.3)
+
+                # Draw vertical edge up
+                if abs(i) + abs(j+1) <= n+1 and i+(j+1)<=n and i-(j+1)<n and -(j+1)-i<n+1:
+                    ax.plot([i, i], [j, j+1], 'k-', linewidth=0.5, alpha=0.3)
+
+    # Place dimers based on the tiling in x0
+    for i in range(size):
+        for j in range(size):
+            if x0[i][j] == 1:
+                # Convert matrix coordinates to Aztec diamond coordinates
+                # These mapping calculations align with the vertex grid defined above
+                if i % 2 == 1 and j % 2 == 1:  # Green horizontal
+                    # Calculate vertex coords of the domino's endpoints
+                    x1 = (j - i) // 2 - 1
+                    y1 = (size - i - j) // 2
+                    x2 = x1 + 1
+                    y2 = y1
+                    ax.plot([x1, x2], [y1, y2], 'green', linewidth=4)
+
+                elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
+                    x1 = (j - i) // 2
+                    y1 = (size - i - j) // 2
+                    x2 = x1
+                    y2 = y1 + 1
+                    ax.plot([x1, x2], [y1, y2], 'blue', linewidth=4)
+
+                elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
+                    x1 = (j - i) // 2 - 1
+                    y1 = (size - i - j) // 2
+                    x2 = x1 + 1
+                    y2 = y1
+                    ax.plot([x1, x2], [y1, y2], 'red', linewidth=4)
+                elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
+                    x1 = (j - i) // 2
+                    y1 = (size - i - j) // 2
+                    x2 = x1
+                    y2 = y1 + 1
+                    ax.plot([x1, x2], [y1, y2], 'yellow', linewidth=4)
+    # Set aspect ratio to be equal and remove axes
+    ax.set_aspect('equal')
+    ax.set_axis_off()
+
+    # Set plot limits with some padding
+    ax.set_xlim(-n-1, n+1)
+    ax.set_ylim(-n-1, n+1)
+
+    # Display the plot
+    plt.title(f'Aztec Diamond Edge Representation (n={n})')
+    plt.tight_layout()
+    plt.show()
 
 
 n = 4
