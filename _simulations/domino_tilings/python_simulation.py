@@ -89,10 +89,6 @@ def probs(x1):
         A.append(C)
     return A
 
-
-
-
-
 def delslide(x1):
     n = len(x1)
     a0 = []
@@ -128,7 +124,6 @@ def delslide(x1):
                 a0[2*i][2*j+1] = 0
     return a0
 
-
 def create(x0, p):
     n = len(x0)
     for i in range(int(n/2)):
@@ -159,7 +154,6 @@ def create(x0, p):
                         x0[2*i][2*j+1] = 1
     return x0
 
-
 def aztecgen(x0):
     n = len(x0)
     if random.random() < x0[0][0][0]:
@@ -170,41 +164,6 @@ def aztecgen(x0):
         a1 = delslide(a1)
         a1 = create(a1, x0[i+1])
     return a1
-
-def pretty2(m, filename):
-    f = open(filename, "w")
-    for i in range(len(m)):
-        for j in range(len(m)):
-            f.write(""+str(m[i][j])+"     ")
-        f.write("\n")
-
-def aztec_printer(x0, n):
-    size = len(x0)
-
-    # Create Mathematica output - print to stdout
-    print("Graphics[{")
-
-    for i in range(size):
-        for j in range(size):
-            if x0[i][j] == 1:
-                if i % 2 == 1 and j % 2 == 1:  # Green horizontal
-                    color = "Green"
-                    rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
-                elif i % 2 == 1 and j % 2 == 0:  # Blue vertical
-                    color = "Blue"
-                    rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
-                elif i % 2 == 0 and j % 2 == 0:  # Red horizontal
-                    color = "Red"
-                    rect = f"Rectangle[{{{j - i - 2}, {size + 1 - (i + j) - 1}}}, {{{j - i - 2 + 4}, {size + 1 - (i + j) - 1 + 2}}}]"
-                elif i % 2 == 0 and j % 2 == 1:  # Yellow vertical
-                    color = "Yellow"
-                    rect = f"Rectangle[{{{j - i - 1}, {size + 1 - (i + j) - 2}}}, {{{j - i - 1 + 2}, {size + 1 - (i + j) - 2 + 4}}}]"
-
-                print(f"{{EdgeForm[None], {color}, {rect}}},")
-
-    # Close the Graphics list
-    print("},ImageSize->800]")
-
 
 def aztec_edge_printer(x0, n):
     import matplotlib.pyplot as plt
@@ -279,9 +238,7 @@ def aztec_edge_printer(x0, n):
     plt.tight_layout()
     plt.show()
 
-
-n = 40
-n = 40
+n = 20
 A1a = []
 for i in range(2*n):
     row = []
