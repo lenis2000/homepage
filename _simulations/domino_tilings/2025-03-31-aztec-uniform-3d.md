@@ -57,6 +57,8 @@ Module.onRuntimeInitialized = async function() {
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(w,h);
     renderer.setPixelRatio(window.devicePixelRatio);
+    // Enable OES_element_index_uint extension for WebGL 1 to support 32-bit indices
+    renderer.getContext().getExtension('OES_element_index_uint');
     container.innerHTML = ''; container.appendChild(renderer.domElement);
 
     const frustum = 100, aspect = w/h;
@@ -160,11 +162,16 @@ Module.onRuntimeInitialized = async function() {
             );
             // indices: same as before
             const isH = (f.color==='blue'||f.color==='green');
-            geom.setIndex(
-              isH
-                ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-                : [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-            );
+            const indices = isH
+              ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
+              : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
+              
+            // Use 32-bit indices if needed (either based on flag from backend or total count)
+            if (data.use32BitIndices || total > 65535 / 6) { // 6 vertices per domino
+              geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+            } else {
+              geom.setIndex(indices);
+            }
             geom.computeVertexNormals();
             const mat = new THREE.MeshStandardMaterial({
               color: colors[f.color]||0x808080,

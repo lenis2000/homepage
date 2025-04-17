@@ -507,7 +507,8 @@ char* simulateAztec(int n) {
         oss << "{\"faces\":[";  // Start with an object containing faces array
 
         // Limit the number of faces to prevent memory issues
-        const size_t maxFacesToOutput = 10000;
+        // Allow more faces for large values of n (since we now support 32-bit indices)
+        const size_t maxFacesToOutput = (n > 60) ? 40000 : 10000;
         const size_t facesToOutput = std::min(faces.size(), maxFacesToOutput);
 
         for (size_t i = 0; i < facesToOutput; i++) {
@@ -537,8 +538,9 @@ char* simulateAztec(int n) {
             oss << ",{\"color\":\"gray\",\"vertices\":[[0,0,0],[1,0,0],[1,1,0],[0,1,0]],\"message\":\"Output limited to "
                 << maxFacesToOutput << " faces out of " << faces.size() << " total\"}";
         }
-
-        oss << "],\"heightFunction\":{";
+        
+        // Add a flag to indicate if we need 32-bit indices
+        oss << "],\"use32BitIndices\":" << (faces.size() > 10922 ? "true" : "false") << ",\"heightFunction\":{";
 
         // Add height function data
         bool firstVertex = true;
