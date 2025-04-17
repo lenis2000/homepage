@@ -121,8 +121,13 @@ Module.onRuntimeInitialized = async function() {
       const ptr = await simulateAztec(n);
       let raw = Module.UTF8ToString(ptr);
       freeString(ptr);
-      const faces = JSON.parse(raw);
-      if(faces.error) throw new Error(faces.error);
+      const data = JSON.parse(raw);
+      if(data.error) throw new Error(data.error);
+      
+      // Log the height function to the console for debugging
+      console.log('Height Function:', data.heightFunction);
+      
+      const faces = data.faces || [];
 
       const scale = 60/(2*n);
       const colors = {

@@ -502,9 +502,9 @@ char* simulateAztec(int n) {
             throw std::runtime_error("Error generating 3D faces");
         }
 
-        // Build JSON output with 3D vertices
+        // Build JSON output with 3D vertices and height function
         ostringstream oss;
-        oss << "[";
+        oss << "{\"faces\":[";  // Start with an object containing faces array
 
         // Limit the number of faces to prevent memory issues
         const size_t maxFacesToOutput = 10000;
@@ -538,7 +538,22 @@ char* simulateAztec(int n) {
                 << maxFacesToOutput << " faces out of " << faces.size() << " total\"}";
         }
 
-        oss << "]";
+        oss << "],\"heightFunction\":{";
+
+        // Add height function data
+        bool firstVertex = true;
+        for (const auto& entry : heightMap) {
+            if (!firstVertex) {
+                oss << ",";
+            }
+            firstVertex = false;
+
+            // Format is "x,y": height
+            oss << "\"" << entry.first.first << "," << entry.first.second << "\":"
+                << entry.second;
+        }
+
+        oss << "}}";
         progressCounter = 100; // Finished.
         emscripten_sleep(0); // Yield to update UI
 
@@ -560,9 +575,9 @@ char* simulateAztec(int n) {
                 strcpy(out, errorMsg);
             } else {
                 // If we can't even allocate the error message, return a minimal response
-                out = (char*)malloc(3);
+                out = (char*)malloc(13); // size for {"faces":[]}
                 if (out) {
-                    strcpy(out, "[]");
+                    strcpy(out, "{\"faces\":[]}");
                 }
             }
         }
@@ -576,9 +591,9 @@ char* simulateAztec(int n) {
             strcpy(out, errorMsg.c_str());
         } else {
             // Fallback if memory allocation fails
-            out = (char*)malloc(3);
+            out = (char*)malloc(13); // size for {"faces":[]}
             if (out) {
-                strcpy(out, "[]");
+                strcpy(out, "{\"faces\":[]}");
             }
         }
         progressCounter = 100; // Mark as complete to stop progress indicator
