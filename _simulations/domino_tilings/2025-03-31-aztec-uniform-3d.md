@@ -126,9 +126,7 @@ Module.onRuntimeInitialized = async function() {
       const data = JSON.parse(raw);
       if(data.error) throw new Error(data.error);
       
-      // Log the height function to the console for debugging
-      console.log('Height Function:', data.heightFunction);
-      
+      // Heights are now integrated directly into the vertex data
       const faces = data.faces || [];
 
       const scale = 60/(2*n);

@@ -540,22 +540,7 @@ char* simulateAztec(int n) {
         }
         
         // Add a flag to indicate if we need 32-bit indices
-        oss << "],\"use32BitIndices\":" << (faces.size() > 10922 ? "true" : "false") << ",\"heightFunction\":{";
-
-        // Add height function data
-        bool firstVertex = true;
-        for (const auto& entry : heightMap) {
-            if (!firstVertex) {
-                oss << ",";
-            }
-            firstVertex = false;
-
-            // Format is "x,y": height
-            oss << "\"" << entry.first.first << "," << entry.first.second << "\":"
-                << entry.second;
-        }
-
-        oss << "}}";
+        oss << "],\"use32BitIndices\":" << (faces.size() > 10922 ? "true" : "false") << "}";
         progressCounter = 100; // Finished.
         emscripten_sleep(0); // Yield to update UI
 
