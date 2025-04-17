@@ -28,7 +28,7 @@ published: true
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="/js/2025-03-31-aztec-uniform-3d.js"></script>
 
-This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, via its three-dimentional height function. The simulation is inspired by Alexei and Matvey Borodins' <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>.
+This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, via its three-dimensional height function. The simulation uses the JavaScript to calculate the correct height function using the same algorithm as in the 2D simulation (with negation applied at the end), while the C++ code is used only to sample the domino configuration.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
@@ -46,7 +46,7 @@ Module.onRuntimeInitialized = async function() {
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
 
-  // Three.js setup (scene, camera, renderer, controls) unchanged...
+  // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
 
   function initThreeJS() {
@@ -67,7 +67,7 @@ Module.onRuntimeInitialized = async function() {
        frustum/2, -frustum/2,
       1,1000
     );
-    camera.position.set(0,100,0);
+    camera.position.set(30,100,30);
     camera.lookAt(0,0,0);
 
     scene.add(new THREE.AmbientLight(0xffffff,0.5));
@@ -85,6 +85,7 @@ Module.onRuntimeInitialized = async function() {
 
     animate();
   }
+  
   function onWindowResize(){
     const container = document.getElementById('aztec-canvas');
     const w = container.clientWidth, h = container.clientHeight;
@@ -94,6 +95,7 @@ Module.onRuntimeInitialized = async function() {
     camera.updateProjectionMatrix();
     renderer.setSize(w,h);
   }
+  
   function animate(){
     requestAnimationFrame(animate);
     controls.update();
@@ -101,6 +103,169 @@ Module.onRuntimeInitialized = async function() {
   }
 
   initThreeJS();
+  
+  // Calculate height function based on domino configuration
+  // This implementation follows the algorithm from 2025-02-02-aztec-uniform.md
+  function calculateHeightFunction(dominoes) {
+    if (!dominoes || dominoes.length === 0) return new Map();
+    
+    // 1. Determine lattice unit (scaling factor)
+    const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
+    const unit = minSidePx / 2; // 2 lattice units → 1 short side
+    if (unit <= 0) return new Map();
+    
+    // 2. Convert each domino to (orient, sign, gx, gy)
+    const dominoData = dominoes.map(d => {
+      const horiz = d.w > d.h;
+      const orient = horiz ? 0 : 1;
+      const sign = horiz
+        ? (d.color === "green" ? -1 : 1)   // horizontal: green = −1, blue = +1
+        : (d.color === "yellow" ? -1 : 1);  // vertical: yellow = −1, red = +1
+      const gx = Math.round(d.x / unit);   // lattice coordinates
+      const gy = Math.round(d.y / unit);
+      return [orient, sign, gx, gy];
+    });
+    
+    // 3. Build graph with height increments
+    const adj = new Map();
+    
+    function addEdge(v1, v2, dh) {
+      const v1Key = `${v1[0]},${v1[1]}`;
+      const v2Key = `${v2[0]},${v2[1]}`;
+      
+      if (!adj.has(v1Key)) adj.set(v1Key, []);
+      if (!adj.has(v2Key)) adj.set(v2Key, []);
+      
+      adj.get(v1Key).push([v2Key, dh]);
+      adj.get(v2Key).push([v1Key, -dh]);
+    }
+    
+    dominoData.forEach(([o, s, x, y]) => {
+      if (o === 0) { // horizontal (4×2)
+        const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
+        const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
+        
+        addEdge(TL, TM, -s); addEdge(TM, TR, s);
+        addEdge(BL, BM, s); addEdge(BM, BR, -s);
+        addEdge(TL, BL, s); addEdge(TM, BM, 3*s);
+        addEdge(TR, BR, s);
+      } else { // vertical (2×4)
+        const TL = [x, y+4], TR = [x+2, y+4];
+        const ML = [x, y+2], MR = [x+2, y+2];
+        const BL = [x, y], BR = [x+2, y];
+        
+        addEdge(TL, TR, -s); addEdge(ML, MR, -3*s); addEdge(BL, BR, -s);
+        addEdge(TL, ML, s); addEdge(ML, BL, -s);
+        addEdge(TR, MR, -s); addEdge(MR, BR, s);
+      }
+    });
+    
+    // 4. Breadth-first integration of heights
+    const verts = Array.from(adj.keys()).map(k => {
+      const [gx, gy] = k.split(',').map(Number);
+      return {k, gx, gy};
+    });
+    
+    // Find the "bottom-left" vertex as the root
+    const root = verts.reduce((a, b) => 
+      (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
+    ).k;
+    
+    const heights = new Map([[root, 0]]);
+    const queue = [root];
+    
+    while (queue.length > 0) {
+      const v = queue.shift();
+      for (const [w, dh] of adj.get(v)) {
+        if (!heights.has(w)) {
+          heights.set(w, heights.get(v) + dh);
+          queue.push(w);
+        }
+      }
+    }
+    
+    // Create a map of vertex coordinates to height values
+    const finalHeights = new Map();
+    heights.forEach((h, key) => {
+      const [x, y] = key.split(',').map(Number);
+      // Important: negate the height as per the requirements
+      finalHeights.set(`${x},${y}`, -h);
+    });
+    
+    return finalHeights;
+  }
+  
+  // Create a 3D face for a domino with its height function
+  function createDominoFaces(domino, heightMap, scale) {
+    const oddI = domino.color === "blue" || domino.color === "yellow";
+    const oddJ = domino.color === "blue" || domino.color === "red";
+    
+    const isHorizontal = domino.w > domino.h;
+    const color = domino.color;
+    
+    // Determine coordinates for each vertex
+    let pts;
+    if (isHorizontal) {
+      // horizontal domino (blue or green)
+      const w = 4, h = 2;
+      const x = domino.x;
+      const y = domino.y;
+      
+      pts = [
+        [x, y+h],    // top-left
+        [x+w, y+h],  // top-right
+        [x+w, y],    // bottom-right
+        [x, y],      // bottom-left
+        [x+w/2, y+h],// top-mid
+        [x+w/2, y]   // bottom-mid
+      ];
+    } else {
+      // vertical domino (yellow or red)
+      const w = 2, h = 4;
+      const x = domino.x;
+      const y = domino.y;
+      
+      pts = [
+        [x, y],      // bottom-left
+        [x, y+h],    // top-left
+        [x+w, y+h],  // top-right
+        [x+w, y],    // bottom-right
+        [x, y+h/2],  // left-mid
+        [x+w, y+h/2] // right-mid
+      ];
+    }
+    
+    // Map points to 3D coordinates with heights
+    const vertices = [];
+    const unit = isHorizontal ? domino.w / 4 : domino.h / 4;
+    
+    for (const [x, y] of pts) {
+      const gridX = Math.round(x / unit);
+      const gridY = Math.round(y / unit);
+      const key = `${gridX},${gridY}`;
+      
+      // Get height for this vertex (default to 0 if not found)
+      let z = 0;
+      if (heightMap.has(key)) {
+        z = heightMap.get(key);
+      }
+      
+      // Apply scale and shifts
+      const adjustedXShift = -0.5 + (isHorizontal ? 0 : 0.5);
+      const adjustedYShift = 1.5 + (isHorizontal ? 0 : -1.5);
+      
+      vertices.push([
+        x / 2.0 + adjustedXShift,
+        z,  // z is the height
+        y / 2.0 + adjustedYShift
+      ]);
+    }
+    
+    return {
+      color: color,
+      vertices: vertices
+    };
+  }
 
   async function updateVisualization(n) {
     // clear previous
@@ -120,79 +285,96 @@ Module.onRuntimeInitialized = async function() {
     },100);
 
     try {
+      // Get the domino configuration from the C++ code
       const ptr = await simulateAztec(n);
       let raw = Module.UTF8ToString(ptr);
       freeString(ptr);
-      const data = JSON.parse(raw);
-      if(data.error) throw new Error(data.error);
-
-      // Heights are now integrated directly into the vertex data
-      const faces = data.faces || [];
-
+      
+      const dominoes = JSON.parse(raw);
+      if (dominoes.error) throw new Error(dominoes.error);
+      
+      document.getElementById("progress-indicator").innerText = "Calculating height function...";
+      
+      // Calculate the height function
+      const heightMap = calculateHeightFunction(dominoes);
+      
+      // Scale factor based on n
       const scale = 60/(2*n);
+      
+      // Colors for the materials
       const colors = {
         blue:   0x4363d8,
         green:  0x3cb44b,
         red:    0xe6194b,
         yellow: 0xffe119
       };
-
-      // build all meshes
-      let idx = 0, total = faces.length;
-      function batch(start){
+      
+      // Create the 3D faces with proper heights
+      document.getElementById("progress-indicator").innerText = "Rendering...";
+      
+      const faces = dominoes.map(domino => createDominoFaces(domino, heightMap, scale));
+      const total = faces.length;
+      
+      // Batch processing of faces for better performance
+      let idx = 0;
+      function batch(start) {
         const end = Math.min(start + 500, total);
-        for(let i = start; i < end; i++){
+        for (let i = start; i < end; i++) {
           const f = faces[i];
-          if(!f || !f.color || !Array.isArray(f.vertices)) continue;
+          if (!f || !f.color || !Array.isArray(f.vertices)) continue;
+          
           try {
             const geom = new THREE.BufferGeometry();
-            // vertices: 6 entries [x,y,z]
+            // Vertices positions
             const pos = [];
-            for(const v of f.vertices){
-              // For red and yellow dominoes, make vertical coordinate negative
-              const isRedOrYellow = (f.color === 'red' || f.color === 'yellow');
-              const heightFactor = isRedOrYellow ? -1 : 1;
-              pos.push(v[0]*scale, v[2]*scale*heightFactor, v[1]*scale);
+            for (const v of f.vertices) {
+              pos.push(v[0]*scale, v[1]*scale, v[2]*scale);
             }
+            
             geom.setAttribute(
               'position',
               new THREE.Float32BufferAttribute(pos, 3)
             );
-            // indices: same as before
-            const isH = (f.color==='blue'||f.color==='green');
+            
+            // Triangulation indices
+            const isH = (f.color === 'blue' || f.color === 'green');
             const indices = isH
               ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
               : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-
-            // Use 32-bit indices if needed (either based on flag from backend or total count)
-            if (data.use32BitIndices || total > 65535 / 6) { // 6 vertices per domino
+            
+            // Use 32-bit indices if needed for larger models
+            if (total > 65535 / 6) { // 6 vertices per domino
               geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
             } else {
               geom.setIndex(indices);
             }
+            
             geom.computeVertexNormals();
+            
             const mat = new THREE.MeshStandardMaterial({
-              color: colors[f.color]||0x808080,
+              color: colors[f.color] || 0x808080,
               side: THREE.DoubleSide,
-              flatShading:true
+              flatShading: true
             });
+            
             dominoGroup.add(new THREE.Mesh(geom, mat));
-          } catch(e){
-            console.warn("face error",i,e);
+          } catch(e) {
+            console.warn("face error", i, e);
           }
         }
+        
         idx = end;
-        if(idx < total){
+        if (idx < total) {
           document.getElementById("progress-indicator").innerText =
             `Rendering... (${Math.floor(100*(idx/total))}%)`;
-          requestAnimationFrame(()=>batch(idx));
+          requestAnimationFrame(() => batch(idx));
         } else {
           document.getElementById("progress-indicator").innerText = "";
           clearInterval(poll);
         }
       }
+      
       batch(0);
-
     } catch(err) {
       console.error(err);
       document.getElementById("progress-indicator").innerText =
@@ -201,14 +383,14 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  document.getElementById("update-btn").addEventListener("click",()=>{
-    let n = parseInt(document.getElementById("n-input").value,10);
-    if(isNaN(n)||n<2||n%2||n>120){
+  document.getElementById("update-btn").addEventListener("click", () => {
+    let n = parseInt(document.getElementById("n-input").value, 10);
+    if (isNaN(n) || n < 2 || n % 2 || n > 120) {
       return alert("Enter even n between 2 and 120");
     }
     updateVisualization(n);
   });
 
-  updateVisualization(parseInt(document.getElementById("n-input").value,10));
+  updateVisualization(parseInt(document.getElementById("n-input").value, 10));
 };
 </script>

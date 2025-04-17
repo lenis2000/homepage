@@ -925,7 +925,7 @@ Module.onRuntimeInitialized = async function() {
     pathsGroup = null;
     dimersGroup = null;
     heightGroup = null;
-    
+
     // Show or hide height function checkbox based on n value
     const heightToggleDiv = document.querySelector('label[for="height-toggle"]').parentNode;
     if (n > 30) {
