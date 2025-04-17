@@ -187,16 +187,16 @@ def aztec_printer(x0, n):
                 colour, w, h = "green", 4, 2
                 x = j - i - 2
                 y = size + 1 - (i + j) - 1
-            elif (i & 1) and not (j & 1):      # blue vertical
-                colour, w, h = "blue", 2, 4
+            elif (i & 1) and not (j & 1):      # yellow vertical
+                colour, w, h = "yellow", 2, 4
                 x = j - i - 1
                 y = size + 1 - (i + j) - 2
-            elif not (i & 1) and not (j & 1):  # red horizontal
-                colour, w, h = "red", 4, 2
+            elif not (i & 1) and not (j & 1):  # blue horizontal
+                colour, w, h = "blue", 4, 2
                 x = j - i - 2
                 y = size + 1 - (i + j) - 1
-            else:                              # yellow vertical
-                colour, w, h = "yellow", 2, 4
+            else:                              # red vertical
+                colour, w, h = "red", 2, 4
                 x = j - i - 1
                 y = size + 1 - (i + j) - 2
 
@@ -215,7 +215,7 @@ def aztec_printer(x0, n):
     # Label every vertex with a stub 0
     for vx, vy in vertices:
         ax.text(vx, vy, "0", ha="center", va="center",
-                fontsize=26, color="black", zorder=5)
+                fontsize=6, color="black", zorder=5)
 
     # Aesthetics --------------------------------------------------------------
     ax.set_xlim(-size, size)
@@ -226,6 +226,7 @@ def aztec_printer(x0, n):
     plt.title(f"Aztec Diamond (n={n}) – vertex height stub (0 everywhere)")
     plt.tight_layout()
     plt.show()
+
 
 
 def aztec_edge_printer(x0, n):
