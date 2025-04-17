@@ -72,8 +72,10 @@ Updated at \currenttime, \today}}
 
 
 
+\section{Introduction}
 
 
+TO BE FIXED!!!
 
 
 In this lecture we explore the deep connections between random matrix integrals and the topology of surfaces. Random \textbf{unitary} matrices provide a powerful tool for enumerating \textbf{ribbon graphs} (also called \textbf{maps}) on orientable surfaces. We will see how integrals over the Haar measure on $U(N)$ translate into combinatorial counts of graph embeddings, culminating in the \textbf{Harer–Zagier formula} for one-face maps. We then discuss the large-$N$ (genus) expansion of these matrix integrals and outline a recursive proof of the Harer–Zagier result using chord diagrams. Finally, we connect these ideas to modern developments such as 2D quantum gravity, topological recursion, and broader map enumeration.
@@ -84,16 +86,75 @@ A \textbf{ribbon graph} (or \textbf{map}) is a graph with a cyclic ordering of h
 \[ \chi = V - E + F = 2 - 2g, \]
 where $V$ is the number of vertices, $E$ the number of edges, and $F$ the number of faces in the embedded graph. (Intuitively, $g$ counts how many ``handles'' the surface has.)
 
-A fundamental problem in combinatorial topology is to \textbf{count ribbon graphs} of a given genus. In particular, a \emph{one-face map} (or \textbf{unicellular map}) is a connected ribbon graph with exactly $F=1$ face. Equivalently, one-face maps are graphs whose embedding has a single boundary component. These objects are important because any map can be decomposed into one-face pieces by cutting along spanning trees. One-face maps also appear as the building blocks in the study of moduli of Riemann surfaces (via cell decompositions). We denote by $\epsilon_g(n)$ the number of (connected) one-face maps with $n$ edges on a surface of genus $g$. For example, $\epsilon_0(n)$ counts one-face maps on the sphere ($g=0$), $\epsilon_1(n)$ on the torus, etc.
+A fundamental problem in combinatorial topology is to \textbf{count ribbon graphs} of a given genus. In particular, a \emph{one-face map} (or \textbf{unicellular map}) is a connected ribbon graph with exactly $F=1$ face. Equivalently, one-face maps are graphs whose embedding has a single boundary component. These objects are important because any map can be decomposed into one-face pieces by cutting along spanning trees. This decomposition works as follows: given any embedded graph, select a spanning tree (a connected subgraph containing all vertices but no cycles). When we cut the surface along this thickened spanning tree, we obtain a polygon with paired edges—in other words, a one-face map. The spanning tree edges become the boundary of this polygon, while the remaining edges of the original graph become internal chords connecting points on the boundary. This establishes a fundamental bijection between general maps and one-face maps with specific edge-pairing patterns.
 
-Why do random matrices enter the picture?  It turns out that the $1/N$ expansion of \textbf{matrix integrals} naturally enumerates ribbon graphs. In diagrammatic expansions of matrix models ('t Hooft's double-line diagrams), each term corresponds to a graph drawn on a surface. Specifically, \textbf{Haar-random unitary matrices} provide an elegant way to count one-face maps. Observables like $\Tr(U^n)$ (the trace of $U^n$) can be expanded as sums over closed walks of length $n$ on a graph, and their expectations involve summing over pairings of indices that correspond to gluing edges on an $n$-gon. In this lecture we will see that
-\[ \mathbb{E}_{U\sim U(N)}\!\Big[\Tr(U^n)\,\overline{\Tr(U^n)}\Big] \]
+One-face maps also appear as the building blocks in the study of moduli of Riemann surfaces (via cell decompositions). We denote by $\epsilon_g(n)$ the number of (connected) one-face maps with $n$ edges on a surface of genus $g$. For example, $\epsilon_0(n)$ counts one-face maps on the sphere ($g=0$), $\epsilon_1(n)$ on the torus, etc.
+
+Why do random matrices enter the picture?  It turns out that the $1/N$ expansion of \textbf{matrix integrals} naturally enumerates ribbon graphs. In diagrammatic expansions of matrix models ('t~Hooft's double-line diagrams), each term corresponds to a graph drawn on a surface. Specifically, \textbf{Haar-random unitary matrices} provide an elegant way to count one-face maps. Observables like $\operatorname{Tr}(U^n)$ (the trace of $U^n$) can be expanded as sums over closed walks of length $n$ on a graph, and their expectations involve summing over pairings of indices that correspond to gluing edges on an $n$-gon. In this lecture we will see that
+\[ \mathbb{E}_{U\sim U(N)}\!\Big[\operatorname{Tr}(U^n)\,\overline{\operatorname{Tr}(U^n)}\Big] \]
 is intimately connected to the enumeration of one-face maps with $n$ edges. This connection leads to explicit formulae for $\epsilon_g(n)$, illustrating a beautiful interplay between random matrix theory and topology.
 
 \begin{figure}[h]
 \centering
-% (A TikZ illustration of a ribbon graph embedding can be placed here.)
-\caption{A polygon whose edges are pairwise identified (indicated by matching arrows) to form a one-face map. In this example, an octagon's edges are glued to produce a graph embedded on a surface (left). In the planar case ($g=0$), one-face maps are exactly plane trees (right), but for higher genus the gluing introduces handles. Each distinct pairing of edges of a $2n$-gon corresponds to a unique one-face ribbon graph with $n$ edges on some orientable surface.}
+\begin{tikzpicture}[scale=0.9]
+
+% ------------------------------------------------------------------
+%  Left panel – Regular octagon whose edges are pair‑wise identified
+% ------------------------------------------------------------------
+\begin{scope}[xshift=-3.8cm]
+
+  % Interior "surface" just for visual hint
+  \fill[gray!15] (0,0) circle (2.5cm);
+
+  % Vertices of the octagon
+  \foreach \ang/\idx in {0/1,45/2,90/3,135/4,180/5,225/6,270/7,315/8}{
+      \coordinate (v\idx) at (\ang:2cm);
+      \fill (v\idx) circle (2pt);
+      \node[font=\small] at (\ang:2.35cm) {\idx};
+  }
+
+  % Coloured, oriented edges (matching colours = glued pair)
+  \foreach \a/\b/\clr in {1/2/red,2/3/blue,3/4/green,4/5/orange,
+                          5/6/red,6/7/blue,7/8/green,8/1/orange}{
+      \draw[thick,\clr] (v\a) -- (v\b);
+  }
+
+  % Sub‑caption
+  \node at (0,-2.7) {Glued octagon};
+
+\end{scope}
+
+% ----------------------------------------------
+%  Right panel – A representative plane tree
+% ----------------------------------------------
+\begin{scope}[xshift=3.8cm]
+
+  % Edges of the tree
+  \draw[thick] (0,0) -- (0,1);
+  \draw[thick] (0,1) -- (-1,2);
+  \draw[thick] (0,1) -- (1,2);
+  \draw[thick] (0,0) -- (-1.5,-1);
+  \draw[thick] (0,0) -- (0,-1);
+  \draw[thick] (0,0) -- (1.5,-1);
+
+  % Vertices
+  \foreach \p in {(0,0),(0,1),(-1,2),(1,2),(-1.5,-1),(0,-1),(1.5,-1)}{
+      \fill \p circle (2pt);
+  }
+
+  % Dashed outline of the single face
+  \draw[gray,dashed]
+        (-1.8,-1.3) -- (-1.7,-0.2) -- (-1.3,1) -- (-1.2,2.3) --
+        (0,2.5) -- (1.2,2.3) -- (1.7,1) -- (1.8,-0.2) -- (1.7,-1.3) --
+        (0,-1.5) -- cycle;
+
+  % Sub‑caption
+  \node at (0,-2.7) {Plane tree ($g=0$)};
+
+\end{scope}
+\end{tikzpicture}
+
+\caption{A polygon whose edges are pairwise identified (indicated by matching colours) to form a one–face ribbon graph.  For genus~$0$ the result is a plane tree; for higher genus the same edge–pairing introduces handles on the underlying surface.}
 \end{figure}
 
 \subsection*{Haar Measure on $U(N)$ and Weingarten's Formula}
@@ -129,10 +190,10 @@ The takeaway is that \textbf{integrals over Haar-random unitaries reduce to sums
 \subsection*{Harer–Zagier Formula for One-Face Maps}
 
 We now focus on a particular observable that generates one-face maps: the product of a trace and its conjugate. Consider
-\[ X_n \;:=\; \Tr(U^n)\,\overline{\Tr(U^n)} \;=\; \Tr(U^n)\,\Tr((U^*)^n)\,. \]
+\[ X_n \;:=\; \operatorname{Tr}(U^n)\,\overline{\operatorname{Tr}(U^n)} \;=\; \operatorname{Tr}(U^n)\,\operatorname{Tr}((U^*)^n)\,. \]
 Expanding this out in indices:
-\[ \Tr(U^n) = \sum_{a_1,\dots,a_n=1}^N U_{a_1 a_2} U_{a_2 a_3}\cdots U_{a_n a_1}, \]
-\[ \Tr((U^*)^n) = \sum_{b_1,\dots,b_n=1}^N \overline{U_{b_1 b_2} U_{b_2 b_3}\cdots U_{b_n b_1}} = \sum_{b_1,\dots,b_n} \overline{U_{b_1 b_2}}\,\overline{U_{b_2 b_3}}\cdots \overline{U_{b_n b_1}}. \]
+\[ \operatorname{Tr}(U^n) = \sum_{a_1,\dots,a_n=1}^N U_{a_1 a_2} U_{a_2 a_3}\cdots U_{a_n a_1}, \]
+\[ \operatorname{Tr}((U^*)^n) = \sum_{b_1,\dots,b_n=1}^N \overline{U_{b_1 b_2} U_{b_2 b_3}\cdots U_{b_n b_1}} = \sum_{b_1,\dots,b_n} \overline{U_{b_1 b_2}}\,\overline{U_{b_2 b_3}}\cdots \overline{U_{b_n b_1}}. \]
 Thus $X_n = \sum_{a_\bullet,b_\bullet} U_{a_1 a_2}\cdots U_{a_n a_1}\,\overline{U_{b_1 b_2}\cdots U_{b_n b_1}}$. This is precisely of the form covered by the Weingarten formula \eqref{eq:Weingarten}, with $m=n$ and the $U$ indices $(i_1,\dots,i_n)$ identified as $(a_1,a_2,\dots,a_n)$ and $(j_1,\dots,j_n)=(a_2,a_3,\dots,a_1)$, and similarly $(k_1,\dots,k_n)=(b_1,b_2,\dots,b_n)$ and $(l_1,\dots,l_n)=(b_2,b_3,\dots,b_1)$. The delta constraints in \eqref{eq:Weingarten} enforce that after integration, $a_\bullet$ and $b_\bullet$ indices must match in a way that corresponds to a permutation pairing of the $n$-gon formed by the $U$ factors with the $n$-gon formed by the $\bar U$ factors. In other words, each term in $\mathbb{E}[X_n] = \int X_n\,dU$ can be visualized as gluing the edges of a $2n$-gon (with $n$ oriented edges from the $U^n$ trace and $n$ from the $(U^*)^n$ trace) according to some identification pattern. The result of a given gluing is a connected ribbon graph with one face (since the $2n$-gon's boundary becomes a single closed curve once all pairs of edges are glued). See the figure below for an illustration.
 
 By this reasoning, we expect
@@ -168,7 +229,7 @@ i.e. the total number of one-face maps with $n$ edges (summing over all possible
 In the planar case $g=0$, the Harer–Zagier formula reduces to $\epsilon_0(n) = \frac{1}{n+1}\binom{2n}{n}$. This is the $n$th \textbf{Catalan number}. Planar one-face maps are in bijection with plane trees (think of the unique face as the outside region of a tree drawn on the sphere), and indeed the number of (rooted) plane trees with $n$ edges is the Catalan number $C_n$. For example, $\epsilon_0(2)=2$ corresponds to the two distinct plane trees with 2 edges. The fact that $\epsilon_0(n)$ is Catalan while $\sum_g \epsilon_g(n)=(2n-1)!!$ (which is much larger for $n>2$) reflects that most pairings of $2n$ edges produce surfaces of higher genus (many ``crossings''), whereas only a subset of ``non-crossing'' pairings produce a planar embedding. The numbers for $g>0$ do not have such a simple closed form name, but they grow rapidly with $n$ and $g$.
 \end{remark}
 
-Thus, $\mathbb{E}[\Tr(U^n)\overline{\Tr(U^n)}]$ is completely determined: it equals the polynomial in $N$ given by $\sum_{g=0}^{\lfloor n/2\rfloor}\epsilon_g(n) N^{\,1-2g}$. The leading term (as $N\to\infty$) is $\epsilon_0(n)N$, and the subleading corrections at order $N^{-1}, N^{-3},\dots$ carry the higher-genus information.
+Thus, $\mathbb{E}[\operatorname{Tr}(U^n)\overline{\operatorname{Tr}(U^n)}]$ is completely determined: it equals the polynomial in $N$ given by $\sum_{g=0}^{\lfloor n/2\rfloor}\epsilon_g(n) N^{\,1-2g}$. The leading term (as $N\to\infty$) is $\epsilon_0(n)N$, and the subleading corrections at order $N^{-1}, N^{-3},\dots$ carry the higher-genus information.
 
 \subsection*{Genus Expansions and the $1/N$ Topological Expansion}
 
@@ -176,7 +237,7 @@ One of the most important insights from random matrix theory is that integrals l
 \[ \mathbb{E}_{U(N)}[X_n] \;=\; \epsilon_0(n)\,N \;+\; \epsilon_1(n)\,\frac{1}{N} \;+\; \epsilon_2(n)\,\frac{1}{N^3} \;+\; \cdots, \]
 with only powers $N^{1-2g}$ appearing. This is a special case of a general phenomenon. For many random matrix ensembles, the expectation of a normalized trace (or product of traces) can be expanded in a power series in $1/N^2$, where the coefficient of $1/N^{2g}$ is enumerating graphs of genus $g$. This is often called the \textbf{$1/N$ expansion} or \textbf{'t Hooft expansion}.
 
-In the present context, if we define $W_n(N) := \frac{1}{N}\mathbb{E}[\Tr(U^n)\overline{\Tr(U^n)}]$, then $W_n(N) = \epsilon_0(n) + \epsilon_1(n)N^{-2} + \epsilon_2(n)N^{-4} + \cdots$. In the limit $N\to\infty$, $W_n(N)$ approaches $\epsilon_0(n)$, recovering the fact that planar diagrams dominate at large $N$. The corrections of order $1/N^2$ correspond to adding handles to the surface, which are suppressed for large but finite $N$.
+In the present context, if we define $W_n(N) := \frac{1}{N}\mathbb{E}[\operatorname{Tr}(U^n)\overline{\operatorname{Tr}(U^n)}]$, then $W_n(N) = \epsilon_0(n) + \epsilon_1(n)N^{-2} + \epsilon_2(n)N^{-4} + \cdots$. In the limit $N\to\infty$, $W_n(N)$ approaches $\epsilon_0(n)$, recovering the fact that planar diagrams dominate at large $N$. The corrections of order $1/N^2$ correspond to adding handles to the surface, which are suppressed for large but finite $N$.
 
 This topological $1/N^2$ expansion was first exploited by 't Hooft in the context of gauge theory (1974) and was later widely used in matrix models for gravity. In our case, we see it explicitly in the formula for $\mathbb{E}[X_n]$. Each power of $1/N^2$ is tied to the Euler characteristic of the ribbon graph (since for a one-face map, $\chi = 2-2g$, and the contribution goes like $N^{\chi} = N^{2-2g}$ up to the $N^1$ normalization needed for one face). If we had a random matrix integral generating maps with $F$ faces, the leading power would be $N^F$ and the expansion would involve $N^{2-2g - F}$.
 
