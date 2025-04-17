@@ -167,65 +167,116 @@ def aztecgen(x0):
 
 def aztec_printer(x0, n):
     """
-    Draw the domino tiling *and* label every lattice vertex with a stub
-    height‑function value (currently 0).  All vertices, including the
-    “mid‑edge” ones on border dominoes, are now covered.
+    Draw the domino tiling *and* compute / display the Kenyon height
+    function on every lattice vertex.
+
+    `x0` is the occupancy matrix returned by `aztecgen`.
+    The height is unique up to an additive constant; we set the
+    lexicographically‑smallest vertex to 0.
     """
+    # ------------------------------------------------------------------
+    # 1.  Build the list of dominoes with orientation & “sign” ---------
+    #     sign = +1  →  blue (hor.) or red (vert.)   (“counter‑clockwise”)
+    #           −1  →  green (hor.) or yellow (vert.)
+    # ------------------------------------------------------------------
     size = len(x0)
-
-    fig, ax = plt.subplots(figsize=(10, 10))
-
-    vertices = set()          # ← will hold *every* lattice vertex
-
+    dominoes = []             # (orient, sign, x, y)
+                              # orient 0 = horizontal, 1 = vertical
     for i in range(size):
         for j in range(size):
             if x0[i][j] != 1:
                 continue
+            if (i & 1) == (j & 1):                      # horizontal
+                orient = 0
+                sign   = -1 if (i & 1) else 1           # green←−1, blue←+1
+                x      = j - i - 2                      # bottom‑left corner
+                y      = size + 1 - (i + j) - 1
+            else:                                       # vertical
+                orient = 1
+                sign   = -1 if (i & 1) else 1           # yellow←−1, red←+1
+                x      = j - i - 1
+                y      = size + 1 - (i + j) - 2
+            dominoes.append((orient, sign, x, y))
 
-            # Domino type → colour, width, height, lower‑left corner
-            if (i & 1) and (j & 1):            # green horizontal
-                colour, w, h = "green", 4, 2
-                x = j - i - 2
-                y = size + 1 - (i + j) - 1
-            elif (i & 1) and not (j & 1):      # yellow vertical
-                colour, w, h = "yellow", 2, 4
-                x = j - i - 1
-                y = size + 1 - (i + j) - 2
-            elif not (i & 1) and not (j & 1):  # blue horizontal
-                colour, w, h = "blue", 4, 2
-                x = j - i - 2
-                y = size + 1 - (i + j) - 1
-            else:                              # red vertical
-                colour, w, h = "red", 2, 4
-                x = j - i - 1
-                y = size + 1 - (i + j) - 2
+    # ------------------------------------------------------------------
+    # 2.  Convert domino list → graph of vertices with prescribed
+    #     height differences, then BFS to obtain absolute heights.
+    # ------------------------------------------------------------------
+    from collections import defaultdict, deque
 
-            # Draw the domino
-            ax.add_patch(
-                patches.Rectangle((x, y), w, h, linewidth=0,
-                                  edgecolor=None, facecolor=colour)
-            )
+    adj = defaultdict(list)   # v → [(w, Δh = h_w − h_v), …]
 
-            # Register *all* lattice vertices touched by this domino:
-            # grid spacing is 2, so step through 0,2,…,w (or h)
-            for dx in range(0, w + 1, 2):
-                for dy in range(0, h + 1, 2):
-                    vertices.add((x + dx, y + dy))
+    def add_edge(v1, v2, dh):
+        adj[v1].append((v2, dh))
+        adj[v2].append((v1, -dh))
 
-    # Label every vertex with a stub 0
-    for vx, vy in vertices:
-        ax.text(vx, vy, "0", ha="center", va="center",
-                fontsize=6, color="black", zorder=5)
+    for orient, s, x, y in dominoes:
+        if orient == 0:                               # horizontal (w=4,h=2)
+            TL, TM, TR = (x, y+2), (x+2, y+2), (x+4, y+2)
+            BL, BM, BR = (x, y),   (x+2, y),   (x+4, y)
+            add_edge(TL, TM,  s);   add_edge(TM, TR, -s)
+            add_edge(BL, BM, -s);   add_edge(BM, BR,  s)
+            add_edge(TL, BL, -s);   add_edge(TM, BM, -3*s)
+            add_edge(TR, BR, -s)
+        else:                                         # vertical   (w=2,h=4)
+            TL, TR = (x, y+4), (x+2, y+4)
+            ML, MR = (x, y+2), (x+2, y+2)
+            BL, BR = (x, y),   (x+2, y)
+            add_edge(TL, TR, -s);  add_edge(ML, MR, -3*s); add_edge(BL, BR, -s)
+            add_edge(TL, ML,  s);  add_edge(ML, BL,  -s)
+            add_edge(TR, MR, -s);  add_edge(MR, BR,   s)
 
-    # Aesthetics --------------------------------------------------------------
+    # Breadth‑first integration of heights
+    vertices = list(adj.keys())
+    root = min(vertices, key=lambda v: (v[1], v[0]))   # “bottom‑left” vertex
+    heights = {root: 0}
+    Q = deque([root])
+    while Q:
+        v = Q.popleft()
+        for w, dh in adj[v]:
+            if w not in heights:
+                heights[w] = heights[v] + dh
+                Q.append(w)
+            elif heights[w] != heights[v] + dh:
+                raise ValueError("Inconsistent height assignment detected")
+
+    # ------------------------------------------------------------------
+    # 3.  Plot the dominoes and label every vertex with its height -----
+    # ------------------------------------------------------------------
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    colour_map = {  # keyed by (orient, sign)
+        (0,  1): "blue",     # horizontal, +1
+        (0, -1): "green",    # horizontal, -1
+        (1,  1): "red",      # vertical,   +1
+        (1, -1): "yellow"    # vertical,   -1
+    }
+
+    for orient, s, x, y in dominoes:
+        if orient == 0:           # horizontal
+            w, h = 4, 2
+        else:                     # vertical
+            w, h = 2, 4
+        ax.add_patch(
+            patches.Rectangle((x, y), w, h, linewidth=0,
+                              edgecolor=None, facecolor=colour_map[(orient, s)])
+        )
+
+    for (vx, vy), h in heights.items():
+        ax.text(vx, vy, f"{h}", ha="center", va="center",
+                fontsize=26, color="black", zorder=5)
+
     ax.set_xlim(-size, size)
     ax.set_ylim(-size + 2, size + 2)
     ax.set_aspect("equal")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    plt.title(f"Aztec Diamond (n={n}) – vertex height stub (0 everywhere)")
+    ax.set_xticks([]); ax.set_yticks([])
+    plt.title(f"Aztec Diamond (n={n}) – vertex height function")
     plt.tight_layout()
     plt.show()
+
 
 
 
