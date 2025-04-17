@@ -1,5 +1,5 @@
 ---
-title: '3D Height of Uniform Domino Tilings of the Aztec Diamond'
+title: '3D Visualization of Uniform Domino Tilings of the Aztec Diamond'
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
