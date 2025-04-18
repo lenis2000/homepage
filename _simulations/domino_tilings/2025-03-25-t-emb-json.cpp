@@ -6,17 +6,17 @@
 
   Compile to JavaScript/WASM with Emscripten, for example:
 
-    emcc 2025-03-25-t-emb-json.cpp -o 2025-03-25-t-emb-json.js \
-     -s WASM=1 \
-     -s ASYNCIFY=1 \
-     -s "EXPORTED_FUNCTIONS=['_doTembJSON','_freeString','_getProgress','_resetProgress']" \
-     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
-     -s ALLOW_MEMORY_GROWTH=1 \
-     -s INITIAL_MEMORY=64MB \
-     -s ENVIRONMENT=web \
-     -s SINGLE_FILE=1 \
-     -O3 -ffast-math \
-     && mv 2025-03-25-t-emb-json.js ../../js/
+  emcc 2025-03-25-t-emb-json.cpp -o 2025-03-25-t-emb-json.js \
+   -s WASM=1 \
+   -s ASYNCIFY=1 \
+   -s "EXPORTED_FUNCTIONS=['_doTembJSON','_freeString','_getProgress','_resetProgress','_requestCancel','_isCancelled','_resetCancel']" \
+   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+   -s ALLOW_MEMORY_GROWTH=1 \
+   -s INITIAL_MEMORY=64MB \
+   -s ENVIRONMENT=web \
+   -s SINGLE_FILE=1 \
+   -O3 -ffast-math \
+   && mv 2025-03-25-t-emb-json.js ../../js/
 
 */
 
@@ -31,7 +31,7 @@
 #include <cstdlib>
 #include <cstring>
 
-static const int bign = 200;   // largest n we allow
+static const int bign = 300;   // largest n we allow
 static const double a = 1.0;   // scale factor used below
 
 // Tarray[n][k+bign][j+bign], Oarray[n][k+bign][j+bign]
@@ -40,6 +40,9 @@ static std::vector<std::vector<std::vector<std::complex<double>>>> Oarray;
 
 // Track progress for the UI
 static int currentProgress = 0;
+
+// Cancellation flag
+static bool cancelRequested = false;
 
 // Some small helper “piecewise” factors from the references:
 static inline std::complex<double> alpha(int n) {
@@ -77,10 +80,10 @@ static void buildArraysIfNeeded() {
     if (!Tarray.empty() && !Oarray.empty()) {
         return; // done already
     }
-    
+
     // Reset progress counter
     currentProgress = 0;
-    
+
     Tarray.resize(bign + 1, std::vector<std::vector<std::complex<double>>>(
                                  2*bign + 1,
                                  std::vector<std::complex<double>>(2*bign + 1,{0,0})));
@@ -107,6 +110,11 @@ static void buildArraysIfNeeded() {
     for (int n = 1; n < bign; n++) {
         // Update progress based on current loop (0-100)
         currentProgress = (n * 100) / bign;
+
+        // Check for cancellation
+        if (cancelRequested) {
+            return;
+        }
         //=============================================
         //  T array pass 1
         for (int k = -n; k <= n; k++) {
@@ -297,9 +305,27 @@ void resetProgress() {
     currentProgress = 0;
 }
 
+// Function to request cancellation
+EMSCRIPTEN_KEEPALIVE
+void requestCancel() {
+    cancelRequested = true;
+}
+
+// Function to check if cancellation is requested
+EMSCRIPTEN_KEEPALIVE
+bool isCancelled() {
+    return cancelRequested;
+}
+
+// Function to reset cancellation flag
+EMSCRIPTEN_KEEPALIVE
+void resetCancel() {
+    cancelRequested = false;
+}
+
 /*
   doTembJSON(n):
-    Returns a JSON with keys "T", "O", and "B":
+    Returns a JSON with keys "T", "O", and "B", or null if cancelled:
 
       {
         "T": [
@@ -312,47 +338,61 @@ void resetProgress() {
           ...
         ]
       }
+
+    The function can be cancelled by calling requestCancel(). If cancellation
+    is requested, this function will return null.
 */
 EMSCRIPTEN_KEEPALIVE
 char* doTembJSON(int n) {
-    // Reset progress counter
+    // Reset progress counter and cancel flag
     resetProgress();
-    
+    resetCancel();
+
     // Initial progress update - starting computation
     currentProgress = 5;
-    
+
     // Add small delays for progress visualization
-    for (int i = 0; i < 1000000; i++) { 
+    for (int i = 0; i < 1000000; i++) {
         // Simple loop to create some CPU work for progress visualization
         if (i % 100000 == 0) {
             // Update progress slowly from 5% to 20%
             currentProgress = 5 + (i / 100000);
+
+            // Check for cancellation
+            if (cancelRequested) {
+                return nullptr;
+            }
         }
     }
-    
+
     // Arrays preparation phase
     currentProgress = 20;
-    
+
     buildArraysIfNeeded();
     if (n < 1)  n = 1;
     if (n > bign) n = bign;
-    
+
     // Add more intermediate progress for larger n values
     // or when arrays already exist
-    for (int i = 0; i < std::min(n * 10000, 3000000); i++) { 
+    for (int i = 0; i < std::min(n * 10000, 3000000); i++) {
         // Another computation delay with visible progress
         if (i % 300000 == 0) {
             // Update progress from 20% to 60%
             currentProgress = 20 + (i / 300000) * 5;
+
+            // Check for cancellation
+            if (cancelRequested) {
+                return nullptr;
+            }
         }
     }
-    
+
     // Set progress to 60% after preparation phase
     currentProgress = 60;
 
     std::ostringstream oss;
     oss << "{";
-    
+
     // Progress update - starting JSON generation
     currentProgress = 65;
 
@@ -379,6 +419,11 @@ char* doTembJSON(int n) {
             processedPoints++;
             if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
               currentProgress = 65 + (processedPoints * 10 / totalPoints);
+
+              // Check for cancellation
+              if (cancelRequested) {
+                return nullptr;
+              }
             }
             if (!first) oss << ",";
             first=false;
@@ -409,6 +454,11 @@ char* doTembJSON(int n) {
             processedPoints++;
             if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
               currentProgress = 75 + (processedPoints * 10 / totalPoints);
+
+              // Check for cancellation
+              if (cancelRequested) {
+                return nullptr;
+              }
             }
             if (!first) oss << ",";
             first=false;
@@ -475,14 +525,19 @@ char* doTembJSON(int n) {
       bool first = true;
       int boundaryCount = boundary.size();
       int boundaryProcessed = 0;
-      
+
       for (auto &z : boundary) {
          // Update progress during boundary processing (85-95%)
          boundaryProcessed++;
          if (boundaryProcessed % (boundaryCount/5 + 1) == 0) { // Update ~5 times
            currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
+
+           // Check for cancellation
+           if (cancelRequested) {
+             return nullptr;
+           }
          }
-         
+
          if (!first) oss << ",";
          first=false;
          double re = z.real();
