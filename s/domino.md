@@ -1024,23 +1024,23 @@ Module.onRuntimeInitialized = async function() {
     return "#" + hex + hex + hex;
   }
 
-  // Simple map of colors to grayscale values
-  const colorToGrayscale = {
-    "#ff0000": grayHex(76),  // red
-    "#00ff00": grayHex(150), // green
-    "#0000ff": grayHex(38),  // blue
-    "#ffff00": grayHex(226)  // yellow
-  };
-
-  // Simple function to convert color to grayscale
-  function getGrayscaleColor(originalColor) {
+  // Function to convert color to grayscale based on position
+  function getGrayscaleColor(originalColor, d) {
     let c = d3.color(originalColor);
     if (!c) return originalColor;
     
-    // Try direct mapping for the four main colors
     let normHex = c.formatHex().toLowerCase();
-    if (colorToGrayscale[normHex]) {
-      return colorToGrayscale[normHex];
+    const isHorizontal = d.w > d.h;
+    
+    if (normHex === "#0000ff" || normHex === "#00ff00") { // blue or green (horizontal dominoes)
+      // Use vertical coordinate parity
+      const yCoord = Math.floor(d.y);
+      return yCoord % 2 === 0 ? grayHex(120) : grayHex(180); // lighter/darker gray based on y parity
+    } 
+    else if (normHex === "#ff0000" || normHex === "#ffff00") { // red or yellow (vertical dominoes)
+      // Use horizontal coordinate parity
+      const xCoord = Math.floor(d.x);
+      return xCoord % 2 === 0 ? grayHex(70) : grayHex(130); // lighter/darker gray based on x parity
     }
     
     // For any other color, convert using standard luminance formula
@@ -1100,7 +1100,7 @@ Module.onRuntimeInitialized = async function() {
     const useGrayscale = this.checked;
     // Update colors of existing dominoes
     svg2d.select("g").selectAll("rect")
-      .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color) : d.color);
+      .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
   });
 
   // Function to render dominoes in 2D view
@@ -1155,7 +1155,7 @@ Module.onRuntimeInitialized = async function() {
            .attr("y", d => d.y)
            .attr("width", d => d.w)
            .attr("height", d => d.h)
-           .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color) : d.color)
+           .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
            .attr("stroke", "#000")
            .attr("stroke-width", 0.1);
 
