@@ -252,6 +252,9 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <br>
       <input type="checkbox" id="paths-checkbox-2d">
       <label for="paths-checkbox-2d">Show nonintersecting paths</label>
+      <br>
+      <input type="checkbox" id="dimers-checkbox-2d">
+      <label for="dimers-checkbox-2d">Show dimers</label>
     </div>
     </div>
 
@@ -1344,6 +1347,11 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("paths-checkbox-2d").addEventListener("change", function() {
     updateDominoDisplay();
   });
+  
+  // Dimers toggle handler
+  document.getElementById("dimers-checkbox-2d").addEventListener("change", function() {
+    updateDominoDisplay();
+  });
 
   // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
   function getCheckerboardPattern(d) {
@@ -1368,12 +1376,15 @@ Module.onRuntimeInitialized = async function() {
     const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
     const showCheckerboard = document.getElementById("checkerboard-checkbox-2d").checked;
     const showPaths = document.getElementById("paths-checkbox-2d").checked;
+    const showDimers = document.getElementById("dimers-checkbox-2d").checked;
     const showColors = document.getElementById("show-colors-checkbox").checked;
     const monoColor = "#F8F8F8"; // Extremely light monochrome color
 
-    // First, remove any existing checkerboard pattern and paths
+    // First, remove any existing overlays
     svg2d.select("g").selectAll(".checkerboard-square").remove();
     svg2d.select("g").selectAll(".path-line").remove();
+    svg2d.select("g").selectAll(".dimer-circle").remove();
+    svg2d.select("g").selectAll(".dimer-line").remove();
 
     // Get the current border thickness value
     const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
@@ -1561,6 +1572,128 @@ Module.onRuntimeInitialized = async function() {
           .attr("stroke", "black") // All paths are black now
           .attr("stroke-width", 0.6)
           .attr("pointer-events", "none"); // Allow clicking through to dominoes
+    }
+    
+    // If dimers are enabled, draw them
+    if (showDimers) {
+      // Collect all the dominoes
+      const dominoes = [];
+      svg2d.select("g").selectAll("rect").each(function(d) {
+        dominoes.push(d);
+      });
+      
+      // Create dimer representations
+      const dimerNodes = [];
+      const dimerEdges = [];
+      
+      // Process each domino to create dimer edges and nodes
+      dominoes.forEach(d => {
+        const isHorizontal = d.w > d.h;
+        
+        // For each domino, we'll add two nodes and one edge connecting them
+        // The dimer length should be half the long side of the domino
+        
+        if (isHorizontal) {
+          // Horizontal domino (blue or green)
+          const centerX = d.x + d.w/2;  // Center of the domino
+          const midY = d.y + d.h/2;     // Vertical center
+          
+          // Calculate dimer length (half the domino width)
+          const dimerLength = d.w / 2;
+          
+          // Place nodes at the midpoints between center and edges
+          const leftX = centerX - dimerLength/2;
+          const rightX = centerX + dimerLength/2;
+          
+          // Add nodes
+          const leftNode = {
+            x: leftX,
+            y: midY,
+            radius: 0.4 // Radius for node circles
+          };
+          
+          const rightNode = {
+            x: rightX,
+            y: midY,
+            radius: 0.4
+          };
+          
+          dimerNodes.push(leftNode, rightNode);
+          
+          // Add edge connecting the two nodes
+          dimerEdges.push({
+            x1: leftX,
+            y1: midY,
+            x2: rightX,
+            y2: midY
+          });
+          
+        } else {
+          // Vertical domino (red or yellow)
+          const midX = d.x + d.w/2;     // Horizontal center
+          const centerY = d.y + d.h/2;  // Center of the domino
+          
+          // Calculate dimer length (half the domino height)
+          const dimerLength = d.h / 2;
+          
+          // Place nodes at the midpoints between center and edges
+          const topY = centerY - dimerLength/2;
+          const bottomY = centerY + dimerLength/2;
+          
+          // Add nodes
+          const topNode = {
+            x: midX,
+            y: topY,
+            radius: 0.4
+          };
+          
+          const bottomNode = {
+            x: midX,
+            y: bottomY,
+            radius: 0.4
+          };
+          
+          dimerNodes.push(topNode, bottomNode);
+          
+          // Add edge connecting the two nodes
+          dimerEdges.push({
+            x1: midX,
+            y1: topY,
+            x2: midX,
+            y2: bottomY
+          });
+        }
+      });
+      
+      // Draw dimer edges and nodes
+      const group = svg2d.select("g");
+      
+      // First draw edges (lines)
+      group.selectAll(".dimer-line")
+          .data(dimerEdges)
+          .enter()
+          .append("line")
+          .attr("class", "dimer-line")
+          .attr("x1", d => d.x1)
+          .attr("y1", d => d.y1)
+          .attr("x2", d => d.x2)
+          .attr("y2", d => d.y2)
+          .attr("stroke", "black")
+          .attr("stroke-width", 0.3)
+          .attr("pointer-events", "none");
+      
+      // Then draw nodes (circles)
+      group.selectAll(".dimer-circle")
+          .data(dimerNodes)
+          .enter()
+          .append("circle")
+          .attr("class", "dimer-circle")
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y)
+          .attr("r", d => d.radius)
+          .attr("fill", "black")
+          .attr("stroke", "none")
+          .attr("pointer-events", "none");
     }
   }
 
