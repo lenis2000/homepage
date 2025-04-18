@@ -1196,6 +1196,12 @@ Module.onRuntimeInitialized = async function() {
 
   // Function to convert color to grayscale based on position
   function getGrayscaleColor(originalColor, d) {
+    // Handle undefined or non-string colors
+    if (!originalColor) {
+      // Default to a medium gray if color is undefined
+      return grayHex(150);
+    }
+
     // Special handling for "green" as string
     if (originalColor === "green" ||
         (typeof originalColor === 'string' && originalColor.toLowerCase().includes('green'))) {
@@ -1203,22 +1209,36 @@ Module.onRuntimeInitialized = async function() {
       return grayHex(grayscaleValues.green["p" + yParity]);
     }
 
-    let c = d3.color(originalColor);
-    if (!c) return originalColor;
+    let c;
+    try {
+      c = d3.color(originalColor);
+    } catch (e) {
+      return grayHex(150); // Default gray on parsing error
+    }
+    
+    if (!c) return typeof originalColor === 'string' ? originalColor : grayHex(150);
 
-    let normHex = c.formatHex().toLowerCase();
+    let normHex;
+    try {
+      normHex = c.formatHex().toLowerCase();
+    } catch (e) {
+      return grayHex(150); // Default gray if format fails
+    }
+    
     const isHorizontal = d.w > d.h;
 
     // For blue or green (horizontal dominoes), use vertical coordinate parity
     if (isHorizontal) {
       const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
 
-      if (normHex === "#0000ff" || normHex === "#4363d8" || normHex.includes("blue")) { // blue
+      if (normHex === "#0000ff" || normHex === "#4363d8" || 
+          (typeof normHex === 'string' && normHex.includes("blue"))) { // blue
         return grayHex(grayscaleValues.blue["p" + yParity]);
       }
       // Green dominoes - check multiple possible formats
-      else if (normHex === "#00ff00" || normHex === "#1e8c28" || normHex.includes("green") ||
-               c.r < c.g && c.g > c.b) { // Any mostly-green color
+      else if (normHex === "#00ff00" || normHex === "#1e8c28" || 
+               (typeof normHex === 'string' && normHex.includes("green")) ||
+               (c.r !== undefined && c.g !== undefined && c.b !== undefined && c.r < c.g && c.g > c.b)) { // Any mostly-green color
         return grayHex(grayscaleValues.green["p" + yParity]);
       }
     }
@@ -1226,16 +1246,22 @@ Module.onRuntimeInitialized = async function() {
     else {
       const xParity = Math.floor(d.x) % 4 === 0 ? 0 : 1;
 
-      if (normHex === "#ff0000" || normHex === "#ff2244" || normHex.includes("red") ||
-          (c.r > c.g && c.r > c.b)) { // red - any reddish color
+      if (normHex === "#ff0000" || normHex === "#ff2244" || 
+          (typeof normHex === 'string' && normHex.includes("red")) ||
+          (c.r !== undefined && c.g !== undefined && c.b !== undefined && c.r > c.g && c.r > c.b)) { // red - any reddish color
         return grayHex(grayscaleValues.red["p" + xParity]);
-      } else if (normHex === "#ffff00" || normHex === "#fca414" || normHex.includes("yellow") ||
-                (c.r > 200 && c.g > 200 && c.b < 100)) { // yellow - any yellowish color
+      } else if (normHex === "#ffff00" || normHex === "#fca414" || 
+                (typeof normHex === 'string' && normHex.includes("yellow")) ||
+                (c.r !== undefined && c.g !== undefined && c.b !== undefined && c.r > 200 && c.g > 200 && c.b < 100)) { // yellow - any yellowish color
         return grayHex(grayscaleValues.yellow["p" + xParity]);
       }
     }
 
     // For any other color, convert using standard luminance formula
+    if (c.r === undefined || c.g === undefined || c.b === undefined) {
+      return grayHex(150); // Default gray if color components are missing
+    }
+    
     let r = c.r, g = c.g, b = c.b;
     let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
     return grayHex(lum);
@@ -1461,15 +1487,15 @@ Module.onRuntimeInitialized = async function() {
         // Get color type
         let colorType = "";
         if (isHorizontal) {
-          if (color.includes("green") || color === "#1e8c28" || color === "#00ff00") {
+          if (typeof color === 'string' && (color.includes("green") || color === "#1e8c28" || color === "#00ff00")) {
             colorType = "green";
-          } else if (color.includes("blue") || color === "#4363d8" || color === "#0000ff") {
+          } else if (typeof color === 'string' && (color.includes("blue") || color === "#4363d8" || color === "#0000ff")) {
             colorType = "blue";
           }
         } else {
-          if (color.includes("yellow") || color === "#fca414" || color === "#ffff00") {
+          if (typeof color === 'string' && (color.includes("yellow") || color === "#fca414" || color === "#ffff00")) {
             colorType = "yellow";
-          } else if (color.includes("red") || color === "#ff2244" || color === "#ff0000") {
+          } else if (typeof color === 'string' && (color.includes("red") || color === "#ff2244" || color === "#ff0000")) {
             colorType = "red";
           }
         }
