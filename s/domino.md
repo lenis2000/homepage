@@ -1030,15 +1030,11 @@ Module.onRuntimeInitialized = async function() {
     if (originalColor === "green" ||
         (typeof originalColor === 'string' && originalColor.toLowerCase().includes('green'))) {
       const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
-      console.log('Direct green string match:', { originalColor, parity: yParity });
       return grayHex(grayscaleValues.green["p" + yParity]);
     }
 
     let c = d3.color(originalColor);
-    if (!c) {
-      console.log('Could not parse color:', originalColor);
-      return originalColor;
-    }
+    if (!c) return originalColor;
 
     let normHex = c.formatHex().toLowerCase();
     const isHorizontal = d.w > d.h;
@@ -1047,29 +1043,18 @@ Module.onRuntimeInitialized = async function() {
     if (isHorizontal) {
       const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
 
-      console.log('Horizontal domino:', { color: normHex, x: d.x, y: d.y, parity: yParity });
-
       if (normHex === "#0000ff" || normHex === "#4363d8" || normHex.includes("blue")) { // blue
         return grayHex(grayscaleValues.blue["p" + yParity]);
       }
-      // Give green special priority with extra debug
+      // Green dominoes - check multiple possible formats
       else if (normHex === "#00ff00" || normHex === "#1e8c28" || normHex.includes("green") ||
                c.r < c.g && c.g > c.b) { // Any mostly-green color
-        const result = grayHex(grayscaleValues.green["p" + yParity]);
-        console.log('Green match found!', {
-          normHex,
-          rgb: [c.r, c.g, c.b],
-          parity: yParity,
-          grayscale: result
-        });
-        return result;
+        return grayHex(grayscaleValues.green["p" + yParity]);
       }
     }
     // For red or yellow (vertical dominoes), use horizontal coordinate parity
     else {
       const xParity = Math.floor(d.x) % 4 === 0 ? 0 : 1;
-
-      console.log('Vertical domino:', { color: normHex, x: d.x, y: d.y, parity: xParity });
 
       if (normHex === "#ff0000" || normHex === "#ff2244" || normHex.includes("red") ||
           (c.r > c.g && c.r > c.b)) { // red - any reddish color
@@ -1136,108 +1121,22 @@ Module.onRuntimeInitialized = async function() {
 
   // Hardcoded grayscale values
   const grayscaleValues = {
-    blue: { p0: 133, p1: 253 },
-    green: { p0: 243, p1: 133 },
-    red: { p0: 100, p1: 130 },
-    yellow: { p0: 105, p1: 135 }
+    blue: { p0: 100, p1: 253 },
+    green: { p0: 243, p1: 80 },
+    red: { p0: 150, p1: 10 },
+    yellow: { p0: 20, p1: 170 }
   };
 
-  // Apply button handler
-  document.getElementById("apply-grayscale").addEventListener("click", function() {
-    if (document.getElementById("grayscale-checkbox-2d").checked) {
-      // First console.log for debugging current values
-      console.log('Applying grayscale values:', grayscaleValues);
-
-      // Force update colors of existing dominoes
-      svg2d.select("g").selectAll("rect")
-        .each(function(d) {
-          // For debugging - log each domino's color before conversion
-          const origColor = d3.color(d.color);
-          if (origColor) {
-            const normHex = origColor.formatHex().toLowerCase();
-            const isHorizontal = d.w > d.h;
-
-            // Special debug for green dominoes
-            if ((normHex === "#00ff00" || normHex === "#1e8c28" || normHex.includes("green")) && isHorizontal) {
-              const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
-              console.log('Green domino detected:', {
-                originalColor: d.color,
-                normHex: normHex,
-                yParity: yParity,
-                newColor: grayHex(grayscaleValues.green["p" + yParity])
-              });
-            }
-          }
-        })
-        .attr("fill", d => getGrayscaleColor(d.color, d));
-
-      console.log('Grayscale application complete');
-    }
-  });
-
-  // Get code button handler
-  document.getElementById("get-values-code").addEventListener("click", function() {
-    const codeOutput = document.getElementById("code-output");
-    const code = `      if (normHex === "#0000ff" || normHex === "#4363d8" || normHex.includes("blue")) { // blue
-        return yParity === 0 ? grayHex(${grayscaleValues.blue.p0}) : grayHex(${grayscaleValues.blue.p1});
-      } else if (normHex === "#00ff00" || normHex === "#1e8c28" || normHex.includes("green")) { // green
-        return yParity === 0 ? grayHex(${grayscaleValues.green.p0}) : grayHex(${grayscaleValues.green.p1});
-      }
-    }
-    // For red or yellow (vertical dominoes), use horizontal coordinate parity
-    else {
-      const xParity = Math.floor(d.x) % 4;
-
-      if (normHex === "#ff0000" || normHex === "#ff2244" || normHex.includes("red")) { // red
-        return xParity === 0 ? grayHex(${grayscaleValues.red.p0}) : grayHex(${grayscaleValues.red.p1});
-      } else if (normHex === "#ffff00" || normHex === "#fca414" || normHex.includes("yellow")) { // yellow
-        return xParity === 0 ? grayHex(${grayscaleValues.yellow.p0}) : grayHex(${grayscaleValues.yellow.p1});
-      }
-    }`;
-
-    codeOutput.textContent = code;
-    codeOutput.style.display = "block";
-  });
+  // No interactive controls needed with hardcoded values
 
   // 2D grayscale toggle handler
   document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
     const useGrayscale = this.checked;
 
-    // Show/hide controls panel
-    document.getElementById("grayscale-controls").style.display = useGrayscale ? "block" : "none";
-
-    // Log the current state for debugging
-    console.log('Grayscale toggle:', useGrayscale, 'Current values:', grayscaleValues);
-
-    // Update colors of existing dominoes with improved green handling
+    // Simply toggle colors between normal and grayscale
     svg2d.select("g").selectAll("rect")
-      .each(function(d) {
-        // For debugging
-        const isHorizontal = d.w > d.h;
-        if (useGrayscale && isHorizontal) {
-          const c = d3.color(d.color);
-          if (c) {
-            const normHex = c.formatHex().toLowerCase();
-            // Extra logging for green dominoes
-            if (normHex === "#00ff00" || normHex === "#1e8c28" || normHex.includes("green")) {
-              const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
-              console.log('Green domino:', {
-                x: d.x, y: d.y,
-                parity: yParity,
-                color: d.color,
-                newColor: grayHex(grayscaleValues.green["p" + yParity])
-              });
-            }
-          }
-        }
-      })
       .attr("fill", function(d) {
-        if (useGrayscale) {
-          // Force recalculation of colors
-          return getGrayscaleColor(d.color, d);
-        } else {
-          return d.color;
-        }
+        return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
       });
   });
 
