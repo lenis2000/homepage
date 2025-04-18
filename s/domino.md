@@ -662,18 +662,42 @@ Module.onRuntimeInitialized = async function() {
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
 
-      // ABSOLUTE HARD CHECK: Skip both height function calculation and 3D rendering if n > 300
-      // This check should never fail regardless of view mode
-      if (n > 300) {
-        progressElem.innerText = "Sampling complete. n > 300 is too large for 3D visualization.";
+        // If we have a large tiling (n > 300), we'll show a message in 3D mode
+      // but still render it in 2D
+      const isLargeTiling = n > 300;
+      
+      // If we're in 2D view or have a large tiling
+      // Always render the 2D view first (we'll need it regardless)
+      await render2D(dominoes);
+      
+      // If we're in 3D view and n is too large, show a message instead of rendering
+      if (is3DView && isLargeTiling) {
+        // Create a div with a message in the 3D canvas container
+        const container = document.getElementById('aztec-canvas');
+        container.innerHTML = '';
+        const messageDiv = document.createElement('div');
+        messageDiv.style.width = '100%';
+        messageDiv.style.height = '100%';
+        messageDiv.style.display = 'flex';
+        messageDiv.style.alignItems = 'center';
+        messageDiv.style.justifyContent = 'center';
+        messageDiv.style.backgroundColor = '#f0f0f0';
+        messageDiv.style.border = '1px solid #ccc';
+        messageDiv.style.padding = '20px';
+        messageDiv.style.boxSizing = 'border-box';
+        messageDiv.style.fontSize = '18px';
+        messageDiv.style.fontWeight = 'bold';
+        messageDiv.style.textAlign = 'center';
+        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
+        container.appendChild(messageDiv);
+        
+        progressElem.innerText = "";
         stopSimulation();
         return;
       }
-
-      // If we're in 2D view, render in 2D and skip 3D visualization
+      
+      // If we're in 2D view, we're done
       if (!is3DView) {
-        // Call 2D renderer
-        await render2D(dominoes);
         progressElem.innerText = "";
         stopSimulation();
         return;
@@ -861,18 +885,33 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
 
-    // Get the current view (3D or 2D)
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-    const maxN = is3DView ? 300 : 500;
-
     if (isNaN(n) || n < 2 || n % 2) {
       return alert(`Enter an even number for n (at least 2)`);
     }
 
-    if (n > maxN) {
-      return alert(`n is too large. Maximum value in ${is3DView ? '3D' : '2D'} view is ${maxN}`);
+    // Get the current view (3D or 2D)
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active"); 
+    
+    // Absolute maximum n values for each view
+    const max3DN = 300;
+    const max2DN = 500;
+    
+    // Check if n is within allowed range
+    if ((is3DView && n > max3DN && n <= max2DN)) {
+      // If in 3D view with n between 300 and 500, ask if user wants to switch to 2D
+      if (confirm(`For n > ${max3DN}, only 2D visualization is available. Switch to 2D view automatically?`)) {
+        // Switch to 2D view
+        document.getElementById("view-2d-btn").click();
+        // Now update visualization
+        updateVisualization(n);
+      }
+      return;
+    } else if (n > max2DN) {
+      // Absolute maximum exceeded
+      return alert(`n is too large. Maximum value is ${max2DN}.`);
     }
 
+    // If we get here, n is within allowed range for current view
     updateVisualization(n);
   });
 
@@ -1013,6 +1052,31 @@ Module.onRuntimeInitialized = async function() {
     if (!animationActive) {
       animationActive = true;
       animate();
+    }
+    
+    // If we have cached dominoes and n > 300, show message instead of 3D visualization
+    if (cachedDominoes && cachedDominoes.length > 0) {
+      const n = parseInt(document.getElementById("n-input").value, 10);
+      if (n > 300) {
+        // Show message for large n
+        const container = document.getElementById('aztec-canvas');
+        container.innerHTML = '';
+        const messageDiv = document.createElement('div');
+        messageDiv.style.width = '100%';
+        messageDiv.style.height = '100%';
+        messageDiv.style.display = 'flex';
+        messageDiv.style.alignItems = 'center';
+        messageDiv.style.justifyContent = 'center';
+        messageDiv.style.backgroundColor = '#f0f0f0';
+        messageDiv.style.border = '1px solid #ccc';
+        messageDiv.style.padding = '20px';
+        messageDiv.style.boxSizing = 'border-box';
+        messageDiv.style.fontSize = '18px';
+        messageDiv.style.fontWeight = 'bold';
+        messageDiv.style.textAlign = 'center';
+        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
+        container.appendChild(messageDiv);
+      }
     }
   });
 
@@ -1216,9 +1280,19 @@ Module.onRuntimeInitialized = async function() {
     // Set the max n for 2D view
     document.getElementById("n-input").setAttribute("max", "500");
 
-    // If we have cached dominoes, render them in 2D
+    // Always reuse the cached dominoes if we have them
     if (cachedDominoes && cachedDominoes.length > 0) {
       render2D(cachedDominoes);
+      
+      // If we're switching from 3D to 2D, update the progress indicator
+      const n = parseInt(document.getElementById("n-input").value, 10);
+      if (n > 300) {
+        progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
+        setTimeout(() => { progressElem.innerText = ""; }, 3000);
+      } else {
+        progressElem.innerText = "Using cached tiling";
+        setTimeout(() => { progressElem.innerText = ""; }, 2000);
+      }
     }
 
     // Pause 3D animation to save resources
