@@ -101,6 +101,7 @@ code:
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="{{site.url}}/s/domino.js"></script>
 
 
@@ -203,7 +204,18 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
   <!-- 2D Visualization Pane (hidden by default) -->
   <div id="aztec-2d-canvas">
-    <p>2D visualization will be available in a future update</p>
+    <div class="zoom-controls" style="margin-bottom: 10px;">
+      <span style="font-weight: bold;">Zoom: </span>
+      <button id="zoom-in-btn-2d" style="font-weight: bold; width: 30px; height: 30px; margin-left: 5px;">+</button>
+      <button id="zoom-out-btn-2d" style="font-weight: bold; width: 30px; height: 30px; margin-left: 5px;">-</button>
+      <button id="zoom-reset-btn-2d" style="height: 30px; margin-left: 5px;">Reset Zoom</button>
+      <span style="margin-left: 10px; font-style: italic; font-size: 0.9em;">(You can also use mouse wheel to zoom and drag to pan)</span>
+    </div>
+    <div>
+      <input type="checkbox" id="grayscale-checkbox-2d">
+      <label for="grayscale-checkbox-2d">Grayscale mode</label>
+    </div>
+    <svg id="aztec-svg-2d" style="width: 100%; height: 70vh; border: 1px solid #ccc;"></svg>
   </div>
 </div>
 
@@ -224,6 +236,7 @@ Module.onRuntimeInitialized = async function() {
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
+  let cachedDominoes = null; // Store dominoes for 2D view
 
   // Demo mode state
   let isDemoMode = false;
@@ -637,11 +650,23 @@ Module.onRuntimeInitialized = async function() {
       const dominoes = JSON.parse(raw);
       if (dominoes.error) throw new Error(dominoes.error);
       if (signal.aborted) return;
+      
+      // Cache the dominoes for 2D view
+      cachedDominoes = dominoes;
 
       // ABSOLUTE HARD CHECK: Skip both height function calculation and 3D rendering if n > 300
       // This check should never fail regardless of view mode
       if (n > 300) {
         progressElem.innerText = "Sampling complete. n > 300 is too large for 3D visualization.";
+        stopSimulation();
+        return;
+      }
+      
+      // If we're in 2D view, render in 2D and skip 3D visualization
+      if (!is3DView) {
+        // Call 2D renderer
+        await render2D(dominoes);
+        progressElem.innerText = "";
         stopSimulation();
         return;
       }
@@ -983,10 +1008,166 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
+  // 2D visualization helper functions
+  // Helper: convert a brightness value (0–255) to a hex grayscale string.
+  function grayHex(brightness) {
+    let hex = Math.round(brightness).toString(16);
+    if(hex.length < 2) hex = "0" + hex;
+    return "#" + hex + hex + hex;
+  }
+
+  // Pre-compute grayscale palettes for the four original colors.
+  const palettes = {
+    "#ff2244": d3.range(0,8).map(i => grayHex(30*i+5)),
+    "#1e8c28": d3.range(0,8).map(i => grayHex(30*i+10)),
+    "#4363d8": d3.range(0,8).map(i => grayHex(30*i+12)),
+    "#fca414": d3.range(0,8).map(i => grayHex(30*i+18))
+  };
+
+  function getPos(d) {
+    if (d.w > d.h) {
+      return ((Math.floor(d.x) % 8) + 8) % 8;
+    } else {
+      return ((Math.floor(d.y) % 8) + 8) % 8;
+    }
+  }
+
+  function getGrayscaleColor(originalColor, d) {
+    let c = d3.color(originalColor);
+    if (!c) return originalColor;
+    let normHex = c.formatHex().toLowerCase();
+    let pos = getPos(d);
+    if (palettes[normHex]) {
+      return palettes[normHex][pos];
+    }
+    let r = c.r, g = c.g, b = c.b;
+    let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
+    let offset = ((pos / 7) - 0.5) * 80;
+    let newLum = Math.max(0, Math.min(255, lum + offset));
+    return grayHex(newLum);
+  }
+
+  // Setup 2D visualization elements
+  const svg2d = d3.select("#aztec-svg-2d");
+  let initialTransform2d = {}; // Store initial transform parameters for 2D
+
+  // Create zoom behavior for 2D
+  const zoom2d = d3.zoom()
+    .scaleExtent([0.1, 50]) // Min and max zoom scale
+    .on("zoom", (event) => {
+      if (!initialTransform2d.scale) return; // Skip if no initial transform is set
+      
+      // Apply the zoom transformation on top of initial transform
+      const group = svg2d.select("g");
+      const t = event.transform;
+      group.attr("transform", 
+        `translate(${initialTransform2d.translateX * t.k + t.x},${initialTransform2d.translateY * t.k + t.y}) scale(${initialTransform2d.scale * t.k})`);
+    });
+  
+  // Enable zoom on the 2D SVG
+  svg2d.call(zoom2d);
+  
+  // Add double-click to reset zoom for 2D
+  svg2d.on("dblclick.zoom", () => {
+    svg2d.transition()
+      .duration(750)
+      .call(zoom2d.transform, d3.zoomIdentity);
+  });
+
+  // Add event listeners for 2D zoom controls
+  document.getElementById("zoom-in-btn-2d").addEventListener("click", () => {
+    svg2d.transition()
+      .duration(300)
+      .call(zoom2d.scaleBy, 1.3);
+  });
+    
+  document.getElementById("zoom-out-btn-2d").addEventListener("click", () => {
+    svg2d.transition()
+      .duration(300)
+      .call(zoom2d.scaleBy, 0.7);
+  });
+  
+  document.getElementById("zoom-reset-btn-2d").addEventListener("click", () => {
+    svg2d.transition()
+      .duration(300)
+      .call(zoom2d.transform, d3.zoomIdentity);
+  });
+
+  // 2D grayscale toggle handler
+  document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
+    const useGrayscale = this.checked;
+    // Update colors of existing dominoes
+    svg2d.select("g").selectAll("rect")
+      .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
+  });
+  
+  // Function to render dominoes in 2D view
+  async function render2D(dominoes) {
+    if (!dominoes || dominoes.length === 0) return;
+
+    // Clear previous rendering
+    svg2d.selectAll("g").remove();
+    
+    const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
+    
+    // Calculate bounds and scale
+    const minX = d3.min(dominoes, d => d.x);
+    const minY = d3.min(dominoes, d => d.y);
+    const maxX = d3.max(dominoes, d => d.x + d.w);
+    const maxY = d3.max(dominoes, d => d.y + d.h);
+    const widthDominoes = maxX - minX;
+    const heightDominoes = maxY - minY;
+
+    const bbox = svg2d.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+
+    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+
+    // Store the initial transform parameters for zoom behavior
+    initialTransform2d = {
+      translateX: translateX,
+      translateY: translateY,
+      scale: scale
+    };
+
+    // Reset the zoom transform when creating a new visualization
+    svg2d.call(zoom2d.transform, d3.zoomIdentity);
+
+    const group = svg2d.append("g")
+                       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+    // Render dominoes in batches to keep UI responsive
+    const BATCH_SIZE = 200;
+
+    for (let i = 0; i < dominoes.length; i += BATCH_SIZE) {
+      const batch = dominoes.slice(i, i + BATCH_SIZE);
+
+      group.selectAll("rect.batch" + i)
+           .data(batch)
+           .enter()
+           .append("rect")
+           .attr("x", d => d.x)
+           .attr("y", d => d.y)
+           .attr("width", d => d.w)
+           .attr("height", d => d.h)
+           .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+           .attr("stroke", "#000")
+           .attr("stroke-width", 0.5);
+
+      // Yield to UI thread after each batch
+      if (i + BATCH_SIZE < dominoes.length) {
+        await sleep(0);
+      }
+    }
+  }
+
   document.getElementById("view-2d-btn").addEventListener("click", function() {
     // Show 2D view, hide 3D view
     document.getElementById("aztec-canvas").style.display = "none";
-    document.getElementById("aztec-2d-canvas").style.display = "flex";
+    document.getElementById("aztec-2d-canvas").style.display = "block";
     document.getElementById("camera-controls").style.display = "none";
 
     // Update toggle button states
@@ -995,6 +1176,14 @@ Module.onRuntimeInitialized = async function() {
 
     // Set the max n for 2D view
     document.getElementById("n-input").setAttribute("max", "500");
+    
+    // If we have cached dominoes, render them in 2D
+    if (cachedDominoes && cachedDominoes.length > 0) {
+      render2D(cachedDominoes);
+    }
+    
+    // Pause 3D animation to save resources
+    animationActive = false;
   });
 
   // Add keyboard controls
