@@ -662,16 +662,14 @@ Module.onRuntimeInitialized = async function() {
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
 
-        // If we have a large tiling (n > 300), we'll show a message in 3D mode
-      // but still render it in 2D
+        // Check if this is a large tiling (n > 300)
       const isLargeTiling = n > 300;
       
-      // If we're in 2D view or have a large tiling
       // Always render the 2D view first (we'll need it regardless)
       await render2D(dominoes);
       
-      // If we're in 3D view and n is too large, show a message instead of rendering
-      if (is3DView && isLargeTiling) {
+      // For large tilings (n > 300), prepare a message for 3D view
+      if (isLargeTiling) {
         // Create a div with a message in the 3D canvas container
         const container = document.getElementById('aztec-canvas');
         container.innerHTML = '';
@@ -696,12 +694,7 @@ Module.onRuntimeInitialized = async function() {
         return;
       }
       
-      // If we're in 2D view, we're done
-      if (!is3DView) {
-        progressElem.innerText = "";
-        stopSimulation();
-        return;
-      }
+      // For n ≤ 300, continue with 3D rendering regardless of current view
 
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
@@ -1054,9 +1047,10 @@ Module.onRuntimeInitialized = async function() {
       animate();
     }
     
-    // If we have cached dominoes and n > 300, show message instead of 3D visualization
+    // If we have cached dominoes, handle the view switch appropriately
     if (cachedDominoes && cachedDominoes.length > 0) {
       const n = parseInt(document.getElementById("n-input").value, 10);
+      
       if (n > 300) {
         // Show message for large n
         const container = document.getElementById('aztec-canvas');
@@ -1076,6 +1070,13 @@ Module.onRuntimeInitialized = async function() {
         messageDiv.style.textAlign = 'center';
         messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
         container.appendChild(messageDiv);
+        
+        progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
+        setTimeout(() => { progressElem.innerText = ""; }, 3000);
+      } else {
+        // For n ≤ 300, show informational message
+        progressElem.innerText = "Using cached 3D visualization";
+        setTimeout(() => { progressElem.innerText = ""; }, 2000);
       }
     }
   });
