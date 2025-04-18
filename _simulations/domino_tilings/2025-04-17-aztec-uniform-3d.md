@@ -34,7 +34,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 200$): </label>
-  <input id="n-input" type="number" value="4" min="2" step="2" max="200" size="3">
+  <input id="n-input" type="number" value="16" min="2" step="2" max="200" size="3">
   <button id="update-btn">Update</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 </div>
