@@ -246,6 +246,9 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <br>
       <input type="checkbox" id="checkerboard-checkbox-2d">
       <label for="checkerboard-checkbox-2d">Show checkerboard overlay</label>
+      <span style="margin-left: 20px;"></span>
+      <label for="border-width-input">Border thickness:</label>
+      <input type="number" id="border-width-input" min="0" max="1" step="0.05" value="0.1" style="width: 60px;">
     </div>
     </div>
 
@@ -1299,6 +1302,11 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("checkerboard-checkbox-2d").addEventListener("change", function() {
     updateDominoDisplay();
   });
+  
+  // Border width input handler - update immediately on input
+  document.getElementById("border-width-input").addEventListener("input", function() {
+    updateDominoDisplay();
+  });
 
   // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
   function getCheckerboardPattern(d) {
@@ -1328,7 +1336,10 @@ Module.onRuntimeInitialized = async function() {
     // First, remove any existing checkerboard pattern
     svg2d.select("g").selectAll(".checkerboard-square").remove();
     
-    // Toggle colors between normal and grayscale for the dominoes
+    // Get the current border thickness value
+    const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
+    
+    // Toggle colors between normal and grayscale for the dominoes and update border width
     svg2d.select("g").selectAll("rect")
       .attr("fill", function(d) {
         // Determine the base color based on color settings
@@ -1339,7 +1350,8 @@ Module.onRuntimeInitialized = async function() {
         } else {
           return d.color;
         }
-      });
+      })
+      .attr("stroke-width", borderWidth); // Update the border thickness
     
     // If checkerboard is enabled, draw 2x2 lattice squares
     if (showCheckerboard) {
@@ -1469,6 +1481,9 @@ Module.onRuntimeInitialized = async function() {
     svg2d.selectAll("g").remove();
 
     const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
+    
+    // Get the current border thickness value
+    const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
 
     // Calculate bounds and scale
     const minX = d3.min(dominoes, d => d.x);
@@ -1514,7 +1529,7 @@ Module.onRuntimeInitialized = async function() {
            .attr("width", d => d.w)
            .attr("height", d => d.h)
            .attr("stroke", "#000")
-           .attr("stroke-width", 0.1);
+           .attr("stroke-width", borderWidth);
 
       // Yield to UI thread after each batch
       if (i + BATCH_SIZE < dominoes.length) {
