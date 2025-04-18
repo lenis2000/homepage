@@ -279,9 +279,9 @@ Module.onRuntimeInitialized = async function() {
     scene.background = new THREE.Color(0xf0f0f0);
     const container = document.getElementById('aztec-canvas');
     
-    // Make sure the container is visible and clear
+    // Make sure the container is visible
     container.style.display = 'block';
-    container.innerHTML = '';
+    // No innerHTML clearing here - it can disrupt existing WebGL context
     
     const w = container.clientWidth, h = container.clientHeight;
     renderer = new THREE.WebGLRenderer({antialias:true});
@@ -289,6 +289,9 @@ Module.onRuntimeInitialized = async function() {
     renderer.setPixelRatio(window.devicePixelRatio);
     // Enable OES_element_index_uint extension for WebGL 1 to support 32-bit indices
     renderer.getContext().getExtension('OES_element_index_uint');
+    
+    // Clear and add canvas
+    container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
     const frustum = 100, aspect = w/h;
@@ -414,7 +417,18 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
+  // Initialize Three.js when the module is loaded
   initThreeJS();
+  
+  // Add a global function to easily reset Three.js if needed
+  window.resetThreeJS = function() {
+    console.log("Manual reset of Three.js requested");
+    if (renderer) {
+      renderer.dispose();
+    }
+    initThreeJS();
+    return "Three.js reset complete";
+  };
 
   // Calculate height function based on domino configuration
   // This implementation follows the algorithm from 2025-02-02-aztec-uniform.md
@@ -583,10 +597,16 @@ Module.onRuntimeInitialized = async function() {
     /* ------------------------------------------------------------------ */
      /* 1. wipe previous geometry *and* transforms                          */
      /* ------------------------------------------------------------------ */
-     dominoGroup.clear();                      // three ≥ r152 preferred to loop/remove
-     dominoGroup.position.set(0, 0, 0);
-     dominoGroup.rotation.set(0, 0, 0);
-     dominoGroup.scale.set(1, 1, 1);           // <‑‑ the crucial line
+     if (dominoGroup) {
+       dominoGroup.clear();                    // three ≥ r152 preferred to loop/remove
+       dominoGroup.position.set(0, 0, 0);
+       dominoGroup.rotation.set(0, 0, 0);
+       dominoGroup.scale.set(1, 1, 1);         // <‑‑ the crucial line
+     } else {
+       // Something went wrong with the 3D scene - reinitialize
+       console.log("Reinitializing Three.js - dominoGroup was null");
+       initThreeJS();
+     }
      /* ------------------------------------------------------------------ */
 
 
@@ -639,11 +659,16 @@ Module.onRuntimeInitialized = async function() {
       console.log('Using uniform weights (all 1.0)');
     }
     // Clear previous models
-    while(dominoGroup.children.length){
-      const m = dominoGroup.children[0];
-      dominoGroup.remove(m);
-      m.geometry.dispose();
-      m.material.dispose();
+    if (dominoGroup && dominoGroup.children) {
+      // Improved clearing that's safer and handles possible null conditions
+      while(dominoGroup.children && dominoGroup.children.length > 0){
+        const m = dominoGroup.children[0];
+        if (m) {
+          dominoGroup.remove(m);
+          if (m.geometry) m.geometry.dispose();
+          if (m.material) m.material.dispose();
+        }
+      }
     }
 
     // Remember demo mode state
@@ -945,13 +970,21 @@ Module.onRuntimeInitialized = async function() {
       return alert(`n is too large. Maximum value is ${max2DN}.`);
     }
 
-    // Clear any previous 3D container content if we're in 3D view
+    // Handle 3D view initialization and clearing
     if (is3DView) {
-      const container = document.getElementById('aztec-canvas');
-      // Reinitialize the container - this is crucial to ensure rendering works
-      container.innerHTML = '';
-      
       if (n <= max3DN) {
+        // For valid n in 3D view, initialize properly
+        // Make sure the 3D view is fully initialized
+        const container = document.getElementById('aztec-canvas');
+        const hasCanvas = container.querySelector('canvas') !== null;
+        
+        // Only clear the container if we're keeping the 3D view (n <= 300)
+        // and there's no WebGL canvas yet
+        if (!hasCanvas) {
+          console.log("Ensuring Three.js is initialized");
+          initThreeJS();
+        }
+        
         // Show helpful information in the progress indicator for valid n
         progressElem.innerText = "Generating new 3D visualization...";
       }
@@ -1098,6 +1131,13 @@ Module.onRuntimeInitialized = async function() {
     if (!animationActive) {
       animationActive = true;
       animate();
+    }
+    
+    // Check if the WebGL renderer is properly initialized
+    const container = document.getElementById('aztec-canvas');
+    if (!container.querySelector('canvas')) {
+      console.log("Reinitializing Three.js - canvas was missing");
+      initThreeJS();
     }
 
     // If we have cached dominoes, handle the view switch appropriately
