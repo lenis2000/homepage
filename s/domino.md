@@ -110,8 +110,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 <div class="parameters-section">
   <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px;">
     <div>
-      <label for="n-input">Aztec Diamond Order ($n\le 320$): </label>
-      <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
+      <label for="n-input">Aztec Diamond Order: </label>
+      <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3">
     </div>
 
     <div style="margin-left: auto;">
@@ -530,6 +530,10 @@ Module.onRuntimeInitialized = async function() {
   }
 
   async function updateVisualization(n) {
+    // Check if we're in 3D view with n > 300
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+    const skip3DRendering = is3DView && n > 300;
+
     // Get the current periodicity setting
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
 
@@ -631,6 +635,13 @@ Module.onRuntimeInitialized = async function() {
       // Calculate the height function (in chunks if large)
       const heightMap = calculateHeightFunction(dominoes);
       if (signal.aborted) return;
+
+      // Skip 3D rendering if n > 300 in 3D view
+      if (skip3DRendering) {
+        progressElem.innerText = "Sampling complete. n > 300 is too large for 3D rendering.";
+        stopSimulation();
+        return;
+      }
 
       // Scale factor based on n
       const scale = 60/(2*n);
@@ -801,8 +812,17 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n % 2 || n > 320) {
-      return alert("Enter even n between 2 and 320");
+
+    // Get the current view (3D or 2D)
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+    const maxN = is3DView ? 300 : 500;
+
+    if (isNaN(n) || n < 2 || n % 2) {
+      return alert(`Enter an even number for n (at least 2)`);
+    }
+
+    if (n > maxN) {
+      return alert(`n is too large. Maximum value in ${is3DView ? '3D' : '2D'} view is ${maxN}`);
     }
 
     updateVisualization(n);
@@ -938,6 +958,9 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("view-3d-btn").classList.add("active");
     document.getElementById("view-2d-btn").classList.remove("active");
 
+    // Set the max n for 3D view
+    document.getElementById("n-input").setAttribute("max", "300");
+
     // Resume animation
     if (!animationActive) {
       animationActive = true;
@@ -954,6 +977,9 @@ Module.onRuntimeInitialized = async function() {
     // Update toggle button states
     document.getElementById("view-3d-btn").classList.remove("active");
     document.getElementById("view-2d-btn").classList.add("active");
+
+    // Set the max n for 2D view
+    document.getElementById("n-input").setAttribute("max", "500");
   });
 
   // Add keyboard controls
