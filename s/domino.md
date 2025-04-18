@@ -819,9 +819,13 @@ Module.onRuntimeInitialized = async function() {
     // Show/hide weights based on selection
     const weights2x2 = document.getElementById('weights-2x2');
     const weights3x3 = document.getElementById('weights-3x3');
+    const debugBtn = document.getElementById('debug-btn');
 
     if (weights2x2) weights2x2.style.display = (periodicity === '2x2') ? 'block' : 'none';
     if (weights3x3) weights3x3.style.display = (periodicity === '3x3') ? 'block' : 'none';
+    
+    // Show/hide debug button based on periodicity
+    if (debugBtn) debugBtn.style.display = (periodicity === 'uniform') ? 'none' : 'inline-block';
 
     // Update debug info if it exists
     const debugInfo = document.getElementById('debug-info');
