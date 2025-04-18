@@ -28,7 +28,8 @@ published: true
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="/js/2025-03-31-aztec-uniform-3d.js"></script>
 
-This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, via its three-dimensional height function. The simulation uses the JavaScript to calculate the correct height function using the same algorithm as in the 2D simulation (with negation applied at the end), while the C++ code is used only to sample the domino configuration.
+
+This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
