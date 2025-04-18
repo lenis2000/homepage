@@ -113,18 +113,12 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <label for="n-input">Aztec Diamond Order ($n\le 320$): </label>
       <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
     </div>
-
+  
     <div>
       <button id="update-btn">Update</button>
       <button id="cancel-btn" style="display: none; margin-left: 5px; background-color: #ff5555;">Cancel</button>
     </div>
-
-    <div>
-      <label for="demo-mode">
-        <input id="demo-mode" type="checkbox"> Demo mode
-      </label>
-    </div>
-
+  
     <div>
       <span id="progress-indicator" style="font-weight: bold;"></span>
     </div>
@@ -156,12 +150,19 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
   <!-- Camera controls for 3D pane -->
   <div id="camera-controls" style="margin-bottom: 10px;">
-    <label>Camera movement:</label>
-    <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
-    <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
-    <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
-    <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
-    <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 8px;">
+      <label>Camera movement:</label>
+      <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
+      <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
+      <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
+      <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
+      <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
+    </div>
+    <div>
+      <label for="demo-mode">
+        <input id="demo-mode" type="checkbox"> Demo mode (automatic rotation)
+      </label>
+    </div>
   </div>
 
   <!-- 3D Visualization Pane (default) -->
