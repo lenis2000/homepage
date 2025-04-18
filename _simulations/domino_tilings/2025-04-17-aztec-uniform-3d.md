@@ -36,6 +36,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
   <input id="n-input" type="number" value="16" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
+  <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 </div>
 
@@ -49,6 +50,15 @@ Module.onRuntimeInitialized = async function() {
 
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
+  let animationActive = true;
+  
+  // Simulation state
+  let simulationActive = false;
+  let abortController = null;
+  const progressElem = document.getElementById("progress-indicator");
+  const updateBtn = document.getElementById("update-btn");
+  const cancelBtn = document.getElementById("cancel-btn");
+  let progressInterval;
 
   function initThreeJS() {
     scene = new THREE.Scene();
@@ -101,9 +111,36 @@ Module.onRuntimeInitialized = async function() {
   }
 
   function animate(){
+    if (!animationActive) return;
+    
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
+  }
+
+  // Helper function to sleep for ms milliseconds
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  function startSimulation() {
+    simulationActive = true;
+    updateBtn.disabled = true;
+    cancelBtn.style.display = 'inline-block';
+    abortController = new AbortController();
+  }
+  
+  function stopSimulation() {
+    simulationActive = false;
+    clearInterval(progressInterval);
+    updateBtn.disabled = false;
+    cancelBtn.style.display = 'none';
+    progressElem.innerText = "Simulation cancelled";
+    
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
   }
 
   initThreeJS();
@@ -272,7 +309,7 @@ Module.onRuntimeInitialized = async function() {
   }
 
   async function updateVisualization(n) {
-    // clear previous
+    // Clear previous models
     while(dominoGroup.children.length){
       const m = dominoGroup.children[0];
       dominoGroup.remove(m);
@@ -280,27 +317,52 @@ Module.onRuntimeInitialized = async function() {
       m.material.dispose();
     }
 
-    // start progress polling
-    document.getElementById("progress-indicator").innerText = "Sampling... (0%)";
-    const poll = setInterval(()=>{
+    startSimulation();
+    const signal = abortController.signal;
+    
+    // Start progress polling
+    progressElem.innerText = "Sampling... (0%)";
+    progressInterval = setInterval(() => {
+      if (!simulationActive) {
+        clearInterval(progressInterval);
+        return;
+      }
       const p = getProgress();
-      document.getElementById("progress-indicator").innerText = `Sampling... (${p}%)`;
-      if(p>=100) clearInterval(poll);
-    },100);
+      progressElem.innerText = `Sampling... (${p}%)`;
+      if(p >= 100) clearInterval(progressInterval);
+    }, 100);
 
     try {
-      // Get the domino configuration from the C++ code
-      const ptr = await simulateAztec(n);
+      // Allow UI to update before starting heavy computation
+      await sleep(50);
+      if (signal.aborted) return;
+      
+      // Get domino configuration from C++ code
+      const ptrPromise = simulateAztec(n);
+      
+      // Wait for simulation to complete
+      const ptr = await ptrPromise;
+      if (signal.aborted) {
+        if (ptr) freeString(ptr);
+        return;
+      }
+      
       let raw = Module.UTF8ToString(ptr);
       freeString(ptr);
-
+      if (signal.aborted) return;
+      
+      // Parse the results
       const dominoes = JSON.parse(raw);
       if (dominoes.error) throw new Error(dominoes.error);
+      if (signal.aborted) return;
 
-      document.getElementById("progress-indicator").innerText = "Calculating height function...";
-
-      // Calculate the height function
+      progressElem.innerText = "Calculating height function...";
+      await sleep(10);
+      if (signal.aborted) return;
+      
+      // Calculate the height function (in chunks if large)
       const heightMap = calculateHeightFunction(dominoes);
+      if (signal.aborted) return;
 
       // Scale factor based on n
       const scale = 60/(2*n);
@@ -314,97 +376,156 @@ Module.onRuntimeInitialized = async function() {
       };
 
       // Create the 3D faces with proper heights
-      document.getElementById("progress-indicator").innerText = "Rendering...";
+      progressElem.innerText = "Processing domino data...";
+      await sleep(10);
+      if (signal.aborted) return;
 
-      const faces = dominoes.map(domino => createDominoFaces(domino, heightMap, scale));
+      // Process faces in chunks to keep UI responsive
+      const facesPromise = (async () => {
+        const faces = [];
+        const CHUNK_SIZE = 300;
+        
+        for (let i = 0; i < dominoes.length; i += CHUNK_SIZE) {
+          if (signal.aborted) return null;
+          
+          // Process a chunk of dominoes
+          const chunk = dominoes.slice(i, i + CHUNK_SIZE);
+          const chunkFaces = chunk.map(domino => 
+            createDominoFaces(domino, heightMap, scale));
+          faces.push(...chunkFaces);
+          
+          // Update progress and yield to UI
+          progressElem.innerText = 
+            `Processing... (${Math.floor(100*(i+chunk.length)/dominoes.length)}%)`;
+          await sleep(0);
+        }
+        
+        return faces;
+      })();
+      
+      const faces = await facesPromise;
+      if (!faces || signal.aborted) return;
+      
       const total = faces.length;
+      if (total === 0 || signal.aborted) return;
 
       // Batch processing of faces for better performance
+      progressElem.innerText = "Rendering...";
       let idx = 0;
-      function batch(start) {
-        const end = Math.min(start + 500, total);
-        for (let i = start; i < end; i++) {
-          const f = faces[i];
-          if (!f || !f.color || !Array.isArray(f.vertices)) continue;
+      
+      function processBatch(start) {
+        return new Promise(resolve => {
+          requestAnimationFrame(() => {
+            if (signal.aborted) {
+              resolve(false);
+              return;
+            }
+            
+            const BATCH_SIZE = 200;
+            const end = Math.min(start + BATCH_SIZE, total);
+            
+            for (let i = start; i < end; i++) {
+              if (signal.aborted) {
+                resolve(false);
+                return;
+              }
+              
+              const f = faces[i];
+              if (!f || !f.color || !Array.isArray(f.vertices)) continue;
 
-          try {
-            const geom = new THREE.BufferGeometry();
-            // Vertices positions
-            const pos = [];
-            for (const v of f.vertices) {
-              pos.push(v[0]*scale, v[1]*scale, v[2]*scale);
+              try {
+                const geom = new THREE.BufferGeometry();
+                // Vertices positions
+                const pos = [];
+                for (const v of f.vertices) {
+                  pos.push(v[0]*scale, v[1]*scale, v[2]*scale);
+                }
+
+                geom.setAttribute(
+                  'position',
+                  new THREE.Float32BufferAttribute(pos, 3)
+                );
+
+                // Triangulation indices
+                const isH = (f.color === 'blue' || f.color === 'green');
+                const indices = isH
+                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
+                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
+
+                // Use 32-bit indices if needed for larger models
+                if (total > 65535 / 6) { // 6 vertices per domino
+                  geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+                } else {
+                  geom.setIndex(indices);
+                }
+
+                geom.computeVertexNormals();
+
+                const mat = new THREE.MeshStandardMaterial({
+                  color: colors[f.color] || 0x808080,
+                  side: THREE.DoubleSide,
+                  flatShading: true
+                });
+
+                dominoGroup.add(new THREE.Mesh(geom, mat));
+              } catch(e) {
+                console.warn("face error", i, e);
+              }
             }
 
-            geom.setAttribute(
-              'position',
-              new THREE.Float32BufferAttribute(pos, 3)
-            );
-
-            // Triangulation indices
-            const isH = (f.color === 'blue' || f.color === 'green');
-            const indices = isH
-              ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-              : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-
-            // Use 32-bit indices if needed for larger models
-            if (total > 65535 / 6) { // 6 vertices per domino
-              geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-            } else {
-              geom.setIndex(indices);
-            }
-
-            geom.computeVertexNormals();
-
-            const mat = new THREE.MeshStandardMaterial({
-              color: colors[f.color] || 0x808080,
-              side: THREE.DoubleSide,
-              flatShading: true
-            });
-
-            dominoGroup.add(new THREE.Mesh(geom, mat));
-          } catch(e) {
-            console.warn("face error", i, e);
-          }
-        }
-
-        idx = end;
-        if (idx < total) {
-          document.getElementById("progress-indicator").innerText =
-            `Rendering... (${Math.floor(100*(idx/total))}%)`;
-          requestAnimationFrame(() => batch(idx));
-        } else {
-          document.getElementById("progress-indicator").innerText = "";
-          // === recentre the tiling ===
-           const box    = new THREE.Box3().setFromObject(dominoGroup);
-           const center = box.getCenter(new THREE.Vector3());
-           dominoGroup.position.sub(center);   // move group so its centre is at (0,0,0)
-
-           // now scale it to fill the view
-           const size = new THREE.Vector3();
-           box.getSize(size);
-
-           // compute how big the camera’s view is in world units
-           const viewWidth  = camera.right  - camera.left;   // frustum*aspect
-           const viewHeight = camera.top    - camera.bottom; // frustum
-
-           // pick the smaller scale so it fits both width & height, with 5% padding
-           const scale = Math.min(
-             viewWidth  / size.x,
-             viewHeight / size.z    // 'z' here is the depth axis on the ground‑plane
-           ) * 0.95;
-
-           dominoGroup.scale.setScalar(scale);
-
-          clearInterval(poll);
-        }
+            idx = end;
+            progressElem.innerText = `Rendering... (${Math.floor(100*(idx/total))}%)`;
+            resolve(idx < total);
+          });
+        });
       }
-
-      batch(0);
+      
+      // Process batches sequentially with yield points for UI
+      let hasMore = true;
+      while (hasMore && simulationActive && !signal.aborted) {
+        hasMore = await processBatch(idx);
+      }
+      
+      if (signal.aborted) return;
+      
+      // Only finish if we completed all batches
+      if (idx >= total) {
+        progressElem.innerText = "";
+        
+        // === recentre the tiling ===
+        const box = new THREE.Box3().setFromObject(dominoGroup);
+        const center = box.getCenter(new THREE.Vector3());
+        dominoGroup.position.sub(center);
+        
+        // now scale it to fill the view
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        
+        // compute how big the camera's view is in world units
+        const viewWidth = camera.right - camera.left;
+        const viewHeight = camera.top - camera.bottom;
+        
+        // pick the smaller scale so it fits both width & height, with 5% padding
+        const finalScale = Math.min(
+          viewWidth / size.x,
+          viewHeight / size.z
+        ) * 0.95;
+        
+        dominoGroup.scale.setScalar(finalScale);
+      }
+      
+      // Cleanup
+      clearInterval(progressInterval);
+      updateBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      simulationActive = false;
     } catch(err) {
       console.error(err);
-      document.getElementById("progress-indicator").innerText =
-        `Error: ${err.message}`;
-      clearInterval(poll);
+      progressElem.innerText = `Error: ${err.message}`;
+      clearInterval(progressInterval);
+      updateBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      simulationActive = false;
     }
   }
 
@@ -414,6 +535,10 @@ Module.onRuntimeInitialized = async function() {
       return alert("Enter even n between 2 and 300");
     }
     updateVisualization(n);
+  });
+  
+  document.getElementById("cancel-btn").addEventListener("click", () => {
+    stopSimulation();
   });
 
   updateVisualization(parseInt(document.getElementById("n-input").value, 10));

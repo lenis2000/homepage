@@ -221,39 +221,16 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
     int dim = 2 * n;
     MatrixDouble A1a(dim, vector<double>(dim, 0.0));
 
-    // Create 3x3 periodic pattern with 9 different weights
-    // w1 to w9 represent weights for each position in the 3x3 grid:
-    // [w1 w2 w3]
-    // [w4 w5 w6]
-    // [w7 w8 w9]
-    for (int i = 0; i < dim; i++){
-        for (int j = 0; j < dim; j++){
-            int im = i % 9;
-            int jm = j % 9;
-            
-            // Determine position in the 3x3 grid
-            int blockI = im / 3;
-            int blockJ = jm / 3;
-            
-            // Assign weight based on position in 3x3 grid
-            if (blockI == 0 && blockJ == 0)
-                A1a[i][j] = w1;
-            else if (blockI == 0 && blockJ == 1)
-                A1a[i][j] = w2;
-            else if (blockI == 0 && blockJ == 2)
-                A1a[i][j] = w3;
-            else if (blockI == 1 && blockJ == 0)
-                A1a[i][j] = w4;
-            else if (blockI == 1 && blockJ == 1)
-                A1a[i][j] = w5;
-            else if (blockI == 1 && blockJ == 2)
-                A1a[i][j] = w6;
-            else if (blockI == 2 && blockJ == 0)
-                A1a[i][j] = w7;
-            else if (blockI == 2 && blockJ == 1)
-                A1a[i][j] = w8;
-            else // blockI == 2 && blockJ == 2
-                A1a[i][j] = w9;
+    // --- 3×3 periodic pattern ------------------------------------------
+    const double W[3][3] = {{w1, w2, w3},
+                            {w4, w5, w6},
+                            {w7, w8, w9}};
+
+    for (int i = 0; i < dim; ++i) {
+        int ii = i % 3;               // row inside the 3‑periodic block
+        for (int j = 0; j < dim; ++j) {
+            int jj = j % 3;           // column inside the 3‑periodic block
+            A1a[i][j] = W[ii][jj];    // assign the corresponding weight
         }
     }
 
@@ -273,7 +250,7 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
             if (dominoConfig[i][j] == 1) {
                 double x, y, w, h;
                 string color;
-                
+
                 // Use the original 4 colors based on domino orientation
                 if ((i & 1) && (j & 1)) {
                     color = "#00ff00"; // green for upper horizontal

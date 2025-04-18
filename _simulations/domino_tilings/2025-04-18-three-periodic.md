@@ -46,6 +46,7 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
   <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
+  <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
 <div class="controls" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 600px; margin-bottom: 20px;">
@@ -151,80 +152,187 @@ Module.onRuntimeInitialized = async function() {
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
+  const updateBtn = document.getElementById("update-btn");
+  const cancelBtn = document.getElementById("cancel-btn");
+  
   let progressInterval;
+  let simulationActive = false;
+  let simulationPromise = null;
+  let simulationAbortController = null;
 
   function startProgressPolling() {
     progressElem.innerText = "Sampling... (0%)";
     progressInterval = setInterval(() => {
+      if (!simulationActive) {
+        clearInterval(progressInterval);
+        return;
+      }
+      
       const progress = getProgress();
       progressElem.innerText = "Sampling... (" + progress + "%)";
-      if (progress >= 100) clearInterval(progressInterval);
+      
+      if (progress >= 100) {
+        clearInterval(progressInterval);
+      }
     }, 100);
+  }
+  
+  function startSimulation() {
+    simulationActive = true;
+    updateBtn.disabled = true;
+    cancelBtn.style.display = 'inline-block';
+    simulationAbortController = new AbortController();
+  }
+  
+  function stopSimulation() {
+    simulationActive = false;
+    clearInterval(progressInterval);
+    updateBtn.disabled = false;
+    cancelBtn.style.display = 'none';
+    progressElem.innerText = "Simulation cancelled";
+    
+    if (simulationAbortController) {
+      simulationAbortController.abort();
+      simulationAbortController = null;
+    }
+  }
+
+  // Helper function to sleep for ms milliseconds
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async function updateVisualization(n) {
     svg.selectAll("g").remove();
+    startSimulation();
     startProgressPolling();
 
-    // Get all 9 weight parameters
-    const w1 = parseFloat(document.getElementById("w1-input").value);
-    const w2 = parseFloat(document.getElementById("w2-input").value);
-    const w3 = parseFloat(document.getElementById("w3-input").value);
-    const w4 = parseFloat(document.getElementById("w4-input").value);
-    const w5 = parseFloat(document.getElementById("w5-input").value);
-    const w6 = parseFloat(document.getElementById("w6-input").value);
-    const w7 = parseFloat(document.getElementById("w7-input").value);
-    const w8 = parseFloat(document.getElementById("w8-input").value);
-    const w9 = parseFloat(document.getElementById("w9-input").value);
-    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-
-    const ptr = await simulateAztec(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
-    const jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
-
-    let dominoes;
     try {
-      dominoes = JSON.parse(jsonStr);
-    } catch (e) {
-      console.error("Error parsing JSON:", e, jsonStr);
-      progressElem.innerText = "Error during sampling";
-      clearInterval(progressInterval);
-      return;
+      // Get all 9 weight parameters
+      const w1 = parseFloat(document.getElementById("w1-input").value);
+      const w2 = parseFloat(document.getElementById("w2-input").value);
+      const w3 = parseFloat(document.getElementById("w3-input").value);
+      const w4 = parseFloat(document.getElementById("w4-input").value);
+      const w5 = parseFloat(document.getElementById("w5-input").value);
+      const w6 = parseFloat(document.getElementById("w6-input").value);
+      const w7 = parseFloat(document.getElementById("w7-input").value);
+      const w8 = parseFloat(document.getElementById("w8-input").value);
+      const w9 = parseFloat(document.getElementById("w9-input").value);
+      const useGrayscale = document.getElementById("grayscale-checkbox").checked;
+
+      // Allow UI to update before starting heavy computation
+      await sleep(50);
+      
+      // Run simulation with periodic yielding to keep UI responsive
+      const signal = simulationAbortController.signal;
+      
+      simulationPromise = (async () => {
+        if (signal.aborted) return null;
+        
+        // Run the heavy simulation
+        const ptr = await simulateAztec(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
+        
+        if (signal.aborted) {
+          if (ptr) freeString(ptr);
+          return null;
+        }
+        
+        // Allow UI thread to breathe
+        await sleep(10);
+        
+        if (signal.aborted) {
+          if (ptr) freeString(ptr);
+          return null;
+        }
+        
+        const jsonStr = Module.UTF8ToString(ptr);
+        freeString(ptr);
+        
+        // Parse results
+        if (signal.aborted) return null;
+        
+        let dominoes;
+        try {
+          dominoes = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error("Error parsing JSON:", e, jsonStr);
+          if (simulationActive) {
+            progressElem.innerText = "Error during sampling";
+          }
+          return null;
+        }
+        
+        return dominoes;
+      })();
+      
+      // Wait for simulation to complete
+      const dominoes = await simulationPromise;
+      
+      // If simulation was cancelled or errored
+      if (!dominoes || !simulationActive) {
+        return;
+      }
+      
+      cachedDominoes = dominoes;
+
+      // Allow UI thread to breathe before rendering
+      await sleep(10);
+      if (!simulationActive) return;
+
+      // Process and render the results in smaller chunks
+      const minX = d3.min(dominoes, d => d.x);
+      const minY = d3.min(dominoes, d => d.y);
+      const maxX = d3.max(dominoes, d => d.x + d.w);
+      const maxY = d3.max(dominoes, d => d.y + d.h);
+      const widthDominoes = maxX - minX;
+      const heightDominoes = maxY - minY;
+
+      const bbox = svg.node().getBoundingClientRect();
+      const svgWidth = bbox.width;
+      const svgHeight = bbox.height;
+      svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+      const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+      const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
+      const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+
+      const group = svg.append("g")
+                       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+      
+      // Render dominoes in batches to keep UI responsive
+      const BATCH_SIZE = 200;
+      
+      for (let i = 0; i < dominoes.length && simulationActive; i += BATCH_SIZE) {
+        const batch = dominoes.slice(i, i + BATCH_SIZE);
+        
+        group.selectAll("rect.batch" + i)
+             .data(batch)
+             .enter()
+             .append("rect")
+             .attr("x", d => d.x)
+             .attr("y", d => d.y)
+             .attr("width", d => d.w)
+             .attr("height", d => d.h)
+             .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+             .attr("stroke", "#000")
+             .attr("stroke-width", 0.5);
+        
+        // Yield to UI thread after each batch
+        if (i + BATCH_SIZE < dominoes.length) {
+          await sleep(0);
+          if (!simulationActive) return;
+        }
+      }
+
+      progressElem.innerText = "";
+      updateBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      simulationActive = false;
+    } catch (error) {
+      console.error("Simulation error:", error);
+      progressElem.innerText = "Error during simulation";
+      stopSimulation();
     }
-    cachedDominoes = dominoes;
-
-    const minX = d3.min(dominoes, d => d.x);
-    const minY = d3.min(dominoes, d => d.y);
-    const maxX = d3.max(dominoes, d => d.x + d.w);
-    const maxY = d3.max(dominoes, d => d.y + d.h);
-    const widthDominoes = maxX - minX;
-    const heightDominoes = maxY - minY;
-
-    const bbox = svg.node().getBoundingClientRect();
-    const svgWidth = bbox.width;
-    const svgHeight = bbox.height;
-    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
-
-    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
-    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
-    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
-
-    const group = svg.append("g")
-                     .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
-
-    group.selectAll("rect")
-         .data(dominoes)
-         .enter()
-         .append("rect")
-         .attr("x", d => d.x)
-         .attr("y", d => d.y)
-         .attr("width", d => d.w)
-         .attr("height", d => d.h)
-         .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
-         .attr("stroke", "#000")
-         .attr("stroke-width", 0.5);
-
-    progressElem.innerText = "";
   }
 
   document.getElementById("update-btn").addEventListener("click", () => {
@@ -235,6 +343,10 @@ Module.onRuntimeInitialized = async function() {
     }
     updateVisualization(n);
   });
+  
+  document.getElementById("cancel-btn").addEventListener("click", () => {
+    stopSimulation();
+  });
 
   document.getElementById("grayscale-checkbox").addEventListener("change", () => {
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
@@ -243,7 +355,6 @@ Module.onRuntimeInitialized = async function() {
         .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
     }
   });
-
 
   const initialN = parseInt(document.getElementById("n-input").value, 10);
   updateVisualization(initialN);
