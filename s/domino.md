@@ -66,7 +66,7 @@ code:
   }
 
   /* Styling for buttons and controls */
-  #update-btn:disabled {
+  #sample-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
     background-color: #cccccc;
@@ -101,7 +101,7 @@ code:
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-<script src="/js/2025-04-18-aztec-three-periodic-3d.js"></script>
+<script src="{{site.url}}/s/domino.js"></script>
 
 
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
@@ -114,8 +114,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
     </div>
 
-    <div>
-      <button id="update-btn">Update</button>
+    <div style="margin-left: auto;">
+      <button id="sample-btn">Sample</button>
       <button id="cancel-btn" style="display: none; margin-left: 5px; background-color: #ff5555;">Cancel</button>
     </div>
 
@@ -124,7 +124,46 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
     </div>
   </div>
 
-  <div>
+  <!-- Periodicity control with radio buttons -->
+  <div style="margin-bottom: 15px;">
+    <h4 style="margin-top: 0; margin-bottom: 8px;">Periodicity:</h4>
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
+      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
+        <input type="radio" id="uniform-radio" name="periodicity" value="uniform" checked style="cursor: pointer;">
+        <label for="uniform-radio" style="cursor: pointer; user-select: none;">Uniform (no parameters)</label>
+      </div>
+      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
+        <input type="radio" id="2x2-radio" name="periodicity" value="2x2" style="cursor: pointer;">
+        <label for="2x2-radio" style="cursor: pointer; user-select: none;">2×2 Periodic</label>
+      </div>
+      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
+        <input type="radio" id="3x3-radio" name="periodicity" value="3x3" style="cursor: pointer;">
+        <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
+      </div>
+    </div>
+    <div>
+      <button id="debug-btn" style="font-size: 0.8em; padding: 3px 6px;">Show/Hide Parameters</button>
+      <span id="debug-info" style="font-size: 0.8em; margin-left: 10px;"></span>
+    </div>
+  </div>
+
+  <!-- 2×2 Periodic Weights (initially hidden) -->
+  <div id="weights-2x2" style="display: none; margin-bottom: 15px;">
+    <h4 style="margin-top: 0; margin-bottom: 5px;">2×2 Periodic Weights</h4>
+    <div style="display: flex; gap: 15px;">
+      <div>
+        <label for="a-input">a:</label>
+        <input id="a-input" type="number" value="0.5" step="0.1" min="0.1" max="10" style="width: 60px;">
+      </div>
+      <div>
+        <label for="b-input">b:</label>
+        <input id="b-input" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 60px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- 3×3 Periodic Weights (initially hidden) -->
+  <div id="weights-3x3" style="display: none;">
     <h4 style="margin-top: 0; margin-bottom: 5px;">3×3 Periodic Weights</h4>
     <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
       <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
@@ -265,17 +304,63 @@ Module.onRuntimeInitialized = async function() {
 
   function startSimulation() {
     simulationActive = true;
-    updateBtn.disabled = true;
-    cancelBtn.style.display = 'inline-block';
+
+    // Disable sample button and n-input
+    document.getElementById("sample-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("n-input")?.setAttribute("disabled", "disabled");
+
+    // Disable all the periodicity controls
+    document.querySelectorAll('input[name="periodicity"]').forEach(radio => {
+      radio.disabled = true;
+    });
+
+    // Disable all weight inputs regardless of current periodicity
+    document.getElementById("a-input")?.setAttribute("disabled", "disabled");
+    document.getElementById("b-input")?.setAttribute("disabled", "disabled");
+
+    for (let i = 1; i <= 9; i++) {
+      document.getElementById(`w${i}`)?.setAttribute("disabled", "disabled");
+    }
+
+    // Show cancel button
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      cancelBtn.removeAttribute("disabled");
+    }
+
     abortController = new AbortController();
   }
 
   function stopSimulation() {
     simulationActive = false;
     clearInterval(progressInterval);
-    updateBtn.disabled = false;
-    cancelBtn.style.display = 'none';
-    progressElem.innerText = "Simulation cancelled";
+
+    // Force re-enable all controls
+    document.getElementById("sample-btn")?.removeAttribute("disabled");
+    document.getElementById("n-input")?.removeAttribute("disabled");
+
+    // Re-enable all radio buttons
+    document.querySelectorAll('input[name="periodicity"]').forEach(radio => {
+      radio.disabled = false;
+    });
+
+    // Re-enable ALL possible input fields regardless of current periodicity
+    document.getElementById("a-input")?.removeAttribute("disabled");
+    document.getElementById("b-input")?.removeAttribute("disabled");
+
+    for (let i = 1; i <= 9; i++) {
+      document.getElementById(`w${i}`)?.removeAttribute("disabled");
+    }
+
+    // Make sure parameter display is correct
+    try {
+      updatePeriodicityParams();
+    } catch (e) {
+      console.error("Error updating params:", e);
+    }
+
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    if (progressElem) progressElem.innerText = "Simulation cancelled";
 
     if (abortController) {
       abortController.abort();
@@ -448,7 +533,51 @@ Module.onRuntimeInitialized = async function() {
     };
   }
 
-  async function updateVisualization(n, w1=1.0, w2=4.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=9.0) {
+  async function updateVisualization(n) {
+    // Get the current periodicity setting
+    const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
+
+    let w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=1.0;
+    let a=1.0, b=1.0;
+
+    if (periodicity === '2x2') {
+      // Safe get values with defaults
+      const aInput = document.getElementById("a-input");
+      const bInput = document.getElementById("b-input");
+      a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
+      b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
+
+      console.log(`Using 2×2 weights with a=${a}, b=${b}`);
+
+      // For 2x2, we'll set the 3x3 weights specially
+      w1 = 1.0; w2 = a; w3 = 1.0;
+      w4 = b; w5 = 1.0; w6 = b;
+      w7 = 1.0; w8 = a; w9 = 1.0;
+    } else if (periodicity === '3x3') {
+      // Get values from the 3x3 weight inputs
+      for (let i = 1; i <= 9; i++) {
+        const input = document.getElementById(`w${i}`);
+        const val = input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0;
+        if (i === 1) w1 = val;
+        else if (i === 2) w2 = val;
+        else if (i === 3) w3 = val;
+        else if (i === 4) w4 = val;
+        else if (i === 5) w5 = val;
+        else if (i === 6) w6 = val;
+        else if (i === 7) w7 = val;
+        else if (i === 8) w8 = val;
+        else if (i === 9) w9 = val;
+      }
+
+      console.log(`Using 3×3 weights: [${w1}, ${w2}, ${w3}], [${w4}, ${w5}, ${w6}], [${w7}, ${w8}, ${w9}]`);
+    } else {
+      // Uniform weights - all weights are 1.0
+      w1 = 1.0; w2 = 1.0; w3 = 1.0;
+      w4 = 1.0; w5 = 1.0; w6 = 1.0;
+      w7 = 1.0; w8 = 1.0; w9 = 1.0;
+
+      console.log('Using uniform weights (all 1.0)');
+    }
     // Clear previous models
     while(dominoGroup.children.length){
       const m = dominoGroup.children[0];
@@ -662,36 +791,82 @@ Module.onRuntimeInitialized = async function() {
         }
       }
 
-      // Cleanup
-      clearInterval(progressInterval);
-      updateBtn.disabled = false;
-      cancelBtn.style.display = 'none';
-      simulationActive = false;
+      // Cleanup - reuse the stopSimulation function since it handles everything properly
+      stopSimulation();
+      if (progressElem) progressElem.innerText = "";
+      console.log("Visualization complete");
     } catch(err) {
-      console.error(err);
-      progressElem.innerText = `Error: ${err.message}`;
-      clearInterval(progressInterval);
-      updateBtn.disabled = false;
-      cancelBtn.style.display = 'none';
-      simulationActive = false;
+      console.error("Visualization error:", err);
+      if (progressElem) progressElem.innerText = `Error: ${err.message}`;
+      // Also use stopSimulation for cleanup on error
+      stopSimulation();
     }
   }
 
-  document.getElementById("update-btn").addEventListener("click", () => {
+  document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
     if (isNaN(n) || n < 2 || n % 2 || n > 320) {
       return alert("Enter even n between 2 and 320");
     }
 
-    // Get the weights from the input fields
-    const weights = [];
-    for (let i = 1; i <= 9; i++) {
-      const weightVal = parseFloat(document.getElementById(`w${i}`).value);
-      weights.push(isNaN(weightVal) ? 1.0 : weightVal);
+    updateVisualization(n);
+  });
+
+  // Function to update parameter visibility based on selected periodicity
+  function updatePeriodicityParams() {
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+
+    // Show/hide weights based on selection
+    const weights2x2 = document.getElementById('weights-2x2');
+    const weights3x3 = document.getElementById('weights-3x3');
+
+    if (weights2x2) weights2x2.style.display = (periodicity === '2x2') ? 'block' : 'none';
+    if (weights3x3) weights3x3.style.display = (periodicity === '3x3') ? 'block' : 'none';
+
+    // Update debug info if it exists
+    const debugInfo = document.getElementById('debug-info');
+    if (debugInfo) {
+      debugInfo.textContent = `Current: ${periodicity}`;
     }
 
-    updateVisualization(n, ...weights);
+    console.log(`Periodicity set to ${periodicity}, showing appropriate parameters`);
+  }
+
+  // Add handlers for periodicity radio buttons
+  document.querySelectorAll('input[name="periodicity"]').forEach(radio => {
+    radio.addEventListener('change', updatePeriodicityParams);
+
+    // Make sure clicking on labels works too
+    const id = radio.id;
+    const label = document.querySelector(`label[for="${id}"]`);
+    if (label) {
+      label.addEventListener('click', () => {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change'));
+      });
+    }
   });
+
+  // Debug button to force parameter visibility update
+  document.getElementById('debug-btn')?.addEventListener('click', () => {
+    const weights2x2 = document.getElementById('weights-2x2');
+    const weights3x3 = document.getElementById('weights-3x3');
+
+    // Toggle 2x2 parameters
+    if (document.getElementById('2x2-radio').checked) {
+      if (weights2x2) weights2x2.style.display = weights2x2.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Toggle 3x3 parameters
+    if (document.getElementById('3x3-radio').checked) {
+      if (weights3x3) weights3x3.style.display = weights3x3.style.display === 'none' ? 'block' : 'none';
+    }
+
+    updatePeriodicityParams();
+  });
+
+  // Ensure correct parameters are visible initially
+  setTimeout(updatePeriodicityParams, 0);
 
   document.getElementById("cancel-btn").addEventListener("click", () => {
     stopSimulation();
@@ -851,13 +1026,14 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
-  // Initial visualization with default weights
-  const n = parseInt(document.getElementById("n-input").value, 10);
-  const weights = [];
-  for (let i = 1; i <= 9; i++) {
-    const weightVal = parseFloat(document.getElementById(`w${i}`).value);
-    weights.push(isNaN(weightVal) ? 1.0 : weightVal);
-  }
-  updateVisualization(n, ...weights);
+  // Delay initialization slightly to ensure all DOM elements are ready
+  setTimeout(() => {
+    try {
+      const n = parseInt(document.getElementById("n-input").value, 10) || 12;
+      updateVisualization(n);
+    } catch (err) {
+      console.error("Error during initial visualization:", err);
+    }
+  }, 100);
 };
 </script>
