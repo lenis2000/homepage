@@ -12,14 +12,55 @@ code:
 
 
 <style>
-  /* Ensure the canvas scales fully on wide screens and remains responsive on mobile */
-  #aztec-canvas {
+  /* Layout for the visualization panes */
+  .visualization-container {
     width: 100%;
-    height: 80vh; /* Use 80% of viewport height on large screens */
+    position: relative;
+  }
+
+  .viz-pane {
+    width: 100%;
+    margin-bottom: 15px;
+  }
+
+  /* Canvas styling */
+  #aztec-canvas, #aztec-2d-canvas {
+    width: 100%;
+    height: 70vh; /* Use 70% of viewport height */
     vertical-align: top;
   }
-  @media (max-width: 576px) {
-    #aztec-canvas {
+
+  #aztec-2d-canvas {
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: none; /* Hidden by default */
+  }
+
+  /* View toggle button styling */
+  .view-toggle {
+    margin-bottom: 10px;
+  }
+
+  .view-toggle button {
+    padding: 6px 12px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .view-toggle button.active {
+    background-color: #e0e0e0;
+    font-weight: bold;
+    border-color: #999;
+  }
+
+  @media (max-width: 768px) {
+    #aztec-canvas, #aztec-2d-canvas {
       height: 60vh;
     }
   }
@@ -35,12 +76,26 @@ code:
     cursor: pointer;
   }
 
+  .pane-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+  }
+
   #move-left-btn, #move-up-btn, #move-down-btn, #move-right-btn, #reset-view-btn {
     transition: background-color 0.2s;
   }
 
   #move-left-btn:hover, #move-up-btn:hover, #move-down-btn:hover, #move-right-btn:hover, #reset-view-btn:hover {
     background-color: #e0e0e0;
+  }
+
+  .parameters-section {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
   }
 </style>
 
@@ -51,20 +106,32 @@ code:
 
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
 
-<!-- Controls to change n -->
-<div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 320$): </label>
-  <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
-  <button id="update-btn">Update</button>
-  <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
-  <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
+<!-- Parameters section above the panes -->
+<div class="parameters-section">
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px;">
+    <div>
+      <label for="n-input">Aztec Diamond Order ($n\le 320$): </label>
+      <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
+    </div>
 
-  <label for="demo-mode" style="margin-left: 15px;">
-    <input id="demo-mode" type="checkbox"> Demo mode
-  </label>
+    <div>
+      <button id="update-btn">Update</button>
+      <button id="cancel-btn" style="display: none; margin-left: 5px; background-color: #ff5555;">Cancel</button>
+    </div>
 
-  <div style="margin-top: 10px;">
-    <h4>3×3 Periodic Weights</h4>
+    <div>
+      <label for="demo-mode">
+        <input id="demo-mode" type="checkbox"> Demo mode
+      </label>
+    </div>
+
+    <div>
+      <span id="progress-indicator" style="font-weight: bold;"></span>
+    </div>
+  </div>
+
+  <div>
+    <h4 style="margin-top: 0; margin-bottom: 5px;">3×3 Periodic Weights</h4>
     <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
       <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
@@ -77,8 +144,18 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
     </div>
   </div>
+</div>
 
-  <div style="margin-top: 10px;">
+<!-- Visualization container with switchable views -->
+<div class="visualization-container">
+  <!-- View toggle buttons -->
+  <div class="view-toggle">
+    <button id="view-3d-btn" class="active">3D</button>
+    <button id="view-2d-btn">2D</button>
+  </div>
+
+  <!-- Camera controls for 3D pane -->
+  <div id="camera-controls" style="margin-bottom: 10px;">
     <label>Camera movement:</label>
     <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
     <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
@@ -86,9 +163,15 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
     <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
     <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
   </div>
-</div>
 
-<div id="aztec-canvas"></div>
+  <!-- 3D Visualization Pane (default) -->
+  <div id="aztec-canvas"></div>
+
+  <!-- 2D Visualization Pane (hidden by default) -->
+  <div id="aztec-2d-canvas">
+    <p>2D visualization will be available in a future update</p>
+  </div>
+</div>
 
 <script>
 Module.onRuntimeInitialized = async function() {
@@ -692,6 +775,35 @@ Module.onRuntimeInitialized = async function() {
 
       controls.update();
     }
+  });
+
+  // View toggle handlers
+  document.getElementById("view-3d-btn").addEventListener("click", function() {
+    // Show 3D view, hide 2D view
+    document.getElementById("aztec-canvas").style.display = "block";
+    document.getElementById("aztec-2d-canvas").style.display = "none";
+    document.getElementById("camera-controls").style.display = "block";
+
+    // Update toggle button states
+    document.getElementById("view-3d-btn").classList.add("active");
+    document.getElementById("view-2d-btn").classList.remove("active");
+
+    // Resume animation
+    if (!animationActive) {
+      animationActive = true;
+      animate();
+    }
+  });
+
+  document.getElementById("view-2d-btn").addEventListener("click", function() {
+    // Show 2D view, hide 3D view
+    document.getElementById("aztec-canvas").style.display = "none";
+    document.getElementById("aztec-2d-canvas").style.display = "flex";
+    document.getElementById("camera-controls").style.display = "none";
+
+    // Update toggle button states
+    document.getElementById("view-3d-btn").classList.remove("active");
+    document.getElementById("view-2d-btn").classList.add("active");
   });
 
   // Add keyboard controls
