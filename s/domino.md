@@ -1579,7 +1579,12 @@ Module.onRuntimeInitialized = async function() {
       // Collect all the dominoes
       const dominoes = [];
       svg2d.select("g").selectAll("rect").each(function(d) {
-        dominoes.push(d);
+        // Only add dominoes with valid coordinates
+        if (d && typeof d.x === 'number' && typeof d.y === 'number' && 
+            typeof d.w === 'number' && typeof d.h === 'number' &&
+            !isNaN(d.x) && !isNaN(d.y) && !isNaN(d.w) && !isNaN(d.h)) {
+          dominoes.push(d);
+        }
       });
       
       // Create dimer representations
@@ -1588,89 +1593,116 @@ Module.onRuntimeInitialized = async function() {
       
       // Process each domino to create dimer edges and nodes
       dominoes.forEach(d => {
+        // Skip dominoes with invalid dimensions
+        if (d.w <= 0 || d.h <= 0) return;
+        
         const isHorizontal = d.w > d.h;
         
         // For each domino, we'll add two nodes and one edge connecting them
         // The dimer length should be half the long side of the domino
         
-        if (isHorizontal) {
-          // Horizontal domino (blue or green)
-          const centerX = d.x + d.w/2;  // Center of the domino
-          const midY = d.y + d.h/2;     // Vertical center
-          
-          // Calculate dimer length (half the domino width)
-          const dimerLength = d.w / 2;
-          
-          // Place nodes at the midpoints between center and edges
-          const leftX = centerX - dimerLength/2;
-          const rightX = centerX + dimerLength/2;
-          
-          // Add nodes
-          const leftNode = {
-            x: leftX,
-            y: midY,
-            radius: 0.4 // Radius for node circles
-          };
-          
-          const rightNode = {
-            x: rightX,
-            y: midY,
-            radius: 0.4
-          };
-          
-          dimerNodes.push(leftNode, rightNode);
-          
-          // Add edge connecting the two nodes
-          dimerEdges.push({
-            x1: leftX,
-            y1: midY,
-            x2: rightX,
-            y2: midY
-          });
-          
-        } else {
-          // Vertical domino (red or yellow)
-          const midX = d.x + d.w/2;     // Horizontal center
-          const centerY = d.y + d.h/2;  // Center of the domino
-          
-          // Calculate dimer length (half the domino height)
-          const dimerLength = d.h / 2;
-          
-          // Place nodes at the midpoints between center and edges
-          const topY = centerY - dimerLength/2;
-          const bottomY = centerY + dimerLength/2;
-          
-          // Add nodes
-          const topNode = {
-            x: midX,
-            y: topY,
-            radius: 0.4
-          };
-          
-          const bottomNode = {
-            x: midX,
-            y: bottomY,
-            radius: 0.4
-          };
-          
-          dimerNodes.push(topNode, bottomNode);
-          
-          // Add edge connecting the two nodes
-          dimerEdges.push({
-            x1: midX,
-            y1: topY,
-            x2: midX,
-            y2: bottomY
-          });
+        try {
+          if (isHorizontal) {
+            // Horizontal domino (blue or green)
+            const centerX = d.x + d.w/2;  // Center of the domino
+            const midY = d.y + d.h/2;     // Vertical center
+            
+            // Calculate dimer length (half the domino width)
+            const dimerLength = d.w / 2;
+            
+            // Place nodes at the midpoints between center and edges
+            const leftX = centerX - dimerLength/2;
+            const rightX = centerX + dimerLength/2;
+            
+            // Validate all coordinates are numbers and not NaN
+            if (isNaN(leftX) || isNaN(rightX) || isNaN(midY)) return;
+            
+            // Add nodes
+            const leftNode = {
+              x: leftX,
+              y: midY,
+              radius: 0.4 // Radius for node circles
+            };
+            
+            const rightNode = {
+              x: rightX,
+              y: midY,
+              radius: 0.4
+            };
+            
+            dimerNodes.push(leftNode, rightNode);
+            
+            // Add edge connecting the two nodes
+            dimerEdges.push({
+              x1: leftX,
+              y1: midY,
+              x2: rightX,
+              y2: midY
+            });
+            
+          } else {
+            // Vertical domino (red or yellow)
+            const midX = d.x + d.w/2;     // Horizontal center
+            const centerY = d.y + d.h/2;  // Center of the domino
+            
+            // Calculate dimer length (half the domino height)
+            const dimerLength = d.h / 2;
+            
+            // Place nodes at the midpoints between center and edges
+            const topY = centerY - dimerLength/2;
+            const bottomY = centerY + dimerLength/2;
+            
+            // Validate all coordinates are numbers and not NaN
+            if (isNaN(midX) || isNaN(topY) || isNaN(bottomY)) return;
+            
+            // Add nodes
+            const topNode = {
+              x: midX,
+              y: topY,
+              radius: 0.4
+            };
+            
+            const bottomNode = {
+              x: midX,
+              y: bottomY,
+              radius: 0.4
+            };
+            
+            dimerNodes.push(topNode, bottomNode);
+            
+            // Add edge connecting the two nodes
+            dimerEdges.push({
+              x1: midX,
+              y1: topY,
+              x2: midX,
+              y2: bottomY
+            });
+          }
+        } catch (e) {
+          console.error("Error processing dimer:", e);
         }
       });
+      
+      // Additional validation for all dimer edges and nodes
+      const validDimerEdges = dimerEdges.filter(d => 
+        typeof d.x1 === 'number' && !isNaN(d.x1) &&
+        typeof d.y1 === 'number' && !isNaN(d.y1) &&
+        typeof d.x2 === 'number' && !isNaN(d.x2) &&
+        typeof d.y2 === 'number' && !isNaN(d.y2)
+      );
+      
+      const validDimerNodes = dimerNodes.filter(d => 
+        typeof d.x === 'number' && !isNaN(d.x) &&
+        typeof d.y === 'number' && !isNaN(d.y) &&
+        typeof d.radius === 'number' && !isNaN(d.radius)
+      );
       
       // Draw dimer edges and nodes
       const group = svg2d.select("g");
       
       // First draw edges (lines)
       group.selectAll(".dimer-line")
-          .data(dimerEdges)
+          .data(validDimerEdges)
           .enter()
           .append("line")
           .attr("class", "dimer-line")
@@ -1684,7 +1716,7 @@ Module.onRuntimeInitialized = async function() {
       
       // Then draw nodes (circles)
       group.selectAll(".dimer-circle")
-          .data(dimerNodes)
+          .data(validDimerNodes)
           .enter()
           .append("circle")
           .attr("class", "dimer-circle")
