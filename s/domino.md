@@ -241,9 +241,12 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
       <!-- Display options -->
       <div style="margin-bottom: 10px;">
-        <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
-        <label for="grayscale-checkbox-2d">Grayscale mode (great for seeing gas phase in 2x2 periodic model)</label>
-      </div>
+      <input type="checkbox" id="grayscale-checkbox-2d">
+      <label for="grayscale-checkbox-2d">Grayscale mode (great for seeing gas phase in 2x2 periodic model)</label>
+      <br>
+      <input type="checkbox" id="checkerboard-checkbox-2d">
+      <label for="checkerboard-checkbox-2d">Show checkerboard overlay</label>
+    </div>
     </div>
 
     <!-- SVG container with adjusted height to account for controls -->
@@ -1289,7 +1292,18 @@ Module.onRuntimeInitialized = async function() {
 
   // 2D grayscale toggle handler
   document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
-    const useGrayscale = this.checked;
+    updateDominoDisplay();
+  });
+
+  // Checkerboard overlay toggle handler
+  document.getElementById("checkerboard-checkbox-2d").addEventListener("change", function() {
+    updateDominoDisplay();
+  });
+
+  // Function to update domino display based on various display settings
+  function updateDominoDisplay() {
+    const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
+    const showCheckerboard = document.getElementById("checkerboard-checkbox-2d").checked;
     const showColors = document.getElementById("show-colors-checkbox").checked;
     const monoColor = "#999999";
 
@@ -1297,9 +1311,27 @@ Module.onRuntimeInitialized = async function() {
     svg2d.select("g").selectAll("rect")
       .attr("fill", function(d) {
         if (!showColors) return monoColor;
-        return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
+
+        // If checkerboard is enabled, apply overlay pattern
+        if (showCheckerboard) {
+          const xPos = Math.floor(d.x);
+          const yPos = Math.floor(d.y);
+          const isEvenCell = (xPos + yPos) % 2 === 0;
+
+          if (useGrayscale) {
+            // Grayscale with checkerboard
+            const baseColor = getGrayscaleColor(d.color, d);
+            return isEvenCell ? d3.color(baseColor).darker(0.5) : baseColor;
+          } else {
+            // Color with checkerboard
+            return isEvenCell ? d3.color(d.color).darker(0.3) : d.color;
+          }
+        } else {
+          // No checkerboard, just regular coloring
+          return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
+        }
       });
-  });
+  }
 
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
@@ -1310,11 +1342,7 @@ Module.onRuntimeInitialized = async function() {
     // Update 2D view if it exists
     const svg2dGroup = svg2d.select("g");
     if (!svg2dGroup.empty()) {
-      svg2dGroup.selectAll("rect")
-        .attr("fill", function(d) {
-          if (!showColors) return monoColor;
-          return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
-        });
+      updateDominoDisplay();
     }
 
     // Update 3D view if it exists and we're not in a large tiling case
@@ -1400,10 +1428,6 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 0; i < dominoes.length; i += BATCH_SIZE) {
       const batch = dominoes.slice(i, i + BATCH_SIZE);
 
-      // Check if we should show colors
-      const showColors = document.getElementById("show-colors-checkbox").checked;
-      const monoColor = "#EEEEEE"; // Lighter monochrome color for 2D view
-
       group.selectAll("rect.batch" + i)
            .data(batch)
            .enter()
@@ -1412,10 +1436,6 @@ Module.onRuntimeInitialized = async function() {
            .attr("y", d => d.y)
            .attr("width", d => d.w)
            .attr("height", d => d.h)
-           .attr("fill", d => {
-             if (!showColors) return monoColor;
-             return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
-           })
            .attr("stroke", "#000")
            .attr("stroke-width", 0.1);
 
@@ -1424,6 +1444,9 @@ Module.onRuntimeInitialized = async function() {
         await sleep(0);
       }
     }
+
+    // Apply display settings (colors, grayscale, checkerboard overlay) once all dominoes are rendered
+    updateDominoDisplay();
   }
 
   document.getElementById("view-2d-btn").addEventListener("click", function() {
