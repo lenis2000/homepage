@@ -1024,35 +1024,29 @@ Module.onRuntimeInitialized = async function() {
     return "#" + hex + hex + hex;
   }
 
-  // Pre-compute grayscale palettes for the four original colors.
-  const palettes = {
-    "#ffff00": d3.range(0,8).map(i => grayHex(30*i+5)),
-    "#ff0000": d3.range(0,8).map(i => grayHex(30*i+10)),
-    "#00ff00": d3.range(0,8).map(i => grayHex(30*i+12)),
-    "#ff0000": d3.range(0,8).map(i => grayHex(30*i+18))
+  // Simple map of colors to grayscale values
+  const colorToGrayscale = {
+    "#ff0000": grayHex(76),  // red
+    "#00ff00": grayHex(150), // green
+    "#0000ff": grayHex(38),  // blue
+    "#ffff00": grayHex(226)  // yellow
   };
 
-  function getPos(d) {
-    if (d.w > d.h) {
-      return ((Math.floor(d.x) % 8) + 8) % 8;
-    } else {
-      return ((Math.floor(d.y) % 8) + 8) % 8;
-    }
-  }
-
-  function getGrayscaleColor(originalColor, d) {
+  // Simple function to convert color to grayscale
+  function getGrayscaleColor(originalColor) {
     let c = d3.color(originalColor);
     if (!c) return originalColor;
+    
+    // Try direct mapping for the four main colors
     let normHex = c.formatHex().toLowerCase();
-    let pos = getPos(d);
-    if (palettes[normHex]) {
-      return palettes[normHex][pos];
+    if (colorToGrayscale[normHex]) {
+      return colorToGrayscale[normHex];
     }
+    
+    // For any other color, convert using standard luminance formula
     let r = c.r, g = c.g, b = c.b;
     let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
-    let offset = ((pos / 7) - 0.5) * 80;
-    let newLum = Math.max(0, Math.min(255, lum + offset));
-    return grayHex(newLum);
+    return grayHex(lum);
   }
 
   // Setup 2D visualization elements
@@ -1106,7 +1100,7 @@ Module.onRuntimeInitialized = async function() {
     const useGrayscale = this.checked;
     // Update colors of existing dominoes
     svg2d.select("g").selectAll("rect")
-      .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
+      .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color) : d.color);
   });
 
   // Function to render dominoes in 2D view
@@ -1161,7 +1155,7 @@ Module.onRuntimeInitialized = async function() {
            .attr("y", d => d.y)
            .attr("width", d => d.w)
            .attr("height", d => d.h)
-           .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+           .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color) : d.color)
            .attr("stroke", "#000")
            .attr("stroke-width", 0.1);
 
