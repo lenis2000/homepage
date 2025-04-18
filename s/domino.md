@@ -791,7 +791,7 @@ Module.onRuntimeInitialized = async function() {
         dominoGroup.position.sub(center);
 
         const sizeXYZ   = box.getSize(new THREE.Vector3());       // model extents
-        const margin    = 0.00;                                   // 5 % breathing room
+        const margin    = 0.05;                                   // 5 % breathing room
 
         // For an orthographic camera its “view size” is the difference of the planes:
         const viewW = camera.right  - camera.left;
