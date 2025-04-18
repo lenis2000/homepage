@@ -244,10 +244,10 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztec(int n) {
     try {
-        // Limit n to reasonable values to prevent memory issues
-        if (n > 120) {
-            n = 120; // Cap at 120 to prevent memory issues
-        }
+        // // Limit n to reasonable values to prevent memory issues
+        // if (n > 120) {
+        //     n = 120; // Cap at 120 to prevent memory issues
+        // }
 
         progressCounter = 0; // Reset progress.
 
