@@ -22,6 +22,25 @@ published: true
       height: 60vh;
     }
   }
+  
+  /* Styling for buttons and controls */
+  #update-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #cccccc;
+  }
+  
+  button {
+    cursor: pointer;
+  }
+  
+  #move-left-btn, #move-up-btn, #move-down-btn, #move-right-btn, #reset-view-btn {
+    transition: background-color 0.2s;
+  }
+  
+  #move-left-btn:hover, #move-up-btn:hover, #move-down-btn:hover, #move-right-btn:hover, #reset-view-btn:hover {
+    background-color: #e0e0e0;
+  }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
@@ -38,6 +57,19 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
+  
+  <label for="demo-mode" style="margin-left: 15px;">
+    <input id="demo-mode" type="checkbox"> Demo mode
+  </label>
+  
+  <div style="margin-top: 10px;">
+    <label>Camera movement:</label>
+    <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
+    <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
+    <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
+    <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
+    <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
+  </div>
 </div>
 
 <div id="aztec-canvas"></div>
@@ -59,6 +91,10 @@ Module.onRuntimeInitialized = async function() {
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
+  
+  // Demo mode state
+  let isDemoMode = false;
+  let rotationSpeed = 0.005; // Speed of rotation in radians
 
   function initThreeJS() {
     scene = new THREE.Scene();
@@ -115,6 +151,12 @@ Module.onRuntimeInitialized = async function() {
 
     requestAnimationFrame(animate);
     controls.update();
+    
+    // Apply rotation in demo mode
+    if (isDemoMode && dominoGroup) {
+      dominoGroup.rotation.y += rotationSpeed;
+    }
+    
     renderer.render(scene, camera);
   }
 
@@ -316,6 +358,9 @@ Module.onRuntimeInitialized = async function() {
       m.geometry.dispose();
       m.material.dispose();
     }
+    
+    // Remember demo mode state
+    const wasInDemoMode = isDemoMode;
 
     startSimulation();
     const signal = abortController.signal;
@@ -512,6 +557,11 @@ Module.onRuntimeInitialized = async function() {
         ) * 0.95;
 
         dominoGroup.scale.setScalar(finalScale);
+        
+        // If we were in demo mode before update, restore demo view
+        if (wasInDemoMode) {
+          setDemoViewCamera();
+        }
       }
 
       // Cleanup
@@ -539,6 +589,131 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("cancel-btn").addEventListener("click", () => {
     stopSimulation();
+  });
+
+  // Demo mode toggle handler
+  document.getElementById("demo-mode").addEventListener("change", function() {
+    isDemoMode = this.checked;
+    
+    if (isDemoMode) {
+      // Set to angled demo view
+      setDemoViewCamera();
+    }
+    // When turning off, we just stop rotation but keep the current view
+  });
+  
+  // Set up demo view camera position
+  function setDemoViewCamera() {
+    // Reset any existing rotation
+    if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
+    
+    // Set to angled view
+    camera.position.set(50, 80, 50);
+    camera.lookAt(0, 0, 0);
+    controls.update();
+  }
+  
+  // Camera movement controls
+  document.getElementById("move-up-btn").addEventListener("click", function() {
+    // Move camera up relative to current view
+    const moveAmount = 5;
+    const upVector = new THREE.Vector3(0, 1, 0);
+    upVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(upVector, moveAmount);
+    controls.target.addScaledVector(upVector, moveAmount);
+    controls.update();
+  });
+
+  document.getElementById("move-down-btn").addEventListener("click", function() {
+    // Move camera down relative to current view
+    const moveAmount = 5;
+    const upVector = new THREE.Vector3(0, 1, 0);
+    upVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(upVector, -moveAmount);
+    controls.target.addScaledVector(upVector, -moveAmount);
+    controls.update();
+  });
+
+  document.getElementById("move-left-btn").addEventListener("click", function() {
+    // Move camera left relative to current view
+    const moveAmount = 5;
+    const rightVector = new THREE.Vector3(1, 0, 0);
+    rightVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(rightVector, -moveAmount);
+    controls.target.addScaledVector(rightVector, -moveAmount);
+    controls.update();
+  });
+
+  document.getElementById("move-right-btn").addEventListener("click", function() {
+    // Move camera right relative to current view
+    const moveAmount = 5;
+    const rightVector = new THREE.Vector3(1, 0, 0);
+    rightVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(rightVector, moveAmount);
+    controls.target.addScaledVector(rightVector, moveAmount);
+    controls.update();
+  });
+  
+  // Reset view button handler
+  document.getElementById("reset-view-btn").addEventListener("click", function() {
+    if (isDemoMode) {
+      setDemoViewCamera();
+    } else {
+      // Reset camera to initial position
+      camera.position.set(0, 130, 0);
+      camera.lookAt(0, 0, 0);
+      
+      // Reset domino group rotation
+      if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
+      
+      controls.update();
+    }
+  });
+  
+  // Add keyboard controls
+  window.addEventListener('keydown', function(event) {
+    const moveAmount = 5;
+    
+    // Arrow keys for camera movement
+    if (event.key === 'ArrowUp') {
+      const upVector = new THREE.Vector3(0, 1, 0);
+      upVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(upVector, moveAmount);
+      controls.target.addScaledVector(upVector, moveAmount);
+      controls.update();
+    }
+    else if (event.key === 'ArrowDown') {
+      const upVector = new THREE.Vector3(0, 1, 0);
+      upVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(upVector, -moveAmount);
+      controls.target.addScaledVector(upVector, -moveAmount);
+      controls.update();
+    }
+    else if (event.key === 'ArrowLeft') {
+      const rightVector = new THREE.Vector3(1, 0, 0);
+      rightVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(rightVector, -moveAmount);
+      controls.target.addScaledVector(rightVector, -moveAmount);
+      controls.update();
+    }
+    else if (event.key === 'ArrowRight') {
+      const rightVector = new THREE.Vector3(1, 0, 0);
+      rightVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(rightVector, moveAmount);
+      controls.target.addScaledVector(rightVector, moveAmount);
+      controls.update();
+    }
+    // 'R' key to reset view
+    else if (event.key === 'r' || event.key === 'R') {
+      document.getElementById("reset-view-btn").click();
+    }
+    // 'D' key to toggle demo mode
+    else if (event.key === 'd' || event.key === 'D') {
+      const demoCheckbox = document.getElementById('demo-mode');
+      demoCheckbox.checked = !demoCheckbox.checked;
+      // Trigger the change event
+      demoCheckbox.dispatchEvent(new Event('change'));
+    }
   });
 
   updateVisualization(parseInt(document.getElementById("n-input").value, 10));
