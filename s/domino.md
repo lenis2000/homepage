@@ -877,6 +877,9 @@ Module.onRuntimeInitialized = async function() {
                   side: THREE.DoubleSide,
                   flatShading: true
                 });
+                
+                // Store the original color code for later use in the userData
+                mat.userData = { originalColorValue: colorValue };
 
                 // Create the mesh and store the original color for later toggling
                 const mesh = new THREE.Mesh(geom, mat);
@@ -1542,6 +1545,9 @@ Module.onRuntimeInitialized = async function() {
 
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
+    const showColors = this.checked; // Get the current state of the checkbox
+    console.log("Show colors toggled:", showColors);
+    
     // Update 2D view if it exists
     const svg2dGroup = svg2d.select("g");
     if (!svg2dGroup.empty()) {
@@ -1568,13 +1574,18 @@ Module.onRuntimeInitialized = async function() {
             // Set to monochrome
             mesh.material.color.setHex(monoColor3D);
           } else {
-            // Restore original color
-            const colorName = mesh.userData.originalColor || "blue";
-            if (domino3DColors[colorName]) {
-              mesh.material.color.setHex(domino3DColors[colorName]);
+            // Try to get the color from userData first (direct hex value)
+            if (mesh.material.userData && mesh.material.userData.originalColorValue) {
+              mesh.material.color.setHex(mesh.material.userData.originalColorValue);
             } else {
-              // Fallback for unknown colors
-              mesh.material.color.setHex(0x808080);
+              // Fall back to the color name method
+              const colorName = mesh.userData.originalColor || "blue";
+              if (domino3DColors[colorName]) {
+                mesh.material.color.setHex(domino3DColors[colorName]);
+              } else {
+                // Fallback for unknown colors
+                mesh.material.color.setHex(0x808080);
+              }
             }
           }
         }
