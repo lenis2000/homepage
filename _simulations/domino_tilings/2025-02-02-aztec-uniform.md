@@ -91,6 +91,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
   <!-- Updated input: starting value 24, even numbers only (step=2), three-digit window (size=3), maximum 400 -->
   <input id="n-input" type="number" value="24" min="2" step="2" max="400" size="3">
   <button id="update-btn">Update</button>
+  <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
@@ -179,6 +180,11 @@ Module.onRuntimeInitialized = async function() {
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
   let heightGroup; // Group for height function display
+  
+  // Simulation state
+  let simulationActive = false;
+  let simulationAbortController = null;
+  const cancelBtn = document.getElementById("cancel-btn");
 
   // Define n in the broader scope so it's accessible to all functions
   let n = parseInt(inputField.value, 10);
@@ -221,10 +227,49 @@ Module.onRuntimeInitialized = async function() {
     }, 100); // Longer timeout to ensure DOM is ready
   }
 
+  // Helper function to sleep for ms milliseconds
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  function startSimulation() {
+    simulationActive = true;
+    const updateBtn = document.getElementById("update-btn");
+    
+    updateBtn.disabled = true;
+    inputField.disabled = true;
+    cancelBtn.style.display = 'inline-block';
+    
+    simulationAbortController = new AbortController();
+  }
+  
+  function stopSimulation() {
+    simulationActive = false;
+    const updateBtn = document.getElementById("update-btn");
+    
+    clearInterval(progressInterval);
+    updateBtn.disabled = false;
+    inputField.disabled = false;
+    cancelBtn.style.display = 'none';
+    progressElem.innerText = "Simulation cancelled";
+    
+    if (simulationAbortController) {
+      simulationAbortController.abort();
+      simulationAbortController = null;
+    }
+    
+    isProcessing = false;
+  }
+
   // Start polling the progress counter from C++.
   function startProgressPolling() {
     progressElem.innerText = "Sampling... (0%)";
     progressInterval = setInterval(() => {
+      if (!simulationActive) {
+        clearInterval(progressInterval);
+        return;
+      }
+      
       const progress = getProgress();
       progressElem.innerText = "Sampling... (" + progress + "%)";
       if (progress >= 100) {
@@ -917,6 +962,8 @@ Module.onRuntimeInitialized = async function() {
     if (isProcessing) return;
 
     isProcessing = true;
+    startSimulation();
+    const signal = simulationAbortController.signal;
 
     // Clear any previous simulation.
     svg.selectAll("g").remove();
@@ -954,11 +1001,44 @@ Module.onRuntimeInitialized = async function() {
     // Start the progress indicator.
     startProgressPolling();
 
+    // Allow UI thread to update before starting computation
+    await sleep(10);
+    if (signal.aborted) {
+      clearInterval(progressInterval);
+      isProcessing = false;
+      return;
+    }
+
     try {
       // Await the asynchronous simulation.
-      const ptr = await simulateAztec(n);
+      const ptrPromise = simulateAztec(n);
+      
+      // Wait for computation to complete or be aborted
+      const ptr = await ptrPromise;
+      
+      if (signal.aborted) {
+        if (ptr) freeString(ptr);
+        clearInterval(progressInterval);
+        isProcessing = false;
+        return;
+      }
+      
       const jsonStr = Module.UTF8ToString(ptr);
       freeString(ptr);
+      
+      if (signal.aborted) {
+        clearInterval(progressInterval);
+        isProcessing = false;
+        return;
+      }
+
+      // Allow UI thread to breathe after computation
+      await sleep(10);
+      if (signal.aborted) {
+        clearInterval(progressInterval);
+        isProcessing = false;
+        return;
+      }
 
       try {
         currentDominoes = JSON.parse(jsonStr); // Store for later toggling
@@ -969,19 +1049,32 @@ Module.onRuntimeInitialized = async function() {
         return;
       }
 
-      // Render the dominoes
-      renderDominoes(currentDominoes);
+      // Render the dominoes with yield points for UI responsiveness
+      if (!signal.aborted) {
+        renderDominoes(currentDominoes);
+      }
 
       // Clear progress indicator once done.
-      progressElem.innerText = "";
-
-      // Update last processed value
-      lastValue = n;
+      if (!signal.aborted) {
+        progressElem.innerText = "";
+        // Update last processed value
+        lastValue = n;
+      }
     } catch (error) {
-      progressElem.innerText = "Error during sampling";
-      clearInterval(progressInterval);
+      if (!signal.aborted) {
+        progressElem.innerText = "Error during sampling";
+        clearInterval(progressInterval);
+      }
     } finally {
-      isProcessing = false;
+      if (!signal.aborted) {
+        // Reset simulation state if not already cancelled
+        simulationActive = false;
+        const updateBtn = document.getElementById("update-btn");
+        updateBtn.disabled = false;
+        inputField.disabled = false;
+        cancelBtn.style.display = 'none';
+        isProcessing = false;
+      }
     }
   }
 
@@ -1017,6 +1110,11 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("update-btn").addEventListener("click", function() {
     // Force a resample even if the value hasn't changed
     updateVisualization(parseInt(inputField.value, 10));
+  });
+  
+  // Add cancel button event listener
+  document.getElementById("cancel-btn").addEventListener("click", function() {
+    stopSimulation();
   });
 
   // Run an initial simulation.
