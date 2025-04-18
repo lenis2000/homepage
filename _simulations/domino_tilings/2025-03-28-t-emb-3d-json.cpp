@@ -13,7 +13,7 @@
   emcc 2025-03-28-t-emb-3d-json.cpp -o 2025-03-28-t-emb-3d-json.js \
    -s WASM=1 \
    -s ASYNCIFY=1 \
-   -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress','_requestCancel','_isCancelled','_resetCancel']" \
+   -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress']" \
    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
    -s ALLOW_MEMORY_GROWTH=1 \
    -s INITIAL_MEMORY=64MB \
@@ -49,9 +49,6 @@
 
 // Track progress for the UI
 static int currentProgress = 0;
-
-// Cancellation flag
-static bool cancelRequested = false;
 
 static inline std::complex<double> alphaVal(int m, double a) {
     // if m%2==1 => 1
@@ -117,24 +114,6 @@ void resetProgress() {
     currentProgress = 0;
 }
 
-// Function to request cancellation
-EMSCRIPTEN_KEEPALIVE
-void requestCancel() {
-    cancelRequested = true;
-}
-
-// Function to check if cancellation is requested
-EMSCRIPTEN_KEEPALIVE
-bool isCancelled() {
-    return cancelRequested;
-}
-
-// Function to reset cancellation flag
-EMSCRIPTEN_KEEPALIVE
-void resetCancel() {
-    cancelRequested = false;
-}
-
 EMSCRIPTEN_KEEPALIVE
 char* doTembJSONwithA(int n, double a) {
     // Reset progress counter
@@ -174,11 +153,6 @@ char* doTembJSONwithA(int n, double a) {
     for (int m = 1; m <= n; m++) {
         // Update progress during initialization (25-30%)
         currentProgress = 25 + (m * 5 / n);
-        
-        // Check for cancellation
-        if (cancelRequested) {
-            return nullptr;
-        }
         // T(-m,0) = -1, T(m,0)=+1, T(0,-m)= i*a, T(0,m)=-i*a
         Tarray[m][(-m + n)][(0 + n)] = std::complex<double>(-1.0, 0.0);
         Tarray[m][( m + n)][(0 + n)] = std::complex<double>(+1.0, 0.0);
@@ -199,11 +173,6 @@ char* doTembJSONwithA(int n, double a) {
     for (int m = 1; m < n; m++) {
         // Update progress at the start of each iteration for recursive filling (30-65%)
         currentProgress = 30 + (m * 35 / n);
-        
-        // Check for cancellation
-        if (cancelRequested) {
-            return nullptr;
-        }
         // pass 1 (T)
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
@@ -398,11 +367,6 @@ char* doTembJSONwithA(int n, double a) {
             processedPoints++;
             // Update more frequently for smoother progress
             currentProgress = 65 + (processedPoints * 10 / totalPoints);
-            
-            // Check for cancellation
-            if (cancelRequested) {
-                return nullptr;
-            }
             if (!first) oss << ",";
             first=false;
             double re = Tarray[n][k + n][j + n].real();
@@ -433,11 +397,6 @@ char* doTembJSONwithA(int n, double a) {
             processedPoints++;
             // Update more frequently for smoother progress
             currentProgress = 75 + (processedPoints * 10 / totalPoints);
-            
-            // Check for cancellation
-            if (cancelRequested) {
-                return nullptr;
-            }
             // We won't skip (0,0) here in the data (the 3D code filters if needed).
             if (!first) oss << ",";
             first = false;
@@ -500,11 +459,6 @@ char* doTembJSONwithA(int n, double a) {
          boundaryProcessed++;
          // Update more frequently for smoother progress
          currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
-         
-         // Check for cancellation
-         if (cancelRequested) {
-             return nullptr;
-         }
          
          if (!first) oss << ",";
          first=false;
