@@ -56,7 +56,7 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
   </div>
   <div>
     <label for="w2-input">w₂:</label>
-    <input id="w2-input" type="number" value="0.5" step="0.1" style="width: 60px;">
+    <input id="w2-input" type="number" value="1.0" step="0.1" style="width: 60px;">
   </div>
   <div>
     <label for="w3-input">w₃:</label>
@@ -64,7 +64,7 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
   </div>
   <div>
     <label for="w4-input">w₄:</label>
-    <input id="w4-input" type="number" value="0.5" step="0.1" style="width: 60px;">
+    <input id="w4-input" type="number" value="2.5" step="0.1" style="width: 60px;">
   </div>
   <div>
     <label for="w5-input">w₅:</label>
@@ -72,7 +72,7 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
   </div>
   <div>
     <label for="w6-input">w₆:</label>
-    <input id="w6-input" type="number" value="0.5" step="0.1" style="width: 60px;">
+    <input id="w6-input" type="number" value="1.0" step="0.1" style="width: 60px;">
   </div>
   <div>
     <label for="w7-input">w₇:</label>
@@ -80,11 +80,11 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
   </div>
   <div>
     <label for="w8-input">w₈:</label>
-    <input id="w8-input" type="number" value="0.5" step="0.1" style="width: 60px;">
+    <input id="w8-input" type="number" value="1.0" step="0.1" style="width: 60px;">
   </div>
   <div>
     <label for="w9-input">w₉:</label>
-    <input id="w9-input" type="number" value="1.0" step="0.1" style="width: 60px;">
+    <input id="w9-input" type="number" value="4.0" step="0.1" style="width: 60px;">
   </div>
 </div>
 
@@ -154,7 +154,7 @@ Module.onRuntimeInitialized = async function() {
   const progressElem = document.getElementById("progress-indicator");
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
-  
+
   let progressInterval;
   let simulationActive = false;
   let simulationPromise = null;
@@ -167,30 +167,30 @@ Module.onRuntimeInitialized = async function() {
         clearInterval(progressInterval);
         return;
       }
-      
+
       const progress = getProgress();
       progressElem.innerText = "Sampling... (" + progress + "%)";
-      
+
       if (progress >= 100) {
         clearInterval(progressInterval);
       }
     }, 100);
   }
-  
+
   function startSimulation() {
     simulationActive = true;
     updateBtn.disabled = true;
     cancelBtn.style.display = 'inline-block';
     simulationAbortController = new AbortController();
   }
-  
+
   function stopSimulation() {
     simulationActive = false;
     clearInterval(progressInterval);
     updateBtn.disabled = false;
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
-    
+
     if (simulationAbortController) {
       simulationAbortController.abort();
       simulationAbortController = null;
@@ -222,35 +222,35 @@ Module.onRuntimeInitialized = async function() {
 
       // Allow UI to update before starting heavy computation
       await sleep(50);
-      
+
       // Run simulation with periodic yielding to keep UI responsive
       const signal = simulationAbortController.signal;
-      
+
       simulationPromise = (async () => {
         if (signal.aborted) return null;
-        
+
         // Run the heavy simulation
         const ptr = await simulateAztec(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
-        
+
         if (signal.aborted) {
           if (ptr) freeString(ptr);
           return null;
         }
-        
+
         // Allow UI thread to breathe
         await sleep(10);
-        
+
         if (signal.aborted) {
           if (ptr) freeString(ptr);
           return null;
         }
-        
+
         const jsonStr = Module.UTF8ToString(ptr);
         freeString(ptr);
-        
+
         // Parse results
         if (signal.aborted) return null;
-        
+
         let dominoes;
         try {
           dominoes = JSON.parse(jsonStr);
@@ -261,18 +261,18 @@ Module.onRuntimeInitialized = async function() {
           }
           return null;
         }
-        
+
         return dominoes;
       })();
-      
+
       // Wait for simulation to complete
       const dominoes = await simulationPromise;
-      
+
       // If simulation was cancelled or errored
       if (!dominoes || !simulationActive) {
         return;
       }
-      
+
       cachedDominoes = dominoes;
 
       // Allow UI thread to breathe before rendering
@@ -298,13 +298,13 @@ Module.onRuntimeInitialized = async function() {
 
       const group = svg.append("g")
                        .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
-      
+
       // Render dominoes in batches to keep UI responsive
       const BATCH_SIZE = 200;
-      
+
       for (let i = 0; i < dominoes.length && simulationActive; i += BATCH_SIZE) {
         const batch = dominoes.slice(i, i + BATCH_SIZE);
-        
+
         group.selectAll("rect.batch" + i)
              .data(batch)
              .enter()
@@ -316,7 +316,7 @@ Module.onRuntimeInitialized = async function() {
              .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
              .attr("stroke", "#000")
              .attr("stroke-width", 0.5);
-        
+
         // Yield to UI thread after each batch
         if (i + BATCH_SIZE < dominoes.length) {
           await sleep(0);
@@ -343,7 +343,7 @@ Module.onRuntimeInitialized = async function() {
     }
     updateVisualization(n);
   });
-  
+
   document.getElementById("cancel-btn").addEventListener("click", () => {
     stopSimulation();
   });
