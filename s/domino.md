@@ -39,8 +39,8 @@ code:
     display: none; /* Hidden by default */
   }
 
-  /* View toggle button styling */
-  .view-toggle {
+  /* View toggle and display options styling */
+  .view-toggle, .display-options {
     margin-bottom: 10px;
   }
 
@@ -57,6 +57,25 @@ code:
     background-color: #e0e0e0;
     font-weight: bold;
     border-color: #999;
+  }
+
+  .display-options {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    margin-bottom: 15px;
+  }
+
+  .display-options label {
+    margin-left: 5px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .display-options input[type="checkbox"] {
+    cursor: pointer;
   }
 
   @media (max-width: 768px) {
@@ -113,6 +132,11 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
     <div>
       <label for="n-input">Aztec Diamond Order: </label>
       <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3">
+    </div>
+
+    <div style="margin-left: 20px;">
+      <input type="checkbox" id="show-colors-checkbox" checked style="vertical-align: middle;">
+      <label for="show-colors-checkbox" style="cursor: pointer;">&nbsp;Show colors</label>
     </div>
 
     <div style="margin-left: auto;">
@@ -664,10 +688,10 @@ Module.onRuntimeInitialized = async function() {
 
         // Check if this is a large tiling (n > 300)
       const isLargeTiling = n > 300;
-      
+
       // Always render the 2D view first (we'll need it regardless)
       await render2D(dominoes);
-      
+
       // For large tilings (n > 300), prepare a message for 3D view
       if (isLargeTiling) {
         // Create a div with a message in the 3D canvas container
@@ -688,12 +712,12 @@ Module.onRuntimeInitialized = async function() {
         messageDiv.style.textAlign = 'center';
         messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
         container.appendChild(messageDiv);
-        
+
         progressElem.innerText = "";
         stopSimulation();
         return;
       }
-      
+
       // For n ≤ 300, continue with 3D rendering regardless of current view
 
       progressElem.innerText = "Calculating height function...";
@@ -801,13 +825,22 @@ Module.onRuntimeInitialized = async function() {
 
                 geom.computeVertexNormals();
 
+                // Check if we should show colors in 3D view
+                const showColors = document.getElementById("show-colors-checkbox").checked;
+                const monoColor = 0x999999; // Default monochrome color when not showing colors
+                const colorValue = colors[f.color] || 0x808080;
+
                 const mat = new THREE.MeshStandardMaterial({
-                  color: colors[f.color] || 0x808080,
+                  color: showColors ? colorValue : monoColor,
                   side: THREE.DoubleSide,
                   flatShading: true
                 });
 
-                dominoGroup.add(new THREE.Mesh(geom, mat));
+                // Create the mesh and store the original color for later toggling
+                const mesh = new THREE.Mesh(geom, mat);
+                mesh.userData.originalColor = f.color;
+
+                dominoGroup.add(mesh);
               } catch(e) {
                 console.warn("face error", i, e);
               }
@@ -883,12 +916,12 @@ Module.onRuntimeInitialized = async function() {
     }
 
     // Get the current view (3D or 2D)
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active"); 
-    
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+
     // Absolute maximum n values for each view
     const max3DN = 300;
     const max2DN = 500;
-    
+
     // Check if n is within allowed range
     if ((is3DView && n > max3DN && n <= max2DN)) {
       // If in 3D view with n between 300 and 500, ask if user wants to switch to 2D
@@ -1046,11 +1079,11 @@ Module.onRuntimeInitialized = async function() {
       animationActive = true;
       animate();
     }
-    
+
     // If we have cached dominoes, handle the view switch appropriately
     if (cachedDominoes && cachedDominoes.length > 0) {
       const n = parseInt(document.getElementById("n-input").value, 10);
-      
+
       if (n > 300) {
         // Show message for large n
         const container = document.getElementById('aztec-canvas');
@@ -1070,7 +1103,7 @@ Module.onRuntimeInitialized = async function() {
         messageDiv.style.textAlign = 'center';
         messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
         container.appendChild(messageDiv);
-        
+
         progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
         setTimeout(() => { progressElem.innerText = ""; }, 3000);
       } else {
@@ -1197,12 +1230,70 @@ Module.onRuntimeInitialized = async function() {
   // 2D grayscale toggle handler
   document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
     const useGrayscale = this.checked;
+    const showColors = document.getElementById("show-colors-checkbox").checked;
+    const monoColor = "#999999";
 
-    // Simply toggle colors between normal and grayscale
+    // Toggle colors between normal and grayscale, respecting the show-colors setting
     svg2d.select("g").selectAll("rect")
       .attr("fill", function(d) {
+        if (!showColors) return monoColor;
         return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
       });
+  });
+
+  // Global color toggle handler
+  document.getElementById("show-colors-checkbox").addEventListener("change", function() {
+    const showColors = this.checked;
+    const monoColor = "#999999";
+    const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
+
+    // Update 2D view if it exists
+    const svg2dGroup = svg2d.select("g");
+    if (!svg2dGroup.empty()) {
+      svg2dGroup.selectAll("rect")
+        .attr("fill", function(d) {
+          if (!showColors) return monoColor;
+          return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
+        });
+    }
+
+    // Update 3D view if it exists and we're not in a large tiling case
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
+      const monoColor3D = 0x999999;
+
+      // Define standard colors for domino types (same as in the 3D rendering)
+      const domino3DColors = {
+        blue:   0x4363d8,
+        green:  0x1e8c28,
+        red:    0xff2244,
+        yellow: 0xfca414
+      };
+
+      // Update all meshes in the domino group
+      dominoGroup.children.forEach(mesh => {
+        if (mesh.material) {
+          if (!showColors) {
+            // Set to monochrome
+            mesh.material.color.setHex(monoColor3D);
+          } else {
+            // Restore original color
+            const colorName = mesh.userData.originalColor || "blue";
+            if (domino3DColors[colorName]) {
+              mesh.material.color.setHex(domino3DColors[colorName]);
+            } else {
+              // Fallback for unknown colors
+              mesh.material.color.setHex(0x808080);
+            }
+          }
+        }
+      });
+
+      // Force a render update
+      if (renderer) {
+        renderer.render(scene, camera);
+      }
+    }
   });
 
   // Function to render dominoes in 2D view
@@ -1249,6 +1340,10 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 0; i < dominoes.length; i += BATCH_SIZE) {
       const batch = dominoes.slice(i, i + BATCH_SIZE);
 
+      // Check if we should show colors
+      const showColors = document.getElementById("show-colors-checkbox").checked;
+      const monoColor = "#999999"; // Default monochrome color when not showing colors
+
       group.selectAll("rect.batch" + i)
            .data(batch)
            .enter()
@@ -1257,7 +1352,10 @@ Module.onRuntimeInitialized = async function() {
            .attr("y", d => d.y)
            .attr("width", d => d.w)
            .attr("height", d => d.h)
-           .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+           .attr("fill", d => {
+             if (!showColors) return monoColor;
+             return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
+           })
            .attr("stroke", "#000")
            .attr("stroke-width", 0.1);
 
@@ -1284,7 +1382,7 @@ Module.onRuntimeInitialized = async function() {
     // Always reuse the cached dominoes if we have them
     if (cachedDominoes && cachedDominoes.length > 0) {
       render2D(cachedDominoes);
-      
+
       // If we're switching from 3D to 2D, update the progress indicator
       const n = parseInt(document.getElementById("n-input").value, 10);
       if (n > 300) {
