@@ -242,7 +242,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <!-- Display options -->
       <div style="margin-bottom: 10px;">
         <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
-        <label for="grayscale-checkbox-2d" style="vertical-align: middle;">Grayscale mode</label>
+        <label for="grayscale-checkbox-2d">Grayscale mode (great for seeing gas phase in 2x2 periodic model)</label>
       </div>
     </div>
 
@@ -278,18 +278,18 @@ Module.onRuntimeInitialized = async function() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     const container = document.getElementById('aztec-canvas');
-    
+
     // Make sure the container is visible
     container.style.display = 'block';
     // No innerHTML clearing here - it can disrupt existing WebGL context
-    
+
     const w = container.clientWidth, h = container.clientHeight;
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(w,h);
     renderer.setPixelRatio(window.devicePixelRatio);
     // Enable OES_element_index_uint extension for WebGL 1 to support 32-bit indices
     renderer.getContext().getExtension('OES_element_index_uint');
-    
+
     // Clear and add canvas
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
@@ -419,7 +419,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Initialize Three.js when the module is loaded
   initThreeJS();
-  
+
   // Add a global function to easily reset Three.js if needed
   window.resetThreeJS = function() {
     console.log("Manual reset of Three.js requested");
@@ -752,7 +752,7 @@ Module.onRuntimeInitialized = async function() {
 
       // For n ≤ 300, continue with 3D rendering regardless of current view
       console.log("Small tiling (n ≤ 300), proceeding with 3D rendering");
-      
+
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
       if (signal.aborted) return;
@@ -977,14 +977,14 @@ Module.onRuntimeInitialized = async function() {
         // Make sure the 3D view is fully initialized
         const container = document.getElementById('aztec-canvas');
         const hasCanvas = container.querySelector('canvas') !== null;
-        
+
         // Only clear the container if we're keeping the 3D view (n <= 300)
         // and there's no WebGL canvas yet
         if (!hasCanvas) {
           console.log("Ensuring Three.js is initialized");
           initThreeJS();
         }
-        
+
         // Show helpful information in the progress indicator for valid n
         progressElem.innerText = "Generating new 3D visualization...";
       }
@@ -1132,7 +1132,7 @@ Module.onRuntimeInitialized = async function() {
       animationActive = true;
       animate();
     }
-    
+
     // Check if the WebGL renderer is properly initialized
     const container = document.getElementById('aztec-canvas');
     if (!container.querySelector('canvas')) {
