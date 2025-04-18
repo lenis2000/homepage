@@ -33,8 +33,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
-  <input id="n-input" type="number" value="16" min="2" step="2" max="300" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 320$): </label>
+  <input id="n-input" type="number" value="16" min="2" step="2" max="320" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
@@ -51,7 +51,7 @@ Module.onRuntimeInitialized = async function() {
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
   let animationActive = true;
-  
+
   // Simulation state
   let simulationActive = false;
   let abortController = null;
@@ -112,7 +112,7 @@ Module.onRuntimeInitialized = async function() {
 
   function animate(){
     if (!animationActive) return;
-    
+
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
@@ -122,21 +122,21 @@ Module.onRuntimeInitialized = async function() {
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
-  
+
   function startSimulation() {
     simulationActive = true;
     updateBtn.disabled = true;
     cancelBtn.style.display = 'inline-block';
     abortController = new AbortController();
   }
-  
+
   function stopSimulation() {
     simulationActive = false;
     clearInterval(progressInterval);
     updateBtn.disabled = false;
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
-    
+
     if (abortController) {
       abortController.abort();
       abortController = null;
@@ -319,7 +319,7 @@ Module.onRuntimeInitialized = async function() {
 
     startSimulation();
     const signal = abortController.signal;
-    
+
     // Start progress polling
     progressElem.innerText = "Sampling... (0%)";
     progressInterval = setInterval(() => {
@@ -336,21 +336,21 @@ Module.onRuntimeInitialized = async function() {
       // Allow UI to update before starting heavy computation
       await sleep(50);
       if (signal.aborted) return;
-      
+
       // Get domino configuration from C++ code
       const ptrPromise = simulateAztec(n);
-      
+
       // Wait for simulation to complete
       const ptr = await ptrPromise;
       if (signal.aborted) {
         if (ptr) freeString(ptr);
         return;
       }
-      
+
       let raw = Module.UTF8ToString(ptr);
       freeString(ptr);
       if (signal.aborted) return;
-      
+
       // Parse the results
       const dominoes = JSON.parse(raw);
       if (dominoes.error) throw new Error(dominoes.error);
@@ -359,7 +359,7 @@ Module.onRuntimeInitialized = async function() {
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
       if (signal.aborted) return;
-      
+
       // Calculate the height function (in chunks if large)
       const heightMap = calculateHeightFunction(dominoes);
       if (signal.aborted) return;
@@ -383,36 +383,36 @@ Module.onRuntimeInitialized = async function() {
       // Process faces in chunks to keep UI responsive
       const facesPromise = (async () => {
         const faces = [];
-        const CHUNK_SIZE = 300;
-        
+        const CHUNK_SIZE = 200;
+
         for (let i = 0; i < dominoes.length; i += CHUNK_SIZE) {
           if (signal.aborted) return null;
-          
+
           // Process a chunk of dominoes
           const chunk = dominoes.slice(i, i + CHUNK_SIZE);
-          const chunkFaces = chunk.map(domino => 
+          const chunkFaces = chunk.map(domino =>
             createDominoFaces(domino, heightMap, scale));
           faces.push(...chunkFaces);
-          
+
           // Update progress and yield to UI
-          progressElem.innerText = 
+          progressElem.innerText =
             `Processing... (${Math.floor(100*(i+chunk.length)/dominoes.length)}%)`;
           await sleep(0);
         }
-        
+
         return faces;
       })();
-      
+
       const faces = await facesPromise;
       if (!faces || signal.aborted) return;
-      
+
       const total = faces.length;
       if (total === 0 || signal.aborted) return;
 
       // Batch processing of faces for better performance
       progressElem.innerText = "Rendering...";
       let idx = 0;
-      
+
       function processBatch(start) {
         return new Promise(resolve => {
           requestAnimationFrame(() => {
@@ -420,16 +420,16 @@ Module.onRuntimeInitialized = async function() {
               resolve(false);
               return;
             }
-            
+
             const BATCH_SIZE = 200;
             const end = Math.min(start + BATCH_SIZE, total);
-            
+
             for (let i = start; i < end; i++) {
               if (signal.aborted) {
                 resolve(false);
                 return;
               }
-              
+
               const f = faces[i];
               if (!f || !f.color || !Array.isArray(f.vertices)) continue;
 
@@ -479,41 +479,41 @@ Module.onRuntimeInitialized = async function() {
           });
         });
       }
-      
+
       // Process batches sequentially with yield points for UI
       let hasMore = true;
       while (hasMore && simulationActive && !signal.aborted) {
         hasMore = await processBatch(idx);
       }
-      
+
       if (signal.aborted) return;
-      
+
       // Only finish if we completed all batches
       if (idx >= total) {
         progressElem.innerText = "";
-        
+
         // === recentre the tiling ===
         const box = new THREE.Box3().setFromObject(dominoGroup);
         const center = box.getCenter(new THREE.Vector3());
         dominoGroup.position.sub(center);
-        
+
         // now scale it to fill the view
         const size = new THREE.Vector3();
         box.getSize(size);
-        
+
         // compute how big the camera's view is in world units
         const viewWidth = camera.right - camera.left;
         const viewHeight = camera.top - camera.bottom;
-        
+
         // pick the smaller scale so it fits both width & height, with 5% padding
         const finalScale = Math.min(
           viewWidth / size.x,
           viewHeight / size.z
         ) * 0.95;
-        
+
         dominoGroup.scale.setScalar(finalScale);
       }
-      
+
       // Cleanup
       clearInterval(progressInterval);
       updateBtn.disabled = false;
@@ -531,12 +531,12 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("update-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n % 2 || n > 300) {
-      return alert("Enter even n between 2 and 300");
+    if (isNaN(n) || n < 2 || n % 2 || n > 320) {
+      return alert("Enter even n between 2 and 320");
     }
     updateVisualization(n);
   });
-  
+
   document.getElementById("cancel-btn").addEventListener("click", () => {
     stopSimulation();
   });

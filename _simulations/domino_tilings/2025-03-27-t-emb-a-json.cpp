@@ -18,7 +18,7 @@
     emcc 2025-03-27-t-emb-a-json.cpp -o 2025-03-27-t-emb-a-json.js \
      -s WASM=1 \
      -s ASYNCIFY=1 \
-     -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress']" \
+     -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress','_requestCancel','_isCancelled','_resetCancel']" \
      -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
      -s ALLOW_MEMORY_GROWTH=1 \
      -s INITIAL_MEMORY=64MB \
@@ -53,6 +53,9 @@
 
 // Track progress for the UI
 static int currentProgress = 0;
+
+// Cancellation flag
+static bool cancelRequested = false;
 
 // Helper inline functions to compute the piecewise factors alpha, beta, gamma:
 static inline std::complex<double> alphaVal(int m, double a) {
@@ -129,6 +132,24 @@ void resetProgress() {
     currentProgress = 0;
 }
 
+// Function to request cancellation
+EMSCRIPTEN_KEEPALIVE
+void requestCancel() {
+    cancelRequested = true;
+}
+
+// Function to check if cancellation is requested
+EMSCRIPTEN_KEEPALIVE
+bool isCancelled() {
+    return cancelRequested;
+}
+
+// Function to reset cancellation flag
+EMSCRIPTEN_KEEPALIVE
+void resetCancel() {
+    cancelRequested = false;
+}
+
 /*
   doTembJSONwithA(n, a):
     - n is an integer, 1 <= n <= 200
@@ -168,6 +189,11 @@ char* doTembJSONwithA(int n, double a) {
         if (i % 100000 == 0) {
             // Update progress slowly from 5% to 15%
             currentProgress = 5 + (i / 100000);
+            
+            // Check for cancellation
+            if (cancelRequested) {
+                return nullptr;
+            }
         }
     }
 
@@ -200,6 +226,11 @@ char* doTembJSONwithA(int n, double a) {
         // Update progress during initialization (25-30%)
         if (m % ((n/10) + 1) == 0) { // Update ~10 times
             currentProgress = 25 + (m * 5 / n);
+            
+            // Check for cancellation
+            if (cancelRequested) {
+                return nullptr;
+            }
         }
         
         // T(-m,0) = -1, T(m,0)= +1, T(0,-m)= i*a, T(0,m)= -i*a
@@ -222,6 +253,11 @@ char* doTembJSONwithA(int n, double a) {
     for (int m = 1; m < n; m++) {
         // Update progress during recursive filling (30-65%)
         currentProgress = 30 + (m * 35 / n);
+        
+        // Check for cancellation
+        if (cancelRequested) {
+            return nullptr;
+        }
         // Pass 1 for T
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
@@ -425,6 +461,11 @@ char* doTembJSONwithA(int n, double a) {
             processedPoints++;
             if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
               currentProgress = 65 + (processedPoints * 10 / totalPoints);
+              
+              // Check for cancellation
+              if (cancelRequested) {
+                return nullptr;
+              }
             }
             if (!first) oss << ",";
             first=false;
@@ -456,6 +497,11 @@ char* doTembJSONwithA(int n, double a) {
             processedPoints++;
             if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
               currentProgress = 75 + (processedPoints * 10 / totalPoints);
+              
+              // Check for cancellation
+              if (cancelRequested) {
+                return nullptr;
+              }
             }
             // -- Skip the origin (k=0, j=0) so no red vertex appears there:
             if (k == 0 && j == 0) {
@@ -530,6 +576,11 @@ char* doTembJSONwithA(int n, double a) {
          boundaryProcessed++;
          if (boundaryProcessed % (boundaryCount/5 + 1) == 0) { // Update ~5 times
            currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
+           
+           // Check for cancellation
+           if (cancelRequested) {
+             return nullptr;
+           }
          }
          
          if (!first) oss << ",";
