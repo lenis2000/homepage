@@ -214,7 +214,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
         <button id="zoom-reset-btn-2d" style="height: 30px; margin-left: 5px;">Reset Zoom</button>
         <span style="margin-left: 10px; font-style: italic; font-size: 0.9em;">(You can also use mouse wheel to zoom and drag to pan)</span>
       </div>
-      
+
       <!-- Display options -->
       <div style="margin-bottom: 10px;">
         <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
@@ -1026,10 +1026,10 @@ Module.onRuntimeInitialized = async function() {
 
   // Pre-compute grayscale palettes for the four original colors.
   const palettes = {
-    "#ff2244": d3.range(0,8).map(i => grayHex(30*i+5)),
-    "#1e8c28": d3.range(0,8).map(i => grayHex(30*i+10)),
-    "#4363d8": d3.range(0,8).map(i => grayHex(30*i+12)),
-    "#fca414": d3.range(0,8).map(i => grayHex(30*i+18))
+    "#ffff00": d3.range(0,8).map(i => grayHex(30*i+5)),
+    "#ff0000": d3.range(0,8).map(i => grayHex(30*i+10)),
+    "#00ff00": d3.range(0,8).map(i => grayHex(30*i+12)),
+    "#ff0000": d3.range(0,8).map(i => grayHex(30*i+18))
   };
 
   function getPos(d) {
