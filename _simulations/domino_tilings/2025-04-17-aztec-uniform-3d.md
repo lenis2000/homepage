@@ -33,8 +33,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
-  <input id="n-input" type="number" value="16" min="2" step="2" max="400" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
+  <input id="n-input" type="number" value="16" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 </div>
@@ -391,8 +391,8 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("update-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n % 2 || n > 400) {
-      return alert("Enter even n between 2 and 400");
+    if (isNaN(n) || n < 2 || n % 2 || n > 300) {
+      return alert("Enter even n between 2 and 300");
     }
     updateVisualization(n);
   });
