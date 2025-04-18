@@ -19,6 +19,14 @@ code:
   .controls {
     margin-bottom: 10px;
   }
+  #zoom-in-btn, #zoom-out-btn {
+    font-weight: bold;
+    width: 30px;
+    height: 30px;
+  }
+  #zoom-reset-btn {
+    height: 30px;
+  }
 </style>
 
 This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a measure with $2\times 2$ periodic weights, as in the <a href="https://arxiv.org/abs/1410.2385">paper</a> by Chhita and Johansson. The simulation uses the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
@@ -129,16 +137,87 @@ Module.onRuntimeInitialized = async function() {
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
-  
+
+  // Create zoom behavior
+  let initialTransform = {}; // Store initial transform parameters
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 50]) // Min and max zoom scale
+    .on("zoom", (event) => {
+      if (!initialTransform.scale) return; // Skip if no initial transform is set
+
+      // Apply the zoom transformation on top of initial transform
+      const group = svg.select("g");
+      const t = event.transform;
+      group.attr("transform",
+        `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+    });
+
+  // Enable zoom on the SVG
+  svg.call(zoom);
+
+  // Add double-click to reset zoom
+  svg.on("dblclick.zoom", () => {
+    svg.transition()
+      .duration(750)
+      .call(zoom.transform, d3.zoomIdentity);
+  });
+
+  // Add zoom controls to the UI
+  const controlsContainer = d3.select(".row").insert("div", "div")  // Insert before the SVG container
+    .attr("class", "col-12")
+    .append("div")
+    .attr("class", "controls zoom-controls")
+    .style("margin-bottom", "10px");
+
+  controlsContainer.append("span")
+    .text("Zoom: ")
+    .style("font-weight", "bold");
+
+  controlsContainer.append("button")
+    .attr("id", "zoom-in-btn")
+    .style("margin-left", "5px")
+    .text("+")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 1.3);
+    });
+
+  controlsContainer.append("button")
+    .attr("id", "zoom-out-btn")
+    .style("margin-left", "5px")
+    .text("-")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 0.7);
+    });
+
+  controlsContainer.append("button")
+    .attr("id", "zoom-reset-btn")
+    .style("margin-left", "5px")
+    .text("Reset Zoom")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.transform, d3.zoomIdentity);
+    });
+
+  controlsContainer.append("span")
+    .style("margin-left", "10px")
+    .style("font-style", "italic")
+    .style("font-size", "0.9em")
+    .text("(You can also use mouse wheel to zoom and drag to pan)");
+
   // Simulation state
   let simulationActive = false;
   let simulationAbortController = null;
-  
+
   // Helper function to sleep for ms milliseconds
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
-  
+
   function startSimulation() {
     simulationActive = true;
     updateBtn.disabled = true;
@@ -146,10 +225,10 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("a-input").disabled = true;
     document.getElementById("b-input").disabled = true;
     cancelBtn.style.display = 'inline-block';
-    
+
     simulationAbortController = new AbortController();
   }
-  
+
   function stopSimulation() {
     simulationActive = false;
     clearInterval(progressInterval);
@@ -159,7 +238,7 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("b-input").disabled = false;
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
-    
+
     if (simulationAbortController) {
       simulationAbortController.abort();
       simulationAbortController = null;
@@ -173,7 +252,7 @@ Module.onRuntimeInitialized = async function() {
         clearInterval(progressInterval);
         return;
       }
-      
+
       const progress = getProgress();
       progressElem.innerText = "Sampling... (" + progress + "%)";
       if (progress >= 100) clearInterval(progressInterval);
@@ -184,7 +263,7 @@ Module.onRuntimeInitialized = async function() {
     svg.selectAll("g").remove();
     startSimulation();
     startProgressPolling();
-    
+
     const signal = simulationAbortController.signal;
 
     // Hide the TikZ code container if it's visible
@@ -210,28 +289,28 @@ Module.onRuntimeInitialized = async function() {
     // Run simulation with periodic yielding to keep UI responsive
     try {
       const ptr = await simulateAztec(n, aVal, bVal);
-      
+
       if (signal.aborted) {
         if (ptr) freeString(ptr);
         return;
       }
-      
+
       // Allow UI thread to breathe
       await sleep(10);
       if (signal.aborted) {
         if (ptr) freeString(ptr);
         return;
       }
-      
+
       const jsonStr = Module.UTF8ToString(ptr);
       freeString(ptr);
-      
+
       if (signal.aborted) return;
-      
+
       // Allow UI thread to breathe before parsing
       await sleep(10);
       if (signal.aborted) return;
-      
+
       let dominoes;
       try {
         dominoes = JSON.parse(jsonStr);
@@ -243,9 +322,9 @@ Module.onRuntimeInitialized = async function() {
         clearInterval(progressInterval);
         return;
       }
-      
+
       if (signal.aborted) return;
-      
+
       cachedDominoes = dominoes;
 
       const minX = d3.min(dominoes, d => d.x);
@@ -268,17 +347,27 @@ Module.onRuntimeInitialized = async function() {
       const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
       const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
 
+      // Store the initial transform parameters for zoom behavior
+      initialTransform = {
+        translateX: translateX,
+        translateY: translateY,
+        scale: scale
+      };
+
+      // Reset the zoom transform when creating a new visualization
+      svg.call(zoom.transform, d3.zoomIdentity);
+
       const group = svg.append("g")
                        .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
 
       // Render dominoes in batches to keep UI responsive
       const BATCH_SIZE = 200;
-      
+
       for (let i = 0; i < dominoes.length && simulationActive; i += BATCH_SIZE) {
         if (signal.aborted) return;
-        
+
         const batch = dominoes.slice(i, i + BATCH_SIZE);
-        
+
         group.selectAll("rect.batch" + i)
              .data(batch)
              .enter()
@@ -290,7 +379,7 @@ Module.onRuntimeInitialized = async function() {
              .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
              .attr("stroke", "#000")
              .attr("stroke-width", 0.5);
-        
+
         // Yield to UI thread after each batch
         if (i + BATCH_SIZE < dominoes.length) {
           await sleep(0);
@@ -325,7 +414,7 @@ Module.onRuntimeInitialized = async function() {
     }
     updateVisualization(n);
   });
-  
+
   // Add cancel button event listener
   document.getElementById("cancel-btn").addEventListener("click", stopSimulation);
 

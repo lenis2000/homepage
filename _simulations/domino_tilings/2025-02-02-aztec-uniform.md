@@ -32,6 +32,16 @@ code:
     background-color: #f1f1f1;
     margin-bottom: 10px;
   }
+  
+  /* Zoom controls styling */
+  #zoom-in-btn, #zoom-out-btn {
+    font-weight: bold;
+    width: 30px;
+    height: 30px;
+  }
+  #zoom-reset-btn {
+    height: 30px;
+  }
 
   .tab button {
     background-color: inherit;
@@ -180,6 +190,165 @@ Module.onRuntimeInitialized = async function() {
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
   let heightGroup; // Group for height function display
+  
+  // Create zoom behavior for domino view
+  let initialTransform = {}; // Store initial transform parameters
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 50]) // Min and max zoom scale (up to 50x)
+    .on("zoom", (event) => {
+      if (!initialTransform.scale) return; // Skip if no initial transform is set
+      
+      // Apply the zoom transformation on top of initial transform
+      const group = svg.select("g.dominoes");
+      if (!group.empty()) {
+        const t = event.transform;
+        group.attr("transform", 
+          `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        
+        // Also transform other groups if they exist
+        if (checkerboardGroup) {
+          checkerboardGroup.attr("transform", 
+            `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        }
+        if (pathsGroup) {
+          pathsGroup.attr("transform", 
+            `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        }
+        if (dimersGroup) {
+          dimersGroup.attr("transform", 
+            `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        }
+        if (heightGroup) {
+          heightGroup.attr("transform", 
+            `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        }
+      }
+    });
+  
+  // Create zoom behavior for dimer view
+  let dimerInitialTransform = {}; // Store dimer view initial transform parameters
+  const dimerZoom = d3.zoom()
+    .scaleExtent([0.1, 50]) // Min and max zoom scale (up to 50x)
+    .on("zoom", (event) => {
+      if (!dimerInitialTransform.scale) return; // Skip if no initial transform is set
+      
+      // Apply the zoom transformation on top of initial transform
+      const group = dimerSvg.select("g.dimer-elements");
+      if (!group.empty()) {
+        const t = event.transform;
+        group.attr("transform", 
+          `translate(${dimerInitialTransform.translateX * t.k + t.x},${dimerInitialTransform.translateY * t.k + t.y}) scale(${dimerInitialTransform.scaleX * t.k},${dimerInitialTransform.scaleY * t.k})`);
+      }
+    });
+  
+  // Enable zoom on both SVGs
+  svg.call(zoom);
+  dimerSvg.call(dimerZoom);
+  
+  // Add double-click to reset zoom on both views
+  svg.on("dblclick.zoom", () => {
+    svg.transition()
+      .duration(750)
+      .call(zoom.transform, d3.zoomIdentity);
+  });
+  
+  dimerSvg.on("dblclick.zoom", () => {
+    dimerSvg.transition()
+      .duration(750)
+      .call(dimerZoom.transform, d3.zoomIdentity);
+  });
+  
+  // Add zoom controls for domino view
+  const dominoControlsContainer = d3.select("#domino-view")
+    .insert("div", ".row")
+    .attr("class", "zoom-controls")
+    .style("margin-bottom", "10px");
+  
+  dominoControlsContainer.append("span")
+    .text("Zoom: ")
+    .style("font-weight", "bold");
+  
+  dominoControlsContainer.append("button")
+    .attr("id", "zoom-in-btn")
+    .style("margin-left", "5px")
+    .text("+")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 1.3);
+    });
+    
+  dominoControlsContainer.append("button")
+    .attr("id", "zoom-out-btn")
+    .style("margin-left", "5px")
+    .text("-")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 0.7);
+    });
+  
+  dominoControlsContainer.append("button")
+    .attr("id", "zoom-reset-btn")
+    .style("margin-left", "5px")
+    .text("Reset Zoom")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.transform, d3.zoomIdentity);
+    });
+    
+  dominoControlsContainer.append("span")
+    .style("margin-left", "10px")
+    .style("font-style", "italic")
+    .style("font-size", "0.9em")
+    .text("(You can also use mouse wheel to zoom and drag to pan)");
+  
+  // Add zoom controls for dimer view
+  const dimerControlsContainer = d3.select("#dimer-view")
+    .insert("div", ".row")
+    .attr("class", "zoom-controls")
+    .style("margin-bottom", "10px");
+  
+  dimerControlsContainer.append("span")
+    .text("Zoom: ")
+    .style("font-weight", "bold");
+  
+  dimerControlsContainer.append("button")
+    .attr("id", "dimer-zoom-in-btn")
+    .style("margin-left", "5px")
+    .text("+")
+    .on("click", () => {
+      dimerSvg.transition()
+        .duration(300)
+        .call(dimerZoom.scaleBy, 1.3);
+    });
+    
+  dimerControlsContainer.append("button")
+    .attr("id", "dimer-zoom-out-btn")
+    .style("margin-left", "5px")
+    .text("-")
+    .on("click", () => {
+      dimerSvg.transition()
+        .duration(300)
+        .call(dimerZoom.scaleBy, 0.7);
+    });
+  
+  dimerControlsContainer.append("button")
+    .attr("id", "dimer-zoom-reset-btn")
+    .style("margin-left", "5px")
+    .text("Reset Zoom")
+    .on("click", () => {
+      dimerSvg.transition()
+        .duration(300)
+        .call(dimerZoom.transform, d3.zoomIdentity);
+    });
+    
+  dimerControlsContainer.append("span")
+    .style("margin-left", "10px")
+    .style("font-style", "italic")
+    .style("font-size", "0.9em")
+    .text("(You can also use mouse wheel to zoom and drag to pan)");
   
   // Simulation state
   let simulationActive = false;
@@ -703,6 +872,16 @@ Module.onRuntimeInitialized = async function() {
     const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
     const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
 
+    // Store the initial transform parameters for zoom behavior
+    initialTransform = {
+      translateX: translateX,
+      translateY: translateY,
+      scale: scale
+    };
+
+    // Reset the zoom transform when creating a new visualization
+    svg.call(zoom.transform, d3.zoomIdentity);
+
     // Clear previous rendering
     svg.selectAll("g").remove();
     checkerboardGroup = null;
@@ -923,6 +1102,26 @@ Module.onRuntimeInitialized = async function() {
     } else {
       strokeWidth = 1.5;
       circleRadius = 1.5;
+    }
+    
+    // Store the initial transform parameters for dimer view zoom behavior
+    // Extract the transformation values from the group
+    const transformStr = dimerGroup.attr("transform");
+    // Parse the transform string to get values (assuming format: translate(x,y) scale(x,-y))
+    // For the dimer view, the transform includes a vertical flip with scale(1,-1)
+    const translateMatch = transformStr.match(/translate\(([^,]+),([^)]+)\)/);
+    const scaleMatch = transformStr.match(/scale\(([^,]+),([^)]+)\)/);
+    
+    if (translateMatch && scaleMatch) {
+      dimerInitialTransform = {
+        translateX: parseFloat(translateMatch[1]),
+        translateY: parseFloat(translateMatch[2]),
+        scaleX: parseFloat(scaleMatch[1]),
+        scaleY: parseFloat(scaleMatch[2])
+      };
+      
+      // Reset the zoom transform when creating a new visualization
+      dimerSvg.call(dimerZoom.transform, d3.zoomIdentity);
     }
 
     // Draw the dimer on the grid

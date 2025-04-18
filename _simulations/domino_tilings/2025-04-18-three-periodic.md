@@ -19,6 +19,14 @@ code:
   .controls {
     margin-bottom: 10px;
   }
+  #zoom-in-btn, #zoom-out-btn {
+    font-weight: bold;
+    width: 30px;
+    height: 30px;
+  }
+  #zoom-reset-btn {
+    height: 30px;
+  }
 </style>
 
 This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a measure with $3\times 3$ periodic weights, extending the <a href="https://arxiv.org/abs/1410.2385">work</a> by Chhita and Johansson on 2×2 periodic weights.
@@ -154,6 +162,77 @@ Module.onRuntimeInitialized = async function() {
   const progressElem = document.getElementById("progress-indicator");
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
+
+  // Create zoom behavior
+  let initialTransform = {}; // Store initial transform parameters
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 50]) // Min and max zoom scale (up to 50x)
+    .on("zoom", (event) => {
+      if (!initialTransform.scale) return; // Skip if no initial transform is set
+      
+      // Apply the zoom transformation on top of initial transform
+      const group = svg.select("g");
+      const t = event.transform;
+      group.attr("transform", 
+        `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+    });
+  
+  // Enable zoom on the SVG
+  svg.call(zoom);
+  
+  // Add double-click to reset zoom
+  svg.on("dblclick.zoom", () => {
+    svg.transition()
+      .duration(750)
+      .call(zoom.transform, d3.zoomIdentity);
+  });
+  
+  // Add zoom controls to the UI
+  const controlsContainer = d3.select(".row").insert("div", "div")  // Insert before the SVG container
+    .attr("class", "col-12")
+    .append("div")
+    .attr("class", "controls zoom-controls")
+    .style("margin-bottom", "10px");
+  
+  controlsContainer.append("span")
+    .text("Zoom: ")
+    .style("font-weight", "bold");
+  
+  controlsContainer.append("button")
+    .attr("id", "zoom-in-btn")
+    .style("margin-left", "5px")
+    .text("+")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 1.3);
+    });
+    
+  controlsContainer.append("button")
+    .attr("id", "zoom-out-btn")
+    .style("margin-left", "5px")
+    .text("-")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.scaleBy, 0.7);
+    });
+  
+  controlsContainer.append("button")
+    .attr("id", "zoom-reset-btn")
+    .style("margin-left", "5px")
+    .text("Reset Zoom")
+    .on("click", () => {
+      svg.transition()
+        .duration(300)
+        .call(zoom.transform, d3.zoomIdentity);
+    });
+    
+  controlsContainer.append("span")
+    .style("margin-left", "10px")
+    .style("font-style", "italic")
+    .style("font-size", "0.9em")
+    .text("(You can also use mouse wheel to zoom and drag to pan)");
 
   let progressInterval;
   let simulationActive = false;
@@ -295,6 +374,16 @@ Module.onRuntimeInitialized = async function() {
       const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
       const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
       const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+
+      // Store the initial transform parameters for zoom behavior
+      initialTransform = {
+        translateX: translateX,
+        translateY: translateY,
+        scale: scale
+      };
+
+      // Reset the zoom transform when creating a new visualization
+      svg.call(zoom.transform, d3.zoomIdentity);
 
       const group = svg.append("g")
                        .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
