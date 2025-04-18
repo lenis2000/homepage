@@ -6,16 +6,23 @@ nav_id: Simulations
 nav_weight: 19
 ---
 
-<h1 class="my-4">Simulations and other computational tools</h1>
-<h5 class="mb-3">Data, source code, visualizations</h5>
-
-{% include dear_colleagues.md %}
-
-<hr class="mb-4"/>
-
 <!-- Container for the entire page content -->
 <div class="container mb-5">
 
+<h1 class="my-4">Simulations and other computational tools</h1>
+<h5 class="mb-3">Data, source code, visualizations</h5>
+
+<hr>
+
+{% include dear_colleagues.md %}
+
+<hr/>
+
+{%include sims.html%}
+
+
+
+<hr>
   <!-- Show the 10 most recent simulations as a plain list with category tags -->
   <h2 class="mb-3">Recent Simulations</h2>
   <ul class="list-group list-group-flush">
