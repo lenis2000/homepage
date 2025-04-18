@@ -12,7 +12,10 @@ emcc domino.cpp -o domino.js\
  -O3 -ffast-math
 
 
-
+Features:
+- 3x3 periodic weights for random domino tilings of Aztec diamond
+- 2x2 periodic weights support added (May 2025)
+- Memory efficient implementation
 
 */
 
@@ -251,7 +254,7 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
 
         progressCounter = 0; // Reset progress.
 
-        // Create weight matrix A1a: dimensions 2*n x 2*n with 3x3 periodic pattern
+        // Create weight matrix A1a: dimensions 2*n x 2*n with periodic pattern
         int dim = 2 * n;
 
         // Check if memory allocation would be too large
@@ -260,17 +263,41 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         }
 
         MatrixDouble A1a(dim, vector<double>(dim, 0.0));
+        
+        // Check if the weights match the pattern for a 2x2 periodic configuration
+        // In a 2x2 pattern, w2 and w8 are 'a', w4 and w6 are 'b', and the rest are 1.0
+        bool is2x2Pattern = (std::abs(w1 - 1.0) < 1e-9 && std::abs(w3 - 1.0) < 1e-9 && 
+                             std::abs(w5 - 1.0) < 1e-9 && std::abs(w7 - 1.0) < 1e-9 && 
+                             std::abs(w9 - 1.0) < 1e-9 &&
+                             std::abs(w2 - w8) < 1e-9 && std::abs(w4 - w6) < 1e-9);
 
-        // --- 3×3 periodic pattern ------------------------------------------
-        const double W[3][3] = {{w1, w2, w3},
-                                {w4, w5, w6},
-                                {w7, w8, w9}};
+        if (is2x2Pattern) {
+            // Use the direct 2x2 pattern implementation from the reference code
+            double a = w2; // w2 and w8 are 'a'
+            double b = w4; // w4 and w6 are 'b'
+            
+            for (int i = 0; i < dim; ++i) {
+                for (int j = 0; j < dim; ++j) {
+                    int im = i & 3; // Faster than i % 4
+                    int jm = j & 3; // Faster than j % 4
+                    if ((im < 2 && jm < 2) || (im >= 2 && jm >= 2))
+                        A1a[i][j] = b;
+                    else
+                        A1a[i][j] = a;
+                }
+            }
+        } else {
+            // --- 3×3 periodic pattern ------------------------------------------
+            const double W[3][3] = {{w1, w2, w3},
+                                    {w4, w5, w6},
+                                    {w7, w8, w9}};
 
-        for (int i = 0; i < dim; ++i) {
-            int ii = i % 3;               // row inside the 3‑periodic block
-            for (int j = 0; j < dim; ++j) {
-                int jj = j % 3;           // column inside the 3‑periodic block
-                A1a[i][j] = W[ii][jj];    // assign the corresponding weight
+            for (int i = 0; i < dim; ++i) {
+                int ii = i % 3;               // row inside the 3‑periodic block
+                for (int j = 0; j < dim; ++j) {
+                    int jj = j % 3;           // column inside the 3‑periodic block
+                    A1a[i][j] = W[ii][jj];    // assign the corresponding weight
+                }
             }
         }
 
