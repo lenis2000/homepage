@@ -66,11 +66,11 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
     <h4>3×3 Periodic Weights</h4>
     <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
       <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w2" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6" type="number" value="6.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
@@ -365,7 +365,7 @@ Module.onRuntimeInitialized = async function() {
     };
   }
 
-  async function updateVisualization(n, w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=6.0, w7=1.0, w8=1.0, w9=9.0) {
+  async function updateVisualization(n, w1=1.0, w2=4.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=9.0) {
     // Clear previous models
     while(dominoGroup.children.length){
       const m = dominoGroup.children[0];
