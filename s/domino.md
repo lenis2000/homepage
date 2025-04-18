@@ -1028,21 +1028,31 @@ Module.onRuntimeInitialized = async function() {
   function getGrayscaleColor(originalColor, d) {
     let c = d3.color(originalColor);
     if (!c) return originalColor;
-    
+
     let normHex = c.formatHex().toLowerCase();
     const isHorizontal = d.w > d.h;
-    
-    if (normHex === "#0000ff" || normHex === "#00ff00") { // blue or green (horizontal dominoes)
-      // Use vertical coordinate parity
-      const yCoord = Math.floor(d.y);
-      return yCoord % 2 === 0 ? grayHex(120) : grayHex(180); // lighter/darker gray based on y parity
-    } 
-    else if (normHex === "#ff0000" || normHex === "#ffff00") { // red or yellow (vertical dominoes)
-      // Use horizontal coordinate parity
-      const xCoord = Math.floor(d.x);
-      return xCoord % 2 === 0 ? grayHex(70) : grayHex(130); // lighter/darker gray based on x parity
+
+    // For blue or green (horizontal dominoes), use vertical coordinate parity
+    if (isHorizontal) {
+      const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
+
+      if (normHex === "#0000ff") { // blue
+        return grayHex(grayscaleValues.blue["p" + yParity]);
+      } else if (normHex === "#00ff00") { // green
+        return grayHex(grayscaleValues.green["p" + yParity]);
+      }
     }
-    
+    // For red or yellow (vertical dominoes), use horizontal coordinate parity
+    else {
+      const xParity = Math.floor(d.x) % 4 === 0 ? 0 : 1;
+
+      if (normHex === "#ff0000") { // red
+        return grayHex(grayscaleValues.red["p" + xParity]);
+      } else if (normHex === "#ffff00") { // yellow
+        return grayHex(grayscaleValues.yellow["p" + xParity]);
+      }
+    }
+
     // For any other color, convert using standard luminance formula
     let r = c.r, g = c.g, b = c.b;
     let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
@@ -1095,9 +1105,145 @@ Module.onRuntimeInitialized = async function() {
       .call(zoom2d.transform, d3.zoomIdentity);
   });
 
+  // Add grayscale controls to the interface
+  let grayscaleControlsHTML = `
+    <div id="grayscale-controls" style="display: none; margin-top: 10px; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
+      <h4 style="margin-top: 0;">Grayscale Value Adjustments</h4>
+      
+      <div style="margin-bottom: 10px;">
+        <h5>Horizontal Dominoes (Blue/Green)</h5>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <label>Blue (parity 0): </label>
+            <input type="range" id="blue-p0" min="0" max="255" value="133" style="width: 100px;">
+            <span id="blue-p0-val">133</span>
+          </div>
+          <div>
+            <label>Blue (parity 1): </label>
+            <input type="range" id="blue-p1" min="0" max="255" value="253" style="width: 100px;">
+            <span id="blue-p1-val">253</span>
+          </div>
+          <div>
+            <label>Green (parity 0): </label>
+            <input type="range" id="green-p0" min="0" max="255" value="243" style="width: 100px;">
+            <span id="green-p0-val">243</span>
+          </div>
+          <div>
+            <label>Green (parity 1): </label>
+            <input type="range" id="green-p1" min="0" max="255" value="133" style="width: 100px;">
+            <span id="green-p1-val">133</span>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <h5>Vertical Dominoes (Red/Yellow)</h5>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <label>Red (parity 0): </label>
+            <input type="range" id="red-p0" min="0" max="255" value="100" style="width: 100px;">
+            <span id="red-p0-val">100</span>
+          </div>
+          <div>
+            <label>Red (parity 1): </label>
+            <input type="range" id="red-p1" min="0" max="255" value="130" style="width: 100px;">
+            <span id="red-p1-val">130</span>
+          </div>
+          <div>
+            <label>Yellow (parity 0): </label>
+            <input type="range" id="yellow-p0" min="0" max="255" value="105" style="width: 100px;">
+            <span id="yellow-p0-val">105</span>
+          </div>
+          <div>
+            <label>Yellow (parity 1): </label>
+            <input type="range" id="yellow-p1" min="0" max="255" value="135" style="width: 100px;">
+            <span id="yellow-p1-val">135</span>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 15px;">
+        <button id="apply-grayscale" style="margin-right: 10px;">Apply Changes</button>
+        <button id="get-values-code">Get Values as Code</button>
+      </div>
+      <div id="code-output" style="margin-top: 10px; display: none; padding: 10px; background-color: #eee; font-family: monospace; white-space: pre-wrap;"></div>
+    </div>
+  `;
+  
+  // Insert the controls after the grayscale checkbox container
+  const grayscaleCheckboxDiv = document.querySelector('label[for="grayscale-checkbox-2d"]').parentNode;
+  const controlsDiv = document.createElement('div');
+  controlsDiv.innerHTML = grayscaleControlsHTML;
+  grayscaleCheckboxDiv.parentNode.insertBefore(controlsDiv.firstElementChild, grayscaleCheckboxDiv.nextSibling);
+  
+  // Store grayscale values in a global object for easy access
+  const grayscaleValues = {
+    blue: { p0: 133, p1: 253 },
+    green: { p0: 243, p1: 133 },
+    red: { p0: 100, p1: 130 },
+    yellow: { p0: 105, p1: 135 }
+  };
+  
+  // Update value display when sliders change
+  function setupSlider(id, property, parity) {
+    const slider = document.getElementById(id);
+    const valueDisplay = document.getElementById(id + "-val");
+    
+    slider.addEventListener("input", function() {
+      const value = parseInt(this.value);
+      valueDisplay.textContent = value;
+      grayscaleValues[property]["p" + parity] = value;
+    });
+  }
+  
+  // Set up all sliders
+  setupSlider("blue-p0", "blue", 0);
+  setupSlider("blue-p1", "blue", 1);
+  setupSlider("green-p0", "green", 0);
+  setupSlider("green-p1", "green", 1);
+  setupSlider("red-p0", "red", 0);
+  setupSlider("red-p1", "red", 1);
+  setupSlider("yellow-p0", "yellow", 0);
+  setupSlider("yellow-p1", "yellow", 1);
+  
+  // Apply button handler
+  document.getElementById("apply-grayscale").addEventListener("click", function() {
+    if (document.getElementById("grayscale-checkbox-2d").checked) {
+      // Update colors of existing dominoes
+      svg2d.select("g").selectAll("rect")
+        .attr("fill", d => getGrayscaleColor(d.color, d));
+    }
+  });
+  
+  // Get code button handler
+  document.getElementById("get-values-code").addEventListener("click", function() {
+    const codeOutput = document.getElementById("code-output");
+    const code = `      if (normHex === "#0000ff") { // blue
+        return yParity === 0 ? grayHex(${grayscaleValues.blue.p0}) : grayHex(${grayscaleValues.blue.p1});
+      } else if (normHex === "#00ff00") { // green
+        return yParity === 0 ? grayHex(${grayscaleValues.green.p0}) : grayHex(${grayscaleValues.green.p1});
+      }
+    }
+    // For red or yellow (vertical dominoes), use horizontal coordinate parity
+    else {
+      const xParity = Math.floor(d.x) % 4;
+
+      if (normHex === "#ff0000") { // red
+        return xParity === 0 ? grayHex(${grayscaleValues.red.p0}) : grayHex(${grayscaleValues.red.p1});
+      } else if (normHex === "#ffff00") { // yellow
+        return xParity === 0 ? grayHex(${grayscaleValues.yellow.p0}) : grayHex(${grayscaleValues.yellow.p1});
+      }
+    }`;
+    
+    codeOutput.textContent = code;
+    codeOutput.style.display = "block";
+  });
+
   // 2D grayscale toggle handler
   document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
     const useGrayscale = this.checked;
+    // Show/hide controls panel
+    document.getElementById("grayscale-controls").style.display = useGrayscale ? "block" : "none";
     // Update colors of existing dominoes
     svg2d.select("g").selectAll("rect")
       .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
