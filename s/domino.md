@@ -124,7 +124,7 @@ code:
 <script src="{{site.url}}/s/domino.js"></script>
 
 
-This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
+This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The 3d visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast. The simulation also contains a 2d version, which is faster and has more features, such as nonintersecting paths, dimers, and TikZ exports.
 
 <!-- Parameters section above the panes -->
 <div class="parameters-section">
@@ -1244,7 +1244,7 @@ Module.onRuntimeInitialized = async function() {
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
     const showColors = this.checked;
-    const monoColor = "#999999";
+    const monoColor = "#EEEEEE"; // Lighter monochrome color for 2D view
     const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
 
     // Update 2D view if it exists
@@ -1342,7 +1342,7 @@ Module.onRuntimeInitialized = async function() {
 
       // Check if we should show colors
       const showColors = document.getElementById("show-colors-checkbox").checked;
-      const monoColor = "#999999"; // Default monochrome color when not showing colors
+      const monoColor = "#EEEEEE"; // Lighter monochrome color for 2D view
 
       group.selectAll("rect.batch" + i)
            .data(batch)
