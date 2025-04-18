@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-03-31-aztec-uniform-3d.cpp'
     txt: 'C++ code for the simulation'
-published: false
+published: true
 ---
 
 <style>
@@ -32,8 +32,8 @@ This simulation demonstrates random domino tilings of an <a href="https://mathwo
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 120$): </label>
-  <input id="n-input" type="number" value="4" min="2" step="2" max="120" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 200$): </label>
+  <input id="n-input" type="number" value="4" min="2" step="2" max="200" size="3">
   <button id="update-btn">Update</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 </div>
@@ -67,8 +67,8 @@ Module.onRuntimeInitialized = async function() {
        frustum/2, -frustum/2,
       1,1000
     );
-    camera.position.set(30,100,30);
-    camera.lookAt(0,0,0);
+    camera.position.set(0, 130, 0);
+    camera.lookAt(0, 0, 0);
 
     scene.add(new THREE.AmbientLight(0xffffff,0.5));
     const dir = new THREE.DirectionalLight(0xffffff,0.8);
@@ -251,8 +251,8 @@ Module.onRuntimeInitialized = async function() {
       }
 
       // Apply scale and shifts
-      const adjustedXShift = -0.5 + (isHorizontal ? 0 : 0.5);
-      const adjustedYShift = 1.5 + (isHorizontal ? 0 : -1.5);
+      const adjustedXShift = -0.5 + (isHorizontal ? 0 : 0);
+      const adjustedYShift = 1.5 + (isHorizontal ? 0 : 0);
 
       vertices.push([
         x / 2.0 + adjustedXShift,
@@ -370,6 +370,11 @@ Module.onRuntimeInitialized = async function() {
           requestAnimationFrame(() => batch(idx));
         } else {
           document.getElementById("progress-indicator").innerText = "";
+          // === recentre the tiling ===
+           const box    = new THREE.Box3().setFromObject(dominoGroup);
+           const center = box.getCenter(new THREE.Vector3());
+           dominoGroup.position.sub(center);   // move group so its centre is at (0,0,0)
+
           clearInterval(poll);
         }
       }
@@ -385,8 +390,8 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("update-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n % 2 || n > 120) {
-      return alert("Enter even n between 2 and 120");
+    if (isNaN(n) || n < 2 || n % 2 || n > 200) {
+      return alert("Enter even n between 2 and 200");
     }
     updateVisualization(n);
   });
