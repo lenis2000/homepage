@@ -1,10 +1,10 @@
 ---
-title: '3D Visualization of Domino Tilings with 3x3 Periodic Weights'
+title: '3D Visualization of 3x3 periodic Domino Tilings of the Aztec Diamond'
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-18-aztec-three-periodic-3d.md'
-    txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
+    txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-18-aztec-three-periodic-3d.cpp'
     txt: 'C++ code for the simulation'
 published: true
@@ -22,6 +22,25 @@ published: true
       height: 60vh;
     }
   }
+
+  /* Styling for buttons and controls */
+  #update-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #cccccc;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  #move-left-btn, #move-up-btn, #move-down-btn, #move-right-btn, #reset-view-btn {
+    transition: background-color 0.2s;
+  }
+
+  #move-left-btn:hover, #move-up-btn:hover, #move-down-btn:hover, #move-right-btn:hover, #reset-view-btn:hover {
+    background-color: #e0e0e0;
+  }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
@@ -29,74 +48,52 @@ published: true
 <script src="/js/2025-04-18-aztec-three-periodic-3d.js"></script>
 
 
-This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. The simulation uses a measure with $3\times 3$ periodic weights, extending the <a href="https://arxiv.org/abs/1410.2385">work</a> by Chhita and Johansson on 2×2 periodic weights.
+This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
 
-The weight assignment uses a full 3×3 block pattern with 9 different weights:
-```
-[w₁ w₂ w₃]
-[w₄ w₅ w₆]
-[w₇ w₈ w₉]
-```
-
-Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
-
-<!-- Aztec Diamond Order Control -->
+<!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 300$): </label>
-  <input id="n-input" type="number" value="30" min="2" step="2" max="300" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 320$): </label>
+  <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
-</div>
+  <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 
-<!-- Weight Controls -->
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 600px; margin-bottom: 20px;">
-  <div>
-    <label for="w1-input">w₁:</label>
-    <input id="w1-input" type="number" value="1.0" step="0.1" style="width: 60px;">
+  <label for="demo-mode" style="margin-left: 15px;">
+    <input id="demo-mode" type="checkbox"> Demo mode
+  </label>
+
+  <div style="margin-top: 10px;">
+    <h4>3×3 Periodic Weights</h4>
+    <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
+      <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w2" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6" type="number" value="6.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+    </div>
   </div>
-  <div>
-    <label for="w2-input">w₂:</label>
-    <input id="w2-input" type="number" value="1.0" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w3-input">w₃:</label>
-    <input id="w3-input" type="number" value="1.0" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w4-input">w₄:</label>
-    <input id="w4-input" type="number" value="2.5" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w5-input">w₅:</label>
-    <input id="w5-input" type="number" value="1.0" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w6-input">w₆:</label>
-    <input id="w6-input" type="number" value="1.0" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w7-input">w₇:</label>
-    <input id="w7-input" type="number" value="1.0" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w8-input">w₈:</label>
-    <input id="w8-input" type="number" value="1.0" step="0.1" style="width: 60px;">
-  </div>
-  <div>
-    <label for="w9-input">w₉:</label>
-    <input id="w9-input" type="number" value="4.0" step="0.1" style="width: 60px;">
+
+  <div style="margin-top: 10px;">
+    <label>Camera movement:</label>
+    <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
+    <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
+    <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
+    <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
+    <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
   </div>
 </div>
-
-<span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 
 <div id="aztec-canvas"></div>
 
 <script>
 Module.onRuntimeInitialized = async function() {
-  const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number','number','number','number','number','number','number','number','number','number'], {async: true});
-  const freeString    = Module.cwrap('freeString', null, ['number']);
-  const getProgress   = Module.cwrap('getProgress', 'number', []);
+  const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
+  const freeString    = Module.cwrap('freeString',null,['number']);
+  const getProgress   = Module.cwrap('getProgress','number',[]);
 
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
@@ -109,6 +106,10 @@ Module.onRuntimeInitialized = async function() {
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
+
+  // Demo mode state
+  let isDemoMode = false;
+  let rotationSpeed = 0.005; // Speed of rotation in radians
 
   function initThreeJS() {
     scene = new THREE.Scene();
@@ -165,6 +166,12 @@ Module.onRuntimeInitialized = async function() {
 
     requestAnimationFrame(animate);
     controls.update();
+
+    // Apply rotation in demo mode
+    if (isDemoMode && dominoGroup) {
+      dominoGroup.rotation.y += rotationSpeed;
+    }
+
     renderer.render(scene, camera);
   }
 
@@ -196,6 +203,7 @@ Module.onRuntimeInitialized = async function() {
   initThreeJS();
 
   // Calculate height function based on domino configuration
+  // This implementation follows the algorithm from 2025-02-02-aztec-uniform.md
   function calculateHeightFunction(dominoes) {
     if (!dominoes || dominoes.length === 0) return new Map();
 
@@ -208,10 +216,9 @@ Module.onRuntimeInitialized = async function() {
     const dominoData = dominoes.map(d => {
       const horiz = d.w > d.h;
       const orient = horiz ? 0 : 1;
-      // color names from the C++ file: red, blue, green, yellow 
       const sign = horiz
-        ? (d.color === "#00ff00" ? -1 : 1)   // horizontal: green = −1, blue = +1
-        : (d.color === "#ffff00" ? -1 : 1);  // vertical: yellow = −1, red = +1
+        ? (d.color === "green" ? -1 : 1)   // horizontal: green = −1, blue = +1
+        : (d.color === "yellow" ? -1 : 1);  // vertical: yellow = −1, red = +1
       const gx = Math.round(d.x / unit);   // lattice coordinates
       const gy = Math.round(d.y / unit);
       return [orient, sign, gx, gy];
@@ -288,6 +295,9 @@ Module.onRuntimeInitialized = async function() {
 
   // Create a 3D face for a domino with its height function
   function createDominoFaces(domino, heightMap, scale) {
+    const oddI = domino.color === "blue" || domino.color === "yellow";
+    const oddJ = domino.color === "blue" || domino.color === "red";
+
     const isHorizontal = domino.w > domino.h;
     const color = domino.color;
 
@@ -355,7 +365,7 @@ Module.onRuntimeInitialized = async function() {
     };
   }
 
-  async function updateVisualization(n) {
+  async function updateVisualization(n, w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=6.0, w7=1.0, w8=1.0, w9=9.0) {
     // Clear previous models
     while(dominoGroup.children.length){
       const m = dominoGroup.children[0];
@@ -363,6 +373,9 @@ Module.onRuntimeInitialized = async function() {
       m.geometry.dispose();
       m.material.dispose();
     }
+
+    // Remember demo mode state
+    const wasInDemoMode = isDemoMode;
 
     startSimulation();
     const signal = abortController.signal;
@@ -380,22 +393,11 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
 
     try {
-      // Get all 9 weight parameters
-      const w1 = parseFloat(document.getElementById("w1-input").value);
-      const w2 = parseFloat(document.getElementById("w2-input").value);
-      const w3 = parseFloat(document.getElementById("w3-input").value);
-      const w4 = parseFloat(document.getElementById("w4-input").value);
-      const w5 = parseFloat(document.getElementById("w5-input").value);
-      const w6 = parseFloat(document.getElementById("w6-input").value);
-      const w7 = parseFloat(document.getElementById("w7-input").value);
-      const w8 = parseFloat(document.getElementById("w8-input").value);
-      const w9 = parseFloat(document.getElementById("w9-input").value);
-      
       // Allow UI to update before starting heavy computation
       await sleep(50);
       if (signal.aborted) return;
 
-      // Get domino configuration from C++ code with weights
+      // Get domino configuration from C++ code
       const ptrPromise = simulateAztec(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
 
       // Wait for simulation to complete
@@ -425,12 +427,12 @@ Module.onRuntimeInitialized = async function() {
       // Scale factor based on n
       const scale = 60/(2*n);
 
-      // Colors for the materials (hex colors to THREE.js colors)
+      // Colors for the materials
       const colors = {
-        "#ff0000": 0xff0000, // red
-        "#00ff00": 0x00ff00, // green
-        "#0000ff": 0x0000ff, // blue
-        "#ffff00": 0xffff00  // yellow
+        blue:   0x4363d8,
+        green:  0x1e8c28,
+        red:    0xff2244,
+        yellow: 0xfca414
       };
 
       // Create the 3D faces with proper heights
@@ -505,10 +507,10 @@ Module.onRuntimeInitialized = async function() {
                 );
 
                 // Triangulation indices
-                const isH = (f.color === '#0000ff' || f.color === '#00ff00');
+                const isH = (f.color === 'blue' || f.color === 'green');
                 const indices = isH
-                  ? [0,1,4, 1,2,5, 0,4,3, 4,5,3]
-                  : [0,1,4, 1,2,5, 0,4,3, 4,5,3];
+                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
+                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
 
                 // Use 32-bit indices if needed for larger models
                 if (total > 65535 / 6) { // 6 vertices per domino
@@ -570,6 +572,11 @@ Module.onRuntimeInitialized = async function() {
         ) * 0.95;
 
         dominoGroup.scale.setScalar(finalScale);
+
+        // If we were in demo mode before update, restore demo view
+        if (wasInDemoMode) {
+          setDemoViewCamera();
+        }
       }
 
       // Cleanup
@@ -589,16 +596,156 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("update-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n % 2 || n > 300) {
-      return alert("Enter even n between 2 and 300");
+    if (isNaN(n) || n < 2 || n % 2 || n > 320) {
+      return alert("Enter even n between 2 and 320");
     }
-    updateVisualization(n);
+
+    // Get the weights from the input fields
+    const weights = [];
+    for (let i = 1; i <= 9; i++) {
+      const weightVal = parseFloat(document.getElementById(`w${i}`).value);
+      weights.push(isNaN(weightVal) ? 1.0 : weightVal);
+    }
+
+    updateVisualization(n, ...weights);
   });
 
   document.getElementById("cancel-btn").addEventListener("click", () => {
     stopSimulation();
   });
 
-  updateVisualization(parseInt(document.getElementById("n-input").value, 10));
+  // Demo mode toggle handler
+  document.getElementById("demo-mode").addEventListener("change", function() {
+    isDemoMode = this.checked;
+
+    if (isDemoMode) {
+      // Set to angled demo view
+      setDemoViewCamera();
+    }
+    // When turning off, we just stop rotation but keep the current view
+  });
+
+  // Set up demo view camera position
+  function setDemoViewCamera() {
+    // Reset any existing rotation
+    if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
+
+    // Set to angled view
+    camera.position.set(50, 80, 50);
+    camera.lookAt(0, 0, 0);
+    controls.update();
+  }
+
+  // Camera movement controls
+  document.getElementById("move-up-btn").addEventListener("click", function() {
+    // Move camera up relative to current view
+    const moveAmount = 5;
+    const upVector = new THREE.Vector3(0, 1, 0);
+    upVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(upVector, moveAmount);
+    controls.target.addScaledVector(upVector, moveAmount);
+    controls.update();
+  });
+
+  document.getElementById("move-down-btn").addEventListener("click", function() {
+    // Move camera down relative to current view
+    const moveAmount = 5;
+    const upVector = new THREE.Vector3(0, 1, 0);
+    upVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(upVector, -moveAmount);
+    controls.target.addScaledVector(upVector, -moveAmount);
+    controls.update();
+  });
+
+  document.getElementById("move-left-btn").addEventListener("click", function() {
+    // Move camera left relative to current view
+    const moveAmount = 5;
+    const rightVector = new THREE.Vector3(1, 0, 0);
+    rightVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(rightVector, -moveAmount);
+    controls.target.addScaledVector(rightVector, -moveAmount);
+    controls.update();
+  });
+
+  document.getElementById("move-right-btn").addEventListener("click", function() {
+    // Move camera right relative to current view
+    const moveAmount = 5;
+    const rightVector = new THREE.Vector3(1, 0, 0);
+    rightVector.applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(rightVector, moveAmount);
+    controls.target.addScaledVector(rightVector, moveAmount);
+    controls.update();
+  });
+
+  // Reset view button handler
+  document.getElementById("reset-view-btn").addEventListener("click", function() {
+    if (isDemoMode) {
+      setDemoViewCamera();
+    } else {
+      // Reset camera to initial position
+      camera.position.set(0, 130, 0);
+      camera.lookAt(0, 0, 0);
+
+      // Reset domino group rotation
+      if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
+
+      controls.update();
+    }
+  });
+
+  // Add keyboard controls
+  window.addEventListener('keydown', function(event) {
+    const moveAmount = 5;
+
+    // Arrow keys for camera movement
+    if (event.key === 'ArrowUp') {
+      const upVector = new THREE.Vector3(0, 1, 0);
+      upVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(upVector, moveAmount);
+      controls.target.addScaledVector(upVector, moveAmount);
+      controls.update();
+    }
+    else if (event.key === 'ArrowDown') {
+      const upVector = new THREE.Vector3(0, 1, 0);
+      upVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(upVector, -moveAmount);
+      controls.target.addScaledVector(upVector, -moveAmount);
+      controls.update();
+    }
+    else if (event.key === 'ArrowLeft') {
+      const rightVector = new THREE.Vector3(1, 0, 0);
+      rightVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(rightVector, -moveAmount);
+      controls.target.addScaledVector(rightVector, -moveAmount);
+      controls.update();
+    }
+    else if (event.key === 'ArrowRight') {
+      const rightVector = new THREE.Vector3(1, 0, 0);
+      rightVector.applyQuaternion(camera.quaternion);
+      camera.position.addScaledVector(rightVector, moveAmount);
+      controls.target.addScaledVector(rightVector, moveAmount);
+      controls.update();
+    }
+    // 'R' key to reset view
+    else if (event.key === 'r' || event.key === 'R') {
+      document.getElementById("reset-view-btn").click();
+    }
+    // 'D' key to toggle demo mode
+    else if (event.key === 'd' || event.key === 'D') {
+      const demoCheckbox = document.getElementById('demo-mode');
+      demoCheckbox.checked = !demoCheckbox.checked;
+      // Trigger the change event
+      demoCheckbox.dispatchEvent(new Event('change'));
+    }
+  });
+
+  // Initial visualization with default weights
+  const n = parseInt(document.getElementById("n-input").value, 10);
+  const weights = [];
+  for (let i = 1; i <= 9; i++) {
+    const weightVal = parseFloat(document.getElementById(`w${i}`).value);
+    weights.push(isNaN(weightVal) ? 1.0 : weightVal);
+  }
+  updateVisualization(n, ...weights);
 };
 </script>
