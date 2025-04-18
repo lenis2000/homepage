@@ -26,7 +26,7 @@ code:
   /* Canvas styling */
   #aztec-canvas, #aztec-2d-canvas {
     width: 100%;
-    height: 70vh; /* Use 70% of viewport height */
+    height: 75vh; /* Use 75% of viewport height - slightly larger in vertical direction */
     vertical-align: top;
   }
 
@@ -80,7 +80,7 @@ code:
 
   @media (max-width: 768px) {
     #aztec-canvas, #aztec-2d-canvas {
-      height: 60vh;
+      height: 65vh;
     }
   }
 
@@ -227,7 +227,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <div id="aztec-canvas"></div>
 
   <!-- 2D Visualization Pane (hidden by default) -->
-  <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 70vh;">
+  <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 75vh;">
     <!-- 2D controls (fixed at top like 3D controls) -->
     <div id="controls-2d" style="margin-bottom: 10px;">
       <!-- Zoom controls -->
@@ -1305,12 +1305,12 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("checkerboard-checkbox-2d").addEventListener("change", function() {
     updateDominoDisplay();
   });
-  
+
   // Border width input handler - update immediately on input
   document.getElementById("border-width-input").addEventListener("input", function() {
     updateDominoDisplay();
   });
-  
+
   // Nonintersecting paths toggle handler
   document.getElementById("paths-checkbox-2d").addEventListener("change", function() {
     updateDominoDisplay();
@@ -1320,20 +1320,20 @@ Module.onRuntimeInitialized = async function() {
   function getCheckerboardPattern(d) {
     // Dominoes are 2x4 (horizontal) or 4x2 (vertical)
     // We want to create a checkerboard pattern on the underlying 2x2 lattice faces
-    
+
     // Get the position of each lattice face (2x2 square)
     // For a horizontal domino (2x4), it covers 2 lattice faces
     // For a vertical domino (4x2), it also covers 2 lattice faces
-    
+
     // Convert domino coordinates to lattice coordinates (each lattice face is 2x2)
     const latticeX = Math.floor(d.x / 2);
     const latticeY = Math.floor(d.y / 2);
-    
+
     // Traditional checkerboard pattern on the lattice
     // True if the sum of lattice coordinates is even
     return (latticeX + latticeY) % 2 === 0;
   }
-  
+
   // Function to update domino display based on various display settings
   function updateDominoDisplay() {
     const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
@@ -1345,10 +1345,10 @@ Module.onRuntimeInitialized = async function() {
     // First, remove any existing checkerboard pattern and paths
     svg2d.select("g").selectAll(".checkerboard-square").remove();
     svg2d.select("g").selectAll(".path-line").remove();
-    
+
     // Get the current border thickness value
     const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
-    
+
     // Toggle colors between normal and grayscale for the dominoes and update border width
     svg2d.select("g").selectAll("rect")
       .attr("fill", function(d) {
@@ -1362,36 +1362,36 @@ Module.onRuntimeInitialized = async function() {
         }
       })
       .attr("stroke-width", borderWidth); // Update the border thickness
-    
+
     // If checkerboard is enabled, draw 2x2 lattice squares
     if (showCheckerboard) {
       const group = svg2d.select("g");
-      
+
       // Create a set of all 2x2 lattice faces used by the dominoes
       const latticeSet = new Set();
       const latticeSquares = [];
-      
+
       // First, collect all the 2x2 lattice face positions
       group.selectAll("rect").each(function(d) {
         // For a horizontal domino (2x4), it covers 2 lattice faces side by side
         // For a vertical domino (4x2), it covers 2 lattice faces one above the other
-        
+
         const isHorizontal = d.w > d.h;
-        
+
         if (isHorizontal) {
           // Horizontal domino covers 2 faces horizontally
           const leftX = Math.floor(d.x / 2) * 2;
           const y = Math.floor(d.y / 2) * 2;
-          
+
           // Add both lattice faces
           const leftKey = `${leftX},${y}`;
           const rightKey = `${leftX + 2},${y}`;
-          
+
           if (!latticeSet.has(leftKey)) {
             latticeSet.add(leftKey);
             latticeSquares.push({x: leftX, y: y, size: 2});
           }
-          
+
           if (!latticeSet.has(rightKey)) {
             latticeSet.add(rightKey);
             latticeSquares.push({x: leftX + 2, y: y, size: 2});
@@ -1400,23 +1400,23 @@ Module.onRuntimeInitialized = async function() {
           // Vertical domino covers 2 faces vertically
           const x = Math.floor(d.x / 2) * 2;
           const topY = Math.floor(d.y / 2) * 2;
-          
+
           // Add both lattice faces
           const topKey = `${x},${topY}`;
           const bottomKey = `${x},${topY + 2}`;
-          
+
           if (!latticeSet.has(topKey)) {
             latticeSet.add(topKey);
             latticeSquares.push({x: x, y: topY, size: 2});
           }
-          
+
           if (!latticeSet.has(bottomKey)) {
             latticeSet.add(bottomKey);
             latticeSquares.push({x: x, y: topY + 2, size: 2});
           }
         }
       });
-      
+
       // Now draw all the lattice faces with checkerboard pattern
       group.selectAll(".checkerboard-square")
           .data(latticeSquares)
@@ -1434,7 +1434,7 @@ Module.onRuntimeInitialized = async function() {
           })
           .attr("pointer-events", "none"); // Allow clicking through to the dominoes
     }
-    
+
     // If nonintersecting paths are enabled, draw them
     if (showPaths) {
       // Collect all the dominoes
@@ -1442,19 +1442,19 @@ Module.onRuntimeInitialized = async function() {
       svg2d.select("g").selectAll("rect").each(function(d) {
         dominoes.push(d);
       });
-      
+
       // Create paths based on domino type and orientation
       const pathSegments = [];
-      
+
       // Process each domino
       dominoes.forEach(d => {
         const isHorizontal = d.w > d.h;
         const color = d.color;
-        
+
         // Calculate center points
         const centerX = d.x + d.w/2;
         const centerY = d.y + d.h/2;
-        
+
         // Get color type
         let colorType = "";
         if (isHorizontal) {
@@ -1470,7 +1470,7 @@ Module.onRuntimeInitialized = async function() {
             colorType = "red";
           }
         }
-        
+
         if (isHorizontal && colorType === "green") {
           // Green horizontal domino - horizontal path through center
           // Draw a horizontal line through the center of the green domino
@@ -1481,20 +1481,20 @@ Module.onRuntimeInitialized = async function() {
             y2: centerY,
             color: "black" // All paths are black now
           });
-        } 
+        }
         else if (!isHorizontal) {
           // For vertical dominoes (yellow or red)
           const centerX = d.x + d.w/2; // center X
           const centerY = d.y + d.h/2; // center Y
           const tileWidth = d.w;  // width of the domino
           const tileHeight = d.h; // height of the domino
-          
+
           // Calculate path length through the center (maintaining 45° angle)
           // For 45° angle, we need equal horizontal and vertical components
           // We'll use the smaller of width/2 and height/2 to ensure we maintain the angle
           // but scaled appropriately to make the path go through most of the tile
           const pathHalfLength = Math.min(tileWidth, tileHeight) * 1.2; // Slightly longer to ensure it crosses the tile
-          
+
           if (colorType === "yellow") {
             // Yellow vertical domino - up-right 45° diagonal through center
             pathSegments.push({
@@ -1504,7 +1504,7 @@ Module.onRuntimeInitialized = async function() {
               y2: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
               color: "black"
             });
-          } 
+          }
           else if (colorType === "red") {
             // Red vertical domino - down-right 45° diagonal through center
             pathSegments.push({
@@ -1517,7 +1517,7 @@ Module.onRuntimeInitialized = async function() {
           }
         }
       });
-      
+
       // Draw all path segments
       const group = svg2d.select("g");
       group.selectAll(".path-line")
@@ -1534,7 +1534,7 @@ Module.onRuntimeInitialized = async function() {
           .attr("pointer-events", "none"); // Allow clicking through to dominoes
     }
   }
-  
+
   // Helper function to check if a domino is horizontal
   function isHorizontalDomino(d) {
     return d.w > d.h;
@@ -1595,7 +1595,7 @@ Module.onRuntimeInitialized = async function() {
     svg2d.selectAll("g").remove();
 
     const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
-    
+
     // Get the current border thickness value
     const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
 
@@ -1613,7 +1613,9 @@ Module.onRuntimeInitialized = async function() {
 
     const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
     const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
-    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+    // Shift the visualization up by adding a negative vertical offset (20% of available space)
+    const verticalShift = svgHeight * 0.04; // 10% of the SVG height
+    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale - verticalShift;
 
     // Store the initial transform parameters for zoom behavior
     initialTransform2d = {
