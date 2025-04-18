@@ -628,6 +628,14 @@ Module.onRuntimeInitialized = async function() {
       if (dominoes.error) throw new Error(dominoes.error);
       if (signal.aborted) return;
 
+      // ABSOLUTE HARD CHECK: Skip both height function calculation and 3D rendering if n > 300
+      // This check should never fail regardless of view mode
+      if (n > 300) {
+        progressElem.innerText = "Sampling complete. n > 300 is too large for 3D visualization.";
+        stopSimulation();
+        return;
+      }
+
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
       if (signal.aborted) return;
@@ -635,13 +643,6 @@ Module.onRuntimeInitialized = async function() {
       // Calculate the height function (in chunks if large)
       const heightMap = calculateHeightFunction(dominoes);
       if (signal.aborted) return;
-
-      // Skip 3D rendering if n > 300 in 3D view
-      if (skip3DRendering) {
-        progressElem.innerText = "Sampling complete. n > 300 is too large for 3D rendering.";
-        stopSimulation();
-        return;
-      }
 
       // Scale factor based on n
       const scale = 60/(2*n);
