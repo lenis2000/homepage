@@ -2,6 +2,7 @@
 title: Domino tilings of the Aztec diamond
 author: 'Leonid Petrov'
 permalink: /t-emb/
+layout: default
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/p/t-emb.md'
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'

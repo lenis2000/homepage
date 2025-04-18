@@ -1,6 +1,7 @@
 ---
 title: Domino tilings of the Aztec diamond
 author: 'Leonid Petrov'
+layout: default
 permalink: /domino/
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/p/domino.md'

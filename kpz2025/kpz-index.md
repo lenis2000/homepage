@@ -1,8 +1,8 @@
 ---
 layout: default
 title: All roads to the KPZ universality class
-nav_weight: 1000
-nav_id: KPZ at AIM 2025
+# nav_weight: 1000
+# nav_id: KPZ at AIM 2025
 permalink: /kpz2025/
 ---
 
