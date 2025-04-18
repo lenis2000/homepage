@@ -249,6 +249,9 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <span style="margin-left: 20px;"></span>
       <label for="border-width-input">Border thickness:</label>
       <input type="number" id="border-width-input" min="0" max="1" step="0.05" value="0.1" style="width: 60px;">
+      <br>
+      <input type="checkbox" id="paths-checkbox-2d">
+      <label for="paths-checkbox-2d">Show nonintersecting paths</label>
     </div>
     </div>
 
@@ -1307,6 +1310,11 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("border-width-input").addEventListener("input", function() {
     updateDominoDisplay();
   });
+  
+  // Nonintersecting paths toggle handler
+  document.getElementById("paths-checkbox-2d").addEventListener("change", function() {
+    updateDominoDisplay();
+  });
 
   // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
   function getCheckerboardPattern(d) {
@@ -1330,11 +1338,13 @@ Module.onRuntimeInitialized = async function() {
   function updateDominoDisplay() {
     const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
     const showCheckerboard = document.getElementById("checkerboard-checkbox-2d").checked;
+    const showPaths = document.getElementById("paths-checkbox-2d").checked;
     const showColors = document.getElementById("show-colors-checkbox").checked;
     const monoColor = "#F8F8F8"; // Extremely light monochrome color
 
-    // First, remove any existing checkerboard pattern
+    // First, remove any existing checkerboard pattern and paths
     svg2d.select("g").selectAll(".checkerboard-square").remove();
+    svg2d.select("g").selectAll(".path-line").remove();
     
     // Get the current border thickness value
     const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
@@ -1424,6 +1434,110 @@ Module.onRuntimeInitialized = async function() {
           })
           .attr("pointer-events", "none"); // Allow clicking through to the dominoes
     }
+    
+    // If nonintersecting paths are enabled, draw them
+    if (showPaths) {
+      // Collect all the dominoes
+      const dominoes = [];
+      svg2d.select("g").selectAll("rect").each(function(d) {
+        dominoes.push(d);
+      });
+      
+      // Create paths based on domino type and orientation
+      const pathSegments = [];
+      
+      // Process each domino
+      dominoes.forEach(d => {
+        const isHorizontal = d.w > d.h;
+        const color = d.color;
+        
+        // Calculate center points
+        const centerX = d.x + d.w/2;
+        const centerY = d.y + d.h/2;
+        
+        // Get color type
+        let colorType = "";
+        if (isHorizontal) {
+          if (color.includes("green") || color === "#1e8c28" || color === "#00ff00") {
+            colorType = "green";
+          } else if (color.includes("blue") || color === "#4363d8" || color === "#0000ff") {
+            colorType = "blue";
+          }
+        } else {
+          if (color.includes("yellow") || color === "#fca414" || color === "#ffff00") {
+            colorType = "yellow";
+          } else if (color.includes("red") || color === "#ff2244" || color === "#ff0000") {
+            colorType = "red";
+          }
+        }
+        
+        if (isHorizontal && colorType === "green") {
+          // Green horizontal domino - horizontal path through center
+          // Draw a horizontal line through the center of the green domino
+          pathSegments.push({
+            x1: d.x, // left edge
+            y1: centerY,
+            x2: d.x + d.w, // right edge
+            y2: centerY,
+            color: "black" // All paths are black now
+          });
+        } 
+        else if (!isHorizontal) {
+          // For vertical dominoes (yellow or red)
+          const centerX = d.x + d.w/2; // center X
+          const centerY = d.y + d.h/2; // center Y
+          const tileWidth = d.w;  // width of the domino
+          const tileHeight = d.h; // height of the domino
+          
+          // Calculate path length through the center (maintaining 45° angle)
+          // For 45° angle, we need equal horizontal and vertical components
+          // We'll use the smaller of width/2 and height/2 to ensure we maintain the angle
+          // but scaled appropriately to make the path go through most of the tile
+          const pathHalfLength = Math.min(tileWidth, tileHeight) * 1.2; // Slightly longer to ensure it crosses the tile
+          
+          if (colorType === "yellow") {
+            // Yellow vertical domino - up-right 45° diagonal through center
+            pathSegments.push({
+              x1: centerX - pathHalfLength/2,
+              y1: centerY + pathHalfLength/2, // Adding because y increases downward in SVG
+              x2: centerX + pathHalfLength/2,
+              y2: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
+              color: "black"
+            });
+          } 
+          else if (colorType === "red") {
+            // Red vertical domino - down-right 45° diagonal through center
+            pathSegments.push({
+              x1: centerX - pathHalfLength/2,
+              y1: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
+              x2: centerX + pathHalfLength/2,
+              y2: centerY + pathHalfLength/2, // Adding because y increases downward in SVG
+              color: "black"
+            });
+          }
+        }
+      });
+      
+      // Draw all path segments
+      const group = svg2d.select("g");
+      group.selectAll(".path-line")
+          .data(pathSegments)
+          .enter()
+          .append("line")
+          .attr("class", "path-line")
+          .attr("x1", d => d.x1)
+          .attr("y1", d => d.y1)
+          .attr("x2", d => d.x2)
+          .attr("y2", d => d.y2)
+          .attr("stroke", "black") // All paths are black now
+          .attr("stroke-width", 0.6)
+          .attr("pointer-events", "none"); // Allow clicking through to dominoes
+    }
+  }
+  
+  // Helper function to check if a domino is horizontal
+  function isHorizontalDomino(d) {
+    return d.w > d.h;
   }
 
   // Global color toggle handler
