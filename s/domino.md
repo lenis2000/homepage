@@ -141,10 +141,6 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
     </div>
-    <div>
-      <button id="debug-btn" style="font-size: 0.8em; padding: 3px 6px;">Show/Hide Parameters</button>
-      <span id="debug-info" style="font-size: 0.8em; margin-left: 10px;"></span>
-    </div>
   </div>
 
   <!-- 2×2 Periodic Weights (initially hidden) -->
@@ -819,19 +815,11 @@ Module.onRuntimeInitialized = async function() {
     // Show/hide weights based on selection
     const weights2x2 = document.getElementById('weights-2x2');
     const weights3x3 = document.getElementById('weights-3x3');
-    const debugBtn = document.getElementById('debug-btn');
 
     if (weights2x2) weights2x2.style.display = (periodicity === '2x2') ? 'block' : 'none';
     if (weights3x3) weights3x3.style.display = (periodicity === '3x3') ? 'block' : 'none';
-    
-    // Show/hide debug button based on periodicity
-    if (debugBtn) debugBtn.style.display = (periodicity === 'uniform') ? 'none' : 'inline-block';
 
-    // Update debug info if it exists
-    const debugInfo = document.getElementById('debug-info');
-    if (debugInfo) {
-      debugInfo.textContent = `Current: ${periodicity}`;
-    }
+
 
     console.log(`Periodicity set to ${periodicity}, showing appropriate parameters`);
   }
@@ -851,23 +839,7 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
-  // Debug button to force parameter visibility update
-  document.getElementById('debug-btn')?.addEventListener('click', () => {
-    const weights2x2 = document.getElementById('weights-2x2');
-    const weights3x3 = document.getElementById('weights-3x3');
 
-    // Toggle 2x2 parameters
-    if (document.getElementById('2x2-radio').checked) {
-      if (weights2x2) weights2x2.style.display = weights2x2.style.display === 'none' ? 'block' : 'none';
-    }
-
-    // Toggle 3x3 parameters
-    if (document.getElementById('3x3-radio').checked) {
-      if (weights3x3) weights3x3.style.display = weights3x3.style.display === 'none' ? 'block' : 'none';
-    }
-
-    updatePeriodicityParams();
-  });
 
   // Ensure correct parameters are visible initially
   setTimeout(updatePeriodicityParams, 0);
