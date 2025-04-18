@@ -1300,45 +1300,122 @@ Module.onRuntimeInitialized = async function() {
     updateDominoDisplay();
   });
 
+  // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
+  function getCheckerboardPattern(d) {
+    // Dominoes are 2x4 (horizontal) or 4x2 (vertical)
+    // We want to create a checkerboard pattern on the underlying 2x2 lattice faces
+    
+    // Get the position of each lattice face (2x2 square)
+    // For a horizontal domino (2x4), it covers 2 lattice faces
+    // For a vertical domino (4x2), it also covers 2 lattice faces
+    
+    // Convert domino coordinates to lattice coordinates (each lattice face is 2x2)
+    const latticeX = Math.floor(d.x / 2);
+    const latticeY = Math.floor(d.y / 2);
+    
+    // Traditional checkerboard pattern on the lattice
+    // True if the sum of lattice coordinates is even
+    return (latticeX + latticeY) % 2 === 0;
+  }
+  
   // Function to update domino display based on various display settings
   function updateDominoDisplay() {
     const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
     const showCheckerboard = document.getElementById("checkerboard-checkbox-2d").checked;
     const showColors = document.getElementById("show-colors-checkbox").checked;
-    const monoColor = "#999999";
+    const monoColor = "#F8F8F8"; // Extremely light monochrome color
 
-    // Toggle colors between normal and grayscale, respecting the show-colors setting
+    // First, remove any existing checkerboard pattern
+    svg2d.select("g").selectAll(".checkerboard-square").remove();
+    
+    // Toggle colors between normal and grayscale for the dominoes
     svg2d.select("g").selectAll("rect")
       .attr("fill", function(d) {
-        if (!showColors) return monoColor;
-
-        // If checkerboard is enabled, apply overlay pattern
-        if (showCheckerboard) {
-          const xPos = Math.floor(d.x);
-          const yPos = Math.floor(d.y);
-          const isEvenCell = (xPos + yPos) % 2 === 0;
-
-          if (useGrayscale) {
-            // Grayscale with checkerboard
-            const baseColor = getGrayscaleColor(d.color, d);
-            return isEvenCell ? d3.color(baseColor).darker(0.5) : baseColor;
-          } else {
-            // Color with checkerboard
-            return isEvenCell ? d3.color(d.color).darker(0.3) : d.color;
-          }
+        // Determine the base color based on color settings
+        if (!showColors) {
+          return monoColor;
+        } else if (useGrayscale) {
+          return getGrayscaleColor(d.color, d);
         } else {
-          // No checkerboard, just regular coloring
-          return useGrayscale ? getGrayscaleColor(d.color, d) : d.color;
+          return d.color;
         }
       });
+    
+    // If checkerboard is enabled, draw 2x2 lattice squares
+    if (showCheckerboard) {
+      const group = svg2d.select("g");
+      
+      // Create a set of all 2x2 lattice faces used by the dominoes
+      const latticeSet = new Set();
+      const latticeSquares = [];
+      
+      // First, collect all the 2x2 lattice face positions
+      group.selectAll("rect").each(function(d) {
+        // For a horizontal domino (2x4), it covers 2 lattice faces side by side
+        // For a vertical domino (4x2), it covers 2 lattice faces one above the other
+        
+        const isHorizontal = d.w > d.h;
+        
+        if (isHorizontal) {
+          // Horizontal domino covers 2 faces horizontally
+          const leftX = Math.floor(d.x / 2) * 2;
+          const y = Math.floor(d.y / 2) * 2;
+          
+          // Add both lattice faces
+          const leftKey = `${leftX},${y}`;
+          const rightKey = `${leftX + 2},${y}`;
+          
+          if (!latticeSet.has(leftKey)) {
+            latticeSet.add(leftKey);
+            latticeSquares.push({x: leftX, y: y, size: 2});
+          }
+          
+          if (!latticeSet.has(rightKey)) {
+            latticeSet.add(rightKey);
+            latticeSquares.push({x: leftX + 2, y: y, size: 2});
+          }
+        } else {
+          // Vertical domino covers 2 faces vertically
+          const x = Math.floor(d.x / 2) * 2;
+          const topY = Math.floor(d.y / 2) * 2;
+          
+          // Add both lattice faces
+          const topKey = `${x},${topY}`;
+          const bottomKey = `${x},${topY + 2}`;
+          
+          if (!latticeSet.has(topKey)) {
+            latticeSet.add(topKey);
+            latticeSquares.push({x: x, y: topY, size: 2});
+          }
+          
+          if (!latticeSet.has(bottomKey)) {
+            latticeSet.add(bottomKey);
+            latticeSquares.push({x: x, y: topY + 2, size: 2});
+          }
+        }
+      });
+      
+      // Now draw all the lattice faces with checkerboard pattern
+      group.selectAll(".checkerboard-square")
+          .data(latticeSquares)
+          .enter()
+          .append("rect")
+          .attr("class", "checkerboard-square")
+          .attr("x", d => d.x)
+          .attr("y", d => d.y)
+          .attr("width", d => d.size)
+          .attr("height", d => d.size)
+          .attr("fill", function(d) {
+            // Create checkerboard pattern based on lattice coordinates
+            const isBlack = ((d.x / 2) + (d.y / 2)) % 2 === 0;
+            return isBlack ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0)"; // Black or transparent
+          })
+          .attr("pointer-events", "none"); // Allow clicking through to the dominoes
+    }
   }
 
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
-    const showColors = this.checked;
-    const monoColor = "#EEEEEE"; // Lighter monochrome color for 2D view
-    const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
-
     // Update 2D view if it exists
     const svg2dGroup = svg2d.select("g");
     if (!svg2dGroup.empty()) {
