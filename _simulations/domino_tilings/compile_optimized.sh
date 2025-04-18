@@ -61,6 +61,19 @@ emcc 2025-04-17-aztec-uniform-3d-optimized.cpp -o 2025-04-17-aztec-uniform-3d.js
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
 
+# Compile the 3D three-periodic visualization
+echo "Compiling 3D three-periodic visualization..."
+emcc 2025-04-18-aztec-three-periodic-3d.cpp -o 2025-04-18-aztec-three-periodic-3d.js \
+ -s WASM=1 \
+ -s ASYNCIFY=1 \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
+ -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+ -s ALLOW_MEMORY_GROWTH=1 \
+ -s INITIAL_MEMORY=64MB \
+ -s ENVIRONMENT=web \
+ -s SINGLE_FILE=1 \
+ -O3 -ffast-math
+
 echo "Moving JavaScript files to js directory..."
 # Create js directory if it doesn't exist
 mkdir -p ../../js/
