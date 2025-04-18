@@ -72,9 +72,12 @@ Module.onRuntimeInitialized = async function() {
     camera.lookAt(0, 0, 0);
 
     scene.add(new THREE.AmbientLight(0xffffff,0.5));
-    const dir = new THREE.DirectionalLight(0xffffff,0.8);
-    dir.position.set(1,1,1).normalize();
-    scene.add(dir);
+    const dir1 = new THREE.DirectionalLight(0xffffff,0.8);
+    dir1.position.set(0.5,1,0.5).normalize();
+    scene.add(dir1);
+    const dir2 = new THREE.DirectionalLight(0xffffff,0.6);
+    dir2.position.set(-0.5,1,-0.5).normalize();
+    scene.add(dir2);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -305,9 +308,9 @@ Module.onRuntimeInitialized = async function() {
       // Colors for the materials
       const colors = {
         blue:   0x4363d8,
-        green:  0x3cb44b,
-        red:    0xe6194b,
-        yellow: 0xffe119
+        green:  0x1e8c28,
+        red:    0xff2244,
+        yellow: 0xfca414
       };
 
       // Create the 3D faces with proper heights
@@ -375,6 +378,22 @@ Module.onRuntimeInitialized = async function() {
            const box    = new THREE.Box3().setFromObject(dominoGroup);
            const center = box.getCenter(new THREE.Vector3());
            dominoGroup.position.sub(center);   // move group so its centre is at (0,0,0)
+
+           // now scale it to fill the view
+           const size = new THREE.Vector3();
+           box.getSize(size);
+
+           // compute how big the camera’s view is in world units
+           const viewWidth  = camera.right  - camera.left;   // frustum*aspect
+           const viewHeight = camera.top    - camera.bottom; // frustum
+
+           // pick the smaller scale so it fits both width & height, with 5% padding
+           const scale = Math.min(
+             viewWidth  / size.x,
+             viewHeight / size.z    // 'z' here is the depth axis on the ground‑plane
+           ) * 0.95;
+
+           dominoGroup.scale.setScalar(scale);
 
           clearInterval(poll);
         }
