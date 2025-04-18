@@ -530,6 +530,16 @@ Module.onRuntimeInitialized = async function() {
   }
 
   async function updateVisualization(n) {
+    /* ------------------------------------------------------------------ */
+     /* 1. wipe previous geometry *and* transforms                          */
+     /* ------------------------------------------------------------------ */
+     dominoGroup.clear();                      // three ≥ r152 preferred to loop/remove
+     dominoGroup.position.set(0, 0, 0);
+     dominoGroup.rotation.set(0, 0, 0);
+     dominoGroup.scale.set(1, 1, 1);           // <‑‑ the crucial line
+     /* ------------------------------------------------------------------ */
+
+
     // Check if we're in 3D view with n > 300
     const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
     const skip3DRendering = is3DView && n > 300;
@@ -775,23 +785,27 @@ Module.onRuntimeInitialized = async function() {
         // === recentre the tiling ===
         const box = new THREE.Box3().setFromObject(dominoGroup);
         const center = box.getCenter(new THREE.Vector3());
+        // Shift the center a little for better visualization
+        center.x += -0.7;  // Shift right a bit
+        center.z +=  4;  // Shift forward a bit
         dominoGroup.position.sub(center);
 
-        // now scale it to fill the view
-        const size = new THREE.Vector3();
-        box.getSize(size);
+        const sizeXYZ   = box.getSize(new THREE.Vector3());       // model extents
+        const margin    = 0.00;                                   // 5 % breathing room
 
-        // compute how big the camera's view is in world units
-        const viewWidth = camera.right - camera.left;
-        const viewHeight = camera.top - camera.bottom;
+        // For an orthographic camera its “view size” is the difference of the planes:
+        const viewW = camera.right  - camera.left;
+        const viewH = camera.top    - camera.bottom;
 
-        // pick the smaller scale so it fits both width & height, with 5% padding
-        const finalScale = Math.min(
-          viewWidth / size.x,
-          viewHeight / size.z
-        ) * 0.95;
+        /* choose the limiting dimension (the one that would clip first) */
+        const maxScale = (1 - margin) * Math.min(
+          viewW / sizeXYZ.x,
+          viewH / sizeXYZ.z          // z‑extent projects to vertical axis in your set‑up
+        );
 
-        dominoGroup.scale.setScalar(finalScale);
+        dominoGroup.scale.setScalar(maxScale);
+        controls.target.set(0, 0, 0);   // orbit around the true centre
+        controls.update();
 
         // If we were in demo mode before update, restore demo view
         if (wasInDemoMode) {
