@@ -29,12 +29,12 @@ published: true
 <script src="/js/2025-04-17-aztec-uniform-3d.js"></script>
 
 
-This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>.
+This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 200$): </label>
-  <input id="n-input" type="number" value="16" min="2" step="2" max="200" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
+  <input id="n-input" type="number" value="16" min="2" step="2" max="400" size="3">
   <button id="update-btn">Update</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
 </div>
@@ -391,8 +391,8 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("update-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n % 2 || n > 200) {
-      return alert("Enter even n between 2 and 200");
+    if (isNaN(n) || n < 2 || n % 2 || n > 400) {
+      return alert("Enter even n between 2 and 400");
     }
     updateVisualization(n);
   });
