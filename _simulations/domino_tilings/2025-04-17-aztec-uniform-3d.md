@@ -3,9 +3,9 @@ title: '3D Visualization of Uniform Domino Tilings of the Aztec Diamond'
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-03-31-aztec-uniform-3d.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-03-31-aztec-uniform-3d.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d.cpp'
     txt: 'C++ code for the simulation'
 published: true
 ---
@@ -26,7 +26,7 @@ published: true
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
-<script src="/js/2025-03-31-aztec-uniform-3d.js"></script>
+<script src="/js/2025-04-17-aztec-uniform-3d.js"></script>
 
 
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>.

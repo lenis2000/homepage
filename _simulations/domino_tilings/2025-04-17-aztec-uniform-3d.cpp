@@ -1,6 +1,6 @@
 /*
 
-emcc 2025-03-31-aztec-uniform-3d.cpp -o 2025-03-31-aztec-uniform-3d.js \
+emcc 2025-04-17-aztec-uniform-3d.cpp -o 2025-04-17-aztec-uniform-3d.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
@@ -10,7 +10,7 @@ emcc 2025-03-31-aztec-uniform-3d.cpp -o 2025-03-31-aztec-uniform-3d.js \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
-mv 2025-03-31-aztec-uniform-3d.js ../../js/
+mv 2025-04-17-aztec-uniform-3d.js ../../js/
 
 
 
@@ -285,18 +285,18 @@ char* simulateAztec(int n) {
         // Build JSON output with dominoes data
         ostringstream oss;
         oss << "[";  // Simple array of domino objects
-        
+
         int size = (int)dominoConfig.size();
         bool first = true;
-        
+
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 if (dominoConfig[i][j] == 1) {
                     double x, y, w, h;
                     string color;
-                    
+
                     bool oddI = (i & 1), oddJ = (j & 1);
-                    
+
                     if (oddI && oddJ) { // i odd, j odd: Blue
                         color = "blue";
                         x = j - i - 2;
@@ -324,17 +324,17 @@ char* simulateAztec(int n) {
                     } else {
                         continue;
                     }
-                    
+
                     if (!first) oss << ",";
                     else first = false;
-                    
+
                     oss << "{\"x\":" << x << ",\"y\":" << y
                         << ",\"w\":" << w << ",\"h\":" << h
                         << ",\"color\":\"" << color << "\"}";
                 }
             }
         }
-        
+
         oss << "]";
         progressCounter = 100; // Finished.
         emscripten_sleep(0); // Yield to update UI
