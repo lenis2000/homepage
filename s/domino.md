@@ -278,13 +278,18 @@ Module.onRuntimeInitialized = async function() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     const container = document.getElementById('aztec-canvas');
+    
+    // Make sure the container is visible and clear
+    container.style.display = 'block';
+    container.innerHTML = '';
+    
     const w = container.clientWidth, h = container.clientHeight;
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(w,h);
     renderer.setPixelRatio(window.devicePixelRatio);
     // Enable OES_element_index_uint extension for WebGL 1 to support 32-bit indices
     renderer.getContext().getExtension('OES_element_index_uint');
-    container.innerHTML = ''; container.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     const frustum = 100, aspect = w/h;
     camera = new THREE.OrthographicCamera(
@@ -686,14 +691,16 @@ Module.onRuntimeInitialized = async function() {
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
 
-        // Check if this is a large tiling (n > 300)
+      // Check if this is a large tiling (n > 300)
       const isLargeTiling = n > 300;
+      console.log("Current n value:", n, "isLargeTiling:", isLargeTiling);
 
       // Always render the 2D view first (we'll need it regardless)
       await render2D(dominoes);
 
       // For large tilings (n > 300), prepare a message for 3D view
       if (isLargeTiling) {
+        console.log("Large tiling detected, showing message instead of 3D");
         // Create a div with a message in the 3D canvas container
         const container = document.getElementById('aztec-canvas');
         container.innerHTML = '';
@@ -710,7 +717,7 @@ Module.onRuntimeInitialized = async function() {
         messageDiv.style.fontSize = '18px';
         messageDiv.style.fontWeight = 'bold';
         messageDiv.style.textAlign = 'center';
-        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
+        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
         container.appendChild(messageDiv);
 
         progressElem.innerText = "";
@@ -719,7 +726,8 @@ Module.onRuntimeInitialized = async function() {
       }
 
       // For n ≤ 300, continue with 3D rendering regardless of current view
-
+      console.log("Small tiling (n ≤ 300), proceeding with 3D rendering");
+      
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
       if (signal.aborted) return;
@@ -937,6 +945,18 @@ Module.onRuntimeInitialized = async function() {
       return alert(`n is too large. Maximum value is ${max2DN}.`);
     }
 
+    // Clear any previous 3D container content if we're in 3D view
+    if (is3DView) {
+      const container = document.getElementById('aztec-canvas');
+      // Reinitialize the container - this is crucial to ensure rendering works
+      container.innerHTML = '';
+      
+      if (n <= max3DN) {
+        // Show helpful information in the progress indicator for valid n
+        progressElem.innerText = "Generating new 3D visualization...";
+      }
+    }
+
     // If we get here, n is within allowed range for current view
     updateVisualization(n);
   });
@@ -1101,7 +1121,7 @@ Module.onRuntimeInitialized = async function() {
         messageDiv.style.fontSize = '18px';
         messageDiv.style.fontWeight = 'bold';
         messageDiv.style.textAlign = 'center';
-        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.';
+        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
         container.appendChild(messageDiv);
 
         progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
