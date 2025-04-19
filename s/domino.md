@@ -40,15 +40,6 @@ code:
     vertical-align: top;
   }
 
-  /* Mobile responsiveness */
-  .mobile-input {
-    max-width: 5rem;
-  }
-
-  input[type="number"].mobile-input {
-    padding: 0.25rem;
-    font-size: 0.9rem;
-  }
 
   #aztec-svg-2d {
     touch-action: none; /* Prevent browser defaults on touch */
@@ -159,21 +150,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 <i style="color:#999999;">Last updated: 2025-04-19</i>
 
 <!-- Parameters section above the panes -->
-<!-- Settings toggle button for small screens (Bootstrap 4 alpha.6) -->
-<button class="btn btn-secondary w-100 d-block d-md-none mb-2" type="button" data-toggle="collapse" data-target="#controls" aria-expanded="true" aria-controls="controls">
-  Settings ▼
-</button>
 
-<style>
-  /* Additional styles for the collapse toggle */
-  @media (max-width: 767px) {
-    .collapse:not(.show) {
-      display: none;
-    }
-  }
-</style>
-
-<div id="controls" class="collapse show d-md-block">
+<div id="controls">
   <div class="parameters-section">
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px;">
       <div>
@@ -1899,11 +1877,11 @@ Module.onRuntimeInitialized = async function() {
   function toggleHeightFunction() {
     // Remove any existing height function elements
     svg2d.select("g").selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
-  
+
     // If height function is not enabled or n > 30, just return
     const n = parseInt(document.getElementById("n-input").value, 10);
     if (!useHeightFunction || n > 30 || !cachedDominoes || cachedDominoes.length === 0) return;
-  
+
     // Make sure we use cached dominoes directly which has known good coordinates
     // rather than trying to collect them from the display which might have NaN issues
     const dominoes = [...cachedDominoes];
@@ -1988,7 +1966,7 @@ Module.onRuntimeInitialized = async function() {
 
     // 6. Render just the numbers in pixels
     const group = svg2d.select("g");
-    
+
     // Create a group for the height function labels
     const heightLabelsGroup = group.append("g")
         .attr("class", "height-function-group");
@@ -2007,7 +1985,7 @@ Module.onRuntimeInitialized = async function() {
         .attr("font-size", `${fontSize}px`)
         .text(-h); // Negate height as per the requirements
     });
-    
+
     // Make height function appear above everything else
     heightLabelsGroup.raise();
   }
