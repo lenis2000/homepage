@@ -182,7 +182,11 @@ code:
           <p><strong>Tip.</strong> The simulation caches the most recent tiling in <code>localStorage</code>; press <strong>Sample</strong> again to force a fresh run.</p>
         </blockquote>
 
-        <p><i style="color:#999999;">Last updated: 2025-04-19</i></p>
+        <p class="mb-3"><i style="color:#999999;">Last updated: 2025-04-19</i></p>
+
+  {%include dear_colleagues.md%}
+
+<br><br>
       </div>
     </div>
   </div>
