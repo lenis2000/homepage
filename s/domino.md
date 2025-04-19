@@ -151,9 +151,6 @@ code:
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
 <script src="{{site.url}}/s/domino.js"></script>
 
 
@@ -1902,11 +1899,11 @@ Module.onRuntimeInitialized = async function() {
   function toggleHeightFunction() {
     // Remove any existing height function elements
     svg2d.select("g").selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
-  
+
     // If height function is not enabled or n > 30, just return
     const n = parseInt(document.getElementById("n-input").value, 10);
     if (!useHeightFunction || n > 30 || !cachedDominoes || cachedDominoes.length === 0) return;
-  
+
     // Make sure we use cached dominoes directly which has known good coordinates
     // rather than trying to collect them from the display which might have NaN issues
     const dominoes = [...cachedDominoes];
@@ -1991,7 +1988,7 @@ Module.onRuntimeInitialized = async function() {
 
     // 6. Render just the numbers in pixels
     const group = svg2d.select("g");
-    
+
     // Create a group for the height function labels
     const heightLabelsGroup = group.append("g")
         .attr("class", "height-function-group");
@@ -2010,7 +2007,7 @@ Module.onRuntimeInitialized = async function() {
         .attr("font-size", `${fontSize}px`)
         .text(-h); // Negate height as per the requirements
     });
-    
+
     // Make height function appear above everything else
     heightLabelsGroup.raise();
   }
