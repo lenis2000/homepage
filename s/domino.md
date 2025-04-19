@@ -339,76 +339,22 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 <script>
 // Add functionality for the collapse toggle on small screens using vanilla JS
 document.addEventListener('DOMContentLoaded', function() {
-  // Get the elements
+  // Get the Bootstrap 4 collapse instances
   var controlsEl = document.getElementById('controls');
   var displayOptionsEl = document.getElementById('display-options-2d');
-  
-  // Get toggle buttons
-  var controlsToggleBtn = document.querySelector('[data-target="#controls"]');
-  var displayOptionsToggleBtn = document.querySelector('[data-target="#display-options-2d"]');
-  
+
   // Auto-collapse on small screens initially
   if (window.innerWidth < 768) {
+    // For Bootstrap 4 alpha.6, we need to toggle the class manually
     controlsEl.classList.remove('show');
     if (displayOptionsEl) displayOptionsEl.classList.remove('show');
   }
-  
-  // Implement toggle functionality for controls
-  if (controlsToggleBtn && controlsEl) {
-    controlsToggleBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      controlsEl.classList.toggle('show');
-      
-      // Update the toggle button text
-      var expanded = controlsEl.classList.contains('show');
-      controlsToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      
-      // Update button text to reflect state
-      var textContent = controlsToggleBtn.textContent.trim();
-      if (expanded) {
-        controlsToggleBtn.textContent = textContent.replace('▼', '▲');
-      } else {
-        controlsToggleBtn.textContent = textContent.replace('▲', '▼');
-      }
-    });
-  }
-  
-  // Implement toggle functionality for display options
-  if (displayOptionsToggleBtn && displayOptionsEl) {
-    displayOptionsToggleBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      displayOptionsEl.classList.toggle('show');
-      
-      // Update the toggle button text
-      var expanded = displayOptionsEl.classList.contains('show');
-      displayOptionsToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      
-      // Update button text to reflect state
-      var textContent = displayOptionsToggleBtn.textContent.trim();
-      if (expanded) {
-        displayOptionsToggleBtn.textContent = textContent.replace('▼', '▲');
-      } else {
-        displayOptionsToggleBtn.textContent = textContent.replace('▲', '▼');
-      }
-    });
-  }
-  
+
   // Update the collapse state on window resize
   window.addEventListener('resize', function() {
     if (window.innerWidth >= 768) {
       controlsEl.classList.add('show');
       if (displayOptionsEl) displayOptionsEl.classList.add('show');
-      
-      // Update button text for desktop view
-      if (controlsToggleBtn) {
-        var textContent = controlsToggleBtn.textContent.trim();
-        controlsToggleBtn.textContent = textContent.replace('▲', '▼');
-      }
-      
-      if (displayOptionsToggleBtn) {
-        var textContent = displayOptionsToggleBtn.textContent.trim();
-        displayOptionsToggleBtn.textContent = textContent.replace('▲', '▼');
-      }
     }
   });
 });
@@ -499,25 +445,8 @@ Module.onRuntimeInitialized = async function() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
 
-    /* Enhanced touch controls configuration for mobile */
-    controls.touches = {
-      ONE: THREE.TOUCH.ROTATE,
-      TWO: THREE.TOUCH.DOLLY_PAN
-    };
-    
-    // Make sure touch events are properly handled
-    renderer.domElement.addEventListener('touchstart', function(e) {
-      e.preventDefault();
-    }, { passive: false });
-    
-    renderer.domElement.addEventListener('touchmove', function(e) {
-      e.preventDefault();
-    }, { passive: false });
-    
-    renderer.domElement.addEventListener('touchend', function(e) {
-      e.preventDefault();
-    }, { passive: false });
-    
+    /* NEW — allow one‑finger rotate on touch devices */
+    controls.touches.ONE = THREE.TOUCH.ROTATE;
     window.addEventListener('resize', onWindowResize);
 
     dominoGroup = new THREE.Group();
@@ -1509,18 +1438,8 @@ Module.onRuntimeInitialized = async function() {
         `translate(${initialTransform2d.translateX * t.k + t.x},${initialTransform2d.translateY * t.k + t.y}) scale(${initialTransform2d.scale * t.k})`);
     });
 
-  // Enable zoom on the 2D SVG with touch events explicitly enabled
-  svg2d.call(zoom2d)
-    .on("touchstart touchmove touchend", function(event) {
-      // Prevent default browser behavior for touch events
-      event.preventDefault();
-    });
-    
-  // Add mobile-specific touch handling
-  svg2d.node().addEventListener('touchstart', function(event) {
-    // Prevent default behavior to avoid browser gestures
-    event.preventDefault();
-  }, { passive: false });
+  // Enable zoom on the 2D SVG
+  svg2d.call(zoom2d);
 
   // Add double-click to reset zoom for 2D
   svg2d.on("dblclick.zoom", () => {
