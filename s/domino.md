@@ -158,7 +158,7 @@ Two complementary visualizations are available:
   * dimers inscribed into dominos
   * integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).
 
-There is also an on‑the‑fly **LaTeX/TikZ export**, which as of now supports dominos and nonintersecting paths.
+There is also an on‑the‑fly **LaTeX/TikZ export**, which supports all 2-D viewmodes.
 
 Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times 3\) periodic weightings, adjust border thickness, zoom/pan, and copy or download the generated TikZ code.
 
@@ -328,7 +328,6 @@ Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times
 <!-- TikZ Code Generation Section -->
 <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
   <h3 style="margin-top: 0;">TikZ Code Generation</h3>
-  <p>Generate LaTeX TikZ code from the current domino tiling. This feature supports <b>colored dominoes</b>, <b>nonintersecting paths</b>, and <b>height function</b>.</p>
 
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
@@ -2253,15 +2252,53 @@ Module.onRuntimeInitialized = async function() {
     const useCheckerboard = document.getElementById("checkerboard-checkbox-2d")?.checked || false;
     const useDimers = document.getElementById("dimers-checkbox-2d")?.checked || false;
     const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
-
+    const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
+    
+    // Helper function to convert a brightness value (0–255) to a TikZ grayscale color
+    function grayHexForTikZ(brightness) {
+      const normalizedBrightness = brightness / 255;
+      return `black!${Math.round((1 - normalizedBrightness) * 100)}`;
+    }
+    
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = cachedDominoes.map(domino => {
+      let fillColor;
+      
+      if (!showColors) {
+        fillColor = "white"; // Use white if colors are disabled
+      } else if (useGrayscale) {
+        // Use grayscale colors based on domino position and type
+        const isHorizontal = domino.w > domino.h;
+        
+        if (isHorizontal) {
+          const yParity = Math.floor(domino.y) % 4 === 0 ? 0 : 1;
+          if (domino.color === "blue") {
+            fillColor = grayHexForTikZ(grayscaleValues.blue["p" + yParity]);
+          } else if (domino.color === "green") {
+            fillColor = grayHexForTikZ(grayscaleValues.green["p" + yParity]);
+          } else {
+            fillColor = "black!50"; // Default gray
+          }
+        } else {
+          const xParity = Math.floor(domino.x) % 4 === 0 ? 0 : 1;
+          if (domino.color === "red") {
+            fillColor = grayHexForTikZ(grayscaleValues.red["p" + xParity]);
+          } else if (domino.color === "yellow") {
+            fillColor = grayHexForTikZ(grayscaleValues.yellow["p" + xParity]);
+          } else {
+            fillColor = "black!50"; // Default gray
+          }
+        }
+      } else {
+        fillColor = domino.color; // Use regular color
+      }
+      
       return {
         x: domino.x / 100,
         y: domino.y / 100,
         width: domino.w / 100,
         height: domino.h / 100,
-        fill: showColors ? domino.color : "white", // Use white if colors are disabled
+        fill: fillColor,
         stroke: "black",
         strokeWidth: 0.45 // Scaled down for tikz
       };
@@ -2542,7 +2579,12 @@ Module.onRuntimeInitialized = async function() {
     rectangles.forEach(rect => {
       // Map SVG colors to TikZ colors
       let fillColor = rect.fill;
-      if (fillColor === 'green') fillColor = 'svggreen';
+      // If it's already a TikZ grayscale format (black!X), keep it as is
+      if (fillColor.startsWith('black!')) {
+        // Already in TikZ format
+      }
+      // Otherwise map standard colors to TikZ named colors
+      else if (fillColor === 'green') fillColor = 'svggreen';
       else if (fillColor === 'red') fillColor = 'svgred';
       else if (fillColor === 'yellow') fillColor = 'svgyellow';
       else if (fillColor === 'blue') fillColor = 'svgblue';
@@ -2604,11 +2646,11 @@ Module.onRuntimeInitialized = async function() {
         tikzCode += `\\filldraw[fill=black] (${x.toFixed(2)}, ${y.toFixed(2)}) circle (${radius.toFixed(2)/10});\n`;
       });
     }
-    
+
     // Add height function if enabled
     if (useHeightFunctionExport && cachedDominoes && cachedDominoes.length > 0) {
       tikzCode += "\n% Height Function\n";
-      
+
       // 1. Determine lattice unit (scaling factor)
       const minSidePx = Math.min(...cachedDominoes.map(d => Math.min(d.w, d.h)));
       const unit = minSidePx / 2; // 2 lattice units → 1 short side
@@ -2624,26 +2666,26 @@ Module.onRuntimeInitialized = async function() {
           const gy = Math.round(d.y / unit);
           return [orient, sign, gx, gy];
         });
-        
+
         // 3. Build graph with height increments
         const adj = new Map();
-        
+
         function addEdge(v1, v2, dh) {
           const v1Key = typeof v1 === 'string' ? v1 : `${v1[0]},${v1[1]}`;
           const v2Key = typeof v2 === 'string' ? v2 : `${v2[0]},${v2[1]}`;
-          
+
           if (!adj.has(v1Key)) adj.set(v1Key, []);
           if (!adj.has(v2Key)) adj.set(v2Key, []);
-          
+
           adj.get(v1Key).push([v2Key, dh]);
           adj.get(v2Key).push([v1Key, -dh]);
         }
-        
+
         dominoData.forEach(([o, s, x, y]) => {
           if (o === 0) { // horizontal (4×2)
             const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
             const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
-            
+
             addEdge(TL, TM, -s); addEdge(TM, TR, s);
             addEdge(BL, BM, s); addEdge(BM, BR, -s);
             addEdge(TL, BL, s); addEdge(TM, BM, 3*s);
@@ -2652,27 +2694,27 @@ Module.onRuntimeInitialized = async function() {
             const TL = [x, y+4], TR = [x+2, y+4];
             const ML = [x, y+2], MR = [x+2, y+2];
             const BL = [x, y], BR = [x+2, y];
-            
+
             addEdge(TL, TR, -s); addEdge(ML, MR, -3*s); addEdge(BL, BR, -s);
             addEdge(TL, ML, s); addEdge(ML, BL, -s);
             addEdge(TR, MR, -s); addEdge(MR, BR, s);
           }
         });
-        
+
         // 4. Breadth-first integration of heights
         const verts = Array.from(adj.keys()).map(k => {
           const [gx, gy] = k.split(',').map(Number);
           return {k, gx, gy};
         });
-        
+
         // Find the "bottom-left" vertex as the root
         const root = verts.reduce((a, b) =>
           (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
         ).k;
-        
+
         const heights = new Map([[root, 0]]);
         const queue = [root];
-        
+
         while (queue.length > 0) {
           const v = queue.shift();
           for (const [w, dh] of adj.get(v)) {
@@ -2682,19 +2724,19 @@ Module.onRuntimeInitialized = async function() {
             }
           }
         }
-        
+
         // 5. Generate TikZ text nodes for height values
         heights.forEach((h, key) => {
           const [gx, gy] = key.split(',').map(Number);
           const px = gx * unit / 100, py = gy * unit / 100;  // convert to TikZ coordinates
-          
+
           // Shift and invert coordinates for TikZ
           const x = px - minX;
           const y = maxY - py;
-          
+
           // Negate height as per the requirements
           const heightValue = -h;
-          
+
           // Add TikZ code for height value text
           tikzCode += `\\node[font=\\small] at (${x.toFixed(2)}, ${y.toFixed(2)}) {${heightValue}};\n`;
         });
