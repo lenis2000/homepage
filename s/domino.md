@@ -326,7 +326,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
         <div class="mb-1" id="height-function-toggle-container">
           <input type="checkbox" id="height-function-checkbox-2d" style="vertical-align: middle;">
-          <label for="height-function-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show height function (\(n≤30\))</label>
+          <label for="height-function-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show height function (\(n \le 30\) only)</label>
         </div>
       </div>
     </div>
@@ -1887,27 +1887,26 @@ Module.onRuntimeInitialized = async function() {
           .attr("pointer-events", "none");
     }
 
-    // If height function is enabled, draw it
+    // If height function is enabled, draw it last so it appears on top
     useHeightFunction = document.getElementById("height-function-checkbox-2d").checked;
     if (useHeightFunction) {
       toggleHeightFunction();
+      // The height function is already set to raise() internally
     }
   }
 
   // Function to toggle height function on/off
   function toggleHeightFunction() {
     // Remove any existing height function elements
-    svg2d.select("g").selectAll(".height-label,.height-node,.oldHeightBubble").remove();
-
+    svg2d.select("g").selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
+  
     // If height function is not enabled or n > 30, just return
     const n = parseInt(document.getElementById("n-input").value, 10);
-    if (!useHeightFunction || n > 30 || cachedDominoes.length === 0) return;
-
-    // Get the dominoes from the current display
-    const dominoes = [];
-    svg2d.select("g").selectAll("rect").each(function(d) {
-      dominoes.push(d);
-    });
+    if (!useHeightFunction || n > 30 || !cachedDominoes || cachedDominoes.length === 0) return;
+  
+    // Make sure we use cached dominoes directly which has known good coordinates
+    // rather than trying to collect them from the display which might have NaN issues
+    const dominoes = [...cachedDominoes];
 
     // 1. Determine lattice unit (scaling factor)
     const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
@@ -1989,13 +1988,17 @@ Module.onRuntimeInitialized = async function() {
 
     // 6. Render just the numbers in pixels
     const group = svg2d.select("g");
+    
+    // Create a group for the height function labels
+    const heightLabelsGroup = group.append("g")
+        .attr("class", "height-function-group");
 
     heights.forEach((h, key) => {
       const [gx, gy] = key.split(',').map(Number);
       const px = gx * unit, py = gy * unit;  // back to pixels
 
       // Add just the height value (text only, no circles)
-      group.append("text")
+      heightLabelsGroup.append("text")
         .attr("class", "height-label")
         .attr("x", px)
         .attr("y", py)
@@ -2004,6 +2007,9 @@ Module.onRuntimeInitialized = async function() {
         .attr("font-size", `${fontSize}px`)
         .text(-h); // Negate height as per the requirements
     });
+    
+    // Make height function appear above everything else
+    heightLabelsGroup.raise();
   }
 
   // Helper function to check if a domino is horizontal
