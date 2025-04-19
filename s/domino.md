@@ -145,7 +145,25 @@ code:
 <script src="{{site.url}}/s/domino.js"></script>
 
 
-This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The 3d visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast. The simulation also contains a 2d version, which is faster and has more features, such as nonintersecting paths, dimers, and TikZ exports.
+This page hosts an **all‑in‑one interactive sampler of random domino tilings of the <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec diamond</a>**. The sampling is done by the traditional <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>, and here it is adapted to `JavaScript` and `WebAssembly`.
+
+Two complementary visualizations are available:
+
+* **3‑D height‑function view** – A block‑and‑terrace rendering of the stepped surface encoding the domino tiling. The 3-D visualization is inspired by <a href="https://math.mit.edu/~borodin/aztec.html">Alexei and Matvey Borodin's work</a> while being rewritten here in modern `WebGL/Three.js`, and with interactive sampling by shuffling. Large sizes ($n > 100$) may take a while; everything is computed client‑side, so be patient on slower machines.
+
+* **2‑D SVG view** – A faster 2-D drawing that adds several friedly overlays:
+  * checkerboard coloring of the underlying grid
+  * grayscale shading for distinguishing domino orientations (handy for the gas phase of the $2 \times 2$ periodic model)
+  * non‑intersecting Motzkin (or Scrhoeder) paths
+  * dimers inscribed into dominos
+  * integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).
+
+There is also an on‑the‑fly LaTeX/TikZ export (supporting dominos and nonintersecting paths).
+
+Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times 3\) periodic weightings, adjust border thickness, zoom/pan, and copy or download the generated TikZ code.
+
+> **Tip.** The simulation caches the most recent tiling in `localStorage`; press **Sample** again to force a fresh run.
+
 
 <i style="color:#999999;">Last updated: 2025-04-19</i>
 
@@ -310,8 +328,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 <!-- TikZ Code Generation Section -->
 <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
   <h3 style="margin-top: 0;">TikZ Code Generation</h3>
-  <p>Generate LaTeX TikZ code from the current domino tiling. This feature supports <b>colored dominoes</b> and <b>nonintersecting paths</b> only.</p>
-  
+  <p>Generate LaTeX TikZ code from the current domino tiling. This feature supports <b>colored dominoes</b>, <b>nonintersecting paths</b>, and <b>height function</b>.</p>
+
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
     <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
@@ -2245,7 +2263,8 @@ Module.onRuntimeInitialized = async function() {
     // Create lines array for paths if enabled
     const lines = [];
     const usePaths = document.getElementById("paths-checkbox-2d")?.checked || false;
-    
+    const useHeightFunctionExport = document.getElementById("height-function-checkbox-2d")?.checked || false;
+
     if (usePaths) {
       // Add lines based on domino colors and positions
       cachedDominoes.forEach(domino => {
@@ -2361,7 +2380,7 @@ Module.onRuntimeInitialized = async function() {
 
     if (lines.length > 0) {
       tikzCode += "\n% Paths (lines) - Optimized\n";
-      
+
       // Extract all line segments
       const segments = [];
 
