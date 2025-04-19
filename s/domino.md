@@ -12,6 +12,16 @@ code:
 
 
 <style>
+  /* Height function label styling for better readability */
+  .height-label {
+    fill: #000;
+    stroke: #fff;
+    stroke-width: 0.3px;          /* outline thickness – tweak at will */
+    paint-order: stroke fill;   /* draw stroke first, then fill      */
+    stroke-linejoin: round;     /* smooth outline corners            */
+    font-family: sans-serif;
+  }
+
   /* Layout for the visualization panes */
   .visualization-container {
     width: 100%;
@@ -1887,8 +1897,7 @@ Module.onRuntimeInitialized = async function() {
   // Function to toggle height function on/off
   function toggleHeightFunction() {
     // Remove any existing height function elements
-    svg2d.select("g").selectAll(".height-node").remove();
-    svg2d.select("g").selectAll(".height-label").remove();
+    svg2d.select("g").selectAll(".height-label,.height-node,.oldHeightBubble").remove();
 
     // If height function is not enabled or n > 30, just return
     const n = parseInt(document.getElementById("n-input").value, 10);
@@ -1976,7 +1985,7 @@ Module.onRuntimeInitialized = async function() {
     }
 
     // 5. Calculate font size based on n value (smaller font for larger n)
-    const fontSize = Math.max(0.2, 0.6 - n/80.0); // Variable font size based on n
+    const fontSize = Math.max(0.8, Math.min(1.2, 3.6 - n / 20.0))/1.0; // n = order
 
     // 6. Render just the numbers in pixels
     const group = svg2d.select("g");
@@ -1985,18 +1994,14 @@ Module.onRuntimeInitialized = async function() {
       const [gx, gy] = key.split(',').map(Number);
       const px = gx * unit, py = gy * unit;  // back to pixels
 
-      // Add just the height value - no circles
+      // Add just the height value (text only, no circles)
       group.append("text")
         .attr("class", "height-label")
         .attr("x", px)
         .attr("y", py)
         .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
+        .attr("dominant-baseline", "central")
         .attr("font-size", `${fontSize}px`)
-        .attr("fill", "black")
-        .attr("stroke", "white")
-        .attr("stroke-width", "0.5px")
-        .attr("paint-order", "stroke")
         .text(-h); // Negate height as per the requirements
     });
   }
