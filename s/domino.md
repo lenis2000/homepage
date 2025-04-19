@@ -224,8 +224,6 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
     </div>
   </div>
 </div>
-</div><!-- End of controls collapse wrapper -->
-
 <!-- Visualization container with switchable views -->
 <div class="visualization-container">
   <!-- View toggle buttons -->
@@ -270,13 +268,8 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
         <span class="d-none d-md-inline font-italic small">(Use mouse wheel to zoom and drag to pan)</span>
       </div>
 
-      <!-- Toggle for 2D display options on mobile -->
-      <button class="btn btn-sm btn-secondary d-block d-md-none w-100 mb-2" type="button" data-toggle="collapse" data-target="#display-options-2d" aria-expanded="false" aria-controls="display-options-2d">
-        Display Options ▼
-      </button>
-
-      <!-- Display options (collapsible on mobile) -->
-      <div id="display-options-2d" class="collapse show d-md-block mb-2">
+      <!-- Display options -->
+      <div id="display-options-2d" class="d-block mb-2">
         <div class="mb-1">
           <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
           <label for="grayscale-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Grayscale mode (nice for gas phase in \(2\times 2\) model)</label>
@@ -315,26 +308,9 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 </div>
 
 <script>
-// Add functionality for the collapse toggle on small screens using vanilla JS
+// Initialize display settings on document load
 document.addEventListener('DOMContentLoaded', function() {
-  // Get the Bootstrap 4 collapse instances
-  var controlsEl = document.getElementById('controls');
-  var displayOptionsEl = document.getElementById('display-options-2d');
-
-  // Auto-collapse on small screens initially
-  if (window.innerWidth < 768) {
-    // For Bootstrap 4 alpha.6, we need to toggle the class manually
-    controlsEl.classList.remove('show');
-    if (displayOptionsEl) displayOptionsEl.classList.remove('show');
-  }
-
-  // Update the collapse state on window resize
-  window.addEventListener('resize', function() {
-    if (window.innerWidth >= 768) {
-      controlsEl.classList.add('show');
-      if (displayOptionsEl) displayOptionsEl.classList.add('show');
-    }
-  });
+  // No collapsible functionality needed
 });
 
 // Helper function to create a message for large tilings (n > 300) in 3D view
