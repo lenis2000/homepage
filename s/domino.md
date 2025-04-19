@@ -149,7 +149,7 @@ This page hosts an **all‑in‑one interactive sampler of random domino tilings
 
 Two complementary visualizations are available:
 
-* **3‑D height‑function view** – A block‑and‑terrace rendering of the stepped surface encoding the domino tiling. The 3-D visualization is inspired by <a href="https://math.mit.edu/~borodin/aztec.html">Alexei and Matvey Borodin's work</a> while being rewritten here in modern `WebGL/Three.js`, and with interactive sampling by shuffling. Large sizes ($n > 100$) may take a while; everything is computed client‑side, so be patient on slower machines.
+* **3‑D height‑function view** – A rendering of the stepped surface encoding the domino tiling. The 3-D visualization is inspired by <a href="https://math.mit.edu/~borodin/aztec.html">Alexei and Matvey Borodin's work</a> while being rewritten here in modern `WebGL/Three.js`, and with interactive sampling by shuffling. Large sizes ($n > 100$) may take a while; everything is computed client‑side, so be patient on slower machines.
 
 * **2‑D SVG view** – A faster 2-D drawing that adds several friedly overlays:
   * checkerboard coloring of the underlying grid
