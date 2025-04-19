@@ -158,7 +158,7 @@ Two complementary visualizations are available:
   * dimers inscribed into dominos
   * integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).
 
-There is also an on‑the‑fly LaTeX/TikZ export (supporting dominos and nonintersecting paths).
+There is also an on‑the‑fly **LaTeX/TikZ export**, which as of now supports dominos and nonintersecting paths.
 
 Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times 3\) periodic weightings, adjust border thickness, zoom/pan, and copy or download the generated TikZ code.
 
@@ -194,7 +194,7 @@ Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times
 
   <!-- Periodicity control with radio buttons -->
   <div style="margin-bottom: 15px;">
-    <h4 style="margin-top: 0; margin-bottom: 8px;">Periodicity:</h4>
+    <h3 style="margin-top: 0; margin-bottom: 8px;">Periodicity:</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
         <input type="radio" id="uniform-radio" name="periodicity" value="uniform" checked style="cursor: pointer;">
@@ -213,7 +213,7 @@ Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times
 
   <!-- 2×2 Periodic Weights (initially hidden) -->
   <div id="weights-2x2" style="display: none; margin-bottom: 15px;">
-    <h4 style="margin-top: 0; margin-bottom: 5px;">2×2 Periodic Weights</h4>
+    <h5 style="margin-top: 0; margin-bottom: 5px;">2×2 Periodic Weights</h5>
     <div style="display: flex; gap: 15px;">
       <div>
         <label for="a-input">a:</label>
@@ -228,7 +228,7 @@ Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times
 
   <!-- 3×3 Periodic Weights (initially hidden) -->
   <div id="weights-3x3" style="display: none;">
-    <h4 style="margin-top: 0; margin-bottom: 5px;">3×3 Periodic Weights</h4>
+    <h5 style="margin-top: 0; margin-bottom: 5px;">3×3 Periodic Weights</h5>
     <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
       <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
