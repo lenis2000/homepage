@@ -29,6 +29,20 @@ code:
     height: 75vh; /* Use 75% of viewport height - slightly larger in vertical direction */
     vertical-align: top;
   }
+  
+  /* Mobile responsiveness */
+  .mobile-input {
+    max-width: 5rem;
+  }
+  
+  input[type="number"].mobile-input {
+    padding: 0.25rem;
+    font-size: 0.9rem;
+  }
+  
+  #aztec-svg-2d {
+    touch-action: none; /* Prevent browser defaults on touch */
+  }
 
   #aztec-2d-canvas {
     background-color: #f8f8f8;
@@ -83,6 +97,12 @@ code:
       height: 65vh;
     }
   }
+  
+  @media (max-width: 600px) {
+    #aztec-canvas, #aztec-2d-canvas {
+      height: 60vh;
+    }
+  }
 
   /* Styling for buttons and controls */
   #sample-btn:disabled {
@@ -127,16 +147,31 @@ code:
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The 3d visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast. The simulation also contains a 2d version, which is faster and has more features, such as nonintersecting paths, dimers, and TikZ exports.
 
 <!-- Parameters section above the panes -->
-<div class="parameters-section">
-  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px;">
-    <div>
-      <label for="n-input">Aztec Diamond Order: </label>
-      <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3">
-    </div>
+<!-- Settings toggle button for small screens (Bootstrap 4 alpha.6) -->
+<button class="btn btn-secondary w-100 d-block d-md-none mb-2" type="button" data-toggle="collapse" data-target="#controls" aria-expanded="true" aria-controls="controls">
+  Settings ▼
+</button>
+
+<style>
+  /* Additional styles for the collapse toggle */
+  @media (max-width: 767px) {
+    .collapse:not(.show) {
+      display: none;
+    }
+  }
+</style>
+
+<div id="controls" class="collapse show d-md-block">
+  <div class="parameters-section">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px;">
+      <div>
+        <label for="n-input">Aztec Diamond Order: </label>
+        <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3" class="mobile-input">
+      </div>
 
     <div style="margin-left: 20px;">
       <input type="checkbox" id="show-colors-checkbox" checked style="vertical-align: middle;">
-      <label for="show-colors-checkbox" style="cursor: pointer;">&nbsp;Show colors</label>
+      <label for="show-colors-checkbox" style="cursor: pointer; margin-left: 5px;">Show colors</label>
     </div>
 
     <div style="margin-left: auto;">
@@ -199,27 +234,31 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
     </div>
   </div>
 </div>
+</div><!-- End of controls collapse wrapper -->
 
 <!-- Visualization container with switchable views -->
 <div class="visualization-container">
   <!-- View toggle buttons -->
-  <div class="view-toggle">
-    <button id="view-3d-btn" class="active">3D</button>
-    <button id="view-2d-btn">2D</button>
+  <div class="view-toggle d-flex flex-wrap mb-2">
+    <button id="view-3d-btn" class="btn btn-sm mr-2 active" style="background-color: #e0e0e0; border: 1px solid #999; border-radius: 3px; padding: 6px 12px;">3D</button>
+    <button id="view-2d-btn" class="btn btn-sm" style="background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 6px 12px;">2D</button>
   </div>
 
   <!-- Camera controls for 3D pane -->
-  <div id="camera-controls" style="margin-bottom: 10px;">
-      <div class="d-flex flex-wrap align-items-center mb-2">
-      <label>Camera movement:&nbsp;&nbsp;</label>
-      <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
-      <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
-      <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
-      <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
-      <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
-      <label for="demo-mode" style="padding: 2px 8px; margin: 0 25px; vertical-align: middle;">
-        <input id="demo-mode" type="checkbox"> Demo mode (automatic rotation)
-      </label>
+  <div id="camera-controls" class="mb-3">
+    <div class="d-flex flex-wrap align-items-center">
+      <label class="mr-2 mb-1">Camera movement:</label>
+      <div class="btn-group mr-2 mb-1">
+        <button id="move-left-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">←</button>
+        <button id="move-up-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">↑</button>
+        <button id="move-down-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">↓</button>
+        <button id="move-right-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">→</button>
+      </div>
+      <button id="reset-view-btn" class="btn btn-sm btn-outline-secondary mr-2 mb-1">Reset View</button>
+      <div class="mb-1">
+        <input type="checkbox" id="demo-mode" style="vertical-align: middle;">
+        <label for="demo-mode" style="cursor: pointer; margin-left: 5px;">Demo mode (automatic rotation)</label>
+      </div>
     </div>
   </div>
 
@@ -229,41 +268,72 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <!-- 2D Visualization Pane (hidden by default) -->
   <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 75vh;">
     <!-- 2D controls (fixed at top like 3D controls) -->
-    <div id="controls-2d" style="margin-bottom: 10px;">
+    <div id="controls-2d" class="mb-3">
       <!-- Zoom controls -->
-      <div style="margin-bottom: 10px;">
-        <span style="font-weight: bold;">Zoom: </span>
-        <button id="zoom-in-btn-2d" style="font-weight: bold; width: 30px; height: 30px; margin-left: 5px;">+</button>
-        <button id="zoom-out-btn-2d" style="font-weight: bold; width: 30px; height: 30px; margin-left: 5px;">-</button>
-        <button id="zoom-reset-btn-2d" style="height: 30px; margin-left: 5px;">Reset Zoom</button>
-        <span style="margin-left: 10px; font-style: italic; font-size: 0.9em;">(You can also use mouse wheel to zoom and drag to pan)</span>
+      <div class="d-flex flex-wrap align-items-center mb-2">
+        <span class="font-weight-bold mr-2 mb-1">Zoom: </span>
+        <div class="btn-group mr-2 mb-1">
+          <button id="zoom-in-btn-2d" class="btn btn-sm btn-outline-secondary px-2 py-1">+</button>
+          <button id="zoom-out-btn-2d" class="btn btn-sm btn-outline-secondary px-2 py-1">-</button>
+        </div>
+        <button id="zoom-reset-btn-2d" class="btn btn-sm btn-outline-secondary mr-2 mb-1">Reset Zoom</button>
+        <span class="d-none d-md-inline font-italic small">(You can also use mouse wheel to zoom and drag to pan)</span>
       </div>
 
       <!-- Display options -->
-      <div style="margin-bottom: 10px;">
-      <input type="checkbox" id="grayscale-checkbox-2d">
-      <label for="grayscale-checkbox-2d">Grayscale mode (great for seeing gas phase in 2x2 periodic model)</label>
-      <br>
-      <input type="checkbox" id="checkerboard-checkbox-2d">
-      <label for="checkerboard-checkbox-2d">Show checkerboard overlay</label>
-      <span style="margin-left: 20px;"></span>
-      <label for="border-width-input">Border thickness:</label>
-      <input type="number" id="border-width-input" min="0" max="1" step="0.05" value="0.1" style="width: 60px;">
-      <br>
-      <input type="checkbox" id="paths-checkbox-2d">
-      <label for="paths-checkbox-2d">Show nonintersecting paths</label>
-      <br>
-      <input type="checkbox" id="dimers-checkbox-2d">
-      <label for="dimers-checkbox-2d">Show dimers</label>
-    </div>
+      <div class="mb-2">
+        <div class="mb-1">
+          <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
+          <label for="grayscale-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Grayscale mode (gas phase in 2x2 model)</label>
+        </div>
+        
+        <div class="mb-1">
+          <input type="checkbox" id="checkerboard-checkbox-2d" style="vertical-align: middle;">
+          <label for="checkerboard-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show checkerboard overlay</label>
+        </div>
+        
+        <div class="form-group form-inline mb-1">
+          <label for="border-width-input" class="mr-2">Border thickness:</label>
+          <input type="number" id="border-width-input" min="0" max="1" step="0.05" value="0.1" class="form-control form-control-sm mobile-input">
+        </div>
+        
+        <div class="mb-1">
+          <input type="checkbox" id="paths-checkbox-2d" style="vertical-align: middle;">
+          <label for="paths-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show nonintersecting paths</label>
+        </div>
+        
+        <div class="mb-1">
+          <input type="checkbox" id="dimers-checkbox-2d" style="vertical-align: middle;">
+          <label for="dimers-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show dimers</label>
+        </div>
+      </div>
     </div>
 
     <!-- SVG container with adjusted height to account for controls -->
-    <svg id="aztec-svg-2d" style="width: 100%; height: calc(100% - 80px); border: 1px solid #ccc;"></svg>
+    <svg id="aztec-svg-2d" style="width: 100%; height: calc(100% - 120px); border: 1px solid #ccc;"></svg>
   </div>
 </div>
 
 <script>
+// Add functionality for the collapse toggle on small screens using vanilla JS
+document.addEventListener('DOMContentLoaded', function() {
+  // Get the Bootstrap 4 collapse instance
+  var controlsEl = document.getElementById('controls');
+  
+  // Auto-collapse on small screens initially
+  if (window.innerWidth < 768) {
+    // For Bootstrap 4 alpha.6, we need to toggle the class manually
+    controlsEl.classList.remove('show');
+  }
+  
+  // Update the collapse state on window resize
+  window.addEventListener('resize', function() {
+    if (window.innerWidth >= 768) {
+      controlsEl.classList.add('show');
+    }
+  });
+});
+
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
@@ -326,6 +396,9 @@ Module.onRuntimeInitialized = async function() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
+    
+    /* NEW — allow one‑finger rotate on touch devices */
+    controls.touches.ONE = THREE.TOUCH.ROTATE;
     window.addEventListener('resize', onWindowResize);
 
     dominoGroup = new THREE.Group();
@@ -1271,7 +1344,8 @@ Module.onRuntimeInitialized = async function() {
   }
 
   // Setup 2D visualization elements
-  const svg2d = d3.select("#aztec-svg-2d");
+  const svg2d = d3.select("#aztec-svg-2d")
+    .style("touch-action", "none"); // Prevent browser default touch actions
   let initialTransform2d = {}; // Store initial transform parameters for 2D
 
   // Create zoom behavior for 2D
