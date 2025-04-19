@@ -2247,6 +2247,13 @@ Module.onRuntimeInitialized = async function() {
       return;
     }
 
+    // Get states of all visualization checkboxes
+    const usePaths = document.getElementById("paths-checkbox-2d")?.checked || false;
+    const useHeightFunctionExport = document.getElementById("height-function-checkbox-2d")?.checked || false;
+    const useCheckerboard = document.getElementById("checkerboard-checkbox-2d")?.checked || false;
+    const useDimers = document.getElementById("dimers-checkbox-2d")?.checked || false;
+    const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
+
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = cachedDominoes.map(domino => {
       return {
@@ -2254,7 +2261,7 @@ Module.onRuntimeInitialized = async function() {
         y: domino.y / 100,
         width: domino.w / 100,
         height: domino.h / 100,
-        fill: domino.color,
+        fill: showColors ? domino.color : "white", // Use white if colors are disabled
         stroke: "black",
         strokeWidth: 0.45 // Scaled down for tikz
       };
@@ -2262,8 +2269,6 @@ Module.onRuntimeInitialized = async function() {
 
     // Create lines array for paths if enabled
     const lines = [];
-    const usePaths = document.getElementById("paths-checkbox-2d")?.checked || false;
-    const useHeightFunctionExport = document.getElementById("height-function-checkbox-2d")?.checked || false;
 
     if (usePaths) {
       // Add lines based on domino colors and positions
@@ -2336,6 +2341,180 @@ Module.onRuntimeInitialized = async function() {
       maxY = Math.max(maxY, line.y1, line.y2);
     }
 
+    // Create checkerboard squares if enabled
+    const checkerboardSquares = [];
+
+    // Create dimers if enabled
+    const dimerNodes = [];
+    const dimerEdges = [];
+
+    if (useDimers) {
+      // Process each domino to create dimer edges and nodes
+      cachedDominoes.forEach(domino => {
+        // Skip dominoes with invalid dimensions
+        if (domino.w <= 0 || domino.h <= 0) return;
+
+        const isHorizontal = domino.w > domino.h;
+
+        if (isHorizontal) {
+          // Horizontal domino (blue or green)
+          const centerX = domino.x + domino.w/2;  // Center of the domino
+          const midY = domino.y + domino.h/2;     // Vertical center
+
+          // Calculate dimer length (half the domino width)
+          const dimerLength = domino.w / 2;
+
+          // Place nodes at the midpoints between center and edges
+          const leftX = centerX - dimerLength/2;
+          const rightX = centerX + dimerLength/2;
+
+          // Add nodes
+          const leftNode = {
+            x: leftX / 100,
+            y: midY / 100,
+            radius: 0.4 / 100
+          };
+
+          const rightNode = {
+            x: rightX / 100,
+            y: midY / 100,
+            radius: 0.4 / 100
+          };
+
+          dimerNodes.push(leftNode, rightNode);
+
+          // Add edge connecting the two nodes
+          dimerEdges.push({
+            x1: leftX / 100,
+            y1: midY / 100,
+            x2: rightX / 100,
+            y2: midY / 100
+          });
+        } else {
+          // Vertical domino (red or yellow)
+          const midX = domino.x + domino.w/2;     // Horizontal center
+          const centerY = domino.y + domino.h/2;  // Center of the domino
+
+          // Calculate dimer length (half the domino height)
+          const dimerLength = domino.h / 2;
+
+          // Place nodes at the midpoints between center and edges
+          const topY = centerY - dimerLength/2;
+          const bottomY = centerY + dimerLength/2;
+
+          // Add nodes
+          const topNode = {
+            x: midX / 100,
+            y: topY / 100,
+            radius: 0.4 / 100
+          };
+
+          const bottomNode = {
+            x: midX / 100,
+            y: bottomY / 100,
+            radius: 0.4 / 100
+          };
+
+          dimerNodes.push(topNode, bottomNode);
+
+          // Add edge connecting the two nodes
+          dimerEdges.push({
+            x1: midX / 100,
+            y1: topY / 100,
+            x2: midX / 100,
+            y2: bottomY / 100
+          });
+        }
+      });
+
+      // Update bounds for dimer nodes and edges
+      for (const node of dimerNodes) {
+        minX = Math.min(minX, node.x - node.radius);
+        maxX = Math.max(maxX, node.x + node.radius);
+        minY = Math.min(minY, node.y - node.radius);
+        maxY = Math.max(maxY, node.y + node.radius);
+      }
+
+      for (const edge of dimerEdges) {
+        minX = Math.min(minX, edge.x1, edge.x2);
+        maxX = Math.max(maxX, edge.x1, edge.x2);
+        minY = Math.min(minY, edge.y1, edge.y2);
+        maxY = Math.max(maxY, edge.y1, edge.y2);
+      }
+    }
+
+    if (useCheckerboard) {
+      // Create a set of all 2x2 lattice faces used by the dominoes
+      const latticeSet = new Set();
+
+      // Collect all the 2x2 lattice face positions
+      cachedDominoes.forEach(domino => {
+        const isHorizontal = domino.w > domino.h;
+
+        if (isHorizontal) {
+          // Horizontal domino covers 2 faces horizontally
+          const leftX = Math.floor(domino.x / 2) * 2;
+          const y = Math.floor(domino.y / 2) * 2;
+
+          // Add both lattice faces
+          const leftKey = `${leftX},${y}`;
+          const rightKey = `${leftX + 2},${y}`;
+
+          if (!latticeSet.has(leftKey)) {
+            latticeSet.add(leftKey);
+            checkerboardSquares.push({
+              x: leftX / 100,
+              y: y / 100,
+              size: 2 / 100
+            });
+          }
+
+          if (!latticeSet.has(rightKey)) {
+            latticeSet.add(rightKey);
+            checkerboardSquares.push({
+              x: (leftX + 2) / 100,
+              y: y / 100,
+              size: 2 / 100
+            });
+          }
+        } else {
+          // Vertical domino covers 2 faces vertically
+          const x = Math.floor(domino.x / 2) * 2;
+          const topY = Math.floor(domino.y / 2) * 2;
+
+          // Add both lattice faces
+          const topKey = `${x},${topY}`;
+          const bottomKey = `${x},${topY + 2}`;
+
+          if (!latticeSet.has(topKey)) {
+            latticeSet.add(topKey);
+            checkerboardSquares.push({
+              x: x / 100,
+              y: topY / 100,
+              size: 2 / 100
+            });
+          }
+
+          if (!latticeSet.has(bottomKey)) {
+            latticeSet.add(bottomKey);
+            checkerboardSquares.push({
+              x: x / 100,
+              y: (topY + 2) / 100,
+              size: 2 / 100
+            });
+          }
+        }
+      });
+
+      // Update bounds for checkerboard squares
+      for (const square of checkerboardSquares) {
+        minX = Math.min(minX, square.x);
+        maxX = Math.max(maxX, square.x + square.size);
+        minY = Math.min(minY, square.y);
+        maxY = Math.max(maxY, square.y + square.size);
+      }
+    }
+
     // Calculate a good scale factor
     const width = maxX - minX;
     const height = maxY - minY;
@@ -2367,6 +2546,7 @@ Module.onRuntimeInitialized = async function() {
       else if (fillColor === 'red') fillColor = 'svgred';
       else if (fillColor === 'yellow') fillColor = 'svgyellow';
       else if (fillColor === 'blue') fillColor = 'svgblue';
+      else if (fillColor === 'white') fillColor = 'white';
 
       // Shift coordinates to keep everything positive
       const x1 = rect.x - minX;
@@ -2377,6 +2557,53 @@ Module.onRuntimeInitialized = async function() {
       tikzCode += `\\filldraw[fill=${fillColor}, draw=black, line width=${rect.strokeWidth}pt] `;
       tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
     });
+
+    // Add checkerboard pattern if enabled
+    if (useCheckerboard && checkerboardSquares.length > 0) {
+      tikzCode += "\n% Checkerboard pattern\n";
+
+      checkerboardSquares.forEach(square => {
+        // Shift coordinates to keep everything positive
+        const x1 = square.x - minX;
+        const y1 = maxY - square.y - square.size;  // Invert y and adjust for height
+        const x2 = square.x - minX + square.size;
+        const y2 = maxY - square.y;
+
+        // Create checkerboard pattern based on lattice coordinates
+        const isBlack = ((square.x * 100 / 2) + (square.y * 100 / 2)) % 2 === 0;
+
+        if (isBlack) {
+          tikzCode += `\\filldraw[fill=black!20, draw=none] `;
+          tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+        }
+      });
+    }
+
+    // Add dimers if enabled
+    if (useDimers && dimerNodes.length > 0) {
+      tikzCode += "\n% Dimers\n";
+
+      // First draw edges
+      dimerEdges.forEach(edge => {
+        // Shift and invert coordinates
+        const x1 = edge.x1 - minX;
+        const y1 = maxY - edge.y1;
+        const x2 = edge.x2 - minX;
+        const y2 = maxY - edge.y2;
+
+        tikzCode += `\\draw[line width=2.5pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+      });
+
+      // Then draw nodes
+      dimerNodes.forEach(node => {
+        // Shift and invert coordinates
+        const x = node.x - minX;
+        const y = maxY - node.y;
+        const radius = node.radius * 10; // Adjust radius for TikZ
+
+        tikzCode += `\\filldraw[fill=black] (${x.toFixed(2)}, ${y.toFixed(2)}) circle (${radius.toFixed(2)/10});\n`;
+      });
+    }
 
     if (lines.length > 0) {
       tikzCode += "\n% Paths (lines) - Optimized\n";
