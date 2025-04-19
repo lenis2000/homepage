@@ -144,28 +144,49 @@ code:
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="{{site.url}}/s/domino.js"></script>
 
+<div class="accordion" id="infoAccordion">
+  <div class="card">
+    <div class="card-header" id="infoHeading">
+      <h5 class="mb-0">
+        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="true" aria-controls="infoCollapse">
+          <strong>About this simulation</strong> <i class="fa fa-chevron-down"></i>
+        </button>
+      </h5>
+    </div>
 
-This page hosts an **all‑in‑one interactive sampler of random domino tilings of the <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec diamond</a>**. The sampling is done by the traditional <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>, and here it is adapted to `JavaScript` and `WebAssembly`.
+    <div id="infoCollapse" class="collapse show" aria-labelledby="infoHeading" data-parent="#infoAccordion">
+      <div class="card-body">
+        <p class="mt-3">This page hosts an <strong>all‑in‑one interactive sampler of random domino tilings of the <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec diamond</a></strong>. The sampling is done by the traditional <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>, and here it is adapted to <code>JavaScript</code> and <code>WebAssembly</code>.</p>
 
-Two complementary visualizations are available:
+        <p>Two complementary visualizations are available:</p>
 
-* **3‑D height‑function view** – A rendering of the stepped surface encoding the domino tiling. The 3-D visualization is inspired by <a href="https://math.mit.edu/~borodin/aztec.html">Alexei and Matvey Borodin's work</a> while being rewritten here in modern `WebGL/Three.js`, and with interactive sampling by shuffling. Large sizes ($n > 100$) may take a while; everything is computed client‑side, so be patient on slower machines.
+        <ul>
+          <li><strong>3‑D height‑function view</strong> – A rendering of the stepped surface encoding the domino tiling. The 3-D visualization is inspired by <a href="https://math.mit.edu/~borodin/aztec.html">Alexei and Matvey Borodin's work</a> while being rewritten here in modern <code>WebGL/Three.js</code>, and with interactive sampling by shuffling. Large sizes ($n > 100$) may take a while; everything is computed client‑side, so be patient on slower machines.</li>
 
-* **2‑D SVG view** – A faster 2-D drawing that adds several friedly overlays:
-  * checkerboard coloring of the underlying grid
-  * grayscale shading for distinguishing domino orientations (handy for the gas phase of the $2 \times 2$ periodic model)
-  * non‑intersecting Motzkin (or Scrhoeder) paths
-  * dimers inscribed into dominos
-  * integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).
+          <li><strong>2‑D SVG view</strong> – A faster 2-D drawing that adds several friedly overlays:
+            <ul>
+              <li>checkerboard coloring of the underlying grid</li>
+              <li>grayscale shading for distinguishing domino orientations (handy for the gas phase of the $2 \times 2$ periodic model)</li>
+              <li>non‑intersecting Motzkin (or Scrhoeder) paths</li>
+              <li>dimers inscribed into dominos</li>
+              <li>integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).</li>
+            </ul>
+          </li>
+        </ul>
 
-There is also an on‑the‑fly **LaTeX/TikZ export**, which supports all 2-D viewmodes.
+        <p>There is also an on‑the‑fly <strong>LaTeX/TikZ export</strong>, which supports all 2-D viewmodes.</p>
 
-Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times 3\) periodic weightings, adjust border thickness, zoom/pan, and copy or download the generated TikZ code.
+        <p>Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times 3\) periodic weightings, adjust border thickness, zoom/pan, and copy or download the generated TikZ code.</p>
 
-> **Tip.** The simulation caches the most recent tiling in `localStorage`; press **Sample** again to force a fresh run.
+        <blockquote>
+          <p><strong>Tip.</strong> The simulation caches the most recent tiling in <code>localStorage</code>; press <strong>Sample</strong> again to force a fresh run.</p>
+        </blockquote>
 
-
-<i style="color:#999999;">Last updated: 2025-04-19</i>
+        <p><i style="color:#999999;">Last updated: 2025-04-19</i></p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Parameters section above the panes -->
 
@@ -2253,23 +2274,23 @@ Module.onRuntimeInitialized = async function() {
     const useDimers = document.getElementById("dimers-checkbox-2d")?.checked || false;
     const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
     const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
-    
+
     // Helper function to convert a brightness value (0–255) to a TikZ grayscale color
     function grayHexForTikZ(brightness) {
       const normalizedBrightness = brightness / 255;
       return `black!${Math.round((1 - normalizedBrightness) * 100)}`;
     }
-    
+
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = cachedDominoes.map(domino => {
       let fillColor;
-      
+
       if (!showColors) {
         fillColor = "white"; // Use white if colors are disabled
       } else if (useGrayscale) {
         // Use grayscale colors based on domino position and type
         const isHorizontal = domino.w > domino.h;
-        
+
         if (isHorizontal) {
           const yParity = Math.floor(domino.y) % 4 === 0 ? 0 : 1;
           if (domino.color === "blue") {
@@ -2292,7 +2313,7 @@ Module.onRuntimeInitialized = async function() {
       } else {
         fillColor = domino.color; // Use regular color
       }
-      
+
       return {
         x: domino.x / 100,
         y: domino.y / 100,
