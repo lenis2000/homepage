@@ -307,6 +307,24 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   </div>
 </div>
 
+<!-- TikZ Code Generation Section -->
+<div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
+  <h3 style="margin-top: 0;">TikZ Code Generation</h3>
+  <p>Generate LaTeX TikZ code from the current domino tiling. This feature supports <b>colored dominoes</b> and <b>nonintersecting paths</b> only.</p>
+  
+  <div style="margin-top: 10px; margin-bottom: 10px;">
+    <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
+    <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
+      <button id="copy-tikz-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy to Clipboard</button>
+      <button id="download-tikz-btn" style="margin-left: 10px; padding: 6px 12px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">Download .tex File</button>
+      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    </div>
+  </div>
+
+  <!-- TikZ code container that will be updated dynamically -->
+  <div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
+</div>
+
 <script>
 // Initialize display settings on document load
 document.addEventListener('DOMContentLoaded', function() {
@@ -2203,5 +2221,370 @@ Module.onRuntimeInitialized = async function() {
       console.error("Error during initial visualization:", err);
     }
   }, 100);
+
+  // SVG to TikZ conversion function
+  function svgToTikZ() {
+    if (!cachedDominoes || cachedDominoes.length === 0) {
+      alert("Please generate a domino tiling first.");
+      return;
+    }
+
+    // Convert domino objects to rectangle objects with the format needed for TikZ conversion
+    const rectangles = cachedDominoes.map(domino => {
+      return {
+        x: domino.x / 100,
+        y: domino.y / 100,
+        width: domino.w / 100,
+        height: domino.h / 100,
+        fill: domino.color,
+        stroke: "black",
+        strokeWidth: 0.45 // Scaled down for tikz
+      };
+    });
+
+    // Create lines array for paths if enabled
+    const lines = [];
+    const usePaths = document.getElementById("paths-checkbox-2d")?.checked || false;
+    
+    if (usePaths) {
+      // Add lines based on domino colors and positions
+      cachedDominoes.forEach(domino => {
+        const centerX = domino.x + domino.w/2;
+        const centerY = domino.y + domino.h/2;
+        const isHorizontal = domino.w > domino.h;
+
+        if (domino.color === "green") {
+          // Green: Horizontal line through center
+          lines.push({
+            x1: domino.x / 100,
+            y1: centerY / 100,
+            x2: (domino.x + domino.w) / 100,
+            y2: centerY / 100,
+            stroke: "black",
+            strokeWidth: 0.55 // Scaled down from UI thickness
+          });
+        }
+        else if (domino.color === "yellow") {
+          // Yellow: path parallel to vector (1,-1) through the center
+          const length = Math.min(domino.w, domino.h) * 0.7;
+          const dx = length / Math.sqrt(2);
+          const dy = length / Math.sqrt(2);
+
+          lines.push({
+            x1: (centerX - dx) / 100,
+            y1: (centerY + dy) / 100,
+            x2: (centerX + dx) / 100,
+            y2: (centerY - dy) / 100,
+            stroke: "black",
+            strokeWidth: 0.55
+          });
+        }
+        else if (domino.color === "red") {
+          // Red: path parallel to vector (1,1) through the center
+          const length = Math.min(domino.w, domino.h) * 0.7;
+          const dx = length / Math.sqrt(2);
+          const dy = length / Math.sqrt(2);
+
+          lines.push({
+            x1: (centerX - dx) / 100,
+            y1: (centerY - dy) / 100,
+            x2: (centerX + dx) / 100,
+            y2: (centerY + dy) / 100,
+            stroke: "black",
+            strokeWidth: 0.55
+          });
+        }
+        // Blue dominos don't get paths
+      });
+    }
+
+    // Find the bounds of the drawing
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+    // Process rectangles
+    for (const rect of rectangles) {
+      minX = Math.min(minX, rect.x);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      minY = Math.min(minY, rect.y);
+      maxY = Math.max(maxY, rect.y + rect.height);
+    }
+
+    // Process lines if they exist
+    for (const line of lines) {
+      minX = Math.min(minX, line.x1, line.x2);
+      maxX = Math.max(maxX, line.x1, line.x2);
+      minY = Math.min(minY, line.y1, line.y2);
+      maxY = Math.max(maxY, line.y1, line.y2);
+    }
+
+    // Calculate a good scale factor
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const maxDimension = Math.max(width, height);
+    const scaleFactor = 15.0 / maxDimension;
+
+    // Generate TikZ code
+    let tikzCode = `\\documentclass{standalone}
+\\usepackage{tikz}
+\\usepackage{xcolor}
+
+% Define colors to match SVG
+\\definecolor{svggreen}{RGB}{30, 140, 40}
+\\definecolor{svgred}{RGB}{255, 34, 68}
+\\definecolor{svgyellow}{RGB}{252, 164, 20}
+\\definecolor{svgblue}{RGB}{67, 99, 216}
+
+\\begin{document}
+\\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
+
+% Dominoes (rectangles)
+`;
+
+    // Add rectangles to TikZ code
+    rectangles.forEach(rect => {
+      // Map SVG colors to TikZ colors
+      let fillColor = rect.fill;
+      if (fillColor === 'green') fillColor = 'svggreen';
+      else if (fillColor === 'red') fillColor = 'svgred';
+      else if (fillColor === 'yellow') fillColor = 'svgyellow';
+      else if (fillColor === 'blue') fillColor = 'svgblue';
+
+      // Shift coordinates to keep everything positive
+      const x1 = rect.x - minX;
+      const y1 = maxY - rect.y - rect.height;  // Invert y and adjust for height
+      const x2 = rect.x - minX + rect.width;
+      const y2 = maxY - rect.y;
+
+      tikzCode += `\\filldraw[fill=${fillColor}, draw=black, line width=${rect.strokeWidth}pt] `;
+      tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+    });
+
+    if (lines.length > 0) {
+      tikzCode += "\n% Paths (lines) - Optimized\n";
+      
+      // Extract all line segments
+      const segments = [];
+
+      // Process lines to get path segments with coordinate adjustments
+      lines.forEach(line => {
+        // Shift and invert coordinates
+        const x1 = line.x1 - minX;
+        const y1 = maxY - line.y1;
+        const x2 = line.x2 - minX;
+        const y2 = maxY - line.y2;
+        segments.push([x1, y1, x2, y2]);
+      });
+
+      // Convert segments to start/end point format
+      const parsedSegments = [];
+      segments.forEach(segment => {
+        const [x1, y1, x2, y2] = segment;
+        const start = [x1, y1];
+        const end = [x2, y2];
+        parsedSegments.push([start, end]);
+      });
+
+      // Function to optimize paths
+      function optimizePaths(segments) {
+        // Create an adjacency list for easier path finding
+        const adjacencyMap = new Map();
+
+        // Add a pair to the adjacency map
+        function addToAdjacencyMap(point, segmentIndex, isStart) {
+          // Convert point to string for use as a map key (with reduced precision)
+          const key = `${point[0].toFixed(2)},${point[1].toFixed(2)}`;
+          if (!adjacencyMap.has(key)) {
+            adjacencyMap.set(key, []);
+          }
+          adjacencyMap.get(key).push({ segmentIndex, isStart });
+        }
+
+        // Build the adjacency map
+        segments.forEach((segment, index) => {
+          addToAdjacencyMap(segment[0], index, true);  // Start point
+          addToAdjacencyMap(segment[1], index, false); // End point
+        });
+
+        // Track which segments have been used
+        const used = new Set();
+        const paths = [];
+
+        // Find all paths
+        while (used.size < segments.length) {
+          // Find an unused segment to start a new path
+          let currentIndex = -1;
+          for (let i = 0; i < segments.length; i++) {
+            if (!used.has(i)) {
+              currentIndex = i;
+              break;
+            }
+          }
+
+          if (currentIndex === -1) break; // All segments used
+
+          // Start building the path
+          const startSegment = segments[currentIndex];
+          let currentPath = [...startSegment[0], ...startSegment[1]]; // Flatten to [x1,y1,x2,y2]
+          used.add(currentIndex);
+
+          // Keep extending the path as long as possible
+          let foundExtension = true;
+          while (foundExtension) {
+            foundExtension = false;
+
+            // Get current endpoints
+            const n = currentPath.length;
+            const headPoint = [currentPath[0], currentPath[1]];
+            const tailPoint = [currentPath[n-2], currentPath[n-1]];
+
+            // Try to find a segment connecting to the tail
+            const tailKey = `${tailPoint[0].toFixed(2)},${tailPoint[1].toFixed(2)}`;
+            if (adjacencyMap.has(tailKey)) {
+              for (const connection of adjacencyMap.get(tailKey)) {
+                if (used.has(connection.segmentIndex)) continue;
+
+                const segment = segments[connection.segmentIndex];
+                let newPoint;
+
+                if (connection.isStart) {
+                  // Tail connects to start of segment, add the end
+                  newPoint = segment[1];
+                } else {
+                  // Tail connects to end of segment, add the start
+                  newPoint = segment[0];
+                }
+
+                // Add the new point
+                currentPath.push(newPoint[0], newPoint[1]);
+                used.add(connection.segmentIndex);
+                foundExtension = true;
+                break;
+              }
+            }
+
+            // If we didn't find a tail extension, try the head
+            if (!foundExtension) {
+              const headKey = `${headPoint[0].toFixed(2)},${headPoint[1].toFixed(2)}`;
+              if (adjacencyMap.has(headKey)) {
+                for (const connection of adjacencyMap.get(headKey)) {
+                  if (used.has(connection.segmentIndex)) continue;
+
+                  const segment = segments[connection.segmentIndex];
+                  let newPoint;
+
+                  if (connection.isStart) {
+                    // Head connects to start of segment, add the end at the beginning
+                    newPoint = segment[1];
+                  } else {
+                    // Head connects to end of segment, add the start at the beginning
+                    newPoint = segment[0];
+                  }
+
+                  // Add to the beginning of the path
+                  currentPath.unshift(newPoint[0], newPoint[1]);
+                  used.add(connection.segmentIndex);
+                  foundExtension = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          // Convert flat array [x1,y1,x2,y2,...] to points [[x1,y1],[x2,y2],...]
+          const pointPath = [];
+          for (let i = 0; i < currentPath.length; i += 2) {
+            pointPath.push([currentPath[i], currentPath[i+1]]);
+          }
+
+          paths.push(pointPath);
+        }
+
+        return paths;
+      }
+
+      // Function to format point for TikZ
+      function formatPoint(point) {
+        return `(${point[0].toFixed(2)}, ${point[1].toFixed(2)})`;
+      }
+
+      // Optimize the paths
+      const optimizedPaths = optimizePaths(parsedSegments);
+
+      // Generate the optimized TikZ code
+      optimizedPaths.forEach((path, i) => {
+        // Add path info comment
+        tikzCode += `% Path ${i+1}, ${path.length} points\n`;
+
+        // Generate the draw command
+        tikzCode += `\\draw[black, line width=2.5pt]`;
+        path.forEach((point, j) => {
+          if (j === 0) {
+            tikzCode += ` ${formatPoint(point)}`;
+          } else {
+            tikzCode += ` -- ${formatPoint(point)}`;
+          }
+        });
+        tikzCode += ";\n\n";
+      });
+    }
+
+    tikzCode += `
+\\end{tikzpicture}
+\\end{document}`;
+
+    // Update the TikZ code in the code container
+    const tikzCodeContainer = document.getElementById('tikz-code-container');
+    if (tikzCodeContainer) {
+      tikzCodeContainer.textContent = tikzCode;
+      tikzCodeContainer.style.display = 'block';
+    }
+
+    // Show the copy/download buttons
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'block';
+    }
+  }
+
+  // Add event listeners for the TikZ buttons
+  document.getElementById("tikz-btn").addEventListener("click", function() {
+    svgToTikZ();
+  });
+
+  // Add event listener for the copy button
+  document.getElementById("copy-tikz-btn").addEventListener("click", function() {
+    const codeContainer = document.getElementById('tikz-code-container');
+    const successMsg = document.getElementById('copy-success-msg');
+
+    // Create a text area to copy from (more reliable cross-browser)
+    const textArea = document.createElement('textarea');
+    textArea.value = codeContainer.textContent;
+    textArea.style.position = 'fixed';  // Prevent scrolling to bottom
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    try {
+      document.execCommand('copy');
+      successMsg.style.display = 'inline';
+      setTimeout(() => {
+        successMsg.style.display = 'none';
+      }, 2000);
+    } catch (err) {
+      alert('Failed to copy to clipboard. Please try again or select and copy manually.');
+    }
+
+    document.body.removeChild(textArea);
+  });
+
+  // Add event listener for the download button
+  document.getElementById("download-tikz-btn").addEventListener("click", function() {
+    const codeContainer = document.getElementById('tikz-code-container');
+    const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.download = `aztec_diamond_tikz.tex`;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
 };
 </script>
