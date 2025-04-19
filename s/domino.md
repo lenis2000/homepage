@@ -29,17 +29,17 @@ code:
     height: 75vh; /* Use 75% of viewport height - slightly larger in vertical direction */
     vertical-align: top;
   }
-  
+
   /* Mobile responsiveness */
   .mobile-input {
     max-width: 5rem;
   }
-  
+
   input[type="number"].mobile-input {
     padding: 0.25rem;
     font-size: 0.9rem;
   }
-  
+
   #aztec-svg-2d {
     touch-action: none; /* Prevent browser defaults on touch */
   }
@@ -97,7 +97,7 @@ code:
       height: 65vh;
     }
   }
-  
+
   @media (max-width: 600px) {
     #aztec-canvas, #aztec-2d-canvas {
       height: 60vh;
@@ -145,6 +145,8 @@ code:
 
 
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The 3d visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast. The simulation also contains a 2d version, which is faster and has more features, such as nonintersecting paths, dimers, and TikZ exports.
+
+<i style="color:#999999;">Last updated: 2025-04-19</i>
 
 <!-- Parameters section above the panes -->
 <!-- Settings toggle button for small screens (Bootstrap 4 alpha.6) -->
@@ -279,7 +281,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
         <button id="zoom-reset-btn-2d" class="btn btn-sm btn-outline-secondary mr-2 mb-1">Reset Zoom</button>
         <span class="d-none d-md-inline font-italic small">(Use mouse wheel to zoom and drag to pan)</span>
       </div>
-      
+
       <!-- Toggle for 2D display options on mobile -->
       <button class="btn btn-sm btn-secondary d-block d-md-none w-100 mb-2" type="button" data-toggle="collapse" data-target="#display-options-2d" aria-expanded="false" aria-controls="display-options-2d">
         Display Options ▼
@@ -289,27 +291,32 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
       <div id="display-options-2d" class="collapse show d-md-block mb-2">
         <div class="mb-1">
           <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
-          <label for="grayscale-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Grayscale mode (gas phase in 2x2 model)</label>
+          <label for="grayscale-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Grayscale mode (nice for gas phase in \(2\times 2\) model)</label>
         </div>
-        
+
         <div class="mb-1">
           <input type="checkbox" id="checkerboard-checkbox-2d" style="vertical-align: middle;">
           <label for="checkerboard-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show checkerboard overlay</label>
         </div>
-        
+
         <div class="form-group form-inline mb-1">
           <label for="border-width-input" class="mr-2">Border thickness:</label>
           <input type="number" id="border-width-input" min="0" max="1" step="0.05" value="0.1" class="form-control form-control-sm mobile-input">
         </div>
-        
+
         <div class="mb-1">
           <input type="checkbox" id="paths-checkbox-2d" style="vertical-align: middle;">
           <label for="paths-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show nonintersecting paths</label>
         </div>
-        
+
         <div class="mb-1">
           <input type="checkbox" id="dimers-checkbox-2d" style="vertical-align: middle;">
           <label for="dimers-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show dimers</label>
+        </div>
+
+        <div class="mb-1" id="height-function-toggle-container">
+          <input type="checkbox" id="height-function-checkbox-2d" style="vertical-align: middle;">
+          <label for="height-function-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show height function (\(n≤30\))</label>
         </div>
       </div>
     </div>
@@ -325,14 +332,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Get the Bootstrap 4 collapse instances
   var controlsEl = document.getElementById('controls');
   var displayOptionsEl = document.getElementById('display-options-2d');
-  
+
   // Auto-collapse on small screens initially
   if (window.innerWidth < 768) {
     // For Bootstrap 4 alpha.6, we need to toggle the class manually
     controlsEl.classList.remove('show');
     if (displayOptionsEl) displayOptionsEl.classList.remove('show');
   }
-  
+
   // Update the collapse state on window resize
   window.addEventListener('resize', function() {
     if (window.innerWidth >= 768) {
@@ -380,6 +387,8 @@ Module.onRuntimeInitialized = async function() {
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
   let cachedDominoes = null; // Store dominoes for 2D view
+  let useHeightFunction = false; // Track height function visibility state
+  let heightGroup; // Group for height function display
 
   // Demo mode state
   let isDemoMode = false;
@@ -425,7 +434,7 @@ Module.onRuntimeInitialized = async function() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
-    
+
     /* NEW — allow one‑finger rotate on touch devices */
     controls.touches.ONE = THREE.TOUCH.ROTATE;
     window.addEventListener('resize', onWindowResize);
@@ -982,7 +991,7 @@ Module.onRuntimeInitialized = async function() {
                   side: THREE.DoubleSide,
                   flatShading: true
                 });
-                
+
                 // Store the original color code for later use in the userData
                 mat.userData = { originalColorValue: colorValue };
 
@@ -1064,6 +1073,9 @@ Module.onRuntimeInitialized = async function() {
     if (isNaN(n) || n < 2 || n % 2) {
       return alert(`Enter an even number for n (at least 2)`);
     }
+
+    // Update height function visibility based on n value
+    updateHeightFunctionVisibility(n);
 
     // Get the current view (3D or 2D)
     const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
@@ -1249,13 +1261,13 @@ Module.onRuntimeInitialized = async function() {
       animationActive = true;
       animate();
     }
-    
+
     // Check if the renderer is properly initialized/restored
     const container = document.getElementById('aztec-canvas');
     if (!container.querySelector('canvas')) {
       console.log("Reinitializing Three.js - canvas was missing");
       initThreeJS();
-      
+
       // If we have cached dominoes, render them again
       if (cachedDominoes && cachedDominoes.length > 0) {
         // For large n, show a message instead
@@ -1271,7 +1283,7 @@ Module.onRuntimeInitialized = async function() {
             message.style.fontWeight = 'bold';
             message.innerHTML = 'Restoring 3D visualization...';
             container.appendChild(message);
-            
+
             // Use setTimeout to allow the UI to update
             setTimeout(() => {
               updateVisualization(n);
@@ -1346,7 +1358,7 @@ Module.onRuntimeInitialized = async function() {
     } catch (e) {
       return grayHex(150); // Default gray on parsing error
     }
-    
+
     if (!c) return typeof originalColor === 'string' ? originalColor : grayHex(150);
 
     let normHex;
@@ -1355,19 +1367,19 @@ Module.onRuntimeInitialized = async function() {
     } catch (e) {
       return grayHex(150); // Default gray if format fails
     }
-    
+
     const isHorizontal = d.w > d.h;
 
     // For blue or green (horizontal dominoes), use vertical coordinate parity
     if (isHorizontal) {
       const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
 
-      if (normHex === "#0000ff" || normHex === "#4363d8" || 
+      if (normHex === "#0000ff" || normHex === "#4363d8" ||
           (typeof normHex === 'string' && normHex.includes("blue"))) { // blue
         return grayHex(grayscaleValues.blue["p" + yParity]);
       }
       // Green dominoes - check multiple possible formats
-      else if (normHex === "#00ff00" || normHex === "#1e8c28" || 
+      else if (normHex === "#00ff00" || normHex === "#1e8c28" ||
                (typeof normHex === 'string' && normHex.includes("green")) ||
                (c.r !== undefined && c.g !== undefined && c.b !== undefined && c.r < c.g && c.g > c.b)) { // Any mostly-green color
         return grayHex(grayscaleValues.green["p" + yParity]);
@@ -1377,11 +1389,11 @@ Module.onRuntimeInitialized = async function() {
     else {
       const xParity = Math.floor(d.x) % 4 === 0 ? 0 : 1;
 
-      if (normHex === "#ff0000" || normHex === "#ff2244" || 
+      if (normHex === "#ff0000" || normHex === "#ff2244" ||
           (typeof normHex === 'string' && normHex.includes("red")) ||
           (c.r !== undefined && c.g !== undefined && c.b !== undefined && c.r > c.g && c.r > c.b)) { // red - any reddish color
         return grayHex(grayscaleValues.red["p" + xParity]);
-      } else if (normHex === "#ffff00" || normHex === "#fca414" || 
+      } else if (normHex === "#ffff00" || normHex === "#fca414" ||
                 (typeof normHex === 'string' && normHex.includes("yellow")) ||
                 (c.r !== undefined && c.g !== undefined && c.b !== undefined && c.r > 200 && c.g > 200 && c.b < 100)) { // yellow - any yellowish color
         return grayHex(grayscaleValues.yellow["p" + xParity]);
@@ -1392,7 +1404,7 @@ Module.onRuntimeInitialized = async function() {
     if (c.r === undefined || c.g === undefined || c.b === undefined) {
       return grayHex(150); // Default gray if color components are missing
     }
-    
+
     let r = c.r, g = c.g, b = c.b;
     let lum = Math.round(0.3 * r + 0.59 * g + 0.11 * b);
     return grayHex(lum);
@@ -1476,9 +1488,15 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("paths-checkbox-2d").addEventListener("change", function() {
     updateDominoDisplay();
   });
-  
+
   // Dimers toggle handler
   document.getElementById("dimers-checkbox-2d").addEventListener("change", function() {
+    updateDominoDisplay();
+  });
+
+  // Height function toggle handler
+  document.getElementById("height-function-checkbox-2d").addEventListener("change", function() {
+    useHeightFunction = this.checked;
     updateDominoDisplay();
   });
 
@@ -1514,6 +1532,8 @@ Module.onRuntimeInitialized = async function() {
     svg2d.select("g").selectAll(".path-line").remove();
     svg2d.select("g").selectAll(".dimer-circle").remove();
     svg2d.select("g").selectAll(".dimer-line").remove();
+    svg2d.select("g").selectAll(".height-node").remove();
+    svg2d.select("g").selectAll(".height-label").remove();
 
     // Get the current border thickness value
     const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
@@ -1702,65 +1722,65 @@ Module.onRuntimeInitialized = async function() {
           .attr("stroke-width", 0.6)
           .attr("pointer-events", "none"); // Allow clicking through to dominoes
     }
-    
+
     // If dimers are enabled, draw them
     if (showDimers) {
       // Collect all the dominoes
       const dominoes = [];
       svg2d.select("g").selectAll("rect").each(function(d) {
         // Only add dominoes with valid coordinates
-        if (d && typeof d.x === 'number' && typeof d.y === 'number' && 
+        if (d && typeof d.x === 'number' && typeof d.y === 'number' &&
             typeof d.w === 'number' && typeof d.h === 'number' &&
             !isNaN(d.x) && !isNaN(d.y) && !isNaN(d.w) && !isNaN(d.h)) {
           dominoes.push(d);
         }
       });
-      
+
       // Create dimer representations
       const dimerNodes = [];
       const dimerEdges = [];
-      
+
       // Process each domino to create dimer edges and nodes
       dominoes.forEach(d => {
         // Skip dominoes with invalid dimensions
         if (d.w <= 0 || d.h <= 0) return;
-        
+
         const isHorizontal = d.w > d.h;
-        
+
         // For each domino, we'll add two nodes and one edge connecting them
         // The dimer length should be half the long side of the domino
-        
+
         try {
           if (isHorizontal) {
             // Horizontal domino (blue or green)
             const centerX = d.x + d.w/2;  // Center of the domino
             const midY = d.y + d.h/2;     // Vertical center
-            
+
             // Calculate dimer length (half the domino width)
             const dimerLength = d.w / 2;
-            
+
             // Place nodes at the midpoints between center and edges
             const leftX = centerX - dimerLength/2;
             const rightX = centerX + dimerLength/2;
-            
+
             // Validate all coordinates are numbers and not NaN
             if (isNaN(leftX) || isNaN(rightX) || isNaN(midY)) return;
-            
+
             // Add nodes
             const leftNode = {
               x: leftX,
               y: midY,
               radius: 0.4 // Radius for node circles
             };
-            
+
             const rightNode = {
               x: rightX,
               y: midY,
               radius: 0.4
             };
-            
+
             dimerNodes.push(leftNode, rightNode);
-            
+
             // Add edge connecting the two nodes
             dimerEdges.push({
               x1: leftX,
@@ -1768,37 +1788,37 @@ Module.onRuntimeInitialized = async function() {
               x2: rightX,
               y2: midY
             });
-            
+
           } else {
             // Vertical domino (red or yellow)
             const midX = d.x + d.w/2;     // Horizontal center
             const centerY = d.y + d.h/2;  // Center of the domino
-            
+
             // Calculate dimer length (half the domino height)
             const dimerLength = d.h / 2;
-            
+
             // Place nodes at the midpoints between center and edges
             const topY = centerY - dimerLength/2;
             const bottomY = centerY + dimerLength/2;
-            
+
             // Validate all coordinates are numbers and not NaN
             if (isNaN(midX) || isNaN(topY) || isNaN(bottomY)) return;
-            
+
             // Add nodes
             const topNode = {
               x: midX,
               y: topY,
               radius: 0.4
             };
-            
+
             const bottomNode = {
               x: midX,
               y: bottomY,
               radius: 0.4
             };
-            
+
             dimerNodes.push(topNode, bottomNode);
-            
+
             // Add edge connecting the two nodes
             dimerEdges.push({
               x1: midX,
@@ -1811,24 +1831,24 @@ Module.onRuntimeInitialized = async function() {
           console.error("Error processing dimer:", e);
         }
       });
-      
+
       // Additional validation for all dimer edges and nodes
-      const validDimerEdges = dimerEdges.filter(d => 
+      const validDimerEdges = dimerEdges.filter(d =>
         typeof d.x1 === 'number' && !isNaN(d.x1) &&
         typeof d.y1 === 'number' && !isNaN(d.y1) &&
         typeof d.x2 === 'number' && !isNaN(d.x2) &&
         typeof d.y2 === 'number' && !isNaN(d.y2)
       );
-      
-      const validDimerNodes = dimerNodes.filter(d => 
+
+      const validDimerNodes = dimerNodes.filter(d =>
         typeof d.x === 'number' && !isNaN(d.x) &&
         typeof d.y === 'number' && !isNaN(d.y) &&
         typeof d.radius === 'number' && !isNaN(d.radius)
       );
-      
+
       // Draw dimer edges and nodes
       const group = svg2d.select("g");
-      
+
       // First draw edges (lines)
       group.selectAll(".dimer-line")
           .data(validDimerEdges)
@@ -1842,7 +1862,7 @@ Module.onRuntimeInitialized = async function() {
           .attr("stroke", "black")
           .attr("stroke-width", 0.3)
           .attr("pointer-events", "none");
-      
+
       // Then draw nodes (circles)
       group.selectAll(".dimer-circle")
           .data(validDimerNodes)
@@ -1856,6 +1876,129 @@ Module.onRuntimeInitialized = async function() {
           .attr("stroke", "none")
           .attr("pointer-events", "none");
     }
+
+    // If height function is enabled, draw it
+    useHeightFunction = document.getElementById("height-function-checkbox-2d").checked;
+    if (useHeightFunction) {
+      toggleHeightFunction();
+    }
+  }
+
+  // Function to toggle height function on/off
+  function toggleHeightFunction() {
+    // Remove any existing height function elements
+    svg2d.select("g").selectAll(".height-node").remove();
+    svg2d.select("g").selectAll(".height-label").remove();
+
+    // If height function is not enabled or n > 30, just return
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    if (!useHeightFunction || n > 30 || cachedDominoes.length === 0) return;
+
+    // Get the dominoes from the current display
+    const dominoes = [];
+    svg2d.select("g").selectAll("rect").each(function(d) {
+      dominoes.push(d);
+    });
+
+    // 1. Determine lattice unit (scaling factor)
+    const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
+    const unit = minSidePx / 2; // 2 lattice units → 1 short side
+    if (unit <= 0) return;
+
+    // 2. Convert each domino to (orient, sign, gx, gy)
+    const dominoData = dominoes.map(d => {
+      const horiz = d.w > d.h;
+      const orient = horiz ? 0 : 1;
+      const sign = horiz
+        ? (d.color === "green" ? -1 : 1)   // horizontal: green = −1, blue = +1
+        : (d.color === "yellow" ? -1 : 1);  // vertical: yellow = −1, red = +1
+      const gx = Math.round(d.x / unit);   // lattice coordinates
+      const gy = Math.round(d.y / unit);
+      return [orient, sign, gx, gy];
+    });
+
+    // 3. Build graph with height increments
+    const adj = new Map();
+
+    function addEdge(v1, v2, dh) {
+      const v1Key = `${v1},${v2}` === v1 ? v1 : `${v1[0]},${v1[1]}`;
+      const v2Key = `${v1},${v2}` === v2 ? v2 : `${v2[0]},${v2[1]}`;
+
+      if (!adj.has(v1Key)) adj.set(v1Key, []);
+      if (!adj.has(v2Key)) adj.set(v2Key, []);
+
+      adj.get(v1Key).push([v2Key, dh]);
+      adj.get(v2Key).push([v1Key, -dh]);
+    }
+
+    dominoData.forEach(([o, s, x, y]) => {
+      if (o === 0) { // horizontal (4×2)
+        const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
+        const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
+
+        addEdge(TL, TM, -s); addEdge(TM, TR, s);
+        addEdge(BL, BM, s); addEdge(BM, BR, -s);
+        addEdge(TL, BL, s); addEdge(TM, BM, 3*s);
+        addEdge(TR, BR, s);
+      } else { // vertical (2×4)
+        const TL = [x, y+4], TR = [x+2, y+4];
+        const ML = [x, y+2], MR = [x+2, y+2];
+        const BL = [x, y], BR = [x+2, y];
+
+        addEdge(TL, TR, -s); addEdge(ML, MR, -3*s); addEdge(BL, BR, -s);
+        addEdge(TL, ML, s); addEdge(ML, BL, -s);
+        addEdge(TR, MR, -s); addEdge(MR, BR, s);
+      }
+    });
+
+    // 4. Breadth-first integration of heights
+    const verts = Array.from(adj.keys()).map(k => {
+      const [gx, gy] = k.split(',').map(Number);
+      return {k, gx, gy};
+    });
+
+    // Find the "bottom-left" vertex as the root
+    const root = verts.reduce((a, b) =>
+      (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
+    ).k;
+
+    const heights = new Map([[root, 0]]);
+    const queue = [root];
+
+    while (queue.length > 0) {
+      const v = queue.shift();
+      for (const [w, dh] of adj.get(v)) {
+        if (!heights.has(w)) {
+          heights.set(w, heights.get(v) + dh);
+          queue.push(w);
+        }
+      }
+    }
+
+    // 5. Calculate font size based on n value (smaller font for larger n)
+    const fontSize = Math.max(0.2, 0.6 - n/80.0); // Variable font size based on n
+
+    // 6. Render just the numbers in pixels
+    const group = svg2d.select("g");
+
+    heights.forEach((h, key) => {
+      const [gx, gy] = key.split(',').map(Number);
+      const px = gx * unit, py = gy * unit;  // back to pixels
+
+      // Add just the height value - no circles
+      group.append("text")
+        .attr("class", "height-label")
+        .attr("x", px)
+        .attr("y", py)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", `${fontSize}px`)
+        .attr("fill", "black")
+        .attr("stroke", "white")
+        .attr("stroke-width", "0.5px")
+        .attr("paint-order", "stroke")
+        .text(-h); // Negate height as per the requirements
+    });
   }
 
   // Helper function to check if a domino is horizontal
@@ -1867,7 +2010,7 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
     const showColors = this.checked; // Get the current state of the checkbox
     console.log("Show colors toggled:", showColors);
-    
+
     // Update 2D view if it exists
     const svg2dGroup = svg2d.select("g");
     if (!svg2dGroup.empty()) {
@@ -2066,10 +2209,30 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
+  // Function to update height function visibility based on n value
+  function updateHeightFunctionVisibility(n) {
+    const heightFunctionToggle = document.getElementById("height-function-toggle-container");
+    if (heightFunctionToggle) {
+      if (n > 30) {
+        // Hide height function toggle for large n values
+        heightFunctionToggle.style.display = "none";
+        // Reset state if it was enabled
+        if (useHeightFunction) {
+          useHeightFunction = false;
+          document.getElementById("height-function-checkbox-2d").checked = false;
+        }
+      } else {
+        // Show height function toggle for smaller n
+        heightFunctionToggle.style.display = "block";
+      }
+    }
+  }
+
   // Delay initialization slightly to ensure all DOM elements are ready
   setTimeout(() => {
     try {
       const n = parseInt(document.getElementById("n-input").value, 10) || 12;
+      updateHeightFunctionVisibility(n);
       updateVisualization(n);
     } catch (err) {
       console.error("Error during initial visualization:", err);
