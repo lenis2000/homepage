@@ -269,7 +269,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 75vh;">
     <!-- 2D controls (fixed at top like 3D controls) -->
     <div id="controls-2d" class="mb-3">
-      <!-- Zoom controls -->
+      <!-- Zoom controls (always visible) -->
       <div class="d-flex flex-wrap align-items-center mb-2">
         <span class="font-weight-bold mr-2 mb-1">Zoom: </span>
         <div class="btn-group mr-2 mb-1">
@@ -277,11 +277,16 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
           <button id="zoom-out-btn-2d" class="btn btn-sm btn-outline-secondary px-2 py-1">-</button>
         </div>
         <button id="zoom-reset-btn-2d" class="btn btn-sm btn-outline-secondary mr-2 mb-1">Reset Zoom</button>
-        <span class="d-none d-md-inline font-italic small">(You can also use mouse wheel to zoom and drag to pan)</span>
+        <span class="d-none d-md-inline font-italic small">(Use mouse wheel to zoom and drag to pan)</span>
       </div>
+      
+      <!-- Toggle for 2D display options on mobile -->
+      <button class="btn btn-sm btn-secondary d-block d-md-none w-100 mb-2" type="button" data-toggle="collapse" data-target="#display-options-2d" aria-expanded="false" aria-controls="display-options-2d">
+        Display Options ▼
+      </button>
 
-      <!-- Display options -->
-      <div class="mb-2">
+      <!-- Display options (collapsible on mobile) -->
+      <div id="display-options-2d" class="collapse show d-md-block mb-2">
         <div class="mb-1">
           <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
           <label for="grayscale-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Grayscale mode (gas phase in 2x2 model)</label>
@@ -317,19 +322,22 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 <script>
 // Add functionality for the collapse toggle on small screens using vanilla JS
 document.addEventListener('DOMContentLoaded', function() {
-  // Get the Bootstrap 4 collapse instance
+  // Get the Bootstrap 4 collapse instances
   var controlsEl = document.getElementById('controls');
+  var displayOptionsEl = document.getElementById('display-options-2d');
   
   // Auto-collapse on small screens initially
   if (window.innerWidth < 768) {
     // For Bootstrap 4 alpha.6, we need to toggle the class manually
     controlsEl.classList.remove('show');
+    if (displayOptionsEl) displayOptionsEl.classList.remove('show');
   }
   
   // Update the collapse state on window resize
   window.addEventListener('resize', function() {
     if (window.innerWidth >= 768) {
       controlsEl.classList.add('show');
+      if (displayOptionsEl) displayOptionsEl.classList.add('show');
     }
   });
 });
