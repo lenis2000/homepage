@@ -342,6 +342,27 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Helper function to create a message for large tilings (n > 300) in 3D view
+function createLargeTilingMessage() {
+  const container = document.getElementById('aztec-canvas');
+  container.innerHTML = '';
+  const messageDiv = document.createElement('div');
+  messageDiv.style.width = '100%';
+  messageDiv.style.height = '100%';
+  messageDiv.style.display = 'flex';
+  messageDiv.style.alignItems = 'center';
+  messageDiv.style.justifyContent = 'center';
+  messageDiv.style.backgroundColor = '#f0f0f0';
+  messageDiv.style.border = '1px solid #ccc';
+  messageDiv.style.padding = '20px';
+  messageDiv.style.boxSizing = 'border-box';
+  messageDiv.style.fontSize = '18px';
+  messageDiv.style.fontWeight = 'bold';
+  messageDiv.style.textAlign = 'center';
+  messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
+  container.appendChild(messageDiv);
+}
+
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
@@ -1228,12 +1249,38 @@ Module.onRuntimeInitialized = async function() {
       animationActive = true;
       animate();
     }
-
-    // Check if the WebGL renderer is properly initialized
+    
+    // Check if the renderer is properly initialized/restored
     const container = document.getElementById('aztec-canvas');
     if (!container.querySelector('canvas')) {
       console.log("Reinitializing Three.js - canvas was missing");
       initThreeJS();
+      
+      // If we have cached dominoes, render them again
+      if (cachedDominoes && cachedDominoes.length > 0) {
+        // For large n, show a message instead
+        const n = parseInt(document.getElementById("n-input").value, 10);
+        if (n > 300) {
+          createLargeTilingMessage();
+        } else {
+          // Small enough to render in 3D, try to restore
+          try {
+            const message = document.createElement('div');
+            message.style.textAlign = 'center';
+            message.style.padding = '20px';
+            message.style.fontWeight = 'bold';
+            message.innerHTML = 'Restoring 3D visualization...';
+            container.appendChild(message);
+            
+            // Use setTimeout to allow the UI to update
+            setTimeout(() => {
+              updateVisualization(n);
+            }, 10);
+          } catch (e) {
+            console.error("Failed to restore 3D view:", e);
+          }
+        }
+      }
     }
 
     // If we have cached dominoes, handle the view switch appropriately
