@@ -8,9 +8,9 @@ permalink: /t-emb/
 <!-- === Parameter controls shared by both panes === -->
 <div id="controls" style="font-size:18px;margin-bottom:12px">
   <label>Aztec diamond n (1–200):</label>
-  <input id="n-input" type="number" value="16" min="1" max="200" step="1">
+  <input id="n-input" type="number" value="24" min="1" max="200" step="1">
   <label style="margin-left:15px">Periodic a:</label>
-  <input id="a-input" type="number" value="0.8" min="0.1" max="10" step="0.1">
+  <input id="a-input" type="number" value="0.6" min="0.1" max="10" step="0.1">
   <button id="update-btn">Update</button>
   <label style="margin-left:15px">
     <input id="show-origami" type="checkbox" checked>
@@ -26,8 +26,12 @@ permalink: /t-emb/
 
 <!-- === Two panes === -->
 <div class="visualization-container">
-  <svg id="t-emb-2d" viewBox="-1 -1 2 2" style="display:none;width:100%;height:80vh;border:1px solid #ccc;"></svg>
-  <div id="t-emb-3d"  style="width:100%;height:80vh;"></div>
+  <!--  ❖  The panes are now *square* – size is controlled only by width,
+          height is governed by aspect-ratio 1/1 so both stay identical. -->
+  <svg id="t-emb-2d"
+      viewBox="-1 -1 2 2"
+      style="display:none;width:100%;aspect-ratio:1/1;border:1px solid #ccc;"></svg>
+  <div id="t-emb-3d" style="width:100%;aspect-ratio:1/1;"></div>
 </div>
 
 <style>
@@ -76,15 +80,22 @@ permalink: /t-emb/
   }
 
   /* Responsive design */
+  /* 2 D & 3 D panes share the same square frame */
+  #t-emb-2d, #t-emb-3d {
+    aspect-ratio: 1 / 1;
+    height: auto;            /* override any inline height       */
+    max-height: 80vh;        /* optional – keeps it off the roof */
+  }
+
   @media (max-width: 768px) {
     #t-emb-2d, #t-emb-3d {
-      height: 65vh;
+      max-height: 65vh;
     }
   }
 
   @media (max-width: 600px) {
     #t-emb-2d, #t-emb-3d {
-      height: 60vh;
+      max-height: 60vh;
     }
   }
 
@@ -217,7 +228,7 @@ function initThree(){
   scene.background = new THREE.Color(0xffffff);
 
   // Set up camera with appropriate near and far planes
-  camera = new THREE.PerspectiveCamera(45, w/h, 0.0001, 10000);
+  camera = new THREE.PerspectiveCamera(45, 1, 0.0001, 10000); // square ⇒ aspect = 1
   camera.position.set(0, 0, 3);
   camera.lookAt(0, 0, 0);
 
@@ -238,7 +249,7 @@ function initThree(){
     if (renderer) {
       const newWidth = div.clientWidth;
       const newHeight = div.clientHeight;
-      camera.aspect = newWidth / newHeight;
+      camera.aspect = 1;                // stays square no matter the window
       camera.updateProjectionMatrix();
       renderer.setSize(newWidth, newHeight);
     }
@@ -305,7 +316,10 @@ function draw3D(data){
   const edges = Tedges;
 
   /* ---- material for lines ---- */
-  const material = new THREE.LineBasicMaterial({ color: 0x000000 });
+  const material = new THREE.LineBasicMaterial({
+    color: 0x000000,
+    linewidth: 0.5  // thinner lines (note: most browsers have a minimum line width)
+  });
 
   /* ---- build THREE.BufferGeometry from the filtered edge list ---- */
   const positions = new Float32Array(edges.length * 6);   // 2 × 3 coords
