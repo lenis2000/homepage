@@ -149,7 +149,7 @@ code:
     <div class="card-header" id="infoHeading">
       <h5 class="mb-0">
         <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="true" aria-controls="infoCollapse">
-          <strong>About this simulation</strong> <i class="fa fa-chevron-down"></i>
+          <strong>About</strong> <i class="fa fa-chevron-down"></i>
         </button>
       </h5>
     </div>
