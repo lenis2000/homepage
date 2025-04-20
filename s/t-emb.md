@@ -10,7 +10,7 @@ permalink: /t-emb/
   <label>Aztec diamond n (1–200):</label>
   <input id="n-input" type="number" value="16" min="1" max="200" step="1">
   <label style="margin-left:15px">Periodic a:</label>
-  <input id="a-input" type="number" value="1.0" min="0.1" max="10" step="0.1">
+  <input id="a-input" type="number" value="0.8" min="0.1" max="10" step="0.1">
   <button id="update-btn">Update</button>
 </div>
 
@@ -62,12 +62,12 @@ permalink: /t-emb/
   .vertex {
     fill: black;
     stroke: none;
-    r: 0.004;
+    r: 0.001;
   }
 
   .edge {
     stroke: black;
-    stroke-width: 0.003;
+    stroke-width: 0.001;
     fill: none;
   }
 
@@ -129,9 +129,9 @@ function draw2D(data){
   const svg   = d3.select("#t-emb-2d");
   svg.selectAll("*").remove();
   const g     = svg.append("g");
-  
+
   const T     = data.T;
-  
+
   // Helper function to safely get real component
   const getReal = (point) => {
     if (!point) return 0;
@@ -140,7 +140,7 @@ function draw2D(data){
     if (typeof point[0] === 'number') return point[0]; // Array format
     return 0;
   };
-  
+
   // Helper function to safely get imaginary component
   const getImag = (point) => {
     if (!point) return 0;
@@ -165,12 +165,12 @@ function draw2D(data){
    .attr("y2", d => -getImag(T[d[1]]));
 
   g.selectAll("circle.vert").data(T).join("circle")
-   .attr("class","vertex").attr("r",0.004)
+   .attr("class","vertex").attr("r",0.001)
    .attr("cx", d => getReal(d))
    .attr("cy", d => -getImag(d));
-   
+
   /* No need for auto-scale with viewBox - the SVG viewBox already handles scaling for us */
-  
+
   /* optional zoom */
   svg.call(d3.zoom().scaleExtent([0.5,30]).on("zoom",e=>g.attr("transform",e.transform)));
 }
@@ -179,27 +179,29 @@ function draw2D(data){
 function initThree(){
   const div = document.getElementById("t-emb-3d");
   div.innerHTML = "";
-  const w=div.clientWidth, h=div.clientHeight;
-  
+  const w = div.clientWidth;
+  const h = div.clientHeight;
+
   // Initialize the scene
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff); // White background
-  
-  // Set up camera
-  camera = new THREE.PerspectiveCamera(45, w/h, 0.001, 1000);
-  camera.position.set(0, 0, 2); // Position camera for better initial view
-  
+  scene.background = new THREE.Color(0xffffff);
+
+  // Set up camera with appropriate near and far planes
+  camera = new THREE.PerspectiveCamera(45, w/h, 0.0001, 10000);
+  camera.position.set(0, 0, 3);
+  camera.lookAt(0, 0, 0);
+
   // Set up renderer with antialiasing
   renderer = new THREE.WebGLRenderer({antialias: true});
   renderer.setSize(w, h);
-  renderer.setPixelRatio(window.devicePixelRatio); // For sharper rendering
   div.appendChild(renderer.domElement);
-  
-  // Set up orbit controls for interaction
+
+  // Set up orbit controls with min/max distances
   controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; // Smoother controls
-  controls.dampingFactor = 0.25;
-  
+  controls.minDistance = 0.0001;
+  controls.maxDistance = 5000;
+  controls.enableZoom = true;
+
   // Handle window resize
   window.addEventListener('resize', () => {
     if (renderer) {
@@ -210,110 +212,72 @@ function initThree(){
       renderer.setSize(newWidth, newHeight);
     }
   });
-  
+
   // Start animation loop
   animate();
 }
 
-function animate(){ 
-  requestAnimationFrame(animate); 
-  controls.update(); 
-  renderer.render(scene, camera); 
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
 }
 
+// ---------- 4.5 3‑D drawing ----------
 function draw3D(data){
-  if(!renderer) initThree();
+  /* ----------------- INITIAL SETUP ----------------- */
+  if (!renderer) initThree();
   scene.clear();
-  const T=data.T;
-  
-  // Helper function to safely get real component
-  const getReal = (point) => {
-    if (!point) return 0;
-    if (typeof point.re === 'number') return point.re;
-    if (typeof point.real === 'number') return point.real;
-    if (typeof point[0] === 'number') return point[0]; // Array format
-    return 0;
-  };
-  
-  // Helper function to safely get imaginary component
-  const getImag = (point) => {
-    if (!point) return 0;
-    if (typeof point.im === 'number') return point.im;
-    if (typeof point.imag === 'number') return point.imag;
-    if (typeof point[1] === 'number') return point[1]; // Array format
-    return 0;
-  };
-  
-  // Helper to get a coordinate key
-  const getKey = (point) => {
-    if (!point) return "0,0";
-    const k = point.k !== undefined ? point.k : 0;
-    const j = point.j !== undefined ? point.j : 0;
-    return `${k},${j}`;
-  };
-  
-  // Safely create a mapping from O coordinates to O.im values
-  const Oim = new Map();
-  if (data.O && Array.isArray(data.O)) {
-    data.O.forEach(o => {
-      if (o) {
-        const key = getKey(o);
-        const value = getImag(o);
-        Oim.set(key, value);
+
+  const T = data.T;                     // T‑vertices in the JSON
+  const OImMap = new Map();             // lookup: (k,j) ↦ Im(O)
+
+  /* ---- map O‑vertices to z‑coordinates, if present ---- */
+  if (data.O && Array.isArray(data.O)){
+    data.O.forEach(o=>{
+      if (o && o.k!==undefined && o.j!==undefined && o.im!==undefined){
+        OImMap.set(`${o.k},${o.j}`, o.im);
       }
     });
   }
-  
-  console.log("3D: Creating geometry with", T.length, "vertices");
-  const geom = new THREE.BufferGeometry();
-  const positions = [];
-  
-  const edges = buildEdges(T, cached.n);
-  console.log("3D: Built", edges.length, "edges");
-  
-  edges.forEach(e => {
-    if (e && e.length >= 2 && T[e[0]] && T[e[1]]) {
-      const v1 = T[e[0]], v2 = T[e[1]];
-      
-      // Get z-coordinate from Oim map or use 0
-      const z1 = Oim.get(getKey(v1)) || 0;
-      const z2 = Oim.get(getKey(v2)) || 0;
-      
-      positions.push(
-        getReal(v1),     // x1
-        -getImag(v1),    // y1
-        z1,              // z1
-        getReal(v2),     // x2
-        -getImag(v2),    // y2
-        z2               // z2
-      );
-    }
-  });
-  
-  console.log("3D: Created", positions.length/6, "line segments");
-  
-  // Create the line segments geometry and material
-  geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  
-  // Line material with improved appearance
-  const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0x000000,
-    linewidth: 1.5, // Note: WebGL has limited support for line widths
-    opacity: 0.85,
-    transparent: true
-  });
-  
-  // Add the line segments to the scene
-  scene.add(new THREE.LineSegments(geom, lineMaterial));
-  
-  // Add a grid to help with orientation
-  const gridHelper = new THREE.GridHelper(2, 20, 0xcccccc, 0xdddddd);
-  gridHelper.position.y = -1; // Place grid below the model
-  scene.add(gridHelper);
-  
-  // Adjust camera to get a good view of the model
-  camera.position.set(0.5, -0.5, 1.5);
-  camera.lookAt(0, 0, 0);
+
+  /* ---- build interior + boundary edges ---- */
+  const Tedges = buildEdges(T, cached.n);
+  addBoundaryRingEdges(T, Tedges, cached.n);
+
+  const originIndex = T.findIndex(v => v && v.k === 0 && v.j === 0);
+  const edges = Tedges;
+
+  /* ---- material for lines ---- */
+  const material = new THREE.LineBasicMaterial({ color: 0x000000 });
+
+  /* ---- build THREE.BufferGeometry from the filtered edge list ---- */
+  const positions = new Float32Array(edges.length * 6);   // 2 × 3 coords
+  for (let e = 0; e < edges.length; ++e){
+    const [i1,i2] = edges[e];
+    const v1 = T[i1], v2 = T[i2];
+
+    const z1 = OImMap.get(`${v1.k},${v1.j}`) ?? 0;
+    const z2 = OImMap.get(`${v2.k},${v2.j}`) ?? 0;
+
+    positions.set([ v1.re, -v1.im, z1,
+                    v2.re, -v2.im, z2 ], e*6);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  const lineGroup = new THREE.LineSegments(geometry, material);
+  scene.add(lineGroup);
+
+  /* ===============================================================
+     ❷  ***REMOVE SPHERES***  – no decorative vertices any more
+     (The old sphere/InstancedMesh code block has been deleted.)
+  ================================================================== */
+
+  /* ---- camera framing ---- */
+  camera.position.set(0.5, -0.5, 2);
+  camera.lookAt(0,0,0);
+  controls.update();
 }
 
 // Build the interior edges among T- or O-vertices
@@ -332,7 +296,7 @@ function buildEdges(vertices, n) {
     console.error("Invalid vertices array:", vertices);
     return [];
   }
-  
+
   vertices.forEach((v, idx) => {
     if (v) {
       const { k, j } = getCoords(v);
@@ -379,14 +343,14 @@ function buildEdges(vertices, n) {
   // Add edges to neighbor steps, avoiding boundary/interior mismatches
   vertices.forEach((v, idx) => {
     if (!v) return;
-    
+
     const { k, j } = getCoords(v);
-    
+
     neighborSteps.forEach(step => {
       const nk = k + step.dk;
       const nj = j + step.dj;
       const key = `${nk},${nj}`;
-      
+
       if (!indexMap.has(key)) return;
       const nbrIdx = indexMap.get(key);
 
@@ -414,7 +378,7 @@ function addBoundaryRingEdges(vertices, edges, n) {
     const j = v.j !== undefined ? v.j : 0;
     return { k, j };
   };
-  
+
   // Helper function to safely get real component
   const getReal = (point) => {
     if (!point) return 0;
@@ -423,7 +387,7 @@ function addBoundaryRingEdges(vertices, edges, n) {
     if (typeof point[0] === 'number') return point[0]; // Array format
     return 0;
   };
-  
+
   // Helper function to safely get imaginary component
   const getImag = (point) => {
     if (!point) return 0;
@@ -432,14 +396,14 @@ function addBoundaryRingEdges(vertices, edges, n) {
     if (typeof point[1] === 'number') return point[1]; // Array format
     return 0;
   };
-  
+
   // Find vertices on the boundary (k+j = n-1)
   const boundaryIndices = [];
   if (!vertices || !Array.isArray(vertices) || !edges) {
     console.error("Invalid parameters to addBoundaryRingEdges");
     return;
   }
-  
+
   vertices.forEach((v, idx) => {
     if (!v) return;
     const { k, j } = getCoords(v);
@@ -447,7 +411,7 @@ function addBoundaryRingEdges(vertices, edges, n) {
       boundaryIndices.push(idx);
     }
   });
-  
+
   console.log(`Found ${boundaryIndices.length} boundary vertices (n=${n})`);
   if (boundaryIndices.length === 0) return;
 
@@ -466,7 +430,7 @@ function addBoundaryRingEdges(vertices, edges, n) {
     const iB = boundaryIndices[(i+1) % boundaryIndices.length];
     edges.push([Math.min(iA, iB), Math.max(iA, iB)]);
   }
-  
+
   console.log(`Added ${boundaryIndices.length} boundary ring edges`);
 }
 
@@ -483,13 +447,13 @@ async function update(){
     console.log(`Fetching embedding with n=${n}, a=${a}`);
     const data=await fetchEmbedding(n,a);
     console.log("Data fetched:", data);
-    
+
     // Debug: examine the structure of the first few T objects
     if (data.T && data.T.length > 0) {
       console.log("First T object sample:", data.T[0]);
       console.log("T object properties:", Object.keys(data.T[0]));
     }
-    
+
     // Debug: examine the structure of the first few O objects
     if (data.O && data.O.length > 0) {
       console.log("First O object sample:", data.O[0]);

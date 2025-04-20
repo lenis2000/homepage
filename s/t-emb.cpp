@@ -53,27 +53,22 @@
 // Track progress for the UI
 static int currentProgress = 0;
 
-// Helper inline functions to compute the piecewise factors alpha, beta, gamma:
 static inline std::complex<double> alphaVal(int m, double a) {
-    // alpha depends on m mod 4
-    // if (m % 2 == 1) => 1
-    // else if (m % 4 == 2) => a^2
-    // else (m % 4 == 0) => 1/(a^2)
+    // if m%2==1 => 1
+    // else if m%4==2 => a^2
+    // else => 1/(a^2)
     if ((m % 2) == 1) {
         return {1.0, 0.0};
     }
     if ((m % 4) == 2) {
         return {a*a, 0.0};
     }
-    // (m % 4) == 0
     return {1.0/(a*a), 0.0};
 }
 
 static inline std::complex<double> betaVal(int j, int m, double a) {
-    // depends on m mod 4 and j mod 2
-    // If m % 2 == 1 => 1
-    // If m % 4 == 0 and j % 2 == 0 => a^2
-    // If m % 4 == 2 and j % 2 == 1 => a^2
+    // if m%2==1 => 1
+    // else if (m%4==0 && j%2==0) or (m%4==2 && j%2==1) => a^2
     // else => 1/(a^2)
     if ((m % 2) == 1) {
         return {1.0, 0.0};
@@ -89,11 +84,9 @@ static inline std::complex<double> betaVal(int j, int m, double a) {
 }
 
 static inline std::complex<double> gammaVal(int j, int k, int m, double a) {
-    // depends on m mod 4 and j,k mod 2
-    // If m % 2 == 0 => 1
-    // Else if m % 4 == 3 and j,k even => a^2
-    // Else if m % 4 == 1 and j,k odd  => a^2
-    // otherwise => 1/(a^2)
+    // if m%2==0 => 1
+    // else if (m%4==3 && j,k even) or (m%4==1 && j,k odd) => a^2
+    // else => 1/(a^2)
     if ((m % 2) == 0) {
         return {1.0, 0.0};
     }
@@ -110,10 +103,6 @@ static inline std::complex<double> gammaVal(int j, int k, int m, double a) {
     return {1.0/(a*a), 0.0};
 }
 
-
-// We build up Tarray[m], Oarray[m] for m from 1..n, storing them in
-// local 3D vectors of dimension [n+1][2n+1][2n+1].
-// The final Tarray[n][k][j] and Oarray[n][k][j] produce the embedding.
 extern "C" {
 
 // Function to update and get the current progress
@@ -128,26 +117,6 @@ void resetProgress() {
     currentProgress = 0;
 }
 
-/*
-  doTembJSONwithA(n, a):
-    - n is an integer, 1 <= n <= 200
-    - a is a positive real scale factor
-
-    Returns a JSON string with keys "T", "O", and "B":
-      {
-        "T": [
-          { "k":k, "j":j, "re":Re(T_{k,j}), "im":Im(T_{k,j}) },
-          ...
-        ],
-        "O": [ ... ],
-        "B": [  // boundary points T_{k,j} + O_{k,j} around the perimeter in a cycle
-          { "re":..., "im":... },
-          ...
-        ]
-      }
-
-    The caller must free the returned string with freeString().
-*/
 EMSCRIPTEN_KEEPALIVE
 char* doTembJSONwithA(int n, double a) {
     // Reset progress counter
@@ -156,25 +125,14 @@ char* doTembJSONwithA(int n, double a) {
     // Initial progress update - starting computation
     currentProgress = 5;
 
-    // clamp n
     if (n < 1)  n = 1;
     if (n > 200) n = 200;
-    if (a <= 0.0) a = 1.0;  // fallback if user gave a nonpositive
-
-    // Add small delays with visible progress
-    for (int i = 0; i < 1000000; i++) {
-        // Simple loop to create some CPU work for progress visualization
-        if (i % 100000 == 0) {
-            // Update progress slowly from 5% to 15%
-            currentProgress = 5 + (i / 100000);
-        }
-    }
+    if (a <= 0.0) a = 1.0;
 
     // Update progress for array preparation
     currentProgress = 15;
 
-    // Prepare Tarray, Oarray of size (n+1) x (2*n + 1) x (2*n + 1)
-    // We'll index them as Tarray[m][k+n][j+n] for k,j in [-n..n].
+    // 3D arrays: Tarray[m][k+n][j+n], Oarray[m][k+n][j+n]
     std::vector<std::vector<std::vector<std::complex<double>>>> Tarray(
         n+1,
         std::vector<std::vector<std::complex<double>>>(2*n + 1,
@@ -191,17 +149,14 @@ char* doTembJSONwithA(int n, double a) {
     // Progress update after arrays are prepared
     currentProgress = 20;
 
-    // 1) Initialize T and O for m=1..n (boundary seeds)
+    // Initialize boundary conditions for m=1..n
     // Progress update for initialization phase
     currentProgress = 25;
 
     for (int m = 1; m <= n; m++) {
         // Update progress during initialization (25-30%)
-        if (m % ((n/10) + 1) == 0) { // Update ~10 times
-            currentProgress = 25 + (m * 5 / n);
-        }
-
-        // T(-m,0) = -1, T(m,0)= +1, T(0,-m)= i*a, T(0,m)= -i*a
+        currentProgress = 25 + (m * 5 / n);
+        // T(-m,0) = -1, T(m,0)=+1, T(0,-m)= i*a, T(0,m)=-i*a
         Tarray[m][(-m + n)][(0 + n)] = std::complex<double>(-1.0, 0.0);
         Tarray[m][( m + n)][(0 + n)] = std::complex<double>(+1.0, 0.0);
         Tarray[m][(0 + n)][(-m + n)] = std::complex<double>(0.0, a);
@@ -214,41 +169,39 @@ char* doTembJSONwithA(int n, double a) {
         Oarray[m][(0 + n)][( m + n)] = std::complex<double>(0.0, a);
     }
 
-    // 2) Fill T and O for m=1..(n-1) via the recursive rule
+    // Fill T, O for m=1..(n-1)
     // Progress update for recursive filling phase
     currentProgress = 30;
 
     for (int m = 1; m < n; m++) {
-        // Update progress during recursive filling (30-65%)
+        // Update progress at the start of each iteration for recursive filling (30-65%)
         currentProgress = 30 + (m * 35 / n);
-        // Pass 1 for T
+        // pass 1 (T)
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
-            if (std::abs(k) + std::abs(j) <= m) {
-              // boundary “incremental” updates:
+            if (std::abs(k)+std::abs(j) <= m) {
               auto aVal = alphaVal(m, a);
-
-              // T(-m,0), T(m,0), T(0,-m), T(0,m)
+              // boundary increments
               if (j == -m && k == 0) {
-                  Tarray[m+1][(j + n)][(k + n)] =
+                  Tarray[m+1][(j+n)][(k+n)] =
                       ( Tarray[m][(-m + n)][(0 + n)]
                         + aVal*Tarray[m][(-m+1 + n)][(0 + n)] )
                       / (std::complex<double>(1.0)+aVal);
               }
               if (j ==  m && k == 0) {
-                  Tarray[m+1][(j + n)][(k + n)] =
+                  Tarray[m+1][(j+n)][(k+n)] =
                       ( Tarray[m][( m + n)][(0 + n)]
                         + aVal*Tarray[m][( m-1 + n)][(0 + n)] )
                       / (std::complex<double>(1.0)+aVal);
               }
               if (j == 0 && k == -m) {
-                  Tarray[m+1][(j + n)][(k + n)] =
+                  Tarray[m+1][(j+n)][(k+n)] =
                       ( aVal*Tarray[m][(0 + n)][(-m + n)]
                         + Tarray[m][(0 + n)][(-m+1 + n)] )
                       / (std::complex<double>(1.0)+aVal);
               }
               if (j == 0 && k ==  m) {
-                  Tarray[m+1][(j + n)][(k + n)] =
+                  Tarray[m+1][(j+n)][(k+n)] =
                       ( aVal*Tarray[m][(0 + n)][( m + n)]
                         + Tarray[m][(0 + n)][( m-1 + n)] )
                       / (std::complex<double>(1.0)+aVal);
@@ -257,82 +210,80 @@ char* doTembJSONwithA(int n, double a) {
               // corners inside boundary
               auto bVal = betaVal(j, m, a);
               if ((1 <= j && j <= m-1) && (k == m - j)) {
-                  Tarray[m+1][(j + n)][(k + n)] =
-                    ( Tarray[m][(j-1 + n)][(m-j + n)]
-                      + bVal*Tarray[m][(j + n)][(m-j-1 + n)] )
+                  Tarray[m+1][(j+n)][(k+n)] =
+                    ( Tarray[m][(j-1+n)][(m-j + n)]
+                      + bVal*Tarray[m][(j+n)][(m-j-1 + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
               if ((1 <= j && j <= m-1) && (k == -m + j)) {
-                  Tarray[m+1][(j + n)][(k + n)] =
-                    ( Tarray[m][(j-1 + n)][(-m+j + n)]
-                      + bVal*Tarray[m][(j + n)][(-m+j+1 + n)] )
+                  Tarray[m+1][(j+n)][(k+n)] =
+                    ( Tarray[m][(j-1+n)][(-m+j + n)]
+                      + bVal*Tarray[m][(j+n)][(-m+j+1 + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
               if (((1-m) <= j && j <= -1) && (k == m + j)) {
-                  Tarray[m+1][(j + n)][(k + n)] =
-                    ( bVal*Tarray[m][(j + n)][(m+j-1 + n)]
-                      + Tarray[m][(j+1 + n)][(m+j + n)] )
+                  Tarray[m+1][(j+n)][(k+n)] =
+                    ( bVal*Tarray[m][(j+n)][(m+j-1 + n)]
+                      + Tarray[m][(j+1+n)][(m+j + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
               if (((1-m) <= j && j <= -1) && (k == -m - j)) {
-                  Tarray[m+1][(j + n)][(k + n)] =
-                    ( bVal*Tarray[m][(j + n)][(-m-j+1 + n)]
-                      + Tarray[m][(j+1 + n)][(-m-j + n)] )
+                  Tarray[m+1][(j+n)][(k+n)] =
+                    ( bVal*Tarray[m][(j+n)][(-m-j+1 + n)]
+                      + Tarray[m][(j+1+n)][(-m-j + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
 
               // interior pass-through
               if ((std::abs(k)+std::abs(j) < m) && (((j + k + m) % 2) == 0)) {
-                  Tarray[m+1][(j + n)][(k + n)] =
-                      Tarray[m][(j + n)][(k + n)];
+                  Tarray[m+1][(j+n)][(k+n)] = Tarray[m][(j+n)][(k+n)];
               }
             }
           }
         }
-        // Pass 2 for T
+        // pass 2 (T)
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
-            if (std::abs(k) + std::abs(j) <= m) {
+            if (std::abs(k)+std::abs(j) <= m) {
               if ((std::abs(k)+std::abs(j) < m) && (((j + k + m) % 2) == 1)) {
                   auto gVal = gammaVal(j, k, m, a);
-                  Tarray[m+1][(j + n)][(k + n)] =
-                      -Tarray[m][(j + n)][(k + n)]
-                      + (    Tarray[m+1][(j-1 + n)][(k + n)]
-                           + Tarray[m+1][(j+1 + n)][(k + n)]
-                           + gVal*Tarray[m+1][(j + n)][(k+1 + n)]
-                           + gVal*Tarray[m+1][(j + n)][(k-1 + n)]
-                        )
-                        / (std::complex<double>(1.0)+gVal);
+                  Tarray[m+1][(j+n)][(k+n)] =
+                      -Tarray[m][(j+n)][(k+n)]
+                      + (    Tarray[m+1][(j-1+n)][(k+n)]
+                           + Tarray[m+1][(j+1+n)][(k+n)]
+                           + gVal*Tarray[m+1][(j+n)][(k+1+n)]
+                           + gVal*Tarray[m+1][(j+n)][(k-1+n)]
+                        ) / (std::complex<double>(1.0)+gVal);
               }
             }
           }
         }
 
-        // Pass 1 for O
+        // pass 1 (O)
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
-            if (std::abs(k) + std::abs(j) <= m) {
+            if (std::abs(k)+std::abs(j) <= m) {
               auto aVal = alphaVal(m, a);
               if (j == -m && k == 0) {
-                  Oarray[m+1][(j + n)][(k + n)] =
+                  Oarray[m+1][(j+n)][(k+n)] =
                       ( Oarray[m][(-m + n)][(0 + n)]
                         + aVal*Oarray[m][(-m+1 + n)][(0 + n)] )
                       / (std::complex<double>(1.0)+aVal);
               }
               if (j ==  m && k == 0) {
-                  Oarray[m+1][(j + n)][(k + n)] =
+                  Oarray[m+1][(j+n)][(k+n)] =
                       ( Oarray[m][( m + n)][(0 + n)]
                         + aVal*Oarray[m][( m-1 + n)][(0 + n)] )
                       / (std::complex<double>(1.0)+aVal);
               }
               if (j == 0 && k == -m) {
-                  Oarray[m+1][(j + n)][(k + n)] =
+                  Oarray[m+1][(j+n)][(k+n)] =
                       ( aVal*Oarray[m][(0 + n)][(-m + n)]
                         + Oarray[m][(0 + n)][(-m+1 + n)] )
                       / (std::complex<double>(1.0)+aVal);
               }
               if (j == 0 && k ==  m) {
-                  Oarray[m+1][(j + n)][(k + n)] =
+                  Oarray[m+1][(j+n)][(k+n)] =
                       ( aVal*Oarray[m][(0 + n)][( m + n)]
                         + Oarray[m][(0 + n)][( m-1 + n)] )
                       / (std::complex<double>(1.0)+aVal);
@@ -340,60 +291,56 @@ char* doTembJSONwithA(int n, double a) {
 
               auto bVal = betaVal(j, m, a);
               if ((1 <= j && j <= m-1) && (k == m - j)) {
-                  Oarray[m+1][(j + n)][(k + n)] =
-                    ( Oarray[m][(j-1 + n)][(m-j + n)]
-                      + bVal*Oarray[m][(j + n)][(m-j-1 + n)] )
+                  Oarray[m+1][(j+n)][(k+n)] =
+                    ( Oarray[m][(j-1+n)][(m-j + n)]
+                      + bVal*Oarray[m][(j+n)][(m-j-1 + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
               if ((1 <= j && j <= m-1) && (k == -m + j)) {
-                  Oarray[m+1][(j + n)][(k + n)] =
-                    ( Oarray[m][(j-1 + n)][(-m+j + n)]
-                      + bVal*Oarray[m][(j + n)][(-m+j+1 + n)] )
+                  Oarray[m+1][(j+n)][(k+n)] =
+                    ( Oarray[m][(j-1+n)][(-m+j + n)]
+                      + bVal*Oarray[m][(j+n)][(-m+j+1 + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
               if (((1-m) <= j && j <= -1) && (k == m + j)) {
-                  Oarray[m+1][(j + n)][(k + n)] =
-                    ( bVal*Oarray[m][(j + n)][(m+j-1 + n)]
-                      + Oarray[m][(j+1 + n)][(m+j + n)] )
+                  Oarray[m+1][(j+n)][(k+n)] =
+                    ( bVal*Oarray[m][(j+n)][(m+j-1 + n)]
+                      + Oarray[m][(j+1+n)][(m+j + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
               if (((1-m) <= j && j <= -1) && (k == -m - j)) {
-                  Oarray[m+1][(j + n)][(k + n)] =
-                    ( bVal*Oarray[m][(j + n)][(-m-j+1 + n)]
-                      + Oarray[m][(j+1 + n)][(-m-j + n)] )
+                  Oarray[m+1][(j+n)][(k+n)] =
+                    ( bVal*Oarray[m][(j+n)][(-m-j+1 + n)]
+                      + Oarray[m][(j+1+n)][(-m-j + n)] )
                     / (std::complex<double>(1.0)+bVal);
               }
 
-              // interior pass-through
               if ((std::abs(k)+std::abs(j) < m) && (((j + k + m) % 2) == 0)) {
-                  Oarray[m+1][(j + n)][(k + n)] =
-                      Oarray[m][(j + n)][(k + n)];
+                  Oarray[m+1][(j+n)][(k+n)] = Oarray[m][(j+n)][(k+n)];
               }
             }
           }
         }
-        // Pass 2 for O
+        // pass 2 (O)
         for (int k = -m; k <= m; k++) {
           for (int j = -m; j <= m; j++) {
-            if (std::abs(k) + std::abs(j) <= m) {
+            if (std::abs(k)+std::abs(j) <= m) {
               if ((std::abs(k)+std::abs(j) < m) && (((j + k + m) % 2) == 1)) {
                   auto gVal = gammaVal(j, k, m, a);
-                  Oarray[m+1][(j + n)][(k + n)] =
-                      -Oarray[m][(j + n)][(k + n)]
-                      + (    Oarray[m+1][(j-1 + n)][(k + n)]
-                           + Oarray[m+1][(j+1 + n)][(k + n)]
-                           + gVal*Oarray[m+1][(j + n)][(k+1 + n)]
-                           + gVal*Oarray[m+1][(j + n)][(k-1 + n)]
-                        )
-                        / (std::complex<double>(1.0)+gVal);
+                  Oarray[m+1][(j+n)][(k+n)] =
+                      -Oarray[m][(j+n)][(k+n)]
+                      + (    Oarray[m+1][(j-1+n)][(k+n)]
+                           + Oarray[m+1][(j+1+n)][(k+n)]
+                           + gVal*Oarray[m+1][(j+n)][(k+1+n)]
+                           + gVal*Oarray[m+1][(j+n)][(k-1+n)]
+                        ) / (std::complex<double>(1.0)+gVal);
               }
             }
           }
         }
-    } // end for m in [1..n-1]
+    }
 
-    // Now we have Tarray[n] and Oarray[n] as our final T- and O- embeddings.
-    // We'll build the output JSON:
+    // Prepare JSON
 
     // Progress update for JSON generation
     currentProgress = 65;
@@ -401,7 +348,7 @@ char* doTembJSONwithA(int n, double a) {
     std::ostringstream oss;
     oss << "{";
 
-    // =========== T array
+    // T array
     oss << "\"T\":[";
     // Calculate total points for progress tracking
     int totalPoints = 0;
@@ -415,20 +362,18 @@ char* doTembJSONwithA(int n, double a) {
 
     {
       bool first = true;
-      // k, j in [-n..n], but only consider |k|+|j| <= n
       int processedPoints = 0;
       for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
           if (std::abs(k)+std::abs(j) <= n) {
             // Update progress for T array (65-75%)
             processedPoints++;
-            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
-              currentProgress = 65 + (processedPoints * 10 / totalPoints);
-            }
+            // Update more frequently for smoother progress
+            currentProgress = 65 + (processedPoints * 10 / totalPoints);
             if (!first) oss << ",";
             first=false;
-            double re = Tarray[n][(k + n)][(j + n)].real();
-            double im = Tarray[n][(k + n)][(j + n)].imag();
+            double re = Tarray[n][k + n][j + n].real();
+            double im = Tarray[n][k + n][j + n].imag();
             oss << "{\"k\":" << k
                 << ",\"j\":" << j
                 << ",\"re\":" << std::fixed << std::setprecision(15) << re
@@ -440,7 +385,7 @@ char* doTembJSONwithA(int n, double a) {
     }
     oss << "],";
 
-    // =========== O array
+    // O array
     oss << "\"O\":[";
     // Progress update for O array
     currentProgress = 75;
@@ -453,17 +398,13 @@ char* doTembJSONwithA(int n, double a) {
           if (std::abs(k)+std::abs(j) <= n) {
             // Update progress for O array (75-85%)
             processedPoints++;
-            if (processedPoints % (totalPoints/10 + 1) == 0) { // Update ~10 times
-              currentProgress = 75 + (processedPoints * 10 / totalPoints);
-            }
-            // -- Skip the origin (k=0, j=0) so no red vertex appears there:
-            if (k == 0 && j == 0) {
-                continue;
-            }
+            // Update more frequently for smoother progress
+            currentProgress = 75 + (processedPoints * 10 / totalPoints);
+            // We won't skip (0,0) here in the data (the 3D code filters if needed).
             if (!first) oss << ",";
-            first=false;
-            double re = Oarray[n][(k + n)][(j + n)].real();
-            double im = Oarray[n][(k + n)][(j + n)].imag();
+            first = false;
+            double re = Oarray[n][k + n][j + n].real();
+            double im = Oarray[n][k + n][j + n].imag();
             oss << "{\"k\":" << k
                 << ",\"j\":" << j
                 << ",\"re\":" << std::fixed << std::setprecision(15) << re
@@ -475,49 +416,41 @@ char* doTembJSONwithA(int n, double a) {
     }
     oss << "],";
 
-    // =========== B array (boundary: T_{k,j} + O_{k,j})
-    // We'll walk around the perimeter in 4 segments, each with (n+1) points:
-    //   from (-n,0) up to (0,n),
-    //   from (0,n) over to (n,0),
-    //   from (n,0) down to (0,-n),
-    //   from (0,-n) back to (-n,0).
+    // B array (boundary T_{k,j} + O_{k,j})
+    // We'll do the same perimeter approach in 4 segments
     oss << "\"B\":[";
     // Progress update for boundary array
     currentProgress = 85;
     {
+      auto getT = [&](int K, int J){return Tarray[n][K + n][J + n];};
+      auto getO = [&](int K, int J){return Oarray[n][K + n][J + n];};
+
       std::vector<std::complex<double>> boundary;
-      boundary.reserve(4 * (n+1));
+      boundary.reserve(4*(n+1));
 
-      auto getT = [&](int k, int j) {
-        return Tarray[n][(k + n)][(j + n)];
-      };
-      auto getO = [&](int k, int j) {
-        return Oarray[n][(k + n)][(j + n)];
-      };
-
-      // seg1: from (-n,0) to (0,n)
+      // seg1: (-n,0) to (0,n)
       for (int i = 0; i <= n; i++) {
-         int k = -n + i;
-         int j = i;
-         boundary.push_back( getT(k,j) + getO(k,j) );
+        int k = -n + i;
+        int j = i;
+        boundary.push_back(getT(k,j)+getO(k,j));
       }
-      // seg2: from (0,n) to (n,0)
+      // seg2: (0,n) to (n,0)
       for (int i = 0; i <= n; i++) {
-         int k = i;
-         int j = n - i;
-         boundary.push_back( getT(k,j) + getO(k,j) );
+        int k = i;
+        int j = n - i;
+        boundary.push_back(getT(k,j)+getO(k,j));
       }
-      // seg3: from (n,0) down to (0,-n)
+      // seg3: (n,0) to (0,-n)
       for (int i = 0; i <= n; i++) {
-         int k = n - i;
-         int j = -i;
-         boundary.push_back( getT(k,j) + getO(k,j) );
+        int k = n - i;
+        int j = -i;
+        boundary.push_back(getT(k,j)+getO(k,j));
       }
-      // seg4: from (0,-n) back to (-n,0)
+      // seg4: (0,-n) to (-n,0)
       for (int i = 0; i <= n; i++) {
-         int k = -i;
-         int j = -n + i;
-         boundary.push_back( getT(k,j) + getO(k,j) );
+        int k = -i;
+        int j = -n + i;
+        boundary.push_back(getT(k,j)+getO(k,j));
       }
 
       bool first = true;
@@ -527,9 +460,8 @@ char* doTembJSONwithA(int n, double a) {
       for (auto &z : boundary) {
          // Update progress during boundary processing (85-95%)
          boundaryProcessed++;
-         if (boundaryProcessed % (boundaryCount/5 + 1) == 0) { // Update ~5 times
-           currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
-         }
+         // Update more frequently for smoother progress
+         currentProgress = 85 + (boundaryProcessed * 10 / boundaryCount);
 
          if (!first) oss << ",";
          first=false;
@@ -546,16 +478,16 @@ char* doTembJSONwithA(int n, double a) {
     // Set progress to 100% when complete
     currentProgress = 100;
 
-    // Convert to char* for returning
     std::string jsonStr = oss.str();
+
     char* out = (char*) std::malloc(jsonStr.size()+1);
     std::strcpy(out, jsonStr.c_str());
     return out;
 }
 
 EMSCRIPTEN_KEEPALIVE
-void freeString(char* str) {
-    std::free(str);
+void freeString(char* ptr) {
+    std::free(ptr);
 }
 
 }
