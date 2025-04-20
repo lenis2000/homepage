@@ -117,7 +117,6 @@ Module.onRuntimeInitialized = () => {
   window.doTemb = Module.cwrap('doTembJSONwithA','number',['number','number'],{async:true});
   window.freeStr = Module.cwrap('freeString',null,['number']);
   doTembInitialized = true;
-  console.log("WASM module initialized");
   // Initial update once module is ready
   update();
 };
@@ -164,11 +163,8 @@ function draw2D(data){
   };
 
   /* build edges exactly like in the standalone 2‑D page */
-  console.log("Building edges for n =", cached.n);
   const edges = buildEdges(T, cached.n);
-  console.log("Adding boundary edges");
   addBoundaryRingEdges(T, edges, cached.n);
-  console.log("Created edges:", edges.length);
 
   TContainer.selectAll("line.edge").data(edges).join("line")
    .attr("class","edge")
@@ -352,7 +348,6 @@ function buildEdges(vertices, n) {
   // Create a mapping from coordinates to vertex index
   const indexMap = new Map();
   if (!vertices || !Array.isArray(vertices)) {
-    console.error("Invalid vertices array:", vertices);
     return [];
   }
 
@@ -386,7 +381,6 @@ function buildEdges(vertices, n) {
     { from: { k: 0,     j: -(n-1) }, to: { k: 0,    j: -n } }
   ];
 
-  console.log("Index map has", indexMap.size, "entries for n =", n);
 
   // Add edges between special vertices
   specialEdges.forEach(s => {
@@ -424,7 +418,6 @@ function buildEdges(vertices, n) {
     });
   });
 
-  console.log(`Built ${edges.length} edges from ${vertices.length} vertices with n=${n}`);
   return edges;
 }
 
@@ -459,7 +452,6 @@ function addBoundaryRingEdges(vertices, edges, n) {
   // Find vertices on the boundary (k+j = n-1)
   const boundaryIndices = [];
   if (!vertices || !Array.isArray(vertices) || !edges) {
-    console.error("Invalid parameters to addBoundaryRingEdges");
     return;
   }
 
@@ -471,7 +463,6 @@ function addBoundaryRingEdges(vertices, edges, n) {
     }
   });
 
-  console.log(`Found ${boundaryIndices.length} boundary vertices (n=${n})`);
   if (boundaryIndices.length === 0) return;
 
   // Sort boundary vertices by angle and connect them in order
@@ -490,44 +481,26 @@ function addBoundaryRingEdges(vertices, edges, n) {
     edges.push([Math.min(iA, iB), Math.max(iA, iB)]);
   }
 
-  console.log(`Added ${boundaryIndices.length} boundary ring edges`);
 }
 
 /* ---------- 4.6 UI wiring ---------- */
 async function update(){
   if (!doTembInitialized) {
-    console.log("WASM module not yet initialized, skipping update");
     return;
   }
 
   try {
     const n=parseInt(document.getElementById("n-input").value,10);
     const a=parseFloat(document.getElementById("a-input").value);
-    console.log(`Fetching embedding with n=${n}, a=${a}`);
     const data=await fetchEmbedding(n,a);
-    console.log("Data fetched:", data);
 
-    // Debug: examine the structure of the first few T objects
-    if (data.T && data.T.length > 0) {
-      console.log("First T object sample:", data.T[0]);
-      console.log("T object properties:", Object.keys(data.T[0]));
-    }
-
-    // Debug: examine the structure of the first few O objects
-    if (data.O && data.O.length > 0) {
-      console.log("First O object sample:", data.O[0]);
-      console.log("O object properties:", Object.keys(data.O[0]));
-    }
 
     if (document.getElementById("view-2d-btn").classList.contains("active")) {
-      console.log("Drawing 2D view");
       draw2D(data);
     } else {
-      console.log("Drawing 3D view");
       draw3D(data);
     }
   } catch (err) {
-    console.error("Error in update:", err);
   }
 }
 document.getElementById("update-btn").onclick = update;
