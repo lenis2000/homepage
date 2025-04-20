@@ -300,8 +300,8 @@ function draw2D(data){
   const g = svg.append("g").attr("class", "main-container");
 
   // --- dynamic thickness (edge width & vertex radius) ---
-  const BASE_EDGE  = 0.0005;   // present look at n≈50
-  const BASE_VERT  = 0.001;
+  const BASE_EDGE  = 0.001;
+  const BASE_VERT  = 0.0005;
   const scale      = getThicknessScale(cached.n);   // cached.n is current n
   const edgeWidth  = BASE_EDGE * scale;
   const vertRadius = BASE_VERT * scale;
