@@ -107,6 +107,9 @@ permalink: /t-emb/
   /* --- origami (O‑embedding) --- */
   .o-edge    { stroke:red; stroke-width:0.0003px; fill:none; }
   .o-vertex  { fill:red;   stroke:none;  r:0.0005;  opacity:0.7; }
+  
+  /* --- face styling --- */
+  .face     { stroke-width:0.0001px; }
 </style>
 
 <script src="/js/d3.v7.min.js"></script>
@@ -176,7 +179,42 @@ function draw2D(data){
   /* build edges exactly like in the standalone 2‑D page */
   const edges = buildEdges(T, cached.n);
   addBoundaryRingEdges(T, edges, cached.n);
+  
+  /* build faces for polygons */
+  const faces = buildFaces(T, cached.n);
+  
+  /* Draw polygons/faces for 2D visualization */
+  const facesContainer = TContainer.append("g").attr("class", "t-faces");
+  
+  // Build a polygon path from an array of vertex indices
+  const buildPolygonPath = (vertexIndices) => {
+    return vertexIndices.map((idx, i) => {
+      const v = T[idx];
+      const x = getReal(v);
+      const y = -getImag(v);
+      return (i === 0 ? "M" : "L") + x + "," + y;
+    }).join(" ") + "Z";
+  };
+  
+  // Draw faces
+  faces.forEach(face => {
+    if (face.length < 3) return; // Skip degenerate polygons
+    
+    // Check if this is the center face (0,0)
+    const centerVertexIdx = face[0];
+    const centerVertex = T[centerVertexIdx];
+    const isCenterFace = centerVertex && centerVertex.k === 0 && centerVertex.j === 0;
+    
+    // Create path for the face
+    facesContainer.append("path")
+      .attr("d", buildPolygonPath(face))
+      .attr("class", "face")
+      .style("fill", "#3366cc")
+      .style("fill-opacity", "0.25")
+      .style("stroke", "none");
+  });
 
+  // Draw edges on top of faces
   TContainer.selectAll("line.edge").data(edges).join("line")
    .attr("class","edge")
    .attr("x1", d => getReal(T[d[0]]))
@@ -315,8 +353,11 @@ function draw3D(data){
   const originIndex = T.findIndex(v => v && v.k === 0 && v.j === 0);
   const edges = Tedges;
 
-  /* ---- material for lines ---- */
-  const material = new THREE.LineBasicMaterial({
+  /* ---- build faces for polygons ---- */
+  const faces = buildFaces(T, cached.n);
+  
+  /* ---- materials ---- */
+  const lineMaterial = new THREE.LineBasicMaterial({
     color: 0x000000,
     linewidth: 0.5  // thinner lines (note: most browsers have a minimum line width)
   });
@@ -336,8 +377,72 @@ function draw3D(data){
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions,3));
-  const lineGroup = new THREE.LineSegments(geometry, material);
+  const lineGroup = new THREE.LineSegments(geometry, lineMaterial);
   scene.add(lineGroup);
+  
+  /* ---- add lighting for better face rendering ---- */
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambientLight);
+  
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  directionalLight.position.set(0, 0, 2);
+  scene.add(directionalLight);
+  
+  /* ---- build face meshes ---- */
+  // Create a group to hold all faces
+  const facesGroup = new THREE.Group();
+  
+  faces.forEach(face => {
+    if (face.length < 3) return; // Skip invalid faces
+    
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    
+    // Special handling for center (0,0) vertex
+    const centerVertexIdx = face[0];
+    const centerVertex = T[centerVertexIdx];
+    const isCenterFace = centerVertex && centerVertex.k === 0 && centerVertex.j === 0;
+    
+    // Add all vertices to the geometry
+    face.forEach((idx, i) => {
+      const v = T[idx];
+      if (!v) return;
+      
+      const z = OImMap.get(`${v.k},${v.j}`) ?? 0;
+      vertices.push(v.re, -v.im, z);
+      
+      // Create triangulation indices
+      if (i > 1) {
+        indices.push(0, i-1, i);
+      }
+    });
+    
+    // Close the polygon if it has more than 3 vertices
+    if (face.length > 3) {
+      indices.push(0, face.length-1, 1);
+    }
+    
+    // Create the geometry
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    
+    // Create materials with proper transparency
+    const faceMaterial = new THREE.MeshBasicMaterial({
+      color: 0x3366cc,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      depthWrite: false // Important for correct transparency rendering
+    });
+    
+    const mesh = new THREE.Mesh(geometry, faceMaterial);
+    facesGroup.add(mesh);
+  });
+  
+  // Add the face group to the scene
+  scene.add(facesGroup);
 
   /* ---- camera framing ---- */
   camera.position.set(0, 0, 4);      // straight above, a little higher
@@ -491,7 +596,89 @@ function addBoundaryRingEdges(vertices, edges, n) {
     const iB = boundaryIndices[(i+1) % boundaryIndices.length];
     edges.push([Math.min(iA, iB), Math.max(iA, iB)]);
   }
+}
 
+// Build the face polygons from vertices
+function buildFaces(vertices, n) {
+  // Helper function to safely get k,j coordinates
+  const getCoords = (v) => {
+    if (!v) return { k: 0, j: 0 };
+    const k = v.k !== undefined ? v.k : 0;
+    const j = v.j !== undefined ? v.j : 0;
+    return { k, j };
+  };
+
+  // Create a mapping from coordinates to vertex index
+  const indexMap = new Map();
+  if (!vertices || !Array.isArray(vertices)) {
+    return [];
+  }
+
+  vertices.forEach((v, idx) => {
+    if (v) {
+      const { k, j } = getCoords(v);
+      indexMap.set(`${k},${j}`, idx);
+    }
+  });
+
+  const faces = [];
+  
+  // Special handling for the central face (0,0)
+  if (indexMap.has('0,0')) {
+    const centerIdx = indexMap.get('0,0');
+    const centralFace = [centerIdx];
+    
+    // Check each of the primary directions for adjacent vertices
+    [[-1,0], [0,1], [1,0], [0,-1]].forEach(([dk, dj]) => {
+      const key = `${dk},${dj}`;
+      if (indexMap.has(key)) {
+        centralFace.push(indexMap.get(key));
+      }
+    });
+    
+    // Only add face if we have at least 3 vertices
+    if (centralFace.length >= 3) {
+      faces.push(centralFace);
+    }
+  }
+  
+  // Generate all other faces
+  for (let k = -n+1; k < n; k++) {
+    for (let j = -n+1; j < n; j++) {
+      // Skip the center which we've already handled
+      if (k === 0 && j === 0) continue;
+      
+      // Only consider positions within the diamond
+      if (Math.abs(k) + Math.abs(j) >= n) continue;
+      
+      const key = `${k},${j}`;
+      if (!indexMap.has(key)) continue;
+      
+      const centralIdx = indexMap.get(key);
+      const face = [centralIdx];
+      
+      // Find connected neighbors in clockwise order
+      const neighbors = [];
+      [[0,-1], [1,0], [0,1], [-1,0]].forEach(([dk, dj]) => {
+        const nk = k + dk;
+        const nj = j + dj;
+        const nKey = `${nk},${nj}`;
+        
+        if (indexMap.has(nKey) && Math.abs(nk) + Math.abs(nj) < n) {
+          neighbors.push(indexMap.get(nKey));
+        }
+      });
+      
+      // Only create faces with at least 3 vertices (including center)
+      if (neighbors.length >= 2) {
+        // Add neighbors to form the face
+        face.push(...neighbors);
+        faces.push(face);
+      }
+    }
+  }
+  
+  return faces;
 }
 
 /* ---------- 4.6 UI wiring ---------- */
