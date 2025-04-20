@@ -867,8 +867,12 @@ Module.onRuntimeInitialized = async function() {
       const isLargeTiling = n > 300;
       console.log("Current n value:", n, "isLargeTiling:", isLargeTiling);
 
-      // Always render the 2D view first (we'll need it regardless)
-      await render2D(dominoes);
+      /* Only render the 2‑D SVG if the pane is actually on screen
+         (mobile Safari gives it height 0 while it is display:none).      */
+      const need2D = document.getElementById("view-2d-btn")
+                         .classList.contains("active")        // user is in 2‑D view
+                   || n > 300;                                // 3‑D disabled anyway
+      if (need2D) await render2D(dominoes);                   // otherwise defer
 
       // For large tilings (n > 300), prepare a message for 3D view
       if (isLargeTiling) {
@@ -2253,16 +2257,65 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Delay initialization slightly to ensure all DOM elements are ready
-  setTimeout(() => {
-    try {
-      const n = parseInt(document.getElementById("n-input").value, 10) || 12;
-      updateHeightFunctionVisibility(n);
-      updateVisualization(n);
-    } catch (err) {
-      console.error("Error during initial visualization:", err);
+  /* First sample loader – extra robust for iOS Safari
+   ------------------------------------------------
+   ①  Wait for the 'load' event (DOM *and* CSS finished).
+   ②  Add extra delay for iOS to be absolutely sure.
+   ③  Wait until #aztec‑canvas has a non‑zero size (layout stabilised).
+   ④  Only then run updateVisualization.                                */
+
+  function firstSampleWhenReady() {
+    // 1. container for 3‑D view
+    const container = document.getElementById('aztec-canvas');
+
+    // 2. if it is still collapsed (0×0), try again on next frame
+    if (!container || !container.clientWidth || !container.clientHeight) {
+      return requestAnimationFrame(firstSampleWhenReady);
     }
-  }, 100);
+
+    console.log('Layout ready, initializing visualization...');
+    // 3. everything is ready – launch the initial sample
+    const n = parseInt(document.getElementById("n-input").value, 10) || 12;
+    updateHeightFunctionVisibility(n);
+
+    // Add visible loading indicator before starting
+    const progressElem = document.getElementById("progress-indicator");
+    if (progressElem) progressElem.innerText = "Initializing...";
+
+    // Use a short timeout to ensure UI updates before heavy computation
+    setTimeout(() => {
+      updateVisualization(n);
+    }, 50);
+  }
+
+  // Make sure we also explicitly update any time the pane becomes visible
+  function ensureVisualization() {
+    if (document.visibilityState === 'visible' && cachedDominoes && cachedDominoes.length > 0) {
+      console.log('Page became visible, ensuring visualization is complete');
+      const n = parseInt(document.getElementById("n-input").value, 10) || 12;
+      // If we're in 2D view, re-render it
+      if (document.getElementById("view-2d-btn").classList.contains("active")) {
+        render2D(cachedDominoes);
+      }
+    }
+  }
+
+  // Listen for visibility changes (useful for iOS)
+  document.addEventListener('visibilitychange', ensureVisualization);
+
+  // Add a small delay for iOS to ensure everything is truly ready
+  function initWithIOSDelay() {
+    console.log('Page loaded, preparing visualization...');
+    // Extra delay for iOS (300ms has proven reliable on most devices)
+    setTimeout(firstSampleWhenReady, 300);
+  }
+
+  // run after full page load with additional safety delay
+  if (document.readyState === 'complete') {
+    initWithIOSDelay();
+  } else {
+    window.addEventListener('load', initWithIOSDelay, { once: true });
+  }
 
   // SVG to TikZ conversion function
   function svgToTikZ() {
