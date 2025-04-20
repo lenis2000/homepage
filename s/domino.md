@@ -552,7 +552,7 @@ Module.onRuntimeInitialized = async function() {
     try {
       updatePeriodicityParams();
     } catch (e) {
-      console.error("Error updating params:", e);
+
     }
 
     if (cancelBtn) cancelBtn.style.display = 'none';
@@ -569,12 +569,12 @@ Module.onRuntimeInitialized = async function() {
 
   // Add a global function to easily reset Three.js if needed
   window.resetThreeJS = function() {
-    console.log("Manual reset of Three.js requested");
+
     if (renderer) {
       renderer.dispose();
     }
     initThreeJS();
-    return "Three.js reset complete";
+    return "";
   };
 
   // Calculate height function based on domino configuration
@@ -751,7 +751,7 @@ Module.onRuntimeInitialized = async function() {
        dominoGroup.scale.set(1, 1, 1);         // <‑‑ the crucial line
      } else {
        // Something went wrong with the 3D scene - reinitialize
-       console.log("Reinitializing Three.js - dominoGroup was null");
+ 
        initThreeJS();
      }
      /* ------------------------------------------------------------------ */
@@ -774,8 +774,6 @@ Module.onRuntimeInitialized = async function() {
       a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
       b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
 
-      console.log(`Using 2×2 weights with a=${a}, b=${b}`);
-
       // For 2x2, we'll set the 3x3 weights specially
       w1 = 1.0; w2 = a; w3 = 1.0;
       w4 = b; w5 = 1.0; w6 = b;
@@ -796,14 +794,14 @@ Module.onRuntimeInitialized = async function() {
         else if (i === 9) w9 = val;
       }
 
-      console.log(`Using 3×3 weights: [${w1}, ${w2}, ${w3}], [${w4}, ${w5}, ${w6}], [${w7}, ${w8}, ${w9}]`);
+
     } else {
       // Uniform weights - all weights are 1.0
       w1 = 1.0; w2 = 1.0; w3 = 1.0;
       w4 = 1.0; w5 = 1.0; w6 = 1.0;
       w7 = 1.0; w8 = 1.0; w9 = 1.0;
 
-      console.log('Using uniform weights (all 1.0)');
+
     }
     // Clear previous models
     if (dominoGroup && dominoGroup.children) {
@@ -865,7 +863,7 @@ Module.onRuntimeInitialized = async function() {
 
       // Check if this is a large tiling (n > 300)
       const isLargeTiling = n > 300;
-      console.log("Current n value:", n, "isLargeTiling:", isLargeTiling);
+
 
       /* Only render the 2‑D SVG if the pane is actually on screen
          (mobile Safari gives it height 0 while it is display:none).      */
@@ -876,7 +874,7 @@ Module.onRuntimeInitialized = async function() {
 
       // For large tilings (n > 300), prepare a message for 3D view
       if (isLargeTiling) {
-        console.log("Large tiling detected, showing message instead of 3D");
+
         // Create a div with a message in the 3D canvas container
         const container = document.getElementById('aztec-canvas');
         container.innerHTML = '';
@@ -902,7 +900,7 @@ Module.onRuntimeInitialized = async function() {
       }
 
       // For n ≤ 300, continue with 3D rendering regardless of current view
-      console.log("Small tiling (n ≤ 300), proceeding with 3D rendering");
+
 
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
@@ -1029,7 +1027,7 @@ Module.onRuntimeInitialized = async function() {
 
                 dominoGroup.add(mesh);
               } catch(e) {
-                console.warn("face error", i, e);
+
               }
             }
 
@@ -1086,9 +1084,9 @@ Module.onRuntimeInitialized = async function() {
       // Cleanup - reuse the stopSimulation function since it handles everything properly
       stopSimulation();
       if (progressElem) progressElem.innerText = "";
-      console.log("Visualization complete");
+
     } catch(err) {
-      console.error("Visualization error:", err);
+
       if (progressElem) progressElem.innerText = `Error: ${err.message}`;
       // Also use stopSimulation for cleanup on error
       stopSimulation();
@@ -1164,7 +1162,7 @@ Module.onRuntimeInitialized = async function() {
 
 
 
-    console.log(`Periodicity set to ${periodicity}, showing appropriate parameters`);
+
   }
 
   // Add handlers for periodicity radio buttons
@@ -1293,7 +1291,7 @@ Module.onRuntimeInitialized = async function() {
     // Check if the renderer is properly initialized/restored
     const container = document.getElementById('aztec-canvas');
     if (!container.querySelector('canvas')) {
-      console.log("Reinitializing Three.js - canvas was missing");
+
       initThreeJS();
 
       // If we have cached dominoes, render them again
@@ -1317,7 +1315,7 @@ Module.onRuntimeInitialized = async function() {
               updateVisualization(n);
             }, 10);
           } catch (e) {
-            console.error("Failed to restore 3D view:", e);
+
           }
         }
       }
@@ -1856,7 +1854,7 @@ Module.onRuntimeInitialized = async function() {
             });
           }
         } catch (e) {
-          console.error("Error processing dimer:", e);
+
         }
       });
 
@@ -2038,7 +2036,7 @@ Module.onRuntimeInitialized = async function() {
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
     const showColors = this.checked; // Get the current state of the checkbox
-    console.log("Show colors toggled:", showColors);
+
 
     // Update 2D view if it exists
     const svg2dGroup = svg2d.select("g");
@@ -2273,7 +2271,7 @@ Module.onRuntimeInitialized = async function() {
       return requestAnimationFrame(firstSampleWhenReady);
     }
 
-    console.log('Layout ready, initializing visualization...');
+
     // 3. everything is ready – launch the initial sample
     const n = parseInt(document.getElementById("n-input").value, 10) || 12;
     updateHeightFunctionVisibility(n);
@@ -2291,7 +2289,7 @@ Module.onRuntimeInitialized = async function() {
   // Make sure we also explicitly update any time the pane becomes visible
   function ensureVisualization() {
     if (document.visibilityState === 'visible' && cachedDominoes && cachedDominoes.length > 0) {
-      console.log('Page became visible, ensuring visualization is complete');
+
       const n = parseInt(document.getElementById("n-input").value, 10) || 12;
       // If we're in 2D view, re-render it
       if (document.getElementById("view-2d-btn").classList.contains("active")) {
@@ -2305,7 +2303,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Add a small delay for iOS to ensure everything is truly ready
   function initWithIOSDelay() {
-    console.log('Page loaded, preparing visualization...');
+
     // Extra delay for iOS (300ms has proven reliable on most devices)
     setTimeout(firstSampleWhenReady, 300);
   }
