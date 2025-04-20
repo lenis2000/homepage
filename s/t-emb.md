@@ -16,6 +16,20 @@ permalink: /t-emb/
     <input id="show-origami" type="checkbox" checked>
     Show origami map
   </label>
+  <button id="tikz-btn" style="margin-left:15px;">Export TikZ</button>
+</div>
+
+<!-- TikZ Code Generation Section (hidden by default) -->
+<div id="tikz-container" style="margin-top: 10px; margin-bottom: 10px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9; display: none;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h4 style="margin: 0;">TikZ Code</h4>
+    <div>
+      <button id="copy-tikz-btn" style="padding: 4px 10px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">Copy to Clipboard</button>
+      <button id="download-tikz-btn" style="margin-left: 10px; padding: 4px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer;">Download .tex</button>
+      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    </div>
+  </div>
+  <div id="tikz-code-container" style="font-family: monospace; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
 </div>
 
 <!-- === Camera controls === -->
@@ -213,7 +227,7 @@ function draw2D(data){
   const svg = d3.select("#t-emb-2d");
   svg.selectAll("*").remove();
   const g = svg.append("g").attr("class", "main-container");
-  
+
   // --- dynamic thickness (edge width & vertex radius) ---
   const BASE_EDGE  = 0.0005;   // present look at n≈50
   const BASE_VERT  = 0.001;
@@ -348,12 +362,12 @@ function initThree(){
 function animate(){
   requestAnimationFrame(animate);
   controls.update();
-  
+
   // Apply rotation in demo mode (3D only)
   if (isDemoMode && document.getElementById("view-3d-btn").classList.contains("active")) {
     scene.rotation.y += rotationSpeed;
   }
-  
+
   renderer.render(scene, camera);
 }
 
@@ -361,10 +375,10 @@ function animate(){
 function draw3D(data){
   /* ----------------- INITIAL SETUP ----------------- */
   if (!renderer) initThree();
-  
+
   // Preserve rotation when updating
   const currentRotation = scene.rotation.clone();
-  
+
   scene.clear();
 
   const T = data.T;                     // T‑vertices in the JSON
@@ -505,7 +519,7 @@ function draw3D(data){
   /* ---- maintain camera position after update ---- */
   // Don't reset camera/controls - they will stay at current position
   controls.update();
-  
+
   // Restore rotation when updating
   scene.rotation.copy(currentRotation);
 }
@@ -788,6 +802,161 @@ document.getElementById("demo-mode").addEventListener("change", function () {
   isDemoMode = this.checked;
 });
 
+// --- TikZ Export functionality ---
+function generateTikZ() {
+  // Only work in 2D mode (switch to 2D if not already there)
+  if (document.getElementById("view-3d-btn").classList.contains("active")) {
+    document.getElementById("view-2d-btn").click();
+  }
+
+  // Check if we have data
+  if (!cached || !cached.data) {
+    alert("No data to export. Please run an update first.");
+    return;
+  }
+
+  const data = cached.data;
+  const T = data.T;
+  const showOrigami = document.getElementById("show-origami").checked;
+
+  // Find min/max coordinates for scaling
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+
+  // Check T vertices
+  T.forEach(v => {
+    if (v) {
+      xMin = Math.min(xMin, v.re);
+      xMax = Math.max(xMax, v.re);
+      yMin = Math.min(yMin, -v.im);
+      yMax = Math.max(yMax, -v.im);
+    }
+  });
+
+  // Check O vertices if showing origami
+  if (showOrigami && data.O) {
+    data.O.forEach(v => {
+      if (v) {
+        xMin = Math.min(xMin, v.re);
+        xMax = Math.max(xMax, v.re);
+        yMin = Math.min(yMin, -v.im);
+        yMax = Math.max(yMax, -v.im);
+      }
+    });
+  }
+
+  // Calculate scaling
+  const maxDimension = Math.max(xMax - xMin, yMax - yMin);
+  const scaleFactor = 15.0 / maxDimension; // 15 cm is a good size for LaTeX document
+
+  // Generate TikZ
+  let tikzCode = `\\documentclass{standalone}
+\\usepackage{tikz}
+\\usepackage{xcolor}
+
+\\begin{document}
+\\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]
+
+% T-embedding edges
+`;
+
+  // Build edges for T-embedding
+  const edges = buildEdges(T, cached.n);
+  addBoundaryRingEdges(T, edges, cached.n);
+
+  // Add T-edges to TikZ
+  edges.forEach(edge => {
+    const v1 = T[edge[0]];
+    const v2 = T[edge[1]];
+    if (v1 && v2) {
+      tikzCode += `\\draw[black, line width=0.5pt] (${v1.re.toFixed(6)},${(-v1.im).toFixed(6)}) -- (${v2.re.toFixed(6)},${(-v2.im).toFixed(6)});
+`;
+    }
+  });
+
+  // Add T-vertices to TikZ
+  tikzCode += `
+% T-embedding vertices
+`;
+  T.forEach(v => {
+    if (v) {
+      tikzCode += `\\filldraw[black] (${v.re.toFixed(6)},${(-v.im).toFixed(6)}) circle (${0.0005 * scaleFactor});
+`;
+    }
+  });
+
+  // Add origami if showing
+  if (showOrigami && data.O) {
+    tikzCode += `
+% Origami map edges
+`;
+    const Oedges = buildEdges(data.O, cached.n);
+    addBoundaryRingEdges(data.O, Oedges, cached.n);
+
+    Oedges.forEach(edge => {
+      const v1 = data.O[edge[0]];
+      const v2 = data.O[edge[1]];
+      if (v1 && v2) {
+        tikzCode += `\\draw[red, line width=0.3pt] (${v1.re.toFixed(6)},${(v1.im).toFixed(6)}) -- (${v2.re.toFixed(6)},${(v2.im).toFixed(6)});
+`;
+      }
+    });
+
+    tikzCode += `
+% Origami map vertices
+`;
+    data.O.filter(v => Math.abs(v.re) + Math.abs(v.im) > 1e-10).forEach(v => {
+      tikzCode += `\\filldraw[red, opacity=0.7] (${v.re.toFixed(6)},${(v.im).toFixed(6)}) circle (${0.0003 * scaleFactor});
+`;
+    });
+  }
+
+  tikzCode += `
+\\end{tikzpicture}
+\\end{document}`;
+
+  // Update UI with TikZ code
+  document.getElementById("tikz-code-container").textContent = tikzCode;
+  document.getElementById("tikz-container").style.display = "block";
+}
+
+// TikZ button event handlers
+document.getElementById("tikz-btn").addEventListener("click", generateTikZ);
+
+document.getElementById("copy-tikz-btn").addEventListener("click", function() {
+  const codeContainer = document.getElementById('tikz-code-container');
+  const successMsg = document.getElementById('copy-success-msg');
+
+  const textArea = document.createElement('textarea');
+  textArea.value = codeContainer.textContent;
+  textArea.style.position = 'fixed';
+  document.body.appendChild(textArea);
+  textArea.select();
+
+  try {
+    document.execCommand('copy');
+    successMsg.style.display = 'inline';
+    setTimeout(() => {
+      successMsg.style.display = 'none';
+    }, 2000);
+  } catch (err) {
+    alert('Failed to copy to clipboard. Please try again or select and copy manually.');
+  }
+
+  document.body.removeChild(textArea);
+});
+
+document.getElementById("download-tikz-btn").addEventListener("click", function() {
+  const codeContainer = document.getElementById('tikz-code-container');
+  const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
+  const a = document.createElement('a');
+  const n = cached ? cached.n : "unknown";
+  const a_val = cached ? cached.a.toFixed(2) : "unknown";
+  a.download = `t-emb_n${n}_a${a_val}.tex`;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
 /* ---------- 5. Camera controls ---------- */
 // Shared variables for zoom levels
 let zoom3DLevel = 1.0;
@@ -804,7 +973,7 @@ document.getElementById("reset-view-btn").addEventListener("click", function() {
     camera.lookAt(0, 0, 0);
     zoom3DLevel = 1.0;
     controls.reset();
-    
+
     // Reset scene rotation only if not in demo mode
     if (!isDemoMode) {
       scene.rotation.set(0, 0, 0);
