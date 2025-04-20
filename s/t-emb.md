@@ -241,6 +241,31 @@ function draw3D(data){
     });
   }
 
+  /* ------------------------------------------------------------------
+     Guarantee a height entry for the central vertex (k,j) = (0,0).
+
+     – If an O‑vertex with those indices exists, use its imaginary part.
+     – Otherwise approximate by averaging the four neighbours that *do*
+       lie in OImMap.  This prevents the centre from defaulting to 0 and
+       eliminates the fan‑out artefact.
+  ------------------------------------------------------------------- */
+  if (!OImMap.has('0,0')) {
+    const centreO = data.O?.find(o => o.k === 0 && o.j === 0 && o.im!==undefined);
+    if (centreO) {
+      OImMap.set('0,0', centreO.im);
+    } else {
+      const neighKeys = ['1,0','-1,0','0,1','0,-1'].filter(key => OImMap.has(key));
+      if (neighKeys.length) {
+        const avg = neighKeys.reduce((s,k)=>s+OImMap.get(k),0)/neighKeys.length;
+        OImMap.set('0,0', avg);
+      } else {
+        // fall back: give the centre a tiny lift so it is distinct
+        OImMap.set('0,0', 1e-6);
+      }
+    }
+  }
+
+
   /* ---- build interior + boundary edges ---- */
   const Tedges = buildEdges(T, cached.n);
   addBoundaryRingEdges(T, Tedges, cached.n);
