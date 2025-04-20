@@ -137,6 +137,11 @@ code:
     border-radius: 5px;
     margin-bottom: 15px;
   }
+
+  /* Sixu2011vertex pane inherits general .viz-pane rules; only tweak if wanted */
+  #six-vertex-svg {
+    touch-action:none;   /* enable d3 zoom later if desired */
+  }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
@@ -271,9 +276,18 @@ code:
 <div class="visualization-container">
   <!-- View toggle buttons -->
   <div class="view-toggle d-flex flex-wrap mb-2">
-    <button id="view-3d-btn" class="btn btn-sm mr-2 active" style="background-color: #e0e0e0; border: 1px solid #999; border-radius: 3px; padding: 6px 12px;">3D</button>
-    <button id="view-2d-btn" class="btn btn-sm" style="background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 6px 12px;">2D</button>
-  </div>
+  <button id="view-3d-btn"  class="btn btn-sm mr-2 active"
+          style="background-color:#e0e0e0;border:1px solid #999;
+                 border-radius:3px;padding:6px 12px;">3D</button>
+
+  <button id="view-2d-btn"  class="btn btn-sm mr-2"
+          style="background-color:#f0f0f0;border:1px solid #ccc;
+                 border-radius:3px;padding:6px 12px;">2D</button>
+
+  <button id="view-6v-btn"  class="btn btn-sm"
+          style="background-color:#f0f0f0;border:1px solid #ccc;
+                 border-radius:3px;padding:6px 12px;">6V</button>
+</div>
 
   <!-- Camera controls for 3D pane -->
   <div id="camera-controls" class="mb-3">
@@ -347,6 +361,13 @@ code:
 
     <!-- SVG container with adjusted height to account for controls -->
     <svg id="aztec-svg-2d" style="width: 100%; height: calc(100% - 120px); border: 1px solid #ccc;"></svg>
+  </div>
+
+  <!-- 6u2011Vertex (path) Visualization Pane (hidden by default) -->
+  <div id="six-vertex-canvas" class="viz-pane"
+       style="display:none; position:relative; overflow:hidden; height:75vh;">
+    <svg id="six-vertex-svg"
+         style="width:100%; height:100%; border:1px solid #ccc;"></svg>
   </div>
 </div>
 
@@ -1149,6 +1170,11 @@ Module.onRuntimeInitialized = async function() {
 
     // If we get here, n is within allowed range for current view
     updateVisualization(n);
+    
+    // If 6V pane is currently active, refresh it too
+    if(document.getElementById("view-6v-btn").classList.contains("active")){
+      setTimeout(renderSixVertexView, 50);   // let cache fill
+    }
   });
 
   // Function to update parameter visibility based on selected periodicity
@@ -1272,14 +1298,10 @@ Module.onRuntimeInitialized = async function() {
 
   // View toggle handlers
   document.getElementById("view-3d-btn").addEventListener("click", function() {
-    // Show 3D view, hide 2D view
+    hideAllPanes(); clearActiveButtons();
     document.getElementById("aztec-canvas").style.display = "block";
-    document.getElementById("aztec-2d-canvas").style.display = "none";
     document.getElementById("camera-controls").style.display = "block";
-
-    // Update toggle button states
-    document.getElementById("view-3d-btn").classList.add("active");
-    document.getElementById("view-2d-btn").classList.remove("active");
+    this.classList.add("active");
 
     // Set the max n for 3D view
     document.getElementById("n-input").setAttribute("max", "300");
@@ -1363,6 +1385,135 @@ Module.onRuntimeInitialized = async function() {
     let hex = Math.round(brightness).toString(16);
     if(hex.length < 2) hex = "0" + hex;
     return "#" + hex + hex + hex;
+  }
+
+  /***********************************************************************
+   *  SIX-VERTEX  →  PATH-VIEW  (rectangular, not rotated)
+   *
+   *  Algorithm (order n Aztec diamond):
+   *   • Work on the "checkerboard" 2×2 faces.  Re-index them to an n×n
+   *     square grid with coordinates (i,j), 0 ≤ i,j < n.
+   *   • Each domino occupies two faces; colour/orientation encodes one of
+   *     the Wang-tiling arrow patterns for the six-vertex model:
+   *
+   *       BLUE   (horizontal, NW-SE) →   ↔ on top & bottom edges
+   *       GREEN  (horizontal, NE-SW) →   ← on top & bottom edges
+   *       RED    (vertical, NE-SW)   →   ↕ on left & right edges
+   *       YELLOW (vertical, NW-SE)   →   ↑ on left, ↓ on right
+   *
+   *   • Place arrows on *internal* edges only; outside border uses the
+   *     usual Domain-Wall b.c.: all arrows enter from West/South, exit at
+   *     North/East.
+   *   • Recover non-intersecting lattice paths by following ↑/→ arrows
+   *     starting at the S-boundary (row 0½) – you'll get n paths.
+   **********************************************************************/
+
+  /* 4-A.  Arrow-field builder */
+  function buildArrowField(dominoes, n){
+    // grid has (n+1)×(n+1) vertices, n×n internal edges
+    const hor = Array.from({length:n}, ()=> Array(n+1).fill(0)); // east=+1, west=-1
+    const ver = Array.from({length:n+1},()=> Array(n).fill(0));  // north=+1, south=-1
+
+    // helper to write an arrow, keeping antisymmetry automatically
+    function setHor(i,j,dir){ 
+      // Check bounds to prevent "Cannot set properties of undefined" error
+      if (i >= 0 && i < n && j >= 0 && j < n+1) {
+        hor[i][j] = dir;
+      }
+    }       
+    function setVer(i,j,dir){ 
+      // Check bounds to prevent "Cannot set properties of undefined" error
+      if (i >= 0 && i < n+1 && j >= 0 && j < n) {
+        ver[i][j] = dir;
+      }
+    }
+
+    dominoes.forEach(d=>{
+      const i = Math.floor(d.y/2), j = Math.floor(d.x/2); // cell coord
+      if(d.w>d.h){
+        // horizontal domino covers (i,j) & (i,j+1)
+        const isBlue   = d.color === "blue";
+        const dir = isBlue ? +1 : -1;                 // blue → east, green → west
+        setHor(i,      j   , dir);
+        setHor(i,      j+1 , dir);
+        setHor(i+1,    j   , dir);
+        setHor(i+1,    j+1 , dir);
+      }else{
+        // vertical domino covers (i,j) & (i+1,j)
+        const isRed    = d.color === "red";
+        const dir = isRed ? +1 : -1;                  // red → north, yellow → south
+        setVer(i,   j  , dir);
+        setVer(i+1, j  , dir);
+        setVer(i,   j+1, dir);
+        setVer(i+1, j+1, dir);
+      }
+    });
+
+    // Boundary: DWBC  (all arrows inwards on W/S)
+    for(let i=0;i<n;i++){ setHor(i,0,-1);  setVer(n,i,+1);}   // West, North
+    for(let j=0;j<n;j++){ setVer(0,j,-1);  setHor(j,n,+1);}   // South, East
+
+    return {hor,ver};
+  }
+
+  /* 4-B.  Trace ↑/→ paths, return as array of point-arrays */
+  function tracePaths(field,n){
+    const {hor,ver} = field;
+    const paths=[];
+    for(let j=0;j<n;j++){              // starts along S boundary
+      if(ver[0][j]!==+1) continue;
+      let x=j, y=0;
+      const pts=[[x,y]];
+      while(x<n && y<n){
+        if(ver[y][x]===+1){ y++; }     // move north
+        else if(hor[y][x]===+1){ x++; }// move east
+        else break;
+        pts.push([x,y]);
+      }
+      paths.push(pts);
+    }
+    return paths;
+  }
+
+  /* 4-C.  Main render-to-SVG (takes cachedDominoes & current n) */
+  async function renderSixVertexView(){
+    const n = parseInt(document.getElementById("n-input").value,10);
+    if(!cachedDominoes || cachedDominoes.length===0){ alert("Sample first!"); return; }
+
+    // build field & paths
+    const field = buildArrowField(cachedDominoes,n);
+    const paths = tracePaths(field,n);
+
+    // quick SVG draw
+    const svg = d3.select("#six-vertex-svg");
+    svg.selectAll("*").remove();
+
+    const size  = Math.min(svg.node().clientWidth, svg.node().clientHeight)*0.9;
+    const scale = size/n, margin = (svg.node().clientWidth-size)/2;
+
+    const g = svg.append("g")
+               .attr("transform",`translate(${margin},${margin}) scale(${scale})`);
+
+    // grid
+    for(let i=0;i<=n;i++){
+      g.append("line")
+        .attr("x1",0).attr("y1",i)
+        .attr("x2",n).attr("y2",i)
+        .attr("stroke","#ddd").attr("stroke-width",0.05);
+      g.append("line")
+        .attr("x1",i).attr("y1",0)
+        .attr("x2",i).attr("y2",n)
+        .attr("stroke","#ddd").attr("stroke-width",0.05);
+    }
+
+    // paths
+    paths.forEach(p=>{
+      g.append("polyline")
+        .attr("points", p.map(pt=>pt.join(",")).join(" "))
+        .attr("fill","none")
+        .attr("stroke","black")
+        .attr("stroke-width",0.15);
+    });
   }
 
   // Function to convert color to grayscale based on position
@@ -2090,6 +2241,20 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
+  // View pane helper functions
+  function hideAllPanes(){
+    document.getElementById("aztec-canvas").style.display    = "none";
+    document.getElementById("aztec-2d-canvas").style.display = "none";
+    document.getElementById("six-vertex-canvas").style.display = "none";
+    document.getElementById("camera-controls").style.display = "none";
+    animationActive = false;                 // pause 3-D if not visible
+  }
+  function clearActiveButtons(){
+    document.getElementById("view-3d-btn").classList.remove("active");
+    document.getElementById("view-2d-btn").classList.remove("active");
+    document.getElementById("view-6v-btn").classList.remove("active");
+  }
+
   // Function to render dominoes in 2D view
   async function render2D(dominoes) {
     if (!dominoes || dominoes.length === 0) return;
@@ -2161,14 +2326,9 @@ Module.onRuntimeInitialized = async function() {
   }
 
   document.getElementById("view-2d-btn").addEventListener("click", function() {
-    // Show 2D view, hide 3D view
-    document.getElementById("aztec-canvas").style.display = "none";
+    hideAllPanes(); clearActiveButtons();
     document.getElementById("aztec-2d-canvas").style.display = "block";
-    document.getElementById("camera-controls").style.display = "none";
-
-    // Update toggle button states
-    document.getElementById("view-3d-btn").classList.remove("active");
-    document.getElementById("view-2d-btn").classList.add("active");
+    this.classList.add("active");
 
     // Set the max n for 2D view
     document.getElementById("n-input").setAttribute("max", "500");
@@ -2297,8 +2457,25 @@ Module.onRuntimeInitialized = async function() {
       if (document.getElementById("view-2d-btn").classList.contains("active")) {
         render2D(cachedDominoes);
       }
+      // If we're in 6V view, re-render it
+      else if (document.getElementById("view-6v-btn").classList.contains("active")) {
+        renderSixVertexView();
+      }
     }
   }
+
+
+
+  // 6V view button handler
+  document.getElementById("view-6v-btn").addEventListener("click", function() {
+    hideAllPanes(); clearActiveButtons();
+    document.getElementById("six-vertex-canvas").style.display = "block";
+    this.classList.add("active");
+    document.getElementById("n-input").setAttribute("max", "500"); // same as 2D
+
+    // Always draw from cache
+    renderSixVertexView();
+  });
 
   // Listen for visibility changes (useful for iOS)
   document.addEventListener('visibilitychange', ensureVisualization);
