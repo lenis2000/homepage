@@ -180,16 +180,46 @@ function initThree(){
   const div = document.getElementById("t-emb-3d");
   div.innerHTML = "";
   const w=div.clientWidth, h=div.clientHeight;
-  scene   = new THREE.Scene();
-  camera  = new THREE.PerspectiveCamera(45,w/h,0.001,1000);
-  camera.position.set(0,0,3);
-
-  renderer= new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(w,h); div.appendChild(renderer.domElement);
-  controls= new THREE.OrbitControls(camera, renderer.domElement);
+  
+  // Initialize the scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff); // White background
+  
+  // Set up camera
+  camera = new THREE.PerspectiveCamera(45, w/h, 0.001, 1000);
+  camera.position.set(0, 0, 2); // Position camera for better initial view
+  
+  // Set up renderer with antialiasing
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio); // For sharper rendering
+  div.appendChild(renderer.domElement);
+  
+  // Set up orbit controls for interaction
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; // Smoother controls
+  controls.dampingFactor = 0.25;
+  
+  // Handle window resize
+  window.addEventListener('resize', () => {
+    if (renderer) {
+      const newWidth = div.clientWidth;
+      const newHeight = div.clientHeight;
+      camera.aspect = newWidth / newHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newWidth, newHeight);
+    }
+  });
+  
+  // Start animation loop
   animate();
 }
-function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); }
+
+function animate(){ 
+  requestAnimationFrame(animate); 
+  controls.update(); 
+  renderer.render(scene, camera); 
+}
 
 function draw3D(data){
   if(!renderer) initThree();
@@ -261,8 +291,29 @@ function draw3D(data){
   });
   
   console.log("3D: Created", positions.length/6, "line segments");
+  
+  // Create the line segments geometry and material
   geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  scene.add(new THREE.LineSegments(geom, new THREE.LineBasicMaterial({color:0x000000})));
+  
+  // Line material with improved appearance
+  const lineMaterial = new THREE.LineBasicMaterial({
+    color: 0x000000,
+    linewidth: 1.5, // Note: WebGL has limited support for line widths
+    opacity: 0.85,
+    transparent: true
+  });
+  
+  // Add the line segments to the scene
+  scene.add(new THREE.LineSegments(geom, lineMaterial));
+  
+  // Add a grid to help with orientation
+  const gridHelper = new THREE.GridHelper(2, 20, 0xcccccc, 0xdddddd);
+  gridHelper.position.y = -1; // Place grid below the model
+  scene.add(gridHelper);
+  
+  // Adjust camera to get a good view of the model
+  camera.position.set(0.5, -0.5, 1.5);
+  camera.lookAt(0, 0, 0);
 }
 
 // Build the interior edges among T- or O-vertices
