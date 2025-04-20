@@ -103,7 +103,7 @@ permalink: /t-emb/
 <script src="/js/OrbitControls.js"></script>
 
 <!-- WASM/JS produced from the single C++ core -->
-<script src="/js/2025-03-27-t-emb-a-json.js"></script>   <!-- same module drives BOTH views -->
+<script src="/s/t-emb.js"></script>   <!-- same module drives BOTH views -->
 
 <script>
 /* ---------- 4.1 globals ---------- */

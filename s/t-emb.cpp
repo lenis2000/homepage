@@ -1,42 +1,39 @@
+
 /*
-  2025-03-27-t-emb-a-json.cpp
+  2025-03-28-t-emb-3d-json.cpp
 
-  A version of the t-embedding generator that allows a tunable real parameter a.
-  It provides a single exported function:
+  This is the same t-embedding generator code as in 2025-03-27-t-emb-a-json.cpp,
+  only placed here under a new name. It exports doTembJSONwithA(n, a) which
+  returns a JSON string describing T, O, and boundary arrays for an Aztec diamond
+  of parameter n, with a doubly periodic weight a.
 
-    doTembJSONwithA(n, a)
+  Compilation with Emscripten example:
 
-  that returns a JSON with:
-    {
-      "T": [...],  // T-vertices
-      "O": [...],  // O-vertices
-      "B": [...]   // boundary points (T+O) around perimeter
-    }
 
-  Usage with Emscripten (example command):
+  emcc t-emb.cpp -o t-emb.js \
+   -s WASM=1 \
+   -s ASYNCIFY=1 \
+   -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress']" \
+   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+   -s ALLOW_MEMORY_GROWTH=1 \
+   -s INITIAL_MEMORY=64MB \
+   -s ENVIRONMENT=web \
+   -s SINGLE_FILE=1 \
+   -O3 -ffast-math \
 
-    emcc t-emb.cpp -o t-emb.js \
-     -s WASM=1 \
-     -s ASYNCIFY=1 \
-     -s "EXPORTED_FUNCTIONS=['_doTembJSONwithA','_freeString','_getProgress','_resetProgress']" \
-     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
-     -s ALLOW_MEMORY_GROWTH=1 \
-     -s INITIAL_MEMORY=64MB \
-     -s ENVIRONMENT=web \
-     -s SINGLE_FILE=1 \
-     -O3 -ffast-math
 
-  Then, include the generated .js (and .wasm if separate) in your web page.
-  Make sure to wrap the exported function and freeString with cwrap or ccall, for example:
+  Then load "2025-03-28-t-emb-3d-json.js" in your HTML, and call:
 
-      const doTembJSONwithA = Module.cwrap('doTembJSONwithA', 'number', ['number','number']);
-      const freeString = Module.cwrap('freeString', null, ['number']);
-
-  Then call:
-      const ptr = doTembJSONwithA(n, a);
+      const ptr = Module.ccall('doTembJSONwithA', 'number', ['number','number'], [n, a]);
       const jsonStr = Module.UTF8ToString(ptr);
-      freeString(ptr);
-      const data = JSON.parse(jsonStr);
+      Module.ccall('freeString', null, ['number'], [ptr]);
+
+  The returned JSON has the structure:
+    {
+      "T": [ {k, j, re, im}, ... ],
+      "O": [ {k, j, re, im}, ... ],
+      "B": [ {re, im}, ... ]  // boundary points T+O
+    }
 */
 
 #include <emscripten.h>
