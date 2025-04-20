@@ -22,7 +22,7 @@ permalink: /t-emb/
 
 <!-- === Two panes === -->
 <div class="visualization-container">
-  <svg id="t-emb-2d" style="width:100%;height:80vh;border:1px solid #ccc;"></svg>
+  <svg id="t-emb-2d" viewBox="-1 -1 2 2" style="width:100%;height:80vh;border:1px solid #ccc;"></svg>
   <div id="t-emb-3d"  style="display:none;width:100%;height:80vh;"></div>
 </div>
 
@@ -62,12 +62,12 @@ permalink: /t-emb/
   .vertex {
     fill: black;
     stroke: none;
-    r: 0.001;
+    r: 0.004;
   }
 
   .edge {
     stroke: black;
-    stroke-width: 0.001px;
+    stroke-width: 0.003;
     fill: none;
   }
 
@@ -95,7 +95,7 @@ permalink: /t-emb/
 <script src="/js/OrbitControls.js"></script>
 
 <!-- WASM/JS produced from the single C++ core -->
-<script src="/s/t-emb.js"></script>   <!-- same module drives BOTH views -->
+<script src="/js/2025-03-27-t-emb-a-json.js"></script>   <!-- same module drives BOTH views -->
 
 <script>
 /* ---------- 4.1 globals ---------- */
@@ -129,6 +129,7 @@ function draw2D(data){
   const svg   = d3.select("#t-emb-2d");
   svg.selectAll("*").remove();
   const g     = svg.append("g");
+  
   const T     = data.T;
   
   // Helper function to safely get real component
@@ -164,10 +165,12 @@ function draw2D(data){
    .attr("y2", d => -getImag(T[d[1]]));
 
   g.selectAll("circle.vert").data(T).join("circle")
-   .attr("class","vertex").attr("r",0.001)
+   .attr("class","vertex").attr("r",0.004)
    .attr("cx", d => getReal(d))
    .attr("cy", d => -getImag(d));
    
+  /* No need for auto-scale with viewBox - the SVG viewBox already handles scaling for us */
+  
   /* optional zoom */
   svg.call(d3.zoom().scaleExtent([0.5,30]).on("zoom",e=>g.attr("transform",e.transform)));
 }
