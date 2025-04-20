@@ -20,8 +20,8 @@ permalink: /t-emb/
 
 <!-- === View toggle === -->
 <div class="view-toggle" style="margin-bottom:10px">
-  <button id="view-2d-btn" class="active">2‑D</button>
-  <button id="view-3d-btn">3‑D</button>
+  <button id="view-3d-btn" class="active">3D</button>
+  <button id="view-2d-btn">2D</button>
 </div>
 
 <!-- === Two panes === -->
@@ -324,11 +324,6 @@ function draw3D(data){
   const lineGroup = new THREE.LineSegments(geometry, material);
   scene.add(lineGroup);
 
-  /* ===============================================================
-     ❷  ***REMOVE SPHERES***  – no decorative vertices any more
-     (The old sphere/InstancedMesh code block has been deleted.)
-  ================================================================== */
-
   /* ---- camera framing ---- */
   camera.position.set(0.5, -0.5, 2);
   camera.lookAt(0,0,0);
@@ -495,10 +490,10 @@ async function update(){
     const data=await fetchEmbedding(n,a);
 
 
-    if (document.getElementById("view-2d-btn").classList.contains("active")) {
-      draw2D(data);
-    } else {
+    if (document.getElementById("view-3d-btn").classList.contains("active")) {
       draw3D(data);
+    } else {
+      draw2D(data);
     }
   } catch (err) {
   }
