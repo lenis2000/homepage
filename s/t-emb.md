@@ -26,8 +26,8 @@ permalink: /t-emb/
 
 <!-- === Two panes === -->
 <div class="visualization-container">
-  <svg id="t-emb-2d" viewBox="-1 -1 2 2" style="width:100%;height:80vh;border:1px solid #ccc;"></svg>
-  <div id="t-emb-3d"  style="display:none;width:100%;height:80vh;"></div>
+  <svg id="t-emb-2d" viewBox="-1 -1 2 2" style="display:none;width:100%;height:80vh;border:1px solid #ccc;"></svg>
+  <div id="t-emb-3d"  style="width:100%;height:80vh;"></div>
 </div>
 
 <style>
