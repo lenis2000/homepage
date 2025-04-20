@@ -85,12 +85,10 @@ permalink: /t-emb/
   .vertex {
     fill: black;
     stroke: none;
-    r: 0.0005;
   }
 
   .edge {
     stroke: black;
-    stroke-width: 0.0005;
     fill: none;
   }
 
@@ -120,8 +118,8 @@ permalink: /t-emb/
   }
 
   /* --- origami (O‑embedding) --- */
-  .o-edge    { stroke:red; stroke-width:0.0003px; fill:none; }
-  .o-vertex  { fill:red;   stroke:none;  r:0.0005;  opacity:0.7; }
+  .o-edge    { stroke:red; fill:none; }
+  .o-vertex  { fill:red;   stroke:none; opacity:0.7; }
 
   /* --- face styling --- */
   .face     { stroke-width:0.0001px; }
@@ -176,6 +174,15 @@ Module.onRuntimeInitialized = () => {
   update();
 };
 
+/* --- thickness scaling for 2‑D --- */
+function getThicknessScale(n){
+  if (n <= 20)  return 2.0;   // +2 levels (thickest)
+  if (n <= 35)  return 1.5;   // +1 level
+  if (n <  75)  return 1.0;   // baseline around n≈50
+  if (n < 100)  return 0.75;  // –1 level
+  return 0.5;                 // –2 levels (thinnest)
+}
+
 /* ---------- 4.3 helpers ---------- */
 async function fetchEmbedding(n,a){
   if (cached && cached.n===n && Math.abs(cached.a-a)<1e-12) return cached.data;
@@ -201,6 +208,13 @@ function draw2D(data){
   const svg = d3.select("#t-emb-2d");
   svg.selectAll("*").remove();
   const g = svg.append("g").attr("class", "main-container");
+  
+  // --- dynamic thickness (edge width & vertex radius) ---
+  const BASE_EDGE  = 0.0005;   // present look at n≈50
+  const BASE_VERT  = 0.001;
+  const scale      = getThicknessScale(cached.n);   // cached.n is current n
+  const edgeWidth  = BASE_EDGE * scale;
+  const vertRadius = BASE_VERT * scale;
 
   // Apply the stored transform if available
   if (currentTransform) {
@@ -245,13 +259,15 @@ function draw2D(data){
   // Draw edges
   TContainer.selectAll("line.edge").data(edges).join("line")
    .attr("class","edge")
+   .attr("stroke-width", edgeWidth)        // ← add this
    .attr("x1", d => getReal(T[d[0]]))
    .attr("y1", d => -getImag(T[d[0]]))
    .attr("x2", d => getReal(T[d[1]]))
    .attr("y2", d => -getImag(T[d[1]]));
 
   TContainer.selectAll("circle.vert").data(T).join("circle")
-   .attr("class","vertex").attr("r",0.001)
+   .attr("class","vertex")
+   .attr("r", vertRadius)                  // ← add / replace
    .attr("cx", d => getReal(d))
    .attr("cy", d => -getImag(d));
 
@@ -263,6 +279,7 @@ function draw2D(data){
     .selectAll("line.o-edge")
     .data(Oedges).join("line")
     .attr("class","o-edge")
+    .attr("stroke-width", edgeWidth)          // in the O‑edge join
     .attr("x1", d => data.O[d[0]].re)
     .attr("y1", d => -data.O[d[0]].im)
     .attr("x2", d => data.O[d[1]].re)
@@ -273,6 +290,7 @@ function draw2D(data){
     .data(data.O.filter(v => Math.abs(v.re)+Math.abs(v.im) > 1e-10))
     .join("circle")
     .attr("class","o-vertex")
+    .attr("r", vertRadius * 0.8)              // slightly smaller
     .attr("cx", d => d.re)
     .attr("cy", d => -d.im);
 
