@@ -3049,4 +3049,27 @@ Module.onRuntimeInitialized = async function() {
     URL.revokeObjectURL(a.href);
   });
 };
+
+/* Collapse the “About” section automatically on phones.
+   ▸ Uses Bootstrap’s Collapse API.
+   ▸ Triggers after DOM+CSS are ready, so it works on iOS Safari.  */
+document.addEventListener('DOMContentLoaded', () => {
+  const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
+  if (!isSmallScreen) return;      // keep desktop behaviour unchanged
+
+  const about = document.getElementById('infoCollapse');
+  if (!about) return;              // safety check
+
+  // Remove the “show” class Bootstrap added in the markup
+  about.classList.remove('show');
+
+  // Tell assistive technologies it is now collapsed
+  const btn = document.querySelector('[data-target="#infoCollapse"]');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+
+  // Initialise the collapse component without toggling (so it stays folded)
+  if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+    new bootstrap.Collapse(about, { toggle: false });
+  }
+});
 </script>
