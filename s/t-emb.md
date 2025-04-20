@@ -16,21 +16,9 @@ permalink: /t-emb/
     <input id="show-origami" type="checkbox" checked>
     Show origami map
   </label>
-  <button id="tikz-btn" style="margin-left:15px;">Export TikZ</button>
 </div>
 
-<!-- TikZ Code Generation Section (hidden by default) -->
-<div id="tikz-container" style="margin-top: 10px; margin-bottom: 10px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9; display: none;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h4 style="margin: 0;">TikZ Code</h4>
-    <div>
-      <button id="copy-tikz-btn" style="padding: 4px 10px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">Copy to Clipboard</button>
-      <button id="download-tikz-btn" style="margin-left: 10px; padding: 4px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer;">Download .tex</button>
-      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
-    </div>
-  </div>
-  <div id="tikz-code-container" style="font-family: monospace; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
-</div>
+
 
 <!-- === Camera controls === -->
 <div class="camera-controls" style="margin-bottom:10px">
@@ -64,6 +52,24 @@ permalink: /t-emb/
       viewBox="-1 -1 2 2"
       style="display:none;width:100%;aspect-ratio:1/1;border:1px solid #ccc;"></svg>
   <div id="t-emb-3d" style="width:100%;aspect-ratio:1/1;"></div>
+</div>
+
+<!-- === TikZ Export Section === -->
+<div style="margin-top: 20px;">
+  <button id="tikz-btn" style="padding: 8px 16px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 16px;">Export TikZ</button>
+</div>
+
+<!-- TikZ Code Generation Section (hidden by default) -->
+<div id="tikz-container" style="margin-top: 15px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9; display: none;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h4 style="margin: 0;">TikZ Code</h4>
+    <div>
+      <button id="copy-tikz-btn" style="padding: 4px 10px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">Copy to Clipboard</button>
+      <button id="download-tikz-btn" style="margin-left: 10px; padding: 4px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 3px; cursor: pointer;">Download .tex</button>
+      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    </div>
+  </div>
+  <div id="tikz-code-container" style="font-family: monospace; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 12px; max-height: 300px; overflow-y: auto;"></div>
 </div>
 
 <style>
