@@ -18,6 +18,8 @@ nav_weight: 19
 
 <hr/>
 
+<h2 class="mb-3">Comprehensive pages</h2>
+
 {%include sims.html%}
 
 
