@@ -12,6 +12,10 @@ permalink: /t-emb/
   <label style="margin-left:15px">Periodic a:</label>
   <input id="a-input" type="number" value="0.8" min="0.1" max="10" step="0.1">
   <button id="update-btn">Update</button>
+  <label style="margin-left:15px">
+    <input id="show-origami" type="checkbox" checked>
+    Show origami map
+  </label>
 </div>
 
 <!-- === View toggle === -->
@@ -88,6 +92,10 @@ permalink: /t-emb/
   button {
     cursor: pointer;
   }
+
+  /* --- origami (O‑embedding) --- */
+  .o-edge    { stroke:red; stroke-width:0.0003px; fill:none; }
+  .o-vertex  { fill:red;   stroke:none;  r:0.0005;  opacity:0.7; }
 </style>
 
 <script src="/js/d3.v7.min.js"></script>
@@ -128,7 +136,12 @@ async function fetchEmbedding(n,a){
 function draw2D(data){
   const svg   = d3.select("#t-emb-2d");
   svg.selectAll("*").remove();
-  const g     = svg.append("g");
+  const g          = svg.append("g");
+  const TContainer = g.append("g").attr("class","t-container");        // existing content
+  const OContainer = g.append("g")
+      .attr("class","o-container")
+      .style("visibility",
+             document.getElementById("show-origami").checked ? "visible" : "hidden");
 
   const T     = data.T;
 
@@ -157,17 +170,38 @@ function draw2D(data){
   addBoundaryRingEdges(T, edges, cached.n);
   console.log("Created edges:", edges.length);
 
-  g.selectAll("line.edge").data(edges).join("line")
+  TContainer.selectAll("line.edge").data(edges).join("line")
    .attr("class","edge")
    .attr("x1", d => getReal(T[d[0]]))
    .attr("y1", d => -getImag(T[d[0]]))
    .attr("x2", d => getReal(T[d[1]]))
    .attr("y2", d => -getImag(T[d[1]]));
 
-  g.selectAll("circle.vert").data(T).join("circle")
+  TContainer.selectAll("circle.vert").data(T).join("circle")
    .attr("class","vertex").attr("r",0.001)
    .attr("cx", d => getReal(d))
    .attr("cy", d => -getImag(d));
+
+  // --- build and draw O‑edges / O‑vertices (origami map) ---
+  const Oedges = buildEdges(data.O, cached.n);
+  addBoundaryRingEdges(data.O, Oedges, cached.n);
+
+  OContainer.append("g")
+    .selectAll("line.o-edge")
+    .data(Oedges).join("line")
+    .attr("class","o-edge")
+    .attr("x1", d => data.O[d[0]].re)
+    .attr("y1", d => -data.O[d[0]].im)
+    .attr("x2", d => data.O[d[1]].re)
+    .attr("y2", d => -data.O[d[1]].im);
+
+  OContainer.append("g")
+    .selectAll("circle.o-vertex")
+    .data(data.O.filter(v => Math.abs(v.re)+Math.abs(v.im) > 1e-10))
+    .join("circle")
+    .attr("class","o-vertex")
+    .attr("cx", d => d.re)
+    .attr("cy", d => -d.im);
 
   /* No need for auto-scale with viewBox - the SVG viewBox already handles scaling for us */
 
@@ -513,4 +547,9 @@ document.getElementById("view-3d-btn").onclick = ()=>{
   document.getElementById("t-emb-2d").style.display="none";
   if (cached) draw3D(cached.data);
 };
+
+document.getElementById("show-origami").addEventListener("change", function () {
+  d3.select(".o-container")
+     .style("visibility", this.checked ? "visible" : "hidden");
+});
 </script>
