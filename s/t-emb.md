@@ -5,6 +5,71 @@ layout: default          # keeps site look identical to domino.md
 permalink: /t-emb/
 ---
 
+<!-- ===== ABOUT (accordion) ===== -->
+<div class="accordion mb-4" id="tEmbInfoAccordion">
+  <div class="card">
+
+    <!-- clickable header -->
+    <div class="card-header" id="tEmbInfoHeading">
+      <h5 class="mb-0">
+        <button class="btn btn-link" type="button"
+                data-toggle="collapse" data-target="#tEmbInfoCollapse"
+                aria-expanded="false" aria-controls="tEmbInfoCollapse">
+          <strong>About</strong> <i class="fa fa-chevron-down"></i>
+        </button>
+      </h5>
+    </div>
+
+    <!-- collapsible body (collapsed by default) -->
+    <div id="tEmbInfoCollapse" class="collapse"
+         aria-labelledby="tEmbInfoHeading" data-parent="#tEmbInfoAccordion">
+      <div class="card-body">
+
+        <p class="mt-3">
+          This page is an <strong>interactive visualization of the two canonical
+          embeddings&nbsp;(<em>T</em> and <em>O</em>) of the
+          <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec‑diamond graph</a></strong> with
+          uniform ($a=1$) or $2\times 2$ periodic edge weights depending on a parameter $a\ne 1$.
+          In the <em>T‑embedding</em>, every face is a quadrilateral
+          with the same cyclic product of edge lengths as in the original Aztec diamond graph.
+          The companion <em>O‑embedding</em> in 2D represents the
+          origami folding of the T-embedding. The 3D view lifts the
+          <em>T</em>‑coordinates by&nbsp;$\mathrm{Im}(O)$.
+        </p>
+
+        <p>
+        The 2D T-embedding can be exported in TikZ format using the <code>Export TikZ</code> button below.
+        </p>
+
+        <p>
+          Large sizes (<span style="white-space:nowrap;">n &gt; 100</span>)
+          are computation‑intensive; the code runs entirely in your browser, therefore
+          patience is advised on mobile.
+        </p>
+
+        <p class="mb-1"><em>Selected references:</em></p>
+        <ol style="margin-left:1em">
+          <li>T. Berggren, M. Nicoletti, M. Russkikh,
+              "<u>Perfect t‑Embeddings of Uniformly Weighted Aztec Diamonds and Tower Graphs</u>,"
+              <em>IMRN</em>, 2023 (doi:10.1093/imrn/rnad299).</li>
+          <li>D. Chelkak, B. Laslier, M. Russkikh,
+              "<u>Bipartite Dimer Model: Perfect t‑Embeddings and Lorentz‑Minimal Surfaces</u>,"
+              arXiv:2109.06272, 2021.</li>
+          <li>D. Chelkak, S. Ramassamy,
+              "<u>Fluctuations in the Aztec Diamonds via a Lorentz‑Minimal Surface</u>,"
+              arXiv:2002.07540, 2020.</li>
+        </ol>
+
+        <p class="mb-3"><i style="color:#999">Last updated: 2025-04-20</i></p>
+
+        {%include dear_colleagues.md%}
+        <br><br>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ===== /ABOUT ===== -->
+
 <!-- === Parameter controls shared by both panes === -->
 <div id="controls" style="font-size:18px;margin-bottom:12px">
   <label>Aztec diamond n (1–200):</label>
@@ -1128,5 +1193,15 @@ document.getElementById("zoom-in-btn").addEventListener("click", function() {
 
 document.getElementById("zoom-out-btn").addEventListener("click", function() {
   handleZoom(false);
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  const isMobileWidth = window.innerWidth < 768;
+  if (!isMobileWidth) {
+    const body = document.getElementById('tEmbInfoCollapse');
+    if (body && !body.classList.contains('show')) {
+      body.classList.add('show');      // open accordion on larger screens
+    }
+  }
 });
 </script>
