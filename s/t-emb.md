@@ -18,6 +18,21 @@ permalink: /t-emb/
   </label>
 </div>
 
+<!-- === Camera controls === -->
+<div class="camera-controls" style="margin-bottom:10px">
+  <div style="margin-bottom:5px">
+    <span style="margin-right:10px">Camera:</span>
+    <button id="move-left-btn" class="camera-btn">←</button>
+    <button id="move-up-btn" class="camera-btn">↑</button>
+    <button id="move-down-btn" class="camera-btn">↓</button>
+    <button id="move-right-btn" class="camera-btn">→</button>
+    <span style="margin-left:10px">Zoom:</span>
+    <button id="zoom-in-btn" class="camera-btn">+</button>
+    <button id="zoom-out-btn" class="camera-btn">−</button>
+    <button id="reset-view-btn" style="margin-left:10px">Reset View</button>
+  </div>
+</div>
+
 <!-- === View toggle === -->
 <div class="view-toggle" style="margin-bottom:10px">
   <button id="view-3d-btn" class="active">3D</button>
@@ -110,6 +125,32 @@ permalink: /t-emb/
   
   /* --- face styling --- */
   .face     { stroke-width:0.0001px; }
+  
+  /* --- camera controls styling --- */
+  .camera-btn {
+    padding: 4px 8px;
+    margin: 0 2px;
+    border: 1px solid #ccc;
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  
+  .camera-btn:hover {
+    background-color: #e8e8e8;
+  }
+  
+  #reset-view-btn {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  
+  #reset-view-btn:hover {
+    background-color: #e0e0e0;
+  }
 </style>
 
 <script src="/js/d3.v7.min.js"></script>
@@ -147,9 +188,25 @@ async function fetchEmbedding(n,a){
 
 /* ---------- 4.4 2‑D drawing ---------- */
 function draw2D(data){
+  // Store current transform if it exists before removing content
+  let currentTransform = null;
+  const existingG = d3.select("#t-emb-2d g");
+  if (!existingG.empty()) {
+    const transform = existingG.attr("transform");
+    if (transform) {
+      currentTransform = transform;
+    }
+  }
+  
   const svg   = d3.select("#t-emb-2d");
   svg.selectAll("*").remove();
-  const g          = svg.append("g");
+  const g     = svg.append("g");
+  
+  // Apply the stored transform if available
+  if (currentTransform) {
+    g.attr("transform", currentTransform);
+  }
+  
   const TContainer = g.append("g").attr("class","t-container");        // existing content
   const OContainer = g.append("g")
       .attr("class","o-container")
@@ -444,10 +501,8 @@ function draw3D(data){
   // Add the face group to the scene
   scene.add(facesGroup);
 
-  /* ---- camera framing ---- */
-  camera.position.set(0, 0, 4);      // straight above, a little higher
-  camera.up.set(0, 1, 0);            // keep Y pointing up
-  camera.lookAt(0, 0, 0);
+  /* ---- maintain camera position after update ---- */
+  // Don't reset camera/controls - they will stay at current position
   controls.update();
 }
 
@@ -722,5 +777,128 @@ document.getElementById("view-3d-btn").onclick = ()=>{
 document.getElementById("show-origami").addEventListener("change", function () {
   d3.select(".o-container")
      .style("visibility", this.checked ? "visible" : "hidden");
+});
+
+/* ---------- 5. Camera controls ---------- */
+// Shared variables for zoom levels
+let zoom2D = d3.zoom().scaleExtent([0.5, 30]);
+let zoom3DLevel = 1.0;
+const ZOOM_FACTOR = 1.2;
+
+// Reset view button (works in both 2D and 3D modes)
+document.getElementById("reset-view-btn").addEventListener("click", function() {
+  const is3DActive = document.getElementById("view-3d-btn").classList.contains("active");
+  
+  if (is3DActive) {
+    // Reset 3D camera
+    camera.position.set(0, 0, 3);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0, 0);
+    zoom3DLevel = 1.0;
+    controls.reset();
+  } else {
+    // Reset 2D view
+    const svg = d3.select("#t-emb-2d");
+    const g = svg.select("g");
+    g.transition().duration(750).attr("transform", "translate(0,0) scale(1)");
+  }
+});
+
+// Camera movement in both 2D and 3D
+function handleCameraMovement(direction) {
+  const is3DActive = document.getElementById("view-3d-btn").classList.contains("active");
+  
+  if (is3DActive) {
+    // Handle 3D camera movement
+    const moveAmount = 0.1 * camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+    
+    if (direction === "up") {
+      camera.position.y += moveAmount;
+      controls.target.y += moveAmount;
+    } else if (direction === "down") {
+      camera.position.y -= moveAmount;
+      controls.target.y -= moveAmount;
+    } else if (direction === "left") {
+      camera.position.x -= moveAmount;
+      controls.target.x -= moveAmount;
+    } else if (direction === "right") {
+      camera.position.x += moveAmount;
+      controls.target.x += moveAmount;
+    }
+    
+    controls.update();
+  } else {
+    // Handle 2D camera movement
+    const svg = d3.select("#t-emb-2d");
+    const g = svg.select("g");
+    
+    // Get current transform
+    const transform = d3.zoomTransform(svg.node());
+    const moveAmount = 0.1;
+    
+    if (direction === "up") {
+      g.attr("transform", `translate(${transform.x}, ${transform.y + moveAmount * 100}) scale(${transform.k})`);
+    } else if (direction === "down") {
+      g.attr("transform", `translate(${transform.x}, ${transform.y - moveAmount * 100}) scale(${transform.k})`);
+    } else if (direction === "left") {
+      g.attr("transform", `translate(${transform.x + moveAmount * 100}, ${transform.y}) scale(${transform.k})`);
+    } else if (direction === "right") {
+      g.attr("transform", `translate(${transform.x - moveAmount * 100}, ${transform.y}) scale(${transform.k})`);
+    }
+  }
+}
+
+// Zoom in/out in both 2D and 3D
+function handleZoom(zoomIn) {
+  const is3DActive = document.getElementById("view-3d-btn").classList.contains("active");
+  
+  if (is3DActive) {
+    // Handle 3D zoom
+    const zoomFactor = zoomIn ? 1 / ZOOM_FACTOR : ZOOM_FACTOR;
+    const cameraDir = new THREE.Vector3();
+    camera.getWorldDirection(cameraDir);
+    
+    // Move camera along its direction vector
+    camera.position.addScaledVector(cameraDir, -2 * (zoomFactor - 1));
+    camera.updateProjectionMatrix();
+    controls.update();
+    
+    zoom3DLevel *= zoomIn ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
+  } else {
+    // Handle 2D zoom
+    const svg = d3.select("#t-emb-2d");
+    const g = svg.select("g");
+    
+    // Get current transform
+    const transform = d3.zoomTransform(svg.node());
+    const newScale = zoomIn ? transform.k * ZOOM_FACTOR : transform.k / ZOOM_FACTOR;
+    
+    g.attr("transform", `translate(${transform.x}, ${transform.y}) scale(${newScale})`);
+  }
+}
+
+// Add event listeners for camera controls
+document.getElementById("move-up-btn").addEventListener("click", function() {
+  handleCameraMovement("up");
+});
+
+document.getElementById("move-down-btn").addEventListener("click", function() {
+  handleCameraMovement("down");
+});
+
+document.getElementById("move-left-btn").addEventListener("click", function() {
+  handleCameraMovement("left");
+});
+
+document.getElementById("move-right-btn").addEventListener("click", function() {
+  handleCameraMovement("right");
+});
+
+document.getElementById("zoom-in-btn").addEventListener("click", function() {
+  handleZoom(true);
+});
+
+document.getElementById("zoom-out-btn").addEventListener("click", function() {
+  handleZoom(false);
 });
 </script>
