@@ -3,11 +3,6 @@ title: Domino tilings of the Aztec diamond
 author: 'Leonid Petrov'
 layout: default
 permalink: /domino/
-code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/p/domino.md'
-    txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/p/domino.cpp'
-    txt: 'C++ code for the simulation'
 ---
 
 
@@ -156,7 +151,9 @@ code:
 
     <div id="infoCollapse" class="collapse show" aria-labelledby="infoHeading" data-parent="#infoAccordion">
       <div class="card-body">
-        <p class="mt-3">This page hosts an <strong>all‑in‑one interactive sampler of random domino tilings of the <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec diamond</a></strong>. The sampling is done by the traditional <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>, and here it is adapted to <code>JavaScript</code> and <code>WebAssembly</code>.</p>
+        <p class="mt-3">This page hosts an <strong>all‑in‑one interactive sampler of random domino tilings of the <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec diamond</a></strong>. The sampling is done by the traditional <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>, and here it is adapted to <code>JavaScript</code> and <code>WebAssembly</code>.
+        See also the <a href="{{site.url}}/simulations/model/domino-tilings/">individual simulations page</a> which include bite-size examples with more readable code.
+        </p>
 
         <p>Two complementary visualizations are available:</p>
 
@@ -178,9 +175,9 @@ code:
 
         <p>Use the controls below to switch between uniform, \(2 \times 2\), and \(3 \times 3\) periodic weightings, adjust border thickness, zoom/pan, and copy or download the generated TikZ code.</p>
 
-        <blockquote>
-          <p><strong>Tip.</strong> The simulation caches the most recent tiling in <code>localStorage</code>; press <strong>Sample</strong> again to force a fresh run.</p>
-        </blockquote>
+        <p><strong>Tip.</strong> The simulation caches the most recent tiling in <code>localStorage</code>; press <strong>Sample</strong> again to force a fresh run.</p>
+
+
 
         <p class="mb-3"><i style="color:#999999;">Last updated: 2025-04-19</i></p>
 
