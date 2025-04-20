@@ -30,6 +30,9 @@ permalink: /t-emb/
     <button id="zoom-in-btn" class="camera-btn">+</button>
     <button id="zoom-out-btn" class="camera-btn">−</button>
     <button id="reset-view-btn" style="margin-left:10px">Reset View</button>
+    <label style="margin-left:15px">
+      <input id="demo-mode" type="checkbox"> Auto-rotate (3D)
+    </label>
   </div>
 </div>
 
@@ -162,6 +165,8 @@ permalink: /t-emb/
 /* ---------- 4.1 globals ---------- */
 let cached = null;            // {n, a, data} or null
 let scene, camera, renderer, controls;   // 3‑D objects
+let isDemoMode = false;       // track if auto-rotation is enabled
+let rotationSpeed = 0.005;    // rotation speed in radians
 
 /* ---------- 4.2 WASM wrappers ---------- */
 let doTembInitialized = false;
@@ -343,6 +348,12 @@ function initThree(){
 function animate(){
   requestAnimationFrame(animate);
   controls.update();
+  
+  // Apply rotation in demo mode (3D only)
+  if (isDemoMode && document.getElementById("view-3d-btn").classList.contains("active")) {
+    scene.rotation.y += rotationSpeed;
+  }
+  
   renderer.render(scene, camera);
 }
 
@@ -350,6 +361,10 @@ function animate(){
 function draw3D(data){
   /* ----------------- INITIAL SETUP ----------------- */
   if (!renderer) initThree();
+  
+  // Preserve rotation when updating
+  const currentRotation = scene.rotation.clone();
+  
   scene.clear();
 
   const T = data.T;                     // T‑vertices in the JSON
@@ -490,6 +505,9 @@ function draw3D(data){
   /* ---- maintain camera position after update ---- */
   // Don't reset camera/controls - they will stay at current position
   controls.update();
+  
+  // Restore rotation when updating
+  scene.rotation.copy(currentRotation);
 }
 
 // Build the interior edges among T- or O-vertices
@@ -765,6 +783,11 @@ document.getElementById("show-origami").addEventListener("change", function () {
      .style("visibility", this.checked ? "visible" : "hidden");
 });
 
+// Toggle auto-rotation demo mode
+document.getElementById("demo-mode").addEventListener("change", function () {
+  isDemoMode = this.checked;
+});
+
 /* ---------- 5. Camera controls ---------- */
 // Shared variables for zoom levels
 let zoom3DLevel = 1.0;
@@ -781,6 +804,11 @@ document.getElementById("reset-view-btn").addEventListener("click", function() {
     camera.lookAt(0, 0, 0);
     zoom3DLevel = 1.0;
     controls.reset();
+    
+    // Reset scene rotation only if not in demo mode
+    if (!isDemoMode) {
+      scene.rotation.set(0, 0, 0);
+    }
   } else {
     // Reset 2D view
     const svg = d3.select("#t-emb-2d");
