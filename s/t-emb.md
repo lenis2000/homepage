@@ -231,6 +231,7 @@ function initThree(){
   controls.minDistance = 0.0001;
   controls.maxDistance = 5000;
   controls.enableZoom = true;
+  controls.screenSpacePanning = false;  // preserve vertical axis
 
   // Handle window resize
   window.addEventListener('resize', () => {
@@ -325,8 +326,9 @@ function draw3D(data){
   scene.add(lineGroup);
 
   /* ---- camera framing ---- */
-  camera.position.set(0.5, -0.5, 2);
-  camera.lookAt(0,0,0);
+  camera.position.set(0, 0, 4);      // straight above, a little higher
+  camera.up.set(0, 1, 0);            // keep Y pointing up
+  camera.lookAt(0, 0, 0);
   controls.update();
 }
 
