@@ -297,7 +297,7 @@ code:
   <div id="aztec-canvas"></div>
 
   <!-- 2D Visualization Pane (hidden by default) -->
-  <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 75vh;">
+  <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 85vh;">
     <!-- 2D controls (fixed at top like 3D controls) -->
     <div id="controls-2d" class="mb-3">
       <!-- Zoom controls (always visible) -->
@@ -751,7 +751,7 @@ Module.onRuntimeInitialized = async function() {
        dominoGroup.scale.set(1, 1, 1);         // <‑‑ the crucial line
      } else {
        // Something went wrong with the 3D scene - reinitialize
- 
+
        initThreeJS();
      }
      /* ------------------------------------------------------------------ */
