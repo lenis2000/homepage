@@ -2401,17 +2401,9 @@ Module.onRuntimeInitialized = async function() {
         .attr("x",d.x).attr("y",d.y)
         .attr("width",d.w).attr("height",d.h)
         .attr("stroke","#000");      // fill & stroke‑width set later in updateDominoDisplay()
-       // ----------------------------------------------------------------- triangle
-       const tri = g.select("polygon");
-       const p = (d.w>d.h)            // horizontal vs vertical
-               ? `${d.x+0.4},${d.y+0.4} ${d.x+0.4},${d.y+d.h-0.4} ${d.x+d.w-0.4},${d.y+0.4}`
-               : `${d.x+0.4},${d.y+0.4} ${d.x+d.w-0.4},${d.y+0.4} ${d.x+0.4},${d.y+d.h-0.4}`;
-       tri.attr("points",p)
-          .attr("fill","#000")
-          .attr("pointer-events","none");
 
        // store reference for lightning‑fast single‑domino tweaks later if needed
-       dominoIndex.set(k,{rect:g.select("rect"),tri,datum:d});
+       dominoIndex.set(k,{rect:g.select("rect"),datum:d});
     });
 
     // apply current colouring / overlays
