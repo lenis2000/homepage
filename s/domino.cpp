@@ -3,7 +3,7 @@
 emcc domino.cpp -o domino.js\
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_performGlauberSteps','_wasGlauberActive','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -53,6 +53,104 @@ using Matrix = vector<vector<Cell>>;
 using MatrixDouble = vector<vector<double>>;
 using MatrixInt = vector<vector<int>>;
 using Vertex = pair<int, int>;
+
+/* ---------- Global state for incremental Glauber dynamics ---------- */
+static MatrixInt      g_conf;        // current domino configuration (vector<vector<int>>)
+static MatrixDouble   g_W;           // current weight matrix (vector<vector<double>>)
+static int            g_N    = 0;    // linear size of g_conf (2n)
+static string         g_periodicity = "uniform"; // "uniform", "2x2", or "3x3"
+// Store weights based on periodicity
+static double         g_a = 1.0, g_b = 1.0; // For 2x2
+static array<double, 9> g_w = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; // For 3x3 (w1 to w9)
+
+// Flag to track if a Glauber run is active
+static bool g_glauber_active = false;
+/* ------------------------------------------------------------------ */
+
+// Helper to get the weight of a plaquette configuration
+// Uses the globally stored weight matrix g_W
+double plaquetteWeight(int r, int c, bool horizontal) {
+    /* Calculates the weight contribution of a 2x2 plaquette at (r, c).
+       'horizontal' being true corresponds to the state where
+       markers are at (r, c) [NW] and (r+1, c+1) [SE].
+       'horizontal' being false corresponds to markers at
+       (r+1, c) [SW] and (r, c+1) [NE].
+
+       Uses the global weight matrix g_W.
+    */
+    if (r < 0 || r + 1 >= g_N || c < 0 || c + 1 >= g_N) {
+         // Bounds check - should not happen if called correctly
+         return 1.0; // Or some other default/error handling
+    }
+
+    const double wNW = g_W[r][c];         // Weight at NW corner (r, c)
+    const double wNE = g_W[r][c + 1];     // Weight at NE corner (r, c+1)
+    const double wSW = g_W[r + 1][c];     // Weight at SW corner (r+1, c)
+    const double wSE = g_W[r + 1][c + 1]; // Weight at SE corner (r+1, c+1)
+
+    if (horizontal) {
+        // Weight for Horizontal configuration (NW and SE markers)
+        return wNW * wSE;
+    } else {
+        // Weight for Vertical configuration (SW and NE markers)
+        return wSW * wNE;
+    }
+}
+
+// One heat‑bath update on a random 2×2 plaquette using global state
+void glauberStep(std::uniform_real_distribution<> &u) {
+    if (g_N == 0) return; // No configuration loaded
+
+    // Use global RNG
+    std::uniform_int_distribution<> duRow(0, g_N - 2);
+    std::uniform_int_distribution<> duCol(0, g_N - 2);
+    int i = duRow(rng); // Random row for top-left corner (0 to N-2)
+    int j = duCol(rng); // Random col for top-left corner (0 to N-2)
+
+    // Check current state of the 2x2 plaquette at (i, j)
+    bool isHH = (g_conf[i][j] == 1 && g_conf[i + 1][j + 1] == 1 &&
+                 g_conf[i + 1][j] == 0 && g_conf[i][j + 1] == 0);
+    bool isVV = (g_conf[i + 1][j] == 1 && g_conf[i][j + 1] == 1 &&
+                 g_conf[i][j] == 0 && g_conf[i + 1][j + 1] == 0);
+
+    if (!(isHH || isVV)) {
+        // Not a valid HH or VV plaquette (might be mixed or empty)
+        return; // Skip update for invalid states
+    }
+
+    // Compute weights using the global weight matrix g_W
+    double wHH = plaquetteWeight(i, j, /*horizontal=*/true);
+    double wVV = plaquetteWeight(i, j, /*horizontal=*/false);
+
+    // Heat-bath probability for choosing the Horizontal state (HH)
+    double pHH = (std::abs(wHH + wVV) < 1e-15) ? 0.5 : (wHH / (wHH + wVV));
+
+    // Decide whether to flip based on the probability
+    bool chooseHH = (u(rng) < pHH);
+
+    // If the chosen state matches the current state, do nothing
+    if ((chooseHH && isHH) || (!chooseHH && isVV)) {
+        return;
+    }
+
+    // Flip the state: clear the plaquette first
+    g_conf[i][j] = 0;
+    g_conf[i][j + 1] = 0;
+    g_conf[i + 1][j] = 0;
+    g_conf[i + 1][j + 1] = 0;
+
+    // Set the new state
+    if (chooseHH) {
+        // Place markers for HH state (NW and SE)
+        g_conf[i][j] = 1;
+        g_conf[i + 1][j + 1] = 1;
+    } else {
+        // Place markers for VV state (SW and NE)
+        g_conf[i + 1][j] = 1;
+        g_conf[i][j + 1] = 1;
+    }
+     g_glauber_active = true; // Mark that Glauber has modified the state
+}
 
 vector<Matrix> d3p(const MatrixDouble &x1) {
     // d3p: builds a vector of matrices from x1.
@@ -320,8 +418,29 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         } catch (const std::exception& e) {
             throw std::runtime_error("Error generating domino configuration");
         }
+        // Store the generated configuration and parameters globally
+        g_conf = dominoConfig; // Store the generated MatrixInt
+        g_W    = A1a;          // Store the calculated weight MatrixDouble
+        g_N    = dim;          // Store the dimension (2*n)
+
+        // Store the periodicity type and corresponding weights
+        if (is2x2Pattern) {
+            g_periodicity = "2x2";
+            g_a = w2; // 'a' from input
+            g_b = w4; // 'b' from input
+        } else if (std::abs(w1 - 1.0) < 1e-9 && std::abs(w2 - 1.0) < 1e-9 && std::abs(w3 - 1.0) < 1e-9 &&
+                   std::abs(w4 - 1.0) < 1e-9 && std::abs(w5 - 1.0) < 1e-9 && std::abs(w6 - 1.0) < 1e-9 &&
+                   std::abs(w7 - 1.0) < 1e-9 && std::abs(w8 - 1.0) < 1e-9 && std::abs(w9 - 1.0) < 1e-9) {
+            g_periodicity = "uniform";
+        } else {
+            g_periodicity = "3x3";
+            g_w = {w1, w2, w3, w4, w5, w6, w7, w8, w9}; // Store all 9 weights
+        }
+
+        g_glauber_active = false; // Reset Glauber flag after fresh sample
+
         progressCounter = 90; // Simulation steps complete.
-        emscripten_sleep(0); // Yield to update UI
+        emscripten_sleep(0);  // Yield to update UI
 
         // Build JSON output with dominoes data
         ostringstream oss;
@@ -432,6 +551,141 @@ void freeString(char* str) {
 EMSCRIPTEN_KEEPALIVE
 int getProgress() {
     return progressCounter;
+}
+
+// Function to perform multiple Glauber steps and return the result as JSON
+EMSCRIPTEN_KEEPALIVE
+char* performGlauberSteps(
+    const char* periodicity_cstr, // "uniform", "2x2", or "3x3"
+    double p1, double p2, double p3, double p4, double p5, double p6, double p7, double p8, double p9, // Use all 9 for flexibility
+    int nSteps)
+{
+    try {
+        if (g_N == 0) {
+            throw std::runtime_error("No configuration loaded. Run 'Sample' first.");
+        }
+
+        string periodicity = periodicity_cstr;
+        bool weights_changed = false;
+
+        // Check if weights or periodicity need updating
+        if (periodicity != g_periodicity) {
+            weights_changed = true;
+            g_periodicity = periodicity;
+        }
+
+        if (periodicity == "2x2") {
+            double a = p1; // Use p1 for 'a'
+            double b = p2; // Use p2 for 'b'
+            if (std::abs(a - g_a) > 1e-9 || std::abs(b - g_b) > 1e-9) {
+                weights_changed = true;
+                g_a = a;
+                g_b = b;
+            }
+        } else if (periodicity == "3x3") {
+            array<double, 9> current_w = {p1, p2, p3, p4, p5, p6, p7, p8, p9};
+            for (size_t i = 0; i < 9; ++i) {
+                if (std::abs(current_w[i] - g_w[i]) > 1e-9) {
+                    weights_changed = true;
+                    break;
+                }
+            }
+            if (weights_changed) {
+                g_w = current_w;
+            }
+        }
+         // No specific weight check needed for "uniform" if periodicity changes
+
+        // Rebuild global weight matrix g_W if necessary
+        if (weights_changed) {
+             g_W = MatrixDouble(g_N, vector<double>(g_N, 0.0)); // Reinitialize
+             if (g_periodicity == "2x2") {
+                 for (int i = 0; i < g_N; ++i) {
+                     for (int j = 0; j < g_N; ++j) {
+                         int im = i & 3, jm = j & 3;
+                         g_W[i][j] = ((im < 2 && jm < 2) || (im >= 2 && jm >= 2)) ? g_b : g_a;
+                     }
+                 }
+             } else if (g_periodicity == "3x3") {
+                 const double W[3][3] = {{g_w[0], g_w[1], g_w[2]},
+                                         {g_w[3], g_w[4], g_w[5]},
+                                         {g_w[6], g_w[7], g_w[8]}};
+                 for (int i = 0; i < g_N; ++i) {
+                     for (int j = 0; j < g_N; ++j) {
+                         g_W[i][j] = W[i % 3][j % 3];
+                     }
+                 }
+             } else { // Uniform
+                  for (int i = 0; i < g_N; ++i) {
+                     for (int j = 0; j < g_N; ++j) {
+                          g_W[i][j] = 1.0;
+                     }
+                 }
+             }
+        }
+
+        // Perform nSteps Glauber updates
+        std::uniform_real_distribution<> u(0.0, 1.0);
+        for (int k = 0; k < nSteps; ++k) {
+            glauberStep(u);
+             // Optionally add emscripten_sleep(0) inside the loop for very large nSteps
+             // if (k % 1000 == 0) emscripten_sleep(0);
+        }
+
+         g_glauber_active = true; // Mark that Glauber has run
+
+        // Serialize the current configuration g_conf to JSON
+        // (This part is identical to the JSON generation in simulateAztec)
+        ostringstream oss;
+        oss << "[";
+        int size = g_N;
+        bool first = true;
+
+         for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (g_conf[i][j] == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+                    if (oddI && oddJ) { color = "blue";   x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
+                    else if (oddI && !oddJ){ color = "yellow"; x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
+                    else if (!oddI && !oddJ){ color = "green";  x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
+                    else if (!oddI && oddJ) { color = "red";    x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
+                    else continue;
+
+                    if (!first) oss << ","; else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+        oss << "]";
+
+        // Allocate memory for the output string and return
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed for Glauber result");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        // Return error as JSON
+        std::string errorMsg = std::string("{\"error\":\"Glauber step error: ") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        else { // Fallback if error allocation fails
+            out = (char*)malloc(13); // size for "[]" + null
+            if (out) strcpy(out, "[]");
+        }
+        return out;
+    }
+}
+
+// Add a simple getter for the g_glauber_active flag
+EMSCRIPTEN_KEEPALIVE
+bool wasGlauberActive() {
+    return g_glauber_active;
 }
 
 } // extern "C"

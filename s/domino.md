@@ -106,6 +106,11 @@ permalink: /domino/
     cursor: not-allowed;
     background-color: #cccccc;
   }
+  
+  #glauber-btn.running {
+    background-color: #dc3545; /* Red when running */
+    border-color: #dc3545;
+  }
 
   button {
     cursor: pointer;
@@ -263,6 +268,21 @@ permalink: /domino/
       <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
     </div>
   </div>
+  
+  <div id="glauber-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+    <h3 style="margin-bottom: 8px;">Glauber Dynamics:</h3>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px;">
+      <div>
+        <label for="sweeps-input">Sweeps per redraw:</label>
+        <input id="sweeps-input" type="number" value="100" min="1" step="1" style="width: 70px;">
+        <small>(Number of plaquette updates between screen updates)</small>
+      </div>
+      <div style="margin-left: auto;">
+         <button id="glauber-btn" class="btn btn-success">Run Glauber</button>
+         <span id="glauber-status" style="margin-left: 10px; font-style: italic;"></span>
+      </div>
+    </div>
+  </div>
 </div>
 <!-- Visualization container with switchable views -->
 <div class="visualization-container">
@@ -395,6 +415,8 @@ Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
+  const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
+  const wasGlauberActive = Module.cwrap('wasGlauberActive', 'boolean', []);
 
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
@@ -410,6 +432,11 @@ Module.onRuntimeInitialized = async function() {
   let cachedDominoes = null; // Store dominoes for 2D view
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
+  
+  // Glauber state variables
+  let glauberRunning = false;
+  let glauberTimer = null;
+  let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
 
   // Demo mode state
   let isDemoMode = false;
@@ -514,6 +541,10 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 1; i <= 9; i++) {
       document.getElementById(`w${i}`)?.setAttribute("disabled", "disabled");
     }
+    
+    // Disable Glauber controls
+    document.getElementById('glauber-btn')?.setAttribute('disabled', 'disabled');
+    document.getElementById('sweeps-input')?.setAttribute('disabled', 'disabled');
 
     // Show cancel button
     if (cancelBtn) {
@@ -544,6 +575,23 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 1; i <= 9; i++) {
       document.getElementById(`w${i}`)?.removeAttribute("disabled");
     }
+    
+    // Re-enable Glauber controls
+    document.getElementById('glauber-btn')?.removeAttribute('disabled');
+    document.getElementById('sweeps-input')?.removeAttribute('disabled');
+    
+    // If cancelled while Glauber was running, reset its UI
+    if (glauberRunning) {
+        const glauberBtn = document.getElementById('glauber-btn');
+        const glauberStatus = document.getElementById('glauber-status');
+        glauberRunning = false;
+        clearInterval(glauberTimer);
+        glauberTimer = null;
+        glauberBtn.textContent = "Run Glauber";
+        glauberBtn.classList.remove('running', 'btn-danger');
+        glauberBtn.classList.add('btn-success');
+        glauberStatus.innerText = "";
+    }
 
     // Make sure parameter display is correct
     try {
@@ -573,6 +621,199 @@ Module.onRuntimeInitialized = async function() {
     initThreeJS();
     return "";
   };
+  
+  // Helper function to run Glauber steps and update visualization
+  async function advanceGlauberDynamics(nSteps) {
+    if (!cachedDominoes) return 0; // Need an initial state
+
+    // 1. Get current periodicity and parameters
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    let params = [periodicity]; // First arg is string name
+    if (periodicity === '2x2') {
+        const a = parseFloat(document.getElementById('a-input').value) || 0.5;
+        const b = parseFloat(document.getElementById('b-input').value) || 1.0;
+        params.push(a, b, 0,0,0,0,0,0,0); // Pass a, b as p1, p2
+    } else if (periodicity === '3x3') {
+        for (let i = 1; i <= 9; i++) {
+            const val = parseFloat(document.getElementById(`w${i}`).value) || 1.0;
+            params.push(val);
+        }
+    } else { // Uniform
+        params.push(1,1,1,1,1,1,1,1,1); // Pass all 1s
+    }
+    params.push(nSteps); // Add number of steps
+
+    // 2. Call C++ function
+    const ptr = await performGlauberSteps(...params);
+    const jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+
+    // 3. Parse result and update cache
+    try {
+        const result = JSON.parse(jsonStr);
+        if (result.error) {
+            console.error("Glauber error:", result.error);
+            // Optionally stop dynamics on error
+            // toggleGlauberDynamics();
+            return 0;
+        }
+        cachedDominoes = result;
+        lastSampleWasGlauber = true; // Mark that Glauber produced this state
+
+        // 4. Update visualization (both 2D and 3D if applicable)
+        await updateVisualizationFromCache();
+
+        return nSteps; // Return number of steps successfully run
+    } catch (e) {
+        console.error("Error parsing Glauber result:", e, jsonStr);
+        return 0;
+    }
+  }
+  
+  // Function to start/stop Glauber dynamics
+  async function toggleGlauberDynamics() {
+    const glauberBtn = document.getElementById('glauber-btn');
+    const sweepsInput = document.getElementById('sweeps-input');
+    const glauberStatus = document.getElementById('glauber-status');
+
+    if (glauberRunning) {
+        // Stop dynamics
+        clearInterval(glauberTimer);
+        glauberTimer = null;
+        glauberRunning = false;
+        glauberBtn.textContent = "Run Glauber";
+        glauberBtn.classList.remove('running', 'btn-danger');
+        glauberBtn.classList.add('btn-success');
+        glauberStatus.innerText = "";
+
+        // Re-enable controls that were disabled by Glauber
+        document.getElementById("sample-btn")?.removeAttribute("disabled");
+        document.getElementById("n-input")?.removeAttribute("disabled");
+        document.querySelectorAll('input[name="periodicity"]').forEach(radio => radio.disabled = false);
+        // Re-enable specific weight inputs based on current periodicity
+        updatePeriodicityParams(); // This function should handle enabling/disabling based on selected radio
+
+    } else {
+        // Start dynamics
+        if (!cachedDominoes) {
+            alert("Please generate a tiling first using 'Sample' before running Glauber dynamics.");
+            return;
+        }
+
+        glauberRunning = true;
+        glauberBtn.textContent = "Stop Glauber";
+        glauberBtn.classList.add('running', 'btn-danger');
+        glauberBtn.classList.remove('btn-success');
+        glauberStatus.innerText = "Running...";
+
+        // Disable controls that shouldn't be changed during dynamics
+        document.getElementById("sample-btn")?.setAttribute("disabled", "disabled");
+        document.getElementById("n-input")?.setAttribute("disabled", "disabled");
+        document.querySelectorAll('input[name="periodicity"]').forEach(radio => radio.disabled = true);
+        // Keep weight inputs enabled so user can change them live
+
+        // Initial step before interval starts
+        const initialSteps = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
+        await advanceGlauberDynamics(initialSteps);
+
+        // Start the timer if still running
+        if (glauberRunning) {
+            const updateInterval = 100; // ms between redraws
+            glauberTimer = setInterval(async () => {
+                if (!glauberRunning) { // Check again inside interval
+                    clearInterval(glauberTimer);
+                    return;
+                }
+                const stepsPerUpdate = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
+                await advanceGlauberDynamics(stepsPerUpdate);
+            }, updateInterval);
+        }
+    }
+  }
+  
+  // Function to update both 2D and 3D visualizations from cachedDominoes
+  async function updateVisualizationFromCache() {
+    if (!cachedDominoes) return;
+
+    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+    const is2DView = document.getElementById("view-2d-btn").classList.contains("active");
+
+    // Update 2D view immediately if active
+    if (is2DView) {
+        await render2D(cachedDominoes); // Re-render 2D SVG
+    }
+
+    // Update 3D view if active and n is suitable
+    if (is3DView && n <= 300) {
+        // Clear existing domino group
+        if (dominoGroup) {
+            while(dominoGroup.children.length > 0){
+                const m = dominoGroup.children[0];
+                dominoGroup.remove(m);
+                if (m.geometry) m.geometry.dispose();
+                if (m.material) m.material.dispose();
+            }
+        } else {
+            initThreeJS(); // Reinitialize if group doesn't exist
+        }
+
+        // Recalculate height map and render (similar logic as in updateVisualization)
+        const heightMap = calculateHeightFunction(cachedDominoes);
+        const scale = 60 / (2 * n);
+        const colors = { blue: 0x4363d8, green: 0x1e8c28, red: 0xff2244, yellow: 0xfca414 };
+        const showColors3D = document.getElementById("show-colors-checkbox").checked;
+        const monoColor3D = 0x999999;
+
+        cachedDominoes.forEach(domino => {
+            const faceData = createDominoFaces(domino, heightMap, scale);
+            if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return;
+
+            try {
+                const geom = new THREE.BufferGeometry();
+                const pos = [];
+                faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+
+                const isH = (faceData.color === 'blue' || faceData.color === 'green');
+                // Indices for two triangles making the top face
+                const indices = [0, 1, 2, 0, 2, 3]; // Placeholder for a basic quad
+
+                if (cachedDominoes.length * 6 > 65535) {
+                    geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+                } else {
+                    geom.setIndex(indices);
+                }
+                geom.computeVertexNormals();
+
+                const colorValue = colors[faceData.color] || 0x808080;
+                const mat = new THREE.MeshStandardMaterial({
+                    color: showColors3D ? colorValue : monoColor3D,
+                    side: THREE.DoubleSide,
+                    flatShading: true
+                });
+                mat.userData = { originalColorValue: colorValue };
+                const mesh = new THREE.Mesh(geom, mat);
+                mesh.userData.originalColor = faceData.color;
+                dominoGroup.add(mesh);
+            } catch(e) {
+                console.error("Error creating 3D mesh during Glauber update:", e);
+            }
+        });
+
+        // Recenter (optional, could keep previous center/scale)
+        if (dominoGroup.children.length > 0) {
+            const box = new THREE.Box3().setFromObject(dominoGroup);
+            const center = box.getCenter(new THREE.Vector3());
+            center.x += -0.7; center.z += 4; // Adjust center
+            dominoGroup.position.sub(center);
+        }
+        // Ensure render happens
+        if (renderer && animationActive) {
+            //renderer.render(scene, camera); // Render handled by animate loop
+        }
+    }
+  }
 
   // Calculate height function based on domino configuration
   // This implementation follows the algorithm from 2025-02-02-aztec-uniform.md
@@ -738,6 +979,12 @@ Module.onRuntimeInitialized = async function() {
   }
 
   async function updateVisualization(n) {
+    // If Glauber is running, stop it
+    if (glauberRunning) {
+        toggleGlauberDynamics(); // Stop the dynamics
+    }
+    lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
+    
     /* ------------------------------------------------------------------ */
      /* 1. wipe previous geometry *and* transforms                          */
      /* ------------------------------------------------------------------ */
@@ -1090,6 +1337,9 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
+  // Add Glauber button event listener
+  document.getElementById('glauber-btn')?.addEventListener('click', toggleGlauberDynamics);
+  
   document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
 
@@ -2643,6 +2893,14 @@ Module.onRuntimeInitialized = async function() {
 \\definecolor{svgblue}{RGB}{67, 99, 216}
 
 \\begin{document}
+% Aztec Diamond Tiling
+% n = ${parseInt(document.getElementById("n-input").value, 10)}
+% Periodicity: ${document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform'}`;
+    // Add Glauber status comment
+    if (lastSampleWasGlauber || wasGlauberActive()) { // Check both JS flag and C++ flag
+      tikzCode += `\n% Sample obtained/modified by Glauber dynamics`;
+    }
+    tikzCode += `
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
 
 % Dominoes (rectangles)
