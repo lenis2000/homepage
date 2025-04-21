@@ -250,23 +250,17 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
 // --- replace the old helper completely -------------------------------
 double plaquetteWeight(int r,int c,bool horizontal,const MatrixDouble& W)
 {
+    /* exact Gibbs weights used by the shuffling sampler
+         – "HH": markers on NW & SE  →  weight = w_NW · w_SE
+         – "VV": markers on SW & NE  →  weight = w_SW · w_NE            */
 
-    /* NEW – edge‑weighted model:
-       domino weight = √(w_face1 ⋅ w_face2)
-       plaquette weight = product of the two domino weights        */
-
-    const double w00 = W.at(r,   c);     // NW square
+    const double w00 = W.at(r,   c);     // NW
     const double w01 = W.at(r,   c+1);   // NE
     const double w10 = W.at(r+1, c);     // SW
     const double w11 = W.at(r+1, c+1);   // SE
 
-    if (horizontal) {
-        // HH: dominoes (w00,w01) and (w10,w11)
-        return std::sqrt(w00 * w01) * std::sqrt(w10 * w11);
-    } else {
-        // VV: dominoes (w00,w10) and (w01,w11)
-        return std::sqrt(w00 * w10) * std::sqrt(w01 * w11);
-    }
+    return horizontal ? (w00 * w11)      // w_HH
+                      : (w10 * w01);     // w_VV
 }
 
 
@@ -299,13 +293,10 @@ void glauberStep(MatrixInt &conf,
     double wHH = plaquetteWeight(i, j, /*horizontal=*/true,  W);
     double wVV = plaquetteWeight(i, j, /*horizontal=*/false, W);
 
-    // Heat‑bath probability for HH
-    double pHH;
-    if (std::abs(wHH - wVV) < 1e-15) {   // identical weights → unbiased
-        pHH = 0.5;
-    } else {
-        pHH = wHH / (wHH + wVV);
-    }
+    /* Heat‑bath probability matching shuffling measure */
+    double pHH = (std::abs(wHH - wVV) < 1e-15)
+                 ? 0.5
+                 : wHH / (wHH + wVV);
 
     bool chooseHH = (u(rng) < pHH);
 
