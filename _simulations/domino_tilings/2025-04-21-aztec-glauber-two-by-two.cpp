@@ -48,7 +48,7 @@ void glauberStep(MatrixInt &conf,
                  const MatrixDouble &W,
                  std::mt19937 &rng,
                  std::uniform_real_distribution<> &u);
-char* simulateAztecGlauber(int n, double a, double b, int sweeps);
+// char* simulateAztecGlauber(int n, double a, double b, int sweeps);
 
 // d3p: builds a vector of matrices from x1.
 vector<Matrix> d3p(const MatrixDouble &x1) {

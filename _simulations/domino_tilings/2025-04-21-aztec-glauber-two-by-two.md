@@ -1,5 +1,5 @@
 ---
-title: Domino tilings of the Aztec diamond with 2x2 periodic weights
+title: Glauber Dynamics on Domino tilings with 2x2 periodic weights
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
