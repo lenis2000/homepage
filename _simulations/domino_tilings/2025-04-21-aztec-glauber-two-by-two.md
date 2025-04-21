@@ -54,7 +54,7 @@ You can start the dynamics with one set of parameters $(a,b)$ and change them on
 Key phenomena visible in the grayscale view:
 
 - When $a=b$, the measure is uniform and inside the arctic circle you can see a "liquid" mixture of colors.
-- When $a<1, b=1$, lighter color dominates; when $a=1, b>1$, darker color dominates.
+- When $a<1, b=1$, lighter color dominates; when $a>1, b=1$, darker color dominates.
 - Local color relaxation occurs much faster than changes in the macroscopic limit shape.
 
 **Conjecture**: In the non‑uniform case $a\neq b$, the Glauber chain requires exponentially many sweeps in $n$ to alter the limit shape.
