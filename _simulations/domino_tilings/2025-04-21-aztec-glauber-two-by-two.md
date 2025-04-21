@@ -157,6 +157,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Add this new function for single Glauber steps
   const performGlauberStep = Module.cwrap('performGlauberStep', 'number', ['number', 'number'], {async: true});
+  const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['number','number','number'], {async:true});
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
@@ -325,38 +326,21 @@ Module.onRuntimeInitialized = async function() {
       const sweepsPerUpdateInput = document.getElementById("sweeps-input");
       const updateInterval = 100; // ms between screen draws
 
-      dynamicsTimer = setInterval(async () => {
-        const stepsPerUpdate = Math.max(
-              1,
-              parseInt(sweepsPerUpdateInput.value, 10) || 1);   // user speed
-        const aVal = parseFloat(document.getElementById("a-input").value);
-        const bVal = parseFloat(document.getElementById("b-input").value);
+      // every update interval:
+dynamicsTimer = setInterval(async () => {
+  const stepsPerUpdate = Math.max(
+        1, parseInt(document.getElementById('sweeps-input').value,10)||1);
+  const aVal = parseFloat(document.getElementById('a-input').value);
+  const bVal = parseFloat(document.getElementById('b-input').value);
 
-        // Perform multiple Glauber steps
-        for (let i = 0; i < stepsPerUpdate; i++) {
-          const resultPtr = await performGlauberStep(aVal, bVal);
-          if (resultPtr) {
-            const jsonStr = Module.UTF8ToString(resultPtr);
-            freeString(resultPtr);
+  const ptr = await performGlauberSteps(aVal, bVal, stepsPerUpdate);
+  const jsonStr = Module.UTF8ToString(ptr);  freeString(ptr);
+  cachedDominoes = JSON.parse(jsonStr);
 
-            try {
-              cachedDominoes = JSON.parse(jsonStr);
-            } catch (e) {
-              console.error("Error parsing JSON:", e);
-              clearInterval(dynamicsTimer);
-              progressElem.innerText = "Error during dynamics";
-              return;
-            }
-          }
-        }
-
-        // Update visualization with new domino configuration
-        updateDominoesVisualization();
-
-        // Update counter
-        stepCount += stepsPerUpdate;
-        progressElem.innerText = `Dynamics running... (${stepCount} steps)`;
-      }, updateInterval);
+  updateDominoesVisualization();
+  stepCount += stepsPerUpdate;
+  progressElem.innerText = `Dynamics running… (${stepCount} steps)`;
+}, updateInterval);
     }
   }
 

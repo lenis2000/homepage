@@ -2,7 +2,7 @@
 emcc 2025-04-21-aztec-glauber-two-by-two.cpp -o 2025-04-21-aztec-glauber-two-by-two.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecGlauber','_performGlauberStep','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_freeString', '_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -718,6 +718,63 @@ char* performGlauberStep(double a, double b)
         char* out = (char*)malloc(err.size()+1);
         if(out) strcpy(out, err.c_str());
         return out;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Run N plaquette flips, rebuild weights if (a,b) changed, return   */
+/*  updated configuration as JSON.                                    */
+/* ------------------------------------------------------------------ */
+EMSCRIPTEN_KEEPALIVE
+char* performGlauberSteps(double a, double b, int nSteps)
+{
+    try {
+        if(g_N == 0)
+            throw std::runtime_error("No configuration in memory – run a sampler first.");
+
+        /* rebuild weights if needed */
+        if(a != g_a || b != g_b){
+            g_W = MatrixDouble(g_N, g_N, 0.0);
+            for(int i=0;i<g_N;++i)
+                for(int j=0;j<g_N;++j){
+                    int im=i&3, jm=j&3;
+                    g_W.at(i,j)=((im<2&&jm<2)||(im>=2&&jm>=2))? b : a;
+                }
+            g_a = a; g_b = b;
+        }
+
+        /* run the requested number of flips */
+        std::uniform_real_distribution<> u(0.0,1.0);
+        for(int k=0;k<nSteps;++k)
+            glauberStep(g_conf, g_W, rng, u);
+
+        /* --- serialise g_conf (identical code path) --- */
+        const int size  = g_N;
+        const double sc = 10.0;
+        std::string json;  json.reserve((size*size/4)*100); json.push_back('[');
+        bool first=true;  char buf[128];
+        for(int i=0;i<size;++i)
+          for(int j=0;j<size;++j){
+            if(g_conf.at(i,j)!=1) continue;
+            bool oi=i&1, oj=j&1; const char* col;
+            double x,y,w,h;
+            if( oi&& oj){col="green";  x=j-i-2; y=size+1-(i+j)-1; w=4; h=2;}
+            if( oi&&!oj){col="blue";   x=j-i-1; y=size+1-(i+j)-2; w=2; h=4;}
+            if(!oi&&!oj){col="red";    x=j-i-2; y=size+1-(i+j)-1; w=4; h=2;}
+            if(!oi&& oj){col="yellow"; x=j-i-1; y=size+1-(i+j)-2; w=2; h=4;}
+            if(!first) json.push_back(','); else first=false;
+            snprintf(buf,sizeof(buf),
+                     "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
+                     x*sc,y*sc,w*sc,h*sc,col);
+            json.append(buf);
+          }
+        json.push_back(']');
+        char* out=(char*)malloc(json.size()+1); strcpy(out,json.c_str());
+        return out;
+
+    }catch(const std::exception& e){
+        std::string err="{\"error\":\""+std::string(e.what())+"\"}";
+        char* out=(char*)malloc(err.size()+1); strcpy(out,err.c_str()); return out;
     }
 }
 
