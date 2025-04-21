@@ -27,6 +27,17 @@ code:
   #zoom-reset-btn {
     height: 30px;
   }
+  #dynamics-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #dynamics-btn.running {
+    background-color: #f44336;
+  }
 </style>
 
 This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a measure with $2\times 2$ periodic weights, as in the <a href="https://arxiv.org/abs/1410.2385">paper</a> by Chhita and Johansson. The simulation uses the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
@@ -56,6 +67,18 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <script src="/js/2025-04-21-aztec-glauber-two-by-two.js"></script>
 
 <!-- Simulation Controls -->
+<div class="controls">
+  <label for="algo-select">Algorithm: </label>
+  <select id="algo-select">
+    <option value="shuffling">Exact shuffling</option>
+    <option value="glauber">Glauber dynamics</option>
+  </select>
+  <label id="sweeps-label" for="sweeps-input" style="display:none;">  Sweeps:</label>
+  <input  id="sweeps-input" type="number" value="50" min="1" step="10"
+          style="width:70px; display:none;">
+  <button id="dynamics-btn" style="margin-left: 10px; display:none;">Start Dynamics</button>
+</div>
+
 <div class="controls">
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
   <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
@@ -87,6 +110,8 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <script>
 // Global variable to cache the simulation sample.
 let cachedDominoes = null;
+let dynamicsRunning = false;
+let dynamicsTimer = null;
 
 // Helper: convert a brightness value (0–255) to a hex grayscale string.
 function grayHex(brightness) {
@@ -129,13 +154,18 @@ function getGrayscaleColor(originalColor, d) {
 // Wrap exported functions after module is initialized.
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number','number','number'], {async: true});
+  const simulateAztecGlauber = Module.cwrap('simulateAztecGlauber', 'number', ['number','number','number','number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
+
+  // Add this new function for single Glauber steps
+  const performGlauberStep = Module.cwrap('performGlauberStep', 'number', ['number', 'number'], {async: true});
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
+  const dynamicsBtn = document.getElementById("dynamics-btn");
   let progressInterval;
 
   // Create zoom behavior
@@ -259,7 +289,108 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
+  // Function to start/stop real-time Glauber dynamics
+  function toggleDynamics() {
+    if (dynamicsRunning) {
+      // Stop dynamics
+      clearInterval(dynamicsTimer);
+      dynamicsTimer = null;
+      dynamicsRunning = false;
+      dynamicsBtn.textContent = "Start Dynamics";
+      dynamicsBtn.classList.remove("running");
+      progressElem.innerText = "Dynamics stopped";
+
+      // Re-enable controls
+      document.getElementById("algo-select").disabled = false;
+      document.getElementById("sweeps-input").disabled = false;
+      document.getElementById("n-input").disabled = false;
+      document.getElementById("a-input").disabled = false;
+      document.getElementById("b-input").disabled = false;
+      updateBtn.disabled = false;
+    } else {
+      // Start dynamics
+      if (!cachedDominoes) {
+        alert("Please generate a tiling first before starting dynamics.");
+        return;
+      }
+
+      dynamicsRunning = true;
+      dynamicsBtn.textContent = "Stop Dynamics";
+      dynamicsBtn.classList.add("running");
+      progressElem.innerText = "Dynamics running...";
+
+      // Disable controls during dynamics
+      document.getElementById("algo-select").disabled = true;
+      document.getElementById("sweeps-input").disabled = true;
+      document.getElementById("n-input").disabled = true;
+      document.getElementById("a-input").disabled = true;
+      document.getElementById("b-input").disabled = true;
+      updateBtn.disabled = true;
+
+      // Start the dynamics timer - perform steps and update visualization
+      let stepCount = 0;
+      const stepsPerUpdate = 10; // Number of Glauber steps per visual update
+      const updateInterval = 100; // Update every 100ms
+
+      dynamicsTimer = setInterval(async () => {
+        const aVal = parseFloat(document.getElementById("a-input").value);
+        const bVal = parseFloat(document.getElementById("b-input").value);
+
+        // Perform multiple Glauber steps
+        for (let i = 0; i < stepsPerUpdate; i++) {
+          const resultPtr = await performGlauberStep(aVal, bVal);
+          if (resultPtr) {
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            freeString(resultPtr);
+
+            try {
+              cachedDominoes = JSON.parse(jsonStr);
+            } catch (e) {
+              console.error("Error parsing JSON:", e);
+              clearInterval(dynamicsTimer);
+              progressElem.innerText = "Error during dynamics";
+              return;
+            }
+          }
+        }
+
+        // Update visualization with new domino configuration
+        updateDominoesVisualization();
+
+        // Update counter
+        stepCount += stepsPerUpdate;
+        progressElem.innerText = `Dynamics running... (${stepCount} steps)`;
+      }, updateInterval);
+    }
+  }
+
+  // Function to update just the visualization without resampling
+  function updateDominoesVisualization() {
+    if (!cachedDominoes) return;
+
+    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
+
+    // Update existing rectangles
+    const rects = svg.select("g").selectAll("rect").data(cachedDominoes);
+
+    // Update attributes that might have changed
+    rects.attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+         .attr("x", d => d.x)
+         .attr("y", d => d.y)
+         .attr("width", d => d.w)
+         .attr("height", d => d.h);
+  }
+
   async function updateVisualization(n) {
+    // First, stop any running dynamics
+    if (dynamicsRunning) {
+      clearInterval(dynamicsTimer);
+      dynamicsTimer = null;
+      dynamicsRunning = false;
+      dynamicsBtn.textContent = "Start Dynamics";
+      dynamicsBtn.classList.remove("running");
+    }
+
     svg.selectAll("g").remove();
     startSimulation();
     startProgressPolling();
@@ -288,7 +419,19 @@ Module.onRuntimeInitialized = async function() {
 
     // Run simulation with periodic yielding to keep UI responsive
     try {
-      const ptr = await simulateAztec(n, aVal, bVal);
+      let ptr;
+      if(document.getElementById("algo-select").value === "glauber"){
+          const sweeps = parseInt(document.getElementById("sweeps-input").value,10);
+          ptr = await simulateAztecGlauber(n, aVal, bVal, sweeps);
+
+          // Show the dynamics button for Glauber mode
+          dynamicsBtn.style.display = 'inline-block';
+      }else{
+          ptr = await simulateAztec(n, aVal, bVal);
+
+          // Hide the dynamics button for shuffling mode
+          dynamicsBtn.style.display = 'none';
+      }
 
       if (signal.aborted) {
         if (ptr) freeString(ptr);
@@ -418,12 +561,23 @@ Module.onRuntimeInitialized = async function() {
   // Add cancel button event listener
   document.getElementById("cancel-btn").addEventListener("click", stopSimulation);
 
+  // Add dynamics button event listener
+  document.getElementById("dynamics-btn").addEventListener("click", toggleDynamics);
+
   document.getElementById("grayscale-checkbox").addEventListener("change", () => {
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
     if (cachedDominoes) {
       d3.select("#aztec-svg").select("g").selectAll("rect")
         .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
     }
+  });
+
+  // Add event listener for algorithm selection
+  document.getElementById("algo-select").addEventListener("change", e => {
+    const g = (e.target.value === "glauber");
+    document.getElementById("sweeps-label").style.display =
+    document.getElementById("sweeps-input").style.display = g ? "inline" : "none";
+    document.getElementById("dynamics-btn").style.display = g ? "inline-block" : "none";
   });
 
   // Function to convert SVG dominoes to TikZ code
@@ -468,6 +622,8 @@ Module.onRuntimeInitialized = async function() {
     const a = parseFloat(document.getElementById("a-input").value);
     const b = parseFloat(document.getElementById("b-input").value);
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
+    const algo = document.getElementById("algo-select").value;
+    const sweeps = parseInt(document.getElementById("sweeps-input").value, 10);
 
     // Generate TikZ code
     let tikzCode = `\\documentclass{standalone}
@@ -483,6 +639,7 @@ Module.onRuntimeInitialized = async function() {
 \\begin{document}
 % Aztec Diamond with 2x2 periodic weights
 % n = ${n}, a = ${a}, b = ${b}, grayscale = ${useGrayscale}
+% algorithm = ${algo}${algo === 'glauber' ? `, sweeps = ${sweeps}` : ''}
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
 
 % Dominoes (rectangles)
@@ -568,9 +725,10 @@ Module.onRuntimeInitialized = async function() {
     const n = parseInt(document.getElementById("n-input").value, 10);
     const a = parseFloat(document.getElementById("a-input").value);
     const b = parseFloat(document.getElementById("b-input").value);
+    const algo = document.getElementById("algo-select").value;
 
     const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
-    const fileNameBase = `aztec_periodic_n${n}_a${a}_b${b}`;
+    const fileNameBase = `aztec_periodic_${algo}_n${n}_a${a}_b${b}`;
     const downloadLink = document.createElement('a');
     downloadLink.download = `${fileNameBase.replace(/\./g, "_")}_tikz.tex`;
     downloadLink.href = URL.createObjectURL(blob);
