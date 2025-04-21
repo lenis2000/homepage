@@ -51,7 +51,7 @@ MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
 
 // ---------- Glauber dynamics forward declarations ----------
-double plaquetteWeight(const MatrixDouble &W, int r, int c, bool horizontal);
+double plaquetteWeight(int r, int c, bool horizontal);
 void glauberStep(MatrixInt &conf,
                  const MatrixDouble &W,
                  std::mt19937 &rng,
@@ -247,18 +247,20 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     return a1;
 }
 
-// Weight of the 2‑domino covering of a 2×2 plaquette that starts at (r,c)
-inline double plaquetteWeight(const MatrixDouble &W,
-                              int r, int c,
-                              bool horizontal /*true ↔ HH , false ↔ VV*/) {
-    if(horizontal){
-        //  HH: two horizontal dominoes stacked
-        return W.at(r,   c) * W.at(r,   c+1)   // upper domino
-             * W.at(r+1, c) * W.at(r+1, c+1);  // lower domino
+// --- replace the old helper completely -------------------------------
+double plaquetteWeight(int r,int c,bool horizontal,
+                              const MatrixDouble& W)
+{
+    if (horizontal) {
+        // domino 1: (r,c)+(r,c+1)  ← use left square (r,c)
+        // domino 2: (r+1,c)+(r+1,c+1) ← use left square (r+1,c)
+        console.log(sqrt(W.at(r, c) * W.at(r+1, c)));
+        return sqrt(W.at(r,   c) * W.at(r+1, c));
     } else {
-        //  VV: two vertical dominoes side‑by‑side
-        return W.at(r,   c) * W.at(r+1, c)     // left domino
-             * W.at(r,   c+1) * W.at(r+1, c+1);// right domino
+        // domino 1: (r,c)+(r+1,c)  ← use top square (r,c)
+        // domino 2: (r,c+1)+(r+1,c+1) ← use top square (r,c+1)
+        console.log(sqrt(W.at(r, c) * W.at(r, c)));
+        return sqrt(W.at(r, c) * W.at(r, c));
     }
 }
 
@@ -288,8 +290,8 @@ void glauberStep(MatrixInt &conf,
     if(!(isHH || isVV)) return;   // "mixed" plaquette – skip
 
     // Compute weights
-    double wHH = plaquetteWeight(W, i, j, true);
-    double wVV = plaquetteWeight(W, i, j, false);
+    double wHH = plaquetteWeight(i, j, /*horizontal=*/true,  W);
+    double wVV = plaquetteWeight(i, j, /*horizontal=*/false, W);
 
     // Heat‑bath probability for HH
     double pHH = wHH / (wHH + wVV);

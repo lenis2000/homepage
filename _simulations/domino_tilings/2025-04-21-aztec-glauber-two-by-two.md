@@ -71,7 +71,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <div class="controls">
   <label for="sweeps-input">Sweeps per visual update:</label>
   <input id="sweeps-input" type="number"
-         value="10" min="1" step="1" style="width:70px;">
+         value="100000" min="1" step="1" style="width:70px;">
   <button id="dynamics-btn" style="margin-left:10px;">Start Dynamics</button>
 </div>
 
@@ -91,7 +91,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 </div>
 
 <div class="controls">
-  <input type="checkbox" id="grayscale-checkbox">
+    <input type="checkbox" id="grayscale-checkbox" checked>
   <label for="grayscale-checkbox">Grayscale mode</label>
 </div>
 
@@ -287,8 +287,23 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
+// --- helper: run nSteps Glauber flips with current a,b and redraw ---
+async function advanceDynamics(nSteps) {
+  const aVal = parseFloat(document.getElementById('a-input').value);
+  const bVal = parseFloat(document.getElementById('b-input').value);
+
+  const ptr   = await performGlauberSteps(aVal, bVal, nSteps);
+  const json  = Module.UTF8ToString(ptr);
+  freeString(ptr);
+
+  cachedDominoes = JSON.parse(json);
+  updateDominoesVisualization();          // redraw
+  return nSteps;                           // tell caller how many steps ran
+}
+
+
   // Function to start/stop real-time Glauber dynamics
-  function toggleDynamics() {
+  async function toggleDynamics() {
     if (dynamicsRunning) {
       // Stop dynamics
       clearInterval(dynamicsTimer);
@@ -320,8 +335,16 @@ Module.onRuntimeInitialized = async function() {
       document.getElementById("n-input").disabled = true;
       updateBtn.disabled = true;
 
+          // ---- FIRST update *before* timer starts ----
+          const firstSteps   = Math.max(1,
+            parseInt(document.getElementById('sweeps-input').value, 10) || 1);
+
+          let stepCount      = await advanceDynamics(firstSteps);   // runs once
+          progressElem.innerText =
+            `Dynamics running… (${stepCount} steps)`;               // show count
+
+
       // Start the dynamics timer - perform steps and update visualization
-      let stepCount = 0;
       const sweepsPerUpdateInput = document.getElementById("sweeps-input");
       const updateInterval = 100; // ms between screen draws
 
