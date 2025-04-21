@@ -776,8 +776,15 @@ Module.onRuntimeInitialized = async function() {
                 geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
 
                 const isH = (faceData.color === 'blue' || faceData.color === 'green');
-                // Indices for two triangles making the top face
-                const indices = [0, 1, 2, 0, 2, 3]; // Placeholder for a basic quad
+                // ── choose full 12‑triangle index list (6 vertices) ──
+                const indices = isH
+                  // horizontal domino (blue/green): vertices 0‑5 →
+                  //   0,1,3, 3,2,1  – top face
+                  //   0,1,4         – long left side
+                  //   3,2,5         – long right side
+                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
+                  // vertical domino (red/yellow): same pattern
+                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
 
                 if (cachedDominoes.length * 6 > 65535) {
                     geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
