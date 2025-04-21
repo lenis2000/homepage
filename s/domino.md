@@ -557,17 +557,6 @@ const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
   async function toggleGlauberDynamics() {
 
 
-// —–––– hook the button —––––
-document.getElementById('glauber-btn')
-        .addEventListener('click', toggleGlauberDynamics);
-
-
-// hook the button
-if (!window._glauberHooked) {
-    document.getElementById('glauber-btn')
-            .addEventListener('click', toggleGlauberDynamics);
-    window._glauberHooked = true;
-}
 
       const glauberBtn = document.getElementById('glauber-btn');
       const sweepsInput = document.getElementById('sweeps-input');
@@ -1373,6 +1362,11 @@ if (!window._glauberHooked) {
   }
 
   document.getElementById("sample-btn").addEventListener("click", () => {
+
+    // Hook Glauber button to toggleGlauberDynamics
+    document.getElementById("glauber-btn")
+            .addEventListener("click", toggleGlauberDynamics);
+
     let n = parseInt(document.getElementById("n-input").value, 10);
 
     if (isNaN(n) || n < 2 || n % 2) {
@@ -1423,6 +1417,8 @@ if (!window._glauberHooked) {
         progressElem.innerText = "Generating new 3D visualization...";
       }
     }
+
+
 
     // If we get here, n is within allowed range for current view
     updateVisualization(n);
