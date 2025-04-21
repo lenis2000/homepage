@@ -1688,6 +1688,15 @@ Module.onRuntimeInitialized = async function() {
     .style("touch-action", "none"); // Prevent browser default touch actions
   let initialTransform2d = {}; // Store initial transform parameters for 2D
 
+  // ---- 2‑D layer bookkeeping ----------------------------------------------
+  let dominoLayer   = null;   // <g> that holds *only* domino items
+  let dominoIndex   = new Map();   // key ↦ {rect,tri,datum}
+  let prevDominoKey = null;   // to detect first render
+
+  function key2D(d){      // unique key → bottom‑left lattice coord
+    return `${d.x}|${d.y}`;
+  }
+
   // Create zoom behavior for 2D
   const zoom2d = d3.zoom()
     .scaleExtent([0.1, 50]) // Min and max zoom scale
@@ -1800,41 +1809,50 @@ Module.onRuntimeInitialized = async function() {
     const showColors = document.getElementById("show-colors-checkbox").checked;
     const monoColor = "#F8F8F8"; // Extremely light monochrome color
 
-    // First, remove any existing overlays
-    svg2d.select("g").selectAll(".checkerboard-square").remove();
-    svg2d.select("g").selectAll(".path-line").remove();
-    svg2d.select("g").selectAll(".dimer-circle").remove();
-    svg2d.select("g").selectAll(".dimer-line").remove();
-    svg2d.select("g").selectAll(".height-node").remove();
-    svg2d.select("g").selectAll(".height-label").remove();
+    // First, make sure we have a persistent layer to work with
+    if (!dominoLayer) return;
+
+    // Remove any existing overlays
+    dominoLayer.selectAll(".checkerboard-square").remove();
+    dominoLayer.selectAll(".path-line").remove();
+    dominoLayer.selectAll(".dimer-circle").remove();
+    dominoLayer.selectAll(".dimer-line").remove();
+    dominoLayer.selectAll(".height-node").remove();
+    dominoLayer.selectAll(".height-label").remove();
 
     // Get the current border thickness value
     const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
 
     // Toggle colors between normal and grayscale for the dominoes and update border width
-    svg2d.select("g").selectAll("rect")
-      .attr("fill", function(d) {
-        // Determine the base color based on color settings
-        if (!showColors) {
-          return monoColor;
-        } else if (useGrayscale) {
-          return getGrayscaleColor(d.color, d);
-        } else {
-          return d.color;
-        }
-      })
-      .attr("stroke-width", borderWidth); // Update the border thickness
+    // Use dominoIndex for fast direct access to each domino's rect and tri objects
+    dominoIndex.forEach((domino, key) => {
+      const d = domino.datum;
+
+      // Set fill color based on settings
+      let fill;
+      if (!showColors) {
+        fill = monoColor;
+      } else if (useGrayscale) {
+        fill = getGrayscaleColor(d.color, d);
+      } else {
+        fill = d.color;
+      }
+
+      // Apply styling directly to the rectangle
+      domino.rect
+        .attr("fill", fill)
+        .attr("stroke-width", borderWidth);
+    });
 
     // If checkerboard is enabled, draw 2x2 lattice squares
     if (showCheckerboard) {
-      const group = svg2d.select("g");
-
       // Create a set of all 2x2 lattice faces used by the dominoes
       const latticeSet = new Set();
       const latticeSquares = [];
 
-      // First, collect all the 2x2 lattice face positions
-      group.selectAll("rect").each(function(d) {
+      // First, collect all the 2x2 lattice face positions from our indexed dominoes
+      dominoIndex.forEach((domino, key) => {
+        const d = domino.datum;
         // For a horizontal domino (2x4), it covers 2 lattice faces side by side
         // For a vertical domino (4x2), it covers 2 lattice faces one above the other
 
@@ -1880,7 +1898,7 @@ Module.onRuntimeInitialized = async function() {
       });
 
       // Now draw all the lattice faces with checkerboard pattern
-      group.selectAll(".checkerboard-square")
+      dominoLayer.selectAll(".checkerboard-square")
           .data(latticeSquares)
           .enter()
           .append("rect")
@@ -1899,17 +1917,12 @@ Module.onRuntimeInitialized = async function() {
 
     // If nonintersecting paths are enabled, draw them
     if (showPaths) {
-      // Collect all the dominoes
-      const dominoes = [];
-      svg2d.select("g").selectAll("rect").each(function(d) {
-        dominoes.push(d);
-      });
-
       // Create paths based on domino type and orientation
       const pathSegments = [];
 
-      // Process each domino
-      dominoes.forEach(d => {
+      // Process each domino from our index
+      dominoIndex.forEach((domino, key) => {
+        const d = domino.datum;
         const isHorizontal = d.w > d.h;
         const color = d.color;
 
@@ -1981,8 +1994,7 @@ Module.onRuntimeInitialized = async function() {
       });
 
       // Draw all path segments
-      const group = svg2d.select("g");
-      group.selectAll(".path-line")
+      dominoLayer.selectAll(".path-line")
           .data(pathSegments)
           .enter()
           .append("line")
@@ -1998,9 +2010,10 @@ Module.onRuntimeInitialized = async function() {
 
     // If dimers are enabled, draw them
     if (showDimers) {
-      // Collect all the dominoes
+      // Use dominoes from our index
       const dominoes = [];
-      svg2d.select("g").selectAll("rect").each(function(d) {
+      dominoIndex.forEach((domino, key) => {
+        const d = domino.datum;
         // Only add dominoes with valid coordinates
         if (d && typeof d.x === 'number' && typeof d.y === 'number' &&
             typeof d.w === 'number' && typeof d.h === 'number' &&
@@ -2120,10 +2133,9 @@ Module.onRuntimeInitialized = async function() {
       );
 
       // Draw dimer edges and nodes
-      const group = svg2d.select("g");
 
       // First draw edges (lines)
-      group.selectAll(".dimer-line")
+      dominoLayer.selectAll(".dimer-line")
           .data(validDimerEdges)
           .enter()
           .append("line")
@@ -2137,7 +2149,7 @@ Module.onRuntimeInitialized = async function() {
           .attr("pointer-events", "none");
 
       // Then draw nodes (circles)
-      group.selectAll(".dimer-circle")
+      dominoLayer.selectAll(".dimer-circle")
           .data(validDimerNodes)
           .enter()
           .append("circle")
@@ -2161,7 +2173,8 @@ Module.onRuntimeInitialized = async function() {
   // Function to toggle height function on/off
   function toggleHeightFunction() {
     // Remove any existing height function elements
-    svg2d.select("g").selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
+    if (!dominoLayer) return;
+    dominoLayer.selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
 
     // If height function is not enabled or n > 30, just return
     const n = parseInt(document.getElementById("n-input").value, 10);
@@ -2250,10 +2263,8 @@ Module.onRuntimeInitialized = async function() {
     const fontSize = Math.max(0.8, Math.min(1.2, 3.6 - n / 20.0))/1.0; // n = order
 
     // 6. Render just the numbers in pixels
-    const group = svg2d.select("g");
-
     // Create a group for the height function labels
-    const heightLabelsGroup = group.append("g")
+    const heightLabelsGroup = dominoLayer.append("g")
         .attr("class", "height-function-group");
 
     heights.forEach((h, key) => {
@@ -2336,72 +2347,76 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // Function to render dominoes in 2D view
-  async function render2D(dominoes) {
-    if (!dominoes || dominoes.length === 0) return;
+  async function render2D(dominoes){
+    if(!dominoes?.length) return;
 
-    // Clear previous rendering
-    svg2d.selectAll("g").remove();
-
-    const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
-
-    // Get the current border thickness value
-    const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
-
-    // Calculate bounds and scale
-    const minX = d3.min(dominoes, d => d.x);
-    const minY = d3.min(dominoes, d => d.y);
-    const maxX = d3.max(dominoes, d => d.x + d.w);
-    const maxY = d3.max(dominoes, d => d.y + d.h);
-    const widthDominoes = maxX - minX;
-    const heightDominoes = maxY - minY;
-
-    const bbox = svg2d.node().getBoundingClientRect();
-    const svgWidth = bbox.width;
-    const svgHeight = bbox.height;
-
-    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
-    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
-    // Shift the visualization up by adding a negative vertical offset (20% of available space)
-    const verticalShift = svgHeight * 0.04; // 10% of the SVG height
-    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale - verticalShift;
-
-    // Store the initial transform parameters for zoom behavior
-    initialTransform2d = {
-      translateX: translateX,
-      translateY: translateY,
-      scale: scale
-    };
-
-    // Reset the zoom transform when creating a new visualization
-    svg2d.call(zoom2d.transform, d3.zoomIdentity);
-
-    const group = svg2d.append("g")
-                       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
-
-    // Render dominoes in batches to keep UI responsive
-    const BATCH_SIZE = 200;
-
-    for (let i = 0; i < dominoes.length; i += BATCH_SIZE) {
-      const batch = dominoes.slice(i, i + BATCH_SIZE);
-
-      group.selectAll("rect.batch" + i)
-           .data(batch)
-           .enter()
-           .append("rect")
-           .attr("x", d => d.x)
-           .attr("y", d => d.y)
-           .attr("width", d => d.w)
-           .attr("height", d => d.h)
-           .attr("stroke", "#000")
-           .attr("stroke-width", borderWidth);
-
-      // Yield to UI thread after each batch
-      if (i + BATCH_SIZE < dominoes.length) {
-        await sleep(0);
-      }
+    /* -------- Initial build --------------------------------------------- */
+    if(!dominoLayer){
+      // build once
+      svg2d.selectAll("g").remove();          // scrap stray stuff from old versions
+      dominoLayer = svg2d.append("g")
+                         .attr("class","domino-layer");
     }
 
-    // Apply display settings (colors, grayscale, checkerboard overlay) once all dominoes are rendered
+    /* -------- Compute current transform --------------------------------- */
+    const minX = d3.min(dominoes,d=>d.x),
+          minY = d3.min(dominoes,d=>d.y),
+          maxX = d3.max(dominoes,d=>d.x+d.w),
+          maxY = d3.max(dominoes,d=>d.y+d.h);
+
+    const box   = svg2d.node().getBoundingClientRect(),
+          scale = Math.min(box.width /(maxX-minX),
+                           box.height/(maxY-minY))*0.9,
+          tx    = (box.width  -(maxX-minX)*scale)/2 - minX*scale,
+          ty    = (box.height -(maxY-minY)*scale)/2 - minY*scale
+                  - box.height*0.04;                   // vertical shift
+
+    dominoLayer.attr("transform",`translate(${tx},${ty}) scale(${scale})`);
+
+    /* -------- Data‑join -------------------------------------------------- */
+    // join by bottom‑left coordinate
+    const join = dominoLayer.selectAll("g.dom")
+                  .data(dominoes,key2D);
+
+    // EXIT – remove gone dominoes
+    join.exit().each(function(d){
+        const k = key2D(d);
+        dominoIndex.delete(k);
+      }).remove();
+
+    // ENTER – new domino container
+    const gEnter = join.enter()
+          .append("g").attr("class","dom");
+
+    //  ► rect
+    gEnter.append("rect");
+    //  ► tiny orientation triangle (points filled below)
+    // gEnter.append("polygon").attr("class","tri");
+
+    // UPDATE + ENTER
+    const gAll = gEnter.merge(join);
+
+    gAll.each(function(d){
+       const k = key2D(d), g = d3.select(this);
+       // ----------------------------------------------------------------- rect
+       g.select("rect")
+        .attr("x",d.x).attr("y",d.y)
+        .attr("width",d.w).attr("height",d.h)
+        .attr("stroke","#000");      // fill & stroke‑width set later in updateDominoDisplay()
+       // ----------------------------------------------------------------- triangle
+       const tri = g.select("polygon");
+       const p = (d.w>d.h)            // horizontal vs vertical
+               ? `${d.x+0.4},${d.y+0.4} ${d.x+0.4},${d.y+d.h-0.4} ${d.x+d.w-0.4},${d.y+0.4}`
+               : `${d.x+0.4},${d.y+0.4} ${d.x+d.w-0.4},${d.y+0.4} ${d.x+0.4},${d.y+d.h-0.4}`;
+       tri.attr("points",p)
+          .attr("fill","#000")
+          .attr("pointer-events","none");
+
+       // store reference for lightning‑fast single‑domino tweaks later if needed
+       dominoIndex.set(k,{rect:g.select("rect"),tri,datum:d});
+    });
+
+    // apply current colouring / overlays
     updateDominoDisplay();
   }
 
