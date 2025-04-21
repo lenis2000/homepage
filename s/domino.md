@@ -418,29 +418,8 @@ Module.onRuntimeInitialized = async function() {
   const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
   const wasGlauberActive = Module.cwrap('wasGlauberActive', 'boolean', []);
 
-  // Helper functions for domino identification and display
-  function dominoKey(d) {
-    // NW lattice corner in axial coords is unique and does not change
-    return `${Math.round(d.x)}_${Math.round(d.y)}`;
-  }
-
-  function getDominoFill(d) {
-    const showColors = !document.getElementById("grayscale-checkbox-2d").checked;
-    if (!showColors) {
-      return "#F8F8F8"; // Extremely light monochrome color
-    } else {
-      return d.color;
-    }
-  }
-
-  function orientationChanged(a, b) {
-    return a.w !== b.w || a.h !== b.h || a.color !== b.color;
-  }
-
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
-  let dominoMeshMap = new Map(); // key → THREE.Mesh
-  let dominoLayer; // D3 layer for dominoes
   let animationActive = true;
 
   // Simulation state
@@ -752,51 +731,6 @@ Module.onRuntimeInitialized = async function() {
     }
   }
   
-  // Helper function to build a domino mesh
-  function buildDominoMesh(domino) {
-    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
-    const scale = 60 / (2 * n);
-    const heightMap = calculateHeightFunction(cachedDominoes);
-    const colors = { blue: 0x4363d8, green: 0x1e8c28, red: 0xff2244, yellow: 0xfca414 };
-    const showColors3D = document.getElementById("show-colors-checkbox").checked;
-    const monoColor3D = 0x999999;
-    
-    const faceData = createDominoFaces(domino, heightMap, scale);
-    if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return null;
-    
-    try {
-        const geom = new THREE.BufferGeometry();
-        const pos = [];
-        faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
-        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-        
-        // Always use indices for a quad
-        const indices = [0, 1, 2, 0, 2, 3];
-        
-        if (cachedDominoes.length * 6 > 65535) {
-            geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-        } else {
-            geom.setIndex(indices);
-        }
-        geom.computeVertexNormals();
-        
-        const colorValue = colors[faceData.color] || 0x808080;
-        const mat = new THREE.MeshStandardMaterial({
-            color: showColors3D ? colorValue : monoColor3D,
-            side: THREE.DoubleSide,
-            flatShading: true
-        });
-        mat.userData = { originalColorValue: colorValue };
-        const mesh = new THREE.Mesh(geom, mat);
-        mesh.userData.originalColor = faceData.color;
-        mesh.userData.domino = domino; // Store original domino for comparison
-        return mesh;
-    } catch(e) {
-        console.error("Error creating 3D mesh during domino creation:", e);
-        return null;
-    }
-  }
-
   // Function to update both 2D and 3D visualizations from cachedDominoes
   async function updateVisualizationFromCache() {
     if (!cachedDominoes) return;
@@ -805,69 +739,65 @@ Module.onRuntimeInitialized = async function() {
     const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
     const is2DView = document.getElementById("view-2d-btn").classList.contains("active");
 
-    // Update 2D view with incremental updates if active
+    // Update 2D view immediately if active
     if (is2DView) {
-        if (dominoLayer) {
-            const sel = dominoLayer.selectAll('rect').data(cachedDominoes, dominoKey);
-            
-            sel.exit().remove();                         // dropped dominoes
-            sel.enter().append('rect')                   // new dominoes
-               .attr('stroke','#000');                   // one-time attrs only
-            sel.merge(sel)                               // changed dominoes
-               .attr('x',d=>d.x)
-               .attr('y',d=>d.y)
-               .attr('width',d=>d.w)
-               .attr('height',d=>d.h)
-               .attr('fill',d=>getDominoFill(d));        // helper that honours grayscale etc.
-               
-            // Update display settings (but don't re-render)
-            updateDominoDisplay();
-        } else {
-            // First time or after reset, do a full render
-            await render2D(cachedDominoes);
-        }
+        await render2D(cachedDominoes); // Re-render 2D SVG
     }
 
     // Update 3D view if active and n is suitable
     if (is3DView && n <= 300) {
-        if (!dominoGroup) {
+        // Clear existing domino group
+        if (dominoGroup) {
+            while(dominoGroup.children.length > 0){
+                const m = dominoGroup.children[0];
+                dominoGroup.remove(m);
+                if (m.geometry) m.geometry.dispose();
+                if (m.material) m.material.dispose();
+            }
+        } else {
             initThreeJS(); // Reinitialize if group doesn't exist
         }
-        
-        // Map for tracking new dominoes
-        const newMap = new Map();
-        cachedDominoes.forEach(dom => { 
-            newMap.set(dominoKey(dom), dom); 
-        });
 
-        /* remove vanished dominoes */
-        dominoMeshMap.forEach((mesh, key) => {
-            if(!newMap.has(key)) {
-                dominoGroup.remove(mesh);
-                mesh.geometry.dispose(); 
-                mesh.material.dispose();
-                dominoMeshMap.delete(key);
-            }
-        });
+        // Recalculate height map and render (similar logic as in updateVisualization)
+        const heightMap = calculateHeightFunction(cachedDominoes);
+        const scale = 60 / (2 * n);
+        const colors = { blue: 0x4363d8, green: 0x1e8c28, red: 0xff2244, yellow: 0xfca414 };
+        const showColors3D = document.getElementById("show-colors-checkbox").checked;
+        const monoColor3D = 0x999999;
 
-        /* add / update changed dominoes */
-        newMap.forEach((dom, key) => {
-            const old = dominoMeshMap.get(key);
-            if (!old) {                      // brand-new
-                const mesh = buildDominoMesh(dom);
-                if (mesh) {
-                    dominoGroup.add(mesh);
-                    dominoMeshMap.set(key, mesh);
+        cachedDominoes.forEach(domino => {
+            const faceData = createDominoFaces(domino, heightMap, scale);
+            if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return;
+
+            try {
+                const geom = new THREE.BufferGeometry();
+                const pos = [];
+                faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+
+                const isH = (faceData.color === 'blue' || faceData.color === 'green');
+                // Indices for two triangles making the top face
+                const indices = [0, 1, 2, 0, 2, 3]; // Placeholder for a basic quad
+
+                if (cachedDominoes.length * 6 > 65535) {
+                    geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+                } else {
+                    geom.setIndex(indices);
                 }
-            } else if (orientationChanged(dom, old.userData.domino)) { // width/height swap
-                dominoGroup.remove(old);
-                old.geometry.dispose(); 
-                old.material.dispose();
-                const mesh = buildDominoMesh(dom);
-                if (mesh) {
-                    dominoGroup.add(mesh);
-                    dominoMeshMap.set(key, mesh);
-                }
+                geom.computeVertexNormals();
+
+                const colorValue = colors[faceData.color] || 0x808080;
+                const mat = new THREE.MeshStandardMaterial({
+                    color: showColors3D ? colorValue : monoColor3D,
+                    side: THREE.DoubleSide,
+                    flatShading: true
+                });
+                mat.userData = { originalColorValue: colorValue };
+                const mesh = new THREE.Mesh(geom, mat);
+                mesh.userData.originalColor = faceData.color;
+                dominoGroup.add(mesh);
+            } catch(e) {
+                console.error("Error creating 3D mesh during Glauber update:", e);
             }
         });
 
@@ -877,6 +807,10 @@ Module.onRuntimeInitialized = async function() {
             const center = box.getCenter(new THREE.Vector3());
             center.x += -0.7; center.z += 4; // Adjust center
             dominoGroup.position.sub(center);
+        }
+        // Ensure render happens
+        if (renderer && animationActive) {
+            //renderer.render(scene, camera); // Render handled by animate loop
         }
     }
   }
@@ -992,7 +926,9 @@ Module.onRuntimeInitialized = async function() {
         [x, y+h],    // top-left
         [x+w, y+h],  // top-right
         [x+w, y],    // bottom-right
-        [x, y]       // bottom-left
+        [x, y],      // bottom-left
+        [x+w/2, y+h],// top-mid
+        [x+w/2, y]   // bottom-mid
       ];
     } else {
       // vertical domino (yellow or red)
@@ -1004,7 +940,9 @@ Module.onRuntimeInitialized = async function() {
         [x, y],      // bottom-left
         [x, y+h],    // top-left
         [x+w, y+h],  // top-right
-        [x+w, y]     // bottom-right
+        [x+w, y],    // bottom-right
+        [x, y+h/2],  // left-mid
+        [x+w, y+h/2] // right-mid
       ];
     }
 
@@ -1036,7 +974,7 @@ Module.onRuntimeInitialized = async function() {
 
     return {
       color: color,
-      vertices: [vertices[0], vertices[1], vertices[2], vertices[3]]
+      vertices: vertices
     };
   }
 
@@ -2439,11 +2377,6 @@ Module.onRuntimeInitialized = async function() {
 
     const group = svg2d.append("g")
                        .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
-    
-    // Create a dedicated domino layer
-    dominoLayer = group.append('g')
-      .attr('id','domino-layer')
-      .attr('transform',`translate(0,0) scale(1)`);
 
     // Render dominoes in batches to keep UI responsive
     const BATCH_SIZE = 200;
@@ -2451,8 +2384,8 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 0; i < dominoes.length; i += BATCH_SIZE) {
       const batch = dominoes.slice(i, i + BATCH_SIZE);
 
-      dominoLayer.selectAll("rect.batch" + i)
-           .data(batch, dominoKey)
+      group.selectAll("rect.batch" + i)
+           .data(batch)
            .enter()
            .append("rect")
            .attr("x", d => d.x)
