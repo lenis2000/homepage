@@ -106,7 +106,7 @@ permalink: /domino/
     cursor: not-allowed;
     background-color: #cccccc;
   }
-  
+
   #glauber-btn.running {
     background-color: #dc3545; /* Red when running */
     border-color: #dc3545;
@@ -268,7 +268,7 @@ permalink: /domino/
       <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
     </div>
   </div>
-  
+
   <div id="glauber-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
     <h3 style="margin-bottom: 8px;">Glauber Dynamics:</h3>
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px;">
@@ -432,7 +432,7 @@ Module.onRuntimeInitialized = async function() {
   let cachedDominoes = null; // Store dominoes for 2D view
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
-  
+
   // Glauber state variables
   let glauberRunning = false;
   let glauberTimer = null;
@@ -541,7 +541,7 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 1; i <= 9; i++) {
       document.getElementById(`w${i}`)?.setAttribute("disabled", "disabled");
     }
-    
+
     // Disable Glauber controls
     document.getElementById('glauber-btn')?.setAttribute('disabled', 'disabled');
     document.getElementById('sweeps-input')?.setAttribute('disabled', 'disabled');
@@ -575,11 +575,11 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 1; i <= 9; i++) {
       document.getElementById(`w${i}`)?.removeAttribute("disabled");
     }
-    
+
     // Re-enable Glauber controls
     document.getElementById('glauber-btn')?.removeAttribute('disabled');
     document.getElementById('sweeps-input')?.removeAttribute('disabled');
-    
+
     // If cancelled while Glauber was running, reset its UI
     if (glauberRunning) {
         const glauberBtn = document.getElementById('glauber-btn');
@@ -621,7 +621,7 @@ Module.onRuntimeInitialized = async function() {
     initThreeJS();
     return "";
   };
-  
+
   // Helper function to run Glauber steps and update visualization
   async function advanceGlauberDynamics(nSteps) {
     if (!cachedDominoes) return 0; // Need an initial state
@@ -669,7 +669,7 @@ Module.onRuntimeInitialized = async function() {
         return 0;
     }
   }
-  
+
   // Function to start/stop Glauber dynamics
   async function toggleGlauberDynamics() {
     const glauberBtn = document.getElementById('glauber-btn');
@@ -704,7 +704,7 @@ Module.onRuntimeInitialized = async function() {
         glauberBtn.textContent = "Stop Glauber";
         glauberBtn.classList.add('running', 'btn-danger');
         glauberBtn.classList.remove('btn-success');
-        glauberStatus.innerText = "Running...";
+        glauberStatus.innerText = "";
 
         // Disable controls that shouldn't be changed during dynamics
         document.getElementById("sample-btn")?.setAttribute("disabled", "disabled");
@@ -730,7 +730,7 @@ Module.onRuntimeInitialized = async function() {
         }
     }
   }
-  
+
   // Function to update both 2D and 3D visualizations from cachedDominoes
   async function updateVisualizationFromCache() {
     if (!cachedDominoes) return;
@@ -984,7 +984,7 @@ Module.onRuntimeInitialized = async function() {
         toggleGlauberDynamics(); // Stop the dynamics
     }
     lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
-    
+
     /* ------------------------------------------------------------------ */
      /* 1. wipe previous geometry *and* transforms                          */
      /* ------------------------------------------------------------------ */
@@ -1339,7 +1339,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Add Glauber button event listener
   document.getElementById('glauber-btn')?.addEventListener('click', toggleGlauberDynamics);
-  
+
   document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
 
