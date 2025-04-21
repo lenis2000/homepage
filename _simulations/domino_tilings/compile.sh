@@ -48,6 +48,19 @@ emcc 2025-04-18-three-periodic-optimized.cpp -o 2025-04-18-three-periodic.js \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
 
+# Compile the 2x2 Aztec Glauber simulation
+echo "Compiling 2x2 Aztec Glauber simulation..."
+emcc 2025-04-21-aztec-glauber-two-by-two.cpp -o 2025-04-21-aztec-glauber-two-by-two.js \
+ -s WASM=1 \
+ -s ASYNCIFY=1 \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_freeString', '_getProgress']" \
+ -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+ -s ALLOW_MEMORY_GROWTH=1 \
+ -s INITIAL_MEMORY=64MB \
+ -s ENVIRONMENT=web \
+ -s SINGLE_FILE=1 \
+ -O3 -ffast-math
+
 # Compile the 3D visualization
 echo "Compiling 3D visualization..."
 emcc 2025-04-17-aztec-uniform-3d-optimized.cpp -o 2025-04-17-aztec-uniform-3d.js \
@@ -67,19 +80,6 @@ emcc 2025-04-18-aztec-three-periodic-3d.cpp -o 2025-04-18-aztec-three-periodic-3
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
- -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
- -s ALLOW_MEMORY_GROWTH=1 \
- -s INITIAL_MEMORY=64MB \
- -s ENVIRONMENT=web \
- -s SINGLE_FILE=1 \
- -O3 -ffast-math
-
-# Compile T-embeddings JSON generator
-echo "Compiling T-embeddings JSON generator..."
-emcc 2025-03-25-t-emb-json.cpp -o 2025-03-25-t-emb-json.js \
- -s WASM=1 \
- -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_doTembJSON','_freeString','_getProgress','_resetProgress','_requestCancel','_isCancelled','_resetCancel']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
