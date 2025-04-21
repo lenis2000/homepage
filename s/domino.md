@@ -1711,7 +1711,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Create zoom behavior for 2D
   const zoom2d = d3.zoom()
-    .scaleExtent([0.1, 50]) // Min and max zoom scale
+    .scaleExtent([0.001, 50]) // Min and max zoom scale
     .on("zoom", (event) => {
       if (!initialTransform2d.scale) return; // Skip if no initial transform is set
 
@@ -2435,7 +2435,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Mark that we've done a render by setting prevDominoKey
     prevDominoKey = dominoes.length > 0 ? key2D(dominoes[0]) : "empty";
-    
+
     // apply current colouring / overlays
     updateDominoDisplay();
   }
