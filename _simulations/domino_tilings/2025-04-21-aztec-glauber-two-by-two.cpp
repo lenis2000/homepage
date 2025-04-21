@@ -276,14 +276,18 @@ void glauberStep(MatrixInt &conf,
     int i = du(rng)*2;
     int j = du(rng)*2;
 
-    // Detect current orientation: 1 → occupied
-    bool isHH = (conf.at(i, j)     == 1 && conf.at(i, j+1)   == 1 &&
-                 conf.at(i+1, j)   == 1 && conf.at(i+1, j+1) == 1);
+    // Detect current orientation (exactly two markers on a diagonal)
+    bool isHH = (conf.at(i, j)      == 1 &&                // NW
+                 conf.at(i+1, j+1)  == 1 &&                // SE
+                 conf.at(i+1, j)    == 0 &&                // SW empty
+                 conf.at(i, j+1)    == 0);                 // NE empty
 
-    bool isVV = (conf.at(i, j)     == 1 && conf.at(i+1, j)   == 1 &&
-                 conf.at(i, j+1)   == 1 && conf.at(i+1, j+1) == 1);
+    bool isVV = (conf.at(i+1, j)    == 1 &&                // SW
+                 conf.at(i, j+1)    == 1 &&                // NE
+                 conf.at(i, j)      == 0 &&                // NW empty
+                 conf.at(i+1, j+1)  == 0);                 // SE empty
 
-    if(!(isHH || isVV)) return;   // plaquette is "mixed"; skip
+    if(!(isHH || isVV)) return;   // "mixed" plaquette – skip
 
     // Compute weights
     double wHH = plaquetteWeight(W, i, j, true);
@@ -297,14 +301,17 @@ void glauberStep(MatrixInt &conf,
     if( (chooseHH && isHH) || (!chooseHH && isVV) ) return; // nothing flips
 
     // Clear plaquette
-    conf.at(i, j) = conf.at(i, j+1) = conf.at(i+1, j) = conf.at(i+1, j+1) = 0;
+    conf.at(i, j)    = conf.at(i, j+1)   = 0;
+    conf.at(i+1, j)  = conf.at(i+1, j+1)  = 0;
 
     if(chooseHH){
-        conf.at(i,   j)   = conf.at(i,   j+1) = 1;  // upper
-        conf.at(i+1, j)   = conf.at(i+1, j+1) = 1;  // lower
+        // place markers on NW & SE
+        conf.at(i, j)     = 1;
+        conf.at(i+1, j+1) = 1;
     }else{
-        conf.at(i,   j)   = conf.at(i+1, j)   = 1;  // left
-        conf.at(i,   j+1) = conf.at(i+1, j+1) = 1;  // right
+        // place markers on SW & NE
+        conf.at(i+1, j)   = 1;
+        conf.at(i, j+1)   = 1;
     }
 }
 
