@@ -71,7 +71,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <div class="controls">
   <label for="sweeps-input">Sweeps per visual update:</label>
   <input id="sweeps-input" type="number"
-         value="100000" min="1" step="1" style="width:70px;">
+         value="100" min="1" step="1" style="width:70px;">
   <button id="dynamics-btn" style="margin-left:10px;">Start Dynamics</button>
 </div>
 
@@ -91,7 +91,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 </div>
 
 <div class="controls">
-    <input type="checkbox" id="grayscale-checkbox" checked>
+    <input type="checkbox" id="grayscale-checkbox">
   <label for="grayscale-checkbox">Grayscale mode</label>
 </div>
 
