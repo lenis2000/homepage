@@ -3,9 +3,9 @@ title: Domino tilings of the Aztec diamond with 2x2 periodic weights
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-21-aztec-glauber-two-by-two.md'
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-21-aztec-glauber-two-by-two.cpp'
     txt: 'C++ code for the simulation'
 ---
 
@@ -53,7 +53,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 ---
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="/js/2025-02-03-aztec-periodic.js"></script>
+<script src="/js/2025-04-21-aztec-glauber-two-by-two.js"></script>
 
 <!-- Simulation Controls -->
 <div class="controls">

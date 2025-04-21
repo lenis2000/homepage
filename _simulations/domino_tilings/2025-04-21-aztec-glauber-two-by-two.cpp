@@ -1,5 +1,5 @@
 /*
-emcc 2025-02-03-aztec-periodic-optimized.cpp -o 2025-02-03-aztec-periodic.js \
+emcc 2025-04-21-aztec-glauber-two-by-two.cpp -o 2025-04-21-aztec-glauber-two-by-two.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
@@ -9,7 +9,7 @@ emcc 2025-02-03-aztec-periodic-optimized.cpp -o 2025-02-03-aztec-periodic.js \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
-  mv 2025-02-03-aztec-periodic.js ../../js/
+  mv 2025-04-21-aztec-glauber-two-by-two.js ../../js/
 
 Features:
 - 2x2 periodic weights for random domino tilings of Aztec diamond
@@ -219,7 +219,7 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
         a1.at(0, 0) = 0; a1.at(0, 1) = 1;
         a1.at(1, 0) = 1; a1.at(1, 1) = 0;
     }
-    
+
     int totalIterations = n - 1;
     for (int i = 0; i < totalIterations; i++){
         a1 = delslide(a1);
@@ -241,7 +241,7 @@ char* simulateAztec(int n, double a, double b) {
         // Create 2*n x 2*n weight matrix with 2x2 periodic weights.
         int dim = 2 * n;
         MatrixDouble A1a(dim, dim, 0.0);
-        
+
         // Set up the 2x2 periodic weights pattern
         for (int i = 0; i < dim; i++){
             for (int j = 0; j < dim; j++){
@@ -323,24 +323,24 @@ char* simulateAztec(int n, double a, double b) {
                     } else {
                         continue;
                     }
-                    
+
                     x *= scale;
                     y *= scale;
                     w *= scale;
                     h *= scale;
-                    
+
                     if (!first) json.append(",");
                     else first = false;
 
                     // Use sprintf for efficient number formatting
-                    snprintf(buffer, sizeof(buffer), 
-                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}", 
+                    snprintf(buffer, sizeof(buffer),
+                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
                              x, y, w, h, color);
                     json.append(buffer);
                 }
             }
         }
-        
+
         json.append("]");
         progressCounter = 100; // Finished.
 
