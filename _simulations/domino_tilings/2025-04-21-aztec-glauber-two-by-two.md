@@ -299,7 +299,6 @@ Module.onRuntimeInitialized = async function() {
       progressElem.innerText = "Dynamics stopped";
 
       // Re-enable controls
-      document.getElementById("algo-select").disabled = false;
       document.getElementById("sweeps-input").disabled = false;
       document.getElementById("n-input").disabled = false;
       document.getElementById("a-input").disabled = false;
@@ -687,7 +686,7 @@ dynamicsTimer = setInterval(async () => {
     const n = parseInt(document.getElementById("n-input").value, 10);
     const a = parseFloat(document.getElementById("a-input").value);
     const b = parseFloat(document.getElementById("b-input").value);
-    const algo = document.getElementById("algo-select").value;
+    const algo = "glauber";
 
     const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
     const fileNameBase = `aztec_periodic_${algo}_n${n}_a${a}_b${b}`;

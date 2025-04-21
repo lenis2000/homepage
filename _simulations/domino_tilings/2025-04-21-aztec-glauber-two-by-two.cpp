@@ -268,13 +268,11 @@ void glauberStep(MatrixInt &conf,
                  std::mt19937 &rng,
                  std::uniform_real_distribution<> &u)
 {
-    const int N = conf.size();         // even
-    const int cells = N / 2;           // # 2×2 blocks per side
-
-    // choose random plaquette (top‑left corner indices are even)
-    std::uniform_int_distribution<> du(0, cells-1);
-    int i = du(rng)*2;
-    int j = du(rng)*2;
+    const int N = conf.size();               // lattice size (even)
+    std::uniform_int_distribution<> duRow(0, N - 2);
+    std::uniform_int_distribution<> duCol(0, N - 2);
+    int i = duRow(rng);      // 0 … N‑2  (no “*2” ⇒ all rows)
+    int j = duCol(rng);      // 0 … N‑2  (no “*2” ⇒ all cols)
 
     // Detect current orientation (exactly two markers on a diagonal)
     bool isHH = (conf.at(i, j)      == 1 &&                // NW
@@ -526,7 +524,8 @@ char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
         /* 2. Glauber sweeps */
         int N = 2*n;
         std::uniform_real_distribution<> u(0.0,1.0);
-        const long steps = (long)sweeps * (N/2) * (N/2);   // one sweep ≡ one visit per plaquette
+        const long plaquettes = (long)(N - 1) * (N - 1);   // total 2×2 blocks now visited
+        const long steps      = (long)sweeps * plaquettes; // one sweep = one average visit
         progressCounter = 5;                               // reuse progress bar
         for(long t=0; t<steps; ++t){
             glauberStep(conf, W, rng, u);
