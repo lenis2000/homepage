@@ -742,6 +742,10 @@ const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
   function startSimulation() {
     simulationActive = true;
 
+    // Disable Glauber controls
+    document.getElementById('glauber-btn')?.setAttribute('disabled', 'disabled');
+    document.getElementById('sweeps-input')?.setAttribute('disabled', 'disabled');
+
     // Disable sample button and n-input
     document.getElementById("sample-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("n-input")?.setAttribute("disabled", "disabled");
@@ -787,6 +791,21 @@ const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
 
     for (let i = 1; i <= 9; i++) {
       document.getElementById(`w${i}`)?.removeAttribute("disabled");
+    }
+
+    // Re-enable Glauber controls
+    document.getElementById('glauber-btn')?.removeAttribute('disabled');
+    document.getElementById('sweeps-input')?.removeAttribute('disabled');
+    if (glauberRunning) { // If cancelled while Glauber was running, reset its UI
+         const glauberBtn = document.getElementById('glauber-btn');
+         const glauberStatus = document.getElementById('glauber-status');
+         glauberRunning = false;
+         clearInterval(glauberTimer);
+         glauberTimer = null;
+         glauberBtn.textContent = "Run Glauber";
+         glauberBtn.classList.remove('running', 'btn-danger');
+         glauberBtn.classList.add('btn-success');
+         glauberStatus.innerText = "";
     }
 
     // Make sure parameter display is correct
@@ -982,6 +1001,11 @@ const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
   }
 
   async function updateVisualization(n) {
+    // Stop Glauber if running, and reset state
+    if (glauberRunning) {
+         toggleGlauberDynamics(); // Stop the dynamics
+    }
+    lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
     /* ------------------------------------------------------------------ */
      /* 1. wipe previous geometry *and* transforms                          */
      /* ------------------------------------------------------------------ */
