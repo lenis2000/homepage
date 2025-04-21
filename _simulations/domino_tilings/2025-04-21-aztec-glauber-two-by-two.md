@@ -39,27 +39,25 @@ code:
     background-color: #f44336;
   }
 </style>
+## About the simulation
 
-This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a measure with $2\times 2$ periodic weights, as in the <a href="https://arxiv.org/abs/1410.2385">paper</a> by Chhita and Johansson. The simulation uses the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
+##### Shuffling (initial picture)
 
-The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
-I set the upper bound at $n=300$ to avoid freezing your browser.
+This simulation demonstrates random domino tilings of an Aztec diamond—a diamond‑shaped union of unit squares. The probability measure is $2\times2$‑periodic with edge‑weights $(a,b)$, as studied by Chhita & Johansson in [Domino tilings of the Aztec diamond with periodic weights](https://arxiv.org/abs/1410.2385). Sampling uses the shuffling algorithm. The original Python implementation by Sunil Chhita has been ported to JavaScript + WebAssembly, and the graphics are rendered with D3.js.
 
-### Update 2025-04-14: TikZ Code Generation
+The sampling runs entirely in your browser. For sizes up to about $n\le120$ the sampler is fast; larger $n$ may take noticeable time (hard cap $n=300$ to protect your browser).
 
-You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports dominoes with appropriate coloring.
+##### Glauber Dynamics
 
-<div style="margin-top: 10px; margin-bottom: 10px;">
-  <button id="tikz-btn" class="btn btn-primary">Generate TikZ Code</button>
-  <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
-    <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
-    <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
-  </div>
-</div>
+You can run the Glauber dynamics on domino tilings, and adjust the speed.
+You can start the dynamics with one set of parameters $(a,b)$ and change them on the fly, observing in real time how the tiling reacts.
+Key phenomena visible in the grayscale view:
 
-<!-- TikZ code container that will be updated dynamically -->
-<div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
+- When $a=b$, the measure is uniform and inside the arctic circle you can see a "liquid" mixture of colors.
+- When $a<1, b=1$, lighter color dominates; when $a=1, b>1$, darker color dominates.
+- Local color relaxation occurs much faster than changes in the macroscopic limit shape.
+
+**Conjecture**: In the non‑uniform case $a\neq b$, the Glauber chain requires exponentially many sweeps in $n$ to alter the limit shape.
 
 ---
 
@@ -103,6 +101,18 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
     <svg id="aztec-svg"></svg>
   </div>
 </div>
+
+<div style="margin-top: 10px; margin-bottom: 10px;">
+  <button id="tikz-btn" class="btn btn-primary">Generate TikZ Code</button>
+  <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
+    <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
+    <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
+    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+  </div>
+</div>
+
+<!-- TikZ code container that will be updated dynamically -->
+<div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 
 <script>
 // Global variable to cache the simulation sample.
