@@ -311,7 +311,7 @@ async function advanceDynamics(nSteps) {
       dynamicsRunning = false;
       dynamicsBtn.textContent = "Start Dynamics";
       dynamicsBtn.classList.remove("running");
-      progressElem.innerText = "Dynamics stopped";
+      progressElem.innerText = "";
 
       // Re-enable controls
       document.getElementById("sweeps-input").disabled = false;
@@ -329,7 +329,7 @@ async function advanceDynamics(nSteps) {
       dynamicsRunning = true;
       dynamicsBtn.textContent = "Stop Dynamics";
       dynamicsBtn.classList.add("running");
-      progressElem.innerText = "Dynamics running...";
+      progressElem.innerText = "";
 
       // Only disable new sample inputs, leave sweeps/a/b editable
       document.getElementById("n-input").disabled = true;
@@ -340,8 +340,7 @@ async function advanceDynamics(nSteps) {
             parseInt(document.getElementById('sweeps-input').value, 10) || 1);
 
           let stepCount      = await advanceDynamics(firstSteps);   // runs once
-          progressElem.innerText =
-            `Dynamics running… (${stepCount} steps)`;               // show count
+          progressElem.innerText = "";
 
 
       // Start the dynamics timer - perform steps and update visualization
@@ -360,7 +359,7 @@ dynamicsTimer = setInterval(async () => {
 
   updateDominoesVisualization();
   stepCount += stepsPerUpdate;
-  progressElem.innerText = `Dynamics running… (${stepCount} steps)`;
+  progressElem.innerText = "";
 }, updateInterval);
     }
   }
