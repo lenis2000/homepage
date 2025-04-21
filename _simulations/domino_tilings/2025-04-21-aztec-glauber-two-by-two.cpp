@@ -2,7 +2,7 @@
 emcc 2025-04-21-aztec-glauber-two-by-two.cpp -o 2025-04-21-aztec-glauber-two-by-two.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecGlauber','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecGlauber','_performGlauberStep','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -33,6 +33,14 @@ Features:
 using namespace std;
 
 static std::mt19937 rng(std::random_device{}()); // Global RNG for speed
+
+/* ---------- Global state for incremental Glauber dynamics ---------- */
+static MatrixInt      g_conf;         // current domino configuration
+static MatrixDouble   g_W;            // current 2×2–periodic weight matrix
+static int            g_N    = 0;     // linear size of g_conf (2n)
+static double         g_a    = -1.0;  // last (a,b) used to build g_W
+static double         g_b    = -1.0;
+
 volatile int progressCounter = 0;
 
 // Forward declarations
@@ -347,6 +355,13 @@ char* simulateAztec(int n, double a, double b) {
         int size = dominoConfig.size();
         double scale = 10.0;
 
+        /* store global state so that performGlauberStep can continue from here */
+        g_conf = dominoConfig;
+        g_W    = A1a;
+        g_N    = 2 * n;
+        g_a    = a;
+        g_b    = b;
+
         // Reserve a reasonable amount of space for the JSON string
         // Each domino needs ~100 chars, and about 1/4 of the cells will be dominoes
         size_t estimatedJsonSize = (size * size / 4) * 100;
@@ -494,6 +509,13 @@ char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
             throw std::runtime_error("Error generating domino configuration");
         }
 
+        /* store global state for incremental updates */
+        g_conf = conf;
+        g_W    = W;
+        g_N    = 2 * n;
+        g_a    = a;
+        g_b    = b;
+
         /* 2. Glauber sweeps */
         int N = 2*n;
         std::uniform_real_distribution<> u(0.0,1.0);
@@ -616,6 +638,78 @@ char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
             }
         }
         progressCounter = 100; // Mark as complete to stop progress indicator
+        return out;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  One Glauber heat‑bath update, serialise result, and return JSON   */
+/*  JS side calls:   performGlauberStep(a, b)                         */
+/* ------------------------------------------------------------------ */
+EMSCRIPTEN_KEEPALIVE
+char* performGlauberStep(double a, double b)
+{
+    try {
+        if(g_N == 0)
+            throw std::runtime_error("No configuration in memory – run an initial sampler first.");
+
+        /* rebuild weight matrix only if (a,b) changed */
+        if(a != g_a || b != g_b){
+            g_W = MatrixDouble(g_N, g_N, 0.0);
+            for(int i = 0; i < g_N; ++i){
+                for(int j = 0; j < g_N; ++j){
+                    int im = i & 3, jm = j & 3;
+                    g_W.at(i,j) = ((im < 2 && jm < 2) || (im >= 2 && jm >= 2)) ? b : a;
+                }
+            }
+            g_a = a; g_b = b;
+        }
+
+        /* one heat‑bath plaquette flip */
+        std::uniform_real_distribution<> u(0.0,1.0);
+        glauberStep(g_conf, g_W, rng, u);
+
+        /* --------- serialise g_conf – identical to other drivers --------- */
+        const int size  = g_N;
+        const double sc = 10.0;   // drawing scale
+        std::string json;
+        json.reserve((size*size/4)*100);
+        json.push_back('[');
+
+        bool first = true;
+        char buf[128];
+
+        for(int i = 0; i < size; ++i){
+            for(int j = 0; j < size; ++j){
+                if(g_conf.at(i,j) != 1) continue;
+
+                double x, y, w, h;
+                const char* col;
+                bool oi = i & 1, oj = j & 1;
+
+                if( oi &&  oj){ col="green";  x=j-i-2; y=size+1-(i+j)-1; w=4; h=2; }
+                if( oi && !oj){ col="blue";   x=j-i-1; y=size+1-(i+j)-2; w=2; h=4; }
+                if(!oi && !oj){ col="red";    x=j-i-2; y=size+1-(i+j)-1; w=4; h=2; }
+                if(!oi &&  oj){ col="yellow"; x=j-i-1; y=size+1-(i+j)-2; w=2; h=4; }
+
+                if(!first) json.push_back(','); else first = false;
+                snprintf(buf,sizeof(buf),
+                         "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
+                         x*sc, y*sc, w*sc, h*sc, col);
+                json.append(buf);
+            }
+        }
+        json.push_back(']');
+
+        char* out = (char*)malloc(json.size()+1);
+        if(!out) throw std::runtime_error("malloc failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch(const std::exception& e){
+        std::string err = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(err.size()+1);
+        if(out) strcpy(out, err.c_str());
         return out;
     }
 }
