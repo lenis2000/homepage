@@ -444,6 +444,175 @@ const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
 
   // Helper function to run Glauber steps and update visualization
   async function advanceGlauberDynamics(nSteps) {
+
+  // Function to update both 2D and 3D visualizations from cachedDominoes
+  async function updateVisualizationFromCache() {
+       if (!cachedDominoes) return;
+
+       const n = parseInt(document.getElementById("n-input").value, 10) || 0;
+       const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+       const is2DView = document.getElementById("view-2d-btn").classList.contains("active");
+
+       // Update 2D view immediately if active
+       if (is2DView) {
+           await render2D(cachedDominoes); // Re-render 2D SVG
+       }
+
+       // Update 3D view if active and n is suitable
+       if (is3DView && n <= 300) {
+           // --- Simplified 3D update ---
+           // Clear existing domino group
+           if (dominoGroup) {
+              while(dominoGroup.children.length > 0){
+                  const m = dominoGroup.children[0];
+                  dominoGroup.remove(m);
+                  if (m.geometry) m.geometry.dispose();
+                  if (m.material) m.material.dispose();
+              }
+           } else {
+              initThreeJS(); // Reinitialize if group doesn't exist
+           }
+
+           // Recalculate height map and render (similar logic as in updateVisualization)
+           const heightMap = calculateHeightFunction(cachedDominoes);
+           const scale = 60 / (2 * n);
+           const colors = { blue: 0x4363d8, green: 0x1e8c28, red: 0xff2244, yellow: 0xfca414 };
+           const showColors3D = document.getElementById("show-colors-checkbox").checked;
+           const monoColor3D = 0x999999;
+
+           cachedDominoes.forEach(domino => {
+              const faceData = createDominoFaces(domino, heightMap, scale);
+              if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return;
+
+              try {
+                   const geom = new THREE.BufferGeometry();
+                   const pos = [];
+                   faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
+                   geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+
+                   const isH = (faceData.color === 'blue' || faceData.color === 'green');
+                   // Indices based on createDominoFaces structure (6 vertices per domino)
+                   // Indices for two triangles making the top face,
+                   // Assuming vertices are [TL, TR, BR, BL, TM, BM] for Horizontal
+                   // And [BL, TL, TR, BR, LM, RM] for Vertical
+                   // Need to adjust based on actual createDominoFaces vertex order.
+                   // Let's assume a simple quad structure for now (0,1,2, 0,2,3)
+                   // This needs verification based on createDominoFaces vertex order.
+                   // Example: for a quad TL(0), TR(1), BR(2), BL(3)
+                   // const indices = [0, 3, 1, 1, 3, 2]; // Two triangles for the quad
+
+                   // Assuming createDominoFaces structure from previous context:
+                   // H: [TL(0), TR(1), BR(2), BL(3), TM(4), BM(5)] -> Quads: (0,4,5,3), (4,1,2,5)
+                   // V: [BL(0), TL(1), TR(2), BR(3), LM(4), RM(5)] -> Quads: (0,1,4,?), (4,1,2,5), (?,4,5,?)
+                   // This triangulation logic needs careful review based on createDominoFaces output
+                   // Using a simplified placeholder:
+                   const indices = [0, 1, 2, 0, 2, 3]; // Placeholder for a basic quad
+
+
+                   if (cachedDominoes.length * 6 > 65535) {
+                       geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+                   } else {
+                       geom.setIndex(indices);
+                   }
+                   geom.computeVertexNormals();
+
+                   const colorValue = colors[faceData.color] || 0x808080;
+                   const mat = new THREE.MeshStandardMaterial({
+                       color: showColors3D ? colorValue : monoColor3D,
+                       side: THREE.DoubleSide,
+                       flatShading: true
+                   });
+                   mat.userData = { originalColorValue: colorValue };
+                   const mesh = new THREE.Mesh(geom, mat);
+                   mesh.userData.originalColor = faceData.color;
+                   dominoGroup.add(mesh);
+              } catch(e) {
+                  console.error("Error creating 3D mesh during Glauber update:", e);
+              }
+           });
+
+           // Recenter (optional, could keep previous center/scale)
+            if (dominoGroup.children.length > 0) {
+               const box = new THREE.Box3().setFromObject(dominoGroup);
+               const center = box.getCenter(new THREE.Vector3());
+               center.x += -0.7; center.z += 4; // Adjust center
+               dominoGroup.position.sub(center);
+               // Rescaling might cause jumps, maybe omit for Glauber updates
+               // const sizeXYZ = box.getSize(new THREE.Vector3());
+               // const viewW = camera.right - camera.left;
+               // const viewH = camera.top - camera.bottom;
+               // const maxScale = (1 - 0.05) * Math.min(viewW / sizeXYZ.x, viewH / sizeXYZ.z);
+               // dominoGroup.scale.setScalar(maxScale);
+               // controls.target.set(0, 0, 0);
+               // controls.update();
+           }
+           // Ensure render happens
+           if (renderer && animationActive) {
+              //renderer.render(scene, camera); // Render handled by animate loop
+           }
+       }
+  }
+
+  // Function to start/stop Glauber dynamics
+  async function toggleGlauberDynamics() {
+      const glauberBtn = document.getElementById('glauber-btn');
+      const sweepsInput = document.getElementById('sweeps-input');
+      const glauberStatus = document.getElementById('glauber-status');
+
+      if (glauberRunning) {
+          // Stop dynamics
+          clearInterval(glauberTimer);
+          glauberTimer = null;
+          glauberRunning = false;
+          glauberBtn.textContent = "Run Glauber";
+          glauberBtn.classList.remove('running', 'btn-danger');
+          glauberBtn.classList.add('btn-success');
+          glauberStatus.innerText = "";
+
+          // Re-enable controls that were disabled by Glauber
+          document.getElementById("sample-btn")?.removeAttribute("disabled");
+          document.getElementById("n-input")?.removeAttribute("disabled");
+          document.querySelectorAll('input[name="periodicity"]').forEach(radio => radio.disabled = false);
+          // Re-enable specific weight inputs based on current periodicity
+          updatePeriodicityParams(); // This function should handle enabling/disabling based on selected radio
+
+      } else {
+          // Start dynamics
+          if (!cachedDominoes) {
+              alert("Please generate a tiling first using 'Sample' before running Glauber dynamics.");
+              return;
+          }
+
+          glauberRunning = true;
+          glauberBtn.textContent = "Stop Glauber";
+          glauberBtn.classList.add('running', 'btn-danger');
+          glauberBtn.classList.remove('btn-success');
+          glauberStatus.innerText = "Running...";
+
+          // Disable controls that shouldn't be changed during dynamics
+          document.getElementById("sample-btn")?.setAttribute("disabled", "disabled");
+          document.getElementById("n-input")?.setAttribute("disabled", "disabled");
+          document.querySelectorAll('input[name="periodicity"]').forEach(radio => radio.disabled = true);
+          // Keep weight inputs enabled so user can change them live
+
+          // Initial step before interval starts
+          const initialSteps = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
+          await advanceGlauberDynamics(initialSteps);
+
+          // Start the timer if still running
+          if (glauberRunning) {
+              const updateInterval = 100; // ms between redraws
+              glauberTimer = setInterval(async () => {
+                   if (!glauberRunning) { // Check again inside interval
+                      clearInterval(glauberTimer);
+                      return;
+                   }
+                  const stepsPerUpdate = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
+                  await advanceGlauberDynamics(stepsPerUpdate);
+              }, updateInterval);
+          }
+      }
+  }
     if (!cachedDominoes) return 0; // Need an initial state
 
     // 1. Get current periodicity and parameters
