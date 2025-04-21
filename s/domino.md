@@ -2384,6 +2384,13 @@ Module.onRuntimeInitialized = async function() {
 
     dominoLayer.attr("transform",`translate(${tx},${ty}) scale(${scale})`);
 
+    // Save initial transform values for zoom behavior
+    initialTransform2d = {
+      translateX: tx,
+      translateY: ty,
+      scale: scale
+    };
+
     /* -------- Data‑join -------------------------------------------------- */
     // join by bottom‑left coordinate
     const join = dominoLayer.selectAll("g.dom")
