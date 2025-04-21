@@ -555,6 +555,20 @@ const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
 
   // Function to start/stop Glauber dynamics
   async function toggleGlauberDynamics() {
+
+
+// —–––– hook the button —––––
+document.getElementById('glauber-btn')
+        .addEventListener('click', toggleGlauberDynamics);
+
+
+// hook the button
+if (!window._glauberHooked) {
+    document.getElementById('glauber-btn')
+            .addEventListener('click', toggleGlauberDynamics);
+    window._glauberHooked = true;
+}
+
       const glauberBtn = document.getElementById('glauber-btn');
       const sweepsInput = document.getElementById('sweeps-input');
       const glauberStatus = document.getElementById('glauber-status');
