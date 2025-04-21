@@ -174,6 +174,10 @@ permalink: /domino/
               <li>integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).</li>
             </ul>
           </li>
+
+          <li><strong>Glauber dynamics</strong> – Markov process of flipping pairs of adjacent dominoes forming a square. It uses
+          the currently selected parameters - so you can sample a tiling with one set of parameters, and evolve it into another.
+          See what happens!
         </ul>
 
         <p>There is also an on‑the‑fly <strong>LaTeX/TikZ export</strong>, which supports all 2-D viewmodes.</p>
