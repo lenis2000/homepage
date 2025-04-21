@@ -580,6 +580,8 @@ dynamicsTimer = setInterval(async () => {
       return;
     }
 
+    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
+
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = cachedDominoes.map(domino => {
       return {
@@ -587,7 +589,7 @@ dynamicsTimer = setInterval(async () => {
         y: domino.y / 100,
         width: domino.w / 100,
         height: domino.h / 100,
-        fill: domino.color,
+        fill: useGrayscale ? getGrayscaleColor(domino.color, domino) : domino.color,
         stroke: "black",
         strokeWidth: 0.45 // Scaled down
       };
@@ -614,7 +616,6 @@ dynamicsTimer = setInterval(async () => {
     const n = parseInt(document.getElementById("n-input").value, 10);
     const a = parseFloat(document.getElementById("a-input").value);
     const b = parseFloat(document.getElementById("b-input").value);
-    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
 
     // Generate TikZ code
     let tikzCode = `\\documentclass{standalone}
@@ -640,12 +641,15 @@ dynamicsTimer = setInterval(async () => {
     rectangles.forEach(rect => {
       // Map SVG colors to TikZ colors
       let fillColor = rect.fill;
-      if (fillColor === '#00ff00') fillColor = 'svggreen';
-      else if (fillColor === '#ff0000') fillColor = 'svgred';
-      else if (fillColor === '#ffff00') fillColor = 'svgyellow';
-      else if (fillColor === '#0000ff') fillColor = 'svgblue';
-      else if (fillColor.startsWith('#')) {
-        // For grayscale mode, we extract the intensity and use it
+      if (!useGrayscale) {
+        if (fillColor === '#00ff00') fillColor = 'svggreen';
+        else if (fillColor === '#ff0000') fillColor = 'svgred';
+        else if (fillColor === '#ffff00') fillColor = 'svgyellow';
+        else if (fillColor === '#0000ff') fillColor = 'svgblue';
+      }
+
+      if (fillColor.startsWith('#')) {
+        // For grayscale mode or other hex colors, extract the intensity and use it
         const intensity = parseInt(fillColor.substring(1, 3), 16);
         fillColor = `black!${Math.round((intensity/255)*100)}`;
       }
