@@ -2390,8 +2390,6 @@ Module.onRuntimeInitialized = async function() {
 
     //  ► rect
     gEnter.append("rect");
-    //  ► tiny orientation triangle (points filled below)
-    // gEnter.append("polygon").attr("class","tri");
 
     // UPDATE + ENTER
     const gAll = gEnter.merge(join);
