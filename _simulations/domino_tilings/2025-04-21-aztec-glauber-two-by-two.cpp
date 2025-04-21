@@ -51,7 +51,7 @@ MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
 
 // ---------- Glauber dynamics forward declarations ----------
-double plaquetteWeight(int r, int c, bool horizontal);
+double plaquetteWeight(int r, int c, bool horizontal, const MatrixDouble& W);
 void glauberStep(MatrixInt &conf,
                  const MatrixDouble &W,
                  std::mt19937 &rng,
@@ -254,13 +254,11 @@ double plaquetteWeight(int r,int c,bool horizontal,
     if (horizontal) {
         // domino 1: (r,c)+(r,c+1)  ← use left square (r,c)
         // domino 2: (r+1,c)+(r+1,c+1) ← use left square (r+1,c)
-        console.log(sqrt(W.at(r, c) * W.at(r+1, c)));
         return sqrt(W.at(r,   c) * W.at(r+1, c));
     } else {
         // domino 1: (r,c)+(r+1,c)  ← use top square (r,c)
         // domino 2: (r,c+1)+(r+1,c+1) ← use top square (r,c+1)
-        console.log(sqrt(W.at(r, c) * W.at(r, c)));
-        return sqrt(W.at(r, c) * W.at(r, c));
+        return sqrt(W.at(r, c) * W.at(r, c+1));
     }
 }
 

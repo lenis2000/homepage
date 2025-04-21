@@ -345,7 +345,6 @@ async function advanceDynamics(nSteps) {
 
 
       // Start the dynamics timer - perform steps and update visualization
-      const sweepsPerUpdateInput = document.getElementById("sweeps-input");
       const updateInterval = 100; // ms between screen draws
 
       // every update interval:
@@ -607,7 +606,6 @@ dynamicsTimer = setInterval(async () => {
     const a = parseFloat(document.getElementById("a-input").value);
     const b = parseFloat(document.getElementById("b-input").value);
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-    const sweeps = parseInt(document.getElementById("sweeps-input").value, 10);
 
     // Generate TikZ code
     let tikzCode = `\\documentclass{standalone}
