@@ -2370,27 +2370,35 @@ Module.onRuntimeInitialized = async function() {
                          .attr("class","domino-layer");
     }
 
-    /* -------- Compute current transform --------------------------------- */
-    const minX = d3.min(dominoes,d=>d.x),
-          minY = d3.min(dominoes,d=>d.y),
-          maxX = d3.max(dominoes,d=>d.x+d.w),
-          maxY = d3.max(dominoes,d=>d.y+d.h);
+    /* -------- Compute /‑‑‑only‑on‑first‑render‑‑‑/ ------------------------ */
+    // Use prevDominoKey to detect first render (it's null only on first render)
+    let needInitialTransform = prevDominoKey === null;
 
-    const box   = svg2d.node().getBoundingClientRect(),
-          scale = Math.min(box.width /(maxX-minX),
-                           box.height/(maxY-minY))*0.9,
-          tx    = (box.width  -(maxX-minX)*scale)/2 - minX*scale,
-          ty    = (box.height -(maxY-minY)*scale)/2 - minY*scale
-                  - box.height*0.04;                   // vertical shift
+    if (needInitialTransform) {
+      const minX = d3.min(dominoes,d=>d.x),
+            minY = d3.min(dominoes,d=>d.y),
+            maxX = d3.max(dominoes,d=>d.x+d.w),
+            maxY = d3.max(dominoes,d=>d.y+d.h);
 
-    dominoLayer.attr("transform",`translate(${tx},${ty}) scale(${scale})`);
+      const box   = svg2d.node().getBoundingClientRect(),
+            scale = Math.min(box.width /(maxX-minX),
+                            box.height/(maxY-minY))*0.9,
+            tx    = (box.width  -(maxX-minX)*scale)/2 - minX*scale,
+            ty    = (box.height -(maxY-minY)*scale)/2 - minY*scale
+                    - box.height*0.04;                   // vertical shift
 
-    // Save initial transform values for zoom behavior
-    initialTransform2d = {
-      translateX: tx,
-      translateY: ty,
-      scale: scale
-    };
+      dominoLayer.attr("transform",`translate(${tx},${ty}) scale(${scale})`);
+
+      // Save initial transform values for zoom behavior
+      initialTransform2d = {
+        translateX: tx,
+        translateY: ty,
+        scale: scale
+      };
+    } else {
+      /* dominoLayer already exists ⇒ keep whatever transform/zoom
+         the user currently has.  Nothing to do here. */
+    }
 
     /* -------- Data‑join -------------------------------------------------- */
     // join by bottom‑left coordinate
@@ -2425,6 +2433,9 @@ Module.onRuntimeInitialized = async function() {
        dominoIndex.set(k,{rect:g.select("rect"),datum:d});
     });
 
+    // Mark that we've done a render by setting prevDominoKey
+    prevDominoKey = dominoes.length > 0 ? key2D(dominoes[0]) : "empty";
+    
     // apply current colouring / overlays
     updateDominoDisplay();
   }
