@@ -606,7 +606,7 @@ Module.onRuntimeInitialized = async function() {
     }
 
     if (cancelBtn) cancelBtn.style.display = 'none';
-    if (progressElem) progressElem.innerText = "Simulation cancelled";
+    if (progressElem) progressElem.innerText = "3D Drawing Cancelled";
 
     if (abortController) {
       abortController.abort();
@@ -1359,6 +1359,12 @@ Module.onRuntimeInitialized = async function() {
       return alert(`Enter an even number for n (at least 2)`);
     }
 
+    // Reset lastNRendered if n has changed
+    if (n !== lastNRendered) {
+      // This will force a recalculation of the transform when rendering
+      lastNRendered = null;
+    }
+
     // Update height function visibility based on n value
     updateHeightFunctionVisibility(n);
 
@@ -1614,6 +1620,9 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
+  // Global variable to track last rendered order value
+  let lastNRendered = null;
+
   // 2D visualization helper functions
   // Helper: convert a brightness value (0–255) to a hex grayscale string.
   function grayHex(brightness) {
@@ -1746,9 +1755,11 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("zoom-reset-btn-2d").addEventListener("click", () => {
-    svg2d.transition()
-      .duration(300)
-      .call(zoom2d.transform, d3.zoomIdentity);
+    if (initialTransform2d.scale) {
+      svg2d.transition()
+        .duration(300)
+        .call(zoom2d.transform, d3.zoomIdentity);
+    }
   });
 
   // Grayscale values are now hardcoded, no interactive controls needed
@@ -2370,9 +2381,10 @@ Module.onRuntimeInitialized = async function() {
                          .attr("class","domino-layer");
     }
 
-    /* -------- Compute /‑‑‑only‑on‑first‑render‑‑‑/ ------------------------ */
-    // Use prevDominoKey to detect first render (it's null only on first render)
-    let needInitialTransform = prevDominoKey === null;
+    /* -------- Compute /‑‑‑only‑on‑first‑render‑or‑n‑change‑‑‑/ ------------------------ */
+    // Check if this is first render or n has changed
+    const currentN = parseInt(document.getElementById('n-input').value, 10);
+    let needInitialTransform = prevDominoKey === null || currentN !== lastNRendered;
 
     if (needInitialTransform) {
       const minX = d3.min(dominoes,d=>d.x),
@@ -2395,6 +2407,9 @@ Module.onRuntimeInitialized = async function() {
         translateY: ty,
         scale: scale
       };
+
+      // Update lastNRendered
+      lastNRendered = currentN;
     } else {
       /* dominoLayer already exists ⇒ keep whatever transform/zoom
          the user currently has.  Nothing to do here. */
@@ -2455,6 +2470,12 @@ Module.onRuntimeInitialized = async function() {
 
     // Always reuse the cached dominoes if we have them
     if (cachedDominoes && cachedDominoes.length > 0) {
+      // Force re-centering if we've switched viewmodes
+      const currentN = parseInt(document.getElementById('n-input').value, 10);
+      if (lastNRendered !== currentN) {
+        lastNRendered = null; // Force a recalculation of the transform
+      }
+
       render2D(cachedDominoes);
 
       // If we're switching from 3D to 2D, update the progress indicator
