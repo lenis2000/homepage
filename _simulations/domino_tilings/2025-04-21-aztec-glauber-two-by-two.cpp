@@ -2,7 +2,7 @@
 emcc 2025-04-21-aztec-glauber-two-by-two.cpp -o 2025-04-21-aztec-glauber-two-by-two.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecGlauber','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -41,6 +41,14 @@ vector<MatrixDouble> probs2(const MatrixDouble &x1);
 MatrixInt delslide(const MatrixInt &x1);
 MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
+
+// ---------- Glauber dynamics forward declarations ----------
+double plaquetteWeight(const MatrixDouble &W, int r, int c, bool horizontal);
+void glauberStep(MatrixInt &conf,
+                 const MatrixDouble &W,
+                 std::mt19937 &rng,
+                 std::uniform_real_distribution<> &u);
+char* simulateAztecGlauber(int n, double a, double b, int sweeps);
 
 // d3p: builds a vector of matrices from x1.
 vector<Matrix> d3p(const MatrixDouble &x1) {
@@ -231,6 +239,67 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     return a1;
 }
 
+// Weight of the 2‑domino covering of a 2×2 plaquette that starts at (r,c)
+inline double plaquetteWeight(const MatrixDouble &W,
+                              int r, int c,
+                              bool horizontal /*true ↔ HH , false ↔ VV*/) {
+    if(horizontal){
+        //  HH: two horizontal dominoes stacked
+        return W.at(r,   c) * W.at(r,   c+1)   // upper domino
+             * W.at(r+1, c) * W.at(r+1, c+1);  // lower domino
+    } else {
+        //  VV: two vertical dominoes side‑by‑side
+        return W.at(r,   c) * W.at(r+1, c)     // left domino
+             * W.at(r,   c+1) * W.at(r+1, c+1);// right domino
+    }
+}
+
+// One heat‑bath update on a random 2×2 plaquette
+void glauberStep(MatrixInt &conf,
+                 const MatrixDouble &W,
+                 std::mt19937 &rng,
+                 std::uniform_real_distribution<> &u)
+{
+    const int N = conf.size();         // even
+    const int cells = N / 2;           // # 2×2 blocks per side
+
+    // choose random plaquette (top‑left corner indices are even)
+    std::uniform_int_distribution<> du(0, cells-1);
+    int i = du(rng)*2;
+    int j = du(rng)*2;
+
+    // Detect current orientation: 1 → occupied
+    bool isHH = (conf.at(i, j)     == 1 && conf.at(i, j+1)   == 1 &&
+                 conf.at(i+1, j)   == 1 && conf.at(i+1, j+1) == 1);
+
+    bool isVV = (conf.at(i, j)     == 1 && conf.at(i+1, j)   == 1 &&
+                 conf.at(i, j+1)   == 1 && conf.at(i+1, j+1) == 1);
+
+    if(!(isHH || isVV)) return;   // plaquette is "mixed"; skip
+
+    // Compute weights
+    double wHH = plaquetteWeight(W, i, j, true);
+    double wVV = plaquetteWeight(W, i, j, false);
+
+    // Heat‑bath probability for HH
+    double pHH = wHH / (wHH + wVV);
+
+    bool chooseHH = (u(rng) < pHH);
+
+    if( (chooseHH && isHH) || (!chooseHH && isVV) ) return; // nothing flips
+
+    // Clear plaquette
+    conf.at(i, j) = conf.at(i, j+1) = conf.at(i+1, j) = conf.at(i+1, j+1) = 0;
+
+    if(chooseHH){
+        conf.at(i,   j)   = conf.at(i,   j+1) = 1;  // upper
+        conf.at(i+1, j)   = conf.at(i+1, j+1) = 1;  // lower
+    }else{
+        conf.at(i,   j)   = conf.at(i+1, j)   = 1;  // left
+        conf.at(i,   j+1) = conf.at(i+1, j+1) = 1;  // right
+    }
+}
+
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
@@ -291,6 +360,171 @@ char* simulateAztec(int n, double a, double b) {
         for (int i = 0; i < size; i++){
             for (int j = 0; j < size; j++){
                 if (dominoConfig.at(i, j) == 1) {
+                    double x, y, w, h;
+                    const char* color;
+
+                    // Determine domino properties based on position
+                    bool oddI = (i & 1), oddJ = (j & 1);
+                    if (oddI && oddJ) { // i odd, j odd
+                        color = "green";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4;
+                        h = 2;
+                    } else if (oddI && !oddJ) { // i odd, j even
+                        color = "blue";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                    } else if (!oddI && !oddJ) { // i even, j even
+                        color = "red";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4;
+                        h = 2;
+                    } else if (!oddI && oddJ) { // i even, j odd
+                        color = "yellow";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                    } else {
+                        continue;
+                    }
+
+                    x *= scale;
+                    y *= scale;
+                    w *= scale;
+                    h *= scale;
+
+                    if (!first) json.append(",");
+                    else first = false;
+
+                    // Use sprintf for efficient number formatting
+                    snprintf(buffer, sizeof(buffer),
+                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
+                             x, y, w, h, color);
+                    json.append(buffer);
+                }
+            }
+        }
+
+        json.append("]");
+        progressCounter = 100; // Finished.
+
+        // Allocate memory for the output string
+        char* out = NULL;
+        try {
+            out = (char*)malloc(json.size() + 1);
+            if (!out) {
+                throw std::runtime_error("Failed to allocate memory for output");
+            }
+            strcpy(out, json.c_str());
+            return out;
+        } catch (const std::exception& e) {
+            // If memory allocation fails, return a simple error message
+            const char* errorMsg = "{\"error\":\"Memory allocation failed\"}";
+            out = (char*)malloc(strlen(errorMsg) + 1);
+            if (out) {
+                strcpy(out, errorMsg);
+            } else {
+                // If we can't even allocate the error message, return a minimal response
+                out = (char*)malloc(3); // size for []
+                if (out) {
+                    strcpy(out, "[]");
+                }
+            }
+            return out;
+        }
+    } catch (const std::exception& e) {
+        // Return error as JSON
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) {
+            strcpy(out, errorMsg.c_str());
+        } else {
+            // Fallback if memory allocation fails
+            out = (char*)malloc(3); // size for []
+            if (out) {
+                strcpy(out, "[]");
+            }
+        }
+        progressCounter = 100; // Mark as complete to stop progress indicator
+        return out;
+    }
+}
+
+// ---------- Glauber driver ----------
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
+    try {
+        /* 1. exact start (shuffling) */
+        // Create 2*n x 2*n weight matrix with 2x2 periodic weights.
+        int dim = 2 * n;
+        MatrixDouble W(dim, dim, 0.0);
+
+        // Set up the 2x2 periodic weights pattern
+        for (int i = 0; i < dim; i++){
+            for (int j = 0; j < dim; j++){
+                int im = i & 3; // Faster than i % 4
+                int jm = j & 3; // Faster than j % 4
+                if ((im < 2 && jm < 2) || (im >= 2 && jm >= 2))
+                    W.at(i, j) = b;
+                else
+                    W.at(i, j) = a;
+            }
+        }
+
+        // Compute probability matrices.
+        vector<MatrixDouble> prob;
+        try {
+            prob = probs2(W);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error computing probability matrices");
+        }
+        progressCounter = 5; // Initial progress.
+        emscripten_sleep(0); // Yield to update UI
+
+        // Generate initial domino configuration.
+        MatrixInt conf;
+        try {
+            conf = aztecgen(prob);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error generating domino configuration");
+        }
+
+        /* 2. Glauber sweeps */
+        int N = 2*n;
+        std::uniform_real_distribution<> u(0.0,1.0);
+        const long steps = (long)sweeps * (N/2) * (N/2);   // one sweep ≡ one visit per plaquette
+        progressCounter = 5;                               // reuse progress bar
+        for(long t=0; t<steps; ++t){
+            glauberStep(conf, W, rng, u);
+            if(t % (steps/90==0?1:steps/90) == 0){
+                progressCounter = 5 + (int)(90.0 * t / steps);
+                emscripten_sleep(0);
+            }
+        }
+
+        /* 3. serialise to JSON – *identical* code path as simulateAztec */
+        // Build JSON output with pre-allocated string for efficiency
+        int size = conf.size();
+        double scale = 10.0;
+
+        // Reserve a reasonable amount of space for the JSON string
+        // Each domino needs ~100 chars, and about 1/4 of the cells will be dominoes
+        size_t estimatedJsonSize = (size * size / 4) * 100;
+        string json;
+        json.reserve(estimatedJsonSize > 1024 ? estimatedJsonSize : 1024);
+        json.append("[");
+
+        bool first = true;
+        char buffer[128]; // Buffer for formatting numbers
+
+        for (int i = 0; i < size; i++){
+            for (int j = 0; j < size; j++){
+                if (conf.at(i, j) == 1) {
                     double x, y, w, h;
                     const char* color;
 
