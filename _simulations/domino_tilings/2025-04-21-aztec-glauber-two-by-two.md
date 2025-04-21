@@ -67,17 +67,14 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <script src="/js/2025-04-21-aztec-glauber-two-by-two.js"></script>
 
 <!-- Simulation Controls -->
+<!-- Dynamics controls – always visible -->
 <div class="controls">
-  <label for="algo-select">Algorithm: </label>
-  <select id="algo-select">
-    <option value="shuffling">Exact shuffling</option>
-    <option value="glauber">Glauber dynamics</option>
-  </select>
-  <label id="sweeps-label" for="sweeps-input" style="display:none;">  Sweeps:</label>
-  <input  id="sweeps-input" type="number" value="50" min="1" step="10"
-          style="width:70px; display:none;">
-  <button id="dynamics-btn" style="margin-left: 10px; display:none;">Start Dynamics</button>
+  <label for="sweeps-input">Sweeps per visual update:</label>
+  <input id="sweeps-input" type="number"
+         value="10" min="1" step="1" style="width:70px;">
+  <button id="dynamics-btn" style="margin-left:10px;">Start Dynamics</button>
 </div>
+
 
 <div class="controls">
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
@@ -319,20 +316,19 @@ Module.onRuntimeInitialized = async function() {
       dynamicsBtn.classList.add("running");
       progressElem.innerText = "Dynamics running...";
 
-      // Disable controls during dynamics
-      document.getElementById("algo-select").disabled = true;
-      document.getElementById("sweeps-input").disabled = true;
+      // Only disable new sample inputs, leave sweeps/a/b editable
       document.getElementById("n-input").disabled = true;
-      document.getElementById("a-input").disabled = true;
-      document.getElementById("b-input").disabled = true;
       updateBtn.disabled = true;
 
       // Start the dynamics timer - perform steps and update visualization
       let stepCount = 0;
-      const stepsPerUpdate = 10; // Number of Glauber steps per visual update
-      const updateInterval = 100; // Update every 100ms
+      const sweepsPerUpdateInput = document.getElementById("sweeps-input");
+      const updateInterval = 100; // ms between screen draws
 
       dynamicsTimer = setInterval(async () => {
+        const stepsPerUpdate = Math.max(
+              1,
+              parseInt(sweepsPerUpdateInput.value, 10) || 1);   // user speed
         const aVal = parseFloat(document.getElementById("a-input").value);
         const bVal = parseFloat(document.getElementById("b-input").value);
 
@@ -419,19 +415,9 @@ Module.onRuntimeInitialized = async function() {
 
     // Run simulation with periodic yielding to keep UI responsive
     try {
-      let ptr;
-      if(document.getElementById("algo-select").value === "glauber"){
-          const sweeps = parseInt(document.getElementById("sweeps-input").value,10);
-          ptr = await simulateAztecGlauber(n, aVal, bVal, sweeps);
+      // always take an exact shuffling sample
+      let ptr = await simulateAztec(n, aVal, bVal);
 
-          // Show the dynamics button for Glauber mode
-          dynamicsBtn.style.display = 'inline-block';
-      }else{
-          ptr = await simulateAztec(n, aVal, bVal);
-
-          // Hide the dynamics button for shuffling mode
-          dynamicsBtn.style.display = 'none';
-      }
 
       if (signal.aborted) {
         if (ptr) freeString(ptr);
@@ -572,13 +558,6 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
-  // Add event listener for algorithm selection
-  document.getElementById("algo-select").addEventListener("change", e => {
-    const g = (e.target.value === "glauber");
-    document.getElementById("sweeps-label").style.display =
-    document.getElementById("sweeps-input").style.display = g ? "inline" : "none";
-    document.getElementById("dynamics-btn").style.display = g ? "inline-block" : "none";
-  });
 
   // Function to convert SVG dominoes to TikZ code
   function svgToTikZ() {
@@ -622,7 +601,6 @@ Module.onRuntimeInitialized = async function() {
     const a = parseFloat(document.getElementById("a-input").value);
     const b = parseFloat(document.getElementById("b-input").value);
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-    const algo = document.getElementById("algo-select").value;
     const sweeps = parseInt(document.getElementById("sweeps-input").value, 10);
 
     // Generate TikZ code
@@ -639,7 +617,7 @@ Module.onRuntimeInitialized = async function() {
 \\begin{document}
 % Aztec Diamond with 2x2 periodic weights
 % n = ${n}, a = ${a}, b = ${b}, grayscale = ${useGrayscale}
-% algorithm = ${algo}${algo === 'glauber' ? `, sweeps = ${sweeps}` : ''}
+% sample obtained by Glauber dynamics
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
 
 % Dominoes (rectangles)
