@@ -88,7 +88,12 @@ permalink: /domino/
     cursor: pointer;
   }
 
-  @media (max-width: 768px) {
+  #glauber-btn.running {
+  background-color: #dc3545; /* Red when running */
+  border-color: #dc3545;
+}
+
+@media (max-width: 768px) {
     #aztec-canvas, #aztec-2d-canvas {
       height: 65vh;
     }
@@ -232,6 +237,21 @@ permalink: /domino/
       </div>
     </div>
   </div>
+
+  <div id="glauber-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+        <h3 style="margin-bottom: 8px;">Glauber Dynamics:</h3>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px;">
+          <div>
+            <label for="sweeps-input">Sweeps per redraw:</label>
+            <input id="sweeps-input" type="number" value="100" min="1" step="1" style="width: 70px;">
+            <small>(Number of plaquette updates between screen updates)</small>
+          </div>
+          <div style="margin-left: auto;">
+             <button id="glauber-btn" class="btn btn-success">Run Glauber</button>
+             <span id="glauber-status" style="margin-left: 10px; font-style: italic;"></span>
+          </div>
+        </div>
+      </div>
 
   <!-- 2×2 Periodic Weights (initially hidden) -->
   <div id="weights-2x2" style="display: none; margin-bottom: 15px;">
@@ -396,6 +416,9 @@ Module.onRuntimeInitialized = async function() {
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
 
+const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
+const wasGlauberActive    = Module.cwrap('wasGlauberActive', 'boolean', []);
+
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
   let animationActive = true;
@@ -411,9 +434,61 @@ Module.onRuntimeInitialized = async function() {
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
 
+  let glauberRunning = false;
+  let glauberTimer = null;
+  let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
+
   // Demo mode state
   let isDemoMode = false;
   let rotationSpeed = 0.005; // Speed of rotation in radians
+
+  // Helper function to run Glauber steps and update visualization
+  async function advanceGlauberDynamics(nSteps) {
+    if (!cachedDominoes) return 0; // Need an initial state
+
+    // 1. Get current periodicity and parameters
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    let params = [periodicity]; // First arg is string name
+    if (periodicity === '2x2') {
+        const a = parseFloat(document.getElementById('a-input').value) || 0.5;
+        const b = parseFloat(document.getElementById('b-input').value) || 1.0;
+        params.push(a, b, 0,0,0,0,0,0,0); // Pass a, b as p1, p2
+    } else if (periodicity === '3x3') {
+        for (let i = 1; i <= 9; i++) {
+            const val = parseFloat(document.getElementById(`w${i}`).value) || 1.0;
+            params.push(val);
+        }
+    } else { // Uniform
+        params.push(1,1,1,1,1,1,1,1,1); // Pass all 1s
+    }
+    params.push(nSteps); // Add number of steps
+
+    // 2. Call C++ function
+    const ptr = await performGlauberSteps(...params);
+    const jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+
+    // 3. Parse result and update cache
+    try {
+        const result = JSON.parse(jsonStr);
+        if (result.error) {
+            console.error("Glauber error:", result.error);
+            // Optionally stop dynamics on error
+            // toggleGlauberDynamics();
+            return 0;
+        }
+        cachedDominoes = result;
+        lastSampleWasGlauber = true; // Mark that Glauber produced this state
+
+        // 4. Update visualization (both 2D and 3D if applicable)
+        await updateVisualizationFromCache();
+
+        return nSteps; // Return number of steps successfully run
+    } catch (e) {
+        console.error("Error parsing Glauber result:", e, jsonStr);
+        return 0;
+    }
+  }
 
   function initThreeJS() {
     scene = new THREE.Scene();
