@@ -3,7 +3,7 @@
 emcc domino.cpp -o domino.js\
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_performGlauberSteps','_simulateAztecVertical','_wasGlauberActive','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_performGlauberSteps','_simulateAztecVertical','_simulateAztecHorizontal','_wasGlauberActive','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -543,6 +543,77 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
     }
 }
 
+/* ------------------------------------------------------------------ *
+ *  simulateAztecHorizontal – deterministic “all‑horizontal” frozen state
+ *  (returns only dominoes whose 4×2 rectangle lies wholly inside ♦)
+ * ------------------------------------------------------------------ */
+extern "C" EMSCRIPTEN_KEEPALIVE
+char* simulateAztecHorizontal(int n,
+                              double, double, double,
+                              double, double, double,
+                              double, double, double)
+{
+    try {
+        const int N = 2 * n;                     // lattice size
+
+        MatrixInt conf(N, std::vector<int>(N, 0));
+
+        for (int i = 0; i <= N; ++i) {
+            for (int j = 0; j <= N; ++j) {
+                const bool oddI = i & 1;
+                const bool oddJ = j & 1;
+
+                /* Renderer y‑coord (centre‑of‑diamond = 0) */
+                const int y = (N + 1) - (i + j) - 1;
+
+                /*  blue  = NW marker  (companion SE = i+1,j+1)
+                 *  green = SE marker  (companion NW = i‑1,j‑1)          */
+                if (y >= 0) {                            // TOP half
+                    if (oddI && oddJ && i <= N - 2 && j <= N - 2  && i >= 3 && j >= 3)
+                        conf[i][j] = 1;                  // blue marker
+                } else {                                 // BOTTOM half
+                    if (!oddI && !oddJ && i >= 1 && j >= 1 && i <= N  && j <= N )
+                        conf[i][j] = 1;                  // green marker
+                }
+            }
+        }
+
+        /* ---- stash in globals so renderers & Glauber can use it ---- */
+        g_conf           = conf;
+        g_W              = MatrixDouble(N, std::vector<double>(N, 1.0));
+        g_N              = N;
+        g_periodicity    = "uniform";
+        g_glauber_active = false;
+
+        /* ------------ serialise exactly like simulateAztec ---------- */
+        std::ostringstream oss;  oss << '[';  bool first = true;
+
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j < N; ++j) {
+                if (!conf[i][j]) continue;
+
+                double x  = j - i - 2;
+                double yy = N + 1 - (i + j) - 1;
+                const char* col = ((i & 1) && (j & 1)) ? "blue" : "green";
+
+                if (!first) oss << ','; else first = false;
+                oss << "{\"x\":" << x  << ",\"y\":" << yy
+                    << ",\"w\":4,\"h\":2,\"color\":\"" << col << "\"}";
+            }
+        }
+        oss << ']';
+
+        char* out = (char*)std::malloc(oss.str().size() + 1);
+        std::strcpy(out, oss.str().c_str());
+        return out;
+    }
+    catch (const std::exception& e) {
+        std::string err = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)std::malloc(err.size() + 1);
+        std::strcpy(out, err.c_str());
+        return out;
+    }
+}
 
 
 /* ------------------------------------------------------------------ *

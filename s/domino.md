@@ -417,7 +417,7 @@ function createLargeTilingMessage() {
 }
 
 Module.onRuntimeInitialized = async function() {
-  const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
+  const simulateAztecHorizontal = Module.cwrap('simulateAztecHorizontal','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
   const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
@@ -1096,7 +1096,7 @@ Module.onRuntimeInitialized = async function() {
       if (signal.aborted) return;
 
       // Get domino configuration from C++ code
-      const ptrPromise = simulateAztec(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
+      const ptrPromise = simulateAztecHorizontal(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
 
       // Wait for simulation to complete
       const ptr = await ptrPromise;
