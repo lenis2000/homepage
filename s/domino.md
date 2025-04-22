@@ -240,6 +240,20 @@ permalink: /domino/
         <input type="radio" id="3x3-radio" name="periodicity" value="3x3" style="cursor: pointer;">
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
+      <div style="padding:5px;border-radius:4px;cursor:pointer;">
+        <input type="radio" id="frozenH-radio" name="periodicity"
+               value="frozenH" style="cursor:pointer;">
+        <label for="frozenH-radio" style="cursor:pointer;user-select:none;">
+              Frozen – all horizontal
+        </label>
+      </div>
+      <div style="padding:5px;border-radius:4px;cursor:pointer;">
+        <input type="radio" id="frozenV-radio" name="periodicity"
+               value="frozenV" style="cursor:pointer;">
+        <label for="frozenV-radio" style="cursor:pointer;user-select:none;">
+              Frozen – all vertical
+        </label>
+      </div>
     </div>
   </div>
 
@@ -418,6 +432,15 @@ function createLargeTilingMessage() {
 
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
+  const simulateAztecHorizontal = Module.cwrap(
+    'simulateAztecHorizontal', 'number',
+    ['number','number','number','number','number','number',
+     'number','number','number','number'], {async:true});
+  
+  const simulateAztecVertical = Module.cwrap(
+    'simulateAztecVertical', 'number',
+    ['number','number','number','number','number','number',
+     'number','number','number','number'], {async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
   const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
@@ -1019,45 +1042,49 @@ Module.onRuntimeInitialized = async function() {
 
     // Get the current periodicity setting
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
+    const isFrozenH = (periodicity === 'frozenH');
+    const isFrozenV = (periodicity === 'frozenV');
 
     let w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=1.0;
     let a=1.0, b=1.0;
 
-    if (periodicity === '2x2') {
-      // Safe get values with defaults
-      const aInput = document.getElementById("a-input");
-      const bInput = document.getElementById("b-input");
-      a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
-      b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
+    if (!isFrozenH && !isFrozenV) {
+      if (periodicity === '2x2') {
+        // Safe get values with defaults
+        const aInput = document.getElementById("a-input");
+        const bInput = document.getElementById("b-input");
+        a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
+        b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
 
-      // For 2x2, we'll set the 3x3 weights specially
-      w1 = 1.0; w2 = a; w3 = 1.0;
-      w4 = b; w5 = 1.0; w6 = b;
-      w7 = 1.0; w8 = a; w9 = 1.0;
-    } else if (periodicity === '3x3') {
-      // Get values from the 3x3 weight inputs
-      for (let i = 1; i <= 9; i++) {
-        const input = document.getElementById(`w${i}`);
-        const val = input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0;
-        if (i === 1) w1 = val;
-        else if (i === 2) w2 = val;
-        else if (i === 3) w3 = val;
-        else if (i === 4) w4 = val;
-        else if (i === 5) w5 = val;
-        else if (i === 6) w6 = val;
-        else if (i === 7) w7 = val;
-        else if (i === 8) w8 = val;
-        else if (i === 9) w9 = val;
+        // For 2x2, we'll set the 3x3 weights specially
+        w1 = 1.0; w2 = a; w3 = 1.0;
+        w4 = b; w5 = 1.0; w6 = b;
+        w7 = 1.0; w8 = a; w9 = 1.0;
+      } else if (periodicity === '3x3') {
+        // Get values from the 3x3 weight inputs
+        for (let i = 1; i <= 9; i++) {
+          const input = document.getElementById(`w${i}`);
+          const val = input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0;
+          if (i === 1) w1 = val;
+          else if (i === 2) w2 = val;
+          else if (i === 3) w3 = val;
+          else if (i === 4) w4 = val;
+          else if (i === 5) w5 = val;
+          else if (i === 6) w6 = val;
+          else if (i === 7) w7 = val;
+          else if (i === 8) w8 = val;
+          else if (i === 9) w9 = val;
+        }
+
+
+      } else {
+        // Uniform weights - all weights are 1.0
+        w1 = 1.0; w2 = 1.0; w3 = 1.0;
+        w4 = 1.0; w5 = 1.0; w6 = 1.0;
+        w7 = 1.0; w8 = 1.0; w9 = 1.0;
+
+
       }
-
-
-    } else {
-      // Uniform weights - all weights are 1.0
-      w1 = 1.0; w2 = 1.0; w3 = 1.0;
-      w4 = 1.0; w5 = 1.0; w6 = 1.0;
-      w7 = 1.0; w8 = 1.0; w9 = 1.0;
-
-
     }
     // Clear previous models
     if (dominoGroup && dominoGroup.children) {
@@ -1096,7 +1123,14 @@ Module.onRuntimeInitialized = async function() {
       if (signal.aborted) return;
 
       // Get domino configuration from C++ code
-      const ptrPromise = simulateAztec(n, w1, w2, w3, w4, w5, w6, w7, w8, w9);
+      let ptrPromise;
+      if (isFrozenH) {
+        ptrPromise = simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
+      } else if (isFrozenV) {
+        ptrPromise = simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
+      } else {
+        ptrPromise = simulateAztec(n, w1,w2,w3,w4,w5,w6,w7,w8,w9);
+      }
 
       // Wait for simulation to complete
       const ptr = await ptrPromise;
@@ -1416,18 +1450,15 @@ Module.onRuntimeInitialized = async function() {
 
   // Function to update parameter visibility based on selected periodicity
   function updatePeriodicityParams() {
-    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    const p = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    const isFrozen = (p === 'frozenH' || p === 'frozenV');
 
-    // Show/hide weights based on selection
-    const weights2x2 = document.getElementById('weights-2x2');
-    const weights3x3 = document.getElementById('weights-3x3');
+    // 2×2 and 3×3 weight panels
+    document.getElementById('weights-2x2').style.display = (p === '2x2') ? 'block' : 'none';
+    document.getElementById('weights-3x3').style.display = (p === '3x3') ? 'block' : 'none';
 
-    if (weights2x2) weights2x2.style.display = (periodicity === '2x2') ? 'block' : 'none';
-    if (weights3x3) weights3x3.style.display = (periodicity === '3x3') ? 'block' : 'none';
-
-
-
-
+    // Glauber controls
+    document.getElementById('glauber-controls').style.display = isFrozen ? 'none' : 'block';
   }
 
   // Add handlers for periodicity radio buttons
@@ -1441,6 +1472,7 @@ Module.onRuntimeInitialized = async function() {
       label.addEventListener('click', () => {
         radio.checked = true;
         radio.dispatchEvent(new Event('change'));
+        updatePeriodicityParams();
       });
     }
   });
