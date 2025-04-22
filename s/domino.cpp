@@ -3,7 +3,7 @@
 emcc domino.cpp -o domino.js\
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_performGlauberSteps','_wasGlauberActive','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_performGlauberSteps','_simulateAztecVertical','_wasGlauberActive','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -361,11 +361,11 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         }
 
         MatrixDouble A1a(dim, vector<double>(dim, 0.0));
-        
+
         // Check if the weights match the pattern for a 2x2 periodic configuration
         // In a 2x2 pattern, w2 and w8 are 'a', w4 and w6 are 'b', and the rest are 1.0
-        bool is2x2Pattern = (std::abs(w1 - 1.0) < 1e-9 && std::abs(w3 - 1.0) < 1e-9 && 
-                             std::abs(w5 - 1.0) < 1e-9 && std::abs(w7 - 1.0) < 1e-9 && 
+        bool is2x2Pattern = (std::abs(w1 - 1.0) < 1e-9 && std::abs(w3 - 1.0) < 1e-9 &&
+                             std::abs(w5 - 1.0) < 1e-9 && std::abs(w7 - 1.0) < 1e-9 &&
                              std::abs(w9 - 1.0) < 1e-9 &&
                              std::abs(w2 - w8) < 1e-9 && std::abs(w4 - w6) < 1e-9);
 
@@ -373,7 +373,7 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
             // Use the direct 2x2 pattern implementation from the reference code
             double a = w2; // w2 and w8 are 'a'
             double b = w4; // w4 and w6 are 'b'
-            
+
             for (int i = 0; i < dim; ++i) {
                 for (int j = 0; j < dim; ++j) {
                     int im = i & 3; // Faster than i % 4
@@ -542,6 +542,85 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         return out;
     }
 }
+
+
+
+/* ------------------------------------------------------------------ *
+ *  simulateAztecVertical – deterministic “all‑vertical” frozen state
+ *  (returns only dominoes whose 2×4 rectangle lies wholly inside ♦)
+ * ------------------------------------------------------------------ */
+extern "C" EMSCRIPTEN_KEEPALIVE
+char* simulateAztecVertical(int n,
+                            double, double, double,
+                            double, double, double,
+                            double, double, double)
+{
+    try {
+        const int N = 2 * n;                       /* lattice size */
+
+
+        MatrixInt conf(N, std::vector<int>(N,0));
+
+        for (int i = 0; i <= N; ++i){
+            for (int j = 0; j <= N; ++j){
+
+                const bool oddI = i & 1;
+                const bool oddJ = j & 1;
+                const int  x    = j - i - 1;          // renderer’s x‑coord
+
+                /*  yellow  (NE marker)  needs companion SW = (i+1,j‑1)
+                 *  red     (SW marker)  needs companion NE = (i‑1,j+1)  */
+                if (x <= 0){                                            // left half
+                    if ( oddI && !oddJ && i <= N-2 && j >= 2 )
+                        conf[i][j] = 1;          /* yellow marker */
+                } else {                                              // right half
+                    if (!oddI && oddJ && i >= 0 && j <= N )
+                        conf[i][j] = 1;          /* red marker */
+                }
+            }
+        }
+
+        /* --- stash in globals so downstream renderers / Glauber work --- */
+        g_conf           = conf;
+        g_W              = MatrixDouble(N, std::vector<double>(N,1.0));
+        g_N              = N;
+        g_periodicity    = "uniform";
+        g_glauber_active = false;
+
+        /* ----------- serialise exactly like simulateAztec -------------- */
+        std::ostringstream oss;  oss << '[';  bool first = true;
+
+        for (int i = 0; i < N; ++i){
+            for (int j = 0; j < N; ++j){
+                if (!conf[i][j]) continue;
+
+                double x = j - i - 1;
+                double y = N + 1 - (i + j) - 2;
+                const char* col = (x <= 0) ? "yellow" : "red";
+
+                if (!first) oss << ','; else first = false;
+
+                    oss << "{\"x\":"<<x<<",\"y\":"<<y
+                        <<",\"w\":2,\"h\":4,\"color\":\""<<col<<"\"}";
+            }
+        }
+        oss << ']';
+
+        char* out = (char*)std::malloc(oss.str().size()+1);
+        std::strcpy(out, oss.str().c_str());
+        return out;
+    }
+    catch (const std::exception& e){
+        std::string err = std::string("{\"error\":\"")+e.what()+"\"}";
+        char* out = (char*)std::malloc(err.size()+1);
+        std::strcpy(out, err.c_str());
+        return out;
+    }
+}
+
+
+
+
 
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) {
