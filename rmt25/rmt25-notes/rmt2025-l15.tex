@@ -92,7 +92,7 @@ matrices, and outline their connection to topology
 {\LARGE{Todo: tables of contents in HTML + total PDF}}
 
 \section{Gluing polygons into surfaces}
-
+\label{sec:gluing-polygons}
 \subsection{Gluing edges of a polygon}
 
 Consider a regular $2n$-gon with edges labeled by $1,\ldots,2n$.
@@ -264,7 +264,7 @@ $N$ is the generating function variable.
 The polynomial $T_n(N)$ has only powers of $N$ of the same parity as $n$.
 \end{remark}
 
-We have the first few polynomials 
+We have the first few polynomials
 (the case $n=2$ corresponds to the square):
 \begin{align*}
 	T_1(N)&=N^2;\\
@@ -353,7 +353,7 @@ with the initial condition
 \end{proof}
 
 \begin{corollary}\label{cor:epsg-explicit}
-The number $\varepsilon_g(n)$ can be written as  
+The number $\varepsilon_g(n)$ can be written as
 \[
 \varepsilon_g(n)\;=\;\frac{(2n)!}{(n+1)!\,(n-2g)!}\,
 \bigl[s^{2g}\bigr]\!
@@ -372,16 +372,189 @@ Then, \eqref{eq:HZ-rec} can be rewritten as
 \begin{equation*}
 	C_g(n+1)=C_g(n)+\binom{n+1}2 C_{g-1}(n-1).
 \end{equation*}
-In particular, $C_g(n)$ is a positive integer, which is not straightforward from the 
+In particular, $C_g(n)$ is a positive integer, which is not straightforward from the
 definition of $\varepsilon_g(n)$.
-
 
 
 \section{Gaussian integrals and Wick formula}
 
+\label{sec:gaussian-wick}
+
+\subsection{The standard one–dimensional Gaussian measure}
+\label{subsec:1d-gaussian}
+
+Denote by
+\[
+  d\mu(x)\;=\;\frac{1}{\sqrt{2\pi}}\,
+               e^{-\frac{x^{2}}{2}}\,dx,
+  \qquad x\in\Bbb R,
+\]
+the \emph{standard centred Gaussian measure}.
+We record the elementary facts that will be used repeatedly:
+
+\begin{enumerate}[(i)]
+  \item \textbf{Normalization:}
+        $\displaystyle\int_{\Bbb R}d\mu(x)=1$.
+
+  \item \textbf{Odd moments vanish:}
+        $\langle x^{2n+1}\rangle=0$.
+
+  \item \textbf{Even moments:}
+        \[
+          \langle x^{2n}\rangle
+          \;=\;
+          \frac{1}{\sqrt{2\pi}}
+          \int_{-\infty}^{\infty}
+            x^{2n}e^{-\frac{x^{2}}{2}}dx
+          \;=\;(2n-1)!!,
+          \qquad n\in\Bbb N.
+        \]
+
+  \item \textbf{Characteristic (Fourier–Laplace) transform:}
+        \[
+          \varphi(t)
+          \;=\;
+          \int_{\Bbb R}e^{itx}\,d\mu(x)
+          \;=\;
+          e^{-\frac{t^{2}}{2}},
+          \qquad t\in\Bbb R.
+        \]
+\end{enumerate}
+Here and below we use the convenient bracket notation
+\(
+  \langle f\rangle:=\int_{\Bbb R}f(x)\,d\mu(x)
+\)
+for expectations.
+
+
+
+\begin{example}
+\label{ex:x4}
+For $k=1$ with variance~$1$ we have
+\(
+  \langle x^{4}\rangle
+  = 3\,\langle x^{2}\rangle^{2}=3.
+\)
+For degree $6$ one finds
+\(
+  \langle x^{6}\rangle = 15.
+\)
+More generally,
+$\langle x^{2n}\rangle=(2n-1)!!$.
+This can be computed by a simple induction.
+\end{example}
+
+
+
+\subsection{Gaussian measures on \texorpdfstring{$\Bbb R^{k}$}{Rk}}
+\label{subsec:multivariate-gaussian}
+
+Fix a positive–definite symmetric matrix
+$B\in\operatorname{Sym}_{k}^{+}(\Bbb R)$ and set
+$C:=B^{-1}$.
+The centred Gaussian measure with covariance~$C$ is
+\begin{equation}
+  d\mu_{B}(x)
+  \;=\;
+  \underbrace{\bigl[(2\pi)^{-k/2}(\det B)^{1/2}\bigr]}_{\displaystyle =:\;Z_{B}^{-1}}
+  \exp\!\Bigl(-\tfrac12\langle Bx,x\rangle\Bigr)\,d^{k}x,
+  \qquad x\in\Bbb R^{k}.
+  \label{eq:multivariate-gaussian-density}
+\end{equation}
+Orthogonal diagonalisation of~$B$ shows that the normalising
+prefactor indeed gives $\int_{\Bbb R^{k}}d\mu_{B}=1$.
+
+\paragraph{Basic facts.}
+\begin{align}
+  \langle x_{i}\rangle &= 0,
+  \quad
+  1\le i\le k;
+  \label{eq:mean-zero}\\
+  \langle x_{i}x_{j}\rangle &= C_{ij},
+  \quad
+  1\le i,j\le k.
+  \label{eq:covariance}
+\end{align}
+All higher moments are expressed in terms of the matrix~$C$
+via Wick’s formula below.
+
+\subsection{Wick (Isserlis) formula}
+\label{subsec:wick}
+
+The essence of Wick’s formula is that \emph{every} moment of a
+centred Gaussian vector is a sum over pairwise contractions governed
+solely by the covariance matrix.
+
+\begin{theorem}[Wick’s (or Isserlis’) formula]
+\label{thm:wick}
+Let $x=(x_{1},\dots,x_{k})$ be distributed according
+to~\eqref{eq:multivariate-gaussian-density}.
+For an integer $n\ge1$ and indices $i_{1},\dots,i_{2n}\in\{1,\dots,k\}$,
+\begin{equation}
+  \bigl\langle x_{i_{1}}\cdots x_{i_{2n}}\bigr\rangle
+  \;=\;
+  \sum_{p\in\operatorname{Pair}(2n)}
+        \;\prod_{\{a,b\}\in p}
+        C_{i_{a}i_{b}},
+  \label{eq:wick}
+\end{equation}
+where $\operatorname{Pair}(2n)$ is the set of all
+$(2n-1)!!$ perfect pairings of $\{1,\dots,2n\}$.
+If the degree is \emph{odd}, then the expectation vanishes.
+
+More generally, for any \emph{linear} functions (not necessarily distinct)
+$f_1,\ldots,f_{2n}$ of the variables $x_1,\ldots,x_k$, we have
+\begin{equation}
+	\label{eq:f_Wick}
+	\bigl\langle f_{1}\cdots f_{2n}\bigr\rangle
+	=\sum
+	\langle f_{p_1}f_{q_1} \rangle
+	\langle f_{p_2}f_{q_2} \rangle \ldots
+	\langle f_{p_n}f_{q_n} \rangle,
+\end{equation}
+where the sum is over all pairings of the indices $1,\ldots,2n$,
+and $p_1<p_2<\ldots<p_n$ , $q_1<q_2<\ldots<q_n$ are the
+indices encoding the pairing.
+\end{theorem}
+
+\begin{proof}[Sketch of proof]
+	When $C=\operatorname{diag}(\sigma_{1}^{2},\dots,\sigma_{k}^{2})$,
+mixed covariances vanish and Wick’s formula factorises:
+\begin{equation}
+  \bigl\langle
+     x_{1}^{2n_{1}}\cdots x_{k}^{2n_{k}}
+  \bigr\rangle
+  \;=\;
+  \prod_{i=1}^{k}
+    (2n_{i}-1)!!\;\sigma_{i}^{2n_{i}},
+  \qquad n_{1},\dots,n_{k}\in\Bbb N.
+  \label{eq:wick-diagonal}
+\end{equation}
+The general case follows from the diagonal case by
+making a linear change of variables which diagonalizes the covariance matrix, and
+proving \eqref{eq:wick}.
+\end{proof}
 
 
 \section{GUE integrals and gluing polygons}
+
+We will now apply Wick’s formula to compute the moments of traces of 
+GUE matrices. Recall that in 
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1} 
+and 
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2} we 
+worked with general Wigner matrices (real symmetric or Hermitian),
+and now we will deal with the special case of
+GUE, Gaussian Hermitian matrices.
+Here, the Gaussian distribution will allow us to 
+connect the moments of traces of GUE matrices to the topology of surfaces.
+
+
+\subsection{}
+
+\colorbox{yellow}{\parbox{.7\textwidth}{to continue here}}
+
+
 
 
 
