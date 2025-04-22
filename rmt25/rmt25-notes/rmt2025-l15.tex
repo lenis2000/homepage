@@ -48,6 +48,7 @@
 \theoremstyle{definition}
 \newtheorem{definition}[proposition]{Definition}
 \newtheorem{remark}[proposition]{Remark}
+\newtheorem{example}[proposition]{Example}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
@@ -77,19 +78,199 @@ In this wrap-up lecture, we go back to moments of random
 matrices, and outline their connection to topology
 (more precisely, to counting certain embedded graphs).
 
+\begin{remark}
+	Throughout this lecture, to make an exact connection with the existing literature,
+	the matrix size is denoted by $N$, and the small $n$ is reserved to
+	the order of the moment.
+\end{remark}
+
+
 \bigskip
-\huge{NOTE: course evaluations!}`
+{\huge{NOTE: course evaluations!}}
 
-\section{Gluing polygons}
+\section{Gluing polygons into surfaces}
+
+\subsection{Gluing edges of a polygon}
+
+Consider a regular $2n$-gon with edges labeled by $1,\ldots,2n$.
+We can glue the edges in pairs, so that the resulting
+surface is oriented.
+
+\begin{example}
+Consider a square.
+Recall that to obtain an orientable surface one must orient the square’s
+boundary cyclically and then glue opposite sides with \emph{opposite}
+orientations. There are three ways to glue the edges of a square.
+Note that in two cases, we get the sphere and in one case, the torus.
+The two spheres are obtained by gluing the edges in the same way, but this differs by
+a rotation --- we consider these two cases as different.
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[scale=1, thick]
+    % ---- basic parameters ----
+    \def\s{2}   % side length of one square
+    \def\gap{1} % horizontal gap between squares
+
+    % ===== left square =====
+    \draw (0,0) rectangle (\s,\s);
+    % corner dots & labels
+    \fill (0,0) circle(2pt) node[below left]  {$i$};
+    \fill (\s,0) circle(2pt) node[below right] {$j$};
+    \fill (\s,\s) circle(2pt) node[above right] {$k$};
+    \fill (0,\s) circle(2pt) node[above left]  {$l$};
+    % internal quarter–circles
+    \draw (0,\s/2)  arc ( 90:  0:{\s/2});
+    \draw (\s/2,\s) arc (180:270:{\s/2});
+
+    % ===== middle square =====
+    \begin{scope}[shift={({\s+\gap},0)}]
+      \draw (0,0) rectangle (\s,\s);
+      \fill (0,0) circle(2pt) node[below left]  {$i$};
+      \fill (\s,0) circle(2pt) node[below right] {$j$};
+      \fill (\s,\s) circle(2pt) node[above right] {$k$};
+      \fill (0,\s) circle(2pt) node[above left]  {$l$};
+      % grid
+      \draw (\s/2,0) -- (\s/2,\s);
+      \draw (0,\s/2) -- (\s,\s/2);
+    \end{scope}
+
+    % ===== right square =====
+    \begin{scope}[shift={({2*(\s+\gap)},0)}]
+      \draw (0,0) rectangle (\s,\s);
+      \fill (0,0) circle(2pt) node[below left]  {$i$};
+      \fill (\s,0) circle(2pt) node[below right] {$j$};
+      \fill (\s,\s) circle(2pt) node[above right] {$k$};
+      \fill (0,\s) circle(2pt) node[above left]  {$l$};
+      % internal quarter–circles (opposite orientation)
+      \draw (0,\s/2)  arc (270:360:{\s/2});
+      \draw (\s/2,0) arc (180: 90:{\s/2});
+    \end{scope}
+  \end{tikzpicture}
+\end{figure}
+\end{example}
+
+The boundary of the $2n$-gon becomes a graph embedded into the
+surface. It has exactly $n$ edges and one face. It may have different number
+of vertices, and thus the number of vertices uniquely determines the genus of the surface:
+\begin{equation*}
+	V - E + F = 2 - 2g \implies g = \frac{n+1-V}{2}.
+\end{equation*}
+In the case of the square ($n=2$), we have $V=3$ and $g=0$ for the sphere,
+and $V=1$ and $g=1$ for the torus.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[thick,scale=1.2]
+    % -------------------------------------------------------------
+    % handy parameters
+    \def\R{1.45}   % radius of each disk
+    \def\G{4.2}    % horizontal gap between the three pictures
+    % -------------------------------------------------------------
+    % === LEFT DISK =================================================
+    \begin{scope}[shift={(-\G,0)}]
+      \draw (0,0) circle (\R);
+      % three collinear points and the poly‑line between them
+      \coordinate (A) at (-0.95,-0.45);
+      \coordinate (B) at (-0.45, 0.10);
+      \coordinate (C) at ( 0.10, 0.65);
+      \draw (A) -- (B) -- (C);
+      \foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
+    \end{scope}
+
+    % === MIDDLE TORUS (CROSS‑SECTION) =============================
+    \begin{scope}
+      % outer and inner “rings”
+      \draw (0,0) ellipse (2.45 and 1.20);
+      \draw (0,0) ellipse (1.55 and 0.72);
+      % central hole (top rim)
+      \draw (0,0) ellipse (0.60 and 0.18);
+      % base‑point on the interior boundary
+      \coordinate (P) at (-1.0,-0.55);
+      \fill (P) circle(3pt);
+			\draw (-.5,-.65) circle (0.53);
+    \end{scope}
+
+    % === RIGHT DISK ===============================================
+    \begin{scope}[shift={(\G,0)}]
+      \draw (0,0) circle (\R);
+      % mirror‑image of the left‑hand poly‑line
+      \coordinate (A) at ( 0.10, 0.65);
+      \coordinate (B) at ( 0.55, 0.10);
+      \coordinate (C) at ( 0.95,-0.45);
+      \draw (A) -- (B) -- (C);
+      \foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
+    \end{scope}
+  \end{tikzpicture}
+\end{figure}
+
+\subsection{Starting to count}
+
+\begin{proposition}
+	There is a total 
+	\begin{equation*}
+		(2n-1)!!=(2n-1)(2n-3)\cdots 3\cdot 1
+	\end{equation*}
+	ways to glue the edges of a $2n$-gon into a surface.
+\end{proposition}
+\begin{proof}
+	This is just the number of ways to pair $2n$ edges of the polygon.
+\end{proof}
+
+\begin{proposition}
+	\label{prop:gluing_sphere}
+	The following are equivalent:
+	\begin{enumerate}
+		\item The surface is a sphere;
+		\item The graph on the surface is a tree;
+		\item The identification of the opposite edges of the polygon is a \emph{noncrossing pairing} of the edges of the polygon.
+	\end{enumerate}
+\end{proposition}
+\begin{proof}
+	See Problem~\ref{prob:gluing_sphere}.
+\end{proof}
+There is $\mathrm{Cat}_n=\frac{1}{n+1}\binom{2n}{n}$ ways to get the sphere.
 
 
+\subsection{Dual picture}
+
+In the dual picture, we can consider a star with $2n$ half-edges. Then, we get a dual graph on the
+same surface. This graph has $V^*=1$, $E^*=n$, but can have a variable number of faces (which corresponds to the genus):
+\begin{equation*}
+	F^*=n-2g+1.
+\end{equation*}
+When $n=2$, for the sphere, we have $F^*=3$, and for the torus, we have $F^*=1$.
 
 
+\subsection{Notation}
 
+Let us denote 
+\begin{align*}
+	\varepsilon_g(n)
+	&\coloneqq\text{number of ways to glue the edges of a $2n$-gon into a surface of genus $g$},\\
+	T_n(N)
+	&\coloneqq
+	\sum_{\text{gluings }\sigma}N^{V(\sigma)}
+	=
+	\sum_{g=0}^{\infty}\varepsilon_g(n)N^{n+1-2g},
+\end{align*}
+that is, this is the generating function
+of the gluings of the edges of a $2n$-gon, where
+$N$ is the generating function variable.
 
-
+\begin{remark}
+The polynomial $T_n(N)$ has only powers of $N$ of the same parity as $n$.
+\end{remark}
 
 \section{Harer–Zagier formula (statement)}
+
+One of the goals of today's lecture is to prove the following:
+\begin{theorem}
+	[Harer–Zagier formula \cite{harer1986euler}]
+\end{theorem}
+
+
+
+
 
 
 \section{Gaussian integrals and Wick formula}
@@ -317,8 +498,15 @@ To derive a recurrence, \textbf{pick a distinguished edge} (or equivalently, poi
 
 \section{Problems (due 2025-04-29)}
 
-
-
+\subsection{Gluing a Sphere}
+\label{prob:gluing_sphere}
+Show that for a connected, orientable surface formed by gluing the edges of a $2n$-gon in pairs, the following are equivalent:
+\begin{enumerate}
+	\item The resulting surface is a sphere.
+	\item The embedded graph formed by the identification is a tree.
+	\item The pairing of edges corresponds to a \emph{noncrossing pairing} (i.e., when the edges are arranged around the polygon in order, the identifications can be drawn inside the disk without crossings).
+\end{enumerate}
+(This is the proof of \Cref{prop:gluing_sphere}.)
 
 
 \bibliographystyle{alpha}
