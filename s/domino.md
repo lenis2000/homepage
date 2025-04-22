@@ -240,15 +240,6 @@ permalink: /domino/
         <input type="radio" id="3x3-radio" name="periodicity" value="3x3" style="cursor: pointer;">
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
-      <!-- NEW — frozen tilings -->
-      <div style="padding:5px;border-radius:4px;cursor:pointer;">
-        <input type="radio" id="frozen-vertical-radio"   name="periodicity" value="frozenV" style="cursor:pointer;">
-        <label for="frozen-vertical-radio"   style="cursor:pointer;user-select:none;">Frozen (all R/Y)</label>
-      </div>
-      <div style="padding:5px;border-radius:4px;cursor:pointer;">
-        <input type="radio" id="frozen-horizontal-radio" name="periodicity" value="frozenH" style="cursor:pointer;">
-        <label for="frozen-horizontal-radio" style="cursor:pointer;user-select:none;">Frozen (all B/G)</label>
-      </div>
     </div>
   </div>
 
@@ -745,54 +736,6 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-/* ------------------------------------------------------------------ *
- *  generateFrozenDominoes(n, variant)
- *  variant = 'frozenV'  ← all vertical   (red / yellow)
- *         = 'frozenH'  ← all horizontal (blue / green)
- *  Returns an array of domino objects {x,y,w,h,color}
- *  identical to those produced by simulateAztec.
- * ------------------------------------------------------------------ */
-function generateFrozenDominoes(n, variant){
-  const dom = [];
-  const N   = 2*n;
-
-  // test whether lattice site (i,j) is inside the Aztec‑diamond mask
-  const inDiamond = (i,j)=> {
-     const s = i+j;
-     return (s >= n-1 && s <= 3*n-3 && Math.abs(i-j) <= n-1);
-  };
-
-  for(let i=0;i<N;i++){
-    for(let j=0;j<N;j++){
-      if(!inDiamond(i,j)) continue;
-
-      /* parity conventions must match the C++ ⇢ JS converter used
-         in simulateAztec – then all colours line up automatically */
-
-      if(variant==='frozenV'){            // ---------- all vertical
-        if((i%2)===(j%2)) continue;       // skip horizontal marker sites
-        // choose exactly ONE marker per domino
-        if(i%2===0 && j%2===1){           // red
-          dom.push({x:j-i-1, y:N+1-(i+j)-2, w:2, h:4, color:'red'});
-        }
-        if(i%2===1 && j%2===0){           // yellow
-          dom.push({x:j-i-1, y:N+1-(i+j)-2, w:2, h:4, color:'yellow'});
-        }
-      }else if(variant==='frozenH'){      // ---------- all horizontal
-        if((i%2)!==(j%2)) continue;       // skip vertical marker sites
-        if(i%2===1 && j%2===1){           // blue
-          dom.push({x:j-i-2, y:N+1-(i+j)-1, w:4, h:2, color:'blue'});
-        }
-        if(i%2===0 && j%2===0){           // green
-          dom.push({x:j-i-2, y:N+1-(i+j)-1, w:4, h:2, color:'green'});
-        }
-      }
-    }
-  }
-  return dom;
-}
-
-
   // Function to update both 2D and 3D visualizations from cachedDominoes
   async function updateVisualizationFromCache() {
     if (!cachedDominoes) return;
@@ -1076,23 +1019,6 @@ function generateFrozenDominoes(n, variant){
 
     // Get the current periodicity setting
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-
-  /* ⇢⇢  NEW  – frozen tilings need no WASM call  */
-    if(periodicity==='frozenV' || periodicity==='frozenH'){
-        if (glauberRunning) toggleGlauberDynamics();  // safety
-        lastSampleWasGlauber = false;
-
-        /* wipe old 3‑D meshes */
-        if(dominoGroup){ dominoGroup.clear();
-                        dominoGroup.position.set(0,0,0);
-                        dominoGroup.rotation.set(0,0,0);
-                        dominoGroup.scale.set(1,1,1); }
-
-        cachedDominoes = generateFrozenDominoes(n, periodicity);
-        await updateVisualizationFromCache();   // re‑use the common renderer
-        stopSimulation();                       // re‑enable buttons, etc.
-        return;                                 //  ←← skip the WASM pipeline
-    }
 
     let w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=1.0;
     let a=1.0, b=1.0;
@@ -1500,9 +1426,6 @@ function generateFrozenDominoes(n, variant){
     if (weights3x3) weights3x3.style.display = (periodicity === '3x3') ? 'block' : 'none';
 
 
-  const glauberControls = document.getElementById('glauber-controls');
-  const isFrozen = (periodicity==='frozenV' || periodicity==='frozenH');
-  if(glauberControls) glauberControls.style.display = isFrozen ? 'none' : 'block';
 
 
   }
