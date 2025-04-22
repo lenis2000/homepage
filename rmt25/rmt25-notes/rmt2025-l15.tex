@@ -206,7 +206,7 @@ and $V=1$ and $g=1$ for the torus.
 \subsection{Starting to count}
 
 \begin{proposition}
-	There is a total 
+	There is a total
 	\begin{equation*}
 		(2n-1)!!=(2n-1)(2n-3)\cdots 3\cdot 1
 	\end{equation*}
@@ -243,7 +243,7 @@ When $n=2$, for the sphere, we have $F^*=3$, and for the torus, we have $F^*=1$.
 
 \subsection{Notation}
 
-Let us denote 
+Let us denote
 \begin{align*}
 	\varepsilon_g(n)
 	&\coloneqq\text{number of ways to glue the edges of a $2n$-gon into a surface of genus $g$},\\
@@ -261,15 +261,116 @@ $N$ is the generating function variable.
 The polynomial $T_n(N)$ has only powers of $N$ of the same parity as $n$.
 \end{remark}
 
+We have the first few polynomials 
+(the case $n=2$ corresponds to the square):
+\begin{align*}
+	T_1(N)&=N^2;\\
+	T_2(N)&=2N^3+N;\\
+	T_3(N)&=5N^4+10N^2;\\
+	T_4(N)&=14N^5+70N^3+21N;\\
+	T_5(N)&=42N^6+420N^4+483N^2.
+\end{align*}
+
 \section{Harer–Zagier formula (statement)}
+
+
+Introduce the \emph{exponential generating function}
+for the sequence $\{T_n(N)\}_{n\ge 0}$:
+\begin{equation}\label{eq:TNs-def} % (3.1)
+  \begin{split}
+    T(N,s)\;=&\;1+2Ns
+            +2s\sum_{n\ge 1}\frac{T_n(N)}{(2n-1)!!}\,s^{n}
+        \\
+       =&\;
+        1+2Ns+2N^{2}s^{2}
+        +\frac{2}{3}\bigl(2N^{3}+N\bigr)s^{3}
+        +\frac{2}{15}\bigl(5N^{4}+10N^{2}\bigr)s^{4}
+        +\dots
+  \end{split}
+\end{equation}
 
 One of the goals of today's lecture is to prove the following:
 \begin{theorem}
 	[Harer–Zagier formula \cite{harer1986euler}]
+	\label{thm:HZ-genfun}
+	For every $N\in\mathbb{Z}_{>0}$ one has the closed form
+\begin{equation}\label{eq:TNs-closed}
+  T(N,s)\;=\;\Bigl(\frac{1+s}{1-s}\Bigr)^{N}.
+\end{equation}
 \end{theorem}
 
 
+Let us at least
+verify that
+the first few Taylor coefficients of~\eqref{eq:TNs-closed}
+indeed coincide with those in~\eqref{eq:TNs-def}.
+Write
+\begin{align*}
+  \Biggl(\frac{1+s}{1-s}\Biggr)^N
+  &= (1+s)^N (1-s)^{-N} \\
+  &=
+  \Biggl(1 + Ns + \frac{N(N-1)}{2!}s^2 + \frac{N(N-1)(N-2)}{3!}s^3 + \dots\Biggr) \\
+  &\qquad\times
+  \Biggl(1 + Ns + \frac{N(N+1)}{2!}s^2 + \frac{N(N+1)(N+2)}{3!}s^3 + \dots\Biggr).
+\end{align*}
+Multiplying the two series and collecting terms up to $s^3$, we find
+\[
+  1 + 2N s + 2N^2 s^2 + \frac{2}{3}(2N^3 + N) s^3 + \dots,
+\]
+which matches the expansion~\eqref{eq:TNs-def} exactly.
 
+
+
+
+\begin{corollary}\label{cor:HZ-recurrence} % 3.1.6
+For all $g\ge 0$ and $n\ge 0$, the numbers $\varepsilon_g(n)$ obey
+\begin{equation}\label{eq:HZ-rec} % (3.2)
+  (n+2)\,\varepsilon_g(n+1)
+  \;=\;
+  (4n+2)\,\varepsilon_g(n)
+  \;+\;
+  (4n^{3}-n)\,\varepsilon_{g-1}(n-1),
+\end{equation}
+with the initial condition
+\[
+  \varepsilon_g(0)
+  \;=\;
+  \begin{cases}
+    1,& g=0,\\[4pt]
+    0,& g\ge 1.
+  \end{cases}
+\]
+\end{corollary}
+\begin{proof}
+	Follows from the identity
+	\begin{equation*}
+		\left( \frac{1+s}{1-s} \right)^{N}=
+		(1+s)(1+s+s^2+\ldots )\left( \frac{1+s}{1-s} \right)^{N-1}.
+	\end{equation*}
+\end{proof}
+
+\begin{corollary}\label{cor:epsg-explicit}
+The number $\varepsilon_g(n)$ can be written as  
+\[
+\varepsilon_g(n)\;=\;\frac{(2n)!}{(n+1)!\,(n-2g)!}\,
+\bigl[s^{2g}\bigr]\!
+\left(\frac{s/2}{\tanh(s/2)}\right)^{n+1},
+\]
+where $\bigl[s^{2g}\bigr]f(s)$ denotes the coefficient of $s^{2g}$ in the power‑series expansion of $f(s)$.
+\end{corollary}
+
+
+
+One can define another family of coefficients:
+\begin{equation*}
+	C_g(n)\coloneqq \frac{2^g \varepsilon_g(n)}{\mathrm{Cat}_n}.
+\end{equation*}
+Then, \eqref{eq:HZ-rec} can be rewritten as
+\begin{equation*}
+	C_g(n+1)=C_g(n)+\binom{n+1}2 C_{g-1}(n-1).
+\end{equation*}
+In particular, $C_g(n)$ is a positive integer, which is not straightforward from the 
+definition of $\varepsilon_g(n)$.
 
 
 
