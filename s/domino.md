@@ -240,6 +240,15 @@ permalink: /domino/
         <input type="radio" id="3x3-radio" name="periodicity" value="3x3" style="cursor: pointer;">
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
+      <!-- NEW — frozen tilings -->
+      <div style="padding:5px;border-radius:4px;cursor:pointer;">
+        <input type="radio" id="frozen-vertical-radio"   name="periodicity" value="frozenV" style="cursor:pointer;">
+        <label for="frozen-vertical-radio"   style="cursor:pointer;user-select:none;">Frozen (all R/Y)</label>
+      </div>
+      <div style="padding:5px;border-radius:4px;cursor:pointer;">
+        <input type="radio" id="frozen-horizontal-radio" name="periodicity" value="frozenH" style="cursor:pointer;">
+        <label for="frozen-horizontal-radio" style="cursor:pointer;user-select:none;">Frozen (all B/G)</label>
+      </div>
     </div>
   </div>
 
