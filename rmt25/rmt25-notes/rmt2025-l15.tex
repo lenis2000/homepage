@@ -963,86 +963,83 @@ This completes the proof of \Cref{thm:HZ-genfun}.
 
 \section{Going further: Multi-matrix models}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{to be edited}}
-
-%-----------------------------------------------------------------------
 \subsection{Maps with several faces and Feynman diagrams}
 \label{subsec:feynman-multifaces}
 
-\paragraph{Set-up.}
 Fix a composition $\mathbf k=(k_1,\dots,k_\ell)$ with
-$k_1+\dots+k_\ell=2n$.
+$k_1+\dots+k_\ell=n$.
 For a GUE matrix $H$ let
 \[
   M_{\mathbf k}(N)
   \;:=\;
   \Bigl\langle
-    \operatorname{tr}(H^{k_1})\,
-    \operatorname{tr}(H^{k_2})\cdots
-    \operatorname{tr}(H^{k_\ell})
+    \operatorname{tr}(H^{2k_1})\,
+    \operatorname{tr}(H^{2k_2})\cdots
+    \operatorname{tr}(H^{2k_\ell})
   \Bigr\rangle .
 \]
-Write each trace as a \emph{$k_i$-valent star}: a cyclicly ordered vertex
-with $k_i$ labelled half-edges.
+Write each trace as a \emph{$2k_i$-valent star}: a cyclicly ordered vertex
+with $2k_i$ labelled half-edges.
 Wick’s formula pairs the $2n$ half-edges in every possible way; a
 pairing $\sigma$ produces an oriented ribbon graph~$\mathcal G(\sigma)$
+(dual to the collection of stars),
 with
-
-* $F=\ell$ faces (the original traces),
-* $E=n$ edges (Wick pairings),
-* a vertex count $V(\sigma)$ determined by the cycle structure of
-  $\sigma$.
+\begin{itemize}
+  \item $F=\ell$ faces (the original traces),
+  \item $E=n$ edges (Wick pairings),
+	\item a vertex count $V(\sigma)$.
+\end{itemize}
+On the other hand, we may count the star picture, then $V(\sigma)$ becomes
+$F^*(\sigma)$, the number of faces in the star picture.
 
 Each pairing contributes $N^{V(\sigma)}$, so
 \[
-  M_{\mathbf k}(N)\;=\!\!\!\sum_{\sigma\in\operatorname{Pair}(2n)}\!\!\! N^{V(\sigma)}.
+  M_{\mathbf k}(N)\;=\sum_{\sigma} N^{V(\sigma)}=
+	\sum_{\sigma} N^{F^*(\sigma)}.
 \]
-With Euler’s formula $2-2g=V-E+F$ the sum
-enumerates connected maps of every genus~$g$ having
-$\ell$ boundary components whose perimeters are the parts of~$\mathbf k$.
-A representative four-valent example is depicted in the cited PDF on the
-page showing the “four-star Feynman diagram”.
+The sum (the matrix integral)
+enumerates maps by genus.
+One can also write the matrix integral
+$\langle \operatorname{tr}(H)^{\alpha_1}\operatorname{tr}(H^2)^{\alpha_2}\ldots  \rangle $
+as a sum over
+all possible embedded graphs (into surfaces of various genera),
+with $\alpha_1$ vertices of degree $1$,
+$\alpha_2$ vertices of degree $2$, etc.
+The sum needs to be normalized by the number of automorphisms of the graph,
+more precisely, the matrix integral is equal to
+\begin{equation*}
+	\underbrace{\alpha_1!\ldots \alpha_k! \cdot 1^{\alpha_1}2^{\alpha_2}\ldots k^{\alpha_k}}_{c_\alpha}
+	\sum_{\Gamma}\frac{N^{F(\Gamma)}}{|\operatorname{Aug}(\Gamma)|}.
+\end{equation*}
+\begin{example}
+	There are two embedded graphs with one vertex and two cycles. For the sphere, the
+	automorphisms of the graph are $2$ (the two cycles can be interchanged), and for the torus, the automorphisms are $1$ (the two cycles cannot be interchanged). The contribution of the sphere is $2N^2$, and the contribution of the torus is $N^2$.
+	We have $\alpha_2=1$ (and all other $\alpha_i$ are zero), so
+	$c_\alpha=4$, and we get
+	\[
+	4\left(\frac{N^3}{2} + \frac{N}{4}\right) = 2N^3 + N,
+	\]
+	which is the moment $\langle \operatorname{tr}\left( H^4 \right) \rangle $,
+	as it should be.
+\end{example}
 
-\paragraph{Generating functions.}
-Define normalised moments
-$
-  F_{\mathbf k}(N):=M_{\mathbf k}(N)/(2n-1)!!
-$
-and let $C_{\mathbf k}(N)$ denote their connected part.
-Introduce formal variables $t_1,t_2,\dots$ and set
-\begin{align*}
-  F(t,N)
-    &:=\sum_{\ell\ge0}\frac{1}{\ell!}
-       \!\!\!\sum_{k_1,\dots,k_\ell\ge1}
-       \!\!\!F_{(k_1,\dots,k_\ell)}(N)\,t_{k_1}\cdots t_{k_\ell},\\
-  C(t,N)
-    &:=\sum_{\ell\ge1}\frac{1}{\ell!}
-       \!\!\!\sum_{k_1,\dots,k_\ell\ge1}
-       \!\!\!C_{(k_1,\dots,k_\ell)}(N)\,t_{k_1}\cdots t_{k_\ell}.
-\end{align*}
-Since Wick contractions factor over connected components,
-\[
-   F(t,N)\;=\;\exp\bigl(C(t,N)\bigr),
-\]
-matching the exponential formula.
+\begin{remark}
+	Even the case $N=1$ is of interest:
+	\begin{equation*}
+		\sum_{\Gamma}\frac{1}{|\operatorname{Aut}(\Gamma)|}
+		=
+		\frac{1}{\alpha_1!\ldots \alpha_k!\cdot 1^{\alpha_1}2^{\alpha_2}\ldots k^{\alpha_k}}
+		\langle x^{\sum i\alpha_i} \rangle =
+		\frac{\left( -1+2\sum i\alpha_i \right)!!}
+		{\alpha_1!\ldots \alpha_k!\cdot 1^{\alpha_1}2^{\alpha_2}\ldots k^{\alpha_k}}.
+	\end{equation*}
+\end{remark}
 
-\paragraph{Explicit low-degree coefficients.}
-For one face we recover $T_n(N)$, e.g.
-\(
-  C_{(2)}(N)=N^{2},\;
-  C_{(4)}(N)=2N^{3}+N.
-\)
-For two faces of length two each, an explicit Wick expansion gives
-\(
-  C_{(2,2)}(N)=N^{4}+2N^{2},
-\)
-where the two summands correspond to the sphere and torus.
 
 %-----------------------------------------------------------------------
 \subsection{Two–matrix model and the Ising interaction}
 \label{subsec:ising}
 
-\paragraph{Quadratic action.}
 Take two independent GUE matrices
 $H,G\in\mathcal H_N$ and fix a real coupling $c$ with
 $|c|<1$.
@@ -1050,46 +1047,28 @@ Define
 \[
    Z_N(c)\;=\;
    \int_{\mathcal H_N\times\mathcal H_N}
-        \exp\!\Bigl\{
+        \exp\Bigl\{
             -\tfrac{N}{2}\operatorname{tr}(H^{2}+G^{2})
             +cN\,\operatorname{tr}(HG)
           \Bigr\}\,d\mu(H)\,d\mu(G).
 \]
-Diagonalising the quadratic form shows that
-\(
-  \langle h_{ij}h_{ji}\rangle=\langle g_{ij}g_{ji}\rangle=1,
-\)
-while
-\(
-  \langle h_{ij}g_{ji}\rangle=c
-\)
+This is again a Gaussian integral, but it is over correlated
+indices. Namely, we have
+\begin{equation*}
+	\langle h_{ij}h_{ji} \rangle =\frac{1}{1-c^2},\qquad 
+	\langle g_{ij}g_{ji} \rangle =\frac{1}{1-c^2},\qquad
+	\langle h_{ij}g_{ji} \rangle =\frac{c}{1-c^2},
+\end{equation*}
 and all other covariances vanish.
 
-\paragraph{Feynman rules.}
-Vertices are colored (white for $H$, black for $G$);
+Now, we may consider matrix integral, for example,
+\begin{equation*}
+	\int e^{-t\operatorname{tr}\left( H^4+G^4 \right)}d\mu(H)d\mu(G).
+\end{equation*}
+This integral is a generating function of four-valent maps (with an arbitrary number of vertices), but this time assign one of two ``states'' to each vertex of the map. We label these states $H$ and $G$; this labeling simply means that the vertex represents either $\text{tr}\, H^4$ or $\text{tr}\, G^4$, respectively. Now, if two vertices are connected by an edge and they are in the same state, the contribution of the edge to the sum (i.e., in the "perturbation theory series") is equal to $1 / (1 - c^2)$, and if the vertices are in different states, the contribution of this edge is equal to $c / (1 - c^2)$. The summation is carried out over all maps and all possible combinations of vertex states.
 
-* a white–white or black–black edge carries weight $1/N$,
-* a mixed edge carries weight $c/N$,
-* summing over vertex colors multiplies the whole graph by $N^{V}$.
+The model we obtained is very reminiscent of the classical Ising model in statistical physics, only in this case the model is considered not on a regular lattice, but on the set of maps (and the summation is carried out not only over the states of the system, but also over all maps). Physicists call this model the ``Ising model on a dynamical lattice'' \cite{itzykson1980planar}. This model shares many common phenomena with the regular Ising model, such as the presence of phase transitions.
 
-Thus the free energy
-$
-  F_N(c)=\frac{1}{N^{2}}\log Z_N(c)
-$
-generates connected bicolored maps weighted by $c^{\,m}$,
-where $m$ is the number of mixed edges—precisely the partition
-function of the Ising model on random maps.
-
-\paragraph{Example.}
-For a single white and single black $2$-valent vertex connected by two
-edges,
-\(
-  \langle\operatorname{tr}H^{2}\operatorname{tr}G^{2}\rangle
-  =N^{2}+c^{2}.
-\)
-The sphere term $N^{2}$ comes from parallel pairings of the two edges,
-while $c^{2}$ corresponds to crossing pairings that identify the two
-vertices and yield a torus.
 
 %-----------------------------------------------------------------------
 \subsection{Outlook: meanders and higher matrix species}
@@ -1113,18 +1092,7 @@ A detailed derivation is postponed to the probabilistic part of the
 course; the essential moral here is that the Feynman-diagram machinery
 scales seamlessly to these richer combinatorial classes.
 
-%-----------------------------------------------------------------------
-\subsection*{Standing conventions (for quick reference)}
-\begin{enumerate}[(1)]
-  \item All Gaussian ensembles are centred, with variance $1$ for each
-        independent real component.
-  \item Ribbon graphs are oriented unless stated otherwise; for each
-        pairing $\sigma$ we always use Euler’s relation
-        $2-2g=V-E+F$ to read off the genus.
-  \item The normalisation $(2n-1)!!$ is factored out whenever a raw Wick
-        sum is promoted to a generating function coefficient; this makes
-        every $F_{\mathbf k}(N)$ a polynomial of degree $N-1$ in~$n$.
-\end{enumerate}
+
 
 
 
@@ -1221,13 +1189,8 @@ indices, and the polygon-gluing picture changes accordingly.
 
   \item
   Derive a recurrence relation for the numbers $\tilde\varepsilon_\gamma(n)$
-  analogous to the Harer–Zagier recurrence
-  \[
-    (n+2)\,\varepsilon_g(n+1)
-    =(4n+2)\,\varepsilon_g(n)
-      +(4n^{3}-n)\,\varepsilon_{g-1}(n-1)
-  \]
-  obtained in the complex Hermitian case.  (\emph{Hint:} keep track of how
+	analogous to the Harer–Zagier recurrence.
+  (\emph{Hint:} keep track of how
   many of the $2n$ edges are glued with or without a twist.)
 \end{enumerate}
 
