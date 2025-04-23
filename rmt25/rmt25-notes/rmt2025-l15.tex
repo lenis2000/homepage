@@ -846,7 +846,7 @@ polynomial in \(n\) of degree \(N-1\), as desired.
 
 Assume now that the vertices of the $2n$-gon are colored in (at most)
 $N$ colors.  A gluing is said to be \emph{compatible with the coloring}
-if only vertices of the \emph{same} color may 
+if only vertices of the \emph{same} color may
 (but are not required to)
 be
 glued to one another.
@@ -888,7 +888,7 @@ Define
     \tilde t(N,n)\;=\;\frac{\tilde T_n(N)}{(2n-1)!!}.
 \]
 The function $\tilde t(N,n)$ is a polynomial in $n$ of degree
-$N-1$ by \Cref{lem:traces-polynomial}.  
+$N-1$ by \Cref{lem:traces-polynomial}.
 We just found the roots of this polynomial:
 its $N-1$ roots are $0,1,2,\dots,N-2$.  Therefore, there exists a
 constant $A_N$ such that
@@ -961,13 +961,170 @@ in powers of $s$. Indeed,
 This completes the proof of \Cref{thm:HZ-genfun}.
 
 
-
 \section{Going further: Multi-matrix models}
 
+\colorbox{yellow}{\parbox{.7\textwidth}{to be edited}}
 
-\subsection{Feynman diagrams}
+%-----------------------------------------------------------------------
+\subsection{Maps with several faces and Feynman diagrams}
+\label{subsec:feynman-multifaces}
 
-\subsection{Two-matrix models and the Ising model}
+\paragraph{Set-up.}
+Fix a composition $\mathbf k=(k_1,\dots,k_\ell)$ with
+$k_1+\dots+k_\ell=2n$.
+For a GUE matrix $H$ let
+\[
+  M_{\mathbf k}(N)
+  \;:=\;
+  \Bigl\langle
+    \operatorname{tr}(H^{k_1})\,
+    \operatorname{tr}(H^{k_2})\cdots
+    \operatorname{tr}(H^{k_\ell})
+  \Bigr\rangle .
+\]
+Write each trace as a \emph{$k_i$-valent star}: a cyclicly ordered vertex
+with $k_i$ labelled half-edges.
+Wick’s formula pairs the $2n$ half-edges in every possible way; a
+pairing $\sigma$ produces an oriented ribbon graph~$\mathcal G(\sigma)$
+with
+
+* $F=\ell$ faces (the original traces),
+* $E=n$ edges (Wick pairings),
+* a vertex count $V(\sigma)$ determined by the cycle structure of
+  $\sigma$.
+
+Each pairing contributes $N^{V(\sigma)}$, so
+\[
+  M_{\mathbf k}(N)\;=\!\!\!\sum_{\sigma\in\operatorname{Pair}(2n)}\!\!\! N^{V(\sigma)}.
+\]
+With Euler’s formula $2-2g=V-E+F$ the sum
+enumerates connected maps of every genus~$g$ having
+$\ell$ boundary components whose perimeters are the parts of~$\mathbf k$.
+A representative four-valent example is depicted in the cited PDF on the
+page showing the “four-star Feynman diagram”.
+
+\paragraph{Generating functions.}
+Define normalised moments
+$
+  F_{\mathbf k}(N):=M_{\mathbf k}(N)/(2n-1)!!
+$
+and let $C_{\mathbf k}(N)$ denote their connected part.
+Introduce formal variables $t_1,t_2,\dots$ and set
+\begin{align*}
+  F(t,N)
+    &:=\sum_{\ell\ge0}\frac{1}{\ell!}
+       \!\!\!\sum_{k_1,\dots,k_\ell\ge1}
+       \!\!\!F_{(k_1,\dots,k_\ell)}(N)\,t_{k_1}\cdots t_{k_\ell},\\
+  C(t,N)
+    &:=\sum_{\ell\ge1}\frac{1}{\ell!}
+       \!\!\!\sum_{k_1,\dots,k_\ell\ge1}
+       \!\!\!C_{(k_1,\dots,k_\ell)}(N)\,t_{k_1}\cdots t_{k_\ell}.
+\end{align*}
+Since Wick contractions factor over connected components,
+\[
+   F(t,N)\;=\;\exp\bigl(C(t,N)\bigr),
+\]
+matching the exponential formula.
+
+\paragraph{Explicit low-degree coefficients.}
+For one face we recover $T_n(N)$, e.g.
+\(
+  C_{(2)}(N)=N^{2},\;
+  C_{(4)}(N)=2N^{3}+N.
+\)
+For two faces of length two each, an explicit Wick expansion gives
+\(
+  C_{(2,2)}(N)=N^{4}+2N^{2},
+\)
+where the two summands correspond to the sphere and torus.
+
+%-----------------------------------------------------------------------
+\subsection{Two–matrix model and the Ising interaction}
+\label{subsec:ising}
+
+\paragraph{Quadratic action.}
+Take two independent GUE matrices
+$H,G\in\mathcal H_N$ and fix a real coupling $c$ with
+$|c|<1$.
+Define
+\[
+   Z_N(c)\;=\;
+   \int_{\mathcal H_N\times\mathcal H_N}
+        \exp\!\Bigl\{
+            -\tfrac{N}{2}\operatorname{tr}(H^{2}+G^{2})
+            +cN\,\operatorname{tr}(HG)
+          \Bigr\}\,d\mu(H)\,d\mu(G).
+\]
+Diagonalising the quadratic form shows that
+\(
+  \langle h_{ij}h_{ji}\rangle=\langle g_{ij}g_{ji}\rangle=1,
+\)
+while
+\(
+  \langle h_{ij}g_{ji}\rangle=c
+\)
+and all other covariances vanish.
+
+\paragraph{Feynman rules.}
+Vertices are colored (white for $H$, black for $G$);
+
+* a white–white or black–black edge carries weight $1/N$,
+* a mixed edge carries weight $c/N$,
+* summing over vertex colors multiplies the whole graph by $N^{V}$.
+
+Thus the free energy
+$
+  F_N(c)=\frac{1}{N^{2}}\log Z_N(c)
+$
+generates connected bicolored maps weighted by $c^{\,m}$,
+where $m$ is the number of mixed edges—precisely the partition
+function of the Ising model on random maps.
+
+\paragraph{Example.}
+For a single white and single black $2$-valent vertex connected by two
+edges,
+\(
+  \langle\operatorname{tr}H^{2}\operatorname{tr}G^{2}\rangle
+  =N^{2}+c^{2}.
+\)
+The sphere term $N^{2}$ comes from parallel pairings of the two edges,
+while $c^{2}$ corresponds to crossing pairings that identify the two
+vertices and yield a torus.
+
+%-----------------------------------------------------------------------
+\subsection{Outlook: meanders and higher matrix species}
+\label{subsec:meanders-brief}
+
+Adding further matrix species (and therefore edge colors)
+opens the door to many classical counting problems.
+A three-matrix integral, laid out in the cited PDF under the title
+“Enumeration of meanders”, produces the generating series for
+plane meanders—closed curves crossing a line through $2n$ bridges.
+The table included near the end of the PDF lists the first values
+\(
+  M_1=1,\;M_2=2,\;M_3=8,\dots
+\)
+and shows that $M_n$ grows asymptotically like
+\(
+  C\,\rho^{\,2n}n^{-3/2}
+\)
+with $\rho\approx3.20$.
+A detailed derivation is postponed to the probabilistic part of the
+course; the essential moral here is that the Feynman-diagram machinery
+scales seamlessly to these richer combinatorial classes.
+
+%-----------------------------------------------------------------------
+\subsection*{Standing conventions (for quick reference)}
+\begin{enumerate}[(1)]
+  \item All Gaussian ensembles are centred, with variance $1$ for each
+        independent real component.
+  \item Ribbon graphs are oriented unless stated otherwise; for each
+        pairing $\sigma$ we always use Euler’s relation
+        $2-2g=V-E+F$ to read off the genus.
+  \item The normalisation $(2n-1)!!$ is factored out whenever a raw Wick
+        sum is promoted to a generating function coefficient; this makes
+        every $F_{\mathbf k}(N)$ a polynomial of degree $N-1$ in~$n$.
+\end{enumerate}
 
 
 
