@@ -5,7 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d-optimized.cpp'
     txt: 'C++ code for the simulation'
 published: true
 ---
@@ -22,22 +22,22 @@ published: true
       height: 60vh;
     }
   }
-  
+
   /* Styling for buttons and controls */
   #update-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
     background-color: #cccccc;
   }
-  
+
   button {
     cursor: pointer;
   }
-  
+
   #move-left-btn, #move-up-btn, #move-down-btn, #move-right-btn, #reset-view-btn {
     transition: background-color 0.2s;
   }
-  
+
   #move-left-btn:hover, #move-up-btn:hover, #move-down-btn:hover, #move-right-btn:hover, #reset-view-btn:hover {
     background-color: #e0e0e0;
   }
@@ -57,11 +57,11 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
   <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
-  
+
   <label for="demo-mode" style="margin-left: 15px;">
     <input id="demo-mode" type="checkbox"> Demo mode
   </label>
-  
+
   <div style="margin-top: 10px;">
     <label>Camera movement:</label>
     <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
@@ -91,7 +91,7 @@ Module.onRuntimeInitialized = async function() {
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
-  
+
   // Demo mode state
   let isDemoMode = false;
   let rotationSpeed = 0.005; // Speed of rotation in radians
@@ -151,12 +151,12 @@ Module.onRuntimeInitialized = async function() {
 
     requestAnimationFrame(animate);
     controls.update();
-    
+
     // Apply rotation in demo mode
     if (isDemoMode && dominoGroup) {
       dominoGroup.rotation.y += rotationSpeed;
     }
-    
+
     renderer.render(scene, camera);
   }
 
@@ -358,7 +358,7 @@ Module.onRuntimeInitialized = async function() {
       m.geometry.dispose();
       m.material.dispose();
     }
-    
+
     // Remember demo mode state
     const wasInDemoMode = isDemoMode;
 
@@ -557,7 +557,7 @@ Module.onRuntimeInitialized = async function() {
         ) * 0.95;
 
         dominoGroup.scale.setScalar(finalScale);
-        
+
         // If we were in demo mode before update, restore demo view
         if (wasInDemoMode) {
           setDemoViewCamera();
@@ -594,25 +594,25 @@ Module.onRuntimeInitialized = async function() {
   // Demo mode toggle handler
   document.getElementById("demo-mode").addEventListener("change", function() {
     isDemoMode = this.checked;
-    
+
     if (isDemoMode) {
       // Set to angled demo view
       setDemoViewCamera();
     }
     // When turning off, we just stop rotation but keep the current view
   });
-  
+
   // Set up demo view camera position
   function setDemoViewCamera() {
     // Reset any existing rotation
     if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
-    
+
     // Set to angled view
     camera.position.set(50, 80, 50);
     camera.lookAt(0, 0, 0);
     controls.update();
   }
-  
+
   // Camera movement controls
   document.getElementById("move-up-btn").addEventListener("click", function() {
     // Move camera up relative to current view
@@ -653,7 +653,7 @@ Module.onRuntimeInitialized = async function() {
     controls.target.addScaledVector(rightVector, moveAmount);
     controls.update();
   });
-  
+
   // Reset view button handler
   document.getElementById("reset-view-btn").addEventListener("click", function() {
     if (isDemoMode) {
@@ -662,18 +662,18 @@ Module.onRuntimeInitialized = async function() {
       // Reset camera to initial position
       camera.position.set(0, 130, 0);
       camera.lookAt(0, 0, 0);
-      
+
       // Reset domino group rotation
       if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
-      
+
       controls.update();
     }
   });
-  
+
   // Add keyboard controls
   window.addEventListener('keydown', function(event) {
     const moveAmount = 5;
-    
+
     // Arrow keys for camera movement
     if (event.key === 'ArrowUp') {
       const upVector = new THREE.Vector3(0, 1, 0);

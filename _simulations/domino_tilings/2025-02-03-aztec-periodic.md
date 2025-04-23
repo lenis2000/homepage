@@ -5,7 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic.md'
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic-optimized.cpp'
     txt: 'C++ code for the simulation'
 ---
 

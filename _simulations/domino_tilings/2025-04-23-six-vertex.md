@@ -1,14 +1,12 @@
 ---
-title: Domino tilings of the Aztec diamond
+title: Domino tilings as Six Vertex Configurations
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-02-aztec-uniform.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-23-six-vertex.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-02-aztec-uniform-optimized.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-23-six-vertex.cpp'
     txt: 'C++ code for the simulation'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py'
-    txt: 'Python script for TikZ export (now integrated directly in the web page)'
 ---
 
 <style>
@@ -70,7 +68,7 @@ code:
 </style>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
-<script src="/js/2025-02-02-aztec-uniform.js"></script>
+<script src="/js/2025-04-23-six-vertex.js"></script>
 
 This simulation demonstrates random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>, which is a diamond-shaped union of unit squares. The simulation uses a uniform measure to generate random tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
 
