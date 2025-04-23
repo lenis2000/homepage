@@ -662,9 +662,95 @@ In a similar manner, we obtain the following:
 	Odd moments (expectations of $\operatorname{tr}(H^{2n+1})$) vanish.
 \end{proposition}
 \begin{proof}[Proof sketch]
-	The idea why we get the genus will be evident from a larger example. 
+	The idea why we get the genus will be evident from a larger example.
+	Let $n=4$, so we are dealing with a sum of $N^{8}$ monomials of the form
+\[
+  h_{i_{1}i_{2}}
+  h_{i_{2}i_{3}}
+  h_{i_{3}i_{4}}
+  h_{i_{4}i_{5}}
+  h_{i_{5}i_{6}}
+  h_{i_{6}i_{7}}
+  h_{i_{7}i_{8}}
+  h_{i_{8}i_{1}}.
+\]
+Choose an arbitrary Wick pairing (there are $7!!=105$ of them).
+For instance, pair
+\[
+  h_{i_{1}i_{2}}\;\text{with}\;h_{i_{4}i_{5}},\quad
+  h_{i_{2}i_{3}}\;\text{with}\;h_{i_{5}i_{6}},\quad
+  h_{i_{3}i_{4}}\;\text{with}\;h_{i_{8}i_{1}},\quad
+  h_{i_{6}i_{7}}\;\text{with}\;h_{i_{7}i_{8}}.
+\]
+In other words, consider the product
+\begin{equation}
+  \bigl\langle h_{i_{1}i_{2}}h_{i_{4}i_{5}}\bigr\rangle
+  \bigl\langle h_{i_{2}i_{3}}h_{i_{5}i_{6}}\bigr\rangle
+  \bigl\langle h_{i_{3}i_{4}}h_{i_{8}i_{1}}\bigr\rangle
+  \bigl\langle h_{i_{6}i_{7}}h_{i_{7}i_{8}}\bigr\rangle.
+  \label{eq:example-3.10}
+\end{equation}
+Each factor in
+\eqref{eq:example-3.10} is usually~$0$; if any of them vanishes, so does
+the whole product.  For the product to be non–zero, \emph{every} factor
+must equal~$1$, which imposes the constraints
+\[
+  \langle h_{i_{1}i_{2}}h_{i_{4}i_{5}}\rangle = 1
+  \iff
+  i_{1}=i_{5},\; i_{2}=i_{4};
+\qquad
+  \langle h_{i_{2}i_{3}}h_{i_{5}i_{6}}\rangle = 1
+  \iff
+  i_{2}=i_{6},\; i_{3}=i_{5};
+\]
+\[
+  \langle h_{i_{3}i_{4}}h_{i_{8}i_{1}}\rangle = 1
+  \iff
+  i_{3}=i_{1},\; i_{4}=i_{8};
+\qquad
+  \langle h_{i_{6}i_{7}}h_{i_{7}i_{8}}\rangle = 1
+  \iff
+  i_{6}=i_{8},\; i_{7}=i_{7}.
+\]
+Altogether we obtain the \emph{chain of equalities}
+\[
+  i_{1}=i_{5}=i_{3}=i_{1},\qquad
+  i_{2}=i_{4}=i_{8}=i_{6}=i_{2},\qquad
+  i_{7}=i_{7},
+\]
+which leaves $i_{1},i_{2},i_{7}$ free and therefore yields $N^{3}$
+admissible index choices.  So, the contribution of the pairing
+\eqref{eq:example-3.10} equals $N^{3}$.
 
-	
+\medskip
+Now, 
+consider an octagon ($2n=8$), and glue its sides in pairs as illustrated in
+Figure~\ref{fig:octagon-gluing}.  Writing, for example,
+\[
+  i_{1}=i_{5},\; i_{2}=i_{4},\qquad
+  i_{2}=i_{6},\; i_{3}=i_{5},\qquad
+  i_{3}=i_{1},\; i_{4}=i_{8},\qquad
+  i_{6}=i_{8},
+\]
+we see that the eight initial vertices collapse into
+\[
+  i_{1}=i_{5}=i_{3},\quad
+  i_{2}=i_{4}=i_{6}=i_{8},\quad
+  i_{7}=i_{7},
+\]
+producing $V(\sigma)=3$ vertices in the resulting map; hence the gluing
+$\sigma$ shown in Figure~\ref{fig:octagon-gluing} contributes
+$N^{V(\sigma)} = N^{3}$.
+
+
+\begin{figure}[htbp]
+  \centering
+
+
+  \caption{An $8$–gon with pairwise–identified sides corresponding to the
+           Wick pairing.}
+  \label{fig:octagon-gluing}
+\end{figure}
 \end{proof}
 
 
