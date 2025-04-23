@@ -19,6 +19,7 @@
 %tikz
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning,decorations.markings}
+\usetikzlibrary{calc}
 
 %conveniences
 \usepackage{array}
@@ -161,9 +162,9 @@ a rotation --- we consider these two cases as different.
 The boundary of the $2n$-gon becomes a graph embedded into the
 surface. It has exactly $n$ edges and one face. It may have different number
 of vertices, and thus the number of vertices uniquely determines the genus of the surface:
-\begin{equation*}
+\begin{equation}\label{eq:genus}
 	V - E + F = 2 - 2g \implies g = \frac{n+1-V}{2}.
-\end{equation*}
+\end{equation}
 In the case of the square ($n=2$), we have $V=3$ and $g=0$ for the sphere,
 and $V=1$ and $g=1$ for the torus.
 
@@ -723,16 +724,17 @@ admissible index choices.  So, the contribution of the pairing
 \eqref{eq:example-3.10} equals $N^{3}$.
 
 \medskip
-Now, 
+Now,
 consider an octagon ($2n=8$), and glue its sides in pairs as illustrated in
-Figure~\ref{fig:octagon-gluing}.  Writing, for example,
+Figure~\ref{fig:octagon-gluing}.  Since the edges are identified, we 
+have also identification of the vertices:
 \[
   i_{1}=i_{5},\; i_{2}=i_{4},\qquad
   i_{2}=i_{6},\; i_{3}=i_{5},\qquad
   i_{3}=i_{1},\; i_{4}=i_{8},\qquad
-  i_{6}=i_{8},
+	i_{6}=i_{8}.
 \]
-we see that the eight initial vertices collapse into
+We thus see that the eight initial vertices collapse into
 \[
   i_{1}=i_{5}=i_{3},\quad
   i_{2}=i_{4}=i_{6}=i_{8},\quad
@@ -741,18 +743,103 @@ we see that the eight initial vertices collapse into
 producing $V(\sigma)=3$ vertices in the resulting map; hence the gluing
 $\sigma$ shown in Figure~\ref{fig:octagon-gluing} contributes
 $N^{V(\sigma)} = N^{3}$.
-
+By \eqref{eq:genus}, we get a torus.
+\end{proof}
 
 \begin{figure}[htbp]
   \centering
+  \begin{tikzpicture}[scale=1.6, thick,
+                      every node/.style={font=\scriptsize}]
+    %----------------------------------------------------------
+    % vertices of a regular octagon
+    \foreach \k in {1,...,8} {
+      \coordinate (v\k) at ({90-45*(\k-1)}:2);
+    }
 
+    % polygon outline
+    \draw (v1)--(v2)--(v3)--(v4)--(v5)--(v6)--(v7)--(v8)--cycle;
 
+    % vertex labels
+    \foreach \k/\lbl in {1/{i_1},2/{i_2},3/{i_3},4/{i_4},
+                         5/{i_5},6/{i_6},7/{i_7},8/{i_8}} {
+      \node[shift={({90-45*(\k-1)}:0.35)}] at (v\k) {$\lbl$};
+    }
+
+    % midpoints of sides
+    \foreach \a/\b/\name in {1/2/m12, 2/3/m23, 3/4/m34, 4/5/m45,
+                             5/6/m56, 6/7/m67, 7/8/m78, 8/1/m81} {
+      \coordinate (\name) at ($ (v\a)!0.5!(v\b) $);
+    }
+
+    % pairings: draw curved double-arrow between midpoints of glued sides
+    \draw[<->,bend left=28] (m12) to (m45); % (i1,i2)  ↔ (i4,i5)
+    \draw[<->,bend left=28] (m23) to (m56); % (i2,i3)  ↔ (i5,i6)
+    \draw[<->,bend right=32] (m34) to (m81);% (i3,i4)  ↔ (i8,i1)
+    \draw[<->,bend right=32] (m67) to (m78);% (i6,i7)  ↔ (i7,i8)
+  \end{tikzpicture}
   \caption{An $8$–gon with pairwise–identified sides corresponding to the
-           Wick pairing.}
+           Wick pairing considered in the proof of \Cref{prop:traces-moments}.}
   \label{fig:octagon-gluing}
 \end{figure}
-\end{proof}
 
+\subsection{Computing traces of powers}
+\label{subsec:traces-powers-computation}
+
+We now invoke the powerful technique of dealing with
+integrals over GUE through their spectrum.
+Recall that we have the following change of measure formula.
+For any function $f$ on $\mathcal{H}_N$ which depends only on the eigenvalues
+$\lambda_1,\ldots,\lambda_N$ of $H$, we have
+\begin{equation*}
+	\int_{\mathcal{H}_N} f(H) \, d\mu(H) =
+	c_N
+	\int_{\mathbb{R}^N}
+	f(\lambda_1,\ldots,\lambda_N) \prod_{1\le i<j\le N}
+	(\lambda_i-\lambda_j)^2 
+	\prod_{i=1}^{N}\mu(d\lambda_i),
+\end{equation*}
+where $\mu(H)$ is the GUE distribution on $\mathcal{H}_N$, and 
+$\mu(dx)$ is the one-dimensional Gaussian measure on $\mathbb{R}$.
+The constant $c_N$ depends only on $N$ (we computed it in,
+e.g.,
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture
+5} using determinantal structure of the 
+GUE eigenvalues).
+
+\begin{lemma}
+	\label{lem:traces-polynomial}
+	The function
+\[
+  t(N,n)\coloneqq\frac{T_n(N)}{(2n-1)!!}
+\]
+is a polynomial in the variable \(n\), of degree \(N-1\).
+\end{lemma}
+In particular, 
+$t(1,n)=1$.
+\begin{proof}[Proof of \Cref{lem:traces-polynomial}]
+Consider $f(H)=\operatorname{tr}(H^{2n})$,
+so $f(\lambda_1,\ldots,\lambda_N )=\lambda_1^{2n}+\ldots+\lambda_N^{2n}$.
+Because
+the integral over the GUE spectrum
+is symmetric in the \(\lambda_i\), we may replace the trace
+by \(N\lambda_1^{2n}\).
+
+Express the squared Vandermonde determinant as a polynomial in
+\(\lambda_1\) and integrate in the remaining variables
+\(\lambda_2,\dots,\lambda_N\).  This reduces the multiple integral to a
+one–dimensional integral whose integrand is a polynomial in
+\(\lambda_1\) of degree \(2n+2N-2\).  For fixed \(N\) the coefficients
+of this polynomial are constants; its leading coefficient equals
+\(Nc_N\).
+
+When we integrate each monomial \(\lambda_1^{2n+2k}\) and divide the
+result by \((2n-1)!!\), we obtain
+\[
+  \frac{(2n+2k-1)!!}{(2n-1)!!},
+\]
+which is a polynomial in \(n\) of degree \(k\).  Hence \(t(N,n)\) is a
+polynomial in \(n\) of degree \(N-1\), as desired.
+\end{proof}
 
 
 
@@ -818,6 +905,58 @@ where $a_1, \ldots, a_k \in \mathbb{R}$ are fixed parameters.
 
 Compute $I(a_1, a_2)$ and $I(a_1, a_2, a_3, a_4)$ explicitly as polynomials in $a_1,\ldots, a_4$,
 and compare $I(a_1, a_2, a_3, a_4)$ with the Wick-like expansion.
+
+\subsection{GOE and non-orientable surfaces}
+\label{prob:goe-nonorient}
+
+Let $S\in\operatorname{Sym}_N(\Bbb R)$ be drawn from the \emph{Gaussian Orthogonal Ensemble} (GOE), so that the entries
+are centred Gaussians with covariances
+\[
+  \langle s_{ij}s_{kl}\rangle
+  \;=\;
+  \delta_{ik}\,\delta_{jl}\;+\;\delta_{il}\,\delta_{jk},
+  \qquad 1\le i,j,k,l\le N.
+\]
+Because of the second term, Wick’s pairings now allow \emph{reversals} of
+indices, and the polygon-gluing picture changes accordingly.
+
+\begin{enumerate}[(a)]
+  \item
+  Show that each Wick contraction contributing to the moment
+  $\displaystyle\int_{\operatorname{Sym}_{N}(\Bbb R)}\!\!\!\operatorname{tr}(S^{2n})\,d\mu(S)$
+  corresponds to a pairing of the $2n$ edges of a $2n$-gon in which
+  \emph{half} of the identifications are orientation-preserving and the
+  other half are orientation-reversing.  Conclude that the resulting
+  surface is, in general, \textbf{non-orientable}.  
+  (A convenient measure of non-orientability is the \emph{cross-cap number}
+  $\gamma$, so that the Euler characteristic is $\,\chi=2-\gamma$.)
+
+  \item
+  Let $\tilde\varepsilon_\gamma(n)$ be the number of pairings producing a
+  surface with $\gamma$ cross-caps.
+  Prove that
+  \[
+    2^n\int_{\operatorname{Sym}_{N}(\Bbb R)}\operatorname{tr}(S^{2n})\,d\mu(S)
+		=
+		\sum_{\sigma}N^{V(\sigma)}.
+  \]
+
+  \item
+  Compute $\tilde\varepsilon_\gamma(n)$ explicitly for $n=1,2,3$
+  and identify the corresponding additional non-orientable surfaces
+  (real projective plane, Klein bottle, \dots).
+
+  \item
+  Derive a recurrence relation for the numbers $\tilde\varepsilon_\gamma(n)$
+  analogous to the Harer–Zagier recurrence
+  \[
+    (n+2)\,\varepsilon_g(n+1)
+    =(4n+2)\,\varepsilon_g(n)
+      +(4n^{3}-n)\,\varepsilon_{g-1}(n-1)
+  \]
+  obtained in the complex Hermitian case.  (\emph{Hint:} keep track of how
+  many of the $2n$ edges are glued with or without a twist.)
+\end{enumerate}
 
 
 
