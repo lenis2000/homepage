@@ -1043,17 +1043,10 @@ more precisely, the matrix integral is equal to
 Take two independent GUE matrices
 $H,G\in\mathcal H_N$ and fix a real coupling $c$ with
 $|c|<1$.
-Define
-\[
-   Z_N(c)\;=\;
-   \int_{\mathcal H_N\times\mathcal H_N}
-        \exp\Bigl\{
-            -\tfrac{N}{2}\operatorname{tr}(H^{2}+G^{2})
-            +cN\,\operatorname{tr}(HG)
-          \Bigr\}\,d\mu(H)\,d\mu(G).
-\]
-This is again a Gaussian integral, but it is over correlated
-indices. Namely, we have
+Consider the \emph{weighted} Gaussian measure with density proportional
+to $\exp\left\{ 2c \operatorname{tr}(HG) \right\}$.
+In other words, the  Gaussian measure on $\mathcal{H}_N\times\mathcal{H}_N$ 
+has two correlated matrices $H$ and $G$, with
 \begin{equation*}
 	\langle h_{ij}h_{ji} \rangle =\frac{1}{1-c^2},\qquad 
 	\langle g_{ij}g_{ji} \rangle =\frac{1}{1-c^2},\qquad
@@ -1061,7 +1054,7 @@ indices. Namely, we have
 \end{equation*}
 and all other covariances vanish.
 
-Now, we may consider matrix integral, for example,
+Now, we may consider matrix integrals over the correlated measure, for example,
 \begin{equation*}
 	\int e^{-t\operatorname{tr}\left( H^4+G^4 \right)}d\mu(H)d\mu(G).
 \end{equation*}
@@ -1070,28 +1063,15 @@ This integral is a generating function of four-valent maps (with an arbitrary nu
 The model we obtained is very reminiscent of the classical Ising model in statistical physics, only in this case the model is considered not on a regular lattice, but on the set of maps (and the summation is carried out not only over the states of the system, but also over all maps). Physicists call this model the ``Ising model on a dynamical lattice'' \cite{itzykson1980planar}. This model shares many common phenomena with the regular Ising model, such as the presence of phase transitions.
 
 
-%-----------------------------------------------------------------------
-\subsection{Outlook: meanders and higher matrix species}
-\label{subsec:meanders-brief}
-
-Adding further matrix species (and therefore edge colors)
-opens the door to many classical counting problems.
-A three-matrix integral, laid out in the cited PDF under the title
-“Enumeration of meanders”, produces the generating series for
-plane meanders—closed curves crossing a line through $2n$ bridges.
-The table included near the end of the PDF lists the first values
-\(
-  M_1=1,\;M_2=2,\;M_3=8,\dots
-\)
-and shows that $M_n$ grows asymptotically like
-\(
-  C\,\rho^{\,2n}n^{-3/2}
-\)
-with $\rho\approx3.20$.
-A detailed derivation is postponed to the probabilistic part of the
-course; the essential moral here is that the Feynman-diagram machinery
-scales seamlessly to these richer combinatorial classes.
-
+\begin{remark}
+	Many other enumerative problems in geometry and topology can be
+	formulated in terms of Gaussian matrix integrals (with ``multi-matrix models'', that is,
+	involving several GUE matrices). 
+	Examples include 
+	Gauss' problem of counting the number of curves on a surface ($\mathbb{R}^2$ or the sphere)
+	up to isotopy; and the problem of counting meanders (curves which intersect a given 
+	line at $n$ points, up to isotopy of the plane leaving the line invariant).
+\end{remark}
 
 
 
