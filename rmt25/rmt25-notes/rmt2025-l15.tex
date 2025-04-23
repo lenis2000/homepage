@@ -88,8 +88,9 @@ matrices, and outline their connection to topology
 \bigskip
 {\huge{NOTE: course evaluations!}}
 
+\bigskip
 
-{\LARGE{Todo: tables of contents in HTML + total PDF}}
+{\LARGE{Todo on web: tables of contents in HTML + total PDF}}
 
 \section{Gluing polygons into surfaces}
 \label{sec:gluing-polygons}
@@ -108,47 +109,52 @@ Note that in two cases, we get the sphere and in one case, the torus.
 The two spheres are obtained by gluing the edges in the same way, but this differs by
 a rotation --- we consider these two cases as different.
 \begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}[scale=1, thick]
-    % ---- basic parameters ----
-    \def\s{2}   % side length of one square
-    \def\gap{1} % horizontal gap between squares
+		\centering
+		\begin{tikzpicture}[scale=1, thick]
+				% ---- basic parameters ----
+				\def\s{2}   % side length of one square
+		\def\gap{1.5} % horizontal gap between squares
 
-    % ===== left square =====
-    \draw (0,0) rectangle (\s,\s);
-    % corner dots & labels
-    \fill (0,0) circle(2pt) node[below left]  {$i$};
-    \fill (\s,0) circle(2pt) node[below right] {$j$};
-    \fill (\s,\s) circle(2pt) node[above right] {$k$};
-    \fill (0,\s) circle(2pt) node[above left]  {$l$};
-    % internal quarter–circles
-    \draw (0,\s/2)  arc ( 90:  0:{\s/2});
-    \draw (\s/2,\s) arc (180:270:{\s/2});
+				% ===== left square =====
+				\begin{scope}[shift={({-2*(\s+\gap)},0)}]
+						\draw (0,0) rectangle (\s,\s);
+						\fill (0,0) circle(2pt) node[below left]  {$i$};
+						\fill (\s,0) circle(2pt) node[below right] {$j$};
+						\fill (\s,\s) circle(2pt) node[above right] {$k$};
+						\fill (0,\s) circle(2pt) node[above left]  {$l$};
+						% internal quarter–circles (opposite orientation)
+						\draw (0,\s/2)  arc (270:360:{\s/2});
+						\draw (\s/2,0) arc (180: 90:{\s/2});
+				\end{scope}
 
-    % ===== middle square =====
-    \begin{scope}[shift={({\s+\gap},0)}]
-      \draw (0,0) rectangle (\s,\s);
-      \fill (0,0) circle(2pt) node[below left]  {$i$};
-      \fill (\s,0) circle(2pt) node[below right] {$j$};
-      \fill (\s,\s) circle(2pt) node[above right] {$k$};
-      \fill (0,\s) circle(2pt) node[above left]  {$l$};
-      % grid
-      \draw (\s/2,0) -- (\s/2,\s);
-      \draw (0,\s/2) -- (\s,\s/2);
-    \end{scope}
 
-    % ===== right square =====
-    \begin{scope}[shift={({2*(\s+\gap)},0)}]
-      \draw (0,0) rectangle (\s,\s);
-      \fill (0,0) circle(2pt) node[below left]  {$i$};
-      \fill (\s,0) circle(2pt) node[below right] {$j$};
-      \fill (\s,\s) circle(2pt) node[above right] {$k$};
-      \fill (0,\s) circle(2pt) node[above left]  {$l$};
-      % internal quarter–circles (opposite orientation)
-      \draw (0,\s/2)  arc (270:360:{\s/2});
-      \draw (\s/2,0) arc (180: 90:{\s/2});
-    \end{scope}
-  \end{tikzpicture}
+				% ===== middle square =====
+				\begin{scope}[shift={({-\s-\gap},0)}]
+						\draw (0,0) rectangle (\s,\s);
+						\fill (0,0) circle(2pt) node[below left]  {$i$};
+						\fill (\s,0) circle(2pt) node[below right] {$j$};
+						\fill (\s,\s) circle(2pt) node[above right] {$k$};
+						\fill (0,\s) circle(2pt) node[above left]  {$l$};
+						% grid
+						\draw (\s/2,0) -- (\s/2,\s);
+						\draw (0,\s/2) -- (\s,\s/2);
+				\end{scope}
+
+
+
+						% ===== right square =====
+				\draw (0,0) rectangle (\s,\s);
+				% corner dots & labels
+				\fill (0,0) circle(2pt) node[below left]  {$i$};
+				\fill (\s,0) circle(2pt) node[below right] {$j$};
+				\fill (\s,\s) circle(2pt) node[above right] {$k$};
+				\fill (0,\s) circle(2pt) node[above left]  {$l$};
+				% internal quarter–circles
+				\draw (0,\s/2)  arc ( 90:  0:{\s/2});
+				\draw (\s/2,\s) arc (180:270:{\s/2});
+		\end{tikzpicture}
+		\caption{The three ways to glue edges of a square to make an orientable surface: two spheres (left and right) and one torus (center).}
+		\label{fig:square-gluings}
 \end{figure}
 \end{example}
 
@@ -162,48 +168,50 @@ In the case of the square ($n=2$), we have $V=3$ and $g=0$ for the sphere,
 and $V=1$ and $g=1$ for the torus.
 
 \begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}[thick,scale=1.2]
-    % -------------------------------------------------------------
-    % handy parameters
-    \def\R{1.45}   % radius of each disk
-    \def\G{4.2}    % horizontal gap between the three pictures
-    % -------------------------------------------------------------
-    % === LEFT DISK =================================================
-    \begin{scope}[shift={(-\G,0)}]
-      \draw (0,0) circle (\R);
-      % three collinear points and the poly‑line between them
-      \coordinate (A) at (-0.95,-0.45);
-      \coordinate (B) at (-0.45, 0.10);
-      \coordinate (C) at ( 0.10, 0.65);
-      \draw (A) -- (B) -- (C);
-      \foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
-    \end{scope}
+		\centering
+		\begin{tikzpicture}[thick,scale=1.2]
+				% -------------------------------------------------------------
+				% handy parameters
+				\def\R{1.45}   % radius of each disk
+				\def\G{4.2}    % horizontal gap between the three pictures
+				% -------------------------------------------------------------
+				% === LEFT DISK =================================================
+				\begin{scope}[shift={(-\G,0)}]
+						\draw (0,0) circle (\R);
+						% three collinear points and the poly‑line between them
+						\coordinate (A) at (-0.95,-0.45);
+						\coordinate (B) at (-0.45, 0.10);
+						\coordinate (C) at ( 0.10, 0.65);
+						\draw (A) -- (B) -- (C);
+						\foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
+				\end{scope}
 
-    % === MIDDLE TORUS (CROSS‑SECTION) =============================
-    \begin{scope}
-      % outer and inner “rings”
-      \draw (0,0) ellipse (2.45 and 1.20);
-      \draw (0,0) ellipse (1.55 and 0.72);
-      % central hole (top rim)
-      \draw (0,0) ellipse (0.60 and 0.18);
-      % base‑point on the interior boundary
-      \coordinate (P) at (-1.0,-0.55);
-      \fill (P) circle(3pt);
+				% === MIDDLE TORUS (CROSS‑SECTION) =============================
+				\begin{scope}
+						% outer and inner “rings”
+						\draw (0,0) ellipse (2.45 and 1.20);
+						\draw (0,0) ellipse (1.55 and 0.72);
+						% central hole (top rim)
+						\draw (0,0) ellipse (0.60 and 0.18);
+						% base‑point on the interior boundary
+						\coordinate (P) at (-1.0,-0.55);
+						\fill (P) circle(3pt);
 			\draw (-.5,-.65) circle (0.53);
-    \end{scope}
+				\end{scope}
 
-    % === RIGHT DISK ===============================================
-    \begin{scope}[shift={(\G,0)}]
-      \draw (0,0) circle (\R);
-      % mirror‑image of the left‑hand poly‑line
-      \coordinate (A) at ( 0.10, 0.65);
-      \coordinate (B) at ( 0.55, 0.10);
-      \coordinate (C) at ( 0.95,-0.45);
-      \draw (A) -- (B) -- (C);
-      \foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
-    \end{scope}
-  \end{tikzpicture}
+				% === RIGHT DISK ===============================================
+				\begin{scope}[shift={(\G,0)}]
+						\draw (0,0) circle (\R);
+						% mirror‑image of the left‑hand poly‑line
+						\coordinate (A) at ( 0.10, 0.65);
+						\coordinate (B) at ( 0.55, 0.10);
+						\coordinate (C) at ( 0.95,-0.45);
+						\draw (A) -- (B) -- (C);
+						\foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
+				\end{scope}
+		\end{tikzpicture}
+		\caption{Surfaces corresponding to gluings: left and right show three-vertex trees (disk, sphere), center shows a one-vertex, one-face case (torus).}
+		\label{fig:dual-graphs-gluings}
 \end{figure}
 
 \subsection{Starting to count}
@@ -476,7 +484,11 @@ prefactor indeed gives $\int_{\Bbb R^{k}}d\mu_{B}=1$.
   \label{eq:covariance}
 \end{align}
 All higher moments are expressed in terms of the matrix~$C$
-via Wick’s formula below.
+via Wick’s formula in \Cref{subsec:wick} below.
+
+\begin{remark}
+	In this lecture, we consider only \emph{centered} (mean zero) Gaussian measures.
+\end{remark}
 
 \subsection{Wick (Isserlis) formula}
 \label{subsec:wick}
@@ -519,8 +531,8 @@ indices encoding the pairing.
 
 \begin{proof}[Sketch of proof]
 	When $C=\operatorname{diag}(\sigma_{1}^{2},\dots,\sigma_{k}^{2})$,
-mixed covariances vanish and Wick’s formula factorises:
-\begin{equation}
+mixed covariances vanish and Wick’s formula factorizes:
+\begin{equation*}
   \bigl\langle
      x_{1}^{2n_{1}}\cdots x_{k}^{2n_{k}}
   \bigr\rangle
@@ -529,30 +541,114 @@ mixed covariances vanish and Wick’s formula factorises:
     (2n_{i}-1)!!\;\sigma_{i}^{2n_{i}},
   \qquad n_{1},\dots,n_{k}\in\Bbb N.
   \label{eq:wick-diagonal}
-\end{equation}
-The general case follows from the diagonal case by
-making a linear change of variables which diagonalizes the covariance matrix, and
-proving \eqref{eq:wick}.
+\end{equation*}
+Indeed, pairings are allowed only between indices of the same variable,
+and then the number of pairings within one variable $x_i$ is $(2n_i-1)!!$.
+
+The general case of Wick’s formula follows from the diagonal case by
+making a linear change of variables which diagonalizes the covariance matrix, and using the linearity of
+\eqref{eq:f_Wick}.
 \end{proof}
+
+\begin{example}
+	The one-dimensional integral
+	$\langle  x^4 \rangle =\frac{1}{\sqrt{2\pi}} \int_{-\infty}^{\infty} x^4 e^{-\frac{x^2}{2}} dx$ can be computed using Wick’s formula:
+	\begin{equation*}
+		\langle f_1f_2f_3f_4 \rangle =
+		\langle f_1f_2 \rangle \langle f_3f_4 \rangle + \langle f_1f_3 \rangle \langle f_2f_4 \rangle + \langle f_1f_4 \rangle \langle f_2f_3 \rangle,
+	\end{equation*}
+	where $f_i(x)=x$ for $i=1,2,3,4$.
+	We know this integral is equal to $3$.
+\end{example}
+
+\begin{remark}
+	\label{rem:wick-linear}
+	Note that in the second part of \Cref{thm:wick},
+	the linear functions $f_j$ must be not \emph{affine}, but truly \emph{linear},
+	that is, $f_j(0,\ldots,0)=0$. See Problem~\ref{prob:wick-linear}.
+\end{remark}
 
 
 \section{GUE integrals and gluing polygons}
 
-We will now apply Wick’s formula to compute the moments of traces of 
-GUE matrices. Recall that in 
-\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1} 
-and 
-\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2} we 
+We will now apply Wick’s formula to compute the moments of traces of
+GUE matrices. Recall that in
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l01.pdf}{Lecture 1}
+and
+\href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l02.pdf}{Lecture 2} we
 worked with general Wigner matrices (real symmetric or Hermitian),
 and now we will deal with the special case of
 GUE, Gaussian Hermitian matrices.
-Here, the Gaussian distribution will allow us to 
+Here, the Gaussian distribution will allow us to
 connect the moments of traces of GUE matrices to the topology of surfaces.
 
+\subsection{Traces of powers, again}
+\label{subsec:traces-powers}
 
-\subsection{}
 
-\colorbox{yellow}{\parbox{.7\textwidth}{to continue here}}
+Let $\mathcal{H}_N$ be the space of $N\times N$ Hermitian matrices,
+and $\mu$ on $\mathcal{H}_N$ be the GUE measure, with complex variances $1$
+for the diagonal and off-diagonal entries.
+Let us begin by an example with $n=2$.
+
+Consider the integral
+\[
+  \int_{\mathcal{H}_N}\!\operatorname{tr}(H^4)\,d\mu(H).
+\]
+Here the integrand is a sum of monomials,
+\[
+  \operatorname{tr}(H^4)
+  \;=\;
+  \sum_{i,j,k,l=1}^N
+    h_{ij}\,h_{jk}\,h_{kl}\,h_{li}.
+\]
+Since each entry $h_{pq}$ is a linear function of the real and imaginary parts
+of $H$, we may apply Wick’s formula:
+\begin{equation}\label{eq:wick-square}
+  \bigl\langle h_{ij}h_{jk}h_{kl}h_{li}\bigr\rangle
+  =
+  \langle h_{ij}h_{jk}\rangle\,\langle h_{kl}h_{li}\rangle
+  +
+  \langle h_{ij}h_{kl}\rangle\,\langle h_{jk}h_{li}\rangle
+  +
+  \langle h_{ij}h_{li}\rangle\,\langle h_{jk}h_{kl}\rangle.
+\end{equation}
+\begin{lemma}
+	We have $\langle h_{ij}h_{ji} \rangle =1$, and all other
+	second moments are zero.
+\end{lemma}
+\begin{proof}
+	This is straightforward from the independence of real and imaginary parts of the entries of $H$.
+\end{proof}
+
+Let us inspect each term in \eqref{eq:wick-square} separately:
+\begin{itemize}
+  \item In the first product
+        $\langle h_{ij}h_{jk}\rangle$ is nonzero only when $i=k$, and then equals $1$.
+        Likewise $\langle h_{kl}h_{li}\rangle=1$ only when $k=i$.  Summing over all $i,j,k,l$
+        with $i=k$ gives $N^3$.
+
+  \item In the second product
+        $\langle h_{ij}h_{kl}\rangle\,\langle h_{jk}h_{li}\rangle$ is nonzero
+        only if $i=j=k=l$, and then each factor equals $1$.  Hence this term contributes $N$.
+
+  \item The third product is identical in structure to the first and therefore contributes another $N^3$.
+\end{itemize}
+There is a one‐to‐one correspondence between these three terms in \eqref{eq:wick-square}
+and the three pairings of the edges of a square (see \Cref{fig:square-gluings}).  Each pairing contributes
+$N^{V(\sigma)}$, where $V(\sigma)$ is the number of vertices in the glued graph.
+
+Putting everything together, we get
+\[
+  \int_{\mathcal{H}_N}\!\operatorname{tr}(H^4)\,d\mu(H)
+  \;=\;
+  2\,N^3 + N
+  \;=\;
+  T_2(N).
+\]
+
+
+
 
 
 
@@ -606,6 +702,19 @@ Show that for a connected, orientable surface formed by gluing the edges of a $2
 	\item The pairing of edges corresponds to a \emph{noncrossing pairing} (i.e., when the edges are arranged around the polygon in order, the identifications can be drawn inside the disk without crossings).
 \end{enumerate}
 (This is the proof of \Cref{prop:gluing_sphere}.)
+
+\subsection{Wick's formula for affine functions}
+\label{prob:wick-linear}
+Consider the integrals of the form
+\[
+	I(a_1, \ldots, a_k) := \int_{-\infty}^\infty \prod_{i=1}^k (x - a_i)\; \frac{1}{\sqrt{2\pi}} e^{-x^2/2}\, dx,
+\]
+where $a_1, \ldots, a_k \in \mathbb{R}$ are fixed parameters.
+
+Compute $I(a_1, a_2)$ and $I(a_1, a_2, a_3, a_4)$ explicitly as polynomials in $a_1,\ldots, a_4$,
+and compare $I(a_1, a_2, a_3, a_4)$ with the Wick-like expansion.
+
+
 
 
 \bibliographystyle{alpha}
