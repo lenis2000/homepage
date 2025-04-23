@@ -726,7 +726,7 @@ admissible index choices.  So, the contribution of the pairing
 \medskip
 Now,
 consider an octagon ($2n=8$), and glue its sides in pairs as illustrated in
-Figure~\ref{fig:octagon-gluing}.  Since the edges are identified, we 
+Figure~\ref{fig:octagon-gluing}.  Since the edges are identified, we
 have also identification of the vertices:
 \[
   i_{1}=i_{5},\; i_{2}=i_{4},\qquad
@@ -795,15 +795,15 @@ $\lambda_1,\ldots,\lambda_N$ of $H$, we have
 	c_N
 	\int_{\mathbb{R}^N}
 	f(\lambda_1,\ldots,\lambda_N) \prod_{1\le i<j\le N}
-	(\lambda_i-\lambda_j)^2 
+	(\lambda_i-\lambda_j)^2
 	\prod_{i=1}^{N}\mu(d\lambda_i),
 \end{equation*}
-where $\mu(H)$ is the GUE distribution on $\mathcal{H}_N$, and 
+where $\mu(H)$ is the GUE distribution on $\mathcal{H}_N$, and
 $\mu(dx)$ is the one-dimensional Gaussian measure on $\mathbb{R}$.
 The constant $c_N$ depends only on $N$ (we computed it in,
 e.g.,
 \href{https://lpetrov.cc/rmt25/rmt25-notes/rmt2025-l05.pdf}{Lecture
-5} using determinantal structure of the 
+5} using determinantal structure of the
 GUE eigenvalues).
 
 \begin{lemma}
@@ -814,7 +814,7 @@ GUE eigenvalues).
 \]
 is a polynomial in the variable \(n\), of degree \(N-1\).
 \end{lemma}
-In particular, 
+In particular,
 $t(1,n)=1$.
 \begin{proof}[Proof of \Cref{lem:traces-polynomial}]
 Consider $f(H)=\operatorname{tr}(H^{2n})$,
@@ -841,17 +841,133 @@ which is a polynomial in \(n\) of degree \(k\).  Hence \(t(N,n)\) is a
 polynomial in \(n\) of degree \(N-1\), as desired.
 \end{proof}
 
+\subsection{Proof of Harer–Zagier formula}
+
+
+Assume now that the vertices of the $2n$-gon are colored in (at most)
+$N$ colors.  A gluing is said to be \emph{compatible with the coloring}
+if only vertices of the \emph{same} color may 
+(but are not required to)
+be
+glued to one another.
+
+\begin{lemma}
+The number $T_n(N)$ is precisely the number of gluings of a
+$2n$-gon that are compatible with some coloring of its vertices in
+(at most) $N$ colors.
+\end{lemma}
+
+\begin{proof}
+After gluing, the boundary of the polygon becomes an embedded graph with
+$V$ vertices.  color each of those $V$ vertices with one of the $N$
+colors.  Any such coloring induces a coloring of the original
+polygon, and the given gluing is compatible with it.  There are exactly
+$N^{V}$ such colorings of the graph (note that adjacent vertices are
+\emph{not} required to have different colors).
+\end{proof}
+
+Let $\tilde T_n(N)$ denote the number of gluings of the $2n$-gon that
+are compatible with colorings in \emph{exactly} $N$ colors.
+Choosing which $L$ colors are actually used and then coloring the
+vertices gives
+\[
+   T_n(N)\;=\;\sum_{L=1}^{N}\binom{N}{L}\,\tilde T_n(L).
+\]
+\begin{remark}
+	This combinatorial technique is extremely standard, and it
+	is useful here.
+\end{remark}
+
+Clearly, $\tilde T_0(N)=\tilde T_1(N)=\tilde T_{N-2}(N)=0$, because the
+graph on the surface has at most $n+1$ vertices (and that is possible
+only when the graph is a tree).  Hence no coloring with more than
+$n+1$ different colors can be compatible with any gluing.
+
+Define
+\[
+    \tilde t(N,n)\;=\;\frac{\tilde T_n(N)}{(2n-1)!!}.
+\]
+The function $\tilde t(N,n)$ is a polynomial in $n$ of degree
+$N-1$ by \Cref{lem:traces-polynomial}.  
+We just found the roots of this polynomial:
+its $N-1$ roots are $0,1,2,\dots,N-2$.  Therefore, there exists a
+constant $A_N$ such that
+\[
+   \tilde t(N,n)
+       =A_N\,n(n-1)(n-2)\dots(n-N+2)
+       =A_N\,(N-1)!\,\binom{n}{N-1}.
+\]
+Substituting this into the expression for $T_n(N)$, we obtain
+\[
+  T_n(N)
+     =(2n-1)!!
+       \sum_{L=1}^{N}
+         A_L\,
+         \binom{n}{\,L-1}\,
+         \binom{N}{\,L}\,
+         (L-1)!!.
+\]
+
+Now, consider $T_n(N)$ as a polynomial in $N$.  Its leading coefficient (the
+coefficient of $N^{\,n+1}$) equals
+\[
+  (2n-1)!!\,
+  \frac{A_{n+1}}{(n+1)!}\,n!.
+\]
+On the other hand, this coefficient is known to be the $n$-th Catalan
+number (since the surface is a sphere, and we are enumerating trees):
+\[
+  (2n-1)!!\,
+  \frac{A_{n+1}}{(n+1)!}\,n!
+      =\operatorname{Cat}_n
+      =\frac{(2n)!}{n!\,(n+1)!}.
+\]
+Hence $A_{n+1}=2^{\,n}/n!$, and therefore, we have found
+\[
+  T_n(N)
+     =(2n-1)!!
+       \sum_{L=1}^{N}
+         2^{\,L-1}\,
+         \binom{n}{\,L-1}\,
+         \binom{N}{\,L}\,
+         (L-1)!!.
+\]
+Because $\binom{n}{L-1}=0$ when $n<L-1$, the number of non–zero summands
+is $\min\{N,n+1\}$.
+
+\medskip
+As the last step in the proof of \Cref{thm:HZ-genfun}, we note that
+the last formula is exactly the series expansion of
+\[
+   \left(\frac{1+s}{1-s}\right)^{\!N}
+\]
+in powers of $s$. Indeed,
+\[
+  \begin{aligned}
+     1+2Ns
+     +2s\sum_{n=1}^{\infty}
+          \frac{T_n(N)}{(2n-1)!!}\,s^{n}
+     &\;=\;
+       1+\sum_{L=1}^{N}
+             2^{L}\binom{N}{L}
+             \sum_{n=L-1}^{\infty}
+               \binom{n}{\,L-1}\,s^{n+1}\\[4pt]
+     &=\sum_{L=0}^{N}
+          \binom{N}{L}
+          \left(\frac{2s}{1-s}\right)^{\!L}
+       =\left(\frac{1+s}{1-s}\right)^{\!N}.
+  \end{aligned}
+\]
+This completes the proof of \Cref{thm:HZ-genfun}.
 
 
 
+\section{Going further: Multi-matrix models}
 
 
+\subsection{Feynman diagrams}
 
-\section{Multi-matrix models}
-
-
-
-\section{Two-matrix models and the Ising model}
+\subsection{Two-matrix models and the Ising model}
 
 
 
@@ -927,7 +1043,7 @@ indices, and the polygon-gluing picture changes accordingly.
   corresponds to a pairing of the $2n$ edges of a $2n$-gon in which
   \emph{half} of the identifications are orientation-preserving and the
   other half are orientation-reversing.  Conclude that the resulting
-  surface is, in general, \textbf{non-orientable}.  
+  surface is, in general, \textbf{non-orientable}.
   (A convenient measure of non-orientability is the \emph{cross-cap number}
   $\gamma$, so that the Euler characteristic is $\,\chi=2-\gamma$.)
 
