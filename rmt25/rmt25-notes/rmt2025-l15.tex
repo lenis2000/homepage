@@ -255,15 +255,17 @@ When $n=2$, for the sphere, we have $F^*=3$, and for the torus, we have $F^*=1$.
 \subsection{Notation}
 
 Let us denote
-\begin{align*}
+\begin{align}
+	\label{eq:epsg-def}
 	\varepsilon_g(n)
 	&\coloneqq\text{number of ways to glue the edges of a $2n$-gon into a surface of genus $g$},\\
+	\label{eq:Tn-def}
 	T_n(N)
 	&\coloneqq
 	\sum_{\text{gluings }\sigma}N^{V(\sigma)}
 	=
 	\sum_{g=0}^{\infty}\varepsilon_g(n)N^{n+1-2g},
-\end{align*}
+\end{align}
 that is, this is the generating function
 of the gluings of the edges of a $2n$-gon, where
 $N$ is the generating function variable.
@@ -644,9 +646,26 @@ Putting everything together, we get
   \;=\;
   2\,N^3 + N
   \;=\;
-  T_2(N).
+	T_2(N),
 \]
+where $T_2(N)$ is defined by \eqref{eq:Tn-def}.
 
+In a similar manner, we obtain the following:
+\begin{proposition}
+	\label{prop:traces-moments}
+	For any $n\ge 1$, we have
+	\[
+		\int_{\mathcal{H}_N}\!\operatorname{tr}(H^{2n})\,d\mu(H)
+		\;=\;
+		T_n(N).
+	\]
+	Odd moments (expectations of $\operatorname{tr}(H^{2n+1})$) vanish.
+\end{proposition}
+\begin{proof}[Proof sketch]
+	The idea why we get the genus will be evident from a larger example. 
+
+	
+\end{proof}
 
 
 
