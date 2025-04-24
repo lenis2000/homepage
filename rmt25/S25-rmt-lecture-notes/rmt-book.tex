@@ -1,0 +1,75 @@
+\documentclass[letterpaper,11pt,oneside,reqno]{book}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages from the original lectures
+
+% Core packages
+\usepackage[pdftex,backref=page,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
+\usepackage[alphabetic,nobysame]{amsrefs}
+
+% Math packages
+\usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools}
+\usepackage{upgreek}
+\usepackage[mathscr]{euscript}
+\usepackage{esint}  % For special integrals
+
+% Graphics packages
+\usepackage{graphicx,color}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,decorations.markings,calc}
+
+% Convenience packages
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{cleveref}
+\usepackage{enumerate}
+\usepackage{datetime}
+\usepackage{comment}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Equations
+\allowdisplaybreaks
+\numberwithin{equation}{chapter}  % Changed from section to chapter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This paper specific
+\newcommand{\ssp}{\hspace{1pt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Theorem environments
+\newtheorem{proposition}{Proposition}[chapter]  % Changed from section to chapter
+\newtheorem{lemma}[proposition]{Lemma}
+\newtheorem{corollary}[proposition]{Corollary}
+\newtheorem{theorem}[proposition]{Theorem}
+
+\theoremstyle{definition}
+\newtheorem{definition}[proposition]{Definition}
+\newtheorem{remark}[proposition]{Remark}
+\newtheorem{example}[proposition]{Example}
+
+\begin{document}
+
+\title{Lectures on Random Matrices}
+\author{Leonid Petrov}
+\date{Updated \today\\
+\href{https://lpetrov.cc/rmt25/S25-rmt-lecture-notes/S25-rmt-lecture-notes.tex}{\texttt{TeX Source}} $\bullet$
+\href{https://github.com/lenis2000/homepage/blob/master/rmt25/S25-rmt-lecture-notes/S25-rmt-lecture-notes.tex}{\texttt{GitHub}} $\bullet$ \href{https://lpetrov.cc/simulations/model/random-matrices/}{\texttt{Live simulations}}}
+\maketitle
+\setcounter{tocdepth}{1}
+\tableofcontents
+\setcounter{tocdepth}{4}
+
+
+
+
+
+\bibliographystyle{alpha}
+\bibliography{bib}
+
+\medskip
+
+\textsc{L. Petrov, University of Virginia, Department of Mathematics, 141 Cabell Drive, Kerchof Hall, P.O. Box 400137, Charlottesville, VA 22904, USA}
+
+E-mail: \texttt{lenia.petrov@gmail.com}
+
+\end{document}
