@@ -16,7 +16,7 @@
 % Graphics packages
 \usepackage{graphicx,color}
 \usepackage{tikz}
-\usetikzlibrary{shapes,arrows,positioning,decorations.markings}
+\usetikzlibrary{shapes,arrows,positioning,decorations.markings,calc}
 
 % Convenience packages
 \usepackage{array}
@@ -11070,12 +11070,997 @@ Let $a_1, \ldots, a_t$ and $b_1, \ldots, b_n$ be positive parameters satisfying 
 
 
 
+\section{Introduction}
+
+In this wrap-up lecture, we go back to moments of random
+matrices, and outline their connection to topology
+(more precisely, to counting certain embedded graphs).
+
+\begin{remark}
+	Throughout this lecture, to make an exact connection with the existing literature,
+	the matrix size is denoted by $N$, and the small $n$ is reserved to
+	the order of the moment.
+\end{remark}
+
+\section{Gluing polygons into surfaces}
+\label{lecture15:sec:gluing-polygons}
+\subsection{Gluing edges of a polygon}
+
+Consider a regular $2n$-gon with edges labeled by $1,\ldots,2n$.
+We can glue the edges in pairs, so that the resulting
+surface is oriented.
+
+
+\begin{example}
+Consider a square.
+Recall that to obtain an orientable surface one must orient the square’s
+boundary cyclically and then glue opposite sides with \emph{opposite}
+orientations. There are three ways to glue the edges of a square.
+Note that in two cases, we get the sphere and in one case, the torus.
+The two spheres are obtained by gluing the edges in the same way, but this differs by
+a rotation --- we consider these two cases as different.
+\begin{figure}[htbp]
+		\centering
+		\begin{tikzpicture}[scale=1, thick]
+				% ---- basic parameters ----
+				\def\s{2}   % side length of one square
+		\def\gap{1.5} % horizontal gap between squares
+
+				% ===== left square =====
+				\begin{scope}[shift={({-2*(\s+\gap)},0)}]
+						\draw (0,0) rectangle (\s,\s);
+						\fill (0,0) circle(2pt) node[below left]  {$i$};
+						\fill (\s,0) circle(2pt) node[below right] {$j$};
+						\fill (\s,\s) circle(2pt) node[above right] {$k$};
+						\fill (0,\s) circle(2pt) node[above left]  {$l$};
+						% internal quarter–circles (opposite orientation)
+						\draw (0,\s/2)  arc (270:360:{\s/2});
+						\draw (\s/2,0) arc (180: 90:{\s/2});
+				\end{scope}
+
+
+				% ===== middle square =====
+				\begin{scope}[shift={({-\s-\gap},0)}]
+						\draw (0,0) rectangle (\s,\s);
+						\fill (0,0) circle(2pt) node[below left]  {$i$};
+						\fill (\s,0) circle(2pt) node[below right] {$j$};
+						\fill (\s,\s) circle(2pt) node[above right] {$k$};
+						\fill (0,\s) circle(2pt) node[above left]  {$l$};
+						% grid
+						\draw (\s/2,0) -- (\s/2,\s);
+						\draw (0,\s/2) -- (\s,\s/2);
+				\end{scope}
+
+
+
+						% ===== right square =====
+				\draw (0,0) rectangle (\s,\s);
+				% corner dots & labels
+				\fill (0,0) circle(2pt) node[below left]  {$i$};
+				\fill (\s,0) circle(2pt) node[below right] {$j$};
+				\fill (\s,\s) circle(2pt) node[above right] {$k$};
+				\fill (0,\s) circle(2pt) node[above left]  {$l$};
+				% internal quarter–circles
+				\draw (0,\s/2)  arc ( 90:  0:{\s/2});
+				\draw (\s/2,\s) arc (180:270:{\s/2});
+		\end{tikzpicture}
+		\caption{The three ways to glue edges of a square to make an orientable surface: two spheres (left and right) and one torus (center).}
+		\label{lecture15:fig:square-gluings}
+\end{figure}
+\end{example}
+
+The boundary of the $2n$-gon becomes a graph embedded into the
+surface. It has exactly $n$ edges and one face. It may have different number
+of vertices, and thus the number of vertices uniquely determines the genus of the surface:
+\begin{equation}\label{lecture15:eq:genus}
+	V - E + F = 2 - 2g \implies g = \frac{n+1-V}{2}.
+\end{equation}
+In the case of the square ($n=2$), we have $V=3$ and $g=0$ for the sphere,
+and $V=1$ and $g=1$ for the torus.
+
+\begin{figure}[htbp]
+		\centering
+		\begin{tikzpicture}[thick,scale=1.2]
+				% -------------------------------------------------------------
+				% handy parameters
+				\def\R{1.45}   % radius of each disk
+				\def\G{4.2}    % horizontal gap between the three pictures
+				% -------------------------------------------------------------
+				% === LEFT DISK =================================================
+				\begin{scope}[shift={(-\G,0)}]
+						\draw (0,0) circle (\R);
+						% three collinear points and the poly‑line between them
+						\coordinate (A) at (-0.95,-0.45);
+						\coordinate (B) at (-0.45, 0.10);
+						\coordinate (C) at ( 0.10, 0.65);
+						\draw (A) -- (B) -- (C);
+						\foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
+				\end{scope}
+
+				% === MIDDLE TORUS (CROSS‑SECTION) =============================
+				\begin{scope}
+						% outer and inner “rings”
+						\draw (0,0) ellipse (2.45 and 1.20);
+						\draw (0,0) ellipse (1.55 and 0.72);
+						% central hole (top rim)
+						\draw (0,0) ellipse (0.60 and 0.18);
+						% base‑point on the interior boundary
+						\coordinate (P) at (-1.0,-0.55);
+						\fill (P) circle(3pt);
+			\draw (-.5,-.65) circle (0.53);
+				\end{scope}
+
+				% === RIGHT DISK ===============================================
+				\begin{scope}[shift={(\G,0)}]
+						\draw (0,0) circle (\R);
+						% mirror‑image of the left‑hand poly‑line
+						\coordinate (A) at ( 0.10, 0.65);
+						\coordinate (B) at ( 0.55, 0.10);
+						\coordinate (C) at ( 0.95,-0.45);
+						\draw (A) -- (B) -- (C);
+						\foreach \P in {A,B,C}{\fill (\P) circle(3pt);}
+				\end{scope}
+		\end{tikzpicture}
+		\caption{Surfaces corresponding to gluings: left and right show three-vertex trees (disk, sphere), center shows a one-vertex, one-face case (torus).}
+		\label{lecture15:fig:dual-graphs-gluings}
+\end{figure}
+
+\subsection{Starting to count}
+
+\begin{proposition}
+	There is a total
+	\begin{equation*}
+		(2n-1)!!=(2n-1)(2n-3)\cdots 3\cdot 1
+	\end{equation*}
+	ways to glue the edges of a $2n$-gon into a surface.
+\end{proposition}
+\begin{proof}
+	This is just the number of ways to pair $2n$ edges of the polygon.
+\end{proof}
+
+\begin{proposition}
+	\label{lecture15:prop:gluing_sphere}
+	The following are equivalent:
+	\begin{enumerate}
+		\item The surface is a sphere;
+		\item The graph on the surface is a tree;
+		\item The identification of the opposite edges of the polygon is a \emph{noncrossing pairing} of the edges of the polygon.
+	\end{enumerate}
+\end{proposition}
+\begin{proof}
+	See Problem~\ref{lecture15:prob:gluing_sphere}.
+\end{proof}
+There is $\mathrm{Cat}_n=\frac{1}{n+1}\binom{2n}{n}$ ways to get the sphere.
+
+
+\subsection{Dual picture}
+
+In the dual picture, we can consider a star with $2n$ half-edges. Then, we get a dual graph on the
+same surface. This graph has $V^*=1$, $E^*=n$, but can have a variable number of faces (which corresponds to the genus):
+\begin{equation*}
+	F^*=n-2g+1.
+\end{equation*}
+When $n=2$, for the sphere, we have $F^*=3$, and for the torus, we have $F^*=1$.
+
+
+\subsection{Notation}
+
+Let us denote
+\begin{align}
+	\label{lecture15:eq:epsg-def}
+	\varepsilon_g(n)
+	&\coloneqq\text{number of ways to glue the edges of a $2n$-gon into a surface of genus $g$},\\
+	\label{lecture15:eq:Tn-def}
+	T_n(N)
+	&\coloneqq
+	\sum_{\text{gluings }\sigma}N^{V(\sigma)}
+	=
+	\sum_{g=0}^{\infty}\varepsilon_g(n)N^{n+1-2g},
+\end{align}
+that is, this is the generating function
+of the gluings of the edges of a $2n$-gon, where
+$N$ is the generating function variable.
+
+\begin{remark}
+The polynomial $T_n(N)$ has only powers of $N$ of the same parity as $n$.
+\end{remark}
+
+We have the first few polynomials
+(the case $n=2$ corresponds to the square):
+\begin{align*}
+	T_1(N)&=N^2;\\
+	T_2(N)&=2N^3+N;\\
+	T_3(N)&=5N^4+10N^2;\\
+	T_4(N)&=14N^5+70N^3+21N;\\
+	T_5(N)&=42N^6+420N^4+483N^2.
+\end{align*}
+
+\section{Harer–Zagier formula (statement)}
+
+
+Introduce the \emph{exponential generating function}
+for the sequence $\{T_n(N)\}_{n\ge 0}$:
+\begin{equation}\label{lecture15:eq:TNs-def} % (3.1)
+  \begin{split}
+    T(N,s)\;=&\;1+2Ns
+            +2s\sum_{n\ge 1}\frac{T_n(N)}{(2n-1)!!}\,s^{n}
+        \\
+       =&\;
+        1+2Ns+2N^{2}s^{2}
+        +\frac{2}{3}\bigl(2N^{3}+N\bigr)s^{3}
+        +\frac{2}{15}\bigl(5N^{4}+10N^{2}\bigr)s^{4}
+        +\dots
+  \end{split}
+\end{equation}
+
+One of the goals of today's lecture is to prove the following:
+\begin{theorem}
+	[Harer–Zagier formula \cite{harer1986euler}]
+	\label{lecture15:thm:HZ-genfun}
+	For every $N\in\mathbb{Z}_{>0}$ one has the closed form
+\begin{equation}\label{lecture15:eq:TNs-closed}
+  T(N,s)\;=\;\Bigl(\frac{1+s}{1-s}\Bigr)^{N}.
+\end{equation}
+\end{theorem}
+
+
+Let us at least
+verify that
+the first few Taylor coefficients of~\eqref{lecture15:eq:TNs-closed}
+indeed coincide with those in~\eqref{lecture15:eq:TNs-def}.
+Write
+\begin{align*}
+  \Biggl(\frac{1+s}{1-s}\Biggr)^N
+  &= (1+s)^N (1-s)^{-N} \\
+  &=
+  \Biggl(1 + Ns + \frac{N(N-1)}{2!}s^2 + \frac{N(N-1)(N-2)}{3!}s^3 + \dots\Biggr) \\
+  &\qquad\times
+  \Biggl(1 + Ns + \frac{N(N+1)}{2!}s^2 + \frac{N(N+1)(N+2)}{3!}s^3 + \dots\Biggr).
+\end{align*}
+Multiplying the two series and collecting terms up to $s^3$, we find
+\[
+  1 + 2N s + 2N^2 s^2 + \frac{2}{3}(2N^3 + N) s^3 + \dots,
+\]
+which matches the expansion~\eqref{lecture15:eq:TNs-def} exactly.
 
 
 
 
+\begin{corollary}\label{lecture15:cor:HZ-recurrence} % 3.1.6
+For all $g\ge 0$ and $n\ge 0$, the numbers $\varepsilon_g(n)$ obey
+\begin{equation}\label{lecture15:eq:HZ-rec} % (3.2)
+  (n+2)\,\varepsilon_g(n+1)
+  \;=\;
+  (4n+2)\,\varepsilon_g(n)
+  \;+\;
+  (4n^{3}-n)\,\varepsilon_{g-1}(n-1),
+\end{equation}
+with the initial condition
+\[
+  \varepsilon_g(0)
+  \;=\;
+  \begin{cases}
+    1,& g=0,\\[4pt]
+    0,& g\ge 1.
+  \end{cases}
+\]
+\end{corollary}
+\begin{proof}
+	Follows from the identity
+	\begin{equation*}
+		\left( \frac{1+s}{1-s} \right)^{N}=
+		(1+s)(1+s+s^2+\ldots )\left( \frac{1+s}{1-s} \right)^{N-1}.
+	\end{equation*}
+\end{proof}
+
+\begin{corollary}\label{lecture15:cor:epsg-explicit}
+The number $\varepsilon_g(n)$ can be written as
+\[
+\varepsilon_g(n)\;=\;\frac{(2n)!}{(n+1)!\,(n-2g)!}\,
+\bigl[s^{2g}\bigr]\!
+\left(\frac{s/2}{\tanh(s/2)}\right)^{n+1},
+\]
+where $\bigl[s^{2g}\bigr]f(s)$ denotes the coefficient of $s^{2g}$ in the power‑series expansion of $f(s)$.
+\end{corollary}
 
 
+
+One can define another family of coefficients:
+\begin{equation*}
+	C_g(n)\coloneqq \frac{2^g \varepsilon_g(n)}{\mathrm{Cat}_n}.
+\end{equation*}
+Then, \eqref{lecture15:eq:HZ-rec} can be rewritten as
+\begin{equation*}
+	C_g(n+1)=C_g(n)+\binom{n+1}2 C_{g-1}(n-1).
+\end{equation*}
+In particular, $C_g(n)$ is a positive integer, which is not straightforward from the
+definition of $\varepsilon_g(n)$.
+
+
+\section{Gaussian integrals and Wick formula}
+
+\label{lecture15:sec:gaussian-wick}
+
+\subsection{The standard one–dimensional Gaussian measure}
+\label{lecture15:subsec:1d-gaussian}
+
+Denote by
+\[
+  d\mu(x)\;=\;\frac{1}{\sqrt{2\pi}}\,
+               e^{-\frac{x^{2}}{2}}\,dx,
+  \qquad x\in\Bbb R,
+\]
+the \emph{standard centred Gaussian measure}.
+We record the elementary facts that will be used repeatedly:
+
+\begin{enumerate}[(i)]
+  \item \textbf{Normalization:}
+        $\displaystyle\int_{\Bbb R}d\mu(x)=1$.
+
+  \item \textbf{Odd moments vanish:}
+        $\langle x^{2n+1}\rangle=0$.
+
+  \item \textbf{Even moments:}
+        \[
+          \langle x^{2n}\rangle
+          \;=\;
+          \frac{1}{\sqrt{2\pi}}
+          \int_{-\infty}^{\infty}
+            x^{2n}e^{-\frac{x^{2}}{2}}dx
+          \;=\;(2n-1)!!,
+          \qquad n\in\Bbb N.
+        \]
+
+  \item \textbf{Characteristic (Fourier–Laplace) transform:}
+        \[
+          \varphi(t)
+          \;=\;
+          \int_{\Bbb R}e^{itx}\,d\mu(x)
+          \;=\;
+          e^{-\frac{t^{2}}{2}},
+          \qquad t\in\Bbb R.
+        \]
+\end{enumerate}
+Here and below we use the convenient bracket notation
+\(
+  \langle f\rangle:=\int_{\Bbb R}f(x)\,d\mu(x)
+\)
+for expectations.
+
+
+
+\begin{example}
+\label{lecture15:ex:x4}
+For $k=1$ with variance~$1$ we have
+\(
+  \langle x^{4}\rangle
+  = 3\,\langle x^{2}\rangle^{2}=3.
+\)
+For degree $6$ one finds
+\(
+  \langle x^{6}\rangle = 15.
+\)
+More generally,
+$\langle x^{2n}\rangle=(2n-1)!!$.
+This can be computed by a simple induction.
+\end{example}
+
+
+
+\subsection{Gaussian measures on \texorpdfstring{$\Bbb R^{k}$}{Rk}}
+\label{lecture15:subsec:multivariate-gaussian}
+
+Fix a positive–definite symmetric matrix
+$B\in\operatorname{Sym}_{k}^{+}(\Bbb R)$ and set
+$C:=B^{-1}$.
+The centred Gaussian measure with covariance~$C$ is
+\begin{equation}
+  d\mu_{B}(x)
+  \;=\;
+  \underbrace{\bigl[(2\pi)^{-k/2}(\det B)^{1/2}\bigr]}_{\displaystyle =:\;Z_{B}^{-1}}
+  \exp\!\Bigl(-\tfrac12\langle Bx,x\rangle\Bigr)\,d^{k}x,
+  \qquad x\in\Bbb R^{k}.
+  \label{lecture15:eq:multivariate-gaussian-density}
+\end{equation}
+Orthogonal diagonalisation of~$B$ shows that the normalising
+prefactor indeed gives $\int_{\Bbb R^{k}}d\mu_{B}=1$.
+
+\paragraph{Basic facts.}
+\begin{align}
+  \langle x_{i}\rangle &= 0,
+  \quad
+  1\le i\le k;
+  \label{lecture15:eq:mean-zero}\\
+  \langle x_{i}x_{j}\rangle &= C_{ij},
+  \quad
+  1\le i,j\le k.
+  \label{lecture15:eq:covariance}
+\end{align}
+All higher moments are expressed in terms of the matrix~$C$
+via Wick’s formula in \Cref{lecture15:subsec:wick} below.
+
+\begin{remark}
+	In this lecture, we consider only \emph{centered} (mean zero) Gaussian measures.
+\end{remark}
+
+\subsection{Wick (Isserlis) formula}
+\label{lecture15:subsec:wick}
+
+The essence of Wick’s formula is that \emph{every} moment of a
+centred Gaussian vector is a sum over pairwise contractions governed
+solely by the covariance matrix.
+
+\begin{theorem}[Wick’s (or Isserlis’) formula]
+\label{lecture15:thm:wick}
+Let $x=(x_{1},\dots,x_{k})$ be distributed according
+to~\eqref{lecture15:eq:multivariate-gaussian-density}.
+For an integer $n\ge1$ and indices $i_{1},\dots,i_{2n}\in\{1,\dots,k\}$,
+\begin{equation}
+  \bigl\langle x_{i_{1}}\cdots x_{i_{2n}}\bigr\rangle
+  \;=\;
+  \sum_{p\in\operatorname{Pair}(2n)}
+        \;\prod_{\{a,b\}\in p}
+        C_{i_{a}i_{b}},
+  \label{lecture15:eq:wick}
+\end{equation}
+where $\operatorname{Pair}(2n)$ is the set of all
+$(2n-1)!!$ perfect pairings of $\{1,\dots,2n\}$.
+If the degree is \emph{odd}, then the expectation vanishes.
+
+More generally, for any \emph{linear} functions (not necessarily distinct)
+$f_1,\ldots,f_{2n}$ of the variables $x_1,\ldots,x_k$, we have
+\begin{equation}
+	\label{lecture15:eq:f_Wick}
+	\bigl\langle f_{1}\cdots f_{2n}\bigr\rangle
+	=\sum
+	\langle f_{p_1}f_{q_1} \rangle
+	\langle f_{p_2}f_{q_2} \rangle \ldots
+	\langle f_{p_n}f_{q_n} \rangle,
+\end{equation}
+where the sum is over all pairings of the indices $1,\ldots,2n$,
+and $p_1<p_2<\ldots<p_n$ , $q_1<q_2<\ldots<q_n$ are the
+indices encoding the pairing.
+\end{theorem}
+
+\begin{proof}[Sketch of proof]
+	When $C=\operatorname{diag}(\sigma_{1}^{2},\dots,\sigma_{k}^{2})$,
+mixed covariances vanish and Wick’s formula factorizes:
+\begin{equation*}
+  \bigl\langle
+     x_{1}^{2n_{1}}\cdots x_{k}^{2n_{k}}
+  \bigr\rangle
+  \;=\;
+  \prod_{i=1}^{k}
+    (2n_{i}-1)!!\;\sigma_{i}^{2n_{i}},
+  \qquad n_{1},\dots,n_{k}\in\Bbb N.
+  \label{lecture15:eq:wick-diagonal}
+\end{equation*}
+Indeed, pairings are allowed only between indices of the same variable,
+and then the number of pairings within one variable $x_i$ is $(2n_i-1)!!$.
+
+The general case of Wick’s formula follows from the diagonal case by
+making a linear change of variables which diagonalizes the covariance matrix, and using the linearity of
+\eqref{lecture15:eq:f_Wick}.
+\end{proof}
+
+\begin{example}
+	The one-dimensional integral
+	$\langle  x^4 \rangle =\frac{1}{\sqrt{2\pi}} \int_{-\infty}^{\infty} x^4 e^{-\frac{x^2}{2}} dx$ can be computed using Wick’s formula:
+	\begin{equation*}
+		\langle f_1f_2f_3f_4 \rangle =
+		\langle f_1f_2 \rangle \langle f_3f_4 \rangle + \langle f_1f_3 \rangle \langle f_2f_4 \rangle + \langle f_1f_4 \rangle \langle f_2f_3 \rangle,
+	\end{equation*}
+	where $f_i(x)=x$ for $i=1,2,3,4$.
+	We know this integral is equal to $3$.
+\end{example}
+
+\begin{remark}
+	\label{lecture15:rem:wick-linear}
+	Note that in the second part of \Cref{lecture15:thm:wick},
+	the linear functions $f_j$ must be not \emph{affine}, but truly \emph{linear},
+	that is, $f_j(0,\ldots,0)=0$. See Problem~\ref{lecture15:prob:wick-linear}.
+\end{remark}
+
+
+\section{GUE integrals and gluing polygons}
+
+We will now apply Wick’s formula to compute the moments of traces of
+GUE matrices. Recall that in
+\Cref{chap:lecture1}
+and
+\Cref{chap:lecture2} we
+worked with general Wigner matrices (real symmetric or Hermitian),
+and now we will deal with the special case of
+GUE, Gaussian Hermitian matrices.
+Here, the Gaussian distribution will allow us to
+connect the moments of traces of GUE matrices to the topology of surfaces.
+
+\subsection{Traces of powers, again}
+\label{lecture15:subsec:traces-powers}
+
+
+Let $\mathcal{H}_N$ be the space of $N\times N$ Hermitian matrices,
+and $\mu$ on $\mathcal{H}_N$ be the GUE measure, with complex variances $1$
+for the diagonal and off-diagonal entries.
+Let us begin by an example with $n=2$.
+
+Consider the integral
+\[
+  \int_{\mathcal{H}_N}\!\operatorname{tr}(H^4)\,d\mu(H).
+\]
+Here the integrand is a sum of monomials,
+\[
+  \operatorname{tr}(H^4)
+  \;=\;
+  \sum_{i,j,k,l=1}^N
+    h_{ij}\,h_{jk}\,h_{kl}\,h_{li}.
+\]
+Since each entry $h_{pq}$ is a linear function of the real and imaginary parts
+of $H$, we may apply Wick’s formula:
+\begin{equation}\label{lecture15:eq:wick-square}
+  \bigl\langle h_{ij}h_{jk}h_{kl}h_{li}\bigr\rangle
+  =
+  \langle h_{ij}h_{jk}\rangle\,\langle h_{kl}h_{li}\rangle
+  +
+  \langle h_{ij}h_{kl}\rangle\,\langle h_{jk}h_{li}\rangle
+  +
+  \langle h_{ij}h_{li}\rangle\,\langle h_{jk}h_{kl}\rangle.
+\end{equation}
+\begin{lemma}
+	We have $\langle h_{ij}h_{ji} \rangle =1$, and all other
+	second moments are zero.
+\end{lemma}
+\begin{proof}
+	This is straightforward from the independence of real and imaginary parts of the entries of $H$.
+\end{proof}
+
+Let us inspect each term in \eqref{lecture15:eq:wick-square} separately:
+\begin{itemize}
+  \item In the first product
+        $\langle h_{ij}h_{jk}\rangle$ is nonzero only when $i=k$, and then equals $1$.
+        Likewise $\langle h_{kl}h_{li}\rangle=1$ only when $k=i$.  Summing over all $i,j,k,l$
+        with $i=k$ gives $N^3$.
+
+  \item In the second product
+        $\langle h_{ij}h_{kl}\rangle\,\langle h_{jk}h_{li}\rangle$ is nonzero
+        only if $i=j=k=l$, and then each factor equals $1$.  Hence this term contributes $N$.
+
+  \item The third product is identical in structure to the first and therefore contributes another $N^3$.
+\end{itemize}
+There is a one‐to‐one correspondence between these three terms in \eqref{lecture15:eq:wick-square}
+and the three pairings of the edges of a square (see \Cref{lecture15:fig:square-gluings}).  Each pairing contributes
+$N^{V(\sigma)}$, where $V(\sigma)$ is the number of vertices in the glued graph.
+
+Putting everything together, we get
+\[
+  \int_{\mathcal{H}_N}\!\operatorname{tr}(H^4)\,d\mu(H)
+  \;=\;
+  2\,N^3 + N
+  \;=\;
+	T_2(N),
+\]
+where $T_2(N)$ is defined by \eqref{lecture15:eq:Tn-def}.
+
+In a similar manner, we obtain the following:
+\begin{proposition}
+	\label{lecture15:prop:traces-moments}
+	For any $n\ge 1$, we have
+	\[
+		\int_{\mathcal{H}_N}\!\operatorname{tr}(H^{2n})\,d\mu(H)
+		\;=\;
+		T_n(N).
+	\]
+	Odd moments (expectations of $\operatorname{tr}(H^{2n+1})$) vanish.
+\end{proposition}
+\begin{proof}[Proof sketch]
+	The idea why we get the genus will be evident from a larger example.
+	Let $n=4$, so we are dealing with a sum of $N^{8}$ monomials of the form
+\[
+  h_{i_{1}i_{2}}
+  h_{i_{2}i_{3}}
+  h_{i_{3}i_{4}}
+  h_{i_{4}i_{5}}
+  h_{i_{5}i_{6}}
+  h_{i_{6}i_{7}}
+  h_{i_{7}i_{8}}
+  h_{i_{8}i_{1}}.
+\]
+Choose an arbitrary Wick pairing (there are $7!!=105$ of them).
+For instance, pair
+\[
+  h_{i_{1}i_{2}}\;\text{with}\;h_{i_{4}i_{5}},\quad
+  h_{i_{2}i_{3}}\;\text{with}\;h_{i_{5}i_{6}},\quad
+  h_{i_{3}i_{4}}\;\text{with}\;h_{i_{8}i_{1}},\quad
+  h_{i_{6}i_{7}}\;\text{with}\;h_{i_{7}i_{8}}.
+\]
+In other words, consider the product
+\begin{equation}
+  \bigl\langle h_{i_{1}i_{2}}h_{i_{4}i_{5}}\bigr\rangle
+  \bigl\langle h_{i_{2}i_{3}}h_{i_{5}i_{6}}\bigr\rangle
+  \bigl\langle h_{i_{3}i_{4}}h_{i_{8}i_{1}}\bigr\rangle
+  \bigl\langle h_{i_{6}i_{7}}h_{i_{7}i_{8}}\bigr\rangle.
+  \label{lecture15:eq:example-3.10}
+\end{equation}
+Each factor in
+\eqref{lecture15:eq:example-3.10} is usually~$0$; if any of them vanishes, so does
+the whole product.  For the product to be non–zero, \emph{every} factor
+must equal~$1$, which imposes the constraints
+\[
+  \langle h_{i_{1}i_{2}}h_{i_{4}i_{5}}\rangle = 1
+  \iff
+  i_{1}=i_{5},\; i_{2}=i_{4};
+\qquad
+  \langle h_{i_{2}i_{3}}h_{i_{5}i_{6}}\rangle = 1
+  \iff
+  i_{2}=i_{6},\; i_{3}=i_{5};
+\]
+\[
+  \langle h_{i_{3}i_{4}}h_{i_{8}i_{1}}\rangle = 1
+  \iff
+  i_{3}=i_{1},\; i_{4}=i_{8};
+\qquad
+  \langle h_{i_{6}i_{7}}h_{i_{7}i_{8}}\rangle = 1
+  \iff
+  i_{6}=i_{8},\; i_{7}=i_{7}.
+\]
+Altogether we obtain the \emph{chain of equalities}
+\[
+  i_{1}=i_{5}=i_{3}=i_{1},\qquad
+  i_{2}=i_{4}=i_{8}=i_{6}=i_{2},\qquad
+  i_{7}=i_{7},
+\]
+which leaves $i_{1},i_{2},i_{7}$ free and therefore yields $N^{3}$
+admissible index choices.  So, the contribution of the pairing
+\eqref{lecture15:eq:example-3.10} equals $N^{3}$.
+
+\medskip
+Now,
+consider an octagon ($2n=8$), and glue its sides in pairs as illustrated in
+Figure~\ref{lecture15:fig:octagon-gluing}.  Since the edges are identified, we
+have also identification of the vertices:
+\[
+  i_{1}=i_{5},\; i_{2}=i_{4},\qquad
+  i_{2}=i_{6},\; i_{3}=i_{5},\qquad
+  i_{3}=i_{1},\; i_{4}=i_{8},\qquad
+	i_{6}=i_{8}.
+\]
+We thus see that the eight initial vertices collapse into
+\[
+  i_{1}=i_{5}=i_{3},\quad
+  i_{2}=i_{4}=i_{6}=i_{8},\quad
+  i_{7}=i_{7},
+\]
+producing $V(\sigma)=3$ vertices in the resulting map; hence the gluing
+$\sigma$ shown in Figure~\ref{lecture15:fig:octagon-gluing} contributes
+$N^{V(\sigma)} = N^{3}$.
+By \eqref{lecture15:eq:genus}, we get a torus.
+\end{proof}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[scale=1.6, thick,
+                      every node/.style={font=\scriptsize}]
+    %----------------------------------------------------------
+    % vertices of a regular octagon
+    \foreach \k in {1,...,8} {
+      \coordinate (v\k) at ({90-45*(\k-1)}:2);
+    }
+
+    % polygon outline
+    \draw (v1)--(v2)--(v3)--(v4)--(v5)--(v6)--(v7)--(v8)--cycle;
+
+    % vertex labels
+    \foreach \k/\lbl in {1/{i_1},2/{i_2},3/{i_3},4/{i_4},
+                         5/{i_5},6/{i_6},7/{i_7},8/{i_8}} {
+      \node[shift={({90-45*(\k-1)}:0.35)}] at (v\k) {$\lbl$};
+    }
+
+    % midpoints of sides
+    \foreach \a/\b/\name in {1/2/m12, 2/3/m23, 3/4/m34, 4/5/m45,
+                             5/6/m56, 6/7/m67, 7/8/m78, 8/1/m81} {
+      \coordinate (\name) at ($ (v\a)!0.5!(v\b) $);
+    }
+
+    % pairings: draw curved double-arrow between midpoints of glued sides
+    \draw[<->,bend left=28] (m12) to (m45); % (i1,i2)  ↔ (i4,i5)
+    \draw[<->,bend left=28] (m23) to (m56); % (i2,i3)  ↔ (i5,i6)
+    \draw[<->,bend right=32] (m34) to (m81);% (i3,i4)  ↔ (i8,i1)
+    \draw[<->,bend right=32] (m67) to (m78);% (i6,i7)  ↔ (i7,i8)
+  \end{tikzpicture}
+  \caption{An $8$–gon with pairwise–identified sides corresponding to the
+           Wick pairing considered in the proof of \Cref{lecture15:prop:traces-moments}.}
+  \label{lecture15:fig:octagon-gluing}
+\end{figure}
+
+\subsection{Computing traces of powers}
+\label{lecture15:subsec:traces-powers-computation}
+
+We now invoke the powerful technique of dealing with
+integrals over GUE through their spectrum.
+Recall that we have the following change of measure formula.
+For any function $f$ on $\mathcal{H}_N$ which depends only on the eigenvalues
+$\lambda_1,\ldots,\lambda_N$ of $H$, we have
+\begin{equation*}
+	\int_{\mathcal{H}_N} f(H) \, d\mu(H) =
+	c_N
+	\int_{\mathbb{R}^N}
+	f(\lambda_1,\ldots,\lambda_N) \prod_{1\le i<j\le N}
+	(\lambda_i-\lambda_j)^2
+	\prod_{i=1}^{N}\mu(d\lambda_i),
+\end{equation*}
+where $\mu(H)$ is the GUE distribution on $\mathcal{H}_N$, and
+$\mu(dx)$ is the one-dimensional Gaussian measure on $\mathbb{R}$.
+The constant $c_N$ depends only on $N$ (we computed it in,
+e.g.,
+\Cref{chap:lecture5} using determinantal structure of the
+GUE eigenvalues).
+
+\begin{lemma}
+	\label{lecture15:lem:traces-polynomial}
+	The function
+\[
+  t(N,n)\coloneqq\frac{T_n(N)}{(2n-1)!!}
+\]
+is a polynomial in the variable \(n\), of degree \(N-1\).
+\end{lemma}
+In particular,
+$t(1,n)=1$.
+\begin{proof}[Proof of \Cref{lecture15:lem:traces-polynomial}]
+Consider $f(H)=\operatorname{tr}(H^{2n})$,
+so $f(\lambda_1,\ldots,\lambda_N )=\lambda_1^{2n}+\ldots+\lambda_N^{2n}$.
+Because
+the integral over the GUE spectrum
+is symmetric in the \(\lambda_i\), we may replace the trace
+by \(N\lambda_1^{2n}\).
+
+Express the squared Vandermonde determinant as a polynomial in
+\(\lambda_1\) and integrate in the remaining variables
+\(\lambda_2,\dots,\lambda_N\).  This reduces the multiple integral to a
+one–dimensional integral whose integrand is a polynomial in
+\(\lambda_1\) of degree \(2n+2N-2\).  For fixed \(N\) the coefficients
+of this polynomial are constants; its leading coefficient equals
+\(Nc_N\).
+
+When we integrate each monomial \(\lambda_1^{2n+2k}\) and divide the
+result by \((2n-1)!!\), we obtain
+\[
+  \frac{(2n+2k-1)!!}{(2n-1)!!},
+\]
+which is a polynomial in \(n\) of degree \(k\).  Hence \(t(N,n)\) is a
+polynomial in \(n\) of degree \(N-1\), as desired.
+\end{proof}
+
+\subsection{Proof of Harer–Zagier formula}
+
+
+Assume now that the vertices of the $2n$-gon are colored in (at most)
+$N$ colors.  A gluing is said to be \emph{compatible with the coloring}
+if only vertices of the \emph{same} color may
+(but are not required to)
+be
+glued to one another.
+
+\begin{lemma}
+The number $T_n(N)$ is precisely the number of gluings of a
+$2n$-gon that are compatible with some coloring of its vertices in
+(at most) $N$ colors.
+\end{lemma}
+
+\begin{proof}
+After gluing, the boundary of the polygon becomes an embedded graph with
+$V$ vertices.  color each of those $V$ vertices with one of the $N$
+colors.  Any such coloring induces a coloring of the original
+polygon, and the given gluing is compatible with it.  There are exactly
+$N^{V}$ such colorings of the graph (note that adjacent vertices are
+\emph{not} required to have different colors).
+\end{proof}
+
+Let $\tilde T_n(N)$ denote the number of gluings of the $2n$-gon that
+are compatible with colorings in \emph{exactly} $N$ colors.
+Choosing which $L$ colors are actually used and then coloring the
+vertices gives
+\[
+   T_n(N)\;=\;\sum_{L=1}^{N}\binom{N}{L}\,\tilde T_n(L).
+\]
+\begin{remark}
+	This combinatorial technique is extremely standard, and it
+	is useful here.
+\end{remark}
+
+Clearly, $\tilde T_0(N)=\tilde T_1(N)=\tilde T_{N-2}(N)=0$, because the
+graph on the surface has at most $n+1$ vertices (and that is possible
+only when the graph is a tree).  Hence no coloring with more than
+$n+1$ different colors can be compatible with any gluing.
+
+Define
+\[
+    \tilde t(N,n)\;=\;\frac{\tilde T_n(N)}{(2n-1)!!}.
+\]
+The function $\tilde t(N,n)$ is a polynomial in $n$ of degree
+$N-1$ by \Cref{lecture15:lem:traces-polynomial}.
+We just found the roots of this polynomial:
+its $N-1$ roots are $0,1,2,\dots,N-2$.  Therefore, there exists a
+constant $A_N$ such that
+\[
+   \tilde t(N,n)
+       =A_N\,n(n-1)(n-2)\dots(n-N+2)
+       =A_N\,(N-1)!\,\binom{n}{N-1}.
+\]
+Substituting this into the expression for $T_n(N)$, we obtain
+\[
+  T_n(N)
+     =(2n-1)!!
+       \sum_{L=1}^{N}
+         A_L\,
+         \binom{n}{\,L-1}\,
+         \binom{N}{\,L}\,
+         (L-1)!!.
+\]
+
+Now, consider $T_n(N)$ as a polynomial in $N$.  Its leading coefficient (the
+coefficient of $N^{\,n+1}$) equals
+\[
+  (2n-1)!!\,
+  \frac{A_{n+1}}{(n+1)!}\,n!.
+\]
+On the other hand, this coefficient is known to be the $n$-th Catalan
+number (since the surface is a sphere, and we are enumerating trees):
+\[
+  (2n-1)!!\,
+  \frac{A_{n+1}}{(n+1)!}\,n!
+      =\operatorname{Cat}_n
+      =\frac{(2n)!}{n!\,(n+1)!}.
+\]
+Hence $A_{n+1}=2^{\,n}/n!$, and therefore, we have found
+\[
+  T_n(N)
+     =(2n-1)!!
+       \sum_{L=1}^{N}
+         2^{\,L-1}\,
+         \binom{n}{\,L-1}\,
+         \binom{N}{\,L}\,
+         (L-1)!!.
+\]
+Because $\binom{n}{L-1}=0$ when $n<L-1$, the number of non–zero summands
+is $\min\{N,n+1\}$.
+
+\medskip
+As the last step in the proof of \Cref{lecture15:thm:HZ-genfun}, we note that
+the last formula is exactly the series expansion of
+\[
+   \left(\frac{1+s}{1-s}\right)^{\!N}
+\]
+in powers of $s$. Indeed,
+\[
+  \begin{aligned}
+     1+2Ns
+     +2s\sum_{n=1}^{\infty}
+          \frac{T_n(N)}{(2n-1)!!}\,s^{n}
+     &\;=\;
+       1+\sum_{L=1}^{N}
+             2^{L}\binom{N}{L}
+             \sum_{n=L-1}^{\infty}
+               \binom{n}{\,L-1}\,s^{n+1}\\[4pt]
+     &=\sum_{L=0}^{N}
+          \binom{N}{L}
+          \left(\frac{2s}{1-s}\right)^{\!L}
+       =\left(\frac{1+s}{1-s}\right)^{\!N}.
+  \end{aligned}
+\]
+This completes the proof of \Cref{lecture15:thm:HZ-genfun}.
+
+
+\section{Going further: Multi-matrix models}
+
+\subsection{Maps with several faces and Feynman diagrams}
+\label{lecture15:subsec:feynman-multifaces}
+
+Fix a composition $\mathbf k=(k_1,\dots,k_\ell)$ with
+$k_1+\dots+k_\ell=n$.
+For a GUE matrix $H$ let
+\[
+  M_{\mathbf k}(N)
+  \;:=\;
+  \Bigl\langle
+    \operatorname{tr}(H^{2k_1})\,
+    \operatorname{tr}(H^{2k_2})\cdots
+    \operatorname{tr}(H^{2k_\ell})
+  \Bigr\rangle .
+\]
+Write each trace as a \emph{$2k_i$-valent star}: a cyclicly ordered vertex
+with $2k_i$ labelled half-edges.
+Wick’s formula pairs the $2n$ half-edges in every possible way; a
+pairing $\sigma$ produces an oriented ribbon graph~$\mathcal G(\sigma)$
+(dual to the collection of stars),
+with
+\begin{itemize}
+  \item $F=\ell$ faces (the original traces),
+  \item $E=n$ edges (Wick pairings),
+	\item a vertex count $V(\sigma)$.
+\end{itemize}
+On the other hand, we may count the star picture, then $V(\sigma)$ becomes
+$F^*(\sigma)$, the number of faces in the star picture.
+
+Each pairing contributes $N^{V(\sigma)}$, so
+\[
+  M_{\mathbf k}(N)\;=\sum_{\sigma} N^{V(\sigma)}=
+	\sum_{\sigma} N^{F^*(\sigma)}.
+\]
+The sum (the matrix integral)
+enumerates maps by genus.
+One can also write the matrix integral
+$\langle \operatorname{tr}(H)^{\alpha_1}\operatorname{tr}(H^2)^{\alpha_2}\ldots  \rangle $
+as a sum over
+all possible embedded graphs (into surfaces of various genera),
+with $\alpha_1$ vertices of degree $1$,
+$\alpha_2$ vertices of degree $2$, etc.
+The sum needs to be normalized by the number of automorphisms of the graph,
+more precisely, the matrix integral is equal to
+\begin{equation*}
+	\underbrace{\alpha_1!\ldots \alpha_k! \cdot 1^{\alpha_1}2^{\alpha_2}\ldots k^{\alpha_k}}_{c_\alpha}
+	\sum_{\Gamma}\frac{N^{F(\Gamma)}}{|\operatorname{Aug}(\Gamma)|}.
+\end{equation*}
+\begin{example}
+	There are two embedded graphs with one vertex and two cycles. For the sphere, the
+	automorphisms of the graph are $2$ (the two cycles can be interchanged), and for the torus, the automorphisms are $1$ (the two cycles cannot be interchanged). The contribution of the sphere is $2N^2$, and the contribution of the torus is $N^2$.
+	We have $\alpha_2=1$ (and all other $\alpha_i$ are zero), so
+	$c_\alpha=4$, and we get
+	\[
+	4\left(\frac{N^3}{2} + \frac{N}{4}\right) = 2N^3 + N,
+	\]
+	which is the moment $\langle \operatorname{tr}\left( H^4 \right) \rangle $,
+	as it should be.
+\end{example}
+
+\begin{remark}
+	Even the case $N=1$ is of interest:
+	\begin{equation*}
+		\sum_{\Gamma}\frac{1}{|\operatorname{Aut}(\Gamma)|}
+		=
+		\frac{1}{\alpha_1!\ldots \alpha_k!\cdot 1^{\alpha_1}2^{\alpha_2}\ldots k^{\alpha_k}}
+		\langle x^{\sum i\alpha_i} \rangle =
+		\frac{\left( -1+2\sum i\alpha_i \right)!!}
+		{\alpha_1!\ldots \alpha_k!\cdot 1^{\alpha_1}2^{\alpha_2}\ldots k^{\alpha_k}}.
+	\end{equation*}
+\end{remark}
+
+
+%-----------------------------------------------------------------------
+\subsection{Two–matrix model and the Ising interaction}
+\label{lecture15:subsec:ising}
+
+Take two independent GUE matrices
+$H,G\in\mathcal H_N$ and fix a real coupling $c$ with
+$|c|<1$.
+Consider the \emph{weighted} Gaussian measure with density proportional
+to $\exp\left\{ 2c \operatorname{tr}(HG) \right\}$.
+In other words, the  Gaussian measure on $\mathcal{H}_N\times\mathcal{H}_N$
+has two correlated matrices $H$ and $G$, with
+\begin{equation*}
+	\langle h_{ij}h_{ji} \rangle =\frac{1}{1-c^2},\qquad
+	\langle g_{ij}g_{ji} \rangle =\frac{1}{1-c^2},\qquad
+	\langle h_{ij}g_{ji} \rangle =\frac{c}{1-c^2},
+\end{equation*}
+and all other covariances vanish.
+
+Now, we may consider matrix integrals over the correlated measure, for example,
+\begin{equation*}
+	\int e^{-t\operatorname{tr}\left( H^4+G^4 \right)}d\mu(H)d\mu(G).
+\end{equation*}
+This integral is a generating function of four-valent maps (with an arbitrary number of vertices), but this time assign one of two ``states'' to each vertex of the map. We label these states $H$ and $G$; this labeling simply means that the vertex represents either $\text{tr}\, H^4$ or $\text{tr}\, G^4$, respectively. Now, if two vertices are connected by an edge and they are in the same state, the contribution of the edge to the sum (i.e., in the "perturbation theory series") is equal to $1 / (1 - c^2)$, and if the vertices are in different states, the contribution of this edge is equal to $c / (1 - c^2)$. The summation is carried out over all maps and all possible combinations of vertex states.
+
+The model we obtained is very reminiscent of the classical Ising model in statistical physics, only in this case the model is considered not on a regular lattice, but on the set of maps (and the summation is carried out not only over the states of the system, but also over all maps). Physicists call this model the ``Ising model on a dynamical lattice'' \cite{itzykson1980planar}. This model shares many common phenomena with the regular Ising model, such as the presence of phase transitions.
+
+
+\begin{remark}
+	Many other enumerative problems in geometry and topology can be
+	formulated in terms of Gaussian matrix integrals (with ``multi-matrix models'', that is,
+	involving several GUE matrices).
+	Examples include
+	Gauss' problem of counting the number of curves on a surface ($\mathbb{R}^2$ or the sphere)
+	up to isotopy; and the problem of counting meanders (curves which intersect a given
+	line at $n$ points, up to isotopy of the plane leaving the line invariant).
+\end{remark}
 
 
 
@@ -11110,6 +12095,73 @@ Let $a_1, \ldots, a_t$ and $b_1, \ldots, b_n$ be positive parameters satisfying 
 
 \section{Problems}
 
+\subsection{Gluing a Sphere}
+\label{lecture15:prob:gluing_sphere}
+Show that for a connected, orientable surface formed by gluing the edges of a $2n$-gon in pairs, the following are equivalent:
+\begin{enumerate}
+	\item The resulting surface is a sphere.
+	\item The embedded graph formed by the identification is a tree.
+	\item The pairing of edges corresponds to a \emph{noncrossing pairing} (i.e., when the edges are arranged around the polygon in order, the identifications can be drawn inside the disk without crossings).
+\end{enumerate}
+(This is the proof of \Cref{lecture15:prop:gluing_sphere}.)
+
+\subsection{Wick's formula for affine functions}
+\label{lecture15:prob:wick-linear}
+Consider the integrals of the form
+\[
+	I(a_1, \ldots, a_k) := \int_{-\infty}^\infty \prod_{i=1}^k (x - a_i)\; \frac{1}{\sqrt{2\pi}} e^{-x^2/2}\, dx,
+\]
+where $a_1, \ldots, a_k \in \mathbb{R}$ are fixed parameters.
+
+Compute $I(a_1, a_2)$ and $I(a_1, a_2, a_3, a_4)$ explicitly as polynomials in $a_1,\ldots, a_4$,
+and compare $I(a_1, a_2, a_3, a_4)$ with the Wick-like expansion.
+
+\subsection{GOE and non-orientable surfaces}
+\label{lecture15:prob:goe-nonorient}
+
+Let $S\in\operatorname{Sym}_N(\Bbb R)$ be drawn from the \emph{Gaussian Orthogonal Ensemble} (GOE), so that the entries
+are centred Gaussians with covariances
+\[
+  \langle s_{ij}s_{kl}\rangle
+  \;=\;
+  \delta_{ik}\,\delta_{jl}\;+\;\delta_{il}\,\delta_{jk},
+  \qquad 1\le i,j,k,l\le N.
+\]
+Because of the second term, Wick’s pairings now allow \emph{reversals} of
+indices, and the polygon-gluing picture changes accordingly.
+
+\begin{enumerate}[(a)]
+  \item
+  Show that each Wick contraction contributing to the moment
+  $\displaystyle\int_{\operatorname{Sym}_{N}(\Bbb R)}\!\!\!\operatorname{tr}(S^{2n})\,d\mu(S)$
+  corresponds to a pairing of the $2n$ edges of a $2n$-gon in which
+  \emph{half} of the identifications are orientation-preserving and the
+  other half are orientation-reversing.  Conclude that the resulting
+  surface is, in general, \textbf{non-orientable}.
+  (A convenient measure of non-orientability is the \emph{cross-cap number}
+  $\gamma$, so that the Euler characteristic is $\,\chi=2-\gamma$.)
+
+  \item
+  Let $\tilde\varepsilon_\gamma(n)$ be the number of pairings producing a
+  surface with $\gamma$ cross-caps.
+  Prove that
+  \[
+    2^n\int_{\operatorname{Sym}_{N}(\Bbb R)}\operatorname{tr}(S^{2n})\,d\mu(S)
+		=
+		\sum_{\sigma}N^{V(\sigma)}.
+  \]
+
+  \item
+  Compute $\tilde\varepsilon_\gamma(n)$ explicitly for $n=1,2,3$
+  and identify the corresponding additional non-orientable surfaces
+  (real projective plane, Klein bottle, \dots).
+
+  \item
+  Derive a recurrence relation for the numbers $\tilde\varepsilon_\gamma(n)$
+	analogous to the Harer–Zagier recurrence.
+  (\emph{Hint:} keep track of how
+  many of the $2n$ edges are glued with or without a twist.)
+\end{enumerate}
 
 
 

@@ -157,7 +157,7 @@ def create_book():
 % Graphics packages
 \usepackage{graphicx,color}
 \usepackage{tikz}
-\usetikzlibrary{shapes,arrows,positioning,decorations.markings}
+\usetikzlibrary{shapes,arrows,positioning,decorations.markings,calc}
 
 % Convenience packages
 \usepackage{array}
