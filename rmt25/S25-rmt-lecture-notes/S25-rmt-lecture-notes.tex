@@ -47,89 +47,33 @@
 \newtheorem{remark}[proposition]{Remark}
 \newtheorem{example}[proposition]{Example}
 
-% Exclude lecture notes for the final book
-\newenvironment{lnotes}{\section*{Notes for the lecturer}}{}
-\excludecomment{lnotes}
-
 \begin{document}
 
-\title{Lectures on Random Matrices (Spring 2025)}
+\title{Lectures on Random Matrices}
 \author{Leonid Petrov}
-\date{Spring 2025}
+\date{Updated \today}
 \maketitle
+\setcounter{tocdepth}{1}
 \tableofcontents
+\setcounter{tocdepth}{4}
+
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+
+These are the notes for a course on Random Matrix Theory,
+from Spring 2025 at University of Virginia.
+
+
+% \chapter*{Acknowledgements}
+% \addcontentsline{toc}{chapter}{Acknowledgements}
+
+% The author thanks the students in the course.
+% Support.
 
 \chapter{Moments of random variables and random
 matrices}
 \label{chap:lecture1}
 
-
-
-
-
-
-
-\begin{lnotes}
-
-``If you find something nice or beautiful or efficient in
-RMT or computing/numerics around RMT, please share with me.''
-
-\medskip
-
-``Each problem set is due for a month.
-You need to solve about 2 problems in each set. Attempt more,
-and do not always pick the easiest ones.''
-
-\medskip
-
-
-\textbf{Course Meetings:}
-\begin{itemize}
-				\item Classes are scheduled for 2:00-3:15 PM in Kerchof 326 on Wednesdays and some Mondays.
-				\item Lecture notes, including problem sets, will be available online.
-\end{itemize}
-
-\textbf{Lecture Schedule:}
-\begin{itemize}
-				\item (Mon) January 13: Moments of random variables and matrices.
-				\item (Wed) January 15: Wigner's semicircle law.
-				\item (Wed) January 22: Eigenvalue densities, Dyson Brownian motion.
-				\item Additional lectures are scheduled for the following dates:
-				\begin{itemize}
-								\item (Wed) January 29
-								\item (Wed) February 5
-								\item (Wed) February 12
-								\item (Wed) February 19
-								\item (Wed) February 26
-								\item (Wed) March 5
-								\item (Mon) March 24
-								\item (Wed) March 26
-								\item (Wed) April 2
-								\item (Wed) April 9
-								\item (Wed) April 16
-								\item (Wed) April 23
-				\end{itemize}
-\end{itemize}
-
-\textbf{Student Presentations:}
-\begin{itemize}
-				\item To be held on Mondays in April:
-				\begin{itemize}
-								\item (Mon) April 7
-								\item (Mon) April 14
-								\item (Mon) April 21
-								\item (Mon) April 28 (tentative - dependent on student enrollment)
-				\end{itemize}
-\end{itemize}
-
-\textbf{Weekly Individual Meetings:}
-\begin{itemize}
-				\item The course covers a span of 12 full weeks, excluding the first week, the final week, and the week following Spring break, during which I will be traveling.
-				\item Students will have one-on-one meetings at least 8 times during this period, each lasting approximately 45 minutes. While in-person meetings are preferred, a Zoom option is available.
-				\item These meetings are vital to the reading course component, allowing discussions on lectures, homework problems, student presentations, and research topics related to random matrices.
-\end{itemize}
-During the first week, a regular weekly meeting time will be set up for each student. Consistency throughout the semester is highly encouraged, although some flexibility is possible.
-\end{lnotes}
 
 
 \section{Why study random matrices?}
@@ -1000,18 +944,6 @@ Show that the number of rooted trees with $m$ edges is the $m$-th Catalan number
 
 
 
-\begin{lnotes}
-	PREP:
-	\begin{enumerate}
-		\item Start:
-			Catalan number formula
-		\item Moments of SC need to be computed
-		\item
-			SC is uniquely determined by its moments; need Carleman criterion to show that the moments determine the distribution.
-		\item from expected moments to the full convergence, some analysis needed
-	\end{enumerate}
-\end{lnotes}
-
 
 \section{Recap}
 
@@ -1442,7 +1374,7 @@ that almost surely, for each fixed \(k\),
   \nu_n\bigl(\{x\,:\,|x|>M\}\bigr)
 	\;\le\; \frac{C}{M^k}.
 \end{equation}
-Here, $C$ may depend on $k$, but 
+Here, $C$ may depend on $k$, but
 its growth is at most exponential in \(k\)
 due to the Catalan number moments.
 By choosing \(k\) large, we see that \(\nu_n\) puts
@@ -4222,16 +4154,16 @@ In \eqref{lecture5:eq:rho_k_computation_1}, we get, using the symmetry over $x_1
 	\label{lecture5:eq:rho_k_computation_2}
 	\rho_k(x_1,\dots,x_k)=\frac{1}{(n-k)!\,\widehat{Z}_{n,2}}
 	\sum_{\substack{\sigma,\tau\in S_n\\
-	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau) 
+	\sigma(k+1)=\tau(k+1),\ldots,\sigma(n)=\tau(n) }} \operatorname{sgn}(\sigma)\operatorname{sgn}(\tau)
 	\prod_{i=1}^k \psi_{\sigma(i)-1}(x_i)\psi_{\tau(i)-1}(x_i)  .
 \end{equation}
 Indeed, here we integrated over $x_{k+1},\ldots,x_n $, and passed
 from the functions $\phi_0,\phi_1,\ldots,\phi_{n-1} $
 to
 $\psi_0,\psi_1,\ldots,\psi_{n-1} $.
-The passage to the orthonormal functions only introduces the constant 
-$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the 
-normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and 
+The passage to the orthonormal functions only introduces the constant
+$h_0h_1\ldots h_{n-1} $ (by symmetry), and together with $n!$, we include it into the
+normalization $\widehat{Z}_{n,2} $. The normalization constant does not depend on $k$, and
 we later will show that the final normalization becomes $1$.
 
 To continue with \eqref{lecture5:eq:rho_k_computation_2}, we need two general lemmas.
@@ -4326,7 +4258,7 @@ where the kernel is given by
 \[
 K_n(x,y)=\sum_{j=0}^{n-1}\psi_j(x)\psi_j(y).
 \]
-The fact that the normalization constant 
+The fact that the normalization constant
 in \eqref{lecture5:eq:rho_k_determinantal_final_result}
 is indeed $1$ follows from \Cref{lecture5:lemma:Andreief}.
 Indeed, once the integral of $\rho_n$ over $\mathbb{R}^n$ is equal to \(n!\),
@@ -4576,25 +4508,6 @@ For the proof of the existence and uniqueness of the determinantal point process
 
 
 
-\begin{lnotes}
-
-\begin{itemize}
-	\item GUE det structure
-
-	\item Formulate Cauchy--Binet and Andreief
-
-	\item Recall that $\rho_n=P_n$ and it is
-	$\left( \det[\psi_i(x_j)]_{n\times n} \right)^2$, then reproduce the proofs here.
-
-	\item Recall the Christoffel--Darboux formula:
-	\begin{equation*}
-		K_n(x,y)=\frac{e^{-\frac{x^2+y^2}{4}}}{\sqrt{2\pi}
-		h_{n-1}}\,\frac{p_n(x)p_{n-1}(y)-p_{n-1}(x)p_n(y)}{x-y},
-	\end{equation*}
-	here $h_{n-1}=\sqrt{2\pi}(n-1)!$.
-\end{itemize}
-
-\end{lnotes}
 
 \section{Recap: Determinantal structure of the GUE}
 
@@ -6195,25 +6108,25 @@ Let $\mu_1,\ldots,\mu_{n-1}$ be the eigenvalues of the $(n-1)\times(n-1)$ corner
 \subsection{Inductive nature of the transition}
 
 Note that when we fix $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
-and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving 
+and get random $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ by solving
 \eqref{lecture7:eq:polynomial_equation}, we can then fix $\mu$ and get random
-$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on. 
+$\nu=(\nu_1\ge \ldots \ge \nu_{n-2} )$, and so on.
 Here, $\nu$ corresponds to the $(n-2)\times(n-2)$ corner of $H$.
 Indeed, we can condition on $\mu$, and conjugate $H$ again by a
 unitary matrix of the form $U=\begin{pmatrix}
 	U'&0\\0&1
 \end{pmatrix}$, where $U'\in U(n-1)$ is Haar distributed.
 Since $U\in U(n)$, this extra conjugation does not change the distribution of $H\in \mathrm{Orbit}(\lambda)$,
-but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the 
+but it allows us to treat the passage from $\mu$ to $\nu$ on the same grounds as the
 passage from $\lambda$ to $\mu$.
 
 \begin{remark}
-	In more detail, since the homogeneous space $U(n)/U(n-1)$ 
+	In more detail, since the homogeneous space $U(n)/U(n-1)$
 	can be identified with $S^{2n-1}$, the $(2n-1)$-dimensional real sphere,
 	we can construct a Haar-distributed unitary matrix $U\in U(n)$
 	by first picking a Haar-distributed unitary matrix $U'\in U(n-1)$,
 	and then picking a random point on the sphere $S^{2n-1}$.
-	Restricting $H$ to $\mathbb{C}^{n-1}$ fixes the last component on the sphere 
+	Restricting $H$ to $\mathbb{C}^{n-1}$ fixes the last component on the sphere
 	(up to a complex phase), but the eigenbasis of the restriction $H^{(n-1)}$
 	is still Haar distributed, but now in $U(n-1)$.
 \end{remark}
@@ -6234,16 +6147,16 @@ deterministic:
 \begin{equation*}
 	\sum_{i=1}^n \frac{1}{z-\lambda_i}=0.
 \end{equation*}
-Denote 
+Denote
 \begin{equation}
 	\label{lecture7:eq:P_z_definition}
 	P(z)=\prod_{i=1}^n(z-\lambda_i).
 \end{equation}
-Then 
+Then
 \begin{proposition}
 	The passage from $\lambda=(\lambda_1\ge \ldots \ge \lambda_n )$
 	to $\mu=(\mu_1\ge \ldots \ge \mu_{n-1} )$ in the limit as $\beta=\infty$
-	is deterministic, and it the same as the passage from the 
+	is deterministic, and it the same as the passage from the
 	roots of the polynomial $P(z)$ \eqref{lecture7:eq:P_z_definition} to the roots of its derivative $P'(z)$.
 \end{proposition}
 
@@ -6678,13 +6591,13 @@ The Stieltjes transform of the semicircular law is given by:
 	\frac{1}{2} \left(z-\sqrt{z^2-4}\right).
 \end{equation*}
 We take this as the function $G_t(z)$ for $t=1$.
-Then, for each $0\le t\le 1$, the 
-G$\beta$E solution should be 
+Then, for each $0\le t\le 1$, the
+G$\beta$E solution should be
 \begin{equation*}
 	\frac{1}{n}\sum_{i=1}^{\lfloor nt \rfloor }\frac{1}{z-\lambda_i^{(\lfloor nt \rfloor )}}
 	\to t\ssp G^{(\sqrt t)}(z),
 \end{equation*}
-where 
+where
 \begin{equation*}
 	G^{(c)}(z) \coloneqq \frac{z-\sqrt{z^2-4c^2}}{2c^2},
 \end{equation*}
@@ -7597,7 +7510,7 @@ Since $\mathcal{M}(u)$ diagonalizes to $\mathrm{diag}\bigl(\lambda_1(u),\ldots,\
 \begin{equation*}
 	\mathcal{M}(u)=U_u\,\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\,U_u^\dagger.
 \end{equation*}
-Now take another independent Haar-distributed unitary matrix $V$ and 
+Now take another independent Haar-distributed unitary matrix $V$ and
 write
 \[
 	V^\dagger\mathcal{M}(t)\,V=V^\dagger\;U_u^\dagger\,\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;U_u V\;+V^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)V.
@@ -7608,9 +7521,9 @@ Thus, after conjugation by $U_uV$, we have
 \[
 U_u\,\mathcal{M}(t)\,U_u^\dagger\;=\;\mathrm{diag}\bigl(\lambda_1(u),\ldots,\lambda_N(u)\bigr)\;+\; U_u V\bigl(V^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)V\bigr)\,V^\dagger U_u^\dagger.
 \]
-The left-hand side 
+The left-hand side
 has eigenvalues $\lambda_j(t)$, which are obtained from $\lambda_j(u)$
-by adding a random term. 
+by adding a random term.
 This random term is a GUE matrix with variance $t-u$
 (the matrix $V^\dagger\bigl(\mathcal{M}(t)-\mathcal{M}(u)\bigr)V$ which has the GUE distribution
 by the unitary invariance of the GUE),
@@ -8875,7 +8788,7 @@ We conclude that $AB$ is a projection, since
 $(AB)^2=ABAB=AB$.
 
 \medskip
-For the rest of 
+For the rest of
 the analysis, continue to
 Problem~\ref{lecture11:prob:Gaussian_kernel}.
 
@@ -9454,26 +9367,26 @@ where the coordinates $(u,v)$ satisfy $u + v = t$ and $u - v = x$. In other word
 \subsection{Topics to continue}
 
 \begin{itemize}
-	\item Multipath LPP and multi-layer PNG: 
+	\item Multipath LPP and multi-layer PNG:
 		$h_1+\ldots+h_k $ (with the droplet initial condition)
-		has the same distribution as 
+		has the same distribution as
 		$\mathcal{P}^{(k)}[(0,0)\to (t+x,t-x)]$, the $k$-path point-to-point LPP distribution.
 	\item Connection to the Airy line ensemble --- PNG with
 		the droplet initial condition converges to the Airy line
 		ensemble. (Same it true of the LPP, by the mapping.)
-		So, the PNG/LPP with the droplet initial condition 
+		So, the PNG/LPP with the droplet initial condition
 		is related to Hermitian symmetric random matrices.
-	\item PNG with flat initial condition / LPP in the point-to line regime 
+	\item PNG with flat initial condition / LPP in the point-to line regime
 		converge to the GOE Tracy-Widom distribution.
 		This initial condition is somehow related to real symmetric random matrices.
 	\item The full scaling limit --- the flat initial condition
-		version of the Airy line ensemble --- is less understood. In particular, 
+		version of the Airy line ensemble --- is less understood. In particular,
 		its Gibbs property is not quite clear.
-	\item Multipoint PNG fluctuations are asymptotically described by the 
-		KPZ fixed point Markov process \cite{matetski2017kpz}, 
+	\item Multipoint PNG fluctuations are asymptotically described by the
+		KPZ fixed point Markov process \cite{matetski2017kpz},
 		and, in full generality of fluctuations,
 		by an object known as Directed Landscape \cite{directed_landscape}.
-	\item Possible next item to explore: 
+	\item Possible next item to explore:
 		Mapping LPP to the Wishart-Laguerre ensemble.
 \end{itemize}
 
@@ -10983,7 +10896,7 @@ To see this correspondence, we interpret $L(t,i) - L(t,i-1)$ (with the conventio
 				\draw[<->, dashed, orange] (8,-0.8) -- (9,-0.8) node[midway, below] {pushed};
 
 \end{tikzpicture}
-\caption{Illustration of a pushTASEP jump. The particle attempts to jump by 2. 
+\caption{Illustration of a pushTASEP jump. The particle attempts to jump by 2.
 It pushes two particles in a cascade of pushes.}
 \end{figure}
 This connection completes the circle of relationships between random matrix theory, interacting particle systems, and last-passage percolation / random growth, demonstrating the deep unity of integrable probability models.
