@@ -58,9 +58,10 @@
 
 \author{Leonid Petrov; based on the joint work with Jeanne Scott \cite{PetrovScott2024Fibonacci}}
 
-\date{University of Illinois at Urbana-Champaign, Integrability \& Representation Theory (IRT) Seminar, February 20, 2025\\
-Rutgers University, 
-Symmetric Functions and Probability Seminar, March 12, 2025}
+\date{UIUC, Integrability \& Representation Theory (IRT) Seminar, February 20, 2025\\
+Rutgers, 
+Symmetric Functions and Probability Seminar, March 12, 2025\\
+CMSA (Harvard), Program on Integrability, May 2, 2025}
 
 
 \maketitle
@@ -73,7 +74,7 @@ Symmetric Functions and Probability Seminar, March 12, 2025}
 
 These are notes for a chalk talk, prepared based on the paper
 \cite{PetrovScott2024Fibonacci}, in the ``extended lecture notes''
-style, similar to my \href{https://lpetrov.cc/rmt25/}{random matrix course}.
+style.
 Along the notes, there are numerous skipped details,
 which are left as exercises for the reader.
 
@@ -626,7 +627,7 @@ with \emph{positive coefficients}.
 Other examples come from orthogonal polynomials
 in the (q-)Askey scheme. We describe the framework next.
 
-Examples with convergent series are, for example, $t_k=\alpha/k^\gamma$, $\gamma>1$.
+Another example: $t_k=\alpha/k^\gamma$, $\gamma>1$.
 
 \subsection{Stieltjes moment problem}
 
@@ -708,12 +709,12 @@ a certain discrete distribution with atoms at nontrivial locations, and
 \begin{equation}
 	\label{eq:MGF_shifted_charlier_solution}
 	M\big(z;\rho, \sigma\big)
-	= \frac{
-	{_1F_1}\left(\sigma  ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
-	}{
-	{_1F_1}\left(\sigma - 1 ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
-	- z (\sigma - 1) \, {_1F_1}\left(\sigma  ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
-	}.
+	=
+	\big(1 - z(\sigma-1) \big)^{-1} \,
+        \frac{
+		{_1F_1}\left(\sigma  ; \, \sigma - \frac{1}{z}  ; \, -\rho \right)
+		}{
+		{_1F_1}\left(\sigma - 1 ; \, \sigma -1 - \frac{1}{z}  ; \, -\rho \right)}.
 \end{equation}
 
 
@@ -739,7 +740,7 @@ we can conclude that the weighting measure
 on the boundary is fully supported on the
 ``discrete'' component.
 
-\subsection{Divergent type}
+\subsection{}
 
 We have scaling limits for the measures
 $\rho=1$, $\sigma\ge1$
@@ -748,7 +749,7 @@ $\sigma=1$, $0<\rho\le 1$.
 Both of these regimes recover the Plancherel measure
 result of \cite{gnedin2000plancherel}.
 
-\subsubsection{}
+\subsubsection{Charlier (divergent type)}
 
 Consider the Charlier specialization
 \begin{equation}
@@ -807,8 +808,7 @@ distributed simply as $\mathrm{GEM}(\rho)$.
 (GEM is a fundamental distribution in probability modeling and such.)
 
 
-\subsubsection{}
-
+\subsubsection{Shifted Plancherel (convergent type)}
 
 Consider
 the shifted Plancherel specialization
