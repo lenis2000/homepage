@@ -616,6 +616,20 @@ have all minors either identically zero,
 or element of $\mathbb{Z}[\varepsilon_1,\varepsilon_2,\ldots ]$
 with \emph{positive coefficients}.
 
+The parameters $c_k$ and $t_k$ are obtained from $(\vec x,\vec{y}\ssp)$ as 
+\begin{equation*}
+	c_k=\frac{A_{k}(\vec x\mid \vec{y}\ssp)}{A_{k-1}(\vec x\mid \vec{y}\ssp)},\qquad
+	t_k=y_k\frac{A_{k-1}(\vec x\mid \vec{y}\ssp)}{A_{k+1}(\vec x\mid \vec{y}\ssp)}
+	=x_{k+1}\frac{A_k(\vec x\mid \vec{y}\ssp)}{A_{k+1}(\vec x\mid \vec{y}\ssp)}-1
+	,\qquad k\ge1,
+\end{equation*}
+with the agreement that $A_0(\vec x\mid \vec{y}\ssp)=1$ and $t_0=0$.
+Here, $A_k$ are the tridiagonal determinants used in the definition of the clone Schur functions.
+
+Note that multiple sequences $(\vec x,\vec{y}\ssp)$ can lead to the same
+clone coherent measures / clone harmonic functions.
+
+
 \subsection{Examples for which we do scaling limits}
 
 \begin{itemize}
