@@ -1,5 +1,5 @@
 ---
-title: Young Diagram Dimension Visualization
+title: Young diagrams of maximal dimension
 model: misc
 author: 'Leonid Petrov'
 code:
@@ -21,6 +21,22 @@ code:
     fill: #4682b4;
     stroke: #000;
     stroke-width: 1px;
+  }
+  .young-box-new {
+    fill: #ff7f50; /* Coral color for new boxes */
+    stroke: #000;
+    stroke-width: 1px;
+  }
+  .young-box-moved {
+    fill: #9370db; /* Medium purple for moved boxes */
+    stroke: #000;
+    stroke-width: 1px;
+  }
+  .young-box-removed {
+    fill: none;
+    stroke: #ff0000; /* Red color for removed boxes */
+    stroke-width: 2px;
+    stroke-dasharray: 5,5;
   }
   .stats-card {
     margin-top: 20px;
@@ -50,9 +66,8 @@ code:
   <div class="row">
     <div class="col-md-12">
       <p>
-        This visualization displays the Young diagrams with the maximum dimension (number of standard Young tableaux)
-        for each size n. These partitions maximize f<sup>λ</sup> as identified in the paper
-        <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
+          This visualization displays the Young diagrams with the maximum dimension (number of standard Young tableaux)
+          for each size $n$. For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
       </p>
     </div>
   </div>
@@ -84,7 +99,7 @@ code:
         <div class="card-body">
           <div id="stats-container">
             <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
-            <p><strong>Dimension f<sup>λ</sup>:</strong> <span id="dimension-display">-</span></p>
+            <p><strong>Dimension $f^{\lambda}$:</strong> <span id="dimension-display">-</span></p>
           </div>
         </div>
       </div>
@@ -436,8 +451,11 @@ code:
     116: { partition: [18, 15, 13, 11, 10, 8, 7, 6, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1], dimension: 638413540225466549323771634427856615642473725894742100863592254944610659948329752000000000000 }
   };
 
+  // Store the previous partition
+  let previousPartition = null;
+
   // Function to draw the Young diagram for a given partition
-  function drawYoungDiagram(partition) {
+  function drawYoungDiagram(partition, n) {
     const container = document.getElementById('young-diagram-container');
     container.innerHTML = '';
 
@@ -445,9 +463,16 @@ code:
     const boxSize = 40;
     const margin = 20;
 
-    // Calculate diagram dimensions
-    const numRows = partition.length;
-    const numCols = Math.max(...partition);
+    // Get the previous partition if available
+    const prevPartition = n > 1 ? partitionData[n-1].partition : null;
+
+    // Calculate max dimensions considering both current and previous partitions
+    const numRows = Math.max(partition.length, prevPartition ? prevPartition.length : 0);
+    const numCols = Math.max(
+      Math.max(...partition),
+      prevPartition ? Math.max(...prevPartition) : 0
+    );
+
     const width = numCols * boxSize + margin * 2;
     const height = numRows * boxSize + margin * 2;
 
@@ -457,17 +482,176 @@ code:
       .attr('width', width)
       .attr('height', height);
 
-    // Create each box in the diagram
-    for (let row = 0; row < numRows; row++) {
+    // Create a map to track box statuses
+    let boxStatuses = new Map();
+
+    // If we have a previous partition, identify box statuses
+    if (prevPartition) {
+      // Create a map of boxes in the current partition
+      const currentBoxes = new Set();
+      for (let row = 0; row < partition.length; row++) {
+        for (let col = 0; col < partition[row]; col++) {
+          currentBoxes.add(`${row},${col}`);
+        }
+      }
+
+      // Create a map of boxes in the previous partition
+      const prevBoxes = new Set();
+      for (let row = 0; row < prevPartition.length; row++) {
+        for (let col = 0; col < prevPartition[row]; col++) {
+          prevBoxes.add(`${row},${col}`);
+        }
+      }
+
+      // Identify boxes that exist in both partitions (these haven't changed)
+      const unchangedBoxes = new Set();
+      prevBoxes.forEach(box => {
+        if (currentBoxes.has(box)) {
+          unchangedBoxes.add(box);
+        }
+      });
+
+      // Identify boxes that exist in current but not in previous (new boxes)
+      const newBoxes = new Set();
+      currentBoxes.forEach(box => {
+        if (!prevBoxes.has(box)) {
+          newBoxes.add(box);
+        }
+      });
+
+      // Identify boxes that exist in previous but not in current (removed boxes)
+      const removedBoxes = new Set();
+      prevBoxes.forEach(box => {
+        if (!currentBoxes.has(box)) {
+          removedBoxes.add(box);
+        }
+      });
+
+      // For boxes in the current partition, determine if they're new, unchanged, or moved
+      for (let row = 0; row < partition.length; row++) {
+        for (let col = 0; col < partition[row]; col++) {
+          const boxKey = `${row},${col}`;
+
+          if (newBoxes.has(boxKey)) {
+            // This is a new box
+            boxStatuses.set(boxKey, 'new');
+          } else if (unchangedBoxes.has(boxKey)) {
+            // This box hasn't changed
+            boxStatuses.set(boxKey, 'unchanged');
+          } else {
+            // If it's neither new nor unchanged, it must have moved from somewhere else
+            boxStatuses.set(boxKey, 'moved');
+          }
+        }
+      }
+
+      // Mark removed boxes
+      removedBoxes.forEach(boxKey => {
+        boxStatuses.set(boxKey, 'removed');
+      });
+    }
+
+    // First, draw the removed boxes (so they're in the background)
+    if (prevPartition) {
+      boxStatuses.forEach((status, boxKey) => {
+        if (status === 'removed') {
+          const [row, col] = boxKey.split(',').map(Number);
+          svg.append('rect')
+            .attr('class', 'young-box-removed')
+            .attr('x', margin + col * boxSize)
+            .attr('y', margin + row * boxSize)
+            .attr('width', boxSize)
+            .attr('height', boxSize);
+        }
+      });
+    }
+
+    // Then, draw the current boxes
+    for (let row = 0; row < partition.length; row++) {
       const rowLength = partition[row];
       for (let col = 0; col < rowLength; col++) {
+        const boxKey = `${row},${col}`;
+        let boxClass = 'young-box';
+
+        // If we have a previous partition, check if this box is new or moved
+        if (prevPartition) {
+          const boxStatus = boxStatuses.get(boxKey);
+          if (boxStatus === 'new') {
+            boxClass = 'young-box-new';
+          } else if (boxStatus === 'moved') {
+            boxClass = 'young-box-moved';
+          }
+        }
+
         svg.append('rect')
-          .attr('class', 'young-box')
+          .attr('class', boxClass)
           .attr('x', margin + col * boxSize)
           .attr('y', margin + row * boxSize)
           .attr('width', boxSize)
           .attr('height', boxSize);
       }
+    }
+
+    // Add a legend
+    if (prevPartition) {
+      const legendX = margin;
+      const legendY = height + 10;
+      const legendSpacing = 120;
+
+      // Existing boxes legend
+      svg.append('rect')
+        .attr('class', 'young-box')
+        .attr('x', legendX)
+        .attr('y', legendY)
+        .attr('width', 20)
+        .attr('height', 20);
+
+      svg.append('text')
+        .attr('x', legendX + 30)
+        .attr('y', legendY + 15)
+        .text('Existing');
+
+      // New boxes legend
+      svg.append('rect')
+        .attr('class', 'young-box-new')
+        .attr('x', legendX + legendSpacing)
+        .attr('y', legendY)
+        .attr('width', 20)
+        .attr('height', 20);
+
+      svg.append('text')
+        .attr('x', legendX + legendSpacing + 30)
+        .attr('y', legendY + 15)
+        .text('New');
+
+      // Moved boxes legend
+      svg.append('rect')
+        .attr('class', 'young-box-moved')
+        .attr('x', legendX + legendSpacing * 2)
+        .attr('y', legendY)
+        .attr('width', 20)
+        .attr('height', 20);
+
+      svg.append('text')
+        .attr('x', legendX + legendSpacing * 2 + 30)
+        .attr('y', legendY + 15)
+        .text('Moved');
+
+      // Removed boxes legend
+      svg.append('rect')
+        .attr('class', 'young-box-removed')
+        .attr('x', legendX + legendSpacing * 3)
+        .attr('y', legendY)
+        .attr('width', 20)
+        .attr('height', 20);
+
+      svg.append('text')
+        .attr('x', legendX + legendSpacing * 3 + 30)
+        .attr('y', legendY + 15)
+        .text('Removed');
+
+      // Adjust SVG height to accommodate legend
+      svg.attr('height', height + 40);
     }
   }
 
@@ -483,8 +667,8 @@ code:
       const formattedDimension = data.dimension.toLocaleString();
       document.getElementById('dimension-display').textContent = formattedDimension;
 
-      // Draw the Young diagram
-      drawYoungDiagram(data.partition);
+      // Draw the Young diagram with the current n value
+      drawYoungDiagram(data.partition, n);
     } else {
       document.getElementById('partition-display').textContent = 'Not available';
       document.getElementById('dimension-display').textContent = 'Not available';
