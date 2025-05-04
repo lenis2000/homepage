@@ -3,7 +3,7 @@ title: Young diagrams of maximal dimension
 model: misc
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/yourusername/homepage/blob/master/_simulations/misc/2025-05-04-dim-lambda.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-05-04-dim-lambda.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
@@ -312,7 +312,7 @@ code:
         '{{site.url}}/js/2025-05-04-dim-lambda-partitionData-large.json',
         '{{site.url}}/js/2025-05-04-dim-lambda-partitionData-large2.json'
       ];
-      
+
       // Load each file and merge the data
       for (const jsonFile of jsonFiles) {
         console.log(`Loading data from ${jsonFile}...`);
@@ -343,22 +343,22 @@ code:
               partitionData[key].dimension = partitionData[key].dimension.toString();
             }
           });
-          
+
           console.log(`Successfully merged data from ${jsonFile}`);
         } catch (parseError) {
           console.error(`Error parsing ${jsonFile}:`, parseError);
         }
       }
-      
+
       console.log("Partition data loading complete, merged data from all files.");
-      
+
       // Update max input value based on available data
       const availableKeys = Object.keys(partitionData).map(Number).sort((a, b) => a - b);
       if (availableKeys.length > 0) {
         const maxAvailable = Math.max(...availableKeys);
         // Leave the max as 12000 as specified in the HTML
         console.log(`Updated max input value to ${maxAvailable} based on available data`);
-        
+
         // Add data range information to the page
         const infoElement = document.createElement('p');
         infoElement.className = 'text-muted small mt-2';
