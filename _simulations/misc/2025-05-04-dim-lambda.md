@@ -45,7 +45,7 @@ code:
       overflow-x: scroll;
       -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
     }
-    
+
     /* Force display for mobile */
     .young-diagram-container svg {
       display: block !important;
@@ -92,7 +92,7 @@ code:
   .number-control-btn:hover {
     background: #e9ecef;
   }
-  
+
   /* Styles for the dimension display */
   #dimension-display {
     font-family: "SFMono-Regular", Consolas, Monaco, "Courier New", Courier, monospace;
@@ -141,7 +141,7 @@ code:
           <div class="mb-3">
             <label for="size-n" class="form-label">Size n:</label>
             <div class="number-input-container">
-              <input type="number" class="form-control" id="size-n" min="1" max="10000" value="10" required>
+              <input type="number" class="form-control" id="size-n" min="1" max="12000" value="47" required>
               <div class="number-controls">
                   <span class="number-control-btn" id="increment-btn">▲</span>
                   <span class="number-control-btn" id="decrement-btn">▼</span>
@@ -174,7 +174,7 @@ code:
           <div class="alert alert-warning" role="alert">
             <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Approximate Results</h4>
             <p>For n ≥ 500, the heuristic search was limited and the displayed partition may not have the maximum dimension.
-            Results are approximate and based on constrained optimization methods.</p>
+            Results are approximate and based on simpler greedy algorithms.</p>
           </div>
         </div>
 
@@ -310,10 +310,10 @@ code:
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       // Get the raw text first
       const rawText = await response.text();
-      
+
       // Use raw text parsing for dimension fields to preserve extremely large numbers
       try {
         // Parse JSON to object but ensure dimensions are preserved as strings
@@ -324,7 +324,7 @@ code:
           }
           return value;
         });
-        
+
         // For security, manually iterate through all entries and ensure dimensions are strings
         Object.keys(partitionData).forEach(key => {
           if (partitionData[key].dimension !== undefined) {
@@ -380,7 +380,7 @@ code:
     // Reduce box size for small screens more aggressively, especially for mobile
     const isMobile = window.innerWidth <= 576;
     const minBoxSize = isMobile ? 10 : 18; // Even smaller minimum for mobile
-    
+
     // For mobile, use a more aggressive calculation to ensure the diagram is visible
     let boxSize;
     if (isMobile) {
@@ -391,7 +391,7 @@ code:
       // For larger screens, use the original calculation
       boxSize = Math.min(baseBoxSize, Math.max(minBoxSize, containerWidth / (Math.max(1, Math.max(...partition)) + 5)));
     }
-    
+
     const margin = Math.max(5, boxSize / 4);
 
     // Get the previous partition if available
@@ -606,14 +606,14 @@ code:
 
       // Display dimension value - just focus on showing SUPER DUPER long numbers correctly
       const dimensionStr = data.dimension.toString(); // Convert to string
-      
+
       // Display the dimension value in textarea (use value instead of textContent)
       const dimensionDisplay = document.getElementById('dimension-display');
       dimensionDisplay.value = dimensionStr;
-      
+
       // Log for debugging
       console.log(`Dimension for n=${n}: String of length ${dimensionStr.length}`);
-      
+
       // Adjust textarea height based on content length
       const contentLength = dimensionStr.length;
       if (contentLength > 1000) {
@@ -898,13 +898,13 @@ code:
     // Force immediate redraw on orientation change
     const inputElement = document.getElementById('size-n');
     const currentN = parseInt(inputElement.value);
-    
+
     // First attempt after a very short delay
     setTimeout(function() {
       updateDisplay(currentN);
       drawCLambdaChart(currentN);
     }, 100);
-    
+
     // Second attempt after the device has fully reoriented
     setTimeout(function() {
       const container = document.getElementById('young-diagram-container');
@@ -914,7 +914,7 @@ code:
         drawCLambdaChart(currentN);
       }
     }, 500);
-    
+
     // Final attempt for problematic devices
     setTimeout(function() {
       // Force complete redraw if needed
