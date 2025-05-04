@@ -91,7 +91,7 @@ code:
           <div class="mb-3">
             <label for="size-n" class="form-label">Size n:</label>
             <div class="number-input-container">
-              <input type="number" class="form-control" id="size-n" min="1" max="194" value="10" required>
+              <input type="number" class="form-control" id="size-n" min="1" max="200" value="10" required>
               <div class="number-controls">
                   <span class="number-control-btn" id="increment-btn">▲</span>
                   <span class="number-control-btn" id="decrement-btn">▼</span>
@@ -109,7 +109,7 @@ code:
           <div id="stats-container">
             <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
             <p><strong>Dimension $f^{\lambda}$:</strong> <span id="dimension-display">-</span></p>
-            <p><strong>Scientific Notation:</strong> <span id="scientific-display">-</span></p>
+            <p><strong>Two-digit Notation:</strong> <span id="scientific-display">-</span></p>
             <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display">-</span></p>
           </div>
         </div>
@@ -126,7 +126,7 @@ code:
             </div>
             <div class="card-body">
               <div class="young-diagram-container" id="young-diagram-container"></div>
-              
+
               <!-- Fixed legend below the diagram -->
               <div class="legend-container mt-3" id="legend-container">
                 <div class="d-flex justify-content-center">
@@ -147,7 +147,7 @@ code:
             </div>
           </div>
         </div>
-        
+
         <!-- C(lambda) Graph Card -->
         <div class="col-md-12 mt-3">
           <div class="card">
@@ -204,7 +204,7 @@ code:
   .legend-label {
     font-size: 14px;
   }
-  
+
   /* Responsive adjustments for small screens */
   @media (max-width: 576px) {
     .legend-item {
@@ -219,20 +219,20 @@ code:
       font-size: 12px;
     }
   }
-  
+
   /* Chart styles */
   .c-lambda-chart-container {
     width: 100%;
     height: 300px;
     min-height: 250px;
   }
-  
+
   .x-axis path, .y-axis path,
   .x-axis line, .y-axis line {
     stroke: #ccc;
     stroke-width: 1px;
   }
-  
+
   .x-axis text, .y-axis text {
     font-size: 10px;
     fill: #666;
@@ -1017,12 +1017,36 @@ code:
     194: {
       partition: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1],
       dimension: 1801813588241517944009197924972526398196084901934661849538157026269813283931993057590649458897532150345959713547149337508817107991183886518351525657983605905028464183869440000000
+    },
+    195: {
+      partition: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1],
+      dimension: 24675792045813417953322513135224648279349409661998397559581138378194895380960588592423176988209134679682583045611396031481364147652515762199654968656099430155679805121285324800000
+    },
+    196: {
+      partition: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1],
+      dimension: 340697313583196939923926369340608459743325506808510754748938804688059761103385335519961405854148086871317042811562320607314407384809673266831875224592124423588828336189603840000000
+    },
+    197: {
+      partition: [24, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1],
+      dimension: 4669595821511130430098987663498533392683330475251395269889581437411554064549536658258655352374938843854747616144860186749927119030338793164984128961163766832830313589280604160000000
+    },
+    198: {
+      partition: [24, 21, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1],
+      dimension: 65093099975045062778281742905345638627081503003428659870395011017480622035331768118056854965397242758653549557848298640719018713311776570310839052832293580859934409222538246750208000
+    },
+    199: {
+      partition: [24, 21, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1],
+      dimension: 916710819457404389440474799951014836344864464112014952883117388253419468926715112346324173372736835250578240539409298655065743308449342884410444382753581164784252001555832635392000000
+    },
+    200: {
+      partition: [24, 21, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1],
+      dimension: 12719335299985277761385007561833781102700961858831173694226359269630216358693163090016720493630480956676766051898342046185230275765405562014883452030208984961209692985211276492800000000
     }
   };
 
   // Store the previous partition
   let previousPartition = null;
-  
+
   // No need to store c(lambda) values anymore, we'll calculate them on demand
 
   // Function to draw the Young diagram for a given partition
@@ -1219,9 +1243,10 @@ code:
       // Update partition display
       document.getElementById('partition-display').textContent = `[${data.partition.join(', ')}]`;
 
-      // Format dimension with commas for readability
-      const formattedDimension = data.dimension.toLocaleString();
-      document.getElementById('dimension-display').textContent = formattedDimension;
+      // Display raw dimension value exactly as stored in the object
+      // Using toString() would convert a bigint to scientific notation
+      const dimensionStr = data.dimension; // Keep exact value without string conversion
+      document.getElementById('dimension-display').textContent = dimensionStr;
 
       // Format dimension in scientific notation with LaTeX formatting
       let scientificNotation;
@@ -1237,10 +1262,10 @@ code:
       // Calculate and display c(lambda)
       const cLambda = calculateCLambda(data.dimension, n);
       document.getElementById('c-lambda-display').textContent = cLambda.toFixed(6);
-      
+
       // Draw the Young diagram with the current n value
       drawYoungDiagram(data.partition, n);
-      
+
       // Toggle legend visibility based on whether we have a previous partition
       const legendContainer = document.getElementById('legend-container');
       if (n > 1) {
@@ -1248,7 +1273,7 @@ code:
       } else {
         legendContainer.style.display = 'none';
       }
-      
+
       // Update the c(lambda) chart with current n
       drawCLambdaChart(n);
     } else {
@@ -1257,7 +1282,7 @@ code:
       document.getElementById('scientific-display').textContent = 'Not available';
       document.getElementById('c-lambda-display').textContent = 'Not available';
       document.getElementById('young-diagram-container').innerHTML = '<p>Data not available for this size.</p>';
-      
+
       // Hide legend when no data is available
       document.getElementById('legend-container').style.display = 'none';
     }
@@ -1275,7 +1300,7 @@ code:
     // Add event listener for input changes
     inputElement.addEventListener('input', function() {
       const n = parseInt(this.value);
-      if (n >= 1 && n <= 116) {
+      if (n >= 1 && n <= 200) {
         updateDisplay(n);
       }
     });
@@ -1283,7 +1308,7 @@ code:
     // Add event listener for increment button
     incrementBtn.addEventListener('click', function() {
       const currentValue = parseInt(inputElement.value) || 0;
-      const maxValue = parseInt(inputElement.max) || 116;
+      const maxValue = parseInt(inputElement.max) || 200;
 
       if (currentValue < maxValue) {
         inputElement.value = currentValue + 1;
@@ -1307,21 +1332,21 @@ code:
   function drawCLambdaChart(currentN) {
     const container = document.getElementById('c-lambda-chart-container');
     container.innerHTML = '';
-    
+
     if (currentN < 2) {
       container.innerHTML = '<div class="text-center p-3">At least n=2 is needed to display the chart.</div>';
       return;
     }
-    
+
     // Get container dimensions
     const containerWidth = container.offsetWidth;
     const containerHeight = container.offsetHeight || 250;
-    
+
     // Set up margins
     const margin = {top: 20, right: 30, bottom: 40, left: 60};
     const width = containerWidth - margin.left - margin.right;
     const height = containerHeight - margin.top - margin.bottom;
-    
+
     // Create SVG element
     const svg = d3.select('#c-lambda-chart-container')
       .append('svg')
@@ -1331,7 +1356,7 @@ code:
       .attr('preserveAspectRatio', 'xMidYMid meet')
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
-    
+
     // Calculate c(lambda) values up to current n
     const data = [];
     for (let n = 1; n <= currentN; n++) {
@@ -1345,50 +1370,50 @@ code:
         }
       }
     }
-    
+
     if (data.length < 2) {
       container.innerHTML = '<div class="text-center p-3">No valid data points to display the chart.</div>';
       return;
     }
-    
+
     // Set up scales
     const xScale = d3.scaleLinear()
       .domain([0, currentN + 1]) // Start from 0 with a bit of padding at the end
       .range([0, width]);
-    
+
     const yMin = Math.max(0, d3.min(data, d => d.value) * 0.9); // Start from 0 or slightly below min
     const yMax = d3.max(data, d => d.value) * 1.1; // Add 10% padding at the top
-    
+
     const yScale = d3.scaleLinear()
       .domain([yMin, yMax])
       .range([height, 0]);
-    
+
     // Create axes
     const xAxis = d3.axisBottom(xScale)
       .ticks(Math.min(10, currentN))
       .tickFormat(d => Math.floor(d)); // Only show integer tick values
-    
+
     const yAxis = d3.axisLeft(yScale)
       .ticks(5)
       .tickFormat(d => d.toFixed(2));
-    
+
     // Add axes to chart
     svg.append('g')
       .attr('class', 'x-axis')
       .attr('transform', `translate(0,${height})`)
       .call(xAxis);
-    
+
     svg.append('g')
       .attr('class', 'y-axis')
       .call(yAxis);
-    
+
     // Add X axis label
     svg.append('text')
       .attr('text-anchor', 'middle')
       .attr('x', width / 2)
       .attr('y', height + margin.bottom - 5)
       .text('n');
-    
+
     // Add Y axis label
     svg.append('text')
       .attr('text-anchor', 'middle')
@@ -1396,13 +1421,13 @@ code:
       .attr('x', -height / 2)
       .attr('y', -margin.left + 15)
       .text('c(λ)');
-    
+
     // Create line generator
     const line = d3.line()
       .x(d => xScale(d.n))
       .y(d => yScale(d.value))
       .curve(d3.curveMonotoneX); // Smoother curve
-    
+
     // Add line path
     svg.append('path')
       .datum(data)
@@ -1410,7 +1435,7 @@ code:
       .attr('stroke', '#4682b4')
       .attr('stroke-width', 2)
       .attr('d', line);
-    
+
     // Add points
     svg.selectAll('.point')
       .data(data)
@@ -1421,7 +1446,7 @@ code:
       .attr('cy', d => yScale(d.value))
       .attr('r', 3)
       .attr('fill', '#4682b4');
-    
+
     // Add current point highlight
     const currentPoint = data.find(d => d.n === currentN);
     if (currentPoint) {
@@ -1434,7 +1459,7 @@ code:
         .attr('stroke-width', 1);
     }
   }
-  
+
   // Handle window resize with debouncing to prevent excessive redraws
   let resizeTimeout;
   window.addEventListener('resize', function() {
