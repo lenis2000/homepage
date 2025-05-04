@@ -75,9 +75,12 @@ code:
   <div class="row">
     <div class="col-md-12">
       <p>
-          This visualization displays the Young diagrams with the maximum dimension (number of standard Young tableaux)
-          for each size $n$. For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
-          All data on this page was precomputed with various degree of heuristic accuracy. Up to $n=500$, this should be the correct maximal dimention, and after that, the answer should be close.
+          This visualization displays the Young diagrams with the maximum
+          dimension (number of standard Young tableaux)
+          or <b>close to maximum</b> (for large $n$).
+          Here $n$ is the number of boxes in the Young diagram.
+          For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
+          All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension, and after that, the answer should be reasonably close.
       </p>
     </div>
   </div>
@@ -10120,7 +10123,7 @@ code:
     if (partitionData[n] && partitionData[n].c_lambda !== undefined) {
       return partitionData[n].c_lambda;
     }
-    
+
     // For all n values, use logarithmic calculations to avoid overflow
     // Convert dimension to string to handle very large numbers
     const dimensionStr = dimension.toString();
@@ -10167,7 +10170,7 @@ code:
 
       // Display dimension value
       const dimensionStr = data.dimension; // Keep exact value without string conversion
-      
+
       // For very large numbers, display a placeholder and scientific notation
       if (n >= 300) { // Use n as a threshold to decide if dimension is too large
         document.getElementById('dimension-display').textContent = "Large value, see scientific notation";
@@ -10204,7 +10207,7 @@ code:
 
       // Calculate and display c(lambda)
       const cLambda = calculateCLambda(data.dimension, n);
-      
+
       // Check if cLambda is a valid finite number
       if (isFinite(cLambda)) {
         document.getElementById('c-lambda-display').textContent = cLambda.toFixed(6);
@@ -10322,7 +10325,7 @@ code:
         } else {
           cLambda = calculateCLambda(partitionData[n].dimension, n);
         }
-        
+
         if (!isNaN(cLambda) && isFinite(cLambda)) {
           data.push({
             n: n,
