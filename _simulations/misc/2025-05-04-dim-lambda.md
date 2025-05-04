@@ -27,11 +27,6 @@ code:
     stroke: #000;
     stroke-width: 1px;
   }
-  .young-box-moved {
-    fill: #9370db; /* Medium purple for moved boxes */
-    stroke: #000;
-    stroke-width: 1px;
-  }
   .young-box-removed {
     fill: none;
     stroke: #ff0000; /* Red color for removed boxes */
@@ -100,6 +95,8 @@ code:
           <div id="stats-container">
             <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
             <p><strong>Dimension $f^{\lambda}$:</strong> <span id="dimension-display">-</span></p>
+            <p><strong>Scientific Notation:</strong> <span id="scientific-display">-</span></p>
+            <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display">-</span></p>
           </div>
         </div>
       </div>
@@ -535,12 +532,9 @@ code:
           if (newBoxes.has(boxKey)) {
             // This is a new box
             boxStatuses.set(boxKey, 'new');
-          } else if (unchangedBoxes.has(boxKey)) {
-            // This box hasn't changed
-            boxStatuses.set(boxKey, 'unchanged');
           } else {
-            // If it's neither new nor unchanged, it must have moved from somewhere else
-            boxStatuses.set(boxKey, 'moved');
+            // All other boxes are considered unchanged
+            boxStatuses.set(boxKey, 'unchanged');
           }
         }
       }
@@ -573,13 +567,11 @@ code:
         const boxKey = `${row},${col}`;
         let boxClass = 'young-box';
 
-        // If we have a previous partition, check if this box is new or moved
+        // If we have a previous partition, check if this box is new
         if (prevPartition) {
           const boxStatus = boxStatuses.get(boxKey);
           if (boxStatus === 'new') {
             boxClass = 'young-box-new';
-          } else if (boxStatus === 'moved') {
-            boxClass = 'young-box-moved';
           }
         }
 
@@ -624,9 +616,9 @@ code:
         .attr('y', legendY + 15)
         .text('New');
 
-      // Moved boxes legend
+      // Removed boxes legend
       svg.append('rect')
-        .attr('class', 'young-box-moved')
+        .attr('class', 'young-box-removed')
         .attr('x', legendX + legendSpacing * 2)
         .attr('y', legendY)
         .attr('width', 20)
@@ -635,24 +627,50 @@ code:
       svg.append('text')
         .attr('x', legendX + legendSpacing * 2 + 30)
         .attr('y', legendY + 15)
-        .text('Moved');
-
-      // Removed boxes legend
-      svg.append('rect')
-        .attr('class', 'young-box-removed')
-        .attr('x', legendX + legendSpacing * 3)
-        .attr('y', legendY)
-        .attr('width', 20)
-        .attr('height', 20);
-
-      svg.append('text')
-        .attr('x', legendX + legendSpacing * 3 + 30)
-        .attr('y', legendY + 15)
         .text('Removed');
 
       // Adjust SVG height to accommodate legend
       svg.attr('height', height + 40);
     }
+  }
+
+  // Function to calculate log factorial: log(n!)
+  function logFactorial(n) {
+    if (n <= 1) return 0;
+
+    let logResult = 0;
+    for (let i = 1; i <= n; i++) {
+      logResult += Math.log(i);
+    }
+    return logResult;
+  }
+
+  // Function to calculate c(lambda) = -log(f^lambda/sqrt(n!))/sqrt(n)
+  function calculateCLambda(dimension, n) {
+    // For all n values, use logarithmic calculations to avoid overflow
+    // Convert dimension to string to handle very large numbers
+    const dimensionStr = dimension.toString();
+
+    // For very large numbers (scientific notation with e+), extract the exponent
+    let logDimension;
+    if (dimensionStr.includes('e+')) {
+      const parts = dimensionStr.split('e+');
+      const mantissa = parseFloat(parts[0]);
+      const exponent = parseInt(parts[1]);
+      logDimension = Math.log(mantissa) + exponent * Math.log(10);
+    } else {
+      // For regular numbers, just take the log
+      logDimension = Math.log(dimension);
+    }
+
+    // Calculate log(n!)
+    const logNFactorial = logFactorial(n);
+
+    // logSqrtFactorial = log(sqrt(n!)) = log(n!)/2
+    const logSqrtFactorial = logNFactorial / 2;
+
+    // c(lambda) = -log(f^lambda/sqrt(n!))/sqrt(n) = -(log(f^lambda) - log(sqrt(n!)))/sqrt(n)
+    return -(logDimension - logSqrtFactorial) / Math.sqrt(n);
   }
 
   // Function to update the display with information for a given size n
@@ -667,11 +685,28 @@ code:
       const formattedDimension = data.dimension.toLocaleString();
       document.getElementById('dimension-display').textContent = formattedDimension;
 
+      // Format dimension in scientific notation with LaTeX formatting
+      let scientificNotation;
+      if (data.dimension >= 1e10) { // Only use scientific notation for large numbers
+        const exponent = Math.floor(Math.log10(data.dimension));
+        const mantissa = data.dimension / Math.pow(10, exponent);
+        scientificNotation = `${mantissa.toFixed(2)} * 10^{${exponent}}`;
+      } else {
+        scientificNotation = data.dimension.toString();
+      }
+      document.getElementById('scientific-display').innerHTML = scientificNotation;
+
+      // Calculate and display c(lambda)
+      const cLambda = calculateCLambda(data.dimension, n);
+      document.getElementById('c-lambda-display').textContent = cLambda.toFixed(6);
+
       // Draw the Young diagram with the current n value
       drawYoungDiagram(data.partition, n);
     } else {
       document.getElementById('partition-display').textContent = 'Not available';
       document.getElementById('dimension-display').textContent = 'Not available';
+      document.getElementById('scientific-display').textContent = 'Not available';
+      document.getElementById('c-lambda-display').textContent = 'Not available';
       document.getElementById('young-diagram-container').innerHTML = '<p>Data not available for this size.</p>';
     }
   }
