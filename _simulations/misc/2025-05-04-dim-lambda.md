@@ -22,8 +22,10 @@ code:
     max-width: 100%; /* Ensure container doesn't exceed parent width */
     display: flex;
     justify-content: center;
+    align-items: center; /* Center vertically as well */
     min-height: 200px;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    position: relative; /* For absolute positioning if needed */
   }
   /* Make SVG responsive */
   .young-diagram-container svg {
@@ -40,6 +42,16 @@ code:
       margin-left: -15px;
       margin-right: -15px;
       width: calc(100% + 30px);
+      overflow-x: scroll;
+      -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
+    }
+    
+    /* Force display for mobile */
+    .young-diagram-container svg {
+      display: block !important;
+      max-width: none !important; /* Allow diagram to be wider than container with scrolling */
+      height: auto !important;
+      min-width: 250px; /* Ensure minimum width on small screens */
     }
   }
   .young-box {
@@ -329,8 +341,19 @@ code:
     const baseBoxSize = 40;
     // Reduce box size for small screens more aggressively, especially for mobile
     const isMobile = window.innerWidth <= 576;
-    const minBoxSize = isMobile ? 12 : 18;
-    const boxSize = Math.min(baseBoxSize, Math.max(minBoxSize, containerWidth / (Math.max(1, Math.max(...partition)) + 5)));
+    const minBoxSize = isMobile ? 10 : 18; // Even smaller minimum for mobile
+    
+    // For mobile, use a more aggressive calculation to ensure the diagram is visible
+    let boxSize;
+    if (isMobile) {
+      // On mobile, prioritize visibility over detail
+      const maxBoxesInWidth = Math.max(1, Math.max(...partition));
+      boxSize = Math.min(baseBoxSize, Math.max(minBoxSize, 300 / (maxBoxesInWidth + 2)));
+    } else {
+      // For larger screens, use the original calculation
+      boxSize = Math.min(baseBoxSize, Math.max(minBoxSize, containerWidth / (Math.max(1, Math.max(...partition)) + 5)));
+    }
+    
     const margin = Math.max(5, boxSize / 4);
 
     // Get the previous partition if available
@@ -355,9 +378,12 @@ code:
     const svg = d3.select('#young-diagram-container')
       .append('svg')
       .attr('viewBox', `0 0 ${width + 50} ${height + 20}`) // No extra space for legend
-      .attr('preserveAspectRatio', 'xMidYMid meet')
-      .style('max-width', '100%')
-      .style('height', 'auto')
+      .attr('preserveAspectRatio', isMobile ? 'xMinYMid meet' : 'xMidYMid meet') // Left-align on mobile for better visibility
+      .attr('width', isMobile ? Math.max(width + 50, 300) : '100%') // Set explicit width for mobile
+      .attr('height', height + 20)
+      .style('max-width', isMobile ? 'none' : '100%') // Remove max-width restriction on mobile
+      .style('min-width', isMobile ? '300px' : 'auto') // Ensure minimum width on mobile
+      .style('height', 'auto !important') // Force auto height with !important
       .style('display', 'block')
       .style('margin', '0 auto');
 
@@ -816,9 +842,32 @@ code:
     // Force immediate redraw on orientation change
     const inputElement = document.getElementById('size-n');
     const currentN = parseInt(inputElement.value);
+    
+    // First attempt after a very short delay
     setTimeout(function() {
       updateDisplay(currentN);
       drawCLambdaChart(currentN);
     }, 100);
+    
+    // Second attempt after the device has fully reoriented
+    setTimeout(function() {
+      const container = document.getElementById('young-diagram-container');
+      if (container && (!container.querySelector('svg') || container.querySelector('svg').style.display === 'none')) {
+        console.log("Attempting secondary redraw after orientation change");
+        updateDisplay(currentN);
+        drawCLambdaChart(currentN);
+      }
+    }, 500);
+    
+    // Final attempt for problematic devices
+    setTimeout(function() {
+      // Force complete redraw if needed
+      const container = document.getElementById('young-diagram-container');
+      if (container && (!container.querySelector('svg') || container.querySelector('svg').style.display === 'none')) {
+        console.log("Final redraw attempt after orientation change");
+        container.innerHTML = ''; // Clear container
+        updateDisplay(currentN); // Complete redraw
+      }
+    }, 1000);
   });
 </script>
