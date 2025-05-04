@@ -14,15 +14,21 @@ code:
     width: 100%;
   }
   .young-diagram-container {
-    margin-top: 20px;
+    margin-top: 5px;
+    margin-bottom: 10px;
     text-align: center;
     overflow-x: auto; /* Enable horizontal scrolling if needed */
     max-width: 100%; /* Ensure container doesn't exceed parent width */
+    display: flex;
+    justify-content: center;
+    min-height: 200px;
   }
   /* Make SVG responsive */
   .young-diagram-container svg {
     max-width: 100%;
     height: auto;
+    display: block;
+    margin: 0 auto;
   }
   .young-box {
     fill: #4682b4;
@@ -145,17 +151,23 @@ code:
   .legend-container {
     text-align: center;
     padding: 5px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-top: 5px;
+    border: 1px solid #e9ecef;
   }
   .legend-item {
     display: inline-flex;
     align-items: center;
-    margin-bottom: 5px;
+    margin: 0 8px 5px 8px;
+    white-space: nowrap;
   }
   .legend-box {
     display: inline-block;
     width: 15px;
     height: 15px;
     margin-right: 5px;
+    flex-shrink: 0;
   }
   .existing-box {
     background-color: #4682b4;
@@ -173,6 +185,21 @@ code:
   }
   .legend-label {
     font-size: 14px;
+  }
+  
+  /* Responsive adjustments for small screens */
+  @media (max-width: 576px) {
+    .legend-item {
+      margin: 0 4px 5px 4px;
+    }
+    .legend-box {
+      width: 12px;
+      height: 12px;
+      margin-right: 3px;
+    }
+    .legend-label {
+      font-size: 12px;
+    }
   }
 </style>
 
