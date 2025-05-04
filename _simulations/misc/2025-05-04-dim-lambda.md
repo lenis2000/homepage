@@ -78,6 +78,31 @@ code:
           This visualization displays the Young diagrams with the maximum dimension (number of standard Young tableaux)
           for each size $n$. For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
       </p>
+      <div class="text-center mb-3">
+        <button type="button" class="btn btn-outline-primary" id="show-heuristic-results">
+          View Heuristic Results
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal for Heuristic Results -->
+  <div class="modal fade" id="heuristicResultsModal" tabindex="-1" aria-labelledby="heuristicResultsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="heuristicResultsModalLabel">Heuristic Search Results</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="heuristic-results-container">
+            <pre id="heuristic-results-content" style="max-height: 70vh; overflow-y: auto;"></pre>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -997,5 +1022,45 @@ code:
       updateDisplay(currentN);
       drawCLambdaChart(currentN); // Redraw the chart on resize with current n
     }, 250); // Wait 250ms after resize ends to redraw
+  });
+  
+  // Function to load the heuristic results into the modal
+  document.addEventListener('DOMContentLoaded', function() {
+    const showHeuristicResultsBtn = document.getElementById('show-heuristic-results');
+    const heuristicResultsModal = new bootstrap.Modal(document.getElementById('heuristicResultsModal'));
+    const heuristicResultsContent = document.getElementById('heuristic-results-content');
+    
+    // Create a variable to track if content has been loaded
+    let resultsLoaded = false;
+    
+    // Add click event listener to the button
+    showHeuristicResultsBtn.addEventListener('click', function() {
+      // Only fetch the content if it hasn't been loaded yet
+      if (!resultsLoaded) {
+        // Display loading message
+        heuristicResultsContent.textContent = 'Loading results...';
+        
+        // Use fetch to get the heuristic_results.txt file
+        fetch('{{ site.baseurl }}/simulations/misc/heuristic_results.txt')
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.text();
+          })
+          .then(data => {
+            // Set the content of the pre element
+            heuristicResultsContent.textContent = data;
+            resultsLoaded = true;
+          })
+          .catch(error => {
+            console.error('Error fetching heuristic results:', error);
+            heuristicResultsContent.textContent = 'Error loading results. Please try again later.';
+          });
+      }
+      
+      // Show the modal
+      heuristicResultsModal.show();
+    });
   });
 </script>
