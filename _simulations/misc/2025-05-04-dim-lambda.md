@@ -10277,7 +10277,7 @@ code:
     // Add event listener for input changes
     inputElement.addEventListener('input', function() {
       const n = parseInt(this.value);
-      if (n >= 1 && n <= 2000) {
+      if (n >= 1 && n <= 10000) {
         updateDisplay(n);
       }
     });
@@ -10285,7 +10285,7 @@ code:
     // Add event listener for increment button
     incrementBtn.addEventListener('click', function() {
       const currentValue = parseInt(inputElement.value) || 0;
-      const maxValue = parseInt(inputElement.max) || 2000;
+      const maxValue = parseInt(inputElement.max) || 10000;
 
       if (currentValue < maxValue) {
         inputElement.value = currentValue + 1;
