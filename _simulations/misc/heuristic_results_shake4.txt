@@ -1,0 +1,1093 @@
+Heuristic search results (arXiv:2311.15199v2 constraints + 4-shake) for partitions maximizing f^lambda (SYT count)
+-------------------------------------------------------------------------------------------------------------------
+--- Size 1 ---
+Max f^lambda: 1 (achieved by 1 partition)
+Partitions achieving maximum: [1]
+
+--- Size 2 ---
+Max f^lambda: 1 (achieved by 1 partition in G')
+Partitions achieving maximum: [1, 1]
+
+--- Size 3 ---
+Max f^lambda: 2 (achieved by 1 partition in G')
+Partitions achieving maximum: [2, 1]
+
+--- Size 4 ---
+Max f^lambda: 3 (achieved by 1 partition in G')
+Partitions achieving maximum: [2, 1, 1]
+
+--- Size 5 ---
+Max f^lambda: 6 (achieved by 1 partition in G')
+Partitions achieving maximum: [3, 1, 1]
+
+--- Size 6 ---
+Max f^lambda: 16 (achieved by 1 partition in G')
+Partitions achieving maximum: [3, 2, 1]
+
+--- Size 7 ---
+Max f^lambda: 35 (achieved by 1 partition in G')
+Partitions achieving maximum: [3, 2, 1, 1]
+
+--- Size 8 ---
+Max f^lambda: 90 (achieved by 1 partition in G')
+Partitions achieving maximum: [4, 2, 1, 1]
+
+--- Size 9 ---
+Max f^lambda: 216 (achieved by 1 partition in G')
+Partitions achieving maximum: [4, 2, 2, 1]
+
+--- Size 10 ---
+Max f^lambda: 768 (achieved by 1 partition in G')
+Partitions achieving maximum: [4, 3, 2, 1]
+
+--- Size 11 ---
+Max f^lambda: 2310 (achieved by 1 partition in G')
+Partitions achieving maximum: [4, 3, 2, 1, 1]
+
+--- Size 12 ---
+Max f^lambda: 7700 (achieved by 1 partition in G')
+Partitions achieving maximum: [5, 3, 2, 1, 1]
+
+--- Size 13 ---
+Max f^lambda: 21450 (achieved by 1 partition in G')
+Partitions achieving maximum: [5, 3, 2, 2, 1]
+
+--- Size 14 ---
+Max f^lambda: 69498 (achieved by 1 partition in G')
+Partitions achieving maximum: [5, 3, 2, 2, 1, 1]
+
+--- Size 15 ---
+Max f^lambda: 292864 (achieved by 1 partition in G')
+Partitions achieving maximum: [5, 4, 3, 2, 1]
+
+--- Size 16 ---
+Max f^lambda: 1153152 (achieved by 1 partition in G')
+Partitions achieving maximum: [5, 4, 3, 2, 1, 1]
+
+--- Size 17 ---
+Max f^lambda: 4873050 (achieved by 1 partition in G')
+Partitions achieving maximum: [6, 4, 3, 2, 1, 1]
+
+--- Size 18 ---
+Max f^lambda: 16336320 (achieved by 1 partition in G')
+Partitions achieving maximum: [6, 4, 3, 2, 1, 1, 1]
+
+--- Size 19 ---
+Max f^lambda: 64664600 (achieved by 1 partition in G')
+Partitions achieving maximum: [6, 4, 3, 2, 2, 1, 1]
+
+--- Size 20 ---
+Max f^lambda: 249420600 (achieved by 1 partition in G')
+Partitions achieving maximum: [6, 5, 3, 2, 2, 1, 1]
+
+--- Size 21 ---
+Max f^lambda: 1118939184 (achieved by 1 partition in G')
+Partitions achieving maximum: [7, 5, 3, 2, 2, 1, 1]
+
+--- Size 22 ---
+Max f^lambda: 5462865408 (achieved by 1 partition in G')
+Partitions achieving maximum: [6, 5, 4, 3, 2, 1, 1]
+
+--- Size 23 ---
+Max f^lambda: 28542158568 (achieved by 1 partition in G')
+Partitions achieving maximum: [7, 5, 4, 3, 2, 1, 1]
+
+--- Size 24 ---
+Max f^lambda: 117487079424 (achieved by 1 partition in G')
+Partitions achieving maximum: [7, 5, 4, 3, 2, 1, 1, 1]
+
+--- Size 25 ---
+Max f^lambda: 547591590000 (achieved by 1 partition in G')
+Partitions achieving maximum: [7, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 26 ---
+Max f^lambda: 2474843571200 (achieved by 1 partition in G')
+Partitions achieving maximum: [8, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 27 ---
+Max f^lambda: 12760912164000 (achieved by 1 partition in G')
+Partitions achieving maximum: [8, 6, 4, 3, 2, 2, 1, 1]
+
+--- Size 28 ---
+Max f^lambda: 57424104738000 (achieved by 1 partition in G')
+Partitions achieving maximum: [8, 6, 4, 3, 3, 2, 1, 1]
+
+--- Size 29 ---
+Max f^lambda: 295284192952320 (achieved by 1 partition in G')
+Partitions achieving maximum: [7, 6, 5, 4, 3, 2, 1, 1]
+
+--- Size 30 ---
+Max f^lambda: 1865134921890240 (achieved by 1 partition in G')
+Partitions achieving maximum: [8, 6, 5, 4, 3, 2, 1, 1]
+
+--- Size 31 ---
+Max f^lambda: 9241827385190400 (achieved by 1 partition in G')
+Partitions achieving maximum: [8, 6, 5, 4, 3, 2, 1, 1, 1]
+
+--- Size 32 ---
+Max f^lambda: 50385731994259200 (achieved by 1 partition in G')
+Partitions achieving maximum: [8, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 33 ---
+Max f^lambda: 268401306245529600 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 34 ---
+Max f^lambda: 1579812376072320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 35 ---
+Max f^lambda: 7821859115070000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 5, 4, 3, 3, 2, 1, 1]
+
+--- Size 36 ---
+Max f^lambda: 40971642983700000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 6, 4, 3, 3, 2, 1, 1]
+
+--- Size 37 ---
+Max f^lambda: 222250513478508715200 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 38 ---
+Max f^lambda: 1592694283209952665600 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 6, 5, 4, 3, 2, 1, 1]
+
+--- Size 39 ---
+Max f^lambda: 9335226290275709091840 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 6, 5, 4, 3, 2, 1, 1, 1]
+
+--- Size 40 ---
+Max f^lambda: 58965081685061803130880 (achieved by 1 partition in G')
+Partitions achieving maximum: [9, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 41 ---
+Max f^lambda: 366086379166733146521600 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 42 ---
+Max f^lambda: 2455861544135906461632000 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 8, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 43 ---
+Max f^lambda: 14064743140340298422496480 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 8, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 44 ---
+Max f^lambda: 82628724406182220050744960 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 8, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 45 ---
+Max f^lambda: 500283928761422348434320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 46 ---
+Max f^lambda: 3099186881321017005002484000 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 47 ---
+Max f^lambda: 20368873512400427423405568000 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 8, 7, 6, 5, 4, 3, 2, 1, 1]
+
+--- Size 48 ---
+Max f^lambda: 139108709149402516499579535360 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1]
+
+--- Size 49 ---
+Max f^lambda: 1007882872827294450598918225920 (achieved by 1 partition in G')
+Partitions achieving maximum: [10, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 50 ---
+Max f^lambda: 7213044178117167522200420352000 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 51 ---
+Max f^lambda: 54862456282689907329134847590400 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 9, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 52 ---
+Max f^lambda: 360271734400780906661162863257600 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 9, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 53 ---
+Max f^lambda: 2416328017978835907706221223561800 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 9, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 54 ---
+Max f^lambda: 16032089198265876501244987648140000 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 55 ---
+Max f^lambda: 112332940080014807351231850047731500 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 56 ---
+Max f^lambda: 780924182374434489607494144716850000 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 9, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 57 ---
+Max f^lambda: 5759492688586530968032605948341040000 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 10, 8, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 58 ---
+Max f^lambda: 39204228543251710567342810799102400000 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 10, 8, 6, 5, 4, 4, 3, 2, 2, 1, 1]
+
+--- Size 59 ---
+Max f^lambda: 284360991016399770894957040134389760000 (achieved by 1 partition in G')
+Partitions achieving maximum: [11, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 60 ---
+Max f^lambda: 2321999844171845578871179664651452416000 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 61 ---
+Max f^lambda: 19896436084338134974427586952682903961600 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 10, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 62 ---
+Max f^lambda: 148493270650299093215991941843059928064000 (achieved by 1 partition in G')
+Partitions achieving maximum: [12, 10, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 63 ---
+Max f^lambda: 1128084815471490923775238783188995891011200 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 10, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 64 ---
+Max f^lambda: 8229081864439402212381478702631306868113280 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 10, 8, 7, 6, 5, 4, 3, 3, 2, 1, 1, 1]
+
+--- Size 65 ---
+Max f^lambda: 64744511859060420712290642354586811061519360 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 10, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 66 ---
+Max f^lambda: 492648887206925778427244427860670202969057200 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 10, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 67 ---
+Max f^lambda: 4025571251354748853301084014788823689834654000 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 11, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 68 ---
+Max f^lambda: 30473167912125109106974726128840645867371520000 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 11, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 69 ---
+Max f^lambda: 234417911643806987948678393500955835502166016000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 70 ---
+Max f^lambda: 1788611255686599443441275423897069708421376000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 9, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 71 ---
+Max f^lambda: 14061798146634215100928457529846541203122400000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 9, 8, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 72 ---
+Max f^lambda: 130752274327952321538989760952406388528535044096000 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 11, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 73 ---
+Max f^lambda: 1099941833914297566548100976306304543754345185280000 (achieved by 1 partition in G')
+Partitions achieving maximum: [13, 11, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 74 ---
+Max f^lambda: 9393814297722007346466225462665628282244030499904000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 75 ---
+Max f^lambda: 75591730449481189068765207148175917862445398493000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 9, 8, 7, 6, 5, 4, 3, 3, 2, 1, 1, 1]
+
+--- Size 76 ---
+Max f^lambda: 660943493657107495213974182754150511637360513303040000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 77 ---
+Max f^lambda: 5507479956694844226612276769373271537654140064265320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 11, 10, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 78 ---
+Max f^lambda: 49718318339225029555103035309089735554926840176109440000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 12, 10, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 79 ---
+Max f^lambda: 418920939879777844937260609944023276410019030898651955200 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 12, 10, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 80 ---
+Max f^lambda: 3579026417818008407776702958356552842464133458949423759360 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 81 ---
+Max f^lambda: 29326030832439019031092736803263846956891854060380047278080 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 82 ---
+Max f^lambda: 245717058969967243667527972726893680531472205822714908672000 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 9, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 83 ---
+Max f^lambda: 1958510306535009521762165974428282510483897121566558093312000 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 84 ---
+Max f^lambda: 17199984970509310503422142406316778944531851299986079744000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1]
+
+--- Size 85 ---
+Max f^lambda: 161866387856671801830938160974282163319008607501789408788480000 (achieved by 1 partition in G')
+Partitions achieving maximum: [14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 86 ---
+Max f^lambda: 1543188965753898098745955145496379055557243125097337202422906880 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 87 ---
+Max f^lambda: 13652515506675457063836747192041480586149162971910780027773255200 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 1, 1, 1]
+
+--- Size 88 ---
+Max f^lambda: 132012112829058929697216055665548406632996088226054058331660288000 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 89 ---
+Max f^lambda: 1202770010851978089499001986967434093160593877549352313484968012800 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 12, 11, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 90 ---
+Max f^lambda: 11952161805200485671523852732672950906233029612342903238952910848000 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 13, 11, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 91 ---
+Max f^lambda: 111536354532746933705105521827401388958780700059721074267272511488000 (achieved by 1 partition in G')
+Partitions achieving maximum: [15, 13, 11, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 92 ---
+Max f^lambda: 1053454252419345014848313815715121307642151973096789037261887897600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 93 ---
+Max f^lambda: 9298019732498692589306447931761769662631984023874447420141412024320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 94 ---
+Max f^lambda: 83528869990036960061655065586806227330592230516749107406742623092736000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 10, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 95 ---
+Max f^lambda: 738856195291160637064439093409373209747689102713743192921850842710016000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 96 ---
+Max f^lambda: 6830694040117548932247228149858288447418106733746110630642358121073868800 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 97 ---
+Max f^lambda: 63933734724523910394059324668425220557070884535418451305089068784299552000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 10, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 98 ---
+Max f^lambda: 587608644132988669062315659190628313018199189598748549625037176301076447232 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 14, 12, 10, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 99 ---
+Max f^lambda: 5629956124941094770622386912044341575706909420518139046529417862613615814000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 14, 12, 10, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 100 ---
+Max f^lambda: 54539477511295000975066379739366669128884298419169669212903038310103287500000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 10, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 101 ---
+Max f^lambda: 565378959002571348526487738883086152928500083237801155401255766231772364800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 102 ---
+Max f^lambda: 5686551912381574511129147722159555766486912859732682235293686582973153935360000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 103 ---
+Max f^lambda: 61214329016711158166505670767097073373225632044596866872062611556033207085301760 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 104 ---
+Max f^lambda: 629571928828905856385137619784652309874964139464234066432099908346091489198080000 (achieved by 1 partition in G')
+Partitions achieving maximum: [16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 105 ---
+Max f^lambda: 6543617427878537957159797488174446866494284857950790449673796864650405478400000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 106 ---
+Max f^lambda: 62248998806107993222904021013832709197228288195326145558076624865148293611520000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 107 ---
+Max f^lambda: 600822535255522047374450656754652331112658343843410146461744233385203670292889600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 11, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 108 ---
+Max f^lambda: 5859053607504252923711044267102909797677033029585662217958005496073729528960122880000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 109 ---
+Max f^lambda: 59379551491616867820813793786673418100650673100467326423241849100982654799687188480000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 110 ---
+Max f^lambda: 593754279116521722049929039398826768910603501370575717477957906392395310042149879808000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 14, 12, 11, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 111 ---
+Max f^lambda: 5843131836928986744562472498190299615029892226822600183226816624070074070360015831040000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 15, 13, 11, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 112 ---
+Max f^lambda: 61105493625303738395253114613131217949919457622033925706446568203732810893059278458880000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 15, 13, 11, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 113 ---
+Max f^lambda: 645284300395922462346988764778610006799667957567032614439503191406364806919846176670528000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 114 ---
+Max f^lambda: 6471311714640738998035388676878361545551725384849470054442985279137987684523862560930800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 115 ---
+Max f^lambda: 66128905523715119393658109922164820371664898533283474357337419642390289909199389685625000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 10, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 116 ---
+Max f^lambda: 638413540225466549323771634427856615642473725894742100863592254944610659948329752000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 10, 8, 7, 6, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 117 ---
+Max f^lambda: 7264677475665757809588865469324114857951498304424610468804884130954372253510635214340096000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 118 ---
+Max f^lambda: 81957821889006269343939932925565702494371135067346828364830110395108173678039294474715136000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 119 ---
+Max f^lambda: 933265651485302990456973680195002814630181335963531167035311179395532156804616895040428441600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 120 ---
+Max f^lambda: 9561748744622283052749506679404608802911488096180764339610035441459656958678315846074368000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 121 ---
+Max f^lambda: 99168394465082746801226508797212412342381673249847876815200769992656534951269110277734400000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 122 ---
+Max f^lambda: 1060317412401790133664921362238355614964072509661204015496834618921891762559143365769696343647846400 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 123 ---
+Max f^lambda: 11735633863911204938490639412913207457256769393971699554486924429354933320408383703506908708864000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 124 ---
+Max f^lambda: 125523394771381975831786289849651910702470806649337320960975362584641188490390808459367474046668800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 15, 13, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 125 ---
+Max f^lambda: 1322896608562657954567427866796349722403587506448681903827035398815645964192770284234405686280192000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 126 ---
+Max f^lambda: 15053793377258935921026197289527106978430680279327971210023260869830845635254897943633742871848960000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 127 ---
+Max f^lambda: 172796287471960987860822815262100856489260856157731537393069903298538421091240496540395511426764480000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 128 ---
+Max f^lambda: 1833008139189744060655687517745838727856197212468517540568765333173580850312094186536014481201471488000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 129 ---
+Max f^lambda: 19733338904897136848652524451398725618283047755321823547856141401392164546581430011844388902685979443200000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 130 ---
+Max f^lambda: 200534932023735151679946820980226809219196038868645819410390500611064332442495282408304952199479296000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 131 ---
+Max f^lambda: 2122735461683156019264203330227856209122179197425703850494039038120750966572155464908542450271495651328000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 132 ---
+Max f^lambda: 22023678843442451997799208731033593155726813961332400647060525628383438796780784758181516770009833275392000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 133 ---
+Max f^lambda: 247255696247142945060209062919568425664047173819032218835215385849221481680112821289974561943481489920000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 134 ---
+Max f^lambda: 3306013929179103943043901815888913835215541080396985145337839749334237802268176600068570956603751209422028800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 135 ---
+Max f^lambda: 36426421823787422423850536980861410755870124327132086522562760105586889562061526866373613512329736172339200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 136 ---
+Max f^lambda: 405579479634910898543619455432379411380731602346265433468484143221644499460830208962257236200055153623040000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1, 1]
+
+--- Size 137 ---
+Max f^lambda: 4732026577924815333900794220018675362227185365110655550362093177258761454933994574029475410021043312156213248000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1]
+
+--- Size 138 ---
+Max f^lambda: 56986628015408922337218404750470520059445719042938516116749701812796892939797109663858058191325206602055680000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 139 ---
+Max f^lambda: 651933300636720302833210922509046815946775248409954516062945548205683644714404925282322511954606000984162304000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 140 ---
+Max f^lambda: 7354741150622141286131650026433270329974630990521071138079316447313843388831941481279743552508969783449969427200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 141 ---
+Max f^lambda: 90765292487466887354952114766891875397553781573037728594416556151755329236602489537757595843747582103869699990224896000 (achieved by 1 partition in G')
+Partitions achieving maximum: [19, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 142 ---
+Max f^lambda: 1129114595566355834723538918518547605511288359677692817552488978257212658845876463316665835829501268791383738765571200000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 143 ---
+Max f^lambda: 12697357867423167848164683503994790231036726959503621475643719931282519252877289186368608591633227905951386308898749600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 144 ---
+Max f^lambda: 144522881992797174072290715055011043724948964411863720158150049595292306663471769543985109553201326824749922044394232320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 12, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 145 ---
+Max f^lambda: 1589005959228396797527539054746597575639056322517351492620461645107972054211805990313307197499442479605683924372976979148800 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 12, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 146 ---
+Max f^lambda: 18101293762320277259623416926147151906878675932145877848144377287431666268621765953212853916285250088284743174787205038080000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 12, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 147 ---
+Max f^lambda: 203237748845281435384278484901531575082980508139066412932042097180823917166850458604152370057945923821598137636536660787200000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 148 ---
+Max f^lambda: 2399590874138736925951739468466214852206513319364806783799737596381230391306169977956507872886347079712552144844012240896000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 12, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 149 ---
+Max f^lambda: 27778881984977052989942617383019884317973086676295778722642724390775852133828745172757315529180081954784893333482964831232000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 12, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 150 ---
+Max f^lambda: 319797170701790292036758602938903195946705245044971131559772031649146924985791407045001604826094783958664397279284862910464000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 15, 13, 12, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 151 ---
+Max f^lambda: 3766380544564184882280896917362764730063172936506653526075476614592864256667700958638389505726319716711117959419660337152000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 15, 13, 12, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 152 ---
+Max f^lambda: 45285445033696517649532333172965397830860217732150675769286677334368200137596972232292528253676718891882113127705720305745920000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 153 ---
+Max f^lambda: 544502266514427698640914564660670362341549902940855714609866642088905026995240488725875554910799842139242918738443534336000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 154 ---
+Max f^lambda: 7313556583684905080271564871807838598496833304190561938609691584613591579021019832338555956806880375503840557999710207685427200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 155 ---
+Max f^lambda: 89413233500123457442589951348785653261504177096595454102559702104849314100131444653709415485716123962101290172205044629504000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 156 ---
+Max f^lambda: 1101550653622498869103414634115761604343921875936317146516239746552755767444269744979464366903193559438905911930126401690337280000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 157 ---
+Max f^lambda: 14389683315758747347489026364798716726928704313942533064281069440417498699505529348897750040981686354404601883826853631750779699200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [20, 18, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 158 ---
+Max f^lambda: 193425534338388731685233860259735043526368778316864592775094377412723207827185734414786490101123791600640776927410389611359360000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 159 ---
+Max f^lambda: 2307646048481195464559365876965578751762497566946499837930497274807634745287165921863160259653022767112975947828905814852354860000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 160 ---
+Max f^lambda: 27812961277819263709500818836970852862066715631257824885555825807268360435992301047791538451349168177216454852790877642102215680000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 161 ---
+Max f^lambda: 329964298585309113402218015106385023964995317773598455782071905328175073329962255348665609616467100878282667981572529835094236659712000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 162 ---
+Max f^lambda: 4037128787758551983272853050884244658358803507184751066334459884590105640045476993352909650583801008017479898585343194688907955404800000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 163 ---
+Max f^lambda: 48873662428843851440958136833535298423026060266823209536584293572185942471664223033640106985122055558003366574366625463582710056166759596032000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 164 ---
+Max f^lambda: 608403710714779954588210326970320035228286322172420132848228977249872340406936256152081932900007902204941219133055577130665386748231465041920000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 165 ---
+Max f^lambda: 7419860980954976687654756631228463945752852092055745847835517604083365770895181006235832449501685280936747440939620048013165710876873406283776000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 166 ---
+Max f^lambda: 93385115531709525640635906947866898275487788572761700662095633850410020015834144574817578097109558612521641105646872015880651400369351778369536000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 16, 14, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 167 ---
+Max f^lambda: 1151377168022837752309280848607416385576247541429524141452436946607682910908821325618966972213599077781085777287283624926073677729144929404321792000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 16, 14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 168 ---
+Max f^lambda: 14928633182986518115404132153662170969999090853161918131127451862069874717642888316739419269485209225512714434417371134499640159497547460431052800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 169 ---
+Max f^lambda: 187379762318185722753395343479741970201523644816734491309961511875418746112340062878299782827410113157941423440526203313739303108548217075138560000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 170 ---
+Max f^lambda: 2382396223092153259548612385582260372711756229770614893745001701297595677301732838074364333800703563856546004457992928910332334754308280033280000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 171 ---
+Max f^lambda: 28702842781319841577643318053024193041991223532882063570284358585973251896225832792848610307520506540521519229411754623951796499685225388264960000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 172 ---
+Max f^lambda: 350815325730922136370286747061495902669209249061985908612321379607338853904788825919624234711109021956777961953795856319411455786727927916630917120000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 173 ---
+Max f^lambda: 4643091161524421961406181866932431696866306953340119251552070710339623362176130427968890173904952097057466117888730996781891596114628202940919657267200000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 174 ---
+Max f^lambda: 64201106365431289370286790836094903228238696989943796949905970905024296135452800380006915935444105625711538230912411016728840127407132573166678835200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [21, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 175 ---
+Max f^lambda: 929806756370227163035750745473779987041120686123252268772587169071455783464081813026792608546343585989583451949687759343672555035752200371745280000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 176 ---
+Max f^lambda: 11767648949660630647336681517749441819620735359888206613591548258825506795996657171438346670198596375966238280350596935529190725549112932800525000000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 177 ---
+Max f^lambda: 150241460606807456581585062575636217990268700704849477575384135846098651581460905654197566650759584491869618112158762761894063159748205051101867675781250000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 178 ---
+Max f^lambda: 1943434336742853980699959964527505282685284881392920522864896642526199534267841171764775844436226349939086547279194267411801128433653246259421301964800000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 179 ---
+Max f^lambda: 25153477353724493273074937044877565257520307405879384838391208972145674208734447546500505743516747627303274134371202255734186878513275153833880038400000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 180 ---
+Max f^lambda: 327292429734474604046055005151304262658155855018029309149320769441656145697822984645644948056154445189770046180419931703266937752568457664178162233245696000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [22, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 181 ---
+Max f^lambda: 4317048917291207606949310675850792137408263117228062308655772706715795561964136247635508411491428797215320912856740561958368763235406315706107740458844160000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 182 ---
+Max f^lambda: 56293787804616646240509199214181065364508390770589020481491907942522502233069094842185475195465679664866952983165822878809518683794955006501163918503924727808000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 183 ---
+Max f^lambda: 757295810797753789852338610033781695694545297287000615172578156283222108411441724286400628592034870327928704337782906793117421303000261094741967546204003342745600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 184 ---
+Max f^lambda: 9799375248615739510022176402240196609840643927414665316875998111513058189092138399169480931296540133083622151461969569845815404668953982028038306446494505369600000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 185 ---
+Max f^lambda: 136534048219327707968599775652069544588947486345702954568133125204143703682995743131409636773026942773730353133486927829336155633594674631068166180779893062468349460480 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 186 ---
+Max f^lambda: 1794617318607529126049010215292973175777754392238680805227961032614444485188265638769851692151817497024948262314638060407956136296863447631841421955190783847176339456000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 187 ---
+Max f^lambda: 23837069577515140146037255879477522422110958365061481171356330936739782646618986630217867289717820000744726199039507197353308351780477471525010306297569308760678072320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 188 ---
+Max f^lambda: 307414853981058820715753919537908117106694372880357827330125768141985946259335210362526121747418469609133803311708790359236366761849517901235452824769810311319388160000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 189 ---
+Max f^lambda: 4005987473456882474327274202347097692538750679621972667805119196510681501364258204512783357303293567627631150939631877603096834653288289525911357108517391987701645312000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 190 ---
+Max f^lambda: 52267157614350746110333525491254887189781072766043648535518720527345051552015555491875598499345238928790547956778548341644789193929009166407759112717845608354349056000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 20, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 191 ---
+Max f^lambda: 689179443890693834372859052373472709474925734318265784783474381994997524721876376454940941539951023103062215847237085562176596894951931275881634610177480355109595955200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 14, 13, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 192 ---
+Max f^lambda: 8773986437767007234642462853696803046957376440977051945144541354370211415258891301861108330952114807712655195881367029549758434538801076353776970908833309607772237384908800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 14, 13, 11, 10, 9, 8, 7, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 193 ---
+Max f^lambda: 133756321352980959924709075530949306469090940241609455428110035663711108216564365873945369368475883659978816502894484822692265366658594467928124140923688055812239883501568000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 194 ---
+Max f^lambda: 1801813588241517944009197924972526398196084901934661849538157026269813283931993057590649458897532150345959713547149337508817107991183886518351525657983605905028464183869440000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 195 ---
+Max f^lambda: 24675792045813417953322513135224648279349409661998397559581138378194895380960588592423176988209134679682583045611396031481364147652515762199654968656099430155679805121285324800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 196 ---
+Max f^lambda: 340697313583196939923926369340608459743325506808510754748938804688059761103385335519961405854148086871317042811562320607314407384809673266831875224592124423588828336189603840000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [23, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 197 ---
+Max f^lambda: 4669595821511130430098987663498533392683330475251395269889581437411554064549536658258655352374938843854747616144860186749927119030338793164984128961163766832830313589280604160000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 198 ---
+Max f^lambda: 65093099975045062778281742905345638627081503003428659870395011017480622035331768118056854965397242758653549557848298640719018713311776570310839052832293580859934409222538246750208000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 199 ---
+Max f^lambda: 916710819457404389440474799951014836344864464112014952883117388253419468926715112346324173372736835250578240539409298655065743308449342884410444382753581164784252001555832635392000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 200 ---
+Max f^lambda: 12719335299985277761385007561833781102700961858831173694226359269630216358693163090016720493630480956676766051898342046185230275765405562014883452030208984961209692985211276492800000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 201 ---
+Max f^lambda: 181538804907540660935279617491357576614971936207510193596864031053931358404963006849481970769498216581395976792867499765588181353329669996966685805119075311374788240421691588608000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 202 ---
+Max f^lambda: 2468543550401331361938771387596080409971858433983917746659519725886135145396888103092650906502803051674995300959124148934858887756245270019102270134048827332962306754776924160000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 203 ---
+Max f^lambda: 36849246085049325907756563483011297951160975128406687557532263916965303706655994418398099983362227521398410157248637016568331241733062687334651174414792637926533835669269089380990976000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 204 ---
+Max f^lambda: 508065000068019124095416946282864449087001247860056049388560430130918859725900310270663694623859617280216461369926602071432510628527302692911556087305258209420185452565778767156346880000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 205 ---
+Max f^lambda: 7066972926983790979342962793174442670988845836520839385236182370462212375560735731097751315191025789887538267694554611734599225255633895027396922709854551354070141952444001708251545600000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 206 ---
+Max f^lambda: 97372364917768003895987901324995529593889056140743232891090518054978846276114677586270233184121513414344384174933282659061665335016590429282654104594392464041661056461304945592510709760000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 207 ---
+Max f^lambda: 1350910408968003643397897045973819746319821413482076222425686883681651917929032007631500790730402191703679549680359971519107362606550780035226898485754104680355730260387871320280338432000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [24, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 208 ---
+Max f^lambda: 18812125762816047954285452847537651427937180508570916800168336862441264908747062235945038111252148393039504993991001352060970755752507193319726981599409704407280327983062705608568004935680000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 209 ---
+Max f^lambda: 263815644858270172335763890142420831831090865209256539620609996229662017587626390510063915051298048105681782717859969707757688484183939666436207276999639470987587986975771656418995732480000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 210 ---
+Max f^lambda: 3487362344515091661644788765130403815106980263095962250533309603434072671298401422205418274059922339274777671071624283230726487146693973424923394691022250662547314333171391660803953262592000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 211 ---
+Max f^lambda: 47407062996182786698565560603728404249381667489739035401145632691378804784232453489941718511631475396506694793971725190334019371231597264335008399601968748308415886024670229191996725421670400000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 212 ---
+Max f^lambda: 655266558608525879456533918959798433986686484957914558320412576608346500423556353747221973317220113667203684848794410619030397685317149329166720020343921254456044977433255887430127759434711040000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 213 ---
+Max f^lambda: 9374479336122484160430107698450405148686755516220366221890809522306774570619764391364913102903382168452385916841733030966431201312439597784111375806197002722612722262216114096502782493104013312000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 214 ---
+Max f^lambda: 128902438724387980924317351619729586559902270986801419829524615751982196792204230222201131031943917678574597839115254537101962425339553418770776806115086640680323604693115086537449797740525309132800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 215 ---
+Max f^lambda: 1790334217119361534720412416468307014294422881777219818604428212256689993744999752323005473350556175393967582059902456174956624246298013096547751767614560713882152330838779090642171561499484160000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 16, 14, 13, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 216 ---
+Max f^lambda: 27876246798960246031829547269859499047907069940802226955081816153714628435739893968102032286732189249752562894643233051562637253538644854224486767809537483825512501309537394894843331226769647193817088000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 217 ---
+Max f^lambda: 411840291257101163552527906787227351915932984636866184663274279159565702831800357383563128650496903505129318272947103292150744326311040096289698719118787328881884037476485484507895478831277975117863321600 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 218 ---
+Max f^lambda: 6125172930421649435963777419550467701519086796232655391964742686754476204500583380461046938469463374909560028547719524371320071590419777627945468770234947109307602759922427959915136188524734574593352663040 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 219 ---
+Max f^lambda: 90738127312753847008456433200921298797410841783933447887028471322658045792042345215627754685943832133104812926722460745644965136001526462370485025775135105679645056973451459290731307944688597158698627891200 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 220 ---
+Max f^lambda: 1365825603219684202828554074196433325070204818734510807858667105171869591810789989292364688451981838838251432150170172829095821579613852690738265424956774057762393634044714978134937582705156486032523264000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 221 ---
+Max f^lambda: 19592554537716964165026659892413633563849058129758631800742162832026653025945005774596556862612672119030860144654530041060648589791871988769902264873613553236601225844204469902029615664501359689820484403200000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 222 ---
+Max f^lambda: 311447648943075613955333496850249665269958926291231019820597200682100321005954792179852194599448239386667175526932335537694066720520948158334110344234444188969484235868264754108321625543855438953615196160000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 223 ---
+Max f^lambda: 4513623766111583348224762605680378216831547735903877916781673630660267965581905359684419875880198619744618378757268349569819683731970434316459041357791852893200952159102501820190276321244590482914885081497600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 224 ---
+Max f^lambda: 65880141660085650392780996527356097529583783218595365884460329783121864266530919784395108167700904602281725036997694729106434818796920568400924419080073096017152507187685009333200222175170096270066466160640000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 225 ---
+Max f^lambda: 966215576148453980466966514478900427294971698582970466732540004803423872777585338087384422512309558495818404184588456735899303760596181716365551199084255536911772900415468634997200789112011737873252352000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [25, 22, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 226 ---
+Max f^lambda: 14260344191454510893749239050400287628215758682074846130043403473565529429354309338170545893602319199630080384204125049629280680813124976751650808572879166473728624986310558445909147377970537783500600725600000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 227 ---
+Max f^lambda: 211339641484376535108920781158602042288600525047873537139499193300397706247722569080260006618754537455992068916541479187450654371507018683400184833888068333014147242385795974087345663190208419479265356031250000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 228 ---
+Max f^lambda: 3147655419260170700490745145721565789189401843576075984296025925755553113344210148936415275931943748829731606156440280923981283146154051807245586718208748741292585031703784927672313328132125696201118339843750000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 229 ---
+Max f^lambda: 43818081224471476421713578990745772735476263242036265150595684036077559511949975168272270122374246777673139804421873342534210499181828307967422825003299503502246225701334610900968826568848781239195758056640625000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+
+--- Size 230 ---
+Max f^lambda: 619101945678536889658973979092584529960007857849338941174739618714978859838831978190117576570057768545891431597736778026102296538925611537296764370279342454007890851222430426117309917798416654682463520200000000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 231 ---
+Max f^lambda: 9179126993813442004051030565942683554375802156619893360144280079853049311555914414351040445490556653471054605388499990225137876401976653794763048292225029486031668683737709670075892215263603173949518299490950400000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 232 ---
+Max f^lambda: 136588042104559482501447190420672472518223179599025383740304856291641847174037119473871534270024472962865539726503428943678745790638578565596704561548222780621451444408164647733163581779921969398417088961279033344000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 233 ---
+Max f^lambda: 1997418193460089170209348759530480874674369368533010391521404313446974027558721332841233912642911330345220393600982493938211053405739569466475446675862384282158014459424160462582271241806351391845090856970856693760000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 234 ---
+Max f^lambda: 29012429716043707759623256186806556289529407304757659115383066561017813778353855748401591371319869007178719202606539612313910923048299752118133094119789687495174619971761208289628117536789342908088266709378411659264000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 235 ---
+Max f^lambda: 426597365363929932116953371179261182512927952571824070987026461836172191050082788183965294638684402298522272537812758340425049587838644361357834446801808807790624979268164475939934033640716697109147292597151291266826240000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 21, 19, 17, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 236 ---
+Max f^lambda: 6532408091504898781896166791128842610512373809933659083831498445226669530636708348828665361602011032398974287959101726458304995580819524531332524549714809766550963424731759736495699592561348220892021565298599727223275520000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 237 ---
+Max f^lambda: 97432695256653540325515771007330129186296054588508324675228943959797143558205853263160608110113720501547823500005445682423857683410804083688891351116026439360319139939055153781448810985855317081042182670253018874302693376000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 238 ---
+Max f^lambda: 1459907627226189536376042964519419899040590295653255721221115092453650829082349513058322523550349984653814618114345885847719515342106219734508539020955488296800458818876695969051416680804126362981225076397873798166338967961600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 239 ---
+Max f^lambda: 21741649349917619018516494284704409074231779740819149363673765801749271076937167076844197045739864827351937611088552752964540975270693891904624853549135986373497091079316091556162504171107772197908762025932150653946880663224320000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 23, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 240 ---
+Max f^lambda: 325309930702423804308530027656060413119371095606484647486790592884307007950342260374337048640635312765105903430017115465177579950567253636659375497713783870208692022937538289966732294116846796927740394576966971414599926382854144000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 241 ---
+Max f^lambda: 4753496961995868932613970804766980468133562891622881996895535165538159503127435520108044656126210447108384380513943549395073460371012189664881137001099568427885721456208571435607559217836356441322010218629394296144799776555139072000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 15, 14, 12, 11, 10, 9, 8, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 242 ---
+Max f^lambda: 87262927409718894760908420759935659652710954611339575141131037361966915347881092520923610449966973694080278599974056866079027197946107932422887138434404254755234812110422563942978218839873509377898520173076703747927024356609228800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 21, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 243 ---
+Max f^lambda: 1347060860515142614219605070430362242783276529970048212078265423554467623513817938518010065919393045202521969288272001302903183586368596131700071801135526002106142178567649063212133837598357419018897439760151073277532757187729817600000 (achieved by 1 partition in G')
+Partitions achieving maximum: [26, 23, 21, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 244 ---
+Max f^lambda: 20887614881345470153543346993080888713534689784730226948286244138142389804509795326894067154692703916600117407248002154577170109619760953087574329171402676725225968518386841498592351732975971717806784678463688433870890053673995468800000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 23, 21, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 245 ---
+Max f^lambda: 323171787094214511360346083117225543539568066761100786713135309644757742704100985710053074533124587267750774296017463045974520231898103446573809515607858009348871659253164922608026610985348248988772446763843166457725567103884328960000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 23, 21, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 246 ---
+Max f^lambda: 5030198732112332369339814910906919291070895802288514936601294447281925612280134327266248820609830746820568596921737185302554914515579319723680813383305887467679444222554882119941583686408746044486824062332297714439087233924464640000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 23, 21, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 247 ---
+Max f^lambda: 78579508341416924788928973841899046854327927023745684300693592563062958807866459190584310440018809218057889939699358481902996520521637341064673541023550507055761969488348845635882459377041001797429067816149450615988820076376227840000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 248 ---
+Max f^lambda: 1237339858341707933421821317573487452500399055039229211752936886327197637193529018996588555343322284035055259131232777805087837855056224869919102702704121393034821540282155358533988660443212517692334803968168960567172530438144000000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 249 ---
+Max f^lambda: 18314595079507116301157913211578822995538482023384446356179873676034627136080518449566550823435747707692370649803578330483083349403416619297803734695343552189248922633052038919998860736789017408856743108132112400088818274585804800000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+
+--- Size 250 ---
+Max f^lambda: 272267160145996934499888166230151236882905503243880889307263629309078542035211541348523333215716562647837332583240377038907115966027215797846613054102830008368235610256812105855244394751885281598751752066282248034301284381097984000000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+
+--- Size 251 ---
+Max f^lambda: 4228380960717382820438856373020762850100102465065855205952551371573516469908104219330745524401003023130618664831983350341005322503800168430618255546679224424113912481238979646666602313893078124238783181405604612556678565362247126400000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 252 ---
+Max f^lambda: 65560397007028288221758373743979067056658572452890832462738953199827175755966886879833831381922879439446059087437395370778590557704871448692001518264442317854244796252023449183034086733318350889061788349455335300069578467904057466875000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 253 ---
+Max f^lambda: 1017983589554872110930253332356851089669282561125701210653084844068623448369496205224218050246487843962961874139471893701266842617204679094038101683925156295042477893702837046388607265683037249881402457637020183104738776504272488056976000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 254 ---
+Max f^lambda: 15658265290968105696306801603204122786188644069290835535876288533956393761918004758988240715898828535080614261926325101782284081905254801910623120551699668214829961712361862881302043786493983776714330472542172289230651050236903186165760000000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 21, 19, 17, 16, 14, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 255 ---
+Max f^lambda: 238398894628372240139544544681804187114582095722526702218728537423703008462348019923545687143309175401915164647353418437853196626479054954567267375670656303553113948063727210687667319513815000354488319760697493333391043970354607064133130240000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 22, 20, 18, 16, 14, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 256 ---
+Max f^lambda: 3790073338391519229716580370093631501562721813119636450901690777259729238335951432663322321742417544860216985829159660348533547977519961107607973109673821442935916512919690737398896312324372632496537116578154163409084762850537349053918163763200000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 257 ---
+Max f^lambda: 59927456283296761724980250924390496385869221329109049865473730253913997356648932733246993181789287091919837851701288905656292609869269046770399149136566795843834905389776775799316177887733744844238462495633561689233409348206841055164633899335680000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 258 ---
+Max f^lambda: 951567535843631523804695064553062052198536965655297301880972778490377327340728947771398841052777516238252734079746011677796439215987202270545883126371124158844811599337158093948410460602648502207832987350605563132993989583429711488393886903251763200000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 24, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 259 ---
+Max f^lambda: 14976197861680021190859706329835166415355475395021913017395023049375999764118234539764531933818710211627438306497176169686110565007193576737048310018574891029719384868234203702654847616905053578582892980055715843148487205425125615524726451092848640000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 24, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 260 ---
+Max f^lambda: 236724057966495142398111959728594049814636497357978086786509700169450152915484801906394756292113397104640565563433111238311031169202615284429927779036541857055399596466764467418703715745409231276163457432648494231198652239009491318522391537123328000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 7, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 261 ---
+Max f^lambda: 3564528446200777115636886883589401651130168283175965189762243760179188176159894979363758110243418452190934122243157209961340920638635422163132054152304177116408321102561237766765235314250621519355851217598945827407084118134508754818104431661704806400000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 16, 15, 13, 12, 11, 10, 9, 8, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 262 ---
+Max f^lambda: 54256154784883357818610222386827257524479730325864431544636767952456986362621299657172935818739981459690806884485191069663157402412298832293221852660363871172743628115693633934381970185390007363883454026267559455198863481676650671363662835523015147520000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 16, 15, 14, 12, 11, 10, 9, 8, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 263 ---
+Max f^lambda: 855845569662942669320298363543137620238488730584209404306904531402117432380192449570378602746763844730433385046978107803832494842850161595382850935851138730561778397065317931891238786664834055388295853026803428979313839879547094092555536940849145315328000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 264 ---
+Max f^lambda: 14044669647211063681203743575298255245452532614949255177426864550920156731552995565111905391709115560751691227381337936759251873338181740814725266131001129523941413490390298673590541174570403825825933455984275400514077324255795968628065090451879705444352000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [27, 24, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 265 ---
+Max f^lambda: 231429414966724919335892545922648813287973429052735929039132435323358043939875166890278237670945097345280292827927222761430109424031794314991758362123514740281294920109950379831722512578371042887546608322065751865736109220556678010759216820179607771676672000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 24, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
+
+--- Size 266 ---
+Max f^lambda: 3795669475165534416786456525927443516105107642186970578983882213234976613261010967351772478306602879717735192485061076074434569604229633708986059939803302199886600975899763407130089082395526174618681330534348173843287405130847827623562720651465434595328000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 24, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 267 ---
+Max f^lambda: 62516280835077332244135284139426527539458701803187616537180647876304084936749786704007719456517351094930120549276649572641880432163801596598048935749753247607064675079720194128250265707741644541737211454261270060647096544454545524980802120900752284057600000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 268 ---
+Max f^lambda: 1025117141693443643890915092052850680185766598451772105730559263196461964116760744968560398376914795962249416589769635996383559854440437744542283189355858363082360928356249677920676816868980480987427702131182439119112515909564339639067401264749440848363520000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 269 ---
+Max f^lambda: 16907117654193066385012647310302584969676927940800774112918769591066606228955003563536083925820491900863759245035183196796932758743399362528275699673950482439706486433670470731509328327048422141573851843145461806792304287397185340739180006940567013708251136000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1]
+
+--- Size 270 ---
+Max f^lambda: 265615920049557430186158867205522022126367190997033723439094697149197987128807090088559158999150987016856011074678830838690115458062002271570246665986408353956934331107312874501059302912291558045647247781271390394009126741802180806181856711534856027225866240000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+
+--- Size 271 ---
+Max f^lambda: 4189697462070922303663209159876984598023806287034651578494116841761024395280811909906411906761271049627007924530579140690628956895341905650725165329698276378991942534767873971007910707673439731756495131314285019948790954016324379505593713359659632192190414848000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [29, 25, 22, 20, 18, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+
+--- Size 272 ---
+Max f^lambda: 67539383714755676963446444086456694238132947867209543918496317961352394398122369514169619020401315028869416321324543014549268659313900436337923878337970363797397226815539381439630657027757721485109733210599505799408968183703850042830241291233757243132574105600000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1]
+
+--- Size 273 ---
+Max f^lambda: 1104601202752267802216968083038428091447350481651637337560197182505995525480492954173259162406769421224332453719419965198140261801300284886071744542736382522230586564957428277379020177344490958295229302972855712933449100061060730173709029585139843675508479885312000000000 (achieved by 1 partition in G')
+Partitions achieving maximum: [28, 25, 22, 20, 18, 17, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1]
