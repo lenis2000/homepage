@@ -23,13 +23,24 @@ code:
     display: flex;
     justify-content: center;
     min-height: 200px;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   }
   /* Make SVG responsive */
   .young-diagram-container svg {
     max-width: 100%;
-    height: auto;
+    height: auto !important;
     display: block;
     margin: 0 auto;
+  }
+  
+  /* Responsive adjustments for small screens */
+  @media (max-width: 576px) {
+    .young-diagram-container {
+      min-height: 150px;
+      margin-left: -15px;
+      margin-right: -15px;
+      width: calc(100% + 30px);
+    }
   }
   .young-box {
     fill: #4682b4;
@@ -2646,9 +2657,11 @@ code:
 
     // Set up dimensions - dynamically adjust box size based on screen size
     const baseBoxSize = 40;
-    // Reduce box size for small screens
-    const boxSize = Math.min(baseBoxSize, Math.max(18, containerWidth / (Math.max(1, Math.max(...partition)) + 5)));
-    const margin = Math.max(10, boxSize / 3);
+    // Reduce box size for small screens more aggressively, especially for mobile
+    const isMobile = window.innerWidth <= 576;
+    const minBoxSize = isMobile ? 12 : 18;
+    const boxSize = Math.min(baseBoxSize, Math.max(minBoxSize, containerWidth / (Math.max(1, Math.max(...partition)) + 5)));
+    const margin = Math.max(5, boxSize / 4);
 
     // Get the previous partition if available
     const prevPartition = n > 1 ? partitionData[n-1].partition : null;
@@ -2673,7 +2686,10 @@ code:
       .append('svg')
       .attr('viewBox', `0 0 ${width + 50} ${height + 20}`) // No extra space for legend
       .attr('preserveAspectRatio', 'xMidYMid meet')
-      .style('max-width', '100%');
+      .style('max-width', '100%')
+      .style('height', 'auto')
+      .style('display', 'block')
+      .style('margin', '0 auto');
 
     // Create a map to track box statuses
     let boxStatuses = new Map();
@@ -3097,9 +3113,9 @@ code:
     const currentPoint = data.find(d => d.n === currentN);
   }
 
-  // Handle window resize with debouncing to prevent excessive redraws
+  // Handle window resize and orientation changes with debouncing
   let resizeTimeout;
-  window.addEventListener('resize', function() {
+  function handleResize() {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(function() {
       const inputElement = document.getElementById('size-n');
@@ -3107,5 +3123,19 @@ code:
       updateDisplay(currentN);
       drawCLambdaChart(currentN); // Redraw the chart on resize with current n
     }, 250); // Wait 250ms after resize ends to redraw
+  }
+  
+  // Listen for window resize
+  window.addEventListener('resize', handleResize);
+  
+  // Listen for orientation change specifically for mobile
+  window.addEventListener('orientationchange', function() {
+    // Force immediate redraw on orientation change
+    const inputElement = document.getElementById('size-n');
+    const currentN = parseInt(inputElement.value);
+    setTimeout(function() {
+      updateDisplay(currentN);
+      drawCLambdaChart(currentN);
+    }, 100);
   });
 </script>
