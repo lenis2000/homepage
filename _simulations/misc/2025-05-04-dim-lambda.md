@@ -16,6 +16,13 @@ code:
   .young-diagram-container {
     margin-top: 20px;
     text-align: center;
+    overflow-x: auto; /* Enable horizontal scrolling if needed */
+    max-width: 100%; /* Ensure container doesn't exceed parent width */
+  }
+  /* Make SVG responsive */
+  .young-diagram-container svg {
+    max-width: 100%;
+    height: auto;
   }
   .young-box {
     fill: #4682b4;
@@ -109,11 +116,65 @@ code:
         </div>
         <div class="card-body">
           <div class="young-diagram-container" id="young-diagram-container"></div>
+          
+          <!-- Fixed legend below the diagram -->
+          <div class="legend-container mt-3" id="legend-container">
+            <div class="d-flex justify-content-center">
+              <div class="legend-item mx-2">
+                <span class="legend-box existing-box"></span>
+                <span class="legend-label">Existing</span>
+              </div>
+              <div class="legend-item mx-2">
+                <span class="legend-box new-box"></span>
+                <span class="legend-label">New</span>
+              </div>
+              <div class="legend-item mx-2">
+                <span class="legend-box removed-box"></span>
+                <span class="legend-label">Removed</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* Legend styles */
+  .legend-container {
+    text-align: center;
+    padding: 5px;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  .legend-box {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    margin-right: 5px;
+  }
+  .existing-box {
+    background-color: #4682b4;
+    border: 1px solid #000;
+  }
+  .new-box {
+    background-color: #ff7f50;
+    border: 1px solid #000;
+  }
+  .removed-box {
+    background-color: transparent;
+    border: 2px dashed #ff0000;
+    width: 13px;
+    height: 13px;
+  }
+  .legend-label {
+    font-size: 14px;
+  }
+</style>
 
 <script>
   // Store the partition data for each size n
@@ -456,9 +517,14 @@ code:
     const container = document.getElementById('young-diagram-container');
     container.innerHTML = '';
 
-    // Set up dimensions
-    const boxSize = 40;
-    const margin = 20;
+    // Get container dimensions
+    const containerWidth = document.getElementById('young-diagram-container').offsetWidth;
+
+    // Set up dimensions - dynamically adjust box size based on screen size
+    const baseBoxSize = 40;
+    // Reduce box size for small screens
+    const boxSize = Math.min(baseBoxSize, Math.max(18, containerWidth / (Math.max(1, Math.max(...partition)) + 5)));
+    const margin = Math.max(10, boxSize / 3);
 
     // Get the previous partition if available
     const prevPartition = n > 1 ? partitionData[n-1].partition : null;
@@ -473,11 +539,17 @@ code:
     const width = numCols * boxSize + margin * 2;
     const height = numRows * boxSize + margin * 2;
 
-    // Create SVG
+    // Container width already calculated above
+
+    // Calculate scale factor if diagram is wider than container
+    const scaleFactor = Math.min(1, containerWidth / (width + 100));
+
+    // Create SVG with viewBox for responsiveness
     const svg = d3.select('#young-diagram-container')
       .append('svg')
-      .attr('width', width+200)
-      .attr('height', height);
+      .attr('viewBox', `0 0 ${width + 50} ${height + 20}`) // No extra space for legend
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .style('max-width', '100%');
 
     // Create a map to track box statuses
     let boxStatuses = new Map();
@@ -584,54 +656,7 @@ code:
       }
     }
 
-    // Add a legend
-    if (prevPartition) {
-      const legendX = margin;
-      const legendY = height + 10;
-      const legendSpacing = 120;
-
-      // Existing boxes legend
-      svg.append('rect')
-        .attr('class', 'young-box')
-        .attr('x', legendX)
-        .attr('y', legendY)
-        .attr('width', 20)
-        .attr('height', 20);
-
-      svg.append('text')
-        .attr('x', legendX + 30)
-        .attr('y', legendY + 15)
-        .text('Existing');
-
-      // New boxes legend
-      svg.append('rect')
-        .attr('class', 'young-box-new')
-        .attr('x', legendX + legendSpacing)
-        .attr('y', legendY)
-        .attr('width', 20)
-        .attr('height', 20);
-
-      svg.append('text')
-        .attr('x', legendX + legendSpacing + 30)
-        .attr('y', legendY + 15)
-        .text('New');
-
-      // Removed boxes legend
-      svg.append('rect')
-        .attr('class', 'young-box-removed')
-        .attr('x', legendX + legendSpacing * 2)
-        .attr('y', legendY)
-        .attr('width', 20)
-        .attr('height', 20);
-
-      svg.append('text')
-        .attr('x', legendX + legendSpacing * 2 + 30)
-        .attr('y', legendY + 15)
-        .text('Removed');
-
-      // Adjust SVG height to accommodate legend
-      svg.attr('height', height + 40);
-    }
+    // No floating legend in the SVG
   }
 
   // Function to calculate log factorial: log(n!)
@@ -690,11 +715,11 @@ code:
       if (data.dimension >= 1e10) { // Only use scientific notation for large numbers
         const exponent = Math.floor(Math.log10(data.dimension));
         const mantissa = data.dimension / Math.pow(10, exponent);
-        scientificNotation = `${mantissa.toFixed(2)} * 10^{${exponent}}`;
+        scientificNotation = `${mantissa.toFixed(2)} × 10^${exponent}`;
       } else {
         scientificNotation = data.dimension.toString();
       }
-      document.getElementById('scientific-display').innerHTML = scientificNotation;
+      document.getElementById('scientific-display').textContent = scientificNotation;
 
       // Calculate and display c(lambda)
       const cLambda = calculateCLambda(data.dimension, n);
@@ -702,12 +727,23 @@ code:
 
       // Draw the Young diagram with the current n value
       drawYoungDiagram(data.partition, n);
+      
+      // Toggle legend visibility based on whether we have a previous partition
+      const legendContainer = document.getElementById('legend-container');
+      if (n > 1) {
+        legendContainer.style.display = 'block';
+      } else {
+        legendContainer.style.display = 'none';
+      }
     } else {
       document.getElementById('partition-display').textContent = 'Not available';
       document.getElementById('dimension-display').textContent = 'Not available';
       document.getElementById('scientific-display').textContent = 'Not available';
       document.getElementById('c-lambda-display').textContent = 'Not available';
       document.getElementById('young-diagram-container').innerHTML = '<p>Data not available for this size.</p>';
+      
+      // Hide legend when no data is available
+      document.getElementById('legend-container').style.display = 'none';
     }
   }
 
@@ -751,9 +787,13 @@ code:
     });
   });
 
-  // Handle window resize
+  // Handle window resize with debouncing to prevent excessive redraws
+  let resizeTimeout;
   window.addEventListener('resize', function() {
-    const inputElement = document.getElementById('size-n');
-    updateDisplay(parseInt(inputElement.value));
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+      const inputElement = document.getElementById('size-n');
+      updateDisplay(parseInt(inputElement.value));
+    }, 250); // Wait 250ms after resize ends to redraw
   });
 </script>
