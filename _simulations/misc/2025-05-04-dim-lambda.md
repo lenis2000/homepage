@@ -476,7 +476,7 @@ code:
     // Create SVG
     const svg = d3.select('#young-diagram-container')
       .append('svg')
-      .attr('width', width)
+      .attr('width', width+200)
       .attr('height', height);
 
     // Create a map to track box statuses
