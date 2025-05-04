@@ -81,6 +81,8 @@ code:
           Here $n$ is the number of boxes in the Young diagram.
           For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
           All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
+
+          After $n=500$, we implement a greedy-like algorithm which takes the maximal found partition of the previous size $n-1$, adds one box to it and moves around another box in all possible ways, and finds the maximum among all these local modifications. By looking at the behavior for $n\le 500$, this clearly does not always find the maximum (because modifications can be multibox), but we expect that this greedy approach hits the actual maximum infinitely often as $n\to\infty$.
       </p>
     </div>
   </div>
