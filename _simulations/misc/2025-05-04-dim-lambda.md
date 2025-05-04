@@ -92,6 +92,25 @@ code:
   .number-control-btn:hover {
     background: #e9ecef;
   }
+  
+  /* Styles for the dimension display */
+  #dimension-display {
+    font-family: "SFMono-Regular", Consolas, Monaco, "Courier New", Courier, monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+    white-space: pre-wrap;
+    min-height: 120px;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+    padding: 10px;
+    border-color: #ccc;
+    background-color: #f9f9f9;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    width: 100%;
+  }
 </style>
 
 <div class="container mt-5">
@@ -140,7 +159,7 @@ code:
           <div id="stats-container">
             <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
             <p><strong>Dimension $f^{\lambda}$:</strong></p>
-            <textarea id="dimension-display" class="form-control mb-4" rows="5" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem;">-</textarea>
+            <textarea id="dimension-display" class="form-control mb-4" rows="7" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem; word-break: break-all; white-space: pre-wrap; overflow-x: scroll; scrollbar-width: thin;">-</textarea>
             <p><strong>Two-digit Notation:</strong> <span id="scientific-display">-</span></p>
             <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display">-</span></p>
           </div>
@@ -291,12 +310,31 @@ code:
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const rawData = await response.json();
-
-      // Process the raw data if necessary (e.g., ensure keys are numbers if needed,
-      // though accessing via string keys rawData[n.toString()] might be fine)
-      // The provided python script saves keys as strings, so direct use should work.
-      partitionData = rawData;
+      
+      // Get the raw text first
+      const rawText = await response.text();
+      
+      // Use raw text parsing for dimension fields to preserve extremely large numbers
+      try {
+        // Parse JSON to object but ensure dimensions are preserved as strings
+        partitionData = JSON.parse(rawText, (key, value) => {
+          // Ensure dimension values are always strings
+          if (key === 'dimension') {
+            return value.toString();
+          }
+          return value;
+        });
+        
+        // For security, manually iterate through all entries and ensure dimensions are strings
+        Object.keys(partitionData).forEach(key => {
+          if (partitionData[key].dimension !== undefined) {
+            partitionData[key].dimension = partitionData[key].dimension.toString();
+          }
+        });
+      } catch (parseError) {
+        console.error("Error with JSON parsing:", parseError);
+        alert("Error loading data. Please refresh the page.");
+      }
 
       console.log("Partition data loaded successfully.");
 
@@ -566,11 +604,29 @@ code:
       // Update partition display
       document.getElementById('partition-display').textContent = `[${data.partition.join(', ')}]`;
 
-      // Display dimension value
-      const dimensionStr = data.dimension; // Keep exact value without string conversion
-
-      // Always display the dimension value as text, even for large numbers
-      document.getElementById('dimension-display').textContent = dimensionStr;
+      // Display dimension value - just focus on showing SUPER DUPER long numbers correctly
+      const dimensionStr = data.dimension.toString(); // Convert to string
+      
+      // Display the dimension value in textarea (use value instead of textContent)
+      const dimensionDisplay = document.getElementById('dimension-display');
+      dimensionDisplay.value = dimensionStr;
+      
+      // Log for debugging
+      console.log(`Dimension for n=${n}: String of length ${dimensionStr.length}`);
+      
+      // Adjust textarea height based on content length
+      const contentLength = dimensionStr.length;
+      if (contentLength > 1000) {
+        dimensionDisplay.rows = 15; // More rows for extremely large numbers
+      } else if (contentLength > 500) {
+        dimensionDisplay.rows = 12;
+      } else if (contentLength > 300) {
+        dimensionDisplay.rows = 8;
+      } else if (contentLength > 150) {
+        dimensionDisplay.rows = 6;
+      } else {
+        dimensionDisplay.rows = 5;
+      }
 
       // Format dimension in scientific notation with LaTeX formatting
       let scientificNotation;
