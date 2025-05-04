@@ -91,7 +91,7 @@ code:
           <div class="mb-3">
             <label for="size-n" class="form-label">Size n:</label>
             <div class="number-input-container">
-              <input type="number" class="form-control" id="size-n" min="1" max="273" value="10" required>
+              <input type="number" class="form-control" id="size-n" min="1" max="500" value="10" required>
               <div class="number-controls">
                   <span class="number-control-btn" id="increment-btn">▲</span>
                   <span class="number-control-btn" id="decrement-btn">▼</span>
@@ -1592,7 +1592,7 @@ code:
     // Add event listener for input changes
     inputElement.addEventListener('input', function() {
       const n = parseInt(this.value);
-      if (n >= 1 && n <= 273) {
+      if (n >= 1 && n <= 500) {
         updateDisplay(n);
       }
     });
@@ -1600,7 +1600,7 @@ code:
     // Add event listener for increment button
     incrementBtn.addEventListener('click', function() {
       const currentValue = parseInt(inputElement.value) || 0;
-      const maxValue = parseInt(inputElement.max) || 273;
+      const maxValue = parseInt(inputElement.max) || 500;
 
       if (currentValue < maxValue) {
         inputElement.value = currentValue + 1;
