@@ -158,9 +158,7 @@ code:
         <div class="card-body">
           <div id="stats-container">
             <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
-            <p><strong>Dimension $f^{\lambda}$:</strong></p>
-            <textarea id="dimension-display" class="form-control mb-4" rows="7" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem; word-break: break-all; white-space: pre-wrap; overflow-x: scroll; scrollbar-width: thin;">-</textarea>
-            <p><strong>Two-digit Notation:</strong> <span id="scientific-display">-</span></p>
+            <p><strong>Dimension $f^{\lambda}=$</strong> <span id="scientific-display">-</span></p>
             <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display">-</span></p>
           </div>
         </div>
@@ -218,6 +216,19 @@ code:
               <div class="c-lambda-chart-container" id="c-lambda-chart-container"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header bg-dark">
+          <h5 class="card-title mb-0">Number of standard Young tableaux</h5>
+        </div>
+        <div class="card-body">
+          <textarea id="dimension-display" class="form-control mb-4" rows="7" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem; word-break: break-all; white-space: pre-wrap; overflow-x: scroll; scrollbar-width: thin;">-</textarea>
         </div>
       </div>
     </div>
@@ -669,7 +680,7 @@ code:
             scientificNotation = `${mantissa.toFixed(2)} × 10^${exponent}`;
           } else if (typeof dimensionStr === 'string' && dimensionStr.length > 15) {
             // For very long string numbers
-            scientificNotation = `≈ ${dimensionStr.substring(0, 2)}.${dimensionStr.substring(2, 4)} × 10^${dimensionStr.length - 1}`;
+            scientificNotation = `${dimensionStr.substring(0, 2)}.${dimensionStr.substring(2, 4)} × 10^${dimensionStr.length - 1}`;
           } else if (data.dimension >= 1e10) {
             // Regular large numbers
             const exponent = Math.floor(Math.log10(data.dimension));
@@ -685,7 +696,7 @@ code:
         }
       } catch (e) {
         // Fallback for any parsing errors
-        scientificNotation = `≈ 10^${dimensionStr.toString().length}`;
+        scientificNotation = `10^${dimensionStr.toString().length}`;
       }
       document.getElementById('scientific-display').textContent = scientificNotation;
 
