@@ -80,7 +80,7 @@ code:
           or <b>close to maximum</b> (for large $n$).
           Here $n$ is the number of boxes in the Young diagram.
           For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
-          All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension, and after that, the answer should be reasonably close.
+          All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
       </p>
     </div>
   </div>
