@@ -92,6 +92,12 @@ code:
   .number-control-btn:hover {
     background: #e9ecef;
   }
+  
+  .auto-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
 
   /* Styles for the dimension display */
   #dimension-display {
@@ -146,6 +152,12 @@ code:
                   <span class="number-control-btn" id="increment-btn">▲</span>
                   <span class="number-control-btn" id="decrement-btn">▼</span>
               </div>
+            </div>
+            <div class="auto-controls mt-2">
+              <button class="btn btn-sm btn-outline-primary" id="grow-btn">Grow Diagram</button>
+              <button class="btn btn-sm btn-outline-danger" id="stop-grow-btn" style="display: none;">Stop</button>
+              <button class="btn btn-sm btn-outline-warning ml-2" id="shrink-btn">Shrink Diagram</button>
+              <button class="btn btn-sm btn-outline-danger" id="stop-shrink-btn" style="display: none;">Stop</button>
             </div>
           </div>
         </div>
@@ -311,8 +323,10 @@ code:
 </style>
 
 <script>
-  // Global variable to store the fetched partition data
+  // Global variables
   let partitionData = {};
+  let growInterval = null;  // Timer for auto-incrementing n
+  let shrinkInterval = null;  // Timer for auto-decrementing n
 
   // Function to fetch and process partition data
   async function loadPartitionData() {
@@ -370,11 +384,7 @@ code:
         // Leave the max as 12000 as specified in the HTML
         console.log(`Updated max input value to ${maxAvailable} based on available data`);
 
-        // Add data range information to the page
-        const infoElement = document.createElement('p');
-        infoElement.className = 'text-muted small mt-2';
-        infoElement.innerHTML = `Data available for sizes: 1 to ${maxAvailable} (${Object.keys(partitionData).length} entries total)`;
-        document.querySelector('.number-input-container').insertAdjacentElement('afterend', infoElement);
+        // No longer adding data range information
       }
 
       // Initialize display after data is loaded
@@ -740,16 +750,136 @@ code:
     }
   }
 
+  // Function to increment n value with validation
+  function incrementN() {
+    const inputElement = document.getElementById('size-n');
+    const currentValue = parseInt(inputElement.value) || 0;
+    const maxValue = parseInt(inputElement.max);
+
+    if (currentValue < maxValue) {
+      const nextN = currentValue + 1;
+      if (partitionData[nextN.toString()]) {
+        inputElement.value = nextN;
+        updateDisplay(nextN);
+        return true; // Successfully incremented
+      } else {
+        console.warn(`Data for n=${nextN} not loaded or available.`);
+        return false; // Failed to increment
+      }
+    }
+    return false; // Out of range
+  }
+
+  // Function to decrement n value with validation
+  function decrementN() {
+    const inputElement = document.getElementById('size-n');
+    const currentValue = parseInt(inputElement.value) || 0;
+    const minValue = parseInt(inputElement.min) || 1;
+
+    if (currentValue > minValue) {
+      const prevN = currentValue - 1;
+      if (partitionData[prevN.toString()]) {
+        inputElement.value = prevN;
+        updateDisplay(prevN);
+        return true; // Successfully decremented
+      } else {
+        console.warn(`Data for n=${prevN} not loaded or available.`);
+        return false; // Failed to decrement
+      }
+    }
+    return false; // Out of range
+  }
+
+  // Function to start auto-growing the diagram
+  function startGrowing() {
+    // Clear any existing intervals to prevent multiple timers
+    if (growInterval) clearInterval(growInterval);
+    if (shrinkInterval) {
+      clearInterval(shrinkInterval);
+      shrinkInterval = null;
+      document.getElementById('shrink-btn').style.display = 'inline-block';
+      document.getElementById('stop-shrink-btn').style.display = 'none';
+    }
+
+    // Hide grow button, show stop button
+    document.getElementById('grow-btn').style.display = 'none';
+    document.getElementById('stop-grow-btn').style.display = 'inline-block';
+
+    // Start increasing n at regular intervals
+    growInterval = setInterval(() => {
+      const success = incrementN();
+      // If we've reached the max value or data not available, stop auto-growing
+      if (!success) {
+        stopGrowing();
+      }
+    }, 500); // 0.5 seconds between increments
+  }
+
+  // Function to stop auto-growing
+  function stopGrowing() {
+    if (growInterval) {
+      clearInterval(growInterval);
+      growInterval = null;
+      // Show grow button, hide stop button
+      document.getElementById('grow-btn').style.display = 'inline-block';
+      document.getElementById('stop-grow-btn').style.display = 'none';
+    }
+  }
+
+  // Function to start auto-shrinking the diagram
+  function startShrinking() {
+    // Clear any existing intervals to prevent multiple timers
+    if (shrinkInterval) clearInterval(shrinkInterval);
+    if (growInterval) {
+      clearInterval(growInterval);
+      growInterval = null;
+      document.getElementById('grow-btn').style.display = 'inline-block';
+      document.getElementById('stop-grow-btn').style.display = 'none';
+    }
+
+    // Hide shrink button, show stop button
+    document.getElementById('shrink-btn').style.display = 'none';
+    document.getElementById('stop-shrink-btn').style.display = 'inline-block';
+
+    // Start decreasing n at regular intervals
+    shrinkInterval = setInterval(() => {
+      const success = decrementN();
+      // If we've reached the min value or data not available, stop auto-shrinking
+      if (!success) {
+        stopShrinking();
+      }
+    }, 500); // 0.5 seconds between decrements
+  }
+
+  // Function to stop auto-shrinking
+  function stopShrinking() {
+    if (shrinkInterval) {
+      clearInterval(shrinkInterval);
+      shrinkInterval = null;
+      // Show shrink button, hide stop button
+      document.getElementById('shrink-btn').style.display = 'inline-block';
+      document.getElementById('stop-shrink-btn').style.display = 'none';
+    }
+  }
+
   // Add event listeners for the input field and control buttons
   document.addEventListener('DOMContentLoaded', function() {
     const inputElement = document.getElementById('size-n');
     const incrementBtn = document.getElementById('increment-btn');
     const decrementBtn = document.getElementById('decrement-btn');
+    const growBtn = document.getElementById('grow-btn');
+    const stopGrowBtn = document.getElementById('stop-grow-btn');
+    const shrinkBtn = document.getElementById('shrink-btn');
+    const stopShrinkBtn = document.getElementById('stop-shrink-btn');
 
     // Initialize display is now handled by loadPartitionData() after fetch completes
 
     // Add event listener for input changes
     inputElement.addEventListener('input', function() {
+      // Stop any auto-growing/shrinking when the user manually changes the value
+      stopGrowing();
+      stopShrinking();
+      
       const n = parseInt(this.value);
       // Check if data for n exists before updating
       if (partitionData[n.toString()]) {
@@ -764,35 +894,19 @@ code:
 
     // Add event listener for increment button
     incrementBtn.addEventListener('click', function() {
-      const currentValue = parseInt(inputElement.value) || 0;
-      const maxValue = parseInt(inputElement.max); // Read max value from input
-
-      if (currentValue < maxValue) {
-        const nextN = currentValue + 1;
-        if (partitionData[nextN.toString()]) { // Check if next data exists
-           inputElement.value = nextN;
-           updateDisplay(nextN);
-        } else {
-            console.warn(`Data for n=${nextN} not loaded or available.`);
-        }
-      }
+      incrementN();
     });
 
     // Add event listener for decrement button
     decrementBtn.addEventListener('click', function() {
-      const currentValue = parseInt(inputElement.value) || 0;
-      const minValue = parseInt(inputElement.min) || 1;
-
-      if (currentValue > minValue) {
-        const prevN = currentValue - 1;
-         if (partitionData[prevN.toString()]) { // Check if previous data exists
-            inputElement.value = prevN;
-            updateDisplay(prevN);
-         } else {
-             console.warn(`Data for n=${prevN} not loaded or available.`);
-         }
-      }
+      decrementN();
     });
+    
+    // Add event listeners for auto grow/shrink controls
+    growBtn.addEventListener('click', startGrowing);
+    stopGrowBtn.addEventListener('click', stopGrowing);
+    shrinkBtn.addEventListener('click', startShrinking);
+    stopShrinkBtn.addEventListener('click', stopShrinking);
   });
 
   // Function to create and update the c(lambda) chart
@@ -931,6 +1045,12 @@ code:
 
   // Listen for window resize
   window.addEventListener('resize', handleResize);
+  
+  // Stop auto-growing/shrinking when the window loses focus
+  window.addEventListener('blur', function() {
+    stopGrowing();
+    stopShrinking();
+  });
 
   // Listen for orientation change specifically for mobile
   window.addEventListener('orientationchange', function() {
