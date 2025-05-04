@@ -10193,7 +10193,7 @@ code:
 
       // For very large numbers, display a placeholder and scientific notation
       if (n >= 300) { // Use n as a threshold to decide if dimension is too large
-        document.getElementById('dimension-display').textContent = "Large value, see scientific notation";
+        document.getElementById('dimension-display').textContent = "Too large";
       } else {
         document.getElementById('dimension-display').textContent = dimensionStr;
       }
@@ -10201,23 +10201,29 @@ code:
       // Format dimension in scientific notation with LaTeX formatting
       let scientificNotation;
       try {
-        if (typeof dimensionStr === 'string' && dimensionStr.includes('e')) {
-          // Handle scientific notation directly
-          const parts = dimensionStr.split('e');
-          const mantissa = parseFloat(parts[0]);
-          const exponent = parseInt(parts[1].replace('+', ''));
-          scientificNotation = `${mantissa.toFixed(2)} × 10^${exponent}`;
-        } else if (typeof dimensionStr === 'string' && dimensionStr.length > 15) {
-          // For very long string numbers
-          scientificNotation = `≈ ${dimensionStr.substring(0, 2)}.${dimensionStr.substring(2, 4)} × 10^${dimensionStr.length - 1}`;
-        } else if (data.dimension >= 1e10) {
-          // Regular large numbers
-          const exponent = Math.floor(Math.log10(data.dimension));
-          const mantissa = data.dimension / Math.pow(10, exponent);
-          scientificNotation = `${mantissa.toFixed(2)} × 10^${exponent}`;
+        // Only format numbers for n <= 300
+        if (n <= 300) {
+          if (typeof dimensionStr === 'string' && dimensionStr.includes('e')) {
+            // Handle scientific notation directly
+            const parts = dimensionStr.split('e');
+            const mantissa = parseFloat(parts[0]);
+            const exponent = parseInt(parts[1].replace('+', ''));
+            scientificNotation = `${mantissa.toFixed(2)} × 10^${exponent}`;
+          } else if (typeof dimensionStr === 'string' && dimensionStr.length > 15) {
+            // For very long string numbers
+            scientificNotation = `≈ ${dimensionStr.substring(0, 2)}.${dimensionStr.substring(2, 4)} × 10^${dimensionStr.length - 1}`;
+          } else if (data.dimension >= 1e10) {
+            // Regular large numbers
+            const exponent = Math.floor(Math.log10(data.dimension));
+            const mantissa = data.dimension / Math.pow(10, exponent);
+            scientificNotation = `${mantissa.toFixed(2)} × 10^${exponent}`;
+          } else {
+            // Small numbers
+            scientificNotation = data.dimension.toString();
+          }
         } else {
-          // Small numbers
-          scientificNotation = data.dimension.toString();
+          // For n > 300, don't try to format
+          scientificNotation = "Too large";
         }
       } catch (e) {
         // Fallback for any parsing errors
