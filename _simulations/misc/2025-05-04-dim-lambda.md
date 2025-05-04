@@ -77,6 +77,7 @@ code:
       <p>
           This visualization displays the Young diagrams with the maximum dimension (number of standard Young tableaux)
           for each size $n$. For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
+          All data on this page was precomputed with various degree of heuristic accuracy. Up to $n=500$, this should be the correct maximal dimention, and after that, the answer should be close.
       </p>
     </div>
   </div>
