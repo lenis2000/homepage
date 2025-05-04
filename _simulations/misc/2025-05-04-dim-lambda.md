@@ -306,37 +306,65 @@ code:
   // Function to fetch and process partition data
   async function loadPartitionData() {
     try {
-      const response = await fetch('{{site.url}}/js/2025-05-04-dim-lambda-partitionData.json'); // Use path to file in js directory
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Load all three JSON files
+      const jsonFiles = [
+        '{{site.url}}/js/2025-05-04-dim-lambda-partitionData.json',
+        '{{site.url}}/js/2025-05-04-dim-lambda-partitionData-large.json',
+        '{{site.url}}/js/2025-05-04-dim-lambda-partitionData-large2.json'
+      ];
+      
+      // Load each file and merge the data
+      for (const jsonFile of jsonFiles) {
+        console.log(`Loading data from ${jsonFile}...`);
+        const response = await fetch(jsonFile);
+        if (!response.ok) {
+          console.warn(`Could not load ${jsonFile}: ${response.status}`);
+          continue;
+        }
+
+        // Get the raw text first
+        const rawText = await response.text();
+
+        try {
+          // Parse JSON to object but ensure dimensions are preserved as strings
+          const fileData = JSON.parse(rawText, (key, value) => {
+            // Ensure dimension values are always strings
+            if (key === 'dimension') {
+              return value.toString();
+            }
+            return value;
+          });
+
+          // Merge data into the main partitionData object
+          Object.keys(fileData).forEach(key => {
+            partitionData[key] = fileData[key];
+            // Ensure dimensions are strings
+            if (partitionData[key].dimension !== undefined) {
+              partitionData[key].dimension = partitionData[key].dimension.toString();
+            }
+          });
+          
+          console.log(`Successfully merged data from ${jsonFile}`);
+        } catch (parseError) {
+          console.error(`Error parsing ${jsonFile}:`, parseError);
+        }
       }
-
-      // Get the raw text first
-      const rawText = await response.text();
-
-      // Use raw text parsing for dimension fields to preserve extremely large numbers
-      try {
-        // Parse JSON to object but ensure dimensions are preserved as strings
-        partitionData = JSON.parse(rawText, (key, value) => {
-          // Ensure dimension values are always strings
-          if (key === 'dimension') {
-            return value.toString();
-          }
-          return value;
-        });
-
-        // For security, manually iterate through all entries and ensure dimensions are strings
-        Object.keys(partitionData).forEach(key => {
-          if (partitionData[key].dimension !== undefined) {
-            partitionData[key].dimension = partitionData[key].dimension.toString();
-          }
-        });
-      } catch (parseError) {
-        console.error("Error with JSON parsing:", parseError);
-        alert("Error loading data. Please refresh the page.");
+      
+      console.log("Partition data loading complete, merged data from all files.");
+      
+      // Update max input value based on available data
+      const availableKeys = Object.keys(partitionData).map(Number).sort((a, b) => a - b);
+      if (availableKeys.length > 0) {
+        const maxAvailable = Math.max(...availableKeys);
+        // Leave the max as 12000 as specified in the HTML
+        console.log(`Updated max input value to ${maxAvailable} based on available data`);
+        
+        // Add data range information to the page
+        const infoElement = document.createElement('p');
+        infoElement.className = 'text-muted small mt-2';
+        infoElement.innerHTML = `Data available for sizes: 1 to ${maxAvailable} (${Object.keys(partitionData).length} entries total)`;
+        document.querySelector('.number-input-container').insertAdjacentElement('afterend', infoElement);
       }
-
-      console.log("Partition data loaded successfully.");
 
       // Initialize display after data is loaded
       const inputElement = document.getElementById('size-n');
