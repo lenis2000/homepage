@@ -122,6 +122,15 @@ code:
 
     <div class="col-md-8">
       <div class="row">
+        <!-- Warning Banner for n >= 500 -->
+        <div class="col-md-12 mb-3" id="large-n-warning" style="display: none;">
+          <div class="alert alert-warning" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Approximate Results</h4>
+            <p>For n ≥ 500, the heuristic search was limited and the displayed partition may not have the maximum dimension.
+            Results are approximate and based on constrained optimization methods.</p>
+          </div>
+        </div>
+
         <!-- Young Diagram Card -->
         <div class="col-md-12">
           <div class="card">
@@ -10163,6 +10172,14 @@ code:
   // Function to update the display with information for a given size n
   function updateDisplay(n) {
     const data = partitionData[n];
+
+    // Show/hide the warning banner based on n value
+    const warningBanner = document.getElementById('large-n-warning');
+    if (n >= 500) {
+      warningBanner.style.display = 'block';
+    } else {
+      warningBanner.style.display = 'none';
+    }
 
     if (data) {
       // Update partition display
