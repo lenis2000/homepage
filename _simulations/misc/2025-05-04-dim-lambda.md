@@ -32,7 +32,7 @@ code:
     display: block;
     margin: 0 auto;
   }
-  
+
   /* Responsive adjustments for small screens */
   @media (max-width: 576px) {
     .young-diagram-container {
@@ -92,7 +92,8 @@ code:
           Here $n$ is the number of boxes in the Young diagram.
           For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
           All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
-
+      </p>
+      <p>
           In detail, from $n=500$ to $n=5000$, we implement a greedy-like algorithm which takes the maximal found partition of the previous size $n-1$, adds one box to it and moves around another box in all possible ways, and finds the maximum among all these local modifications. By looking at the behavior for $n\le 500$, this clearly does not always find the maximum (because modifications can be multibox), but we expect that this greedy approach hits the actual maximum infinitely often as $n\to\infty$.
           After $n=5000$, we implemented an even simpler greedy algorithm which just maximizes over all ways to add a box to the previous partition.
       </p>
@@ -126,7 +127,8 @@ code:
         <div class="card-body">
           <div id="stats-container">
             <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
-            <p><strong>Dimension $f^{\lambda}$:</strong> <span id="dimension-display">-</span></p>
+            <p><strong>Dimension $f^{\lambda}$:</strong></p>
+            <textarea id="dimension-display" class="form-control mb-4" rows="5" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem;">-</textarea>
             <p><strong>Two-digit Notation:</strong> <span id="scientific-display">-</span></p>
             <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display">-</span></p>
           </div>
@@ -541,12 +543,8 @@ code:
       // Display dimension value
       const dimensionStr = data.dimension; // Keep exact value without string conversion
 
-      // For very large numbers, display a placeholder and scientific notation
-      if (n >= 300) { // Use n as a threshold to decide if dimension is too large
-        document.getElementById('dimension-display').textContent = "Too large";
-      } else {
-        document.getElementById('dimension-display').textContent = dimensionStr;
-      }
+      // Always display the dimension value as text, even for large numbers
+      document.getElementById('dimension-display').textContent = dimensionStr;
 
       // Format dimension in scientific notation with LaTeX formatting
       let scientificNotation;
@@ -809,10 +807,10 @@ code:
       drawCLambdaChart(currentN); // Redraw the chart on resize with current n
     }, 250); // Wait 250ms after resize ends to redraw
   }
-  
+
   // Listen for window resize
   window.addEventListener('resize', handleResize);
-  
+
   // Listen for orientation change specifically for mobile
   window.addEventListener('orientationchange', function() {
     // Force immediate redraw on orientation change
