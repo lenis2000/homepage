@@ -152,7 +152,7 @@ code:
         <div class="col-md-12 mt-3">
           <div class="card">
             <div class="card-header bg-info text-white">
-              <h5 class="card-title mb-0">$c(\lambda)$ vs $n$</h5>
+              <h5 class="card-title mb-0">Kerov-Pass conjectural constant</h5>
             </div>
             <div class="card-body">
               <div class="c-lambda-chart-container" id="c-lambda-chart-container"></div>
@@ -1728,28 +1728,10 @@ code:
       .attr('stroke-width', 2)
       .attr('d', line);
 
-    // Add points
-    svg.selectAll('.point')
-      .data(data)
-      .enter()
-      .append('circle')
-      .attr('class', 'point')
-      .attr('cx', d => xScale(d.n))
-      .attr('cy', d => yScale(d.value))
-      .attr('r', 3)
-      .attr('fill', '#4682b4');
+    // We're removing the dots for a cleaner line chart
 
-    // Add current point highlight
+    // Just track the current point for the value but don't display it
     const currentPoint = data.find(d => d.n === currentN);
-    if (currentPoint) {
-      svg.append('circle')
-        .attr('cx', xScale(currentPoint.n))
-        .attr('cy', yScale(currentPoint.value))
-        .attr('r', 5)
-        .attr('fill', '#ff7f50')
-        .attr('stroke', '#000')
-        .attr('stroke-width', 1);
-    }
   }
 
   // Handle window resize with debouncing to prevent excessive redraws
