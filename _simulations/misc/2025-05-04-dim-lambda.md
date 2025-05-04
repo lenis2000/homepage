@@ -224,8 +224,8 @@ code:
   <div class="row mt-4">
     <div class="col-md-12">
       <div class="card">
-        <div class="card-header bg-dark">
-          <h5 class="card-title mb-0">Number of standard Young tableaux</h5>
+        <div class="card-header bg-info text-white">
+          <h5 class="card-title mb-0">Number of standard Young tableaux of this shape</h5>
         </div>
         <div class="card-body">
           <textarea id="dimension-display" class="form-control mb-4" rows="7" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem; word-break: break-all; white-space: pre-wrap; overflow-x: scroll; scrollbar-width: thin;">-</textarea>
