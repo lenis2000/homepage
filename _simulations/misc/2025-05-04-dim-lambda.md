@@ -82,7 +82,8 @@ code:
           For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
           All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
 
-          In detail, after $n=500$, we implement a greedy-like algorithm which takes the maximal found partition of the previous size $n-1$, adds one box to it and moves around another box in all possible ways, and finds the maximum among all these local modifications. By looking at the behavior for $n\le 500$, this clearly does not always find the maximum (because modifications can be multibox), but we expect that this greedy approach hits the actual maximum infinitely often as $n\to\infty$.
+          In detail, from $n=500$ to $n=5000$, we implement a greedy-like algorithm which takes the maximal found partition of the previous size $n-1$, adds one box to it and moves around another box in all possible ways, and finds the maximum among all these local modifications. By looking at the behavior for $n\le 500$, this clearly does not always find the maximum (because modifications can be multibox), but we expect that this greedy approach hits the actual maximum infinitely often as $n\to\infty$.
+          After $n=5000$, we implemented an even simpler greedy algorithm which just maximizes over all ways to add a box to the previous partition.
       </p>
     </div>
   </div>
@@ -97,7 +98,7 @@ code:
           <div class="mb-3">
             <label for="size-n" class="form-label">Size n:</label>
             <div class="number-input-container">
-              <input type="number" class="form-control" id="size-n" min="1" max="2001" value="10" required>
+              <input type="number" class="form-control" id="size-n" min="1" max="10000" value="10" required>
               <div class="number-controls">
                   <span class="number-control-btn" id="increment-btn">▲</span>
                   <span class="number-control-btn" id="decrement-btn">▼</span>
