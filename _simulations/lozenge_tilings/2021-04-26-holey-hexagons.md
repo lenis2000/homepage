@@ -34,6 +34,11 @@ results:
 
 What happens if we sample a uniformly random tiling of a hexagon with a hole, but place the hole at different heights? (Thanks to MR for the request to sample these examples.)
 
+<b>Update 2025-05-05</b>: Well, since I am running the Glauber dynamics to sample these pictures,
+the pictures are <i>not</i> having fluctuations in the height of the hole. So, one can think of these
+pictures as samples from the fixed filling numbers ensembles. The "shift" in the data is what
+exactly corresponds to the height of the hole.
+
 ### Data file format
 
 The data file is a list of lists of lists in Mathematica-readable format, of the form
