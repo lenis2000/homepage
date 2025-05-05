@@ -294,7 +294,8 @@ results:
         <div class="col-md-12 mt-3">
           <div class="card">
             <div class="card-header bg-info text-white">
-              <h5 class="card-title mb-0">Kerov-Pass conjectural constant</h5>
+            <span class="card-title mb-0">Kerov-Pass conjectural constant $c=-\lim\limits_{n\to\infty}
+            \max\limits_{\lambda\vdash n}\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}$</span>
             </div>
             <div class="card-body">
               <div class="c-lambda-chart-container" id="c-lambda-chart-container"></div>
