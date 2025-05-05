@@ -1,5 +1,5 @@
 ---
-title: Young diagrams of maximal dimension
+title: Young diagrams of (very close to) maximal dimension
 model: misc
 author: 'Leonid Petrov'
 code:
@@ -92,13 +92,13 @@ code:
   .number-control-btn:hover {
     background: #e9ecef;
   }
-  
+
   .auto-controls {
     display: flex;
     gap: 10px;
     margin-top: 10px;
   }
-  
+
   .speed-control {
     margin-top: 10px;
     padding: 5px;
@@ -106,7 +106,7 @@ code:
     border-radius: 4px;
     border: 1px solid #e9ecef;
   }
-  
+
   .form-range {
     width: 100%;
     height: 1.5rem;
@@ -114,7 +114,7 @@ code:
     appearance: none;
     background-color: transparent;
   }
-  
+
   .form-range::-webkit-slider-thumb {
     appearance: none;
     width: 16px;
@@ -123,7 +123,7 @@ code:
     background: #007bff;
     cursor: pointer;
   }
-  
+
   .form-range::-moz-range-thumb {
     width: 16px;
     height: 16px;
@@ -160,13 +160,21 @@ code:
           dimension (number of standard Young tableaux)
           or <b>close to maximum</b> (for large $n$).
           Here $n$ is the number of boxes in the Young diagram.
-          For large $n$, partitions maximizing $f^\lambda$ are identified via heuristics similarly to those described in <a href="https://arxiv.org/abs/2311.15199">arXiv:2311.15199</a>.
-          All data on this page was precomputed with various degree of certainty that the answer is maximal. Up to $n=500$, this should be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
+          For large $n$, Young diagrams maximizing $f^\lambda$ are identified via heuristics inspired by <a href="https://arxiv.org/abs/2311.15199">this paper</a> by Duzhin and Smirnov-Maltsev (2023).
+          All data on this page was precomputed with various degree of precision (and thus, closeness to the maximal). Up to $n=500$, this should likely be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
       </p>
       <p>
-          In detail, from $n=500$ to $n=5000$, we implement a greedy-like algorithm which takes the maximal found partition of the previous size $n-1$, adds one box to it and moves around another box in all possible ways, and finds the maximum among all these local modifications. By looking at the behavior for $n\le 500$, this clearly does not always find the maximum (because modifications can be multibox), but we expect that this greedy approach hits the actual maximum infinitely often as $n\to\infty$.
-          After $n=5000$, we implemented an even simpler greedy algorithm which just maximizes over all ways to add a box to the previous partition.
+        In our search, we build candidate Young diagrams at level $n+1$ recursively by adding boxes to "best bets" from the previous two levels (few dozen at level $n-1$, and few hundred at level $n$). We also add "shaking": after adding boxes, we allow to move up to $k$ additional boxes in the Young diagram. We maximize the dimension over all candidates, and store the result and the "best bets" for future use.
       </p>
+      <p>
+      The algorithm's parameters differ significantly between small and large $n$. For $n\le 500$,
+      we implement larger pools of "best bets", and more extensive shaking.
+      For $500<n \le 5000$, we allow to move only one box.
+    After $n=5000$, we implemented an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition.
+      </p>
+      <blockquote class="blockquote">
+        <p>We conjecture </p>
+      </blockquote>
     </div>
   </div>
 
@@ -831,7 +839,7 @@ code:
   function getIntervalTime() {
     const speedSlider = document.getElementById('speed-slider');
     const speedValue = parseInt(speedSlider.value);
-    
+
     // Convert speed multiplier (1-10) to milliseconds
     // Higher speed value means shorter interval time
     // 1x = 1000ms, 10x = 100ms
@@ -940,7 +948,7 @@ code:
       // Stop any auto-growing/shrinking when the user manually changes the value
       stopGrowing();
       stopShrinking();
-      
+
       const n = parseInt(this.value);
       // Check if data for n exists before updating
       if (partitionData[n.toString()]) {
@@ -962,7 +970,7 @@ code:
     decrementBtn.addEventListener('click', function() {
       decrementN();
     });
-    
+
     // Add event listeners for auto grow/shrink controls
     growBtn.addEventListener('click', startGrowing);
     stopGrowBtn.addEventListener('click', stopGrowing);
@@ -971,15 +979,15 @@ code:
 
     // Add event listener for speed slider
     const speedSlider = document.getElementById('speed-slider');
-    
+
     // Initialize speed display
     updateSpeedDisplay();
-    
+
     // Event listener for speed slider
     speedSlider.addEventListener('input', function() {
       // Update the speed display
       updateSpeedDisplay();
-      
+
       // Update any active intervals with the new speed
       updateActiveIntervals();
     });
@@ -1121,17 +1129,17 @@ code:
 
   // Listen for window resize
   window.addEventListener('resize', handleResize);
-  
+
   // Stop auto-growing/shrinking when the window loses focus
   window.addEventListener('blur', function() {
     stopGrowing();
     stopShrinking();
   });
-  
+
   // Helper function to restart active intervals with new speed
   function updateActiveIntervals() {
     const intervalTime = getIntervalTime();
-    
+
     // Update growing interval if active
     if (growInterval) {
       clearInterval(growInterval);
@@ -1142,7 +1150,7 @@ code:
         }
       }, intervalTime);
     }
-    
+
     // Update shrinking interval if active
     if (shrinkInterval) {
       clearInterval(shrinkInterval);
