@@ -59,7 +59,7 @@
 \author{Leonid Petrov; based on the joint work with Jeanne Scott \cite{PetrovScott2024Fibonacci}}
 
 \date{UIUC, Integrability \& Representation Theory (IRT) Seminar, February 20, 2025\\
-Rutgers, 
+Rutgers,
 Symmetric Functions and Probability Seminar, March 12, 2025\\
 CMSA (Harvard), Program on Integrability, May 2, 2025}
 
@@ -130,11 +130,11 @@ In fact, we define the coherent measures
 $M_n$ for each $n$ as the distribution of
 $S_n=X_1+\ldots+X_n $:
 \begin{equation*}
-	M_n(k)=\operatorname{\mathbb{P}}\left( 
+	M_n(k)=\operatorname{\mathbb{P}}\left(
 	X_1+\ldots+X_n=k\right),\qquad k=0,1,\ldots,n.
 \end{equation*}
-Note that the distribution of 
-$(X_1,\ldots,X_n )$ depends only on 
+Note that the distribution of
+$(X_1,\ldots,X_n )$ depends only on
 $S_n$, this is exchangeability.
 
 The coherent measures $M_n$ for various $n$ satisfy linear
@@ -183,8 +183,8 @@ triangle encodes all possible coherent measures via the law of large numbers,
 	\frac{S_n}{n}\to \mu \quad \textnormal{on} \quad [0,1].
 \end{equation*}
 Here
-$S_n=X_1+\ldots+X_n$, 
-and in the Polya urn scheme, 
+$S_n=X_1+\ldots+X_n$,
+and in the Polya urn scheme,
 $S_n$ is simply the
 number of black balls drawn by time $n$,
 that is, the number of extra black balls added to the urn
@@ -216,9 +216,9 @@ of the Pascal triangle clearly contains the linear
 piece between $\delta_0$ and $\delta_1$.
 
 \begin{remark}
-	\emph{Convex interpolation} here is an elementary version of the 
+	\emph{Convex interpolation} here is an elementary version of the
 	Kerov--Goodman flow \cite{KerovGoodman1997}
-	which exists between Plancherel and other coherent measures on both 
+	which exists between Plancherel and other coherent measures on both
 	Young and Young--Fibonacci lattices (we do not mention it below, just mention it here).
 	For Pascal triangle, the flow essentially reduces to the elementary coupling between iid sequences:
 	If you have an iid coin flip sequence with probability $p$, then you can pick a proportion of $1$'s and turn them
@@ -226,7 +226,7 @@ piece between $\delta_0$ and $\delta_1$.
 \end{remark}
 
 \begin{exercise}
-	Write this flow on the Pascal triangle in terms of coherent measures, as a formula for 
+	Write this flow on the Pascal triangle in terms of coherent measures, as a formula for
 	$(C_\tau M_n)(k)$, where for $M_n$ an iid Bernoulli coherent measure with parameter $p$, $C_\tau$ produces
 	a coherent measure with parameter $p \tau$ (or $p(1-\tau)$ maybe).
 \end{exercise}
@@ -397,7 +397,7 @@ large numbers for the growing Fibonacci words.
 
 In contrast with the Young lattice and the Pascal triangle,
 the Young--Fibonacci lattice has many lonely paths.
-Namely, there is a lonely path from each Fibonacci word $w$:
+Namely, there is a lonely path started from each Fibonacci word $w$:
 \begin{equation*}
 	1w, \quad 11w, \quad 111w, \quad \ldots
 \end{equation*}
@@ -406,8 +406,13 @@ Lonely paths correspond to extreme measures,
 so the boundary has a ``discrete component''
 $1^\infty\mathbb{YF}$.
 
+There is another ``discrete component'',
+which consists of \emph{summable Fibonacci words}.
+The summability condition is that the series
+$\sum 1/d_i$, where $d_i$ are the positions of the $2$'s in the infinite word (read from the right, as usual).
+
 The full boundary looks as the Plancherel point,
-connected to all points $1^\infty w$, $w\in\mathbb{YF}$,
+connected to all points $1^\infty w$, $w\in\mathbb{YF}$, and all summable Fibonacci words,
 by linear segments (via the ``convex interpolation'' as in the
 Pascal case --- recall that these segments are still extremal
 for coherent measures).
@@ -616,7 +621,7 @@ have all minors either identically zero,
 or element of $\mathbb{Z}[\varepsilon_1,\varepsilon_2,\ldots ]$
 with \emph{positive coefficients}.
 
-The parameters $c_k$ and $t_k$ are obtained from $(\vec x,\vec{y}\ssp)$ as 
+The parameters $c_k$ and $t_k$ are obtained from $(\vec x,\vec{y}\ssp)$ as
 \begin{equation*}
 	c_k=\frac{A_{k}(\vec x\mid \vec{y}\ssp)}{A_{k-1}(\vec x\mid \vec{y}\ssp)},\qquad
 	t_k=y_k\frac{A_{k-1}(\vec x\mid \vec{y}\ssp)}{A_{k+1}(\vec x\mid \vec{y}\ssp)}
