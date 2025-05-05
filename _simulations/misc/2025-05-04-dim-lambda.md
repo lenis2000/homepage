@@ -4,10 +4,23 @@ model: misc
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-05-04-dim-lambda.md'
-    txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
+    txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at this link'
+results:
+  - title: JSON data for $n <= 5000$
+    raw: 'https://github.com/lenis2000/homepage/blob/master/js/2025-05-04-dim-lambda-partitionData.json'
+    raw-size: 21.2MB
+  - title: JSON data for $5000 < n <= 10000$
+    raw: 'https://github.com/lenis2000/homepage/blob/master/js/2025-05-04-dim-lambda-partitionData-large.json'
+    raw-size: 41.5MB
+  - title: JSON data for $10000 < n <= 12000$
+    raw: 'https://github.com/lenis2000/homepage/blob/master/js/2025-05-04-dim-lambda-partitionData-large2.json'
+    raw-size: 68.3MB
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+
+add 2 code files
 
 <style>
   .chart-container, .c-lambda-chart-container {
