@@ -1247,18 +1247,20 @@ code:
     }, 1000);
   });
 
-  // Auto-close details on small screens
+  // Auto-collapse accordion on mobile
   document.addEventListener('DOMContentLoaded', function() {
-    // Close the about section by default on mobile
+    // Function to collapse/expand the about section based on screen size
     function setAboutSectionState() {
-      const aboutSection = document.getElementById('about-section');
-      if (aboutSection) {
+      // Get the collapse element by ID
+      const infoCollapse = document.getElementById('infoCollapse');
+      
+      if (infoCollapse) {
         if (window.innerWidth <= 576) {
-          // On mobile, remove the open attribute to fold the section
-          aboutSection.removeAttribute('open');
+          // On mobile, collapse the section
+          infoCollapse.classList.remove('show');
         } else {
-          // On larger screens, add the open attribute to show the section by default
-          aboutSection.setAttribute('open', '');
+          // On larger screens, expand the section
+          infoCollapse.classList.add('show');
         }
       }
     }
