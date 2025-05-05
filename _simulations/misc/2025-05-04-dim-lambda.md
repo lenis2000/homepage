@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
 <style>
   .chart-container, .c-lambda-chart-container {
@@ -153,28 +154,40 @@ code:
 </style>
 
 <div class="container mt-5">
-  <div class="row">
-    <div class="col-md-12">
-      <p>
-          This visualization displays the Young diagrams with the maximum
-          dimension (number of standard Young tableaux)
-          or <b>close to maximum</b> (for large $n$).
-          Here $n$ is the number of boxes in the Young diagram.
-          For large $n$, Young diagrams maximizing $f^\lambda$ are identified via heuristics inspired by <a href="https://arxiv.org/abs/2311.15199">this paper</a> by Duzhin and Smirnov-Maltsev (2023).
-          All data on this page was precomputed with various degree of precision (and thus, closeness to the maximal). Up to $n=500$, this should likely be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
-      </p>
-      <p>
-        In our search, we build candidate Young diagrams at level $n+1$ recursively by adding boxes to "best bets" from the previous two levels (few dozen at level $n-1$, and few hundred at level $n$). We also add "shaking": after adding boxes, we allow to move up to $k$ additional boxes in the Young diagram. We maximize the dimension over all candidates, and store the result and the "best bets" for future use.
-      </p>
-      <p>
-      The algorithm's parameters differ significantly between small and large $n$. For $n\le 500$,
-      we implement larger pools of "best bets", and more extensive shaking.
-      For $500<n \le 5000$, we allow to move only one box.
-    After $n=5000$, we implement an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition, without shaking.
-      </p>
-      <blockquote class="blockquote">
-        <p>Based on the evidence up to $n=500$, we conjecture that even the greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
-      </blockquote>
+  <div class="accordion" id="infoAccordion">
+    <div class="card">
+      <div class="card-header" id="infoHeading">
+        <h5 class="mb-0">
+          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="true" aria-controls="infoCollapse">
+            <strong>About</strong> <i class="fa fa-chevron-down"></i>
+          </button>
+        </h5>
+      </div>
+
+      <div id="infoCollapse" class="collapse show" aria-labelledby="infoHeading" data-parent="#infoAccordion">
+        <div class="card-body">
+          <p class="mt-4">
+              This visualization displays the Young diagrams with the maximum
+              dimension (number of standard Young tableaux)
+              or <b>close to maximum</b> (for large $n$).
+              Here $n$ is the number of boxes in the Young diagram.
+              For large $n$, Young diagrams maximizing $f^\lambda$ are identified via heuristics inspired by <a href="https://arxiv.org/abs/2311.15199">this paper</a> by Duzhin and Smirnov-Maltsev (2023).
+              All data on this page was precomputed with various degree of precision (and thus, closeness to the maximal). Up to $n=500$, this should likely be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
+          </p>
+          <p>
+            In our search, we build candidate Young diagrams at level $n+1$ recursively by adding boxes to "best bets" from the previous two levels (few dozen at level $n-1$, and few hundred at level $n$). We also add "shaking": after adding boxes, we allow to move up to $k$ additional boxes in the Young diagram. We maximize the dimension over all candidates, and store the result and the "best bets" for future use.
+          </p>
+          <p>
+          The algorithm's parameters differ significantly between small and large $n$. For $n\le 500$,
+          we implement larger pools of "best bets", and more extensive shaking.
+          For $500<n \le 5000$, we allow to move only one box.
+        After $n=5000$, we implement an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition, without shaking.
+          </p>
+          <blockquote class="blockquote">
+            <p>Based on the evidence up to $n=500$, we conjecture that even the greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
+          </blockquote>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -345,6 +358,43 @@ code:
     }
     .legend-label {
       font-size: 12px;
+    }
+    #about-section[open] {
+      margin-bottom: 1rem;
+    }
+    #about-section:not([open]) {
+      margin-bottom: 0;
+    }
+    #about-section > summary {
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0.5rem 0;
+      margin-bottom: 0;
+    }
+  }
+
+  /* Always fold About section by default on mobile */
+  @media (max-width: 576px) {
+    #about-section:not([open]) {
+      display: block;
+    }
+    #about-section > div {
+      display: none;
+    }
+    #about-section[open] > div {
+      display: block;
+    }
+  }
+
+  /* For larger screens, make details togglable but not folded by default */
+  @media (min-width: 577px) {
+    #about-section > summary {
+      cursor: pointer;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    #about-section > summary::marker {
+      font-size: 1.2em;
     }
   }
 
@@ -1195,5 +1245,28 @@ code:
         updateDisplay(currentN); // Complete redraw
       }
     }, 1000);
+  });
+
+  // Auto-close details on small screens
+  document.addEventListener('DOMContentLoaded', function() {
+    // Close the about section by default on mobile
+    function setAboutSectionState() {
+      const aboutSection = document.getElementById('about-section');
+      if (aboutSection) {
+        if (window.innerWidth <= 576) {
+          // On mobile, remove the open attribute to fold the section
+          aboutSection.removeAttribute('open');
+        } else {
+          // On larger screens, add the open attribute to show the section by default
+          aboutSection.setAttribute('open', '');
+        }
+      }
+    }
+
+    // Set initial state
+    setAboutSectionState();
+
+    // Update on resize
+    window.addEventListener('resize', setAboutSectionState);
   });
 </script>
