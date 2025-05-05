@@ -5,6 +5,10 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-05-04-dim-lambda.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at this link'
+  - link: 'https://github.com/lenis2000/simulations/blob/master/2025-05-04-dim-lambda/heuristic_dim_lambda.cpp'
+    txt: 'C++ implementation of the heuristic algorithm using GMP and omp for parallelization'
+  - link: 'https://github.com/lenis2000/simulations/blob/master/2025-05-04-dim-lambda/partition_updater.c'
+    txt: 'C code for parsing the text results and generating the JSON data, with c(lambda) computation using GMP'
 results:
   - title: JSON data for $n <= 5000$
     raw: 'https://github.com/lenis2000/homepage/blob/master/js/2025-05-04-dim-lambda-partitionData.json'
@@ -18,9 +22,6 @@ results:
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-
-
-add 2 code files
 
 <style>
   .chart-container, .c-lambda-chart-container {
