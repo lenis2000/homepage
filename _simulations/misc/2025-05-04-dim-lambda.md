@@ -206,7 +206,8 @@ results:
            symmetric, or have all their <i>asymmetry boxes</i> (the skew diagram $\lambda/(\lambda\Delta\lambda')$,
            where $\lambda\Delta\lambda'$ is the maximal symmetric subdiagram of $\lambda$, and
            $\lambda'$ is the conjugate of $\lambda$)
-           exclusively below the diagonal.</p>
+           exclusively below the diagonal. Moreover, in every row or column there is at most
+           one asymmetry box.</p>
           </blockquote>
         </div>
       </div>
