@@ -158,13 +158,13 @@ code:
     <div class="card">
       <div class="card-header" id="infoHeading">
         <h5 class="mb-0">
-          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="true" aria-controls="infoCollapse">
+          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="false" aria-controls="infoCollapse">
             <strong>About</strong> <i class="fa fa-chevron-down"></i>
           </button>
         </h5>
       </div>
 
-      <div id="infoCollapse" class="collapse show" aria-labelledby="infoHeading" data-parent="#infoAccordion">
+      <div id="infoCollapse" class="collapse" aria-labelledby="infoHeading" data-parent="#infoAccordion">
         <div class="card-body">
           <p class="mt-4">
               This visualization displays the Young diagrams with the maximum
@@ -1247,28 +1247,47 @@ code:
     }, 1000);
   });
 
-  // Auto-collapse accordion on mobile
+  // Auto-collapse accordion on mobile, expand on desktop
   document.addEventListener('DOMContentLoaded', function() {
     // Function to collapse/expand the about section based on screen size
     function setAboutSectionState() {
       // Get the collapse element by ID
       const infoCollapse = document.getElementById('infoCollapse');
       
+      // Also get the button element to update aria-expanded attribute
+      const toggleButton = document.querySelector('[data-target="#infoCollapse"]');
+      
       if (infoCollapse) {
-        if (window.innerWidth <= 576) {
+        const isMobile = window.innerWidth <= 576;
+        
+        if (isMobile) {
           // On mobile, collapse the section
           infoCollapse.classList.remove('show');
+          if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', 'false');
+          }
         } else {
           // On larger screens, expand the section
           infoCollapse.classList.add('show');
+          if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', 'true');
+          }
         }
       }
     }
 
-    // Set initial state
-    setAboutSectionState();
+    // Set initial state with a slight delay to ensure DOM is fully loaded
+    setTimeout(function() {
+      setAboutSectionState();
+    }, 100);
 
-    // Update on resize
-    window.addEventListener('resize', setAboutSectionState);
+    // Update state on resize
+    window.addEventListener('resize', function() {
+      // Use debouncing to avoid excessive function calls during resize
+      clearTimeout(window.resizeAboutTimer);
+      window.resizeAboutTimer = setTimeout(function() {
+        setAboutSectionState();
+      }, 250);
+    });
   });
 </script>
