@@ -98,6 +98,39 @@ code:
     gap: 10px;
     margin-top: 10px;
   }
+  
+  .speed-control {
+    margin-top: 10px;
+    padding: 5px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .form-range {
+    width: 100%;
+    height: 1.5rem;
+    padding: 0;
+    appearance: none;
+    background-color: transparent;
+  }
+  
+  .form-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+  }
+  
+  .form-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    cursor: pointer;
+  }
 
   /* Styles for the dimension display */
   #dimension-display {
@@ -158,6 +191,10 @@ code:
               <button class="btn btn-sm btn-outline-danger" id="stop-grow-btn" style="display: none;">Stop</button>
               <button class="btn btn-sm btn-outline-warning ml-2" id="shrink-btn">Shrink Diagram</button>
               <button class="btn btn-sm btn-outline-danger" id="stop-shrink-btn" style="display: none;">Stop</button>
+            </div>
+            <div class="speed-control mt-2">
+              <label for="speed-slider" class="form-label">Speed: <span id="speed-value">2x</span></label>
+              <input type="range" class="form-range" id="speed-slider" min="1" max="10" value="2">
             </div>
           </div>
         </div>
@@ -790,6 +827,24 @@ code:
     return false; // Out of range
   }
 
+  // Function to get interval time based on speed slider
+  function getIntervalTime() {
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = parseInt(speedSlider.value);
+    
+    // Convert speed multiplier (1-10) to milliseconds
+    // Higher speed value means shorter interval time
+    // 1x = 1000ms, 10x = 100ms
+    return Math.round(1100 - (speedValue * 100));
+  }
+
+  // Function to update speed display
+  function updateSpeedDisplay() {
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = parseInt(speedSlider.value);
+    document.getElementById('speed-value').textContent = `${speedValue}x`;
+  }
+
   // Function to start auto-growing the diagram
   function startGrowing() {
     // Clear any existing intervals to prevent multiple timers
@@ -805,6 +860,9 @@ code:
     document.getElementById('grow-btn').style.display = 'none';
     document.getElementById('stop-grow-btn').style.display = 'inline-block';
 
+    // Get interval time from speed slider
+    const intervalTime = getIntervalTime();
+
     // Start increasing n at regular intervals
     growInterval = setInterval(() => {
       const success = incrementN();
@@ -812,7 +870,7 @@ code:
       if (!success) {
         stopGrowing();
       }
-    }, 500); // 0.5 seconds between increments
+    }, intervalTime);
   }
 
   // Function to stop auto-growing
@@ -841,6 +899,9 @@ code:
     document.getElementById('shrink-btn').style.display = 'none';
     document.getElementById('stop-shrink-btn').style.display = 'inline-block';
 
+    // Get interval time from speed slider
+    const intervalTime = getIntervalTime();
+
     // Start decreasing n at regular intervals
     shrinkInterval = setInterval(() => {
       const success = decrementN();
@@ -848,7 +909,7 @@ code:
       if (!success) {
         stopShrinking();
       }
-    }, 500); // 0.5 seconds between decrements
+    }, intervalTime);
   }
 
   // Function to stop auto-shrinking
@@ -907,6 +968,21 @@ code:
     stopGrowBtn.addEventListener('click', stopGrowing);
     shrinkBtn.addEventListener('click', startShrinking);
     stopShrinkBtn.addEventListener('click', stopShrinking);
+
+    // Add event listener for speed slider
+    const speedSlider = document.getElementById('speed-slider');
+    
+    // Initialize speed display
+    updateSpeedDisplay();
+    
+    // Event listener for speed slider
+    speedSlider.addEventListener('input', function() {
+      // Update the speed display
+      updateSpeedDisplay();
+      
+      // Update any active intervals with the new speed
+      updateActiveIntervals();
+    });
   });
 
   // Function to create and update the c(lambda) chart
@@ -1051,6 +1127,33 @@ code:
     stopGrowing();
     stopShrinking();
   });
+  
+  // Helper function to restart active intervals with new speed
+  function updateActiveIntervals() {
+    const intervalTime = getIntervalTime();
+    
+    // Update growing interval if active
+    if (growInterval) {
+      clearInterval(growInterval);
+      growInterval = setInterval(() => {
+        const success = incrementN();
+        if (!success) {
+          stopGrowing();
+        }
+      }, intervalTime);
+    }
+    
+    // Update shrinking interval if active
+    if (shrinkInterval) {
+      clearInterval(shrinkInterval);
+      shrinkInterval = setInterval(() => {
+        const success = decrementN();
+        if (!success) {
+          stopShrinking();
+        }
+      }, intervalTime);
+    }
+  }
 
   // Listen for orientation change specifically for mobile
   window.addEventListener('orientationchange', function() {
