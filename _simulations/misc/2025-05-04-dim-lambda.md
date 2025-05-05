@@ -198,7 +198,15 @@ results:
         After $n=5000$, we implement an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition, without shaking.
           </p>
           <blockquote class="blockquote">
-            <p>Based on the evidence up to $n=500$, we conjecture that even the greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
+            <p><b>Conjecture.</b> We believe that even the simplest greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
+          </blockquote>
+          Another observation, which supports the above conjecture and the results of Duzhin--Smirnov-Maltsev:
+          <blockquote class="blockquote">
+            <p><b>Observation.</b> All partitions up to $n=12000$ included in the current dataset are either
+           symmetric, or have all their <i>asymmetry boxes</i> (the skew diagram $\lambda/(\lambda\Delta\lambda')$,
+           where $\lambda\Delta\lambda'$ is the maximal symmetric subdiagram of $\lambda$, and
+           $\lambda'$ is the conjugate of $\lambda$)
+           exclusively below the diagonal.</p>
           </blockquote>
         </div>
       </div>
