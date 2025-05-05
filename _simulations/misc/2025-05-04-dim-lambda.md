@@ -170,10 +170,10 @@ code:
       The algorithm's parameters differ significantly between small and large $n$. For $n\le 500$,
       we implement larger pools of "best bets", and more extensive shaking.
       For $500<n \le 5000$, we allow to move only one box.
-    After $n=5000$, we implemented an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition.
+    After $n=5000$, we implement an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition, without shaking.
       </p>
       <blockquote class="blockquote">
-        <p>We conjecture </p>
+        <p>Based on the evidence up to $n=500$, we conjecture that even the greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
       </blockquote>
     </div>
   </div>
