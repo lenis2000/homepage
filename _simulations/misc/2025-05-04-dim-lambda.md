@@ -241,7 +241,7 @@ code:
         <div class="col-md-12 mb-3" id="large-n-warning" style="display: none;">
           <div class="alert alert-warning" role="alert">
             <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Approximate Results</h4>
-            <p>For n ≥ 500, the heuristic search was limited and the displayed partition may not have the maximum dimension.
+            <p>For n > 500, the heuristic search was limited and the displayed partition may not have the maximum dimension.
             Results are approximate and based on simpler greedy algorithms.</p>
           </div>
         </div>
@@ -299,6 +299,17 @@ code:
         </div>
         <div class="card-body">
           <textarea id="dimension-display" class="form-control mb-4" rows="7" readonly style="resize: vertical; overflow-y: auto; font-family: monospace; font-size: 0.9rem; word-break: break-all; white-space: pre-wrap; overflow-x: scroll; scrollbar-width: thin;">-</textarea>
+          <div class="mt-2">
+            <div class="d-flex mb-2">
+              <button id="get-mathematica-btn" class="btn btn-sm btn-outline-primary mr-2">Get dimension data Mathematica Format</button>
+              <button id="copy-mathematica-btn" class="btn btn-sm btn-outline-secondary" type="button" style="display: none;">
+                <i class="fas fa-copy"></i> Copy
+              </button>
+            </div>
+            <div id="mathematica-format-container" class="mt-2" style="display: none;">
+              <textarea id="mathematica-format" class="form-control" rows="4" readonly style="font-family: monospace; font-size: 0.9rem;"></textarea>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -738,7 +749,7 @@ code:
 
     // Show/hide the warning banner based on n value
     const warningBanner = document.getElementById('large-n-warning');
-    if (n >= 500) {
+    if (n > 500) {
       warningBanner.style.display = 'block';
     } else {
       warningBanner.style.display = 'none';
@@ -1247,19 +1258,74 @@ code:
     }, 1000);
   });
 
+  // Mathematica format generation
+  document.addEventListener('DOMContentLoaded', function() {
+    const getMathematicaBtn = document.getElementById('get-mathematica-btn');
+    const mathematicaFormatContainer = document.getElementById('mathematica-format-container');
+    const mathematicaFormatTextarea = document.getElementById('mathematica-format');
+    const copyMathematicaBtn = document.getElementById('copy-mathematica-btn');
+
+    // Function to generate Mathematica format based on the current partition
+    function generateMathematicaFormat() {
+      const inputElement = document.getElementById('size-n');
+      const n = parseInt(inputElement.value);
+
+      if (partitionData[n.toString()]) {
+        const partition = partitionData[n.toString()].partition;
+
+        // Generate coordinate pairs for Mathematica
+        let coordPairs = [];
+        for (let i = 1; i <= n; i++) {
+          // Calculate dim(λ_i) where λ_i is the partition of i
+          const dimValue = i < n ?
+                          (partitionData[i.toString()] ? partitionData[i.toString()].dimension : 1) :
+                          partitionData[n.toString()].dimension;
+
+          coordPairs.push(`{${i}, ${dimValue}}`);
+        }
+
+        // Format as Mathematica list
+        return `{${coordPairs.join(', ')}}`;
+      } else {
+        return "Data not available for this size";
+      }
+    }
+
+    // Event listener for the Mathematica format button
+    getMathematicaBtn.addEventListener('click', function() {
+      const mathematicaFormat = generateMathematicaFormat();
+      mathematicaFormatTextarea.value = mathematicaFormat;
+      mathematicaFormatContainer.style.display = 'block';
+      copyMathematicaBtn.style.display = 'inline-block'; // Show the copy button
+    });
+
+    // Clipboard copy functionality
+    copyMathematicaBtn.addEventListener('click', function() {
+      mathematicaFormatTextarea.select();
+      document.execCommand('copy');
+
+      // Visual feedback
+      const originalText = copyMathematicaBtn.innerHTML;
+      copyMathematicaBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      setTimeout(function() {
+        copyMathematicaBtn.innerHTML = originalText;
+      }, 2000);
+    });
+  });
+
   // Auto-collapse accordion on mobile, expand on desktop
   document.addEventListener('DOMContentLoaded', function() {
     // Function to collapse/expand the about section based on screen size
     function setAboutSectionState() {
       // Get the collapse element by ID
       const infoCollapse = document.getElementById('infoCollapse');
-      
+
       // Also get the button element to update aria-expanded attribute
       const toggleButton = document.querySelector('[data-target="#infoCollapse"]');
-      
+
       if (infoCollapse) {
         const isMobile = window.innerWidth <= 576;
-        
+
         if (isMobile) {
           // On mobile, collapse the section
           infoCollapse.classList.remove('show');
