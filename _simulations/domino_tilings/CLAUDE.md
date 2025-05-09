@@ -8,6 +8,13 @@
 
 ## Quick Commands
 
+### Standard Commands
+The following commands can always be executed without asking for permission:
+- Compilation commands (emcc)
+- Moving files to the js directory
+- Reading code/files
+- Updating code/MD files for simulations
+
 ### Single File Compilation
 ```bash
 # Compile and move a single simulation:

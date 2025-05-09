@@ -71,10 +71,11 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
 </div>
 
 <div class="controls">
-  <label for="a-input">a:</label>
-  <input id="a-input" type="number" value="0.5" step="0.1">
-  <label for="b-input">b:</label>
-  <input id="b-input" type="number" value="1.0" step="0.1">
+  <label for="u-input">Value u:</label>
+  <input id="u-input" type="number" value="0.5" step="0.1" min="0.1">
+  <label for="v-input">Value v:</label>
+  <input id="v-input" type="number" value="1.5" step="0.1" min="0.1">
+  <span style="margin-left: 10px; font-style: italic;">(Random Bernoulli weights use u or v with probability 1/2)</span>
 </div>
 
 <div class="controls">
@@ -262,8 +263,7 @@ Module.onRuntimeInitialized = async function() {
     simulationActive = true;
     updateBtn.disabled = true;
     document.getElementById("n-input").disabled = true;
-    document.getElementById("a-input").disabled = true;
-    document.getElementById("b-input").disabled = true;
+    // Removed references to a-input and b-input as they no longer exist
     cancelBtn.style.display = 'inline-block';
 
     simulationAbortController = new AbortController();
@@ -274,8 +274,7 @@ Module.onRuntimeInitialized = async function() {
     clearInterval(progressInterval);
     updateBtn.disabled = false;
     document.getElementById("n-input").disabled = false;
-    document.getElementById("a-input").disabled = false;
-    document.getElementById("b-input").disabled = false;
+    // Removed references to a-input and b-input as they no longer exist
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
 
@@ -301,10 +300,11 @@ Module.onRuntimeInitialized = async function() {
 
 // --- helper: run nSteps Glauber flips with current a,b and redraw ---
 async function advanceDynamics(nSteps) {
-  const aVal = parseFloat(document.getElementById('a-input').value);
-  const bVal = parseFloat(document.getElementById('b-input').value);
+  // Get the current u and v values from the interface
+  const uVal = parseFloat(document.getElementById("u-input").value);
+  const vVal = parseFloat(document.getElementById("v-input").value);
 
-  const ptr   = await performGlauberSteps(aVal, bVal, nSteps);
+  const ptr   = await performGlauberSteps(uVal, vVal, nSteps);
   const json  = Module.UTF8ToString(ptr);
   freeString(ptr);
 
@@ -328,8 +328,6 @@ async function advanceDynamics(nSteps) {
       // Re-enable controls
       document.getElementById("sweeps-input").disabled = false;
       document.getElementById("n-input").disabled = false;
-      document.getElementById("a-input").disabled = false;
-      document.getElementById("b-input").disabled = false;
       updateBtn.disabled = false;
     } else {
       // Start dynamics
@@ -343,7 +341,7 @@ async function advanceDynamics(nSteps) {
       dynamicsBtn.classList.add("running");
       progressElem.innerText = "";
 
-      // Only disable new sample inputs, leave sweeps/a/b editable
+      // Only disable new sample inputs, leave sweeps editable
       document.getElementById("n-input").disabled = true;
       updateBtn.disabled = true;
 
@@ -362,10 +360,11 @@ async function advanceDynamics(nSteps) {
 dynamicsTimer = setInterval(async () => {
   const stepsPerUpdate = Math.max(
         1, parseInt(document.getElementById('sweeps-input').value,10)||1);
-  const aVal = parseFloat(document.getElementById('a-input').value);
-  const bVal = parseFloat(document.getElementById('b-input').value);
+  // Get the current u and v values from the interface
+  const uVal = parseFloat(document.getElementById("u-input").value);
+  const vVal = parseFloat(document.getElementById("v-input").value);
 
-  const ptr = await performGlauberSteps(aVal, bVal, stepsPerUpdate);
+  const ptr = await performGlauberSteps(uVal, vVal, stepsPerUpdate);
   const jsonStr = Module.UTF8ToString(ptr);  freeString(ptr);
   cachedDominoes = JSON.parse(jsonStr);
 
@@ -425,14 +424,22 @@ dynamicsTimer = setInterval(async () => {
     await sleep(50);
     if (signal.aborted) return;
 
-    const aVal = parseFloat(document.getElementById("a-input").value);
-    const bVal = parseFloat(document.getElementById("b-input").value);
+    // Get u and v values from the interface
+    const uVal = parseFloat(document.getElementById("u-input").value);
+    const vVal = parseFloat(document.getElementById("v-input").value);
+    // Verify u and v are valid
+    if (isNaN(uVal) || isNaN(vVal) || uVal <= 0 || vVal <= 0) {
+      alert("Values for u and v must be positive numbers.");
+      stopSimulation();
+      return;
+    }
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
 
     // Run simulation with periodic yielding to keep UI responsive
     try {
       // always take an exact shuffling sample
-      let ptr = await simulateAztec(n, aVal, bVal);
+      // Use the u and v values for the random Bernoulli weights
+      let ptr = await simulateAztec(n, uVal, vVal);
 
 
       if (signal.aborted) {
@@ -537,8 +544,6 @@ dynamicsTimer = setInterval(async () => {
         progressElem.innerText = "";
         updateBtn.disabled = false;
         document.getElementById("n-input").disabled = false;
-        document.getElementById("a-input").disabled = false;
-        document.getElementById("b-input").disabled = false;
         cancelBtn.style.display = 'none';
         simulationActive = false;
       }
@@ -557,7 +562,21 @@ dynamicsTimer = setInterval(async () => {
       alert("Please enter a valid even number n, 2 ≤ n ≤ 300.");
       return;
     }
-    updateVisualization(n);
+
+    // Force random weights regeneration
+    const forceRegenerate = async () => {
+      // Get the current u, v values but force regeneration with special flag
+      const uVal = parseFloat(document.getElementById("u-input").value);
+      const vVal = parseFloat(document.getElementById("v-input").value);
+      // Pass -1 as the number of steps to signal regeneration
+      const ptr = await performGlauberSteps(uVal, vVal, -1);
+      freeString(ptr);
+
+      // Now run the actual visualization
+      updateVisualization(n);
+    };
+
+    forceRegenerate();
   });
 
   // Add cancel button event listener
@@ -573,6 +592,14 @@ dynamicsTimer = setInterval(async () => {
         .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
     }
   });
+
+  // Ensure weight matrix button is visible
+  const showWeightsBtn = document.getElementById("show-weights-btn");
+  if (showWeightsBtn) showWeightsBtn.style.display = "block";
+
+  // Remove weight-matrix-container if it exists
+  const weightMatrixContainer = document.getElementById("weight-matrix-container");
+  // Don't hide the container
 
 
   // Function to convert SVG dominoes to TikZ code
@@ -632,7 +659,7 @@ dynamicsTimer = setInterval(async () => {
 
 \\begin{document}
 % Aztec Diamond with 2x2 periodic weights
-% n = ${n}, a = ${a}, b = ${b}, grayscale = ${useGrayscale}
+% n = ${n}, u = ${u}, v = ${v}, grayscale = ${useGrayscale}
 % sample obtained by Glauber dynamics
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
 
@@ -720,12 +747,12 @@ dynamicsTimer = setInterval(async () => {
   document.getElementById("download-tikz-btn").addEventListener("click", function() {
     const codeContainer = document.getElementById('tikz-code-container');
     const n = parseInt(document.getElementById("n-input").value, 10);
-    const a = parseFloat(document.getElementById("a-input").value);
-    const b = parseFloat(document.getElementById("b-input").value);
+    const u = parseFloat(document.getElementById("u-input").value);
+    const v = parseFloat(document.getElementById("v-input").value);
     const algo = "glauber";
 
     const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
-    const fileNameBase = `aztec_periodic_${algo}_n${n}_a${a}_b${b}`;
+    const fileNameBase = `aztec_periodic_${algo}_n${n}_u${u}_v${v}`;
     const downloadLink = document.createElement('a');
     downloadLink.download = `${fileNameBase.replace(/\./g, "_")}_tikz.tex`;
     downloadLink.href = URL.createObjectURL(blob);
@@ -733,7 +760,7 @@ dynamicsTimer = setInterval(async () => {
     URL.revokeObjectURL(downloadLink.href);
   });
 
-  // Weight matrix display functionality
+  // Weight matrix display functionality - shows only 10x10 corner of the matrix
   document.getElementById("show-weights-btn").addEventListener("click", async function() {
     const containerElem = document.getElementById('weight-matrix-container');
     const tableElem = document.getElementById('weight-matrix-table');
@@ -786,23 +813,36 @@ dynamicsTimer = setInterval(async () => {
       }
 
       // The data is already structured as a 2D array from C++
-      const size = weightValues.length;
+      const fullSize = weightValues.length;
+      // Show only a 10x10 corner (or full matrix if smaller)
+      const displaySize = Math.min(10, fullSize);
+
+      // Add a note about the size being displayed
+      const noteElem = document.createElement('div');
+      noteElem.style.marginBottom = '10px';
+      noteElem.style.fontStyle = 'italic';
+      if (fullSize > 10) {
+        noteElem.textContent = `Showing 10×10 corner of the ${fullSize}×${fullSize} weight matrix:`;
+      } else {
+        noteElem.textContent = `Showing the full ${fullSize}×${fullSize} weight matrix:`;
+      }
+      tableElem.appendChild(noteElem);
 
       const headerRow = document.createElement('tr');
       headerRow.innerHTML = '<th style="border: 1px solid #ccc; padding: 4px;"></th>' +
-        Array.from({length: size}, (_, i) =>
+        Array.from({length: displaySize}, (_, i) =>
           `<th style="border: 1px solid #ccc; padding: 4px;">${i}</th>`).join('');
       tableElem.appendChild(headerRow);
 
-      // Create rows with formatted cells
-      for (let i = 0; i < size; i++) {
+      // Create rows with formatted cells - limited to the display size
+      for (let i = 0; i < displaySize; i++) {
         const row = document.createElement('tr');
         const headerCell = document.createElement('th');
         headerCell.textContent = i;
         headerCell.style.cssText = 'border: 1px solid #ccc; padding: 4px;';
         row.appendChild(headerCell);
 
-        for (let j = 0; j < size; j++) {
+        for (let j = 0; j < displaySize; j++) {
           const cell = document.createElement('td');
           // For this pattern, we need integer division as well as modulus
           // Calculate the 2×2 block pattern - every other row/column should have random weights
@@ -813,27 +853,19 @@ dynamicsTimer = setInterval(async () => {
           const mod_i = i % 2;
           const mod_j = j % 2;
 
-          // Determine which of the 4 pattern types (matches implementation in C++)
+          // Simplify to just two pattern types - deterministic (1.0) and random (0.5 or 1.5)
           let patternType;
           let bgcolor;
 
-          // Pattern matching the C++ code at lines 395-415
           if (mod_i === 0 && mod_j === 0) {
             // These are the deterministic weights (1.0)
             patternType = "Deterministic (1.0)";
             bgcolor = '#e6f7ff'; // Light blue
           }
-          else if (mod_i === 0 && mod_j === 1) {
-            patternType = "α";
-            bgcolor = '#ffebcc'; // Light orange
-          }
-          else if (mod_i === 1 && mod_j === 1) {
-            patternType = "β";
-            bgcolor = '#e6ffe6'; // Light green
-          }
-          else if (mod_i === 1 && mod_j === 0) {
-            patternType = "γ";
-            bgcolor = '#ffe6e6'; // Light red
+          else {
+            // All other weights are random Bernoulli weights
+            patternType = "Random Bernoulli";
+            bgcolor = '#f9f9f9'; // Very light gray for all random weights
           }
 
           cell.title = patternType; // Add a tooltip
@@ -866,14 +898,12 @@ dynamicsTimer = setInterval(async () => {
       // Add a legend
       const legendRow = document.createElement('tr');
       const legendCell = document.createElement('td');
-      legendCell.colSpan = size + 1;
+      legendCell.colSpan = displaySize + 1;
       legendCell.innerHTML = `
         <div style="margin-top: 10px; text-align: left;">
           <p><strong>Legend:</strong></p>
           <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #e6f7ff;"></span> Deterministic weights (1.0)</p>
-          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #ffebcc;"></span> Random Bernoulli weights α (0.5 or 1.5)</p>
-          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #e6ffe6;"></span> Random Bernoulli weights β (0.5 or 1.5)</p>
-          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #ffe6e6;"></span> Random Bernoulli weights γ (0.5 or 1.5)</p>
+          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #f9f9f9;"></span> Random Bernoulli weights (u or v with probability 1/2)</p>
         </div>
       `;
       legendRow.appendChild(legendCell);

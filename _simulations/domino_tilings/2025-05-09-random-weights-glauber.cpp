@@ -403,11 +403,11 @@ std::string getWeightMatrixJson() {
             if (mod_i == 0 && mod_j == 0) {
                 json += "1.0"; // Deterministic
             } else if (mod_i == 0 && mod_j == 1) {
-                json += ((i+j) % 4 == 0) ? "0.5" : "1.5"; // Alpha
+                json += ((i+j) % 4 == 0) ? std::to_string(g_a) : std::to_string(g_b); // Alpha with u/v values
             } else if (mod_i == 1 && mod_j == 1) {
-                json += ((i+j) % 4 == 0) ? "1.5" : "0.5"; // Beta
+                json += ((i+j) % 4 == 0) ? std::to_string(g_b) : std::to_string(g_a); // Beta with u/v values
             } else if (mod_i == 1 && mod_j == 0) {
-                json += ((i+j) % 3 == 0) ? "0.5" : "1.5"; // Gamma
+                json += ((i+j) % 3 == 0) ? std::to_string(g_a) : std::to_string(g_b); // Gamma with u/v values
             }
         }
 
@@ -463,7 +463,13 @@ char* simulateAztec(int n, double a, double b) {
         int dim = 2 * n;
         MatrixDouble A1a(dim, dim, 0.0);
 
-        // Initialize random Bernoulli weights if not already done
+        // Force regeneration of weights if special parameter values are used
+        if (a == -1.0 && b == -1.0) {
+            std::cout << "Forcing regeneration of random weights in simulateAztec" << std::endl;
+            g_random_initialized = false;
+        }
+
+        // Initialize random Bernoulli weights if not already done or if forced
         if (!g_random_initialized) {
             std::uniform_real_distribution<> bernoulli(0.0, 1.0);
             // Set up the random weights according to the specified pattern:
@@ -487,15 +493,15 @@ char* simulateAztec(int n, double a, double b) {
                     }
                     // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
                     else if (mod_i == 0 && mod_j != 0) {
-                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // α - random
                     }
                     // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
                     else if (mod_i != 0 && mod_j != 0) {
-                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // β - random
                     }
                     // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
                     else if (mod_i != 0 && mod_j == 0) {
-                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // γ - random
                     }
                 }
             }
@@ -679,15 +685,15 @@ char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
                     }
                     // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
                     else if (mod_i == 0 && mod_j != 0) {
-                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // α - random
                     }
                     // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
                     else if (mod_i != 0 && mod_j != 0) {
-                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // β - random
                     }
                     // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
                     else if (mod_i != 0 && mod_j == 0) {
-                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // γ - random
                     }
                 }
             }
@@ -704,7 +710,7 @@ char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
                 std::uniform_real_distribution<> bernoulli(0.0, 1.0);
                 for (int i = 0; i < dim; i++){
                     for (int j = 0; j < dim; j++){
-                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5;
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b;
                     }
                 }
                 g_W = W;
@@ -897,15 +903,15 @@ char* performGlauberStep(double a, double b)
                         }
                         // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
                         else if (mod_i == 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // α - random
                         }
                         // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
                         else if (mod_i != 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // β - random
                         }
                         // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
                         else if (mod_i != 0 && mod_j == 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // γ - random
                         }
                     }
                 }
@@ -979,6 +985,9 @@ char* performGlauberSteps(double a, double b, int nSteps)
         if(a != g_a || b != g_b){
             // If params changed AND they're both -1, this is a special signal to regenerate random weights
             if (a == -1.0 && b == -1.0) {
+                std::cout << "Regenerating random weights matrix..." << std::endl;
+                // Force randomization flag to false to ensure new weights
+                g_random_initialized = false;
                 std::uniform_real_distribution<> bernoulli(0.0, 1.0);
                 g_W = MatrixDouble(g_N, g_N, 0.0);
 
@@ -997,15 +1006,15 @@ char* performGlauberSteps(double a, double b, int nSteps)
                         }
                         // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
                         else if (mod_i == 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // α - random
                         }
                         // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
                         else if (mod_i != 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // β - random
                         }
                         // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
                         else if (mod_i != 0 && mod_j == 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // γ - random
                         }
                     }
                 }
