@@ -65,16 +65,17 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
 
 <div class="controls">
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
-  <input id="n-input" type="number" value="6" min="2" step="2" max="300" size="3">
-  <button id="update-btn">Update</button>
+  <input id="n-input" type="number" value="6" min="2" step="2" max="300" size="3" onchange="clearGlobalStateForResample()">
+  <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
 <div class="controls">
   <label for="u-input">Value u:</label>
-  <input id="u-input" type="number" value="0.5" step="0.1" min="0.1">
+  <input id="u-input" type="number" value="0.5" step="0.1" min="0.1" oninput="updateWeightsIfShown()">
   <label for="v-input">Value v:</label>
-  <input id="v-input" type="number" value="1.5" step="0.1" min="0.1">
+  <input id="v-input" type="number" value="1.5" step="0.1" min="0.1" oninput="updateWeightsIfShown()">
+  <button id="update-weights-btn" style="margin-left: 10px;">Update Weights</button>
   <span style="margin-left: 10px; font-style: italic;">(Random Bernoulli weights use u or v with probability 1/2)</span>
 </div>
 
@@ -119,6 +120,7 @@ let cachedDominoes = null;
 let dynamicsRunning = false;
 let dynamicsTimer = null;
 let g_W = null; // Global variable to store the weight matrix
+let g_N = null; // Global variable to track current matrix size (2*n)
 
 // Helper: convert a brightness value (0–255) to a hex grayscale string.
 function grayHex(brightness) {
@@ -171,6 +173,9 @@ Module.onRuntimeInitialized = async function() {
 
   // Add new function to get the weight matrix
   const getWeightMatrix = Module.cwrap('getWeightMatrix', 'number', [], {async: true});
+
+  // Add reset global state function
+  const resetGlobalState = Module.cwrap('resetGlobalState', null, [], {});
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
@@ -438,7 +443,8 @@ dynamicsTimer = setInterval(async () => {
     // Run simulation with periodic yielding to keep UI responsive
     try {
       // always take an exact shuffling sample
-      // Use the u and v values for the random Bernoulli weights
+      // Use the current n value and u,v values for the random Bernoulli weights
+      console.log(`Generating new sample with n=${n}, u=${uVal}, v=${vVal}`);
       let ptr = await simulateAztec(n, uVal, vVal);
 
 
@@ -478,6 +484,10 @@ dynamicsTimer = setInterval(async () => {
       if (signal.aborted) return;
 
       cachedDominoes = dominoes;
+
+      // Update our JavaScript tracking of the current n value
+      g_N = 2 * n;
+      console.log(`Updated g_N to ${g_N} (n=${n})`);
 
       const minX = d3.min(dominoes, d => d.x);
       const minY = d3.min(dominoes, d => d.y);
@@ -563,20 +573,13 @@ dynamicsTimer = setInterval(async () => {
       return;
     }
 
-    // Force random weights regeneration
-    const forceRegenerate = async () => {
-      // Get the current u, v values but force regeneration with special flag
-      const uVal = parseFloat(document.getElementById("u-input").value);
-      const vVal = parseFloat(document.getElementById("v-input").value);
-      // Pass -1 as the number of steps to signal regeneration
-      const ptr = await performGlauberSteps(uVal, vVal, -1);
-      freeString(ptr);
+    // Always reset global state to force a clean resample
+    // This ensures we'll use the current n value
+    console.log(`Forcing resample with n=${n}`);
+    clearGlobalStateForResample();
 
-      // Now run the actual visualization
-      updateVisualization(n);
-    };
-
-    forceRegenerate();
+    // Generate new sample with explicitly passed n
+    updateVisualization(n);
   });
 
   // Add cancel button event listener
@@ -584,6 +587,60 @@ dynamicsTimer = setInterval(async () => {
 
   // Add dynamics button event listener
   document.getElementById("dynamics-btn").addEventListener("click", toggleDynamics);
+
+  // Add update weights button event listener
+  document.getElementById("update-weights-btn").addEventListener("click", async function() {
+    const u = parseFloat(document.getElementById("u-input").value);
+    const v = parseFloat(document.getElementById("v-input").value);
+
+    // Validate u and v
+    if (isNaN(u) || isNaN(v) || u <= 0 || v <= 0) {
+      alert("Values for u and v must be positive numbers.");
+      return;
+    }
+
+    // Temporarily disable the button and show progress
+    const updateBtn = document.getElementById("update-weights-btn");
+    const originalText = updateBtn.textContent;
+    updateBtn.disabled = true;
+    updateBtn.textContent = "Updating...";
+    progressElem.innerText = "Updating weight matrix...";
+
+    try {
+      // Call performGlauberSteps with special parameter -1 to signal regeneration of weights
+      // but keep the current configuration
+      const ptr = await performGlauberSteps(u, v, -1);
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+
+      // Update the visualization with the new configuration (which has the same pattern
+      // but possibly uses the new weights for the dynamics)
+      cachedDominoes = JSON.parse(jsonStr);
+      updateDominoesVisualization();
+
+      // Update the weight matrix display if it's visible
+      const weightMatrixContainer = document.getElementById('weight-matrix-container');
+      if (weightMatrixContainer && weightMatrixContainer.style.display !== 'none') {
+        // Hide and then re-show the weight matrix to force a refresh
+        document.getElementById('show-weights-btn').click(); // Hide
+        setTimeout(() => {
+          document.getElementById('show-weights-btn').click(); // Show again
+        }, 100);
+      }
+
+      progressElem.innerText = "Weights updated successfully";
+      setTimeout(() => {
+        progressElem.innerText = "";
+      }, 2000);
+    } catch (e) {
+      console.error("Error updating weights:", e);
+      progressElem.innerText = "Error updating weights";
+    } finally {
+      // Re-enable the button
+      updateBtn.disabled = false;
+      updateBtn.textContent = originalText;
+    }
+  });
 
   document.getElementById("grayscale-checkbox").addEventListener("change", () => {
     const useGrayscale = document.getElementById("grayscale-checkbox").checked;
@@ -903,7 +960,7 @@ dynamicsTimer = setInterval(async () => {
         <div style="margin-top: 10px; text-align: left;">
           <p><strong>Legend:</strong></p>
           <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #e6f7ff;"></span> Deterministic weights (1.0)</p>
-          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #f9f9f9;"></span> Random Bernoulli weights (u or v with probability 1/2)</p>
+          <p class="legend-random-weights"><span style="display: inline-block; width: 15px; height: 15px; background-color: #f9f9f9;"></span> Random Bernoulli weights (u or v with probability 1/2)</p>
         </div>
       `;
       legendRow.appendChild(legendCell);
@@ -915,6 +972,54 @@ dynamicsTimer = setInterval(async () => {
       btnElem.textContent = 'Show Weight Matrix';
     }
   });
+
+  // Helper to clear global state to force fresh resampling
+  window.clearGlobalStateForResample = function() {
+    // This JavaScript counterpart to C++ global state clearing
+    // Makes sure we force a complete resampling with new dimensions
+    // To be called when n changes before sampling
+
+    // Reset cached dominoes
+    cachedDominoes = null;
+
+    // Reset the C++ global state
+    if (Module && Module.ccall) {
+      try {
+        console.log("Calling resetGlobalState to clear C++ globals");
+        Module.ccall("resetGlobalState", null, [], []);
+      } catch (e) {
+        console.error("Error calling resetGlobalState:", e);
+      }
+    }
+  };
+
+  // Function to update weight matrix when u/v values change
+  window.updateWeightsIfShown = function() {
+    const containerElem = document.getElementById('weight-matrix-container');
+
+    // Only update if the weight matrix is currently visible
+    if (containerElem && containerElem.style.display !== 'none') {
+      // Prevent too rapid updates with a debounce mechanism
+      if (window.weightUpdateTimer) {
+        clearTimeout(window.weightUpdateTimer);
+      }
+
+      // Schedule update after a short delay to avoid too many rapid updates
+      window.weightUpdateTimer = setTimeout(function() {
+        // Get the current u/v values
+        const u = parseFloat(document.getElementById('u-input').value);
+        const v = parseFloat(document.getElementById('v-input').value);
+
+        // Update the legend text only without regenerating the matrix
+        if (!isNaN(u) && !isNaN(v) && u > 0 && v > 0) {
+          const legendElement = document.querySelector('#weight-matrix-table .legend-random-weights');
+          if (legendElement) {
+            legendElement.textContent = `Random Bernoulli weights (${u} or ${v} with probability 1/2)`;
+          }
+        }
+      }, 200);
+    }
+  };
 
   const initialN = parseInt(document.getElementById("n-input").value, 10);
   updateVisualization(initialN);

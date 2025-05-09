@@ -1024,10 +1024,17 @@ char* performGlauberSteps(double a, double b, int nSteps)
             g_a = a; g_b = b;
         }
 
-        /* run the requested number of flips */
-        std::uniform_real_distribution<> u(0.0,1.0);
-        for(int k=0;k<nSteps;++k)
-            glauberStep(g_conf, g_W, rng, u);
+        /* run the requested number of flips or special case for just updating weights */
+        if (nSteps == -1) {
+            // Special case: nSteps = -1 means just update weights and return the current configuration
+            // No Glauber steps needed
+            std::cout << "Updating weights only with u=" << a << ", v=" << b << std::endl;
+        } else {
+            // Normal case: perform nSteps Glauber steps
+            std::uniform_real_distribution<> u(0.0,1.0);
+            for(int k=0;k<nSteps;++k)
+                glauberStep(g_conf, g_W, rng, u);
+        }
 
         /* --- serialise g_conf (identical code path) --- */
         const int size  = g_N;
@@ -1067,6 +1074,15 @@ void freeString(char* str) {
 EMSCRIPTEN_KEEPALIVE
 int getProgress() {
     return progressCounter;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void resetGlobalState() {
+    // Reset global state to force complete regeneration
+    g_N = 0;  // This will force a fresh size calculation
+    g_random_initialized = false;  // Force new random weights
+
+    std::cout << "Global state reset - g_N=0, g_random_initialized=false" << std::endl;
 }
 
 } // extern "C"
