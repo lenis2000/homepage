@@ -40,13 +40,51 @@ code:
   }
 </style>
 
-<!-- ## About the simulation
+<details>
+<summary>About the simulation</summary>
 
-##### Shuffling (initial picture)
+## About the simulation
 
-This simulation demonstrates random domino tilings of an Aztec diamond—a diamond‑shaped union of unit squares. The probability measure is $2\times2$‑periodic with edge‑weights $(a,b)$, as studied by Chhita & Johansson in [Domino tilings of the Aztec diamond with periodic weights](https://arxiv.org/abs/1410.2385). Sampling uses the shuffling algorithm. The original Python implementation by Sunil Chhita has been ported to JavaScript + WebAssembly, and the graphics are rendered with D3.js.
+This interactive application demonstrates random domino tilings of an Aztec diamond - a diamond-shaped union of unit squares. The simulation allows exploration of two distinct sampling methods:
 
-The sampling runs entirely in your browser. For sizes up to about $n\le120$ the sampler is fast; larger $n$ may take noticeable time (hard cap $n=300$ to protect your browser). -->
+### Initial sampling (Shuffling algorithm)
+
+The initial configuration is generated using the exact-sampling shuffling algorithm, producing a perfect sample from the weighted domino tiling measure. The probability measure is 2×2-periodic with random Bernoulli weights, as studied by Chhita & Johansson in [Domino tilings of the Aztec diamond with periodic weights](https://arxiv.org/abs/1410.2385).
+
+In this random Bernoulli weights model, each edge in the graph is randomly assigned one of two possible weights (`u` or `v`) with probability 1/2, creating a disordered environment for the domino tiling. This contrasts with deterministic periodic weight patterns seen in other simulations.
+
+### Glauber dynamics
+
+After generating an initial configuration, you can observe the evolution of the system through Glauber dynamics - a Markov chain Monte Carlo method that preserves the stationary distribution. Each step attempts to flip a randomly chosen 2×2 block of cells according to the heat-bath probability determined by the edge weights.
+
+Unlike the shuffling algorithm which generates an exact sample immediately, Glauber dynamics shows the system evolving over time, potentially revealing metastable states and the system's approach to equilibrium.
+
+## Parameters explained
+
+- **Aztec Diamond Order (n)**: Controls the size of the diamond. The resulting tiling will be of a diamond with sides of length n.
+- **Value u and Value v**: These parameters determine the two possible weights (u or v) assigned with probability 1/2 to each edge in the Bernoulli weight model.
+- **Sweeps per visual update**: Controls how many complete sweeps of Glauber dynamics to perform between each visual update. A sweep consists of n² attempted flips.
+
+## How to interpret the visualization
+
+The different colors represent domino orientations:
+- Red/Green: Horizontal dominoes (occupying two cells side-by-side)
+- Blue/Yellow: Vertical dominoes (occupying two cells stacked vertically)
+
+The grayscale mode provides an alternative visualization that can help highlight structural patterns.
+
+As the dynamics evolve, observe the formation and movement of the "arctic circle" phenomenon - the boundary between the ordered (frozen) regions near the corners and the disordered (temperate) region in the center. With random weights, this boundary can exhibit interesting fluctuations compared to uniform or deterministic periodic cases.
+
+## Weight Matrix Visualization
+
+The "Show Weight Matrix" button displays the edge weights used in the simulation:
+- Edges with weight 1.0 (shown in blue) are deterministic
+- Edges with weight u or v (shown in red or green) are randomly assigned according to the Bernoulli distribution
+
+The graph visualization shows a 4×4 corner of the weight matrix to help understand the spatial arrangement of weights.
+
+The sampling runs entirely in your browser. For sizes up to about n≤120 the sampler is fast; larger n may take noticeable time (hard cap n=300 to protect your browser).
+</details>
 
 ---
 
@@ -96,7 +134,7 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
   <!-- Graph visualization of weights -->
   <div style="margin-top: 20px; margin-bottom: 20px;">
     <h4>Graph Visualization (4×4 Corner)</h4>
-    <p style="font-style: italic; font-size: 0.9em;">This shows a corner of the Aztec diamond graph with labeled weights (using 2×2 periodicity)</p>
+    <p style="font-style: italic; font-size: 0.9em;">This shows a corner of the Aztec diamond graph with labeled weights</p>
     <svg id="weight-graph-svg" width="400" height="400" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
   </div>
 </div>
@@ -707,8 +745,8 @@ dynamicsTimer = setInterval(async () => {
 
     // Get current parameters
     const n = parseInt(document.getElementById("n-input").value, 10);
-    const a = parseFloat(document.getElementById("a-input").value);
-    const b = parseFloat(document.getElementById("b-input").value);
+    const u = parseFloat(document.getElementById("u-input").value);
+    const v = parseFloat(document.getElementById("v-input").value);
 
     // Generate TikZ code
     let tikzCode = `\\documentclass{standalone}
@@ -722,7 +760,7 @@ dynamicsTimer = setInterval(async () => {
 \\definecolor{svgblue}{RGB}{0, 0, 255}
 
 \\begin{document}
-% Aztec Diamond with 2x2 periodic weights
+
 % n = ${n}, u = ${u}, v = ${v}, grayscale = ${useGrayscale}
 % sample obtained by Glauber dynamics
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
