@@ -841,7 +841,21 @@ dynamicsTimer = setInterval(async () => {
 
           // Get the actual weight value from the C++ matrix
           const value = weightValues[i][j];
-          cell.textContent = value !== null ? value.toFixed(1) : 'n/a';
+          console.log(`Cell [${i},${j}] value: ${value}`); // Debug print every value
+
+          // Make sure we display the actual value with proper precision
+          if (value !== null && typeof value === 'number') {
+            // Format to 1 decimal place
+            cell.textContent = value.toFixed(1);
+            // Add a debug marker if it's 1.0 to identify which cells are always 1.0
+            if (Math.abs(value - 1.0) < 0.01) {
+              // Just keep 1.0 without any marker
+            } else {
+              cell.style.fontWeight = 'bold'; // Make non-1.0 values bold
+            }
+          } else {
+            cell.textContent = 'n/a';
+          }
           cell.style.cssText += 'border: 1px solid #ccc; padding: 4px; width: 30px;';
           row.appendChild(cell);
         }
