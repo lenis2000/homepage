@@ -321,63 +321,15 @@ void glauberStep(MatrixInt &conf,
 
 // Function to get the current weight matrix as JSON
 std::string getWeightMatrixJson() {
-    // Always generate fresh random weights for display to ensure we see actual random values
-    if (true) {  // Force matrix regeneration
-        // Force reseeding of RNG to ensure different values
-        rng.seed(std::random_device{}());
-        // Get an appropriate size for the matrix (use a default if not available)
-        int size = g_N > 0 ? g_N : 12;  // Default to 12 if g_N not set
-
-        MatrixDouble tempMatrix(size, size, 0.0);
-        std::uniform_real_distribution<> bernoulli(0.0, 1.0);
-
-        // We're using k=ℓ=1 (based on the specification)
-        int k = 1, ell = 1;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                // For each coordinate, determine which weight type it is
-                int mod_i = i % ell;
-                int mod_j = j % k;
-
-                // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
-                if (mod_i == 0 && mod_j == 0) {
-                    tempMatrix.at(i, j) = 1.0; // This is the deterministic weight
-                }
-                // α weights when (mod_i == 0 && mod_j != 0)
-                else if (mod_i == 0 && mod_j != 0) {
-                    tempMatrix.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
-                }
-                // β weights when (mod_i != 0 && mod_j != 0)
-                else if (mod_i != 0 && mod_j != 0) {
-                    tempMatrix.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
-                }
-                // γ weights when (mod_i != 0 && mod_j == 0)
-                else if (mod_i != 0 && mod_j == 0) {
-                    tempMatrix.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
-                }
-            }
-        }
-
-        // Store the random weights matrix globally
-        g_W = tempMatrix;
-
-        // Debug: Print temp values to confirm they're randomized
-        std::cout << "Newly generated matrix values:" << std::endl;
-        for (int i = 0; i < std::min(10, size); i++) {
-            for (int j = 0; j < std::min(10, size); j++) {
-                std::cout << tempMatrix.at(i, j) << " ";
-            }
-            std::cout << std::endl;
-        }
-
-        g_random_initialized = true;
+    // Check if g_W is initialized
+    if (g_N == 0) {
+        // Return an error if g_W is not initialized
+        return "{\"error\":\"Weight matrix g_W is not initialized. Run a simulation or update weights first.\"}";
     }
 
     std::string json = "[";
     const int size = g_W.size();
     bool first = true;
-    char buffer[128];
 
     // Structure the data as a 2D grid for easier handling in JavaScript
     // First, organize by row
@@ -394,21 +346,8 @@ std::string getWeightMatrixJson() {
             if (!firstInRow) json += ",";
             firstInRow = false;
 
-            // Hardcode values for direct verification
-            double val = g_W.at(i, j);
-            int mod_i = i % 2;
-            int mod_j = j % 2;
-
-            // Override values for display based on position pattern
-            if (mod_i == 0 && mod_j == 0) {
-                json += "1.0"; // Deterministic
-            } else if (mod_i == 0 && mod_j == 1) {
-                json += ((i+j) % 4 == 0) ? std::to_string(g_a) : std::to_string(g_b); // Alpha with u/v values
-            } else if (mod_i == 1 && mod_j == 1) {
-                json += ((i+j) % 4 == 0) ? std::to_string(g_b) : std::to_string(g_a); // Beta with u/v values
-            } else if (mod_i == 1 && mod_j == 0) {
-                json += ((i+j) % 3 == 0) ? std::to_string(g_a) : std::to_string(g_b); // Gamma with u/v values
-            }
+            // Directly use the actual values from g_W
+            json += std::to_string(g_W.at(i, j));
         }
 
         // Close the row array
@@ -476,16 +415,16 @@ char* simulateAztec(int n, double a, double b) {
             // When (ℓx'+i', ky'+j') = (ℓx+i+1, ky+j), the element equals 1
             // For α, β, γ, use random Bernoulli weights (0.5 or 1.5 with probability 1/2)
 
-            // We're using k=ℓ=1 (based on the specification)
-            int k = 1, ell = 1;
+            // We're using k=ℓ=2 for 2x2 periodicity
+            int k_period = 2, ell_period = 2;
 
             for (int i = 0; i < dim; i++){
                 for (int j = 0; j < dim; j++){
                     // For each coordinate, determine which weight type it is
-                    int mod_i = i % ell;
-                    int mod_j = j % k;
-                    int x = i / ell;
-                    int y = j / k;
+                    int mod_i = i % ell_period;
+                    int mod_j = j % k_period;
+                    int x = i / ell_period;
+                    int y = j / k_period;
 
                     // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
                     if (mod_i == 0 && mod_j == 0) {
@@ -668,16 +607,16 @@ char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
             // When (ℓx'+i', ky'+j') = (ℓx+i+1, ky+j), the element equals 1
             // For α, β, γ, use random Bernoulli weights (0.5 or 1.5 with probability 1/2)
 
-            // We're using k=ℓ=1 (based on the specification)
-            int k = 1, ell = 1;
+            // We're using k=ℓ=2 for 2x2 periodicity
+            int k_period = 2, ell_period = 2;
 
             for (int i = 0; i < dim; i++){
                 for (int j = 0; j < dim; j++){
                     // For each coordinate, determine which weight type it is
-                    int mod_i = i % ell;
-                    int mod_j = j % k;
-                    int x = i / ell;
-                    int y = j / k;
+                    int mod_i = i % ell_period;
+                    int mod_j = j % k_period;
+                    int x = i / ell_period;
+                    int y = j / k_period;
 
                     // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
                     if (mod_i == 0 && mod_j == 0) {
@@ -881,44 +820,44 @@ char* performGlauberStep(double a, double b)
         if(g_N == 0)
             throw std::runtime_error("No configuration in memory – run an initial sampler first.");
 
-        /* Only generate a new weight matrix if specifically requested via param changes */
-        if(a != g_a || b != g_b){
-            // If params changed AND they're both -1, this is a special signal to regenerate random weights
-            if (a == -1.0 && b == -1.0) {
+        /* Generate a new weight matrix if parameters have changed */
+        if (a != g_a || b != g_b) {
+            std::cout << "Weight parameters changed or update requested. New (a,b) = (" << a << "," << b
+                      << "). Previous (g_a,g_b) = (" << g_a << "," << g_b << "). Regenerating g_W." << std::endl;
+
+            g_a = a; // Update g_a and g_b with the new parameters
+            g_b = b;
+
+            if (g_N > 0) { // g_N should be set from a previous simulation run
+                g_W = MatrixDouble(g_N, g_N, 0.0); // Reinitialize g_W
                 std::uniform_real_distribution<> bernoulli(0.0, 1.0);
-                g_W = MatrixDouble(g_N, g_N, 0.0);
+                int k_period = 2;    // Corrected periodicity
+                int ell_period = 2;  // Corrected periodicity
 
-                // We're using k=ℓ=1 (based on the specification)
-                int k = 1, ell = 1;
+                for (int i = 0; i < g_N; ++i) {
+                    for (int j = 0; j < g_N; ++j) {
+                        int mod_i = i % ell_period;
+                        int mod_j = j % k_period;
 
-                for(int i = 0; i < g_N; ++i){
-                    for(int j = 0; j < g_N; ++j){
-                        // For each coordinate, determine which weight type it is
-                        int mod_i = i % ell;
-                        int mod_j = j % k;
-
-                        // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
-                        if (mod_i == 0 && mod_j == 0) {
-                            g_W.at(i, j) = 1.0; // This is the deterministic weight
-                        }
-                        // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
-                        else if (mod_i == 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // α - random
-                        }
-                        // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
-                        else if (mod_i != 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // β - random
-                        }
-                        // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
-                        else if (mod_i != 0 && mod_j == 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // γ - random
+                        // Using the same 4-case pattern as in simulateAztec:
+                        // One type is 1.0, others are random (g_a or g_b)
+                        if (mod_i == 0 && mod_j == 0) {         // Case 1 (e.g., top-left of 2x2 block)
+                            g_W.at(i, j) = 1.0;                 // Deterministic weight
+                        } else if (mod_i == 0 && mod_j != 0) {  // Case 2 (e.g., top-right)
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? g_a : g_b; // Random
+                        } else if (mod_i != 0 && mod_j == 0) {  // Case 3 (e.g., bottom-left)
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? g_a : g_b; // Random
+                        } else { // mod_i != 0 && mod_j != 0     // Case 4 (e.g., bottom-right)
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? g_a : g_b; // Random
                         }
                     }
                 }
-                g_random_initialized = true;
+                g_random_initialized = true; // Mark that g_W is now current and correctly initialized
+                std::cout << "g_W regenerated with new parameters and 2x2 periodicity." << std::endl;
+            } else {
+                // This case should ideally not be hit if called after an initial simulation.
+                std::cerr << "Error in performGlauberStep: g_N is 0, cannot regenerate g_W. Run an initial sampler first." << std::endl;
             }
-            // Otherwise, just update the params but keep using the existing weights
-            g_a = a; g_b = b;
         }
 
         /* one heat‑bath plaquette flip */
@@ -981,54 +920,60 @@ char* performGlauberSteps(double a, double b, int nSteps)
         if(g_N == 0)
             throw std::runtime_error("No configuration in memory – run a sampler first.");
 
-        /* Only generate a new weight matrix if specifically requested via param changes */
-        if(a != g_a || b != g_b){
-            // If params changed AND they're both -1, this is a special signal to regenerate random weights
-            if (a == -1.0 && b == -1.0) {
-                std::cout << "Regenerating random weights matrix..." << std::endl;
-                // Force randomization flag to false to ensure new weights
-                g_random_initialized = false;
+        /* Generate a new weight matrix if:
+           1. Parameters have changed, OR
+           2. The function was called with nSteps == -1 (Update Weights button)
+        */
+        bool force_regenerate_due_to_update_button = (nSteps == -1);
+        bool parameters_changed = (a != g_a || b != g_b);
+
+        if (force_regenerate_due_to_update_button || parameters_changed) {
+            if (force_regenerate_due_to_update_button) {
+                std::cout << "Update Weights request: Forcing regeneration of g_W with (a,b) = (" << a << "," << b << ")." << std::endl;
+            } else { // This means parameters_changed is true and force_regenerate_due_to_update_button is false
+                std::cout << "Weight parameters changed during dynamics. New (a,b) = (" << a << "," << b
+                          << "). Previous (g_a,g_b) = (" << g_a << "," << g_b << "). Regenerating g_W." << std::endl;
+            }
+
+            g_a = a; // Update g_a and g_b with the new parameters
+            g_b = b;
+
+            if (g_N > 0) { // g_N should be set from a previous simulation run
+                g_W = MatrixDouble(g_N, g_N, 0.0); // Reinitialize g_W
                 std::uniform_real_distribution<> bernoulli(0.0, 1.0);
-                g_W = MatrixDouble(g_N, g_N, 0.0);
+                int k_period = 2;    // Corrected periodicity
+                int ell_period = 2;  // Corrected periodicity
 
-                // We're using k=ℓ=1 (based on the specification)
-                int k = 1, ell = 1;
+                for (int i = 0; i < g_N; ++i) {
+                    for (int j = 0; j < g_N; ++j) {
+                        int mod_i = i % ell_period;
+                        int mod_j = j % k_period;
 
-                for(int i = 0; i < g_N; ++i){
-                    for(int j = 0; j < g_N; ++j){
-                        // For each coordinate, determine which weight type it is
-                        int mod_i = i % ell;
-                        int mod_j = j % k;
-
-                        // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
-                        if (mod_i == 0 && mod_j == 0) {
-                            g_W.at(i, j) = 1.0; // This is the deterministic weight
-                        }
-                        // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
-                        else if (mod_i == 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // α - random
-                        }
-                        // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
-                        else if (mod_i != 0 && mod_j != 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // β - random
-                        }
-                        // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
-                        else if (mod_i != 0 && mod_j == 0) {
-                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? a : b; // γ - random
+                        // Using the same 4-case pattern as in simulateAztec:
+                        // One type is 1.0, others are random (g_a or g_b)
+                        if (mod_i == 0 && mod_j == 0) {         // Case 1 (e.g., top-left of 2x2 block)
+                            g_W.at(i, j) = 1.0;                 // Deterministic weight
+                        } else if (mod_i == 0 && mod_j != 0) {  // Case 2 (e.g., top-right)
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? g_a : g_b; // Random
+                        } else if (mod_i != 0 && mod_j == 0) {  // Case 3 (e.g., bottom-left)
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? g_a : g_b; // Random
+                        } else { // mod_i != 0 && mod_j != 0     // Case 4 (e.g., bottom-right)
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? g_a : g_b; // Random
                         }
                     }
                 }
-                g_random_initialized = true;
+                g_random_initialized = true; // Mark that g_W is now current and correctly initialized
+                std::cout << "g_W regenerated with new parameters and 2x2 periodicity." << std::endl;
+            } else {
+                // This case should ideally not be hit if called after an initial simulation.
+                std::cerr << "Error in performGlauberSteps: g_N is 0, cannot regenerate g_W. Run an initial sampler first." << std::endl;
             }
-            // Otherwise, just update the params but keep using the existing weights
-            g_a = a; g_b = b;
         }
 
         /* run the requested number of flips or special case for just updating weights */
         if (nSteps == -1) {
-            // Special case: nSteps = -1 means just update weights and return the current configuration
-            // No Glauber steps needed
-            std::cout << "Updating weights only with u=" << a << ", v=" << b << std::endl;
+            // Special case: nSteps = -1 means just update weights (done above) and return the current configuration
+            std::cout << "Weights updated (or re-confirmed) for (u,v) = (" << a << "," << b << "). No Glauber steps performed." << std::endl;
         } else {
             // Normal case: perform nSteps Glauber steps
             std::uniform_real_distribution<> u(0.0,1.0);

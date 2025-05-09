@@ -89,8 +89,16 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
   <button id="show-weights-btn">Show Weight Matrix</button>
 </div>
 <div id="weight-matrix-container" style="display: none; margin-top: 15px; margin-bottom: 15px; overflow-x: auto;">
-  <table id="weight-matrix-table" style="border-collapse: collapse; font-family: monospace; text-align: center;">
+  <!-- Tabular weight matrix view -->
+  <table id="weight-matrix-table" style="border-collapse: collapse; font-family: monospace; text-align: center; margin-bottom: 20px;">
   </table>
+
+  <!-- Graph visualization of weights -->
+  <div style="margin-top: 20px; margin-bottom: 20px;">
+    <h4>Graph Visualization (4×4 Corner)</h4>
+    <p style="font-style: italic; font-size: 0.9em;">This shows a corner of the Aztec diamond graph with labeled weights (using 2×2 periodicity)</p>
+    <svg id="weight-graph-svg" width="400" height="400" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
+  </div>
 </div>
 
 <!-- Progress indicator -->
@@ -816,11 +824,12 @@ dynamicsTimer = setInterval(async () => {
     URL.revokeObjectURL(downloadLink.href);
   });
 
-  // Weight matrix display functionality - shows only 10x10 corner of the matrix
+  // Weight matrix display functionality - shows both tabular and graph visualization
   document.getElementById("show-weights-btn").addEventListener("click", async function() {
     const containerElem = document.getElementById('weight-matrix-container');
     const tableElem = document.getElementById('weight-matrix-table');
     const btnElem = document.getElementById('show-weights-btn');
+    const graphSvg = document.getElementById('weight-graph-svg');
 
     if (containerElem.style.display === 'none') {
       // Show the weights
@@ -965,6 +974,9 @@ dynamicsTimer = setInterval(async () => {
       legendRow.appendChild(legendCell);
       tableElem.appendChild(legendRow);
 
+      // Draw the graph visualization
+      drawWeightGraph(graphSvg, weightValues);
+
       // Re-enable the button after successfully loading the matrix
       btnElem.disabled = false;
       progressElem.innerText = ""; // Clear any progress message
@@ -976,6 +988,219 @@ dynamicsTimer = setInterval(async () => {
       btnElem.disabled = false; // Re-enable the button
     }
   });
+
+  // Function to draw the graph visualization
+  function drawWeightGraph(svg, weightMatrix) {
+    // Clear previous content
+    d3.select(svg).selectAll("*").remove();
+
+    // Determine graph size - we'll show a 4x4 corner of the graph
+    const graphSize = 4;
+
+    // Ensure we have data
+    if (!weightMatrix || !weightMatrix.length) return;
+
+    // Size calculations
+    const width = svg.width.baseVal.value;
+    const height = svg.height.baseVal.value;
+    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+    const graphWidth = width - margin.left - margin.right;
+    const graphHeight = height - margin.top - margin.bottom;
+
+    // Grid size
+    const cellSize = Math.floor(Math.min(graphWidth, graphHeight) / (graphSize + 1));
+
+    // Create a group for the graph with a transform for margin
+    const g = d3.select(svg)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Get the u and v values from the interface for the legend
+    const uVal = parseFloat(document.getElementById("u-input").value);
+    const vVal = parseFloat(document.getElementById("v-input").value);
+
+    // Create grid points
+    const points = [];
+    for (let i = 0; i <= graphSize; i++) {
+      for (let j = 0; j <= graphSize; j++) {
+        points.push({ x: j * cellSize, y: i * cellSize, row: i, col: j });
+      }
+    }
+
+    // Draw horizontal edges (connecting grid points in the same row)
+    const horizontalEdges = [];
+    for (let i = 0; i <= graphSize; i++) {
+      for (let j = 0; j < graphSize; j++) {
+        if (i < weightMatrix.length && j < weightMatrix[0].length) {
+          // Get the weight for this edge
+          const weight = weightMatrix[i][j];
+          // Determine color based on weight pattern and value
+          let color = "black";
+          if (Math.abs(weight - 1.0) < 0.01) {
+            color = "#1976D2"; // Deterministic 1.0 weights
+          } else if (Math.abs(weight - uVal) < 0.01) {
+            color = "#D32F2F"; // u value
+          } else if (Math.abs(weight - vVal) < 0.01) {
+            color = "#388E3C"; // v value
+          }
+
+          horizontalEdges.push({
+            x1: j * cellSize,
+            y1: i * cellSize,
+            x2: (j + 1) * cellSize,
+            y2: i * cellSize,
+            weight: weight.toFixed(1),
+            color: color
+          });
+        }
+      }
+    }
+
+    // Draw vertical edges (connecting grid points in the same column)
+    const verticalEdges = [];
+    for (let i = 0; i < graphSize; i++) {
+      for (let j = 0; j <= graphSize; j++) {
+        if (i < weightMatrix.length && j < weightMatrix[0].length) {
+          // Get the weight for this edge
+          const weight = weightMatrix[i][j];
+          // Determine color based on weight pattern and value
+          let color = "black";
+          if (Math.abs(weight - 1.0) < 0.01) {
+            color = "#1976D2"; // Deterministic 1.0 weights
+          } else if (Math.abs(weight - uVal) < 0.01) {
+            color = "#D32F2F"; // u value
+          } else if (Math.abs(weight - vVal) < 0.01) {
+            color = "#388E3C"; // v value
+          }
+
+          verticalEdges.push({
+            x1: j * cellSize,
+            y1: i * cellSize,
+            x2: j * cellSize,
+            y2: (i + 1) * cellSize,
+            weight: weight.toFixed(1),
+            color: color
+          });
+        }
+      }
+    }
+
+    // Draw edges
+    g.selectAll(".h-edge")
+      .data(horizontalEdges)
+      .enter()
+      .append("line")
+      .attr("class", "h-edge")
+      .attr("x1", d => d.x1)
+      .attr("y1", d => d.y1)
+      .attr("x2", d => d.x2)
+      .attr("y2", d => d.y2)
+      .attr("stroke", d => d.color)
+      .attr("stroke-width", 2);
+
+    g.selectAll(".v-edge")
+      .data(verticalEdges)
+      .enter()
+      .append("line")
+      .attr("class", "v-edge")
+      .attr("x1", d => d.x1)
+      .attr("y1", d => d.y1)
+      .attr("x2", d => d.x2)
+      .attr("y2", d => d.y2)
+      .attr("stroke", d => d.color)
+      .attr("stroke-width", 2);
+
+    // Add weight labels for horizontal edges
+    g.selectAll(".h-label")
+      .data(horizontalEdges)
+      .enter()
+      .append("text")
+      .attr("class", "h-label")
+      .attr("x", d => (d.x1 + d.x2) / 2)
+      .attr("y", d => d.y1 - 5)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "10px")
+      .attr("fill", d => d.color)
+      .text(d => d.weight);
+
+    // Add weight labels for vertical edges
+    g.selectAll(".v-label")
+      .data(verticalEdges)
+      .enter()
+      .append("text")
+      .attr("class", "v-label")
+      .attr("x", d => d.x1 + 5)
+      .attr("y", d => (d.y1 + d.y2) / 2)
+      .attr("text-anchor", "start")
+      .attr("dominant-baseline", "middle")
+      .attr("font-size", "10px")
+      .attr("fill", d => d.color)
+      .text(d => d.weight);
+
+    // Draw grid points
+    g.selectAll(".grid-point")
+      .data(points)
+      .enter()
+      .append("circle")
+      .attr("class", "grid-point")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", 3)
+      .attr("fill", "black");
+
+    // Add a legend
+    const legend = g.append("g")
+      .attr("transform", `translate(10, ${graphHeight - 60})`)
+      .attr("font-size", "12px");
+
+    // Legend title
+    legend.append("text")
+      .attr("y", -10)
+      .attr("font-weight", "bold")
+      .text("Legend:");
+
+    // Deterministic weight
+    legend.append("line")
+      .attr("x1", 0)
+      .attr("y1", 10)
+      .attr("x2", 20)
+      .attr("y2", 10)
+      .attr("stroke", "#1976D2")
+      .attr("stroke-width", 2);
+
+    legend.append("text")
+      .attr("x", 25)
+      .attr("y", 14)
+      .text("1.0 (deterministic)");
+
+    // u value
+    legend.append("line")
+      .attr("x1", 0)
+      .attr("y1", 30)
+      .attr("x2", 20)
+      .attr("y2", 30)
+      .attr("stroke", "#D32F2F")
+      .attr("stroke-width", 2);
+
+    legend.append("text")
+      .attr("x", 25)
+      .attr("y", 34)
+      .text(`${uVal.toFixed(1)} (u value)`);
+
+    // v value
+    legend.append("line")
+      .attr("x1", 0)
+      .attr("y1", 50)
+      .attr("x2", 20)
+      .attr("y2", 50)
+      .attr("stroke", "#388E3C")
+      .attr("stroke-width", 2);
+
+    legend.append("text")
+      .attr("x", 25)
+      .attr("y", 54)
+      .text(`${vVal.toFixed(1)} (v value)`);
+  }
 
   // Tracks the previously used n value
   let previousN = parseInt(document.getElementById("n-input").value, 10) || 6;
