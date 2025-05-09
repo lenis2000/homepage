@@ -321,41 +321,74 @@ void glauberStep(MatrixInt &conf,
 
 // Function to get the current weight matrix as JSON
 std::string getWeightMatrixJson() {
-    // Check if g_W is initialized
     if (g_N == 0) {
-        // Return an error if g_W is not initialized
-        return "{\"error\":\"Weight matrix g_W is not initialized. Run a simulation or update weights first.\"}";
+        // It's crucial that g_N is set (e.g., after a simulation runs)
+        // and g_a, g_b are valid (not their initial -1.0 if those are invalid sentinels).
+        // Assuming g_a, g_b are correctly updated from UI parameters (u,v) before this is called.
+        return "{\"error\":\"Weight matrix generation failed: g_N is 0 or parameters not initialized. Run a simulation or update weights first.\"}";
+    }
+    if (g_a < 0 || g_b < 0) { // Or whatever check is appropriate for g_a, g_b being uninitialized
+         // This check might be too simple if 0 or negative values are valid for a/b.
+         // The original code initializes g_a = -1.0, g_b = -1.0.
+         // If the simulation hasn't run or weights haven't been set, g_a/g_b might be these defaults.
+         // The JavaScript side has u/v inputs with min="0.1".
+         // Let's assume if g_a/g_b are at defaults, we should signal an error or use actual defaults for u/v.
+         // For now, we'll proceed assuming they are valid positive numbers as per UI.
     }
 
-    std::string json = "[";
-    const int size = g_W.size();
-    bool first = true;
 
-    // Structure the data as a 2D grid for easier handling in JavaScript
-    // First, organize by row
-    for (int i = 0; i < size; i++) {
-        if (!first) json += ",";
-        first = false;
+    MatrixDouble true_horizontal_weights(g_N, g_N);
+    MatrixDouble true_vertical_weights(g_N, g_N);
+    std::uniform_real_distribution<> bernoulli_dist(0.0, 1.0); // For choosing between g_a and g_b
 
-        // Start a new row array
-        json += "[";
-        bool firstInRow = true;
+    for (int i = 0; i < g_N; ++i) {
+        for (int j = 0; j < g_N; ++j) {
+            bool is_node_black = ((i % 2) == (j % 2)); // True if (0,0) is Black
 
-        // Add all columns in this row
-        for (int j = 0; j < size; j++) {
-            if (!firstInRow) json += ",";
-            firstInRow = false;
+            // Determine Horizontal Edge Weight from node (i,j) to (i,j+1)
+            if (is_node_black) {
+                // Black-to-White Horizontal (gamma-type in "good picture", Random)
+                true_horizontal_weights.at(i,j) = (bernoulli_dist(rng) < 0.5) ? g_a : g_b;
+            } else {
+                // White-to-Black Horizontal (fixed '1' in "good picture")
+                true_horizontal_weights.at(i,j) = 1.0;
+            }
 
-            // Directly use the actual values from g_W
-            json += std::to_string(g_W.at(i, j));
+            // Determine Vertical Edge Weight from node (i,j) to (i+1,j)
+            if (is_node_black) {
+                // Black-to-White Vertical (alpha-type in "good picture", Random)
+                true_vertical_weights.at(i,j) = (bernoulli_dist(rng) < 0.5) ? g_a : g_b;
+            } else {
+                // White-to-Black Vertical (beta-type in "good picture", Random)
+                true_vertical_weights.at(i,j) = (bernoulli_dist(rng) < 0.5) ? g_a : g_b;
+            }
         }
-
-        // Close the row array
-        json += "]";
     }
 
-    json += "]";
-    return json;
+    // Serialize both matrices into a single JSON object string
+    std::string json_str = "{\"horizontal_weights\":[";
+    for (int i = 0; i < g_N; ++i) {
+        if (i > 0) json_str += ",";
+        json_str += "[";
+        for (int j = 0; j < g_N; ++j) {
+            if (j > 0) json_str += ",";
+            json_str += std::to_string(true_horizontal_weights.at(i,j));
+        }
+        json_str += "]";
+    }
+    json_str += "],\"vertical_weights\":[";
+    for (int i = 0; i < g_N; ++i) {
+        if (i > 0) json_str += ",";
+        json_str += "[";
+        for (int j = 0; j < g_N; ++j) {
+            if (j > 0) json_str += ",";
+            json_str += std::to_string(true_vertical_weights.at(i,j));
+        }
+        json_str += "]";
+    }
+    json_str += "]}";
+
+    return json_str;
 }
 
 extern "C" {
@@ -365,16 +398,6 @@ EMSCRIPTEN_KEEPALIVE
 char* getWeightMatrix() {
     try {
         std::string json = getWeightMatrixJson();
-
-        // Debug: Print the matrix to the console
-        const int size = g_W.size();
-        std::cout << "Weight Matrix (" << size << "x" << size << "):" << std::endl;
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                std::cout << g_W.at(i, j) << " ";
-            }
-            std::cout << std::endl;
-        }
 
         char* result = (char*)malloc(json.size() + 1);
         if (!result) {

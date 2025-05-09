@@ -829,377 +829,258 @@ dynamicsTimer = setInterval(async () => {
     const containerElem = document.getElementById('weight-matrix-container');
     const tableElem = document.getElementById('weight-matrix-table');
     const btnElem = document.getElementById('show-weights-btn');
-    const graphSvg = document.getElementById('weight-graph-svg');
+    const graphSvg = document.getElementById('weight-graph-svg'); // Ensure this is correct ID
 
     if (containerElem.style.display === 'none') {
-      // Show the weights
       containerElem.style.display = 'block';
       btnElem.textContent = 'Hide Weight Matrix';
-      btnElem.disabled = true;
+      btnElem.disabled = true; // Disable button while loading
 
-      // Clear previous matrix if any
-      while (tableElem.firstChild) {
+      while (tableElem.firstChild) { // Clear previous table content
         tableElem.removeChild(tableElem.firstChild);
       }
 
-      if (!cachedDominoes) {
-        tableElem.innerHTML = '<tr><td>No weight matrix available. Generate a tiling first.</td></tr>';
-        btnElem.disabled = false;
-        return;
-      }
+      // Check if simulation has run by checking cachedDominoes or g_N (if available to JS)
+      // For simplicity, we'll rely on C++ to return an error if not ready.
+      // if (!cachedDominoes && (g_N === null || g_N === 0)) { // g_N is a JS global here
+      //   tableElem.innerHTML = '<tr><td>No data available. Generate a tiling first.</td></tr>';
+      //   progressElem.innerText = "";
+      //   btnElem.disabled = false;
+      //   return;
+      // }
 
-      // Get the actual weight matrix from C++
-      progressElem.innerText = "Fetching weight matrix...";
-      const ptr = await getWeightMatrix();
+
+      progressElem.innerText = "Fetching edge weight matrices...";
+      const ptr = await getWeightMatrix(); // C++ function now returns JSON with two matrices
       const jsonStr = Module.UTF8ToString(ptr);
       freeString(ptr);
 
-      // Debug: print jsonStr to console
-      console.log("Weight matrix JSON:", jsonStr);
+      // For debugging, log the raw JSON string from C++
+      console.log("Edge weights JSON from C++:", jsonStr);
 
-      let weightValues;
+      let edgeWeightData;
       try {
-        weightValues = JSON.parse(jsonStr);
-        // Debug: print parsed values to console
-        console.log("Parsed weight values:", weightValues);
+        edgeWeightData = JSON.parse(jsonStr);
+        if (edgeWeightData.error) {
+            console.error("Error from C++ getWeightMatrix:", edgeWeightData.error);
+            tableElem.innerHTML = '<tr><td>Error fetching weight matrices: ' + edgeWeightData.error + '</td></tr>';
+            progressElem.innerText = "";
+            btnElem.disabled = false;
+            return;
+        }
+        if (!edgeWeightData || !edgeWeightData.horizontal_weights || !edgeWeightData.vertical_weights) {
+            throw new Error("Returned JSON does not contain horizontal_weights or vertical_weights.");
+        }
       } catch (e) {
-        console.error("JSON parse error:", e, "Raw JSON:", jsonStr);
-        tableElem.innerHTML = '<tr><td>Error fetching weight matrix: ' + e.message + '</td></tr>';
+        console.error("JSON parse error for edge weights:", e, "Raw JSON:", jsonStr);
+        tableElem.innerHTML = '<tr><td>Error parsing edge weight matrices: ' + e.message + '</td></tr>';
         progressElem.innerText = "";
         btnElem.disabled = false;
         return;
       }
 
-      if (!weightValues || !weightValues.length) {
-        tableElem.innerHTML = '<tr><td>No weight matrix available. Generate a tiling first.</td></tr>';
+      const horizontalWeights = edgeWeightData.horizontal_weights;
+      const verticalWeights = edgeWeightData.vertical_weights;
+
+      if (!horizontalWeights || !horizontalWeights.length || !verticalWeights || !verticalWeights.length || horizontalWeights.length !== verticalWeights.length) {
+        tableElem.innerHTML = '<tr><td>No valid weight matrices available or matrices mismatch. Ensure simulation has run.</td></tr>';
         progressElem.innerText = "";
         btnElem.disabled = false;
         return;
       }
 
-      // The data is already structured as a 2D array from C++
-      const fullSize = weightValues.length;
-      // Show only a 10x10 corner (or full matrix if smaller)
+      const fullSize = horizontalWeights.length;
+
+      // Simplified Tabular Display (showing only horizontal weights corner)
       const displaySize = Math.min(10, fullSize);
-
-      // Add a note about the size being displayed
       const noteElem = document.createElement('div');
-      noteElem.style.marginBottom = '10px';
-      noteElem.style.fontStyle = 'italic';
-      if (fullSize > 10) {
-        noteElem.textContent = `Showing 10×10 corner of the ${fullSize}×${fullSize} weight matrix:`;
+      noteElem.style.cssText = 'margin-bottom: 10px; font-style: italic;';
+      if (fullSize > displaySize) {
+        noteElem.textContent = `Showing ${displaySize}×${displaySize} corner of the Horizontal Edge Weight Matrix (${fullSize}×${fullSize}):`;
       } else {
-        noteElem.textContent = `Showing the full ${fullSize}×${fullSize} weight matrix:`;
+        noteElem.textContent = `Showing the full Horizontal Edge Weight Matrix (${fullSize}×${fullSize}):`;
       }
       tableElem.appendChild(noteElem);
 
       const headerRow = document.createElement('tr');
-      headerRow.innerHTML = '<th style="border: 1px solid #ccc; padding: 4px;"></th>' +
-        Array.from({length: displaySize}, (_, i) =>
-          `<th style="border: 1px solid #ccc; padding: 4px;">${i}</th>`).join('');
+      let thHTML = '<th style="border: 1px solid #ccc; padding: 4px;">H[i][j]</th>';
+      for(let colIdx = 0; colIdx < displaySize; colIdx++) {
+        thHTML += `<th style="border: 1px solid #ccc; padding: 4px;">${colIdx}</th>`;
+      }
+      headerRow.innerHTML = thHTML;
       tableElem.appendChild(headerRow);
 
-      // Create rows with formatted cells - limited to the display size
       for (let i = 0; i < displaySize; i++) {
+        if (i >= horizontalWeights.length) break;
         const row = document.createElement('tr');
         const headerCell = document.createElement('th');
         headerCell.textContent = i;
-        headerCell.style.cssText = 'border: 1px solid #ccc; padding: 4px;';
+        headerCell.style.cssText = 'border: 1px solid #ccc; padding: 4px; background-color: #f0f0f0;';
         row.appendChild(headerCell);
-
         for (let j = 0; j < displaySize; j++) {
+          if (j >= horizontalWeights[i].length) break;
           const cell = document.createElement('td');
-          // For this pattern, we need integer division as well as modulus
-          // Calculate the 2×2 block pattern - every other row/column should have random weights
-          // This uses the "1 out of 2" alternating pattern as seen in the C++ code
-          // Integer division in JavaScript
-          const x = Math.floor(i / 2);
-          const y = Math.floor(j / 2);
-          const mod_i = i % 2;
-          const mod_j = j % 2;
-
-          // Simplify to just two pattern types - deterministic (1.0) and random (0.5 or 1.5)
-          let patternType;
-          let bgcolor;
-
-          if (mod_i === 0 && mod_j === 0) {
-            // These are the deterministic weights (1.0)
-            patternType = "Deterministic (1.0)";
-            bgcolor = '#e6f7ff'; // Light blue
-          }
-          else {
-            // All other weights are random Bernoulli weights
-            patternType = "Random Bernoulli";
-            bgcolor = '#f9f9f9'; // Very light gray for all random weights
-          }
-
-          cell.title = patternType; // Add a tooltip
-          cell.style.backgroundColor = bgcolor;
-
-          // Get the actual weight value from the C++ matrix
-          const value = weightValues[i][j];
-          console.log(`Cell [${i},${j}] value: ${value}`); // Debug print every value
-
-          // Make sure we display the actual value with proper precision
-          if (value !== null && typeof value === 'number') {
-            // Format to 1 decimal place
-            cell.textContent = value.toFixed(1);
-            // Add a debug marker if it's 1.0 to identify which cells are always 1.0
-            if (Math.abs(value - 1.0) < 0.01) {
-              // Just keep 1.0 without any marker
-            } else {
-              cell.style.fontWeight = 'bold'; // Make non-1.0 values bold
-            }
-          } else {
-            cell.textContent = 'n/a';
-          }
-          cell.style.cssText += 'border: 1px solid #ccc; padding: 4px; width: 30px;';
+          const value = horizontalWeights[i][j];
+          cell.textContent = (typeof value === 'number') ? value.toFixed(1) : 'N/A';
+          cell.style.cssText = 'border: 1px solid #ccc; padding: 4px; width: 35px; text-align: center;';
+          if (Math.abs(value - 1.0) < 0.01) { cell.style.backgroundColor = '#e6f7ff'; } // Light blue for 1.0
+          else { cell.style.backgroundColor = '#f9f9f9';}
           row.appendChild(cell);
         }
-
         tableElem.appendChild(row);
       }
+      const legendNote = document.createElement('div');
+      legendNote.innerHTML = `<p style="font-style:italic; margin-top:10px;">The graph visualization (4×4 corner) below displays both horizontal and vertical edge weights according to the 'good picture' pattern.</p>`;
+      tableElem.appendChild(legendNote);
 
-      // Add a legend
-      const legendRow = document.createElement('tr');
-      const legendCell = document.createElement('td');
-      legendCell.colSpan = displaySize + 1;
-      legendCell.innerHTML = `
-        <div style="margin-top: 10px; text-align: left;">
-          <p><strong>Legend:</strong></p>
-          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #e6f7ff;"></span> Deterministic weights (1.0)</p>
-          <p class="legend-random-weights"><span style="display: inline-block; width: 15px; height: 15px; background-color: #f9f9f9;"></span> Random Bernoulli weights (u or v with probability 1/2)</p>
-        </div>
-      `;
-      legendRow.appendChild(legendCell);
-      tableElem.appendChild(legendRow);
+      // Call drawWeightGraph with both matrices
+      drawWeightGraph(d3.select("#weight-graph-svg").node(), horizontalWeights, verticalWeights);
 
-      // Draw the graph visualization
-      drawWeightGraph(graphSvg, weightValues);
-
-      // Re-enable the button after successfully loading the matrix
-      btnElem.disabled = false;
-      progressElem.innerText = ""; // Clear any progress message
+      progressElem.innerText = ""; // Clear progress message
+      btnElem.disabled = false; // Re-enable button
 
     } else {
       // Hide the weights
       containerElem.style.display = 'none';
       btnElem.textContent = 'Show Weight Matrix';
-      btnElem.disabled = false; // Re-enable the button
+      btnElem.disabled = false;
     }
   });
 
-  // Function to draw the graph visualization
-  function drawWeightGraph(svg, weightMatrix) {
-    // Clear previous content
-    d3.select(svg).selectAll("*").remove();
+  // Modify the drawWeightGraph function signature and internal logic
+  function drawWeightGraph(svgNode, horizontalWeightMatrix, verticalWeightMatrix) { // Changed signature
+    const svg = d3.select(svgNode); // Work with the D3 selection of the SVG node
+    svg.selectAll("*").remove(); // Clear previous content
 
-    // Determine graph size - we'll show a 4x4 corner of the graph
-    const graphSize = 4;
+    const graphDisplayCells = 4; // We want to display a 4x4 grid of cells/plaquettes
 
-    // Ensure we have data
-    if (!weightMatrix || !weightMatrix.length) return;
+    if (!horizontalWeightMatrix || !horizontalWeightMatrix.length ||
+        !verticalWeightMatrix || !verticalWeightMatrix.length ||
+        horizontalWeightMatrix.length !== verticalWeightMatrix.length) {
+        console.error("drawWeightGraph: Invalid or mismatched weight matrices.");
+        // Optionally display an error message in the SVG itself
+        svg.append("text").attr("x", 10).attr("y", 20).text("Error: Weight data unavailable.");
+        return;
+    }
+    const matrixDim = horizontalWeightMatrix.length; // e.g., g_N from C++
 
-    // Size calculations
-    const width = svg.width.baseVal.value;
-    const height = svg.height.baseVal.value;
-    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+    // Size calculations for the SVG drawing area
+    const width = parseFloat(svg.attr("width"));
+    const height = parseFloat(svg.attr("height"));
+    const margin = { top: 40, right: 20, bottom: 70, left: 40 }; // Adjusted margins
     const graphWidth = width - margin.left - margin.right;
     const graphHeight = height - margin.top - margin.bottom;
 
-    // Grid size
-    const cellSize = Math.floor(Math.min(graphWidth, graphHeight) / (graphSize + 1));
+    // Number of nodes to display: graphDisplayCells + 1
+    // Max node index will be graphDisplayCells
+    const numNodesToDisplay = graphDisplayCells + 1;
+    const cellSize = Math.floor(Math.min(graphWidth, graphHeight) / (graphDisplayCells + 1)); // Add padding around
 
-    // Create a group for the graph with a transform for margin
-    const g = d3.select(svg)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Get the u and v values from the interface for the legend
     const uVal = parseFloat(document.getElementById("u-input").value);
     const vVal = parseFloat(document.getElementById("v-input").value);
 
-    // Create grid points
+    // Create grid points (nodes)
     const points = [];
-    for (let i = 0; i <= graphSize; i++) {
-      for (let j = 0; j <= graphSize; j++) {
+    for (let i = 0; i < numNodesToDisplay && i < matrixDim; i++) {
+      for (let j = 0; j < numNodesToDisplay && j < matrixDim; j++) {
         points.push({ x: j * cellSize, y: i * cellSize, row: i, col: j });
       }
     }
 
-    // Draw horizontal edges (connecting grid points in the same row)
+    // Draw horizontal edges
     const horizontalEdges = [];
-    for (let i = 0; i <= graphSize; i++) {
-      for (let j = 0; j < graphSize; j++) {
-        if (i < weightMatrix.length && j < weightMatrix[0].length) {
-          // Get the weight for this edge
-          const weight = weightMatrix[i][j];
-          // Determine color based on weight pattern and value
-          let color = "black";
-          if (Math.abs(weight - 1.0) < 0.01) {
-            color = "#1976D2"; // Deterministic 1.0 weights
-          } else if (Math.abs(weight - uVal) < 0.01) {
-            color = "#D32F2F"; // u value
-          } else if (Math.abs(weight - vVal) < 0.01) {
-            color = "#388E3C"; // v value
-          }
+    for (let i = 0; i < numNodesToDisplay && i < matrixDim; i++) {         // Node row index
+      for (let j = 0; j < numNodesToDisplay - 1 && j < matrixDim -1; j++) { // Node col index (start of edge)
+          const weight = horizontalWeightMatrix[i][j];
+          let color = "grey"; // Default for unexpected weights
+          if (Math.abs(weight - 1.0) < 0.01) color = "#1976D2";
+          else if (Math.abs(weight - uVal) < 0.01) color = "#D32F2F";
+          else if (Math.abs(weight - vVal) < 0.01) color = "#388E3C";
 
           horizontalEdges.push({
-            x1: j * cellSize,
-            y1: i * cellSize,
-            x2: (j + 1) * cellSize,
-            y2: i * cellSize,
-            weight: weight.toFixed(1),
-            color: color
+            x1: j * cellSize, y1: i * cellSize,
+            x2: (j + 1) * cellSize, y2: i * cellSize,
+            weight: weight.toFixed(1), color: color
           });
-        }
       }
     }
 
-    // Draw vertical edges (connecting grid points in the same column)
+    // Draw vertical edges
     const verticalEdges = [];
-    for (let i = 0; i < graphSize; i++) {
-      for (let j = 0; j <= graphSize; j++) {
-        if (i < weightMatrix.length && j < weightMatrix[0].length) {
-          // Get the weight for this edge
-          const weight = weightMatrix[i][j];
-          // Determine color based on weight pattern and value
-          let color = "black";
-          if (Math.abs(weight - 1.0) < 0.01) {
-            color = "#1976D2"; // Deterministic 1.0 weights
-          } else if (Math.abs(weight - uVal) < 0.01) {
-            color = "#D32F2F"; // u value
-          } else if (Math.abs(weight - vVal) < 0.01) {
-            color = "#388E3C"; // v value
-          }
+    for (let i = 0; i < numNodesToDisplay - 1 && i < matrixDim -1; i++) { // Node row index (start of edge)
+      for (let j = 0; j < numNodesToDisplay && j < matrixDim; j++) {     // Node col index
+          const weight = verticalWeightMatrix[i][j];
+          let color = "grey"; // Default for unexpected weights
+          if (Math.abs(weight - 1.0) < 0.01) color = "#1976D2";
+          else if (Math.abs(weight - uVal) < 0.01) color = "#D32F2F";
+          else if (Math.abs(weight - vVal) < 0.01) color = "#388E3C";
 
           verticalEdges.push({
-            x1: j * cellSize,
-            y1: i * cellSize,
-            x2: j * cellSize,
-            y2: (i + 1) * cellSize,
-            weight: weight.toFixed(1),
-            color: color
+            x1: j * cellSize, y1: i * cellSize,
+            x2: j * cellSize, y2: (i + 1) * cellSize,
+            weight: weight.toFixed(1), color: color
           });
-        }
       }
     }
 
-    // Draw edges
+    // Draw edges (lines)
     g.selectAll(".h-edge")
       .data(horizontalEdges)
-      .enter()
-      .append("line")
+      .enter().append("line")
       .attr("class", "h-edge")
-      .attr("x1", d => d.x1)
-      .attr("y1", d => d.y1)
-      .attr("x2", d => d.x2)
-      .attr("y2", d => d.y2)
-      .attr("stroke", d => d.color)
-      .attr("stroke-width", 2);
+      .attr("x1", d => d.x1).attr("y1", d => d.y1)
+      .attr("x2", d => d.x2).attr("y2", d => d.y2)
+      .attr("stroke", d => d.color).attr("stroke-width", 2);
 
     g.selectAll(".v-edge")
       .data(verticalEdges)
-      .enter()
-      .append("line")
+      .enter().append("line")
       .attr("class", "v-edge")
-      .attr("x1", d => d.x1)
-      .attr("y1", d => d.y1)
-      .attr("x2", d => d.x2)
-      .attr("y2", d => d.y2)
-      .attr("stroke", d => d.color)
-      .attr("stroke-width", 2);
+      .attr("x1", d => d.x1).attr("y1", d => d.y1)
+      .attr("x2", d => d.x2).attr("y2", d => d.y2)
+      .attr("stroke", d => d.color).attr("stroke-width", 2);
 
     // Add weight labels for horizontal edges
     g.selectAll(".h-label")
       .data(horizontalEdges)
-      .enter()
-      .append("text")
+      .enter().append("text")
       .attr("class", "h-label")
-      .attr("x", d => (d.x1 + d.x2) / 2)
-      .attr("y", d => d.y1 - 5)
-      .attr("text-anchor", "middle")
-      .attr("font-size", "10px")
-      .attr("fill", d => d.color)
-      .text(d => d.weight);
+      .attr("x", d => (d.x1 + d.x2) / 2).attr("y", d => d.y1 - 5)
+      .attr("text-anchor", "middle").attr("font-size", "10px")
+      .attr("fill", d => d.color).text(d => d.weight);
 
     // Add weight labels for vertical edges
     g.selectAll(".v-label")
       .data(verticalEdges)
-      .enter()
-      .append("text")
+      .enter().append("text")
       .attr("class", "v-label")
-      .attr("x", d => d.x1 + 5)
-      .attr("y", d => (d.y1 + d.y2) / 2)
-      .attr("text-anchor", "start")
-      .attr("dominant-baseline", "middle")
-      .attr("font-size", "10px")
-      .attr("fill", d => d.color)
+      .attr("x", d => d.x1 + 5).attr("y", d => (d.y1 + d.y2) / 2)
+      .attr("text-anchor", "start").attr("dominant-baseline", "middle")
+      .attr("font-size", "10px").attr("fill", d => d.color)
       .text(d => d.weight);
 
-    // Draw grid points
+    // Draw grid points (nodes)
     g.selectAll(".grid-point")
       .data(points)
-      .enter()
-      .append("circle")
+      .enter().append("circle")
       .attr("class", "grid-point")
-      .attr("cx", d => d.x)
-      .attr("cy", d => d.y)
-      .attr("r", 3)
-      .attr("fill", "black");
+      .attr("cx", d => d.x).attr("cy", d => d.y)
+      .attr("r", 3).attr("fill", "black");
 
-    // Add a legend
+    // Legend (should still be correct as it uses uVal, vVal from UI)
     const legend = g.append("g")
-      .attr("transform", `translate(10, ${graphHeight - 60})`)
+      .attr("transform", `translate(10, ${Math.min(graphHeight, (numNodesToDisplay)*cellSize) + 10})`) // Position legend below graph
       .attr("font-size", "12px");
 
-    // Legend title
-    legend.append("text")
-      .attr("y", -10)
-      .attr("font-weight", "bold")
-      .text("Legend:");
-
-    // Deterministic weight
-    legend.append("line")
-      .attr("x1", 0)
-      .attr("y1", 10)
-      .attr("x2", 20)
-      .attr("y2", 10)
-      .attr("stroke", "#1976D2")
-      .attr("stroke-width", 2);
-
-    legend.append("text")
-      .attr("x", 25)
-      .attr("y", 14)
-      .text("1.0 (deterministic)");
-
-    // u value
-    legend.append("line")
-      .attr("x1", 0)
-      .attr("y1", 30)
-      .attr("x2", 20)
-      .attr("y2", 30)
-      .attr("stroke", "#D32F2F")
-      .attr("stroke-width", 2);
-
-    legend.append("text")
-      .attr("x", 25)
-      .attr("y", 34)
-      .text(`${uVal.toFixed(1)} (u value)`);
-
-    // v value
-    legend.append("line")
-      .attr("x1", 0)
-      .attr("y1", 50)
-      .attr("x2", 20)
-      .attr("y2", 50)
-      .attr("stroke", "#388E3C")
-      .attr("stroke-width", 2);
-
-    legend.append("text")
-      .attr("x", 25)
-      .attr("y", 54)
-      .text(`${vVal.toFixed(1)} (v value)`);
+    legend.append("text").attr("y", -10).attr("font-weight", "bold").text("Legend (Edge Weights):");
+    legend.append("line").attr("x1", 0).attr("y1", 10).attr("x2", 20).attr("y2", 10).attr("stroke", "#1976D2").attr("stroke-width", 2);
+    legend.append("text").attr("x", 25).attr("y", 14).text("1.0 (deterministic)");
+    legend.append("line").attr("x1", 0).attr("y1", 30).attr("x2", 20).attr("y2", 30).attr("stroke", "#D32F2F").attr("stroke-width", 2);
+    legend.append("text").attr("x", 25).attr("y", 34).text(`${uVal.toFixed(1)} (u value)`);
+    legend.append("line").attr("x1", 0).attr("y1", 50).attr("x2", 20).attr("y2", 50).attr("stroke", "#388E3C").attr("stroke-width", 2);
+    legend.append("text").attr("x", 25).attr("y", 54).text(`${vVal.toFixed(1)} (v value)`);
   }
 
   // Tracks the previously used n value
@@ -1248,19 +1129,20 @@ dynamicsTimer = setInterval(async () => {
       }
 
       // Schedule update after a short delay to avoid too many rapid updates
-      window.weightUpdateTimer = setTimeout(function() {
+      window.weightUpdateTimer = setTimeout(async function() {
         // Get the current u/v values
         const u = parseFloat(document.getElementById('u-input').value);
         const v = parseFloat(document.getElementById('v-input').value);
 
-        // Update the legend text only without regenerating the matrix
         if (!isNaN(u) && !isNaN(v) && u > 0 && v > 0) {
-          const legendElement = document.querySelector('#weight-matrix-table .legend-random-weights');
-          if (legendElement) {
-            legendElement.textContent = `Random Bernoulli weights (${u} or ${v} with probability 1/2)`;
-          }
+          // Force a complete refresh of the weight matrix visualization
+          // Hide and then re-show the weight matrix to trigger a refresh with the latest u/v values
+          document.getElementById('show-weights-btn').click(); // Hide
+          setTimeout(() => {
+            document.getElementById('show-weights-btn').click(); // Show again
+          }, 100);
         }
-      }, 200);
+      }, 300);
     }
   };
 
