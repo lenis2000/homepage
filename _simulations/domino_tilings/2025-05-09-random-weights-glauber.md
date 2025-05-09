@@ -65,7 +65,7 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
 
 <div class="controls">
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
-  <input id="n-input" type="number" value="6" min="2" step="2" max="300" size="3" onchange="clearGlobalStateForResample()">
+  <input id="n-input" type="number" value="6" min="2" step="2" max="300" size="3" onchange="onNChange()">
   <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -573,10 +573,9 @@ dynamicsTimer = setInterval(async () => {
       return;
     }
 
-    // Always reset global state to force a clean resample
-    // This ensures we'll use the current n value
-    console.log(`Forcing resample with n=${n}`);
-    clearGlobalStateForResample();
+    // We only want to force a resample if n changed, which is handled by onNChange
+    // So we DON'T call clearGlobalStateForResample() here
+    console.log(`Sampling with n=${n} (only clearing state if n changed)`);
 
     // Generate new sample with explicitly passed n
     updateVisualization(n);
@@ -966,12 +965,31 @@ dynamicsTimer = setInterval(async () => {
       legendRow.appendChild(legendCell);
       tableElem.appendChild(legendRow);
 
+      // Re-enable the button after successfully loading the matrix
+      btnElem.disabled = false;
+      progressElem.innerText = ""; // Clear any progress message
+
     } else {
       // Hide the weights
       containerElem.style.display = 'none';
       btnElem.textContent = 'Show Weight Matrix';
+      btnElem.disabled = false; // Re-enable the button
     }
   });
+
+  // Tracks the previously used n value
+  let previousN = parseInt(document.getElementById("n-input").value, 10) || 6;
+
+  // Called when n input changes
+  window.onNChange = function() {
+    const newN = parseInt(document.getElementById("n-input").value, 10);
+    // Only clear global state if n actually changed
+    if (newN !== previousN) {
+      console.log(`n changed from ${previousN} to ${newN}, clearing global state`);
+      previousN = newN;
+      clearGlobalStateForResample();
+    }
+  };
 
   // Helper to clear global state to force fresh resampling
   window.clearGlobalStateForResample = function() {
