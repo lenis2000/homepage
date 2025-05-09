@@ -1,5 +1,5 @@
 ---
-title: Random Bernoulli Weights and Glauber Dynamics
+title: Domino tilings with random Bernoulli Weights and Glauber Dynamics
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -41,49 +41,37 @@ code:
 </style>
 
 <details>
-<summary>About the simulation</summary>
+<summary><h2>About the simulation <svg width="14" height="10" style="vertical-align: middle; margin-left: 3px;">
+      <polygon points="2,2 12,2 7,8" style="fill:#888;" />
+    </svg></h2>
+</summary>
 
-## About the simulation
 
-This interactive application demonstrates random domino tilings of an Aztec diamond - a diamond-shaped union of unit squares. The simulation allows exploration of two distinct sampling methods:
+<p>This interactive application demonstrates random domino tilings of an Aztec diamond - a diamond-shaped union of unit squares. The simulation allows exploration of two distinct sampling methods:</p>
 
-### Initial sampling (Shuffling algorithm)
+<h5>1. Initial sampling (Shuffling algorithm)</h5>
 
-The initial configuration is generated using the exact-sampling shuffling algorithm, producing a perfect sample from the weighted domino tiling measure. The probability measure is 2×2-periodic with random Bernoulli weights, as studied by Chhita & Johansson in [Domino tilings of the Aztec diamond with periodic weights](https://arxiv.org/abs/1410.2385).
+<p>The initial configuration is generated using the exact-sampling shuffling algorithm, producing a perfect sample from the weighted domino tiling measure, with random Bernoulli weights on 3/4 of edges. The Bernoulli weights are equal to $u$ or $v$ with probability 1/2, where $u$ and $v$ are user-defined parameters. The remaining 1/4 of edges are assigned a deterministic weight of 1.0.</p>
 
-In this random Bernoulli weights model, each edge in the graph is randomly assigned one of two possible weights (`u` or `v`) with probability 1/2, creating a disordered environment for the domino tiling. This contrasts with deterministic periodic weight patterns seen in other simulations.
+<h5>2. Glauber dynamics</h5>
 
-### Glauber dynamics
+<p>After generating an initial configuration, you can observe the evolution of the system through Glauber dynamics - a Markov chain Monte Carlo method that preserves the stationary distribution. Each step attempts to flip a randomly chosen 2×2 block of cells according to the heat-bath probability determined by the edge weights.</p>
 
-After generating an initial configuration, you can observe the evolution of the system through Glauber dynamics - a Markov chain Monte Carlo method that preserves the stationary distribution. Each step attempts to flip a randomly chosen 2×2 block of cells according to the heat-bath probability determined by the edge weights.
+<p>Unlike the shuffling algorithm which generates an exact sample immediately, Glauber dynamics shows the system evolving over time.</p>
 
-Unlike the shuffling algorithm which generates an exact sample immediately, Glauber dynamics shows the system evolving over time, potentially revealing metastable states and the system's approach to equilibrium.
+<p>You can change the weights before the Glauber dynamics, effectively running a dynamics out of equilibrium.</p>
 
-## Parameters explained
+<h3>Weight Graph Visualization</h3>
 
-- **Aztec Diamond Order (n)**: Controls the size of the diamond. The resulting tiling will be of a diamond with sides of length n.
-- **Value u and Value v**: These parameters determine the two possible weights (u or v) assigned with probability 1/2 to each edge in the Bernoulli weight model.
-- **Sweeps per visual update**: Controls how many complete sweeps of Glauber dynamics to perform between each visual update. A sweep consists of n² attempted flips.
+<p>The "Show Weight Graph" button displays a graphical representation of the edge weights used in the simulation:</p>
+<ul>
+  <li>Edges with weight 1.0 (shown in blue) are deterministic</li>
+  <li>Edges with weight u (shown in red) or v (shown in green) are randomly assigned according to the Bernoulli distribution</li>
+</ul>
 
-## How to interpret the visualization
+<p>The graph visualization shows a 4×4 corner of the weight matrix to help understand the spatial arrangement of weights in the Aztec diamond graph.</p>
 
-The different colors represent domino orientations:
-- Red/Green: Horizontal dominoes (occupying two cells side-by-side)
-- Blue/Yellow: Vertical dominoes (occupying two cells stacked vertically)
-
-The grayscale mode provides an alternative visualization that can help highlight structural patterns.
-
-As the dynamics evolve, observe the formation and movement of the "arctic circle" phenomenon - the boundary between the ordered (frozen) regions near the corners and the disordered (temperate) region in the center. With random weights, this boundary can exhibit interesting fluctuations compared to uniform or deterministic periodic cases.
-
-## Weight Graph Visualization
-
-The "Show Weight Graph" button displays a graphical representation of the edge weights used in the simulation:
-- Edges with weight 1.0 (shown in blue) are deterministic
-- Edges with weight u (shown in red) or v (shown in green) are randomly assigned according to the Bernoulli distribution
-
-The graph visualization shows a 4×4 corner of the weight matrix to help understand the spatial arrangement of weights in the Aztec diamond graph.
-
-The sampling runs entirely in your browser. For sizes up to about n≤120 the sampler is fast; larger n may take noticeable time (hard cap n=300 to protect your browser).
+<p>The sampling runs entirely in your browser. For sizes up to about n≤120 the sampler is fast; larger n may take noticeable time (hard cap n=300 to protect your browser).</p>
 </details>
 
 ---
@@ -368,7 +356,7 @@ async function advanceDynamics(nSteps) {
       clearInterval(dynamicsTimer);
       dynamicsTimer = null;
       dynamicsRunning = false;
-      dynamicsBtn.textContent = "Start Dynamics";
+      dynamicsBtn.textContent = "Start Glauber Dynamics";
       dynamicsBtn.classList.remove("running");
       progressElem.innerText = "";
 
@@ -384,7 +372,7 @@ async function advanceDynamics(nSteps) {
       }
 
       dynamicsRunning = true;
-      dynamicsBtn.textContent = "Stop Dynamics";
+      dynamicsBtn.textContent = "Stop Glauber Dynamics";
       dynamicsBtn.classList.add("running");
       progressElem.innerText = "";
 
@@ -445,7 +433,7 @@ dynamicsTimer = setInterval(async () => {
       clearInterval(dynamicsTimer);
       dynamicsTimer = null;
       dynamicsRunning = false;
-      dynamicsBtn.textContent = "Start Dynamics";
+      dynamicsBtn.textContent = "Start Glauber Dynamics";
       dynamicsBtn.classList.remove("running");
     }
 
