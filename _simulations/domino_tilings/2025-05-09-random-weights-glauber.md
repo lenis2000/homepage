@@ -1,5 +1,5 @@
 ---
-title: Random weights and Glauber dynamics
+title: Random Bernoulli Weights and Glauber Dynamics
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -65,7 +65,7 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
 
 <div class="controls">
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
-  <input id="n-input" type="number" value="50" min="2" step="2" max="300" size="3">
+  <input id="n-input" type="number" value="6" min="2" step="2" max="300" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -80,6 +80,15 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
 <div class="controls">
     <input type="checkbox" id="grayscale-checkbox">
   <label for="grayscale-checkbox">Grayscale mode</label>
+</div>
+
+<!-- Weight Matrix Display -->
+<div class="controls">
+  <button id="show-weights-btn">Show Weight Matrix</button>
+</div>
+<div id="weight-matrix-container" style="display: none; margin-top: 15px; margin-bottom: 15px; overflow-x: auto;">
+  <table id="weight-matrix-table" style="border-collapse: collapse; font-family: monospace; text-align: center;">
+  </table>
 </div>
 
 <!-- Progress indicator -->
@@ -104,10 +113,11 @@ The sampling runs entirely in your browser. For sizes up to about $n\le120$ the 
 <div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 
 <script>
-// Global variable to cache the simulation sample.
+// Global variables to cache the simulation state.
 let cachedDominoes = null;
 let dynamicsRunning = false;
 let dynamicsTimer = null;
+let g_W = null; // Global variable to store the weight matrix
 
 // Helper: convert a brightness value (0–255) to a hex grayscale string.
 function grayHex(brightness) {
@@ -157,6 +167,9 @@ Module.onRuntimeInitialized = async function() {
   // Add this new function for single Glauber steps
   const performGlauberStep = Module.cwrap('performGlauberStep', 'number', ['number', 'number'], {async: true});
   const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['number','number','number'], {async:true});
+
+  // Add new function to get the weight matrix
+  const getWeightMatrix = Module.cwrap('getWeightMatrix', 'number', [], {async: true});
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
@@ -718,6 +731,145 @@ dynamicsTimer = setInterval(async () => {
     downloadLink.href = URL.createObjectURL(blob);
     downloadLink.click();
     URL.revokeObjectURL(downloadLink.href);
+  });
+
+  // Weight matrix display functionality
+  document.getElementById("show-weights-btn").addEventListener("click", async function() {
+    const containerElem = document.getElementById('weight-matrix-container');
+    const tableElem = document.getElementById('weight-matrix-table');
+    const btnElem = document.getElementById('show-weights-btn');
+
+    if (containerElem.style.display === 'none') {
+      // Show the weights
+      containerElem.style.display = 'block';
+      btnElem.textContent = 'Hide Weight Matrix';
+      btnElem.disabled = true;
+
+      // Clear previous matrix if any
+      while (tableElem.firstChild) {
+        tableElem.removeChild(tableElem.firstChild);
+      }
+
+      if (!cachedDominoes) {
+        tableElem.innerHTML = '<tr><td>No weight matrix available. Generate a tiling first.</td></tr>';
+        btnElem.disabled = false;
+        return;
+      }
+
+      // Get the actual weight matrix from C++
+      progressElem.innerText = "Fetching weight matrix...";
+      const ptr = await getWeightMatrix();
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+
+      // Debug: print jsonStr to console
+      console.log("Weight matrix JSON:", jsonStr);
+
+      let weightValues;
+      try {
+        weightValues = JSON.parse(jsonStr);
+        // Debug: print parsed values to console
+        console.log("Parsed weight values:", weightValues);
+      } catch (e) {
+        console.error("JSON parse error:", e, "Raw JSON:", jsonStr);
+        tableElem.innerHTML = '<tr><td>Error fetching weight matrix: ' + e.message + '</td></tr>';
+        progressElem.innerText = "";
+        btnElem.disabled = false;
+        return;
+      }
+
+      if (!weightValues || !weightValues.length) {
+        tableElem.innerHTML = '<tr><td>No weight matrix available. Generate a tiling first.</td></tr>';
+        progressElem.innerText = "";
+        btnElem.disabled = false;
+        return;
+      }
+
+      // The data is already structured as a 2D array from C++
+      const size = weightValues.length;
+
+      const headerRow = document.createElement('tr');
+      headerRow.innerHTML = '<th style="border: 1px solid #ccc; padding: 4px;"></th>' +
+        Array.from({length: size}, (_, i) =>
+          `<th style="border: 1px solid #ccc; padding: 4px;">${i}</th>`).join('');
+      tableElem.appendChild(headerRow);
+
+      // Create rows with formatted cells
+      for (let i = 0; i < size; i++) {
+        const row = document.createElement('tr');
+        const headerCell = document.createElement('th');
+        headerCell.textContent = i;
+        headerCell.style.cssText = 'border: 1px solid #ccc; padding: 4px;';
+        row.appendChild(headerCell);
+
+        for (let j = 0; j < size; j++) {
+          const cell = document.createElement('td');
+          // For this pattern, we need integer division as well as modulus
+          // Calculate the 2×2 block pattern - every other row/column should have random weights
+          // This uses the "1 out of 2" alternating pattern as seen in the C++ code
+          // Integer division in JavaScript
+          const x = Math.floor(i / 2);
+          const y = Math.floor(j / 2);
+          const mod_i = i % 2;
+          const mod_j = j % 2;
+
+          // Determine which of the 4 pattern types (matches implementation in C++)
+          let patternType;
+          let bgcolor;
+
+          // Pattern matching the C++ code at lines 395-415
+          if (mod_i === 0 && mod_j === 0) {
+            // These are the deterministic weights (1.0)
+            patternType = "Deterministic (1.0)";
+            bgcolor = '#e6f7ff'; // Light blue
+          }
+          else if (mod_i === 0 && mod_j === 1) {
+            patternType = "α";
+            bgcolor = '#ffebcc'; // Light orange
+          }
+          else if (mod_i === 1 && mod_j === 1) {
+            patternType = "β";
+            bgcolor = '#e6ffe6'; // Light green
+          }
+          else if (mod_i === 1 && mod_j === 0) {
+            patternType = "γ";
+            bgcolor = '#ffe6e6'; // Light red
+          }
+
+          cell.title = patternType; // Add a tooltip
+          cell.style.backgroundColor = bgcolor;
+
+          // Get the actual weight value from the C++ matrix
+          const value = weightValues[i][j];
+          cell.textContent = value !== null ? value.toFixed(1) : 'n/a';
+          cell.style.cssText += 'border: 1px solid #ccc; padding: 4px; width: 30px;';
+          row.appendChild(cell);
+        }
+
+        tableElem.appendChild(row);
+      }
+
+      // Add a legend
+      const legendRow = document.createElement('tr');
+      const legendCell = document.createElement('td');
+      legendCell.colSpan = size + 1;
+      legendCell.innerHTML = `
+        <div style="margin-top: 10px; text-align: left;">
+          <p><strong>Legend:</strong></p>
+          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #e6f7ff;"></span> Deterministic weights (1.0)</p>
+          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #ffebcc;"></span> Random Bernoulli weights α (0.5 or 1.5)</p>
+          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #e6ffe6;"></span> Random Bernoulli weights β (0.5 or 1.5)</p>
+          <p><span style="display: inline-block; width: 15px; height: 15px; background-color: #ffe6e6;"></span> Random Bernoulli weights γ (0.5 or 1.5)</p>
+        </div>
+      `;
+      legendRow.appendChild(legendCell);
+      tableElem.appendChild(legendRow);
+
+    } else {
+      // Hide the weights
+      containerElem.style.display = 'none';
+      btnElem.textContent = 'Show Weight Matrix';
+    }
   });
 
   const initialN = parseInt(document.getElementById("n-input").value, 10);

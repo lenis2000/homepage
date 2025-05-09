@@ -2,7 +2,7 @@
 emcc 2025-05-09-random-weights-glauber.cpp -o 2025-05-09-random-weights-glauber.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_freeString', '_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_getWeightMatrix', '_freeString', '_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -12,7 +12,8 @@ emcc 2025-05-09-random-weights-glauber.cpp -o 2025-05-09-random-weights-glauber.
   mv 2025-05-09-random-weights-glauber.js ../../js/
 
 Features:
-- 2x2 periodic weights for random domino tilings of Aztec diamond
+- Random Bernoulli weights (0.5 or 1.5 with probability 1/2) for domino tilings of Aztec diamond
+- Glauber dynamics using the same random weight matrix
 - Memory optimized implementation with flat matrices (May 2025)
 */
 
@@ -36,10 +37,11 @@ static std::mt19937 rng(std::random_device{}()); // Global RNG for speed
 
 /* ---------- Global state for incremental Glauber dynamics ---------- */
 static MatrixInt      g_conf;         // current domino configuration
-static MatrixDouble   g_W;            // current 2×2–periodic weight matrix
+static MatrixDouble   g_W;            // current random weight matrix
 static int            g_N    = 0;     // linear size of g_conf (2n)
 static double         g_a    = -1.0;  // last (a,b) used to build g_W
 static double         g_b    = -1.0;
+static bool           g_random_initialized = false; // whether random weights are initialized
 
 volatile int progressCounter = 0;
 
@@ -317,27 +319,168 @@ void glauberStep(MatrixInt &conf,
     }
 }
 
+// Function to get the current weight matrix as JSON
+std::string getWeightMatrixJson() {
+    // Initialize random weights if not already done
+    if (!g_random_initialized || g_W.size() == 0) {
+        // Get an appropriate size for the matrix (use a default if not available)
+        int size = g_N > 0 ? g_N : 12;  // Default to 12 if g_N not set
+
+        MatrixDouble tempMatrix(size, size, 0.0);
+        std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+
+        // We're using k=ℓ=1 (based on the specification)
+        int k = 1, ell = 1;
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                // For each coordinate, determine which weight type it is
+                int mod_i = i % ell;
+                int mod_j = j % k;
+
+                // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
+                if (mod_i == 0 && mod_j == 0) {
+                    tempMatrix.at(i, j) = 1.0; // This is the deterministic weight
+                }
+                // α weights when (mod_i == 0 && mod_j != 0)
+                else if (mod_i == 0 && mod_j != 0) {
+                    tempMatrix.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                }
+                // β weights when (mod_i != 0 && mod_j != 0)
+                else if (mod_i != 0 && mod_j != 0) {
+                    tempMatrix.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                }
+                // γ weights when (mod_i != 0 && mod_j == 0)
+                else if (mod_i != 0 && mod_j == 0) {
+                    tempMatrix.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                }
+            }
+        }
+
+        // Store the random weights matrix globally
+        g_W = tempMatrix;
+        g_random_initialized = true;
+    }
+
+    std::string json = "[";
+    const int size = g_W.size();
+    bool first = true;
+    char buffer[128];
+
+    // Structure the data as a 2D grid for easier handling in JavaScript
+    // First, organize by row
+    for (int i = 0; i < size; i++) {
+        if (!first) json += ",";
+        first = false;
+
+        // Start a new row array
+        json += "[";
+        bool firstInRow = true;
+
+        // Add all columns in this row
+        for (int j = 0; j < size; j++) {
+            if (!firstInRow) json += ",";
+            firstInRow = false;
+
+            // Format the value directly (no object wrapper)
+            snprintf(buffer, sizeof(buffer), "%g", g_W.at(i, j));
+            json += buffer;
+        }
+
+        // Close the row array
+        json += "]";
+    }
+
+    json += "]";
+    return json;
+}
+
 extern "C" {
+
+// Export function to get the weight matrix
+EMSCRIPTEN_KEEPALIVE
+char* getWeightMatrix() {
+    try {
+        std::string json = getWeightMatrixJson();
+
+        // Debug: Print the matrix to the console
+        const int size = g_W.size();
+        std::cout << "Weight Matrix (" << size << "x" << size << "):" << std::endl;
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                std::cout << g_W.at(i, j) << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        char* result = (char*)malloc(json.size() + 1);
+        if (!result) {
+            return nullptr;
+        }
+        strcpy(result, json.c_str());
+        return result;
+    } catch (const std::exception& e) {
+        std::string error = "{\"error\":\"" + std::string(e.what()) + "\"}";
+        char* result = (char*)malloc(error.size() + 1);
+        if (!result) {
+            return nullptr;
+        }
+        strcpy(result, error.c_str());
+        return result;
+    }
+}
 
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztec(int n, double a, double b) {
     try {
         progressCounter = 0; // Reset progress.
 
-        // Create 2*n x 2*n weight matrix with 2x2 periodic weights.
+        // Create 2*n x 2*n weight matrix with random weights
         int dim = 2 * n;
         MatrixDouble A1a(dim, dim, 0.0);
 
-        // Set up the 2x2 periodic weights pattern
-        for (int i = 0; i < dim; i++){
-            for (int j = 0; j < dim; j++){
-                int im = i & 3; // Faster than i % 4
-                int jm = j & 3; // Faster than j % 4
-                if ((im < 2 && jm < 2) || (im >= 2 && jm >= 2))
-                    A1a.at(i, j) = b;
-                else
-                    A1a.at(i, j) = a;
+        // Initialize random Bernoulli weights if not already done
+        if (!g_random_initialized) {
+            std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+            // Set up the random weights according to the specified pattern:
+            // When (ℓx'+i', ky'+j') = (ℓx+i+1, ky+j), the element equals 1
+            // For α, β, γ, use random Bernoulli weights (0.5 or 1.5 with probability 1/2)
+
+            // We're using k=ℓ=1 (based on the specification)
+            int k = 1, ell = 1;
+
+            for (int i = 0; i < dim; i++){
+                for (int j = 0; j < dim; j++){
+                    // For each coordinate, determine which weight type it is
+                    int mod_i = i % ell;
+                    int mod_j = j % k;
+                    int x = i / ell;
+                    int y = j / k;
+
+                    // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
+                    if (mod_i == 0 && mod_j == 0) {
+                        A1a.at(i, j) = 1.0; // This is the deterministic weight
+                    }
+                    // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
+                    else if (mod_i == 0 && mod_j != 0) {
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                    }
+                    // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
+                    else if (mod_i != 0 && mod_j != 0) {
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                    }
+                    // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
+                    else if (mod_i != 0 && mod_j == 0) {
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                    }
+                }
             }
+            // Store the random weights matrix globally
+            g_W = A1a;
+            g_random_initialized = true;
+        } else {
+            // Reuse the existing random weights matrix
+            A1a = g_W;
         }
 
         // Compute probability matrices.
@@ -484,19 +627,64 @@ EMSCRIPTEN_KEEPALIVE
 char* simulateAztecGlauber(int n, double a, double b, int sweeps) {
     try {
         /* 1. exact start (shuffling) */
-        // Create 2*n x 2*n weight matrix with 2x2 periodic weights.
+        // Create 2*n x 2*n weight matrix with random weights
         int dim = 2 * n;
         MatrixDouble W(dim, dim, 0.0);
 
-        // Set up the 2x2 periodic weights pattern
-        for (int i = 0; i < dim; i++){
-            for (int j = 0; j < dim; j++){
-                int im = i & 3; // Faster than i % 4
-                int jm = j & 3; // Faster than j % 4
-                if ((im < 2 && jm < 2) || (im >= 2 && jm >= 2))
-                    W.at(i, j) = b;
-                else
-                    W.at(i, j) = a;
+        // Initialize random Bernoulli weights if not already done
+        if (!g_random_initialized) {
+            std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+            // Set up the random weights according to the specified pattern:
+            // When (ℓx'+i', ky'+j') = (ℓx+i+1, ky+j), the element equals 1
+            // For α, β, γ, use random Bernoulli weights (0.5 or 1.5 with probability 1/2)
+
+            // We're using k=ℓ=1 (based on the specification)
+            int k = 1, ell = 1;
+
+            for (int i = 0; i < dim; i++){
+                for (int j = 0; j < dim; j++){
+                    // For each coordinate, determine which weight type it is
+                    int mod_i = i % ell;
+                    int mod_j = j % k;
+                    int x = i / ell;
+                    int y = j / k;
+
+                    // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
+                    if (mod_i == 0 && mod_j == 0) {
+                        W.at(i, j) = 1.0; // This is the deterministic weight
+                    }
+                    // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
+                    else if (mod_i == 0 && mod_j != 0) {
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                    }
+                    // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
+                    else if (mod_i != 0 && mod_j != 0) {
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                    }
+                    // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
+                    else if (mod_i != 0 && mod_j == 0) {
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                    }
+                }
+            }
+            // Store the random weights matrix globally
+            g_W = W;
+            g_random_initialized = true;
+        } else {
+            // Reuse the existing random weights matrix if dimensions match
+            if (g_W.size() == dim) {
+                W = g_W;
+            } else {
+                // Create new random weights if dimensions don't match
+                g_random_initialized = false; // Reset flag to recreate matrix
+                std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+                for (int i = 0; i < dim; i++){
+                    for (int j = 0; j < dim; j++){
+                        W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5;
+                    }
+                }
+                g_W = W;
+                g_random_initialized = true;
             }
         }
 
@@ -663,15 +851,43 @@ char* performGlauberStep(double a, double b)
         if(g_N == 0)
             throw std::runtime_error("No configuration in memory – run an initial sampler first.");
 
-        /* rebuild weight matrix only if (a,b) changed */
+        /* Only generate a new weight matrix if specifically requested via param changes */
         if(a != g_a || b != g_b){
-            g_W = MatrixDouble(g_N, g_N, 0.0);
-            for(int i = 0; i < g_N; ++i){
-                for(int j = 0; j < g_N; ++j){
-                    int im = i & 3, jm = j & 3;
-                    g_W.at(i,j) = ((im < 2 && jm < 2) || (im >= 2 && jm >= 2)) ? b : a;
+            // If params changed AND they're both -1, this is a special signal to regenerate random weights
+            if (a == -1.0 && b == -1.0) {
+                std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+                g_W = MatrixDouble(g_N, g_N, 0.0);
+
+                // We're using k=ℓ=1 (based on the specification)
+                int k = 1, ell = 1;
+
+                for(int i = 0; i < g_N; ++i){
+                    for(int j = 0; j < g_N; ++j){
+                        // For each coordinate, determine which weight type it is
+                        int mod_i = i % ell;
+                        int mod_j = j % k;
+
+                        // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
+                        if (mod_i == 0 && mod_j == 0) {
+                            g_W.at(i, j) = 1.0; // This is the deterministic weight
+                        }
+                        // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
+                        else if (mod_i == 0 && mod_j != 0) {
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                        }
+                        // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
+                        else if (mod_i != 0 && mod_j != 0) {
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                        }
+                        // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
+                        else if (mod_i != 0 && mod_j == 0) {
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                        }
+                    }
                 }
+                g_random_initialized = true;
             }
+            // Otherwise, just update the params but keep using the existing weights
             g_a = a; g_b = b;
         }
 
@@ -735,14 +951,43 @@ char* performGlauberSteps(double a, double b, int nSteps)
         if(g_N == 0)
             throw std::runtime_error("No configuration in memory – run a sampler first.");
 
-        /* rebuild weights if needed */
+        /* Only generate a new weight matrix if specifically requested via param changes */
         if(a != g_a || b != g_b){
-            g_W = MatrixDouble(g_N, g_N, 0.0);
-            for(int i=0;i<g_N;++i)
-                for(int j=0;j<g_N;++j){
-                    int im=i&3, jm=j&3;
-                    g_W.at(i,j)=((im<2&&jm<2)||(im>=2&&jm>=2))? b : a;
+            // If params changed AND they're both -1, this is a special signal to regenerate random weights
+            if (a == -1.0 && b == -1.0) {
+                std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+                g_W = MatrixDouble(g_N, g_N, 0.0);
+
+                // We're using k=ℓ=1 (based on the specification)
+                int k = 1, ell = 1;
+
+                for(int i = 0; i < g_N; ++i){
+                    for(int j = 0; j < g_N; ++j){
+                        // For each coordinate, determine which weight type it is
+                        int mod_i = i % ell;
+                        int mod_j = j % k;
+
+                        // When (x'+i', y'+j') = (x+i+1, y+j), element equals 1
+                        if (mod_i == 0 && mod_j == 0) {
+                            g_W.at(i, j) = 1.0; // This is the deterministic weight
+                        }
+                        // α_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j+1)
+                        else if (mod_i == 0 && mod_j != 0) {
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // α - random
+                        }
+                        // β_{j+1,i+1} when (x'+i', y'+j') = (x+i+1, y+j+1)
+                        else if (mod_i != 0 && mod_j != 0) {
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // β - random
+                        }
+                        // γ_{j+1,i+1} when (x'+i', y'+j') = (x+i, y+j)
+                        else if (mod_i != 0 && mod_j == 0) {
+                            g_W.at(i, j) = (bernoulli(rng) < 0.5) ? 0.5 : 1.5; // γ - random
+                        }
+                    }
                 }
+                g_random_initialized = true;
+            }
+            // Otherwise, just update the params but keep using the existing weights
             g_a = a; g_b = b;
         }
 
