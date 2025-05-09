@@ -1,5 +1,5 @@
 ---
-title: Glauber Dynamics on Domino tilings with 2x2 periodic weights
+title: Random weights and Glauber dynamics
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -39,25 +39,14 @@ code:
     background-color: #f44336;
   }
 </style>
-## About the simulation
+
+<!-- ## About the simulation
 
 ##### Shuffling (initial picture)
 
 This simulation demonstrates random domino tilings of an Aztec diamond—a diamond‑shaped union of unit squares. The probability measure is $2\times2$‑periodic with edge‑weights $(a,b)$, as studied by Chhita & Johansson in [Domino tilings of the Aztec diamond with periodic weights](https://arxiv.org/abs/1410.2385). Sampling uses the shuffling algorithm. The original Python implementation by Sunil Chhita has been ported to JavaScript + WebAssembly, and the graphics are rendered with D3.js.
 
-The sampling runs entirely in your browser. For sizes up to about $n\le120$ the sampler is fast; larger $n$ may take noticeable time (hard cap $n=300$ to protect your browser).
-
-##### Glauber Dynamics
-
-You can run the Glauber dynamics on domino tilings, and adjust the speed.
-You can start the dynamics with one set of parameters $(a,b)$ and change them on the fly, observing in real time how the tiling reacts.
-Key phenomena visible in the grayscale view:
-
-- When $a=b$, the measure is uniform and inside the arctic circle you can see a "liquid" mixture of colors.
-- When $a<1, b=1$, lighter color dominates; when $a>1, b=1$, darker color dominates.
-- Local color relaxation occurs much faster than changes in the macroscopic limit shape.
-
-**Conjecture**: In the non‑uniform case $a\neq b$, the Glauber chain requires exponentially many sweeps in $n$ to alter the limit shape.
+The sampling runs entirely in your browser. For sizes up to about $n\le120$ the sampler is fast; larger $n$ may take noticeable time (hard cap $n=300$ to protect your browser). -->
 
 ---
 
