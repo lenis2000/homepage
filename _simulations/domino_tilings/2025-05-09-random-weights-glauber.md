@@ -75,13 +75,13 @@ The grayscale mode provides an alternative visualization that can help highlight
 
 As the dynamics evolve, observe the formation and movement of the "arctic circle" phenomenon - the boundary between the ordered (frozen) regions near the corners and the disordered (temperate) region in the center. With random weights, this boundary can exhibit interesting fluctuations compared to uniform or deterministic periodic cases.
 
-## Weight Matrix Visualization
+## Weight Graph Visualization
 
-The "Show Weight Matrix" button displays the edge weights used in the simulation:
+The "Show Weight Graph" button displays a graphical representation of the edge weights used in the simulation:
 - Edges with weight 1.0 (shown in blue) are deterministic
-- Edges with weight u or v (shown in red or green) are randomly assigned according to the Bernoulli distribution
+- Edges with weight u (shown in red) or v (shown in green) are randomly assigned according to the Bernoulli distribution
 
-The graph visualization shows a 4×4 corner of the weight matrix to help understand the spatial arrangement of weights.
+The graph visualization shows a 4×4 corner of the weight matrix to help understand the spatial arrangement of weights in the Aztec diamond graph.
 
 The sampling runs entirely in your browser. For sizes up to about n≤120 the sampler is fast; larger n may take noticeable time (hard cap n=300 to protect your browser).
 </details>
@@ -122,18 +122,14 @@ The sampling runs entirely in your browser. For sizes up to about n≤120 the sa
   <label for="grayscale-checkbox">Grayscale mode</label>
 </div>
 
-<!-- Weight Matrix Display -->
+<!-- Weight Graph Display -->
 <div class="controls">
-  <button id="show-weights-btn">Show Weight Matrix</button>
+  <button id="show-weights-btn">Show Weight Graph</button>
 </div>
 <div id="weight-matrix-container" style="display: none; margin-top: 15px; margin-bottom: 15px; overflow-x: auto;">
-  <!-- Tabular weight matrix view -->
-  <table id="weight-matrix-table" style="border-collapse: collapse; font-family: monospace; text-align: center; margin-bottom: 20px;">
-  </table>
-
   <!-- Graph visualization of weights -->
-  <div style="margin-top: 20px; margin-bottom: 20px;">
-    <h4>Graph Visualization (4×4 Corner)</h4>
+  <div>
+    <h4>Weight Graph Visualization (4×4 Corner)</h4>
     <p style="font-style: italic; font-size: 0.9em;">This shows a corner of the Aztec diamond graph with labeled weights</p>
     <svg id="weight-graph-svg" width="400" height="400" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
   </div>
@@ -862,34 +858,19 @@ dynamicsTimer = setInterval(async () => {
     URL.revokeObjectURL(downloadLink.href);
   });
 
-  // Weight matrix display functionality - shows both tabular and graph visualization
+  // Weight graph display functionality
   document.getElementById("show-weights-btn").addEventListener("click", async function() {
     const containerElem = document.getElementById('weight-matrix-container');
-    const tableElem = document.getElementById('weight-matrix-table');
     const btnElem = document.getElementById('show-weights-btn');
-    const graphSvg = document.getElementById('weight-graph-svg'); // Ensure this is correct ID
+    const graphSvg = document.getElementById('weight-graph-svg');
 
     if (containerElem.style.display === 'none') {
       containerElem.style.display = 'block';
-      btnElem.textContent = 'Hide Weight Matrix';
+      btnElem.textContent = 'Hide Weight Graph';
       btnElem.disabled = true; // Disable button while loading
 
-      while (tableElem.firstChild) { // Clear previous table content
-        tableElem.removeChild(tableElem.firstChild);
-      }
-
-      // Check if simulation has run by checking cachedDominoes or g_N (if available to JS)
-      // For simplicity, we'll rely on C++ to return an error if not ready.
-      // if (!cachedDominoes && (g_N === null || g_N === 0)) { // g_N is a JS global here
-      //   tableElem.innerHTML = '<tr><td>No data available. Generate a tiling first.</td></tr>';
-      //   progressElem.innerText = "";
-      //   btnElem.disabled = false;
-      //   return;
-      // }
-
-
-      progressElem.innerText = "Fetching edge weight matrices...";
-      const ptr = await getWeightMatrix(); // C++ function now returns JSON with two matrices
+      progressElem.innerText = "Fetching edge weights...";
+      const ptr = await getWeightMatrix(); // C++ function returns JSON with two matrices
       const jsonStr = Module.UTF8ToString(ptr);
       freeString(ptr);
 
@@ -901,8 +882,7 @@ dynamicsTimer = setInterval(async () => {
         edgeWeightData = JSON.parse(jsonStr);
         if (edgeWeightData.error) {
             console.error("Error from C++ getWeightMatrix:", edgeWeightData.error);
-            tableElem.innerHTML = '<tr><td>Error fetching weight matrices: ' + edgeWeightData.error + '</td></tr>';
-            progressElem.innerText = "";
+            progressElem.innerText = "Error fetching weight data: " + edgeWeightData.error;
             btnElem.disabled = false;
             return;
         }
@@ -911,8 +891,7 @@ dynamicsTimer = setInterval(async () => {
         }
       } catch (e) {
         console.error("JSON parse error for edge weights:", e, "Raw JSON:", jsonStr);
-        tableElem.innerHTML = '<tr><td>Error parsing edge weight matrices: ' + e.message + '</td></tr>';
-        progressElem.innerText = "";
+        progressElem.innerText = "Error parsing weight data: " + e.message;
         btnElem.disabled = false;
         return;
       }
@@ -921,55 +900,10 @@ dynamicsTimer = setInterval(async () => {
       const verticalWeights = edgeWeightData.vertical_weights;
 
       if (!horizontalWeights || !horizontalWeights.length || !verticalWeights || !verticalWeights.length || horizontalWeights.length !== verticalWeights.length) {
-        tableElem.innerHTML = '<tr><td>No valid weight matrices available or matrices mismatch. Ensure simulation has run.</td></tr>';
-        progressElem.innerText = "";
+        progressElem.innerText = "No valid weight data available or data mismatch. Ensure simulation has run.";
         btnElem.disabled = false;
         return;
       }
-
-      const fullSize = horizontalWeights.length;
-
-      // Simplified Tabular Display (showing only horizontal weights corner)
-      const displaySize = Math.min(10, fullSize);
-      const noteElem = document.createElement('div');
-      noteElem.style.cssText = 'margin-bottom: 10px; font-style: italic;';
-      if (fullSize > displaySize) {
-        noteElem.textContent = `Showing ${displaySize}×${displaySize} corner of the Horizontal Edge Weight Matrix (${fullSize}×${fullSize}):`;
-      } else {
-        noteElem.textContent = `Showing the full Horizontal Edge Weight Matrix (${fullSize}×${fullSize}):`;
-      }
-      tableElem.appendChild(noteElem);
-
-      const headerRow = document.createElement('tr');
-      let thHTML = '<th style="border: 1px solid #ccc; padding: 4px;">H[i][j]</th>';
-      for(let colIdx = 0; colIdx < displaySize; colIdx++) {
-        thHTML += `<th style="border: 1px solid #ccc; padding: 4px;">${colIdx}</th>`;
-      }
-      headerRow.innerHTML = thHTML;
-      tableElem.appendChild(headerRow);
-
-      for (let i = 0; i < displaySize; i++) {
-        if (i >= horizontalWeights.length) break;
-        const row = document.createElement('tr');
-        const headerCell = document.createElement('th');
-        headerCell.textContent = i;
-        headerCell.style.cssText = 'border: 1px solid #ccc; padding: 4px; background-color: #f0f0f0;';
-        row.appendChild(headerCell);
-        for (let j = 0; j < displaySize; j++) {
-          if (j >= horizontalWeights[i].length) break;
-          const cell = document.createElement('td');
-          const value = horizontalWeights[i][j];
-          cell.textContent = (typeof value === 'number') ? value.toFixed(1) : 'N/A';
-          cell.style.cssText = 'border: 1px solid #ccc; padding: 4px; width: 35px; text-align: center;';
-          if (Math.abs(value - 1.0) < 0.01) { cell.style.backgroundColor = '#e6f7ff'; } // Light blue for 1.0
-          else { cell.style.backgroundColor = '#f9f9f9';}
-          row.appendChild(cell);
-        }
-        tableElem.appendChild(row);
-      }
-      const legendNote = document.createElement('div');
-      legendNote.innerHTML = `<p style="font-style:italic; margin-top:10px;">The graph visualization (4×4 corner) below displays both horizontal and vertical edge weights according to the 'good picture' pattern.</p>`;
-      tableElem.appendChild(legendNote);
 
       // Call drawWeightGraph with both matrices
       drawWeightGraph(d3.select("#weight-graph-svg").node(), horizontalWeights, verticalWeights);
@@ -980,7 +914,7 @@ dynamicsTimer = setInterval(async () => {
     } else {
       // Hide the weights
       containerElem.style.display = 'none';
-      btnElem.textContent = 'Show Weight Matrix';
+      btnElem.textContent = 'Show Weight Graph';
       btnElem.disabled = false;
     }
   });
@@ -1155,11 +1089,11 @@ dynamicsTimer = setInterval(async () => {
     }
   };
 
-  // Function to update weight matrix when u/v values change
+  // Function to update weight graph when u/v values change
   window.updateWeightsIfShown = function() {
     const containerElem = document.getElementById('weight-matrix-container');
 
-    // Only update if the weight matrix is currently visible
+    // Only update if the weight graph is currently visible
     if (containerElem && containerElem.style.display !== 'none') {
       // Prevent too rapid updates with a debounce mechanism
       if (window.weightUpdateTimer) {
@@ -1173,8 +1107,8 @@ dynamicsTimer = setInterval(async () => {
         const v = parseFloat(document.getElementById('v-input').value);
 
         if (!isNaN(u) && !isNaN(v) && u > 0 && v > 0) {
-          // Force a complete refresh of the weight matrix visualization
-          // Hide and then re-show the weight matrix to trigger a refresh with the latest u/v values
+          // Force a complete refresh of the weight graph visualization
+          // Hide and then re-show the weight graph to trigger a refresh with the latest u/v values
           document.getElementById('show-weights-btn').click(); // Hide
           setTimeout(() => {
             document.getElementById('show-weights-btn').click(); // Show again
