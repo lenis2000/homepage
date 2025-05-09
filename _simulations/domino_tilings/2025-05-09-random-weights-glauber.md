@@ -81,13 +81,6 @@ code:
 
 <!-- Simulation Controls -->
 <!-- Dynamics controls – always visible -->
-<div class="controls">
-  <label for="sweeps-input">Sweeps per visual update:</label>
-  <input id="sweeps-input" type="number"
-         value="100" min="1" step="1" style="width:70px;">
-  <button id="dynamics-btn" style="margin-left:10px;">Start Dynamics</button>
-</div>
-
 
 <div class="controls">
   <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
@@ -105,10 +98,6 @@ code:
   <span style="margin-left: 10px; font-style: italic;">(Random Bernoulli weights use u or v with probability 1/2)</span>
 </div>
 
-<div class="controls">
-    <input type="checkbox" id="grayscale-checkbox">
-  <label for="grayscale-checkbox">Grayscale mode</label>
-</div>
 
 <!-- Weight Graph Display -->
 <div class="controls">
@@ -211,7 +200,7 @@ Module.onRuntimeInitialized = async function() {
   const progressElem = document.getElementById("progress-indicator");
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
-  const dynamicsBtn = document.getElementById("dynamics-btn");
+  let dynamicsBtn = document.getElementById("dynamics-btn"); // Changed to let since we'll reassign it
   let progressInterval;
 
   // Create zoom behavior
@@ -284,6 +273,23 @@ Module.onRuntimeInitialized = async function() {
     .style("font-style", "italic")
     .style("font-size", "0.9em")
     .text("(You can also use mouse wheel to zoom and drag to pan)");
+
+  // Add the Glauber dynamics controls just before zoom controls
+  controlsContainer.insert("div", ":first-child")
+    .attr("class", "controls")
+    .style("margin-bottom", "10px")
+    .html(`
+      <label for="sweeps-input">Sweeps per visual update:</label>
+      <input id="sweeps-input" type="number"
+             value="100" min="1" step="1" style="width:70px;">
+      <button id="dynamics-btn" style="margin-left:10px;">Start Glauber Dynamics</button>
+    `);
+
+  // Update the dynamics button reference since we created it dynamically
+  dynamicsBtn = document.getElementById("dynamics-btn");
+
+  // Add event listener after the button is created
+  dynamicsBtn.addEventListener("click", toggleDynamics);
 
   // Simulation state
   let simulationActive = false;
@@ -414,13 +420,11 @@ dynamicsTimer = setInterval(async () => {
   function updateDominoesVisualization() {
     if (!cachedDominoes) return;
 
-    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-
     // Update existing rectangles
     const rects = svg.select("g").selectAll("rect").data(cachedDominoes);
 
     // Update attributes that might have changed
-    rects.attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+    rects.attr("fill", d => d.color)
          .attr("x", d => d.x)
          .attr("y", d => d.y)
          .attr("width", d => d.w)
@@ -468,7 +472,6 @@ dynamicsTimer = setInterval(async () => {
       stopSimulation();
       return;
     }
-    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
 
     // Run simulation with periodic yielding to keep UI responsive
     try {
@@ -568,7 +571,7 @@ dynamicsTimer = setInterval(async () => {
              .attr("y", d => d.y)
              .attr("width", d => d.w)
              .attr("height", d => d.h)
-             .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color)
+             .attr("fill", d => d.color)
              .attr("stroke", "#000")
              .attr("stroke-width", 0.5);
 
@@ -614,8 +617,7 @@ dynamicsTimer = setInterval(async () => {
   // Add cancel button event listener
   document.getElementById("cancel-btn").addEventListener("click", stopSimulation);
 
-  // Add dynamics button event listener
-  document.getElementById("dynamics-btn").addEventListener("click", toggleDynamics);
+  // Note: Dynamics button event listener is now added immediately after the button is created
 
   // Add update weights button event listener
   document.getElementById("update-weights-btn").addEventListener("click", async function() {
@@ -671,13 +673,6 @@ dynamicsTimer = setInterval(async () => {
     }
   });
 
-  document.getElementById("grayscale-checkbox").addEventListener("change", () => {
-    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-    if (cachedDominoes) {
-      d3.select("#aztec-svg").select("g").selectAll("rect")
-        .attr("fill", d => useGrayscale ? getGrayscaleColor(d.color, d) : d.color);
-    }
-  });
 
   // Ensure weight matrix button is visible
   const showWeightsBtn = document.getElementById("show-weights-btn");
@@ -695,8 +690,6 @@ dynamicsTimer = setInterval(async () => {
       return;
     }
 
-    const useGrayscale = document.getElementById("grayscale-checkbox").checked;
-
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = cachedDominoes.map(domino => {
       return {
@@ -704,7 +697,7 @@ dynamicsTimer = setInterval(async () => {
         y: domino.y / 100,
         width: domino.w / 100,
         height: domino.h / 100,
-        fill: useGrayscale ? getGrayscaleColor(domino.color, domino) : domino.color,
+        fill: domino.color,
         stroke: "black",
         strokeWidth: 0.45 // Scaled down
       };
@@ -745,7 +738,7 @@ dynamicsTimer = setInterval(async () => {
 
 \\begin{document}
 
-% n = ${n}, u = ${u}, v = ${v}, grayscale = ${useGrayscale}
+% n = ${n}, u = ${u}, v = ${v}
 % sample obtained by Glauber dynamics
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]  % Calculated scale
 
@@ -756,15 +749,14 @@ dynamicsTimer = setInterval(async () => {
     rectangles.forEach(rect => {
       // Map SVG colors to TikZ colors
       let fillColor = rect.fill;
-      if (!useGrayscale) {
-        if (fillColor === '#00ff00') fillColor = 'svggreen';
-        else if (fillColor === '#ff0000') fillColor = 'svgred';
-        else if (fillColor === '#ffff00') fillColor = 'svgyellow';
-        else if (fillColor === '#0000ff') fillColor = 'svgblue';
-      }
+      if (fillColor === '#00ff00') fillColor = 'svggreen';
+      else if (fillColor === '#ff0000') fillColor = 'svgred';
+      else if (fillColor === '#ffff00') fillColor = 'svgyellow';
+      else if (fillColor === '#0000ff') fillColor = 'svgblue';
 
-      if (fillColor.startsWith('#')) {
-        // For grayscale mode or other hex colors, extract the intensity and use it
+      if (fillColor.startsWith('#') && fillColor !== '#00ff00' && fillColor !== '#ff0000' &&
+          fillColor !== '#ffff00' && fillColor !== '#0000ff') {
+        // For other hex colors, extract the intensity and use it
         const intensity = parseInt(fillColor.substring(1, 3), 16);
         fillColor = `black!${Math.round((intensity/255)*100)}`;
       }
