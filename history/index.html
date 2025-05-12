@@ -49,32 +49,32 @@
     <title>Note History || LMathNotes</title>
     <link rel="canonical" href="http://localhost:4000/LMathNotes/history/" />
 
-    
 
-    
+
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" integrity="sha384-cpW21h6RZv/phavutF+AuVYrr+dA8xD9zs6FwLpaCct6O9ctzYFfFr4dgmgccOTx" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
 
-    
+
 <link rel="stylesheet" href="/LMathNotes/css/paperesque.min.1ed355f6466984bc45832e5260b2220a7b455f595bd354deb096c89a8340f693.css" />
 <script type="text/javascript" src="/LMathNotes/js/main.ed0b25e542f4cc8cdfea5ee819579125cd6129320fbfecee9c3e0484140cf964.js"></script>
 
 <link href="https://fonts.googleapis.com/css?family=Lora&display=swap" rel="stylesheet">
 
-    
+
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body
   class=""
   lang="en-us">
-  
+
 <section id="main" class="content-container article-pad-v">
     <a href="/" class="back-button">← Home</a>
     <h1 id="title">Note History</h1>
 
-    
+
     <div
     class="search-panel"
     style="
@@ -100,7 +100,7 @@
 </div>
 
 <style>
-     
+
     .search-panel,
     .content-container .search-panel,
     .sidepull-main .search-panel,
@@ -130,7 +130,7 @@
         const searchInput = document.getElementById("searchInput");
         const searchPanel = document.querySelector(".search-panel");
 
-        
+
         if (searchPanel) {
             searchPanel.style.width = "100%";
             searchPanel.style.maxWidth = "100%";
@@ -148,50 +148,50 @@
             searchInput.style.display = "block";
         }
 
-        
+
         searchInput.addEventListener("input", function () {
             performSearch(this.value);
         });
 
-        
+
         document.addEventListener("keydown", function (event) {
             if (event.key === "Escape") {
-                
+
                 if (
                     document.activeElement !== searchInput &&
                     searchInput.value.trim() !== ""
                 ) {
                     searchInput.focus();
-                    event.preventDefault(); 
+                    event.preventDefault();
                 }
-                
+
                 else {
                     searchInput.value = "";
                     performSearch("");
-                    searchInput.focus(); 
-                    event.preventDefault(); 
+                    searchInput.focus();
+                    event.preventDefault();
                 }
             }
         });
 
         function createCaseSmartPattern(searchTerm) {
-            
+
             const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            
-            
+
+
             let pattern = '';
             for (let i = 0; i < escaped.length; i++) {
                 const char = escaped[i];
-                
+
                 if (char === char.toUpperCase() && char !== char.toLowerCase()) {
                     pattern += char;
                 }
-                
+
                 else if (char === char.toLowerCase() && char !== char.toUpperCase()) {
                     pattern += '[' + char + char.toUpperCase() + ']';
                 }
-                
+
                 else {
                     pattern += char;
                 }
@@ -225,7 +225,7 @@
                     }
                 }
 
-                
+
                 if (visibleCount === 0) {
                     header.style.display = "none";
                     notesList.style.display = "none";
@@ -235,17 +235,17 @@
                 }
             }
 
-            
+
             updateNoResultsMessage(!hasResults && searchTerm);
         }
 
         async function isNoteMatchingSearch(note, searchTerm) {
             if (!searchTerm) return true;
 
-            
+
             const pattern = createCaseSmartPattern(searchTerm);
 
-            
+
             const title = note.querySelector(".note-title")?.textContent || "";
             const description = note.querySelector(".note-description")?.textContent || "";
 
@@ -253,12 +253,12 @@
                 return true;
             }
 
-            
+
             let dirPath = "";
 
-            
+
             const texLinks = note.querySelectorAll(
-                'a[href*="tex-viewer?path="]',
+                'a[href*="tex-viewer.html?path="]',
             );
             if (texLinks.length > 0) {
                 const href = texLinks[0].getAttribute("href");
@@ -271,20 +271,20 @@
                 }
             }
 
-            
+
             if (!dirPath) {
                 const pdfLinks = note.querySelectorAll('a[href*=".pdf"]');
                 if (pdfLinks.length > 0) {
                     const href = pdfLinks[0].getAttribute("href");
                     dirPath = href.split("/").slice(0, -1).join("/");
-                    
+
                     if (dirPath.startsWith("/")) {
                         dirPath = dirPath.substring(1);
                     }
                 }
             }
 
-            
+
             const allFileLinks = note.querySelectorAll('a.file-link, a.pdf-link, a.tex-link');
             for (const link of allFileLinks) {
                 const href = link.getAttribute("href");
@@ -293,13 +293,13 @@
                     return true;
                 }
 
-                
+
                 if (link.textContent && pattern.test(link.textContent)) {
                     return true;
                 }
             }
 
-            
+
             if (dirPath) {
                 try {
                     const descPath = `${dirPath}/description.txt`;
@@ -316,7 +316,7 @@
                 }
             }
 
-            
+
             for (const link of texLinks) {
                 const href = link.getAttribute("href");
                 const path = href.split("path=")[1];
@@ -359,208 +359,207 @@
 </script>
 
 
-    
+
     <div id="history-content">
         <p>Loading history...</p>
     </div>
 
-    
-    
 
-    
-    
-        
-    
-        
-            
-            
-            
-            
 
-            
-                
-                
-                
-                
-                
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                
-            
-        
-    
-        
-            
-            
-            
-            
 
-            
-                
-                
-                
-                
-                
-                
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                            
-                        
-                    
-                
-                    
-                
-            
-        
-    
-        
-            
-            
-            
-            
 
-            
-                
-                
-                    
-                
-                    
-                        
-                        
-                        
-                    
-                
-                    
-                
-            
-        
-    
-        
-    
-        
-    
-        
-    
-        
-    
-        
-    
-        
-            
-            
-            
-            
 
-            
-                
-                
-                
-                
-                
-                
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                    
-                
-                    
-                        
-                        
-                        
-                        
-                    
-                
-                    
-                
-            
-        
-    
 
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <div id="history-data" style="display: none;">
-        
+
             <div data-note-id="2021-09-01-22_Notebook_Sep_Oct_2021">
                 <ul class="notes-list">
-                    
 
 
 
@@ -588,21 +587,22 @@
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -610,13 +610,13 @@
         <details>
             <summary class="note-title">
                 <i>Sample Handwritten Notebook</i>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(September 1, 2021)</span>
-                
+
             </summary>
             <p class="note-description">Sample table of contents:
 - q-Vol, Macd, Jack, intertwine. remains: intertwine x2 α/β (pp. 1-3)
@@ -624,55 +624,55 @@
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-                
-                    
+
+
+
+
+
                     <a href="/content/Handwritten_Notebooks/2021-09-01-22_Notebook_Sep_Oct_2021/2021-09-01-22_Notebook_Sep_Oct_2021.pdf" target="_blank" class="pdf-link">PDF (2021-09-01-22_Notebook_Sep_Oct_2021.pdf)</a>
-                    
-                
-            
-                
-            
-        
-        
 
-        
-        
-        
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -680,10 +680,9 @@
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-04-15-klein-bottle-topology">
                 <ul class="notes-list">
-                    
 
 
 
@@ -711,21 +710,22 @@
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -733,13 +733,13 @@
         <details>
             <summary class="note-title">
                 <b>The Topology of Klein Bottles</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(April 15, 2025)</span>
-                
+
             </summary>
             <p class="note-description">Initial exploration of the properties of Klein bottles as non-orientable surfaces. This note examines the basic topological properties, construction methods, and visualization techniques for understanding these fascinating objects.
 
@@ -752,120 +752,120 @@ Key topics include:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
-                <a href="/content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+                <a href="/content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.pdf" target="_blank" class="pdf-link">PDF</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
                     <a href="/tex-viewer?path=content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-        
-        
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
-        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tex-viewer.html        </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -873,10 +873,9 @@ Key topics include:
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-04-30-fibonacci-paradox">
                 <ul class="notes-list">
-                    
 
 
 
@@ -904,21 +903,22 @@ Key topics include:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -926,13 +926,13 @@ Key topics include:
         <details>
             <summary class="note-title">
                 <b>The Fibonacci Identity Paradox</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(April 30, 2025)</span>
-                
+
             </summary>
             <p class="note-description">A fun mathematical puzzle examining an apparent contradiction in Fibonacci number identities. This note presents a seemingly impossible equation involving Fibonacci numbers that appears to be both true and false simultaneously.
 
@@ -945,120 +945,120 @@ The puzzle explores:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
-                <a href="/content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+                <a href="/content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.pdf" target="_blank" class="pdf-link">PDF</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
                     <a href="/tex-viewer?path=content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-        
-        
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
-        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tex-viewer.html        </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -1066,10 +1066,9 @@ The puzzle explores:
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-05-01-klein-bottle-applications">
                 <ul class="notes-list">
-                    
 
 
 
@@ -1097,21 +1096,22 @@ The puzzle explores:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -1119,13 +1119,13 @@ The puzzle explores:
         <details>
             <summary class="note-title">
                 <b>Applications of Klein Bottles in Modern Mathematics</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 1, 2025)</span>
-                
+
             </summary>
             <p class="note-description">A continuation of our exploration of Klein bottles, focusing on their surprising applications in various fields of mathematics and theoretical physics. This note expands on the foundational concepts presented in the previous note.
 
@@ -1138,173 +1138,165 @@ This note covers:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
-                <a href="/content/2025-05/2025-05-01-klein-bottle-applications/2025-05-01-klein-bottle-applications.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+                <a href="/content/2025-05/2025-05-01-klein-bottle-applications/2025-05-01-klein-bottle-applications.pdf" target="_blank" class="pdf-link">PDF</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
                     <a href="/tex-viewer?path=content/2025-05/2025-05-01-klein-bottle-applications/2025-05-01-klein-bottle-applications.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
-        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tex-viewer.html        </div>
     </div>
 
-    
-    
-        
-        
-            
-            
-            
-                
-                
-                    
-                
-            
-                
-                
-                    
-                
-            
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <div class="prev-notes">
-                    
-                        
-                        
-                            
-                        
-                    
-                        
-                        
-                            
-                        
-                    
+
+
+
+
+
+
+
+
+
+
+
                 </div>
-            
-        
-    
+
+
+
     </details>
 </li>
 
 
 
-    
-    
-        
-        
-            
-            
-                
-                    
 
 
 
@@ -1332,21 +1324,29 @@ This note covers:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -1354,13 +1354,13 @@ This note covers:
         <details>
             <summary class="note-title">
                 <b>The Topology of Klein Bottles</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(April 15, 2025)</span>
-                
+
             </summary>
             <p class="note-description">Initial exploration of the properties of Klein bottles as non-orientable surfaces. This note examines the basic topological properties, construction methods, and visualization techniques for understanding these fascinating objects.
 
@@ -1373,132 +1373,125 @@ Key topics include:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
 
 
-                
-            
-        
-            
-            
-                
-                    
 
 
 
@@ -1526,21 +1519,28 @@ Key topics include:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -1548,18 +1548,18 @@ Key topics include:
         <details>
             <summary class="note-title">
                 <b>The Paradoxical Values of the Riemann Zeta Function</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 10, 2025)</span>
-                
+
             </summary>
             <p class="note-description">An exploration of counterintuitive values of the Riemann zeta function, focusing on the famous result that 1 &#43; 2 &#43; 3 &#43; 4 &#43; ... = -1/12. This note investigates how regularization methods in physics and mathematics lead to these bizarre but useful results.
 
 Topics covered:
-- Analytic continuation of the zeta function 
+- Analytic continuation of the zeta function
 - Applications in string theory and quantum field theory
 - Ramanujan summation techniques
 - The connection to the Casimir effect
@@ -1567,163 +1567,155 @@ Topics covered:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
-        
-        
-            
-            
-            
-                
-                
-                    
-                
-            
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <div class="prev-notes">
-                    
-                        
-                        
-                            
-                        
-                    
+
+
+
+
+
+
                 </div>
-            
-        
-    
+
+
+
     </details>
 </li>
 
 
 
-    
-    
-        
-        
-            
-            
-                
-                    
 
 
 
@@ -1751,21 +1743,29 @@ Topics covered:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -1773,13 +1773,13 @@ Topics covered:
         <details>
             <summary class="note-title">
                 <b>The Fibonacci Identity Paradox</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(April 30, 2025)</span>
-                
+
             </summary>
             <p class="note-description">A fun mathematical puzzle examining an apparent contradiction in Fibonacci number identities. This note presents a seemingly impossible equation involving Fibonacci numbers that appears to be both true and false simultaneously.
 
@@ -1792,141 +1792,140 @@ The puzzle explores:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
 
 
-                
-            
-        
-    
 
-                
-            
-        
-    
+
+
+
+
+
+
+
+
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-05-05-category-theory-joke">
                 <ul class="notes-list">
-                    
 
 
 
@@ -1954,21 +1953,22 @@ The puzzle explores:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -1976,13 +1976,13 @@ The puzzle explores:
         <details>
             <summary class="note-title">
                 <b>The Comprehensive Guide to Category Theory Jokes</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 5, 2025)</span>
-                
+
             </summary>
             <p class="note-description">An analysis of humor in category theory, exploring why category theorists are notoriously difficult to make laugh. This note catalogs various attempts at category theory humor and analyzes why they generally fall flat.
 
@@ -1995,152 +1995,152 @@ Key sections include:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-05/2025-05-05-category-theory-joke/2025-05-05-category-theory-joke.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-05/2025-05-05-category-theory-joke/2025-05-05-category-theory-joke.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-05/2025-05-05-category-theory-joke/2025-05-05-category-theory-joke.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-                    
-                
-            
-                
-            
-        
-        
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <span class="link-separator-small">&bull;</span>
                 <a href="/content/2025-05/2025-05-05-category-theory-joke/category_jokes.bib" target="_blank" class="file-link">category_jokes.bib</a>
-                
-            
-        
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -2148,10 +2148,9 @@ Key sections include:
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-05-08-collatz-conjecture-proof">
                 <ul class="notes-list">
-                    
 
 
 
@@ -2177,25 +2176,26 @@ Key sections include:
 
 
 
-    
-
-
-
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item blurred-note" data-blur="true">
@@ -2203,13 +2203,13 @@ Key sections include:
         <details>
             <summary class="note-title">
                 <b>Breakthrough on the Collatz Conjecture</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 8, 2025)</span>
-                
+
             </summary>
             <p class="note-description">This note contains preliminary work on a potential approach to proving the Collatz conjecture using techniques from dynamical systems and non-standard analysis. While not a complete proof, it identifies a promising pathway involving ergodic theory.
 
@@ -2222,128 +2222,128 @@ Key insights include:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-05/2025-05-08-collatz-conjecture-proof/2025-05-08-collatz-conjecture-proof.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-05/2025-05-08-collatz-conjecture-proof/2025-05-08-collatz-conjecture-proof.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-05/2025-05-08-collatz-conjecture-proof/2025-05-08-collatz-conjecture-proof.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -2351,10 +2351,9 @@ Key insights include:
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-05-10-hilbert-space-joke">
                 <ul class="notes-list">
-                    
 
 
 
@@ -2382,21 +2381,22 @@ Key insights include:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -2404,13 +2404,13 @@ Key insights include:
         <details>
             <summary class="note-title">
                 <b>Why Mathematicians Can&#39;t Find Things in Hilbert Space</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 10, 2025)</span>
-                
+
             </summary>
             <p class="note-description">A humorous exploration of why objects in infinite-dimensional spaces are so difficult to locate. This note examines the topological properties of Hilbert spaces through the lens of the classic &#34;I can&#39;t find my keys&#34; problem, reimagined for functional analysis.
 
@@ -2422,136 +2422,136 @@ Key concepts include:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-05/2025-05-10-hilbert-space-joke/2025-05-10-hilbert-space-joke.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-05/2025-05-10-hilbert-space-joke/2025-05-10-hilbert-space-joke.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-05/2025-05-10-hilbert-space-joke/2025-05-10-hilbert-space-joke.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-                    
-                
-            
-        
-        
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <span class="link-separator-small">&bull;</span>
                 <a href="/content/2025-05/2025-05-10-hilbert-space-joke/hilbert_joke.png" target="_blank" class="file-link">hilbert_joke.png</a>
-                
-            
-        
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -2559,10 +2559,9 @@ Key concepts include:
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-05-10-zeta-function-paradox">
                 <ul class="notes-list">
-                    
 
 
 
@@ -2590,21 +2589,22 @@ Key concepts include:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -2612,18 +2612,18 @@ Key concepts include:
         <details>
             <summary class="note-title">
                 <b>The Paradoxical Values of the Riemann Zeta Function</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 10, 2025)</span>
-                
+
             </summary>
             <p class="note-description">An exploration of counterintuitive values of the Riemann zeta function, focusing on the famous result that 1 &#43; 2 &#43; 3 &#43; 4 &#43; ... = -1/12. This note investigates how regularization methods in physics and mathematics lead to these bizarre but useful results.
 
 Topics covered:
-- Analytic continuation of the zeta function 
+- Analytic continuation of the zeta function
 - Applications in string theory and quantum field theory
 - Ramanujan summation techniques
 - The connection to the Casimir effect
@@ -2631,163 +2631,155 @@ Topics covered:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
-        
-        
-            
-            
-            
-                
-                
-                    
-                
-            
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <div class="prev-notes">
-                    
-                        
-                        
-                            
-                        
-                    
+
+
+
+
+
+
                 </div>
-            
-        
-    
+
+
+
     </details>
 </li>
 
 
 
-    
-    
-        
-        
-            
-            
-                
-                    
 
 
 
@@ -2815,21 +2807,29 @@ Topics covered:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -2837,13 +2837,13 @@ Topics covered:
         <details>
             <summary class="note-title">
                 <b>The Fibonacci Identity Paradox</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(April 30, 2025)</span>
-                
+
             </summary>
             <p class="note-description">A fun mathematical puzzle examining an apparent contradiction in Fibonacci number identities. This note presents a seemingly impossible equation involving Fibonacci numbers that appears to be both true and false simultaneously.
 
@@ -2856,136 +2856,135 @@ The puzzle explores:
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
 
 
-                
-            
-        
-    
+
+
+
+
 
                 </ul>
             </div>
-        
+
             <div data-note-id="2025-05-12-lmathnotes-documentation">
                 <ul class="notes-list">
-                    
 
 
 
@@ -3013,21 +3012,22 @@ The puzzle explores:
 
 
 
-    
-    
 
 
 
 
 
-    
-    
-        
-        
-        
-            
-        
-    
+
+
+
+
+
+
+
+
+
+
+
 
 
 <li class="history-note-item" >
@@ -3035,13 +3035,13 @@ The puzzle explores:
         <details>
             <summary class="note-title">
                 <b>LMathNotes - Hugo-based Mathematical Research Notes Repository</b>
-                
-                
-                
-                    
-                    
+
+
+
+
+
                     <span style="font-size: 0.8em; color: #777; font-weight:normal;">(May 12, 2025)</span>
-                
+
             </summary>
             <p class="note-description">LMathNotes is a specialized Hugo-based web application designed for organizing, displaying, and navigating mathematical research notes with a focus on LaTeX content. It provides a comprehensive system for managing academic notes with advanced features for confidentiality, history tracking, and content exploration.
 
@@ -3143,7 +3143,7 @@ Note ID refers to the directory name of a note (e.g., `2025-05-11-blur-test-1`).
 | `/YYYY-MM/` | Monthly note listing |
 | `/Handwritten_Notebooks/` | Handwritten notebooks listing |
 | `/history?note=YYYY-MM-DD-Note-Title` | History view for specific note |
-| `/tex-viewer?path=content/path/to/file.tex` | TeX file viewer |
+| `/tex-viewer.html?path=content/path/to/file.tex` | TeX file viewer |
 
 ## Setup Instructions
 
@@ -3216,120 +3216,120 @@ SOFTWARE.
     </div>
     <div class="link-container">
         <div class="all-links">
-        
-        
-            
-            
-            
+
+
+
+
+
                 <a href="/content/2025-05/2025-05-12-lmathnotes-documentation/2025-05-12-lmathnotes-documentation.pdf" target="_blank" class="pdf-link">PDF</a>
-                
-            
 
-            
-            
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     <span class="link-separator">&bull;</span>
-                    <a href="/tex-viewer?path=content/2025-05/2025-05-12-lmathnotes-documentation/2025-05-12-lmathnotes-documentation.tex" target="_blank" class="tex-link">TEX</a>
-                    
-                
-            
-                
-            
-        
-        
+                    <a href="/tex-viewer.html?path=content/2025-05/2025-05-12-lmathnotes-documentation/2025-05-12-lmathnotes-documentation.tex" target="_blank" class="tex-link">TEX</a>
 
-        
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
 
-        
-        
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-                
-            
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
     </div>
 
-    
-    
+
+
     </details>
 </li>
 
@@ -3337,25 +3337,25 @@ SOFTWARE.
 
                 </ul>
             </div>
-        
+
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        
+
         const urlParams = new URLSearchParams(window.location.search);
         const noteParam = urlParams.get('note');
         const typeParam = urlParams.get('type') || 'default';
-        
+
         const historyContent = document.getElementById('history-content');
-        
+
         if (!noteParam) {
             historyContent.innerHTML = '<p>No note specified. Please access this page via a history link from a note.</p>';
         } else {
-            
+
             const historyData = document.getElementById('history-data');
             const noteDiv = historyData.querySelector(`[data-note-id="${noteParam}"]`);
-            
+
             if (noteDiv) {
                 historyContent.innerHTML = `
                     <div class="history-header">
@@ -3366,10 +3366,10 @@ SOFTWARE.
                     </div>
                 `;
 
-                
+
                 const searchInput = document.getElementById("searchInput");
                 if (searchInput) {
-                    
+
                     function performSearch(searchTerm) {
                         const notes = document.querySelectorAll(".history-note-item");
                         let hasResults = false;
@@ -3389,35 +3389,35 @@ SOFTWARE.
                             if (isVisible) hasResults = true;
                         });
 
-                        
+
                         updateNoResultsMessage(!hasResults && searchTerm);
                     }
 
-                    
+
                     searchInput.addEventListener("input", function() {
                         performSearch(this.value.trim());
                     });
 
-                    
+
                     document.addEventListener("keydown", function(event) {
                         if (event.key === "Escape") {
-                            
+
                             if (document.activeElement !== searchInput && searchInput.value.trim() !== "") {
                                 searchInput.focus();
-                                event.preventDefault(); 
+                                event.preventDefault();
                             }
-                            
+
                             else {
                                 searchInput.value = "";
-                                performSearch(""); 
-                                searchInput.focus(); 
-                                event.preventDefault(); 
+                                performSearch("");
+                                searchInput.focus();
+                                event.preventDefault();
                             }
                         }
 
-                        
+
                         if ((event.key === 'b' || event.key === 'B') && (event.metaKey || event.ctrlKey)) {
-                            event.preventDefault(); 
+                            event.preventDefault();
                             const blurredNotes = document.querySelectorAll('.blurred-note');
                             blurredNotes.forEach(note => {
                                 note.classList.toggle('unblurred');
@@ -3435,23 +3435,23 @@ SOFTWARE.
         }
 
         function createCaseSmartPattern(searchTerm) {
-            
+
             const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            
-            
+
+
             let pattern = '';
             for (let i = 0; i < escaped.length; i++) {
                 const char = escaped[i];
-                
+
                 if (char === char.toUpperCase() && char !== char.toLowerCase()) {
                     pattern += char;
                 }
-                
+
                 else if (char === char.toLowerCase() && char !== char.toUpperCase()) {
                     pattern += '[' + char + char.toUpperCase() + ']';
                 }
-                
+
                 else {
                     pattern += char;
                 }
@@ -3489,28 +3489,28 @@ SOFTWARE.
             setTimeout(function() {
                 const details = document.querySelectorAll("details");
                 details.forEach((detail) => {
-                    
+
                     const summaryText = detail.querySelector("summary").textContent.trim();
                     const storageKey = "history-detail-" + summaryText;
-                    
-                    
+
+
                     detail.addEventListener("toggle", function () {
                         localStorage.setItem(storageKey, this.open);
                     });
-                    
-                    
+
+
                     const stored = localStorage.getItem(storageKey);
                     if (stored === "true") {
                         detail.open = true;
                     }
                 });
-            }, 100); 
+            }, 100);
         });
     </script>
 </section>
 
 <style>
-   
+
   .back-button {
       display: inline-block;
       margin-bottom: 1.5rem;
@@ -3527,12 +3527,12 @@ SOFTWARE.
       background: #e5e5e5;
   }
 
-   
+
   .history-header { margin-bottom: 1.5rem; }
   .notes-history-list { list-style-type: none; padding-left: 0; }
   .history-note-item { padding: 10px 0; margin-bottom: 5px; }
-  
-   
+
+
   .history-note-item details { margin-bottom: 0.5em; }
   .history-note-item summary { display: block; cursor: pointer; padding: 0.25em 0; position: relative; outline: none; }
   .history-note-item summary::-webkit-details-marker { display: none; }
@@ -3540,8 +3540,8 @@ SOFTWARE.
   .history-note-item details[open] summary::before { content: "▼"; }
   .history-note-item .note-title { margin: 0; font-size: 1.2em; font-weight: normal; }
   .history-note-item .note-description { font-size: 0.95em; color: #333; margin: 0.7em 0; padding-left: 1em; }
-  
-   
+
+
   .history-note-item .link-container { margin-top: 8px; font-size: 0.9em; }
   .pdf-link, .tex-link { text-decoration: none; padding: 2px 6px; border-radius: 3px; border: 1px solid #ddd; background-color: #f7f7f7; margin-right: 3px;}
   .pdf-link { color: #0056b3; }
@@ -3551,7 +3551,7 @@ SOFTWARE.
   .file-link-tex { color: #28a745; }
   .pdf-link:hover, .tex-link:hover, .file-link:hover { background-color: #e7e7e7; }
 
-   
+
   .no-results-message {
     margin: 2rem 0;
     text-align: center;
@@ -3560,11 +3560,11 @@ SOFTWARE.
   }
 </style>
 
-  
-    
-  
 
-  
+
+
+
+
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       renderMathInElement(document.body, {

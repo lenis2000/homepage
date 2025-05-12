@@ -51,25 +51,25 @@
 
     <link rel="alternate" type="application/rss+xml" href="http://localhost:4000/LMathNotes/handwritten_notebooks/index.xml" title="LMathNotes" />
 
-    
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" integrity="sha384-cpW21h6RZv/phavutF+AuVYrr+dA8xD9zs6FwLpaCct6O9ctzYFfFr4dgmgccOTx" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
 
-    
+
 <link rel="stylesheet" href="/LMathNotes/css/paperesque.min.1ed355f6466984bc45832e5260b2220a7b455f595bd354deb096c89a8340f693.css" />
 <script type="text/javascript" src="/LMathNotes/js/main.ed0b25e542f4cc8cdfea5ee819579125cd6129320fbfecee9c3e0484140cf964.js"></script>
 
 <link href="https://fonts.googleapis.com/css?family=Lora&display=swap" rel="stylesheet">
 
-    
+
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body
   class=""
   lang="en-us">
-  
+
 <section id="main" class="content-container article-pad-v">
   <a href="/" class="back-button">← Home</a>
   <h1 id="title">Handwritten Notebooks</h1>
@@ -103,7 +103,7 @@
 </div>
 
 <style>
-     
+
     .search-panel,
     .content-container .search-panel,
     .sidepull-main .search-panel,
@@ -133,7 +133,7 @@
         const searchInput = document.getElementById("searchInput");
         const searchPanel = document.querySelector(".search-panel");
 
-        
+
         if (searchPanel) {
             searchPanel.style.width = "100%";
             searchPanel.style.maxWidth = "100%";
@@ -151,50 +151,50 @@
             searchInput.style.display = "block";
         }
 
-        
+
         searchInput.addEventListener("input", function () {
             performSearch(this.value);
         });
 
-        
+
         document.addEventListener("keydown", function (event) {
             if (event.key === "Escape") {
-                
+
                 if (
                     document.activeElement !== searchInput &&
                     searchInput.value.trim() !== ""
                 ) {
                     searchInput.focus();
-                    event.preventDefault(); 
+                    event.preventDefault();
                 }
-                
+
                 else {
                     searchInput.value = "";
                     performSearch("");
-                    searchInput.focus(); 
-                    event.preventDefault(); 
+                    searchInput.focus();
+                    event.preventDefault();
                 }
             }
         });
 
         function createCaseSmartPattern(searchTerm) {
-            
+
             const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            
-            
+
+
             let pattern = '';
             for (let i = 0; i < escaped.length; i++) {
                 const char = escaped[i];
-                
+
                 if (char === char.toUpperCase() && char !== char.toLowerCase()) {
                     pattern += char;
                 }
-                
+
                 else if (char === char.toLowerCase() && char !== char.toUpperCase()) {
                     pattern += '[' + char + char.toUpperCase() + ']';
                 }
-                
+
                 else {
                     pattern += char;
                 }
@@ -228,7 +228,7 @@
                     }
                 }
 
-                
+
                 if (visibleCount === 0) {
                     header.style.display = "none";
                     notesList.style.display = "none";
@@ -238,17 +238,17 @@
                 }
             }
 
-            
+
             updateNoResultsMessage(!hasResults && searchTerm);
         }
 
         async function isNoteMatchingSearch(note, searchTerm) {
             if (!searchTerm) return true;
 
-            
+
             const pattern = createCaseSmartPattern(searchTerm);
 
-            
+
             const title = note.querySelector(".note-title")?.textContent || "";
             const description = note.querySelector(".note-description")?.textContent || "";
 
@@ -256,12 +256,12 @@
                 return true;
             }
 
-            
+
             let dirPath = "";
 
-            
+
             const texLinks = note.querySelectorAll(
-                'a[href*="tex-viewer?path="]',
+                'a[href*="tex-viewer.html?path="]',
             );
             if (texLinks.length > 0) {
                 const href = texLinks[0].getAttribute("href");
@@ -274,20 +274,20 @@
                 }
             }
 
-            
+
             if (!dirPath) {
                 const pdfLinks = note.querySelectorAll('a[href*=".pdf"]');
                 if (pdfLinks.length > 0) {
                     const href = pdfLinks[0].getAttribute("href");
                     dirPath = href.split("/").slice(0, -1).join("/");
-                    
+
                     if (dirPath.startsWith("/")) {
                         dirPath = dirPath.substring(1);
                     }
                 }
             }
 
-            
+
             const allFileLinks = note.querySelectorAll('a.file-link, a.pdf-link, a.tex-link');
             for (const link of allFileLinks) {
                 const href = link.getAttribute("href");
@@ -296,13 +296,13 @@
                     return true;
                 }
 
-                
+
                 if (link.textContent && pattern.test(link.textContent)) {
                     return true;
                 }
             }
 
-            
+
             if (dirPath) {
                 try {
                     const descPath = `${dirPath}/description.txt`;
@@ -319,7 +319,7 @@
                 }
             }
 
-            
+
             for (const link of texLinks) {
                 const href = link.getAttribute("href");
                 const path = href.split("path=")[1];
@@ -362,78 +362,78 @@
 </script>
 
   <div class="notebooks-section">
-    
-    
-    
-        
-    
-        
-            
-        
-    
-        
-    
 
-    
-    
 
-    
-    
-    
-    
 
-    
-        
-        
 
-        
-            
-            
-            
-            
 
-            
-            
-                
-                
 
-                
-                
-                
-                
 
-                
-                
 
-                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <h2 class="date-header">September 2021</h2>
                 <ul class="notes-list">
-            
 
-            
-            
-            
-            
-            
 
-            
-            
-                
-                
-                
-                    
-                    
-                        
-                    
-                
-            
 
-            
-            
-            
-            
 
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             <li class="note-item " id="2021-09-01-22_notebook_sep_oct_2021" data-blur="false">
                 <div class="note-content">
                     <details>
@@ -451,50 +451,50 @@
                 </div>
                 <div class="link-container">
                     <div class="all-links">
-                        
-                        
-                        
-                            
-                                
-                                    
-                                
-                            
-                                
-                            
-                        
 
-                        
-                            
+
+
+
+
+
+
+
+
+
+
+
+
+
                                 <a href="/content/Handwritten_Notebooks/2021-09-01-22_Notebook_Sep_Oct_2021/2021-09-01-22_Notebook_Sep_Oct_2021.pdf"
                                    target="_blank"
                                    class="pdf-link">PDF</a>
-                            
-                        
+
+
                     </div>
                 </div>
 
-                
-                
-                 
-                
-                
-                
 
-                
 
-                
-                
+
+
+
+
+
+
+
+
+
             </li>
-        
-    
 
-    
-    
+
+
+
+
         </ul>
-    
+
   </div>
 
-  
+
   <script>
   document.addEventListener('DOMContentLoaded', function() {
       const details = document.querySelectorAll('details');
@@ -509,11 +509,11 @@
           }
       });
 
-      
+
       document.addEventListener("keydown", function(event) {
-          
+
           if ((event.key === 'b' || event.key === 'B') && (event.metaKey || event.ctrlKey)) {
-              event.preventDefault(); 
+              event.preventDefault();
               const blurredNotes = document.querySelectorAll('.blurred-note');
               blurredNotes.forEach(note => {
                   note.classList.toggle('unblurred');
@@ -568,8 +568,8 @@
 .pdf-link {
     display: inline-block;
     padding: 2px 8px;
-     
-     
+
+
     text-decoration: none;
     border-radius: 3px;
     margin-right: 4px;
@@ -582,11 +582,11 @@
 }
 </style>
 
-  
-    
-  
 
-  
+
+
+
+
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       renderMathInElement(document.body, {

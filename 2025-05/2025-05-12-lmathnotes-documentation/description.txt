@@ -100,7 +100,7 @@ Note ID refers to the directory name of a note (e.g., `2025-05-11-blur-test-1`).
 | `/YYYY-MM/` | Monthly note listing |
 | `/Handwritten_Notebooks/` | Handwritten notebooks listing |
 | `/history?note=YYYY-MM-DD-Note-Title` | History view for specific note |
-| `/tex-viewer?path=content/path/to/file.tex` | TeX file viewer |
+| `/tex-viewer.html?path=content/path/to/file.tex` | TeX file viewer |
 
 ## Setup Instructions
 

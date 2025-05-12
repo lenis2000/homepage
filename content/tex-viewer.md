@@ -1,4 +1,4 @@
 ---
 title: "TEX Viewer"
-layout: "tex-viewer"
+layout: "tex-viewer.html"
 ---

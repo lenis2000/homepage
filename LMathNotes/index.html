@@ -60,25 +60,25 @@ May 2025 April 2025 Handwritten Notebooks">
 
     <link rel="alternate" type="application/rss+xml" href="http://localhost:4000/LMathNotes/index.xml" title="LMathNotes" />
 
-    
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" integrity="sha384-cpW21h6RZv/phavutF+AuVYrr+dA8xD9zs6FwLpaCct6O9ctzYFfFr4dgmgccOTx" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
 
-    
+
 <link rel="stylesheet" href="/LMathNotes/css/paperesque.min.1ed355f6466984bc45832e5260b2220a7b455f595bd354deb096c89a8340f693.css" />
 <script type="text/javascript" src="/LMathNotes/js/main.ed0b25e542f4cc8cdfea5ee819579125cd6129320fbfecee9c3e0484140cf964.js"></script>
 
 <link href="https://fonts.googleapis.com/css?family=Lora&display=swap" rel="stylesheet">
 
-    
+
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body
   class=""
   lang="en-us">
-  
+
 <section id="main" class="content-container article-pad-v">
     <div class="sidepull-container">
         <div class="sidepull-side"><h3 id="lmathnotes-demo-notebook">LMathNotes Demo Notebook</h3>
@@ -120,7 +120,7 @@ May 2025 April 2025 Handwritten Notebooks">
 </div>
 
 <style>
-     
+
     .search-panel,
     .content-container .search-panel,
     .sidepull-main .search-panel,
@@ -150,7 +150,7 @@ May 2025 April 2025 Handwritten Notebooks">
         const searchInput = document.getElementById("searchInput");
         const searchPanel = document.querySelector(".search-panel");
 
-        
+
         if (searchPanel) {
             searchPanel.style.width = "100%";
             searchPanel.style.maxWidth = "100%";
@@ -168,50 +168,50 @@ May 2025 April 2025 Handwritten Notebooks">
             searchInput.style.display = "block";
         }
 
-        
+
         searchInput.addEventListener("input", function () {
             performSearch(this.value);
         });
 
-        
+
         document.addEventListener("keydown", function (event) {
             if (event.key === "Escape") {
-                
+
                 if (
                     document.activeElement !== searchInput &&
                     searchInput.value.trim() !== ""
                 ) {
                     searchInput.focus();
-                    event.preventDefault(); 
+                    event.preventDefault();
                 }
-                
+
                 else {
                     searchInput.value = "";
                     performSearch("");
-                    searchInput.focus(); 
-                    event.preventDefault(); 
+                    searchInput.focus();
+                    event.preventDefault();
                 }
             }
         });
 
         function createCaseSmartPattern(searchTerm) {
-            
+
             const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            
-            
+
+
             let pattern = '';
             for (let i = 0; i < escaped.length; i++) {
                 const char = escaped[i];
-                
+
                 if (char === char.toUpperCase() && char !== char.toLowerCase()) {
                     pattern += char;
                 }
-                
+
                 else if (char === char.toLowerCase() && char !== char.toUpperCase()) {
                     pattern += '[' + char + char.toUpperCase() + ']';
                 }
-                
+
                 else {
                     pattern += char;
                 }
@@ -245,7 +245,7 @@ May 2025 April 2025 Handwritten Notebooks">
                     }
                 }
 
-                
+
                 if (visibleCount === 0) {
                     header.style.display = "none";
                     notesList.style.display = "none";
@@ -255,17 +255,17 @@ May 2025 April 2025 Handwritten Notebooks">
                 }
             }
 
-            
+
             updateNoResultsMessage(!hasResults && searchTerm);
         }
 
         async function isNoteMatchingSearch(note, searchTerm) {
             if (!searchTerm) return true;
 
-            
+
             const pattern = createCaseSmartPattern(searchTerm);
 
-            
+
             const title = note.querySelector(".note-title")?.textContent || "";
             const description = note.querySelector(".note-description")?.textContent || "";
 
@@ -273,12 +273,12 @@ May 2025 April 2025 Handwritten Notebooks">
                 return true;
             }
 
-            
+
             let dirPath = "";
 
-            
+
             const texLinks = note.querySelectorAll(
-                'a[href*="tex-viewer?path="]',
+                'a[href*="tex-viewer.html?path="]',
             );
             if (texLinks.length > 0) {
                 const href = texLinks[0].getAttribute("href");
@@ -291,20 +291,20 @@ May 2025 April 2025 Handwritten Notebooks">
                 }
             }
 
-            
+
             if (!dirPath) {
                 const pdfLinks = note.querySelectorAll('a[href*=".pdf"]');
                 if (pdfLinks.length > 0) {
                     const href = pdfLinks[0].getAttribute("href");
                     dirPath = href.split("/").slice(0, -1).join("/");
-                    
+
                     if (dirPath.startsWith("/")) {
                         dirPath = dirPath.substring(1);
                     }
                 }
             }
 
-            
+
             const allFileLinks = note.querySelectorAll('a.file-link, a.pdf-link, a.tex-link');
             for (const link of allFileLinks) {
                 const href = link.getAttribute("href");
@@ -313,13 +313,13 @@ May 2025 April 2025 Handwritten Notebooks">
                     return true;
                 }
 
-                
+
                 if (link.textContent && pattern.test(link.textContent)) {
                     return true;
                 }
             }
 
-            
+
             if (dirPath) {
                 try {
                     const descPath = `${dirPath}/description.txt`;
@@ -336,7 +336,7 @@ May 2025 April 2025 Handwritten Notebooks">
                 }
             }
 
-            
+
             for (const link of texLinks) {
                 const href = link.getAttribute("href");
                 const path = href.split("path=")[1];
@@ -379,137 +379,137 @@ May 2025 April 2025 Handwritten Notebooks">
 </script>
 
             <div class="notes-section">
-                
-                 
 
-                
-                     
 
-                
-                 
-                
-                   
 
-                
-                 
-                
-                      
 
-                
-                 
-                
-                           
 
-                
-                 
-                
-                     
 
-                
-                 
-                
-                      
 
-                
-                 
-                
-                      
 
-                
-                 
-                
-                      
 
-                
-                 
-                
-                      
 
-                
-                 
-                
-                      
 
-                
-                 
-                
-                           
 
-                
-                 
-                
-                     
 
-                
-                 
-                
-                                     
 
-                
-                 
-                
-                     
 
-                
-                      
 
-                
-                      
 
-                
-                        
 
-                
-                    
-                
-                
-                        
-                
-                
-                        
-                
-                
-                        
-                
-                
-                        
-                
-                
-                        
-                
-                
-                        
-                
-                
-                      
-                
-                
-                        
-                
-                
-                    
 
-                
-                                 
 
-                
-                  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <h2 class="date-header">
                     May 12, 2025 • Monday
                 </h2>
                 <ul class="notes-list">
-                                                                                                
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>LMathNotes - Hugo-based Mathematical Research Notes Repository</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>LMathNotes is a specialized Hugo-based web application designed for organizing, displaying, and navigating mathematical research notes with a focus on LaTeX content. It provides a comprehensive system for managing academic notes with advanced features for confidentiality, history tracking, and content exploration.</p>
@@ -649,7 +649,7 @@ May 2025 April 2025 Handwritten Notebooks">
           <td>History view for specific note</td>
       </tr>
       <tr>
-          <td><code>/tex-viewer?path=content/path/to/file.tex</code></td>
+          <td><code>/tex-viewer.html?path=content/path/to/file.tex</code></td>
           <td>TeX file viewer</td>
       </tr>
   </tbody>
@@ -724,7 +724,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-05/2025-05-12-lmathnotes-documentation/2025-05-12-lmathnotes-documentation.pdf"
                                     target="_blank"
@@ -732,58 +732,58 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                         
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-05%2f2025-05-12-lmathnotes-documentation/2025-05-12-lmathnotes-documentation.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-05%2f2025-05-12-lmathnotes-documentation/2025-05-12-lmathnotes-documentation.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                      
 
-                                
-                                                      
 
-                                
-                                                      
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                              
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     May 10, 2025 • Saturday
                 </h2>
                 <ul class="notes-list">
-                                                                                
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>Why Mathematicians Can&#39;t Find Things in Hilbert Space</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>A humorous exploration of why objects in infinite-dimensional spaces are so difficult to locate. This note examines the topological properties of Hilbert spaces through the lens of the classic &ldquo;I can&rsquo;t find my keys&rdquo; problem, reimagined for functional analysis.</p>
@@ -800,7 +800,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-05/2025-05-10-hilbert-space-joke/2025-05-10-hilbert-space-joke.pdf"
                                     target="_blank"
@@ -808,25 +808,25 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                           
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-05%2f2025-05-10-hilbert-space-joke/2025-05-10-hilbert-space-joke.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-05%2f2025-05-10-hilbert-space-joke/2025-05-10-hilbert-space-joke.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                        
 
-                                
-                                                        
 
-                                
-                                                           
+
+
+
+
+
+
+
                                 <span class="link-separator-small">&bull;</span>
                                 <a
                                     href="/content/2025-05/2025-05-10-hilbert-space-joke/hilbert_joke.png"
@@ -834,33 +834,33 @@ SOFTWARE.
                                     class="file-link"
                                     >hilbert_joke.png</a
                                 >
-                                 
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                                          
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>The Paradoxical Values of the Riemann Zeta Function</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>An exploration of counterintuitive values of the Riemann zeta function, focusing on the famous result that 1 + 2 + 3 + 4 + &hellip; = -1/12. This note investigates how regularization methods in physics and mathematics lead to these bizarre but useful results.</p>
@@ -878,7 +878,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.pdf"
                                     target="_blank"
@@ -886,129 +886,129 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                           
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-05%2f2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-05%2f2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                        
 
-                                
-                                                        
 
-                                
-                                                        
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
-                            
-                            
-                                
-                                
-                                
-                                    
-                                    
-                                        
-                                        
-                                        
-                                            
-                                        
-                                            
-                                                
-                                                
-                                                
 
-                                                
-                                                
-                                                
-                                                
-                                                    
-                                                    
-                                                    
-                                                
-                                                
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                        
-                                            
-                                        
-                                    
-                                
-                            
-                        
 
-                        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                             <div class="previous-notes-section" style="margin-top: 0.3em; margin-left: 1.5em;">
                                 <ul style="list-style-type: none; font-size: 0.9em; padding-left: 0; margin-bottom: 0; display: inline;">
-                                    
+
                                         <span style="color: #999; margin-right: 0.1em;">→</span>
-                                        
-                                            
+
+
                                             <a href="/content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.pdf" target="_blank">The Fibonacci Identity Paradox</a>
-                                            
-                                                
+
+
                                                 <span style="color: #666;">(April 30, 2025)</span>
-                                            
-                                        
-                                        
-                                            
+
+
+
+
                                             <a href="/history?note=2025-05-10-zeta-function-paradox" class="history-link" style="font-size: 0.9em; display: inline-block; color: #007bff; margin-left: 0.5em;">&raquo;</a>
-                                        
-                                    
+
+
                                 </ul>
                             </div>
-                        
-                        
+
+
                     </li>
-                                      
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     May 8, 2025 • Thursday
                 </h2>
                 <ul class="notes-list">
-                                                                        
 
-                    
-                    
-                    
-                        
-                    
+
+
+
+
+
+
                     <li class="note-item blurred-note" style="margin-bottom: 0.2em" data-blur="true">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>Breakthrough on the Collatz Conjecture</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>This note contains preliminary work on a potential approach to proving the Collatz conjecture using techniques from dynamical systems and non-standard analysis. While not a complete proof, it identifies a promising pathway involving ergodic theory.</p>
@@ -1026,7 +1026,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-05/2025-05-08-collatz-conjecture-proof/2025-05-08-collatz-conjecture-proof.pdf"
                                     target="_blank"
@@ -1034,58 +1034,58 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                           
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-05%2f2025-05-08-collatz-conjecture-proof/2025-05-08-collatz-conjecture-proof.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-05%2f2025-05-08-collatz-conjecture-proof/2025-05-08-collatz-conjecture-proof.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                        
 
-                                
-                                                        
 
-                                
-                                                        
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                                                      
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     May 5, 2025 • Monday
                 </h2>
                 <ul class="notes-list">
-                                                                
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>The Comprehensive Guide to Category Theory Jokes</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>An analysis of humor in category theory, exploring why category theorists are notoriously difficult to make laugh. This note catalogs various attempts at category theory humor and analyzes why they generally fall flat.</p>
@@ -1103,7 +1103,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-05/2025-05-05-category-theory-joke/2025-05-05-category-theory-joke.pdf"
                                     target="_blank"
@@ -1111,25 +1111,25 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                               
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-05%2f2025-05-05-category-theory-joke/2025-05-05-category-theory-joke.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-05%2f2025-05-05-category-theory-joke/2025-05-05-category-theory-joke.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                            
 
-                                
-                                                            
 
-                                
-                                                               
+
+
+
+
+
+
+
                                 <span class="link-separator-small">&bull;</span>
                                 <a
                                     href="/content/2025-05/2025-05-05-category-theory-joke/category_jokes.bib"
@@ -1137,40 +1137,40 @@ SOFTWARE.
                                     class="file-link"
                                     >category_jokes.bib</a
                                 >
-                                 
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                                                              
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     May 1, 2025 • Thursday
                 </h2>
                 <ul class="notes-list">
-                                                        
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>Applications of Klein Bottles in Modern Mathematics</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>A continuation of our exploration of Klein bottles, focusing on their surprising applications in various fields of mathematics and theoretical physics. This note expands on the foundational concepts presented in the previous note.</p>
@@ -1188,7 +1188,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-05/2025-05-01-klein-bottle-applications/2025-05-01-klein-bottle-applications.pdf"
                                     target="_blank"
@@ -1196,180 +1196,180 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                           
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-05%2f2025-05-01-klein-bottle-applications/2025-05-01-klein-bottle-applications.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-05%2f2025-05-01-klein-bottle-applications/2025-05-01-klein-bottle-applications.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                        
 
-                                
-                                                        
 
-                                
-                                                        
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
-                            
-                            
-                                
-                                
-                                
-                                    
-                                    
-                                        
-                                        
-                                        
-                                            
-                                                
-                                                
-                                                
 
-                                                
-                                                
-                                                
-                                                
-                                                    
-                                                    
-                                                    
-                                                
-                                                
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                        
-                                            
-                                        
-                                    
-                                
-                                    
-                                    
-                                        
-                                        
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                            
-                                                
-                                                
-                                                
 
-                                                
-                                                
-                                                
-                                                
-                                                    
-                                                    
-                                                    
-                                                
-                                                
-                                            
-                                        
-                                            
-                                        
-                                            
-                                        
-                                        
-                                            
-                                        
-                                    
-                                
-                            
-                        
 
-                        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                             <div class="previous-notes-section" style="margin-top: 0.3em; margin-left: 1.5em;">
                                 <ul style="list-style-type: none; font-size: 0.9em; padding-left: 0; margin-bottom: 0; display: inline;">
-                                    
+
                                         <span style="color: #999; margin-right: 0.1em;">→</span>
-                                        
-                                            
+
+
                                             <a href="/content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.pdf" target="_blank">The Topology of Klein Bottles</a>
-                                            
-                                                
+
+
                                                 <span style="color: #666;">(April 15, 2025)</span>
-                                            
-                                        
-                                        
-                                    
+
+
+
+
                                         <span style="color: #999; margin-right: 0.1em;">→</span>
-                                        
-                                            
+
+
                                             <a href="/content/2025-05/2025-05-10-zeta-function-paradox/2025-05-10-zeta-function-paradox.pdf" target="_blank">The Paradoxical Values of the Riemann Zeta Function</a>
-                                            
-                                                
+
+
                                                 <span style="color: #666;">(May 10, 2025)</span>
-                                            
-                                        
-                                        
-                                            
+
+
+
+
                                             <a href="/history?note=2025-05-01-klein-bottle-applications" class="history-link" style="font-size: 0.9em; display: inline-block; color: #007bff; margin-left: 0.5em;">&raquo;</a>
-                                        
-                                    
+
+
                                 </ul>
                             </div>
-                        
-                        
+
+
                     </li>
-                                                                      
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     April 30, 2025 • Wednesday
                 </h2>
                 <ul class="notes-list">
-                                                
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>The Fibonacci Identity Paradox</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>A fun mathematical puzzle examining an apparent contradiction in Fibonacci number identities. This note presents a seemingly impossible equation involving Fibonacci numbers that appears to be both true and false simultaneously.</p>
@@ -1387,7 +1387,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-04/2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.pdf"
                                     target="_blank"
@@ -1395,58 +1395,58 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                         
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-04%2f2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-04%2f2025-04-30-fibonacci-paradox/2025-04-30-fibonacci-paradox.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                      
 
-                                
-                                                      
 
-                                
-                                                      
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                                                                              
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     April 15, 2025 • Tuesday
                 </h2>
                 <ul class="notes-list">
-                                        
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <b>The Topology of Klein Bottles</b>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>Initial exploration of the properties of Klein bottles as non-orientable surfaces. This note examines the basic topological properties, construction methods, and visualization techniques for understanding these fascinating objects.</p>
@@ -1464,7 +1464,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/2025-04/2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.pdf"
                                     target="_blank"
@@ -1472,58 +1472,58 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                                         
+
+
                                 <span class="link-separator">&bull;</span>
                                 <a
-                                    href="/tex-viewer?path=content%2f2025-04%2f2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.tex"
+                                    href="/tex-viewer.html?path=content%2f2025-04%2f2025-04-15-klein-bottle-topology/2025-04-15-klein-bottle-topology.tex"
                                     target="_blank"
                                     class="tex-link"
                                     >TEX</a
                                 >
-                                
 
-                                
-                                                      
 
-                                
-                                                      
 
-                                
-                                                      
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                                                                                      
+
                 </ul>
-                  
+
                 <h2 class="date-header">
                     September 1, 2021 • Wednesday
                 </h2>
                 <ul class="notes-list">
-                                                                                                        
 
-                    
-                    
-                    
+
+
+
+
                     <li class="note-item " style="margin-bottom: 0.2em" data-blur="false">
                         <div class="note-content" style="margin-bottom: 0.2em">
                             <details>
                                 <summary class="note-title">
-                                    
+
                                     <i>Sample Handwritten Notebook</i>
-                                    
+
                                 </summary>
                                 <p class="note-description">
                                     <p>Sample table of contents:</p>
@@ -1536,7 +1536,7 @@ SOFTWARE.
                         </div>
                         <div class="link-container">
                             <div class="all-links">
-                                
+
                                 <a
                                     href="/content/Handwritten_Notebooks/2021-09-01-22_Notebook_Sep_Oct_2021/2021-09-01-22_Notebook_Sep_Oct_2021.pdf"
                                     target="_blank"
@@ -1544,41 +1544,41 @@ SOFTWARE.
                                     >PDF</a
                                 >
 
-                                
-                                        
 
-                                
-                                        
 
-                                
-                                        
 
-                                
-                                        
+
+
+
+
+
+
+
+
                             </div>
                         </div>
 
-                        
-                        
-                        
-                        
-                        
 
-                        
 
-                        
-                        
+
+
+
+
+
+
+
+
                     </li>
-                      
+
                 </ul>
-                
+
             </div>
         </div>
     </div>
 </section>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        
+
         const details = document.querySelectorAll("details");
         details.forEach((detail) => {
             detail.addEventListener("toggle", function () {
@@ -1597,11 +1597,11 @@ SOFTWARE.
             }
         });
 
-        
+
         const blurredNotes = document.querySelectorAll('.blurred-note');
         let allUnblurred = false;
 
-        
+
         function toggleBlur() {
             console.log('Toggle blur called, found ' + blurredNotes.length + ' blurred notes');
 
@@ -1622,29 +1622,29 @@ SOFTWARE.
             }
         }
 
-        
+
         document.addEventListener('keydown', function(e) {
             console.log('Key pressed: ' + e.key + ', metaKey: ' + e.metaKey);
 
-            
+
             if (e.metaKey && (e.key === 'b' || e.key === 'B')) {
                 console.log('Command+B detected, toggling blur');
                 toggleBlur();
-                e.preventDefault(); 
+                e.preventDefault();
             }
 
-            
+
         });
 
-        
+
     });
 </script>
 
-  
-    
-  
 
-  
+
+
+
+
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       renderMathInElement(document.body, {
