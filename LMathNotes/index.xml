@@ -2,44 +2,44 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>LMathNotes Demo Notebook on LMathNotes</title>
-    <link>https://lpetrov.cc/LMathNotes/</link>
+    <link>/LMathNotes/</link>
     <description>Recent content in LMathNotes Demo Notebook on LMathNotes</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <atom:link href="https://lpetrov.cc/LMathNotes/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="/LMathNotes/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title></title>
-      <link>https://lpetrov.cc/LMathNotes/venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/license/</link>
+      <link>/LMathNotes/venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/license/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>https://lpetrov.cc/LMathNotes/venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/license/</guid>
+      <guid>/LMathNotes/venv/lib/python3.13/site-packages/httpcore-1.0.9.dist-info/licenses/license/</guid>
       <description>&lt;p&gt;Copyright © 2020, &lt;a href=&#34;https://www.encode.io/&#34;&gt;Encode OSS Ltd&lt;/a&gt;.&#xA;All rights reserved.&lt;/p&gt;&#xA;&lt;p&gt;Redistribution and use in source and binary forms, with or without&#xA;modification, are permitted provided that the following conditions are met:&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Redistributions of source code must retain the above copyright notice, this&#xA;list of conditions and the following disclaimer.&lt;/p&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Redistributions in binary form must reproduce the above copyright notice,&#xA;this list of conditions and the following disclaimer in the documentation&#xA;and/or other materials provided with the distribution.&lt;/p&gt;</description>
     </item>
     <item>
       <title></title>
-      <link>https://lpetrov.cc/LMathNotes/venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/license/</link>
+      <link>/LMathNotes/venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/license/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>https://lpetrov.cc/LMathNotes/venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/license/</guid>
+      <guid>/LMathNotes/venv/lib/python3.13/site-packages/httpx-0.28.1.dist-info/licenses/license/</guid>
       <description>&lt;p&gt;Copyright © 2019, &lt;a href=&#34;https://www.encode.io/&#34;&gt;Encode OSS Ltd&lt;/a&gt;.&#xA;All rights reserved.&lt;/p&gt;&#xA;&lt;p&gt;Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.&lt;/p&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.&lt;/p&gt;</description>
     </item>
     <item>
       <title></title>
-      <link>https://lpetrov.cc/LMathNotes/venv/lib/python3.13/site-packages/idna-3.10.dist-info/license/</link>
+      <link>/LMathNotes/venv/lib/python3.13/site-packages/idna-3.10.dist-info/license/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>https://lpetrov.cc/LMathNotes/venv/lib/python3.13/site-packages/idna-3.10.dist-info/license/</guid>
+      <guid>/LMathNotes/venv/lib/python3.13/site-packages/idna-3.10.dist-info/license/</guid>
       <description>&lt;p&gt;BSD 3-Clause License&lt;/p&gt;&#xA;&lt;p&gt;Copyright (c) 2013-2024, Kim Davies and contributors.&#xA;All rights reserved.&lt;/p&gt;&#xA;&lt;p&gt;Redistribution and use in source and binary forms, with or without&#xA;modification, are permitted provided that the following conditions are&#xA;met:&lt;/p&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Redistributions of source code must retain the above copyright&#xA;notice, this list of conditions and the following disclaimer.&lt;/p&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Redistributions in binary form must reproduce the above copyright&#xA;notice, this list of conditions and the following disclaimer in the&#xA;documentation and/or other materials provided with the distribution.&lt;/p&gt;</description>
     </item>
     <item>
       <title>Note History</title>
-      <link>https://lpetrov.cc/LMathNotes/history/</link>
+      <link>/LMathNotes/history/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>https://lpetrov.cc/LMathNotes/history/</guid>
+      <guid>/LMathNotes/history/</guid>
       <description>&lt;p&gt;This page displays the history chain of a selected note by recursively following references in prev.txt files.&lt;/p&gt;</description>
     </item>
     <item>
       <title>TEX Viewer</title>
-      <link>https://lpetrov.cc/LMathNotes/tex-viewer/</link>
+      <link>/LMathNotes/tex-viewer/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>https://lpetrov.cc/LMathNotes/tex-viewer/</guid>
+      <guid>/LMathNotes/tex-viewer/</guid>
       <description></description>
     </item>
   </channel>

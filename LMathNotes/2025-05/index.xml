@@ -2,10 +2,10 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>May 2025 on LMathNotes</title>
-    <link>https://lpetrov.cc/LMathNotes/2025-05/</link>
+    <link>/LMathNotes/2025-05/</link>
     <description>Recent content in May 2025 on LMathNotes</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <atom:link href="https://lpetrov.cc/LMathNotes/2025-05/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="/LMathNotes/2025-05/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>
