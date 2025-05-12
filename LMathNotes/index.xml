@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>LMathNotes Demo Notebook on My Notes</title>
+    <title>LMathNotes Demo Notebook on LMathNotes</title>
     <link>https://lpetrov.cc/LMathNotes/</link>
-    <description>Recent content in LMathNotes Demo Notebook on My Notes</description>
+    <description>Recent content in LMathNotes Demo Notebook on LMathNotes</description>
     <generator>Hugo</generator>
     <language>en-us</language>
     <atom:link href="https://lpetrov.cc/LMathNotes/index.xml" rel="self" type="application/rss+xml" />
