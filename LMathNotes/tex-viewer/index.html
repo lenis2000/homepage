@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
     
     
-    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="../css/custom.css">
 
     <style>
         :root {
@@ -228,9 +228,7 @@
             
             const downloadBtn = document.getElementById('downloadBtn');
             downloadBtn.addEventListener('click', function() {
-                
-                const baseUrl = 'https:\/\/lpetrov.cc\/LMathNotes\/';
-                window.location.href = baseUrl + texPath;
+                window.location.href = '/' + texPath;
             });
             
             
@@ -272,8 +270,7 @@
             });
             
             
-            const baseUrl = 'https:\/\/lpetrov.cc\/LMathNotes\/';
-            fetch(baseUrl + texPath)
+            fetch('/' + texPath)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok: ' + response.statusText);
