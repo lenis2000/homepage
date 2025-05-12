@@ -70,3 +70,12 @@ rmt25/S25-rmt-lecture-notes/rmt-book.toc
 rmt25/S25-rmt-lecture-notes/S25-rmt-lecture-notes.txt
 
 **/.claude/settings.local.json
+
+*.aux
+*.fls
+*.log
+*.synctex.gz
+*.fdb_latexmk
+*.out
+*.bbl
+*.blg
