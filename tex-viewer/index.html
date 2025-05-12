@@ -228,7 +228,7 @@
             
             const downloadBtn = document.getElementById('downloadBtn');
             downloadBtn.addEventListener('click', function() {
-                window.location.href = '\/LMathNotes\/' + texPath;
+                window.location.href = '/' + texPath;
             });
             
             
@@ -270,7 +270,7 @@
             });
             
             
-            fetch('\/LMathNotes\/' + texPath)
+            fetch('/' + texPath)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok: ' + response.statusText);
