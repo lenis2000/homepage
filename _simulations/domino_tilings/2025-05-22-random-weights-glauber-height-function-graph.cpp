@@ -5,7 +5,9 @@ emcc 2025-05-22-random-weights-glauber-height-function-graph.cpp -o 2025-05-22-r
  -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_getWeightMatrix', '_freeString', '_getProgress', '_resetGlobalState']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
- -s INITIAL_MEMORY=64MB \
+ -s INITIAL_MEMORY=1GB \
+ -s STACK_SIZE=32MB \
+ -s ASSERTIONS=1 \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
@@ -14,6 +16,7 @@ emcc 2025-05-22-random-weights-glauber-height-function-graph.cpp -o 2025-05-22-r
 Features:
 - Random Bernoulli weights (0.5 or 1.5 with probability 1/2) for domino tilings of Aztec diamond
 - Glauber dynamics using the same random weight matrix
+- Height function graph visualization
 - Memory optimized implementation with flat matrices (May 2025)
 */
 

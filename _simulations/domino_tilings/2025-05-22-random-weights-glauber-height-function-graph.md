@@ -1,5 +1,5 @@
 ---
-title: Domino tilings with random Bernoulli Weights and Glauber Dynamics
+title: Domino tilings with random Bernoulli Weights, Glauber Dynamics, and Height Graph
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -71,7 +71,7 @@ code:
 
 <p>The graph visualization shows a 4×4 corner of the weight matrix to help understand the spatial arrangement of weights in the Aztec diamond graph.</p>
 
-<p>The sampling runs entirely in your browser. For sizes up to about n≤120 the sampler is fast; larger n may take noticeable time (hard cap n=300 to protect your browser).</p>
+<p>The sampling runs entirely in your browser. For sizes up to about n≤120 the sampler is fast; larger n may take noticeable time (hard cap n=400 due to WebAssembly memory limits).</p>
 </details>
 
 ---
@@ -83,8 +83,8 @@ code:
 <!-- Dynamics controls – always visible -->
 
 <div class="controls">
-  <label for="n-input">Aztec Diamond Order (n ≤ 300): </label>
-  <input id="n-input" type="number" value="6" min="2" step="2" max="300" size="3" onchange="onNChange()">
+  <label for="n-input">Aztec Diamond Order (n ≤ 400): </label>
+  <input id="n-input" type="number" value="6" min="2" step="2" max="400" size="3" onchange="onNChange()">
   <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -759,7 +759,9 @@ dynamicsTimer = setInterval(async () => {
       // always take an exact shuffling sample
       // Use the current n value and u,v values for the random Bernoulli weights
       console.log(`Generating new sample with n=${n}, u=${uVal}, v=${vVal}`);
+      console.log(`Matrix size will be ${2*n}x${2*n} = ${2*n*2*n} elements`);
       let ptr = await simulateAztec(n, uVal, vVal);
+      console.log(`simulateAztec returned ptr=${ptr}`);
 
 
       if (signal.aborted) {
@@ -881,8 +883,9 @@ dynamicsTimer = setInterval(async () => {
       }
     } catch (error) {
       console.error("Simulation error:", error);
+      console.error("Error stack:", error.stack);
       if (simulationActive) {
-        progressElem.innerText = "Error during simulation";
+        progressElem.innerText = "Error during simulation: " + error.message;
       }
       stopSimulation();
     }
@@ -890,8 +893,8 @@ dynamicsTimer = setInterval(async () => {
 
   document.getElementById("update-btn").addEventListener("click", () => {
     const n = parseInt(document.getElementById("n-input").value, 10);
-    if (isNaN(n) || n < 2 || n > 300 || n % 2 !== 0) {
-      alert("Please enter a valid even number n, 2 ≤ n ≤ 300.");
+    if (isNaN(n) || n < 2 || n > 400 || n % 2 !== 0) {
+      alert("Please enter a valid even number n, 2 ≤ n ≤ 400.");
       return;
     }
 
