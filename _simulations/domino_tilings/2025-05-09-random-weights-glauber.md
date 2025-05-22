@@ -99,6 +99,13 @@ code:
 </div>
 
 
+<!-- Height function toggle -->
+<div class="controls">
+  <label for="height-toggle">
+    <input type="checkbox" id="height-toggle"> Show height function
+  </label>
+</div>
+
 <!-- Weight Graph Display -->
 <div class="controls">
   <button id="show-weights-btn">Show Weight Graph</button>
@@ -140,6 +147,8 @@ let dynamicsRunning = false;
 let dynamicsTimer = null;
 let g_W = null; // Global variable to store the weight matrix
 let g_N = null; // Global variable to track current matrix size (2*n)
+let useHeightFunction = false; // Track height function visibility state
+let heightGroup; // Group for height function display
 
 // Helper: convert a brightness value (0–255) to a hex grayscale string.
 function grayHex(brightness) {
@@ -213,8 +222,13 @@ Module.onRuntimeInitialized = async function() {
       // Apply the zoom transformation on top of initial transform
       const group = svg.select("g");
       const t = event.transform;
-      group.attr("transform",
-        `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+      const transformStr = `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`;
+      group.attr("transform", transformStr);
+      
+      // Also transform height function group if it exists
+      if (heightGroup) {
+        heightGroup.attr("transform", transformStr);
+      }
     });
 
   // Enable zoom on the SVG
@@ -290,6 +304,14 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listener after the button is created
   dynamicsBtn.addEventListener("click", toggleDynamics);
+
+  // Handle height function toggle
+  document.getElementById("height-toggle").addEventListener("change", function() {
+    useHeightFunction = this.checked;
+    if (cachedDominoes && cachedDominoes.length > 0) {
+      toggleHeightFunction();
+    }
+  });
 
   // Simulation state
   let simulationActive = false;
@@ -429,6 +451,128 @@ dynamicsTimer = setInterval(async () => {
          .attr("y", d => d.y)
          .attr("width", d => d.w)
          .attr("height", d => d.h);
+
+    // Update height function if enabled
+    if (useHeightFunction) {
+      toggleHeightFunction();
+    }
+  }
+
+  // Function to toggle height function on/off
+  function toggleHeightFunction() {
+    /* ────────────────────────────────────────────────────────────── 0. clear */
+    if (heightGroup) { heightGroup.remove(); heightGroup = null; }
+    if (!useHeightFunction) return;
+    if (!cachedDominoes || cachedDominoes.length === 0) return;
+
+    /* ─────────────────────────────── 1. determine one lattice unit in pixels */
+    //  Every rectangle is either 4×2 or 2×4 lattice units.
+    const minSidePx = d3.min(cachedDominoes, d => Math.min(d.w, d.h));
+    const unit      = minSidePx / 2;              // 2 lattice units → 1 short side
+    if (unit <= 0) { console.error("unit ≤ 0"); return; }
+
+    /* ─────────────────────────────── 2. viewport transform for the new group */
+    const minX = d3.min(cachedDominoes, d => d.x);
+    const minY = d3.min(cachedDominoes, d => d.y);
+    const maxX = d3.max(cachedDominoes, d => d.x + d.w);
+    const maxY = d3.max(cachedDominoes, d => d.y + d.h);
+
+    const { width: svgW, height: svgH } = svg.node().getBoundingClientRect();
+    const scale = Math.min(svgW / (maxX - minX), svgH / (maxY - minY)) * 0.9;
+    const tx    = (svgW - (maxX - minX) * scale) / 2 - minX * scale;
+    const ty    = (svgH - (maxY - minY) * scale) / 2 - minY * scale;
+
+    heightGroup = svg.append("g")
+      .attr("class", "height-function")
+      .attr("transform", `translate(${tx},${ty}) scale(${scale})`);
+
+    /* ───────────────────── 3. convert each domino → (orient, sign, gx, gy)  */
+    //     orient 0 = horizontal , 1 = vertical
+    //     sign   +1 = blue|red  , −1 = green|yellow
+    const dominoData = cachedDominoes.map(d => {
+      const horiz  = d.w > d.h;
+      const orient = horiz ? 0 : 1;
+      const sign   = horiz
+          ? (d.color === "green"  ? -1 :  1)   // horizontal: green = −1, blue = +1
+          : (d.color === "yellow" ? -1 :  1);  // vertical:   yellow = −1, red  = +1
+      const gx = Math.round(d.x / unit);       // lattice coordinates
+      const gy = Math.round(d.y / unit);
+      return [orient, sign, gx, gy];
+    });
+
+    /* ─────────────────────────────── 4. build graph with height increments  */
+    const adj = new Map();                      // key → [[nbrKey, Δh], …]
+    const edge = (v1, v2, dh) => {
+      if (!adj.has(v1)) adj.set(v1, []);
+      if (!adj.has(v2)) adj.set(v2, []);
+      adj.get(v1).push([v2, dh]);
+      adj.get(v2).push([v1, -dh]);
+    };
+
+    dominoData.forEach(([o, s, x, y]) => {
+      if (o === 0) {                      /* horizontal  (4×2)  */
+        const TL = `${x},${y+2}`, TM = `${x+2},${y+2}`, TR = `${x+4},${y+2}`;
+        const BL = `${x},${y}`,   BM = `${x+2},${y}`,   BR = `${x+4},${y}`;
+        edge(TL, TM, -s);   edge(TM, TR,  s);
+        edge(BL, BM,  s);   edge(BM, BR, -s);
+        edge(TL, BL,  s);   edge(TM, BM,  3*s);
+        edge(TR, BR,  s);
+      } else {                            /* vertical    (2×4)  */
+        const TL = `${x},${y+4}`, TR = `${x+2},${y+4}`;
+        const ML = `${x},${y+2}`, MR = `${x+2},${y+2}`;
+        const BL = `${x},${y}`,   BR = `${x+2},${y}`;
+        edge(TL, TR, -s);  edge(ML, MR, -3*s);  edge(BL, BR, -s);
+        edge(TL, ML,  s);  edge(ML, BL,  -s);
+        edge(TR, MR, -s);  edge(MR, BR,  s);
+      }
+    });
+
+    /* ─────────────────────────────── 5. breadth‑first integration of heights */
+    const verts = Array.from(adj.keys())
+          .map(k => { const [gx, gy] = k.split(',').map(Number); return {k, gx, gy}; });
+
+    const root = verts.reduce((a, b) =>
+          (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b).k;
+
+    const H = new Map([[root, 0]]);
+    const queue = [root];
+    while (queue.length) {
+      const v = queue.shift();
+      for (const [w, dh] of adj.get(v)) {
+        if (!H.has(w)) { H.set(w, H.get(v) + dh); queue.push(w); }
+        else if (H.get(w) !== H.get(v) + dh)
+          console.warn(`height inconsistency on edge ${v}↔${w}`);
+      }
+    }
+
+    /* ─────────────────────────────── 6. render dots + numbers (in pixels)  */
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    const fontSize = Math.max(8, Math.min(12, 36 - n / 2));   // n = order
+
+    H.forEach((h, key) => {
+      const [gx, gy] = key.split(',').map(Number);
+      const px = gx * unit, py = gy * unit;                   // back to pixels
+
+      heightGroup.append("circle")
+        .attr("cx", px)
+        .attr("cy", py)
+        .attr("r", fontSize / 6)
+        .attr("fill", "black");
+
+      heightGroup.append("text")
+        .attr("x", px)
+        .attr("y", py)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", `${fontSize}px`)
+        .attr("fill", "black")
+        .attr("stroke", "white")
+        .attr("stroke-width", "3px")
+        .attr("paint-order", "stroke")
+        .text(-h);
+    });
+
+    heightGroup.raise();   // keep on top
   }
 
   async function updateVisualization(n) {
@@ -441,7 +585,21 @@ dynamicsTimer = setInterval(async () => {
       dynamicsBtn.classList.remove("running");
     }
 
+    // Show or hide height function checkbox based on n value
+    const heightToggleDiv = document.querySelector('label[for="height-toggle"]').parentNode;
+    if (n > 30) {
+      heightToggleDiv.style.display = 'none';
+      // If height function was enabled, disable it
+      if (useHeightFunction) {
+        useHeightFunction = false;
+        document.getElementById("height-toggle").checked = false;
+      }
+    } else {
+      heightToggleDiv.style.display = 'block';
+    }
+
     svg.selectAll("g").remove();
+    heightGroup = null; // Reset height group when clearing SVG
     startSimulation();
     startProgressPolling();
 
@@ -584,6 +742,11 @@ dynamicsTimer = setInterval(async () => {
 
       // Only update if not aborted
       if (!signal.aborted) {
+        // Add height function if enabled
+        if (useHeightFunction) {
+          toggleHeightFunction();
+        }
+        
         progressElem.innerText = "";
         updateBtn.disabled = false;
         document.getElementById("n-input").disabled = false;
