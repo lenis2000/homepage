@@ -59,6 +59,8 @@ code:
 
 <p>Unlike the shuffling algorithm which generates an exact sample immediately, Glauber dynamics shows the system evolving over time.</p>
 
+<p><strong>Note:</strong> During Glauber dynamics, the domino tiling visualization is updated in real-time only for n≤30. For larger sizes (n>30), the picture is not updated to improve performance, but you can manually refresh it or observe the evolution through the height function graph below.</p>
+
 <p>You can change the weights before the Glauber dynamics, effectively running a dynamics out of equilibrium.</p>
 
 <h3>Weight Graph Visualization</h3>
@@ -122,6 +124,17 @@ code:
 <!-- Progress indicator -->
 <div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
 
+<!-- Height Function Graph -->
+<div id="height-graph-container" style="margin-bottom: 20px; display: none;">
+  <h4>Center Height Function Evolution</h4>
+  <div style="border: 1px solid #ccc; border-radius: 4px; padding: 10px; background-color: #f9f9f9;">
+    <svg id="height-graph-svg" width="600" height="300"></svg>
+    <div style="margin-top: 10px; font-size: 0.9em;">
+      <span id="height-stats" style="color: #666;"></span>
+    </div>
+  </div>
+</div>
+
 <div class="row">
   <div class="col-12">
     <svg id="aztec-svg"></svg>
@@ -149,6 +162,13 @@ let g_W = null; // Global variable to store the weight matrix
 let g_N = null; // Global variable to track current matrix size (2*n)
 let useHeightFunction = false; // Track height function visibility state
 let heightGroup; // Group for height function display
+
+// Height graph tracking
+let heightData = []; // Array to store {step: number, height: number}
+let heightGraphSvg = null;
+let heightScale = null;
+let stepScale = null;
+let heightLine = null;
 
 // Helper: convert a brightness value (0–255) to a hex grayscale string.
 function grayHex(brightness) {
@@ -297,6 +317,8 @@ Module.onRuntimeInitialized = async function() {
       <input id="sweeps-input" type="number"
              value="100" min="1" step="1" style="width:70px;">
       <button id="dynamics-btn" style="margin-left:10px;">Start Glauber Dynamics</button>
+      <button id="refresh-picture-btn" style="margin-left:10px; display:none; background-color:#2196F3; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Refresh Picture</button>
+      <span id="dynamics-status" style="margin-left:15px; font-style:italic; color:#666; display:none;"></span>
       <span id="center-height-display" style="margin-left:20px; font-weight:bold;"></span>
     `);
 
@@ -305,6 +327,13 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listener after the button is created
   dynamicsBtn.addEventListener("click", toggleDynamics);
+  
+  // Add refresh picture button event listener
+  document.getElementById("refresh-picture-btn").addEventListener("click", function() {
+    if (cachedDominoes) {
+      updateDominoesVisualization();
+    }
+  });
 
   // Handle height function toggle
   document.getElementById("height-toggle").addEventListener("change", function() {
@@ -362,8 +391,8 @@ Module.onRuntimeInitialized = async function() {
     }, 100);
   }
 
-// --- helper: run nSteps Glauber flips with current a,b and redraw ---
-async function advanceDynamics(nSteps) {
+// --- helper: run nSteps Glauber flips with current a,b and update height graph ---
+async function advanceDynamics(nSteps, currentStep, shouldUpdatePicture = false) {
   // Get the current u and v values from the interface
   const uVal = parseFloat(document.getElementById("u-input").value);
   const vVal = parseFloat(document.getElementById("v-input").value);
@@ -373,8 +402,120 @@ async function advanceDynamics(nSteps) {
   freeString(ptr);
 
   cachedDominoes = JSON.parse(json);
-  updateDominoesVisualization();          // redraw
+  
+  // Calculate center height and update graph
+  const centerHeight = calculateCenterHeight();
+  if (centerHeight !== null) {
+    updateHeightGraph(currentStep, centerHeight);
+  }
+  
+  // Update domino visualization only if requested (for small n)
+  if (shouldUpdatePicture) {
+    updateDominoesVisualization();
+  }
+  
+  // Still update the center height display
+  showCenterHeight();
+  
   return nSteps;                           // tell caller how many steps ran
+}
+
+// Function to calculate center height without full visualization
+function calculateCenterHeight() {
+  if (!cachedDominoes || cachedDominoes.length === 0) return null;
+
+  /* ─────────────────────────────── 1. determine one lattice unit in pixels */
+  const minSidePx = d3.min(cachedDominoes, d => Math.min(d.w, d.h));
+  const unit = minSidePx / 2;
+  if (unit <= 0) return null;
+
+  /* ─────────────────────────────── 2. calculate domino bounds */
+  const minX = d3.min(cachedDominoes, d => d.x);
+  const minY = d3.min(cachedDominoes, d => d.y);
+  const maxX = d3.max(cachedDominoes, d => d.x + d.w);
+  const maxY = d3.max(cachedDominoes, d => d.y + d.h);
+
+  /* ───────────────────── 3. convert each domino → (orient, sign, gx, gy)  */
+  const dominoData = cachedDominoes.map(d => {
+    const horiz = d.w > d.h;
+    const orient = horiz ? 0 : 1;
+    const sign = horiz
+        ? (d.color === "green" ? -1 : 1)   // horizontal: green = −1, blue = +1
+        : (d.color === "yellow" ? -1 : 1); // vertical:   yellow = −1, red  = +1
+    const gx = Math.round(d.x / unit);
+    const gy = Math.round(d.y / unit);
+    return [orient, sign, gx, gy];
+  });
+
+  /* ─────────────────────────────── 4. build graph with height increments  */
+  const adj = new Map();
+  const edge = (v1, v2, dh) => {
+    if (!adj.has(v1)) adj.set(v1, []);
+    if (!adj.has(v2)) adj.set(v2, []);
+    adj.get(v1).push([v2, dh]);
+    adj.get(v2).push([v1, -dh]);
+  };
+
+  dominoData.forEach(([o, s, x, y]) => {
+    if (o === 0) {                      /* horizontal  (4×2)  */
+      const TL = `${x},${y+2}`, TM = `${x+2},${y+2}`, TR = `${x+4},${y+2}`;
+      const BL = `${x},${y}`,   BM = `${x+2},${y}`,   BR = `${x+4},${y}`;
+      edge(TL, TM, -s);   edge(TM, TR,  s);
+      edge(BL, BM,  s);   edge(BM, BR, -s);
+      edge(TL, BL,  s);   edge(TM, BM,  3*s);
+      edge(TR, BR,  s);
+    } else {                            /* vertical    (2×4)  */
+      const TL = `${x},${y+4}`, TR = `${x+2},${y+4}`;
+      const ML = `${x},${y+2}`, MR = `${x+2},${y+2}`;
+      const BL = `${x},${y}`,   BR = `${x+2},${y}`;
+      edge(TL, TR, -s);  edge(ML, MR, -3*s);  edge(BL, BR, -s);
+      edge(TL, ML,  s);  edge(ML, BL,  -s);
+      edge(TR, MR, -s);  edge(MR, BR,  s);
+    }
+  });
+
+  /* ─────────────────────────────── 5. breadth‑first integration of heights */
+  const verts = Array.from(adj.keys())
+        .map(k => { const [gx, gy] = k.split(',').map(Number); return {k, gx, gy}; });
+
+  if (verts.length === 0) return null;
+
+  const root = verts.reduce((a, b) =>
+        (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b).k;
+
+  const H = new Map([[root, 0]]);
+  const queue = [root];
+  while (queue.length) {
+    const v = queue.shift();
+    for (const [w, dh] of adj.get(v)) {
+      if (!H.has(w)) { H.set(w, H.get(v) + dh); queue.push(w); }
+    }
+  }
+
+  /* ─────────────────────────────── 6. find center point and its height */
+  const centerGx = Math.round((minX + maxX) / 2 / unit);
+  const centerGy = Math.round((minY + maxY) / 2 / unit);
+  
+  let centerHeight = null;
+  const centerKey = `${centerGx},${centerGy}`;
+  
+  if (H.has(centerKey)) {
+    centerHeight = H.get(centerKey);
+  } else {
+    // If exact center doesn't exist, find the closest vertex
+    let minDist = Infinity;
+    
+    H.forEach((h, key) => {
+      const [gx, gy] = key.split(',').map(Number);
+      const dist = Math.sqrt((gx - centerGx) ** 2 + (gy - centerGy) ** 2);
+      if (dist < minDist) {
+        minDist = dist;
+        centerHeight = h;
+      }
+    });
+  }
+
+  return centerHeight !== null ? -centerHeight : null;
 }
 
 
@@ -389,6 +530,16 @@ async function advanceDynamics(nSteps) {
       dynamicsBtn.classList.remove("running");
       progressElem.innerText = "";
 
+      // Hide height graph
+      const container = document.getElementById("height-graph-container");
+      if (container) container.style.display = "none";
+      
+      // Hide refresh button and status
+      const refreshBtn = document.getElementById("refresh-picture-btn");
+      const statusSpan = document.getElementById("dynamics-status");
+      if (refreshBtn) refreshBtn.style.display = "none";
+      if (statusSpan) statusSpan.style.display = "none";
+
       // Re-enable controls
       document.getElementById("sweeps-input").disabled = false;
       document.getElementById("n-input").disabled = false;
@@ -400,10 +551,37 @@ async function advanceDynamics(nSteps) {
         return;
       }
 
+      // Check current n value to determine behavior
+      const currentN = parseInt(document.getElementById("n-input").value, 10);
+      const shouldUpdatePicture = currentN <= 30;
+      
       dynamicsRunning = true;
       dynamicsBtn.textContent = "Stop Glauber Dynamics";
       dynamicsBtn.classList.add("running");
       progressElem.innerText = "";
+
+      // Show/hide refresh button and status based on n
+      const refreshBtn = document.getElementById("refresh-picture-btn");
+      const statusSpan = document.getElementById("dynamics-status");
+      
+      if (shouldUpdatePicture) {
+        refreshBtn.style.display = "none";
+        statusSpan.style.display = "none";
+      } else {
+        refreshBtn.style.display = "inline-block";
+        statusSpan.style.display = "inline";
+        statusSpan.textContent = "Picture updates disabled for n>30";
+      }
+
+      // Initialize height graph
+      heightData = []; // Reset data
+      initializeHeightGraph();
+      
+      // Add initial height point
+      const initialHeight = calculateCenterHeight();
+      if (initialHeight !== null) {
+        updateHeightGraph(0, initialHeight);
+      }
 
       // Only disable new sample inputs, leave sweeps editable
       document.getElementById("n-input").disabled = true;
@@ -413,7 +591,7 @@ async function advanceDynamics(nSteps) {
           const firstSteps   = Math.max(1,
             parseInt(document.getElementById('sweeps-input').value, 10) || 1);
 
-          let stepCount      = await advanceDynamics(firstSteps);   // runs once
+          let stepCount      = await advanceDynamics(firstSteps, firstSteps, shouldUpdatePicture);   // runs once
           progressElem.innerText = "";
 
 
@@ -424,17 +602,11 @@ async function advanceDynamics(nSteps) {
 dynamicsTimer = setInterval(async () => {
   const stepsPerUpdate = Math.max(
         1, parseInt(document.getElementById('sweeps-input').value,10)||1);
-  // Get the current u and v values from the interface
-  const uVal = parseFloat(document.getElementById("u-input").value);
-  const vVal = parseFloat(document.getElementById("v-input").value);
-
-  const ptr = await performGlauberSteps(uVal, vVal, stepsPerUpdate);
-  const jsonStr = Module.UTF8ToString(ptr);  freeString(ptr);
-  cachedDominoes = JSON.parse(jsonStr);
-
-  updateDominoesVisualization();
+  
   stepCount += stepsPerUpdate;
-  progressElem.innerText = "";
+  await advanceDynamics(stepsPerUpdate, stepCount, shouldUpdatePicture);
+  
+  progressElem.innerText = `Running Glauber dynamics... (${stepCount} steps)`;
 }, updateInterval);
     }
   }
@@ -577,6 +749,100 @@ dynamicsTimer = setInterval(async () => {
     });
 
     heightGroup.raise();   // keep on top
+  }
+
+  // Function to initialize the height graph
+  function initializeHeightGraph() {
+    const container = document.getElementById("height-graph-container");
+    container.style.display = "block";
+    
+    heightGraphSvg = d3.select("#height-graph-svg");
+    heightGraphSvg.selectAll("*").remove();
+    
+    const margin = {top: 20, right: 30, bottom: 40, left: 60};
+    const width = 600 - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+    
+    const g = heightGraphSvg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+    
+    // Initialize scales
+    stepScale = d3.scaleLinear().range([0, width]);
+    heightScale = d3.scaleLinear().range([height, 0]);
+    
+    // Add axes
+    g.append("g")
+      .attr("class", "x-axis")
+      .attr("transform", `translate(0,${height})`);
+    
+    g.append("g")
+      .attr("class", "y-axis");
+    
+    // Add axis labels
+    g.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x", 0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("Center Height");
+    
+    g.append("text")
+      .attr("transform", `translate(${width / 2}, ${height + margin.bottom})`)
+      .style("text-anchor", "middle")
+      .text("Glauber Steps");
+    
+    // Initialize line generator
+    heightLine = d3.line()
+      .x(d => stepScale(d.step))
+      .y(d => heightScale(d.height))
+      .curve(d3.curveLinear);
+    
+    // Add path for the line
+    g.append("path")
+      .attr("class", "height-line")
+      .attr("fill", "none")
+      .attr("stroke", "#007cba")
+      .attr("stroke-width", 2);
+  }
+  
+  // Function to update the height graph with new data point
+  function updateHeightGraph(step, height) {
+    if (!heightGraphSvg) return;
+    
+    // Add new data point
+    heightData.push({step: step, height: height});
+    
+    // Keep only last 1000 points for performance
+    if (heightData.length > 1000) {
+      heightData = heightData.slice(-1000);
+    }
+    
+    // Update scales
+    const stepExtent = d3.extent(heightData, d => d.step);
+    const heightExtent = d3.extent(heightData, d => d.height);
+    
+    stepScale.domain(stepExtent);
+    heightScale.domain(heightExtent);
+    
+    // Update axes
+    const g = heightGraphSvg.select("g");
+    g.select(".x-axis").call(d3.axisBottom(stepScale).tickFormat(d3.format(".0f")));
+    g.select(".y-axis").call(d3.axisLeft(heightScale));
+    
+    // Update line
+    g.select(".height-line")
+      .datum(heightData)
+      .attr("d", heightLine);
+    
+    // Update stats
+    const stats = document.getElementById("height-stats");
+    if (stats && heightData.length > 0) {
+      const current = heightData[heightData.length - 1];
+      const min = d3.min(heightData, d => d.height);
+      const max = d3.max(heightData, d => d.height);
+      stats.textContent = `Current: ${current.height}, Min: ${min}, Max: ${max}, Steps: ${current.step}`;
+    }
   }
 
   // Function to display the height function value at the center (always shown)
