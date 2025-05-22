@@ -2,7 +2,7 @@
 emcc 2025-05-22-random-weights-glauber-height-function-graph.cpp -o 2025-05-22-random-weights-glauber-height-function-graph.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_getWeightMatrix', '_freeString', '_getProgress', '_resetGlobalState']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec', '_simulateAztecFrozen', '_performGlauberStep', '_performGlauberSteps', '_simulateAztecGlauber', '_getWeightMatrix', '_freeString', '_getProgress', '_resetGlobalState']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=1GB \
@@ -394,7 +394,152 @@ std::string getWeightMatrixJson() {
     return json_str;
 }
 
+// Function to generate frozen all-vertical configuration
+MatrixInt generateFrozenVertical(int n) {
+    // Create frozen-all-vertical configuration exactly like reference but swapped for blue left/yellow right
+    const int N = 2 * n;
+    MatrixInt conf(N, N, 0);
+    
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            const bool oddI = i & 1;
+            const bool oddJ = j & 1;
+            const int x = j - i - 1;  // renderer's x-coord
+            
+            // Reference puts oddI && !oddJ on left (yellow), !oddI && oddJ on right (red)
+            // But oddI && !oddJ renders as blue, !oddI && oddJ renders as yellow
+            // So reference actually has blue on left, yellow on right - which is what we want!
+            if (x <= 0) {  // left half
+                if (oddI && !oddJ && i <= N-2 && j >= 2)
+                    conf.at(i, j) = 1;  /* blue markers */
+            } else {  // right half
+                if (!oddI && oddJ && i >= 0 && j <= N-1)
+                    conf.at(i, j) = 1;  /* yellow markers */
+            }
+        }
+    }
+    
+    return conf;
+}
+
 extern "C" {
+
+// Export function to generate frozen configuration
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecFrozen(int n, double a, double b) {
+    try {
+        progressCounter = 0;
+        
+        // Generate frozen all-vertical configuration
+        MatrixInt dominoConfig = generateFrozenVertical(n);
+        
+        // Update global state
+        g_conf = dominoConfig;
+        g_N = 2 * n;
+        g_a = a;
+        g_b = b;
+        
+        // Create weight matrix (same as regular simulation)
+        MatrixDouble A1a(2*n, 2*n, 0.0);
+        
+        if (!g_random_initialized) {
+            std::uniform_real_distribution<> bernoulli(0.0, 1.0);
+            int k_period = 2, ell_period = 2;
+            
+            for (int i = 0; i < 2*n; i++){
+                for (int j = 0; j < 2*n; j++){
+                    int mod_i = i % ell_period;
+                    int mod_j = j % k_period;
+                    
+                    if (mod_i == 0 && mod_j == 0) {
+                        A1a.at(i, j) = 1.0;
+                    } else if (mod_i == 0 && mod_j != 0) {
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? a : b;
+                    } else if (mod_i != 0 && mod_j != 0) {
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? a : b;
+                    } else if (mod_i != 0 && mod_j == 0) {
+                        A1a.at(i, j) = (bernoulli(rng) < 0.5) ? a : b;
+                    }
+                }
+            }
+            g_W = A1a;
+            g_random_initialized = true;
+        } else {
+            A1a = g_W;
+        }
+        
+        // Build JSON output (same format as regular simulation)
+        int size = dominoConfig.size();
+        double scale = 10.0;
+        
+        size_t estimatedJsonSize = (size * size / 4) * 100;
+        string json;
+        json.reserve(estimatedJsonSize > 1024 ? estimatedJsonSize : 1024);
+        json.append("[");
+        
+        bool first = true;
+        char buffer[128];
+        
+        for (int i = 0; i < size; i++){
+            for (int j = 0; j < size; j++){
+                if (dominoConfig.at(i, j) == 1) {
+                    double x, y, w, h;
+                    const char* color;
+                    
+                    // For frozen vertical configuration, all dominoes are vertical (red or yellow)
+                    bool oddI = (i & 1), oddJ = (j & 1);
+                    if (oddI && !oddJ) { // i odd, j even - vertical red
+                        color = "red";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                    } else if (!oddI && oddJ) { // i even, j odd - vertical yellow  
+                        color = "yellow";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                    } else {
+                        continue; // Skip non-vertical positions
+                    }
+                    
+                    x *= scale;
+                    y *= scale;
+                    w *= scale;
+                    h *= scale;
+                    
+                    if (!first) json.append(",");
+                    else first = false;
+                    
+                    snprintf(buffer, sizeof(buffer),
+                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
+                             x, y, w, h, color);
+                    json.append(buffer);
+                }
+            }
+        }
+        
+        json.append("]");
+        progressCounter = 100;
+        
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) {
+            throw std::runtime_error("Failed to allocate memory for output");
+        }
+        strcpy(out, json.c_str());
+        return out;
+        
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) {
+            strcpy(out, errorMsg.c_str());
+        }
+        progressCounter = 100;
+        return out;
+    }
+}
 
 // Export function to get the weight matrix
 EMSCRIPTEN_KEEPALIVE

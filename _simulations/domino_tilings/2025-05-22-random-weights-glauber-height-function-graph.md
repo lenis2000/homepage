@@ -49,9 +49,11 @@ code:
 
 <p>This interactive application demonstrates random domino tilings of an Aztec diamond - a diamond-shaped union of unit squares. The simulation allows exploration of two distinct sampling methods:</p>
 
-<h5>1. Initial sampling (Shuffling algorithm)</h5>
+<h5>1. Initial sampling</h5>
 
-<p>The initial configuration is generated using the exact-sampling shuffling algorithm, producing a perfect sample from the weighted domino tiling measure, with random Bernoulli weights on 3/4 of edges. The Bernoulli weights are equal to $u$ or $v$ with probability 1/2, where $u$ and $v$ are user-defined parameters. The remaining 1/4 of edges are assigned a deterministic weight of 1.0.</p>
+<p><strong>Shuffling algorithm:</strong> The "Sample" button generates an initial configuration using the exact-sampling shuffling algorithm, producing a perfect sample from the weighted domino tiling measure, with random Bernoulli weights on 3/4 of edges. The Bernoulli weights are equal to $u$ or $v$ with probability 1/2, where $u$ and $v$ are user-defined parameters. The remaining 1/4 of edges are assigned a deterministic weight of 1.0.</p>
+
+<p><strong>Frozen configuration:</strong> The "Make Frozen" button creates an all-vertical domino configuration, where every domino is oriented vertically. This provides a deterministic starting point that can be useful for observing how the system evolves under Glauber dynamics from a highly ordered initial state.</p>
 
 <h5>2. Glauber dynamics</h5>
 
@@ -88,6 +90,7 @@ code:
   <label for="n-input">Aztec Diamond Order (n ≤ 400): </label>
   <input id="n-input" type="number" value="6" min="2" step="2" max="400" size="3" onchange="onNChange()">
   <button id="update-btn">Sample</button>
+  <button id="frozen-btn" style="margin-left: 10px; background-color: #4CAF50; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;">Make Frozen</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
@@ -211,6 +214,7 @@ function getGrayscaleColor(originalColor, d) {
 // Wrap exported functions after module is initialized.
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number','number','number'], {async: true});
+  const simulateAztecFrozen = Module.cwrap('simulateAztecFrozen', 'number', ['number','number','number'], {async: true});
   const simulateAztecGlauber = Module.cwrap('simulateAztecGlauber', 'number', ['number','number','number','number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
@@ -355,6 +359,7 @@ Module.onRuntimeInitialized = async function() {
   function startSimulation() {
     simulationActive = true;
     updateBtn.disabled = true;
+    document.getElementById("frozen-btn").disabled = true;
     document.getElementById("n-input").disabled = true;
     // Removed references to a-input and b-input as they no longer exist
     cancelBtn.style.display = 'inline-block';
@@ -366,6 +371,7 @@ Module.onRuntimeInitialized = async function() {
     simulationActive = false;
     clearInterval(progressInterval);
     updateBtn.disabled = false;
+    document.getElementById("frozen-btn").disabled = false;
     document.getElementById("n-input").disabled = false;
     // Removed references to a-input and b-input as they no longer exist
     cancelBtn.style.display = 'none';
@@ -534,10 +540,19 @@ function calculateCenterHeight() {
       const container = document.getElementById("height-graph-container");
       if (container) container.style.display = "none";
       
-      // Hide refresh button and status
+      // Keep refresh button visible if n > 30, but hide status
       const refreshBtn = document.getElementById("refresh-picture-btn");
       const statusSpan = document.getElementById("dynamics-status");
-      if (refreshBtn) refreshBtn.style.display = "none";
+      const n = parseInt(document.getElementById("n-input").value);
+      const shouldUpdatePicture = n <= 30;
+      
+      if (!shouldUpdatePicture) {
+        // Keep refresh button visible for large n
+        if (refreshBtn) refreshBtn.style.display = "inline-block";
+      } else {
+        // Hide refresh button for small n (since picture updates automatically)
+        if (refreshBtn) refreshBtn.style.display = "none";
+      }
       if (statusSpan) statusSpan.style.display = "none";
 
       // Re-enable controls
@@ -964,6 +979,179 @@ dynamicsTimer = setInterval(async () => {
     }
   }
 
+  async function updateVisualizationFrozen(n) {
+    // First, stop any running dynamics
+    if (dynamicsRunning) {
+      clearInterval(dynamicsTimer);
+      dynamicsTimer = null;
+      dynamicsRunning = false;
+      dynamicsBtn.textContent = "Start Glauber Dynamics";
+      dynamicsBtn.classList.remove("running");
+    }
+
+    // Show or hide height function checkbox based on n value
+    const heightToggleDiv = document.querySelector('label[for="height-toggle"]').parentNode;
+    if (n > 30) {
+      heightToggleDiv.style.display = 'none';
+      if (useHeightFunction) {
+        useHeightFunction = false;
+        document.getElementById("height-toggle").checked = false;
+      }
+    } else {
+      heightToggleDiv.style.display = 'block';
+    }
+
+    svg.selectAll("g").remove();
+    heightGroup = null;
+    startSimulation();
+    startProgressPolling();
+
+    const signal = simulationAbortController.signal;
+
+    // Hide the TikZ code container if it's visible
+    const codeContainer = document.getElementById('tikz-code-container');
+    if (codeContainer) {
+      codeContainer.style.display = 'none';
+    }
+
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'none';
+    }
+
+    await sleep(50);
+    if (signal.aborted) return;
+
+    const uVal = parseFloat(document.getElementById("u-input").value);
+    const vVal = parseFloat(document.getElementById("v-input").value);
+    if (isNaN(uVal) || isNaN(vVal) || uVal <= 0 || vVal <= 0) {
+      alert("Values for u and v must be positive numbers.");
+      stopSimulation();
+      return;
+    }
+
+    try {
+      console.log(`Generating frozen configuration with n=${n}, u=${uVal}, v=${vVal}`);
+      let ptr = await simulateAztecFrozen(n, uVal, vVal);
+      console.log(`simulateAztecFrozen returned ptr=${ptr}`);
+
+      if (signal.aborted) {
+        if (ptr) freeString(ptr);
+        return;
+      }
+
+      await sleep(10);
+      if (signal.aborted) {
+        if (ptr) freeString(ptr);
+        return;
+      }
+
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+
+      if (signal.aborted) return;
+
+      await sleep(10);
+      if (signal.aborted) return;
+
+      let dominoes;
+      try {
+        dominoes = JSON.parse(jsonStr);
+      } catch (e) {
+        console.error("Error parsing JSON:", e, jsonStr);
+        if (simulationActive) {
+          progressElem.innerText = "Error during frozen configuration generation";
+        }
+        clearInterval(progressInterval);
+        return;
+      }
+
+      if (signal.aborted) return;
+
+      cachedDominoes = dominoes;
+      g_N = 2 * n;
+      console.log(`Updated g_N to ${g_N} (n=${n}) for frozen configuration`);
+
+      // Rest of visualization code is the same as regular updateVisualization
+      const minX = d3.min(dominoes, d => d.x);
+      const minY = d3.min(dominoes, d => d.y);
+      const maxX = d3.max(dominoes, d => d.x + d.w);
+      const maxY = d3.max(dominoes, d => d.y + d.h);
+      const widthDominoes = maxX - minX;
+      const heightDominoes = maxY - minY;
+
+      await sleep(10);
+      if (signal.aborted) return;
+
+      const bbox = svg.node().getBoundingClientRect();
+      const svgWidth = bbox.width;
+      const svgHeight = bbox.height;
+      svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+      const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+      const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
+      const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+
+      initialTransform = {
+        translateX: translateX,
+        translateY: translateY,
+        scale: scale
+      };
+
+      svg.call(zoom.transform, d3.zoomIdentity);
+
+      const group = svg.append("g")
+                       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+      const BATCH_SIZE = 200;
+
+      for (let i = 0; i < dominoes.length && simulationActive; i += BATCH_SIZE) {
+        if (signal.aborted) return;
+
+        const batch = dominoes.slice(i, i + BATCH_SIZE);
+
+        group.selectAll("rect.batch" + i)
+             .data(batch)
+             .enter()
+             .append("rect")
+             .attr("x", d => d.x)
+             .attr("y", d => d.y)
+             .attr("width", d => d.w)
+             .attr("height", d => d.h)
+             .attr("fill", d => d.color)
+             .attr("stroke", "#000")
+             .attr("stroke-width", 0.5);
+
+        if (i + BATCH_SIZE < dominoes.length) {
+          await sleep(0);
+          if (signal.aborted) return;
+        }
+      }
+
+      if (!signal.aborted) {
+        if (useHeightFunction) {
+          toggleHeightFunction();
+        }
+        
+        showCenterHeight();
+
+        progressElem.innerText = "";
+        updateBtn.disabled = false;
+        document.getElementById("frozen-btn").disabled = false;
+        document.getElementById("n-input").disabled = false;
+        cancelBtn.style.display = 'none';
+        simulationActive = false;
+      }
+    } catch (error) {
+      console.error("Frozen simulation error:", error);
+      console.error("Error stack:", error.stack);
+      if (simulationActive) {
+        progressElem.innerText = "Error during frozen simulation: " + error.message;
+      }
+      stopSimulation();
+    }
+  }
+
   async function updateVisualization(n) {
     // First, stop any running dynamics
     if (dynamicsRunning) {
@@ -1143,6 +1331,7 @@ dynamicsTimer = setInterval(async () => {
 
         progressElem.innerText = "";
         updateBtn.disabled = false;
+        document.getElementById("frozen-btn").disabled = false;
         document.getElementById("n-input").disabled = false;
         cancelBtn.style.display = 'none';
         simulationActive = false;
@@ -1170,6 +1359,17 @@ dynamicsTimer = setInterval(async () => {
 
     // Generate new sample with explicitly passed n
     updateVisualization(n);
+  });
+
+  document.getElementById("frozen-btn").addEventListener("click", () => {
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    if (isNaN(n) || n < 2 || n > 400 || n % 2 !== 0) {
+      alert("Please enter a valid even number n, 2 ≤ n ≤ 400.");
+      return;
+    }
+
+    console.log(`Generating frozen configuration with n=${n}`);
+    updateVisualizationFrozen(n);
   });
 
   // Add cancel button event listener
