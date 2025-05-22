@@ -3,9 +3,9 @@ title: Domino tilings with random Bernoulli Weights and Glauber Dynamics
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-09-random-weights-glauber.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-22-random-weights-glauber-height-function-graph.md'
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-09-random-weights-glauber.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-22-random-weights-glauber-height-function-graph.cpp'
     txt: 'C++ code for the simulation'
 ---
 
@@ -77,7 +77,7 @@ code:
 ---
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="/js/2025-05-09-random-weights-glauber.js"></script>
+<script src="/js/2025-05-22-random-weights-glauber-height-function-graph.js"></script>
 
 <!-- Simulation Controls -->
 <!-- Dynamics controls – always visible -->
