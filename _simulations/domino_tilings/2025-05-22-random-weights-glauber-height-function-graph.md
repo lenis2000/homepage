@@ -320,6 +320,9 @@ Module.onRuntimeInitialized = async function() {
       <label for="sweeps-input">Sweeps per visual update:</label>
       <input id="sweeps-input" type="number"
              value="100" min="1" step="1" style="width:70px;">
+      <label for="max-sweeps-input" style="margin-left:15px;">Max sweeps:</label>
+      <input id="max-sweeps-input" type="number"
+             value="10000" min="1" step="1" style="width:80px;">
       <button id="dynamics-btn" style="margin-left:10px;">Start Glauber Dynamics</button>
       <button id="refresh-picture-btn" style="margin-left:10px; display:none; background-color:#2196F3; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Refresh Picture</button>
       <span id="dynamics-status" style="margin-left:15px; font-style:italic; color:#666; display:none;"></span>
@@ -555,6 +558,7 @@ function calculateCenterHeight() {
 
       // Re-enable controls
       document.getElementById("sweeps-input").disabled = false;
+      document.getElementById("max-sweeps-input").disabled = false;
       document.getElementById("n-input").disabled = false;
       updateBtn.disabled = false;
     } else {
@@ -596,7 +600,7 @@ function calculateCenterHeight() {
         updateHeightGraph(0, initialHeight);
       }
 
-      // Only disable new sample inputs, leave sweeps editable
+      // Only disable new sample inputs, leave sweeps and max-sweeps editable
       document.getElementById("n-input").disabled = true;
       updateBtn.disabled = true;
 
@@ -615,11 +619,37 @@ function calculateCenterHeight() {
 dynamicsTimer = setInterval(async () => {
   const stepsPerUpdate = Math.max(
         1, parseInt(document.getElementById('sweeps-input').value,10)||1);
+  const maxSweeps = parseInt(document.getElementById('max-sweeps-input').value,10) || 10000;
+  
+  // Check if we would exceed max sweeps
+  if (stepCount + stepsPerUpdate > maxSweeps) {
+    // Do final partial step to reach exactly maxSweeps
+    const remainingSteps = maxSweeps - stepCount;
+    if (remainingSteps > 0) {
+      stepCount += remainingSteps;
+      await advanceDynamics(remainingSteps, stepCount, shouldUpdatePicture);
+    }
+    
+    // Stop the dynamics
+    clearInterval(dynamicsTimer);
+    dynamicsTimer = null;
+    dynamicsRunning = false;
+    dynamicsBtn.textContent = "Start Glauber Dynamics";
+    dynamicsBtn.classList.remove("running");
+    progressElem.innerText = `Glauber dynamics completed (${stepCount} steps, max reached)`;
+    
+    // Re-enable controls
+    document.getElementById("sweeps-input").disabled = false;
+    document.getElementById("max-sweeps-input").disabled = false;
+    document.getElementById("n-input").disabled = false;
+    updateBtn.disabled = false;
+    return;
+  }
   
   stepCount += stepsPerUpdate;
   await advanceDynamics(stepsPerUpdate, stepCount, shouldUpdatePicture);
   
-  progressElem.innerText = `Running Glauber dynamics... (${stepCount} steps)`;
+  progressElem.innerText = `Running Glauber dynamics... (${stepCount}/${maxSweeps} steps)`;
 }, updateInterval);
     }
   }
