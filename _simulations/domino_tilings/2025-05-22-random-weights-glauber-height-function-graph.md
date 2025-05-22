@@ -536,9 +536,7 @@ function calculateCenterHeight() {
       dynamicsBtn.classList.remove("running");
       progressElem.innerText = "";
 
-      // Hide height graph
-      const container = document.getElementById("height-graph-container");
-      if (container) container.style.display = "none";
+      // Don't hide height graph - keep it visible once shown during dynamics
       
       // Keep refresh button visible if n > 30, but hide status
       const refreshBtn = document.getElementById("refresh-picture-btn");
