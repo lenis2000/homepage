@@ -13,24 +13,16 @@ code:
 
 <style>
   /* Ensure the SVG scales fully on wide screens and remains responsive on mobile */
-  #aztec-svg, #dimer-svg {
+  #aztec-svg {
     width: 100%;
     height: 80vh; /* Use 80% of viewport height on large screens */
     vertical-align: top; /* Align media to the top */
   }
   @media (max-width: 576px) {
-    #aztec-svg, #dimer-svg {
+    #aztec-svg {
       height: 60vh; /* Reduce height on smaller devices */
       vertical-align: top; /* Maintain top alignment on mobile */
     }
-  }
-
-  /* Tabs styling */
-  .tab {
-    overflow: hidden;
-    border: 1px solid #ccc;
-    background-color: #f1f1f1;
-    margin-bottom: 10px;
   }
 
   /* Zoom controls styling */
@@ -41,31 +33,6 @@ code:
   }
   #zoom-reset-btn {
     height: 30px;
-  }
-
-  .tab button {
-    background-color: inherit;
-    float: left;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 14px 16px;
-    transition: 0.3s;
-  }
-
-  .tab button:hover {
-    background-color: #ddd;
-  }
-
-  .tab button.active {
-    background-color: #ccc;
-  }
-
-  .tabcontent {
-    display: none;
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    border-top: none;
   }
 </style>
 
@@ -92,14 +59,9 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
 <div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
 
-<!-- Tabs -->
-<div class="tab">
-  <button class="tablinks active" onclick="openView(event, 'domino-view')">Double Dimer Configuration</button>
-  <button class="tablinks" onclick="openView(event, 'dimer-view'); resizeDimerView();">First Configuration on Dual Grid</button>
-</div>
 
 <!-- Domino View -->
-<div id="domino-view" class="tabcontent" style="display: block;">
+<div id="domino-view">
   <div style="margin-top: 8px; margin-bottom: 8px;">
     <strong>Double Dimer Configuration:</strong> Black dimers show the first configuration, red dimers show the second configuration.
   </div>
@@ -110,16 +72,6 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
     </div>
   </div>
 </div>
-
-<!-- Dimer View -->
-<div id="dimer-view" class="tabcontent">
-  <div class="row">
-    <div class="col-12">
-      <svg id="dimer-svg"></svg>
-    </div>
-  </div>
-</div>
-
 <script>
 Module.onRuntimeInitialized = async function() {
   // Wrap exported functions asynchronously.
@@ -128,7 +80,6 @@ Module.onRuntimeInitialized = async function() {
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
   const svg = d3.select("#aztec-svg");
-  const dimerSvg = d3.select("#dimer-svg");
   const progressElem = document.getElementById("progress-indicator");
   const inputField = document.getElementById("n-input");
   let progressInterval;
@@ -180,25 +131,9 @@ Module.onRuntimeInitialized = async function() {
       }
     });
 
-  // Create zoom behavior for dimer view
-  let dimerInitialTransform = {}; // Store dimer view initial transform parameters
-  const dimerZoom = d3.zoom()
-    .scaleExtent([0.1, 50]) // Min and max zoom scale (up to 50x)
-    .on("zoom", (event) => {
-      if (!dimerInitialTransform.scale) return; // Skip if no initial transform is set
-
-      // Apply the zoom transformation on top of initial transform
-      const group = dimerSvg.select("g.dimer-elements");
-      if (!group.empty()) {
-        const t = event.transform;
-        group.attr("transform",
-          `translate(${dimerInitialTransform.translateX * t.k + t.x},${dimerInitialTransform.translateY * t.k + t.y}) scale(${dimerInitialTransform.scaleX * t.k},${dimerInitialTransform.scaleY * t.k})`);
-      }
-    });
 
   // Enable zoom on both SVGs
   svg.call(zoom);
-  dimerSvg.call(dimerZoom);
 
   // Add double-click to reset zoom on both views
   svg.on("dblclick.zoom", () => {
@@ -206,13 +141,6 @@ Module.onRuntimeInitialized = async function() {
       .duration(750)
       .call(zoom.transform, d3.zoomIdentity);
   });
-
-  dimerSvg.on("dblclick.zoom", () => {
-    dimerSvg.transition()
-      .duration(750)
-      .call(dimerZoom.transform, d3.zoomIdentity);
-  });
-
   // Add zoom controls for domino view
   const dominoControlsContainer = d3.select("#domino-view")
     .insert("div", ".row")
@@ -259,51 +187,6 @@ Module.onRuntimeInitialized = async function() {
     .style("font-size", "0.9em")
     .text("(You can also use mouse wheel to zoom and drag to pan)");
 
-  // Add zoom controls for dimer view
-  const dimerControlsContainer = d3.select("#dimer-view")
-    .insert("div", ".row")
-    .attr("class", "zoom-controls")
-    .style("margin-bottom", "10px");
-
-  dimerControlsContainer.append("span")
-    .text("Zoom: ")
-    .style("font-weight", "bold");
-
-  dimerControlsContainer.append("button")
-    .attr("id", "dimer-zoom-in-btn")
-    .style("margin-left", "5px")
-    .text("+")
-    .on("click", () => {
-      dimerSvg.transition()
-        .duration(300)
-        .call(dimerZoom.scaleBy, 1.3);
-    });
-
-  dimerControlsContainer.append("button")
-    .attr("id", "dimer-zoom-out-btn")
-    .style("margin-left", "5px")
-    .text("-")
-    .on("click", () => {
-      dimerSvg.transition()
-        .duration(300)
-        .call(dimerZoom.scaleBy, 0.7);
-    });
-
-  dimerControlsContainer.append("button")
-    .attr("id", "dimer-zoom-reset-btn")
-    .style("margin-left", "5px")
-    .text("Reset Zoom")
-    .on("click", () => {
-      dimerSvg.transition()
-        .duration(300)
-        .call(dimerZoom.transform, d3.zoomIdentity);
-    });
-
-  dimerControlsContainer.append("span")
-    .style("margin-left", "10px")
-    .style("font-style", "italic")
-    .style("font-size", "0.9em")
-    .text("(You can also use mouse wheel to zoom and drag to pan)");
 
   // Simulation state
   let simulationActive = false;
@@ -313,43 +196,7 @@ Module.onRuntimeInitialized = async function() {
   // Define n in the broader scope so it's accessible to all functions
   let n = parseInt(inputField.value, 10);
 
-  // Tab functionality
-  window.openView = function(evt, viewName) {
-    var i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tabcontent");
-    for (i = 0; i < tabcontent.length; i++) {
-      tabcontent[i].style.display = "none";
-    }
-    tablinks = document.getElementsByClassName("tablinks");
-    for (i = 0; i < tablinks.length; i++) {
-      tablinks[i].className = tablinks[i].className.replace(" active", "");
-    }
-    document.getElementById(viewName).style.display = "block";
-    evt.currentTarget.className += " active";
 
-    // If switching to dimer view, force a redraw
-    if (viewName === "dimer-view") {
-      resizeDimerView();
-    }
-  }
-
-  // Function to properly render dimer view when tab becomes visible
-  window.resizeDimerView = function() {
-    // This fixes a common issue where SVG doesn't render properly in hidden tabs
-    setTimeout(() => {
-      if (currentDominoes && currentDominoes.length > 0) {
-
-        // First get the DOM node dimensions
-        const dimerSvgNode = document.getElementById("dimer-svg");
-        if (dimerSvgNode) {
-          const rect = dimerSvgNode.getBoundingClientRect();
-        }
-
-        renderDimerView(currentDominoes);
-      } else {
-      }
-    }, 100); // Longer timeout to ensure DOM is ready
-  }
 
   // Helper function to sleep for ms milliseconds
   function sleep(ms) {
@@ -904,8 +751,6 @@ Module.onRuntimeInitialized = async function() {
         .attr("fill-opacity", 0.8);
     });
 
-    // Also render the dimer view
-    renderDimerView(configs.config1);
   }
 
   // Render the dominoes with or without colors
@@ -973,8 +818,6 @@ Module.onRuntimeInitialized = async function() {
       toggleCheckerboard();
     }
 
-    // Also render the dimer view
-    renderDimerView(dominoes);
 
     // Add dimers if enabled
     if (useDimers) {
@@ -987,226 +830,6 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Render the dimer view based on Python's aztec_edge_printer
-  function renderDimerView(dominoes) {
-
-
-    // Clear previous rendering
-    dimerSvg.selectAll("*").remove();
-
-    // Define the dimensions of the dimer view
-    const bbox = dimerSvg.node().getBoundingClientRect();
-    const svgWidth = bbox.width;
-    const svgHeight = bbox.height;
-    dimerSvg.attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
-
-    // Add a title
-    dimerSvg.append("text")
-      .attr("x", svgWidth / 2)
-      .attr("y", 20)
-      .attr("text-anchor", "middle")
-      .style("font-size", "16px")
-      .text(`Aztec Diamond Dimer Configuration (n=${n})`);
-
-    // Create group for dimer elements with appropriate transformation
-    const dimerGroup = dimerSvg.append("g")
-      .attr("class", "dimer-elements")
-      .attr("transform", `translate(${svgWidth/2},${svgHeight/2}) scale(1,-1)`);  // Flip vertically with scale(1,-1)
-
-    // Scale factor based on the SVG size and the diamond size
-    const scale = Math.min(svgWidth, svgHeight) / (2 * n + 4) * 0.85;
-
-    // Draw the Aztec diamond grid vertices (points)
-    let vertexCount = 0;
-    for (let i = -n; i <= n; i++) {
-      for (let j = -n; j <= n; j++) {
-        if (Math.abs(i) + Math.abs(j) <= n + 1 &&
-            i + j <= n &&
-            i - j < n &&
-            -j - i < n + 1) {
-          dimerGroup.append("circle")
-            .attr("cx", i * scale)
-            .attr("cy", j * scale)
-            .attr("r", 1.5)
-            .attr("fill", "black");
-          vertexCount++;
-        }
-      }
-    }
-
-    // Draw background grid lines with low opacity
-    let edgeCount = 0;
-    for (let i = -n; i <= n; i++) {
-      for (let j = -n; j <= n; j++) {
-        if (Math.abs(i) + Math.abs(j) <= n + 1 &&
-            i + j <= n &&
-            i - j < n &&
-            -j - i < n + 1) {
-          // Draw horizontal edge to the right if in bounds
-          if (Math.abs(i+1) + Math.abs(j) <= n + 1 &&
-              (i+1) + j <= n &&
-              (i+1) - j < n &&
-              -j - (i+1) < n + 1) {
-            dimerGroup.append("line")
-              .attr("x1", i * scale)
-              .attr("y1", j * scale)
-              .attr("x2", (i+1) * scale)
-              .attr("y2", j * scale)
-              .attr("stroke", "black")
-              .attr("stroke-width", 0.5)
-              .attr("opacity", 0.3);
-            edgeCount++;
-          }
-
-          // Draw vertical edge up if in bounds
-          if (Math.abs(i) + Math.abs(j+1) <= n + 1 &&
-              i + (j+1) <= n &&
-              i - (j+1) < n &&
-              -(j+1) - i < n + 1) {
-            dimerGroup.append("line")
-              .attr("x1", i * scale)
-              .attr("y1", j * scale)
-              .attr("x2", i * scale)
-              .attr("y2", (j+1) * scale)
-              .attr("stroke", "black")
-              .attr("stroke-width", 0.5)
-              .attr("opacity", 0.3);
-            edgeCount++;
-          }
-        }
-      }
-    }
-
-    // Direct rendering of dimers without using a grid
-  let dimerCount = 0;
-
-  // The size value used for scaling
-  const size = 2 * n;
-
-  // Check if n is too large for dimer view
-  if (n >= 52) {
-    // Display message for large n values as an overlay on top of SVG
-    dimerSvg.append("rect")
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("width", svgWidth)
-      .attr("height", svgHeight)
-      .attr("fill", "rgba(255, 255, 255, 0.8)");
-
-    dimerSvg.append("text")
-      .attr("x", svgWidth / 2)
-      .attr("y", svgHeight / 2)
-      .attr("text-anchor", "middle")
-      .attr("dominant-baseline", "middle")
-      .style("font-size", "20px")
-      .style("font-weight", "bold")
-      .style("z-index", "100")
-      .text("This n is too large to see individual dimers");
-    return;
-  }
-
-  // Draw dimers directly from the domino data
-  dominoes.forEach(domino => {
-    // Based on the logs, dominoes look like: {"x":-20,"y":1000,"w":40,"h":20,"color":"green"}
-
-    // Only attempt to draw dimers that are within reasonable bounds
-    if (Math.abs(domino.x) > 1000 || Math.abs(domino.y) > 1000) {
-      return;
-    }
-
-    // Determine if it's a horizontal or vertical domino
-    const isHorizontal = domino.w > domino.h;
-
-    // Get color from the domino or use black if colors disabled
-    const color = useColors ? domino.color : "black";
-
-    // Calculate center point for the domino
-    const centerX = domino.x / 20;
-    const centerY = -domino.y / 20;  // Flip Y since our coordinate system is inverted
-
-    // Calculate dimer endpoints based on orientation
-    let x1, y1, x2, y2;
-
-    if (isHorizontal) {
-      // For horizontal dominos
-      x1 = centerX - 0.5;
-      y1 = centerY;
-      x2 = centerX + 0.5;
-      y2 = centerY;
-    } else {
-      // For vertical dominos
-      x1 = centerX;
-      y1 = centerY - 0.5;
-      x2 = centerX;
-      y2 = centerY + 0.5;
-    }
-
-    // Determine stroke width based on n (decreasing with larger n)
-    let strokeWidth, circleRadius;
-    if (n <= 20) {
-      strokeWidth = 6;
-      circleRadius = 6;
-    } else if (n <= 30) {
-      strokeWidth = 5;
-      circleRadius = 5;
-    } else if (n <= 40) {
-      strokeWidth = 3;
-      circleRadius = 3;
-    } else if (n <= 50) {
-      strokeWidth = 2;
-      circleRadius = 2;
-    } else {
-      strokeWidth = 1.5;
-      circleRadius = 1.5;
-    }
-
-    // Store the initial transform parameters for dimer view zoom behavior
-    // Extract the transformation values from the group
-    const transformStr = dimerGroup.attr("transform");
-    // Parse the transform string to get values (assuming format: translate(x,y) scale(x,-y))
-    // For the dimer view, the transform includes a vertical flip with scale(1,-1)
-    const translateMatch = transformStr.match(/translate\(([^,]+),([^)]+)\)/);
-    const scaleMatch = transformStr.match(/scale\(([^,]+),([^)]+)\)/);
-
-    if (translateMatch && scaleMatch) {
-      dimerInitialTransform = {
-        translateX: parseFloat(translateMatch[1]),
-        translateY: parseFloat(translateMatch[2]),
-        scaleX: parseFloat(scaleMatch[1]),
-        scaleY: parseFloat(scaleMatch[2])
-      };
-
-      // Reset the zoom transform when creating a new visualization
-      dimerSvg.call(dimerZoom.transform, d3.zoomIdentity);
-    }
-
-    // Draw the dimer on the grid
-    dimerGroup.append("line")
-      .attr("x1", isHorizontal ? (x1+1/2) * scale : x1 * scale)
-      .attr("y1", isHorizontal ? (y1+1) * scale : (y1 + 1/2) * scale)
-      .attr("x2", isHorizontal ? (x2+1/2) * scale : x2 * scale)
-      .attr("y2", isHorizontal ? (y2+1) * scale : (y2 + 1/2) * scale)
-      .attr("stroke", "black")
-      .attr("stroke-width", strokeWidth)
-      .attr("class", isHorizontal ? "dimer-edge-h" : "dimer-edge-v");
-
-    // Add circles at endpoints for better visibility
-    dimerGroup.append("circle")
-      .attr("cx", isHorizontal ? (x1+1/2) * scale : x1 * scale)
-      .attr("cy", isHorizontal ? (y1+1) * scale : (y1 + 1/2) * scale)
-      .attr("r", circleRadius)
-      .attr("fill", "black");
-
-    dimerGroup.append("circle")
-      .attr("cx", isHorizontal ? (x2+1/2) * scale : x2 * scale)
-      .attr("cy", isHorizontal ? (y2+1) * scale : (y2 + 1/2) * scale)
-      .attr("r", circleRadius)
-      .attr("fill", "black");
-
-    dimerCount++;
-  });
-
-  }
 
   // Update the visualization for a given n.
   async function updateVisualization(newN) {
@@ -1222,7 +845,6 @@ Module.onRuntimeInitialized = async function() {
 
     // Clear any previous simulation.
     svg.selectAll("g").remove();
-    dimerSvg.selectAll("*").remove();
     checkerboardGroup = null;
     pathsGroup = null;
     dimersGroup = null;
@@ -1356,15 +978,6 @@ Module.onRuntimeInitialized = async function() {
   const initialN = parseInt(inputField.value, 10);
   updateVisualization(initialN);
 
-  // Make sure both tab views are properly initialized once
-  setTimeout(() => {
-    if (currentConfigs && currentConfigs.config1 && currentConfigs.config1.length > 0) {
-      renderDimerView(currentConfigs.config1);
-
-      // Make the first tab (domino view) active by default
-      document.querySelector('.tablinks').click();
-    }
-  }, 1000);
 
   // TikZ export not supported for double dimer configurations
 };
