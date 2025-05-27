@@ -229,9 +229,8 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
     for (int i = 0; i < totalIterations; i++){
         a1 = delslide(a1);
         a1 = create(a1, x0[i + 1]);
-        // Update progress: scale from 10 to 90 over these iterations.
-        progressCounter = 10 + (int)(((double)(i + 1) / totalIterations) * 80);
-        emscripten_sleep(0); // Yield control so that progress updates are visible.
+        // Don't update progress here anymore - it's handled in simulateAztec
+        emscripten_sleep(0); // Yield control periodically
     }
     return a1;
 }
@@ -241,7 +240,7 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
 //
 // Exported function callable from JavaScript.
 // It creates a 2*n x 2*n weight matrix, runs the simulation,
-// and returns a JSON string with domino placements.
+// and returns a JSON string with TWO domino placements.
 // ---------------------------------------------------------------------
 extern "C" {
 
@@ -261,36 +260,49 @@ char* simulateAztec(int n) {
         } catch (const std::exception& e) {
             throw std::runtime_error("Error computing probability matrices");
         }
-        progressCounter = 10; // Probabilities computed.
+        progressCounter = 5; // Probabilities computed.
         emscripten_sleep(0); // Yield to update UI
 
-        // Generate domino configuration.
-        MatrixInt dominoConfig;
+        // Generate FIRST domino configuration.
+        MatrixInt dominoConfig1;
         try {
-            dominoConfig = aztecgen(prob);
+            dominoConfig1 = aztecgen(prob);
         } catch (const std::exception& e) {
-            throw std::runtime_error("Error generating domino configuration");
+            throw std::runtime_error("Error generating first domino configuration");
         }
-        progressCounter = 90; // Simulation steps complete.
+        progressCounter = 45; // First simulation complete.
+        emscripten_sleep(0); // Yield to update UI
+
+        // Generate SECOND domino configuration (independent).
+        MatrixInt dominoConfig2;
+        try {
+            dominoConfig2 = aztecgen(prob);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error generating second domino configuration");
+        }
+        progressCounter = 90; // Both simulations complete.
         emscripten_sleep(0); // Yield to update UI
 
         // Build JSON output with pre-allocated string for efficiency
-        int size = dominoConfig.size();
+        int size1 = dominoConfig1.size();
+        int size2 = dominoConfig2.size();
         double scale = 10.0;
 
         // Reserve a reasonable amount of space for the JSON string
         // Each domino needs ~100 chars, and about 1/4 of the cells will be dominoes
-        size_t estimatedJsonSize = (size * size / 4) * 100;
+        // Now we have TWO configurations
+        size_t estimatedJsonSize = (size1 * size1 / 4 + size2 * size2 / 4) * 100;
         string json;
-        json.reserve(estimatedJsonSize > 1024 ? estimatedJsonSize : 1024);
-        json.append("[");
+        json.reserve(estimatedJsonSize > 2048 ? estimatedJsonSize : 2048);
+        json.append("{\"config1\":[");
 
         bool first = true;
         char buffer[128]; // Buffer for formatting numbers
 
-        for (int i = 0; i < size; i++){
-            for (int j = 0; j < size; j++){
-                if (dominoConfig.at(i, j) == 1) {
+        // Process FIRST configuration
+        for (int i = 0; i < size1; i++){
+            for (int j = 0; j < size1; j++){
+                if (dominoConfig1.at(i, j) == 1) {
                     double x, y, w, h;
                     const char* color;
 
@@ -299,25 +311,25 @@ char* simulateAztec(int n) {
                     if (oddI && oddJ) { // i odd, j odd: Blue
                         color = "blue";
                         x = j - i - 2;
-                        y = size + 1 - (i + j) - 1;
+                        y = size1 + 1 - (i + j) - 1;
                         w = 4;
                         h = 2;
                     } else if (oddI && !oddJ) { // i odd, j even: Yellow
                         color = "yellow";
                         x = j - i - 1;
-                        y = size + 1 - (i + j) - 2;
+                        y = size1 + 1 - (i + j) - 2;
                         w = 2;
                         h = 4;
                     } else if (!oddI && !oddJ) { // i even, j even: Green
                         color = "green";
                         x = j - i - 2;
-                        y = size + 1 - (i + j) - 1;
+                        y = size1 + 1 - (i + j) - 1;
                         w = 4;
                         h = 2;
                     } else if (!oddI && oddJ) { // i even, j odd: Red
                         color = "red";
                         x = j - i - 1;
-                        y = size + 1 - (i + j) - 2;
+                        y = size1 + 1 - (i + j) - 2;
                         w = 2;
                         h = 4;
                     } else {
@@ -341,7 +353,64 @@ char* simulateAztec(int n) {
             }
         }
         
-        json.append("]");
+        json.append("],\"config2\":[");
+        
+        // Process SECOND configuration
+        first = true;
+        for (int i = 0; i < size2; i++){
+            for (int j = 0; j < size2; j++){
+                if (dominoConfig2.at(i, j) == 1) {
+                    double x, y, w, h;
+                    const char* color;
+
+                    // Determine domino properties based on position
+                    bool oddI = (i & 1), oddJ = (j & 1);
+                    if (oddI && oddJ) { // i odd, j odd: Blue
+                        color = "blue";
+                        x = j - i - 2;
+                        y = size2 + 1 - (i + j) - 1;
+                        w = 4;
+                        h = 2;
+                    } else if (oddI && !oddJ) { // i odd, j even: Yellow
+                        color = "yellow";
+                        x = j - i - 1;
+                        y = size2 + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                    } else if (!oddI && !oddJ) { // i even, j even: Green
+                        color = "green";
+                        x = j - i - 2;
+                        y = size2 + 1 - (i + j) - 1;
+                        w = 4;
+                        h = 2;
+                    } else if (!oddI && oddJ) { // i even, j odd: Red
+                        color = "red";
+                        x = j - i - 1;
+                        y = size2 + 1 - (i + j) - 2;
+                        w = 2;
+                        h = 4;
+                    } else {
+                        continue;
+                    }
+                    
+                    x *= scale;
+                    y *= scale;
+                    w *= scale;
+                    h *= scale;
+                    
+                    if (!first) json.append(",");
+                    else first = false;
+
+                    // Use sprintf for efficient number formatting
+                    snprintf(buffer, sizeof(buffer), 
+                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}", 
+                             x, y, w, h, color);
+                    json.append(buffer);
+                }
+            }
+        }
+        
+        json.append("]}");
         progressCounter = 100; // Finished.
 
         // Allocate memory for the output string
