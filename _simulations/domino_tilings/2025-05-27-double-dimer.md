@@ -7,8 +7,6 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-27-double-dimer.cpp'
     txt: 'C++ code for the simulation'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py'
-    txt: 'Python script for TikZ export (now integrated directly in the web page)'
 ---
 
 <style>
