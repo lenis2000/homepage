@@ -45,8 +45,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 <b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from one of three distributions:
 - **Bernoulli**: Takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (1/2 and 3/2 with equal probability) create a mildly inhomogeneous environment.
 - **Gaussian**: $W_{ij} = e^{\beta X_{ij}}$ where $X_{ij} \sim N(0,1)$ are independent standard normal random variables. The parameter $\beta$ controls the variance of the log-weights.
-- **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for NE/SE edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for NW/SW edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of weights on the NE/SE edges.
-
+- **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for some of the edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for other edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of the gamma weights.
 
 ---
 
@@ -69,7 +68,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
     <input type="radio" name="weight-dist" value="gaussian"> Gaussian (e^{βX})
   </label>
   <label style="margin-left: 10px;">
-    <input type="radio" name="weight-dist" value="gamma"> Gamma (NE/SE edges)
+    <input type="radio" name="weight-dist" value="gamma"> Gamma
   </label>
 </div>
 
@@ -97,7 +96,6 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
   <strong>Gamma Parameters:</strong>
   <label for="shape-input" style="margin-left: 10px;">Shape (α): </label>
   <input id="shape-input" type="number" value="2.0" min="0.1" max="20" step="0.1" size="6" style="width: 60px;">
-  <span style="margin-left: 10px; font-style: italic;">NE/SE edges: Gamma(α,1), NW/SW edges: 1</span>
 </div>
 
 <!-- Display options -->
@@ -109,6 +107,10 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
   <label style="margin-left: 20px;">
     <input type="checkbox" id="show-weight-matrix">
     Show weight matrix sample (upper-left 8×8)
+  </label>
+  <label style="margin-left: 20px;">
+    <input type="checkbox" id="show-nested-loops">
+    Show colored heights of nested loops
   </label>
 </div>
 
@@ -169,6 +171,7 @@ Module.onRuntimeInitialized = async function() {
   const shapeInput = document.getElementById("shape-input");
   const showDoubleEdgesCheckbox = document.getElementById("show-double-edges");
   const showWeightMatrixCheckbox = document.getElementById("show-weight-matrix");
+  const showNestedLoopsCheckbox = document.getElementById("show-nested-loops");
   const weightMatrixDisplay = document.getElementById("weight-matrix-display");
   const weightMatrixContent = document.getElementById("weight-matrix-content");
   const bernoulliParams = document.getElementById("bernoulli-params");
@@ -190,6 +193,8 @@ Module.onRuntimeInitialized = async function() {
   let dimersGroup; // Group for dimers overlay
   let heightGroup; // Group for height function display
   let showDoubleEdges = true; // Track whether to show double edges
+  let nestedLoopsGroup; // Group for nested loops visualization
+  let showNestedLoops = false; // Track whether to show nested loops
 
   // Function to get current distribution type
   function getCurrentDistribution() {
@@ -204,24 +209,24 @@ Module.onRuntimeInitialized = async function() {
   // Function to display weight matrix
   function displayWeightMatrix(matrix) {
     if (!matrix || matrix.length === 0) return;
-    
+
     const distType = getCurrentDistribution();
     let html = '<table style="border-collapse: collapse;">';
-    
+
     // Add row/column headers
     html += '<tr><td style="padding: 4px; border: 1px solid #ccc;"></td>';
     for (let j = 0; j < matrix[0].length; j++) {
       html += `<td style="padding: 4px; border: 1px solid #ccc; font-weight: bold; text-align: center;">j=${j}</td>`;
     }
     html += '</tr>';
-    
+
     // Add matrix rows
     for (let i = 0; i < matrix.length; i++) {
       html += `<tr><td style="padding: 4px; border: 1px solid #ccc; font-weight: bold;">i=${i}</td>`;
       for (let j = 0; j < matrix[i].length; j++) {
         const value = matrix[i][j];
         let bgColor = '#ffffff';
-        
+
         if (distType === 'bernoulli') {
           bgColor = value === parseFloat(value1Input.value) ? '#e8f5e9' : '#fff3e0';
         } else if (distType === 'gaussian') {
@@ -239,13 +244,13 @@ Module.onRuntimeInitialized = async function() {
             bgColor = `rgb(255, ${255-intensity/2}, ${255-intensity})`;
           }
         }
-        
+
         html += `<td style="padding: 4px; border: 1px solid #ccc; text-align: right; background-color: ${bgColor};">${value.toFixed(3)}</td>`;
       }
       html += '</tr>';
     }
     html += '</table>';
-    
+
     html += '<div style="margin-top: 10px; font-size: 11px;">';
     if (distType === 'bernoulli') {
       html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #e8f5e9; border: 1px solid #ccc;"></span> Value 1 (${value1Input.value})<br>`;
@@ -257,7 +262,7 @@ Module.onRuntimeInitialized = async function() {
       html += `<span style="display: inline-block; width: 15px; height: 15px; background: linear-gradient(to right, rgb(255,255,255), rgb(255,128,128)); border: 1px solid #ccc;"></span> Gamma(${shapeInput.value}, 1) (NE/SE edges, even rows)`;
     }
     html += '</div>';
-    
+
     weightMatrixContent.innerHTML = html;
   }
 
@@ -309,6 +314,10 @@ Module.onRuntimeInitialized = async function() {
         }
         if (heightGroup) {
           heightGroup.attr("transform",
+            `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        }
+        if (nestedLoopsGroup) {
+          nestedLoopsGroup.attr("transform",
             `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
         }
       }
@@ -713,6 +722,292 @@ Module.onRuntimeInitialized = async function() {
     heightGroup.raise();   // keep on top
   }
 
+  // Function to detect and visualize nested loops for double dimer configurations
+  function toggleNestedLoops() {
+    // Remove existing nested loops visualization if it exists
+    if (nestedLoopsGroup) {
+      nestedLoopsGroup.remove();
+      nestedLoopsGroup = null;
+    }
+
+    // If nested loops are not enabled or no configs, just return
+    if (!showNestedLoops || !currentConfigs) return;
+
+    // Get both configurations
+    const config1 = currentConfigs.config1;
+    const config2 = currentConfigs.config2;
+
+    // Compute bounding box
+    const allDominoes = [...config1, ...config2];
+    const minX = d3.min(allDominoes, d => d.x);
+    const minY = d3.min(allDominoes, d => d.y);
+    const maxX = d3.max(allDominoes, d => d.x + d.w);
+    const maxY = d3.max(allDominoes, d => d.y + d.h);
+
+    // Use the computed dimensions of the SVG
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
+    const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
+
+    // Create a new group for the nested loops visualization
+    nestedLoopsGroup = svg.append("g")
+      .attr("class", "nested-loops")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+    // Build the union graph from both configurations
+    const unionGraph = new Map(); // vertex -> set of adjacent vertices
+    const allEdges = new Set(); // set of all edges in normalized form
+    
+    // Helper function to add edges from a domino to the graph
+    const addDominoToGraph = (domino) => {
+      const centerX = domino.x + domino.w / 2;
+      const centerY = domino.y + domino.h / 2;
+      const isHorizontal = domino.w > domino.h;
+
+      let x1, y1, x2, y2;
+      if (isHorizontal) {
+        x1 = centerX - domino.w / 4;
+        y1 = centerY;
+        x2 = centerX + domino.w / 4;
+        y2 = centerY;
+      } else {
+        x1 = centerX;
+        y1 = centerY - domino.h / 4;
+        x2 = centerX;
+        y2 = centerY + domino.h / 4;
+      }
+
+      // Round to avoid floating point issues
+      x1 = Math.round(x1 * 100) / 100;
+      y1 = Math.round(y1 * 100) / 100;
+      x2 = Math.round(x2 * 100) / 100;
+      y2 = Math.round(y2 * 100) / 100;
+
+      const v1 = `${x1},${y1}`;
+      const v2 = `${x2},${y2}`;
+      
+      // Add to adjacency list
+      if (!unionGraph.has(v1)) unionGraph.set(v1, new Set());
+      if (!unionGraph.has(v2)) unionGraph.set(v2, new Set());
+      unionGraph.get(v1).add(v2);
+      unionGraph.get(v2).add(v1);
+      
+      // Add edge to set
+      const edgeKey = x1 < x2 || (x1 === x2 && y1 < y2) ? `${v1}|${v2}` : `${v2}|${v1}`;
+      allEdges.add(edgeKey);
+    };
+    
+    // Build the union graph from both configurations
+    config1.forEach(addDominoToGraph);
+    config2.forEach(addDominoToGraph);
+    
+    // Find all faces (loops) in the planar graph using a face-finding algorithm
+    const faces = [];
+    const usedHalfEdges = new Set();
+    
+    // For each vertex, try to trace faces starting from each outgoing edge
+    unionGraph.forEach((neighbors, startVertex) => {
+      neighbors.forEach(firstNeighbor => {
+        const halfEdge = `${startVertex}->${firstNeighbor}`;
+        if (usedHalfEdges.has(halfEdge)) return;
+        
+        // Try to trace a face starting from this half-edge
+        const face = [startVertex];
+        let current = firstNeighbor;
+        let previous = startVertex;
+        
+        while (current !== startVertex) {
+          face.push(current);
+          usedHalfEdges.add(`${previous}->${current}`);
+          
+          // Find the next vertex by going clockwise around current
+          const [cx, cy] = current.split(',').map(Number);
+          const [px, py] = previous.split(',').map(Number);
+          const incomingAngle = Math.atan2(py - cy, px - cx);
+          
+          const neighbors = Array.from(unionGraph.get(current) || []);
+          if (neighbors.length === 0) break;
+          
+          // Sort neighbors by angle relative to incoming edge
+          const sortedNeighbors = neighbors
+            .filter(v => v !== previous)
+            .map(v => {
+              const [vx, vy] = v.split(',').map(Number);
+              let angle = Math.atan2(vy - cy, vx - cx) - incomingAngle;
+              while (angle <= 0) angle += 2 * Math.PI;
+              return { vertex: v, angle };
+            })
+            .sort((a, b) => a.angle - b.angle);
+          
+          if (sortedNeighbors.length === 0) break;
+          
+          // Take the first neighbor (most clockwise)
+          previous = current;
+          current = sortedNeighbors[0].vertex;
+          
+          if (face.length > 100) break; // Safety check
+        }
+        
+        if (current === startVertex && face.length >= 3) {
+          // We completed a cycle
+          faces.push(face);
+        }
+      });
+    });
+    
+    // Color cells based on how many loops surround them
+    const cellSize = n > 0 ? (maxX - minX) / (2 * n) : 10; // Grid cell size
+    
+    // Create color scale - 0 loops = no color, 1+ loops = colors
+    const maxSurroundingLoops = 10; // Maximum we expect
+    const colorScale = d3.scaleSequential(d3.interpolateViridis)
+      .domain([1, maxSurroundingLoops]);
+    
+    // For each cell, count how many loops contain it
+    for (let x = minX; x < maxX; x += cellSize) {
+      for (let y = minY; y < maxY; y += cellSize) {
+        const cx = x + cellSize;
+        const cy = y + cellSize;
+        
+        // Count how many faces contain this point
+        let surroundingLoops = 0;
+        
+        faces.forEach(face => {
+          // Use ray casting to check if point is inside polygon
+          const coords = face.map(v => v.split(',').map(Number));
+          let inside = false;
+          
+          for (let i = 0; i < coords.length; i++) {
+            const j = (i + 1) % coords.length;
+            const [x1, y1] = coords[i];
+            const [x2, y2] = coords[j];
+            
+            if ((y1 > cy) !== (y2 > cy) && 
+                cx < (x2 - x1) * (cy - y1) / (y2 - y1) + x1) {
+              inside = !inside;
+            }
+          }
+          
+          if (inside) {
+            surroundingLoops++;
+          }
+        });
+        
+        // Only color cells that are inside at least one loop
+        if (surroundingLoops > 0) {
+          const color = colorScale(Math.min(surroundingLoops, maxSurroundingLoops));
+          
+          nestedLoopsGroup.append("rect")
+            .attr("x", x + cellSize/2)
+            .attr("y", y + cellSize/2)
+            .attr("width", cellSize)
+            .attr("height", cellSize)
+            .attr("fill", color)
+            .attr("fill-opacity", 0.7)
+            .attr("stroke", "none");
+        }
+      }
+    }
+    
+    // Optionally draw all edges from the union graph
+    allEdges.forEach(edgeKey => {
+      const [v1, v2] = edgeKey.split('|');
+      const [x1, y1] = v1.split(',').map(Number);
+      const [x2, y2] = v2.split(',').map(Number);
+      
+      nestedLoopsGroup.append("line")
+        .attr("x1", x1)
+        .attr("y1", y1)
+        .attr("x2", x2)
+        .attr("y2", y2)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .attr("stroke-opacity", 0.3);
+    });
+    
+    // Add a legend
+    const legendWidth = 200;
+    const legendHeight = 20;
+    const legendX = minX;
+    const legendY = maxY + 10;
+    
+    // Create gradient for legend
+    const gradientId = "nested-loops-gradient";
+    const gradient = nestedLoopsGroup.append("defs")
+      .append("linearGradient")
+      .attr("id", gradientId)
+      .attr("x1", "0%")
+      .attr("x2", "100%");
+    
+    // Add color stops
+    gradient.append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", "white");
+    
+    for (let i = 1; i <= 10; i++) {
+      gradient.append("stop")
+        .attr("offset", `${i * 10}%`)
+        .attr("stop-color", colorScale(i));
+    }
+    
+    // Draw legend rectangle
+    nestedLoopsGroup.append("rect")
+      .attr("x", legendX)
+      .attr("y", legendY)
+      .attr("width", legendWidth)
+      .attr("height", legendHeight)
+      .attr("fill", `url(#${gradientId})`)
+      .attr("stroke", "black")
+      .attr("stroke-width", 1);
+    
+    // Add legend labels
+    nestedLoopsGroup.append("text")
+      .attr("x", legendX - 5)
+      .attr("y", legendY + legendHeight/2)
+      .attr("text-anchor", "end")
+      .attr("dominant-baseline", "middle")
+      .attr("font-size", "12px")
+      .text("0");
+    
+    nestedLoopsGroup.append("text")
+      .attr("x", legendX + legendWidth/5)
+      .attr("y", legendY + legendHeight + 15)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "12px")
+      .text("1");
+    
+    nestedLoopsGroup.append("text")
+      .attr("x", legendX + legendWidth)
+      .attr("y", legendY + legendHeight + 15)
+      .attr("text-anchor", "end")
+      .attr("font-size", "12px")
+      .text("10+");
+    
+    nestedLoopsGroup.append("text")
+      .attr("x", legendX + legendWidth / 2)
+      .attr("y", legendY - 5)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "14px")
+      .attr("font-weight", "bold")
+      .text("Number of Surrounding Loops");
+    
+    // Add info about number of faces found
+    nestedLoopsGroup.append("text")
+      .attr("x", legendX + legendWidth / 2)
+      .attr("y", legendY + legendHeight + 30)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "12px")
+      .text(`Found ${faces.length} faces in the union graph`);
+    
+    // Move nested loops group below dominoes but above background
+    if (nestedLoopsGroup) {
+      nestedLoopsGroup.lower();
+    }
+  }
+
 
   // Function to toggle dimers on/off in the domino view
   function toggleDimers() {
@@ -802,7 +1097,7 @@ Module.onRuntimeInitialized = async function() {
   function renderDoubleDimer(configs) {
     // For double dimer, we show dimers from both configs
     const allDominoes = [...configs.config1, ...configs.config2];
-    
+
     // Compute bounding box
     const minX = d3.min(allDominoes, d => d.x);
     const minY = d3.min(allDominoes, d => d.y);
@@ -837,6 +1132,7 @@ Module.onRuntimeInitialized = async function() {
     pathsGroup = null;
     dimersGroup = null;
     heightGroup = null;
+    nestedLoopsGroup = null;
 
     // Create group for the visualization
     const group = svg.append("g")
@@ -845,61 +1141,9 @@ Module.onRuntimeInitialized = async function() {
 
     // Create a map to track edges from both configurations
     const edgeMap = new Map();
-    
+
     // Helper function to create edge key
     const createEdgeKey = (domino) => {
-      const centerX = domino.x + domino.w / 2;
-      const centerY = domino.y + domino.h / 2;
-      const isHorizontal = domino.w > domino.h;
-      
-      let x1, y1, x2, y2;
-      if (isHorizontal) {
-        x1 = centerX - domino.w / 4;
-        y1 = centerY;
-        x2 = centerX + domino.w / 4;
-        y2 = centerY;
-      } else {
-        x1 = centerX;
-        y1 = centerY - domino.h / 4;
-        x2 = centerX;
-        y2 = centerY + domino.h / 4;
-      }
-      
-      // Round to avoid floating point comparison issues
-      x1 = Math.round(x1 * 1000) / 1000;
-      y1 = Math.round(y1 * 1000) / 1000;
-      x2 = Math.round(x2 * 1000) / 1000;
-      y2 = Math.round(y2 * 1000) / 1000;
-      
-      // Create a normalized key (smaller coords first)
-      return `${Math.min(x1,x2)},${Math.min(y1,y2)}-${Math.max(x1,x2)},${Math.max(y1,y2)}`;
-    };
-    
-    // First pass: identify all edges and mark which configs they belong to
-    configs.config1.forEach(domino => {
-      const key = createEdgeKey(domino);
-      edgeMap.set(key, { config1: true, config2: false, domino: domino });
-    });
-    
-    configs.config2.forEach(domino => {
-      const key = createEdgeKey(domino);
-      if (edgeMap.has(key)) {
-        edgeMap.get(key).config2 = true;
-      } else {
-        edgeMap.set(key, { config1: false, config2: true, domino: domino });
-      }
-    });
-    
-    // Second pass: draw edges based on whether they're double edges or not
-    edgeMap.forEach((edgeInfo, key) => {
-      const domino = edgeInfo.domino;
-      const isDoubleEdge = edgeInfo.config1 && edgeInfo.config2;
-      
-      // Skip double edges if checkbox is unchecked
-      if (isDoubleEdge && !showDoubleEdges) {
-        return;
-      }
-      
       const centerX = domino.x + domino.w / 2;
       const centerY = domino.y + domino.h / 2;
       const isHorizontal = domino.w > domino.h;
@@ -916,7 +1160,59 @@ Module.onRuntimeInitialized = async function() {
         x2 = centerX;
         y2 = centerY + domino.h / 4;
       }
-      
+
+      // Round to avoid floating point comparison issues
+      x1 = Math.round(x1 * 1000) / 1000;
+      y1 = Math.round(y1 * 1000) / 1000;
+      x2 = Math.round(x2 * 1000) / 1000;
+      y2 = Math.round(y2 * 1000) / 1000;
+
+      // Create a normalized key (smaller coords first)
+      return `${Math.min(x1,x2)},${Math.min(y1,y2)}-${Math.max(x1,x2)},${Math.max(y1,y2)}`;
+    };
+
+    // First pass: identify all edges and mark which configs they belong to
+    configs.config1.forEach(domino => {
+      const key = createEdgeKey(domino);
+      edgeMap.set(key, { config1: true, config2: false, domino: domino });
+    });
+
+    configs.config2.forEach(domino => {
+      const key = createEdgeKey(domino);
+      if (edgeMap.has(key)) {
+        edgeMap.get(key).config2 = true;
+      } else {
+        edgeMap.set(key, { config1: false, config2: true, domino: domino });
+      }
+    });
+
+    // Second pass: draw edges based on whether they're double edges or not
+    edgeMap.forEach((edgeInfo, key) => {
+      const domino = edgeInfo.domino;
+      const isDoubleEdge = edgeInfo.config1 && edgeInfo.config2;
+
+      // Skip double edges if checkbox is unchecked
+      if (isDoubleEdge && !showDoubleEdges) {
+        return;
+      }
+
+      const centerX = domino.x + domino.w / 2;
+      const centerY = domino.y + domino.h / 2;
+      const isHorizontal = domino.w > domino.h;
+
+      let x1, y1, x2, y2;
+      if (isHorizontal) {
+        x1 = centerX - domino.w / 4;
+        y1 = centerY;
+        x2 = centerX + domino.w / 4;
+        y2 = centerY;
+      } else {
+        x1 = centerX;
+        y1 = centerY - domino.h / 4;
+        x2 = centerX;
+        y2 = centerY + domino.h / 4;
+      }
+
       // Determine color based on which config(s) the edge belongs to
       let color, opacity;
       if (isDoubleEdge) {
@@ -956,6 +1252,11 @@ Module.onRuntimeInitialized = async function() {
         .attr("fill", color)
         .attr("fill-opacity", opacity);
     });
+    
+    // Add nested loops visualization if enabled
+    if (showNestedLoops) {
+      toggleNestedLoops();
+    }
   }
 
   // Render the dominoes with or without colors
@@ -1073,7 +1374,7 @@ Module.onRuntimeInitialized = async function() {
       // Get weight parameters based on distribution type
       const distType = getCurrentDistribution();
       let ptrPromise;
-      
+
       if (distType === 'gaussian') {
         // For Gaussian distribution
         const beta = parseFloat(betaInput.value);
@@ -1175,7 +1476,7 @@ Module.onRuntimeInitialized = async function() {
   // Make sure the update button always triggers a new sample, even if value hasn't changed
   document.getElementById("update-btn").addEventListener("click", function() {
     const newN = parseInt(inputField.value, 10);
-    
+
     // Check for a valid positive even number.
     if (isNaN(newN) || newN < 2) {
       progressElem.innerText = "Please enter a valid positive even number for n (n ≥ 2).";
@@ -1189,7 +1490,7 @@ Module.onRuntimeInitialized = async function() {
       progressElem.innerText = "Please enter a number no greater than 400.";
       return;
     }
-    
+
     // Force a resample even if the value hasn't changed
     lastValue = -1; // Reset lastValue to force update
     updateVisualization(newN);
@@ -1199,7 +1500,7 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("cancel-btn").addEventListener("click", function() {
     stopSimulation();
   });
-  
+
   // Add checkbox event listener for double edges
   showDoubleEdgesCheckbox.addEventListener("change", function() {
     showDoubleEdges = this.checked;
@@ -1208,10 +1509,19 @@ Module.onRuntimeInitialized = async function() {
       renderDoubleDimer(currentConfigs);
     }
   });
-  
+
   // Add checkbox event listener for weight matrix display
   showWeightMatrixCheckbox.addEventListener("change", function() {
     weightMatrixDisplay.style.display = this.checked ? 'block' : 'none';
+  });
+
+  // Add checkbox event listener for nested loops visualization
+  showNestedLoopsCheckbox.addEventListener("change", function() {
+    showNestedLoops = this.checked;
+    // Re-render if we have data
+    if (currentConfigs) {
+      renderDoubleDimer(currentConfigs);
+    }
   });
 
   // Run an initial simulation.
@@ -1228,16 +1538,16 @@ Module.onRuntimeInitialized = async function() {
     // Process both configurations
     const config1 = currentConfigs.config1;
     const config2 = currentConfigs.config2;
-    
+
     // Create a map to track edges from both configurations
     const edgeMap = new Map();
-    
+
     // Helper function to create edge key
     const createEdgeKey = (domino) => {
       const centerX = domino.x + domino.w / 2;
       const centerY = domino.y + domino.h / 2;
       const isHorizontal = domino.w > domino.h;
-      
+
       let x1, y1, x2, y2;
       if (isHorizontal) {
         x1 = centerX - domino.w / 4;
@@ -1250,48 +1560,48 @@ Module.onRuntimeInitialized = async function() {
         x2 = centerX;
         y2 = centerY + domino.h / 4;
       }
-      
+
       // Round to avoid floating point comparison issues
       x1 = Math.round(x1 * 1000) / 1000;
       y1 = Math.round(y1 * 1000) / 1000;
       x2 = Math.round(x2 * 1000) / 1000;
       y2 = Math.round(y2 * 1000) / 1000;
-      
+
       // Create a normalized key (smaller coords first)
       return {
         key: `${Math.min(x1,x2)},${Math.min(y1,y2)}-${Math.max(x1,x2)},${Math.max(y1,y2)}`,
         coords: {x1, y1, x2, y2}
       };
     };
-    
+
     // First pass: collect all dimers and mark which configs they belong to
     config1.forEach(domino => {
       const {key, coords} = createEdgeKey(domino);
-      edgeMap.set(key, { 
-        config1: true, 
-        config2: false, 
+      edgeMap.set(key, {
+        config1: true,
+        config2: false,
         coords: coords,
-        domino: domino 
+        domino: domino
       });
     });
-    
+
     config2.forEach(domino => {
       const {key, coords} = createEdgeKey(domino);
       if (edgeMap.has(key)) {
         edgeMap.get(key).config2 = true;
       } else {
-        edgeMap.set(key, { 
-          config1: false, 
-          config2: true, 
+        edgeMap.set(key, {
+          config1: false,
+          config2: true,
           coords: coords,
-          domino: domino 
+          domino: domino
         });
       }
     });
 
     // Find the bounds of the drawing
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    
+
     edgeMap.forEach((edgeInfo) => {
       const c = edgeInfo.coords;
       minX = Math.min(minX, c.x1/100, c.x2/100);
@@ -1330,11 +1640,11 @@ Module.onRuntimeInitialized = async function() {
     const config1Only = [];
     const config2Only = [];
     const doubleEdges = [];
-    
+
     edgeMap.forEach((edgeInfo) => {
       const isDoubleEdge = edgeInfo.config1 && edgeInfo.config2;
       const c = edgeInfo.coords;
-      
+
       // Convert to TikZ coordinates (scale and shift)
       const dimer = {
         x1: c.x1/100 - minX,
@@ -1342,7 +1652,7 @@ Module.onRuntimeInitialized = async function() {
         x2: c.x2/100 - minX,
         y2: maxY - c.y2/100
       };
-      
+
       if (isDoubleEdge) {
         doubleEdges.push(dimer);
       } else if (edgeInfo.config1) {
