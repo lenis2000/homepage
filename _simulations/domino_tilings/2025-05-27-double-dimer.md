@@ -75,6 +75,19 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
     <input type="checkbox" id="show-double-edges" checked>
     Show double edges (edges present in both configurations)
   </label>
+  <label style="margin-left: 20px;">
+    <input type="checkbox" id="show-weight-matrix">
+    Show weight matrix sample (upper-left 8×8)
+  </label>
+</div>
+
+<!-- Weight matrix display (hidden by default) -->
+<div id="weight-matrix-display" style="display: none; margin-bottom: 10px; font-family: monospace; font-size: 12px;">
+  <strong>Shared Weight Matrix Sample (8×8 upper-left corner):</strong>
+  <p style="font-size: 11px; color: #666; margin: 5px 0;">Note: Both domino tilings use the same weight matrix. They are independent samples from the same weighted distribution.</p>
+  <div id="weight-matrix-content" style="margin-top: 5px; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; overflow-x: auto;">
+    <!-- Matrix content will be inserted here -->
+  </div>
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
@@ -108,6 +121,9 @@ Module.onRuntimeInitialized = async function() {
   const value2Input = document.getElementById("value2-input");
   const prob1Input = document.getElementById("prob1-input");
   const showDoubleEdgesCheckbox = document.getElementById("show-double-edges");
+  const showWeightMatrixCheckbox = document.getElementById("show-weight-matrix");
+  const weightMatrixDisplay = document.getElementById("weight-matrix-display");
+  const weightMatrixContent = document.getElementById("weight-matrix-content");
   let progressInterval;
   let useColors = true; // Track coloring state
   let useCheckerboard = false; // Track checkerboard state
@@ -123,6 +139,39 @@ Module.onRuntimeInitialized = async function() {
   let dimersGroup; // Group for dimers overlay
   let heightGroup; // Group for height function display
   let showDoubleEdges = true; // Track whether to show double edges
+
+  // Function to display weight matrix
+  function displayWeightMatrix(matrix) {
+    if (!matrix || matrix.length === 0) return;
+    
+    let html = '<table style="border-collapse: collapse;">';
+    
+    // Add row/column headers
+    html += '<tr><td style="padding: 4px; border: 1px solid #ccc;"></td>';
+    for (let j = 0; j < matrix[0].length; j++) {
+      html += `<td style="padding: 4px; border: 1px solid #ccc; font-weight: bold; text-align: center;">j=${j}</td>`;
+    }
+    html += '</tr>';
+    
+    // Add matrix rows
+    for (let i = 0; i < matrix.length; i++) {
+      html += `<tr><td style="padding: 4px; border: 1px solid #ccc; font-weight: bold;">i=${i}</td>`;
+      for (let j = 0; j < matrix[i].length; j++) {
+        const value = matrix[i][j];
+        const bgColor = value === parseFloat(value1Input.value) ? '#e8f5e9' : '#fff3e0';
+        html += `<td style="padding: 4px; border: 1px solid #ccc; text-align: right; background-color: ${bgColor};">${value}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</table>';
+    
+    html += '<div style="margin-top: 10px; font-size: 11px;">';
+    html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #e8f5e9; border: 1px solid #ccc;"></span> Value 1 (${value1Input.value})<br>`;
+    html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #fff3e0; border: 1px solid #ccc;"></span> Value 2 (${value2Input.value})`;
+    html += '</div>';
+    
+    weightMatrixContent.innerHTML = html;
+  }
 
   // Create zoom behavior for domino view
   let initialTransform = {}; // Store initial transform parameters
@@ -950,7 +999,15 @@ Module.onRuntimeInitialized = async function() {
       }
 
       try {
-        currentConfigs = JSON.parse(jsonStr); // Parse the two configurations
+        const parsedData = JSON.parse(jsonStr);
+        currentConfigs = {
+          config1: parsedData.config1,
+          config2: parsedData.config2
+        };
+        // Store weight matrix if available
+        if (parsedData.weightMatrix) {
+          displayWeightMatrix(parsedData.weightMatrix);
+        }
         // Merge both configurations for display
         currentDominoes = [...currentConfigs.config1, ...currentConfigs.config2];
       } catch (e) {
@@ -1036,6 +1093,11 @@ Module.onRuntimeInitialized = async function() {
     if (currentConfigs) {
       renderDoubleDimer(currentConfigs);
     }
+  });
+  
+  // Add checkbox event listener for weight matrix display
+  showWeightMatrixCheckbox.addEventListener("change", function() {
+    weightMatrixDisplay.style.display = this.checked ? 'block' : 'none';
   });
 
   // Run an initial simulation.

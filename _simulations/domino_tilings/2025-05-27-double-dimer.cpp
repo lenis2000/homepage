@@ -306,11 +306,26 @@ char* simulateAztecWithWeights(int n, double value1, double value2, double prob1
 
         // Reserve a reasonable amount of space for the JSON string
         // Each domino needs ~100 chars, and about 1/4 of the cells will be dominoes
-        // Now we have TWO configurations
-        size_t estimatedJsonSize = (size1 * size1 / 4 + size2 * size2 / 4) * 100;
+        // Now we have TWO configurations, plus weight matrix
+        size_t estimatedJsonSize = (size1 * size1 / 4 + size2 * size2 / 4) * 100 + 2000;
         string json;
         json.reserve(estimatedJsonSize > 2048 ? estimatedJsonSize : 2048);
-        json.append("{\"config1\":[");
+        
+        // Add weight matrix sample (8x8 upper-left corner)
+        json.append("{\"weightMatrix\":[");
+        int matrixSampleSize = std::min(8, dim);
+        for (int i = 0; i < matrixSampleSize; i++) {
+            if (i > 0) json.append(",");
+            json.append("[");
+            for (int j = 0; j < matrixSampleSize; j++) {
+                if (j > 0) json.append(",");
+                char weightBuffer[32];
+                snprintf(weightBuffer, sizeof(weightBuffer), "%.2f", A1a.at(i, j));
+                json.append(weightBuffer);
+            }
+            json.append("]");
+        }
+        json.append("],\"config1\":[");
 
         bool first = true;
         char buffer[128]; // Buffer for formatting numbers
