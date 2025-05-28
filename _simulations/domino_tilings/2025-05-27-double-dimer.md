@@ -44,7 +44,7 @@ This simulation demonstrates <b>double dimer configurations</b> on an <a href="h
 The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
 I set the upper bound at $n=400$ to avoid freezing your browser.
 
-<b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from a Bernoulli distribution that takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (0.1 and 50 with equal probability) create an interesting phase transition between frozen and liquid regions.
+<b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from a Bernoulli distribution that takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (1/2 and 3/2 with equal probability) create a mildly inhomogeneous environment.
 
 
 ---
@@ -62,11 +62,19 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 <div style="margin-bottom: 10px;">
   <strong>Weight Distribution (Bernoulli):</strong>
   <label for="value1-input" style="margin-left: 10px;">Value 1: </label>
-  <input id="value1-input" type="number" value="0.1" min="0.01" step="0.1" size="6" style="width: 60px;">
+  <input id="value1-input" type="number" value="0.5" min="0.01" step="0.1" size="6" style="width: 60px;">
   <label for="value2-input" style="margin-left: 10px;">Value 2: </label>
-  <input id="value2-input" type="number" value="50" min="0.01" step="1" size="6" style="width: 60px;">
+  <input id="value2-input" type="number" value="1.5" min="0.01" step="0.1" size="6" style="width: 60px;">
   <label for="prob1-input" style="margin-left: 10px;">P(Value 1): </label>
   <input id="prob1-input" type="number" value="0.5" min="0" max="1" step="0.1" size="4" style="width: 60px;">
+</div>
+
+<!-- Display options -->
+<div style="margin-bottom: 10px;">
+  <label>
+    <input type="checkbox" id="show-double-edges" checked>
+    Show double edges (edges present in both configurations)
+  </label>
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
@@ -76,7 +84,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 <!-- Domino View -->
 <div id="domino-view">
   <div style="margin-top: 8px; margin-bottom: 8px;">
-    <strong>Double Dimer Configuration:</strong> Black dimers show the first configuration, red dimers show the second configuration.
+    <strong>Double Dimer Configuration:</strong> Black dimers show the first configuration, red dimers show the second configuration. Purple dimers are "double edges" that appear in both configurations. Use the checkbox above to show/hide double edges.
   </div>
 
   <div class="row">
@@ -99,6 +107,7 @@ Module.onRuntimeInitialized = async function() {
   const value1Input = document.getElementById("value1-input");
   const value2Input = document.getElementById("value2-input");
   const prob1Input = document.getElementById("prob1-input");
+  const showDoubleEdgesCheckbox = document.getElementById("show-double-edges");
   let progressInterval;
   let useColors = true; // Track coloring state
   let useCheckerboard = false; // Track checkerboard state
@@ -113,6 +122,7 @@ Module.onRuntimeInitialized = async function() {
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
   let heightGroup; // Group for height function display
+  let showDoubleEdges = true; // Track whether to show double edges
 
   // Create zoom behavior for domino view
   let initialTransform = {}; // Store initial transform parameters
@@ -677,9 +687,63 @@ Module.onRuntimeInitialized = async function() {
       .attr("class", "dominoes")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
 
-    // Draw dimers from both configurations
-    // First configuration dimers in black
+    // Create a map to track edges from both configurations
+    const edgeMap = new Map();
+    
+    // Helper function to create edge key
+    const createEdgeKey = (domino) => {
+      const centerX = domino.x + domino.w / 2;
+      const centerY = domino.y + domino.h / 2;
+      const isHorizontal = domino.w > domino.h;
+      
+      let x1, y1, x2, y2;
+      if (isHorizontal) {
+        x1 = centerX - domino.w / 4;
+        y1 = centerY;
+        x2 = centerX + domino.w / 4;
+        y2 = centerY;
+      } else {
+        x1 = centerX;
+        y1 = centerY - domino.h / 4;
+        x2 = centerX;
+        y2 = centerY + domino.h / 4;
+      }
+      
+      // Round to avoid floating point comparison issues
+      x1 = Math.round(x1 * 1000) / 1000;
+      y1 = Math.round(y1 * 1000) / 1000;
+      x2 = Math.round(x2 * 1000) / 1000;
+      y2 = Math.round(y2 * 1000) / 1000;
+      
+      // Create a normalized key (smaller coords first)
+      return `${Math.min(x1,x2)},${Math.min(y1,y2)}-${Math.max(x1,x2)},${Math.max(y1,y2)}`;
+    };
+    
+    // First pass: identify all edges and mark which configs they belong to
     configs.config1.forEach(domino => {
+      const key = createEdgeKey(domino);
+      edgeMap.set(key, { config1: true, config2: false, domino: domino });
+    });
+    
+    configs.config2.forEach(domino => {
+      const key = createEdgeKey(domino);
+      if (edgeMap.has(key)) {
+        edgeMap.get(key).config2 = true;
+      } else {
+        edgeMap.set(key, { config1: false, config2: true, domino: domino });
+      }
+    });
+    
+    // Second pass: draw edges based on whether they're double edges or not
+    edgeMap.forEach((edgeInfo, key) => {
+      const domino = edgeInfo.domino;
+      const isDoubleEdge = edgeInfo.config1 && edgeInfo.config2;
+      
+      // Skip double edges if checkbox is unchecked
+      if (isDoubleEdge && !showDoubleEdges) {
+        return;
+      }
+      
       const centerX = domino.x + domino.w / 2;
       const centerY = domino.y + domino.h / 2;
       const isHorizontal = domino.w > domino.h;
@@ -695,6 +759,19 @@ Module.onRuntimeInitialized = async function() {
         y1 = centerY - domino.h / 4;
         x2 = centerX;
         y2 = centerY + domino.h / 4;
+      }
+      
+      // Determine color based on which config(s) the edge belongs to
+      let color, opacity;
+      if (isDoubleEdge) {
+        color = "purple"; // Double edges in purple
+        opacity = 1;
+      } else if (edgeInfo.config1) {
+        color = "black";
+        opacity = 1;
+      } else {
+        color = "red";
+        opacity = 0.8;
       }
 
       // Draw dimer line
@@ -703,9 +780,9 @@ Module.onRuntimeInitialized = async function() {
         .attr("y1", y1)
         .attr("x2", x2)
         .attr("y2", y2)
-        .attr("stroke", "black")
+        .attr("stroke", color)
         .attr("stroke-width", 3.5)
-        .attr("stroke-opacity", 1);
+        .attr("stroke-opacity", opacity);
 
       // Add circles at endpoints
       const circleRadius = 3.5;
@@ -713,61 +790,16 @@ Module.onRuntimeInitialized = async function() {
         .attr("cx", x1)
         .attr("cy", y1)
         .attr("r", circleRadius)
-        .attr("fill", "black");
+        .attr("fill", color)
+        .attr("fill-opacity", opacity);
 
       group.append("circle")
         .attr("cx", x2)
         .attr("cy", y2)
         .attr("r", circleRadius)
-        .attr("fill", "black");
+        .attr("fill", color)
+        .attr("fill-opacity", opacity);
     });
-
-    // Second configuration dimers in red
-    configs.config2.forEach(domino => {
-      const centerX = domino.x + domino.w / 2;
-      const centerY = domino.y + domino.h / 2;
-      const isHorizontal = domino.w > domino.h;
-
-      let x1, y1, x2, y2;
-      if (isHorizontal) {
-        x1 = centerX - domino.w / 4;
-        y1 = centerY;
-        x2 = centerX + domino.w / 4;
-        y2 = centerY;
-      } else {
-        x1 = centerX;
-        y1 = centerY - domino.h / 4;
-        x2 = centerX;
-        y2 = centerY + domino.h / 4;
-      }
-
-      // Draw dimer line in red
-      group.append("line")
-        .attr("x1", x1)
-        .attr("y1", y1)
-        .attr("x2", x2)
-        .attr("y2", y2)
-        .attr("stroke", "red")
-        .attr("stroke-width", 3.5)
-        .attr("stroke-opacity", 0.8);
-
-      // Add circles at endpoints in red
-      const circleRadius = 3.5;
-      group.append("circle")
-        .attr("cx", x1)
-        .attr("cy", y1)
-        .attr("r", circleRadius)
-        .attr("fill", "red")
-        .attr("fill-opacity", 0.8);
-
-      group.append("circle")
-        .attr("cx", x2)
-        .attr("cy", y2)
-        .attr("r", circleRadius)
-        .attr("fill", "red")
-        .attr("fill-opacity", 0.8);
-    });
-
   }
 
   // Render the dominoes with or without colors
@@ -930,6 +962,7 @@ Module.onRuntimeInitialized = async function() {
 
       // Render the double dimer configuration
       if (!signal.aborted) {
+        showDoubleEdges = showDoubleEdgesCheckbox.checked;
         renderDoubleDimer(currentConfigs);
       }
 
@@ -994,6 +1027,15 @@ Module.onRuntimeInitialized = async function() {
   // Add cancel button event listener
   document.getElementById("cancel-btn").addEventListener("click", function() {
     stopSimulation();
+  });
+  
+  // Add checkbox event listener for double edges
+  showDoubleEdgesCheckbox.addEventListener("change", function() {
+    showDoubleEdges = this.checked;
+    // Re-render if we have data
+    if (currentConfigs) {
+      renderDoubleDimer(currentConfigs);
+    }
   });
 
   // Run an initial simulation.

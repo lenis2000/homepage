@@ -474,7 +474,7 @@ char* simulateAztecWithWeights(int n, double value1, double value2, double prob1
 // Default wrapper function that uses the original values
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztec(int n) {
-    return simulateAztecWithWeights(n, 0.1, 50.0, 0.5);
+    return simulateAztecWithWeights(n, 0.5, 1.5, 0.5);
 }
 
 EMSCRIPTEN_KEEPALIVE
