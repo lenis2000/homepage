@@ -2,7 +2,7 @@
 emcc 2025-05-27-double-dimer.cpp -o 2025-05-27-double-dimer.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecWithWeights','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -46,6 +46,21 @@ vector<MatrixDouble> probs2(const MatrixDouble &x1);
 MatrixInt delslide(const MatrixInt &x1);
 MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
+
+// Function to generate random weights from Bernoulli distribution
+MatrixDouble generateRandomWeights(int dim, double value1, double value2, double prob1) {
+    MatrixDouble weights(dim, dim);
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+    
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            // Sample from Bernoulli distribution
+            weights.at(i, j) = (dis(rng) < prob1) ? value1 : value2;
+        }
+    }
+    
+    return weights;
+}
 
 // d3p: builds a vector of matrices from x1. Now uses flat matrix implementation.
 vector<Matrix> d3p(const MatrixDouble &x1) {
@@ -245,13 +260,14 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
-char* simulateAztec(int n) {
+char* simulateAztecWithWeights(int n, double value1, double value2, double prob1) {
     try {
         progressCounter = 0; // Reset progress.
 
-        // Create weight matrix A1a: dimensions 2*n x 2*n, filled with ones.
+        // Create weight matrix A1a: dimensions 2*n x 2*n, with random weights
         int dim = 2 * n;
-        MatrixDouble A1a(dim, dim, 1.0);
+        // Bernoulli distribution with provided values and probability
+        MatrixDouble A1a = generateRandomWeights(dim, value1, value2, prob1);
 
         // Compute probability matrices.
         vector<MatrixDouble> prob;
@@ -453,6 +469,12 @@ char* simulateAztec(int n) {
         progressCounter = 100; // Mark as complete to stop progress indicator
         return out;
     }
+}
+
+// Default wrapper function that uses the original values
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztec(int n) {
+    return simulateAztecWithWeights(n, 0.1, 50.0, 0.5);
 }
 
 EMSCRIPTEN_KEEPALIVE

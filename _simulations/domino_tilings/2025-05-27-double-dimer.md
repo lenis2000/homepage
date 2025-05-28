@@ -39,21 +39,34 @@ code:
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-05-27-double-dimer.js"></script>
 
-This simulation demonstrates <b>double dimer configurations</b> on an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>. Two independent dimer configurations are sampled and displayed simultaneously - one in black and one in red. The simulation uses a uniform measure to generate random tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
+This simulation demonstrates <b>double dimer configurations</b> on an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>. Two independent dimer configurations are sampled and displayed simultaneously - one in black and one in red. The simulation uses <b>random IID weights</b> sampled from a Bernoulli distribution to generate tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
 
 The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
 I set the upper bound at $n=400$ to avoid freezing your browser.
 
+<b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from a Bernoulli distribution that takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (0.1 and 50 with equal probability) create an interesting phase transition between frozen and liquid regions.
+
 
 ---
 
-<!-- Controls to change n -->
+<!-- Controls to change n and weight parameters -->
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
   <!-- Updated input: starting value 24, even numbers only (step=2), three-digit window (size=3), maximum 400 -->
   <input id="n-input" type="number" value="24" min="2" step="2" max="400" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
+</div>
+
+<!-- Weight distribution controls -->
+<div style="margin-bottom: 10px;">
+  <strong>Weight Distribution (Bernoulli):</strong>
+  <label for="value1-input" style="margin-left: 10px;">Value 1: </label>
+  <input id="value1-input" type="number" value="0.1" min="0.01" step="0.1" size="6" style="width: 60px;">
+  <label for="value2-input" style="margin-left: 10px;">Value 2: </label>
+  <input id="value2-input" type="number" value="50" min="0.01" step="1" size="6" style="width: 60px;">
+  <label for="prob1-input" style="margin-left: 10px;">P(Value 1): </label>
+  <input id="prob1-input" type="number" value="0.5" min="0" max="1" step="0.1" size="4" style="width: 60px;">
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
@@ -76,12 +89,16 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 Module.onRuntimeInitialized = async function() {
   // Wrap exported functions asynchronously.
   const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number'], {async: true});
+  const simulateAztecWithWeights = Module.cwrap('simulateAztecWithWeights', 'number', ['number', 'number', 'number', 'number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
   const svg = d3.select("#aztec-svg");
   const progressElem = document.getElementById("progress-indicator");
   const inputField = document.getElementById("n-input");
+  const value1Input = document.getElementById("value1-input");
+  const value2Input = document.getElementById("value2-input");
+  const prob1Input = document.getElementById("prob1-input");
   let progressInterval;
   let useColors = true; // Track coloring state
   let useCheckerboard = false; // Track checkerboard state
@@ -865,8 +882,13 @@ Module.onRuntimeInitialized = async function() {
     }
 
     try {
-      // Await the asynchronous simulation.
-      const ptrPromise = simulateAztec(n);
+      // Get weight parameters
+      const value1 = parseFloat(value1Input.value);
+      const value2 = parseFloat(value2Input.value);
+      const prob1 = parseFloat(prob1Input.value);
+      
+      // Await the asynchronous simulation with weights.
+      const ptrPromise = simulateAztecWithWeights(n, value1, value2, prob1);
 
       // Wait for computation to complete or be aborted
       const ptr = await ptrPromise;
