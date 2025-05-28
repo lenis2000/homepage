@@ -45,8 +45,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 <b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from one of three distributions:
 - **Bernoulli**: Takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (1/2 and 3/2 with equal probability) create a mildly inhomogeneous environment.
 - **Gaussian**: $W_{ij} = e^{\beta X_{ij}}$ where $X_{ij} \sim N(0,1)$ are independent standard normal random variables. The parameter $\beta$ controls the variance of the log-weights.
-- **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for NE/SE edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for NW/SW edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of weights on the NE/SE edges.
-
+- **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for some of the edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for other edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of the gamma weights.
 
 ---
 
@@ -69,7 +68,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
     <input type="radio" name="weight-dist" value="gaussian"> Gaussian (e^{βX})
   </label>
   <label style="margin-left: 10px;">
-    <input type="radio" name="weight-dist" value="gamma"> Gamma (NE/SE edges)
+    <input type="radio" name="weight-dist" value="gamma"> Gamma
   </label>
 </div>
 
@@ -97,7 +96,6 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
   <strong>Gamma Parameters:</strong>
   <label for="shape-input" style="margin-left: 10px;">Shape (α): </label>
   <input id="shape-input" type="number" value="2.0" min="0.1" max="20" step="0.1" size="6" style="width: 60px;">
-  <span style="margin-left: 10px; font-style: italic;">NE/SE edges: Gamma(α,1), NW/SW edges: 1</span>
 </div>
 
 <!-- Display options -->
