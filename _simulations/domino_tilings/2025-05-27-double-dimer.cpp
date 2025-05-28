@@ -2,7 +2,7 @@
 emcc 2025-05-27-double-dimer.cpp -o 2025-05-27-double-dimer.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecWithWeights','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecWithWeights','_simulateAztecWithWeightsAndDist','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -47,8 +47,15 @@ MatrixInt delslide(const MatrixInt &x1);
 MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
 
+// Enum for weight distribution types
+enum class WeightDistribution {
+    BERNOULLI = 0,
+    GAUSSIAN = 1,
+    GAMMA = 2
+};
+
 // Function to generate random weights from Bernoulli distribution
-MatrixDouble generateRandomWeights(int dim, double value1, double value2, double prob1) {
+MatrixDouble generateBernoulliWeights(int dim, double value1, double value2, double prob1) {
     MatrixDouble weights(dim, dim);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     
@@ -60,6 +67,57 @@ MatrixDouble generateRandomWeights(int dim, double value1, double value2, double
     }
     
     return weights;
+}
+
+// Function to generate random weights from Gaussian distribution
+MatrixDouble generateGaussianWeights(int dim, double beta) {
+    MatrixDouble weights(dim, dim);
+    std::normal_distribution<> normal(0.0, 1.0); // Standard normal
+    
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            // Sample X from standard normal, weight = exp(beta * X)
+            double X = normal(rng);
+            weights.at(i, j) = exp(beta * X);
+        }
+    }
+    
+    return weights;
+}
+
+// Function to generate gamma-distributed weights on specific edges
+// NE/SE edges (i even) get gamma distribution, NW/SW edges (i odd) get weight 1
+MatrixDouble generateGammaWeights(int dim, double shape) {
+    MatrixDouble weights(dim, dim);
+    std::gamma_distribution<> gamma(shape, 1.0); // shape parameter, scale = 1
+    
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            if (i % 2 == 0) {
+                // i is even: use gamma distribution (NE/SE edges)
+                weights.at(i, j) = gamma(rng);
+            } else {
+                // i is odd: use weight 1 (NW/SW edges)
+                weights.at(i, j) = 1.0;
+            }
+        }
+    }
+    
+    return weights;
+}
+
+// General function to generate random weights based on distribution type
+MatrixDouble generateRandomWeights(int dim, WeightDistribution distType, double param1, double param2, double param3) {
+    if (distType == WeightDistribution::GAUSSIAN) {
+        // For Gaussian, param1 is beta, param2 and param3 are ignored
+        return generateGaussianWeights(dim, param1);
+    } else if (distType == WeightDistribution::GAMMA) {
+        // For Gamma, param1 is shape parameter, param2 and param3 are ignored
+        return generateGammaWeights(dim, param1);
+    } else {
+        // For Bernoulli, param1 is value1, param2 is value2, param3 is prob1
+        return generateBernoulliWeights(dim, param1, param2, param3);
+    }
 }
 
 // d3p: builds a vector of matrices from x1. Now uses flat matrix implementation.
@@ -259,15 +317,24 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
 // ---------------------------------------------------------------------
 extern "C" {
 
+// Forward declaration inside extern "C"
+char* simulateAztecWithWeightsAndDist(int n, int distType, double param1, double param2, double param3);
+
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztecWithWeights(int n, double value1, double value2, double prob1) {
+    // This function maintains backward compatibility for Bernoulli weights
+    return simulateAztecWithWeightsAndDist(n, 0, value1, value2, prob1);
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecWithWeightsAndDist(int n, int distType, double param1, double param2, double param3) {
     try {
         progressCounter = 0; // Reset progress.
 
         // Create weight matrix A1a: dimensions 2*n x 2*n, with random weights
         int dim = 2 * n;
-        // Bernoulli distribution with provided values and probability
-        MatrixDouble A1a = generateRandomWeights(dim, value1, value2, prob1);
+        WeightDistribution distribution = static_cast<WeightDistribution>(distType);
+        MatrixDouble A1a = generateRandomWeights(dim, distribution, param1, param2, param3);
 
         // Compute probability matrices.
         vector<MatrixDouble> prob;

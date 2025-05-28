@@ -37,12 +37,15 @@ code:
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-05-27-double-dimer.js"></script>
 
-This simulation demonstrates <b>double dimer configurations</b> on an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>. Two independent dimer configurations are sampled and displayed simultaneously - one in black and one in red. The simulation uses <b>random IID weights</b> sampled from a Bernoulli distribution to generate tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
+This simulation demonstrates <b>double dimer configurations</b> on an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>. Two independent dimer configurations are sampled and displayed simultaneously - one in black and one in red. The simulation uses <b>random IID weights</b> sampled from either a Bernoulli distribution or a log-normal distribution (exp(β × X) where X ~ N(0,1)) to generate tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
 
 The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
 I set the upper bound at $n=400$ to avoid freezing your browser.
 
-<b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from a Bernoulli distribution that takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (1/2 and 3/2 with equal probability) create a mildly inhomogeneous environment.
+<b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from one of three distributions:
+- **Bernoulli**: Takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (1/2 and 3/2 with equal probability) create a mildly inhomogeneous environment.
+- **Gaussian**: $W_{ij} = e^{\beta X_{ij}}$ where $X_{ij} \sim N(0,1)$ are independent standard normal random variables. The parameter $\beta$ controls the variance of the log-weights.
+- **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for NE/SE edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for NW/SW edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of weights on the NE/SE edges.
 
 
 ---
@@ -58,13 +61,43 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
 <!-- Weight distribution controls -->
 <div style="margin-bottom: 10px;">
-  <strong>Weight Distribution (Bernoulli):</strong>
+  <strong>Weight Distribution Type:</strong>
+  <label style="margin-left: 10px;">
+    <input type="radio" name="weight-dist" value="bernoulli" checked> Bernoulli
+  </label>
+  <label style="margin-left: 10px;">
+    <input type="radio" name="weight-dist" value="gaussian"> Gaussian (e^{βX})
+  </label>
+  <label style="margin-left: 10px;">
+    <input type="radio" name="weight-dist" value="gamma"> Gamma (NE/SE edges)
+  </label>
+</div>
+
+<!-- Bernoulli parameters -->
+<div id="bernoulli-params" style="margin-bottom: 10px;">
+  <strong>Bernoulli Parameters:</strong>
   <label for="value1-input" style="margin-left: 10px;">Value 1: </label>
   <input id="value1-input" type="number" value="0.5" min="0.01" step="0.1" size="6" style="width: 60px;">
   <label for="value2-input" style="margin-left: 10px;">Value 2: </label>
   <input id="value2-input" type="number" value="1.5" min="0.01" step="0.1" size="6" style="width: 60px;">
   <label for="prob1-input" style="margin-left: 10px;">P(Value 1): </label>
   <input id="prob1-input" type="number" value="0.5" min="0" max="1" step="0.1" size="4" style="width: 60px;">
+</div>
+
+<!-- Gaussian parameters -->
+<div id="gaussian-params" style="margin-bottom: 10px; display: none;">
+  <strong>Gaussian Parameters:</strong>
+  <label for="beta-input" style="margin-left: 10px;">β: </label>
+  <input id="beta-input" type="number" value="1.0" min="-5" max="5" step="0.1" size="6" style="width: 60px;">
+  <span style="margin-left: 10px; font-style: italic;">Weights: exp(β × X) where X ~ N(0,1)</span>
+</div>
+
+<!-- Gamma parameters -->
+<div id="gamma-params" style="margin-bottom: 10px; display: none;">
+  <strong>Gamma Parameters:</strong>
+  <label for="shape-input" style="margin-left: 10px;">Shape (α): </label>
+  <input id="shape-input" type="number" value="2.0" min="0.1" max="20" step="0.1" size="6" style="width: 60px;">
+  <span style="margin-left: 10px; font-style: italic;">NE/SE edges: Gamma(α,1), NW/SW edges: 1</span>
 </div>
 
 <!-- Display options -->
@@ -122,6 +155,7 @@ Module.onRuntimeInitialized = async function() {
   // Wrap exported functions asynchronously.
   const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number'], {async: true});
   const simulateAztecWithWeights = Module.cwrap('simulateAztecWithWeights', 'number', ['number', 'number', 'number', 'number'], {async: true});
+  const simulateAztecWithWeightsAndDist = Module.cwrap('simulateAztecWithWeightsAndDist', 'number', ['number', 'number', 'number', 'number', 'number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
@@ -131,10 +165,16 @@ Module.onRuntimeInitialized = async function() {
   const value1Input = document.getElementById("value1-input");
   const value2Input = document.getElementById("value2-input");
   const prob1Input = document.getElementById("prob1-input");
+  const betaInput = document.getElementById("beta-input");
+  const shapeInput = document.getElementById("shape-input");
   const showDoubleEdgesCheckbox = document.getElementById("show-double-edges");
   const showWeightMatrixCheckbox = document.getElementById("show-weight-matrix");
   const weightMatrixDisplay = document.getElementById("weight-matrix-display");
   const weightMatrixContent = document.getElementById("weight-matrix-content");
+  const bernoulliParams = document.getElementById("bernoulli-params");
+  const gaussianParams = document.getElementById("gaussian-params");
+  const gammaParams = document.getElementById("gamma-params");
+  const distRadios = document.getElementsByName("weight-dist");
   let progressInterval;
   let useColors = true; // Track coloring state
   let useCheckerboard = false; // Track checkerboard state
@@ -151,10 +191,21 @@ Module.onRuntimeInitialized = async function() {
   let heightGroup; // Group for height function display
   let showDoubleEdges = true; // Track whether to show double edges
 
+  // Function to get current distribution type
+  function getCurrentDistribution() {
+    for (let radio of distRadios) {
+      if (radio.checked) {
+        return radio.value;
+      }
+    }
+    return 'bernoulli';
+  }
+
   // Function to display weight matrix
   function displayWeightMatrix(matrix) {
     if (!matrix || matrix.length === 0) return;
     
+    const distType = getCurrentDistribution();
     let html = '<table style="border-collapse: collapse;">';
     
     // Add row/column headers
@@ -169,19 +220,64 @@ Module.onRuntimeInitialized = async function() {
       html += `<tr><td style="padding: 4px; border: 1px solid #ccc; font-weight: bold;">i=${i}</td>`;
       for (let j = 0; j < matrix[i].length; j++) {
         const value = matrix[i][j];
-        const bgColor = value === parseFloat(value1Input.value) ? '#e8f5e9' : '#fff3e0';
-        html += `<td style="padding: 4px; border: 1px solid #ccc; text-align: right; background-color: ${bgColor};">${value}</td>`;
+        let bgColor = '#ffffff';
+        
+        if (distType === 'bernoulli') {
+          bgColor = value === parseFloat(value1Input.value) ? '#e8f5e9' : '#fff3e0';
+        } else if (distType === 'gaussian') {
+          // For Gaussian, use a gradient based on value
+          const intensity = Math.min(255, Math.floor(255 * (1 - Math.exp(-value))));
+          bgColor = `rgb(255, ${255-intensity}, ${255-intensity})`;
+        } else if (distType === 'gamma') {
+          // For Gamma, differentiate between weight=1 (odd rows) and gamma values (even rows)
+          if (i % 2 === 1) {
+            // Odd rows (i is odd): weight should be 1
+            bgColor = '#e3f2fd'; // Light blue for weight=1
+          } else {
+            // Even rows (i is even): gamma distributed
+            const intensity = Math.min(255, Math.floor(255 * (1 - Math.exp(-value/2))));
+            bgColor = `rgb(255, ${255-intensity/2}, ${255-intensity})`;
+          }
+        }
+        
+        html += `<td style="padding: 4px; border: 1px solid #ccc; text-align: right; background-color: ${bgColor};">${value.toFixed(3)}</td>`;
       }
       html += '</tr>';
     }
     html += '</table>';
     
     html += '<div style="margin-top: 10px; font-size: 11px;">';
-    html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #e8f5e9; border: 1px solid #ccc;"></span> Value 1 (${value1Input.value})<br>`;
-    html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #fff3e0; border: 1px solid #ccc;"></span> Value 2 (${value2Input.value})`;
+    if (distType === 'bernoulli') {
+      html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #e8f5e9; border: 1px solid #ccc;"></span> Value 1 (${value1Input.value})<br>`;
+      html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #fff3e0; border: 1px solid #ccc;"></span> Value 2 (${value2Input.value})`;
+    } else if (distType === 'gaussian') {
+      html += `Gaussian weights: exp(β × X), β = ${betaInput.value}, X ~ N(0,1)`;
+    } else if (distType === 'gamma') {
+      html += `<span style="display: inline-block; width: 15px; height: 15px; background-color: #e3f2fd; border: 1px solid #ccc;"></span> Weight = 1 (NW/SW edges, odd rows)<br>`;
+      html += `<span style="display: inline-block; width: 15px; height: 15px; background: linear-gradient(to right, rgb(255,255,255), rgb(255,128,128)); border: 1px solid #ccc;"></span> Gamma(${shapeInput.value}, 1) (NE/SE edges, even rows)`;
+    }
     html += '</div>';
     
     weightMatrixContent.innerHTML = html;
+  }
+
+  // Add event handlers for radio buttons
+  for (let radio of distRadios) {
+    radio.addEventListener('change', function() {
+      if (this.value === 'bernoulli') {
+        bernoulliParams.style.display = 'block';
+        gaussianParams.style.display = 'none';
+        gammaParams.style.display = 'none';
+      } else if (this.value === 'gaussian') {
+        bernoulliParams.style.display = 'none';
+        gaussianParams.style.display = 'block';
+        gammaParams.style.display = 'none';
+      } else if (this.value === 'gamma') {
+        bernoulliParams.style.display = 'none';
+        gaussianParams.style.display = 'none';
+        gammaParams.style.display = 'block';
+      }
+    });
   }
 
   // Create zoom behavior for domino view
@@ -974,13 +1070,28 @@ Module.onRuntimeInitialized = async function() {
     }
 
     try {
-      // Get weight parameters
-      const value1 = parseFloat(value1Input.value);
-      const value2 = parseFloat(value2Input.value);
-      const prob1 = parseFloat(prob1Input.value);
+      // Get weight parameters based on distribution type
+      const distType = getCurrentDistribution();
+      let ptrPromise;
       
-      // Await the asynchronous simulation with weights.
-      const ptrPromise = simulateAztecWithWeights(n, value1, value2, prob1);
+      if (distType === 'gaussian') {
+        // For Gaussian distribution
+        const beta = parseFloat(betaInput.value);
+        // distType: 1 for Gaussian, beta is param1, param2 and param3 are ignored
+        ptrPromise = simulateAztecWithWeightsAndDist(n, 1, beta, 0, 0);
+      } else if (distType === 'gamma') {
+        // For Gamma distribution
+        const shape = parseFloat(shapeInput.value);
+        // distType: 2 for Gamma, shape is param1, param2 and param3 are ignored
+        ptrPromise = simulateAztecWithWeightsAndDist(n, 2, shape, 0, 0);
+      } else {
+        // For Bernoulli distribution
+        const value1 = parseFloat(value1Input.value);
+        const value2 = parseFloat(value2Input.value);
+        const prob1 = parseFloat(prob1Input.value);
+        // distType: 0 for Bernoulli
+        ptrPromise = simulateAztecWithWeightsAndDist(n, 0, value1, value2, prob1);
+      }
 
       // Wait for computation to complete or be aborted
       const ptr = await ptrPromise;
@@ -1058,13 +1169,13 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Validate and process the input
-  function processInput() {
+  // Remove automatic processing on input changes
+  // Only process when Update button is clicked
+
+  // Make sure the update button always triggers a new sample, even if value hasn't changed
+  document.getElementById("update-btn").addEventListener("click", function() {
     const newN = parseInt(inputField.value, 10);
-
-    // Skip if the value hasn't changed
-    if (newN === lastValue) return;
-
+    
     // Check for a valid positive even number.
     if (isNaN(newN) || newN < 2) {
       progressElem.innerText = "Please enter a valid positive even number for n (n ≥ 2).";
@@ -1078,18 +1189,10 @@ Module.onRuntimeInitialized = async function() {
       progressElem.innerText = "Please enter a number no greater than 400.";
       return;
     }
-
-    updateVisualization(newN);
-  }
-
-  // Set up event listeners for input changes
-  inputField.addEventListener("input", processInput);
-  inputField.addEventListener("change", processInput);
-
-  // Make sure the update button always triggers a new sample, even if value hasn't changed
-  document.getElementById("update-btn").addEventListener("click", function() {
+    
     // Force a resample even if the value hasn't changed
-    updateVisualization(parseInt(inputField.value, 10));
+    lastValue = -1; // Reset lastValue to force update
+    updateVisualization(newN);
   });
 
   // Add cancel button event listener
