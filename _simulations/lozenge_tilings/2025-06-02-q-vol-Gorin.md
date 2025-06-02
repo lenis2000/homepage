@@ -79,8 +79,11 @@ The sampler works entirely in your browser using WebAssembly for computational e
     <option value="5">Non-intersecting paths on Z²</option>
   </select>
   
-  <button id="step-plus" style="margin-left: 20px;">S → S+1</button>
-  <button id="step-minus" style="margin-left: 10px;">S → S-1</button>
+  <label for="steps" style="margin-left: 20px;">Steps: </label>
+  <input id="steps" type="number" value="1" min="1" max="10" style="width: 50px;">
+  
+  <button id="step-plus" style="margin-left: 10px;">S → S+steps</button>
+  <button id="step-minus" style="margin-left: 10px;">S → S-steps</button>
   <button id="set-parameters" style="margin-left: 10px;">Set Parameters</button>
   <button id="export" style="margin-left: 10px;">Export</button>
 </div>
@@ -98,10 +101,10 @@ The sampler works entirely in your browser using WebAssembly for computational e
 
 <div class="keyboard-info">
   <strong>Keyboard shortcuts:</strong><br>
-  A: S → S+1<br>
-  Z: S → S-1<br>
-  S: S → S+1 → S<br>
-  X: S → S-1 → S
+  A: S → S+steps<br>
+  Z: S → S-steps<br>
+  S: S → S+steps → S-steps<br>
+  X: S → S-steps → S+steps
 </div>
 
 <script>
@@ -661,6 +664,8 @@ Module.onRuntimeInitialized = async function() {
                     return;
                 }
 
+                const steps = parseInt(document.getElementById('steps').value) || 1;
+
                 switch(key) {
                     case 'a':
                         this.stepForward();
@@ -670,19 +675,35 @@ Module.onRuntimeInitialized = async function() {
                         break;
                     case 's':
                         this.compositeOperationRunning = true;
-                        this.stepForward();
-                        setTimeout(() => {
-                            this.stepBackward();
+                        this.stepForwardNoRedraw().then(() => {
+                            return this.stepBackwardNoRedraw();
+                        }).then(() => {
+                            // Update S display and redraw once at the end
+                            const params = this.wasm.getParameters();
+                            document.getElementById('S').value = params.S;
+                            this.updateInfo();
+                            this.redraw();
                             this.compositeOperationRunning = false;
-                        }, 500);
+                        }).catch((error) => {
+                            alert(error.message);
+                            this.compositeOperationRunning = false;
+                        });
                         break;
                     case 'x':
                         this.compositeOperationRunning = true;
-                        this.stepBackward();
-                        setTimeout(() => {
-                            this.stepForward();
+                        this.stepBackwardNoRedraw().then(() => {
+                            return this.stepForwardNoRedraw();
+                        }).then(() => {
+                            // Update S display and redraw once at the end
+                            const params = this.wasm.getParameters();
+                            document.getElementById('S').value = params.S;
+                            this.updateInfo();
+                            this.redraw();
                             this.compositeOperationRunning = false;
-                        }, 500);
+                        }).catch((error) => {
+                            alert(error.message);
+                            this.compositeOperationRunning = false;
+                        });
                         break;
                 }
             });
@@ -766,7 +787,11 @@ Module.onRuntimeInitialized = async function() {
 
         async stepForward() {
             try {
-                await this.wasm.stepForward();
+                const steps = parseInt(document.getElementById('steps').value) || 1;
+                
+                for (let i = 0; i < steps; i++) {
+                    await this.wasm.stepForward();
+                }
 
                 const params = this.wasm.getParameters();
                 document.getElementById('S').value = params.S;
@@ -781,7 +806,11 @@ Module.onRuntimeInitialized = async function() {
 
         async stepBackward() {
             try {
-                await this.wasm.stepBackward();
+                const steps = parseInt(document.getElementById('steps').value) || 1;
+                
+                for (let i = 0; i < steps; i++) {
+                    await this.wasm.stepBackward();
+                }
 
                 const params = this.wasm.getParameters();
                 document.getElementById('S').value = params.S;
@@ -791,6 +820,21 @@ Module.onRuntimeInitialized = async function() {
 
             } catch (error) {
                 alert(error.message);
+            }
+        }
+
+        // Internal functions without redraw for composite operations
+        async stepForwardNoRedraw() {
+            const steps = parseInt(document.getElementById('steps').value) || 1;
+            for (let i = 0; i < steps; i++) {
+                await this.wasm.stepForward();
+            }
+        }
+
+        async stepBackwardNoRedraw() {
+            const steps = parseInt(document.getElementById('steps').value) || 1;
+            for (let i = 0; i < steps; i++) {
+                await this.wasm.stepBackward();
             }
         }
 
