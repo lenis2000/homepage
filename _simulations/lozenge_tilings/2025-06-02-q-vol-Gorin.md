@@ -685,7 +685,7 @@ Module.onRuntimeInitialized = async function() {
                             this.redraw();
                             this.compositeOperationRunning = false;
                         }).catch((error) => {
-                            alert(error.message);
+                            // Silently handle errors - just stop the operation
                             this.compositeOperationRunning = false;
                         });
                         break;
@@ -701,7 +701,7 @@ Module.onRuntimeInitialized = async function() {
                             this.redraw();
                             this.compositeOperationRunning = false;
                         }).catch((error) => {
-                            alert(error.message);
+                            // Silently handle errors - just stop the operation
                             this.compositeOperationRunning = false;
                         });
                         break;
@@ -790,7 +790,12 @@ Module.onRuntimeInitialized = async function() {
                 const steps = parseInt(document.getElementById('steps').value) || 1;
                 
                 for (let i = 0; i < steps; i++) {
-                    await this.wasm.stepForward();
+                    try {
+                        await this.wasm.stepForward();
+                    } catch (error) {
+                        // Silently ignore boundary errors - just stop stepping
+                        break;
+                    }
                 }
 
                 const params = this.wasm.getParameters();
@@ -800,7 +805,7 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
 
             } catch (error) {
-                alert(error.message);
+                // Silently handle any other errors
             }
         }
 
@@ -809,7 +814,12 @@ Module.onRuntimeInitialized = async function() {
                 const steps = parseInt(document.getElementById('steps').value) || 1;
                 
                 for (let i = 0; i < steps; i++) {
-                    await this.wasm.stepBackward();
+                    try {
+                        await this.wasm.stepBackward();
+                    } catch (error) {
+                        // Silently ignore boundary errors - just stop stepping
+                        break;
+                    }
                 }
 
                 const params = this.wasm.getParameters();
@@ -819,7 +829,7 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
 
             } catch (error) {
-                alert(error.message);
+                // Silently handle any other errors
             }
         }
 
@@ -827,14 +837,24 @@ Module.onRuntimeInitialized = async function() {
         async stepForwardNoRedraw() {
             const steps = parseInt(document.getElementById('steps').value) || 1;
             for (let i = 0; i < steps; i++) {
-                await this.wasm.stepForward();
+                try {
+                    await this.wasm.stepForward();
+                } catch (error) {
+                    // Silently ignore boundary errors - just stop stepping
+                    break;
+                }
             }
         }
 
         async stepBackwardNoRedraw() {
             const steps = parseInt(document.getElementById('steps').value) || 1;
             for (let i = 0; i < steps; i++) {
-                await this.wasm.stepBackward();
+                try {
+                    await this.wasm.stepBackward();
+                } catch (error) {
+                    // Silently ignore boundary errors - just stop stepping
+                    break;
+                }
             }
         }
 
