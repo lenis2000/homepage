@@ -272,6 +272,21 @@ Module.onRuntimeInitialized = async function() {
       } else {
         sInput.value = result.s;
         console.log("Initialized successfully");
+        // Automatically export and draw paths after initialization
+        setTimeout(async () => {
+          try {
+            const pathPtr = await exportPaths();
+            const pathJsonStr = Module.UTF8ToString(pathPtr);
+            freeString(pathPtr);
+            const pathResult = JSON.parse(pathJsonStr);
+            if (!pathResult.error) {
+              currentPaths = pathResult;
+              drawPaths(pathResult);
+            }
+          } catch (e) {
+            console.log("Auto-export failed:", e);
+          }
+        }, 100);
       }
     } catch (error) {
       alert("Initialization failed: " + error.message);
@@ -294,6 +309,21 @@ Module.onRuntimeInitialized = async function() {
       } else {
         sInput.value = result.s;
         console.log("S operator completed");
+        // Automatically update visualization
+        setTimeout(async () => {
+          try {
+            const pathPtr = await exportPaths();
+            const pathJsonStr = Module.UTF8ToString(pathPtr);
+            freeString(pathPtr);
+            const pathResult = JSON.parse(pathJsonStr);
+            if (!pathResult.error) {
+              currentPaths = pathResult;
+              drawPaths(pathResult);
+            }
+          } catch (e) {
+            console.log("Auto-export after S operator failed:", e);
+          }
+        }, 100);
       }
     } catch (error) {
       alert("S operator failed: " + error.message);
@@ -316,6 +346,21 @@ Module.onRuntimeInitialized = async function() {
       } else {
         sInput.value = result.s;
         console.log("S- operator completed");
+        // Automatically update visualization
+        setTimeout(async () => {
+          try {
+            const pathPtr = await exportPaths();
+            const pathJsonStr = Module.UTF8ToString(pathPtr);
+            freeString(pathPtr);
+            const pathResult = JSON.parse(pathJsonStr);
+            if (!pathResult.error) {
+              currentPaths = pathResult;
+              drawPaths(pathResult);
+            }
+          } catch (e) {
+            console.log("Auto-export after S- operator failed:", e);
+          }
+        }, 100);
       }
     } catch (error) {
       alert("S- operator failed: " + error.message);
