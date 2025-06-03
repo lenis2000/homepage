@@ -352,8 +352,8 @@ char* initializeTiling(int n, int t, int s, int mode, double q) {
             throw std::invalid_argument("Invalid parameters");
         }
         
-        if (mode == 5 && (q <= 0.0 || q == 1.0)) {
-            throw std::invalid_argument("q must be positive and not equal to 1");
+        if (mode == 5 && q <= 0.0) {
+            throw std::invalid_argument("q must be positive");
         }
 
         N_param = n;
@@ -495,8 +495,8 @@ char* updateParameters(int mode, double q) {
             throw std::invalid_argument("Mode must be 5 or 6");
         }
         
-        if (mode == 5 && (q <= 0.0 || q == 1.0)) {
-            throw std::invalid_argument("q must be positive and not equal to 1");
+        if (mode == 5 && q <= 0.0) {
+            throw std::invalid_argument("q must be positive");
         }
         
         current_mode = static_cast<TilingMode>(mode);

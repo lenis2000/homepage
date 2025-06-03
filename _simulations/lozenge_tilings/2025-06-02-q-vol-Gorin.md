@@ -64,7 +64,7 @@ code:
 <script src="/js/OrbitControls.js"></script>
 <script src="/js/2025-06-02-q-vol-Gorin.js"></script>
 
-This simulation demonstrates **lozenge tilings** using a WASM/JS port of a program by [Vadim Gorin](https://www.stat.berkeley.edu/~vadicgor/research.html). The simulation handles $q^{-volume}$ measure on lozenge tilings of a hexagon with sides $N$, $S$, and $T-S$.
+This simulation demonstrates **lozenge tilings** using a WASM/JS port of a program by [Vadim Gorin](https://www.stat.berkeley.edu/~vadicgor/research.html). The simulation generates lozenge tilings of a hexagon with sides $N$, $S$, and $T-S$ under the $q^{-volume}$ measure.
 
 The sampler works entirely in your browser using WebAssembly.
 
@@ -72,11 +72,6 @@ The sampler works entirely in your browser using WebAssembly.
 
 <!-- Controls for the simulation -->
 <div class="controls">
-  <label for="mode">Mode: </label>
-  <select id="mode">
-    <option value="6">Hahn (uniform measure)</option>
-    <option value="5">q-Hahn (measure q^vol)</option>
-  </select>
 
   <label for="N" style="margin-left: 20px;">N: </label>
   <input id="N" type="number" value="20" min="1" max="200" style="width: 60px;">
@@ -87,10 +82,8 @@ The sampler works entirely in your browser using WebAssembly.
   <label for="S" style="margin-left: 20px;">S: </label>
   <input id="S" type="number" value="0" min="0" style="width: 60px;">
 
-  <span id="q-group" style="display:none;">
-    <label for="q" style="margin-left: 20px;">q: </label>
-    <input id="q" type="number" value="0.9" step="0.1" min="0.01" style="width: 60px;">
-  </span>
+  <label for="q" style="margin-left: 20px;">q: </label>
+  <input id="q" type="number" value="1" step="0.1" min="0.01" style="width: 60px;">
 
   <button id="initialize">Initialize</button>
   <button id="set-parameters">Set Parameters</button>
@@ -133,6 +126,12 @@ The sampler works entirely in your browser using WebAssembly.
 </div>
 
 <script>
+// Check if Module is defined before setting onRuntimeInitialized
+if (typeof Module === 'undefined') {
+    console.error('Module is not defined. Make sure the WASM JavaScript file is loaded correctly.');
+    window.Module = { onRuntimeInitialized: function() {} };
+}
+
 Module.onRuntimeInitialized = async function() {
     // WASM Interface Class
     class WASMInterface {
@@ -141,12 +140,20 @@ Module.onRuntimeInitialized = async function() {
             this.N_param = 20;
             this.T_param = 40;
             this.S_param = 0;
-            this.mode_param = 6;
-            this.q_param = 0.9;
+            this.mode_param = 5;
+            this.q_param = 1.0;
             this.paths = [];
         }
 
         async initialize() {
+            // Check if Module and cwrap are available
+            if (typeof Module === 'undefined') {
+                throw new Error('Module is not defined. WASM JavaScript file may not be loaded.');
+            }
+            if (typeof Module.cwrap !== 'function') {
+                throw new Error('Module.cwrap is not a function. WASM module may not be properly initialized.');
+            }
+            
             // Wrap exported functions
             this.initializeTiling = Module.cwrap('initializeTiling', 'number', ['number', 'number', 'number', 'number', 'number'], {async: true});
             this.performSOperator = Module.cwrap('performSOperator', 'number', [], {async: true});
@@ -162,6 +169,7 @@ Module.onRuntimeInitialized = async function() {
 
         async initializeTilingWasm(params) {
             if (!this.ready) throw new Error('WASM not ready');
+            if (typeof Module === 'undefined') throw new Error('Module is not defined');
 
             this.N_param = params.N;
             this.T_param = params.T;
@@ -170,7 +178,11 @@ Module.onRuntimeInitialized = async function() {
             this.q_param = params.q;
 
             try {
+                console.log('Initializing tiling with params:', params);
                 const ptr = await this.initializeTiling(params.N, params.T, params.S, params.mode, params.q);
+                if (!ptr) {
+                    throw new Error('initializeTiling returned null pointer');
+                }
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeString(ptr);
 
@@ -183,7 +195,8 @@ Module.onRuntimeInitialized = async function() {
                 await this.refreshPaths();
                 return result;
             } catch (error) {
-                throw new Error(`Initialization failed: ${error.message}`);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                throw new Error(`Initialization failed: ${errorMessage}`);
             }
         }
 
@@ -205,7 +218,8 @@ Module.onRuntimeInitialized = async function() {
                 await this.refreshPaths();
                 return result;
             } catch (error) {
-                throw new Error(`S operator failed: ${error.message}`);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                throw new Error(`S operator failed: ${errorMessage}`);
             }
         }
 
@@ -227,7 +241,8 @@ Module.onRuntimeInitialized = async function() {
                 await this.refreshPaths();
                 return result;
             } catch (error) {
-                throw new Error(`S- operator failed: ${error.message}`);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                throw new Error(`S- operator failed: ${errorMessage}`);
             }
         }
 
@@ -277,7 +292,8 @@ Module.onRuntimeInitialized = async function() {
                 this.q_param = params.q;
                 return result;
             } catch (error) {
-                throw new Error(`Parameter update failed: ${error.message}`);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                throw new Error(`Parameter update failed: ${errorMessage}`);
             }
         }
 
@@ -668,14 +684,9 @@ Module.onRuntimeInitialized = async function() {
             this.compositeOperationRunning = false;
 
             this.setupEventListeners();
-            this.updateParameterVisibility();
         }
 
         setupEventListeners() {
-            document.getElementById('mode').addEventListener('change', () => {
-                this.updateParameterVisibility();
-            });
-
             document.getElementById('style').addEventListener('change', (e) => {
                 this.visualizer.setStyle(e.target.value);
                 this.redraw();
@@ -776,35 +787,15 @@ Module.onRuntimeInitialized = async function() {
             });
         }
 
-        updateParameterVisibility() {
-            const mode = parseInt(document.getElementById('mode').value);
-            const qGroup = document.getElementById('q-group');
-            if (qGroup) qGroup.style.display = 'none';
-
-            switch (mode) {
-                case 5: // q-Hahn
-                    if (qGroup) qGroup.style.display = 'block';
-                    break;
-                case 6: // Hahn
-                    break;
-            }
-        }
 
         getParametersFromUI() {
-            const mode = parseInt(document.getElementById('mode').value);
             const params = {
-                mode: mode,
+                mode: 5, // Always q-Hahn
                 N: parseInt(document.getElementById('N').value),
                 T: parseInt(document.getElementById('T').value),
                 S: parseInt(document.getElementById('S').value),
-                q: 1.0
+                q: parseFloat(document.getElementById('q').value)
             };
-
-            switch (mode) {
-                case 5: // q-Hahn
-                    params.q = parseFloat(document.getElementById('q').value);
-                    break;
-            }
 
             return params;
         }
@@ -820,12 +811,8 @@ Module.onRuntimeInitialized = async function() {
                 throw new Error('S must be between 0 and T');
             }
 
-            switch (params.mode) {
-                case 5:
-                    if (isNaN(params.q) || params.q <= 0 || params.q === 1) {
-                        throw new Error('q must be positive and not equal to 1');
-                    }
-                    break;
+            if (isNaN(params.q) || params.q <= 0) {
+                throw new Error('q must be positive');
             }
         }
 
@@ -843,7 +830,8 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
 
             } catch (error) {
-                alert('Initialization error: ' + error.message);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                alert('Initialization error: ' + errorMessage);
                 console.error(error);
             }
         }
@@ -940,26 +928,18 @@ Module.onRuntimeInitialized = async function() {
                 URL.revokeObjectURL(url);
 
             } catch (error) {
-                alert('Export error: ' + error.message);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                alert('Export error: ' + errorMessage);
             }
         }
 
         updateInfo() {
             const params = this.wasm.getParameters();
-            const modeNames = {
-                1: 'Imaginary q-Racah',
-                2: 'Real q-Racah',
-                3: 'Trigonometric q-Racah',
-                4: 'Racah',
-                5: 'q-Hahn',
-                6: 'Hahn'
-            };
 
             const info = document.getElementById('info');
             info.innerHTML = `
                 <strong>Current Configuration:</strong><br>
-                Mode: ${modeNames[params.mode]}<br>
-                N = ${params.N}, T = ${params.T}, S = ${params.S}
+                N = ${params.N}, T = ${params.T}, S = ${params.S}, q = ${params.q}
             `;
         }
 
@@ -979,7 +959,8 @@ Module.onRuntimeInitialized = async function() {
                 this.updateInfo();
 
             } catch (error) {
-                alert('Invalid parameters: ' + error.message);
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                alert('Invalid parameters: ' + errorMessage);
             }
         }
 
@@ -996,22 +977,29 @@ Module.onRuntimeInitialized = async function() {
 
     // Initialize application
     try {
+        console.log('Starting application initialization...');
+        console.log('Module defined:', typeof Module !== 'undefined');
+        
         const wasmInterface = new WASMInterface();
         await wasmInterface.initialize();
 
         const canvas = document.getElementById('lozenge-canvas');
+        if (!canvas) {
+            throw new Error('Canvas element "lozenge-canvas" not found');
+        }
         const visualizer = new TilingVisualizer(canvas);
 
         const ui = new UIController(wasmInterface, visualizer);
 
         // Initialize with default parameters
-        ui.initializeTiling();
+        await ui.initializeTiling();
 
         console.log('Random Tilings Generator initialized successfully');
 
     } catch (error) {
         console.error('Failed to initialize application:', error);
-        alert('Failed to initialize application. Check console for details.');
+        const errorMessage = error?.message || error?.toString() || 'Unknown error';
+        alert('Failed to initialize application: ' + errorMessage + '\nCheck console for details.');
     }
 };
 </script>
