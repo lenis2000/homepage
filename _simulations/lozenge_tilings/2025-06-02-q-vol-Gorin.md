@@ -38,6 +38,71 @@ code:
     font-size: 12px;
   }
 
+  /* Export modal styles */
+  .export-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+  }
+
+  .export-modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .export-textarea {
+    width: 100%;
+    height: 300px;
+    font-family: monospace;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+    resize: vertical;
+  }
+
+  .export-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .export-buttons button {
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+  }
+
+  .export-buttons button:hover {
+    background-color: #e9ecef;
+  }
+
+  .close-modal {
+    float: right;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #aaa;
+  }
+
+  .close-modal:hover {
+    color: #000;
+  }
+
   /* Mobile responsiveness */
   @media (max-width: 768px) {
     #lozenge-canvas {
@@ -114,6 +179,21 @@ The sampler works entirely in your browser using WebAssembly.
 
 <!-- Visualization canvas -->
 <canvas id="lozenge-canvas"></canvas>
+
+<!-- Export Modal -->
+<div id="export-modal" class="export-modal">
+  <div class="export-modal-content">
+    <span class="close-modal">&times;</span>
+    <h3>Export Plane Partition</h3>
+    <p>Matrix representation of the plane partition:</p>
+    <textarea id="export-textarea" class="export-textarea" readonly></textarea>
+    <div class="export-buttons">
+      <button id="copy-to-clipboard">Copy to Clipboard</button>
+      <button id="download-file">Download File</button>
+      <button id="close-export">Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="keyboard-info">
   <strong>Keyboard shortcuts:</strong><br>
@@ -362,17 +442,14 @@ Module.onRuntimeInitialized = async function() {
             this.canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
 
-                const width = this.canvas.width / (window.devicePixelRatio || 1);
-                const height = this.canvas.height / (window.devicePixelRatio || 1);
-                const centerX = width / 2;
-                const centerY = height / 2;
+                const center = this.getHexagonScreenCenter();
 
                 const zoomFactor = e.deltaY > 0 ? 0.985 : 1.015;
                 const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
 
                 const scale = newZoom / this.zoomLevel;
-                this.panX = centerX - (centerX - this.panX) * scale;
-                this.panY = centerY - (centerY - this.panY) * scale;
+                this.panX = center.x - (center.x - this.panX) * scale;
+                this.panY = center.y - (center.y - this.panY) * scale;
 
                 this.zoomLevel = newZoom;
 
@@ -449,11 +526,26 @@ Module.onRuntimeInitialized = async function() {
             this.style = parseInt(style);
         }
 
-        zoomIn() {
+        getHexagonScreenCenter() {
+            if (!this.lastPaths || !this.lastN || !this.lastT || !this.lastS) {
+                const width = this.canvas.width / (window.devicePixelRatio || 1);
+                const height = this.canvas.height / (window.devicePixelRatio || 1);
+                return { x: width / 2, y: height / 2 };
+            }
+
             const width = this.canvas.width / (window.devicePixelRatio || 1);
             const height = this.canvas.height / (window.devicePixelRatio || 1);
-            const centerX = width / 2;
-            const centerY = height / 2;
+
+            // Calculate where the hexagon center appears on screen
+            // This matches the transformation sequence in drawHexagonStyle
+            const screenCenterX = this.panX + width / 2;
+            const screenCenterY = this.panY + height / 2;
+            
+            return { x: screenCenterX, y: screenCenterY };
+        }
+
+        zoomIn() {
+            const center = this.getHexagonScreenCenter();
 
             const oldZoom = this.zoomLevel;
             const newZoom = Math.min(10.0, oldZoom * 1.2);
@@ -461,17 +553,14 @@ Module.onRuntimeInitialized = async function() {
             if (newZoom === oldZoom) return;
 
             const scale = newZoom / oldZoom;
-            this.panX = centerX - (centerX - this.panX) * scale;
-            this.panY = centerY - (centerY - this.panY) * scale;
+            this.panX = center.x - (center.x - this.panX) * scale;
+            this.panY = center.y - (center.y - this.panY) * scale;
 
             this.zoomLevel = newZoom;
         }
 
         zoomOut() {
-            const width = this.canvas.width / (window.devicePixelRatio || 1);
-            const height = this.canvas.height / (window.devicePixelRatio || 1);
-            const centerX = width / 2;
-            const centerY = height / 2;
+            const center = this.getHexagonScreenCenter();
 
             const oldZoom = this.zoomLevel;
             const newZoom = Math.max(0.1, oldZoom / 1.2);
@@ -479,16 +568,18 @@ Module.onRuntimeInitialized = async function() {
             if (newZoom === oldZoom) return;
 
             const scale = newZoom / oldZoom;
-            this.panX = centerX - (centerX - this.panX) * scale;
-            this.panY = centerY - (centerY - this.panY) * scale;
+            this.panX = center.x - (center.x - this.panX) * scale;
+            this.panY = center.y - (center.y - this.panY) * scale;
 
             this.zoomLevel = newZoom;
         }
 
         resetZoom() {
+            // Reset zoom and center the hexagon properly
             this.zoomLevel = 1.0;
             this.panX = 0;
             this.panY = 0;
+            
             if (this.lastPaths) {
                 this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
             }
@@ -726,6 +817,40 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
             });
 
+            // Export modal event listeners
+            document.getElementById('copy-to-clipboard').addEventListener('click', () => {
+                this.copyToClipboard();
+            });
+
+            document.getElementById('download-file').addEventListener('click', () => {
+                this.downloadFile();
+            });
+
+            document.getElementById('close-export').addEventListener('click', () => {
+                this.closeExportModal();
+            });
+
+            document.querySelector('.close-modal').addEventListener('click', () => {
+                this.closeExportModal();
+            });
+
+            // Close modal when clicking outside of it
+            document.getElementById('export-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'export-modal') {
+                    this.closeExportModal();
+                }
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('export-modal');
+                    if (modal.style.display === 'block') {
+                        this.closeExportModal();
+                    }
+                }
+            });
+
             // Keyboard controls
             document.addEventListener('keypress', (e) => {
                 if (this.animationRunning) return;
@@ -918,6 +1043,44 @@ Module.onRuntimeInitialized = async function() {
                     text += row.join('\t') + '\n';
                 }
 
+                // Show the export modal with the text
+                document.getElementById('export-textarea').value = text;
+                document.getElementById('export-modal').style.display = 'block';
+
+            } catch (error) {
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                alert('Export error: ' + errorMessage);
+            }
+        }
+
+        copyToClipboard() {
+            try {
+                const textarea = document.getElementById('export-textarea');
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // For mobile devices
+                
+                if (navigator.clipboard && window.isSecureContext) {
+                    // Use modern clipboard API if available
+                    navigator.clipboard.writeText(textarea.value).then(() => {
+                        alert('Copied to clipboard!');
+                    }).catch(() => {
+                        // Fallback to execCommand
+                        document.execCommand('copy');
+                        alert('Copied to clipboard!');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    document.execCommand('copy');
+                    alert('Copied to clipboard!');
+                }
+            } catch (error) {
+                alert('Failed to copy to clipboard');
+            }
+        }
+
+        downloadFile() {
+            try {
+                const text = document.getElementById('export-textarea').value;
                 const blob = new Blob([text], { type: 'text/plain' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -925,11 +1088,14 @@ Module.onRuntimeInitialized = async function() {
                 a.download = `plane_partition_N${this.wasm.getParameters().N}_T${this.wasm.getParameters().T}_S${this.wasm.getParameters().S}.txt`;
                 a.click();
                 URL.revokeObjectURL(url);
-
             } catch (error) {
                 const errorMessage = error?.message || error?.toString() || 'Unknown error';
-                alert('Export error: ' + errorMessage);
+                alert('Download error: ' + errorMessage);
             }
+        }
+
+        closeExportModal() {
+            document.getElementById('export-modal').style.display = 'none';
         }
 
         updateInfo() {
