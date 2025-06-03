@@ -83,7 +83,7 @@ The sampler works entirely in your browser using WebAssembly.
   <input id="S" type="number" value="0" min="0" style="width: 60px;">
 
   <label for="q" style="margin-left: 20px;">q: </label>
-  <input id="q" type="number" value="1" step="0.1" min="0.01" style="width: 60px;">
+  <input id="q" type="number" value="1" step="0.02" min="0.01" style="width: 60px;">
 
   <button id="initialize">Initialize</button>
   <button id="set-parameters">Set Parameters</button>

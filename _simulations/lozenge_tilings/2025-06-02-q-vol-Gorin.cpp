@@ -369,73 +369,129 @@ void calculateProbabilitiesSminus(std::vector<double>& p, int k_start, int j_end
             break;
         }
         case TilingMode::Q_HAHN: {
-            double K_prime_val = static_cast<double>(S_param - tc);
+            double S_val = static_cast<double>(S_param);
+            double tc_val = static_cast<double>(tc);
+            double N_val = static_cast<double>(N_param);
 
             if (std::abs(q_param - 1.0) < 1e-9) {
                 // Fallback to Hahn if q is very close to 1.
-                // This assumes Hahn is the q->1 limit. This part might need model-specific verification.
-                // Copying Hahn logic for Sminus:
-                if (tc < S_param) { // K_prime_val > 0
+                // Using HAHN logic from Sminusoperator in Fortran
+                if (tc < S_param) {
                     p[0] = 1.0;
                     for (int i = 1; i <= j_end - k_start + 1; i++) {
                         double x = static_cast<double>(paths[k_start + i - 1][tc]);
-                        if (std::abs(N_param + S_param - x - 1.0) < 1e-9) { p[i] = 0.0; }
-                        else { p[i] = p[i-1] * (N_param + (tc - 1) - x + 1.0) / (N_param + S_param - x - 1.0); }
+                        double den = (N_val + S_val - x - 1.0);
+                        if (std::abs(den) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * (N_val + (tc_val - 1.0) - x + 1.0) / den; }
                     }
-                } else { // K_prime_val <= 0
+                } else {
                     p[j_end - k_start + 1] = 1.0;
                     for (int i = 0; i < j_end - k_start + 1; i++) {
                         double x = static_cast<double>(paths[j_end - i][tc]);
-                        if (std::abs(N_param + (tc - 1) - x + 1.0) < 1e-9) { p[j_end - k_start - i] = 0.0; }
+                        double den = (N_val + (tc_val - 1.0) - x + 1.0);
+                        if (std::abs(den) < 1e-9) { p[j_end - k_start - i] = 0.0; }
                         else {
                             p[j_end - k_start - i] = p[j_end - k_start + 1 - i] *
-                                                   (N_param + S_param - x - 1.0) / (N_param + (tc - 1) - x + 1.0);
+                                                   (N_val + S_val - x - 1.0) / den;
                         }
                     }
                 }
-            } else if (q_param < 1.0) { // Case: q < 1
-                if (K_prime_val > 0) { // Subcase: q < 1 AND K_prime_val > 0 (tc < S_param)
+            } else if (q_param < 1.0) { // Fortran q < 1 case
+                if (tc < S_param) { // K_prime_val > 0
                     p[0] = 1.0; // Forward iteration
                     for (int i = 1; i <= j_end - k_start + 1; i++) {
                         double x = static_cast<double>(paths[k_start + i - 1][tc]);
-                        double term_numerator = (1.0 - std::pow(q_param, N_param + tc - x));
-                        double term_denominator = (1.0 - std::pow(q_param, N_param + S_param - x - 1.0));
+                        double term_numerator = (1.0 - std::pow(q_param, N_val + tc_val - x));
+                        double term_denominator = (1.0 - std::pow(q_param, N_val + S_val - x - 1.0));
                         if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
-                        else { p[i] = p[i-1] * std::pow(q_param, K_prime_val) * term_numerator / term_denominator; }
+                        else {
+                            p[i] = p[i-1] * std::pow(q_param, S_val - tc_val) * term_numerator / term_denominator;
+                        }
                     }
-                } else { // Subcase: q < 1 AND K_prime_val <= 0 (tc >= S_param)
+                } else { // K_prime_val <= 0 (tc >= S_param)
+                    // Fortran: p(j-k+2)=1 (0-indexed p[j-k+1]), then loop i=1 to j-k+1 fills p(j-k+2-i)
+                    // This means p[j-k+1] = 1, then loop fills p[j-k] down to p[0]
+                    p[j_end - k_start + 1] = 1.0; // Backward iteration
+                    for (int i = 0; i < j_end - k_start + 1; i++) { // Fills p[j_end-k_start-i] from p[j_end-k_start+1-i]
+                        int current_p_idx = j_end - k_start - i;
+                        // x for p[j-k+2-i] (Fortran) is paths(j+1-i,tc)
+                        // Fortran i goes 1..j-k+1. Fortran p index j-k+2-i goes from j-k+1 down to 1.
+                        // C++ i goes 0..j-k. C++ p index j_end-k_start-i goes from j_end-k_start down to 0.
+                        // x for C++ p[current_p_idx] uses paths[k_start + current_p_idx][tc]
+                        double x_for_current_p = static_cast<double>(paths[k_start + current_p_idx][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, N_val + S_val - x_for_current_p - 1.0));
+                        double term_denominator = (1.0 - std::pow(q_param, N_val + tc_val - x_for_current_p));
+                        if (std::abs(term_denominator) < 1e-9) { p[current_p_idx] = 0.0; }
+                        else {
+                            p[current_p_idx] = p[j_end - k_start + 1 - i] * // p[next_p_idx]
+                                std::pow(q_param, tc_val - S_val) * term_numerator / term_denominator;
+                        }
+                    }
+                }
+            } else { // q_param > 1.0 (Fortran q > 1 case)
+                if (tc < S_param) { // K_prime_val > 0
+                    // Fortran: i0 logic
+                    double x0_num = (std::pow(q_param, tc_val - S_val) - 1.0);
+                    double x0_den = (1.0 - q_param); // Fortran 1-q (where q is q_param)
+                    double x0 = 0.0;
+
+                    if (std::abs(x0_den) > 1e-9 && std::abs(std::log(q_param)) > 1e-9 && x0_num / x0_den > 0 /*arg of log must be positive*/) {
+                         x0 = tc_val - 1.0 + N_val - std::log(x0_num / x0_den) / std::log(q_param);
+                    } else {
+                        // Fallback: if x0 cannot be calculated, default to one end (e.g., k_start)
+                        // This may not be ideal but prevents NaN/crash. Better handling may be model-specific.
+                        x0 = paths[k_start][tc] - 1.0; // Ensure i0 starts at k_start
+                    }
+
+                    int i0_fortran_style = k_start; // Fortran k is 1-based, C++ k_start is 0-based
+                    while ((i0_fortran_style < j_end) && (paths[i0_fortran_style][tc] < x0)) {
+                        i0_fortran_style++;
+                    }
+                    // Fortran p is 1-indexed, p(i0-k+1)=1. C++ p is 0-indexed.
+                    // Fortran i0 is actual particle index. k is starting particle index.
+                    // C++ k_start is 0-based starting particle index.
+                    int i0_offset = i0_fortran_style - k_start;
+                    if (i0_offset < 0) i0_offset = 0;
+                    if (i0_offset > (j_end - k_start + 1)) i0_offset = (j_end - k_start + 1);
+
+                    p[i0_offset] = 1.0;
+
+                    // Fortran: forward from i0 (do i=i0-k+2,j-k+2)
+                    // p(i)=p(i-1)*(q**(x-tc-N)-1)/(q**(x-S-N)-1/q)
+                    // C++: loop from i0_offset + 1 to j_end - k_start + 1
+                    for (int current_p_array_idx = i0_offset + 1; current_p_array_idx <= j_end - k_start + 1; current_p_array_idx++) {
+                        // x for p(i) in Fortran is paths(k+i-2,tc)
+                        // k_fortran = k_start_cpp + 1. Fortran i goes from i0_cpp-k_start_cpp+1 up to j_cpp-k_start_cpp+1.
+                        // path_idx_cpp = k_start_cpp + (current_p_array_idx - 1)
+                        double x = static_cast<double>(paths[k_start + current_p_array_idx -1][tc]);
+                        double term_numerator = (std::pow(q_param, x - tc_val - N_val) - 1.0);
+                        double term_denominator = (std::pow(q_param, x - S_val - N_val) - (1.0/q_param));
+                        if (std::abs(term_denominator) < 1e-9) { p[current_p_array_idx] = 0.0; }
+                        else { p[current_p_array_idx] = p[current_p_array_idx-1] * term_numerator / term_denominator; }
+                    }
+
+                    // Fortran: backward from i0 (do i=2,i0-k+1) fills p(i0-k+2-i) from p(i0-k+2-i+1)
+                    // p(i0-k+2-i)=p(i0-k+2-i+1)*(q**(x-S-N)-1/q)/(q**(x-tc-N)-1)
+                    // C++: loop from i0_offset - 1 down to 0
+                    for (int current_p_array_idx = i0_offset - 1; current_p_array_idx >= 0; current_p_array_idx--) {
+                        // x for p(i0-k+2-i) in Fortran is paths(i0+1-i, tc)
+                        // path_idx_cpp for p[current_p_array_idx] is k_start_cpp + current_p_array_idx
+                        double x = static_cast<double>(paths[k_start + current_p_array_idx][tc]);
+                        double term_numerator = (std::pow(q_param, x - S_val - N_val) - (1.0/q_param));
+                        double term_denominator = (std::pow(q_param, x - tc_val - N_val) - 1.0);
+                        if (std::abs(term_denominator) < 1e-9) { p[current_p_array_idx] = 0.0; }
+                        else { p[current_p_array_idx] = p[current_p_array_idx+1] * term_numerator / term_denominator; }
+                    }
+                } else { // K_prime_val <= 0 (tc >= S_param)
+                    // Fortran: p(j-k+2)=1, then loop i=1 to j-k+1 fills p(j-k+2-i)
+                    // p(j-k+2-i)=p(j-k+2-i+1)*(q**(x-S-N)-1/q)/(q**(x-tc-N)-1)
                     p[j_end - k_start + 1] = 1.0; // Backward iteration
                     for (int i = 0; i < j_end - k_start + 1; i++) {
                         int current_p_idx = j_end - k_start - i;
                         double x_for_current_p = static_cast<double>(paths[k_start + current_p_idx][tc]);
-                        double term_numerator = (1.0 - std::pow(q_param, N_param + S_param - x_for_current_p - 1.0));
-                        double term_denominator = (1.0 - std::pow(q_param, N_param + tc - x_for_current_p));
-                        if (std::abs(term_denominator) < 1e-9) { p[current_p_idx] = 0.0; }
-                        else {
-                            p[current_p_idx] = p[j_end - k_start + 1 - i] *
-                                std::pow(q_param, -K_prime_val) * term_numerator / term_denominator;
-                        }
-                    }
-                }
-            } else { // Case: q_param > 1.0
-                if (K_prime_val > 0) { // Subcase: q > 1 AND K_prime_val > 0 (tc < S_param)
-                    // Forward iteration. Ratio p[i]/p[i-1] for q>1: (1 - Q^-(N+tc-x)) / (1 - Q^-(N+S-x-1))
-                    p[0] = 1.0;
-                    for (int i = 1; i <= j_end - k_start + 1; i++) {
-                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
-                        double term_numerator = (1.0 - std::pow(q_param, -(N_param + tc - x)));
-                        double term_denominator = (1.0 - std::pow(q_param, -(N_param + S_param - x - 1.0)));
-                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
-                        else { p[i] = p[i-1] * term_numerator / term_denominator; }
-                    }
-                } else { // Subcase: q > 1 AND K_prime_val <= 0 (tc >= S_param)
-                    // Backward iteration. Ratio p[curr]/p[next] for q>1: (1 - Q^-(N+S-x_curr-1)) / (1 - Q^-(N+tc-x_curr))
-                    p[j_end - k_start + 1] = 1.0;
-                    for (int i = 0; i < j_end - k_start + 1; i++) {
-                        int current_p_idx = j_end - k_start - i;
-                        double x_for_current_p = static_cast<double>(paths[k_start + current_p_idx][tc]);
-                        double term_numerator = (1.0 - std::pow(q_param, -(N_param + S_param - x_for_current_p - 1.0)));
-                        double term_denominator = (1.0 - std::pow(q_param, -(N_param + tc - x_for_current_p)));
+                        double term_numerator = (std::pow(q_param, x_for_current_p - S_val - N_val) - (1.0/q_param));
+                        double term_denominator = (std::pow(q_param, x_for_current_p - tc_val - N_val) - 1.0);
+
                         if (std::abs(term_denominator) < 1e-9) { p[current_p_idx] = 0.0; }
                         else {
                             p[current_p_idx] = p[j_end - k_start + 1 - i] * term_numerator / term_denominator;
