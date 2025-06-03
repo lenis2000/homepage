@@ -94,7 +94,6 @@ The sampler works entirely in your browser using WebAssembly.
   <select id="style">
     <option value="1" selected>Lozenges</option>
     <option value="5">Z² paths</option>
-    <option value="3d">3D boxes</option>
   </select>
 
   <label for="steps">Steps: </label>
@@ -115,7 +114,6 @@ The sampler works entirely in your browser using WebAssembly.
 
 <!-- Visualization canvas -->
 <canvas id="lozenge-canvas"></canvas>
-<div id="lozenge-3d-container" style="display: none; width: 100%; max-width: 1200px; height: 80vh; max-height: 800px; margin: 0 auto;"></div>
 
 <div class="keyboard-info">
   <strong>Keyboard shortcuts:</strong><br>
@@ -515,6 +513,7 @@ Module.onRuntimeInitialized = async function() {
                 this.drawHexagonStyle(paths, N, T, S);
             }
         }
+
 
         drawHexagonStyle(paths, N, T, S) {
             const ctx = this.ctx;
