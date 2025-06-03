@@ -13,11 +13,22 @@ code:
   /* Basic styling for the canvas and controls */
   #lozenge-canvas {
     width: 100%;
+    max-width: 1200px;
     height: 80vh;
+    max-height: 800px;
     border: 1px solid #ccc;
+    display: block;
+    margin: 0 auto;
   }
   .controls {
     margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .controls > * {
+    flex-shrink: 0;
   }
   .keyboard-info {
     margin-top: 10px;
@@ -25,6 +36,27 @@ code:
     background-color: #f8f9fa;
     border-radius: 4px;
     font-size: 12px;
+  }
+  
+  /* Mobile responsiveness */
+  @media (max-width: 768px) {
+    #lozenge-canvas {
+      height: 60vh;
+      min-height: 400px;
+    }
+    .controls {
+      font-size: 14px;
+    }
+    .controls input[type="number"] {
+      width: 50px !important;
+    }
+    .controls button {
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+    .keyboard-info {
+      display: none;
+    }
   }
 </style>
 
@@ -66,26 +98,23 @@ The sampler works entirely in your browser using WebAssembly for computational e
     <input id="q" type="number" value="0.9" step="0.1" min="0.01" style="width: 60px;">
   </span>
   
-  <button id="initialize" style="margin-left: 20px;">Initialize</button>
+  <button id="initialize">Initialize</button>
+  <button id="set-parameters">Set Parameters</button>
 </div>
 
 <div class="controls">
   <label for="style">Style: </label>
   <select id="style">
-    <option value="1">No borders</option>
-    <option value="2" selected>Classical with borders</option>
-    <option value="3">No borders with paths</option>
-    <option value="4">Classical with borders and paths</option>
-    <option value="5">Non-intersecting paths on Z²</option>
+    <option value="1" selected>Lozenges</option>
+    <option value="5">Z² paths</option>
   </select>
   
-  <label for="steps" style="margin-left: 20px;">Steps: </label>
+  <label for="steps">Steps: </label>
   <input id="steps" type="number" value="1" min="1" max="10" style="width: 50px;">
   
-  <button id="step-plus" style="margin-left: 10px;">S → S+steps</button>
-  <button id="step-minus" style="margin-left: 10px;">S → S-steps</button>
-  <button id="set-parameters" style="margin-left: 10px;">Set Parameters</button>
-  <button id="export" style="margin-left: 10px;">Export</button>
+  <button id="step-plus">S → S+steps</button>
+  <button id="step-minus">S → S-steps</button>
+  <button id="export">Export</button>
 </div>
 
 <div class="controls">
@@ -305,30 +334,35 @@ Module.onRuntimeInitialized = async function() {
 
         setupCanvas() {
             const dpr = window.devicePixelRatio || 1;
-            const displayWidth = 1200;
-            const displayHeight = 800;
+            
+            // Get the actual canvas element dimensions from CSS
+            const rect = this.canvas.getBoundingClientRect();
+            const displayWidth = rect.width || 1200;
+            const displayHeight = rect.height || 800;
 
+            // Set internal size accounting for device pixel ratio
             this.canvas.width = displayWidth * dpr;
             this.canvas.height = displayHeight * dpr;
+            
+            // Scale context to ensure correct drawing operations
             this.ctx.scale(dpr, dpr);
-            this.canvas.style.width = displayWidth + 'px';
-            this.canvas.style.height = displayHeight + 'px';
         }
 
         setupMouseHandlers() {
             this.canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 
-                const rect = this.canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
+                const width = this.canvas.width / (window.devicePixelRatio || 1);
+                const height = this.canvas.height / (window.devicePixelRatio || 1);
+                const centerX = width / 2;
+                const centerY = height / 2;
                 
-                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                const zoomFactor = e.deltaY > 0 ? 0.97 : 1.03;
                 const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
                 
                 const scale = newZoom / this.zoomLevel;
-                this.panX = mouseX - (mouseX - this.panX) * scale;
-                this.panY = mouseY - (mouseY - this.panY) * scale;
+                this.panX = centerX - (centerX - this.panX) * scale;
+                this.panY = centerY - (centerY - this.panY) * scale;
                 
                 this.zoomLevel = newZoom;
                 
@@ -366,6 +400,38 @@ Module.onRuntimeInitialized = async function() {
                 this.canvas.style.cursor = 'grab';
             });
 
+            // Touch events for mobile
+            this.canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    this.isPanning = true;
+                    this.lastMouseX = e.touches[0].clientX;
+                    this.lastMouseY = e.touches[0].clientY;
+                    e.preventDefault();
+                }
+            });
+
+            this.canvas.addEventListener('touchmove', (e) => {
+                if (!this.isPanning || e.touches.length !== 1) return;
+                
+                const dx = e.touches[0].clientX - this.lastMouseX;
+                const dy = e.touches[0].clientY - this.lastMouseY;
+                
+                this.panX += dx;
+                this.panY += dy;
+                
+                this.lastMouseX = e.touches[0].clientX;
+                this.lastMouseY = e.touches[0].clientY;
+                
+                if (this.lastPaths) {
+                    this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
+                }
+                e.preventDefault();
+            });
+
+            this.canvas.addEventListener('touchend', () => {
+                this.isPanning = false;
+            });
+
             this.canvas.style.cursor = 'grab';
         }
 
@@ -374,11 +440,39 @@ Module.onRuntimeInitialized = async function() {
         }
 
         zoomIn() {
-            this.zoomLevel = Math.min(10.0, this.zoomLevel * 1.2);
+            const width = this.canvas.width / (window.devicePixelRatio || 1);
+            const height = this.canvas.height / (window.devicePixelRatio || 1);
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            const oldZoom = this.zoomLevel;
+            const newZoom = Math.min(10.0, oldZoom * 1.2);
+            
+            if (newZoom === oldZoom) return;
+            
+            const scale = newZoom / oldZoom;
+            this.panX = centerX - (centerX - this.panX) * scale;
+            this.panY = centerY - (centerY - this.panY) * scale;
+            
+            this.zoomLevel = newZoom;
         }
 
         zoomOut() {
-            this.zoomLevel = Math.max(0.1, this.zoomLevel / 1.2);
+            const width = this.canvas.width / (window.devicePixelRatio || 1);
+            const height = this.canvas.height / (window.devicePixelRatio || 1);
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            const oldZoom = this.zoomLevel;
+            const newZoom = Math.max(0.1, oldZoom / 1.2);
+            
+            if (newZoom === oldZoom) return;
+            
+            const scale = newZoom / oldZoom;
+            this.panX = centerX - (centerX - this.panX) * scale;
+            this.panY = centerY - (centerY - this.panY) * scale;
+            
+            this.zoomLevel = newZoom;
         }
 
         resetZoom() {
@@ -416,18 +510,30 @@ Module.onRuntimeInitialized = async function() {
             const height = this.canvas.height / (window.devicePixelRatio || 1);
 
             const sqrt3 = Math.sqrt(3);
-            const size = Math.max((N + S * 0.5) + (T - S) * 0.5, T * 0.5 * sqrt3);
+            
+            // Calculate the bounding box of the hexagon
+            const minX = 0;
+            const maxX = T * 0.5 * sqrt3;
+            const minY = -(T - S) * 0.5;
+            const maxY = N + Math.max(S * 0.5, (2 * S - T) * 0.5);
+            
+            const hexWidth = maxX - minX;
+            const hexHeight = maxY - minY;
+            const hexCenterX = (minX + maxX) / 2;
+            const hexCenterY = (minY + maxY) / 2;
 
             const margin = 40;
             const scale = Math.min(
-                (width - 2 * margin) / (size * 1.2),
-                (height - 2 * margin) / (size * 1.2)
+                (width - 2 * margin) / hexWidth,
+                (height - 2 * margin) / hexHeight
             ) * this.zoomLevel;
 
             ctx.save();
             ctx.translate(this.panX, this.panY);
             ctx.translate(width / 2, height / 2);
             ctx.scale(scale, scale);
+            // Center the hexagon
+            ctx.translate(-hexCenterX, -hexCenterY);
 
             this.drawBackgroundHexagon(N, T, S);
 
@@ -437,10 +543,6 @@ Module.onRuntimeInitialized = async function() {
                     const nextHeight = paths[j][i + 1];
                     this.drawRhombus(i, j, currentHeight, nextHeight);
                 }
-            }
-
-            if (this.style === 3 || this.style === 4) {
-                this.drawPathLines(paths, N, T);
             }
 
             ctx.restore();
@@ -468,12 +570,6 @@ Module.onRuntimeInitialized = async function() {
 
             ctx.fillStyle = this.colors.gray3;
             ctx.fill();
-
-            if (this.style === 2 || this.style === 4) {
-                ctx.strokeStyle = this.colors.black;
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-            }
         }
 
         drawRhombus(timeIdx, particleIdx, height, nextHeight) {
@@ -513,38 +609,8 @@ Module.onRuntimeInitialized = async function() {
 
             ctx.fillStyle = fillColor;
             ctx.fill();
-
-            if (this.style === 2 || this.style === 4) {
-                ctx.strokeStyle = this.colors.black;
-                ctx.lineWidth = 0.02;
-                ctx.stroke();
-            }
         }
 
-        drawPathLines(paths, N, T) {
-            const ctx = this.ctx;
-            const sqrt3 = Math.sqrt(3);
-
-            ctx.strokeStyle = this.colors.black;
-            ctx.lineWidth = 0.03;
-
-            for (let j = 0; j < N; j++) {
-                ctx.beginPath();
-
-                for (let i = 0; i <= T; i++) {
-                    const x = i * 0.5 * sqrt3;
-                    const y = (paths[j][i] + 0.5) - i * 0.5;
-
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-
-                ctx.stroke();
-            }
-        }
 
         drawLatticePathsStyle(paths, N, T, S) {
             const ctx = this.ctx;
@@ -709,6 +775,7 @@ Module.onRuntimeInitialized = async function() {
             });
 
             window.addEventListener('resize', () => {
+                this.visualizer.setupCanvas();
                 this.redraw();
             });
         }
