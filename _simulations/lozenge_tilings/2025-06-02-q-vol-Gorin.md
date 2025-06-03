@@ -37,7 +37,7 @@ code:
     border-radius: 4px;
     font-size: 12px;
   }
-  
+
   /* Mobile responsiveness */
   @media (max-width: 768px) {
     #lozenge-canvas {
@@ -60,19 +60,13 @@ code:
   }
 </style>
 
+<script src="/js/three.min.js"></script>
+<script src="/js/OrbitControls.js"></script>
 <script src="/js/2025-06-02-q-vol-Gorin.js"></script>
 
-This simulation demonstrates **lozenge tilings** using a WASM/JS port of a program by [Vadim Gorin](https://www.stat.berkeley.edu/~vadicgor/research.html). The simulation handles **uniform** and **q^volume** cases for lozenge tilings, providing an interactive way to explore these mathematical structures.
+This simulation demonstrates **lozenge tilings** using a WASM/JS port of a program by [Vadim Gorin](https://www.stat.berkeley.edu/~vadicgor/research.html). The simulation handles $q^{-volume}$ measure on lozenge tilings of a hexagon with sides $N$, $S$, and $T-S$.
 
-This is a simplified version that focuses on the core tiling generation algorithms. The original implementation by Vadim Gorin includes much more sophisticated features for studying the asymptotic behavior of random lozenge tilings.
-
-**Technical Details:**
-- **Uniform case**: All tilings have equal probability
-- **q^volume case**: Tilings are weighted by q raised to their volume
-- **S operator**: Performs dynamics on the tiling configurations
-- **Interactive visualization**: Real-time rendering of the tiling structure
-
-The sampler works entirely in your browser using WebAssembly for computational efficiency.
+The sampler works entirely in your browser using WebAssembly.
 
 ---
 
@@ -83,21 +77,21 @@ The sampler works entirely in your browser using WebAssembly for computational e
     <option value="6">Hahn (uniform measure)</option>
     <option value="5">q-Hahn (measure q^vol)</option>
   </select>
-  
+
   <label for="N" style="margin-left: 20px;">N: </label>
   <input id="N" type="number" value="20" min="1" max="200" style="width: 60px;">
-  
+
   <label for="T" style="margin-left: 20px;">T: </label>
   <input id="T" type="number" value="40" min="1" max="500" style="width: 60px;">
-  
+
   <label for="S" style="margin-left: 20px;">S: </label>
   <input id="S" type="number" value="0" min="0" style="width: 60px;">
-  
+
   <span id="q-group" style="display:none;">
     <label for="q" style="margin-left: 20px;">q: </label>
     <input id="q" type="number" value="0.9" step="0.1" min="0.01" style="width: 60px;">
   </span>
-  
+
   <button id="initialize">Initialize</button>
   <button id="set-parameters">Set Parameters</button>
 </div>
@@ -107,11 +101,12 @@ The sampler works entirely in your browser using WebAssembly for computational e
   <select id="style">
     <option value="1" selected>Lozenges</option>
     <option value="5">Z² paths</option>
+    <option value="3d">3D boxes</option>
   </select>
-  
+
   <label for="steps">Steps: </label>
   <input id="steps" type="number" value="1" min="1" max="10" style="width: 50px;">
-  
+
   <button id="step-plus">S → S+steps</button>
   <button id="step-minus">S → S-steps</button>
   <button id="export">Export</button>
@@ -127,6 +122,7 @@ The sampler works entirely in your browser using WebAssembly for computational e
 
 <!-- Visualization canvas -->
 <canvas id="lozenge-canvas"></canvas>
+<div id="lozenge-3d-container" style="display: none; width: 100%; max-width: 1200px; height: 80vh; max-height: 800px; margin: 0 auto;"></div>
 
 <div class="keyboard-info">
   <strong>Keyboard shortcuts:</strong><br>
@@ -159,14 +155,14 @@ Module.onRuntimeInitialized = async function() {
             this.updateParameters = Module.cwrap('updateParameters', 'number', ['number', 'number'], {async: true});
             this.freeString = Module.cwrap('freeString', null, ['number']);
             this.getProgress = Module.cwrap('getProgress', 'number', []);
-            
+
             this.ready = true;
             console.log('WASM module loaded successfully');
         }
 
         async initializeTilingWasm(params) {
             if (!this.ready) throw new Error('WASM not ready');
-            
+
             this.N_param = params.N;
             this.T_param = params.T;
             this.S_param = params.S;
@@ -177,12 +173,12 @@ Module.onRuntimeInitialized = async function() {
                 const ptr = await this.initializeTiling(params.N, params.T, params.S, params.mode, params.q);
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeString(ptr);
-                
+
                 const result = JSON.parse(jsonStr);
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                
+
                 // Auto-export paths
                 await this.refreshPaths();
                 return result;
@@ -199,12 +195,12 @@ Module.onRuntimeInitialized = async function() {
                 const ptr = await this.performSOperator();
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeString(ptr);
-                
+
                 const result = JSON.parse(jsonStr);
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                
+
                 this.S_param = result.s;
                 await this.refreshPaths();
                 return result;
@@ -221,12 +217,12 @@ Module.onRuntimeInitialized = async function() {
                 const ptr = await this.performSMinusOperator();
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeString(ptr);
-                
+
                 const result = JSON.parse(jsonStr);
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                
+
                 this.S_param = result.s;
                 await this.refreshPaths();
                 return result;
@@ -240,7 +236,7 @@ Module.onRuntimeInitialized = async function() {
                 const ptr = await this.exportPaths();
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeString(ptr);
-                
+
                 const result = JSON.parse(jsonStr);
                 if (!result.error) {
                     this.paths = result.paths;
@@ -266,17 +262,17 @@ Module.onRuntimeInitialized = async function() {
 
         async updateParametersWasm(params) {
             if (!this.ready) throw new Error('WASM not ready');
-            
+
             try {
                 const ptr = await this.updateParameters(params.mode, params.q);
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeString(ptr);
-                
+
                 const result = JSON.parse(jsonStr);
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                
+
                 this.mode_param = params.mode;
                 this.q_param = params.q;
                 return result;
@@ -334,7 +330,7 @@ Module.onRuntimeInitialized = async function() {
 
         setupCanvas() {
             const dpr = window.devicePixelRatio || 1;
-            
+
             // Get the actual canvas element dimensions from CSS
             const rect = this.canvas.getBoundingClientRect();
             const displayWidth = rect.width || 1200;
@@ -343,7 +339,7 @@ Module.onRuntimeInitialized = async function() {
             // Set internal size accounting for device pixel ratio
             this.canvas.width = displayWidth * dpr;
             this.canvas.height = displayHeight * dpr;
-            
+
             // Scale context to ensure correct drawing operations
             this.ctx.scale(dpr, dpr);
         }
@@ -351,21 +347,21 @@ Module.onRuntimeInitialized = async function() {
         setupMouseHandlers() {
             this.canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
-                
+
                 const width = this.canvas.width / (window.devicePixelRatio || 1);
                 const height = this.canvas.height / (window.devicePixelRatio || 1);
                 const centerX = width / 2;
                 const centerY = height / 2;
-                
+
                 const zoomFactor = e.deltaY > 0 ? 0.985 : 1.015;
                 const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
-                
+
                 const scale = newZoom / this.zoomLevel;
                 this.panX = centerX - (centerX - this.panX) * scale;
                 this.panY = centerY - (centerY - this.panY) * scale;
-                
+
                 this.zoomLevel = newZoom;
-                
+
                 if (this.lastPaths) {
                     this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
                 }
@@ -380,16 +376,16 @@ Module.onRuntimeInitialized = async function() {
 
             window.addEventListener('mousemove', (e) => {
                 if (!this.isPanning) return;
-                
+
                 const dx = e.clientX - this.lastMouseX;
                 const dy = e.clientY - this.lastMouseY;
-                
+
                 this.panX += dx;
                 this.panY += dy;
-                
+
                 this.lastMouseX = e.clientX;
                 this.lastMouseY = e.clientY;
-                
+
                 if (this.lastPaths) {
                     this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
                 }
@@ -412,16 +408,16 @@ Module.onRuntimeInitialized = async function() {
 
             this.canvas.addEventListener('touchmove', (e) => {
                 if (!this.isPanning || e.touches.length !== 1) return;
-                
+
                 const dx = e.touches[0].clientX - this.lastMouseX;
                 const dy = e.touches[0].clientY - this.lastMouseY;
-                
+
                 this.panX += dx;
                 this.panY += dy;
-                
+
                 this.lastMouseX = e.touches[0].clientX;
                 this.lastMouseY = e.touches[0].clientY;
-                
+
                 if (this.lastPaths) {
                     this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
                 }
@@ -447,13 +443,13 @@ Module.onRuntimeInitialized = async function() {
 
             const oldZoom = this.zoomLevel;
             const newZoom = Math.min(10.0, oldZoom * 1.2);
-            
+
             if (newZoom === oldZoom) return;
-            
+
             const scale = newZoom / oldZoom;
             this.panX = centerX - (centerX - this.panX) * scale;
             this.panY = centerY - (centerY - this.panY) * scale;
-            
+
             this.zoomLevel = newZoom;
         }
 
@@ -465,13 +461,13 @@ Module.onRuntimeInitialized = async function() {
 
             const oldZoom = this.zoomLevel;
             const newZoom = Math.max(0.1, oldZoom / 1.2);
-            
+
             if (newZoom === oldZoom) return;
-            
+
             const scale = newZoom / oldZoom;
             this.panX = centerX - (centerX - this.panX) * scale;
             this.panY = centerY - (centerY - this.panY) * scale;
-            
+
             this.zoomLevel = newZoom;
         }
 
@@ -510,13 +506,13 @@ Module.onRuntimeInitialized = async function() {
             const height = this.canvas.height / (window.devicePixelRatio || 1);
 
             const sqrt3 = Math.sqrt(3);
-            
+
             // Calculate the bounding box of the hexagon
             const minX = 0;
             const maxX = T * 0.5 * sqrt3;
             const minY = -(T - S) * 0.5;
             const maxY = N + Math.max(S * 0.5, (2 * S - T) * 0.5);
-            
+
             const hexWidth = maxX - minX;
             const hexHeight = maxY - minY;
             const hexCenterX = (minX + maxX) / 2;
@@ -725,7 +721,7 @@ Module.onRuntimeInitialized = async function() {
                 if (this.animationRunning) return;
 
                 const key = e.key.toLowerCase();
-                
+
                 if ((key === 's' || key === 'x') && this.compositeOperationRunning) {
                     return;
                 }
@@ -855,7 +851,7 @@ Module.onRuntimeInitialized = async function() {
         async stepForward() {
             try {
                 const steps = parseInt(document.getElementById('steps').value) || 1;
-                
+
                 for (let i = 0; i < steps; i++) {
                     try {
                         await this.wasm.stepForward();
@@ -879,7 +875,7 @@ Module.onRuntimeInitialized = async function() {
         async stepBackward() {
             try {
                 const steps = parseInt(document.getElementById('steps').value) || 1;
-                
+
                 for (let i = 0; i < steps; i++) {
                     try {
                         await this.wasm.stepBackward();
@@ -971,17 +967,17 @@ Module.onRuntimeInitialized = async function() {
             try {
                 const params = this.getParametersFromUI();
                 const currentParams = this.wasm.getParameters();
-                
+
                 if (params.N !== currentParams.N || params.T !== currentParams.T || params.S !== currentParams.S) {
                     alert('Cannot change N, T, or S without creating a new tiling. Use "Initialize New Tiling" instead.');
                     return;
                 }
-                
+
                 this.validateParametersUI(params);
                 await this.wasm.updateParametersWasm(params);
-                
+
                 this.updateInfo();
-                
+
             } catch (error) {
                 alert('Invalid parameters: ' + error.message);
             }
