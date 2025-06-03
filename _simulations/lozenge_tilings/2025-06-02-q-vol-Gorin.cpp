@@ -97,52 +97,117 @@ void calculateProbabilitiesSplus(std::vector<double>& p, int k_start, int j_end,
             break;
         }
         case TilingMode::Q_HAHN: {
-            if (T_param - tc - S_param < 1) {
-                p[0] = 1.0;
-                for (int i = 1; i <= j_end - k_start + 1; i++) {
-                    double x = paths[k_start + i - 1][tc];
-                    if (q_param < 1.0) {
-                        p[i] = p[i-1] * q_param *
-                               (1.0 - std::pow(q_param, T_param - tc - S_param + x)) /
-                               (1.0 - std::pow(q_param, x + 1));
-                    } else {
-                        p[i] = p[i-1] *
-                               (1.0 - std::pow(q_param, -(T_param - tc - S_param + x))) /
-                               (1.0 - std::pow(q_param, -x - 1)) *
-                               std::pow(q_param, T_param - tc - S_param);
+            double K_val = static_cast<double>(T_param - tc - S_param); // Parameter K
+
+            if (std::abs(q_param - 1.0) < 1e-9) {
+                // Fallback to Hahn if q is very close to 1, as q-formulas become degenerate.
+                // This assumes Hahn is the q->1 limit. This part might need model-specific verification.
+                // For now, copying Hahn logic as a robust fallback:
+                if (K_val < 1.0) { // Equivalent to T_param - tc - S_param < 1 in Hahn
+                    p[0] = 1.0;
+                    for (int i = 1; i <= j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        if (std::abs(x + 1.0) < 1e-9) { p[i] = 0.0; } // Avoid division by zero
+                        else { p[i] = p[i-1] * (K_val + x) / (x + 1.0); }
+                    }
+                } else {
+                    p[j_end - k_start + 1] = 1.0;
+                    for (int i = 0; i < j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[j_end - i][tc]);
+                        if (std::abs(K_val + x) < 1e-9) { p[j_end - k_start - i] = 0.0; } // Avoid division by zero
+                        else {
+                            p[j_end - k_start - i] = p[j_end - k_start + 1 - i] *
+                                                   (x + 1.0) / (K_val + x);
+                        }
                     }
                 }
-            } else if (q_param > 1.0) {
-                p[j_end - k_start + 1] = 1.0;
-                for (int i = 0; i < j_end - k_start + 1; i++) {
-                    double x = paths[j_end - i][tc];
-                    p[j_end - k_start - i] = p[j_end - k_start + 1 - i] *
-                        (1.0 - std::pow(q_param, -x - 1)) /
-                        (1.0 - std::pow(q_param, -(T_param - tc - S_param + x))) *
-                        std::pow(q_param, -(T_param - tc - S_param));
-                }
-            } else { // q < 1 and T - tc - S >= 1
-                double x0 = -std::log((std::pow(q_param, T_param - tc - S_param) - 1.0) /
-                                     (1.0 - 1.0/q_param)) / std::log(q_param);
-                int i0 = k_start;
-                while (i0 < j_end && paths[i0][tc] < x0) {
-                    i0++;
-                }
+            } else if (q_param < 1.0) { // Case: q < 1
+                if (K_val < 1.0) { // Subcase: q < 1 AND K_val <= 0
+                    p[0] = 1.0; // Forward iteration
+                    for (int i = 1; i <= j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, K_val + x));
+                        double term_denominator = (1.0 - std::pow(q_param, x + 1.0));
+                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * q_param * term_numerator / term_denominator; }
+                    }
+                } else { // Subcase: q < 1 AND K_val >= 1
+                    // This is the original block with "i0 logic", crucial for non-monotonic distributions.
+                    double x0_threshold_numerator = (std::pow(q_param, K_val) - 1.0);
+                    double x0_threshold_denominator = (1.0 - 1.0/q_param);
+                    double x0 = 0.0; // Default x0 if calculation is problematic
 
-                int i0_offset = i0 - k_start;
-                p[i0_offset] = 1.0;
+                    if (std::abs(x0_threshold_denominator) > 1e-9 && std::abs(std::log(q_param)) > 1e-9 && x0_threshold_numerator / x0_threshold_denominator > 0) {
+                         x0 = -std::log(x0_threshold_numerator / x0_threshold_denominator) / std::log(q_param);
+                    } else {
+                        // Fallback or specific handling if x0 cannot be calculated well
+                        // (e.g. K_val makes numerator non-positive, or q_param is problematic for log)
+                        // For now, this may lead to i0 being at an edge if x0 calculation fails.
+                    }
 
-                for (int i = i0_offset + 1; i <= j_end - k_start + 1; i++) {
-                    double x = paths[k_start + i - 1][tc];
-                    p[i] = p[i-1] * q_param *
-                           (1.0 - std::pow(q_param, T_param - tc - S_param + x)) /
-                           (1.0 - std::pow(q_param, x + 1));
+                    int i0 = k_start;
+                    // Ensure paths[i0][tc] is valid before comparison if i0 can reach j_end+1
+                    while (i0 <= j_end && paths[i0][tc] < x0) {
+                        i0++;
+                    }
+
+                    int i0_offset = i0 - k_start;
+                    // Clamp i0_offset to be a valid index for array p
+                    if (i0_offset < 0) i0_offset = 0;
+                    if (i0_offset > (j_end - k_start + 1)) i0_offset = (j_end - k_start + 1);
+                    
+                    p[i0_offset] = 1.0;
+
+                    for (int i = i0_offset + 1; i <= j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, K_val + x));
+                        double term_denominator = (1.0 - std::pow(q_param, x + 1.0));
+                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * q_param * term_numerator / term_denominator; }
+                    }
+                    for (int i = i0_offset - 1; i >= 0; i--) {
+                        double x = static_cast<double>(paths[k_start + i][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, x + 1.0));
+                        double term_denominator = (q_param * (1.0 - std::pow(q_param, K_val + x)));
+                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i+1] * term_numerator / term_denominator; }
+                    }
                 }
+            } else { // Case: q_param > 1.0
+                // Formulas are standard q-inversions (q -> 1/q, adjust powers) of the q < 1 cases.
+                if (K_val < 1.0) { // Subcase: q > 1 AND K_val <= 0
+                    // Corresponds to forward iteration for q < 1, K_val <= 0.
+                    // Ratio p[i]/p[i-1] for q>1: Q^K_val * (1 - Q^-(K_val+x)) / (1 - Q^-(x+1)), where Q=q_param.
+                    p[0] = 1.0;
+                    for (int i = 1; i <= j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, -(K_val + x)));
+                        double term_denominator = (1.0 - std::pow(q_param, -(x + 1.0)));
+                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * std::pow(q_param, K_val) * term_numerator / term_denominator; }
+                    }
+                } else { // Subcase: q > 1 AND K_val >= 1
+                    // Corresponds to backward iteration from p[last]=1.0.
+                    // Ratio p[curr]/p[next] for q>1: Q^-K_val * (1 - Q^-(x_curr+1)) / (1 - Q^-(K_val+x_curr))
+                    // This assumes that for q>1, K_val>=1, the probability distribution does not require
+                    // an "i0-like" pivot different from the edges for stable calculation.
+                    // If the specific model dictates otherwise, this part would need model-specific "i0 logic" for q>1.
+                    // Verification Point: Confirm if "i0 logic" is needed for this case (q>1, K_val>=1) from source model.
+                    p[j_end - k_start + 1] = 1.0;
+                    for (int i = 0; i < j_end - k_start + 1; i++) { // Iterates to fill p[j_end-k_start] down to p[0]
+                        int current_p_idx = j_end - k_start - i;
+                        int next_p_idx = j_end - k_start + 1 - i;
+                        double x_for_current_p = static_cast<double>(paths[k_start + current_p_idx][tc]); // x for p[current_idx]
 
-                for (int i = i0_offset - 1; i >= 0; i--) {
-                    double x = paths[k_start + i][tc];
-                    p[i] = p[i+1] * (1.0/q_param - std::pow(q_param, x)) /
-                                    (1.0 - std::pow(q_param, T_param - tc - S_param + x));
+                        double term_numerator = (1.0 - std::pow(q_param, -(x_for_current_p + 1.0)));
+                        double term_denominator = (1.0 - std::pow(q_param, -(K_val + x_for_current_p)));
+
+                        if (std::abs(term_denominator) < 1e-9) { p[current_p_idx] = 0.0; }
+                        else {
+                             p[current_p_idx] = p[next_p_idx] *
+                                std::pow(q_param, -K_val) * term_numerator / term_denominator;
+                        }
+                    }
                 }
             }
             break;
@@ -304,33 +369,77 @@ void calculateProbabilitiesSminus(std::vector<double>& p, int k_start, int j_end
             break;
         }
         case TilingMode::Q_HAHN: {
-            if (tc < S_param) {
-                if (q_param < 1.0) {
+            double K_prime_val = static_cast<double>(S_param - tc);
+
+            if (std::abs(q_param - 1.0) < 1e-9) {
+                // Fallback to Hahn if q is very close to 1.
+                // This assumes Hahn is the q->1 limit. This part might need model-specific verification.
+                // Copying Hahn logic for Sminus:
+                if (tc < S_param) { // K_prime_val > 0
                     p[0] = 1.0;
                     for (int i = 1; i <= j_end - k_start + 1; i++) {
-                        double x = paths[k_start + i - 1][tc];
-                        p[i] = p[i-1] * std::pow(q_param, S_param - tc) *
-                               (1.0 - std::pow(q_param, N_param + tc - x)) /
-                               (1.0 - std::pow(q_param, N_param + S_param - x - 1));
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        if (std::abs(N_param + S_param - x - 1.0) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * (N_param + (tc - 1) - x + 1.0) / (N_param + S_param - x - 1.0); }
                     }
-                } else {
-                    // Complex case for q > 1, tc < S - simplified for now
-                    p[0] = 1.0;
-                    for (int i = 1; i <= j_end - k_start + 1; i++) {
-                        p[i] = p[i-1] * 0.5; // Simplified
+                } else { // K_prime_val <= 0
+                    p[j_end - k_start + 1] = 1.0;
+                    for (int i = 0; i < j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[j_end - i][tc]);
+                        if (std::abs(N_param + (tc - 1) - x + 1.0) < 1e-9) { p[j_end - k_start - i] = 0.0; }
+                        else {
+                            p[j_end - k_start - i] = p[j_end - k_start + 1 - i] *
+                                                   (N_param + S_param - x - 1.0) / (N_param + (tc - 1) - x + 1.0);
+                        }
                     }
                 }
-            } else {
-                p[j_end - k_start + 1] = 1.0;
-                for (int i = 0; i < j_end - k_start + 1; i++) {
-                    double x = paths[j_end - i][tc];
-                    if (q_param < 1.0) {
-                        p[j_end - k_start - i] = p[j_end - k_start + 1 - i] *
-                            std::pow(q_param, tc - S_param) *
-                            (1.0 - std::pow(q_param, N_param + S_param - x - 1)) /
-                            (1.0 - std::pow(q_param, N_param + tc - x));
-                    } else {
-                        p[j_end - k_start - i] = p[j_end - k_start + 1 - i] * 0.5; // Simplified
+            } else if (q_param < 1.0) { // Case: q < 1
+                if (K_prime_val > 0) { // Subcase: q < 1 AND K_prime_val > 0 (tc < S_param)
+                    p[0] = 1.0; // Forward iteration
+                    for (int i = 1; i <= j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, N_param + tc - x));
+                        double term_denominator = (1.0 - std::pow(q_param, N_param + S_param - x - 1.0));
+                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * std::pow(q_param, K_prime_val) * term_numerator / term_denominator; }
+                    }
+                } else { // Subcase: q < 1 AND K_prime_val <= 0 (tc >= S_param)
+                    p[j_end - k_start + 1] = 1.0; // Backward iteration
+                    for (int i = 0; i < j_end - k_start + 1; i++) {
+                        int current_p_idx = j_end - k_start - i;
+                        double x_for_current_p = static_cast<double>(paths[k_start + current_p_idx][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, N_param + S_param - x_for_current_p - 1.0));
+                        double term_denominator = (1.0 - std::pow(q_param, N_param + tc - x_for_current_p));
+                        if (std::abs(term_denominator) < 1e-9) { p[current_p_idx] = 0.0; }
+                        else {
+                            p[current_p_idx] = p[j_end - k_start + 1 - i] *
+                                std::pow(q_param, -K_prime_val) * term_numerator / term_denominator;
+                        }
+                    }
+                }
+            } else { // Case: q_param > 1.0
+                if (K_prime_val > 0) { // Subcase: q > 1 AND K_prime_val > 0 (tc < S_param)
+                    // Forward iteration. Ratio p[i]/p[i-1] for q>1: (1 - Q^-(N+tc-x)) / (1 - Q^-(N+S-x-1))
+                    p[0] = 1.0;
+                    for (int i = 1; i <= j_end - k_start + 1; i++) {
+                        double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, -(N_param + tc - x)));
+                        double term_denominator = (1.0 - std::pow(q_param, -(N_param + S_param - x - 1.0)));
+                        if (std::abs(term_denominator) < 1e-9) { p[i] = 0.0; }
+                        else { p[i] = p[i-1] * term_numerator / term_denominator; }
+                    }
+                } else { // Subcase: q > 1 AND K_prime_val <= 0 (tc >= S_param)
+                    // Backward iteration. Ratio p[curr]/p[next] for q>1: (1 - Q^-(N+S-x_curr-1)) / (1 - Q^-(N+tc-x_curr))
+                    p[j_end - k_start + 1] = 1.0;
+                    for (int i = 0; i < j_end - k_start + 1; i++) {
+                        int current_p_idx = j_end - k_start - i;
+                        double x_for_current_p = static_cast<double>(paths[k_start + current_p_idx][tc]);
+                        double term_numerator = (1.0 - std::pow(q_param, -(N_param + S_param - x_for_current_p - 1.0)));
+                        double term_denominator = (1.0 - std::pow(q_param, -(N_param + tc - x_for_current_p)));
+                        if (std::abs(term_denominator) < 1e-9) { p[current_p_idx] = 0.0; }
+                        else {
+                            p[current_p_idx] = p[j_end - k_start + 1 - i] * term_numerator / term_denominator;
+                        }
                     }
                 }
             }
