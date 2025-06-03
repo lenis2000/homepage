@@ -357,7 +357,7 @@ Module.onRuntimeInitialized = async function() {
                 const centerX = width / 2;
                 const centerY = height / 2;
                 
-                const zoomFactor = e.deltaY > 0 ? 0.97 : 1.03;
+                const zoomFactor = e.deltaY > 0 ? 0.985 : 1.015;
                 const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
                 
                 const scale = newZoom / this.zoomLevel;
