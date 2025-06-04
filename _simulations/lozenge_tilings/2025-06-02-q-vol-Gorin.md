@@ -1740,7 +1740,7 @@ Module.onRuntimeInitialized = async function() {
             ctx.save();
             ctx.translate(this.panX, this.panY);
             ctx.translate(width / 2, height / 2);
-            ctx.scale(scale, scale);
+            ctx.scale(-scale, scale);  // Flip horizontally with negative x scale
             // Center the hexagon
             ctx.translate(-hexCenterX, -hexCenterY);
 
