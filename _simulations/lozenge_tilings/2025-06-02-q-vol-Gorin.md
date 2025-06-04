@@ -38,6 +38,46 @@ code:
     font-size: 12px;
   }
 
+  /* Custom colors panel */
+  .custom-colors-panel {
+    display: none;
+    margin-top: 10px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+
+  .color-palette {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .color-palette label {
+    width: 120px;
+    font-weight: bold;
+  }
+
+  .color-palette input[type="color"] {
+    width: 40px;
+    height: 30px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .color-palette input[type="text"] {
+    width: 70px;
+    height: 26px;
+    font-family: monospace;
+    font-size: 12px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
   /* Export modal styles */
   .export-modal {
     display: none;
@@ -184,6 +224,34 @@ The sampler works entirely in your browser using WebAssembly.
   
   <button id="change-colors" style="margin-left: 20px;">Change Colors</button>
   <button id="custom-colors">Custom Colors</button>
+</div>
+
+<!-- Custom Colors Panel -->
+<div id="custom-colors-panel" class="custom-colors-panel">
+  <h4>Custom Color Palettes</h4>
+  
+  <div class="color-palette">
+    <label>Down Rhombi:</label>
+    <input type="color" id="color-gray1" value="#D0FFD0">
+    <input type="text" id="hex-gray1" value="#D0FFD0" placeholder="#RRGGBB">
+  </div>
+  
+  <div class="color-palette">
+    <label>Up Rhombi:</label>
+    <input type="color" id="color-gray2" value="#D0D0FF">
+    <input type="text" id="hex-gray2" value="#D0D0FF" placeholder="#RRGGBB">
+  </div>
+  
+  <div class="color-palette">
+    <label>Background:</label>
+    <input type="color" id="color-gray3" value="#FFB0B0">
+    <input type="text" id="hex-gray3" value="#FFB0B0" placeholder="#RRGGBB">
+  </div>
+  
+  <div style="margin-top: 15px;">
+    <button id="reset-default-colors">Reset to Default</button>
+    <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
+  </div>
 </div>
 
 <div id="info" style="margin-bottom: 10px; font-weight: bold;"></div>
@@ -542,6 +610,18 @@ Module.onRuntimeInitialized = async function() {
             this.borderWidth = parseFloat(width);
         }
 
+        setCustomColors(colors) {
+            this.colors.gray1 = colors.gray1;
+            this.colors.gray2 = colors.gray2;
+            this.colors.gray3 = colors.gray3;
+        }
+
+        resetDefaultColors() {
+            this.colors.gray1 = '#D0FFD0';
+            this.colors.gray2 = '#D0D0FF';
+            this.colors.gray3 = '#FFB0B0';
+        }
+
         getHexagonScreenCenter() {
             if (!this.lastPaths || !this.lastN || !this.lastT || !this.lastS) {
                 const width = this.canvas.width / (window.devicePixelRatio || 1);
@@ -872,6 +952,80 @@ Module.onRuntimeInitialized = async function() {
                 document.getElementById('border-width').value = '0.05';
                 this.visualizer.setBorderWidth(0.05);
                 this.redraw();
+            });
+
+            // Custom colors functionality
+            document.getElementById('custom-colors').addEventListener('click', () => {
+                const panel = document.getElementById('custom-colors-panel');
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            });
+
+            // Apply colors automatically when color pickers change
+            const applyColors = () => {
+                const colors = {
+                    gray1: document.getElementById('color-gray1').value,
+                    gray2: document.getElementById('color-gray2').value,
+                    gray3: document.getElementById('color-gray3').value
+                };
+                this.visualizer.setCustomColors(colors);
+                this.redraw();
+            };
+
+            // Color picker event listeners with hex sync
+            document.getElementById('color-gray1').addEventListener('input', (e) => {
+                document.getElementById('hex-gray1').value = e.target.value.toUpperCase();
+                applyColors();
+            });
+
+            document.getElementById('color-gray2').addEventListener('input', (e) => {
+                document.getElementById('hex-gray2').value = e.target.value.toUpperCase();
+                applyColors();
+            });
+
+            document.getElementById('color-gray3').addEventListener('input', (e) => {
+                document.getElementById('hex-gray3').value = e.target.value.toUpperCase();
+                applyColors();
+            });
+
+            // Hex field event listeners with color picker sync
+            document.getElementById('hex-gray1').addEventListener('input', (e) => {
+                const hex = e.target.value;
+                if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                    document.getElementById('color-gray1').value = hex;
+                    applyColors();
+                }
+            });
+
+            document.getElementById('hex-gray2').addEventListener('input', (e) => {
+                const hex = e.target.value;
+                if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                    document.getElementById('color-gray2').value = hex;
+                    applyColors();
+                }
+            });
+
+            document.getElementById('hex-gray3').addEventListener('input', (e) => {
+                const hex = e.target.value;
+                if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                    document.getElementById('color-gray3').value = hex;
+                    applyColors();
+                }
+            });
+
+            document.getElementById('reset-default-colors').addEventListener('click', () => {
+                this.visualizer.resetDefaultColors();
+                // Reset both color pickers and hex fields
+                document.getElementById('color-gray1').value = '#D0FFD0';
+                document.getElementById('hex-gray1').value = '#D0FFD0';
+                document.getElementById('color-gray2').value = '#D0D0FF';
+                document.getElementById('hex-gray2').value = '#D0D0FF';
+                document.getElementById('color-gray3').value = '#FFB0B0';
+                document.getElementById('hex-gray3').value = '#FFB0B0';
+                this.redraw();
+            });
+
+            document.getElementById('close-custom-colors').addEventListener('click', () => {
+                document.getElementById('custom-colors-panel').style.display = 'none';
             });
 
             document.getElementById('initialize').addEventListener('click', () => {
