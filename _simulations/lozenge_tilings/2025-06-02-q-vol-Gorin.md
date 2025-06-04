@@ -2900,10 +2900,25 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        // "More Options" main section (#more-options-details) - CLOSED by default on both mobile and desktop
+        // "More Options" main section (#more-options-details) - Don't auto-close if user has opened it
         const moreOptionsDetails = document.getElementById('more-options-details');
         if (moreOptionsDetails) {
-            moreOptionsDetails.removeAttribute('open'); // CLOSED by default, user clicks to expand
+            // On mobile, preserve the current state if user has opened it
+            // On desktop, close by default unless user has opened it
+            if (!moreOptionsDetails.hasAttribute('data-user-opened')) {
+                moreOptionsDetails.removeAttribute('open'); // CLOSED by default, user clicks to expand
+            }
+            // Add event listener to track when user manually opens/closes
+            if (!moreOptionsDetails.hasAttribute('data-listener-added')) {
+                moreOptionsDetails.setAttribute('data-listener-added', 'true');
+                moreOptionsDetails.addEventListener('toggle', function() {
+                    if (this.hasAttribute('open')) {
+                        this.setAttribute('data-user-opened', 'true');
+                    } else {
+                        this.removeAttribute('data-user-opened');
+                    }
+                });
+            }
         }
 
         // Nested details within "More Options" (.nested-control-group)
