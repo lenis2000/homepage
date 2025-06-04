@@ -242,7 +242,7 @@ The sampler works entirely in your browser using WebAssembly.
   <label for="palette-select" style="margin-left: 20px;">Palette:</label>
   <select id="palette-select">
     <!-- Original Palettes -->
-    <option value="0">UVA Colors</option>
+    <option value="0">UVA</option>
     <option value="1">Ocean Breeze</option>
     <option value="2">Forest Calm</option>
     <option value="3">Sunset Glow</option>
@@ -325,7 +325,7 @@ The sampler works entirely in your browser using WebAssembly.
   <div class="color-swatch" id="swatch-gray3" style="background-color: #F9DCBF;"></div>
   <span>Horizontal</span>
   <span>|</span>
-  <span id="palette-info">UVA Colors</span>
+  <span id="palette-info">UVA</span>
 </div>
 
 <!-- Visualization canvas -->
@@ -568,7 +568,7 @@ Module.onRuntimeInitialized = async function() {
 
             // 35+ beautiful color palettes - mix of original, coder themes, and universities
             this.colorPalettes = [
-                { name: 'UVA Colors', colors: ['#E57200', '#232D4B', '#F9DCBF'] },
+                { name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF'] },
                 { name: 'Ocean Breeze', colors: ['#2E86AB', '#A23B72', '#F18F01'] },
                 { name: 'Forest Calm', colors: ['#355E3B', '#8FBC8F', '#F5F5DC'] },
                 { name: 'Sunset Glow', colors: ['#FF6B35', '#F7931E', '#FFE66D'] },
@@ -589,25 +589,25 @@ Module.onRuntimeInitialized = async function() {
                 { name: 'Steel Blue', colors: ['#4682B4', '#6495ED', '#F0F8FF'] },
                 { name: 'Crimson Tide', colors: ['#DC143C', '#B22222', '#FFF8F8'] },
                 // Popular Coding Themes
-                { name: 'Dracula Theme', colors: ['#282a36', '#8be9fd', '#50fa7b'] },
+                { name: 'Dracula', colors: ['#282a36', '#8be9fd', '#50fa7b'] },
                 { name: 'Monokai', colors: ['#272822', '#f92672', '#a6e22e'] },
                 { name: 'Solarized Dark', colors: ['#002b36', '#268bd2', '#2aa198'] },
                 { name: 'One Dark', colors: ['#282c34', '#61afef', '#98c379'] },
-                { name: 'Material Theme', colors: ['#263238', '#82aaff', '#c3e88d'] },
-                { name: 'Nord Theme', colors: ['#2e3440', '#5e81ac', '#a3be8c'] },
+                { name: 'Material', colors: ['#263238', '#82aaff', '#c3e88d'] },
+                { name: 'Nord', colors: ['#2e3440', '#5e81ac', '#a3be8c'] },
                 { name: 'Gruvbox Dark', colors: ['#282828', '#fe8019', '#b8bb26'] },
                 { name: 'Atom One Light', colors: ['#fafafa', '#e45649', '#50a14f'] },
                 // University Color Palettes
-                { name: 'Harvard University', colors: ['#a51c30', '#ffffff', '#8c8b8b'] },
+                { name: 'Harvard', colors: ['#a51c30', '#ffffff', '#8c8b8b'] },
                 { name: 'MIT', colors: ['#8a8b8c', '#a31f34', '#000000'] },
-                { name: 'Stanford University', colors: ['#8c1515', '#daa900', '#ffffff'] },
-                { name: 'Yale University', colors: ['#00356b', '#286dc0', '#63aaff'] },
-                { name: 'Princeton University', colors: ['#e77500', '#000000', '#ffffff'] },
-                { name: 'Columbia University', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a'] },
+                { name: 'Stanford', colors: ['#8c1515', '#daa900', '#ffffff'] },
+                { name: 'Yale', colors: ['#00356b', '#286dc0', '#63aaff'] },
+                { name: 'Princeton', colors: ['#e77500', '#000000', '#ffffff'] },
+                { name: 'Columbia', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a'] },
                 { name: 'UC Berkeley', colors: ['#003262', '#fdb515', '#ffffff'] },
-                { name: 'University of Michigan', colors: ['#00274c', '#ffcb05', '#ffffff'] },
-                { name: 'Cornell University', colors: ['#b31b1b', '#ffffff', '#222222'] },
-                { name: 'Northwestern University', colors: ['#4e2a84', '#ffffff', '#342f2e'] }
+                { name: 'Michigan', colors: ['#00274c', '#ffcb05', '#ffffff'] },
+                { name: 'Cornell', colors: ['#b31b1b', '#ffffff', '#222222'] },
+                { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] }
             ];
 
             this.zoomLevel = 1.0;
