@@ -727,11 +727,11 @@ The sampler works entirely in your browser using WebAssembly.
     </div>
     <div class="param-item">
       <label for="T">T:</label>
-      <input type="number" id="T" value="40" min="1" max="500" style="width: 60px;">
+      <input type="number" id="T" value="30" min="1" max="500" style="width: 60px;">
     </div>
     <div class="param-item">
       <label for="S">S:</label>
-      <input type="number" id="S" value="5" min="0" style="width: 60px;">
+      <input type="number" id="S" value="25" min="0" style="width: 60px;">
     </div>
     <div class="param-item">
       <label for="q">q:</label>
@@ -924,8 +924,8 @@ The sampler works entirely in your browser using WebAssembly.
   <div class="content">
     <div class="config-values" id="info">
       <span class="config-item">N = <strong>20</strong></span>
-      <span class="config-item">T = <strong>40</strong></span>
-      <span class="config-item">S = <strong>5</strong></span>
+      <span class="config-item">T = <strong>30</strong></span>
+      <span class="config-item">S = <strong>25</strong></span>
       <span class="config-item">q = <strong>1</strong></span>
     </div>
   </div>
@@ -996,8 +996,8 @@ Module.onRuntimeInitialized = async function() {
         constructor() {
             this.ready = false;
             this.N_param = 20;
-            this.T_param = 40;
-            this.S_param = 5;
+            this.T_param = 30;
+            this.S_param = 25;
             this.mode_param = 5;
             this.q_param = 1.0;
             this.paths = [];
@@ -1223,7 +1223,7 @@ Module.onRuntimeInitialized = async function() {
                 { name: 'United Kingdom', colors: ['#012169', '#FFFFFF', '#C8102E'] },
                 { name: 'Jamaica', colors: ['#009639', '#FED100', '#000000'] },
                 { name: 'Belgium', colors: ['#000000', '#FED100', '#ED2939'] },
-                { name: 'Colombia', colors: ['#FDE047', '#0F172A', '#DC2626'] },
+                { name: 'Colombia', colors: ['#FFCD00', '#003087', '#C8102E'] },
                 { name: 'South Korea', colors: ['#CD212A', '#0047A0', '#FFFFFF'] },
                 { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169'] },
                 { name: 'Argentina', colors: ['#74ACDF', '#FFFFFF', '#F6B40E'] },
