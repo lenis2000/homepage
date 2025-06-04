@@ -10,7 +10,52 @@ code:
 ---
 
 <style>
-  /* Basic styling for the canvas and controls */
+  /* Interface container and responsive layout */
+  .interface-container {
+    display: grid;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Desktop layout */
+  @media (min-width: 768px) {
+    .interface-container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .control-group.full-width {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Mobile layout */
+  @media (max-width: 767px) {
+    .interface-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Visual grouping */
+  .control-group {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .control-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Basic styling for the canvas */
   #lozenge-canvas {
     width: 100%;
     max-width: 1200px;
@@ -20,6 +65,8 @@ code:
     display: block;
     margin: 0 auto;
   }
+
+  /* Legacy controls class for backward compatibility */
   .controls {
     margin-bottom: 10px;
     display: flex;
@@ -29,6 +76,187 @@ code:
   }
   .controls > * {
     flex-shrink: 0;
+  }
+
+  /* Parameter grid layout */
+  .parameters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .param-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .param-item label {
+    font-weight: 500;
+    min-width: 20px;
+  }
+
+  .param-item input {
+    flex: 1;
+    min-width: 50px;
+  }
+
+  .button-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Consistent input styling */
+  input[type="number"], 
+  input[type="text"], 
+  select {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+
+  input[type="number"]:focus,
+  input[type="text"]:focus,
+  select:focus {
+    outline: none;
+    border-color: #4CAF50;
+  }
+
+  /* Button improvements */
+  button {
+    height: 36px;
+    padding: 0 16px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  button:hover {
+    background: #f5f5f5;
+    border-color: #999;
+  }
+
+  button:active {
+    background: #e0e0e0;
+  }
+
+  /* Primary action buttons */
+  button.primary {
+    background: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+  }
+
+  button.primary:hover {
+    background: #45a049;
+  }
+
+  /* Current configuration display */
+  .config-display {
+    background: #e8f5e9;
+    border: 1px solid #4CAF50;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+
+  .config-display h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #2e7d32;
+  }
+
+  .config-values {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .config-item {
+    font-family: 'SF Mono', Monaco, monospace;
+    color: #1976d2;
+  }
+
+  /* Color legend */
+  .color-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 8px;
+    flex-wrap: wrap;
+  }
+
+  .legend-title {
+    font-weight: 600;
+    color: #666;
+  }
+
+  .legend-items {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+  }
+
+  .color-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  /* Mobile touch targets and accessibility */
+  @media (max-width: 767px) {
+    button {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    input[type="number"],
+    input[type="text"],
+    select {
+      height: 44px;
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .parameters-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Focus states for accessibility */
+  *:focus-visible {
+    outline: 2px solid #4CAF50;
+    outline-offset: 2px;
+  }
+
+  /* Loading and disabled states */
+  button.loading {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  button:disabled,
+  input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .keyboard-info {
     margin-top: 10px;
@@ -193,99 +421,122 @@ The sampler works entirely in your browser using WebAssembly.
 ---
 
 <!-- Controls for the simulation -->
-<div class="controls">
-
-  <label for="N" style="margin-left: 20px;">N: </label>
-  <input id="N" type="number" value="20" min="1" max="200" style="width: 60px;">
-
-  <label for="T" style="margin-left: 20px;">T: </label>
-  <input id="T" type="number" value="40" min="1" max="500" style="width: 60px;">
-
-  <label for="S" style="margin-left: 20px;">S: </label>
-  <input id="S" type="number" value="20" min="0" style="width: 60px;">
-
-  <label for="q" style="margin-left: 20px;">q: </label>
-  <input id="q" type="number" value="1" step="0.02" min="0.01" style="width: 60px;">
-
-  <button id="initialize">Initialize</button>
-  <button id="set-parameters">Set Parameters</button>
+<div class="interface-container">
+<!-- Parameters Group -->
+<div class="control-group full-width">
+  <div class="control-group-title">Parameters</div>
+  <div class="parameters-grid">
+    <div class="param-item">
+      <label for="N">N:</label>
+      <input type="number" id="N" value="20" min="1" max="200">
+    </div>
+    <div class="param-item">
+      <label for="T">T:</label>
+      <input type="number" id="T" value="40" min="1" max="500">
+    </div>
+    <div class="param-item">
+      <label for="S">S:</label>
+      <input type="number" id="S" value="20" min="0">
+    </div>
+    <div class="param-item">
+      <label for="q">q:</label>
+      <input type="number" id="q" value="1" step="0.02" min="0.01">
+    </div>
+  </div>
+  <div class="button-row">
+    <button id="initialize" class="primary">Initialize</button>
+    <button id="set-parameters">Set Parameters</button>
+  </div>
 </div>
 
-<div class="controls">
-  <label for="style">Style: </label>
-  <select id="style">
-    <option value="1" selected>Lozenges</option>
-    <option value="5">Z² paths</option>
-  </select>
-
-  <label for="steps">Steps: </label>
-  <input id="steps" type="number" value="1" min="1" max="10" style="width: 50px;">
-
-  <button id="step-plus">S → S+steps</button>
-  <button id="step-minus">S → S-steps</button>
-  <button id="export">Export</button>
+<!-- Animation Controls -->
+<div class="control-group">
+  <div class="control-group-title">Animation Controls</div>
+  <div class="button-row">
+    <label for="style">Style:</label>
+    <select id="style">
+      <option value="1" selected>Lozenges</option>
+      <option value="5">Z² paths</option>
+    </select>
+    
+    <label for="steps">Steps:</label>
+    <input id="steps" type="number" value="1" min="1" max="10" style="width: 60px;">
+    
+    <button id="step-plus">S → S+steps</button>
+    <button id="step-minus">S → S-steps</button>
+    <button id="export">Export</button>
+  </div>
 </div>
 
-<div class="controls">
-  <button id="zoom-in">Zoom In</button>
-  <button id="zoom-out" style="margin-left: 10px;">Zoom Out</button>
-  <button id="zoom-reset" style="margin-left: 10px;">Reset Zoom</button>
+<!-- View Controls -->
+<div class="control-group">
+  <div class="control-group-title">View Controls</div>
+  <div class="button-row">
+    <button id="zoom-in">Zoom In</button>
+    <button id="zoom-out">Zoom Out</button>
+    <button id="zoom-reset">Reset Zoom</button>
+  </div>
 </div>
 
-<div class="controls">
-  <label>Border Width:</label>
-  <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 60px;">
-  <button id="border-thin">Thin</button>
-  <button id="border-medium">Medium</button>
-  <button id="border-thick">Thick</button>
-
-  <label for="palette-select" style="margin-left: 20px;">Palette:</label>
-  <button id="prev-palette">◀</button>
-  <select id="palette-select">
-    <!-- Original Palettes -->
-    <option value="0">UVA</option>
-    <option value="1">Ocean Breeze</option>
-    <option value="2">Forest Calm</option>
-    <option value="3">Sunset Glow</option>
-    <option value="4">Royal Purple</option>
-    <option value="5">Arctic Frost</option>
-    <option value="6">Cherry Blossom</option>
-    <option value="7">Tropical</option>
-    <option value="8">Emerald Dream</option>
-    <option value="9">Cosmic Blue</option>
-    <option value="10">Autumn Leaves</option>
-    <option value="11">Lavender Fields</option>
-    <option value="12">Desert Sand</option>
-    <option value="13">Coral Reef</option>
-    <option value="14">Midnight Sky</option>
-    <option value="15">Rose Garden</option>
-    <option value="16">Sage Green</option>
-    <option value="17">Amber Glow</option>
-    <option value="18">Steel Blue</option>
-    <option value="19">Crimson Tide</option>
-    <!-- Coding Themes -->
-    <option value="20">Dracula</option>
-    <option value="21">Monokai</option>
-    <option value="22">Solarized Dark</option>
-    <option value="23">One Dark</option>
-    <option value="24">Material</option>
-    <option value="25">Nord</option>
-    <option value="26">Gruvbox Dark</option>
-    <option value="27">Atom One Light</option>
-    <!-- University Colors -->
-    <option value="28">Harvard</option>
-    <option value="29">MIT</option>
-    <option value="30">Stanford</option>
-    <option value="31">Yale</option>
-    <option value="32">Princeton</option>
-    <option value="33">Columbia</option>
-    <option value="34">Berkeley</option>
-    <option value="35">Michigan</option>
-    <option value="36">Cornell</option>
-    <option value="37">Northwestern</option>
-  </select>
-  <button id="next-palette">▶</button>
-  <button id="custom-colors" style="margin-left: 10px;">Custom Colors</button>
+<!-- Styling Controls -->
+<div class="control-group full-width">
+  <div class="control-group-title">Styling Controls</div>
+  <div class="button-row">
+    <label>Border Width:</label>
+    <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 60px;">
+    <button id="border-thin">Thin</button>
+    <button id="border-medium">Medium</button>
+    <button id="border-thick">Thick</button>
+  </div>
+  <div class="button-row">
+    <label for="palette-select">Palette:</label>
+    <button id="prev-palette">◀</button>
+    <select id="palette-select">
+      <!-- Original Palettes -->
+      <option value="0">UVA</option>
+      <option value="1">Ocean Breeze</option>
+      <option value="2">Forest Calm</option>
+      <option value="3">Sunset Glow</option>
+      <option value="4">Royal Purple</option>
+      <option value="5">Arctic Frost</option>
+      <option value="6">Cherry Blossom</option>
+      <option value="7">Tropical</option>
+      <option value="8">Emerald Dream</option>
+      <option value="9">Cosmic Blue</option>
+      <option value="10">Autumn Leaves</option>
+      <option value="11">Lavender Fields</option>
+      <option value="12">Desert Sand</option>
+      <option value="13">Coral Reef</option>
+      <option value="14">Midnight Sky</option>
+      <option value="15">Rose Garden</option>
+      <option value="16">Sage Green</option>
+      <option value="17">Amber Glow</option>
+      <option value="18">Steel Blue</option>
+      <option value="19">Crimson Tide</option>
+      <!-- Coding Themes -->
+      <option value="20">Dracula</option>
+      <option value="21">Monokai</option>
+      <option value="22">Solarized Dark</option>
+      <option value="23">One Dark</option>
+      <option value="24">Material</option>
+      <option value="25">Nord</option>
+      <option value="26">Gruvbox Dark</option>
+      <option value="27">Atom One Light</option>
+      <!-- University Colors -->
+      <option value="28">Harvard</option>
+      <option value="29">MIT</option>
+      <option value="30">Stanford</option>
+      <option value="31">Yale</option>
+      <option value="32">Princeton</option>
+      <option value="33">Columbia</option>
+      <option value="34">Berkeley</option>
+      <option value="35">Michigan</option>
+      <option value="36">Cornell</option>
+      <option value="37">Northwestern</option>
+    </select>
+    <button id="next-palette">▶</button>
+    <button id="custom-colors">Custom Colors</button>
+  </div>
 </div>
 
 <!-- Custom Colors Panel -->
@@ -316,19 +567,40 @@ The sampler works entirely in your browser using WebAssembly.
   </div>
 </div>
 
-<div id="info" style="margin-bottom: 10px; font-weight: bold;"></div>
-
-<div id="color-indicator" class="color-indicator">
-  <span>Colors:</span>
-  <div class="color-swatch" id="swatch-gray1" style="background-color: #E57200;"></div>
-  <span>Up</span>
-  <div class="color-swatch" id="swatch-gray2" style="background-color: #232D4B;"></div>
-  <span>Down</span>
-  <div class="color-swatch" id="swatch-gray3" style="background-color: #F9DCBF;"></div>
-  <span>Horizontal</span>
-  <span>|</span>
-  <span id="palette-info">UVA</span>
+<!-- Current Configuration -->
+<div class="config-display full-width">
+  <h3>Current Configuration</h3>
+  <div class="config-values" id="info">
+    <span class="config-item">N = <strong>20</strong></span>
+    <span class="config-item">T = <strong>40</strong></span>
+    <span class="config-item">S = <strong>20</strong></span>
+    <span class="config-item">q = <strong>1</strong></span>
+  </div>
 </div>
+
+<!-- Color Legend -->
+<div class="color-legend full-width">
+  <span class="legend-title">Colors:</span>
+  <div class="legend-items">
+    <span class="legend-item">
+      <span class="color-box" id="swatch-gray1" style="background-color: #E57200;"></span>
+      Up
+    </span>
+    <span class="legend-item">
+      <span class="color-box" id="swatch-gray2" style="background-color: #232D4B;"></span>
+      Down
+    </span>
+    <span class="legend-item">
+      <span class="color-box" id="swatch-gray3" style="background-color: #F9DCBF;"></span>
+      Horizontal
+    </span>
+    <span class="legend-item">
+      <span style="font-weight: 600;" id="palette-info">UVA</span>
+    </span>
+  </div>
+</div>
+
+</div> <!-- End interface-container -->
 
 <!-- Visualization canvas -->
 <canvas id="lozenge-canvas"></canvas>
@@ -1580,8 +1852,10 @@ Module.onRuntimeInitialized = async function() {
 
             const info = document.getElementById('info');
             info.innerHTML = `
-                <strong>Current Configuration:</strong><br>
-                N = ${params.N}, T = ${params.T}, S = ${params.S}, q = ${params.q}
+                <span class="config-item">N = <strong>${params.N}</strong></span>
+                <span class="config-item">T = <strong>${params.T}</strong></span>
+                <span class="config-item">S = <strong>${params.S}</strong></span>
+                <span class="config-item">q = <strong>${params.q}</strong></span>
             `;
         }
 
