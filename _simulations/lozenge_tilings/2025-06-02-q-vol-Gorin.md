@@ -175,6 +175,17 @@ The sampler works entirely in your browser using WebAssembly.
   <button id="zoom-reset" style="margin-left: 10px;">Reset Zoom</button>
 </div>
 
+<div class="controls">
+  <label>Border Width:</label>
+  <input id="border-width" type="number" value="0.001" step="0.001" min="0" max="0.1" style="width: 60px;">
+  <button id="border-thin">Thin</button>
+  <button id="border-medium">Medium</button>
+  <button id="border-thick">Thick</button>
+  
+  <button id="change-colors" style="margin-left: 20px;">Change Colors</button>
+  <button id="custom-colors">Custom Colors</button>
+</div>
+
 <div id="info" style="margin-bottom: 10px; font-weight: bold;"></div>
 
 <!-- Visualization canvas -->
@@ -402,6 +413,7 @@ Module.onRuntimeInitialized = async function() {
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
             this.style = 2; // Default: classical with borders
+            this.borderWidth = 0.001; // Default border width
 
             this.colors = {
                 gray1: '#D0FFD0', // Green-tinted (down rhombi)
@@ -524,6 +536,10 @@ Module.onRuntimeInitialized = async function() {
 
         setStyle(style) {
             this.style = parseInt(style);
+        }
+
+        setBorderWidth(width) {
+            this.borderWidth = parseFloat(width);
         }
 
         getHexagonScreenCenter() {
@@ -701,7 +717,7 @@ Module.onRuntimeInitialized = async function() {
                         ctx.fill();
 
                         ctx.strokeStyle = this.colors.black;
-                        ctx.lineWidth = 0.02;
+                        ctx.lineWidth = this.borderWidth;
                         ctx.stroke();
                     }
                 }
@@ -717,7 +733,7 @@ Module.onRuntimeInitialized = async function() {
             }
             ctx.closePath();
             ctx.strokeStyle = this.colors.black;
-            ctx.lineWidth = 0.04;
+            ctx.lineWidth = this.borderWidth;
             ctx.stroke();
         }
 
@@ -758,6 +774,11 @@ Module.onRuntimeInitialized = async function() {
 
             ctx.fillStyle = fillColor;
             ctx.fill();
+
+            // Add consistent thin borders to all rhombi
+            ctx.strokeStyle = this.colors.black;
+            ctx.lineWidth = this.borderWidth;
+            ctx.stroke();
         }
 
 
@@ -785,7 +806,7 @@ Module.onRuntimeInitialized = async function() {
             }
 
             ctx.strokeStyle = this.colors.black;
-            ctx.lineWidth = 0.1;
+            ctx.lineWidth = this.borderWidth;
             ctx.fillStyle = this.colors.black;
 
             for (let j = 0; j < N; j++) {
@@ -826,6 +847,30 @@ Module.onRuntimeInitialized = async function() {
         setupEventListeners() {
             document.getElementById('style').addEventListener('change', (e) => {
                 this.visualizer.setStyle(e.target.value);
+                this.redraw();
+            });
+
+            document.getElementById('border-width').addEventListener('input', (e) => {
+                this.visualizer.setBorderWidth(e.target.value);
+                this.redraw();
+            });
+
+            // Border width preset buttons
+            document.getElementById('border-thin').addEventListener('click', () => {
+                document.getElementById('border-width').value = '0.001';
+                this.visualizer.setBorderWidth(0.001);
+                this.redraw();
+            });
+
+            document.getElementById('border-medium').addEventListener('click', () => {
+                document.getElementById('border-width').value = '0.01';
+                this.visualizer.setBorderWidth(0.01);
+                this.redraw();
+            });
+
+            document.getElementById('border-thick').addEventListener('click', () => {
+                document.getElementById('border-width').value = '0.05';
+                this.visualizer.setBorderWidth(0.05);
                 this.redraw();
             });
 
