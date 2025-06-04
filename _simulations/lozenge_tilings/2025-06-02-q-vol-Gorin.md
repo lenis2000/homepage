@@ -240,6 +240,7 @@ The sampler works entirely in your browser using WebAssembly.
   <button id="border-thick">Thick</button>
 
   <label for="palette-select" style="margin-left: 20px;">Palette:</label>
+  <button id="prev-palette">◀</button>
   <select id="palette-select">
     <!-- Original Palettes -->
     <option value="0">UVA</option>
@@ -278,11 +279,12 @@ The sampler works entirely in your browser using WebAssembly.
     <option value="31">Yale</option>
     <option value="32">Princeton</option>
     <option value="33">Columbia</option>
-    <option value="34">UC Berkeley</option>
+    <option value="34">Berkeley</option>
     <option value="35">Michigan</option>
     <option value="36">Cornell</option>
     <option value="37">Northwestern</option>
   </select>
+  <button id="next-palette">▶</button>
   <button id="custom-colors" style="margin-left: 10px;">Custom Colors</button>
 </div>
 
@@ -604,7 +606,7 @@ Module.onRuntimeInitialized = async function() {
                 { name: 'Yale', colors: ['#00356b', '#286dc0', '#63aaff'] },
                 { name: 'Princeton', colors: ['#e77500', '#000000', '#ffffff'] },
                 { name: 'Columbia', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a'] },
-                { name: 'UC Berkeley', colors: ['#003262', '#fdb515', '#ffffff'] },
+                { name: 'Berkeley', colors: ['#003262', '#fdb515', '#ffffff'] },
                 { name: 'Michigan', colors: ['#00274c', '#ffcb05', '#ffffff'] },
                 { name: 'Cornell', colors: ['#b31b1b', '#ffffff', '#222222'] },
                 { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] }
@@ -780,7 +782,7 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        changePalette() {
+        nextPalette() {
             this.currentPaletteIndex = (this.currentPaletteIndex + 1) % this.colorPalettes.length;
             const palette = this.colorPalettes[this.currentPaletteIndex];
 
@@ -791,6 +793,23 @@ Module.onRuntimeInitialized = async function() {
 
             this.updateColorIndicator();
             this.updateCustomColorPickers();
+        }
+
+        prevPalette() {
+            this.currentPaletteIndex = (this.currentPaletteIndex - 1 + this.colorPalettes.length) % this.colorPalettes.length;
+            const palette = this.colorPalettes[this.currentPaletteIndex];
+
+            this.colors.gray1 = palette.colors[0];
+            this.colors.gray2 = palette.colors[1];
+            this.colors.gray3 = palette.colors[2];
+            this.currentPalette = palette.name;
+
+            this.updateColorIndicator();
+            this.updateCustomColorPickers();
+        }
+
+        changePalette() {
+            this.nextPalette();
         }
 
         updateCustomColorPickers() {
@@ -1213,6 +1232,17 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('palette-select').addEventListener('change', (e) => {
                 const paletteIndex = parseInt(e.target.value);
                 this.visualizer.setPalette(paletteIndex);
+                this.redraw();
+            });
+
+            // Next/Previous palette buttons
+            document.getElementById('next-palette').addEventListener('click', () => {
+                this.visualizer.nextPalette();
+                this.redraw();
+            });
+
+            document.getElementById('prev-palette').addEventListener('click', () => {
+                this.visualizer.prevPalette();
                 this.redraw();
             });
 
