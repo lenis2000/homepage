@@ -888,6 +888,7 @@ The sampler works entirely in your browser using WebAssembly.
       <div class="content">
         <div class="button-row">
           <button id="export">Export Plane Partition</button>
+          <button id="export-tikz">Export TikZ</button>
         </div>
         <div id="export-display" style="display: none; margin-top: 12px;">
           <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
@@ -896,6 +897,15 @@ The sampler works entirely in your browser using WebAssembly.
             <button id="copy-inline-clipboard">Copy to Clipboard</button>
             <button id="download-inline-file">Download File</button>
             <button id="hide-export">Hide</button>
+          </div>
+        </div>
+        <div id="tikz-export-display" style="display: none; margin-top: 12px;">
+          <div style="margin-bottom: 8px; font-weight: 600; color: #666;">TikZ Code:</div>
+          <textarea id="tikz-export-textarea" readonly style="width: 100%; height: 300px; font-family: monospace; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <button id="copy-tikz-clipboard">Copy TikZ to Clipboard</button>
+            <button id="download-tikz-file">Download TikZ File</button>
+            <button id="hide-tikz-export">Hide</button>
           </div>
         </div>
       </div>
@@ -967,7 +977,9 @@ The sampler works entirely in your browser using WebAssembly.
     A: S → S+r<br>
     Z: S → S-r<br>
     S: S → S+r → S-r<br>
-    X: S → S-r → S+r
+    X: S → S-r → S+r<br>
+    C: Change color palette<br>
+    B: Change border style (thin/medium/thick)
   </div>
 </details>
 
@@ -1609,6 +1621,15 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('hex-gray3').value = this.colors.gray3.toUpperCase();
         }
 
+        getCurrentPalette() {
+            // Return current color palette for TikZ export
+            return [
+                this.colors.gray1,
+                this.colors.gray2,
+                this.colors.gray3
+            ];
+        }
+
         getHexagonScreenCenter() {
             if (!this.lastPaths || !this.lastN || !this.lastT || !this.lastS) {
                 const width = this.canvas.width / (window.devicePixelRatio || 1);
@@ -2064,6 +2085,10 @@ Module.onRuntimeInitialized = async function() {
                 this.exportPlanePartition();
             });
 
+            document.getElementById('export-tikz').addEventListener('click', () => {
+                this.exportTikz();
+            });
+
             document.getElementById('zoom-in').addEventListener('click', () => {
                 this.visualizer.zoomIn();
                 this.redraw();
@@ -2090,6 +2115,18 @@ Module.onRuntimeInitialized = async function() {
 
             document.getElementById('hide-export').addEventListener('click', () => {
                 document.getElementById('export-display').style.display = 'none';
+            });
+
+            document.getElementById('copy-tikz-clipboard').addEventListener('click', () => {
+                this.copyTikzToClipboard();
+            });
+
+            document.getElementById('download-tikz-file').addEventListener('click', () => {
+                this.downloadTikzFile();
+            });
+
+            document.getElementById('hide-tikz-export').addEventListener('click', () => {
+                document.getElementById('tikz-export-display').style.display = 'none';
             });
 
             // Export modal event listeners (keep for backward compatibility)
@@ -2176,6 +2213,15 @@ Module.onRuntimeInitialized = async function() {
                             // Silently handle errors - just stop the operation
                             this.compositeOperationRunning = false;
                         });
+                        break;
+                    case 'c':
+                        // Change color palette
+                        this.visualizer.nextPalette();
+                        this.redraw();
+                        break;
+                    case 'b':
+                        // Cycle border thickness
+                        this.cycleBorderThickness();
                         break;
                 }
             });
@@ -2405,11 +2451,189 @@ Module.onRuntimeInitialized = async function() {
                 // Show inline export display
                 document.getElementById('export-inline-textarea').value = text;
                 document.getElementById('export-display').style.display = 'block';
+                document.getElementById('tikz-export-display').style.display = 'none';
 
             } catch (error) {
                 const errorMessage = error?.message || error?.toString() || 'Unknown error';
                 alert('Export error: ' + errorMessage);
             }
+        }
+
+        exportTikz() {
+            try {
+                const params = this.wasm.getParameters();
+                const paths = this.wasm.getPaths();
+                const currentPalette = this.visualizer.getCurrentPalette();
+                const borderWidth = parseFloat(document.getElementById('border-width').value);
+                
+                const tikzCode = this.generateTikzCode(paths, params, currentPalette, borderWidth);
+                
+                // Show TikZ export display
+                document.getElementById('tikz-export-textarea').value = tikzCode;
+                document.getElementById('tikz-export-display').style.display = 'block';
+                document.getElementById('export-display').style.display = 'none';
+            } catch (error) {
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                this.showErrorFeedback('export-tikz', 'Export failed: ' + errorMessage);
+            }
+        }
+
+        generateTikzCode(paths, params, palette, borderWidth) {
+            const N = params.N;
+            const T = params.T;
+            const S = params.S;
+            const sqrt3 = Math.sqrt(3);
+            
+            let tikz = `% Lozenge tiling exported from simulation
+% Parameters: N=${N}, T=${T}, S=${S}, q=${params.q}
+% Generated on ${new Date().toISOString()}
+
+\\documentclass{standalone}
+\\usepackage{tikz}
+\\begin{document}
+\\begin{tikzpicture}[scale=1]
+
+`;
+
+            // Define colors from palette
+            const [color1, color2, color3] = palette;
+            const rgb1 = this.hexToRGB(color1);
+            const rgb2 = this.hexToRGB(color2);
+            const rgb3 = this.hexToRGB(color3);
+            
+            tikz += `% Define colors
+\\definecolor{gray1}{RGB}{${rgb1[0]},${rgb1[1]},${rgb1[2]}}
+\\definecolor{gray2}{RGB}{${rgb2[0]},${rgb2[1]},${rgb2[2]}}
+\\definecolor{gray3}{RGB}{${rgb3[0]},${rgb3[1]},${rgb3[2]}}
+
+`;
+
+            // First draw background horizontal rhombi (like the canvas version)
+            tikz += `% Background horizontal rhombi
+`;
+            for (let timeIdx = -1; timeIdx <= T; timeIdx++) {
+                for (let height = -(T - S + 2); height <= N + S + 2; height++) {
+                    const x1 = timeIdx * 0.5 * sqrt3;
+                    const y1 = height - timeIdx * 0.5;
+                    
+                    // Check if rhombus center is roughly within hexagon bounds
+                    const centerX = x1 + 0.25 * sqrt3;
+                    const centerY = y1 + 0.5;
+                    
+                    if (this.isInsideHexagon(centerX, centerY, N, T, S)) {
+                        tikz += `\\fill[gray3`;
+                        if (borderWidth > 0) {
+                            tikz += `, draw=black, line width=${borderWidth}pt`;
+                        }
+                        tikz += `] (${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                        tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 + 0.5).toFixed(3)}) -- `;
+                        tikz += `(${(x1 + sqrt3).toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                        tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 - 0.5).toFixed(3)}) -- cycle;\n`;
+                    }
+                }
+            }
+            
+            tikz += `\n% Path-based rhombi
+`;
+            
+            // Draw the actual path-based rhombi (like drawRhombus)
+            for (let timeIdx = 0; timeIdx < T; timeIdx++) {
+                for (let particleIdx = 0; particleIdx < N; particleIdx++) {
+                    if (particleIdx < paths.length && timeIdx < paths[particleIdx].length - 1) {
+                        const currentHeight = paths[particleIdx][timeIdx];
+                        const nextHeight = paths[particleIdx][timeIdx + 1];
+                        
+                        const x1 = timeIdx * 0.5 * sqrt3;
+                        const y1 = currentHeight - timeIdx * 0.5;
+                        const x2 = x1;
+                        const y2 = y1 + 1;
+                        
+                        let x3, y3, x4, y4, fillColor;
+                        
+                        if (nextHeight === currentHeight) {
+                            // Down rhombus (gray1)
+                            x3 = x2 + 0.5 * sqrt3;
+                            y3 = y2 - 0.5;
+                            x4 = x1 + 0.5 * sqrt3;
+                            y4 = y1 - 0.5;
+                            fillColor = 'gray1';
+                        } else {
+                            // Up rhombus (gray2)
+                            x3 = x2 + 0.5 * sqrt3;
+                            y3 = y2 + 0.5;
+                            x4 = x1 + 0.5 * sqrt3;
+                            y4 = y1 + 0.5;
+                            fillColor = 'gray2';
+                        }
+                        
+                        tikz += `\\fill[${fillColor}`;
+                        if (borderWidth > 0) {
+                            tikz += `, draw=black, line width=${borderWidth}pt`;
+                        }
+                        tikz += `] (${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                        tikz += `(${x2.toFixed(3)}, ${y2.toFixed(3)}) -- `;
+                        tikz += `(${x3.toFixed(3)}, ${y3.toFixed(3)}) -- `;
+                        tikz += `(${x4.toFixed(3)}, ${y4.toFixed(3)}) -- cycle;\n`;
+                    }
+                }
+            }
+
+            // Draw hexagon border
+            const vertices = [
+                {x: 0, y: 0},
+                {x: 0, y: N},
+                {x: S * 0.5 * sqrt3, y: N + S * 0.5},
+                {x: T * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5},
+                {x: T * 0.5 * sqrt3, y: (2 * S - T) * 0.5},
+                {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
+            ];
+            
+            tikz += `\n% Hexagon border
+\\draw[black, line width=${Math.max(borderWidth, 0.5)}pt] `;
+            for (let i = 0; i < vertices.length; i++) {
+                if (i > 0) tikz += ' -- ';
+                tikz += `(${vertices[i].x.toFixed(3)}, ${vertices[i].y.toFixed(3)})`;
+            }
+            tikz += ' -- cycle;\n';
+
+            tikz += `
+\\end{tikzpicture}
+\\end{document}`;
+
+            return tikz;
+        }
+
+
+        hexToRGB(hex) {
+            // Convert hex color to RGB array
+            if (typeof hex === 'string' && hex.startsWith('#')) {
+                const h = hex.slice(1);
+                return [
+                    parseInt(h.slice(0, 2), 16),
+                    parseInt(h.slice(2, 4), 16),
+                    parseInt(h.slice(4, 6), 16)
+                ];
+            }
+            return [128, 128, 128]; // Default gray
+        }
+
+        isInsideHexagon(x, y, N, T, S) {
+            // Simple bounds check for hexagon region
+            // This is a rough approximation - you may want to refine this
+            const sqrt3 = Math.sqrt(3);
+            const maxX = T * 0.5 * sqrt3;
+            const minY = -(T - S) * 0.5;
+            const maxY = N + Math.max(S * 0.5, (2 * S - T) * 0.5);
+            
+            return x >= -0.5 && x <= maxX + 0.5 && y >= minY - 0.5 && y <= maxY + 0.5;
+        }
+
+        rgbToTikzColor(rgb) {
+            const [r, g, b] = rgb;
+            const rNorm = (r / 255).toFixed(3);
+            const gNorm = (g / 255).toFixed(3);
+            const bNorm = (b / 255).toFixed(3);
+            return `fill={rgb,255:red,${r};green,${g};blue,${b}}`;
         }
 
         copyToClipboard() {
@@ -2421,19 +2645,19 @@ Module.onRuntimeInitialized = async function() {
                 if (navigator.clipboard && window.isSecureContext) {
                     // Use modern clipboard API if available
                     navigator.clipboard.writeText(textarea.value).then(() => {
-                        alert('Copied to clipboard!');
+                        this.showCopyFeedback('copy-to-clipboard');
                     }).catch(() => {
                         // Fallback to execCommand
                         document.execCommand('copy');
-                        alert('Copied to clipboard!');
+                        this.showCopyFeedback('copy-to-clipboard');
                     });
                 } else {
                     // Fallback for older browsers
                     document.execCommand('copy');
-                    alert('Copied to clipboard!');
+                    this.showCopyFeedback('copy-to-clipboard');
                 }
             } catch (error) {
-                alert('Failed to copy to clipboard');
+                this.showErrorFeedback('copy-to-clipboard', 'Failed to copy');
             }
         }
 
@@ -2462,19 +2686,19 @@ Module.onRuntimeInitialized = async function() {
                 if (navigator.clipboard && window.isSecureContext) {
                     // Use modern clipboard API if available
                     navigator.clipboard.writeText(textarea.value).then(() => {
-                        alert('Copied to clipboard!');
+                        this.showCopyFeedback('copy-inline-clipboard');
                     }).catch(() => {
                         // Fallback to execCommand
                         document.execCommand('copy');
-                        alert('Copied to clipboard!');
+                        this.showCopyFeedback('copy-inline-clipboard');
                     });
                 } else {
                     // Fallback for older browsers
                     document.execCommand('copy');
-                    alert('Copied to clipboard!');
+                    this.showCopyFeedback('copy-inline-clipboard');
                 }
             } catch (error) {
-                alert('Failed to copy to clipboard');
+                this.showErrorFeedback('copy-inline-clipboard', 'Failed to copy');
             }
         }
 
@@ -2494,8 +2718,82 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
+        copyTikzToClipboard() {
+            try {
+                const textarea = document.getElementById('tikz-export-textarea');
+                textarea.select();
+                textarea.setSelectionRange(0, 99999);
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(textarea.value).then(() => {
+                        this.showCopyFeedback('copy-tikz-clipboard');
+                    }).catch(() => {
+                        document.execCommand('copy');
+                        this.showCopyFeedback('copy-tikz-clipboard');
+                    });
+                } else {
+                    document.execCommand('copy');
+                    this.showCopyFeedback('copy-tikz-clipboard');
+                }
+            } catch (error) {
+                this.showErrorFeedback('copy-tikz-clipboard', 'Failed to copy');
+            }
+        }
+
+        downloadTikzFile() {
+            try {
+                const text = document.getElementById('tikz-export-textarea').value;
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const params = this.wasm.getParameters();
+                a.download = `lozenge_tiling_N${params.N}_T${params.T}_S${params.S}.tex`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                this.showErrorFeedback('download-tikz-file', 'Download failed');
+            }
+        }
+
         closeExportModal() {
             document.getElementById('export-modal').style.display = 'none';
+        }
+
+        showCopyFeedback(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                const originalText = button.textContent;
+                button.textContent = '✓ Copied!';
+                button.style.background = '#4CAF50';
+                button.style.color = 'white';
+                button.style.borderColor = '#4CAF50';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                    button.style.color = '';
+                    button.style.borderColor = '';
+                }, 2000);
+            }
+        }
+
+        showErrorFeedback(buttonId, message) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                const originalText = button.textContent;
+                button.textContent = '✗ ' + message;
+                button.style.background = '#f44336';
+                button.style.color = 'white';
+                button.style.borderColor = '#f44336';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                    button.style.color = '';
+                    button.style.borderColor = '';
+                }, 3000);
+            }
         }
 
         updateInfo() {
@@ -2529,6 +2827,25 @@ Module.onRuntimeInitialized = async function() {
                 const errorMessage = error?.message || error?.toString() || 'Unknown error';
                 alert('Invalid parameters: ' + errorMessage);
             }
+        }
+
+        cycleBorderThickness() {
+            // Cycle through border thickness presets: thin (0.001) -> medium (0.01) -> thick (0.05) -> thin
+            const borderInput = document.getElementById('border-width');
+            const currentValue = parseFloat(borderInput.value);
+            
+            let newValue;
+            if (currentValue <= 0.001) {
+                newValue = 0.01; // thin -> medium
+            } else if (currentValue <= 0.01) {
+                newValue = 0.05; // medium -> thick
+            } else {
+                newValue = 0.001; // thick -> thin
+            }
+            
+            borderInput.value = newValue;
+            this.visualizer.setBorderWidth(newValue);
+            this.redraw();
         }
 
         redraw() {
