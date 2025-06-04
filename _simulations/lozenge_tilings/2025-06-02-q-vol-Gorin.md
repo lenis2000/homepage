@@ -782,6 +782,11 @@ The sampler works entirely in your browser using WebAssembly.
   </div>
 </details>
 
+</div> <!-- End interface-container -->
+
+<!-- Visualization canvas -->
+<canvas id="lozenge-canvas"></canvas>
+
 <!-- Current Configuration -->
 <div class="config-display full-width">
   <h3>Current Configuration</h3>
@@ -814,11 +819,6 @@ The sampler works entirely in your browser using WebAssembly.
     </span>
   </div>
 </div>
-
-</div> <!-- End interface-container -->
-
-<!-- Visualization canvas -->
-<canvas id="lozenge-canvas"></canvas>
 
 <!-- Export Modal -->
 <div id="export-modal" class="export-modal">

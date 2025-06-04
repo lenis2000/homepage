@@ -8,20 +8,43 @@
         {% include navbar.html %}
 
         <div class="container">
-            <h1>
-                {{page.title}} &nbsp;&nbsp;&nbsp;<a
-                    href="{{site.url}}/simulations/model/{{page.model}}/"
-                    class="btn btn-secondary"
-                >
-                    {{page.model}}
-                </a>
-            </h1>
+            <!-- Desktop title/authors - visible on larger screens -->
+            <div class="d-none d-md-block">
+                <h1>
+                    {{page.title}} &nbsp;&nbsp;&nbsp;<a
+                        href="{{site.url}}/simulations/model/{{page.model}}/"
+                        class="btn btn-secondary"
+                    >
+                        {{page.model}}
+                    </a>
+                </h1>
 
-            <h4>{{page.author}}</h4>
+                <h4>{{page.author}}</h4>
 
-            <h3></h3>
+                <h3></h3>
 
-            <hr class="mb-4" />
+                <hr class="mb-4" />
+            </div>
+
+            <!-- Mobile collapsible title/authors - visible on smaller screens -->
+            <div class="d-md-none">
+                <details class="mb-3" style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                    <summary style="background: #f5f5f5; padding: 12px 16px; cursor: pointer; font-weight: 600; user-select: none; border-bottom: 1px solid #e0e0e0;">
+                        Simulation Info
+                    </summary>
+                    <div style="padding: 16px; background: white;">
+                        <h2 style="margin: 0 0 12px 0; font-size: 1.5rem;">
+                            {{page.title}} &nbsp;&nbsp;&nbsp;<a
+                                href="{{site.url}}/simulations/model/{{page.model}}/"
+                                class="btn btn-secondary"
+                            >
+                                {{page.model}}
+                            </a>
+                        </h2>
+                        <h4 style="margin: 0 0 12px 0; color: #666;">{{page.author}}</h4>
+                    </div>
+                </details>
+            </div>
 
             {{ content }}
 
