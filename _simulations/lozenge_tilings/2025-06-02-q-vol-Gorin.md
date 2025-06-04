@@ -78,6 +78,23 @@ code:
     border-radius: 4px;
   }
 
+  /* Color indicator */
+  .color-indicator {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .color-swatch {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #333;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
   /* Export modal styles */
   .export-modal {
     display: none;
@@ -217,7 +234,7 @@ The sampler works entirely in your browser using WebAssembly.
 
 <div class="controls">
   <label>Border Width:</label>
-  <input id="border-width" type="number" value="0.001" step="0.001" min="0" max="0.1" style="width: 60px;">
+  <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 60px;">
   <button id="border-thin">Thin</button>
   <button id="border-medium">Medium</button>
   <button id="border-thick">Thick</button>
@@ -232,20 +249,20 @@ The sampler works entirely in your browser using WebAssembly.
   
   <div class="color-palette">
     <label>Down Rhombi:</label>
-    <input type="color" id="color-gray1" value="#D0FFD0">
-    <input type="text" id="hex-gray1" value="#D0FFD0" placeholder="#RRGGBB">
+    <input type="color" id="color-gray1" value="#FF6600">
+    <input type="text" id="hex-gray1" value="#FF6600" placeholder="#RRGGBB">
   </div>
   
   <div class="color-palette">
     <label>Up Rhombi:</label>
-    <input type="color" id="color-gray2" value="#D0D0FF">
-    <input type="text" id="hex-gray2" value="#D0D0FF" placeholder="#RRGGBB">
+    <input type="color" id="color-gray2" value="#003366">
+    <input type="text" id="hex-gray2" value="#003366" placeholder="#RRGGBB">
   </div>
   
   <div class="color-palette">
     <label>Background:</label>
-    <input type="color" id="color-gray3" value="#FFB0B0">
-    <input type="text" id="hex-gray3" value="#FFB0B0" placeholder="#RRGGBB">
+    <input type="color" id="color-gray3" value="#F8F8F8">
+    <input type="text" id="hex-gray3" value="#F8F8F8" placeholder="#RRGGBB">
   </div>
   
   <div style="margin-top: 15px;">
@@ -255,6 +272,16 @@ The sampler works entirely in your browser using WebAssembly.
 </div>
 
 <div id="info" style="margin-bottom: 10px; font-weight: bold;"></div>
+
+<div id="color-indicator" class="color-indicator">
+  <span>Colors:</span>
+  <div class="color-swatch" id="swatch-gray1" style="background-color: #FF6600;"></div>
+  <span>Down</span>
+  <div class="color-swatch" id="swatch-gray2" style="background-color: #003366;"></div>
+  <span>Up</span>
+  <div class="color-swatch" id="swatch-gray3" style="background-color: #F8F8F8;"></div>
+  <span>Background</span>
+</div>
 
 <!-- Visualization canvas -->
 <canvas id="lozenge-canvas"></canvas>
@@ -481,12 +508,12 @@ Module.onRuntimeInitialized = async function() {
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
             this.style = 2; // Default: classical with borders
-            this.borderWidth = 0.001; // Default border width
+            this.borderWidth = 0.01; // Default border width
 
             this.colors = {
-                gray1: '#D0FFD0', // Green-tinted (down rhombi)
-                gray2: '#D0D0FF', // Blue-tinted (up rhombi)
-                gray3: '#FFB0B0', // Red-tinted (background)
+                gray1: '#FF6600', // UVA Orange (down rhombi)
+                gray2: '#003366', // UVA Navy (up rhombi)
+                gray3: '#F8F8F8', // Light gray (background)
                 black: '#000000',
                 white: '#FFFFFF'
             };
@@ -614,12 +641,20 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray1 = colors.gray1;
             this.colors.gray2 = colors.gray2;
             this.colors.gray3 = colors.gray3;
+            this.updateColorIndicator();
+        }
+
+        updateColorIndicator() {
+            document.getElementById('swatch-gray1').style.backgroundColor = this.colors.gray1;
+            document.getElementById('swatch-gray2').style.backgroundColor = this.colors.gray2;
+            document.getElementById('swatch-gray3').style.backgroundColor = this.colors.gray3;
         }
 
         resetDefaultColors() {
-            this.colors.gray1 = '#D0FFD0';
-            this.colors.gray2 = '#D0D0FF';
-            this.colors.gray3 = '#FFB0B0';
+            this.colors.gray1 = '#FF6600';
+            this.colors.gray2 = '#003366';
+            this.colors.gray3 = '#F8F8F8';
+            this.updateColorIndicator();
         }
 
         getHexagonScreenCenter() {
@@ -1015,12 +1050,12 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('reset-default-colors').addEventListener('click', () => {
                 this.visualizer.resetDefaultColors();
                 // Reset both color pickers and hex fields
-                document.getElementById('color-gray1').value = '#D0FFD0';
-                document.getElementById('hex-gray1').value = '#D0FFD0';
-                document.getElementById('color-gray2').value = '#D0D0FF';
-                document.getElementById('hex-gray2').value = '#D0D0FF';
-                document.getElementById('color-gray3').value = '#FFB0B0';
-                document.getElementById('hex-gray3').value = '#FFB0B0';
+                document.getElementById('color-gray1').value = '#FF6600';
+                document.getElementById('hex-gray1').value = '#FF6600';
+                document.getElementById('color-gray2').value = '#003366';
+                document.getElementById('hex-gray2').value = '#003366';
+                document.getElementById('color-gray3').value = '#F8F8F8';
+                document.getElementById('hex-gray3').value = '#F8F8F8';
                 this.redraw();
             });
 
