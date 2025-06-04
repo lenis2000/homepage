@@ -376,7 +376,7 @@ code:
     }
     
     /* Keyboard info mobile optimization */
-    .keyboard-info {
+    #keyboard-info-details > .keyboard-info {
       padding: 8px !important;
       font-size: 11px !important;
       display: block !important; /* Show on mobile now that it's smaller */
@@ -401,59 +401,163 @@ code:
     cursor: not-allowed;
   }
 
-  /* Details/summary styling */
+  /* --- General Styling for ALL details elements --- */
   details {
-    margin-bottom: 20px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     overflow: hidden;
+    margin-bottom: 16px; /* Default spacing */
+  }
+  details:last-of-type {
+    margin-bottom: 20px; /* Ensure consistent final spacing */
   }
 
-  summary {
-    background: #f5f5f5;
+  details > summary {
     padding: 12px 16px;
-    cursor: pointer;
+    background: #f5f5f5;
     font-weight: 600;
+    cursor: pointer;
     user-select: none;
+    list-style-position: inside;
+  }
+
+  details[open] > summary {
     border-bottom: 1px solid #e0e0e0;
   }
 
-  summary:hover {
-    background: #eaeaea;
-  }
-
-  details[open] summary {
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  details .content {
+  /* Content wrapper div directly inside details */
+  details > .content {
     padding: 16px;
     background: white;
   }
+  details > .content.control-group-content {
+    background: #f5f5f5; /* Match original .control-group background */
+    border: 1px solid #e0e0e0; /* Match original .control-group border */
+    border-top: none; /* Summary border is enough */
+    border-radius: 0 0 8px 8px;
+    margin: -1px; /* To align with summary border if details has its own */
+    margin-top: 0;
+    padding: 12px; /* Match original .control-group padding */
+  }
+  #animation-controls-details {
+    background: transparent; /* Let content handle bg */
+    border: 1px solid #e0e0e0;
+  }
+  #animation-controls-details > summary {
+    background: #f5f5f5; /* Title background */
+  }
+  /* Title styling when inside summary */
+  details > summary > .control-group-title {
+    display: inline;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0;
+  }
 
-  /* Desktop: Always show More Options content, hide summary */
+  /* --- Styling for the MAIN "More Options" details (#more-options-details) --- */
+  details#more-options-details {
+    border: none; /* No border for the main container itself */
+    background: transparent;
+    margin-bottom: 0; /* It's a container, spacing handled by nested items */
+    padding: 0;
+  }
+  details#more-options-details > .content {
+    padding: 0; /* No padding, it just holds nested details */
+    background: transparent;
+  }
+
   @media (min-width: 768px) {
-    details.control-group {
-      border: none;
-      background: transparent;
-      margin-bottom: 0;
+    details#more-options-details > summary {
+      display: none; /* Hide the "More Options" text summary */
     }
-    
-    details.control-group summary {
-      display: none;
-    }
-    
-    details.control-group .content {
-      display: block !important;
-      padding: 0;
-      background: transparent;
-    }
-    
-    /* Force details to be open on desktop */
-    details.control-group[open] .content,
-    details.control-group:not([open]) .content {
+    /* Ensure its content area (holding nested details) is always visible */
+    details#more-options-details > .content {
       display: block !important;
     }
+    /* Force the details element itself to be 'open' visually by ensuring content is shown */
+    details#more-options-details[open] > .content,
+    details#more-options-details:not([open]) > .content {
+      display: block !important;
+    }
+  }
+  @media (max-width: 767px) {
+    details#more-options-details > summary {
+      display: block; /* Summary is clickable on mobile */
+    }
+    details#more-options-details > .content {
+      padding: 8px; /* Example for mobile container */
+    }
+  }
+
+  /* --- Styling for NESTED details elements within "More Options" --- */
+  details.nested-control-group {
+    margin-bottom: 10px;
+    border: 1px solid #e8e8e8; /* Lighter border */
+    border-radius: 6px;
+  }
+  details.nested-control-group:last-child {
+    margin-bottom: 0;
+  }
+  details.nested-control-group > summary {
+    background: #f9f9f9; /* Lighter summary background */
+    padding: 10px 14px;
+    font-size: 0.95em; /* Slightly smaller text */
+    border-bottom: none; /* No border unless open */
+  }
+  details.nested-control-group[open] > summary {
+    border-bottom: 1px solid #e0e0e0;
+  }
+  details.nested-control-group > .content {
+    padding: 12px; /* Slightly smaller padding */
+  }
+
+  /* Special handling for #custom-colors-panel within #styling-controls-details */
+  details#styling-controls-details > #custom-colors-panel {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e0e0e0; /* Separator from .content above */
+    margin: 0; /* Reset original margin */
+    border-radius: 0 0 6px 6px; /* Match bottom of parent details */
+  }
+  details#styling-controls-details:not([open]) > #custom-colors-panel {
+    display: none; /* Hidden if styling-controls is closed */
+  }
+  @media (max-width: 767px) {
+    details#styling-controls-details > #custom-colors-panel {
+      padding: 10px;
+    }
+  }
+
+  /* --- Styling for Info Sections (Config, Legend) & Keyboard Shortcuts --- */
+  details.info-section-details,
+  details#keyboard-info-details,
+  details#about-simulation-details,
+  details#animation-controls-details {
+    /* These use the general 'details', 'summary', '.content' styles. */
+  }
+  /* Ensure the content of these sections uses the correct background */
+  details.info-section-details > .content,
+  details#keyboard-info-details > .keyboard-info,
+  details#about-simulation-details > .content {
+    background-color: white; /* Default content background for these */
+  }
+  /* Override for animation controls content to match its original group style */
+  details#animation-controls-details > .content.control-group-content {
+    background-color: #f5f5f5; /* Original control group background */
+    border: none; /* The details element itself provides the border */
+  }
+
+  /* Ensure .keyboard-info (when child of details) displays correctly */
+  #keyboard-info-details > .keyboard-info {
+    display: block;
+    margin-top: 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 0 0 4px 4px;
+    font-size: 12px;
   }
   .keyboard-info {
     margin-top: 10px;
@@ -601,9 +705,6 @@ code:
       padding: 5px 10px;
       font-size: 13px;
     }
-    .keyboard-info {
-      display: none;
-    }
   }
 </style>
 
@@ -611,7 +712,7 @@ code:
 <script src="/js/OrbitControls.js"></script>
 <script src="/js/2025-06-02-q-vol-Gorin.js"></script>
 
-<details>
+<details id="about-simulation-details">
 <summary>About this simulation</summary>
 <div class="content">
 
@@ -655,155 +756,160 @@ The sampler works entirely in your browser using WebAssembly.
 </div>
 
 <!-- Animation Controls -->
-<div class="control-group">
-  <div class="control-group-title">Animation Controls</div>
-  <div class="button-row">
-    <label for="style">Style:</label>
-    <select id="style">
-      <option value="1" selected>Lozenges</option>
-      <option value="5">Z² paths</option>
-    </select>
-
-    <label for="steps">Steps:</label>
-    <input id="steps" type="number" value="1" min="1" max="9999" style="width: 60px;">
+<details id="animation-controls-details">
+  <summary><div class="control-group-title">Animation Controls</div></summary>
+  <div class="content control-group-content">
+    <div class="button-row">
+      <label for="style">Style:</label>
+      <select id="style">
+        <option value="1" selected>Lozenges</option>
+        <option value="5">Z² paths</option>
+      </select>
+      <label for="steps">Steps:</label>
+      <input id="steps" type="number" value="1" min="1" max="9999" style="width: 60px;">
+    </div>
+    <div class="button-row">
+      <button id="step-plus">S → S+steps</button>
+      <button id="step-minus">S → S-steps</button>
+      <button id="step-plus-back">S → S+steps → S</button>
+      <button id="step-minus-forward">S → S-steps → S</button>
+    </div>
   </div>
-  <div class="button-row">
-    <button id="step-plus">S → S+steps</button>
-    <button id="step-minus">S → S-steps</button>
-    <button id="step-plus-back">S → S+steps → S</button>
-    <button id="step-minus-forward">S → S-steps → S</button>
-  </div>
-</div>
+</details>
 
 <!-- More Options (Mobile Collapsible) -->
-<details class="control-group full-width">
+<details class="control-group full-width" id="more-options-details">
   <summary>More Options</summary>
   <div class="content">
     <!-- View Controls -->
-    <div class="control-group">
-      <div class="control-group-title">View Controls</div>
-      <div class="button-row">
-        <button id="zoom-in">Zoom In</button>
-        <button id="zoom-out">Zoom Out</button>
-        <button id="zoom-reset">Reset Zoom</button>
-      </div>
-    </div>
-
-    <!-- Styling Controls -->
-    <div class="control-group">
-      <div class="control-group-title">Styling Controls</div>
-      <div class="button-row">
-        <label>Border Width:</label>
-        <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
-        <button id="border-thin">Thin</button>
-        <button id="border-medium">Medium</button>
-        <button id="border-thick">Thick</button>
-      </div>
-      <div class="button-row">
-        <label for="palette-select">Palette:</label>
-        <button id="prev-palette">◀</button>
-        <select id="palette-select">
-          <!-- Original Palettes -->
-          <option value="0">UVA</option>
-          <option value="1">No Colors</option>
-          <option value="2">Ocean Breeze</option>
-          <option value="3">Forest Calm</option>
-          <option value="4">Sunset Glow</option>
-          <option value="5">Royal Purple</option>
-          <option value="6">Arctic Frost</option>
-          <option value="7">Cherry Blossom</option>
-          <option value="8">Tropical</option>
-          <option value="9">Emerald Dream</option>
-          <option value="10">Cosmic Blue</option>
-          <option value="11">Autumn Leaves</option>
-          <option value="12">Lavender Fields</option>
-          <option value="13">Desert Sand</option>
-          <option value="14">Coral Reef</option>
-          <option value="15">Midnight Sky</option>
-          <option value="16">Rose Garden</option>
-          <option value="17">Sage Green</option>
-          <option value="18">Amber Glow</option>
-          <option value="19">Steel Blue</option>
-          <!-- Flag-Inspired Palettes -->
-          <option value="20">Italy</option>
-          <option value="21">France</option>
-          <option value="22">United Kingdom</option>
-          <option value="23">Jamaica</option>
-          <option value="24">Belgium</option>
-          <option value="25">Colombia</option>
-          <option value="26">South Korea</option>
-          <option value="27">Brazil</option>
-          <option value="28">Argentina</option>
-          <!-- Coding Themes -->
-          <option value="29">Dracula</option>
-          <option value="30">Monokai</option>
-          <option value="31">Solarized Dark</option>
-          <option value="32">One Dark</option>
-          <option value="33">Material</option>
-          <option value="34">Nord</option>
-          <option value="35">Gruvbox Dark</option>
-          <option value="36">Atom One Light</option>
-          <!-- University Colors -->
-          <option value="37">Harvard</option>
-          <option value="38">MIT</option>
-          <option value="39">Stanford</option>
-          <option value="40">Yale</option>
-          <option value="41">Princeton</option>
-          <option value="42">Columbia</option>
-          <option value="43">Berkeley</option>
-          <option value="44">Michigan</option>
-          <option value="45">Cornell</option>
-          <option value="46">Northwestern</option>
-        </select>
-        <button id="next-palette">▶</button>
-        <button id="custom-colors">Custom Colors</button>
-      </div>
-    </div>
-
-    <!-- Custom Colors Panel -->
-    <div id="custom-colors-panel" class="custom-colors-panel">
-      <h4>Custom Color Palettes</h4>
-
-      <div class="color-palette">
-        <label>Up Rhombi:</label>
-        <input type="color" id="color-gray1" value="#E57200">
-        <input type="text" id="hex-gray1" value="#E57200" placeholder="#RRGGBB">
-      </div>
-
-      <div class="color-palette">
-        <label>Down Rhombi:</label>
-        <input type="color" id="color-gray2" value="#232D4B">
-        <input type="text" id="hex-gray2" value="#232D4B" placeholder="#RRGGBB">
-      </div>
-
-      <div class="color-palette">
-        <label>Horizontal:</label>
-        <input type="color" id="color-gray3" value="#F9DCBF">
-        <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
-      </div>
-
-      <div style="margin-top: 15px;">
-        <button id="reset-default-colors">Reset to Default</button>
-        <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
-      </div>
-    </div>
-
-    <!-- Export Controls -->
-    <div class="control-group">
-      <div class="control-group-title">Export</div>
-      <div class="button-row">
-        <button id="export">Export Plane Partition</button>
-      </div>
-      <div id="export-display" style="display: none; margin-top: 12px;">
-        <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
-        <textarea id="export-inline-textarea" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
-        <div style="margin-top: 8px; display: flex; gap: 8px;">
-          <button id="copy-inline-clipboard">Copy to Clipboard</button>
-          <button id="download-inline-file">Download File</button>
-          <button id="hide-export">Hide</button>
+    <details class="nested-control-group">
+      <summary><div class="control-group-title">View Controls</div></summary>
+      <div class="content">
+        <div class="button-row">
+          <button id="zoom-in">Zoom In</button>
+          <button id="zoom-out">Zoom Out</button>
+          <button id="zoom-reset">Reset Zoom</button>
         </div>
       </div>
-    </div>
+    </details>
+
+    <!-- Styling Controls -->
+    <details class="nested-control-group" id="styling-controls-details">
+      <summary><div class="control-group-title">Styling Controls</div></summary>
+      <div class="content">
+        <div class="button-row">
+          <label>Border Width:</label>
+          <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
+          <button id="border-thin">Thin</button>
+          <button id="border-medium">Medium</button>
+          <button id="border-thick">Thick</button>
+        </div>
+        <div class="button-row">
+          <label for="palette-select">Palette:</label>
+          <button id="prev-palette">◀</button>
+          <select id="palette-select">
+            <!-- Original Palettes -->
+            <option value="0">UVA</option>
+            <option value="1">No Colors</option>
+            <option value="2">Ocean Breeze</option>
+            <option value="3">Forest Calm</option>
+            <option value="4">Sunset Glow</option>
+            <option value="5">Royal Purple</option>
+            <option value="6">Arctic Frost</option>
+            <option value="7">Cherry Blossom</option>
+            <option value="8">Tropical</option>
+            <option value="9">Emerald Dream</option>
+            <option value="10">Cosmic Blue</option>
+            <option value="11">Autumn Leaves</option>
+            <option value="12">Lavender Fields</option>
+            <option value="13">Desert Sand</option>
+            <option value="14">Coral Reef</option>
+            <option value="15">Midnight Sky</option>
+            <option value="16">Rose Garden</option>
+            <option value="17">Sage Green</option>
+            <option value="18">Amber Glow</option>
+            <option value="19">Steel Blue</option>
+            <!-- Flag-Inspired Palettes -->
+            <option value="20">Italy</option>
+            <option value="21">France</option>
+            <option value="22">United Kingdom</option>
+            <option value="23">Jamaica</option>
+            <option value="24">Belgium</option>
+            <option value="25">Colombia</option>
+            <option value="26">South Korea</option>
+            <option value="27">Brazil</option>
+            <option value="28">Argentina</option>
+            <!-- Coding Themes -->
+            <option value="29">Dracula</option>
+            <option value="30">Monokai</option>
+            <option value="31">Solarized Dark</option>
+            <option value="32">One Dark</option>
+            <option value="33">Material</option>
+            <option value="34">Nord</option>
+            <option value="35">Gruvbox Dark</option>
+            <option value="36">Atom One Light</option>
+            <!-- University Colors -->
+            <option value="37">Harvard</option>
+            <option value="38">MIT</option>
+            <option value="39">Stanford</option>
+            <option value="40">Yale</option>
+            <option value="41">Princeton</option>
+            <option value="42">Columbia</option>
+            <option value="43">Berkeley</option>
+            <option value="44">Michigan</option>
+            <option value="45">Cornell</option>
+            <option value="46">Northwestern</option>
+          </select>
+          <button id="next-palette">▶</button>
+          <button id="custom-colors">Custom Colors</button>
+        </div>
+      </div>
+      <div id="custom-colors-panel" class="custom-colors-panel">
+        <h4>Custom Color Palettes</h4>
+
+        <div class="color-palette">
+          <label>Up Rhombi:</label>
+          <input type="color" id="color-gray1" value="#E57200">
+          <input type="text" id="hex-gray1" value="#E57200" placeholder="#RRGGBB">
+        </div>
+
+        <div class="color-palette">
+          <label>Down Rhombi:</label>
+          <input type="color" id="color-gray2" value="#232D4B">
+          <input type="text" id="hex-gray2" value="#232D4B" placeholder="#RRGGBB">
+        </div>
+
+        <div class="color-palette">
+          <label>Horizontal:</label>
+          <input type="color" id="color-gray3" value="#F9DCBF">
+          <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
+        </div>
+
+        <div style="margin-top: 15px;">
+          <button id="reset-default-colors">Reset to Default</button>
+          <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- Export Controls -->
+    <details class="nested-control-group">
+      <summary><div class="control-group-title">Export</div></summary>
+      <div class="content">
+        <div class="button-row">
+          <button id="export">Export Plane Partition</button>
+        </div>
+        <div id="export-display" style="display: none; margin-top: 12px;">
+          <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
+          <textarea id="export-inline-textarea" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
+          <div style="margin-top: 8px; display: flex; gap: 8px;">
+            <button id="copy-inline-clipboard">Copy to Clipboard</button>
+            <button id="download-inline-file">Download File</button>
+            <button id="hide-export">Hide</button>
+          </div>
+        </div>
+      </div>
+    </details>
   </div>
 </details>
 
@@ -813,37 +919,41 @@ The sampler works entirely in your browser using WebAssembly.
 <canvas id="lozenge-canvas"></canvas>
 
 <!-- Current Configuration -->
-<div class="config-display full-width">
-  <h3>Current Configuration</h3>
-  <div class="config-values" id="info">
-    <span class="config-item">N = <strong>20</strong></span>
-    <span class="config-item">T = <strong>40</strong></span>
-    <span class="config-item">S = <strong>20</strong></span>
-    <span class="config-item">q = <strong>1</strong></span>
+<details class="info-section-details" id="config-details">
+  <summary>Current Configuration</summary>
+  <div class="content">
+    <div class="config-values" id="info">
+      <span class="config-item">N = <strong>20</strong></span>
+      <span class="config-item">T = <strong>40</strong></span>
+      <span class="config-item">S = <strong>20</strong></span>
+      <span class="config-item">q = <strong>1</strong></span>
+    </div>
   </div>
-</div>
+</details>
 
 <!-- Color Legend -->
-<div class="color-legend full-width">
-  <span class="legend-title">Colors:</span>
-  <div class="legend-items">
-    <span class="legend-item">
-      <span class="color-box" id="swatch-gray1" style="background-color: #E57200;"></span>
-      Up
-    </span>
-    <span class="legend-item">
-      <span class="color-box" id="swatch-gray2" style="background-color: #232D4B;"></span>
-      Down
-    </span>
-    <span class="legend-item">
-      <span class="color-box" id="swatch-gray3" style="background-color: #F9DCBF;"></span>
-      Horizontal
-    </span>
-    <span class="legend-item">
-      <span style="font-weight: 600;" id="palette-info">UVA</span>
-    </span>
+<details class="info-section-details" id="legend-details">
+  <summary>Color Legend</summary>
+  <div class="content">
+    <div class="legend-items">
+      <span class="legend-item">
+        <span class="color-box" id="swatch-gray1" style="background-color: #E57200;"></span>
+        Up
+      </span>
+      <span class="legend-item">
+        <span class="color-box" id="swatch-gray2" style="background-color: #232D4B;"></span>
+        Down
+      </span>
+      <span class="legend-item">
+        <span class="color-box" id="swatch-gray3" style="background-color: #F9DCBF;"></span>
+        Horizontal
+      </span>
+      <span class="legend-item">
+        <span style="font-weight: 600;" id="palette-info">UVA</span>
+      </span>
+    </div>
   </div>
-</div>
+</details>
 
 <!-- Export Modal -->
 <div id="export-modal" class="export-modal">
@@ -860,13 +970,16 @@ The sampler works entirely in your browser using WebAssembly.
   </div>
 </div>
 
-<div class="keyboard-info">
-  <strong>Keyboard shortcuts:</strong><br>
-  A: S → S+steps<br>
-  Z: S → S-steps<br>
-  S: S → S+steps → S-steps<br>
-  X: S → S-steps → S+steps
-</div>
+<details id="keyboard-info-details">
+  <summary>Keyboard Shortcuts</summary>
+  <div class="keyboard-info">
+    <strong>Keyboard shortcuts:</strong><br>
+    A: S → S+steps<br>
+    Z: S → S-steps<br>
+    S: S → S+steps → S-steps<br>
+    X: S → S-steps → S+steps
+  </div>
+</details>
 
 <script>
 // Check if Module is defined before setting onRuntimeInitialized
@@ -2391,17 +2504,62 @@ Module.onRuntimeInitialized = async function() {
         }
     }
 
-    // Handle responsive details behavior
-    function handleDetailsResponsive() {
-        const detailsElement = document.querySelector('details.control-group');
-        if (detailsElement) {
-            if (window.innerWidth >= 768) {
-                // Desktop: force open
-                detailsElement.setAttribute('open', '');
+    function initializeCollapsibleSections() {
+        const screenWidth = window.innerWidth;
+        const isMobile = screenWidth < 768;
+
+        // About this simulation (#about-simulation-details)
+        const aboutDetails = document.getElementById('about-simulation-details');
+        if (aboutDetails) {
+            if (isMobile) {
+                aboutDetails.removeAttribute('open'); // CLOSED on mobile
             } else {
-                // Mobile: allow normal behavior, start closed
-                detailsElement.removeAttribute('open');
+                aboutDetails.setAttribute('open', ''); // OPEN on desktop
             }
+        }
+
+        // Animation Controls (#animation-controls-details)
+        const animationDetails = document.getElementById('animation-controls-details');
+        if (animationDetails) {
+            if (isMobile) {
+                animationDetails.setAttribute('open', ''); // OPEN on mobile
+            } else {
+                animationDetails.removeAttribute('open'); // CLOSED on desktop
+            }
+        }
+
+        // "More Options" main section (#more-options-details)
+        const moreOptionsDetails = document.getElementById('more-options-details');
+        if (moreOptionsDetails) {
+            if (isMobile) {
+                moreOptionsDetails.removeAttribute('open'); // CLOSED on mobile (user clicks to open)
+            } else {
+                // On desktop, CSS hides summary & forces content. Set 'open' for consistency.
+                moreOptionsDetails.setAttribute('open', '');
+            }
+        }
+        
+        // Nested details within "More Options" (.nested-control-group)
+        const nestedMoreOptionsDetails = document.querySelectorAll('#more-options-details .nested-control-group');
+        nestedMoreOptionsDetails.forEach(detail => {
+            // CLOSED by default on both mobile and desktop, user expands as needed.
+            detail.removeAttribute('open');
+        });
+
+        // Info Sections (Current Configuration & Color Legend) - OPEN on both mobile and desktop
+        const configDetails = document.getElementById('config-details');
+        if (configDetails) {
+            configDetails.setAttribute('open', ''); // OPEN on both mobile and desktop
+        }
+        const legendDetails = document.getElementById('legend-details');
+        if (legendDetails) {
+            legendDetails.setAttribute('open', ''); // OPEN on both mobile and desktop
+        }
+
+        // Keyboard Shortcuts (#keyboard-info-details) - OPEN on both mobile and desktop
+        const keyboardDetails = document.getElementById('keyboard-info-details');
+        if (keyboardDetails) {
+            keyboardDetails.setAttribute('open', ''); // OPEN on both mobile and desktop
         }
     }
 
@@ -2421,9 +2579,17 @@ Module.onRuntimeInitialized = async function() {
 
         const ui = new UIController(wasmInterface, visualizer);
 
-        // Handle responsive details behavior
-        handleDetailsResponsive();
-        window.addEventListener('resize', handleDetailsResponsive);
+        // Initialize collapsible sections with responsive behavior
+        initializeCollapsibleSections();
+        
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            // Debounce the resize event to avoid excessive calls
+            resizeTimer = setTimeout(() => {
+                initializeCollapsibleSections();
+            }, 250);
+        });
 
         // Initialize with default parameters
         await ui.initializeTiling();
