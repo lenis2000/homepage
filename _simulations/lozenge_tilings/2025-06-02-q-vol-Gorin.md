@@ -248,21 +248,21 @@ The sampler works entirely in your browser using WebAssembly.
   <h4>Custom Color Palettes</h4>
   
   <div class="color-palette">
-    <label>Down Rhombi:</label>
-    <input type="color" id="color-gray1" value="#FF6600">
-    <input type="text" id="hex-gray1" value="#FF6600" placeholder="#RRGGBB">
-  </div>
-  
-  <div class="color-palette">
     <label>Up Rhombi:</label>
-    <input type="color" id="color-gray2" value="#003366">
-    <input type="text" id="hex-gray2" value="#003366" placeholder="#RRGGBB">
+    <input type="color" id="color-gray1" value="#E57200">
+    <input type="text" id="hex-gray1" value="#E57200" placeholder="#RRGGBB">
   </div>
   
   <div class="color-palette">
-    <label>Background:</label>
-    <input type="color" id="color-gray3" value="#F8F8F8">
-    <input type="text" id="hex-gray3" value="#F8F8F8" placeholder="#RRGGBB">
+    <label>Down Rhombi:</label>
+    <input type="color" id="color-gray2" value="#232D4B">
+    <input type="text" id="hex-gray2" value="#232D4B" placeholder="#RRGGBB">
+  </div>
+  
+  <div class="color-palette">
+    <label>Horizontal:</label>
+    <input type="color" id="color-gray3" value="#C8CBD2">
+    <input type="text" id="hex-gray3" value="#C8CBD2" placeholder="#RRGGBB">
   </div>
   
   <div style="margin-top: 15px;">
@@ -275,12 +275,14 @@ The sampler works entirely in your browser using WebAssembly.
 
 <div id="color-indicator" class="color-indicator">
   <span>Colors:</span>
-  <div class="color-swatch" id="swatch-gray1" style="background-color: #FF6600;"></div>
-  <span>Down</span>
-  <div class="color-swatch" id="swatch-gray2" style="background-color: #003366;"></div>
+  <div class="color-swatch" id="swatch-gray1" style="background-color: #E57200;"></div>
   <span>Up</span>
-  <div class="color-swatch" id="swatch-gray3" style="background-color: #F8F8F8;"></div>
-  <span>Background</span>
+  <div class="color-swatch" id="swatch-gray2" style="background-color: #232D4B;"></div>
+  <span>Down</span>
+  <div class="color-swatch" id="swatch-gray3" style="background-color: #C8CBD2;"></div>
+  <span>Horizontal</span>
+  <span>|</span>
+  <span id="palette-info">UVA Colors</span>
 </div>
 
 <!-- Visualization canvas -->
@@ -511,12 +513,14 @@ Module.onRuntimeInitialized = async function() {
             this.borderWidth = 0.01; // Default border width
 
             this.colors = {
-                gray1: '#FF6600', // UVA Orange (down rhombi)
-                gray2: '#003366', // UVA Navy (up rhombi)
-                gray3: '#F8F8F8', // Light gray (background)
+                gray1: '#E57200', // UVA Orange (up rhombi)
+                gray2: '#232D4B', // UVA Blue (down rhombi)
+                gray3: '#C8CBD2', // UVA Blue 25% (horizontal rhombi)
                 black: '#000000',
                 white: '#FFFFFF'
             };
+            
+            this.currentPalette = 'UVA Colors';
 
             this.zoomLevel = 1.0;
             this.panX = 0;
@@ -641,6 +645,7 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray1 = colors.gray1;
             this.colors.gray2 = colors.gray2;
             this.colors.gray3 = colors.gray3;
+            this.currentPalette = 'Custom';
             this.updateColorIndicator();
         }
 
@@ -648,12 +653,20 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('swatch-gray1').style.backgroundColor = this.colors.gray1;
             document.getElementById('swatch-gray2').style.backgroundColor = this.colors.gray2;
             document.getElementById('swatch-gray3').style.backgroundColor = this.colors.gray3;
+            
+            const paletteInfo = document.getElementById('palette-info');
+            if (this.currentPalette === 'Custom') {
+                paletteInfo.textContent = `Custom (${this.colors.gray1}, ${this.colors.gray2}, ${this.colors.gray3})`;
+            } else {
+                paletteInfo.textContent = this.currentPalette;
+            }
         }
 
         resetDefaultColors() {
-            this.colors.gray1 = '#FF6600';
-            this.colors.gray2 = '#003366';
-            this.colors.gray3 = '#F8F8F8';
+            this.colors.gray1 = '#E57200';
+            this.colors.gray2 = '#232D4B';
+            this.colors.gray3 = '#C8CBD2';
+            this.currentPalette = 'UVA Colors';
             this.updateColorIndicator();
         }
 
@@ -1050,12 +1063,12 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('reset-default-colors').addEventListener('click', () => {
                 this.visualizer.resetDefaultColors();
                 // Reset both color pickers and hex fields
-                document.getElementById('color-gray1').value = '#FF6600';
-                document.getElementById('hex-gray1').value = '#FF6600';
-                document.getElementById('color-gray2').value = '#003366';
-                document.getElementById('hex-gray2').value = '#003366';
-                document.getElementById('color-gray3').value = '#F8F8F8';
-                document.getElementById('hex-gray3').value = '#F8F8F8';
+                document.getElementById('color-gray1').value = '#E57200';
+                document.getElementById('hex-gray1').value = '#E57200';
+                document.getElementById('color-gray2').value = '#232D4B';
+                document.getElementById('hex-gray2').value = '#232D4B';
+                document.getElementById('color-gray3').value = '#C8CBD2';
+                document.getElementById('hex-gray3').value = '#C8CBD2';
                 this.redraw();
             });
 
