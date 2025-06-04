@@ -25,7 +25,8 @@ code:
       grid-template-columns: repeat(2, 1fr);
     }
 
-    .control-group.full-width {
+    .control-group.full-width,
+    .full-width {
       grid-column: 1 / -1;
     }
   }
@@ -847,6 +848,7 @@ The sampler works entirely in your browser using WebAssembly.
             <option value="44">Michigan</option>
             <option value="45">Cornell</option>
             <option value="46">Northwestern</option>
+            <option value="47">Northeastern</option>
           </select>
           <button id="next-palette">▶</button>
           <button id="custom-colors">Custom Colors</button>
@@ -1225,14 +1227,15 @@ Module.onRuntimeInitialized = async function() {
                 // University Color Palettes
                 { name: 'Harvard', colors: ['#a51c30', '#ffffff', '#8c8b8b'] },
                 { name: 'MIT', colors: ['#8a8b8c', '#a31f34', '#000000'] },
-                { name: 'Stanford', colors: ['#8c1515', '#daa900', '#ffffff'] },
+                { name: 'Stanford', colors: ['#8c1515', '#2e2d29', '#ffffff'] },
                 { name: 'Yale', colors: ['#00356b', '#286dc0', '#63aaff'] },
                 { name: 'Princeton', colors: ['#e77500', '#000000', '#ffffff'] },
                 { name: 'Columbia', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a'] },
                 { name: 'Berkeley', colors: ['#003262', '#fdb515', '#ffffff'] },
                 { name: 'Michigan', colors: ['#00274c', '#ffcb05', '#ffffff'] },
                 { name: 'Cornell', colors: ['#b31b1b', '#ffffff', '#222222'] },
-                { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] }
+                { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] },
+                { name: 'Northeastern', colors: ['#cc0000', '#000000', '#ffffff'] }
             ];
 
             this.zoomLevel = 1.0;
