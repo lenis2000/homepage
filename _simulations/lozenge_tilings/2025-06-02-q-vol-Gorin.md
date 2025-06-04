@@ -231,7 +231,7 @@ Module.onRuntimeInitialized = async function() {
             if (typeof Module.cwrap !== 'function') {
                 throw new Error('Module.cwrap is not a function. WASM module may not be properly initialized.');
             }
-            
+
             // Wrap exported functions
             this.initializeTiling = Module.cwrap('initializeTiling', 'number', ['number', 'number', 'number', 'number', 'number'], {async: true});
             this.performSOperator = Module.cwrap('performSOperator', 'number', [], {async: true});
@@ -540,7 +540,7 @@ Module.onRuntimeInitialized = async function() {
             // This matches the transformation sequence in drawHexagonStyle
             const screenCenterX = this.panX + width / 2;
             const screenCenterY = this.panY + height / 2;
-            
+
             return { x: screenCenterX, y: screenCenterY };
         }
 
@@ -579,7 +579,7 @@ Module.onRuntimeInitialized = async function() {
             this.zoomLevel = 1.0;
             this.panX = 0;
             this.panY = 0;
-            
+
             if (this.lastPaths) {
                 this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
             }
@@ -665,7 +665,7 @@ Module.onRuntimeInitialized = async function() {
             ];
 
             ctx.save();
-            
+
             // Create clipping path
             ctx.beginPath();
             ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -681,63 +681,34 @@ Module.onRuntimeInitialized = async function() {
                     // Use the same coordinate system as the actual rhombi
                     const x1 = timeIdx * 0.5 * sqrt3;
                     const y1 = height - timeIdx * 0.5;
-                    const x2 = x1;
-                    const y2 = y1 + 1;
-                    
+
                     // Calculate rhombus center for bounds checking
                     const centerX = x1 + 0.25 * sqrt3;
                     const centerY = y1 + 0.5;
-                    
+
                     // Check if rhombus center is roughly within bounds
-                    if (centerX >= -0.5 * sqrt3 && centerX <= (T + 1) * 0.5 * sqrt3 && 
+                    if (centerX >= -0.5 * sqrt3 && centerX <= (T + 1) * 0.5 * sqrt3 &&
                         centerY >= -(T - S + 2) * 0.5 && centerY <= N + S + 1) {
-                        
-                        // Draw both possible rhombus orientations in the grid
-                        // Down rhombus
-                        const x3_down = x2 + 0.5 * sqrt3;
-                        const y3_down = y2 - 0.5;
-                        const x4_down = x1 + 0.5 * sqrt3;
-                        const y4_down = y1 - 0.5;
-                        
+
                         ctx.beginPath();
                         ctx.moveTo(x1, y1);
-                        ctx.lineTo(x2, y2);
-                        ctx.lineTo(x3_down, y3_down);
-                        ctx.lineTo(x4_down, y4_down);
+                        ctx.lineTo(x1+0.5 * sqrt3, y1 + 0.5);
+                        ctx.lineTo(x1 + sqrt3, y1);
+                        ctx.lineTo(x1 + 0.5 * sqrt3, y1 - 0.5);
                         ctx.closePath();
-                        
+
                         ctx.fillStyle = this.colors.gray3;
                         ctx.fill();
-                        
-                        ctx.strokeStyle = this.colors.black;
-                        ctx.lineWidth = 0.02;
-                        ctx.stroke();
-                        
-                        // Up rhombus
-                        const x3_up = x2 + 0.5 * sqrt3;
-                        const y3_up = y2 + 0.5;
-                        const x4_up = x1 + 0.5 * sqrt3;
-                        const y4_up = y1 + 0.5;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(x1, y1);
-                        ctx.lineTo(x2, y2);
-                        ctx.lineTo(x3_up, y3_up);
-                        ctx.lineTo(x4_up, y4_up);
-                        ctx.closePath();
-                        
-                        ctx.fillStyle = this.colors.gray3;
-                        ctx.fill();
-                        
+
                         ctx.strokeStyle = this.colors.black;
                         ctx.lineWidth = 0.02;
                         ctx.stroke();
                     }
                 }
             }
-            
+
             ctx.restore();
-            
+
             // Draw hexagon border
             ctx.beginPath();
             ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -1134,7 +1105,7 @@ Module.onRuntimeInitialized = async function() {
                 const textarea = document.getElementById('export-textarea');
                 textarea.select();
                 textarea.setSelectionRange(0, 99999); // For mobile devices
-                
+
                 if (navigator.clipboard && window.isSecureContext) {
                     // Use modern clipboard API if available
                     navigator.clipboard.writeText(textarea.value).then(() => {
@@ -1220,7 +1191,7 @@ Module.onRuntimeInitialized = async function() {
     try {
         console.log('Starting application initialization...');
         console.log('Module defined:', typeof Module !== 'undefined');
-        
+
         const wasmInterface = new WASMInterface();
         await wasmInterface.initialize();
 
