@@ -461,10 +461,12 @@ The sampler works entirely in your browser using WebAssembly.
     
     <label for="steps">Steps:</label>
     <input id="steps" type="number" value="1" min="1" max="10" style="width: 60px;">
-    
+  </div>
+  <div class="button-row">
     <button id="step-plus">S → S+steps</button>
     <button id="step-minus">S → S-steps</button>
-    <button id="export">Export</button>
+    <button id="step-plus-back">S → S+steps → S</button>
+    <button id="step-minus-forward">S → S-steps → S</button>
   </div>
 </div>
 
@@ -483,7 +485,7 @@ The sampler works entirely in your browser using WebAssembly.
   <div class="control-group-title">Styling Controls</div>
   <div class="button-row">
     <label>Border Width:</label>
-    <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 60px;">
+    <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
     <button id="border-thin">Thin</button>
     <button id="border-medium">Medium</button>
     <button id="border-thick">Thick</button>
@@ -494,45 +496,55 @@ The sampler works entirely in your browser using WebAssembly.
     <select id="palette-select">
       <!-- Original Palettes -->
       <option value="0">UVA</option>
-      <option value="1">Ocean Breeze</option>
-      <option value="2">Forest Calm</option>
-      <option value="3">Sunset Glow</option>
-      <option value="4">Royal Purple</option>
-      <option value="5">Arctic Frost</option>
-      <option value="6">Cherry Blossom</option>
-      <option value="7">Tropical</option>
-      <option value="8">Emerald Dream</option>
-      <option value="9">Cosmic Blue</option>
-      <option value="10">Autumn Leaves</option>
-      <option value="11">Lavender Fields</option>
-      <option value="12">Desert Sand</option>
-      <option value="13">Coral Reef</option>
-      <option value="14">Midnight Sky</option>
-      <option value="15">Rose Garden</option>
-      <option value="16">Sage Green</option>
-      <option value="17">Amber Glow</option>
-      <option value="18">Steel Blue</option>
-      <option value="19">Crimson Tide</option>
+      <option value="1">No Colors</option>
+      <option value="2">Ocean Breeze</option>
+      <option value="3">Forest Calm</option>
+      <option value="4">Sunset Glow</option>
+      <option value="5">Royal Purple</option>
+      <option value="6">Arctic Frost</option>
+      <option value="7">Cherry Blossom</option>
+      <option value="8">Tropical</option>
+      <option value="9">Emerald Dream</option>
+      <option value="10">Cosmic Blue</option>
+      <option value="11">Autumn Leaves</option>
+      <option value="12">Lavender Fields</option>
+      <option value="13">Desert Sand</option>
+      <option value="14">Coral Reef</option>
+      <option value="15">Midnight Sky</option>
+      <option value="16">Rose Garden</option>
+      <option value="17">Sage Green</option>
+      <option value="18">Amber Glow</option>
+      <option value="19">Steel Blue</option>
+      <!-- Flag-Inspired Palettes -->
+      <option value="20">Italy</option>
+      <option value="21">France</option>
+      <option value="22">United Kingdom</option>
+      <option value="23">Jamaica</option>
+      <option value="24">Belgium</option>
+      <option value="25">Colombia</option>
+      <option value="26">South Korea</option>
+      <option value="27">Brazil</option>
+      <option value="28">Argentina</option>
       <!-- Coding Themes -->
-      <option value="20">Dracula</option>
-      <option value="21">Monokai</option>
-      <option value="22">Solarized Dark</option>
-      <option value="23">One Dark</option>
-      <option value="24">Material</option>
-      <option value="25">Nord</option>
-      <option value="26">Gruvbox Dark</option>
-      <option value="27">Atom One Light</option>
+      <option value="29">Dracula</option>
+      <option value="30">Monokai</option>
+      <option value="31">Solarized Dark</option>
+      <option value="32">One Dark</option>
+      <option value="33">Material</option>
+      <option value="34">Nord</option>
+      <option value="35">Gruvbox Dark</option>
+      <option value="36">Atom One Light</option>
       <!-- University Colors -->
-      <option value="28">Harvard</option>
-      <option value="29">MIT</option>
-      <option value="30">Stanford</option>
-      <option value="31">Yale</option>
-      <option value="32">Princeton</option>
-      <option value="33">Columbia</option>
-      <option value="34">Berkeley</option>
-      <option value="35">Michigan</option>
-      <option value="36">Cornell</option>
-      <option value="37">Northwestern</option>
+      <option value="37">Harvard</option>
+      <option value="38">MIT</option>
+      <option value="39">Stanford</option>
+      <option value="40">Yale</option>
+      <option value="41">Princeton</option>
+      <option value="42">Columbia</option>
+      <option value="43">Berkeley</option>
+      <option value="44">Michigan</option>
+      <option value="45">Cornell</option>
+      <option value="46">Northwestern</option>
     </select>
     <button id="next-palette">▶</button>
     <button id="custom-colors">Custom Colors</button>
@@ -564,6 +576,23 @@ The sampler works entirely in your browser using WebAssembly.
   <div style="margin-top: 15px;">
     <button id="reset-default-colors">Reset to Default</button>
     <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
+  </div>
+</div>
+
+<!-- Export Controls -->
+<div class="control-group full-width">
+  <div class="control-group-title">Export</div>
+  <div class="button-row">
+    <button id="export">Export Plane Partition</button>
+  </div>
+  <div id="export-display" style="display: none; margin-top: 12px;">
+    <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
+    <textarea id="export-inline-textarea" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
+    <div style="margin-top: 8px; display: flex; gap: 8px;">
+      <button id="copy-inline-clipboard">Copy to Clipboard</button>
+      <button id="download-inline-file">Download File</button>
+      <button id="hide-export">Hide</button>
+    </div>
   </div>
 </div>
 
@@ -843,6 +872,7 @@ Module.onRuntimeInitialized = async function() {
             // 35+ beautiful color palettes - mix of original, coder themes, and universities
             this.colorPalettes = [
                 { name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF'] },
+                { name: 'No Colors', colors: ['#FFFFFF', '#FFFFFF', '#FFFFFF'] },
                 { name: 'Ocean Breeze', colors: ['#2E86AB', '#A23B72', '#F18F01'] },
                 { name: 'Forest Calm', colors: ['#355E3B', '#8FBC8F', '#F5F5DC'] },
                 { name: 'Sunset Glow', colors: ['#FF6B35', '#F7931E', '#FFE66D'] },
@@ -861,7 +891,16 @@ Module.onRuntimeInitialized = async function() {
                 { name: 'Sage Green', colors: ['#9CAF88', '#87A96B', '#F5F5F5'] },
                 { name: 'Amber Glow', colors: ['#FFBF00', '#FF8C00', '#FFFACD'] },
                 { name: 'Steel Blue', colors: ['#4682B4', '#6495ED', '#F0F8FF'] },
-                { name: 'Crimson Tide', colors: ['#DC143C', '#B22222', '#FFF8F8'] },
+                // Flag-Inspired Palettes
+                { name: 'Italy', colors: ['#009246', '#FFFFFF', '#CE2B37'] },
+                { name: 'France', colors: ['#0055A4', '#FFFFFF', '#EF4135'] },
+                { name: 'United Kingdom', colors: ['#012169', '#FFFFFF', '#C8102E'] },
+                { name: 'Jamaica', colors: ['#009639', '#FED100', '#000000'] },
+                { name: 'Belgium', colors: ['#000000', '#FED100', '#ED2939'] },
+                { name: 'Colombia', colors: ['#FDE047', '#0F172A', '#DC2626'] },
+                { name: 'South Korea', colors: ['#CD212A', '#0047A0', '#FFFFFF'] },
+                { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169'] },
+                { name: 'Argentina', colors: ['#74ACDF', '#FFFFFF', '#F6B40E'] },
                 // Popular Coding Themes
                 { name: 'Dracula', colors: ['#282a36', '#8be9fd', '#50fa7b'] },
                 { name: 'Monokai', colors: ['#272822', '#f92672', '#a6e22e'] },
@@ -1534,6 +1573,14 @@ Module.onRuntimeInitialized = async function() {
                 this.stepBackward();
             });
 
+            document.getElementById('step-plus-back').addEventListener('click', () => {
+                this.stepPlusBack();
+            });
+
+            document.getElementById('step-minus-forward').addEventListener('click', () => {
+                this.stepMinusForward();
+            });
+
             document.getElementById('export').addEventListener('click', () => {
                 this.exportPlanePartition();
             });
@@ -1553,7 +1600,20 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
             });
 
-            // Export modal event listeners
+            // Inline export event listeners
+            document.getElementById('copy-inline-clipboard').addEventListener('click', () => {
+                this.copyInlineToClipboard();
+            });
+
+            document.getElementById('download-inline-file').addEventListener('click', () => {
+                this.downloadInlineFile();
+            });
+
+            document.getElementById('hide-export').addEventListener('click', () => {
+                document.getElementById('export-display').style.display = 'none';
+            });
+
+            // Export modal event listeners (keep for backward compatibility)
             document.getElementById('copy-to-clipboard').addEventListener('click', () => {
                 this.copyToClipboard();
             });
@@ -1782,6 +1842,72 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
+        async stepPlusBack() {
+            try {
+                const steps = parseInt(document.getElementById('steps').value) || 1;
+
+                // S → S+steps
+                for (let i = 0; i < steps; i++) {
+                    try {
+                        await this.wasm.stepForward();
+                    } catch (error) {
+                        break;
+                    }
+                }
+
+                // S+steps → S
+                for (let i = 0; i < steps; i++) {
+                    try {
+                        await this.wasm.stepBackward();
+                    } catch (error) {
+                        break;
+                    }
+                }
+
+                const params = this.wasm.getParameters();
+                document.getElementById('S').value = params.S;
+
+                this.updateInfo();
+                this.redraw();
+
+            } catch (error) {
+                // Silently handle any other errors
+            }
+        }
+
+        async stepMinusForward() {
+            try {
+                const steps = parseInt(document.getElementById('steps').value) || 1;
+
+                // S → S-steps
+                for (let i = 0; i < steps; i++) {
+                    try {
+                        await this.wasm.stepBackward();
+                    } catch (error) {
+                        break;
+                    }
+                }
+
+                // S-steps → S
+                for (let i = 0; i < steps; i++) {
+                    try {
+                        await this.wasm.stepForward();
+                    } catch (error) {
+                        break;
+                    }
+                }
+
+                const params = this.wasm.getParameters();
+                document.getElementById('S').value = params.S;
+
+                this.updateInfo();
+                this.redraw();
+
+            } catch (error) {
+                // Silently handle any other errors
+            }
+        }
+
         exportPlanePartition() {
             try {
                 const partition = this.wasm.exportPlanePartition();
@@ -1792,9 +1918,9 @@ Module.onRuntimeInitialized = async function() {
                     text += row.join('\t') + '\n';
                 }
 
-                // Show the export modal with the text
-                document.getElementById('export-textarea').value = text;
-                document.getElementById('export-modal').style.display = 'block';
+                // Show inline export display
+                document.getElementById('export-inline-textarea').value = text;
+                document.getElementById('export-display').style.display = 'block';
 
             } catch (error) {
                 const errorMessage = error?.message || error?.toString() || 'Unknown error';
@@ -1830,6 +1956,47 @@ Module.onRuntimeInitialized = async function() {
         downloadFile() {
             try {
                 const text = document.getElementById('export-textarea').value;
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `plane_partition_N${this.wasm.getParameters().N}_T${this.wasm.getParameters().T}_S${this.wasm.getParameters().S}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                const errorMessage = error?.message || error?.toString() || 'Unknown error';
+                alert('Download error: ' + errorMessage);
+            }
+        }
+
+        copyInlineToClipboard() {
+            try {
+                const textarea = document.getElementById('export-inline-textarea');
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // For mobile devices
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    // Use modern clipboard API if available
+                    navigator.clipboard.writeText(textarea.value).then(() => {
+                        alert('Copied to clipboard!');
+                    }).catch(() => {
+                        // Fallback to execCommand
+                        document.execCommand('copy');
+                        alert('Copied to clipboard!');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    document.execCommand('copy');
+                    alert('Copied to clipboard!');
+                }
+            } catch (error) {
+                alert('Failed to copy to clipboard');
+            }
+        }
+
+        downloadInlineFile() {
+            try {
+                const text = document.getElementById('export-inline-textarea').value;
                 const blob = new Blob([text], { type: 'text/plain' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
