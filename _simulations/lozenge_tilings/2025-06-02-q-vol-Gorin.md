@@ -469,26 +469,14 @@ code:
     background: transparent;
   }
 
-  @media (min-width: 768px) {
-    details#more-options-details > summary {
-      display: none; /* Hide the "More Options" text summary */
-    }
-    /* Ensure its content area (holding nested details) is always visible */
-    details#more-options-details > .content {
-      display: block !important;
-    }
-    /* Force the details element itself to be 'open' visually by ensuring content is shown */
-    details#more-options-details[open] > .content,
-    details#more-options-details:not([open]) > .content {
-      display: block !important;
-    }
+  /* More Options behaves the same on both mobile and desktop - always collapsible */
+  details#more-options-details > summary {
+    display: block; /* Summary is clickable on both mobile and desktop */
   }
+  
   @media (max-width: 767px) {
-    details#more-options-details > summary {
-      display: block; /* Summary is clickable on mobile */
-    }
     details#more-options-details > .content {
-      padding: 8px; /* Example for mobile container */
+      padding: 8px; /* Mobile container padding */
     }
   }
 
