@@ -460,7 +460,7 @@ The sampler works entirely in your browser using WebAssembly.
     </select>
     
     <label for="steps">Steps:</label>
-    <input id="steps" type="number" value="1" min="1" max="10" style="width: 60px;">
+    <input id="steps" type="number" value="1" min="1" max="9999" style="width: 80px;">
   </div>
   <div class="button-row">
     <button id="step-plus">S → S+steps</button>
