@@ -744,18 +744,16 @@ The sampler works entirely in your browser using WebAssembly.
 </div>
 
 <!-- Animation Controls -->
-<details id="animation-controls-details">
+<details id="animation-controls-details" class="full-width">
   <summary><div class="control-group-title">Animation Controls</div></summary>
   <div class="content control-group-content">
     <div class="button-row">
-      <label for="steps">Steps:</label>
+      <label for="steps" style="font-style: italic;">r =</label>
       <input id="steps" type="number" value="1" min="1" max="9999" style="width: 60px;">
-    </div>
-    <div class="button-row">
-      <button id="step-plus">S → S+steps</button>
-      <button id="step-minus">S → S-steps</button>
-      <button id="step-plus-back">S → S+steps → S</button>
-      <button id="step-minus-forward">S → S-steps → S</button>
+      <button id="step-plus">S → S+r</button>
+      <button id="step-minus">S → S-r</button>
+      <button id="step-plus-back">S → S+r → S</button>
+      <button id="step-minus-forward">S → S-r → S</button>
     </div>
   </div>
 </details>
@@ -964,10 +962,10 @@ The sampler works entirely in your browser using WebAssembly.
   <summary>Keyboard Shortcuts</summary>
   <div class="keyboard-info">
     <strong>Keyboard shortcuts:</strong><br>
-    A: S → S+steps<br>
-    Z: S → S-steps<br>
-    S: S → S+steps → S-steps<br>
-    X: S → S-steps → S+steps
+    A: S → S+r<br>
+    Z: S → S-r<br>
+    S: S → S+r → S-r<br>
+    X: S → S-r → S+r
   </div>
 </details>
 
