@@ -2921,11 +2921,24 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        // Nested details within "More Options" (.nested-control-group)
+        // Nested details within "More Options" (.nested-control-group) - Don't auto-close if user opened them
         const nestedMoreOptionsDetails = document.querySelectorAll('#more-options-details .nested-control-group');
         nestedMoreOptionsDetails.forEach(detail => {
-            // CLOSED by default on both mobile and desktop, user expands as needed.
-            detail.removeAttribute('open');
+            // Don't auto-close if user has opened it
+            if (!detail.hasAttribute('data-user-opened')) {
+                detail.removeAttribute('open'); // CLOSED by default, user expands as needed
+            }
+            // Add event listener to track when user manually opens/closes
+            if (!detail.hasAttribute('data-listener-added')) {
+                detail.setAttribute('data-listener-added', 'true');
+                detail.addEventListener('toggle', function() {
+                    if (this.hasAttribute('open')) {
+                        this.setAttribute('data-user-opened', 'true');
+                    } else {
+                        this.removeAttribute('data-user-opened');
+                    }
+                });
+            }
         });
 
         // Info Sections (Current Configuration & Color Legend) - OPEN on both mobile and desktop
