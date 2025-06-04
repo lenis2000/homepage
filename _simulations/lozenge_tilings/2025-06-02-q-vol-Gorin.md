@@ -238,33 +238,76 @@ The sampler works entirely in your browser using WebAssembly.
   <button id="border-thin">Thin</button>
   <button id="border-medium">Medium</button>
   <button id="border-thick">Thick</button>
-  
-  <button id="change-colors" style="margin-left: 20px;">Change Colors</button>
-  <button id="custom-colors">Custom Colors</button>
+
+  <label for="palette-select" style="margin-left: 20px;">Palette:</label>
+  <select id="palette-select">
+    <!-- Original Palettes -->
+    <option value="0">UVA Colors</option>
+    <option value="1">Ocean Breeze</option>
+    <option value="2">Forest Calm</option>
+    <option value="3">Sunset Glow</option>
+    <option value="4">Royal Purple</option>
+    <option value="5">Arctic Frost</option>
+    <option value="6">Cherry Blossom</option>
+    <option value="7">Tropical</option>
+    <option value="8">Emerald Dream</option>
+    <option value="9">Cosmic Blue</option>
+    <option value="10">Autumn Leaves</option>
+    <option value="11">Lavender Fields</option>
+    <option value="12">Desert Sand</option>
+    <option value="13">Coral Reef</option>
+    <option value="14">Midnight Sky</option>
+    <option value="15">Rose Garden</option>
+    <option value="16">Sage Green</option>
+    <option value="17">Amber Glow</option>
+    <option value="18">Steel Blue</option>
+    <option value="19">Crimson Tide</option>
+    <!-- Coding Themes -->
+    <option value="20">Dracula</option>
+    <option value="21">Monokai</option>
+    <option value="22">Solarized Dark</option>
+    <option value="23">One Dark</option>
+    <option value="24">Material</option>
+    <option value="25">Nord</option>
+    <option value="26">Gruvbox Dark</option>
+    <option value="27">Atom One Light</option>
+    <!-- University Colors -->
+    <option value="28">Harvard</option>
+    <option value="29">MIT</option>
+    <option value="30">Stanford</option>
+    <option value="31">Yale</option>
+    <option value="32">Princeton</option>
+    <option value="33">Columbia</option>
+    <option value="34">UC Berkeley</option>
+    <option value="35">Michigan</option>
+    <option value="36">Cornell</option>
+    <option value="37">Northwestern</option>
+  </select>
+  <button id="custom-colors" style="margin-left: 10px;">Custom Colors</button>
 </div>
 
 <!-- Custom Colors Panel -->
 <div id="custom-colors-panel" class="custom-colors-panel">
   <h4>Custom Color Palettes</h4>
-  
+
   <div class="color-palette">
     <label>Up Rhombi:</label>
     <input type="color" id="color-gray1" value="#E57200">
     <input type="text" id="hex-gray1" value="#E57200" placeholder="#RRGGBB">
   </div>
-  
+
   <div class="color-palette">
     <label>Down Rhombi:</label>
     <input type="color" id="color-gray2" value="#232D4B">
     <input type="text" id="hex-gray2" value="#232D4B" placeholder="#RRGGBB">
   </div>
-  
+
   <div class="color-palette">
     <label>Horizontal:</label>
     <input type="color" id="color-gray3" value="#F9DCBF">
     <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
   </div>
-  
+
   <div style="margin-top: 15px;">
     <button id="reset-default-colors">Reset to Default</button>
     <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
@@ -519,8 +562,53 @@ Module.onRuntimeInitialized = async function() {
                 black: '#000000',
                 white: '#FFFFFF'
             };
-            
+
             this.currentPalette = 'UVA Colors';
+            this.currentPaletteIndex = 0;
+
+            // 35+ beautiful color palettes - mix of original, coder themes, and universities
+            this.colorPalettes = [
+                { name: 'UVA Colors', colors: ['#E57200', '#232D4B', '#F9DCBF'] },
+                { name: 'Ocean Breeze', colors: ['#2E86AB', '#A23B72', '#F18F01'] },
+                { name: 'Forest Calm', colors: ['#355E3B', '#8FBC8F', '#F5F5DC'] },
+                { name: 'Sunset Glow', colors: ['#FF6B35', '#F7931E', '#FFE66D'] },
+                { name: 'Royal Purple', colors: ['#6A0572', '#AB83A1', '#F4C2C2'] },
+                { name: 'Arctic Frost', colors: ['#4F8A8B', '#2F4858', '#E8F4F8'] },
+                { name: 'Cherry Blossom', colors: ['#D1477A', '#8B6F47', '#F7E7CE'] },
+                { name: 'Tropical', colors: ['#FF6B9D', '#C44569', '#F8B500'] },
+                { name: 'Emerald Dream', colors: ['#50C878', '#2E8B57', '#F0FFF0'] },
+                { name: 'Cosmic Blue', colors: ['#1B263B', '#415A77', '#E0E1DD'] },
+                { name: 'Autumn Leaves', colors: ['#D2691E', '#8B4513', '#FFF8DC'] },
+                { name: 'Lavender Fields', colors: ['#8A2BE2', '#DDA0DD', '#F8F8FF'] },
+                { name: 'Desert Sand', colors: ['#CD853F', '#A0522D', '#FDF5E6'] },
+                { name: 'Coral Reef', colors: ['#FF7F50', '#FA8072', '#FFF5EE'] },
+                { name: 'Midnight Sky', colors: ['#191970', '#4169E1', '#F0F8FF'] },
+                { name: 'Rose Garden', colors: ['#C21807', '#FF69B4', '#FFE4E1'] },
+                { name: 'Sage Green', colors: ['#9CAF88', '#87A96B', '#F5F5F5'] },
+                { name: 'Amber Glow', colors: ['#FFBF00', '#FF8C00', '#FFFACD'] },
+                { name: 'Steel Blue', colors: ['#4682B4', '#6495ED', '#F0F8FF'] },
+                { name: 'Crimson Tide', colors: ['#DC143C', '#B22222', '#FFF8F8'] },
+                // Popular Coding Themes
+                { name: 'Dracula Theme', colors: ['#282a36', '#8be9fd', '#50fa7b'] },
+                { name: 'Monokai', colors: ['#272822', '#f92672', '#a6e22e'] },
+                { name: 'Solarized Dark', colors: ['#002b36', '#268bd2', '#2aa198'] },
+                { name: 'One Dark', colors: ['#282c34', '#61afef', '#98c379'] },
+                { name: 'Material Theme', colors: ['#263238', '#82aaff', '#c3e88d'] },
+                { name: 'Nord Theme', colors: ['#2e3440', '#5e81ac', '#a3be8c'] },
+                { name: 'Gruvbox Dark', colors: ['#282828', '#fe8019', '#b8bb26'] },
+                { name: 'Atom One Light', colors: ['#fafafa', '#e45649', '#50a14f'] },
+                // University Color Palettes
+                { name: 'Harvard University', colors: ['#a51c30', '#ffffff', '#8c8b8b'] },
+                { name: 'MIT', colors: ['#8a8b8c', '#a31f34', '#000000'] },
+                { name: 'Stanford University', colors: ['#8c1515', '#daa900', '#ffffff'] },
+                { name: 'Yale University', colors: ['#00356b', '#286dc0', '#63aaff'] },
+                { name: 'Princeton University', colors: ['#e77500', '#000000', '#ffffff'] },
+                { name: 'Columbia University', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a'] },
+                { name: 'UC Berkeley', colors: ['#003262', '#fdb515', '#ffffff'] },
+                { name: 'University of Michigan', colors: ['#00274c', '#ffcb05', '#ffffff'] },
+                { name: 'Cornell University', colors: ['#b31b1b', '#ffffff', '#222222'] },
+                { name: 'Northwestern University', colors: ['#4e2a84', '#ffffff', '#342f2e'] }
+            ];
 
             this.zoomLevel = 1.0;
             this.panX = 0;
@@ -653,12 +741,18 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('swatch-gray1').style.backgroundColor = this.colors.gray1;
             document.getElementById('swatch-gray2').style.backgroundColor = this.colors.gray2;
             document.getElementById('swatch-gray3').style.backgroundColor = this.colors.gray3;
-            
+
             const paletteInfo = document.getElementById('palette-info');
             if (this.currentPalette === 'Custom') {
                 paletteInfo.textContent = `Custom (${this.colors.gray1}, ${this.colors.gray2}, ${this.colors.gray3})`;
             } else {
                 paletteInfo.textContent = this.currentPalette;
+            }
+
+            // Update dropdown selection
+            const paletteSelect = document.getElementById('palette-select');
+            if (paletteSelect && this.currentPalette !== 'Custom') {
+                paletteSelect.value = this.currentPaletteIndex.toString();
             }
         }
 
@@ -667,7 +761,46 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray2 = '#232D4B';
             this.colors.gray3 = '#F9DCBF';
             this.currentPalette = 'UVA Colors';
+            this.currentPaletteIndex = 0;
             this.updateColorIndicator();
+        }
+
+        setPalette(paletteIndex) {
+            if (paletteIndex >= 0 && paletteIndex < this.colorPalettes.length) {
+                this.currentPaletteIndex = paletteIndex;
+                const palette = this.colorPalettes[this.currentPaletteIndex];
+
+                this.colors.gray1 = palette.colors[0];
+                this.colors.gray2 = palette.colors[1];
+                this.colors.gray3 = palette.colors[2];
+                this.currentPalette = palette.name;
+
+                this.updateColorIndicator();
+                this.updateCustomColorPickers();
+            }
+        }
+
+        changePalette() {
+            this.currentPaletteIndex = (this.currentPaletteIndex + 1) % this.colorPalettes.length;
+            const palette = this.colorPalettes[this.currentPaletteIndex];
+
+            this.colors.gray1 = palette.colors[0];
+            this.colors.gray2 = palette.colors[1];
+            this.colors.gray3 = palette.colors[2];
+            this.currentPalette = palette.name;
+
+            this.updateColorIndicator();
+            this.updateCustomColorPickers();
+        }
+
+        updateCustomColorPickers() {
+            // Update the custom color panel to reflect current colors
+            document.getElementById('color-gray1').value = this.colors.gray1;
+            document.getElementById('hex-gray1').value = this.colors.gray1.toUpperCase();
+            document.getElementById('color-gray2').value = this.colors.gray2;
+            document.getElementById('hex-gray2').value = this.colors.gray2.toUpperCase();
+            document.getElementById('color-gray3').value = this.colors.gray3;
+            document.getElementById('hex-gray3').value = this.colors.gray3.toUpperCase();
         }
 
         getHexagonScreenCenter() {
@@ -1074,6 +1207,13 @@ Module.onRuntimeInitialized = async function() {
 
             document.getElementById('close-custom-colors').addEventListener('click', () => {
                 document.getElementById('custom-colors-panel').style.display = 'none';
+            });
+
+            // Palette dropdown functionality
+            document.getElementById('palette-select').addEventListener('change', (e) => {
+                const paletteIndex = parseInt(e.target.value);
+                this.visualizer.setPalette(paletteIndex);
+                this.redraw();
             });
 
             document.getElementById('initialize').addEventListener('click', () => {
