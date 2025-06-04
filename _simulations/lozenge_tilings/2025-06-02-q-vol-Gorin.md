@@ -58,9 +58,8 @@ code:
   /* Basic styling for the canvas */
   #lozenge-canvas {
     width: 100%;
-    max-width: 1200px;
-    height: 80vh;
-    max-height: 800px;
+    max-width: 800px;
+    height: 400px; /* Default height, will be calculated dynamically */
     border: 1px solid #ccc;
     display: block;
     margin: 0 auto;
@@ -295,8 +294,9 @@ code:
     }
 
     #lozenge-canvas {
-      height: 60vh;
-      min-height: 300px;
+      max-width: 100%;
+      height: auto; /* Let dynamic sizing handle this */
+      min-height: 200px;
     }
 
     .config-display {
@@ -730,7 +730,7 @@ The sampler works entirely in your browser using WebAssembly.
     </div>
     <div class="param-item">
       <label for="S">S:</label>
-      <input type="number" id="S" value="20" min="0" style="width: 60px;">
+      <input type="number" id="S" value="5" min="0" style="width: 60px;">
     </div>
     <div class="param-item">
       <label for="q">q:</label>
@@ -748,11 +748,6 @@ The sampler works entirely in your browser using WebAssembly.
   <summary><div class="control-group-title">Animation Controls</div></summary>
   <div class="content control-group-content">
     <div class="button-row">
-      <label for="style">Style:</label>
-      <select id="style">
-        <option value="1" selected>Lozenges</option>
-        <option value="5">Z² paths</option>
-      </select>
       <label for="steps">Steps:</label>
       <input id="steps" type="number" value="1" min="1" max="9999" style="width: 60px;">
     </div>
@@ -785,6 +780,13 @@ The sampler works entirely in your browser using WebAssembly.
     <details class="nested-control-group" id="styling-controls-details">
       <summary><div class="control-group-title">Styling Controls</div></summary>
       <div class="content">
+        <div class="button-row">
+          <label for="style">Style:</label>
+          <select id="style">
+            <option value="1" selected>Lozenges</option>
+            <option value="5">Z² paths</option>
+          </select>
+        </div>
         <div class="button-row">
           <label>Border Width:</label>
           <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
@@ -913,7 +915,7 @@ The sampler works entirely in your browser using WebAssembly.
     <div class="config-values" id="info">
       <span class="config-item">N = <strong>20</strong></span>
       <span class="config-item">T = <strong>40</strong></span>
-      <span class="config-item">S = <strong>20</strong></span>
+      <span class="config-item">S = <strong>5</strong></span>
       <span class="config-item">q = <strong>1</strong></span>
     </div>
   </div>
@@ -983,7 +985,7 @@ Module.onRuntimeInitialized = async function() {
             this.ready = false;
             this.N_param = 20;
             this.T_param = 40;
-            this.S_param = 0;
+            this.S_param = 5;
             this.mode_param = 5;
             this.q_param = 1.0;
             this.paths = [];
@@ -1251,8 +1253,8 @@ Module.onRuntimeInitialized = async function() {
 
             // Get the actual canvas element dimensions from CSS
             const rect = this.canvas.getBoundingClientRect();
-            const displayWidth = rect.width || 1200;
-            const displayHeight = rect.height || 800;
+            const displayWidth = rect.width || 800;
+            const displayHeight = rect.height || 400;
 
             // Set internal size accounting for device pixel ratio
             this.canvas.width = displayWidth * dpr;
@@ -1260,6 +1262,45 @@ Module.onRuntimeInitialized = async function() {
 
             // Scale context to ensure correct drawing operations
             this.ctx.scale(dpr, dpr);
+        }
+
+        updateCanvasDimensions(N, T, S) {
+            // Check if we already have the same parameters
+            if (this.lastCanvasN === N && this.lastCanvasT === T && this.lastCanvasS === S) {
+                return; // No need to update
+            }
+            
+            this.lastCanvasN = N;
+            this.lastCanvasT = T;
+            this.lastCanvasS = S;
+            
+            const sqrt3 = Math.sqrt(3);
+            
+            // Calculate the bounding box of the hexagon
+            const minX = 0;
+            const maxX = T * 0.5 * sqrt3;
+            const minY = -(T - S) * 0.5;
+            const maxY = N + Math.max(S * 0.5, (2 * S - T) * 0.5);
+            
+            const hexWidth = maxX - minX;
+            const hexHeight = maxY - minY;
+            
+            // Get the container width
+            const container = this.canvas.parentElement;
+            const containerWidth = container ? container.clientWidth : 800;
+            const maxCanvasWidth = Math.min(containerWidth, 800); // Respect max-width
+            
+            const aspectRatio = hexWidth / hexHeight;
+            
+            // Calculate dimensions maintaining aspect ratio
+            let canvasWidth = maxCanvasWidth;
+            let canvasHeight = canvasWidth / aspectRatio;
+            
+            // Update canvas dimensions
+            this.canvas.style.height = `${canvasHeight}px`;
+            
+            // Re-setup canvas with new dimensions
+            this.setupCanvas();
         }
 
         setupMouseHandlers() {
@@ -1632,6 +1673,9 @@ Module.onRuntimeInitialized = async function() {
             this.lastT = T;
             this.lastS = S;
 
+            // Update canvas dimensions to fit hexagon exactly
+            this.updateCanvasDimensions(N, T, S);
+
             const ctx = this.ctx;
             const width = this.canvas.width / (window.devicePixelRatio || 1);
             const height = this.canvas.height / (window.devicePixelRatio || 1);
@@ -1665,7 +1709,7 @@ Module.onRuntimeInitialized = async function() {
             const hexCenterX = (minX + maxX) / 2;
             const hexCenterY = (minY + maxY) / 2;
 
-            const margin = 40;
+            const margin = 0; // No margin - fit hexagon exactly
             const scale = Math.min(
                 (width - 2 * margin) / hexWidth,
                 (height - 2 * margin) / hexHeight
@@ -1812,7 +1856,7 @@ Module.onRuntimeInitialized = async function() {
             const width = this.canvas.width / (window.devicePixelRatio || 1);
             const height = this.canvas.height / (window.devicePixelRatio || 1);
 
-            const margin = 40;
+            const margin = 20; // Smaller margin for lattice paths
             const scaleX = (width - 2 * margin) / (T + 5);
             const scaleY = (height - 2 * margin) / (N + S + 5);
             const scale = Math.min(scaleX, scaleY) * this.zoomLevel;
@@ -1992,7 +2036,7 @@ Module.onRuntimeInitialized = async function() {
             });
 
             document.getElementById('initialize').addEventListener('click', () => {
-                this.initializeTiling();
+                this.initializeTiling(false); // Don't perform initial steps on button click
             });
 
             document.getElementById('set-parameters').addEventListener('click', () => {
@@ -2170,24 +2214,29 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        async initializeTiling() {
+        async initializeTiling(performInitialSteps = false) {
             try {
                 const params = this.getParametersFromUI();
                 this.validateParametersUI(params);
 
-                // Initialize with S=0 first
-                const initParams = { ...params, S: 0 };
-                await this.wasm.initializeTilingWasm(initParams);
+                if (performInitialSteps) {
+                    // On page load: Initialize with S=0 and step to target S
+                    const initParams = { ...params, S: 0 };
+                    await this.wasm.initializeTilingWasm(initParams);
 
-                // If target S > 0, perform S→S+1 steps to reach the target
-                const targetS = params.S;
-                for (let i = 0; i < targetS; i++) {
-                    try {
-                        await this.wasm.stepForward();
-                    } catch (error) {
-                        // Stop if we can't step further
-                        break;
+                    // Perform S→S+1 steps to reach the target
+                    const targetS = params.S;
+                    for (let i = 0; i < targetS; i++) {
+                        try {
+                            await this.wasm.stepForward();
+                        } catch (error) {
+                            // Stop if we can't step further
+                            break;
+                        }
                     }
+                } else {
+                    // On button click: Initialize directly with the desired S value (empty room)
+                    await this.wasm.initializeTilingWasm(params);
                 }
 
                 const actualParams = this.wasm.getParameters();
@@ -2516,15 +2565,10 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        // "More Options" main section (#more-options-details)
+        // "More Options" main section (#more-options-details) - CLOSED by default on both mobile and desktop
         const moreOptionsDetails = document.getElementById('more-options-details');
         if (moreOptionsDetails) {
-            if (isMobile) {
-                moreOptionsDetails.removeAttribute('open'); // CLOSED on mobile (user clicks to open)
-            } else {
-                // On desktop, CSS hides summary & forces content. Set 'open' for consistency.
-                moreOptionsDetails.setAttribute('open', '');
-            }
+            moreOptionsDetails.removeAttribute('open'); // CLOSED by default, user clicks to expand
         }
         
         // Nested details within "More Options" (.nested-control-group)
@@ -2579,8 +2623,8 @@ Module.onRuntimeInitialized = async function() {
             }, 250);
         });
 
-        // Initialize with default parameters
-        await ui.initializeTiling();
+        // Initialize with default parameters and perform initial steps on page load
+        await ui.initializeTiling(true);
 
         console.log('Random Tilings Generator initialized successfully');
 
