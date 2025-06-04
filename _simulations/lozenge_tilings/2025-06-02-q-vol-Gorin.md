@@ -1068,6 +1068,15 @@ Module.onRuntimeInitialized = async function() {
         }
 
         setupMouseHandlers() {
+            // Initialize touch gesture tracking
+            this.lastTouchDistance = 0;
+            this.lastTapTime = 0;
+            this.tapCount = 0;
+            this.doubleTapZooming = false;
+            this.pinchZooming = false;
+            this.initialDoubleTapY = 0;
+
+            // Mouse wheel zoom
             this.canvas.addEventListener('wheel', (e) => {
                 e.preventDefault();
 
@@ -1087,6 +1096,7 @@ Module.onRuntimeInitialized = async function() {
                 }
             });
 
+            // Mouse events
             this.canvas.addEventListener('mousedown', (e) => {
                 this.isPanning = true;
                 this.lastMouseX = e.clientX;
@@ -1116,39 +1126,151 @@ Module.onRuntimeInitialized = async function() {
                 this.canvas.style.cursor = 'grab';
             });
 
-            // Touch events for mobile
+            // Enhanced touch events for mobile
             this.canvas.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    this.isPanning = true;
-                    this.lastMouseX = e.touches[0].clientX;
-                    this.lastMouseY = e.touches[0].clientY;
-                    e.preventDefault();
+                e.preventDefault();
+                
+                const currentTime = Date.now();
+                const touches = e.touches;
+
+                if (touches.length === 1) {
+                    // Single touch - check for double tap
+                    const timeSinceLastTap = currentTime - this.lastTapTime;
+                    
+                    if (timeSinceLastTap < 300 && this.tapCount === 1) {
+                        // Double tap detected - start zoom mode
+                        this.doubleTapZooming = true;
+                        this.initialDoubleTapY = touches[0].clientY;
+                        this.tapCount = 0;
+                        this.lastTapTime = 0;
+                        this.isPanning = false;
+                    } else {
+                        // Single tap or first tap of potential double tap
+                        this.tapCount = 1;
+                        this.lastTapTime = currentTime;
+                        
+                        // Start panning after a delay to distinguish from double tap
+                        setTimeout(() => {
+                            if (this.tapCount === 1 && !this.doubleTapZooming && !this.pinchZooming) {
+                                this.isPanning = true;
+                                this.lastMouseX = touches[0].clientX;
+                                this.lastMouseY = touches[0].clientY;
+                            }
+                        }, 150);
+                    }
+                } else if (touches.length === 2) {
+                    // Two finger pinch zoom
+                    this.pinchZooming = true;
+                    this.isPanning = false;
+                    this.doubleTapZooming = false;
+                    this.tapCount = 0;
+                    
+                    const touch1 = touches[0];
+                    const touch2 = touches[1];
+                    const distance = Math.sqrt(
+                        Math.pow(touch2.clientX - touch1.clientX, 2) +
+                        Math.pow(touch2.clientY - touch1.clientY, 2)
+                    );
+                    this.lastTouchDistance = distance;
                 }
             });
 
             this.canvas.addEventListener('touchmove', (e) => {
-                if (!this.isPanning || e.touches.length !== 1) return;
+                e.preventDefault();
+                
+                const touches = e.touches;
 
-                const dx = e.touches[0].clientX - this.lastMouseX;
-                const dy = e.touches[0].clientY - this.lastMouseY;
+                if (this.doubleTapZooming && touches.length === 1) {
+                    // Double tap zoom with finger movement
+                    const touch = touches[0];
+                    const deltaY = touch.clientY - this.initialDoubleTapY;
+                    
+                    // More sensitive zoom factor for double-tap zoom
+                    const zoomFactor = 1 + (deltaY * -0.005); // Negative for intuitive direction (up = zoom in)
+                    const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
+                    
+                    if (newZoom !== this.zoomLevel) {
+                        const center = this.getHexagonScreenCenter();
+                        const scale = newZoom / this.zoomLevel;
+                        this.panX = center.x - (center.x - this.panX) * scale;
+                        this.panY = center.y - (center.y - this.panY) * scale;
+                        this.zoomLevel = newZoom;
 
-                this.panX += dx;
-                this.panY += dy;
+                        if (this.lastPaths) {
+                            this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
+                        }
+                    }
+                    
+                    // Update the reference point for smoother zooming
+                    this.initialDoubleTapY = touch.clientY;
+                } else if (this.pinchZooming && touches.length === 2) {
+                    // Pinch to zoom
+                    const touch1 = touches[0];
+                    const touch2 = touches[1];
+                    const distance = Math.sqrt(
+                        Math.pow(touch2.clientX - touch1.clientX, 2) +
+                        Math.pow(touch2.clientY - touch1.clientY, 2)
+                    );
+                    
+                    if (this.lastTouchDistance > 0) {
+                        const zoomFactor = distance / this.lastTouchDistance;
+                        const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
+                        
+                        if (newZoom !== this.zoomLevel) {
+                            const center = this.getHexagonScreenCenter();
+                            const scale = newZoom / this.zoomLevel;
+                            this.panX = center.x - (center.x - this.panX) * scale;
+                            this.panY = center.y - (center.y - this.panY) * scale;
+                            this.zoomLevel = newZoom;
 
-                this.lastMouseX = e.touches[0].clientX;
-                this.lastMouseY = e.touches[0].clientY;
+                            if (this.lastPaths) {
+                                this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
+                            }
+                        }
+                    }
+                    this.lastTouchDistance = distance;
+                } else if (this.isPanning && touches.length === 1) {
+                    // Single finger panning
+                    const dx = touches[0].clientX - this.lastMouseX;
+                    const dy = touches[0].clientY - this.lastMouseY;
 
-                if (this.lastPaths) {
-                    this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
+                    this.panX += dx;
+                    this.panY += dy;
+
+                    this.lastMouseX = touches[0].clientX;
+                    this.lastMouseY = touches[0].clientY;
+
+                    if (this.lastPaths) {
+                        this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
+                    }
                 }
+            });
+
+            this.canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                
+                const touches = e.touches;
+                
+                if (touches.length === 0) {
+                    // All fingers lifted
+                    this.isPanning = false;
+                    this.pinchZooming = false;
+                    this.doubleTapZooming = false;
+                    this.lastTouchDistance = 0;
+                } else if (touches.length === 1 && this.pinchZooming) {
+                    // Went from pinch to single touch
+                    this.pinchZooming = false;
+                    this.lastTouchDistance = 0;
+                }
+            });
+
+            // Prevent context menu on long press
+            this.canvas.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
             });
 
-            this.canvas.addEventListener('touchend', () => {
-                this.isPanning = false;
-            });
-
             this.canvas.style.cursor = 'grab';
+            this.canvas.style.touchAction = 'none'; // Prevent browser zoom/pan
         }
 
         setStyle(style) {
