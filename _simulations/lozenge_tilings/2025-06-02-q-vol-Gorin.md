@@ -430,6 +430,31 @@ code:
     padding: 16px;
     background: white;
   }
+
+  /* Desktop: Always show More Options content, hide summary */
+  @media (min-width: 768px) {
+    details.control-group {
+      border: none;
+      background: transparent;
+      margin-bottom: 0;
+    }
+    
+    details.control-group summary {
+      display: none;
+    }
+    
+    details.control-group .content {
+      display: block !important;
+      padding: 0;
+      background: transparent;
+    }
+    
+    /* Force details to be open on desktop */
+    details.control-group[open] .content,
+    details.control-group:not([open]) .content {
+      display: block !important;
+    }
+  }
   .keyboard-info {
     margin-top: 10px;
     padding: 10px;
@@ -2366,6 +2391,20 @@ Module.onRuntimeInitialized = async function() {
         }
     }
 
+    // Handle responsive details behavior
+    function handleDetailsResponsive() {
+        const detailsElement = document.querySelector('details.control-group');
+        if (detailsElement) {
+            if (window.innerWidth >= 768) {
+                // Desktop: force open
+                detailsElement.setAttribute('open', '');
+            } else {
+                // Mobile: allow normal behavior, start closed
+                detailsElement.removeAttribute('open');
+            }
+        }
+    }
+
     // Initialize application
     try {
         console.log('Starting application initialization...');
@@ -2381,6 +2420,10 @@ Module.onRuntimeInitialized = async function() {
         const visualizer = new TilingVisualizer(canvas);
 
         const ui = new UIController(wasmInterface, visualizer);
+
+        // Handle responsive details behavior
+        handleDetailsResponsive();
+        window.addEventListener('resize', handleDetailsResponsive);
 
         // Initialize with default parameters
         await ui.initializeTiling();
