@@ -103,6 +103,74 @@ code:
     color: #000;
   }
 
+  /* Color picker modal styles */
+  .color-picker-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+  }
+
+  .color-picker-modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 400px;
+  }
+
+  .color-picker-row {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+    gap: 10px;
+  }
+
+  .color-picker-row label {
+    width: 120px;
+    font-weight: bold;
+  }
+
+  .color-picker-row input[type="color"] {
+    width: 50px;
+    height: 40px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .color-preview {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-left: 10px;
+  }
+
+  .color-picker-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+
+  .color-picker-buttons button {
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+  }
+
+  .color-picker-buttons button:hover {
+    background-color: #e9ecef;
+  }
+
   /* Mobile responsiveness */
   @media (max-width: 768px) {
     #lozenge-canvas {
@@ -173,9 +241,14 @@ The sampler works entirely in your browser using WebAssembly.
   <button id="zoom-in">Zoom In</button>
   <button id="zoom-out" style="margin-left: 10px;">Zoom Out</button>
   <button id="zoom-reset" style="margin-left: 10px;">Reset Zoom</button>
+  <button id="change-palette" style="margin-left: 10px;">Change Colors</button>
+  <button id="custom-colors" style="margin-left: 10px;">Custom Colors</button>
+  <button id="toggle-debug" style="margin-left: 10px;">Toggle Debug</button>
 </div>
 
 <div id="info" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="color-info" style="margin-bottom: 10px; font-size: 14px; color: #666;">Current palette: <span id="current-palette">UVA</span></div>
+<div id="debug-info" style="margin-bottom: 10px; font-size: 14px; color: #666; display: none;">Debug mode: <span id="debug-status">OFF</span></div>
 
 <!-- Visualization canvas -->
 <canvas id="lozenge-canvas"></canvas>
@@ -191,6 +264,39 @@ The sampler works entirely in your browser using WebAssembly.
       <button id="copy-to-clipboard">Copy to Clipboard</button>
       <button id="download-file">Download File</button>
       <button id="close-export">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Color Picker Modal -->
+<div id="color-picker-modal" class="color-picker-modal">
+  <div class="color-picker-modal-content">
+    <span class="close-modal" id="close-color-picker">&times;</span>
+    <h3>Custom Colors</h3>
+    <p>Choose colors for the different elements:</p>
+
+    <div class="color-picker-row">
+      <label for="color-down">Down Rhombi:</label>
+      <input type="color" id="color-down" value="#E57200">
+      <div class="color-preview" id="preview-down"></div>
+    </div>
+
+    <div class="color-picker-row">
+      <label for="color-up">Up Rhombi:</label>
+      <input type="color" id="color-up" value="#232D4B">
+      <div class="color-preview" id="preview-up"></div>
+    </div>
+
+    <div class="color-picker-row">
+      <label for="color-background">Background:</label>
+      <input type="color" id="color-background" value="#F5F5F5">
+      <div class="color-preview" id="preview-background"></div>
+    </div>
+
+    <div class="color-picker-buttons">
+      <button id="apply-colors">Apply Colors</button>
+      <button id="reset-colors">Reset to Default</button>
+      <button id="close-color-picker-btn">Close</button>
     </div>
   </div>
 </div>
@@ -231,7 +337,7 @@ Module.onRuntimeInitialized = async function() {
             if (typeof Module.cwrap !== 'function') {
                 throw new Error('Module.cwrap is not a function. WASM module may not be properly initialized.');
             }
-            
+
             // Wrap exported functions
             this.initializeTiling = Module.cwrap('initializeTiling', 'number', ['number', 'number', 'number', 'number', 'number'], {async: true});
             this.performSOperator = Module.cwrap('performSOperator', 'number', [], {async: true});
@@ -402,14 +508,171 @@ Module.onRuntimeInitialized = async function() {
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
             this.style = 2; // Default: classical with borders
+            this.debugMode = false;
+            this.showLabels = true;
+            this.logHorizontal = true;
+            this.lozengeCounts = null;
 
-            this.colors = {
-                gray1: '#D0FFD0', // Green-tinted (down rhombi)
-                gray2: '#D0D0FF', // Blue-tinted (up rhombi)
-                gray3: '#FFB0B0', // Red-tinted (background)
-                black: '#000000',
-                white: '#FFFFFF'
-            };
+            this.colorPalettes = [
+                {
+                    name: 'UVA',
+                    colors: {
+                        gray1: '#E57200', // UVA Orange (horizontal lozenges)
+                        gray2: '#232D4B', // UVA Navy (left-tilted lozenges)
+                        gray3: '#606060', // Darker gray (right-tilted lozenges)
+                        background: '#F5F5F5', // Light gray (background)
+                        black: '#000000', // Changed to actual black for better border visibility
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Classic',
+                    colors: {
+                        gray1: '#D0FFD0', // Green-tinted (horizontal lozenges)
+                        gray2: '#D0D0FF', // Blue-tinted (left-tilted lozenges)
+                        gray3: '#FFD0D0', // Red-tinted (right-tilted lozenges)
+                        background: '#FFB0B0', // Light red (background)
+                        black: '#000000',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Ocean',
+                    colors: {
+                        gray1: '#87CEEB', // Sky blue (horizontal lozenges)
+                        gray2: '#4682B4', // Steel blue (left-tilted lozenges)
+                        gray3: '#5F9EA0', // Cadet blue (right-tilted lozenges)
+                        background: '#F0F8FF', // Alice blue (background)
+                        black: '#191970',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Sunset',
+                    colors: {
+                        gray1: '#FFB347', // Peach (horizontal lozenges)
+                        gray2: '#FF6B6B', // Light coral (left-tilted lozenges)
+                        gray3: '#FFA07A', // Light salmon (right-tilted lozenges)
+                        background: '#FFF0E6', // Linen (background)
+                        black: '#8B4513',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Forest',
+                    colors: {
+                        gray1: '#90EE90', // Light green (horizontal lozenges)
+                        gray2: '#228B22', // Forest green (left-tilted lozenges)
+                        gray3: '#3CB371', // Medium sea green (right-tilted lozenges)
+                        background: '#F0FFF0', // Honeydew (background)
+                        black: '#006400',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Berry',
+                    colors: {
+                        gray1: '#FF69B4', // Hot pink (down rhombi)
+                        gray2: '#8B008B', // Dark magenta (up rhombi)
+                        gray3: '#FFF0F5', // Lavender blush (background)
+                        black: '#4B0082',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Earth',
+                    colors: {
+                        gray1: '#D2691E', // Chocolate (down rhombi)
+                        gray2: '#8B4513', // Saddle brown (up rhombi)
+                        gray3: '#F5F5DC', // Beige (background)
+                        black: '#654321',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Arctic',
+                    colors: {
+                        gray1: '#B0E0E6', // Powder blue (down rhombi)
+                        gray2: '#4682B4', // Steel blue (up rhombi)
+                        gray3: '#F0F8FF', // Alice blue (background)
+                        black: '#2F4F4F',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Autumn',
+                    colors: {
+                        gray1: '#FF8C00', // Dark orange (down rhombi)
+                        gray2: '#DC143C', // Crimson (up rhombi)
+                        gray3: '#FFF8DC', // Cornsilk (background)
+                        black: '#8B0000',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Lavender',
+                    colors: {
+                        gray1: '#DDA0DD', // Plum (down rhombi)
+                        gray2: '#9370DB', // Medium purple (up rhombi)
+                        gray3: '#F8F8FF', // Ghost white (background)
+                        black: '#483D8B',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Mint',
+                    colors: {
+                        gray1: '#98FB98', // Pale green (down rhombi)
+                        gray2: '#00FF7F', // Spring green (up rhombi)
+                        gray3: '#F0FFF0', // Honeydew (background)
+                        black: '#2E8B57',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Coral',
+                    colors: {
+                        gray1: '#FF7F50', // Coral (down rhombi)
+                        gray2: '#CD5C5C', // Indian red (up rhombi)
+                        gray3: '#FFF5EE', // Seashell (background)
+                        black: '#A0522D',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Steel',
+                    colors: {
+                        gray1: '#708090', // Slate gray (down rhombi)
+                        gray2: '#2F4F4F', // Dark slate gray (up rhombi)
+                        gray3: '#F8F8FF', // Ghost white (background)
+                        black: '#191970',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Gold',
+                    colors: {
+                        gray1: '#FFD700', // Gold (down rhombi)
+                        gray2: '#B8860B', // Dark goldenrod (up rhombi)
+                        gray3: '#FFFACD', // Lemon chiffon (background)
+                        black: '#8B7355',
+                        white: '#FFFFFF'
+                    }
+                },
+                {
+                    name: 'Sage',
+                    colors: {
+                        gray1: '#9CAF88', // Dark sea green (down rhombi)
+                        gray2: '#556B2F', // Dark olive green (up rhombi)
+                        gray3: '#F5F5F5', // White smoke (background)
+                        black: '#2F4F2F',
+                        white: '#FFFFFF'
+                    }
+                }
+            ];
+
+            this.currentPaletteIndex = 0;
+            this.colors = this.colorPalettes[this.currentPaletteIndex].colors;
 
             this.zoomLevel = 1.0;
             this.panX = 0;
@@ -526,6 +789,46 @@ Module.onRuntimeInitialized = async function() {
             this.style = parseInt(style);
         }
 
+        changePalette() {
+            this.currentPaletteIndex = (this.currentPaletteIndex + 1) % this.colorPalettes.length;
+            this.colors = this.colorPalettes[this.currentPaletteIndex].colors;
+            return this.colorPalettes[this.currentPaletteIndex].name;
+        }
+
+        getCurrentPaletteName() {
+            return this.colorPalettes[this.currentPaletteIndex].name;
+        }
+
+        setCustomColors(downColor, upColor, backgroundColor) {
+            this.colors = {
+                gray1: downColor,
+                gray2: upColor,
+                gray3: '#606060', // Darker gray for third type
+                background: backgroundColor,
+                black: '#000000',
+                white: '#FFFFFF'
+            };
+        }
+
+        getContrastingBorderColor(fillColor) {
+            // Convert hex to RGB
+            const hex = fillColor.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            
+            // Calculate perceived brightness
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            
+            // Special handling for gray rhombi (our gray3 color)
+            if (fillColor === '#606060' || fillColor.toLowerCase() === '#848484') {
+                return '#FFFFFF'; // White border for gray rhombi
+            }
+            
+            // Return white for dark colors, black for light colors
+            return brightness < 128 ? '#FFFFFF' : '#000000';
+        }
+
         getHexagonScreenCenter() {
             if (!this.lastPaths || !this.lastN || !this.lastT || !this.lastS) {
                 const width = this.canvas.width / (window.devicePixelRatio || 1);
@@ -540,7 +843,7 @@ Module.onRuntimeInitialized = async function() {
             // This matches the transformation sequence in drawHexagonStyle
             const screenCenterX = this.panX + width / 2;
             const screenCenterY = this.panY + height / 2;
-            
+
             return { x: screenCenterX, y: screenCenterY };
         }
 
@@ -579,7 +882,7 @@ Module.onRuntimeInitialized = async function() {
             this.zoomLevel = 1.0;
             this.panX = 0;
             this.panY = 0;
-            
+
             if (this.lastPaths) {
                 this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
             }
@@ -639,6 +942,9 @@ Module.onRuntimeInitialized = async function() {
 
             this.drawBackgroundHexagon(N, T, S);
 
+            // Reset lozenge counts before drawing
+            this.lozengeCounts = { horizontal: 0, left: 0, right: 0, unknown: 0 };
+
             for (let i = 0; i < T; i++) {
                 for (let j = 0; j < N; j++) {
                     const currentHeight = paths[j][i];
@@ -648,6 +954,12 @@ Module.onRuntimeInitialized = async function() {
             }
 
             ctx.restore();
+
+            // Log lozenge counts if in debug mode
+            if (this.debugMode) {
+                console.log('Lozenge counts:', this.lozengeCounts);
+                console.log(`Total lozenges: ${this.lozengeCounts.horizontal + this.lozengeCounts.left + this.lozengeCounts.right + this.lozengeCounts.unknown}`);
+            }
         }
 
         drawBackgroundHexagon(N, T, S) {
@@ -670,7 +982,7 @@ Module.onRuntimeInitialized = async function() {
             }
             ctx.closePath();
 
-            ctx.fillStyle = this.colors.gray3;
+            ctx.fillStyle = this.colors.background || this.colors.gray3;
             ctx.fill();
         }
 
@@ -678,6 +990,7 @@ Module.onRuntimeInitialized = async function() {
             const ctx = this.ctx;
             const sqrt3 = Math.sqrt(3);
 
+            // Base coordinates for the rhombus
             const x1 = timeIdx * 0.5 * sqrt3;
             const y1 = height - timeIdx * 0.5;
             const x2 = x1;
@@ -685,23 +998,56 @@ Module.onRuntimeInitialized = async function() {
 
             let x3, y3, x4, y4;
             let fillColor;
+            let lozengeType;
+            let debugSymbol;
 
+            // Determine lozenge type based on position and transition
             if (nextHeight === height) {
-                // Down rhombus
+                // Horizontal lozenge (Type 1) - flat rhombus
                 x3 = x2 + 0.5 * sqrt3;
                 y3 = y2 - 0.5;
                 x4 = x1 + 0.5 * sqrt3;
                 y4 = y1 - 0.5;
-                fillColor = this.colors.gray1;
-            } else {
-                // Up rhombus
+                fillColor = this.debugMode ? '#FF0000' : this.colors.gray1; // Bright red in debug mode
+                lozengeType = 'horizontal';
+                debugSymbol = 'H';
+
+                // Log horizontal lozenges with details
+                if (this.debugMode && this.logHorizontal) {
+                    console.log(`Horizontal lozenge at time=${timeIdx}, particle=${particleIdx}, height=${height}, nextHeight=${nextHeight}`);
+                }
+            } else if (nextHeight === height + 1) {
+                // Left-tilted lozenge (Type 2) - tilted up-right
                 x3 = x2 + 0.5 * sqrt3;
                 y3 = y2 + 0.5;
                 x4 = x1 + 0.5 * sqrt3;
                 y4 = y1 + 0.5;
-                fillColor = this.colors.gray2;
+                fillColor = this.debugMode ? '#0000FF' : this.colors.gray2; // Bright blue in debug mode
+                lozengeType = 'left';
+                debugSymbol = 'L';
+            } else if (nextHeight === height - 1) {
+                // Right-tilted lozenge (Type 3) - tilted down-right
+                // This is actually a vertical rhombus
+                x3 = x1 + 0.5 * sqrt3;
+                y3 = y1 - 0.5;
+                x4 = x2 + 0.5 * sqrt3;
+                y4 = y2 - 0.5;
+                fillColor = this.debugMode ? '#00FF00' : this.colors.gray3; // Bright green in debug mode
+                lozengeType = 'right';
+                debugSymbol = 'R';
+            } else {
+                // Unexpected case - log for debugging
+                console.warn(`Unexpected height transition: time=${timeIdx}, particle=${particleIdx}, height=${height}, nextHeight=${nextHeight}, diff=${nextHeight - height}`);
+                x3 = x2 + 0.5 * sqrt3;
+                y3 = y2;
+                x4 = x1 + 0.5 * sqrt3;
+                y4 = y1;
+                fillColor = '#FF00FF'; // Magenta for unexpected cases
+                lozengeType = 'unknown';
+                debugSymbol = '?';
             }
 
+            // Draw the lozenge
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
@@ -709,8 +1055,47 @@ Module.onRuntimeInitialized = async function() {
             ctx.lineTo(x4, y4);
             ctx.closePath();
 
+            // Fill with appropriate color
             ctx.fillStyle = fillColor;
             ctx.fill();
+
+            // Add border with improved visibility
+            ctx.save();
+            
+            // Determine border color based on fill color
+            let borderColor;
+            if (this.debugMode) {
+                borderColor = '#000000'; // Always black in debug mode
+            } else {
+                borderColor = this.getContrastingBorderColor(fillColor);
+            }
+            
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = this.debugMode ? 0.08 : 0.05; // Increased thickness for better visibility
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw debug label if in debug mode
+            if (this.debugMode && this.showLabels) {
+                ctx.save();
+                ctx.fillStyle = '#000000';
+                ctx.font = '0.3px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Calculate center of rhombus
+                const centerX = (x1 + x2 + x3 + x4) / 4;
+                const centerY = (y1 + y2 + y3 + y4) / 4;
+
+                ctx.fillText(debugSymbol, centerX, centerY);
+                ctx.restore();
+            }
+
+            // Count lozenge types
+            if (!this.lozengeCounts) {
+                this.lozengeCounts = { horizontal: 0, left: 0, right: 0, unknown: 0 };
+            }
+            this.lozengeCounts[lozengeType]++;
         }
 
 
@@ -817,6 +1202,20 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
             });
 
+            document.getElementById('change-palette').addEventListener('click', () => {
+                const paletteName = this.visualizer.changePalette();
+                this.updateColorInfo(paletteName);
+                this.redraw();
+            });
+
+            document.getElementById('custom-colors').addEventListener('click', () => {
+                this.openColorPicker();
+            });
+
+            document.getElementById('toggle-debug').addEventListener('click', () => {
+                this.toggleDebugMode();
+            });
+
             // Export modal event listeners
             document.getElementById('copy-to-clipboard').addEventListener('click', () => {
                 this.copyToClipboard();
@@ -841,12 +1240,53 @@ Module.onRuntimeInitialized = async function() {
                 }
             });
 
+            // Color picker modal event listeners
+            document.getElementById('apply-colors').addEventListener('click', () => {
+                this.applyCustomColors();
+            });
+
+            document.getElementById('reset-colors').addEventListener('click', () => {
+                this.resetCustomColors();
+            });
+
+            document.getElementById('close-color-picker-btn').addEventListener('click', () => {
+                this.closeColorPicker();
+            });
+
+            document.getElementById('close-color-picker').addEventListener('click', () => {
+                this.closeColorPicker();
+            });
+
+            // Close modal when clicking outside of it
+            document.getElementById('color-picker-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'color-picker-modal') {
+                    this.closeColorPicker();
+                }
+            });
+
+            // Update color previews when color inputs change
+            document.getElementById('color-down').addEventListener('input', (e) => {
+                document.getElementById('preview-down').style.backgroundColor = e.target.value;
+            });
+
+            document.getElementById('color-up').addEventListener('input', (e) => {
+                document.getElementById('preview-up').style.backgroundColor = e.target.value;
+            });
+
+            document.getElementById('color-background').addEventListener('input', (e) => {
+                document.getElementById('preview-background').style.backgroundColor = e.target.value;
+            });
+
             // Close modal with Escape key
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
-                    const modal = document.getElementById('export-modal');
-                    if (modal.style.display === 'block') {
+                    const exportModal = document.getElementById('export-modal');
+                    const colorModal = document.getElementById('color-picker-modal');
+                    if (exportModal.style.display === 'block') {
                         this.closeExportModal();
+                    }
+                    if (colorModal.style.display === 'block') {
+                        this.closeColorPicker();
                     }
                 }
             });
@@ -1058,7 +1498,7 @@ Module.onRuntimeInitialized = async function() {
                 const textarea = document.getElementById('export-textarea');
                 textarea.select();
                 textarea.setSelectionRange(0, 99999); // For mobile devices
-                
+
                 if (navigator.clipboard && window.isSecureContext) {
                     // Use modern clipboard API if available
                     navigator.clipboard.writeText(textarea.value).then(() => {
@@ -1098,6 +1538,49 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('export-modal').style.display = 'none';
         }
 
+        openColorPicker() {
+            // Set current colors in the color pickers
+            const currentColors = this.visualizer.colors;
+            document.getElementById('color-down').value = currentColors.gray1;
+            document.getElementById('color-up').value = currentColors.gray2;
+            document.getElementById('color-background').value = currentColors.gray3;
+
+            // Update previews
+            document.getElementById('preview-down').style.backgroundColor = currentColors.gray1;
+            document.getElementById('preview-up').style.backgroundColor = currentColors.gray2;
+            document.getElementById('preview-background').style.backgroundColor = currentColors.gray3;
+
+            document.getElementById('color-picker-modal').style.display = 'block';
+        }
+
+        closeColorPicker() {
+            document.getElementById('color-picker-modal').style.display = 'none';
+        }
+
+        applyCustomColors() {
+            const downColor = document.getElementById('color-down').value;
+            const upColor = document.getElementById('color-up').value;
+            const backgroundColor = document.getElementById('color-background').value;
+
+            this.visualizer.setCustomColors(downColor, upColor, backgroundColor);
+            this.updateColorInfo('Custom');
+            this.redraw();
+            this.closeColorPicker();
+        }
+
+        resetCustomColors() {
+            // Reset to UVA palette colors (now the default)
+            const defaultColors = this.visualizer.colorPalettes[0].colors;
+            document.getElementById('color-down').value = defaultColors.gray1;
+            document.getElementById('color-up').value = defaultColors.gray2;
+            document.getElementById('color-background').value = defaultColors.gray3;
+
+            // Update previews
+            document.getElementById('preview-down').style.backgroundColor = defaultColors.gray1;
+            document.getElementById('preview-up').style.backgroundColor = defaultColors.gray2;
+            document.getElementById('preview-background').style.backgroundColor = defaultColors.gray3;
+        }
+
         updateInfo() {
             const params = this.wasm.getParameters();
 
@@ -1106,6 +1589,10 @@ Module.onRuntimeInitialized = async function() {
                 <strong>Current Configuration:</strong><br>
                 N = ${params.N}, T = ${params.T}, S = ${params.S}, q = ${params.q}
             `;
+        }
+
+        updateColorInfo(paletteName) {
+            document.getElementById('current-palette').textContent = paletteName;
         }
 
         async setParameters() {
@@ -1138,13 +1625,71 @@ Module.onRuntimeInitialized = async function() {
                 console.error('Redraw error:', error);
             }
         }
+
+        toggleDebugMode() {
+            this.visualizer.debugMode = !this.visualizer.debugMode;
+            const debugInfo = document.getElementById('debug-info');
+            const debugStatus = document.getElementById('debug-status');
+
+            if (this.visualizer.debugMode) {
+                debugInfo.style.display = 'block';
+                debugStatus.textContent = 'ON';
+                console.log('Debug mode enabled. Colors: Red=Horizontal, Blue=Left, Green=Right');
+                this.analyzePaths();
+            } else {
+                debugInfo.style.display = 'none';
+                debugStatus.textContent = 'OFF';
+            }
+
+            this.redraw();
+        }
+
+        analyzePaths() {
+            const params = this.wasm.getParameters();
+            const paths = this.wasm.getPaths();
+
+            console.log('=== Path Analysis ===');
+            console.log(`Configuration: N=${params.N}, T=${params.T}, S=${params.S}`);
+            console.log(`Paths array dimensions: ${paths.length} x ${paths[0]?.length || 0}`);
+
+            // Check for horizontal transitions
+            let horizontalCount = 0;
+            let leftCount = 0;
+            let rightCount = 0;
+            let otherCount = 0;
+
+            for (let j = 0; j < params.N; j++) {
+                for (let i = 0; i < params.T; i++) {
+                    const current = paths[j][i];
+                    const next = paths[j][i + 1];
+                    const diff = next - current;
+
+                    if (diff === 0) horizontalCount++;
+                    else if (diff === 1) leftCount++;
+                    else if (diff === -1) rightCount++;
+                    else {
+                        otherCount++;
+                        console.log(`Unusual transition at particle ${j}, time ${i}: ${current} -> ${next} (diff=${diff})`);
+                    }
+                }
+            }
+
+            console.log(`Transition counts: Horizontal=${horizontalCount}, Left=${leftCount}, Right=${rightCount}, Other=${otherCount}`);
+            console.log(`Total transitions: ${horizontalCount + leftCount + rightCount + otherCount}`);
+
+            // Sample some paths
+            console.log('Sample paths (first 3 particles):');
+            for (let j = 0; j < Math.min(3, params.N); j++) {
+                console.log(`Particle ${j}: [${paths[j].slice(0, Math.min(10, params.T + 1)).join(', ')}...]`);
+            }
+        }
     }
 
     // Initialize application
     try {
         console.log('Starting application initialization...');
         console.log('Module defined:', typeof Module !== 'undefined');
-        
+
         const wasmInterface = new WASMInterface();
         await wasmInterface.initialize();
 
