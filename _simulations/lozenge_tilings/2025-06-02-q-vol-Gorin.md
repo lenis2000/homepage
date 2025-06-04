@@ -249,9 +249,31 @@ code:
     input[type="number"],
     input[type="text"],
     select {
-      height: 44px;
-      font-size: 16px; /* Prevents zoom on iOS */
-      padding: 0 8px;
+      height: 40px;
+      font-size: 14px;
+      padding: 0 6px;
+    }
+    
+    /* Smaller text inputs where space is critical */
+    #steps, #border-width {
+      height: 36px;
+      font-size: 13px;
+      padding: 0 4px;
+    }
+    
+    /* Compact select elements */
+    select {
+      height: 38px;
+      font-size: 13px;
+      padding: 0 4px;
+    }
+    
+    /* Smaller palette dropdown specifically */
+    #palette-select {
+      height: 36px;
+      font-size: 12px;
+      padding: 0 4px;
+      max-width: 120px;
     }
 
     .parameters-grid {
@@ -317,6 +339,47 @@ code:
     #export-inline-textarea {
       height: 150px !important;
       font-size: 11px !important;
+    }
+    
+    /* Custom color panel mobile optimization */
+    .custom-colors-panel {
+      padding: 10px !important;
+    }
+    
+    .color-palette label {
+      width: 80px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+    }
+    
+    .color-palette input[type="color"] {
+      width: 32px !important;
+      height: 24px !important;
+    }
+    
+    .color-palette input[type="text"] {
+      width: 55px !important;
+      height: 22px !important;
+      font-size: 10px !important;
+      padding: 2px !important;
+    }
+    
+    /* Summary and details mobile styling */
+    summary {
+      padding: 10px 12px !important;
+      font-size: 14px !important;
+    }
+    
+    details .content {
+      padding: 12px !important;
+      font-size: 14px !important;
+    }
+    
+    /* Keyboard info mobile optimization */
+    .keyboard-info {
+      padding: 8px !important;
+      font-size: 11px !important;
+      display: block !important; /* Show on mobile now that it's smaller */
     }
   }
 
@@ -545,19 +608,19 @@ The sampler works entirely in your browser using WebAssembly.
   <div class="parameters-grid">
     <div class="param-item">
       <label for="N">N:</label>
-      <input type="number" id="N" value="20" min="1" max="200">
+      <input type="number" id="N" value="20" min="1" max="200" style="width: 60px;">
     </div>
     <div class="param-item">
       <label for="T">T:</label>
-      <input type="number" id="T" value="40" min="1" max="500">
+      <input type="number" id="T" value="40" min="1" max="500" style="width: 60px;">
     </div>
     <div class="param-item">
       <label for="S">S:</label>
-      <input type="number" id="S" value="20" min="0">
+      <input type="number" id="S" value="20" min="0" style="width: 60px;">
     </div>
     <div class="param-item">
       <label for="q">q:</label>
-      <input type="number" id="q" value="1" step="0.02" min="0.01">
+      <input type="number" id="q" value="1" step="0.02" min="0.01" style="width: 80px;">
     </div>
   </div>
   <div class="button-row">
@@ -577,7 +640,7 @@ The sampler works entirely in your browser using WebAssembly.
     </select>
 
     <label for="steps">Steps:</label>
-    <input id="steps" type="number" value="1" min="1" max="9999" style="width: 80px;">
+    <input id="steps" type="number" value="1" min="1" max="9999" style="width: 60px;">
   </div>
   <div class="button-row">
     <button id="step-plus">S → S+steps</button>
@@ -587,131 +650,137 @@ The sampler works entirely in your browser using WebAssembly.
   </div>
 </div>
 
-<!-- View Controls -->
-<div class="control-group">
-  <div class="control-group-title">View Controls</div>
-  <div class="button-row">
-    <button id="zoom-in">Zoom In</button>
-    <button id="zoom-out">Zoom Out</button>
-    <button id="zoom-reset">Reset Zoom</button>
-  </div>
-</div>
+<!-- More Options (Mobile Collapsible) -->
+<details class="control-group full-width">
+  <summary>More Options</summary>
+  <div class="content">
+    <!-- View Controls -->
+    <div class="control-group">
+      <div class="control-group-title">View Controls</div>
+      <div class="button-row">
+        <button id="zoom-in">Zoom In</button>
+        <button id="zoom-out">Zoom Out</button>
+        <button id="zoom-reset">Reset Zoom</button>
+      </div>
+    </div>
 
-<!-- Styling Controls -->
-<div class="control-group full-width">
-  <div class="control-group-title">Styling Controls</div>
-  <div class="button-row">
-    <label>Border Width:</label>
-    <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
-    <button id="border-thin">Thin</button>
-    <button id="border-medium">Medium</button>
-    <button id="border-thick">Thick</button>
-  </div>
-  <div class="button-row">
-    <label for="palette-select">Palette:</label>
-    <button id="prev-palette">◀</button>
-    <select id="palette-select">
-      <!-- Original Palettes -->
-      <option value="0">UVA</option>
-      <option value="1">No Colors</option>
-      <option value="2">Ocean Breeze</option>
-      <option value="3">Forest Calm</option>
-      <option value="4">Sunset Glow</option>
-      <option value="5">Royal Purple</option>
-      <option value="6">Arctic Frost</option>
-      <option value="7">Cherry Blossom</option>
-      <option value="8">Tropical</option>
-      <option value="9">Emerald Dream</option>
-      <option value="10">Cosmic Blue</option>
-      <option value="11">Autumn Leaves</option>
-      <option value="12">Lavender Fields</option>
-      <option value="13">Desert Sand</option>
-      <option value="14">Coral Reef</option>
-      <option value="15">Midnight Sky</option>
-      <option value="16">Rose Garden</option>
-      <option value="17">Sage Green</option>
-      <option value="18">Amber Glow</option>
-      <option value="19">Steel Blue</option>
-      <!-- Flag-Inspired Palettes -->
-      <option value="20">Italy</option>
-      <option value="21">France</option>
-      <option value="22">United Kingdom</option>
-      <option value="23">Jamaica</option>
-      <option value="24">Belgium</option>
-      <option value="25">Colombia</option>
-      <option value="26">South Korea</option>
-      <option value="27">Brazil</option>
-      <option value="28">Argentina</option>
-      <!-- Coding Themes -->
-      <option value="29">Dracula</option>
-      <option value="30">Monokai</option>
-      <option value="31">Solarized Dark</option>
-      <option value="32">One Dark</option>
-      <option value="33">Material</option>
-      <option value="34">Nord</option>
-      <option value="35">Gruvbox Dark</option>
-      <option value="36">Atom One Light</option>
-      <!-- University Colors -->
-      <option value="37">Harvard</option>
-      <option value="38">MIT</option>
-      <option value="39">Stanford</option>
-      <option value="40">Yale</option>
-      <option value="41">Princeton</option>
-      <option value="42">Columbia</option>
-      <option value="43">Berkeley</option>
-      <option value="44">Michigan</option>
-      <option value="45">Cornell</option>
-      <option value="46">Northwestern</option>
-    </select>
-    <button id="next-palette">▶</button>
-    <button id="custom-colors">Custom Colors</button>
-  </div>
-</div>
+    <!-- Styling Controls -->
+    <div class="control-group">
+      <div class="control-group-title">Styling Controls</div>
+      <div class="button-row">
+        <label>Border Width:</label>
+        <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
+        <button id="border-thin">Thin</button>
+        <button id="border-medium">Medium</button>
+        <button id="border-thick">Thick</button>
+      </div>
+      <div class="button-row">
+        <label for="palette-select">Palette:</label>
+        <button id="prev-palette">◀</button>
+        <select id="palette-select">
+          <!-- Original Palettes -->
+          <option value="0">UVA</option>
+          <option value="1">No Colors</option>
+          <option value="2">Ocean Breeze</option>
+          <option value="3">Forest Calm</option>
+          <option value="4">Sunset Glow</option>
+          <option value="5">Royal Purple</option>
+          <option value="6">Arctic Frost</option>
+          <option value="7">Cherry Blossom</option>
+          <option value="8">Tropical</option>
+          <option value="9">Emerald Dream</option>
+          <option value="10">Cosmic Blue</option>
+          <option value="11">Autumn Leaves</option>
+          <option value="12">Lavender Fields</option>
+          <option value="13">Desert Sand</option>
+          <option value="14">Coral Reef</option>
+          <option value="15">Midnight Sky</option>
+          <option value="16">Rose Garden</option>
+          <option value="17">Sage Green</option>
+          <option value="18">Amber Glow</option>
+          <option value="19">Steel Blue</option>
+          <!-- Flag-Inspired Palettes -->
+          <option value="20">Italy</option>
+          <option value="21">France</option>
+          <option value="22">United Kingdom</option>
+          <option value="23">Jamaica</option>
+          <option value="24">Belgium</option>
+          <option value="25">Colombia</option>
+          <option value="26">South Korea</option>
+          <option value="27">Brazil</option>
+          <option value="28">Argentina</option>
+          <!-- Coding Themes -->
+          <option value="29">Dracula</option>
+          <option value="30">Monokai</option>
+          <option value="31">Solarized Dark</option>
+          <option value="32">One Dark</option>
+          <option value="33">Material</option>
+          <option value="34">Nord</option>
+          <option value="35">Gruvbox Dark</option>
+          <option value="36">Atom One Light</option>
+          <!-- University Colors -->
+          <option value="37">Harvard</option>
+          <option value="38">MIT</option>
+          <option value="39">Stanford</option>
+          <option value="40">Yale</option>
+          <option value="41">Princeton</option>
+          <option value="42">Columbia</option>
+          <option value="43">Berkeley</option>
+          <option value="44">Michigan</option>
+          <option value="45">Cornell</option>
+          <option value="46">Northwestern</option>
+        </select>
+        <button id="next-palette">▶</button>
+        <button id="custom-colors">Custom Colors</button>
+      </div>
+    </div>
 
-<!-- Custom Colors Panel -->
-<div id="custom-colors-panel" class="custom-colors-panel">
-  <h4>Custom Color Palettes</h4>
+    <!-- Custom Colors Panel -->
+    <div id="custom-colors-panel" class="custom-colors-panel">
+      <h4>Custom Color Palettes</h4>
 
-  <div class="color-palette">
-    <label>Up Rhombi:</label>
-    <input type="color" id="color-gray1" value="#E57200">
-    <input type="text" id="hex-gray1" value="#E57200" placeholder="#RRGGBB">
-  </div>
+      <div class="color-palette">
+        <label>Up Rhombi:</label>
+        <input type="color" id="color-gray1" value="#E57200">
+        <input type="text" id="hex-gray1" value="#E57200" placeholder="#RRGGBB">
+      </div>
 
-  <div class="color-palette">
-    <label>Down Rhombi:</label>
-    <input type="color" id="color-gray2" value="#232D4B">
-    <input type="text" id="hex-gray2" value="#232D4B" placeholder="#RRGGBB">
-  </div>
+      <div class="color-palette">
+        <label>Down Rhombi:</label>
+        <input type="color" id="color-gray2" value="#232D4B">
+        <input type="text" id="hex-gray2" value="#232D4B" placeholder="#RRGGBB">
+      </div>
 
-  <div class="color-palette">
-    <label>Horizontal:</label>
-    <input type="color" id="color-gray3" value="#F9DCBF">
-    <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
-  </div>
+      <div class="color-palette">
+        <label>Horizontal:</label>
+        <input type="color" id="color-gray3" value="#F9DCBF">
+        <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
+      </div>
 
-  <div style="margin-top: 15px;">
-    <button id="reset-default-colors">Reset to Default</button>
-    <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
-  </div>
-</div>
+      <div style="margin-top: 15px;">
+        <button id="reset-default-colors">Reset to Default</button>
+        <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
+      </div>
+    </div>
 
-<!-- Export Controls -->
-<div class="control-group full-width">
-  <div class="control-group-title">Export</div>
-  <div class="button-row">
-    <button id="export">Export Plane Partition</button>
-  </div>
-  <div id="export-display" style="display: none; margin-top: 12px;">
-    <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
-    <textarea id="export-inline-textarea" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
-    <div style="margin-top: 8px; display: flex; gap: 8px;">
-      <button id="copy-inline-clipboard">Copy to Clipboard</button>
-      <button id="download-inline-file">Download File</button>
-      <button id="hide-export">Hide</button>
+    <!-- Export Controls -->
+    <div class="control-group">
+      <div class="control-group-title">Export</div>
+      <div class="button-row">
+        <button id="export">Export Plane Partition</button>
+      </div>
+      <div id="export-display" style="display: none; margin-top: 12px;">
+        <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
+        <textarea id="export-inline-textarea" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
+        <div style="margin-top: 8px; display: flex; gap: 8px;">
+          <button id="copy-inline-clipboard">Copy to Clipboard</button>
+          <button id="download-inline-file">Download File</button>
+          <button id="hide-export">Hide</button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+</details>
 
 <!-- Current Configuration -->
 <div class="config-display full-width">
