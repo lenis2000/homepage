@@ -1221,10 +1221,10 @@ Module.onRuntimeInitialized = async function() {
                 { name: 'Italy', colors: ['#009246', '#FFFFFF', '#CE2B37'] },
                 { name: 'France', colors: ['#0055A4', '#FFFFFF', '#EF4135'] },
                 { name: 'United Kingdom', colors: ['#012169', '#FFFFFF', '#C8102E'] },
-                { name: 'Jamaica', colors: ['#009639', '#FED100', '#000000'] },
+                { name: 'Jamaica', colors: ['#009B3A', '#FED100', '#000000'] },
                 { name: 'Belgium', colors: ['#000000', '#FED100', '#ED2939'] },
                 { name: 'Colombia', colors: ['#FFCD00', '#003087', '#C8102E'] },
-                { name: 'South Korea', colors: ['#CD212A', '#0047A0', '#FFFFFF'] },
+                { name: 'South Korea', colors: ['#CD2E3A', '#0047A0', '#FFFFFF', '#000000'] },
                 { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169'] },
                 { name: 'Argentina', colors: ['#74ACDF', '#FFFFFF', '#F6B40E'] },
                 // Popular Coding Themes
@@ -1243,7 +1243,7 @@ Module.onRuntimeInitialized = async function() {
                 { name: 'Yale', colors: ['#00356b', '#286dc0', '#63aaff'] },
                 { name: 'Princeton', colors: ['#e77500', '#000000', '#ffffff'] },
                 { name: 'Columbia', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a'] },
-                { name: 'Berkeley', colors: ['#003262', '#fdb515', '#ffffff'] },
+                { name: 'Berkeley', colors: ['#002676', '#fdb515', '#ffffff'] },
                 { name: 'Michigan', colors: ['#00274c', '#ffcb05', '#ffffff'] },
                 { name: 'Cornell', colors: ['#b31b1b', '#ffffff', '#222222'] },
                 { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] },
@@ -2515,11 +2515,11 @@ Module.onRuntimeInitialized = async function() {
                 for (let height = -(T - S + 2); height <= N + S + 2; height++) {
                     const x1 = timeIdx * 0.5 * sqrt3;
                     const y1 = height - timeIdx * 0.5;
-                    
+
                     // Check if rhombus center is roughly within hexagon bounds
                     const centerX = x1 + 0.25 * sqrt3;
                     const centerY = y1 + 0.5;
-                    
+
                     if (this.isInsideHexagon(centerX, centerY, N, T, S)) {
                         tikz += `\\fill[gray3`;
                         if (borderWidth > 0) {
@@ -2625,10 +2625,10 @@ Module.onRuntimeInitialized = async function() {
             const vertices = [
                 {x: 0, y: 0},
                 {x: 0, y: N},
-                {x: S * 0.5 * sqrt3, y: N + S * 0.5},
-                {x: T * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5},
-                {x: T * 0.5 * sqrt3, y: (2 * S - T) * 0.5},
-                {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
+                {x: S * 0.5 * sqrt3, y: N + (S+1) * 0.5},
+                {x: (T-1) * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5+1},
+                {x: (T-1) * 0.5 * sqrt3, y: (2 * S - T) * 0.5+1},
+                {x: (T - S-1) * 0.5 * sqrt3, y: -(T - S-1) * 0.5}
             ];
 
             // Use ray casting algorithm to check if point is inside polygon
