@@ -253,21 +253,21 @@ code:
       font-size: 14px;
       padding: 0 6px;
     }
-    
+
     /* Smaller text inputs where space is critical */
     #steps, #border-width {
       height: 36px;
       font-size: 13px;
       padding: 0 4px;
     }
-    
+
     /* Compact select elements */
     select {
       height: 38px;
       font-size: 13px;
       padding: 0 4px;
     }
-    
+
     /* Smaller palette dropdown specifically */
     #palette-select {
       height: 36px;
@@ -341,41 +341,41 @@ code:
       height: 150px !important;
       font-size: 11px !important;
     }
-    
+
     /* Custom color panel mobile optimization */
     .custom-colors-panel {
       padding: 10px !important;
     }
-    
+
     .color-palette label {
       width: 80px !important;
       font-size: 12px !important;
       font-weight: 600 !important;
     }
-    
+
     .color-palette input[type="color"] {
       width: 32px !important;
       height: 24px !important;
     }
-    
+
     .color-palette input[type="text"] {
       width: 55px !important;
       height: 22px !important;
       font-size: 10px !important;
       padding: 2px !important;
     }
-    
+
     /* Summary and details mobile styling */
     summary {
       padding: 10px 12px !important;
       font-size: 14px !important;
     }
-    
+
     details .content {
       padding: 12px !important;
       font-size: 14px !important;
     }
-    
+
     /* Keyboard info mobile optimization */
     #keyboard-info-details > .keyboard-info {
       padding: 8px !important;
@@ -474,7 +474,7 @@ code:
   details#more-options-details > summary {
     display: block; /* Summary is clickable on both mobile and desktop */
   }
-  
+
   @media (max-width: 767px) {
     details#more-options-details > .content {
       padding: 8px; /* Mobile container padding */
@@ -1282,36 +1282,36 @@ Module.onRuntimeInitialized = async function() {
             if (this.lastCanvasN === N && this.lastCanvasT === T && this.lastCanvasS === S) {
                 return; // No need to update
             }
-            
+
             this.lastCanvasN = N;
             this.lastCanvasT = T;
             this.lastCanvasS = S;
-            
+
             const sqrt3 = Math.sqrt(3);
-            
+
             // Calculate the bounding box of the hexagon
             const minX = 0;
             const maxX = T * 0.5 * sqrt3;
             const minY = -(T - S) * 0.5;
             const maxY = N + Math.max(S * 0.5, (2 * S - T) * 0.5);
-            
+
             const hexWidth = maxX - minX;
             const hexHeight = maxY - minY;
-            
+
             // Get the container width
             const container = this.canvas.parentElement;
             const containerWidth = container ? container.clientWidth : 800;
             const maxCanvasWidth = Math.min(containerWidth, 800); // Respect max-width
-            
+
             const aspectRatio = hexWidth / hexHeight;
-            
+
             // Calculate dimensions maintaining aspect ratio
             let canvasWidth = maxCanvasWidth;
             let canvasHeight = canvasWidth / aspectRatio;
-            
+
             // Update canvas dimensions
             this.canvas.style.height = `${canvasHeight}px`;
-            
+
             // Re-setup canvas with new dimensions
             this.setupCanvas();
         }
@@ -1378,14 +1378,14 @@ Module.onRuntimeInitialized = async function() {
             // Enhanced touch events for mobile
             this.canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                
+
                 const currentTime = Date.now();
                 const touches = e.touches;
 
                 if (touches.length === 1) {
                     // Single touch - check for double tap
                     const timeSinceLastTap = currentTime - this.lastTapTime;
-                    
+
                     if (timeSinceLastTap < 300 && this.tapCount === 1) {
                         // Double tap detected - start zoom mode
                         this.doubleTapZooming = true;
@@ -1397,7 +1397,7 @@ Module.onRuntimeInitialized = async function() {
                         // Single tap or first tap of potential double tap
                         this.tapCount = 1;
                         this.lastTapTime = currentTime;
-                        
+
                         // Start panning after a delay to distinguish from double tap
                         setTimeout(() => {
                             if (this.tapCount === 1 && !this.doubleTapZooming && !this.pinchZooming) {
@@ -1413,7 +1413,7 @@ Module.onRuntimeInitialized = async function() {
                     this.isPanning = false;
                     this.doubleTapZooming = false;
                     this.tapCount = 0;
-                    
+
                     const touch1 = touches[0];
                     const touch2 = touches[1];
                     const distance = Math.sqrt(
@@ -1426,18 +1426,18 @@ Module.onRuntimeInitialized = async function() {
 
             this.canvas.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                
+
                 const touches = e.touches;
 
                 if (this.doubleTapZooming && touches.length === 1) {
                     // Double tap zoom with finger movement
                     const touch = touches[0];
                     const deltaY = touch.clientY - this.initialDoubleTapY;
-                    
+
                     // More sensitive zoom factor for double-tap zoom
                     const zoomFactor = 1 + (deltaY * -0.005); // Negative for intuitive direction (up = zoom in)
                     const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
-                    
+
                     if (newZoom !== this.zoomLevel) {
                         const center = this.getHexagonScreenCenter();
                         const scale = newZoom / this.zoomLevel;
@@ -1449,7 +1449,7 @@ Module.onRuntimeInitialized = async function() {
                             this.draw(this.lastPaths, this.lastN, this.lastT, this.lastS);
                         }
                     }
-                    
+
                     // Update the reference point for smoother zooming
                     this.initialDoubleTapY = touch.clientY;
                 } else if (this.pinchZooming && touches.length === 2) {
@@ -1460,11 +1460,11 @@ Module.onRuntimeInitialized = async function() {
                         Math.pow(touch2.clientX - touch1.clientX, 2) +
                         Math.pow(touch2.clientY - touch1.clientY, 2)
                     );
-                    
+
                     if (this.lastTouchDistance > 0) {
                         const zoomFactor = distance / this.lastTouchDistance;
                         const newZoom = Math.max(0.1, Math.min(10.0, this.zoomLevel * zoomFactor));
-                        
+
                         if (newZoom !== this.zoomLevel) {
                             const center = this.getHexagonScreenCenter();
                             const scale = newZoom / this.zoomLevel;
@@ -1497,9 +1497,9 @@ Module.onRuntimeInitialized = async function() {
 
             this.canvas.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                
+
                 const touches = e.touches;
-                
+
                 if (touches.length === 0) {
                     // All fingers lifted
                     this.isPanning = false;
@@ -2465,9 +2465,9 @@ Module.onRuntimeInitialized = async function() {
                 const paths = this.wasm.getPaths();
                 const currentPalette = this.visualizer.getCurrentPalette();
                 const borderWidth = parseFloat(document.getElementById('border-width').value);
-                
+
                 const tikzCode = this.generateTikzCode(paths, params, currentPalette, borderWidth);
-                
+
                 // Show TikZ export display
                 document.getElementById('tikz-export-textarea').value = tikzCode;
                 document.getElementById('tikz-export-display').style.display = 'block';
@@ -2483,7 +2483,7 @@ Module.onRuntimeInitialized = async function() {
             const T = params.T;
             const S = params.S;
             const sqrt3 = Math.sqrt(3);
-            
+
             let tikz = `% Lozenge tiling exported from simulation
 % Parameters: N=${N}, T=${T}, S=${S}, q=${params.q}
 % Generated on ${new Date().toISOString()}
@@ -2500,7 +2500,7 @@ Module.onRuntimeInitialized = async function() {
             const rgb1 = this.hexToRGB(color1);
             const rgb2 = this.hexToRGB(color2);
             const rgb3 = this.hexToRGB(color3);
-            
+
             tikz += `% Define colors
 \\definecolor{gray1}{RGB}{${rgb1[0]},${rgb1[1]},${rgb1[2]}}
 \\definecolor{gray2}{RGB}{${rgb2[0]},${rgb2[1]},${rgb2[2]}}
@@ -2532,24 +2532,24 @@ Module.onRuntimeInitialized = async function() {
                     }
                 }
             }
-            
+
             tikz += `\n% Path-based rhombi
 `;
-            
+
             // Draw the actual path-based rhombi (like drawRhombus)
             for (let timeIdx = 0; timeIdx < T; timeIdx++) {
                 for (let particleIdx = 0; particleIdx < N; particleIdx++) {
                     if (particleIdx < paths.length && timeIdx < paths[particleIdx].length - 1) {
                         const currentHeight = paths[particleIdx][timeIdx];
                         const nextHeight = paths[particleIdx][timeIdx + 1];
-                        
+
                         const x1 = timeIdx * 0.5 * sqrt3;
                         const y1 = currentHeight - timeIdx * 0.5;
                         const x2 = x1;
                         const y2 = y1 + 1;
-                        
+
                         let x3, y3, x4, y4, fillColor;
-                        
+
                         if (nextHeight === currentHeight) {
                             // Down rhombus (gray1)
                             x3 = x2 + 0.5 * sqrt3;
@@ -2565,7 +2565,7 @@ Module.onRuntimeInitialized = async function() {
                             y4 = y1 + 0.5;
                             fillColor = 'gray2';
                         }
-                        
+
                         tikz += `\\fill[${fillColor}`;
                         if (borderWidth > 0) {
                             tikz += `, draw=black, line width=${borderWidth}pt`;
@@ -2587,7 +2587,7 @@ Module.onRuntimeInitialized = async function() {
                 {x: T * 0.5 * sqrt3, y: (2 * S - T) * 0.5},
                 {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
             ];
-            
+
             tikz += `\n% Hexagon border
 \\draw[black, line width=${Math.max(borderWidth, 0.5)}pt] `;
             for (let i = 0; i < vertices.length; i++) {
@@ -2618,14 +2618,31 @@ Module.onRuntimeInitialized = async function() {
         }
 
         isInsideHexagon(x, y, N, T, S) {
-            // Simple bounds check for hexagon region
-            // This is a rough approximation - you may want to refine this
+            // Proper hexagon geometry check using the exact vertices
             const sqrt3 = Math.sqrt(3);
-            const maxX = T * 0.5 * sqrt3;
-            const minY = -(T - S) * 0.5;
-            const maxY = N + Math.max(S * 0.5, (2 * S - T) * 0.5);
-            
-            return x >= -0.5 && x <= maxX + 0.5 && y >= minY - 0.5 && y <= maxY + 0.5;
+
+            // Define the hexagon vertices (same as in the border drawing)
+            const vertices = [
+                {x: 0, y: 0},
+                {x: 0, y: N},
+                {x: S * 0.5 * sqrt3, y: N + S * 0.5},
+                {x: T * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5},
+                {x: T * 0.5 * sqrt3, y: (2 * S - T) * 0.5},
+                {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
+            ];
+
+            // Use ray casting algorithm to check if point is inside polygon
+            let inside = false;
+            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                const xi = vertices[i].x, yi = vertices[i].y;
+                const xj = vertices[j].x, yj = vertices[j].y;
+
+                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
         }
 
         rgbToTikzColor(rgb) {
@@ -2768,7 +2785,7 @@ Module.onRuntimeInitialized = async function() {
                 button.style.background = '#4CAF50';
                 button.style.color = 'white';
                 button.style.borderColor = '#4CAF50';
-                
+
                 setTimeout(() => {
                     button.textContent = originalText;
                     button.style.background = '';
@@ -2786,7 +2803,7 @@ Module.onRuntimeInitialized = async function() {
                 button.style.background = '#f44336';
                 button.style.color = 'white';
                 button.style.borderColor = '#f44336';
-                
+
                 setTimeout(() => {
                     button.textContent = originalText;
                     button.style.background = '';
@@ -2833,7 +2850,7 @@ Module.onRuntimeInitialized = async function() {
             // Cycle through border thickness presets: thin (0.001) -> medium (0.01) -> thick (0.05) -> thin
             const borderInput = document.getElementById('border-width');
             const currentValue = parseFloat(borderInput.value);
-            
+
             let newValue;
             if (currentValue <= 0.001) {
                 newValue = 0.01; // thin -> medium
@@ -2842,7 +2859,7 @@ Module.onRuntimeInitialized = async function() {
             } else {
                 newValue = 0.001; // thick -> thin
             }
-            
+
             borderInput.value = newValue;
             this.visualizer.setBorderWidth(newValue);
             this.redraw();
@@ -2888,7 +2905,7 @@ Module.onRuntimeInitialized = async function() {
         if (moreOptionsDetails) {
             moreOptionsDetails.removeAttribute('open'); // CLOSED by default, user clicks to expand
         }
-        
+
         // Nested details within "More Options" (.nested-control-group)
         const nestedMoreOptionsDetails = document.querySelectorAll('#more-options-details .nested-control-group');
         nestedMoreOptionsDetails.forEach(detail => {
@@ -2931,7 +2948,7 @@ Module.onRuntimeInitialized = async function() {
 
         // Initialize collapsible sections with responsive behavior
         initializeCollapsibleSections();
-        
+
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
