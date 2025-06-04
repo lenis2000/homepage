@@ -24,7 +24,7 @@ code:
     .interface-container {
       grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .control-group.full-width {
       grid-column: 1 / -1;
     }
@@ -109,8 +109,8 @@ code:
   }
 
   /* Consistent input styling */
-  input[type="number"], 
-  input[type="text"], 
+  input[type="number"],
+  input[type="text"],
   select {
     height: 36px;
     padding: 0 12px;
@@ -224,20 +224,99 @@ code:
 
   /* Mobile touch targets and accessibility */
   @media (max-width: 767px) {
+    .interface-container {
+      padding: 8px;
+      gap: 8px;
+    }
+
+    .control-group {
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+
+    .control-group-title {
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+
     button {
       min-height: 44px;
       min-width: 44px;
+      padding: 0 12px;
+      font-size: 13px;
     }
-    
+
     input[type="number"],
     input[type="text"],
     select {
       height: 44px;
       font-size: 16px; /* Prevents zoom on iOS */
+      padding: 0 8px;
     }
-    
+
     .parameters-grid {
       grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .button-row {
+      gap: 6px;
+    }
+
+    .param-item {
+      gap: 2px;
+    }
+
+    .param-item label {
+      font-size: 14px;
+      min-width: 16px;
+    }
+
+    #lozenge-canvas {
+      height: 60vh;
+      min-height: 300px;
+    }
+
+    .config-display {
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .config-display h3 {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .config-values {
+      gap: 12px;
+    }
+
+    .config-item {
+      font-size: 12px;
+    }
+
+    .color-legend {
+      padding: 8px;
+      gap: 8px;
+    }
+
+    .legend-items {
+      gap: 12px;
+    }
+
+    .legend-item {
+      font-size: 12px;
+      gap: 4px;
+    }
+
+    .color-box {
+      width: 16px;
+      height: 16px;
+    }
+
+    #export-inline-textarea {
+      height: 150px !important;
+      font-size: 11px !important;
     }
   }
 
@@ -257,6 +336,36 @@ code:
   input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Details/summary styling */
+  details {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  summary {
+    background: #f5f5f5;
+    padding: 12px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    user-select: none;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  summary:hover {
+    background: #eaeaea;
+  }
+
+  details[open] summary {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  details .content {
+    padding: 16px;
+    background: white;
   }
   .keyboard-info {
     margin-top: 10px;
@@ -414,9 +523,17 @@ code:
 <script src="/js/OrbitControls.js"></script>
 <script src="/js/2025-06-02-q-vol-Gorin.js"></script>
 
-This simulation demonstrates **lozenge tilings** using a WASM/JS port of a program by [Vadim Gorin](https://www.stat.berkeley.edu/~vadicgor/research.html). The simulation generates lozenge tilings of a hexagon with sides $N$, $S$, and $T-S$ under the $q^{-volume}$ measure.
+<details>
+<summary>About this simulation</summary>
+<div class="content">
 
+This simulation demonstrates <strong>lozenge tilings</strong> using a WASM/JS port of a program by <a href="https://www.stat.berkeley.edu/~vadicgor/research.html">Vadim Gorin</a>.
+The simulation generates lozenge tilings of a hexagon with sides $N$, $S$, and $T-S$ under the $q^{-volume}$ measure.
+<br><br>
 The sampler works entirely in your browser using WebAssembly.
+
+</div>
+</details>
 
 ---
 
@@ -458,7 +575,7 @@ The sampler works entirely in your browser using WebAssembly.
       <option value="1" selected>Lozenges</option>
       <option value="5">Z² paths</option>
     </select>
-    
+
     <label for="steps">Steps:</label>
     <input id="steps" type="number" value="1" min="1" max="9999" style="width: 80px;">
   </div>
