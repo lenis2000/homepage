@@ -202,7 +202,7 @@ The sampler works entirely in your browser using WebAssembly.
   <input id="T" type="number" value="40" min="1" max="500" style="width: 60px;">
 
   <label for="S" style="margin-left: 20px;">S: </label>
-  <input id="S" type="number" value="0" min="0" style="width: 60px;">
+  <input id="S" type="number" value="20" min="0" style="width: 60px;">
 
   <label for="q" style="margin-left: 20px;">q: </label>
   <input id="q" type="number" value="1" step="0.02" min="0.01" style="width: 60px;">
@@ -1409,7 +1409,20 @@ Module.onRuntimeInitialized = async function() {
                 const params = this.getParametersFromUI();
                 this.validateParametersUI(params);
 
-                await this.wasm.initializeTilingWasm(params);
+                // Initialize with S=0 first
+                const initParams = { ...params, S: 0 };
+                await this.wasm.initializeTilingWasm(initParams);
+
+                // If target S > 0, perform S→S+1 steps to reach the target
+                const targetS = params.S;
+                for (let i = 0; i < targetS; i++) {
+                    try {
+                        await this.wasm.stepForward();
+                    } catch (error) {
+                        // Stop if we can't step further
+                        break;
+                    }
+                }
 
                 const actualParams = this.wasm.getParameters();
                 document.getElementById('S').value = actualParams.S;
