@@ -261,8 +261,8 @@ The sampler works entirely in your browser using WebAssembly.
   
   <div class="color-palette">
     <label>Horizontal:</label>
-    <input type="color" id="color-gray3" value="#C8CBD2">
-    <input type="text" id="hex-gray3" value="#C8CBD2" placeholder="#RRGGBB">
+    <input type="color" id="color-gray3" value="#F9DCBF">
+    <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
   </div>
   
   <div style="margin-top: 15px;">
@@ -279,7 +279,7 @@ The sampler works entirely in your browser using WebAssembly.
   <span>Up</span>
   <div class="color-swatch" id="swatch-gray2" style="background-color: #232D4B;"></div>
   <span>Down</span>
-  <div class="color-swatch" id="swatch-gray3" style="background-color: #C8CBD2;"></div>
+  <div class="color-swatch" id="swatch-gray3" style="background-color: #F9DCBF;"></div>
   <span>Horizontal</span>
   <span>|</span>
   <span id="palette-info">UVA Colors</span>
@@ -515,7 +515,7 @@ Module.onRuntimeInitialized = async function() {
             this.colors = {
                 gray1: '#E57200', // UVA Orange (up rhombi)
                 gray2: '#232D4B', // UVA Blue (down rhombi)
-                gray3: '#C8CBD2', // UVA Blue 25% (horizontal rhombi)
+                gray3: '#F9DCBF', // UVA Orange 25% (horizontal rhombi)
                 black: '#000000',
                 white: '#FFFFFF'
             };
@@ -665,7 +665,7 @@ Module.onRuntimeInitialized = async function() {
         resetDefaultColors() {
             this.colors.gray1 = '#E57200';
             this.colors.gray2 = '#232D4B';
-            this.colors.gray3 = '#C8CBD2';
+            this.colors.gray3 = '#F9DCBF';
             this.currentPalette = 'UVA Colors';
             this.updateColorIndicator();
         }
@@ -1067,8 +1067,8 @@ Module.onRuntimeInitialized = async function() {
                 document.getElementById('hex-gray1').value = '#E57200';
                 document.getElementById('color-gray2').value = '#232D4B';
                 document.getElementById('hex-gray2').value = '#232D4B';
-                document.getElementById('color-gray3').value = '#C8CBD2';
-                document.getElementById('hex-gray3').value = '#C8CBD2';
+                document.getElementById('color-gray3').value = '#F9DCBF';
+                document.getElementById('hex-gray3').value = '#F9DCBF';
                 this.redraw();
             });
 
