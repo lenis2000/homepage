@@ -989,7 +989,9 @@ The sampler works entirely in your browser using WebAssembly.
     Z: S → S-r<br>
     S: S → S+r → S-r<br>
     X: S → S-r → S+r<br>
-    C: Change color palette<br>
+    C: Next color palette<br>
+    Shift+C: Previous color palette<br>
+    P: Permute colors (cycle through 6 permutations)<br>
     B: Change border style (thin/medium/thick/ultra thick)
   </div>
 </details>
@@ -1207,6 +1209,10 @@ Module.onRuntimeInitialized = async function() {
 
             this.currentPalette = 'UVA Colors';
             this.currentPaletteIndex = 0;
+            
+            // Color permutation state (0-5 for 6 possible permutations)
+            this.currentPermutation = 0;
+            this.originalColors = { gray1: '', gray2: '', gray3: '' }; // Store original colors for permutation
 
             // 35+ beautiful color palettes - mix of original, coder themes, and universities
             this.colorPalettes = [
@@ -1776,6 +1782,9 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray3 = palette.colors[2];
             this.customBorderColor = null; // Clear custom border color
             this.currentPalette = palette.name;
+            
+            // Reset permutation state when changing palettes
+            this.currentPermutation = 0;
 
             this.updateColorIndicator();
             this.updateCustomColorPickers();
@@ -1790,6 +1799,9 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray3 = palette.colors[2];
             this.customBorderColor = null; // Clear custom border color
             this.currentPalette = palette.name;
+            
+            // Reset permutation state when changing palettes
+            this.currentPermutation = 0;
 
             this.updateColorIndicator();
             this.updateCustomColorPickers();
@@ -1797,6 +1809,56 @@ Module.onRuntimeInitialized = async function() {
 
         changePalette() {
             this.nextPalette();
+        }
+
+        permuteColors() {
+            // Store original colors on first permutation
+            if (this.currentPermutation === 0) {
+                this.originalColors.gray1 = this.colors.gray1;
+                this.originalColors.gray2 = this.colors.gray2;
+                this.originalColors.gray3 = this.colors.gray3;
+            }
+
+            // Cycle through the 6 permutations of (gray1, gray2, gray3)
+            this.currentPermutation = (this.currentPermutation + 1) % 6;
+
+            const { gray1, gray2, gray3 } = this.originalColors;
+
+            switch (this.currentPermutation) {
+                case 0: // Original: (1, 2, 3)
+                    this.colors.gray1 = gray1;
+                    this.colors.gray2 = gray2;
+                    this.colors.gray3 = gray3;
+                    break;
+                case 1: // (1, 3, 2)
+                    this.colors.gray1 = gray1;
+                    this.colors.gray2 = gray3;
+                    this.colors.gray3 = gray2;
+                    break;
+                case 2: // (2, 1, 3)
+                    this.colors.gray1 = gray2;
+                    this.colors.gray2 = gray1;
+                    this.colors.gray3 = gray3;
+                    break;
+                case 3: // (2, 3, 1)
+                    this.colors.gray1 = gray2;
+                    this.colors.gray2 = gray3;
+                    this.colors.gray3 = gray1;
+                    break;
+                case 4: // (3, 1, 2)
+                    this.colors.gray1 = gray3;
+                    this.colors.gray2 = gray1;
+                    this.colors.gray3 = gray2;
+                    break;
+                case 5: // (3, 2, 1)
+                    this.colors.gray1 = gray3;
+                    this.colors.gray2 = gray2;
+                    this.colors.gray3 = gray1;
+                    break;
+            }
+
+            this.updateColorIndicator();
+            this.updateCustomColorPickers();
         }
 
         updateCustomColorPickers() {
@@ -2442,6 +2504,11 @@ Module.onRuntimeInitialized = async function() {
                     case 'b':
                         // Cycle border thickness
                         this.cycleBorderThickness();
+                        break;
+                    case 'p':
+                        // Permute colors (cycle through 6 permutations)
+                        this.visualizer.permuteColors();
+                        this.redraw();
                         break;
                 }
             });
