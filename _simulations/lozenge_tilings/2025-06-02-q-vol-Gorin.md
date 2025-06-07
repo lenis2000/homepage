@@ -852,6 +852,7 @@ The sampler works entirely in your browser using WebAssembly.
             <option value="47">Northeastern</option>
           </select>
           <button id="next-palette">▶</button>
+          <button id="permute-colors">Permute Colors</button>
           <button id="custom-colors">Custom Colors</button>
         </div>
       </div>
@@ -2327,6 +2328,11 @@ Module.onRuntimeInitialized = async function() {
             // Next/Previous palette buttons
             document.getElementById('next-palette').addEventListener('click', () => {
                 this.visualizer.nextPalette();
+                this.redraw();
+            });
+
+            document.getElementById('permute-colors').addEventListener('click', () => {
+                this.visualizer.permuteColors();
                 this.redraw();
             });
 
