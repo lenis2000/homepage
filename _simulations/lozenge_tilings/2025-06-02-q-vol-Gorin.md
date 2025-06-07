@@ -851,6 +851,7 @@ The sampler works entirely in your browser using WebAssembly.
             <option value="45">Cornell</option>
             <option value="46">Northwestern</option>
             <option value="47">Northeastern</option>
+            <option value="48">Duke</option>
           </select>
           <button id="next-palette">▶</button>
           <button id="permute-colors">Permute Colors</button>

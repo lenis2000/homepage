@@ -3,6 +3,9 @@
  * 
  * This file contains various color palettes used across different simulations.
  * Each color scheme contains a name and an array of colors.
+ * 
+ * Currently used by:
+ * - _simulations/lozenge_tilings/2025-06-02-q-vol-Gorin.md
  */
 
 const ColorSchemes = [
