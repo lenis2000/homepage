@@ -788,10 +788,11 @@ The sampler works entirely in your browser using WebAssembly.
         </div>
         <div class="button-row">
           <label>Border Width:</label>
-          <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.1" style="width: 100px;">
+          <input id="border-width" type="number" value="0.01" step="0.001" min="0" max="0.2" style="width: 100px;">
           <button id="border-thin">Thin</button>
           <button id="border-medium">Medium</button>
           <button id="border-thick">Thick</button>
+          <button id="border-ultra-thick">Ultra Thick</button>
         </div>
         <div class="button-row">
           <label for="palette-select">Palette:</label>
@@ -875,6 +876,12 @@ The sampler works entirely in your browser using WebAssembly.
           <input type="text" id="hex-gray3" value="#F9DCBF" placeholder="#RRGGBB">
         </div>
 
+        <div class="color-palette">
+          <label>Border:</label>
+          <input type="color" id="color-border" value="#666666">
+          <input type="text" id="hex-border" value="#666666" placeholder="#RRGGBB">
+        </div>
+
         <div style="margin-top: 15px;">
           <button id="reset-default-colors">Reset to Default</button>
           <button id="close-custom-colors" style="margin-left: 10px;">Close</button>
@@ -949,6 +956,10 @@ The sampler works entirely in your browser using WebAssembly.
         Horizontal
       </span>
       <span class="legend-item">
+        <span class="color-box" id="swatch-border" style="background-color: #666666; border: 1px solid #333;"></span>
+        Border
+      </span>
+      <span class="legend-item">
         <span style="font-weight: 600;" id="palette-info">UVA</span>
       </span>
     </div>
@@ -979,7 +990,7 @@ The sampler works entirely in your browser using WebAssembly.
     S: S → S+r → S-r<br>
     X: S → S-r → S+r<br>
     C: Change color palette<br>
-    B: Change border style (thin/medium/thick)
+    B: Change border style (thin/medium/thick/ultra thick)
   </div>
 </details>
 
@@ -1188,9 +1199,11 @@ Module.onRuntimeInitialized = async function() {
                 gray1: '#E57200', // UVA Orange (up rhombi)
                 gray2: '#232D4B', // UVA Blue (down rhombi)
                 gray3: '#F9DCBF', // UVA Orange 25% (horizontal rhombi)
+                border: '#666666', // Default border color
                 black: '#000000',
                 white: '#FFFFFF'
             };
+            this.customBorderColor = null; // Track if user has set custom border color
 
             this.currentPalette = 'UVA Colors';
             this.currentPaletteIndex = 0;
@@ -1530,10 +1543,176 @@ Module.onRuntimeInitialized = async function() {
             this.borderWidth = parseFloat(width);
         }
 
+        getBorderColor() {
+            // If user has set a custom border color, use that
+            if (this.customBorderColor) {
+                return this.customBorderColor;
+            }
+            
+            // Get appropriate border color based on the current color scheme
+            const palette = this.colorPalettes[this.currentPaletteIndex];
+            
+            // For "No Colors" palette, use a subtle gray
+            if (palette.name === 'No Colors') {
+                return '#BBBBBB';
+            }
+            
+            // Convert hex colors to RGB for analysis
+            const colors = [this.colors.gray1, this.colors.gray2, this.colors.gray3];
+            const rgbColors = colors.map(hex => {
+                const rgb = parseInt(hex.substring(1), 16);
+                return {
+                    r: (rgb >> 16) & 0xff,
+                    g: (rgb >> 8) & 0xff,
+                    b: rgb & 0xff
+                };
+            });
+            
+            // Calculate average color and brightness
+            const avgColor = {
+                r: Math.round(rgbColors.reduce((sum, c) => sum + c.r, 0) / 3),
+                g: Math.round(rgbColors.reduce((sum, c) => sum + c.g, 0) / 3),
+                b: Math.round(rgbColors.reduce((sum, c) => sum + c.b, 0) / 3)
+            };
+            
+            const avgBrightness = (0.299 * avgColor.r + 0.587 * avgColor.g + 0.114 * avgColor.b);
+            
+            // Function to convert RGB to HSL
+            const rgbToHsl = (r, g, b) => {
+                r /= 255;
+                g /= 255;
+                b /= 255;
+                
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                
+                if (max === min) {
+                    h = s = 0; // achromatic
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    
+                    switch (max) {
+                        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                        case g: h = ((b - r) / d + 2) / 6; break;
+                        case b: h = ((r - g) / d + 4) / 6; break;
+                    }
+                }
+                
+                return { h: h * 360, s: s * 100, l: l * 100 };
+            };
+            
+            // Function to convert HSL to RGB
+            const hslToRgb = (h, s, l) => {
+                h /= 360;
+                s /= 100;
+                l /= 100;
+                
+                let r, g, b;
+                
+                if (s === 0) {
+                    r = g = b = l; // achromatic
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                
+                return {
+                    r: Math.round(r * 255),
+                    g: Math.round(g * 255),
+                    b: Math.round(b * 255)
+                };
+            };
+            
+            // Get HSL of average color
+            const avgHsl = rgbToHsl(avgColor.r, avgColor.g, avgColor.b);
+            
+            // Create a complementary color
+            let borderHsl;
+            
+            if (avgHsl.s < 10) {
+                // For grayscale palettes, use a contrasting gray
+                if (avgBrightness > 128) {
+                    return '#444444';
+                } else {
+                    return '#CCCCCC';
+                }
+            }
+            
+            // For colorful palettes, create an interesting border color
+            if (avgBrightness > 180) {
+                // Very light palette: use a darker, slightly shifted hue
+                borderHsl = {
+                    h: (avgHsl.h + 30) % 360,  // Slight hue shift
+                    s: Math.min(avgHsl.s + 20, 80),  // Increase saturation
+                    l: 25  // Dark
+                };
+            } else if (avgBrightness < 80) {
+                // Very dark palette: use a lighter, complementary color
+                borderHsl = {
+                    h: (avgHsl.h + 180) % 360,  // Complementary hue
+                    s: Math.max(avgHsl.s - 20, 30),  // Slightly less saturated
+                    l: 75  // Light
+                };
+            } else {
+                // Mid-range palette: use a color that's offset in hue and contrast
+                const hueShift = avgHsl.s > 50 ? 150 : 120;  // More shift for saturated colors
+                borderHsl = {
+                    h: (avgHsl.h + hueShift) % 360,
+                    s: avgHsl.s > 50 ? avgHsl.s * 0.7 : avgHsl.s * 1.2,  // Adjust saturation
+                    l: avgBrightness > 128 ? 30 : 70  // Ensure contrast
+                };
+            }
+            
+            // Special adjustments for specific palettes
+            const paletteName = palette.name.toLowerCase();
+            
+            // Flag-inspired palettes often look better with neutral borders
+            if (paletteName.includes('italy') || paletteName.includes('france') || 
+                paletteName.includes('belgium') || paletteName.includes('colombia')) {
+                return avgBrightness > 128 ? '#2C3E50' : '#ECF0F1';  // Elegant blue-gray
+            }
+            
+            // Coding themes work well with their typical comment colors
+            if (paletteName.includes('dracula')) return '#6272A4';  // Dracula comment color
+            if (paletteName.includes('monokai')) return '#75715E';  // Monokai comment color
+            if (paletteName.includes('solarized')) return '#586E75';  // Solarized comment color
+            if (paletteName.includes('gruvbox')) return '#928374';  // Gruvbox gray
+            if (paletteName.includes('nord')) return '#4C566A';  // Nord gray
+            
+            // University colors often have specific accent colors
+            if (paletteName.includes('uva')) return '#666666';  // Neutral gray for UVA
+            if (paletteName.includes('harvard')) return '#C0C0C0';  // Silver for Harvard
+            if (paletteName.includes('yale')) return '#8C8C8C';  // Yale gray
+            
+            // Convert the calculated HSL back to RGB and then to hex
+            const borderRgb = hslToRgb(borderHsl.h, borderHsl.s, borderHsl.l);
+            const toHex = (n) => n.toString(16).padStart(2, '0');
+            
+            return `#${toHex(borderRgb.r)}${toHex(borderRgb.g)}${toHex(borderRgb.b)}`;
+        }
+
         setCustomColors(colors) {
             this.colors.gray1 = colors.gray1;
             this.colors.gray2 = colors.gray2;
             this.colors.gray3 = colors.gray3;
+            if (colors.border) {
+                this.customBorderColor = colors.border;
+                this.colors.border = colors.border;
+            }
             this.currentPalette = 'Custom';
             this.updateColorIndicator();
         }
@@ -1542,10 +1721,14 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('swatch-gray1').style.backgroundColor = this.colors.gray1;
             document.getElementById('swatch-gray2').style.backgroundColor = this.colors.gray2;
             document.getElementById('swatch-gray3').style.backgroundColor = this.colors.gray3;
+            
+            // Update border color swatch with current border color
+            const borderColor = this.getBorderColor();
+            document.getElementById('swatch-border').style.backgroundColor = borderColor;
 
             const paletteInfo = document.getElementById('palette-info');
             if (this.currentPalette === 'Custom') {
-                paletteInfo.textContent = `Custom (${this.colors.gray1}, ${this.colors.gray2}, ${this.colors.gray3})`;
+                paletteInfo.textContent = `Custom`;
             } else {
                 paletteInfo.textContent = this.currentPalette;
             }
@@ -1561,6 +1744,8 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray1 = '#E57200';
             this.colors.gray2 = '#232D4B';
             this.colors.gray3 = '#F9DCBF';
+            this.colors.border = '#666666';
+            this.customBorderColor = null; // Clear custom border color
             this.currentPalette = 'UVA Colors';
             this.currentPaletteIndex = 0;
             this.updateColorIndicator();
@@ -1574,6 +1759,7 @@ Module.onRuntimeInitialized = async function() {
                 this.colors.gray1 = palette.colors[0];
                 this.colors.gray2 = palette.colors[1];
                 this.colors.gray3 = palette.colors[2];
+                this.customBorderColor = null; // Clear custom border color when switching palettes
                 this.currentPalette = palette.name;
 
                 this.updateColorIndicator();
@@ -1588,6 +1774,7 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray1 = palette.colors[0];
             this.colors.gray2 = palette.colors[1];
             this.colors.gray3 = palette.colors[2];
+            this.customBorderColor = null; // Clear custom border color
             this.currentPalette = palette.name;
 
             this.updateColorIndicator();
@@ -1601,6 +1788,7 @@ Module.onRuntimeInitialized = async function() {
             this.colors.gray1 = palette.colors[0];
             this.colors.gray2 = palette.colors[1];
             this.colors.gray3 = palette.colors[2];
+            this.customBorderColor = null; // Clear custom border color
             this.currentPalette = palette.name;
 
             this.updateColorIndicator();
@@ -1619,6 +1807,11 @@ Module.onRuntimeInitialized = async function() {
             document.getElementById('hex-gray2').value = this.colors.gray2.toUpperCase();
             document.getElementById('color-gray3').value = this.colors.gray3;
             document.getElementById('hex-gray3').value = this.colors.gray3.toUpperCase();
+            
+            // Update border color picker with current border color
+            const borderColor = this.getBorderColor();
+            document.getElementById('color-border').value = borderColor;
+            document.getElementById('hex-border').value = borderColor.toUpperCase();
         }
 
         getCurrentPalette() {
@@ -1807,7 +2000,7 @@ Module.onRuntimeInitialized = async function() {
                         ctx.fillStyle = this.colors.gray3;
                         ctx.fill();
 
-                        ctx.strokeStyle = this.colors.black;
+                        ctx.strokeStyle = this.getBorderColor();
                         ctx.lineWidth = this.borderWidth;
                         ctx.stroke();
                     }
@@ -1823,7 +2016,7 @@ Module.onRuntimeInitialized = async function() {
                 ctx.lineTo(vertices[i].x, vertices[i].y);
             }
             ctx.closePath();
-            ctx.strokeStyle = this.colors.black;
+            ctx.strokeStyle = this.getBorderColor();
             ctx.lineWidth = this.borderWidth;
             ctx.stroke();
         }
@@ -1867,7 +2060,7 @@ Module.onRuntimeInitialized = async function() {
             ctx.fill();
 
             // Add consistent thin borders to all rhombi
-            ctx.strokeStyle = this.colors.black;
+            ctx.strokeStyle = this.getBorderColor();
             ctx.lineWidth = this.borderWidth;
             ctx.stroke();
         }
@@ -1965,6 +2158,12 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
             });
 
+            document.getElementById('border-ultra-thick').addEventListener('click', () => {
+                document.getElementById('border-width').value = '0.15';
+                this.visualizer.setBorderWidth(0.15);
+                this.redraw();
+            });
+
             // Custom colors functionality
             document.getElementById('custom-colors').addEventListener('click', () => {
                 const panel = document.getElementById('custom-colors-panel');
@@ -1976,7 +2175,8 @@ Module.onRuntimeInitialized = async function() {
                 const colors = {
                     gray1: document.getElementById('color-gray1').value,
                     gray2: document.getElementById('color-gray2').value,
-                    gray3: document.getElementById('color-gray3').value
+                    gray3: document.getElementById('color-gray3').value,
+                    border: document.getElementById('color-border').value
                 };
                 this.visualizer.setCustomColors(colors);
                 this.redraw();
@@ -2023,6 +2223,20 @@ Module.onRuntimeInitialized = async function() {
                 }
             });
 
+            // Border color event listeners
+            document.getElementById('color-border').addEventListener('input', (e) => {
+                document.getElementById('hex-border').value = e.target.value.toUpperCase();
+                applyColors();
+            });
+
+            document.getElementById('hex-border').addEventListener('input', (e) => {
+                const hex = e.target.value;
+                if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                    document.getElementById('color-border').value = hex;
+                    applyColors();
+                }
+            });
+
             document.getElementById('reset-default-colors').addEventListener('click', () => {
                 this.visualizer.resetDefaultColors();
                 // Reset both color pickers and hex fields
@@ -2032,6 +2246,8 @@ Module.onRuntimeInitialized = async function() {
                 document.getElementById('hex-gray2').value = '#232D4B';
                 document.getElementById('color-gray3').value = '#F9DCBF';
                 document.getElementById('hex-gray3').value = '#F9DCBF';
+                document.getElementById('color-border').value = '#666666';
+                document.getElementById('hex-border').value = '#666666';
                 this.redraw();
             });
 
@@ -2153,24 +2369,24 @@ Module.onRuntimeInitialized = async function() {
                 }
             });
 
-            // Close modal with Escape key
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    const modal = document.getElementById('export-modal');
-                    if (modal.style.display === 'block') {
-                        this.closeExportModal();
-                    }
-                }
-            });
 
             // Keyboard controls
-            document.addEventListener('keypress', (e) => {
+            document.addEventListener('keydown', (e) => {
                 if (this.animationRunning) return;
 
                 const key = e.key.toLowerCase();
 
                 if ((key === 's' || key === 'x') && this.compositeOperationRunning) {
                     return;
+                }
+
+                // Handle Escape key for closing modal
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('export-modal');
+                    if (modal.style.display === 'block') {
+                        this.closeExportModal();
+                        return;
+                    }
                 }
 
                 const steps = parseInt(document.getElementById('steps').value) || 1;
@@ -2215,8 +2431,12 @@ Module.onRuntimeInitialized = async function() {
                         });
                         break;
                     case 'c':
-                        // Change color palette
-                        this.visualizer.nextPalette();
+                        // Change color palette - Shift+C for previous, C for next
+                        if (e.shiftKey) {
+                            this.visualizer.prevPalette();
+                        } else {
+                            this.visualizer.nextPalette();
+                        }
                         this.redraw();
                         break;
                     case 'b':
@@ -2500,11 +2720,16 @@ Module.onRuntimeInitialized = async function() {
             const rgb1 = this.hexToRGB(color1);
             const rgb2 = this.hexToRGB(color2);
             const rgb3 = this.hexToRGB(color3);
+            
+            // Get the border color using the same logic as the visualizer
+            const borderColor = this.visualizer.getBorderColor();
+            const borderRgb = this.hexToRGB(borderColor);
 
             tikz += `% Define colors
 \\definecolor{gray1}{RGB}{${rgb1[0]},${rgb1[1]},${rgb1[2]}}
 \\definecolor{gray2}{RGB}{${rgb2[0]},${rgb2[1]},${rgb2[2]}}
 \\definecolor{gray3}{RGB}{${rgb3[0]},${rgb3[1]},${rgb3[2]}}
+\\definecolor{bordercolor}{RGB}{${borderRgb[0]},${borderRgb[1]},${borderRgb[2]}}
 
 `;
 
@@ -2523,7 +2748,7 @@ Module.onRuntimeInitialized = async function() {
                     if (this.isInsideHexagon(centerX, centerY, N, T, S)) {
                         tikz += `\\fill[gray3`;
                         if (borderWidth > 0) {
-                            tikz += `, draw=black, line width=${borderWidth}pt`;
+                            tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
                         }
                         tikz += `] (${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
                         tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 + 0.5).toFixed(3)}) -- `;
@@ -2568,7 +2793,7 @@ Module.onRuntimeInitialized = async function() {
 
                         tikz += `\\fill[${fillColor}`;
                         if (borderWidth > 0) {
-                            tikz += `, draw=black, line width=${borderWidth}pt`;
+                            tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
                         }
                         tikz += `] (${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
                         tikz += `(${x2.toFixed(3)}, ${y2.toFixed(3)}) -- `;
@@ -2589,7 +2814,7 @@ Module.onRuntimeInitialized = async function() {
             ];
 
             tikz += `\n% Hexagon border
-\\draw[black, line width=${Math.max(borderWidth, 0.5)}pt] `;
+\\draw[bordercolor, line width=${Math.max(borderWidth, 0.5)}pt] `;
             for (let i = 0; i < vertices.length; i++) {
                 if (i > 0) tikz += ' -- ';
                 tikz += `(${vertices[i].x.toFixed(3)}, ${vertices[i].y.toFixed(3)})`;
@@ -2847,7 +3072,7 @@ Module.onRuntimeInitialized = async function() {
         }
 
         cycleBorderThickness() {
-            // Cycle through border thickness presets: thin (0.001) -> medium (0.01) -> thick (0.05) -> thin
+            // Cycle through border thickness presets: thin (0.001) -> medium (0.01) -> thick (0.05) -> ultra thick (0.15) -> thin
             const borderInput = document.getElementById('border-width');
             const currentValue = parseFloat(borderInput.value);
 
@@ -2856,8 +3081,10 @@ Module.onRuntimeInitialized = async function() {
                 newValue = 0.01; // thin -> medium
             } else if (currentValue <= 0.01) {
                 newValue = 0.05; // medium -> thick
+            } else if (currentValue <= 0.05) {
+                newValue = 0.15; // thick -> ultra thick
             } else {
-                newValue = 0.001; // thick -> thin
+                newValue = 0.001; // ultra thick -> thin
             }
 
             borderInput.value = newValue;
