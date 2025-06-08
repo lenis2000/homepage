@@ -2759,7 +2759,7 @@ Module.onRuntimeInitialized = async function() {
 
 `;
 
-            // Define hexagon vertices for clipping
+            // Define hexagon vertices for border
             const hexagonVertices = [
                 {x: 0, y: 0},
                 {x: 0, y: N},
@@ -2769,13 +2769,67 @@ Module.onRuntimeInitialized = async function() {
                 {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
             ];
 
+            // Calculate inset for clipping region to account for border thickness
+            // Scale border width: multiply by 20 for rhombi, hexagon is 2x rhombi width
+            const tikzRhombiBorderWidth = borderWidth * 20; // 0.2 * 20 = 4pt
+            const tikzHexagonBorderWidth = tikzRhombiBorderWidth * 2; // 2x rhombi width = 8pt at max
+            // Half the border width extends inward from the border path
+            const borderInset = showBorder ? tikzHexagonBorderWidth * 0.5 * 0.02 : 0; // Convert pt to coordinate units
+            
+            // Create slightly smaller hexagon for clipping
+            const clippingVertices = hexagonVertices.map((vertex, i) => {
+                // Calculate inward normal direction for each edge
+                const nextVertex = hexagonVertices[(i + 1) % hexagonVertices.length];
+                const prevVertex = hexagonVertices[(i + hexagonVertices.length - 1) % hexagonVertices.length];
+                
+                // Edge vectors
+                const edgeToNext = {x: nextVertex.x - vertex.x, y: nextVertex.y - vertex.y};
+                const edgeFromPrev = {x: vertex.x - prevVertex.x, y: vertex.y - prevVertex.y};
+                
+                // Normalize edge vectors
+                const lenNext = Math.sqrt(edgeToNext.x * edgeToNext.x + edgeToNext.y * edgeToNext.y);
+                const lenPrev = Math.sqrt(edgeFromPrev.x * edgeFromPrev.x + edgeFromPrev.y * edgeFromPrev.y);
+                
+                if (lenNext > 0) {
+                    edgeToNext.x /= lenNext;
+                    edgeToNext.y /= lenNext;
+                }
+                if (lenPrev > 0) {
+                    edgeFromPrev.x /= lenPrev;
+                    edgeFromPrev.y /= lenPrev;
+                }
+                
+                // Inward normals (rotate 90 degrees clockwise)
+                const normalNext = {x: edgeToNext.y, y: -edgeToNext.x};
+                const normalPrev = {x: edgeFromPrev.y, y: -edgeFromPrev.x};
+                
+                // Average normal direction
+                const avgNormal = {
+                    x: (normalNext.x + normalPrev.x) * 0.5,
+                    y: (normalNext.y + normalPrev.y) * 0.5
+                };
+                
+                // Normalize average normal
+                const avgLen = Math.sqrt(avgNormal.x * avgNormal.x + avgNormal.y * avgNormal.y);
+                if (avgLen > 0) {
+                    avgNormal.x /= avgLen;
+                    avgNormal.y /= avgLen;
+                }
+                
+                // Move vertex inward by border inset
+                return {
+                    x: vertex.x + avgNormal.x * borderInset,
+                    y: vertex.y + avgNormal.y * borderInset
+                };
+            });
+
             // Render exactly as the canvas does: background horizontal rhombi first
             tikz += `% Background horizontal rhombi (color3)
 \\begin{scope}
 \\clip `;
-            for (let i = 0; i < hexagonVertices.length; i++) {
+            for (let i = 0; i < clippingVertices.length; i++) {
                 if (i > 0) tikz += ' -- ';
-                tikz += `(${hexagonVertices[i].x.toFixed(3)}, ${hexagonVertices[i].y.toFixed(3)})`;
+                tikz += `(${clippingVertices[i].x.toFixed(3)}, ${clippingVertices[i].y.toFixed(3)})`;
             }
             tikz += ` -- cycle;
 `;
@@ -2786,7 +2840,7 @@ Module.onRuntimeInitialized = async function() {
                     
                     tikz += `\\fill[color3`;
                     if (showBorder && borderWidth > 0) {
-                        tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
+                        tikz += `, draw=bordercolor, line width=${tikzRhombiBorderWidth}pt`;
                     }
                     tikz += `] `;
                     tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
@@ -2798,10 +2852,10 @@ Module.onRuntimeInitialized = async function() {
             }
             tikz += `\\end{scope}
 
-% Path-based rhombi (colors 1 and 2)
+% Path-based rhombi fills (colors 1 and 2)
 `;
 
-            // Render path-based rhombi exactly as canvas does
+            // First pass: draw only the fills for path-based rhombi
             for (let timeIdx = 0; timeIdx < T; timeIdx++) {
                 for (let particleIdx = 0; particleIdx < N; particleIdx++) {
                     if (particleIdx < paths.length && timeIdx < paths[particleIdx].length - 1) {
@@ -2831,11 +2885,8 @@ Module.onRuntimeInitialized = async function() {
                             fillColor = 'color2';
                         }
                         
-                        tikz += `\\fill[${fillColor}`;
-                        if (showBorder && borderWidth > 0) {
-                            tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
-                        }
-                        tikz += `] `;
+                        // Only fill, no stroke
+                        tikz += `\\fill[${fillColor}] `;
                         tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
                         tikz += `(${x2.toFixed(3)}, ${y2.toFixed(3)}) -- `;
                         tikz += `(${x3.toFixed(3)}, ${y3.toFixed(3)}) -- `;
@@ -2845,10 +2896,54 @@ Module.onRuntimeInitialized = async function() {
                 }
             }
 
+            // Second pass: draw borders for path-based rhombi if borders are enabled
+            if (showBorder && borderWidth > 0) {
+                tikz += `
+% Path-based rhombi borders
+`;
+                for (let timeIdx = 0; timeIdx < T; timeIdx++) {
+                    for (let particleIdx = 0; particleIdx < N; particleIdx++) {
+                        if (particleIdx < paths.length && timeIdx < paths[particleIdx].length - 1) {
+                            const currentHeight = paths[particleIdx][timeIdx];
+                            const nextHeight = paths[particleIdx][timeIdx + 1];
+                            
+                            const x1 = timeIdx * 0.5 * sqrt3;
+                            const y1 = currentHeight - timeIdx * 0.5;
+                            const x2 = x1;
+                            const y2 = y1 + 1;
+                            
+                            let x3, y3, x4, y4;
+                            
+                            if (nextHeight === currentHeight) {
+                                // Down rhombus (color1)
+                                x3 = x2 + 0.5 * sqrt3;
+                                y3 = y2 - 0.5;
+                                x4 = x1 + 0.5 * sqrt3;
+                                y4 = y1 - 0.5;
+                            } else {
+                                // Up rhombus (color2)
+                                x3 = x2 + 0.5 * sqrt3;
+                                y3 = y2 + 0.5;
+                                x4 = x1 + 0.5 * sqrt3;
+                                y4 = y1 + 0.5;
+                            }
+                            
+                            // Only stroke, no fill
+                            tikz += `\\draw[bordercolor, line width=${tikzRhombiBorderWidth}pt] `;
+                            tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                            tikz += `(${x2.toFixed(3)}, ${y2.toFixed(3)}) -- `;
+                            tikz += `(${x3.toFixed(3)}, ${y3.toFixed(3)}) -- `;
+                            tikz += `(${x4.toFixed(3)}, ${y4.toFixed(3)}) -- cycle;
+`;
+                        }
+                    }
+                }
+            }
+
             // Draw hexagon border exactly as canvas does
             tikz += `
 % Hexagon border
-\\draw[bordercolor, line width=${Math.max(borderWidth, 0.5)}pt] `;
+\\draw[bordercolor, line width=${Math.max(tikzHexagonBorderWidth, 0.5)}pt] `;
             for (let i = 0; i < hexagonVertices.length; i++) {
                 if (i > 0) tikz += ' -- ';
                 tikz += `(${hexagonVertices[i].x.toFixed(3)}, ${hexagonVertices[i].y.toFixed(3)})`;
