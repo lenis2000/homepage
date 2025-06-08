@@ -2737,7 +2737,7 @@ Module.onRuntimeInitialized = async function() {
 \\documentclass{standalone}
 \\usepackage{tikz}
 \\begin{document}
-\\begin{tikzpicture}[scale=1]
+\\begin{tikzpicture}[scale=1, yscale=-1, xscale=-1]
 
 `;
 
@@ -2759,33 +2759,45 @@ Module.onRuntimeInitialized = async function() {
 
 `;
 
+            // Define hexagon vertices for clipping
+            const hexagonVertices = [
+                {x: 0, y: 0},
+                {x: 0, y: N},
+                {x: S * 0.5 * sqrt3, y: N + S * 0.5},
+                {x: T * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5},
+                {x: T * 0.5 * sqrt3, y: (2 * S - T) * 0.5},
+                {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
+            ];
+
             // Render exactly as the canvas does: background horizontal rhombi first
             tikz += `% Background horizontal rhombi (color3)
+\\begin{scope}
+\\clip `;
+            for (let i = 0; i < hexagonVertices.length; i++) {
+                if (i > 0) tikz += ' -- ';
+                tikz += `(${hexagonVertices[i].x.toFixed(3)}, ${hexagonVertices[i].y.toFixed(3)})`;
+            }
+            tikz += ` -- cycle;
 `;
             for (let timeIdx = -1; timeIdx <= T; timeIdx++) {
                 for (let height = -(T - S + 2); height <= N + S + 2; height++) {
                     const x1 = timeIdx * 0.5 * sqrt3;
                     const y1 = height - timeIdx * 0.5;
                     
-                    const centerX = x1 + 0.25 * sqrt3;
-                    const centerY = y1 + 0.5;
-                    
-                    if (this.isInsideHexagon(centerX, centerY, N, T, S)) {
-                        tikz += `\\fill[color3`;
-                        if (showBorder && borderWidth > 0) {
-                            tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
-                        }
-                        tikz += `] `;
-                        tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
-                        tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 + 0.5).toFixed(3)}) -- `;
-                        tikz += `(${(x1 + sqrt3).toFixed(3)}, ${y1.toFixed(3)}) -- `;
-                        tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 - 0.5).toFixed(3)}) -- cycle;
-`;
+                    tikz += `\\fill[color3`;
+                    if (showBorder && borderWidth > 0) {
+                        tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
                     }
+                    tikz += `] `;
+                    tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                    tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 + 0.5).toFixed(3)}) -- `;
+                    tikz += `(${(x1 + sqrt3).toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                    tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 - 0.5).toFixed(3)}) -- cycle;
+`;
                 }
             }
+            tikz += `\\end{scope}
 
-            tikz += `
 % Path-based rhombi (colors 1 and 2)
 `;
 
@@ -2834,15 +2846,6 @@ Module.onRuntimeInitialized = async function() {
             }
 
             // Draw hexagon border exactly as canvas does
-            const hexagonVertices = [
-                {x: 0, y: 0},
-                {x: 0, y: N},
-                {x: S * 0.5 * sqrt3, y: N + S * 0.5},
-                {x: T * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5},
-                {x: T * 0.5 * sqrt3, y: (2 * S - T) * 0.5},
-                {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
-            ];
-
             tikz += `
 % Hexagon border
 \\draw[bordercolor, line width=${Math.max(borderWidth, 0.5)}pt] `;
@@ -2875,33 +2878,6 @@ Module.onRuntimeInitialized = async function() {
             return [128, 128, 128]; // Default gray
         }
 
-        isInsideHexagon(x, y, N, T, S) {
-            // Proper hexagon geometry check using the exact vertices
-            const sqrt3 = Math.sqrt(3);
-
-            // Define the hexagon vertices (same as in the border drawing)
-            const vertices = [
-                {x: 0, y: 0},
-                {x: 0, y: N},
-                {x: S * 0.5 * sqrt3, y: N + (S+1) * 0.5},
-                {x: (T-1) * 0.5 * sqrt3, y: N + (2 * S - T) * 0.5+1},
-                {x: (T-1) * 0.5 * sqrt3, y: (2 * S - T) * 0.5+1},
-                {x: (T - S-1) * 0.5 * sqrt3, y: -(T - S-1) * 0.5}
-            ];
-
-            // Use ray casting algorithm to check if point is inside polygon
-            let inside = false;
-            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-                const xi = vertices[i].x, yi = vertices[i].y;
-                const xj = vertices[j].x, yj = vertices[j].y;
-
-                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-                    inside = !inside;
-                }
-            }
-
-            return inside;
-        }
 
 
         copyToClipboard() {
