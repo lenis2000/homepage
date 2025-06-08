@@ -1828,7 +1828,7 @@ Module.onRuntimeInitialized = async function() {
         }
 
         getCurrentPalette() {
-            // Return current color palette for TikZ export
+            // Return current color palette for export
             return [
                 this.colors.gray1,
                 this.colors.gray2,
@@ -2363,6 +2363,7 @@ Module.onRuntimeInitialized = async function() {
                 document.getElementById('tikz-export-display').style.display = 'none';
             });
 
+
             // Export modal event listeners (keep for backward compatibility)
             document.getElementById('copy-to-clipboard').addEventListener('click', () => {
                 this.copyToClipboard();
@@ -2702,14 +2703,16 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
+
         exportTikz() {
             try {
                 const params = this.wasm.getParameters();
                 const paths = this.wasm.getPaths();
                 const currentPalette = this.visualizer.getCurrentPalette();
                 const borderWidth = parseFloat(document.getElementById('border-width').value);
+                const showBorder = borderWidth > 0;
 
-                const tikzCode = this.generateTikzCode(paths, params, currentPalette, borderWidth);
+                const tikzCode = this.generateTikzFromCanvas(params, paths, currentPalette, borderWidth, showBorder);
 
                 // Show TikZ export display
                 document.getElementById('tikz-export-textarea').value = tikzCode;
@@ -2721,13 +2724,13 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        generateTikzCode(paths, params, palette, borderWidth) {
+        generateTikzFromCanvas(params, paths, palette, borderWidth, showBorder) {
             const N = params.N;
             const T = params.T;
             const S = params.S;
             const sqrt3 = Math.sqrt(3);
 
-            let tikz = `% Lozenge tiling exported from simulation
+            let tikz = `% Lozenge tiling exported from canvas rendering
 % Parameters: N=${N}, T=${T}, S=${S}, q=${params.q}
 % Generated on ${new Date().toISOString()}
 
@@ -2738,96 +2741,100 @@ Module.onRuntimeInitialized = async function() {
 
 `;
 
-            // Define colors from palette
+            // Define colors from palette (exactly as rendered on canvas)
             const [color1, color2, color3] = palette;
             const rgb1 = this.hexToRGB(color1);
             const rgb2 = this.hexToRGB(color2);
             const rgb3 = this.hexToRGB(color3);
             
-            // Get the border color using the same logic as the visualizer
+            // Get border color exactly as used in canvas
             const borderColor = this.visualizer.getBorderColor();
             const borderRgb = this.hexToRGB(borderColor);
 
-            tikz += `% Define colors
-\\definecolor{gray1}{RGB}{${rgb1[0]},${rgb1[1]},${rgb1[2]}}
-\\definecolor{gray2}{RGB}{${rgb2[0]},${rgb2[1]},${rgb2[2]}}
-\\definecolor{gray3}{RGB}{${rgb3[0]},${rgb3[1]},${rgb3[2]}}
+            tikz += `% Define colors (matching canvas rendering)
+\\definecolor{color1}{RGB}{${rgb1[0]},${rgb1[1]},${rgb1[2]}}
+\\definecolor{color2}{RGB}{${rgb2[0]},${rgb2[1]},${rgb2[2]}}
+\\definecolor{color3}{RGB}{${rgb3[0]},${rgb3[1]},${rgb3[2]}}
 \\definecolor{bordercolor}{RGB}{${borderRgb[0]},${borderRgb[1]},${borderRgb[2]}}
 
 `;
 
-            // First draw background horizontal rhombi (like the canvas version)
-            tikz += `% Background horizontal rhombi
+            // Render exactly as the canvas does: background horizontal rhombi first
+            tikz += `% Background horizontal rhombi (color3)
 `;
             for (let timeIdx = -1; timeIdx <= T; timeIdx++) {
                 for (let height = -(T - S + 2); height <= N + S + 2; height++) {
                     const x1 = timeIdx * 0.5 * sqrt3;
                     const y1 = height - timeIdx * 0.5;
-
-                    // Check if rhombus center is roughly within hexagon bounds
+                    
                     const centerX = x1 + 0.25 * sqrt3;
                     const centerY = y1 + 0.5;
-
+                    
                     if (this.isInsideHexagon(centerX, centerY, N, T, S)) {
-                        tikz += `\\fill[gray3`;
-                        if (borderWidth > 0) {
+                        tikz += `\\fill[color3`;
+                        if (showBorder && borderWidth > 0) {
                             tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
                         }
-                        tikz += `] (${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                        tikz += `] `;
+                        tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
                         tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 + 0.5).toFixed(3)}) -- `;
                         tikz += `(${(x1 + sqrt3).toFixed(3)}, ${y1.toFixed(3)}) -- `;
-                        tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 - 0.5).toFixed(3)}) -- cycle;\n`;
+                        tikz += `(${(x1 + 0.5 * sqrt3).toFixed(3)}, ${(y1 - 0.5).toFixed(3)}) -- cycle;
+`;
                     }
                 }
             }
 
-            tikz += `\n% Path-based rhombi
+            tikz += `
+% Path-based rhombi (colors 1 and 2)
 `;
 
-            // Draw the actual path-based rhombi (like drawRhombus)
+            // Render path-based rhombi exactly as canvas does
             for (let timeIdx = 0; timeIdx < T; timeIdx++) {
                 for (let particleIdx = 0; particleIdx < N; particleIdx++) {
                     if (particleIdx < paths.length && timeIdx < paths[particleIdx].length - 1) {
                         const currentHeight = paths[particleIdx][timeIdx];
                         const nextHeight = paths[particleIdx][timeIdx + 1];
-
+                        
                         const x1 = timeIdx * 0.5 * sqrt3;
                         const y1 = currentHeight - timeIdx * 0.5;
                         const x2 = x1;
                         const y2 = y1 + 1;
-
+                        
                         let x3, y3, x4, y4, fillColor;
-
+                        
                         if (nextHeight === currentHeight) {
-                            // Down rhombus (gray1)
+                            // Down rhombus (color1)
                             x3 = x2 + 0.5 * sqrt3;
                             y3 = y2 - 0.5;
                             x4 = x1 + 0.5 * sqrt3;
                             y4 = y1 - 0.5;
-                            fillColor = 'gray1';
+                            fillColor = 'color1';
                         } else {
-                            // Up rhombus (gray2)
+                            // Up rhombus (color2)
                             x3 = x2 + 0.5 * sqrt3;
                             y3 = y2 + 0.5;
                             x4 = x1 + 0.5 * sqrt3;
                             y4 = y1 + 0.5;
-                            fillColor = 'gray2';
+                            fillColor = 'color2';
                         }
-
+                        
                         tikz += `\\fill[${fillColor}`;
-                        if (borderWidth > 0) {
+                        if (showBorder && borderWidth > 0) {
                             tikz += `, draw=bordercolor, line width=${borderWidth}pt`;
                         }
-                        tikz += `] (${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
+                        tikz += `] `;
+                        tikz += `(${x1.toFixed(3)}, ${y1.toFixed(3)}) -- `;
                         tikz += `(${x2.toFixed(3)}, ${y2.toFixed(3)}) -- `;
                         tikz += `(${x3.toFixed(3)}, ${y3.toFixed(3)}) -- `;
-                        tikz += `(${x4.toFixed(3)}, ${y4.toFixed(3)}) -- cycle;\n`;
+                        tikz += `(${x4.toFixed(3)}, ${y4.toFixed(3)}) -- cycle;
+`;
                     }
                 }
             }
 
-            // Draw hexagon border
-            const vertices = [
+            // Draw hexagon border exactly as canvas does
+            const hexagonVertices = [
                 {x: 0, y: 0},
                 {x: 0, y: N},
                 {x: S * 0.5 * sqrt3, y: N + S * 0.5},
@@ -2836,13 +2843,15 @@ Module.onRuntimeInitialized = async function() {
                 {x: (T - S) * 0.5 * sqrt3, y: -(T - S) * 0.5}
             ];
 
-            tikz += `\n% Hexagon border
+            tikz += `
+% Hexagon border
 \\draw[bordercolor, line width=${Math.max(borderWidth, 0.5)}pt] `;
-            for (let i = 0; i < vertices.length; i++) {
+            for (let i = 0; i < hexagonVertices.length; i++) {
                 if (i > 0) tikz += ' -- ';
-                tikz += `(${vertices[i].x.toFixed(3)}, ${vertices[i].y.toFixed(3)})`;
+                tikz += `(${hexagonVertices[i].x.toFixed(3)}, ${hexagonVertices[i].y.toFixed(3)})`;
             }
-            tikz += ' -- cycle;\n';
+            tikz += ` -- cycle;
+`;
 
             tikz += `
 \\end{tikzpicture}
@@ -2850,6 +2859,7 @@ Module.onRuntimeInitialized = async function() {
 
             return tikz;
         }
+
 
 
         hexToRGB(hex) {
@@ -2893,13 +2903,6 @@ Module.onRuntimeInitialized = async function() {
             return inside;
         }
 
-        rgbToTikzColor(rgb) {
-            const [r, g, b] = rgb;
-            const rNorm = (r / 255).toFixed(3);
-            const gNorm = (g / 255).toFixed(3);
-            const bNorm = (b / 255).toFixed(3);
-            return `fill={rgb,255:red,${r};green,${g};blue,${b}}`;
-        }
 
         copyToClipboard() {
             try {
@@ -2983,6 +2986,7 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
+
         copyTikzToClipboard() {
             try {
                 const textarea = document.getElementById('tikz-export-textarea');
@@ -3030,6 +3034,24 @@ Module.onRuntimeInitialized = async function() {
             if (button) {
                 const originalText = button.textContent;
                 button.textContent = '✓ Copied!';
+                button.style.background = '#4CAF50';
+                button.style.color = 'white';
+                button.style.borderColor = '#4CAF50';
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                    button.style.color = '';
+                    button.style.borderColor = '';
+                }, 2000);
+            }
+        }
+
+        showSuccessFeedback(buttonId, message) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                const originalText = button.textContent;
+                button.textContent = '✓ ' + message;
                 button.style.background = '#4CAF50';
                 button.style.color = 'white';
                 button.style.borderColor = '#4CAF50';
