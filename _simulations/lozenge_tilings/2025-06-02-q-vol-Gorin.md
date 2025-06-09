@@ -337,10 +337,6 @@ code:
       height: 16px;
     }
 
-    #export-inline-textarea {
-      height: 150px !important;
-      font-size: 11px !important;
-    }
 
     /* Custom color panel mobile optimization */
     .custom-colors-panel {
@@ -897,17 +893,7 @@ The sampler works entirely in your browser using WebAssembly.
       <summary><div class="control-group-title">Export</div></summary>
       <div class="content">
         <div class="button-row">
-          <button id="export">Export Plane Partition</button>
           <button id="export-tikz">Export TikZ</button>
-        </div>
-        <div id="export-display" style="display: none; margin-top: 12px;">
-          <div style="margin-bottom: 8px; font-weight: 600; color: #666;">Plane Partition Matrix:</div>
-          <textarea id="export-inline-textarea" readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; resize: vertical; background: #f8f9fa;"></textarea>
-          <div style="margin-top: 8px; display: flex; gap: 8px;">
-            <button id="copy-inline-clipboard">Copy to Clipboard</button>
-            <button id="download-inline-file">Download File</button>
-            <button id="hide-export">Hide</button>
-          </div>
         </div>
         <div id="tikz-export-display" style="display: none; margin-top: 12px;">
           <div style="margin-bottom: 8px; font-weight: 600; color: #666;">TikZ Code:</div>
@@ -1171,10 +1157,6 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        exportPlanePartition() {
-            // Return current paths as plane partition
-            return this.paths;
-        }
 
         static transposeMatrix(matrix) {
             if (matrix.length === 0) return [];
@@ -2315,9 +2297,6 @@ Module.onRuntimeInitialized = async function() {
                 this.stepMinusForward();
             });
 
-            document.getElementById('export').addEventListener('click', () => {
-                this.exportPlanePartition();
-            });
 
             document.getElementById('export-tikz').addEventListener('click', () => {
                 this.exportTikz();
@@ -2338,18 +2317,6 @@ Module.onRuntimeInitialized = async function() {
                 this.redraw();
             });
 
-            // Inline export event listeners
-            document.getElementById('copy-inline-clipboard').addEventListener('click', () => {
-                this.copyInlineToClipboard();
-            });
-
-            document.getElementById('download-inline-file').addEventListener('click', () => {
-                this.downloadInlineFile();
-            });
-
-            document.getElementById('hide-export').addEventListener('click', () => {
-                document.getElementById('export-display').style.display = 'none';
-            });
 
             document.getElementById('copy-tikz-clipboard').addEventListener('click', () => {
                 this.copyTikzToClipboard();
@@ -2682,26 +2649,6 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        exportPlanePartition() {
-            try {
-                const partition = this.wasm.exportPlanePartition();
-                const transposed = WASMInterface.transposeMatrix(partition);
-
-                let text = '';
-                for (let row of transposed) {
-                    text += row.join('\t') + '\n';
-                }
-
-                // Show inline export display
-                document.getElementById('export-inline-textarea').value = text;
-                document.getElementById('export-display').style.display = 'block';
-                document.getElementById('tikz-export-display').style.display = 'none';
-
-            } catch (error) {
-                const errorMessage = error?.message || error?.toString() || 'Unknown error';
-                alert('Export error: ' + errorMessage);
-            }
-        }
 
 
         exportTikz() {
@@ -2717,7 +2664,6 @@ Module.onRuntimeInitialized = async function() {
                 // Show TikZ export display
                 document.getElementById('tikz-export-textarea').value = tikzCode;
                 document.getElementById('tikz-export-display').style.display = 'block';
-                document.getElementById('export-display').style.display = 'none';
             } catch (error) {
                 const errorMessage = error?.message || error?.toString() || 'Unknown error';
                 this.showErrorFeedback('export-tikz', 'Export failed: ' + errorMessage);
@@ -3016,46 +2962,6 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
-        copyInlineToClipboard() {
-            try {
-                const textarea = document.getElementById('export-inline-textarea');
-                textarea.select();
-                textarea.setSelectionRange(0, 99999); // For mobile devices
-
-                if (navigator.clipboard && window.isSecureContext) {
-                    // Use modern clipboard API if available
-                    navigator.clipboard.writeText(textarea.value).then(() => {
-                        this.showCopyFeedback('copy-inline-clipboard');
-                    }).catch(() => {
-                        // Fallback to execCommand
-                        document.execCommand('copy');
-                        this.showCopyFeedback('copy-inline-clipboard');
-                    });
-                } else {
-                    // Fallback for older browsers
-                    document.execCommand('copy');
-                    this.showCopyFeedback('copy-inline-clipboard');
-                }
-            } catch (error) {
-                this.showErrorFeedback('copy-inline-clipboard', 'Failed to copy');
-            }
-        }
-
-        downloadInlineFile() {
-            try {
-                const text = document.getElementById('export-inline-textarea').value;
-                const blob = new Blob([text], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `plane_partition_N${this.wasm.getParameters().N}_T${this.wasm.getParameters().T}_S${this.wasm.getParameters().S}.txt`;
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (error) {
-                const errorMessage = error?.message || error?.toString() || 'Unknown error';
-                alert('Download error: ' + errorMessage);
-            }
-        }
 
 
         copyTikzToClipboard() {
