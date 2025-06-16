@@ -64,7 +64,8 @@ const ColorSchemes = [
     { name: 'Cornell', colors: ['#b31b1b', '#ffffff', '#222222'] },
     { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] },
     { name: 'Northeastern', colors: ['#cc0000', '#000000', '#ffffff'] },
-    { name: 'Duke', colors: ['#012169', '#00539B', '#E2E6ED'] }
+    { name: 'Duke', colors: ['#012169', '#00539B', '#E2E6ED'] },
+    { name: 'Notre Dame', colors: ['#0c2340', '#c99700', '#00843d'] }
 ];
 
 // Export for module systems (if needed)
