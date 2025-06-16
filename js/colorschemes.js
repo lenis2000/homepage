@@ -1,9 +1,9 @@
 /**
  * Color Schemes for Simulations
- * 
+ *
  * This file contains various color palettes used across different simulations.
  * Each color scheme contains a name and an array of colors.
- * 
+ *
  * Currently used by:
  * - _simulations/lozenge_tilings/2025-06-02-q-vol-Gorin.md
  * - _simulations/lozenge_tilings/2025-06-08-q-vol-3d.md
@@ -30,7 +30,7 @@ const ColorSchemes = [
     { name: 'Sage Green', colors: ['#9CAF88', '#87A96B', '#F5F5F5'] },
     { name: 'Amber Glow', colors: ['#FFBF00', '#FF8C00', '#FFFACD'] },
     { name: 'Steel Blue', colors: ['#4682B4', '#6495ED', '#F0F8FF'] },
-    
+
     // Flag-Inspired Palettes
     { name: 'Italy', colors: ['#009246', '#FFFFFF', '#CE2B37'] },
     { name: 'France', colors: ['#0055A4', '#FFFFFF', '#EF4135'] },
@@ -41,7 +41,7 @@ const ColorSchemes = [
     { name: 'South Korea', colors: ['#CD2E3A', '#0047A0', '#FFFFFF', '#000000'] },
     { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169'] },
     { name: 'Argentina', colors: ['#74ACDF', '#FFFFFF', '#F6B40E'] },
-    
+
     // Popular Coding Themes
     { name: 'Dracula', colors: ['#282a36', '#8be9fd', '#50fa7b'] },
     { name: 'Monokai', colors: ['#272822', '#f92672', '#a6e22e'] },
@@ -51,7 +51,7 @@ const ColorSchemes = [
     { name: 'Nord', colors: ['#2e3440', '#5e81ac', '#a3be8c'] },
     { name: 'Gruvbox Dark', colors: ['#282828', '#fe8019', '#b8bb26'] },
     { name: 'Atom One Light', colors: ['#fafafa', '#e45649', '#50a14f'] },
-    
+
     // University Color Palettes
     { name: 'Harvard', colors: ['#a51c30', '#ffffff', '#8c8b8b'] },
     { name: 'MIT', colors: ['#8a8b8c', '#a31f34', '#000000'] },
@@ -65,7 +65,7 @@ const ColorSchemes = [
     { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e'] },
     { name: 'Northeastern', colors: ['#cc0000', '#000000', '#ffffff'] },
     { name: 'Duke', colors: ['#012169', '#00539B', '#E2E6ED'] },
-    { name: 'Notre Dame', colors: ['#0c2340', '#c99700', '#00843d'] }
+    { name: 'Notre Dame', colors: ['#0c2340', '#ae9142', '#d39f10'] }
 ];
 
 // Export for module systems (if needed)
