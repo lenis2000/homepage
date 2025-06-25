@@ -172,7 +172,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
   <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
   <!-- Updated input: starting value 24, even numbers only (step=2), three-digit window (size=3), maximum 400 -->
   <input id="n-input" type="number" value="24" min="2" step="2" max="400" size="3">
-  <button id="update-btn">Update</button>
+  <button id="resample-btn">Resample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
@@ -266,7 +266,6 @@ Module.onRuntimeInitialized = async function() {
   let useHeightFunction = false; // Track height function visibility state
   let currentDominoes = []; // Store current dominoes for toggling colors
   let isProcessing = false; // Flag to prevent multiple simultaneous updates
-  let lastValue = parseInt(inputField.value, 10); // Track last processed value
   let checkerboardGroup; // Group for checkerboard squares
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
@@ -551,9 +550,9 @@ Module.onRuntimeInitialized = async function() {
 
   function startSimulation() {
     simulationActive = true;
-    const updateBtn = document.getElementById("update-btn");
+    const resampleBtn = document.getElementById("resample-btn");
 
-    updateBtn.disabled = true;
+    resampleBtn.disabled = true;
     inputField.disabled = true;
     cancelBtn.style.display = 'inline-block';
 
@@ -562,10 +561,10 @@ Module.onRuntimeInitialized = async function() {
 
   function stopSimulation() {
     simulationActive = false;
-    const updateBtn = document.getElementById("update-btn");
+    const resampleBtn = document.getElementById("resample-btn");
 
     clearInterval(progressInterval);
-    updateBtn.disabled = false;
+    resampleBtn.disabled = false;
     inputField.disabled = false;
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
@@ -1461,8 +1460,6 @@ Module.onRuntimeInitialized = async function() {
       // Clear progress indicator once done.
       if (!signal.aborted) {
         progressElem.innerText = "";
-        // Update last processed value
-        lastValue = n;
       }
     } catch (error) {
       if (!signal.aborted) {
@@ -1473,8 +1470,8 @@ Module.onRuntimeInitialized = async function() {
       if (!signal.aborted) {
         // Reset simulation state if not already cancelled
         simulationActive = false;
-        const updateBtn = document.getElementById("update-btn");
-        updateBtn.disabled = false;
+        const resampleBtn = document.getElementById("resample-btn");
+        resampleBtn.disabled = false;
         inputField.disabled = false;
         cancelBtn.style.display = 'none';
         isProcessing = false;
@@ -1486,34 +1483,31 @@ Module.onRuntimeInitialized = async function() {
   function processInput() {
     const newN = parseInt(inputField.value, 10);
 
-    // Skip if the value hasn't changed
-    if (newN === lastValue) return;
-
     // Check for a valid positive even number.
     if (isNaN(newN) || newN < 2) {
       progressElem.innerText = "Please enter a valid positive even number for n (n ≥ 2).";
-      return;
+      return false;
     }
     if (newN % 2 !== 0) {
       progressElem.innerText = "Please enter an even number for n.";
-      return;
+      return false;
     }
     if (newN > 400) {
       progressElem.innerText = "Please enter a number no greater than 400.";
-      return;
+      return false;
     }
 
-    updateVisualization(newN);
+    // Clear any error messages
+    progressElem.innerText = "";
+    return true;
   }
 
-  // Set up event listeners for input changes
-  inputField.addEventListener("input", processInput);
-  inputField.addEventListener("change", processInput);
-
-  // Make sure the update button always triggers a new sample, even if value hasn't changed
-  document.getElementById("update-btn").addEventListener("click", function() {
-    // Force a resample even if the value hasn't changed
-    updateVisualization(parseInt(inputField.value, 10));
+  // Resample button triggers a new sample with current n value
+  document.getElementById("resample-btn").addEventListener("click", function() {
+    const newN = parseInt(inputField.value, 10);
+    if (processInput()) {
+      updateVisualization(newN);
+    }
   });
 
   // Add cancel button event listener
@@ -1521,9 +1515,8 @@ Module.onRuntimeInitialized = async function() {
     stopSimulation();
   });
 
-  // Run an initial simulation.
-  const initialN = parseInt(inputField.value, 10);
-  updateVisualization(initialN);
+  // Initial message - no automatic simulation
+  progressElem.innerText = "Click 'Resample' to generate a domino tiling";
 
   // Make sure both tab views are properly initialized once
   setTimeout(() => {
