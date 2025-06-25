@@ -107,6 +107,12 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
       <label style="margin-left: 10px;">Value 2: <input type="number" id="regime1-val2" value="1" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Prob 1: <input type="number" id="regime1-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Prob 2: <input type="number" id="regime1-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 60px;"></label>
+      <div style="margin-top: 8px; padding: 8px; background-color: #f0f8ff; border-left: 3px solid #4169e1; font-size: 0.85em;">
+        <strong>Formula:</strong><br>
+        • With probability <strong>Prob 1</strong>: weight = <strong>Value 1</strong> + 2/√N<br>
+        • With probability <strong>Prob 2</strong>: weight = <strong>Value 2</strong> - 1/√N<br>
+        <em>Your inputs directly replace the base values in the scaling formulas.</em>
+      </div>
     </div>
   </div>
 
@@ -121,6 +127,12 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
       <label>Value 1: <input type="number" id="regime2-val1" value="2" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Value 2: <input type="number" id="regime2-val2" value="1" step="0.1" style="width: 60px;"></label>
       <span style="margin-left: 10px; font-size: 0.9em; color: #666;">(Probabilities auto-computed)</span>
+      <div style="margin-top: 8px; padding: 8px; background-color: #f0f8ff; border-left: 3px solid #4169e1; font-size: 0.85em;">
+        <strong>Formula:</strong><br>
+        • With probability <strong>1/√N</strong>: weight = <strong>Value 1</strong><br>
+        • With probability <strong>(√N-1)/√N</strong>: weight = <strong>Value 2</strong><br>
+        <em>Probabilities automatically computed based on N. Your values are used directly as weights.</em>
+      </div>
     </div>
   </div>
 
@@ -136,6 +148,12 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
       <label style="margin-left: 10px;">Value 2: <input type="number" id="regime3-val2" value="0.5" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Prob 1: <input type="number" id="regime3-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Prob 2: <input type="number" id="regime3-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 60px;"></label>
+      <div style="margin-top: 8px; padding: 8px; background-color: #f0f8ff; border-left: 3px solid #4169e1; font-size: 0.85em;">
+        <strong>Formula:</strong><br>
+        • With probability <strong>Prob 1</strong>: weight = <strong>Value 1</strong><br>
+        • With probability <strong>Prob 2</strong>: weight = <strong>Value 2</strong><br>
+        <em>Simple Bernoulli distribution. Your values and probabilities are used directly.</em>
+      </div>
     </div>
   </div>
 
@@ -149,6 +167,12 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
     <div id="regime4-params" style="margin-left: 25px; display: none;">
       <label>Weight 1 (w₁): <input type="number" id="regime4-w1" value="2" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Weight 2 (w₂): <input type="number" id="regime4-w2" value="0.5" step="0.1" style="width: 60px;"></label>
+      <div style="margin-top: 8px; padding: 8px; background-color: #f0f8ff; border-left: 3px solid #4169e1; font-size: 0.85em;">
+        <strong>Pattern:</strong><br>
+        • Position 0, 2, 4, 6, ... → weight = <strong>Weight 1 (w₁)</strong><br>
+        • Position 1, 3, 5, 7, ... → weight = <strong>Weight 2 (w₂)</strong><br>
+        <em>Deterministic alternating sequence. Your weights create a fixed periodic pattern.</em>
+      </div>
     </div>
   </div>
 
@@ -162,6 +186,12 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
     <div id="regime5-params" style="margin-left: 25px; display: none;">
       <label>Min (a): <input type="number" id="regime5-min" value="0" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Max (b): <input type="number" id="regime5-max" value="1" step="0.1" style="width: 60px;"></label>
+      <div style="margin-top: 8px; padding: 8px; background-color: #f0f8ff; border-left: 3px solid #4169e1; font-size: 0.85em;">
+        <strong>Distribution:</strong><br>
+        • Each weight ~ Uniform[<strong>Min (a)</strong>, <strong>Max (b)</strong>]<br>
+        • All weights are independent random draws<br>
+        <em>Continuous uniform distribution between your specified bounds.</em>
+      </div>
     </div>
   </div>
 
