@@ -388,10 +388,14 @@ permalink: /domino/
 
 <!-- TikZ Code Generation Section -->
 <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
-  <h3 style="margin-top: 0;">TikZ Code Generation</h3>
+  <h3 style="margin-top: 0;">Export</h3>
 
   <div style="margin-top: 10px; margin-bottom: 10px;">
-    <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+      <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
+      <button id="download-png-btn" style="padding: 6px 12px; background-color: #e83e8c; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Download 2D in PNG</button>
+      <button id="download-3d-btn" style="padding: 6px 12px; background-color: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer;">Download 3D Screenshot</button>
+    </div>
     <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
       <button id="copy-tikz-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy to Clipboard</button>
       <button id="download-tikz-btn" style="margin-left: 10px; padding: 6px 12px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">Download .tex File</button>
@@ -1576,6 +1580,10 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("view-3d-btn").classList.add("active");
     document.getElementById("view-2d-btn").classList.remove("active");
 
+    // Show/hide appropriate download buttons
+    document.getElementById("download-png-btn").style.display = "none";
+    document.getElementById("download-3d-btn").style.display = "inline-block";
+
     // Set the max n for 3D view
     document.getElementById("n-input").setAttribute("max", "300");
 
@@ -2497,6 +2505,10 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("view-3d-btn").classList.remove("active");
     document.getElementById("view-2d-btn").classList.add("active");
 
+    // Show/hide appropriate download buttons
+    document.getElementById("download-png-btn").style.display = "inline-block";
+    document.getElementById("download-3d-btn").style.display = "none";
+
     // Set the max n for 2D view
     document.getElementById("n-input").setAttribute("max", "500");
 
@@ -3388,6 +3400,125 @@ Module.onRuntimeInitialized = async function() {
     a.href = URL.createObjectURL(blob);
     a.click();
     URL.revokeObjectURL(a.href);
+  });
+
+  // Add event listener for PNG download button
+  document.getElementById("download-png-btn").addEventListener("click", function() {
+    // Get the SVG element
+    const svg = document.getElementById("aztec-svg-2d");
+    
+    // Check if SVG has content (dominoes have been drawn)
+    if (!svg || !cachedDominoes || cachedDominoes.length === 0) {
+      alert("Please sample a domino tiling first by clicking the 'Sample' button.");
+      return;
+    }
+    
+    // Get current parameters for filename
+    const n = parseInt(document.getElementById("n-input").value) || 12;
+    const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
+    
+    // Create filename with parameters
+    const filename = `aztec_diamond_2d_n${n}_${periodicity}.png`;
+    
+    // Clone the SVG to avoid modifying the original
+    const svgClone = svg.cloneNode(true);
+    
+    // Get the SVG's computed dimensions
+    const svgRect = svg.getBoundingClientRect();
+    const width = svgRect.width || 800;
+    const height = svgRect.height || 600;
+    
+    // Set explicit dimensions on the cloned SVG
+    svgClone.setAttribute('width', width);
+    svgClone.setAttribute('height', height);
+    
+    // Ensure the SVG has proper namespace
+    if (!svgClone.getAttribute('xmlns')) {
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+    
+    // Create a canvas element with maximum resolution for best quality
+    const canvas = document.createElement('canvas');
+    const scale = 4; // 4x resolution for maximum quality
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    
+    // Enable high-quality rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.scale(scale, scale);
+    
+    // Convert SVG to data URL with proper encoding
+    const svgData = new XMLSerializer().serializeToString(svgClone);
+    const encodedSvgData = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    
+    // Create an image and load the SVG
+    const img = new Image();
+    img.onload = function() {
+      // Fill with white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, width, height);
+      
+      // Draw the SVG image
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert canvas to PNG with maximum quality (no compression)
+      canvas.toBlob(function(blob) {
+        if (blob) {
+          const a = document.createElement('a');
+          a.download = filename;
+          a.href = URL.createObjectURL(blob);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+        } else {
+          alert('Error creating PNG file');
+        }
+      }, 'image/png', 1.0); // Maximum quality (no compression)
+    };
+    
+    img.onerror = function() {
+      alert('Error loading SVG for conversion');
+    };
+    
+    img.src = encodedSvgData;
+  });
+
+  // Add event listener for 3D download button
+  document.getElementById("download-3d-btn").addEventListener("click", function() {
+    // Check if 3D scene exists and has content
+    if (!renderer || !scene || !cachedDominoes || cachedDominoes.length === 0) {
+      alert("Please sample a domino tiling first by clicking the 'Sample' button.");
+      return;
+    }
+
+    // Get current parameters for filename
+    const n = parseInt(document.getElementById("n-input").value) || 12;
+    const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
+    
+    // Create filename with parameters
+    const filename = `aztec_diamond_3d_n${n}_${periodicity}.png`;
+
+    // Render the current frame
+    renderer.render(scene, camera);
+    
+    // Get the canvas and convert to blob
+    const canvas = renderer.domElement;
+    canvas.toBlob(function(blob) {
+      if (blob) {
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      } else {
+        alert('Error creating PNG file from 3D view');
+      }
+    }, 'image/png', 0.95);
   });
 };
 
