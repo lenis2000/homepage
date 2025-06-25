@@ -296,25 +296,18 @@ char* simulateAztecWithRegime(int n, int regime, double param1, double param2, d
                     break;
                 }
                 case 4: {
-                    // Regime 4: param1 with prob param3, param2 with prob param4
-                    // Default: param1=5, param2=0.2, param3=0.5, param4=0.5
-                    if (rnd < param3) {
-                        random_variables[k] = param1;
+                    // Regime 4: Deterministic periodic - alternating w1, w2, w1, w2, ...
+                    // param1 = w1, param2 = w2
+                    if (k % 2 == 0) {
+                        random_variables[k] = param1; // w1 for even positions
                     } else {
-                        random_variables[k] = param2;
+                        random_variables[k] = param2; // w2 for odd positions
                     }
                     break;
                 }
                 case 5: {
                     // Regime 5: Independent uniform on [param1, param2]
                     // Default: param1=0, param2=1
-                    std::uniform_real_distribution<> uniform_dis(param1, param2);
-                    random_variables[k] = uniform_dis(rng);
-                    break;
-                }
-                case 6: {
-                    // Regime 6: Independent uniform on [param1, param2]
-                    // Default: param1=0, param2=2
                     std::uniform_real_distribution<> uniform_dis(param1, param2);
                     random_variables[k] = uniform_dis(rng);
                     break;

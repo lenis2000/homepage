@@ -131,7 +131,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
       Parameter equals $v_1$ with probability $\frac{1}{2}$, and $v_2$ with probability $\frac{1}{2}$.
       <br><em>Balanced two-point distribution.</em>
     </p>
-    <div id="regime3-params" style="margin-left: 25px; display: none;">
+    <div id="regime3-params" style="margin-left: 25px; display: block;">
       <label>Value 1: <input type="number" id="regime3-val1" value="2" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Value 2: <input type="number" id="regime3-val2" value="0.5" step="0.1" style="width: 60px;"></label>
       <label style="margin-left: 10px;">Prob 1: <input type="number" id="regime3-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;"></label>
@@ -139,6 +139,18 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
     </div>
   </div>
 
+  <div style="margin-bottom: 15px;">
+    <input type="radio" id="regime4" name="regime" value="4">
+    <label for="regime4" style="margin-left: 5px; font-weight: bold;">Regime 4: Deterministic Periodic</label>
+    <p style="margin: 5px 0 10px 25px; font-size: 0.9em; color: #666;">
+      Deterministic periodic pattern: $w_1, w_2, w_1, w_2, w_1, w_2, \ldots$
+      <br><em>Fixed alternating weights with no randomness.</em>
+    </p>
+    <div id="regime4-params" style="margin-left: 25px; display: none;">
+      <label>Weight 1 (w₁): <input type="number" id="regime4-w1" value="2" step="0.1" style="width: 60px;"></label>
+      <label style="margin-left: 10px;">Weight 2 (w₂): <input type="number" id="regime4-w2" value="0.5" step="0.1" style="width: 60px;"></label>
+    </div>
+  </div>
 
   <div style="margin-bottom: 15px;">
     <input type="radio" id="regime5" name="regime" value="5">
@@ -428,7 +440,7 @@ Module.onRuntimeInitialized = async function() {
   let n = parseInt(inputField.value, 10);
 
   // Regime selection and parameter management
-  let currentRegime = 4; // Default to regime 4 (high contrast)
+  let currentRegime = 3; // Default to regime 3 (balanced Bernoulli)
   
   // Add event listeners for regime radio buttons
   document.querySelectorAll('input[name="regime"]').forEach(radio => {
@@ -436,7 +448,7 @@ Module.onRuntimeInitialized = async function() {
       if (this.checked) {
         currentRegime = parseInt(this.value);
         // Hide all parameter divs
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 1; i <= 5; i++) {
           const paramDiv = document.getElementById(`regime${i}-params`);
           if (paramDiv) {
             paramDiv.style.display = 'none';
@@ -476,20 +488,14 @@ Module.onRuntimeInitialized = async function() {
         param4 = parseFloat(document.getElementById('regime3-prob2').value) || 0.5;
         break;
       case 4:
-        param1 = parseFloat(document.getElementById('regime4-val1').value) || 5;
-        param2 = parseFloat(document.getElementById('regime4-val2').value) || 0.2;
-        param3 = parseFloat(document.getElementById('regime4-prob1').value) || 0.5;
-        param4 = parseFloat(document.getElementById('regime4-prob2').value) || 0.5;
+        param1 = parseFloat(document.getElementById('regime4-w1').value) || 2;
+        param2 = parseFloat(document.getElementById('regime4-w2').value) || 0.5;
+        param3 = 0; // Unused for deterministic
+        param4 = 0; // Unused for deterministic
         break;
       case 5:
         param1 = parseFloat(document.getElementById('regime5-min').value) || 0;
         param2 = parseFloat(document.getElementById('regime5-max').value) || 1;
-        param3 = 0; // Unused for uniform
-        param4 = 0; // Unused for uniform
-        break;
-      case 6:
-        param1 = parseFloat(document.getElementById('regime6-min').value) || 0;
-        param2 = parseFloat(document.getElementById('regime6-max').value) || 2;
         param3 = 0; // Unused for uniform
         param4 = 0; // Unused for uniform
         break;
