@@ -1328,6 +1328,187 @@ Module.onRuntimeInitialized = async function() {
     }
   }, 1000);
 
+  // SVG to TikZ conversion function for dual grid dimers
+  function dimerToTikZ() {
+    if (!currentDominoes || currentDominoes.length === 0) {
+      alert("Please generate a domino tiling first.");
+      return;
+    }
+
+    // Check if n is too large for dimer view
+    if (n >= 52) {
+      alert("n is too large for dimer TikZ export (n >= 52). Please use a smaller value.");
+      return;
+    }
+
+    // Convert dominoes to dimer lines for the dual grid
+    const dimerLines = [];
+    
+    currentDominoes.forEach(domino => {
+      // Skip dominoes that are out of reasonable bounds
+      if (Math.abs(domino.x) > 1000 || Math.abs(domino.y) > 1000) {
+        return;
+      }
+
+      // Determine if it's a horizontal or vertical domino
+      const isHorizontal = domino.w > domino.h;
+
+      // Calculate center point for the domino in dual grid coordinates
+      const centerX = domino.x / 20;
+      const centerY = -domino.y / 20;  // Flip Y since coordinate system is inverted
+
+      // Calculate dimer endpoints based on orientation
+      let x1, y1, x2, y2;
+
+      if (isHorizontal) {
+        // For horizontal dominos
+        x1 = centerX - 0.5;
+        y1 = centerY;
+        x2 = centerX + 0.5;
+        y2 = centerY;
+      } else {
+        // For vertical dominos
+        x1 = centerX;
+        y1 = centerY - 0.5;
+        x2 = centerX;
+        y2 = centerY + 0.5;
+      }
+
+      // Adjust coordinates to match the dual grid positioning from renderDimerView
+      const scale = 1; // We'll handle scaling in TikZ
+      dimerLines.push({
+        x1: isHorizontal ? (x1 + 1/2) : x1,
+        y1: isHorizontal ? (y1 + 1) : (y1 + 1/2),
+        x2: isHorizontal ? (x2 + 1/2) : x2,
+        y2: isHorizontal ? (y2 + 1) : (y2 + 1/2),
+        isHorizontal: isHorizontal
+      });
+    });
+
+    console.log(`Generated ${dimerLines.length} dimer lines for TikZ export`);
+
+    if (dimerLines.length === 0) {
+      alert("No dimer elements found to convert.");
+      return;
+    }
+
+    // Find the bounds of the drawing
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+    dimerLines.forEach(line => {
+      minX = Math.min(minX, line.x1, line.x2);
+      maxX = Math.max(maxX, line.x1, line.x2);
+      minY = Math.min(minY, line.y1, line.y2);
+      maxY = Math.max(maxY, line.y1, line.y2);
+    });
+
+    // Calculate a good scale factor
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const maxDimension = Math.max(width, height);
+    const scaleFactor = 15.0 / maxDimension;
+
+    // Generate TikZ code for dual grid dimers
+    let tikzCode = `\\documentclass{standalone}
+\\usepackage{tikz}
+
+\\begin{document}
+\\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]
+
+% Aztec Diamond Dual Grid Dimer Configuration (n=${n})
+% Generated from ${dimerLines.length} dimers
+
+`;
+
+    // First, add the underlying grid structure
+    tikzCode += "% Underlying grid\n";
+    
+    // Generate all grid edges that should be visible
+    const gridEdges = new Set();
+    const gridVertices = new Set();
+    
+    // For each vertex in the Aztec diamond grid, check if it's within bounds
+    for (let i = -n; i <= n; i++) {
+      for (let j = -n; j <= n; j++) {
+        if (Math.abs(i) + Math.abs(j) <= n + 1 &&
+            i + j <= n &&
+            i - j < n &&
+            -j - i < n + 1) {
+          
+          const x = i;
+          const y = j;
+          gridVertices.add(`${x},${y}`);
+          
+          // Check horizontal edge to the right
+          if (Math.abs(i+1) + Math.abs(j) <= n + 1 &&
+              (i+1) + j <= n &&
+              (i+1) - j < n &&
+              -j - (i+1) < n + 1) {
+            gridEdges.add(`${x},${y},${x+1},${y}`);
+          }
+          
+          // Check vertical edge up
+          if (Math.abs(i) + Math.abs(j+1) <= n + 1 &&
+              i + (j+1) <= n &&
+              i - (j+1) < n &&
+              -(j+1) - i < n + 1) {
+            gridEdges.add(`${x},${y},${x},${y+1}`);
+          }
+        }
+      }
+    }
+    
+    // Draw all grid edges with thicker lines
+    gridEdges.forEach(edge => {
+      const [x1, y1, x2, y2] = edge.split(',').map(Number);
+      const tx1 = x1 - minX;
+      const ty1 = maxY - y1;
+      const tx2 = x2 - minX;
+      const ty2 = maxY - y2;
+      tikzCode += `\\draw[gray!60, line width=1.6pt] (${tx1.toFixed(2)}, ${ty1.toFixed(2)}) -- (${tx2.toFixed(2)}, ${ty2.toFixed(2)});\n`;
+    });
+
+    // Add grid vertices (black dots) with 5x larger radius
+    tikzCode += "\n% Grid vertices\n";
+    gridVertices.forEach(vertex => {
+      const [x, y] = vertex.split(',').map(Number);
+      const tx = x - minX;
+      const ty = maxY - y;
+      tikzCode += `\\fill (${tx.toFixed(2)}, ${ty.toFixed(2)}) circle (4pt);\n`;
+    });
+
+    tikzCode += "\n% Dimer edges (3x thicker)\n";
+    
+    // Add dimer lines with 3x thickness
+    dimerLines.forEach((line, index) => {
+      // Shift and invert coordinates to match TikZ coordinate system
+      const x1 = line.x1 - minX;
+      const y1 = maxY - line.y1;
+      const x2 = line.x2 - minX;
+      const y2 = maxY - line.y2;
+
+      tikzCode += `\\draw[black, line width=6pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+    });
+
+    tikzCode += `
+\\end{tikzpicture}
+\\end{document}`;
+
+    // Update the TikZ code in the code container
+    const tikzCodeContainer = document.getElementById('tikz-code-container');
+    if (tikzCodeContainer) {
+      tikzCodeContainer.textContent = tikzCode;
+    } else {
+      console.error("TikZ code container not found");
+    }
+
+    // Show the copy/download buttons
+    const buttonsContainer = document.getElementById('tikz-buttons-container');
+    if (buttonsContainer) {
+      buttonsContainer.style.display = 'block';
+    }
+  }
+
   // SVG to TikZ conversion function - directly adapted from the Python script at
   // /Users/leo/Homepage/LaTeX/Scripts/2025-04-14-SVG_to_TiKZ_domino_tiling_convert.py
   function svgToTikZ() {
@@ -1731,7 +1912,15 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listeners for the TikZ buttons
   document.getElementById("tikz-btn").addEventListener("click", function() {
-    svgToTikZ();
+    // Check which tab is currently active
+    const activeTab = document.querySelector('.tablinks.active');
+    const isDimerViewActive = activeTab && activeTab.textContent.includes('Dual Grid');
+    
+    if (isDimerViewActive) {
+      dimerToTikZ();
+    } else {
+      svgToTikZ();
+    }
 
     // Show the TikZ code container
     const codeContainer = document.getElementById('tikz-code-container');
