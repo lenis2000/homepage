@@ -132,10 +132,10 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
   <div style="margin-bottom: 15px;">
     <input type="radio" id="regime3" name="regime" value="3" checked>
-    <label for="regime3" style="margin-left: 5px; font-weight: bold;">Regime 3: Balanced Bernoulli (Default)</label>
+    <label for="regime3" style="margin-left: 5px; font-weight: bold;">Regime 3: Bernoulli (Default)</label>
     <p style="margin: 5px 0 10px 25px; font-size: 0.9em; color: #666;">
       Parameter equals $v_1$ with probability $\frac{1}{2}$, and $v_2$ with probability $\frac{1}{2}$.
-      <br><em>Balanced two-point distribution.</em>
+      <br><em>Two-point discrete distribution.</em>
     </p>
     <div id="regime3-params" style="margin-left: 25px; display: block;">
       <label>Value 1: <input type="number" id="regime3-val1" value="2" step="0.1" style="width: 60px;"></label>
@@ -172,7 +172,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
   <div style="margin-bottom: 15px;">
     <input type="radio" id="regime5" name="regime" value="5">
-    <label for="regime5" style="margin-left: 5px; font-weight: bold;">Regime 5: Uniform [0,1]</label>
+    <label for="regime5" style="margin-left: 5px; font-weight: bold;">Regime 5: Continuous uniform [a,b]</label>
     <p style="margin: 5px 0 10px 25px; font-size: 0.9em; color: #666;">
       Parameters are independent and uniform on $[a,b]$.
       <br><em>Continuous uniform distribution.</em>
