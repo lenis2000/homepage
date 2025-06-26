@@ -322,6 +322,9 @@ function setupInteraction() {
                 camera.x = worldX - (worldX - camera.x) * zoomChange;
                 camera.y = worldY - (worldY - camera.y) * zoomChange;
                 
+                // Show zoom indicator
+                showZoomIndicator();
+                
                 render();
             }
         }
