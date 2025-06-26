@@ -65,35 +65,29 @@ code:
     border: 1px solid #ccc;
     border-top: none;
   }
+
+  /* Make details element open by default on wider screens */
+  @media (min-width: 577px) {
+    #parameter-regimes-details[open] {
+      /* Keep it open on desktop */
+    }
+  }
 </style>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-06-25-random-edges.js"></script>
 
-The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
+This simulation generates random tilings with random edge weights via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
 I set the upper bound at $n=400$ to avoid freezing your browser.
-
-### Update 2025-04-14: TikZ Code Generation
-
-You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports <b>dominoes</b> and <b>nonintersecting paths</b> only.
-
-<div style="margin-top: 10px; margin-bottom: 10px;">
-  <button id="tikz-btn" class="btn btn-primary">Generate TikZ Code</button>
-  <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
-    <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
-    <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
-  </div>
-</div>
-
-<!-- TikZ code container that will be updated dynamically -->
-<div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 
 ---
 
 <!-- Parameter Regime Selection -->
-<div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
-  <h4 style="margin-top: 0;">Parameter Regimes</h4>
+<details id="parameter-regimes-details" style="margin-bottom: 20px;">
+  <summary style="cursor: pointer; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; font-weight: bold; font-size: 1.1em;">
+    Parameter Regimes
+  </summary>
+  <div style="padding: 15px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 5px 5px; background-color: #f9f9f9;">
   
   <div style="margin-bottom: 15px;">
     <input type="radio" id="regime1" name="regime" value="1">
@@ -195,13 +189,14 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
     </div>
   </div>
 
-</div>
+  </div>
+</details>
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
-  <!-- Updated input: starting value 24, even numbers only (step=2), three-digit window (size=3), maximum 400 -->
-  <input id="n-input" type="number" value="24" min="2" step="2" max="400" size="3">
+  <!-- Updated input: starting value 12, even numbers only (step=2), three-digit window (size=3), maximum 400 -->
+  <input id="n-input" type="number" value="12" min="2" step="2" max="400" size="3">
   <button id="resample-btn">Resample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -264,6 +259,19 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
       <svg id="aztec-svg"></svg>
     </div>
   </div>
+  
+  <!-- Export to TikZ button -->
+  <div style="margin-top: 10px; margin-bottom: 10px;">
+    <button id="tikz-btn" class="btn btn-primary">Export to TikZ</button>
+    <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
+      <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
+      <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
+      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    </div>
+  </div>
+
+  <!-- TikZ code container that will be updated dynamically -->
+  <div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 </div>
 
 <!-- Dimer View -->
@@ -2220,5 +2228,15 @@ Module.onRuntimeInitialized = async function() {
     a.click();
     URL.revokeObjectURL(a.href);
   });
+
+  // Open details element on wider screens
+  if (window.innerWidth >= 577) {
+    document.getElementById('parameter-regimes-details').open = true;
+  }
+
+  // Trigger initial sample on page load
+  setTimeout(() => {
+    document.getElementById("resample-btn").click();
+  }, 100);
 };
 </script>

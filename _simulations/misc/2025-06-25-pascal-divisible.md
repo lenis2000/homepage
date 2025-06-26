@@ -706,7 +706,6 @@ document.getElementById('rowsInput').addEventListener('input', function(e) {
 
 document.getElementById('modulusInput').addEventListener('input', function(e) {
     updateModulus(e.target.value);
-    drawVisualization();
 });
 
 // Also handle Enter key and blur events for immediate updates
@@ -720,7 +719,6 @@ document.getElementById('rowsInput').addEventListener('keypress', function(e) {
 document.getElementById('modulusInput').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         updateModulus(e.target.value);
-        drawVisualization();
     }
 });
 
