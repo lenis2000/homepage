@@ -135,6 +135,9 @@ let pixelBuffer = null;
 let triangleBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0, width: 0, height: 0 };
 let lastParams = { rows: 200, modulus: 2, dotSize: 1, spacing: 2 };
 let keysPressed = new Set();
+let touches = null;
+let initialPinchDistance = 0;
+let initialZoom = 1;
 
 // Initialize WebAssembly module
 async function initWasm() {
@@ -238,27 +241,95 @@ function setupInteraction() {
     // Touch events for mobile
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        touches = e.touches;
+        
         if (e.touches.length === 1) {
+            // Single touch - pan
             isDragging = true;
             dragStart.x = e.touches[0].clientX;
             dragStart.y = e.touches[0].clientY;
             cameraStart.x = camera.x;
             cameraStart.y = camera.y;
+        } else if (e.touches.length === 2) {
+            // Two touches - pinch zoom
+            isDragging = false;
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            initialPinchDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            initialZoom = camera.zoom;
         }
     });
     
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        if (isDragging && e.touches.length === 1) {
+        touches = e.touches;
+        
+        if (e.touches.length === 1 && isDragging) {
+            // Single touch pan
             camera.x = cameraStart.x + (e.touches[0].clientX - dragStart.x) / camera.zoom;
             camera.y = cameraStart.y + (e.touches[0].clientY - dragStart.y) / camera.zoom;
             render();
+        } else if (e.touches.length === 2) {
+            // Pinch zoom
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const currentDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            
+            if (initialPinchDistance > 0) {
+                const scale = currentDistance / initialPinchDistance;
+                const newZoom = initialZoom * scale;
+                
+                // Get pinch center in screen coordinates
+                const centerX = (touch1.clientX + touch2.clientX) / 2;
+                const centerY = (touch1.clientY + touch2.clientY) / 2;
+                const rect = canvas.getBoundingClientRect();
+                
+                // Convert to world coordinates
+                const worldX = (centerX - rect.left - rect.width/2) / camera.zoom - camera.x;
+                const worldY = (centerY - rect.top - rect.height/2) / camera.zoom - camera.y;
+                
+                // Apply zoom
+                camera.zoom = Math.max(0.1, Math.min(10, newZoom));
+                
+                // Adjust camera position to zoom towards pinch center
+                const zoomChange = camera.zoom / initialZoom;
+                camera.x = worldX - (worldX - camera.x) * zoomChange;
+                camera.y = worldY - (worldY - camera.y) * zoomChange;
+                
+                render();
+            }
         }
     });
     
     canvas.addEventListener('touchend', (e) => {
         e.preventDefault();
+        touches = e.touches;
+        
+        if (e.touches.length === 0) {
+            isDragging = false;
+            initialPinchDistance = 0;
+        } else if (e.touches.length === 1) {
+            // Switching from pinch to pan
+            isDragging = true;
+            dragStart.x = e.touches[0].clientX;
+            dragStart.y = e.touches[0].clientY;
+            cameraStart.x = camera.x;
+            cameraStart.y = camera.y;
+            initialPinchDistance = 0;
+        }
+    });
+    
+    canvas.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
         isDragging = false;
+        initialPinchDistance = 0;
+        touches = null;
     });
 
     // Zoom with mouse wheel
