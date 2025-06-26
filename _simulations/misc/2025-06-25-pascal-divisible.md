@@ -53,9 +53,26 @@ code:
         background-color: white;
         cursor: grab;
         position: relative;
+        touch-action: none;
     }
     #visualization:active {
         cursor: grabbing;
+    }
+    #zoomIndicator {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    #zoomIndicator.visible {
+        opacity: 1;
     }
     canvas {
         display: block;
