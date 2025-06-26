@@ -132,7 +132,9 @@ This simulation visualizes Pascal's triangle with dots colored based on whether 
     <button id="resetZoomBtn">Reset View</button>
 </div>
 
-<div id="visualization"></div>
+<div id="visualization">
+    <div id="zoomIndicator"></div>
+</div>
 
 <script>
 let rows = 200;
