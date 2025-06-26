@@ -104,6 +104,9 @@ code:
             padding: 10px 15px;
             font-size: 16px;
         }
+        #zoomIndicator {
+            font-size: 14px;
+        }
     }
     
     @media (max-width: 480px) {
@@ -456,7 +459,7 @@ function showZoomIndicator() {
 function zoomCamera(zoomFactor, worldX = 0, worldY = 0) {
     const oldZoom = camera.zoom;
     camera.zoom *= zoomFactor;
-    camera.zoom = Math.max(0.1, Math.min(10, camera.zoom));
+    camera.zoom = Math.max(0.2, Math.min(5, camera.zoom));
 
     // Adjust camera position to zoom towards focal point
     if (worldX !== 0 || worldY !== 0) {
@@ -661,15 +664,22 @@ function resetView() {
     const centerX = width / 2;
     const centerY = height / 2;
 
-    // Calculate zoom to fit
+    // Calculate zoom to fit with mobile-friendly limits
     const zoomX = (rect.width * 0.8) / width;
     const zoomY = (rect.height * 0.8) / height;
-    camera.zoom = Math.min(zoomX, zoomY, 1);
+    const isMobile = window.innerWidth <= 768;
+    const maxInitialZoom = isMobile ? 0.8 : 1;
+    
+    camera.zoom = Math.min(zoomX, zoomY, maxInitialZoom);
+    camera.zoom = Math.max(0.2, Math.min(5, camera.zoom));
 
     // Center the view
     camera.x = -centerX;
     camera.y = -centerY;
 
+    // Show zoom indicator
+    showZoomIndicator();
+    
     render();
 }
 
