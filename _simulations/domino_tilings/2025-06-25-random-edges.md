@@ -1,5 +1,5 @@
 ---
-title: Domino tilings of the Aztec diamond with random one-periodic edges
+title: Domino tilings of the Aztec diamond with random one-periodic edge weights
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
