@@ -157,6 +157,7 @@ let keysPressed = new Set();
 let touches = null;
 let initialPinchDistance = 0;
 let initialZoom = 1;
+let zoomIndicatorTimer = null;
 
 // Initialize WebAssembly module
 async function initWasm() {
@@ -430,6 +431,24 @@ function handleKeyboard() {
     }
 }
 
+// Show zoom indicator
+function showZoomIndicator() {
+    const indicator = document.getElementById('zoomIndicator');
+    const zoomPercent = Math.round(camera.zoom * 100);
+    indicator.textContent = `${zoomPercent}%`;
+    indicator.classList.add('visible');
+    
+    // Clear existing timer
+    if (zoomIndicatorTimer) {
+        clearTimeout(zoomIndicatorTimer);
+    }
+    
+    // Hide after 1.5 seconds
+    zoomIndicatorTimer = setTimeout(() => {
+        indicator.classList.remove('visible');
+    }, 1500);
+}
+
 // Zoom camera with optional focal point
 function zoomCamera(zoomFactor, worldX = 0, worldY = 0) {
     const oldZoom = camera.zoom;
@@ -442,6 +461,9 @@ function zoomCamera(zoomFactor, worldX = 0, worldY = 0) {
         camera.x = worldX - (worldX - camera.x) * zoomChange;
         camera.y = worldY - (worldY - camera.y) * zoomChange;
     }
+    
+    // Show zoom indicator
+    showZoomIndicator();
 }
 
 // Generate pixel-based image data
