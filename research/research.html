@@ -149,7 +149,7 @@ nav_weight: 2
 
 
       <li class="mb-1" style="padding:6px">
-        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF ({{post.pdf-size}})</a>
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}</a>
 
         {% unless post.no-abstract %}<details>
           <summary>
