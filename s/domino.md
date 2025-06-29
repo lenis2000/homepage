@@ -388,10 +388,13 @@ permalink: /domino/
 
 <!-- TikZ Code Generation Section -->
 <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
-  <h3 style="margin-top: 0;">Export</h3>
+  <h3 style="margin-top: 0;">Export and Import</h3>
 
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+      <button id="download-csv-btn" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Download CSV</button>
+      <input type="file" id="upload-csv-input" accept=".csv" style="display: none;">
+      <button id="upload-csv-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Upload CSV</button>
       <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
       <button id="download-png-btn" style="padding: 6px 12px; background-color: #e83e8c; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Download 2D in PNG</button>
       <button id="download-3d-btn" style="padding: 6px 12px; background-color: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer;">Download 3D Screenshot</button>
@@ -1488,6 +1491,117 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("cancel-btn").addEventListener("click", () => {
     stopSimulation();
+  });
+
+  // CSV Download functionality
+  document.getElementById("download-csv-btn").addEventListener("click", () => {
+    if (!cachedDominoes || cachedDominoes.length === 0) {
+      alert("No tiling data available. Generate a tiling first by clicking 'Sample'.");
+      return;
+    }
+
+    // Create CSV content
+    const headers = ["x", "y", "width", "height", "color"];
+    const csvContent = [
+      headers.join(","),
+      ...cachedDominoes.map(domino => 
+        [domino.x, domino.y, domino.w, domino.h, domino.color].join(",")
+      )
+    ].join("\n");
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    const n = document.getElementById("n-input").value;
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    link.download = `domino_tiling_n${n}_${periodicity}_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
+
+  // CSV Upload functionality
+  document.getElementById("upload-csv-btn").addEventListener("click", () => {
+    document.getElementById("upload-csv-input").click();
+  });
+
+  document.getElementById("upload-csv-input").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const csvContent = e.target.result;
+        const lines = csvContent.split("\n").filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          alert("Invalid CSV file: no data found.");
+          return;
+        }
+
+        // Parse header
+        const headers = lines[0].split(",").map(h => h.trim());
+        const expectedHeaders = ["x", "y", "width", "height", "color"];
+        
+        if (!expectedHeaders.every(h => headers.includes(h))) {
+          alert("Invalid CSV format. Expected headers: " + expectedHeaders.join(", "));
+          return;
+        }
+
+        // Parse data
+        const newDominoes = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",").map(v => v.trim());
+          if (values.length !== headers.length) continue;
+
+          const domino = {};
+          headers.forEach((header, index) => {
+            if (header === "color") {
+              domino[header] = values[index];
+            } else if (header === "width") {
+              domino.w = parseFloat(values[index]);
+            } else if (header === "height") {
+              domino.h = parseFloat(values[index]);
+            } else {
+              domino[header] = parseFloat(values[index]);
+            }
+          });
+
+          // Validate domino data
+          if (!isNaN(domino.x) && !isNaN(domino.y) && !isNaN(domino.w) && !isNaN(domino.h) && domino.color) {
+            newDominoes.push(domino);
+          }
+        }
+
+        if (newDominoes.length === 0) {
+          alert("No valid domino data found in CSV file.");
+          return;
+        }
+
+        // Update cached dominoes and refresh visualization
+        cachedDominoes = newDominoes;
+        
+        // Stop any running simulation
+        stopSimulation();
+        
+        // Update visualization using existing cached data
+        updateVisualizationFromCache();
+
+        alert(`Successfully loaded ${newDominoes.length} dominoes from CSV file.`);
+        
+      } catch (error) {
+        alert("Error parsing CSV file: " + error.message);
+      }
+    };
+
+    reader.readAsText(file);
+    event.target.value = ""; // Reset file input
   });
 
   // Demo mode toggle handler
