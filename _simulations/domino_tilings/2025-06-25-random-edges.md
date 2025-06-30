@@ -2253,6 +2253,32 @@ Module.onRuntimeInitialized = async function() {
       tikzCode += ";\n\n";
     });
 
+    // Add particles if enabled
+    if (useParticles) {
+      tikzCode += "\n% Particles\n";
+      
+      currentDominoes.forEach(domino => {
+        // Only blue and yellow dominoes have particles
+        if (domino.color === "blue") {
+          // Blue domino (horizontal): particle in the right box
+          const particleX = (domino.x + domino.w * 0.75) / 100 - minX;
+          const particleY = maxY - (domino.y + domino.h / 2) / 100;
+          const radius = 0.05; // Scaled down from 5
+          
+          tikzCode += `\\filldraw[fill=darkgray, draw=black, line width=0.05pt] `;
+          tikzCode += `(${particleX.toFixed(2)}, ${particleY.toFixed(2)}) circle (${radius}pt);\n`;
+        } else if (domino.color === "yellow") {
+          // Yellow domino (vertical): particle in the bottom box
+          const particleX = (domino.x + domino.w / 2) / 100 - minX;
+          const particleY = maxY - (domino.y + domino.h * 0.75) / 100;
+          const radius = 0.05; // Scaled down from 5
+          
+          tikzCode += `\\filldraw[fill=darkgray, draw=black, line width=0.05pt] `;
+          tikzCode += `(${particleX.toFixed(2)}, ${particleY.toFixed(2)}) circle (${radius}pt);\n`;
+        }
+      });
+    }
+
     tikzCode += `
 \\end{tikzpicture}
 \\end{document}`;
