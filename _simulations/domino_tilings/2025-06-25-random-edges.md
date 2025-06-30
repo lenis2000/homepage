@@ -1135,37 +1135,62 @@ Module.onRuntimeInitialized = async function() {
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
 
     // Standard domino-to-particles mapping
-    // Blue: particle in right box only
-    // Yellow: particle in bottom box only
+    // Blue: filled particle in right box, hollow particle in left box
+    // Yellow: filled particle in bottom box, hollow particle in top box
     // Red and Green: no particles
     currentDominoes.forEach(domino => {
       const particleRadius = 5;
       
       // Only blue and yellow dominoes have particles
       if (domino.color === "blue") {
-        // Blue domino (horizontal): particle in the right box
-        const particleX = domino.x + domino.w * 0.75;
-        const particleY = domino.y + domino.h / 2;
+        // Blue domino (horizontal): filled particle in the right box
+        const filledX = domino.x + domino.w * 0.75;
+        const filledY = domino.y + domino.h / 2;
         
         particlesGroup.append("circle")
-          .attr("cx", particleX)
-          .attr("cy", particleY)
+          .attr("cx", filledX)
+          .attr("cy", filledY)
           .attr("r", particleRadius)
           .attr("fill", "darkred")
           .attr("stroke", "black")
           .attr("stroke-width", 0.5);
+          
+        // Hollow particle in the left box
+        const hollowX = domino.x + domino.w * 0.25;
+        const hollowY = domino.y + domino.h / 2;
+        
+        particlesGroup.append("circle")
+          .attr("cx", hollowX)
+          .attr("cy", hollowY)
+          .attr("r", particleRadius)
+          .attr("fill", "white")
+          .attr("stroke", "black")
+          .attr("stroke-width", 1);
+          
       } else if (domino.color === "yellow") {
-        // Yellow domino (vertical): particle in the bottom box
-        const particleX = domino.x + domino.w / 2;
-        const particleY = domino.y + domino.h * 0.75;
+        // Yellow domino (vertical): filled particle in the bottom box
+        const filledX = domino.x + domino.w / 2;
+        const filledY = domino.y + domino.h * 0.75;
         
         particlesGroup.append("circle")
-          .attr("cx", particleX)
-          .attr("cy", particleY)
+          .attr("cx", filledX)
+          .attr("cy", filledY)
           .attr("r", particleRadius)
           .attr("fill", "darkred")
           .attr("stroke", "black")
           .attr("stroke-width", 0.5);
+          
+        // Hollow particle in the top box
+        const hollowX = domino.x + domino.w / 2;
+        const hollowY = domino.y + domino.h * 0.25;
+        
+        particlesGroup.append("circle")
+          .attr("cx", hollowX)
+          .attr("cy", hollowY)
+          .attr("r", particleRadius)
+          .attr("fill", "white")
+          .attr("stroke", "black")
+          .attr("stroke-width", 1);
       }
       // Red and green dominoes have no particles
     });
@@ -2255,26 +2280,41 @@ Module.onRuntimeInitialized = async function() {
 
     // Add particles if enabled
     if (useParticles) {
-      tikzCode += "\n% Particles\n";
+      tikzCode += "\n% Particles (filled and hollow)\n";
       
       currentDominoes.forEach(domino => {
         // Only blue and yellow dominoes have particles
         if (domino.color === "blue") {
-          // Blue domino (horizontal): particle in the right box
-          const particleX = (domino.x + domino.w * 0.75) / 100 - minX;
-          const particleY = maxY - (domino.y + domino.h / 2) / 100;
+          // Blue domino (horizontal): filled particle in the right box
+          const filledX = (domino.x + domino.w * 0.75) / 100 - minX;
+          const filledY = maxY - (domino.y + domino.h / 2) / 100;
           const radius = 0.05; // Scaled down from 5
           
           tikzCode += `\\filldraw[fill=darkgray, draw=black, line width=0.05pt] `;
-          tikzCode += `(${particleX.toFixed(2)}, ${particleY.toFixed(2)}) circle (${radius}pt);\n`;
+          tikzCode += `(${filledX.toFixed(2)}, ${filledY.toFixed(2)}) circle (${radius}pt);\n`;
+          
+          // Hollow particle in the left box
+          const hollowX = (domino.x + domino.w * 0.25) / 100 - minX;
+          const hollowY = maxY - (domino.y + domino.h / 2) / 100;
+          
+          tikzCode += `\\draw[fill=white, draw=black, line width=0.1pt] `;
+          tikzCode += `(${hollowX.toFixed(2)}, ${hollowY.toFixed(2)}) circle (${radius}pt);\n`;
+          
         } else if (domino.color === "yellow") {
-          // Yellow domino (vertical): particle in the bottom box
-          const particleX = (domino.x + domino.w / 2) / 100 - minX;
-          const particleY = maxY - (domino.y + domino.h * 0.75) / 100;
+          // Yellow domino (vertical): filled particle in the bottom box
+          const filledX = (domino.x + domino.w / 2) / 100 - minX;
+          const filledY = maxY - (domino.y + domino.h * 0.75) / 100;
           const radius = 0.05; // Scaled down from 5
           
           tikzCode += `\\filldraw[fill=darkgray, draw=black, line width=0.05pt] `;
-          tikzCode += `(${particleX.toFixed(2)}, ${particleY.toFixed(2)}) circle (${radius}pt);\n`;
+          tikzCode += `(${filledX.toFixed(2)}, ${filledY.toFixed(2)}) circle (${radius}pt);\n`;
+          
+          // Hollow particle in the top box
+          const hollowX = (domino.x + domino.w / 2) / 100 - minX;
+          const hollowY = maxY - (domino.y + domino.h * 0.25) / 100;
+          
+          tikzCode += `\\draw[fill=white, draw=black, line width=0.1pt] `;
+          tikzCode += `(${hollowX.toFixed(2)}, ${hollowY.toFixed(2)}) circle (${radius}pt);\n`;
         }
       });
     }
