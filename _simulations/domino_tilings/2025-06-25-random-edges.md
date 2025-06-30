@@ -1884,14 +1884,24 @@ Module.onRuntimeInitialized = async function() {
     // We'll use the domino data directly instead of parsing SVG
     // Convert domino objects to rectangle objects with the format needed for TikZ conversion
     const rectangles = currentDominoes.map(domino => {
+      // Apply the same color logic as the SVG rendering
+      let fillColor;
+      if (useGrayscale) {
+        fillColor = getGrayscaleColor(domino.color, domino);
+      } else if (useColors) {
+        fillColor = domino.color;
+      } else {
+        fillColor = "#eee"; // Light gray when colors are disabled
+      }
+      
       return {
         x: domino.x / 100,
         y: domino.y / 100,
         width: domino.w / 100,
         height: domino.h / 100,
-        fill: domino.color,
+        fill: fillColor,
         stroke: "black",
-        strokeWidth: 0.45 // Scaled down like in the Python script
+        strokeWidth: useCheckerboard ? 0.45 : (useColors ? 0.05 : 0.08) // Respect checkerboard setting
       };
     });
 
@@ -2026,12 +2036,29 @@ Module.onRuntimeInitialized = async function() {
           fillColor = '{rgb,255:red,128;green,128;blue,128}'; // fallback gray
         }
       } else {
-        // Use original colors
+        // Use original colors or convert hex colors
         fillColor = rect.fill;
         if (fillColor === 'green') fillColor = 'svggreen';
         else if (fillColor === 'red') fillColor = 'svgred';
         else if (fillColor === 'yellow') fillColor = 'svgyellow';
         else if (fillColor === 'blue') fillColor = 'svgblue';
+        else if (fillColor.startsWith('#')) {
+          // Convert hex colors to TikZ RGB format
+          const hex = fillColor.substring(1);
+          let r, g, b;
+          if (hex.length === 3) {
+            // Handle short hex format like #eee
+            r = parseInt(hex[0] + hex[0], 16);
+            g = parseInt(hex[1] + hex[1], 16);
+            b = parseInt(hex[2] + hex[2], 16);
+          } else {
+            // Handle full hex format like #eeeeee
+            r = parseInt(hex.substring(0,2), 16);
+            g = parseInt(hex.substring(2,4), 16);
+            b = parseInt(hex.substring(4,6), 16);
+          }
+          fillColor = `{rgb,255:red,${r};green,${g};blue,${b}}`;
+        }
       }
 
       // Shift coordinates to keep everything positive
@@ -2281,6 +2308,65 @@ Module.onRuntimeInitialized = async function() {
       tikzCode += ";\n\n";
     });
 
+    // Add checkerboard pattern if enabled
+    if (useCheckerboard) {
+      tikzCode += "\n% Checkerboard pattern\n";
+      
+      // Collect all lattice faces covered by dominoes
+      const latticeSquares = new Set();
+      
+      currentDominoes.forEach(domino => {
+        // Convert domino coordinates to TikZ coordinates first
+        const dominoTikzX = domino.x / 100;
+        const dominoTikzY = domino.y / 100;
+        const dominoTikzW = domino.w / 100;
+        const dominoTikzH = domino.h / 100;
+        
+        // Each domino covers exactly 2 lattice faces
+        // In TikZ coordinates, each lattice face is 0.2×0.2 (since domino is 0.4×0.2 or 0.2×0.4)
+        const isHorizontal = domino.w > domino.h;
+        
+        if (isHorizontal) {
+          // Horizontal domino (0.4×0.2) covers 2 horizontal lattice faces (0.2×0.2 each)
+          const leftFaceX = Math.floor(dominoTikzX / 0.2) * 0.2;
+          const rightFaceX = leftFaceX + 0.2;
+          const faceY = Math.floor(dominoTikzY / 0.2) * 0.2;
+          
+          latticeSquares.add(`${leftFaceX.toFixed(1)},${faceY.toFixed(1)}`);
+          latticeSquares.add(`${rightFaceX.toFixed(1)},${faceY.toFixed(1)}`);
+        } else {
+          // Vertical domino (0.2×0.4) covers 2 vertical lattice faces (0.2×0.2 each)
+          const faceX = Math.floor(dominoTikzX / 0.2) * 0.2;
+          const topFaceY = Math.floor(dominoTikzY / 0.2) * 0.2;
+          const bottomFaceY = topFaceY + 0.2;
+          
+          latticeSquares.add(`${faceX.toFixed(1)},${topFaceY.toFixed(1)}`);
+          latticeSquares.add(`${faceX.toFixed(1)},${bottomFaceY.toFixed(1)}`);
+        }
+      });
+      
+      // Convert set to array and create checkerboard squares
+      Array.from(latticeSquares).forEach(coord => {
+        const [x, y] = coord.split(',').map(Number);
+        
+        // Convert to final TikZ coordinates with proper transformations
+        const tikzX = x - minX;
+        const tikzY = maxY - y - 0.2; // 0.2 is the lattice face size in TikZ coordinates
+        const tikzX2 = tikzX + 0.2;
+        const tikzY2 = tikzY + 0.2;
+        
+        // Create checkerboard pattern based on lattice coordinates
+        const latticeX = Math.round(x / 0.2);
+        const latticeY = Math.round(y / 0.2);
+        const isBlack = (latticeX + latticeY) % 2 === 0;
+        
+        if (isBlack) {
+          tikzCode += `\\filldraw[fill=black!20, draw=none] `;
+          tikzCode += `(${tikzX.toFixed(2)}, ${tikzY.toFixed(2)}) rectangle (${tikzX2.toFixed(2)}, ${tikzY2.toFixed(2)});\n`;
+        }
+      });
+    }
+
     // Add particles if enabled
     if (useParticles) {
       tikzCode += "\n% Particles (filled and hollow)\n";
@@ -2496,7 +2582,7 @@ Module.onRuntimeInitialized = async function() {
         
         // Re-render the visualization
         renderDominoes(newDominoes);
-        renderDimers(newDominoes);
+        renderDimerView(newDominoes);
 
         alert(`Successfully loaded ${newDominoes.length} dominoes from CSV file.`);
         
