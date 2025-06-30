@@ -247,6 +247,13 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
     </label>
   </div>
 
+  <!-- Particles toggle -->
+  <div style="margin-bottom: 8px;">
+    <label for="particles-toggle">
+      <input type="checkbox" id="particles-toggle"> Show particles
+    </label>
+  </div>
+
   <!-- Height function toggle -->
   <div style="margin-bottom: 8px;">
     <label for="height-toggle">
@@ -301,12 +308,14 @@ Module.onRuntimeInitialized = async function() {
   let useCheckerboard = false; // Track checkerboard state
   let usePaths = false; // Track nonintersecting paths state
   let useDimers = false; // Track dimers visibility state
+  let useParticles = false; // Track particles visibility state
   let useHeightFunction = false; // Track height function visibility state
   let currentDominoes = []; // Store current dominoes for toggling colors
   let isProcessing = false; // Flag to prevent multiple simultaneous updates
   let checkerboardGroup; // Group for checkerboard squares
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
+  let particlesGroup; // Group for particles overlay
   let heightGroup; // Group for height function display
 
   // Create zoom behavior for domino view
@@ -334,6 +343,10 @@ Module.onRuntimeInitialized = async function() {
         }
         if (dimersGroup) {
           dimersGroup.attr("transform",
+            `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+        }
+        if (particlesGroup) {
+          particlesGroup.attr("transform",
             `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
         }
         if (heightGroup) {
@@ -711,6 +724,14 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
+  // Handle particles toggle
+  document.getElementById("particles-toggle").addEventListener("change", function() {
+    useParticles = this.checked;
+    if (currentDominoes.length > 0) {
+      toggleParticles();
+    }
+  });
+
   // Handle height function toggle
   document.getElementById("height-toggle").addEventListener("change", function() {
     useHeightFunction = this.checked;
@@ -1083,6 +1104,76 @@ Module.onRuntimeInitialized = async function() {
     dimersGroup.raise();
   }
 
+  // Function to toggle particles on/off
+  function toggleParticles() {
+    // Remove existing particles if they exist
+    if (particlesGroup) {
+      particlesGroup.remove();
+      particlesGroup = null;
+    }
+
+    // If particles are not enabled, just return
+    if (!useParticles) return;
+
+    // Compute bounding box of dominoes
+    const minX = d3.min(currentDominoes, d => d.x);
+    const minY = d3.min(currentDominoes, d => d.y);
+    const maxX = d3.max(currentDominoes, d => d.x + d.w);
+    const maxY = d3.max(currentDominoes, d => d.y + d.h);
+
+    // Use the computed dimensions of the SVG
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    const scale = Math.min(svgWidth / (maxX - minX), svgHeight / (maxY - minY)) * 0.9;
+    const translateX = (svgWidth - (maxX - minX) * scale) / 2 - minX * scale;
+    const translateY = (svgHeight - (maxY - minY) * scale) / 2 - minY * scale;
+
+    // Create a new group for the particles
+    particlesGroup = svg.append("g")
+      .attr("class", "particles-overlay")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+
+    // Standard domino-to-particles mapping
+    // Blue: particle in right box only
+    // Yellow: particle in bottom box only
+    // Red and Green: no particles
+    currentDominoes.forEach(domino => {
+      const particleRadius = 5;
+      
+      // Only blue and yellow dominoes have particles
+      if (domino.color === "blue") {
+        // Blue domino (horizontal): particle in the right box
+        const particleX = domino.x + domino.w * 0.75;
+        const particleY = domino.y + domino.h / 2;
+        
+        particlesGroup.append("circle")
+          .attr("cx", particleX)
+          .attr("cy", particleY)
+          .attr("r", particleRadius)
+          .attr("fill", "darkred")
+          .attr("stroke", "black")
+          .attr("stroke-width", 0.5);
+      } else if (domino.color === "yellow") {
+        // Yellow domino (vertical): particle in the bottom box
+        const particleX = domino.x + domino.w / 2;
+        const particleY = domino.y + domino.h * 0.75;
+        
+        particlesGroup.append("circle")
+          .attr("cx", particleX)
+          .attr("cy", particleY)
+          .attr("r", particleRadius)
+          .attr("fill", "darkred")
+          .attr("stroke", "black")
+          .attr("stroke-width", 0.5);
+      }
+      // Red and green dominoes have no particles
+    });
+
+    // Make particles appear on top of everything else
+    particlesGroup.raise();
+  }
+
   // Render the dominoes with or without colors
   function renderDominoes(dominoes) {
     // Compute bounding box of dominoes.
@@ -1118,6 +1209,7 @@ Module.onRuntimeInitialized = async function() {
     checkerboardGroup = null;
     pathsGroup = null;
     dimersGroup = null;
+    particlesGroup = null;
     heightGroup = null;
 
     // Append a group for the dominoes.
@@ -1162,6 +1254,11 @@ Module.onRuntimeInitialized = async function() {
     // Add dimers if enabled
     if (useDimers) {
       toggleDimers();
+    }
+
+    // Add particles if enabled
+    if (useParticles) {
+      toggleParticles();
     }
 
     // Add height function if enabled
@@ -1409,6 +1506,7 @@ Module.onRuntimeInitialized = async function() {
     checkerboardGroup = null;
     pathsGroup = null;
     dimersGroup = null;
+    particlesGroup = null;
     heightGroup = null;
 
     // Show or hide height function checkbox based on n value
