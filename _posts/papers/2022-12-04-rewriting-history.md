@@ -9,12 +9,12 @@ coauthors:
 comments: false
 categories: blog math paper
 published: true
-journal-ref: Commun. Math. Phys., 405 (300), 2024.
+journal-ref: Commun. Math. Phys., 405 (300), 2024
 journal-web: https://link.springer.com/article/10.1007/s00220-024-05189-y
 # more-text:
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
 image-alt: |
-  Two-car systems with cars of different speeds. In every picture, the blue and the yellow trajectories are of the faster and the slower cars, respectively. <br><b>Top</b>: cars start at neighboring locations, and the trajectory of the second car, $x_2(t)$, is the same in distribution. 
+  Two-car systems with cars of different speeds. In every picture, the blue and the yellow trajectories are of the faster and the slower cars, respectively. <br><b>Top</b>: cars start at neighboring locations, and the trajectory of the second car, $x_2(t)$, is the same in distribution.
   <br><b>Bottom</b>: cars start at locations away from each other, and the distributions of the trajectories of the second car are different in the left and the central pictures. However, when we randomize the initial condition, the distribution of the second car in the slow-fast system with the randomized initial condition is the same as in the fast-slow system on the left.
 show-date: true
 pdf: 41-rewriting_history_in.pdf
@@ -35,7 +35,7 @@ Second, we show that our intertwining relations lead to couplings between probab
 
 ---
 
-##### A poem on the topic 
+##### A poem on the topic
 
 by [OpenAI](https://beta.openai.com/playground)
 
