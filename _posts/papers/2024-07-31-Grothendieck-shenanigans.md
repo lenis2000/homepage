@@ -21,7 +21,7 @@ image-alt: Reduction of a pipe dream leading to the permutation w(D) = 241653.
 show-date: true
 pdf: 45-grothendieck-shenanigans-permutons.pdf
 post-pdf: true
-pages: 46
+pages: 50
 cv-number: 45
 simulations: simulations/2025-01-26-grothendieck-shenanigans/
 ---

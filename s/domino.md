@@ -3659,3 +3659,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
+<div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
+This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
+</div>
