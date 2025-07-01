@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Grothendieck Shenanigans: Permutons from pipe dreams via integrable probability"
+title: "Grothendieck Shenanigans: Permutons from Pipe Dreams via Integrable Probability"
 arXiv: 2407.21653 [math.PR]
 coauthors:
   - name: Alejandro H. Morales
