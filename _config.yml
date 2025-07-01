@@ -36,6 +36,13 @@ permalink: /:year/:month/:title/
 exclude:
   - vendor
   - "_simulations/domino_tilings/myenv/"
+  - ".claude"
+  - "_simulations/domino_tilings/.claude"
+  - "_simulations/lozenge_tilings/.claude"
+  - "_simulations/misc/.claude"
+  - "_simulations/permutations/.claude"
+  - "_simulations/random-matrices/.claude"
+  - "_simulations/TASEP-like-systems/.claude"
 
 plugins:
   - jekyll-paginate

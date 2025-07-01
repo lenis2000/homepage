@@ -1,0 +1,41 @@
+{% comment %}
+  NSF Grant Footer Include
+  This include adds the NSF grant acknowledgment for simulations dated after July 1, 2022
+{% endcomment %}
+
+{% if page.collection == 'simulations' %}
+  {% comment %} Extract date from the filename if not in front matter {% endcomment %}
+  {% if page.date %}
+    {% assign page_date = page.date %}
+  {% else %}
+    {% assign filename_parts = page.path | split: '/' | last | split: '-' %}
+    {% if filename_parts.size >= 3 %}
+      {% assign page_date = filename_parts[0] | append: '-' | append: filename_parts[1] | append: '-' | append: filename_parts[2] %}
+    {% endif %}
+  {% endif %}
+  
+  {% comment %} Parse the date string to compare {% endcomment %}
+  {% if page_date and page_date != '' %}
+    {% assign date_parts = page_date | split: '-' %}
+    {% assign year = date_parts[0] | plus: 0 %}
+    {% assign month = date_parts[1] | plus: 0 %}
+    {% assign day = date_parts[2] | plus: 0 %}
+    
+    {% comment %} Check if date is after July 1, 2022 {% endcomment %}
+    {% if year > 2022 %}
+      <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
+        This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
+      </div>
+    {% elsif year == 2022 %}
+      {% if month > 7 %}
+        <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
+          This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
+        </div>
+      {% elsif month == 7 and day >= 1 %}
+        <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
+          This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
+        </div>
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endif %}
