@@ -1,3 +1,37 @@
+:root {
+  /* Light theme colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #F1F1EF;
+  --bg-navbar: #002f6c;
+  --bg-footer: rgba(0, 0, 0, 0.12);
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-navbar: #ffffff;
+  --text-navbar-active: #002359;
+  --link-color: #2A69A6;
+  --link-hover: #e57200;
+  --accent-color: #e57200;
+  --border-color: #DADADA;
+  --code-bg: #f5f5f5;
+}
+
+[data-theme="dark"] {
+  /* Dark theme colors */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-navbar: #0f1419;
+  --bg-footer: rgba(255, 255, 255, 0.08);
+  --text-primary: #e8e8e8;
+  --text-secondary: #b3b3b3;
+  --text-navbar: #ffffff;
+  --text-navbar-active: #ffd700;
+  --link-color: #66b3ff;
+  --link-hover: #ff9933;
+  --accent-color: #ff9933;
+  --border-color: #4a4a4a;
+  --code-bg: #2d2d2d;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
@@ -9,14 +43,17 @@ body {
     padding:0px;
     font-family: "franklingothic-book", Arial, "Helvetica Neue", Helvetica, sans-serif;
     font-weight: 400;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 a:link, a:visited {
-  color: #2A69A6;
+  color: var(--link-color);
 }
 
 a:focus, a:hover {
-  color: #e57200;
+  color: var(--link-hover);
   text-decoration: underline;
 }
 
@@ -34,16 +71,16 @@ a:focus, a:hover {
 }
 
 .navbar-light .navbar-nav .nav-link:focus, .navbar-light .navbar-nav .nav-link:hover {
-  color: #e57200;
+  color: var(--accent-color);
 }
 
 .bg-inverse {
-  background-color: #e57200 !important;
+  background-color: var(--accent-color) !important;
 }
 
 .navbar-light .navbar-nav .active>.nav-link, .navbar-light .navbar-nav .nav-link.active, .navbar-light .navbar-nav .nav-link.open, .navbar-light .navbar-nav .open>.nav-link
 {
-  color:#002359;
+  color: var(--text-navbar-active);
 }
 
 .navbar-light .active .nav-link:focus, .navbar-light .active .nav-link:hover {
@@ -96,7 +133,7 @@ a:focus, a:hover {
 
 
 @media (max-width: 575px){.jumbotron {
-  background-color:#F1F1EF;
+  background-color: var(--bg-secondary);
   padding: 10px;
   margin-bottom: 20px;
   padding-bottom: 12px;
@@ -106,7 +143,7 @@ a:focus, a:hover {
 
 
 @media (min-width: 576px){.jumbotron {
-  background-color:#F1F1EF;
+  background-color: var(--bg-secondary);
   padding-top: 20px;
   padding-bottom: 20px;
   margin-bottom: 20px;
@@ -114,32 +151,32 @@ a:focus, a:hover {
 }
 
 .my-row-zebra .row:nth-of-type(2n+1){
-  background-color: #F1F1EF;
+  background-color: var(--bg-secondary);
 }
 
 .my-ul-zebra li:nth-of-type(2n+1){
-  background-color: #F1F1EF;
+  background-color: var(--bg-secondary);
 }
 
 .my-div-zebra div:nth-of-type(2n){
-  background-color: #F1F1EF;
+  background-color: var(--bg-secondary);
 }
 
 .my-col-12-zebra .col-12:nth-of-type(2n+1){
-  background-color: #F1F1EF;
+  background-color: var(--bg-secondary);
 }
 
 @media (min-width: 992px) {
   .my-col-12-zebra-twocols .col-12:nth-of-type(4n+1){
-    background-color: #F1F1EF;
+    background-color: var(--bg-secondary);
   }
   .my-col-12-zebra-twocols .col-12:nth-of-type(4n+4){
-    background-color: #F1F1EF;
+    background-color: var(--bg-secondary);
   }
 }
 @media (max-width: 991px) {
   .my-col-12-zebra-twocols .col-12:nth-of-type(2n+1){
-    background-color: #F1F1EF;
+    background-color: var(--bg-secondary);
   }
 }
 
@@ -235,7 +272,7 @@ a.page-logo-large:link, a.page-logo-large:visited
 
 a.page-logo-large:focus, a.page-logo-large:hover
 {
-  color: #e57200;
+  color: var(--accent-color);
   text-decoration: none;
 }
 
@@ -272,47 +309,47 @@ h6,
 }
 
 .my-bordered-news-snippets{
-  border-left: 1px dotted #DADADA;
-  border-bottom: 1px dotted #DADADA;
+  border-left: 1px dotted var(--border-color);
+  border-bottom: 1px dotted var(--border-color);
 }
 
 a.list-group-item-action:hover, a.list-group-item-action:focus {
-  color: #e57200;
+  color: var(--accent-color);
 }
 .list-group-item.active {
   color: white;
-  background-color: #002F6C;
-  border-color: #002F6C;
+  background-color: var(--bg-navbar);
+  border-color: var(--bg-navbar);
 }
 
 a.list-group-item.active,
 button.list-group-item.active {
   color: white;
-  background-color: #002F6C;
-  border-color: #002F6C;
+  background-color: var(--bg-navbar);
+  border-color: var(--bg-navbar);
 }
 
 a:focus.list-group-item.active,
 a:hover.list-group-item.active {
   color: white;
-  color: #e57200;
-  background-color: #002F6C;
-  border-color: #002F6C;
+  color: var(--accent-color);
+  background-color: var(--bg-navbar);
+  border-color: var(--bg-navbar);
 }
 
 .orange-item {
   background-color:rgba(235,95,12, 0.6);
-  color:#002F6C;
+  color: var(--bg-navbar);
 }
 
 a.orange-item:link, a.orange-item:visited {
   background-color:rgba(235,95,12, 0.6);
-  color:#002F6C;
+  color: var(--bg-navbar);
 }
 
 a.orange-item:hover, a.orange-item:focus {
-  background-color: #e57200 !important;
-  color:#002F6C !important;
+  background-color: var(--accent-color) !important;
+  color: var(--bg-navbar) !important;
 }
 
 .highlighted-item, a.highlighted-item:link, a.highlighted-item:visited {
@@ -327,4 +364,451 @@ a.orange-item:hover, a.orange-item:focus {
 {
   padding-right: 10px;
   font-weight: bold;
+}
+
+/* Dark theme specific overrides */
+[data-theme="dark"] .navbar {
+  background-color: var(--bg-navbar) !important;
+}
+
+[data-theme="dark"] footer > div {
+  background-color: var(--bg-footer) !important;
+}
+
+[data-theme="dark"] .highlighted-item, 
+[data-theme="dark"] a.highlighted-item:link, 
+[data-theme="dark"] a.highlighted-item:visited {
+  color: #7dd863;
+}
+
+[data-theme="dark"] .orange-item {
+  opacity: 0.8;
+}
+
+[data-theme="dark"] code {
+  background-color: var(--code-bg);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] pre {
+  background-color: var(--code-bg);
+  border-color: var(--border-color);
+}
+
+/* Fix Bootstrap components in dark mode */
+[data-theme="dark"] .list-group-item {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .list-group-item:hover,
+[data-theme="dark"] .list-group-item:focus {
+  background-color: #3a3a3a;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: #3a3a3a;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .card {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Fix simulation control groups */
+[data-theme="dark"] .control-group {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary);
+}
+
+/* Fix form controls */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .form-control {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] .form-control:focus {
+  background-color: #3a3a3a;
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+/* Fix mobile collapsible sections */
+[data-theme="dark"] .collapse,
+[data-theme="dark"] .collapsing {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Fix any remaining white backgrounds */
+[data-theme="dark"] *[style*="background: white"],
+[data-theme="dark"] *[style*="background-color: white"],
+[data-theme="dark"] *[style*="background:#fff"],
+[data-theme="dark"] *[style*="background-color:#fff"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background: #f5f5f5"],
+[data-theme="dark"] *[style*="background-color: #f5f5f5"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Fix additional Bootstrap elements */
+[data-theme="dark"] .btn-light,
+[data-theme="dark"] .btn-outline-secondary {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-light:hover,
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: #3a3a3a;
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-primary {
+  background-color: var(--link-color);
+  border-color: var(--link-color);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background-color: var(--link-hover);
+  border-color: var(--link-hover);
+}
+
+/* Fix dropdown menus */
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus {
+  background-color: #3a3a3a;
+  color: var(--text-primary);
+}
+
+/* Fix simulation specific elements */
+[data-theme="dark"] .simulationarea,
+[data-theme="dark"] canvas {
+  background-color: var(--bg-secondary);
+}
+
+/* Fix table styles */
+[data-theme="dark"] table {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] th,
+[data-theme="dark"] td {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Fix domino.md specific styles */
+[data-theme="dark"] *[style*="background-color: #f8f8f8"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background-color: #f0f0f0"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background-color: #f5f5f5"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background-color: #e0e0e0"] {
+  background-color: #3a3a3a !important;
+}
+
+[data-theme="dark"] *[style*="border: 1px solid #ddd"] {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] *[style*="border: 1px solid #ccc"] {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] *[style*="border-color: #999"] {
+  border-color: var(--border-color) !important;
+}
+
+/* Fix view toggle buttons */
+[data-theme="dark"] .view-toggle button {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .view-toggle button.active {
+  background-color: #3a3a3a !important;
+  border-color: var(--accent-color) !important;
+}
+
+[data-theme="dark"] .display-options {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Fix height labels */
+[data-theme="dark"] .height-label {
+  fill: var(--text-primary) !important;
+  stroke: var(--bg-primary) !important;
+}
+
+/* Comprehensive fix for domino.md and similar pages */
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-body,
+[data-theme="dark"] .card-header {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .accordion .card {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .btn-link {
+  color: var(--link-color) !important;
+}
+
+[data-theme="dark"] .btn-link:hover {
+  color: var(--link-hover) !important;
+}
+
+[data-theme="dark"] .parameters-section {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .pane-title {
+  border-bottom-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #sample-btn:disabled {
+  background-color: #666 !important;
+}
+
+[data-theme="dark"] #move-left-btn:hover,
+[data-theme="dark"] #move-up-btn:hover,
+[data-theme="dark"] #move-down-btn:hover,
+[data-theme="dark"] #move-right-btn:hover,
+[data-theme="dark"] #reset-view-btn:hover {
+  background-color: #3a3a3a !important;
+}
+
+/* Fix border colors */
+[data-theme="dark"] *[style*="border-bottom: 1px solid #eee"] {
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] *[style*="border-top: 1px solid #eee"] {
+  border-top-color: var(--border-color) !important;
+}
+
+/* Fix any remaining light background patterns */
+[data-theme="dark"] *[style*="background: #f8f8f8"],
+[data-theme="dark"] *[style*="background: #e0e0e0"],
+[data-theme="dark"] *[style*="background: #cccccc"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Fix simulation pages - comprehensive coverage */
+[data-theme="dark"] .config-display {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .color-legend {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] details > summary {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] details > .content {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] details > .content.control-group-content {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .export-modal-content {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .keyboard-info {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Fix textarea with light backgrounds */
+[data-theme="dark"] textarea[style*="background: #f8f9fa"] {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Additional background color fixes */
+[data-theme="dark"] *[style*="background: #e8f5e9"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background: #fafafa"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Fix specific domino.md export/import section */
+[data-theme="dark"] *[style*="background-color: #f9f9f9"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background-color: white"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] *[style*="background-color: #f0f0f0"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] #tikz-code-container {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Fix Three.js scene background */
+[data-theme="dark"] *[style*="background-color: #f0f0f0"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Fix SVG borders */
+[data-theme="dark"] svg[style*="border: 1px solid #ccc"] {
+  border-color: var(--border-color) !important;
+}
+
+/* Fix additional button backgrounds */
+[data-theme="dark"] *[style*="background-color: #e0e0e0"] {
+  background-color: #3a3a3a !important;
+}
+
+/* Fix large tiling message container */
+[data-theme="dark"] div[style*="backgroundColor: '#f0f0f0'"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Theme toggle switch styles */
+.theme-toggle-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.theme-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-toggle .slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.theme-toggle .slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.theme-toggle input:checked + .slider {
+  background-color: var(--accent-color);
+}
+
+.theme-toggle input:checked + .slider:before {
+  transform: translateX(32px);
+}
+
+.theme-toggle .slider i {
+  font-size: 14px;
+  color: #333;
+  z-index: 1;
+}
+
+.theme-toggle .slider .fa-sun {
+  color: #ffd700;
+}
+
+.theme-toggle .slider .fa-moon {
+  color: #333;
+}
+
+[data-theme="dark"] .theme-toggle .slider .fa-moon {
+  color: #fff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991px) {
+  .theme-toggle-wrapper {
+    position: absolute;
+    right: 60px;
+    top: 8px;
+  }
 }

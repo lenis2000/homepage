@@ -1,4 +1,4 @@
-<nav class="navbar navbar-toggleable-sm mb-4 navbar-light" style="background-color:#002f6c">
+<nav class="navbar navbar-toggleable-sm mb-4 navbar-light" style="background-color: var(--bg-navbar);">
   <div class="container">
 
     <div class="navbar-brand" style="padding-top: 0 ;padding-bottom: 0;">
@@ -29,6 +29,17 @@
         {% endif %}
         {% endfor %}
       </ul>
+      
+      <!-- Theme toggle switch -->
+      <div class="theme-toggle-wrapper ml-3">
+        <label class="theme-toggle" for="theme-switch">
+          <input type="checkbox" id="theme-switch" />
+          <span class="slider">
+            <i class="fas fa-sun"></i>
+            <i class="fas fa-moon"></i>
+          </span>
+        </label>
+      </div>
 
     </div>
   </div>
