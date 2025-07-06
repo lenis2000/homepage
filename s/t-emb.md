@@ -237,6 +237,75 @@ permalink: /t-emb/
   #reset-view-btn:hover {
     background-color: #e0e0e0;
   }
+
+  /* Dark theme styles */
+  [data-theme="dark"] .view-toggle button {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] .view-toggle button:hover {
+    background-color: #4a4a4a;
+  }
+
+  [data-theme="dark"] .view-toggle button.active {
+    background-color: #4a4a4a;
+    border-color: #666;
+  }
+
+  [data-theme="dark"] .camera-btn {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] .camera-btn:hover {
+    background-color: #4a4a4a;
+    border-color: #666;
+  }
+
+  [data-theme="dark"] #reset-view-btn {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] #reset-view-btn:hover {
+    background-color: #4a4a4a;
+    border-color: #666;
+  }
+
+  [data-theme="dark"] .vertex {
+    fill: #ddd;
+  }
+
+  [data-theme="dark"] .edge {
+    stroke: #aaa;
+  }
+
+  [data-theme="dark"] label {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] input[type="number"],
+  [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] select {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] button {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] button:hover {
+    background-color: #4a4a4a;
+    border-color: #666;
+  }
 </style>
 
 <script src="/js/d3.v7.min.js"></script>

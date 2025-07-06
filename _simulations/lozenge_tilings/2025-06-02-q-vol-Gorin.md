@@ -691,6 +691,73 @@ code:
       font-size: 13px;
     }
   }
+
+  /* Dark theme styles */
+  [data-theme="dark"] .control-group {
+    background-color: #2d2d2d;
+    border-color: #444;
+  }
+
+  [data-theme="dark"] .control-group-title {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] label {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] input[type="number"],
+  [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] select {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] button {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] button:hover {
+    background-color: #4a4a4a;
+    border-color: #666;
+  }
+
+  [data-theme="dark"] .config-display {
+    background-color: #1e3a1e;
+    border-color: #4CAF50;
+    color: #bbb;
+  }
+
+  [data-theme="dark"] .color-legend {
+    background-color: #2d2d2d;
+    color: #bbb;
+  }
+
+  [data-theme="dark"] .legend-title {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] details > summary {
+    background-color: #2d2d2d;
+    color: #bbb;
+  }
+
+  [data-theme="dark"] details > .content {
+    background-color: #1a1a1a;
+    border-color: #444;
+  }
+
+  [data-theme="dark"] canvas {
+    border-color: #555;
+  }
+
+  [data-theme="dark"] #loading {
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #ddd;
+  }
 </style>
 
 <script src="/js/three.min.js"></script>

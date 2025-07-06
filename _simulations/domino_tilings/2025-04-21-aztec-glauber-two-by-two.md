@@ -38,6 +38,34 @@ code:
   #dynamics-btn.running {
     background-color: #f44336;
   }
+
+  /* Dark theme styles */
+  [data-theme="dark"] svg {
+    border-color: #555;
+  }
+
+  [data-theme="dark"] #dynamics-btn {
+    background-color: #3a7f3a;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] #dynamics-btn:hover {
+    background-color: #4a8f4a;
+  }
+
+  [data-theme="dark"] #dynamics-btn.running {
+    background-color: #a43330;
+  }
+
+  [data-theme="dark"] label {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] input[type="number"] {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
 </style>
 ## About the simulation
 
