@@ -100,6 +100,24 @@ permalink: /domino/
     }
   }
 
+  /* Dark theme styles for UI labels */
+  [data-theme="dark"] #display-options-2d label,
+  [data-theme="dark"] #controls-2d label,
+  [data-theme="dark"] #controls label,
+  [data-theme="dark"] #camera-controls label,
+  [data-theme="dark"] .parameters-section label,
+  [data-theme="dark"] #weights-2x2 label,
+  [data-theme="dark"] #weights-3x3 label,
+  [data-theme="dark"] #glauber-controls label {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] #display-options-2d small,
+  [data-theme="dark"] #controls-2d small,
+  [data-theme="dark"] #glauber-controls small {
+    color: #999;
+  }
+
   /* Styling for buttons and controls */
   #sample-btn:disabled {
     opacity: 0.7;
