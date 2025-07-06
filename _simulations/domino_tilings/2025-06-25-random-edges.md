@@ -72,6 +72,71 @@ code:
       /* Keep it open on desktop */
     }
   }
+
+  /* Dark theme styles */
+  [data-theme="dark"] .tab {
+    background-color: #2d2d2d;
+    border-color: #555;
+  }
+
+  [data-theme="dark"] .tab button {
+    background-color: inherit;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] .tab button:hover {
+    background-color: #3a3a3a;
+  }
+
+  [data-theme="dark"] .tab button.active {
+    background-color: #444;
+  }
+
+  [data-theme="dark"] .tabcontent {
+    background-color: #1a1a1a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] details > summary {
+    background-color: #2d2d2d;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] details > div {
+    background-color: #1a1a1a;
+    border-color: #555;
+  }
+
+  [data-theme="dark"] label {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] p {
+    color: #999;
+  }
+
+  [data-theme="dark"] input[type="number"],
+  [data-theme="dark"] input[type="text"] {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] button {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+
+  [data-theme="dark"] button:hover {
+    background-color: #4a4a4a;
+  }
+
+  [data-theme="dark"] svg {
+    border-color: #555;
+  }
 </style>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
