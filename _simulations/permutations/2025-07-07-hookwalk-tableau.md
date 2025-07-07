@@ -3,8 +3,10 @@ title: Random SYT via Hook Walk
 model: permutations
 author: 'Leonid Petrov'
 code:
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-hookwalk-tableau.md'
+    txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-hookwalk-tableau.cpp'
-    txt : 'C++ code for WASM module (samples SYT up to 10 000 boxes)'
+    txt : 'C++ code for WASM module (samples SYT up to 100 000 boxes)'
 ---
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -76,14 +78,49 @@ code:
 
 <h2>Generate Random Standard Young Tableaux</h2>
 
-<p>This simulation uses the <strong>hook-walk algorithm</strong> to generate uniformly random Standard Young Tableaux (SYT) of any given shape. For shapes with up to 200 boxes, the tableau is displayed with individual numbers. For larger shapes (up to 10,000 boxes), a heat map visualization shows the decile distribution.</p>
-
-<p><strong>Shape notation:</strong> Enter row lengths separated by commas. Use exponential notation like <code>100^50</code> for 50 rows of length 100. Examples: <code>5,5,5</code> or <code>100^100</code> or <code>200^10,100^5,50^20</code>.</p>
+<details id="algorithm-description-details" style="margin-bottom: 20px;">
+    <summary style="cursor: pointer; padding: 15px; border: 1px solid var(--border-color, #ddd); border-radius: 5px; background-color: var(--bg-secondary, #f9f9f9); font-weight: bold; font-size: 1.1em; color: var(--text-primary, #212529);">
+        About the Hook-Walk Algorithm
+    </summary>
+    <div style="padding: 15px; border: 1px solid var(--border-color, #ddd); border-top: none; border-radius: 0 0 5px 5px; background-color: var(--bg-secondary, #f9f9f9); color: var(--text-primary, #212529);">
+        <p>The <strong>hook-walk algorithm</strong> (Greene-Nijenhuis-Wilf) generates uniformly random Standard Young Tableaux (SYT) of any given shape. This is a fundamental tool in algebraic combinatorics with applications to representation theory, symmetric functions, and random matrix theory.</p>
+        
+        <h4>How it works:</h4>
+        <ol>
+            <li>Start with an empty Young diagram of the given shape</li>
+            <li>For each number k from N down to 1:
+                <ul>
+                    <li>Pick a random starting cell uniformly from all empty cells</li>
+                    <li>Perform a random walk within the hook: move right or down with probabilities proportional to arm and leg lengths</li>
+                    <li>Stop when reaching a corner cell (arm = leg = 0)</li>
+                    <li>Place k at that corner and remove it from the diagram</li>
+                </ul>
+            </li>
+        </ol>
+        
+        <h4>Properties:</h4>
+        <ul>
+            <li><strong>Uniform sampling:</strong> Each SYT of the given shape has equal probability</li>
+            <li><strong>Efficient:</strong> O(N√N) time complexity for N boxes</li>
+            <li><strong>Scalable:</strong> Handles shapes up to 100,000 boxes using WASM</li>
+        </ul>
+        
+        <h4>Shape notation:</h4>
+        <p>Enter row lengths separated by commas. Use exponential notation like <code>100^50</code> for 50 rows of length 100.</p>
+        <p><strong>Examples:</strong> <code>5,5,5</code> or <code>100^100</code> or <code>200^10,100^5,50^20</code></p>
+        
+        <h4>Visualization:</h4>
+        <ul>
+            <li><strong>Small tableaux (≤200 boxes):</strong> Individual numbers displayed in cells</li>
+            <li><strong>Large tableaux (>200 boxes):</strong> Heat map showing value distribution by deciles</li>
+        </ul>
+    </div>
+</details>
 
 <div class="controls">
   <div class="input-group">
     <label for="shape-input">Shape (rows):</label>
-    <input type="text" id="shape-input" value="100^100">
+    <input type="text" id="shape-input" value="50^50">
     <button id="generate-tableau">Generate SYT</button>
     <span id="hook-wasm-indicator" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
   </div>
@@ -99,12 +136,14 @@ if (typeof Module !== 'undefined') {
 
 class HookWalkVis {
   constructor() {
-    this.shape = Array(100).fill(100);
-    this.N     = 10000;
+    this.shape = Array(50).fill(50);
+    this.N     = 2500;
     this.tableau = [];
     this.wasm   = null;
     this.initWASM();
     this.setupEvents();
+    this.setupCollapsibleDetails();
+    this.generate(); // Generate initial tableau
   }
 
   async initWASM(){
@@ -120,6 +159,14 @@ class HookWalkVis {
 
   setupEvents(){
     document.getElementById('generate-tableau').addEventListener('click',()=>this.generate());
+  }
+
+  setupCollapsibleDetails() {
+    // Keep details element collapsed by default
+    const details = document.getElementById('algorithm-description-details');
+    if (details) {
+      details.open = false;
+    }
   }
 
   parseShape(){
@@ -241,33 +288,62 @@ class HookWalkVis {
   }
 
   drawSmall(cont){
-    const cell=40,pad=5;
+    const containerWidth = cont.offsetWidth || 800;
+    const containerHeight = window.innerHeight * 0.8; // 80% of viewport height
     const rows=this.tableau.length;
     const cols=Math.max(...this.shape);
+    const pad=10;
+    
+    // Calculate cell size based on both width and height constraints
+    const cellSizeByWidth = (containerWidth - 2*pad) / cols;
+    const cellSizeByHeight = (containerHeight - 2*pad) / rows;
+    const cellSize = Math.min(40, cellSizeByWidth, cellSizeByHeight);
+    
+    const width = cols * cellSize + 2*pad;
+    const height = rows * cellSize + 2*pad;
+    
     const svg=d3.select(cont).append('svg')
-      .attr('width',cols*cell+2*pad)
-      .attr('height',rows*cell+2*pad);
+      .attr('width', '100%')
+      .attr('height', height)
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .style('max-height', containerHeight + 'px');
     const g=svg.append('g').attr('transform',`translate(${pad},${pad})`);
+    
     this.tableau.forEach((row,r)=>{
       row.forEach((val,c)=>{
-        g.append('rect').attr('x',c*cell).attr('y',r*cell)
-          .attr('width',cell).attr('height',cell)
+        g.append('rect').attr('x',c*cellSize).attr('y',r*cellSize)
+          .attr('width',cellSize).attr('height',cellSize)
           .attr('class','tableau-cell filled');
-        g.append('text').attr('x',c*cell+cell/2).attr('y',r*cell+cell/2)
-          .attr('class','tableau-text').text(val);
+        g.append('text').attr('x',c*cellSize+cellSize/2).attr('y',r*cellSize+cellSize/2)
+          .attr('class','tableau-text')
+          .style('font-size', Math.min(14, cellSize*0.6) + 'px')
+          .text(val);
       });
     });
   }
 
   drawLarge(cont){
-    const cell=4;       // tiny pixels
-    const pad=10;
+    const containerWidth = cont.offsetWidth || 800;
+    const containerHeight = window.innerHeight * 0.8; // 80% of viewport height
     const rows=this.shape.length;
     const cols=Math.max(...this.shape);
+    const pad=10;
+    
+    // Calculate cell size based on both width and height constraints
+    const cellSizeByWidth = (containerWidth - 2*pad) / cols;
+    const cellSizeByHeight = (containerHeight - 2*pad) / rows;
+    const cellSize = Math.max(1, Math.min(cellSizeByWidth, cellSizeByHeight));
+    
+    const width = cols * cellSize + 2*pad;
+    const height = rows * cellSize + 2*pad;
+    
     const svg=d3.select(cont).append('svg')
-      .attr('width',cols*cell+2*pad)
-      .attr('height',rows*cell+2*pad);
+      .attr('width', '100%')
+      .attr('height', height)
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .style('max-height', containerHeight + 'px');
     const g=svg.append('g').attr('transform',`translate(${pad},${pad})`);
+    
     const thresholds=[];
     for(let i=1;i<10;i++) thresholds.push(i*this.N/10);
     const palette=['#e3f2fd','#bbdefb','#90caf9','#64b5f6','#42a5f5',
@@ -275,8 +351,8 @@ class HookWalkVis {
     this.tableau.forEach((row,r)=>{
       row.forEach((val,c)=>{
         let idx=thresholds.findIndex(t=>val<=t)+1; // 1..10
-        g.append('rect').attr('x',c*cell).attr('y',r*cell)
-          .attr('width',cell).attr('height',cell)
+        g.append('rect').attr('x',c*cellSize).attr('y',r*cellSize)
+          .attr('width',cellSize).attr('height',cellSize)
           .attr('fill',palette[idx-1]).attr('stroke-width',0);
       });
     });
@@ -286,20 +362,3 @@ class HookWalkVis {
 const hookVis=new HookWalkVis();
 </script>
 
-<h3>How it works</h3>
-
-<p>The hook-walk algorithm generates a uniformly random Standard Young Tableau by:</p>
-<ol>
-  <li>Starting with an empty Young diagram of the given shape</li>
-  <li>For each number k from N down to 1:
-    <ul>
-      <li>Perform a random walk starting from a corner cell</li>
-      <li>At each step, move up or left with equal probability (when possible)</li>
-      <li>Stop with probability 1/2 at each step</li>
-      <li>Place k at the final position</li>
-      <li>Use jeu-de-taquin slides to maintain the tableau property</li>
-    </ul>
-  </li>
-</ol>
-
-<p>For large tableaux (N > 200), the visualization shows a heat map where darker blues represent larger values, divided into deciles.</p>

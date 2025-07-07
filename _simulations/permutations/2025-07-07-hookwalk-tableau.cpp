@@ -13,7 +13,7 @@ mv 2025-07-07-hookwalk-tableau.js ../../js/
 
 Features:
 - Hook-walk algorithm for sampling uniform random Standard Young Tableaux
-- Supports any Young diagram shape up to 10,000 boxes
+- Supports any Young diagram shape up to 100,000 boxes
 - Efficient C++ implementation with O(N√N) complexity
 - Returns tableau entries accessible via getTableauEntry(row, col)
 */
