@@ -12,7 +12,7 @@ emcc 2025-07-07-rsk-algorithm.cpp -o 2025-07-07-rsk-algorithm.js \
  mv 2025-07-07-rsk-algorithm.js ../../js/
 
 Features:
-- RSK (Robinson-Schensted-Knuth) algorithm for permutations up to size 15000
+- RSK (Robinson-Schensted-Knuth) algorithm for permutations up to size 10000
 - Forward RSK: permutation → (P-tableau, Q-tableau)
 - Inverse RSK: (P-tableau, Q-tableau) → permutation
 - Efficient C++ implementation for large permutations with optimized memory management
@@ -80,14 +80,14 @@ char* performRSK(const char* permStr) {
         
         while (currentValue != -1) {
             // Ensure row exists
-            if (row >= pTableau.size()) {
+            if (row >= (int)pTableau.size()) {
                 pTableau.resize(row + 1);
                 qTableau.resize(row + 1);
             }
             
             // Find position to insert/bump
             bool inserted = false;
-            for (int col = 0; col < pTableau[row].size(); col++) {
+            for (int col = 0; col < (int)pTableau[row].size(); col++) {
                 if (pTableau[row][col] > currentValue) {
                     // Bump this value
                     swap(pTableau[row][col], currentValue);
@@ -116,7 +116,7 @@ char* performRSK(const char* permStr) {
     
     // Return shape as string
     stringstream result;
-    for (int i = 0; i < tableauShape.size(); i++) {
+    for (int i = 0; i < (int)tableauShape.size(); i++) {
         if (i > 0) result << ",";
         result << tableauShape[i];
     }
@@ -158,8 +158,8 @@ char* performInverseRSK() {
     for (int time = maxTime; time >= 1; time--) {
         // Find position of time in Q-tableau
         int qRow = -1, qCol = -1;
-        for (int r = 0; r < qCopy.size(); r++) {
-            for (int c = 0; c < qCopy[r].size(); c++) {
+        for (int r = 0; r < (int)qCopy.size(); r++) {
+            for (int c = 0; c < (int)qCopy[r].size(); c++) {
                 if (qCopy[r][c] == time) {
                     qRow = r;
                     qCol = c;
@@ -188,7 +188,7 @@ char* performInverseRSK() {
         for (int row = qRow - 1; row >= 0; row--) {
             // Find largest element smaller than value
             int bestCol = -1;
-            for (int col = pCopy[row].size() - 1; col >= 0; col--) {
+            for (int col = (int)pCopy[row].size() - 1; col >= 0; col--) {
                 if (pCopy[row][col] < value) {
                     bestCol = col;
                     break;
@@ -208,7 +208,7 @@ char* performInverseRSK() {
     
     // Return as string
     stringstream resultStream;
-    for (int i = 0; i < result.size(); i++) {
+    for (int i = 0; i < (int)result.size(); i++) {
         if (i > 0) resultStream << ",";
         resultStream << result[i];
     }
@@ -227,7 +227,7 @@ char* performInverseRSK() {
 EMSCRIPTEN_KEEPALIVE
 char* getTableauShape() {
     stringstream result;
-    for (int i = 0; i < tableauShape.size(); i++) {
+    for (int i = 0; i < (int)tableauShape.size(); i++) {
         if (i > 0) result << ",";
         result << tableauShape[i];
     }
@@ -245,11 +245,11 @@ char* getTableauShape() {
 EMSCRIPTEN_KEEPALIVE
 int getTableauEntry(int tableau, int row, int col) {
     if (tableau == 0) { // P-tableau
-        if (row < pTableau.size() && col < pTableau[row].size()) {
+        if (row < (int)pTableau.size() && col < (int)pTableau[row].size()) {
             return pTableau[row][col];
         }
     } else { // Q-tableau
-        if (row < qTableau.size() && col < qTableau[row].size()) {
+        if (row < (int)qTableau.size() && col < (int)qTableau[row].size()) {
             return qTableau[row][col];
         }
     }
@@ -259,7 +259,7 @@ int getTableauEntry(int tableau, int row, int col) {
 // Get permutation entry at index
 EMSCRIPTEN_KEEPALIVE
 int getPermutationEntry(int index) {
-    if (index >= 0 && index < currentPermutation.size()) {
+    if (index >= 0 && index < (int)currentPermutation.size()) {
         return currentPermutation[index];
     }
     return -1;

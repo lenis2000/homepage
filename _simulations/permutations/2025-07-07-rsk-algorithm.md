@@ -6,7 +6,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-rsk-algorithm.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-rsk-algorithm.cpp'
-    txt: 'C++ code for WASM module (handles permutations up to size 15000)'
+    txt: 'C++ code for WASM module (handles permutations up to size 10000)'
 ---
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -180,7 +180,7 @@ button:disabled {
     <div class="controls">
         <div class="input-group">
             <label for="n-input">Permutation size N:</label>
-            <input type="number" id="n-input" min="1" max="15000" value="6">
+            <input type="number" id="n-input" min="1" max="10000" value="6">
             <button id="generate-random">Generate Random Permutation</button>
             <span id="wasm-indicator" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
         </div>
@@ -217,11 +217,6 @@ button:disabled {
         <div id="permutation-matrix"></div>
     </div>
     
-    <div class="section" id="step-info-section" style="display: none;">
-        <h3>Current Step</h3>
-        <div id="step-info" class="step-info"></div>
-    </div>
-    
     <div class="visualization-container">
         <div class="section">
             <h3>P-Tableau (Insertion Tableau)</h3>
@@ -232,6 +227,11 @@ button:disabled {
             <h3>Q-Tableau (Recording Tableau)</h3>
             <div id="q-tableau"></div>
         </div>
+    </div>
+    
+    <div class="section" id="step-info-section" style="display: none;">
+        <h3>Current Step</h3>
+        <div id="step-info" class="step-info"></div>
     </div>
 </div>
 
