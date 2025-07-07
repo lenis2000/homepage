@@ -74,6 +74,83 @@ code:
     font-size: 14px;
     fill: #333;
   }
+  
+  .mode-toggle {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color, #ccc);
+    background: var(--background-primary, white);
+    cursor: pointer;
+    margin-right: 5px;
+  }
+  
+  .mode-toggle.active {
+    background: var(--accent-color, #007bff);
+    color: white;
+  }
+  
+  .input-section {
+    margin: 15px 0;
+    padding: 15px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 5px;
+    background: var(--background-secondary, #f9f9f9);
+  }
+  
+  .drawing-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .drawing-info {
+    min-width: 200px;
+    font-family: monospace;
+    font-size: 14px;
+  }
+  
+  .drawing-info div {
+    margin: 5px 0;
+  }
+  
+  .grid-cell {
+    fill: white;
+    stroke: #ccc;
+    stroke-width: 1;
+    cursor: pointer;
+  }
+  
+  .grid-cell.filled {
+    fill: #e8f4ff;
+  }
+  
+  .grid-cell:hover {
+    fill: #d0e8ff;
+  }
+  
+  .shape-toggle {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color, #ccc);
+    background: var(--background-primary, white);
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 14px;
+  }
+  
+  .shape-toggle.active {
+    background: var(--accent-color, #007bff);
+    color: white;
+  }
+  
+  .shape-input-section {
+    margin-top: 10px;
+  }
+  
+  .info-text {
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    font-style: italic;
+    margin-left: 10px;
+  }
 </style>
 
 <h2>Generate Random Standard Young Tableaux</h2>
@@ -105,9 +182,12 @@ code:
             <li><strong>Scalable:</strong> Handles shapes up to 100,000 boxes using WASM</li>
         </ul>
         
-        <h4>Shape notation:</h4>
-        <p>Enter row lengths separated by commas. Use exponential notation like <code>100^50</code> for 50 rows of length 100.</p>
-        <p><strong>Examples:</strong> <code>5,5,5</code> or <code>100^100</code> or <code>200^10,100^5,50^20</code></p>
+        <h4>Shape input methods:</h4>
+        <ul>
+            <li><strong>Draw Shape:</strong> Click cells on the interactive grid to draw Young diagrams by hand</li>
+            <li><strong>Manual notation:</strong> Enter row lengths like <code>5,5,5</code> or <code>100^50</code></li>
+            <li><strong>Plancherel measure:</strong> Sample random partitions by discretizing the Vershik-Kerov limit shape Ω(x) = (2/π)[x√(1-x²) + arcsin(x)]</li>
+        </ul>
         
         <h4>Visualization:</h4>
         <ul>
@@ -119,8 +199,52 @@ code:
 
 <div class="controls">
   <div class="input-group">
-    <label for="shape-input">Shape (rows):</label>
-    <input type="text" id="shape-input" value="50^50">
+    <label>Input method:</label>
+    <button id="toggle-draw-mode" class="mode-toggle active">Draw Shape</button>
+    <button id="toggle-text-mode" class="mode-toggle">Text Input</button>
+  </div>
+  
+  <!-- Drawing interface -->
+  <div id="draw-interface" class="input-section">
+    <div class="input-group">
+      <label for="target-boxes">Target boxes (N):</label>
+      <input type="number" id="target-boxes" value="2500" min="1" max="100000">
+      <button id="clear-drawing">Clear</button>
+    </div>
+    <div class="drawing-container">
+      <div id="shape-canvas"></div>
+      <div class="drawing-info">
+        <div>Current boxes: <span id="current-boxes">0</span></div>
+        <div>Shape: <span id="current-shape-text">[]</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Text interface -->
+  <div id="text-interface" class="input-section" style="display: none;">
+    <div class="input-group">
+      <label>Shape type:</label>
+      <button id="toggle-manual-shape" class="shape-toggle active">Manual</button>
+      <button id="toggle-plancherel-shape" class="shape-toggle">Plancherel</button>
+    </div>
+    
+    <div id="manual-shape-input" class="shape-input-section">
+      <div class="input-group">
+        <label for="shape-input">Shape (rows):</label>
+        <input type="text" id="shape-input" value="50^50">
+      </div>
+    </div>
+    
+    <div id="plancherel-shape-input" class="shape-input-section" style="display: none;">
+      <div class="input-group">
+        <label for="plancherel-n">Number of boxes (N):</label>
+        <input type="number" id="plancherel-n" value="100" min="1" max="10000">
+        <span class="info-text">Samples random partition with Plancherel measure</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="input-group">
     <button id="generate-tableau">Generate SYT</button>
     <span id="hook-wasm-indicator" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
   </div>
@@ -140,10 +264,18 @@ class HookWalkVis {
     this.N     = 2500;
     this.tableau = [];
     this.wasm   = null;
+    this.drawMode = true;
+    this.drawnShape = [];
+    this.gridSize = 20;
+    this.cellSize = 20;
+    this.usePlancherel = false;
+    this.plancherelData = null;
     this.initWASM();
     this.setupEvents();
     this.setupCollapsibleDetails();
-    this.generate(); // Generate initial tableau
+    this.initDrawingCanvas();
+    this.loadPlancherelData();
+    this.updateDrawingFromTarget(); // Create initial square shape
   }
 
   async initWASM(){
@@ -159,6 +291,12 @@ class HookWalkVis {
 
   setupEvents(){
     document.getElementById('generate-tableau').addEventListener('click',()=>this.generate());
+    document.getElementById('toggle-draw-mode').addEventListener('click',()=>this.setDrawMode(true));
+    document.getElementById('toggle-text-mode').addEventListener('click',()=>this.setDrawMode(false));
+    document.getElementById('clear-drawing').addEventListener('click',()=>this.clearDrawing());
+    document.getElementById('target-boxes').addEventListener('input',()=>this.updateDrawingFromTarget());
+    document.getElementById('toggle-manual-shape').addEventListener('click',()=>this.setShapeMode(false));
+    document.getElementById('toggle-plancherel-shape').addEventListener('click',()=>this.setShapeMode(true));
   }
 
   setupCollapsibleDetails() {
@@ -169,35 +307,337 @@ class HookWalkVis {
     }
   }
 
-  parseShape(){
-    const txt = document.getElementById('shape-input').value;
-    const parts = txt.split(',').map(x=>x.trim());
-    const arr = [];
+  setDrawMode(isDraw) {
+    this.drawMode = isDraw;
+    document.getElementById('toggle-draw-mode').classList.toggle('active', isDraw);
+    document.getElementById('toggle-text-mode').classList.toggle('active', !isDraw);
+    document.getElementById('draw-interface').style.display = isDraw ? 'block' : 'none';
+    document.getElementById('text-interface').style.display = isDraw ? 'none' : 'block';
+  }
+
+  setShapeMode(isPlancherel) {
+    this.usePlancherel = isPlancherel;
+    document.getElementById('toggle-manual-shape').classList.toggle('active', !isPlancherel);
+    document.getElementById('toggle-plancherel-shape').classList.toggle('active', isPlancherel);
+    document.getElementById('manual-shape-input').style.display = isPlancherel ? 'none' : 'block';
+    document.getElementById('plancherel-shape-input').style.display = isPlancherel ? 'block' : 'none';
+  }
+
+  initDrawingCanvas() {
+    const container = document.getElementById('shape-canvas');
+    const svg = d3.select(container).append('svg')
+      .attr('width', this.gridSize * this.cellSize)
+      .attr('height', this.gridSize * this.cellSize);
     
-    for(const part of parts){
-      if(part.includes('^')){
-        // Handle exponential notation like "100^50"
-        const [len, count] = part.split('^').map(x=>parseInt(x.trim()));
-        if(isNaN(len) || isNaN(count) || len<=0 || count<=0){
-          alert('Bad shape format: ' + part); 
-          return null;
-        }
-        for(let i=0; i<count; i++) arr.push(len);
-      } else {
-        // Handle single number
-        const len = parseInt(part);
-        if(isNaN(len) || len<=0){
-          alert('Bad shape format: ' + part); 
-          return null;
-        }
-        arr.push(len);
+    this.drawingGrid = [];
+    for(let r=0; r<this.gridSize; r++) {
+      this.drawingGrid[r] = [];
+      for(let c=0; c<this.gridSize; c++) {
+        this.drawingGrid[r][c] = false;
+        svg.append('rect')
+          .attr('x', c * this.cellSize)
+          .attr('y', r * this.cellSize)
+          .attr('width', this.cellSize)
+          .attr('height', this.cellSize)
+          .attr('class', 'grid-cell')
+          .attr('data-row', r)
+          .attr('data-col', c)
+          .on('click', (event) => this.toggleCell(r, c));
       }
     }
+    this.updateDrawingInfo();
+  }
+
+  toggleCell(r, c) {
+    this.drawingGrid[r][c] = !this.drawingGrid[r][c];
+    this.updateDrawingVisual();
+    this.updateDrawingInfo();
+  }
+
+  updateDrawingVisual() {
+    const svg = d3.select('#shape-canvas svg');
+    for(let r=0; r<this.gridSize; r++) {
+      for(let c=0; c<this.gridSize; c++) {
+        svg.select(`rect[data-row="${r}"][data-col="${c}"]`)
+          .attr('class', this.drawingGrid[r][c] ? 'grid-cell filled' : 'grid-cell');
+      }
+    }
+  }
+
+  clearDrawing() {
+    for(let r=0; r<this.gridSize; r++) {
+      for(let c=0; c<this.gridSize; c++) {
+        this.drawingGrid[r][c] = false;
+      }
+    }
+    this.updateDrawingVisual();
+    this.updateDrawingInfo();
+  }
+
+  updateDrawingFromTarget() {
+    // Create a roughly square shape with target number of boxes
+    const target = parseInt(document.getElementById('target-boxes').value) || 100;
+    const side = Math.floor(Math.sqrt(target));
+    this.clearDrawing();
     
-    if(!arr.length){ alert('Bad shape'); return null; }
+    for(let r=0; r<Math.min(side, this.gridSize); r++) {
+      for(let c=0; c<Math.min(side, this.gridSize); c++) {
+        this.drawingGrid[r][c] = true;
+      }
+    }
+    this.updateDrawingVisual();
+    this.updateDrawingInfo();
+  }
+
+  updateDrawingInfo() {
+    this.drawnShape = this.getShapeFromDrawing();
+    const boxes = this.drawnShape.reduce((a,b)=>a+b,0);
+    document.getElementById('current-boxes').textContent = boxes;
+    document.getElementById('current-shape-text').textContent = 
+      this.drawnShape.length ? `[${this.drawnShape.join(',')}]` : '[]';
+  }
+
+  getShapeFromDrawing() {
+    const shape = [];
+    for(let r=0; r<this.gridSize; r++) {
+      let rowLen = 0;
+      for(let c=0; c<this.gridSize; c++) {
+        if(this.drawingGrid[r][c]) rowLen = c + 1;
+      }
+      if(rowLen > 0) shape.push(rowLen);
+      else if(shape.length > 0) break; // Stop at first empty row after filled rows
+    }
+    return shape;
+  }
+
+  parseShape(){
+    let arr;
+    
+    if(this.drawMode) {
+      // Use drawn shape
+      arr = this.getShapeFromDrawing();
+      if(!arr.length){ 
+        alert('Please draw a shape first'); 
+        return null; 
+      }
+    } else if(this.usePlancherel) {
+      // Generate Plancherel random partition
+      const n = parseInt(document.getElementById('plancherel-n').value) || 100;
+      arr = this.samplePlancherelPartition(n);
+      if(!arr.length){ 
+        alert('Failed to generate Plancherel partition'); 
+        return null; 
+      }
+    } else {
+      // Use manual text input
+      const txt = document.getElementById('shape-input').value;
+      const parts = txt.split(',').map(x=>x.trim());
+      arr = [];
+      
+      for(const part of parts){
+        if(part.includes('^')){
+          // Handle exponential notation like "100^50"
+          const [len, count] = part.split('^').map(x=>parseInt(x.trim()));
+          if(isNaN(len) || isNaN(count) || len<=0 || count<=0){
+            alert('Bad shape format: ' + part); 
+            return null;
+          }
+          for(let i=0; i<count; i++) arr.push(len);
+        } else {
+          // Handle single number
+          const len = parseInt(part);
+          if(isNaN(len) || len<=0){
+            alert('Bad shape format: ' + part); 
+            return null;
+          }
+          arr.push(len);
+        }
+      }
+      
+      if(!arr.length){ alert('Bad shape'); return null; }
+    }
+    
     this.shape = arr;
     this.N = arr.reduce((a,b)=>a+b,0);
     return arr;
+  }
+
+  async loadPlancherelData() {
+    try {
+      const response = await fetch('{{site.url}}/js/2025-05-04-dim-lambda-partitionData.json');
+      this.plancherelData = await response.json();
+      console.log('Loaded Plancherel partition data for sizes up to', Math.max(...Object.keys(this.plancherelData).map(Number)));
+    } catch (error) {
+      console.log('Could not load Plancherel data, using fallback algorithm');
+    }
+  }
+
+  samplePlancherelPartition(n) {
+    // Use precomputed data if available, otherwise fallback to approximation
+    if (this.plancherelData && this.plancherelData[n]) {
+      // Direct lookup - the data has one partition per size
+      const partitionData = this.plancherelData[n];
+      return [...partitionData.partition]; // Copy to avoid mutation
+    }
+    
+    // For large n > 5000, use block scaling
+    if (this.plancherelData && n > 5000) {
+      // Find k such that n/k² ≤ 5000, so k² ≥ n/5000
+      const minK2 = n / 5000;
+      const k = Math.ceil(Math.sqrt(minK2));
+      const targetSize = Math.floor(n / (k * k));
+      
+      if (this.plancherelData[targetSize]) {
+        const partitionData = this.plancherelData[targetSize];
+        return this.blockScalePartition(partitionData.partition, k);
+      }
+      
+      // If exact targetSize not available, find closest
+      const sizes = Object.keys(this.plancherelData).map(Number).sort((a,b) => a - b);
+      const closestSize = sizes.reduce((prev, curr) => 
+        Math.abs(curr - targetSize) < Math.abs(prev - targetSize) ? curr : prev
+      );
+      
+      if (closestSize && this.plancherelData[closestSize]) {
+        const partitionData = this.plancherelData[closestSize];
+        const blockScaled = this.blockScalePartition(partitionData.partition, k);
+        
+        // Fine-tune to get exactly n boxes
+        return this.adjustPartitionSize(blockScaled, n);
+      }
+    }
+    
+    // Fallback: find closest size in data and scale
+    if (this.plancherelData) {
+      const sizes = Object.keys(this.plancherelData).map(Number).sort((a,b) => a - b);
+      const closestSize = sizes.reduce((prev, curr) => 
+        Math.abs(curr - n) < Math.abs(prev - n) ? curr : prev
+      );
+      
+      if (closestSize && this.plancherelData[closestSize]) {
+        const partitionData = this.plancherelData[closestSize];
+        // Scale the partition to target size n
+        return this.scalePartition(partitionData.partition, n);
+      }
+    }
+    
+    // Ultimate fallback: simple approximation
+    return this.fallbackPlancherelPartition(n);
+  }
+
+  blockScalePartition(partition, k) {
+    // Replace each cell with a k×k block
+    // Each row of length L becomes k rows of length L*k
+    const scaledPartition = [];
+    
+    for (let i = 0; i < partition.length; i++) {
+      const rowLength = partition[i];
+      const scaledRowLength = rowLength * k;
+      
+      // Add k copies of this scaled row
+      for (let j = 0; j < k; j++) {
+        scaledPartition.push(scaledRowLength);
+      }
+    }
+    
+    return scaledPartition;
+  }
+
+  adjustPartitionSize(partition, targetN) {
+    const currentN = partition.reduce((a,b) => a + b, 0);
+    if (currentN === targetN) return partition;
+    
+    // Make a copy to avoid mutating input
+    const adjusted = [...partition];
+    
+    if (currentN < targetN) {
+      // Add boxes by extending rows (prefer longer rows)
+      let diff = targetN - currentN;
+      let i = 0;
+      while (diff > 0 && i < adjusted.length) {
+        adjusted[i]++;
+        diff--;
+        i = (i + 1) % adjusted.length;
+      }
+    } else if (currentN > targetN) {
+      // Remove boxes by shortening rows (prefer shorter rows)
+      let diff = currentN - targetN;
+      for (let i = adjusted.length - 1; i >= 0 && diff > 0; i--) {
+        if (adjusted[i] > 1) {
+          adjusted[i]--;
+          diff--;
+        }
+      }
+    }
+    
+    // Ensure monotonicity
+    adjusted.sort((a,b) => b - a);
+    for (let i = 1; i < adjusted.length; i++) {
+      if (adjusted[i] > adjusted[i-1]) adjusted[i] = adjusted[i-1];
+    }
+    
+    return adjusted.filter(x => x > 0);
+  }
+
+  scalePartition(partition, targetN) {
+    const currentN = partition.reduce((a,b) => a + b, 0);
+    if (currentN === targetN) return [...partition];
+    
+    const scale = targetN / currentN;
+    let scaled = partition.map(x => Math.max(1, Math.round(x * scale)));
+    
+    // Adjust to exact target
+    let sum = scaled.reduce((a,b) => a + b, 0);
+    let i = 0;
+    while (sum < targetN && i < scaled.length) {
+      scaled[i]++;
+      sum++;
+      i = (i + 1) % scaled.length;
+    }
+    while (sum > targetN && i < scaled.length) {
+      if (scaled[i] > 1) {
+        scaled[i]--;
+        sum--;
+      }
+      i++;
+    }
+    
+    // Ensure monotonicity
+    scaled.sort((a,b) => b - a);
+    for (let i = 1; i < scaled.length; i++) {
+      if (scaled[i] > scaled[i-1]) scaled[i] = scaled[i-1];
+    }
+    
+    return scaled.filter(x => x > 0);
+  }
+
+  fallbackPlancherelPartition(n) {
+    // Simple approximation: roughly square with some randomness
+    const side = Math.floor(Math.sqrt(n));
+    const partition = [];
+    
+    for (let i = 0; i < side + 5; i++) {
+      const baseLength = side - Math.floor(i/2);
+      const noise = Math.floor(this.gaussianRandom() * Math.sqrt(side));
+      const length = Math.max(1, baseLength + noise);
+      
+      if (length > 0) partition.push(length);
+    }
+    
+    return this.scalePartition(partition, n);
+  }
+
+  gaussianRandom() {
+    // Box-Muller transform for standard normal
+    if(this.spare !== undefined) {
+      const tmp = this.spare;
+      delete this.spare;
+      return tmp;
+    }
+    const u = Math.random(), v = Math.random();
+    const mag = Math.sqrt(-2 * Math.log(u));
+    this.spare = mag * Math.cos(2 * Math.PI * v);
+    return mag * Math.sin(2 * Math.PI * v);
   }
 
   async generate(){
@@ -223,14 +663,6 @@ class HookWalkVis {
     }
 
     this.draw();
-    
-    // Debug: print tableau to console
-    console.log('Generated SYT for shape:', this.shape.join(','));
-    console.log('Total boxes N =', this.N);
-    console.log('Tableau:');
-    this.tableau.forEach((row, i) => {
-      console.log(`Row ${i}: [${row.join(', ')}]`);
-    });
   }
 
   /* ---------- NEW: uniform GNW hook-walk (N ≤ 500) ---------- */
