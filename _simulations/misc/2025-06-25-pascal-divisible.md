@@ -132,6 +132,8 @@ This simulation visualizes Pascal's triangle with dots colored based on whether 
         <input type="number" id="modulusInput" min="2" max="2000" value="2">
     </div>
     <button id="regenerateBtn">Regenerate</button>
+    <button id="zoomInBtn">Zoom In</button>
+    <button id="zoomOutBtn">Zoom Out</button>
     <button id="resetZoomBtn">Reset View</button>
 </div>
 
@@ -261,11 +263,9 @@ function setupInteraction() {
         canvas.style.cursor = 'grab';
     });
     
-    // Touch events for mobile
+    // Touch events for mobile - pan only
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        touches = e.touches;
-        
         if (e.touches.length === 1) {
             // Single touch - pan
             isDragging = true;
@@ -273,105 +273,33 @@ function setupInteraction() {
             dragStart.y = e.touches[0].clientY;
             cameraStart.x = camera.x;
             cameraStart.y = camera.y;
-        } else if (e.touches.length === 2) {
-            // Two touches - pinch zoom
-            isDragging = false;
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            initialPinchDistance = Math.hypot(
-                touch2.clientX - touch1.clientX,
-                touch2.clientY - touch1.clientY
-            );
-            initialZoom = camera.zoom;
         }
     });
     
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        touches = e.touches;
-        
         if (e.touches.length === 1 && isDragging) {
             // Single touch pan
             camera.x = cameraStart.x + (e.touches[0].clientX - dragStart.x) / camera.zoom;
             camera.y = cameraStart.y + (e.touches[0].clientY - dragStart.y) / camera.zoom;
             render();
-        } else if (e.touches.length === 2) {
-            // Pinch zoom
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            const currentDistance = Math.hypot(
-                touch2.clientX - touch1.clientX,
-                touch2.clientY - touch1.clientY
-            );
-            
-            if (initialPinchDistance > 0) {
-                const scale = currentDistance / initialPinchDistance;
-                const newZoom = initialZoom * scale;
-                
-                // Get pinch center in screen coordinates
-                const centerX = (touch1.clientX + touch2.clientX) / 2;
-                const centerY = (touch1.clientY + touch2.clientY) / 2;
-                const rect = canvas.getBoundingClientRect();
-                
-                // Convert to world coordinates
-                const worldX = (centerX - rect.left - rect.width/2) / camera.zoom - camera.x;
-                const worldY = (centerY - rect.top - rect.height/2) / camera.zoom - camera.y;
-                
-                // Apply zoom
-                camera.zoom = Math.max(0.1, Math.min(10, newZoom));
-                
-                // Adjust camera position to zoom towards pinch center
-                const zoomChange = camera.zoom / initialZoom;
-                camera.x = worldX - (worldX - camera.x) * zoomChange;
-                camera.y = worldY - (worldY - camera.y) * zoomChange;
-                
-                // Show zoom indicator
-                showZoomIndicator();
-                
-                render();
-            }
         }
     });
     
     canvas.addEventListener('touchend', (e) => {
         e.preventDefault();
-        touches = e.touches;
-        
-        if (e.touches.length === 0) {
-            isDragging = false;
-            initialPinchDistance = 0;
-        } else if (e.touches.length === 1) {
-            // Switching from pinch to pan
-            isDragging = true;
-            dragStart.x = e.touches[0].clientX;
-            dragStart.y = e.touches[0].clientY;
-            cameraStart.x = camera.x;
-            cameraStart.y = camera.y;
-            initialPinchDistance = 0;
-        }
+        isDragging = false;
     });
     
     canvas.addEventListener('touchcancel', (e) => {
         e.preventDefault();
         isDragging = false;
-        initialPinchDistance = 0;
-        touches = null;
     });
 
-    // Zoom with mouse wheel
+    // Disable mouse wheel zoom
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // World coordinates before zoom
-        const worldX = (mouseX - rect.width/2) / camera.zoom - camera.x;
-        const worldY = (mouseY - rect.height/2) / camera.zoom - camera.y;
-
-        // Apply zoom
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-        zoomCamera(zoomFactor, worldX, worldY);
+        // Do nothing - zoom only via buttons
     });
 
     // Keyboard navigation
@@ -459,7 +387,7 @@ function showZoomIndicator() {
 function zoomCamera(zoomFactor, worldX = 0, worldY = 0) {
     const oldZoom = camera.zoom;
     camera.zoom *= zoomFactor;
-    camera.zoom = Math.max(0.2, Math.min(5, camera.zoom));
+    camera.zoom = Math.max(0.05, Math.min(5, camera.zoom));
 
     // Adjust camera position to zoom towards focal point
     if (worldX !== 0 || worldY !== 0) {
@@ -671,7 +599,7 @@ function resetView() {
     const maxInitialZoom = isMobile ? 0.8 : 1;
     
     camera.zoom = Math.min(zoomX, zoomY, maxInitialZoom);
-    camera.zoom = Math.max(0.2, Math.min(5, camera.zoom));
+    camera.zoom = Math.max(0.05, Math.min(5, camera.zoom));
 
     // Center the view
     camera.x = -centerX;
@@ -727,6 +655,18 @@ document.getElementById('regenerateBtn').addEventListener('click', function() {
     if (canvas) canvas.focus();
 });
 
+document.getElementById('zoomInBtn').addEventListener('click', function() {
+    zoomCamera(1.2, 0, 0);
+    render();
+    if (canvas) canvas.focus();
+});
+
+document.getElementById('zoomOutBtn').addEventListener('click', function() {
+    zoomCamera(0.8333, 0, 0);
+    render();
+    if (canvas) canvas.focus();
+});
+
 document.getElementById('resetZoomBtn').addEventListener('click', function() {
     resetView();
     if (canvas) canvas.focus();
@@ -757,7 +697,8 @@ window.addEventListener('beforeunload', function() {
 Pascal's triangle is a triangular array of numbers where each number is the sum of the two numbers directly above it. This simulation visualizes divisibility patterns by showing dots only where the Pascal's triangle values are divisible by the chosen modulus.
 
 ### Controls:
-- **Mouse**: Drag to pan, scroll wheel to zoom
+- **Mouse/Touch**: Drag to pan
+- **Zoom Buttons**: Use "Zoom In" and "Zoom Out" buttons to control zoom level
 - **Keyboard**: Arrow keys (or WASD) to pan, +/- to zoom
 - **Input Fields**: Enter values directly (up to 2000 rows and modulus!)
 - **Smart View**: Changing modulus preserves your current zoom and position
