@@ -78,10 +78,12 @@ code:
 
 <p>This simulation uses the <strong>hook-walk algorithm</strong> to generate uniformly random Standard Young Tableaux (SYT) of any given shape. For shapes with up to 200 boxes, the tableau is displayed with individual numbers. For larger shapes (up to 10,000 boxes), a heat map visualization shows the decile distribution.</p>
 
+<p><strong>Shape notation:</strong> Enter row lengths separated by commas. Use exponential notation like <code>100^50</code> for 50 rows of length 100. Examples: <code>5,5,5</code> or <code>100^100</code> or <code>200^10,100^5,50^20</code>.</p>
+
 <div class="controls">
   <div class="input-group">
     <label for="shape-input">Shape (rows):</label>
-    <input type="text" id="shape-input" value="100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100">
+    <input type="text" id="shape-input" value="100^100">
     <button id="generate-tableau">Generate SYT</button>
     <span id="hook-wasm-indicator" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
   </div>
@@ -122,7 +124,29 @@ class HookWalkVis {
 
   parseShape(){
     const txt = document.getElementById('shape-input').value;
-    const arr = txt.split(',').map(x=>parseInt(x.trim())).filter(x=>x>0);
+    const parts = txt.split(',').map(x=>x.trim());
+    const arr = [];
+    
+    for(const part of parts){
+      if(part.includes('^')){
+        // Handle exponential notation like "100^50"
+        const [len, count] = part.split('^').map(x=>parseInt(x.trim()));
+        if(isNaN(len) || isNaN(count) || len<=0 || count<=0){
+          alert('Bad shape format: ' + part); 
+          return null;
+        }
+        for(let i=0; i<count; i++) arr.push(len);
+      } else {
+        // Handle single number
+        const len = parseInt(part);
+        if(isNaN(len) || len<=0){
+          alert('Bad shape format: ' + part); 
+          return null;
+        }
+        arr.push(len);
+      }
+    }
+    
     if(!arr.length){ alert('Bad shape'); return null; }
     this.shape = arr;
     this.N = arr.reduce((a,b)=>a+b,0);
