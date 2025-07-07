@@ -215,6 +215,12 @@ button:disabled {
             </select>
         </div>
         
+        <div class="input-group">
+            <label for="steps-input">Number of steps:</label>
+            <input type="number" id="steps-input" min="1" max="100" value="1">
+            <button id="run-rsk-steps">Run RSK Steps</button>
+        </div>
+        
         <div>
             <button id="run-rsk">Run Forward RSK (Animated)</button>
             <button id="run-rsk-instant">Run Forward RSK (Instant)</button>
@@ -306,6 +312,7 @@ class RSKVisualization {
         document.getElementById('run-rsk').addEventListener('click', () => this.runRSK());
         document.getElementById('run-rsk-instant').addEventListener('click', () => this.runRSKInstant());
         document.getElementById('run-rsk-step').addEventListener('click', () => this.handleStepRSK());
+        document.getElementById('run-rsk-steps').addEventListener('click', () => this.runMultipleSteps());
         document.getElementById('reset').addEventListener('click', () => this.reset());
         document.getElementById('speed-select').addEventListener('change', (e) => {
             this.animationSpeed = parseInt(e.target.value);
@@ -562,6 +569,42 @@ class RSKVisualization {
         
         const stepInfo = document.getElementById('step-info');
         stepInfo.innerHTML = `Step ${this.currentStep}/${this.n} completed. Value ${this.permutation[this.currentStep - 1]} inserted.`;
+    }
+    
+    runMultipleSteps() {
+        const numSteps = parseInt(document.getElementById('steps-input').value);
+        if (isNaN(numSteps) || numSteps < 1) {
+            alert('Please enter a valid number of steps (1 or more).');
+            return;
+        }
+        
+        if (this.currentStep >= this.n) {
+            alert('RSK algorithm already completed!');
+            return;
+        }
+        
+        document.getElementById('step-info-section').style.display = 'block';
+        
+        const stepsToRun = Math.min(numSteps, this.n - this.currentStep);
+        const startStep = this.currentStep;
+        
+        for (let i = 0; i < stepsToRun; i++) {
+            // Use trajectory visualization for large permutations
+            const showTrajectory = this.n > 200;
+            this.insertRSK(this.permutation[this.currentStep], this.currentStep + 1, showTrajectory, !showTrajectory);
+            this.currentStep++;
+        }
+        
+        const stepInfo = document.getElementById('step-info');
+        if (stepsToRun === 1) {
+            stepInfo.innerHTML = `Step ${this.currentStep}/${this.n} completed. Value ${this.permutation[this.currentStep - 1]} inserted.`;
+        } else {
+            stepInfo.innerHTML = `Steps ${startStep + 1}-${this.currentStep}/${this.n} completed. ${stepsToRun} values inserted.`;
+        }
+        
+        if (this.currentStep >= this.n) {
+            stepInfo.innerHTML += `<br>RSK algorithm completed!<br>Shape: [${this.pTableau.map(row => row.length).slice(0, 20).join(', ')}${this.pTableau.length > 20 ? '...' : ''}]`;
+        }
     }
     
     async insertRSK(value, time, animate, showDetailedBumps = true) {
