@@ -151,6 +151,29 @@ code:
     font-style: italic;
     margin-left: 10px;
   }
+  
+  .progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: var(--background-secondary, #f0f0f0);
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color, #007bff), #0056b3);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  
+  .progress-text {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 5px;
+    color: var(--text-primary, #333);
+  }
 </style>
 
 <h2>Generate Random Standard Young Tableaux</h2>
@@ -247,6 +270,13 @@ code:
   <div class="input-group">
     <button id="generate-tableau">Generate SYT</button>
     <span id="hook-wasm-indicator" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
+  </div>
+  
+  <div id="progress-container" style="display: none; margin-top: 10px;">
+    <div class="progress-bar">
+      <div id="progress-fill" class="progress-fill"></div>
+    </div>
+    <div id="progress-text" class="progress-text">Generating SYT...</div>
   </div>
 </div>
 
@@ -643,26 +673,81 @@ class HookWalkVis {
   async generate(){
     if(!this.parseShape()) return;
 
-    if(this.wasm && this.N>500){
-      // use WASM
-      const sample = this.wasm.cwrap('sampleHookWalk','string',['string']);
-      const getShape = this.wasm.cwrap('getTableauShape','string',[]);
-      const getEntry = this.wasm.cwrap('getTableauEntry','number',['number','number']);
-      const status = sample(this.shape.join(','));
-      if(status!=='OK'){ alert('WASM failed'); return;}
-      // rebuild tableau from wasm
-      this.tableau = this.shape.map(r=>Array(r).fill(0));
-      for(let r=0;r<this.shape.length;r++){
-        for(let c=0;c<this.shape[r];c++){
-          this.tableau[r][c]=getEntry(r,c);
-        }
-      }
-    } else {
-      // fallback JS hook-walk
-      this.tableau = this.sampleHookWalkJS();
+    // Show progress bar for large N
+    const showProgress = this.N > 10000;
+    if(showProgress) {
+      this.showProgressBar(true);
+      this.updateProgress(0, 'Initializing...');
+      // Small delay to let UI update
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
-    this.draw();
+    try {
+      if(this.wasm && this.N>500){
+        // use WASM with progress updates
+        if(showProgress) this.updateProgress(20, 'Preparing WASM...');
+        
+        const sample = this.wasm.cwrap('sampleHookWalk','string',['string']);
+        const getShape = this.wasm.cwrap('getTableauShape','string',[]);
+        const getEntry = this.wasm.cwrap('getTableauEntry','number',['number','number']);
+        
+        if(showProgress) this.updateProgress(40, 'Sampling tableau...');
+        const status = sample(this.shape.join(','));
+        
+        if(status!=='OK'){ 
+          alert('WASM failed'); 
+          if(showProgress) this.showProgressBar(false);
+          return;
+        }
+        
+        if(showProgress) this.updateProgress(70, 'Reading tableau...');
+        
+        // rebuild tableau from wasm
+        this.tableau = this.shape.map(r=>Array(r).fill(0));
+        const totalCells = this.N;
+        let processedCells = 0;
+        
+        for(let r=0;r<this.shape.length;r++){
+          for(let c=0;c<this.shape[r];c++){
+            this.tableau[r][c]=getEntry(r,c);
+            processedCells++;
+            
+            // Update progress periodically
+            if(showProgress && processedCells % Math.max(1, Math.floor(totalCells/50)) === 0) {
+              const progress = 70 + (processedCells / totalCells) * 20;
+              this.updateProgress(progress, `Reading tableau... ${Math.floor(processedCells/totalCells*100)}%`);
+              await new Promise(resolve => setTimeout(resolve, 1));
+            }
+          }
+        }
+        
+        if(showProgress) this.updateProgress(95, 'Rendering...');
+      } else {
+        // fallback JS hook-walk with progress
+        if(showProgress) this.updateProgress(30, 'Generating with JavaScript...');
+        this.tableau = await this.sampleHookWalkJSWithProgress(showProgress);
+      }
+
+      if(showProgress) this.updateProgress(100, 'Complete!');
+      this.draw();
+      
+      if(showProgress) {
+        setTimeout(() => this.showProgressBar(false), 1000);
+      }
+    } catch(error) {
+      console.error('Generation failed:', error);
+      if(showProgress) this.showProgressBar(false);
+      alert('Failed to generate tableau');
+    }
+  }
+
+  showProgressBar(show) {
+    document.getElementById('progress-container').style.display = show ? 'block' : 'none';
+  }
+
+  updateProgress(percent, text) {
+    document.getElementById('progress-fill').style.width = percent + '%';
+    document.getElementById('progress-text').textContent = text;
   }
 
   /* ---------- NEW: uniform GNW hook-walk (N ≤ 500) ---------- */
@@ -707,6 +792,49 @@ class HookWalkVis {
         newCells.push([rr, cc]);
       }
       cells = newCells;
+    }
+    return tableau;
+  }
+
+  async sampleHookWalkJSWithProgress(showProgress) {
+    const rowLen = [...this.shape];
+    const tableau = rowLen.map(r => Array(r).fill(0));
+
+    let cells = [];
+    for (let r = 0; r < rowLen.length; ++r)
+      for (let c = 0; c < rowLen[r]; ++c) cells.push([r, c]);
+
+    for (let k = this.N; k >= 1; --k) {
+      const start = Math.floor(Math.random() * cells.length);
+      let [r, c] = cells[start];
+
+      while (true) {
+        const arm = rowLen[r] - c - 1;
+        let leg = 0;
+        for (let rr = r + 1; rr < rowLen.length && c < rowLen[rr]; ++rr) leg++;
+        if (arm === 0 && leg === 0) break;
+        const step = 1 + Math.floor(Math.random() * (arm + leg));
+        if (step <= arm) c += step;
+        else r += (step - arm);
+      }
+
+      tableau[r][c] = k;
+      rowLen[r]--;
+
+      const newCells = [];
+      for (const [rr, cc] of cells) {
+        if (rr === r && cc === c) continue;
+        if (cc >= rowLen[rr]) continue;
+        newCells.push([rr, cc]);
+      }
+      cells = newCells;
+
+      // Update progress every 100 steps for large N
+      if (showProgress && (this.N - k) % Math.max(1, Math.floor(this.N/100)) === 0) {
+        const progress = 30 + ((this.N - k) / this.N) * 60;
+        this.updateProgress(progress, `Processing... ${Math.floor((this.N - k)/this.N*100)}%`);
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }
     }
     return tableau;
   }
@@ -778,14 +906,23 @@ class HookWalkVis {
     
     const thresholds=[];
     for(let i=1;i<10;i++) thresholds.push(i*this.N/10);
-    const palette=['#e3f2fd','#bbdefb','#90caf9','#64b5f6','#42a5f5',
-                   '#2196f3','#1e88e5','#1976d2','#1565c0','#0d47a1']; // light→dark
+    
+    // UVA color palette: orange (inside/small values) to blue (outside/large values)
+    const uvaColors = [];
+    for(let i=0; i<10; i++) {
+      const t = i / 9; // 0 to 1
+      const r = Math.round((1-t) * 229 + t * 35);  // E57200 to 232D4B
+      const g_val = Math.round((1-t) * 114 + t * 45);
+      const b = Math.round((1-t) * 0 + t * 75);
+      uvaColors.push(`rgb(${r},${g_val},${b})`);
+    }
+    
     this.tableau.forEach((row,r)=>{
       row.forEach((val,c)=>{
         let idx=thresholds.findIndex(t=>val<=t)+1; // 1..10
         g.append('rect').attr('x',c*cellSize).attr('y',r*cellSize)
           .attr('width',cellSize).attr('height',cellSize)
-          .attr('fill',palette[idx-1]).attr('stroke-width',0);
+          .attr('fill',uvaColors[idx-1]).attr('stroke-width',0);
       });
     });
   }
