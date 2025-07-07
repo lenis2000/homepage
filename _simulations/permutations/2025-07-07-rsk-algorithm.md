@@ -197,6 +197,33 @@ button:disabled {
         </div>
         
         <div class="input-group">
+            <label for="sampling-method">Sampling method:</label>
+            <select id="sampling-method">
+                <option value="uniform">Uniform Random</option>
+                <option value="block3">Block Structured (3x3)</option>
+                <option value="block10">Block Structured (10x10)</option>
+            </select>
+        </div>
+        
+        <div class="input-group" id="block-controls-3x3" style="display: none;">
+            <label for="base-permutation">Base permutation of 3:</label>
+            <select id="base-permutation">
+                <option value="123">123 (identity)</option>
+                <option value="132">132</option>
+                <option value="213">213</option>
+                <option value="231">231</option>
+                <option value="312">312</option>
+                <option value="321">321 (reverse)</option>
+            </select>
+            <span id="block-size-info" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
+        </div>
+        
+        <div class="input-group" id="block-controls-10x10" style="display: none;">
+            <label>10x10 block structure:</label>
+            <span id="block-size-info-10x10" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
+        </div>
+        
+        <div class="input-group">
             <label for="permutation-input">Permutation:</label>
             <input type="text" id="permutation-input" placeholder="e.g., 3,1,4,2" style="width: 300px;">
             <button id="set-permutation">Set Permutation</button>
@@ -269,6 +296,7 @@ class RSKVisualization {
         this.initializeWASM();
         this.setupEventListeners();
         this.setupCollapsibleDetails();
+        this.updateSamplingMethod();
         this.generateRandomPermutation();
         this.switchingToStepMode = false;
     }
@@ -317,10 +345,28 @@ class RSKVisualization {
         document.getElementById('speed-select').addEventListener('change', (e) => {
             this.animationSpeed = parseInt(e.target.value);
         });
+        document.getElementById('sampling-method').addEventListener('change', () => this.updateSamplingMethod());
+        document.getElementById('n-input').addEventListener('input', () => this.updateBlockSizeInfo());
     }
     
     generateRandomPermutation() {
         this.n = parseInt(document.getElementById('n-input').value);
+        const samplingMethod = document.getElementById('sampling-method').value;
+        
+        if (samplingMethod === 'block3') {
+            this.generateBlockStructuredPermutation();
+        } else if (samplingMethod === 'block10') {
+            this.generateBlockStructured10x10();
+        } else {
+            this.generateUniformPermutation();
+        }
+        
+        document.getElementById('permutation-input').value = this.permutation.join(',');
+        this.displayPermutation();
+        this.reset();
+    }
+    
+    generateUniformPermutation() {
         this.permutation = Array.from({length: this.n}, (_, i) => i + 1);
         
         // Fisher-Yates shuffle
@@ -328,10 +374,149 @@ class RSKVisualization {
             const j = Math.floor(Math.random() * (i + 1));
             [this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]];
         }
+    }
+    
+    generateBlockStructuredPermutation() {
+        const basePerm = document.getElementById('base-permutation').value;
+        const baseArray = basePerm.split('').map(x => parseInt(x) - 1); // Convert to 0-indexed
         
-        document.getElementById('permutation-input').value = this.permutation.join(',');
-        this.displayPermutation();
-        this.reset();
+        // Calculate block sizes (handle remainder)
+        const blockSize = Math.floor(this.n / 3);
+        const remainder = this.n % 3;
+        const blockSizes = [blockSize, blockSize, blockSize];
+        
+        // Distribute remainder across blocks
+        for (let i = 0; i < remainder; i++) {
+            blockSizes[i]++;
+        }
+        
+        // Initialize permutation array
+        this.permutation = new Array(this.n).fill(0);
+        
+        // Calculate block positions
+        const blockStarts = [0, blockSizes[0], blockSizes[0] + blockSizes[1]];
+        
+        let currentIndex = 0;
+        
+        // Fill blocks according to base permutation
+        for (let blockIdx = 0; blockIdx < 3; blockIdx++) {
+            const targetBlock = baseArray[blockIdx];
+            const currentBlockSize = blockSizes[blockIdx];
+            
+            // Generate random permutation for this block
+            const blockPerm = Array.from({length: currentBlockSize}, (_, i) => i + 1);
+            for (let i = currentBlockSize - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [blockPerm[i], blockPerm[j]] = [blockPerm[j], blockPerm[i]];
+            }
+            
+            // Place block permutation in the correct position
+            const startPos = blockStarts[targetBlock];
+            for (let i = 0; i < currentBlockSize; i++) {
+                this.permutation[currentIndex + i] = startPos + blockPerm[i];
+            }
+            
+            currentIndex += currentBlockSize;
+        }
+    }
+    
+    generateBlockStructured10x10() {
+        // Generate master permutation of 10
+        const masterPerm = Array.from({length: 10}, (_, i) => i);
+        for (let i = 9; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [masterPerm[i], masterPerm[j]] = [masterPerm[j], masterPerm[i]];
+        }
+        
+        // Calculate block sizes (handle remainder)
+        const blockSize = Math.floor(this.n / 10);
+        const remainder = this.n % 10;
+        const blockSizes = new Array(10).fill(blockSize);
+        
+        // Distribute remainder across first blocks
+        for (let i = 0; i < remainder; i++) {
+            blockSizes[i]++;
+        }
+        
+        // Calculate block start positions
+        const blockStarts = new Array(10);
+        blockStarts[0] = 0;
+        for (let i = 1; i < 10; i++) {
+            blockStarts[i] = blockStarts[i - 1] + blockSizes[i - 1];
+        }
+        
+        // Initialize permutation array
+        this.permutation = new Array(this.n).fill(0);
+        
+        let currentIndex = 0;
+        
+        // Fill blocks according to master permutation
+        for (let blockIdx = 0; blockIdx < 10; blockIdx++) {
+            const targetBlock = masterPerm[blockIdx];
+            const currentBlockSize = blockSizes[blockIdx];
+            
+            // Generate random permutation for this block
+            const blockPerm = Array.from({length: currentBlockSize}, (_, i) => i + 1);
+            for (let i = currentBlockSize - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [blockPerm[i], blockPerm[j]] = [blockPerm[j], blockPerm[i]];
+            }
+            
+            // Place block permutation in the correct position
+            const startPos = blockStarts[targetBlock];
+            for (let i = 0; i < currentBlockSize; i++) {
+                this.permutation[currentIndex + i] = startPos + blockPerm[i];
+            }
+            
+            currentIndex += currentBlockSize;
+        }
+    }
+    
+    updateSamplingMethod() {
+        const samplingMethod = document.getElementById('sampling-method').value;
+        const blockControls3x3 = document.getElementById('block-controls-3x3');
+        const blockControls10x10 = document.getElementById('block-controls-10x10');
+        
+        if (samplingMethod === 'block3') {
+            blockControls3x3.style.display = 'block';
+            blockControls10x10.style.display = 'none';
+            this.updateBlockSizeInfo();
+        } else if (samplingMethod === 'block10') {
+            blockControls3x3.style.display = 'none';
+            blockControls10x10.style.display = 'block';
+            this.updateBlockSizeInfo();
+        } else {
+            blockControls3x3.style.display = 'none';
+            blockControls10x10.style.display = 'none';
+        }
+    }
+    
+    updateBlockSizeInfo() {
+        const samplingMethod = document.getElementById('sampling-method').value;
+        const n = parseInt(document.getElementById('n-input').value) || 0;
+        
+        if (samplingMethod === 'block3') {
+            const blockSizeInfo = document.getElementById('block-size-info');
+            const blockSize = Math.floor(n / 3);
+            const remainder = n % 3;
+            
+            if (remainder === 0) {
+                blockSizeInfo.textContent = `(3 blocks of size ${blockSize})`;
+            } else {
+                blockSizeInfo.textContent = `(blocks of size ${blockSize + 1}, ${blockSize + 1}, ${blockSize})`;
+            }
+        } else if (samplingMethod === 'block10') {
+            const blockSizeInfo10x10 = document.getElementById('block-size-info-10x10');
+            const blockSize = Math.floor(n / 10);
+            const remainder = n % 10;
+            
+            if (remainder === 0) {
+                blockSizeInfo10x10.textContent = `(10 blocks of size ${blockSize})`;
+            } else {
+                const extraBlocks = remainder;
+                blockSizeInfo10x10.textContent = `(${extraBlocks} blocks of size ${blockSize + 1}, ${10 - extraBlocks} blocks of size ${blockSize})`;
+            }
+        }
     }
     
     setPermutation() {
@@ -383,6 +568,14 @@ class RSKVisualization {
         
         const actualSize = this.n * cellSize;
         
+        // Draw block structure if using block sampling
+        const samplingMethod = document.getElementById('sampling-method').value;
+        if (samplingMethod === 'block3') {
+            this.drawBlockStructure3x3(g, actualSize, cellSize);
+        } else if (samplingMethod === 'block10') {
+            this.drawBlockStructure10x10(g, actualSize, cellSize);
+        }
+        
         // Draw border
         g.append('rect')
             .attr('x', 0)
@@ -401,6 +594,132 @@ class RSKVisualization {
                 .attr('cy', i * cellSize + cellSize / 2)
                 .attr('r', dotRadius)
                 .attr('fill', 'var(--text-primary, #333)');
+        }
+    }
+    
+    drawBlockStructure3x3(g, actualSize, cellSize) {
+        const blockSize = Math.floor(this.n / 3);
+        const remainder = this.n % 3;
+        const blockSizes = [blockSize, blockSize, blockSize];
+        
+        // Distribute remainder across blocks
+        for (let i = 0; i < remainder; i++) {
+            blockSizes[i]++;
+        }
+        
+        const blockStarts = [0, blockSizes[0], blockSizes[0] + blockSizes[1]];
+        const blockColors = ['#ffebee', '#e8f5e8', '#e3f2fd'];
+        
+        // Draw block backgrounds
+        for (let blockIdx = 0; blockIdx < 3; blockIdx++) {
+            const rowStart = blockStarts[blockIdx] * cellSize;
+            const colStart = blockStarts[blockIdx] * cellSize;
+            const blockHeight = blockSizes[blockIdx] * cellSize;
+            const blockWidth = blockSizes[blockIdx] * cellSize;
+            
+            g.append('rect')
+                .attr('x', colStart)
+                .attr('y', rowStart)
+                .attr('width', blockWidth)
+                .attr('height', blockHeight)
+                .attr('fill', blockColors[blockIdx])
+                .attr('stroke', 'var(--text-secondary, #666)')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', '2,2')
+                .attr('opacity', 0.5);
+        }
+        
+        // Draw block dividers
+        for (let i = 1; i < 3; i++) {
+            const pos = blockStarts[i] * cellSize;
+            
+            // Vertical divider
+            g.append('line')
+                .attr('x1', pos)
+                .attr('y1', 0)
+                .attr('x2', pos)
+                .attr('y2', actualSize)
+                .attr('stroke', 'var(--text-secondary, #666)')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,5');
+            
+            // Horizontal divider
+            g.append('line')
+                .attr('x1', 0)
+                .attr('y1', pos)
+                .attr('x2', actualSize)
+                .attr('y2', pos)
+                .attr('stroke', 'var(--text-secondary, #666)')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,5');
+        }
+    }
+    
+    drawBlockStructure10x10(g, actualSize, cellSize) {
+        const blockSize = Math.floor(this.n / 10);
+        const remainder = this.n % 10;
+        const blockSizes = new Array(10).fill(blockSize);
+        
+        // Distribute remainder across first blocks
+        for (let i = 0; i < remainder; i++) {
+            blockSizes[i]++;
+        }
+        
+        // Calculate block start positions
+        const blockStarts = new Array(10);
+        blockStarts[0] = 0;
+        for (let i = 1; i < 10; i++) {
+            blockStarts[i] = blockStarts[i - 1] + blockSizes[i - 1];
+        }
+        
+        // Colors for 10x10 blocks (cycling through a palette)
+        const blockColors = [
+            '#ffebee', '#e8f5e8', '#e3f2fd', '#fff3e0', '#f3e5f5',
+            '#e0f2f1', '#fce4ec', '#f1f8e9', '#e8eaf6', '#fff8e1'
+        ];
+        
+        // Draw block backgrounds
+        for (let blockIdx = 0; blockIdx < 10; blockIdx++) {
+            const rowStart = blockStarts[blockIdx] * cellSize;
+            const colStart = blockStarts[blockIdx] * cellSize;
+            const blockHeight = blockSizes[blockIdx] * cellSize;
+            const blockWidth = blockSizes[blockIdx] * cellSize;
+            
+            g.append('rect')
+                .attr('x', colStart)
+                .attr('y', rowStart)
+                .attr('width', blockWidth)
+                .attr('height', blockHeight)
+                .attr('fill', blockColors[blockIdx])
+                .attr('stroke', 'var(--text-secondary, #666)')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', '2,2')
+                .attr('opacity', 0.3);
+        }
+        
+        // Draw block dividers
+        for (let i = 1; i < 10; i++) {
+            const pos = blockStarts[i] * cellSize;
+            
+            // Vertical divider
+            g.append('line')
+                .attr('x1', pos)
+                .attr('y1', 0)
+                .attr('x2', pos)
+                .attr('y2', actualSize)
+                .attr('stroke', 'var(--text-secondary, #666)')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', '3,3');
+            
+            // Horizontal divider
+            g.append('line')
+                .attr('x1', 0)
+                .attr('y1', pos)
+                .attr('x2', actualSize)
+                .attr('y2', pos)
+                .attr('stroke', 'var(--text-secondary, #666)')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', '3,3');
         }
     }
     
