@@ -242,6 +242,7 @@ button:disabled {
             </select>
         </div>
         
+        
         <div class="input-group">
             <label for="steps-input">Number of steps:</label>
             <input type="number" id="steps-input" min="1" max="100" value="1">
@@ -1153,6 +1154,12 @@ class RSKVisualization {
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+    
+    redrawTableaux() {
+        this.drawTableau('p-tableau', this.pTableau);
+        this.drawTableau('q-tableau', this.qTableau);
+    }
+    
 }
 
 // Initialize visualization
