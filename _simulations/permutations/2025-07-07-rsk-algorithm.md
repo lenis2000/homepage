@@ -127,6 +127,17 @@ button:disabled {
     fill: #8b4000;
 }
 
+.tableau-cell.trajectory {
+    fill: #e91e63;
+    stroke: #ad1457;
+    stroke-width: 3;
+}
+
+[data-theme="dark"] .tableau-cell.trajectory {
+    fill: #c2185b;
+    stroke: #e91e63;
+}
+
 .tableau-text {
     font-family: monospace;
     font-size: 16px;
@@ -199,6 +210,8 @@ button:disabled {
                 <option value="500">Medium</option>
                 <option value="250">Fast</option>
                 <option value="100">Very Fast</option>
+                <option value="50">Ultra Fast</option>
+                <option value="10">Lightning</option>
             </select>
         </div>
         
@@ -206,7 +219,6 @@ button:disabled {
             <button id="run-rsk">Run Forward RSK (Animated)</button>
             <button id="run-rsk-instant">Run Forward RSK (Instant)</button>
             <button id="run-rsk-step">Step Forward RSK</button>
-            <button id="run-inverse">Run Inverse RSK</button>
             <button id="reset">Reset</button>
         </div>
     </div>
@@ -252,6 +264,7 @@ class RSKVisualization {
         this.setupEventListeners();
         this.setupCollapsibleDetails();
         this.generateRandomPermutation();
+        this.switchingToStepMode = false;
     }
     
     async initializeWASM() {
@@ -292,8 +305,7 @@ class RSKVisualization {
         document.getElementById('set-permutation').addEventListener('click', () => this.setPermutation());
         document.getElementById('run-rsk').addEventListener('click', () => this.runRSK());
         document.getElementById('run-rsk-instant').addEventListener('click', () => this.runRSKInstant());
-        document.getElementById('run-rsk-step').addEventListener('click', () => this.stepRSK());
-        document.getElementById('run-inverse').addEventListener('click', () => this.runInverseRSK());
+        document.getElementById('run-rsk-step').addEventListener('click', () => this.handleStepRSK());
         document.getElementById('reset').addEventListener('click', () => this.reset());
         document.getElementById('speed-select').addEventListener('change', (e) => {
             this.animationSpeed = parseInt(e.target.value);
@@ -401,17 +413,42 @@ class RSKVisualization {
         this.isRunning = true;
         document.getElementById('step-info-section').style.display = 'block';
         
-        // Don't animate for large permutations
-        if (this.n > 50) {
-            const stepInfo = document.getElementById('step-info');
-            stepInfo.innerHTML = 'Animation disabled for N > 50. Use "Run Forward RSK (Instant)" instead.';
-            this.isRunning = false;
-            return;
+        // Determine animation mode based on N
+        const isFastMode = this.n > 200;
+        const showDetailedBumps = this.n <= 200;
+        
+        const stepInfo = document.getElementById('step-info');
+        if (isFastMode) {
+            stepInfo.innerHTML = `Running RSK with fast animation (N=${this.n})...`;
+        } else {
+            stepInfo.innerHTML = `Running RSK with detailed animation (N=${this.n})...`;
         }
         
         for (let i = 0; i < this.n; i++) {
-            await this.insertRSK(this.permutation[i], i + 1, true);
+            if (isFastMode) {
+                stepInfo.innerHTML = `Inserting ${this.permutation[i]} (step ${i + 1}/${this.n}) - showing bumping trajectory...`;
+            }
+            
+            await this.insertRSK(this.permutation[i], i + 1, true, showDetailedBumps);
             if (!this.isRunning) break;
+            
+            // Check if user wants to switch to step mode
+            if (this.switchingToStepMode) {
+                this.currentStep = i + 1;
+                this.isRunning = false;
+                this.switchingToStepMode = false;
+                stepInfo.innerHTML = `Animation stopped. Now in step mode at step ${this.currentStep}/${this.n}.`;
+                break;
+            }
+            
+            // Brief pause between insertions in fast mode
+            if (isFastMode) {
+                await this.sleep(Math.min(this.animationSpeed / 2, 200));
+            }
+        }
+        
+        if (this.isRunning) {
+            stepInfo.innerHTML = `RSK algorithm completed!<br>Shape: [${this.pTableau.map(row => row.length).slice(0, 20).join(', ')}${this.pTableau.length > 20 ? '...' : ''}]`;
         }
         
         this.isRunning = false;
@@ -500,29 +537,44 @@ class RSKVisualization {
         }
     }
     
-    stepRSK() {
-        if (this.n > 50) {
-            alert('Step-by-step mode is disabled for N > 50');
-            return;
+    handleStepRSK() {
+        if (this.isRunning) {
+            // Stop animation and switch to step mode
+            this.switchingToStepMode = true;
+        } else {
+            // Regular step mode
+            this.stepRSK();
         }
-        
+    }
+    
+    stepRSK() {
         if (this.currentStep >= this.n) {
             alert('RSK algorithm completed!');
             return;
         }
         
         document.getElementById('step-info-section').style.display = 'block';
-        this.insertRSK(this.permutation[this.currentStep], this.currentStep + 1, false);
+        
+        // Use detailed bumps for step mode regardless of N, but show trajectory for large N
+        const showTrajectory = this.n > 200;
+        this.insertRSK(this.permutation[this.currentStep], this.currentStep + 1, showTrajectory, !showTrajectory);
         this.currentStep++;
+        
+        const stepInfo = document.getElementById('step-info');
+        stepInfo.innerHTML = `Step ${this.currentStep}/${this.n} completed. Value ${this.permutation[this.currentStep - 1]} inserted.`;
     }
     
-    async insertRSK(value, time, animate) {
+    async insertRSK(value, time, animate, showDetailedBumps = true) {
         const stepInfo = document.getElementById('step-info');
-        stepInfo.innerHTML = `Inserting value ${value} at time ${time}`;
+        
+        if (animate && showDetailedBumps) {
+            stepInfo.innerHTML = `Inserting value ${value} at time ${time}`;
+        }
         
         // Insert into P-tableau
         let currentValue = value;
         let row = 0;
+        const bumpingPath = []; // Track the path for fast mode
         
         while (currentValue !== null) {
             if (!this.pTableau[row]) {
@@ -537,7 +589,9 @@ class RSKVisualization {
                     this.pTableau[row][col] = currentValue;
                     currentValue = temp;
                     
-                    if (animate) {
+                    bumpingPath.push({row, col, value: currentValue, action: 'bump'});
+                    
+                    if (animate && showDetailedBumps) {
                         stepInfo.innerHTML += `<br>Row ${row + 1}: ${currentValue} bumps ${temp}`;
                         this.drawTableau('p-tableau', this.pTableau, {row, col, type: 'bumped'});
                         await this.sleep(this.animationSpeed);
@@ -551,8 +605,9 @@ class RSKVisualization {
             if (!inserted) {
                 // Add to end of row
                 this.pTableau[row].push(currentValue);
+                bumpingPath.push({row, col: this.pTableau[row].length - 1, value: currentValue, action: 'insert'});
                 
-                if (animate) {
+                if (animate && showDetailedBumps) {
                     stepInfo.innerHTML += `<br>Row ${row + 1}: ${currentValue} added to end`;
                     this.drawTableau('p-tableau', this.pTableau, {row, col: this.pTableau[row].length - 1, type: 'inserting'});
                     await this.sleep(this.animationSpeed);
@@ -568,6 +623,19 @@ class RSKVisualization {
             }
             
             row++;
+        }
+        
+        // Fast mode: show the bumping trajectory
+        if (animate && !showDetailedBumps && bumpingPath.length > 0) {
+            // Highlight all cells in the bumping trajectory
+            const trajectoryHighlights = bumpingPath.map(step => ({
+                row: step.row, 
+                col: step.col, 
+                type: 'trajectory'
+            }));
+            
+            this.drawTableau('p-tableau', this.pTableau, trajectoryHighlights);
+            await this.sleep(Math.max(this.animationSpeed / 2, 100)); // Quick but visible
         }
         
         this.drawTableau('p-tableau', this.pTableau);
@@ -634,6 +702,21 @@ class RSKVisualization {
                 .attr('fill', 'var(--text-primary, #333)')
                 .attr('opacity', 0.8);
             
+            // Draw trajectory highlights if present
+            if (highlight && Array.isArray(highlight)) {
+                highlight.forEach(h => {
+                    if (h.row < shape.length && h.col < shape[h.row]) {
+                        g.append('circle')
+                            .attr('cx', h.col * scale + scale/2)
+                            .attr('cy', h.row * scale + scale/2)
+                            .attr('r', Math.max(scale/3, 2))
+                            .attr('fill', '#e91e63')
+                            .attr('stroke', '#ad1457')
+                            .attr('stroke-width', 2);
+                    }
+                });
+            }
+            
             // Add info text
             container.insertAdjacentHTML('beforeend', 
                 `<div style="font-size: 12px; color: var(--text-secondary, #666); margin-top: 5px;">
@@ -663,16 +746,31 @@ class RSKVisualization {
         
         tableau.slice(0, displayRows).forEach((row, rowIdx) => {
             row.slice(0, maxDisplaySize).forEach((value, colIdx) => {
-                const isHighlighted = highlight && highlight.row === rowIdx && highlight.col === colIdx;
+                // Check for highlighting (single highlight object or array of highlights)
+                let highlightType = '';
+                if (highlight) {
+                    if (Array.isArray(highlight)) {
+                        // Multiple highlights (trajectory mode)
+                        const matchingHighlight = highlight.find(h => h.row === rowIdx && h.col === colIdx);
+                        if (matchingHighlight) {
+                            highlightType = matchingHighlight.type;
+                        }
+                    } else {
+                        // Single highlight
+                        if (highlight.row === rowIdx && highlight.col === colIdx) {
+                            highlightType = highlight.type;
+                        }
+                    }
+                }
                 
                 g.append('rect')
                     .attr('x', colIdx * cellSize)
                     .attr('y', rowIdx * cellSize)
                     .attr('width', cellSize)
                     .attr('height', cellSize)
-                    .attr('class', `tableau-cell filled ${isHighlighted ? highlight.type : ''}`);
+                    .attr('class', `tableau-cell filled ${highlightType}`);
                 
-                if (cellSize >= 30) {
+                if (this.n <= 200) {
                     g.append('text')
                         .attr('x', colIdx * cellSize + cellSize / 2)
                         .attr('y', rowIdx * cellSize + cellSize / 2)
@@ -689,181 +787,6 @@ class RSKVisualization {
         }
     }
     
-    async runInverseRSK() {
-        if (this.pTableau.length === 0 || this.qTableau.length === 0) {
-            alert('Please run forward RSK first to generate tableaux');
-            return;
-        }
-        
-        this.isRunning = true;
-        document.getElementById('step-info-section').style.display = 'block';
-        
-        // Use WASM for large tableaux
-        if (this.wasmModule && this.n > 100) {
-            this.runInverseRSKWASM();
-            return;
-        }
-        
-        // Don't animate for large permutations
-        if (this.n > 50) {
-            const stepInfo = document.getElementById('step-info');
-            stepInfo.innerHTML = 'Animation disabled for N > 50. Running without animation...';
-            
-            // Run without animation
-            const pCopy = this.pTableau.map(row => [...row]);
-            const qCopy = this.qTableau.map(row => [...row]);
-            const result = [];
-            
-            const maxTime = Math.max(...qCopy.flat());
-            
-            for (let time = maxTime; time >= 1; time--) {
-                let qRow = -1, qCol = -1;
-                for (let r = 0; r < qCopy.length; r++) {
-                    for (let c = 0; c < qCopy[r].length; c++) {
-                        if (qCopy[r][c] === time) {
-                            qRow = r;
-                            qCol = c;
-                            break;
-                        }
-                    }
-                    if (qRow !== -1) break;
-                }
-                
-                const value = this.extractFromTableauSync(pCopy, qCopy, qRow, qCol);
-                result.unshift(value);
-            }
-            
-            stepInfo.innerHTML = `Inverse RSK complete!<br>Recovered permutation: [${result.join(', ')}]`;
-            this.isRunning = false;
-            return;
-        }
-        
-        // Original animated version for small N
-        const pCopy = this.pTableau.map(row => [...row]);
-        const qCopy = this.qTableau.map(row => [...row]);
-        const result = [];
-        
-        // Find maximum value in Q-tableau
-        const maxTime = Math.max(...qCopy.flat());
-        
-        for (let time = maxTime; time >= 1; time--) {
-            // Find position of time in Q-tableau
-            let qRow = -1, qCol = -1;
-            for (let r = 0; r < qCopy.length; r++) {
-                for (let c = 0; c < qCopy[r].length; c++) {
-                    if (qCopy[r][c] === time) {
-                        qRow = r;
-                        qCol = c;
-                        break;
-                    }
-                }
-                if (qRow !== -1) break;
-            }
-            
-            // Remove from Q-tableau
-            qCopy[qRow].splice(qCol, 1);
-            if (qCopy[qRow].length === 0) {
-                qCopy.splice(qRow, 1);
-            }
-            
-            // Extract from P-tableau
-            const value = await this.extractFromTableau(pCopy, qRow, qCol, time);
-            result.unshift(value);
-            
-            this.drawTableau('p-tableau', pCopy);
-            this.drawTableau('q-tableau', qCopy);
-            
-            if (!this.isRunning) break;
-        }
-        
-        const stepInfo = document.getElementById('step-info');
-        stepInfo.innerHTML = `Inverse RSK complete!<br>Recovered permutation: [${result.join(', ')}]`;
-        
-        this.isRunning = false;
-    }
-    
-    runInverseRSKWASM() {
-        const stepInfo = document.getElementById('step-info');
-        stepInfo.innerHTML = 'Running inverse RSK with WASM...';
-        
-        const performInverseRSK = this.wasmModule.cwrap('performInverseRSK', 'string', []);
-        const permStr = performInverseRSK();
-        
-        const recoveredPerm = permStr.split(',').map(x => parseInt(x));
-        
-        // Free the allocated string
-        this.wasmModule._freeString(permStr);
-        
-        stepInfo.innerHTML = `Inverse RSK complete (WASM)!<br>Recovered permutation: [${recoveredPerm.join(', ')}]`;
-        this.isRunning = false;
-    }
-    
-    extractFromTableauSync(pCopy, qCopy, startRow, startCol) {
-        // Remove the element
-        const value = pCopy[startRow][startCol];
-        pCopy[startRow].splice(startCol, 1);
-        if (pCopy[startRow].length === 0) {
-            pCopy.splice(startRow, 1);
-        }
-        
-        // Reverse bumping
-        let currentValue = value;
-        for (let row = startRow - 1; row >= 0; row--) {
-            let bestCol = -1;
-            for (let col = pCopy[row].length - 1; col >= 0; col--) {
-                if (pCopy[row][col] < currentValue) {
-                    bestCol = col;
-                    break;
-                }
-            }
-            
-            if (bestCol !== -1) {
-                const temp = pCopy[row][bestCol];
-                pCopy[row][bestCol] = currentValue;
-                currentValue = temp;
-            }
-        }
-        
-        return currentValue;
-    }
-    
-    async extractFromTableau(tableau, startRow, startCol, time) {
-        const stepInfo = document.getElementById('step-info');
-        stepInfo.innerHTML = `Extracting element at time ${time}`;
-        
-        // Remove the element
-        const value = tableau[startRow][startCol];
-        tableau[startRow].splice(startCol, 1);
-        if (tableau[startRow].length === 0) {
-            tableau.splice(startRow, 1);
-        }
-        
-        await this.sleep(this.animationSpeed);
-        
-        // Reverse bumping
-        let currentValue = value;
-        for (let row = startRow - 1; row >= 0; row--) {
-            // Find the largest element smaller than currentValue
-            let bestCol = -1;
-            for (let col = tableau[row].length - 1; col >= 0; col--) {
-                if (tableau[row][col] < currentValue) {
-                    bestCol = col;
-                    break;
-                }
-            }
-            
-            if (bestCol !== -1) {
-                const temp = tableau[row][bestCol];
-                tableau[row][bestCol] = currentValue;
-                currentValue = temp;
-                
-                stepInfo.innerHTML += `<br>Row ${row + 1}: ${currentValue} replaces ${temp}`;
-                await this.sleep(this.animationSpeed);
-            }
-        }
-        
-        return currentValue;
-    }
     
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
