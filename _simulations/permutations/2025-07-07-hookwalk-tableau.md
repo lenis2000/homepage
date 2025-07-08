@@ -232,7 +232,9 @@ code:
     <div class="input-group">
       <label for="target-boxes">Target boxes (N):</label>
       <input type="number" id="target-boxes" value="2500" min="1" max="100000">
+      <button id="auto-shape">Auto Shape</button>
       <button id="clear-drawing">Clear</button>
+      <span class="info-text">Draw boundary of Young diagram. Interior auto-filled.</span>
     </div>
     <div class="drawing-container">
       <div id="shape-canvas"></div>
@@ -296,8 +298,10 @@ class HookWalkVis {
     this.wasm   = null;
     this.drawMode = true;
     this.drawnShape = [];
-    this.gridSize = 20;
-    this.cellSize = 20;
+    this.canvasSize = 400;
+    this.gridResolution = 100; // 100x100 logical grid
+    this.pixelSize = this.canvasSize / this.gridResolution; // 4px per cell
+    this.boundaryPoints = new Set(); // Store boundary points as "row,col"
     this.usePlancherel = false;
     this.plancherelData = null;
     this.initWASM();
@@ -324,7 +328,8 @@ class HookWalkVis {
     document.getElementById('toggle-draw-mode').addEventListener('click',()=>this.setDrawMode(true));
     document.getElementById('toggle-text-mode').addEventListener('click',()=>this.setDrawMode(false));
     document.getElementById('clear-drawing').addEventListener('click',()=>this.clearDrawing());
-    document.getElementById('target-boxes').addEventListener('input',()=>this.updateDrawingFromTarget());
+    document.getElementById('auto-shape').addEventListener('click',()=>this.updateDrawingFromTarget());
+    document.getElementById('target-boxes').addEventListener('input',()=>this.validateTargetBoxes());
     document.getElementById('toggle-manual-shape').addEventListener('click',()=>this.setShapeMode(false));
     document.getElementById('toggle-plancherel-shape').addEventListener('click',()=>this.setShapeMode(true));
   }
@@ -355,67 +360,132 @@ class HookWalkVis {
 
   initDrawingCanvas() {
     const container = document.getElementById('shape-canvas');
-    const svg = d3.select(container).append('svg')
-      .attr('width', this.gridSize * this.cellSize)
-      .attr('height', this.gridSize * this.cellSize);
+    container.innerHTML = ''; // Clear existing content
     
+    // Create HTML5 canvas
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = this.canvasSize;
+    this.canvas.height = this.canvasSize;
+    this.canvas.style.border = '2px solid #ccc';
+    this.canvas.style.borderRadius = '4px';
+    this.canvas.style.cursor = 'crosshair';
+    this.canvas.style.display = 'block';
+    
+    container.appendChild(this.canvas);
+    this.ctx = this.canvas.getContext('2d');
+    
+    // Initialize drawing grid
     this.drawingGrid = [];
-    for(let r=0; r<this.gridSize; r++) {
+    for(let r = 0; r < this.gridResolution; r++) {
       this.drawingGrid[r] = [];
-      for(let c=0; c<this.gridSize; c++) {
+      for(let c = 0; c < this.gridResolution; c++) {
         this.drawingGrid[r][c] = false;
-        svg.append('rect')
-          .attr('x', c * this.cellSize)
-          .attr('y', r * this.cellSize)
-          .attr('width', this.cellSize)
-          .attr('height', this.cellSize)
-          .attr('class', 'grid-cell')
-          .attr('data-row', r)
-          .attr('data-col', c)
-          .on('click', (event) => this.toggleCell(r, c));
       }
     }
+    
+    this.setupCanvasEvents();
+    this.drawCanvas();
     this.updateDrawingInfo();
   }
 
-  toggleCell(r, c) {
-    this.drawingGrid[r][c] = !this.drawingGrid[r][c];
-    this.updateDrawingVisual();
+  setupCanvasEvents() {
+    this.canvas.addEventListener('click', (event) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
+      // Convert to grid coordinates
+      const col = Math.floor(x / this.pixelSize);
+      const row = Math.floor(y / this.pixelSize);
+      
+      if(row >= 0 && row < this.gridResolution && col >= 0 && col < this.gridResolution) {
+        this.toggleCell(row, col);
+      }
+    });
+  }
+  
+  handleCanvasMove(event) {
+    // Could add preview functionality here
+  }
+  
+  toggleCell(row, col) {
+    this.drawingGrid[row][col] = !this.drawingGrid[row][col];
+    this.drawCanvas();
     this.updateDrawingInfo();
   }
 
-  updateDrawingVisual() {
-    const svg = d3.select('#shape-canvas svg');
-    for(let r=0; r<this.gridSize; r++) {
-      for(let c=0; c<this.gridSize; c++) {
-        svg.select(`rect[data-row="${r}"][data-col="${c}"]`)
-          .attr('class', this.drawingGrid[r][c] ? 'grid-cell filled' : 'grid-cell');
+  drawCanvas() {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvasSize, this.canvasSize);
+    
+    // Draw grid lines
+    this.ctx.strokeStyle = '#f0f0f0';
+    this.ctx.lineWidth = 0.5;
+    const step = 20;
+    for(let i = 0; i <= this.canvasSize; i += step) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(i, 0);
+      this.ctx.lineTo(i, this.canvasSize);
+      this.ctx.stroke();
+      
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, i);
+      this.ctx.lineTo(this.canvasSize, i);
+      this.ctx.stroke();
+    }
+    
+    // Draw filled cells
+    this.ctx.fillStyle = '#e8f4ff';
+    this.ctx.strokeStyle = '#333';
+    this.ctx.lineWidth = 1;
+    
+    for(let r = 0; r < this.gridResolution; r++) {
+      for(let c = 0; c < this.gridResolution; c++) {
+        if(this.drawingGrid[r][c]) {
+          const x = c * this.pixelSize;
+          const y = r * this.pixelSize;
+          this.ctx.fillRect(x, y, this.pixelSize, this.pixelSize);
+          this.ctx.strokeRect(x, y, this.pixelSize, this.pixelSize);
+        }
       }
     }
   }
 
   clearDrawing() {
-    for(let r=0; r<this.gridSize; r++) {
-      for(let c=0; c<this.gridSize; c++) {
+    for(let r = 0; r < this.gridResolution; r++) {
+      for(let c = 0; c < this.gridResolution; c++) {
         this.drawingGrid[r][c] = false;
       }
     }
-    this.updateDrawingVisual();
+    this.drawCanvas();
     this.updateDrawingInfo();
   }
 
   updateDrawingFromTarget() {
-    // Create a roughly square shape with target number of boxes
+    // Create a Young diagram shape
     const target = parseInt(document.getElementById('target-boxes').value) || 100;
-    const side = Math.floor(Math.sqrt(target));
+    const approxSide = Math.max(3, Math.ceil(Math.sqrt(target)) / 10); // Small base shape
+    const maxRows = Math.min(this.gridResolution / 4, Math.ceil(approxSide * 1.5));
+    
     this.clearDrawing();
     
-    for(let r=0; r<Math.min(side, this.gridSize); r++) {
-      for(let c=0; c<Math.min(side, this.gridSize); c++) {
-        this.drawingGrid[r][c] = true;
+    let currentRowLength = Math.ceil(approxSide);
+    
+    // Fill cells to create Young diagram
+    for(let r = 0; r < maxRows; r++) {
+      for(let c = 0; c < currentRowLength; c++) {
+        if(c < this.gridResolution) {
+          this.drawingGrid[r][c] = true;
+        }
+      }
+      
+      // Gradually decrease row length
+      if(r > 1 && currentRowLength > 1 && Math.random() < 0.6) {
+        currentRowLength = Math.max(1, currentRowLength - 1);
       }
     }
-    this.updateDrawingVisual();
+    
+    this.drawCanvas();
     this.updateDrawingInfo();
   }
 
@@ -427,17 +497,90 @@ class HookWalkVis {
       this.drawnShape.length ? `[${this.drawnShape.join(',')}]` : '[]';
   }
 
-  getShapeFromDrawing() {
-    const shape = [];
-    for(let r=0; r<this.gridSize; r++) {
-      let rowLen = 0;
-      for(let c=0; c<this.gridSize; c++) {
-        if(this.drawingGrid[r][c]) rowLen = c + 1;
-      }
-      if(rowLen > 0) shape.push(rowLen);
-      else if(shape.length > 0) break; // Stop at first empty row after filled rows
+  validateTargetBoxes() {
+    const input = document.getElementById('target-boxes');
+    const value = parseInt(input.value);
+    const maxBoxes = this.gridResolution * this.gridResolution;
+    
+    if(value > maxBoxes) {
+      input.value = maxBoxes;
+      alert(`Maximum ${maxBoxes} boxes allowed for ${this.gridResolution}×${this.gridResolution} grid`);
     }
+  }
+
+  getShapeFromGrid() {
+    const shape = [];
+    
+    for(let r = 0; r < this.gridResolution; r++) {
+      let rowLength = 0;
+      
+      // Find the rightmost filled cell in this row
+      for(let c = this.gridResolution - 1; c >= 0; c--) {
+        if(this.drawingGrid[r][c]) {
+          rowLength = c + 1;
+          break;
+        }
+      }
+      
+      if(rowLength > 0) {
+        shape.push(rowLength);
+      } else if(shape.length > 0) {
+        // Empty row after filled rows - stop here
+        break;
+      }
+    }
+    
+    // Ensure Young diagram property (non-increasing row lengths)
+    for(let i = 1; i < shape.length; i++) {
+      if(shape[i] > shape[i-1]) {
+        shape[i] = shape[i-1];
+        // Also update the grid to match
+        for(let c = shape[i]; c < this.gridResolution; c++) {
+          this.drawingGrid[i][c] = false;
+        }
+      }
+    }
+    
     return shape;
+  }
+  
+  getShapeFromDrawing() {
+    const baseShape = this.getShapeFromGrid();
+    if(baseShape.length === 0) return [];
+    
+    // Scale up the shape to reach target number of boxes
+    const target = parseInt(document.getElementById('target-boxes').value) || 100;
+    const currentTotal = baseShape.reduce((a,b) => a + b, 0);
+    
+    if(currentTotal === 0) return [];
+    
+    const scaleFactor = Math.sqrt(target / currentTotal);
+    const scaledShape = baseShape.map(len => Math.max(1, Math.round(len * scaleFactor)));
+    
+    // Fine-tune to get closer to target
+    let total = scaledShape.reduce((a,b) => a + b, 0);
+    let attempts = 0;
+    while(total < target && attempts < 1000) {
+      // Add boxes to longest rows first
+      const maxLen = Math.max(...scaledShape);
+      for(let i = 0; i < scaledShape.length && total < target; i++) {
+        if(scaledShape[i] === maxLen) {
+          scaledShape[i]++;
+          total++;
+          break;
+        }
+      }
+      attempts++;
+    }
+    
+    // Ensure Young diagram property after scaling
+    for(let i = 1; i < scaledShape.length; i++) {
+      if(scaledShape[i] > scaledShape[i-1]) {
+        scaledShape[i] = scaledShape[i-1];
+      }
+    }
+    
+    return scaledShape.filter(x => x > 0);
   }
 
   parseShape(){
