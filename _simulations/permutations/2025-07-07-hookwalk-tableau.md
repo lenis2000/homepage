@@ -230,7 +230,7 @@ code:
   <!-- Drawing interface -->
   <div id="draw-interface" class="input-section">
     <div class="input-group">
-      <label for="target-boxes">Final boxes (N):</label>
+      <label for="target-boxes">N:</label>
       <input type="number" id="target-boxes" value="2500" min="1" max="100000">
       <button id="auto-shape">Auto Shape</button>
       <button id="clear-drawing">Clear</button>
@@ -240,7 +240,6 @@ code:
       <div id="shape-canvas"></div>
       <div class="drawing-info">
         <div>Current boxes: <span id="current-boxes">0</span></div>
-        <div>Shape: <span id="current-shape-text">[]</span></div>
       </div>
     </div>
   </div>
@@ -531,8 +530,7 @@ class HookWalkVis {
     this.drawnShape = this.getShapeFromDrawing();
     const boxes = this.drawnShape.reduce((a,b)=>a+b,0);
     document.getElementById('current-boxes').textContent = boxes;
-    document.getElementById('current-shape-text').textContent = 
-      this.drawnShape.length ? `[${this.drawnShape.join(',')}]` : '[]';
+    document.getElementById('target-boxes').value = boxes;
   }
 
 
