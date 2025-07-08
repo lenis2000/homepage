@@ -307,6 +307,8 @@ class HookWalkVis {
                        _=>Array(this.gridResolution).fill(false));   // 1 = border pixel
     this.isDrawing   = false;            // drag-state
     this.drawAction  = true;             // add or erase on this drag
+    this.prevRow = null;                 // remember previous grid cell while dragging
+    this.prevCol = null;                 //  …   …
     this.usePlancherel = false;
     this.plancherelData = null;
     this.initWASM();
@@ -384,20 +386,45 @@ class HookWalkVis {
     this.updateDrawingInfo();
   }
 
+  drawLine(r0,c0,r1,c1,val){
+    let dr = Math.abs(r1-r0), dc = Math.abs(c1-c0);
+    let sr = (r0<r1)?1:-1,     sc = (c0<c1)?1:-1;
+    let err = dr - dc;
+    while(true){
+      this.borderGrid[r0][c0] = val;
+      if (r0===r1 && c0===c1) break;
+      const e2 = 2*err;
+      if (e2 > -dc){ err -= dc; r0 += sr; }
+      if (e2 <  dr){ err += dr; c0 += sc; }
+    }
+  }
+
   setupCanvasEvents() {
-    const start  = (x,y) => {
+    const start = (x,y)=>{
       const {row,col} = this.xy2rc(x,y);
-      if (row<0) return;
-      this.isDrawing  = true;
-      this.drawAction = !this.borderGrid[row][col];   // flip logic
+      if(row<0) return;
+      this.isDrawing = true;
+      this.drawAction = !this.borderGrid[row][col];   // draw OR erase
+      this.prevRow = row; this.prevCol = col;
       this.setBorder(row,col,this.drawAction);
     };
-    const move   = (x,y) => {
+
+    const move = (x,y)=>{
       if(!this.isDrawing) return;
       const {row,col} = this.xy2rc(x,y);
-      this.setBorder(row,col,this.drawAction);
+      if(row===this.prevRow && col===this.prevCol) return;
+      /* interpolate the skipped cells */
+      if(this.drawAction) this.drawLine(this.prevRow,this.prevCol,row,col,true);
+      else                this.drawLine(this.prevRow,this.prevCol,row,col,false);
+      this.prevRow = row; this.prevCol = col;
+      this.drawCanvas();
+      this.updateDrawingInfo();
     };
-    const stop = () => this.isDrawing=false;
+
+    const stop = ()=>{
+      this.isDrawing = false;
+      this.prevRow = this.prevCol = null;
+    };
 
     /* mouse */
     this.canvas.addEventListener('mousedown',e=>start(e.offsetX,e.offsetY));
@@ -458,30 +485,22 @@ class HookWalkVis {
     this.updateDrawingInfo();
   }
 
-  updateDrawingFromTarget() {
-    // Create a Young diagram shape
-    const target = parseInt(document.getElementById('target-boxes').value) || 100;
-    const approxSide = Math.max(3, Math.ceil(Math.sqrt(target)) / 10); // Small base shape
-    const maxRows = Math.min(this.gridResolution / 4, Math.ceil(approxSide * 1.5));
-    
+  updateDrawingFromTarget () {
     this.clearDrawing();
-    
-    let currentRowLength = Math.ceil(approxSide);
-    
-    // Fill cells to create Young diagram
-    for(let r = 0; r < maxRows; r++) {
-      for(let c = 0; c < currentRowLength; c++) {
-        if(c < this.gridResolution) {
-          this.borderGrid[r][c] = true;
-        }
-      }
-      
-      // Gradually decrease row length
-      if(r > 1 && currentRowLength > 1 && Math.random() < 0.6) {
-        currentRowLength = Math.max(1, currentRowLength - 1);
-      }
+
+    const Nwant = parseInt(document.getElementById('target-boxes').value) || 100;
+    const side  = Math.min(this.gridResolution-2, Math.ceil(Math.sqrt(Nwant)));
+
+    // Simple square border, 1-pixel thick
+    for (let c=0; c<side; c++) {                 // top & bottom
+      this.borderGrid[0][c]      = true;
+      this.borderGrid[side-1][c] = true;
     }
-    
+    for (let r=0; r<side; r++) {                 // left & right
+      this.borderGrid[r][0]      = true;
+      this.borderGrid[r][side-1] = true;
+    }
+
     this.drawCanvas();
     this.updateDrawingInfo();
   }
@@ -495,72 +514,27 @@ class HookWalkVis {
   }
 
 
-  getShapeFromGrid() {
-    const shape = [];
-    
-    for(let r = 0; r < this.gridResolution; r++) {
-      let rowLength = 0;
-      
-      // Find the rightmost filled cell in this row
-      for(let c = this.gridResolution - 1; c >= 0; c--) {
-        if(this.borderGrid[r][c]) {
-          rowLength = c + 1;
-          break;
-        }
-      }
-      
-      if(rowLength > 0) {
-        shape.push(rowLength);
-      } else if(shape.length > 0) {
-        // Empty row after filled rows - stop here
-        break;
-      }
-    }
-    
-    // Ensure Young diagram property (non-increasing row lengths)
-    for(let i = 1; i < shape.length; i++) {
-      if(shape[i] > shape[i-1]) {
-        shape[i] = shape[i-1];
-        // Also update the grid to match
-        for(let c = shape[i]; c < this.gridResolution; c++) {
-          this.borderGrid[i][c] = false;
-        }
-      }
-    }
-    
-    return shape;
-  }
   
   getShapeFromDrawing(){
-    /* -------- flood-fill outside region to find interior ---------- */
-    const visited = Array.from({length:this.gridResolution},
-                    _=>Array(this.gridResolution).fill(false));
-    const q=[[ -1, -1 ]];                       // virtual outside cell
-    const inGrid = (r,c)=>r>=0&&r<this.gridResolution&&c>=0&&c<this.gridResolution;
-    while(q.length){
-      const [r,c]=q.pop();
-      const nbr=[[r+1,c],[r-1,c],[r,c+1],[r,c-1]];
-      for(const [nr,nc] of nbr){
-        if(!inGrid(nr,nc) || visited[nr][nc] || this.borderGrid[nr][nc]) continue;
-        visited[nr][nc]=true; q.push([nr,nc]);
+    const N = this.gridResolution;
+    const rowLen = Array(N).fill(0);
+
+    /* propagate each border pixel upward */
+    for(let r=0; r<N; r++){
+      for(let c=0; c<N; c++){
+        if(!this.borderGrid[r][c]) continue;
+        for(let rr=0; rr<=r; rr++) rowLen[rr] = Math.max(rowLen[rr], c+1);
       }
     }
 
-    /* ---------- interior cells are !visited && !borderGrid -------- */
-    const occupied = (r,c)=> !visited[r][c] || this.borderGrid[r][c];
+    /* trim trailing zeros */
+    while(rowLen.length && rowLen[rowLen.length-1]===0) rowLen.pop();
 
-    const shape=[];
-    for(let r=0;r<this.gridResolution;r++){
-      let len=0;
-      while(len<this.gridResolution && occupied(r,len)) len++;
-      if(len===0 && shape.length) break;         // stop after first empty row
-      if(len) shape.push(len);
-    }
-    /* enforce non-increasing */
-    for(let i=1;i<shape.length;i++)
-      if(shape[i]>shape[i-1]) shape[i]=shape[i-1];
+    /* enforce non-increasing property */
+    for(let i=1; i<rowLen.length; i++)
+      if(rowLen[i] > rowLen[i-1]) rowLen[i] = rowLen[i-1];
 
-    return shape;
+    return rowLen;
   }
 
   parseShape(){
