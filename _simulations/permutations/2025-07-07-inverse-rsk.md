@@ -1,5 +1,5 @@
 ---
-title: Inverse RSK from Two Random SYT
+title: Permutation from a given shape via inverse RSK
 model: permutations
 author: 'Leonid Petrov'
 code:
