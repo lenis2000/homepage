@@ -213,18 +213,56 @@ code:
             <li>The sequence of extracted values forms the permutation σ</li>
         </ol>
         
+        <h4>Shape Input Methods:</h4>
+        <ul>
+            <li><strong>Draw Mode:</strong> Draw the outline of a Young diagram and specify target number of boxes</li>
+            <li><strong>Text Input:</strong> 
+                <ul>
+                    <li><strong>Manual:</strong> Enter comma-separated row lengths (e.g., <code>5,4,3,2,1</code>) or use exponential notation (e.g., <code>50^50,1^50</code> for 50 rows of length 50 followed by 50 rows of length 1)</li>
+                    <li><strong>Plancherel:</strong> Sample random partition with given number of boxes using Plancherel measure</li>
+                    <li><strong>Staircase:</strong> Generate staircase shape k, k-1, ..., 1</li>
+                </ul>
+            </li>
+        </ul>
+        
+        <h4>Output Formats:</h4>
+        <ul>
+            <li><strong>Small permutations (N ≤ 200):</strong> 
+                <ul>
+                    <li>Full permutation array display: <code>σ = [3, 1, 4, 2, ...]</code></li>
+                    <li>Detailed tableaux with numbered entries</li>
+                    <li>Permutation matrix with dots</li>
+                </ul>
+            </li>
+            <li><strong>Medium permutations (200 < N ≤ 600):</strong>
+                <ul>
+                    <li>Truncated array display: <code>σ of size N (showing first 20): [σ(1), σ(2), ..., σ(20), ...]</code></li>
+                    <li>Permutation matrix visualization with dots</li>
+                    <li>Color-coded tableaux (heat map style)</li>
+                </ul>
+            </li>
+            <li><strong>Large permutations (N > 600):</strong>
+                <ul>
+                    <li>Truncated array display with first 20 elements</li>
+                    <li>Summary statistics only for visualization</li>
+                    <li>Color-coded tableaux using UVA color scheme (orange to blue gradient)</li>
+                </ul>
+            </li>
+        </ul>
+        
+        <h4>Download Options:</h4>
+        <ul>
+            <li><strong>Download Shape λ:</strong> Saves the Young diagram as comma-separated row lengths in a text file</li>
+            <li><strong>Download Permutation σ:</strong> Saves the complete permutation as comma-separated values in a text file</li>
+            <li>Files are timestamped with format: <code>shape_lambda_N{size}_{timestamp}.txt</code> and <code>permutation_sigma_N{size}_{timestamp}.txt</code></li>
+        </ul>
+        
         <h4>Properties:</h4>
         <ul>
             <li><strong>Uniform distribution:</strong> Generates uniformly random permutations with given RSK shape</li>
             <li><strong>Bijective:</strong> Perfect correspondence between permutations and SYT pairs</li>
             <li><strong>Scalable:</strong> Uses WASM for large shapes (N > 500 boxes) with pure JS implementation for smaller cases</li>
-        </ul>
-        
-        <h4>Visualization:</h4>
-        <ul>
-            <li><strong>Small permutations (≤200):</strong> Full permutation array display</li>
-            <li><strong>Medium permutations (≤600):</strong> Permutation matrix with dots</li>
-            <li><strong>Large permutations (>600):</strong> Summary statistics only</li>
+            <li><strong>Progress tracking:</strong> Shows progress bar for large simulations (N > 5000)</li>
         </ul>
     </div>
 </details>
