@@ -230,11 +230,11 @@ code:
   <!-- Drawing interface -->
   <div id="draw-interface" class="input-section">
     <div class="input-group">
-      <label for="target-boxes">Target boxes (N):</label>
+      <label for="target-boxes">Final boxes (N):</label>
       <input type="number" id="target-boxes" value="2500" min="1" max="100000">
       <button id="auto-shape">Auto Shape</button>
       <button id="clear-drawing">Clear</button>
-      <span class="info-text">Draw boundary of Young diagram. Interior auto-filled.</span>
+      <span class="info-text">Draw only the outline; interior is auto-filled.</span>
     </div>
     <div class="drawing-container">
       <div id="shape-canvas"></div>
@@ -298,18 +298,22 @@ class HookWalkVis {
     this.wasm   = null;
     this.drawMode = true;
     this.drawnShape = [];
-    this.canvasSize = 400;
-    this.gridResolution = 100; // 100x100 logical grid
-    this.pixelSize = this.canvasSize / this.gridResolution; // 4px per cell
-    this.boundaryPoints = new Set(); // Store boundary points as "row,col"
+    this.canvasSize    = 400;           // keeps the UI spec
+    this.gridResolution = 100;          // keep
+    this.pixelSize     = this.canvasSize / this.gridResolution;
+    
+    // === NEW ===
+    this.borderGrid  = Array.from({length:this.gridResolution},
+                       _=>Array(this.gridResolution).fill(false));   // 1 = border pixel
+    this.isDrawing   = false;            // drag-state
+    this.drawAction  = true;             // add or erase on this drag
     this.usePlancherel = false;
     this.plancherelData = null;
     this.initWASM();
     this.setupEvents();
     this.setupCollapsibleDetails();
     this.initDrawingCanvas();
-    this.loadPlancherelData();
-    this.updateDrawingFromTarget(); // Create initial square shape
+    this.loadPlancherelData();      // leave the grid empty; user draws border
   }
 
   async initWASM(){
@@ -329,7 +333,6 @@ class HookWalkVis {
     document.getElementById('toggle-text-mode').addEventListener('click',()=>this.setDrawMode(false));
     document.getElementById('clear-drawing').addEventListener('click',()=>this.clearDrawing());
     document.getElementById('auto-shape').addEventListener('click',()=>this.updateDrawingFromTarget());
-    document.getElementById('target-boxes').addEventListener('input',()=>this.validateTargetBoxes());
     document.getElementById('toggle-manual-shape').addEventListener('click',()=>this.setShapeMode(false));
     document.getElementById('toggle-plancherel-shape').addEventListener('click',()=>this.setShapeMode(true));
   }
@@ -374,14 +377,7 @@ class HookWalkVis {
     container.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d');
     
-    // Initialize drawing grid
-    this.drawingGrid = [];
-    for(let r = 0; r < this.gridResolution; r++) {
-      this.drawingGrid[r] = [];
-      for(let c = 0; c < this.gridResolution; c++) {
-        this.drawingGrid[r][c] = false;
-      }
-    }
+    // borderGrid is already initialized in constructor
     
     this.setupCanvasEvents();
     this.drawCanvas();
@@ -389,72 +385,73 @@ class HookWalkVis {
   }
 
   setupCanvasEvents() {
-    this.canvas.addEventListener('click', (event) => {
-      const rect = this.canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      
-      // Convert to grid coordinates
-      const col = Math.floor(x / this.pixelSize);
-      const row = Math.floor(y / this.pixelSize);
-      
-      if(row >= 0 && row < this.gridResolution && col >= 0 && col < this.gridResolution) {
-        this.toggleCell(row, col);
-      }
-    });
+    const start  = (x,y) => {
+      const {row,col} = this.xy2rc(x,y);
+      if (row<0) return;
+      this.isDrawing  = true;
+      this.drawAction = !this.borderGrid[row][col];   // flip logic
+      this.setBorder(row,col,this.drawAction);
+    };
+    const move   = (x,y) => {
+      if(!this.isDrawing) return;
+      const {row,col} = this.xy2rc(x,y);
+      this.setBorder(row,col,this.drawAction);
+    };
+    const stop = () => this.isDrawing=false;
+
+    /* mouse */
+    this.canvas.addEventListener('mousedown',e=>start(e.offsetX,e.offsetY));
+    this.canvas.addEventListener('mousemove',e=>move(e.offsetX,e.offsetY));
+    window.addEventListener('mouseup',stop);
+
+    /* touch (mobile) */
+    this.canvas.addEventListener('touchstart',e=>{
+        const t=e.touches[0]; const r=this.canvas.getBoundingClientRect();
+        start(t.clientX-r.left,t.clientY-r.top); e.preventDefault();
+    },{passive:false});
+    this.canvas.addEventListener('touchmove',e=>{
+        const t=e.touches[0]; const r=this.canvas.getBoundingClientRect();
+        move(t.clientX-r.left,t.clientY-r.top); e.preventDefault();
+    },{passive:false});
+    window.addEventListener('touchend',stop);
   }
-  
-  handleCanvasMove(event) {
-    // Could add preview functionality here
+
+  xy2rc(x,y){        // canvas x,y → grid row,col
+    return {row:Math.floor(y/this.pixelSize),
+            col:Math.floor(x/this.pixelSize)};
   }
-  
-  toggleCell(row, col) {
-    this.drawingGrid[row][col] = !this.drawingGrid[row][col];
+  setBorder(r,c,val){
+    if(r<0||r>=this.gridResolution||c<0||c>=this.gridResolution) return;
+    if(this.borderGrid[r][c]===val) return;
+    this.borderGrid[r][c]=val;
     this.drawCanvas();
     this.updateDrawingInfo();
   }
 
-  drawCanvas() {
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvasSize, this.canvasSize);
-    
-    // Draw grid lines
-    this.ctx.strokeStyle = '#f0f0f0';
-    this.ctx.lineWidth = 0.5;
-    const step = 20;
-    for(let i = 0; i <= this.canvasSize; i += step) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(i, 0);
-      this.ctx.lineTo(i, this.canvasSize);
-      this.ctx.stroke();
-      
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, i);
-      this.ctx.lineTo(this.canvasSize, i);
-      this.ctx.stroke();
+  drawCanvas(){
+    const ctx=this.ctx;
+    ctx.clearRect(0,0,this.canvasSize,this.canvasSize);
+
+    /* faint grid */
+    ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=0.5;
+    for(let i=0;i<=this.canvasSize;i+=this.pixelSize){
+        ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,this.canvasSize); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(this.canvasSize,i); ctx.stroke();
     }
-    
-    // Draw filled cells
-    this.ctx.fillStyle = '#e8f4ff';
-    this.ctx.strokeStyle = '#333';
-    this.ctx.lineWidth = 1;
-    
-    for(let r = 0; r < this.gridResolution; r++) {
-      for(let c = 0; c < this.gridResolution; c++) {
-        if(this.drawingGrid[r][c]) {
-          const x = c * this.pixelSize;
-          const y = r * this.pixelSize;
-          this.ctx.fillRect(x, y, this.pixelSize, this.pixelSize);
-          this.ctx.strokeRect(x, y, this.pixelSize, this.pixelSize);
-        }
-      }
-    }
+
+    /* border cells */
+    ctx.fillStyle='#444';
+    for(let r=0;r<this.gridResolution;r++)
+      for(let c=0;c<this.gridResolution;c++)
+        if(this.borderGrid[r][c])
+          ctx.fillRect(c*this.pixelSize, r*this.pixelSize,
+                       this.pixelSize,     this.pixelSize);
   }
 
   clearDrawing() {
     for(let r = 0; r < this.gridResolution; r++) {
       for(let c = 0; c < this.gridResolution; c++) {
-        this.drawingGrid[r][c] = false;
+        this.borderGrid[r][c] = false;
       }
     }
     this.drawCanvas();
@@ -475,7 +472,7 @@ class HookWalkVis {
     for(let r = 0; r < maxRows; r++) {
       for(let c = 0; c < currentRowLength; c++) {
         if(c < this.gridResolution) {
-          this.drawingGrid[r][c] = true;
+          this.borderGrid[r][c] = true;
         }
       }
       
@@ -497,16 +494,6 @@ class HookWalkVis {
       this.drawnShape.length ? `[${this.drawnShape.join(',')}]` : '[]';
   }
 
-  validateTargetBoxes() {
-    const input = document.getElementById('target-boxes');
-    const value = parseInt(input.value);
-    const maxBoxes = this.gridResolution * this.gridResolution;
-    
-    if(value > maxBoxes) {
-      input.value = maxBoxes;
-      alert(`Maximum ${maxBoxes} boxes allowed for ${this.gridResolution}×${this.gridResolution} grid`);
-    }
-  }
 
   getShapeFromGrid() {
     const shape = [];
@@ -516,7 +503,7 @@ class HookWalkVis {
       
       // Find the rightmost filled cell in this row
       for(let c = this.gridResolution - 1; c >= 0; c--) {
-        if(this.drawingGrid[r][c]) {
+        if(this.borderGrid[r][c]) {
           rowLength = c + 1;
           break;
         }
@@ -536,7 +523,7 @@ class HookWalkVis {
         shape[i] = shape[i-1];
         // Also update the grid to match
         for(let c = shape[i]; c < this.gridResolution; c++) {
-          this.drawingGrid[i][c] = false;
+          this.borderGrid[i][c] = false;
         }
       }
     }
@@ -544,43 +531,36 @@ class HookWalkVis {
     return shape;
   }
   
-  getShapeFromDrawing() {
-    const baseShape = this.getShapeFromGrid();
-    if(baseShape.length === 0) return [];
-    
-    // Scale up the shape to reach target number of boxes
-    const target = parseInt(document.getElementById('target-boxes').value) || 100;
-    const currentTotal = baseShape.reduce((a,b) => a + b, 0);
-    
-    if(currentTotal === 0) return [];
-    
-    const scaleFactor = Math.sqrt(target / currentTotal);
-    const scaledShape = baseShape.map(len => Math.max(1, Math.round(len * scaleFactor)));
-    
-    // Fine-tune to get closer to target
-    let total = scaledShape.reduce((a,b) => a + b, 0);
-    let attempts = 0;
-    while(total < target && attempts < 1000) {
-      // Add boxes to longest rows first
-      const maxLen = Math.max(...scaledShape);
-      for(let i = 0; i < scaledShape.length && total < target; i++) {
-        if(scaledShape[i] === maxLen) {
-          scaledShape[i]++;
-          total++;
-          break;
-        }
-      }
-      attempts++;
-    }
-    
-    // Ensure Young diagram property after scaling
-    for(let i = 1; i < scaledShape.length; i++) {
-      if(scaledShape[i] > scaledShape[i-1]) {
-        scaledShape[i] = scaledShape[i-1];
+  getShapeFromDrawing(){
+    /* -------- flood-fill outside region to find interior ---------- */
+    const visited = Array.from({length:this.gridResolution},
+                    _=>Array(this.gridResolution).fill(false));
+    const q=[[ -1, -1 ]];                       // virtual outside cell
+    const inGrid = (r,c)=>r>=0&&r<this.gridResolution&&c>=0&&c<this.gridResolution;
+    while(q.length){
+      const [r,c]=q.pop();
+      const nbr=[[r+1,c],[r-1,c],[r,c+1],[r,c-1]];
+      for(const [nr,nc] of nbr){
+        if(!inGrid(nr,nc) || visited[nr][nc] || this.borderGrid[nr][nc]) continue;
+        visited[nr][nc]=true; q.push([nr,nc]);
       }
     }
-    
-    return scaledShape.filter(x => x > 0);
+
+    /* ---------- interior cells are !visited && !borderGrid -------- */
+    const occupied = (r,c)=> !visited[r][c] || this.borderGrid[r][c];
+
+    const shape=[];
+    for(let r=0;r<this.gridResolution;r++){
+      let len=0;
+      while(len<this.gridResolution && occupied(r,len)) len++;
+      if(len===0 && shape.length) break;         // stop after first empty row
+      if(len) shape.push(len);
+    }
+    /* enforce non-increasing */
+    for(let i=1;i<shape.length;i++)
+      if(shape[i]>shape[i-1]) shape[i]=shape[i-1];
+
+    return shape;
   }
 
   parseShape(){
@@ -590,8 +570,15 @@ class HookWalkVis {
       // Use drawn shape
       arr = this.getShapeFromDrawing();
       if(!arr.length){ 
-        alert('Please draw a shape first'); 
+        alert('Draw a closed border first'); 
         return null; 
+      }
+      
+      /* rescale to N if necessary */
+      const Nwanted = parseInt(document.getElementById('target-boxes').value)||1;
+      const Ncurr   = arr.reduce((a,b)=>a+b,0);
+      if(Ncurr!==Nwanted){
+         arr = this.scalePartition(arr,Nwanted);   // we already have this util
       }
     } else if(this.usePlancherel) {
       // Generate Plancherel random partition
