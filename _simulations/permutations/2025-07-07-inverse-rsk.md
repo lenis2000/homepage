@@ -282,6 +282,7 @@ code:
       this.drawMode = true;
       this.usePlancherel = false;
       this.shapeMode = 'manual';
+      this.eraserMode = false;
       this.plancherelData = null;
       this.canvasSize = 400;
       this.gridResolution = 100;
@@ -317,7 +318,7 @@ code:
             <div class="input-group">
               <label for="target-boxes">N:</label>
               <input type="number" id="target-boxes" value="2500" min="1" max="100000">
-              <button id="auto-shape">Auto Shape</button>
+              <button id="eraser-toggle" class="mode-toggle">Eraser</button>
               <button id="clear-drawing">Clear</button>
               <span class="info-text">Draw only the outline; interior is auto-filled.</span>
             </div>
@@ -369,7 +370,7 @@ code:
       document.getElementById('toggle-draw-mode').addEventListener('click', () => this.setDrawMode(true));
       document.getElementById('toggle-text-mode').addEventListener('click', () => this.setDrawMode(false));
       document.getElementById('clear-drawing').addEventListener('click', () => this.clearDrawing());
-      document.getElementById('auto-shape').addEventListener('click', () => this.updateDrawingFromTarget());
+      document.getElementById('eraser-toggle').addEventListener('click', () => this.toggleEraserMode());
       document.getElementById('toggle-manual-shape').addEventListener('click', () => this.setShapeMode('manual'));
       document.getElementById('toggle-plancherel-shape').addEventListener('click', () => this.setShapeMode('plancherel'));
       document.getElementById('toggle-staircase-shape').addEventListener('click', () => this.setShapeMode('staircase'));
@@ -395,6 +396,12 @@ code:
 
       // For backward compatibility
       this.usePlancherel = (mode === 'plancherel');
+    }
+
+    toggleEraserMode() {
+      this.eraserMode = !this.eraserMode;
+      document.getElementById('eraser-toggle').classList.toggle('active', this.eraserMode);
+      this.canvas.style.cursor = this.eraserMode ? 'crosshair' : 'crosshair';
     }
 
     initDrawingCanvas() {
@@ -435,9 +442,14 @@ code:
         const {row, col} = this.xy2rc(x, y);
         if (row < 0) return;
         this.isDrawing = true;
-        this.drawAction = !this.borderGrid[row][col];
-        this.prevRow = row; this.prevCol = col;
-        this.setBorder(row, col, this.drawAction);
+        
+        if (this.eraserMode) {
+          this.eraseDownAndRight(row, col);
+        } else {
+          this.drawAction = !this.borderGrid[row][col];
+          this.prevRow = row; this.prevCol = col;
+          this.setBorder(row, col, this.drawAction);
+        }
       };
 
       const move = (x, y) => {
@@ -445,11 +457,15 @@ code:
         const {row, col} = this.xy2rc(x, y);
         if (row === this.prevRow && col === this.prevCol) return;
 
-        if (this.drawAction) this.drawLine(this.prevRow, this.prevCol, row, col, true);
-        else this.drawLine(this.prevRow, this.prevCol, row, col, false);
-        this.prevRow = row; this.prevCol = col;
-        this.drawCanvas();
-        this.updateDrawingInfo();
+        if (this.eraserMode) {
+          this.eraseDownAndRight(row, col);
+        } else {
+          if (this.drawAction) this.drawLine(this.prevRow, this.prevCol, row, col, true);
+          else this.drawLine(this.prevRow, this.prevCol, row, col, false);
+          this.prevRow = row; this.prevCol = col;
+          this.drawCanvas();
+          this.updateDrawingInfo();
+        }
       };
 
       const stop = () => {
@@ -530,24 +546,17 @@ code:
       this.updateDrawingInfo();
     }
 
-    updateDrawingFromTarget() {
-      this.clearDrawing();
-
-      const Nwant = parseInt(document.getElementById('target-boxes').value) || 100;
-      const side = Math.min(this.gridResolution - 2, Math.ceil(Math.sqrt(Nwant)));
-
-      for (let c = 0; c < side; c++) {
-        this.borderGrid[0][c] = true;
-        this.borderGrid[side - 1][c] = true;
+    eraseDownAndRight(row, col) {
+      // Remove all points down and right from (row, col)
+      for (let r = row; r < this.gridResolution; r++) {
+        for (let c = col; c < this.gridResolution; c++) {
+          this.borderGrid[r][c] = false;
+        }
       }
-      for (let r = 0; r < side; r++) {
-        this.borderGrid[r][0] = true;
-        this.borderGrid[r][side - 1] = true;
-      }
-
       this.drawCanvas();
       this.updateDrawingInfo();
     }
+
 
     updateDrawingInfo() {
       const drawnShape = this.getShapeFromDrawing();
