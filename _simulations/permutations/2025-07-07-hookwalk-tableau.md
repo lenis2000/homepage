@@ -250,6 +250,7 @@ code:
       <label>Shape type:</label>
       <button id="toggle-manual-shape" class="shape-toggle active">Manual</button>
       <button id="toggle-plancherel-shape" class="shape-toggle">Plancherel</button>
+      <button id="toggle-staircase-shape" class="shape-toggle">Staircase</button>
     </div>
     
     <div id="manual-shape-input" class="shape-input-section">
@@ -264,6 +265,14 @@ code:
         <label for="plancherel-n">Number of boxes (N):</label>
         <input type="number" id="plancherel-n" value="100" min="1" max="10000">
         <span class="info-text">Samples random partition with Plancherel measure</span>
+      </div>
+    </div>
+    
+    <div id="staircase-shape-input" class="shape-input-section" style="display: none;">
+      <div class="input-group">
+        <label for="staircase-k">Staircase k:</label>
+        <input type="number" id="staircase-k" value="10" min="1" max="1000">
+        <span class="info-text">Generates staircase shape k, k-1, ..., 1</span>
       </div>
     </div>
   </div>
@@ -309,6 +318,7 @@ class HookWalkVis {
     this.prevRow = null;                 // remember previous grid cell while dragging
     this.prevCol = null;                 //  …   …
     this.usePlancherel = false;
+    this.shapeMode = 'manual';
     this.plancherelData = null;
     this.initWASM();
     this.setupEvents();
@@ -334,8 +344,9 @@ class HookWalkVis {
     document.getElementById('toggle-text-mode').addEventListener('click',()=>this.setDrawMode(false));
     document.getElementById('clear-drawing').addEventListener('click',()=>this.clearDrawing());
     document.getElementById('auto-shape').addEventListener('click',()=>this.updateDrawingFromTarget());
-    document.getElementById('toggle-manual-shape').addEventListener('click',()=>this.setShapeMode(false));
-    document.getElementById('toggle-plancherel-shape').addEventListener('click',()=>this.setShapeMode(true));
+    document.getElementById('toggle-manual-shape').addEventListener('click',()=>this.setShapeMode('manual'));
+    document.getElementById('toggle-plancherel-shape').addEventListener('click',()=>this.setShapeMode('plancherel'));
+    document.getElementById('toggle-staircase-shape').addEventListener('click',()=>this.setShapeMode('staircase'));
   }
 
   setupCollapsibleDetails() {
@@ -354,12 +365,18 @@ class HookWalkVis {
     document.getElementById('text-interface').style.display = isDraw ? 'none' : 'block';
   }
 
-  setShapeMode(isPlancherel) {
-    this.usePlancherel = isPlancherel;
-    document.getElementById('toggle-manual-shape').classList.toggle('active', !isPlancherel);
-    document.getElementById('toggle-plancherel-shape').classList.toggle('active', isPlancherel);
-    document.getElementById('manual-shape-input').style.display = isPlancherel ? 'none' : 'block';
-    document.getElementById('plancherel-shape-input').style.display = isPlancherel ? 'block' : 'none';
+  setShapeMode(mode) {
+    this.shapeMode = mode;
+    document.getElementById('toggle-manual-shape').classList.toggle('active', mode === 'manual');
+    document.getElementById('toggle-plancherel-shape').classList.toggle('active', mode === 'plancherel');
+    document.getElementById('toggle-staircase-shape').classList.toggle('active', mode === 'staircase');
+    
+    document.getElementById('manual-shape-input').style.display = mode === 'manual' ? 'block' : 'none';
+    document.getElementById('plancherel-shape-input').style.display = mode === 'plancherel' ? 'block' : 'none';
+    document.getElementById('staircase-shape-input').style.display = mode === 'staircase' ? 'block' : 'none';
+    
+    // For backward compatibility
+    this.usePlancherel = (mode === 'plancherel');
   }
 
   initDrawingCanvas() {
@@ -584,13 +601,20 @@ class HookWalkVis {
       if(Ncurr!==Nwanted){
          arr = this.scalePartition2D(arr,Nwanted); // 2-D block scale
       }
-    } else if(this.usePlancherel) {
+    } else if(this.shapeMode === 'plancherel') {
       // Generate Plancherel random partition
       const n = parseInt(document.getElementById('plancherel-n').value) || 100;
       arr = this.samplePlancherelPartition(n);
       if(!arr.length){ 
         alert('Failed to generate Plancherel partition'); 
         return null; 
+      }
+    } else if(this.shapeMode === 'staircase') {
+      // Generate staircase shape k,k-1,...,1
+      const k = parseInt(document.getElementById('staircase-k').value) || 10;
+      arr = [];
+      for(let i = k; i >= 1; i--) {
+        arr.push(i);
       }
     } else {
       // Use manual text input
