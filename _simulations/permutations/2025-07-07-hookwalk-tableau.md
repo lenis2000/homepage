@@ -19,25 +19,25 @@ code:
     background: var(--background-secondary, #f8f9fa);
     border-radius: 8px;
   }
-  
+
   .input-group {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
   }
-  
+
   .input-group label {
     font-weight: 500;
   }
-  
+
   .input-group input {
     padding: 8px 12px;
     border: 1px solid var(--border-color, #ccc);
     border-radius: 4px;
     font-family: monospace;
   }
-  
+
   .input-group button {
     padding: 8px 16px;
     background: var(--accent-color, #007bff);
@@ -47,26 +47,26 @@ code:
     cursor: pointer;
     font-weight: 500;
   }
-  
+
   .input-group button:hover {
     background: var(--accent-hover, #0056b3);
   }
-  
+
   .section {
     margin: 20px 0;
     min-height: 200px;
   }
-  
+
   .tableau-cell {
     fill: white;
     stroke: #333;
     stroke-width: 1;
   }
-  
+
   .tableau-cell.filled {
     fill: #e8f4ff;
   }
-  
+
   .tableau-text {
     text-anchor: middle;
     dominant-baseline: middle;
@@ -74,7 +74,7 @@ code:
     font-size: 14px;
     fill: #333;
   }
-  
+
   .mode-toggle {
     padding: 8px 16px;
     border: 1px solid var(--border-color, #ccc);
@@ -82,12 +82,12 @@ code:
     cursor: pointer;
     margin-right: 5px;
   }
-  
+
   .mode-toggle.active {
     background: var(--accent-color, #007bff);
     color: white;
   }
-  
+
   .input-section {
     margin: 15px 0;
     padding: 15px;
@@ -95,38 +95,38 @@ code:
     border-radius: 5px;
     background: var(--background-secondary, #f9f9f9);
   }
-  
+
   .drawing-container {
     display: flex;
     gap: 20px;
     align-items: flex-start;
   }
-  
+
   .drawing-info {
     min-width: 200px;
     font-family: monospace;
     font-size: 14px;
   }
-  
+
   .drawing-info div {
     margin: 5px 0;
   }
-  
+
   .grid-cell {
     fill: white;
     stroke: #ccc;
     stroke-width: 1;
     cursor: pointer;
   }
-  
+
   .grid-cell.filled {
     fill: #e8f4ff;
   }
-  
+
   .grid-cell:hover {
     fill: #d0e8ff;
   }
-  
+
   .shape-toggle {
     padding: 6px 12px;
     border: 1px solid var(--border-color, #ccc);
@@ -135,23 +135,23 @@ code:
     margin-right: 5px;
     font-size: 14px;
   }
-  
+
   .shape-toggle.active {
     background: var(--accent-color, #007bff);
     color: white;
   }
-  
+
   .shape-input-section {
     margin-top: 10px;
   }
-  
+
   .info-text {
     font-size: 12px;
     color: var(--text-secondary, #666);
     font-style: italic;
     margin-left: 10px;
   }
-  
+
   .progress-bar {
     width: 100%;
     height: 20px;
@@ -160,14 +160,14 @@ code:
     border-radius: 10px;
     overflow: hidden;
   }
-  
+
   .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--accent-color, #007bff), #0056b3);
     width: 0%;
     transition: width 0.3s ease;
   }
-  
+
   .progress-text {
     text-align: center;
     font-size: 14px;
@@ -184,7 +184,7 @@ code:
     </summary>
     <div style="padding: 15px; border: 1px solid var(--border-color, #ddd); border-top: none; border-radius: 0 0 5px 5px; background-color: var(--bg-secondary, #f9f9f9); color: var(--text-primary, #212529);">
         <p>The <strong>hook-walk algorithm</strong> (Greene-Nijenhuis-Wilf) generates uniformly random Standard Young Tableaux (SYT) of any given shape. This is a fundamental tool in algebraic combinatorics with applications to representation theory, symmetric functions, and random matrix theory.</p>
-        
+
         <h4>How it works:</h4>
         <ol>
             <li>Start with an empty Young diagram of the given shape</li>
@@ -197,21 +197,21 @@ code:
                 </ul>
             </li>
         </ol>
-        
+
         <h4>Properties:</h4>
         <ul>
             <li><strong>Uniform sampling:</strong> Each SYT of the given shape has equal probability</li>
             <li><strong>Efficient:</strong> O(N√N) time complexity for N boxes</li>
             <li><strong>Scalable:</strong> Handles shapes up to 100,000 boxes using WASM</li>
         </ul>
-        
+
         <h4>Shape input methods:</h4>
         <ul>
             <li><strong>Draw Shape:</strong> Click cells on the interactive grid to draw Young diagrams by hand</li>
             <li><strong>Manual notation:</strong> Enter row lengths like <code>5,5,5</code> or <code>100^50</code></li>
             <li><strong>Plancherel measure:</strong> Sample random partitions by discretizing the Vershik-Kerov limit shape Ω(x) = (2/π)[x√(1-x²) + arcsin(x)]</li>
         </ul>
-        
+
         <h4>Visualization:</h4>
         <ul>
             <li><strong>Small tableaux (≤200 boxes):</strong> Individual numbers displayed in cells</li>
@@ -226,7 +226,7 @@ code:
     <button id="toggle-draw-mode" class="mode-toggle active">Draw Shape</button>
     <button id="toggle-text-mode" class="mode-toggle">Text Input</button>
   </div>
-  
+
   <!-- Drawing interface -->
   <div id="draw-interface" class="input-section">
     <div class="input-group">
@@ -243,7 +243,7 @@ code:
       </div>
     </div>
   </div>
-  
+
   <!-- Text interface -->
   <div id="text-interface" class="input-section" style="display: none;">
     <div class="input-group">
@@ -252,14 +252,14 @@ code:
       <button id="toggle-plancherel-shape" class="shape-toggle">Plancherel</button>
       <button id="toggle-staircase-shape" class="shape-toggle">Staircase</button>
     </div>
-    
+
     <div id="manual-shape-input" class="shape-input-section">
       <div class="input-group">
         <label for="shape-input">Shape (rows):</label>
         <input type="text" id="shape-input" value="50^50">
       </div>
     </div>
-    
+
     <div id="plancherel-shape-input" class="shape-input-section" style="display: none;">
       <div class="input-group">
         <label for="plancherel-n">Number of boxes (N):</label>
@@ -267,7 +267,7 @@ code:
         <span class="info-text">Samples random partition with Plancherel measure</span>
       </div>
     </div>
-    
+
     <div id="staircase-shape-input" class="shape-input-section" style="display: none;">
       <div class="input-group">
         <label for="staircase-k">Staircase k:</label>
@@ -276,12 +276,12 @@ code:
       </div>
     </div>
   </div>
-  
+
   <div class="input-group">
     <button id="generate-tableau">Generate SYT</button>
     <span id="hook-wasm-indicator" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
   </div>
-  
+
   <div id="progress-container" style="display: none; margin-top: 10px;">
     <div class="progress-bar">
       <div id="progress-fill" class="progress-fill"></div>
@@ -309,7 +309,7 @@ class HookWalkVis {
     this.canvasSize    = 400;           // keeps the UI spec
     this.gridResolution = 100;          // keep
     this.pixelSize     = this.canvasSize / this.gridResolution;
-    
+
     // === NEW ===
     this.borderGrid  = Array.from({length:this.gridResolution},
                        _=>Array(this.gridResolution).fill(false));   // 1 = border pixel
@@ -334,7 +334,7 @@ class HookWalkVis {
       document.getElementById('hook-wasm-indicator').textContent = '(WASM ready for N>500)';
       document.getElementById('hook-wasm-indicator').style.color = 'var(--accent-color,#28a745)';
     } else {
-      document.getElementById('hook-wasm-indicator').textContent='(JavaScript mode)';
+      document.getElementById('hook-wasm-indicator').textContent='';
     }
   }
 
@@ -370,11 +370,11 @@ class HookWalkVis {
     document.getElementById('toggle-manual-shape').classList.toggle('active', mode === 'manual');
     document.getElementById('toggle-plancherel-shape').classList.toggle('active', mode === 'plancherel');
     document.getElementById('toggle-staircase-shape').classList.toggle('active', mode === 'staircase');
-    
+
     document.getElementById('manual-shape-input').style.display = mode === 'manual' ? 'block' : 'none';
     document.getElementById('plancherel-shape-input').style.display = mode === 'plancherel' ? 'block' : 'none';
     document.getElementById('staircase-shape-input').style.display = mode === 'staircase' ? 'block' : 'none';
-    
+
     // For backward compatibility
     this.usePlancherel = (mode === 'plancherel');
   }
@@ -382,7 +382,7 @@ class HookWalkVis {
   initDrawingCanvas() {
     const container = document.getElementById('shape-canvas');
     container.innerHTML = ''; // Clear existing content
-    
+
     // Create HTML5 canvas
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.canvasSize;
@@ -391,12 +391,12 @@ class HookWalkVis {
     this.canvas.style.borderRadius = '4px';
     this.canvas.style.cursor = 'crosshair';
     this.canvas.style.display = 'block';
-    
+
     container.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d');
-    
+
     // borderGrid is already initialized in constructor
-    
+
     this.setupCanvasEvents();
     this.drawCanvas();
     this.updateDrawingInfo();
@@ -551,7 +551,7 @@ class HookWalkVis {
   }
 
 
-  
+
   getShapeFromDrawing(){
     const N = this.gridResolution;
     const interior = Array.from({length:N}, _=>Array(N).fill(false));
@@ -586,15 +586,15 @@ class HookWalkVis {
 
   parseShape(){
     let arr;
-    
+
     if(this.drawMode) {
       // Use drawn shape
       arr = this.getShapeFromDrawing();
-      if(!arr.length){ 
-        alert('Draw a closed border first'); 
-        return null; 
+      if(!arr.length){
+        alert('Draw a closed border first');
+        return null;
       }
-      
+
       /* rescale to N if necessary */
       const Nwanted = parseInt(document.getElementById('target-boxes').value)||1;
       const Ncurr   = arr.reduce((a,b)=>a+b,0);
@@ -605,9 +605,9 @@ class HookWalkVis {
       // Generate Plancherel random partition
       const n = parseInt(document.getElementById('plancherel-n').value) || 100;
       arr = this.samplePlancherelPartition(n);
-      if(!arr.length){ 
-        alert('Failed to generate Plancherel partition'); 
-        return null; 
+      if(!arr.length){
+        alert('Failed to generate Plancherel partition');
+        return null;
       }
     } else if(this.shapeMode === 'staircase') {
       // Generate staircase shape k,k-1,...,1
@@ -621,13 +621,13 @@ class HookWalkVis {
       const txt = document.getElementById('shape-input').value;
       const parts = txt.split(',').map(x=>x.trim());
       arr = [];
-      
+
       for(const part of parts){
         if(part.includes('^')){
           // Handle exponential notation like "100^50"
           const [len, count] = part.split('^').map(x=>parseInt(x.trim()));
           if(isNaN(len) || isNaN(count) || len<=0 || count<=0){
-            alert('Bad shape format: ' + part); 
+            alert('Bad shape format: ' + part);
             return null;
           }
           for(let i=0; i<count; i++) arr.push(len);
@@ -635,16 +635,16 @@ class HookWalkVis {
           // Handle single number
           const len = parseInt(part);
           if(isNaN(len) || len<=0){
-            alert('Bad shape format: ' + part); 
+            alert('Bad shape format: ' + part);
             return null;
           }
           arr.push(len);
         }
       }
-      
+
       if(!arr.length){ alert('Bad shape'); return null; }
     }
-    
+
     this.shape = arr;
     this.N = arr.reduce((a,b)=>a+b,0);
     return arr;
@@ -667,48 +667,48 @@ class HookWalkVis {
       const partitionData = this.plancherelData[n];
       return [...partitionData.partition]; // Copy to avoid mutation
     }
-    
+
     // For large n > 5000, use block scaling
     if (this.plancherelData && n > 5000) {
       // Find k such that n/k² ≤ 5000, so k² ≥ n/5000
       const minK2 = n / 5000;
       const k = Math.ceil(Math.sqrt(minK2));
       const targetSize = Math.floor(n / (k * k));
-      
+
       if (this.plancherelData[targetSize]) {
         const partitionData = this.plancherelData[targetSize];
         return this.blockScalePartition(partitionData.partition, k);
       }
-      
+
       // If exact targetSize not available, find closest
       const sizes = Object.keys(this.plancherelData).map(Number).sort((a,b) => a - b);
-      const closestSize = sizes.reduce((prev, curr) => 
+      const closestSize = sizes.reduce((prev, curr) =>
         Math.abs(curr - targetSize) < Math.abs(prev - targetSize) ? curr : prev
       );
-      
+
       if (closestSize && this.plancherelData[closestSize]) {
         const partitionData = this.plancherelData[closestSize];
         const blockScaled = this.blockScalePartition(partitionData.partition, k);
-        
+
         // Fine-tune to get exactly n boxes
         return this.adjustPartitionSize(blockScaled, n);
       }
     }
-    
+
     // Fallback: find closest size in data and scale
     if (this.plancherelData) {
       const sizes = Object.keys(this.plancherelData).map(Number).sort((a,b) => a - b);
-      const closestSize = sizes.reduce((prev, curr) => 
+      const closestSize = sizes.reduce((prev, curr) =>
         Math.abs(curr - n) < Math.abs(prev - n) ? curr : prev
       );
-      
+
       if (closestSize && this.plancherelData[closestSize]) {
         const partitionData = this.plancherelData[closestSize];
         // Scale the partition to target size n
         return this.scalePartition(partitionData.partition, n);
       }
     }
-    
+
     // Ultimate fallback: simple approximation
     return this.fallbackPlancherelPartition(n);
   }
@@ -717,27 +717,27 @@ class HookWalkVis {
     // Replace each cell with a k×k block
     // Each row of length L becomes k rows of length L*k
     const scaledPartition = [];
-    
+
     for (let i = 0; i < partition.length; i++) {
       const rowLength = partition[i];
       const scaledRowLength = rowLength * k;
-      
+
       // Add k copies of this scaled row
       for (let j = 0; j < k; j++) {
         scaledPartition.push(scaledRowLength);
       }
     }
-    
+
     return scaledPartition;
   }
 
   adjustPartitionSize(partition, targetN) {
     const currentN = partition.reduce((a,b) => a + b, 0);
     if (currentN === targetN) return partition;
-    
+
     // Make a copy to avoid mutating input
     const adjusted = [...partition];
-    
+
     if (currentN < targetN) {
       // Add boxes by extending rows (prefer longer rows)
       let diff = targetN - currentN;
@@ -757,23 +757,23 @@ class HookWalkVis {
         }
       }
     }
-    
+
     // Ensure monotonicity
     adjusted.sort((a,b) => b - a);
     for (let i = 1; i < adjusted.length; i++) {
       if (adjusted[i] > adjusted[i-1]) adjusted[i] = adjusted[i-1];
     }
-    
+
     return adjusted.filter(x => x > 0);
   }
 
   scalePartition(partition, targetN) {
     const currentN = partition.reduce((a,b) => a + b, 0);
     if (currentN === targetN) return [...partition];
-    
+
     const scale = targetN / currentN;
     let scaled = partition.map(x => Math.max(1, Math.round(x * scale)));
-    
+
     // Adjust to exact target
     let sum = scaled.reduce((a,b) => a + b, 0);
     let i = 0;
@@ -789,13 +789,13 @@ class HookWalkVis {
       }
       i++;
     }
-    
+
     // Ensure monotonicity
     scaled.sort((a,b) => b - a);
     for (let i = 1; i < scaled.length; i++) {
       if (scaled[i] > scaled[i-1]) scaled[i] = scaled[i-1];
     }
-    
+
     return scaled.filter(x => x > 0);
   }
 
@@ -816,15 +816,15 @@ class HookWalkVis {
     // Simple approximation: roughly square with some randomness
     const side = Math.floor(Math.sqrt(n));
     const partition = [];
-    
+
     for (let i = 0; i < side + 5; i++) {
       const baseLength = side - Math.floor(i/2);
       const noise = Math.floor(this.gaussianRandom() * Math.sqrt(side));
       const length = Math.max(1, baseLength + noise);
-      
+
       if (length > 0) partition.push(length);
     }
-    
+
     return this.scalePartition(partition, n);
   }
 
@@ -857,32 +857,32 @@ class HookWalkVis {
       if(this.wasm && this.N>500){
         // use WASM with progress updates
         if(showProgress) this.updateProgress(20, 'Preparing WASM...');
-        
+
         const sample = this.wasm.cwrap('sampleHookWalk','string',['string']);
         const getShape = this.wasm.cwrap('getTableauShape','string',[]);
         const getEntry = this.wasm.cwrap('getTableauEntry','number',['number','number']);
-        
+
         if(showProgress) this.updateProgress(40, 'Sampling tableau...');
         const status = sample(this.shape.join(','));
-        
-        if(status!=='OK'){ 
-          alert('WASM failed'); 
+
+        if(status!=='OK'){
+          alert('WASM failed');
           if(showProgress) this.showProgressBar(false);
           return;
         }
-        
+
         if(showProgress) this.updateProgress(70, 'Reading tableau...');
-        
+
         // rebuild tableau from wasm
         this.tableau = this.shape.map(r=>Array(r).fill(0));
         const totalCells = this.N;
         let processedCells = 0;
-        
+
         for(let r=0;r<this.shape.length;r++){
           for(let c=0;c<this.shape[r];c++){
             this.tableau[r][c]=getEntry(r,c);
             processedCells++;
-            
+
             // Update progress periodically
             if(showProgress && processedCells % Math.max(1, Math.floor(totalCells/50)) === 0) {
               const progress = 70 + (processedCells / totalCells) * 20;
@@ -891,7 +891,7 @@ class HookWalkVis {
             }
           }
         }
-        
+
         if(showProgress) this.updateProgress(95, 'Rendering...');
       } else {
         // fallback JS hook-walk with progress
@@ -901,7 +901,7 @@ class HookWalkVis {
 
       if(showProgress) this.updateProgress(100, 'Complete!');
       this.draw();
-      
+
       if(showProgress) {
         setTimeout(() => this.showProgressBar(false), 1000);
       }
@@ -1024,22 +1024,22 @@ class HookWalkVis {
     const rows=this.tableau.length;
     const cols=Math.max(...this.shape);
     const pad=10;
-    
+
     // Calculate cell size based on both width and height constraints
     const cellSizeByWidth = (containerWidth - 2*pad) / cols;
     const cellSizeByHeight = (containerHeight - 2*pad) / rows;
     const cellSize = Math.min(40, cellSizeByWidth, cellSizeByHeight);
-    
+
     const width = cols * cellSize + 2*pad;
     const height = rows * cellSize + 2*pad;
-    
+
     const svg=d3.select(cont).append('svg')
       .attr('width', '100%')
       .attr('height', height)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .style('max-height', containerHeight + 'px');
     const g=svg.append('g').attr('transform',`translate(${pad},${pad})`);
-    
+
     this.tableau.forEach((row,r)=>{
       row.forEach((val,c)=>{
         g.append('rect').attr('x',c*cellSize).attr('y',r*cellSize)
@@ -1059,25 +1059,25 @@ class HookWalkVis {
     const rows=this.shape.length;
     const cols=Math.max(...this.shape);
     const pad=10;
-    
+
     // Calculate cell size based on both width and height constraints
     const cellSizeByWidth = (containerWidth - 2*pad) / cols;
     const cellSizeByHeight = (containerHeight - 2*pad) / rows;
     const cellSize = Math.max(1, Math.min(cellSizeByWidth, cellSizeByHeight));
-    
+
     const width = cols * cellSize + 2*pad;
     const height = rows * cellSize + 2*pad;
-    
+
     const svg=d3.select(cont).append('svg')
       .attr('width', '100%')
       .attr('height', height)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .style('max-height', containerHeight + 'px');
     const g=svg.append('g').attr('transform',`translate(${pad},${pad})`);
-    
+
     const thresholds=[];
     for(let i=1;i<10;i++) thresholds.push(i*this.N/10);
-    
+
     // UVA color palette: orange (inside/small values) to blue (outside/large values)
     const uvaColors = [];
     for(let i=0; i<10; i++) {
@@ -1087,7 +1087,7 @@ class HookWalkVis {
       const b = Math.round((1-t) * 0 + t * 75);
       uvaColors.push(`rgb(${r},${g_val},${b})`);
     }
-    
+
     this.tableau.forEach((row,r)=>{
       row.forEach((val,c)=>{
         let idx=thresholds.findIndex(t=>val<=t)+1; // 1..10
@@ -1101,4 +1101,3 @@ class HookWalkVis {
 
 const hookVis=new HookWalkVis();
 </script>
-

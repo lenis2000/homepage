@@ -172,7 +172,7 @@ button:disabled {
 
 <div class="container">
     <h2>RSK Algorithm Interactive Visualization</h2>
-    
+
     <details id="algorithm-description-details" style="margin-bottom: 20px;">
         <summary style="cursor: pointer; padding: 15px; border: 1px solid var(--border-color, #ddd); border-radius: 5px; background-color: var(--bg-secondary, #f9f9f9); font-weight: bold; font-size: 1.1em; color: var(--text-primary, #212529);">
             About the RSK Algorithm
@@ -187,7 +187,7 @@ button:disabled {
             <p>For large permutations (N > 100), the simulation automatically uses a WebAssembly module for optimal performance.</p>
         </div>
     </details>
-    
+
     <div class="controls">
         <div class="input-group">
             <label for="n-input">Permutation size N:</label>
@@ -195,7 +195,7 @@ button:disabled {
             <button id="generate-random">Generate Random Permutation</button>
             <span id="wasm-indicator" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
         </div>
-        
+
         <div class="input-group">
             <label for="sampling-method">Sampling method:</label>
             <select id="sampling-method">
@@ -204,7 +204,7 @@ button:disabled {
                 <option value="block10">Block Structured (10x10)</option>
             </select>
         </div>
-        
+
         <div class="input-group" id="block-controls-3x3" style="display: none;">
             <label for="base-permutation">Base permutation of 3:</label>
             <select id="base-permutation">
@@ -217,18 +217,18 @@ button:disabled {
             </select>
             <span id="block-size-info" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
         </div>
-        
+
         <div class="input-group" id="block-controls-10x10" style="display: none;">
             <label>10x10 block structure:</label>
             <span id="block-size-info-10x10" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
         </div>
-        
+
         <div class="input-group">
             <label for="permutation-input">Permutation:</label>
             <input type="text" id="permutation-input" placeholder="e.g., 3,1,4,2" style="width: 300px;">
             <button id="set-permutation">Set Permutation</button>
         </div>
-        
+
         <div class="input-group">
             <label for="speed-select">Animation Speed:</label>
             <select id="speed-select">
@@ -241,14 +241,14 @@ button:disabled {
                 <option value="10">Lightning</option>
             </select>
         </div>
-        
-        
+
+
         <div class="input-group">
             <label for="steps-input">Number of steps:</label>
             <input type="number" id="steps-input" min="1" max="100" value="1">
             <button id="run-rsk-steps">Run RSK Steps</button>
         </div>
-        
+
         <div>
             <button id="run-rsk">Run Forward RSK (Animated)</button>
             <button id="run-rsk-instant">Run Forward RSK (Instant)</button>
@@ -256,25 +256,25 @@ button:disabled {
             <button id="reset">Reset</button>
         </div>
     </div>
-    
+
     <div class="section">
         <h3>Current Permutation</h3>
         <div id="permutation-display" class="permutation-display"></div>
         <div id="permutation-matrix"></div>
     </div>
-    
+
     <div class="visualization-container">
         <div class="section">
             <h3>P-Tableau (Insertion Tableau)</h3>
             <div id="p-tableau"></div>
         </div>
-        
+
         <div class="section">
             <h3>Q-Tableau (Recording Tableau)</h3>
             <div id="q-tableau"></div>
         </div>
     </div>
-    
+
     <div class="section" id="step-info-section" style="display: none;">
         <h3>Current Step</h3>
         <div id="step-info" class="step-info"></div>
@@ -293,7 +293,7 @@ class RSKVisualization {
         this.animationSpeed = 1000;
         this.wasmModule = null;
         this.useWASM = false;
-        
+
         this.initializeWASM();
         this.setupEventListeners();
         this.setupCollapsibleDetails();
@@ -301,7 +301,7 @@ class RSKVisualization {
         this.generateRandomPermutation();
         this.switchingToStepMode = false;
     }
-    
+
     async initializeWASM() {
         try {
             // Check if Module is available (loaded from WASM JS file)
@@ -314,17 +314,17 @@ class RSKVisualization {
             console.log('WASM module not available, using JavaScript implementation');
         }
     }
-    
+
     updateWASMIndicator() {
         const indicator = document.getElementById('wasm-indicator');
         if (this.wasmModule) {
             indicator.textContent = '(WASM ready for N > 100)';
             indicator.style.color = 'var(--accent-color, #28a745)';
         } else {
-            indicator.textContent = '(JavaScript mode)';
+            indicator.textContent = '';
         }
     }
-    
+
     setupCollapsibleDetails() {
         // Open details element on wider screens
         if (window.innerWidth >= 577) {
@@ -334,7 +334,7 @@ class RSKVisualization {
             }
         }
     }
-    
+
     setupEventListeners() {
         document.getElementById('generate-random').addEventListener('click', () => this.generateRandomPermutation());
         document.getElementById('set-permutation').addEventListener('click', () => this.setPermutation());
@@ -349,11 +349,11 @@ class RSKVisualization {
         document.getElementById('sampling-method').addEventListener('change', () => this.updateSamplingMethod());
         document.getElementById('n-input').addEventListener('input', () => this.updateBlockSizeInfo());
     }
-    
+
     generateRandomPermutation() {
         this.n = parseInt(document.getElementById('n-input').value);
         const samplingMethod = document.getElementById('sampling-method').value;
-        
+
         if (samplingMethod === 'block3') {
             this.generateBlockStructuredPermutation();
         } else if (samplingMethod === 'block10') {
@@ -361,66 +361,66 @@ class RSKVisualization {
         } else {
             this.generateUniformPermutation();
         }
-        
+
         document.getElementById('permutation-input').value = this.permutation.join(',');
         this.displayPermutation();
         this.reset();
     }
-    
+
     generateUniformPermutation() {
         this.permutation = Array.from({length: this.n}, (_, i) => i + 1);
-        
+
         // Fisher-Yates shuffle
         for (let i = this.n - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]];
         }
     }
-    
+
     generateBlockStructuredPermutation() {
         const basePerm = document.getElementById('base-permutation').value;
         const baseArray = basePerm.split('').map(x => parseInt(x) - 1); // Convert to 0-indexed
-        
+
         // Calculate block sizes (handle remainder)
         const blockSize = Math.floor(this.n / 3);
         const remainder = this.n % 3;
         const blockSizes = [blockSize, blockSize, blockSize];
-        
+
         // Distribute remainder across blocks
         for (let i = 0; i < remainder; i++) {
             blockSizes[i]++;
         }
-        
+
         // Initialize permutation array
         this.permutation = new Array(this.n).fill(0);
-        
+
         // Calculate block positions
         const blockStarts = [0, blockSizes[0], blockSizes[0] + blockSizes[1]];
-        
+
         let currentIndex = 0;
-        
+
         // Fill blocks according to base permutation
         for (let blockIdx = 0; blockIdx < 3; blockIdx++) {
             const targetBlock = baseArray[blockIdx];
             const currentBlockSize = blockSizes[blockIdx];
-            
+
             // Generate random permutation for this block
             const blockPerm = Array.from({length: currentBlockSize}, (_, i) => i + 1);
             for (let i = currentBlockSize - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [blockPerm[i], blockPerm[j]] = [blockPerm[j], blockPerm[i]];
             }
-            
+
             // Place block permutation in the correct position
             const startPos = blockStarts[targetBlock];
             for (let i = 0; i < currentBlockSize; i++) {
                 this.permutation[currentIndex + i] = startPos + blockPerm[i];
             }
-            
+
             currentIndex += currentBlockSize;
         }
     }
-    
+
     generateBlockStructured10x10() {
         // Generate master permutation of 10
         const masterPerm = Array.from({length: 10}, (_, i) => i);
@@ -428,56 +428,56 @@ class RSKVisualization {
             const j = Math.floor(Math.random() * (i + 1));
             [masterPerm[i], masterPerm[j]] = [masterPerm[j], masterPerm[i]];
         }
-        
+
         // Calculate block sizes (handle remainder)
         const blockSize = Math.floor(this.n / 10);
         const remainder = this.n % 10;
         const blockSizes = new Array(10).fill(blockSize);
-        
+
         // Distribute remainder across first blocks
         for (let i = 0; i < remainder; i++) {
             blockSizes[i]++;
         }
-        
+
         // Calculate block start positions
         const blockStarts = new Array(10);
         blockStarts[0] = 0;
         for (let i = 1; i < 10; i++) {
             blockStarts[i] = blockStarts[i - 1] + blockSizes[i - 1];
         }
-        
+
         // Initialize permutation array
         this.permutation = new Array(this.n).fill(0);
-        
+
         let currentIndex = 0;
-        
+
         // Fill blocks according to master permutation
         for (let blockIdx = 0; blockIdx < 10; blockIdx++) {
             const targetBlock = masterPerm[blockIdx];
             const currentBlockSize = blockSizes[blockIdx];
-            
+
             // Generate random permutation for this block
             const blockPerm = Array.from({length: currentBlockSize}, (_, i) => i + 1);
             for (let i = currentBlockSize - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [blockPerm[i], blockPerm[j]] = [blockPerm[j], blockPerm[i]];
             }
-            
+
             // Place block permutation in the correct position
             const startPos = blockStarts[targetBlock];
             for (let i = 0; i < currentBlockSize; i++) {
                 this.permutation[currentIndex + i] = startPos + blockPerm[i];
             }
-            
+
             currentIndex += currentBlockSize;
         }
     }
-    
+
     updateSamplingMethod() {
         const samplingMethod = document.getElementById('sampling-method').value;
         const blockControls3x3 = document.getElementById('block-controls-3x3');
         const blockControls10x10 = document.getElementById('block-controls-10x10');
-        
+
         if (samplingMethod === 'block3') {
             blockControls3x3.style.display = 'block';
             blockControls10x10.style.display = 'none';
@@ -491,16 +491,16 @@ class RSKVisualization {
             blockControls10x10.style.display = 'none';
         }
     }
-    
+
     updateBlockSizeInfo() {
         const samplingMethod = document.getElementById('sampling-method').value;
         const n = parseInt(document.getElementById('n-input').value) || 0;
-        
+
         if (samplingMethod === 'block3') {
             const blockSizeInfo = document.getElementById('block-size-info');
             const blockSize = Math.floor(n / 3);
             const remainder = n % 3;
-            
+
             if (remainder === 0) {
                 blockSizeInfo.textContent = `(3 blocks of size ${blockSize})`;
             } else {
@@ -510,7 +510,7 @@ class RSKVisualization {
             const blockSizeInfo10x10 = document.getElementById('block-size-info-10x10');
             const blockSize = Math.floor(n / 10);
             const remainder = n % 10;
-            
+
             if (remainder === 0) {
                 blockSizeInfo10x10.textContent = `(10 blocks of size ${blockSize})`;
             } else {
@@ -519,15 +519,15 @@ class RSKVisualization {
             }
         }
     }
-    
+
     setPermutation() {
         const input = document.getElementById('permutation-input').value;
         const perm = input.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
-        
+
         // Validate permutation
         const sorted = [...perm].sort((a, b) => a - b);
         const isValid = sorted.length > 0 && sorted.every((val, idx) => val === idx + 1);
-        
+
         if (isValid) {
             this.permutation = perm;
             this.n = perm.length;
@@ -538,7 +538,7 @@ class RSKVisualization {
             alert('Invalid permutation. Please enter a permutation of {1, 2, ..., n}');
         }
     }
-    
+
     displayPermutation() {
         const display = document.getElementById('permutation-display');
         if (this.n > 100) {
@@ -546,29 +546,29 @@ class RSKVisualization {
         } else {
             display.textContent = `σ = [${this.permutation.join(', ')}]`;
         }
-        
+
         this.drawPermutationMatrix();
     }
-    
+
     drawPermutationMatrix() {
         const container = document.getElementById('permutation-matrix');
         container.innerHTML = '';
-        
+
         const fixedSize = 300; // Fixed size for the visualization
         const margin = 20;
         const cellSize = Math.min(30, (fixedSize - 2 * margin) / this.n);
         const dotRadius = Math.max(1, cellSize * 0.3);
-        
+
         const svg = d3.select(container)
             .append('svg')
             .attr('width', fixedSize)
             .attr('height', fixedSize);
-        
+
         const g = svg.append('g')
             .attr('transform', `translate(${margin}, ${margin})`);
-        
+
         const actualSize = this.n * cellSize;
-        
+
         // Draw block structure if using block sampling
         const samplingMethod = document.getElementById('sampling-method').value;
         if (samplingMethod === 'block3') {
@@ -576,7 +576,7 @@ class RSKVisualization {
         } else if (samplingMethod === 'block10') {
             this.drawBlockStructure10x10(g, actualSize, cellSize);
         }
-        
+
         // Draw border
         g.append('rect')
             .attr('x', 0)
@@ -586,7 +586,7 @@ class RSKVisualization {
             .attr('fill', 'none')
             .attr('stroke', 'var(--text-primary, #333)')
             .attr('stroke-width', 1);
-        
+
         // Draw dots for the permutation
         for (let j = 0; j < this.n; j++) {
             const i = this.permutation[j] - 1;
@@ -597,27 +597,27 @@ class RSKVisualization {
                 .attr('fill', 'var(--text-primary, #333)');
         }
     }
-    
+
     drawBlockStructure3x3(g, actualSize, cellSize) {
         const blockSize = Math.floor(this.n / 3);
         const remainder = this.n % 3;
         const blockSizes = [blockSize, blockSize, blockSize];
-        
+
         // Distribute remainder across blocks
         for (let i = 0; i < remainder; i++) {
             blockSizes[i]++;
         }
-        
+
         const blockStarts = [0, blockSizes[0], blockSizes[0] + blockSizes[1]];
         const blockColors = ['#ffebee', '#e8f5e8', '#e3f2fd'];
-        
+
         // Draw block backgrounds
         for (let blockIdx = 0; blockIdx < 3; blockIdx++) {
             const rowStart = blockStarts[blockIdx] * cellSize;
             const colStart = blockStarts[blockIdx] * cellSize;
             const blockHeight = blockSizes[blockIdx] * cellSize;
             const blockWidth = blockSizes[blockIdx] * cellSize;
-            
+
             g.append('rect')
                 .attr('x', colStart)
                 .attr('y', rowStart)
@@ -629,11 +629,11 @@ class RSKVisualization {
                 .attr('stroke-dasharray', '2,2')
                 .attr('opacity', 0.5);
         }
-        
+
         // Draw block dividers
         for (let i = 1; i < 3; i++) {
             const pos = blockStarts[i] * cellSize;
-            
+
             // Vertical divider
             g.append('line')
                 .attr('x1', pos)
@@ -643,7 +643,7 @@ class RSKVisualization {
                 .attr('stroke', 'var(--text-secondary, #666)')
                 .attr('stroke-width', 2)
                 .attr('stroke-dasharray', '5,5');
-            
+
             // Horizontal divider
             g.append('line')
                 .attr('x1', 0)
@@ -655,37 +655,37 @@ class RSKVisualization {
                 .attr('stroke-dasharray', '5,5');
         }
     }
-    
+
     drawBlockStructure10x10(g, actualSize, cellSize) {
         const blockSize = Math.floor(this.n / 10);
         const remainder = this.n % 10;
         const blockSizes = new Array(10).fill(blockSize);
-        
+
         // Distribute remainder across first blocks
         for (let i = 0; i < remainder; i++) {
             blockSizes[i]++;
         }
-        
+
         // Calculate block start positions
         const blockStarts = new Array(10);
         blockStarts[0] = 0;
         for (let i = 1; i < 10; i++) {
             blockStarts[i] = blockStarts[i - 1] + blockSizes[i - 1];
         }
-        
+
         // Colors for 10x10 blocks (cycling through a palette)
         const blockColors = [
             '#ffebee', '#e8f5e8', '#e3f2fd', '#fff3e0', '#f3e5f5',
             '#e0f2f1', '#fce4ec', '#f1f8e9', '#e8eaf6', '#fff8e1'
         ];
-        
+
         // Draw block backgrounds
         for (let blockIdx = 0; blockIdx < 10; blockIdx++) {
             const rowStart = blockStarts[blockIdx] * cellSize;
             const colStart = blockStarts[blockIdx] * cellSize;
             const blockHeight = blockSizes[blockIdx] * cellSize;
             const blockWidth = blockSizes[blockIdx] * cellSize;
-            
+
             g.append('rect')
                 .attr('x', colStart)
                 .attr('y', rowStart)
@@ -697,11 +697,11 @@ class RSKVisualization {
                 .attr('stroke-dasharray', '2,2')
                 .attr('opacity', 0.3);
         }
-        
+
         // Draw block dividers
         for (let i = 1; i < 10; i++) {
             const pos = blockStarts[i] * cellSize;
-            
+
             // Vertical divider
             g.append('line')
                 .attr('x1', pos)
@@ -711,7 +711,7 @@ class RSKVisualization {
                 .attr('stroke', 'var(--text-secondary, #666)')
                 .attr('stroke-width', 1)
                 .attr('stroke-dasharray', '3,3');
-            
+
             // Horizontal divider
             g.append('line')
                 .attr('x1', 0)
@@ -723,7 +723,7 @@ class RSKVisualization {
                 .attr('stroke-dasharray', '3,3');
         }
     }
-    
+
     reset() {
         this.pTableau = [];
         this.qTableau = [];
@@ -733,32 +733,32 @@ class RSKVisualization {
         this.drawTableau('p-tableau', this.pTableau);
         this.drawTableau('q-tableau', this.qTableau);
     }
-    
+
     async runRSK() {
         if (this.isRunning) return;
         this.reset();
         this.isRunning = true;
         document.getElementById('step-info-section').style.display = 'block';
-        
+
         // Determine animation mode based on N
         const isFastMode = this.n > 200;
         const showDetailedBumps = this.n <= 200;
-        
+
         const stepInfo = document.getElementById('step-info');
         if (isFastMode) {
             stepInfo.innerHTML = `Running RSK with fast animation (N=${this.n})...`;
         } else {
             stepInfo.innerHTML = `Running RSK with detailed animation (N=${this.n})...`;
         }
-        
+
         for (let i = 0; i < this.n; i++) {
             if (isFastMode) {
                 stepInfo.innerHTML = `Inserting ${this.permutation[i]} (step ${i + 1}/${this.n}) - showing bumping trajectory...`;
             }
-            
+
             await this.insertRSK(this.permutation[i], i + 1, true, showDetailedBumps);
             if (!this.isRunning) break;
-            
+
             // Check if user wants to switch to step mode
             if (this.switchingToStepMode) {
                 this.currentStep = i + 1;
@@ -767,25 +767,25 @@ class RSKVisualization {
                 stepInfo.innerHTML = `Animation stopped. Now in step mode at step ${this.currentStep}/${this.n}.`;
                 break;
             }
-            
+
             // Brief pause between insertions in fast mode
             if (isFastMode) {
                 await this.sleep(Math.min(this.animationSpeed / 2, 200));
             }
         }
-        
+
         if (this.isRunning) {
             stepInfo.innerHTML = `RSK algorithm completed!<br>Shape: [${this.pTableau.map(row => row.length).slice(0, 20).join(', ')}${this.pTableau.length > 20 ? '...' : ''}]`;
         }
-        
+
         this.isRunning = false;
     }
-    
+
     runRSKInstant() {
         if (this.isRunning) return;
         this.reset();
         document.getElementById('step-info-section').style.display = 'block';
-        
+
         // Use WASM for large permutations
         if (this.wasmModule && this.n > 100) {
             this.runRSKWASM();
@@ -793,77 +793,77 @@ class RSKVisualization {
             for (let i = 0; i < this.n; i++) {
                 this.insertRSK(this.permutation[i], i + 1, false);
             }
-            
+
             const stepInfo = document.getElementById('step-info');
             stepInfo.innerHTML = `RSK algorithm completed!<br>Shape: [${this.pTableau.map(row => row.length).join(', ')}]`;
         }
     }
-    
+
     runRSKWASM() {
         const stepInfo = document.getElementById('step-info');
         stepInfo.innerHTML = 'Running RSK with WASM...';
-        
+
         try {
             // Convert permutation to comma-separated string
             const permStr = this.permutation.join(',');
-            
+
             // Call WASM function
             const performRSK = this.wasmModule.cwrap('performRSK', 'string', ['string']);
             const shapeStr = performRSK(permStr);
-            
+
             if (!shapeStr) {
                 throw new Error('WASM function returned null - possible memory allocation failure');
             }
-            
+
             // Parse shape
             const shape = shapeStr.split(',').map(x => parseInt(x));
-            
+
             // Build tableaux from WASM data
             this.pTableau = [];
             this.qTableau = [];
-            
+
             const getTableauEntry = this.wasmModule.cwrap('getTableauEntry', 'number', ['number', 'number', 'number']);
-            
+
             for (let row = 0; row < shape.length; row++) {
                 this.pTableau[row] = [];
                 this.qTableau[row] = [];
                 for (let col = 0; col < shape[row]; col++) {
                     const pEntry = getTableauEntry(0, row, col);
                     const qEntry = getTableauEntry(1, row, col);
-                    
+
                     if (pEntry === -1 || qEntry === -1) {
                         throw new Error(`Invalid tableau entry at (${row}, ${col})`);
                     }
-                    
+
                     this.pTableau[row][col] = pEntry;
                     this.qTableau[row][col] = qEntry;
                 }
             }
-            
+
             // Free the allocated string
             this.wasmModule._freeString(shapeStr);
-            
+
             this.drawTableau('p-tableau', this.pTableau);
             this.drawTableau('q-tableau', this.qTableau);
-            
+
             stepInfo.innerHTML = `RSK algorithm completed (WASM)!<br>Shape: [${shape.slice(0, 20).join(', ')}${shape.length > 20 ? '...' : ''}]<br>Total boxes: ${shape.reduce((a, b) => a + b, 0)}`;
-            
+
         } catch (error) {
             console.error('WASM RSK error:', error);
             stepInfo.innerHTML = `WASM error: ${error.message}<br>Falling back to JavaScript implementation...`;
-            
+
             // Fallback to JavaScript implementation
             this.pTableau = [];
             this.qTableau = [];
-            
+
             for (let i = 0; i < this.n; i++) {
                 this.insertRSK(this.permutation[i], i + 1, false);
             }
-            
+
             stepInfo.innerHTML += `<br>Completed with JavaScript fallback!`;
         }
     }
-    
+
     handleStepRSK() {
         if (this.isRunning) {
             // Stop animation and switch to step mode
@@ -873,77 +873,77 @@ class RSKVisualization {
             this.stepRSK();
         }
     }
-    
+
     stepRSK() {
         if (this.currentStep >= this.n) {
             alert('RSK algorithm completed!');
             return;
         }
-        
+
         document.getElementById('step-info-section').style.display = 'block';
-        
+
         // Use detailed bumps for step mode regardless of N, but show trajectory for large N
         const showTrajectory = this.n > 200;
         this.insertRSK(this.permutation[this.currentStep], this.currentStep + 1, showTrajectory, !showTrajectory);
         this.currentStep++;
-        
+
         const stepInfo = document.getElementById('step-info');
         stepInfo.innerHTML = `Step ${this.currentStep}/${this.n} completed. Value ${this.permutation[this.currentStep - 1]} inserted.`;
     }
-    
+
     runMultipleSteps() {
         const numSteps = parseInt(document.getElementById('steps-input').value);
         if (isNaN(numSteps) || numSteps < 1) {
             alert('Please enter a valid number of steps (1 or more).');
             return;
         }
-        
+
         if (this.currentStep >= this.n) {
             alert('RSK algorithm already completed!');
             return;
         }
-        
+
         document.getElementById('step-info-section').style.display = 'block';
-        
+
         const stepsToRun = Math.min(numSteps, this.n - this.currentStep);
         const startStep = this.currentStep;
-        
+
         for (let i = 0; i < stepsToRun; i++) {
             // Use trajectory visualization for large permutations
             const showTrajectory = this.n > 200;
             this.insertRSK(this.permutation[this.currentStep], this.currentStep + 1, showTrajectory, !showTrajectory);
             this.currentStep++;
         }
-        
+
         const stepInfo = document.getElementById('step-info');
         if (stepsToRun === 1) {
             stepInfo.innerHTML = `Step ${this.currentStep}/${this.n} completed. Value ${this.permutation[this.currentStep - 1]} inserted.`;
         } else {
             stepInfo.innerHTML = `Steps ${startStep + 1}-${this.currentStep}/${this.n} completed. ${stepsToRun} values inserted.`;
         }
-        
+
         if (this.currentStep >= this.n) {
             stepInfo.innerHTML += `<br>RSK algorithm completed!<br>Shape: [${this.pTableau.map(row => row.length).slice(0, 20).join(', ')}${this.pTableau.length > 20 ? '...' : ''}]`;
         }
     }
-    
+
     async insertRSK(value, time, animate, showDetailedBumps = true) {
         const stepInfo = document.getElementById('step-info');
-        
+
         if (animate && showDetailedBumps) {
             stepInfo.innerHTML = `Inserting value ${value} at time ${time}`;
         }
-        
+
         // Insert into P-tableau
         let currentValue = value;
         let row = 0;
         const bumpingPath = []; // Track the path for fast mode
-        
+
         while (currentValue !== null) {
             if (!this.pTableau[row]) {
                 this.pTableau[row] = [];
             }
-            
+
             let inserted = false;
             for (let col = 0; col < this.pTableau[row].length; col++) {
                 if (this.pTableau[row][col] > currentValue) {
@@ -951,85 +951,85 @@ class RSKVisualization {
                     const temp = this.pTableau[row][col];
                     this.pTableau[row][col] = currentValue;
                     currentValue = temp;
-                    
+
                     bumpingPath.push({row, col, value: currentValue, action: 'bump'});
-                    
+
                     if (animate && showDetailedBumps) {
                         stepInfo.innerHTML += `<br>Row ${row + 1}: ${currentValue} bumps ${temp}`;
                         this.drawTableau('p-tableau', this.pTableau, {row, col, type: 'bumped'});
                         await this.sleep(this.animationSpeed);
                     }
-                    
+
                     inserted = true;
                     break;
                 }
             }
-            
+
             if (!inserted) {
                 // Add to end of row
                 this.pTableau[row].push(currentValue);
                 bumpingPath.push({row, col: this.pTableau[row].length - 1, value: currentValue, action: 'insert'});
-                
+
                 if (animate && showDetailedBumps) {
                     stepInfo.innerHTML += `<br>Row ${row + 1}: ${currentValue} added to end`;
                     this.drawTableau('p-tableau', this.pTableau, {row, col: this.pTableau[row].length - 1, type: 'inserting'});
                     await this.sleep(this.animationSpeed);
                 }
-                
+
                 // Record in Q-tableau
                 if (!this.qTableau[row]) {
                     this.qTableau[row] = [];
                 }
                 this.qTableau[row].push(time);
-                
+
                 currentValue = null;
             }
-            
+
             row++;
         }
-        
+
         // Fast mode: show the bumping trajectory
         if (animate && !showDetailedBumps && bumpingPath.length > 0) {
             // Highlight all cells in the bumping trajectory
             const trajectoryHighlights = bumpingPath.map(step => ({
-                row: step.row, 
-                col: step.col, 
+                row: step.row,
+                col: step.col,
                 type: 'trajectory'
             }));
-            
+
             this.drawTableau('p-tableau', this.pTableau, trajectoryHighlights);
             await this.sleep(Math.max(this.animationSpeed / 2, 100)); // Quick but visible
         }
-        
+
         this.drawTableau('p-tableau', this.pTableau);
         this.drawTableau('q-tableau', this.qTableau);
     }
-    
+
     drawTableau(containerId, tableau, highlight = null) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
-        
+
         if (tableau.length === 0) return;
-        
+
         // For very large tableaux, draw the shape as a filled region
         if (this.n > 500) {
             const shape = tableau.map(row => row.length);
             const gridSize = 200;
             const margin = 10;
-            
+
             const svg = d3.select(container)
                 .append('svg')
                 .attr('width', gridSize + 2 * margin)
                 .attr('height', gridSize + 2 * margin);
-            
+
             const g = svg.append('g')
                 .attr('transform', `translate(${margin}, ${margin})`);
-            
+
             // Calculate scale
             const maxRow = shape[0] || 0;
             const numRows = shape.length;
             const scale = Math.min(gridSize / maxRow, gridSize / numRows);
-            
+
             // Draw background
             g.append('rect')
                 .attr('x', 0)
@@ -1038,14 +1038,14 @@ class RSKVisualization {
                 .attr('height', gridSize)
                 .attr('fill', 'var(--bg-secondary, #f5f5f5)')
                 .attr('stroke', 'var(--border-color, #ddd)');
-            
+
             // Draw the Young diagram shape
             const pathData = [];
             pathData.push(`M 0 0`);
-            
+
             // Top edge
             pathData.push(`L ${shape[0] * scale} 0`);
-            
+
             // Right edges going down
             for (let i = 0; i < shape.length; i++) {
                 pathData.push(`L ${shape[i] * scale} ${(i + 1) * scale}`);
@@ -1053,18 +1053,18 @@ class RSKVisualization {
                     pathData.push(`L ${shape[i + 1] * scale} ${(i + 1) * scale}`);
                 }
             }
-            
+
             // Bottom edge
             pathData.push(`L 0 ${numRows * scale}`);
-            
+
             // Close path
             pathData.push('Z');
-            
+
             g.append('path')
                 .attr('d', pathData.join(' '))
                 .attr('fill', 'var(--text-primary, #333)')
                 .attr('opacity', 0.8);
-            
+
             // Draw trajectory highlights if present
             if (highlight && Array.isArray(highlight)) {
                 highlight.forEach(h => {
@@ -1079,34 +1079,34 @@ class RSKVisualization {
                     }
                 });
             }
-            
+
             // Add info text
-            container.insertAdjacentHTML('beforeend', 
+            container.insertAdjacentHTML('beforeend',
                 `<div style="font-size: 12px; color: var(--text-secondary, #666); margin-top: 5px;">
                     Shape: [${shape.slice(0, 10).join(', ')}${shape.length > 10 ? '...' : ''}]<br>
                     Rows: ${shape.length}, Boxes: ${shape.reduce((a, b) => a + b, 0)}
                 </div>`);
-            
+
             return;
         }
-        
+
         const maxDisplaySize = 50; // Maximum cells to display in each direction
         const truncated = tableau.length > maxDisplaySize || (tableau[0] && tableau[0].length > maxDisplaySize);
-        
+
         const cellSize = this.n > 100 ? 20 : 40;
         const padding = 5;
-        
+
         const displayRows = Math.min(tableau.length, maxDisplaySize);
         const maxCols = Math.min(Math.max(...tableau.slice(0, displayRows).map(row => row.length)), maxDisplaySize);
-        
+
         const svg = d3.select(container)
             .append('svg')
             .attr('width', maxCols * cellSize + 2 * padding)
             .attr('height', displayRows * cellSize + 2 * padding);
-        
+
         const g = svg.append('g')
             .attr('transform', `translate(${padding}, ${padding})`);
-        
+
         tableau.slice(0, displayRows).forEach((row, rowIdx) => {
             row.slice(0, maxDisplaySize).forEach((value, colIdx) => {
                 // Check for highlighting (single highlight object or array of highlights)
@@ -1125,14 +1125,14 @@ class RSKVisualization {
                         }
                     }
                 }
-                
+
                 g.append('rect')
                     .attr('x', colIdx * cellSize)
                     .attr('y', rowIdx * cellSize)
                     .attr('width', cellSize)
                     .attr('height', cellSize)
                     .attr('class', `tableau-cell filled ${highlightType}`);
-                
+
                 if (this.n <= 200) {
                     g.append('text')
                         .attr('x', colIdx * cellSize + cellSize / 2)
@@ -1143,23 +1143,23 @@ class RSKVisualization {
                 }
             });
         });
-        
+
         if (truncated) {
-            container.insertAdjacentHTML('beforeend', 
+            container.insertAdjacentHTML('beforeend',
                 '<div style="font-size: 12px; color: var(--text-secondary, #666); margin-top: 5px;">Tableau truncated for display</div>');
         }
     }
-    
-    
+
+
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    
+
     redrawTableaux() {
         this.drawTableau('p-tableau', this.pTableau);
         this.drawTableau('q-tableau', this.qTableau);
     }
-    
+
 }
 
 // Initialize visualization

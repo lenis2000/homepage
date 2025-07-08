@@ -6,7 +6,7 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   /* ---------------------------------- 1. Shape UI Class ---------------------------------- */
-  
+
   /**
    * Complete shape input UI class borrowed from HookWalkVis
    * Handles drawing, text input, and Plancherel mode
@@ -24,14 +24,14 @@
       this.canvasSize = 400;
       this.gridResolution = 100;
       this.pixelSize = this.canvasSize / this.gridResolution;
-      
-      this.borderGrid = Array.from({length: this.gridResolution}, 
+
+      this.borderGrid = Array.from({length: this.gridResolution},
                         _ => Array(this.gridResolution).fill(false));
       this.isDrawing = false;
       this.drawAction = true;
       this.prevRow = null;
       this.prevCol = null;
-      
+
       this.initUI();
       this.setupEvents();
       this.initDrawingCanvas();
@@ -49,7 +49,7 @@
             <button id="toggle-draw-mode" class="mode-toggle active">Draw Shape</button>
             <button id="toggle-text-mode" class="mode-toggle">Text Input</button>
           </div>
-          
+
           <!-- Drawing interface -->
           <div id="draw-interface" class="input-section">
             <div class="input-group">
@@ -66,7 +66,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Text interface -->
           <div id="text-interface" class="input-section" style="display: none;">
             <div class="input-group">
@@ -75,14 +75,14 @@
               <button id="toggle-plancherel-shape" class="shape-toggle">Plancherel</button>
               <button id="toggle-staircase-shape" class="shape-toggle">Staircase</button>
             </div>
-            
+
             <div id="manual-shape-input" class="shape-input-section">
               <div class="input-group">
                 <label for="shape-input">Shape (rows):</label>
                 <input type="text" id="shape-input" value="50^50">
               </div>
             </div>
-            
+
             <div id="plancherel-shape-input" class="shape-input-section" style="display: none;">
               <div class="input-group">
                 <label for="plancherel-n">Number of boxes (N):</label>
@@ -90,7 +90,7 @@
                 <span class="info-text">Samples random partition with Plancherel measure</span>
               </div>
             </div>
-            
+
             <div id="staircase-shape-input" class="shape-input-section" style="display: none;">
               <div class="input-group">
                 <label for="staircase-k">Staircase k:</label>
@@ -126,11 +126,11 @@
       document.getElementById('toggle-manual-shape').classList.toggle('active', mode === 'manual');
       document.getElementById('toggle-plancherel-shape').classList.toggle('active', mode === 'plancherel');
       document.getElementById('toggle-staircase-shape').classList.toggle('active', mode === 'staircase');
-      
+
       document.getElementById('manual-shape-input').style.display = mode === 'manual' ? 'block' : 'none';
       document.getElementById('plancherel-shape-input').style.display = mode === 'plancherel' ? 'block' : 'none';
       document.getElementById('staircase-shape-input').style.display = mode === 'staircase' ? 'block' : 'none';
-      
+
       // For backward compatibility
       this.usePlancherel = (mode === 'plancherel');
     }
@@ -138,7 +138,7 @@
     initDrawingCanvas() {
       const container = document.getElementById('shape-canvas');
       container.innerHTML = '';
-      
+
       this.canvas = document.createElement('canvas');
       this.canvas.width = this.canvasSize;
       this.canvas.height = this.canvasSize;
@@ -146,10 +146,10 @@
       this.canvas.style.borderRadius = '4px';
       this.canvas.style.cursor = 'crosshair';
       this.canvas.style.display = 'block';
-      
+
       container.appendChild(this.canvas);
       this.ctx = this.canvas.getContext('2d');
-      
+
       this.setupCanvasEvents();
       this.drawCanvas();
       this.updateDrawingInfo();
@@ -182,7 +182,7 @@
         if (!this.isDrawing) return;
         const {row, col} = this.xy2rc(x, y);
         if (row === this.prevRow && col === this.prevCol) return;
-        
+
         if (this.drawAction) this.drawLine(this.prevRow, this.prevCol, row, col, true);
         else this.drawLine(this.prevRow, this.prevCol, row, col, false);
         this.prevRow = row; this.prevCol = col;
@@ -337,18 +337,18 @@
         const partitionData = this.plancherelData[n];
         return [...partitionData.partition];
       }
-      
+
       if (this.plancherelData && n > 5000) {
         const minK2 = n / 5000;
         const k = Math.ceil(Math.sqrt(minK2));
         const targetSize = Math.floor(n / (k * k));
-        
+
         if (this.plancherelData[targetSize]) {
           const partitionData = this.plancherelData[targetSize];
           return this.blockScalePartition(partitionData.partition, k);
         }
       }
-      
+
       return this.fallbackPlancherelPartition(n);
     }
 
@@ -376,9 +376,9 @@
     adjustPartitionSize(partition, targetN) {
       const currentN = partition.reduce((a, b) => a + b, 0);
       if (currentN === targetN) return partition;
-      
+
       const adjusted = [...partition];
-      
+
       if (currentN < targetN) {
         let diff = targetN - currentN;
         let i = 0;
@@ -396,37 +396,37 @@
           }
         }
       }
-      
+
       adjusted.sort((a, b) => b - a);
       for (let i = 1; i < adjusted.length; i++) {
         if (adjusted[i] > adjusted[i - 1]) adjusted[i] = adjusted[i - 1];
       }
-      
+
       return adjusted.filter(x => x > 0);
     }
 
     fallbackPlancherelPartition(n) {
       const side = Math.floor(Math.sqrt(n));
       const partition = [];
-      
+
       for (let i = 0; i < side + 5; i++) {
         const baseLength = side - Math.floor(i / 2);
         const noise = Math.floor(this.gaussianRandom() * Math.sqrt(side));
         const length = Math.max(1, baseLength + noise);
-        
+
         if (length > 0) partition.push(length);
       }
-      
+
       return this.scalePartition(partition, n);
     }
 
     scalePartition(partition, targetN) {
       const currentN = partition.reduce((a, b) => a + b, 0);
       if (currentN === targetN) return [...partition];
-      
+
       const scale = targetN / currentN;
       let scaled = partition.map(x => Math.max(1, Math.round(x * scale)));
-      
+
       let sum = scaled.reduce((a, b) => a + b, 0);
       let i = 0;
       while (sum < targetN && i < scaled.length) {
@@ -441,12 +441,12 @@
         }
         i++;
       }
-      
+
       scaled.sort((a, b) => b - a);
       for (let i = 1; i < scaled.length; i++) {
         if (scaled[i] > scaled[i - 1]) scaled[i] = scaled[i - 1];
       }
-      
+
       return scaled.filter(x => x > 0);
     }
 
@@ -464,7 +464,7 @@
 
     parseShape() {
       let arr;
-      
+
       if (this.drawMode) {
         try {
           arr = this.getShapeFromDrawing();
@@ -475,7 +475,7 @@
         } catch (error) {
           arr = [50, 50];  // Default fallback
         }
-        
+
         const Nwanted = parseInt(document.getElementById('target-boxes').value) || 1;
         const Ncurr = arr.reduce((a, b) => a + b, 0);
         if (Ncurr !== Nwanted) {
@@ -498,7 +498,7 @@
         const txt = document.getElementById('shape-input').value;
         const parts = txt.split(',').map(x => x.trim());
         arr = [];
-        
+
         for (const part of parts) {
           if (part.includes('^')) {
             const [len, count] = part.split('^').map(x => parseInt(x.trim()));
@@ -516,10 +516,10 @@
             arr.push(len);
           }
         }
-        
+
         if (!arr.length) { alert('Bad shape'); return null; }
       }
-      
+
       return arr;
     }
   }
@@ -580,14 +580,14 @@
   function inverseRSK(P, Q) {
     const N = P.flat().length;
     const perm = Array(N);
-    
+
     for (let t = N; t >= 1; --t) {
       let r = -1, c = -1;
       for (let i = 0; i < Q.length && r === -1; ++i) {
         const j = Q[i].indexOf(t);
         if (j !== -1) { r = i; c = j; }
       }
-      
+
       const val = P[r][c];
       Q[r].splice(c, 1);
       P[r].splice(c, 1);
@@ -613,23 +613,23 @@
   function drawPermutation(perm, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    
+
     const N = perm.length;
     const fixedSize = 300; // Fixed size for the visualization
     const margin = 20;
     const cellSize = Math.min(30, (fixedSize - 2 * margin) / N);
     const dotRadius = Math.max(1, cellSize * 0.3);
-    
+
     const svg = d3.select(container)
       .append('svg')
       .attr('width', fixedSize)
       .attr('height', fixedSize);
-    
+
     const g = svg.append('g')
       .attr('transform', `translate(${margin}, ${margin})`);
-    
+
     const actualSize = N * cellSize;
-    
+
     // Draw border
     g.append('rect')
       .attr('x', 0)
@@ -639,7 +639,7 @@
       .attr('fill', 'none')
       .attr('stroke', 'var(--text-primary, #333)')
       .attr('stroke-width', 1);
-    
+
     // Draw dots for the permutation
     for (let j = 0; j < N; j++) {
       const i = perm[j] - 1;
@@ -655,14 +655,14 @@
   function drawTableau(containerId, tableau, title) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    
+
     if (!tableau || tableau.length === 0) {
       container.innerHTML = '<div style="color: #666; font-style: italic;">No tableau</div>';
       return;
     }
-    
+
     const N = tableau.flat().length;
-    
+
     // Use EXACT same logic as hookwalk-tableau
     if (N <= 200) {
       drawTableauSmall(container, tableau, N);
@@ -677,22 +677,22 @@
     const rows = tableau.length;
     const cols = Math.max(...tableau.map(row => row.length));
     const pad = 10;
-    
+
     // Calculate cell size based on both width and height constraints
     const cellSizeByWidth = (containerWidth - 2 * pad) / cols;
     const cellSizeByHeight = (containerHeight - 2 * pad) / rows;
     const cellSize = Math.min(40, cellSizeByWidth, cellSizeByHeight);
-    
+
     const width = cols * cellSize + 2 * pad;
     const height = rows * cellSize + 2 * pad;
-    
+
     const svg = d3.select(container).append('svg')
       .attr('width', '100%')
       .attr('height', height)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .style('max-height', containerHeight + 'px');
     const g = svg.append('g').attr('transform', `translate(${pad},${pad})`);
-    
+
     tableau.forEach((row, r) => {
       row.forEach((val, c) => {
         g.append('rect').attr('x', c * cellSize).attr('y', r * cellSize)
@@ -712,25 +712,25 @@
     const rows = tableau.length;
     const cols = Math.max(...tableau.map(row => row.length));
     const pad = 10;
-    
+
     // Calculate cell size based on both width and height constraints
     const cellSizeByWidth = (containerWidth - 2 * pad) / cols;
     const cellSizeByHeight = (containerHeight - 2 * pad) / rows;
     const cellSize = Math.max(1, Math.min(cellSizeByWidth, cellSizeByHeight));
-    
+
     const width = cols * cellSize + 2 * pad;
     const height = rows * cellSize + 2 * pad;
-    
+
     const svg = d3.select(container).append('svg')
       .attr('width', '100%')
       .attr('height', height)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .style('max-height', containerHeight + 'px');
     const g = svg.append('g').attr('transform', `translate(${pad},${pad})`);
-    
+
     const thresholds = [];
     for (let i = 1; i < 10; i++) thresholds.push(i * N / 10);
-    
+
     // UVA color palette: orange (inside/small values) to blue (outside/large values)
     const uvaColors = [];
     for (let i = 0; i < 10; i++) {
@@ -740,7 +740,7 @@
       const b = Math.round((1 - t) * 0 + t * 75);
       uvaColors.push(`rgb(${r},${g_val},${b})`);
     }
-    
+
     tableau.forEach((row, r) => {
       row.forEach((val, c) => {
         let idx = thresholds.findIndex(t => val <= t) + 1; // 1..10
@@ -769,7 +769,7 @@
           .textContent = '(WASM ready for N>500)';
       } else {
         document.getElementById('wasm-status')
-          .textContent = '(JavaScript mode)';
+          .textContent = '';
       }
     }
 
@@ -793,7 +793,7 @@
       } catch (error) {
         shape = null;
       }
-      
+
       if (!shape || shape.length === 0) {
         // Default to a small rectangle if no shape is provided
         const defaultShape = [7, 7, 7, 7, 7, 7, 7];
@@ -825,7 +825,7 @@
         const perm = inverseRSK(Pcopy, Qcopy);
 
         this.showProgress(100, 'Rendering permutation');
-        
+
         if (N <= 200) {
           document.getElementById('perm-display').textContent = `σ = [${perm.join(', ')}]`;
         } else {
