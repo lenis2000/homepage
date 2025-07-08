@@ -385,6 +385,7 @@ code:
       document.getElementById('toggle-text-mode').classList.toggle('active', !isDraw);
       document.getElementById('draw-interface').style.display = isDraw ? 'block' : 'none';
       document.getElementById('text-interface').style.display = isDraw ? 'none' : 'block';
+      document.getElementById('generate-large-permutation').style.display = isDraw ? 'inline-block' : 'none';
     }
 
     setShapeMode(mode) {
