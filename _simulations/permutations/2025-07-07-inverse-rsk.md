@@ -1145,26 +1145,9 @@ code:
     }
 
     async runLarge() {
-      // Generate a large shape with N=30,000
-      const targetN = 30000;
-      const side = Math.floor(Math.sqrt(targetN));
-      const shape = [];
-      
-      // Create approximately square shape
-      for (let i = 0; i < side; i++) {
-        shape.push(side);
-      }
-      
-      // Adjust to get exactly targetN boxes
-      let currentN = shape.reduce((a, b) => a + b, 0);
-      let i = 0;
-      while (currentN < targetN && i < shape.length) {
-        shape[i]++;
-        currentN++;
-        i = (i + 1) % shape.length;
-      }
-      
-      this.runWithShape(shape, targetN);
+      // Set N=30,000 and run the simulation with current shape
+      document.getElementById('target-boxes').value = 30000;
+      this.run();
     }
 
     async runWithShape(shape, N) {
