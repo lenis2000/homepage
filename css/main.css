@@ -805,10 +805,22 @@ a.orange-item:hover, a.orange-item:focus {
 }
 
 /* Responsive adjustments */
-@media (max-width: 991px) {
+@media (max-width: 575px) {
   .theme-toggle-wrapper {
     position: absolute;
     right: 60px;
     top: 8px;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991px) {
+  .theme-toggle-wrapper {
+    position: static;
+    margin-left: auto;
+    order: 2;
+  }
+  
+  .navbar-nav {
+    order: 1;
   }
 }
