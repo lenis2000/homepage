@@ -466,10 +466,32 @@ class HookWalkVis {
         ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(this.canvasSize,i); ctx.stroke();
     }
 
-    /* border cells */
-    ctx.fillStyle='#444';
-    for(let r=0;r<this.gridResolution;r++)
-      for(let c=0;c<this.gridResolution;c++)
+    /* compute interior using north-west closure */
+    const N = this.gridResolution;
+    const interior = Array.from({length:N}, _=>Array(N).fill(false));
+    for(let r=0; r<N; r++){
+      for(let c=0; c<N; c++){
+        if(!this.borderGrid[r][c]) continue;
+        for(let rr=0; rr<=r; rr++){
+          for(let cc=0; cc<=c; cc++){
+            interior[rr][cc] = true;
+          }
+        }
+      }
+    }
+
+    /* draw interior cells (black fill) */
+    ctx.fillStyle='#000000';
+    for(let r=0;r<N;r++)
+      for(let c=0;c<N;c++)
+        if(interior[r][c])
+          ctx.fillRect(c*this.pixelSize, r*this.pixelSize,
+                       this.pixelSize,     this.pixelSize);
+
+    /* draw border cells (same black) */
+    ctx.fillStyle='#000000';
+    for(let r=0;r<N;r++)
+      for(let c=0;c<N;c++)
         if(this.borderGrid[r][c])
           ctx.fillRect(c*this.pixelSize, r*this.pixelSize,
                        this.pixelSize,     this.pixelSize);
@@ -517,18 +539,28 @@ class HookWalkVis {
   
   getShapeFromDrawing(){
     const N = this.gridResolution;
-    const rowLen = Array(N).fill(0);
+    const interior = Array.from({length:N}, _=>Array(N).fill(false));
 
-    /* propagate each border pixel upward */
+    /* north-west closure: if (r,c) is border, mark all (r',c') with r'≤r AND c'≤c as interior */
     for(let r=0; r<N; r++){
       for(let c=0; c<N; c++){
         if(!this.borderGrid[r][c]) continue;
-        for(let rr=0; rr<=r; rr++) rowLen[rr] = Math.max(rowLen[rr], c+1);
+        for(let rr=0; rr<=r; rr++){
+          for(let cc=0; cc<=c; cc++){
+            interior[rr][cc] = true;
+          }
+        }
       }
     }
 
-    /* trim trailing zeros */
-    while(rowLen.length && rowLen[rowLen.length-1]===0) rowLen.pop();
+    /* read Young diagram row-lengths from interior */
+    const rowLen = [];
+    for(let r=0; r<N; r++){
+      let len = 0;
+      while(len < N && interior[r][len]) len++;
+      if(len === 0 && rowLen.length) break;  // stop after first empty row
+      if(len > 0) rowLen.push(len);
+    }
 
     /* enforce non-increasing property */
     for(let i=1; i<rowLen.length; i++)
