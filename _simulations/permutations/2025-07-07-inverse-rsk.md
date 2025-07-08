@@ -232,6 +232,7 @@ code:
 <div id="shape-ui"></div>
 <div class="input-group">
   <button id="generate-permutation">Generate permutation σ</button>
+  <button id="generate-large-permutation">Generate σ with N=30,000</button>
   <span id="wasm-status" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
 </div>
 
@@ -1047,6 +1048,8 @@ code:
       this.initWASM();
       document.getElementById('generate-permutation')
         .addEventListener('click', () => this.run());
+      document.getElementById('generate-large-permutation')
+        .addEventListener('click', () => this.runLarge());
       document.getElementById('download-shape')
         .addEventListener('click', () => this.downloadShape());
       document.getElementById('download-sigma')
@@ -1139,6 +1142,29 @@ code:
       }
       const N = shape.reduce((a, b) => a + b, 0);
       this.runWithShape(shape, N);
+    }
+
+    async runLarge() {
+      // Generate a large shape with N=30,000
+      const targetN = 30000;
+      const side = Math.floor(Math.sqrt(targetN));
+      const shape = [];
+      
+      // Create approximately square shape
+      for (let i = 0; i < side; i++) {
+        shape.push(side);
+      }
+      
+      // Adjust to get exactly targetN boxes
+      let currentN = shape.reduce((a, b) => a + b, 0);
+      let i = 0;
+      while (currentN < targetN && i < shape.length) {
+        shape[i]++;
+        currentN++;
+        i = (i + 1) % shape.length;
+      }
+      
+      this.runWithShape(shape, targetN);
     }
 
     async runWithShape(shape, N) {
