@@ -9,6 +9,8 @@ code:
     txt : 'WASM sampler for a single SYT (already exists)'
 ---
 
+**Conjecture (L.P.)**: If a Young diagram has a limit shape on the scale $\sqrt{n}$, then random permutations have a limit in the sense of permutons.
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <!-- hook-walk WASM (already compiled, single-file) -->
 <script src="{{site.url}}/js/2025-07-07-hookwalk-tableau.js"></script>
