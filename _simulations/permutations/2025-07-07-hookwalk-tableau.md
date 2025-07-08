@@ -584,7 +584,7 @@ class HookWalkVis {
       const Nwanted = parseInt(document.getElementById('target-boxes').value)||1;
       const Ncurr   = arr.reduce((a,b)=>a+b,0);
       if(Ncurr!==Nwanted){
-         arr = this.scalePartition(arr,Nwanted);   // we already have this util
+         arr = this.scalePartition2D(arr,Nwanted); // 2-D block scale
       }
     } else if(this.usePlancherel) {
       // Generate Plancherel random partition
@@ -775,6 +775,19 @@ class HookWalkVis {
     }
     
     return scaled.filter(x => x > 0);
+  }
+
+  /* === true 2-D scaler: block + fine-tune ========================== */
+  scalePartition2D (partition, targetN) {
+    const currentN = partition.reduce((a,b)=>a+b,0);
+    if (currentN === 0) return [];
+
+    /* k×k block blow-up so area ≥ target ---------------------------- */
+    const k = Math.max(1, Math.ceil(Math.sqrt(targetN / currentN)));
+    let scaled = this.blockScalePartition(partition, k);   // already defined
+
+    /* fine-tune to *exactly* targetN using existing helper ---------- */
+    return this.adjustPartitionSize(scaled, targetN);       // already defined
   }
 
   fallbackPlancherelPartition(n) {
