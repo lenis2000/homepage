@@ -807,9 +807,12 @@ a.orange-item:hover, a.orange-item:focus {
 /* Responsive adjustments */
 @media (max-width: 575px) {
   .theme-toggle-wrapper {
-    position: absolute;
-    right: 60px;
-    top: 8px;
+    margin-top: 10px;
+    justify-content: flex-start;
+  }
+  
+  .collapse:not(.show) .theme-toggle-wrapper {
+    display: none;
   }
 }
 
@@ -818,9 +821,16 @@ a.orange-item:hover, a.orange-item:focus {
     position: static;
     margin-left: auto;
     order: 2;
+    padding-left: 20px;
   }
   
   .navbar-nav {
     order: 1;
+  }
+}
+
+@media (min-width: 992px) {
+  .theme-toggle-wrapper {
+    padding-left: 30px;
   }
 }

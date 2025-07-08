@@ -6,7 +6,8 @@
       <a href="{{site.url}}" class="d-inline d-md-none page-logo-large mr-2" style="vertical-align: middle;">Leo Petrov</a>
     </div>
 
-    <button class="navbar-toggler float-right" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo01" aria-controls="navbarTogglerDemo01" aria-expanded="false" aria-label="Toggle navigation">
+    <!-- Burger stays left-of-toggle; no floats so flexbox order is respected -->
+    <button class="navbar-toggler ms-2" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo01" aria-controls="navbarTogglerDemo01" aria-expanded="false" aria-label="Toggle navigation">
       <span class="fa fa-bars" style="color:white; padding:6px;"></span>
     </button>
 
@@ -30,8 +31,8 @@
         {% endfor %}
       </ul>
       
-      <!-- Theme toggle switch -->
-      <div class="theme-toggle-wrapper ml-3">
+      <!-- Theme toggle – shows in collapsed menu on narrow screens -->
+      <div class="theme-toggle-wrapper d-flex align-items-center ms-auto">
         <label class="theme-toggle" for="theme-switch">
           <input type="checkbox" id="theme-switch" />
           <span class="slider">
@@ -40,7 +41,6 @@
           </span>
         </label>
       </div>
-
     </div>
   </div>
 </nav>
