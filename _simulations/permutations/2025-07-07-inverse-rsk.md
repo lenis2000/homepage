@@ -251,8 +251,12 @@ code:
 </div>
 
 <h3>Permutation</h3>
-<div id="perm-display" class="permutation-display"></div>
 <div id="perm-matrix"></div>
+<div id="perm-display" class="permutation-display"></div>
+<div class="input-group" style="margin-top: 10px;">
+  <button id="download-shape">Download Shape λ</button>
+  <button id="download-sigma">Download Permutation σ</button>
+</div>
 
 <script>
 /* global HookModule */
@@ -261,6 +265,7 @@ code:
 (function () {
   /* ---------------------------------- 0. Utilities ---------------------------------- */
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const yieldFrame = () => new Promise(requestAnimationFrame);
 
   /* ---------------------------------- 1. Shape UI Class ---------------------------------- */
 
@@ -834,7 +839,7 @@ code:
   }
 
   /* ---------------------------------- 3. Inverse RSK ---------------------------------- */
-  function inverseRSK(P, Q) {
+  async function inverseRSK(P, Q) {
     const N = P.flat().length;
     const perm = Array(N);
 
@@ -849,6 +854,8 @@ code:
           progressText.textContent = `Progress: ${N - t + 1} / ${N} (${pct}%)`;
         }
       }
+
+      if ((N - t) % 1024 === 0) await yieldFrame();   // let the browser paint every ~1k steps
 
       let r = -1, c = -1;
       for (let i = 0; i < Q.length && r === -1; ++i) {
@@ -1024,9 +1031,15 @@ code:
     constructor() {
       this.shapeUI = new ShapeInputVis('shape-ui');
       this.wasm = null;
+      this.currentShape = null;
+      this.currentPermutation = null;
       this.initWASM();
       document.getElementById('generate-permutation')
         .addEventListener('click', () => this.run());
+      document.getElementById('download-shape')
+        .addEventListener('click', () => this.downloadShape());
+      document.getElementById('download-sigma')
+        .addEventListener('click', () => this.downloadPermutation());
     }
 
     async initWASM() {
@@ -1051,7 +1064,51 @@ code:
     }
 
     hideProgress() {
-      document.getElementById('progress-area').style.display = 'none';
+      const bar  = document.getElementById('progress-area');
+      const fill = document.getElementById('progress-fill');
+      const text = document.getElementById('progress-text');
+      if (!bar) return;
+      fill.style.width = '100%';
+      text.textContent = 'Simulation complete!';
+      setTimeout(() => { bar.style.display = 'none'; }, 1000);   // ← 1-second grace period
+    }
+
+    downloadShape() {
+      if (!this.currentShape) {
+        alert('No shape data available. Please generate a permutation first.');
+        return;
+      }
+      const content = this.currentShape.join(',');
+      const size = this.currentShape.reduce((a, b) => a + b, 0);
+      const timestamp = new Date().toISOString().replace(/[:]/g, '-').split('.')[0];
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shape_lambda_N${size}_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    downloadPermutation() {
+      if (!this.currentPermutation) {
+        alert('No permutation data available. Please generate a permutation first.');
+        return;
+      }
+      const content = this.currentPermutation.join(',');
+      const size = this.currentPermutation.length;
+      const timestamp = new Date().toISOString().replace(/[:]/g, '-').split('.')[0];
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `permutation_sigma_N${size}_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     async run() {
@@ -1075,15 +1132,18 @@ code:
 
     async runWithShape(shape, N) {
       try {
+        // Store current data for downloads
+        this.currentShape = [...shape];
+        
         // Show progress bar for large simulations
         if (N > 5000) {
-          this.showProgress(0, `Initializing simulation for ${N} elements...`);
+          await (this.showProgress(0, `Initialising simulation for ${N} elements…`), yieldFrame());
         }
 
-        this.showProgress(5, 'Sampling P tableau');
+        await (this.showProgress(5, 'Sampling P tableau'), yieldFrame());
         const P = await sampleSYT(shape, this.wasm);
 
-        this.showProgress(55, 'Sampling Q tableau');
+        await (this.showProgress(55, 'Sampling Q tableau'), yieldFrame());
         const Q = await sampleSYT(shape, this.wasm);
 
         // Draw the tableaux before inverse RSK (for all sizes)
@@ -1094,17 +1154,21 @@ code:
         const Pcopy = P.map(r => r.slice());
         const Qcopy = Q.map(r => r.slice());
 
-        this.showProgress(75, 'Computing inverse RSK');
-        const perm = inverseRSK(Pcopy, Qcopy);
+        await (this.showProgress(75, 'Computing inverse RSK'), yieldFrame());
+        const perm = await inverseRSK(Pcopy, Qcopy);
 
-        this.showProgress(100, 'Rendering permutation');
+        // Store current permutation for downloads
+        this.currentPermutation = [...perm];
 
+        await (this.showProgress(100, 'Rendering permutation'), yieldFrame());
+
+        drawPermutation(perm, 'perm-matrix');
+        
         if (N <= 200) {
           document.getElementById('perm-display').textContent = `σ = [${perm.join(', ')}]`;
         } else {
           document.getElementById('perm-display').textContent = `σ of size ${N} (showing first 20): [${perm.slice(0, 20).join(', ')}...]`;
         }
-        drawPermutation(perm, 'perm-matrix');
       } catch (err) {
         alert(`Error: ${err.message}`);
       } finally {
