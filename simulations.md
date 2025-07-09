@@ -163,6 +163,37 @@ nav_weight: 19
     font-size: 0.8125rem;
   }
 }
+
+/* Dark mode styles for category buttons and tags */
+[data-theme="dark"] .category-btn {
+  color: var(--text-primary);
+  background-color: transparent;
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .category-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .category-btn.active {
+  color: var(--text-primary);
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .badge-outline-uva {
+  color: var(--text-primary);
+  background-color: transparent;
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .badge-outline-uva:hover {
+  color: var(--text-primary);
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
 </style>
 
 </div><!-- /.container -->
