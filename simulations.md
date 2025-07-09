@@ -14,8 +14,6 @@ nav_weight: 19
 <h1 class="my-4">Simulations and other computational tools</h1>
 <h5 class="mb-3">Visualizations, data, source code</h5>
 
-<hr>
-
 {%include sims.html%}
 
 
