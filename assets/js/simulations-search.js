@@ -65,7 +65,13 @@
 
     /* ESC key clears */
     q.addEventListener('keyup', e => {
-      if (e.key === 'Escape') clr.click();
+      if (e.key === 'Escape') {
+        clr.click();
+        // Remove hash from URL and reload
+        if (window.location.hash) {
+          window.location.href = window.location.pathname + window.location.search;
+        }
+      }
     });
 
     /* Category buttons */
@@ -138,19 +144,28 @@
     
     /* Global ESC handler to focus search from anywhere */
     document.addEventListener('keyup', e => {
-      if (e.key === 'Escape' && document.activeElement !== q) {
+      if (e.key === 'Escape') {
         e.preventDefault();
-        q.focus();
-        q.select(); // Select all text for easy replacement
         
-        // Also reset category filter to "All"
-        if (catState !== 'all') {
-          cats.forEach(b => b.classList.remove('active'));
-          const allBtn = Array.from(cats).find(btn => btn.dataset.category === 'all');
-          if (allBtn) {
-            allBtn.classList.add('active');
-            catState = 'all';
-            applyFilter();
+        // Remove hash from URL and reload
+        if (window.location.hash) {
+          window.location.href = window.location.pathname + window.location.search;
+        } else {
+          // If not already focused on search input, focus it
+          if (document.activeElement !== q) {
+            q.focus();
+            q.select(); // Select all text for easy replacement
+            
+            // Also reset category filter to "All"
+            if (catState !== 'all') {
+              cats.forEach(b => b.classList.remove('active'));
+              const allBtn = Array.from(cats).find(btn => btn.dataset.category === 'all');
+              if (allBtn) {
+                allBtn.classList.add('active');
+                catState = 'all';
+                applyFilter();
+              }
+            }
           }
         }
       }
