@@ -12,11 +12,9 @@ nav_weight: 19
 <div class="container mb-5">
 
 <h1 class="my-4">Simulations and other computational tools</h1>
-<h5 class="mb-3">Data, source code, visualizations</h5>
+<h5 class="mb-3">Visualizations, data, source code</h5>
 
 <hr>
-
-{% include dear_colleagues.md %}
 
 {%include sims.html%}
 
@@ -47,12 +45,12 @@ nav_weight: 19
     All
   </button>
   {% assign categories = "
-        domino-tilings:Domino Tilings,
+        domino-tilings:Dominos,
         random-matrices:Random Matrices,
-        permutations:Random Permutations,
-        lozenge-tilings:Lozenge Tilings,
-        TASEPs:TASEP-like Systems,
-        misc:Miscellaneous Tools" | split: "," %}
+        permutations:Permutations,
+        lozenge-tilings:Lozenges,
+        TASEPs:TASEPs,
+        misc:Misc" | split: "," %}
   {% for cat in categories %}
     {% assign p = cat | split: ":" %}
     {% assign slug = p[0] | strip %}
@@ -76,16 +74,54 @@ nav_weight: 19
       <div>
         <a href="{{ sim.url }}" class="fw-bold">{{ sim.title }}</a>
         <span class="text-muted ms-2">{{ sim.date | date: "%Y-%m-%d" }}</span>
+        {% if sim.model %}
+          {% assign cat_found = false %}
+          {% assign cat_display_name = sim.model %}
+          {% for cat in categories %}
+            {% assign p = cat | split: ":" %}
+            {% assign slug = p[0] | strip %}
+            {% assign name = p[1] | strip %}
+            {% if slug == sim.model %}
+              {% assign cat_display_name = name %}
+              {% assign cat_found = true %}
+            {% endif %}
+          {% endfor %}
+          <button type="button"
+                  class="badge badge-outline-uva ms-2 clickable-tag"
+                  data-category="{{ sim.model }}"
+                  style="border: 1px solid #232D4B; cursor: pointer;">
+            {{ cat_display_name }}
+          </button>
+        {% endif %}
       </div>
-      {% if sim.model %}
-        <span class="badge bg-light text-dark text-capitalize">{{ sim.model }}</span>
-      {% endif %}
     </li>
     {% endunless %}
   {% endfor %}
 </ul>
 <!-- =========================================================== -->
 
+<br>
+{% include dear_colleagues.md %}
 
+<style>
+.category-btn.active {
+  color: #fff;
+  background-color: #232D4B; /* UVA Blue */
+  border-color: #232D4B;
+}
+
+.badge-outline-uva {
+  color: #232D4B; /* UVA Blue */
+  background-color: transparent;
+  border: 1px solid #232D4B;
+  font-weight: normal;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge-outline-uva:hover {
+  color: #fff;
+  background-color: #232D4B;
+}
+</style>
 
 </div><!-- /.container -->

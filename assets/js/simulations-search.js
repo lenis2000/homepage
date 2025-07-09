@@ -77,9 +77,58 @@
         applyFilter();
       })
     );
+    
+    /* Clickable tags in list items */
+    const tags = document.querySelectorAll('.clickable-tag');
+    tags.forEach(tag =>
+      tag.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Update category buttons to match clicked tag
+        cats.forEach(b => b.classList.remove('active'));
+        const matchingBtn = Array.from(cats).find(btn => btn.dataset.category === tag.dataset.category);
+        if (matchingBtn) {
+          matchingBtn.classList.add('active');
+          catState = tag.dataset.category;
+        } else {
+          // If no matching button (shouldn't happen), set to all
+          const allBtn = Array.from(cats).find(btn => btn.dataset.category === 'all');
+          if (allBtn) allBtn.classList.add('active');
+          catState = 'all';
+        }
+        
+        // Clear search and apply filter
+        q.value = '';
+        applyFilter();
+        
+        // Scroll to top of list
+        document.getElementById('sim-search-group').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      })
+    );
 
     /* Auto-focus search input on page load */
     q.focus();
+    
+    /* Global ESC handler to focus search from anywhere */
+    document.addEventListener('keyup', e => {
+      if (e.key === 'Escape' && document.activeElement !== q) {
+        e.preventDefault();
+        q.focus();
+        q.select(); // Select all text for easy replacement
+        
+        // Also reset category filter to "All"
+        if (catState !== 'all') {
+          cats.forEach(b => b.classList.remove('active'));
+          const allBtn = Array.from(cats).find(btn => btn.dataset.category === 'all');
+          if (allBtn) {
+            allBtn.classList.add('active');
+            catState = 'all';
+            applyFilter();
+          }
+        }
+      }
+    });
   }
 
   /* Run immediately if DOM is already parsed, else wait */
