@@ -36,14 +36,17 @@ nav_weight: 19
          aria-describedby="sim-search-label">
   <button class="btn btn-outline-secondary" id="sim-search-clear" type="button">Clear</button>
 </div>
+<small class="text-muted d-none d-md-block mb-3" style="margin-top: -1.5rem;">Tip: Press ESC to clear search and reset filters</small>
 
 <!-- Category buttons -->
-<div id="sim-cat-buttons" class="d-flex flex-wrap gap-3 mb-4">
-  <button type="button"
-          class="btn btn-sm category-btn active"
-          data-category="all">
-    All
-  </button>&nbsp;&nbsp;
+<div id="sim-cat-buttons" class="row g-2 mb-4">
+  <div class="col-auto">
+    <button type="button"
+            class="btn btn-sm category-btn active text-nowrap"
+            data-category="all">
+      All
+    </button>
+  </div>
   {% assign categories = "
         domino-tilings:Dominos,
         random-matrices:Random Matrices,
@@ -55,11 +58,13 @@ nav_weight: 19
     {% assign p = cat | split: ":" %}
     {% assign slug = p[0] | strip %}
     {% assign name = p[1] | strip %}
-    <button type="button"
-            class="btn btn-sm category-btn"
-            data-category="{{ slug }}">
-      {{ name }}
-    </button>&nbsp;&nbsp;
+    <div class="col-auto">
+      <button type="button"
+              class="btn btn-sm category-btn text-nowrap"
+              data-category="{{ slug }}">
+        {{ name }}
+      </button>
+    </div>
   {% endfor %}
 </div>
 
