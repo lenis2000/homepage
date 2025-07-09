@@ -110,6 +110,32 @@
     /* Auto-focus search input on page load */
     q.focus();
     
+    /* Check URL hash for category filter */
+    function checkHashFilter() {
+      const hash = window.location.hash.slice(1); // Remove #
+      if (hash && hash !== 'all') {
+        // Find matching category button
+        const matchingBtn = Array.from(cats).find(btn => btn.dataset.category === hash);
+        if (matchingBtn) {
+          cats.forEach(b => b.classList.remove('active'));
+          matchingBtn.classList.add('active');
+          catState = hash;
+          applyFilter();
+          
+          // Scroll to search after a short delay
+          setTimeout(() => {
+            document.getElementById('sim-search-group').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
+      }
+    }
+    
+    // Check on load
+    checkHashFilter();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', checkHashFilter);
+    
     /* Global ESC handler to focus search from anywhere */
     document.addEventListener('keyup', e => {
       if (e.key === 'Escape' && document.activeElement !== q) {
