@@ -13,13 +13,6 @@ code:
 <script src="{{site.url}}/js/2025-07-07-rsk-algorithm.js"></script>
 
 <style>
-.container {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
 .controls {
     background-color: var(--bg-secondary, #f5f5f5);
     padding: 20px;
@@ -170,117 +163,114 @@ button:disabled {
 /* Algorithm description is now a collapsible details element */
 </style>
 
-<div class="container">
-    <h2>RSK Algorithm Interactive Visualization</h2>
+<h2>RSK Algorithm Interactive Visualization</h2>
 
-    <details id="algorithm-description-details" style="margin-bottom: 20px;">
-        <summary style="cursor: pointer; padding: 15px; border: 1px solid var(--border-color, #ddd); border-radius: 5px; background-color: var(--bg-secondary, #f9f9f9); font-weight: bold; font-size: 1.1em; color: var(--text-primary, #212529);">
-            About the RSK Algorithm
-        </summary>
-        <div style="padding: 15px; border: 1px solid var(--border-color, #ddd); border-top: none; border-radius: 0 0 5px 5px; background-color: var(--bg-secondary, #f9f9f9); color: var(--text-primary, #212529);">
-            <p>The Robinson-Schensted-Knuth (RSK) correspondence is a bijection between permutations and pairs of Standard Young Tableaux (SYT) of the same shape.</p>
-            <p>This visualization demonstrates both directions:</p>
-            <ul>
-                <li><strong>Forward RSK:</strong> Permutation → (P-tableau, Q-tableau)</li>
-                <li><strong>Inverse RSK:</strong> (P-tableau, Q-tableau) → Permutation</li>
-            </ul>
-            <p>For large permutations (N > 100), the simulation automatically uses a WebAssembly module for optimal performance.</p>
-        </div>
-    </details>
+<details id="algorithm-description-details" style="margin-bottom: 20px;">
+    <summary style="cursor: pointer; padding: 15px; border: 1px solid var(--border-color, #ddd); border-radius: 5px; background-color: var(--bg-secondary, #f9f9f9); font-weight: bold; font-size: 1.1em; color: var(--text-primary, #212529);">
+        About the RSK Algorithm
+    </summary>
+    <div style="padding: 15px; border: 1px solid var(--border-color, #ddd); border-top: none; border-radius: 0 0 5px 5px; background-color: var(--bg-secondary, #f9f9f9); color: var(--text-primary, #212529);">
+        <p>The Robinson-Schensted-Knuth (RSK) correspondence is a bijection between permutations and pairs of Standard Young Tableaux (SYT) of the same shape.</p>
+        <p>This visualization demonstrates both directions:</p>
+        <ul>
+            <li><strong>Forward RSK:</strong> Permutation → (P-tableau, Q-tableau)</li>
+            <li><strong>Inverse RSK:</strong> (P-tableau, Q-tableau) → Permutation</li>
+        </ul>
+        <p>For large permutations (N > 100), the simulation automatically uses a WebAssembly module for optimal performance.</p>
+    </div>
+</details>
 
-    <div class="controls">
-        <div class="input-group">
-            <label for="n-input">Permutation size N:</label>
-            <input type="number" id="n-input" min="1" max="10000" value="6">
-            <button id="generate-random">Generate Random Permutation</button>
-            <span id="wasm-indicator" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
-        </div>
-
-        <div class="input-group">
-            <label for="sampling-method">Sampling method:</label>
-            <select id="sampling-method">
-                <option value="uniform">Uniform Random</option>
-                <option value="block3">Block Structured (3x3)</option>
-                <option value="block10">Block Structured (10x10)</option>
-            </select>
-        </div>
-
-        <div class="input-group" id="block-controls-3x3" style="display: none;">
-            <label for="base-permutation">Base permutation of 3:</label>
-            <select id="base-permutation">
-                <option value="123">123 (identity)</option>
-                <option value="132">132</option>
-                <option value="213">213</option>
-                <option value="231">231</option>
-                <option value="312">312</option>
-                <option value="321">321 (reverse)</option>
-            </select>
-            <span id="block-size-info" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
-        </div>
-
-        <div class="input-group" id="block-controls-10x10" style="display: none;">
-            <label>10x10 block structure:</label>
-            <span id="block-size-info-10x10" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
-        </div>
-
-        <div class="input-group">
-            <label for="permutation-input">Permutation:</label>
-            <input type="text" id="permutation-input" placeholder="e.g., 3,1,4,2" style="width: 300px;">
-            <button id="set-permutation">Set Permutation</button>
-        </div>
-
-        <div class="input-group">
-            <label for="speed-select">Animation Speed:</label>
-            <select id="speed-select">
-                <option value="2000">Very Slow</option>
-                <option value="1000" selected>Slow</option>
-                <option value="500">Medium</option>
-                <option value="250">Fast</option>
-                <option value="100">Very Fast</option>
-                <option value="50">Ultra Fast</option>
-                <option value="10">Lightning</option>
-            </select>
-        </div>
-
-
-        <div class="input-group">
-            <label for="steps-input">Number of steps:</label>
-            <input type="number" id="steps-input" min="1" max="100" value="1">
-            <button id="run-rsk-steps">Run RSK Steps</button>
-        </div>
-
-        <div>
-            <button id="run-rsk">Run Forward RSK (Animated)</button>
-            <button id="run-rsk-instant">Run Forward RSK (Instant)</button>
-            <button id="run-rsk-step">Step Forward RSK</button>
-            <button id="reset">Reset</button>
-        </div>
+<div class="controls">
+    <div class="input-group">
+        <label for="n-input">Permutation size N:</label>
+        <input type="number" id="n-input" min="1" max="10000" value="6">
+        <button id="generate-random">Generate Random Permutation</button>
+        <span id="wasm-indicator" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
     </div>
 
-    <div class="section">
-        <h3>Current Permutation</h3>
-        <div id="permutation-display" class="permutation-display"></div>
-        <div id="permutation-matrix"></div>
+    <div class="input-group">
+        <label for="sampling-method">Sampling method:</label>
+        <select id="sampling-method">
+            <option value="uniform">Uniform Random</option>
+            <option value="block3">Block Structured (3x3)</option>
+            <option value="block10">Block Structured (10x10)</option>
+        </select>
     </div>
 
-    <div class="visualization-container">
-        <div class="section">
-            <h3>P-Tableau (Insertion Tableau)</h3>
-            <div id="p-tableau"></div>
-        </div>
-
-        <div class="section">
-            <h3>Q-Tableau (Recording Tableau)</h3>
-            <div id="q-tableau"></div>
-        </div>
+    <div class="input-group" id="block-controls-3x3" style="display: none;">
+        <label for="base-permutation">Base permutation of 3:</label>
+        <select id="base-permutation">
+            <option value="123">123 (identity)</option>
+            <option value="132">132</option>
+            <option value="213">213</option>
+            <option value="231">231</option>
+            <option value="312">312</option>
+            <option value="321">321 (reverse)</option>
+        </select>
+        <span id="block-size-info" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
     </div>
 
-    <div class="section" id="step-info-section" style="display: none;">
-        <h3>Current Step</h3>
-        <div id="step-info" class="step-info"></div>
+    <div class="input-group" id="block-controls-10x10" style="display: none;">
+        <label>10x10 block structure:</label>
+        <span id="block-size-info-10x10" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
+    </div>
+
+    <div class="input-group">
+        <label for="permutation-input">Permutation:</label>
+        <input type="text" id="permutation-input" placeholder="e.g., 3,1,4,2" style="width: 300px;">
+        <button id="set-permutation">Set Permutation</button>
+    </div>
+
+    <div class="input-group">
+        <label for="speed-select">Animation Speed:</label>
+        <select id="speed-select">
+            <option value="2000">Very Slow</option>
+            <option value="1000" selected>Slow</option>
+            <option value="500">Medium</option>
+            <option value="250">Fast</option>
+            <option value="100">Very Fast</option>
+            <option value="50">Ultra Fast</option>
+            <option value="10">Lightning</option>
+        </select>
+    </div>
+
+
+    <div class="input-group">
+        <label for="steps-input">Number of steps:</label>
+        <input type="number" id="steps-input" min="1" max="100" value="1">
+        <button id="run-rsk-steps">Run RSK Steps</button>
+    </div>
+
+    <div>
+        <button id="run-rsk">Run Forward RSK (Animated)</button>
+        <button id="run-rsk-instant">Run Forward RSK (Instant)</button>
+        <button id="run-rsk-step">Step Forward RSK</button>
+        <button id="reset">Reset</button>
     </div>
 </div>
 
+<div class="section">
+    <h3>Current Permutation</h3>
+    <div id="permutation-display" class="permutation-display"></div>
+    <div id="permutation-matrix"></div>
+</div>
+
+<div class="visualization-container">
+    <div class="section">
+        <h3>P-Tableau (Insertion Tableau)</h3>
+        <div id="p-tableau"></div>
+    </div>
+
+    <div class="section">
+        <h3>Q-Tableau (Recording Tableau)</h3>
+        <div id="q-tableau"></div>
+    </div>
+</div>
+
+<div class="section" id="step-info-section" style="display: none;">
+    <h3>Current Step</h3>
+    <div id="step-info" class="step-info"></div>
+</div>
 <script>
 class RSKVisualization {
     constructor() {
