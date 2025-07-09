@@ -38,12 +38,12 @@ nav_weight: 19
 </div>
 
 <!-- Category buttons -->
-<div id="sim-cat-buttons" class="d-flex flex-wrap gap-2 mb-4">
+<div id="sim-cat-buttons" class="d-flex flex-wrap gap-3 mb-4">
   <button type="button"
-          class="btn btn-outline-primary category-btn active"
+          class="btn btn-sm category-btn active"
           data-category="all">
     All
-  </button>
+  </button>&nbsp;&nbsp;
   {% assign categories = "
         domino-tilings:Dominos,
         random-matrices:Random Matrices,
@@ -56,10 +56,10 @@ nav_weight: 19
     {% assign slug = p[0] | strip %}
     {% assign name = p[1] | strip %}
     <button type="button"
-            class="btn btn-outline-primary category-btn"
+            class="btn btn-sm category-btn"
             data-category="{{ slug }}">
       {{ name }}
-    </button>
+    </button>&nbsp;&nbsp;
   {% endfor %}
 </div>
 
@@ -104,23 +104,59 @@ nav_weight: 19
 {% include dear_colleagues.md %}
 
 <style>
+/* Category filter buttons */
+.category-btn {
+  color: #232D4B; /* UVA Blue */
+  background-color: transparent;
+  border: 1px solid #232D4B;
+  padding: 0.375rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 2rem;
+  transition: all 0.2s ease;
+}
+
+.category-btn:hover {
+  color: #fff;
+  background-color: #232D4B;
+  border-color: #232D4B;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(35, 45, 75, 0.15);
+}
+
 .category-btn.active {
   color: #fff;
   background-color: #232D4B; /* UVA Blue */
   border-color: #232D4B;
+  box-shadow: 0 2px 4px rgba(35, 45, 75, 0.15);
 }
 
+/* Model type badges */
 .badge-outline-uva {
   color: #232D4B; /* UVA Blue */
   background-color: transparent;
   border: 1px solid #232D4B;
   font-weight: normal;
   padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
 }
 
 .badge-outline-uva:hover {
   color: #fff;
   background-color: #232D4B;
+  transform: translateY(-1px);
+}
+
+/* Responsive spacing for small screens */
+@media (max-width: 576px) {
+  #sim-cat-buttons {
+    gap: 0.5rem !important;
+  }
+  .category-btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+  }
 }
 </style>
 
