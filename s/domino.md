@@ -428,6 +428,8 @@ permalink: /domino/
   <div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 </div>
 
+{%include dear_colleagues.md%}
+
 <script>
 // Initialize display settings on document load
 document.addEventListener('DOMContentLoaded', function() {
@@ -461,7 +463,7 @@ Module.onRuntimeInitialized = async function() {
     'simulateAztecHorizontal', 'number',
     ['number','number','number','number','number','number',
      'number','number','number','number'], {async:true});
-  
+
   const simulateAztecVertical = Module.cwrap(
     'simulateAztecVertical', 'number',
     ['number','number','number','number','number','number',
@@ -1522,7 +1524,7 @@ Module.onRuntimeInitialized = async function() {
     const headers = ["x", "y", "width", "height", "color"];
     const csvContent = [
       headers.join(","),
-      ...cachedDominoes.map(domino => 
+      ...cachedDominoes.map(domino =>
         [domino.x, domino.y, domino.w, domino.h, domino.color].join(",")
       )
     ].join("\n");
@@ -1532,11 +1534,11 @@ Module.onRuntimeInitialized = async function() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    
+
     const n = document.getElementById("n-input").value;
     const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     link.download = `domino_tiling_n${n}_${periodicity}_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1557,7 +1559,7 @@ Module.onRuntimeInitialized = async function() {
       try {
         const csvContent = e.target.result;
         const lines = csvContent.split("\n").filter(line => line.trim());
-        
+
         if (lines.length < 2) {
           alert("Invalid CSV file: no data found.");
           return;
@@ -1566,7 +1568,7 @@ Module.onRuntimeInitialized = async function() {
         // Parse header
         const headers = lines[0].split(",").map(h => h.trim());
         const expectedHeaders = ["x", "y", "width", "height", "color"];
-        
+
         if (!expectedHeaders.every(h => headers.includes(h))) {
           alert("Invalid CSV format. Expected headers: " + expectedHeaders.join(", "));
           return;
@@ -1604,15 +1606,15 @@ Module.onRuntimeInitialized = async function() {
 
         // Update cached dominoes and refresh visualization
         cachedDominoes = newDominoes;
-        
+
         // Stop any running simulation
         stopSimulation();
-        
+
         // Update visualization using existing cached data
         updateVisualizationFromCache();
 
         alert(`Successfully loaded ${newDominoes.length} dominoes from CSV file.`);
-        
+
       } catch (error) {
         alert("Error parsing CSV file: " + error.message);
       }
@@ -3538,63 +3540,63 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("download-png-btn").addEventListener("click", function() {
     // Get the SVG element
     const svg = document.getElementById("aztec-svg-2d");
-    
+
     // Check if SVG has content (dominoes have been drawn)
     if (!svg || !cachedDominoes || cachedDominoes.length === 0) {
       alert("Please sample a domino tiling first by clicking the 'Sample' button.");
       return;
     }
-    
+
     // Get current parameters for filename
     const n = parseInt(document.getElementById("n-input").value) || 12;
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-    
+
     // Create filename with parameters
     const filename = `aztec_diamond_2d_n${n}_${periodicity}.png`;
-    
+
     // Clone the SVG to avoid modifying the original
     const svgClone = svg.cloneNode(true);
-    
+
     // Get the SVG's computed dimensions
     const svgRect = svg.getBoundingClientRect();
     const width = svgRect.width || 800;
     const height = svgRect.height || 600;
-    
+
     // Set explicit dimensions on the cloned SVG
     svgClone.setAttribute('width', width);
     svgClone.setAttribute('height', height);
-    
+
     // Ensure the SVG has proper namespace
     if (!svgClone.getAttribute('xmlns')) {
       svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     }
-    
+
     // Create a canvas element with maximum resolution for best quality
     const canvas = document.createElement('canvas');
     const scale = 4; // 4x resolution for maximum quality
     canvas.width = width * scale;
     canvas.height = height * scale;
     const ctx = canvas.getContext('2d');
-    
+
     // Enable high-quality rendering
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.scale(scale, scale);
-    
+
     // Convert SVG to data URL with proper encoding
     const svgData = new XMLSerializer().serializeToString(svgClone);
     const encodedSvgData = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-    
+
     // Create an image and load the SVG
     const img = new Image();
     img.onload = function() {
       // Fill with white background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, width, height);
-      
+
       // Draw the SVG image
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       // Convert canvas to PNG with maximum quality (no compression)
       canvas.toBlob(function(blob) {
         if (blob) {
@@ -3610,11 +3612,11 @@ Module.onRuntimeInitialized = async function() {
         }
       }, 'image/png', 1.0); // Maximum quality (no compression)
     };
-    
+
     img.onerror = function() {
       alert('Error loading SVG for conversion');
     };
-    
+
     img.src = encodedSvgData;
   });
 
@@ -3629,13 +3631,13 @@ Module.onRuntimeInitialized = async function() {
     // Get current parameters for filename
     const n = parseInt(document.getElementById("n-input").value) || 12;
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-    
+
     // Create filename with parameters
     const filename = `aztec_diamond_3d_n${n}_${periodicity}.png`;
 
     // Render the current frame
     renderer.render(scene, camera);
-    
+
     // Get the canvas and convert to blob
     const canvas = renderer.domElement;
     canvas.toBlob(function(blob) {

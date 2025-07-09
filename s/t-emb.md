@@ -124,6 +124,9 @@ permalink: /t-emb/
   <button id="tikz-btn" style="padding: 8px 16px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 16px;">Export TikZ</button>
 </div>
 
+<br>
+{%include dear_colleagues.md%}
+
 <!-- TikZ Code Generation Section (hidden by default) -->
 <div id="tikz-container" style="margin-top: 15px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9; display: none;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
