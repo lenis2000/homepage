@@ -17,10 +17,6 @@ nav_weight: 19
 {%include sims.html%}
 
 
-
-<hr>
-
-
 <!-- Search bar -->
 <div id="sim-search-group" class="input-group mb-4">
   <span class="input-group-text" id="sim-search-label">
