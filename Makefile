@@ -12,7 +12,7 @@ invalidate:
 deploy:
 	@echo "Committing changes..."
 	@git add -A
-	@git commit || echo "No changes to commit"
+	@git commit --verbose --signoff || echo "No changes to commit"
 	@echo "Pushing to remote..."
 	@git push
 	@echo "Creating CloudFront invalidations..."
