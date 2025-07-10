@@ -327,7 +327,7 @@ char* simulateAztecWithRegime(int n, int regime, double param1, double param2, d
         // Apply 1-periodic pattern: weights depend on (i+j) % 2
         for (int i = 0; i < dim; i++) {
             for (int j = 0; j < dim; j++) {
-                if ((i + j) % 2 == 0) {
+                if ((i + j) % 2 == 0 && i % 2 == 0) {
                     // Use the random variable for position i/2
                     A1a.at(i, j) = random_variables[i / 2];
                 } else {
