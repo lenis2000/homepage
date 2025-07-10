@@ -243,11 +243,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (extendedSearch) {
                 extendedSearchToggle.classList.remove('btn-outline-info');
                 extendedSearchToggle.classList.add('btn-info');
-                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended Search (ON)';
+                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended (ON)';
             } else {
                 extendedSearchToggle.classList.remove('btn-info');
                 extendedSearchToggle.classList.add('btn-outline-info');
-                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended Search (includes abstracts)';
+                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended';
             }
         }
     }
