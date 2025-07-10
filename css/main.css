@@ -32,6 +32,55 @@
   --code-bg: #2d2d2d;
 }
 
+/* Search highlighting */
+.search-highlight {
+  background-color: yellow;
+  padding: 0;
+  margin: 0;
+}
+
+[data-theme="dark"] .search-highlight {
+  background-color: #ffd700;
+  color: #000000;
+}
+
+/* Mobile optimizations for search */
+@media (max-width: 768px) {
+  #research-search-group {
+    flex-direction: column;
+  }
+  
+  #research-search-group .form-control {
+    margin-bottom: 0.5rem;
+  }
+  
+  #research-search-group .btn {
+    width: 100%;
+  }
+  
+  #research-extended-search-toggle,
+  #research-recent-filter {
+    margin-bottom: 0.5rem;
+    margin-left: 0 !important;
+  }
+  
+  #research-cat-buttons .col-auto {
+    flex: 1;
+    margin-bottom: 0.25rem;
+  }
+  
+  #research-cat-buttons .btn {
+    width: 100%;
+    font-size: 0.875rem;
+  }
+  
+  /* Ensure minimum touch target size */
+  .btn-sm {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+  }
+}
+
 html {
   -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;

@@ -3,15 +3,73 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchClear = document.getElementById('research-search-clear');
     const categoryButtons = document.getElementById('research-cat-buttons');
     const extendedSearchToggle = document.getElementById('research-extended-search-toggle');
+    const recentFilter = document.getElementById('research-recent-filter');
     const researchLists = document.querySelectorAll('.research-list');
     
     let activeCategory = 'all';
     let extendedSearch = false;
+    let recentOnly = false;
+
+    // Highlight matching text
+    function highlightText(element, searchTerm) {
+        if (!searchTerm) return;
+        
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+        
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+        
+        textNodes.forEach(textNode => {
+            const parent = textNode.parentNode;
+            if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE') return;
+            
+            const text = textNode.textContent;
+            let regex;
+            
+            // Smart case matching for highlighting
+            if (searchTerm !== searchTerm.toLowerCase()) {
+                // Case sensitive
+                regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+            } else {
+                // Case insensitive
+                regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            }
+            
+            if (regex.test(text)) {
+                const highlightedText = text.replace(regex, '<mark class="search-highlight">$1</mark>');
+                const span = document.createElement('span');
+                span.innerHTML = highlightedText;
+                parent.replaceChild(span, textNode);
+            }
+        });
+    }
+
+    // Remove highlighting
+    function removeHighlighting() {
+        const highlights = document.querySelectorAll('.search-highlight');
+        highlights.forEach(highlight => {
+            const parent = highlight.parentNode;
+            parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+            parent.normalize();
+        });
+    }
 
     // Filter function
     function filterResearch() {
         const searchTerm = searchInput.value.toLowerCase();
+        const originalSearchTerm = searchInput.value;
         let visibleCount = 0;
+
+        // Remove previous highlighting
+        removeHighlighting();
 
         // Track which sections have visible items
         const sectionVisibility = {};
@@ -22,28 +80,53 @@ document.addEventListener('DOMContentLoaded', function() {
             
             items.forEach(item => {
                 const category = item.dataset.category || 'all';
+                const year = parseInt(item.dataset.year) || 0;
                 
                 let matchesSearch = false;
                 if (searchTerm === '') {
                     matchesSearch = true;
                 } else {
                     if (extendedSearch) {
-                        // Extended search: search all text content
-                        const textContent = item.textContent.toLowerCase();
-                        matchesSearch = textContent.includes(searchTerm);
+                        // Extended search: search all text content with smart case
+                        const textContent = item.textContent;
+                        
+                        if (originalSearchTerm !== originalSearchTerm.toLowerCase()) {
+                            // Contains uppercase letters - case sensitive search
+                            matchesSearch = textContent.includes(originalSearchTerm);
+                        } else {
+                            // All lowercase - case insensitive search
+                            matchesSearch = textContent.toLowerCase().includes(searchTerm);
+                        }
                     } else {
                         // Basic search: search only basic fields (paper number, title, authors)
                         const basicFields = item.dataset.basicSearch || '';
-                        matchesSearch = basicFields.toLowerCase().includes(searchTerm);
+                        
+                        // Smart case matching
+                        if (originalSearchTerm !== originalSearchTerm.toLowerCase()) {
+                            // Contains uppercase letters - case sensitive search
+                            matchesSearch = basicFields.includes(originalSearchTerm);
+                        } else {
+                            // All lowercase - case insensitive search
+                            matchesSearch = basicFields.toLowerCase().includes(searchTerm);
+                        }
                     }
                 }
                 
                 const matchesCategory = activeCategory === 'all' || category === activeCategory;
                 
-                if (matchesSearch && matchesCategory) {
+                // Dynamic recent filter (current year + 3 years back)
+                const currentYear = new Date().getFullYear();
+                const matchesRecent = !recentOnly || (year >= currentYear - 3 && year <= currentYear);
+                
+                if (matchesSearch && matchesCategory && matchesRecent) {
                     item.style.display = '';
                     visibleCount++;
                     sectionHasVisibleItems = true;
+                    
+                    // Highlight matching text in visible items
+                    if (searchTerm !== '') {
+                        highlightText(item, originalSearchTerm);
+                    }
                 } else {
                     item.style.display = 'none';
                 }
@@ -90,9 +173,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function clearSearch() {
         searchInput.value = '';
         activeCategory = 'all';
+        recentOnly = false;
         updateCategoryButtons();
+        updateRecentFilter();
+        removeHighlighting();
         filterResearch();
         searchInput.focus();
+        
+        // Remove hash from URL
+        if (window.location.hash) {
+            history.replaceState(null, null, window.location.pathname + window.location.search);
+        }
         
         // Collapse all details tags
         const detailsElements = document.querySelectorAll('details');
@@ -131,6 +222,28 @@ document.addEventListener('DOMContentLoaded', function() {
         filterResearch();
     }
 
+    // Toggle recent filter
+    function toggleRecentFilter() {
+        recentOnly = !recentOnly;
+        updateRecentFilter();
+        filterResearch();
+    }
+
+    // Update recent filter button state
+    function updateRecentFilter() {
+        if (recentFilter) {
+            if (recentOnly) {
+                recentFilter.classList.remove('btn-outline-success');
+                recentFilter.classList.add('btn-success');
+                recentFilter.innerHTML = '<i class="bi bi-clock-history"></i> Recent (ON)';
+            } else {
+                recentFilter.classList.remove('btn-success');
+                recentFilter.classList.add('btn-outline-success');
+                recentFilter.innerHTML = '<i class="bi bi-clock-history"></i> Recent';
+            }
+        }
+    }
+
     // Event listeners
     if (searchInput) {
         searchInput.addEventListener('input', filterResearch);
@@ -143,6 +256,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (extendedSearchToggle) {
         extendedSearchToggle.addEventListener('click', toggleExtendedSearch);
+    }
+
+    if (recentFilter) {
+        recentFilter.addEventListener('click', toggleRecentFilter);
     }
 
     // ESC key to clear

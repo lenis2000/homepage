@@ -11,19 +11,20 @@ nav_weight: 2
     
     <!-- Search Bar -->
     <div id="research-search-group" class="input-group mb-3">
-      <span class="input-group-text" id="research-search-label">
-        <i class="bi bi-search"></i>
-      </span>
-      <input type="text" id="research-search-input" class="form-control" placeholder="Type to search research papers… (Press Esc to clear)" aria-label="Search research" aria-describedby="research-search-label">
+      <input type="text" id="research-search-input" class="form-control" placeholder="Type to search research papers… (Press Esc to clear)" aria-label="Search research">
       <button class="btn btn-outline-secondary" type="button" id="research-search-clear">Clear</button>
     </div>
     
-    <!-- Extended Search Toggle -->
+    <!-- Search Options -->
     <div class="mb-3">
       <button class="btn btn-sm btn-outline-info" type="button" id="research-extended-search-toggle">
         <i class="bi bi-search-plus"></i> Extended Search (includes abstracts)
       </button>
-      <small class="text-muted ms-2">By default, search covers paper number, title, and authors only</small>
+      <button class="btn btn-sm btn-outline-success ms-2" type="button" id="research-recent-filter">
+        <i class="bi bi-clock-history"></i> Recent
+      </button>
+      <br>
+      <small class="text-muted">By default, search covers paper number, title, authors, and journal only</small>
     </div>
     
     <!-- Category Buttons -->
@@ -39,7 +40,7 @@ nav_weight: 2
     {% if post.categories contains "preprint" %}
 
 
-      <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px" data-category="preprint" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}">
+      <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px" data-category="preprint" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}" data-year="{{post.date | date: '%Y'}}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
@@ -72,7 +73,7 @@ nav_weight: 2
     {% if post.categories contains "paper" %}
 
 
-      <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="published" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}">
+      <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="published" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.journal-ref}}" data-year="{{post.date | date: '%Y'}}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
@@ -106,7 +107,7 @@ nav_weight: 2
       {% for post in site.posts %}
       {% if post.categories contains "erratum" %}
 
-        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="erratum" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}">
+        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="erratum" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.journal-ref}}" data-year="{{post.date | date: '%Y'}}">
           {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
           <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
           {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
@@ -171,7 +172,7 @@ nav_weight: 2
     {% if post.categories contains "talk" %}
 
 
-      <li class="mb-1" style="padding:6px" data-category="talk" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}}">
+      <li class="mb-1" style="padding:6px" data-category="talk" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}}" data-year="{{post.date | date: '%Y'}}">
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}</a>
 
         {% unless post.no-abstract %}<details>
