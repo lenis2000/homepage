@@ -47,21 +47,25 @@
 /* Mobile optimizations for search */
 @media (max-width: 768px) {
   #research-search-group {
-    flex-direction: column;
+    flex-direction: row;
   }
   
   #research-search-group .form-control {
-    margin-bottom: 0.5rem;
+    flex: 1;
+    margin-bottom: 0;
   }
   
   #research-search-group .btn {
-    width: 100%;
+    flex-shrink: 0;
+    min-width: 60px;
   }
   
   #research-extended-search-toggle,
   #research-recent-filter {
     margin-bottom: 0.5rem;
     margin-left: 0 !important;
+    width: 100%;
+    max-width: 200px;
   }
   
   #research-cat-buttons {
