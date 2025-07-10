@@ -8,16 +8,38 @@ nav_weight: 2
 
 <div class="row row-offcanvas row-offcanvas-right">
   <div class="col-md-8">
+    
+    <!-- Search Bar -->
+    <div id="research-search-group" class="input-group mb-3">
+      <span class="input-group-text" id="research-search-label">
+        <i class="bi bi-search"></i>
+      </span>
+      <input type="text" id="research-search-input" class="form-control" placeholder="Type to search research papers… (Press Esc to clear)" aria-label="Search research" aria-describedby="research-search-label">
+      <button class="btn btn-outline-secondary" type="button" id="research-search-clear">Clear</button>
+    </div>
+    
+    <!-- Extended Search Toggle -->
+    <div class="mb-3">
+      <button class="btn btn-sm btn-outline-info" type="button" id="research-extended-search-toggle">
+        <i class="bi bi-search-plus"></i> Extended Search (includes abstracts)
+      </button>
+      <small class="text-muted ms-2">By default, search covers paper number, title, and authors only</small>
+    </div>
+    
+    <!-- Category Buttons -->
+    <div id="research-cat-buttons" class="row g-2 mb-4">
+      <!-- Categories will be dynamically generated -->
+    </div>
 
     <h1><a name="preprints">Preprints</a></h1>
     <hr />
 
-    <ol class="my-ul-zebra">
+    <ol class="my-ul-zebra research-list">
     {% for post in site.posts %}
     {% if post.categories contains "preprint" %}
 
 
-      <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px">
+      <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px" data-category="preprint" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
@@ -45,12 +67,12 @@ nav_weight: 2
     <h1  class="mt-4"><a name="published">Published or accepted</a> &bull; (<a href="{{ site.url }}/research/petrovCV.pdf">Full CV</a>)</h1>
     <hr />
 
-    <ol reversed class="my-ul-zebra">
+    <ol reversed class="my-ul-zebra research-list">
     {% for post in site.posts %}
     {% if post.categories contains "paper" %}
 
 
-      <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+      <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="published" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
@@ -80,11 +102,11 @@ nav_weight: 2
     <h1 class="mt-4"><a name="errata">Errata</a></h1>
     <hr />
 
-    <ol class="my-ul-zebra">
+    <ol class="my-ul-zebra research-list">
       {% for post in site.posts %}
       {% if post.categories contains "erratum" %}
 
-        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="erratum" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}">
           {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
           <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
           {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
@@ -112,9 +134,10 @@ nav_weight: 2
 
 
     <h1 class="mt-4">Other works</h1>
+    <hr />
 
-    <ol reversed class="my-ul-zebra">
-        <li class="mb-1" style="padding:6px">
+    <ol reversed class="my-ul-zebra research-list">
+        <li class="mb-1" style="padding:6px" data-category="other" data-title="myosin-viia multiple isoforms" data-basic-search="myosin-viia multiple isoforms Sihan Li Andrew Mecca Jeewoo Kim Giusy Caprara Elizabeth Wagner Ting-Ting Du Leonid Petrov Wenhao Xu Runjia Cui Ivan Rebustini Bechara Kachar Anthony Peng Jung-Bum Shin">
           Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
 	        <i>Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex</i>.
 	        <a href="https://www.nature.com/articles/s41467-020-15936-z">Nature Communications, 11, Article number: 2066 (2020)</a>. 15 pages.
@@ -125,11 +148,11 @@ nav_weight: 2
       <h1 class="mt-4"><a name="lecture-notes">Unpublished lecture notes</a></h1>
       <hr />
 
-      <ol class="my-ul-zebra">
+      <ol class="my-ul-zebra research-list">
         {% for post in site.posts %}
         {% if post.categories contains "unpublished-lecture-notes" %}
 
-          <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
+          <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="lecture-notes" data-title="{{post.link-description | downcase}}" data-basic-search="{{post.cv-number}} {{post.link-description}} {{post.link-text}}">
             <b>
               {{post.link-description}} &bull;
               <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
@@ -143,12 +166,12 @@ nav_weight: 2
     <h1 class="mt-4"><a name="slides">Slides of some talks</a></h1>
     <hr />
 
-    <ol reversed class="my-ul-zebra">
+    <ol reversed class="my-ul-zebra research-list">
     {% for post in site.posts %}
     {% if post.categories contains "talk" %}
 
 
-      <li class="mb-1" style="padding:6px">
+      <li class="mb-1" style="padding:6px" data-category="talk" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}}">
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}</a>
 
         {% unless post.no-abstract %}<details>
@@ -204,6 +227,8 @@ nav_weight: 2
 
 </div>
 
+<!-- Include search script -->
+<script src="{{ site.url }}/assets/js/research-search.js"></script>
 
 <script type="text/javascript">
   <!--
