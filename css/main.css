@@ -64,14 +64,14 @@
     margin-left: 0 !important;
   }
   
-  #research-cat-buttons .col-auto {
-    flex: 1;
-    margin-bottom: 0.25rem;
+  #research-cat-buttons {
+    justify-content: center;
   }
   
   #research-cat-buttons .btn {
-    width: 100%;
+    flex: 1;
     font-size: 0.875rem;
+    margin-bottom: 0.25rem;
   }
   
   /* Ensure minimum touch target size */
@@ -79,6 +79,58 @@
     min-height: 44px;
     padding: 0.5rem 1rem;
   }
+}
+
+/* Research page button styling with UVA colors */
+#research-extended-search-toggle {
+  border-color: #E57200;
+  color: #E57200;
+}
+
+#research-extended-search-toggle:hover {
+  background-color: #E57200;
+  border-color: #E57200;
+  color: white;
+}
+
+#research-extended-search-toggle.btn-info {
+  background-color: #E57200;
+  border-color: #E57200;
+  color: white;
+}
+
+#research-recent-filter {
+  border-color: #232D4B;
+  color: #232D4B;
+}
+
+#research-recent-filter:hover {
+  background-color: #232D4B;
+  border-color: #232D4B;
+  color: white;
+}
+
+#research-recent-filter.btn-success {
+  background-color: #232D4B;
+  border-color: #232D4B;
+  color: white;
+}
+
+.category-btn {
+  border-color: #232D4B;
+  color: #232D4B;
+}
+
+.category-btn:hover {
+  background-color: #232D4B;
+  border-color: #232D4B;
+  color: white;
+}
+
+.category-btn.active {
+  background-color: #E57200;
+  border-color: #E57200;
+  color: white;
 }
 
 html {

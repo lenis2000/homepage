@@ -235,11 +235,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (recentOnly) {
                 recentFilter.classList.remove('btn-outline-success');
                 recentFilter.classList.add('btn-success');
-                recentFilter.innerHTML = '<i class="bi bi-clock-history"></i> Recent (ON)';
+                recentFilter.innerHTML = 'Recent (ON)';
             } else {
                 recentFilter.classList.remove('btn-success');
                 recentFilter.classList.add('btn-outline-success');
-                recentFilter.innerHTML = '<i class="bi bi-clock-history"></i> Recent';
+                recentFilter.innerHTML = 'Recent';
             }
         }
     }
@@ -299,16 +299,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create category buttons
         categories.forEach(category => {
-            const col = document.createElement('div');
-            col.className = 'col-auto';
-            
             const btn = document.createElement('button');
             btn.className = 'btn btn-sm category-btn' + (category === 'all' ? ' active' : '');
             btn.dataset.category = category;
             btn.textContent = category.charAt(0).toUpperCase() + category.slice(1);
             
-            col.appendChild(btn);
-            categoryButtons.appendChild(col);
+            categoryButtons.appendChild(btn);
         });
     }
 
