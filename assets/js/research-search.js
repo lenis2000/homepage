@@ -174,8 +174,10 @@ document.addEventListener('DOMContentLoaded', function() {
         searchInput.value = '';
         activeCategory = 'all';
         recentOnly = false;
+        extendedSearch = false;
         updateCategoryButtons();
         updateRecentFilter();
+        updateExtendedSearchToggle();
         removeHighlighting();
         filterResearch();
         searchInput.focus();
@@ -207,16 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle extended search
     function toggleExtendedSearch() {
         extendedSearch = !extendedSearch;
-        
-        if (extendedSearch) {
-            extendedSearchToggle.classList.remove('btn-outline-info');
-            extendedSearchToggle.classList.add('btn-info');
-            extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended Search (ON)';
-        } else {
-            extendedSearchToggle.classList.remove('btn-info');
-            extendedSearchToggle.classList.add('btn-outline-info');
-            extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended Search (includes abstracts)';
-        }
+        updateExtendedSearchToggle();
         
         // Re-filter with new search mode
         filterResearch();
@@ -240,6 +233,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 recentFilter.classList.remove('btn-success');
                 recentFilter.classList.add('btn-outline-success');
                 recentFilter.innerHTML = 'Recent';
+            }
+        }
+    }
+
+    // Update extended search toggle button state
+    function updateExtendedSearchToggle() {
+        if (extendedSearchToggle) {
+            if (extendedSearch) {
+                extendedSearchToggle.classList.remove('btn-outline-info');
+                extendedSearchToggle.classList.add('btn-info');
+                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended Search (ON)';
+            } else {
+                extendedSearchToggle.classList.remove('btn-info');
+                extendedSearchToggle.classList.add('btn-outline-info');
+                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended Search (includes abstracts)';
             }
         }
     }
