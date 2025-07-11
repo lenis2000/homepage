@@ -1,5 +1,5 @@
 /*
-emcc 2025-06-08-q-vol-3d.cpp -o 2025-06-08-q-vol-3d.js \
+emcc 2025-07-11-q-racah.cpp -o 2025-07-11-q-racah.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_initializeTiling','_performSOperator','_performSMinusOperator','_exportPaths','_updateParameters','_freeString','_getProgress']" \
@@ -9,7 +9,7 @@ emcc 2025-06-08-q-vol-3d.cpp -o 2025-06-08-q-vol-3d.js \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
-  mv 2025-06-08-q-vol-3d.js ../../js/
+  mv 2025-07-11-q-racah.js ../../js/
 
 Features:
 - Lozenge tilings simulation (WASM/JS port of Vadim Gorin's program)
