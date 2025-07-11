@@ -4,7 +4,7 @@ title: "Domino Tilings of the Aztec Diamond in Random Environment and Schur Gene
 arXiv: 2507.XXXXX [math.PR]
 coauthors:
   - name: Alexey Bufetov
-    web: https://www.math.uni-leipzig.de/~bufetov/
+    web: https://sites.google.com/site/alexeybufetov/home
   - name: Leonid Petrov
   - name: Panagiotis Zografos
     noweb: true
