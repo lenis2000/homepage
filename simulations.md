@@ -20,7 +20,6 @@ nav_weight: 19
 <!-- Search bar -->
 <div id="sim-search-group" class="input-group mb-4">
   <span class="input-group-text" id="sim-search-label">
-    <i class="bi bi-search"></i>
   </span>
   <input type="text"
          id="sim-search-input"
