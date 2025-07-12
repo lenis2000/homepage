@@ -248,20 +248,30 @@ function sortBibliography() {
 // Example bibliography for testing
 const exampleBbl = `\\begin{thebibliography}{99}
 
-\\bibitem{Bob12}
-A. I. Bobenko and F. Schray.
-\\newblock Discrete conformal maps and ideal hyperbolic polyhedra.
-\\newblock \\emph{Geom. Topol.}, 19(4):2155--2215, 2015.
+\\bibitem{EinBoh1955}
+A. Einstein and N. Bohr.
+\\newblock Unified field theory and the proper way to organize one's sock drawer.
+\\newblock \\emph{Princeton Advanced Studies Quarterly}, 12(3):42--108, 1955.
 
-\\bibitem{DeTi06}
-B. de Tili�re.
-\\newblock Scaling limit of isoradial dimer models and the case of triangular quadri-tilings.
-\\newblock \\emph{Ann. Inst. Henri Poincar� Probab. Stat.}, 43(6):729--750, 2007.
+\\bibitem{EinMax1900}
+A. Einstein and M. Planck.
+\\newblock On blackbody radiation and why my office is always too cold.
+\\newblock \\emph{Ann. Physik}, 4(3):553--563, 1900.
 
-\\bibitem{AB03}
-M. Aissen and I. J. Benitez.
-\\newblock A generalization of the Schur function.
-\\newblock \\emph{J. Algebra}, 278(1):123--145, 2004.
+\\bibitem{Ein1905}
+A. Einstein.
+\\newblock On the electrodynamics of moving bodies, with special attention to my wild hair.
+\\newblock \\emph{Ann. Physik}, 17(10):891--921, 1905.
+
+\\bibitem{EinNewt1687}
+A. Einstein and I. Newton.
+\\newblock Principia mathematica: Now with 100% more relativity and significantly better notation.
+\\newblock \\emph{Philosophiae Naturalis Principia Mathematica (Revised Edition)}, Royal Society of London, 1687.
+
+\\bibitem{EinPod1935}
+A. Einstein and B. Podolsky.
+\\newblock Can quantum-mechanical description of physical reality be considered complete? Also, why is my hair like this?
+\\newblock \\emph{Phys. Rev.}, 47(10):777--780, 1935.
 
 \\end{thebibliography}`;
 
