@@ -2,157 +2,109 @@
 title: Bibliography (.bbl) Sorting Tool
 model: misc
 author: Leo Petrov
+layout: sim_page
 code:
   - link: https://github.com/leopteryxin/Homepage/blob/master/_simulations/misc/2025-07-12-bbl_sorting_tool.md
     txt: Interactive bibliography sorting tool for LaTeX .bbl files
 ---
 
 <style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    background: #f5f5f5;
-    margin: 0;
-    padding: 20px;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-h1 {
-    color: #2c3e50;
-    margin-bottom: 10px;
-}
-
-.description {
-    color: #666;
-    margin-bottom: 30px;
-}
-
-.input-section, .output-section {
-    margin-bottom: 30px;
-}
-
-.section-title {
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #34495e;
-}
-
-textarea {
+.bbl-tool textarea {
     width: 100%;
-    min-height: 300px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 14px;
+    min-height: 280px;
+    padding: 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
     resize: vertical;
+    transition: border-color 0.2s ease;
+    background: #fafbfc;
     box-sizing: border-box;
 }
 
-textarea:focus {
+.bbl-tool textarea:focus {
     outline: none;
     border-color: #3498db;
+    background: white;
 }
 
-.button-group {
+.bbl-tool .button-group {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin: 25px 0;
+    flex-wrap: wrap;
 }
 
-button {
-    padding: 10px 20px;
-    background: #3498db;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.bbl-tool .stats {
+    color: #6c757d;
+    font-size: 13px;
+    margin-top: 8px;
+    font-weight: 500;
 }
 
-button:hover {
-    background: #2980b9;
-}
-
-button:active {
-    transform: translateY(1px);
-}
-
-.secondary-button {
-    background: #95a5a6;
-}
-
-.secondary-button:hover {
-    background: #7f8c8d;
-}
-
-.stats {
-    color: #666;
-    font-size: 14px;
-    margin-top: 10px;
-}
-
-.example-link {
-    color: #3498db;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.example-link:hover {
-    text-decoration: underline;
-}
-
-.error {
+.bbl-tool .error {
     color: #e74c3c;
-    margin-top: 10px;
+    margin: 15px 0;
+    padding: 12px 16px;
+    background: #fdf2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    font-weight: 500;
 }
 
-.success {
+.bbl-tool .success {
     color: #27ae60;
-    margin-top: 10px;
+    margin: 15px 0;
+    padding: 12px 16px;
+    background: #f0f9f4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    font-weight: 500;
 }
 
-#outputArea {
+.bbl-tool #outputArea {
     background: #f8f9fa;
+}
+
+.bbl-tool section {
+    margin-bottom: 30px;
+}
+
+.bbl-tool .section-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #2c3e50;
+    font-size: 1.1em;
 }
 </style>
 
-<div class="container">
-    <h1>Bibliography (.bbl) Sorting Tool</h1>
-    <p class="description">
+<div class="bbl-tool">
+    <p class="lead">
         This tool sorts entries alphabetically by author names, and—for identical author lists—chronologically from oldest to newest.
         It handles complex author formats including initials, surname prefixes (de, von, van), and multiple authors.
     </p>
 
-    <div class="input-section">
+    <section>
         <div class="section-title">Input (.bbl file content)</div>
         <textarea id="inputArea" placeholder="Paste your .bbl file content here..."></textarea>
         <div class="stats" id="inputStats"></div>
-    </div>
+    </section>
 
     <div class="button-group">
-        <button onclick="sortBibliography()">Sort Bibliography</button>
-        <button class="secondary-button" onclick="clearAll()">Clear All</button>
-        <button class="secondary-button" onclick="loadExample()">Load Example</button>
+        <button class="btn btn-primary" onclick="sortBibliography()">Sort Bibliography</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+        <button class="btn btn-secondary" onclick="loadExample()">Load Example</button>
     </div>
 
     <div id="message"></div>
 
-    <div class="output-section">
+    <section>
         <div class="section-title">Sorted Output</div>
         <textarea id="outputArea" placeholder="Sorted bibliography will appear here..." readonly></textarea>
         <div class="stats" id="outputStats"></div>
-    </div>
+    </section>
 </div>
 
 <script>
