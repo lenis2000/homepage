@@ -4,7 +4,7 @@ model: misc
 author: Leo Petrov
 layout: sim_page
 code:
-  - link: https://github.com/leopteryxin/Homepage/blob/master/_simulations/misc/2025-07-12-bbl_sorting_tool.md
+  - link: https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-07-12-bbl_sorting_tool.md
     txt: Interactive bibliography sorting tool for LaTeX .bbl files
 ---
 
@@ -190,13 +190,13 @@ function sortBibliography() {
         document.getElementById('message').innerHTML = '<div class="error">Please enter bibliography content to sort.</div>';
         return;
     }
-    
+
     const lines = input.split(/\r?\n/);
     const header = [];
     const entries = [];
     let curr = null;
     let footer = '';
-    
+
     let inHeader = true;
     for (const line of lines) {
         if (line.trim().startsWith('\\begin{thebibliography}')) {
@@ -220,7 +220,7 @@ function sortBibliography() {
         }
     }
     if (curr) entries.push(curr);
-    
+
     entries.sort((a, b) => {
         const ka = entryKey(a);
         const kb = entryKey(b);
@@ -231,14 +231,14 @@ function sortBibliography() {
         const yb = extractYear(b);
         return ya - yb;
     });
-    
+
     const outLines = [
         ...header,
         ...entries.flatMap(e => [...e, '']),
         footer,
         ''
     ];
-    
+
     const output = outLines.join('\n');
     document.getElementById('outputArea').value = output;
     document.getElementById('message').innerHTML = '<div class="success">Bibliography sorted successfully!</div>';
@@ -280,10 +280,10 @@ function clearAll() {
 function updateStats() {
     const input = document.getElementById('inputArea').value;
     const output = document.getElementById('outputArea').value;
-    
+
     const inputEntries = (input.match(/\\\\bibitem/g) || []).length;
     document.getElementById('inputStats').textContent = inputEntries ? `${inputEntries} entries` : '';
-    
+
     const outputEntries = (output.match(/\\\\bibitem/g) || []).length;
     document.getElementById('outputStats').textContent = outputEntries ? `${outputEntries} entries sorted` : '';
 }
