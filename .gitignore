@@ -80,3 +80,5 @@ rmt25/S25-rmt-lecture-notes/S25-rmt-lecture-notes.txt
 *.bbl
 *.blg
 tilings-web
+
+sort_bibliography.py
