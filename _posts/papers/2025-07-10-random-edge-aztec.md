@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Domino Tilings of the Aztec Diamond in Random Environment and Schur Generating Functions"
-arXiv: 2507.XXXXX [math.PR]
+arXiv: 2507.08560 [math.PR]
 coauthors:
   - name: Alexey Bufetov
     web: https://sites.google.com/site/alexeybufetov/home
