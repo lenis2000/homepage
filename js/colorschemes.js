@@ -11,7 +11,7 @@
 
 const ColorSchemes = [
     { name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF'] },
-    { name: 'Albina', colors: ['#569F28', '#F3BE59', '#D37766'] },
+    { name: 'Albina', colors: ['#47a290', '#ee5a4e', '#f7b948'] },
     { name: 'No Colors', colors: ['#FFFFFF', '#FFFFFF', '#FFFFFF'] },
     { name: 'Ocean Breeze', colors: ['#2E86AB', '#A23B72', '#F18F01'] },
     { name: 'Forest Calm', colors: ['#355E3B', '#8FBC8F', '#F5F5DC'] },
