@@ -2,7 +2,7 @@
 emcc 2025-06-08-q-vol-3d.cpp -o 2025-06-08-q-vol-3d.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_initializeTiling','_performSOperator','_performSMinusOperator','_exportPaths','_updateParameters','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_initializeTiling','_performSOperator','_performSMinusOperator','_exportPaths','_updateParameters','_setImaginaryQ','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=32MB \
@@ -659,7 +659,11 @@ char* initializeTiling(int n, int t, int s, int mode, double q) {
         T_param = t;
         S_param = s;
         current_mode = static_cast<TilingMode>(mode);
-        q_param = q;
+        
+        // Only set q_param if not in imaginary mode (where it's already set)
+        if (mode != 7) {
+            q_param = q;
+        }
 
         // Resize paths array
         paths.resize(N_param);
@@ -786,6 +790,13 @@ char* exportPaths() {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void setImaginaryQ(double imaginary_q) {
+    if (imaginary_q > 0 && imaginary_q <= 1) {
+        q_param = imaginary_q;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
 char* updateParameters(int mode, double q) {
     try {
         progressCounter = 0;
@@ -801,20 +812,26 @@ char* updateParameters(int mode, double q) {
         // Handle imaginary q-Racah mode
         if (mode == 7) {
             imaginary_q_racah_mode = true;
-            // For imaginary mode, we need to decode q and kappasq from the q parameter
-            // For now, q parameter is passed as -kappasq, and we use default q=0.5
+            // For imaginary mode, q parameter is passed as negative kappasq
             if (q >= 0.0) {
                 throw std::invalid_argument("Expected negative q (encoded kappasq) for IMAGINARY_Q_RACAH mode");
             }
             kappasq = -q; // Extract kappasq from negative q
             kappa_over_i = std::sqrt(kappasq); // kappa/i = sqrt(kappasq)
-            q_param = 0.5; // Use default q for imaginary mode
+            // Keep the existing q_param value or use default if not set
+            if (q_param <= 0 || q_param > 1) {
+                q_param = 0.5; // Default q for imaginary mode
+            }
         } else {
             imaginary_q_racah_mode = false;
         }
         
         current_mode = static_cast<TilingMode>(mode);
-        q_param = q;
+        
+        // Only set q_param if not in imaginary mode (where it's already set)
+        if (mode != 7) {
+            q_param = q;
+        }
         
         progressCounter = 100;
         
