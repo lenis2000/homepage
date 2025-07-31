@@ -40,7 +40,8 @@ static std::mt19937 rng(std::random_device{}());
 // Enum for tiling modes
 enum class TilingMode {
     Q_HAHN = 5,
-    HAHN = 6
+    HAHN = 6,
+    IMAGINARY_Q_RACAH = 7
 };
 
 // Global parameters
@@ -49,6 +50,9 @@ int T_param = 10;     // Time horizon
 int S_param = 0;      // Current S value
 TilingMode current_mode = TilingMode::HAHN;
 double q_param = 0.5; // q parameter for Q_HAHN mode
+bool imaginary_q_racah_mode = false; // Flag for imaginary q-Racah mode
+double kappa_over_i = 3.0; // kappa/i parameter for imaginary mode
+double kappasq = 9.0; // kappasq = (kappa/i)^2 for imaginary mode
 
 // Paths array: paths[i][t] = position of path i at time t
 std::vector<std::vector<int>> paths;
@@ -212,6 +216,116 @@ void calculateProbabilitiesSplus(std::vector<double>& p, int k_start, int j_end,
             }
             break;
         }
+        case TilingMode::IMAGINARY_Q_RACAH: {
+            // Imaginary q-Racah polynomials case - based on python_tilings.py _get_s_plus_term
+            double K_val = static_cast<double>(T_param - tc - S_param);
+            
+            if (K_val < 1.0) {
+                // Forward iteration case
+                p[0] = 1.0;
+                for (int i = 1; i <= j_end - k_start + 1; i++) {
+                    double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                    
+                    // Base q-polynomial term
+                    double term;
+                    if (q_param < 1.0) {
+                        term = q_param * (1.0 - std::pow(q_param, K_val + x)) / (1.0 - std::pow(q_param, x + 1.0));
+                    } else { // q_param >= 1.0
+                        term = (1.0 - std::pow(q_param, -(K_val + x))) / (1.0 - std::pow(q_param, -(x + 1.0)));
+                        if (kappasq == 0.0) {
+                            term *= std::pow(q_param, K_val);
+                        }
+                    }
+                    
+                    // Add kappa-dependent factors if kappasq != 0
+                    if (std::abs(kappasq) > 1e-12) {
+                        // First kappa-dependent factor
+                        double factor1_num, factor1_den;
+                        if ((-x + T_param - 1) > 0) {
+                            factor1_num = 1.0 + kappasq * std::pow(q_param, -x + S_param + tc);
+                            factor1_den = 1.0 + kappasq * std::pow(q_param, -x + T_param - 1);
+                        } else {
+                            factor1_num = std::pow(q_param, x - T_param + 1) + kappasq * std::pow(q_param, S_param + tc - T_param + 1);
+                            factor1_den = std::pow(q_param, x - T_param + 1) + kappasq;
+                        }
+                        if (std::abs(factor1_den) > 1e-100) {
+                            term *= factor1_num / factor1_den;
+                        }
+                        
+                        // Second kappa-dependent factor
+                        double factor2_num, factor2_den;
+                        if ((-2 * x + tc + S_param - 2) > 0) {
+                            factor2_num = 1.0 + kappasq * std::pow(q_param, -2 * x + tc + S_param - 2);
+                            factor2_den = 1.0 + kappasq * std::pow(q_param, -2 * x + tc + S_param);
+                        } else {
+                            factor2_num = std::pow(q_param, 2 * x - tc - S_param + 2) + kappasq;
+                            factor2_den = std::pow(q_param, 2 * x - tc - S_param + 2) + kappasq * q_param * q_param;
+                        }
+                        if (std::abs(factor2_den) > 1e-100) {
+                            term *= factor2_num / factor2_den;
+                        }
+                    }
+                    
+                    if (std::isfinite(term) && term > 0) {
+                        p[i] = p[i-1] * term;
+                    } else {
+                        p[i] = 0.0;
+                    }
+                }
+            } else {
+                // Backward iteration case - compute terms in reverse
+                p[j_end - k_start + 1] = 1.0;
+                for (int i = 0; i < j_end - k_start + 1; i++) {
+                    double x = static_cast<double>(paths[j_end - i][tc]);
+                    
+                    // Compute forward term and invert it
+                    double term;
+                    if (q_param < 1.0) {
+                        term = q_param * (1.0 - std::pow(q_param, K_val + x)) / (1.0 - std::pow(q_param, x + 1.0));
+                    } else {
+                        term = (1.0 - std::pow(q_param, -(K_val + x))) / (1.0 - std::pow(q_param, -(x + 1.0)));
+                        if (kappasq == 0.0) {
+                            term *= std::pow(q_param, K_val);
+                        }
+                    }
+                    
+                    // Add kappa factors (same as forward)
+                    if (std::abs(kappasq) > 1e-12) {
+                        double factor1_num, factor1_den;
+                        if ((-x + T_param - 1) > 0) {
+                            factor1_num = 1.0 + kappasq * std::pow(q_param, -x + S_param + tc);
+                            factor1_den = 1.0 + kappasq * std::pow(q_param, -x + T_param - 1);
+                        } else {
+                            factor1_num = std::pow(q_param, x - T_param + 1) + kappasq * std::pow(q_param, S_param + tc - T_param + 1);
+                            factor1_den = std::pow(q_param, x - T_param + 1) + kappasq;
+                        }
+                        if (std::abs(factor1_den) > 1e-100) {
+                            term *= factor1_num / factor1_den;
+                        }
+                        
+                        double factor2_num, factor2_den;
+                        if ((-2 * x + tc + S_param - 2) > 0) {
+                            factor2_num = 1.0 + kappasq * std::pow(q_param, -2 * x + tc + S_param - 2);
+                            factor2_den = 1.0 + kappasq * std::pow(q_param, -2 * x + tc + S_param);
+                        } else {
+                            factor2_num = std::pow(q_param, 2 * x - tc - S_param + 2) + kappasq;
+                            factor2_den = std::pow(q_param, 2 * x - tc - S_param + 2) + kappasq * q_param * q_param;
+                        }
+                        if (std::abs(factor2_den) > 1e-100) {
+                            term *= factor2_num / factor2_den;
+                        }
+                    }
+                    
+                    // Invert the term for backward iteration
+                    if (std::isfinite(term) && std::abs(term) > 1e-12) {
+                        p[j_end - k_start - i] = p[j_end - k_start + 1 - i] / term;
+                    } else {
+                        p[j_end - k_start - i] = 0.0;
+                    }
+                }
+            }
+            break;
+        }
     }
 }
 
@@ -350,6 +464,11 @@ void sMinusOperator() {
 
 // Calculate probabilities for S-minus operator
 void calculateProbabilitiesSminus(std::vector<double>& p, int k_start, int j_end, int tc) {
+    // S-minus operator is disabled in imaginary q-Racah mode
+    if (imaginary_q_racah_mode) {
+        throw std::runtime_error("S-minus operator is disabled in imaginary q-Racah mode");
+    }
+    
     switch (current_mode) {
         case TilingMode::HAHN: {
             if (tc < S_param) {
@@ -513,12 +632,27 @@ char* initializeTiling(int n, int t, int s, int mode, double q) {
         progressCounter = 0;
         
         // Validate parameters
-        if (n < 1 || t < 1 || s < 0 || s > t || mode < 5 || mode > 6) {
+        if (n < 1 || t < 1 || s < 0 || s > t || mode < 5 || mode > 7) {
             throw std::invalid_argument("Invalid parameters");
         }
         
         if (mode == 5 && q <= 0.0) {
-            throw std::invalid_argument("q must be positive");
+            throw std::invalid_argument("q must be positive for Q_HAHN mode");
+        }
+        
+        // Handle imaginary q-Racah mode
+        if (mode == 7) {
+            imaginary_q_racah_mode = true;
+            // For imaginary mode, we need to decode q and kappasq from the q parameter
+            // For now, q parameter is passed as -kappasq, and we use default q=0.5
+            if (q >= 0.0) {
+                throw std::invalid_argument("Expected negative q (encoded kappasq) for IMAGINARY_Q_RACAH mode");
+            }
+            kappasq = -q; // Extract kappasq from negative q
+            kappa_over_i = std::sqrt(kappasq); // kappa/i = sqrt(kappasq)
+            q_param = 0.5; // Use default q for imaginary mode
+        } else {
+            imaginary_q_racah_mode = false;
         }
 
         N_param = n;
@@ -656,12 +790,27 @@ char* updateParameters(int mode, double q) {
     try {
         progressCounter = 0;
         
-        if (mode < 5 || mode > 6) {
-            throw std::invalid_argument("Mode must be 5 or 6");
+        if (mode < 5 || mode > 7) {
+            throw std::invalid_argument("Mode must be 5, 6, or 7");
         }
         
         if (mode == 5 && q <= 0.0) {
-            throw std::invalid_argument("q must be positive");
+            throw std::invalid_argument("q must be positive for Q_HAHN mode");
+        }
+        
+        // Handle imaginary q-Racah mode
+        if (mode == 7) {
+            imaginary_q_racah_mode = true;
+            // For imaginary mode, we need to decode q and kappasq from the q parameter
+            // For now, q parameter is passed as -kappasq, and we use default q=0.5
+            if (q >= 0.0) {
+                throw std::invalid_argument("Expected negative q (encoded kappasq) for IMAGINARY_Q_RACAH mode");
+            }
+            kappasq = -q; // Extract kappasq from negative q
+            kappa_over_i = std::sqrt(kappasq); // kappa/i = sqrt(kappasq)
+            q_param = 0.5; // Use default q for imaginary mode
+        } else {
+            imaginary_q_racah_mode = false;
         }
         
         current_mode = static_cast<TilingMode>(mode);
