@@ -4202,6 +4202,7 @@ Module.onRuntimeInitialized = async function() {
       // Get current color settings
       const showColors = document.getElementById("show-colors-checkbox")?.checked !== false;
       const useGrayscale = document.getElementById("grayscale-checkbox")?.checked === true;
+      const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
 
       cachedDominoes.forEach(domino => {
         // Determine fill color based on current settings
@@ -4236,7 +4237,7 @@ Module.onRuntimeInitialized = async function() {
         // Draw rectangle with precise coordinates
         pdf.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
         pdf.setDrawColor(0, 0, 0); // Black border
-        pdf.setLineWidth(0.1);
+        pdf.setLineWidth(borderWidth);
 
         // Convert domino coordinates to PDF coordinates, accounting for content offset
         const x = (domino.x - minX) * scaleX;
