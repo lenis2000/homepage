@@ -362,7 +362,7 @@ permalink: /domino/
     <h3 style="margin-top: 0; margin-bottom: 8px;">Periodicity:</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="uniform-radio" name="periodicity" value="uniform" checked style="cursor: pointer;">
+        <input type="radio" id="uniform-radio" name="periodicity" value="uniform" style="cursor: pointer;">
         <label for="uniform-radio" style="cursor: pointer; user-select: none;">Uniform (no parameters)</label>
       </div>
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
@@ -374,7 +374,7 @@ permalink: /domino/
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="6x2-radio" name="periodicity" value="6x2" style="cursor: pointer;">
+        <input type="radio" id="6x2-radio" name="periodicity" value="6x2" checked style="cursor: pointer;">
         <label for="6x2-radio" style="cursor: pointer; user-select: none;">6×2 Periodic</label>
       </div>
       <div style="padding:5px;border-radius:4px;cursor:pointer;">
@@ -425,21 +425,21 @@ permalink: /domino/
     </div>
   </div>
 
-  <div id="weights-6x2" style="display: none; margin-bottom: 15px;">
+  <div id="weights-6x2" style="display: block; margin-bottom: 15px;">
     <h5 style="margin-top: 0; margin-bottom: 5px;">6×2 Periodic Weights</h5>
     <div style="display: grid; grid-template-columns: repeat(6, 60px); gap: 5px;">
-      <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_2" type="number" value="2.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_4" type="number" value="3.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_6" type="number" value="2.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_9" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_10" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_11" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6x2_12" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_2" type="number" value="20.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_3" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_4" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_6" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_7" type="number" value="5.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_8" type="number" value="10.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_9" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_10" type="number" value="20.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_11" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_12" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
     </div>
   </div>
 
