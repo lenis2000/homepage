@@ -889,10 +889,20 @@ Module.onRuntimeInitialized = async function() {
     const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     let params = [periodicity]; // First arg is string name
     if (periodicity === '6x2') {
-        // C++ performGlauberSteps does not support live updates for 6x2 mode.
-        // It will use the g_W matrix set by the last full sample.
-        // Pass 'uniform' parameters to satisfy the C++ function signature.
-        params = ['uniform', 1,1,1,1,1,1,1,1,1];
+        // Get the 6x2 weights from the UI inputs
+        // We can only pass 9 parameters, so we'll pass the first 9 weights
+        // and reuse some values for the remaining positions
+        const w1 = parseFloat(document.getElementById('w6x2_1').value) || 1.0;
+        const w2 = parseFloat(document.getElementById('w6x2_2').value) || 20.0;
+        const w3 = parseFloat(document.getElementById('w6x2_3').value) || 1.0;
+        const w4 = parseFloat(document.getElementById('w6x2_4').value) || 20.0;
+        const w5 = parseFloat(document.getElementById('w6x2_5').value) || 1.0;
+        const w6 = parseFloat(document.getElementById('w6x2_6').value) || 20.0;
+        const w7 = parseFloat(document.getElementById('w6x2_7').value) || 1.0;
+        const w8 = parseFloat(document.getElementById('w6x2_8').value) || 20.0;
+        const w9 = parseFloat(document.getElementById('w6x2_9').value) || 1.0;
+        // Note: We can only pass 9 parameters, so w10, w11, w12 will be handled by storing them during sample
+        params.push(w1, w2, w3, w4, w5, w6, w7, w8, w9);
     } else if (periodicity === '2x2') {
         const a = parseFloat(document.getElementById('a-input').value) || 0.5;
         const b = parseFloat(document.getElementById('b-input').value) || 1.0;

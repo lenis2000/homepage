@@ -62,6 +62,7 @@ static string         g_periodicity = "uniform"; // "uniform", "2x2", or "3x3"
 // Store weights based on periodicity
 static double         g_a = 1.0, g_b = 1.0; // For 2x2
 static array<double, 9> g_w = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; // For 3x3 (w1 to w9)
+static array<double, 12> g_w6x2 = {1.0, 20.0, 1.0, 20.0, 1.0, 20.0, 1.0, 20.0, 1.0, 20.0, 1.0, 20.0}; // For 6x2
 
 // Flag to track if a Glauber run is active
 static bool g_glauber_active = false;
@@ -557,6 +558,12 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
             throw std::runtime_error("Input size too large, would exceed memory limits");
         }
 
+        // Store weights globally for Glauber dynamics
+        g_w6x2[0] = v1; g_w6x2[1] = v2; g_w6x2[2] = v3;
+        g_w6x2[3] = v4; g_w6x2[4] = v5; g_w6x2[5] = v6;
+        g_w6x2[6] = v7; g_w6x2[7] = v8; g_w6x2[8] = v9;
+        g_w6x2[9] = v10; g_w6x2[10] = v11; g_w6x2[11] = v12;
+
         MatrixDouble A1a(dim, vector<double>(dim, 0.0));
         const double W[2][6] = {
             {v1, v2, v3, v4, v5, v6},
@@ -829,6 +836,16 @@ char* performGlauberSteps(
             if (weights_changed) {
                 g_w = current_w;
             }
+        } else if (periodicity == "6x2") {
+            // Check if any of the first 9 weights have changed
+            array<double, 9> current_w = {p1, p2, p3, p4, p5, p6, p7, p8, p9};
+            for (size_t i = 0; i < 9; ++i) {
+                if (std::abs(current_w[i] - g_w6x2[i]) > 1e-9) {
+                    weights_changed = true;
+                    break;
+                }
+            }
+            // Note: we'll update g_w6x2 in the rebuild section below
         }
          // No specific weight check needed for "uniform" if periodicity changes
 
@@ -849,6 +866,27 @@ char* performGlauberSteps(
                  for (int i = 0; i < g_N; ++i) {
                      for (int j = 0; j < g_N; ++j) {
                          g_W[i][j] = W[i % 3][j % 3];
+                     }
+                 }
+             } else if (g_periodicity == "6x2") {
+                 // For 6x2 mode, update the global weights with passed parameters
+                 // We only have 9 parameters, so we'll update the first 9 weights
+                 // and keep the last 3 from the global state
+                 g_w6x2[0] = p1; g_w6x2[1] = p2; g_w6x2[2] = p3;
+                 g_w6x2[3] = p4; g_w6x2[4] = p5; g_w6x2[5] = p6;
+                 g_w6x2[6] = p7; g_w6x2[7] = p8; g_w6x2[8] = p9;
+                 // Keep g_w6x2[9], g_w6x2[10], g_w6x2[11] from previous state
+                 
+                 // Now rebuild the weight matrix with the updated values
+                 const double W[2][6] = {
+                     {g_w6x2[0], g_w6x2[1], g_w6x2[2], g_w6x2[3], g_w6x2[4], g_w6x2[5]},
+                     {g_w6x2[6], g_w6x2[7], g_w6x2[8], g_w6x2[9], g_w6x2[10], g_w6x2[11]}
+                 };
+                 for (int i = 0; i < g_N; ++i) {
+                     int ii = i % 2;
+                     for (int j = 0; j < g_N; ++j) {
+                         int jj = j % 6;
+                         g_W[i][j] = W[ii][jj];
                      }
                  }
              } else { // Uniform
