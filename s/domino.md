@@ -3524,16 +3524,33 @@ Module.onRuntimeInitialized = async function() {
     const maxDimension = Math.max(width, height);
     const scaleFactor = 15.0 / maxDimension;
 
-    // Generate TikZ code
+    // Generate TikZ code with current color scheme
+    // Convert hex colors to RGB for TikZ
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : {r: 0, g: 0, b: 0};
+    }
+
+    const blueRgb = hexToRgb(currentColors.blue);
+    const greenRgb = hexToRgb(currentColors.green);
+    const redRgb = hexToRgb(currentColors.red);
+    const yellowRgb = hexToRgb(currentColors.yellow);
+    const borderRgb = hexToRgb(currentColors.border);
+
     let tikzCode = `\\documentclass{standalone}
 \\usepackage{tikz}
 \\usepackage{xcolor}
 
-% Define colors to match SVG
-\\definecolor{svggreen}{RGB}{30, 140, 40}
-\\definecolor{svgred}{RGB}{255, 34, 68}
-\\definecolor{svgyellow}{RGB}{252, 164, 20}
-\\definecolor{svgblue}{RGB}{67, 99, 216}
+% Define colors to match current color scheme
+\\definecolor{svggreen}{RGB}{${greenRgb.r}, ${greenRgb.g}, ${greenRgb.b}}
+\\definecolor{svgred}{RGB}{${redRgb.r}, ${redRgb.g}, ${redRgb.b}}
+\\definecolor{svgyellow}{RGB}{${yellowRgb.r}, ${yellowRgb.g}, ${yellowRgb.b}}
+\\definecolor{svgblue}{RGB}{${blueRgb.r}, ${blueRgb.g}, ${blueRgb.b}}
+\\definecolor{svgborder}{RGB}{${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}}
 
 \\begin{document}
 % Aztec Diamond Tiling
@@ -3570,7 +3587,7 @@ Module.onRuntimeInitialized = async function() {
       const x2 = rect.x - minX + rect.width;
       const y2 = maxY - rect.y;
 
-      tikzCode += `\\filldraw[fill=${fillColor}, draw=black, line width=${rect.strokeWidth}pt] `;
+      tikzCode += `\\filldraw[fill=${fillColor}, draw=svgborder, line width=${rect.strokeWidth}pt] `;
       tikzCode += `(${x1.toFixed(2)}, ${y1.toFixed(2)}) rectangle (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
     });
 
@@ -3607,7 +3624,7 @@ Module.onRuntimeInitialized = async function() {
         const x2 = edge.x2 - minX;
         const y2 = maxY - edge.y2;
 
-        tikzCode += `\\draw[line width=2.5pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
+        tikzCode += `\\draw[svgborder, line width=2.5pt] (${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)});\n`;
       });
 
       // Then draw nodes
@@ -3617,7 +3634,7 @@ Module.onRuntimeInitialized = async function() {
         const y = maxY - node.y;
         const radius = node.radius * 10; // Adjust radius for TikZ
 
-        tikzCode += `\\filldraw[fill=black] (${x.toFixed(2)}, ${y.toFixed(2)}) circle (${radius.toFixed(2)/10});\n`;
+        tikzCode += `\\filldraw[fill=svgborder] (${x.toFixed(2)}, ${y.toFixed(2)}) circle (${radius.toFixed(2)/10});\n`;
       });
     }
 
@@ -3874,7 +3891,7 @@ Module.onRuntimeInitialized = async function() {
         tikzCode += `% Path ${i+1}, ${path.length} points\n`;
 
         // Generate the draw command
-        tikzCode += `\\draw[black, line width=2.5pt]`;
+        tikzCode += `\\draw[svgborder, line width=2.5pt]`;
         path.forEach((point, j) => {
           if (j === 0) {
             tikzCode += ` ${formatPoint(point)}`;
