@@ -118,6 +118,60 @@ permalink: /domino/
     color: #999;
   }
 
+  /* Dark theme styles for custom colors panel */
+  [data-theme="dark"] #styling-controls label,
+  [data-theme="dark"] .custom-colors-panel label {
+    color: #bbb;
+  }
+
+  [data-theme="dark"] .custom-colors-panel {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel h4 {
+    color: #ddd !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel input[type="text"] {
+    background-color: #3a3a3a !important;
+    border-color: #555 !important;
+    color: #ddd !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel input[type="text"]:focus {
+    border-color: #007bff !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel button {
+    background-color: #3a3a3a !important;
+    border-color: #555 !important;
+    color: #ddd !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel button:hover {
+    background-color: #4a4a4a !important;
+    border-color: #666 !important;
+  }
+
+  [data-theme="dark"] #reset-default-colors {
+    background-color: #28a745 !important;
+    color: white !important;
+  }
+
+  [data-theme="dark"] #reset-default-colors:hover {
+    background-color: #218838 !important;
+  }
+
+  [data-theme="dark"] #close-custom-colors {
+    background-color: #6c757d !important;
+    color: white !important;
+  }
+
+  [data-theme="dark"] #close-custom-colors:hover {
+    background-color: #5a6268 !important;
+  }
+
   /* Styling for buttons and controls */
   #sample-btn:disabled {
     opacity: 0.7;
@@ -154,6 +208,42 @@ permalink: /domino/
     padding: 10px;
     border-radius: 5px;
     margin-bottom: 15px;
+  }
+
+  /* Custom colors panel styling */
+  .custom-colors-panel {
+    background-color: #f8f9fa;
+    border-color: #ccc;
+  }
+
+  .custom-colors-panel h4 {
+    color: #333;
+  }
+
+  .custom-colors-panel label {
+    color: #333;
+  }
+
+  .custom-colors-panel input[type="text"] {
+    background-color: white;
+    border: 1px solid #ccc;
+    color: #333;
+  }
+
+  .custom-colors-panel input[type="text"]:focus {
+    border-color: #007bff;
+    outline: none;
+  }
+
+  .custom-colors-panel button {
+    background-color: #f8f9fa;
+    border: 1px solid #ccc;
+    color: #333;
+  }
+
+  .custom-colors-panel button:hover {
+    background-color: #e9ecef;
+    border-color: #999;
   }
 </style>
 
@@ -318,6 +408,56 @@ permalink: /domino/
          <button id="glauber-btn" class="btn btn-success">Run Glauber</button>
          <span id="glauber-status" style="margin-left: 10px; font-style: italic;"></span>
       </div>
+    </div>
+  </div>
+
+  <!-- Styling Controls -->
+  <div id="styling-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+    <h3 style="margin-bottom: 8px;">Styling Controls:</h3>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px;">
+      <button id="custom-colors-btn" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Custom Colors</button>
+    </div>
+  </div>
+
+  <!-- Custom Colors Panel (initially hidden) -->
+  <div id="custom-colors-panel" class="custom-colors-panel" style="display: none; margin-top: 15px; padding: 15px; border-radius: 4px; border: 1px solid #ccc;">
+    <h4 style="margin-top: 0; margin-bottom: 15px;">Custom Domino Colors</h4>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="color-blue" style="width: 120px; font-weight: bold;">Blue (Horizontal):</label>
+        <input type="color" id="color-blue" value="#4363d8" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+        <input type="text" id="hex-blue" value="#4363d8" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="color-green" style="width: 120px; font-weight: bold;">Green (Horizontal):</label>
+        <input type="color" id="color-green" value="#1e8c28" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+        <input type="text" id="hex-green" value="#1e8c28" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="color-red" style="width: 120px; font-weight: bold;">Red (Vertical):</label>
+        <input type="color" id="color-red" value="#ff2244" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+        <input type="text" id="hex-red" value="#ff2244" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="color-yellow" style="width: 120px; font-weight: bold;">Yellow (Vertical):</label>
+        <input type="color" id="color-yellow" value="#fca414" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+        <input type="text" id="hex-yellow" value="#fca414" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="color-border" style="width: 120px; font-weight: bold;">Border Color:</label>
+        <input type="color" id="color-border" value="#666666" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+        <input type="text" id="hex-border" value="#666666" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 15px;">
+      <button id="reset-default-colors" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset to Default</button>
+      <button id="close-custom-colors" style="padding: 6px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
     </div>
   </div>
 </div>
@@ -816,7 +956,12 @@ Module.onRuntimeInitialized = async function() {
         // Recalculate height map and render (similar logic as in updateVisualization)
         const heightMap = calculateHeightFunction(cachedDominoes);
         const scale = 60 / (2 * n);
-        const colors = { blue: 0x4363d8, green: 0x1e8c28, red: 0xff2244, yellow: 0xfca414 };
+        const colors = { 
+          blue: hexToThreeColor(currentColors.blue), 
+          green: hexToThreeColor(currentColors.green), 
+          red: hexToThreeColor(currentColors.red), 
+          yellow: hexToThreeColor(currentColors.yellow) 
+        };
         const showColors3D = document.getElementById("show-colors-checkbox").checked;
         const monoColor3D = 0x999999;
 
@@ -1230,12 +1375,12 @@ Module.onRuntimeInitialized = async function() {
       // Scale factor based on n
       const scale = 60/(2*n);
 
-      // Colors for the materials
+      // Colors for the materials - use current custom colors
       const colors = {
-        blue:   0x4363d8,
-        green:  0x1e8c28,
-        red:    0xff2244,
-        yellow: 0xfca414
+        blue:   hexToThreeColor(currentColors.blue),
+        green:  hexToThreeColor(currentColors.green),
+        red:    hexToThreeColor(currentColors.red),
+        yellow: hexToThreeColor(currentColors.yellow)
       };
 
       // Create the 3D faces with proper heights
@@ -1646,6 +1791,137 @@ Module.onRuntimeInitialized = async function() {
     controls.update();
   }
 
+  // Helper function to convert hex to THREE.js color format
+  function hexToThreeColor(hex) {
+    return parseInt(hex.replace('#', '0x'));
+  }
+
+  // Custom Colors Functionality
+  let isCustomColorsVisible = false;
+  let currentColors = {
+    blue: '#4363d8',
+    green: '#1e8c28', 
+    red: '#ff2244',
+    yellow: '#fca414',
+    border: '#666666'
+  };
+
+  // Custom colors toggle handler
+  document.getElementById("custom-colors-btn").addEventListener("click", function() {
+    const panel = document.getElementById("custom-colors-panel");
+    isCustomColorsVisible = !isCustomColorsVisible;
+    panel.style.display = isCustomColorsVisible ? 'block' : 'none';
+    this.textContent = isCustomColorsVisible ? 'Hide Custom Colors' : 'Custom Colors';
+  });
+
+  // Close custom colors panel
+  document.getElementById("close-custom-colors").addEventListener("click", function() {
+    const panel = document.getElementById("custom-colors-panel");
+    const btn = document.getElementById("custom-colors-btn");
+    isCustomColorsVisible = false;
+    panel.style.display = 'none';
+    btn.textContent = 'Custom Colors';
+  });
+
+  // Reset to default colors
+  document.getElementById("reset-default-colors").addEventListener("click", function() {
+    const defaultColors = {
+      blue: '#4363d8',
+      green: '#1e8c28',
+      red: '#ff2244', 
+      yellow: '#fca414',
+      border: '#666666'
+    };
+    
+    // Update color inputs
+    Object.keys(defaultColors).forEach(colorKey => {
+      const colorInput = document.getElementById(`color-${colorKey}`);
+      const hexInput = document.getElementById(`hex-${colorKey}`);
+      if (colorInput && hexInput) {
+        colorInput.value = defaultColors[colorKey];
+        hexInput.value = defaultColors[colorKey];
+        currentColors[colorKey] = defaultColors[colorKey];
+      }
+    });
+
+    // Update visualization
+    updateColorsInVisualization();
+  });
+
+  // Function to update colors in both 2D and 3D visualizations
+  function updateColorsInVisualization() {
+    console.log("Updating colors in visualization...", currentColors);
+    
+    // Update 3D visualization if it exists (regardless of which view is active)
+    if (dominoGroup && dominoGroup.children.length > 0) {
+      console.log("Updating 3D colors for", dominoGroup.children.length, "meshes");
+      // Update 3D materials
+      dominoGroup.children.forEach(mesh => {
+        if (mesh.material && mesh.userData.originalColor) {
+          const colorName = mesh.userData.originalColor;
+          if (currentColors[colorName]) {
+            const newColor = hexToThreeColor(currentColors[colorName]);
+            const showColors = document.getElementById("show-colors-checkbox").checked;
+            const monoColor = 0x999999;
+            mesh.material.color.setHex(showColors ? newColor : monoColor);
+            mesh.material.userData.originalColorValue = newColor;
+          }
+        }
+      });
+      // Force a render
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
+    }
+
+    // Update 2D visualization if cached dominoes exist
+    if (cachedDominoes && cachedDominoes.length > 0) {
+      console.log("Updating 2D colors for", cachedDominoes.length, "dominoes");
+      // Update the 2D display regardless of which view is active
+      if (dominoLayer) {
+        updateDominoDisplay();
+      }
+    }
+  }
+
+  // Add event listeners for each color input (both color picker and hex input)
+  ['blue', 'green', 'red', 'yellow', 'border'].forEach(colorKey => {
+    const colorInput = document.getElementById(`color-${colorKey}`);
+    const hexInput = document.getElementById(`hex-${colorKey}`);
+
+    // Color picker change handler
+    colorInput.addEventListener('change', function() {
+      const newColor = this.value;
+      hexInput.value = newColor;
+      currentColors[colorKey] = newColor;
+      updateColorsInVisualization();
+    });
+
+    // Hex input change handler
+    hexInput.addEventListener('change', function() {
+      const newColor = this.value;
+      // Validate hex color format
+      if (/^#[0-9A-F]{6}$/i.test(newColor)) {
+        colorInput.value = newColor;
+        currentColors[colorKey] = newColor;
+        updateColorsInVisualization();
+      } else {
+        // Reset to current color if invalid
+        this.value = currentColors[colorKey];
+      }
+    });
+
+    // Real-time hex input validation and update
+    hexInput.addEventListener('input', function() {
+      const newColor = this.value;
+      if (/^#[0-9A-F]{6}$/i.test(newColor)) {
+        colorInput.value = newColor;
+        currentColors[colorKey] = newColor;
+        updateColorsInVisualization();
+      }
+    });
+  });
+
   // Camera movement controls
   document.getElementById("move-up-btn").addEventListener("click", function() {
     // Move camera up relative to current view
@@ -2032,7 +2308,8 @@ Module.onRuntimeInitialized = async function() {
       } else if (useGrayscale) {
         fill = getGrayscaleColor(d.color, d);
       } else {
-        fill = d.color;
+        // Use custom colors if available, otherwise fall back to original color
+        fill = currentColors[d.color] || d.color;
       }
 
       // Apply styling directly to the rectangle
@@ -2504,12 +2781,12 @@ Module.onRuntimeInitialized = async function() {
     if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
       const monoColor3D = 0x999999;
 
-      // Define standard colors for domino types (same as in the 3D rendering)
+      // Use current custom colors instead of hardcoded colors
       const domino3DColors = {
-        blue:   0x4363d8,
-        green:  0x1e8c28,
-        red:    0xff2244,
-        yellow: 0xfca414
+        blue:   hexToThreeColor(currentColors.blue),
+        green:  hexToThreeColor(currentColors.green),
+        red:    hexToThreeColor(currentColors.red),
+        yellow: hexToThreeColor(currentColors.yellow)
       };
 
       // Update all meshes in the domino group
