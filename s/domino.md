@@ -523,7 +523,11 @@ permalink: /domino/
   <!-- View toggle buttons -->
   <div class="view-toggle d-flex flex-wrap mb-2">
     <button id="view-3d-btn" class="btn btn-sm mr-2 active" style="background-color: #e0e0e0; border: 1px solid #999; border-radius: 3px; padding: 6px 12px;">3D</button>
-    <button id="view-2d-btn" class="btn btn-sm" style="background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 6px 12px;">2D</button>
+    <button id="view-2d-btn" class="btn btn-sm mr-2" style="background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 6px 12px;">2D</button>
+    <div style="margin-left: 10px;">
+      <input type="checkbox" id="no-3d-checkbox" style="vertical-align: middle;">
+      <label for="no-3d-checkbox" style="cursor: pointer; margin-left: 5px; font-size: 14px;">No 3D (save resources)</label>
+    </div>
   </div>
 
   <!-- Camera controls for 3D pane -->
@@ -1002,8 +1006,9 @@ Module.onRuntimeInitialized = async function() {
         await render2D(cachedDominoes); // Re-render 2D SVG
     }
 
-    // Update 3D view if active and n is suitable
-    if (is3DView && n <= 300) {
+    // Update 3D view if active and n is suitable and 3D is not disabled
+    const no3D = document.getElementById("no-3d-checkbox").checked;
+    if (is3DView && n <= 300 && !no3D) {
         // Clear existing domino group
         if (dominoGroup) {
             while(dominoGroup.children.length > 0){
@@ -1431,8 +1436,14 @@ Module.onRuntimeInitialized = async function() {
         return;
       }
 
-      // For n ≤ 300, continue with 3D rendering regardless of current view
-
+      // For n ≤ 300, check if 3D rendering is disabled
+      const no3D = document.getElementById("no-3d-checkbox").checked;
+      if (no3D) {
+        // Skip 3D processing entirely when no 3D is checked
+        progressElem.innerText = "";
+        stopSimulation();
+        return;
+      }
 
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
@@ -2112,10 +2123,12 @@ Module.onRuntimeInitialized = async function() {
 
   // View toggle handlers
   document.getElementById("view-3d-btn").addEventListener("click", function() {
+    const no3D = document.getElementById("no-3d-checkbox").checked;
+    
     // Show 3D view, hide 2D view
     document.getElementById("aztec-canvas").style.display = "block";
     document.getElementById("aztec-2d-canvas").style.display = "none";
-    document.getElementById("camera-controls").style.display = "block";
+    document.getElementById("camera-controls").style.display = no3D ? "none" : "block";
 
     // Update toggle button states
     document.getElementById("view-3d-btn").classList.add("active");
@@ -2123,15 +2136,37 @@ Module.onRuntimeInitialized = async function() {
 
     // Show/hide appropriate download buttons
     document.getElementById("download-png-btn").style.display = "none";
-    document.getElementById("download-3d-btn").style.display = "inline-block";
+    document.getElementById("download-3d-btn").style.display = no3D ? "none" : "inline-block";
 
     // Set the max n for 3D view
     document.getElementById("n-input").setAttribute("max", "300");
 
-    // Resume animation
-    if (!animationActive) {
-      animationActive = true;
-      animate();
+    if (no3D) {
+      // Show no 3D message
+      const container = document.getElementById('aztec-canvas');
+      container.innerHTML = '';
+      const messageDiv = document.createElement('div');
+      messageDiv.style.width = '100%';
+      messageDiv.style.height = '100%';
+      messageDiv.style.display = 'flex';
+      messageDiv.style.alignItems = 'center';
+      messageDiv.style.justifyContent = 'center';
+      messageDiv.style.backgroundColor = '#f0f0f0';
+      messageDiv.style.border = '1px solid #ccc';
+      messageDiv.style.padding = '20px';
+      messageDiv.style.boxSizing = 'border-box';
+      messageDiv.style.fontSize = '18px';
+      messageDiv.style.fontWeight = 'bold';
+      messageDiv.style.textAlign = 'center';
+      messageDiv.innerHTML = '3D visualization disabled.<br>Uncheck "No 3D" to enable 3D rendering.<br><br>Switch to 2D view to see the visualization.';
+      container.appendChild(messageDiv);
+      animationActive = false;
+    } else {
+      // Resume animation for 3D view
+      if (!animationActive) {
+        animationActive = true;
+        animate();
+      }
     }
 
     // Check if the renderer is properly initialized/restored
@@ -3078,6 +3113,15 @@ Module.onRuntimeInitialized = async function() {
 
     // Pause 3D animation to save resources
     animationActive = false;
+  });
+
+  // No 3D checkbox event listener
+  document.getElementById("no-3d-checkbox").addEventListener("change", function() {
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+    if (is3DView) {
+      // If we're in 3D view, trigger the 3D button click to update the display
+      document.getElementById("view-3d-btn").click();
+    }
   });
 
   // Add keyboard controls
