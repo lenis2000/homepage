@@ -2018,7 +2018,9 @@ Module.onRuntimeInitialized = async function() {
   }
 
   // Apply selected palette
-  document.getElementById('apply-palette').addEventListener('click', function() {
+  const applyPaletteBtn = document.getElementById('apply-palette');
+  if (applyPaletteBtn) {
+    applyPaletteBtn.addEventListener('click', function() {
     const paletteSelector = document.getElementById('palette-selector');
     const selectedIndex = paletteSelector.value;
     
@@ -2059,12 +2061,25 @@ Module.onRuntimeInitialized = async function() {
     // Reset selector to show that palette was applied
     paletteSelector.value = '';
   });
+  }
 
-  // Initialize palette selector when page loads
-  document.addEventListener('DOMContentLoaded', function() {
-    // Small delay to ensure ColorSchemes is loaded
-    setTimeout(initializePaletteSelector, 100);
-  });
+  // Initialize palette selector when ColorSchemes is available
+  function waitForColorSchemes() {
+    if (typeof window.ColorSchemes !== 'undefined') {
+      initializePaletteSelector();
+    } else {
+      // Keep checking until ColorSchemes is available
+      setTimeout(waitForColorSchemes, 100);
+    }
+  }
+  
+  // Start checking when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForColorSchemes);
+  } else {
+    // DOM is already loaded, start checking
+    waitForColorSchemes();
+  }
 
   // Camera movement controls
   document.getElementById("move-up-btn").addEventListener("click", function() {

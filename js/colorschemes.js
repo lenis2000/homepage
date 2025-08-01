@@ -43,7 +43,7 @@ const ColorSchemes = [
     { name: 'South Korea', colors: ['#CD2E3A', '#0047A0', '#FFFFFF', '#000000'] },
     { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169', '#FFFFFF'] },
     { name: 'Argentina', colors: ['#74ACDF', '#FFFFFF', '#F6B40E', '#0057A8'] },
-    { name: 'Ukraine', colors: ['#0057B7', '#FFD700', '#FFFFFF', '#000000'] },
+    { name: 'Ukraine', colors: ['#0057B7', '#FFD700', '#004494', '#D4A017'] },
 
     // Popular Coding Themes (keeping fourth color consistent with original themes)
     { name: 'Dracula', colors: ['#282a36', '#8be9fd', '#50fa7b', '#bd93f9'] },
