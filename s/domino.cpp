@@ -3,7 +3,7 @@
 emcc domino.cpp -o domino.js\
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_performGlauberSteps','_simulateAztecVertical','_simulateAztecHorizontal','_wasGlauberActive','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztec6x2','_performGlauberSteps','_simulateAztecVertical','_simulateAztecHorizontal','_wasGlauberActive','_freeString','_getProgress']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -543,8 +543,94 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
     }
 }
 
+// ---------------------------------------------------------------------
+// simulateAztec6x2
+//
+// New function for 6x2 periodic weights.
+// ---------------------------------------------------------------------
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double v5, double v6, double v7, double v8, double v9, double v10, double v11, double v12) {
+    try {
+        progressCounter = 0;
+        int dim = 2 * n;
+        if (dim > 1000) {
+            throw std::runtime_error("Input size too large, would exceed memory limits");
+        }
+
+        MatrixDouble A1a(dim, vector<double>(dim, 0.0));
+        const double W[2][6] = {
+            {v1, v2, v3, v4, v5, v6},
+            {v7, v8, v9, v10, v11, v12}
+        };
+
+        for (int i = 0; i < dim; ++i) {
+            int ii = i % 2;
+            for (int j = 0; j < dim; ++j) {
+                int jj = j % 6;
+                A1a[i][j] = W[ii][jj];
+            }
+        }
+        emscripten_sleep(0);
+
+        vector<MatrixDouble> prob = probs2(A1a);
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        MatrixInt dominoConfig = aztecgen(prob);
+
+        // Store the generated configuration and parameters globally for Glauber
+        g_conf = dominoConfig;
+        g_W    = A1a;
+        g_N    = dim;
+        g_periodicity = "6x2"; // Set periodicity for Glauber context
+        g_glauber_active = false;
+
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        ostringstream oss;
+        oss << "[";
+        int size = (int)dominoConfig.size();
+        bool first = true;
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig[i][j] == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+                    if (oddI && oddJ) { color = "blue";   x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
+                    else if (oddI && !oddJ){ color = "yellow"; x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
+                    else if (!oddI && !oddJ){ color = "green";  x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
+                    else if (!oddI && oddJ) { color = "red";    x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
+                    else continue;
+
+                    if (!first) oss << ","; else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+        oss << "]";
+        progressCounter = 100;
+        emscripten_sleep(0);
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) { throw std::runtime_error("Failed to allocate memory for output"); }
+        strcpy(out, json.c_str());
+        return out;
+    } catch (const std::exception& e) {
+        string errorMsg = string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
+}
+
 /* ------------------------------------------------------------------ *
- *  simulateAztecHorizontal – deterministic “all‑horizontal” frozen state
+ *  simulateAztecHorizontal – deterministic "all‑horizontal" frozen state
  *  (returns only dominoes whose 4×2 rectangle lies wholly inside ♦)
  * ------------------------------------------------------------------ */
 extern "C" EMSCRIPTEN_KEEPALIVE

@@ -372,6 +372,10 @@ permalink: /domino/
         <input type="radio" id="3x3-radio" name="periodicity" value="3x3" style="cursor: pointer;">
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
+      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
+        <input type="radio" id="6x2-radio" name="periodicity" value="6x2" style="cursor: pointer;">
+        <label for="6x2-radio" style="cursor: pointer; user-select: none;">6×2 Periodic</label>
+      </div>
       <div style="padding:5px;border-radius:4px;cursor:pointer;">
         <input type="radio" id="frozenH-radio" name="periodicity"
                value="frozenH" style="cursor:pointer;">
@@ -417,6 +421,24 @@ permalink: /domino/
       <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
       <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+    </div>
+  </div>
+
+  <div id="weights-6x2" style="display: none; margin-bottom: 15px;">
+    <h5 style="margin-top: 0; margin-bottom: 5px;">6×2 Periodic Weights</h5>
+    <div style="display: grid; grid-template-columns: repeat(6, 60px); gap: 5px;">
+      <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_2" type="number" value="2.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_4" type="number" value="3.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_6" type="number" value="2.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_9" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_10" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_11" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w6x2_12" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
     </div>
   </div>
 
@@ -634,6 +656,7 @@ function createLargeTilingMessage() {
 
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
+  const simulateAztec6x2 = Module.cwrap('simulateAztec6x2', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async:true});
   const simulateAztecHorizontal = Module.cwrap(
     'simulateAztecHorizontal', 'number',
     ['number','number','number','number','number','number',
@@ -859,7 +882,12 @@ Module.onRuntimeInitialized = async function() {
     // 1. Get current periodicity and parameters
     const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     let params = [periodicity]; // First arg is string name
-    if (periodicity === '2x2') {
+    if (periodicity === '6x2') {
+        // C++ performGlauberSteps does not support live updates for 6x2 mode.
+        // It will use the g_W matrix set by the last full sample.
+        // Pass 'uniform' parameters to satisfy the C++ function signature.
+        params = ['uniform', 1,1,1,1,1,1,1,1,1];
+    } else if (periodicity === '2x2') {
         const a = parseFloat(document.getElementById('a-input').value) || 0.5;
         const b = parseFloat(document.getElementById('b-input').value) || 1.0;
         params.push(a, b, 0,0,0,0,0,0,0); // Pass a, b as p1, p2
@@ -1335,6 +1363,13 @@ Module.onRuntimeInitialized = async function() {
         ptrPromise = simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
       } else if (isFrozenV) {
         ptrPromise = simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
+      } else if (periodicity === '6x2') {
+        const v = [];
+        for (let i = 1; i <= 12; i++) {
+            const input = document.getElementById(`w6x2_${i}`);
+            v.push(input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0);
+        }
+        ptrPromise = simulateAztec6x2(n, ...v);
       } else {
         ptrPromise = simulateAztec(n, w1,w2,w3,w4,w5,w6,w7,w8,w9);
       }
@@ -1660,9 +1695,10 @@ Module.onRuntimeInitialized = async function() {
     const p = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     const isFrozen = (p === 'frozenH' || p === 'frozenV');
 
-    // 2×2 and 3×3 weight panels
+    // 2×2, 3×3, and 6x2 weight panels
     document.getElementById('weights-2x2').style.display = (p === '2x2') ? 'block' : 'none';
     document.getElementById('weights-3x3').style.display = (p === '3x3') ? 'block' : 'none';
+    document.getElementById('weights-6x2').style.display = (p === '6x2') ? 'block' : 'none';
 
     // Glauber controls
     document.getElementById('glauber-controls').style.display = isFrozen ? 'none' : 'block';
