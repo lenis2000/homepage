@@ -464,10 +464,6 @@ void sMinusOperator() {
 
 // Calculate probabilities for S-minus operator
 void calculateProbabilitiesSminus(std::vector<double>& p, int k_start, int j_end, int tc) {
-    // S-minus operator is disabled in imaginary q-Racah mode
-    if (imaginary_q_racah_mode) {
-        throw std::runtime_error("S-minus operator is disabled in imaginary q-Racah mode");
-    }
     
     switch (current_mode) {
         case TilingMode::HAHN: {
@@ -616,6 +612,80 @@ void calculateProbabilitiesSminus(std::vector<double>& p, int k_start, int j_end
                             p[current_p_idx] = p[j_end - k_start + 1 - i] * term_numerator / term_denominator;
                         }
                     }
+                }
+            }
+            break;
+        }
+        case TilingMode::IMAGINARY_Q_RACAH: {
+            // Ported from Fortran Main.f90 SminusOperator case(1,2) for q<1.
+            // The JS front-end ensures q_param is in (0,1) for this mode.
+            if (tc < S_param) {
+                // Forward iteration
+                p[0] = 1.0;
+                for (int i = 1; i <= j_end - k_start + 1; ++i) {
+                    double x = static_cast<double>(paths[k_start + i - 1][tc]);
+                    
+                    double term_base_num = (1.0 - std::pow(q_param, N_param + tc - x));
+                    double term_base_den = (1.0 - std::pow(q_param, N_param + S_param - x - 1.0));
+                    if (std::abs(term_base_den) < 1e-100) { p[i] = 0.0; continue; }
+                    double term = term_base_num / term_base_den;
+                    
+                    if (std::abs(kappasq) > 1e-12) {
+                        double factor1_num, factor1_den;
+                        if ((-x - N_param + S_param) > 0) {
+                            factor1_num = std::pow(q_param, S_param - tc) + kappasq * std::pow(q_param, -x - N_param + S_param);
+                            factor1_den = 1.0 + kappasq * std::pow(q_param, -x - N_param + S_param - 1.0);
+                        } else {
+                            factor1_num = std::pow(q_param, x + N_param - tc) + kappasq;
+                            factor1_den = std::pow(q_param, x + N_param - S_param) + kappasq * std::pow(q_param, -1.0);
+                        }
+                        if (std::abs(factor1_den) > 1e-100) term *= factor1_num / factor1_den;
+                        
+                        double factor2_num, factor2_den;
+                        if ((2.0 * x - tc - S_param) < 0) {
+                            factor2_num = 1.0 + kappasq * std::pow(q_param, -2.0 * x + tc - 2.0 + S_param);
+                            factor2_den = 1.0 + kappasq * std::pow(q_param, -2.0 * x + tc + S_param);
+                        } else {
+                            factor2_num = std::pow(q_param, 2.0 * x - tc - S_param) + kappasq * std::pow(q_param, -2.0);
+                            factor2_den = std::pow(q_param, 2.0 * x - tc - S_param) + kappasq;
+                        }
+                        if (std::abs(factor2_den) > 1e-100) term *= factor2_num / factor2_den;
+                    }
+                    p[i] = p[i - 1] * term;
+                }
+            } else { // tc >= S_param
+                // Backward iteration
+                p[j_end - k_start + 1] = 1.0;
+                for (int i = j_end - k_start; i >= 0; --i) {
+                    double x = static_cast<double>(paths[k_start + i][tc]);
+                    
+                    double term_base_num = (1.0 - std::pow(q_param, N_param + tc - x));
+                    double term_base_den = (1.0 - std::pow(q_param, N_param + S_param - x - 1.0));
+                    if (std::abs(term_base_num) < 1e-100) { p[i] = 0.0; continue; }
+                    double term = term_base_den / term_base_num; // Inverted for backward calculation
+                    
+                    if (std::abs(kappasq) > 1e-12) {
+                        double factor1_num, factor1_den;
+                        if ((-x - N_param + S_param) > 0) {
+                            factor1_num = std::pow(q_param, S_param - tc) + kappasq * std::pow(q_param, -x - N_param + S_param);
+                            factor1_den = 1.0 + kappasq * std::pow(q_param, -x - N_param + S_param - 1.0);
+                        } else {
+                            factor1_num = std::pow(q_param, x + N_param - tc) + kappasq;
+                            factor1_den = std::pow(q_param, x + N_param - S_param) + kappasq * std::pow(q_param, -1.0);
+                        }
+                        if (std::abs(factor1_num) > 1e-100) term *= factor1_den / factor1_num;
+                        
+                        double factor2_num, factor2_den;
+                        if ((2.0 * x - tc - S_param) < 0) {
+                            factor2_num = 1.0 + kappasq * std::pow(q_param, -2.0 * x + tc - 2.0 + S_param);
+                            factor2_den = 1.0 + kappasq * std::pow(q_param, -2.0 * x + tc + S_param);
+                        } else {
+                            factor2_num = std::pow(q_param, 2.0 * x - tc - S_param) + kappasq * std::pow(q_param, -2.0);
+                            factor2_den = std::pow(q_param, 2.0 * x - tc - S_param) + kappasq;
+                        }
+                        if (std::abs(factor2_num) > 1e-100) term *= factor2_den / factor2_num;
+                    }
+                    p[i] = p[i + 1] * term;
                 }
             }
             break;
