@@ -362,7 +362,7 @@ permalink: /domino/
     <h3 style="margin-top: 0; margin-bottom: 8px;">Periodicity:</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="uniform-radio" name="periodicity" value="uniform" style="cursor: pointer;">
+        <input type="radio" id="uniform-radio" name="periodicity" value="uniform" checked style="cursor: pointer;">
         <label for="uniform-radio" style="cursor: pointer; user-select: none;">Uniform (no parameters)</label>
       </div>
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
@@ -374,7 +374,7 @@ permalink: /domino/
         <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
       </div>
       <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="6x2-radio" name="periodicity" value="6x2" checked style="cursor: pointer;">
+        <input type="radio" id="6x2-radio" name="periodicity" value="6x2" style="cursor: pointer;">
         <label for="6x2-radio" style="cursor: pointer; user-select: none;">6×2 Periodic</label>
       </div>
       <div style="padding:5px;border-radius:4px;cursor:pointer;">
@@ -425,7 +425,7 @@ permalink: /domino/
     </div>
   </div>
 
-  <div id="weights-6x2" style="display: block; margin-bottom: 15px;">
+  <div id="weights-6x2" style="display: none; margin-bottom: 15px;">
     <h5 style="margin-top: 0; margin-bottom: 5px;">6×2 Periodic Weights</h5>
     <div style="display: grid; grid-template-columns: repeat(6, 60px); gap: 5px;">
       <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
@@ -435,9 +435,9 @@ permalink: /domino/
       <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
       <input id="w6x2_6" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 50px;">
       <input id="w6x2_7" type="number" value="5.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_8" type="number" value="10.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_8" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
       <input id="w6x2_9" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_10" type="number" value="20.0" step="0.1" min="0.1" max="100" style="width: 50px;">
+      <input id="w6x2_10" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
       <input id="w6x2_11" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
       <input id="w6x2_12" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
     </div>
@@ -469,39 +469,39 @@ permalink: /domino/
   <!-- Custom Colors Panel (initially hidden) -->
   <div id="custom-colors-panel" class="custom-colors-panel" style="display: none; margin-top: 15px; padding: 15px; border-radius: 4px; border: 1px solid #ccc;">
     <h4 style="margin-top: 0; margin-bottom: 15px;">Custom Domino Colors</h4>
-    
+
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <label for="color-blue" style="width: 120px; font-weight: bold;">Blue (Horizontal):</label>
         <input type="color" id="color-blue" value="#4363d8" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-blue" value="#4363d8" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
-      
+
       <div style="display: flex; align-items: center; gap: 10px;">
         <label for="color-green" style="width: 120px; font-weight: bold;">Green (Horizontal):</label>
         <input type="color" id="color-green" value="#1e8c28" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-green" value="#1e8c28" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
-      
+
       <div style="display: flex; align-items: center; gap: 10px;">
         <label for="color-red" style="width: 120px; font-weight: bold;">Red (Vertical):</label>
         <input type="color" id="color-red" value="#ff2244" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-red" value="#ff2244" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
-      
+
       <div style="display: flex; align-items: center; gap: 10px;">
         <label for="color-yellow" style="width: 120px; font-weight: bold;">Yellow (Vertical):</label>
         <input type="color" id="color-yellow" value="#fca414" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-yellow" value="#fca414" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
-      
+
       <div style="display: flex; align-items: center; gap: 10px;">
         <label for="color-border" style="width: 120px; font-weight: bold;">Border Color:</label>
         <input type="color" id="color-border" value="#666666" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-border" value="#666666" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
     </div>
-    
+
     <!-- Palette Selector -->
     <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #ddd;">
       <h5 style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Choose from Predefined Palettes:</h5>
@@ -512,7 +512,7 @@ permalink: /domino/
         <button id="apply-palette" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Palette</button>
       </div>
     </div>
-    
+
     <div style="display: flex; gap: 10px; align-items: center; margin-top: 15px;">
       <button id="reset-default-colors" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset to Default</button>
       <button id="close-custom-colors" style="padding: 6px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
@@ -527,7 +527,7 @@ permalink: /domino/
     <button id="view-2d-btn" class="btn btn-sm mr-2" style="background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 6px 12px;">2D</button>
     <div style="margin-left: 10px;">
       <input type="checkbox" id="no-3d-checkbox" style="vertical-align: middle;">
-      <label for="no-3d-checkbox" style="cursor: pointer; margin-left: 5px; font-size: 14px;">No 3D (save resources)</label>
+      <label for="no-3d-checkbox" style="cursor: pointer; margin-left: 5px; font-size: 14px;">No 3D (faster)</label>
     </div>
   </div>
 
@@ -1026,11 +1026,11 @@ Module.onRuntimeInitialized = async function() {
         // Recalculate height map and render (similar logic as in updateVisualization)
         const heightMap = calculateHeightFunction(cachedDominoes);
         const scale = 60 / (2 * n);
-        const colors = { 
-          blue: hexToThreeColor(currentColors.blue), 
-          green: hexToThreeColor(currentColors.green), 
-          red: hexToThreeColor(currentColors.red), 
-          yellow: hexToThreeColor(currentColors.yellow) 
+        const colors = {
+          blue: hexToThreeColor(currentColors.blue),
+          green: hexToThreeColor(currentColors.green),
+          red: hexToThreeColor(currentColors.red),
+          yellow: hexToThreeColor(currentColors.yellow)
         };
         const showColors3D = document.getElementById("show-colors-checkbox").checked;
         const monoColor3D = 0x999999;
@@ -1884,7 +1884,7 @@ Module.onRuntimeInitialized = async function() {
   let isCustomColorsVisible = false;
   let currentColors = {
     blue: '#4363d8',
-    green: '#1e8c28', 
+    green: '#1e8c28',
     red: '#ff2244',
     yellow: '#fca414',
     border: '#666666'
@@ -1912,11 +1912,11 @@ Module.onRuntimeInitialized = async function() {
     const defaultColors = {
       blue: '#4363d8',
       green: '#1e8c28',
-      red: '#ff2244', 
+      red: '#ff2244',
       yellow: '#fca414',
       border: '#666666'
     };
-    
+
     // Update color inputs
     Object.keys(defaultColors).forEach(colorKey => {
       const colorInput = document.getElementById(`color-${colorKey}`);
@@ -2005,7 +2005,7 @@ Module.onRuntimeInitialized = async function() {
   // Palette Selector Functionality
   function initializePaletteSelector() {
     const paletteSelector = document.getElementById('palette-selector');
-    
+
     // Populate the selector with available color schemes
     if (typeof window.ColorSchemes !== 'undefined') {
       window.ColorSchemes.forEach((scheme, index) => {
@@ -2023,27 +2023,27 @@ Module.onRuntimeInitialized = async function() {
     applyPaletteBtn.addEventListener('click', function() {
     const paletteSelector = document.getElementById('palette-selector');
     const selectedIndex = paletteSelector.value;
-    
+
     if (selectedIndex === '' || typeof window.ColorSchemes === 'undefined') {
       return;
     }
-    
+
     const selectedPalette = window.ColorSchemes[selectedIndex];
     if (!selectedPalette || !selectedPalette.colors) {
       return;
     }
-    
+
     // Map palette colors to domino colors
     // For domino simulation: [blue, green, red, yellow] or [blue, green, red, border]
     const colors = selectedPalette.colors;
     const paletteColors = {
       blue: colors[0] || '#4363d8',
-      green: colors[1] || '#1e8c28', 
+      green: colors[1] || '#1e8c28',
       red: colors[2] || '#ff2244',
       yellow: colors.length >= 4 ? colors[3] : colors[0] || '#fca414', // Use 4th color or fallback to 1st
       border: colors.length >= 4 ? colors[3] : '#666666' // Use 4th color or default border
     };
-    
+
     // Update color inputs
     Object.keys(paletteColors).forEach(colorKey => {
       const colorInput = document.getElementById(`color-${colorKey}`);
@@ -2057,7 +2057,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Update visualization
     updateColorsInVisualization();
-    
+
     // Reset selector to show that palette was applied
     paletteSelector.value = '';
   });
@@ -2072,7 +2072,7 @@ Module.onRuntimeInitialized = async function() {
       setTimeout(waitForColorSchemes, 100);
     }
   }
-  
+
   // Start checking when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', waitForColorSchemes);
@@ -2141,7 +2141,7 @@ Module.onRuntimeInitialized = async function() {
   // View toggle handlers
   document.getElementById("view-3d-btn").addEventListener("click", function() {
     const no3D = document.getElementById("no-3d-checkbox").checked;
-    
+
     // Show 3D view, hide 2D view
     document.getElementById("aztec-canvas").style.display = "block";
     document.getElementById("aztec-2d-canvas").style.display = "none";
@@ -4113,7 +4113,7 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("download-pdf-btn").addEventListener("click", function() {
     // Get the SVG element
     const svg = document.getElementById("aztec-svg-2d");
-    
+
     // Check if SVG has content (dominoes have been drawn)
     if (!svg || !cachedDominoes || cachedDominoes.length === 0) {
       alert("Please sample a domino tiling first by clicking the 'Sample' button.");
@@ -4127,33 +4127,33 @@ Module.onRuntimeInitialized = async function() {
 
     // Calculate the actual bounding box of all dominoes
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
+
     cachedDominoes.forEach(domino => {
       minX = Math.min(minX, domino.x);
       minY = Math.min(minY, domino.y);
       maxX = Math.max(maxX, domino.x + domino.w);
       maxY = Math.max(maxY, domino.y + domino.h);
     });
-    
+
     // Add some padding around the content
     const padding = 10;
     minX -= padding;
     minY -= padding;
     maxX += padding;
     maxY += padding;
-    
+
     const contentWidth = maxX - minX;
     const contentHeight = maxY - minY;
     const aspectRatio = contentWidth / contentHeight;
 
     // Create jsPDF instance with appropriate page size
     const { jsPDF } = window.jspdf;
-    
+
     // Determine optimal PDF dimensions (in mm) - use A4 as base
     let pdfWidth, pdfHeight;
     const a4Width = 210; // A4 width in mm
     const a4Height = 297; // A4 height in mm
-    
+
     if (aspectRatio > 1) {
       // Landscape orientation for wide diagrams
       pdfWidth = a4Height;
@@ -4182,17 +4182,17 @@ Module.onRuntimeInitialized = async function() {
     const paletteSelector = document.getElementById('palette-selector');
     const selectedIndex = paletteSelector?.value || 0;
     const selectedPalette = window.ColorSchemes?.[selectedIndex];
-    
+
     // Process each domino as vector graphics
     if (cachedDominoes && cachedDominoes.length > 0) {
       // Calculate scale factor from content bounds to PDF coordinates
       const scaleX = pdfWidth / contentWidth;
       const scaleY = pdfHeight / contentHeight;
-      
+
       // Get current color settings
       const showColors = document.getElementById("show-colors-checkbox")?.checked !== false;
       const useGrayscale = document.getElementById("grayscale-checkbox")?.checked === true;
-      
+
       cachedDominoes.forEach(domino => {
         // Determine fill color based on current settings
         let fillColor;
@@ -4209,7 +4209,7 @@ Module.onRuntimeInitialized = async function() {
         } else {
           // Use the actual current theme colors, same as 2D rendering
           const colorHex = currentColors[domino.color] || domino.color;
-          
+
           // Convert hex to RGB
           let r, g, b;
           if (typeof colorHex === 'string' && colorHex.startsWith('#')) {
@@ -4222,18 +4222,18 @@ Module.onRuntimeInitialized = async function() {
           }
           fillColor = [r, g, b];
         }
-        
+
         // Draw rectangle with precise coordinates
         pdf.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
         pdf.setDrawColor(0, 0, 0); // Black border
         pdf.setLineWidth(0.1);
-        
+
         // Convert domino coordinates to PDF coordinates, accounting for content offset
         const x = (domino.x - minX) * scaleX;
         const y = (domino.y - minY) * scaleY;
         const width = domino.w * scaleX;
         const height = domino.h * scaleY;
-        
+
         pdf.rect(x, y, width, height, 'FD'); // Fill and Draw
       });
     }
