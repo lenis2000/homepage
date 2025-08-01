@@ -273,6 +273,7 @@ permalink: /domino/
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{site.url}}/js/colorschemes.js"></script>
 <script src="{{site.url}}/s/domino.js"></script>
 
@@ -616,6 +617,7 @@ permalink: /domino/
       <button id="upload-csv-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Upload CSV</button>
       <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
       <button id="download-png-btn" style="padding: 6px 12px; background-color: #e83e8c; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Download 2D in PNG</button>
+      <button id="download-pdf-btn" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Download 2D in PDF</button>
       <button id="download-3d-btn" style="padding: 6px 12px; background-color: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer;">Download 3D Screenshot</button>
     </div>
     <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
@@ -2136,6 +2138,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Show/hide appropriate download buttons
     document.getElementById("download-png-btn").style.display = "none";
+    document.getElementById("download-pdf-btn").style.display = "none";
     document.getElementById("download-3d-btn").style.display = no3D ? "none" : "inline-block";
 
     // Set the max n for 3D view
@@ -3085,6 +3088,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Show/hide appropriate download buttons
     document.getElementById("download-png-btn").style.display = "inline-block";
+    document.getElementById("download-pdf-btn").style.display = "inline-block";
     document.getElementById("download-3d-btn").style.display = "none";
 
     // Set the max n for 2D view
@@ -4090,6 +4094,139 @@ Module.onRuntimeInitialized = async function() {
     img.src = encodedSvgData;
   });
 
+  // Add event listener for PDF download button
+  document.getElementById("download-pdf-btn").addEventListener("click", function() {
+    // Get the SVG element
+    const svg = document.getElementById("aztec-svg-2d");
+    
+    // Check if SVG has content (dominoes have been drawn)
+    if (!svg || !cachedDominoes || cachedDominoes.length === 0) {
+      alert("Please sample a domino tiling first by clicking the 'Sample' button.");
+      return;
+    }
+
+    // Get current parameters for filename
+    const n = parseInt(document.getElementById("n-input").value) || 12;
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'free';
+    const filename = `aztec_diamond_2d_n${n}_${periodicity}.pdf`;
+
+    // Calculate the actual bounding box of all dominoes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    cachedDominoes.forEach(domino => {
+      minX = Math.min(minX, domino.x);
+      minY = Math.min(minY, domino.y);
+      maxX = Math.max(maxX, domino.x + domino.w);
+      maxY = Math.max(maxY, domino.y + domino.h);
+    });
+    
+    // Add some padding around the content
+    const padding = 10;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+    
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    const aspectRatio = contentWidth / contentHeight;
+
+    // Create jsPDF instance with appropriate page size
+    const { jsPDF } = window.jspdf;
+    
+    // Determine optimal PDF dimensions (in mm) - use A4 as base
+    let pdfWidth, pdfHeight;
+    const a4Width = 210; // A4 width in mm
+    const a4Height = 297; // A4 height in mm
+    
+    if (aspectRatio > 1) {
+      // Landscape orientation for wide diagrams
+      pdfWidth = a4Height;
+      pdfHeight = a4Height / aspectRatio;
+      if (pdfHeight > a4Width) {
+        pdfHeight = a4Width;
+        pdfWidth = a4Width * aspectRatio;
+      }
+    } else {
+      // Portrait orientation
+      pdfWidth = a4Width;
+      pdfHeight = a4Width / aspectRatio;
+      if (pdfHeight > a4Height) {
+        pdfHeight = a4Height;
+        pdfWidth = a4Height * aspectRatio;
+      }
+    }
+
+    const pdf = new jsPDF({
+      orientation: aspectRatio > 1 ? 'landscape' : 'portrait',
+      unit: 'mm',
+      format: [pdfWidth, pdfHeight]
+    });
+
+    // Get current color scheme for accurate colors
+    const paletteSelector = document.getElementById('palette-selector');
+    const selectedIndex = paletteSelector?.value || 0;
+    const selectedPalette = window.ColorSchemes?.[selectedIndex];
+    
+    // Process each domino as vector graphics
+    if (cachedDominoes && cachedDominoes.length > 0) {
+      // Calculate scale factor from content bounds to PDF coordinates
+      const scaleX = pdfWidth / contentWidth;
+      const scaleY = pdfHeight / contentHeight;
+      
+      // Get current color settings
+      const showColors = document.getElementById("show-colors-checkbox")?.checked !== false;
+      const useGrayscale = document.getElementById("grayscale-checkbox")?.checked === true;
+      
+      cachedDominoes.forEach(domino => {
+        // Determine fill color based on current settings
+        let fillColor;
+        if (!showColors) {
+          fillColor = [255, 255, 255]; // White
+        } else if (useGrayscale) {
+          // Convert to grayscale
+          const isHorizontal = domino.w > domino.h;
+          if (isHorizontal) {
+            fillColor = [200, 200, 200]; // Light gray for horizontal
+          } else {
+            fillColor = [100, 100, 100]; // Dark gray for vertical
+          }
+        } else {
+          // Use the actual current theme colors, same as 2D rendering
+          const colorHex = currentColors[domino.color] || domino.color;
+          
+          // Convert hex to RGB
+          let r, g, b;
+          if (typeof colorHex === 'string' && colorHex.startsWith('#')) {
+            r = parseInt(colorHex.substr(1, 2), 16);
+            g = parseInt(colorHex.substr(3, 2), 16);
+            b = parseInt(colorHex.substr(5, 2), 16);
+          } else {
+            // Fallback to default colors if hex parsing fails
+            r = 100; g = 100; b = 100;
+          }
+          fillColor = [r, g, b];
+        }
+        
+        // Draw rectangle with precise coordinates
+        pdf.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
+        pdf.setDrawColor(0, 0, 0); // Black border
+        pdf.setLineWidth(0.1);
+        
+        // Convert domino coordinates to PDF coordinates, accounting for content offset
+        const x = (domino.x - minX) * scaleX;
+        const y = (domino.y - minY) * scaleY;
+        const width = domino.w * scaleX;
+        const height = domino.h * scaleY;
+        
+        pdf.rect(x, y, width, height, 'FD'); // Fill and Draw
+      });
+    }
+
+    // Save the PDF
+    pdf.save(filename);
+  });
+
   // Add event listener for 3D download button
   document.getElementById("download-3d-btn").addEventListener("click", function() {
     // Check if 3D scene exists and has content
@@ -4147,6 +4284,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
     new bootstrap.Collapse(about, { toggle: false });
   }
+
 });
 </script>
 
