@@ -172,6 +172,29 @@ permalink: /domino/
     background-color: #5a6268 !important;
   }
 
+  [data-theme="dark"] .custom-colors-panel h5 {
+    color: #bbb !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel select {
+    background-color: #3a3a3a !important;
+    border-color: #555 !important;
+    color: #ddd !important;
+  }
+
+  [data-theme="dark"] .custom-colors-panel select:focus {
+    border-color: #007bff !important;
+  }
+
+  [data-theme="dark"] #apply-palette {
+    background-color: #007bff !important;
+    color: white !important;
+  }
+
+  [data-theme="dark"] #apply-palette:hover {
+    background-color: #0056b3 !important;
+  }
+
   /* Styling for buttons and controls */
   #sample-btn:disabled {
     opacity: 0.7;
@@ -250,6 +273,7 @@ permalink: /domino/
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="{{site.url}}/js/colorschemes.js"></script>
 <script src="{{site.url}}/s/domino.js"></script>
 
 <div class="accordion" id="infoAccordion">
@@ -452,6 +476,17 @@ permalink: /domino/
         <label for="color-border" style="width: 120px; font-weight: bold;">Border Color:</label>
         <input type="color" id="color-border" value="#666666" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-border" value="#666666" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
+      </div>
+    </div>
+    
+    <!-- Palette Selector -->
+    <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #ddd;">
+      <h5 style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Choose from Predefined Palettes:</h5>
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <select id="palette-selector" style="flex: 1; min-width: 200px; height: 36px; padding: 0 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+          <option value="">-- Select a palette --</option>
+        </select>
+        <button id="apply-palette" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Palette</button>
       </div>
     </div>
     
@@ -1850,11 +1885,8 @@ Module.onRuntimeInitialized = async function() {
 
   // Function to update colors in both 2D and 3D visualizations
   function updateColorsInVisualization() {
-    console.log("Updating colors in visualization...", currentColors);
-    
     // Update 3D visualization if it exists (regardless of which view is active)
     if (dominoGroup && dominoGroup.children.length > 0) {
-      console.log("Updating 3D colors for", dominoGroup.children.length, "meshes");
       // Update 3D materials
       dominoGroup.children.forEach(mesh => {
         if (mesh.material && mesh.userData.originalColor) {
@@ -1876,7 +1908,6 @@ Module.onRuntimeInitialized = async function() {
 
     // Update 2D visualization if cached dominoes exist
     if (cachedDominoes && cachedDominoes.length > 0) {
-      console.log("Updating 2D colors for", cachedDominoes.length, "dominoes");
       // Update the 2D display regardless of which view is active
       if (dominoLayer) {
         updateDominoDisplay();
@@ -1920,6 +1951,70 @@ Module.onRuntimeInitialized = async function() {
         updateColorsInVisualization();
       }
     });
+  });
+
+  // Palette Selector Functionality
+  function initializePaletteSelector() {
+    const paletteSelector = document.getElementById('palette-selector');
+    
+    // Populate the selector with available color schemes
+    if (typeof window.ColorSchemes !== 'undefined') {
+      window.ColorSchemes.forEach((scheme, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = scheme.name;
+        paletteSelector.appendChild(option);
+      });
+    }
+  }
+
+  // Apply selected palette
+  document.getElementById('apply-palette').addEventListener('click', function() {
+    const paletteSelector = document.getElementById('palette-selector');
+    const selectedIndex = paletteSelector.value;
+    
+    if (selectedIndex === '' || typeof window.ColorSchemes === 'undefined') {
+      return;
+    }
+    
+    const selectedPalette = window.ColorSchemes[selectedIndex];
+    if (!selectedPalette || !selectedPalette.colors) {
+      return;
+    }
+    
+    // Map palette colors to domino colors
+    // For domino simulation: [blue, green, red, yellow] or [blue, green, red, border]
+    const colors = selectedPalette.colors;
+    const paletteColors = {
+      blue: colors[0] || '#4363d8',
+      green: colors[1] || '#1e8c28', 
+      red: colors[2] || '#ff2244',
+      yellow: colors.length >= 4 ? colors[3] : colors[0] || '#fca414', // Use 4th color or fallback to 1st
+      border: colors.length >= 4 ? colors[3] : '#666666' // Use 4th color or default border
+    };
+    
+    // Update color inputs
+    Object.keys(paletteColors).forEach(colorKey => {
+      const colorInput = document.getElementById(`color-${colorKey}`);
+      const hexInput = document.getElementById(`hex-${colorKey}`);
+      if (colorInput && hexInput) {
+        colorInput.value = paletteColors[colorKey];
+        hexInput.value = paletteColors[colorKey];
+        currentColors[colorKey] = paletteColors[colorKey];
+      }
+    });
+
+    // Update visualization
+    updateColorsInVisualization();
+    
+    // Reset selector to show that palette was applied
+    paletteSelector.value = '';
+  });
+
+  // Initialize palette selector when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure ColorSchemes is loaded
+    setTimeout(initializePaletteSelector, 100);
   });
 
   // Camera movement controls
@@ -2315,6 +2410,7 @@ Module.onRuntimeInitialized = async function() {
       // Apply styling directly to the rectangle
       domino.rect
         .attr("fill", fill)
+        .attr("stroke", currentColors.border || "#000")
         .attr("stroke-width", borderWidth);
     });
 
@@ -2893,7 +2989,7 @@ Module.onRuntimeInitialized = async function() {
        g.select("rect")
         .attr("x",d.x).attr("y",d.y)
         .attr("width",d.w).attr("height",d.h)
-        .attr("stroke","#000");      // fill & stroke‑width set later in updateDominoDisplay()
+        .attr("stroke", currentColors.border || "#000");      // use custom border color
 
        // store reference for lightning‑fast single‑domino tweaks later if needed
        dominoIndex.set(k,{rect:g.select("rect"),datum:d});
