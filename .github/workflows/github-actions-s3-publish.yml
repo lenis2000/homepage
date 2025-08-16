@@ -51,6 +51,7 @@ jobs:
         sudo mv ./_site/teaching/syll/Syllabus_3340_s23.pdf ./_site/teaching/
         sudo mv ./_site/teaching/syll/Syllabus_3100_f23.pdf ./_site/teaching/
         sudo mv ./_site/teaching/syll/Syllabus_2310_f24.pdf ./_site/teaching/
+        sudo mv ./_site/teaching/syll/Syllabus_EGMT_f25.pdf ./_site/teaching/
         sudo rm -Rf _site/teaching/syll
 
     # - name: Check HTML
