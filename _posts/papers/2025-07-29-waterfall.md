@@ -17,7 +17,7 @@ pdf: 49-random-lozenge-waterfall.pdf
 post-pdf: true
 pages: 65
 cv-number: 49
-simulations: /lozenge/
+simulations: lozenge/
 published: true
 ---
 
