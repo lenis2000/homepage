@@ -45,6 +45,7 @@ nav_weight: 19
         random-matrices:Random Matrices,
         permutations:Permutations,
         lozenge-tilings:Lozenges,
+        vertex-models:Vertex Models,
         TASEPs:TASEPs,
         misc:Misc" | split: "," %}
   {% for cat in categories %}
