@@ -25,7 +25,7 @@ author: Leo Petrov
           <li><strong>Deterministic part:</strong></li>
           <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s</li>
           <li><strong>Stochastic part for different colors:</strong></li>
-          <li>If s ≠ s' (both > 0): with probability t, v = s' if u = s or v = s if u = s' (crossing); with probability 1-t, v = 0 (annihilation)</li>
+          <li>If s ≠ s' (both > 0): with probability p, v = s' if u = s or v = s if u = s' (crossing); with probability 1-p, v = 0 (annihilation)</li>
         </ul>
       </div>
 
@@ -52,8 +52,12 @@ author: Leo Petrov
             <input type="text" id="b-param" inputmode="decimal" class="form-control" value="0.1" placeholder="e.g. 0.1 or 0,1">
           </div>
           <div class="form-group">
+            <label for="p-param">p (color crossing probability):</label>
+            <input type="text" id="p-param" inputmode="decimal" class="form-control" value="0.5" placeholder="e.g. 0.1 or 0,1">
+          </div>
+          <div class="form-group">
             <label for="n-colors">Number of colors:</label>
-            <input type="number" id="n-colors" min="1" max="10" class="form-control" value="4">
+            <input type="number" id="n-colors" min="1" max="500" class="form-control" value="4">
           </div>
         </div>
 
@@ -101,6 +105,7 @@ function readUnitInterval(id){
     const stepBtn = document.getElementById('step-btn');
     const tParam = document.getElementById('t-param');
     const bParam = document.getElementById('b-param');
+    const pParam = document.getElementById('p-param');
     const nColorsParam = document.getElementById('n-colors');
     const sizeParam = document.getElementById('size-param');
     const sizeValue = document.getElementById('size-value');
@@ -112,16 +117,23 @@ function readUnitInterval(id){
 
     let t = 0.5;  // Crossing probability
     let b = 0.1;  // Birth probability
+    let p = 0.5;  // Color crossing probability
     let nColors = 4; // Number of colors
     let speedMultiplier = 2.5; // Speed multiplier
 
-    // Color palettes - bright distinguishable colors
-    const colorPalettes = [
-        ['#FF6B6B', '#4ECDC4', '#45B7D1', '#F7DC6F', '#BB8FCE', '#85C88A', '#F8B500', '#6C5CE7', '#FD79A8', '#00CEC9'],
-        ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E', '#16A085', '#27AE60'],
-        ['#FF4757', '#5F27CD', '#00D2D3', '#FFC048', '#54A0FF', '#48DBFB', '#EE5A24', '#10AC84', '#F368E0', '#FECA57']
-    ];
-    let currentPalette = colorPalettes[0];
+    // Generate rainbow colors using HSL
+    function generateRainbowPalette(n) {
+        const colors = [];
+        for (let i = 0; i < n; i++) {
+            const hue = (i * 360) / n; // Distribute hues evenly around the color wheel
+            const saturation = 80; // High saturation for vibrant colors
+            const lightness = 50; // Medium lightness
+            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        }
+        return colors;
+    }
+    
+    let currentPalette = generateRainbowPalette(nColors);
 
     // Grid dimensions
     let gridSize = 50; // Grid size
@@ -252,8 +264,8 @@ function readUnitInterval(id){
                     if (s > 0 && sPrime > 0) {
                         // Both s and s' are non-zero and different
                         // Apply stochastic crossing/annihilation rule
-                        if (Math.random() < t) {
-                            // Crossing with probability t
+                        if (Math.random() < p) {
+                            // Crossing with probability p
                             if (u === s) {
                                 nextGrid[x][y] = sPrime;
                             } else if (u === sPrime) {
@@ -268,7 +280,7 @@ function readUnitInterval(id){
                                 nextGrid[x][y] = 0;
                             }
                         } else {
-                            // Annihilation with probability 1-t
+                            // Annihilation with probability 1-p
                             nextGrid[x][y] = 0;
                         }
                     } else {
@@ -495,12 +507,20 @@ function readUnitInterval(id){
         }
     });
 
+    pParam.addEventListener('input', (e) => {
+        try {
+            p = readUnitInterval('p-param');
+        } catch (err) {
+            console.warn(err.message);
+        }
+    });
+
     nColorsParam.addEventListener('input', (e) => {
         const newColors = parseInt(e.target.value);
-        if (newColors >= 1 && newColors <= 10) {
+        if (newColors >= 1 && newColors <= 20) {
             nColors = newColors;
-            // Select a random palette
-            currentPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+            // Generate new rainbow palette
+            currentPalette = generateRainbowPalette(nColors);
             // Stop the simulation
             isRunning = false;
             if (animationId) {
