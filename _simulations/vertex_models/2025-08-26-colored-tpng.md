@@ -12,22 +12,63 @@ author: Leo Petrov
       <div class="description mt-3 mb-4">
         <h4>Description</h4>
         <p>
-          The colored discrete t-PNG model lives on the integer quadrant {1,2,...}² with N colors (N = grid size).
-          It evolves as a Markov chain in continuous time t = x + y. The boundaries are empty (no boundary emissions).
-          New particles born at position (x,y) get color x.
+          The colored discrete t-PNG model lives on the integer quadrant \(\{1,2,\dots\}^2\) with \(N\) colors (\(N =\) grid size).
+          It evolves by diagonals \(D = x + y\) (we avoid using the letter <code>t</code> for time to prevent confusion with a model parameter).
+          Boundaries are empty (no boundary emissions). Any new particle born at \((x,y)\) receives color \(x\).
         </p>
+
         <p>
-          <strong>Update rules:</strong> For a cell v at (x,y) on diagonal t+1, depending on cells s = (x-1, y) and s' = (x, y-1) on diagonal t, and u = (x-1, y-1) on diagonal t-1:
+          <strong>State used for the update:</strong> for a target cell \(v=(x,y)\) on diagonal \(D+1\), define
+          \(s=(x-1,y)\) and \(s'=(x,y-1)\) on diagonal \(D\), and \(u=(x-1,y-1)\) on diagonal \(D-1\).
+          Values are \(0\) (empty) or a color in \(\{1,\dots,N\}\).
         </p>
+
+        <p><strong>Parameters:</strong>
+          <ul>
+            <li><strong>b</strong> — birth probability when \(s=s'=0\) and \(u=0\).</li>
+            <li><strong>t</strong> — continuation probability when \(s=s'=0\) and \(u>0\) (not a crossing parameter).</li>
+            <li><strong>p</strong> — color crossing probability when \(s\neq s'\) and both are nonzero.</li>
+          </ul>
+        </p>
+
+        <p><strong>Update rules (exactly as implemented):</strong></p>
         <ul>
-          <li><strong>Random part:</strong></li>
-          <li>If s = s' = 0 and u = 0: v = 0 with probability 1-b, v = x with probability b</li>
-          <li>If s = s' = 0 and u > 0: v = u with probability t, v = 0 with probability 1-t</li>
-          <li><strong>Deterministic part:</strong></li>
-          <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s; if u ≠ 0 and u ≠ s: v = 0</li>
-          <li><strong>Stochastic part for different colors:</strong></li>
-          <li>If s ≠ s' (both > 0): with probability p, v = s' if u = s or v = s if u = s' (crossing); with probability 1-p, v = 0 (annihilation); if u is neither s nor s' nor 0: v = 0</li>
-          <li>If s ≠ s' (exactly one is 0): v = s' if u = s, v = s if u = s', v = non-zero if u = 0, v = 0 if u is some other color</li>
+          <li><strong>Birth / propagation with empty neighbors:</strong>
+            <ul>
+              <li>If \(s=s'=0\) and \(u=0\): \(v=0\) with prob \(1-b\); \(v=x\) with prob \(b\).</li>
+              <li>If \(s=s'=0\) and \(u>0\): \(v=u\) with prob \(t\); \(v=0\) with prob \(1-t\).</li>
+            </ul>
+          </li>
+
+          <li><strong>Same color on both sides:</strong> if \(s=s'=c>0\):
+            <ul>
+              <li>If \(u=c\): \(v=0\).</li>
+              <li>If \(u=0\): \(v=c\).</li>
+              <li>If \(u\neq 0\) and \(u\neq c\): \(v=0\).</li>
+            </ul>
+          </li>
+
+          <li><strong>Two different nonzero colors present:</strong> if \(s\neq s'\) with \(s>0\) and \(s'>0\):
+            <ul>
+              <li>With prob \(p\) (crossing):
+                <ul>
+                  <li>If \(u=s\): \(v=s'\).</li>
+                  <li>If \(u=s'\): \(v=s\).</li>
+                  <li>If \(u=0\): \(v\) is chosen uniformly from \(\{s,s'\}\).</li>
+                  <li>If \(u\) is some other color: \(v=0\).</li>
+                </ul>
+              </li>
+              <li>With prob \(1-p\) (annihilation): \(v=0\).</li>
+            </ul>
+          </li>
+
+          <li><strong>Exactly one of \(s, s'\) is zero:</strong> write \(\{s,s'\}=\{c,0\}\) with \(c>0\):
+            <ul>
+              <li>If \(u=c\): \(v=0\).</li>
+              <li>If \(u=0\): \(v=c\).</li>
+              <li>Otherwise: \(v=0\).</li>
+            </ul>
+          </li>
         </ul>
       </div>
 
@@ -46,15 +87,15 @@ author: Leo Petrov
         <div class="col-md-3">
           <h5>Model Parameters</h5>
           <div class="form-group">
-            <label for="t-param">t (crossing probability):</label>
+            <label for="t-param">t (continuation probability, case s=s'=0 and u>0):</label>
             <input type="text" id="t-param" inputmode="decimal" class="form-control" value="0.5" placeholder="e.g. 0.1 or 0,1">
           </div>
           <div class="form-group">
-            <label for="b-param">b (birth probability):</label>
+            <label for="b-param">b (birth probability, case s=s'=0 and u=0):</label>
             <input type="text" id="b-param" inputmode="decimal" class="form-control" value="0.1" placeholder="e.g. 0.1 or 0,1">
           </div>
           <div class="form-group">
-            <label for="p-param">p (color crossing probability):</label>
+            <label for="p-param">p (color crossing probability when s≠s' > 0):</label>
             <input type="text" id="p-param" inputmode="decimal" class="form-control" value="0.5" placeholder="e.g. 0.1 or 0,1">
           </div>
         </div>
