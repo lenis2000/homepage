@@ -1,5 +1,5 @@
 ---
-title: Colored discretizer t-PNG Model (Stochastic Colored Rule 54)
+title: Colored discretized t-PNG Model (Stochastic Colored Rule 54)
 model: vertex-models
 author: Leo Petrov
 ---
@@ -24,7 +24,8 @@ author: Leo Petrov
           <li>If s = s' = 0 and u > 0: v = u with probability t, v = 0 with probability 1-t</li>
           <li><strong>Deterministic part:</strong></li>
           <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s</li>
-          <li>If s ≠ s' and u = s: v = s'; if u = s': v = s; if u = 0: v = max(s,s')</li>
+          <li><strong>Stochastic part for different colors:</strong></li>
+          <li>If s ≠ s' (both > 0): with probability t, v = s' if u = s or v = s if u = s' (crossing); with probability 1-t, v = 0 (annihilation)</li>
         </ul>
       </div>
 
@@ -215,7 +216,7 @@ function readUnitInterval(id){
                 const u = getCell(x - 1, y - 1);    // SW neighbor on diagonal t-1
 
                 // Apply the colored rule based on the exact specification
-                
+
                 // RANDOM PART: s = s' = 0
                 if (s === 0 && sPrime === 0) {
                     if (u === 0) {
@@ -247,20 +248,27 @@ function readUnitInterval(id){
                         nextGrid[x][y] = 0;
                     }
                 } else if (s !== sPrime) {
-                    // s ≠ s' 
+                    // s ≠ s'
                     if (s > 0 && sPrime > 0) {
                         // Both s and s' are non-zero and different
-                        if (u === s) {
-                            nextGrid[x][y] = sPrime;
-                        } else if (u === sPrime) {
-                            nextGrid[x][y] = s;
-                        } else if (u === 0) {
-                            // u = 0: v = max(s, s')
-                            nextGrid[x][y] = Math.max(s, sPrime);
+                        // Apply stochastic crossing/annihilation rule
+                        if (Math.random() < t) {
+                            // Crossing with probability t
+                            if (u === s) {
+                                nextGrid[x][y] = sPrime;
+                            } else if (u === sPrime) {
+                                nextGrid[x][y] = s;
+                            } else if (u === 0) {
+                                // u = 0: randomly pick one to survive
+                                nextGrid[x][y] = (Math.random() < 0.5) ? s : sPrime;
+                            } else {
+                                // u is some other color - invalid
+                                console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
+                                alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                                nextGrid[x][y] = 0;
+                            }
                         } else {
-                            // u is some other color ≠ s, s', 0
-                            console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
-                            alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                            // Annihilation with probability 1-t
                             nextGrid[x][y] = 0;
                         }
                     } else {
@@ -268,7 +276,7 @@ function readUnitInterval(id){
                         // We need to treat this case carefully to match the uncolored model
                         const nonZero = (s > 0) ? s : sPrime;
                         const zero = 0;
-                        
+
                         // Apply the same swap rule as if 0 were a color
                         if (u === nonZero) {
                             nextGrid[x][y] = zero;  // v = 0
