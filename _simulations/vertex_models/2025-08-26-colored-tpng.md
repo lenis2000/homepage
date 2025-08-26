@@ -12,9 +12,9 @@ author: Leo Petrov
       <div class="description mt-3 mb-4">
         <h4>Description</h4>
         <p>
-          The colored discrete t-PNG model lives on the integer quadrant {1,2,...}² with 2N colors (N = grid size).
+          The colored discrete t-PNG model lives on the integer quadrant {1,2,...}² with N colors (N = grid size).
           It evolves as a Markov chain in continuous time t = x + y. The boundaries are empty (no boundary emissions).
-          New particles born at position (x,y) get color x+y.
+          New particles born at position (x,y) get color x.
         </p>
         <p>
           <strong>Update rules:</strong> For a cell v at (x,y) on diagonal t+1, depending on cells s = (x-1, y) and s' = (x, y-1) on diagonal t, and u = (x-1, y-1) on diagonal t-1:
@@ -119,7 +119,7 @@ function readUnitInterval(id){
     // Grid dimensions
     let gridSize = 50; // Grid size
     let cellSize = Math.min(canvas.width, canvas.height) / gridSize;
-    let nColors = 2 * gridSize; // Number of colors = 2 * grid size (for x+y coloring)
+    let nColors = gridSize; // Number of colors = grid size
 
     // Generate rainbow colors using HSL
     function generateRainbowPalette(n) {
@@ -232,8 +232,8 @@ function readUnitInterval(id){
                         if (Math.random() < (1 - b)) {
                             nextGrid[x][y] = 0;
                         } else {
-                            // New particle gets color x+y (its diagonal position)
-                            nextGrid[x][y] = x + y;
+                            // New particle gets color x (its x-coordinate)
+                            nextGrid[x][y] = x;
                         }
                     } else {
                         // s = s' = 0 and u > 0: v = u prob t, v = 0 prob 1-t
@@ -518,7 +518,7 @@ function readUnitInterval(id){
 
         // Update grid size and reinitialize
         gridSize = newSize;
-        nColors = 2 * gridSize; // Update number of colors to match 2 * grid size
+        nColors = gridSize; // Update number of colors to match grid size
         currentPalette = generateRainbowPalette(nColors); // Regenerate palette
         cellSize = Math.min(canvas.width / gridSize, canvas.height / gridSize);
         initGrid();
