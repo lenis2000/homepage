@@ -19,9 +19,12 @@ author: Leo Petrov
           <strong>Update rules:</strong> For a cell v at (x,y) on diagonal t+1, depending on cells s = (x-1, y) and s' = (x, y-1) on diagonal t, and u = (x-1, y-1) on diagonal t-1:
         </p>
         <ul>
-          <li>If s ≠ 0 or s' ≠ 0: must have u = s or u = s'. Then v = s' if u = s, v = s if u = s'</li>
-          <li>If s = s' = 0 and u has color: v = 0 with probability t, v = u with probability 1-t</li>
-          <li>If s = s' = 0 and u = 0: v = 0 with probability t, v = random color j with probability (1-t)/n each</li>
+          <li><strong>Random part:</strong></li>
+          <li>If s = s' = 0 and u = 0: v = 0 with probability 1-b, v = j > 0 with probability b/n each</li>
+          <li>If s = s' = 0 and u > 0: v = u with probability t, v = 0 with probability 1-t</li>
+          <li><strong>Deterministic part:</strong></li>
+          <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s</li>
+          <li>If s ≠ s' and u = s: v = s'; if u = s': v = s; if u = 0: v = max(s,s')</li>
         </ul>
       </div>
 
@@ -40,12 +43,16 @@ author: Leo Petrov
         <div class="col-md-3">
           <h5>Model Parameters</h5>
           <div class="form-group">
-            <label for="t-param">t (empty probability):</label>
+            <label for="t-param">t (crossing probability):</label>
             <input type="text" id="t-param" inputmode="decimal" class="form-control" value="0.5" placeholder="e.g. 0.1 or 0,1">
           </div>
           <div class="form-group">
+            <label for="b-param">b (birth probability):</label>
+            <input type="text" id="b-param" inputmode="decimal" class="form-control" value="0.1" placeholder="e.g. 0.1 or 0,1">
+          </div>
+          <div class="form-group">
             <label for="n-colors">Number of colors:</label>
-            <input type="number" id="n-colors" min="2" max="10" class="form-control" value="4">
+            <input type="number" id="n-colors" min="1" max="10" class="form-control" value="4">
           </div>
         </div>
 
@@ -53,7 +60,7 @@ author: Leo Petrov
           <h5>Simulation Control</h5>
           <div class="form-group">
             <label for="size-param">Grid Size:</label>
-            <input type="range" id="size-param" min="20" max="200" step="10" value="50" class="form-control-range">
+            <input type="range" id="size-param" min="20" max="700" step="10" value="50" class="form-control-range">
             <span id="size-value">50</span>
           </div>
           <div class="form-group">
@@ -92,6 +99,7 @@ function readUnitInterval(id){
     const resetBtn = document.getElementById('reset-btn');
     const stepBtn = document.getElementById('step-btn');
     const tParam = document.getElementById('t-param');
+    const bParam = document.getElementById('b-param');
     const nColorsParam = document.getElementById('n-colors');
     const sizeParam = document.getElementById('size-param');
     const sizeValue = document.getElementById('size-value');
@@ -101,7 +109,8 @@ function readUnitInterval(id){
     const occupiedCount = document.getElementById('occupied-count');
     const colorCountsDiv = document.getElementById('color-counts');
 
-    let t = 0.5;  // Empty probability
+    let t = 0.5;  // Crossing probability
+    let b = 0.1;  // Birth probability
     let nColors = 4; // Number of colors
     let speedMultiplier = 2.5; // Speed multiplier
 
@@ -205,35 +214,78 @@ function readUnitInterval(id){
                 const sPrime = getCell(x, y - 1);   // down neighbor on diagonal t
                 const u = getCell(x - 1, y - 1);    // SW neighbor on diagonal t-1
 
-                // Apply the colored rule
-                if (s !== 0 || sPrime !== 0) {
-                    // At least one of s, s' is non-empty
-                    // Must have u = s or u = s'
-                    if (u === s) {
-                        nextGrid[x][y] = sPrime;
-                    } else if (u === sPrime) {
-                        nextGrid[x][y] = s;
-                    } else {
-                        // This shouldn't happen in a valid evolution
-                        // but we'll handle it gracefully
-                        nextGrid[x][y] = 0;
-                    }
-                } else {
-                    // s = s' = 0
-                    if (u !== 0) {
-                        // u has some color
-                        // v = 0 with probability t, v = u with probability 1-t
-                        nextGrid[x][y] = (Math.random() < t) ? 0 : u;
-                    } else {
-                        // u = 0
-                        // v = 0 with probability t, v = random color with probability (1-t)/n each
-                        if (Math.random() < t) {
+                // Apply the colored rule based on the exact specification
+                
+                // RANDOM PART: s = s' = 0
+                if (s === 0 && sPrime === 0) {
+                    if (u === 0) {
+                        // s = s' = 0 and u = 0: v = 0 prob 1-b; v = j > 0 prob b/n
+                        if (Math.random() < (1 - b)) {
                             nextGrid[x][y] = 0;
                         } else {
                             // Choose a random color from 1 to nColors
                             nextGrid[x][y] = Math.floor(Math.random() * nColors) + 1;
                         }
+                    } else {
+                        // s = s' = 0 and u > 0: v = u prob t, v = 0 prob 1-t
+                        nextGrid[x][y] = (Math.random() < t) ? u : 0;
                     }
+                }
+                // DETERMINISTIC PART: at least one of s, s' is non-zero
+                else if (s === sPrime && s > 0) {
+                    // s = s' > 0
+                    if (u === s) {
+                        // u = s = s': v = 0
+                        nextGrid[x][y] = 0;
+                    } else if (u === 0) {
+                        // u = 0: v = s
+                        nextGrid[x][y] = s;
+                    } else {
+                        // Invalid situation: u ≠ 0 and u ≠ s
+                        console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
+                        alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                        nextGrid[x][y] = 0;
+                    }
+                } else if (s !== sPrime) {
+                    // s ≠ s' 
+                    if (s > 0 && sPrime > 0) {
+                        // Both s and s' are non-zero and different
+                        if (u === s) {
+                            nextGrid[x][y] = sPrime;
+                        } else if (u === sPrime) {
+                            nextGrid[x][y] = s;
+                        } else if (u === 0) {
+                            // u = 0: v = max(s, s')
+                            nextGrid[x][y] = Math.max(s, sPrime);
+                        } else {
+                            // u is some other color ≠ s, s', 0
+                            console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
+                            alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                            nextGrid[x][y] = 0;
+                        }
+                    } else {
+                        // Exactly one of s, s' is 0 (since they're different and not both 0)
+                        // We need to treat this case carefully to match the uncolored model
+                        const nonZero = (s > 0) ? s : sPrime;
+                        const zero = 0;
+                        
+                        // Apply the same swap rule as if 0 were a color
+                        if (u === nonZero) {
+                            nextGrid[x][y] = zero;  // v = 0
+                        } else if (u === zero) {
+                            nextGrid[x][y] = nonZero;  // v = the non-zero color
+                        } else {
+                            // u is some other color - this shouldn't happen
+                            console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
+                            alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                            nextGrid[x][y] = 0;
+                        }
+                    }
+                } else {
+                    // This should never happen - we've covered all cases
+                    console.error(`Unexpected case at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
+                    alert(`Error: Unexpected case at (${x},${y}). Please check the logic.`);
+                    nextGrid[x][y] = 0;
                 }
             }
         }
@@ -427,14 +479,31 @@ function readUnitInterval(id){
         }
     });
 
+    bParam.addEventListener('input', (e) => {
+        try {
+            b = readUnitInterval('b-param');
+        } catch (err) {
+            console.warn(err.message);
+        }
+    });
+
     nColorsParam.addEventListener('input', (e) => {
         const newColors = parseInt(e.target.value);
-        if (newColors >= 2 && newColors <= 10) {
+        if (newColors >= 1 && newColors <= 10) {
             nColors = newColors;
             // Select a random palette
             currentPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
-            // Reset when changing colors
-            resetBtn.click();
+            // Stop the simulation
+            isRunning = false;
+            if (animationId) {
+                clearTimeout(animationId);
+            }
+            // Reset the grid
+            initGrid();
+            draw();
+            startBtn.textContent = 'Start';
+            timeDisplay.textContent = '0';
+            updateColorStats();
         }
     });
 
