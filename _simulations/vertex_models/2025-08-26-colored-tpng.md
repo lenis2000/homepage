@@ -24,9 +24,10 @@ author: Leo Petrov
           <li>If s = s' = 0 and u = 0: v = 0 with probability 1-b, v = x with probability b</li>
           <li>If s = s' = 0 and u > 0: v = u with probability t, v = 0 with probability 1-t</li>
           <li><strong>Deterministic part:</strong></li>
-          <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s</li>
+          <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s; if u ≠ 0 and u ≠ s: v = 0</li>
           <li><strong>Stochastic part for different colors:</strong></li>
-          <li>If s ≠ s' (both > 0): with probability p, v = s' if u = s or v = s if u = s' (crossing); with probability 1-p, v = 0 (annihilation)</li>
+          <li>If s ≠ s' (both > 0): with probability p, v = s' if u = s or v = s if u = s' (crossing); with probability 1-p, v = 0 (annihilation); if u is neither s nor s' nor 0: v = 0</li>
+          <li>If s ≠ s' (exactly one is 0): v = s' if u = s, v = s if u = s', v = non-zero if u = 0, v = 0 if u is some other color</li>
         </ul>
       </div>
 
@@ -250,9 +251,7 @@ function readUnitInterval(id){
                         // u = 0: v = s
                         nextGrid[x][y] = s;
                     } else {
-                        // Invalid situation: u ≠ 0 and u ≠ s
-                        console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
-                        alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                        // Invalid situation: u ≠ 0 and u ≠ s (silently set to 0)
                         nextGrid[x][y] = 0;
                     }
                 } else if (s !== sPrime) {
@@ -270,9 +269,7 @@ function readUnitInterval(id){
                                 // u = 0: randomly pick one to survive
                                 nextGrid[x][y] = (Math.random() < 0.5) ? s : sPrime;
                             } else {
-                                // u is some other color - invalid
-                                console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
-                                alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                                // u is some other color (silently set to 0)
                                 nextGrid[x][y] = 0;
                             }
                         } else {
@@ -291,9 +288,7 @@ function readUnitInterval(id){
                         } else if (u === zero) {
                             nextGrid[x][y] = nonZero;  // v = the non-zero color
                         } else {
-                            // u is some other color - this shouldn't happen
-                            console.error(`Invalid evolution at (${x},${y}): s=${s}, s'=${sPrime}, u=${u}`);
-                            alert(`Error: Invalid configuration at position (${x},${y}). s=${s}, s'=${sPrime}, u=${u}. This should not occur!`);
+                            // u is some other color (silently set to 0)
                             nextGrid[x][y] = 0;
                         }
                     }
