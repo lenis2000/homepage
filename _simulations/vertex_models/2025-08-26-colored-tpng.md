@@ -12,15 +12,16 @@ author: Leo Petrov
       <div class="description mt-3 mb-4">
         <h4>Description</h4>
         <p>
-          The colored discrete t-PNG model lives on the integer quadrant {1,2,...}² with n distinct colors.
+          The colored discrete t-PNG model lives on the integer quadrant {1,2,...}² with N colors (N = grid size).
           It evolves as a Markov chain in continuous time t = x + y. The boundaries are empty (no boundary emissions).
+          New particles born at position (x,y) get color x.
         </p>
         <p>
           <strong>Update rules:</strong> For a cell v at (x,y) on diagonal t+1, depending on cells s = (x-1, y) and s' = (x, y-1) on diagonal t, and u = (x-1, y-1) on diagonal t-1:
         </p>
         <ul>
           <li><strong>Random part:</strong></li>
-          <li>If s = s' = 0 and u = 0: v = 0 with probability 1-b, v = j > 0 with probability b/n each</li>
+          <li>If s = s' = 0 and u = 0: v = 0 with probability 1-b, v = x with probability b</li>
           <li>If s = s' = 0 and u > 0: v = u with probability t, v = 0 with probability 1-t</li>
           <li><strong>Deterministic part:</strong></li>
           <li>If s = s' > 0 and u = s: v = 0; if u = 0: v = s</li>
@@ -34,9 +35,9 @@ author: Leo Petrov
       </div>
 
       <div class="controls mt-3">
-        <button id="start-btn" class="btn btn-primary">Start</button>
+        <button id="reset-start-btn" class="btn btn-primary">Reset & Start</button>
+        <button id="start-btn" class="btn btn-success">Start</button>
         <button id="stop-btn" class="btn btn-secondary">Stop</button>
-        <button id="reset-btn" class="btn btn-warning">Reset</button>
         <button id="step-btn" class="btn btn-info">Step</button>
       </div>
 
@@ -54,10 +55,6 @@ author: Leo Petrov
           <div class="form-group">
             <label for="p-param">p (color crossing probability):</label>
             <input type="text" id="p-param" inputmode="decimal" class="form-control" value="0.5" placeholder="e.g. 0.1 or 0,1">
-          </div>
-          <div class="form-group">
-            <label for="n-colors">Number of colors:</label>
-            <input type="number" id="n-colors" min="1" max="500" class="form-control" value="4">
           </div>
         </div>
 
@@ -99,14 +96,13 @@ function readUnitInterval(id){
 (function() {
     const canvas = document.getElementById('colored-tpng-canvas');
     const ctx = canvas.getContext('2d');
+    const resetStartBtn = document.getElementById('reset-start-btn');
     const startBtn = document.getElementById('start-btn');
     const stopBtn = document.getElementById('stop-btn');
-    const resetBtn = document.getElementById('reset-btn');
     const stepBtn = document.getElementById('step-btn');
     const tParam = document.getElementById('t-param');
     const bParam = document.getElementById('b-param');
     const pParam = document.getElementById('p-param');
-    const nColorsParam = document.getElementById('n-colors');
     const sizeParam = document.getElementById('size-param');
     const sizeValue = document.getElementById('size-value');
     const speedParam = document.getElementById('speed-param');
@@ -118,26 +114,26 @@ function readUnitInterval(id){
     let t = 0.5;  // Crossing probability
     let b = 0.1;  // Birth probability
     let p = 0.5;  // Color crossing probability
-    let nColors = 4; // Number of colors
     let speedMultiplier = 2.5; // Speed multiplier
+
+    // Grid dimensions
+    let gridSize = 50; // Grid size
+    let cellSize = Math.min(canvas.width, canvas.height) / gridSize;
+    let nColors = gridSize; // Number of colors = grid size
 
     // Generate rainbow colors using HSL
     function generateRainbowPalette(n) {
         const colors = [];
         for (let i = 0; i < n; i++) {
             const hue = (i * 360) / n; // Distribute hues evenly around the color wheel
-            const saturation = 80; // High saturation for vibrant colors
-            const lightness = 50; // Medium lightness
+            const saturation = 90; // Higher saturation for more vibrant colors
+            const lightness = 45; // Slightly darker lightness to avoid pale colors
             colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
         }
         return colors;
     }
     
     let currentPalette = generateRainbowPalette(nColors);
-
-    // Grid dimensions
-    let gridSize = 50; // Grid size
-    let cellSize = Math.min(canvas.width, canvas.height) / gridSize;
 
     // Grid state (0 = empty, 1-n = colors)
     let grid = [];
@@ -232,12 +228,12 @@ function readUnitInterval(id){
                 // RANDOM PART: s = s' = 0
                 if (s === 0 && sPrime === 0) {
                     if (u === 0) {
-                        // s = s' = 0 and u = 0: v = 0 prob 1-b; v = j > 0 prob b/n
+                        // s = s' = 0 and u = 0: v = 0 prob 1-b; v = x prob b
                         if (Math.random() < (1 - b)) {
                             nextGrid[x][y] = 0;
                         } else {
-                            // Choose a random color from 1 to nColors
-                            nextGrid[x][y] = Math.floor(Math.random() * nColors) + 1;
+                            // New particle gets color x (its x-coordinate)
+                            nextGrid[x][y] = x;
                         }
                     } else {
                         // s = s' = 0 and u > 0: v = u prob t, v = 0 prob 1-t
@@ -325,7 +321,6 @@ function readUnitInterval(id){
             if (animationId) {
                 clearTimeout(animationId);
             }
-            startBtn.textContent = 'Start';
         }
     }
 
@@ -450,17 +445,25 @@ function readUnitInterval(id){
     }
 
     // Event handlers
+    resetStartBtn.addEventListener('click', () => {
+        isRunning = false;
+        if (animationId) {
+            clearTimeout(animationId);
+        }
+        initGrid();
+        draw();
+        timeDisplay.textContent = '0';
+        updateColorStats();
+        
+        // Start immediately after reset
+        isRunning = true;
+        animate();
+    });
+
     startBtn.addEventListener('click', () => {
         if (!isRunning) {
             isRunning = true;
             animate();
-            startBtn.textContent = 'Pause';
-        } else {
-            isRunning = false;
-            if (animationId) {
-                clearTimeout(animationId);
-            }
-            startBtn.textContent = 'Start';
         }
     });
 
@@ -469,19 +472,6 @@ function readUnitInterval(id){
         if (animationId) {
             clearTimeout(animationId);
         }
-        startBtn.textContent = 'Start';
-    });
-
-    resetBtn.addEventListener('click', () => {
-        isRunning = false;
-        if (animationId) {
-            clearTimeout(animationId);
-        }
-        initGrid();
-        draw();
-        startBtn.textContent = 'Start';
-        timeDisplay.textContent = '0';
-        updateColorStats();
     });
 
     stepBtn.addEventListener('click', () => {
@@ -515,25 +505,6 @@ function readUnitInterval(id){
         }
     });
 
-    nColorsParam.addEventListener('input', (e) => {
-        const newColors = parseInt(e.target.value);
-        if (newColors >= 1 && newColors <= 20) {
-            nColors = newColors;
-            // Generate new rainbow palette
-            currentPalette = generateRainbowPalette(nColors);
-            // Stop the simulation
-            isRunning = false;
-            if (animationId) {
-                clearTimeout(animationId);
-            }
-            // Reset the grid
-            initGrid();
-            draw();
-            startBtn.textContent = 'Start';
-            timeDisplay.textContent = '0';
-            updateColorStats();
-        }
-    });
 
     sizeParam.addEventListener('input', (e) => {
         const newSize = parseInt(e.target.value);
@@ -547,10 +518,11 @@ function readUnitInterval(id){
 
         // Update grid size and reinitialize
         gridSize = newSize;
+        nColors = gridSize; // Update number of colors to match grid size
+        currentPalette = generateRainbowPalette(nColors); // Regenerate palette
         cellSize = Math.min(canvas.width / gridSize, canvas.height / gridSize);
         initGrid();
         draw();
-        startBtn.textContent = 'Start';
     });
 
     speedParam.addEventListener('input', (e) => {
