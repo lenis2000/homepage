@@ -39,6 +39,7 @@ const ColorSchemes = [
     { name: 'United Kingdom', colors: ['#012169', '#FFFFFF', '#C8102E', '#D3D3D3'] },
     { name: 'Jamaica', colors: ['#009B3A', '#FED100', '#000000', '#222222'] },
     { name: 'Belgium', colors: ['#000000', '#FED100', '#ED2939', '#FFFFFF'] },
+    { name: 'Germany', colors: ['#000000', '#DD0000', '#FFCC00', '#D3D3D3'] },
     { name: 'Colombia', colors: ['#FFCD00', '#003087', '#C8102E', '#FFFFFF'] },
     { name: 'South Korea', colors: ['#CD2E3A', '#0047A0', '#FFFFFF', '#000000'] },
     { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169', '#FFFFFF'] },
