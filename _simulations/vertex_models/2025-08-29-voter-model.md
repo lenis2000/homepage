@@ -51,28 +51,30 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
       <canvas id="stat-ts" width="900" height="160"
               style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
     </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+      <div>
+        <div style="font-weight:600;margin-bottom:6px;text-align:center">
+          Space–time raster: Complete History (time ↓, space →, NEVER scrolls)
+        </div>
+        <div style="max-height:600px;overflow-y:auto;border:1px solid #ccc">
+          <canvas id="stat-raster-full" width="600" height="2000"
+                  style="width:100%;display:block"></canvas>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:600;margin-bottom:6px;text-align:center">
+          Recent Events Window (last N×N events)
+        </div>
+        <canvas id="stat-raster" width="300" height="300"
+                style="width:100%;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+      </div>
+    </div>
     <div>
       <div style="font-weight:600;margin-bottom:6px;text-align:center">
-        Space–time raster: Full History (time ↓, space →)
+        Domain-size histogram
       </div>
-      <canvas id="stat-raster-full" width="900" height="120"
+      <canvas id="stat-hist" width="900" height="120"
               style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div>
-        <div style="font-weight:600;margin-bottom:6px;text-align:center">
-          Domain-size histogram
-        </div>
-        <canvas id="stat-hist" width="420" height="180"
-                style="width:100%;max-width:420px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
-      </div>
-      <div>
-        <div style="font-weight:600;margin-bottom:6px;text-align:center">
-          Space–time raster: Recent Window (time ↓)
-        </div>
-        <canvas id="stat-raster" width="420" height="320"
-                style="width:100%;max-width:420px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
-      </div>
     </div>
   </div>
 </details>
@@ -319,6 +321,71 @@ Module.onRuntimeInitialized = function() {
     ctx.putImageData(row, 0, H-1);
   }
 
+  // State for full history raster
+  let fullHistoryRow = 0;
+
+  function appendFullHistoryRow(canvas, view) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    
+    if (fullHistoryRow >= H) {
+      // Canvas is full, stop adding rows (or could expand canvas)
+      return;
+    }
+    
+    // Draw new row at current row position
+    const row = ctx.createImageData(W, 1);
+    for (let x = 0; x < W; x++) {
+      const i = Math.floor(x * view.length / W);
+      const rgb = view[i];
+      const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
+      const p = x*4;
+      row.data[p+0]=R; row.data[p+1]=G; row.data[p+2]=B; row.data[p+3]=255;
+    }
+    ctx.putImageData(row, 0, fullHistoryRow);
+    fullHistoryRow++;
+  }
+
+  // Recent events sliding window (N×N grid)
+  const recentEvents = [];
+  const maxRecentEvents = 300; // N×N = 300×300
+
+  function updateRecentEventsWindow(canvas, view) {
+    // Add current state to recent events
+    recentEvents.push(Array.from(view));
+    if (recentEvents.length > maxRecentEvents) {
+      recentEvents.shift(); // Remove oldest
+    }
+    
+    // Draw the N×N grid
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    
+    const N = recentEvents.length;
+    if (N === 0) return;
+    
+    const cellSize = Math.min(W / view.length, H / N);
+    const gridW = view.length;
+    const gridH = N;
+    
+    for (let t = 0; t < gridH; t++) {
+      for (let x = 0; x < gridW; x++) {
+        if (x < recentEvents[t].length) {
+          const rgb = recentEvents[t][x];
+          const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
+          ctx.fillStyle = `rgb(${R},${G},${B})`;
+          ctx.fillRect(
+            x * W / gridW, 
+            t * H / gridH, 
+            W / gridW, 
+            H / gridH
+          );
+        }
+      }
+    }
+  }
+
   function rgbIntToCss(rgb) {
     // rgb is 0xRRGGBB
     const hex = rgb.toString(16).padStart(6,'0');
@@ -385,8 +452,8 @@ Module.onRuntimeInitialized = function() {
       drawSites(arr);
       
       // --- Statistics updates ---
-      appendRasterRow(rasterCanvas, arr);
-      appendRasterRow(rasterFullCanvas, arr);
+      updateRecentEventsWindow(rasterCanvas, arr);
+      appendFullHistoryRow(rasterFullCanvas, arr);
 
       if (!lastSampleTS || ts - lastSampleTS > 50) {
         lastSampleTS = ts;
@@ -451,6 +518,7 @@ Module.onRuntimeInitialized = function() {
 
     // clear stats canvases & series
     T.length = 0; frontSeries.length = 0; ifaceSeries.length = 0; entSeries.length = 0;
+    recentEvents.length = 0; fullHistoryRow = 0;
     const ctx1 = tsCanvas.getContext('2d'); ctx1.clearRect(0,0,tsCanvas.width,tsCanvas.height);
     const ctx2 = histCanvas.getContext('2d'); ctx2.clearRect(0,0,histCanvas.width,histCanvas.height);
     const ctx3 = rasterCanvas.getContext('2d'); ctx3.clearRect(0,0,rasterCanvas.width,rasterCanvas.height);
@@ -503,8 +571,8 @@ Module.onRuntimeInitialized = function() {
       const { arr } = wasm.exportSites();
       drawSites(arr);
       // Update stats for single step
-      appendRasterRow(rasterCanvas, arr);
-      appendRasterRow(rasterFullCanvas, arr);
+      updateRecentEventsWindow(rasterCanvas, arr);
+      appendFullHistoryRow(rasterFullCanvas, arr);
       // Force stats update
       const t = wasm.getTime();
       const Lsites = arr.length;
