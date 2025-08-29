@@ -63,7 +63,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
       </div>
       <div style="flex:5;">
         <div style="font-weight:600;margin-bottom:6px;text-align:center">
-          Recent Events Window (last N×N events)
+          Recent Events Window (last N events)
         </div>
         <div style="height:280px;border:1px solid #ccc;overflow:hidden">
           <canvas id="stat-raster" width="300" height="280"
@@ -204,10 +204,10 @@ Module.onRuntimeInitialized = function() {
     let isFirst = true;
     for (let i = 1; i < view.length; i++) {
       if (view[i] === cur) run++;
-      else { 
+      else {
         if (!isFirst) sizes.push(run); // Skip the first domain (leftmost color)
         isFirst = false;
-        cur = view[i]; run = 1; 
+        cur = view[i]; run = 1;
       }
     }
     if (!isFirst) sizes.push(run); // Skip if this is the only domain (all same color)
