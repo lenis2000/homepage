@@ -73,7 +73,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
     </div>
     <div>
       <div style="font-weight:600;margin-bottom:6px;text-align:center">
-        Domain-size histogram
+        Domain-size histogram (excluding the leftmost color)
       </div>
       <canvas id="stat-hist" width="900" height="120"
               style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
@@ -201,11 +201,16 @@ Module.onRuntimeInitialized = function() {
     const sizes = [];
     if (view.length === 0) return sizes;
     let cur = view[0], run = 1;
+    let isFirst = true;
     for (let i = 1; i < view.length; i++) {
       if (view[i] === cur) run++;
-      else { sizes.push(run); cur = view[i]; run = 1; }
+      else { 
+        if (!isFirst) sizes.push(run); // Skip the first domain (leftmost color)
+        isFirst = false;
+        cur = view[i]; run = 1; 
+      }
     }
-    sizes.push(run);
+    if (!isFirst) sizes.push(run); // Skip if this is the only domain (all same color)
     return sizes;
   }
 
