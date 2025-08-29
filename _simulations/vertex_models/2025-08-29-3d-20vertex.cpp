@@ -2,10 +2,10 @@
 emcc 2025-08-29-3d-20vertex.cpp -o 2025-08-29-3d-20vertex.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_initializeModel','_sampleConfiguration','_exportArrows','_updateWeights','_freeString','_getProgress','_malloc','_free']" \
- -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","getValue","setValue","HEAPF64","HEAP8"]' \
+ -s "EXPORTED_FUNCTIONS=['_initializeModel','_sampleConfiguration','_exportArrows','_exportFilledCubes','_freeString','_getProgress','_malloc','_free']" \
+ -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","getValue","setValue","HEAPF64","HEAPU8","HEAPU32"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
- -s INITIAL_MEMORY=64MB \
+ -s INITIAL_MEMORY=128MB \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
@@ -42,14 +42,18 @@ static std::uniform_real_distribution<double> uniform01(0.0, 1.0);
 // Global parameters
 int N_param = 10;  // Grid size N x N x N
 
-// Arrow configuration: arrows[x][y][z][dir] where dir = 0(x), 1(y), 2(z)
-// Value is 1 if arrow present, 0 otherwise
-std::vector<std::vector<std::vector<std::vector<int>>>> arrows;
+// Flattened arrow data structure for performance
+std::vector<uint8_t> arrows; // Flat array for performance
+#define ARROW_INDEX(x, y, z, dir) ((size_t)(x) * N_param * N_param * 3 + (size_t)(y) * N_param * 3 + (size_t)(z) * 3 + (dir))
 
-// Vertex weights for the 20 configurations
-// Index encodes: incoming(3 bits) * 8 + outgoing(3 bits)
-// We have 18 free parameters after sum-to-one constraints
-double vertexWeights[64];  // 8x8 matrix, but only certain entries are valid
+// Global vector to store filled cube coordinates
+std::vector<uint32_t> filledCubes;
+
+// Pre-calculated sampling probabilities
+double cumProbs_sum1[3][3]; // For incoming sums of 1
+int outcomes_sum1[3][3];    // Encoded outcomes for sum=1
+double cumProbs_sum2[3][3]; // For incoming sums of 2
+int outcomes_sum2[3][3];    // Encoded outcomes for sum=2
 
 // The 12 free parameters (after accounting for sum-to-one constraints)
 double freeParams[12];
@@ -64,154 +68,147 @@ int patternToIndex(int x, int y, int z) {
     return (x << 2) | (y << 1) | z;
 }
 
-// Initialize vertex weights from free parameters
 void initializeWeights() {
-    // Clear all weights
-    for (int i = 0; i < 64; i++) {
-        vertexWeights[i] = 0.0;
-    }
+    // --- Outcomes for 1 incoming arrow (sum=1) ---
+    // Possible outgoing patterns: 100 (4), 010 (2), 001 (1)
+    outcomes_sum1[0][0] = 4; outcomes_sum1[0][1] = 2; outcomes_sum1[0][2] = 1;
+    outcomes_sum1[1][0] = 4; outcomes_sum1[1][1] = 2; outcomes_sum1[1][2] = 1;
+    outcomes_sum1[2][0] = 4; outcomes_sum1[2][1] = 2; outcomes_sum1[2][2] = 1;
+
+    // Probabilities for incoming 100
+    double p100_1 = freeParams[0]; double p100_2 = freeParams[1]; double p100_3 = 1.0;
+    double sum100 = p100_1 + p100_2 + p100_3;
+    cumProbs_sum1[0][0] = p100_1 / sum100;
+    cumProbs_sum1[0][1] = cumProbs_sum1[0][0] + p100_2 / sum100;
+    cumProbs_sum1[0][2] = 1.0;
+
+    // Probabilities for incoming 010
+    double p010_1 = freeParams[2]; double p010_2 = freeParams[3]; double p010_3 = 1.0;
+    double sum010 = p010_1 + p010_2 + p010_3;
+    cumProbs_sum1[1][0] = p010_1 / sum010;
+    cumProbs_sum1[1][1] = cumProbs_sum1[1][0] + p010_2 / sum010;
+    cumProbs_sum1[1][2] = 1.0;
+
+    // Probabilities for incoming 001
+    double p001_1 = freeParams[4]; double p001_2 = freeParams[5]; double p001_3 = 1.0;
+    double sum001 = p001_1 + p001_2 + p001_3;
+    cumProbs_sum1[2][0] = p001_1 / sum001;
+    cumProbs_sum1[2][1] = cumProbs_sum1[2][0] + p001_2 / sum001;
+    cumProbs_sum1[2][2] = 1.0;
+
+
+    // --- Outcomes for 2 incoming arrows (sum=2) ---
+    // Possible outgoing patterns: 110 (6), 101 (5), 011 (3)
+    outcomes_sum2[0][0] = 6; outcomes_sum2[0][1] = 5; outcomes_sum2[0][2] = 3;
+    outcomes_sum2[1][0] = 6; outcomes_sum2[1][1] = 5; outcomes_sum2[1][2] = 3;
+    outcomes_sum2[2][0] = 6; outcomes_sum2[2][1] = 5; outcomes_sum2[2][2] = 3;
+
+    // Probabilities for incoming 110
+    double p110_1 = freeParams[6]; double p110_2 = freeParams[7]; double p110_3 = 1.0;
+    double sum110 = p110_1 + p110_2 + p110_3;
+    cumProbs_sum2[0][0] = p110_1 / sum110;
+    cumProbs_sum2[0][1] = cumProbs_sum2[0][0] + p110_2 / sum110;
+    cumProbs_sum2[0][2] = 1.0;
+
+    // Probabilities for incoming 101
+    double p101_1 = freeParams[8]; double p101_2 = freeParams[9]; double p101_3 = 1.0;
+    double sum101 = p101_1 + p101_2 + p101_3;
+    cumProbs_sum2[1][0] = p101_1 / sum101;
+    cumProbs_sum2[1][1] = cumProbs_sum2[1][0] + p101_2 / sum101;
+    cumProbs_sum2[1][2] = 1.0;
     
-    // Deterministic vertices (conservation enforces these)
-    vertexWeights[patternToIndex(0,0,0) * 8 + patternToIndex(0,0,0)] = 1.0;  // 000->000
-    vertexWeights[patternToIndex(1,1,1) * 8 + patternToIndex(1,1,1)] = 1.0;  // 111->111
-    
-    // For vertices with sum=1 (one incoming arrow)
-    // We have 3 choices of incoming, each with 3 choices of outgoing
-    // Due to sum-to-one constraint, we need 2 free parameters per incoming config
-    
-    // 100 -> {100, 010, 001}
-    double sum100 = freeParams[0] + freeParams[1] + 1.0;
-    vertexWeights[patternToIndex(1,0,0) * 8 + patternToIndex(1,0,0)] = freeParams[0] / sum100;
-    vertexWeights[patternToIndex(1,0,0) * 8 + patternToIndex(0,1,0)] = freeParams[1] / sum100;
-    vertexWeights[patternToIndex(1,0,0) * 8 + patternToIndex(0,0,1)] = 1.0 / sum100;
-    
-    // 010 -> {100, 010, 001}
-    double sum010 = freeParams[2] + freeParams[3] + 1.0;
-    vertexWeights[patternToIndex(0,1,0) * 8 + patternToIndex(1,0,0)] = freeParams[2] / sum010;
-    vertexWeights[patternToIndex(0,1,0) * 8 + patternToIndex(0,1,0)] = freeParams[3] / sum010;
-    vertexWeights[patternToIndex(0,1,0) * 8 + patternToIndex(0,0,1)] = 1.0 / sum010;
-    
-    // 001 -> {100, 010, 001}
-    double sum001 = freeParams[4] + freeParams[5] + 1.0;
-    vertexWeights[patternToIndex(0,0,1) * 8 + patternToIndex(1,0,0)] = freeParams[4] / sum001;
-    vertexWeights[patternToIndex(0,0,1) * 8 + patternToIndex(0,1,0)] = freeParams[5] / sum001;
-    vertexWeights[patternToIndex(0,0,1) * 8 + patternToIndex(0,0,1)] = 1.0 / sum001;
-    
-    // For vertices with sum=2 (two incoming arrows)
-    // We have 3 choices of incoming, each with 3 choices of outgoing
-    
-    // 110 -> {110, 101, 011}
-    double sum110 = freeParams[6] + freeParams[7] + 1.0;
-    vertexWeights[patternToIndex(1,1,0) * 8 + patternToIndex(1,1,0)] = freeParams[6] / sum110;
-    vertexWeights[patternToIndex(1,1,0) * 8 + patternToIndex(1,0,1)] = freeParams[7] / sum110;
-    vertexWeights[patternToIndex(1,1,0) * 8 + patternToIndex(0,1,1)] = 1.0 / sum110;
-    
-    // 101 -> {110, 101, 011}
-    double sum101 = freeParams[8] + freeParams[9] + 1.0;
-    vertexWeights[patternToIndex(1,0,1) * 8 + patternToIndex(1,1,0)] = freeParams[8] / sum101;
-    vertexWeights[patternToIndex(1,0,1) * 8 + patternToIndex(1,0,1)] = freeParams[9] / sum101;
-    vertexWeights[patternToIndex(1,0,1) * 8 + patternToIndex(0,1,1)] = 1.0 / sum101;
-    
-    // 011 -> {110, 101, 011}
-    double sum011 = freeParams[10] + freeParams[11] + 1.0;
-    vertexWeights[patternToIndex(0,1,1) * 8 + patternToIndex(1,1,0)] = freeParams[10] / sum011;
-    vertexWeights[patternToIndex(0,1,1) * 8 + patternToIndex(1,0,1)] = freeParams[11] / sum011;
-    vertexWeights[patternToIndex(0,1,1) * 8 + patternToIndex(0,1,1)] = 1.0 / sum011;
+    // Probabilities for incoming 011
+    double p011_1 = freeParams[10]; double p011_2 = freeParams[11]; double p011_3 = 1.0;
+    double sum011 = p011_1 + p011_2 + p011_3;
+    cumProbs_sum2[2][0] = p011_1 / sum011;
+    cumProbs_sum2[2][1] = cumProbs_sum2[2][0] + p011_2 / sum011;
+    cumProbs_sum2[2][2] = 1.0;
 }
 
-// Initialize the arrow configuration
 void initializeArrows() {
-    arrows.resize(N_param);
-    for (int x = 0; x < N_param; x++) {
-        arrows[x].resize(N_param);
-        for (int y = 0; y < N_param; y++) {
-            arrows[x][y].resize(N_param);
-            for (int z = 0; z < N_param; z++) {
-                arrows[x][y][z].resize(3, 0);  // 3 directions: x, y, z
-            }
-        }
-    }
-    
-    // Set boundary conditions
-    // Empty in xz and yz planes (x=0 or y=0)
-    // Full in xy plane (z=0) - arrow pointing up from below
-    for (int x = 0; x < N_param; x++) {
-        for (int y = 0; y < N_param; y++) {
-            if (x > 0 && y > 0) {
-                // Arrow pointing up into vertex (x,y,0)
-                // This is stored as the z-direction arrow at (x,y,-1) if we had it
-                // Since we don't have negative indices, we handle this as a boundary condition
-                // We'll mark that vertices at z=0 with x>0 and y>0 have incoming z arrow
-            }
-        }
-    }
+    arrows.assign((size_t)N_param * N_param * N_param * 3, 0);
+    // The boundary condition logic is handled in sampleVertex, so no changes are needed here.
 }
 
-// Sample the configuration for a single vertex
 void sampleVertex(int x, int y, int z) {
-    // Get incoming arrows
-    int in_x = (x > 0) ? arrows[x-1][y][z][0] : 0;
-    int in_y = (y > 0) ? arrows[x][y-1][z][1] : 0;
-    int in_z = (z > 0) ? arrows[x][y][z-1][2] : ((x > 0 && y > 0) ? 1 : 0);  // Boundary condition
+    // Get incoming arrows using flattened array
+    int in_x = (x > 0) ? arrows[ARROW_INDEX(x - 1, y, z, 0)] : 0;
+    int in_y = (y > 0) ? arrows[ARROW_INDEX(x, y - 1, z, 1)] : 0;
+    int in_z = (z > 0) ? arrows[ARROW_INDEX(x, y, z - 1, 2)] : ((x > 0 && y > 0) ? 1 : 0); // Boundary condition
     
-    int incomingPattern = patternToIndex(in_x, in_y, in_z);
     int incomingSum = in_x + in_y + in_z;
     
-    // Deterministic cases
+    int chosen_out_pattern = 0;
+
     if (incomingSum == 0) {
-        arrows[x][y][z][0] = 0;
-        arrows[x][y][z][1] = 0;
-        arrows[x][y][z][2] = 0;
-        return;
-    }
-    if (incomingSum == 3) {
-        arrows[x][y][z][0] = 1;
-        arrows[x][y][z][1] = 1;
-        arrows[x][y][z][2] = 1;
-        return;
-    }
-    
-    // Stochastic case - sample from valid outgoing configurations
-    std::vector<int> validOutgoing;
-    std::vector<double> probs;
-    
-    // Find all valid outgoing patterns (those with same sum)
-    for (int out_x = 0; out_x <= 1; out_x++) {
-        for (int out_y = 0; out_y <= 1; out_y++) {
-            for (int out_z = 0; out_z <= 1; out_z++) {
-                if (out_x + out_y + out_z == incomingSum) {
-                    int outPattern = patternToIndex(out_x, out_y, out_z);
-                    int index = incomingPattern * 8 + outPattern;
-                    validOutgoing.push_back(outPattern);
-                    probs.push_back(vertexWeights[index]);
-                }
-            }
-        }
-    }
-    
-    // Normalize probabilities (should already sum to 1, but just in case)
-    double totalProb = 0.0;
-    for (double p : probs) totalProb += p;
-    if (totalProb > 0) {
-        for (double& p : probs) p /= totalProb;
-    }
-    
-    // Sample from distribution
-    double r = getRandom01();
-    double cumProb = 0.0;
-    int chosen = 0;
-    for (size_t i = 0; i < probs.size(); i++) {
-        cumProb += probs[i];
-        if (r <= cumProb) {
-            chosen = validOutgoing[i];
-            break;
+        chosen_out_pattern = 0; // 000
+    } else if (incomingSum == 3) {
+        chosen_out_pattern = 7; // 111
+    } else {
+        // Stochastic cases
+        double r = getRandom01();
+        int incoming_idx = -1;
+
+        if (incomingSum == 1) {
+            if (in_x) incoming_idx = 0;      // 100
+            else if (in_y) incoming_idx = 1; // 010
+            else incoming_idx = 2;           // 001
+
+            if (r < cumProbs_sum1[incoming_idx][0]) chosen_out_pattern = outcomes_sum1[incoming_idx][0];
+            else if (r < cumProbs_sum1[incoming_idx][1]) chosen_out_pattern = outcomes_sum1[incoming_idx][1];
+            else chosen_out_pattern = outcomes_sum1[incoming_idx][2];
+
+        } else { // incomingSum == 2
+            if (!in_z) incoming_idx = 0;     // 110
+            else if (!in_y) incoming_idx = 1;// 101
+            else incoming_idx = 2;           // 011
+
+            if (r < cumProbs_sum2[incoming_idx][0]) chosen_out_pattern = outcomes_sum2[incoming_idx][0];
+            else if (r < cumProbs_sum2[incoming_idx][1]) chosen_out_pattern = outcomes_sum2[incoming_idx][1];
+            else chosen_out_pattern = outcomes_sum2[incoming_idx][2];
         }
     }
     
     // Set outgoing arrows
-    arrows[x][y][z][0] = (chosen >> 2) & 1;
-    arrows[x][y][z][1] = (chosen >> 1) & 1;
-    arrows[x][y][z][2] = chosen & 1;
+    arrows[ARROW_INDEX(x, y, z, 0)] = (chosen_out_pattern >> 2) & 1;
+    arrows[ARROW_INDEX(x, y, z, 1)] = (chosen_out_pattern >> 1) & 1;
+    arrows[ARROW_INDEX(x, y, z, 2)] = chosen_out_pattern & 1;
+}
+
+bool isCubeFilled(int x, int y, int z) {
+    // Check 4 edges in X-dir
+    if (!arrows[ARROW_INDEX(x, y, z, 0)]) return false;
+    if (!arrows[ARROW_INDEX(x, y + 1, z, 0)]) return false;
+    if (!arrows[ARROW_INDEX(x, y, z + 1, 0)]) return false;
+    if (!arrows[ARROW_INDEX(x, y + 1, z + 1, 0)]) return false;
+    // Check 4 edges in Y-dir
+    if (!arrows[ARROW_INDEX(x, y, z, 1)]) return false;
+    if (!arrows[ARROW_INDEX(x + 1, y, z, 1)]) return false;
+    if (!arrows[ARROW_INDEX(x, y, z + 1, 1)]) return false;
+    if (!arrows[ARROW_INDEX(x + 1, y, z + 1, 1)]) return false;
+    // Check 4 edges in Z-dir
+    if (!arrows[ARROW_INDEX(x, y, z, 2)]) return false;
+    if (!arrows[ARROW_INDEX(x + 1, y, z, 2)]) return false;
+    if (!arrows[ARROW_INDEX(x, y + 1, z, 2)]) return false;
+    if (!arrows[ARROW_INDEX(x + 1, y + 1, z, 2)]) return false;
+    return true;
+}
+
+void findFilledCubes() {
+    filledCubes.clear();
+    if (N_param < 2) return;
+    for (int x = 0; x < N_param - 1; ++x) {
+        for (int y = 0; y < N_param - 1; ++y) {
+            for (int z = 0; z < N_param - 1; ++z) {
+                if (isCubeFilled(x, y, z)) {
+                    // Pack x, y, z into a single uint32_t
+                    // x (10 bits), y (10 bits), z (10 bits)
+                    uint32_t packed = ((uint32_t)x << 20) | ((uint32_t)y << 10) | (uint32_t)z;
+                    filledCubes.push_back(packed);
+                }
+            }
+        }
+    }
 }
 
 // Sample the entire configuration
@@ -236,6 +233,7 @@ void sampleFullConfiguration() {
         progressCounter = (int)((100.0 * t) / maxT);
     }
     
+    findFilledCubes();
     progressCounter = 100;
 }
 
@@ -309,44 +307,42 @@ char* sampleConfiguration() {
 
 EMSCRIPTEN_KEEPALIVE
 char* exportArrows() {
-    try {
-        progressCounter = 0;
-        
-        // Build JSON output with arrow data
-        std::stringstream json;
-        json << "{\"arrows\":[";
-        
-        bool first = true;
-        for (int x = 0; x < N_param; x++) {
-            for (int y = 0; y < N_param; y++) {
-                for (int z = 0; z < N_param; z++) {
-                    for (int dir = 0; dir < 3; dir++) {
-                        if (arrows[x][y][z][dir] == 1) {
-                            if (!first) json << ",";
-                            json << "{\"x\":" << x << ",\"y\":" << y << ",\"z\":" << z << ",\"dir\":" << dir << "}";
-                            first = false;
-                        }
+    static std::vector<uint32_t> arrow_data;
+    arrow_data.clear();
+
+    for (int x = 0; x < N_param; x++) {
+        for (int y = 0; y < N_param; y++) {
+            for (int z = 0; z < N_param; z++) {
+                for (int dir = 0; dir < 3; dir++) {
+                    if (arrows[ARROW_INDEX(x, y, z, dir)]) {
+                        // Pack x, y, z, dir into one uint32_t
+                        // x(10 bits), y(10 bits), z(10 bits), dir(2 bits)
+                        uint32_t packed = ((uint32_t)x << 22) | ((uint32_t)y << 12) | ((uint32_t)z << 2) | (uint32_t)dir;
+                        arrow_data.push_back(packed);
                     }
                 }
             }
         }
-        
-        json << "],\"n\":" << N_param << "}";
-        
-        progressCounter = 100;
-        
-        std::string jsonStr = json.str();
-        char* out = (char*)malloc(jsonStr.size() + 1);
-        strcpy(out, jsonStr.c_str());
-        return out;
-        
-    } catch (const std::exception& e) {
-        std::string errorMsg = "{\"error\":\"" + std::string(e.what()) + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        strcpy(out, errorMsg.c_str());
-        progressCounter = 100;
-        return out;
     }
+    
+    uint32_t* ptr = arrow_data.data();
+    size_t count = arrow_data.size();
+    
+    std::string json = "{\"ptr\":" + std::to_string((uintptr_t)ptr) + ",\"count\":" + std::to_string(count) + "}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* exportFilledCubes() {
+    uint32_t* ptr = filledCubes.data();
+    size_t count = filledCubes.size();
+    
+    std::string json = "{\"ptr\":" + std::to_string((uintptr_t)ptr) + ",\"count\":" + std::to_string(count) + "}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
 }
 
 EMSCRIPTEN_KEEPALIVE
