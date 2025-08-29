@@ -36,6 +36,47 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
     Time: <span id="time-display">0.00</span>
 </div>
 
+<details class="control-group full-width" open>
+  <summary><div class="control-group-title">Statistics</div></summary>
+  <div class="content" style="display:grid;gap:12px">
+    <div>
+      <div style="font-weight:600;margin-bottom:6px;text-align:center">
+        Time Series: Front Position, Interface Density, Normalized Entropy
+      </div>
+      <div style="font-size:12px;margin-bottom:8px;text-align:center;color:#666">
+        <strong style="color:#d62728">Red (thick):</strong> Front position F(t)/L (leftmost color extent) with Poisson(t) theory ±√t band<br>
+        <strong style="color:#2ca02c">Green:</strong> Interface density I(t)/(L-1) (fraction of neighboring sites with different colors)<br>
+        <strong style="color:#1f77b4">Blue:</strong> Normalized entropy H(t)/log(L) (color diversity, 1=uniform, 0=single color)
+      </div>
+      <canvas id="stat-ts" width="900" height="160"
+              style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+    </div>
+    <div>
+      <div style="font-weight:600;margin-bottom:6px;text-align:center">
+        Space–time raster: Full History (time ↓, space →)
+      </div>
+      <canvas id="stat-raster-full" width="900" height="120"
+              style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-weight:600;margin-bottom:6px;text-align:center">
+          Domain-size histogram
+        </div>
+        <canvas id="stat-hist" width="420" height="180"
+                style="width:100%;max-width:420px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+      </div>
+      <div>
+        <div style="font-weight:600;margin-bottom:6px;text-align:center">
+          Space–time raster: Recent Window (time ↓)
+        </div>
+        <canvas id="stat-raster" width="420" height="320"
+                style="width:100%;max-width:420px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+      </div>
+    </div>
+  </div>
+</details>
+
 <script src="/js/2025-08-29-voter-model.js"></script>
 
 <script>
@@ -108,6 +149,176 @@ Module.onRuntimeInitialized = function() {
 
   const wasm = new VoterWASM();
 
+  // ---------- Stats state ----------
+  const tsCanvas   = document.getElementById('stat-ts');
+  const histCanvas = document.getElementById('stat-hist');
+  const rasterCanvas = document.getElementById('stat-raster');
+  const rasterFullCanvas = document.getElementById('stat-raster-full');
+
+  const T = [];            // times
+  const frontSeries = [];  // F(t) / (2N+1)
+  const ifaceSeries = [];  // I(t) / (2N)
+  const entSeries   = [];  // Hnorm(t) in [0,1]
+
+  // throttle sampling (e.g., every ~50ms wall time)
+  let lastSampleTS = 0;
+
+  // ---------- Metrics from current snapshot ----------
+  function computeFrontLen(view) {
+    if (view.length === 0) return 0;
+    const c0 = view[0];
+    let k = 1;
+    while (k < view.length && view[k] === c0) k++;
+    return k; // number of sites equal to the leftmost color
+  }
+
+  function computeInterfaceCount(view) {
+    let cnt = 0;
+    for (let i = 1; i < view.length; i++) if (view[i] !== view[i-1]) cnt++;
+    return cnt;
+  }
+
+  function computeEntropy(view) {
+    const L = view.length;
+    if (L === 0) return { H: 0, Hnorm: 0 };
+    const m = new Map();
+    for (let i = 0; i < L; i++) m.set(view[i], (m.get(view[i])||0) + 1);
+    let H = 0;
+    for (const [,count] of m) {
+      const p = count / L;
+      H -= p * Math.log(p);
+    }
+    const Hnorm = H / Math.log(L); // in [0,1]
+    return { H, Hnorm };
+  }
+
+  function computeDomainSizes(view) {
+    const sizes = [];
+    if (view.length === 0) return sizes;
+    let cur = view[0], run = 1;
+    for (let i = 1; i < view.length; i++) {
+      if (view[i] === cur) run++;
+      else { sizes.push(run); cur = view[i]; run = 1; }
+    }
+    sizes.push(run);
+    return sizes;
+  }
+
+  // ---------- Tiny plotting helpers ----------
+  function linePlot(canvas, series, opts={}) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const pad = {l:40,r:10,t:10,b:22};
+    const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+
+    // Build x range from time, y from union of series ranges or fixed [0,1]
+    const T = series[0].x, n = T.length;
+    if (n === 0) return;
+
+    const xmin = T[0], xmax = T[n-1];
+    let ymin = Infinity, ymax = -Infinity;
+    for (const s of series) {
+      for (const v of s.y) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; }
+    }
+    if (opts.forceY01) { ymin = 0; ymax = 1; }
+    if (ymax === ymin) { ymax = ymin + 1; }
+
+    const x2px = x => pad.l + (x - xmin) / (xmax - xmin) * plotW;
+    const y2px = y => pad.t + (1 - (y - ymin) / (ymax - ymin)) * plotH;
+
+    // Axes
+    ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t+plotH); ctx.lineTo(pad.l+plotW, pad.t+plotH);
+    ctx.stroke();
+
+    // Series
+    const colors = opts.colors || ['#d62728','#2ca02c','#1f77b4','#9467bd','#8c564b'];
+    series.forEach((s, idx) => {
+      ctx.strokeStyle = colors[idx % colors.length]; ctx.lineWidth = s.width || 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const x = x2px(T[i]), y = y2px(s.y[i]);
+        if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    });
+
+    // Shaded band if provided: y±band
+    if (opts.band) {
+      const { y, band } = opts.band;
+      ctx.fillStyle = 'rgba(31,119,180,0.12)';
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const x = x2px(T[i]);
+        const yU = y2px(y[i] + band[i]);
+        if (i === 0) ctx.moveTo(x, yU); else ctx.lineTo(x, yU);
+      }
+      for (let i = n-1; i >= 0; i--) {
+        const x = x2px(T[i]);
+        const yL = y2px(y[i] - band[i]);
+        ctx.lineTo(x, yL);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Y ticks (few)
+    ctx.fillStyle = '#666'; ctx.font = '11px sans-serif';
+    for (let k = 0; k <= 4; k++) {
+      const vy = ymin + k*(ymax-ymin)/4;
+      const y = y2px(vy);
+      ctx.fillText(vy.toFixed(2), 4, y+4);
+      ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l+plotW, y); ctx.stroke();
+    }
+  }
+
+  function histPlot(canvas, data, bins=30) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    if (!data.length) return;
+    const maxVal = Math.max(...data);
+    const minVal = 1;
+    const B = Math.min(bins, maxVal);
+    const counts = new Array(B).fill(0);
+    for (const v of data) {
+      const b = Math.min(B-1, Math.floor((v-minVal) / (maxVal-minVal+1e-9) * B));
+      counts[b]++;
+    }
+    const maxC = Math.max(...counts);
+    const barW = W / B;
+    for (let i = 0; i < B; i++) {
+      const h = (H-20) * (counts[i] / (maxC || 1));
+      ctx.fillStyle = '#888';
+      ctx.fillRect(i*barW, H-20 - h, barW-1, h);
+    }
+    ctx.fillStyle = '#666'; ctx.font = '11px sans-serif';
+    ctx.fillText('size →', W-40, H-6);
+    ctx.save(); ctx.translate(10, H/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText('count', 0, 0); ctx.restore();
+  }
+
+  function appendRasterRow(canvas, view) {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const W = canvas.width, H = canvas.height;
+    // Scroll up by 1 pixel
+    const img = ctx.getImageData(0, 1, W, H-1);
+    ctx.putImageData(img, 0, 0);
+    // Draw new row at bottom
+    const row = ctx.createImageData(W, 1);
+    for (let x = 0; x < W; x++) {
+      const i = Math.floor(x * view.length / W);
+      const rgb = view[i];
+      const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
+      const p = x*4;
+      row.data[p+0]=R; row.data[p+1]=G; row.data[p+2]=B; row.data[p+3]=255;
+    }
+    ctx.putImageData(row, 0, H-1);
+  }
+
   function rgbIntToCss(rgb) {
     // rgb is 0xRRGGBB
     const hex = rgb.toString(16).padStart(6,'0');
@@ -172,6 +383,44 @@ Module.onRuntimeInitialized = function() {
       updateTimeDisplay();
       const { arr } = wasm.exportSites();
       drawSites(arr);
+      
+      // --- Statistics updates ---
+      appendRasterRow(rasterCanvas, arr);
+      appendRasterRow(rasterFullCanvas, arr);
+
+      if (!lastSampleTS || ts - lastSampleTS > 50) {
+        lastSampleTS = ts;
+        const t = wasm.getTime();
+        const Lsites = arr.length;
+        const Flen = computeFrontLen(arr);    // number of leftmost-color sites
+        const Icnt = computeInterfaceCount(arr);
+        const { Hnorm } = computeEntropy(arr);
+
+        // record normalized series
+        T.push(t);
+        frontSeries.push(Flen / Lsites);
+        ifaceSeries.push(Icnt / Math.max(1, Lsites-1));
+        entSeries.push(Hnorm);
+
+        // Build theoretical overlay for front: E[F]=t, band=√t, all normalized
+        const Ncur = parseInt(nInput.value, 10);
+        const Lcur = 2 * Ncur + 1;
+        const yFront = T.map(tt => Math.min(tt, Lcur-1) / Lcur);
+        const bandFront = T.map(tt => Math.min(Math.sqrt(Math.max(tt,0)), Lcur-1) / Lcur);
+
+        linePlot(tsCanvas, [
+          { x: T, y: frontSeries,    width: 2 },    // empirical front (normalized)
+          { x: T, y: ifaceSeries },                 // interface density
+          { x: T, y: entSeries }                    // entropy (normalized)
+        ], {
+          forceY01: true,
+          band: { y: yFront, band: bandFront }      // ±√t band around theory y=t/L
+        });
+
+        // Domain-size histogram (recompute each sample)
+        const sizes = computeDomainSizes(arr);
+        histPlot(histCanvas, sizes, 30);
+      }
     }
     animHandle = requestAnimationFrame(frame);
   }
@@ -199,6 +448,13 @@ Module.onRuntimeInitialized = function() {
     const { arr } = wasm.exportSites();
     drawSites(arr);
     updateTimeDisplay();
+
+    // clear stats canvases & series
+    T.length = 0; frontSeries.length = 0; ifaceSeries.length = 0; entSeries.length = 0;
+    const ctx1 = tsCanvas.getContext('2d'); ctx1.clearRect(0,0,tsCanvas.width,tsCanvas.height);
+    const ctx2 = histCanvas.getContext('2d'); ctx2.clearRect(0,0,histCanvas.width,histCanvas.height);
+    const ctx3 = rasterCanvas.getContext('2d'); ctx3.clearRect(0,0,rasterCanvas.width,rasterCanvas.height);
+    const ctx4 = rasterFullCanvas.getContext('2d'); ctx4.clearRect(0,0,rasterFullCanvas.width,rasterFullCanvas.height);
   }
 
   // Wire events
@@ -238,6 +494,41 @@ Module.onRuntimeInitialized = function() {
     if (event.key === 'r' || event.key === 'R') {
       event.preventDefault();
       if (running) stop(); else start();
+    }
+    if (event.key === 's' || event.key === 'S') {
+      event.preventDefault();
+      stop();
+      wasm.stepK(1);
+      updateTimeDisplay();
+      const { arr } = wasm.exportSites();
+      drawSites(arr);
+      // Update stats for single step
+      appendRasterRow(rasterCanvas, arr);
+      appendRasterRow(rasterFullCanvas, arr);
+      // Force stats update
+      const t = wasm.getTime();
+      const Lsites = arr.length;
+      const Flen = computeFrontLen(arr);
+      const Icnt = computeInterfaceCount(arr);
+      const { Hnorm } = computeEntropy(arr);
+      T.push(t);
+      frontSeries.push(Flen / Lsites);
+      ifaceSeries.push(Icnt / Math.max(1, Lsites-1));
+      entSeries.push(Hnorm);
+      const Ncur = parseInt(nInput.value, 10);
+      const Lcur = 2 * Ncur + 1;
+      const yFront = T.map(tt => Math.min(tt, Lcur-1) / Lcur);
+      const bandFront = T.map(tt => Math.min(Math.sqrt(Math.max(tt,0)), Lcur-1) / Lcur);
+      linePlot(tsCanvas, [
+        { x: T, y: frontSeries, width: 2 },
+        { x: T, y: ifaceSeries },
+        { x: T, y: entSeries }
+      ], {
+        forceY01: true,
+        band: { y: yFront, band: bandFront }
+      });
+      const sizes = computeDomainSizes(arr);
+      histPlot(histCanvas, sizes, 30);
     }
   });
 
