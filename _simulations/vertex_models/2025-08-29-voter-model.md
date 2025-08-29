@@ -46,7 +46,8 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
       <div style="font-size:12px;margin-bottom:8px;text-align:center;color:#666">
         <strong style="color:#d62728">Red (thick):</strong> Front position F(t)/L (leftmost color extent) with Poisson(t) theory ±√t band<br>
         <strong style="color:#2ca02c">Green:</strong> Interface density I(t)/(L-1) (fraction of neighboring sites with different colors)<br>
-        <strong style="color:#1f77b4">Blue:</strong> Normalized entropy H(t)/log(L) (color diversity, 1=uniform, 0=single color)
+        <strong style="color:#1f77b4">Blue:</strong> Normalized entropy H(t)/log(L) (color diversity, 1=uniform, 0=single color)<br>
+        <strong style="color:#9467bd">Purple:</strong> Rightmost site color (normalized RGB brightness)
       </div>
       <canvas id="stat-ts" width="900" height="160"
               style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
@@ -54,9 +55,9 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
       <div>
         <div style="font-weight:600;margin-bottom:6px;text-align:center">
-          Space–time raster: Complete History (time ↓, space →, NEVER scrolls)
+          Space–time raster: Complete History (time ↑, space →, NEVER scrolls)
         </div>
-        <div style="max-height:600px;overflow-y:auto;border:1px solid #ccc">
+        <div id="history-container" style="max-height:600px;overflow-y:auto;border:1px solid #ccc">
           <canvas id="stat-raster-full" width="600" height="2000"
                   style="width:100%;display:block"></canvas>
         </div>
@@ -156,11 +157,13 @@ Module.onRuntimeInitialized = function() {
   const histCanvas = document.getElementById('stat-hist');
   const rasterCanvas = document.getElementById('stat-raster');
   const rasterFullCanvas = document.getElementById('stat-raster-full');
+  const historyContainer = document.getElementById('history-container');
 
   const T = [];            // times
   const frontSeries = [];  // F(t) / (2N+1)
   const ifaceSeries = [];  // I(t) / (2N)
   const entSeries   = [];  // Hnorm(t) in [0,1]
+  const rightColorSeries = []; // Color of rightmost site (normalized)
 
   // throttle sampling (e.g., every ~50ms wall time)
   let lastSampleTS = 0;
@@ -204,6 +207,13 @@ Module.onRuntimeInitialized = function() {
     }
     sizes.push(run);
     return sizes;
+  }
+
+  function computeRightmostColor(view) {
+    if (view.length === 0) return 0;
+    const rightmostRgb = view[view.length - 1];
+    // Normalize RGB to [0,1] for plotting (simple hash-like normalization)
+    return ((rightmostRgb & 0xFF) + ((rightmostRgb >> 8) & 0xFF) + ((rightmostRgb >> 16) & 0xFF)) / (3 * 255);
   }
 
   // ---------- Tiny plotting helpers ----------
@@ -321,34 +331,52 @@ Module.onRuntimeInitialized = function() {
     ctx.putImageData(row, 0, H-1);
   }
 
-  // State for full history raster
-  let fullHistoryRow = 0;
-
+  // State for full history raster with compression
+  const fullHistory = []; // Store all history states
+  
   function appendFullHistoryRow(canvas, view) {
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     
-    if (fullHistoryRow >= H) {
-      // Canvas is full, stop adding rows (or could expand canvas)
-      return;
+    // Add current state to full history
+    fullHistory.push(Array.from(view));
+    
+    // Redraw entire history compressed to fit canvas height
+    ctx.clearRect(0, 0, W, H);
+    
+    const totalSteps = fullHistory.length;
+    if (totalSteps === 0) return;
+    
+    // Each pixel row represents one or more time steps
+    const stepsPerPixel = totalSteps / H;
+    
+    for (let y = 0; y < H; y++) {
+      // Map pixel row to history step(s)
+      const stepIndex = Math.floor(y * stepsPerPixel);
+      if (stepIndex >= totalSteps) continue;
+      
+      const historyRow = fullHistory[stepIndex];
+      const row = ctx.createImageData(W, 1);
+      
+      for (let x = 0; x < W; x++) {
+        const i = Math.floor(x * historyRow.length / W);
+        const rgb = historyRow[i];
+        const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
+        const p = x * 4;
+        row.data[p+0] = R; row.data[p+1] = G; row.data[p+2] = B; row.data[p+3] = 255;
+      }
+      
+      // Draw from bottom up (H-1-y for time ↑)
+      ctx.putImageData(row, 0, H - 1 - y);
     }
     
-    // Draw new row at current row position
-    const row = ctx.createImageData(W, 1);
-    for (let x = 0; x < W; x++) {
-      const i = Math.floor(x * view.length / W);
-      const rgb = view[i];
-      const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
-      const p = x*4;
-      row.data[p+0]=R; row.data[p+1]=G; row.data[p+2]=B; row.data[p+3]=255;
-    }
-    ctx.putImageData(row, 0, fullHistoryRow);
-    fullHistoryRow++;
+    // Auto-scroll to bottom to show the most recent activity
+    historyContainer.scrollTop = historyContainer.scrollHeight;
   }
 
   // Recent events sliding window (N×N grid)
   const recentEvents = [];
-  const maxRecentEvents = 300; // N×N = 300×300
+  const maxRecentEvents = 300; // Always exactly N×N = 300×300
 
   function updateRecentEventsWindow(canvas, view) {
     // Add current state to recent events
@@ -357,7 +385,7 @@ Module.onRuntimeInitialized = function() {
       recentEvents.shift(); // Remove oldest
     }
     
-    // Draw the N×N grid
+    // Draw exactly N×N grid (no scaling of time dimension)
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
@@ -365,23 +393,24 @@ Module.onRuntimeInitialized = function() {
     const N = recentEvents.length;
     if (N === 0) return;
     
-    const cellSize = Math.min(W / view.length, H / N);
-    const gridW = view.length;
-    const gridH = N;
+    // ALWAYS draw N×N pixels, one pixel per event per space location
+    const pixelWidth = W / view.length;   // space dimension (can scale to canvas width)
+    const pixelHeight = H / maxRecentEvents; // time dimension (1 pixel = 1 event)
     
-    for (let t = 0; t < gridH; t++) {
-      for (let x = 0; x < gridW; x++) {
-        if (x < recentEvents[t].length) {
-          const rgb = recentEvents[t][x];
-          const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
-          ctx.fillStyle = `rgb(${R},${G},${B})`;
-          ctx.fillRect(
-            x * W / gridW, 
-            t * H / gridH, 
-            W / gridW, 
-            H / gridH
-          );
-        }
+    for (let t = 0; t < N; t++) {
+      const historyRow = recentEvents[t];
+      for (let x = 0; x < historyRow.length; x++) {
+        const rgb = historyRow[x];
+        const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
+        ctx.fillStyle = `rgb(${R},${G},${B})`;
+        
+        // Draw from bottom up (most recent at bottom)
+        ctx.fillRect(
+          x * pixelWidth, 
+          H - (t + 1) * pixelHeight, 
+          pixelWidth, 
+          pixelHeight
+        );
       }
     }
   }
@@ -462,12 +491,14 @@ Module.onRuntimeInitialized = function() {
         const Flen = computeFrontLen(arr);    // number of leftmost-color sites
         const Icnt = computeInterfaceCount(arr);
         const { Hnorm } = computeEntropy(arr);
+        const rightColor = computeRightmostColor(arr);
 
         // record normalized series
         T.push(t);
         frontSeries.push(Flen / Lsites);
         ifaceSeries.push(Icnt / Math.max(1, Lsites-1));
         entSeries.push(Hnorm);
+        rightColorSeries.push(rightColor);
 
         // Build theoretical overlay for front: E[F]=t, band=√t, all normalized
         const Ncur = parseInt(nInput.value, 10);
@@ -478,7 +509,8 @@ Module.onRuntimeInitialized = function() {
         linePlot(tsCanvas, [
           { x: T, y: frontSeries,    width: 2 },    // empirical front (normalized)
           { x: T, y: ifaceSeries },                 // interface density
-          { x: T, y: entSeries }                    // entropy (normalized)
+          { x: T, y: entSeries },                   // entropy (normalized)
+          { x: T, y: rightColorSeries }             // rightmost site color
         ], {
           forceY01: true,
           band: { y: yFront, band: bandFront }      // ±√t band around theory y=t/L
@@ -517,8 +549,8 @@ Module.onRuntimeInitialized = function() {
     updateTimeDisplay();
 
     // clear stats canvases & series
-    T.length = 0; frontSeries.length = 0; ifaceSeries.length = 0; entSeries.length = 0;
-    recentEvents.length = 0; fullHistoryRow = 0;
+    T.length = 0; frontSeries.length = 0; ifaceSeries.length = 0; entSeries.length = 0; rightColorSeries.length = 0;
+    recentEvents.length = 0; fullHistory.length = 0;
     const ctx1 = tsCanvas.getContext('2d'); ctx1.clearRect(0,0,tsCanvas.width,tsCanvas.height);
     const ctx2 = histCanvas.getContext('2d'); ctx2.clearRect(0,0,histCanvas.width,histCanvas.height);
     const ctx3 = rasterCanvas.getContext('2d'); ctx3.clearRect(0,0,rasterCanvas.width,rasterCanvas.height);
@@ -559,7 +591,7 @@ Module.onRuntimeInitialized = function() {
 
   // Keyboard shortcuts
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'r' || event.key === 'R') {
+    if (event.key === 'p' || event.key === 'P') {
       event.preventDefault();
       if (running) stop(); else start();
     }
@@ -579,10 +611,12 @@ Module.onRuntimeInitialized = function() {
       const Flen = computeFrontLen(arr);
       const Icnt = computeInterfaceCount(arr);
       const { Hnorm } = computeEntropy(arr);
+      const rightColor = computeRightmostColor(arr);
       T.push(t);
       frontSeries.push(Flen / Lsites);
       ifaceSeries.push(Icnt / Math.max(1, Lsites-1));
       entSeries.push(Hnorm);
+      rightColorSeries.push(rightColor);
       const Ncur = parseInt(nInput.value, 10);
       const Lcur = 2 * Ncur + 1;
       const yFront = T.map(tt => Math.min(tt, Lcur-1) / Lcur);
@@ -590,7 +624,8 @@ Module.onRuntimeInitialized = function() {
       linePlot(tsCanvas, [
         { x: T, y: frontSeries, width: 2 },
         { x: T, y: ifaceSeries },
-        { x: T, y: entSeries }
+        { x: T, y: entSeries },
+        { x: T, y: rightColorSeries }
       ], {
         forceY01: true,
         band: { y: yFront, band: bandFront }
