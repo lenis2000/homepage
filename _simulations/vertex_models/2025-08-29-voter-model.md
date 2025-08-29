@@ -1,5 +1,5 @@
 ---
-title: Voter Model
+title: One-dimensional Voter Model
 model: vertex-models
 author: Alexei Borodin and Alexei Bufetov (request); Leonid Petrov (implementation)
 code:
@@ -44,30 +44,31 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
         Time Series: Front Position, Interface Density, Normalized Entropy
       </div>
       <div style="font-size:12px;margin-bottom:8px;text-align:center;color:#666">
-        <strong style="color:#d62728">Red (thick):</strong> Front position F(t)/L (leftmost color extent) with Poisson(t) theory ±√t band<br>
+        <strong style="color:#d62728">Red:</strong> Front position F(t)/L (leftmost color extent) with Poisson(t) theory ±√t band<br>
         <strong style="color:#2ca02c">Green:</strong> Interface density I(t)/(L-1) (fraction of neighboring sites with different colors)<br>
-        <strong style="color:#1f77b4">Blue:</strong> Normalized entropy H(t)/log(L) (color diversity, 1=uniform, 0=single color)<br>
-        <strong style="color:#9467bd">Purple:</strong> Rightmost site color (normalized RGB brightness)
+        <strong style="color:#1f77b4">Blue:</strong> Normalized entropy H(t)/log(L) (color diversity, 1=uniform, 0=single color)
       </div>
       <canvas id="stat-ts" width="900" height="160"
               style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
     </div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
-      <div>
+    <div style="display:flex;gap:16px;">
+      <div style="flex:7;">
         <div style="font-weight:600;margin-bottom:6px;text-align:center">
           Space–time raster: Complete History (time ↑, space →, NEVER scrolls)
         </div>
-        <div id="history-container" style="max-height:600px;overflow-y:auto;border:1px solid #ccc">
-          <canvas id="stat-raster-full" width="600" height="2000"
+        <div id="history-container" style="height:280px;border:1px solid #ccc;overflow:hidden">
+          <canvas id="stat-raster-full" width="600" height="280"
                   style="width:100%;display:block"></canvas>
         </div>
       </div>
-      <div>
+      <div style="flex:5;">
         <div style="font-weight:600;margin-bottom:6px;text-align:center">
           Recent Events Window (last N×N events)
         </div>
-        <canvas id="stat-raster" width="300" height="300"
-                style="width:100%;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+        <div style="height:280px;border:1px solid #ccc;overflow:hidden">
+          <canvas id="stat-raster" width="300" height="280"
+                  style="width:100%;display:block"></canvas>
+        </div>
       </div>
     </div>
     <div>
@@ -163,7 +164,6 @@ Module.onRuntimeInitialized = function() {
   const frontSeries = [];  // F(t) / (2N+1)
   const ifaceSeries = [];  // I(t) / (2N)
   const entSeries   = [];  // Hnorm(t) in [0,1]
-  const rightColorSeries = []; // Color of rightmost site (normalized)
 
   // throttle sampling (e.g., every ~50ms wall time)
   let lastSampleTS = 0;
@@ -209,11 +209,24 @@ Module.onRuntimeInitialized = function() {
     return sizes;
   }
 
+  // Map colors to normalized values [0,1]
+  const colorToValue = new Map();
+  let nextColorIndex = 0;
+
   function computeRightmostColor(view) {
     if (view.length === 0) return 0;
-    const rightmostRgb = view[view.length - 1];
-    // Normalize RGB to [0,1] for plotting (simple hash-like normalization)
-    return ((rightmostRgb & 0xFF) + ((rightmostRgb >> 8) & 0xFF) + ((rightmostRgb >> 16) & 0xFF)) / (3 * 255);
+
+    // Get color at position +N (rightmost site)
+    const rightmostSiteIndex = view.length - 1; // Last array element = position +N
+    const rightmostColor = view[rightmostSiteIndex];
+
+    // Map this color to a normalized value
+    if (!colorToValue.has(rightmostColor)) {
+      colorToValue.set(rightmostColor, nextColorIndex * 0.1);
+      nextColorIndex = (nextColorIndex + 1) % 11; // Cycle through 0, 0.1, 0.2, ..., 1.0
+    }
+
+    return colorToValue.get(rightmostColor);
   }
 
   // ---------- Tiny plotting helpers ----------
@@ -224,11 +237,13 @@ Module.onRuntimeInitialized = function() {
     const pad = {l:40,r:10,t:10,b:22};
     const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
 
-    // Build x range from time, y from union of series ranges or fixed [0,1]
+    // Build x range from ALL time data (never scroll, always show complete history)
     const T = series[0].x, n = T.length;
     if (n === 0) return;
 
-    const xmin = T[0], xmax = T[n-1];
+    // ALWAYS use the full time range from start (0 or first time) to current time
+    const xmin = 0; // Always start from time 0
+    const xmax = T[n-1]; // Current time (scales as simulation progresses)
     let ymin = Infinity, ymax = -Infinity;
     for (const s of series) {
       for (const v of s.y) { if (v < ymin) ymin = v; if (v > ymax) ymax = v; }
@@ -236,7 +251,8 @@ Module.onRuntimeInitialized = function() {
     if (opts.forceY01) { ymin = 0; ymax = 1; }
     if (ymax === ymin) { ymax = ymin + 1; }
 
-    const x2px = x => pad.l + (x - xmin) / (xmax - xmin) * plotW;
+    // Time axis scales automatically: more time = more compressed
+    const x2px = x => pad.l + (x - xmin) / (xmax - xmin || 1) * plotW;
     const y2px = y => pad.t + (1 - (y - ymin) / (ymax - ymin)) * plotH;
 
     // Axes
@@ -333,31 +349,31 @@ Module.onRuntimeInitialized = function() {
 
   // State for full history raster with compression
   const fullHistory = []; // Store all history states
-  
+
   function appendFullHistoryRow(canvas, view) {
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
-    
+
     // Add current state to full history
     fullHistory.push(Array.from(view));
-    
+
     // Redraw entire history compressed to fit canvas height
     ctx.clearRect(0, 0, W, H);
-    
+
     const totalSteps = fullHistory.length;
     if (totalSteps === 0) return;
-    
+
     // Each pixel row represents one or more time steps
     const stepsPerPixel = totalSteps / H;
-    
+
     for (let y = 0; y < H; y++) {
       // Map pixel row to history step(s)
       const stepIndex = Math.floor(y * stepsPerPixel);
       if (stepIndex >= totalSteps) continue;
-      
+
       const historyRow = fullHistory[stepIndex];
       const row = ctx.createImageData(W, 1);
-      
+
       for (let x = 0; x < W; x++) {
         const i = Math.floor(x * historyRow.length / W);
         const rgb = historyRow[i];
@@ -365,18 +381,18 @@ Module.onRuntimeInitialized = function() {
         const p = x * 4;
         row.data[p+0] = R; row.data[p+1] = G; row.data[p+2] = B; row.data[p+3] = 255;
       }
-      
+
       // Draw from bottom up (H-1-y for time ↑)
       ctx.putImageData(row, 0, H - 1 - y);
     }
-    
+
     // Auto-scroll to bottom to show the most recent activity
     historyContainer.scrollTop = historyContainer.scrollHeight;
   }
 
   // Recent events sliding window (N×N grid)
   const recentEvents = [];
-  const maxRecentEvents = 300; // Always exactly N×N = 300×300
+  const maxRecentEvents = 100; // Reduced for faster startup
 
   function updateRecentEventsWindow(canvas, view) {
     // Add current state to recent events
@@ -384,32 +400,32 @@ Module.onRuntimeInitialized = function() {
     if (recentEvents.length > maxRecentEvents) {
       recentEvents.shift(); // Remove oldest
     }
-    
+
     // Draw exactly N×N grid (no scaling of time dimension)
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
-    
+
     const N = recentEvents.length;
     if (N === 0) return;
-    
-    // ALWAYS draw N×N pixels, one pixel per event per space location
+
+    // Draw available events, using full height even if not full buffer
     const pixelWidth = W / view.length;   // space dimension (can scale to canvas width)
-    const pixelHeight = H / maxRecentEvents; // time dimension (1 pixel = 1 event)
-    
+    const pixelHeight = H / N; // time dimension scales with actual data
+
     for (let t = 0; t < N; t++) {
       const historyRow = recentEvents[t];
       for (let x = 0; x < historyRow.length; x++) {
         const rgb = historyRow[x];
         const R = (rgb >> 16) & 255, G = (rgb >> 8) & 255, B = rgb & 255;
         ctx.fillStyle = `rgb(${R},${G},${B})`;
-        
-        // Draw from bottom up (most recent at bottom)
+
+        // Draw from bottom up (most recent at bottom) - use Math.floor/ceil to avoid gaps
         ctx.fillRect(
-          x * pixelWidth, 
-          H - (t + 1) * pixelHeight, 
-          pixelWidth, 
-          pixelHeight
+          Math.floor(x * pixelWidth),
+          Math.floor(H - (t + 1) * pixelHeight),
+          Math.ceil(pixelWidth) + 1,
+          Math.ceil(pixelHeight) + 1
         );
       }
     }
@@ -479,7 +495,7 @@ Module.onRuntimeInitialized = function() {
       updateTimeDisplay();
       const { arr } = wasm.exportSites();
       drawSites(arr);
-      
+
       // --- Statistics updates ---
       updateRecentEventsWindow(rasterCanvas, arr);
       appendFullHistoryRow(rasterFullCanvas, arr);
@@ -491,14 +507,12 @@ Module.onRuntimeInitialized = function() {
         const Flen = computeFrontLen(arr);    // number of leftmost-color sites
         const Icnt = computeInterfaceCount(arr);
         const { Hnorm } = computeEntropy(arr);
-        const rightColor = computeRightmostColor(arr);
 
         // record normalized series
         T.push(t);
         frontSeries.push(Flen / Lsites);
         ifaceSeries.push(Icnt / Math.max(1, Lsites-1));
         entSeries.push(Hnorm);
-        rightColorSeries.push(rightColor);
 
         // Build theoretical overlay for front: E[F]=t, band=√t, all normalized
         const Ncur = parseInt(nInput.value, 10);
@@ -507,10 +521,9 @@ Module.onRuntimeInitialized = function() {
         const bandFront = T.map(tt => Math.min(Math.sqrt(Math.max(tt,0)), Lcur-1) / Lcur);
 
         linePlot(tsCanvas, [
-          { x: T, y: frontSeries,    width: 2 },    // empirical front (normalized)
+          { x: T, y: frontSeries },                 // empirical front (normalized)
           { x: T, y: ifaceSeries },                 // interface density
-          { x: T, y: entSeries },                   // entropy (normalized)
-          { x: T, y: rightColorSeries }             // rightmost site color
+          { x: T, y: entSeries }                    // entropy (normalized)
         ], {
           forceY01: true,
           band: { y: yFront, band: bandFront }      // ±√t band around theory y=t/L
@@ -549,7 +562,7 @@ Module.onRuntimeInitialized = function() {
     updateTimeDisplay();
 
     // clear stats canvases & series
-    T.length = 0; frontSeries.length = 0; ifaceSeries.length = 0; entSeries.length = 0; rightColorSeries.length = 0;
+    T.length = 0; frontSeries.length = 0; ifaceSeries.length = 0; entSeries.length = 0;
     recentEvents.length = 0; fullHistory.length = 0;
     const ctx1 = tsCanvas.getContext('2d'); ctx1.clearRect(0,0,tsCanvas.width,tsCanvas.height);
     const ctx2 = histCanvas.getContext('2d'); ctx2.clearRect(0,0,histCanvas.width,histCanvas.height);
@@ -611,21 +624,18 @@ Module.onRuntimeInitialized = function() {
       const Flen = computeFrontLen(arr);
       const Icnt = computeInterfaceCount(arr);
       const { Hnorm } = computeEntropy(arr);
-      const rightColor = computeRightmostColor(arr);
       T.push(t);
       frontSeries.push(Flen / Lsites);
       ifaceSeries.push(Icnt / Math.max(1, Lsites-1));
       entSeries.push(Hnorm);
-      rightColorSeries.push(rightColor);
       const Ncur = parseInt(nInput.value, 10);
       const Lcur = 2 * Ncur + 1;
       const yFront = T.map(tt => Math.min(tt, Lcur-1) / Lcur);
       const bandFront = T.map(tt => Math.min(Math.sqrt(Math.max(tt,0)), Lcur-1) / Lcur);
       linePlot(tsCanvas, [
-        { x: T, y: frontSeries, width: 2 },
+        { x: T, y: frontSeries },
         { x: T, y: ifaceSeries },
-        { x: T, y: entSeries },
-        { x: T, y: rightColorSeries }
+        { x: T, y: entSeries }
       ], {
         forceY01: true,
         band: { y: yFront, band: bandFront }
