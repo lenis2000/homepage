@@ -8,7 +8,7 @@ coauthors:
   - name: Leonid Petrov
 comments: false
 categories: blog math preprint
-# journal-ref:  PMP?
+# journal-ref:  PMP around 2025-08-31
 # journal-web:
 image: __STORAGE_URL__/img/papers/waterfall_paper.png
 image-alt: "Left: the three types of lozenges. Center: an example of a lozenge tiling of a hexagon whose side lengths are all equal to 3. Right: a perfect sample of the q-Racah random tiling with N=50, T=100, S=30, q=0.7, and κ=3i. The cross-section of the 3D surface across the middle represents the barcode process."
