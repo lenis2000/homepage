@@ -4,7 +4,7 @@
 {% if post.categories contains "preprint" or post.categories contains "paper" %}
 \item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{{%endraw%}{{post.journal-ref}}{%raw%}}{%endraw%}. {%endif%}
+\emph{%raw%}{{%endraw%}{{post.title}}}, {% if post.journal-ref %}\textbf{\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{{%endraw%}{{post.journal-ref}}{%raw%}}{%endraw%}}. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{{%endraw%}{%raw%}\textcolor{red}{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% if post.pages %}{{post.pages}} pages.{%endif%}
 {% endif %}
 {% endfor %}
@@ -18,7 +18,7 @@
 {% if post.categories contains "erratum" %}
 \item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{{%endraw%}{{post.journal-ref}}{%raw%}}{%endraw%}. {%endif%}
+\emph{%raw%}{{%endraw%}{{post.title}}}, {% if post.journal-ref %}\textbf{\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{{%endraw%}{{post.journal-ref}}{%raw%}}{%endraw%}}. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{{%endraw%}{%raw%}\textcolor{red}{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% if post.pages %}{{post.pages}} pages.{%endif%}
 {% endif %}
 {% endfor %}
@@ -42,5 +42,5 @@
 	\item
 	Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
 	\emph{Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex}.
-	\href{https://www.nature.com/articles/s41467-020-15936-z}{Nature Communications, 11, Article number: 2066 (2020).} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/nature-comm.pdf{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. 15 pages.
+	\textbf{\href{https://www.nature.com/articles/s41467-020-15936-z}{Nature Communications, 11, Article number: 2066 (2020).}} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/nature-comm.pdf{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. 15 pages.
 \end{etaremune}
