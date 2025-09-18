@@ -4,7 +4,7 @@
 {% if post.categories contains "preprint" or post.categories contains "paper" %}
 \item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}{{post.journal-ref}}. {%endif%}
+\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}{{post.journal-ref}}. {%endif%}{% if post.journal-ref-extra %}{{post.journal-ref-extra}}. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}{%endraw%}.{% endif %}
 {% endif %}
 {% endfor %}
