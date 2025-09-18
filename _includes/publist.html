@@ -4,7 +4,7 @@
 {% if post.categories contains "preprint" or post.categories contains "paper" %}
 \item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {% if post.journal-ref %}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{\textbf{{{%endraw%}{{post.journal-ref}}{%raw%}}}{%endraw%}}. {% endif %}
+\emph{%raw%}{{%endraw%}{{post.title}}}, {% if post.journal-ref %}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{\textbf{{{%endraw%}{{post.journal-ref}}{%raw%}}}{%endraw%}}. {% endif %}{% if post.journal-ref-extra %}{%raw%}\textbf{{%endraw%}{{post.journal-ref-extra}}{%raw%}}{%endraw%}. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{{%endraw%}{%raw%}\textcolor{red}{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% if post.pages %}{{post.pages}} pages.{%endif%}
 {% endif %}
 {% endfor %}
@@ -18,7 +18,7 @@
 {% if post.categories contains "erratum" %}
 \item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {% if post.journal-ref %}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{\textbf{{{%endraw%}{{post.journal-ref}}{%raw%}}}{%endraw%}}. {% endif %}
+\emph{%raw%}{{%endraw%}{{post.title}}}, {% if post.journal-ref %}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{\textbf{{{%endraw%}{{post.journal-ref}}{%raw%}}}{%endraw%}}. {% endif %}{% if post.journal-ref-extra %}{%raw%}\textbf{{%endraw%}{{post.journal-ref-extra}}{%raw%}}{%endraw%}. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{{%endraw%}{%raw%}\textcolor{red}{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% if post.pages %}{{post.pages}} pages.{%endif%}
 {% endif %}
 {% endfor %}

@@ -12,8 +12,9 @@ coauthors:
     web: http://www.damir.xyz/
 comments: false
 categories: blog math paper
-journal-ref: FPSAC 2025 poster. Full version to appear in Advances in Mathematics.
-# journal-web:
+journal-ref: Advances in Mathematics, 480 (2025), Part C, 110510.
+journal-web: https://www.sciencedirect.com/science/article/pii/S0001870825004086
+journal-ref-extra: FPSAC 2025 poster
 published: true
 image: __STORAGE_URL__/img/papers/grothendieck-shenanigans.png
 image-alt: Reduction of a pipe dream leading to the permutation w(D) = 241653.

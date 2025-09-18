@@ -8,13 +8,13 @@ nav_weight: 2
 
 <div class="row row-offcanvas row-offcanvas-right">
   <div class="col-md-8">
-    
+
     <!-- Search Bar -->
     <div id="research-search-group" class="input-group mb-3">
       <input type="text" id="research-search-input" class="form-control" placeholder="Search papers… (Esc to clear)" aria-label="Search research">
       <button class="btn btn-outline-secondary" type="button" id="research-search-clear">Clear</button>
     </div>
-    
+
     <!-- Search Options -->
     <div class="mb-3">
       <button class="btn btn-sm btn-outline-info" type="button" id="research-extended-search-toggle">
@@ -26,7 +26,7 @@ nav_weight: 2
       <br>
       <small class="text-muted">By default, search covers paper number, title, authors, and journal only</small>
     </div>
-    
+
     <!-- Category Buttons -->
     <div id="research-cat-buttons" class="d-none d-md-flex flex-wrap gap-2 mb-4">
       <!-- Categories will be dynamically generated -->
@@ -77,7 +77,7 @@ nav_weight: 2
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
-          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%} &bull;
+          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}{% if post.journal-ref-extra %} {{post.journal-ref-extra}}{% endif %} &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
         {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
         {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Visualizations</a>){% endif %}
@@ -111,7 +111,7 @@ nav_weight: 2
           {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
           <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
           {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
-            <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}
+            <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}{% if post.journal-ref-extra %} {{post.journal-ref-extra}}{% endif %}
           {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
           {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
           {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Visualizations</a>){% endif %}
