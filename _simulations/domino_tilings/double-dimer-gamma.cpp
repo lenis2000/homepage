@@ -81,92 +81,154 @@ static Xoshiro256PlusPlus rng(std::random_device{}());
 // Global progress counter (0 to 100)
 volatile int progressCounter = 0;
 
+// Structure to hold scaffolded weights for all sizes
+struct ScaffoldedWeights {
+    std::vector<MatrixDouble> a_weights;  // a_weights[k] is the 'a' weight matrix for size k (1 <= k <= N)
+    std::vector<MatrixDouble> b_weights;  // b_weights[k] is the 'b' weight matrix for size k (1 <= k <= N)
+    int N;  // Maximum size
+};
+
 // Forward declarations
 vector<Matrix> d3p(const MatrixDouble &x1);
 vector<MatrixDouble> probs2(const MatrixDouble &x1);
 MatrixInt delslide(const MatrixInt &x1);
 MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
+ScaffoldedWeights generateScaffoldedWeights(int N, double alpha, double beta);
 
 // ============================================================================
-// WEIGHT ASSIGNMENT FUNCTION - GAMMA-DISORDERED AZTEC DIAMOND
+// SCAFFOLDED WEIGHT GENERATION - TOP-DOWN INVERSE RECURRENCE
 // ============================================================================
 //
-// Function to generate gamma-distributed weights on specific edges
+// This function implements the inverse recurrence from Duits & Van Peski (2025)
+// Equation 1.22 in their paper describes the top-down recurrence for weights.
 //
-// MATHEMATICAL DEFINITION (from Duits & Van Peski):
-// Paper Definition 1.1: "independent random weights {a_{i,j}, b_{i,j} : 1 ≤ i,j ≤ n}"
-// - Each a_{i,j} ~ Γ(α,1) INDEPENDENTLY (Gamma distribution, shape α, scale 1)
-// - Each b_{i,j} ~ Γ(β,1) INDEPENDENTLY (Gamma distribution, shape β, scale 1)
+// CRITICAL: Weights must be generated TOP-DOWN (from size N to 1), not bottom-up.
+// Generating bottom-up or using independent weights at each level causes freezing.
 //
-// WEIGHT MATRIX STRUCTURE:
-// The weight matrix has dimensions dim×dim where dim = 2n.
-// Indexed by (i,j) where 0 ≤ i,j < dim.
-//
-// ASSIGNMENT RULE (based on row parity):
-//
-// ┌─────────────────────────────────────────────────────────────────┐
-// │ IF i is EVEN (i % 2 == 0):                                      │
-// │   - IF j is EVEN: weight(i,j) = a_{i,j} ~ Γ(α, 1) [RANDOM]     │
-// │   - IF j is ODD:  weight(i,j) = b_{i,j} ~ Γ(β, 1) [RANDOM]     │
-// │                                                                  │
-// │ IF i is ODD (i % 2 == 1):                                       │
-// │   - FOR ALL j:    weight(i,j) = 1         [DETERMINISTIC]       │
-// └─────────────────────────────────────────────────────────────────┘
-//
-// INDEPENDENCE: Every a_{i,j} and b_{i,j} is sampled INDEPENDENTLY.
-//
-// CRITICAL PROPERTY: This weight matrix is generated ONCE.
-// Both dimer configurations are then sampled from the measure induced by
-// this SAME weight matrix (not two independent weight samples).
+// The recurrence relations are:
+// a[k-1]_(i,j) = (a[k]_(i,j) / (a[k]_(i,j) + b[k]_(i,j))) * (a[k]_(i+1,j) + b[k]_(i+1,j))
+// b[k-1]_(i,j) = (b[k]_(i,j+1) / (a[k]_(i,j+1) + b[k]_(i,j+1))) * (a[k]_(i+1,j+1) + b[k]_(i+1,j+1))
 //
 // ============================================================================
-MatrixDouble generateGammaWeights(int dim, double alpha, double beta) {
-    MatrixDouble weights(dim, dim);
+ScaffoldedWeights generateScaffoldedWeights(int N, double alpha, double beta) {
+    ScaffoldedWeights scaffolded;
+    scaffolded.N = N;
 
-    // Create Gamma distributions:
-    // Γ(α, 1) has shape parameter α and scale parameter 1
-    // Γ(β, 1) has shape parameter β and scale parameter 1
+    // Initialize vectors to hold weights for sizes 0 to N (we'll use indices 1 to N)
+    scaffolded.a_weights.resize(N + 1);
+    scaffolded.b_weights.resize(N + 1);
+
+    // Create Gamma distributions
     std::gamma_distribution<> gamma_alpha(alpha, 1.0);
     std::gamma_distribution<> gamma_beta(beta, 1.0);
 
     // ========================================================================
-    // WEIGHT ASSIGNMENT LOOP
+    // STEP 1: Generate independent Gamma variables for the largest size N
     // ========================================================================
+    scaffolded.a_weights[N] = MatrixDouble(N, N);
+    scaffolded.b_weights[N] = MatrixDouble(N, N);
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            scaffolded.a_weights[N].at(i, j) = gamma_alpha(rng);
+            scaffolded.b_weights[N].at(i, j) = gamma_beta(rng);
+        }
+    }
+
+    // ========================================================================
+    // STEP 2: TOP-DOWN RECURRENCE - Compute weights for sizes k-1 from k
+    // ========================================================================
+    for (int k = N; k >= 2; k--) {
+        int k_minus_1 = k - 1;
+
+        // Allocate matrices for size k-1
+        scaffolded.a_weights[k_minus_1] = MatrixDouble(k_minus_1, k_minus_1);
+        scaffolded.b_weights[k_minus_1] = MatrixDouble(k_minus_1, k_minus_1);
+
+        const MatrixDouble& a_curr = scaffolded.a_weights[k];
+        const MatrixDouble& b_curr = scaffolded.b_weights[k];
+        MatrixDouble& a_prev = scaffolded.a_weights[k_minus_1];
+        MatrixDouble& b_prev = scaffolded.b_weights[k_minus_1];
+
+        // Compute total weights at current level
+        MatrixDouble total(k, k);
+        for (int i = 0; i < k; i++) {
+            for (int j = 0; j < k; j++) {
+                total.at(i, j) = a_curr.at(i, j) + b_curr.at(i, j);
+            }
+        }
+
+        // Apply inverse recurrence
+        for (int i = 0; i < k_minus_1; i++) {
+            for (int j = 0; j < k_minus_1; j++) {
+                // ============================================================
+                // Recurrence for a[k-1]_(i,j)
+                // ============================================================
+                // a[k-1]_(i,j) = ratio_(i,j) * sum_(i+1,j)
+                // where:
+                //   ratio_(i,j) = a[k]_(i,j) / (a[k]_(i,j) + b[k]_(i,j))
+                //   sum_(i+1,j) = a[k]_(i+1,j) + b[k]_(i+1,j)
+
+                double ratio_a = a_curr.at(i, j) / total.at(i, j);
+                double sum_next_a = total.at(i + 1, j);
+                a_prev.at(i, j) = ratio_a * sum_next_a;
+
+                // ============================================================
+                // Recurrence for b[k-1]_(i,j)
+                // ============================================================
+                // b[k-1]_(i,j) = ratio_(i,j+1) * sum_(i+1,j+1)
+                // where:
+                //   ratio_(i,j+1) = b[k]_(i,j+1) / (a[k]_(i,j+1) + b[k]_(i,j+1))
+                //   sum_(i+1,j+1) = a[k]_(i+1,j+1) + b[k]_(i+1,j+1)
+
+                double ratio_b = b_curr.at(i, j + 1) / total.at(i, j + 1);
+                double sum_next_b = total.at(i + 1, j + 1);
+                b_prev.at(i, j) = ratio_b * sum_next_b;
+            }
+        }
+    }
+
+    return scaffolded;
+}
+// ============================================================================
+// END OF SCAFFOLDED WEIGHT GENERATION
+// ============================================================================
+
+// ============================================================================
+// HELPER: Build weight matrix for a given size from scaffolded weights
+// ============================================================================
+//
+// Converts the separate a and b weight matrices at size k into the combined
+// 2k×2k weight matrix format expected by the shuffling algorithm.
+//
+// Matrix structure:
+// - Even rows (i % 2 == 0): Alternating a (j even) and b (j odd) values
+// - Odd rows (i % 2 == 1): All values = 1
+//
+// ============================================================================
+MatrixDouble buildWeightMatrixForSize(const ScaffoldedWeights& scaffolded, int k) {
+    int dim = 2 * k;
+    MatrixDouble weights(dim, dim);
+
+    const MatrixDouble& a_k = scaffolded.a_weights[k];
+    const MatrixDouble& b_k = scaffolded.b_weights[k];
+
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
-
-            // Check row parity
             if (i % 2 == 0) {
-                // ============================================================
-                // CASE: i is EVEN (even row)
-                // ============================================================
-                // These rows get random gamma-distributed weights
-
+                // Even row: use scaffolded weights
+                int idx_i = i / 2;
+                int idx_j = j / 2;
                 if (j % 2 == 0) {
-                    // --------------------------------------------------------
-                    // SUBCASE: i even, j even
-                    // ASSIGN: a_{i,j} ~ Γ(α, 1)
-                    // --------------------------------------------------------
-                    weights.at(i, j) = gamma_alpha(rng);
-
+                    // Even column: use a weight
+                    weights.at(i, j) = a_k.at(idx_i, idx_j);
                 } else {
-                    // --------------------------------------------------------
-                    // SUBCASE: i even, j odd
-                    // ASSIGN: b_{i,j} ~ Γ(β, 1)
-                    // --------------------------------------------------------
-                    weights.at(i, j) = gamma_beta(rng);
+                    // Odd column: use b weight
+                    weights.at(i, j) = b_k.at(idx_i, idx_j);
                 }
-
             } else {
-                // ============================================================
-                // CASE: i is ODD (odd row)
-                // ============================================================
-                // These rows get deterministic weight = 1
-                // (for all j, regardless of parity)
-                // --------------------------------------------------------
-                // ASSIGN: weight(i,j) = 1 (deterministic)
-                // --------------------------------------------------------
+                // Odd row: weight = 1
                 weights.at(i, j) = 1.0;
             }
         }
@@ -174,8 +236,6 @@ MatrixDouble generateGammaWeights(int dim, double alpha, double beta) {
 
     return weights;
 }
-// ============================================================================
-// END OF WEIGHT ASSIGNMENT FUNCTION
 // ============================================================================
 
 // d3p: builds a vector of matrices from x1. Now uses flat matrix implementation.
@@ -401,18 +461,64 @@ char* simulateAztecWithWeights(int n, double alpha, double beta) {
     try {
         progressCounter = 0; // Reset progress.
 
-        // Create weight matrix A1a: dimensions 2*n x 2*n, with gamma-distributed weights
-        int dim = 2 * n;
-        MatrixDouble A1a = generateGammaWeights(dim, alpha, beta);
+        // ====================================================================
+        // STEP 1: Generate scaffolded weights using TOP-DOWN recurrence
+        // ====================================================================
+        // This generates weights for all sizes from N down to 1 using the
+        // inverse recurrence from Duits & Van Peski (2025), Equation 1.22
+        ScaffoldedWeights scaffolded = generateScaffoldedWeights(n, alpha, beta);
+        progressCounter = 2; // Scaffolded weights generated
 
-        // Compute probability matrices.
+        // ====================================================================
+        // STEP 2: Build probability matrices DIRECTLY from scaffolded weights
+        // ====================================================================
+        // CRITICAL: We do NOT use d3p/probs2 here. Those functions re-derive
+        // probabilities using a generic algorithm that doesn't preserve the
+        // correct structure from the top-down recurrence.
+        //
+        // Instead, we compute probabilities directly from the scaffolded weights:
+        // P[k]_(i,j) = b[k]_(i,j) / (a[k]_(i,j) + b[k]_(i,j))
+        //
+        // This is the probability of placing a VERTICAL domino at position (i,j)
+        // when creating size k+1 from size k in the shuffling algorithm.
+        //
+        // Index mapping for aztecgen:
+        // - prob[0] corresponds to weights at size 1 (initial 2x2 block)
+        // - prob[k] corresponds to weights at size k+1
+        // ====================================================================
+
         vector<MatrixDouble> prob;
-        try {
-            prob = probs2(A1a);
-        } catch (const std::exception& e) {
-            throw std::runtime_error("Error computing probability matrices");
+        prob.reserve(n);
+
+        for (int k = 1; k <= n; k++) {
+            const MatrixDouble& a_k = scaffolded.a_weights[k];
+            const MatrixDouble& b_k = scaffolded.b_weights[k];
+
+            // The probability matrix size matches the weight matrix size at this level
+            int size = a_k.size();
+            MatrixDouble P(size, size);
+
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    double w_a = a_k.at(i, j);
+                    double w_b = b_k.at(i, j);
+
+                    // Probability of Vertical pair (North/South dominoes)
+                    // If random() < P[i,j] -> place vertical domino
+                    // If random() >= P[i,j] -> place horizontal domino
+                    double total = w_a + w_b;
+                    P.at(i, j) = (total > 1e-12) ? (w_b / total) : 0.5;
+                }
+            }
+            prob.push_back(P);
         }
-        progressCounter = 5; // Probabilities computed.
+
+        progressCounter = 5; // Probabilities computed directly from scaffolded weights.
+
+        // Build A1a ONLY for visualization/checksum purposes (upper-left 8x8 of size N)
+        // This is NOT used for the shuffling calculation anymore - just for JSON output
+        MatrixDouble A1a = buildWeightMatrixForSize(scaffolded, n);
+        int dim = 2 * n;
 
         // Compute checksum of PROBABILITY MATRICES to verify both configs use same probs
         double probChecksum = 0.0;
