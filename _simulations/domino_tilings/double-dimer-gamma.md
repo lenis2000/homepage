@@ -547,9 +547,9 @@ Module.onRuntimeInitialized = async function() {
     try {
       // For Gamma distribution (always gamma in this version)
       const alpha = parseFloat(alphaInput.value);
-      // Note: We're using alpha for both a and b parameters
-      // distType: 2 for Gamma, alpha is param1, param2 and param3 are ignored
-      const ptrPromise = simulateAztecWithWeightsAndDist(n, 2, alpha, 0, 0);
+      const beta = parseFloat(betaInputGamma.value);
+      // distType: 2 for Gamma, alpha is param1, beta is param2, param3 is ignored
+      const ptrPromise = simulateAztecWithWeightsAndDist(n, 2, alpha, beta, 0);
 
       // Wait for computation to complete or be aborted
       const ptr = await ptrPromise;
@@ -774,7 +774,7 @@ Module.onRuntimeInitialized = async function() {
 \\begin{document}
 \\begin{tikzpicture}[scale=${scaleFactor.toFixed(6)}]
 
-% Gamma-disordered Aztec Diamond (n=${n}, α=${alphaInput.value})
+% Gamma-disordered Aztec Diamond (n=${n}, α=${alphaInput.value}, β=${betaInputGamma.value})
 % Config 1: Black dimers
 % Config 2: Red dimers
 % Double edges (in both configs): Purple dimers
@@ -913,7 +913,7 @@ Module.onRuntimeInitialized = async function() {
     const codeContainer = document.getElementById('tikz-code-container');
     const blob = new Blob([codeContainer.textContent], { type: 'text/plain' });
     const a = document.createElement('a');
-    a.download = `gamma_disordered_aztec_n${n}_alpha${alphaInput.value}_tikz.tex`;
+    a.download = `gamma_disordered_aztec_n${n}_alpha${alphaInput.value}_beta${betaInputGamma.value}_tikz.tex`;
     a.href = URL.createObjectURL(blob);
     a.click();
     URL.revokeObjectURL(a.href);

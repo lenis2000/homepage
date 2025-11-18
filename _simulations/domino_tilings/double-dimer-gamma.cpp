@@ -87,23 +87,31 @@ MatrixDouble generateGaussianWeights(int dim, double beta) {
 }
 
 // Function to generate gamma-distributed weights on specific edges
-// NE/SE edges (i even) get gamma distribution, NW/SW edges (i odd) get weight 1
-MatrixDouble generateGammaWeights(int dim, double shape) {
+// For i even: j even uses Gamma(alpha,1) for a_{i,j}, j odd uses Gamma(beta,1) for b_{i,j}
+// For i odd: weight = 1
+MatrixDouble generateGammaWeights(int dim, double alpha, double beta) {
     MatrixDouble weights(dim, dim);
-    std::gamma_distribution<> gamma(shape, 1.0); // shape parameter, scale = 1
-    
+    std::gamma_distribution<> gamma_alpha(alpha, 1.0); // shape = alpha, scale = 1
+    std::gamma_distribution<> gamma_beta(beta, 1.0);   // shape = beta, scale = 1
+
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
             if (i % 2 == 0) {
-                // i is even: use gamma distribution (NE/SE edges)
-                weights.at(i, j) = gamma(rng);
+                // i is even: use gamma distribution
+                if (j % 2 == 0) {
+                    // j is even: a_{i,j} ~ Gamma(alpha, 1)
+                    weights.at(i, j) = gamma_alpha(rng);
+                } else {
+                    // j is odd: b_{i,j} ~ Gamma(beta, 1)
+                    weights.at(i, j) = gamma_beta(rng);
+                }
             } else {
                 // i is odd: use weight 1 (NW/SW edges)
                 weights.at(i, j) = 1.0;
             }
         }
     }
-    
+
     return weights;
 }
 
@@ -113,8 +121,8 @@ MatrixDouble generateRandomWeights(int dim, WeightDistribution distType, double 
         // For Gaussian, param1 is beta, param2 and param3 are ignored
         return generateGaussianWeights(dim, param1);
     } else if (distType == WeightDistribution::GAMMA) {
-        // For Gamma, param1 is shape parameter, param2 and param3 are ignored
-        return generateGammaWeights(dim, param1);
+        // For Gamma, param1 is alpha, param2 is beta, param3 is ignored
+        return generateGammaWeights(dim, param1, param2);
     } else {
         // For Bernoulli, param1 is value1, param2 is value2, param3 is prob1
         return generateBernoulliWeights(dim, param1, param2, param3);
