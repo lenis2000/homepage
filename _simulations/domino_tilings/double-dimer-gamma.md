@@ -60,7 +60,7 @@ The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma 
 <!-- Controls to change n and weight parameters -->
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
-  <input id="n-input" type="number" value="24" min="2" step="2" max="400" size="3">
+  <input id="n-input" type="number" value="120" min="2" step="2" max="400" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -71,7 +71,7 @@ The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma 
   <label for="alpha-input" style="margin-left: 10px;">α (shape for a<sub>i,j</sub>): </label>
   <input id="alpha-input" type="number" value="2.0" min="0.1" max="20" step="0.1" size="6" style="width: 60px;">
   <label for="beta-input-gamma" style="margin-left: 10px;">β (shape for b<sub>i,j</sub>): </label>
-  <input id="beta-input-gamma" type="number" value="2.0" min="0.1" max="20" step="0.1" size="6" style="width: 60px;">
+  <input id="beta-input-gamma" type="number" value="2.5" min="0.1" max="20" step="0.1" size="6" style="width: 60px;">
 </div>
 
 <!-- Display options -->
@@ -128,8 +128,7 @@ The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma 
 Module.onRuntimeInitialized = async function() {
   // Wrap exported functions asynchronously.
   const simulateAztec = Module.cwrap('simulateAztec', 'number', ['number'], {async: true});
-  const simulateAztecWithWeights = Module.cwrap('simulateAztecWithWeights', 'number', ['number', 'number', 'number', 'number'], {async: true});
-  const simulateAztecWithWeightsAndDist = Module.cwrap('simulateAztecWithWeightsAndDist', 'number', ['number', 'number', 'number', 'number', 'number'], {async: true});
+  const simulateAztecWithWeights = Module.cwrap('simulateAztecWithWeights', 'number', ['number', 'number', 'number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
@@ -549,8 +548,8 @@ Module.onRuntimeInitialized = async function() {
       // For Gamma distribution (always gamma in this version)
       const alpha = parseFloat(alphaInput.value);
       const beta = parseFloat(betaInputGamma.value);
-      // distType: 2 for Gamma, alpha is param1, beta is param2, param3 is ignored
-      const ptrPromise = simulateAztecWithWeightsAndDist(n, 2, alpha, beta, 0);
+      // Call with gamma parameters: n, alpha, beta
+      const ptrPromise = simulateAztecWithWeights(n, alpha, beta);
 
       // Wait for computation to complete or be aborted
       const ptr = await ptrPromise;
