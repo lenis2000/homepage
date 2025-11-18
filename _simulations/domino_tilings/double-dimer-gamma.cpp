@@ -8,7 +8,7 @@ emcc double-dimer-gamma.cpp -o double-dimer-gamma.js \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
- -O3 -ffast-math
+ -O3 -flto -ffast-math
   mv double-dimer-gamma.js ../../js/
 
 Features:
@@ -36,7 +36,47 @@ Features:
 
 using namespace std;
 
-static std::mt19937 rng(std::random_device{}()); // Global RNG for speed
+// Fast xoshiro256++ RNG (much faster than mt19937)
+class Xoshiro256PlusPlus {
+private:
+    uint64_t s[4];
+
+    static inline uint64_t rotl(const uint64_t x, int k) {
+        return (x << k) | (x >> (64 - k));
+    }
+
+public:
+    using result_type = uint64_t;
+
+    Xoshiro256PlusPlus(uint64_t seed = 0) {
+        // Seed using splitmix64
+        uint64_t z = seed;
+        for (int i = 0; i < 4; i++) {
+            z += 0x9e3779b97f4a7c15;
+            z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
+            z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
+            s[i] = z ^ (z >> 31);
+        }
+    }
+
+    uint64_t operator()() {
+        const uint64_t result = rotl(s[0] + s[3], 23) + s[0];
+        const uint64_t t = s[1] << 17;
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+        s[2] ^= t;
+        s[3] = rotl(s[3], 45);
+        return result;
+    }
+
+    static constexpr uint64_t min() { return 0; }
+    static constexpr uint64_t max() { return UINT64_MAX; }
+};
+
+// Fast RNG instance (much faster than mt19937)
+static Xoshiro256PlusPlus rng(std::random_device{}());
 
 // Global progress counter (0 to 100)
 volatile int progressCounter = 0;
@@ -59,14 +99,14 @@ enum class WeightDistribution {
 MatrixDouble generateBernoulliWeights(int dim, double value1, double value2, double prob1) {
     MatrixDouble weights(dim, dim);
     std::uniform_real_distribution<> dis(0.0, 1.0);
-    
+
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
             // Sample from Bernoulli distribution
             weights.at(i, j) = (dis(rng) < prob1) ? value1 : value2;
         }
     }
-    
+
     return weights;
 }
 
@@ -74,7 +114,7 @@ MatrixDouble generateBernoulliWeights(int dim, double value1, double value2, dou
 MatrixDouble generateGaussianWeights(int dim, double beta) {
     MatrixDouble weights(dim, dim);
     std::normal_distribution<> normal(0.0, 1.0); // Standard normal
-    
+
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
             // Sample X from standard normal, weight = exp(beta * X)
@@ -82,31 +122,33 @@ MatrixDouble generateGaussianWeights(int dim, double beta) {
             weights.at(i, j) = exp(beta * X);
         }
     }
-    
+
     return weights;
 }
 
 // Function to generate gamma-distributed weights on specific edges
-// For i even: j even uses Gamma(alpha,1) for a_{i,j}, j odd uses Gamma(beta,1) for b_{i,j}
-// For i odd: weight = 1
+// Paper Definition 1.1: "independent random weights {a_{i,j}, b_{i,j} : 1 ≤ i,j ≤ n}"
+// Each a_{i,j} ~ Γ(α,1) INDEPENDENTLY, each b_{i,j} ~ Γ(β,1) INDEPENDENTLY
+// Weight matrix generated ONCE - both dimer configs use THIS EXACT SAME MATRIX
 MatrixDouble generateGammaWeights(int dim, double alpha, double beta) {
     MatrixDouble weights(dim, dim);
     std::gamma_distribution<> gamma_alpha(alpha, 1.0); // shape = alpha, scale = 1
     std::gamma_distribution<> gamma_beta(beta, 1.0);   // shape = beta, scale = 1
 
+    // Generate INDEPENDENT random weights for each edge position
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
             if (i % 2 == 0) {
-                // i is even: use gamma distribution
+                // i even: use gamma distributions
                 if (j % 2 == 0) {
-                    // j is even: a_{i,j} ~ Gamma(alpha, 1)
+                    // j even: a_{i,j} ~ Γ(α,1) INDEPENDENTLY
                     weights.at(i, j) = gamma_alpha(rng);
                 } else {
-                    // j is odd: b_{i,j} ~ Gamma(beta, 1)
+                    // j odd: b_{i,j} ~ Γ(β,1) INDEPENDENTLY
                     weights.at(i, j) = gamma_beta(rng);
                 }
             } else {
-                // i is odd: use weight 1 (NW/SW edges)
+                // i odd: weight = 1 (NW/SW edges)
                 weights.at(i, j) = 1.0;
             }
         }
@@ -130,50 +172,68 @@ MatrixDouble generateRandomWeights(int dim, WeightDistribution distType, double 
 }
 
 // d3p: builds a vector of matrices from x1. Now uses flat matrix implementation.
+// Optimized version with reduced overhead
 vector<Matrix> d3p(const MatrixDouble &x1) {
     int n = x1.size();
     Matrix A(n, n);
+
+    // Initialize first matrix - unroll inner loop hints for compiler
     for (int i = 0; i < n; i++){
         for (int j = 0; j < n; j++){
-            A.at(i, j) = (fabs(x1.at(i, j)) < 1e-9) ? Cell{1.0, 1} : Cell{x1.at(i, j), 0};
+            double val = x1.at(i, j);
+            A.at(i, j) = (val < 1e-9 && val > -1e-9) ? Cell{1.0, 1} : Cell{val, 0};
         }
     }
-    vector<Matrix> AA;
-    AA.reserve(n/2); // Pre-allocate to avoid reallocations
-    AA.push_back(A);
 
-    int iterations = n / 2 - 1; // Assumes n is even.
+    vector<Matrix> AA;
+    int iterations = n / 2 - 1;
+    AA.reserve(iterations + 1); // Exact size to avoid reallocations
+    AA.push_back(std::move(A)); // Move instead of copy
+
+    // Main computation loop - hot path
     for (int k = 0; k < iterations; k++){
         int nk = n - 2 * k - 2;
         Matrix C(nk, nk);
         const Matrix &prev = AA[k];
+
         for (int i = 0; i < nk; i++){
+            int ii = i + 2 * (i & 1);
             for (int j = 0; j < nk; j++){
-                int ii = i + 2 * (i & 1);  // instead of i % 2
-                int jj = j + 2 * (j & 1);  // instead of j % 2
+                int jj = j + 2 * (j & 1);
+
+                // Load cells once
                 const Cell &current = prev.at(ii, jj);
                 const Cell &diag    = prev.at(i + 1, j + 1);
                 const Cell &right   = prev.at(ii, j + 1);
                 const Cell &down    = prev.at(i + 1, jj);
-                double sum1 = current.flag + diag.flag;
-                double sum2 = right.flag + down.flag;
+
+                // Compute sums
+                int sum1_int = current.flag + diag.flag;
+                int sum2_int = right.flag + down.flag;
+
                 double a2, a2_second;
-                if (fabs(sum1 - sum2) < 1e-9) {
+
+                // Optimize branching
+                if (sum1_int == sum2_int) {
                     a2 = current.value * diag.value + right.value * down.value;
-                    a2_second = sum1;
-                } else if (sum1 < sum2) {
+                    a2_second = sum1_int;
+                } else if (sum1_int < sum2_int) {
                     a2 = current.value * diag.value;
-                    a2_second = sum1;
+                    a2_second = sum1_int;
                 } else {
                     a2 = right.value * down.value;
-                    a2_second = sum2;
+                    a2_second = sum2_int;
                 }
-                if (fabs(a2) < 1e-9) a2 = 1e-9;
+
+                // Avoid division by zero with simpler check
+                a2 = (a2 < 1e-9 && a2 > -1e-9) ? 1e-9 : a2;
                 C.at(i, j) = { current.value / a2, current.flag - static_cast<int>(a2_second) };
             }
         }
-        AA.push_back(C);
-        emscripten_sleep(0); // Yield periodically during heavy computation
+        AA.push_back(std::move(C)); // Move instead of copy
+
+        // Yield less frequently - only every 4th iteration
+        if (k % 4 == 0) emscripten_sleep(0);
     }
     return AA;
 }
@@ -306,13 +366,13 @@ MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
         a1.at(0, 0) = 0; a1.at(0, 1) = 1;
         a1.at(1, 0) = 1; a1.at(1, 1) = 0;
     }
-    
+
     int totalIterations = n - 1;
     for (int i = 0; i < totalIterations; i++){
         a1 = delslide(a1);
         a1 = create(a1, x0[i + 1]);
-        // Don't update progress here anymore - it's handled in simulateAztec
-        emscripten_sleep(0); // Yield control periodically
+        // Yield less frequently to reduce overhead
+        if (i % 4 == 0) emscripten_sleep(0);
     }
     return a1;
 }
@@ -353,27 +413,24 @@ char* simulateAztecWithWeightsAndDist(int n, int distType, double param1, double
             throw std::runtime_error("Error computing probability matrices");
         }
         progressCounter = 5; // Probabilities computed.
-        emscripten_sleep(0); // Yield to update UI
 
-        // Generate FIRST domino configuration.
+        // Generate FIRST domino configuration
         MatrixInt dominoConfig1;
         try {
             dominoConfig1 = aztecgen(prob);
         } catch (const std::exception& e) {
             throw std::runtime_error("Error generating first domino configuration");
         }
-        progressCounter = 45; // First simulation complete.
-        emscripten_sleep(0); // Yield to update UI
+        progressCounter = 50; // First simulation complete
 
-        // Generate SECOND domino configuration (independent).
+        // Generate SECOND domino configuration (independent)
         MatrixInt dominoConfig2;
         try {
             dominoConfig2 = aztecgen(prob);
         } catch (const std::exception& e) {
             throw std::runtime_error("Error generating second domino configuration");
         }
-        progressCounter = 90; // Both simulations complete.
-        emscripten_sleep(0); // Yield to update UI
+        progressCounter = 95; // Both simulations complete
 
         // Build JSON output with pre-allocated string for efficiency
         int size1 = dominoConfig1.size();
@@ -386,7 +443,7 @@ char* simulateAztecWithWeightsAndDist(int n, int distType, double param1, double
         size_t estimatedJsonSize = (size1 * size1 / 4 + size2 * size2 / 4) * 100 + 2000;
         string json;
         json.reserve(estimatedJsonSize > 2048 ? estimatedJsonSize : 2048);
-        
+
         // Add weight matrix sample (8x8 upper-left corner)
         json.append("{\"weightMatrix\":[");
         int matrixSampleSize = std::min(8, dim);
@@ -442,26 +499,26 @@ char* simulateAztecWithWeightsAndDist(int n, int distType, double param1, double
                     } else {
                         continue;
                     }
-                    
+
                     x *= scale;
                     y *= scale;
                     w *= scale;
                     h *= scale;
-                    
+
                     if (!first) json.append(",");
                     else first = false;
 
                     // Use sprintf for efficient number formatting
-                    snprintf(buffer, sizeof(buffer), 
-                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}", 
+                    snprintf(buffer, sizeof(buffer),
+                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
                              x, y, w, h, color);
                     json.append(buffer);
                 }
             }
         }
-        
+
         json.append("],\"config2\":[");
-        
+
         // Process SECOND configuration
         first = true;
         for (int i = 0; i < size2; i++){
@@ -499,24 +556,24 @@ char* simulateAztecWithWeightsAndDist(int n, int distType, double param1, double
                     } else {
                         continue;
                     }
-                    
+
                     x *= scale;
                     y *= scale;
                     w *= scale;
                     h *= scale;
-                    
+
                     if (!first) json.append(",");
                     else first = false;
 
                     // Use sprintf for efficient number formatting
-                    snprintf(buffer, sizeof(buffer), 
-                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}", 
+                    snprintf(buffer, sizeof(buffer),
+                             "{\"x\":%g,\"y\":%g,\"w\":%g,\"h\":%g,\"color\":\"%s\"}",
                              x, y, w, h, color);
                     json.append(buffer);
                 }
             }
         }
-        
+
         json.append("]}");
         progressCounter = 100; // Finished.
 

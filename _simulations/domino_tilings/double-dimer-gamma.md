@@ -77,7 +77,7 @@ The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma 
 <!-- Display options -->
 <div style="margin-bottom: 10px;">
   <label>
-    <input type="checkbox" id="show-double-edges" checked>
+    <input type="checkbox" id="show-double-edges">
     Show double edges (edges present in both configurations)
   </label>
   <label style="margin-left: 20px;">
@@ -156,7 +156,7 @@ Module.onRuntimeInitialized = async function() {
   let pathsGroup; // Group for nonintersecting paths
   let dimersGroup; // Group for dimers overlay
   let heightGroup; // Group for height function display
-  let showDoubleEdges = true; // Track whether to show double edges
+  let showDoubleEdges = false; // Track whether to show double edges (default: hidden)
 
   // Function to display weight matrix
   function displayWeightMatrix(matrix) {
