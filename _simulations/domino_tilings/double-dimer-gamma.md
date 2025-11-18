@@ -1,7 +1,8 @@
 ---
 title: Gamma-disordered Aztec diamond (double dimer representation)
 date: 2025-11-18
-permalink: /double-dimer-gamma
+permalink: /double-dimer-gamma/
+layout: sim_page
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
