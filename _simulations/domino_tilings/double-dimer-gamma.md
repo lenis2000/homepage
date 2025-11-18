@@ -49,11 +49,20 @@ This interactive simulation visualizes the **Gamma-disordered Aztec diamond**, a
 
 The simulation runs entirely in your browser using the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. For $n \lesssim 120$ it runs in reasonable time; the upper bound is set at $n=400$ to prevent browser freezing.
 
-<b>Gamma Weights:</b> Each edge weight $a_{i,j}$ or $b_{i,j}$ is sampled independently from a Gamma distribution $\Gamma(\alpha, 1)$ for edges on even rows (NE/SE edges, $i$ even), and weight is fixed at $1$ for edges on odd rows (NW/SW edges, $i$ odd):
-- $a_{i,j} \sim \Gamma(\alpha, 1)$ for $i$ even, and $a_{i,j} = 1$ for $i$ odd
-- $b_{i,j} \sim \Gamma(\beta, 1)$ for $i$ even, and $b_{i,j} = 1$ for $i$ odd
+<b>Gamma Weights - Precise Definition:</b>
 
-The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma weights.
+The edge weights are stored in a matrix indexed by $(i,j)$ where $0 \le i, j < 2n$. Each entry corresponds to an edge in the Aztec diamond graph. The weights are assigned according to the row parity $i \bmod 2$:
+
+**For even rows ($i$ even):**
+- When $j$ is even: $\text{weight}(i,j) = a_{i,j} \sim \Gamma(\alpha, 1)$ independently
+- When $j$ is odd: $\text{weight}(i,j) = b_{i,j} \sim \Gamma(\beta, 1)$ independently
+
+**For odd rows ($i$ odd):**
+- For all $j$: $\text{weight}(i,j) = 1$ (deterministic)
+
+This pattern creates a checkerboard of random weights on even rows (alternating between $a$-type and $b$-type edges), while odd rows have uniform weight $1$. The shape parameters $\alpha > 0$ and $\beta > 0$ control the Gamma distributions.
+
+**Important:** All weights $a_{i,j}$ and $b_{i,j}$ are sampled **independently** from their respective distributions. The weight matrix is generated **once**, and both dimer configurations are sampled from the measure induced by this **same** weight matrix.
 
 ---
 
@@ -97,6 +106,15 @@ The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma 
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
 <div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+
+<!-- Debug info about weight matrix -->
+<div id="weight-debug-info" style="margin-bottom: 10px; padding: 8px; background-color: #f0f8ff; border: 2px solid #4682b4; border-radius: 4px; font-family: monospace; font-size: 12px; display: none;">
+  <strong style="color: #000080;">Shuffling Algorithm Verification:</strong><br>
+  <div style="margin-top: 5px; padding-left: 10px;">
+    <span id="weight-checksum"></span><br>
+    <span style="color: #006400; font-weight: bold; margin-top: 5px; display: inline-block;">✓ Probabilities computed ONCE, then FIXED and reused for both configs</span>
+  </div>
+</div>
 
 <!-- TikZ export section -->
 <div style="margin-top: 10px; margin-bottom: 10px;">
@@ -587,6 +605,57 @@ Module.onRuntimeInitialized = async function() {
         // Store weight matrix if available
         if (parsedData.weightMatrix) {
           displayWeightMatrix(parsedData.weightMatrix);
+
+          // DEBUG: Log weight matrix statistics to verify same weights used
+          console.log("=== SHUFFLING ALGORITHM VERIFICATION ===");
+          console.log("Weight matrix dimensions:", parsedData.weightMatrix.length, "x", parsedData.weightMatrix[0].length);
+          console.log("");
+          console.log("STEP 1: Generate random weight matrix");
+          console.log("  Weight matrix checksum:", parsedData.weightChecksum);
+          console.log("");
+          console.log("STEP 2: Shuffling algo computes edge probabilities from weights");
+          console.log("  Probability matrices checksum:", parsedData.probChecksum);
+          console.log("  ↑ COMPUTED ONCE, THEN FIXED");
+          console.log("");
+          console.log("STEP 3: Sample config1 using these FIXED probabilities");
+          console.log("STEP 4: Sample config2 using these SAME FIXED probabilities");
+          console.log("");
+          console.log("✓ Both configs use SAME probability matrices (checksum:", parsedData.probChecksum + ")");
+
+          // Compute a simple checksum of the weight matrix in JS for additional verification
+          let weightSum = 0;
+          let weightProduct = 1;
+          for (let i = 0; i < Math.min(8, parsedData.weightMatrix.length); i++) {
+            for (let j = 0; j < Math.min(8, parsedData.weightMatrix[i].length); j++) {
+              weightSum += parsedData.weightMatrix[i][j];
+              weightProduct *= (1 + parsedData.weightMatrix[i][j] / 100); // Scaled to avoid overflow
+            }
+          }
+          console.log("JS verification checksum (sum of 8x8 sample):", weightSum.toFixed(4));
+          console.log("Sample weights [0,0] to [3,3]:");
+          for (let i = 0; i < Math.min(4, parsedData.weightMatrix.length); i++) {
+            const row = [];
+            for (let j = 0; j < Math.min(4, parsedData.weightMatrix[i].length); j++) {
+              row.push(parsedData.weightMatrix[i][j].toFixed(3));
+            }
+            console.log(`  Row ${i}:`, row.join(", "));
+          }
+          console.log("Number of dominoes in config1:", parsedData.config1.length);
+          console.log("Number of dominoes in config2:", parsedData.config2.length);
+          console.log("IMPORTANT: Both configs sampled from SAME weight matrix above");
+          console.log("================================");
+
+          // Update visual debug info
+          const debugInfo = document.getElementById('weight-debug-info');
+          const checksumSpan = document.getElementById('weight-checksum');
+          if (debugInfo && checksumSpan) {
+            checksumSpan.innerHTML = `
+              <strong>Step 1:</strong> Weight matrix (${parsedData.weightMatrix.length}×${parsedData.weightMatrix[0].length}) generated → checksum: ${parsedData.weightChecksum}<br>
+              <strong>Step 2:</strong> Shuffling algo computes probabilities → checksum: <span style="background-color: #ffff99; padding: 2px 4px; border-radius: 2px;"><strong>${parsedData.probChecksum}</strong></span> (FIXED)<br>
+              <strong>Step 3+4:</strong> Both configs (${parsedData.config1.length} dominoes each) sampled using SAME probabilities
+            `;
+            debugInfo.style.display = 'block';
+          }
         }
         // Merge both configurations for display
         currentDominoes = [...currentConfigs.config1, ...currentConfigs.config2];

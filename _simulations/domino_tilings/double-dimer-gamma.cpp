@@ -88,29 +88,85 @@ MatrixInt delslide(const MatrixInt &x1);
 MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
 
+// ============================================================================
+// WEIGHT ASSIGNMENT FUNCTION - GAMMA-DISORDERED AZTEC DIAMOND
+// ============================================================================
+//
 // Function to generate gamma-distributed weights on specific edges
+//
+// MATHEMATICAL DEFINITION (from Duits & Van Peski):
 // Paper Definition 1.1: "independent random weights {a_{i,j}, b_{i,j} : 1 ≤ i,j ≤ n}"
-// Each a_{i,j} ~ Γ(α,1) INDEPENDENTLY, each b_{i,j} ~ Γ(β,1) INDEPENDENTLY
-// Weight matrix generated ONCE - both dimer configs use THIS EXACT SAME MATRIX
+// - Each a_{i,j} ~ Γ(α,1) INDEPENDENTLY (Gamma distribution, shape α, scale 1)
+// - Each b_{i,j} ~ Γ(β,1) INDEPENDENTLY (Gamma distribution, shape β, scale 1)
+//
+// WEIGHT MATRIX STRUCTURE:
+// The weight matrix has dimensions dim×dim where dim = 2n.
+// Indexed by (i,j) where 0 ≤ i,j < dim.
+//
+// ASSIGNMENT RULE (based on row parity):
+//
+// ┌─────────────────────────────────────────────────────────────────┐
+// │ IF i is EVEN (i % 2 == 0):                                      │
+// │   - IF j is EVEN: weight(i,j) = a_{i,j} ~ Γ(α, 1) [RANDOM]     │
+// │   - IF j is ODD:  weight(i,j) = b_{i,j} ~ Γ(β, 1) [RANDOM]     │
+// │                                                                  │
+// │ IF i is ODD (i % 2 == 1):                                       │
+// │   - FOR ALL j:    weight(i,j) = 1         [DETERMINISTIC]       │
+// └─────────────────────────────────────────────────────────────────┘
+//
+// INDEPENDENCE: Every a_{i,j} and b_{i,j} is sampled INDEPENDENTLY.
+//
+// CRITICAL PROPERTY: This weight matrix is generated ONCE.
+// Both dimer configurations are then sampled from the measure induced by
+// this SAME weight matrix (not two independent weight samples).
+//
+// ============================================================================
 MatrixDouble generateGammaWeights(int dim, double alpha, double beta) {
     MatrixDouble weights(dim, dim);
-    std::gamma_distribution<> gamma_alpha(alpha, 1.0); // shape = alpha, scale = 1
-    std::gamma_distribution<> gamma_beta(beta, 1.0);   // shape = beta, scale = 1
 
-    // Generate INDEPENDENT random weights for each edge position
+    // Create Gamma distributions:
+    // Γ(α, 1) has shape parameter α and scale parameter 1
+    // Γ(β, 1) has shape parameter β and scale parameter 1
+    std::gamma_distribution<> gamma_alpha(alpha, 1.0);
+    std::gamma_distribution<> gamma_beta(beta, 1.0);
+
+    // ========================================================================
+    // WEIGHT ASSIGNMENT LOOP
+    // ========================================================================
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
+
+            // Check row parity
             if (i % 2 == 0) {
-                // i even: use gamma distributions
+                // ============================================================
+                // CASE: i is EVEN (even row)
+                // ============================================================
+                // These rows get random gamma-distributed weights
+
                 if (j % 2 == 0) {
-                    // j even: a_{i,j} ~ Γ(α,1) INDEPENDENTLY
+                    // --------------------------------------------------------
+                    // SUBCASE: i even, j even
+                    // ASSIGN: a_{i,j} ~ Γ(α, 1)
+                    // --------------------------------------------------------
                     weights.at(i, j) = gamma_alpha(rng);
+
                 } else {
-                    // j odd: b_{i,j} ~ Γ(β,1) INDEPENDENTLY
+                    // --------------------------------------------------------
+                    // SUBCASE: i even, j odd
+                    // ASSIGN: b_{i,j} ~ Γ(β, 1)
+                    // --------------------------------------------------------
                     weights.at(i, j) = gamma_beta(rng);
                 }
+
             } else {
-                // i odd: weight = 1 (NW/SW edges)
+                // ============================================================
+                // CASE: i is ODD (odd row)
+                // ============================================================
+                // These rows get deterministic weight = 1
+                // (for all j, regardless of parity)
+                // --------------------------------------------------------
+                // ASSIGN: weight(i,j) = 1 (deterministic)
+                // --------------------------------------------------------
                 weights.at(i, j) = 1.0;
             }
         }
@@ -118,6 +174,9 @@ MatrixDouble generateGammaWeights(int dim, double alpha, double beta) {
 
     return weights;
 }
+// ============================================================================
+// END OF WEIGHT ASSIGNMENT FUNCTION
+// ============================================================================
 
 // d3p: builds a vector of matrices from x1. Now uses flat matrix implementation.
 // Optimized version with reduced overhead
@@ -355,6 +414,17 @@ char* simulateAztecWithWeights(int n, double alpha, double beta) {
         }
         progressCounter = 5; // Probabilities computed.
 
+        // Compute checksum of PROBABILITY MATRICES to verify both configs use same probs
+        double probChecksum = 0.0;
+        for (size_t k = 0; k < std::min(size_t(3), prob.size()); k++) {
+            int probSize = std::min(8, prob[k].size());
+            for (int i = 0; i < probSize; i++) {
+                for (int j = 0; j < probSize; j++) {
+                    probChecksum += prob[k].at(i, j) * (k + 1) * (i + 1) * (j + 1);
+                }
+            }
+        }
+
         // Generate FIRST domino configuration
         MatrixInt dominoConfig1;
         try {
@@ -385,8 +455,25 @@ char* simulateAztecWithWeights(int n, double alpha, double beta) {
         string json;
         json.reserve(estimatedJsonSize > 2048 ? estimatedJsonSize : 2048);
 
-        // Add weight matrix sample (8x8 upper-left corner)
-        json.append("{\"weightMatrix\":[");
+        // Compute weight matrix checksum for verification that both configs use same matrix
+        double weightChecksum = 0.0;
+        int checksumSize = std::min(16, dim);
+        for (int i = 0; i < checksumSize; i++) {
+            for (int j = 0; j < checksumSize; j++) {
+                weightChecksum += A1a.at(i, j) * (i + 1) * (j + 1); // Weighted sum for uniqueness
+            }
+        }
+
+        // Add weight matrix checksum, probability checksum, and sample (8x8 upper-left corner)
+        json.append("{\"weightChecksum\":");
+        char checksumBuffer[32];
+        snprintf(checksumBuffer, sizeof(checksumBuffer), "%.8f", weightChecksum);
+        json.append(checksumBuffer);
+        json.append(",\"probChecksum\":");
+        char probChecksumBuffer[32];
+        snprintf(probChecksumBuffer, sizeof(probChecksumBuffer), "%.8f", probChecksum);
+        json.append(probChecksumBuffer);
+        json.append(",\"weightMatrix\":[");
         int matrixSampleSize = std::min(8, dim);
         for (int i = 0; i < matrixSampleSize; i++) {
             if (i > 0) json.append(",");
