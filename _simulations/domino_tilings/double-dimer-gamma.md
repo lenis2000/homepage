@@ -46,36 +46,13 @@ This interactive simulation visualizes the **Gamma-disordered Aztec diamond**, a
 - **Red dimers** show the second configuration
 - **Purple dimers** are "double edges" that appear in both configurations (toggle with checkbox below)
 
-The simulation runs entirely in your browser using the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a> (generalized to arbitrary weights). For $n \lesssim 120$ it runs in reasonable time; the upper bound is set at $n=400$ to prevent browser freezing.
+The simulation runs entirely in your browser using the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. For $n \lesssim 120$ it runs in reasonable time; the upper bound is set at $n=400$ to prevent browser freezing.
 
 <b>Gamma Weights:</b> Each edge weight $a_{i,j}$ or $b_{i,j}$ is sampled independently from a Gamma distribution $\Gamma(\alpha, 1)$ for edges on even rows (NE/SE edges, $i$ even), and weight is fixed at $1$ for edges on odd rows (NW/SW edges, $i$ odd):
 - $a_{i,j} \sim \Gamma(\alpha, 1)$ for $i$ even, and $a_{i,j} = 1$ for $i$ odd
 - $b_{i,j} \sim \Gamma(\beta, 1)$ for $i$ even, and $b_{i,j} = 1$ for $i$ odd
 
 The shape parameters $\alpha$ and $\beta$ control the distribution of the gamma weights.
-
-## Theoretical Background
-
-This model is introduced and analyzed in the paper **"The Gamma-Disordered Aztec Diamond"** by **Maurice Duits and Roger Van Peski** (in preparation, 2025). The key insight is that **Gamma-distributed weights are the unique family** for which independence is preserved under the shuffling algorithm—a remarkable integrability property characterized by Lukacs' theorem.
-
-### Why Random Weights?
-
-Dimer models with quenched random weights (where weights are random but fixed before sampling) are believed to lie in the same universality class as certain **spin glass models** studied in physics. Unlike deterministic weights, random weights lead to:
-
-- **Spin glass behavior**: Two independent samples from the same random weights tend to "overlap" (share many edges), especially in regions with high or low weights
-- **No phase transition**: Unlike some spin glass models, the Gamma-disordered Aztec diamond exhibits glassy behavior at *all temperatures* with no phase transition in the free energy
-- **KPZ scaling**: Boundary fluctuations (turning points) exhibit $n^{2/3}$ scaling characteristic of the Kardar-Parisi-Zhang universality class, rather than the $n^{1/2}$ Gaussian fluctuations seen with deterministic weights
-
-### Key Results from the Paper
-
-1. **Free Energy**: The normalized difference between annealed and averaged quenched free energy converges to a positive constant:
-   $$\lim_{n\to\infty} \frac{1}{n^2}(\mathcal{F}^a_n - \mathbb{E}[\mathcal{F}_n]) = \frac{1}{4(\alpha+\beta)} > 0$$
-
-2. **Turning Point Fluctuations**: The West, North, and South turning points (where frozen and disordered regions meet at the boundary) fluctuate on scale $n^{2/3}$ around explicit locations given by trigamma functions $\Psi_1(\alpha)$ and $\Psi_1(\beta)$
-
-3. **Connection to Integrable Polymers**: The model exhibits exact distributional equalities with hybrid integrable polymer models (combinations of log-Gamma, strict-weak, and Beta polymers), enabling transfer of known results from polymer theory to dimers
-
-4. **Double Dimer Overlaps**: The overlap structure visible in the double dimer configuration below reveals the characteristic "freezing" due to random weights—edges with high weights appear in both samples (purple), while edges with low weights are avoided by both
 
 ---
 
