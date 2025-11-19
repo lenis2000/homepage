@@ -34,222 +34,256 @@ static std::mt19937 rng(std::random_device{}());
 volatile int progressCounter = 0;
 
 // Forward declarations
-vector<Matrix> d3p(const MatrixDouble &x1);
-vector<MatrixDouble> probs2(const MatrixDouble &x1);
-MatrixInt delslide(const MatrixInt &x1);
-MatrixInt create(MatrixInt x0, const MatrixDouble &p);
-MatrixInt aztecgen(const vector<MatrixDouble> &x0);
+pair<vector<MatrixDouble>, vector<MatrixDouble>> d3pslim(const MatrixDouble &x1);
+vector<MatrixDouble> probsslim(const MatrixDouble &x1);
+MatrixInt delslideslim(const MatrixInt &x1);
+MatrixInt createslim(MatrixInt &x0, const MatrixDouble &p);
+MatrixInt aztecgenslim(const vector<MatrixDouble> &x0);
 
-// Implementation matching Julia's ab_gamma function (lines 252-267 in simulatorfinal.jl)
-// Translates from Julia 1-indexed to C++ 0-indexed:
-// Julia: i odd (1,3,5...) -> C++: i even (0,2,4...)
-// Julia: i even (2,4,6...) -> C++: i odd (1,3,5...)
-// When i is even (0-indexed) and j is even: use Gamma(beta, 1) [bshape]
-// When i is even (0-indexed) and j is odd: use Gamma(alpha, 1) [ashape]
-// When i is odd (0-indexed): weight is 1.0 for all j
-MatrixDouble generateBiasedGammaWeights(int dim, double alpha, double beta) {
-    MatrixDouble weights(dim, dim);
-    std::gamma_distribution<> gamma_a(alpha, 1.0);
-    std::gamma_distribution<> gamma_b(beta, 1.0);
+// ab_gamma: generates weights with gamma distribution
+// For odd rows (i%2==0 in 0-indexed) and odd cols (j%2==0): Gamma(bshape, 1)
+// For odd rows (i%2==0 in 0-indexed) and even cols (j%2==1): Gamma(ashape, 1)
+// Everything else: 1.0
+MatrixDouble ab_gamma(int n, double ashape, double bshape) {
+    std::gamma_distribution<> gamma_a(ashape, 1.0);
+    std::gamma_distribution<> gamma_b(bshape, 1.0);
 
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if (i % 2 == 1) {
-                // Odd i (0-indexed): weight is 1
-                weights.at(i, j) = 1.0;
-            } else {
-                // Even i (0-indexed): weight depends on parity of j
-                if (j % 2 == 0) {
-                    // Even j: use beta (bshape)
-                    weights.at(i, j) = gamma_b(rng);
-                } else {
-                    // Odd j: use alpha (ashape)
-                    weights.at(i, j) = gamma_a(rng);
+    MatrixDouble A(2*n, 2*n, 1.0); // Initialize with 1.0
+
+    for (int i = 0; i < 2*n; i++) {
+        if (i % 2 == 0) {  // i is even in 0-indexed (odd in 1-indexed Julia)
+            for (int j = 0; j < 2*n; j++) {
+                if (j % 2 == 0) {  // j is even in 0-indexed (odd in 1-indexed)
+                    A.at(i, j) = gamma_b(rng);
+                } else {  // j is odd in 0-indexed (even in 1-indexed)
+                    A.at(i, j) = gamma_a(rng);
                 }
             }
         }
     }
-    return weights;
+    return A;
 }
 
-// d3p, probs2, delslide, create, aztecgen are standard shuffling functions
-// We retain the optimized flat matrix implementation
-vector<Matrix> d3p(const MatrixDouble &x1) {
+// d3pslim: computes the square move for all Aztec diamonds
+// Returns pair of [weights matrix list, exponents matrix list]
+pair<vector<MatrixDouble>, vector<MatrixDouble>> d3pslim(const MatrixDouble& x1) {
     int n = x1.size();
-    Matrix A(n, n);
-    for (int i = 0; i < n; i++){
-        for (int j = 0; j < n; j++){
-            A.at(i, j) = (fabs(x1.at(i, j)) < 1e-9) ? Cell{1.0, 1} : Cell{x1.at(i, j), 0};
-        }
-    }
-    vector<Matrix> AA;
-    AA.reserve(n/2);
-    AA.push_back(A);
+    int m = n / 2;
 
-    int iterations = n / 2 - 1;
-    for (int k = 0; k < iterations; k++){
-        int nk = n - 2 * k - 2;
-        Matrix C(nk, nk);
-        const Matrix &prev = AA[k];
-        for (int i = 0; i < nk; i++){
-            for (int j = 0; j < nk; j++){
-                int ii = i + 2 * (i & 1);
-                int jj = j + 2 * (j & 1);
-                const Cell &current = prev.at(ii, jj);
-                const Cell &diag    = prev.at(i + 1, j + 1);
-                const Cell &right   = prev.at(ii, j + 1);
-                const Cell &down    = prev.at(i + 1, jj);
-                double sum1 = current.flag + diag.flag;
-                double sum2 = right.flag + down.flag;
-                double a2, a2_second;
-                if (fabs(sum1 - sum2) < 1e-9) {
-                    a2 = current.value * diag.value + right.value * down.value;
-                    a2_second = sum1;
-                } else if (sum1 < sum2) {
-                    a2 = current.value * diag.value;
-                    a2_second = sum1;
-                } else {
-                    a2 = right.value * down.value;
-                    a2_second = sum2;
-                }
-                if (fabs(a2) < 1e-9) a2 = 1e-9;
-                C.at(i, j) = { current.value / a2, current.flag - a2_second };
+    vector<MatrixDouble> A1, A2;
+    MatrixDouble B(n, n, 0.0);
+    MatrixDouble C(n, n, 0.0);
+
+    // Initialize first matrices
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (x1.at(i, j) == 0.0) {
+                B.at(i, j) = 1.0;
+                C.at(i, j) = 1.0;
+            } else {
+                B.at(i, j) = x1.at(i, j);
+                C.at(i, j) = 0.0;
             }
         }
-        AA.push_back(C);
+    }
+
+    A1.push_back(B);
+    A2.push_back(C);
+
+    // Main loop
+    for (int k = 0; k < m - 1; k++) {
+        int size = n - 2*k - 2;
+        B = MatrixDouble(size, size, 0.0);
+        C = MatrixDouble(size, size, 0.0);
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                int idx_i = i + 2*(i%2);
+                int idx_j = j + 2*(j%2);
+
+                double a1_val = A1[k].at(idx_i, idx_j);
+                double a1_exp = A2[k].at(idx_i, idx_j);
+
+                double sum1_exp = A2[k].at(idx_i, idx_j) + A2[k].at(i+1, j+1);
+                double sum2_exp = A2[k].at(idx_i, j+1) + A2[k].at(i+1, idx_j);
+
+                double a2_val, a2_exp;
+
+                if (sum1_exp == sum2_exp) {
+                    a2_val = A1[k].at(idx_i, idx_j) * A1[k].at(i+1, j+1) +
+                            A1[k].at(idx_i, j+1) * A1[k].at(i+1, idx_j);
+                    a2_exp = sum1_exp;
+                } else if (sum1_exp < sum2_exp) {
+                    a2_val = A1[k].at(idx_i, idx_j) * A1[k].at(i+1, j+1);
+                    a2_exp = sum1_exp;
+                } else {
+                    a2_val = A1[k].at(idx_i, j+1) * A1[k].at(i+1, idx_j);
+                    a2_exp = sum2_exp;
+                }
+
+                B.at(i, j) = a1_val / a2_val;
+                C.at(i, j) = a1_exp - a2_exp;
+            }
+        }
+
+        A1.push_back(B);
+        A2.push_back(C);
         emscripten_sleep(0);
     }
-    return AA;
+
+    return {A1, A2};
 }
 
-vector<MatrixDouble> probs2(const MatrixDouble &x1) {
-    vector<Matrix> a0 = d3p(x1);
-    int n = a0.size();
+// probsslim: outputs the probabilities needed for creation steps
+vector<MatrixDouble> probsslim(const MatrixDouble& x1) {
+    auto [a1, a2] = d3pslim(x1);
+    int n = a1.size();
     vector<MatrixDouble> A;
-    A.reserve(n);
 
-    for (int k = 0; k < n; k++){
-        const Matrix &mat = a0[n - k - 1];
-        int nk = mat.size();
-        int rows = nk / 2;
-        MatrixDouble C(rows, rows, 0.0);
-        for (int i = 0; i < rows; i++){
-            for (int j = 0; j < rows; j++){
-                int i0 = i << 1;
-                int j0 = j << 1;
-                double sum1 = mat.at(i0, j0).flag + mat.at(i0 + 1, j0 + 1).flag;
-                double sum2 = mat.at(i0 + 1, j0).flag + mat.at(i0, j0 + 1).flag;
-                if (sum1 > sum2) {
+    for (int k = 0; k < n; k++) {
+        int size = k + 1;
+        MatrixDouble C(size, size, 0.0);
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                double exp1 = a2[n-k-1].at(2*i, 2*j) + a2[n-k-1].at(2*i+1, 2*j+1);
+                double exp2 = a2[n-k-1].at(2*i+1, 2*j) + a2[n-k-1].at(2*i, 2*j+1);
+
+                if (exp1 > exp2) {
                     C.at(i, j) = 0.0;
-                } else if (sum1 < sum2) {
+                } else if (exp1 < exp2) {
                     C.at(i, j) = 1.0;
                 } else {
-                    double prod_main  = mat.at(i0 + 1, j0 + 1).value * mat.at(i0, j0).value;
-                    double prod_other = mat.at(i0 + 1, j0).value * mat.at(i0, j0 + 1).value;
-                    double denom = prod_main + prod_other;
-                    if (fabs(denom) < 1e-9) denom = 1e-9;
-                    C.at(i, j) = prod_main / denom;
+                    double num = a1[n-k-1].at(2*i+1, 2*j+1) * a1[n-k-1].at(2*i, 2*j);
+                    double den = num + a1[n-k-1].at(2*i+1, 2*j) * a1[n-k-1].at(2*i, 2*j+1);
+                    C.at(i, j) = num / den;
                 }
             }
         }
         A.push_back(C);
     }
+
     return A;
 }
 
-MatrixInt delslide(const MatrixInt &x1) {
+// delslideslim: deletion and sliding step
+MatrixInt delslideslim(const MatrixInt& x1) {
     int n = x1.size();
+    int m = n / 2;
     MatrixInt a0(n + 2, n + 2, 0);
-    for (int i = 0; i < n; i++){
-        for (int j = 0; j < n; j++){
-            a0.at(i + 1, j + 1) = x1.at(i, j);
+
+    // Copy interior
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            a0.at(i+1, j+1) = x1.at(i, j);
         }
     }
-    int half = n / 2;
-    for (int i = 0; i < half; i++){
-        for (int j = 0; j < half; j++){
-            int i2 = i << 1, j2 = j << 1;
-            if (a0.at(i2, j2) == 1 && a0.at(i2 + 1, j2 + 1) == 1) {
-                a0.at(i2, j2) = 0;
-                a0.at(i2 + 1, j2 + 1) = 0;
-            } else if (a0.at(i2, j2 + 1) == 1 && a0.at(i2 + 1, j2) == 1) {
-                a0.at(i2 + 1, j2) = 0;
-                a0.at(i2, j2 + 1) = 0;
+
+    // Deletion step
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+            if (a0.at(2*i, 2*j) == 1 && a0.at(2*i+1, 2*j+1) == 1) {
+                a0.at(2*i, 2*j) = 0;
+                a0.at(2*i+1, 2*j+1) = 0;
+            } else if (a0.at(2*i, 2*j+1) == 1 && a0.at(2*i+1, 2*j) == 1) {
+                a0.at(2*i+1, 2*j) = 0;
+                a0.at(2*i, 2*j+1) = 0;
             }
         }
     }
-    for (int i = 0; i < half + 1; i++){
-        for (int j = 0; j < half + 1; j++){
-            int i2 = i << 1, j2 = j << 1;
-            if (a0.at(i2 + 1, j2 + 1) == 1) {
-                a0.at(i2, j2) = 1;
-                a0.at(i2 + 1, j2 + 1) = 0;
-            } else if (a0.at(i2, j2) == 1) {
-                a0.at(i2, j2) = 0;
-                a0.at(i2 + 1, j2 + 1) = 1;
-            } else if (a0.at(i2 + 1, j2) == 1) {
-                a0.at(i2, j2 + 1) = 1;
-                a0.at(i2 + 1, j2) = 0;
-            } else if (a0.at(i2, j2 + 1) == 1) {
-                a0.at(i2 + 1, j2) = 1;
-                a0.at(i2, j2 + 1) = 0;
+
+    // Sliding step
+    for (int i = 0; i <= m; i++) {
+        for (int j = 0; j <= m; j++) {
+            if (a0.at(2*i+1, 2*j+1) == 1) {
+                a0.at(2*i, 2*j) = 1;
+                a0.at(2*i+1, 2*j+1) = 0;
+            } else if (a0.at(2*i, 2*j) == 1) {
+                a0.at(2*i, 2*j) = 0;
+                a0.at(2*i+1, 2*j+1) = 1;
+            } else if (a0.at(2*i+1, 2*j) == 1) {
+                a0.at(2*i, 2*j+1) = 1;
+                a0.at(2*i+1, 2*j) = 0;
+            } else if (a0.at(2*i, 2*j+1) == 1) {
+                a0.at(2*i+1, 2*j) = 1;
+                a0.at(2*i, 2*j+1) = 0;
             }
         }
     }
+
     return a0;
 }
 
-MatrixInt create(MatrixInt x0, const MatrixDouble &p) {
+// createslim: creation step with probabilities
+MatrixInt createslim(MatrixInt& x0, const MatrixDouble& p) {
     int n = x0.size();
-    int half = n / 2;
-    for (int i = 0; i < half; i++){
-        for (int j = 0; j < half; j++){
-            int i2 = i << 1, j2 = j << 1;
-            if (x0.at(i2, j2) == 0 && x0.at(i2 + 1, j2) == 0 &&
-                x0.at(i2, j2 + 1) == 0 && x0.at(i2 + 1, j2 + 1) == 0) {
+    int m = n / 2;
+    std::uniform_real_distribution<> uniform(0.0, 1.0);
+
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+            // Check if 2x2 block is empty
+            if (x0.at(2*i, 2*j) == 0 && x0.at(2*i+1, 2*j) == 0 &&
+                x0.at(2*i, 2*j+1) == 0 && x0.at(2*i+1, 2*j+1) == 0) {
+
                 bool a1 = true, a2 = true, a3 = true, a4 = true;
-                if (j > 0)
-                    a1 = (x0.at(i2, j2 - 1) == 0) && (x0.at(i2 + 1, j2 - 1) == 0);
-                if (j < half - 1)
-                    a2 = (x0.at(i2, j2 + 2) == 0) && (x0.at(i2 + 1, j2 + 2) == 0);
-                if (i > 0)
-                    a3 = (x0.at(i2 - 1, j2) == 0) && (x0.at(i2 - 1, j2 + 1) == 0);
-                if (i < half - 1)
-                    a4 = (x0.at(i2 + 2, j2) == 0) && (x0.at(i2 + 2, j2 + 1) == 0);
+
+                // Check left
+                if (j > 0) {
+                    a1 = (x0.at(2*i, 2*j-1) == 0) && (x0.at(2*i+1, 2*j-1) == 0);
+                }
+
+                // Check right
+                if (j < m - 1) {
+                    a2 = (x0.at(2*i, 2*j+2) == 0) && (x0.at(2*i+1, 2*j+2) == 0);
+                }
+
+                // Check top
+                if (i > 0) {
+                    a3 = (x0.at(2*i-1, 2*j) == 0) && (x0.at(2*i-1, 2*j+1) == 0);
+                }
+
+                // Check bottom
+                if (i < m - 1) {
+                    a4 = (x0.at(2*i+2, 2*j) == 0) && (x0.at(2*i+2, 2*j+1) == 0);
+                }
+
                 if (a1 && a2 && a3 && a4) {
-                    std::uniform_real_distribution<> dis(0.0, 1.0);
-                    double r = dis(rng);
-                    if (r < p.at(i, j)) {
-                        x0.at(i2, j2) = 1;
-                        x0.at(i2 + 1, j2 + 1) = 1;
+                    if (uniform(rng) < p.at(i, j)) {
+                        x0.at(2*i, 2*j) = 1;
+                        x0.at(2*i+1, 2*j+1) = 1;
                     } else {
-                        x0.at(i2 + 1, j2) = 1;
-                        x0.at(i2, j2 + 1) = 1;
+                        x0.at(2*i+1, 2*j) = 1;
+                        x0.at(2*i, 2*j+1) = 1;
                     }
                 }
             }
         }
     }
+
     return x0;
 }
 
-MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
-    int n = (int)x0.size();
-    std::uniform_real_distribution<> dis(0.0, 1.0);
-    MatrixInt a1(2, 2);
-    if (dis(rng) < x0[0].at(0, 0)) {
+// aztecgenslim: generates an Aztec diamond using probabilities
+MatrixInt aztecgenslim(const vector<MatrixDouble>& x0) {
+    int n = x0.size();
+    std::uniform_real_distribution<> uniform(0.0, 1.0);
+
+    MatrixInt a1(2, 2, 0);
+    if (uniform(rng) < x0[0].at(0, 0)) {
         a1.at(0, 0) = 1; a1.at(0, 1) = 0;
         a1.at(1, 0) = 0; a1.at(1, 1) = 1;
     } else {
         a1.at(0, 0) = 0; a1.at(0, 1) = 1;
         a1.at(1, 0) = 1; a1.at(1, 1) = 0;
     }
-    int totalIterations = n - 1;
-    for (int i = 0; i < totalIterations; i++){
-        a1 = delslide(a1);
-        a1 = create(a1, x0[i + 1]);
+
+    for (int i = 0; i < n - 1; i++) {
+        a1 = delslideslim(a1);
+        a1 = createslim(a1, x0[i+1]);
         emscripten_sleep(0);
     }
+
     return a1;
 }
 
@@ -260,13 +294,12 @@ char* simulateBiasedGamma(int n, double alpha, double beta) {
     try {
         progressCounter = 0;
 
-        // Create biased Gamma weights: 2*n x 2*n
-        int dim = 2 * n;
-        MatrixDouble A1a = generateBiasedGammaWeights(dim, alpha, beta);
+        // Create biased Gamma weights using ab_gamma
+        MatrixDouble A1a = ab_gamma(n, alpha, beta);
 
         vector<MatrixDouble> prob;
         try {
-            prob = probs2(A1a);
+            prob = probsslim(A1a);
         } catch (const std::exception& e) {
             throw std::runtime_error("Error computing probability matrices");
         }
@@ -276,7 +309,7 @@ char* simulateBiasedGamma(int n, double alpha, double beta) {
         // First configuration
         MatrixInt dominoConfig1;
         try {
-            dominoConfig1 = aztecgen(prob);
+            dominoConfig1 = aztecgenslim(prob);
         } catch (const std::exception& e) {
             throw std::runtime_error("Error generating first domino configuration");
         }
@@ -286,7 +319,7 @@ char* simulateBiasedGamma(int n, double alpha, double beta) {
         // Second configuration
         MatrixInt dominoConfig2;
         try {
-            dominoConfig2 = aztecgen(prob);
+            dominoConfig2 = aztecgenslim(prob);
         } catch (const std::exception& e) {
             throw std::runtime_error("Error generating second domino configuration");
         }
@@ -296,6 +329,7 @@ char* simulateBiasedGamma(int n, double alpha, double beta) {
         // JSON Generation
         int size1 = dominoConfig1.size();
         int size2 = dominoConfig2.size();
+        int dim = A1a.size();  // The weight matrix is 2*n x 2*n
         double scale = 10.0;
         size_t estimatedJsonSize = (size1 * size1 / 4 + size2 * size2 / 4) * 100 + 2000;
         string json;
