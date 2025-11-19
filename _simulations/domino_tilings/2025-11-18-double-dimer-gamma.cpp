@@ -40,10 +40,13 @@ MatrixInt delslide(const MatrixInt &x1);
 MatrixInt create(MatrixInt x0, const MatrixDouble &p);
 MatrixInt aztecgen(const vector<MatrixDouble> &x0);
 
-// Implementation of Definition 1.1:
-// a_ij ~ Gamma(alpha, 1)
-// b_ij ~ Gamma(beta, 1)
-// In the matrix representation, rows alternate between 'a' type and 'b' type edges.
+// Implementation matching Julia's ab_gamma function (lines 252-267 in simulatorfinal.jl)
+// Translates from Julia 1-indexed to C++ 0-indexed:
+// Julia: i odd (1,3,5...) -> C++: i even (0,2,4...)
+// Julia: i even (2,4,6...) -> C++: i odd (1,3,5...)
+// When i is even (0-indexed) and j is even: use Gamma(beta, 1) [bshape]
+// When i is even (0-indexed) and j is odd: use Gamma(alpha, 1) [ashape]
+// When i is odd (0-indexed): weight is 1.0 for all j
 MatrixDouble generateBiasedGammaWeights(int dim, double alpha, double beta) {
     MatrixDouble weights(dim, dim);
     std::gamma_distribution<> gamma_a(alpha, 1.0);
@@ -51,15 +54,17 @@ MatrixDouble generateBiasedGammaWeights(int dim, double alpha, double beta) {
 
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
-            if (j % 2 == 1) {
-                // Odd j: weight is 1
+            if (i % 2 == 1) {
+                // Odd i (0-indexed): weight is 1
                 weights.at(i, j) = 1.0;
             } else {
-                // Even j: weight depends on parity of i
-                if (i % 2 == 0) {
-                    weights.at(i, j) = gamma_a(rng);
-                } else {
+                // Even i (0-indexed): weight depends on parity of j
+                if (j % 2 == 0) {
+                    // Even j: use beta (bshape)
                     weights.at(i, j) = gamma_b(rng);
+                } else {
+                    // Odd j: use alpha (ashape)
+                    weights.at(i, j) = gamma_a(rng);
                 }
             }
         }
@@ -108,7 +113,7 @@ vector<Matrix> d3p(const MatrixDouble &x1) {
                     a2_second = sum2;
                 }
                 if (fabs(a2) < 1e-9) a2 = 1e-9;
-                C.at(i, j) = { current.value / a2, current.flag - static_cast<int>(a2_second) };
+                C.at(i, j) = { current.value / a2, current.flag - a2_second };
             }
         }
         AA.push_back(C);
@@ -132,8 +137,8 @@ vector<MatrixDouble> probs2(const MatrixDouble &x1) {
             for (int j = 0; j < rows; j++){
                 int i0 = i << 1;
                 int j0 = j << 1;
-                int sum1 = mat.at(i0, j0).flag + mat.at(i0 + 1, j0 + 1).flag;
-                int sum2 = mat.at(i0 + 1, j0).flag + mat.at(i0, j0 + 1).flag;
+                double sum1 = mat.at(i0, j0).flag + mat.at(i0 + 1, j0 + 1).flag;
+                double sum2 = mat.at(i0 + 1, j0).flag + mat.at(i0, j0 + 1).flag;
                 if (sum1 > sum2) {
                     C.at(i, j) = 0.0;
                 } else if (sum1 < sum2) {

@@ -33,7 +33,7 @@ These weights create a biased random environment.
 
 <div style="margin-bottom: 10px;">
   <label for="n-input">Size ($n\le 400$): </label>
-  <input id="n-input" type="number" value="120" min="2" step="2" max="400" size="3">
+  <input id="n-input" type="number" value="20" min="2" step="2" max="400" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -50,7 +50,8 @@ These weights create a biased random environment.
 </div>
 
 <div style="margin-bottom: 10px;">
-  <label><input type="checkbox" id="show-double-edges"> Show double edges (purple)</label>
+  <label><input type="checkbox" id="show-double-config" checked> Show double dimer config</label>
+  <label style="margin-left: 20px;"><input type="checkbox" id="show-double-edges"> Show double edges (purple)</label>
   <label style="margin-left: 20px;"><input type="checkbox" id="show-weight-matrix"> Show weight sample (8×8)</label>
 </div>
 
@@ -78,6 +79,7 @@ Module.onRuntimeInitialized = async function() {
   const betaInput = document.getElementById("beta-input");
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
+  const showDoubleConfigCheckbox = document.getElementById("show-double-config");
   const showDoubleEdgesCheckbox = document.getElementById("show-double-edges");
 
   // State
@@ -86,6 +88,7 @@ Module.onRuntimeInitialized = async function() {
   let progressInterval;
   let currentConfigs = null;
   let currentDominoes = [];
+  let showDoubleConfig = true;
   let showDoubleEdges = false;
   let initialTransform = {};
 
@@ -140,8 +143,8 @@ Module.onRuntimeInitialized = async function() {
 
   // Rendering
   function render(configs) {
-    const allDominoes = [...configs.config1, ...configs.config2];
-    if(allDominoes.length === 0) return;
+    const allDominoes = configs.config1;
+    if(!allDominoes || allDominoes.length === 0) return;
 
     const minX = d3.min(allDominoes, d => d.x), maxX = d3.max(allDominoes, d => d.x + d.w);
     const minY = d3.min(allDominoes, d => d.y), maxY = d3.max(allDominoes, d => d.y + d.h);
@@ -159,48 +162,63 @@ Module.onRuntimeInitialized = async function() {
     const group = svg.append("g").attr("class", "dominoes")
        .attr("transform", `translate(${tx},${ty}) scale(${scale})`);
 
-    // Edge Map for Double Dimer logic
-    const edgeMap = new Map();
-    const key = d => {
-       const cx = d.x + d.w/2, cy = d.y + d.h/2;
-       const horiz = d.w > d.h;
-       let x1, y1, x2, y2;
-       if(horiz) { x1=cx-d.w/4; x2=cx+d.w/4; y1=y2=cy; }
-       else { x1=x2=cx; y1=cy-d.h/4; y2=cy+d.h/4; }
-       // quantize
-       const q = v => Math.round(v*1000);
-       return `${Math.min(q(x1),q(x2))},${Math.min(q(y1),q(y2))}-${Math.max(q(x1),q(x2))},${Math.max(q(y1),q(y2))}`;
-    };
+    if(showDoubleConfig) {
+      // Double dimer edge visualization - compare two configs
+      const edgeMap = new Map();
+      const key = d => {
+         const cx = d.x + d.w/2, cy = d.y + d.h/2;
+         const horiz = d.w > d.h;
+         let x1, y1, x2, y2;
+         if(horiz) { x1=cx-d.w/4; x2=cx+d.w/4; y1=y2=cy; }
+         else { x1=x2=cx; y1=cy-d.h/4; y2=cy+d.h/4; }
+         const q = v => Math.round(v*1000);
+         return `${Math.min(q(x1),q(x2))},${Math.min(q(y1),q(y2))}-${Math.max(q(x1),q(x2))},${Math.max(q(y1),q(y2))}`;
+      };
 
-    const addEdges = (list, type) => list.forEach(d => {
-        const k = key(d);
-        if(!edgeMap.has(k)) edgeMap.set(k, {d, types: new Set()});
-        edgeMap.get(k).types.add(type);
-    });
+      const addEdges = (list, type) => list.forEach(d => {
+          const k = key(d);
+          if(!edgeMap.has(k)) edgeMap.set(k, {d, types: new Set()});
+          edgeMap.get(k).types.add(type);
+      });
 
-    addEdges(configs.config1, 1);
-    addEdges(configs.config2, 2);
+      addEdges(configs.config1, 1);
+      addEdges(configs.config2, 2);
 
-    edgeMap.forEach((val) => {
-        const isDouble = val.types.has(1) && val.types.has(2);
-        if(isDouble && !showDoubleEdges) return;
+      edgeMap.forEach((val) => {
+          const isDouble = val.types.has(1) && val.types.has(2);
+          if(isDouble && !showDoubleEdges) return; // Hide double edges if checkbox unchecked
 
-        let color = "red", opacity = 0.8;
-        if(isDouble) { color = "purple"; opacity = 1.0; }
-        else if(val.types.has(1)) { color = "black"; opacity = 1.0; }
+          let color, opacity;
+          if(isDouble) { color = "purple"; opacity = 1.0; }
+          else if(val.types.has(1)) { color = "black"; opacity = 1.0; }
+          else { color = "red"; opacity = 0.8; }
 
-        const d = val.d;
-        const cx = d.x + d.w/2, cy = d.y + d.h/2;
-        const horiz = d.w > d.h;
-        let x1, y1, x2, y2;
-        if(horiz) { x1=cx-d.w/4; x2=cx+d.w/4; y1=y2=cy; }
-        else { x1=x2=cx; y1=cy-d.h/4; y2=cy+d.h/4; }
+          const d = val.d;
+          const cx = d.x + d.w/2, cy = d.y + d.h/2;
+          const horiz = d.w > d.h;
+          let x1, y1, x2, y2;
+          if(horiz) { x1=cx-d.w/4; x2=cx+d.w/4; y1=y2=cy; }
+          else { x1=x2=cx; y1=cy-d.h/4; y2=cy+d.h/4; }
 
-        group.append("line").attr("x1",x1).attr("y1",y1).attr("x2",x2).attr("y2",y2)
-             .attr("stroke", color).attr("stroke-width", 3.5).attr("opacity", opacity);
-        group.append("circle").attr("cx",x1).attr("cy",y1).attr("r",3.5).attr("fill",color).attr("opacity",opacity);
-        group.append("circle").attr("cx",x2).attr("cy",y2).attr("r",3.5).attr("fill",color).attr("opacity",opacity);
-    });
+          group.append("line").attr("x1",x1).attr("y1",y1).attr("x2",x2).attr("y2",y2)
+               .attr("stroke", color).attr("stroke-width", 3.5).attr("opacity", opacity);
+          group.append("circle").attr("cx",x1).attr("cy",y1).attr("r",3.5).attr("fill",color).attr("opacity",opacity);
+          group.append("circle").attr("cx",x2).attr("cy",y2).attr("r",3.5).attr("fill",color).attr("opacity",opacity);
+      });
+    } else {
+      // Standard domino rendering - just config1 as rectangles
+      allDominoes.forEach(d => {
+        group.append("rect")
+          .attr("x", d.x)
+          .attr("y", d.y)
+          .attr("width", d.w)
+          .attr("height", d.h)
+          .attr("fill", d.color)
+          .attr("stroke", "#333")
+          .attr("stroke-width", 0.5)
+          .attr("opacity", 0.9);
+      });
+    }
   }
 
   async function runSimulation() {
@@ -257,6 +275,11 @@ Module.onRuntimeInitialized = async function() {
   updateBtn.addEventListener("click", runSimulation);
   cancelBtn.addEventListener("click", () => {
      if(simulationAbortController) simulationAbortController.abort();
+  });
+
+  showDoubleConfigCheckbox.addEventListener("change", function() {
+      showDoubleConfig = this.checked;
+      if(currentConfigs) render(currentConfigs);
   });
 
   showDoubleEdgesCheckbox.addEventListener("change", function() {

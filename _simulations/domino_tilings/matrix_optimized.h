@@ -5,7 +5,7 @@
 
 struct Cell {
     double value;
-    int flag;
+    double flag;  // Changed from int to double to match Julia implementation
 };
 
 // Memory-efficient flat matrix implementations
@@ -19,7 +19,7 @@ public:
     Matrix() : rows_(0), cols_(0) {}
 
     Matrix(int rows, int cols)
-        : data(rows * cols, Cell{0.0, 0}), rows_(rows), cols_(cols) {}
+        : data(rows * cols, Cell{0.0, 0.0}), rows_(rows), cols_(cols) {}
 
     Cell& at(int i, int j) {
         return data[i * cols_ + j];
