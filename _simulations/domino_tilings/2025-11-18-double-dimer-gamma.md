@@ -20,14 +20,10 @@ code:
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-11-18-double-dimer-gamma.js"></script>
 
-This simulation visualizes **Definition 1.1** from *The Gamma-disordered Aztec diamond* (Duits and Van Peski).
+This simulation visualizes the Gamma-disordered random domino tilings of the Aztec diamond (Duits and Van Peski, in preparation).
 We generate random weights $\{a_{i,j}, b_{i,j}\}$ on the Aztec diamond graph such that:
 
 $a_{i,j} \sim \Gamma(\alpha, 1) \quad \text{and} \quad b_{i,j} \sim \Gamma(\beta, 1).$
-
-These weights create a biased random environment.
-- When $\alpha \approx \beta$, the environment is roughly homogeneous.
-- When $\alpha \gg \beta$ or $\beta \gg \alpha$, we observe specific "frozen" behaviors and turning point fluctuations described in the paper.
 
 ---
 
