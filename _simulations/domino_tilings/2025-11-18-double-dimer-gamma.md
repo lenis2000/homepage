@@ -47,7 +47,7 @@ $a_{i,j} \sim \Gamma(\alpha, 1) \quad \text{and} \quad b_{i,j} \sim \Gamma(\beta
 
 <div style="margin-bottom: 10px;">
   <label><input type="checkbox" id="show-double-config" checked> Show double dimer config</label>
-  <label style="margin-left: 20px;"><input type="checkbox" id="show-double-edges"> Show double edges (purple)</label>
+  <label style="margin-left: 20px;"><input type="checkbox" id="show-double-edges" checked> Show double edges (purple)</label>
   <label style="margin-left: 20px;"><input type="checkbox" id="show-weight-matrix"> Show weight sample (8×8)</label>
 </div>
 
@@ -85,35 +85,44 @@ Module.onRuntimeInitialized = async function() {
   let currentConfigs = null;
   let currentDominoes = [];
   let showDoubleConfig = true;
-  let showDoubleEdges = false;
+  let showDoubleEdges = true;
   let initialTransform = {};
 
   // Weight Matrix Display Logic
   function displayWeightMatrix(matrix) {
     if (!matrix || matrix.length === 0) return;
-    let html = '<table style="border-collapse: collapse;"><tr><td></td>';
-    for (let j = 0; j < matrix[0].length; j++) html += `<td style="padding:4px;border:1px solid #ccc;text-align:center;font-weight:bold;">j=${j}</td>`;
-    html += '</tr>';
+    let html = '<table style="border-collapse: collapse;">';
 
     for (let i = 0; i < matrix.length; i++) {
-      html += `<tr><td style="padding:4px;border:1px solid #ccc;font-weight:bold;">i=${i}</td>`;
-      // Identify row type for visualization: Even = Alpha, Odd = Beta
-      const rowType = (i % 2 === 0) ? "α" : "β";
-      const bgBase = (i % 2 === 0) ? [230, 240, 255] : [255, 240, 230];
+      html += `<tr>`;
 
-      for (let j = 0; j < matrix[i].length; j++) {
+      for (let j = 1; j < Math.min(9, matrix[i].length); j++) {
         const val = matrix[i][j];
-        // Simple opacity scaling for visual intensity
-        const opacity = Math.min(1, val / 5.0);
-        const r = Math.round(255 + (bgBase[0]-255)*opacity);
-        const g = Math.round(255 + (bgBase[1]-255)*opacity);
-        const b = Math.round(255 + (bgBase[2]-255)*opacity);
 
-        html += `<td style="padding:4px;border:1px solid #ccc;text-align:right;background-color:rgb(${r},${g},${b})">${val.toFixed(2)}</td>`;
+        // Check if this is a "1" weight (within tolerance)
+        const isOne = Math.abs(val - 1.0) < 0.01;
+
+        let cellStyle;
+        if (isOne) {
+          // Highlight 1's with gold/yellow background
+          cellStyle = `padding:4px;border:1px solid #ccc;text-align:right;background-color:#FFF8DC;font-weight:bold;`;
+        } else {
+          // Solid coloring based on edge type (Gamma distribution parameter)
+          const bgColor = ((i + j) % 2 === 0) ? '#96B4FF' : '#FF9999';
+          cellStyle = `padding:4px;border:1px solid #ccc;text-align:right;background-color:${bgColor}`;
+        }
+
+        html += `<td style="${cellStyle}">${val.toFixed(2)}</td>`;
       }
-      html += `<td>(${rowType})</td></tr>`;
+      html += `</tr>`;
     }
-    html += '</table><div style="font-size:11px;margin-top:5px;">Blueish rows: weights ~ Γ(α). Reddish rows: weights ~ Γ(β).</div>';
+    html += '</table>';
+    html += '<div style="font-size:11px;margin-top:8px;">';
+    html += '<strong>Legend:</strong> ';
+    html += '<span style="background-color:#FF9999;padding:2px 6px;margin-right:8px;border:1px solid #555;">Red: Γ(α)</span>';
+    html += '<span style="background-color:#96B4FF;padding:2px 6px;margin-right:8px;border:1px solid #555;">Blue: Γ(β)</span>';
+    html += '<span style="background-color:#FFF8DC;padding:2px 6px;font-weight:bold;border:1px solid #555;">Gold: 1</span>';
+    html += '</div>';
     document.getElementById("weight-matrix-content").innerHTML = html;
   }
 
