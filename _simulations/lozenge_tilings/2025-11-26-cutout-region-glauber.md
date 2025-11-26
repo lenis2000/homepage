@@ -327,8 +327,32 @@ code:
     border-color: #555;
     color: #ddd;
   }
+
+  /* 3D container styling */
+  #three-container {
+    width: 100%;
+    max-width: 900px;
+    height: 500px;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    display: none;
+    background: #ffffff;
+    border-radius: 8px;
+  }
+
+  [data-theme="dark"] #three-container {
+    background: #1a1a1a;
+    border-color: #444;
+  }
+
+  #three-canvas {
+    width: 100%;
+    height: 100%;
+  }
 </style>
 
+<script src="/js/three.min.js"></script>
+<script src="/js/OrbitControls.js"></script>
 <script src="/js/colorschemes.js"></script>
 <script src="/js/2025-11-26-cutout-region-glauber.js"></script>
 
@@ -374,6 +398,10 @@ code:
 <div class="control-group">
   <div class="control-group-title">Display Options</div>
   <div class="checkbox-group">
+    <input type="checkbox" id="show3DView">
+    <label for="show3DView">3D view</label>
+  </div>
+  <div class="checkbox-group">
     <input type="checkbox" id="showGradient">
     <label for="showGradient">Color gradient</label>
   </div>
@@ -417,8 +445,13 @@ code:
 
 </div> <!-- End controls grid -->
 
-<!-- Visualization canvas -->
+<!-- Visualization canvas (2D) -->
 <canvas id="lozenge-canvas"></canvas>
+
+<!-- 3D Visualization container -->
+<div id="three-container">
+  <canvas id="three-canvas"></canvas>
+</div>
 
 <!-- Statistics (below canvas) -->
 <div class="interface-container">
@@ -1097,10 +1130,268 @@ Module.onRuntimeInitialized = async function() {
         }
     }
 
+    // === 3D Visualizer ===
+    class Visualizer3D {
+        constructor(container) {
+            this.container = container;
+            this.colors = {
+                top: '#E57200',
+                right: '#232D4B',
+                left: '#F9DCBF',
+                border: '#333333'
+            };
+
+            // Three.js setup
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0xffffff);
+
+            // Camera
+            this.camera = new THREE.PerspectiveCamera(
+                45,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                10000
+            );
+            this.camera.up.set(0, 0, 1);
+
+            // Renderer
+            this.renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('three-canvas'),
+                antialias: true
+            });
+            this.renderer.setSize(container.clientWidth, container.clientHeight);
+
+            // Controls
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enablePan = true;
+            this.controls.screenSpacePanning = false;
+            this.controls.mouseButtons = {
+                LEFT: THREE.MOUSE.ROTATE,
+                MIDDLE: THREE.MOUSE.DOLLY,
+                RIGHT: THREE.MOUSE.PAN
+            };
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            this.scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(10, 10, 15);
+            this.scene.add(directionalLight);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+            directionalLight2.position.set(-10, -10, 10);
+            this.scene.add(directionalLight2);
+
+            // Group for geometry
+            this.meshGroup = new THREE.Group();
+            this.scene.add(this.meshGroup);
+
+            // Handle window resize
+            window.addEventListener('resize', () => this.handleResize());
+
+            // Start animation loop
+            this.animate();
+        }
+
+        handleResize() {
+            if (this.container.style.display === 'none') return;
+            const width = this.container.clientWidth;
+            const height = this.container.clientHeight;
+            this.camera.aspect = width / height;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(width, height);
+        }
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            this.controls.update();
+            this.renderer.render(this.scene, this.camera);
+        }
+
+        updateColors(palette) {
+            this.colors = {
+                top: palette.colors[0],
+                right: palette.colors[1],
+                left: palette.colors[2],
+                border: palette.colors[3] || '#333333'
+            };
+        }
+
+        buildFromHeights(heights, mask, n, maxHeight) {
+            // Clear existing geometry
+            while (this.meshGroup.children.length > 0) {
+                const child = this.meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                this.meshGroup.remove(child);
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            const colors = [];
+            const indices = [];
+
+            const topColor = new THREE.Color(this.colors.top);
+            const rightColor = new THREE.Color(this.colors.right);
+            const leftColor = new THREE.Color(this.colors.left);
+
+            // Helper to add a quad face
+            const addFace = (v1, v2, v3, v4, normal, color) => {
+                const baseIndex = vertices.length / 3;
+
+                vertices.push(...v1, ...v2, ...v3, ...v4);
+
+                for (let i = 0; i < 4; i++) {
+                    normals.push(...normal);
+                    colors.push(color.r, color.g, color.b);
+                }
+
+                indices.push(
+                    baseIndex, baseIndex + 1, baseIndex + 2,
+                    baseIndex, baseIndex + 2, baseIndex + 3
+                );
+            };
+
+            // Build visible faces for each cell
+            for (let y = 0; y < n; y++) {
+                for (let x = 0; x < n; x++) {
+                    const idx = y * n + x;
+                    if (mask[idx] === 0) continue;
+
+                    const h = heights[idx];
+                    if (h === 0) continue;
+
+                    // Get neighbor heights
+                    const hRight = (x < n - 1 && mask[y * n + (x + 1)] === 1) ? heights[y * n + (x + 1)] : 0;
+                    const hDown = (y < n - 1 && mask[(y + 1) * n + x] === 1) ? heights[(y + 1) * n + x] : 0;
+
+                    // World coordinates (swap x,y for isometric-like view)
+                    const wx = y;
+                    const wy = x;
+
+                    // Top face (always visible if h > 0)
+                    addFace(
+                        [wx, wy, h],
+                        [wx + 1, wy, h],
+                        [wx + 1, wy + 1, h],
+                        [wx, wy + 1, h],
+                        [0, 0, 1],
+                        topColor
+                    );
+
+                    // Right face (visible if h > hRight)
+                    if (h > hRight) {
+                        addFace(
+                            [wx + 1, wy, hRight],
+                            [wx + 1, wy, h],
+                            [wx + 1, wy + 1, h],
+                            [wx + 1, wy + 1, hRight],
+                            [1, 0, 0],
+                            rightColor
+                        );
+                    }
+
+                    // Front face (visible if h > hDown)
+                    if (h > hDown) {
+                        addFace(
+                            [wx, wy + 1, hDown],
+                            [wx + 1, wy + 1, hDown],
+                            [wx + 1, wy + 1, h],
+                            [wx, wy + 1, h],
+                            [0, 1, 0],
+                            leftColor
+                        );
+                    }
+
+                    // Back faces at boundaries
+                    if (x === 0 || mask[y * n + (x - 1)] === 0) {
+                        addFace(
+                            [wx, wy, 0],
+                            [wx, wy + 1, 0],
+                            [wx, wy + 1, h],
+                            [wx, wy, h],
+                            [-1, 0, 0],
+                            rightColor
+                        );
+                    }
+                    if (y === 0 || mask[(y - 1) * n + x] === 0) {
+                        addFace(
+                            [wx, wy, 0],
+                            [wx, wy, h],
+                            [wx + 1, wy, h],
+                            [wx + 1, wy, 0],
+                            [0, -1, 0],
+                            leftColor
+                        );
+                    }
+                }
+            }
+
+            if (vertices.length === 0) return;
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setIndex(indices);
+
+            const material = new THREE.MeshPhongMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                flatShading: true
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            this.meshGroup.add(mesh);
+
+            // Add edges
+            const edgesGeometry = new THREE.EdgesGeometry(geometry, 1);
+            const edgesMaterial = new THREE.LineBasicMaterial({
+                color: this.colors.border,
+                linewidth: 1
+            });
+            const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+            this.meshGroup.add(edges);
+
+            // Center camera on first build
+            if (!this.cameraInitialized) {
+                this.centerCamera(n, n, maxHeight);
+                this.cameraInitialized = true;
+            }
+        }
+
+        centerCamera(maxX, maxY, maxZ) {
+            const centerX = maxX / 2;
+            const centerY = maxY / 2;
+            const centerZ = maxZ / 2;
+
+            const maxDim = Math.max(maxX, maxY, maxZ);
+            const distance = maxDim * 2.5;
+
+            this.camera.position.set(
+                centerX + distance * 0.7,
+                centerY - distance * 0.7,
+                centerZ + distance * 0.5
+            );
+
+            this.controls.target.set(centerX, centerY, centerZ);
+            this.controls.update();
+        }
+
+        resetCamera() {
+            this.cameraInitialized = false;
+        }
+    }
+
     // === Main Application ===
     const canvas = document.getElementById('lozenge-canvas');
+    const threeContainer = document.getElementById('three-container');
     const wasm = new GlauberWASM();
     const renderer = new IsometricRenderer(canvas);
+    let visualizer3D = null; // Lazy initialization
 
     // Set up redraw callback for zoom/pan
     renderer.onRedraw = () => {
@@ -1118,6 +1409,7 @@ Module.onRuntimeInitialized = async function() {
     let frameCount = 0;
     let currentFps = 0;
     let currentBias = 0;
+    let is3DView = false;
 
     // State for max height ratio
     let maxHeightRatio = 0.7;
@@ -1191,7 +1483,41 @@ Module.onRuntimeInitialized = async function() {
     // Draw current state
     function draw() {
         if (wasm.heights && wasm.mask) {
-            renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+            if (is3DView) {
+                if (visualizer3D) {
+                    visualizer3D.buildFromHeights(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+                }
+            } else {
+                renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+            }
+        }
+    }
+
+    // Toggle 3D view
+    function toggle3DView(enabled) {
+        is3DView = enabled;
+
+        if (is3DView) {
+            // Initialize 3D visualizer if needed
+            if (!visualizer3D) {
+                visualizer3D = new Visualizer3D(threeContainer);
+                visualizer3D.updateColors(renderer.getCurrentPalette());
+            }
+
+            // Show 3D, hide 2D
+            canvas.style.display = 'none';
+            threeContainer.style.display = 'block';
+            visualizer3D.handleResize();
+
+            // Build 3D view
+            draw();
+        } else {
+            // Show 2D, hide 3D
+            canvas.style.display = 'block';
+            threeContainer.style.display = 'none';
+
+            // Redraw 2D
+            draw();
         }
     }
 
@@ -1251,6 +1577,7 @@ Module.onRuntimeInitialized = async function() {
             totalSteps = 0;
             if (resetView) {
                 renderer.resetView();
+                if (visualizer3D) visualizer3D.resetCamera();
             }
             draw();
             updateStats(result);
@@ -1318,6 +1645,10 @@ Module.onRuntimeInitialized = async function() {
         }
     });
 
+    document.getElementById('show3DView').addEventListener('change', (e) => {
+        toggle3DView(e.target.checked);
+    });
+
     document.getElementById('showGradient').addEventListener('change', (e) => {
         renderer.showGradient = e.target.checked;
         draw();
@@ -1340,18 +1671,21 @@ Module.onRuntimeInitialized = async function() {
 
     elements.paletteSelect.addEventListener('change', (e) => {
         renderer.setPalette(parseInt(e.target.value));
+        if (visualizer3D) visualizer3D.updateColors(renderer.getCurrentPalette());
         draw();
     });
 
     document.getElementById('prev-palette').addEventListener('click', () => {
         renderer.prevPalette();
         elements.paletteSelect.value = renderer.currentPaletteIndex;
+        if (visualizer3D) visualizer3D.updateColors(renderer.getCurrentPalette());
         draw();
     });
 
     document.getElementById('next-palette').addEventListener('click', () => {
         renderer.nextPalette();
         elements.paletteSelect.value = renderer.currentPaletteIndex;
+        if (visualizer3D) visualizer3D.updateColors(renderer.getCurrentPalette());
         draw();
     });
 
