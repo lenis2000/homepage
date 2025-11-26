@@ -7,6 +7,7 @@
  * Currently used by:
  * - _simulations/lozenge_tilings/2025-06-02-q-vol-Gorin.md
  * - _simulations/lozenge_tilings/2025-06-08-q-vol-3d.md
+ * - _simulations/lozenge_tilings/2025-11-26-cutout-region-glauber.md
  * - s/domino.md
  */
 
