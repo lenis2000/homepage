@@ -1526,14 +1526,19 @@ Module.onRuntimeInitialized = async function() {
             visualizer3D.handleResize();
 
             // Build 3D view
-            draw();
+            if (wasm.heights && wasm.mask) {
+                visualizer3D.buildFromHeights(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+            }
         } else {
             // Show 2D, hide 3D
             canvas.style.display = 'block';
             threeContainer.style.display = 'none';
 
-            // Redraw 2D
-            draw();
+            // Reinitialize 2D canvas and redraw
+            renderer.setupCanvas();
+            if (wasm.heights && wasm.mask) {
+                renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+            }
         }
     }
 
@@ -1708,8 +1713,28 @@ Module.onRuntimeInitialized = async function() {
     elements.startStopBtn.addEventListener('click', toggleRunning);
 
     document.getElementById('resetViewBtn').addEventListener('click', () => {
+        // Stop simulation
+        if (running) {
+            running = false;
+            elements.startStopBtn.textContent = 'Start';
+            elements.startStopBtn.classList.remove('running');
+        }
+
+        // Reset views
         renderer.resetView();
-        draw();
+        renderer.setupCanvas();
+        if (visualizer3D) {
+            visualizer3D.resetCamera();
+            visualizer3D.cameraInitialized = false;
+        }
+
+        // Force complete redraw
+        if (is3DView && visualizer3D) {
+            visualizer3D.handleResize();
+            visualizer3D.buildFromHeights(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+        } else {
+            renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+        }
     });
 
     // Export quality slider
@@ -1730,18 +1755,27 @@ Module.onRuntimeInitialized = async function() {
             return;
         }
 
+        // Use fixed export dimensions (900x500 like the canvas CSS)
+        const baseWidth = 900;
+        const baseHeight = 500;
         const scale = getExportScale();
         const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = renderer.displayWidth * scale;
-        exportCanvas.height = renderer.displayHeight * scale;
+        exportCanvas.width = baseWidth * scale;
+        exportCanvas.height = baseHeight * scale;
         const exportCtx = exportCanvas.getContext('2d');
         exportCtx.scale(scale, scale);
 
-        // Temporarily swap context and draw
+        // Temporarily swap context and dimensions, then draw
         const originalCtx = renderer.ctx;
+        const originalWidth = renderer.displayWidth;
+        const originalHeight = renderer.displayHeight;
         renderer.ctx = exportCtx;
+        renderer.displayWidth = baseWidth;
+        renderer.displayHeight = baseHeight;
         renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
         renderer.ctx = originalCtx;
+        renderer.displayWidth = originalWidth;
+        renderer.displayHeight = originalHeight;
 
         // Download
         const link = document.createElement('a');
@@ -1768,17 +1802,26 @@ Module.onRuntimeInitialized = async function() {
         }
 
         function exportPDF() {
+            // Use fixed export dimensions
+            const baseWidth = 900;
+            const baseHeight = 500;
             const scale = getExportScale();
             const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = renderer.displayWidth * scale;
-            exportCanvas.height = renderer.displayHeight * scale;
+            exportCanvas.width = baseWidth * scale;
+            exportCanvas.height = baseHeight * scale;
             const exportCtx = exportCanvas.getContext('2d');
             exportCtx.scale(scale, scale);
 
             const originalCtx = renderer.ctx;
+            const originalWidth = renderer.displayWidth;
+            const originalHeight = renderer.displayHeight;
             renderer.ctx = exportCtx;
+            renderer.displayWidth = baseWidth;
+            renderer.displayHeight = baseHeight;
             renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
             renderer.ctx = originalCtx;
+            renderer.displayWidth = originalWidth;
+            renderer.displayHeight = originalHeight;
 
             const imgData = exportCanvas.toDataURL('image/png');
             const { jsPDF } = window.jspdf;
