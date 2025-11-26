@@ -415,16 +415,12 @@ code:
     <label for="showGradient">Color gradient</label>
   </div>
   <div class="checkbox-group">
-    <input type="checkbox" id="showOutlines" checked>
-    <label for="showOutlines">Tile outlines</label>
-  </div>
-  <div class="checkbox-group">
     <input type="checkbox" id="showWalls" checked>
-    <label for="showWalls">Back walls</label>
+    <label for="showWalls">Room outline</label>
   </div>
   <div class="checkbox-group">
     <input type="checkbox" id="showWallGrid" checked>
-    <label for="showWallGrid">Back wall grid</label>
+    <label for="showWallGrid">Room outline grid</label>
   </div>
   <div class="button-row" style="margin-top: 12px;">
     <button id="prev-palette">&#9664;</button>
@@ -949,25 +945,20 @@ Module.onRuntimeInitialized = async function() {
                     ctx.lineTo(centerX - y * dx, centerY + y * dy - wallHeight);
                     ctx.stroke();
                 }
-            }
-        }
 
-        // Draw floor grid
-        drawFloorGrid(ctx, centerX, centerY, dx, dy, n) {
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.lineWidth = this.borderWidth;
-
-            for (let x = 0; x <= n; x++) {
-                ctx.beginPath();
-                ctx.moveTo(centerX + (x - 0) * dx, centerY + (x + 0) * dy);
-                ctx.lineTo(centerX + (x - n) * dx, centerY + (x + n) * dy);
-                ctx.stroke();
-            }
-            for (let y = 0; y <= n; y++) {
-                ctx.beginPath();
-                ctx.moveTo(centerX + (0 - y) * dx, centerY + (0 + y) * dy);
-                ctx.lineTo(centerX + (n - y) * dx, centerY + (n + y) * dy);
-                ctx.stroke();
+                // Floor grid lines
+                for (let x = 0; x <= n; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX + x * dx, centerY + x * dy);
+                    ctx.lineTo(centerX + (x - n) * dx, centerY + (x + n) * dy);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= n; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - y * dx, centerY + y * dy);
+                    ctx.lineTo(centerX + (n - y) * dx, centerY + (n + y) * dy);
+                    ctx.stroke();
+                }
             }
         }
 
@@ -1030,10 +1021,6 @@ Module.onRuntimeInitialized = async function() {
                 this.drawBackWalls(ctx, centerX, centerY, dx, dy, n, maxHeight, wallRightColor, wallLeftColor, floorColor, tileSize);
             }
 
-            // Optional floor grid
-            if (this.showFloor) {
-                this.drawFloorGrid(ctx, centerX, centerY, dx, dy, n);
-            }
 
             // Draw cubes using painter's algorithm
             for (let x = 0; x < n; x++) {
@@ -1708,11 +1695,6 @@ Module.onRuntimeInitialized = async function() {
 
     document.getElementById('showGradient').addEventListener('change', (e) => {
         renderer.showGradient = e.target.checked;
-        draw();
-    });
-
-    document.getElementById('showOutlines').addEventListener('change', (e) => {
-        renderer.showOutlines = e.target.checked;
         draw();
     });
 
