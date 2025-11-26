@@ -1801,14 +1801,14 @@ Module.onRuntimeInitialized = async function() {
         return 1 + (quality / 100) * 3; // 0->1x, 100->4x
     }
 
-    // Export PNG
-    document.getElementById('export-png').addEventListener('click', () => {
-        if (!wasm.heights || !wasm.mask) {
-            alert('No tiling data to export.');
-            return;
-        }
+    // Helper: detect iOS
+    function isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
 
-        // Use fixed export dimensions (900x500 like the canvas CSS)
+    // Helper: create export canvas with current tiling
+    function createExportCanvas() {
         const baseWidth = 900;
         const baseHeight = 500;
         const scale = getExportScale();
@@ -1818,7 +1818,6 @@ Module.onRuntimeInitialized = async function() {
         const exportCtx = exportCanvas.getContext('2d');
         exportCtx.scale(scale, scale);
 
-        // Temporarily swap context and dimensions, then draw
         const originalCtx = renderer.ctx;
         const originalWidth = renderer.displayWidth;
         const originalHeight = renderer.displayHeight;
@@ -1830,11 +1829,60 @@ Module.onRuntimeInitialized = async function() {
         renderer.displayWidth = originalWidth;
         renderer.displayHeight = originalHeight;
 
-        // Download
-        const link = document.createElement('a');
-        link.download = `lozenge_tiling_qracah_${wasm.n}x${wasm.n}.png`;
-        link.href = exportCanvas.toDataURL('image/png');
-        link.click();
+        return exportCanvas;
+    }
+
+    // Helper: download file with iOS fallback
+    async function downloadFile(blob, filename, mimeType) {
+        if (isIOS() && navigator.share && navigator.canShare) {
+            // Try Web Share API on iOS
+            try {
+                const file = new File([blob], filename, { type: mimeType });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: filename
+                    });
+                    return;
+                }
+            } catch (e) {
+                console.log('Web Share failed, falling back to new tab');
+            }
+        }
+
+        if (isIOS()) {
+            // iOS fallback: open in new tab for user to save manually
+            const url = URL.createObjectURL(blob);
+            const newTab = window.open(url, '_blank');
+            if (!newTab) {
+                // Popup blocked, show inline
+                alert('Long-press the image to save it, or allow popups for this site.');
+                window.location.href = url;
+            }
+        } else {
+            // Standard download for desktop
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    // Export PNG
+    document.getElementById('export-png').addEventListener('click', async () => {
+        if (!wasm.heights || !wasm.mask) {
+            alert('No tiling data to export.');
+            return;
+        }
+
+        const exportCanvas = createExportCanvas();
+        const filename = `lozenge_tiling_qracah_${wasm.n}x${wasm.n}.png`;
+
+        exportCanvas.toBlob(async (blob) => {
+            await downloadFile(blob, filename, 'image/png');
+        }, 'image/png');
     });
 
     // Export PDF
@@ -1854,28 +1902,8 @@ Module.onRuntimeInitialized = async function() {
             exportPDF();
         }
 
-        function exportPDF() {
-            // Use fixed export dimensions
-            const baseWidth = 900;
-            const baseHeight = 500;
-            const scale = getExportScale();
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = baseWidth * scale;
-            exportCanvas.height = baseHeight * scale;
-            const exportCtx = exportCanvas.getContext('2d');
-            exportCtx.scale(scale, scale);
-
-            const originalCtx = renderer.ctx;
-            const originalWidth = renderer.displayWidth;
-            const originalHeight = renderer.displayHeight;
-            renderer.ctx = exportCtx;
-            renderer.displayWidth = baseWidth;
-            renderer.displayHeight = baseHeight;
-            renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
-            renderer.ctx = originalCtx;
-            renderer.displayWidth = originalWidth;
-            renderer.displayHeight = originalHeight;
-
+        async function exportPDF() {
+            const exportCanvas = createExportCanvas();
             const imgData = exportCanvas.toDataURL('image/png');
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({
@@ -1884,7 +1912,10 @@ Module.onRuntimeInitialized = async function() {
                 format: [exportCanvas.width, exportCanvas.height]
             });
             pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
-            pdf.save(`lozenge_tiling_qracah_${wasm.n}x${wasm.n}.pdf`);
+
+            const filename = `lozenge_tiling_qracah_${wasm.n}x${wasm.n}.pdf`;
+            const pdfBlob = pdf.output('blob');
+            await downloadFile(pdfBlob, filename, 'application/pdf');
         }
     });
 
