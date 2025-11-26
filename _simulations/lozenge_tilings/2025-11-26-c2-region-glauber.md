@@ -422,6 +422,10 @@ code:
     <input type="checkbox" id="showWallGrid" checked>
     <label for="showWallGrid">Room outline grid</label>
   </div>
+  <div class="checkbox-group">
+    <input type="checkbox" id="showRegion3Wall">
+    <label for="showRegion3Wall">Region 0-h back wall</label>
+  </div>
   <div class="button-row" style="margin-top: 12px;">
     <button id="prev-palette">&#9664;</button>
     <select id="palette-select"></select>
@@ -674,6 +678,7 @@ Module.onRuntimeInitialized = async function() {
             this.showOutlines = true;
             this.showWalls = true;
             this.showWallGrid = true;
+            this.showRegion3Wall = false;
             this.currentPaletteIndex = 0;
             this.borderWidth = 0.8;
 
@@ -1022,6 +1027,87 @@ Module.onRuntimeInitialized = async function() {
                 this.drawBackWalls(ctx, centerX, centerY, dx, dy, n, maxHeight, wallRightColor, wallLeftColor, floorColor, tileSize);
             }
 
+            // Draw Region 3 (0-h) back wall at boundary with Region 2
+            // This wall is drawn from Region 2's perspective - looking back at Region 3
+            if (this.showRegion3Wall) {
+                const halfHeight = maxHeight / 2; // h = maxHeight/2
+                const outlineColor = 'rgba(0, 0, 0, 0.5)';
+
+                // Find boundary cells where Region 2 (mask==2) meets Region 3 (mask==3)
+                // Draw wall on the Region 2 side facing back toward Region 3
+                for (let x = 0; x < n; x++) {
+                    for (let y = 0; y < n; y++) {
+                        const idx = y * n + x;
+                        if (mask[idx] !== 2) continue; // Only process Region 2 cells
+
+                        // Check if neighbor in -x direction is Region 3
+                        if (x > 0) {
+                            const leftIdx = y * n + (x - 1);
+                            if (mask[leftIdx] === 3) {
+                                // Draw back wall on -x side (left-facing from Region 2)
+                                const sx = centerX + (x - y) * dx;
+                                const baseY = centerY + (x + y) * dy;
+
+                                // Wall face (this is a "left" wall when looking from Region 2 back to Region 3)
+                                ctx.fillStyle = this.rgbToString(rightColor);
+                                ctx.beginPath();
+                                ctx.moveTo(sx - dx, baseY - dy);
+                                ctx.lineTo(sx - dx, baseY - dy - halfHeight * tileSize);
+                                ctx.lineTo(sx, baseY - halfHeight * tileSize);
+                                ctx.lineTo(sx, baseY);
+                                ctx.closePath();
+                                ctx.fill();
+
+                                if (this.showOutlines) {
+                                    ctx.strokeStyle = outlineColor;
+                                    ctx.lineWidth = this.borderWidth;
+                                    ctx.stroke();
+                                    for (let level = 1; level < halfHeight; level++) {
+                                        const levelOffset = level * tileSize;
+                                        ctx.beginPath();
+                                        ctx.moveTo(sx - dx, baseY - dy - levelOffset);
+                                        ctx.lineTo(sx, baseY - levelOffset);
+                                        ctx.stroke();
+                                    }
+                                }
+                            }
+                        }
+
+                        // Check if neighbor in -y direction is Region 3
+                        if (y > 0) {
+                            const upIdx = (y - 1) * n + x;
+                            if (mask[upIdx] === 3) {
+                                // Draw back wall on -y side (right-facing from Region 2)
+                                const sx = centerX + (x - y) * dx;
+                                const baseY = centerY + (x + y) * dy;
+
+                                // Wall face
+                                ctx.fillStyle = this.rgbToString(leftColor);
+                                ctx.beginPath();
+                                ctx.moveTo(sx + dx, baseY - dy);
+                                ctx.lineTo(sx + dx, baseY - dy - halfHeight * tileSize);
+                                ctx.lineTo(sx, baseY - halfHeight * tileSize);
+                                ctx.lineTo(sx, baseY);
+                                ctx.closePath();
+                                ctx.fill();
+
+                                if (this.showOutlines) {
+                                    ctx.strokeStyle = outlineColor;
+                                    ctx.lineWidth = this.borderWidth;
+                                    ctx.stroke();
+                                    for (let level = 1; level < halfHeight; level++) {
+                                        const levelOffset = level * tileSize;
+                                        ctx.beginPath();
+                                        ctx.moveTo(sx + dx, baseY - dy - levelOffset);
+                                        ctx.lineTo(sx, baseY - levelOffset);
+                                        ctx.stroke();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Draw cubes using painter's algorithm
             for (let x = 0; x < n; x++) {
@@ -1709,6 +1795,11 @@ Module.onRuntimeInitialized = async function() {
         draw();
     });
 
+    document.getElementById('showRegion3Wall').addEventListener('change', (e) => {
+        renderer.showRegion3Wall = e.target.checked;
+        draw();
+    });
+
     elements.paletteSelect.addEventListener('change', (e) => {
         renderer.setPalette(parseInt(e.target.value));
         if (visualizer3D) visualizer3D.updateColors(renderer.getCurrentPalette());
@@ -1893,13 +1984,12 @@ Module.onRuntimeInitialized = async function() {
         const mask = wasm.mask;
 
         // Build CSV with header row
-        let csv = 'x,y,height,in_region\n';
+        let csv = 'x,y,height\n';
         for (let y = 0; y < n; y++) {
             for (let x = 0; x < n; x++) {
                 const idx = y * n + x;
                 const h = heights[idx];
-                const inRegion = mask[idx] > 0 ? 1 : 0;
-                csv += `${x},${y},${h},${inRegion}\n`;
+                csv += `${x},${y},${h}\n`;
             }
         }
 
