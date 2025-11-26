@@ -423,8 +423,8 @@ code:
     <label for="showWalls">Back walls</label>
   </div>
   <div class="checkbox-group">
-    <input type="checkbox" id="showFloor">
-    <label for="showFloor">Floor grid</label>
+    <input type="checkbox" id="showWallGrid" checked>
+    <label for="showWallGrid">Back wall grid</label>
   </div>
   <div class="button-row" style="margin-top: 12px;">
     <button id="prev-palette">&#9664;</button>
@@ -486,13 +486,26 @@ code:
   </div>
 </div>
 
+<!-- Styling -->
+<div class="control-group full-width">
+  <div class="control-group-title">Styling</div>
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <label style="font-size: 13px; color: #555;">Border Width:</label>
+    <input id="border-width" type="number" value="0.8" step="0.1" min="0" max="5" style="width: 70px; height: 28px; padding: 0 8px; border: 1px solid #d0d0d0; border-radius: 4px;">
+    <button id="border-thin">Thin</button>
+    <button id="border-medium">Medium</button>
+    <button id="border-thick">Thick</button>
+    <button id="border-ultra-thick">Ultra</button>
+  </div>
+</div>
+
 <!-- Export -->
 <div class="control-group full-width">
   <div class="control-group-title">Export</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <button id="export-png">PNG</button>
-    <button id="export-pdf">PDF</button>
-    <span style="font-size: 12px; color: #666;">Quality:</span>
+    <button id="export-pdf">PDF (Vector)</button>
+    <span style="font-size: 12px; color: #666;">PNG Quality:</span>
     <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;">
     <span id="export-quality-val" style="font-size: 12px; color: #1976d2; min-width: 24px;">85</span>
   </div>
@@ -663,8 +676,9 @@ Module.onRuntimeInitialized = async function() {
             this.showGradient = false;
             this.showOutlines = true;
             this.showWalls = true;
-            this.showFloor = false;
+            this.showWallGrid = true;
             this.currentPaletteIndex = 0;
+            this.borderWidth = 0.8;
 
             // Zoom and pan state
             this.zoomLevel = 1.0;
@@ -864,9 +878,11 @@ Module.onRuntimeInitialized = async function() {
             ctx.lineTo(centerX - n * dx, centerY + n * dy);
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = this.rgbToString(this.darken(floorColor, 0.7));
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            if (this.showOutlines) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = this.borderWidth;
+                ctx.stroke();
+            }
 
             // Left back wall (at y=0)
             ctx.fillStyle = this.rgbToString(wallRightColor);
@@ -877,8 +893,11 @@ Module.onRuntimeInitialized = async function() {
             ctx.lineTo(centerX, centerY - wallHeight);
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = this.rgbToString(this.darken(wallRightColor, 0.7));
-            ctx.stroke();
+            if (this.showOutlines) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = this.borderWidth;
+                ctx.stroke();
+            }
 
             // Right back wall (at x=0)
             ctx.fillStyle = this.rgbToString(wallLeftColor);
@@ -889,50 +908,54 @@ Module.onRuntimeInitialized = async function() {
             ctx.lineTo(centerX, centerY - wallHeight);
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = this.rgbToString(this.darken(wallLeftColor, 0.7));
-            ctx.stroke();
-
-            // Draw grid lines on walls for depth perception
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.lineWidth = 0.5;
-
-            const gridStep = Math.max(1, Math.floor(n / 10));
-            const heightStep = Math.max(1, Math.floor(maxHeight / 10));
-
-            // Horizontal lines on both walls
-            for (let h = 0; h <= maxHeight; h += heightStep) {
-                const hOffset = h * tileSize;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - hOffset);
-                ctx.lineTo(centerX + n * dx, centerY + n * dy - hOffset);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - hOffset);
-                ctx.lineTo(centerX - n * dx, centerY + n * dy - hOffset);
+            if (this.showOutlines) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = this.borderWidth;
                 ctx.stroke();
             }
 
-            // Vertical lines on left wall
-            for (let x = 0; x <= n; x += gridStep) {
-                ctx.beginPath();
-                ctx.moveTo(centerX + x * dx, centerY + x * dy);
-                ctx.lineTo(centerX + x * dx, centerY + x * dy - wallHeight);
-                ctx.stroke();
-            }
+            // Draw grid lines on walls - full lozenge grid
+            if (this.showWallGrid && this.showOutlines) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = this.borderWidth;
 
-            // Vertical lines on right wall
-            for (let y = 0; y <= n; y += gridStep) {
-                ctx.beginPath();
-                ctx.moveTo(centerX - y * dx, centerY + y * dy);
-                ctx.lineTo(centerX - y * dx, centerY + y * dy - wallHeight);
-                ctx.stroke();
+                // Horizontal lines on both walls (every height unit)
+                for (let h = 0; h <= maxHeight; h++) {
+                    const hOffset = h * tileSize;
+                    // Left back wall
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY - hOffset);
+                    ctx.lineTo(centerX + n * dx, centerY + n * dy - hOffset);
+                    ctx.stroke();
+                    // Right back wall
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY - hOffset);
+                    ctx.lineTo(centerX - n * dx, centerY + n * dy - hOffset);
+                    ctx.stroke();
+                }
+
+                // Vertical lines on left wall (every grid unit)
+                for (let x = 0; x <= n; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX + x * dx, centerY + x * dy);
+                    ctx.lineTo(centerX + x * dx, centerY + x * dy - wallHeight);
+                    ctx.stroke();
+                }
+
+                // Vertical lines on right wall (every grid unit)
+                for (let y = 0; y <= n; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - y * dx, centerY + y * dy);
+                    ctx.lineTo(centerX - y * dx, centerY + y * dy - wallHeight);
+                    ctx.stroke();
+                }
             }
         }
 
         // Draw floor grid
         drawFloorGrid(ctx, centerX, centerY, dx, dy, n) {
-            ctx.strokeStyle = 'rgba(100, 140, 200, 0.15)';
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = this.borderWidth;
 
             for (let x = 0; x <= n; x++) {
                 ctx.beginPath();
@@ -958,10 +981,10 @@ Module.onRuntimeInitialized = async function() {
             const leftColor = this.hexToRgb(palette.colors[2]);
             const fourthColor = palette.colors[3] ? this.hexToRgb(palette.colors[3]) : this.darken(topColor, 0.3);
 
-            // Wall and floor colors follow the color scheme (lighter to show colors better)
-            const wallRightColor = this.darken(rightColor, 0.7);
-            const wallLeftColor = this.darken(leftColor, 0.7);
-            const floorColor = this.darken(topColor, 0.4);
+            // Wall and floor colors - same as lozenge faces
+            const wallRightColor = rightColor;
+            const wallLeftColor = leftColor;
+            const floorColor = topColor;
 
             // Detect dark mode
             const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
@@ -1035,8 +1058,8 @@ Module.onRuntimeInitialized = async function() {
                     }
 
                     // Outline style (consistent dark lines)
-                    const outlineColor = 'rgba(0, 0, 0, 0.3)';
-                    const outlineWidth = 0.8;
+                    const outlineColor = 'rgba(0, 0, 0, 0.5)';
+                    const outlineWidth = this.borderWidth;
 
                     // Top face
                     ctx.fillStyle = this.rgbToString(top);
@@ -1075,7 +1098,16 @@ Module.onRuntimeInitialized = async function() {
                         if (this.showOutlines) {
                             ctx.strokeStyle = outlineColor;
                             ctx.lineWidth = outlineWidth;
+                            // Outline the face
                             ctx.stroke();
+                            // Draw horizontal level lines for each height unit
+                            for (let level = 1; level < h - neighborH; level++) {
+                                const levelOffset = level * tileSize;
+                                ctx.beginPath();
+                                ctx.moveTo(sx + dx, sy + dy + levelOffset);
+                                ctx.lineTo(sx, sy + 2 * dy + levelOffset);
+                                ctx.stroke();
+                            }
                         }
                     }
 
@@ -1100,7 +1132,16 @@ Module.onRuntimeInitialized = async function() {
                         if (this.showOutlines) {
                             ctx.strokeStyle = outlineColor;
                             ctx.lineWidth = outlineWidth;
+                            // Outline the face
                             ctx.stroke();
+                            // Draw horizontal level lines for each height unit
+                            for (let level = 1; level < h - neighborH; level++) {
+                                const levelOffset = level * tileSize;
+                                ctx.beginPath();
+                                ctx.moveTo(sx - dx, sy + dy + levelOffset);
+                                ctx.lineTo(sx, sy + 2 * dy + levelOffset);
+                                ctx.stroke();
+                            }
                         }
                     }
                 }
@@ -1737,6 +1778,36 @@ Module.onRuntimeInitialized = async function() {
         document.getElementById('export-quality-val').textContent = e.target.value;
     });
 
+    // Border width controls
+    document.getElementById('border-width').addEventListener('input', (e) => {
+        renderer.borderWidth = parseFloat(e.target.value);
+        draw();
+    });
+
+    document.getElementById('border-thin').addEventListener('click', () => {
+        renderer.borderWidth = 0.3;
+        document.getElementById('border-width').value = 0.3;
+        draw();
+    });
+
+    document.getElementById('border-medium').addEventListener('click', () => {
+        renderer.borderWidth = 0.8;
+        document.getElementById('border-width').value = 0.8;
+        draw();
+    });
+
+    document.getElementById('border-thick').addEventListener('click', () => {
+        renderer.borderWidth = 1.5;
+        document.getElementById('border-width').value = 1.5;
+        draw();
+    });
+
+    document.getElementById('border-ultra-thick').addEventListener('click', () => {
+        renderer.borderWidth = 3.0;
+        document.getElementById('border-width').value = 3.0;
+        draw();
+    });
+
     // Helper: get scale from quality (0-100 maps to 1x-4x)
     function getExportScale() {
         const quality = parseInt(document.getElementById('export-quality').value);
@@ -1827,7 +1898,7 @@ Module.onRuntimeInitialized = async function() {
         }, 'image/png');
     });
 
-    // Export PDF
+    // Export PDF (Vector)
     document.getElementById('export-pdf').addEventListener('click', () => {
         if (!wasm.heights || !wasm.mask) {
             alert('No tiling data to export.');
@@ -1838,24 +1909,118 @@ Module.onRuntimeInitialized = async function() {
         if (!window.jspdf) {
             const script = document.createElement('script');
             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            script.onload = () => exportPDF();
+            script.onload = () => exportVectorPDF();
             document.head.appendChild(script);
         } else {
-            exportPDF();
+            exportVectorPDF();
         }
 
-        async function exportPDF() {
-            const exportCanvas = createExportCanvas();
-            const imgData = exportCanvas.toDataURL('image/png');
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
-                unit: 'px',
-                format: [exportCanvas.width, exportCanvas.height]
-            });
-            pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
+        async function exportVectorPDF() {
+            const heights = wasm.heights;
+            const mask = wasm.mask;
+            const n = wasm.n;
+            const maxHeight = wasm.maxHeight;
+            const palette = renderer.getCurrentPalette();
 
-            const filename = `c2_lozenge_tiling_${wasm.n}x${wasm.n}.pdf`;
+            const { jsPDF } = window.jspdf;
+            const sqrt3 = Math.sqrt(3);
+
+            // Calculate bounding box of the tiling
+            // Width: 2 * n * cos(30°), Height: 2 * n * sin(30°) + maxHeight
+            const tilingWidth = 2 * n * sqrt3 / 2;
+            const tilingHeight = n + maxHeight;
+
+            // Create PDF with appropriate dimensions
+            const margin = 20;
+            const scale = 10; // Points per unit
+            const pdfWidth = tilingWidth * scale + 2 * margin;
+            const pdfHeight = tilingHeight * scale + 2 * margin;
+
+            const pdf = new jsPDF({
+                orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+                unit: 'pt',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            // Helper to convert hex to RGB array
+            const hexToRgb = hex => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [0, 0, 0];
+            };
+
+            // Transform from grid coords to PDF coords
+            const toScreen = (gx, gy, h) => {
+                const sx = (gx - gy) * sqrt3 / 2;
+                const sy = (gx + gy) * 0.5 + h;
+                // Center in PDF
+                const px = margin + (tilingWidth / 2 + sx) * scale;
+                const py = margin + (tilingHeight - sy) * scale;
+                return [px, py];
+            };
+
+            // Draw a filled polygon
+            const drawPolygon = (vertices, fillColor) => {
+                pdf.setFillColor(...hexToRgb(fillColor));
+                pdf.setDrawColor(51, 51, 51); // #333333
+                pdf.setLineWidth(renderer.borderWidth * 0.3);
+
+                const lines = [];
+                for (let i = 0; i < vertices.length; i++) {
+                    const current = vertices[i];
+                    const next = vertices[(i + 1) % vertices.length];
+                    lines.push([next[0] - current[0], next[1] - current[1]]);
+                }
+                pdf.lines(lines, vertices[0][0], vertices[0][1], [1, 1], renderer.showOutlines ? 'FD' : 'F');
+            };
+
+            // Draw lozenges using painter's algorithm (back to front)
+            for (let x = 0; x < n; x++) {
+                for (let y = 0; y < n; y++) {
+                    const idx = y * n + x;
+                    if (mask[idx] === 0) continue;
+
+                    const h = heights[idx];
+
+                    // Right face (vertical rhombus on +x side)
+                    let neighborH = 0;
+                    if (x < n - 1) {
+                        const rightIdx = y * n + (x + 1);
+                        neighborH = (mask[rightIdx] > 0) ? heights[rightIdx] : 0;
+                    }
+
+                    if (h > neighborH) {
+                        const r1 = toScreen(x + 1, y, h);
+                        const r2 = toScreen(x + 1, y + 1, h);
+                        const r3 = toScreen(x + 1, y + 1, neighborH);
+                        const r4 = toScreen(x + 1, y, neighborH);
+                        drawPolygon([r1, r2, r3, r4], palette.colors[1]);
+                    }
+
+                    // Left face (vertical rhombus on +y side)
+                    neighborH = 0;
+                    if (y < n - 1) {
+                        const downIdx = (y + 1) * n + x;
+                        neighborH = (mask[downIdx] > 0) ? heights[downIdx] : 0;
+                    }
+
+                    if (h > neighborH) {
+                        const l1 = toScreen(x, y + 1, h);
+                        const l2 = toScreen(x + 1, y + 1, h);
+                        const l3 = toScreen(x + 1, y + 1, neighborH);
+                        const l4 = toScreen(x, y + 1, neighborH);
+                        drawPolygon([l1, l2, l3, l4], palette.colors[2]);
+                    }
+
+                    // Top face (horizontal rhombus at height h)
+                    const t1 = toScreen(x, y, h);
+                    const t2 = toScreen(x + 1, y, h);
+                    const t3 = toScreen(x + 1, y + 1, h);
+                    const t4 = toScreen(x, y + 1, h);
+                    drawPolygon([t1, t2, t3, t4], palette.colors[0]);
+                }
+            }
+
+            const filename = `c2_lozenge_tiling_${n}x${n}.pdf`;
             const pdfBlob = pdf.output('blob');
             await downloadFile(pdfBlob, filename, 'application/pdf');
         }
