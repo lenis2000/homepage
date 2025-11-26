@@ -443,6 +443,18 @@ code:
     </div>
   </div>
 </div>
+
+<!-- Export -->
+<div class="control-group full-width">
+  <div class="control-group-title">Export</div>
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <button id="export-png">PNG</button>
+    <button id="export-pdf">PDF</button>
+    <span style="font-size: 12px; color: #666;">Quality:</span>
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;">
+    <span id="export-quality-val" style="font-size: 12px; color: #1976d2; min-width: 24px;">85</span>
+  </div>
+</div>
 </div>
 
 <!-- Color Legend -->
@@ -1326,6 +1338,86 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById('resetViewBtn').addEventListener('click', () => {
         renderer.resetView();
         draw();
+    });
+
+    // Export quality slider
+    document.getElementById('export-quality').addEventListener('input', (e) => {
+        document.getElementById('export-quality-val').textContent = e.target.value;
+    });
+
+    // Helper: get scale from quality (0-100 maps to 1x-4x)
+    function getExportScale() {
+        const quality = parseInt(document.getElementById('export-quality').value);
+        return 1 + (quality / 100) * 3; // 0->1x, 100->4x
+    }
+
+    // Export PNG
+    document.getElementById('export-png').addEventListener('click', () => {
+        if (!wasm.heights || !wasm.mask) {
+            alert('No tiling data to export.');
+            return;
+        }
+
+        const scale = getExportScale();
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = renderer.displayWidth * scale;
+        exportCanvas.height = renderer.displayHeight * scale;
+        const exportCtx = exportCanvas.getContext('2d');
+        exportCtx.scale(scale, scale);
+
+        // Temporarily swap context and draw
+        const originalCtx = renderer.ctx;
+        renderer.ctx = exportCtx;
+        renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+        renderer.ctx = originalCtx;
+
+        // Download
+        const link = document.createElement('a');
+        link.download = `lozenge_tiling_${wasm.n}x${wasm.n}.png`;
+        link.href = exportCanvas.toDataURL('image/png');
+        link.click();
+    });
+
+    // Export PDF
+    document.getElementById('export-pdf').addEventListener('click', () => {
+        if (!wasm.heights || !wasm.mask) {
+            alert('No tiling data to export.');
+            return;
+        }
+
+        // Check if jsPDF is available, if not load it
+        if (!window.jspdf) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.onload = () => exportPDF();
+            document.head.appendChild(script);
+        } else {
+            exportPDF();
+        }
+
+        function exportPDF() {
+            const scale = getExportScale();
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = renderer.displayWidth * scale;
+            exportCanvas.height = renderer.displayHeight * scale;
+            const exportCtx = exportCanvas.getContext('2d');
+            exportCtx.scale(scale, scale);
+
+            const originalCtx = renderer.ctx;
+            renderer.ctx = exportCtx;
+            renderer.draw(wasm.heights, wasm.mask, wasm.n, wasm.maxHeight);
+            renderer.ctx = originalCtx;
+
+            const imgData = exportCanvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [exportCanvas.width, exportCanvas.height]
+            });
+            pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
+            pdf.save(`lozenge_tiling_${wasm.n}x${wasm.n}.pdf`);
+        }
     });
 
     // Handle window resize

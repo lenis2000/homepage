@@ -193,41 +193,57 @@ int performGlauberStepsInternal(int numSteps) {
         bool canFlip = false;
 
         if (dir == 1) {
-            // Adding a cube - need support from both neighbors
-            // Treat frozen cutout tiles as non-constraining (like they don't exist)
+            // Adding a cube - need support from both upstream neighbors (left, up)
+            // If upstream neighbor is in cutout, cutout provides support at its height
             int supportX = MAX_HEIGHT;
             int supportY = MAX_HEIGHT;
 
             if (x > 0) {
-                int leftIdx = y * N + (x - 1);
-                if (mask[leftIdx] == 1 && !isInFrozenCutout(x - 1, y)) {
-                    supportX = heights[leftIdx];
+                if (isInFrozenCutout(x - 1, y)) {
+                    supportX = HOLE_MAX_HEIGHT; // Cutout provides support
+                } else {
+                    int leftIdx = y * N + (x - 1);
+                    if (mask[leftIdx] == 1) {
+                        supportX = heights[leftIdx];
+                    }
                 }
             }
             if (y > 0) {
-                int upIdx = (y - 1) * N + x;
-                if (mask[upIdx] == 1 && !isInFrozenCutout(x, y - 1)) {
-                    supportY = heights[upIdx];
+                if (isInFrozenCutout(x, y - 1)) {
+                    supportY = HOLE_MAX_HEIGHT; // Cutout provides support
+                } else {
+                    int upIdx = (y - 1) * N + x;
+                    if (mask[upIdx] == 1) {
+                        supportY = heights[upIdx];
+                    }
                 }
             }
 
             canFlip = (h < supportX) && (h < supportY);
         } else {
-            // Removing a cube - need no children depending on this cube
-            // Treat frozen cutout tiles as non-constraining
+            // Removing a cube - check downstream neighbors (right, down)
+            // If downstream neighbor is in cutout, we support it and can't go below its height
             int childX = 0;
             int childY = 0;
 
             if (x < N - 1) {
-                int rightIdx = y * N + (x + 1);
-                if (mask[rightIdx] == 1 && !isInFrozenCutout(x + 1, y)) {
-                    childX = heights[rightIdx];
+                if (isInFrozenCutout(x + 1, y)) {
+                    childX = HOLE_MAX_HEIGHT; // We support the cutout
+                } else {
+                    int rightIdx = y * N + (x + 1);
+                    if (mask[rightIdx] == 1) {
+                        childX = heights[rightIdx];
+                    }
                 }
             }
             if (y < N - 1) {
-                int downIdx = (y + 1) * N + x;
-                if (mask[downIdx] == 1 && !isInFrozenCutout(x, y + 1)) {
-                    childY = heights[downIdx];
+                if (isInFrozenCutout(x, y + 1)) {
+                    childY = HOLE_MAX_HEIGHT; // We support the cutout
+                } else {
+                    int downIdx = (y + 1) * N + x;
+                    if (mask[downIdx] == 1) {
+                        childY = heights[downIdx];
+                    }
                 }
             }
 
