@@ -364,7 +364,7 @@ code:
       <input type="range" id="cutY2Slider" min="0" max="100" value="75">
     </div>
     <div class="slider-group" style="grid-column: 1 / -1;">
-      <label>Cutout Max Height <span id="holeHeightVal">0%</span></label>
+      <label>Cutout Height <span id="holeHeightVal">0%</span></label>
       <input type="range" id="holeHeightSlider" min="0" max="100" value="0">
     </div>
   </div>
@@ -514,6 +514,7 @@ Module.onRuntimeInitialized = async function() {
                 ['number', 'number', 'number', 'number']);
             this.setMode = Module.cwrap('setMode', 'number', ['number', 'number']);
             this.updateBiasWasm = Module.cwrap('updateBias', 'number', ['number']);
+            this.updateCutoutHeightWasm = Module.cwrap('updateCutoutHeight', 'number', ['number']);
             this.freeString = Module.cwrap('freeString', null, ['number']);
             this.getTotalCubes = Module.cwrap('getTotalCubes', 'number', []);
             this.getAcceptRate = Module.cwrap('getAcceptRate', 'number', []);
@@ -606,6 +607,20 @@ Module.onRuntimeInitialized = async function() {
             const result = JSON.parse(jsonStr);
             if (result.error) throw new Error(result.error);
 
+            return result;
+        }
+
+        async updateCutoutHeight(holeHeight) {
+            if (!this.ready) throw new Error('WASM not ready');
+
+            const ptr = this.updateCutoutHeightWasm(holeHeight);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeString(ptr);
+
+            const result = JSON.parse(jsonStr);
+            if (result.error) throw new Error(result.error);
+
+            await this.refreshHeights();
             return result;
         }
     }
@@ -1267,7 +1282,14 @@ Module.onRuntimeInitialized = async function() {
 
     elements.holeHeightSlider.addEventListener('input', async (e) => {
         elements.holeHeightVal.textContent = e.target.value + '%';
-        await initSimulation(0);
+        const holeHeight = parseInt(e.target.value);
+        try {
+            const result = await wasm.updateCutoutHeight(holeHeight);
+            draw();
+            updateStats(result);
+        } catch (error) {
+            console.error('Cutout height update error:', error);
+        }
     });
 
     elements.gridSlider.addEventListener('input', async (e) => {

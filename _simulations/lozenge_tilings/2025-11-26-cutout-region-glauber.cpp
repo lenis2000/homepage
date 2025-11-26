@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-26-cutout-region-glauber.cpp -o 2025-11-26-cutout-region-glauber.js \
  -s WASM=1 \
- -s "EXPORTED_FUNCTIONS=['_initDomain','_performGlauberSteps','_exportHeights','_updateCutoutParams','_setMode','_updateBias','_freeString','_getTotalCubes','_getAcceptRate']" \
+ -s "EXPORTED_FUNCTIONS=['_initDomain','_performGlauberSteps','_exportHeights','_updateCutoutParams','_updateCutoutHeight','_setMode','_updateBias','_freeString','_getTotalCubes','_getAcceptRate']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=32MB \
@@ -30,9 +30,15 @@ Features:
 
 using namespace std;
 
-// Random number generator
-static std::mt19937 rng(std::random_device{}());
-static std::uniform_real_distribution<> dis(0.0, 1.0);
+// Fast xorshift random number generator
+static uint64_t rng_state = 12345678901234567ULL;
+
+inline uint64_t xorshift64() {
+    rng_state ^= rng_state >> 12;
+    rng_state ^= rng_state << 25;
+    rng_state ^= rng_state >> 27;
+    return rng_state * 0x2545F4914F6CDD1DULL;
+}
 
 // Global parameters
 int GRID_SIZE = 60;
@@ -63,7 +69,12 @@ long long recentTotal = 0;
 
 // Helper function: get random double in (0,1)
 inline double getRandom01() {
-    return dis(rng);
+    return (xorshift64() >> 11) * (1.0 / 9007199254740992.0);
+}
+
+// Helper function: get random int in [0, n)
+inline int getRandomInt(int n) {
+    return static_cast<int>((xorshift64() >> 11) % n);
 }
 
 // Initialize the C-shaped domain
@@ -167,88 +178,79 @@ int performGlauberStepsInternal(int numSteps) {
     int cutY1 = N * CUT_Y1 / 100;
     int cutY2 = N * CUT_Y2 / 100;
 
+    // Pre-compute whether cutout is active
+    bool cutoutActive = (HOLE_HEIGHT > 0);
+
     for (int step = 0; step < numSteps; step++) {
-        int x = static_cast<int>(getRandom01() * N);
-        int y = static_cast<int>(getRandom01() * N);
+        int x = getRandomInt(N);
+        int y = getRandomInt(N);
         int idx = y * N + x;
 
         if (mask[idx] == 0) continue;
 
         // Skip cutout region - heights are frozen there
-        bool inCutout = (x >= cutX1) && (x < cutX2) && (y >= cutY1) && (y < cutY2);
-        if (inCutout && HOLE_HEIGHT > 0) continue;
+        if (cutoutActive && x >= cutX1 && x < cutX2 && y >= cutY1 && y < cutY2) continue;
 
-        int dir = getRandom01() < addProb ? 1 : -1;
+        int dir = (getRandom01() < addProb) ? 1 : -1;
         int h = heights[idx];
         int newH = h + dir;
 
         if (newH < 0 || newH > MAX_HEIGHT) continue;
 
-        // Helper lambda to check if a position is in the frozen cutout
-        auto isInFrozenCutout = [&](int px, int py) {
-            if (HOLE_HEIGHT == 0) return false;
-            return (px >= cutX1) && (px < cutX2) && (py >= cutY1) && (py < cutY2);
-        };
+        // Inline cutout check macro
+        #define IN_CUTOUT(px, py) (cutoutActive && (px) >= cutX1 && (px) < cutX2 && (py) >= cutY1 && (py) < cutY2)
 
         bool canFlip = false;
 
         if (dir == 1) {
             // Adding a cube - need support from both upstream neighbors (left, up)
-            // If upstream neighbor is in cutout, cutout provides support at its height
             int supportX = MAX_HEIGHT;
             int supportY = MAX_HEIGHT;
 
             if (x > 0) {
-                if (isInFrozenCutout(x - 1, y)) {
-                    supportX = HOLE_MAX_HEIGHT; // Cutout provides support
+                if (IN_CUTOUT(x - 1, y)) {
+                    supportX = HOLE_MAX_HEIGHT;
                 } else {
                     int leftIdx = y * N + (x - 1);
-                    if (mask[leftIdx] == 1) {
-                        supportX = heights[leftIdx];
-                    }
+                    if (mask[leftIdx] == 1) supportX = heights[leftIdx];
                 }
             }
             if (y > 0) {
-                if (isInFrozenCutout(x, y - 1)) {
-                    supportY = HOLE_MAX_HEIGHT; // Cutout provides support
+                if (IN_CUTOUT(x, y - 1)) {
+                    supportY = HOLE_MAX_HEIGHT;
                 } else {
                     int upIdx = (y - 1) * N + x;
-                    if (mask[upIdx] == 1) {
-                        supportY = heights[upIdx];
-                    }
+                    if (mask[upIdx] == 1) supportY = heights[upIdx];
                 }
             }
 
             canFlip = (h < supportX) && (h < supportY);
         } else {
             // Removing a cube - check downstream neighbors (right, down)
-            // If downstream neighbor is in cutout, we support it and can't go below its height
             int childX = 0;
             int childY = 0;
 
             if (x < N - 1) {
-                if (isInFrozenCutout(x + 1, y)) {
-                    childX = HOLE_MAX_HEIGHT; // We support the cutout
+                if (IN_CUTOUT(x + 1, y)) {
+                    childX = HOLE_MAX_HEIGHT;
                 } else {
                     int rightIdx = y * N + (x + 1);
-                    if (mask[rightIdx] == 1) {
-                        childX = heights[rightIdx];
-                    }
+                    if (mask[rightIdx] == 1) childX = heights[rightIdx];
                 }
             }
             if (y < N - 1) {
-                if (isInFrozenCutout(x, y + 1)) {
-                    childY = HOLE_MAX_HEIGHT; // We support the cutout
+                if (IN_CUTOUT(x, y + 1)) {
+                    childY = HOLE_MAX_HEIGHT;
                 } else {
                     int downIdx = (y + 1) * N + x;
-                    if (mask[downIdx] == 1) {
-                        childY = heights[downIdx];
-                    }
+                    if (mask[downIdx] == 1) childY = heights[downIdx];
                 }
             }
 
             canFlip = (h > childX) && (h > childY);
         }
+
+        #undef IN_CUTOUT
 
         if (canFlip) {
             heights[idx] = newH;
@@ -478,6 +480,156 @@ char* updateBias(double bias) {
         BIAS = bias;
 
         std::string json = "{\"status\":\"bias_updated\",\"bias\":" + std::to_string(BIAS) + "}";
+
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = "{\"error\":\"" + std::string(e.what()) + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        strcpy(out, errorMsg.c_str());
+        return out;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* updateCutoutHeight(int holeHeight) {
+    try {
+        if (holeHeight < 0 || holeHeight > 100) {
+            throw std::invalid_argument("Hole height must be a percentage (0-100)");
+        }
+
+        HOLE_HEIGHT = holeHeight;
+        HOLE_MAX_HEIGHT = static_cast<int>(MAX_HEIGHT * HOLE_HEIGHT / 100);
+
+        // Calculate cutout bounds
+        int cutX1 = N * CUT_X1 / 100;
+        int cutX2 = N * CUT_X2 / 100;
+        int cutY1 = N * CUT_Y1 / 100;
+        int cutY2 = N * CUT_Y2 / 100;
+
+        // Helper to check if point is in cutout
+        auto inCutout = [&](int x, int y) {
+            return (x >= cutX1 && x < cutX2 && y >= cutY1 && y < cutY2);
+        };
+
+        // Update heights in cutout region to new frozen height
+        for (int y = cutY1; y < cutY2; y++) {
+            for (int x = cutX1; x < cutX2; x++) {
+                int idx = y * N + x;
+                if (HOLE_HEIGHT == 0) {
+                    mask[idx] = 0;
+                    heights[idx] = 0;
+                } else {
+                    mask[idx] = 1;
+                    heights[idx] = HOLE_MAX_HEIGHT;
+                }
+            }
+        }
+
+        if (HOLE_HEIGHT == 0) {
+            // No constraints needed for complete hole
+            std::string json = "{\"status\":\"cutout_height_updated\",\"holeHeight\":" + std::to_string(HOLE_HEIGHT) +
+                              ",\"holeMaxHeight\":" + std::to_string(HOLE_MAX_HEIGHT) +
+                              ",\"totalCubes\":" + std::to_string(calculateTotalCubes()) + "}";
+            char* out = (char*)malloc(json.size() + 1);
+            strcpy(out, json.c_str());
+            return out;
+        }
+
+        // Enforce monotonicity: h(x,y) >= h(x+1,y) and h(x,y) >= h(x,y+1)
+        // This means upstream tiles (smaller x,y) must be >= downstream tiles
+        // Cutout at HOLE_MAX_HEIGHT means:
+        //   - Tiles upstream of cutout must be >= HOLE_MAX_HEIGHT
+        //   - Tiles downstream of cutout must be <= HOLE_MAX_HEIGHT
+
+        for (int pass = 0; pass < N; pass++) {
+            bool changed = false;
+
+            // Pass 1: Propagate constraints UPSTREAM from cutout (raise tiles)
+            // Go backwards from cutout towards origin
+            for (int y = cutY2 - 1; y >= 0; y--) {
+                for (int x = cutX2 - 1; x >= 0; x--) {
+                    int idx = y * N + x;
+                    if (mask[idx] == 0) continue;
+                    if (inCutout(x, y)) continue;
+
+                    int minRequired = 0;
+
+                    // Check right neighbor - if it's cutout or higher, we must be >= it
+                    if (x < N - 1) {
+                        int rightIdx = y * N + (x + 1);
+                        if (inCutout(x + 1, y)) {
+                            minRequired = std::max(minRequired, HOLE_MAX_HEIGHT);
+                        } else if (mask[rightIdx] == 1) {
+                            minRequired = std::max(minRequired, heights[rightIdx]);
+                        }
+                    }
+
+                    // Check down neighbor
+                    if (y < N - 1) {
+                        int downIdx = (y + 1) * N + x;
+                        if (inCutout(x, y + 1)) {
+                            minRequired = std::max(minRequired, HOLE_MAX_HEIGHT);
+                        } else if (mask[downIdx] == 1) {
+                            minRequired = std::max(minRequired, heights[downIdx]);
+                        }
+                    }
+
+                    // Raise if needed (but cap at what's allowed by boundary)
+                    int maxAllowed = std::min({x, y, MAX_HEIGHT});
+                    int newH = std::min(std::max(heights[idx], minRequired), maxAllowed);
+                    if (newH != heights[idx]) {
+                        heights[idx] = newH;
+                        changed = true;
+                    }
+                }
+            }
+
+            // Pass 2: Propagate constraints DOWNSTREAM from cutout (cap tiles)
+            // Go forward from cutout towards far corner
+            for (int y = cutY1; y < N; y++) {
+                for (int x = cutX1; x < N; x++) {
+                    int idx = y * N + x;
+                    if (mask[idx] == 0) continue;
+                    if (inCutout(x, y)) continue;
+
+                    int maxAllowed = MAX_HEIGHT;
+
+                    // Check left neighbor
+                    if (x > 0) {
+                        int leftIdx = y * N + (x - 1);
+                        if (inCutout(x - 1, y)) {
+                            maxAllowed = std::min(maxAllowed, HOLE_MAX_HEIGHT);
+                        } else if (mask[leftIdx] == 1) {
+                            maxAllowed = std::min(maxAllowed, heights[leftIdx]);
+                        }
+                    }
+
+                    // Check up neighbor
+                    if (y > 0) {
+                        int upIdx = (y - 1) * N + x;
+                        if (inCutout(x, y - 1)) {
+                            maxAllowed = std::min(maxAllowed, HOLE_MAX_HEIGHT);
+                        } else if (mask[upIdx] == 1) {
+                            maxAllowed = std::min(maxAllowed, heights[upIdx]);
+                        }
+                    }
+
+                    if (heights[idx] > maxAllowed) {
+                        heights[idx] = maxAllowed;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (!changed) break;
+        }
+
+        std::string json = "{\"status\":\"cutout_height_updated\",\"holeHeight\":" + std::to_string(HOLE_HEIGHT) +
+                          ",\"holeMaxHeight\":" + std::to_string(HOLE_MAX_HEIGHT) +
+                          ",\"totalCubes\":" + std::to_string(calculateTotalCubes()) + "}";
 
         char* out = (char*)malloc(json.size() + 1);
         strcpy(out, json.c_str());
