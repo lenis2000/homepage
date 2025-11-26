@@ -1721,8 +1721,8 @@ Module.onRuntimeInitialized = async function() {
         draw();
     });
 
-    document.getElementById('showFloor').addEventListener('change', (e) => {
-        renderer.showFloor = e.target.checked;
+    document.getElementById('showWallGrid').addEventListener('change', (e) => {
+        renderer.showWallGrid = e.target.checked;
         draw();
     });
 
