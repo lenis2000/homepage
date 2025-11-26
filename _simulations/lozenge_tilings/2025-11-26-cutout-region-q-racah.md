@@ -447,7 +447,7 @@ code:
 <div class="control-group" style="grid-column: 1 / -1;">
   <div class="control-group-title">q-Racah Parameters</div>
   <div class="formula-display">
-    w(h) = q<sup>h</sup> + q<sup>S&minus;h</sup> &nbsp;&nbsp;|&nbsp;&nbsp; S=0 gives uniform measure
+    w(h) = q<sup>h</sup> + q<sup>S&minus;h</sup> &nbsp;&nbsp;|&nbsp;&nbsp; q=1, S=0 gives uniform measure
   </div>
   <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
     <div class="slider-group" style="flex: 1; min-width: 200px;">
