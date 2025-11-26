@@ -347,6 +347,11 @@ permalink: /domino/
       <label for="show-colors-checkbox" style="cursor: pointer; margin-left: 5px;">Show colors</label>
     </div>
 
+    <div style="margin-left: 20px;">
+      <input type="checkbox" id="height-gradient-checkbox" checked style="vertical-align: middle;">
+      <label for="height-gradient-checkbox" style="cursor: pointer; margin-left: 5px;">Height gradient (3D)</label>
+    </div>
+
     <div style="margin-left: auto;">
       <button id="sample-btn">Sample</button>
       <button id="cancel-btn" style="display: none; margin-left: 5px; background-color: #ff5555;">Cancel</button>
@@ -472,31 +477,31 @@ permalink: /domino/
 
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-blue" style="width: 120px; font-weight: bold;">Blue (Horizontal):</label>
+        <label for="color-blue" style="width: 100px; font-weight: bold;">Horizontal 1:</label>
         <input type="color" id="color-blue" value="#4363d8" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-blue" value="#4363d8" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
 
       <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-green" style="width: 120px; font-weight: bold;">Green (Horizontal):</label>
+        <label for="color-green" style="width: 100px; font-weight: bold;">Horizontal 2:</label>
         <input type="color" id="color-green" value="#1e8c28" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-green" value="#1e8c28" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
 
       <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-red" style="width: 120px; font-weight: bold;">Red (Vertical):</label>
+        <label for="color-red" style="width: 100px; font-weight: bold;">Vertical 1:</label>
         <input type="color" id="color-red" value="#ff2244" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-red" value="#ff2244" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
 
       <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-yellow" style="width: 120px; font-weight: bold;">Yellow (Vertical):</label>
+        <label for="color-yellow" style="width: 100px; font-weight: bold;">Vertical 2:</label>
         <input type="color" id="color-yellow" value="#fca414" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-yellow" value="#fca414" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
 
       <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-border" style="width: 120px; font-weight: bold;">Border Color:</label>
+        <label for="color-border" style="width: 100px; font-weight: bold;">Border:</label>
         <input type="color" id="color-border" value="#666666" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
         <input type="text" id="hex-border" value="#666666" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
       </div>
@@ -1043,10 +1048,21 @@ Module.onRuntimeInitialized = async function() {
           yellow: hexToThreeColor(currentColors.yellow)
         };
         const showColors3D = document.getElementById("show-colors-checkbox").checked;
+        const showGradient3D = document.getElementById("height-gradient-checkbox").checked;
         const monoColor3D = 0x999999;
 
-        cachedDominoes.forEach(domino => {
-            const faceData = createDominoFaces(domino, heightMap, scale);
+        // Pre-calculate all faces for height range
+        const allFaces = cachedDominoes.map(d => createDominoFaces(d, heightMap, scale));
+        let minHeight = Infinity, maxHeight = -Infinity;
+        for (const f of allFaces) {
+          if (f && f.avgHeight !== undefined) {
+            minHeight = Math.min(minHeight, f.avgHeight);
+            maxHeight = Math.max(maxHeight, f.avgHeight);
+          }
+        }
+        const heightRange = maxHeight - minHeight;
+
+        allFaces.forEach(faceData => {
             if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return;
 
             try {
@@ -1074,14 +1090,25 @@ Module.onRuntimeInitialized = async function() {
                 geom.computeVertexNormals();
 
                 const colorValue = colors[faceData.color] || 0x808080;
+
+                // Apply height gradient if enabled
+                let finalColor = colorValue;
+                if (showColors3D && showGradient3D && heightRange > 0 && faceData.avgHeight !== undefined) {
+                  const t = (faceData.avgHeight - minHeight) / heightRange;
+                  const baseColor = new THREE.Color(colorValue);
+                  const darkColor = baseColor.clone().multiplyScalar(0.4);
+                  finalColor = darkColor.lerp(baseColor, t).getHex();
+                }
+
                 const mat = new THREE.MeshStandardMaterial({
-                    color: showColors3D ? colorValue : monoColor3D,
+                    color: showColors3D ? finalColor : monoColor3D,
                     side: THREE.DoubleSide,
                     flatShading: true
                 });
-                mat.userData = { originalColorValue: colorValue };
+                mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
                 const mesh = new THREE.Mesh(geom, mat);
                 mesh.userData.originalColor = faceData.color;
+                mesh.userData.avgHeight = faceData.avgHeight;
                 dominoGroup.add(mesh);
             } catch(e) {
                 console.error("Error creating 3D mesh during Glauber update:", e);
@@ -1259,9 +1286,13 @@ Module.onRuntimeInitialized = async function() {
       ]);
     }
 
+    // Calculate average height for gradient coloring
+    const avgHeight = vertices.reduce((sum, v) => sum + v[1], 0) / vertices.length;
+
     return {
       color: color,
-      vertices: vertices
+      vertices: vertices,
+      avgHeight: avgHeight
     };
   }
 
@@ -1510,6 +1541,16 @@ Module.onRuntimeInitialized = async function() {
       const total = faces.length;
       if (total === 0 || signal.aborted) return;
 
+      // Calculate height range for gradient coloring
+      let minHeight = Infinity, maxHeight = -Infinity;
+      for (const f of faces) {
+        if (f && f.avgHeight !== undefined) {
+          minHeight = Math.min(minHeight, f.avgHeight);
+          maxHeight = Math.max(maxHeight, f.avgHeight);
+        }
+      }
+      const heightRange = maxHeight - minHeight;
+
       // Batch processing of faces for better performance
       progressElem.innerText = "Rendering...";
       let idx = 0;
@@ -1564,21 +1605,32 @@ Module.onRuntimeInitialized = async function() {
 
                 // Check if we should show colors in 3D view
                 const showColors = document.getElementById("show-colors-checkbox").checked;
+                const showGradient = document.getElementById("height-gradient-checkbox").checked;
                 const monoColor = 0x999999; // Default monochrome color when not showing colors
                 const colorValue = colors[f.color] || 0x808080;
 
+                // Apply height gradient if enabled
+                let finalColor = colorValue;
+                if (showColors && showGradient && heightRange > 0 && f.avgHeight !== undefined) {
+                  const t = (f.avgHeight - minHeight) / heightRange; // 0 at bottom, 1 at top
+                  const baseColor = new THREE.Color(colorValue);
+                  const darkColor = baseColor.clone().multiplyScalar(0.4); // darker at bottom
+                  finalColor = darkColor.lerp(baseColor, t).getHex();
+                }
+
                 const mat = new THREE.MeshStandardMaterial({
-                  color: showColors ? colorValue : monoColor,
+                  color: showColors ? finalColor : monoColor,
                   side: THREE.DoubleSide,
                   flatShading: true
                 });
 
                 // Store the original color code for later use in the userData
-                mat.userData = { originalColorValue: colorValue };
+                mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
 
                 // Create the mesh and store the original color for later toggling
                 const mesh = new THREE.Mesh(geom, mat);
                 mesh.userData.originalColor = f.color;
+                mesh.userData.avgHeight = f.avgHeight;
 
                 dominoGroup.add(mesh);
               } catch(e) {
@@ -1979,7 +2031,15 @@ Module.onRuntimeInitialized = async function() {
     const colorInput = document.getElementById(`color-${colorKey}`);
     const hexInput = document.getElementById(`hex-${colorKey}`);
 
-    // Color picker change handler
+    // Color picker real-time input handler (fires while dragging in Firefox/macOS)
+    colorInput.addEventListener('input', function() {
+      const newColor = this.value;
+      hexInput.value = newColor;
+      currentColors[colorKey] = newColor;
+      updateColorsInVisualization();
+    });
+
+    // Color picker change handler (fires when picker is closed)
     colorInput.addEventListener('change', function() {
       const newColor = this.value;
       hexInput.value = newColor;
@@ -2984,12 +3044,17 @@ Module.onRuntimeInitialized = async function() {
         yellow: hexToThreeColor(currentColors.yellow)
       };
 
+      const showGradient = document.getElementById("height-gradient-checkbox").checked;
+
       // Update all meshes in the domino group
       dominoGroup.children.forEach(mesh => {
         if (mesh.material) {
           if (!showColors) {
             // Set to monochrome
             mesh.material.color.setHex(monoColor3D);
+          } else if (showGradient && mesh.material.userData && mesh.material.userData.gradientColorValue) {
+            // Use gradient color if available
+            mesh.material.color.setHex(mesh.material.userData.gradientColorValue);
           } else {
             // Try to get the color from userData first (direct hex value)
             if (mesh.material.userData && mesh.material.userData.originalColorValue) {
@@ -3004,6 +3069,31 @@ Module.onRuntimeInitialized = async function() {
                 mesh.material.color.setHex(0x808080);
               }
             }
+          }
+        }
+      });
+
+      // Force a render update
+      if (renderer) {
+        renderer.render(scene, camera);
+      }
+    }
+  });
+
+  // Height gradient toggle handler
+  document.getElementById("height-gradient-checkbox").addEventListener("change", function() {
+    const showGradient = this.checked;
+    const showColors = document.getElementById("show-colors-checkbox").checked;
+
+    // Update 3D view if it exists and colors are shown
+    const n = parseInt(document.getElementById("n-input").value, 10);
+    if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
+      dominoGroup.children.forEach(mesh => {
+        if (mesh.material && showColors) {
+          if (showGradient && mesh.material.userData && mesh.material.userData.gradientColorValue) {
+            mesh.material.color.setHex(mesh.material.userData.gradientColorValue);
+          } else if (mesh.material.userData && mesh.material.userData.originalColorValue) {
+            mesh.material.color.setHex(mesh.material.userData.originalColorValue);
           }
         }
       });
