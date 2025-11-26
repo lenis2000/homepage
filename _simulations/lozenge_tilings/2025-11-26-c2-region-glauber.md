@@ -501,6 +501,7 @@ code:
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <button id="export-png">PNG</button>
     <button id="export-pdf">PDF (Vector)</button>
+    <button id="export-csv">CSV (Heights)</button>
     <span style="font-size: 12px; color: #666;">PNG Quality:</span>
     <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;">
     <span id="export-quality-val" style="font-size: 12px; color: #1976d2; min-width: 24px;">85</span>
@@ -1878,6 +1879,33 @@ Module.onRuntimeInitialized = async function() {
         exportCanvas.toBlob(async (blob) => {
             await downloadFile(blob, filename, 'image/png');
         }, 'image/png');
+    });
+
+    // Export CSV (Heights)
+    document.getElementById('export-csv').addEventListener('click', async () => {
+        if (!wasm.heights || !wasm.mask) {
+            alert('No tiling data to export.');
+            return;
+        }
+
+        const n = wasm.n;
+        const heights = wasm.heights;
+        const mask = wasm.mask;
+
+        // Build CSV with header row
+        let csv = 'x,y,height,in_region\n';
+        for (let y = 0; y < n; y++) {
+            for (let x = 0; x < n; x++) {
+                const idx = y * n + x;
+                const h = heights[idx];
+                const inRegion = mask[idx] > 0 ? 1 : 0;
+                csv += `${x},${y},${h},${inRegion}\n`;
+            }
+        }
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const filename = `c2_lozenge_heights_${n}x${n}.csv`;
+        await downloadFile(blob, filename, 'text/csv');
     });
 
     // Export PDF (Vector)
