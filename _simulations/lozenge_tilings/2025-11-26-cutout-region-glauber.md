@@ -1242,14 +1242,11 @@ Module.onRuntimeInitialized = async function() {
             // Helper to add a quad face
             const addFace = (v1, v2, v3, v4, normal, color) => {
                 const baseIndex = vertices.length / 3;
-
                 vertices.push(...v1, ...v2, ...v3, ...v4);
-
                 for (let i = 0; i < 4; i++) {
                     normals.push(...normal);
                     colors.push(color.r, color.g, color.b);
                 }
-
                 indices.push(
                     baseIndex, baseIndex + 1, baseIndex + 2,
                     baseIndex, baseIndex + 2, baseIndex + 3
@@ -1257,23 +1254,30 @@ Module.onRuntimeInitialized = async function() {
             };
 
             // Build visible faces for each cell
-            for (let y = 0; y < n; y++) {
-                for (let x = 0; x < n; x++) {
-                    const idx = y * n + x;
+            // Grid coords: x increases right, y increases down in 2D view
+            // World coords: use x, y directly, z = height
+            for (let gy = 0; gy < n; gy++) {
+                for (let gx = 0; gx < n; gx++) {
+                    const idx = gy * n + gx;
                     if (mask[idx] === 0) continue;
 
                     const h = heights[idx];
                     if (h === 0) continue;
 
-                    // Get neighbor heights
-                    const hRight = (x < n - 1 && mask[y * n + (x + 1)] === 1) ? heights[y * n + (x + 1)] : 0;
-                    const hDown = (y < n - 1 && mask[(y + 1) * n + x] === 1) ? heights[(y + 1) * n + x] : 0;
+                    // Get neighbor heights (in grid coordinates)
+                    // Right neighbor: gx+1, same gy
+                    const hRight = (gx < n - 1 && mask[gy * n + (gx + 1)] === 1) ? heights[gy * n + (gx + 1)] : 0;
+                    // Down neighbor: same gx, gy+1
+                    const hDown = (gy < n - 1 && mask[(gy + 1) * n + gx] === 1) ? heights[(gy + 1) * n + gx] : 0;
 
-                    // World coordinates (swap x,y for isometric-like view)
-                    const wx = y;
-                    const wy = x;
+                    // World coordinates - map to match 2D isometric view orientation
+                    // In 2D: x goes right-down, y goes left-down
+                    // In 3D: we want similar orientation when viewed from standard angle
+                    const wx = gx;
+                    const wy = gy;
+                    const wz = 0;
 
-                    // Top face (always visible if h > 0)
+                    // Top face (horizontal, at height h) - orange
                     addFace(
                         [wx, wy, h],
                         [wx + 1, wy, h],
@@ -1283,50 +1287,62 @@ Module.onRuntimeInitialized = async function() {
                         topColor
                     );
 
-                    // Right face (visible if h > hRight)
+                    // Face at x+1 boundary (visible when h > hRight) - blue (right face in 2D)
                     if (h > hRight) {
-                        addFace(
-                            [wx + 1, wy, hRight],
-                            [wx + 1, wy, h],
-                            [wx + 1, wy + 1, h],
-                            [wx + 1, wy + 1, hRight],
-                            [1, 0, 0],
-                            rightColor
-                        );
+                        for (let z = hRight; z < h; z++) {
+                            addFace(
+                                [wx + 1, wy, z],
+                                [wx + 1, wy + 1, z],
+                                [wx + 1, wy + 1, z + 1],
+                                [wx + 1, wy, z + 1],
+                                [1, 0, 0],
+                                rightColor
+                            );
+                        }
                     }
 
-                    // Front face (visible if h > hDown)
+                    // Face at y+1 boundary (visible when h > hDown) - beige (left face in 2D)
                     if (h > hDown) {
-                        addFace(
-                            [wx, wy + 1, hDown],
-                            [wx + 1, wy + 1, hDown],
-                            [wx + 1, wy + 1, h],
-                            [wx, wy + 1, h],
-                            [0, 1, 0],
-                            leftColor
-                        );
+                        for (let z = hDown; z < h; z++) {
+                            addFace(
+                                [wx, wy + 1, z],
+                                [wx, wy + 1, z + 1],
+                                [wx + 1, wy + 1, z + 1],
+                                [wx + 1, wy + 1, z],
+                                [0, 1, 0],
+                                leftColor
+                            );
+                        }
                     }
 
-                    // Back faces at boundaries
-                    if (x === 0 || mask[y * n + (x - 1)] === 0) {
-                        addFace(
-                            [wx, wy, 0],
-                            [wx, wy + 1, 0],
-                            [wx, wy + 1, h],
-                            [wx, wy, h],
-                            [-1, 0, 0],
-                            rightColor
-                        );
+                    // Back wall at x=0 boundary
+                    if (gx === 0 || mask[gy * n + (gx - 1)] === 0) {
+                        const hLeft = (gx > 0 && mask[gy * n + (gx - 1)] === 1) ? heights[gy * n + (gx - 1)] : 0;
+                        for (let z = hLeft; z < h; z++) {
+                            addFace(
+                                [wx, wy, z],
+                                [wx, wy, z + 1],
+                                [wx, wy + 1, z + 1],
+                                [wx, wy + 1, z],
+                                [-1, 0, 0],
+                                rightColor
+                            );
+                        }
                     }
-                    if (y === 0 || mask[(y - 1) * n + x] === 0) {
-                        addFace(
-                            [wx, wy, 0],
-                            [wx, wy, h],
-                            [wx + 1, wy, h],
-                            [wx + 1, wy, 0],
-                            [0, -1, 0],
-                            leftColor
-                        );
+
+                    // Back wall at y=0 boundary
+                    if (gy === 0 || mask[(gy - 1) * n + gx] === 0) {
+                        const hUp = (gy > 0 && mask[(gy - 1) * n + gx] === 1) ? heights[(gy - 1) * n + gx] : 0;
+                        for (let z = hUp; z < h; z++) {
+                            addFace(
+                                [wx, wy, z],
+                                [wx + 1, wy, z],
+                                [wx + 1, wy, z + 1],
+                                [wx, wy, z + 1],
+                                [0, -1, 0],
+                                leftColor
+                            );
+                        }
                     }
                 }
             }
