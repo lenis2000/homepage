@@ -382,23 +382,23 @@ code:
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;">
     <div class="slider-group">
       <label>b <span id="paramBVal">10</span></label>
-      <input type="range" id="paramBSlider" min="2" max="50" value="10">
+      <input type="range" id="paramBSlider" min="2" max="200" value="10">
     </div>
     <div class="slider-group">
       <label>c <span id="paramCVal">4</span></label>
-      <input type="range" id="paramCSlider" min="1" max="30" value="4">
+      <input type="range" id="paramCSlider" min="1" max="200" value="4">
     </div>
     <div class="slider-group">
       <label>d <span id="paramDVal">4</span></label>
-      <input type="range" id="paramDSlider" min="1" max="30" value="4">
+      <input type="range" id="paramDSlider" min="1" max="200" value="4">
     </div>
     <div class="slider-group">
       <label>e <span id="paramEVal">8</span></label>
-      <input type="range" id="paramESlider" min="1" max="30" value="8">
+      <input type="range" id="paramESlider" min="1" max="200" value="8">
     </div>
     <div class="slider-group">
       <label>h (height param) <span id="paramHVal">15</span></label>
-      <input type="range" id="paramHSlider" min="1" max="50" value="15">
+      <input type="range" id="paramHSlider" min="1" max="200" value="15">
     </div>
   </div>
 </div>
@@ -523,19 +523,6 @@ code:
   </div>
 </details>
 
-<!-- Region Info -->
-<details>
-  <summary>Region Information</summary>
-  <div class="content">
-    <p>The C2 region is a 10-sided polygon defined by parameters (a, b, c, d, e) with closure constraint a = b + c + e - d.</p>
-    <p>The region has three sub-regions with different height constraints:</p>
-    <ul>
-      <li><strong>Region 1 (square)</strong>: Height range [0, 2h]</li>
-      <li><strong>Region 2 (right of diagonal)</strong>: Height range [h, 2h] - raised floor!</li>
-      <li><strong>Region 3 (above diagonal)</strong>: Height range [0, h]</li>
-    </ul>
-  </div>
-</details>
 
 <script>
 // Check if Module is defined
@@ -1006,9 +993,12 @@ Module.onRuntimeInitialized = async function() {
             const dx = tileSize * cos30;
             const dy = tileSize * sin30;
 
-            // Apply zoom and pan to center position
+            // Calculate center position to show the full tiling
+            // The tiling extends from (0,0) to (n,n) in grid coords
+            // In screen coords: x ranges from -n*dx to +n*dx, y ranges from -maxHeight*tileSize to +2*n*dy
+            // Center the bounding box in the canvas
             const baseCenterX = this.displayWidth / 2;
-            const baseCenterY = this.displayHeight * 0.4;
+            const baseCenterY = this.displayHeight / 2 + (maxHeight * tileSize) / 2 - n * dy;
             const centerX = baseCenterX + this.panX;
             const centerY = baseCenterY + this.panY;
 
