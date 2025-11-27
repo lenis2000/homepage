@@ -9,6 +9,27 @@ code:
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
 ---
 
+<details>
+<summary>C2 region polygon example (a=9, b=5, c=2, d=2, e=4) - base of the height function</summary>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-0.5 -0.5 11 11" width="400" height="400" style="max-width: 100%; display: block; margin: 16px auto;">
+  <!-- Grid lines -->
+  <g stroke="#ddd" stroke-width="0.03">
+    <line x1="0" y1="0" x2="0" y2="10"/><line x1="1" y1="0" x2="1" y2="10"/><line x1="2" y1="0" x2="2" y2="10"/><line x1="3" y1="0" x2="3" y2="10"/><line x1="4" y1="0" x2="4" y2="10"/><line x1="5" y1="0" x2="5" y2="10"/><line x1="6" y1="0" x2="6" y2="10"/><line x1="7" y1="0" x2="7" y2="10"/><line x1="8" y1="0" x2="8" y2="10"/><line x1="9" y1="0" x2="9" y2="10"/><line x1="10" y1="0" x2="10" y2="10"/>
+    <line x1="0" y1="0" x2="10" y2="0"/><line x1="0" y1="1" x2="10" y2="1"/><line x1="0" y1="2" x2="10" y2="2"/><line x1="0" y1="3" x2="10" y2="3"/><line x1="0" y1="4" x2="10" y2="4"/><line x1="0" y1="5" x2="10" y2="5"/><line x1="0" y1="6" x2="10" y2="6"/><line x1="0" y1="7" x2="10" y2="7"/><line x1="0" y1="8" x2="10" y2="8"/><line x1="0" y1="9" x2="10" y2="9"/><line x1="0" y1="10" x2="10" y2="10"/>
+  </g>
+  <!-- The polygon (y-flipped since SVG y goes down) -->
+  <polygon points="0,9 9,9 9,4 7,4 7,6 3,6 3,2 5,2 5,0 0,0" fill="rgba(65,105,225,0.25)" stroke="#1a5fb4" stroke-width="0.08"/>
+  <!-- Vertex dots -->
+  <g fill="#c01c28">
+    <circle cx="0" cy="9" r="0.12"/><circle cx="9" cy="9" r="0.12"/><circle cx="9" cy="4" r="0.12"/><circle cx="7" cy="4" r="0.12"/><circle cx="7" cy="6" r="0.12"/><circle cx="3" cy="6" r="0.12"/><circle cx="3" cy="2" r="0.12"/><circle cx="5" cy="2" r="0.12"/><circle cx="5" cy="0" r="0.12"/><circle cx="0" cy="0" r="0.12"/>
+  </g>
+  <!-- Coordinate labels -->
+  <g font-family="serif" font-size="0.35" fill="#333">
+    <text x="0" y="9.5" text-anchor="middle">(0,0)</text><text x="9" y="9.5" text-anchor="middle">(9,0)</text><text x="9.6" y="4" text-anchor="start">(9,5)</text><text x="7" y="3.6" text-anchor="middle">(7,5)</text><text x="7.5" y="6.3" text-anchor="start">(7,3)</text><text x="2.4" y="6.3" text-anchor="end">(3,3)</text><text x="2.4" y="2" text-anchor="end">(3,7)</text><text x="5.5" y="2.3" text-anchor="start">(5,7)</text><text x="5.5" y="0.4" text-anchor="start">(5,9)</text><text x="0.2" y="0.4" text-anchor="start">(0,9)</text>
+  </g>
+</svg>
+</details>
+
 <style>
   /* Interface container and responsive layout */
   .interface-container {
@@ -378,23 +399,23 @@ code:
 <!-- Shape Parameters (2 cols) -->
 <div class="control-group">
   <div class="control-group-title">C2 Polygon Shape</div>
-  <div class="param-display">a = b + c + e - d = <span id="paramAVal">18</span> (grid: a × a × 2h)</div>
+  <div class="param-display">a = b + c + e - d = <span id="paramAVal">75</span> (grid: a × a × 2h)</div>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;">
     <div class="slider-group">
-      <label>b <span id="paramBVal">10</span></label>
-      <input type="range" id="paramBSlider" min="2" max="200" value="10">
+      <label>b <span id="paramBVal">30</span></label>
+      <input type="range" id="paramBSlider" min="2" max="200" value="30">
     </div>
     <div class="slider-group">
-      <label>c <span id="paramCVal">4</span></label>
-      <input type="range" id="paramCSlider" min="1" max="200" value="4">
+      <label>c <span id="paramCVal">25</span></label>
+      <input type="range" id="paramCSlider" min="1" max="200" value="25">
     </div>
     <div class="slider-group">
-      <label>d <span id="paramDVal">4</span></label>
-      <input type="range" id="paramDSlider" min="1" max="200" value="4">
+      <label>d <span id="paramDVal">10</span></label>
+      <input type="range" id="paramDSlider" min="1" max="200" value="10">
     </div>
     <div class="slider-group">
-      <label>e <span id="paramEVal">8</span></label>
-      <input type="range" id="paramESlider" min="1" max="200" value="8">
+      <label>e <span id="paramEVal">30</span></label>
+      <input type="range" id="paramESlider" min="1" max="200" value="30">
     </div>
     <div class="slider-group">
       <label>h (height param) <span id="paramHVal">15</span></label>
@@ -415,11 +436,11 @@ code:
     <label for="showGradient">Color gradient</label>
   </div>
   <div class="checkbox-group">
-    <input type="checkbox" id="showWalls" checked>
+    <input type="checkbox" id="showWalls">
     <label for="showWalls">Room outline</label>
   </div>
   <div class="checkbox-group">
-    <input type="checkbox" id="showWallGrid" checked>
+    <input type="checkbox" id="showWallGrid">
     <label for="showWallGrid">Room outline grid</label>
   </div>
   <div class="checkbox-group">
@@ -676,8 +697,8 @@ Module.onRuntimeInitialized = async function() {
             this.baseTileSize = 10;
             this.showGradient = false;
             this.showOutlines = true;
-            this.showWalls = true;
-            this.showWallGrid = true;
+            this.showWalls = false;
+            this.showWallGrid = false;
             this.showRegion3Wall = false;
             this.currentPaletteIndex = 0;
             this.borderWidth = 0.8;
@@ -968,6 +989,49 @@ Module.onRuntimeInitialized = async function() {
             }
         }
 
+        // Draw C2 polygon outline aligned with the simulation grid
+        drawPolygonOutline(ctx, centerX, centerY, dx, dy, tileSize, b, c, d, e, h) {
+            const a = b + c + e - d;
+
+            // Define basis vectors matching the draw() method's grid
+            // +x axis (Right-Down)
+            const vx = { x: dx, y: dy };
+            // +y axis (Left-Down)
+            const vy = { x: -dx, y: dy };
+
+            // Start exactly at the grid origin (0,0) - Top corner
+            let cx = centerX;
+            let cy = centerY;
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.lineWidth = this.borderWidth * 2;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+
+            // Helper to move and draw line
+            const segment = (len, dirX, dirY) => {
+                cx += (vx.x * dirX + vy.x * dirY) * len;
+                cy += (vx.y * dirX + vy.y * dirY) * len;
+                ctx.lineTo(cx, cy);
+            };
+
+            // Trace the C2 boundary starting from (0,0)
+            segment(a,  0,  1); // +y for a (Left back edge)
+            segment(a,  1,  0); // +x for a (Bottom edge)
+            segment(b,  0, -1); // -y for b (Right edge up)
+            segment(c, -1,  0); // -x for c (Inward notch)
+            segment(d,  0,  1); // +y for d (Down into notch)
+            segment(e, -1,  0); // -x for e (Further left)
+            segment(e,  0, -1); // -y for e (Upward)
+            segment(d,  1,  0); // +x for d (Rightward)
+            segment(c,  0, -1); // -y for c (Upward)
+            segment(b, -1,  0); // -x for b (Back to origin)
+
+            ctx.closePath();
+            ctx.stroke();
+        }
+
         draw(heights, mask, n, maxHeight) {
             const ctx = this.ctx;
             const palette = this.getCurrentPalette();
@@ -1219,6 +1283,11 @@ Module.onRuntimeInitialized = async function() {
                         }
                     }
                 }
+            }
+
+            // Draw polygon outline when room outline is off
+            if (!this.showWalls) {
+                this.drawPolygonOutline(ctx, centerX, centerY, dx, dy, tileSize, paramB, paramC, paramD, paramE, paramH);
             }
         }
 
@@ -1533,7 +1602,7 @@ Module.onRuntimeInitialized = async function() {
     let is3DView = false;
 
     // Polygon parameters
-    let paramB = 10, paramC = 4, paramD = 4, paramE = 8, paramH = 15;
+    let paramB = 30, paramC = 25, paramD = 10, paramE = 30, paramH = 15;
 
     // UI Elements
     const elements = {
