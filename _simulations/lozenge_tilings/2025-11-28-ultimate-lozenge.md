@@ -307,7 +307,7 @@ code:
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
+    <button id="redoBoundaryBtn" title="Recalculate boundary">Redo Boundary</button>
     <span id="statusBadge" class="status-empty">Empty</span>
   </div>
 </div>
@@ -366,6 +366,7 @@ code:
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <button id="startStopBtn" class="primary" disabled>Start</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
+    <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -1611,6 +1612,12 @@ Module.onRuntimeInitialized = function() {
         draw();
     });
 
+    document.getElementById('redoBoundaryBtn').addEventListener('click', () => {
+        if (activeTriangles.size === 0) return;
+        reinitialize();
+        draw();
+    });
+
     // Zoom controls
     document.getElementById('zoomInBtn').addEventListener('click', () => {
         renderer.zoomAt(renderer.displayWidth / 2, renderer.displayHeight / 2, 1.3);
@@ -1914,13 +1921,8 @@ Module.onRuntimeInitialized = function() {
     });
 
     initPaletteSelector();
-
-    // Generate default hexagon on load
-    const defaultA = parseInt(el.hexAInput.value) || 4;
-    const defaultB = parseInt(el.hexBInput.value) || 3;
-    const defaultC = parseInt(el.hexCInput.value) || 5;
-    activeTriangles = generateHexagon(defaultA, defaultB, defaultC);
-    reinitialize();
+    updateUI();
+    draw();
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
 };

@@ -267,61 +267,79 @@ void computeBoundary() {
         edgeCount[makeOrderedEdge(v3, v1)]++;
     }
 
-    // Boundary edges appear exactly once
-    std::vector<std::pair<Vertex, Vertex>> boundaryEdges;
-    for (const auto& [edge, count] : edgeCount) {
-        if (count == 1) {
-            boundaryEdges.push_back({edge.v1, edge.v2});
-        }
-    }
-
-    if (boundaryEdges.empty()) return;
-
-    // Build adjacency for boundary vertices
-    std::map<std::pair<int,int>, std::vector<std::pair<int,int>>> adj;
+    // Boundary edges appear exactly once - store as directed edges
+    // Use edge key for tracking which edges have been used
     auto toIntPair = [](const Vertex& v) {
         return std::make_pair((int)std::round(v.x * 1000), (int)std::round(v.y * 1000));
     };
-
-    for (const auto& [v1, v2] : boundaryEdges) {
-        auto p1 = toIntPair(v1);
-        auto p2 = toIntPair(v2);
-        adj[p1].push_back(p2);
-        adj[p2].push_back(p1);
-    }
-
-    if (adj.empty()) return;
 
     auto intToVertex = [](const std::pair<int,int>& p) {
         return Vertex{p.first / 1000.0, p.second / 1000.0};
     };
 
-    // Track all visited vertices globally
-    std::set<std::pair<int,int>> globalVisited;
+    using IntPair = std::pair<int,int>;
+    using EdgeKey = std::pair<IntPair, IntPair>;
 
-    // Find ALL boundary loops (outer boundary + holes + disconnected components)
-    for (auto& [startVertex, neighbors] : adj) {
-        if (globalVisited.find(startVertex) != globalVisited.end()) continue;
+    // Build adjacency and track edges
+    std::map<IntPair, std::vector<IntPair>> adj;
+    std::set<EdgeKey> unusedEdges;
 
-        // Start a new boundary loop
+    for (const auto& [edge, count] : edgeCount) {
+        if (count == 1) {
+            auto p1 = toIntPair(edge.v1);
+            auto p2 = toIntPair(edge.v2);
+            adj[p1].push_back(p2);
+            adj[p2].push_back(p1);
+            // Store edge in canonical order
+            if (p1 < p2) {
+                unusedEdges.insert({p1, p2});
+            } else {
+                unusedEdges.insert({p2, p1});
+            }
+        }
+    }
+
+    if (adj.empty()) return;
+
+    // Trace loops by following edges until we return to start
+    while (!unusedEdges.empty()) {
+        // Pick any unused edge to start
+        auto startEdge = *unusedEdges.begin();
+        IntPair start = startEdge.first;
+        IntPair current = start;
+        IntPair prev = {-999999, -999999}; // Invalid marker
+
         std::vector<Vertex> currentBoundary;
-        auto current = startVertex;
-
         currentBoundary.push_back(intToVertex(current));
-        globalVisited.insert(current);
 
-        while (true) {
-            bool found = false;
-            for (const auto& next : adj[current]) {
-                if (globalVisited.find(next) == globalVisited.end()) {
-                    globalVisited.insert(next);
-                    currentBoundary.push_back(intToVertex(next));
-                    current = next;
-                    found = true;
+        bool loopComplete = false;
+        while (!loopComplete) {
+            // Find next vertex - pick any neighbor that forms an unused edge
+            IntPair next = {-999999, -999999};
+            for (const auto& neighbor : adj[current]) {
+                if (neighbor == prev) continue; // Don't go back immediately
+
+                EdgeKey edgeKey = (current < neighbor) ? EdgeKey{current, neighbor} : EdgeKey{neighbor, current};
+                if (unusedEdges.find(edgeKey) != unusedEdges.end()) {
+                    next = neighbor;
+                    unusedEdges.erase(edgeKey);
                     break;
                 }
             }
-            if (!found) break;
+
+            if (next.first == -999999) {
+                // No more edges to follow
+                break;
+            }
+
+            if (next == start && currentBoundary.size() >= 3) {
+                // Loop complete
+                loopComplete = true;
+            } else {
+                currentBoundary.push_back(intToVertex(next));
+                prev = current;
+                current = next;
+            }
         }
 
         if (currentBoundary.size() >= 3) {
