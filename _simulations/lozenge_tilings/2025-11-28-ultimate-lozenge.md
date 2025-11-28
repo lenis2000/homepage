@@ -1536,13 +1536,14 @@ Module.onRuntimeInitialized = function() {
 
             // 3. Coordinate Transformation
             // Maps abstract lattice (n, j, h) to Cartesian (x, y, z)
-            // Using x = n + h and y = j - h ensures that the "vertical drop" vector (1, -1)
+            // Using x = n - h and y = j + h ensures that the "vertical drop" vector (1, -1)
             // maps to a constant (x, y) position, creating perfect vertical walls.
+            // Height is negated (z = -h) to match 2D "empty room" interpretation.
             const to3D = (n, j, h) => {
                 return {
-                    x: n + h,
-                    y: j - h,
-                    z: h
+                    x: h,
+                    y: -n - h,
+                    z: j - h
                 };
             };
 
@@ -1642,8 +1643,8 @@ Module.onRuntimeInitialized = function() {
 
             this.controls.target.set(centerX, centerY, centerZ);
             this.camera.position.set(
-                centerX + size * 1.0,
-                centerY - size * 0.5,
+                centerX - size * 3.0,
+                centerY + size * 1.5,
                 centerZ + size * 1.5
             );
             this.camera.lookAt(centerX, centerY, centerZ);
@@ -1675,7 +1676,7 @@ Module.onRuntimeInitialized = function() {
     let running = false;
 
     // 3D view state
-    let is3DView = false;
+    let is3DView = true;
     let renderer3D = null;
 
     // Lasso state (drag to select)
@@ -2918,8 +2919,18 @@ Module.onRuntimeInitialized = function() {
     });
 
     initPaletteSelector();
+
+    // Pre-make hexagon on load
+    const a = parseInt(el.hexAInput.value) || 4;
+    const b = parseInt(el.hexBInput.value) || 3;
+    const c = parseInt(el.hexCInput.value) || 5;
+    activeTriangles = generateHexagon(a, b, c);
+    reinitialize();
+
+    // Start in 3D view
+    setViewMode(true);
+
     updateUI();
-    draw();
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
 };
