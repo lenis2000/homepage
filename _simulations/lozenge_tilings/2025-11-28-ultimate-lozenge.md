@@ -328,34 +328,6 @@ code:
 <!-- Main controls -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
 
-<!-- Drawing Tools -->
-<div class="control-group">
-  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div class="tool-toggle">
-      <button id="drawBtn" class="active">Draw</button>
-      <button id="eraseBtn">Erase</button>
-    </div>
-    <button id="resetBtn">Clear</button>
-    <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
-    <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="redoBoundaryBtn" title="Recalculate boundary">Redo Boundary</button>
-    <span id="statusBadge" class="status-empty">Empty</span>
-  </div>
-</div>
-
-<!-- View Controls -->
-<div class="control-group">
-  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="zoomInBtn" title="Zoom In">+</button>
-    <button id="zoomOutBtn" title="Zoom Out">−</button>
-    <button id="panLeftBtn" title="Pan Left">←</button>
-    <button id="panRightBtn" title="Pan Right">→</button>
-    <button id="panUpBtn" title="Pan Up">↑</button>
-    <button id="panDownBtn" title="Pan Down">↓</button>
-    <button id="resetViewBtn" title="Reset View">Reset View</button>
-  </div>
-</div>
-
 <!-- Preset Shapes -->
 <div class="control-group">
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -363,36 +335,6 @@ code:
     <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30"></span>
-  </div>
-</div>
-
-<!-- Display Options -->
-<div class="control-group">
-  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <div class="view-toggle">
-      <button id="lozengeViewBtn" class="active">Lozenge</button>
-      <button id="dimerViewBtn">Dimer</button>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
-      <select id="palette-select" style="width: 120px;"></select>
-      <button id="next-palette" style="padding: 0 8px;">&#9654;</button>
-    </div>
-    <button id="permuteColors" title="Permute colors">Permute</button>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Outline:</span>
-      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="10" step="0.1" class="param-input" style="width: 50px;">
-      <span style="font-size: 11px; color: #888;">%</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Border:</span>
-      <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
-      <span style="font-size: 11px; color: #888;">%</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="showGridCheckbox" checked>
-      <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
-    </div>
   </div>
 </div>
 
@@ -429,6 +371,77 @@ code:
 
 <!-- Canvas -->
 <canvas id="lozenge-canvas"></canvas>
+
+<!-- Controls below canvas -->
+<div style="max-width: 900px; margin: 0 auto; padding: 8px;">
+
+<!-- Drawing Tools -->
+<div class="control-group">
+  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div class="tool-toggle">
+      <button id="drawBtn" class="active">Draw</button>
+      <button id="eraseBtn">Erase</button>
+    </div>
+    <div class="tool-toggle">
+      <button id="lassoFillBtn" title="Drag to select area">Lasso Fill</button>
+      <button id="lassoEraseBtn" title="Drag to select area">Lasso Erase</button>
+    </div>
+    <div class="tool-toggle">
+      <button id="pathFillBtn" title="Click vertices, double-click to close">Path Fill</button>
+      <button id="pathEraseBtn" title="Click vertices, double-click to close">Path Erase</button>
+    </div>
+    <button id="resetBtn">Clear</button>
+    <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
+    <button id="redoBoundaryBtn" title="Recalculate boundary">Redo Boundary</button>
+    <span id="statusBadge" class="status-empty">Empty</span>
+  </div>
+</div>
+
+<!-- View Controls -->
+<div class="control-group">
+  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <button id="zoomInBtn" title="Zoom In">+</button>
+    <button id="zoomOutBtn" title="Zoom Out">−</button>
+    <button id="panLeftBtn" title="Pan Left">←</button>
+    <button id="panRightBtn" title="Pan Right">→</button>
+    <button id="panUpBtn" title="Pan Up">↑</button>
+    <button id="panDownBtn" title="Pan Down">↓</button>
+    <button id="resetViewBtn" title="Reset View">Reset View</button>
+  </div>
+</div>
+
+<!-- Display Options -->
+<div class="control-group">
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <div class="view-toggle">
+      <button id="lozengeViewBtn" class="active">Lozenge</button>
+      <button id="dimerViewBtn">Dimer</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
+      <select id="palette-select" style="width: 120px;"></select>
+      <button id="next-palette" style="padding: 0 8px;">&#9654;</button>
+    </div>
+    <button id="permuteColors" title="Permute colors">Permute</button>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Outline:</span>
+      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="10" step="0.1" class="param-input" style="width: 50px;">
+      <span style="font-size: 11px; color: #888;">%</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Border:</span>
+      <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
+      <span style="font-size: 11px; color: #888;">%</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="showGridCheckbox" checked>
+      <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
+    </div>
+  </div>
+</div>
+
+</div>
 
 <!-- Export & Legend -->
 <details>
@@ -1191,6 +1204,87 @@ Module.onRuntimeInitialized = function() {
             ctx.stroke();
         }
 
+        drawPath(ctx, pathPoints, centerX, centerY, scale, isFillMode) {
+            if (pathPoints.length === 0) return;
+
+            const [sx, sy] = this.toCanvas(pathPoints[0].x, pathPoints[0].y, centerX, centerY, scale);
+
+            // Draw vertices as circles
+            ctx.fillStyle = isFillMode ? '#4CAF50' : '#f44336';
+            for (let i = 0; i < pathPoints.length; i++) {
+                const [px, py] = this.toCanvas(pathPoints[i].x, pathPoints[i].y, centerX, centerY, scale);
+                ctx.beginPath();
+                ctx.arc(px, py, i === 0 ? 8 : 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (pathPoints.length < 2) return;
+
+            // Draw path lines
+            ctx.strokeStyle = isFillMode ? '#4CAF50' : '#f44336';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            for (let i = 1; i < pathPoints.length; i++) {
+                const [px, py] = this.toCanvas(pathPoints[i].x, pathPoints[i].y, centerX, centerY, scale);
+                ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Draw closing line back to start (dashed preview)
+            if (pathPoints.length >= 3) {
+                ctx.setLineDash([5, 5]);
+                const [lastX, lastY] = this.toCanvas(pathPoints[pathPoints.length - 1].x, pathPoints[pathPoints.length - 1].y, centerX, centerY, scale);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(sx, sy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Fill with semi-transparent color
+                ctx.fillStyle = isFillMode ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)';
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                for (let i = 1; i < pathPoints.length; i++) {
+                    const [px, py] = this.toCanvas(pathPoints[i].x, pathPoints[i].y, centerX, centerY, scale);
+                    ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        drawLasso(ctx, lassoPoints, centerX, centerY, scale, isFillMode) {
+            if (lassoPoints.length < 2) return;
+            ctx.strokeStyle = isFillMode ? '#4CAF50' : '#f44336';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            const [sx, sy] = this.toCanvas(lassoPoints[0].x, lassoPoints[0].y, centerX, centerY, scale);
+            ctx.moveTo(sx, sy);
+            for (let i = 1; i < lassoPoints.length; i++) {
+                const [px, py] = this.toCanvas(lassoPoints[i].x, lassoPoints[i].y, centerX, centerY, scale);
+                ctx.lineTo(px, py);
+            }
+            ctx.lineTo(sx, sy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Fill with semi-transparent color
+            if (lassoPoints.length >= 3) {
+                ctx.fillStyle = isFillMode ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)';
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                for (let i = 1; i < lassoPoints.length; i++) {
+                    const [px, py] = this.toCanvas(lassoPoints[i].x, lassoPoints[i].y, centerX, centerY, scale);
+                    ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
         setPalette(index) {
             this.currentPaletteIndex = ((index % this.colorPalettes.length) + this.colorPalettes.length) % this.colorPalettes.length;
             this.colorPermutation = 0;
@@ -1225,8 +1319,18 @@ Module.onRuntimeInitialized = function() {
 
     let activeTriangles = new Map();
     let isDrawing = false;
+    // Tools: 'draw', 'erase', 'lassoFill', 'lassoErase', 'pathFill', 'pathErase', 'belowFill', 'belowErase'
     let currentTool = 'draw';
     let running = false;
+
+    // Lasso state (drag to select)
+    let lassoPoints = []; // Array of {x, y} in world coordinates
+    let isLassoing = false;
+
+    // Path state (click to place vertices)
+    let pathPoints = []; // Array of {x, y} in world coordinates
+    let isDrawingPath = false;
+
     let stepsPerSecond = 100;
     let animationId = null;
     let lastFrameTime = performance.now();
@@ -1237,6 +1341,10 @@ Module.onRuntimeInitialized = function() {
     const el = {
         drawBtn: document.getElementById('drawBtn'),
         eraseBtn: document.getElementById('eraseBtn'),
+        lassoFillBtn: document.getElementById('lassoFillBtn'),
+        lassoEraseBtn: document.getElementById('lassoEraseBtn'),
+        pathFillBtn: document.getElementById('pathFillBtn'),
+        pathEraseBtn: document.getElementById('pathEraseBtn'),
         resetBtn: document.getElementById('resetBtn'),
         undoBtn: document.getElementById('undoBtn'),
         redoBtn: document.getElementById('redoBtn'),
@@ -1316,6 +1424,20 @@ Module.onRuntimeInitialized = function() {
 
     function draw() {
         renderer.draw(sim, activeTriangles, isValid);
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        const tool = getEffectiveTool();
+
+        // Draw lasso overlay if active
+        if (lassoPoints.length > 0) {
+            const isFillMode = tool === 'lassoFill';
+            renderer.drawLasso(renderer.ctx, lassoPoints, centerX, centerY, scale, isFillMode);
+        }
+
+        // Draw path overlay if active
+        if (pathPoints.length > 0) {
+            const isFillMode = tool === 'pathFill';
+            renderer.drawPath(renderer.ctx, pathPoints, centerX, centerY, scale, isFillMode);
+        }
     }
 
     // Track if simulation should auto-restart when shape becomes valid
@@ -1460,6 +1582,143 @@ Module.onRuntimeInitialized = function() {
         return false;
     }
 
+    function completePath(isFillMode) {
+        if (pathPoints.length < 3) {
+            pathPoints = [];
+            isDrawingPath = false;
+            return false;
+        }
+
+        saveState();
+
+        // Find bounding box of path in world coordinates
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const p of pathPoints) {
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+        }
+
+        // Calculate n and j ranges for the triangular lattice
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        let changed = false;
+
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                // Check black triangle (type 1, right-facing)
+                const blackCentroid = getRightTriangleCentroid(n, j);
+                if (pointInPolygonPreset(blackCentroid.x, blackCentroid.y, pathPoints)) {
+                    const key = `${n},${j},1`;
+                    if (isFillMode) {
+                        if (!activeTriangles.has(key)) {
+                            activeTriangles.set(key, { n, j, type: 1 });
+                            changed = true;
+                        }
+                    } else {
+                        if (activeTriangles.has(key)) {
+                            activeTriangles.delete(key);
+                            changed = true;
+                        }
+                    }
+                }
+
+                // Check white triangle (type 2, left-facing)
+                const whiteCentroid = getLeftTriangleCentroid(n, j);
+                if (pointInPolygonPreset(whiteCentroid.x, whiteCentroid.y, pathPoints)) {
+                    const key = `${n},${j},2`;
+                    if (isFillMode) {
+                        if (!activeTriangles.has(key)) {
+                            activeTriangles.set(key, { n, j, type: 2 });
+                            changed = true;
+                        }
+                    } else {
+                        if (activeTriangles.has(key)) {
+                            activeTriangles.delete(key);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        pathPoints = [];
+        isDrawingPath = false;
+        return changed;
+    }
+
+    function completeLasso(isFillMode) {
+        if (lassoPoints.length < 3) {
+            lassoPoints = [];
+            isLassoing = false;
+            return false;
+        }
+
+        saveState();
+
+        // Find bounding box
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const p of lassoPoints) {
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+        }
+
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        let changed = false;
+
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                const blackCentroid = getRightTriangleCentroid(n, j);
+                if (pointInPolygonPreset(blackCentroid.x, blackCentroid.y, lassoPoints)) {
+                    const key = `${n},${j},1`;
+                    if (isFillMode) {
+                        if (!activeTriangles.has(key)) {
+                            activeTriangles.set(key, { n, j, type: 1 });
+                            changed = true;
+                        }
+                    } else {
+                        if (activeTriangles.has(key)) {
+                            activeTriangles.delete(key);
+                            changed = true;
+                        }
+                    }
+                }
+
+                const whiteCentroid = getLeftTriangleCentroid(n, j);
+                if (pointInPolygonPreset(whiteCentroid.x, whiteCentroid.y, lassoPoints)) {
+                    const key = `${n},${j},2`;
+                    if (isFillMode) {
+                        if (!activeTriangles.has(key)) {
+                            activeTriangles.set(key, { n, j, type: 2 });
+                            changed = true;
+                        }
+                    } else {
+                        if (activeTriangles.has(key)) {
+                            activeTriangles.delete(key);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        lassoPoints = [];
+        isLassoing = false;
+        return changed;
+    }
+
     function handleInput(e) {
         const rect = canvas.getBoundingClientRect();
         const mx = (e.clientX || e.touches[0].clientX) - rect.left;
@@ -1506,11 +1765,26 @@ Module.onRuntimeInitialized = function() {
     });
 
     function getEffectiveTool() {
-        // Cmd-hold temporarily switches draw<->erase
+        // Cmd-hold temporarily switches fill<->erase variants
         if (cmdHeld) {
-            return currentTool === 'draw' ? 'erase' : 'draw';
+            if (currentTool === 'draw') return 'erase';
+            if (currentTool === 'erase') return 'draw';
+            if (currentTool === 'lassoFill') return 'lassoErase';
+            if (currentTool === 'lassoErase') return 'lassoFill';
+            if (currentTool === 'pathFill') return 'pathErase';
+            if (currentTool === 'pathErase') return 'pathFill';
         }
         return currentTool;
+    }
+
+    function isLassoTool() {
+        const tool = getEffectiveTool();
+        return tool === 'lassoFill' || tool === 'lassoErase';
+    }
+
+    function isPathTool() {
+        const tool = getEffectiveTool();
+        return tool === 'pathFill' || tool === 'pathErase';
     }
 
     canvas.addEventListener('mousedown', (e) => {
@@ -1527,10 +1801,37 @@ Module.onRuntimeInitialized = function() {
             return;
         }
 
-        // Left-click = draw/erase
-        isDrawing = true;
-        saveState();
-        handleInput(e);
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+
+        // Left-click - handle different tool types
+        if (isLassoTool()) {
+            // Lasso: start dragging
+            isLassoing = true;
+            lassoPoints = [worldPos];
+            draw();
+        } else if (isPathTool()) {
+            // Path: click to add vertices
+            if (pathPoints.length >= 3) {
+                const startPoint = pathPoints[0];
+                const distToStart = Math.hypot(worldPos.x - startPoint.x, worldPos.y - startPoint.y);
+                if (distToStart < 0.5) {
+                    const tool = getEffectiveTool();
+                    const changed = completePath(tool === 'pathFill');
+                    if (changed) reinitialize();
+                    else draw();
+                    return;
+                }
+            }
+            isDrawingPath = true;
+            pathPoints.push(worldPos);
+            draw();
+        } else {
+            // Regular draw/erase
+            saveState();
+            isDrawing = true;
+            handleInput(e);
+        }
     });
 
     canvas.addEventListener('mousemove', (e) => {
@@ -1548,12 +1849,33 @@ Module.onRuntimeInitialized = function() {
             return;
         }
 
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+
+        if (isLassoing) {
+            const lastPoint = lassoPoints[lassoPoints.length - 1];
+            const dist = Math.hypot(worldPos.x - lastPoint.x, worldPos.y - lastPoint.y);
+            if (dist > 0.1) {
+                lassoPoints.push(worldPos);
+                draw();
+            }
+            return;
+        }
+
         if (isDrawing) handleInput(e);
     });
 
     canvas.addEventListener('mouseup', (e) => {
+        if (isLassoing) {
+            const tool = getEffectiveTool();
+            const changed = completeLasso(tool === 'lassoFill');
+            if (changed) reinitialize();
+            else draw();
+        }
+
         isDrawing = false;
         isPanning = false;
+        isLassoing = false;
         canvas.classList.remove('panning');
     });
 
@@ -1578,9 +1900,36 @@ Module.onRuntimeInitialized = function() {
             lastPanX = (t1.clientX + t2.clientX) / 2;
             lastPanY = (t1.clientY + t2.clientY) / 2;
         } else {
-            isDrawing = true;
-            saveState();
-            handleInput(e);
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.touches[0].clientX - rect.left;
+            const my = e.touches[0].clientY - rect.top;
+            const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+            const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+
+            if (isLassoTool()) {
+                isLassoing = true;
+                lassoPoints = [worldPos];
+                draw();
+            } else if (isPathTool()) {
+                if (pathPoints.length >= 3) {
+                    const startPoint = pathPoints[0];
+                    const distToStart = Math.hypot(worldPos.x - startPoint.x, worldPos.y - startPoint.y);
+                    if (distToStart < 0.5) {
+                        const tool = getEffectiveTool();
+                        const changed = completePath(tool === 'pathFill');
+                        if (changed) reinitialize();
+                        else draw();
+                        return;
+                    }
+                }
+                isDrawingPath = true;
+                pathPoints.push(worldPos);
+                draw();
+            } else {
+                saveState();
+                isDrawing = true;
+                handleInput(e);
+            }
         }
     }, { passive: false });
 
@@ -1614,13 +1963,38 @@ Module.onRuntimeInitialized = function() {
             return;
         }
 
+        if (e.touches.length === 1) {
+            const mx = e.touches[0].clientX - rect.left;
+            const my = e.touches[0].clientY - rect.top;
+            const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+            const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+
+            if (isLassoing) {
+                const lastPoint = lassoPoints[lassoPoints.length - 1];
+                const dist = Math.hypot(worldPos.x - lastPoint.x, worldPos.y - lastPoint.y);
+                if (dist > 0.1) {
+                    lassoPoints.push(worldPos);
+                    draw();
+                }
+                return;
+            }
+        }
+
         if (isDrawing) handleInput(e);
     }, { passive: false });
 
     canvas.addEventListener('touchend', (e) => {
         if (e.touches.length === 0) {
+            if (isLassoing) {
+                const tool = getEffectiveTool();
+                const changed = completeLasso(tool === 'lassoFill');
+                if (changed) reinitialize();
+                else draw();
+            }
+
             isDrawing = false;
             isPanning = false;
+            isLassoing = false;
             touchStartDist = 0;
         } else if (e.touches.length === 1) {
             // Switched from two-finger to one
@@ -1632,17 +2006,30 @@ Module.onRuntimeInitialized = function() {
     // ========================================================================
     // UI EVENT HANDLERS
     // ========================================================================
-    el.drawBtn.addEventListener('click', () => {
-        currentTool = 'draw';
-        el.drawBtn.classList.add('active');
-        el.eraseBtn.classList.remove('active');
-    });
+    function setTool(tool) {
+        // Clear any in-progress operations when switching tools
+        if (lassoPoints.length > 0 || pathPoints.length > 0) {
+            lassoPoints = [];
+            pathPoints = [];
+            isLassoing = false;
+            isDrawingPath = false;
+            draw();
+        }
+        currentTool = tool;
+        el.drawBtn.classList.toggle('active', tool === 'draw');
+        el.eraseBtn.classList.toggle('active', tool === 'erase');
+        el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
+        el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
+        el.pathFillBtn.classList.toggle('active', tool === 'pathFill');
+        el.pathEraseBtn.classList.toggle('active', tool === 'pathErase');
+    }
 
-    el.eraseBtn.addEventListener('click', () => {
-        currentTool = 'erase';
-        el.eraseBtn.classList.add('active');
-        el.drawBtn.classList.remove('active');
-    });
+    el.drawBtn.addEventListener('click', () => setTool('draw'));
+    el.eraseBtn.addEventListener('click', () => setTool('erase'));
+    el.lassoFillBtn.addEventListener('click', () => setTool('lassoFill'));
+    el.lassoEraseBtn.addEventListener('click', () => setTool('lassoErase'));
+    el.pathFillBtn.addEventListener('click', () => setTool('pathFill'));
+    el.pathEraseBtn.addEventListener('click', () => setTool('pathErase'));
 
     el.resetBtn.addEventListener('click', () => {
         saveState();
@@ -1739,6 +2126,26 @@ Module.onRuntimeInitialized = function() {
         if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
             e.preventDefault();
             el.redoBtn.click();
+        }
+        // Escape to cancel any in-progress drawing
+        if (e.key === 'Escape') {
+            if (lassoPoints.length > 0 || pathPoints.length > 0) {
+                lassoPoints = [];
+                pathPoints = [];
+                isLassoing = false;
+                isDrawingPath = false;
+                draw();
+            }
+        }
+    });
+
+    // Double-click to close path
+    canvas.addEventListener('dblclick', (e) => {
+        if (isPathTool() && pathPoints.length >= 3) {
+            const tool = getEffectiveTool();
+            const changed = completePath(tool === 'pathFill');
+            if (changed) reinitialize();
+            else draw();
         }
     });
 
