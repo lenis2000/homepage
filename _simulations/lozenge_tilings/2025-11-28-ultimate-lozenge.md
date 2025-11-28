@@ -10,6 +10,36 @@ code:
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
 ---
 
+<details id="about-simulation-details">
+<summary>About this simulation</summary>
+<div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
+
+<p>This simulator generates <strong>uniformly random lozenge tilings</strong> of arbitrary polygonal regions on the triangular lattice.</p>
+
+<p><strong>How to use:</strong></p>
+<ul>
+  <li><strong>Draw mode</strong>: Click or drag on the triangular grid to add triangles to your region</li>
+  <li><strong>Erase mode</strong>: Remove triangles from your region</li>
+  <li><strong>Hexagon preset</strong>: Quickly generate a standard hexagonal region with sides (a,b,c,a,b,c)</li>
+  <li><strong>2x Region</strong>: Double the size of your current region while preserving its shape</li>
+  <li><strong>Make Tileable</strong>: If your region is invalid (unequal black/white triangles), this removes the minimum number of triangles to make it tileable using maximum bipartite matching</li>
+</ul>
+
+<p>A region is <strong>tileable</strong> (valid) if and only if it has equal numbers of black and white triangles AND they can be perfectly matched. The simulator uses <strong>Dinic's maximum flow algorithm</strong> to find a perfect matching when one exists.</p>
+
+<p><strong>Sampling methods:</strong></p>
+<ul>
+  <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local "flips" of three lozenges around hexagonal vertices. Converges to the uniform distribution over time. The <strong>q parameter</strong> biases the distribution toward higher (q&gt;1) or lower (q&lt;1) volume configurations.</li>
+  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce.</li>
+</ul>
+
+<p>The simulation runs entirely in your browser using WebAssembly.</p>
+
+</div>
+</details>
+
+---
+
 <style>
   .control-group {
     background: #f5f5f5;
