@@ -668,46 +668,24 @@ Module.onRuntimeInitialized = function() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    // Convert world coordinates to lattice (n, j) coordinates
-    function worldToLattice(x, y) {
-        const n = x;
-        const j = (y - slope * n) / deltaC;
-        return { n, j };
-    }
+    // Double the mesh by regenerating hexagon with 2x parameters
+    // Store current hexagon parameters
+    let currentHexParams = { a: 4, b: 3, c: 5 };
 
-    // Scale mesh by scaling boundary in LATTICE coordinates
     function doubleMesh(triangles) {
         if (triangles.size === 0) return new Map();
 
-        // Use the boundary computed by WASM
-        if (!sim.boundaries || sim.boundaries.length === 0) {
-            console.warn('No boundary available for scaling');
-            return triangles;
-        }
+        // Double the hexagon parameters and regenerate
+        currentHexParams.a *= 2;
+        currentHexParams.b *= 2;
+        currentHexParams.c *= 2;
 
-        const boundary = sim.boundaries[0];
-        if (boundary.length < 3) return triangles;
+        // Update the input fields to reflect new values
+        el.hexAInput.value = currentHexParams.a;
+        el.hexBInput.value = currentHexParams.b;
+        el.hexCInput.value = currentHexParams.c;
 
-        // Convert boundary to lattice coordinates
-        const latticeVerts = boundary.map(v => worldToLattice(v.x, v.y));
-
-        // Find centroid in lattice space
-        let cenN = 0, cenJ = 0;
-        for (const v of latticeVerts) { cenN += v.n; cenJ += v.j; }
-        cenN /= latticeVerts.length;
-        cenJ /= latticeVerts.length;
-
-        // Scale in lattice space by 2x around centroid
-        const scaledLattice = latticeVerts.map(v => ({
-            n: cenN + (v.n - cenN) * 2,
-            j: cenJ + (v.j - cenJ) * 2
-        }));
-
-        // Convert back to world coordinates
-        const scaledBoundary = scaledLattice.map(v => getVertex(v.n, v.j));
-
-        // Fill scaled boundary with triangles
-        return generateTrianglesInPolygon(scaledBoundary);
+        return generateHexagon(currentHexParams.a, currentHexParams.b, currentHexParams.c);
     }
 
     // ========================================================================
@@ -1583,6 +1561,8 @@ Module.onRuntimeInitialized = function() {
         const a = parseInt(el.hexAInput.value) || 4;
         const b = parseInt(el.hexBInput.value) || 3;
         const c = parseInt(el.hexCInput.value) || 5;
+        // Track current hexagon parameters for 2x scaling
+        currentHexParams = { a, b, c };
         activeTriangles = generateHexagon(a, b, c);
         reinitialize();
     });
@@ -1838,6 +1818,7 @@ Module.onRuntimeInitialized = function() {
     const defaultA = parseInt(el.hexAInput.value) || 4;
     const defaultB = parseInt(el.hexBInput.value) || 3;
     const defaultC = parseInt(el.hexCInput.value) || 5;
+    currentHexParams = { a: defaultA, b: defaultB, c: defaultC };
     activeTriangles = generateHexagon(defaultA, defaultB, defaultC);
     reinitialize();
 
