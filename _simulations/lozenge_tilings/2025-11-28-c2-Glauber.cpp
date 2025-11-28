@@ -428,12 +428,12 @@ char* initPolygon(int b, int c, int d, int e, int h) {
     findTrianglesInPolygon();
     generateInitialDimerCovering();
 
-    // Count dimer types
-    int type0 = 0, type1 = 0, type2 = 0;
+    // Calculate initial volume
+    long long volume = 0;
     for (const auto& dm : currentDimers) {
-        if (dm.type == 0) type0++;
-        else if (dm.type == 1) type1++;
-        else if (dm.type == 2) type2++;
+        if (dm.type == 0) {
+            volume += dm.blackN;
+        }
     }
 
     std::string json = "{\"status\":\"initialized\""
@@ -447,9 +447,7 @@ char* initPolygon(int b, int c, int d, int e, int h) {
         ",\"whiteCount\":" + std::to_string(whiteTriangles.size()) +
         ",\"dimerCount\":" + std::to_string(currentDimers.size()) +
         ",\"vertexCount\":" + std::to_string(triangularVertices.size()) +
-        ",\"type0\":" + std::to_string(type0) +
-        ",\"type1\":" + std::to_string(type1) +
-        ",\"type2\":" + std::to_string(type2) +
+        ",\"volume\":" + std::to_string(volume) +
         "}";
 
     char* out = (char*)malloc(json.size() + 1);
@@ -461,20 +459,18 @@ EMSCRIPTEN_KEEPALIVE
 char* performGlauberSteps(int numSteps) {
     performGlauberStepsInternal(numSteps);
 
-    // Count dimer types
-    int type0 = 0, type1 = 0, type2 = 0;
+    // Calculate volume (sum of blackN for type 0 lozenges - horizontal faces)
+    long long volume = 0;
     for (const auto& dm : currentDimers) {
-        if (dm.type == 0) type0++;
-        else if (dm.type == 1) type1++;
-        else if (dm.type == 2) type2++;
+        if (dm.type == 0) {
+            volume += dm.blackN;
+        }
     }
 
     std::string json = "{\"status\":\"complete\""
         ",\"totalSteps\":" + std::to_string(totalSteps) +
         ",\"flipCount\":" + std::to_string(flipCount) +
-        ",\"type0\":" + std::to_string(type0) +
-        ",\"type1\":" + std::to_string(type1) +
-        ",\"type2\":" + std::to_string(type2) +
+        ",\"volume\":" + std::to_string(volume) +
         "}";
 
     char* out = (char*)malloc(json.size() + 1);
