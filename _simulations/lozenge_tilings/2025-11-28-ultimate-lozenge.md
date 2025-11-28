@@ -671,67 +671,124 @@ Module.onRuntimeInitialized = function() {
     // Convert world coordinates to lattice (n, j) - boundary vertices are at integer lattice points
     function worldToLattice(x, y) {
         const n = Math.round(x);
-        const j = Math.round((y - slope * x) / deltaC);
+        const j = Math.round((y - slope * n) / deltaC);
         return { n, j };
     }
 
-    // Double mesh: trace boundaries, double in lattice space, retrace on grid
+    // Scale mesh by scaling ALL boundaries (including holes) ensuring INTEGER LATTICE alignment
     function doubleMesh(triangles) {
         if (triangles.size === 0) return new Map();
 
+        // 1. Safety Check: We need valid boundaries from the WASM engine
+        // The simulation MUST be valid (have boundaries) to be scaled.
         if (!sim.boundaries || sim.boundaries.length === 0) {
-            console.warn('No boundary available');
+            console.warn('No valid boundary available. The shape must be valid (tilable) to be doubled.');
             return triangles;
         }
 
-        // 1. Convert all boundaries to integer lattice coords
-        const latticeBoundaries = sim.boundaries.map(b =>
-            b.map(v => worldToLattice(v.x, v.y))
-        );
-
-        // 2. Find outer boundary (largest) and compute its centroid
+        // 2. Topology Analysis: Distinguish Outer Boundary from Holes
+        // We assume the Outer Boundary is the one with the largest bounding box diagonal.
         let outerIdx = 0;
-        let maxArea = -1;
+        let maxDiag = -1;
+
+        // Convert all boundaries from World (x,y) to Lattice (n,j) integers
+        const latticeBoundaries = sim.boundaries.map(b => b.map(v => worldToLattice(v.x, v.y)));
+
         latticeBoundaries.forEach((b, i) => {
-            let minN = Infinity, maxN = -Infinity, minJ = Infinity, maxJ = -Infinity;
-            for (const v of b) {
-                minN = Math.min(minN, v.n); maxN = Math.max(maxN, v.n);
-                minJ = Math.min(minJ, v.j); maxJ = Math.max(maxJ, v.j);
+            let mn = Infinity, mxn = -Infinity, mj = Infinity, mxj = -Infinity;
+            for(const v of b) {
+                mn = Math.min(mn, v.n); mxn = Math.max(mxn, v.n);
+                mj = Math.min(mj, v.j); mxj = Math.max(mxj, v.j);
             }
-            const area = (maxN - minN) * (maxJ - minJ);
-            if (area > maxArea) { maxArea = area; outerIdx = i; }
+            const diag = (mxn - mn) ** 2 + (mxj - mj) ** 2;
+            if (diag > maxDiag) {
+                maxDiag = diag;
+                outerIdx = i;
+            }
         });
 
-        const outer = latticeBoundaries[outerIdx];
+        // 3. Integer Anchoring: Calculate the Scaling Origin
+        // CRITICAL: We calculate the centroid, but ROUND it to the nearest integer.
+        // This ensures that Integer + (Integer - Integer)*2 = Integer.
+        const outerLattice = latticeBoundaries[outerIdx];
         let cenN = 0, cenJ = 0;
-        for (const v of outer) { cenN += v.n; cenJ += v.j; }
-        cenN /= outer.length;
-        cenJ /= outer.length;
+        for (const v of outerLattice) { cenN += v.n; cenJ += v.j; }
 
-        // 3. Double all boundaries in lattice space (scale by 2 around centroid)
-        const doubleBoundary = (b) => b.map(v => {
-            const newN = Math.round(cenN + (v.n - cenN) * 2);
-            const newJ = Math.round(cenJ + (v.j - cenJ) * 2);
-            return getVertex(newN, newJ);
+        const anchorN = Math.round(cenN / outerLattice.length);
+        const anchorJ = Math.round(cenJ / outerLattice.length);
+
+        // 4. Transformation: Scale all boundaries relative to the Anchor
+        const scaledBoundaries = latticeBoundaries.map(b => {
+             // Scale in Lattice Space, then convert to World Space for the point-in-poly check
+             return b.map(v => {
+                 // The scaling formula: New = Anchor + (Old - Anchor) * 2
+                 const newN = anchorN + (v.n - anchorN) * 2;
+                 const newJ = anchorJ + (v.j - anchorJ) * 2;
+                 return getVertex(newN, newJ);
+             });
         });
 
-        const scaledOuter = doubleBoundary(outer);
-        const scaledHoles = latticeBoundaries
-            .filter((_, i) => i !== outerIdx)
-            .map(doubleBoundary);
+        const scaledOuter = scaledBoundaries[outerIdx];
+        const scaledHoles = scaledBoundaries.filter((_, i) => i !== outerIdx);
 
-        // 4. Fill outer boundary
-        const result = generateTrianglesInPolygon(scaledOuter);
+        // 5. Rasterization: Fill the new geometry
+        // Determine the scan range (Bounding Box of the new scaled outer boundary)
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const v of scaledOuter) {
+            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        }
 
-        // 5. Remove triangles inside holes
-        for (const hole of scaledHoles) {
-            const holeTriangles = generateTrianglesInPolygon(hole);
-            for (const key of holeTriangles.keys()) {
-                result.delete(key);
+        const newTriangles = new Map();
+
+        // Add padding to ensuring we catch the jagged edges of the boundary
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+
+        // Heuristic for J range based on C++ slope constants
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+
+                // --- Check Type 1 (Black/Right-Facing) ---
+                const rc = getRightTriangleCentroid(n, j);
+                if (pointInPolygonPreset(rc.x, rc.y, scaledOuter)) {
+                    // Inclusion Logic: Must be in Outer AND NOT in any Hole
+                    let inHole = false;
+                    for (const hole of scaledHoles) {
+                        if (pointInPolygonPreset(rc.x, rc.y, hole)) {
+                            inHole = true;
+                            break;
+                        }
+                    }
+                    if (!inHole) {
+                        const key = `${n},${j},1`;
+                        newTriangles.set(key, { n, j, type: 1 });
+                    }
+                }
+
+                // --- Check Type 2 (White/Left-Facing) ---
+                const lc = getLeftTriangleCentroid(n, j);
+                if (pointInPolygonPreset(lc.x, lc.y, scaledOuter)) {
+                    let inHole = false;
+                    for (const hole of scaledHoles) {
+                        if (pointInPolygonPreset(lc.x, lc.y, hole)) {
+                            inHole = true;
+                            break;
+                        }
+                    }
+                    if (!inHole) {
+                        const key = `${n},${j},2`;
+                        newTriangles.set(key, { n, j, type: 2 });
+                    }
+                }
             }
         }
 
-        return result;
+        return newTriangles;
     }
 
     // ========================================================================
