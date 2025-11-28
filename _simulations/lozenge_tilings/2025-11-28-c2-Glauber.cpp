@@ -20,6 +20,7 @@ C++ translation of the working JavaScript implementation for:
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <queue>
 #include <string>
 #include <cmath>
 #include <cstdlib>
@@ -78,6 +79,7 @@ inline Vertex getLeftTriangleCentroid(int n, int j) {
 
 // Point in polygon test (ray casting, exactly as in JS)
 bool pointInPolygon(double x, double y, const std::vector<Vertex>& polygon) {
+    if (polygon.size() < 3) return false;
     bool inside = false;
     for (size_t i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
         double xi = polygon[i].x, yi = polygon[i].y;
@@ -98,6 +100,26 @@ int B = 7, C = 6, D = 3, E = 8, H = 6;
 int A = 18;
 
 std::vector<Vertex> polygonBoundary;
+
+// Dense grid state for O(1) dimer lookups
+// dimerGrid stores dimer type (0,1,2) or -1 if black triangle has no dimer
+std::vector<int8_t> dimerGrid;
+int gridMinN, gridMaxN, gridMinJ, gridMaxJ;
+size_t gridStrideJ; // number of j values per n
+
+inline size_t getGridIdx(int n, int j) {
+    return static_cast<size_t>(n - gridMinN) * gridStrideJ + static_cast<size_t>(j - gridMinJ);
+}
+
+// Get white triangle coords from black triangle and dimer type
+inline void getWhiteFromType(int blackN, int blackJ, int type, int& whiteN, int& whiteJ) {
+    switch (type) {
+        case 0: whiteN = blackN; whiteJ = blackJ; break;      // diagonal
+        case 1: whiteN = blackN; whiteJ = blackJ - 1; break;  // bottom
+        case 2: whiteN = blackN - 1; whiteJ = blackJ; break;  // left vertical
+        default: whiteN = blackN; whiteJ = blackJ; break;
+    }
+}
 
 // Triangle storage
 struct Triangle {
@@ -203,8 +225,21 @@ void findTrianglesInPolygon() {
 
     int searchMinN = static_cast<int>(std::floor(minX)) - 2;
     int searchMaxN = static_cast<int>(std::ceil(maxX)) + 2;
-    int searchMinJ = static_cast<int>(std::floor(minY / deltaC)) - searchMaxN - 5;
-    int searchMaxJ = static_cast<int>(std::ceil(maxY / deltaC)) + searchMaxN + 5;
+    // J bounds need padding proportional to the N range to account for the slanted coordinate system
+    int nRange = searchMaxN - searchMinN;
+    int searchMinJ = static_cast<int>(std::floor(minY / deltaC)) - nRange - 5;
+    int searchMaxJ = static_cast<int>(std::ceil(maxY / deltaC)) + nRange + 5;
+
+    // Initialize grid bounds for O(1) lookups
+    gridMinN = searchMinN;
+    gridMaxN = searchMaxN;
+    gridMinJ = searchMinJ;
+    gridMaxJ = searchMaxJ;
+    gridStrideJ = static_cast<size_t>(gridMaxJ - gridMinJ + 1);
+
+    // Allocate and initialize grid to -1 (no dimer)
+    size_t gridSize = static_cast<size_t>(gridMaxN - gridMinN + 1) * gridStrideJ;
+    dimerGrid.assign(gridSize, -1);
 
     for (int n = searchMinN; n <= searchMaxN; n++) {
         for (int jj = searchMinJ; jj <= searchMaxJ; jj++) {
@@ -241,9 +276,11 @@ void getRightTriangleNeighbors(int n, int j, int neighbors[3][2]) {
     neighbors[2][0] = n - 1; neighbors[2][1] = j;      // left vertical edge
 }
 
-// Generate initial dimer covering using Hungarian algorithm (exactly as in JS)
+// Generate initial dimer covering using Hungarian algorithm (iterative BFS version)
 void generateInitialDimerCovering() {
     currentDimers.clear();
+
+    if (blackTriangles.empty() || whiteTriangles.empty()) return;
 
     // Build adjacency: for each black triangle, list of white neighbors
     std::vector<std::vector<int>> adj(blackTriangles.size());
@@ -263,32 +300,63 @@ void generateInitialDimerCovering() {
         }
     }
 
-    // Hungarian matching
+    // Hungarian matching (iterative BFS to avoid stack overflow)
     std::vector<int> matchWhiteToBlack(whiteTriangles.size(), -1);
     std::vector<int> matchBlackToWhite(blackTriangles.size(), -1);
 
-    std::function<bool(int, std::unordered_set<int>&)> findAugmentingPath;
-    findAugmentingPath = [&](int blackIdx, std::unordered_set<int>& visited) -> bool {
-        for (int whiteIdx : adj[blackIdx]) {
-            if (visited.count(whiteIdx)) continue;
-            visited.insert(whiteIdx);
+    // For each unmatched black triangle, try to find augmenting path using BFS
+    for (size_t startBlack = 0; startBlack < blackTriangles.size(); startBlack++) {
+        // BFS to find augmenting path
+        std::vector<int> parent(whiteTriangles.size(), -1);  // parent[w] = black triangle that led to w
+        std::vector<bool> visitedWhite(whiteTriangles.size(), false);
+        std::queue<int> q;
 
-            if (matchWhiteToBlack[whiteIdx] == -1 ||
-                findAugmentingPath(matchWhiteToBlack[whiteIdx], visited)) {
-                matchWhiteToBlack[whiteIdx] = blackIdx;
-                matchBlackToWhite[blackIdx] = whiteIdx;
-                return true;
+        // Start from startBlack's white neighbors
+        for (int w : adj[startBlack]) {
+            if (!visitedWhite[w]) {
+                visitedWhite[w] = true;
+                parent[w] = startBlack;
+                q.push(w);
             }
         }
-        return false;
-    };
 
-    for (size_t bi = 0; bi < blackTriangles.size(); bi++) {
-        std::unordered_set<int> visited;
-        findAugmentingPath(bi, visited);
+        int endWhite = -1;
+        while (!q.empty() && endWhite == -1) {
+            int w = q.front();
+            q.pop();
+
+            if (matchWhiteToBlack[w] == -1) {
+                // Found unmatched white - augmenting path found
+                endWhite = w;
+            } else {
+                // Follow the matching edge to black, then explore its white neighbors
+                int b = matchWhiteToBlack[w];
+                for (int nextW : adj[b]) {
+                    if (!visitedWhite[nextW]) {
+                        visitedWhite[nextW] = true;
+                        parent[nextW] = b;
+                        q.push(nextW);
+                    }
+                }
+            }
+        }
+
+        // If augmenting path found, trace back and flip edges
+        if (endWhite != -1) {
+            int w = endWhite;
+            int b = parent[w];
+            while (b != -1) {
+                int prevW = matchBlackToWhite[b];
+                matchWhiteToBlack[w] = b;
+                matchBlackToWhite[b] = w;
+                w = prevW;
+                if (w == -1) break;
+                b = parent[w];
+            }
+        }
     }
 
-    // Build dimer list
+    // Build dimer list and populate grid
     for (size_t bi = 0; bi < blackTriangles.size(); bi++) {
         int wi = matchBlackToWhite[bi];
         if (wi >= 0) {
@@ -298,6 +366,14 @@ void generateInitialDimerCovering() {
             int whiteJ = whiteTriangles[wi].j;
             int type = getDimerType(blackN, blackJ, whiteN, whiteJ);
             currentDimers.push_back({blackN, blackJ, whiteN, whiteJ, type});
+
+            // Populate grid for O(1) lookups (with bounds check)
+            if (blackN >= gridMinN && blackN <= gridMaxN && blackJ >= gridMinJ && blackJ <= gridMaxJ) {
+                size_t idx = getGridIdx(blackN, blackJ);
+                if (idx < dimerGrid.size()) {
+                    dimerGrid[idx] = static_cast<int8_t>(type);
+                }
+            }
         }
     }
 }
@@ -318,15 +394,23 @@ void getHexEdgesAroundVertex(int n, int j, HexEdge edges[6]) {
     edges[5] = {n, j+1, n-1, j+1, 2};       // R(n,j+1) - L(n-1,j+1): left vertical
 }
 
-// Check if dimer exists (exactly as in JS dimerExists)
-bool dimerExists(int blackN, int blackJ, int whiteN, int whiteJ) {
-    for (const auto& d : currentDimers) {
-        if (d.blackN == blackN && d.blackJ == blackJ &&
-            d.whiteN == whiteN && d.whiteJ == whiteJ) {
-            return true;
-        }
+// Check if dimer exists - O(1) grid lookup
+inline bool dimerExists(int blackN, int blackJ, int whiteN, int whiteJ) {
+    // Bounds check
+    if (blackN < gridMinN || blackN > gridMaxN || blackJ < gridMinJ || blackJ > gridMaxJ) {
+        return false;
     }
-    return false;
+
+    size_t idx = getGridIdx(blackN, blackJ);
+    if (idx >= dimerGrid.size()) return false;
+
+    int8_t typeInGrid = dimerGrid[idx];
+
+    if (typeInGrid == -1) return false;
+
+    // Check if the type in the grid matches the spatial relationship requested
+    int expectedType = getDimerType(blackN, blackJ, whiteN, whiteJ);
+    return typeInGrid == expectedType;
 }
 
 // Count covered edges around vertex (exactly as in JS countCoveredEdges)
@@ -342,51 +426,65 @@ int countCoveredEdges(int n, int j) {
     return count;
 }
 
-// Perform rotation at vertex (exactly as in JS performRotation)
+// Perform rotation at vertex - O(1) grid updates only
 bool performRotation(int n, int j) {
     HexEdge edges[6];
     getHexEdgesAroundVertex(n, j, edges);
 
-    std::vector<int> coveredIdx;
-    std::vector<int> uncoveredIdx;
+    int coveredIdx[3];
+    int uncoveredIdx[3];
+    int coveredCount = 0;
+    int uncoveredCount = 0;
 
     for (int i = 0; i < 6; i++) {
         if (dimerExists(edges[i].blackN, edges[i].blackJ, edges[i].whiteN, edges[i].whiteJ)) {
-            coveredIdx.push_back(i);
+            if (coveredCount < 3) coveredIdx[coveredCount++] = i;
+            else return false; // More than 3 covered
         } else {
-            uncoveredIdx.push_back(i);
+            if (uncoveredCount < 3) uncoveredIdx[uncoveredCount++] = i;
+            else return false; // More than 3 uncovered
         }
     }
 
-    if (coveredIdx.size() != 3 || uncoveredIdx.size() != 3) {
+    if (coveredCount != 3 || uncoveredCount != 3) {
         return false;
     }
 
-    // Remove covered dimers (exactly as in JS)
-    for (int idx : coveredIdx) {
-        for (auto it = currentDimers.begin(); it != currentDimers.end(); ) {
-            if (it->blackN == edges[idx].blackN && it->blackJ == edges[idx].blackJ &&
-                it->whiteN == edges[idx].whiteN && it->whiteJ == edges[idx].whiteJ) {
-                it = currentDimers.erase(it);
-                break;
-            } else {
-                ++it;
+    // Remove covered dimers by setting grid to -1
+    for (int k = 0; k < 3; k++) {
+        int idx = coveredIdx[k];
+        int blackN = edges[idx].blackN;
+        int blackJ = edges[idx].blackJ;
+        // Bounds check before grid access
+        if (blackN >= gridMinN && blackN <= gridMaxN && blackJ >= gridMinJ && blackJ <= gridMaxJ) {
+            size_t gridIdx = getGridIdx(blackN, blackJ);
+            if (gridIdx < dimerGrid.size()) {
+                dimerGrid[gridIdx] = -1;
             }
         }
     }
 
-    // Add uncovered edges as new dimers (exactly as in JS)
-    for (int idx : uncoveredIdx) {
+    // Add uncovered edges as new dimers by setting grid to type
+    for (int k = 0; k < 3; k++) {
+        int idx = uncoveredIdx[k];
+        int blackN = edges[idx].blackN;
+        int blackJ = edges[idx].blackJ;
+        int type = edges[idx].type;
+
+        // Bounds check before grid access
+        if (blackN < gridMinN || blackN > gridMaxN || blackJ < gridMinJ || blackJ > gridMaxJ) {
+            continue;
+        }
+
         // Check if both triangles exist
-        auto blackIt = blackMap.find(makeKey(edges[idx].blackN, edges[idx].blackJ));
+        auto blackIt = blackMap.find(makeKey(blackN, blackJ));
         auto whiteIt = whiteMap.find(makeKey(edges[idx].whiteN, edges[idx].whiteJ));
 
         if (blackIt != blackMap.end() && whiteIt != whiteMap.end()) {
-            currentDimers.push_back({
-                edges[idx].blackN, edges[idx].blackJ,
-                edges[idx].whiteN, edges[idx].whiteJ,
-                edges[idx].type
-            });
+            size_t gridIdx = getGridIdx(blackN, blackJ);
+            if (gridIdx < dimerGrid.size()) {
+                dimerGrid[gridIdx] = static_cast<int8_t>(type);
+            }
         }
     }
 
@@ -428,11 +526,14 @@ char* initPolygon(int b, int c, int d, int e, int h) {
     findTrianglesInPolygon();
     generateInitialDimerCovering();
 
-    // Calculate initial volume
+    // Calculate initial volume (using grid for consistency)
     long long volume = 0;
-    for (const auto& dm : currentDimers) {
-        if (dm.type == 0) {
-            volume += dm.blackN;
+    for (const auto& bt : blackTriangles) {
+        if (bt.n >= gridMinN && bt.n <= gridMaxN && bt.j >= gridMinJ && bt.j <= gridMaxJ) {
+            size_t gridIdx = getGridIdx(bt.n, bt.j);
+            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == 0) { // type 0 dimer
+                volume += bt.n;
+            }
         }
     }
 
@@ -460,10 +561,14 @@ char* performGlauberSteps(int numSteps) {
     performGlauberStepsInternal(numSteps);
 
     // Calculate volume (sum of blackN for type 0 lozenges - horizontal faces)
+    // Use grid directly for O(N) instead of rebuilding currentDimers
     long long volume = 0;
-    for (const auto& dm : currentDimers) {
-        if (dm.type == 0) {
-            volume += dm.blackN;
+    for (const auto& bt : blackTriangles) {
+        if (bt.n >= gridMinN && bt.n <= gridMaxN && bt.j >= gridMinJ && bt.j <= gridMaxJ) {
+            size_t gridIdx = getGridIdx(bt.n, bt.j);
+            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == 0) { // type 0 dimer
+                volume += bt.n;
+            }
         }
     }
 
@@ -480,6 +585,22 @@ char* performGlauberSteps(int numSteps) {
 
 EMSCRIPTEN_KEEPALIVE
 char* exportDimers() {
+    // Rebuild currentDimers from dimerGrid (lazy export)
+    currentDimers.clear();
+    for (const auto& bt : blackTriangles) {
+        if (bt.n >= gridMinN && bt.n <= gridMaxN && bt.j >= gridMinJ && bt.j <= gridMaxJ) {
+            size_t gridIdx = getGridIdx(bt.n, bt.j);
+            if (gridIdx < dimerGrid.size()) {
+                int8_t type = dimerGrid[gridIdx];
+                if (type != -1) {
+                    int whiteN, whiteJ;
+                    getWhiteFromType(bt.n, bt.j, type, whiteN, whiteJ);
+                    currentDimers.push_back({bt.n, bt.j, whiteN, whiteJ, type});
+                }
+            }
+        }
+    }
+
     // Export boundary vertices
     std::string json = "{\"boundary\":[";
     for (size_t i = 0; i < polygonBoundary.size(); i++) {
