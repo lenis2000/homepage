@@ -1,10 +1,11 @@
 /*
 emcc 2025-11-28-c2-Glauber.cpp -o 2025-11-28-c2-Glauber.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initPolygon','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_freeString']" \
+  -s "EXPORTED_FUNCTIONS=['_initPolygon','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_freeString']" \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
+  -s STACK_SIZE=1MB \
   -s ENVIRONMENT=web \
   -s SINGLE_FILE=1 \
   -O3 -ffast-math
@@ -98,6 +99,7 @@ const int directions_dj[6] = { -1, 0,  1,  1,  0, -1 };
 // Global state
 int B = 7, C = 6, D = 3, E = 8, H = 6;
 int A = 18;
+double qBias = 1.0;  // Bias parameter: q/(1+q) to add box, 1/(1+q) to remove
 
 std::vector<Vertex> polygonBoundary;
 
@@ -427,7 +429,8 @@ int countCoveredEdges(int n, int j) {
 }
 
 // Perform rotation at vertex - O(1) grid updates only
-bool performRotation(int n, int j) {
+// Returns: 0 if rotation not possible, 1 if adds box, -1 if removes box
+int tryRotation(int n, int j, bool execute) {
     HexEdge edges[6];
     getHexEdgesAroundVertex(n, j, edges);
 
@@ -439,15 +442,42 @@ bool performRotation(int n, int j) {
     for (int i = 0; i < 6; i++) {
         if (dimerExists(edges[i].blackN, edges[i].blackJ, edges[i].whiteN, edges[i].whiteJ)) {
             if (coveredCount < 3) coveredIdx[coveredCount++] = i;
-            else return false; // More than 3 covered
+            else return 0; // More than 3 covered
         } else {
             if (uncoveredCount < 3) uncoveredIdx[uncoveredCount++] = i;
-            else return false; // More than 3 uncovered
+            else return 0; // More than 3 uncovered
         }
     }
 
     if (coveredCount != 3 || uncoveredCount != 3) {
-        return false;
+        return 0;
+    }
+
+    // Calculate volume change: compare type 0 lozenges before and after
+    // Volume = sum of blackN for type 0 lozenges
+    // Before: covered edges that are type 0
+    // After: uncovered edges that would become type 0
+    int volumeBefore = 0;
+    int volumeAfter = 0;
+
+    for (int k = 0; k < 3; k++) {
+        int idx = coveredIdx[k];
+        if (edges[idx].type == 0) {
+            volumeBefore += edges[idx].blackN;
+        }
+    }
+
+    for (int k = 0; k < 3; k++) {
+        int idx = uncoveredIdx[k];
+        if (edges[idx].type == 0) {
+            volumeAfter += edges[idx].blackN;
+        }
+    }
+
+    int volumeChange = volumeAfter - volumeBefore;  // positive = adding box, negative = removing
+
+    if (!execute) {
+        return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
     }
 
     // Remove covered dimers by setting grid to -1
@@ -488,12 +518,17 @@ bool performRotation(int n, int j) {
         }
     }
 
-    return true;
+    return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
 }
 
-// Perform Glauber steps (exactly as in JS step function)
+// Perform Glauber steps with bias q
+// Probability q/(1+q) to add box, 1/(1+q) to remove box
 void performGlauberStepsInternal(int numSteps) {
     if (triangularVertices.empty()) return;
+
+    // Precompute acceptance probabilities
+    double probAdd = qBias / (1.0 + qBias);     // q/(1+q)
+    double probRemove = 1.0 / (1.0 + qBias);   // 1/(1+q)
 
     for (int s = 0; s < numSteps; s++) {
         totalSteps++;
@@ -503,9 +538,24 @@ void performGlauberStepsInternal(int numSteps) {
 
         int coveredCount = countCoveredEdges(v.n, v.j);
 
-        if (coveredCount == 3 && getRandom01() < 0.5) {
-            if (performRotation(v.n, v.j)) {
-                flipCount++;
+        if (coveredCount == 3) {
+            // Check what kind of rotation this would be
+            int rotationType = tryRotation(v.n, v.j, false);  // dry run
+
+            if (rotationType != 0) {
+                double acceptProb;
+                if (rotationType > 0) {
+                    // Adding box
+                    acceptProb = probAdd;
+                } else {
+                    // Removing box
+                    acceptProb = probRemove;
+                }
+
+                if (getRandom01() < acceptProb) {
+                    tryRotation(v.n, v.j, true);  // execute
+                    flipCount++;
+                }
             }
         }
     }
@@ -661,6 +711,16 @@ EMSCRIPTEN_KEEPALIVE
 double getAcceptRate() {
     if (totalSteps == 0) return 0.0;
     return static_cast<double>(flipCount) / static_cast<double>(totalSteps);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setQBias(double q) {
+    qBias = q;
+}
+
+EMSCRIPTEN_KEEPALIVE
+double getQBias() {
+    return qBias;
 }
 
 EMSCRIPTEN_KEEPALIVE
