@@ -1676,7 +1676,7 @@ Module.onRuntimeInitialized = function() {
     let running = false;
 
     // 3D view state
-    let is3DView = true;
+    let is3DView = false;
     let renderer3D = null;
 
     // Lasso state (drag to select)
@@ -2919,18 +2919,8 @@ Module.onRuntimeInitialized = function() {
     });
 
     initPaletteSelector();
-
-    // Pre-make hexagon on load
-    const a = parseInt(el.hexAInput.value) || 4;
-    const b = parseInt(el.hexBInput.value) || 3;
-    const c = parseInt(el.hexCInput.value) || 5;
-    activeTriangles = generateHexagon(a, b, c);
-    reinitialize();
-
-    // Start in 3D view
-    setViewMode(true);
-
     updateUI();
+    draw();
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
 };
