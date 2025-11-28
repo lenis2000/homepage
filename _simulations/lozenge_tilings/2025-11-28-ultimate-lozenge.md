@@ -36,6 +36,12 @@ code:
     border-radius: 6px;
     cursor: crosshair;
   }
+  #lozenge-canvas.panning {
+    cursor: grab;
+  }
+  #lozenge-canvas.panning:active {
+    cursor: grabbing;
+  }
   [data-theme="dark"] #lozenge-canvas {
     background: #1a1a1a;
     border-color: #444;
@@ -293,38 +299,36 @@ code:
 
 <!-- Drawing Tools -->
 <div class="control-group">
-  <div class="control-group-title">Drawing Tools</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <div class="tool-toggle">
       <button id="drawBtn" class="active">Draw</button>
       <button id="eraseBtn">Erase</button>
     </div>
-    <span class="param-group"><span class="param-label">Grid</span><input type="number" class="param-input" id="gridSizeInput" value="10" min="3" max="100"></span>
+    <span class="param-group"><span class="param-label">Grid</span><input type="number" class="param-input" id="gridSizeInput" value="100" min="3" max="500"></span>
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="doubleMeshBtn" title="Double the mesh size">2x Mesh</button>
+    <button id="doubleMeshBtn" title="Double the polygon size">2x Polygon</button>
+    <span style="border-left: 1px solid #ddd; height: 20px; margin: 0 4px;"></span>
+    <button id="zoomInBtn" title="Zoom In">+</button>
+    <button id="zoomOutBtn" title="Zoom Out">−</button>
+    <button id="resetViewBtn" title="Reset View">Reset View</button>
     <span id="statusBadge" class="status-empty">Empty</span>
   </div>
 </div>
 
 <!-- Preset Shapes -->
 <div class="control-group">
-  <div class="control-group-title">Preset Shapes</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <button id="hexagonBtn">Hexagon</button>
-    <span class="param-group"><span class="param-label">size</span><input type="number" class="param-input" id="hexSizeInput" value="5" min="1" max="20"></span>
-    <span style="border-left: 1px solid #ddd; height: 20px; margin: 0 8px;"></span>
-    <button id="trapezoidBtn">Trapezoid</button>
-    <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="trapAInput" value="6" min="1" max="30"></span>
-    <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="trapBInput" value="4" min="1" max="30"></span>
-    <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="trapCInput" value="5" min="1" max="30"></span>
+    <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30"></span>
+    <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
+    <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30"></span>
   </div>
 </div>
 
 <!-- Display Options -->
 <div class="control-group">
-  <div class="control-group-title">Display</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <div class="view-toggle">
       <button id="lozengeViewBtn" class="active">Lozenge</button>
@@ -351,7 +355,6 @@ code:
 
 <!-- Simulation Controls -->
 <div class="control-group">
-  <div class="control-group-title">Simulation</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <button id="startStopBtn" class="primary" disabled>Start</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
@@ -633,61 +636,23 @@ Module.onRuntimeInitialized = function() {
         return triangles;
     }
 
-    function generateHexagon(size) {
-        // Generate hexagon boundary: 6 sides of length 'size'
+    function generateHexagon(a, b, c) {
+        // Generate hexagon boundary with sides a, b, c, a, b, c
         // Directions on triangular lattice: (dn, dj) pairs
         const directions = [
             [1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]
         ];
+        const sideLengths = [a, b, c, a, b, c];
 
         const boundary = [];
         let n = 0, j = 0;
 
         for (let dir = 0; dir < 6; dir++) {
             const [dn, dj] = directions[dir];
-            for (let step = 0; step < size; step++) {
+            for (let step = 0; step < sideLengths[dir]; step++) {
                 boundary.push(getVertex(n, j));
                 n += dn;
                 j += dj;
-            }
-        }
-
-        return generateTrianglesInPolygon(boundary);
-    }
-
-    function generateTrapezoid(a, b, c) {
-        // Trapezoid a x b x c: sides a (bottom), b (right slope), c (top), b (left slope)
-        // Boundary traced counter-clockwise
-        const boundary = [];
-        let n = 0, j = 0;
-
-        // Bottom side: move right (direction 0: dn=1, dj=-1)
-        for (let i = 0; i < a; i++) {
-            boundary.push(getVertex(n, j));
-            n += 1; j += -1;
-        }
-        // Right side going up (direction 1: dn=1, dj=0)
-        for (let i = 0; i < b; i++) {
-            boundary.push(getVertex(n, j));
-            n += 1; j += 0;
-        }
-        // Top side: move left (direction 3: dn=-1, dj=1)
-        for (let i = 0; i < c; i++) {
-            boundary.push(getVertex(n, j));
-            n += -1; j += 1;
-        }
-        // Left side going down (direction 4: dn=-1, dj=0)
-        for (let i = 0; i < b; i++) {
-            boundary.push(getVertex(n, j));
-            n += -1; j += 0;
-        }
-        // Connect back: move to close (direction 5 or adjust)
-        // For proper trapezoid: a + c should work with the slant
-        const remaining = a - c;
-        if (remaining > 0) {
-            for (let i = 0; i < remaining; i++) {
-                boundary.push(getVertex(n, j));
-                n += 0; j += -1;
             }
         }
 
@@ -761,13 +726,19 @@ Module.onRuntimeInitialized = function() {
         constructor(canvas) {
             this.canvas = canvas;
             this.ctx = canvas.getContext('2d');
-            this.outlineWidthPct = 0;
+            this.outlineWidthPct = 0.1;
             this.borderWidthPct = 1;
             this.showDimerView = false;
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
-            this.gridSize = 10;
+            this.gridSize = 100;
+            // Pan and zoom state
+            this.zoom = 1;
+            this.panX = 0; // In world coordinates
+            this.panY = 0;
+            this.minZoom = 0.02;
+            this.maxZoom = 10;
             this.setupCanvas();
         }
 
@@ -803,21 +774,48 @@ Module.onRuntimeInitialized = function() {
         }
 
         getTransform(activeTriangles) {
-            // Use fixed grid-based view (no auto-centering/zooming)
-            const minX = -this.gridSize;
-            const maxX = this.gridSize;
-            const minY = -this.gridSize * deltaC;
-            const maxY = this.gridSize * deltaC;
+            // Base scale: fit a reasonable view (e.g., 20 units across)
+            const baseViewSize = 20; // World units visible at zoom=1
+            const baseScale = Math.min(this.displayWidth, this.displayHeight) / baseViewSize;
+            const scale = baseScale * this.zoom;
 
-            const padding = 2;
-            const rangeX = maxX - minX + 2 * padding;
-            const rangeY = maxY - minY + 2 * padding;
-            const plotRange = Math.max(rangeX, rangeY) / 2;
-            const scale = Math.min(this.displayWidth, this.displayHeight) / (2 * plotRange);
-            const centerX = this.displayWidth / 2 - ((minX + maxX) / 2) * scale;
-            const centerY = this.displayHeight / 2 + ((minY + maxY) / 2) * scale;
+            // Center position (incorporating pan)
+            const centerX = this.displayWidth / 2 - this.panX * scale;
+            const centerY = this.displayHeight / 2 + this.panY * scale;
 
-            return { centerX, centerY, scale, minX, maxX, minY, maxY };
+            return { centerX, centerY, scale };
+        }
+
+        // Zoom centered on a point (in canvas coordinates)
+        zoomAt(canvasX, canvasY, factor) {
+            const { centerX, centerY, scale } = this.getTransform();
+
+            // Convert canvas point to world coordinates before zoom
+            const worldX = (canvasX - centerX) / scale;
+            const worldY = (centerY - canvasY) / scale;
+
+            // Apply zoom
+            const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
+            const actualFactor = newZoom / this.zoom;
+            this.zoom = newZoom;
+
+            // Adjust pan so the world point stays at the same canvas position
+            const newScale = scale * actualFactor;
+            this.panX = (this.displayWidth / 2 - canvasX) / newScale + worldX;
+            this.panY = (canvasY - this.displayHeight / 2) / newScale + worldY;
+        }
+
+        // Pan by canvas delta
+        pan(deltaCanvasX, deltaCanvasY) {
+            const { scale } = this.getTransform();
+            this.panX -= deltaCanvasX / scale;
+            this.panY += deltaCanvasY / scale;
+        }
+
+        resetView() {
+            this.zoom = 1;
+            this.panX = 0;
+            this.panY = 0;
         }
 
         getLozengeVertices(dimer) {
@@ -864,30 +862,45 @@ Module.onRuntimeInitialized = function() {
         }
 
         drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode) {
-            const gridRange = this.gridSize + 5;
+            // Calculate visible range based on current view
+            const margin = 5;
+            const topLeft = this.fromCanvas(0, 0, centerX, centerY, scale);
+            const bottomRight = this.fromCanvas(this.displayWidth, this.displayHeight, centerX, centerY, scale);
+
+            const minVisX = Math.floor(Math.min(topLeft.x, bottomRight.x)) - margin;
+            const maxVisX = Math.ceil(Math.max(topLeft.x, bottomRight.x)) + margin;
+            const minVisY = Math.floor(Math.min(topLeft.y, bottomRight.y)) - margin;
+            const maxVisY = Math.ceil(Math.max(topLeft.y, bottomRight.y)) + margin;
+
+            // Clamp to grid bounds
+            const minN = Math.max(-this.gridSize, minVisX);
+            const maxN = Math.min(this.gridSize, maxVisX);
+            const minJ = Math.floor(minVisY / deltaC) - Math.abs(maxN);
+            const maxJ = Math.ceil(maxVisY / deltaC) + Math.abs(maxN);
+
             ctx.strokeStyle = isDarkMode ? 'rgba(100, 100, 100, 0.2)' : 'rgba(200, 200, 200, 0.5)';
             ctx.lineWidth = 0.5;
 
             // Vertical lines
-            for (let n = -gridRange; n <= gridRange; n++) {
-                const y1 = slope * n + (-gridRange) * deltaC;
-                const y2 = slope * n + gridRange * deltaC;
+            for (let n = minN; n <= maxN; n++) {
+                const y1 = slope * n + minJ * deltaC;
+                const y2 = slope * n + maxJ * deltaC;
                 const [x1c, y1c] = this.toCanvas(n, y1, centerX, centerY, scale);
                 const [x2c, y2c] = this.toCanvas(n, y2, centerX, centerY, scale);
                 ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
             }
 
-            // +slope lines
-            for (let j = -gridRange * 2; j <= gridRange * 2; j++) {
-                const [x1c, y1c] = this.toCanvas(-gridRange, slope * (-gridRange) + j * deltaC, centerX, centerY, scale);
-                const [x2c, y2c] = this.toCanvas(gridRange, slope * gridRange + j * deltaC, centerX, centerY, scale);
+            // +slope lines (horizontal in lattice)
+            for (let j = minJ; j <= maxJ; j++) {
+                const [x1c, y1c] = this.toCanvas(minN, slope * minN + j * deltaC, centerX, centerY, scale);
+                const [x2c, y2c] = this.toCanvas(maxN, slope * maxN + j * deltaC, centerX, centerY, scale);
                 ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
             }
 
             // -slope lines
-            for (let j = -gridRange * 2; j <= gridRange * 2; j++) {
-                const [x1c, y1c] = this.toCanvas(-gridRange, -slope * (-gridRange) + j * deltaC, centerX, centerY, scale);
-                const [x2c, y2c] = this.toCanvas(gridRange, -slope * gridRange + j * deltaC, centerX, centerY, scale);
+            for (let j = minJ; j <= maxJ; j++) {
+                const [x1c, y1c] = this.toCanvas(minN, -slope * minN + j * deltaC, centerX, centerY, scale);
+                const [x2c, y2c] = this.toCanvas(maxN, -slope * maxN + j * deltaC, centerX, centerY, scale);
                 ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
             }
         }
@@ -1032,11 +1045,9 @@ Module.onRuntimeInitialized = function() {
         redoBtn: document.getElementById('redoBtn'),
         statusBadge: document.getElementById('statusBadge'),
         hexagonBtn: document.getElementById('hexagonBtn'),
-        hexSizeInput: document.getElementById('hexSizeInput'),
-        trapezoidBtn: document.getElementById('trapezoidBtn'),
-        trapAInput: document.getElementById('trapAInput'),
-        trapBInput: document.getElementById('trapBInput'),
-        trapCInput: document.getElementById('trapCInput'),
+        hexAInput: document.getElementById('hexAInput'),
+        hexBInput: document.getElementById('hexBInput'),
+        hexCInput: document.getElementById('hexCInput'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
         paletteSelect: document.getElementById('palette-select'),
@@ -1149,6 +1160,10 @@ Module.onRuntimeInitialized = function() {
     // ========================================================================
     // MOUSE/TOUCH INTERACTION
     // ========================================================================
+    let isPanning = false;
+    let lastPanX = 0;
+    let lastPanY = 0;
+
     function getTriangleAtPoint(mx, my) {
         const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
         const { x, y } = renderer.fromCanvas(mx, my, centerX, centerY, scale);
@@ -1238,32 +1253,135 @@ Module.onRuntimeInitialized = function() {
         }
     }
 
+    // Mouse wheel zoom
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        renderer.zoomAt(mx, my, zoomFactor);
+        draw();
+    }, { passive: false });
+
+    // Prevent context menu on right-click
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
     canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        // Right-click or middle-click = pan
+        if (e.button === 2 || e.button === 1) {
+            isPanning = true;
+            lastPanX = mx;
+            lastPanY = my;
+            canvas.classList.add('panning');
+            return;
+        }
+
+        // Left-click = draw/erase
         isDrawing = true;
         saveState();
         handleInput(e);
     });
 
     canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        if (isPanning) {
+            const dx = mx - lastPanX;
+            const dy = my - lastPanY;
+            renderer.pan(dx, dy);
+            lastPanX = mx;
+            lastPanY = my;
+            draw();
+            return;
+        }
+
         if (isDrawing) handleInput(e);
     });
 
-    canvas.addEventListener('mouseup', () => { isDrawing = false; });
-    canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+    canvas.addEventListener('mouseup', (e) => {
+        isDrawing = false;
+        isPanning = false;
+        canvas.classList.remove('panning');
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        isDrawing = false;
+        isPanning = false;
+        canvas.classList.remove('panning');
+    });
+
+    // Touch: two-finger pinch to zoom, single finger to draw
+    let touchStartDist = 0;
+    let touchStartZoom = 1;
 
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        isDrawing = true;
-        saveState();
-        handleInput(e);
-    });
+        if (e.touches.length === 2) {
+            // Two-finger: start pinch zoom
+            const t1 = e.touches[0], t2 = e.touches[1];
+            touchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            touchStartZoom = renderer.zoom;
+            isPanning = true;
+            lastPanX = (t1.clientX + t2.clientX) / 2;
+            lastPanY = (t1.clientY + t2.clientY) / 2;
+        } else {
+            isDrawing = true;
+            saveState();
+            handleInput(e);
+        }
+    }, { passive: false });
 
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        if (isDrawing) handleInput(e);
-    });
+        const rect = canvas.getBoundingClientRect();
 
-    canvas.addEventListener('touchend', () => { isDrawing = false; });
+        if (e.touches.length === 2) {
+            const t1 = e.touches[0], t2 = e.touches[1];
+            const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+            const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
+            // Pinch zoom
+            if (touchStartDist > 0) {
+                const newZoom = touchStartZoom * (dist / touchStartDist);
+                renderer.zoom = Math.max(renderer.minZoom, Math.min(renderer.maxZoom, newZoom));
+            }
+
+            // Pan with midpoint
+            const rawMidX = (t1.clientX + t2.clientX) / 2;
+            const rawMidY = (t1.clientY + t2.clientY) / 2;
+            if (isPanning) {
+                const dx = rawMidX - lastPanX;
+                const dy = rawMidY - lastPanY;
+                renderer.pan(dx, dy);
+            }
+            lastPanX = rawMidX;
+            lastPanY = rawMidY;
+            draw();
+            return;
+        }
+
+        if (isDrawing) handleInput(e);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            isDrawing = false;
+            isPanning = false;
+            touchStartDist = 0;
+        } else if (e.touches.length === 1) {
+            // Switched from two-finger to one
+            isPanning = false;
+            touchStartDist = 0;
+        }
+    });
 
     // ========================================================================
     // UI EVENT HANDLERS
@@ -1281,7 +1399,7 @@ Module.onRuntimeInitialized = function() {
     });
 
     el.gridSizeInput.addEventListener('change', (e) => {
-        renderer.gridSize = parseInt(e.target.value) || 15;
+        renderer.gridSize = parseInt(e.target.value) || 100;
         draw();
     });
 
@@ -1308,6 +1426,22 @@ Module.onRuntimeInitialized = function() {
         reinitialize();
     });
 
+    // Zoom controls
+    document.getElementById('zoomInBtn').addEventListener('click', () => {
+        renderer.zoomAt(renderer.displayWidth / 2, renderer.displayHeight / 2, 1.3);
+        draw();
+    });
+
+    document.getElementById('zoomOutBtn').addEventListener('click', () => {
+        renderer.zoomAt(renderer.displayWidth / 2, renderer.displayHeight / 2, 0.7);
+        draw();
+    });
+
+    document.getElementById('resetViewBtn').addEventListener('click', () => {
+        renderer.resetView();
+        draw();
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -1323,17 +1457,10 @@ Module.onRuntimeInitialized = function() {
     // Preset buttons
     el.hexagonBtn.addEventListener('click', () => {
         saveState();
-        const size = parseInt(el.hexSizeInput.value) || 5;
-        activeTriangles = generateHexagon(size);
-        reinitialize();
-    });
-
-    el.trapezoidBtn.addEventListener('click', () => {
-        saveState();
-        const a = parseInt(el.trapAInput.value) || 6;
-        const b = parseInt(el.trapBInput.value) || 4;
-        const c = parseInt(el.trapCInput.value) || 5;
-        activeTriangles = generateTrapezoid(a, b, c);
+        const a = parseInt(el.hexAInput.value) || 4;
+        const b = parseInt(el.hexBInput.value) || 3;
+        const c = parseInt(el.hexCInput.value) || 5;
+        activeTriangles = generateHexagon(a, b, c);
         reinitialize();
     });
 
