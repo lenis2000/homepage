@@ -368,6 +368,7 @@ code:
     <button id="startStopBtn" class="primary" disabled>Start</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
+    <button id="repairBtn" title="Remove unmatched triangles to restore tileability" disabled>Make Tileable</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -480,6 +481,7 @@ Module.onRuntimeInitialized = function() {
             this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
             this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
+            this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
             this.totalSteps = 0;
@@ -560,6 +562,16 @@ Module.onRuntimeInitialized = function() {
             this.freeStringWasm(ptr);
             this.refreshDimers();
             return JSON.parse(jsonStr);
+        }
+
+        repair() {
+            const ptr = this.repairRegionWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            const result = JSON.parse(jsonStr);
+            this.isValid = result.status === 'valid';
+            this.refreshDimers();
+            return result;
         }
 
         refreshDimers() {
@@ -1201,6 +1213,7 @@ Module.onRuntimeInitialized = function() {
         speedInput: document.getElementById('speedInput'),
         startStopBtn: document.getElementById('startStopBtn'),
         cftpBtn: document.getElementById('cftpBtn'),
+        repairBtn: document.getElementById('repairBtn'),
         qInput: document.getElementById('qInput'),
         blackCount: document.getElementById('blackCount'),
         whiteCount: document.getElementById('whiteCount'),
@@ -1256,6 +1269,9 @@ Module.onRuntimeInitialized = function() {
         // Enable/disable simulation buttons
         el.startStopBtn.disabled = !isValid;
         el.cftpBtn.disabled = !isValid;
+
+        // Enable repair button only if Invalid and Not Empty
+        el.repairBtn.disabled = isValid || activeTriangles.size === 0;
     }
 
     function draw() {
@@ -1610,6 +1626,26 @@ Module.onRuntimeInitialized = function() {
         activeTriangles = doubleMesh(activeTriangles);
         reinitialize();
         renderer.fitToRegion(activeTriangles);
+        draw();
+    });
+
+    el.repairBtn.addEventListener('click', () => {
+        saveState();
+        const result = sim.repair();
+
+        // Update activeTriangles based on the C++ result
+        activeTriangles.clear();
+
+        // Rebuild from sim properties updated by refreshDimers inside repair
+        for (const t of sim.blackTriangles) {
+            activeTriangles.set(`${t.n},${t.j},1`, { n: t.n, j: t.j, type: 1 });
+        }
+        for (const t of sim.whiteTriangles) {
+            activeTriangles.set(`${t.n},${t.j},2`, { n: t.n, j: t.j, type: 2 });
+        }
+
+        isValid = result.status === 'valid';
+        updateUI();
         draw();
     });
 

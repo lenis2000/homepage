@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_repairRegion','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -1086,6 +1086,52 @@ char* finalizeCFTP() {
     char* out = (char*)malloc(json.size() + 1);
     strcpy(out, json.c_str());
     return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* repairRegion() {
+    // Strategy: The Max Flow (Dinic) computed a Maximum Bipartite Matching.
+    // Even if the region is not perfectly tileable, the edges with flow==1
+    // represent the largest possible subset of triangles that CAN be tiled.
+    // We simply keep those and discard the rest.
+
+    std::vector<int> keptTriangles; // Flat array: n, j, type
+    int numBlack = blackTriangles.size();
+    int numWhite = whiteTriangles.size();
+    int S = numBlack + numWhite;
+
+    // Iterate over Black triangles
+    for (int i = 0; i < numBlack; i++) {
+        // Check edges in the flow network
+        for (const auto& e : flowAdj[i]) {
+            // We are looking for forward edges from Black(i) to White(wIdx)
+            // White nodes are indexed from numBlack to numBlack+numWhite-1
+            if (e.to >= numBlack && e.to < S && e.flow == 1) {
+                // This edge is part of the max matching. Keep both triangles.
+
+                // Keep Black
+                keptTriangles.push_back(blackTriangles[i].n);
+                keptTriangles.push_back(blackTriangles[i].j);
+                keptTriangles.push_back(1);
+
+                // Keep White
+                int wIdx = e.to - numBlack;
+                keptTriangles.push_back(whiteTriangles[wIdx].n);
+                keptTriangles.push_back(whiteTriangles[wIdx].j);
+                keptTriangles.push_back(2);
+
+                // Each black triangle matches at most one white triangle
+                break;
+            }
+        }
+    }
+
+    // Re-initialize the simulation using ONLY the kept triangles
+    if (keptTriangles.empty()) {
+        return initFromTriangles(nullptr, 0);
+    }
+
+    return initFromTriangles(keptTriangles.data(), keptTriangles.size());
 }
 
 } // extern "C"
