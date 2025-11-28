@@ -2033,6 +2033,7 @@ Module.onRuntimeInitialized = function() {
     el.resetBtn.addEventListener('click', () => {
         saveState();
         activeTriangles.clear();
+        renderer.resetView();
         reinitialize();
     });
 
