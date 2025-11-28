@@ -452,6 +452,16 @@ code:
   </div>
 </div>
 
+<!-- Limit Shape -->
+<div class="control-group">
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <button id="averageBtn" class="cftp" disabled>Get Averaged Sample</button>
+    <span class="param-group"><span class="param-label">Samples</span><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 60px;"></span>
+    <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop</button>
+    <span id="avgProgress" style="font-size: 12px; color: #666;"></span>
+  </div>
+</div>
+
 <!-- Export -->
 <div class="control-group">
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -561,6 +571,75 @@ Module.onRuntimeInitialized = function() {
         }
 
         return heights;
+    }
+
+    // ========================================================================
+    // RECONSTRUCT DIMERS FROM HEIGHT FUNCTION
+    // ========================================================================
+    function reconstructDimersFromHeights(heights, blackTriangles, whiteTriangles) {
+        // Build set of white triangles for lookup
+        const whiteSet = new Set();
+        for (const w of whiteTriangles) {
+            whiteSet.add(`${w.n},${w.j}`);
+        }
+
+        const dimers = [];
+
+        // For each black triangle, determine which white neighbor it pairs with
+        for (const black of blackTriangles) {
+            const bn = black.n;
+            const bj = black.j;
+
+            // Get heights at relevant vertices
+            const getH = (n, j) => heights.get(`${n},${j}`) || 0;
+
+            // Check each possible dimer type
+            // Type 0: pairs with white (bn, bj)
+            // Vertices: [bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]
+            // All should have same height (pattern [0,0,0,0])
+            const h0_v0 = getH(bn, bj);
+            const h0_v1 = getH(bn + 1, bj);
+            const h0_v2 = getH(bn + 1, bj - 1);
+            const h0_v3 = getH(bn, bj - 1);
+            const err0 = whiteSet.has(`${bn},${bj}`) ?
+                Math.abs(h0_v0 - h0_v1) + Math.abs(h0_v1 - h0_v2) + Math.abs(h0_v2 - h0_v3) : Infinity;
+
+            // Type 1: pairs with white (bn, bj-1)
+            // Vertices: [bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]
+            // Pattern [1, 0, 0, 1]: v0,v3 are 1 higher than v1,v2
+            const h1_v0 = getH(bn, bj);
+            const h1_v1 = getH(bn + 1, bj - 1);
+            const h1_v2 = getH(bn + 1, bj - 2);
+            const h1_v3 = getH(bn, bj - 1);
+            const err1 = whiteSet.has(`${bn},${bj - 1}`) ?
+                Math.abs(h1_v0 - h1_v3) + Math.abs(h1_v1 - h1_v2) + Math.abs((h1_v0 - h1_v1) - 1) : Infinity;
+
+            // Type 2: pairs with white (bn-1, bj)
+            // Vertices: [bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]
+            // Pattern [1, 1, 0, 0]: v0,v1 are 1 higher than v2,v3
+            const h2_v0 = getH(bn - 1, bj);
+            const h2_v1 = getH(bn, bj);
+            const h2_v2 = getH(bn + 1, bj - 1);
+            const h2_v3 = getH(bn, bj - 1);
+            const err2 = whiteSet.has(`${bn - 1},${bj}`) ?
+                Math.abs(h2_v0 - h2_v1) + Math.abs(h2_v2 - h2_v3) + Math.abs((h2_v0 - h2_v2) - 1) : Infinity;
+
+            // Choose type with minimum error
+            let bestType = 0;
+            let minErr = err0;
+            if (err1 < minErr) { bestType = 1; minErr = err1; }
+            if (err2 < minErr) { bestType = 2; minErr = err2; }
+
+            // Determine white triangle coords based on type
+            let wn, wj;
+            if (bestType === 0) { wn = bn; wj = bj; }
+            else if (bestType === 1) { wn = bn; wj = bj - 1; }
+            else { wn = bn - 1; wj = bj; }
+
+            dimers.push({ bn, bj, wn, wj, t: bestType });
+        }
+
+        return dimers;
     }
 
     // ========================================================================
@@ -1436,6 +1515,16 @@ Module.onRuntimeInitialized = function() {
             this.controls.dampingFactor = 0.05;
             this.controls.enablePan = true;
             this.controls.panSpeed = 1.0;
+            // Slower zoom for smoother experience
+            this.controls.zoomSpeed = 0.5;
+            // Better touch/trackpad support
+            this.controls.enableZoom = true;
+            this.controls.screenSpacePanning = true;
+            // Touch gestures: one finger rotate, two finger zoom/pan
+            this.controls.touches = {
+                ONE: THREE.TOUCH.ROTATE,
+                TWO: THREE.TOUCH.DOLLY_PAN
+            };
 
             // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -1781,10 +1870,16 @@ Module.onRuntimeInitialized = function() {
         cftpStopBtn: document.getElementById('cftpStopBtn'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
         autoRotateCheckbox: document.getElementById('autoRotateCheckbox'),
+        averageBtn: document.getElementById('averageBtn'),
+        avgSamplesInput: document.getElementById('avgSamplesInput'),
+        avgStopBtn: document.getElementById('avgStopBtn'),
+        avgProgress: document.getElementById('avgProgress'),
     };
 
     // CFTP cancellation flag
     let cftpCancelled = false;
+    // Average sampling cancellation flag
+    let avgCancelled = false;
 
     function initPaletteSelector() {
         renderer.colorPalettes.forEach((p, i) => {
@@ -1832,6 +1927,7 @@ Module.onRuntimeInitialized = function() {
         // Enable/disable simulation buttons
         el.startStopBtn.disabled = !isValid;
         el.cftpBtn.disabled = !isValid;
+        el.averageBtn.disabled = !isValid;
 
         // Enable repair button only if Invalid and Not Empty
         el.repairBtn.disabled = isValid || activeTriangles.size === 0;
@@ -2843,6 +2939,133 @@ Module.onRuntimeInitialized = function() {
 
     el.cftpStopBtn.addEventListener('click', () => {
         cftpCancelled = true;
+    });
+
+    // Average Sampling for Limit Shape
+    el.averageBtn.addEventListener('click', () => {
+        if (!isValid) return;
+
+        // Stop any running simulation
+        if (running) {
+            running = false;
+            el.startStopBtn.textContent = 'Start';
+            el.startStopBtn.classList.remove('running');
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+
+        const numSamples = parseInt(el.avgSamplesInput.value) || 10;
+        const originalText = el.averageBtn.textContent;
+        el.averageBtn.disabled = true;
+        el.cftpBtn.disabled = true;
+        el.startStopBtn.disabled = true;
+        avgCancelled = false;
+        el.avgStopBtn.style.display = 'inline-block';
+
+        // Store height sums
+        const heightSums = new Map();
+        let completedSamples = 0;
+
+        function runOneSample() {
+            if (avgCancelled) {
+                el.avgProgress.textContent = 'stopped';
+                el.averageBtn.textContent = originalText;
+                el.averageBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.startStopBtn.disabled = false;
+                el.avgStopBtn.style.display = 'none';
+                return;
+            }
+
+            el.avgProgress.textContent = `Sample ${completedSamples + 1}/${numSamples}...`;
+            el.averageBtn.textContent = `${completedSamples + 1}/${numSamples}`;
+
+            // Initialize and run CFTP
+            sim.initCFTP();
+
+            function cftpStep() {
+                if (avgCancelled) {
+                    el.avgProgress.textContent = 'stopped';
+                    el.averageBtn.textContent = originalText;
+                    el.averageBtn.disabled = false;
+                    el.cftpBtn.disabled = false;
+                    el.startStopBtn.disabled = false;
+                    el.avgStopBtn.style.display = 'none';
+                    return;
+                }
+
+                const res = sim.stepCFTP();
+                if (res.status === 'in_progress') {
+                    setTimeout(cftpStep, 0);
+                } else if (res.status === 'coalesced') {
+                    sim.finalizeCFTP();
+
+                    // Compute height function for this sample
+                    const heights = computeHeightFunction(sim.dimers);
+
+                    // Add to sums
+                    for (const [key, h] of heights) {
+                        if (!heightSums.has(key)) {
+                            heightSums.set(key, 0);
+                        }
+                        heightSums.set(key, heightSums.get(key) + h);
+                    }
+
+                    completedSamples++;
+
+                    if (completedSamples < numSamples) {
+                        // Run next sample
+                        setTimeout(runOneSample, 0);
+                    } else {
+                        // All samples done - compute average and display
+                        finishAveraging();
+                    }
+                } else if (res.status === 'not_coalesced') {
+                    setTimeout(cftpStep, 0);
+                } else {
+                    // timeout or error - try next sample anyway
+                    completedSamples++;
+                    if (completedSamples < numSamples) {
+                        setTimeout(runOneSample, 0);
+                    } else {
+                        finishAveraging();
+                    }
+                }
+            }
+
+            setTimeout(cftpStep, 0);
+        }
+
+        function finishAveraging() {
+            // Compute averaged heights (rounded to nearest integer)
+            const avgHeights = new Map();
+            for (const [key, sum] of heightSums) {
+                avgHeights.set(key, Math.round(sum / completedSamples));
+            }
+
+            // Reconstruct dimers from averaged heights
+            const avgDimers = reconstructDimersFromHeights(avgHeights, sim.blackTriangles, sim.whiteTriangles);
+
+            // Display the result
+            sim.dimers = avgDimers;
+            draw();
+
+            el.avgProgress.textContent = `Done (${completedSamples} samples)`;
+            el.averageBtn.textContent = originalText;
+            el.averageBtn.disabled = false;
+            el.cftpBtn.disabled = false;
+            el.startStopBtn.disabled = false;
+            el.avgStopBtn.style.display = 'none';
+        }
+
+        setTimeout(runOneSample, 10);
+    });
+
+    el.avgStopBtn.addEventListener('click', () => {
+        avgCancelled = true;
     });
 
     // Export
