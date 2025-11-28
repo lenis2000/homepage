@@ -307,7 +307,8 @@ code:
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="doubleMeshBtn" title="Double the polygon size">2x Polygon</button>
+    <button id="halfMeshBtn" title="Half the region size">0.5x Region</button>
+    <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
     <span id="statusBadge" class="status-empty">Empty</span>
   </div>
 </div>
@@ -462,7 +463,7 @@ Module.onRuntimeInitialized = function() {
     // ========================================================================
     class UltimateLozengeSampler {
         constructor() {
-            this.boundary = [];
+            this.boundaries = [];
             this.dimers = [];
             this.blackTriangles = [];
             this.whiteTriangles = [];
@@ -494,7 +495,7 @@ Module.onRuntimeInitialized = function() {
 
             if (arr.length === 0) {
                 this.isValid = false;
-                this.boundary = [];
+                this.boundaries = [];
                 this.dimers = [];
                 this.blackTriangles = [];
                 this.whiteTriangles = [];
@@ -564,7 +565,7 @@ Module.onRuntimeInitialized = function() {
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             const result = JSON.parse(jsonStr);
-            this.boundary = result.boundary;
+            this.boundaries = result.boundaries || [];
             this.dimers = result.dimers;
             this.blackTriangles = result.black;
             this.whiteTriangles = result.white;
@@ -667,60 +668,76 @@ Module.onRuntimeInitialized = function() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    function doubleMesh(triangles) {
-        // Robust doubling via Geometric Sampling
-        // 1. Calculate bounding box of current shape
+    function scaleMesh(triangles, scaleFactor) {
+        if (triangles.size === 0) return new Map();
+
+        // 1. Calculate Bounding Box indices
         let minN = Infinity, maxN = -Infinity;
         let minJ = Infinity, maxJ = -Infinity;
 
-        for (const [key, tri] of triangles) {
+        for (const tri of triangles.values()) {
             minN = Math.min(minN, tri.n);
             maxN = Math.max(maxN, tri.n);
             minJ = Math.min(minJ, tri.j);
             maxJ = Math.max(maxJ, tri.j);
         }
 
-        // 2. Define search range for the 2x scaled grid
-        // We scan a range slightly larger than 2x the original bounds
-        const scanMinN = minN * 2 - 5;
-        const scanMaxN = maxN * 2 + 5;
-        const scanMinJ = minJ * 2 - 5;
-        const scanMaxJ = maxJ * 2 + 5;
+        // 2. FORCE INTEGER PIVOT (Crucial for lattice alignment)
+        // Using Math.round prevents 0.5 shifts that break the grid parity
+        const cenN = Math.round((minN + maxN) / 2);
+        const cenJ = Math.round((minJ + maxJ) / 2);
 
-        const doubled = new Map();
+        // Get the exact world coordinate of this integer pivot
+        const centerPoint = getRightTriangleCentroid(cenN, cenJ);
+        const pivX = centerPoint.x;
+        const pivY = centerPoint.y;
 
-        // 3. Iterate over the high-res grid
+        // 3. Define Scan Range
+        const rangeN = (maxN - minN) * scaleFactor;
+        const rangeJ = (maxJ - minJ) * scaleFactor;
+        const buffer = 5; // Small buffer is enough with correct pivot
+
+        const scanMinN = Math.floor(cenN - rangeN / 2) - buffer;
+        const scanMaxN = Math.ceil(cenN + rangeN / 2) + buffer;
+        const scanMinJ = Math.floor(cenJ - rangeJ / 2) - buffer;
+        const scanMaxJ = Math.ceil(cenJ + rangeJ / 2) + buffer;
+
+        const newTriangles = new Map();
+
+        // 4. Iterate and Sample with Epsilon
         for (let n = scanMinN; n <= scanMaxN; n++) {
             for (let j = scanMinJ; j <= scanMaxJ; j++) {
-                // Check Type 1 (Black)
-                // Get centroid of the candidate new triangle
-                const c1 = getRightTriangleCentroid(n, j);
-                // Map back to original space (scale / 2)
-                const orig1 = getTriangleFromWorld(c1.x / 2, c1.y / 2);
 
-                if (orig1) {
-                    // We check if the original triangle exists in our active set
-                    const key = `${orig1.n},${orig1.j},${orig1.type}`;
-                    if (triangles.has(key)) {
-                        doubled.set(`${n},${j},1`, { n, j, type: 1 });
+                const checkType = (type) => {
+                    const c = (type === 1) ? getRightTriangleCentroid(n, j) : getLeftTriangleCentroid(n, j);
+
+                    // Transform back to original space
+                    const oldX = pivX + (c.x - pivX) / scaleFactor;
+                    const oldY = pivY + (c.y - pivY) / scaleFactor;
+
+                    // ADD EPSILON: Shift slightly to avoid landing exactly on edges/vertices
+                    const epsilon = 1e-3;
+                    const orig = getTriangleFromWorld(oldX + epsilon, oldY + epsilon);
+
+                    if (orig) {
+                        const key = `${orig.n},${orig.j},${orig.type}`;
+                        if (triangles.has(key)) {
+                            newTriangles.set(`${n},${j},${type}`, { n, j, type });
+                        }
                     }
-                }
+                };
 
-                // Check Type 2 (White)
-                const c2 = getLeftTriangleCentroid(n, j);
-                const orig2 = getTriangleFromWorld(c2.x / 2, c2.y / 2);
-
-                if (orig2) {
-                    const key = `${orig2.n},${orig2.j},${orig2.type}`;
-                    if (triangles.has(key)) {
-                        doubled.set(`${n},${j},2`, { n, j, type: 2 });
-                    }
-                }
+                checkType(1);
+                checkType(2);
             }
         }
 
-        return doubled;
+        return newTriangles;
     }
+
+    // Specific wrappers for clarity
+    function doubleMesh(triangles) { return scaleMesh(triangles, 2.0); }
+    function halfMesh(triangles) { return scaleMesh(triangles, 0.5); }
 
     // ========================================================================
     // RENDERER
@@ -821,6 +838,56 @@ Module.onRuntimeInitialized = function() {
             this.panY = 0;
         }
 
+        // Fit view to show all active triangles with padding
+        fitToRegion(activeTriangles) {
+            if (activeTriangles.size === 0) {
+                this.resetView();
+                return;
+            }
+
+            // Calculate bounding box in world coords
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            for (const [key, tri] of activeTriangles) {
+                let verts;
+                if (tri.type === 1) {
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
+                } else {
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
+                }
+                for (const v of verts) {
+                    minX = Math.min(minX, v.x);
+                    maxX = Math.max(maxX, v.x);
+                    minY = Math.min(minY, v.y);
+                    maxY = Math.max(maxY, v.y);
+                }
+            }
+
+            // Add padding
+            const padding = 2;
+            minX -= padding;
+            maxX += padding;
+            minY -= padding;
+            maxY += padding;
+
+            // Calculate center and zoom
+            const centerWorldX = (minX + maxX) / 2;
+            const centerWorldY = (minY + maxY) / 2;
+            const rangeX = maxX - minX;
+            const rangeY = maxY - minY;
+
+            // Fit to canvas
+            const baseViewSize = 20;
+            const neededZoomX = this.displayWidth / rangeX / (Math.min(this.displayWidth, this.displayHeight) / baseViewSize);
+            const neededZoomY = this.displayHeight / rangeY / (Math.min(this.displayWidth, this.displayHeight) / baseViewSize);
+            this.zoom = Math.min(neededZoomX, neededZoomY);
+
+            // Set pan to center the region
+            this.panX = centerWorldX;
+            this.panY = centerWorldY;
+        }
+
         getLozengeVertices(dimer) {
             const { bn, bj, t } = dimer;
             if (t === 0) {
@@ -858,33 +925,55 @@ Module.onRuntimeInitialized = function() {
                 }
             }
 
-            // Draw boundary
-            if (sim.boundary && sim.boundary.length > 0) {
-                this.drawBoundary(ctx, sim.boundary, centerX, centerY, scale);
+            // Draw all boundaries (outer + holes + disconnected)
+            if (sim.boundaries && sim.boundaries.length > 0) {
+                for (const boundary of sim.boundaries) {
+                    this.drawBoundary(ctx, boundary, centerX, centerY, scale);
+                }
             }
         }
 
         drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode) {
-            // Calculate visible range based on current view
-            const margin = 5;
-            const topLeft = this.fromCanvas(0, 0, centerX, centerY, scale);
-            const bottomRight = this.fromCanvas(this.displayWidth, this.displayHeight, centerX, centerY, scale);
+            // Dynamically calculate visible range based on current view
+            // Sample all corners and edges of canvas to find world bounds
+            const corners = [
+                this.fromCanvas(0, 0, centerX, centerY, scale),
+                this.fromCanvas(this.displayWidth, 0, centerX, centerY, scale),
+                this.fromCanvas(0, this.displayHeight, centerX, centerY, scale),
+                this.fromCanvas(this.displayWidth, this.displayHeight, centerX, centerY, scale),
+                this.fromCanvas(this.displayWidth / 2, 0, centerX, centerY, scale),
+                this.fromCanvas(this.displayWidth / 2, this.displayHeight, centerX, centerY, scale),
+                this.fromCanvas(0, this.displayHeight / 2, centerX, centerY, scale),
+                this.fromCanvas(this.displayWidth, this.displayHeight / 2, centerX, centerY, scale),
+            ];
 
-            const minVisX = Math.floor(Math.min(topLeft.x, bottomRight.x)) - margin;
-            const maxVisX = Math.ceil(Math.max(topLeft.x, bottomRight.x)) + margin;
-            const minVisY = Math.floor(Math.min(topLeft.y, bottomRight.y)) - margin;
-            const maxVisY = Math.ceil(Math.max(topLeft.y, bottomRight.y)) + margin;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const c of corners) {
+                minX = Math.min(minX, c.x);
+                maxX = Math.max(maxX, c.x);
+                minY = Math.min(minY, c.y);
+                maxY = Math.max(maxY, c.y);
+            }
 
-            // Clamp to grid bounds
-            const minN = Math.max(-this.gridSize, minVisX);
-            const maxN = Math.min(this.gridSize, maxVisX);
-            const minJ = Math.floor(minVisY / deltaC) - Math.abs(maxN);
-            const maxJ = Math.ceil(maxVisY / deltaC) + Math.abs(maxN);
+            // Add generous margin that scales with view size
+            const viewRange = Math.max(maxX - minX, maxY - minY);
+            const margin = Math.ceil(viewRange * 0.5) + 10;
+
+            minX -= margin;
+            maxX += margin;
+            minY -= margin;
+            maxY += margin;
+
+            // Calculate n and j ranges for the triangular lattice
+            const minN = Math.floor(minX) - 5;
+            const maxN = Math.ceil(maxX) + 5;
+            const minJ = Math.floor(minY / deltaC) - Math.ceil(viewRange) - 5;
+            const maxJ = Math.ceil(maxY / deltaC) + Math.ceil(viewRange) + 5;
 
             ctx.strokeStyle = isDarkMode ? 'rgba(100, 100, 100, 0.2)' : 'rgba(200, 200, 200, 0.5)';
             ctx.lineWidth = 0.5;
 
-            // Vertical lines
+            // Vertical lines (n = const)
             for (let n = minN; n <= maxN; n++) {
                 const y1 = slope * n + minJ * deltaC;
                 const y2 = slope * n + maxJ * deltaC;
@@ -893,7 +982,7 @@ Module.onRuntimeInitialized = function() {
                 ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
             }
 
-            // +slope lines (horizontal in lattice)
+            // +slope lines (j = const in lattice coords)
             for (let j = minJ; j <= maxJ; j++) {
                 const [x1c, y1c] = this.toCanvas(minN, slope * minN + j * deltaC, centerX, centerY, scale);
                 const [x2c, y2c] = this.toCanvas(maxN, slope * maxN + j * deltaC, centerX, centerY, scale);
@@ -1245,7 +1334,8 @@ Module.onRuntimeInitialized = function() {
         if (!tri) return;
 
         let changed = false;
-        if (currentTool === 'draw') {
+        const tool = getEffectiveTool();
+        if (tool === 'draw') {
             changed = handleDraw(tri);
         } else {
             changed = handleErase(tri);
@@ -1269,6 +1359,24 @@ Module.onRuntimeInitialized = function() {
 
     // Prevent context menu on right-click
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Track if cmd/meta is held for temporary tool switch
+    let cmdHeld = false;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.metaKey || e.ctrlKey) cmdHeld = true;
+    });
+    document.addEventListener('keyup', (e) => {
+        if (!e.metaKey && !e.ctrlKey) cmdHeld = false;
+    });
+
+    function getEffectiveTool() {
+        // Cmd-hold temporarily switches draw<->erase
+        if (cmdHeld) {
+            return currentTool === 'draw' ? 'erase' : 'draw';
+        }
+        return currentTool;
+    }
 
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -1422,6 +1530,17 @@ Module.onRuntimeInitialized = function() {
         saveState();
         activeTriangles = doubleMesh(activeTriangles);
         reinitialize();
+        renderer.fitToRegion(activeTriangles);
+        draw();
+    });
+
+    document.getElementById('halfMeshBtn').addEventListener('click', () => {
+        if (activeTriangles.size === 0) return;
+        saveState();
+        activeTriangles = halfMesh(activeTriangles);
+        reinitialize();
+        renderer.fitToRegion(activeTriangles);
+        draw();
     });
 
     // Zoom controls
@@ -1443,19 +1562,19 @@ Module.onRuntimeInitialized = function() {
     // Pan controls
     const panAmount = 50; // pixels
     document.getElementById('panLeftBtn').addEventListener('click', () => {
-        renderer.pan(-panAmount, 0);
-        draw();
-    });
-    document.getElementById('panRightBtn').addEventListener('click', () => {
         renderer.pan(panAmount, 0);
         draw();
     });
+    document.getElementById('panRightBtn').addEventListener('click', () => {
+        renderer.pan(-panAmount, 0);
+        draw();
+    });
     document.getElementById('panUpBtn').addEventListener('click', () => {
-        renderer.pan(0, -panAmount);
+        renderer.pan(0, panAmount);
         draw();
     });
     document.getElementById('panDownBtn').addEventListener('click', () => {
-        renderer.pan(0, panAmount);
+        renderer.pan(0, -panAmount);
         draw();
     });
 

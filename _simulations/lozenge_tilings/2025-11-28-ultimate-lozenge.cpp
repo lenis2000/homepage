@@ -239,10 +239,10 @@ Edge makeOrderedEdge(Vertex a, Vertex b) {
     return {a, b};
 }
 
-std::vector<Vertex> computedBoundary;
+std::vector<std::vector<Vertex>> computedBoundaries;
 
 void computeBoundary() {
-    computedBoundary.clear();
+    computedBoundaries.clear();
 
     // Collect all triangle edges with count
     std::map<Edge, int> edgeCount;
@@ -290,32 +290,43 @@ void computeBoundary() {
         adj[p2].push_back(p1);
     }
 
-    // Chain edges into polygon (start from any vertex)
     if (adj.empty()) return;
-
-    std::set<std::pair<int,int>> visited;
-    auto start = adj.begin()->first;
-    auto current = start;
 
     auto intToVertex = [](const std::pair<int,int>& p) {
         return Vertex{p.first / 1000.0, p.second / 1000.0};
     };
 
-    computedBoundary.push_back(intToVertex(current));
-    visited.insert(current);
+    // Track all visited vertices globally
+    std::set<std::pair<int,int>> globalVisited;
 
-    while (true) {
-        bool found = false;
-        for (const auto& next : adj[current]) {
-            if (visited.find(next) == visited.end()) {
-                visited.insert(next);
-                computedBoundary.push_back(intToVertex(next));
-                current = next;
-                found = true;
-                break;
+    // Find ALL boundary loops (outer boundary + holes + disconnected components)
+    for (auto& [startVertex, neighbors] : adj) {
+        if (globalVisited.find(startVertex) != globalVisited.end()) continue;
+
+        // Start a new boundary loop
+        std::vector<Vertex> currentBoundary;
+        auto current = startVertex;
+
+        currentBoundary.push_back(intToVertex(current));
+        globalVisited.insert(current);
+
+        while (true) {
+            bool found = false;
+            for (const auto& next : adj[current]) {
+                if (globalVisited.find(next) == globalVisited.end()) {
+                    globalVisited.insert(next);
+                    currentBoundary.push_back(intToVertex(next));
+                    current = next;
+                    found = true;
+                    break;
+                }
             }
+            if (!found) break;
         }
-        if (!found) break;
+
+        if (currentBoundary.size() >= 3) {
+            computedBoundaries.push_back(std::move(currentBoundary));
+        }
     }
 }
 
@@ -631,7 +642,7 @@ char* initFromTriangles(int* data, int count) {
     whiteMap.clear();
     triangularVertices.clear();
     currentDimers.clear();
-    computedBoundary.clear();
+    computedBoundaries.clear();
 
     totalSteps = 0;
     flipCount = 0;
@@ -829,12 +840,17 @@ char* exportDimers() {
         }
     }
 
-    // Export boundary
-    std::string json = "{\"boundary\":[";
-    for (size_t i = 0; i < computedBoundary.size(); i++) {
-        if (i > 0) json += ",";
-        json += "{\"x\":" + std::to_string(computedBoundary[i].x) +
-                ",\"y\":" + std::to_string(computedBoundary[i].y) + "}";
+    // Export boundaries (array of arrays for multiple loops)
+    std::string json = "{\"boundaries\":[";
+    for (size_t b = 0; b < computedBoundaries.size(); b++) {
+        if (b > 0) json += ",";
+        json += "[";
+        for (size_t i = 0; i < computedBoundaries[b].size(); i++) {
+            if (i > 0) json += ",";
+            json += "{\"x\":" + std::to_string(computedBoundaries[b][i].x) +
+                    ",\"y\":" + std::to_string(computedBoundaries[b][i].y) + "}";
+        }
+        json += "]";
     }
     json += "],\"dimers\":[";
 
