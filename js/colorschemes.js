@@ -10,6 +10,7 @@
  * - _simulations/lozenge_tilings/2025-11-26-cutout-region-glauber.md
  * - _simulations/lozenge_tilings/2025-11-26-cutout-region-q-racah.md
  * - _simulations/lozenge_tilings/2025-11-27-lozenge-glauber.md
+ * - _simulations/lozenge_tilings/2025-11-28-c2-Glauber.md
  * - s/domino.md
  */
 
