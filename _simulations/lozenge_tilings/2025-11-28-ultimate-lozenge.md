@@ -71,7 +71,7 @@ code:
     align-items: center;
     margin-right: 12px;
   }
-  button {
+  .control-group button {
     height: 30px;
     padding: 0 14px;
     border: 1px solid #d0d0d0;
@@ -81,37 +81,37 @@ code:
     cursor: pointer;
     transition: all 0.15s;
   }
-  button:hover {
+  .control-group button:hover {
     background: #f5f5f5;
     border-color: #999;
   }
-  button.primary {
+  .control-group button.primary {
     background: #4CAF50;
     color: white;
     border-color: #4CAF50;
   }
-  button.primary:hover {
+  .control-group button.primary:hover {
     background: #45a049;
   }
-  button.primary:disabled {
+  .control-group button.primary:disabled {
     background: #ccc;
     border-color: #ccc;
     cursor: not-allowed;
   }
-  button.running {
+  .control-group button.running {
     background: linear-gradient(135deg, #ff5722, #ff9800);
     color: white;
     border-color: #ff5722;
   }
-  button.cftp {
+  .control-group button.cftp {
     background: linear-gradient(135deg, #9c27b0, #7b1fa2);
     color: white;
     border-color: #9c27b0;
   }
-  button.cftp:hover {
+  .control-group button.cftp:hover {
     background: linear-gradient(135deg, #7b1fa2, #6a1b9a);
   }
-  button.cftp:disabled {
+  .control-group button.cftp:disabled {
     background: #ccc;
     border-color: #ccc;
     cursor: not-allowed;
@@ -276,7 +276,7 @@ code:
   }
   [data-theme="dark"] .param-input,
   [data-theme="dark"] select,
-  [data-theme="dark"] button {
+  [data-theme="dark"] .control-group button {
     background-color: #3a3a3a;
     border-color: #555;
     color: #ddd;
@@ -304,16 +304,24 @@ code:
       <button id="drawBtn" class="active">Draw</button>
       <button id="eraseBtn">Erase</button>
     </div>
-    <span class="param-group"><span class="param-label">Grid</span><input type="number" class="param-input" id="gridSizeInput" value="100" min="3" max="500"></span>
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
     <button id="doubleMeshBtn" title="Double the polygon size">2x Polygon</button>
-    <span style="border-left: 1px solid #ddd; height: 20px; margin: 0 4px;"></span>
+    <span id="statusBadge" class="status-empty">Empty</span>
+  </div>
+</div>
+
+<!-- View Controls -->
+<div class="control-group">
+  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <button id="zoomInBtn" title="Zoom In">+</button>
     <button id="zoomOutBtn" title="Zoom Out">−</button>
+    <button id="panLeftBtn" title="Pan Left">←</button>
+    <button id="panRightBtn" title="Pan Right">→</button>
+    <button id="panUpBtn" title="Pan Up">↑</button>
+    <button id="panDownBtn" title="Pan Down">↓</button>
     <button id="resetViewBtn" title="Reset View">Reset View</button>
-    <span id="statusBadge" class="status-empty">Empty</span>
   </div>
 </div>
 
@@ -659,35 +667,12 @@ Module.onRuntimeInitialized = function() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    function doubleMesh(triangles, boundary) {
-        // Double the mesh by scaling the boundary polygon and regenerating triangles
-        if (!boundary || boundary.length < 3) {
-            // Fallback: compute boundary from triangles
-            return doubleMeshFallback(triangles);
-        }
+    function doubleMesh(triangles) {
+        // Robust doubling via Geometric Sampling
+        // 1. Calculate bounding box of current shape
+        let minN = Infinity, maxN = -Infinity;
+        let minJ = Infinity, maxJ = -Infinity;
 
-        // Find centroid of boundary
-        let cx = 0, cy = 0;
-        for (const v of boundary) {
-            cx += v.x;
-            cy += v.y;
-        }
-        cx /= boundary.length;
-        cy /= boundary.length;
-
-        // Scale boundary by 2 around centroid
-        const scaledBoundary = boundary.map(v => ({
-            x: cx + 2 * (v.x - cx),
-            y: cy + 2 * (v.y - cy)
-        }));
-
-        // Generate triangles inside scaled boundary
-        return generateTrianglesInPolygon(scaledBoundary);
-    }
-
-    function doubleMeshFallback(triangles) {
-        // Fallback when no boundary available: compute bounding box and scale
-        let minN = Infinity, maxN = -Infinity, minJ = Infinity, maxJ = -Infinity;
         for (const [key, tri] of triangles) {
             minN = Math.min(minN, tri.n);
             maxN = Math.max(maxN, tri.n);
@@ -695,27 +680,45 @@ Module.onRuntimeInitialized = function() {
             maxJ = Math.max(maxJ, tri.j);
         }
 
-        // Create boundary from bounding vertices and scale
-        const centerN = (minN + maxN) / 2;
-        const centerJ = (minJ + maxJ) / 2;
+        // 2. Define search range for the 2x scaled grid
+        // We scan a range slightly larger than 2x the original bounds
+        const scanMinN = minN * 2 - 5;
+        const scanMaxN = maxN * 2 + 5;
+        const scanMinJ = minJ * 2 - 5;
+        const scanMaxJ = maxJ * 2 + 5;
 
         const doubled = new Map();
-        for (const [key, tri] of triangles) {
-            const { n, j, type } = tri;
-            // Scale coordinates relative to center
-            const newN = Math.round(centerN + 2 * (n - centerN));
-            const newJ = Math.round(centerJ + 2 * (j - centerJ));
 
-            // Add 4 triangles for each original
-            for (let dn = 0; dn <= 1; dn++) {
-                for (let dj = 0; dj <= 1; dj++) {
-                    const nn = newN + dn;
-                    const nj = newJ - dj;
-                    const newKey = `${nn},${nj},${type}`;
-                    doubled.set(newKey, { n: nn, j: nj, type });
+        // 3. Iterate over the high-res grid
+        for (let n = scanMinN; n <= scanMaxN; n++) {
+            for (let j = scanMinJ; j <= scanMaxJ; j++) {
+                // Check Type 1 (Black)
+                // Get centroid of the candidate new triangle
+                const c1 = getRightTriangleCentroid(n, j);
+                // Map back to original space (scale / 2)
+                const orig1 = getTriangleFromWorld(c1.x / 2, c1.y / 2);
+
+                if (orig1) {
+                    // We check if the original triangle exists in our active set
+                    const key = `${orig1.n},${orig1.j},${orig1.type}`;
+                    if (triangles.has(key)) {
+                        doubled.set(`${n},${j},1`, { n, j, type: 1 });
+                    }
+                }
+
+                // Check Type 2 (White)
+                const c2 = getLeftTriangleCentroid(n, j);
+                const orig2 = getTriangleFromWorld(c2.x / 2, c2.y / 2);
+
+                if (orig2) {
+                    const key = `${orig2.n},${orig2.j},${orig2.type}`;
+                    if (triangles.has(key)) {
+                        doubled.set(`${n},${j},2`, { n, j, type: 2 });
+                    }
                 }
             }
         }
+
         return doubled;
     }
 
@@ -1039,7 +1042,6 @@ Module.onRuntimeInitialized = function() {
     const el = {
         drawBtn: document.getElementById('drawBtn'),
         eraseBtn: document.getElementById('eraseBtn'),
-        gridSizeInput: document.getElementById('gridSizeInput'),
         resetBtn: document.getElementById('resetBtn'),
         undoBtn: document.getElementById('undoBtn'),
         redoBtn: document.getElementById('redoBtn'),
@@ -1164,40 +1166,41 @@ Module.onRuntimeInitialized = function() {
     let lastPanX = 0;
     let lastPanY = 0;
 
-    function getTriangleAtPoint(mx, my) {
-        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
-        const { x, y } = renderer.fromCanvas(mx, my, centerX, centerY, scale);
-
-        // Convert screen coords to lattice coords
-        // x = n, y = slope*n + j*deltaC => j = (y - slope*n) / deltaC
+    // Helper: Check which triangle contains world point (x,y)
+    // Returns {n, j, type} or null
+    function getTriangleFromWorld(x, y) {
+        // Convert world coords to lattice basis guess
         const n = Math.floor(x);
         const j = Math.floor((y - slope * n) / deltaC);
 
-        // For each candidate (n, j), check both black and white triangles
+        // Check neighborhood candidates (n,j) for exact inclusion
+        // We check a 1-ring around the estimate to be safe
         const candidates = [
             { n, j }, { n, j: j + 1 }, { n: n + 1, j }, { n: n - 1, j },
             { n, j: j - 1 }, { n: n + 1, j: j - 1 }, { n: n - 1, j: j + 1 }
         ];
 
         for (const { n: cn, j: cj } of candidates) {
-            // Check black triangle R(cn, cj): (cn,cj), (cn,cj-1), (cn+1,cj-1)
-            if (pointInTriangle(x, y,
-                getVertex(cn, cj),
-                getVertex(cn, cj - 1),
-                getVertex(cn + 1, cj - 1))) {
-                return { n: cn, j: cj, type: 1 };
-            }
+            // Check Black (Type 1)
+            const v1 = getVertex(cn, cj);
+            const v2 = getVertex(cn, cj - 1);
+            const v3 = getVertex(cn + 1, cj - 1);
+            if (pointInTriangle(x, y, v1, v2, v3)) return { n: cn, j: cj, type: 1 };
 
-            // Check white triangle L(cn, cj): (cn,cj), (cn+1,cj), (cn+1,cj-1)
-            if (pointInTriangle(x, y,
-                getVertex(cn, cj),
-                getVertex(cn + 1, cj),
-                getVertex(cn + 1, cj - 1))) {
-                return { n: cn, j: cj, type: 2 };
-            }
+            // Check White (Type 2)
+            const w1 = getVertex(cn, cj);
+            const w2 = getVertex(cn + 1, cj);
+            const w3 = getVertex(cn + 1, cj - 1);
+            if (pointInTriangle(x, y, w1, w2, w3)) return { n: cn, j: cj, type: 2 };
         }
-
         return null;
+    }
+
+    // Refactored mouse handler to use the helper
+    function getTriangleAtPoint(mx, my) {
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        const { x, y } = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+        return getTriangleFromWorld(x, y);
     }
 
     function pointInTriangle(px, py, v1, v2, v3) {
@@ -1398,11 +1401,6 @@ Module.onRuntimeInitialized = function() {
         el.drawBtn.classList.remove('active');
     });
 
-    el.gridSizeInput.addEventListener('change', (e) => {
-        renderer.gridSize = parseInt(e.target.value) || 100;
-        draw();
-    });
-
     el.resetBtn.addEventListener('click', () => {
         saveState();
         activeTriangles.clear();
@@ -1422,7 +1420,7 @@ Module.onRuntimeInitialized = function() {
     document.getElementById('doubleMeshBtn').addEventListener('click', () => {
         if (activeTriangles.size === 0) return;
         saveState();
-        activeTriangles = doubleMesh(activeTriangles, sim.boundary);
+        activeTriangles = doubleMesh(activeTriangles);
         reinitialize();
     });
 
@@ -1439,6 +1437,25 @@ Module.onRuntimeInitialized = function() {
 
     document.getElementById('resetViewBtn').addEventListener('click', () => {
         renderer.resetView();
+        draw();
+    });
+
+    // Pan controls
+    const panAmount = 50; // pixels
+    document.getElementById('panLeftBtn').addEventListener('click', () => {
+        renderer.pan(-panAmount, 0);
+        draw();
+    });
+    document.getElementById('panRightBtn').addEventListener('click', () => {
+        renderer.pan(panAmount, 0);
+        draw();
+    });
+    document.getElementById('panUpBtn').addEventListener('click', () => {
+        renderer.pan(0, -panAmount);
+        draw();
+    });
+    document.getElementById('panDownBtn').addEventListener('click', () => {
+        renderer.pan(0, panAmount);
         draw();
     });
 
