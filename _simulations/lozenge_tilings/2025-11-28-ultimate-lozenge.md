@@ -668,24 +668,70 @@ Module.onRuntimeInitialized = function() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    // Double the mesh by regenerating hexagon with 2x parameters
-    // Store current hexagon parameters
-    let currentHexParams = { a: 4, b: 3, c: 5 };
+    // Convert world coordinates to lattice (n, j) - boundary vertices are at integer lattice points
+    function worldToLattice(x, y) {
+        const n = Math.round(x);
+        const j = Math.round((y - slope * x) / deltaC);
+        return { n, j };
+    }
 
+    // Double mesh: trace boundaries, double in lattice space, retrace on grid
     function doubleMesh(triangles) {
         if (triangles.size === 0) return new Map();
 
-        // Double the hexagon parameters and regenerate
-        currentHexParams.a *= 2;
-        currentHexParams.b *= 2;
-        currentHexParams.c *= 2;
+        if (!sim.boundaries || sim.boundaries.length === 0) {
+            console.warn('No boundary available');
+            return triangles;
+        }
 
-        // Update the input fields to reflect new values
-        el.hexAInput.value = currentHexParams.a;
-        el.hexBInput.value = currentHexParams.b;
-        el.hexCInput.value = currentHexParams.c;
+        // 1. Convert all boundaries to integer lattice coords
+        const latticeBoundaries = sim.boundaries.map(b =>
+            b.map(v => worldToLattice(v.x, v.y))
+        );
 
-        return generateHexagon(currentHexParams.a, currentHexParams.b, currentHexParams.c);
+        // 2. Find outer boundary (largest) and compute its centroid
+        let outerIdx = 0;
+        let maxArea = -1;
+        latticeBoundaries.forEach((b, i) => {
+            let minN = Infinity, maxN = -Infinity, minJ = Infinity, maxJ = -Infinity;
+            for (const v of b) {
+                minN = Math.min(minN, v.n); maxN = Math.max(maxN, v.n);
+                minJ = Math.min(minJ, v.j); maxJ = Math.max(maxJ, v.j);
+            }
+            const area = (maxN - minN) * (maxJ - minJ);
+            if (area > maxArea) { maxArea = area; outerIdx = i; }
+        });
+
+        const outer = latticeBoundaries[outerIdx];
+        let cenN = 0, cenJ = 0;
+        for (const v of outer) { cenN += v.n; cenJ += v.j; }
+        cenN /= outer.length;
+        cenJ /= outer.length;
+
+        // 3. Double all boundaries in lattice space (scale by 2 around centroid)
+        const doubleBoundary = (b) => b.map(v => {
+            const newN = Math.round(cenN + (v.n - cenN) * 2);
+            const newJ = Math.round(cenJ + (v.j - cenJ) * 2);
+            return getVertex(newN, newJ);
+        });
+
+        const scaledOuter = doubleBoundary(outer);
+        const scaledHoles = latticeBoundaries
+            .filter((_, i) => i !== outerIdx)
+            .map(doubleBoundary);
+
+        // 4. Fill outer boundary
+        const result = generateTrianglesInPolygon(scaledOuter);
+
+        // 5. Remove triangles inside holes
+        for (const hole of scaledHoles) {
+            const holeTriangles = generateTrianglesInPolygon(hole);
+            for (const key of holeTriangles.keys()) {
+                result.delete(key);
+            }
+        }
+
+        return result;
     }
 
     // ========================================================================
@@ -1561,8 +1607,6 @@ Module.onRuntimeInitialized = function() {
         const a = parseInt(el.hexAInput.value) || 4;
         const b = parseInt(el.hexBInput.value) || 3;
         const c = parseInt(el.hexCInput.value) || 5;
-        // Track current hexagon parameters for 2x scaling
-        currentHexParams = { a, b, c };
         activeTriangles = generateHexagon(a, b, c);
         reinitialize();
     });
@@ -1818,7 +1862,6 @@ Module.onRuntimeInitialized = function() {
     const defaultA = parseInt(el.hexAInput.value) || 4;
     const defaultB = parseInt(el.hexBInput.value) || 3;
     const defaultC = parseInt(el.hexCInput.value) || 5;
-    currentHexParams = { a: defaultA, b: defaultB, c: defaultC };
     activeTriangles = generateHexagon(defaultA, defaultB, defaultC);
     reinitialize();
 
