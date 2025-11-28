@@ -478,9 +478,10 @@ code:
     <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
       <button id="export-png">PNG</button>
       <button id="export-pdf">PDF</button>
+      <button id="export-height-csv">Height CSV</button><button id="height-csv-info" title="Click for coordinate info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
+      <button id="export-height-mma">Copy Height as Mathematica Array</button><button id="height-mma-info" title="Click for plotting code" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
       <button id="export-json">Export Shape</button>
       <button id="import-json">Import Shape</button>
-      <button id="export-height-csv">Height CSV</button>
       <input type="file" id="import-json-file" accept=".json" style="display: none;">
       <span style="font-size: 11px; color: #666;">Quality:</span>
       <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
@@ -2958,6 +2959,35 @@ Module.onRuntimeInitialized = function() {
         URL.revokeObjectURL(url);
     });
 
+    // Height CSV coordinate info tooltip
+    document.getElementById('height-csv-info').addEventListener('click', () => {
+        alert(
+            'Height CSV Coordinates:\n\n' +
+            '• n, j: Integer lattice coordinates on the triangular grid\n' +
+            '• x, y: World coordinates (floating point)\n\n' +
+            'Conversion:\n' +
+            '  x = n\n' +
+            '  y = n/√3 + j × 2/√3\n\n' +
+            'The height h is defined on vertices of the triangular lattice\n' +
+            '(equivalently, faces of the dual hexagonal grid).'
+        );
+    });
+
+    // Mathematica plotting code tooltip
+    document.getElementById('height-mma-info').addEventListener('click', () => {
+        alert(
+            'Mathematica Plotting Code:\n\n' +
+            'After pasting, assign to A and run:\n\n' +
+            'pts2D = A[[All, {1, 2}]];\n' +
+            'mesh = DelaunayMesh[pts2D];\n' +
+            'Graphics3D[{EdgeForm[Black],\n' +
+            '  GraphicsComplex[\n' +
+            '    MapThread[Append, {pts2D, A[[All, 3]]}],\n' +
+            '    {Polygon[MeshCells[mesh, 2][[All, 1]]]}]\n' +
+            '}, Boxed -> False]'
+        );
+    });
+
     // Height CSV Export - export height function to CSV
     document.getElementById('export-height-csv').addEventListener('click', () => {
         if (!isValid || sim.dimers.length === 0) {
@@ -2983,6 +3013,36 @@ Module.onRuntimeInitialized = function() {
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
+    });
+
+    // Height Mathematica Export - copy height function to clipboard in Mathematica format
+    document.getElementById('export-height-mma').addEventListener('click', () => {
+        if (!isValid || sim.dimers.length === 0) {
+            alert('No valid tiling to export. Create a valid tileable region first.');
+            return;
+        }
+
+        const heights = computeHeightFunction(sim.dimers);
+
+        // Build Mathematica list format: { {x1,y1,h1}, {x2,y2,h2}, ... }
+        const entries = [];
+        for (const [key, h] of heights) {
+            const [n, j] = key.split(',').map(Number);
+            const vertex = getVertex(n, j);
+            entries.push(`{${vertex.x.toFixed(6)}, ${vertex.y.toFixed(6)}, ${-h}}`);
+        }
+        const mma = `{\n${entries.join(',\n')}\n}`;
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(mma).then(() => {
+            // Brief visual feedback
+            const btn = document.getElementById('export-height-mma');
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = originalText; }, 1500);
+        }).catch(err => {
+            alert('Failed to copy to clipboard: ' + err);
+        });
     });
 
     // JSON Import - load shape from file
