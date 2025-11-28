@@ -281,23 +281,6 @@ code:
     background: linear-gradient(135deg, #4CAF50, #66BB6A);
     cursor: pointer;
   }
-  .color-legend {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .color-box {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    border: 1px solid rgba(0,0,0,0.1);
-  }
   details {
     border: 1px solid #e0e0e0;
     border-radius: 6px;
@@ -469,33 +452,23 @@ code:
   </div>
 </div>
 
+<!-- Export -->
+<div class="control-group">
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <button id="export-png">PNG</button>
+    <span style="font-size: 11px; color: #666;">Quality:</span>
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
+    <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
+    <button id="export-pdf">PDF</button>
+    <button id="export-height-csv">Height CSV</button><button id="height-csv-info" title="Click for coordinate info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
+    <button id="export-height-mma">Copy Height as Mathematica Array</button><button id="height-mma-info" title="Click for plotting code" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
+    <button id="export-json">Export Shape</button>
+    <button id="import-json">Import Shape</button>
+    <input type="file" id="import-json-file" accept=".json" style="display: none;">
+  </div>
 </div>
 
-<!-- Export & Legend -->
-<details>
-  <summary>Export & Legend</summary>
-  <div class="content">
-    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <button id="export-png">PNG</button>
-      <button id="export-pdf">PDF</button>
-      <button id="export-height-csv">Height CSV</button><button id="height-csv-info" title="Click for coordinate info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
-      <button id="export-height-mma">Copy Height as Mathematica Array</button><button id="height-mma-info" title="Click for plotting code" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
-      <button id="export-json">Export Shape</button>
-      <button id="import-json">Import Shape</button>
-      <input type="file" id="import-json-file" accept=".json" style="display: none;">
-      <span style="font-size: 11px; color: #666;">Quality:</span>
-      <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
-      <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
-      <span style="border-left: 1px solid #ddd; height: 20px;"></span>
-      <div class="color-legend">
-        <span class="legend-item"><span class="color-box" id="swatch-type0"></span>T0</span>
-        <span class="legend-item"><span class="color-box" id="swatch-type1"></span>T1</span>
-        <span class="legend-item"><span class="color-box" id="swatch-type2"></span>T2</span>
-        <span id="palette-name-display" style="font-weight: 500;"></span>
-      </div>
-    </div>
-  </div>
-</details>
+</div>
 
 <script>
 Module.onRuntimeInitialized = function() {
@@ -1422,12 +1395,7 @@ Module.onRuntimeInitialized = function() {
         }
 
         updateLegend() {
-            const colors = this.getPermutedColors();
-            const palette = this.getCurrentPalette();
-            document.getElementById('swatch-type0').style.backgroundColor = colors[0];
-            document.getElementById('swatch-type1').style.backgroundColor = colors[1];
-            document.getElementById('swatch-type2').style.backgroundColor = colors[2];
-            document.getElementById('palette-name-display').textContent = palette.name;
+            // Legend removed from UI
         }
     }
 
@@ -2964,10 +2932,20 @@ Module.onRuntimeInitialized = function() {
         alert(
             'Height CSV Coordinates:\n\n' +
             '• n, j: Integer lattice coordinates on the triangular grid\n' +
-            '• x, y: World coordinates (floating point)\n\n' +
-            'Conversion:\n' +
+            '• x, y: World coordinates (floating point)\n' +
+            '• h: Height function value at vertex (n, j)\n\n' +
+            'Coordinate System:\n' +
+            '  The angle between n and j axes is 60°\n\n' +
+            '  n-direction: horizontal + slight upward tilt\n' +
+            '    (vector: (1, 1/√3), angle 30° from horizontal)\n\n' +
+            '  j-direction: purely vertical\n' +
+            '    (vector: (0, 2/√3))\n\n' +
+            'Conversion to world (x, y):\n' +
             '  x = n\n' +
             '  y = n/√3 + j × 2/√3\n\n' +
+            'Triangles indexed by (n, j, type):\n' +
+            '  Type 1 (black ▶): vertices (n,j), (n,j-1), (n+1,j-1)\n' +
+            '  Type 2 (white ◀): vertices (n,j), (n+1,j), (n+1,j-1)\n\n' +
             'The height h is defined on vertices of the triangular lattice\n' +
             '(equivalently, faces of the dual hexagonal grid).'
         );
