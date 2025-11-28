@@ -368,8 +368,9 @@ code:
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
-      <input type="range" id="speedSlider" min="1" max="15000000" value="100" style="width: 100px;">
-      <span id="speedVal" style="font-size: 12px; color: #1976d2; min-width: 45px;">100/s</span>
+      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
+      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;">
+      <span style="font-size: 11px; color: #888;">/s</span>
     </div>
     <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
   </div>
@@ -667,11 +668,18 @@ Module.onRuntimeInitialized = function() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    // Scale mesh by scaling the WASM-computed boundary and refilling
+    // Convert world coordinates to lattice (n, j) coordinates
+    function worldToLattice(x, y) {
+        const n = x;
+        const j = (y - slope * n) / deltaC;
+        return { n, j };
+    }
+
+    // Scale mesh by scaling boundary in LATTICE coordinates
     function doubleMesh(triangles) {
         if (triangles.size === 0) return new Map();
 
-        // Use the boundary computed by WASM (sim.boundaries[0] is the outer boundary)
+        // Use the boundary computed by WASM
         if (!sim.boundaries || sim.boundaries.length === 0) {
             console.warn('No boundary available for scaling');
             return triangles;
@@ -680,17 +688,23 @@ Module.onRuntimeInitialized = function() {
         const boundary = sim.boundaries[0];
         if (boundary.length < 3) return triangles;
 
-        // Find centroid
-        let cx = 0, cy = 0;
-        for (const v of boundary) { cx += v.x; cy += v.y; }
-        cx /= boundary.length;
-        cy /= boundary.length;
+        // Convert boundary to lattice coordinates
+        const latticeVerts = boundary.map(v => worldToLattice(v.x, v.y));
 
-        // Scale boundary vertices by 2x around centroid
-        const scaledBoundary = boundary.map(v => ({
-            x: cx + (v.x - cx) * 2,
-            y: cy + (v.y - cy) * 2
+        // Find centroid in lattice space
+        let cenN = 0, cenJ = 0;
+        for (const v of latticeVerts) { cenN += v.n; cenJ += v.j; }
+        cenN /= latticeVerts.length;
+        cenJ /= latticeVerts.length;
+
+        // Scale in lattice space by 2x around centroid
+        const scaledLattice = latticeVerts.map(v => ({
+            n: cenN + (v.n - cenN) * 2,
+            j: cenJ + (v.j - cenJ) * 2
         }));
+
+        // Convert back to world coordinates
+        const scaledBoundary = scaledLattice.map(v => getVertex(v.n, v.j));
 
         // Fill scaled boundary with triangles
         return generateTrianglesInPolygon(scaledBoundary);
@@ -1101,7 +1115,7 @@ Module.onRuntimeInitialized = function() {
         paletteSelect: document.getElementById('palette-select'),
         outlineWidthPct: document.getElementById('outlineWidthPct'),
         speedSlider: document.getElementById('speedSlider'),
-        speedVal: document.getElementById('speedVal'),
+        speedInput: document.getElementById('speedInput'),
         startStopBtn: document.getElementById('startStopBtn'),
         cftpBtn: document.getElementById('cftpBtn'),
         qInput: document.getElementById('qInput'),
@@ -1621,11 +1635,33 @@ Module.onRuntimeInitialized = function() {
         draw();
     });
 
-    // Simulation controls
-    el.speedSlider.addEventListener('input', (e) => {
-        stepsPerSecond = parseInt(e.target.value);
-        el.speedVal.textContent = stepsPerSecond >= 1000 ? (stepsPerSecond / 1000).toFixed(1) + 'k/s' : stepsPerSecond + '/s';
-    });
+    // Simulation controls - logarithmic slider with synchronized input
+    // Slider 0-100 maps to speed 1 - 100,000,000 (logarithmic)
+    function sliderToSpeed(sliderVal) {
+        // 0 -> 1, 100 -> 100M (10^8)
+        return Math.round(Math.pow(10, sliderVal * 0.08));
+    }
+
+    function speedToSlider(speed) {
+        // Inverse: log10(speed) / 0.08
+        if (speed <= 1) return 0;
+        return Math.round(Math.log10(speed) / 0.08);
+    }
+
+    function updateSpeedFromSlider(sliderVal) {
+        stepsPerSecond = sliderToSpeed(sliderVal);
+        el.speedSlider.value = sliderVal;
+        el.speedInput.value = stepsPerSecond;
+    }
+
+    function updateSpeedFromInput(speed) {
+        stepsPerSecond = Math.max(1, Math.min(100000000, parseInt(speed) || 100));
+        el.speedInput.value = stepsPerSecond;
+        el.speedSlider.value = speedToSlider(stepsPerSecond);
+    }
+
+    el.speedSlider.addEventListener('input', (e) => updateSpeedFromSlider(parseInt(e.target.value)));
+    el.speedInput.addEventListener('input', (e) => updateSpeedFromInput(e.target.value));
 
     el.qInput.addEventListener('change', (e) => {
         const q = parseFloat(e.target.value) || 1;
