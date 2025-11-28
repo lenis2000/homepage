@@ -307,7 +307,6 @@ code:
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="halfMeshBtn" title="Half the region size">0.5x Region</button>
     <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
     <span id="statusBadge" class="status-empty">Empty</span>
   </div>
@@ -668,76 +667,34 @@ Module.onRuntimeInitialized = function() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    function scaleMesh(triangles, scaleFactor) {
+    // Scale mesh by scaling the WASM-computed boundary and refilling
+    function doubleMesh(triangles) {
         if (triangles.size === 0) return new Map();
 
-        // 1. Calculate Bounding Box indices
-        let minN = Infinity, maxN = -Infinity;
-        let minJ = Infinity, maxJ = -Infinity;
-
-        for (const tri of triangles.values()) {
-            minN = Math.min(minN, tri.n);
-            maxN = Math.max(maxN, tri.n);
-            minJ = Math.min(minJ, tri.j);
-            maxJ = Math.max(maxJ, tri.j);
+        // Use the boundary computed by WASM (sim.boundaries[0] is the outer boundary)
+        if (!sim.boundaries || sim.boundaries.length === 0) {
+            console.warn('No boundary available for scaling');
+            return triangles;
         }
 
-        // 2. FORCE INTEGER PIVOT (Crucial for lattice alignment)
-        // Using Math.round prevents 0.5 shifts that break the grid parity
-        const cenN = Math.round((minN + maxN) / 2);
-        const cenJ = Math.round((minJ + maxJ) / 2);
+        const boundary = sim.boundaries[0];
+        if (boundary.length < 3) return triangles;
 
-        // Get the exact world coordinate of this integer pivot
-        const centerPoint = getRightTriangleCentroid(cenN, cenJ);
-        const pivX = centerPoint.x;
-        const pivY = centerPoint.y;
+        // Find centroid
+        let cx = 0, cy = 0;
+        for (const v of boundary) { cx += v.x; cy += v.y; }
+        cx /= boundary.length;
+        cy /= boundary.length;
 
-        // 3. Define Scan Range
-        const rangeN = (maxN - minN) * scaleFactor;
-        const rangeJ = (maxJ - minJ) * scaleFactor;
-        const buffer = 5; // Small buffer is enough with correct pivot
+        // Scale boundary vertices by 2x around centroid
+        const scaledBoundary = boundary.map(v => ({
+            x: cx + (v.x - cx) * 2,
+            y: cy + (v.y - cy) * 2
+        }));
 
-        const scanMinN = Math.floor(cenN - rangeN / 2) - buffer;
-        const scanMaxN = Math.ceil(cenN + rangeN / 2) + buffer;
-        const scanMinJ = Math.floor(cenJ - rangeJ / 2) - buffer;
-        const scanMaxJ = Math.ceil(cenJ + rangeJ / 2) + buffer;
-
-        const newTriangles = new Map();
-
-        // 4. Iterate and Sample with Epsilon
-        for (let n = scanMinN; n <= scanMaxN; n++) {
-            for (let j = scanMinJ; j <= scanMaxJ; j++) {
-
-                const checkType = (type) => {
-                    const c = (type === 1) ? getRightTriangleCentroid(n, j) : getLeftTriangleCentroid(n, j);
-
-                    // Transform back to original space
-                    const oldX = pivX + (c.x - pivX) / scaleFactor;
-                    const oldY = pivY + (c.y - pivY) / scaleFactor;
-
-                    // ADD EPSILON: Shift slightly to avoid landing exactly on edges/vertices
-                    const epsilon = 1e-3;
-                    const orig = getTriangleFromWorld(oldX + epsilon, oldY + epsilon);
-
-                    if (orig) {
-                        const key = `${orig.n},${orig.j},${orig.type}`;
-                        if (triangles.has(key)) {
-                            newTriangles.set(`${n},${j},${type}`, { n, j, type });
-                        }
-                    }
-                };
-
-                checkType(1);
-                checkType(2);
-            }
-        }
-
-        return newTriangles;
+        // Fill scaled boundary with triangles
+        return generateTrianglesInPolygon(scaledBoundary);
     }
-
-    // Specific wrappers for clarity
-    function doubleMesh(triangles) { return scaleMesh(triangles, 2.0); }
-    function halfMesh(triangles) { return scaleMesh(triangles, 0.5); }
 
     // ========================================================================
     // RENDERER
@@ -1208,23 +1165,48 @@ Module.onRuntimeInitialized = function() {
         renderer.draw(sim, activeTriangles, isValid);
     }
 
+    // Track if simulation should auto-restart when shape becomes valid
+    let wasRunningBeforeInvalid = false;
+
     function reinitialize() {
-        if (running) {
-            running = false;
-            el.startStopBtn.textContent = 'Start';
-            el.startStopBtn.classList.remove('running');
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                clearTimeout(animationId);
-                animationId = null;
-            }
+        const wasRunning = running;
+
+        // Stop animation loop temporarily
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            clearTimeout(animationId);
+            animationId = null;
         }
 
         const result = sim.initFromTriangles(activeTriangles);
+        const wasValid = isValid;
         isValid = result.status === 'valid';
 
         if (result.volume !== undefined) {
             el.volume.textContent = formatNumber(result.volume);
+        }
+
+        // Track if we should auto-restart when valid again
+        if (wasRunning && !isValid) {
+            wasRunningBeforeInvalid = true;
+            running = false;
+            el.startStopBtn.textContent = 'Start';
+            el.startStopBtn.classList.remove('running');
+        }
+
+        // Auto-restart if shape became valid and we were running before
+        if (isValid && wasRunningBeforeInvalid) {
+            wasRunningBeforeInvalid = false;
+            running = true;
+            el.startStopBtn.textContent = 'Stop';
+            el.startStopBtn.classList.add('running');
+            lastFrameTime = performance.now();
+            frameCount = 0;
+            loop();
+        } else if (isValid && wasRunning) {
+            // Continue running if still valid
+            running = true;
+            loop();
         }
 
         updateUI();
@@ -1534,15 +1516,6 @@ Module.onRuntimeInitialized = function() {
         draw();
     });
 
-    document.getElementById('halfMeshBtn').addEventListener('click', () => {
-        if (activeTriangles.size === 0) return;
-        saveState();
-        activeTriangles = halfMesh(activeTriangles);
-        reinitialize();
-        renderer.fitToRegion(activeTriangles);
-        draw();
-    });
-
     // Zoom controls
     document.getElementById('zoomInBtn').addEventListener('click', () => {
         renderer.zoomAt(renderer.displayWidth / 2, renderer.displayHeight / 2, 1.3);
@@ -1824,8 +1797,14 @@ Module.onRuntimeInitialized = function() {
     });
 
     initPaletteSelector();
-    draw();
-    updateUI();
+
+    // Generate default hexagon on load
+    const defaultA = parseInt(el.hexAInput.value) || 4;
+    const defaultB = parseInt(el.hexBInput.value) || 3;
+    const defaultC = parseInt(el.hexCInput.value) || 5;
+    activeTriangles = generateHexagon(defaultA, defaultB, defaultC);
+    reinitialize();
+
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
 };
 </script>
