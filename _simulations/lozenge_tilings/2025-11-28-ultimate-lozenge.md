@@ -1,7 +1,7 @@
 ---
 title: Ultimate Lozenge Tiling Generator - Draw Any Region
 model: lozenge-tilings
-permalink: lozenge-draw
+permalink: lozenge-draw/
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md'
