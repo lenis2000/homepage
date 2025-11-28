@@ -73,6 +73,25 @@ code:
   #lozenge-canvas.panning:active {
     cursor: grabbing;
   }
+  #three-container {
+    width: 100%;
+    max-width: 900px;
+    height: 600px;
+    border: 1px solid #ccc;
+    display: none;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 6px;
+  }
+  #three-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  [data-theme="dark"] #three-container {
+    background: #1a1a1a;
+    border-color: #444;
+  }
   [data-theme="dark"] #lozenge-canvas {
     background: #1a1a1a;
     border-color: #444;
@@ -323,6 +342,8 @@ code:
 </style>
 
 <script src="/js/colorschemes.js"></script>
+<script src="/js/three.min.js"></script>
+<script src="/js/OrbitControls.js"></script>
 <script src="/js/2025-11-28-ultimate-lozenge.js"></script>
 
 <!-- Main controls -->
@@ -343,6 +364,7 @@ code:
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <button id="startStopBtn" class="primary" disabled>Start</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
+    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
     <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
@@ -361,7 +383,6 @@ code:
     <div class="stat"><span class="stat-label">White</span><span class="stat-value" id="whiteCount">0</span></div>
     <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
-    <div class="stat"><span class="stat-label">Volume</span><span class="stat-value" id="volume">0</span></div>
     <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span></div>
   </div>
 </div>
@@ -370,6 +391,9 @@ code:
 
 <!-- Canvas -->
 <canvas id="lozenge-canvas"></canvas>
+
+<!-- 3D Container -->
+<div id="three-container"></div>
 
 <!-- Controls below canvas -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
@@ -416,6 +440,11 @@ code:
     <div class="view-toggle">
       <button id="lozengeViewBtn" class="active">Lozenge</button>
       <button id="dimerViewBtn">Dimer</button>
+    </div>
+    <button id="toggle3DBtn">3D View</button>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="autoRotateCheckbox">
+      <label for="autoRotateCheckbox" style="font-size: 12px; color: #555;">Auto-rotate</label>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
@@ -1317,9 +1346,324 @@ Module.onRuntimeInitialized = function() {
     }
 
     // ========================================================================
+    // 3D RENDERER
+    // ========================================================================
+    class Lozenge3DRenderer {
+        constructor(container) {
+            this.container = container;
+            this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
+            this.currentPaletteIndex = 0;
+            this.colorPermutation = 0;
+            this.autoRotate = false;
+            this.cameraInitialized = false;
+
+            // Three.js setup
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0xffffff);
+
+            // Camera with Z-up
+            this.camera = new THREE.PerspectiveCamera(
+                45,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                10000
+            );
+            this.camera.up.set(0, 0, 1);
+
+            // Renderer
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(container.clientWidth, container.clientHeight);
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(this.renderer.domElement);
+
+            // Orbit controls
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enablePan = true;
+            this.controls.panSpeed = 1.0;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            this.scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(10, 10, 15);
+            this.scene.add(directionalLight);
+
+            // Group for meshes
+            this.meshGroup = new THREE.Group();
+            this.scene.add(this.meshGroup);
+
+            // Handle window resize
+            window.addEventListener('resize', () => this.handleResize());
+
+            // Start animation loop
+            this.animate();
+        }
+
+        getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
+
+        getPermutedColors() {
+            const palette = this.getCurrentPalette();
+            const permutations = [
+                [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
+            ];
+            const perm = permutations[this.colorPermutation || 0];
+            return [palette.colors[perm[0]], palette.colors[perm[1]], palette.colors[perm[2]]];
+        }
+
+        setPalette(index) {
+            this.currentPaletteIndex = ((index % this.colorPalettes.length) + this.colorPalettes.length) % this.colorPalettes.length;
+            this.colorPermutation = 0;
+        }
+
+        permuteColors() {
+            this.colorPermutation = ((this.colorPermutation || 0) + 1) % 6;
+        }
+
+        setAutoRotate(enabled) {
+            this.autoRotate = enabled;
+            this.controls.autoRotate = enabled;
+            this.controls.autoRotateSpeed = 2.0;
+        }
+
+        handleResize() {
+            if (!this.container) return;
+            const width = this.container.clientWidth;
+            const height = this.container.clientHeight;
+
+            this.camera.aspect = width / height;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(width, height);
+        }
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            this.controls.update();
+            this.renderer.render(this.scene, this.camera);
+        }
+
+        dimersTo3D(dimers, boundaries) {
+            // Clear existing geometry
+            while (this.meshGroup.children.length > 0) {
+                const child = this.meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                this.meshGroup.remove(child);
+            }
+
+            if (!dimers || dimers.length === 0) return;
+
+            const colors = this.getPermutedColors();
+
+            // Vertex keys for each dimer type
+            const getVertexKeys = (dimer) => {
+                const { bn, bj, t } = dimer;
+                if (t === 0) {
+                    return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+                } else if (t === 1) {
+                    return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+                } else {
+                    return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+                }
+            };
+
+            // Height patterns (relative z-heights of the 4 vertices)
+            const getHeightPattern = (t) => {
+                if (t === 0) return [0, 0, 0, 0];
+                if (t === 1) return [1, 0, 0, 1];
+                return [1, 1, 0, 0];
+            };
+
+            // 1. Build Vertex-to-Dimer Map
+            const vertexToDimers = new Map();
+            for (const dimer of dimers) {
+                const verts = getVertexKeys(dimer);
+                for (const [n, j] of verts) {
+                    const key = `${n},${j}`;
+                    if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                    vertexToDimers.get(key).push(dimer);
+                }
+            }
+
+            // 2. BFS to calculate Height Function h(n,j)
+            const heights = new Map();
+            if (dimers.length > 0) {
+                const firstDimer = dimers[0];
+                const firstVerts = getVertexKeys(firstDimer);
+                const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+                heights.set(startKey, 0);
+
+                const queue = [startKey];
+                const visited = new Set();
+
+                while (queue.length > 0) {
+                    const currentKey = queue.shift();
+                    if (visited.has(currentKey)) continue;
+                    visited.add(currentKey);
+
+                    const currentH = heights.get(currentKey);
+                    const [cn, cj] = currentKey.split(',').map(Number);
+
+                    for (const dimer of vertexToDimers.get(currentKey) || []) {
+                        const verts = getVertexKeys(dimer);
+                        const pattern = getHeightPattern(dimer.t);
+
+                        // Find index of current vertex in this dimer
+                        let myIdx = -1;
+                        for (let i = 0; i < 4; i++) {
+                            if (verts[i][0] === cn && verts[i][1] === cj) {
+                                myIdx = i;
+                                break;
+                            }
+                        }
+
+                        if (myIdx >= 0) {
+                            for (let i = 0; i < 4; i++) {
+                                const [vn, vj] = verts[i];
+                                const vkey = `${vn},${vj}`;
+                                if (!heights.has(vkey)) {
+                                    const newH = currentH + (pattern[i] - pattern[myIdx]);
+                                    heights.set(vkey, newH);
+                                    queue.push(vkey);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Coordinate Transformation
+            // Maps abstract lattice (n, j, h) to Cartesian (x, y, z)
+            // Using x = n + h and y = j - h ensures that the "vertical drop" vector (1, -1)
+            // maps to a constant (x, y) position, creating perfect vertical walls.
+            const to3D = (n, j, h) => {
+                return {
+                    x: n + h,
+                    y: j - h,
+                    z: h
+                };
+            };
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            const vertexColors = [];
+            const indices = [];
+
+            const addQuad = (v1, v2, v3, v4, color) => {
+                const baseIndex = vertices.length / 3;
+                vertices.push(v1.x, v1.y, v1.z);
+                vertices.push(v2.x, v2.y, v2.z);
+                vertices.push(v3.x, v3.y, v3.z);
+                vertices.push(v4.x, v4.y, v4.z);
+
+                // Compute flat normal
+                const edge1 = { x: v2.x - v1.x, y: v2.y - v1.y, z: v2.z - v1.z };
+                const edge2 = { x: v4.x - v1.x, y: v4.y - v1.y, z: v4.z - v1.z }; // Use v4 for consistent winding
+                const nx = edge1.y * edge2.z - edge1.z * edge2.y;
+                const ny = edge1.z * edge2.x - edge1.x * edge2.z;
+                const nz = edge1.x * edge2.y - edge1.y * edge2.x;
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+
+                for (let i = 0; i < 4; i++) {
+                    normals.push(nx / len, ny / len, nz / len);
+                }
+
+                const c = new THREE.Color(color);
+                for (let i = 0; i < 4; i++) {
+                    vertexColors.push(c.r, c.g, c.b);
+                }
+
+                indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
+                indices.push(baseIndex, baseIndex + 2, baseIndex + 3);
+            };
+
+            // 4. Generate Geometry
+            for (const dimer of dimers) {
+                const verts = getVertexKeys(dimer);
+                const v3d = verts.map(([n, j]) => {
+                    const h = heights.get(`${n},${j}`) || 0;
+                    return to3D(n, j, h);
+                });
+                addQuad(v3d[0], v3d[1], v3d[2], v3d[3], colors[dimer.t]);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+            geometry.setIndex(indices);
+            geometry.computeBoundingSphere(); // Helps with camera centering
+
+            const material = new THREE.MeshPhongMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                flatShading: true,
+                shininess: 30
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            this.meshGroup.add(mesh);
+
+            const edgesGeometry = new THREE.EdgesGeometry(geometry, 10); // Threshold to show cube edges
+            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1, opacity: 0.3, transparent: true });
+            const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+            this.meshGroup.add(edges);
+
+            if (!this.cameraInitialized && dimers.length > 0) {
+                this.centerCamera(heights);
+                this.cameraInitialized = true;
+            }
+        }
+
+        centerCamera(heights) {
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+
+            for (const [key, h] of heights) {
+                const [n, j] = key.split(',').map(Number);
+                const x = n - j * 0.5;
+                const y = j * Math.sqrt(3) / 2;
+                const z = h;
+
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+                minZ = Math.min(minZ, z);
+                maxZ = Math.max(maxZ, z);
+            }
+
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const centerZ = (minZ + maxZ) / 2;
+            const size = Math.max(maxX - minX, maxY - minY, maxZ - minZ) || 10;
+
+            this.controls.target.set(centerX, centerY, centerZ);
+            this.camera.position.set(
+                centerX + size * 1.0,
+                centerY - size * 0.5,
+                centerZ + size * 1.5
+            );
+            this.camera.lookAt(centerX, centerY, centerZ);
+            this.controls.update();
+        }
+
+        resetCamera() {
+            this.cameraInitialized = false;
+        }
+
+        updateDarkMode(isDark) {
+            this.scene.background = new THREE.Color(isDark ? 0x1a1a1a : 0xffffff);
+        }
+    }
+
+    // ========================================================================
     // MAIN APPLICATION
     // ========================================================================
     const canvas = document.getElementById('lozenge-canvas');
+    const threeContainer = document.getElementById('three-container');
     const sim = new UltimateLozengeSampler();
     const renderer = new LozengeRenderer(canvas);
     const undoStack = new UndoStack();
@@ -1329,6 +1673,10 @@ Module.onRuntimeInitialized = function() {
     // Tools: 'draw', 'erase', 'lassoFill', 'lassoErase', 'pathFill', 'pathErase', 'belowFill', 'belowErase'
     let currentTool = 'draw';
     let running = false;
+
+    // 3D view state
+    let is3DView = false;
+    let renderer3D = null;
 
     // Lasso state (drag to select)
     let lassoPoints = []; // Array of {x, y} in world coordinates
@@ -1374,9 +1722,14 @@ Module.onRuntimeInitialized = function() {
         whiteCount: document.getElementById('whiteCount'),
         dimerCount: document.getElementById('dimerCount'),
         stepCount: document.getElementById('stepCount'),
-        volume: document.getElementById('volume'),
         cftpSteps: document.getElementById('cftpSteps'),
+        cftpStopBtn: document.getElementById('cftpStopBtn'),
+        toggle3DBtn: document.getElementById('toggle3DBtn'),
+        autoRotateCheckbox: document.getElementById('autoRotateCheckbox'),
     };
+
+    // CFTP cancellation flag
+    let cftpCancelled = false;
 
     function initPaletteSelector() {
         renderer.colorPalettes.forEach((p, i) => {
@@ -1429,7 +1782,35 @@ Module.onRuntimeInitialized = function() {
         el.repairBtn.disabled = isValid || activeTriangles.size === 0;
     }
 
+    function setViewMode(use3D) {
+        is3DView = use3D;
+        canvas.style.display = use3D ? 'none' : 'block';
+        threeContainer.style.display = use3D ? 'block' : 'none';
+        el.toggle3DBtn.textContent = use3D ? '2D View' : '3D View';
+
+        if (use3D) {
+            if (!renderer3D) {
+                renderer3D = new Lozenge3DRenderer(threeContainer);
+            }
+            // Sync palette and permutation
+            renderer3D.setPalette(renderer.currentPaletteIndex);
+            renderer3D.colorPermutation = renderer.colorPermutation;
+            // Update dark mode
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            renderer3D.updateDarkMode(isDarkMode);
+            // Render 3D view
+            if (isValid && sim.dimers.length > 0) {
+                renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+            }
+        } else {
+            draw();
+        }
+    }
+
     function draw() {
+        if (is3DView && renderer3D && isValid && sim.dimers.length > 0) {
+            renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+        }
         renderer.draw(sim, activeTriangles, isValid);
         const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
         const tool = getEffectiveTool();
@@ -1464,9 +1845,6 @@ Module.onRuntimeInitialized = function() {
         const wasValid = isValid;
         isValid = result.status === 'valid';
 
-        if (result.volume !== undefined) {
-            el.volume.textContent = formatNumber(result.volume);
-        }
 
         // Track if we should auto-restart when valid again
         if (wasRunning && !isValid) {
@@ -2014,6 +2392,10 @@ Module.onRuntimeInitialized = function() {
     // UI EVENT HANDLERS
     // ========================================================================
     function setTool(tool) {
+        // Auto-switch to 2D when using drawing tools
+        if (is3DView) {
+            setViewMode(false);
+        }
         // Clear any in-progress operations when switching tools
         if (lassoPoints.length > 0 || pathPoints.length > 0) {
             lassoPoints = [];
@@ -2176,26 +2558,49 @@ Module.onRuntimeInitialized = function() {
         draw();
     });
 
+    // 3D View toggle
+    el.toggle3DBtn.addEventListener('click', () => {
+        setViewMode(!is3DView);
+    });
+
+    el.autoRotateCheckbox.addEventListener('change', (e) => {
+        if (renderer3D) {
+            renderer3D.setAutoRotate(e.target.checked);
+        }
+    });
+
     // Palette
     el.paletteSelect.addEventListener('change', (e) => {
         renderer.setPalette(parseInt(e.target.value));
+        if (renderer3D) {
+            renderer3D.setPalette(parseInt(e.target.value));
+        }
         draw();
     });
 
     document.getElementById('prev-palette').addEventListener('click', () => {
         renderer.prevPalette();
+        if (renderer3D) {
+            renderer3D.setPalette(renderer.currentPaletteIndex);
+        }
         el.paletteSelect.value = renderer.currentPaletteIndex;
         draw();
     });
 
     document.getElementById('next-palette').addEventListener('click', () => {
         renderer.nextPalette();
+        if (renderer3D) {
+            renderer3D.setPalette(renderer.currentPaletteIndex);
+        }
         el.paletteSelect.value = renderer.currentPaletteIndex;
         draw();
     });
 
     document.getElementById('permuteColors').addEventListener('click', () => {
         renderer.permuteColors();
+        if (renderer3D) {
+            renderer3D.permuteColors();
+        }
         draw();
     });
 
@@ -2262,7 +2667,6 @@ Module.onRuntimeInitialized = function() {
         const result = sim.step(stepsPerFrame);
         draw();
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
-        if (result.volume !== undefined) el.volume.textContent = formatNumber(result.volume);
 
         if (running) {
             if (stepsPerSecond <= 60) {
@@ -2308,12 +2712,23 @@ Module.onRuntimeInitialized = function() {
         el.cftpBtn.disabled = true;
         el.cftpBtn.textContent = 'Init...';
         el.cftpSteps.textContent = 'init';
+        cftpCancelled = false;
+        el.cftpStopBtn.style.display = 'inline-block';
 
         setTimeout(() => {
             sim.initCFTP();
             let lastDrawnBlock = -1; // Track which 4096-block we last drew
 
             function cftpStep() {
+                // Check for cancellation
+                if (cftpCancelled) {
+                    el.cftpSteps.textContent = 'stopped';
+                    el.cftpBtn.textContent = originalText;
+                    el.cftpBtn.disabled = false;
+                    el.cftpStopBtn.style.display = 'none';
+                    return;
+                }
+
                 const res = sim.stepCFTP();
                 if (res.status === 'in_progress') {
                     el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.step;
@@ -2337,13 +2752,14 @@ Module.onRuntimeInitialized = function() {
                     const finalRes = sim.finalizeCFTP();
                     draw();
                     el.cftpSteps.textContent = res.T;
-                    if (finalRes.volume !== undefined) el.volume.textContent = formatNumber(finalRes.volume);
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
+                    el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'timeout') {
                     el.cftpSteps.textContent = 'timeout';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
+                    el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'not_coalesced') {
                     el.cftpSteps.textContent = 'T=' + res.T;
                     el.cftpBtn.textContent = 'T=' + res.T;
@@ -2362,11 +2778,16 @@ Module.onRuntimeInitialized = function() {
                 } else {
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
+                    el.cftpStopBtn.style.display = 'none';
                 }
             }
 
             setTimeout(cftpStep, 0);
         }, 10);
+    });
+
+    el.cftpStopBtn.addEventListener('click', () => {
+        cftpCancelled = true;
     });
 
     // Export
