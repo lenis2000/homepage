@@ -1805,6 +1805,36 @@ Module.onRuntimeInitialized = function() {
             this.cameraInitialized = false;
         }
 
+        zoom(factor) {
+            // Dolly camera towards/away from target
+            const direction = new THREE.Vector3();
+            direction.subVectors(this.camera.position, this.controls.target);
+            direction.multiplyScalar(1 / factor);
+            this.camera.position.copy(this.controls.target).add(direction);
+            this.controls.update();
+        }
+
+        pan(deltaX, deltaY) {
+            // Pan camera and target in screen space
+            const offset = new THREE.Vector3();
+
+            // Get camera's right and up vectors
+            const right = new THREE.Vector3();
+            const up = new THREE.Vector3();
+            this.camera.matrix.extractBasis(right, up, new THREE.Vector3());
+
+            // Scale pan amount based on distance to target
+            const distance = this.camera.position.distanceTo(this.controls.target);
+            const panScale = distance * 0.002;
+
+            offset.addScaledVector(right, -deltaX * panScale);
+            offset.addScaledVector(up, deltaY * panScale);
+
+            this.camera.position.add(offset);
+            this.controls.target.add(offset);
+            this.controls.update();
+        }
+
         updateDarkMode(isDark) {
             this.scene.background = new THREE.Color(isDark ? 0x1a1a1a : 0xffffff);
         }
@@ -2627,11 +2657,17 @@ Module.onRuntimeInitialized = function() {
     // Zoom controls
     document.getElementById('zoomInBtn').addEventListener('click', () => {
         renderer.zoomAt(renderer.displayWidth / 2, renderer.displayHeight / 2, 1.3);
+        if (renderer3D && is3DView) {
+            renderer3D.zoom(1.3);
+        }
         draw();
     });
 
     document.getElementById('zoomOutBtn').addEventListener('click', () => {
         renderer.zoomAt(renderer.displayWidth / 2, renderer.displayHeight / 2, 0.7);
+        if (renderer3D && is3DView) {
+            renderer3D.zoom(0.7);
+        }
         draw();
     });
 
@@ -2651,18 +2687,30 @@ Module.onRuntimeInitialized = function() {
     const panAmount = 50; // pixels
     document.getElementById('panLeftBtn').addEventListener('click', () => {
         renderer.pan(panAmount, 0);
+        if (renderer3D && is3DView) {
+            renderer3D.pan(-panAmount, 0);
+        }
         draw();
     });
     document.getElementById('panRightBtn').addEventListener('click', () => {
         renderer.pan(-panAmount, 0);
+        if (renderer3D && is3DView) {
+            renderer3D.pan(panAmount, 0);
+        }
         draw();
     });
     document.getElementById('panUpBtn').addEventListener('click', () => {
         renderer.pan(0, panAmount);
+        if (renderer3D && is3DView) {
+            renderer3D.pan(0, panAmount);
+        }
         draw();
     });
     document.getElementById('panDownBtn').addEventListener('click', () => {
         renderer.pan(0, -panAmount);
+        if (renderer3D && is3DView) {
+            renderer3D.pan(0, -panAmount);
+        }
         draw();
     });
 
