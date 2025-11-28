@@ -26,6 +26,7 @@ Features:
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <functional>
 
 // Fast xorshift random number generator
 static uint64_t rng_state = 12345678901234567ULL;
@@ -64,7 +65,7 @@ struct TriangleCentroid {
     double cx, cy;
 };
 
-// Right-facing triangle centroid (BLACK)
+// Right-facing triangle centroid (BLACK) - triangle ▷ with vertices (n,j), (n,j-1), (n+1,j-1)
 TriangleCentroid getRightTriangleCentroid(int n, int j) {
     Vertex v1 = getVertex(n, j);
     Vertex v2 = getVertex(n, j - 1);
@@ -72,7 +73,7 @@ TriangleCentroid getRightTriangleCentroid(int n, int j) {
     return { n, j, (v1.x + v2.x + v3.x) / 3.0, (v1.y + v2.y + v3.y) / 3.0 };
 }
 
-// Left-facing triangle centroid (WHITE)
+// Left-facing triangle centroid (WHITE) - triangle ◁ with vertices (n,j), (n+1,j), (n+1,j-1)
 TriangleCentroid getLeftTriangleCentroid(int n, int j) {
     Vertex v1 = getVertex(n, j);
     Vertex v2 = getVertex(n + 1, j);
@@ -93,15 +94,15 @@ bool pointInPolygon(double x, double y, const std::vector<Vertex>& polygon) {
     return inside;
 }
 
-// 6 directions on triangular lattice
-const int directions[6][2] = {
-    { 1, -1},  // 0: right-down
-    { 1,  0},  // 1: right
-    { 0,  1},  // 2: up
-    {-1,  1},  // 3: up-left
-    {-1,  0},  // 4: left
-    { 0, -1}   // 5: down
-};
+// 6 directions on triangular lattice (dn, dj)
+// Direction 0: right-down (along -30°): (1, -1)
+// Direction 1: right (along +30°): (1, 0)
+// Direction 2: up (vertical): (0, 1)
+// Direction 3: up-left (along -30° backwards): (-1, 1)
+// Direction 4: left (along +30° backwards): (-1, 0)
+// Direction 5: down (vertical): (0, -1)
+const int DIR_DN[6] = { 1,  1,  0, -1, -1,  0 };
+const int DIR_DJ[6] = { -1, 0,  1,  1,  0, -1 };
 
 // Global state
 int B = 7, C = 6, D = 3, E = 8, H = 6;
@@ -154,13 +155,13 @@ void generatePolygonBoundary() {
     A = B - D + E + C;
 
     int n = 0, j = 0;
-    int dir = 0;
+    int dir = 0; // Start facing right-down (direction 0)
 
     auto move = [&](int steps) {
         for (int i = 0; i < steps; i++) {
             polygonBoundary.push_back(getVertex(n, j));
-            n += directions[dir][0];
-            j += directions[dir][1];
+            n += DIR_DN[dir];
+            j += DIR_DJ[dir];
         }
     };
 
@@ -174,7 +175,7 @@ void generatePolygonBoundary() {
         dir = (dir - s + 6) % 6;
     };
 
-    // Trace boundary (from source)
+    // Trace boundary exactly as in original JS
     move(A);
     turnCCW(60); move(B);
     turnCCW(60); move(H);
@@ -213,27 +214,27 @@ void findTrianglesInPolygon() {
     int searchMaxJ = static_cast<int>((maxY) / DELTA_C) + searchMaxN + 5;
 
     for (int n = searchMinN; n <= searchMaxN; n++) {
-        for (int j = searchMinJ; j <= searchMaxJ; j++) {
+        for (int jj = searchMinJ; jj <= searchMaxJ; jj++) {
             // Check right-facing triangle
-            auto rc = getRightTriangleCentroid(n, j);
+            auto rc = getRightTriangleCentroid(n, jj);
             if (pointInPolygon(rc.cx, rc.cy, polygonBoundary)) {
                 int idx = blackTriangles.size();
-                blackTriangles.push_back({n, j, rc.cx, rc.cy});
-                blackMap[makeKey(n, j)] = idx;
+                blackTriangles.push_back({n, jj, rc.cx, rc.cy});
+                blackMap[makeKey(n, jj)] = idx;
             }
 
             // Check left-facing triangle
-            auto lc = getLeftTriangleCentroid(n, j);
+            auto lc = getLeftTriangleCentroid(n, jj);
             if (pointInPolygon(lc.cx, lc.cy, polygonBoundary)) {
                 int idx = whiteTriangles.size();
-                whiteTriangles.push_back({n, j, lc.cx, lc.cy});
-                whiteMap[makeKey(n, j)] = idx;
+                whiteTriangles.push_back({n, jj, lc.cx, lc.cy});
+                whiteMap[makeKey(n, jj)] = idx;
             }
 
             // Check triangular vertex
-            Vertex v = getVertex(n, j);
+            Vertex v = getVertex(n, jj);
             if (pointInPolygon(v.x, v.y, polygonBoundary)) {
-                triangularVertices.push_back({n, j, v.x, v.y});
+                triangularVertices.push_back({n, jj, v.x, v.y});
             }
         }
     }
@@ -259,10 +260,10 @@ void generateInitialDimerCovering() {
 
     for (size_t bi = 0; bi < blackTriangles.size(); bi++) {
         int n = blackTriangles[bi].n;
-        int j = blackTriangles[bi].j;
+        int jj = blackTriangles[bi].j;
 
         // 3 neighbors: (n,j), (n,j-1), (n-1,j)
-        int neighbors[3][2] = {{n, j}, {n, j-1}, {n-1, j}};
+        int neighbors[3][2] = {{n, jj}, {n, jj-1}, {n-1, jj}};
         for (int k = 0; k < 3; k++) {
             auto it = whiteMap.find(makeKey(neighbors[k][0], neighbors[k][1]));
             if (it != whiteMap.end()) {
@@ -320,14 +321,14 @@ struct HexEdge {
     int type;
 };
 
-void getHexEdgesAroundVertex(int n, int j, HexEdge edges[6]) {
-    // 6 edges around vertex (n,j)
-    edges[0] = {n, j+1, n, j, 1};       // R(n,j+1) - L(n,j): bottom edge
-    edges[1] = {n, j, n, j, 0};         // R(n,j) - L(n,j): diagonal
-    edges[2] = {n, j, n-1, j, 2};       // R(n,j) - L(n-1,j): left vertical
-    edges[3] = {n-1, j+1, n-1, j, 1};   // R(n-1,j+1) - L(n-1,j): bottom
-    edges[4] = {n-1, j+1, n-1, j+1, 0}; // R(n-1,j+1) - L(n-1,j+1): diagonal
-    edges[5] = {n, j+1, n-1, j+1, 2};   // R(n,j+1) - L(n-1,j+1): left vertical
+void getHexEdgesAroundVertex(int n, int jj, HexEdge edges[6]) {
+    // 6 edges around vertex (n,j) - exactly as in original JS
+    edges[0] = {n, jj+1, n, jj, 1};         // R(n,j+1) - L(n,j): bottom edge
+    edges[1] = {n, jj, n, jj, 0};           // R(n,j) - L(n,j): diagonal
+    edges[2] = {n, jj, n-1, jj, 2};         // R(n,j) - L(n-1,j): left vertical
+    edges[3] = {n-1, jj+1, n-1, jj, 1};     // R(n-1,j+1) - L(n-1,j): bottom
+    edges[4] = {n-1, jj+1, n-1, jj+1, 0};   // R(n-1,j+1) - L(n-1,j+1): diagonal
+    edges[5] = {n, jj+1, n-1, jj+1, 2};     // R(n,j+1) - L(n-1,j+1): left vertical
 }
 
 // Check if dimer exists
@@ -339,9 +340,9 @@ bool dimerExists(int blackN, int blackJ, int whiteN, int whiteJ) {
 }
 
 // Perform Glauber rotation at vertex
-bool performRotation(int n, int j) {
+bool performRotation(int n, int jj) {
     HexEdge edges[6];
-    getHexEdgesAroundVertex(n, j, edges);
+    getHexEdgesAroundVertex(n, jj, edges);
 
     std::vector<int> coveredIdx;
     std::vector<int> uncoveredIdx;
@@ -362,45 +363,45 @@ bool performRotation(int n, int j) {
         return false;
     }
 
-    // Remove covered dimers
+    // Remove covered dimers from dimerByBlack
     for (int idx : coveredIdx) {
         long long key = makeKey(edges[idx].blackN, edges[idx].blackJ);
         dimerByBlack.erase(key);
     }
 
-    // Update dimer list - mark as invalid and add new
-    // Actually rebuild the dimer at those positions
+    // Add uncovered edges as new dimers
     for (int idx : uncoveredIdx) {
-        Dimer newDimer = {
-            edges[idx].blackN, edges[idx].blackJ,
-            edges[idx].whiteN, edges[idx].whiteJ,
-            edges[idx].type
-        };
+        // Find the black triangle
+        auto blackIt = blackMap.find(makeKey(edges[idx].blackN, edges[idx].blackJ));
+        auto whiteIt = whiteMap.find(makeKey(edges[idx].whiteN, edges[idx].whiteJ));
 
-        // Find and reuse a slot or add new
-        long long key = makeKey(newDimer.blackN, newDimer.blackJ);
+        if (blackIt != blackMap.end() && whiteIt != whiteMap.end()) {
+            Dimer newDimer = {
+                edges[idx].blackN, edges[idx].blackJ,
+                edges[idx].whiteN, edges[idx].whiteJ,
+                edges[idx].type
+            };
 
-        // Find the old dimer to replace
-        bool found = false;
-        for (int ci : coveredIdx) {
-            long long oldKey = makeKey(edges[ci].blackN, edges[ci].blackJ);
-            // Check if this black triangle is now getting a new dimer
-            for (size_t di = 0; di < currentDimers.size(); di++) {
-                if (makeKey(currentDimers[di].blackN, currentDimers[di].blackJ) == oldKey) {
-                    // Reuse this slot
-                    currentDimers[di] = newDimer;
-                    dimerByBlack[key] = di;
-                    found = true;
-                    break;
+            // Find a slot to reuse or add new
+            bool found = false;
+            for (int ci : coveredIdx) {
+                long long oldKey = makeKey(edges[ci].blackN, edges[ci].blackJ);
+                for (size_t di = 0; di < currentDimers.size(); di++) {
+                    if (makeKey(currentDimers[di].blackN, currentDimers[di].blackJ) == oldKey) {
+                        currentDimers[di] = newDimer;
+                        dimerByBlack[makeKey(newDimer.blackN, newDimer.blackJ)] = di;
+                        found = true;
+                        break;
+                    }
                 }
+                if (found) break;
             }
-            if (found) break;
-        }
 
-        if (!found) {
-            int di = currentDimers.size();
-            currentDimers.push_back(newDimer);
-            dimerByBlack[key] = di;
+            if (!found) {
+                int di = currentDimers.size();
+                currentDimers.push_back(newDimer);
+                dimerByBlack[makeKey(newDimer.blackN, newDimer.blackJ)] = di;
+            }
         }
     }
 
@@ -428,15 +429,18 @@ int performGlauberStepsInternal(int numSteps) {
         getHexEdgesAroundVertex(v.n, v.j, edges);
 
         int coveredCount = 0;
+        int validEdges = 0;
         for (int i = 0; i < 6; i++) {
             if (blackMap.find(makeKey(edges[i].blackN, edges[i].blackJ)) == blackMap.end()) continue;
             if (whiteMap.find(makeKey(edges[i].whiteN, edges[i].whiteJ)) == whiteMap.end()) continue;
+            validEdges++;
             if (dimerExists(edges[i].blackN, edges[i].blackJ, edges[i].whiteN, edges[i].whiteJ)) {
                 coveredCount++;
             }
         }
 
-        if (coveredCount == 3) {
+        // Only rotate if all 6 edges are valid and exactly 3 are covered
+        if (validEdges == 6 && coveredCount == 3) {
             if (getRandom01() < 0.5) {
                 if (performRotation(v.n, v.j)) {
                     accepted++;
@@ -479,10 +483,10 @@ char* initPolygon(int b, int c, int d, int e, int h) {
 
         // Count dimer types
         int type0 = 0, type1 = 0, type2 = 0;
-        for (const auto& d : currentDimers) {
-            if (d.type == 0) type0++;
-            else if (d.type == 1) type1++;
-            else if (d.type == 2) type2++;
+        for (const auto& dm : currentDimers) {
+            if (dm.type == 0) type0++;
+            else if (dm.type == 1) type1++;
+            else if (dm.type == 2) type2++;
         }
 
         std::string json = "{\"status\":\"initialized\""
@@ -524,10 +528,10 @@ char* performGlauberSteps(int numSteps) {
 
         // Count dimer types
         int type0 = 0, type1 = 0, type2 = 0;
-        for (const auto& d : currentDimers) {
-            if (d.type == 0) type0++;
-            else if (d.type == 1) type1++;
-            else if (d.type == 2) type2++;
+        for (const auto& dm : currentDimers) {
+            if (dm.type == 0) type0++;
+            else if (dm.type == 1) type1++;
+            else if (dm.type == 2) type2++;
         }
 
         std::string json = "{\"status\":\"complete\""
@@ -566,12 +570,12 @@ char* exportDimers() {
         // Export dimers
         for (size_t i = 0; i < currentDimers.size(); i++) {
             if (i > 0) json += ",";
-            const Dimer& d = currentDimers[i];
-            json += "{\"bn\":" + std::to_string(d.blackN) +
-                    ",\"bj\":" + std::to_string(d.blackJ) +
-                    ",\"wn\":" + std::to_string(d.whiteN) +
-                    ",\"wj\":" + std::to_string(d.whiteJ) +
-                    ",\"t\":" + std::to_string(d.type) + "}";
+            const Dimer& dm = currentDimers[i];
+            json += "{\"bn\":" + std::to_string(dm.blackN) +
+                    ",\"bj\":" + std::to_string(dm.blackJ) +
+                    ",\"wn\":" + std::to_string(dm.whiteN) +
+                    ",\"wj\":" + std::to_string(dm.whiteJ) +
+                    ",\"t\":" + std::to_string(dm.type) + "}";
         }
         json += "],\"black\":[";
 
@@ -610,10 +614,10 @@ char* exportDimers() {
 EMSCRIPTEN_KEEPALIVE
 char* getDimerCounts() {
     int type0 = 0, type1 = 0, type2 = 0;
-    for (const auto& d : currentDimers) {
-        if (d.type == 0) type0++;
-        else if (d.type == 1) type1++;
-        else if (d.type == 2) type2++;
+    for (const auto& dm : currentDimers) {
+        if (dm.type == 0) type0++;
+        else if (dm.type == 1) type1++;
+        else if (dm.type == 2) type2++;
     }
 
     std::string json = "{\"type0\":" + std::to_string(type0) +
