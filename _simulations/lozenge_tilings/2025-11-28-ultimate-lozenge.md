@@ -1,0 +1,1568 @@
+---
+title: Ultimate Lozenge Tiling - Draw Any Region
+model: lozenge-tilings
+author: 'Leonid Petrov'
+code:
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md'
+    txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.cpp'
+    txt: 'C++ code for the simulation (compiled to WebAssembly)'
+---
+
+<style>
+  .control-group {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .control-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  #lozenge-canvas {
+    width: 100%;
+    max-width: 900px;
+    height: 600px;
+    border: 1px solid #ccc;
+    display: block;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 6px;
+    cursor: crosshair;
+  }
+  [data-theme="dark"] #lozenge-canvas {
+    background: #1a1a1a;
+    border-color: #444;
+  }
+  .param-input {
+    width: 50px;
+    height: 28px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+  .param-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  }
+  .param-label {
+    font-size: 13px;
+    color: #555;
+    margin-right: 4px;
+    font-weight: 500;
+  }
+  .param-group {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 12px;
+  }
+  button {
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button:hover {
+    background: #f5f5f5;
+    border-color: #999;
+  }
+  button.primary {
+    background: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+  }
+  button.primary:hover {
+    background: #45a049;
+  }
+  button.primary:disabled {
+    background: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+  }
+  button.running {
+    background: linear-gradient(135deg, #ff5722, #ff9800);
+    color: white;
+    border-color: #ff5722;
+  }
+  button.cftp {
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    color: white;
+    border-color: #9c27b0;
+  }
+  button.cftp:hover {
+    background: linear-gradient(135deg, #7b1fa2, #6a1b9a);
+  }
+  button.cftp:disabled {
+    background: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+  }
+  /* Tool toggle buttons */
+  .tool-toggle {
+    display: inline-flex;
+    border: 2px solid #1976d2;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tool-toggle button {
+    border: none;
+    border-radius: 0;
+    height: 32px;
+    padding: 0 16px;
+    font-weight: 500;
+    background: white;
+    color: #1976d2;
+  }
+  .tool-toggle button.active {
+    background: #1976d2;
+    color: white;
+  }
+  .tool-toggle button:hover:not(.active) {
+    background: #e3f2fd;
+  }
+  /* View toggle buttons */
+  .view-toggle {
+    display: inline-flex;
+    border: 2px solid #1976d2;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .view-toggle button {
+    border: none;
+    border-radius: 0;
+    height: 32px;
+    padding: 0 16px;
+    font-weight: 500;
+    background: white;
+    color: #1976d2;
+  }
+  .view-toggle button.active {
+    background: #1976d2;
+    color: white;
+  }
+  .view-toggle button:hover:not(.active) {
+    background: #e3f2fd;
+  }
+  .stats-inline {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .stats-inline .stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .stats-inline .stat-label {
+    color: #888;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .stats-inline .stat-value {
+    color: #1976d2;
+    font-weight: 600;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+  .status-valid {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .status-invalid {
+    background: #ffebee;
+    color: #c62828;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .status-empty {
+    background: #fff3e0;
+    color: #e65100;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  select {
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+  }
+  input[type="range"] {
+    height: 4px;
+    border-radius: 2px;
+    background: #d0d0d0;
+    appearance: none;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    cursor: pointer;
+  }
+  .color-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .color-box {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+  details {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 8px auto;
+    max-width: 900px;
+  }
+  details > summary {
+    padding: 8px 12px;
+    background: #f5f5f5;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  details > .content {
+    padding: 10px 12px;
+    background: white;
+  }
+  [data-theme="dark"] .control-group {
+    background-color: #2d2d2d;
+    border-color: #444;
+  }
+  [data-theme="dark"] .control-group-title,
+  [data-theme="dark"] .param-label {
+    color: #bbb;
+  }
+  [data-theme="dark"] .param-input,
+  [data-theme="dark"] select,
+  [data-theme="dark"] button {
+    background-color: #3a3a3a;
+    border-color: #555;
+    color: #ddd;
+  }
+  [data-theme="dark"] .status-valid { background: #1b5e20; color: #a5d6a7; }
+  [data-theme="dark"] .status-invalid { background: #b71c1c; color: #ffcdd2; }
+  [data-theme="dark"] .status-empty { background: #e65100; color: #ffe0b2; }
+  @media (max-width: 767px) {
+    #lozenge-canvas { height: 450px; }
+    .param-group { margin-right: 8px; margin-bottom: 6px; }
+    .param-input { width: 40px; }
+  }
+</style>
+
+<script src="/js/colorschemes.js"></script>
+<script src="/js/2025-11-28-ultimate-lozenge.js"></script>
+
+<!-- Main controls -->
+<div style="max-width: 900px; margin: 0 auto; padding: 8px;">
+
+<!-- Drawing Tools -->
+<div class="control-group">
+  <div class="control-group-title">Drawing Tools</div>
+  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div class="tool-toggle">
+      <button id="drawBtn" class="active">Draw</button>
+      <button id="eraseBtn">Erase</button>
+    </div>
+    <span class="param-group"><span class="param-label">Grid</span><input type="number" class="param-input" id="gridSizeInput" value="10" min="3" max="100"></span>
+    <button id="resetBtn">Clear</button>
+    <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
+    <button id="doubleMeshBtn" title="Double the mesh size">2x Mesh</button>
+    <span id="statusBadge" class="status-empty">Empty</span>
+  </div>
+</div>
+
+<!-- Preset Shapes -->
+<div class="control-group">
+  <div class="control-group-title">Preset Shapes</div>
+  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <button id="hexagonBtn">Hexagon</button>
+    <span class="param-group"><span class="param-label">size</span><input type="number" class="param-input" id="hexSizeInput" value="5" min="1" max="20"></span>
+    <span style="border-left: 1px solid #ddd; height: 20px; margin: 0 8px;"></span>
+    <button id="trapezoidBtn">Trapezoid</button>
+    <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="trapAInput" value="6" min="1" max="30"></span>
+    <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="trapBInput" value="4" min="1" max="30"></span>
+    <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="trapCInput" value="5" min="1" max="30"></span>
+  </div>
+</div>
+
+<!-- Display Options -->
+<div class="control-group">
+  <div class="control-group-title">Display</div>
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <div class="view-toggle">
+      <button id="lozengeViewBtn" class="active">Lozenge</button>
+      <button id="dimerViewBtn">Dimer</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
+      <select id="palette-select" style="width: 120px;"></select>
+      <button id="next-palette" style="padding: 0 8px;">&#9654;</button>
+    </div>
+    <button id="permuteColors" title="Permute colors">Permute</button>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Outline:</span>
+      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="10" step="0.1" class="param-input" style="width: 50px;">
+      <span style="font-size: 11px; color: #888;">%</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Border:</span>
+      <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
+      <span style="font-size: 11px; color: #888;">%</span>
+    </div>
+  </div>
+</div>
+
+<!-- Simulation Controls -->
+<div class="control-group">
+  <div class="control-group-title">Simulation</div>
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <button id="startStopBtn" class="primary" disabled>Start</button>
+    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 12px; color: #666;">Speed</span>
+      <input type="range" id="speedSlider" min="1" max="15000000" value="100" style="width: 100px;">
+      <span id="speedVal" style="font-size: 12px; color: #1976d2; min-width: 45px;">100/s</span>
+    </div>
+    <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="control-group">
+  <div class="stats-inline">
+    <div class="stat"><span class="stat-label">Black</span><span class="stat-value" id="blackCount">0</span></div>
+    <div class="stat"><span class="stat-label">White</span><span class="stat-value" id="whiteCount">0</span></div>
+    <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span></div>
+    <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
+    <div class="stat"><span class="stat-label">Volume</span><span class="stat-value" id="volume">0</span></div>
+    <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span></div>
+  </div>
+</div>
+
+</div>
+
+<!-- Canvas -->
+<canvas id="lozenge-canvas"></canvas>
+
+<!-- Export & Legend -->
+<details>
+  <summary>Export & Legend</summary>
+  <div class="content">
+    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <button id="export-png">PNG</button>
+      <button id="export-pdf">PDF</button>
+      <span style="font-size: 11px; color: #666;">Quality:</span>
+      <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
+      <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
+      <span style="border-left: 1px solid #ddd; height: 20px;"></span>
+      <div class="color-legend">
+        <span class="legend-item"><span class="color-box" id="swatch-type0"></span>T0</span>
+        <span class="legend-item"><span class="color-box" id="swatch-type1"></span>T1</span>
+        <span class="legend-item"><span class="color-box" id="swatch-type2"></span>T2</span>
+        <span id="palette-name-display" style="font-weight: 500;"></span>
+      </div>
+    </div>
+  </div>
+</details>
+
+<script>
+Module.onRuntimeInitialized = function() {
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+
+    function getVertex(n, j) {
+        return { x: n, y: slope * n + j * deltaC };
+    }
+
+    // ========================================================================
+    // UNDO/REDO SYSTEM
+    // ========================================================================
+    class UndoStack {
+        constructor() {
+            this.undoStack = [];
+            this.redoStack = [];
+            this.maxSize = 100;
+        }
+
+        push(state) {
+            this.undoStack.push(JSON.stringify(state));
+            this.redoStack = [];
+            if (this.undoStack.length > this.maxSize) {
+                this.undoStack.shift();
+            }
+        }
+
+        undo(currentState) {
+            if (this.undoStack.length === 0) return null;
+            this.redoStack.push(JSON.stringify(currentState));
+            return JSON.parse(this.undoStack.pop());
+        }
+
+        redo(currentState) {
+            if (this.redoStack.length === 0) return null;
+            this.undoStack.push(JSON.stringify(currentState));
+            return JSON.parse(this.redoStack.pop());
+        }
+
+        canUndo() { return this.undoStack.length > 0; }
+        canRedo() { return this.redoStack.length > 0; }
+        clear() { this.undoStack = []; this.redoStack = []; }
+    }
+
+    // ========================================================================
+    // WASM INTERFACE
+    // ========================================================================
+    class UltimateLozengeSampler {
+        constructor() {
+            this.boundary = [];
+            this.dimers = [];
+            this.blackTriangles = [];
+            this.whiteTriangles = [];
+            this.isValid = false;
+
+            this.initFromTrianglesWasm = Module.cwrap('initFromTriangles', 'number', ['number', 'number']);
+            this.performGlauberStepsWasm = Module.cwrap('performGlauberSteps', 'number', ['number']);
+            this.exportDimersWasm = Module.cwrap('exportDimers', 'number', []);
+            this.getAcceptRateWasm = Module.cwrap('getAcceptRate', 'number', []);
+            this.setQBiasWasm = Module.cwrap('setQBias', null, ['number']);
+            this.runCFTPWasm = Module.cwrap('runCFTP', 'number', []);
+            this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
+            this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
+            this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
+            this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
+
+            this.totalSteps = 0;
+            this.flipCount = 0;
+        }
+
+        setQBias(q) { this.setQBiasWasm(q); }
+
+        initFromTriangles(trianglesMap) {
+            // Convert Map to flat array [n, j, type, n, j, type, ...]
+            const arr = [];
+            for (const [key, tri] of trianglesMap) {
+                arr.push(tri.n, tri.j, tri.type);
+            }
+
+            if (arr.length === 0) {
+                this.isValid = false;
+                this.boundary = [];
+                this.dimers = [];
+                this.blackTriangles = [];
+                this.whiteTriangles = [];
+                return { status: 'empty', blackCount: 0, whiteCount: 0 };
+            }
+
+            const dataPtr = Module._malloc(arr.length * 4);
+            // Write array to WASM memory using setValue
+            for (let i = 0; i < arr.length; i++) {
+                Module.setValue(dataPtr + i * 4, arr[i], 'i32');
+            }
+
+            const ptr = this.initFromTrianglesWasm(dataPtr, arr.length);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            Module._free(dataPtr);
+
+            const result = JSON.parse(jsonStr);
+            this.isValid = result.status === 'valid';
+            this.totalSteps = 0;
+            this.flipCount = 0;
+
+            if (this.isValid) {
+                this.refreshDimers();
+            } else {
+                this.dimers = [];
+            }
+
+            return result;
+        }
+
+        step(numSteps) {
+            const ptr = this.performGlauberStepsWasm(numSteps);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            const result = JSON.parse(jsonStr);
+            this.totalSteps = result.totalSteps || 0;
+            this.flipCount = result.flipCount || 0;
+            this.refreshDimers();
+            return result;
+        }
+
+        initCFTP() {
+            const ptr = this.initCFTPWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        stepCFTP() {
+            const ptr = this.stepCFTPWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        finalizeCFTP() {
+            const ptr = this.finalizeCFTPWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            this.refreshDimers();
+            return JSON.parse(jsonStr);
+        }
+
+        refreshDimers() {
+            const ptr = this.exportDimersWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            const result = JSON.parse(jsonStr);
+            this.boundary = result.boundary;
+            this.dimers = result.dimers;
+            this.blackTriangles = result.black;
+            this.whiteTriangles = result.white;
+        }
+
+        getTotalSteps() { return this.totalSteps; }
+        getFlipCount() { return this.flipCount; }
+        getAcceptRate() { return this.getAcceptRateWasm(); }
+    }
+
+    // ========================================================================
+    // PRESET SHAPES
+    // ========================================================================
+    // Helper: point in polygon test (ray casting)
+    function pointInPolygonPreset(x, y, polygon) {
+        if (polygon.length < 3) return false;
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    // Get triangle centroids
+    function getRightTriangleCentroid(n, j) {
+        const v1 = getVertex(n, j);
+        const v2 = getVertex(n, j - 1);
+        const v3 = getVertex(n + 1, j - 1);
+        return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+    }
+
+    function getLeftTriangleCentroid(n, j) {
+        const v1 = getVertex(n, j);
+        const v2 = getVertex(n + 1, j);
+        const v3 = getVertex(n + 1, j - 1);
+        return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+    }
+
+    // Generate triangles inside a polygon boundary
+    function generateTrianglesInPolygon(boundary) {
+        const triangles = new Map();
+
+        // Find bounding box
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const v of boundary) {
+            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        }
+
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                // Check black triangle (right-facing)
+                const rc = getRightTriangleCentroid(n, j);
+                if (pointInPolygonPreset(rc.x, rc.y, boundary)) {
+                    const blackKey = `${n},${j},1`;
+                    triangles.set(blackKey, { n, j, type: 1 });
+                }
+
+                // Check white triangle (left-facing)
+                const lc = getLeftTriangleCentroid(n, j);
+                if (pointInPolygonPreset(lc.x, lc.y, boundary)) {
+                    const whiteKey = `${n},${j},2`;
+                    triangles.set(whiteKey, { n, j, type: 2 });
+                }
+            }
+        }
+        return triangles;
+    }
+
+    function generateHexagon(size) {
+        // Generate hexagon boundary: 6 sides of length 'size'
+        // Directions on triangular lattice: (dn, dj) pairs
+        const directions = [
+            [1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]
+        ];
+
+        const boundary = [];
+        let n = 0, j = 0;
+
+        for (let dir = 0; dir < 6; dir++) {
+            const [dn, dj] = directions[dir];
+            for (let step = 0; step < size; step++) {
+                boundary.push(getVertex(n, j));
+                n += dn;
+                j += dj;
+            }
+        }
+
+        return generateTrianglesInPolygon(boundary);
+    }
+
+    function generateTrapezoid(a, b, c) {
+        // Trapezoid a x b x c: sides a (bottom), b (right slope), c (top), b (left slope)
+        // Boundary traced counter-clockwise
+        const boundary = [];
+        let n = 0, j = 0;
+
+        // Bottom side: move right (direction 0: dn=1, dj=-1)
+        for (let i = 0; i < a; i++) {
+            boundary.push(getVertex(n, j));
+            n += 1; j += -1;
+        }
+        // Right side going up (direction 1: dn=1, dj=0)
+        for (let i = 0; i < b; i++) {
+            boundary.push(getVertex(n, j));
+            n += 1; j += 0;
+        }
+        // Top side: move left (direction 3: dn=-1, dj=1)
+        for (let i = 0; i < c; i++) {
+            boundary.push(getVertex(n, j));
+            n += -1; j += 1;
+        }
+        // Left side going down (direction 4: dn=-1, dj=0)
+        for (let i = 0; i < b; i++) {
+            boundary.push(getVertex(n, j));
+            n += -1; j += 0;
+        }
+        // Connect back: move to close (direction 5 or adjust)
+        // For proper trapezoid: a + c should work with the slant
+        const remaining = a - c;
+        if (remaining > 0) {
+            for (let i = 0; i < remaining; i++) {
+                boundary.push(getVertex(n, j));
+                n += 0; j += -1;
+            }
+        }
+
+        return generateTrianglesInPolygon(boundary);
+    }
+
+    function doubleMesh(triangles, boundary) {
+        // Double the mesh by scaling the boundary polygon and regenerating triangles
+        if (!boundary || boundary.length < 3) {
+            // Fallback: compute boundary from triangles
+            return doubleMeshFallback(triangles);
+        }
+
+        // Find centroid of boundary
+        let cx = 0, cy = 0;
+        for (const v of boundary) {
+            cx += v.x;
+            cy += v.y;
+        }
+        cx /= boundary.length;
+        cy /= boundary.length;
+
+        // Scale boundary by 2 around centroid
+        const scaledBoundary = boundary.map(v => ({
+            x: cx + 2 * (v.x - cx),
+            y: cy + 2 * (v.y - cy)
+        }));
+
+        // Generate triangles inside scaled boundary
+        return generateTrianglesInPolygon(scaledBoundary);
+    }
+
+    function doubleMeshFallback(triangles) {
+        // Fallback when no boundary available: compute bounding box and scale
+        let minN = Infinity, maxN = -Infinity, minJ = Infinity, maxJ = -Infinity;
+        for (const [key, tri] of triangles) {
+            minN = Math.min(minN, tri.n);
+            maxN = Math.max(maxN, tri.n);
+            minJ = Math.min(minJ, tri.j);
+            maxJ = Math.max(maxJ, tri.j);
+        }
+
+        // Create boundary from bounding vertices and scale
+        const centerN = (minN + maxN) / 2;
+        const centerJ = (minJ + maxJ) / 2;
+
+        const doubled = new Map();
+        for (const [key, tri] of triangles) {
+            const { n, j, type } = tri;
+            // Scale coordinates relative to center
+            const newN = Math.round(centerN + 2 * (n - centerN));
+            const newJ = Math.round(centerJ + 2 * (j - centerJ));
+
+            // Add 4 triangles for each original
+            for (let dn = 0; dn <= 1; dn++) {
+                for (let dj = 0; dj <= 1; dj++) {
+                    const nn = newN + dn;
+                    const nj = newJ - dj;
+                    const newKey = `${nn},${nj},${type}`;
+                    doubled.set(newKey, { n: nn, j: nj, type });
+                }
+            }
+        }
+        return doubled;
+    }
+
+    // ========================================================================
+    // RENDERER
+    // ========================================================================
+    class LozengeRenderer {
+        constructor(canvas) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.outlineWidthPct = 0;
+            this.borderWidthPct = 1;
+            this.showDimerView = false;
+            this.currentPaletteIndex = 0;
+            this.colorPermutation = 0;
+            this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
+            this.gridSize = 10;
+            this.setupCanvas();
+        }
+
+        setupCanvas() {
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            this.canvas.width = rect.width * dpr;
+            this.canvas.height = rect.height * dpr;
+            this.ctx.scale(dpr, dpr);
+            this.displayWidth = rect.width;
+            this.displayHeight = rect.height;
+        }
+
+        getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
+
+        getPermutedColors() {
+            const palette = this.getCurrentPalette();
+            const permutations = [
+                [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
+            ];
+            const perm = permutations[this.colorPermutation || 0];
+            return [palette.colors[perm[0]], palette.colors[perm[1]], palette.colors[perm[2]]];
+        }
+
+        toCanvas(x, y, centerX, centerY, scale) {
+            return [centerX + x * scale, centerY - y * scale];
+        }
+
+        fromCanvas(cx, cy, centerX, centerY, scale) {
+            const x = (cx - centerX) / scale;
+            const y = (centerY - cy) / scale;
+            return { x, y };
+        }
+
+        getTransform(activeTriangles) {
+            // Use fixed grid-based view (no auto-centering/zooming)
+            const minX = -this.gridSize;
+            const maxX = this.gridSize;
+            const minY = -this.gridSize * deltaC;
+            const maxY = this.gridSize * deltaC;
+
+            const padding = 2;
+            const rangeX = maxX - minX + 2 * padding;
+            const rangeY = maxY - minY + 2 * padding;
+            const plotRange = Math.max(rangeX, rangeY) / 2;
+            const scale = Math.min(this.displayWidth, this.displayHeight) / (2 * plotRange);
+            const centerX = this.displayWidth / 2 - ((minX + maxX) / 2) * scale;
+            const centerY = this.displayHeight / 2 + ((minY + maxY) / 2) * scale;
+
+            return { centerX, centerY, scale, minX, maxX, minY, maxY };
+        }
+
+        getLozengeVertices(dimer) {
+            const { bn, bj, t } = dimer;
+            if (t === 0) {
+                return [getVertex(bn, bj), getVertex(bn + 1, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
+            } else if (t === 1) {
+                return [getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn + 1, bj - 2), getVertex(bn, bj - 1)];
+            } else {
+                return [getVertex(bn - 1, bj), getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
+            }
+        }
+
+        draw(sim, activeTriangles, isValid) {
+            const ctx = this.ctx;
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+
+            ctx.fillStyle = isDarkMode ? '#1a1a1a' : '#ffffff';
+            ctx.fillRect(0, 0, this.displayWidth, this.displayHeight);
+
+            const { centerX, centerY, scale } = this.getTransform(activeTriangles);
+
+            // Draw background grid
+            this.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
+
+            // Draw active triangles (if not showing dimers or if invalid)
+            if (!isValid || this.showDimerView) {
+                this.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, isValid);
+            }
+
+            // Draw dimers/lozenges if valid
+            if (isValid && sim.dimers.length > 0) {
+                if (this.showDimerView) {
+                    this.drawDimerView(ctx, sim, centerX, centerY, scale);
+                } else {
+                    this.drawLozengeView(ctx, sim, centerX, centerY, scale);
+                }
+            }
+
+            // Draw boundary
+            if (sim.boundary && sim.boundary.length > 0) {
+                this.drawBoundary(ctx, sim.boundary, centerX, centerY, scale);
+            }
+        }
+
+        drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode) {
+            const gridRange = this.gridSize + 5;
+            ctx.strokeStyle = isDarkMode ? 'rgba(100, 100, 100, 0.2)' : 'rgba(200, 200, 200, 0.5)';
+            ctx.lineWidth = 0.5;
+
+            // Vertical lines
+            for (let n = -gridRange; n <= gridRange; n++) {
+                const y1 = slope * n + (-gridRange) * deltaC;
+                const y2 = slope * n + gridRange * deltaC;
+                const [x1c, y1c] = this.toCanvas(n, y1, centerX, centerY, scale);
+                const [x2c, y2c] = this.toCanvas(n, y2, centerX, centerY, scale);
+                ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
+            }
+
+            // +slope lines
+            for (let j = -gridRange * 2; j <= gridRange * 2; j++) {
+                const [x1c, y1c] = this.toCanvas(-gridRange, slope * (-gridRange) + j * deltaC, centerX, centerY, scale);
+                const [x2c, y2c] = this.toCanvas(gridRange, slope * gridRange + j * deltaC, centerX, centerY, scale);
+                ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
+            }
+
+            // -slope lines
+            for (let j = -gridRange * 2; j <= gridRange * 2; j++) {
+                const [x1c, y1c] = this.toCanvas(-gridRange, -slope * (-gridRange) + j * deltaC, centerX, centerY, scale);
+                const [x2c, y2c] = this.toCanvas(gridRange, -slope * gridRange + j * deltaC, centerX, centerY, scale);
+                ctx.beginPath(); ctx.moveTo(x1c, y1c); ctx.lineTo(x2c, y2c); ctx.stroke();
+            }
+        }
+
+        drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, isValid) {
+            for (const [key, tri] of activeTriangles) {
+                let verts;
+                if (tri.type === 1) {
+                    // Black (right-facing): (n,j), (n,j-1), (n+1,j-1)
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
+                } else {
+                    // White (left-facing): (n,j), (n+1,j), (n+1,j-1)
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
+                }
+
+                const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
+
+                // Color: blue for black, orange for white; red tint if invalid
+                if (!isValid) {
+                    ctx.fillStyle = 'rgba(200, 50, 50, 0.4)';
+                } else {
+                    ctx.fillStyle = tri.type === 1 ? 'rgba(50, 100, 200, 0.3)' : 'rgba(200, 150, 50, 0.3)';
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
+                ctx.lineTo(canvasVerts[1][0], canvasVerts[1][1]);
+                ctx.lineTo(canvasVerts[2][0], canvasVerts[2][1]);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = tri.type === 1 ? '#3366cc' : '#cc9933';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+
+        drawLozengeView(ctx, sim, centerX, centerY, scale) {
+            const colors = this.getPermutedColors();
+            const dimerCount = sim.dimers.length || 1;
+            const refDimerCount = 100;
+            const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount) * 0.1;
+
+            for (const dimer of sim.dimers) {
+                const verts = this.getLozengeVertices(dimer);
+                const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
+                ctx.fillStyle = colors[dimer.t];
+                ctx.beginPath();
+                ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
+                for (let i = 1; i < canvasVerts.length; i++) ctx.lineTo(canvasVerts[i][0], canvasVerts[i][1]);
+                ctx.closePath();
+                ctx.fill();
+                if (outlineWidth > 0) {
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = outlineWidth;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        drawDimerView(ctx, sim, centerX, centerY, scale) {
+            // Draw dimer edges
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            for (const dimer of sim.dimers) {
+                const bc = sim.blackTriangles.find(b => b.n === dimer.bn && b.j === dimer.bj);
+                const wc = sim.whiteTriangles.find(w => w.n === dimer.wn && w.j === dimer.wj);
+                if (bc && wc) {
+                    const [bcx, bcy] = this.toCanvas(bc.cx, bc.cy, centerX, centerY, scale);
+                    const [wcx, wcy] = this.toCanvas(wc.cx, wc.cy, centerX, centerY, scale);
+                    ctx.beginPath(); ctx.moveTo(bcx, bcy); ctx.lineTo(wcx, wcy); ctx.stroke();
+                }
+            }
+        }
+
+        drawBoundary(ctx, boundary, centerX, centerY, scale) {
+            if (boundary.length < 2) return;
+            ctx.strokeStyle = '#000';
+            // Scale border width based on percentage (similar to outline scaling)
+            const borderWidth = this.borderWidthPct * scale * 0.1;
+            ctx.lineWidth = Math.max(0.5, borderWidth);
+            ctx.beginPath();
+            const [sx, sy] = this.toCanvas(boundary[0].x, boundary[0].y, centerX, centerY, scale);
+            ctx.moveTo(sx, sy);
+            for (let i = 1; i < boundary.length; i++) {
+                const [px, py] = this.toCanvas(boundary[i].x, boundary[i].y, centerX, centerY, scale);
+                ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        setPalette(index) {
+            this.currentPaletteIndex = ((index % this.colorPalettes.length) + this.colorPalettes.length) % this.colorPalettes.length;
+            this.colorPermutation = 0;
+            this.updateLegend();
+        }
+
+        nextPalette() { this.setPalette(this.currentPaletteIndex + 1); }
+        prevPalette() { this.setPalette(this.currentPaletteIndex - 1); }
+
+        permuteColors() {
+            this.colorPermutation = ((this.colorPermutation || 0) + 1) % 6;
+            this.updateLegend();
+        }
+
+        updateLegend() {
+            const colors = this.getPermutedColors();
+            const palette = this.getCurrentPalette();
+            document.getElementById('swatch-type0').style.backgroundColor = colors[0];
+            document.getElementById('swatch-type1').style.backgroundColor = colors[1];
+            document.getElementById('swatch-type2').style.backgroundColor = colors[2];
+            document.getElementById('palette-name-display').textContent = palette.name;
+        }
+    }
+
+    // ========================================================================
+    // MAIN APPLICATION
+    // ========================================================================
+    const canvas = document.getElementById('lozenge-canvas');
+    const sim = new UltimateLozengeSampler();
+    const renderer = new LozengeRenderer(canvas);
+    const undoStack = new UndoStack();
+
+    let activeTriangles = new Map();
+    let isDrawing = false;
+    let currentTool = 'draw';
+    let running = false;
+    let stepsPerSecond = 100;
+    let animationId = null;
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let currentFps = 0;
+    let isValid = false;
+
+    const el = {
+        drawBtn: document.getElementById('drawBtn'),
+        eraseBtn: document.getElementById('eraseBtn'),
+        gridSizeInput: document.getElementById('gridSizeInput'),
+        resetBtn: document.getElementById('resetBtn'),
+        undoBtn: document.getElementById('undoBtn'),
+        redoBtn: document.getElementById('redoBtn'),
+        statusBadge: document.getElementById('statusBadge'),
+        hexagonBtn: document.getElementById('hexagonBtn'),
+        hexSizeInput: document.getElementById('hexSizeInput'),
+        trapezoidBtn: document.getElementById('trapezoidBtn'),
+        trapAInput: document.getElementById('trapAInput'),
+        trapBInput: document.getElementById('trapBInput'),
+        trapCInput: document.getElementById('trapCInput'),
+        lozengeViewBtn: document.getElementById('lozengeViewBtn'),
+        dimerViewBtn: document.getElementById('dimerViewBtn'),
+        paletteSelect: document.getElementById('palette-select'),
+        outlineWidthPct: document.getElementById('outlineWidthPct'),
+        speedSlider: document.getElementById('speedSlider'),
+        speedVal: document.getElementById('speedVal'),
+        startStopBtn: document.getElementById('startStopBtn'),
+        cftpBtn: document.getElementById('cftpBtn'),
+        qInput: document.getElementById('qInput'),
+        blackCount: document.getElementById('blackCount'),
+        whiteCount: document.getElementById('whiteCount'),
+        dimerCount: document.getElementById('dimerCount'),
+        stepCount: document.getElementById('stepCount'),
+        volume: document.getElementById('volume'),
+        cftpSteps: document.getElementById('cftpSteps'),
+    };
+
+    function initPaletteSelector() {
+        renderer.colorPalettes.forEach((p, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = p.name;
+            el.paletteSelect.appendChild(opt);
+        });
+        el.paletteSelect.value = renderer.currentPaletteIndex;
+        renderer.updateLegend();
+    }
+
+    function formatNumber(n) {
+        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+        return n.toString();
+    }
+
+    function updateUI() {
+        // Count triangles
+        let blackCount = 0, whiteCount = 0;
+        for (const [key, tri] of activeTriangles) {
+            if (tri.type === 1) blackCount++;
+            else whiteCount++;
+        }
+
+        el.blackCount.textContent = blackCount;
+        el.whiteCount.textContent = whiteCount;
+        el.dimerCount.textContent = isValid ? sim.dimers.length : 0;
+        el.stepCount.textContent = formatNumber(sim.getTotalSteps());
+
+        // Status badge
+        if (activeTriangles.size === 0) {
+            el.statusBadge.textContent = 'Empty';
+            el.statusBadge.className = 'status-empty';
+        } else if (isValid) {
+            el.statusBadge.textContent = 'Valid';
+            el.statusBadge.className = 'status-valid';
+        } else {
+            el.statusBadge.textContent = 'Invalid';
+            el.statusBadge.className = 'status-invalid';
+        }
+
+        // Enable/disable simulation buttons
+        el.startStopBtn.disabled = !isValid;
+        el.cftpBtn.disabled = !isValid;
+    }
+
+    function draw() {
+        renderer.draw(sim, activeTriangles, isValid);
+    }
+
+    function reinitialize() {
+        if (running) {
+            running = false;
+            el.startStopBtn.textContent = 'Start';
+            el.startStopBtn.classList.remove('running');
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+
+        const result = sim.initFromTriangles(activeTriangles);
+        isValid = result.status === 'valid';
+
+        if (result.volume !== undefined) {
+            el.volume.textContent = formatNumber(result.volume);
+        }
+
+        updateUI();
+        draw();
+    }
+
+    function saveState() {
+        const state = [];
+        for (const [key, tri] of activeTriangles) {
+            state.push({ n: tri.n, j: tri.j, type: tri.type });
+        }
+        undoStack.push(state);
+    }
+
+    function loadState(state) {
+        activeTriangles.clear();
+        for (const tri of state) {
+            const key = `${tri.n},${tri.j},${tri.type}`;
+            activeTriangles.set(key, { n: tri.n, j: tri.j, type: tri.type });
+        }
+        reinitialize();
+    }
+
+    // ========================================================================
+    // MOUSE/TOUCH INTERACTION
+    // ========================================================================
+    function getTriangleAtPoint(mx, my) {
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        const { x, y } = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+
+        // Convert screen coords to lattice coords
+        // x = n, y = slope*n + j*deltaC => j = (y - slope*n) / deltaC
+        const n = Math.floor(x);
+        const j = Math.floor((y - slope * n) / deltaC);
+
+        // For each candidate (n, j), check both black and white triangles
+        const candidates = [
+            { n, j }, { n, j: j + 1 }, { n: n + 1, j }, { n: n - 1, j },
+            { n, j: j - 1 }, { n: n + 1, j: j - 1 }, { n: n - 1, j: j + 1 }
+        ];
+
+        for (const { n: cn, j: cj } of candidates) {
+            // Check black triangle R(cn, cj): (cn,cj), (cn,cj-1), (cn+1,cj-1)
+            if (pointInTriangle(x, y,
+                getVertex(cn, cj),
+                getVertex(cn, cj - 1),
+                getVertex(cn + 1, cj - 1))) {
+                return { n: cn, j: cj, type: 1 };
+            }
+
+            // Check white triangle L(cn, cj): (cn,cj), (cn+1,cj), (cn+1,cj-1)
+            if (pointInTriangle(x, y,
+                getVertex(cn, cj),
+                getVertex(cn + 1, cj),
+                getVertex(cn + 1, cj - 1))) {
+                return { n: cn, j: cj, type: 2 };
+            }
+        }
+
+        return null;
+    }
+
+    function pointInTriangle(px, py, v1, v2, v3) {
+        const d1 = sign(px, py, v1.x, v1.y, v2.x, v2.y);
+        const d2 = sign(px, py, v2.x, v2.y, v3.x, v3.y);
+        const d3 = sign(px, py, v3.x, v3.y, v1.x, v1.y);
+        const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+        const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+        return !(hasNeg && hasPos);
+    }
+
+    function sign(px, py, x1, y1, x2, y2) {
+        return (px - x2) * (y1 - y2) - (x1 - x2) * (py - y2);
+    }
+
+    function handleDraw(tri) {
+        // Add the specific triangle that was clicked
+        const key = `${tri.n},${tri.j},${tri.type}`;
+        if (!activeTriangles.has(key)) {
+            activeTriangles.set(key, { n: tri.n, j: tri.j, type: tri.type });
+            return true;
+        }
+        return false;
+    }
+
+    function handleErase(tri) {
+        // Remove the specific triangle that was clicked
+        const key = `${tri.n},${tri.j},${tri.type}`;
+        if (activeTriangles.has(key)) {
+            activeTriangles.delete(key);
+            return true;
+        }
+        return false;
+    }
+
+    function handleInput(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX || e.touches[0].clientX) - rect.left;
+        const my = (e.clientY || e.touches[0].clientY) - rect.top;
+
+        const tri = getTriangleAtPoint(mx, my);
+        if (!tri) return;
+
+        let changed = false;
+        if (currentTool === 'draw') {
+            changed = handleDraw(tri);
+        } else {
+            changed = handleErase(tri);
+        }
+
+        if (changed) {
+            reinitialize();
+        }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        saveState();
+        handleInput(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDrawing) handleInput(e);
+    });
+
+    canvas.addEventListener('mouseup', () => { isDrawing = false; });
+    canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDrawing = true;
+        saveState();
+        handleInput(e);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (isDrawing) handleInput(e);
+    });
+
+    canvas.addEventListener('touchend', () => { isDrawing = false; });
+
+    // ========================================================================
+    // UI EVENT HANDLERS
+    // ========================================================================
+    el.drawBtn.addEventListener('click', () => {
+        currentTool = 'draw';
+        el.drawBtn.classList.add('active');
+        el.eraseBtn.classList.remove('active');
+    });
+
+    el.eraseBtn.addEventListener('click', () => {
+        currentTool = 'erase';
+        el.eraseBtn.classList.add('active');
+        el.drawBtn.classList.remove('active');
+    });
+
+    el.gridSizeInput.addEventListener('change', (e) => {
+        renderer.gridSize = parseInt(e.target.value) || 15;
+        draw();
+    });
+
+    el.resetBtn.addEventListener('click', () => {
+        saveState();
+        activeTriangles.clear();
+        reinitialize();
+    });
+
+    el.undoBtn.addEventListener('click', () => {
+        const state = undoStack.undo(Array.from(activeTriangles.values()));
+        if (state) loadState(state);
+    });
+
+    el.redoBtn.addEventListener('click', () => {
+        const state = undoStack.redo(Array.from(activeTriangles.values()));
+        if (state) loadState(state);
+    });
+
+    document.getElementById('doubleMeshBtn').addEventListener('click', () => {
+        if (activeTriangles.size === 0) return;
+        saveState();
+        activeTriangles = doubleMesh(activeTriangles, sim.boundary);
+        reinitialize();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            el.undoBtn.click();
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+            e.preventDefault();
+            el.redoBtn.click();
+        }
+    });
+
+    // Preset buttons
+    el.hexagonBtn.addEventListener('click', () => {
+        saveState();
+        const size = parseInt(el.hexSizeInput.value) || 5;
+        activeTriangles = generateHexagon(size);
+        reinitialize();
+    });
+
+    el.trapezoidBtn.addEventListener('click', () => {
+        saveState();
+        const a = parseInt(el.trapAInput.value) || 6;
+        const b = parseInt(el.trapBInput.value) || 4;
+        const c = parseInt(el.trapCInput.value) || 5;
+        activeTriangles = generateTrapezoid(a, b, c);
+        reinitialize();
+    });
+
+    // View toggle
+    el.lozengeViewBtn.addEventListener('click', () => {
+        renderer.showDimerView = false;
+        el.lozengeViewBtn.classList.add('active');
+        el.dimerViewBtn.classList.remove('active');
+        draw();
+    });
+
+    el.dimerViewBtn.addEventListener('click', () => {
+        renderer.showDimerView = true;
+        el.dimerViewBtn.classList.add('active');
+        el.lozengeViewBtn.classList.remove('active');
+        draw();
+    });
+
+    // Palette
+    el.paletteSelect.addEventListener('change', (e) => {
+        renderer.setPalette(parseInt(e.target.value));
+        draw();
+    });
+
+    document.getElementById('prev-palette').addEventListener('click', () => {
+        renderer.prevPalette();
+        el.paletteSelect.value = renderer.currentPaletteIndex;
+        draw();
+    });
+
+    document.getElementById('next-palette').addEventListener('click', () => {
+        renderer.nextPalette();
+        el.paletteSelect.value = renderer.currentPaletteIndex;
+        draw();
+    });
+
+    document.getElementById('permuteColors').addEventListener('click', () => {
+        renderer.permuteColors();
+        draw();
+    });
+
+    el.outlineWidthPct.addEventListener('input', (e) => {
+        renderer.outlineWidthPct = parseFloat(e.target.value) || 0;
+        draw();
+    });
+
+    document.getElementById('borderWidthPct').addEventListener('input', (e) => {
+        renderer.borderWidthPct = parseFloat(e.target.value) || 0;
+        draw();
+    });
+
+    // Simulation controls
+    el.speedSlider.addEventListener('input', (e) => {
+        stepsPerSecond = parseInt(e.target.value);
+        el.speedVal.textContent = stepsPerSecond >= 1000 ? (stepsPerSecond / 1000).toFixed(1) + 'k/s' : stepsPerSecond + '/s';
+    });
+
+    el.qInput.addEventListener('change', (e) => {
+        const q = parseFloat(e.target.value) || 1;
+        e.target.value = Math.max(0, Math.min(10, q));
+        sim.setQBias(parseFloat(e.target.value));
+    });
+
+    function loop() {
+        if (!running) return;
+        const now = performance.now();
+        frameCount++;
+        if (now - lastFrameTime >= 1000) {
+            currentFps = frameCount * 1000 / (now - lastFrameTime);
+            frameCount = 0;
+            lastFrameTime = now;
+        }
+
+        const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
+        const result = sim.step(stepsPerFrame);
+        draw();
+        el.stepCount.textContent = formatNumber(sim.getTotalSteps());
+        if (result.volume !== undefined) el.volume.textContent = formatNumber(result.volume);
+
+        if (running) {
+            if (stepsPerSecond <= 60) {
+                animationId = setTimeout(() => requestAnimationFrame(loop), 1000 / stepsPerSecond);
+            } else {
+                animationId = requestAnimationFrame(loop);
+            }
+        }
+    }
+
+    el.startStopBtn.addEventListener('click', () => {
+        if (!isValid) return;
+        running = !running;
+        el.startStopBtn.textContent = running ? 'Stop' : 'Start';
+        el.startStopBtn.classList.toggle('running', running);
+        if (running) {
+            lastFrameTime = performance.now();
+            frameCount = 0;
+            loop();
+        } else {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+    });
+
+    el.cftpBtn.addEventListener('click', () => {
+        if (!isValid) return;
+        if (running) {
+            running = false;
+            el.startStopBtn.textContent = 'Start';
+            el.startStopBtn.classList.remove('running');
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+
+        const originalText = el.cftpBtn.textContent;
+        el.cftpBtn.disabled = true;
+        el.cftpBtn.textContent = 'Init...';
+        el.cftpSteps.textContent = 'init';
+
+        setTimeout(() => {
+            sim.initCFTP();
+
+            function cftpStep() {
+                const res = sim.stepCFTP();
+                if (res.status === 'in_progress') {
+                    el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.step;
+                    el.cftpBtn.textContent = res.T + ':' + res.step;
+                    setTimeout(cftpStep, 0);
+                } else if (res.status === 'coalesced') {
+                    const finalRes = sim.finalizeCFTP();
+                    draw();
+                    el.cftpSteps.textContent = res.T;
+                    if (finalRes.volume !== undefined) el.volume.textContent = formatNumber(finalRes.volume);
+                    el.cftpBtn.textContent = originalText;
+                    el.cftpBtn.disabled = false;
+                } else if (res.status === 'timeout') {
+                    el.cftpSteps.textContent = 'timeout';
+                    el.cftpBtn.textContent = originalText;
+                    el.cftpBtn.disabled = false;
+                } else if (res.status === 'not_coalesced') {
+                    el.cftpSteps.textContent = 'T=' + res.T;
+                    el.cftpBtn.textContent = 'T=' + res.T;
+                    setTimeout(cftpStep, 0);
+                } else {
+                    el.cftpBtn.textContent = originalText;
+                    el.cftpBtn.disabled = false;
+                }
+            }
+
+            setTimeout(cftpStep, 0);
+        }, 10);
+    });
+
+    // Export
+    document.getElementById('export-quality').addEventListener('input', (e) => {
+        document.getElementById('export-quality-val').textContent = e.target.value;
+    });
+
+    function getExportScale() {
+        return 1 + (parseInt(document.getElementById('export-quality').value) / 100) * 3;
+    }
+
+    function createExportCanvas() {
+        const baseWidth = 900, baseHeight = 600, scale = getExportScale();
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = baseWidth * scale;
+        exportCanvas.height = baseHeight * scale;
+        const exportCtx = exportCanvas.getContext('2d');
+        exportCtx.scale(scale, scale);
+        const origCtx = renderer.ctx, origW = renderer.displayWidth, origH = renderer.displayHeight;
+        renderer.ctx = exportCtx;
+        renderer.displayWidth = baseWidth;
+        renderer.displayHeight = baseHeight;
+        renderer.draw(sim, activeTriangles, isValid);
+        renderer.ctx = origCtx;
+        renderer.displayWidth = origW;
+        renderer.displayHeight = origH;
+        return exportCanvas;
+    }
+
+    document.getElementById('export-png').addEventListener('click', () => {
+        createExportCanvas().toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'ultimate_lozenge.png';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    });
+
+    document.getElementById('export-pdf').addEventListener('click', () => {
+        if (!window.jspdf) {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            s.onload = exportPDF;
+            document.head.appendChild(s);
+        } else {
+            exportPDF();
+        }
+
+        function exportPDF() {
+            const exportCanvas = createExportCanvas();
+            const imgData = exportCanvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [exportCanvas.width, exportCanvas.height]
+            });
+            pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
+            pdf.save('ultimate_lozenge.pdf');
+        }
+    });
+
+    // Initialize
+    window.addEventListener('resize', () => {
+        renderer.setupCanvas();
+        draw();
+    });
+
+    initPaletteSelector();
+    draw();
+    updateUI();
+    console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
+};
+</script>

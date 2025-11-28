@@ -12,6 +12,7 @@
  * - _simulations/lozenge_tilings/2025-11-27-lozenge-glauber.md
  * - _simulations/lozenge_tilings/2025-11-28-c2-Glauber.md
  * - _simulations/lozenge_tilings/2025-11-28-c2-CFTP.md
+ * - _simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md
  * - s/domino.md
  */
 
