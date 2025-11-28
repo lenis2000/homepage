@@ -1,5 +1,5 @@
 ---
-title: Ultimate Lozenge Tiling - Draw Any Region
+title: Ultimate Lozenge Tiling Generator - Draw Any Region
 model: lozenge-tilings
 author: 'Leonid Petrov'
 code:
