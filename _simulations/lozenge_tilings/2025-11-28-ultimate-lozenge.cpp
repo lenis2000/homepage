@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_repairRegion','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -1051,6 +1051,44 @@ char* stepCFTP() {
         strcpy(out, json.c_str());
         return out;
     }
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* exportCFTPMaxDimers() {
+    if (!cftp_initialized) {
+        std::string json = "{\"dimers\":[]}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Export dimers from cftp_upper (max state)
+    std::string json = "{\"dimers\":[";
+    bool first = true;
+    for (const auto& bt : blackTriangles) {
+        if (bt.n >= gridMinN && bt.n <= gridMaxN && bt.j >= gridMinJ && bt.j <= gridMaxJ) {
+            size_t gridIdx = getGridIdx(bt.n, bt.j);
+            if (gridIdx < cftp_upper.grid.size()) {
+                int8_t type = cftp_upper.grid[gridIdx];
+                if (type != -1) {
+                    int whiteN, whiteJ;
+                    getWhiteFromType(bt.n, bt.j, type, whiteN, whiteJ);
+                    if (!first) json += ",";
+                    first = false;
+                    json += "{\"bn\":" + std::to_string(bt.n) +
+                            ",\"bj\":" + std::to_string(bt.j) +
+                            ",\"wn\":" + std::to_string(whiteN) +
+                            ",\"wj\":" + std::to_string(whiteJ) +
+                            ",\"t\":" + std::to_string((int)type) + "}";
+                }
+            }
+        }
+    }
+    json += "]}";
+
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
 }
 
 EMSCRIPTEN_KEEPALIVE

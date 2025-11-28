@@ -30,7 +30,7 @@ code:
 <p><strong>Sampling methods:</strong></p>
 <ul>
   <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local "flips" of three lozenges around hexagonal vertices. Converges to the uniform distribution over time. The <strong>q parameter</strong> biases the distribution toward higher (q&gt;1) or lower (q&lt;1) volume configurations.</li>
-  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce.</li>
+  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce. During sampling, the max tiling is displayed after each epoch up to T=4096, then every 4096 steps for longer epochs.</li>
 </ul>
 
 <p>The simulation runs entirely in your browser using WebAssembly.</p>
@@ -530,6 +530,7 @@ Module.onRuntimeInitialized = function() {
             this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
             this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
+            this.exportCFTPMaxDimersWasm = Module.cwrap('exportCFTPMaxDimers', 'number', []);
             this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
@@ -610,6 +611,13 @@ Module.onRuntimeInitialized = function() {
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             this.refreshDimers();
+            return JSON.parse(jsonStr);
+        }
+
+        getCFTPMaxDimers() {
+            const ptr = this.exportCFTPMaxDimersWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
             return JSON.parse(jsonStr);
         }
 
@@ -2303,12 +2311,27 @@ Module.onRuntimeInitialized = function() {
 
         setTimeout(() => {
             sim.initCFTP();
+            let lastDrawnBlock = -1; // Track which 4096-block we last drew
 
             function cftpStep() {
                 const res = sim.stepCFTP();
                 if (res.status === 'in_progress') {
                     el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.step;
                     el.cftpBtn.textContent = res.T + ':' + res.step;
+                    // Draw every 4096 steps when T > 4096
+                    if (res.T > 4096) {
+                        const currentBlock = Math.floor(res.step / 4096);
+                        if (currentBlock > lastDrawnBlock) {
+                            lastDrawnBlock = currentBlock;
+                            const maxData = sim.getCFTPMaxDimers();
+                            if (maxData.dimers && maxData.dimers.length > 0) {
+                                const savedDimers = sim.dimers;
+                                sim.dimers = maxData.dimers;
+                                draw();
+                                sim.dimers = savedDimers;
+                            }
+                        }
+                    }
                     setTimeout(cftpStep, 0);
                 } else if (res.status === 'coalesced') {
                     const finalRes = sim.finalizeCFTP();
@@ -2324,6 +2347,17 @@ Module.onRuntimeInitialized = function() {
                 } else if (res.status === 'not_coalesced') {
                     el.cftpSteps.textContent = 'T=' + res.T;
                     el.cftpBtn.textContent = 'T=' + res.T;
+                    lastDrawnBlock = -1; // Reset for new epoch
+                    // Draw max tiling after each epoch up to T=4096
+                    if (res.prevT <= 4096) {
+                        const maxData = sim.getCFTPMaxDimers();
+                        if (maxData.dimers && maxData.dimers.length > 0) {
+                            const savedDimers = sim.dimers;
+                            sim.dimers = maxData.dimers;
+                            draw();
+                            sim.dimers = savedDimers;
+                        }
+                    }
                     setTimeout(cftpStep, 0);
                 } else {
                     el.cftpBtn.textContent = originalText;
