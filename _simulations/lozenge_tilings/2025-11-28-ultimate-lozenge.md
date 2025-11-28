@@ -22,7 +22,7 @@ code:
   <li><strong>Erase mode</strong>: Remove triangles from your region</li>
   <li><strong>Hexagon preset</strong>: Quickly generate a standard hexagonal region with sides (a,b,c,a,b,c)</li>
   <li><strong>2x Region</strong>: Double the size of your current region while preserving its shape</li>
-  <li><strong>Make Tileable</strong>: If your region is invalid (unequal black/white triangles), this removes the minimum number of triangles to make it tileable using maximum bipartite matching</li>
+  <li><strong>Make Tileable</strong>: If your region is invalid, this adds the minimum number of triangles from the exterior boundary to make it tileable. For each unmatched triangle, it finds an adjacent exterior neighbor of the opposite color.</li>
 </ul>
 
 <p>A region is <strong>tileable</strong> (valid) if and only if it has equal numbers of black and white triangles AND they can be perfectly matched. The simulator uses <strong>Dinic's maximum flow algorithm</strong> to find a perfect matching when one exists.</p>
@@ -389,6 +389,10 @@ code:
       <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
       <span style="font-size: 11px; color: #888;">%</span>
     </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="showGridCheckbox" checked>
+      <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
+    </div>
   </div>
 </div>
 
@@ -433,6 +437,9 @@ code:
     <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
       <button id="export-png">PNG</button>
       <button id="export-pdf">PDF</button>
+      <button id="export-json">Export Shape</button>
+      <button id="import-json">Import Shape</button>
+      <input type="file" id="import-json-file" accept=".json" style="display: none;">
       <span style="font-size: 11px; color: #666;">Quality:</span>
       <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
       <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
@@ -845,6 +852,7 @@ Module.onRuntimeInitialized = function() {
             this.outlineWidthPct = 0.1;
             this.borderWidthPct = 1;
             this.showDimerView = false;
+            this.showGrid = true;
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
@@ -1030,6 +1038,8 @@ Module.onRuntimeInitialized = function() {
         }
 
         drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode) {
+            if (!this.showGrid) return;
+
             // Dynamically calculate visible range based on current view
             // Sample all corners and edges of canvas to find world bounds
             const corners = [
@@ -1790,6 +1800,11 @@ Module.onRuntimeInitialized = function() {
         draw();
     });
 
+    document.getElementById('showGridCheckbox').addEventListener('change', (e) => {
+        renderer.showGrid = e.target.checked;
+        draw();
+    });
+
     // Simulation controls - logarithmic slider with synchronized input
     // Slider 0-100 maps to speed 1 - 100,000,000 (logarithmic)
     function sliderToSpeed(sliderVal) {
@@ -1979,6 +1994,65 @@ Module.onRuntimeInitialized = function() {
             pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
             pdf.save('ultimate_lozenge.pdf');
         }
+    });
+
+    // JSON Export - save shape to file
+    document.getElementById('export-json').addEventListener('click', () => {
+        const triangles = [];
+        for (const [key, tri] of activeTriangles) {
+            triangles.push({ n: tri.n, j: tri.j, type: tri.type });
+        }
+        const data = {
+            version: 1,
+            triangles: triangles
+        };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = 'lozenge_shape.json';
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // JSON Import - load shape from file
+    document.getElementById('import-json').addEventListener('click', () => {
+        document.getElementById('import-json-file').click();
+    });
+
+    document.getElementById('import-json-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (!data.triangles || !Array.isArray(data.triangles)) {
+                    alert('Invalid shape file: missing triangles array');
+                    return;
+                }
+
+                saveState();
+                activeTriangles.clear();
+
+                for (const tri of data.triangles) {
+                    if (tri.n !== undefined && tri.j !== undefined && tri.type !== undefined) {
+                        const key = `${tri.n},${tri.j},${tri.type}`;
+                        activeTriangles.set(key, { n: tri.n, j: tri.j, type: tri.type });
+                    }
+                }
+
+                reinitialize();
+                renderer.fitToRegion(activeTriangles);
+                draw();
+            } catch (err) {
+                alert('Failed to parse shape file: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset file input
     });
 
     // Initialize

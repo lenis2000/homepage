@@ -1090,48 +1090,105 @@ char* finalizeCFTP() {
 
 EMSCRIPTEN_KEEPALIVE
 char* repairRegion() {
-    // Strategy: The Max Flow (Dinic) computed a Maximum Bipartite Matching.
-    // Even if the region is not perfectly tileable, the edges with flow==1
-    // represent the largest possible subset of triangles that CAN be tiled.
-    // We simply keep those and discard the rest.
+    // Strategy: Find unmatched triangles and ADD exterior neighbors to match them.
+    // This adds the minimum number of triangles from the exterior to make tileable.
 
-    std::vector<int> keptTriangles; // Flat array: n, j, type
     int numBlack = blackTriangles.size();
     int numWhite = whiteTriangles.size();
     int S = numBlack + numWhite;
 
-    // Iterate over Black triangles
+    // Find which triangles are matched in the current max flow
+    std::unordered_set<int> matchedBlack;
+    std::unordered_set<int> matchedWhite;
+
     for (int i = 0; i < numBlack; i++) {
-        // Check edges in the flow network
         for (const auto& e : flowAdj[i]) {
-            // We are looking for forward edges from Black(i) to White(wIdx)
-            // White nodes are indexed from numBlack to numBlack+numWhite-1
             if (e.to >= numBlack && e.to < S && e.flow == 1) {
-                // This edge is part of the max matching. Keep both triangles.
-
-                // Keep Black
-                keptTriangles.push_back(blackTriangles[i].n);
-                keptTriangles.push_back(blackTriangles[i].j);
-                keptTriangles.push_back(1);
-
-                // Keep White
-                int wIdx = e.to - numBlack;
-                keptTriangles.push_back(whiteTriangles[wIdx].n);
-                keptTriangles.push_back(whiteTriangles[wIdx].j);
-                keptTriangles.push_back(2);
-
-                // Each black triangle matches at most one white triangle
+                matchedBlack.insert(i);
+                matchedWhite.insert(e.to - numBlack);
                 break;
             }
         }
     }
 
-    // Re-initialize the simulation using ONLY the kept triangles
-    if (keptTriangles.empty()) {
+    // Use a set to track all triangles (existing + new) to avoid duplicates
+    std::set<std::tuple<int,int,int>> triangleSet;
+
+    // Add all current triangles
+    for (const auto& bt : blackTriangles) {
+        triangleSet.insert({bt.n, bt.j, 1});
+    }
+    for (const auto& wt : whiteTriangles) {
+        triangleSet.insert({wt.n, wt.j, 2});
+    }
+
+    // For each unmatched black triangle, add an exterior white neighbor
+    for (int i = 0; i < numBlack; i++) {
+        if (matchedBlack.find(i) != matchedBlack.end()) continue;
+
+        int bn = blackTriangles[i].n;
+        int bj = blackTriangles[i].j;
+
+        // White neighbors of Black(n,j): White(n,j), White(n,j-1), White(n-1,j)
+        int neighbors[3][2] = {
+            {bn, bj},
+            {bn, bj - 1},
+            {bn - 1, bj}
+        };
+
+        for (int k = 0; k < 3; k++) {
+            int wn = neighbors[k][0];
+            int wj = neighbors[k][1];
+            long long key = makeKey(wn, wj);
+
+            // If this white is NOT in the current region, add it
+            if (whiteMap.find(key) == whiteMap.end()) {
+                triangleSet.insert({wn, wj, 2});
+                break;
+            }
+        }
+    }
+
+    // For each unmatched white triangle, add an exterior black neighbor
+    for (int i = 0; i < numWhite; i++) {
+        if (matchedWhite.find(i) != matchedWhite.end()) continue;
+
+        int wn = whiteTriangles[i].n;
+        int wj = whiteTriangles[i].j;
+
+        // Black neighbors of White(n,j): Black(n,j), Black(n,j+1), Black(n+1,j)
+        int neighbors[3][2] = {
+            {wn, wj},
+            {wn, wj + 1},
+            {wn + 1, wj}
+        };
+
+        for (int k = 0; k < 3; k++) {
+            int bn = neighbors[k][0];
+            int bj = neighbors[k][1];
+            long long key = makeKey(bn, bj);
+
+            // If this black is NOT in the current region, add it
+            if (blackMap.find(key) == blackMap.end()) {
+                triangleSet.insert({bn, bj, 1});
+                break;
+            }
+        }
+    }
+
+    // Convert set to flat array
+    std::vector<int> newTriangles;
+    for (const auto& t : triangleSet) {
+        newTriangles.push_back(std::get<0>(t));
+        newTriangles.push_back(std::get<1>(t));
+        newTriangles.push_back(std::get<2>(t));
+    }
+
+    if (newTriangles.empty()) {
         return initFromTriangles(nullptr, 0);
     }
 
-    return initFromTriangles(keptTriangles.data(), keptTriangles.size());
+    return initFromTriangles(newTriangles.data(), newTriangles.size());
 }
 
 } // extern "C"
