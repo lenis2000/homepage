@@ -372,11 +372,19 @@ code:
 
 </div>
 
-<!-- Canvas -->
-<canvas id="lozenge-canvas"></canvas>
+<!-- Canvas Container with overlay -->
+<div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
+  <!-- View Toggle overlay -->
+  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100;">
+    <button id="toggle3DBtn" style="padding: 4px 12px; border: 2px solid #1976d2; border-radius: 6px; background: white; color: #1976d2; font-weight: 500; cursor: pointer;">3D</button>
+  </div>
 
-<!-- 3D Container -->
-<div id="three-container"></div>
+  <!-- Canvas -->
+  <canvas id="lozenge-canvas"></canvas>
+
+  <!-- 3D Container -->
+  <div id="three-container"></div>
+</div>
 
 <!-- Controls below canvas -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
@@ -414,6 +422,10 @@ code:
     <button id="panUpBtn" title="Pan Up">↑</button>
     <button id="panDownBtn" title="Pan Down">↓</button>
     <button id="resetViewBtn" title="Reset View">Reset View</button>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="autoRotateCheckbox">
+      <label for="autoRotateCheckbox" style="font-size: 12px; color: #555;">Auto-rotate (3D)</label>
+    </div>
   </div>
 </div>
 
@@ -423,11 +435,6 @@ code:
     <div class="view-toggle">
       <button id="lozengeViewBtn" class="active">Lozenge</button>
       <button id="dimerViewBtn">Dimer</button>
-    </div>
-    <button id="toggle3DBtn">3D View</button>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="autoRotateCheckbox">
-      <label for="autoRotateCheckbox" style="font-size: 12px; color: #555;">Auto-rotate</label>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
@@ -1937,7 +1944,7 @@ Module.onRuntimeInitialized = function() {
         is3DView = use3D;
         canvas.style.display = use3D ? 'none' : 'block';
         threeContainer.style.display = use3D ? 'block' : 'none';
-        el.toggle3DBtn.textContent = use3D ? '2D View' : '3D View';
+        el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
 
         if (use3D) {
             if (!renderer3D) {
@@ -2630,6 +2637,13 @@ Module.onRuntimeInitialized = function() {
 
     document.getElementById('resetViewBtn').addEventListener('click', () => {
         renderer.resetView();
+        if (renderer3D) {
+            renderer3D.resetCamera();
+            // Re-center on current geometry
+            if (isValid && sim.dimers.length > 0) {
+                renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+            }
+        }
         draw();
     });
 
