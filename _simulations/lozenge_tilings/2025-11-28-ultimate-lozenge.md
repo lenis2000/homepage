@@ -480,6 +480,7 @@ code:
       <button id="export-pdf">PDF</button>
       <button id="export-json">Export Shape</button>
       <button id="import-json">Import Shape</button>
+      <button id="export-height-csv">Height CSV</button>
       <input type="file" id="import-json-file" accept=".json" style="display: none;">
       <span style="font-size: 11px; color: #666;">Quality:</span>
       <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
@@ -502,6 +503,90 @@ Module.onRuntimeInitialized = function() {
 
     function getVertex(n, j) {
         return { x: n, y: slope * n + j * deltaC };
+    }
+
+    // ========================================================================
+    // HEIGHT FUNCTION COMPUTATION
+    // ========================================================================
+    function computeHeightFunction(dimers) {
+        // Vertex keys for each dimer type
+        const getVertexKeys = (dimer) => {
+            const { bn, bj, t } = dimer;
+            if (t === 0) {
+                return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            } else if (t === 1) {
+                return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            } else {
+                return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+            }
+        };
+
+        // Height patterns (relative z-heights of the 4 vertices)
+        const getHeightPattern = (t) => {
+            if (t === 0) return [0, 0, 0, 0];
+            if (t === 1) return [1, 0, 0, 1];
+            return [1, 1, 0, 0];
+        };
+
+        // Build Vertex-to-Dimer Map
+        const vertexToDimers = new Map();
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+            for (const [n, j] of verts) {
+                const key = `${n},${j}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(dimer);
+            }
+        }
+
+        // BFS to calculate Height Function h(n,j)
+        const heights = new Map();
+        if (dimers.length > 0) {
+            const firstDimer = dimers[0];
+            const firstVerts = getVertexKeys(firstDimer);
+            const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+            heights.set(startKey, 0);
+
+            const queue = [startKey];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const currentKey = queue.shift();
+                if (visited.has(currentKey)) continue;
+                visited.add(currentKey);
+
+                const currentH = heights.get(currentKey);
+                const [cn, cj] = currentKey.split(',').map(Number);
+
+                for (const dimer of vertexToDimers.get(currentKey) || []) {
+                    const verts = getVertexKeys(dimer);
+                    const pattern = getHeightPattern(dimer.t);
+
+                    // Find index of current vertex in this dimer
+                    let myIdx = -1;
+                    for (let i = 0; i < 4; i++) {
+                        if (verts[i][0] === cn && verts[i][1] === cj) {
+                            myIdx = i;
+                            break;
+                        }
+                    }
+
+                    if (myIdx >= 0) {
+                        for (let i = 0; i < 4; i++) {
+                            const [vn, vj] = verts[i];
+                            const vkey = `${vn},${vj}`;
+                            if (!heights.has(vkey)) {
+                                const newH = currentH + (pattern[i] - pattern[myIdx]);
+                                heights.set(vkey, newH);
+                                queue.push(vkey);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return heights;
     }
 
     // ========================================================================
@@ -2868,6 +2953,33 @@ Module.onRuntimeInitialized = function() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.download = 'lozenge_shape.json';
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Height CSV Export - export height function to CSV
+    document.getElementById('export-height-csv').addEventListener('click', () => {
+        if (!isValid || sim.dimers.length === 0) {
+            alert('No valid tiling to export. Create a valid tileable region first.');
+            return;
+        }
+
+        const heights = computeHeightFunction(sim.dimers);
+
+        // Build CSV with header
+        let csv = 'n,j,x,y,h\n';
+        for (const [key, h] of heights) {
+            const [n, j] = key.split(',').map(Number);
+            const vertex = getVertex(n, j);
+            csv += `${n},${j},${vertex.x.toFixed(6)},${vertex.y.toFixed(6)},${-h}\n`;
+        }
+
+        // Download
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = 'lozenge_height_function.csv';
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
