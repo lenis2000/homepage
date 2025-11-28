@@ -344,7 +344,6 @@ code:
     <button id="startStopBtn" class="primary" disabled>Start</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
-    <button id="repairBtn" title="Remove unmatched triangles to restore tileability" disabled>Make Tileable</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -393,7 +392,7 @@ code:
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="redoBoundaryBtn" title="Recalculate boundary">Redo Boundary</button>
+    <button id="repairBtn" title="Add triangles to make region tileable" disabled>Make Tileable</button>
     <span id="statusBadge" class="status-empty">Empty</span>
   </div>
 </div>
@@ -2073,12 +2072,6 @@ Module.onRuntimeInitialized = function() {
 
         isValid = result.status === 'valid';
         updateUI();
-        draw();
-    });
-
-    document.getElementById('redoBoundaryBtn').addEventListener('click', () => {
-        if (activeTriangles.size === 0) return;
-        reinitialize();
         draw();
     });
 
