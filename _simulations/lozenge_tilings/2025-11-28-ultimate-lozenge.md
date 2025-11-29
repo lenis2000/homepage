@@ -378,10 +378,15 @@ code:
         <option value="5">5</option>
       </select>
     </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Presets:</span>
+      <button id="preset2x2Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">2x2</button>
+      <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;" title="Nienhuis 1984"><a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="text-decoration: none; color: inherit;">Nienhuis 3x3</a></button>
+    </div>
   </div>
   <div id="periodicWeightsMatrix" style="display: inline-grid; gap: 4px;"></div>
-  <div style="font-size: 11px; color: #888; margin-top: 6px;">
-    At position (n,j), uses q<sub>n mod k, j mod k</sub>
+  <div style="font-size: 13px; color: #333; margin-top: 8px;">
+    At position (n,j), uses q<sub>n mod k, j mod k</sub> · <strong>Product: <span id="periodicQProduct">1</span></strong>
   </div>
 </div>
 </details>
@@ -1095,7 +1100,10 @@ Module.onRuntimeInitialized = function() {
             this.rotated = false;
             this.usePeriodicWeights = false;
             this.periodicK = 2;
-            this.periodicQ = [[1, 2], [0.5, 3]];
+            this.periodicQ = [
+                [1, 100],
+                [0.003333, 3]
+            ];
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
@@ -2979,14 +2987,19 @@ Module.onRuntimeInitialized = function() {
     // Default values for each k (k x k matrices stored as 2D arrays)
     const defaultPeriodicQ = {
         1: [[1]],
-        2: [[1, 2], [0.5, 3]],
-        3: [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+        2: [[1, 100], [0.003333, 3]],
+        // Nienhuis Pattern: (n-j)%3. q0=1 (diag), q1=0.5, q2=2
+        3: [
+            [1.0, 2.0, 0.5],
+            [0.5, 1.0, 2.0],
+            [2.0, 0.5, 1.0]
+        ],
         4: [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
         5: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]
     };
 
-    let currentPeriodicK = 2;
-    let currentPeriodicQ = defaultPeriodicQ[2].map(row => [...row]);
+    let currentPeriodicK = 2; // Default to 2
+    let currentPeriodicQ = defaultPeriodicQ[2].map(row => [...row]); // Load 2x2 matrix
 
     function buildPeriodicMatrix(k) {
         periodicWeightsMatrix.innerHTML = '';
@@ -2997,9 +3010,9 @@ Module.onRuntimeInitialized = function() {
                 const input = document.createElement('input');
                 input.type = 'number';
                 input.className = 'param-input';
-                input.style.width = '50px';
+                input.style.width = '100px';
                 input.min = '0';
-                input.max = '10';
+                input.max = '1000';
                 input.step = '0.01';
                 input.value = currentPeriodicQ[i]?.[j] ?? 1;
                 input.dataset.row = i;
@@ -3016,6 +3029,7 @@ Module.onRuntimeInitialized = function() {
         const inputs = periodicWeightsMatrix.querySelectorAll('input');
         const values = [];
         currentPeriodicQ = [];
+        let product = 1;
 
         for (let i = 0; i < k; i++) {
             currentPeriodicQ[i] = [];
@@ -3024,11 +3038,14 @@ Module.onRuntimeInitialized = function() {
         inputs.forEach(input => {
             const i = parseInt(input.dataset.row);
             const j = parseInt(input.dataset.col);
-            const val = Math.max(0, Math.min(10, parseFloat(input.value) || 1));
+            const val = Math.max(0, Math.min(1000, parseFloat(input.value) || 1));
             input.value = val;
             currentPeriodicQ[i][j] = val;
             values.push(val);
+            product *= val;
         });
+
+        document.getElementById('periodicQProduct').textContent = product.toFixed(4).replace(/\.?0+$/, '');
 
         sim.setPeriodicQBias(values, k);
         renderer.periodicK = k;
@@ -3061,8 +3078,27 @@ Module.onRuntimeInitialized = function() {
         draw();
     });
 
-    // Initialize matrix
+    // Preset buttons
+    document.getElementById('preset2x2Btn').addEventListener('click', () => {
+        currentPeriodicK = 2;
+        currentPeriodicQ = [[1, 100], [0.003333, 3]];
+        periodicKSelect.value = '2';
+        buildPeriodicMatrix(2);
+        updatePeriodicWeights();
+    });
+
+    document.getElementById('presetNienhuis3x3Btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        currentPeriodicK = 3;
+        currentPeriodicQ = [[1, 2, 0.5], [0.5, 1, 2], [2, 0.5, 1]];
+        periodicKSelect.value = '3';
+        buildPeriodicMatrix(3);
+        updatePeriodicWeights();
+    });
+
+    // Initialize matrix and compute initial product
     buildPeriodicMatrix(currentPeriodicK);
+    document.getElementById('periodicQProduct').textContent = currentPeriodicQ.flat().reduce((a, b) => a * b, 1).toFixed(4).replace(/\.?0+$/, '');
 
     function loop() {
         if (!running) return;

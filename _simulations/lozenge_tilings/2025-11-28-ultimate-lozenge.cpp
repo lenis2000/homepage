@@ -45,8 +45,16 @@ inline double getRandom01() {
     return (xorshift64() >> 11) * (1.0 / 9007199254740992.0);
 }
 
+// Lemire's fast bounded random - avoids costly modulo operation
+inline uint32_t fastRandomRange(uint32_t range) {
+    uint64_t random64 = xorshift64();
+    // Calculates (random64 * range) >> 64 using 128-bit multiplication
+    uint64_t hi = (uint64_t)(((unsigned __int128)random64 * range) >> 64);
+    return (uint32_t)hi;
+}
+
 inline int getRandomInt(int n) {
-    return static_cast<int>((xorshift64() >> 11) % n);
+    return (int)fastRandomRange((uint32_t)n);
 }
 
 // Triangle geometry constants
@@ -94,15 +102,16 @@ const int directions_dj[6] = { -1, 0,  1,  1,  0, -1 };
 
 // Global state
 double qBias = 1.0;
+// Default 2x2 periodic weights
 double qBias_periodic[5][5] = {
-    {1.0, 2.0, 1.0, 1.0, 1.0},
-    {0.5, 3.0, 1.0, 1.0, 1.0},
+    {1.0, 100.0, 1.0, 1.0, 1.0},
+    {0.003333, 3.0, 1.0, 1.0, 1.0},
     {1.0, 1.0, 1.0, 1.0, 1.0},
     {1.0, 1.0, 1.0, 1.0, 1.0},
     {1.0, 1.0, 1.0, 1.0, 1.0}
 };
-int periodicK = 2;
-bool usePeriodicWeights = false;
+int periodicK = 2; // Default to Period 2
+bool usePeriodicWeights = false; // Disabled by default
 
 inline double getQAtPosition(int n, int j) {
     if (!usePeriodicWeights) return qBias;
@@ -146,6 +155,27 @@ struct TriVertex {
     int n, j;
 };
 std::vector<TriVertex> triangularVertices;
+
+// ============================================================================
+// OPTIMIZATION: Pre-computed caches for fast Glauber dynamics
+// ============================================================================
+
+// Cached grid indices for the 6 hex edges around each vertex
+struct CachedHexIndices {
+    int32_t edges[6];  // Indices into dimerGrid (-1 = sentinel/out of bounds)
+    int8_t types[6];   // Expected dimer types for each edge
+};
+std::vector<CachedHexIndices> cachedHexIndices;
+
+// Cached acceptance probabilities for each vertex
+struct CachedProbabilities {
+    float probUp;    // q / (1+q) - probability for volume increase
+    float probDown;  // 1 / (1+q) - probability for volume decrease
+};
+std::vector<CachedProbabilities> cachedProbs;
+
+// Sentinel index for out-of-bounds lookups
+int32_t sentinelIdx = -1;
 
 // Dimer representation
 struct Dimer {
@@ -384,6 +414,39 @@ void getHexEdgesAroundVertex(int n, int j, HexEdge edges[6]) {
     edges[5] = {n, j+1, n-1, j+1, 2};       // R(n,j+1) - L(n-1,j+1): left vertical
 }
 
+// Populate cached indices for all triangular vertices (call after triangularVertices is built)
+void populateCachedIndices() {
+    cachedHexIndices.resize(triangularVertices.size());
+
+    for (size_t i = 0; i < triangularVertices.size(); ++i) {
+        HexEdge edges[6];
+        getHexEdgesAroundVertex(triangularVertices[i].n, triangularVertices[i].j, edges);
+
+        for (int k = 0; k < 6; ++k) {
+            int bn = edges[k].blackN;
+            int bj = edges[k].blackJ;
+            cachedHexIndices[i].types[k] = edges[k].type;
+
+            // If out of bounds, use sentinel (-1)
+            if (bn < gridMinN || bn > gridMaxN || bj < gridMinJ || bj > gridMaxJ) {
+                cachedHexIndices[i].edges[k] = sentinelIdx;
+            } else {
+                cachedHexIndices[i].edges[k] = (int32_t)getGridIdx(bn, bj);
+            }
+        }
+    }
+}
+
+// Recompute acceptance probabilities for all vertices (call when q values change)
+void recomputeProbabilities() {
+    cachedProbs.resize(triangularVertices.size());
+    for (size_t i = 0; i < triangularVertices.size(); ++i) {
+        double q = getQAtPosition(triangularVertices[i].n, triangularVertices[i].j);
+        cachedProbs[i].probUp = (float)(q / (1.0 + q));
+        cachedProbs[i].probDown = (float)(1.0 / (1.0 + q));
+    }
+}
+
 // Check if dimer exists - O(1) grid lookup
 inline bool dimerExists(int blackN, int blackJ, int whiteN, int whiteJ) {
     if (blackN < gridMinN || blackN > gridMaxN || blackJ < gridMinJ || blackJ > gridMaxJ) {
@@ -563,22 +626,59 @@ int tryRotationOnGrid(std::vector<int8_t>& grid, int n, int j, bool execute) {
 void performGlauberStepsInternal(int numSteps) {
     if (triangularVertices.empty()) return;
 
+    const size_t N = triangularVertices.size();
+    const int8_t* gridData = dimerGrid.data();
+    const size_t gridSize = dimerGrid.size();
+
     for (int s = 0; s < numSteps; s++) {
         totalSteps++;
-        int idx = getRandomInt(triangularVertices.size());
-        const TriVertex& v = triangularVertices[idx];
-        int coveredCount = countCoveredEdges(v.n, v.j);
+        const uint32_t idx = fastRandomRange((uint32_t)N);
+        const CachedHexIndices& hex = cachedHexIndices[idx];
 
-        if (coveredCount == 3) {
-            int rotationType = tryRotation(v.n, v.j, false);
-            if (rotationType != 0) {
-                double q = getQAtPosition(v.n, v.j);
-                double acceptProb = (rotationType > 0) ? (q / (1.0 + q)) : (1.0 / (1.0 + q));
-                if (getRandom01() < acceptProb) {
-                    tryRotation(v.n, v.j, true);
-                    flipCount++;
-                }
+        // Fast covered edge count using cached indices
+        int coveredCount = 0;
+        int coveredIdx[3];
+        int uncoveredIdx[3];
+        int uncoveredCount = 0;
+
+        for (int k = 0; k < 6; k++) {
+            int32_t gridIdx = hex.edges[k];
+            bool covered = false;
+            if (gridIdx >= 0 && (size_t)gridIdx < gridSize) {
+                covered = (gridData[gridIdx] == hex.types[k]);
             }
+            if (covered) {
+                if (coveredCount < 3) coveredIdx[coveredCount] = k;
+                coveredCount++;
+            } else {
+                if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
+                uncoveredCount++;
+            }
+        }
+
+        if (coveredCount != 3 || uncoveredCount != 3) continue;
+
+        // Compute volume change using types (type 0 = diagonal contributes to volume)
+        const TriVertex& v = triangularVertices[idx];
+        HexEdge edges[6];
+        getHexEdgesAroundVertex(v.n, v.j, edges);
+
+        int volumeBefore = 0, volumeAfter = 0;
+        for (int k = 0; k < 3; k++) {
+            if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
+            if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
+        }
+
+        int volumeChange = volumeAfter - volumeBefore;
+        if (volumeChange == 0) continue;
+
+        // Use pre-computed acceptance probability
+        float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+
+        if (getRandom01() < acceptProb) {
+            // Execute flip using tryRotation (still needed for grid update)
+            tryRotation(v.n, v.j, true);
+            flipCount++;
         }
     }
 }
@@ -619,23 +719,61 @@ void makeExtremalState(GridState& state, int direction) {
     }
 }
 
+// Optimized: check coverage and get rotation type using cached indices
+inline int fastCheckAndGetRotationType(const int8_t* gridData, size_t gridSize,
+                                        const CachedHexIndices& hex,
+                                        int coveredIdx[3], int uncoveredIdx[3],
+                                        const HexEdge edges[6]) {
+    int coveredCount = 0, uncoveredCount = 0;
+
+    for (int k = 0; k < 6; k++) {
+        int32_t gridIdx = hex.edges[k];
+        bool covered = (gridIdx >= 0 && (size_t)gridIdx < gridSize && gridData[gridIdx] == hex.types[k]);
+        if (covered) {
+            if (coveredCount < 3) coveredIdx[coveredCount] = k;
+            coveredCount++;
+        } else {
+            if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
+            uncoveredCount++;
+        }
+    }
+
+    if (coveredCount != 3 || uncoveredCount != 3) return 0;
+
+    int volumeBefore = 0, volumeAfter = 0;
+    for (int k = 0; k < 3; k++) {
+        if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
+        if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
+    }
+
+    int volumeChange = volumeAfter - volumeBefore;
+    return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
+}
+
 void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     uint64_t savedRng = rng_state;
     rng_state = seed;
 
-    int N = triangularVertices.size();
+    const uint32_t N = (uint32_t)triangularVertices.size();
     if (N == 0) { rng_state = savedRng; return; }
 
-    for (int i = 0; i < N; i++) {
-        int idx = getRandomInt(N);
-        double u = getRandom01();
-        const TriVertex& v = triangularVertices[idx];
-        double q = getQAtPosition(v.n, v.j);
-        double pRemove = 1.0 / (1.0 + q);
+    const size_t gridSize = lower.grid.size();
 
-        int lowerCovered = countCoveredEdgesOnGrid(lower.grid, v.n, v.j);
-        if (lowerCovered == 3) {
-            int lowerType = tryRotationOnGrid(lower.grid, v.n, v.j, false);
+    for (uint32_t i = 0; i < N; i++) {
+        const uint32_t idx = fastRandomRange(N);
+        const double u = getRandom01();
+        const TriVertex& v = triangularVertices[idx];
+        const CachedHexIndices& hex = cachedHexIndices[idx];
+        const float pRemove = cachedProbs[idx].probDown;
+
+        HexEdge edges[6];
+        getHexEdgesAroundVertex(v.n, v.j, edges);
+
+        int coveredIdx[3], uncoveredIdx[3];
+
+        // Process lower grid
+        int lowerType = fastCheckAndGetRotationType(lower.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+        if (lowerType != 0) {
             if (u < pRemove) {
                 if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
             } else {
@@ -643,9 +781,9 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             }
         }
 
-        int upperCovered = countCoveredEdgesOnGrid(upper.grid, v.n, v.j);
-        if (upperCovered == 3) {
-            int upperType = tryRotationOnGrid(upper.grid, v.n, v.j, false);
+        // Process upper grid
+        int upperType = fastCheckAndGetRotationType(upper.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+        if (upperType != 0) {
             if (u < pRemove) {
                 if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
             } else {
@@ -800,6 +938,10 @@ char* initFromTriangles(int* data, int count) {
         for (const auto& [n, j] : vertexSet) {
             triangularVertices.push_back({n, j});
         }
+
+        // Populate optimization caches
+        populateCachedIndices();
+        recomputeProbabilities();
     }
 
     // 6. Compute boundary
@@ -936,7 +1078,10 @@ double getAcceptRate() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void setQBias(double q) { qBias = q; }
+void setQBias(double q) {
+    qBias = q;
+    recomputeProbabilities();
+}
 
 EMSCRIPTEN_KEEPALIVE
 double getQBias() { return qBias; }
@@ -949,16 +1094,21 @@ void setPeriodicQBias(double* values, int k) {
             qBias_periodic[i][j] = values[i * k + j];
         }
     }
+    recomputeProbabilities();
 }
 
 EMSCRIPTEN_KEEPALIVE
 void setPeriodicK(int k) {
-    if (k >= 1 && k <= 5) periodicK = k;
+    if (k >= 1 && k <= 5) {
+        periodicK = k;
+        recomputeProbabilities();
+    }
 }
 
 EMSCRIPTEN_KEEPALIVE
 void setUsePeriodicWeights(int use) {
     usePeriodicWeights = (use != 0);
+    recomputeProbabilities();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -1055,6 +1205,15 @@ char* stepCFTP() {
     }
     cftp_currentStep += stepsToRun;
 
+    // Check coalescence after each batch - early exit if coalesced
+    if (cftp_lower.grid == cftp_upper.grid) {
+        cftp_coalesced = true;
+        std::string json = "{\"status\":\"coalesced\", \"T\":" + std::to_string(cftp_currentStep) + "}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
     if (cftp_currentStep < cftp_T) {
         std::string json = "{\"status\":\"in_progress\", \"T\":" + std::to_string(cftp_T) +
                           ", \"step\":" + std::to_string(cftp_currentStep) + "}";
@@ -1063,15 +1222,9 @@ char* stepCFTP() {
         return out;
     }
 
+    // Not coalesced after all T steps - double T
     cftp_currentStep = 0;
-
-    if (cftp_lower.grid == cftp_upper.grid) {
-        cftp_coalesced = true;
-        std::string json = "{\"status\":\"coalesced\", \"T\":" + std::to_string(cftp_T) + "}";
-        char* out = (char*)malloc(json.size() + 1);
-        strcpy(out, json.c_str());
-        return out;
-    } else {
+    {
         int prevT = cftp_T;
         cftp_T *= 2;
         if (cftp_T > 1000000) {
