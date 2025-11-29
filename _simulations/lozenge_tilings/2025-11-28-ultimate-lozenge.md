@@ -21,7 +21,7 @@ code:
   <li><strong>Draw mode</strong>: Click or drag on the triangular grid to add triangles to your region</li>
   <li><strong>Erase mode</strong>: Remove triangles from your region</li>
   <li><strong>Hexagon preset</strong>: Quickly generate a standard hexagonal region with sides (a,b,c,a,b,c)</li>
-  <li><strong>2x Region</strong>: Double the size of your current region while preserving its shape</li>
+  <li><strong>Scale Up Region</strong>: Double the size of your current region while preserving its shape</li>
   <li><strong>Make Tileable</strong>: If your region is invalid, this adds the minimum number of triangles from the exterior boundary to make it tileable. For each unmatched triangle, it finds an adjacent exterior neighbor of the opposite color.</li>
 </ul>
 
@@ -348,7 +348,7 @@ code:
     <button id="startStopBtn" class="primary" disabled>Start</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
-    <button id="doubleMeshBtn" title="Double the region size">2x Region</button>
+    <button id="doubleMeshBtn" title="Double the region size">Scale Up Region</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -455,6 +455,10 @@ code:
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showGridCheckbox" checked>
       <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="rotateCheckbox">
+      <label for="rotateCheckbox" style="font-size: 12px; color: #555;">Rotate</label>
     </div>
   </div>
 </div>
@@ -1047,6 +1051,7 @@ Module.onRuntimeInitialized = function() {
             this.borderWidthPct = 1;
             this.showDimerView = false;
             this.showGrid = true;
+            this.rotated = false;
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
@@ -1082,10 +1087,18 @@ Module.onRuntimeInitialized = function() {
         }
 
         toCanvas(x, y, centerX, centerY, scale) {
+            if (this.rotated) {
+                return [centerX + y * scale, centerY + x * scale];
+            }
             return [centerX + x * scale, centerY - y * scale];
         }
 
         fromCanvas(cx, cy, centerX, centerY, scale) {
+            if (this.rotated) {
+                const y = (cx - centerX) / scale;
+                const x = (cy - centerY) / scale;
+                return { x, y };
+            }
             const x = (cx - centerX) / scale;
             const y = (centerY - cy) / scale;
             return { x, y };
@@ -2829,6 +2842,11 @@ Module.onRuntimeInitialized = function() {
 
     document.getElementById('showGridCheckbox').addEventListener('change', (e) => {
         renderer.showGrid = e.target.checked;
+        draw();
+    });
+
+    document.getElementById('rotateCheckbox').addEventListener('change', (e) => {
+        renderer.rotated = e.target.checked;
         draw();
     });
 
