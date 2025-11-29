@@ -795,6 +795,7 @@ Module.onRuntimeInitialized = function() {
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
             this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
             this.exportCFTPMaxDimersWasm = Module.cwrap('exportCFTPMaxDimers', 'number', []);
+            this.exportCFTPMinDimersWasm = Module.cwrap('exportCFTPMinDimers', 'number', []);
             this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
@@ -891,6 +892,13 @@ Module.onRuntimeInitialized = function() {
 
         getCFTPMaxDimers() {
             const ptr = this.exportCFTPMaxDimersWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        getCFTPMinDimers() {
+            const ptr = this.exportCFTPMinDimersWasm();
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             return JSON.parse(jsonStr);
@@ -1533,7 +1541,9 @@ Module.onRuntimeInitialized = function() {
             this.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
 
             // Draw active triangles (if not showing dimers or if invalid)
-            if (!isValid || this.showDimerView) {
+            // Skip coloring triangles in dimer view for large polygons (>1000 black triangles)
+            const skipTriangleColoring = this.showDimerView && sim.blackTriangles && sim.blackTriangles.length > 1000;
+            if (!isValid || (this.showDimerView && !skipTriangleColoring)) {
                 this.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, isValid);
             }
 
@@ -1679,7 +1689,9 @@ Module.onRuntimeInitialized = function() {
         drawDimerView(ctx, sim, centerX, centerY, scale, activeTriangles) {
             // Draw dimer edges
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
+            // Use thinner lines for large polygons (>1000 black triangles)
+            const isLargePolygon = sim.blackTriangles && sim.blackTriangles.length > 1000;
+            ctx.lineWidth = isLargePolygon ? 1 : 3;
             for (const dimer of sim.dimers) {
                 const bc = sim.blackTriangles.find(b => b.n === dimer.bn && b.j === dimer.bj);
                 const wc = sim.whiteTriangles.find(w => w.n === dimer.wn && w.j === dimer.wj);
@@ -1732,6 +1744,63 @@ Module.onRuntimeInitialized = function() {
                     ctx.fillText(q.toString(), cx, cy);
                 }
             }
+        }
+
+        // Draw double dimer configuration (both min and max) for CFTP visualization
+        drawDoubleDimerView(ctx, sim, minDimers, maxDimers, centerX, centerY, scale) {
+            const isLargePolygon = sim.blackTriangles && sim.blackTriangles.length > 1000;
+            const lineWidth = isLargePolygon ? 1 : 3;
+
+            // Create maps for fast lookup
+            const minSet = new Set(minDimers.map(d => `${d.bn},${d.bj},${d.wn},${d.wj}`));
+            const maxSet = new Set(maxDimers.map(d => `${d.bn},${d.bj},${d.wn},${d.wj}`));
+
+            // Combine all dimers
+            const allDimers = new Map();
+            for (const d of minDimers) {
+                const key = `${d.bn},${d.bj},${d.wn},${d.wj}`;
+                allDimers.set(key, d);
+            }
+            for (const d of maxDimers) {
+                const key = `${d.bn},${d.bj},${d.wn},${d.wj}`;
+                allDimers.set(key, d);
+            }
+
+            // Draw dimers with different styles
+            for (const [key, dimer] of allDimers) {
+                const inMin = minSet.has(key);
+                const inMax = maxSet.has(key);
+
+                const bc = sim.blackTriangles.find(b => b.n === dimer.bn && b.j === dimer.bj);
+                const wc = sim.whiteTriangles.find(w => w.n === dimer.wn && w.j === dimer.wj);
+                if (bc && wc) {
+                    const [bcx, bcy] = this.toCanvas(bc.cx, bc.cy, centerX, centerY, scale);
+                    const [wcx, wcy] = this.toCanvas(wc.cx, wc.cy, centerX, centerY, scale);
+
+                    if (inMin && inMax) {
+                        // Coalesced dimers - solid black
+                        ctx.strokeStyle = '#000';
+                        ctx.lineWidth = lineWidth;
+                        ctx.setLineDash([]);
+                    } else if (inMax) {
+                        // Only in max (upper bound) - blue
+                        ctx.strokeStyle = '#2196F3';
+                        ctx.lineWidth = lineWidth;
+                        ctx.setLineDash([]);
+                    } else {
+                        // Only in min (lower bound) - red
+                        ctx.strokeStyle = '#F44336';
+                        ctx.lineWidth = lineWidth;
+                        ctx.setLineDash([]);
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(bcx, bcy);
+                    ctx.lineTo(wcx, wcy);
+                    ctx.stroke();
+                }
+            }
+            ctx.setLineDash([]);
         }
 
         drawBoundary(ctx, boundary, centerX, centerY, scale) {
@@ -2104,6 +2173,118 @@ Module.onRuntimeInitialized = function() {
             if (!this.cameraInitialized && dimers.length > 0) {
                 this.centerCamera(heights);
                 this.cameraInitialized = true;
+            }
+        }
+
+        // Render both min and max CFTP surfaces with transparency
+        cftpBoundsTo3D(minDimers, maxDimers) {
+            while (this.meshGroup.children.length > 0) {
+                const child = this.meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                this.meshGroup.remove(child);
+            }
+
+            if ((!minDimers || minDimers.length === 0) && (!maxDimers || maxDimers.length === 0)) return;
+
+            const colors = this.getPermutedColors();
+
+            const getVertexKeys = (dimer) => {
+                const { bn, bj, t } = dimer;
+                if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+                else if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+                else return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+            };
+
+            const getHeightPattern = (t) => {
+                if (t === 0) return [0, 0, 0, 0];
+                if (t === 1) return [1, 0, 0, 1];
+                return [1, 1, 0, 0];
+            };
+
+            const computeHeights = (dimers) => {
+                const vertexToDimers = new Map();
+                for (const dimer of dimers) {
+                    for (const [n, j] of getVertexKeys(dimer)) {
+                        const key = `${n},${j}`;
+                        if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                        vertexToDimers.get(key).push(dimer);
+                    }
+                }
+                const heights = new Map();
+                if (dimers.length > 0) {
+                    const firstVerts = getVertexKeys(dimers[0]);
+                    const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+                    heights.set(startKey, 0);
+                    const queue = [startKey];
+                    const visited = new Set();
+                    while (queue.length > 0) {
+                        const currentKey = queue.shift();
+                        if (visited.has(currentKey)) continue;
+                        visited.add(currentKey);
+                        const currentH = heights.get(currentKey);
+                        const [cn, cj] = currentKey.split(',').map(Number);
+                        for (const dimer of vertexToDimers.get(currentKey) || []) {
+                            const verts = getVertexKeys(dimer);
+                            const pattern = getHeightPattern(dimer.t);
+                            let myIdx = verts.findIndex(([n, j]) => n === cn && j === cj);
+                            if (myIdx >= 0) {
+                                for (let i = 0; i < 4; i++) {
+                                    const vkey = `${verts[i][0]},${verts[i][1]}`;
+                                    if (!heights.has(vkey)) {
+                                        heights.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
+                                        queue.push(vkey);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return heights;
+            };
+
+            const to3D = (n, j, h) => ({ x: h, y: -n - h, z: j - h });
+
+            const buildSurface = (dimers, heights, opacity, colorMod) => {
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [], normals = [], vertexColors = [], indices = [];
+                const addQuad = (v1, v2, v3, v4, color) => {
+                    const baseIndex = vertices.length / 3;
+                    vertices.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, v4.x, v4.y, v4.z);
+                    const e1 = { x: v2.x-v1.x, y: v2.y-v1.y, z: v2.z-v1.z };
+                    const e2 = { x: v4.x-v1.x, y: v4.y-v1.y, z: v4.z-v1.z };
+                    const nx = e1.y*e2.z - e1.z*e2.y, ny = e1.z*e2.x - e1.x*e2.z, nz = e1.x*e2.y - e1.y*e2.x;
+                    const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+                    for (let i = 0; i < 4; i++) normals.push(nx/len, ny/len, nz/len);
+                    const c = new THREE.Color(color);
+                    c.r *= colorMod; c.g *= colorMod; c.b *= colorMod;
+                    for (let i = 0; i < 4; i++) vertexColors.push(c.r, c.g, c.b);
+                    indices.push(baseIndex, baseIndex+1, baseIndex+2, baseIndex, baseIndex+2, baseIndex+3);
+                };
+                for (const dimer of dimers) {
+                    const verts = getVertexKeys(dimer);
+                    const v3d = verts.map(([n, j]) => to3D(n, j, heights.get(`${n},${j}`) || 0));
+                    addQuad(v3d[0], v3d[1], v3d[2], v3d[3], colors[dimer.t]);
+                }
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+                geometry.setIndex(indices);
+                geometry.computeBoundingSphere();
+                const material = new THREE.MeshPhongMaterial({
+                    vertexColors: true, side: THREE.DoubleSide, flatShading: true, shininess: 30,
+                    transparent: true, opacity: opacity, depthWrite: opacity > 0.9
+                });
+                return new THREE.Mesh(geometry, material);
+            };
+
+            if (maxDimers && maxDimers.length > 0) {
+                const maxHeights = computeHeights(maxDimers);
+                this.meshGroup.add(buildSurface(maxDimers, maxHeights, 0.6, 1.0));
+            }
+            if (minDimers && minDimers.length > 0) {
+                const minHeights = computeHeights(minDimers);
+                this.meshGroup.add(buildSurface(minDimers, minHeights, 0.6, 0.7));
             }
         }
 
@@ -2609,13 +2790,7 @@ Module.onRuntimeInitialized = function() {
     });
 
     function getEffectiveTool() {
-        // Cmd-hold temporarily switches fill<->erase variants
-        if (cmdHeld) {
-            if (currentTool === 'draw') return 'erase';
-            if (currentTool === 'erase') return 'draw';
-            if (currentTool === 'lassoFill') return 'lassoErase';
-            if (currentTool === 'lassoErase') return 'lassoFill';
-        }
+        // Disabled cmd-hold toggle - was causing issues with lasso tools
         return currentTool;
     }
 
@@ -3473,11 +3648,22 @@ Module.onRuntimeInitialized = function() {
                         if (currentBlock > lastDrawnBlock) {
                             lastDrawnBlock = currentBlock;
                             const maxData = sim.getCFTPMaxDimers();
-                            if (maxData.dimers && maxData.dimers.length > 0) {
-                                const savedDimers = sim.dimers;
-                                sim.dimers = maxData.dimers;
-                                draw();
-                                sim.dimers = savedDimers;
+                            const minData = sim.getCFTPMinDimers();
+                            if (is3DView && renderer3D) {
+                                renderer3D.cftpBoundsTo3D(minData.dimers, maxData.dimers);
+                            } else if (maxData.dimers && maxData.dimers.length > 0) {
+                                if (renderer.showDimerView) {
+                                    // Draw double dimer view in 2D dimer mode
+                                    renderer.draw(sim, activeTriangles, isValid);
+                                    const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                    renderer.drawDoubleDimerView(renderer.ctx, sim, minData.dimers, maxData.dimers, centerX, centerY, scale);
+                                } else {
+                                    // Lozenge view - just show max
+                                    const savedDimers = sim.dimers;
+                                    sim.dimers = maxData.dimers;
+                                    draw();
+                                    sim.dimers = savedDimers;
+                                }
                             }
                         }
                     }
@@ -3498,14 +3684,25 @@ Module.onRuntimeInitialized = function() {
                     el.cftpSteps.textContent = 'T=' + res.T;
                     el.cftpBtn.textContent = 'T=' + res.T;
                     lastDrawnBlock = -1; // Reset for new epoch
-                    // Draw max tiling after each epoch up to T=4096
+                    // Draw both surfaces after each epoch
                     if (res.prevT <= 4096) {
                         const maxData = sim.getCFTPMaxDimers();
-                        if (maxData.dimers && maxData.dimers.length > 0) {
-                            const savedDimers = sim.dimers;
-                            sim.dimers = maxData.dimers;
-                            draw();
-                            sim.dimers = savedDimers;
+                        const minData = sim.getCFTPMinDimers();
+                        if (is3DView && renderer3D) {
+                            renderer3D.cftpBoundsTo3D(minData.dimers, maxData.dimers);
+                        } else if (maxData.dimers && maxData.dimers.length > 0) {
+                            if (renderer.showDimerView) {
+                                // Draw double dimer view in 2D dimer mode
+                                renderer.draw(sim, activeTriangles, isValid);
+                                const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                renderer.drawDoubleDimerView(renderer.ctx, sim, minData.dimers, maxData.dimers, centerX, centerY, scale);
+                            } else {
+                                // Lozenge view - just show max
+                                const savedDimers = sim.dimers;
+                                sim.dimers = maxData.dimers;
+                                draw();
+                                sim.dimers = savedDimers;
+                            }
                         }
                     }
                     setTimeout(cftpStep, 0);
