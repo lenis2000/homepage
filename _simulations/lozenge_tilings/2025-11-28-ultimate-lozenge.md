@@ -389,7 +389,8 @@ code:
     <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Presets:</span>
       <button id="preset2x2Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">2x2</button>
-      <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;" title="Nienhuis 1984"><a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="text-decoration: none; color: inherit;">Nienhuis 3x3</a></button>
+      <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Nienhuis et al 3x3</button>
+      <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
     </div>
   </div>
   <div id="periodicWeightsMatrix" style="display: inline-grid; gap: 4px;"></div>
@@ -437,8 +438,9 @@ code:
       <button id="eraseBtn">Erase</button>
     </div>
     <div class="tool-toggle">
-      <button id="lassoFillBtn" title="Drag to select area">Lasso Fill</button>
-      <button id="lassoEraseBtn" title="Drag to select area">Lasso Erase</button>
+      <button id="lassoFillBtn" title="Click to add points, click near start to close">Lasso Fill</button>
+      <button id="lassoEraseBtn" title="Click to add points, click near start to close">Lasso Erase</button>
+      <button id="lassoSnapBtn" class="active" title="Snap to triangular grid">Snap</button>
     </div>
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
@@ -1008,6 +1010,58 @@ Module.onRuntimeInitialized = function() {
         const n = Math.round(x);
         const j = Math.round((y - slope * n) / deltaC);
         return { n, j };
+    }
+
+    // Snap world coordinates to nearest lattice vertex
+    function snapToLattice(worldPos) {
+        const lattice = worldToLattice(worldPos.x, worldPos.y);
+        return getVertex(lattice.n, lattice.j);
+    }
+
+    // Snap direction to nearest triangular grid axis if within threshold
+    // Returns a snapped endpoint given start and raw end positions
+    function snapDirectionToGrid(startPos, endPos, angleThreshold = 15) {
+        const dx = endPos.x - startPos.x;
+        const dy = endPos.y - startPos.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.01) return endPos;
+
+        // Current angle in degrees
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        // Grid directions in world coordinates (6 directions)
+        // n-axis: (1, slope), j-axis: (0, deltaC), diagonal: (1, slope - deltaC)
+        const gridAngles = [
+            Math.atan2(slope, 1) * 180 / Math.PI,           // +n direction
+            Math.atan2(-slope, -1) * 180 / Math.PI,         // -n direction
+            90,                                              // +j direction (straight up)
+            -90,                                             // -j direction (straight down)
+            Math.atan2(slope - deltaC, 1) * 180 / Math.PI,  // +n-j diagonal
+            Math.atan2(deltaC - slope, -1) * 180 / Math.PI  // -n+j diagonal
+        ];
+
+        // Find closest grid angle
+        let closestAngle = angle;
+        let minDiff = Infinity;
+        for (const ga of gridAngles) {
+            let diff = Math.abs(angle - ga);
+            if (diff > 180) diff = 360 - diff;
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestAngle = ga;
+            }
+        }
+
+        // Only snap if within threshold
+        if (minDiff <= angleThreshold) {
+            const radians = closestAngle * Math.PI / 180;
+            return {
+                x: startPos.x + dist * Math.cos(radians),
+                y: startPos.y + dist * Math.sin(radians)
+            };
+        }
+
+        return endPos;
     }
 
     // Scale mesh by scaling ALL boundaries (including holes) ensuring INTEGER LATTICE alignment
@@ -1688,20 +1742,39 @@ Module.onRuntimeInitialized = function() {
             ctx.stroke();
         }
 
-        drawLasso(ctx, lassoPoints, centerX, centerY, scale, isFillMode) {
-            if (lassoPoints.length < 2) return;
+        drawLasso(ctx, lassoPoints, centerX, centerY, scale, isFillMode, cursorPos = null) {
+            if (lassoPoints.length === 0) return;
+
+            const [sx, sy] = this.toCanvas(lassoPoints[0].x, lassoPoints[0].y, centerX, centerY, scale);
+
+            // Draw existing points
             ctx.strokeStyle = isFillMode ? '#4CAF50' : '#f44336';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
-            const [sx, sy] = this.toCanvas(lassoPoints[0].x, lassoPoints[0].y, centerX, centerY, scale);
             ctx.moveTo(sx, sy);
             for (let i = 1; i < lassoPoints.length; i++) {
                 const [px, py] = this.toCanvas(lassoPoints[i].x, lassoPoints[i].y, centerX, centerY, scale);
                 ctx.lineTo(px, py);
             }
-            ctx.lineTo(sx, sy);
             ctx.stroke();
+
+            // Draw preview line to cursor
+            if (cursorPos && lassoPoints.length >= 1) {
+                const lastPt = lassoPoints[lassoPoints.length - 1];
+                const [lx, ly] = this.toCanvas(lastPt.x, lastPt.y, centerX, centerY, scale);
+                const [cx, cy] = this.toCanvas(cursorPos.x, cursorPos.y, centerX, centerY, scale);
+                ctx.strokeStyle = isFillMode ? 'rgba(76, 175, 80, 0.5)' : 'rgba(244, 67, 54, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                ctx.lineTo(cx, cy);
+                // Also show line back to start if we have 2+ points
+                if (lassoPoints.length >= 2) {
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(sx, sy);
+                }
+                ctx.stroke();
+            }
             ctx.setLineDash([]);
 
             // Fill with semi-transparent color
@@ -1716,6 +1789,12 @@ Module.onRuntimeInitialized = function() {
                 ctx.closePath();
                 ctx.fill();
             }
+
+            // Draw start point indicator
+            ctx.fillStyle = isFillMode ? '#4CAF50' : '#f44336';
+            ctx.beginPath();
+            ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         setPalette(index) {
@@ -2250,9 +2329,9 @@ Module.onRuntimeInitialized = function() {
         const tool = getEffectiveTool();
 
         // Draw lasso overlay if active
-        if (lassoPoints.length > 0) {
+        if (lassoPoints.length > 0 || isLassoing) {
             const isFillMode = tool === 'lassoFill';
-            renderer.drawLasso(renderer.ctx, lassoPoints, centerX, centerY, scale, isFillMode);
+            renderer.drawLasso(renderer.ctx, lassoPoints, centerX, centerY, scale, isFillMode, lassoCursor);
         }
 
     }
@@ -2540,13 +2619,44 @@ Module.onRuntimeInitialized = function() {
 
         const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
         const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
+        const lassoSnap = document.getElementById('lassoSnapBtn').classList.contains('active');
 
         // Left-click - handle different tool types
         if (isLassoTool()) {
-            // Lasso: start dragging
-            isLassoing = true;
-            lassoPoints = [worldPos];
-            draw();
+            // Click-based lasso: click to add points, click near start to close
+            if (!isLassoing) {
+                // Start new lasso
+                isLassoing = true;
+                const pointToAdd = lassoSnap ? snapToLattice(worldPos) : worldPos;
+                lassoPoints = [pointToAdd];
+                draw();
+            } else {
+                // Snap direction to grid axes if enabled, then snap to lattice
+                const lastPoint = lassoPoints[lassoPoints.length - 1];
+                let pointToAdd = worldPos;
+                if (lassoSnap) {
+                    const dirSnapped = snapDirectionToGrid(lastPoint, worldPos);
+                    pointToAdd = snapToLattice(dirSnapped);
+                }
+
+                // Check if clicking near start point to close
+                const startPoint = lassoPoints[0];
+                const distToStart = Math.hypot(pointToAdd.x - startPoint.x, pointToAdd.y - startPoint.y);
+                if (lassoPoints.length >= 3 && distToStart < 0.8) {
+                    // Close the lasso
+                    const tool = getEffectiveTool();
+                    const changed = completeLasso(tool === 'lassoFill');
+                    if (changed) reinitialize();
+                    else draw();
+                    isLassoing = false;
+                } else {
+                    // Add waypoint (avoid duplicates)
+                    if (pointToAdd.x !== lastPoint.x || pointToAdd.y !== lastPoint.y) {
+                        lassoPoints.push(pointToAdd);
+                    }
+                    draw();
+                }
+            }
         } else {
             // Regular draw/erase
             saveState();
@@ -2554,6 +2664,9 @@ Module.onRuntimeInitialized = function() {
             handleInput(e);
         }
     });
+
+    // Track cursor position for lasso preview
+    let lassoCursor = null;
 
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -2574,12 +2687,16 @@ Module.onRuntimeInitialized = function() {
         const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
 
         if (isLassoing) {
-            const lastPoint = lassoPoints[lassoPoints.length - 1];
-            const dist = Math.hypot(worldPos.x - lastPoint.x, worldPos.y - lastPoint.y);
-            if (dist > 0.1) {
-                lassoPoints.push(worldPos);
-                draw();
+            // Update cursor preview for lasso with direction snapping
+            const lassoSnap = document.getElementById('lassoSnapBtn').classList.contains('active');
+            if (lassoSnap && lassoPoints.length > 0) {
+                const lastPoint = lassoPoints[lassoPoints.length - 1];
+                const dirSnapped = snapDirectionToGrid(lastPoint, worldPos);
+                lassoCursor = snapToLattice(dirSnapped);
+            } else {
+                lassoCursor = lassoSnap ? snapToLattice(worldPos) : worldPos;
             }
+            draw();
             return;
         }
 
@@ -2587,16 +2704,9 @@ Module.onRuntimeInitialized = function() {
     });
 
     canvas.addEventListener('mouseup', (e) => {
-        if (isLassoing) {
-            const tool = getEffectiveTool();
-            const changed = completeLasso(tool === 'lassoFill');
-            if (changed) reinitialize();
-            else draw();
-        }
-
+        // Lasso doesn't complete on mouseup anymore (click-based)
         isDrawing = false;
         isPanning = false;
-        isLassoing = false;
         canvas.classList.remove('panning');
     });
 
@@ -2629,7 +2739,7 @@ Module.onRuntimeInitialized = function() {
 
             if (isLassoTool()) {
                 isLassoing = true;
-                lassoPoints = [worldPos];
+                lassoPoints = [snapToLattice(worldPos)];
                 draw();
             } else {
                 saveState();
@@ -2676,10 +2786,10 @@ Module.onRuntimeInitialized = function() {
             const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
 
             if (isLassoing) {
+                const snappedPos = snapToLattice(worldPos);
                 const lastPoint = lassoPoints[lassoPoints.length - 1];
-                const dist = Math.hypot(worldPos.x - lastPoint.x, worldPos.y - lastPoint.y);
-                if (dist > 0.1) {
-                    lassoPoints.push(worldPos);
+                if (snappedPos.x !== lastPoint.x || snappedPos.y !== lastPoint.y) {
+                    lassoPoints.push(snappedPos);
                     draw();
                 }
                 return;
