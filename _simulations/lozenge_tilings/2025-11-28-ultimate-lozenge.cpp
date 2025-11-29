@@ -1138,7 +1138,7 @@ char* runCFTP() {
             dimerGrid = lower.grid;
         } else {
             T *= 2;
-            if (T > 1000000) {
+            if (T > 33554432) {  // 2^25
                 std::string json = "{\"status\":\"cftp_timeout\", \"steps\":" + std::to_string(T) + "}";
                 char* out = (char*)malloc(json.size() + 1);
                 strcpy(out, json.c_str());
@@ -1227,7 +1227,7 @@ char* stepCFTP() {
     {
         int prevT = cftp_T;
         cftp_T *= 2;
-        if (cftp_T > 1000000) {
+        if (cftp_T > 33554432) {  // 2^25
             std::string json = "{\"status\":\"timeout\", \"T\":" + std::to_string(cftp_T) + "}";
             char* out = (char*)malloc(json.size() + 1);
             strcpy(out, json.c_str());

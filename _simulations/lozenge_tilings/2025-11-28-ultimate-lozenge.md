@@ -390,6 +390,10 @@ code:
       <span style="font-size: 12px; color: #555;">Presets:</span>
       <button id="preset2x2Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">2x2</button>
       <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Nienhuis et al 3x3</button>
+      <span id="nienhuis3x3AlphaContainer" style="display: none; align-items: center; gap: 4px;">
+        <label for="nienhuis3x3Alpha" style="font-size: 11px; color: #555;">α:</label>
+        <input type="number" id="nienhuis3x3Alpha" value="2" min="0.01" step="0.1" style="width: 60px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
+      </span>
       <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
     </div>
   </div>
@@ -2193,6 +2197,7 @@ Module.onRuntimeInitialized = function() {
     // Lasso state (drag to select)
     let lassoPoints = []; // Array of {x, y} in world coordinates
     let isLassoing = false;
+    let lassoCursor = null; // Current cursor position for lasso preview
 
     let stepsPerSecond = 100;
     let animationId = null;
@@ -2584,7 +2589,14 @@ Module.onRuntimeInitialized = function() {
         if (e.metaKey || e.ctrlKey) cmdHeld = true;
     });
     document.addEventListener('keyup', (e) => {
+        // Reset if the Meta or Ctrl key itself was released
+        if (e.key === 'Meta' || e.key === 'Control') cmdHeld = false;
+        // Also reset if neither modifier is held
         if (!e.metaKey && !e.ctrlKey) cmdHeld = false;
+    });
+    // Reset on focus loss to prevent stuck state
+    window.addEventListener('blur', () => {
+        cmdHeld = false;
     });
 
     function getEffectiveTool() {
@@ -2639,6 +2651,22 @@ Module.onRuntimeInitialized = function() {
                     pointToAdd = snapToLattice(dirSnapped);
                 }
 
+                // Cmd-click (Mac) or Ctrl-click: add point and complete immediately
+                if (e.metaKey || e.ctrlKey) {
+                    if (pointToAdd.x !== lastPoint.x || pointToAdd.y !== lastPoint.y) {
+                        lassoPoints.push(pointToAdd);
+                    }
+                    if (lassoPoints.length >= 3) {
+                        const tool = getEffectiveTool();
+                        const changed = completeLasso(tool === 'lassoFill');
+                        if (changed) reinitialize();
+                        else draw();
+                    }
+                    isLassoing = false;
+                    lassoCursor = null;
+                    return;
+                }
+
                 // Check if clicking near start point to close
                 const startPoint = lassoPoints[0];
                 const distToStart = Math.hypot(pointToAdd.x - startPoint.x, pointToAdd.y - startPoint.y);
@@ -2649,6 +2677,7 @@ Module.onRuntimeInitialized = function() {
                     if (changed) reinitialize();
                     else draw();
                     isLassoing = false;
+                    lassoCursor = null;
                 } else {
                     // Add waypoint (avoid duplicates)
                     if (pointToAdd.x !== lastPoint.x || pointToAdd.y !== lastPoint.y) {
@@ -2664,9 +2693,6 @@ Module.onRuntimeInitialized = function() {
             handleInput(e);
         }
     });
-
-    // Track cursor position for lasso preview
-    let lassoCursor = null;
 
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -2828,9 +2854,10 @@ Module.onRuntimeInitialized = function() {
             setViewMode(false);
         }
         // Clear any in-progress lasso when switching tools
-        if (lassoPoints.length > 0) {
+        if (lassoPoints.length > 0 || isLassoing) {
             lassoPoints = [];
             isLassoing = false;
+            lassoCursor = null;
             draw();
         }
         currentTool = tool;
@@ -2844,6 +2871,11 @@ Module.onRuntimeInitialized = function() {
     el.eraseBtn.addEventListener('click', () => setTool('erase'));
     el.lassoFillBtn.addEventListener('click', () => setTool('lassoFill'));
     el.lassoEraseBtn.addEventListener('click', () => setTool('lassoErase'));
+
+    document.getElementById('lassoSnapBtn').addEventListener('click', () => {
+        const btn = document.getElementById('lassoSnapBtn');
+        btn.classList.toggle('active');
+    });
 
     el.resetBtn.addEventListener('click', () => {
         saveState();
@@ -2933,10 +2965,16 @@ Module.onRuntimeInitialized = function() {
     });
 
     document.getElementById('resetViewBtn').addEventListener('click', () => {
+        // Complete redraw of 2D canvas
+        renderer.setupCanvas();
         renderer.resetView();
+        renderer.fitToRegion(activeTriangles);
+
+        // Complete redraw of 3D if available
         if (renderer3D) {
             renderer3D.resetCamera();
-            // Re-center on current geometry
+            renderer3D.handleResize();
+            // Rebuild 3D geometry from current state
             if (isValid && sim.dimers.length > 0) {
                 renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
             }
@@ -2987,9 +3025,10 @@ Module.onRuntimeInitialized = function() {
         }
         // Escape to cancel any in-progress lasso
         if (e.key === 'Escape') {
-            if (lassoPoints.length > 0) {
+            if (lassoPoints.length > 0 || isLassoing) {
                 lassoPoints = [];
                 isLassoing = false;
+                lassoCursor = null;
                 draw();
             }
         }
@@ -3141,6 +3180,16 @@ Module.onRuntimeInitialized = function() {
 
     let currentPeriodicK = 2; // Default to 2
     let currentPeriodicQ = defaultPeriodicQ[2].map(row => [...row]); // Load 2x2 matrix
+    let isNienhuis3x3Mode = false;
+
+    function computeNienhuis3x3Matrix(alpha) {
+        const invAlpha = 1 / alpha;
+        return [
+            [1, alpha, invAlpha],
+            [invAlpha, 1, alpha],
+            [alpha, invAlpha, 1]
+        ];
+    }
 
     function buildPeriodicMatrix(k) {
         periodicWeightsMatrix.innerHTML = '';
@@ -3153,7 +3202,7 @@ Module.onRuntimeInitialized = function() {
                 input.className = 'param-input';
                 input.style.width = '100px';
                 input.min = '0';
-                input.max = '1000';
+                input.max = '1000000';
                 input.step = '0.01';
                 input.value = currentPeriodicQ[i]?.[j] ?? 1;
                 input.dataset.row = i;
@@ -3179,7 +3228,7 @@ Module.onRuntimeInitialized = function() {
         inputs.forEach(input => {
             const i = parseInt(input.dataset.row);
             const j = parseInt(input.dataset.col);
-            const val = Math.max(0, Math.min(1000, parseFloat(input.value) || 1));
+            const val = Math.max(0, Math.min(1000000, parseFloat(input.value) || 1));
             input.value = val;
             currentPeriodicQ[i][j] = val;
             values.push(val);
@@ -3196,6 +3245,9 @@ Module.onRuntimeInitialized = function() {
 
     periodicKSelect.addEventListener('change', (e) => {
         const newK = parseInt(e.target.value);
+        // Exit Nienhuis mode and restore editable matrix
+        isNienhuis3x3Mode = false;
+        document.getElementById('nienhuis3x3AlphaContainer').style.display = 'none';
         // Preserve values where possible
         const oldQ = currentPeriodicQ;
         currentPeriodicK = newK;
@@ -3207,6 +3259,7 @@ Module.onRuntimeInitialized = function() {
             }
         }
         buildPeriodicMatrix(newK);
+        setMatrixInputsDisabled(false);
         updatePeriodicWeights();
     });
 
@@ -3221,21 +3274,51 @@ Module.onRuntimeInitialized = function() {
 
     // Preset buttons
     document.getElementById('preset2x2Btn').addEventListener('click', () => {
+        isNienhuis3x3Mode = false;
+        document.getElementById('nienhuis3x3AlphaContainer').style.display = 'none';
         currentPeriodicK = 2;
         currentPeriodicQ = [[1, 100], [0.003333, 3]];
         periodicKSelect.value = '2';
         buildPeriodicMatrix(2);
+        setMatrixInputsDisabled(false);
         updatePeriodicWeights();
     });
 
     document.getElementById('presetNienhuis3x3Btn').addEventListener('click', (e) => {
         e.preventDefault();
+        isNienhuis3x3Mode = true;
         currentPeriodicK = 3;
-        currentPeriodicQ = [[1, 2, 0.5], [0.5, 1, 2], [2, 0.5, 1]];
+        const alpha = parseFloat(document.getElementById('nienhuis3x3Alpha').value) || 2;
+        currentPeriodicQ = computeNienhuis3x3Matrix(alpha);
         periodicKSelect.value = '3';
+        document.getElementById('nienhuis3x3AlphaContainer').style.display = 'flex';
         buildPeriodicMatrix(3);
+        setMatrixInputsDisabled(true);
         updatePeriodicWeights();
     });
+
+    document.getElementById('nienhuis3x3Alpha').addEventListener('input', (e) => {
+        if (!isNienhuis3x3Mode) return;
+        const alpha = parseFloat(e.target.value) || 2;
+        currentPeriodicQ = computeNienhuis3x3Matrix(alpha);
+        // Update the displayed values in the greyed-out inputs
+        const inputs = periodicWeightsMatrix.querySelectorAll('input');
+        inputs.forEach(input => {
+            const i = parseInt(input.dataset.row);
+            const j = parseInt(input.dataset.col);
+            input.value = currentPeriodicQ[i][j];
+        });
+        updatePeriodicWeights();
+    });
+
+    function setMatrixInputsDisabled(disabled) {
+        const inputs = periodicWeightsMatrix.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.disabled = disabled;
+            input.style.backgroundColor = disabled ? '#e9e9e9' : '';
+            input.style.color = disabled ? '#666' : '';
+        });
+    }
 
     // Initialize matrix and compute initial product
     buildPeriodicMatrix(currentPeriodicK);
@@ -3704,20 +3787,6 @@ Module.onRuntimeInitialized = function() {
     initPaletteSelector();
     updateUI();
     draw();
-
-    // Default: generate hexagon and run perfect sampling
-    const defaultA = parseInt(el.hexAInput.value) || 4;
-    const defaultB = parseInt(el.hexBInput.value) || 3;
-    const defaultC = parseInt(el.hexCInput.value) || 5;
-    activeTriangles = generateHexagon(defaultA, defaultB, defaultC);
-    reinitialize();
-
-    // Trigger CFTP after a short delay to let UI settle
-    setTimeout(() => {
-        if (isValid) {
-            el.cftpBtn.click();
-        }
-    }, 100);
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
 };
