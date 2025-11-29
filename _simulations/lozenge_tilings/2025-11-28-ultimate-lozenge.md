@@ -519,6 +519,10 @@ code:
     <span id="avgProgress" style="font-size: 12px; color: #666;"></span>
     <button id="fluctuationsBtn" class="cftp" disabled>Fluctuations</button>
     <span id="fluctProgress" style="font-size: 12px; color: #666;"></span>
+    <span style="display: flex; align-items: center; gap: 2px;">
+      <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
+      <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;">
+    </span>
   </div>
 </div>
 
@@ -2716,6 +2720,7 @@ Module.onRuntimeInitialized = function() {
         avgProgress: document.getElementById('avgProgress'),
         fluctuationsBtn: document.getElementById('fluctuationsBtn'),
         fluctProgress: document.getElementById('fluctProgress'),
+        fluctScaleInput: document.getElementById('fluctScaleInput'),
     };
 
     // CFTP cancellation flag
@@ -2724,6 +2729,20 @@ Module.onRuntimeInitialized = function() {
     let avgCancelled = false;
     // Fluctuations cancellation flag
     let fluctCancelled = false;
+    // Store raw fluctuation data for dynamic re-rendering
+    let rawFluctuations = null;
+    // Flag to prevent draw() from overwriting fluctuation surface
+    let inFluctuationMode = false;
+
+    function renderFluctuations() {
+        if (!rawFluctuations || !renderer3D) return;
+        const scale = parseFloat(el.fluctScaleInput.value) || 10;
+        const fluctHeights = new Map();
+        for (const [key, raw] of rawFluctuations) {
+            fluctHeights.set(key, raw * scale);
+        }
+        renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true });
+    }
 
     function initPaletteSelector() {
         renderer.colorPalettes.forEach((p, i) => {
@@ -2804,7 +2823,7 @@ Module.onRuntimeInitialized = function() {
     }
 
     function draw() {
-        if (is3DView && renderer3D && isValid && sim.dimers.length > 0) {
+        if (is3DView && renderer3D && isValid && sim.dimers.length > 0 && !inFluctuationMode) {
             renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
         }
         renderer.draw(sim, activeTriangles, isValid);
@@ -2824,6 +2843,10 @@ Module.onRuntimeInitialized = function() {
 
     function reinitialize() {
         const wasRunning = running;
+
+        // Clear fluctuation mode when polygon changes
+        inFluctuationMode = false;
+        rawFluctuations = null;
 
         // Stop animation loop temporarily
         if (animationId) {
@@ -3884,6 +3907,7 @@ Module.onRuntimeInitialized = function() {
         el.startStopBtn.textContent = running ? 'Stop' : 'Start';
         el.startStopBtn.classList.toggle('running', running);
         if (running) {
+            inFluctuationMode = false; // Exit fluctuation mode when starting Glauber
             lastFrameTime = performance.now();
             frameCount = 0;
             loop();
@@ -3898,6 +3922,7 @@ Module.onRuntimeInitialized = function() {
 
     el.cftpBtn.addEventListener('click', () => {
         if (!isValid) return;
+        inFluctuationMode = false; // Exit fluctuation mode when starting CFTP
         if (running) {
             running = false;
             el.startStopBtn.textContent = 'Start';
@@ -4016,6 +4041,7 @@ Module.onRuntimeInitialized = function() {
     // Average Sampling for Limit Shape
     el.averageBtn.addEventListener('click', () => {
         if (!isValid) return;
+        inFluctuationMode = false; // Exit fluctuation mode when starting averaging
 
         // Stop any running simulation
         if (running) {
@@ -4232,13 +4258,13 @@ Module.onRuntimeInitialized = function() {
         }
 
         function finishFluctuations() {
-            // Compute (h1 - h2) / sqrt(2) * 10 (scaled x10 for visibility, labels show true values)
-            const fluctHeights = new Map();
+            // Compute raw (h1 - h2) / sqrt(2) and store for dynamic re-rendering
+            rawFluctuations = new Map();
             const sqrt2 = Math.sqrt(2);
 
             for (const [key, h1] of sample1Heights) {
                 const h2 = sample2Heights.get(key) || 0;
-                fluctHeights.set(key, (h1 - h2) / sqrt2 * 10);
+                rawFluctuations.set(key, (h1 - h2) / sqrt2);
             }
 
             // Switch to 3D view if not already
@@ -4246,10 +4272,11 @@ Module.onRuntimeInitialized = function() {
                 setViewMode(true);
             }
 
-            // Render the fluctuation surface (hide z labels since values are non-integer GFF fluctuations)
-            if (renderer3D) {
-                renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true });
-            }
+            // Lock fluctuation mode to prevent draw() from overwriting
+            inFluctuationMode = true;
+
+            // Render with current scale
+            renderFluctuations();
 
             el.fluctProgress.textContent = 'Done';
             el.fluctuationsBtn.textContent = originalText;
@@ -4260,6 +4287,11 @@ Module.onRuntimeInitialized = function() {
         }
 
         setTimeout(runSample, 10);
+    });
+
+    // Dynamic scale update for fluctuations
+    el.fluctScaleInput.addEventListener('input', () => {
+        renderFluctuations();
     });
 
     // Export
