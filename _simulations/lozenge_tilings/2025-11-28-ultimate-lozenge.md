@@ -359,6 +359,33 @@ code:
   </div>
 </div>
 
+<!-- Periodic Weights -->
+<details id="periodic-weights-details">
+<summary>Periodic Weights</summary>
+<div class="content">
+  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="usePeriodicWeightsCheckbox">
+      <label for="usePeriodicWeightsCheckbox" style="font-size: 12px; color: #555;">Enable periodic weights</label>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <label for="periodicKSelect" style="font-size: 12px; color: #555;">Period k:</label>
+      <select id="periodicKSelect" style="padding: 2px 6px; font-size: 12px;">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+  </div>
+  <div id="periodicWeightsMatrix" style="display: inline-grid; gap: 4px;"></div>
+  <div style="font-size: 11px; color: #888; margin-top: 6px;">
+    At position (n,j), uses q<sub>n mod k, j mod k</sub>
+  </div>
+</div>
+</details>
+
 <!-- Stats Row -->
 <div class="control-group">
   <div class="stats-inline">
@@ -458,7 +485,7 @@ code:
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="rotateCheckbox">
-      <label for="rotateCheckbox" style="font-size: 12px; color: #555;">Rotate</label>
+      <label for="rotateCheckbox" style="font-size: 12px; color: #555;">Rotate Canvas 90°</label>
     </div>
   </div>
 </div>
@@ -704,6 +731,9 @@ Module.onRuntimeInitialized = function() {
             this.exportDimersWasm = Module.cwrap('exportDimers', 'number', []);
             this.getAcceptRateWasm = Module.cwrap('getAcceptRate', 'number', []);
             this.setQBiasWasm = Module.cwrap('setQBias', null, ['number']);
+            this.setPeriodicQBiasWasm = Module.cwrap('setPeriodicQBias', null, ['number', 'number']);
+            this.setPeriodicKWasm = Module.cwrap('setPeriodicK', null, ['number']);
+            this.setUsePeriodicWeightsWasm = Module.cwrap('setUsePeriodicWeights', null, ['number']);
             this.runCFTPWasm = Module.cwrap('runCFTP', 'number', []);
             this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
@@ -717,6 +747,17 @@ Module.onRuntimeInitialized = function() {
         }
 
         setQBias(q) { this.setQBiasWasm(q); }
+        setPeriodicQBias(values, k) {
+            // values is a flat array of k*k doubles
+            const dataPtr = Module._malloc(values.length * 8);
+            for (let i = 0; i < values.length; i++) {
+                Module.setValue(dataPtr + i * 8, values[i], 'double');
+            }
+            this.setPeriodicQBiasWasm(dataPtr, k);
+            Module._free(dataPtr);
+        }
+        setPeriodicK(k) { this.setPeriodicKWasm(k); }
+        setUsePeriodicWeights(use) { this.setUsePeriodicWeightsWasm(use ? 1 : 0); }
 
         initFromTriangles(trianglesMap) {
             // Convert Map to flat array [n, j, type, n, j, type, ...]
@@ -1052,6 +1093,9 @@ Module.onRuntimeInitialized = function() {
             this.showDimerView = false;
             this.showGrid = true;
             this.rotated = false;
+            this.usePeriodicWeights = false;
+            this.periodicK = 2;
+            this.periodicQ = [[1, 2], [0.5, 3]];
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
@@ -1230,7 +1274,7 @@ Module.onRuntimeInitialized = function() {
             // Draw dimers/lozenges if valid
             if (isValid && sim.dimers.length > 0) {
                 if (this.showDimerView) {
-                    this.drawDimerView(ctx, sim, centerX, centerY, scale);
+                    this.drawDimerView(ctx, sim, centerX, centerY, scale, activeTriangles);
                 } else {
                     this.drawLozengeView(ctx, sim, centerX, centerY, scale);
                 }
@@ -1366,7 +1410,7 @@ Module.onRuntimeInitialized = function() {
             }
         }
 
-        drawDimerView(ctx, sim, centerX, centerY, scale) {
+        drawDimerView(ctx, sim, centerX, centerY, scale, activeTriangles) {
             // Draw dimer edges
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 3;
@@ -1377,6 +1421,49 @@ Module.onRuntimeInitialized = function() {
                     const [bcx, bcy] = this.toCanvas(bc.cx, bc.cy, centerX, centerY, scale);
                     const [wcx, wcy] = this.toCanvas(wc.cx, wc.cy, centerX, centerY, scale);
                     ctx.beginPath(); ctx.moveTo(bcx, bcy); ctx.lineTo(wcx, wcy); ctx.stroke();
+                }
+            }
+
+            // Draw periodic weights at face centers if enabled
+            if (this.usePeriodicWeights && activeTriangles) {
+                // Collect unique vertices from active triangles
+                const vertices = new Map();
+                for (const [key, tri] of activeTriangles) {
+                    // Each triangle has 3 vertices
+                    const addVertex = (n, j) => {
+                        const vkey = `${n},${j}`;
+                        if (!vertices.has(vkey)) {
+                            vertices.set(vkey, { n, j });
+                        }
+                    };
+                    if (tri.type === 1) {
+                        addVertex(tri.n, tri.j);
+                        addVertex(tri.n, tri.j - 1);
+                        addVertex(tri.n + 1, tri.j - 1);
+                    } else {
+                        addVertex(tri.n, tri.j);
+                        addVertex(tri.n + 1, tri.j);
+                        addVertex(tri.n + 1, tri.j - 1);
+                    }
+                }
+
+                // Draw q values at each vertex
+                const fontSize = Math.max(12, Math.min(24, scale * 0.7));
+                ctx.font = `${fontSize}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                ctx.fillStyle = isDark ? '#fff' : '#000';
+
+                for (const [vkey, v] of vertices) {
+                    const k = this.periodicK;
+                    const ni = ((v.n % k) + k) % k;
+                    const ji = ((v.j % k) + k) % k;
+                    const q = this.periodicQ[ni][ji];
+                    const worldX = v.n;
+                    const worldY = v.n / Math.sqrt(3) + v.j * 2 / Math.sqrt(3);
+                    const [cx, cy] = this.toCanvas(worldX, worldY, centerX, centerY, scale);
+                    ctx.fillText(q.toString(), cx, cy);
                 }
             }
         }
@@ -2883,6 +2970,99 @@ Module.onRuntimeInitialized = function() {
         e.target.value = Math.max(0, Math.min(10, q));
         sim.setQBias(parseFloat(e.target.value));
     });
+
+    // Periodic weights controls
+    const usePeriodicCheckbox = document.getElementById('usePeriodicWeightsCheckbox');
+    const periodicKSelect = document.getElementById('periodicKSelect');
+    const periodicWeightsMatrix = document.getElementById('periodicWeightsMatrix');
+
+    // Default values for each k (k x k matrices stored as 2D arrays)
+    const defaultPeriodicQ = {
+        1: [[1]],
+        2: [[1, 2], [0.5, 3]],
+        3: [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+        4: [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]],
+        5: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]]
+    };
+
+    let currentPeriodicK = 2;
+    let currentPeriodicQ = defaultPeriodicQ[2].map(row => [...row]);
+
+    function buildPeriodicMatrix(k) {
+        periodicWeightsMatrix.innerHTML = '';
+        periodicWeightsMatrix.style.gridTemplateColumns = `repeat(${k}, auto)`;
+
+        for (let i = 0; i < k; i++) {
+            for (let j = 0; j < k; j++) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'param-input';
+                input.style.width = '50px';
+                input.min = '0';
+                input.max = '10';
+                input.step = '0.01';
+                input.value = currentPeriodicQ[i]?.[j] ?? 1;
+                input.dataset.row = i;
+                input.dataset.col = j;
+                input.title = `q${i}${j}`;
+                input.addEventListener('change', updatePeriodicWeights);
+                periodicWeightsMatrix.appendChild(input);
+            }
+        }
+    }
+
+    function updatePeriodicWeights() {
+        const k = currentPeriodicK;
+        const inputs = periodicWeightsMatrix.querySelectorAll('input');
+        const values = [];
+        currentPeriodicQ = [];
+
+        for (let i = 0; i < k; i++) {
+            currentPeriodicQ[i] = [];
+        }
+
+        inputs.forEach(input => {
+            const i = parseInt(input.dataset.row);
+            const j = parseInt(input.dataset.col);
+            const val = Math.max(0, Math.min(10, parseFloat(input.value) || 1));
+            input.value = val;
+            currentPeriodicQ[i][j] = val;
+            values.push(val);
+        });
+
+        sim.setPeriodicQBias(values, k);
+        renderer.periodicK = k;
+        renderer.periodicQ = currentPeriodicQ;
+        draw();
+    }
+
+    periodicKSelect.addEventListener('change', (e) => {
+        const newK = parseInt(e.target.value);
+        // Preserve values where possible
+        const oldQ = currentPeriodicQ;
+        currentPeriodicK = newK;
+        currentPeriodicQ = [];
+        for (let i = 0; i < newK; i++) {
+            currentPeriodicQ[i] = [];
+            for (let j = 0; j < newK; j++) {
+                currentPeriodicQ[i][j] = oldQ[i]?.[j] ?? 1;
+            }
+        }
+        buildPeriodicMatrix(newK);
+        updatePeriodicWeights();
+    });
+
+    usePeriodicCheckbox.addEventListener('change', (e) => {
+        sim.setUsePeriodicWeights(e.target.checked);
+        renderer.usePeriodicWeights = e.target.checked;
+        if (e.target.checked) {
+            updatePeriodicWeights();
+        }
+        draw();
+    });
+
+    // Initialize matrix
+    buildPeriodicMatrix(currentPeriodicK);
 
     function loop() {
         if (!running) return;

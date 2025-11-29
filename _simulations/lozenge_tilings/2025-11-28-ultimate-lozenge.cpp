@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_repairRegion','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -94,6 +94,22 @@ const int directions_dj[6] = { -1, 0,  1,  1,  0, -1 };
 
 // Global state
 double qBias = 1.0;
+double qBias_periodic[5][5] = {
+    {1.0, 2.0, 1.0, 1.0, 1.0},
+    {0.5, 3.0, 1.0, 1.0, 1.0},
+    {1.0, 1.0, 1.0, 1.0, 1.0},
+    {1.0, 1.0, 1.0, 1.0, 1.0},
+    {1.0, 1.0, 1.0, 1.0, 1.0}
+};
+int periodicK = 2;
+bool usePeriodicWeights = false;
+
+inline double getQAtPosition(int n, int j) {
+    if (!usePeriodicWeights) return qBias;
+    int ni = ((n % periodicK) + periodicK) % periodicK;  // Handle negative n
+    int ji = ((j % periodicK) + periodicK) % periodicK;  // Handle negative j
+    return qBias_periodic[ni][ji];
+}
 
 // Dense grid state for O(1) dimer lookups
 std::vector<int8_t> dimerGrid;
@@ -547,9 +563,6 @@ int tryRotationOnGrid(std::vector<int8_t>& grid, int n, int j, bool execute) {
 void performGlauberStepsInternal(int numSteps) {
     if (triangularVertices.empty()) return;
 
-    double probAdd = qBias / (1.0 + qBias);
-    double probRemove = 1.0 / (1.0 + qBias);
-
     for (int s = 0; s < numSteps; s++) {
         totalSteps++;
         int idx = getRandomInt(triangularVertices.size());
@@ -559,7 +572,8 @@ void performGlauberStepsInternal(int numSteps) {
         if (coveredCount == 3) {
             int rotationType = tryRotation(v.n, v.j, false);
             if (rotationType != 0) {
-                double acceptProb = (rotationType > 0) ? probAdd : probRemove;
+                double q = getQAtPosition(v.n, v.j);
+                double acceptProb = (rotationType > 0) ? (q / (1.0 + q)) : (1.0 / (1.0 + q));
                 if (getRandom01() < acceptProb) {
                     tryRotation(v.n, v.j, true);
                     flipCount++;
@@ -612,12 +626,12 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     int N = triangularVertices.size();
     if (N == 0) { rng_state = savedRng; return; }
 
-    double pRemove = 1.0 / (1.0 + qBias);
-
     for (int i = 0; i < N; i++) {
         int idx = getRandomInt(N);
         double u = getRandom01();
         const TriVertex& v = triangularVertices[idx];
+        double q = getQAtPosition(v.n, v.j);
+        double pRemove = 1.0 / (1.0 + q);
 
         int lowerCovered = countCoveredEdgesOnGrid(lower.grid, v.n, v.j);
         if (lowerCovered == 3) {
@@ -926,6 +940,26 @@ void setQBias(double q) { qBias = q; }
 
 EMSCRIPTEN_KEEPALIVE
 double getQBias() { return qBias; }
+
+EMSCRIPTEN_KEEPALIVE
+void setPeriodicQBias(double* values, int k) {
+    periodicK = k;
+    for (int i = 0; i < k; i++) {
+        for (int j = 0; j < k; j++) {
+            qBias_periodic[i][j] = values[i * k + j];
+        }
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setPeriodicK(int k) {
+    if (k >= 1 && k <= 5) periodicK = k;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setUsePeriodicWeights(int use) {
+    usePeriodicWeights = (use != 0);
+}
 
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) { free(str); }
