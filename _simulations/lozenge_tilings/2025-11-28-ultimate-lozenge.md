@@ -517,6 +517,8 @@ code:
     <span class="param-group"><span class="param-label">Samples</span><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 60px;"></span>
     <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop</button>
     <span id="avgProgress" style="font-size: 12px; color: #666;"></span>
+    <button id="fluctuationsBtn" class="cftp" disabled>Fluctuations</button>
+    <span id="fluctProgress" style="font-size: 12px; color: #666;"></span>
   </div>
 </div>
 
@@ -1725,6 +1727,9 @@ Module.onRuntimeInitialized = function() {
                     }
                 }
 
+                // Skip drawing q-labels if too many vertices
+                if (vertices.size > 100) return;
+
                 // Draw q values at each vertex
                 const fontSize = Math.max(12, Math.min(24, scale * 0.7));
                 ctx.font = `${fontSize}px sans-serif`;
@@ -2288,6 +2293,287 @@ Module.onRuntimeInitialized = function() {
             }
         }
 
+        // Render continuous height function as surface plot (like Mathematica ListPlot3D)
+        // options: { hideZLabels: boolean } - hide z-axis labels for fluctuation display
+        heightFunctionTo3D(heights, blackTriangles, whiteTriangles, boundaries, options = {}) {
+            while (this.meshGroup.children.length > 0) {
+                const child = this.meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                this.meshGroup.remove(child);
+            }
+
+            if (heights.size === 0) return;
+
+            // Surface plot coordinates: x = n, y = j (in triangular lattice coords), z = height
+            // Use the same 2D world coordinates as the renderer
+            const to3D = (n, j, h) => {
+                // Same as getVertex but with height as z
+                const x = n;
+                const y = n / Math.sqrt(3) + j * 2 / Math.sqrt(3);
+                return { x: x, y: y, z: h };
+            };
+
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [], normals = [], vertexColors = [], indices = [];
+
+            // Diverging colormap: blue (negative) -> white (zero) -> red (positive)
+            // When fadeZero is true, values near zero become transparent
+            const getHeightColorAlpha = (h, fadeZero) => {
+                const t = Math.tanh(h / 3); // Normalize to [-1, 1] range
+                let r, g, b;
+                if (t < 0) {
+                    // Blue to white
+                    const s = -t;
+                    r = 1 - s; g = 1 - s; b = 1;
+                } else {
+                    // White to red
+                    const s = t;
+                    r = 1; g = 1 - s; b = 1 - s;
+                }
+                // Alpha: transparent at zero, opaque at large |h|
+                const alpha = fadeZero ? Math.min(1, Math.abs(h) / 5) : 1;
+                return { r, g, b, a: alpha };
+            };
+
+            const fadeZero = options.fadeZero || false;
+
+            const addTriangle = (v1, v2, v3, h1, h2, h3) => {
+                const baseIndex = vertices.length / 3;
+                vertices.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+
+                // Compute flat normal
+                const e1 = { x: v2.x-v1.x, y: v2.y-v1.y, z: v2.z-v1.z };
+                const e2 = { x: v3.x-v1.x, y: v3.y-v1.y, z: v3.z-v1.z };
+                const nx = e1.y*e2.z - e1.z*e2.y;
+                const ny = e1.z*e2.x - e1.x*e2.z;
+                const nz = e1.x*e2.y - e1.y*e2.x;
+                const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+                for (let i = 0; i < 3; i++) normals.push(nx/len, ny/len, nz/len);
+
+                // Color each vertex by its height (with optional alpha for fadeZero)
+                // For fadeZero, use average height for flat shading (no interpolation)
+                const avgH = fadeZero ? (h1 + h2 + h3) / 3 : 0;
+                const c1 = getHeightColorAlpha(fadeZero ? avgH : h1, fadeZero);
+                const c2 = getHeightColorAlpha(fadeZero ? avgH : h2, fadeZero);
+                const c3 = getHeightColorAlpha(fadeZero ? avgH : h3, fadeZero);
+                vertexColors.push(c1.r, c1.g, c1.b, c1.a, c2.r, c2.g, c2.b, c2.a, c3.r, c3.g, c3.b, c3.a);
+
+                indices.push(baseIndex, baseIndex+1, baseIndex+2);
+            };
+
+            // Draw black triangles (type 1): vertices (n,j), (n,j-1), (n+1,j-1)
+            for (const tri of blackTriangles) {
+                const h1 = heights.get(`${tri.n},${tri.j}`) || 0;
+                const h2 = heights.get(`${tri.n},${tri.j-1}`) || 0;
+                const h3 = heights.get(`${tri.n+1},${tri.j-1}`) || 0;
+                const p1 = to3D(tri.n, tri.j, h1);
+                const p2 = to3D(tri.n, tri.j-1, h2);
+                const p3 = to3D(tri.n+1, tri.j-1, h3);
+                addTriangle(p1, p2, p3, h1, h2, h3);
+            }
+
+            // Draw white triangles (type 2): vertices (n,j), (n+1,j), (n+1,j-1)
+            for (const tri of whiteTriangles) {
+                const h1 = heights.get(`${tri.n},${tri.j}`) || 0;
+                const h2 = heights.get(`${tri.n+1},${tri.j}`) || 0;
+                const h3 = heights.get(`${tri.n+1},${tri.j-1}`) || 0;
+                const p1 = to3D(tri.n, tri.j, h1);
+                const p2 = to3D(tri.n+1, tri.j, h2);
+                const p3 = to3D(tri.n+1, tri.j-1, h3);
+                addTriangle(p1, p2, p3, h1, h2, h3);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 4)); // RGBA
+            geometry.setIndex(indices);
+            geometry.computeBoundingSphere();
+
+            let material;
+            if (fadeZero) {
+                // Custom shader material for per-vertex alpha with flat shading
+                material = new THREE.ShaderMaterial({
+                    vertexShader: `
+                        attribute vec4 color;
+                        flat varying vec4 vColor;
+                        varying vec3 vNormal;
+                        void main() {
+                            vColor = color;
+                            vNormal = normalMatrix * normal;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        flat varying vec4 vColor;
+                        varying vec3 vNormal;
+                        void main() {
+                            vec3 light = normalize(vec3(0.5, 0.5, 1.0));
+                            float diff = max(dot(normalize(vNormal), light), 0.3);
+                            gl_FragColor = vec4(vColor.rgb * diff, vColor.a);
+                        }
+                    `,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    depthWrite: false,
+                    glslVersion: THREE.GLSL3
+                });
+            } else {
+                material = new THREE.MeshPhongMaterial({
+                    vertexColors: true, side: THREE.DoubleSide, flatShading: options.flatShading || false, shininess: 30
+                });
+            }
+            const mesh = new THREE.Mesh(geometry, material);
+            this.meshGroup.add(mesh);
+
+            // Compute bounds
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+            for (let i = 0; i < vertices.length; i += 3) {
+                minX = Math.min(minX, vertices[i]);
+                maxX = Math.max(maxX, vertices[i]);
+                minY = Math.min(minY, vertices[i+1]);
+                maxY = Math.max(maxY, vertices[i+1]);
+                minZ = Math.min(minZ, vertices[i+2]);
+                maxZ = Math.max(maxZ, vertices[i+2]);
+            }
+
+            // Draw coordinate axes and grid
+            const axesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+            const gridMaterial = new THREE.LineBasicMaterial({ color: 0xaaaaaa, linewidth: 1 });
+
+            // X axis
+            const xAxisGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(minX, minY, minZ),
+                new THREE.Vector3(maxX, minY, minZ)
+            ]);
+            this.meshGroup.add(new THREE.Line(xAxisGeom, axesMaterial));
+
+            // Y axis
+            const yAxisGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(minX, minY, minZ),
+                new THREE.Vector3(minX, maxY, minZ)
+            ]);
+            this.meshGroup.add(new THREE.Line(yAxisGeom, axesMaterial));
+
+            // Z axis
+            const zAxisGeom = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(minX, minY, minZ),
+                new THREE.Vector3(minX, minY, maxZ)
+            ]);
+            this.meshGroup.add(new THREE.Line(zAxisGeom, axesMaterial));
+
+            // Grid lines on bottom (z = minZ)
+            const gridStep = Math.max(1, Math.floor((maxX - minX) / 5));
+            for (let x = Math.ceil(minX); x <= maxX; x += gridStep) {
+                const lineGeom = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(x, minY, minZ),
+                    new THREE.Vector3(x, maxY, minZ)
+                ]);
+                this.meshGroup.add(new THREE.Line(lineGeom, gridMaterial));
+            }
+            for (let y = Math.ceil(minY); y <= maxY; y += gridStep) {
+                const lineGeom = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(minX, y, minZ),
+                    new THREE.Vector3(maxX, y, minZ)
+                ]);
+                this.meshGroup.add(new THREE.Line(lineGeom, gridMaterial));
+            }
+
+            // Z axis tick marks and labels
+            const zRange = maxZ - minZ;
+            const zStep = Math.pow(10, Math.floor(Math.log10(zRange))) || 1;
+            const tickSize = (maxX - minX) * 0.02;
+
+            // Create sprite material for labels
+            const createLabel = (text, position) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 128;
+                canvas.height = 64;
+                ctx.fillStyle = '#000000';
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(text, 64, 40);
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMat = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMat);
+                sprite.position.copy(position);
+                sprite.scale.set((maxX - minX) * 0.15, (maxX - minX) * 0.075, 1);
+                return sprite;
+            };
+
+            if (!options.hideZLabels) {
+                for (let z = Math.ceil(minZ / zStep) * zStep; z <= maxZ; z += zStep) {
+                    // Tick mark
+                    const tickGeom = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(minX - tickSize, minY, z),
+                        new THREE.Vector3(minX + tickSize, minY, z)
+                    ]);
+                    this.meshGroup.add(new THREE.Line(tickGeom, axesMaterial));
+
+                    // Label (divide by 10 to show true values since heights are scaled x10)
+                    const trueZ = z / 10;
+                    const label = createLabel(trueZ.toFixed(1), new THREE.Vector3(minX - tickSize * 4, minY, z));
+                    this.meshGroup.add(label);
+                }
+            }
+
+            // Draw polygon boundary above or below the surface
+            if (boundaries && boundaries.length > 0) {
+                let boundaryZ;
+                if (options.boundaryAtZero) {
+                    // Slightly above z=0 for fluctuations (centered around zero)
+                    boundaryZ = zRange * 0.02;
+                } else if (options.boundaryAbove) {
+                    boundaryZ = maxZ + zRange * 0.1;
+                } else {
+                    boundaryZ = minZ - zRange * 0.1; // Below for normal height function
+                }
+                const boundaryMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+
+                for (const boundary of boundaries) {
+                    if (boundary.length < 2) continue;
+                    const points = boundary.map(pt => new THREE.Vector3(pt.x, pt.y, boundaryZ));
+                    points.push(points[0]); // Close the loop
+                    const boundaryGeom = new THREE.BufferGeometry().setFromPoints(points);
+                    this.meshGroup.add(new THREE.Line(boundaryGeom, boundaryMaterial));
+                }
+
+                // Also draw filled polygon
+                if (boundaries[0] && boundaries[0].length >= 3) {
+                    const shape = new THREE.Shape();
+                    shape.moveTo(boundaries[0][0].x, boundaries[0][0].y);
+                    for (let i = 1; i < boundaries[0].length; i++) {
+                        shape.lineTo(boundaries[0][i].x, boundaries[0][i].y);
+                    }
+                    shape.closePath();
+                    const shapeGeom = new THREE.ShapeGeometry(shape);
+                    // Position at boundaryZ
+                    shapeGeom.translate(0, 0, boundaryZ);
+                    const shapeMat = new THREE.MeshBasicMaterial({
+                        color: 0xeeeeee,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.5
+                    });
+                    const shapeMesh = new THREE.Mesh(shapeGeom, shapeMat);
+                    this.meshGroup.add(shapeMesh);
+                }
+            }
+
+            // Center camera for surface plot
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+            const cz = (minZ + maxZ) / 2;
+            const range = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
+            this.camera.position.set(cx + range * 0.6, cy - range * 0.8, cz + range * 0.6);
+            this.camera.lookAt(cx, cy, cz);
+            this.controls.target.set(cx, cy, cz);
+            this.controls.update();
+        }
+
         centerCamera(heights) {
             let minX = Infinity, maxX = -Infinity;
             let minY = Infinity, maxY = -Infinity;
@@ -2427,12 +2713,16 @@ Module.onRuntimeInitialized = function() {
         avgSamplesInput: document.getElementById('avgSamplesInput'),
         avgStopBtn: document.getElementById('avgStopBtn'),
         avgProgress: document.getElementById('avgProgress'),
+        fluctuationsBtn: document.getElementById('fluctuationsBtn'),
+        fluctProgress: document.getElementById('fluctProgress'),
     };
 
     // CFTP cancellation flag
     let cftpCancelled = false;
     // Average sampling cancellation flag
     let avgCancelled = false;
+    // Fluctuations cancellation flag
+    let fluctCancelled = false;
 
     function initPaletteSelector() {
         renderer.colorPalettes.forEach((p, i) => {
@@ -2481,6 +2771,7 @@ Module.onRuntimeInitialized = function() {
         el.startStopBtn.disabled = !isValid;
         el.cftpBtn.disabled = !isValid;
         el.averageBtn.disabled = !isValid;
+        el.fluctuationsBtn.disabled = !isValid;
 
         // Enable repair button only if Invalid and Not Empty
         el.repairBtn.disabled = isValid || activeTriangles.size === 0;
@@ -3779,6 +4070,10 @@ Module.onRuntimeInitialized = function() {
 
                 const res = sim.stepCFTP();
                 if (res.status === 'in_progress') {
+                    el.avgProgress.textContent = `Sample ${completedSamples + 1}/${numSamples}: T=${res.T} @${res.step}`;
+                    setTimeout(cftpStep, 0);
+                } else if (res.status === 'not_coalesced') {
+                    el.avgProgress.textContent = `Sample ${completedSamples + 1}/${numSamples}: T=${res.T}`;
                     setTimeout(cftpStep, 0);
                 } else if (res.status === 'coalesced') {
                     sim.finalizeCFTP();
@@ -3803,7 +4098,7 @@ Module.onRuntimeInitialized = function() {
                         // All samples done - compute average and display
                         finishAveraging();
                     }
-                } else if (res.status === 'not_coalesced') {
+                } else if (res.status === 'timeout') {
                     setTimeout(cftpStep, 0);
                 } else {
                     // timeout or error - try next sample anyway
@@ -3846,6 +4141,124 @@ Module.onRuntimeInitialized = function() {
 
     el.avgStopBtn.addEventListener('click', () => {
         avgCancelled = true;
+    });
+
+    // Fluctuations (GFF) - difference of two samples divided by sqrt(2)
+    el.fluctuationsBtn.addEventListener('click', () => {
+        if (!isValid) return;
+
+        // Stop any running simulation
+        if (running) {
+            running = false;
+            el.startStopBtn.textContent = 'Start';
+            el.startStopBtn.classList.remove('running');
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+
+        const originalText = el.fluctuationsBtn.textContent;
+        el.fluctuationsBtn.disabled = true;
+        el.cftpBtn.disabled = true;
+        el.startStopBtn.disabled = true;
+        el.averageBtn.disabled = true;
+        fluctCancelled = false;
+
+        let sample1Heights = null;
+        let sample2Heights = null;
+        let currentSample = 1;
+
+        function runSample() {
+            if (fluctCancelled) {
+                el.fluctProgress.textContent = 'stopped';
+                el.fluctuationsBtn.textContent = originalText;
+                el.fluctuationsBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.startStopBtn.disabled = false;
+                el.averageBtn.disabled = false;
+                return;
+            }
+
+            el.fluctProgress.textContent = `Sample ${currentSample}/2...`;
+            el.fluctuationsBtn.textContent = `${currentSample}/2`;
+
+            sim.initCFTP();
+
+            function cftpStep() {
+                if (fluctCancelled) {
+                    el.fluctProgress.textContent = 'stopped';
+                    el.fluctuationsBtn.textContent = originalText;
+                    el.fluctuationsBtn.disabled = false;
+                    el.cftpBtn.disabled = false;
+                    el.startStopBtn.disabled = false;
+                    el.averageBtn.disabled = false;
+                    return;
+                }
+
+                const res = sim.stepCFTP();
+                if (res.status === 'in_progress') {
+                    el.fluctProgress.textContent = `Sample ${currentSample}/2: T=${res.T} @${res.step}`;
+                    setTimeout(cftpStep, 0);
+                } else if (res.status === 'not_coalesced') {
+                    el.fluctProgress.textContent = `Sample ${currentSample}/2: T=${res.T}`;
+                    setTimeout(cftpStep, 0);
+                } else if (res.status === 'coalesced') {
+                    sim.finalizeCFTP();
+                    const heights = computeHeightFunction(sim.dimers);
+
+                    if (currentSample === 1) {
+                        sample1Heights = heights;
+                        currentSample = 2;
+                        setTimeout(runSample, 0);
+                    } else {
+                        sample2Heights = heights;
+                        finishFluctuations();
+                    }
+                } else {
+                    // timeout or error
+                    el.fluctProgress.textContent = 'error';
+                    el.fluctuationsBtn.textContent = originalText;
+                    el.fluctuationsBtn.disabled = false;
+                    el.cftpBtn.disabled = false;
+                    el.startStopBtn.disabled = false;
+                    el.averageBtn.disabled = false;
+                }
+            }
+
+            setTimeout(cftpStep, 0);
+        }
+
+        function finishFluctuations() {
+            // Compute (h1 - h2) / sqrt(2) * 10 (scaled x10 for visibility, labels show true values)
+            const fluctHeights = new Map();
+            const sqrt2 = Math.sqrt(2);
+
+            for (const [key, h1] of sample1Heights) {
+                const h2 = sample2Heights.get(key) || 0;
+                fluctHeights.set(key, (h1 - h2) / sqrt2 * 10);
+            }
+
+            // Switch to 3D view if not already
+            if (!is3DView) {
+                setViewMode(true);
+            }
+
+            // Render the fluctuation surface (hide z labels since values are non-integer GFF fluctuations)
+            if (renderer3D) {
+                renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true });
+            }
+
+            el.fluctProgress.textContent = 'Done';
+            el.fluctuationsBtn.textContent = originalText;
+            el.fluctuationsBtn.disabled = false;
+            el.cftpBtn.disabled = false;
+            el.startStopBtn.disabled = false;
+            el.averageBtn.disabled = false;
+        }
+
+        setTimeout(runSample, 10);
     });
 
     // Export
