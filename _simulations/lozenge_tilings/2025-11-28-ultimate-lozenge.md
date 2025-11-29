@@ -2603,6 +2603,10 @@ Module.onRuntimeInitialized = function() {
     window.addEventListener('blur', () => {
         cmdHeld = false;
     });
+    // Also reset when mouse is released
+    canvas.addEventListener('mouseup', () => {
+        cmdHeld = false;
+    });
 
     function getEffectiveTool() {
         // Cmd-hold temporarily switches fill<->erase variants
@@ -2872,10 +2876,10 @@ Module.onRuntimeInitialized = function() {
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
     }
 
-    el.drawBtn.addEventListener('click', () => setTool('draw'));
-    el.eraseBtn.addEventListener('click', () => setTool('erase'));
-    el.lassoFillBtn.addEventListener('click', () => setTool('lassoFill'));
-    el.lassoEraseBtn.addEventListener('click', () => setTool('lassoErase'));
+    el.drawBtn.addEventListener('click', () => { cmdHeld = false; setTool('draw'); });
+    el.eraseBtn.addEventListener('click', () => { cmdHeld = false; setTool('erase'); });
+    el.lassoFillBtn.addEventListener('click', () => { cmdHeld = false; setTool('lassoFill'); });
+    el.lassoEraseBtn.addEventListener('click', () => { cmdHeld = false; setTool('lassoErase'); });
 
     document.getElementById('lassoSnapBtn').addEventListener('click', () => {
         const btn = document.getElementById('lassoSnapBtn');
@@ -3263,6 +3267,11 @@ Module.onRuntimeInitialized = function() {
         isDuits2x2Mode = false;
         document.getElementById('nienhuis3x3AlphaContainer').style.display = 'none';
         document.getElementById('duits2x2Container').style.display = 'none';
+        // Unhighlight presets
+        document.getElementById('preset2x2Btn').style.background = '#f5f5f5';
+        document.getElementById('preset2x2Btn').style.color = '';
+        document.getElementById('presetNienhuis3x3Btn').style.background = '#f5f5f5';
+        document.getElementById('presetNienhuis3x3Btn').style.color = '';
         // Preserve values where possible
         const oldQ = currentPeriodicQ;
         currentPeriodicK = newK;
@@ -3294,6 +3303,11 @@ Module.onRuntimeInitialized = function() {
         isDuits2x2Mode = true;
         document.getElementById('nienhuis3x3AlphaContainer').style.display = 'none';
         document.getElementById('duits2x2Container').style.display = 'flex';
+        // Highlight active preset
+        document.getElementById('preset2x2Btn').style.background = '#1976d2';
+        document.getElementById('preset2x2Btn').style.color = 'white';
+        document.getElementById('presetNienhuis3x3Btn').style.background = '#f5f5f5';
+        document.getElementById('presetNienhuis3x3Btn').style.color = '';
         currentPeriodicK = 2;
         const alpha = parseFloat(document.getElementById('duitsAlpha').value) || 2;
         currentPeriodicQ = computeCharlier2x2Matrix(alpha);
@@ -3328,6 +3342,11 @@ Module.onRuntimeInitialized = function() {
         isDuits2x2Mode = false;
         document.getElementById('duits2x2Container').style.display = 'none';
         document.getElementById('nienhuis3x3AlphaContainer').style.display = 'flex';
+        // Highlight active preset
+        document.getElementById('presetNienhuis3x3Btn').style.background = '#1976d2';
+        document.getElementById('presetNienhuis3x3Btn').style.color = 'white';
+        document.getElementById('preset2x2Btn').style.background = '#f5f5f5';
+        document.getElementById('preset2x2Btn').style.color = '';
         currentPeriodicK = 3;
         const alpha = parseFloat(document.getElementById('nienhuis3x3Alpha').value) || 2;
         currentPeriodicQ = computeNienhuis3x3Matrix(alpha);
