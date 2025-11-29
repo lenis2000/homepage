@@ -3300,6 +3300,10 @@ Module.onRuntimeInitialized = function() {
         periodicKSelect.value = '2';
         buildPeriodicMatrix(2);
         setMatrixInputsDisabled(true);
+        // Enable periodic weights
+        usePeriodicCheckbox.checked = true;
+        sim.setUsePeriodicWeights(true);
+        renderer.usePeriodicWeights = true;
         updatePeriodicWeights();
     });
 
@@ -3330,6 +3334,10 @@ Module.onRuntimeInitialized = function() {
         periodicKSelect.value = '3';
         buildPeriodicMatrix(3);
         setMatrixInputsDisabled(true);
+        // Enable periodic weights
+        usePeriodicCheckbox.checked = true;
+        sim.setUsePeriodicWeights(true);
+        renderer.usePeriodicWeights = true;
         updatePeriodicWeights();
     });
 
