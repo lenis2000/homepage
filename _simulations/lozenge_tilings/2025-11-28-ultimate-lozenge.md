@@ -2317,19 +2317,20 @@ Module.onRuntimeInitialized = function() {
             const geometry = new THREE.BufferGeometry();
             const vertices = [], normals = [], vertexColors = [], indices = [];
 
-            // Diverging colormap: blue (negative) -> white (zero) -> red (positive)
+            // Diverging colormap: blue (negative) -> gray (zero) -> red (positive)
             // When fadeZero is true, values near zero become transparent
             const getHeightColorAlpha = (h, fadeZero) => {
                 const t = Math.tanh(h / 3); // Normalize to [-1, 1] range
+                const gray = 0.75; // Zero value is light gray instead of white
                 let r, g, b;
                 if (t < 0) {
-                    // Blue to white
+                    // Blue to gray
                     const s = -t;
-                    r = 1 - s; g = 1 - s; b = 1;
+                    r = gray * (1 - s); g = gray * (1 - s); b = gray + s * (1 - gray);
                 } else {
-                    // White to red
+                    // Gray to red
                     const s = t;
-                    r = 1; g = 1 - s; b = 1 - s;
+                    r = gray + s * (1 - gray); g = gray * (1 - s); b = gray * (1 - s);
                 }
                 // Alpha: transparent at zero, opaque at large |h|
                 const alpha = fadeZero ? Math.min(1, Math.abs(h) / 5) : 1;
@@ -2524,8 +2525,8 @@ Module.onRuntimeInitialized = function() {
             if (boundaries && boundaries.length > 0) {
                 let boundaryZ;
                 if (options.boundaryAtZero) {
-                    // Slightly above z=0 for fluctuations (centered around zero)
-                    boundaryZ = zRange * 0.02;
+                    // At z=0 for fluctuations (centered around zero)
+                    boundaryZ = 0;
                 } else if (options.boundaryAbove) {
                     boundaryZ = maxZ + zRange * 0.1;
                 } else {
@@ -2541,8 +2542,8 @@ Module.onRuntimeInitialized = function() {
                     this.meshGroup.add(new THREE.Line(boundaryGeom, boundaryMaterial));
                 }
 
-                // Also draw filled polygon
-                if (boundaries[0] && boundaries[0].length >= 3) {
+                // Also draw filled polygon (unless boundaryLineOnly is set)
+                if (!options.boundaryLineOnly && boundaries[0] && boundaries[0].length >= 3) {
                     const shape = new THREE.Shape();
                     shape.moveTo(boundaries[0][0].x, boundaries[0][0].y);
                     for (let i = 1; i < boundaries[0].length; i++) {
@@ -4247,7 +4248,7 @@ Module.onRuntimeInitialized = function() {
 
             // Render the fluctuation surface (hide z labels since values are non-integer GFF fluctuations)
             if (renderer3D) {
-                renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true });
+                renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true });
             }
 
             el.fluctProgress.textContent = 'Done';
