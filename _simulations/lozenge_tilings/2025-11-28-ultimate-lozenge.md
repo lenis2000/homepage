@@ -30,10 +30,17 @@ code:
 <p><strong>Sampling methods:</strong></p>
 <ul>
   <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local "flips" of three lozenges around hexagonal vertices. Converges to the uniform distribution over time. The <strong>q parameter</strong> biases the distribution toward higher (q&gt;1) or lower (q&lt;1) volume configurations.</li>
-  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce. During sampling, the max tiling is displayed after each epoch up to T=4096, then every 4096 steps for longer epochs.</li>
+  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce. Early coalescence detection checks every 1000 steps for faster termination.</li>
 </ul>
 
-<p>The simulation runs entirely in your browser using WebAssembly.</p>
+<p><strong>Periodic Weights:</strong></p>
+<p>Enable <strong>periodic weights</strong> to use position-dependent q values arranged in a k×k matrix (k=1,2,3,4,5). At position (n,j) on the triangular lattice, the flip probability uses q<sub>n mod k, j mod k</sub>. Two presets are provided:</p>
+<ul>
+  <li><strong>2×2</strong>: Default preset with values [[1, 100], [0.003333, 3]]</li>
+  <li><strong>Nienhuis 3×3</strong>: Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis (1984)</a> sublattice pattern with q values following (n-j) mod 3</li>
+</ul>
+
+<p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
 
 </div>
 </details>
@@ -349,6 +356,7 @@ code:
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
     <button id="doubleMeshBtn" title="Double the region size">Scale Up Region</button>
+    <button id="halveMeshBtn" title="Halve the region size">Scale Down Region</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -432,10 +440,6 @@ code:
       <button id="lassoFillBtn" title="Drag to select area">Lasso Fill</button>
       <button id="lassoEraseBtn" title="Drag to select area">Lasso Erase</button>
     </div>
-    <div class="tool-toggle">
-      <button id="pathFillBtn" title="Click vertices, double-click to close">Path Fill</button>
-      <button id="pathEraseBtn" title="Click vertices, double-click to close">Path Erase</button>
-    </div>
     <button id="resetBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
     <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
@@ -513,12 +517,48 @@ code:
     <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
     <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
     <button id="export-pdf">PDF</button>
-    <button id="export-height-csv">Height CSV</button><button id="height-csv-info" title="Click for coordinate info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
-    <button id="export-height-mma">Copy Height as Mathematica Array</button><button id="height-mma-info" title="Click for plotting code" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: help;">?</button>
+    <button id="export-height-csv">Height CSV</button><button id="height-csv-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;">?</button>
+    <button id="export-height-mma">Copy Height as Mathematica Array</button><button id="height-mma-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;">?</button>
     <button id="export-json">Export Shape</button>
     <button id="import-json">Import Shape</button>
     <input type="file" id="import-json-file" accept=".json" style="display: none;">
   </div>
+  <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Height CSV Coordinates:
+
+• n, j: Integer lattice coordinates on the triangular grid
+• x, y: World coordinates (floating point)
+• h: Height function value at vertex (n, j)
+
+Coordinate System:
+  The angle between n and j axes is 60°
+
+  n-direction: horizontal + slight upward tilt
+    (vector: (1, 1/√3), angle 30° from horizontal)
+
+  j-direction: purely vertical
+    (vector: (0, 2/√3))
+
+Conversion to world (x, y):
+  x = n
+  y = n/√3 + j × 2/√3
+
+Triangles indexed by (n, j, type):
+  Type 1 (black ▶): vertices (n,j), (n,j-1), (n+1,j-1)
+  Type 2 (white ◀): vertices (n,j), (n+1,j), (n+1,j-1)
+
+The height h is defined on vertices of the triangular lattice
+(equivalently, faces of the dual hexagonal grid).</div>
+  <div id="height-mma-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Mathematica Plotting Code:
+
+After pasting, assign to A and run:
+
+pts2D = A[[All, {1, 2}]];
+mesh = DelaunayMesh[pts2D];
+Graphics3D[{EdgeForm[Black],
+  GraphicsComplex[
+    MapThread[Append, {pts2D, A[[All, 3]]}],
+    {Polygon[MeshCells[mesh, 2][[All, 1]]]}]
+}, Boxed -> False]</div>
 </div>
 
 </div>
@@ -1086,6 +1126,161 @@ Module.onRuntimeInitialized = function() {
         return newTriangles;
     }
 
+    // Scale mesh DOWN using segment-based boundary halving
+    // Instead of scaling vertices (which causes distortion), we:
+    // 1. Parse boundary into directional segments
+    // 2. Remove length-1 segments, halve the rest
+    // 3. Reconstruct and rasterize
+    function halveMesh(triangles) {
+        if (triangles.size === 0) return new Map();
+
+        if (!sim.boundaries || sim.boundaries.length === 0) {
+            console.warn('No valid boundary available. The shape must be valid (tilable) to be halved.');
+            return triangles;
+        }
+
+        // Convert all boundaries from World (x,y) to Lattice (n,j) integers
+        const latticeBoundaries = sim.boundaries.map(b => b.map(v => worldToLattice(v.x, v.y)));
+
+        // Find outer boundary (largest bounding box diagonal)
+        let outerIdx = 0;
+        let maxDiag = -1;
+        latticeBoundaries.forEach((b, i) => {
+            let mn = Infinity, mxn = -Infinity, mj = Infinity, mxj = -Infinity;
+            for (const v of b) {
+                mn = Math.min(mn, v.n); mxn = Math.max(mxn, v.n);
+                mj = Math.min(mj, v.j); mxj = Math.max(mxj, v.j);
+            }
+            const diag = (mxn - mn) ** 2 + (mxj - mj) ** 2;
+            if (diag > maxDiag) { maxDiag = diag; outerIdx = i; }
+        });
+
+        // Process a single boundary into halved segments
+        function halveBoundary(latticePoints) {
+            if (latticePoints.length < 2) return [];
+
+            // 1. Parse into segments (runs of consecutive same-direction edges)
+            const segments = [];
+            let i = 0;
+            while (i < latticePoints.length) {
+                const curr = latticePoints[i];
+                const next = latticePoints[(i + 1) % latticePoints.length];
+                const dn = next.n - curr.n;
+                const dj = next.j - curr.j;
+
+                // Count consecutive edges in same direction
+                let length = 1;
+                let k = i + 1;
+                while (k < latticePoints.length) {
+                    const p1 = latticePoints[k];
+                    const p2 = latticePoints[(k + 1) % latticePoints.length];
+                    if (p2.n - p1.n === dn && p2.j - p1.j === dj) {
+                        length++;
+                        k++;
+                    } else break;
+                }
+                segments.push({ dn, dj, length });
+                i = k;
+            }
+
+            // 2. Halve segments: remove length-1, halve others with round()
+            const halvedSegments = [];
+            for (const seg of segments) {
+                if (seg.length >= 2) {
+                    halvedSegments.push({
+                        dn: seg.dn,
+                        dj: seg.dj,
+                        length: Math.round(seg.length / 2)
+                    });
+                }
+                // length-1 segments are dropped
+            }
+
+            if (halvedSegments.length === 0) return [];
+
+            // 3. Find centroid of original to anchor the halved boundary
+            let cenN = 0, cenJ = 0;
+            for (const v of latticePoints) { cenN += v.n; cenJ += v.j; }
+            const anchorN = Math.round(cenN / latticePoints.length);
+            const anchorJ = Math.round(cenJ / latticePoints.length);
+
+            // 4. Reconstruct boundary vertices from halved segments
+            const newVertices = [];
+            let n = anchorN, j = anchorJ;
+            for (const seg of halvedSegments) {
+                for (let m = 0; m < seg.length; m++) {
+                    newVertices.push(getVertex(n, j));
+                    n += seg.dn;
+                    j += seg.dj;
+                }
+            }
+            return newVertices;
+        }
+
+        const scaledBoundaries = latticeBoundaries.map(halveBoundary);
+        const scaledOuter = scaledBoundaries[outerIdx];
+        const scaledHoles = scaledBoundaries.filter((_, i) => i !== outerIdx && scaledBoundaries[i].length > 0);
+
+        if (scaledOuter.length < 3) {
+            console.warn('Region too small to halve (all segments were length 1).');
+            return triangles;
+        }
+
+        // Rasterization: Fill the new geometry
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const v of scaledOuter) {
+            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        }
+
+        const newTriangles = new Map();
+
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+
+                // Check Type 1 (Black/Right-Facing)
+                const rc = getRightTriangleCentroid(n, j);
+                if (pointInPolygonPreset(rc.x, rc.y, scaledOuter)) {
+                    let inHole = false;
+                    for (const hole of scaledHoles) {
+                        if (pointInPolygonPreset(rc.x, rc.y, hole)) {
+                            inHole = true;
+                            break;
+                        }
+                    }
+                    if (!inHole) {
+                        const key = `${n},${j},1`;
+                        newTriangles.set(key, { n, j, type: 1 });
+                    }
+                }
+
+                // Check Type 2 (White/Left-Facing)
+                const lc = getLeftTriangleCentroid(n, j);
+                if (pointInPolygonPreset(lc.x, lc.y, scaledOuter)) {
+                    let inHole = false;
+                    for (const hole of scaledHoles) {
+                        if (pointInPolygonPreset(lc.x, lc.y, hole)) {
+                            inHole = true;
+                            break;
+                        }
+                    }
+                    if (!inHole) {
+                        const key = `${n},${j},2`;
+                        newTriangles.set(key, { n, j, type: 2 });
+                    }
+                }
+            }
+        }
+
+        return newTriangles;
+    }
+
     // ========================================================================
     // RENDERER
     // ========================================================================
@@ -1491,57 +1686,6 @@ Module.onRuntimeInitialized = function() {
             }
             ctx.closePath();
             ctx.stroke();
-        }
-
-        drawPath(ctx, pathPoints, centerX, centerY, scale, isFillMode) {
-            if (pathPoints.length === 0) return;
-
-            const [sx, sy] = this.toCanvas(pathPoints[0].x, pathPoints[0].y, centerX, centerY, scale);
-
-            // Draw vertices as circles
-            ctx.fillStyle = isFillMode ? '#4CAF50' : '#f44336';
-            for (let i = 0; i < pathPoints.length; i++) {
-                const [px, py] = this.toCanvas(pathPoints[i].x, pathPoints[i].y, centerX, centerY, scale);
-                ctx.beginPath();
-                ctx.arc(px, py, i === 0 ? 8 : 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            if (pathPoints.length < 2) return;
-
-            // Draw path lines
-            ctx.strokeStyle = isFillMode ? '#4CAF50' : '#f44336';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([]);
-            ctx.beginPath();
-            ctx.moveTo(sx, sy);
-            for (let i = 1; i < pathPoints.length; i++) {
-                const [px, py] = this.toCanvas(pathPoints[i].x, pathPoints[i].y, centerX, centerY, scale);
-                ctx.lineTo(px, py);
-            }
-            ctx.stroke();
-
-            // Draw closing line back to start (dashed preview)
-            if (pathPoints.length >= 3) {
-                ctx.setLineDash([5, 5]);
-                const [lastX, lastY] = this.toCanvas(pathPoints[pathPoints.length - 1].x, pathPoints[pathPoints.length - 1].y, centerX, centerY, scale);
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(sx, sy);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Fill with semi-transparent color
-                ctx.fillStyle = isFillMode ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)';
-                ctx.beginPath();
-                ctx.moveTo(sx, sy);
-                for (let i = 1; i < pathPoints.length; i++) {
-                    const [px, py] = this.toCanvas(pathPoints[i].x, pathPoints[i].y, centerX, centerY, scale);
-                    ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.fill();
-            }
         }
 
         drawLasso(ctx, lassoPoints, centerX, centerY, scale, isFillMode) {
@@ -1959,7 +2103,7 @@ Module.onRuntimeInitialized = function() {
 
     let activeTriangles = new Map();
     let isDrawing = false;
-    // Tools: 'draw', 'erase', 'lassoFill', 'lassoErase', 'pathFill', 'pathErase', 'belowFill', 'belowErase'
+    // Tools: 'draw', 'erase', 'lassoFill', 'lassoErase', 'belowFill', 'belowErase'
     let currentTool = 'draw';
     let running = false;
 
@@ -1970,10 +2114,6 @@ Module.onRuntimeInitialized = function() {
     // Lasso state (drag to select)
     let lassoPoints = []; // Array of {x, y} in world coordinates
     let isLassoing = false;
-
-    // Path state (click to place vertices)
-    let pathPoints = []; // Array of {x, y} in world coordinates
-    let isDrawingPath = false;
 
     let stepsPerSecond = 100;
     let animationId = null;
@@ -1987,8 +2127,6 @@ Module.onRuntimeInitialized = function() {
         eraseBtn: document.getElementById('eraseBtn'),
         lassoFillBtn: document.getElementById('lassoFillBtn'),
         lassoEraseBtn: document.getElementById('lassoEraseBtn'),
-        pathFillBtn: document.getElementById('pathFillBtn'),
-        pathEraseBtn: document.getElementById('pathEraseBtn'),
         resetBtn: document.getElementById('resetBtn'),
         undoBtn: document.getElementById('undoBtn'),
         redoBtn: document.getElementById('redoBtn'),
@@ -2117,11 +2255,6 @@ Module.onRuntimeInitialized = function() {
             renderer.drawLasso(renderer.ctx, lassoPoints, centerX, centerY, scale, isFillMode);
         }
 
-        // Draw path overlay if active
-        if (pathPoints.length > 0) {
-            const isFillMode = tool === 'pathFill';
-            renderer.drawPath(renderer.ctx, pathPoints, centerX, centerY, scale, isFillMode);
-        }
     }
 
     // Track if simulation should auto-restart when shape becomes valid
@@ -2263,76 +2396,6 @@ Module.onRuntimeInitialized = function() {
         return false;
     }
 
-    function completePath(isFillMode) {
-        if (pathPoints.length < 3) {
-            pathPoints = [];
-            isDrawingPath = false;
-            return false;
-        }
-
-        saveState();
-
-        // Find bounding box of path in world coordinates
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const p of pathPoints) {
-            minX = Math.min(minX, p.x);
-            maxX = Math.max(maxX, p.x);
-            minY = Math.min(minY, p.y);
-            maxY = Math.max(maxY, p.y);
-        }
-
-        // Calculate n and j ranges for the triangular lattice
-        const searchMinN = Math.floor(minX) - 2;
-        const searchMaxN = Math.ceil(maxX) + 2;
-        const nRange = searchMaxN - searchMinN;
-        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
-        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
-
-        let changed = false;
-
-        for (let n = searchMinN; n <= searchMaxN; n++) {
-            for (let j = searchMinJ; j <= searchMaxJ; j++) {
-                // Check black triangle (type 1, right-facing)
-                const blackCentroid = getRightTriangleCentroid(n, j);
-                if (pointInPolygonPreset(blackCentroid.x, blackCentroid.y, pathPoints)) {
-                    const key = `${n},${j},1`;
-                    if (isFillMode) {
-                        if (!activeTriangles.has(key)) {
-                            activeTriangles.set(key, { n, j, type: 1 });
-                            changed = true;
-                        }
-                    } else {
-                        if (activeTriangles.has(key)) {
-                            activeTriangles.delete(key);
-                            changed = true;
-                        }
-                    }
-                }
-
-                // Check white triangle (type 2, left-facing)
-                const whiteCentroid = getLeftTriangleCentroid(n, j);
-                if (pointInPolygonPreset(whiteCentroid.x, whiteCentroid.y, pathPoints)) {
-                    const key = `${n},${j},2`;
-                    if (isFillMode) {
-                        if (!activeTriangles.has(key)) {
-                            activeTriangles.set(key, { n, j, type: 2 });
-                            changed = true;
-                        }
-                    } else {
-                        if (activeTriangles.has(key)) {
-                            activeTriangles.delete(key);
-                            changed = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        pathPoints = [];
-        isDrawingPath = false;
-        return changed;
-    }
-
     function completeLasso(isFillMode) {
         if (lassoPoints.length < 3) {
             lassoPoints = [];
@@ -2427,7 +2490,7 @@ Module.onRuntimeInitialized = function() {
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const zoomFactor = e.deltaY > 0 ? 0.97 : 1.03;
         renderer.zoomAt(mx, my, zoomFactor);
         draw();
     }, { passive: false });
@@ -2452,8 +2515,6 @@ Module.onRuntimeInitialized = function() {
             if (currentTool === 'erase') return 'draw';
             if (currentTool === 'lassoFill') return 'lassoErase';
             if (currentTool === 'lassoErase') return 'lassoFill';
-            if (currentTool === 'pathFill') return 'pathErase';
-            if (currentTool === 'pathErase') return 'pathFill';
         }
         return currentTool;
     }
@@ -2461,11 +2522,6 @@ Module.onRuntimeInitialized = function() {
     function isLassoTool() {
         const tool = getEffectiveTool();
         return tool === 'lassoFill' || tool === 'lassoErase';
-    }
-
-    function isPathTool() {
-        const tool = getEffectiveTool();
-        return tool === 'pathFill' || tool === 'pathErase';
     }
 
     canvas.addEventListener('mousedown', (e) => {
@@ -2490,22 +2546,6 @@ Module.onRuntimeInitialized = function() {
             // Lasso: start dragging
             isLassoing = true;
             lassoPoints = [worldPos];
-            draw();
-        } else if (isPathTool()) {
-            // Path: click to add vertices
-            if (pathPoints.length >= 3) {
-                const startPoint = pathPoints[0];
-                const distToStart = Math.hypot(worldPos.x - startPoint.x, worldPos.y - startPoint.y);
-                if (distToStart < 0.5) {
-                    const tool = getEffectiveTool();
-                    const changed = completePath(tool === 'pathFill');
-                    if (changed) reinitialize();
-                    else draw();
-                    return;
-                }
-            }
-            isDrawingPath = true;
-            pathPoints.push(worldPos);
             draw();
         } else {
             // Regular draw/erase
@@ -2590,21 +2630,6 @@ Module.onRuntimeInitialized = function() {
             if (isLassoTool()) {
                 isLassoing = true;
                 lassoPoints = [worldPos];
-                draw();
-            } else if (isPathTool()) {
-                if (pathPoints.length >= 3) {
-                    const startPoint = pathPoints[0];
-                    const distToStart = Math.hypot(worldPos.x - startPoint.x, worldPos.y - startPoint.y);
-                    if (distToStart < 0.5) {
-                        const tool = getEffectiveTool();
-                        const changed = completePath(tool === 'pathFill');
-                        if (changed) reinitialize();
-                        else draw();
-                        return;
-                    }
-                }
-                isDrawingPath = true;
-                pathPoints.push(worldPos);
                 draw();
             } else {
                 saveState();
@@ -2692,12 +2717,10 @@ Module.onRuntimeInitialized = function() {
         if (is3DView) {
             setViewMode(false);
         }
-        // Clear any in-progress operations when switching tools
-        if (lassoPoints.length > 0 || pathPoints.length > 0) {
+        // Clear any in-progress lasso when switching tools
+        if (lassoPoints.length > 0) {
             lassoPoints = [];
-            pathPoints = [];
             isLassoing = false;
-            isDrawingPath = false;
             draw();
         }
         currentTool = tool;
@@ -2705,16 +2728,12 @@ Module.onRuntimeInitialized = function() {
         el.eraseBtn.classList.toggle('active', tool === 'erase');
         el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
-        el.pathFillBtn.classList.toggle('active', tool === 'pathFill');
-        el.pathEraseBtn.classList.toggle('active', tool === 'pathErase');
     }
 
     el.drawBtn.addEventListener('click', () => setTool('draw'));
     el.eraseBtn.addEventListener('click', () => setTool('erase'));
     el.lassoFillBtn.addEventListener('click', () => setTool('lassoFill'));
     el.lassoEraseBtn.addEventListener('click', () => setTool('lassoErase'));
-    el.pathFillBtn.addEventListener('click', () => setTool('pathFill'));
-    el.pathEraseBtn.addEventListener('click', () => setTool('pathErase'));
 
     el.resetBtn.addEventListener('click', () => {
         saveState();
@@ -2738,6 +2757,30 @@ Module.onRuntimeInitialized = function() {
         saveState();
         activeTriangles = doubleMesh(activeTriangles);
         reinitialize();
+        renderer.fitToRegion(activeTriangles);
+        draw();
+    });
+
+    document.getElementById('halveMeshBtn').addEventListener('click', () => {
+        if (activeTriangles.size === 0) return;
+        saveState();
+        activeTriangles = halveMesh(activeTriangles);
+        reinitialize();
+
+        // Auto-repair if region is invalid after scaling
+        if (!isValid && activeTriangles.size > 0) {
+            const result = sim.repair();
+            activeTriangles.clear();
+            for (const t of sim.blackTriangles) {
+                activeTriangles.set(`${t.n},${t.j},1`, { n: t.n, j: t.j, type: 1 });
+            }
+            for (const t of sim.whiteTriangles) {
+                activeTriangles.set(`${t.n},${t.j},2`, { n: t.n, j: t.j, type: 2 });
+            }
+            isValid = result.status === 'valid';
+            updateUI();
+        }
+
         renderer.fitToRegion(activeTriangles);
         draw();
     });
@@ -2832,25 +2875,13 @@ Module.onRuntimeInitialized = function() {
             e.preventDefault();
             el.redoBtn.click();
         }
-        // Escape to cancel any in-progress drawing
+        // Escape to cancel any in-progress lasso
         if (e.key === 'Escape') {
-            if (lassoPoints.length > 0 || pathPoints.length > 0) {
+            if (lassoPoints.length > 0) {
                 lassoPoints = [];
-                pathPoints = [];
                 isLassoing = false;
-                isDrawingPath = false;
                 draw();
             }
-        }
-    });
-
-    // Double-click to close path
-    canvas.addEventListener('dblclick', (e) => {
-        if (isPathTool() && pathPoints.length >= 3) {
-            const tool = getEffectiveTool();
-            const changed = completePath(tool === 'pathFill');
-            if (changed) reinitialize();
-            else draw();
         }
     });
 
@@ -3446,43 +3477,16 @@ Module.onRuntimeInitialized = function() {
         URL.revokeObjectURL(url);
     });
 
-    // Height CSV coordinate info tooltip
+    // Height CSV coordinate info - toggle visibility
+    const csvInfoBox = document.getElementById('height-csv-info-box');
     document.getElementById('height-csv-info').addEventListener('click', () => {
-        alert(
-            'Height CSV Coordinates:\n\n' +
-            '• n, j: Integer lattice coordinates on the triangular grid\n' +
-            '• x, y: World coordinates (floating point)\n' +
-            '• h: Height function value at vertex (n, j)\n\n' +
-            'Coordinate System:\n' +
-            '  The angle between n and j axes is 60°\n\n' +
-            '  n-direction: horizontal + slight upward tilt\n' +
-            '    (vector: (1, 1/√3), angle 30° from horizontal)\n\n' +
-            '  j-direction: purely vertical\n' +
-            '    (vector: (0, 2/√3))\n\n' +
-            'Conversion to world (x, y):\n' +
-            '  x = n\n' +
-            '  y = n/√3 + j × 2/√3\n\n' +
-            'Triangles indexed by (n, j, type):\n' +
-            '  Type 1 (black ▶): vertices (n,j), (n,j-1), (n+1,j-1)\n' +
-            '  Type 2 (white ◀): vertices (n,j), (n+1,j), (n+1,j-1)\n\n' +
-            'The height h is defined on vertices of the triangular lattice\n' +
-            '(equivalently, faces of the dual hexagonal grid).'
-        );
+        csvInfoBox.style.display = csvInfoBox.style.display === 'none' ? 'block' : 'none';
     });
 
-    // Mathematica plotting code tooltip
+    // Mathematica plotting code - toggle visibility
+    const mmaInfoBox = document.getElementById('height-mma-info-box');
     document.getElementById('height-mma-info').addEventListener('click', () => {
-        alert(
-            'Mathematica Plotting Code:\n\n' +
-            'After pasting, assign to A and run:\n\n' +
-            'pts2D = A[[All, {1, 2}]];\n' +
-            'mesh = DelaunayMesh[pts2D];\n' +
-            'Graphics3D[{EdgeForm[Black],\n' +
-            '  GraphicsComplex[\n' +
-            '    MapThread[Append, {pts2D, A[[All, 3]]}],\n' +
-            '    {Polygon[MeshCells[mesh, 2][[All, 1]]]}]\n' +
-            '}, Boxed -> False]'
-        );
+        mmaInfoBox.style.display = mmaInfoBox.style.display === 'none' ? 'block' : 'none';
     });
 
     // Height CSV Export - export height function to CSV
@@ -3590,6 +3594,20 @@ Module.onRuntimeInitialized = function() {
     initPaletteSelector();
     updateUI();
     draw();
+
+    // Default: generate hexagon and run perfect sampling
+    const defaultA = parseInt(el.hexAInput.value) || 4;
+    const defaultB = parseInt(el.hexBInput.value) || 3;
+    const defaultC = parseInt(el.hexCInput.value) || 5;
+    activeTriangles = generateHexagon(defaultA, defaultB, defaultC);
+    reinitialize();
+
+    // Trigger CFTP after a short delay to let UI settle
+    setTimeout(() => {
+        if (isValid) {
+            el.cftpBtn.click();
+        }
+    }, 100);
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
 };
