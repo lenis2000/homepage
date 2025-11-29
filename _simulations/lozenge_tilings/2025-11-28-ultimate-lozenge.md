@@ -386,15 +386,20 @@ code:
         <option value="5">5</option>
       </select>
     </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
+    <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
       <span style="font-size: 12px; color: #555;">Presets:</span>
-      <button id="preset2x2Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">2x2</button>
-      <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Nienhuis et al 3x3</button>
+      <button id="preset2x2Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Charlier-Duits-Kuijlaars 2x2</button>
+      <span id="duits2x2Container" style="display: none; align-items: center; gap: 4px;">
+        <label for="duitsAlpha" style="font-size: 11px; color: #555;">α:</label>
+        <input type="number" id="duitsAlpha" value="2" step="0.1" min="0.01" style="width: 50px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
+        <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank" style="font-size: 11px;">[paper]</a>
+      </span>
+      <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Nienhuis-Hilhorst-Blöte 3x3</button>
       <span id="nienhuis3x3AlphaContainer" style="display: none; align-items: center; gap: 4px;">
         <label for="nienhuis3x3Alpha" style="font-size: 11px; color: #555;">α:</label>
         <input type="number" id="nienhuis3x3Alpha" value="2" min="0.01" step="0.1" style="width: 60px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
+        <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
       </span>
-      <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
     </div>
   </div>
   <div id="periodicWeightsMatrix" style="display: inline-grid; gap: 4px;"></div>
@@ -3181,6 +3186,14 @@ Module.onRuntimeInitialized = function() {
     let currentPeriodicK = 2; // Default to 2
     let currentPeriodicQ = defaultPeriodicQ[2].map(row => [...row]); // Load 2x2 matrix
     let isNienhuis3x3Mode = false;
+    let isDuits2x2Mode = false;
+
+    function computeCharlier2x2Matrix(alpha) {
+        return [
+            [alpha, 1],
+            [1, 1/alpha]
+        ];
+    }
 
     function computeNienhuis3x3Matrix(alpha) {
         const invAlpha = 1 / alpha;
@@ -3245,9 +3258,11 @@ Module.onRuntimeInitialized = function() {
 
     periodicKSelect.addEventListener('change', (e) => {
         const newK = parseInt(e.target.value);
-        // Exit Nienhuis mode and restore editable matrix
+        // Exit preset modes and restore editable matrix
         isNienhuis3x3Mode = false;
+        isDuits2x2Mode = false;
         document.getElementById('nienhuis3x3AlphaContainer').style.display = 'none';
+        document.getElementById('duits2x2Container').style.display = 'none';
         // Preserve values where possible
         const oldQ = currentPeriodicQ;
         currentPeriodicK = newK;
@@ -3273,25 +3288,46 @@ Module.onRuntimeInitialized = function() {
     });
 
     // Preset buttons
-    document.getElementById('preset2x2Btn').addEventListener('click', () => {
+    document.getElementById('preset2x2Btn').addEventListener('click', (e) => {
+        e.preventDefault();
         isNienhuis3x3Mode = false;
+        isDuits2x2Mode = true;
         document.getElementById('nienhuis3x3AlphaContainer').style.display = 'none';
+        document.getElementById('duits2x2Container').style.display = 'flex';
         currentPeriodicK = 2;
-        currentPeriodicQ = [[1, 100], [0.003333, 3]];
+        const alpha = parseFloat(document.getElementById('duitsAlpha').value) || 2;
+        currentPeriodicQ = computeCharlier2x2Matrix(alpha);
         periodicKSelect.value = '2';
         buildPeriodicMatrix(2);
-        setMatrixInputsDisabled(false);
+        setMatrixInputsDisabled(true);
         updatePeriodicWeights();
     });
+
+    function updateCharlier2x2Matrix() {
+        if (!isDuits2x2Mode) return;
+        const alpha = parseFloat(document.getElementById('duitsAlpha').value) || 2;
+        currentPeriodicQ = computeCharlier2x2Matrix(alpha);
+        const inputs = periodicWeightsMatrix.querySelectorAll('input');
+        inputs.forEach(input => {
+            const i = parseInt(input.dataset.row);
+            const j = parseInt(input.dataset.col);
+            input.value = currentPeriodicQ[i][j];
+        });
+        updatePeriodicWeights();
+    }
+
+    document.getElementById('duitsAlpha').addEventListener('input', updateCharlier2x2Matrix);
 
     document.getElementById('presetNienhuis3x3Btn').addEventListener('click', (e) => {
         e.preventDefault();
         isNienhuis3x3Mode = true;
+        isDuits2x2Mode = false;
+        document.getElementById('duits2x2Container').style.display = 'none';
+        document.getElementById('nienhuis3x3AlphaContainer').style.display = 'flex';
         currentPeriodicK = 3;
         const alpha = parseFloat(document.getElementById('nienhuis3x3Alpha').value) || 2;
         currentPeriodicQ = computeNienhuis3x3Matrix(alpha);
         periodicKSelect.value = '3';
-        document.getElementById('nienhuis3x3AlphaContainer').style.display = 'flex';
         buildPeriodicMatrix(3);
         setMatrixInputsDisabled(true);
         updatePeriodicWeights();
