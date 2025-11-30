@@ -4380,6 +4380,7 @@ Module.onRuntimeInitialized = function() {
         el.cftpSteps.textContent = 'init';
         cftpCancelled = false;
         el.cftpStopBtn.style.display = 'inline-block';
+        const cftpStartTime = performance.now();
 
         setTimeout(() => {
             sim.initCFTP();
@@ -4388,7 +4389,8 @@ Module.onRuntimeInitialized = function() {
             function cftpStep() {
                 // Check for cancellation
                 if (cftpCancelled) {
-                    el.cftpSteps.textContent = 'stopped';
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
@@ -4428,12 +4430,14 @@ Module.onRuntimeInitialized = function() {
                 } else if (res.status === 'coalesced') {
                     const finalRes = sim.finalizeCFTP();
                     draw();
-                    el.cftpSteps.textContent = res.T;
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'timeout') {
-                    el.cftpSteps.textContent = 'timeout';
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
@@ -4464,6 +4468,8 @@ Module.onRuntimeInitialized = function() {
                     }
                     setTimeout(cftpStep, 0);
                 } else {
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = 'error (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
