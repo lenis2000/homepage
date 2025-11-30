@@ -944,23 +944,24 @@ inline int worldToJ(double worldX, double worldY) {
     return (int)std::round((worldY - slope * worldX) / deltaC);
 }
 
-// Adjust winding by SWAPPING a crossing dimer from below to above (or vice versa)
+// Adjust winding by SWAPPING crossing dimers from below to above (or vice versa)
 // For multiple holes on same cut: respects segment boundaries between holes
-bool adjustWindingByCut(int holeIdx, int delta) {
-    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return false;
-    if (delta != 1 && delta != -1) return false;
+// Returns the number of successful swaps (0 to |delta|)
+int adjustWindingByCut(int holeIdx, int delta) {
+    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return 0;
+    if (delta == 0) return 0;
 
     auto startTime = std::chrono::steady_clock::now();
     auto checkTimeout = [&]() -> bool {
         return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime).count() > 2000;
+            std::chrono::steady_clock::now() - startTime).count() > 5000;
     };
 
     std::vector<int8_t> savedGrid = dimerGrid;
 
     int cutN;
     std::vector<CutEdge> crossingEdges = findVerticalCutEdges(holeIdx, cutN);
-    if (crossingEdges.empty()) return false;
+    if (crossingEdges.empty()) return 0;
 
     // Sort crossing edges by j (vertical position)
     std::sort(crossingEdges.begin(), crossingEdges.end(),
@@ -989,7 +990,7 @@ bool adjustWindingByCut(int holeIdx, int delta) {
             break;
         }
     }
-    if (thisHolePos < 0) return false;
+    if (thisHolePos < 0) return 0;
 
     // Determine segment boundaries for this hole
     // lowerBoundJ: j of hole below (or -infinity)
@@ -1021,30 +1022,34 @@ bool adjustWindingByCut(int holeIdx, int delta) {
         }
     }
 
-    // For +1: take HIGHEST matched from lower segment, swap with unmatched in upper segment
-    // For -1: take LOWEST matched from upper segment, swap with unmatched in lower segment
-    int idxToUnmatch = -1;
+    int absDelta = std::abs(delta);
+    int sign = (delta > 0) ? 1 : -1;
+
+    // Select edges to unmatch and candidates to match
+    // For +N: take N HIGHEST matched from lower segment, swap with unmatched in upper segment
+    // For -N: take N LOWEST matched from upper segment, swap with unmatched in lower segment
+    std::vector<int> indicesToUnmatch;
     std::vector<int>* toMatchCandidates = nullptr;
 
-    if (delta == 1) {
-        // + : highest matched below -> above
-        if (!matchedInLowerSegment.empty()) {
-            // Edges are sorted by j ascending, so last one is highest
-            idxToUnmatch = matchedInLowerSegment.back();
+    if (delta > 0) {
+        // + : highest matched below -> above (take from end, highest j first)
+        for (int i = (int)matchedInLowerSegment.size() - 1;
+             i >= 0 && (int)indicesToUnmatch.size() < absDelta; i--) {
+            indicesToUnmatch.push_back(matchedInLowerSegment[i]);
         }
         toMatchCandidates = &unmatchedInUpperSegment;
     } else {
-        // - : lowest matched above -> below
-        if (!matchedInUpperSegment.empty()) {
-            // Edges are sorted by j ascending, so first one is lowest
-            idxToUnmatch = matchedInUpperSegment.front();
+        // - : lowest matched above -> below (take from start, lowest j first)
+        for (int i = 0;
+             i < (int)matchedInUpperSegment.size() && (int)indicesToUnmatch.size() < absDelta; i++) {
+            indicesToUnmatch.push_back(matchedInUpperSegment[i]);
         }
         toMatchCandidates = &unmatchedInLowerSegment;
     }
 
-    if (idxToUnmatch < 0 || toMatchCandidates->empty()) {
-        return false;
-    }
+    // Limit to available candidates
+    int numSwaps = std::min((int)indicesToUnmatch.size(), (int)toMatchCandidates->size());
+    if (numSwaps == 0) return 0;
 
     // Collect all currently matched edges
     std::vector<int> currentMatched;
@@ -1056,16 +1061,27 @@ bool adjustWindingByCut(int holeIdx, int delta) {
         }
     }
 
-    // Try each candidate for the new matched edge
-    for (int idxToMatch : *toMatchCandidates) {
-        if (checkTimeout()) { dimerGrid = savedGrid; return false; }
+    // Build set of indices to unmatch for O(1) lookup
+    std::set<int> unmatchSet(indicesToUnmatch.begin(), indicesToUnmatch.begin() + numSwaps);
 
-        // Build new set of matched crossing edges (swap one)
+    // Try batches of decreasing size until one works
+    for (int tryCount = numSwaps; tryCount >= 1; tryCount--) {
+        if (checkTimeout()) { dimerGrid = savedGrid; return 0; }
+
+        // Build new set of matched crossing edges
         std::vector<int> newMatchedIndices;
+        int removed = 0;
         for (int i : currentMatched) {
-            if (i != idxToUnmatch) newMatchedIndices.push_back(i);
+            if (removed < tryCount && unmatchSet.count(i)) {
+                removed++;
+            } else {
+                newMatchedIndices.push_back(i);
+            }
         }
-        newMatchedIndices.push_back(idxToMatch);
+        // Add tryCount new edges from candidates
+        for (int i = 0; i < tryCount && i < (int)toMatchCandidates->size(); i++) {
+            newMatchedIndices.push_back((*toMatchCandidates)[i]);
+        }
 
         // Clear grid and set forced crossing edges
         std::fill(dimerGrid.begin(), dimerGrid.end(), -1);
@@ -1095,19 +1111,20 @@ bool adjustWindingByCut(int holeIdx, int delta) {
             continue;
         }
 
-        // Success!
-        holes[holeIdx].currentWinding += delta;
-        return true;
+        // Success with tryCount swaps!
+        holes[holeIdx].currentWinding += sign * tryCount;
+        return tryCount;
     }
 
     dimerGrid = savedGrid;
-    return false;
+    return 0;
 }
 
 // Main entry point for adjusting hole winding
-bool adjustHoleWinding(int holeIdx, int delta) {
-    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return false;
-    if (delta != 1 && delta != -1) return false;
+// Returns the number of successful swaps (0 to |delta|)
+int adjustHoleWinding(int holeIdx, int delta) {
+    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return 0;
+    if (delta == 0) return 0;
     return adjustWindingByCut(holeIdx, delta);
 }
 
@@ -2345,10 +2362,14 @@ char* getAllHolesInfo() {
 
 EMSCRIPTEN_KEEPALIVE
 char* adjustHoleWindingExport(int holeIdx, int delta) {
-    bool success = adjustHoleWinding(holeIdx, delta);
+    int actualSwaps = adjustHoleWinding(holeIdx, delta);
+    bool success = (actualSwaps > 0);
+    int sign = (delta > 0) ? 1 : -1;
+    int actualDelta = sign * actualSwaps;
 
     std::string json = "{\"success\":" + std::string(success ? "true" : "false");
-    if (success && holeIdx >= 0 && holeIdx < (int)holes.size()) {
+    json += ",\"actualDelta\":" + std::to_string(actualDelta);
+    if (holeIdx >= 0 && holeIdx < (int)holes.size()) {
         json += ",\"newWinding\":" + std::to_string(holes[holeIdx].currentWinding);
     }
     json += "}";

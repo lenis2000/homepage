@@ -3004,29 +3004,13 @@ Module.onRuntimeInitialized = function() {
                         plusBtn.disabled = true;
                         input.value = '⏳';
 
-                        // Apply changes one at a time
-                        let remaining = count;
-                        const delta = sign;
-
-                        const applyOne = () => {
-                            if (remaining <= 0) {
-                                sim.refreshDimers();
-                                draw();
-                                updateHolesUI();
-                                return;
-                            }
-                            const result = sim.adjustHoleWinding(holeIdx, delta);
-                            if (result.success) {
-                                remaining--;
-                                setTimeout(applyOne, 5);
-                            } else {
-                                // Can't continue, stop here
-                                sim.refreshDimers();
-                                draw();
-                                updateHolesUI();
-                            }
-                        };
-                        setTimeout(applyOne, 10);
+                        // Apply all changes at once (batched in C++)
+                        setTimeout(() => {
+                            const result = sim.adjustHoleWinding(holeIdx, sign * count);
+                            sim.refreshDimers();
+                            draw();
+                            updateHolesUI();
+                        }, 10);
                     }
                 });
 
