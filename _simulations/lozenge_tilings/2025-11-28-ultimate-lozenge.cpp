@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -185,6 +185,27 @@ struct Dimer {
 };
 
 std::vector<Dimer> currentDimers;
+
+// ============================================================================
+// HOLE TRACKING AND WINDING CONSTRAINTS
+// ============================================================================
+
+struct HoleInfo {
+    int boundaryIdx;        // Index into computedBoundaries
+    double centroidX, centroidY;
+    int currentWinding;
+    int minWinding, maxWinding;
+};
+
+struct CutEdge {
+    int blackN, blackJ;
+    int whiteN, whiteJ;
+    int type;
+};
+
+std::vector<HoleInfo> holes;
+std::vector<CutEdge> holeCutEdges;  // Cut edges for hole 0
+int outerBoundaryIdx = -1;
 
 // Statistics
 long long totalSteps = 0;
@@ -392,6 +413,460 @@ void computeBoundary() {
             computedBoundaries.push_back(std::move(currentBoundary));
         }
     }
+}
+
+// ============================================================================
+// HOLE DETECTION AND WINDING CONSTRAINT FUNCTIONS
+// ============================================================================
+
+// Compute signed area of a boundary (positive = CCW, negative = CW)
+double computeSignedArea(const std::vector<Vertex>& boundary) {
+    double area = 0;
+    for (size_t i = 0; i < boundary.size(); i++) {
+        size_t j = (i + 1) % boundary.size();
+        area += boundary[i].x * boundary[j].y;
+        area -= boundary[j].x * boundary[i].y;
+    }
+    return area / 2.0;
+}
+
+// Identify holes from computed boundaries
+// The outer boundary has the largest absolute area
+void identifyHolesFromBoundaries() {
+    holes.clear();
+    outerBoundaryIdx = -1;
+
+    if (computedBoundaries.empty()) return;
+
+    // Find outer boundary (largest absolute area)
+    double maxArea = -1;
+    for (size_t i = 0; i < computedBoundaries.size(); i++) {
+        double area = std::abs(computeSignedArea(computedBoundaries[i]));
+        if (area > maxArea) {
+            maxArea = area;
+            outerBoundaryIdx = (int)i;
+        }
+    }
+
+    // All other boundaries are holes
+    for (size_t i = 0; i < computedBoundaries.size(); i++) {
+        if ((int)i == outerBoundaryIdx) continue;
+
+        HoleInfo hole;
+        hole.boundaryIdx = (int)i;
+
+        // Compute centroid
+        double cx = 0, cy = 0;
+        for (const auto& v : computedBoundaries[i]) {
+            cx += v.x;
+            cy += v.y;
+        }
+        hole.centroidX = cx / computedBoundaries[i].size();
+        hole.centroidY = cy / computedBoundaries[i].size();
+
+        hole.currentWinding = 0;
+        hole.minWinding = 0;
+        hole.maxWinding = 0;
+
+        holes.push_back(hole);
+    }
+}
+
+// Get the shared edge coordinates for a dimer
+void getDimerSharedEdge(int blackN, int blackJ, int type, double& x1, double& y1, double& x2, double& y2) {
+    // Black triangle R(n,j) vertices: (n,j), (n,j-1), (n+1,j-1)
+    Vertex bv1 = getVertex(blackN, blackJ);
+    Vertex bv2 = getVertex(blackN, blackJ - 1);
+    Vertex bv3 = getVertex(blackN + 1, blackJ - 1);
+
+    if (type == 0) {
+        // Shared edge with White(bn, bj): edge (n,j)-(n+1,j-1)
+        x1 = bv1.x; y1 = bv1.y;
+        x2 = bv3.x; y2 = bv3.y;
+    } else if (type == 1) {
+        // Shared edge with White(bn, bj-1): edge (n,j-1)-(n+1,j-1)
+        x1 = bv2.x; y1 = bv2.y;
+        x2 = bv3.x; y2 = bv3.y;
+    } else {
+        // type == 2: Shared edge with White(bn-1, bj): edge (n,j)-(n,j-1)
+        x1 = bv1.x; y1 = bv1.y;
+        x2 = bv2.x; y2 = bv2.y;
+    }
+}
+
+// Build a cut from hole to outer boundary
+// Strategy: Draw a ray from hole centroid toward outer centroid and collect all dimer edges it crosses
+void buildCutForHole(int holeIdx) {
+    holeCutEdges.clear();
+
+    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return;
+    if (outerBoundaryIdx < 0 || outerBoundaryIdx >= (int)computedBoundaries.size()) return;
+
+    const HoleInfo& hole = holes[holeIdx];
+
+    // Find centroid of outer boundary
+    double outerCx = 0, outerCy = 0;
+    for (const auto& v : computedBoundaries[outerBoundaryIdx]) {
+        outerCx += v.x;
+        outerCy += v.y;
+    }
+    outerCx /= computedBoundaries[outerBoundaryIdx].size();
+    outerCy /= computedBoundaries[outerBoundaryIdx].size();
+
+    // Ray from hole centroid toward outer centroid
+    double dx = outerCx - hole.centroidX;
+    double dy = outerCy - hole.centroidY;
+    double len = std::sqrt(dx*dx + dy*dy);
+    if (len < 0.001) return;
+    dx /= len;
+    dy /= len;
+
+    // For each black triangle, check if any of its 3 possible dimer edges
+    // intersects the ray from hole to outer boundary
+    for (const auto& bt : blackTriangles) {
+        // Three possible dimer edges from this black triangle
+        int neighbors[3][3] = {
+            {bt.n, bt.j, 0},      // White(bn, bj), type 0
+            {bt.n, bt.j - 1, 1},  // White(bn, bj-1), type 1
+            {bt.n - 1, bt.j, 2}   // White(bn-1, bj), type 2
+        };
+
+        for (int k = 0; k < 3; k++) {
+            int wn = neighbors[k][0];
+            int wj = neighbors[k][1];
+            int type = neighbors[k][2];
+
+            // Check if this white triangle exists
+            if (whiteMap.find(makeKey(wn, wj)) == whiteMap.end()) continue;
+
+            // Get the shared edge coordinates
+            double x1, y1, x2, y2;
+            getDimerSharedEdge(bt.n, bt.j, type, x1, y1, x2, y2);
+
+            // Check if ray from hole centroid intersects this edge segment
+            double ex = x2 - x1;
+            double ey = y2 - y1;
+
+            // Solve intersection
+            double det = dx * (-ey) - dy * (-ex);
+            if (std::abs(det) < 1e-10) continue;  // Parallel
+
+            double rx = x1 - hole.centroidX;
+            double ry = y1 - hole.centroidY;
+
+            double t = (rx * (-ey) - ry * (-ex)) / det;
+            double s = (dx * ry - dy * rx) / det;
+
+            // Check if intersection is valid: t > 0 (forward along ray), s in [0,1] (on segment)
+            if (t > 0.01 && s >= 0 && s <= 1) {
+                CutEdge ce;
+                ce.blackN = bt.n;
+                ce.blackJ = bt.j;
+                ce.whiteN = wn;
+                ce.whiteJ = wj;
+                ce.type = type;
+                holeCutEdges.push_back(ce);
+            }
+        }
+    }
+}
+
+// Compute winding number for hole 0 using the cut
+int computeWindingForHole(int holeIdx) {
+    if (holeIdx != 0) return 0;
+    if (holes.empty()) return 0;
+
+    // Rebuild cut if needed
+    if (holeCutEdges.empty()) {
+        buildCutForHole(0);
+    }
+
+    int winding = 0;
+    for (const auto& ce : holeCutEdges) {
+        size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
+        if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
+            winding++;
+        }
+    }
+
+    return winding;
+}
+
+// Compute all hole windings
+void computeAllWindings() {
+    for (size_t i = 0; i < holes.size(); i++) {
+        holes[i].currentWinding = computeWindingForHole((int)i);
+    }
+}
+
+// Compute winding bounds for holes
+void computeWindingBounds() {
+    if (holes.empty()) return;
+
+    // Build cut for hole 0
+    buildCutForHole(0);
+
+    // Min winding = 0, Max winding = number of cut edges
+    holes[0].minWinding = 0;
+    holes[0].maxWinding = (int)holeCutEdges.size();
+    holes[0].currentWinding = computeWindingForHole(0);
+}
+
+// Rebuild the matching with one edge forced to be matched or unmatched
+bool rebuildMatchingWithForcedEdge(const CutEdge& edge, bool forceMatched) {
+    int numBlack = (int)blackTriangles.size();
+    int numWhite = (int)whiteTriangles.size();
+
+    if (numBlack != numWhite || numBlack == 0) return false;
+
+    int S = numBlack + numWhite;      // Source
+    int T = numBlack + numWhite + 1;  // Sink
+
+    flowAdj.assign(T + 2, std::vector<FlowEdge>());
+    level.resize(T + 2);
+    ptr.resize(T + 2);
+
+    // Find indices
+    int forcedBlackIdx = -1;
+    int forcedWhiteIdx = -1;
+
+    auto bit = blackMap.find(makeKey(edge.blackN, edge.blackJ));
+    auto wit = whiteMap.find(makeKey(edge.whiteN, edge.whiteJ));
+    if (bit != blackMap.end()) forcedBlackIdx = bit->second;
+    if (wit != whiteMap.end()) forcedWhiteIdx = wit->second;
+
+    if (forcedBlackIdx < 0 || forcedWhiteIdx < 0) return false;
+
+    if (forceMatched) {
+        // Force this edge: don't connect this black/white to source/sink normally
+        // Instead, pre-match them
+
+        // Source -> all blacks EXCEPT forcedBlack
+        for (int i = 0; i < numBlack; i++) {
+            if (i != forcedBlackIdx) {
+                add_flow_edge(S, i, 1);
+            }
+        }
+
+        // All whites EXCEPT forcedWhite -> Sink
+        for (int i = 0; i < numWhite; i++) {
+            if (i != forcedWhiteIdx) {
+                add_flow_edge(numBlack + i, T, 1);
+            }
+        }
+
+        // Add all black-white edges EXCEPT any involving forced black or forced white
+        for (int i = 0; i < numBlack; i++) {
+            if (i == forcedBlackIdx) continue;
+
+            int bn = blackTriangles[i].n;
+            int bj = blackTriangles[i].j;
+
+            int neighbors[3][2] = {
+                {bn, bj},
+                {bn, bj - 1},
+                {bn - 1, bj}
+            };
+
+            for (int k = 0; k < 3; k++) {
+                auto wIt = whiteMap.find(makeKey(neighbors[k][0], neighbors[k][1]));
+                if (wIt == whiteMap.end()) continue;
+                int wIdx = wIt->second;
+                if (wIdx == forcedWhiteIdx) continue;
+
+                add_flow_edge(i, numBlack + wIdx, 1);
+            }
+        }
+
+        // Run max flow on reduced graph
+        int flow = dinic(S, T);
+
+        // Need flow = numBlack - 1 (since one pair is pre-matched)
+        if (flow != numBlack - 1) return false;
+
+        // Extract matching
+        dimerGrid.assign(dimerGrid.size(), -1);
+
+        // Set the forced edge
+        size_t forcedGridIdx = getGridIdx(edge.blackN, edge.blackJ);
+        if (forcedGridIdx < dimerGrid.size()) {
+            dimerGrid[forcedGridIdx] = (int8_t)edge.type;
+        }
+
+        // Set remaining edges from flow
+        for (int i = 0; i < numBlack; i++) {
+            if (i == forcedBlackIdx) continue;
+
+            for (const auto& e : flowAdj[i]) {
+                if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow == 1) {
+                    int wIdx = e.to - numBlack;
+                    int bn = blackTriangles[i].n;
+                    int bj = blackTriangles[i].j;
+                    int wn = whiteTriangles[wIdx].n;
+                    int wj = whiteTriangles[wIdx].j;
+                    int type = getDimerType(bn, bj, wn, wj);
+
+                    size_t gridIdx = getGridIdx(bn, bj);
+                    if (gridIdx < dimerGrid.size()) {
+                        dimerGrid[gridIdx] = (int8_t)type;
+                    }
+                    break;
+                }
+            }
+        }
+
+    } else {
+        // Force this edge to NOT be matched - just exclude it from the graph
+
+        // Source -> all blacks
+        for (int i = 0; i < numBlack; i++) {
+            add_flow_edge(S, i, 1);
+        }
+
+        // All whites -> Sink
+        for (int i = 0; i < numWhite; i++) {
+            add_flow_edge(numBlack + i, T, 1);
+        }
+
+        // Add all black-white edges EXCEPT the forced one
+        for (int i = 0; i < numBlack; i++) {
+            int bn = blackTriangles[i].n;
+            int bj = blackTriangles[i].j;
+
+            int neighbors[3][2] = {
+                {bn, bj},
+                {bn, bj - 1},
+                {bn - 1, bj}
+            };
+
+            for (int k = 0; k < 3; k++) {
+                int wn = neighbors[k][0];
+                int wj = neighbors[k][1];
+
+                // Skip the forbidden edge
+                if (bn == edge.blackN && bj == edge.blackJ &&
+                    wn == edge.whiteN && wj == edge.whiteJ) {
+                    continue;
+                }
+
+                auto wIt = whiteMap.find(makeKey(wn, wj));
+                if (wIt == whiteMap.end()) continue;
+
+                add_flow_edge(i, numBlack + wIt->second, 1);
+            }
+        }
+
+        // Run max flow
+        int flow = dinic(S, T);
+
+        if (flow != numBlack) return false;  // No perfect matching without this edge
+
+        // Extract matching
+        dimerGrid.assign(dimerGrid.size(), -1);
+
+        for (int i = 0; i < numBlack; i++) {
+            for (const auto& e : flowAdj[i]) {
+                if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow == 1) {
+                    int wIdx = e.to - numBlack;
+                    int bn = blackTriangles[i].n;
+                    int bj = blackTriangles[i].j;
+                    int wn = whiteTriangles[wIdx].n;
+                    int wj = whiteTriangles[wIdx].j;
+                    int type = getDimerType(bn, bj, wn, wj);
+
+                    size_t gridIdx = getGridIdx(bn, bj);
+                    if (gridIdx < dimerGrid.size()) {
+                        dimerGrid[gridIdx] = (int8_t)type;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+// Adjust winding by rebuilding the matching with constraints
+bool adjustWindingByRebuilding(int holeIdx, int delta) {
+    if (holeIdx != 0) return false;  // Only support hole 0 for now
+    if (holes.empty()) return false;
+    if (delta != 1 && delta != -1) return false;
+
+    // Build cut
+    buildCutForHole(0);
+    if (holeCutEdges.empty()) return false;
+
+    // Count current winding (matched edges crossing cut)
+    int currentWinding = 0;
+    std::vector<CutEdge> matchedCutEdges;
+    std::vector<CutEdge> unmatchedCutEdges;
+
+    for (const auto& ce : holeCutEdges) {
+        size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
+        if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
+            currentWinding++;
+            matchedCutEdges.push_back(ce);
+        } else {
+            unmatchedCutEdges.push_back(ce);
+        }
+    }
+
+    int targetWinding = currentWinding + delta;
+    if (targetWinding < 0 || targetWinding > (int)holeCutEdges.size()) {
+        return false;  // Can't achieve this winding
+    }
+
+    // Save current state for rollback
+    std::vector<int8_t> savedGrid = dimerGrid;
+
+    if (delta == 1 && !unmatchedCutEdges.empty()) {
+        // Try to force one more cut edge to be matched
+        for (const auto& forceEdge : unmatchedCutEdges) {
+            if (rebuildMatchingWithForcedEdge(forceEdge, true)) {
+                // Verify winding changed correctly
+                int newWinding = computeWindingForHole(0);
+                if (newWinding == targetWinding) {
+                    holes[0].currentWinding = newWinding;
+                    return true;
+                }
+            }
+            // Rollback and try next edge
+            dimerGrid = savedGrid;
+        }
+    } else if (delta == -1 && !matchedCutEdges.empty()) {
+        // Try to force one cut edge to NOT be matched
+        for (const auto& forceEdge : matchedCutEdges) {
+            if (rebuildMatchingWithForcedEdge(forceEdge, false)) {
+                // Verify winding changed correctly
+                int newWinding = computeWindingForHole(0);
+                if (newWinding == targetWinding) {
+                    holes[0].currentWinding = newWinding;
+                    return true;
+                }
+            }
+            // Rollback and try next edge
+            dimerGrid = savedGrid;
+        }
+    }
+
+    dimerGrid = savedGrid;
+    return false;
+}
+
+// Main entry point for adjusting hole winding
+bool adjustHoleWinding(int holeIdx, int delta) {
+    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return false;
+    if (delta != 1 && delta != -1) return false;
+    if (holeIdx != 0) return false;  // Only support hole 0 for now
+
+    bool success = adjustWindingByRebuilding(holeIdx, delta);
+
+    if (success) {
+        holes[holeIdx].currentWinding = computeWindingForHole(holeIdx);
+    }
+
+    return success;
 }
 
 // ============================================================================
@@ -947,6 +1422,14 @@ char* initFromTriangles(int* data, int count) {
     // 6. Compute boundary
     computeBoundary();
 
+    // 6.5. Detect holes and compute winding numbers
+    identifyHolesFromBoundaries();
+    if (!holes.empty() && tileable) {
+        buildCutForHole(0);
+        computeAllWindings();
+        computeWindingBounds();
+    }
+
     // 7. Calculate initial volume
     long long volume = 0;
     for (const auto& bt : blackTriangles) {
@@ -1452,6 +1935,107 @@ char* repairRegion() {
     }
 
     return initFromTriangles(newTriangles.data(), newTriangles.size());
+}
+
+// Set dimers directly from a flat array [bn, bj, wn, wj, type, ...]
+// Used for applying winding constraints
+EMSCRIPTEN_KEEPALIVE
+char* setDimers(int* data, int count) {
+    // Clear existing dimer grid
+    std::fill(dimerGrid.begin(), dimerGrid.end(), -1);
+    currentDimers.clear();
+
+    // Populate from input
+    for (int i = 0; i < count; i += 5) {
+        int bn = data[i];
+        int bj = data[i + 1];
+        int wn = data[i + 2];
+        int wj = data[i + 3];
+        int type = data[i + 4];
+
+        // Validate and add to grid
+        if (bn >= gridMinN && bn <= gridMaxN && bj >= gridMinJ && bj <= gridMaxJ) {
+            size_t idx = getGridIdx(bn, bj);
+            if (idx < dimerGrid.size()) {
+                dimerGrid[idx] = static_cast<int8_t>(type);
+                currentDimers.push_back({bn, bj, wn, wj, type});
+            }
+        }
+    }
+
+    // Compute volume
+    long long volume = 0;
+    for (const auto& bt : blackTriangles) {
+        if (bt.n >= gridMinN && bt.n <= gridMaxN && bt.j >= gridMinJ && bt.j <= gridMaxJ) {
+            size_t gridIdx = getGridIdx(bt.n, bt.j);
+            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == 0) {
+                volume += bt.n;
+            }
+        }
+    }
+
+    std::string json = "{\"status\":\"dimers_set\""
+        ",\"dimerCount\":" + std::to_string(currentDimers.size()) +
+        ",\"volume\":" + std::to_string(volume) +
+        "}";
+
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+// ============================================================================
+// HOLE/WINDING EXPORTS FOR JAVASCRIPT
+// ============================================================================
+
+EMSCRIPTEN_KEEPALIVE
+int getHoleCount() {
+    return (int)holes.size();
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getAllHolesInfo() {
+    std::string json = "{\"holes\":[";
+    for (size_t i = 0; i < holes.size(); i++) {
+        if (i > 0) json += ",";
+        const HoleInfo& h = holes[i];
+        json += "{\"idx\":" + std::to_string(i) +
+                ",\"centroidX\":" + std::to_string(h.centroidX) +
+                ",\"centroidY\":" + std::to_string(h.centroidY) +
+                ",\"currentWinding\":" + std::to_string(h.currentWinding) +
+                ",\"minWinding\":" + std::to_string(h.minWinding) +
+                ",\"maxWinding\":" + std::to_string(h.maxWinding) + "}";
+    }
+    json += "]}";
+
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* adjustHoleWindingExport(int holeIdx, int delta) {
+    bool success = adjustHoleWinding(holeIdx, delta);
+
+    std::string json = "{\"success\":" + std::string(success ? "true" : "false");
+    if (success && holeIdx >= 0 && holeIdx < (int)holes.size()) {
+        json += ",\"newWinding\":" + std::to_string(holes[holeIdx].currentWinding);
+    }
+    json += "}";
+
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void recomputeHoleInfo() {
+    identifyHolesFromBoundaries();
+    if (!holes.empty()) {
+        buildCutForHole(0);
+        computeAllWindings();
+        computeWindingBounds();
+    }
 }
 
 } // extern "C"

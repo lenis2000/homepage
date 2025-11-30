@@ -40,6 +40,8 @@ code:
   <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
 </ul>
 
+<p><strong>Hole Constraints (experimental):</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling.</p>
+
 <p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
 
 </div>
@@ -329,6 +331,40 @@ code:
     .param-group { margin-right: 8px; margin-bottom: 6px; }
     .param-input { width: 40px; }
   }
+  /* Hole winding controls */
+  .hole-control {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    pointer-events: auto;
+    transform: translate(-50%, -50%);
+  }
+  .hole-control button {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #666;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .hole-control button:hover {
+    background: rgba(230, 230, 230, 0.95);
+  }
+  [data-theme="dark"] .hole-control button {
+    background: rgba(60, 60, 60, 0.85);
+    border-color: #888;
+    color: #eee;
+  }
+  [data-theme="dark"] .hole-control button:hover {
+    background: rgba(80, 80, 80, 0.95);
+  }
 </style>
 
 <script src="/js/colorschemes.js"></script>
@@ -434,6 +470,9 @@ code:
 
   <!-- 3D Container -->
   <div id="three-container"></div>
+
+  <!-- Hole winding overlays -->
+  <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;"></div>
 </div>
 
 <!-- Controls below canvas -->
@@ -803,6 +842,11 @@ Module.onRuntimeInitialized = function() {
             this.exportCFTPMaxDimersWasm = Module.cwrap('exportCFTPMaxDimers', 'number', []);
             this.exportCFTPMinDimersWasm = Module.cwrap('exportCFTPMinDimers', 'number', []);
             this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
+            this.setDimersWasm = Module.cwrap('setDimers', 'number', ['number', 'number']);
+            this.getHoleCountWasm = Module.cwrap('getHoleCount', 'number', []);
+            this.getAllHolesInfoWasm = Module.cwrap('getAllHolesInfo', 'number', []);
+            this.adjustHoleWindingWasm = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
+            this.recomputeHoleInfoWasm = Module.cwrap('recomputeHoleInfo', null, []);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
             this.totalSteps = 0;
@@ -920,6 +964,30 @@ Module.onRuntimeInitialized = function() {
             return result;
         }
 
+        // Set dimers directly (for winding constraints)
+        // dimers: array of {bn, bj, wn, wj, t}
+        setDimers(dimers) {
+            // Convert to flat array: [bn, bj, wn, wj, type, ...]
+            const arr = [];
+            for (const d of dimers) {
+                arr.push(d.bn, d.bj, d.wn, d.wj, d.t);
+            }
+
+            const dataPtr = Module._malloc(arr.length * 4);
+            for (let i = 0; i < arr.length; i++) {
+                Module.setValue(dataPtr + i * 4, arr[i], 'i32');
+            }
+
+            const ptr = this.setDimersWasm(dataPtr, arr.length);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            Module._free(dataPtr);
+
+            const result = JSON.parse(jsonStr);
+            this.dimers = dimers;
+            return result;
+        }
+
         refreshDimers() {
             const ptr = this.exportDimersWasm();
             const jsonStr = Module.UTF8ToString(ptr);
@@ -934,6 +1002,27 @@ Module.onRuntimeInitialized = function() {
         getTotalSteps() { return this.totalSteps; }
         getFlipCount() { return this.flipCount; }
         getAcceptRate() { return this.getAcceptRateWasm(); }
+
+        // Hole and winding methods
+        getHoleCount() { return this.getHoleCountWasm(); }
+
+        getAllHolesInfo() {
+            const ptr = this.getAllHolesInfoWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        adjustHoleWinding(holeIdx, delta) {
+            const ptr = this.adjustHoleWindingWasm(holeIdx, delta);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        recomputeHoleInfo() {
+            this.recomputeHoleInfoWasm();
+        }
     }
 
     // ========================================================================
@@ -2744,6 +2833,97 @@ Module.onRuntimeInitialized = function() {
         renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true });
     }
 
+    // ========================================================================
+    // HOLE DETECTION AND WINDING CONSTRAINTS
+    // ========================================================================
+    // Hole detection and winding control is now handled in WASM (C++).
+    // The C++ functions: getHoleCount(), getAllHolesInfo(), adjustHoleWindingExport()
+    // are wrapped in the UltimateLozengeSampler class.
+
+    // Get hole overlays container
+    const holeOverlays = document.getElementById('hole-overlays');
+
+    // Convert world coords to screen coords using renderer's toCanvas
+    function worldToScreen(worldX, worldY) {
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        const [sx, sy] = renderer.toCanvas(worldX, worldY, centerX, centerY, scale);
+        return { x: sx, y: sy };
+    }
+
+    // Update hole overlay positions (call on pan/zoom)
+    function updateHoleOverlayPositions() {
+        const controls = holeOverlays.querySelectorAll('.hole-control');
+        if (controls.length === 0) return;
+
+        const holesInfo = sim.getAllHolesInfo();
+        const wasmHoles = holesInfo.holes || [];
+
+        controls.forEach((ctrl, h) => {
+            if (h < wasmHoles.length) {
+                const hole = wasmHoles[h];
+                const screen = worldToScreen(hole.centroidX, hole.centroidY);
+                ctrl.style.left = screen.x + 'px';
+                ctrl.style.top = screen.y + 'px';
+            }
+        });
+    }
+
+    // Update the holes UI - creates overlay controls inside each hole
+    function updateHolesUI() {
+        // Clear existing overlays
+        holeOverlays.innerHTML = '';
+
+        if (!isValid) return;
+
+        // Get hole info from WASM
+        const holesInfo = sim.getAllHolesInfo();
+        const wasmHoles = holesInfo.holes || [];
+
+        if (wasmHoles.length === 0) return;
+
+        // Create control for each hole
+        for (let h = 0; h < wasmHoles.length; h++) {
+            const hole = wasmHoles[h];
+            const screen = worldToScreen(hole.centroidX, hole.centroidY);
+
+            const ctrl = document.createElement('div');
+            ctrl.className = 'hole-control';
+            ctrl.style.left = screen.x + 'px';
+            ctrl.style.top = screen.y + 'px';
+            ctrl.dataset.hole = h;
+
+            ctrl.innerHTML = `
+                <button class="winding-plus">+</button>
+                <button class="winding-minus">−</button>
+            `;
+
+            // Wire up buttons - use WASM-based winding adjustment
+            ctrl.querySelector('.winding-minus').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                const result = sim.adjustHoleWinding(holeIdx, -1);
+                if (result.success) {
+                    sim.refreshDimers();
+                    updateHolesUI();
+                    draw();
+                }
+            });
+
+            ctrl.querySelector('.winding-plus').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                const result = sim.adjustHoleWinding(holeIdx, 1);
+                if (result.success) {
+                    sim.refreshDimers();
+                    updateHolesUI();
+                    draw();
+                }
+            });
+
+            holeOverlays.appendChild(ctrl);
+        }
+    }
+
     function initPaletteSelector() {
         renderer.colorPalettes.forEach((p, i) => {
             const opt = document.createElement('option');
@@ -2801,12 +2981,16 @@ Module.onRuntimeInitialized = function() {
 
         // Enable repair button only if Invalid and Not Empty
         el.repairBtn.disabled = isValid || activeTriangles.size === 0;
+
+        // Update holes UI
+        updateHolesUI();
     }
 
     function setViewMode(use3D) {
         is3DView = use3D;
         canvas.style.display = use3D ? 'none' : 'block';
         threeContainer.style.display = use3D ? 'block' : 'none';
+        holeOverlays.style.display = use3D ? 'none' : 'block';
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
 
         if (use3D) {
@@ -2842,6 +3026,8 @@ Module.onRuntimeInitialized = function() {
             renderer.drawLasso(renderer.ctx, lassoPoints, centerX, centerY, scale, isFillMode, lassoCursor);
         }
 
+        // Update hole overlay positions on pan/zoom
+        updateHoleOverlayPositions();
     }
 
     // Track if simulation should auto-restart when shape becomes valid
