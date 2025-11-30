@@ -14,7 +14,7 @@ code:
 <summary>About this simulation</summary>
 <div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
 
-<p>This simulator generates <strong>uniformly random lozenge tilings</strong> of arbitrary polygonal regions on the triangular lattice.</p>
+<p>This simulator generates <strong>random lozenge tilings</strong> of arbitrary polygonal regions on the triangular lattice, supporting both <strong>uniform</strong> and <strong>q-volume weighted</strong> distributions.</p>
 
 <p><strong>How to use:</strong></p>
 <ul>
@@ -27,20 +27,27 @@ code:
 
 <p>A region is <strong>tileable</strong> (valid) if and only if it has equal numbers of black and white triangles AND they can be perfectly matched. The simulator uses <strong>Dinic's maximum flow algorithm</strong> to find a perfect matching when one exists.</p>
 
+<p><strong>Uniform and q-Volume Sampling:</strong></p>
+<p>The simulator samples from two main distributions:</p>
+<ul>
+  <li><strong>Uniform (q=1)</strong>: Each valid tiling has equal probability</li>
+  <li><strong>q-Volume weighted (q≠1)</strong>: Each tiling has probability proportional to q<sup>volume</sup>, where volume is the 3D volume under the corresponding stepped surface. When q&gt;1, higher-volume (flatter) tilings are favored; when q&lt;1, lower-volume (more tilted) tilings are favored.</li>
+</ul>
+
 <p><strong>Sampling methods:</strong></p>
 <ul>
-  <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local "flips" of three lozenges around hexagonal vertices. Converges to the uniform distribution over time. The <strong>q parameter</strong> biases the distribution toward higher (q&gt;1) or lower (q&lt;1) volume configurations.</li>
+  <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local "flips" of three lozenges around hexagonal vertices. Converges to the uniform (q=1) or q-volume weighted distribution over time.</li>
   <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce. Early coalescence detection checks every 1000 steps for faster termination.</li>
 </ul>
 
 <p><strong>Periodic Weights:</strong></p>
-<p>Enable <strong>periodic weights</strong> to use position-dependent q values arranged in a k×k matrix (k=1,2,3,4,5). At position (n,j) on the triangular lattice, the flip probability uses q<sub>n mod k, j mod k</sub>. Two presets are provided:</p>
+<p>Beyond the constant q parameter, the simulator supports <strong>periodic weights</strong>: position-dependent q values arranged in a k×k matrix (k=1,2,3,4,5). At position (n,j) on the triangular lattice, the flip probability uses q<sub>n mod k, j mod k</sub>. This creates spatially varying weight patterns that can produce interesting limit shapes and phase transitions. Two presets are provided:</p>
 <ul>
   <li><strong>Charlier-Duits-Kuijlaars 2×2</strong>: Matrix [[α, 1], [1, 1/α]] with tunable parameter α. See <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank">Charlier (2020)</a> and <a href="https://ems.press/journals/jems/articles/17389" target="_blank">Duits-Kuijlaars (2021)</a>.</li>
   <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
 </ul>
 
-<p><strong>Hole Constraints (experimental):</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling.</p>
+<p><strong>Hole Constraints (experimental):</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note: the search for valid height changes is randomized and not guaranteed to succeed on each click, but most achievable constraints are explorable with repeated attempts.</p>
 
 <p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
 
@@ -2898,26 +2905,39 @@ Module.onRuntimeInitialized = function() {
             `;
 
             // Wire up buttons - use WASM-based winding adjustment
-            ctrl.querySelector('.winding-minus').addEventListener('click', (e) => {
+            const minusBtn = ctrl.querySelector('.winding-minus');
+            const plusBtn = ctrl.querySelector('.winding-plus');
+
+            minusBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const holeIdx = parseInt(ctrl.dataset.hole);
-                const result = sim.adjustHoleWinding(holeIdx, -1);
-                if (result.success) {
-                    sim.refreshDimers();
+                minusBtn.textContent = '⏳';
+                minusBtn.disabled = true;
+                plusBtn.disabled = true;
+                setTimeout(() => {
+                    const result = sim.adjustHoleWinding(holeIdx, -1);
+                    if (result.success) {
+                        sim.refreshDimers();
+                        draw();
+                    }
                     updateHolesUI();
-                    draw();
-                }
+                }, 10);
             });
 
-            ctrl.querySelector('.winding-plus').addEventListener('click', (e) => {
+            plusBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const holeIdx = parseInt(ctrl.dataset.hole);
-                const result = sim.adjustHoleWinding(holeIdx, 1);
-                if (result.success) {
-                    sim.refreshDimers();
+                plusBtn.textContent = '⏳';
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                setTimeout(() => {
+                    const result = sim.adjustHoleWinding(holeIdx, 1);
+                    if (result.success) {
+                        sim.refreshDimers();
+                        draw();
+                    }
                     updateHolesUI();
-                    draw();
-                }
+                }, 10);
             });
 
             holeOverlays.appendChild(ctrl);

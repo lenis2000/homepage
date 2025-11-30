@@ -495,7 +495,7 @@ void getDimerSharedEdge(int blackN, int blackJ, int type, double& x1, double& y1
 }
 
 // Build a cut from hole to outer boundary
-// Strategy: Draw a ray from hole centroid toward outer centroid and collect all dimer edges it crosses
+// Strategy: Use 32 rays in different directions and collect ALL dimer edges in region
 void buildCutForHole(int holeIdx) {
     holeCutEdges.clear();
 
@@ -504,70 +504,68 @@ void buildCutForHole(int holeIdx) {
 
     const HoleInfo& hole = holes[holeIdx];
 
-    // Find centroid of outer boundary
-    double outerCx = 0, outerCy = 0;
-    for (const auto& v : computedBoundaries[outerBoundaryIdx]) {
-        outerCx += v.x;
-        outerCy += v.y;
-    }
-    outerCx /= computedBoundaries[outerBoundaryIdx].size();
-    outerCy /= computedBoundaries[outerBoundaryIdx].size();
+    // Use a set to deduplicate edges found by multiple rays
+    std::set<std::tuple<int,int,int,int,int>> foundEdges;  // (blackN, blackJ, whiteN, whiteJ, type)
 
-    // Ray from hole centroid toward outer centroid
-    double dx = outerCx - hole.centroidX;
-    double dy = outerCy - hole.centroidY;
-    double len = std::sqrt(dx*dx + dy*dy);
-    if (len < 0.001) return;
-    dx /= len;
-    dy /= len;
+    // Try 32 rays at different angles (every 11.25 degrees)
+    for (int rayIdx = 0; rayIdx < 32; rayIdx++) {
+        double angle = rayIdx * 3.14159265358979 / 16.0;  // 11.25 degrees apart
+        double dx = std::cos(angle);
+        double dy = std::sin(angle);
 
-    // For each black triangle, check if any of its 3 possible dimer edges
-    // intersects the ray from hole to outer boundary
-    for (const auto& bt : blackTriangles) {
-        // Three possible dimer edges from this black triangle
-        int neighbors[3][3] = {
-            {bt.n, bt.j, 0},      // White(bn, bj), type 0
-            {bt.n, bt.j - 1, 1},  // White(bn, bj-1), type 1
-            {bt.n - 1, bt.j, 2}   // White(bn-1, bj), type 2
-        };
+        // For each black triangle, check if any of its 3 possible dimer edges
+        // intersects this ray from hole centroid
+        for (const auto& bt : blackTriangles) {
+            // Three possible dimer edges from this black triangle
+            int neighbors[3][3] = {
+                {bt.n, bt.j, 0},      // White(bn, bj), type 0
+                {bt.n, bt.j - 1, 1},  // White(bn, bj-1), type 1
+                {bt.n - 1, bt.j, 2}   // White(bn-1, bj), type 2
+            };
 
-        for (int k = 0; k < 3; k++) {
-            int wn = neighbors[k][0];
-            int wj = neighbors[k][1];
-            int type = neighbors[k][2];
+            for (int k = 0; k < 3; k++) {
+                int wn = neighbors[k][0];
+                int wj = neighbors[k][1];
+                int type = neighbors[k][2];
 
-            // Check if this white triangle exists
-            if (whiteMap.find(makeKey(wn, wj)) == whiteMap.end()) continue;
+                // Check if this white triangle exists
+                if (whiteMap.find(makeKey(wn, wj)) == whiteMap.end()) continue;
 
-            // Get the shared edge coordinates
-            double x1, y1, x2, y2;
-            getDimerSharedEdge(bt.n, bt.j, type, x1, y1, x2, y2);
+                // Get the shared edge coordinates
+                double x1, y1, x2, y2;
+                getDimerSharedEdge(bt.n, bt.j, type, x1, y1, x2, y2);
 
-            // Check if ray from hole centroid intersects this edge segment
-            double ex = x2 - x1;
-            double ey = y2 - y1;
+                // Check if ray from hole centroid intersects this edge segment
+                double ex = x2 - x1;
+                double ey = y2 - y1;
 
-            // Solve intersection
-            double det = dx * (-ey) - dy * (-ex);
-            if (std::abs(det) < 1e-10) continue;  // Parallel
+                // Solve intersection
+                double det = dx * (-ey) - dy * (-ex);
+                if (std::abs(det) < 1e-10) continue;  // Parallel
 
-            double rx = x1 - hole.centroidX;
-            double ry = y1 - hole.centroidY;
+                double rx = x1 - hole.centroidX;
+                double ry = y1 - hole.centroidY;
 
-            double t = (rx * (-ey) - ry * (-ex)) / det;
-            double s = (dx * ry - dy * rx) / det;
+                double t = (rx * (-ey) - ry * (-ex)) / det;
+                double s = (dx * ry - dy * rx) / det;
 
-            // Check if intersection is valid: t > 0 (forward along ray), s in [0,1] (on segment)
-            if (t > 0.01 && s >= 0 && s <= 1) {
-                CutEdge ce;
-                ce.blackN = bt.n;
-                ce.blackJ = bt.j;
-                ce.whiteN = wn;
-                ce.whiteJ = wj;
-                ce.type = type;
-                holeCutEdges.push_back(ce);
+                // Check if intersection is valid: t > 0 (forward along ray), s in [0,1] (on segment)
+                if (t > 0.01 && s >= 0 && s <= 1) {
+                    foundEdges.insert(std::make_tuple(bt.n, bt.j, wn, wj, type));
+                }
             }
         }
+    }
+
+    // Convert set to vector
+    for (const auto& edge : foundEdges) {
+        CutEdge ce;
+        ce.blackN = std::get<0>(edge);
+        ce.blackJ = std::get<1>(edge);
+        ce.whiteN = std::get<2>(edge);
+        ce.whiteJ = std::get<3>(edge);
+        ce.type = std::get<4>(edge);
+        holeCutEdges.push_back(ce);
     }
 }
 
@@ -788,67 +786,98 @@ bool rebuildMatchingWithForcedEdge(const CutEdge& edge, bool forceMatched) {
 }
 
 // Adjust winding by rebuilding the matching with constraints
+// EXTENSIVE SEARCH: tries cut edges first, then ALL edges in region
 bool adjustWindingByRebuilding(int holeIdx, int delta) {
     if (holeIdx != 0) return false;  // Only support hole 0 for now
     if (holes.empty()) return false;
     if (delta != 1 && delta != -1) return false;
 
-    // Build cut
+    // Build cut with 32 rays
     buildCutForHole(0);
-    if (holeCutEdges.empty()) return false;
-
-    // Count current winding (matched edges crossing cut)
-    int currentWinding = 0;
-    std::vector<CutEdge> matchedCutEdges;
-    std::vector<CutEdge> unmatchedCutEdges;
-
-    for (const auto& ce : holeCutEdges) {
-        size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
-        if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
-            currentWinding++;
-            matchedCutEdges.push_back(ce);
-        } else {
-            unmatchedCutEdges.push_back(ce);
-        }
-    }
-
-    int targetWinding = currentWinding + delta;
-    if (targetWinding < 0 || targetWinding > (int)holeCutEdges.size()) {
-        return false;  // Can't achieve this winding
-    }
 
     // Save current state for rollback
     std::vector<int8_t> savedGrid = dimerGrid;
 
-    if (delta == 1 && !unmatchedCutEdges.empty()) {
-        // Try to force one more cut edge to be matched
-        for (const auto& forceEdge : unmatchedCutEdges) {
-            if (rebuildMatchingWithForcedEdge(forceEdge, true)) {
-                // Verify winding changed correctly
+    // Helper lambda to try edges
+    auto tryEdges = [&](std::vector<CutEdge>& edges, bool forceMatched, int targetWinding) -> bool {
+        // Shuffle edges (Fisher-Yates)
+        for (size_t i = edges.size(); i > 1; i--) {
+            size_t j = fastRandomRange(i);
+            std::swap(edges[i-1], edges[j]);
+        }
+
+        for (const auto& forceEdge : edges) {
+            if (rebuildMatchingWithForcedEdge(forceEdge, forceMatched)) {
                 int newWinding = computeWindingForHole(0);
                 if (newWinding == targetWinding) {
                     holes[0].currentWinding = newWinding;
                     return true;
                 }
             }
-            // Rollback and try next edge
             dimerGrid = savedGrid;
         }
-    } else if (delta == -1 && !matchedCutEdges.empty()) {
-        // Try to force one cut edge to NOT be matched
-        for (const auto& forceEdge : matchedCutEdges) {
-            if (rebuildMatchingWithForcedEdge(forceEdge, false)) {
-                // Verify winding changed correctly
-                int newWinding = computeWindingForHole(0);
-                if (newWinding == targetWinding) {
-                    holes[0].currentWinding = newWinding;
-                    return true;
-                }
+        return false;
+    };
+
+    // Phase 1: Try cut edges (edges crossing rays from hole)
+    if (!holeCutEdges.empty()) {
+        std::vector<CutEdge> matchedCutEdges;
+        std::vector<CutEdge> unmatchedCutEdges;
+
+        for (const auto& ce : holeCutEdges) {
+            size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
+            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
+                matchedCutEdges.push_back(ce);
+            } else {
+                unmatchedCutEdges.push_back(ce);
             }
-            // Rollback and try next edge
-            dimerGrid = savedGrid;
+        }
+
+        int currentWinding = (int)matchedCutEdges.size();
+        int targetWinding = currentWinding + delta;
+
+        if (delta == 1 && tryEdges(unmatchedCutEdges, true, targetWinding)) return true;
+        if (delta == -1 && tryEdges(matchedCutEdges, false, targetWinding)) return true;
+    }
+
+    // Phase 2: Try ALL edges in the region (exhaustive search)
+    std::vector<CutEdge> allMatchedEdges;
+    std::vector<CutEdge> allUnmatchedEdges;
+
+    for (const auto& bt : blackTriangles) {
+        int neighbors[3][3] = {
+            {bt.n, bt.j, 0},
+            {bt.n, bt.j - 1, 1},
+            {bt.n - 1, bt.j, 2}
+        };
+        for (int k = 0; k < 3; k++) {
+            int wn = neighbors[k][0];
+            int wj = neighbors[k][1];
+            int type = neighbors[k][2];
+            if (whiteMap.find(makeKey(wn, wj)) == whiteMap.end()) continue;
+
+            CutEdge ce;
+            ce.blackN = bt.n;
+            ce.blackJ = bt.j;
+            ce.whiteN = wn;
+            ce.whiteJ = wj;
+            ce.type = type;
+
+            size_t gridIdx = getGridIdx(bt.n, bt.j);
+            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == type) {
+                allMatchedEdges.push_back(ce);
+            } else {
+                allUnmatchedEdges.push_back(ce);
+            }
         }
     }
+
+    // Recompute current winding for target calculation
+    int currentWinding = computeWindingForHole(0);
+    int targetWinding = currentWinding + delta;
+
+    if (delta == 1 && tryEdges(allUnmatchedEdges, true, targetWinding)) return true;
+    if (delta == -1 && tryEdges(allMatchedEdges, false, targetWinding)) return true;
 
     dimerGrid = savedGrid;
     return false;
