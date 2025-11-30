@@ -429,6 +429,10 @@ code:
       <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;">
       <span style="font-size: 11px; color: #888;">/s</span>
     </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="useRandomSweepsCheckbox">
+      <label for="useRandomSweepsCheckbox" style="font-size: 12px; color: #555;">Random Sweeps</label>
+    </div>
     <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
   </div>
 </div>
@@ -869,6 +873,7 @@ Module.onRuntimeInitialized = function() {
             this.setPeriodicQBiasWasm = Module.cwrap('setPeriodicQBias', null, ['number', 'number']);
             this.setPeriodicKWasm = Module.cwrap('setPeriodicK', null, ['number']);
             this.setUsePeriodicWeightsWasm = Module.cwrap('setUsePeriodicWeights', null, ['number']);
+            this.setUseRandomSweepsWasm = Module.cwrap('setUseRandomSweeps', null, ['number']);
             this.runCFTPWasm = Module.cwrap('runCFTP', 'number', []);
             this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
@@ -900,6 +905,7 @@ Module.onRuntimeInitialized = function() {
         }
         setPeriodicK(k) { this.setPeriodicKWasm(k); }
         setUsePeriodicWeights(use) { this.setUsePeriodicWeightsWasm(use ? 1 : 0); }
+        setUseRandomSweeps(use) { this.setUseRandomSweepsWasm(use ? 1 : 0); }
 
         initFromTriangles(trianglesMap) {
             // Convert Map to flat array [n, j, type, n, j, type, ...]
@@ -4123,6 +4129,12 @@ Module.onRuntimeInitialized = function() {
             updatePeriodicWeights();
         }
         draw();
+    });
+
+    // Random sweeps checkbox (for Glauber/CFTP)
+    const randomSweepsCheckbox = document.getElementById('useRandomSweepsCheckbox');
+    randomSweepsCheckbox.addEventListener('change', (e) => {
+        sim.setUseRandomSweeps(e.target.checked);
     });
 
     // Preset buttons

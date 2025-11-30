@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -115,6 +115,7 @@ double qBias_periodic[5][5] = {
 };
 int periodicK = 2; // Default to Period 2
 bool usePeriodicWeights = false; // Disabled by default
+bool useRandomSweeps = false; // Default: systematic sweeps (faster, better cache locality)
 
 inline double getQAtPosition(int n, int j) {
     if (!usePeriodicWeights) return qBias;
@@ -1311,6 +1312,9 @@ int tryRotationOnGrid(std::vector<int8_t>& grid, int n, int j, bool execute) {
     return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
 }
 
+// Persistent index for systematic sweeps (reset when region changes)
+static size_t systematicIdx = 0;
+
 void performGlauberStepsInternal(int numSteps) {
     if (triangularVertices.empty()) return;
 
@@ -1318,55 +1322,99 @@ void performGlauberStepsInternal(int numSteps) {
     const int8_t* gridData = dimerGrid.data();
     const size_t gridSize = dimerGrid.size();
 
-    for (int s = 0; s < numSteps; s++) {
-        totalSteps++;
-        const uint32_t idx = fastRandomRange((uint32_t)N);
-        const CachedHexIndices& hex = cachedHexIndices[idx];
+    if (useRandomSweeps) {
+        // Random site selection (original behavior)
+        for (int s = 0; s < numSteps; s++) {
+            totalSteps++;
+            const uint32_t idx = fastRandomRange((uint32_t)N);
+            const CachedHexIndices& hex = cachedHexIndices[idx];
 
-        // Fast covered edge count using cached indices
-        int coveredCount = 0;
-        int coveredIdx[3];
-        int uncoveredIdx[3];
-        int uncoveredCount = 0;
+            // Fast covered edge count using cached indices
+            int coveredCount = 0;
+            int coveredIdx[3], uncoveredIdx[3];
+            int uncoveredCount = 0;
 
-        for (int k = 0; k < 6; k++) {
-            int32_t gridIdx = hex.edges[k];
-            bool covered = false;
-            if (gridIdx >= 0 && (size_t)gridIdx < gridSize) {
-                covered = (gridData[gridIdx] == hex.types[k]);
+            for (int k = 0; k < 6; k++) {
+                int32_t gridIdx = hex.edges[k];
+                bool covered = (gridIdx >= 0 && (size_t)gridIdx < gridSize &&
+                               gridData[gridIdx] == hex.types[k]);
+                if (covered) {
+                    if (coveredCount < 3) coveredIdx[coveredCount] = k;
+                    coveredCount++;
+                } else {
+                    if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
+                    uncoveredCount++;
+                }
             }
-            if (covered) {
-                if (coveredCount < 3) coveredIdx[coveredCount] = k;
-                coveredCount++;
-            } else {
-                if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
-                uncoveredCount++;
+
+            if (coveredCount != 3 || uncoveredCount != 3) continue;
+
+            const TriVertex& v = triangularVertices[idx];
+            HexEdge edges[6];
+            getHexEdgesAroundVertex(v.n, v.j, edges);
+
+            int volumeBefore = 0, volumeAfter = 0;
+            for (int k = 0; k < 3; k++) {
+                if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
+                if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
+            }
+
+            int volumeChange = volumeAfter - volumeBefore;
+            if (volumeChange == 0) continue;
+
+            float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+            if (getRandom01() < acceptProb) {
+                tryRotation(v.n, v.j, true);
+                flipCount++;
             }
         }
+    } else {
+        // SYSTEMATIC SWEEP (default - better cache locality)
+        // Process numSteps vertices sequentially, wrapping around
+        for (int s = 0; s < numSteps; s++) {
+            totalSteps++;
+            const size_t i = systematicIdx;
+            systematicIdx = (systematicIdx + 1) % N;
 
-        if (coveredCount != 3 || uncoveredCount != 3) continue;
+            const CachedHexIndices& hex = cachedHexIndices[i];
 
-        // Compute volume change using types (type 0 = diagonal contributes to volume)
-        const TriVertex& v = triangularVertices[idx];
-        HexEdge edges[6];
-        getHexEdgesAroundVertex(v.n, v.j, edges);
+            int coveredCount = 0;
+            int coveredIdx[3], uncoveredIdx[3];
+            int uncoveredCount = 0;
 
-        int volumeBefore = 0, volumeAfter = 0;
-        for (int k = 0; k < 3; k++) {
-            if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
-            if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
-        }
+            for (int k = 0; k < 6; k++) {
+                int32_t gridIdx = hex.edges[k];
+                bool covered = (gridIdx >= 0 && (size_t)gridIdx < gridSize &&
+                               gridData[gridIdx] == hex.types[k]);
+                if (covered) {
+                    if (coveredCount < 3) coveredIdx[coveredCount] = k;
+                    coveredCount++;
+                } else {
+                    if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
+                    uncoveredCount++;
+                }
+            }
 
-        int volumeChange = volumeAfter - volumeBefore;
-        if (volumeChange == 0) continue;
+            if (coveredCount != 3 || uncoveredCount != 3) continue;
 
-        // Use pre-computed acceptance probability
-        float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+            const TriVertex& v = triangularVertices[i];
+            HexEdge edges[6];
+            getHexEdgesAroundVertex(v.n, v.j, edges);
 
-        if (getRandom01() < acceptProb) {
-            // Execute flip using tryRotation (still needed for grid update)
-            tryRotation(v.n, v.j, true);
-            flipCount++;
+            int volumeBefore = 0, volumeAfter = 0;
+            for (int k = 0; k < 3; k++) {
+                if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
+                if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
+            }
+
+            int volumeChange = volumeAfter - volumeBefore;
+            if (volumeChange == 0) continue;
+
+            float acceptProb = (volumeChange > 0) ? cachedProbs[i].probUp : cachedProbs[i].probDown;
+            if (getRandom01() < acceptProb) {
+                tryRotation(v.n, v.j, true);
+                flipCount++;
+            }
         }
     }
 }
@@ -1442,40 +1490,77 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     uint64_t savedRng = rng_state;
     rng_state = seed;
 
-    const uint32_t N = (uint32_t)triangularVertices.size();
+    const size_t N = triangularVertices.size();
     if (N == 0) { rng_state = savedRng; return; }
 
     const size_t gridSize = lower.grid.size();
 
-    for (uint32_t i = 0; i < N; i++) {
-        const uint32_t idx = fastRandomRange(N);
-        const double u = getRandom01();
-        const TriVertex& v = triangularVertices[idx];
-        const CachedHexIndices& hex = cachedHexIndices[idx];
-        const float pRemove = cachedProbs[idx].probDown;
+    if (useRandomSweeps) {
+        // Random site selection (original behavior)
+        for (size_t i = 0; i < N; i++) {
+            const uint32_t idx = fastRandomRange((uint32_t)N);
+            const double u = getRandom01();
+            const TriVertex& v = triangularVertices[idx];
+            const CachedHexIndices& hex = cachedHexIndices[idx];
+            const float pRemove = cachedProbs[idx].probDown;
 
-        HexEdge edges[6];
-        getHexEdgesAroundVertex(v.n, v.j, edges);
+            HexEdge edges[6];
+            getHexEdgesAroundVertex(v.n, v.j, edges);
+            int coveredIdx[3], uncoveredIdx[3];
 
-        int coveredIdx[3], uncoveredIdx[3];
+            // Process LOWER
+            int lowerType = fastCheckAndGetRotationType(lower.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+            if (lowerType != 0) {
+                if (u < pRemove) {
+                    if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                } else {
+                    if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                }
+            }
 
-        // Process lower grid
-        int lowerType = fastCheckAndGetRotationType(lower.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
-        if (lowerType != 0) {
-            if (u < pRemove) {
-                if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
-            } else {
-                if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+            // Process UPPER (same u!)
+            int upperType = fastCheckAndGetRotationType(upper.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+            if (upperType != 0) {
+                if (u < pRemove) {
+                    if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                } else {
+                    if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                }
             }
         }
+    } else {
+        // SYSTEMATIC SWEEP with forced RNG synchronization
+        // CRITICAL: Generate 'u' for EVERY site, regardless of chain state
+        for (size_t i = 0; i < N; ++i) {
+            // 1. Generate random number FIRST (this is the synchronization key!)
+            const double u = getRandom01();
 
-        // Process upper grid
-        int upperType = fastCheckAndGetRotationType(upper.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
-        if (upperType != 0) {
-            if (u < pRemove) {
-                if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
-            } else {
-                if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+            const TriVertex& v = triangularVertices[i];
+            const CachedHexIndices& hex = cachedHexIndices[i];
+            const float pRemove = cachedProbs[i].probDown;
+
+            HexEdge edges[6];
+            getHexEdgesAroundVertex(v.n, v.j, edges);
+            int coveredIdx[3], uncoveredIdx[3];
+
+            // 2. Process LOWER chain
+            int lowerType = fastCheckAndGetRotationType(lower.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+            if (lowerType != 0) {
+                if (u < pRemove) {
+                    if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                } else {
+                    if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                }
+            }
+
+            // 3. Process UPPER chain (same u value!)
+            int upperType = fastCheckAndGetRotationType(upper.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+            if (upperType != 0) {
+                if (u < pRemove) {
+                    if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                } else {
+                    if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                }
             }
         }
     }
@@ -1501,6 +1586,7 @@ char* initFromTriangles(int* data, int count) {
     triangularVertices.clear();
     currentDimers.clear();
     computedBoundaries.clear();
+    systematicIdx = 0;  // Reset systematic sweep position
 
     totalSteps = 0;
     flipCount = 0;
@@ -1805,6 +1891,16 @@ EMSCRIPTEN_KEEPALIVE
 void setUsePeriodicWeights(int use) {
     usePeriodicWeights = (use != 0);
     recomputeProbabilities();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setUseRandomSweeps(int use) {
+    useRandomSweeps = (use != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getUseRandomSweeps() {
+    return useRandomSweeps ? 1 : 0;
 }
 
 EMSCRIPTEN_KEEPALIVE
