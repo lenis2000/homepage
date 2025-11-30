@@ -516,7 +516,7 @@ code:
 <div class="control-group">
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <div class="tool-toggle">
-      <button id="handBtn">Hand</button>
+      <button id="handBtn" title="Pan view">🤚</button>
       <button id="drawBtn" class="active">Draw</button>
       <button id="eraseBtn">Erase</button>
     </div>
@@ -2972,9 +2972,15 @@ Module.onRuntimeInitialized = function() {
             ctrl.dataset.hole = h;
 
             if (useBatchMode) {
-                // Input field mode for large tilings
-                ctrl.innerHTML = `<input type="text" class="winding-input" placeholder="±N" title="Enter +N or -N to adjust winding">`;
+                // Input field mode for large tilings - with + and - buttons
+                ctrl.innerHTML = `
+                    <button class="winding-plus">+</button>
+                    <input type="text" class="winding-input" placeholder="±N" title="Enter +N or -N to adjust winding">
+                    <button class="winding-minus">−</button>
+                `;
                 const input = ctrl.querySelector('.winding-input');
+                const minusBtn = ctrl.querySelector('.winding-minus');
+                const plusBtn = ctrl.querySelector('.winding-plus');
 
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
@@ -2994,6 +3000,8 @@ Module.onRuntimeInitialized = function() {
                         }
 
                         input.disabled = true;
+                        minusBtn.disabled = true;
+                        plusBtn.disabled = true;
                         input.value = '⏳';
 
                         // Apply changes one at a time
@@ -3023,6 +3031,40 @@ Module.onRuntimeInitialized = function() {
                 });
 
                 input.addEventListener('click', (e) => e.stopPropagation());
+
+                minusBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const holeIdx = parseInt(ctrl.dataset.hole);
+                    minusBtn.textContent = '⏳';
+                    minusBtn.disabled = true;
+                    plusBtn.disabled = true;
+                    input.disabled = true;
+                    setTimeout(() => {
+                        const result = sim.adjustHoleWinding(holeIdx, -1);
+                        if (result.success) {
+                            sim.refreshDimers();
+                            draw();
+                        }
+                        updateHolesUI();
+                    }, 10);
+                });
+
+                plusBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const holeIdx = parseInt(ctrl.dataset.hole);
+                    plusBtn.textContent = '⏳';
+                    plusBtn.disabled = true;
+                    minusBtn.disabled = true;
+                    input.disabled = true;
+                    setTimeout(() => {
+                        const result = sim.adjustHoleWinding(holeIdx, 1);
+                        if (result.success) {
+                            sim.refreshDimers();
+                            draw();
+                        }
+                        updateHolesUI();
+                    }, 10);
+                });
             } else {
                 // Button mode for small tilings
                 ctrl.innerHTML = `
