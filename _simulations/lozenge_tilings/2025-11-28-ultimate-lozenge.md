@@ -400,7 +400,15 @@ code:
 <script src="/js/colorschemes.js"></script>
 <script src="/js/three.min.js"></script>
 <script src="/js/OrbitControls.js"></script>
-<script src="/js/2025-11-28-ultimate-lozenge.js"></script>
+<script>
+// Dynamic WASM loader: use threaded version if SharedArrayBuffer is available
+window.LOZENGE_THREADED = typeof SharedArrayBuffer !== 'undefined';
+console.log('Will load WASM:', window.LOZENGE_THREADED ? 'threaded' : 'non-threaded');
+</script>
+<script>
+// Load appropriate WASM module
+document.write('<script src="/js/2025-11-28-ultimate-lozenge' + (window.LOZENGE_THREADED ? '-threaded' : '') + '.js"><\/script>');
+</script>
 
 <!-- Main controls -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
@@ -4940,6 +4948,6 @@ Module.onRuntimeInitialized = function() {
     updateUI();
     draw();
 
-    console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm)');
+    console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm) - ' + (window.LOZENGE_THREADED ? 'THREADED' : 'single-threaded'));
 };
 </script>
