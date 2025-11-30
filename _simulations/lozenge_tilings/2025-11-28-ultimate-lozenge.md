@@ -516,6 +516,7 @@ code:
 <div class="control-group">
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <div class="tool-toggle">
+      <button id="handBtn">Hand</button>
       <button id="drawBtn" class="active">Draw</button>
       <button id="eraseBtn">Erase</button>
     </div>
@@ -2834,6 +2835,7 @@ Module.onRuntimeInitialized = function() {
     let showHoleLabels = true;
 
     const el = {
+        handBtn: document.getElementById('handBtn'),
         drawBtn: document.getElementById('drawBtn'),
         eraseBtn: document.getElementById('eraseBtn'),
         lassoFillBtn: document.getElementById('lassoFillBtn'),
@@ -3228,20 +3230,36 @@ Module.onRuntimeInitialized = function() {
     }
 
     function saveState() {
-        const state = [];
+        // Save both triangles and current dimers
+        sim.refreshDimers();
+        const state = {
+            triangles: [],
+            dimers: sim.dimers ? sim.dimers.slice() : null
+        };
         for (const [key, tri] of activeTriangles) {
-            state.push({ n: tri.n, j: tri.j, type: tri.type });
+            state.triangles.push({ n: tri.n, j: tri.j, type: tri.type });
         }
         undoStack.push(state);
     }
 
     function loadState(state) {
+        // Handle old format (array of triangles) and new format (object with triangles and dimers)
+        const triangles = Array.isArray(state) ? state : state.triangles;
+        const dimers = Array.isArray(state) ? null : state.dimers;
+
         activeTriangles.clear();
-        for (const tri of state) {
+        for (const tri of triangles) {
             const key = `${tri.n},${tri.j},${tri.type}`;
             activeTriangles.set(key, { n: tri.n, j: tri.j, type: tri.type });
         }
         reinitialize();
+
+        // Restore dimers if we have them
+        if (dimers && dimers.length > 0) {
+            sim.setDimers(dimers);
+            sim.refreshDimers();
+            draw();
+        }
     }
 
     // ========================================================================
@@ -3393,14 +3411,17 @@ Module.onRuntimeInitialized = function() {
         const mx = (e.clientX || e.touches[0].clientX) - rect.left;
         const my = (e.clientY || e.touches[0].clientY) - rect.top;
 
+        const tool = getEffectiveTool();
+        // Hand tool does nothing to the region
+        if (tool === 'hand') return;
+
         const tri = getTriangleAtPoint(mx, my);
         if (!tri) return;
 
         let changed = false;
-        const tool = getEffectiveTool();
         if (tool === 'draw') {
             changed = handleDraw(tri);
-        } else {
+        } else if (tool === 'erase') {
             changed = handleErase(tri);
         }
 
@@ -3461,6 +3482,15 @@ Module.onRuntimeInitialized = function() {
 
         // Right-click or middle-click = pan
         if (e.button === 2 || e.button === 1) {
+            isPanning = true;
+            lastPanX = mx;
+            lastPanY = my;
+            canvas.classList.add('panning');
+            return;
+        }
+
+        // Hand tool = pan on left click too
+        if (currentTool === 'hand') {
             isPanning = true;
             lastPanX = mx;
             lastPanY = my;
@@ -3599,6 +3629,15 @@ Module.onRuntimeInitialized = function() {
             const rect = canvas.getBoundingClientRect();
             const mx = e.touches[0].clientX - rect.left;
             const my = e.touches[0].clientY - rect.top;
+
+            // Hand tool = pan on single touch
+            if (currentTool === 'hand') {
+                isPanning = true;
+                lastPanX = mx;
+                lastPanY = my;
+                return;
+            }
+
             const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
             const worldPos = renderer.fromCanvas(mx, my, centerX, centerY, scale);
 
@@ -3688,8 +3727,8 @@ Module.onRuntimeInitialized = function() {
     // UI EVENT HANDLERS
     // ========================================================================
     function setTool(tool) {
-        // Auto-switch to 2D when using drawing tools
-        if (is3DView) {
+        // Auto-switch to 2D when using drawing tools (but not for hand)
+        if (is3DView && tool !== 'hand') {
             setViewMode(false);
         }
         // Clear any in-progress lasso when switching tools
@@ -3700,12 +3739,14 @@ Module.onRuntimeInitialized = function() {
             draw();
         }
         currentTool = tool;
+        el.handBtn.classList.toggle('active', tool === 'hand');
         el.drawBtn.classList.toggle('active', tool === 'draw');
         el.eraseBtn.classList.toggle('active', tool === 'erase');
         el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
     }
 
+    el.handBtn.addEventListener('click', () => { cmdHeld = false; setTool('hand'); });
     el.drawBtn.addEventListener('click', () => { cmdHeld = false; setTool('draw'); });
     el.eraseBtn.addEventListener('click', () => { cmdHeld = false; setTool('erase'); });
     el.lassoFillBtn.addEventListener('click', () => { cmdHeld = false; setTool('lassoFill'); });
