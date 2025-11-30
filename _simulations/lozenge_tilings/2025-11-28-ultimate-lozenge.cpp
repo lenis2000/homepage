@@ -8,7 +8,7 @@ emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s STACK_SIZE=1MB \
   -s ENVIRONMENT=web \
   -s SINGLE_FILE=1 \
-  -O3 -ffast-math
+  -O3 -ffast-math -flto -msimd128
 mv 2025-11-28-ultimate-lozenge.js ../../js/
 
 Ultimate Lozenge Tiling Sampler
@@ -177,6 +177,34 @@ struct CachedProbabilities {
     float probDown;  // 1 / (1+q) - probability for volume decrease
 };
 std::vector<CachedProbabilities> cachedProbs;
+
+// 64-entry lookup table for 6-bit edge states (HPC optimization)
+struct EdgeStateLUT {
+    bool valid;              // true if exactly 3 covered, 3 uncovered
+    uint8_t covered[3];      // indices of covered edges (0-5)
+    uint8_t uncovered[3];    // indices of uncovered edges (0-5)
+};
+static EdgeStateLUT edgeLUT[64];
+
+// Initialize edge lookup table (call once at startup)
+void initEdgeLUT() {
+    for (int state = 0; state < 64; state++) {
+        int coveredCount = 0, uncoveredCount = 0;
+        for (int k = 0; k < 6; k++) {
+            if (state & (1 << k)) {
+                if (coveredCount < 3) edgeLUT[state].covered[coveredCount] = k;
+                coveredCount++;
+            } else {
+                if (uncoveredCount < 3) edgeLUT[state].uncovered[uncoveredCount] = k;
+                uncoveredCount++;
+            }
+        }
+        edgeLUT[state].valid = (coveredCount == 3 && uncoveredCount == 3);
+    }
+}
+
+// 3-Color partitions for chromatic sweep (vertices with same color are independent)
+std::vector<uint32_t> colorVertices[3];  // indices into triangularVertices
 
 // Sentinel index for out-of-bounds lookups
 int32_t sentinelIdx = -1;
@@ -1315,6 +1343,18 @@ int tryRotationOnGrid(std::vector<int8_t>& grid, int n, int j, bool execute) {
 // Persistent index for systematic sweeps (reset when region changes)
 static size_t systematicIdx = 0;
 
+// Build 6-bit edge state from cached indices (HPC optimization)
+inline uint8_t getEdgeState(const CachedHexIndices& hex, const int8_t* gridData, size_t gridSize) {
+    uint8_t state = 0;
+    for (int k = 0; k < 6; k++) {
+        int32_t gridIdx = hex.edges[k];
+        if (gridIdx >= 0 && (size_t)gridIdx < gridSize && gridData[gridIdx] == hex.types[k]) {
+            state |= (1 << k);
+        }
+    }
+    return state;
+}
+
 void performGlauberStepsInternal(int numSteps) {
     if (triangularVertices.empty()) return;
 
@@ -1323,40 +1363,26 @@ void performGlauberStepsInternal(int numSteps) {
     const size_t gridSize = dimerGrid.size();
 
     if (useRandomSweeps) {
-        // Random site selection (original behavior)
+        // Random site selection with LUT optimization
         for (int s = 0; s < numSteps; s++) {
             totalSteps++;
             const uint32_t idx = fastRandomRange((uint32_t)N);
             const CachedHexIndices& hex = cachedHexIndices[idx];
 
-            // Fast covered edge count using cached indices
-            int coveredCount = 0;
-            int coveredIdx[3], uncoveredIdx[3];
-            int uncoveredCount = 0;
+            // Fast 6-bit state lookup
+            uint8_t state = getEdgeState(hex, gridData, gridSize);
+            const EdgeStateLUT& lut = edgeLUT[state];
+            if (!lut.valid) continue;
 
-            for (int k = 0; k < 6; k++) {
-                int32_t gridIdx = hex.edges[k];
-                bool covered = (gridIdx >= 0 && (size_t)gridIdx < gridSize &&
-                               gridData[gridIdx] == hex.types[k]);
-                if (covered) {
-                    if (coveredCount < 3) coveredIdx[coveredCount] = k;
-                    coveredCount++;
-                } else {
-                    if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
-                    uncoveredCount++;
-                }
-            }
-
-            if (coveredCount != 3 || uncoveredCount != 3) continue;
-
+            // Compute volume change using LUT indices
             const TriVertex& v = triangularVertices[idx];
             HexEdge edges[6];
             getHexEdgesAroundVertex(v.n, v.j, edges);
 
             int volumeBefore = 0, volumeAfter = 0;
             for (int k = 0; k < 3; k++) {
-                if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
-                if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
+                if (edges[lut.covered[k]].type == 0) volumeBefore += edges[lut.covered[k]].blackN;
+                if (edges[lut.uncovered[k]].type == 0) volumeAfter += edges[lut.uncovered[k]].blackN;
             }
 
             int volumeChange = volumeAfter - volumeBefore;
@@ -1369,52 +1395,43 @@ void performGlauberStepsInternal(int numSteps) {
             }
         }
     } else {
-        // SYSTEMATIC SWEEP (default - better cache locality)
-        // Process numSteps vertices sequentially, wrapping around
+        // 3-COLOR CHROMATIC SWEEP with LUT (HPC optimization)
+        // Process each color class separately - vertices of same color are independent
         for (int s = 0; s < numSteps; s++) {
-            totalSteps++;
-            const size_t i = systematicIdx;
-            systematicIdx = (systematicIdx + 1) % N;
+            for (int color = 0; color < 3; color++) {
+                const auto& verts = colorVertices[color];
+                const size_t colorN = verts.size();
 
-            const CachedHexIndices& hex = cachedHexIndices[i];
+                for (size_t vi = 0; vi < colorN; vi++) {
+                    const uint32_t idx = verts[vi];
+                    const CachedHexIndices& hex = cachedHexIndices[idx];
 
-            int coveredCount = 0;
-            int coveredIdx[3], uncoveredIdx[3];
-            int uncoveredCount = 0;
+                    // Fast 6-bit state lookup
+                    uint8_t state = getEdgeState(hex, gridData, gridSize);
+                    const EdgeStateLUT& lut = edgeLUT[state];
+                    if (!lut.valid) continue;
 
-            for (int k = 0; k < 6; k++) {
-                int32_t gridIdx = hex.edges[k];
-                bool covered = (gridIdx >= 0 && (size_t)gridIdx < gridSize &&
-                               gridData[gridIdx] == hex.types[k]);
-                if (covered) {
-                    if (coveredCount < 3) coveredIdx[coveredCount] = k;
-                    coveredCount++;
-                } else {
-                    if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
-                    uncoveredCount++;
+                    const TriVertex& v = triangularVertices[idx];
+                    HexEdge edges[6];
+                    getHexEdgesAroundVertex(v.n, v.j, edges);
+
+                    int volumeBefore = 0, volumeAfter = 0;
+                    for (int k = 0; k < 3; k++) {
+                        if (edges[lut.covered[k]].type == 0) volumeBefore += edges[lut.covered[k]].blackN;
+                        if (edges[lut.uncovered[k]].type == 0) volumeAfter += edges[lut.uncovered[k]].blackN;
+                    }
+
+                    int volumeChange = volumeAfter - volumeBefore;
+                    if (volumeChange == 0) continue;
+
+                    float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+                    if (getRandom01() < acceptProb) {
+                        tryRotation(v.n, v.j, true);
+                        flipCount++;
+                    }
                 }
             }
-
-            if (coveredCount != 3 || uncoveredCount != 3) continue;
-
-            const TriVertex& v = triangularVertices[i];
-            HexEdge edges[6];
-            getHexEdgesAroundVertex(v.n, v.j, edges);
-
-            int volumeBefore = 0, volumeAfter = 0;
-            for (int k = 0; k < 3; k++) {
-                if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
-                if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
-            }
-
-            int volumeChange = volumeAfter - volumeBefore;
-            if (volumeChange == 0) continue;
-
-            float acceptProb = (volumeChange > 0) ? cachedProbs[i].probUp : cachedProbs[i].probDown;
-            if (getRandom01() < acceptProb) {
-                tryRotation(v.n, v.j, true);
-                flipCount++;
-            }
+            totalSteps += N;
         }
     }
 }
@@ -1455,33 +1472,19 @@ void makeExtremalState(GridState& state, int direction) {
     }
 }
 
-// Optimized: check coverage and get rotation type using cached indices
-inline int fastCheckAndGetRotationType(const int8_t* gridData, size_t gridSize,
-                                        const CachedHexIndices& hex,
-                                        int coveredIdx[3], int uncoveredIdx[3],
-                                        const HexEdge edges[6]) {
-    int coveredCount = 0, uncoveredCount = 0;
-
-    for (int k = 0; k < 6; k++) {
-        int32_t gridIdx = hex.edges[k];
-        bool covered = (gridIdx >= 0 && (size_t)gridIdx < gridSize && gridData[gridIdx] == hex.types[k]);
-        if (covered) {
-            if (coveredCount < 3) coveredIdx[coveredCount] = k;
-            coveredCount++;
-        } else {
-            if (uncoveredCount < 3) uncoveredIdx[uncoveredCount] = k;
-            uncoveredCount++;
-        }
-    }
-
-    if (coveredCount != 3 || uncoveredCount != 3) return 0;
+// Optimized: check coverage and get rotation type using LUT (HPC optimization)
+inline int fastCheckRotationTypeLUT(const int8_t* gridData, size_t gridSize,
+                                     const CachedHexIndices& hex,
+                                     const HexEdge edges[6]) {
+    uint8_t state = getEdgeState(hex, gridData, gridSize);
+    const EdgeStateLUT& lut = edgeLUT[state];
+    if (!lut.valid) return 0;
 
     int volumeBefore = 0, volumeAfter = 0;
     for (int k = 0; k < 3; k++) {
-        if (edges[coveredIdx[k]].type == 0) volumeBefore += edges[coveredIdx[k]].blackN;
-        if (edges[uncoveredIdx[k]].type == 0) volumeAfter += edges[uncoveredIdx[k]].blackN;
+        if (edges[lut.covered[k]].type == 0) volumeBefore += edges[lut.covered[k]].blackN;
+        if (edges[lut.uncovered[k]].type == 0) volumeAfter += edges[lut.uncovered[k]].blackN;
     }
-
     int volumeChange = volumeAfter - volumeBefore;
     return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
 }
@@ -1496,7 +1499,7 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     const size_t gridSize = lower.grid.size();
 
     if (useRandomSweeps) {
-        // Random site selection (original behavior)
+        // Random site selection with LUT optimization
         for (size_t i = 0; i < N; i++) {
             const uint32_t idx = fastRandomRange((uint32_t)N);
             const double u = getRandom01();
@@ -1506,10 +1509,9 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
 
             HexEdge edges[6];
             getHexEdgesAroundVertex(v.n, v.j, edges);
-            int coveredIdx[3], uncoveredIdx[3];
 
-            // Process LOWER
-            int lowerType = fastCheckAndGetRotationType(lower.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+            // Process LOWER with LUT
+            int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
             if (lowerType != 0) {
                 if (u < pRemove) {
                     if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
@@ -1518,8 +1520,8 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
                 }
             }
 
-            // Process UPPER (same u!)
-            int upperType = fastCheckAndGetRotationType(upper.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
+            // Process UPPER with LUT (same u!)
+            int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
             if (upperType != 0) {
                 if (u < pRemove) {
                     if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
@@ -1529,37 +1531,39 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             }
         }
     } else {
-        // SYSTEMATIC SWEEP with forced RNG synchronization
+        // 3-COLOR SYSTEMATIC SWEEP for CFTP with LUT (HPC optimization)
         // CRITICAL: Generate 'u' for EVERY site, regardless of chain state
-        for (size_t i = 0; i < N; ++i) {
-            // 1. Generate random number FIRST (this is the synchronization key!)
-            const double u = getRandom01();
+        for (int color = 0; color < 3; color++) {
+            const auto& verts = colorVertices[color];
+            for (size_t vi = 0; vi < verts.size(); vi++) {
+                const uint32_t idx = verts[vi];
+                const double u = getRandom01();  // Generate FIRST for sync
 
-            const TriVertex& v = triangularVertices[i];
-            const CachedHexIndices& hex = cachedHexIndices[i];
-            const float pRemove = cachedProbs[i].probDown;
+                const TriVertex& v = triangularVertices[idx];
+                const CachedHexIndices& hex = cachedHexIndices[idx];
+                const float pRemove = cachedProbs[idx].probDown;
 
-            HexEdge edges[6];
-            getHexEdgesAroundVertex(v.n, v.j, edges);
-            int coveredIdx[3], uncoveredIdx[3];
+                HexEdge edges[6];
+                getHexEdgesAroundVertex(v.n, v.j, edges);
 
-            // 2. Process LOWER chain
-            int lowerType = fastCheckAndGetRotationType(lower.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
-            if (lowerType != 0) {
-                if (u < pRemove) {
-                    if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
-                } else {
-                    if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                // Process LOWER chain with LUT
+                int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
+                if (lowerType != 0) {
+                    if (u < pRemove) {
+                        if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    } else {
+                        if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    }
                 }
-            }
 
-            // 3. Process UPPER chain (same u value!)
-            int upperType = fastCheckAndGetRotationType(upper.grid.data(), gridSize, hex, coveredIdx, uncoveredIdx, edges);
-            if (upperType != 0) {
-                if (u < pRemove) {
-                    if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
-                } else {
-                    if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                // Process UPPER chain with LUT (same u value!)
+                int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
+                if (upperType != 0) {
+                    if (u < pRemove) {
+                        if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    } else {
+                        if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    }
                 }
             }
         }
@@ -1711,6 +1715,23 @@ char* initFromTriangles(int* data, int count) {
         }
         for (const auto& [n, j] : vertexSet) {
             triangularVertices.push_back({n, j});
+        }
+
+        // Initialize edge lookup table (idempotent - only runs once)
+        static bool lutInitialized = false;
+        if (!lutInitialized) {
+            initEdgeLUT();
+            lutInitialized = true;
+        }
+
+        // Partition vertices by (n+j) % 3 for 3-color chromatic sweep (HPC optimization)
+        colorVertices[0].clear();
+        colorVertices[1].clear();
+        colorVertices[2].clear();
+        for (uint32_t i = 0; i < triangularVertices.size(); i++) {
+            const auto& v = triangularVertices[i];
+            int color = ((v.n + v.j) % 3 + 3) % 3;  // Handle negative mod
+            colorVertices[color].push_back(i);
         }
 
         // Populate optimization caches
