@@ -39,6 +39,7 @@ exclude:
   - ".claude"
   - "_simulations/domino_tilings/.claude"
   - "_simulations/lozenge_tilings/.claude"
+  - "_simulations/lozenge_tilings/metal/"
   - "_simulations/misc/.claude"
   - "_simulations/permutations/.claude"
   - "_simulations/random-matrices/.claude"
