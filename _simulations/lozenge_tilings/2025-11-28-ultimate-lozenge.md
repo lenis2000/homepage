@@ -36,8 +36,8 @@ code:
 <p><strong>Periodic Weights:</strong></p>
 <p>Enable <strong>periodic weights</strong> to use position-dependent q values arranged in a k×k matrix (k=1,2,3,4,5). At position (n,j) on the triangular lattice, the flip probability uses q<sub>n mod k, j mod k</sub>. Two presets are provided:</p>
 <ul>
-  <li><strong>2×2</strong>: Default preset with values [[1, 100], [0.003333, 3]]</li>
-  <li><strong>Nienhuis 3×3</strong>: Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis (1984)</a> sublattice pattern with q values following (n-j) mod 3</li>
+  <li><strong>Charlier-Duits-Kuijlaars 2×2</strong>: Matrix [[α, 1], [1, 1/α]] with tunable parameter α. See <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank">Charlier (2020)</a> and <a href="https://ems.press/journals/jems/articles/17389" target="_blank">Duits-Kuijlaars (2021)</a>.</li>
+  <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
 </ul>
 
 <p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
