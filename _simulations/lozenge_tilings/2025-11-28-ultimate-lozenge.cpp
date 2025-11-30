@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -19,6 +19,7 @@ Ultimate Lozenge Tiling Sampler
 */
 
 #include <emscripten.h>
+#include <cstdio>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -28,6 +29,8 @@ Ultimate Lozenge Tiling Sampler
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <climits>
+#include <chrono>
 #include <set>
 #include <map>
 
@@ -195,6 +198,7 @@ struct HoleInfo {
     double centroidX, centroidY;
     int currentWinding;
     int minWinding, maxWinding;
+    int lastAttemptedTarget;  // For hybrid shuffle: shuffle when re-trying same target
 };
 
 struct CutEdge {
@@ -467,6 +471,7 @@ void identifyHolesFromBoundaries() {
         hole.currentWinding = 0;
         hole.minWinding = 0;
         hole.maxWinding = 0;
+        hole.lastAttemptedTarget = INT_MIN;  // Sentinel for first attempt
 
         holes.push_back(hole);
     }
@@ -507,9 +512,9 @@ void buildCutForHole(int holeIdx) {
     // Use a set to deduplicate edges found by multiple rays
     std::set<std::tuple<int,int,int,int,int>> foundEdges;  // (blackN, blackJ, whiteN, whiteJ, type)
 
-    // Try 32 rays at different angles (every 11.25 degrees)
-    for (int rayIdx = 0; rayIdx < 32; rayIdx++) {
-        double angle = rayIdx * 3.14159265358979 / 16.0;  // 11.25 degrees apart
+    // Try 8 rays at different angles (every 45 degrees)
+    for (int rayIdx = 0; rayIdx < 8; rayIdx++) {
+        double angle = rayIdx * 3.14159265358979 / 4.0;  // 45 degrees apart
         double dx = std::cos(angle);
         double dy = std::sin(angle);
 
@@ -610,174 +615,174 @@ void computeWindingBounds() {
     holes[0].currentWinding = computeWindingForHole(0);
 }
 
-// Rebuild the matching with one edge forced to be matched or unmatched
-bool rebuildMatchingWithForcedEdge(const CutEdge& edge, bool forceMatched) {
-    int numBlack = (int)blackTriangles.size();
-    int numWhite = (int)whiteTriangles.size();
+// ============================================================================
+// VERTICAL CUT ALGORITHM FOR HOLE WINDING ADJUSTMENT
+// ============================================================================
 
-    if (numBlack != numWhite || numBlack == 0) return false;
+// Helper: collect crossing edges at a specific n position
+std::vector<CutEdge> collectCrossingEdgesAtN(int n) {
+    std::vector<CutEdge> edges;
+    for (size_t i = 0; i < blackTriangles.size(); i++) {
+        int bn = blackTriangles[i].n;
+        int bj = blackTriangles[i].j;
+        // Type 2 edge: black R(n,j) connects to white L(n-1,j)
+        if (bn == n) {
+            auto wit = whiteMap.find(makeKey(bn - 1, bj));
+            if (wit != whiteMap.end()) {
+                CutEdge ce;
+                ce.blackN = bn;
+                ce.blackJ = bj;
+                ce.whiteN = bn - 1;
+                ce.whiteJ = bj;
+                ce.type = 2;
+                edges.push_back(ce);
+            }
+        }
+    }
+    return edges;
+}
 
-    int S = numBlack + numWhite;      // Source
-    int T = numBlack + numWhite + 1;  // Sink
+// Find vertical cut through hole at integer n coordinate
+// Returns list of edges crossing the cut line
+std::vector<CutEdge> findVerticalCutEdges(int holeIdx, int& cutN) {
+    std::vector<CutEdge> crossingEdges;
+    if (holeIdx >= (int)holes.size()) return crossingEdges;
+
+    // Get centroid n-coordinate (x = n in our coordinate system)
+    double centroidN = holes[holeIdx].centroidX;
+    int startN = (int)std::round(centroidN);
+
+    // Search outward from centroid to find a position with crossing edges
+    // The centroid might be inside the hole where there are no triangles
+    for (int offset = 0; offset <= 20; offset++) {
+        // Try startN + offset
+        cutN = startN + offset;
+        crossingEdges = collectCrossingEdgesAtN(cutN);
+        if (!crossingEdges.empty()) return crossingEdges;
+
+        // Try startN - offset (skip if offset == 0 to avoid duplicate)
+        if (offset > 0) {
+            cutN = startN - offset;
+            crossingEdges = collectCrossingEdgesAtN(cutN);
+            if (!crossingEdges.empty()) return crossingEdges;
+        }
+    }
+
+    cutN = startN;
+    return crossingEdges;  // Empty if nothing found
+}
+
+// Rebuild matching on a partition (left or right of cut) using Dinic's
+// blackIndices/whiteIndices: indices into global blackTriangles/whiteTriangles
+// forcedEdges: edges that must be matched (crossing the cut)
+bool rebuildMatchingOnPartition(
+    const std::vector<int>& blackIndices,
+    const std::vector<int>& whiteIndices,
+    const std::vector<CutEdge>& forcedEdges)
+{
+    int numBlack = (int)blackIndices.size();
+    int numWhite = (int)whiteIndices.size();
+
+    // Build local index maps
+    std::unordered_map<long long, int> localBlackMap;  // global key -> local index
+    std::unordered_map<long long, int> localWhiteMap;
+
+    for (int i = 0; i < numBlack; i++) {
+        int gi = blackIndices[i];
+        localBlackMap[makeKey(blackTriangles[gi].n, blackTriangles[gi].j)] = i;
+    }
+    for (int i = 0; i < numWhite; i++) {
+        int gi = whiteIndices[i];
+        localWhiteMap[makeKey(whiteTriangles[gi].n, whiteTriangles[gi].j)] = i;
+    }
+
+    // Find which blacks/whites are pre-matched by forced edges
+    std::set<int> excludedLocalBlacks, excludedLocalWhites;
+    for (const auto& fe : forcedEdges) {
+        auto bit = localBlackMap.find(makeKey(fe.blackN, fe.blackJ));
+        auto wit = localWhiteMap.find(makeKey(fe.whiteN, fe.whiteJ));
+        if (bit != localBlackMap.end()) excludedLocalBlacks.insert(bit->second);
+        if (wit != localWhiteMap.end()) excludedLocalWhites.insert(wit->second);
+    }
+
+    int numFree = numBlack - (int)excludedLocalBlacks.size();
+    if (numFree == 0) return true;  // All pre-matched, nothing to do
+
+    // Build flow graph
+    int S = numBlack + numWhite;
+    int T = numBlack + numWhite + 1;
 
     flowAdj.assign(T + 2, std::vector<FlowEdge>());
     level.resize(T + 2);
     ptr.resize(T + 2);
 
-    // Find indices
-    int forcedBlackIdx = -1;
-    int forcedWhiteIdx = -1;
-
-    auto bit = blackMap.find(makeKey(edge.blackN, edge.blackJ));
-    auto wit = whiteMap.find(makeKey(edge.whiteN, edge.whiteJ));
-    if (bit != blackMap.end()) forcedBlackIdx = bit->second;
-    if (wit != whiteMap.end()) forcedWhiteIdx = wit->second;
-
-    if (forcedBlackIdx < 0 || forcedWhiteIdx < 0) return false;
-
-    if (forceMatched) {
-        // Force this edge: don't connect this black/white to source/sink normally
-        // Instead, pre-match them
-
-        // Source -> all blacks EXCEPT forcedBlack
-        for (int i = 0; i < numBlack; i++) {
-            if (i != forcedBlackIdx) {
-                add_flow_edge(S, i, 1);
-            }
-        }
-
-        // All whites EXCEPT forcedWhite -> Sink
-        for (int i = 0; i < numWhite; i++) {
-            if (i != forcedWhiteIdx) {
-                add_flow_edge(numBlack + i, T, 1);
-            }
-        }
-
-        // Add all black-white edges EXCEPT any involving forced black or forced white
-        for (int i = 0; i < numBlack; i++) {
-            if (i == forcedBlackIdx) continue;
-
-            int bn = blackTriangles[i].n;
-            int bj = blackTriangles[i].j;
-
-            int neighbors[3][2] = {
-                {bn, bj},
-                {bn, bj - 1},
-                {bn - 1, bj}
-            };
-
-            for (int k = 0; k < 3; k++) {
-                auto wIt = whiteMap.find(makeKey(neighbors[k][0], neighbors[k][1]));
-                if (wIt == whiteMap.end()) continue;
-                int wIdx = wIt->second;
-                if (wIdx == forcedWhiteIdx) continue;
-
-                add_flow_edge(i, numBlack + wIdx, 1);
-            }
-        }
-
-        // Run max flow on reduced graph
-        int flow = dinic(S, T);
-
-        // Need flow = numBlack - 1 (since one pair is pre-matched)
-        if (flow != numBlack - 1) return false;
-
-        // Extract matching
-        dimerGrid.assign(dimerGrid.size(), -1);
-
-        // Set the forced edge
-        size_t forcedGridIdx = getGridIdx(edge.blackN, edge.blackJ);
-        if (forcedGridIdx < dimerGrid.size()) {
-            dimerGrid[forcedGridIdx] = (int8_t)edge.type;
-        }
-
-        // Set remaining edges from flow
-        for (int i = 0; i < numBlack; i++) {
-            if (i == forcedBlackIdx) continue;
-
-            for (const auto& e : flowAdj[i]) {
-                if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow == 1) {
-                    int wIdx = e.to - numBlack;
-                    int bn = blackTriangles[i].n;
-                    int bj = blackTriangles[i].j;
-                    int wn = whiteTriangles[wIdx].n;
-                    int wj = whiteTriangles[wIdx].j;
-                    int type = getDimerType(bn, bj, wn, wj);
-
-                    size_t gridIdx = getGridIdx(bn, bj);
-                    if (gridIdx < dimerGrid.size()) {
-                        dimerGrid[gridIdx] = (int8_t)type;
-                    }
-                    break;
-                }
-            }
-        }
-
-    } else {
-        // Force this edge to NOT be matched - just exclude it from the graph
-
-        // Source -> all blacks
-        for (int i = 0; i < numBlack; i++) {
+    // Source -> free blacks
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedLocalBlacks.count(i) == 0) {
             add_flow_edge(S, i, 1);
         }
+    }
 
-        // All whites -> Sink
-        for (int i = 0; i < numWhite; i++) {
+    // Free whites -> Sink
+    for (int i = 0; i < numWhite; i++) {
+        if (excludedLocalWhites.count(i) == 0) {
             add_flow_edge(numBlack + i, T, 1);
         }
+    }
 
-        // Add all black-white edges EXCEPT the forced one
-        for (int i = 0; i < numBlack; i++) {
-            int bn = blackTriangles[i].n;
-            int bj = blackTriangles[i].j;
+    // Add edges between free blacks and whites (only within partition)
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedLocalBlacks.count(i) > 0) continue;
 
-            int neighbors[3][2] = {
-                {bn, bj},
-                {bn, bj - 1},
-                {bn - 1, bj}
-            };
+        int gi = blackIndices[i];
+        int bn = blackTriangles[gi].n;
+        int bj = blackTriangles[gi].j;
 
-            for (int k = 0; k < 3; k++) {
-                int wn = neighbors[k][0];
-                int wj = neighbors[k][1];
+        int neighbors[3][2] = {
+            {bn, bj},
+            {bn, bj - 1},
+            {bn - 1, bj}
+        };
 
-                // Skip the forbidden edge
-                if (bn == edge.blackN && bj == edge.blackJ &&
-                    wn == edge.whiteN && wj == edge.whiteJ) {
-                    continue;
-                }
+        for (int k = 0; k < 3; k++) {
+            int wn = neighbors[k][0];
+            int wj = neighbors[k][1];
 
-                auto wIt = whiteMap.find(makeKey(wn, wj));
-                if (wIt == whiteMap.end()) continue;
+            auto wit = localWhiteMap.find(makeKey(wn, wj));
+            if (wit == localWhiteMap.end()) continue;
 
-                add_flow_edge(i, numBlack + wIt->second, 1);
-            }
+            int localWIdx = wit->second;
+            if (excludedLocalWhites.count(localWIdx) > 0) continue;
+
+            add_flow_edge(i, numBlack + localWIdx, 1);
         }
+    }
 
-        // Run max flow
-        int flow = dinic(S, T);
+    // Run max flow
+    int flow = dinic(S, T);
+    if (flow != numFree) return false;
 
-        if (flow != numBlack) return false;  // No perfect matching without this edge
+    // Extract matching and update dimerGrid
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedLocalBlacks.count(i) > 0) continue;
 
-        // Extract matching
-        dimerGrid.assign(dimerGrid.size(), -1);
+        for (const auto& e : flowAdj[i]) {
+            if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow == 1) {
+                int localWIdx = e.to - numBlack;
+                int gi = blackIndices[i];
+                int gwi = whiteIndices[localWIdx];
 
-        for (int i = 0; i < numBlack; i++) {
-            for (const auto& e : flowAdj[i]) {
-                if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow == 1) {
-                    int wIdx = e.to - numBlack;
-                    int bn = blackTriangles[i].n;
-                    int bj = blackTriangles[i].j;
-                    int wn = whiteTriangles[wIdx].n;
-                    int wj = whiteTriangles[wIdx].j;
-                    int type = getDimerType(bn, bj, wn, wj);
+                int bn = blackTriangles[gi].n;
+                int bj = blackTriangles[gi].j;
+                int wn = whiteTriangles[gwi].n;
+                int wj = whiteTriangles[gwi].j;
+                int type = getDimerType(bn, bj, wn, wj);
 
-                    size_t gridIdx = getGridIdx(bn, bj);
-                    if (gridIdx < dimerGrid.size()) {
-                        dimerGrid[gridIdx] = (int8_t)type;
-                    }
-                    break;
+                size_t gridIdx = getGridIdx(bn, bj);
+                if (gridIdx < dimerGrid.size()) {
+                    dimerGrid[gridIdx] = (int8_t)type;
                 }
+                break;
             }
         }
     }
@@ -785,99 +790,286 @@ bool rebuildMatchingWithForcedEdge(const CutEdge& edge, bool forceMatched) {
     return true;
 }
 
-// Adjust winding by rebuilding the matching with constraints
-// EXTENSIVE SEARCH: tries cut edges first, then ALL edges in region
-bool adjustWindingByRebuilding(int holeIdx, int delta) {
-    if (holeIdx != 0) return false;  // Only support hole 0 for now
-    if (holes.empty()) return false;
+// Rebuild one partition (LEFT or RIGHT) using Dinic's
+// isLeft: true for LEFT partition (n < cutN), false for RIGHT (n >= cutN)
+// excludedKeys: triangles that are part of forced crossing edges
+bool rebuildHalfPartition(int cutN, bool isLeft, const std::set<long long>& excludedKeys) {
+    // Collect triangles in this partition
+    std::vector<int> partBlacks, partWhites;
+
+    for (size_t i = 0; i < blackTriangles.size(); i++) {
+        bool inPart = isLeft ? (blackTriangles[i].n < cutN) : (blackTriangles[i].n >= cutN);
+        if (inPart) partBlacks.push_back(i);
+    }
+    for (size_t i = 0; i < whiteTriangles.size(); i++) {
+        bool inPart = isLeft ? (whiteTriangles[i].n < cutN) : (whiteTriangles[i].n >= cutN);
+        if (inPart) partWhites.push_back(i);
+    }
+
+    // Build local coordinate -> local index maps
+    std::unordered_map<long long, int> localBlackMap, localWhiteMap;
+    for (size_t i = 0; i < partBlacks.size(); i++) {
+        int gi = partBlacks[i];
+        localBlackMap[makeKey(blackTriangles[gi].n, blackTriangles[gi].j)] = i;
+    }
+    for (size_t i = 0; i < partWhites.size(); i++) {
+        int gi = partWhites[i];
+        localWhiteMap[makeKey(whiteTriangles[gi].n, whiteTriangles[gi].j)] = i;
+    }
+
+    // Find which local indices are excluded (part of forced crossing)
+    // For LEFT partition: exclude whites (they're the ones in LEFT that connect to RIGHT blacks)
+    // For RIGHT partition: exclude blacks (they're the ones in RIGHT that connect to LEFT whites)
+    std::set<int> excludedLocalBlacks, excludedLocalWhites;
+    for (const auto& key : excludedKeys) {
+        if (isLeft) {
+            auto wit = localWhiteMap.find(key);
+            if (wit != localWhiteMap.end()) excludedLocalWhites.insert(wit->second);
+        } else {
+            auto bit = localBlackMap.find(key);
+            if (bit != localBlackMap.end()) excludedLocalBlacks.insert(bit->second);
+        }
+    }
+
+    int numBlack = partBlacks.size();
+    int numWhite = partWhites.size();
+    int freeBlacks = numBlack - excludedLocalBlacks.size();
+    int freeWhites = numWhite - excludedLocalWhites.size();
+
+    if (freeBlacks != freeWhites) {
+        return false;
+    }
+    if (freeBlacks == 0) return true;  // Nothing to match
+
+    // Build flow network
+    int S = numBlack + numWhite;
+    int T = S + 1;
+    flowAdj.assign(T + 1, std::vector<FlowEdge>());
+    level.resize(T + 1);
+    ptr.resize(T + 1);
+
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedLocalBlacks.count(i) == 0) add_flow_edge(S, i, 1);
+    }
+    for (int i = 0; i < numWhite; i++) {
+        if (excludedLocalWhites.count(i) == 0) add_flow_edge(numBlack + i, T, 1);
+    }
+
+    // Edges: free black -> neighboring free whites (within partition)
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedLocalBlacks.count(i) > 0) continue;
+        int gi = partBlacks[i];
+        int bn = blackTriangles[gi].n, bj = blackTriangles[gi].j;
+
+        int neighbors[3][2] = {{bn, bj}, {bn, bj-1}, {bn-1, bj}};
+        for (int k = 0; k < 3; k++) {
+            auto wit = localWhiteMap.find(makeKey(neighbors[k][0], neighbors[k][1]));
+            if (wit == localWhiteMap.end()) continue;
+            if (excludedLocalWhites.count(wit->second) > 0) continue;
+            add_flow_edge(i, numBlack + wit->second, 1);
+        }
+    }
+
+    int flow = dinic(S, T);
+    if (flow != freeBlacks) return false;
+
+    // Write matching to dimerGrid
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedLocalBlacks.count(i) > 0) continue;
+        for (const auto& e : flowAdj[i]) {
+            if (e.to >= numBlack && e.to < S && e.flow == 1) {
+                int localW = e.to - numBlack;
+                int gi = partBlacks[i];
+                int gwi = partWhites[localW];
+                int type = getDimerType(blackTriangles[gi].n, blackTriangles[gi].j,
+                                        whiteTriangles[gwi].n, whiteTriangles[gwi].j);
+                size_t gridIdx = getGridIdx(blackTriangles[gi].n, blackTriangles[gi].j);
+                if (gridIdx < dimerGrid.size()) dimerGrid[gridIdx] = (int8_t)type;
+                break;
+            }
+        }
+    }
+    return true;
+}
+
+// Find the gap in crossing edges (where the hole is)
+// Returns the j-value that separates "below" from "above" the hole
+int findHoleGapJ(const std::vector<CutEdge>& sortedEdges) {
+    if (sortedEdges.size() < 2) return sortedEdges.empty() ? 0 : sortedEdges[0].blackJ;
+
+    // Find largest gap between consecutive edges
+    int maxGap = 0;
+    int gapJ = sortedEdges[0].blackJ;
+    for (size_t i = 1; i < sortedEdges.size(); i++) {
+        int gap = sortedEdges[i].blackJ - sortedEdges[i-1].blackJ;
+        if (gap > maxGap) {
+            maxGap = gap;
+            gapJ = (sortedEdges[i].blackJ + sortedEdges[i-1].blackJ) / 2;
+        }
+    }
+    return gapJ;
+}
+
+// Helper: compute j-coordinate from world coordinates
+inline int worldToJ(double worldX, double worldY) {
+    return (int)std::round((worldY - slope * worldX) / deltaC);
+}
+
+// Adjust winding by SWAPPING a crossing dimer from below to above (or vice versa)
+// For multiple holes on same cut: respects segment boundaries between holes
+bool adjustWindingByCut(int holeIdx, int delta) {
+    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return false;
     if (delta != 1 && delta != -1) return false;
 
-    // Build cut with 32 rays
-    buildCutForHole(0);
-
-    // Save current state for rollback
-    std::vector<int8_t> savedGrid = dimerGrid;
-
-    // Helper lambda to try edges
-    auto tryEdges = [&](std::vector<CutEdge>& edges, bool forceMatched, int targetWinding) -> bool {
-        // Shuffle edges (Fisher-Yates)
-        for (size_t i = edges.size(); i > 1; i--) {
-            size_t j = fastRandomRange(i);
-            std::swap(edges[i-1], edges[j]);
-        }
-
-        for (const auto& forceEdge : edges) {
-            if (rebuildMatchingWithForcedEdge(forceEdge, forceMatched)) {
-                int newWinding = computeWindingForHole(0);
-                if (newWinding == targetWinding) {
-                    holes[0].currentWinding = newWinding;
-                    return true;
-                }
-            }
-            dimerGrid = savedGrid;
-        }
-        return false;
+    auto startTime = std::chrono::steady_clock::now();
+    auto checkTimeout = [&]() -> bool {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime).count() > 2000;
     };
 
-    // Phase 1: Try cut edges (edges crossing rays from hole)
-    if (!holeCutEdges.empty()) {
-        std::vector<CutEdge> matchedCutEdges;
-        std::vector<CutEdge> unmatchedCutEdges;
+    std::vector<int8_t> savedGrid = dimerGrid;
 
-        for (const auto& ce : holeCutEdges) {
+    int cutN;
+    std::vector<CutEdge> crossingEdges = findVerticalCutEdges(holeIdx, cutN);
+    if (crossingEdges.empty()) return false;
+
+    // Sort crossing edges by j (vertical position)
+    std::sort(crossingEdges.begin(), crossingEdges.end(),
+              [](const CutEdge& a, const CutEdge& b) { return a.blackJ < b.blackJ; });
+
+    // Find ALL holes that intersect this vertical cut line
+    // A hole intersects if its centroidX is close to cutN
+    std::vector<std::pair<int, int>> holesOnCut; // (gapJ, holeIndex)
+    for (size_t i = 0; i < holes.size(); i++) {
+        int holeCutN = (int)std::round(holes[i].centroidX);
+        if (holeCutN == cutN) {
+            int holeJ = worldToJ(holes[i].centroidX, holes[i].centroidY);
+            holesOnCut.push_back({holeJ, (int)i});
+        }
+    }
+
+    // Sort holes by j-position (ascending)
+    std::sort(holesOnCut.begin(), holesOnCut.end());
+
+    // Find this hole's position in the sorted list
+    int thisHolePos = -1;
+    int thisGapJ = worldToJ(holes[holeIdx].centroidX, holes[holeIdx].centroidY);
+    for (size_t i = 0; i < holesOnCut.size(); i++) {
+        if (holesOnCut[i].second == holeIdx) {
+            thisHolePos = (int)i;
+            break;
+        }
+    }
+    if (thisHolePos < 0) return false;
+
+    // Determine segment boundaries for this hole
+    // lowerBoundJ: j of hole below (or -infinity)
+    // upperBoundJ: j of hole above (or +infinity)
+    int lowerBoundJ = (thisHolePos > 0) ? holesOnCut[thisHolePos - 1].first : INT_MIN;
+    int upperBoundJ = (thisHolePos < (int)holesOnCut.size() - 1) ? holesOnCut[thisHolePos + 1].first : INT_MAX;
+
+    // Categorize crossing edges into segments
+    // For +: we want matched in (lowerBoundJ, thisGapJ) and unmatched in (thisGapJ, upperBoundJ)
+    // For -: we want matched in (thisGapJ, upperBoundJ) and unmatched in (lowerBoundJ, thisGapJ)
+    std::vector<int> matchedInLowerSegment, matchedInUpperSegment;
+    std::vector<int> unmatchedInLowerSegment, unmatchedInUpperSegment;
+
+    for (size_t i = 0; i < crossingEdges.size(); i++) {
+        const auto& ce = crossingEdges[i];
+        size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
+        bool isMatched = (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type);
+
+        // Check which segment this edge is in
+        bool inLowerSegment = (ce.blackJ > lowerBoundJ && ce.blackJ < thisGapJ);
+        bool inUpperSegment = (ce.blackJ > thisGapJ && ce.blackJ < upperBoundJ);
+
+        if (isMatched) {
+            if (inLowerSegment) matchedInLowerSegment.push_back(i);
+            if (inUpperSegment) matchedInUpperSegment.push_back(i);
+        } else {
+            if (inLowerSegment) unmatchedInLowerSegment.push_back(i);
+            if (inUpperSegment) unmatchedInUpperSegment.push_back(i);
+        }
+    }
+
+    // For +1: take HIGHEST matched from lower segment, swap with unmatched in upper segment
+    // For -1: take LOWEST matched from upper segment, swap with unmatched in lower segment
+    int idxToUnmatch = -1;
+    std::vector<int>* toMatchCandidates = nullptr;
+
+    if (delta == 1) {
+        // + : highest matched below -> above
+        if (!matchedInLowerSegment.empty()) {
+            // Edges are sorted by j ascending, so last one is highest
+            idxToUnmatch = matchedInLowerSegment.back();
+        }
+        toMatchCandidates = &unmatchedInUpperSegment;
+    } else {
+        // - : lowest matched above -> below
+        if (!matchedInUpperSegment.empty()) {
+            // Edges are sorted by j ascending, so first one is lowest
+            idxToUnmatch = matchedInUpperSegment.front();
+        }
+        toMatchCandidates = &unmatchedInLowerSegment;
+    }
+
+    if (idxToUnmatch < 0 || toMatchCandidates->empty()) {
+        return false;
+    }
+
+    // Collect all currently matched edges
+    std::vector<int> currentMatched;
+    for (size_t i = 0; i < crossingEdges.size(); i++) {
+        const auto& ce = crossingEdges[i];
+        size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
+        if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
+            currentMatched.push_back(i);
+        }
+    }
+
+    // Try each candidate for the new matched edge
+    for (int idxToMatch : *toMatchCandidates) {
+        if (checkTimeout()) { dimerGrid = savedGrid; return false; }
+
+        // Build new set of matched crossing edges (swap one)
+        std::vector<int> newMatchedIndices;
+        for (int i : currentMatched) {
+            if (i != idxToUnmatch) newMatchedIndices.push_back(i);
+        }
+        newMatchedIndices.push_back(idxToMatch);
+
+        // Clear grid and set forced crossing edges
+        std::fill(dimerGrid.begin(), dimerGrid.end(), -1);
+        for (int idx : newMatchedIndices) {
+            const auto& ce = crossingEdges[idx];
             size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
-            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
-                matchedCutEdges.push_back(ce);
-            } else {
-                unmatchedCutEdges.push_back(ce);
-            }
+            if (gridIdx < dimerGrid.size()) dimerGrid[gridIdx] = (int8_t)ce.type;
         }
 
-        int currentWinding = (int)matchedCutEdges.size();
-        int targetWinding = currentWinding + delta;
-
-        if (delta == 1 && tryEdges(unmatchedCutEdges, true, targetWinding)) return true;
-        if (delta == -1 && tryEdges(matchedCutEdges, false, targetWinding)) return true;
-    }
-
-    // Phase 2: Try ALL edges in the region (exhaustive search)
-    std::vector<CutEdge> allMatchedEdges;
-    std::vector<CutEdge> allUnmatchedEdges;
-
-    for (const auto& bt : blackTriangles) {
-        int neighbors[3][3] = {
-            {bt.n, bt.j, 0},
-            {bt.n, bt.j - 1, 1},
-            {bt.n - 1, bt.j, 2}
-        };
-        for (int k = 0; k < 3; k++) {
-            int wn = neighbors[k][0];
-            int wj = neighbors[k][1];
-            int type = neighbors[k][2];
-            if (whiteMap.find(makeKey(wn, wj)) == whiteMap.end()) continue;
-
-            CutEdge ce;
-            ce.blackN = bt.n;
-            ce.blackJ = bt.j;
-            ce.whiteN = wn;
-            ce.whiteJ = wj;
-            ce.type = type;
-
-            size_t gridIdx = getGridIdx(bt.n, bt.j);
-            if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == type) {
-                allMatchedEdges.push_back(ce);
-            } else {
-                allUnmatchedEdges.push_back(ce);
-            }
+        // Build excluded keys for each partition
+        std::set<long long> excludedForLeft, excludedForRight;
+        for (int idx : newMatchedIndices) {
+            const auto& ce = crossingEdges[idx];
+            excludedForLeft.insert(makeKey(ce.whiteN, ce.whiteJ));
+            excludedForRight.insert(makeKey(ce.blackN, ce.blackJ));
         }
+
+        // Rebuild LEFT (n < cutN)
+        if (!rebuildHalfPartition(cutN, true, excludedForLeft)) {
+            dimerGrid = savedGrid;
+            continue;
+        }
+
+        // Rebuild RIGHT (n >= cutN)
+        if (!rebuildHalfPartition(cutN, false, excludedForRight)) {
+            dimerGrid = savedGrid;
+            continue;
+        }
+
+        // Success!
+        holes[holeIdx].currentWinding += delta;
+        return true;
     }
-
-    // Recompute current winding for target calculation
-    int currentWinding = computeWindingForHole(0);
-    int targetWinding = currentWinding + delta;
-
-    if (delta == 1 && tryEdges(allUnmatchedEdges, true, targetWinding)) return true;
-    if (delta == -1 && tryEdges(allMatchedEdges, false, targetWinding)) return true;
 
     dimerGrid = savedGrid;
     return false;
@@ -887,15 +1079,7 @@ bool adjustWindingByRebuilding(int holeIdx, int delta) {
 bool adjustHoleWinding(int holeIdx, int delta) {
     if (holeIdx < 0 || holeIdx >= (int)holes.size()) return false;
     if (delta != 1 && delta != -1) return false;
-    if (holeIdx != 0) return false;  // Only support hole 0 for now
-
-    bool success = adjustWindingByRebuilding(holeIdx, delta);
-
-    if (success) {
-        holes[holeIdx].currentWinding = computeWindingForHole(holeIdx);
-    }
-
-    return success;
+    return adjustWindingByCut(holeIdx, delta);
 }
 
 // ============================================================================
@@ -2065,6 +2249,30 @@ void recomputeHoleInfo() {
         computeAllWindings();
         computeWindingBounds();
     }
+}
+
+// Get vertical cut info for visualization
+EMSCRIPTEN_KEEPALIVE
+char* getVerticalCutInfo(int holeIdx) {
+    int cutN = 0;
+    std::vector<CutEdge> crossingEdges = findVerticalCutEdges(holeIdx, cutN);
+
+    // Count matched crossing edges
+    int matchedCount = 0;
+    for (const auto& ce : crossingEdges) {
+        size_t gridIdx = getGridIdx(ce.blackN, ce.blackJ);
+        if (gridIdx < dimerGrid.size() && dimerGrid[gridIdx] == ce.type) {
+            matchedCount++;
+        }
+    }
+
+    std::string json = "{\"cutN\":" + std::to_string(cutN) +
+                       ",\"crossingCount\":" + std::to_string(crossingEdges.size()) +
+                       ",\"matchedCount\":" + std::to_string(matchedCount) + "}";
+
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
 }
 
 } // extern "C"

@@ -352,25 +352,48 @@ code:
     width: 24px;
     height: 24px;
     padding: 0;
-    border: 1px solid #666;
+    border: 1px solid rgba(100, 100, 100, 0.5);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.6);
     cursor: pointer;
     font-weight: bold;
     font-size: 16px;
     line-height: 1;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
   }
   .hole-control button:hover {
-    background: rgba(230, 230, 230, 0.95);
+    background: rgba(255, 255, 255, 0.7);
   }
   [data-theme="dark"] .hole-control button {
-    background: rgba(60, 60, 60, 0.85);
-    border-color: #888;
+    background: rgba(60, 60, 60, 0.6);
+    border-color: rgba(136, 136, 136, 0.5);
     color: #eee;
   }
   [data-theme="dark"] .hole-control button:hover {
-    background: rgba(80, 80, 80, 0.95);
+    background: rgba(80, 80, 80, 0.7);
+  }
+  .hole-control input {
+    width: 50px;
+    height: 24px;
+    padding: 2px 4px;
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .hole-control input:focus {
+    outline: 2px solid #4a90d9;
+    background: rgba(255, 255, 255, 0.8);
+  }
+  [data-theme="dark"] .hole-control input {
+    background: rgba(60, 60, 60, 0.6);
+    border-color: rgba(136, 136, 136, 0.5);
+    color: #eee;
+  }
+  [data-theme="dark"] .hole-control input:focus {
+    background: rgba(60, 60, 60, 0.8);
   }
 </style>
 
@@ -854,6 +877,7 @@ Module.onRuntimeInitialized = function() {
             this.getAllHolesInfoWasm = Module.cwrap('getAllHolesInfo', 'number', []);
             this.adjustHoleWindingWasm = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
             this.recomputeHoleInfoWasm = Module.cwrap('recomputeHoleInfo', null, []);
+            this.getVerticalCutInfoWasm = Module.cwrap('getVerticalCutInfo', 'number', ['number']);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
             this.totalSteps = 0;
@@ -1015,6 +1039,13 @@ Module.onRuntimeInitialized = function() {
 
         getAllHolesInfo() {
             const ptr = this.getAllHolesInfoWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        getVerticalCutInfo(holeIdx) {
+            const ptr = this.getVerticalCutInfoWasm(holeIdx);
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             return JSON.parse(jsonStr);
@@ -1664,6 +1695,7 @@ Module.onRuntimeInitialized = function() {
                     this.drawBoundary(ctx, boundary, centerX, centerY, scale);
                 }
             }
+
         }
 
         drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode) {
@@ -2888,6 +2920,10 @@ Module.onRuntimeInitialized = function() {
 
         if (wasmHoles.length === 0) return;
 
+        // Check dimer count to decide UI mode
+        const dimerCount = sim.dimers ? sim.dimers.length : 0;
+        const useBatchMode = dimerCount >= 1000;
+
         // Create control for each hole
         for (let h = 0; h < wasmHoles.length; h++) {
             const hole = wasmHoles[h];
@@ -2899,46 +2935,100 @@ Module.onRuntimeInitialized = function() {
             ctrl.style.top = screen.y + 'px';
             ctrl.dataset.hole = h;
 
-            ctrl.innerHTML = `
-                <button class="winding-plus">+</button>
-                <button class="winding-minus">−</button>
-            `;
+            if (useBatchMode) {
+                // Input field mode for large tilings
+                ctrl.innerHTML = `<input type="text" class="winding-input" placeholder="±N" title="Enter +N or -N to adjust winding">`;
+                const input = ctrl.querySelector('.winding-input');
 
-            // Wire up buttons - use WASM-based winding adjustment
-            const minusBtn = ctrl.querySelector('.winding-minus');
-            const plusBtn = ctrl.querySelector('.winding-plus');
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const holeIdx = parseInt(ctrl.dataset.hole);
+                        const val = input.value.trim();
+                        const match = val.match(/^([+-]?)(\d+)$/);
+                        if (!match) {
+                            input.value = '';
+                            return;
+                        }
+                        const sign = match[1] === '-' ? -1 : 1;
+                        const count = parseInt(match[2]);
+                        if (count === 0) {
+                            input.value = '';
+                            return;
+                        }
 
-            minusBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const holeIdx = parseInt(ctrl.dataset.hole);
-                minusBtn.textContent = '⏳';
-                minusBtn.disabled = true;
-                plusBtn.disabled = true;
-                setTimeout(() => {
-                    const result = sim.adjustHoleWinding(holeIdx, -1);
-                    if (result.success) {
-                        sim.refreshDimers();
-                        draw();
+                        input.disabled = true;
+                        input.value = '⏳';
+
+                        // Apply changes one at a time
+                        let remaining = count;
+                        const delta = sign;
+
+                        const applyOne = () => {
+                            if (remaining <= 0) {
+                                sim.refreshDimers();
+                                draw();
+                                updateHolesUI();
+                                return;
+                            }
+                            const result = sim.adjustHoleWinding(holeIdx, delta);
+                            if (result.success) {
+                                remaining--;
+                                setTimeout(applyOne, 5);
+                            } else {
+                                // Can't continue, stop here
+                                sim.refreshDimers();
+                                draw();
+                                updateHolesUI();
+                            }
+                        };
+                        setTimeout(applyOne, 10);
                     }
-                    updateHolesUI();
-                }, 10);
-            });
+                });
 
-            plusBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const holeIdx = parseInt(ctrl.dataset.hole);
-                plusBtn.textContent = '⏳';
-                plusBtn.disabled = true;
-                minusBtn.disabled = true;
-                setTimeout(() => {
-                    const result = sim.adjustHoleWinding(holeIdx, 1);
-                    if (result.success) {
-                        sim.refreshDimers();
-                        draw();
-                    }
-                    updateHolesUI();
-                }, 10);
-            });
+                input.addEventListener('click', (e) => e.stopPropagation());
+            } else {
+                // Button mode for small tilings
+                ctrl.innerHTML = `
+                    <button class="winding-plus">+</button>
+                    <button class="winding-minus">−</button>
+                `;
+
+                const minusBtn = ctrl.querySelector('.winding-minus');
+                const plusBtn = ctrl.querySelector('.winding-plus');
+
+                minusBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const holeIdx = parseInt(ctrl.dataset.hole);
+                    minusBtn.textContent = '⏳';
+                    minusBtn.disabled = true;
+                    plusBtn.disabled = true;
+                    setTimeout(() => {
+                        const result = sim.adjustHoleWinding(holeIdx, -1);
+                        if (result.success) {
+                            sim.refreshDimers();
+                            draw();
+                        }
+                        updateHolesUI();
+                    }, 10);
+                });
+
+                plusBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const holeIdx = parseInt(ctrl.dataset.hole);
+                    plusBtn.textContent = '⏳';
+                    plusBtn.disabled = true;
+                    minusBtn.disabled = true;
+                    setTimeout(() => {
+                        const result = sim.adjustHoleWinding(holeIdx, 1);
+                        if (result.success) {
+                            sim.refreshDimers();
+                            draw();
+                        }
+                        updateHolesUI();
+                    }, 10);
+                });
+            }
 
             holeOverlays.appendChild(ctrl);
         }
