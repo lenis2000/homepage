@@ -47,7 +47,7 @@ code:
   <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
 </ul>
 
-<p><strong>Hole Constraints:</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling.</p>
+<p><strong>Hole Constraints:</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note that a lozenge tiling with hole might not correspond to a correct 3D shape, and fun discontinuities will arise.</p>
 
 <p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
 
@@ -2128,6 +2128,17 @@ Module.onRuntimeInitialized = function() {
             this.controls.autoRotateSpeed = 2.0;
         }
 
+        // Convert lattice coords (n, j) + height to screen coords for hole labels
+        worldToScreen3D(n, j, h) {
+            const pos3d = new THREE.Vector3(h, -n - h, j - h);
+            pos3d.project(this.camera);
+            const rect = this.container.getBoundingClientRect();
+            return {
+                x: (pos3d.x * 0.5 + 0.5) * rect.width,
+                y: (-pos3d.y * 0.5 + 0.5) * rect.height
+            };
+        }
+
         handleResize() {
             if (!this.container) return;
             const width = this.container.clientWidth;
@@ -2905,7 +2916,13 @@ Module.onRuntimeInitialized = function() {
         controls.forEach((ctrl, h) => {
             if (h < wasmHoles.length) {
                 const hole = wasmHoles[h];
-                const screen = worldToScreen(hole.centroidX, hole.centroidY);
+                let screen;
+                if (is3DView && renderer3D) {
+                    // In 3D, position label at hole centroid with height=0
+                    screen = renderer3D.worldToScreen3D(hole.centroidX, hole.centroidY, 0);
+                } else {
+                    screen = worldToScreen(hole.centroidX, hole.centroidY);
+                }
                 ctrl.style.left = screen.x + 'px';
                 ctrl.style.top = screen.y + 'px';
             }
@@ -2933,7 +2950,12 @@ Module.onRuntimeInitialized = function() {
         // Create control for each hole
         for (let h = 0; h < wasmHoles.length; h++) {
             const hole = wasmHoles[h];
-            const screen = worldToScreen(hole.centroidX, hole.centroidY);
+            let screen;
+            if (is3DView && renderer3D) {
+                screen = renderer3D.worldToScreen3D(hole.centroidX, hole.centroidY, 0);
+            } else {
+                screen = worldToScreen(hole.centroidX, hole.centroidY);
+            }
 
             const ctrl = document.createElement('div');
             ctrl.className = 'hole-control';
@@ -3106,12 +3128,14 @@ Module.onRuntimeInitialized = function() {
         is3DView = use3D;
         canvas.style.display = use3D ? 'none' : 'block';
         threeContainer.style.display = use3D ? 'block' : 'none';
-        holeOverlays.style.display = use3D ? 'none' : 'block';
+        // Hole overlays are shown in both 2D and 3D views
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
 
         if (use3D) {
             if (!renderer3D) {
                 renderer3D = new Lozenge3DRenderer(threeContainer);
+                // Update hole label positions when camera moves in 3D
+                renderer3D.controls.addEventListener('change', updateHoleOverlayPositions);
             }
             // Sync palette and permutation
             renderer3D.setPalette(renderer.currentPaletteIndex);
@@ -3126,6 +3150,8 @@ Module.onRuntimeInitialized = function() {
         } else {
             draw();
         }
+        // Refresh hole overlays for new view mode
+        updateHolesUI();
     }
 
     function draw() {
