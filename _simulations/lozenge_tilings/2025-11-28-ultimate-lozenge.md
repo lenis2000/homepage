@@ -2751,6 +2751,12 @@ Module.onRuntimeInitialized = function() {
             opt.textContent = p.name;
             el.paletteSelect.appendChild(opt);
         });
+        // Random palette on load, excluding "No Colors" (index 2)
+        let randomIndex;
+        do {
+            randomIndex = Math.floor(Math.random() * renderer.colorPalettes.length);
+        } while (renderer.colorPalettes[randomIndex].name === 'No Colors');
+        renderer.setPalette(randomIndex);
         el.paletteSelect.value = renderer.currentPaletteIndex;
         renderer.updateLegend();
     }
