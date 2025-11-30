@@ -47,7 +47,7 @@ code:
   <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
 </ul>
 
-<p><strong>Hole Constraints (experimental):</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note: the search for valid height changes is randomized and not guaranteed to succeed on each click, but most achievable constraints are explorable with repeated attempts.</p>
+<p><strong>Hole Constraints:</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note: the search for valid height changes is randomized and not guaranteed to succeed on each click, but most achievable constraints are explorable with repeated attempts.</p>
 
 <p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
 
@@ -571,6 +571,10 @@ code:
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showGridCheckbox" checked>
       <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="showHoleLabelsCheckbox" checked>
+      <label for="showHoleLabelsCheckbox" style="font-size: 12px; color: #555;">Hole Labels</label>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="rotateCheckbox">
@@ -2810,6 +2814,7 @@ Module.onRuntimeInitialized = function() {
     let frameCount = 0;
     let currentFps = 0;
     let isValid = false;
+    let showHoleLabels = true;
 
     const el = {
         drawBtn: document.getElementById('drawBtn'),
@@ -2912,6 +2917,7 @@ Module.onRuntimeInitialized = function() {
         // Clear existing overlays
         holeOverlays.innerHTML = '';
 
+        if (!showHoleLabels) return;
         if (!isValid) return;
 
         // Get hole info from WASM
@@ -3919,6 +3925,11 @@ Module.onRuntimeInitialized = function() {
     document.getElementById('showGridCheckbox').addEventListener('change', (e) => {
         renderer.showGrid = e.target.checked;
         draw();
+    });
+
+    document.getElementById('showHoleLabelsCheckbox').addEventListener('change', (e) => {
+        showHoleLabels = e.target.checked;
+        updateHolesUI();
     });
 
     document.getElementById('rotateCheckbox').addEventListener('change', (e) => {
