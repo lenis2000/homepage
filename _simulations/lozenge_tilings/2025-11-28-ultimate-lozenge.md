@@ -2833,6 +2833,8 @@ Module.onRuntimeInitialized = function() {
     let currentFps = 0;
     let isValid = false;
     let showHoleLabels = true;
+    let useRandomSweeps = false;  // Track sweep mode for step normalization
+    let sweepAccumulator = 0;      // Accumulator for fractional sweeps in systematic mode
 
     const el = {
         handBtn: document.getElementById('handBtn'),
@@ -4201,6 +4203,8 @@ Module.onRuntimeInitialized = function() {
     // Random sweeps checkbox (for Glauber/CFTP)
     const randomSweepsCheckbox = document.getElementById('useRandomSweepsCheckbox');
     randomSweepsCheckbox.addEventListener('change', (e) => {
+        useRandomSweeps = e.target.checked;
+        sweepAccumulator = 0;  // Reset accumulator when switching modes
         sim.setUseRandomSweeps(e.target.checked);
     });
 
@@ -4305,13 +4309,31 @@ Module.onRuntimeInitialized = function() {
             lastFrameTime = now;
         }
 
-        const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
-        const result = sim.step(stepsPerFrame);
+        // Normalize step counting: slider represents toggle attempts per second in both modes
+        // In random sweeps: 1 WASM step = 1 toggle attempt
+        // In systematic sweeps: 1 WASM step = N toggle attempts (full sweep)
+        // So for systematic, we divide by N to get equivalent behavior
+        if (useRandomSweeps) {
+            // Random sweeps: direct mapping
+            const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
+            sim.step(stepsPerFrame);
+        } else {
+            // Systematic sweeps: normalize by number of vertices (use dimers as proxy)
+            const N = Math.max(1, sim.dimers.length);  // Number of toggle attempts per sweep
+            const sweepsPerSecond = stepsPerSecond / N;
+            // Accumulate fractional sweeps
+            sweepAccumulator += sweepsPerSecond / 60;  // sweeps this frame (assuming 60fps target)
+            const sweepsThisFrame = Math.floor(sweepAccumulator);
+            sweepAccumulator -= sweepsThisFrame;
+            if (sweepsThisFrame > 0) {
+                sim.step(sweepsThisFrame);
+            }
+        }
         draw();
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
         if (running) {
-            if (stepsPerSecond <= 60) {
+            if (useRandomSweeps && stepsPerSecond <= 60) {
                 animationId = setTimeout(() => requestAnimationFrame(loop), 1000 / stepsPerSecond);
             } else {
                 animationId = requestAnimationFrame(loop);
