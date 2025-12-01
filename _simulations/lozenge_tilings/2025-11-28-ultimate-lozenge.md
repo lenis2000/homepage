@@ -427,11 +427,8 @@ if (window.LOZENGE_WEBGPU) {
     <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30"></span>
     <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
-      <option value="">Letter/Number</option>
+      <option value="">Letter/Number (under construction)</option>
     </select>
-    <button id="exportJsonBtn" style="padding: 4px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;" title="Export current shape as JSON">Export JSON</button>
-    <input type="file" id="importJsonInput" accept=".json" style="display: none;">
-    <button id="importJsonBtn" style="padding: 4px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;" title="Import shape from JSON">Import JSON</button>
   </div>
 </div>
 
@@ -1306,18 +1303,25 @@ function initLozengeApp() {
         return generateTrianglesInPolygon(boundary);
     }
 
-    // Generate triangles for a letter/number preset from pre-computed triangle data
-    // All letters are hand-drawn or algorithmically generated and verified tileable
-    function generateLetterTriangles(char) {
-        const triData = window.LozengeLetterTriangles && window.LozengeLetterTriangles[char.toUpperCase()];
-        if (!triData) return new Map();
+    // Load letter triangles from JSON file
+    async function loadLetterTriangles(char) {
+        const filename = char.toUpperCase() + '.json';
+        try {
+            const response = await fetch(`/letters/${filename}`);
+            if (!response.ok) return new Map();
+            const data = await response.json();
+            if (!data.triangles) return new Map();
 
-        const triangles = new Map();
-        for (const t of triData) {
-            triangles.set(`${t.n},${t.j},${t.t}`, { n: t.n, j: t.j, type: t.t });
+            const triangles = new Map();
+            for (const t of data.triangles) {
+                const type = t.type || t.t;
+                triangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
+            }
+            return triangles;
+        } catch (e) {
+            console.error('Failed to load letter:', char, e);
+            return new Map();
         }
-
-        return triangles;
     }
 
     // Convert world coordinates to lattice (n, j) - boundary vertices are at integer lattice points
@@ -4155,96 +4159,37 @@ function initLozengeApp() {
         reinitialize();
     });
 
-    // Initialize letter/number dropdown
+    // Initialize letter/number dropdown - populate with A-Z, 0-9
     function initLetterSelector() {
         const select = el.letterSelect;
         // Add A-Z
         for (let i = 0; i < 26; i++) {
             const letter = String.fromCharCode(65 + i);
-            if (window.LozengeLetterTriangles && window.LozengeLetterTriangles[letter]) {
-                const opt = document.createElement('option');
-                opt.value = letter;
-                opt.textContent = letter;
-                select.appendChild(opt);
-            }
+            const opt = document.createElement('option');
+            opt.value = letter;
+            opt.textContent = letter;
+            select.appendChild(opt);
         }
         // Add 0-9
         for (let i = 0; i <= 9; i++) {
-            const digit = i.toString();
-            if (window.LozengeLetterTriangles && window.LozengeLetterTriangles[digit]) {
-                const opt = document.createElement('option');
-                opt.value = digit;
-                opt.textContent = digit;
-                select.appendChild(opt);
-            }
+            const opt = document.createElement('option');
+            opt.value = i.toString();
+            opt.textContent = i.toString();
+            select.appendChild(opt);
         }
     }
     initLetterSelector();
 
-    el.letterSelect.addEventListener('change', (e) => {
+    el.letterSelect.addEventListener('change', async (e) => {
         const char = e.target.value;
         if (!char) return;
         saveState();
-        activeTriangles = generateLetterTriangles(char);
+        activeTriangles = await loadLetterTriangles(char);
+        if (activeTriangles.size === 0) {
+            console.warn('Letter not found:', char);
+        }
         reinitialize();
         e.target.value = ''; // Reset to placeholder
-    });
-
-    // Export current shape as JSON
-    document.getElementById('exportJsonBtn').addEventListener('click', () => {
-        if (activeTriangles.size === 0) {
-            alert('No shape to export');
-            return;
-        }
-
-        const triangles = [];
-        for (const tri of activeTriangles.values()) {
-            triangles.push({ n: tri.n, j: tri.j, type: tri.type });
-        }
-
-        const data = { version: 1, triangles };
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'shape.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-    // Import shape from JSON
-    document.getElementById('importJsonBtn').addEventListener('click', () => {
-        document.getElementById('importJsonInput').click();
-    });
-
-    document.getElementById('importJsonInput').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const data = JSON.parse(evt.target.result);
-                if (!data.triangles || !Array.isArray(data.triangles)) {
-                    alert('Invalid JSON: missing triangles array');
-                    return;
-                }
-
-                saveState();
-                activeTriangles = new Map();
-                for (const t of data.triangles) {
-                    const type = t.type || t.t;
-                    activeTriangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
-                }
-                reinitialize();
-            } catch (err) {
-                alert('Error parsing JSON: ' + err.message);
-            }
-        };
-        reader.readAsText(file);
-        e.target.value = ''; // Reset so same file can be loaded again
     });
 
     // View toggle
