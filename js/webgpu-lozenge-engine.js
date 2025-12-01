@@ -260,6 +260,265 @@ class WebGPULozengeEngine {
             this.stagingBuffer = null;
         }
         this.bindGroup = null;
+        this.destroyCFTP();
+    }
+
+    // =========================================================================
+    // CFTP (Coupling From The Past) Methods
+    // =========================================================================
+
+    /**
+     * Initialize CFTP with lower and upper chain buffers
+     * @param {Int32Array} minStateData - Extremal min state from WASM
+     * @param {Int32Array} maxStateData - Extremal max state from WASM
+     */
+    async initCFTP(minStateData, maxStateData) {
+        if (!this.isReady) {
+            console.error("WebGPU engine not initialized");
+            return false;
+        }
+
+        // Load CFTP shader if not already loaded
+        if (!this.cftpPipeline) {
+            try {
+                const response = await fetch('/shaders/cftp_compute.wgsl');
+                if (!response.ok) {
+                    throw new Error(`Failed to load CFTP shader: ${response.status}`);
+                }
+                const cftpShaderCode = await response.text();
+                const shaderModule = this.device.createShaderModule({ code: cftpShaderCode });
+                this.cftpPipeline = this.device.createComputePipeline({
+                    layout: 'auto',
+                    compute: { module: shaderModule, entryPoint: 'main' }
+                });
+            } catch (e) {
+                console.error("Failed to load CFTP shader:", e);
+                return false;
+            }
+        }
+
+        const gridSize = minStateData.byteLength;
+
+        // Create lower chain buffer (starts at min state)
+        this.lowerGridBuffer = this.device.createBuffer({
+            size: gridSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+            mappedAtCreation: true
+        });
+        new Int32Array(this.lowerGridBuffer.getMappedRange()).set(minStateData);
+        this.lowerGridBuffer.unmap();
+
+        // Create upper chain buffer (starts at max state)
+        this.upperGridBuffer = this.device.createBuffer({
+            size: gridSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+            mappedAtCreation: true
+        });
+        new Int32Array(this.upperGridBuffer.getMappedRange()).set(maxStateData);
+        this.upperGridBuffer.unmap();
+
+        // Create random buffer (one float per grid cell)
+        const numCells = minStateData.length;
+        this.randomBuffer = this.device.createBuffer({
+            size: numCells * 4, // float32
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+
+        // Create CFTP uniform buffer
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, direction, num_vertices
+        this.cftpUniformBuffer = this.device.createBuffer({
+            size: 32,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+
+        // Create staging buffers for coalescence check
+        this.lowerStagingBuffer = this.device.createBuffer({
+            size: gridSize,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+        this.upperStagingBuffer = this.device.createBuffer({
+            size: gridSize,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+
+        // Create bind groups for lower and upper chains
+        this.lowerBindGroup = this.device.createBindGroup({
+            layout: this.cftpPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.lowerGridBuffer } },
+                { binding: 1, resource: { buffer: this.randomBuffer } },
+                { binding: 2, resource: { buffer: this.cftpUniformBuffer } }
+            ]
+        });
+
+        this.upperBindGroup = this.device.createBindGroup({
+            layout: this.cftpPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.upperGridBuffer } },
+                { binding: 1, resource: { buffer: this.randomBuffer } },
+                { binding: 2, resource: { buffer: this.cftpUniformBuffer } }
+            ]
+        });
+
+        this.cftpNumCells = numCells;
+        this.cftpInitialized = true;
+        console.log(`WebGPU CFTP initialized: ${numCells} cells`);
+        return true;
+    }
+
+    /**
+     * Reset CFTP chains to extremal states
+     * @param {Int32Array} minStateData - Extremal min state
+     * @param {Int32Array} maxStateData - Extremal max state
+     */
+    resetCFTPChains(minStateData, maxStateData) {
+        if (!this.cftpInitialized) return;
+        this.device.queue.writeBuffer(this.lowerGridBuffer, 0, minStateData);
+        this.device.queue.writeBuffer(this.upperGridBuffer, 0, maxStateData);
+    }
+
+    /**
+     * Run CFTP coupled steps on GPU
+     * @param {number} numSteps - Number of coupled steps to run
+     */
+    async stepCFTP(numSteps) {
+        if (!this.cftpInitialized) return;
+
+        const workgroupCount = Math.ceil(this.cftpNumCells / 64);
+        const uniformData = new ArrayBuffer(32);
+        const intView = new Int32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
+
+        // Pre-allocate random data buffer
+        const randomData = new Float32Array(this.cftpNumCells);
+
+        for (let step = 0; step < numSteps; step++) {
+            // Generate random numbers for this step (same for both chains)
+            for (let i = 0; i < this.cftpNumCells; i++) {
+                randomData[i] = Math.random();
+            }
+            this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
+
+            const commandEncoder = this.device.createCommandEncoder();
+
+            // Run 3 color passes
+            for (let color = 0; color < 3; color++) {
+                // Update uniforms
+                intView[0] = this.gridParams.minN;
+                intView[1] = this.gridParams.maxN;
+                intView[2] = this.gridParams.minJ;
+                intView[3] = this.gridParams.maxJ;
+                intView[4] = this.gridParams.strideJ;
+                intView[5] = color;
+                intView[6] = -1; // direction (unused, coupling is symmetric)
+                uintView[7] = this.cftpNumCells;
+
+                this.device.queue.writeBuffer(this.cftpUniformBuffer, 0, uniformData);
+
+                // Dispatch lower chain
+                const lowerPass = commandEncoder.beginComputePass();
+                lowerPass.setPipeline(this.cftpPipeline);
+                lowerPass.setBindGroup(0, this.lowerBindGroup);
+                lowerPass.dispatchWorkgroups(workgroupCount);
+                lowerPass.end();
+
+                // Dispatch upper chain (same randoms, same uniforms)
+                const upperPass = commandEncoder.beginComputePass();
+                upperPass.setPipeline(this.cftpPipeline);
+                upperPass.setBindGroup(0, this.upperBindGroup);
+                upperPass.dispatchWorkgroups(workgroupCount);
+                upperPass.end();
+            }
+
+            this.device.queue.submit([commandEncoder.finish()]);
+        }
+
+        // Wait for GPU to finish
+        await this.device.queue.onSubmittedWorkDone();
+    }
+
+    /**
+     * Check if lower and upper chains have coalesced
+     * @returns {Promise<boolean>} True if chains are identical
+     */
+    async checkCoalescence() {
+        if (!this.cftpInitialized) return false;
+
+        // Copy both grids to staging buffers
+        const commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.lowerStagingBuffer, 0, this.lowerGridBuffer.size);
+        commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        // Read back both grids
+        await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
+        await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
+
+        const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+        const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
+
+        this.lowerStagingBuffer.unmap();
+        this.upperStagingBuffer.unmap();
+
+        // Compare grids
+        for (let i = 0; i < lowerData.length; i++) {
+            if (lowerData[i] !== upperData[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Get the coalesced result (lower chain)
+     * @returns {Promise<Int32Array>} The coalesced grid state
+     */
+    async getCFTPResult() {
+        if (!this.cftpInitialized) return null;
+
+        const commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.lowerStagingBuffer, 0, this.lowerGridBuffer.size);
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
+        const data = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+        this.lowerStagingBuffer.unmap();
+
+        return data;
+    }
+
+    /**
+     * Copy CFTP result to main grid buffer
+     */
+    async finalizeCFTP() {
+        if (!this.cftpInitialized || !this.gridBuffer) return;
+
+        const commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.gridBuffer, 0, this.lowerGridBuffer.size);
+        this.device.queue.submit([commandEncoder.finish()]);
+    }
+
+    /**
+     * Clean up CFTP resources
+     */
+    destroyCFTP() {
+        if (this.lowerGridBuffer) { this.lowerGridBuffer.destroy(); this.lowerGridBuffer = null; }
+        if (this.upperGridBuffer) { this.upperGridBuffer.destroy(); this.upperGridBuffer = null; }
+        if (this.randomBuffer) { this.randomBuffer.destroy(); this.randomBuffer = null; }
+        if (this.cftpUniformBuffer) { this.cftpUniformBuffer.destroy(); this.cftpUniformBuffer = null; }
+        if (this.lowerStagingBuffer) { this.lowerStagingBuffer.destroy(); this.lowerStagingBuffer = null; }
+        if (this.upperStagingBuffer) { this.upperStagingBuffer.destroy(); this.upperStagingBuffer = null; }
+        this.lowerBindGroup = null;
+        this.upperBindGroup = null;
+        this.cftpInitialized = false;
+    }
+
+    /**
+     * Check if CFTP is initialized
+     * @returns {boolean}
+     */
+    isCFTPInitialized() {
+        return this.cftpInitialized === true;
     }
 }
 

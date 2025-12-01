@@ -914,6 +914,8 @@ Module.onRuntimeInitialized = function() {
             // WebGPU Interface
             this.getRawGridDataWasm = Module.cwrap('getRawGridData', 'number', []);
             this.getGridBoundsWasm = Module.cwrap('getGridBounds', 'number', []);
+            this.getCFTPMinGridDataWasm = Module.cwrap('getCFTPMinGridData', 'number', []);
+            this.getCFTPMaxGridDataWasm = Module.cwrap('getCFTPMaxGridData', 'number', []);
 
             this.totalSteps = 0;
             this.flipCount = 0;
@@ -1165,6 +1167,44 @@ Module.onRuntimeInitialized = function() {
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             return JSON.parse(jsonStr);
+        }
+
+        // WebGPU Interface - get raw CFTP min state grid data
+        getCFTPMinRawGridData() {
+            const boundsPtr = this.getGridBoundsWasm();
+            const boundsStr = Module.UTF8ToString(boundsPtr);
+            this.freeStringWasm(boundsPtr);
+            const bounds = JSON.parse(boundsStr);
+
+            const dataPtr = this.getCFTPMinGridDataWasm();
+            if (!dataPtr) return null;
+
+            const size = bounds.size;
+            const data = new Int32Array(size);
+            for (let i = 0; i < size; i++) {
+                data[i] = Module.getValue(dataPtr + i * 4, 'i32');
+            }
+            Module._free(dataPtr);
+            return data;
+        }
+
+        // WebGPU Interface - get raw CFTP max state grid data
+        getCFTPMaxRawGridData() {
+            const boundsPtr = this.getGridBoundsWasm();
+            const boundsStr = Module.UTF8ToString(boundsPtr);
+            this.freeStringWasm(boundsPtr);
+            const bounds = JSON.parse(boundsStr);
+
+            const dataPtr = this.getCFTPMaxGridDataWasm();
+            if (!dataPtr) return null;
+
+            const size = bounds.size;
+            const data = new Int32Array(size);
+            for (let i = 0; i < size; i++) {
+                data[i] = Module.getValue(dataPtr + i * 4, 'i32');
+            }
+            Module._free(dataPtr);
+            return data;
         }
     }
 
@@ -4518,8 +4558,117 @@ Module.onRuntimeInitialized = function() {
         el.cftpStopBtn.style.display = 'inline-block';
         const cftpStartTime = performance.now();
 
-        setTimeout(() => {
+        // Check if WebGPU is available for accelerated CFTP
+        const useGpuCFTP = gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized();
+
+        setTimeout(async () => {
+            // Initialize CFTP in WASM (creates extremal states)
             sim.initCFTP();
+
+            if (useGpuCFTP) {
+                // ========== WebGPU CFTP Path ==========
+                // Get extremal states from WASM as raw grid data
+                const minGridData = sim.getCFTPMinRawGridData();
+                const maxGridData = sim.getCFTPMaxRawGridData();
+
+                if (!minGridData || !maxGridData) {
+                    console.error('Failed to get CFTP extremal states');
+                    el.cftpSteps.textContent = 'error';
+                    el.cftpBtn.textContent = originalText;
+                    el.cftpBtn.disabled = false;
+                    el.cftpStopBtn.style.display = 'none';
+                    return;
+                }
+
+                // Initialize GPU CFTP with extremal states
+                const gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
+                if (!gpuCftpOk) {
+                    console.error('Failed to initialize GPU CFTP, falling back to WASM');
+                    // Fall through to WASM path below
+                } else {
+                    // GPU CFTP loop with epoch doubling
+                    let T = 1;
+                    const maxT = 1048576; // Safety limit
+                    const stepsPerBatch = 1000; // Run 1000 steps between coalescence checks
+
+                    async function gpuCftpStep() {
+                        if (cftpCancelled) {
+                            gpuEngine.destroyCFTP();
+                            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                            el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
+                            el.cftpBtn.textContent = originalText;
+                            el.cftpBtn.disabled = false;
+                            el.cftpStopBtn.style.display = 'none';
+                            return;
+                        }
+
+                        // Reset chains to extremal states at start of each epoch
+                        gpuEngine.resetCFTPChains(minGridData, maxGridData);
+                        el.cftpSteps.textContent = 'T=' + T + ' (GPU)';
+                        el.cftpBtn.textContent = 'T=' + T;
+
+                        // Run T steps in batches
+                        let stepsRun = 0;
+                        while (stepsRun < T && !cftpCancelled) {
+                            const batchSize = Math.min(stepsPerBatch, T - stepsRun);
+                            await gpuEngine.stepCFTP(batchSize);
+                            stepsRun += batchSize;
+
+                            // Update progress display
+                            el.cftpSteps.textContent = 'T=' + T + ' @' + stepsRun + ' (GPU)';
+                            el.cftpBtn.textContent = T + ':' + stepsRun;
+
+                            // Yield to UI
+                            await new Promise(r => setTimeout(r, 0));
+                        }
+
+                        if (cftpCancelled) {
+                            gpuEngine.destroyCFTP();
+                            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                            el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
+                            el.cftpBtn.textContent = originalText;
+                            el.cftpBtn.disabled = false;
+                            el.cftpStopBtn.style.display = 'none';
+                            return;
+                        }
+
+                        // Check coalescence
+                        const coalesced = await gpuEngine.checkCoalescence();
+
+                        if (coalesced) {
+                            // Success! Copy result to main grid and WASM
+                            await gpuEngine.finalizeCFTP();
+                            // Get dimers from GPU result and update sim
+                            sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+                            draw();
+
+                            gpuEngine.destroyCFTP();
+                            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                            el.cftpSteps.textContent = T + ' (' + elapsed + 's, GPU)';
+                            el.cftpBtn.textContent = originalText;
+                            el.cftpBtn.disabled = false;
+                            el.cftpStopBtn.style.display = 'none';
+                        } else if (T >= maxT) {
+                            // Timeout
+                            gpuEngine.destroyCFTP();
+                            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                            el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
+                            el.cftpBtn.textContent = originalText;
+                            el.cftpBtn.disabled = false;
+                            el.cftpStopBtn.style.display = 'none';
+                        } else {
+                            // Double T and try again
+                            T *= 2;
+                            setTimeout(gpuCftpStep, 0);
+                        }
+                    }
+
+                    gpuCftpStep();
+                    return; // Don't fall through to WASM path
+                }
+            }
+
+            // ========== WASM CFTP Path (fallback) ==========
             let lastDrawnBlock = -1; // Track which 4096-block we last drew
 
             function cftpStep() {

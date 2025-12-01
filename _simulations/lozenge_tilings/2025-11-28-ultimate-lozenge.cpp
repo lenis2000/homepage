@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -2642,6 +2642,38 @@ char* getGridBounds() {
     char* out = (char*)malloc(json.size() + 1);
     strcpy(out, json.c_str());
     return out;
+}
+
+// Get raw CFTP min state grid data for WebGPU
+// Returns pointer to allocated Int32 array (caller must free with _free)
+EMSCRIPTEN_KEEPALIVE
+int32_t* getCFTPMinGridData() {
+    if (!cftp_initialized || cftp_minState.grid.empty()) {
+        return nullptr;
+    }
+    size_t size = cftp_minState.grid.size();
+    int32_t* data = (int32_t*)malloc(size * sizeof(int32_t));
+    if (!data) return nullptr;
+    for (size_t i = 0; i < size; i++) {
+        data[i] = static_cast<int32_t>(cftp_minState.grid[i]);
+    }
+    return data;
+}
+
+// Get raw CFTP max state grid data for WebGPU
+// Returns pointer to allocated Int32 array (caller must free with _free)
+EMSCRIPTEN_KEEPALIVE
+int32_t* getCFTPMaxGridData() {
+    if (!cftp_initialized || cftp_maxState.grid.empty()) {
+        return nullptr;
+    }
+    size_t size = cftp_maxState.grid.size();
+    int32_t* data = (int32_t*)malloc(size * sizeof(int32_t));
+    if (!data) return nullptr;
+    for (size_t i = 0; i < size; i++) {
+        data[i] = static_cast<int32_t>(cftp_maxState.grid[i]);
+    }
+    return data;
 }
 
 } // extern "C"
