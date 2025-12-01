@@ -5673,7 +5673,6 @@ function initLozengeApp() {
 
         // WASM path
         sim.initFluctuationsCFTP(2);
-        const stepBatch = 1000;
 
         function wasmDDStep() {
             if (doubleDimerCancelled) {
@@ -5686,11 +5685,8 @@ function initLozengeApp() {
                 return;
             }
 
-            for (let i = 0; i < stepBatch; i++) {
-                sim.stepFluctuationsCFTP();
-            }
-
-            const res = sim.getFluctuationsCFTPStatus();
+            // Call step once - it does a full epoch and returns status
+            const res = sim.stepFluctuationsCFTP();
             const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(1);
             const status = res.done >= 2 ? '✓' : `(${res.done >= 1 ? '✓' : '○'}${res.done >= 2 ? '✓' : '○'})`;
             el.doubleDimerProgress.textContent = `T=${res.maxT} ${status} (${elapsed}s)`;
@@ -5723,6 +5719,8 @@ function initLozengeApp() {
 
     // Resample button - clears stored samples and re-runs sampling
     el.resampleBtn.addEventListener('click', () => {
+        // Remember which mode was active
+        const wasDoubleDimerMode = inDoubleDimerMode;
         // Clear stored data
         storedSamples = null;
         rawFluctuations = null;
@@ -5731,8 +5729,12 @@ function initLozengeApp() {
         el.resampleBtn.style.display = 'none';
         el.fluctProgress.textContent = '';
         el.doubleDimerProgress.textContent = '';
-        // Trigger new sampling via fluctuations button
-        el.fluctuationsBtn.click();
+        // Trigger new sampling via the appropriate button
+        if (wasDoubleDimerMode) {
+            el.doubleDimerBtn.click();
+        } else {
+            el.fluctuationsBtn.click();
+        }
     });
 
     // Export
