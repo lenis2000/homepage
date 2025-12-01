@@ -426,6 +426,12 @@ if (window.LOZENGE_WEBGPU) {
     <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30"></span>
+    <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
+      <option value="">Letter/Number</option>
+    </select>
+    <button id="exportJsonBtn" style="padding: 4px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;" title="Export current shape as JSON">Export JSON</button>
+    <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+    <button id="importJsonBtn" style="padding: 4px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;" title="Import shape from JSON">Import JSON</button>
   </div>
 </div>
 
@@ -1298,6 +1304,20 @@ function initLozengeApp() {
         }
 
         return generateTrianglesInPolygon(boundary);
+    }
+
+    // Generate triangles for a letter/number preset from pre-computed triangle data
+    // All letters are hand-drawn or algorithmically generated and verified tileable
+    function generateLetterTriangles(char) {
+        const triData = window.LozengeLetterTriangles && window.LozengeLetterTriangles[char.toUpperCase()];
+        if (!triData) return new Map();
+
+        const triangles = new Map();
+        for (const t of triData) {
+            triangles.set(`${t.n},${t.j},${t.t}`, { n: t.n, j: t.j, type: t.t });
+        }
+
+        return triangles;
     }
 
     // Convert world coordinates to lattice (n, j) - boundary vertices are at integer lattice points
@@ -3016,6 +3036,7 @@ function initLozengeApp() {
         hexAInput: document.getElementById('hexAInput'),
         hexBInput: document.getElementById('hexBInput'),
         hexCInput: document.getElementById('hexCInput'),
+        letterSelect: document.getElementById('letterSelect'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
         paletteSelect: document.getElementById('palette-select'),
@@ -4134,6 +4155,98 @@ function initLozengeApp() {
         reinitialize();
     });
 
+    // Initialize letter/number dropdown
+    function initLetterSelector() {
+        const select = el.letterSelect;
+        // Add A-Z
+        for (let i = 0; i < 26; i++) {
+            const letter = String.fromCharCode(65 + i);
+            if (window.LozengeLetterTriangles && window.LozengeLetterTriangles[letter]) {
+                const opt = document.createElement('option');
+                opt.value = letter;
+                opt.textContent = letter;
+                select.appendChild(opt);
+            }
+        }
+        // Add 0-9
+        for (let i = 0; i <= 9; i++) {
+            const digit = i.toString();
+            if (window.LozengeLetterTriangles && window.LozengeLetterTriangles[digit]) {
+                const opt = document.createElement('option');
+                opt.value = digit;
+                opt.textContent = digit;
+                select.appendChild(opt);
+            }
+        }
+    }
+    initLetterSelector();
+
+    el.letterSelect.addEventListener('change', (e) => {
+        const char = e.target.value;
+        if (!char) return;
+        saveState();
+        activeTriangles = generateLetterTriangles(char);
+        reinitialize();
+        e.target.value = ''; // Reset to placeholder
+    });
+
+    // Export current shape as JSON
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+        if (activeTriangles.size === 0) {
+            alert('No shape to export');
+            return;
+        }
+
+        const triangles = [];
+        for (const tri of activeTriangles.values()) {
+            triangles.push({ n: tri.n, j: tri.j, type: tri.type });
+        }
+
+        const data = { version: 1, triangles };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'shape.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Import shape from JSON
+    document.getElementById('importJsonBtn').addEventListener('click', () => {
+        document.getElementById('importJsonInput').click();
+    });
+
+    document.getElementById('importJsonInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const data = JSON.parse(evt.target.result);
+                if (!data.triangles || !Array.isArray(data.triangles)) {
+                    alert('Invalid JSON: missing triangles array');
+                    return;
+                }
+
+                saveState();
+                activeTriangles = new Map();
+                for (const t of data.triangles) {
+                    const type = t.type || t.t;
+                    activeTriangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
+                }
+                reinitialize();
+            } catch (err) {
+                alert('Error parsing JSON: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset so same file can be loaded again
+    });
+
     // View toggle
     el.lozengeViewBtn.addEventListener('click', () => {
         renderer.showDimerView = false;
@@ -4614,7 +4727,7 @@ function initLozengeApp() {
                     const maxT = 1048576; // Safety limit
                     const stepsPerBatch = 1000; // Run steps between UI updates
                     const checkInterval = 1000; // Check coalescence every N steps within batch
-                    const drawInterval = 4096;  // Draw min/max bounds every N steps
+                    const drawInterval = 16384;  // Draw min/max bounds every N steps
                     let lastDrawnBlock = -1;
 
                     async function gpuCftpStep() {
@@ -4717,8 +4830,8 @@ function initLozengeApp() {
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
                         } else {
-                            // Draw bounds after each small epoch (T <= 4096)
-                            if (T <= drawInterval) {
+                            // Draw bounds only at end of epochs 4096, 8192, 16384
+                            if (T >= 4096 && T <= drawInterval) {
                                 const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
                                 if (bounds.maxDimers.length > 0) {
                                     if (is3DView && renderer3D) {
@@ -4747,7 +4860,7 @@ function initLozengeApp() {
             }
 
             // ========== WASM CFTP Path (fallback) ==========
-            let lastDrawnBlock = -1; // Track which 4096-block we last drew
+            let lastDrawnBlock = -1; // Track which 16K-block we last drew
 
             function cftpStep() {
                 // Check for cancellation
@@ -4764,9 +4877,9 @@ function initLozengeApp() {
                 if (res.status === 'in_progress') {
                     el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.step;
                     el.cftpBtn.textContent = res.T + ':' + res.step;
-                    // Draw every 4096 steps when T > 4096
-                    if (res.T > 4096) {
-                        const currentBlock = Math.floor(res.step / 4096);
+                    // Draw every 16384 steps when T > 16384
+                    if (res.T > 16384) {
+                        const currentBlock = Math.floor(res.step / 16384);
                         if (currentBlock > lastDrawnBlock) {
                             lastDrawnBlock = currentBlock;
                             const maxData = sim.getCFTPMaxDimers();
@@ -4808,8 +4921,8 @@ function initLozengeApp() {
                     el.cftpSteps.textContent = 'T=' + res.T;
                     el.cftpBtn.textContent = 'T=' + res.T;
                     lastDrawnBlock = -1; // Reset for new epoch
-                    // Draw both surfaces after each epoch
-                    if (res.prevT <= 4096) {
+                    // Draw both surfaces only at end of epochs 4096, 8192, 16384
+                    if (res.prevT >= 4096 && res.prevT <= 16384) {
                         const maxData = sim.getCFTPMaxDimers();
                         const minData = sim.getCFTPMinDimers();
                         if (is3DView && renderer3D) {
