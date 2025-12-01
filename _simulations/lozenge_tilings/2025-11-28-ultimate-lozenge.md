@@ -49,6 +49,41 @@ code:
 
 <p><strong>Hole Constraints:</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note that a lozenge tiling with hole might not correspond to a correct 3D shape, and fun discontinuities will arise.</p>
 
+<p><strong>Drawing & Editing Tools:</strong></p>
+<ul>
+  <li><strong>Lasso Selection</strong>: Click multiple points to define a polygon. Click near the start to close the loop, or use <strong>Cmd/Ctrl-Click</strong> to close immediately. Supports <strong>Snap to Grid</strong> for precise lattice alignment.</li>
+  <li><strong>Scale Region</strong>: Instantly <strong>Double</strong> (scale up) or <strong>Halve</strong> (scale down) the current region size.</li>
+  <li><strong>Undo/Redo</strong>: Full history support for shape modifications.</li>
+</ul>
+
+<p><strong>Presets:</strong></p>
+<ul>
+  <li><strong>Text</strong>: Generate regions shaped like letters (A-Z) or numbers (0-9).</li>
+  <li><strong>Shape of the Month</strong>: Loads a curated complex polygon.</li>
+</ul>
+
+<p><strong>Visualization Modes:</strong></p>
+<ul>
+  <li><strong>2D Lozenge</strong>: Standard flat tiling view.</li>
+  <li><strong>2D Dimer</strong>: Displays the underlying matching on the dual graph.</li>
+  <li><strong>3D Height Function</strong>: Renders the tiling as a stepped surface in 3D space. Supports rotation, panning, and zooming.</li>
+  <li><strong>Color Palettes</strong>: Multiple color schemes available, with permutation support to cycle colors.</li>
+</ul>
+
+<p><strong>Sampling & Analysis:</strong></p>
+<ul>
+  <li><strong>Average Sample</strong>: Runs parallel CFTP chains to compute the mean height function (Limit Shape).</li>
+  <li><strong>Fluctuations (GFF)</strong>: Visualizes the height difference between two perfect samples (scaled by &radic;2), approximating the Gaussian Free Field.</li>
+  <li><strong>Double Dimer</strong>: Superimposes two independent samples to form loops. Includes a <strong>Min Loop Size</strong> filter to analyze loop statistics.</li>
+</ul>
+
+<p><strong>Data Export:</strong></p>
+<ul>
+  <li><strong>Images</strong>: Export high-quality PNG or PDF.</li>
+  <li><strong>Geometry</strong>: Import/Export the region shape as JSON.</li>
+  <li><strong>Scientific Data</strong>: Export the computed Height Function as a <strong>CSV</strong> file or <strong>Mathematica array</strong> for external analysis.</li>
+</ul>
+
 <p><strong>Performance:</strong> The simulation runs entirely in your browser. When available, it uses <strong>WebGPU</strong> compute shaders for massively parallel Glauber dynamics and CFTP sampling, based on the chromatic sweep approach from <a href="https://arxiv.org/abs/1804.07250" target="_blank">Keating-Sridhar (2018)</a>. On systems without WebGPU, it falls back to <strong>multi-threaded WebAssembly</strong> (up to 4 cores) for parallel CFTP chains, or single-threaded WASM with optimized pre-computed caches and Lemire's fast bounded random.</p>
 
 </div>
@@ -437,6 +472,7 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Preset Shapes -->
 <div class="control-group">
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <button id="shapeOfMonthBtn" style="background: #ff5555; color: white; border-color: #ff5555;">Shape of the Month</button>
     <button id="hexagonBtn">Hexagon</button>
     <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
@@ -444,7 +480,6 @@ if (window.LOZENGE_WEBGPU) {
     <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
       <option value="">Letter/Number (under construction)</option>
     </select>
-    <button id="shapeOfMonthBtn" style="padding: 4px 8px; font-size: 12px;">Shape of the Month</button>
   </div>
 </div>
 
