@@ -477,7 +477,7 @@ if (window.LOZENGE_WEBGPU) {
     <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
     <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30"></span>
     <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
-      <option value="">Letter/Number (under construction)</option>
+      <option value="">Letters and Numbers (under construction)</option>
     </select>
   </div>
 </div>
