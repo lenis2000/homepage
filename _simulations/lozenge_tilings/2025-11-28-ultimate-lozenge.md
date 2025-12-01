@@ -151,6 +151,16 @@ code:
     background: #f5f5f5;
     border-color: #999;
   }
+  .control-group button:disabled {
+    background: #e0e0e0;
+    border-color: #ccc;
+    color: #999;
+    cursor: not-allowed;
+  }
+  .control-group button:disabled:hover {
+    background: #e0e0e0;
+    border-color: #ccc;
+  }
   .control-group button.primary {
     background: #4CAF50;
     color: white;
@@ -329,6 +339,11 @@ code:
     background-color: #3a3a3a;
     border-color: #555;
     color: #ddd;
+  }
+  [data-theme="dark"] .control-group button:disabled {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #666;
   }
   [data-theme="dark"] .status-valid { background: #1b5e20; color: #a5d6a7; }
   [data-theme="dark"] .status-invalid { background: #b71c1c; color: #ffcdd2; }
@@ -559,6 +574,8 @@ if (window.LOZENGE_WEBGPU) {
     <button id="panRightBtn" title="Pan Right">→</button>
     <button id="panUpBtn" title="Pan Up">↑</button>
     <button id="panDownBtn" title="Pan Down">↓</button>
+    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
+    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled>↻</button>
     <button id="resetViewBtn" title="Reset View">Reset View</button>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="autoRotateCheckbox">
@@ -624,6 +641,7 @@ if (window.LOZENGE_WEBGPU) {
       <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
       <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
     </span>
+    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;">Resample</button>
   </div>
 </div>
 
@@ -1979,7 +1997,7 @@ function initLozengeApp() {
             }
         }
 
-        drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, isValid) {
+        drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, isValid, outlinesOnly = false) {
             for (const [key, tri] of activeTriangles) {
                 let verts;
                 if (tri.type === 1) {
@@ -1992,19 +2010,22 @@ function initLozengeApp() {
 
                 const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
 
-                // Color: blue for black, orange for white; red tint if invalid
-                if (!isValid) {
-                    ctx.fillStyle = 'rgba(200, 50, 50, 0.4)';
-                } else {
-                    ctx.fillStyle = tri.type === 1 ? 'rgba(50, 100, 200, 0.3)' : 'rgba(200, 150, 50, 0.3)';
-                }
-
                 ctx.beginPath();
                 ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
                 ctx.lineTo(canvasVerts[1][0], canvasVerts[1][1]);
                 ctx.lineTo(canvasVerts[2][0], canvasVerts[2][1]);
                 ctx.closePath();
-                ctx.fill();
+
+                // Skip fills for outlines-only mode (e.g., double dimer view)
+                if (!outlinesOnly) {
+                    // Color: blue for black, orange for white; red tint if invalid
+                    if (!isValid) {
+                        ctx.fillStyle = 'rgba(200, 50, 50, 0.4)';
+                    } else {
+                        ctx.fillStyle = tri.type === 1 ? 'rgba(50, 100, 200, 0.3)' : 'rgba(200, 150, 50, 0.3)';
+                    }
+                    ctx.fill();
+                }
 
                 ctx.strokeStyle = tri.type === 1 ? '#3366cc' : '#cc9933';
                 ctx.lineWidth = 1;
@@ -3001,6 +3022,22 @@ function initLozengeApp() {
             this.controls.update();
         }
 
+        rotateHorizontal(angleDegrees) {
+            // Rotate camera around the target, around the X+Y=0 axis (direction (1,-1,0))
+            const angleRadians = angleDegrees * Math.PI / 180;
+            const target = this.controls.target;
+            const offset = new THREE.Vector3();
+            offset.subVectors(this.camera.position, target);
+
+            // Rotate around axis (1, -1, 0) normalized
+            const axis = new THREE.Vector3(1, -1, 0).normalize();
+            offset.applyAxisAngle(axis, angleRadians);
+
+            this.camera.position.copy(target).add(offset);
+            this.camera.lookAt(target);
+            this.controls.update();
+        }
+
         updateDarkMode(isDark) {
             this.scene.background = new THREE.Color(isDark ? 0x1a1a1a : 0xffffff);
         }
@@ -3115,6 +3152,7 @@ function initLozengeApp() {
         doubleDimerBtn: document.getElementById('doubleDimerBtn'),
         doubleDimerProgress: document.getElementById('doubleDimerProgress'),
         minLoopInput: document.getElementById('minLoopInput'),
+        resampleBtn: document.getElementById('resampleBtn'),
     };
 
     // CFTP cancellation flag
@@ -3413,6 +3451,9 @@ function initLozengeApp() {
         threeContainer.style.display = use3D ? 'block' : 'none';
         // Hole overlays are shown in both 2D and 3D views
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
+        // Enable/disable rotate buttons based on 3D view
+        document.getElementById('rotateLeftBtn').disabled = !use3D;
+        document.getElementById('rotateRightBtn').disabled = !use3D;
 
         if (use3D) {
             if (!renderer3D) {
@@ -3473,6 +3514,9 @@ function initLozengeApp() {
         inDoubleDimerMode = false;
         storedSamples = null;
         rawFluctuations = null;
+        el.resampleBtn.style.display = 'none';
+        el.fluctProgress.textContent = '';
+        el.doubleDimerProgress.textContent = '';
 
         // Stop animation loop temporarily
         if (animationId) {
@@ -4191,6 +4235,19 @@ function initLozengeApp() {
             renderer3D.pan(0, -panAmount);
         }
         draw();
+    });
+
+    // Rotate controls (3D only)
+    const rotateAngle = 15; // degrees
+    document.getElementById('rotateLeftBtn').addEventListener('click', () => {
+        if (renderer3D && is3DView) {
+            renderer3D.rotateHorizontal(-rotateAngle);
+        }
+    });
+    document.getElementById('rotateRightBtn').addEventListener('click', () => {
+        if (renderer3D && is3DView) {
+            renderer3D.rotateHorizontal(rotateAngle);
+        }
     });
 
     // Keyboard shortcuts
@@ -5314,6 +5371,7 @@ function initLozengeApp() {
             el.startStopBtn.disabled = false;
             el.averageBtn.disabled = false;
             el.doubleDimerBtn.disabled = false;
+            el.resampleBtn.style.display = 'inline-block';
         }
     });
 
@@ -5324,179 +5382,57 @@ function initLozengeApp() {
 
     // Filter loops by minimum size for double dimer display
     // Double dimer = union of 2 perfect matchings = decomposes into vertex-disjoint cycles
-    // Each cycle has length = number of edges (counting multiplicity for double dimers)
-    // Double dimer edge (same in both samples) = cycle of length 2
-    // TODO: Move loop detection to C++/threaded C++/GPU for performance on large regions
-    function filterLoopsBySize(dimers0, dimers1, minSize) {
-        if (minSize <= 2) return { dimers0, dimers1 };
-
-        // Build edge key from dimer
-        function edgeKey(d) {
-            return `${d.bn},${d.bj},${d.wn},${d.wj}`;
-        }
-
-        // Build adjacency: for each vertex, store its two incident edges (one from each sample)
-        // Use unique edge ID to distinguish same edge from different samples
-        const adj = new Map(); // vertex -> [{edgeId, key, other}, ...]
-        let edgeIdCounter = 0;
-
-        function addEdge(d, sample) {
-            const key = edgeKey(d);
-            const vB = `B_${d.bn}_${d.bj}`;
-            const vW = `W_${d.wn}_${d.wj}`;
-            const edgeId = edgeIdCounter++;
-
-            if (!adj.has(vB)) adj.set(vB, []);
-            if (!adj.has(vW)) adj.set(vW, []);
-
-            adj.get(vB).push({ edgeId, key, other: vW, sample });
-            adj.get(vW).push({ edgeId, key, other: vB, sample });
-        }
-
-        dimers0.forEach(d => addEdge(d, 0));
-        dimers1.forEach(d => addEdge(d, 1));
-
-        // Find cycles by tracing through edges
-        // Each vertex has exactly 2 edges (one from each sample)
-        // We trace cycles by following edges, never using the same edge twice
-        const edgeLoopSize = new Map();
-        const usedEdgeIds = new Set();
-
-        for (const d of dimers0) {
-            const key = edgeKey(d);
-            if (edgeLoopSize.has(key)) continue; // Already assigned to a cycle
-
-            // Check if this is a double dimer (same edge in both samples)
-            const vB = `B_${d.bn}_${d.bj}`;
-            const vW = `W_${d.wn}_${d.wj}`;
-            const edgesAtB = adj.get(vB) || [];
-            const edgesAtW = adj.get(vW) || [];
-
-            // For double dimer: both edges at each vertex have the same key
-            const keysAtB = edgesAtB.map(e => e.key);
-            const keysAtW = edgesAtW.map(e => e.key);
-            const isDoubleDimer = keysAtB[0] === keysAtB[1] && keysAtW[0] === keysAtW[1];
-
-            if (isDoubleDimer) {
-                edgeLoopSize.set(key, 2);
-                continue;
-            }
-
-            // Trace alternating cycle: must alternate between sample0 and sample1
-            const cycleKeys = [];
-            let currentV = vW; // Start from white vertex
-            let currentSample = 1; // Next edge should be from sample1
-            let startKey = key;
-            cycleKeys.push(key);
-
-            for (let safety = 0; safety < 10000; safety++) {
-                const vEdges = adj.get(currentV) || [];
-                // Find the edge from the current sample (alternating)
-                const nextEdge = vEdges.find(e => e.sample === currentSample && !usedEdgeIds.has(e.edgeId));
-                if (!nextEdge) break;
-
-                if (nextEdge.key === startKey) break; // Completed the cycle
-
-                cycleKeys.push(nextEdge.key);
-                usedEdgeIds.add(nextEdge.edgeId);
-                currentV = nextEdge.other;
-                currentSample = 1 - currentSample; // Alternate samples
-            }
-
-            // Mark all edges in this cycle
-            const cycleSize = cycleKeys.length;
-            for (const k of cycleKeys) {
-                edgeLoopSize.set(k, cycleSize);
-            }
-        }
-
-        // Debug: log cycle sizes
-        const sizeCounts = new Map();
-        for (const size of edgeLoopSize.values()) {
-            sizeCounts.set(size, (sizeCounts.get(size) || 0) + 1);
-        }
-        console.log('Loop sizes:', Object.fromEntries(sizeCounts));
-
-        // Filter dimers based on loop size
-        const filtered0 = dimers0.filter(d => {
-            const size = edgeLoopSize.get(edgeKey(d));
-            return size !== undefined && size >= minSize;
-        });
-        const filtered1 = dimers1.filter(d => {
-            const size = edgeLoopSize.get(edgeKey(d));
-            return size !== undefined && size >= minSize;
-        });
-
-        // Verify no common edges remain (double dimers should be filtered out)
-        const set0 = new Set(filtered0.map(d => edgeKey(d)));
-        const set1 = new Set(filtered1.map(d => edgeKey(d)));
-        let commonCount = 0;
-        for (const k of set0) if (set1.has(k)) commonCount++;
-
-        console.log(`Filtering: minSize=${minSize}, kept ${filtered0.length}/${dimers0.length} from sample0, ${filtered1.length}/${dimers1.length} from sample1, common=${commonCount}`);
-
-        return { dimers0: filtered0, dimers1: filtered1 };
-    }
-
-    // Render double dimer view with loop filtering
+    // Render double dimer view with loop filtering (C++ only)
     function renderDoubleDimers() {
         if (!storedSamples) return;
         const minLoop = parseInt(el.minLoopInput.value) || 2;
 
-        // Use C++ loop detection for large regions (>1000 dimers), JS for small
-        let filtered;
-        const totalDimers = storedSamples.dimers0.length + storedSamples.dimers1.length;
-        const useCpp = totalDimers > 1000 && sim.loadDimersForLoops && sim.filterLoopsByMinSize;
-
-        if (useCpp) {
-            // Load dimers into C++ once per sample set
-            if (!storedSamples.loadedToCpp) {
-                console.log(`Loop detection: using C++ for ${totalDimers} dimers`);
-                sim.loadDimersForLoops(storedSamples.dimers0, storedSamples.dimers1);
-                storedSamples.loadedToCpp = true;
-            }
-            const result = sim.filterLoopsByMinSize(minLoop);
-            filtered = {
-                dimers0: result.indices0.map(i => storedSamples.dimers0[i]),
-                dimers1: result.indices1.map(i => storedSamples.dimers1[i])
-            };
-        } else {
-            filtered = filterLoopsBySize(
-                storedSamples.dimers0,
-                storedSamples.dimers1,
-                minLoop
-            );
+        // Load dimers into C++ once per sample set
+        if (!storedSamples.loadedToCpp) {
+            sim.loadDimersForLoops(storedSamples.dimers0, storedSamples.dimers1);
+            storedSamples.loadedToCpp = true;
         }
+        const result = sim.filterLoopsByMinSize(minLoop);
+        const filtered = {
+            dimers0: result.indices0.map(i => storedSamples.dimers0[i]),
+            dimers1: result.indices1.map(i => storedSamples.dimers1[i])
+        };
 
-        // Switch to 2D view
-        if (is3DView) {
-            setViewMode(false);
-        }
-        el.dimerViewBtn.classList.add('active');
-        el.lozengeViewBtn.classList.remove('active');
+        // Force 2D mode
+        is3DView = false;
+        canvas.style.display = 'block';
+        threeContainer.style.display = 'none';
+        el.toggle3DBtn.textContent = '3D';
 
-        // Draw base triangles (no lozenge coloring) then overlay double dimers
-        const ctx = renderer.ctx;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, renderer.displayWidth, renderer.displayHeight);
+        // Get canvas context and clear EVERYTHING
+        const ctx = canvas.getContext('2d');
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Clear entire canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = isDarkMode ? '#1a1a1a' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
 
         // Get transform for drawing
         const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
 
         // Draw grid background if enabled
         if (renderer.showGrid) {
-            renderer.drawBackgroundGrid(ctx, centerX, centerY, scale, false);
+            renderer.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
         }
 
-        // Draw triangle outlines (no fill colors)
-        renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true);
+        // Draw triangle outlines only - NO fills (pass outlinesOnly=true)
+        renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true, true);
 
         // Draw boundary
         if (sim.boundaries && sim.boundaries.length > 0) {
             renderer.drawBoundary(ctx, sim.boundaries, centerX, centerY, scale);
         }
 
-        // Draw the double dimer configuration (superimposed samples)
+        // Draw ONLY the double dimer configuration - two samples superimposed
         renderer.drawDoubleDimerView(ctx, sim, filtered.dimers0, filtered.dimers1, centerX, centerY, scale);
     }
 
@@ -5548,6 +5484,7 @@ function initLozengeApp() {
             el.cftpBtn.disabled = false;
             el.fluctuationsBtn.disabled = false;
             el.averageBtn.disabled = false;
+            el.resampleBtn.style.display = 'inline-block';
 
             renderDoubleDimers();
         }
@@ -5685,6 +5622,20 @@ function initLozengeApp() {
         if (inDoubleDimerMode && storedSamples) {
             renderDoubleDimers();
         }
+    });
+
+    // Resample button - clears stored samples and re-runs sampling
+    el.resampleBtn.addEventListener('click', () => {
+        // Clear stored data
+        storedSamples = null;
+        rawFluctuations = null;
+        inFluctuationMode = false;
+        inDoubleDimerMode = false;
+        el.resampleBtn.style.display = 'none';
+        el.fluctProgress.textContent = '';
+        el.doubleDimerProgress.textContent = '';
+        // Trigger new sampling via fluctuations button
+        el.fluctuationsBtn.click();
     });
 
     // Export

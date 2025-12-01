@@ -7,7 +7,7 @@ emcc 2025-11-28-ultimate-lozenge-threaded.cpp -o 2025-11-28-ultimate-lozenge-thr
   -s PTHREAD_POOL_SIZE=4 \
   -s SHARED_MEMORY=1 \
   -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
-  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
+  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','lengthBytesUTF8','stringToUTF8']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
   -s STACK_SIZE=1MB \
@@ -2880,20 +2880,22 @@ static void parseDimerArray(const char* json, std::vector<std::array<int, 4>>& o
 }
 
 // Make vertex key: pack (n, j, isWhite) into 64-bit int
+// Offset 30000 handles coords in range [-30000, +34535] - fits in 16 bits
 inline int64_t makeVertexKey(int n, int j, bool isWhite) {
-    // Use 20 bits for n (shifted by +500000 to handle negatives), 20 bits for j, 1 bit for isWhite
-    int64_t nShifted = (int64_t)(n + 500000);
-    int64_t jShifted = (int64_t)(j + 500000);
-    return (nShifted << 21) | (jShifted << 1) | (isWhite ? 1 : 0);
+    int64_t nShifted = (int64_t)(n + 30000);
+    int64_t jShifted = (int64_t)(j + 30000);
+    // 16 bits for n, 16 bits for j, 1 bit for isWhite = 33 bits total
+    return (nShifted << 17) | (jShifted << 1) | (isWhite ? 1 : 0);
 }
 
 // Make edge key for checking double dimers
+// Offset 30000 handles coords in range [-30000, +34535] - fits in 16 bits each
 inline int64_t makeEdgeKey(int bn, int bj, int wn, int wj) {
-    int64_t bnShifted = (int64_t)(bn + 500000);
-    int64_t bjShifted = (int64_t)(bj + 500000);
-    int64_t wnShifted = (int64_t)(wn + 500000);
-    int64_t wjShifted = (int64_t)(wj + 500000);
-    // Pack all 4 into 64 bits (16 bits each is enough for reasonable coords)
+    int64_t bnShifted = (int64_t)(bn + 30000);
+    int64_t bjShifted = (int64_t)(bj + 30000);
+    int64_t wnShifted = (int64_t)(wn + 30000);
+    int64_t wjShifted = (int64_t)(wj + 30000);
+    // 16 bits each = 64 bits total
     return (bnShifted << 48) | (bjShifted << 32) | (wnShifted << 16) | wjShifted;
 }
 
