@@ -528,8 +528,8 @@ if (window.LOZENGE_WEBGPU) {
 <div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
   <!-- View Toggle overlay -->
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 8px;">
-    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.7); color: white; border-radius: 4px; font-size: 11px; display: none;">
-      Hold Shift to erase
+    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.7); color: white; border-radius: 4px; font-size: 11px;">
+      Shift: erase
     </div>
     <button id="toggle3DBtn" style="padding: 4px 12px; border: 2px solid #1976d2; border-radius: 6px; background: white; color: #1976d2; font-weight: 500; cursor: pointer;">3D</button>
   </div>
