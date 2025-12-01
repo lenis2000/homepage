@@ -479,6 +479,7 @@ if (window.LOZENGE_WEBGPU) {
     <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
       <option value="">Letters and Numbers (under construction)</option>
     </select>
+    <button id="showBoundaryLengthsBtn" title="Show boundary segment lengths">Lengths</button>
   </div>
 </div>
 
@@ -1770,6 +1771,7 @@ function initLozengeApp() {
             this.borderWidthPct = 1;
             this.showDimerView = false;
             this.showGrid = true;
+            this.showBoundaryLengths = false;
             this.rotated = false;
             this.usePeriodicWeights = false;
             this.periodicK = 2;
@@ -1967,6 +1969,13 @@ function initLozengeApp() {
             if (sim.boundaries && sim.boundaries.length > 0) {
                 for (const boundary of sim.boundaries) {
                     this.drawBoundary(ctx, boundary, centerX, centerY, scale, isDarkMode);
+                }
+            }
+
+            // Draw boundary segment lengths if enabled
+            if (this.showBoundaryLengths && sim.boundaries && sim.boundaries.length > 0) {
+                for (const boundary of sim.boundaries) {
+                    this.drawBoundaryLengths(ctx, boundary, centerX, centerY, scale, isDarkMode);
                 }
             }
 
@@ -2233,6 +2242,72 @@ function initLozengeApp() {
             }
             ctx.closePath();
             ctx.stroke();
+        }
+
+        drawBoundaryLengths(ctx, boundary, centerX, centerY, scale, isDarkMode) {
+            if (boundary.length < 2) return;
+
+            // Find straight segments by detecting direction changes
+            const segments = [];
+            let startIdx = 0;
+
+            for (let i = 0; i < boundary.length; i++) {
+                const curr = boundary[i];
+                const next = boundary[(i + 1) % boundary.length];
+                const afterNext = boundary[(i + 2) % boundary.length];
+
+                const dx1 = next.x - curr.x;
+                const dy1 = next.y - curr.y;
+                const dx2 = afterNext.x - next.x;
+                const dy2 = afterNext.y - next.y;
+
+                // Cross product to detect direction change
+                const cross = dx1 * dy2 - dy1 * dx2;
+
+                if (Math.abs(cross) > 0.001 || i === boundary.length - 1) {
+                    const segmentLength = i - startIdx + 1;
+                    if (segmentLength >= 2) {
+                        // Get start and end points of segment
+                        const startPt = boundary[startIdx];
+                        const endPt = boundary[(i + 1) % boundary.length];
+
+                        // Midpoint
+                        const midX = (startPt.x + endPt.x) / 2;
+                        const midY = (startPt.y + endPt.y) / 2;
+
+                        // Direction along segment
+                        const dx = endPt.x - startPt.x;
+                        const dy = endPt.y - startPt.y;
+                        const len = Math.sqrt(dx * dx + dy * dy);
+
+                        // Outward normal (perpendicular, pointing outside)
+                        const nx = dy / len;
+                        const ny = -dx / len;
+
+                        segments.push({
+                            length: segmentLength,
+                            x: midX, y: midY,
+                            nx, ny
+                        });
+                    }
+                    startIdx = i + 1;
+                }
+            }
+
+            // Draw length labels offset outside boundary
+            const fontSize = Math.max(10, Math.min(20, scale * 0.3));
+            const offset = fontSize * 0.8;
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (const seg of segments) {
+                const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
+                const labelX = cx + seg.nx * offset;
+                const labelY = cy + seg.ny * offset;
+                ctx.fillText(seg.length.toString(), labelX, labelY);
+            }
         }
 
         drawLasso(ctx, lassoPoints, centerX, centerY, scale, isFillMode, cursorPos = null) {
@@ -3180,6 +3255,7 @@ function initLozengeApp() {
         hexBInput: document.getElementById('hexBInput'),
         hexCInput: document.getElementById('hexCInput'),
         letterSelect: document.getElementById('letterSelect'),
+        showBoundaryLengthsBtn: document.getElementById('showBoundaryLengthsBtn'),
         shapeOfMonthBtn: document.getElementById('shapeOfMonthBtn'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
@@ -4368,6 +4444,13 @@ function initLozengeApp() {
         }
         reinitialize();
         e.target.value = ''; // Reset to placeholder
+    });
+
+    // Boundary lengths toggle button
+    el.showBoundaryLengthsBtn.addEventListener('click', () => {
+        renderer.showBoundaryLengths = !renderer.showBoundaryLengths;
+        el.showBoundaryLengthsBtn.classList.toggle('active', renderer.showBoundaryLengths);
+        draw();
     });
 
     // Shape of the Month button
