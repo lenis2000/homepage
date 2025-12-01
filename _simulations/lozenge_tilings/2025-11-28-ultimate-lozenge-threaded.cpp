@@ -6,7 +6,7 @@ emcc 2025-11-28-ultimate-lozenge-threaded.cpp -o 2025-11-28-ultimate-lozenge-thr
   -pthread \
   -s PTHREAD_POOL_SIZE=4 \
   -s SHARED_MEMORY=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -2829,6 +2829,43 @@ char* exportFluctuationSample(int sampleIdx) {
     }
 
     json += "]}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+// ============================================================================
+// WEBGPU INTERFACE - Raw grid data access for GPU compute
+// ============================================================================
+
+// Get raw grid data as Int32Array for WebGPU
+// Returns pointer to allocated Int32 array (caller must free with _free)
+EMSCRIPTEN_KEEPALIVE
+int32_t* getRawGridData() {
+    if (dimerGrid.empty()) {
+        return nullptr;
+    }
+
+    // Allocate Int32 array and copy grid data
+    size_t size = dimerGrid.size();
+    int32_t* data = (int32_t*)malloc(size * sizeof(int32_t));
+    if (!data) return nullptr;
+
+    for (size_t i = 0; i < size; i++) {
+        data[i] = static_cast<int32_t>(dimerGrid[i]);
+    }
+    return data;
+}
+
+// Get grid bounds as JSON
+EMSCRIPTEN_KEEPALIVE
+char* getGridBounds() {
+    std::string json = "{\"minN\":" + std::to_string(gridMinN) +
+                       ",\"maxN\":" + std::to_string(gridMaxN) +
+                       ",\"minJ\":" + std::to_string(gridMinJ) +
+                       ",\"maxJ\":" + std::to_string(gridMaxJ) +
+                       ",\"strideJ\":" + std::to_string(gridStrideJ) +
+                       ",\"size\":" + std::to_string(dimerGrid.size()) + "}";
     char* out = (char*)malloc(json.size() + 1);
     strcpy(out, json.c_str());
     return out;

@@ -403,11 +403,17 @@ code:
 <script>
 // Dynamic WASM loader: use threaded version if SharedArrayBuffer is available
 window.LOZENGE_THREADED = typeof SharedArrayBuffer !== 'undefined';
+window.LOZENGE_WEBGPU = !!navigator.gpu;
 console.log('Will load WASM:', window.LOZENGE_THREADED ? 'threaded' : 'non-threaded');
+console.log('WebGPU:', window.LOZENGE_WEBGPU ? 'available' : 'unavailable');
 </script>
 <script>
 // Load appropriate WASM module
 document.write('<script src="/js/2025-11-28-ultimate-lozenge' + (window.LOZENGE_THREADED ? '-threaded' : '') + '.js"><\/script>');
+// Load WebGPU engine if available
+if (window.LOZENGE_WEBGPU) {
+    document.write('<script src="/js/webgpu-lozenge-engine.js"><\/script>');
+}
 </script>
 
 <!-- Main controls -->
@@ -905,6 +911,10 @@ Module.onRuntimeInitialized = function() {
             this.getFluctuationsResultWasm = Module.cwrap('getFluctuationsResult', 'number', []);
             this.exportFluctuationSampleWasm = Module.cwrap('exportFluctuationSample', 'number', ['number']);
 
+            // WebGPU Interface
+            this.getRawGridDataWasm = Module.cwrap('getRawGridData', 'number', []);
+            this.getGridBoundsWasm = Module.cwrap('getGridBounds', 'number', []);
+
             this.totalSteps = 0;
             this.flipCount = 0;
         }
@@ -1116,6 +1126,42 @@ Module.onRuntimeInitialized = function() {
 
         exportFluctuationSample(sampleIdx) {
             const ptr = this.exportFluctuationSampleWasm(sampleIdx);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        // WebGPU Interface - get raw grid data for GPU compute
+        getRawGridData() {
+            const boundsPtr = this.getGridBoundsWasm();
+            const boundsStr = Module.UTF8ToString(boundsPtr);
+            this.freeStringWasm(boundsPtr);
+            const bounds = JSON.parse(boundsStr);
+
+            const dataPtr = this.getRawGridDataWasm();
+            if (!dataPtr) return null;
+
+            // Copy data from WASM memory to JavaScript Int32Array
+            const size = bounds.size;
+            const data = new Int32Array(size);
+            for (let i = 0; i < size; i++) {
+                data[i] = Module.getValue(dataPtr + i * 4, 'i32');
+            }
+            Module._free(dataPtr);
+
+            return {
+                data: data,
+                minN: bounds.minN,
+                maxN: bounds.maxN,
+                minJ: bounds.minJ,
+                maxJ: bounds.maxJ,
+                strideJ: bounds.strideJ,
+                size: size
+            };
+        }
+
+        getGridBounds() {
+            const ptr = this.getGridBoundsWasm();
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             return JSON.parse(jsonStr);
@@ -2859,6 +2905,24 @@ Module.onRuntimeInitialized = function() {
     const renderer = new LozengeRenderer(canvas);
     const undoStack = new UndoStack();
 
+    // WebGPU Engine (initialized asynchronously if available)
+    let gpuEngine = null;
+    let useWebGPU = false;
+
+    // Initialize WebGPU engine if available
+    if (window.LOZENGE_WEBGPU && window.WebGPULozengeEngine) {
+        (async () => {
+            try {
+                gpuEngine = new WebGPULozengeEngine();
+                await gpuEngine.init();
+                console.log('WebGPU Lozenge Engine ready');
+            } catch (e) {
+                console.warn('WebGPU initialization failed:', e);
+                gpuEngine = null;
+            }
+        })();
+    }
+
     let activeTriangles = new Map();
     let isDrawing = false;
     // Tools: 'draw', 'erase', 'lassoFill', 'lassoErase', 'belowFill', 'belowErase'
@@ -3277,6 +3341,19 @@ Module.onRuntimeInitialized = function() {
         const wasValid = isValid;
         isValid = result.status === 'valid';
 
+        // Sync grid data to WebGPU if available and valid
+        if (isValid && gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized()) {
+            const gridInfo = sim.getRawGridData();
+            if (gridInfo) {
+                gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
+                useWebGPU = true;
+            }
+        } else if (isValid && gpuEngine && !gpuEngine.isInitialized()) {
+            // GPU engine exists but not fully init'd yet - schedule sync for later
+            useWebGPU = false;
+        } else {
+            useWebGPU = false;
+        }
 
         // Track if we should auto-restart when valid again
         if (wasRunning && !isValid) {
@@ -4347,7 +4424,7 @@ Module.onRuntimeInitialized = function() {
     buildPeriodicMatrix(currentPeriodicK);
     document.getElementById('periodicQProduct').textContent = currentPeriodicQ.flat().reduce((a, b) => a * b, 1).toFixed(4).replace(/\.?0+$/, '');
 
-    function loop() {
+    async function loop() {
         if (!running) return;
         const now = performance.now();
         frameCount++;
@@ -4361,7 +4438,15 @@ Module.onRuntimeInitialized = function() {
         // In random sweeps: 1 WASM step = 1 toggle attempt
         // In systematic sweeps: 1 WASM step = N toggle attempts (full sweep)
         // So for systematic, we divide by N to get equivalent behavior
-        if (useRandomSweeps) {
+        const qBias = parseFloat(el.qInput.value) || 1.0;
+
+        if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
+            // WebGPU path: chromatic sweep on GPU
+            const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
+            await gpuEngine.step(stepsPerFrame, qBias);
+            // Readback dimers from GPU for rendering
+            sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+        } else if (useRandomSweeps) {
             // Random sweeps: direct mapping
             const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
             sim.step(stepsPerFrame);
@@ -4381,7 +4466,7 @@ Module.onRuntimeInitialized = function() {
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
         if (running) {
-            if (useRandomSweeps && stepsPerSecond <= 60) {
+            if (useRandomSweeps && stepsPerSecond <= 60 && !useWebGPU) {
                 animationId = setTimeout(() => requestAnimationFrame(loop), 1000 / stepsPerSecond);
             } else {
                 animationId = requestAnimationFrame(loop);
