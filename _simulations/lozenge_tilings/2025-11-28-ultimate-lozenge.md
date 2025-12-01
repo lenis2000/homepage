@@ -5005,59 +5005,144 @@ Module.onRuntimeInitialized = function() {
 
         // Start timing
         const startTime = performance.now();
-        const isThreaded = window.LOZENGE_THREADED || false;
-        const cores = sim.getHardwareConcurrency();
-        console.log(`Fluctuations: starting (threaded=${isThreaded}, cores=${cores})`);
 
-        // Initialize parallel CFTP for 2 samples
-        const initRes = sim.initFluctuationsCFTP(2);
-        if (initRes.status !== 'initialized') {
-            el.fluctProgress.textContent = 'init error';
-            el.fluctuationsBtn.textContent = originalText;
-            el.fluctuationsBtn.disabled = false;
-            el.cftpBtn.disabled = false;
-            el.startStopBtn.disabled = false;
-            el.averageBtn.disabled = false;
-            return;
+        // Check if GPU is available
+        const useGpuFluct = useWebGPU && gpuEngine && gpuEngine.isInitialized();
+
+        if (useGpuFluct) {
+            console.log('Fluctuations: starting (GPU)');
+            runGpuFluctuations();
+        } else {
+            const isThreaded = window.LOZENGE_THREADED || false;
+            const cores = sim.getHardwareConcurrency();
+            console.log(`Fluctuations: starting (WASM, threaded=${isThreaded}, cores=${cores})`);
+            runWasmFluctuations();
         }
 
-        function stepParallel() {
-            if (fluctCancelled) {
-                el.fluctProgress.textContent = 'stopped';
-                el.fluctuationsBtn.textContent = originalText;
-                el.fluctuationsBtn.disabled = false;
-                el.cftpBtn.disabled = false;
-                el.startStopBtn.disabled = false;
-                el.averageBtn.disabled = false;
+        // ========== GPU Fluctuations Path ==========
+        async function runGpuFluctuations() {
+            // Initialize WASM CFTP to get extremal states
+            sim.initCFTP();
+
+            // Get extremal state data (same method as regular CFTP)
+            const minGridData = sim.getCFTPMinRawGridData();
+            const maxGridData = sim.getCFTPMaxRawGridData();
+            if (!minGridData || !maxGridData) {
+                console.error('Failed to get extremal states');
+                el.fluctProgress.textContent = 'init error';
+                resetButtons();
                 return;
             }
 
-            const res = sim.stepFluctuationsCFTP();
-            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-
-            if (res.status === 'in_progress') {
-                el.fluctProgress.textContent = `${res.done}/2 done, T=${res.maxT} (${elapsed}s)`;
-                el.fluctuationsBtn.textContent = `${res.done}/2`;
-                setTimeout(stepParallel, 0);
-            } else if (res.status === 'coalesced') {
-                finishFluctuations();
-            } else {
-                el.fluctProgress.textContent = 'error';
-                el.fluctuationsBtn.textContent = originalText;
-                el.fluctuationsBtn.disabled = false;
-                el.cftpBtn.disabled = false;
-                el.startStopBtn.disabled = false;
-                el.averageBtn.disabled = false;
+            // Initialize GPU fluctuations CFTP
+            const gpuOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
+            if (!gpuOk) {
+                console.error('GPU fluctuations init failed, falling back to WASM');
+                runWasmFluctuations();
+                return;
             }
+
+            // Set weights
+            const qBias = parseFloat(el.qInput.value) || 1.0;
+            const usePeriodic = usePeriodicCheckbox.checked;
+            gpuEngine.setFluctuationsWeights(currentPeriodicQ, currentPeriodicK, usePeriodic, qBias);
+
+            // GPU CFTP loop with epoch doubling
+            let T = 1;
+            const maxT = 1048576;
+            const stepsPerBatch = 1000;
+            const checkInterval = 1000;
+
+            async function gpuFluctStep() {
+                if (fluctCancelled) {
+                    gpuEngine.destroyFluctuationsCFTP();
+                    el.fluctProgress.textContent = 'stopped';
+                    resetButtons();
+                    return;
+                }
+
+                // Reset chains at start of each epoch
+                gpuEngine.resetFluctuationsChains();
+                el.fluctProgress.textContent = `T=${T} (GPU)`;
+                el.fluctuationsBtn.textContent = `T=${T}`;
+
+                // Run T steps
+                let totalStepsRun = 0;
+                let coalesced = [false, false];
+
+                while (totalStepsRun < T && !fluctCancelled && !(coalesced[0] && coalesced[1])) {
+                    const batchSize = Math.min(stepsPerBatch, T - totalStepsRun);
+                    const result = await gpuEngine.stepFluctuationsCFTP(batchSize, checkInterval);
+                    totalStepsRun += result.stepsRun;
+                    coalesced = result.coalesced;
+
+                    const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+                    const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'})`;
+                    el.fluctProgress.textContent = `T=${T} @${totalStepsRun}${status} (${elapsed}s, GPU)`;
+                }
+
+                // Check final coalescence
+                const finalCoalesced = await gpuEngine.checkFluctuationsCoalescence();
+
+                if (finalCoalesced[0] && finalCoalesced[1]) {
+                    // Both pairs coalesced - get samples and finish
+                    const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
+                    gpuEngine.destroyFluctuationsCFTP();
+                    finishFluctuationsWithSamples(samples.sample0, samples.sample1);
+                } else if (T >= maxT) {
+                    el.fluctProgress.textContent = 'max T reached';
+                    gpuEngine.destroyFluctuationsCFTP();
+                    resetButtons();
+                } else {
+                    // Double T and try again
+                    T *= 2;
+                    setTimeout(gpuFluctStep, 0);
+                }
+            }
+
+            setTimeout(gpuFluctStep, 10);
         }
 
-        function finishFluctuations() {
-            // Get both samples and compute height functions
-            const sample0 = sim.exportFluctuationSample(0);
-            const sample1 = sim.exportFluctuationSample(1);
+        // ========== WASM Fluctuations Path ==========
+        function runWasmFluctuations() {
+            const initRes = sim.initFluctuationsCFTP(2);
+            if (initRes.status !== 'initialized') {
+                el.fluctProgress.textContent = 'init error';
+                resetButtons();
+                return;
+            }
 
-            const sample1Heights = computeHeightFunction(sample0.dimers);
-            const sample2Heights = computeHeightFunction(sample1.dimers);
+            function stepParallel() {
+                if (fluctCancelled) {
+                    el.fluctProgress.textContent = 'stopped';
+                    resetButtons();
+                    return;
+                }
+
+                const res = sim.stepFluctuationsCFTP();
+                const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+
+                if (res.status === 'in_progress') {
+                    el.fluctProgress.textContent = `${res.done}/2 done, T=${res.maxT} (${elapsed}s)`;
+                    el.fluctuationsBtn.textContent = `${res.done}/2`;
+                    setTimeout(stepParallel, 0);
+                } else if (res.status === 'coalesced') {
+                    const sample0 = sim.exportFluctuationSample(0);
+                    const sample1 = sim.exportFluctuationSample(1);
+                    finishFluctuationsWithSamples(sample0.dimers, sample1.dimers);
+                } else {
+                    el.fluctProgress.textContent = 'error';
+                    resetButtons();
+                }
+            }
+
+            setTimeout(stepParallel, 10);
+        }
+
+        // ========== Shared finish function ==========
+        function finishFluctuationsWithSamples(dimers0, dimers1) {
+            const sample1Heights = computeHeightFunction(dimers0);
+            const sample2Heights = computeHeightFunction(dimers1);
 
             // Compute raw (h1 - h2) / sqrt(2) and store for dynamic re-rendering
             rawFluctuations = new Map();
@@ -5083,14 +5168,16 @@ Module.onRuntimeInitialized = function() {
             const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
             console.log(`Fluctuations: completed in ${elapsed}s`);
             el.fluctProgress.textContent = `Done (${elapsed}s)`;
+            resetButtons();
+        }
+
+        function resetButtons() {
             el.fluctuationsBtn.textContent = originalText;
             el.fluctuationsBtn.disabled = false;
             el.cftpBtn.disabled = false;
             el.startStopBtn.disabled = false;
             el.averageBtn.disabled = false;
         }
-
-        setTimeout(stepParallel, 10);
     });
 
     // Dynamic scale update for fluctuations

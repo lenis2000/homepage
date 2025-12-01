@@ -700,6 +700,348 @@ class WebGPULozengeEngine {
     isCFTPInitialized() {
         return this.cftpInitialized === true;
     }
+
+    // =========================================================================
+    // Fluctuations CFTP Methods (2 independent pairs for 2 samples)
+    // =========================================================================
+
+    /**
+     * Initialize fluctuations CFTP with 2 independent pairs
+     * @param {Int32Array} minStateData - Extremal min state
+     * @param {Int32Array} maxStateData - Extremal max state
+     */
+    async initFluctuationsCFTP(minStateData, maxStateData) {
+        if (!this.isReady) {
+            console.error("WebGPU engine not initialized");
+            return false;
+        }
+
+        // Ensure CFTP pipeline is loaded
+        if (!this.cftpPipeline) {
+            try {
+                const response = await fetch('/shaders/cftp_compute.wgsl');
+                if (!response.ok) throw new Error(`Failed to load CFTP shader: ${response.status}`);
+                const cftpShaderCode = await response.text();
+                const shaderModule = this.device.createShaderModule({ code: cftpShaderCode });
+                this.cftpPipeline = this.device.createComputePipeline({
+                    layout: 'auto',
+                    compute: { module: shaderModule, entryPoint: 'main' }
+                });
+            } catch (e) {
+                console.error("Failed to load CFTP shader:", e);
+                return false;
+            }
+        }
+
+        const gridSize = minStateData.byteLength;
+        const numCells = minStateData.length;
+
+        // Create 4 grid buffers (2 pairs: pair0 lower/upper, pair1 lower/upper)
+        this.fluctGridBuffers = [];
+        for (let i = 0; i < 4; i++) {
+            const buf = this.device.createBuffer({
+                size: gridSize,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+                mappedAtCreation: true
+            });
+            // Initialize: even indices (0,2) are lower chains (min), odd (1,3) are upper chains (max)
+            const data = (i % 2 === 0) ? minStateData : maxStateData;
+            new Int32Array(buf.getMappedRange()).set(data);
+            buf.unmap();
+            this.fluctGridBuffers.push(buf);
+        }
+
+        // Create 2 random buffers (one per pair for independence)
+        this.fluctRandomBuffers = [];
+        for (let i = 0; i < 2; i++) {
+            this.fluctRandomBuffers.push(this.device.createBuffer({
+                size: numCells * 4,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+            }));
+        }
+
+        // Create uniform buffers (4 colors × 2 pairs = 8, but we can reuse 4 since params are same)
+        this.fluctUniformBuffers = [];
+        for (let color = 0; color < 4; color++) {
+            this.fluctUniformBuffers.push(this.device.createBuffer({
+                size: 40,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            }));
+        }
+
+        // Create weights buffer for fluctuations
+        this.fluctWeightsBuffer = this.device.createBuffer({
+            size: numCells * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            mappedAtCreation: true
+        });
+        new Float32Array(this.fluctWeightsBuffer.getMappedRange()).fill(1.0);
+        this.fluctWeightsBuffer.unmap();
+
+        // Create staging buffers for coalescence check (4 grids)
+        this.fluctStagingBuffers = [];
+        for (let i = 0; i < 4; i++) {
+            this.fluctStagingBuffers.push(this.device.createBuffer({
+                size: gridSize,
+                usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+            }));
+        }
+
+        // Create bind groups: 4 colors × 4 grids = 16 bind groups
+        // fluctBindGroups[gridIdx][colorIdx]
+        this.fluctBindGroups = [];
+        for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
+            const pairIdx = Math.floor(gridIdx / 2); // 0,1 -> pair0, 2,3 -> pair1
+            const colorGroups = [];
+            for (let color = 0; color < 4; color++) {
+                colorGroups.push(this.device.createBindGroup({
+                    layout: this.cftpPipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: this.fluctGridBuffers[gridIdx] } },
+                        { binding: 1, resource: { buffer: this.fluctRandomBuffers[pairIdx] } },
+                        { binding: 2, resource: { buffer: this.fluctUniformBuffers[color] } },
+                        { binding: 3, resource: { buffer: this.fluctWeightsBuffer } }
+                    ]
+                }));
+            }
+            this.fluctBindGroups.push(colorGroups);
+        }
+
+        this.fluctNumCells = numCells;
+        this.fluctMinState = minStateData;
+        this.fluctMaxState = maxStateData;
+        this.fluctCoalesced = [false, false]; // Track each pair
+        this.fluctInitialized = true;
+        console.log(`WebGPU Fluctuations CFTP initialized: ${numCells} cells, 2 pairs`);
+        return true;
+    }
+
+    /**
+     * Set fluctuation weights
+     */
+    setFluctuationsWeights(periodicQ, periodicK, usePeriodicWeights, qBias = 1.0) {
+        if (!this.fluctInitialized || !this.fluctWeightsBuffer) return;
+
+        this.fluctUseWeights = usePeriodicWeights;
+        this.fluctQBias = qBias;
+
+        if (!usePeriodicWeights) return;
+
+        const { minN, maxN, minJ, maxJ, strideJ } = this.gridParams;
+        const weights = new Float32Array(this.fluctNumCells);
+
+        for (let n = minN; n <= maxN; n++) {
+            for (let j = minJ; j <= maxJ; j++) {
+                const idx = (n - minN) * strideJ + (j - minJ);
+                const ni = ((n % periodicK) + periodicK) % periodicK;
+                const ji = ((j % periodicK) + periodicK) % periodicK;
+                weights[idx] = periodicQ[ni][ji];
+            }
+        }
+
+        this.device.queue.writeBuffer(this.fluctWeightsBuffer, 0, weights);
+    }
+
+    /**
+     * Reset fluctuation chains to extremal states
+     */
+    resetFluctuationsChains() {
+        if (!this.fluctInitialized) return;
+        for (let i = 0; i < 4; i++) {
+            const data = (i % 2 === 0) ? this.fluctMinState : this.fluctMaxState;
+            this.device.queue.writeBuffer(this.fluctGridBuffers[i], 0, data);
+        }
+        this.fluctCoalesced = [false, false];
+    }
+
+    /**
+     * Run fluctuations CFTP steps (both pairs in parallel)
+     * @param {number} numSteps - Steps to run
+     * @param {number} checkInterval - Check coalescence every N steps
+     * @returns {Promise<{coalesced: boolean[], stepsRun: number}>}
+     */
+    async stepFluctuationsCFTP(numSteps, checkInterval = 0) {
+        if (!this.fluctInitialized) return { coalesced: [false, false], stepsRun: 0 };
+
+        const workgroupCount = Math.ceil(this.fluctNumCells / 64);
+        const qBias = this.fluctQBias || 1.0;
+        const useWeights = this.fluctUseWeights ? 1 : 0;
+
+        // Pre-write uniform data for all 4 colors
+        for (let color = 0; color < 4; color++) {
+            const uniformData = new ArrayBuffer(40);
+            const intView = new Int32Array(uniformData);
+            const floatView = new Float32Array(uniformData);
+            const uintView = new Uint32Array(uniformData);
+
+            intView[0] = this.gridParams.minN;
+            intView[1] = this.gridParams.maxN;
+            intView[2] = this.gridParams.minJ;
+            intView[3] = this.gridParams.maxJ;
+            intView[4] = this.gridParams.strideJ;
+            intView[5] = color;
+            floatView[6] = qBias;
+            uintView[7] = useWeights;
+            uintView[8] = this.fluctNumCells;
+            uintView[9] = 0;
+
+            this.device.queue.writeBuffer(this.fluctUniformBuffers[color], 0, uniformData);
+        }
+
+        const randomData0 = new Float32Array(this.fluctNumCells);
+        const randomData1 = new Float32Array(this.fluctNumCells);
+        let stepsRun = 0;
+
+        for (let step = 0; step < numSteps; step++) {
+            // Generate independent randoms for each pair
+            for (let i = 0; i < this.fluctNumCells; i++) {
+                randomData0[i] = Math.random();
+                randomData1[i] = Math.random();
+            }
+            this.device.queue.writeBuffer(this.fluctRandomBuffers[0], 0, randomData0);
+            this.device.queue.writeBuffer(this.fluctRandomBuffers[1], 0, randomData1);
+
+            // Batch all dispatches: 4 colors × 4 grids = 16 dispatches
+            const commandEncoder = this.device.createCommandEncoder();
+
+            for (let color = 0; color < 4; color++) {
+                // All 4 grids for this color (pairs run in parallel)
+                for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
+                    const pass = commandEncoder.beginComputePass();
+                    pass.setPipeline(this.cftpPipeline);
+                    pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
+                    pass.dispatchWorkgroups(workgroupCount);
+                    pass.end();
+                }
+            }
+
+            this.device.queue.submit([commandEncoder.finish()]);
+            stepsRun++;
+
+            // Early coalescence check
+            if (checkInterval > 0 && stepsRun % checkInterval === 0) {
+                const coalesced = await this.checkFluctuationsCoalescence();
+                if (coalesced[0] && coalesced[1]) {
+                    return { coalesced, stepsRun };
+                }
+            }
+        }
+
+        await this.device.queue.onSubmittedWorkDone();
+        return { coalesced: this.fluctCoalesced, stepsRun };
+    }
+
+    /**
+     * Check coalescence for both pairs
+     * @returns {Promise<boolean[]>} [pair0_coalesced, pair1_coalesced]
+     */
+    async checkFluctuationsCoalescence() {
+        if (!this.fluctInitialized) return [false, false];
+
+        // Copy all 4 grids to staging
+        const commandEncoder = this.device.createCommandEncoder();
+        for (let i = 0; i < 4; i++) {
+            commandEncoder.copyBufferToBuffer(
+                this.fluctGridBuffers[i], 0,
+                this.fluctStagingBuffers[i], 0,
+                this.fluctGridBuffers[i].size
+            );
+        }
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        // Map and compare
+        const dataArrays = [];
+        for (let i = 0; i < 4; i++) {
+            await this.fluctStagingBuffers[i].mapAsync(GPUMapMode.READ);
+            dataArrays.push(new Int32Array(this.fluctStagingBuffers[i].getMappedRange().slice(0)));
+            this.fluctStagingBuffers[i].unmap();
+        }
+
+        // Check pair 0 (grids 0 and 1)
+        let pair0Coalesced = true;
+        for (let i = 0; i < dataArrays[0].length; i++) {
+            if (dataArrays[0][i] !== dataArrays[1][i]) {
+                pair0Coalesced = false;
+                break;
+            }
+        }
+
+        // Check pair 1 (grids 2 and 3)
+        let pair1Coalesced = true;
+        for (let i = 0; i < dataArrays[2].length; i++) {
+            if (dataArrays[2][i] !== dataArrays[3][i]) {
+                pair1Coalesced = false;
+                break;
+            }
+        }
+
+        this.fluctCoalesced = [pair0Coalesced, pair1Coalesced];
+        return this.fluctCoalesced;
+    }
+
+    /**
+     * Get the coalesced samples as dimer arrays
+     * @param {Array} blackTriangles - Black triangles from WASM
+     * @returns {Promise<{sample0: Array, sample1: Array}>}
+     */
+    async getFluctuationsSamples(blackTriangles) {
+        if (!this.fluctInitialized) return { sample0: [], sample1: [] };
+
+        // Read lower chain of each pair (grids 0 and 2)
+        const commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(this.fluctGridBuffers[0], 0, this.fluctStagingBuffers[0], 0, this.fluctGridBuffers[0].size);
+        commandEncoder.copyBufferToBuffer(this.fluctGridBuffers[2], 0, this.fluctStagingBuffers[2], 0, this.fluctGridBuffers[2].size);
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        await this.fluctStagingBuffers[0].mapAsync(GPUMapMode.READ);
+        await this.fluctStagingBuffers[2].mapAsync(GPUMapMode.READ);
+
+        const data0 = new Int32Array(this.fluctStagingBuffers[0].getMappedRange().slice(0));
+        const data2 = new Int32Array(this.fluctStagingBuffers[2].getMappedRange().slice(0));
+
+        this.fluctStagingBuffers[0].unmap();
+        this.fluctStagingBuffers[2].unmap();
+
+        return {
+            sample0: this.gridToDimers(data0, blackTriangles),
+            sample1: this.gridToDimers(data2, blackTriangles)
+        };
+    }
+
+    /**
+     * Clean up fluctuations CFTP resources
+     */
+    destroyFluctuationsCFTP() {
+        if (this.fluctGridBuffers) {
+            for (const buf of this.fluctGridBuffers) buf.destroy();
+            this.fluctGridBuffers = null;
+        }
+        if (this.fluctRandomBuffers) {
+            for (const buf of this.fluctRandomBuffers) buf.destroy();
+            this.fluctRandomBuffers = null;
+        }
+        if (this.fluctUniformBuffers) {
+            for (const buf of this.fluctUniformBuffers) buf.destroy();
+            this.fluctUniformBuffers = null;
+        }
+        if (this.fluctWeightsBuffer) {
+            this.fluctWeightsBuffer.destroy();
+            this.fluctWeightsBuffer = null;
+        }
+        if (this.fluctStagingBuffers) {
+            for (const buf of this.fluctStagingBuffers) buf.destroy();
+            this.fluctStagingBuffers = null;
+        }
+        this.fluctBindGroups = null;
+        this.fluctInitialized = false;
+    }
+
+    /**
+     * Check if fluctuations CFTP is initialized
+     */
+    isFluctuationsCFTPInitialized() {
+        return this.fluctInitialized === true;
+    }
 }
 
 // Make available globally
