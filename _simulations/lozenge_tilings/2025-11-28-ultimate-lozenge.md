@@ -1959,14 +1959,14 @@ function initLozengeApp() {
                 if (this.showDimerView) {
                     this.drawDimerView(ctx, sim, centerX, centerY, scale, activeTriangles);
                 } else {
-                    this.drawLozengeView(ctx, sim, centerX, centerY, scale);
+                    this.drawLozengeView(ctx, sim, centerX, centerY, scale, isDarkMode);
                 }
             }
 
             // Draw all boundaries (outer + holes + disconnected)
             if (sim.boundaries && sim.boundaries.length > 0) {
                 for (const boundary of sim.boundaries) {
-                    this.drawBoundary(ctx, boundary, centerX, centerY, scale);
+                    this.drawBoundary(ctx, boundary, centerX, centerY, scale, isDarkMode);
                 }
             }
 
@@ -2011,7 +2011,7 @@ function initLozengeApp() {
             const minJ = Math.floor(minY / deltaC) - Math.ceil(viewRange) - 5;
             const maxJ = Math.ceil(maxY / deltaC) + Math.ceil(viewRange) + 5;
 
-            ctx.strokeStyle = isDarkMode ? 'rgba(100, 100, 100, 0.2)' : 'rgba(200, 200, 200, 0.5)';
+            ctx.strokeStyle = isDarkMode ? 'rgba(200, 200, 200, 0.4)' : 'rgba(200, 200, 200, 0.5)';
             ctx.lineWidth = 0.5;
 
             // Vertical lines (n = const)
@@ -2074,11 +2074,12 @@ function initLozengeApp() {
             }
         }
 
-        drawLozengeView(ctx, sim, centerX, centerY, scale) {
+        drawLozengeView(ctx, sim, centerX, centerY, scale, isDarkMode = false) {
             const colors = this.getPermutedColors();
             const dimerCount = sim.dimers.length || 1;
             const refDimerCount = 100;
             const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount) * 0.1;
+            const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
 
             for (const dimer of sim.dimers) {
                 const verts = this.getLozengeVertices(dimer);
@@ -2090,7 +2091,7 @@ function initLozengeApp() {
                 ctx.closePath();
                 ctx.fill();
                 if (outlineWidth > 0) {
-                    ctx.strokeStyle = '#000000';
+                    ctx.strokeStyle = outlineColor;
                     ctx.lineWidth = outlineWidth;
                     ctx.stroke();
                 }
@@ -2217,9 +2218,9 @@ function initLozengeApp() {
             ctx.setLineDash([]);
         }
 
-        drawBoundary(ctx, boundary, centerX, centerY, scale) {
+        drawBoundary(ctx, boundary, centerX, centerY, scale, isDarkMode = false) {
             if (boundary.length < 2) return;
-            ctx.strokeStyle = '#000';
+            ctx.strokeStyle = isDarkMode ? '#cccccc' : '#000';
             // Scale border width based on percentage (similar to outline scaling)
             const borderWidth = this.borderWidthPct * scale * 0.1;
             ctx.lineWidth = Math.max(0.5, borderWidth);
@@ -2356,13 +2357,24 @@ function initLozengeApp() {
                 TWO: THREE.TOUCH.DOLLY_PAN
             };
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            // Lighting - multi-light setup for better depth perception
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             this.scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            // Hemisphere light for subtle sky/ground color variation
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+            hemiLight.position.set(0, 20, 0);
+            this.scene.add(hemiLight);
+
+            // Primary directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
             directionalLight.position.set(10, 10, 15);
             this.scene.add(directionalLight);
+
+            // Fill light from opposite side
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+            fillLight.position.set(-10, -5, -10);
+            this.scene.add(fillLight);
 
             // Group for meshes
             this.meshGroup = new THREE.Group();
@@ -2581,17 +2593,18 @@ function initLozengeApp() {
             geometry.setIndex(indices);
             geometry.computeBoundingSphere(); // Helps with camera centering
 
-            const material = new THREE.MeshPhongMaterial({
+            const material = new THREE.MeshStandardMaterial({
                 vertexColors: true,
                 side: THREE.DoubleSide,
                 flatShading: true,
-                shininess: 30
+                roughness: 0.5,
+                metalness: 0.15
             });
             const mesh = new THREE.Mesh(geometry, material);
             this.meshGroup.add(mesh);
 
             const edgesGeometry = new THREE.EdgesGeometry(geometry, 10); // Threshold to show cube edges
-            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1, opacity: 0.3, transparent: true });
+            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2, opacity: 0.5, transparent: true });
             const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
             this.meshGroup.add(edges);
 
@@ -2696,8 +2709,9 @@ function initLozengeApp() {
                 geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
                 geometry.setIndex(indices);
                 geometry.computeBoundingSphere();
-                const material = new THREE.MeshPhongMaterial({
-                    vertexColors: true, side: THREE.DoubleSide, flatShading: true, shininess: 30,
+                const material = new THREE.MeshStandardMaterial({
+                    vertexColors: true, side: THREE.DoubleSide, flatShading: true,
+                    roughness: 0.5, metalness: 0.15,
                     transparent: true, opacity: opacity, depthWrite: opacity > 0.9
                 });
                 return new THREE.Mesh(geometry, material);
@@ -2840,8 +2854,9 @@ function initLozengeApp() {
                     glslVersion: THREE.GLSL3
                 });
             } else {
-                material = new THREE.MeshPhongMaterial({
-                    vertexColors: true, side: THREE.DoubleSide, flatShading: options.flatShading || false, shininess: 30
+                material = new THREE.MeshStandardMaterial({
+                    vertexColors: true, side: THREE.DoubleSide, flatShading: options.flatShading || false,
+                    roughness: 0.5, metalness: 0.15
                 });
             }
             const mesh = new THREE.Mesh(geometry, material);
@@ -5517,7 +5532,7 @@ function initLozengeApp() {
         // Draw all boundaries (outer + holes + disconnected)
         if (sim.boundaries && sim.boundaries.length > 0) {
             for (const boundary of sim.boundaries) {
-                renderer.drawBoundary(ctx, boundary, centerX, centerY, scale);
+                renderer.drawBoundary(ctx, boundary, centerX, centerY, scale, isDarkMode);
             }
         }
 
@@ -5803,7 +5818,7 @@ function initLozengeApp() {
 
             if (sim.boundaries && sim.boundaries.length > 0) {
                 for (const boundary of sim.boundaries) {
-                    renderer.drawBoundary(exportCtx, boundary, centerX, centerY, viewScale);
+                    renderer.drawBoundary(exportCtx, boundary, centerX, centerY, viewScale, isDarkMode);
                 }
             }
 
