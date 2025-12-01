@@ -49,7 +49,7 @@ code:
 
 <p><strong>Hole Constraints:</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note that a lozenge tiling with hole might not correspond to a correct 3D shape, and fun discontinuities will arise.</p>
 
-<p>The simulation runs entirely in your browser using WebAssembly with optimized Glauber dynamics using pre-computed caches and Lemire's fast bounded random.</p>
+<p><strong>Performance:</strong> The simulation runs entirely in your browser. When available, it uses <strong>WebGPU</strong> compute shaders for massively parallel Glauber dynamics and CFTP sampling, based on the chromatic sweep approach from <a href="https://arxiv.org/abs/1804.07250" target="_blank">Keating-Sridhar (2018)</a>. On systems without WebGPU, it falls back to <strong>multi-threaded WebAssembly</strong> (up to 4 cores) for parallel CFTP chains, or single-threaded WASM with optimized pre-computed caches and Lemire's fast bounded random.</p>
 
 </div>
 </details>
