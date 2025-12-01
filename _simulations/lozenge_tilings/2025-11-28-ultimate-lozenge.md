@@ -444,6 +444,7 @@ if (window.LOZENGE_WEBGPU) {
     <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
       <option value="">Letter/Number (under construction)</option>
     </select>
+    <button id="shapeOfMonthBtn" style="padding: 4px 8px; font-size: 12px;">Shape of the Month</button>
   </div>
 </div>
 
@@ -3131,6 +3132,7 @@ function initLozengeApp() {
         hexBInput: document.getElementById('hexBInput'),
         hexCInput: document.getElementById('hexCInput'),
         letterSelect: document.getElementById('letterSelect'),
+        shapeOfMonthBtn: document.getElementById('shapeOfMonthBtn'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
         paletteSelect: document.getElementById('palette-select'),
@@ -4332,6 +4334,38 @@ function initLozengeApp() {
         e.target.value = ''; // Reset to placeholder
     });
 
+    // Shape of the Month button
+    el.shapeOfMonthBtn.addEventListener('click', async () => {
+        saveState();
+        activeTriangles = await loadLetterTriangles('shape');
+        if (activeTriangles.size === 0) {
+            console.warn('Shape of the month not found');
+        }
+        renderer.resetView();
+        renderer.fitToRegion(activeTriangles);
+        if (renderer3D) {
+            renderer3D.resetCamera();
+        }
+        // Load and apply theme from THEME.txt
+        try {
+            const themeResponse = await fetch('/letters/THEME.txt');
+            if (themeResponse.ok) {
+                const themeName = (await themeResponse.text()).trim();
+                const paletteIndex = renderer.colorPalettes.findIndex(p => p.name === themeName);
+                if (paletteIndex !== -1) {
+                    renderer.setPalette(paletteIndex);
+                    if (renderer3D) {
+                        renderer3D.setPalette(paletteIndex);
+                    }
+                    el.paletteSelect.value = paletteIndex;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load theme:', e);
+        }
+        reinitialize();
+    });
+
     // View toggle
     el.lozengeViewBtn.addEventListener('click', () => {
         renderer.showDimerView = false;
@@ -5448,12 +5482,17 @@ function initLozengeApp() {
             renderer.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
         }
 
-        // Draw triangle outlines only - NO fills (pass outlinesOnly=true)
-        renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true, true);
+        // Draw triangle outlines only for small polygons (when shading would be shown)
+        const isSmallPolygon = !sim.blackTriangles || sim.blackTriangles.length <= 1000;
+        if (isSmallPolygon) {
+            renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true, true);
+        }
 
-        // Draw boundary
+        // Draw all boundaries (outer + holes + disconnected)
         if (sim.boundaries && sim.boundaries.length > 0) {
-            renderer.drawBoundary(ctx, sim.boundaries, centerX, centerY, scale);
+            for (const boundary of sim.boundaries) {
+                renderer.drawBoundary(ctx, boundary, centerX, centerY, scale);
+            }
         }
 
         // Draw ONLY the double dimer configuration - two samples superimposed

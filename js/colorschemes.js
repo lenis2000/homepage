@@ -76,7 +76,10 @@ const ColorSchemes = [
     { name: 'Northeastern', colors: ['#cc0000', '#000000', '#ffffff', '#a9a9a9'] }, // Added dark gray
     { name: 'Duke', colors: ['#012169', '#00539B', '#E2E6ED', '#87CEFA'] }, // Added a lighter blue
     { name: 'Notre Dame', colors: ['#0c2340', '#ae9142', '#d39f10', '#b8860b'] },  // Added a darker gold
-    { name: 'The Ohio State', colors: ['#ba0c2f', '#a7b1b7', '#ffffff', '#212325'] }  // Scarlet, gray, white, and gray dark
+    { name: 'The Ohio State', colors: ['#ba0c2f', '#a7b1b7', '#ffffff', '#212325'] },  // Scarlet, gray, white, and gray dark
+
+    // Holiday Themes
+    { name: 'New Year', colors: ['#C41E3A', '#228B22', '#FFFAFA', '#FFD700'] }  // Christmas red, forest green, snow white, gold
 ];
 
 // Export for module systems (if needed)
