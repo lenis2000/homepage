@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -2602,6 +2602,266 @@ char* exportFluctuationSample(int sampleIdx) {
     }
 
     json += "]}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+// ============================================================================
+// LOOP DETECTION FOR DOUBLE DIMER
+// ============================================================================
+
+// Storage for dimers from two samples
+static std::vector<std::array<int, 4>> loopDimers0;  // {bn, bj, wn, wj}
+static std::vector<std::array<int, 4>> loopDimers1;
+static std::vector<int> loopSizes;  // Size of loop for each edge (dimers0 then dimers1)
+static bool loopsDetected = false;
+
+// Parse a simple JSON array of dimer arrays: [[bn,bj,wn,wj], ...]
+static void parseDimerArray(const char* json, std::vector<std::array<int, 4>>& out) {
+    out.clear();
+    const char* p = json;
+    while (*p && *p != '[') p++;  // Find opening bracket
+    if (!*p) return;
+    p++;  // Skip '['
+
+    while (*p) {
+        // Skip whitespace
+        while (*p && (*p == ' ' || *p == '\n' || *p == '\r' || *p == '\t' || *p == ',')) p++;
+        if (*p == ']') break;  // End of array
+        if (*p != '[') { p++; continue; }  // Expect inner array
+        p++;  // Skip '['
+
+        std::array<int, 4> dimer = {0, 0, 0, 0};
+        for (int i = 0; i < 4; i++) {
+            while (*p && (*p == ' ' || *p == ',')) p++;
+            bool neg = false;
+            if (*p == '-') { neg = true; p++; }
+            int val = 0;
+            while (*p >= '0' && *p <= '9') {
+                val = val * 10 + (*p - '0');
+                p++;
+            }
+            dimer[i] = neg ? -val : val;
+        }
+        out.push_back(dimer);
+
+        // Find closing bracket of inner array
+        while (*p && *p != ']') p++;
+        if (*p) p++;  // Skip ']'
+    }
+}
+
+// Make vertex key: pack (n, j, isWhite) into 64-bit int
+inline int64_t makeVertexKey(int n, int j, bool isWhite) {
+    // Use 20 bits for n (shifted by +500000 to handle negatives), 20 bits for j, 1 bit for isWhite
+    int64_t nShifted = (int64_t)(n + 500000);
+    int64_t jShifted = (int64_t)(j + 500000);
+    return (nShifted << 21) | (jShifted << 1) | (isWhite ? 1 : 0);
+}
+
+// Make edge key for checking double dimers
+inline int64_t makeEdgeKey(int bn, int bj, int wn, int wj) {
+    int64_t bnShifted = (int64_t)(bn + 500000);
+    int64_t bjShifted = (int64_t)(bj + 500000);
+    int64_t wnShifted = (int64_t)(wn + 500000);
+    int64_t wjShifted = (int64_t)(wj + 500000);
+    // Pack all 4 into 64 bits (16 bits each is enough for reasonable coords)
+    return (bnShifted << 48) | (bjShifted << 32) | (wnShifted << 16) | wjShifted;
+}
+
+// Load dimers from JSON for loop detection
+EMSCRIPTEN_KEEPALIVE
+void loadDimersForLoops(const char* json0, const char* json1) {
+    parseDimerArray(json0, loopDimers0);
+    parseDimerArray(json1, loopDimers1);
+    loopSizes.clear();
+    loopsDetected = false;
+}
+
+// Detect loop sizes and return JSON with size counts
+EMSCRIPTEN_KEEPALIVE
+char* detectLoopSizes() {
+    if (loopDimers0.empty() && loopDimers1.empty()) {
+        std::string json = "{\"error\":\"no dimers loaded\"}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Build edge-to-index maps for both samples
+    std::unordered_map<int64_t, size_t> edgeToIdx0;
+    std::unordered_map<int64_t, size_t> edgeToIdx1;
+
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        auto& d = loopDimers0[i];
+        edgeToIdx0[makeEdgeKey(d[0], d[1], d[2], d[3])] = i;
+    }
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        auto& d = loopDimers1[i];
+        edgeToIdx1[makeEdgeKey(d[0], d[1], d[2], d[3])] = i;
+    }
+
+    // Build adjacency: vertex -> [(edgeIndex, sample), ...]
+    // edgeIndex for sample 1 is offset by loopDimers0.size()
+    struct EdgeInfo {
+        size_t globalIdx;  // Global edge index
+        int sample;
+        int otherVertex;   // Index into vertex key
+    };
+    std::unordered_map<int64_t, std::vector<EdgeInfo>> adj;
+
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        auto& d = loopDimers0[i];
+        int64_t vB = makeVertexKey(d[0], d[1], false);
+        int64_t vW = makeVertexKey(d[2], d[3], true);
+        adj[vB].push_back({i, 0, (int)vW});
+        adj[vW].push_back({i, 0, (int)vB});
+    }
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        auto& d = loopDimers1[i];
+        int64_t vB = makeVertexKey(d[0], d[1], false);
+        int64_t vW = makeVertexKey(d[2], d[3], true);
+        size_t globalIdx = loopDimers0.size() + i;
+        adj[vB].push_back({globalIdx, 1, (int)vW});
+        adj[vW].push_back({globalIdx, 1, (int)vB});
+    }
+
+    // Initialize loop sizes
+    size_t totalEdges = loopDimers0.size() + loopDimers1.size();
+    loopSizes.resize(totalEdges, 0);
+    std::vector<bool> visited(totalEdges, false);
+
+    // First pass: detect double dimers (same edge in both samples)
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        auto& d = loopDimers0[i];
+        int64_t ek = makeEdgeKey(d[0], d[1], d[2], d[3]);
+        auto it = edgeToIdx1.find(ek);
+        if (it != edgeToIdx1.end()) {
+            // Double dimer found
+            loopSizes[i] = 2;
+            loopSizes[loopDimers0.size() + it->second] = 2;
+            visited[i] = true;
+            visited[loopDimers0.size() + it->second] = true;
+        }
+    }
+
+    // Second pass: trace alternating cycles for remaining edges
+    for (size_t startIdx = 0; startIdx < loopDimers0.size(); startIdx++) {
+        if (visited[startIdx]) continue;
+
+        auto& d = loopDimers0[startIdx];
+        std::vector<size_t> cycleEdges;
+        cycleEdges.push_back(startIdx);
+        visited[startIdx] = true;
+
+        // Start from white vertex of first edge, look for sample 1 edge
+        int64_t currentV = makeVertexKey(d[2], d[3], true);
+        int currentSample = 1;  // Next edge should be from sample 1
+
+        for (int safety = 0; safety < 100000; safety++) {
+            auto it = adj.find(currentV);
+            if (it == adj.end()) break;
+
+            // Find unvisited edge from current sample at this vertex
+            size_t nextEdgeIdx = SIZE_MAX;
+            int64_t nextV = 0;
+            for (auto& ei : it->second) {
+                if (ei.sample == currentSample && !visited[ei.globalIdx]) {
+                    nextEdgeIdx = ei.globalIdx;
+                    // Find the other vertex
+                    if (currentSample == 0) {
+                        auto& dd = loopDimers0[nextEdgeIdx];
+                        int64_t vB = makeVertexKey(dd[0], dd[1], false);
+                        int64_t vW = makeVertexKey(dd[2], dd[3], true);
+                        nextV = (currentV == vB) ? vW : vB;
+                    } else {
+                        auto& dd = loopDimers1[nextEdgeIdx - loopDimers0.size()];
+                        int64_t vB = makeVertexKey(dd[0], dd[1], false);
+                        int64_t vW = makeVertexKey(dd[2], dd[3], true);
+                        nextV = (currentV == vB) ? vW : vB;
+                    }
+                    break;
+                }
+            }
+
+            if (nextEdgeIdx == SIZE_MAX) {
+                // Check if we've completed the cycle back to start
+                break;
+            }
+
+            cycleEdges.push_back(nextEdgeIdx);
+            visited[nextEdgeIdx] = true;
+            currentV = nextV;
+            currentSample = 1 - currentSample;  // Alternate samples
+        }
+
+        // Assign cycle size to all edges in cycle
+        int cycleSize = (int)cycleEdges.size();
+        for (size_t idx : cycleEdges) {
+            loopSizes[idx] = cycleSize;
+        }
+    }
+
+    // Count sizes
+    std::map<int, int> sizeCounts;
+    for (int s : loopSizes) {
+        if (s > 0) sizeCounts[s]++;
+    }
+
+    loopsDetected = true;
+
+    // Return JSON with size counts
+    std::string json = "{\"sizeCounts\":{";
+    bool first = true;
+    for (auto& kv : sizeCounts) {
+        if (!first) json += ",";
+        first = false;
+        json += "\"" + std::to_string(kv.first) + "\":" + std::to_string(kv.second);
+    }
+    json += "},\"total\":" + std::to_string(totalEdges) + "}";
+
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+// Filter dimers by minimum loop size - returns JSON with filtered indices
+EMSCRIPTEN_KEEPALIVE
+char* filterLoopsBySize(int minSize) {
+    if (!loopsDetected) {
+        char* result = detectLoopSizes();
+        free(result);  // We just want to populate loopSizes
+    }
+
+    if (loopSizes.empty()) {
+        std::string json = "{\"indices0\":[],\"indices1\":[]}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Filter indices
+    std::string json = "{\"indices0\":[";
+    bool first = true;
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        if (loopSizes[i] >= minSize) {
+            if (!first) json += ",";
+            first = false;
+            json += std::to_string(i);
+        }
+    }
+    json += "],\"indices1\":[";
+    first = true;
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        if (loopSizes[loopDimers0.size() + i] >= minSize) {
+            if (!first) json += ",";
+            first = false;
+            json += std::to_string(i);
+        }
+    }
+    json += "]}";
+
     char* out = (char*)malloc(json.size() + 1);
     strcpy(out, json.c_str());
     return out;

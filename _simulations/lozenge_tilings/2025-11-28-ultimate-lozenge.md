@@ -618,6 +618,12 @@ if (window.LOZENGE_WEBGPU) {
       <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
       <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;">
     </span>
+    <button id="doubleDimerBtn" class="cftp" disabled>Double Dimer</button>
+    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;"></span>
+    <span style="display: flex; align-items: center; gap: 2px;">
+      <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
+      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
+    </span>
   </div>
 </div>
 
@@ -920,6 +926,11 @@ function initLozengeApp() {
             this.getCFTPMinGridDataWasm = Module.cwrap('getCFTPMinGridData', 'number', []);
             this.getCFTPMaxGridDataWasm = Module.cwrap('getCFTPMaxGridData', 'number', []);
 
+            // Loop Detection for Double Dimer
+            this.loadDimersForLoopsWasm = Module.cwrap('loadDimersForLoops', null, ['number', 'number']);
+            this.detectLoopSizesWasm = Module.cwrap('detectLoopSizes', 'number', []);
+            this.filterLoopsBySizeWasm = Module.cwrap('filterLoopsBySize', 'number', ['number']);
+
             this.totalSteps = 0;
             this.flipCount = 0;
         }
@@ -1208,6 +1219,41 @@ function initLozengeApp() {
             }
             Module._free(dataPtr);
             return data;
+        }
+
+        // Loop Detection for Double Dimer - allocate string helper
+        allocString(str) {
+            const len = Module.lengthBytesUTF8(str) + 1;
+            const ptr = Module._malloc(len);
+            Module.stringToUTF8(str, ptr, len);
+            return ptr;
+        }
+
+        // Load dimers for loop detection (call before filtering)
+        loadDimersForLoops(dimers0, dimers1) {
+            const json0 = JSON.stringify(dimers0.map(d => [d.bn, d.bj, d.wn, d.wj]));
+            const json1 = JSON.stringify(dimers1.map(d => [d.bn, d.bj, d.wn, d.wj]));
+            const ptr0 = this.allocString(json0);
+            const ptr1 = this.allocString(json1);
+            this.loadDimersForLoopsWasm(ptr0, ptr1);
+            Module._free(ptr0);
+            Module._free(ptr1);
+        }
+
+        // Detect loop sizes and return size statistics
+        detectLoopSizes() {
+            const ptr = this.detectLoopSizesWasm();
+            const json = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(json);
+        }
+
+        // Filter dimers by minimum loop size, returns {indices0, indices1}
+        filterLoopsByMinSize(minSize) {
+            const ptr = this.filterLoopsBySizeWasm(minSize);
+            const json = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(json);
         }
     }
 
@@ -3066,6 +3112,9 @@ function initLozengeApp() {
         fluctuationsBtn: document.getElementById('fluctuationsBtn'),
         fluctProgress: document.getElementById('fluctProgress'),
         fluctScaleInput: document.getElementById('fluctScaleInput'),
+        doubleDimerBtn: document.getElementById('doubleDimerBtn'),
+        doubleDimerProgress: document.getElementById('doubleDimerProgress'),
+        minLoopInput: document.getElementById('minLoopInput'),
     };
 
     // CFTP cancellation flag
@@ -3074,10 +3123,16 @@ function initLozengeApp() {
     let avgCancelled = false;
     // Fluctuations cancellation flag
     let fluctCancelled = false;
-    // Store raw fluctuation data for dynamic re-rendering
+    // Double dimer cancellation flag
+    let doubleDimerCancelled = false;
+    // Store raw dimer samples (shared between fluctuations and double dimer views)
+    let storedSamples = null; // {dimers0, dimers1}
+    // Store computed fluctuation heights for dynamic re-rendering
     let rawFluctuations = null;
     // Flag to prevent draw() from overwriting fluctuation surface
     let inFluctuationMode = false;
+    // Flag to prevent draw() from overwriting double dimer view
+    let inDoubleDimerMode = false;
 
     function renderFluctuations() {
         if (!rawFluctuations || !renderer3D) return;
@@ -3343,6 +3398,7 @@ function initLozengeApp() {
         el.cftpBtn.disabled = !isValid;
         el.averageBtn.disabled = !isValid;
         el.fluctuationsBtn.disabled = !isValid;
+        el.doubleDimerBtn.disabled = !isValid;
 
         // Enable repair button only if Invalid and Not Empty
         el.repairBtn.disabled = isValid || activeTriangles.size === 0;
@@ -3382,6 +3438,13 @@ function initLozengeApp() {
     }
 
     function draw() {
+        // If in double dimer mode, render that instead
+        if (inDoubleDimerMode && storedSamples) {
+            renderDoubleDimers();
+            updateHoleOverlayPositions();
+            return;
+        }
+
         if (is3DView && renderer3D && isValid && sim.dimers.length > 0 && !inFluctuationMode) {
             renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
         }
@@ -3405,8 +3468,10 @@ function initLozengeApp() {
     function reinitialize() {
         const wasRunning = running;
 
-        // Clear fluctuation mode when polygon changes
+        // Clear sampling modes when polygon changes
         inFluctuationMode = false;
+        inDoubleDimerMode = false;
+        storedSamples = null;
         rawFluctuations = null;
 
         // Stop animation loop temporarily
@@ -4601,6 +4666,7 @@ function initLozengeApp() {
         el.startStopBtn.classList.toggle('running', running);
         if (running) {
             inFluctuationMode = false; // Exit fluctuation mode when starting Glauber
+            inDoubleDimerMode = false; // Exit double dimer mode when starting Glauber
             lastFrameTime = performance.now();
             frameCount = 0;
             loop();
@@ -4616,6 +4682,7 @@ function initLozengeApp() {
     el.cftpBtn.addEventListener('click', () => {
         if (!isValid) return;
         inFluctuationMode = false; // Exit fluctuation mode when starting CFTP
+        inDoubleDimerMode = false; // Exit double dimer mode when starting CFTP
         if (running) {
             running = false;
             el.startStopBtn.textContent = 'Start';
@@ -4910,6 +4977,7 @@ function initLozengeApp() {
     el.averageBtn.addEventListener('click', () => {
         if (!isValid) return;
         inFluctuationMode = false; // Exit fluctuation mode when starting averaging
+        inDoubleDimerMode = false; // Exit double dimer mode when starting averaging
 
         // Stop any running simulation
         if (running) {
@@ -5034,6 +5102,18 @@ function initLozengeApp() {
     el.fluctuationsBtn.addEventListener('click', () => {
         if (!isValid) return;
 
+        // If samples already exist, just switch to fluctuation view
+        if (storedSamples && rawFluctuations) {
+            inFluctuationMode = true;
+            inDoubleDimerMode = false;
+            // Fluctuations require 3D view
+            if (!is3DView) {
+                setViewMode(true);
+            }
+            renderFluctuations();
+            return;
+        }
+
         // Stop any running simulation
         if (running) {
             running = false;
@@ -5051,6 +5131,7 @@ function initLozengeApp() {
         el.cftpBtn.disabled = true;
         el.startStopBtn.disabled = true;
         el.averageBtn.disabled = true;
+        el.doubleDimerBtn.disabled = true;
         fluctCancelled = false;
 
         // Start timing
@@ -5173,7 +5254,8 @@ function initLozengeApp() {
                 const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
 
                 if (res.status === 'in_progress') {
-                    el.fluctProgress.textContent = `${res.done}/2 done, T=${res.maxT} (${elapsed}s)`;
+                    const status = `(${res.done >= 1 ? '✓' : '○'}${res.done >= 2 ? '✓' : '○'})`;
+                    el.fluctProgress.textContent = `T=${res.maxT} ${status} (${elapsed}s)`;
                     el.fluctuationsBtn.textContent = `${res.done}/2`;
                     setTimeout(stepParallel, 0);
                 } else if (res.status === 'coalesced') {
@@ -5191,6 +5273,9 @@ function initLozengeApp() {
 
         // ========== Shared finish function ==========
         function finishFluctuationsWithSamples(dimers0, dimers1) {
+            // Store raw samples for both views
+            storedSamples = { dimers0, dimers1 };
+
             const sample1Heights = computeHeightFunction(dimers0);
             const sample2Heights = computeHeightFunction(dimers1);
 
@@ -5210,6 +5295,7 @@ function initLozengeApp() {
 
             // Lock fluctuation mode to prevent draw() from overwriting
             inFluctuationMode = true;
+            inDoubleDimerMode = false;
 
             // Render with current scale
             renderFluctuations();
@@ -5227,12 +5313,378 @@ function initLozengeApp() {
             el.cftpBtn.disabled = false;
             el.startStopBtn.disabled = false;
             el.averageBtn.disabled = false;
+            el.doubleDimerBtn.disabled = false;
         }
     });
 
     // Dynamic scale update for fluctuations
     el.fluctScaleInput.addEventListener('input', () => {
         renderFluctuations();
+    });
+
+    // Filter loops by minimum size for double dimer display
+    // Double dimer = union of 2 perfect matchings = decomposes into vertex-disjoint cycles
+    // Each cycle has length = number of edges (counting multiplicity for double dimers)
+    // Double dimer edge (same in both samples) = cycle of length 2
+    // TODO: Move loop detection to C++/threaded C++/GPU for performance on large regions
+    function filterLoopsBySize(dimers0, dimers1, minSize) {
+        if (minSize <= 2) return { dimers0, dimers1 };
+
+        // Build edge key from dimer
+        function edgeKey(d) {
+            return `${d.bn},${d.bj},${d.wn},${d.wj}`;
+        }
+
+        // Build adjacency: for each vertex, store its two incident edges (one from each sample)
+        // Use unique edge ID to distinguish same edge from different samples
+        const adj = new Map(); // vertex -> [{edgeId, key, other}, ...]
+        let edgeIdCounter = 0;
+
+        function addEdge(d, sample) {
+            const key = edgeKey(d);
+            const vB = `B_${d.bn}_${d.bj}`;
+            const vW = `W_${d.wn}_${d.wj}`;
+            const edgeId = edgeIdCounter++;
+
+            if (!adj.has(vB)) adj.set(vB, []);
+            if (!adj.has(vW)) adj.set(vW, []);
+
+            adj.get(vB).push({ edgeId, key, other: vW, sample });
+            adj.get(vW).push({ edgeId, key, other: vB, sample });
+        }
+
+        dimers0.forEach(d => addEdge(d, 0));
+        dimers1.forEach(d => addEdge(d, 1));
+
+        // Find cycles by tracing through edges
+        // Each vertex has exactly 2 edges (one from each sample)
+        // We trace cycles by following edges, never using the same edge twice
+        const edgeLoopSize = new Map();
+        const usedEdgeIds = new Set();
+
+        for (const d of dimers0) {
+            const key = edgeKey(d);
+            if (edgeLoopSize.has(key)) continue; // Already assigned to a cycle
+
+            // Check if this is a double dimer (same edge in both samples)
+            const vB = `B_${d.bn}_${d.bj}`;
+            const vW = `W_${d.wn}_${d.wj}`;
+            const edgesAtB = adj.get(vB) || [];
+            const edgesAtW = adj.get(vW) || [];
+
+            // For double dimer: both edges at each vertex have the same key
+            const keysAtB = edgesAtB.map(e => e.key);
+            const keysAtW = edgesAtW.map(e => e.key);
+            const isDoubleDimer = keysAtB[0] === keysAtB[1] && keysAtW[0] === keysAtW[1];
+
+            if (isDoubleDimer) {
+                edgeLoopSize.set(key, 2);
+                continue;
+            }
+
+            // Trace alternating cycle: must alternate between sample0 and sample1
+            const cycleKeys = [];
+            let currentV = vW; // Start from white vertex
+            let currentSample = 1; // Next edge should be from sample1
+            let startKey = key;
+            cycleKeys.push(key);
+
+            for (let safety = 0; safety < 10000; safety++) {
+                const vEdges = adj.get(currentV) || [];
+                // Find the edge from the current sample (alternating)
+                const nextEdge = vEdges.find(e => e.sample === currentSample && !usedEdgeIds.has(e.edgeId));
+                if (!nextEdge) break;
+
+                if (nextEdge.key === startKey) break; // Completed the cycle
+
+                cycleKeys.push(nextEdge.key);
+                usedEdgeIds.add(nextEdge.edgeId);
+                currentV = nextEdge.other;
+                currentSample = 1 - currentSample; // Alternate samples
+            }
+
+            // Mark all edges in this cycle
+            const cycleSize = cycleKeys.length;
+            for (const k of cycleKeys) {
+                edgeLoopSize.set(k, cycleSize);
+            }
+        }
+
+        // Debug: log cycle sizes
+        const sizeCounts = new Map();
+        for (const size of edgeLoopSize.values()) {
+            sizeCounts.set(size, (sizeCounts.get(size) || 0) + 1);
+        }
+        console.log('Loop sizes:', Object.fromEntries(sizeCounts));
+
+        // Filter dimers based on loop size
+        const filtered0 = dimers0.filter(d => {
+            const size = edgeLoopSize.get(edgeKey(d));
+            return size !== undefined && size >= minSize;
+        });
+        const filtered1 = dimers1.filter(d => {
+            const size = edgeLoopSize.get(edgeKey(d));
+            return size !== undefined && size >= minSize;
+        });
+
+        // Verify no common edges remain (double dimers should be filtered out)
+        const set0 = new Set(filtered0.map(d => edgeKey(d)));
+        const set1 = new Set(filtered1.map(d => edgeKey(d)));
+        let commonCount = 0;
+        for (const k of set0) if (set1.has(k)) commonCount++;
+
+        console.log(`Filtering: minSize=${minSize}, kept ${filtered0.length}/${dimers0.length} from sample0, ${filtered1.length}/${dimers1.length} from sample1, common=${commonCount}`);
+
+        return { dimers0: filtered0, dimers1: filtered1 };
+    }
+
+    // Render double dimer view with loop filtering
+    function renderDoubleDimers() {
+        if (!storedSamples) return;
+        const minLoop = parseInt(el.minLoopInput.value) || 2;
+
+        // Use C++ loop detection for large regions (>1000 dimers), JS for small
+        let filtered;
+        const totalDimers = storedSamples.dimers0.length + storedSamples.dimers1.length;
+        const useCpp = totalDimers > 1000 && sim.loadDimersForLoops && sim.filterLoopsByMinSize;
+
+        if (useCpp) {
+            // Load dimers into C++ once per sample set
+            if (!storedSamples.loadedToCpp) {
+                console.log(`Loop detection: using C++ for ${totalDimers} dimers`);
+                sim.loadDimersForLoops(storedSamples.dimers0, storedSamples.dimers1);
+                storedSamples.loadedToCpp = true;
+            }
+            const result = sim.filterLoopsByMinSize(minLoop);
+            filtered = {
+                dimers0: result.indices0.map(i => storedSamples.dimers0[i]),
+                dimers1: result.indices1.map(i => storedSamples.dimers1[i])
+            };
+        } else {
+            filtered = filterLoopsBySize(
+                storedSamples.dimers0,
+                storedSamples.dimers1,
+                minLoop
+            );
+        }
+
+        // Switch to 2D view
+        if (is3DView) {
+            setViewMode(false);
+        }
+        el.dimerViewBtn.classList.add('active');
+        el.lozengeViewBtn.classList.remove('active');
+
+        // Draw base triangles (no lozenge coloring) then overlay double dimers
+        const ctx = renderer.ctx;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, renderer.displayWidth, renderer.displayHeight);
+
+        // Get transform for drawing
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+
+        // Draw grid background if enabled
+        if (renderer.showGrid) {
+            renderer.drawBackgroundGrid(ctx, centerX, centerY, scale, false);
+        }
+
+        // Draw triangle outlines (no fill colors)
+        renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true);
+
+        // Draw boundary
+        if (sim.boundaries && sim.boundaries.length > 0) {
+            renderer.drawBoundary(ctx, sim.boundaries, centerX, centerY, scale);
+        }
+
+        // Draw the double dimer configuration (superimposed samples)
+        renderer.drawDoubleDimerView(ctx, sim, filtered.dimers0, filtered.dimers1, centerX, centerY, scale);
+    }
+
+    // Double Dimer perfect sampling
+    el.doubleDimerBtn.addEventListener('click', async () => {
+        // If samples already exist, just switch to double dimer view
+        if (storedSamples) {
+            inDoubleDimerMode = true;
+            inFluctuationMode = false;
+            renderDoubleDimers();
+            return;
+        }
+
+        const originalText = el.doubleDimerBtn.textContent;
+        el.doubleDimerBtn.disabled = true;
+        el.cftpBtn.disabled = true;
+        el.fluctuationsBtn.disabled = true;
+        el.averageBtn.disabled = true;
+        doubleDimerCancelled = false;
+
+        const ddStartTime = performance.now();
+
+        // Check if GPU is available
+        const useGpuDD = useWebGPU && gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized();
+
+        el.doubleDimerProgress.textContent = 'initializing...';
+
+        function finishDoubleDimerWithSamples(dimers0, dimers1) {
+            // Store raw samples for both views
+            storedSamples = { dimers0, dimers1 };
+
+            // Also compute fluctuations data so user can switch views
+            const sample1Heights = computeHeightFunction(dimers0);
+            const sample2Heights = computeHeightFunction(dimers1);
+            rawFluctuations = new Map();
+            const sqrt2 = Math.sqrt(2);
+            for (const [key, h1] of sample1Heights) {
+                const h2 = sample2Heights.get(key) || 0;
+                rawFluctuations.set(key, (h1 - h2) / sqrt2);
+            }
+
+            inDoubleDimerMode = true;
+            inFluctuationMode = false;
+
+            const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(2);
+            el.doubleDimerProgress.textContent = `Done (${elapsed}s)`;
+            el.doubleDimerBtn.textContent = originalText;
+            el.doubleDimerBtn.disabled = false;
+            el.cftpBtn.disabled = false;
+            el.fluctuationsBtn.disabled = false;
+            el.averageBtn.disabled = false;
+
+            renderDoubleDimers();
+        }
+
+        if (useGpuDD) {
+            // GPU path - reuse fluctuations CFTP infrastructure
+            // Initialize WASM CFTP to get extremal states
+            sim.initCFTP();
+
+            const minGridData = sim.getCFTPMinRawGridData();
+            const maxGridData = sim.getCFTPMaxRawGridData();
+
+            if (!minGridData || !maxGridData) {
+                el.doubleDimerProgress.textContent = 'Error: no grid data';
+                el.doubleDimerBtn.textContent = originalText;
+                el.doubleDimerBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.fluctuationsBtn.disabled = false;
+                el.averageBtn.disabled = false;
+                return;
+            }
+
+            const gpuDDOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
+            if (!gpuDDOk) {
+                console.warn('GPU Double Dimer init failed, falling back to WASM');
+            } else {
+                const qBias = parseFloat(el.qInput.value) || 1.0;
+                const usePeriodic = usePeriodicCheckbox.checked;
+                gpuEngine.setFluctuationsWeights(currentPeriodicQ, currentPeriodicK, usePeriodic, qBias);
+
+                let T = 1;
+                const maxT = 1073741824;
+                const stepsPerBatch = 1000;
+                const checkInterval = 1000;
+                const drawInterval = 16384;
+
+                async function gpuDDStep() {
+                    if (doubleDimerCancelled) {
+                        gpuEngine.destroyFluctuationsCFTP();
+                        el.doubleDimerProgress.textContent = 'stopped';
+                        el.doubleDimerBtn.textContent = originalText;
+                        el.doubleDimerBtn.disabled = false;
+                        el.cftpBtn.disabled = false;
+                        el.fluctuationsBtn.disabled = false;
+                        el.averageBtn.disabled = false;
+                        return;
+                    }
+
+                    gpuEngine.resetFluctuationsChains();
+                    let stepsRun = 0;
+                    let coalesced = [false, false];
+
+                    while (stepsRun < T && !doubleDimerCancelled) {
+                        const batchSize = Math.min(stepsPerBatch, T - stepsRun);
+                        await gpuEngine.stepFluctuationsCFTP(batchSize, checkInterval);
+                        stepsRun += batchSize;
+
+                        coalesced = await gpuEngine.checkFluctuationsCoalescence();
+                        if (coalesced[0] && coalesced[1]) break;
+
+                        const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(1);
+                        const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'})`;
+                        el.doubleDimerProgress.textContent = `T=${T} @${stepsRun}${status} (${elapsed}s, GPU)`;
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+
+                    if (coalesced[0] && coalesced[1]) {
+                        const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
+                        gpuEngine.destroyFluctuationsCFTP();
+                        finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
+                    } else if (T >= maxT) {
+                        gpuEngine.destroyFluctuationsCFTP();
+                        el.doubleDimerProgress.textContent = 'timeout';
+                        el.doubleDimerBtn.textContent = originalText;
+                        el.doubleDimerBtn.disabled = false;
+                        el.cftpBtn.disabled = false;
+                        el.fluctuationsBtn.disabled = false;
+                        el.averageBtn.disabled = false;
+                    } else {
+                        T *= 2;
+                        setTimeout(gpuDDStep, 0);
+                    }
+                }
+
+                gpuDDStep();
+                return;
+            }
+        }
+
+        // WASM path
+        sim.initFluctuationsCFTP(2);
+        const stepBatch = 1000;
+
+        function wasmDDStep() {
+            if (doubleDimerCancelled) {
+                el.doubleDimerProgress.textContent = 'stopped';
+                el.doubleDimerBtn.textContent = originalText;
+                el.doubleDimerBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.fluctuationsBtn.disabled = false;
+                el.averageBtn.disabled = false;
+                return;
+            }
+
+            for (let i = 0; i < stepBatch; i++) {
+                sim.stepFluctuationsCFTP();
+            }
+
+            const res = sim.getFluctuationsCFTPStatus();
+            const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(1);
+            const status = res.done >= 2 ? '✓' : `(${res.done >= 1 ? '✓' : '○'}${res.done >= 2 ? '✓' : '○'})`;
+            el.doubleDimerProgress.textContent = `T=${res.maxT} ${status} (${elapsed}s)`;
+
+            if (res.status === 'coalesced') {
+                const sample0 = sim.exportFluctuationSample(0);
+                const sample1 = sim.exportFluctuationSample(1);
+                finishDoubleDimerWithSamples(sample0.dimers, sample1.dimers);
+            } else if (res.status === 'in_progress') {
+                setTimeout(wasmDDStep, 0);
+            } else {
+                el.doubleDimerProgress.textContent = 'error';
+                el.doubleDimerBtn.textContent = originalText;
+                el.doubleDimerBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.fluctuationsBtn.disabled = false;
+                el.averageBtn.disabled = false;
+            }
+        }
+
+        wasmDDStep();
+    });
+
+    // Dynamic min loop update for double dimers
+    el.minLoopInput.addEventListener('input', () => {
+        if (inDoubleDimerMode && storedSamples) {
+            renderDoubleDimers();
+        }
     });
 
     // Export
