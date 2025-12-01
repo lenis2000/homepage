@@ -673,7 +673,7 @@ Graphics3D[{EdgeForm[Black],
 </div>
 
 <script>
-Module.onRuntimeInitialized = function() {
+function initLozengeApp() {
     const slope = 1 / Math.sqrt(3);
     const deltaC = 2 / Math.sqrt(3);
 
@@ -4508,12 +4508,13 @@ Module.onRuntimeInitialized = function() {
         const qBias = parseFloat(el.qInput.value) || 1.0;
 
         if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
-            // WebGPU path: batch many steps on GPU before readback (like CFTP batching)
-            // Run 100 chromatic sweeps per frame, only readback every 10 frames
-            const gpuStepsPerBatch = 100;
+            // WebGPU path: scale batch size with speed setting
+            // At 60 fps, we need stepsPerSecond/60 steps per frame
+            const gpuStepsPerBatch = Math.max(1, Math.ceil(stepsPerSecond / 60));
             await gpuEngine.step(gpuStepsPerBatch, qBias);
-            // Only readback every 10 frames to reduce GPU stalls
-            if (frameCount % 10 === 0) {
+            // Readback frequency scales with batch size - more often at low speeds for responsiveness
+            const readbackInterval = gpuStepsPerBatch >= 100 ? 10 : (gpuStepsPerBatch >= 10 ? 5 : 1);
+            if (frameCount % readbackInterval === 0) {
                 sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
             }
         } else if (useRandomSweeps) {
@@ -4536,7 +4537,8 @@ Module.onRuntimeInitialized = function() {
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
         if (running) {
-            if (useRandomSweeps && stepsPerSecond <= 60 && !useWebGPU) {
+            if (stepsPerSecond <= 60) {
+                // Throttle at low speeds (both GPU and WASM)
                 animationId = setTimeout(() => requestAnimationFrame(loop), 1000 / stepsPerSecond);
             } else {
                 animationId = requestAnimationFrame(loop);
@@ -5386,5 +5388,21 @@ Module.onRuntimeInitialized = function() {
     draw();
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm) - ' + (window.LOZENGE_THREADED ? 'THREADED' : 'single-threaded'));
-};
+}
+
+// Handle both fresh loads and bfcache restoration (iOS Firefox/Safari)
+if (typeof Module !== 'undefined' && Module.calledRun) {
+    console.log('Module already initialized, running init directly');
+    initLozengeApp();
+} else {
+    Module.onRuntimeInitialized = initLozengeApp;
+}
+
+// Handle iOS bfcache restoration - force reload to ensure clean state
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        console.log('Page restored from bfcache, reloading...');
+        location.reload();
+    }
+});
 </script>
