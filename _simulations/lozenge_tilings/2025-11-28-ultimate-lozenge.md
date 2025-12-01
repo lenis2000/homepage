@@ -549,8 +549,6 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Stats Row -->
 <div class="control-group">
   <div class="stats-inline">
-    <div class="stat"><span class="stat-label">Black</span><span class="stat-value" id="blackCount">0</span></div>
-    <div class="stat"><span class="stat-label">White</span><span class="stat-value" id="whiteCount">0</span></div>
     <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
     <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span></div>
@@ -3177,8 +3175,6 @@ function initLozengeApp() {
         cftpBtn: document.getElementById('cftpBtn'),
         repairBtn: document.getElementById('repairBtn'),
         qInput: document.getElementById('qInput'),
-        blackCount: document.getElementById('blackCount'),
-        whiteCount: document.getElementById('whiteCount'),
         dimerCount: document.getElementById('dimerCount'),
         stepCount: document.getElementById('stepCount'),
         cftpSteps: document.getElementById('cftpSteps'),
@@ -3450,26 +3446,14 @@ function initLozengeApp() {
     }
 
     function updateUI() {
-        // Count triangles
-        let blackCount = 0, whiteCount = 0;
-        for (const [key, tri] of activeTriangles) {
-            if (tri.type === 1) blackCount++;
-            else whiteCount++;
-        }
-
-        el.blackCount.textContent = blackCount;
-        el.whiteCount.textContent = whiteCount;
         el.dimerCount.textContent = isValid ? sim.dimers.length : 0;
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
-        // Status badge
-        if (activeTriangles.size === 0) {
-            el.statusBadge.textContent = 'Empty';
-            el.statusBadge.className = 'status-empty';
-        } else if (isValid) {
-            el.statusBadge.textContent = 'Valid';
-            el.statusBadge.className = 'status-valid';
+        // Status badge - only show when invalid
+        if (activeTriangles.size === 0 || isValid) {
+            el.statusBadge.style.display = 'none';
         } else {
+            el.statusBadge.style.display = '';
             el.statusBadge.textContent = 'Invalid';
             el.statusBadge.className = 'status-invalid';
         }
