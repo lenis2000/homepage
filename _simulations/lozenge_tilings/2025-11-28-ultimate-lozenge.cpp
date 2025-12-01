@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -2408,6 +2408,200 @@ char* getVerticalCutInfo(int holeIdx) {
                        ",\"crossingCount\":" + std::to_string(crossingEdges.size()) +
                        ",\"matchedCount\":" + std::to_string(matchedCount) + "}";
 
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+// ============================================================================
+// PARALLEL CFTP API (SEQUENTIAL STUBS FOR NON-THREADED BUILD)
+// These match the threaded API but run sequentially
+// ============================================================================
+
+// Fluctuations state
+static int fluct_num_samples = 0;
+static bool fluct_initialized = false;
+static std::vector<bool> fluct_coalesced;
+static std::vector<GridState> fluct_samples;
+static std::vector<int> fluct_T;
+static std::vector<std::vector<uint64_t>> fluct_seeds;
+
+EMSCRIPTEN_KEEPALIVE
+int getHardwareConcurrency() {
+    return 1;  // Non-threaded version
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* initFluctuationsCFTP(int numSamples) {
+    fluct_num_samples = numSamples;
+    fluct_coalesced.assign(numSamples, false);
+    fluct_samples.resize(numSamples);
+    fluct_T.assign(numSamples, 1);  // Start with T=1
+    fluct_seeds.resize(numSamples);
+
+    // Generate initial seeds for each sample
+    for (int s = 0; s < numSamples; s++) {
+        fluct_seeds[s].resize(1);
+        fluct_seeds[s][0] = xorshift64();
+    }
+
+    fluct_initialized = true;
+
+    std::string json = "{\"status\":\"initialized\",\"numSamples\":" + std::to_string(fluct_num_samples) + "}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* stepFluctuationsCFTP() {
+    if (!fluct_initialized) {
+        std::string json = "{\"status\":\"error\",\"message\":\"Fluctuations not initialized\"}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Check how many are done
+    int doneCount = 0;
+    for (int i = 0; i < fluct_num_samples; i++) {
+        if (fluct_coalesced[i]) doneCount++;
+    }
+
+    if (doneCount == fluct_num_samples) {
+        std::string json = "{\"status\":\"coalesced\"}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Process each non-coalesced sample SEQUENTIALLY
+    for (int s = 0; s < fluct_num_samples; s++) {
+        if (fluct_coalesced[s]) continue;
+
+        // Run CFTP from -T to 0
+        GridState lower, upper;
+        makeExtremalState(lower, -1);  // Min state
+        makeExtremalState(upper, 1);   // Max state
+
+        // Run forward from -T
+        for (int t = 0; t < fluct_T[s]; t++) {
+            coupledStep(lower, upper, fluct_seeds[s][t]);
+        }
+
+        // Check coalescence
+        bool coal = true;
+        for (size_t i = 0; i < lower.grid.size(); i++) {
+            if (lower.grid[i] != upper.grid[i]) {
+                coal = false;
+                break;
+            }
+        }
+
+        if (coal) {
+            fluct_coalesced[s] = true;
+            fluct_samples[s] = lower;  // Store coalesced sample
+        } else {
+            // Double T and generate new seeds
+            int newT = fluct_T[s] * 2;
+            std::vector<uint64_t> newSeeds(newT);
+
+            // Generate seeds deterministically
+            uint64_t seedBase = fluct_seeds[s][0] ^ (s * 12345);
+            uint64_t tempRng = seedBase;
+            for (int i = 0; i < newT; i++) {
+                tempRng ^= tempRng >> 12;
+                tempRng ^= tempRng << 25;
+                tempRng ^= tempRng >> 27;
+                newSeeds[i] = tempRng * 0x2545F4914F6CDD1DULL;
+            }
+
+            fluct_seeds[s] = std::move(newSeeds);
+            fluct_T[s] = newT;
+        }
+    }
+
+    // Build status
+    doneCount = 0;
+    int maxT = 0;
+    for (int i = 0; i < fluct_num_samples; i++) {
+        if (fluct_coalesced[i]) doneCount++;
+        maxT = std::max(maxT, fluct_T[i]);
+    }
+
+    std::string status = (doneCount == fluct_num_samples) ? "coalesced" : "in_progress";
+    std::string json = "{\"status\":\"" + status + "\",\"done\":" + std::to_string(doneCount) +
+                       ",\"total\":" + std::to_string(fluct_num_samples) +
+                       ",\"maxT\":" + std::to_string(maxT) + "}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getFluctuationsResult() {
+    if (!fluct_initialized || fluct_num_samples < 2) {
+        std::string json = "{\"status\":\"error\",\"message\":\"Fluctuations not ready\"}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Check all samples coalesced
+    for (int i = 0; i < fluct_num_samples; i++) {
+        if (!fluct_coalesced[i]) {
+            std::string json = "{\"status\":\"error\",\"message\":\"Not all samples coalesced\"}";
+            char* out = (char*)malloc(json.size() + 1);
+            strcpy(out, json.c_str());
+            return out;
+        }
+    }
+
+    std::string json = "{\"status\":\"ready\",\"sample\":0}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* exportFluctuationSample(int sampleIdx) {
+    if (!fluct_initialized || sampleIdx < 0 || sampleIdx >= fluct_num_samples) {
+        std::string json = "{\"dimers\":[]}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    if (!fluct_coalesced[sampleIdx]) {
+        std::string json = "{\"dimers\":[],\"error\":\"sample not coalesced\"}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+
+    // Build dimers from sample grid
+    std::string json = "{\"dimers\":[";
+    bool first = true;
+
+    for (const auto& bt : blackTriangles) {
+        size_t gridIdx = getGridIdx(bt.n, bt.j);
+        if (gridIdx >= fluct_samples[sampleIdx].grid.size()) continue;
+        int8_t type = fluct_samples[sampleIdx].grid[gridIdx];
+        if (type < 0 || type > 2) continue;
+
+        int whiteN, whiteJ;
+        getWhiteFromType(bt.n, bt.j, type, whiteN, whiteJ);
+
+        if (!first) json += ",";
+        first = false;
+        json += "{\"bn\":" + std::to_string(bt.n) +
+                ",\"bj\":" + std::to_string(bt.j) +
+                ",\"wn\":" + std::to_string(whiteN) +
+                ",\"wj\":" + std::to_string(whiteJ) +
+                ",\"t\":" + std::to_string(type) + "}";
+    }
+
+    json += "]}";
     char* out = (char*)malloc(json.size() + 1);
     strcpy(out, json.c_str());
     return out;

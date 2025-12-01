@@ -898,6 +898,13 @@ Module.onRuntimeInitialized = function() {
             this.getVerticalCutInfoWasm = Module.cwrap('getVerticalCutInfo', 'number', ['number']);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
+            // Parallel CFTP API (works with both threaded and non-threaded builds)
+            this.getHardwareConcurrencyWasm = Module.cwrap('getHardwareConcurrency', 'number', []);
+            this.initFluctuationsCFTPWasm = Module.cwrap('initFluctuationsCFTP', 'number', ['number']);
+            this.stepFluctuationsCFTPWasm = Module.cwrap('stepFluctuationsCFTP', 'number', []);
+            this.getFluctuationsResultWasm = Module.cwrap('getFluctuationsResult', 'number', []);
+            this.exportFluctuationSampleWasm = Module.cwrap('exportFluctuationSample', 'number', ['number']);
+
             this.totalSteps = 0;
             this.flipCount = 0;
         }
@@ -1079,6 +1086,39 @@ Module.onRuntimeInitialized = function() {
 
         recomputeHoleInfo() {
             this.recomputeHoleInfoWasm();
+        }
+
+        // Parallel CFTP API
+        getHardwareConcurrency() {
+            return this.getHardwareConcurrencyWasm();
+        }
+
+        initFluctuationsCFTP(numSamples) {
+            const ptr = this.initFluctuationsCFTPWasm(numSamples);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        stepFluctuationsCFTP() {
+            const ptr = this.stepFluctuationsCFTPWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        getFluctuationsResult() {
+            const ptr = this.getFluctuationsResultWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        exportFluctuationSample(sampleIdx) {
+            const ptr = this.exportFluctuationSampleWasm(sampleIdx);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
         }
     }
 
@@ -4493,6 +4533,7 @@ Module.onRuntimeInitialized = function() {
     });
 
     // Average Sampling for Limit Shape
+    // Uses parallel CFTP API (runs in parallel in threaded build)
     el.averageBtn.addEventListener('click', () => {
         if (!isValid) return;
         inFluctuationMode = false; // Exit fluctuation mode when starting averaging
@@ -4517,11 +4558,25 @@ Module.onRuntimeInitialized = function() {
         avgCancelled = false;
         el.avgStopBtn.style.display = 'inline-block';
 
-        // Store height sums
-        const heightSums = new Map();
-        let completedSamples = 0;
+        // Start timing
+        const startTime = performance.now();
+        const isThreaded = window.LOZENGE_THREADED || false;
+        const cores = sim.getHardwareConcurrency();
+        console.log(`Average sampling: starting ${numSamples} samples (threaded=${isThreaded}, cores=${cores})`);
 
-        function runOneSample() {
+        // Initialize parallel CFTP for all samples
+        const initRes = sim.initFluctuationsCFTP(numSamples);
+        if (initRes.status !== 'initialized') {
+            el.avgProgress.textContent = 'init error';
+            el.averageBtn.textContent = originalText;
+            el.averageBtn.disabled = false;
+            el.cftpBtn.disabled = false;
+            el.startStopBtn.disabled = false;
+            el.avgStopBtn.style.display = 'none';
+            return;
+        }
+
+        function stepParallel() {
             if (avgCancelled) {
                 el.avgProgress.textContent = 'stopped';
                 el.averageBtn.textContent = originalText;
@@ -4532,70 +4587,43 @@ Module.onRuntimeInitialized = function() {
                 return;
             }
 
-            el.avgProgress.textContent = `Sample ${completedSamples + 1}/${numSamples}...`;
-            el.averageBtn.textContent = `${completedSamples + 1}/${numSamples}`;
+            const res = sim.stepFluctuationsCFTP();
 
-            // Initialize and run CFTP
-            sim.initCFTP();
-
-            function cftpStep() {
-                if (avgCancelled) {
-                    el.avgProgress.textContent = 'stopped';
-                    el.averageBtn.textContent = originalText;
-                    el.averageBtn.disabled = false;
-                    el.cftpBtn.disabled = false;
-                    el.startStopBtn.disabled = false;
-                    el.avgStopBtn.style.display = 'none';
-                    return;
-                }
-
-                const res = sim.stepCFTP();
-                if (res.status === 'in_progress') {
-                    el.avgProgress.textContent = `Sample ${completedSamples + 1}/${numSamples}: T=${res.T} @${res.step}`;
-                    setTimeout(cftpStep, 0);
-                } else if (res.status === 'not_coalesced') {
-                    el.avgProgress.textContent = `Sample ${completedSamples + 1}/${numSamples}: T=${res.T}`;
-                    setTimeout(cftpStep, 0);
-                } else if (res.status === 'coalesced') {
-                    sim.finalizeCFTP();
-
-                    // Compute height function for this sample
-                    const heights = computeHeightFunction(sim.dimers);
-
-                    // Add to sums
-                    for (const [key, h] of heights) {
-                        if (!heightSums.has(key)) {
-                            heightSums.set(key, 0);
-                        }
-                        heightSums.set(key, heightSums.get(key) + h);
-                    }
-
-                    completedSamples++;
-
-                    if (completedSamples < numSamples) {
-                        // Run next sample
-                        setTimeout(runOneSample, 0);
-                    } else {
-                        // All samples done - compute average and display
-                        finishAveraging();
-                    }
-                } else if (res.status === 'timeout') {
-                    setTimeout(cftpStep, 0);
-                } else {
-                    // timeout or error - try next sample anyway
-                    completedSamples++;
-                    if (completedSamples < numSamples) {
-                        setTimeout(runOneSample, 0);
-                    } else {
-                        finishAveraging();
-                    }
-                }
+            if (res.status === 'in_progress') {
+                el.avgProgress.textContent = `${res.done}/${numSamples} done, T=${res.maxT}`;
+                el.averageBtn.textContent = `${res.done}/${numSamples}`;
+                setTimeout(stepParallel, 0);
+            } else if (res.status === 'coalesced') {
+                finishAveraging();
+            } else {
+                el.avgProgress.textContent = 'error';
+                el.averageBtn.textContent = originalText;
+                el.averageBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.startStopBtn.disabled = false;
+                el.avgStopBtn.style.display = 'none';
             }
-
-            setTimeout(cftpStep, 0);
         }
 
         function finishAveraging() {
+            // Collect all samples and compute height sums
+            const heightSums = new Map();
+            let completedSamples = 0;
+
+            for (let i = 0; i < numSamples; i++) {
+                const sample = sim.exportFluctuationSample(i);
+                if (!sample.dimers || sample.dimers.length === 0) continue;
+
+                const heights = computeHeightFunction(sample.dimers);
+                for (const [key, h] of heights) {
+                    if (!heightSums.has(key)) {
+                        heightSums.set(key, 0);
+                    }
+                    heightSums.set(key, heightSums.get(key) + h);
+                }
+                completedSamples++;
+            }
+
             // Compute averaged heights (rounded to nearest integer)
             const avgHeights = new Map();
             for (const [key, sum] of heightSums) {
@@ -4609,7 +4637,10 @@ Module.onRuntimeInitialized = function() {
             sim.dimers = avgDimers;
             draw();
 
-            el.avgProgress.textContent = `Done (${completedSamples} samples)`;
+            // Report timing
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+            console.log(`Average sampling: completed ${completedSamples} samples in ${elapsed}s`);
+            el.avgProgress.textContent = `Done (${completedSamples} samples, ${elapsed}s)`;
             el.averageBtn.textContent = originalText;
             el.averageBtn.disabled = false;
             el.cftpBtn.disabled = false;
@@ -4617,7 +4648,7 @@ Module.onRuntimeInitialized = function() {
             el.avgStopBtn.style.display = 'none';
         }
 
-        setTimeout(runOneSample, 10);
+        setTimeout(stepParallel, 10);
     });
 
     el.avgStopBtn.addEventListener('click', () => {
@@ -4625,6 +4656,7 @@ Module.onRuntimeInitialized = function() {
     });
 
     // Fluctuations (GFF) - difference of two samples divided by sqrt(2)
+    // Uses parallel CFTP API (runs in parallel in threaded build)
     el.fluctuationsBtn.addEventListener('click', () => {
         if (!isValid) return;
 
@@ -4647,11 +4679,25 @@ Module.onRuntimeInitialized = function() {
         el.averageBtn.disabled = true;
         fluctCancelled = false;
 
-        let sample1Heights = null;
-        let sample2Heights = null;
-        let currentSample = 1;
+        // Start timing
+        const startTime = performance.now();
+        const isThreaded = window.LOZENGE_THREADED || false;
+        const cores = sim.getHardwareConcurrency();
+        console.log(`Fluctuations: starting (threaded=${isThreaded}, cores=${cores})`);
 
-        function runSample() {
+        // Initialize parallel CFTP for 2 samples
+        const initRes = sim.initFluctuationsCFTP(2);
+        if (initRes.status !== 'initialized') {
+            el.fluctProgress.textContent = 'init error';
+            el.fluctuationsBtn.textContent = originalText;
+            el.fluctuationsBtn.disabled = false;
+            el.cftpBtn.disabled = false;
+            el.startStopBtn.disabled = false;
+            el.averageBtn.disabled = false;
+            return;
+        }
+
+        function stepParallel() {
             if (fluctCancelled) {
                 el.fluctProgress.textContent = 'stopped';
                 el.fluctuationsBtn.textContent = originalText;
@@ -4662,56 +4708,32 @@ Module.onRuntimeInitialized = function() {
                 return;
             }
 
-            el.fluctProgress.textContent = `Sample ${currentSample}/2...`;
-            el.fluctuationsBtn.textContent = `${currentSample}/2`;
+            const res = sim.stepFluctuationsCFTP();
 
-            sim.initCFTP();
-
-            function cftpStep() {
-                if (fluctCancelled) {
-                    el.fluctProgress.textContent = 'stopped';
-                    el.fluctuationsBtn.textContent = originalText;
-                    el.fluctuationsBtn.disabled = false;
-                    el.cftpBtn.disabled = false;
-                    el.startStopBtn.disabled = false;
-                    el.averageBtn.disabled = false;
-                    return;
-                }
-
-                const res = sim.stepCFTP();
-                if (res.status === 'in_progress') {
-                    el.fluctProgress.textContent = `Sample ${currentSample}/2: T=${res.T} @${res.step}`;
-                    setTimeout(cftpStep, 0);
-                } else if (res.status === 'not_coalesced') {
-                    el.fluctProgress.textContent = `Sample ${currentSample}/2: T=${res.T}`;
-                    setTimeout(cftpStep, 0);
-                } else if (res.status === 'coalesced') {
-                    sim.finalizeCFTP();
-                    const heights = computeHeightFunction(sim.dimers);
-
-                    if (currentSample === 1) {
-                        sample1Heights = heights;
-                        currentSample = 2;
-                        setTimeout(runSample, 0);
-                    } else {
-                        sample2Heights = heights;
-                        finishFluctuations();
-                    }
-                } else {
-                    // timeout or error
-                    el.fluctProgress.textContent = 'error';
-                    el.fluctuationsBtn.textContent = originalText;
-                    el.fluctuationsBtn.disabled = false;
-                    el.cftpBtn.disabled = false;
-                    el.startStopBtn.disabled = false;
-                    el.averageBtn.disabled = false;
-                }
+            if (res.status === 'in_progress') {
+                el.fluctProgress.textContent = `${res.done}/2 done, T=${res.maxT}`;
+                el.fluctuationsBtn.textContent = `${res.done}/2`;
+                setTimeout(stepParallel, 0);
+            } else if (res.status === 'coalesced') {
+                finishFluctuations();
+            } else {
+                el.fluctProgress.textContent = 'error';
+                el.fluctuationsBtn.textContent = originalText;
+                el.fluctuationsBtn.disabled = false;
+                el.cftpBtn.disabled = false;
+                el.startStopBtn.disabled = false;
+                el.averageBtn.disabled = false;
             }
-
-            setTimeout(cftpStep, 0);
         }
 
         function finishFluctuations() {
+            // Get both samples and compute height functions
+            const sample0 = sim.exportFluctuationSample(0);
+            const sample1 = sim.exportFluctuationSample(1);
+
+            const sample1Heights = computeHeightFunction(sample0.dimers);
+            const sample2Heights = computeHeightFunction(sample1.dimers);
+
             // Compute raw (h1 - h2) / sqrt(2) and store for dynamic re-rendering
             rawFluctuations = new Map();
             const sqrt2 = Math.sqrt(2);
@@ -4732,7 +4754,10 @@ Module.onRuntimeInitialized = function() {
             // Render with current scale
             renderFluctuations();
 
-            el.fluctProgress.textContent = 'Done';
+            // Report timing
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+            console.log(`Fluctuations: completed in ${elapsed}s`);
+            el.fluctProgress.textContent = `Done (${elapsed}s)`;
             el.fluctuationsBtn.textContent = originalText;
             el.fluctuationsBtn.disabled = false;
             el.cftpBtn.disabled = false;
@@ -4740,7 +4765,7 @@ Module.onRuntimeInitialized = function() {
             el.averageBtn.disabled = false;
         }
 
-        setTimeout(runSample, 10);
+        setTimeout(stepParallel, 10);
     });
 
     // Dynamic scale update for fluctuations
