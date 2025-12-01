@@ -5741,10 +5741,10 @@ function initLozengeApp() {
 
         // Measure info
         const qVal = parseFloat(el.qInput.value) || 1.0;
-        const usePeriodic = document.getElementById('usePeriodicCheckbox').checked;
+        const usePeriodic = usePeriodicCheckbox.checked;
         let measure = qVal === 1.0 ? 'unif' : `q${qVal}`;
         if (usePeriodic) {
-            const k = parseInt(document.getElementById('periodicKInput').value) || 1;
+            const k = parseInt(periodicKSelect.value) || 1;
             measure += `_per${k}`;
         }
 
