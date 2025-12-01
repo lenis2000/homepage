@@ -485,7 +485,7 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Simulation Controls -->
 <div class="control-group">
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <button id="startStopBtn" class="primary" disabled>Start</button>
+    <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
     <button id="doubleMeshBtn" title="Double the region size">Scale Up Region</button>
@@ -665,6 +665,7 @@ Cmd-click: complete lasso</div>
 <!-- Limit Shape -->
 <div class="control-group">
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <button id="cftpBtn2" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Individual Sample with CFTP</button>
     <button id="averageBtn" class="cftp" disabled>Get Averaged Sample</button>
     <span class="param-group"><span class="param-label">Samples</span><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 60px;"></span>
     <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop</button>
@@ -3173,6 +3174,7 @@ function initLozengeApp() {
         speedInput: document.getElementById('speedInput'),
         startStopBtn: document.getElementById('startStopBtn'),
         cftpBtn: document.getElementById('cftpBtn'),
+        cftpBtn2: document.getElementById('cftpBtn2'),
         repairBtn: document.getElementById('repairBtn'),
         qInput: document.getElementById('qInput'),
         dimerCount: document.getElementById('dimerCount'),
@@ -3461,6 +3463,7 @@ function initLozengeApp() {
         // Enable/disable simulation buttons
         el.startStopBtn.disabled = !isValid;
         el.cftpBtn.disabled = !isValid;
+        el.cftpBtn2.disabled = !isValid;
         el.averageBtn.disabled = !isValid;
         el.fluctuationsBtn.disabled = !isValid;
         el.doubleDimerBtn.disabled = !isValid;
@@ -5103,6 +5106,11 @@ function initLozengeApp() {
 
     el.cftpStopBtn.addEventListener('click', () => {
         cftpCancelled = true;
+    });
+
+    // cftpBtn2 triggers the same action as cftpBtn
+    el.cftpBtn2.addEventListener('click', () => {
+        el.cftpBtn.click();
     });
 
     // Average Sampling for Limit Shape
