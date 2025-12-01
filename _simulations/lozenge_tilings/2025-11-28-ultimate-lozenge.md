@@ -527,11 +527,12 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Canvas Container with overlay -->
 <div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
   <!-- View Toggle overlay -->
-  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 8px;">
-    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.7); color: white; border-radius: 4px; font-size: 11px;">
-      Shift: erase
-    </div>
+  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <button id="toggle3DBtn" style="padding: 4px 12px; border: 2px solid #1976d2; border-radius: 6px; background: white; color: #1976d2; font-weight: 500; cursor: pointer;">3D</button>
+    <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
+    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: nowrap;">
+      Shift: toggle draw/erase
+    </div>
   </div>
 
   <!-- Canvas -->
@@ -3479,14 +3480,6 @@ function initLozengeApp() {
         }
         // Refresh hole overlays for new view mode
         updateHolesUI();
-        // Update tooltip visibility
-        const tooltip = document.getElementById('tool-tooltip');
-        if (!use3D && (currentTool === 'draw' || currentTool === 'erase')) {
-            tooltip.textContent = currentTool === 'draw' ? 'Shift: erase' : 'Shift: draw';
-            tooltip.style.display = 'block';
-        } else {
-            tooltip.style.display = 'none';
-        }
     }
 
     function draw() {
@@ -4110,14 +4103,6 @@ function initLozengeApp() {
         el.eraseBtn.classList.toggle('active', tool === 'erase');
         el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
-        // Update tooltip
-        const tooltip = document.getElementById('tool-tooltip');
-        if (!is3DView && (tool === 'draw' || tool === 'erase')) {
-            tooltip.textContent = tool === 'draw' ? 'Shift: erase' : 'Shift: draw';
-            tooltip.style.display = 'block';
-        } else {
-            tooltip.style.display = 'none';
-        }
     }
 
     el.handBtn.addEventListener('click', () => { cmdHeld = false; setTool('hand'); });
@@ -4362,6 +4347,12 @@ function initLozengeApp() {
     // 3D View toggle
     el.toggle3DBtn.addEventListener('click', () => {
         setViewMode(!is3DView);
+    });
+
+    // Help button toggle
+    document.getElementById('helpBtn').addEventListener('click', () => {
+        const tooltip = document.getElementById('tool-tooltip');
+        tooltip.style.display = tooltip.style.display === 'none' ? 'block' : 'none';
     });
 
     el.autoRotateCheckbox.addEventListener('change', (e) => {
