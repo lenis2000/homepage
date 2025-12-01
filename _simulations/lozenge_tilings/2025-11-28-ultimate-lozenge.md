@@ -4588,9 +4588,10 @@ Module.onRuntimeInitialized = function() {
             }
 
             const res = sim.stepFluctuationsCFTP();
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
 
             if (res.status === 'in_progress') {
-                el.avgProgress.textContent = `${res.done}/${numSamples} done, T=${res.maxT}`;
+                el.avgProgress.textContent = `${res.done}/${numSamples} done, T=${res.maxT} (${elapsed}s)`;
                 el.averageBtn.textContent = `${res.done}/${numSamples}`;
                 setTimeout(stepParallel, 0);
             } else if (res.status === 'coalesced') {
@@ -4709,9 +4710,10 @@ Module.onRuntimeInitialized = function() {
             }
 
             const res = sim.stepFluctuationsCFTP();
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
 
             if (res.status === 'in_progress') {
-                el.fluctProgress.textContent = `${res.done}/2 done, T=${res.maxT}`;
+                el.fluctProgress.textContent = `${res.done}/2 done, T=${res.maxT} (${elapsed}s)`;
                 el.fluctuationsBtn.textContent = `${res.done}/2`;
                 setTimeout(stepParallel, 0);
             } else if (res.status === 'coalesced') {
