@@ -4669,7 +4669,7 @@ function initLozengeApp() {
                     gpuEngine.setCFTPWeights(currentPeriodicQ, currentPeriodicK, usePeriodic, qBias);
                     // GPU CFTP loop with epoch doubling and early stopping
                     let T = 1;
-                    const maxT = 1048576; // Safety limit
+                    const maxT = 1073741824; // Safety limit (2^30)
                     const stepsPerBatch = 1000; // Run steps between UI updates
                     const checkInterval = 1000; // Check coalescence every N steps within batch
                     const drawInterval = 16384;  // Draw min/max bounds every N steps
@@ -5099,7 +5099,7 @@ function initLozengeApp() {
 
             // GPU CFTP loop with epoch doubling
             let T = 1;
-            const maxT = 1048576;
+            const maxT = 1073741824; // 2^30
             const stepsPerBatch = 1000;
             const checkInterval = 1000;
 
