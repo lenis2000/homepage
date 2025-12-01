@@ -1,6 +1,8 @@
 // CFTP (Coupling From The Past) Compute Shader
 // Runs one chain (lower or upper) using pre-generated random numbers
 // Both chains use identical randoms for coupling
+// Matches C++ implementation exactly
+// Supports periodic weights via per-cell q values
 
 struct CFTPParams {
     minN: i32,
@@ -8,16 +10,19 @@ struct CFTPParams {
     minJ: i32,
     maxJ: i32,
     strideJ: i32,
-    color_pass: i32,    // 0, 1, or 2 for chromatic sweep
-    direction: i32,     // -1 for lower chain, +1 for upper chain (unused in coupling)
-    num_vertices: u32,  // Total number of vertices for random indexing
+    color_pass: i32,    // 0, 1, 2, or 3 for 4-color scheme
+    q_bias: f32,        // Global q bias (used when use_weights=0)
+    use_weights: u32,   // 0 = use global q_bias, 1 = use per-cell weights buffer
+    num_vertices: u32,
+    _pad: u32,          // Padding for alignment
 }
 
 @group(0) @binding(0) var<storage, read_write> grid: array<i32>;
 @group(0) @binding(1) var<storage, read> randoms: array<f32>;
 @group(0) @binding(2) var<uniform> params: CFTPParams;
+@group(0) @binding(3) var<storage, read> weights: array<f32>;  // Per-cell q values
 
-// Get grid index matching C++ getGridIdx()
+// Get grid index - returns -1 if out of bounds
 fn get_grid_idx(n: i32, j: i32) -> i32 {
     if (n < params.minN || n > params.maxN || j < params.minJ || j > params.maxJ) {
         return -1;
@@ -25,31 +30,22 @@ fn get_grid_idx(n: i32, j: i32) -> i32 {
     return (n - params.minN) * params.strideJ + (j - params.minJ);
 }
 
-// Check if a dimer exists at given black triangle with given type
-fn dimer_exists(blackN: i32, blackJ: i32, dtype: i32) -> bool {
-    let idx = get_grid_idx(blackN, blackJ);
-    if (idx < 0 || idx >= i32(arrayLength(&grid))) {
-        return false;
-    }
-    return grid[idx] == dtype;
-}
-
-// Set dimer at given black triangle
-fn set_dimer(blackN: i32, blackJ: i32, dtype: i32) {
-    let idx = get_grid_idx(blackN, blackJ);
-    if (idx >= 0 && idx < i32(arrayLength(&grid))) {
-        grid[idx] = dtype;
-    }
-}
-
-// Edge structure for hex edges
 struct HexEdge {
     blackN: i32,
     blackJ: i32,
     dtype: i32,
 }
 
-// Get hex edge around vertex (n, j) - matches C++ getHexEdgesAroundVertex
+// Get hex edge around vertex (n, j) - matches C++ getHexEdgesAroundVertex EXACTLY
+// C++ struct: { int blackN, blackJ, whiteN, whiteJ, type }
+// So edges[0] = {n, j+1, n, j, 1} means black=(n, j+1), type=1
+// C++ code:
+// edges[0] = {n, j+1, n, j, 1};       -> black (n, j+1), type 1
+// edges[1] = {n, j, n, j, 0};         -> black (n, j), type 0
+// edges[2] = {n, j, n-1, j, 2};       -> black (n, j), type 2
+// edges[3] = {n-1, j+1, n-1, j, 1};   -> black (n-1, j+1), type 1
+// edges[4] = {n-1, j+1, n-1, j+1, 0}; -> black (n-1, j+1), type 0
+// edges[5] = {n, j+1, n-1, j+1, 2};   -> black (n, j+1), type 2
 fn get_hex_edge(n: i32, j: i32, edge_idx: u32) -> HexEdge {
     switch(edge_idx) {
         case 0u: { return HexEdge(n, j + 1, 1); }
@@ -57,8 +53,33 @@ fn get_hex_edge(n: i32, j: i32, edge_idx: u32) -> HexEdge {
         case 2u: { return HexEdge(n, j, 2); }
         case 3u: { return HexEdge(n - 1, j + 1, 1); }
         case 4u: { return HexEdge(n - 1, j + 1, 0); }
-        case 5u: { return HexEdge(n - 1, j, 2); }
+        case 5u: { return HexEdge(n, j + 1, 2); }
         default: { return HexEdge(0, 0, 0); }
+    }
+}
+
+// Check if dimer exists - matches C++ dimerExistsOnGrid
+// Out of bounds returns FALSE (counts as uncovered)
+fn dimer_exists(blackN: i32, blackJ: i32, dtype: i32) -> bool {
+    let idx = get_grid_idx(blackN, blackJ);
+    if (idx < 0) {
+        return false;
+    }
+    if (idx >= i32(arrayLength(&grid))) {
+        return false;
+    }
+    let val = grid[idx];
+    if (val == -1) {
+        return false;
+    }
+    return val == dtype;
+}
+
+// Set dimer - with bounds check
+fn set_dimer(blackN: i32, blackJ: i32, dtype: i32) {
+    let idx = get_grid_idx(blackN, blackJ);
+    if (idx >= 0 && idx < i32(arrayLength(&grid))) {
+        grid[idx] = dtype;
     }
 }
 
@@ -76,42 +97,58 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let n = rel_n + params.minN;
     let j = rel_j + params.minJ;
 
-    // Chromatic Sweep Check: Only process vertices where (n + j) mod 3 == color_pass
-    let sum = n + j;
-    let mod3 = ((sum % 3) + 3) % 3;
-    if (mod3 != params.color_pass) {
+    // 4-Color Chromatic Sweep for parallel safety
+    // Using (n % 2) * 2 + (j % 2) ensures vertices are at least 2 apart
+    let color = (((n % 2) + 2) % 2) * 2 + (((j % 2) + 2) % 2);
+    if (color != params.color_pass) {
         return;
     }
 
     // Get pre-generated random for this vertex
-    // Use index as vertex ID for random lookup
     let u = randoms[u32(index) % params.num_vertices];
-    let pRemove = 0.5;  // For q=1, probDown = 1/(1+q) = 0.5
 
-    // Read state of 6 edges around this vertex
+    // Get q value for this vertex
+    var q: f32;
+    if (params.use_weights != 0u && u32(index) < arrayLength(&weights)) {
+        // Use per-cell periodic weights
+        q = weights[u32(index)];
+    } else {
+        // Use global q_bias
+        q = params.q_bias;
+    }
+    // pRemove = probDown = 1/(1+q)
+    let pRemove = 1.0 / (1.0 + q);
+
+    // Count covered and uncovered edges
     var covered_count: i32 = 0;
     var uncovered_count: i32 = 0;
-    var covered: array<u32, 6>;
-    var uncovered: array<u32, 6>;
+    var covered: array<u32, 3>;
+    var uncovered: array<u32, 3>;
 
     for (var k: u32 = 0u; k < 6u; k++) {
         let edge = get_hex_edge(n, j, k);
         if (dimer_exists(edge.blackN, edge.blackJ, edge.dtype)) {
-            covered[covered_count] = k;
-            covered_count++;
+            if (covered_count < 3) {
+                covered[covered_count] = k;
+                covered_count++;
+            } else {
+                return;
+            }
         } else {
-            uncovered[uncovered_count] = k;
-            uncovered_count++;
+            if (uncovered_count < 3) {
+                uncovered[uncovered_count] = k;
+                uncovered_count++;
+            } else {
+                return;
+            }
         }
     }
 
-    // Valid flip requires exactly 3 covered and 3 uncovered edges
     if (covered_count != 3 || uncovered_count != 3) {
         return;
     }
 
     // Compute volume change (rotation type)
-    // Type 0 dimers contribute their blackN to volume
     var volume_before: i32 = 0;
     var volume_after: i32 = 0;
 
@@ -151,7 +188,7 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
         return;
     }
 
-    // Execute the flip: remove covered edges, add uncovered edges
+    // Execute the flip
     for (var k: i32 = 0; k < 3; k++) {
         let cov_edge = get_hex_edge(n, j, covered[k]);
         set_dimer(cov_edge.blackN, cov_edge.blackJ, -1);

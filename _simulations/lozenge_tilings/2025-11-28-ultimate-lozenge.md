@@ -2949,13 +2949,27 @@ Module.onRuntimeInitialized = function() {
     let gpuEngine = null;
     let useWebGPU = false;
 
-    // Initialize WebGPU engine if available
+    // Initialize WebGPU engine if available (with timeout for iOS Safari)
     if (window.LOZENGE_WEBGPU && window.WebGPULozengeEngine) {
         (async () => {
             try {
                 gpuEngine = new WebGPULozengeEngine();
-                await gpuEngine.init();
+                // Add timeout for iOS Safari where requestAdapter can hang after page refresh
+                const initPromise = gpuEngine.init();
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
+                );
+                await Promise.race([initPromise, timeoutPromise]);
                 console.log('WebGPU Lozenge Engine ready');
+                // Sync grid data if simulation is already valid (async init may complete after reinitRegion)
+                if (isValid && sim) {
+                    const gridInfo = sim.getRawGridData();
+                    if (gridInfo) {
+                        gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
+                        useWebGPU = true;
+                        console.log('WebGPU grid synced after async init');
+                    }
+                }
             } catch (e) {
                 console.warn('WebGPU initialization failed:', e);
                 gpuEngine = null;
@@ -3382,15 +3396,18 @@ Module.onRuntimeInitialized = function() {
         isValid = result.status === 'valid';
 
         // Sync grid data to WebGPU if available and valid
-        if (isValid && gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized()) {
+        // Check gpuEngine.isReady (GPU initialized) rather than isInitialized() (which also requires gridBuffer)
+        if (isValid && gpuEngine && gpuEngine.isReady) {
             const gridInfo = sim.getRawGridData();
             if (gridInfo) {
                 gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
+                // Set GPU weights if periodic weights UI is available
+                if (typeof currentPeriodicQ !== 'undefined' && typeof currentPeriodicK !== 'undefined') {
+                    const usePeriodic = document.getElementById('usePeriodicWeightsCheckbox')?.checked || false;
+                    gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, usePeriodic);
+                }
                 useWebGPU = true;
             }
-        } else if (isValid && gpuEngine && !gpuEngine.isInitialized()) {
-            // GPU engine exists but not fully init'd yet - schedule sync for later
-            useWebGPU = false;
         } else {
             useWebGPU = false;
         }
@@ -4326,6 +4343,12 @@ Module.onRuntimeInitialized = function() {
         sim.setPeriodicQBias(values, k);
         renderer.periodicK = k;
         renderer.periodicQ = currentPeriodicQ;
+
+        // Update GPU weights
+        const usePeriodic = usePeriodicCheckbox.checked;
+        if (gpuEngine && gpuEngine.isInitialized()) {
+            gpuEngine.setWeights(currentPeriodicQ, k, usePeriodic);
+        }
         draw();
     }
 
@@ -4359,6 +4382,10 @@ Module.onRuntimeInitialized = function() {
     usePeriodicCheckbox.addEventListener('change', (e) => {
         sim.setUsePeriodicWeights(e.target.checked);
         renderer.usePeriodicWeights = e.target.checked;
+        // Always update GPU weights (either enable or disable periodic)
+        if (gpuEngine && gpuEngine.isInitialized()) {
+            gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, e.target.checked);
+        }
         if (e.target.checked) {
             updatePeriodicWeights();
         }
@@ -4586,10 +4613,17 @@ Module.onRuntimeInitialized = function() {
                     console.error('Failed to initialize GPU CFTP, falling back to WASM');
                     // Fall through to WASM path below
                 } else {
-                    // GPU CFTP loop with epoch doubling
+                    // Set CFTP weights (periodic or global q_bias)
+                    const qBias = parseFloat(el.qInput.value) || 1.0;
+                    const usePeriodic = usePeriodicCheckbox.checked;
+                    gpuEngine.setCFTPWeights(currentPeriodicQ, currentPeriodicK, usePeriodic, qBias);
+                    // GPU CFTP loop with epoch doubling and early stopping
                     let T = 1;
                     const maxT = 1048576; // Safety limit
-                    const stepsPerBatch = 1000; // Run 1000 steps between coalescence checks
+                    const stepsPerBatch = 1000; // Run steps between UI updates
+                    const checkInterval = 1000; // Check coalescence every N steps within batch
+                    const drawInterval = 4096;  // Draw min/max bounds every N steps
+                    let lastDrawnBlock = -1;
 
                     async function gpuCftpStep() {
                         if (cftpCancelled) {
@@ -4606,17 +4640,47 @@ Module.onRuntimeInitialized = function() {
                         gpuEngine.resetCFTPChains(minGridData, maxGridData);
                         el.cftpSteps.textContent = 'T=' + T + ' (GPU)';
                         el.cftpBtn.textContent = 'T=' + T;
+                        lastDrawnBlock = -1; // Reset for new epoch
 
-                        // Run T steps in batches
-                        let stepsRun = 0;
-                        while (stepsRun < T && !cftpCancelled) {
-                            const batchSize = Math.min(stepsPerBatch, T - stepsRun);
-                            await gpuEngine.stepCFTP(batchSize);
-                            stepsRun += batchSize;
+                        // Run T steps in batches with early coalescence checking
+                        let totalStepsRun = 0;
+                        let coalesced = false;
+
+                        while (totalStepsRun < T && !cftpCancelled && !coalesced) {
+                            const batchSize = Math.min(stepsPerBatch, T - totalStepsRun);
+                            // Pass checkInterval for early stopping within batch
+                            const result = await gpuEngine.stepCFTP(batchSize, checkInterval);
+                            totalStepsRun += result.stepsRun;
+                            coalesced = result.coalesced;
 
                             // Update progress display
-                            el.cftpSteps.textContent = 'T=' + T + ' @' + stepsRun + ' (GPU)';
-                            el.cftpBtn.textContent = T + ':' + stepsRun;
+                            el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '') + ' (GPU)';
+                            el.cftpBtn.textContent = T + ':' + totalStepsRun;
+
+                            // Draw min/max bounds every drawInterval steps (like WASM version)
+                            if (T > drawInterval && !coalesced) {
+                                const currentBlock = Math.floor(totalStepsRun / drawInterval);
+                                if (currentBlock > lastDrawnBlock) {
+                                    lastDrawnBlock = currentBlock;
+                                    const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
+                                    if (bounds.maxDimers.length > 0) {
+                                        if (is3DView && renderer3D) {
+                                            renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
+                                        } else if (renderer.showDimerView) {
+                                            // Draw double dimer view in 2D dimer mode
+                                            renderer.draw(sim, activeTriangles, isValid);
+                                            const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                            renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
+                                        } else {
+                                            // Lozenge view - just show max
+                                            const savedDimers = sim.dimers;
+                                            sim.dimers = bounds.maxDimers;
+                                            draw();
+                                            sim.dimers = savedDimers;
+                                        }
+                                    }
+                                }
+                            }
 
                             // Yield to UI
                             await new Promise(r => setTimeout(r, 0));
@@ -4632,8 +4696,10 @@ Module.onRuntimeInitialized = function() {
                             return;
                         }
 
-                        // Check coalescence
-                        const coalesced = await gpuEngine.checkCoalescence();
+                        // Final coalescence check if not detected during run
+                        if (!coalesced) {
+                            coalesced = await gpuEngine.checkCoalescence();
+                        }
 
                         if (coalesced) {
                             // Success! Copy result to main grid and WASM
@@ -4644,7 +4710,9 @@ Module.onRuntimeInitialized = function() {
 
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                            el.cftpSteps.textContent = T + ' (' + elapsed + 's, GPU)';
+                            // Show T@step if coalesced early, otherwise just T
+                            const stepInfo = totalStepsRun < T ? T + '@' + totalStepsRun : T;
+                            el.cftpSteps.textContent = stepInfo + ' (' + elapsed + 's, GPU)';
                             el.cftpBtn.textContent = originalText;
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
@@ -4657,6 +4725,24 @@ Module.onRuntimeInitialized = function() {
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
                         } else {
+                            // Draw bounds after each small epoch (T <= 4096)
+                            if (T <= drawInterval) {
+                                const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
+                                if (bounds.maxDimers.length > 0) {
+                                    if (is3DView && renderer3D) {
+                                        renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
+                                    } else if (renderer.showDimerView) {
+                                        renderer.draw(sim, activeTriangles, isValid);
+                                        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                        renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
+                                    } else {
+                                        const savedDimers = sim.dimers;
+                                        sim.dimers = bounds.maxDimers;
+                                        draw();
+                                        sim.dimers = savedDimers;
+                                    }
+                                }
+                            }
                             // Double T and try again
                             T *= 2;
                             setTimeout(gpuCftpStep, 0);

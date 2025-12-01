@@ -13,11 +13,13 @@ class WebGPULozengeEngine {
         this.pipeline = null;
         this.gridBuffer = null;
         this.uniformBuffer = null;
+        this.weightsBuffer = null;  // Per-cell q values
         this.stagingBuffer = null;
         this.bindGroup = null;
         this.isReady = false;
         this.gridParams = {};
         this.shaderCode = null;
+        this.useWeights = false;    // Whether to use per-cell weights
     }
 
     async init() {
@@ -76,6 +78,7 @@ class WebGPULozengeEngine {
 
         const strideJ = maxJ - minJ + 1;
         this.gridParams = { minN, maxN, minJ, maxJ, strideJ };
+        this.numCells = gridData.length;
 
         // Create Storage Buffer for the Grid
         this.gridBuffer = this.device.createBuffer({
@@ -86,12 +89,27 @@ class WebGPULozengeEngine {
         new Int32Array(this.gridBuffer.getMappedRange()).set(gridData);
         this.gridBuffer.unmap();
 
-        // Create Uniform Buffer (8 i32 + 1 f32 + 1 u32 = 32 bytes, aligned)
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, rand_seed
-        this.uniformBuffer = this.device.createBuffer({
-            size: 32, // 8 * 4 bytes
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        // Create Weights Buffer for per-cell q values (default to 1.0)
+        this.weightsBuffer = this.device.createBuffer({
+            size: gridData.length * 4,  // float32 per cell
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            mappedAtCreation: true
         });
+        const defaultWeights = new Float32Array(this.weightsBuffer.getMappedRange());
+        defaultWeights.fill(1.0);  // Default q=1.0 for all cells
+        this.weightsBuffer.unmap();
+
+        // Create 4 Uniform Buffers (one per color pass) to enable batching
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        this.uniformBuffers = [];
+        this.bindGroups = [];
+        for (let color = 0; color < 4; color++) {
+            const uniformBuffer = this.device.createBuffer({
+                size: 40,  // 10 x 4 bytes
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            });
+            this.uniformBuffers.push(uniformBuffer);
+        }
 
         // Create Staging Buffer for readback
         this.stagingBuffer = this.device.createBuffer({
@@ -99,14 +117,18 @@ class WebGPULozengeEngine {
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
         });
 
-        // Create Bind Group
-        this.bindGroup = this.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: this.gridBuffer } },
-                { binding: 1, resource: { buffer: this.uniformBuffer } }
-            ]
-        });
+        // Create Bind Groups (one per color pass)
+        for (let color = 0; color < 4; color++) {
+            const bindGroup = this.device.createBindGroup({
+                layout: this.pipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: this.gridBuffer } },
+                    { binding: 1, resource: { buffer: this.uniformBuffers[color] } },
+                    { binding: 2, resource: { buffer: this.weightsBuffer } }
+                ]
+            });
+            this.bindGroups.push(bindGroup);
+        }
 
         console.log(`WebGPU grid initialized: ${gridData.length} cells, bounds (${minN},${maxN}) x (${minJ},${maxJ})`);
     }
@@ -123,6 +145,39 @@ class WebGPULozengeEngine {
     }
 
     /**
+     * Set per-cell weights from periodic weight matrix
+     * @param {number[][]} periodicQ - 2D array of q values [periodicK][periodicK]
+     * @param {number} periodicK - Period size
+     * @param {boolean} usePeriodicWeights - Whether to enable periodic weights
+     */
+    setWeights(periodicQ, periodicK, usePeriodicWeights) {
+        if (!this.isReady || !this.weightsBuffer) return;
+
+        this.useWeights = usePeriodicWeights;
+
+        if (!usePeriodicWeights) {
+            // Will use global q_bias instead
+            return;
+        }
+
+        // Compute per-cell q values based on periodic pattern
+        const { minN, maxN, minJ, maxJ, strideJ } = this.gridParams;
+        const weights = new Float32Array(this.numCells);
+
+        for (let n = minN; n <= maxN; n++) {
+            for (let j = minJ; j <= maxJ; j++) {
+                const idx = (n - minN) * strideJ + (j - minJ);
+                // Handle negative modulo correctly
+                const ni = ((n % periodicK) + periodicK) % periodicK;
+                const ji = ((j % periodicK) + periodicK) % periodicK;
+                weights[idx] = periodicQ[ni][ji];
+            }
+        }
+
+        this.device.queue.writeBuffer(this.weightsBuffer, 0, weights);
+    }
+
+    /**
      * Perform simulation steps using chromatic sweep
      * @param {number} numSteps - Number of full sweeps
      * @param {number} qBias - The q-bias parameter (default 1.0 for uniform)
@@ -133,37 +188,48 @@ class WebGPULozengeEngine {
         }
 
         const workgroupCount = Math.ceil(this.gridBuffer.size / 4 / 64);
-        const uniformData = new ArrayBuffer(32);
-        const intView = new Int32Array(uniformData);
-        const floatView = new Float32Array(uniformData);
-        const uintView = new Uint32Array(uniformData);
 
+        // Pre-write uniform data for all 4 colors
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        for (let color = 0; color < 4; color++) {
+            const uniformData = new ArrayBuffer(40);
+            const intView = new Int32Array(uniformData);
+            const floatView = new Float32Array(uniformData);
+            const uintView = new Uint32Array(uniformData);
+
+            intView[0] = this.gridParams.minN;
+            intView[1] = this.gridParams.maxN;
+            intView[2] = this.gridParams.minJ;
+            intView[3] = this.gridParams.maxJ;
+            intView[4] = this.gridParams.strideJ;
+            intView[5] = color;
+            floatView[6] = qBias;
+            uintView[7] = this.useWeights ? 1 : 0;
+            uintView[8] = Math.floor(Math.random() * 4294967295);
+            uintView[9] = 0;  // padding
+
+            this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
+        }
+
+        // Batch all sweeps into a single command buffer
+        // Each color pass uses its own bind group with pre-written uniforms
         const commandEncoder = this.device.createCommandEncoder();
-        const passEncoder = commandEncoder.beginComputePass();
-        passEncoder.setPipeline(this.pipeline);
-        passEncoder.setBindGroup(0, this.bindGroup);
 
         for (let i = 0; i < numSteps; i++) {
-            // Three color passes per step (chromatic sweep)
-            for (let color = 0; color < 3; color++) {
-                // Update uniforms
-                intView[0] = this.gridParams.minN;
-                intView[1] = this.gridParams.maxN;
-                intView[2] = this.gridParams.minJ;
-                intView[3] = this.gridParams.maxJ;
-                intView[4] = this.gridParams.strideJ;
-                intView[5] = color;
-                floatView[6] = qBias;
-                uintView[7] = Math.floor(Math.random() * 4294967295);
-
-                this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
-
+            // Four color passes per step (parallel-safe chromatic sweep)
+            for (let color = 0; color < 4; color++) {
+                const passEncoder = commandEncoder.beginComputePass();
+                passEncoder.setPipeline(this.pipeline);
+                passEncoder.setBindGroup(0, this.bindGroups[color]);
                 passEncoder.dispatchWorkgroups(workgroupCount);
+                passEncoder.end();
             }
         }
 
-        passEncoder.end();
         this.device.queue.submit([commandEncoder.finish()]);
+
+        // Wait for GPU work to complete
+        await this.device.queue.onSubmittedWorkDone();
     }
 
     /**
@@ -251,15 +317,21 @@ class WebGPULozengeEngine {
             this.gridBuffer.destroy();
             this.gridBuffer = null;
         }
-        if (this.uniformBuffer) {
-            this.uniformBuffer.destroy();
-            this.uniformBuffer = null;
+        if (this.weightsBuffer) {
+            this.weightsBuffer.destroy();
+            this.weightsBuffer = null;
+        }
+        if (this.uniformBuffers) {
+            for (const buf of this.uniformBuffers) {
+                buf.destroy();
+            }
+            this.uniformBuffers = [];
         }
         if (this.stagingBuffer) {
             this.stagingBuffer.destroy();
             this.stagingBuffer = null;
         }
-        this.bindGroup = null;
+        this.bindGroups = [];
         this.destroyCFTP();
     }
 
@@ -324,12 +396,25 @@ class WebGPULozengeEngine {
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
 
-        // Create CFTP uniform buffer
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, direction, num_vertices
-        this.cftpUniformBuffer = this.device.createBuffer({
-            size: 32,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        // Create 4 CFTP uniform buffers (one per color pass for batching)
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
+        this.cftpUniformBuffers = [];
+        for (let color = 0; color < 4; color++) {
+            this.cftpUniformBuffers.push(this.device.createBuffer({
+                size: 40,  // 10 x 4 bytes
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            }));
+        }
+
+        // Create CFTP weights buffer (copy from main weights buffer)
+        this.cftpWeightsBuffer = this.device.createBuffer({
+            size: numCells * 4,  // float32 per cell
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            mappedAtCreation: true
         });
+        const cftpWeights = new Float32Array(this.cftpWeightsBuffer.getMappedRange());
+        cftpWeights.fill(1.0);  // Default q=1.0
+        this.cftpWeightsBuffer.unmap();
 
         // Create staging buffers for coalescence check
         this.lowerStagingBuffer = this.device.createBuffer({
@@ -341,24 +426,29 @@ class WebGPULozengeEngine {
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
         });
 
-        // Create bind groups for lower and upper chains
-        this.lowerBindGroup = this.device.createBindGroup({
-            layout: this.cftpPipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: this.lowerGridBuffer } },
-                { binding: 1, resource: { buffer: this.randomBuffer } },
-                { binding: 2, resource: { buffer: this.cftpUniformBuffer } }
-            ]
-        });
-
-        this.upperBindGroup = this.device.createBindGroup({
-            layout: this.cftpPipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: this.upperGridBuffer } },
-                { binding: 1, resource: { buffer: this.randomBuffer } },
-                { binding: 2, resource: { buffer: this.cftpUniformBuffer } }
-            ]
-        });
+        // Create bind groups for lower and upper chains (4 per chain, one per color)
+        this.lowerBindGroups = [];
+        this.upperBindGroups = [];
+        for (let color = 0; color < 4; color++) {
+            this.lowerBindGroups.push(this.device.createBindGroup({
+                layout: this.cftpPipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: this.lowerGridBuffer } },
+                    { binding: 1, resource: { buffer: this.randomBuffer } },
+                    { binding: 2, resource: { buffer: this.cftpUniformBuffers[color] } },
+                    { binding: 3, resource: { buffer: this.cftpWeightsBuffer } }
+                ]
+            }));
+            this.upperBindGroups.push(this.device.createBindGroup({
+                layout: this.cftpPipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: this.upperGridBuffer } },
+                    { binding: 1, resource: { buffer: this.randomBuffer } },
+                    { binding: 2, resource: { buffer: this.cftpUniformBuffers[color] } },
+                    { binding: 3, resource: { buffer: this.cftpWeightsBuffer } }
+                ]
+            }));
+        }
 
         this.cftpNumCells = numCells;
         this.cftpInitialized = true;
@@ -378,19 +468,76 @@ class WebGPULozengeEngine {
     }
 
     /**
-     * Run CFTP coupled steps on GPU
-     * @param {number} numSteps - Number of coupled steps to run
+     * Set CFTP weights from periodic weight matrix (call before stepCFTP)
+     * @param {number[][]} periodicQ - 2D array of q values [periodicK][periodicK]
+     * @param {number} periodicK - Period size
+     * @param {boolean} usePeriodicWeights - Whether to enable periodic weights
+     * @param {number} qBias - Global q bias (used when usePeriodicWeights=false)
      */
-    async stepCFTP(numSteps) {
-        if (!this.cftpInitialized) return;
+    setCFTPWeights(periodicQ, periodicK, usePeriodicWeights, qBias = 1.0) {
+        if (!this.cftpInitialized || !this.cftpWeightsBuffer) return;
+
+        this.cftpUseWeights = usePeriodicWeights;
+        this.cftpQBias = qBias;
+
+        if (!usePeriodicWeights) {
+            return;
+        }
+
+        // Compute per-cell q values based on periodic pattern
+        const { minN, maxN, minJ, maxJ, strideJ } = this.gridParams;
+        const weights = new Float32Array(this.cftpNumCells);
+
+        for (let n = minN; n <= maxN; n++) {
+            for (let j = minJ; j <= maxJ; j++) {
+                const idx = (n - minN) * strideJ + (j - minJ);
+                const ni = ((n % periodicK) + periodicK) % periodicK;
+                const ji = ((j % periodicK) + periodicK) % periodicK;
+                weights[idx] = periodicQ[ni][ji];
+            }
+        }
+
+        this.device.queue.writeBuffer(this.cftpWeightsBuffer, 0, weights);
+    }
+
+    /**
+     * Run CFTP coupled steps on GPU with early stopping
+     * @param {number} numSteps - Number of coupled steps to run
+     * @param {number} checkInterval - Check coalescence every N steps (0 = no early check)
+     * @returns {Promise<{coalesced: boolean, stepsRun: number}>}
+     */
+    async stepCFTP(numSteps, checkInterval = 0) {
+        if (!this.cftpInitialized) return { coalesced: false, stepsRun: 0 };
 
         const workgroupCount = Math.ceil(this.cftpNumCells / 64);
-        const uniformData = new ArrayBuffer(32);
-        const intView = new Int32Array(uniformData);
-        const uintView = new Uint32Array(uniformData);
+        const qBias = this.cftpQBias || 1.0;
+        const useWeights = this.cftpUseWeights ? 1 : 0;
+
+        // Pre-write uniform data for all 4 colors
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
+        for (let color = 0; color < 4; color++) {
+            const uniformData = new ArrayBuffer(40);
+            const intView = new Int32Array(uniformData);
+            const floatView = new Float32Array(uniformData);
+            const uintView = new Uint32Array(uniformData);
+
+            intView[0] = this.gridParams.minN;
+            intView[1] = this.gridParams.maxN;
+            intView[2] = this.gridParams.minJ;
+            intView[3] = this.gridParams.maxJ;
+            intView[4] = this.gridParams.strideJ;
+            intView[5] = color;
+            floatView[6] = qBias;
+            uintView[7] = useWeights;
+            uintView[8] = this.cftpNumCells;
+            uintView[9] = 0;  // padding
+
+            this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
+        }
 
         // Pre-allocate random data buffer
         const randomData = new Float32Array(this.cftpNumCells);
+        let stepsRun = 0;
 
         for (let step = 0; step < numSteps; step++) {
             // Generate random numbers for this step (same for both chains)
@@ -399,42 +546,40 @@ class WebGPULozengeEngine {
             }
             this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
 
+            // Batch all 8 dispatches (4 colors × 2 chains) in a single command buffer
             const commandEncoder = this.device.createCommandEncoder();
 
-            // Run 3 color passes
-            for (let color = 0; color < 3; color++) {
-                // Update uniforms
-                intView[0] = this.gridParams.minN;
-                intView[1] = this.gridParams.maxN;
-                intView[2] = this.gridParams.minJ;
-                intView[3] = this.gridParams.maxJ;
-                intView[4] = this.gridParams.strideJ;
-                intView[5] = color;
-                intView[6] = -1; // direction (unused, coupling is symmetric)
-                uintView[7] = this.cftpNumCells;
-
-                this.device.queue.writeBuffer(this.cftpUniformBuffer, 0, uniformData);
-
-                // Dispatch lower chain
+            for (let color = 0; color < 4; color++) {
+                // Dispatch lower chain for this color
                 const lowerPass = commandEncoder.beginComputePass();
                 lowerPass.setPipeline(this.cftpPipeline);
-                lowerPass.setBindGroup(0, this.lowerBindGroup);
+                lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
                 lowerPass.dispatchWorkgroups(workgroupCount);
                 lowerPass.end();
 
-                // Dispatch upper chain (same randoms, same uniforms)
+                // Dispatch upper chain for this color (same randoms)
                 const upperPass = commandEncoder.beginComputePass();
                 upperPass.setPipeline(this.cftpPipeline);
-                upperPass.setBindGroup(0, this.upperBindGroup);
+                upperPass.setBindGroup(0, this.upperBindGroups[color]);
                 upperPass.dispatchWorkgroups(workgroupCount);
                 upperPass.end();
             }
 
             this.device.queue.submit([commandEncoder.finish()]);
+            stepsRun++;
+
+            // Early coalescence check
+            if (checkInterval > 0 && stepsRun % checkInterval === 0) {
+                const coalesced = await this.checkCoalescence();
+                if (coalesced) {
+                    return { coalesced: true, stepsRun };
+                }
+            }
         }
 
         // Wait for GPU to finish
         await this.device.queue.onSubmittedWorkDone();
+        return { coalesced: false, stepsRun };
     }
 
     /**
@@ -488,6 +633,37 @@ class WebGPULozengeEngine {
     }
 
     /**
+     * Get current min (lower) and max (upper) chain states during CFTP
+     * @param {Array} blackTriangles - Black triangles from WASM for conversion
+     * @returns {Promise<{minDimers: Array, maxDimers: Array}>}
+     */
+    async getCFTPBounds(blackTriangles) {
+        if (!this.cftpInitialized) return { minDimers: [], maxDimers: [] };
+
+        // Copy both grids to staging buffers
+        const commandEncoder = this.device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.lowerStagingBuffer, 0, this.lowerGridBuffer.size);
+        commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        // Read back both grids
+        await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
+        await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
+
+        const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+        const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
+
+        this.lowerStagingBuffer.unmap();
+        this.upperStagingBuffer.unmap();
+
+        // Convert to dimer arrays
+        const minDimers = this.gridToDimers(lowerData, blackTriangles);
+        const maxDimers = this.gridToDimers(upperData, blackTriangles);
+
+        return { minDimers, maxDimers };
+    }
+
+    /**
      * Copy CFTP result to main grid buffer
      */
     async finalizeCFTP() {
@@ -505,11 +681,15 @@ class WebGPULozengeEngine {
         if (this.lowerGridBuffer) { this.lowerGridBuffer.destroy(); this.lowerGridBuffer = null; }
         if (this.upperGridBuffer) { this.upperGridBuffer.destroy(); this.upperGridBuffer = null; }
         if (this.randomBuffer) { this.randomBuffer.destroy(); this.randomBuffer = null; }
-        if (this.cftpUniformBuffer) { this.cftpUniformBuffer.destroy(); this.cftpUniformBuffer = null; }
+        if (this.cftpWeightsBuffer) { this.cftpWeightsBuffer.destroy(); this.cftpWeightsBuffer = null; }
+        if (this.cftpUniformBuffers) {
+            for (const buf of this.cftpUniformBuffers) buf.destroy();
+            this.cftpUniformBuffers = [];
+        }
         if (this.lowerStagingBuffer) { this.lowerStagingBuffer.destroy(); this.lowerStagingBuffer = null; }
         if (this.upperStagingBuffer) { this.upperStagingBuffer.destroy(); this.upperStagingBuffer = null; }
-        this.lowerBindGroup = null;
-        this.upperBindGroup = null;
+        this.lowerBindGroups = [];
+        this.upperBindGroups = [];
         this.cftpInitialized = false;
     }
 
