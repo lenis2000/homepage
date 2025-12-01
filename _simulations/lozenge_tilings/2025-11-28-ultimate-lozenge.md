@@ -530,8 +530,12 @@ if (window.LOZENGE_WEBGPU) {
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <button id="toggle3DBtn" style="padding: 4px 12px; border: 2px solid #1976d2; border-radius: 6px; background: white; color: #1976d2; font-weight: 500; cursor: pointer;">3D</button>
     <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
-    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">Shift: toggle draw/erase
-🪣 fills or clears connected region</div>
+    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">🤚 pan · ✏️ draw · 🧹 erase
+⭕+ lasso fill · ⭕− lasso erase
+📐 snap to grid
+─────────
+Shift: toggle draw↔erase
+Cmd-click: complete lasso</div>
   </div>
 
   <!-- Canvas -->
@@ -554,7 +558,6 @@ if (window.LOZENGE_WEBGPU) {
       <button id="handBtn" title="Pan view">🤚</button>
       <button id="drawBtn" class="active" title="Draw triangles">✏️</button>
       <button id="eraseBtn" title="Erase triangles">🧹</button>
-      <button id="fillBtn" title="Fill connected region">🪣</button>
     </div>
     <div class="tool-toggle">
       <button id="lassoFillBtn" title="Lasso fill: click to add points, click near start to close">⭕+</button>
@@ -3117,7 +3120,6 @@ function initLozengeApp() {
         handBtn: document.getElementById('handBtn'),
         drawBtn: document.getElementById('drawBtn'),
         eraseBtn: document.getElementById('eraseBtn'),
-        fillBtn: document.getElementById('fillBtn'),
         lassoFillBtn: document.getElementById('lassoFillBtn'),
         lassoEraseBtn: document.getElementById('lassoEraseBtn'),
         resetBtn: document.getElementById('resetBtn'),
@@ -3688,66 +3690,6 @@ function initLozengeApp() {
         return false;
     }
 
-    // Get neighboring triangles (edge-adjacent)
-    function getTriangleNeighbors(n, j, type) {
-        if (type === 1) {
-            // Black triangle neighbors (white triangles)
-            return [
-                { n: n, j: j, type: 2 },
-                { n: n, j: j + 1, type: 2 },
-                { n: n - 1, j: j + 1, type: 2 }
-            ];
-        } else {
-            // White triangle neighbors (black triangles)
-            return [
-                { n: n, j: j, type: 1 },
-                { n: n, j: j - 1, type: 1 },
-                { n: n + 1, j: j - 1, type: 1 }
-            ];
-        }
-    }
-
-    function handleFill(tri) {
-        const startKey = `${tri.n},${tri.j},${tri.type}`;
-        const isFilled = activeTriangles.has(startKey);
-
-        // If clicking on empty space, don't fill (infinite region)
-        if (!isFilled) {
-            return false;
-        }
-
-        // Flood fill: erase connected filled region
-        const visited = new Set();
-        const queue = [{ n: tri.n, j: tri.j, type: tri.type }];
-        let changed = false;
-
-        while (queue.length > 0) {
-            const curr = queue.shift();
-            const key = `${curr.n},${curr.j},${curr.type}`;
-
-            if (visited.has(key)) continue;
-            visited.add(key);
-
-            const currIsFilled = activeTriangles.has(key);
-            if (!currIsFilled) continue; // Empty, don't cross
-
-            // Erase this triangle
-            activeTriangles.delete(key);
-            changed = true;
-
-            // Add neighbors to queue
-            const neighbors = getTriangleNeighbors(curr.n, curr.j, curr.type);
-            for (const nb of neighbors) {
-                const nbKey = `${nb.n},${nb.j},${nb.type}`;
-                if (!visited.has(nbKey)) {
-                    queue.push(nb);
-                }
-            }
-        }
-
-        return changed;
-    }
-
     function completeLasso(isFillMode) {
         if (lassoPoints.length < 3) {
             lassoPoints = [];
@@ -3975,14 +3917,6 @@ function initLozengeApp() {
                     draw();
                 }
             }
-        } else if (getEffectiveTool() === 'fill') {
-            // Fill tool: single click flood fill
-            const tri = getTriangleAtPoint(mx, my);
-            if (tri) {
-                saveState();
-                const changed = handleFill(tri);
-                if (changed) reinitialize();
-            }
         } else {
             // Regular draw/erase
             saveState();
@@ -4170,7 +4104,6 @@ function initLozengeApp() {
         el.handBtn.classList.toggle('active', tool === 'hand');
         el.drawBtn.classList.toggle('active', tool === 'draw');
         el.eraseBtn.classList.toggle('active', tool === 'erase');
-        el.fillBtn.classList.toggle('active', tool === 'fill');
         el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
     }
@@ -4178,7 +4111,6 @@ function initLozengeApp() {
     el.handBtn.addEventListener('click', () => { cmdHeld = false; setTool('hand'); });
     el.drawBtn.addEventListener('click', () => { cmdHeld = false; setTool('draw'); });
     el.eraseBtn.addEventListener('click', () => { cmdHeld = false; setTool('erase'); });
-    el.fillBtn.addEventListener('click', () => { cmdHeld = false; setTool('fill'); });
     el.lassoFillBtn.addEventListener('click', () => { cmdHeld = false; setTool('lassoFill'); });
     el.lassoEraseBtn.addEventListener('click', () => { cmdHeld = false; setTool('lassoErase'); });
 
