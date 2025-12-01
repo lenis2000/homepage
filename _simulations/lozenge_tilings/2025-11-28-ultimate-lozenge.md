@@ -527,7 +527,10 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Canvas Container with overlay -->
 <div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
   <!-- View Toggle overlay -->
-  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100;">
+  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 8px;">
+    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.7); color: white; border-radius: 4px; font-size: 11px; display: none;">
+      Hold Shift to erase
+    </div>
     <button id="toggle3DBtn" style="padding: 4px 12px; border: 2px solid #1976d2; border-radius: 6px; background: white; color: #1976d2; font-weight: 500; cursor: pointer;">3D</button>
   </div>
 
@@ -3476,6 +3479,14 @@ function initLozengeApp() {
         }
         // Refresh hole overlays for new view mode
         updateHolesUI();
+        // Update tooltip visibility
+        const tooltip = document.getElementById('tool-tooltip');
+        if (!use3D && (currentTool === 'draw' || currentTool === 'erase')) {
+            tooltip.textContent = currentTool === 'draw' ? 'Shift: erase' : 'Shift: draw';
+            tooltip.style.display = 'block';
+        } else {
+            tooltip.style.display = 'none';
+        }
     }
 
     function draw() {
@@ -3790,19 +3801,26 @@ function initLozengeApp() {
 
     // Track if cmd/meta is held for temporary tool switch
     let cmdHeld = false;
+    // Track if shift is held for draw/erase toggle
+    let shiftHeld = false;
 
     document.addEventListener('keydown', (e) => {
         if (e.metaKey || e.ctrlKey) cmdHeld = true;
+        if (e.shiftKey) shiftHeld = true;
     });
     document.addEventListener('keyup', (e) => {
         // Reset if the Meta or Ctrl key itself was released
         if (e.key === 'Meta' || e.key === 'Control') cmdHeld = false;
         // Also reset if neither modifier is held
         if (!e.metaKey && !e.ctrlKey) cmdHeld = false;
+        // Reset shift
+        if (e.key === 'Shift') shiftHeld = false;
+        if (!e.shiftKey) shiftHeld = false;
     });
     // Reset on focus loss to prevent stuck state
     window.addEventListener('blur', () => {
         cmdHeld = false;
+        shiftHeld = false;
     });
     // Also reset when mouse is released
     canvas.addEventListener('mouseup', () => {
@@ -3810,7 +3828,11 @@ function initLozengeApp() {
     });
 
     function getEffectiveTool() {
-        // Disabled cmd-hold toggle - was causing issues with lasso tools
+        // Shift toggles between draw and erase
+        if (shiftHeld) {
+            if (currentTool === 'draw') return 'erase';
+            if (currentTool === 'erase') return 'draw';
+        }
         return currentTool;
     }
 
@@ -4088,6 +4110,14 @@ function initLozengeApp() {
         el.eraseBtn.classList.toggle('active', tool === 'erase');
         el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
+        // Update tooltip
+        const tooltip = document.getElementById('tool-tooltip');
+        if (!is3DView && (tool === 'draw' || tool === 'erase')) {
+            tooltip.textContent = tool === 'draw' ? 'Shift: erase' : 'Shift: draw';
+            tooltip.style.display = 'block';
+        } else {
+            tooltip.style.display = 'none';
+        }
     }
 
     el.handBtn.addEventListener('click', () => { cmdHeld = false; setTool('hand'); });
