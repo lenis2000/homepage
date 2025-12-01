@@ -2678,58 +2678,67 @@ char* stepFluctuationsCFTP() {
         return out;
     }
 
-    // Process each non-coalesced sample
-    std::vector<std::thread> threads;
-
+    // Process each non-coalesced sample in batches (limited by thread pool size)
+    const int MAX_THREADS = 4;  // Match PTHREAD_POOL_SIZE
+    std::vector<int> pending;
     for (int s = 0; s < fluct_num_samples; s++) {
-        if (fluct_coalesced[s]) continue;
-
-        threads.emplace_back([s]() {
-            // Run CFTP from -T to 0
-            GridState lower, upper;
-            makeExtremalState(lower, -1);  // Min state
-            makeExtremalState(upper, 1);   // Max state
-
-            // Run forward from -T
-            for (int t = 0; t < fluct_T[s]; t++) {
-                coupledStep(lower, upper, fluct_seeds[s][t]);
-            }
-
-            // Check coalescence
-            bool coal = true;
-            for (size_t i = 0; i < lower.grid.size(); i++) {
-                if (lower.grid[i] != upper.grid[i]) {
-                    coal = false;
-                    break;
-                }
-            }
-
-            std::lock_guard<std::mutex> lock(fluct_mutex);
-            if (coal) {
-                fluct_coalesced[s] = true;
-                fluct_samples[s] = lower;  // Store coalesced sample
-            } else {
-                // Double T and generate new seeds
-                int newT = fluct_T[s] * 2;
-                std::vector<uint64_t> newSeeds(newT);
-
-                // Generate seeds deterministically
-                uint64_t seedBase = fluct_seeds[s][0] ^ (s * 12345);
-                uint64_t tempRng = seedBase;
-                for (int i = 0; i < newT; i++) {
-                    tempRng ^= tempRng >> 12;
-                    tempRng ^= tempRng << 25;
-                    tempRng ^= tempRng >> 27;
-                    newSeeds[i] = tempRng * 0x2545F4914F6CDD1DULL;
-                }
-
-                fluct_seeds[s] = std::move(newSeeds);
-                fluct_T[s] = newT;
-            }
-        });
+        if (!fluct_coalesced[s]) pending.push_back(s);
     }
 
-    for (auto& t : threads) t.join();
+    // Process in batches of MAX_THREADS
+    for (size_t batch_start = 0; batch_start < pending.size(); batch_start += MAX_THREADS) {
+        std::vector<std::thread> threads;
+        size_t batch_end = std::min(batch_start + MAX_THREADS, pending.size());
+
+        for (size_t i = batch_start; i < batch_end; i++) {
+            int s = pending[i];
+            threads.emplace_back([s]() {
+                // Run CFTP from -T to 0
+                GridState lower, upper;
+                makeExtremalState(lower, -1);  // Min state
+                makeExtremalState(upper, 1);   // Max state
+
+                // Run forward from -T
+                for (int t = 0; t < fluct_T[s]; t++) {
+                    coupledStep(lower, upper, fluct_seeds[s][t]);
+                }
+
+                // Check coalescence
+                bool coal = true;
+                for (size_t i = 0; i < lower.grid.size(); i++) {
+                    if (lower.grid[i] != upper.grid[i]) {
+                        coal = false;
+                        break;
+                    }
+                }
+
+                std::lock_guard<std::mutex> lock(fluct_mutex);
+                if (coal) {
+                    fluct_coalesced[s] = true;
+                    fluct_samples[s] = lower;  // Store coalesced sample
+                } else {
+                    // Double T and generate new seeds
+                    int newT = fluct_T[s] * 2;
+                    std::vector<uint64_t> newSeeds(newT);
+
+                    // Generate seeds deterministically
+                    uint64_t seedBase = fluct_seeds[s][0] ^ (s * 12345);
+                    uint64_t tempRng = seedBase;
+                    for (int i = 0; i < newT; i++) {
+                        tempRng ^= tempRng >> 12;
+                        tempRng ^= tempRng << 25;
+                        tempRng ^= tempRng >> 27;
+                        newSeeds[i] = tempRng * 0x2545F4914F6CDD1DULL;
+                    }
+
+                    fluct_seeds[s] = std::move(newSeeds);
+                    fluct_T[s] = newT;
+                }
+            });
+        }
+
+        for (auto& t : threads) t.join();
+    }
 
     // Build status
     doneCount = 0;
