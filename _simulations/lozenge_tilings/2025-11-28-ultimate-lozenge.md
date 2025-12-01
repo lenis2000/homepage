@@ -4441,11 +4441,14 @@ Module.onRuntimeInitialized = function() {
         const qBias = parseFloat(el.qInput.value) || 1.0;
 
         if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
-            // WebGPU path: chromatic sweep on GPU
-            const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
-            await gpuEngine.step(stepsPerFrame, qBias);
-            // Readback dimers from GPU for rendering
-            sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+            // WebGPU path: batch many steps on GPU before readback (like CFTP batching)
+            // Run 100 chromatic sweeps per frame, only readback every 10 frames
+            const gpuStepsPerBatch = 100;
+            await gpuEngine.step(gpuStepsPerBatch, qBias);
+            // Only readback every 10 frames to reduce GPU stalls
+            if (frameCount % 10 === 0) {
+                sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+            }
         } else if (useRandomSweeps) {
             // Random sweeps: direct mapping
             const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
