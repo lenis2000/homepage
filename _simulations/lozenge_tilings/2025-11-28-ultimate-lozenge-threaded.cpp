@@ -1567,6 +1567,34 @@ inline int fastCheckRotationTypeLUT(const int8_t* gridData, size_t gridSize,
     return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
 }
 
+// Process one color phase for a single chain (called from thread)
+void processColorPhase(GridState& chain, int color, const std::vector<double>& randoms,
+                       const std::vector<uint32_t>& vertexIndices) {
+    const size_t gridSize = chain.grid.size();
+
+    for (size_t vi = 0; vi < vertexIndices.size(); vi++) {
+        const uint32_t idx = vertexIndices[vi];
+        const double u = randoms[vi];
+
+        const TriVertex& v = triangularVertices[idx];
+        const CachedHexIndices& hex = cachedHexIndices[idx];
+        const float pRemove = cachedProbs[idx].probDown;
+
+        HexEdge edges[6];
+        getHexEdgesAroundVertex(v.n, v.j, edges);
+
+        int rotType = fastCheckRotationTypeLUT(chain.grid.data(), gridSize, hex, edges);
+        if (rotType != 0) {
+            // CFTP coupling rule: accept if (u < pRemove && decrease) or (u >= pRemove && increase)
+            if (u < pRemove) {
+                if (rotType == -1) tryRotationOnGrid(chain.grid, v.n, v.j, true);
+            } else {
+                if (rotType == 1) tryRotationOnGrid(chain.grid, v.n, v.j, true);
+            }
+        }
+    }
+}
+
 void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     uint64_t savedRng = rng_state;
     rng_state = seed;
@@ -1577,10 +1605,42 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     const size_t gridSize = lower.grid.size();
 
     if (useRandomSweeps) {
-        // Random site selection with LUT optimization
+        // Random site selection - pre-generate all randoms, then run chains in parallel
+        std::vector<uint32_t> indices(N);
+        std::vector<double> randoms(N);
+
         for (size_t i = 0; i < N; i++) {
-            const uint32_t idx = fastRandomRange((uint32_t)N);
-            const double u = getRandom01();
+            indices[i] = fastRandomRange((uint32_t)N);
+            randoms[i] = getRandom01();
+        }
+
+        // Run both chains in parallel with same randoms
+        std::thread lowerThread([&]() {
+            for (size_t i = 0; i < N; i++) {
+                const uint32_t idx = indices[i];
+                const double u = randoms[i];
+                const TriVertex& v = triangularVertices[idx];
+                const CachedHexIndices& hex = cachedHexIndices[idx];
+                const float pRemove = cachedProbs[idx].probDown;
+
+                HexEdge edges[6];
+                getHexEdgesAroundVertex(v.n, v.j, edges);
+
+                int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
+                if (lowerType != 0) {
+                    if (u < pRemove) {
+                        if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    } else {
+                        if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    }
+                }
+            }
+        });
+
+        // Upper chain on main thread
+        for (size_t i = 0; i < N; i++) {
+            const uint32_t idx = indices[i];
+            const double u = randoms[i];
             const TriVertex& v = triangularVertices[idx];
             const CachedHexIndices& hex = cachedHexIndices[idx];
             const float pRemove = cachedProbs[idx].probDown;
@@ -1588,17 +1648,6 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             HexEdge edges[6];
             getHexEdgesAroundVertex(v.n, v.j, edges);
 
-            // Process LOWER with LUT
-            int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
-            if (lowerType != 0) {
-                if (u < pRemove) {
-                    if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
-                } else {
-                    if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
-                }
-            }
-
-            // Process UPPER with LUT (same u!)
             int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
             if (upperType != 0) {
                 if (u < pRemove) {
@@ -1608,42 +1657,31 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
                 }
             }
         }
+
+        lowerThread.join();
     } else {
-        // 3-COLOR SYSTEMATIC SWEEP for CFTP with LUT (HPC optimization)
-        // CRITICAL: Generate 'u' for EVERY site, regardless of chain state
+        // PARALLEL 3-COLOR SYSTEMATIC SWEEP for CFTP
+        // Pre-generate randoms for each color, run both chains in parallel, barrier between colors
         for (int color = 0; color < 3; color++) {
             const auto& verts = colorVertices[color];
-            for (size_t vi = 0; vi < verts.size(); vi++) {
-                const uint32_t idx = verts[vi];
-                const double u = getRandom01();  // Generate FIRST for sync
+            const size_t colorN = verts.size();
 
-                const TriVertex& v = triangularVertices[idx];
-                const CachedHexIndices& hex = cachedHexIndices[idx];
-                const float pRemove = cachedProbs[idx].probDown;
+            if (colorN == 0) continue;
 
-                HexEdge edges[6];
-                getHexEdgesAroundVertex(v.n, v.j, edges);
-
-                // Process LOWER chain with LUT
-                int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
-                if (lowerType != 0) {
-                    if (u < pRemove) {
-                        if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
-                    } else {
-                        if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
-                    }
-                }
-
-                // Process UPPER chain with LUT (same u value!)
-                int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
-                if (upperType != 0) {
-                    if (u < pRemove) {
-                        if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
-                    } else {
-                        if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
-                    }
-                }
+            // Pre-generate randoms for this color phase
+            std::vector<double> randoms(colorN);
+            for (size_t vi = 0; vi < colorN; vi++) {
+                randoms[vi] = getRandom01();
             }
+
+            // Run both chains in parallel with SAME randoms
+            std::thread lowerThread([&]() {
+                processColorPhase(lower, color, randoms, verts);
+            });
+
+            processColorPhase(upper, color, randoms, verts);
+
+            lowerThread.join();  // Barrier before next color
         }
     }
 
