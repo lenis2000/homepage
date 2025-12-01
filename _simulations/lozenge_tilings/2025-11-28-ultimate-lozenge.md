@@ -5746,6 +5746,40 @@ function initLozengeApp() {
         return 1 + (parseInt(document.getElementById('export-quality').value) / 100) * 3;
     }
 
+    function generateExportFilename(extension, exportType) {
+        // Random 4-letter code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const code = Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+        // Size info (black = white count for tileable regions)
+        const numTri = sim.blackTriangles ? sim.blackTriangles.length : 0;
+        const size = `n${numTri}`;
+
+        // Measure info
+        const qVal = parseFloat(el.qInput.value) || 1.0;
+        const usePeriodic = document.getElementById('usePeriodicCheckbox').checked;
+        let measure = qVal === 1.0 ? 'unif' : `q${qVal}`;
+        if (usePeriodic) {
+            const k = parseInt(document.getElementById('periodicKInput').value) || 1;
+            measure += `_per${k}`;
+        }
+
+        // Mode info - exportType takes precedence for data exports (shape, height)
+        let mode;
+        if (exportType) {
+            mode = exportType;
+        } else if (inDoubleDimerMode && storedSamples) {
+            const minLoop = parseInt(el.minLoopInput.value) || 2;
+            mode = `dblDimer_loop${minLoop}`;
+        } else if (renderer.showDimerView) {
+            mode = 'dimer';
+        } else {
+            mode = 'loz';
+        }
+
+        return `lozenge_${mode}_${size}_${measure}_${code}.${extension}`;
+    }
+
     function createExportCanvas() {
         const baseWidth = 900, baseHeight = 600, scale = getExportScale();
         const exportCanvas = document.createElement('canvas');
@@ -5757,7 +5791,47 @@ function initLozengeApp() {
         renderer.ctx = exportCtx;
         renderer.displayWidth = baseWidth;
         renderer.displayHeight = baseHeight;
-        renderer.draw(sim, activeTriangles, isValid);
+
+        // Check if we're in double dimer mode - render that view instead
+        if (inDoubleDimerMode && storedSamples) {
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            exportCtx.fillStyle = isDarkMode ? '#1a1a1a' : '#ffffff';
+            exportCtx.fillRect(0, 0, baseWidth, baseHeight);
+
+            const { centerX, centerY, scale: viewScale } = renderer.getTransform(activeTriangles);
+
+            if (renderer.showGrid) {
+                renderer.drawBackgroundGrid(exportCtx, centerX, centerY, viewScale, isDarkMode);
+            }
+
+            const isSmallPolygon = !sim.blackTriangles || sim.blackTriangles.length <= 1000;
+            if (isSmallPolygon) {
+                renderer.drawActiveTriangles(exportCtx, activeTriangles, centerX, centerY, viewScale, true, true);
+            }
+
+            if (sim.boundaries && sim.boundaries.length > 0) {
+                for (const boundary of sim.boundaries) {
+                    renderer.drawBoundary(exportCtx, boundary, centerX, centerY, viewScale);
+                }
+            }
+
+            // Get filtered dimers using current min loop setting
+            const minLoop = parseInt(el.minLoopInput.value) || 2;
+            if (!storedSamples.loadedToCpp) {
+                sim.loadDimersForLoops(storedSamples.dimers0, storedSamples.dimers1);
+                storedSamples.loadedToCpp = true;
+            }
+            const result = sim.filterLoopsByMinSize(minLoop);
+            const filtered = {
+                dimers0: result.indices0.map(i => storedSamples.dimers0[i]),
+                dimers1: result.indices1.map(i => storedSamples.dimers1[i])
+            };
+
+            renderer.drawDoubleDimerView(exportCtx, sim, filtered.dimers0, filtered.dimers1, centerX, centerY, viewScale);
+        } else {
+            renderer.draw(sim, activeTriangles, isValid);
+        }
+
         renderer.ctx = origCtx;
         renderer.displayWidth = origW;
         renderer.displayHeight = origH;
@@ -5768,7 +5842,7 @@ function initLozengeApp() {
         createExportCanvas().toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.download = 'ultimate_lozenge.png';
+            link.download = generateExportFilename('png');
             link.href = url;
             link.click();
             URL.revokeObjectURL(url);
@@ -5795,7 +5869,7 @@ function initLozengeApp() {
                 format: [exportCanvas.width, exportCanvas.height]
             });
             pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
-            pdf.save('ultimate_lozenge.pdf');
+            pdf.save(generateExportFilename('pdf'));
         }
     });
 
@@ -5813,7 +5887,7 @@ function initLozengeApp() {
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = 'lozenge_shape.json';
+        link.download = generateExportFilename('json', 'shape');
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
@@ -5852,7 +5926,7 @@ function initLozengeApp() {
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = 'lozenge_height_function.csv';
+        link.download = generateExportFilename('csv', 'height');
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
