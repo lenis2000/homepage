@@ -4507,17 +4507,8 @@ function initLozengeApp() {
         // So for systematic, we divide by N to get equivalent behavior
         const qBias = parseFloat(el.qInput.value) || 1.0;
 
-        if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
-            // WebGPU path: scale batch size with speed setting
-            // At 60 fps, we need stepsPerSecond/60 steps per frame
-            const gpuStepsPerBatch = Math.max(1, Math.ceil(stepsPerSecond / 60));
-            await gpuEngine.step(gpuStepsPerBatch, qBias);
-            // Readback frequency scales with batch size - more often at low speeds for responsiveness
-            const readbackInterval = gpuStepsPerBatch >= 100 ? 10 : (gpuStepsPerBatch >= 10 ? 5 : 1);
-            if (frameCount % readbackInterval === 0) {
-                sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
-            }
-        } else if (useRandomSweeps) {
+        // GPU is reserved for CFTP/fluctuations only - Glauber uses WASM
+        if (useRandomSweeps) {
             // Random sweeps: direct mapping
             const stepsPerFrame = stepsPerSecond <= 60 ? 1 : Math.ceil(stepsPerSecond / 60);
             sim.step(stepsPerFrame);
@@ -4537,8 +4528,7 @@ function initLozengeApp() {
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
         if (running) {
-            if (stepsPerSecond <= 60) {
-                // Throttle at low speeds (both GPU and WASM)
+            if (useRandomSweeps && stepsPerSecond <= 60) {
                 animationId = setTimeout(() => requestAnimationFrame(loop), 1000 / stepsPerSecond);
             } else {
                 animationId = requestAnimationFrame(loop);
