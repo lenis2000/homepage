@@ -659,8 +659,8 @@ Cmd-click: complete lasso</div>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Path:</span>
-      <input type="number" id="pathWidthPct" value="1" min="0" max="20" step="0.5" class="param-input" style="width: 50px;">
-      <span style="font-size: 11px; color: #888;">%</span>
+      <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 50px;">
+      <span style="font-size: 11px; color: #888;">px</span>
     </div>
     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
       <input type="checkbox" id="showGridCheckbox" checked> Grid
@@ -1795,7 +1795,7 @@ function initLozengeApp() {
             this.ctx = canvas.getContext('2d');
             this.outlineWidthPct = 0.1;
             this.borderWidthPct = 1;
-            this.pathWidthPct = 1;
+            this.pathWidthPx = 2;
             this.pathMode = 0; // 0=off, 1=types 0+1, 2=types 1+2, 3=types 0+2
             this.showDimerView = false;
             this.showGrid = true;
@@ -2167,14 +2167,9 @@ function initLozengeApp() {
             // Mode 3: types 0+2 (excludes type 1)
             const excludedType = this.pathMode === 1 ? 2 : (this.pathMode === 2 ? 0 : 1);
 
-            // Path width scaling (similar to outline/border scaling)
-            const dimerCount = sim.dimers.length || 1;
-            const refDimerCount = 100;
-            const pathWidth = this.pathWidthPct * (refDimerCount / dimerCount) * 0.1;
-
             const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
             ctx.strokeStyle = isDarkMode ? '#ffffff' : '#333333';
-            ctx.lineWidth = Math.max(1, pathWidth * scale);
+            ctx.lineWidth = this.pathWidthPx;
             ctx.lineCap = 'round';
 
             for (const dimer of sim.dimers) {
@@ -3374,7 +3369,7 @@ function initLozengeApp() {
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         pathViewBtn: document.getElementById('pathViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
-        pathWidthPct: document.getElementById('pathWidthPct'),
+        pathWidthPx: document.getElementById('pathWidthPx'),
         paletteSelect: document.getElementById('palette-select'),
         outlineWidthPct: document.getElementById('outlineWidthPct'),
         speedSlider: document.getElementById('speedSlider'),
@@ -4672,8 +4667,8 @@ function initLozengeApp() {
         draw();
     });
 
-    el.pathWidthPct.addEventListener('input', (e) => {
-        renderer.pathWidthPct = parseFloat(e.target.value) || 0;
+    document.getElementById('pathWidthPx').addEventListener('input', (e) => {
+        renderer.pathWidthPx = parseFloat(e.target.value) || 0;
         draw();
     });
 
