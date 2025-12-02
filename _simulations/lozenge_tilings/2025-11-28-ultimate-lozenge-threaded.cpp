@@ -21,7 +21,7 @@ Ultimate Lozenge Tiling Sampler - THREADED VERSION
 - Dinic's Max Flow algorithm for robust perfect matching initialization
 - User-drawn triangular lattice regions
 - Glauber dynamics and CFTP for sampling
-- PARALLEL: Chromatic sweep, CFTP chains, Fluctuations
+- PARALLEL: CFTP chains, Fluctuations (Glauber is sequential)
 - Requires SharedArrayBuffer (COOP/COEP HTTP headers)
 */
 
@@ -69,23 +69,6 @@ inline uint32_t fastRandomRange(uint32_t range) {
 inline int getRandomInt(int n) {
     return (int)fastRandomRange((uint32_t)n);
 }
-
-// Thread-local RNG for parallel execution
-thread_local uint64_t tl_rng_state = 12345678901234567ULL;
-
-inline uint64_t tl_xorshift64() {
-    tl_rng_state ^= tl_rng_state >> 12;
-    tl_rng_state ^= tl_rng_state << 25;
-    tl_rng_state ^= tl_rng_state >> 27;
-    return tl_rng_state * 0x2545F4914F6CDD1DULL;
-}
-
-inline double tl_getRandom01() {
-    return (tl_xorshift64() >> 11) * (1.0 / 9007199254740992.0);
-}
-
-// Atomic counters for thread-safe statistics
-static std::atomic<long long> atomic_flipCount{0};
 
 // Triangle geometry constants
 const double slope = 1.0 / std::sqrt(3.0);
@@ -1522,43 +1505,6 @@ inline uint8_t getEdgeState(const CachedHexIndices& hex, const int8_t* gridData,
     return state;
 }
 
-// Process a range of vertices within one color class (for parallel execution)
-void processVertexRange(size_t start, size_t end, int color, uint64_t threadSeed) {
-    tl_rng_state = threadSeed;
-    const auto& verts = colorVertices[color];
-    const int8_t* gridData = dimerGrid.data();
-    const size_t gridSize = dimerGrid.size();
-
-    for (size_t vi = start; vi < end; vi++) {
-        const uint32_t idx = verts[vi];
-        const CachedHexIndices& hex = cachedHexIndices[idx];
-
-        // Fast 6-bit state lookup
-        uint8_t state = getEdgeState(hex, gridData, gridSize);
-        const EdgeStateLUT& lut = edgeLUT[state];
-        if (!lut.valid) continue;
-
-        const TriVertex& v = triangularVertices[idx];
-        HexEdge edges[6];
-        getHexEdgesAroundVertex(v.n, v.j, edges);
-
-        int volumeBefore = 0, volumeAfter = 0;
-        for (int k = 0; k < 3; k++) {
-            if (edges[lut.covered[k]].type == 0) volumeBefore += edges[lut.covered[k]].blackN;
-            if (edges[lut.uncovered[k]].type == 0) volumeAfter += edges[lut.uncovered[k]].blackN;
-        }
-
-        int volumeChange = volumeAfter - volumeBefore;
-        if (volumeChange == 0) continue;
-
-        float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
-        if (tl_getRandom01() < acceptProb) {
-            tryRotation(v.n, v.j, true);
-            atomic_flipCount.fetch_add(1, std::memory_order_relaxed);
-        }
-    }
-}
-
 void performGlauberStepsInternal(int numSteps) {
     if (triangularVertices.empty()) return;
 
@@ -1597,42 +1543,41 @@ void performGlauberStepsInternal(int numSteps) {
             }
         }
     } else {
-        // PARALLEL 3-COLOR CHROMATIC SWEEP
-        // Vertices of same color don't share edges -> can process in parallel
-        const unsigned int numThreads = std::max(1u, std::thread::hardware_concurrency());
-
+        // SEQUENTIAL 3-COLOR CHROMATIC SWEEP (no threading for Glauber)
         for (int s = 0; s < numSteps; s++) {
             for (int color = 0; color < 3; color++) {
                 const auto& verts = colorVertices[color];
                 const size_t colorN = verts.size();
 
-                if (colorN < 100 || numThreads == 1) {
-                    // Small color class or single thread - run sequentially
-                    uint64_t seed = xorshift64();
-                    processVertexRange(0, colorN, color, seed);
-                } else {
-                    // Parallel processing
-                    const size_t vertsPerThread = (colorN + numThreads - 1) / numThreads;
-                    std::vector<std::thread> threads;
-                    threads.reserve(numThreads);
+                for (size_t vi = 0; vi < colorN; vi++) {
+                    const uint32_t idx = verts[vi];
+                    const CachedHexIndices& hex = cachedHexIndices[idx];
 
-                    for (unsigned int t = 0; t < numThreads; t++) {
-                        size_t start = t * vertsPerThread;
-                        size_t end = std::min(start + vertsPerThread, colorN);
-                        if (start >= end) continue;
+                    uint8_t state = getEdgeState(hex, gridData, gridSize);
+                    const EdgeStateLUT& lut = edgeLUT[state];
+                    if (!lut.valid) continue;
 
-                        // Each thread gets unique seed derived from master RNG
-                        uint64_t threadSeed = xorshift64();
-                        threads.emplace_back(processVertexRange, start, end, color, threadSeed);
+                    const TriVertex& v = triangularVertices[idx];
+                    HexEdge edges[6];
+                    getHexEdgesAroundVertex(v.n, v.j, edges);
+
+                    int volumeBefore = 0, volumeAfter = 0;
+                    for (int k = 0; k < 3; k++) {
+                        if (edges[lut.covered[k]].type == 0) volumeBefore += edges[lut.covered[k]].blackN;
+                        if (edges[lut.uncovered[k]].type == 0) volumeAfter += edges[lut.uncovered[k]].blackN;
                     }
 
-                    for (auto& t : threads) t.join();
+                    int volumeChange = volumeAfter - volumeBefore;
+                    if (volumeChange == 0) continue;
+
+                    float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+                    if (getRandom01() < acceptProb) {
+                        tryRotation(v.n, v.j, true);
+                        flipCount++;
+                    }
                 }
-                // Implicit barrier between colors (join ensures all threads done)
             }
             totalSteps += N;
-            // Sync atomic counter to local for reporting
-            flipCount = atomic_flipCount.load(std::memory_order_relaxed);
         }
     }
 }
