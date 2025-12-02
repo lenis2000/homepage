@@ -1979,7 +1979,7 @@ function initLozengeApp() {
             // Draw boundary segment lengths if enabled
             if (this.showBoundaryLengths && sim.segments && sim.segments.length > 0) {
                 for (const segmentArray of sim.segments) {
-                    this.drawBoundaryLengths(ctx, segmentArray, centerX, centerY, scale, isDarkMode);
+                    this.drawBoundaryLengths(ctx, segmentArray, centerX, centerY, scale, isDarkMode, sim.boundaries);
                 }
             }
 
@@ -2249,34 +2249,66 @@ function initLozengeApp() {
         }
 
         // Draw pre-computed boundary segment lengths
-        drawBoundaryLengths(ctx, segments, centerX, centerY, scale, isDarkMode) {
+        drawBoundaryLengths(ctx, segments, centerX, centerY, scale, isDarkMode, boundaries) {
             if (!segments || segments.length === 0) return;
+
+            // Helper: point-in-polygon test (ray casting)
+            const pointInPolygon = (x, y, polygon) => {
+                if (!polygon || polygon.length < 3) return false;
+                let inside = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                    const xi = polygon[i].x, yi = polygon[i].y;
+                    const xj = polygon[j].x, yj = polygon[j].y;
+                    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                        inside = !inside;
+                    }
+                }
+                return inside;
+            };
+
+            // Test if point is inside tileable region (inside odd number of boundaries)
+            const isInsideRegion = (x, y) => {
+                if (!boundaries || boundaries.length === 0) return false;
+                let count = 0;
+                for (const boundary of boundaries) {
+                    if (pointInPolygon(x, y, boundary)) count++;
+                }
+                return count % 2 === 1;
+            };
 
             // 1.5x smaller font, LaTeX-like italic serif style
             const fontSize = Math.max(13, Math.min(27, scale * 0.4));
-            const baseOffset = fontSize * 1.5;
+            const latticeOffset = 0.8; // Offset in lattice units for testing
             ctx.font = `italic ${fontSize}px "Times New Roman", "Georgia", serif`;
             ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
             for (const seg of segments) {
-                const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
                 const text = seg.len.toString();
 
-                // Transform normal based on rotation
+                // Test candidate position in lattice coordinates
+                let testX = seg.x + seg.nx * latticeOffset;
+                let testY = seg.y + seg.ny * latticeOffset;
+
+                // Determine direction: flip if candidate is inside the tileable region
+                let flip = isInsideRegion(testX, testY) ? -1 : 1;
+
+                // Transform normal to canvas coordinates based on rotation
                 let nx, ny;
                 if (this.rotated) {
-                    nx = seg.ny;
-                    ny = seg.nx;
+                    nx = seg.ny * flip;
+                    ny = seg.nx * flip;
                 } else {
-                    nx = seg.nx;
-                    ny = -seg.ny;
+                    nx = seg.nx * flip;
+                    ny = -seg.ny * flip;
                 }
 
-                // Position: offset along normal
-                const labelX = cx + nx * baseOffset;
-                const labelY = cy + ny * baseOffset;
+                // Position in canvas coordinates
+                const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
+                const canvasOffset = fontSize * 1.5;
+                const labelX = cx + nx * canvasOffset;
+                const labelY = cy + ny * canvasOffset;
 
                 ctx.fillText(text, labelX, labelY);
             }
