@@ -572,6 +572,7 @@ if (window.LOZENGE_WEBGPU) {
     </div>
     <div class="view-toggle">
       <button id="lozengeViewBtn" class="active" title="Lozenge view">&#9670;</button>
+      <button id="pathViewBtn" title="Toggle nonintersecting paths (cycles: off, type 0+1, type 1+2, type 0+2)">⟶</button>
       <button id="dimerViewBtn" title="Dimer view">&#8226;-&#8226;</button>
       <button id="rotate2DBtn" title="Rotate canvas 90°">&#8635;</button>
     </div>
@@ -654,6 +655,11 @@ Cmd-click: complete lasso</div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Border:</span>
       <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
+      <span style="font-size: 11px; color: #888;">%</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Path:</span>
+      <input type="number" id="pathWidthPct" value="1" min="0" max="20" step="0.5" class="param-input" style="width: 50px;">
       <span style="font-size: 11px; color: #888;">%</span>
     </div>
     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
@@ -1789,6 +1795,8 @@ function initLozengeApp() {
             this.ctx = canvas.getContext('2d');
             this.outlineWidthPct = 0.1;
             this.borderWidthPct = 1;
+            this.pathWidthPct = 1;
+            this.pathMode = 0; // 0=off, 1=types 0+1, 2=types 1+2, 3=types 0+2
             this.showDimerView = false;
             this.showGrid = true;
             this.showBoundaryLengths = false;
@@ -1986,6 +1994,8 @@ function initLozengeApp() {
                 } else {
                     this.drawLozengeView(ctx, sim, centerX, centerY, scale, isDarkMode);
                 }
+                // Draw nonintersecting paths overlay
+                this.drawPaths(ctx, sim, centerX, centerY, scale);
             }
 
             // Draw all boundaries (outer + holes + disconnected)
@@ -2145,6 +2155,66 @@ function initLozengeApp() {
                     ctx.lineWidth = outlineWidth;
                     ctx.stroke();
                 }
+            }
+        }
+
+        drawPaths(ctx, sim, centerX, centerY, scale) {
+            if (this.pathMode === 0) return;
+
+            // 3 path families, each through 2 of the 3 lozenge types
+            // Mode 1: types 0+1 (excludes type 2)
+            // Mode 2: types 1+2 (excludes type 0)
+            // Mode 3: types 0+2 (excludes type 1)
+            const excludedType = this.pathMode === 1 ? 2 : (this.pathMode === 2 ? 0 : 1);
+
+            // Path width scaling (similar to outline/border scaling)
+            const dimerCount = sim.dimers.length || 1;
+            const refDimerCount = 100;
+            const pathWidth = this.pathWidthPct * (refDimerCount / dimerCount) * 0.1;
+
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            ctx.strokeStyle = isDarkMode ? '#ffffff' : '#333333';
+            ctx.lineWidth = Math.max(1, pathWidth * scale);
+            ctx.lineCap = 'round';
+
+            for (const dimer of sim.dimers) {
+                if (dimer.t === excludedType) continue;
+
+                const verts = this.getLozengeVertices(dimer);
+                // Lozenges are rhombi with 4 vertices: [0, 1, 2, 3]
+                // Two pairs of parallel edges:
+                //   Pair A: (0-1, 2-3)
+                //   Pair B: (1-2, 3-0)
+                // Which pair to use depends on mode and lozenge type for proper connectivity
+
+                let mid1, mid2;
+                const t = dimer.t;
+
+                if (this.pathMode === 1) {
+                    // Types 0+1: use Pair B for both
+                    mid1 = { x: (verts[1].x + verts[2].x) / 2, y: (verts[1].y + verts[2].y) / 2 };
+                    mid2 = { x: (verts[3].x + verts[0].x) / 2, y: (verts[3].y + verts[0].y) / 2 };
+                } else if (this.pathMode === 2) {
+                    // Types 1+2: type 1 uses Pair A, type 2 uses Pair B
+                    if (t === 1) {
+                        mid1 = { x: (verts[0].x + verts[1].x) / 2, y: (verts[0].y + verts[1].y) / 2 };
+                        mid2 = { x: (verts[2].x + verts[3].x) / 2, y: (verts[2].y + verts[3].y) / 2 };
+                    } else {
+                        mid1 = { x: (verts[1].x + verts[2].x) / 2, y: (verts[1].y + verts[2].y) / 2 };
+                        mid2 = { x: (verts[3].x + verts[0].x) / 2, y: (verts[3].y + verts[0].y) / 2 };
+                    }
+                } else {
+                    // Mode 3: Types 0+2: use Pair A for both (correct)
+                    mid1 = { x: (verts[0].x + verts[1].x) / 2, y: (verts[0].y + verts[1].y) / 2 };
+                    mid2 = { x: (verts[2].x + verts[3].x) / 2, y: (verts[2].y + verts[3].y) / 2 };
+                }
+
+                const [c1x, c1y] = this.toCanvas(mid1.x, mid1.y, centerX, centerY, scale);
+                const [c2x, c2y] = this.toCanvas(mid2.x, mid2.y, centerX, centerY, scale);
+                ctx.beginPath();
+                ctx.moveTo(c1x, c1y);
+                ctx.lineTo(c2x, c2y);
+                ctx.stroke();
             }
         }
 
@@ -3302,7 +3372,9 @@ function initLozengeApp() {
         labelOffsetInput: document.getElementById('labelOffsetInput'),
         shapeOfMonthBtn: document.getElementById('shapeOfMonthBtn'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
+        pathViewBtn: document.getElementById('pathViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
+        pathWidthPct: document.getElementById('pathWidthPct'),
         paletteSelect: document.getElementById('palette-select'),
         outlineWidthPct: document.getElementById('outlineWidthPct'),
         speedSlider: document.getElementById('speedSlider'),
@@ -3575,12 +3647,14 @@ function initLozengeApp() {
             }
         }
 
-        // Disable lozenge/dimer/rotate toggle in 3D mode (not applicable)
+        // Disable lozenge/dimer/path/rotate toggle in 3D mode (not applicable)
         const rotate2DBtn = document.getElementById('rotate2DBtn');
         el.lozengeViewBtn.disabled = use3D;
+        el.pathViewBtn.disabled = use3D;
         el.dimerViewBtn.disabled = use3D;
         if (rotate2DBtn) rotate2DBtn.disabled = use3D;
         el.lozengeViewBtn.style.opacity = use3D ? '0.5' : '1';
+        el.pathViewBtn.style.opacity = use3D ? '0.5' : '1';
         el.dimerViewBtn.style.opacity = use3D ? '0.5' : '1';
         if (rotate2DBtn) rotate2DBtn.style.opacity = use3D ? '0.5' : '1';
 
@@ -4528,6 +4602,14 @@ function initLozengeApp() {
         draw();
     });
 
+    // Path view toggle (cycles through 4 states: off, 3 path families)
+    el.pathViewBtn.addEventListener('click', () => {
+        renderer.pathMode = (renderer.pathMode + 1) % 4;
+        // Always show ∥ icon, toggle active state based on mode
+        el.pathViewBtn.classList.toggle('active', renderer.pathMode !== 0);
+        draw();
+    });
+
     // 3D View toggle
     el.toggle3DBtn.addEventListener('click', () => {
         setViewMode(!is3DView);
@@ -4587,6 +4669,11 @@ function initLozengeApp() {
 
     document.getElementById('borderWidthPct').addEventListener('input', (e) => {
         renderer.borderWidthPct = parseFloat(e.target.value) || 0;
+        draw();
+    });
+
+    el.pathWidthPct.addEventListener('input', (e) => {
+        renderer.pathWidthPct = parseFloat(e.target.value) || 0;
         draw();
     });
 
