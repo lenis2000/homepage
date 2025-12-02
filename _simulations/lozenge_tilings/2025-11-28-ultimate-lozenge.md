@@ -391,7 +391,7 @@ code:
   .hole-control {
     position: absolute;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 2px;
     pointer-events: auto;
@@ -422,7 +422,7 @@ code:
     background: rgba(80, 80, 80, 0.7);
   }
   .hole-control input {
-    width: 50px;
+    width: 36px;
     height: 24px;
     padding: 2px 4px;
     border: 1px solid rgba(100, 100, 100, 0.5);
@@ -431,6 +431,12 @@ code:
     font-size: 12px;
     text-align: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    -moz-appearance: textfield;
+  }
+  .hole-control input::-webkit-outer-spin-button,
+  .hole-control input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
   .hole-control input:focus {
     outline: 2px solid #4a90d9;
@@ -561,7 +567,14 @@ if (window.LOZENGE_WEBGPU) {
 <div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
   <!-- View Toggle overlay -->
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
-    <button id="toggle3DBtn" style="padding: 4px 12px; border: 2px solid #1976d2; border-radius: 6px; background: white; color: #1976d2; font-weight: 500; cursor: pointer;">3D</button>
+    <div class="view-toggle">
+      <button id="lozengeViewBtn" class="active" title="Lozenge view">&#9670;</button>
+      <button id="dimerViewBtn" title="Dimer view">&#8226;-&#8226;</button>
+    </div>
+    <div class="view-toggle">
+      <button id="toggle3DBtn" title="Toggle 2D/3D">2D</button>
+      <button id="rotate2DBtn" title="Rotate canvas 90°">&#8635;</button>
+    </div>
     <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
     <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">🤚 pan · ✏️ draw · 🧹 erase
 ⭕+ lasso fill · ⭕− lasso erase
@@ -627,10 +640,6 @@ Cmd-click: complete lasso</div>
 <!-- Display Options -->
 <div class="control-group">
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <div class="view-toggle">
-      <button id="lozengeViewBtn" class="active">Lozenge</button>
-      <button id="dimerViewBtn">Dimer</button>
-    </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
       <select id="palette-select" style="width: 120px;"></select>
@@ -647,26 +656,24 @@ Cmd-click: complete lasso</div>
       <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
       <span style="font-size: 11px; color: #888;">%</span>
     </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="showGridCheckbox" checked>
-      <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="showBoundaryLengthsCheckbox">
-      <label for="showBoundaryLengthsCheckbox" style="font-size: 12px; color: #555;">Lengths</label>
-      <label for="labelSizeInput" style="font-size: 11px; color: #888; margin-left: 8px;">size:</label>
+    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
+      <input type="checkbox" id="showGridCheckbox" checked> Grid
+    </label>
+    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
+      <input type="checkbox" id="showBoundaryLengthsCheckbox"> Length Labels
+    </label>
+    <span id="labelControls" style="display: none; align-items: center; gap: 4px;">
+      <label for="labelSizeInput" style="font-size: 11px; color: #888;">size:</label>
       <input type="number" id="labelSizeInput" value="1.0" min="0.3" max="3" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;">
       <label for="labelOffsetInput" style="font-size: 11px; color: #888;">offset:</label>
       <input type="number" id="labelOffsetInput" value="1.5" min="0.5" max="5" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;">
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="showHoleLabelsCheckbox" checked>
-      <label for="showHoleLabelsCheckbox" style="font-size: 12px; color: #555;">Hole Labels</label>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="rotateCheckbox">
-      <label for="rotateCheckbox" style="font-size: 12px; color: #555;">Rotate Canvas 90°</label>
-    </div>
+      <label style="display: flex; align-items: center; gap: 2px; font-size: 11px; color: #888; cursor: pointer; margin-left: 4px;">
+        <input type="checkbox" id="showHoleLengthsCheckbox" checked style="margin: 0;"> holes
+      </label>
+    </span>
+    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
+      <input type="checkbox" id="showHoleLabelsCheckbox" checked> Hole Labels
+    </label>
   </div>
 </div>
 
@@ -976,6 +983,7 @@ function initLozengeApp() {
             this.getHoleCountWasm = Module.cwrap('getHoleCount', 'number', []);
             this.getAllHolesInfoWasm = Module.cwrap('getAllHolesInfo', 'number', []);
             this.adjustHoleWindingWasm = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
+            this.setHoleBaseHeightWasm = Module.cwrap('setHoleBaseHeight', 'number', ['number', 'number']);
             this.recomputeHoleInfoWasm = Module.cwrap('recomputeHoleInfo', null, []);
             this.getVerticalCutInfoWasm = Module.cwrap('getVerticalCutInfo', 'number', ['number']);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
@@ -1176,6 +1184,10 @@ function initLozengeApp() {
             const jsonStr = Module.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             return JSON.parse(jsonStr);
+        }
+
+        setHoleBaseHeight(holeIdx, height) {
+            return this.setHoleBaseHeightWasm(holeIdx, height);
         }
 
         recomputeHoleInfo() {
@@ -1780,6 +1792,7 @@ function initLozengeApp() {
             this.showDimerView = false;
             this.showGrid = true;
             this.showBoundaryLengths = false;
+            this.showHoleLengths = true;
             this.labelSize = 1.0;
             this.labelOffset = 1.5;
             this.rotated = false;
@@ -1984,8 +1997,26 @@ function initLozengeApp() {
 
             // Draw boundary segment lengths if enabled
             if (this.showBoundaryLengths && sim.segments && sim.segments.length > 0) {
-                for (const segmentArray of sim.segments) {
-                    this.drawBoundaryLengths(ctx, segmentArray, centerX, centerY, scale, isDarkMode, sim.boundaries);
+                // Find outer boundary index (largest absolute area)
+                let outerIdx = 0;
+                let maxArea = 0;
+                for (let i = 0; i < sim.boundaries.length; i++) {
+                    const b = sim.boundaries[i];
+                    let area = 0;
+                    for (let j = 0; j < b.length; j++) {
+                        const k = (j + 1) % b.length;
+                        area += b[j].x * b[k].y - b[k].x * b[j].y;
+                    }
+                    if (Math.abs(area) > maxArea) {
+                        maxArea = Math.abs(area);
+                        outerIdx = i;
+                    }
+                }
+                // Draw segments, skip holes if showHoleLengths is false
+                for (let i = 0; i < sim.segments.length; i++) {
+                    const isHole = (i !== outerIdx);
+                    if (isHole && !this.showHoleLengths) continue;
+                    this.drawBoundaryLengths(ctx, sim.segments[i], centerX, centerY, scale, isDarkMode, sim.boundaries);
                 }
             }
 
@@ -3402,126 +3433,73 @@ function initLozengeApp() {
             ctrl.style.top = screen.y + 'px';
             ctrl.dataset.hole = h;
 
-            if (useBatchMode) {
-                // Input field mode for large tilings - with + and - buttons
-                ctrl.innerHTML = `
-                    <button class="winding-plus">+</button>
-                    <input type="text" class="winding-input" placeholder="±N" title="Enter +N or -N to adjust winding">
-                    <button class="winding-minus">−</button>
-                `;
-                const input = ctrl.querySelector('.winding-input');
-                const minusBtn = ctrl.querySelector('.winding-minus');
-                const plusBtn = ctrl.querySelector('.winding-plus');
+            // Both modes: [+] [height] [-] with editable height in center
+            // Display relative height (currentWinding - baseHeight), starts at 0
+            const relativeHeight = hole.currentWinding - hole.baseHeight;
+            ctrl.innerHTML = `
+                <button class="winding-plus">+</button>
+                <input type="number" class="height-input" value="${relativeHeight}" title="Relative height (starts at 0)">
+                <button class="winding-minus">−</button>
+            `;
+            const heightInput = ctrl.querySelector('.height-input');
+            const minusBtn = ctrl.querySelector('.winding-minus');
+            const plusBtn = ctrl.querySelector('.winding-plus');
 
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const holeIdx = parseInt(ctrl.dataset.hole);
-                        const val = input.value.trim();
-                        const match = val.match(/^([+-]?)(\d+)$/);
-                        if (!match) {
-                            input.value = '';
-                            return;
-                        }
-                        const sign = match[1] === '-' ? -1 : 1;
-                        const count = parseInt(match[2]);
-                        if (count === 0) {
-                            input.value = '';
-                            return;
-                        }
+            // Height input change handler - adjust winding to reach target
+            heightInput.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                const targetRelativeHeight = parseInt(e.target.value) || 0;
+                const currentRelativeHeight = hole.currentWinding - hole.baseHeight;
+                const delta = targetRelativeHeight - currentRelativeHeight;
+                if (delta !== 0) {
+                    heightInput.disabled = true;
+                    minusBtn.disabled = true;
+                    plusBtn.disabled = true;
+                    setTimeout(() => {
+                        sim.adjustHoleWinding(holeIdx, delta);
+                        sim.refreshDimers();
+                        draw();
+                        updateHolesUI();
+                    }, 10);
+                }
+            });
+            heightInput.addEventListener('click', (e) => e.stopPropagation());
 
-                        input.disabled = true;
-                        minusBtn.disabled = true;
-                        plusBtn.disabled = true;
-                        input.value = '⏳';
-
-                        // Apply all changes at once (batched in C++)
-                        setTimeout(() => {
-                            const result = sim.adjustHoleWinding(holeIdx, sign * count);
-                            sim.refreshDimers();
-                            draw();
-                            updateHolesUI();
-                        }, 10);
+            // Winding adjustment buttons
+            minusBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                minusBtn.textContent = '⏳';
+                minusBtn.disabled = true;
+                plusBtn.disabled = true;
+                heightInput.disabled = true;
+                setTimeout(() => {
+                    const result = sim.adjustHoleWinding(holeIdx, -1);
+                    if (result.success) {
+                        sim.refreshDimers();
+                        draw();
                     }
-                });
+                    updateHolesUI();
+                }, useBatchMode ? 10 : 10);
+            });
 
-                input.addEventListener('click', (e) => e.stopPropagation());
-
-                minusBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const holeIdx = parseInt(ctrl.dataset.hole);
-                    minusBtn.textContent = '⏳';
-                    minusBtn.disabled = true;
-                    plusBtn.disabled = true;
-                    input.disabled = true;
-                    setTimeout(() => {
-                        const result = sim.adjustHoleWinding(holeIdx, -1);
-                        if (result.success) {
-                            sim.refreshDimers();
-                            draw();
-                        }
-                        updateHolesUI();
-                    }, 10);
-                });
-
-                plusBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const holeIdx = parseInt(ctrl.dataset.hole);
-                    plusBtn.textContent = '⏳';
-                    plusBtn.disabled = true;
-                    minusBtn.disabled = true;
-                    input.disabled = true;
-                    setTimeout(() => {
-                        const result = sim.adjustHoleWinding(holeIdx, 1);
-                        if (result.success) {
-                            sim.refreshDimers();
-                            draw();
-                        }
-                        updateHolesUI();
-                    }, 10);
-                });
-            } else {
-                // Button mode for small tilings
-                ctrl.innerHTML = `
-                    <button class="winding-plus">+</button>
-                    <button class="winding-minus">−</button>
-                `;
-
-                const minusBtn = ctrl.querySelector('.winding-minus');
-                const plusBtn = ctrl.querySelector('.winding-plus');
-
-                minusBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const holeIdx = parseInt(ctrl.dataset.hole);
-                    minusBtn.textContent = '⏳';
-                    minusBtn.disabled = true;
-                    plusBtn.disabled = true;
-                    setTimeout(() => {
-                        const result = sim.adjustHoleWinding(holeIdx, -1);
-                        if (result.success) {
-                            sim.refreshDimers();
-                            draw();
-                        }
-                        updateHolesUI();
-                    }, 10);
-                });
-
-                plusBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const holeIdx = parseInt(ctrl.dataset.hole);
-                    plusBtn.textContent = '⏳';
-                    plusBtn.disabled = true;
-                    minusBtn.disabled = true;
-                    setTimeout(() => {
-                        const result = sim.adjustHoleWinding(holeIdx, 1);
-                        if (result.success) {
-                            sim.refreshDimers();
-                            draw();
-                        }
-                        updateHolesUI();
-                    }, 10);
-                });
-            }
+            plusBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                plusBtn.textContent = '⏳';
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                heightInput.disabled = true;
+                setTimeout(() => {
+                    const result = sim.adjustHoleWinding(holeIdx, 1);
+                    if (result.success) {
+                        sim.refreshDimers();
+                        draw();
+                    }
+                    updateHolesUI();
+                }, useBatchMode ? 10 : 10);
+            });
 
             holeOverlays.appendChild(ctrl);
         }
@@ -3588,6 +3566,21 @@ function initLozengeApp() {
         // Enable/disable rotate buttons based on 3D view
         document.getElementById('rotateLeftBtn').disabled = !use3D;
         document.getElementById('rotateRightBtn').disabled = !use3D;
+        // Disable 2D rotate button when in 3D mode
+        const rotate2DBtn = document.getElementById('rotate2DBtn');
+        if (rotate2DBtn) {
+            rotate2DBtn.disabled = use3D;
+            rotate2DBtn.style.opacity = use3D ? '0.5' : '1';
+        }
+
+        // Auto-disable hole labels when entering 3D (user can re-enable)
+        if (use3D) {
+            const holeLabelsCheckbox = document.getElementById('showHoleLabelsCheckbox');
+            if (holeLabelsCheckbox && holeLabelsCheckbox.checked) {
+                holeLabelsCheckbox.checked = false;
+                showHoleLabels = false;
+            }
+        }
 
         if (use3D) {
             if (!renderer3D) {
@@ -4466,6 +4459,7 @@ function initLozengeApp() {
     // Boundary lengths checkbox
     el.showBoundaryLengthsCheckbox.addEventListener('change', (e) => {
         renderer.showBoundaryLengths = e.target.checked;
+        document.getElementById('labelControls').style.display = e.target.checked ? 'inline-flex' : 'none';
         draw();
     });
 
@@ -4476,6 +4470,12 @@ function initLozengeApp() {
     });
     el.labelOffsetInput.addEventListener('input', (e) => {
         renderer.labelOffset = parseFloat(e.target.value) || 1.5;
+        draw();
+    });
+
+    // Hole lengths toggle
+    document.getElementById('showHoleLengthsCheckbox').addEventListener('change', (e) => {
+        renderer.showHoleLengths = e.target.checked;
         draw();
     });
 
@@ -4598,8 +4598,11 @@ function initLozengeApp() {
         updateHolesUI();
     });
 
-    document.getElementById('rotateCheckbox').addEventListener('change', (e) => {
-        renderer.rotated = e.target.checked;
+    // 2D rotate button in canvas overlay
+    document.getElementById('rotate2DBtn').addEventListener('click', () => {
+        renderer.rotated = !renderer.rotated;
+        const btn = document.getElementById('rotate2DBtn');
+        btn.classList.toggle('active', renderer.rotated);
         draw();
     });
 

@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','lengthBytesUTF8','stringToUTF8']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -228,6 +228,7 @@ struct HoleInfo {
     int currentWinding;
     int minWinding, maxWinding;
     int lastAttemptedTarget;  // For hybrid shuffle: shuffle when re-trying same target
+    int baseHeight = 0;     // Base height offset for this hole (default 0)
 };
 
 struct CutEdge {
@@ -1890,6 +1891,10 @@ char* initFromTriangles(int* data, int count) {
         buildCutForHole(0);
         computeAllWindings();
         computeWindingBounds();
+        // Set baseHeight to initial winding so display starts at 0
+        for (auto& h : holes) {
+            h.baseHeight = h.currentWinding;
+        }
     }
 
     // 7. Calculate initial volume
@@ -2494,13 +2499,21 @@ char* getAllHolesInfo() {
                 ",\"centroidY\":" + std::to_string(h.centroidY) +
                 ",\"currentWinding\":" + std::to_string(h.currentWinding) +
                 ",\"minWinding\":" + std::to_string(h.minWinding) +
-                ",\"maxWinding\":" + std::to_string(h.maxWinding) + "}";
+                ",\"maxWinding\":" + std::to_string(h.maxWinding) +
+                ",\"baseHeight\":" + std::to_string(h.baseHeight) + "}";
     }
     json += "]}";
 
     char* out = (char*)malloc(json.size() + 1);
     strcpy(out, json.c_str());
     return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int setHoleBaseHeight(int holeIdx, int height) {
+    if (holeIdx < 0 || holeIdx >= (int)holes.size()) return 0;
+    holes[holeIdx].baseHeight = height;
+    return 1;
 }
 
 EMSCRIPTEN_KEEPALIVE
