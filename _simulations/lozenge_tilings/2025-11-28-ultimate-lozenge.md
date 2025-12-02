@@ -654,6 +654,10 @@ Cmd-click: complete lasso</div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showBoundaryLengthsCheckbox">
       <label for="showBoundaryLengthsCheckbox" style="font-size: 12px; color: #555;">Lengths</label>
+      <label for="labelSizeInput" style="font-size: 11px; color: #888; margin-left: 8px;">size:</label>
+      <input type="number" id="labelSizeInput" value="1.0" min="0.3" max="3" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;">
+      <label for="labelOffsetInput" style="font-size: 11px; color: #888;">offset:</label>
+      <input type="number" id="labelOffsetInput" value="1.5" min="0.5" max="5" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;">
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showHoleLabelsCheckbox" checked>
@@ -1776,6 +1780,8 @@ function initLozengeApp() {
             this.showDimerView = false;
             this.showGrid = true;
             this.showBoundaryLengths = false;
+            this.labelSize = 1.0;
+            this.labelOffset = 1.5;
             this.rotated = false;
             this.usePeriodicWeights = false;
             this.periodicK = 2;
@@ -2276,8 +2282,9 @@ function initLozengeApp() {
                 return count % 2 === 1;
             };
 
-            // 1.5x smaller font, LaTeX-like italic serif style
-            const fontSize = Math.max(13, Math.min(27, scale * 0.4));
+            // Font size controlled by labelSize parameter
+            const baseFontSize = Math.max(13, Math.min(27, scale * 0.4));
+            const fontSize = baseFontSize * this.labelSize;
             const latticeOffset = 0.8; // Offset in lattice units for testing
             ctx.font = `italic ${fontSize}px "Times New Roman", "Georgia", serif`;
             ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
@@ -2304,9 +2311,9 @@ function initLozengeApp() {
                     ny = -seg.ny * flip;
                 }
 
-                // Position in canvas coordinates
+                // Position in canvas coordinates, offset controlled by labelOffset parameter
                 const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
-                const canvasOffset = fontSize * 1.5;
+                const canvasOffset = fontSize * this.labelOffset;
                 const labelX = cx + nx * canvasOffset;
                 const labelY = cy + ny * canvasOffset;
 
@@ -3260,6 +3267,8 @@ function initLozengeApp() {
         hexCInput: document.getElementById('hexCInput'),
         letterSelect: document.getElementById('letterSelect'),
         showBoundaryLengthsCheckbox: document.getElementById('showBoundaryLengthsCheckbox'),
+        labelSizeInput: document.getElementById('labelSizeInput'),
+        labelOffsetInput: document.getElementById('labelOffsetInput'),
         shapeOfMonthBtn: document.getElementById('shapeOfMonthBtn'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
@@ -4457,6 +4466,16 @@ function initLozengeApp() {
     // Boundary lengths checkbox
     el.showBoundaryLengthsCheckbox.addEventListener('change', (e) => {
         renderer.showBoundaryLengths = e.target.checked;
+        draw();
+    });
+
+    // Label size and offset inputs
+    el.labelSizeInput.addEventListener('input', (e) => {
+        renderer.labelSize = parseFloat(e.target.value) || 1.0;
+        draw();
+    });
+    el.labelOffsetInput.addEventListener('input', (e) => {
+        renderer.labelOffset = parseFloat(e.target.value) || 1.5;
         draw();
     });
 
