@@ -2262,9 +2262,18 @@ function initLozengeApp() {
 
             for (const seg of segments) {
                 const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
-                // Normal from C++ is in world coords; Y is flipped in canvas coords
-                const labelX = cx + seg.nx * offset;
-                const labelY = cy - seg.ny * offset;  // Negate ny for canvas Y-flip
+                // Transform normal based on rotation
+                // Normal from C++ is in world coords
+                let labelX, labelY;
+                if (this.rotated) {
+                    // Rotated: canvas X = world Y, canvas Y = world X
+                    labelX = cx + seg.ny * offset;
+                    labelY = cy + seg.nx * offset;
+                } else {
+                    // Normal: canvas X = world X, canvas Y = -world Y
+                    labelX = cx + seg.nx * offset;
+                    labelY = cy - seg.ny * offset;
+                }
                 ctx.fillText(seg.len.toString(), labelX, labelY);
             }
         }
@@ -4193,6 +4202,10 @@ function initLozengeApp() {
     });
 
     el.resetBtn.addEventListener('click', () => {
+        // Switch to 2D view first if in 3D mode
+        if (is3DView) {
+            setViewMode(false);
+        }
         saveState();
         activeTriangles.clear();
         renderer.resetView();
