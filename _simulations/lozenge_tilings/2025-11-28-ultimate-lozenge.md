@@ -2248,33 +2248,80 @@ function initLozengeApp() {
             ctx.stroke();
         }
 
-        // Draw pre-computed boundary segment lengths
+        // Draw pre-computed boundary segment lengths with bubbles and collision avoidance
         drawBoundaryLengths(ctx, segments, centerX, centerY, scale, isDarkMode) {
             if (!segments || segments.length === 0) return;
 
             // 2x bigger font, LaTeX-like italic serif style
             const fontSize = Math.max(20, Math.min(40, scale * 0.6));
-            const offset = fontSize * 1.2;
+            const baseOffset = fontSize * 1.5;
             ctx.font = `italic ${fontSize}px "Times New Roman", "Georgia", serif`;
+
+            // First pass: compute initial positions and bounding boxes
+            const labels = [];
+            for (const seg of segments) {
+                const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
+                const text = seg.len.toString();
+                const textWidth = ctx.measureText(text).width;
+                const padding = fontSize * 0.3;
+                const boxWidth = textWidth + padding * 2;
+                const boxHeight = fontSize + padding * 2;
+
+                // Transform normal based on rotation
+                let nx, ny;
+                if (this.rotated) {
+                    nx = seg.ny;
+                    ny = seg.nx;
+                } else {
+                    nx = seg.nx;
+                    ny = -seg.ny;
+                }
+
+                // Initial position: offset along normal
+                const labelX = cx + nx * baseOffset;
+                const labelY = cy + ny * baseOffset;
+
+                labels.push({
+                    text,
+                    x: labelX,
+                    y: labelY,
+                    nx, ny,
+                    width: boxWidth,
+                    height: boxHeight
+                });
+            }
+
+            // Second pass: resolve overlaps by pushing labels further out
+            const maxIterations = 10;
+            for (let iter = 0; iter < maxIterations; iter++) {
+                let anyOverlap = false;
+                for (let i = 0; i < labels.length; i++) {
+                    for (let j = i + 1; j < labels.length; j++) {
+                        const a = labels[i];
+                        const b = labels[j];
+                        // Check AABB overlap
+                        const overlapX = Math.abs(a.x - b.x) < (a.width + b.width) / 2;
+                        const overlapY = Math.abs(a.y - b.y) < (a.height + b.height) / 2;
+                        if (overlapX && overlapY) {
+                            anyOverlap = true;
+                            // Push both labels further along their normals
+                            const pushAmount = fontSize * 0.5;
+                            a.x += a.nx * pushAmount;
+                            a.y += a.ny * pushAmount;
+                            b.x += b.nx * pushAmount;
+                            b.y += b.ny * pushAmount;
+                        }
+                    }
+                }
+                if (!anyOverlap) break;
+            }
+
+            // Draw text only (bubbles used only for collision computation)
             ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
-            for (const seg of segments) {
-                const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
-                // Transform normal based on rotation
-                // Normal from C++ is in world coords
-                let labelX, labelY;
-                if (this.rotated) {
-                    // Rotated: canvas X = world Y, canvas Y = world X
-                    labelX = cx + seg.ny * offset;
-                    labelY = cy + seg.nx * offset;
-                } else {
-                    // Normal: canvas X = world X, canvas Y = -world Y
-                    labelX = cx + seg.nx * offset;
-                    labelY = cy - seg.ny * offset;
-                }
-                ctx.fillText(seg.len.toString(), labelX, labelY);
+            for (const label of labels) {
+                ctx.fillText(label.text, label.x, label.y);
             }
         }
 
