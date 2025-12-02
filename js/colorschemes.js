@@ -70,6 +70,7 @@ const ColorSchemes = [
     { name: 'Princeton', colors: ['#e77500', '#000000', '#ffffff', '#a9a9a9'] }, // Added dark gray
     { name: 'Columbia', colors: ['#c4d8e2', '#b9d3ee', '#1e3a8a', '#002147'] }, // Added a darker blue
     { name: 'Berkeley', colors: ['#002676', '#fdb515', '#ffffff', '#696969'] }, // Added a dark gray
+    { name: 'Carnegie Mellon', colors: ['#C41230', '#000000', '#6D6E71', '#E0E0E0'] }, // Carnegie Red, Black, Iron Gray, Steel Gray
     { name: 'Michigan', colors: ['#00274c', '#ffcb05', '#ffffff', '#a7a7a7'] }, // Added a medium gray
     { name: 'Cornell', colors: ['#b31b1b', '#ffffff', '#222222', '#a9a9a9'] }, // Added dark gray
     { name: 'Northwestern', colors: ['#4e2a84', '#ffffff', '#342f2e', '#808080'] }, // Added gray
