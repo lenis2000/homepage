@@ -568,12 +568,12 @@ if (window.LOZENGE_WEBGPU) {
   <!-- View Toggle overlay -->
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <div class="view-toggle">
-      <button id="lozengeViewBtn" class="active" title="Lozenge view">&#9670;</button>
-      <button id="dimerViewBtn" title="Dimer view">&#8226;-&#8226;</button>
-    </div>
-    <div class="view-toggle">
       <button id="toggle3DBtn" title="Toggle 2D/3D">2D</button>
       <button id="rotate2DBtn" title="Rotate canvas 90°">&#8635;</button>
+    </div>
+    <div class="view-toggle">
+      <button id="lozengeViewBtn" class="active" title="Lozenge view">&#9670;</button>
+      <button id="dimerViewBtn" title="Dimer view">&#8226;-&#8226;</button>
     </div>
     <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
     <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">🤚 pan · ✏️ draw · 🧹 erase
@@ -3581,6 +3581,12 @@ function initLozengeApp() {
                 showHoleLabels = false;
             }
         }
+
+        // Disable lozenge/dimer toggle in 3D mode (not applicable)
+        el.lozengeViewBtn.disabled = use3D;
+        el.dimerViewBtn.disabled = use3D;
+        el.lozengeViewBtn.style.opacity = use3D ? '0.5' : '1';
+        el.dimerViewBtn.style.opacity = use3D ? '0.5' : '1';
 
         if (use3D) {
             if (!renderer3D) {
