@@ -1140,6 +1140,7 @@ function initLozengeApp() {
             this.freeStringWasm(ptr);
             const result = JSON.parse(jsonStr);
             this.boundaries = result.boundaries || [];
+            this.segments = result.segments || [];
             this.dimers = result.dimers;
             this.blackTriangles = result.black;
             this.whiteTriangles = result.white;
@@ -1976,9 +1977,9 @@ function initLozengeApp() {
             }
 
             // Draw boundary segment lengths if enabled
-            if (this.showBoundaryLengths && sim.boundaries && sim.boundaries.length > 0) {
-                for (const boundary of sim.boundaries) {
-                    this.drawBoundaryLengths(ctx, boundary, centerX, centerY, scale, isDarkMode);
+            if (this.showBoundaryLengths && sim.segments && sim.segments.length > 0) {
+                for (const segmentArray of sim.segments) {
+                    this.drawBoundaryLengths(ctx, segmentArray, centerX, centerY, scale, isDarkMode);
                 }
             }
 
@@ -2247,86 +2248,24 @@ function initLozengeApp() {
             ctx.stroke();
         }
 
-        drawBoundaryLengths(ctx, boundary, centerX, centerY, scale, isDarkMode) {
-            if (boundary.length < 3) return;
+        // Draw pre-computed boundary segment lengths
+        drawBoundaryLengths(ctx, segments, centerX, centerY, scale, isDarkMode) {
+            if (!segments || segments.length === 0) return;
 
-            const n = boundary.length;
-
-            // Find corners (vertices where direction changes)
-            const isCorner = [];
-            for (let i = 0; i < n; i++) {
-                const prev = boundary[(i - 1 + n) % n];
-                const curr = boundary[i];
-                const next = boundary[(i + 1) % n];
-
-                const dx1 = curr.x - prev.x;
-                const dy1 = curr.y - prev.y;
-                const dx2 = next.x - curr.x;
-                const dy2 = next.y - curr.y;
-
-                const cross = dx1 * dy2 - dy1 * dx2;
-                isCorner.push(Math.abs(cross) > 0.001);
-            }
-
-            // Find corner indices
-            const corners = [];
-            for (let i = 0; i < n; i++) {
-                if (isCorner[i]) corners.push(i);
-            }
-
-            if (corners.length < 3) return;
-
-            // Each segment runs from one corner to the next
-            const segments = [];
-            for (let c = 0; c < corners.length; c++) {
-                const startIdx = corners[c];
-                const endIdx = corners[(c + 1) % corners.length];
-
-                // Count vertices in segment (number of edges = number of vertices in segment)
-                let segmentLength;
-                if (endIdx > startIdx) {
-                    segmentLength = endIdx - startIdx;
-                } else {
-                    segmentLength = (n - startIdx) + endIdx;
-                }
-
-                if (segmentLength >= 2) {
-                    const startPt = boundary[startIdx];
-                    const endPt = boundary[endIdx];
-
-                    const midX = (startPt.x + endPt.x) / 2;
-                    const midY = (startPt.y + endPt.y) / 2;
-
-                    const dx = endPt.x - startPt.x;
-                    const dy = endPt.y - startPt.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist > 0.001) {
-                        const nx = dy / dist;
-                        const ny = -dx / dist;
-
-                        segments.push({
-                            length: segmentLength,
-                            x: midX, y: midY,
-                            nx, ny
-                        });
-                    }
-                }
-            }
-
-            // Draw length labels offset outside boundary
-            const fontSize = Math.max(10, Math.min(20, scale * 0.3));
-            const offset = fontSize * 1.5;
-            ctx.font = `bold ${fontSize}px sans-serif`;
+            // 2x bigger font, LaTeX-like italic serif style
+            const fontSize = Math.max(20, Math.min(40, scale * 0.6));
+            const offset = fontSize * 1.2;
+            ctx.font = `italic ${fontSize}px "Times New Roman", "Georgia", serif`;
             ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
             for (const seg of segments) {
                 const [cx, cy] = this.toCanvas(seg.x, seg.y, centerX, centerY, scale);
+                // Normal from C++ is in world coords; Y is flipped in canvas coords
                 const labelX = cx + seg.nx * offset;
-                const labelY = cy + seg.ny * offset;
-                ctx.fillText(seg.length.toString(), labelX, labelY);
+                const labelY = cy - seg.ny * offset;  // Negate ny for canvas Y-flip
+                ctx.fillText(seg.len.toString(), labelX, labelY);
             }
         }
 

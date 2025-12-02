@@ -476,6 +476,128 @@ void computeBoundary() {
 }
 
 // ============================================================================
+// BOUNDARY SEGMENT COMPUTATION (for length labels)
+// ============================================================================
+
+struct BoundarySegment {
+    double midX, midY;      // Midpoint in world coords
+    double nx, ny;          // Outward normal
+    int length;             // Number of edges
+};
+
+std::vector<std::vector<BoundarySegment>> computedSegments;
+
+// Get direction index (0-5) for edge from v1 to v2
+int getEdgeDirection(const Vertex& v1, const Vertex& v2) {
+    double dx = v2.x - v1.x;
+    double dy = v2.y - v1.y;
+    double len = std::sqrt(dx*dx + dy*dy);
+    if (len < 0.001) return -1;
+
+    double ux = dx / len;
+    double uy = dy / len;
+
+    // 6 directions in triangular lattice
+    const double sqrt3_2 = std::sqrt(3.0) / 2.0;
+    double dirs[6][2] = {
+        {1, 0}, {0.5, sqrt3_2}, {-0.5, sqrt3_2},
+        {-1, 0}, {-0.5, -sqrt3_2}, {0.5, -sqrt3_2}
+    };
+
+    int bestDir = 0;
+    double bestDot = -2;
+    for (int d = 0; d < 6; d++) {
+        double dot = ux * dirs[d][0] + uy * dirs[d][1];
+        if (dot > bestDot) {
+            bestDot = dot;
+            bestDir = d;
+        }
+    }
+    return bestDir;
+}
+
+void computeSegments() {
+    computedSegments.clear();
+
+    for (const auto& boundary : computedBoundaries) {
+        std::vector<BoundarySegment> segs;
+        if (boundary.size() < 3) {
+            computedSegments.push_back(segs);
+            continue;
+        }
+
+        int n = (int)boundary.size();
+
+        // Find corners using cross-product with tolerance
+        // A corner is where incoming and outgoing directions differ significantly
+        std::vector<int> corners;
+        for (int i = 0; i < n; i++) {
+            const Vertex& prev = boundary[(i - 1 + n) % n];
+            const Vertex& curr = boundary[i];
+            const Vertex& next = boundary[(i + 1) % n];
+
+            double dx1 = curr.x - prev.x;
+            double dy1 = curr.y - prev.y;
+            double dx2 = next.x - curr.x;
+            double dy2 = next.y - curr.y;
+
+            // Cross product
+            double cross = dx1 * dy2 - dy1 * dx2;
+
+            // Threshold: if cross product magnitude > 0.1, it's a corner
+            // (for unit edges, a 60-degree turn gives cross ~0.87)
+            if (std::abs(cross) > 0.1) {
+                corners.push_back(i);
+            }
+        }
+
+        if (corners.size() < 3) {
+            computedSegments.push_back(segs);
+            continue;
+        }
+
+        // Compute signed area to determine winding direction
+        double signedArea = 0;
+        for (int i = 0; i < n; i++) {
+            const Vertex& curr = boundary[i];
+            const Vertex& next = boundary[(i + 1) % n];
+            signedArea += curr.x * next.y - next.x * curr.y;
+        }
+        // signedArea > 0 means CCW (outer boundary), < 0 means CW (hole)
+        double normalSign = (signedArea >= 0) ? 1.0 : -1.0;
+
+        // Each segment goes from one corner to the next
+        for (size_t c = 0; c < corners.size(); c++) {
+            int startIdx = corners[c];
+            int endIdx = corners[(c + 1) % corners.size()];
+
+            const Vertex& start = boundary[startIdx];
+            const Vertex& end = boundary[endIdx];
+
+            // Count actual edges between corners
+            int length = (endIdx - startIdx + n) % n;
+
+            double dx = end.x - start.x;
+            double dy = end.y - start.y;
+            double dist = std::sqrt(dx*dx + dy*dy);
+
+            if (length >= 2 && dist > 0.001) {
+                BoundarySegment seg;
+                seg.midX = (start.x + end.x) / 2;
+                seg.midY = (start.y + end.y) / 2;
+                seg.length = length;
+                // Normal pointing outward: for CCW use (dy, -dx), for CW use (-dy, dx)
+                seg.nx = normalSign * dy / dist;
+                seg.ny = normalSign * (-dx) / dist;
+                segs.push_back(seg);
+            }
+        }
+
+        computedSegments.push_back(segs);
+    }
+}
+
+// ============================================================================
 // HOLE DETECTION AND WINDING CONSTRAINT FUNCTIONS
 // ============================================================================
 
@@ -1819,6 +1941,9 @@ char* initFromTriangles(int* data, int count) {
     // 6. Compute boundary
     computeBoundary();
 
+    // 6.1. Compute boundary segments for length labels
+    computeSegments();
+
     // 6.5. Detect holes and compute winding numbers
     identifyHolesFromBoundaries();
     if (!holes.empty() && tileable) {
@@ -1906,6 +2031,24 @@ char* exportDimers() {
         }
         json += "]";
     }
+
+    // Export segments (pre-computed straight boundary segments for length labels)
+    json += "],\"segments\":[";
+    for (size_t b = 0; b < computedSegments.size(); b++) {
+        if (b > 0) json += ",";
+        json += "[";
+        for (size_t s = 0; s < computedSegments[b].size(); s++) {
+            if (s > 0) json += ",";
+            const auto& seg = computedSegments[b][s];
+            json += "{\"x\":" + std::to_string(seg.midX) +
+                    ",\"y\":" + std::to_string(seg.midY) +
+                    ",\"nx\":" + std::to_string(seg.nx) +
+                    ",\"ny\":" + std::to_string(seg.ny) +
+                    ",\"len\":" + std::to_string(seg.length) + "}";
+        }
+        json += "]";
+    }
+
     json += "],\"dimers\":[";
 
     // Export dimers
