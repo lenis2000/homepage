@@ -479,7 +479,6 @@ if (window.LOZENGE_WEBGPU) {
     <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
       <option value="">Letters and Numbers (under construction)</option>
     </select>
-    <button id="showBoundaryLengthsBtn" title="Show boundary segment lengths">Lengths</button>
   </div>
 </div>
 
@@ -651,6 +650,10 @@ Cmd-click: complete lasso</div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showGridCheckbox" checked>
       <label for="showGridCheckbox" style="font-size: 12px; color: #555;">Grid</label>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="showBoundaryLengthsCheckbox">
+      <label for="showBoundaryLengthsCheckbox" style="font-size: 12px; color: #555;">Lengths</label>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showHoleLabelsCheckbox" checked>
@@ -2245,44 +2248,62 @@ function initLozengeApp() {
         }
 
         drawBoundaryLengths(ctx, boundary, centerX, centerY, scale, isDarkMode) {
-            if (boundary.length < 2) return;
+            if (boundary.length < 3) return;
 
-            // Find straight segments by detecting direction changes
-            const segments = [];
-            let startIdx = 0;
+            const n = boundary.length;
 
-            for (let i = 0; i < boundary.length; i++) {
+            // Find corners (vertices where direction changes)
+            const isCorner = [];
+            for (let i = 0; i < n; i++) {
+                const prev = boundary[(i - 1 + n) % n];
                 const curr = boundary[i];
-                const next = boundary[(i + 1) % boundary.length];
-                const afterNext = boundary[(i + 2) % boundary.length];
+                const next = boundary[(i + 1) % n];
 
-                const dx1 = next.x - curr.x;
-                const dy1 = next.y - curr.y;
-                const dx2 = afterNext.x - next.x;
-                const dy2 = afterNext.y - next.y;
+                const dx1 = curr.x - prev.x;
+                const dy1 = curr.y - prev.y;
+                const dx2 = next.x - curr.x;
+                const dy2 = next.y - curr.y;
 
-                // Cross product to detect direction change
                 const cross = dx1 * dy2 - dy1 * dx2;
+                isCorner.push(Math.abs(cross) > 0.001);
+            }
 
-                if (Math.abs(cross) > 0.001 || i === boundary.length - 1) {
-                    const segmentLength = i - startIdx + 1;
-                    if (segmentLength >= 2) {
-                        // Get start and end points of segment
-                        const startPt = boundary[startIdx];
-                        const endPt = boundary[(i + 1) % boundary.length];
+            // Find corner indices
+            const corners = [];
+            for (let i = 0; i < n; i++) {
+                if (isCorner[i]) corners.push(i);
+            }
 
-                        // Midpoint
-                        const midX = (startPt.x + endPt.x) / 2;
-                        const midY = (startPt.y + endPt.y) / 2;
+            if (corners.length < 3) return;
 
-                        // Direction along segment
-                        const dx = endPt.x - startPt.x;
-                        const dy = endPt.y - startPt.y;
-                        const len = Math.sqrt(dx * dx + dy * dy);
+            // Each segment runs from one corner to the next
+            const segments = [];
+            for (let c = 0; c < corners.length; c++) {
+                const startIdx = corners[c];
+                const endIdx = corners[(c + 1) % corners.length];
 
-                        // Outward normal (perpendicular, pointing outside)
-                        const nx = dy / len;
-                        const ny = -dx / len;
+                // Count vertices in segment (number of edges = number of vertices in segment)
+                let segmentLength;
+                if (endIdx > startIdx) {
+                    segmentLength = endIdx - startIdx;
+                } else {
+                    segmentLength = (n - startIdx) + endIdx;
+                }
+
+                if (segmentLength >= 2) {
+                    const startPt = boundary[startIdx];
+                    const endPt = boundary[endIdx];
+
+                    const midX = (startPt.x + endPt.x) / 2;
+                    const midY = (startPt.y + endPt.y) / 2;
+
+                    const dx = endPt.x - startPt.x;
+                    const dy = endPt.y - startPt.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 0.001) {
+                        const nx = dy / dist;
+                        const ny = -dx / dist;
 
                         segments.push({
                             length: segmentLength,
@@ -2290,13 +2311,12 @@ function initLozengeApp() {
                             nx, ny
                         });
                     }
-                    startIdx = i + 1;
                 }
             }
 
             // Draw length labels offset outside boundary
             const fontSize = Math.max(10, Math.min(20, scale * 0.3));
-            const offset = fontSize * 0.8;
+            const offset = fontSize * 1.5;
             ctx.font = `bold ${fontSize}px sans-serif`;
             ctx.fillStyle = isDarkMode ? '#ffffff' : '#000000';
             ctx.textAlign = 'center';
@@ -3255,7 +3275,7 @@ function initLozengeApp() {
         hexBInput: document.getElementById('hexBInput'),
         hexCInput: document.getElementById('hexCInput'),
         letterSelect: document.getElementById('letterSelect'),
-        showBoundaryLengthsBtn: document.getElementById('showBoundaryLengthsBtn'),
+        showBoundaryLengthsCheckbox: document.getElementById('showBoundaryLengthsCheckbox'),
         shapeOfMonthBtn: document.getElementById('shapeOfMonthBtn'),
         lozengeViewBtn: document.getElementById('lozengeViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
@@ -4446,10 +4466,9 @@ function initLozengeApp() {
         e.target.value = ''; // Reset to placeholder
     });
 
-    // Boundary lengths toggle button
-    el.showBoundaryLengthsBtn.addEventListener('click', () => {
-        renderer.showBoundaryLengths = !renderer.showBoundaryLengths;
-        el.showBoundaryLengthsBtn.classList.toggle('active', renderer.showBoundaryLengths);
+    // Boundary lengths checkbox
+    el.showBoundaryLengthsCheckbox.addEventListener('change', (e) => {
+        renderer.showBoundaryLengths = e.target.checked;
         draw();
     });
 
