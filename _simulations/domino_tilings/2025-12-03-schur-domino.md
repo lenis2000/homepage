@@ -287,7 +287,7 @@ Module.onRuntimeInitialized = async function() {
     const svgHeight = bbox.height;
     svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
 
-    const scaleView = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.45;
+    const scaleView = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
     const translateX = (svgWidth - widthDominoes * scaleView) / 2 - minX * scaleView;
     const translateY = (svgHeight - heightDominoes * scaleView) / 2 - minY * scaleView;
 
@@ -445,54 +445,93 @@ Module.onRuntimeInitialized = async function() {
     });
   }
 
-  function renderParticles(particles, n) {
-    const scale = 25;
-    const numSlices = 2 * n + 1;
+  function renderGrowthDiagram(partitions, n) {
+    // Generate half-integer lattice: points (hx, hy) with |hx| + |hy| <= n + 0.5
+    const scale = 20;
+    const latticePoints = [];
 
-    // SW/NE diagonals at x - y = k for k = -n, ..., n (2n+1 lines total)
-    // Slice s corresponds to diagonal k = s - n
-    // Slice sizes: n + 1 - |k| gives 1,2,3,...,n+1,...,3,2,1
-    // λ⁰ (s=0, k=-n) at bottom-left, λⁿ (s=2n, k=n) at top-right
-    const gridPositions = [];
-    for (let s = 0; s < numSlices; s++) {
-      const k = s - n;  // diagonal index: x - y = k, ranges from -n to n
-      const sliceSize = n + 1 - Math.abs(k);  // number of points on this diagonal
+    for (let hx = -n - 0.5; hx <= n + 0.5; hx += 1) {
+      for (let hy = -n - 0.5; hy <= n + 0.5; hy += 1) {
+        // Must be half-integers
+        if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
+        // Must be inside diamond
+        if (Math.abs(hx) + Math.abs(hy) > n + 0.5) continue;
 
-      for (let elem = 1; elem <= sliceSize; elem++) {
-        // Position along diagonal (in x + y direction)
-        const alongDiag = elem - (sliceSize + 1) / 2;
+        // Diagonal k = hx + hy (ranges from -n to n in integer steps)
+        // This matches the shuffling convention where diag = hx + hy
+        const k = Math.round(hx + hy);
 
-        // Coordinates where x - y = k (SW-NE diagonal)
-        // Moving along diagonal: direction (1, 1)
-        // Moving between diagonals: direction (1, -1)
-        const x = (k + alongDiag) * scale;
-        const y = (-k + alongDiag) * scale;
-        // Check: x - y = (k + alongDiag) - (-k + alongDiag) = 2k ✓
-
-        gridPositions.push({
-          x: x,
-          y: y,
-          slice: s,
-          elem: elem,
-          isGrid: true
-        });
+        latticePoints.push({ hx, hy, k });
       }
     }
 
-    // Compute bounds from actual grid positions
-    const allPoints = [...gridPositions];
-    const minX = d3.min(allPoints, d => d.x) - scale * 1.5;
-    const minY = d3.min(allPoints, d => d.y) - scale * 1.5;
-    const maxX = d3.max(allPoints, d => d.x) + scale * 1.5;
-    const maxY = d3.max(allPoints, d => d.y) + scale * 1.5;
-    const widthData = maxX - minX;
-    const heightData = maxY - minY;
+    // Group by diagonal and sort by position along diagonal (hx + hy)
+    const diagonals = {};
+    latticePoints.forEach(p => {
+      if (!diagonals[p.k]) diagonals[p.k] = [];
+      diagonals[p.k].push(p);
+    });
+    for (const k in diagonals) {
+      // Sort by position along the diagonal (hx - hy gives position)
+      diagonals[k].sort((a, b) => (a.hx - a.hy) - (b.hx - b.hy));
+      diagonals[k].forEach((p, idx) => { p.posInDiag = idx + 1; });
+    }
 
+    // Map diagonal k to boundary partition index:
+    // k = -n → boundary[0] = λ^0
+    // k = -n+1 → boundary[1] = μ^1
+    // k = -n+2 → boundary[2] = λ^1
+    // General: boundary index s = k + n
+    function partitionToSubset(partition) {
+      // Maya diagram encoding: λ = (λ_1, ..., λ_m) → S = {λ_m + 1, λ_{m-1} + 2, ..., λ_1 + m}
+      const subset = [];
+      const m = partition.length;
+      for (let j = 1; j <= m; j++) {
+        const part = partition[m - j];  // λ_{m-j+1} (0-indexed: partition[m-j])
+        subset.push(part + j);
+      }
+      return subset;
+    }
+
+    // Compute subset for each diagonal from partitions
+    const subsets = {};
+    for (let k = -n; k <= n; k++) {
+      const s = k + n;  // boundary index
+      if (s >= 0 && s < partitions.length) {
+        subsets[k] = partitionToSubset(partitions[s]);
+      } else {
+        subsets[k] = [];
+      }
+    }
+
+    // Mark which lattice points are in the subset
+    latticePoints.forEach(p => {
+      const subset = subsets[p.k] || [];
+      p.inSubset = subset.includes(p.posInDiag);
+    });
+
+    // Screen coordinates: same transform as shuffling visualization
+    // Center at (0, 0) in abstract coords → center of SVG
     const bbox = svg.node().getBoundingClientRect();
     const svgWidth = bbox.width;
     const svgHeight = bbox.height;
-    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+    const cx = svgWidth / 2;
+    const cy = svgHeight / 2;
 
+    latticePoints.forEach(p => {
+      p.x = cx + p.hx * scale;
+      p.y = cy + p.hy * scale;
+    });
+
+    // Compute bounds
+    const minX = d3.min(latticePoints, d => d.x) - scale * 1.5;
+    const maxX = d3.max(latticePoints, d => d.x) + scale * 1.5;
+    const minY = d3.min(latticePoints, d => d.y) - scale * 1.5;
+    const maxY = d3.max(latticePoints, d => d.y) + scale * 1.5;
+    const widthData = maxX - minX;
+    const heightData = maxY - minY;
+
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
     const viewScale = Math.min(svgWidth / widthData, svgHeight / heightData) * 0.85;
     const translateX = (svgWidth - widthData * viewScale) / 2 - minX * viewScale;
     const translateY = (svgHeight - heightData * viewScale) / 2 - minY * viewScale;
@@ -502,128 +541,45 @@ Module.onRuntimeInitialized = async function() {
     svg.selectAll("g").remove();
 
     const group = svg.append("g")
-      .attr("class", "particles")
+      .attr("class", "growth")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + viewScale + ")");
 
-    // Draw Aztec diamond outline - compute from actual grid extent
-    // The outline should be a rotated square enclosing all grid points
-    // Note: In screen coords, max y is at bottom, min y is at top
-    const outlinePoints = [];
-    // Bottom vertex in screen coords (max y, where λ⁰ slice is)
-    outlinePoints.push({x: 0, y: d3.max(gridPositions, d => d.y) + scale * 0.5});
-    // Right vertex (max x)
-    outlinePoints.push({x: d3.max(gridPositions, d => d.x) + scale * 0.5, y: 0});
-    // Top vertex in screen coords (min y, where λⁿ slice is)
-    outlinePoints.push({x: 0, y: d3.min(gridPositions, d => d.y) - scale * 0.5});
-    // Left vertex (min x)
-    outlinePoints.push({x: d3.min(gridPositions, d => d.x) - scale * 0.5, y: 0});
-
-    group.append("polygon")
-      .attr("points", outlinePoints.map(p => p.x + "," + p.y).join(" "))
-      .attr("fill", "none")
-      .attr("stroke", "#999")
-      .attr("stroke-width", 2)
-      .attr("stroke-dasharray", "5,5");
-
-    // Draw grid positions as small gray circles
-    const gridRadius = 4;
-    group.selectAll("circle.grid")
-      .data(gridPositions)
+    // Draw all lattice points: subset=black filled, not in subset=gray outline
+    group.selectAll("circle.lattice")
+      .data(latticePoints)
       .enter()
       .append("circle")
-      .attr("class", "grid")
+      .attr("class", "lattice")
       .attr("cx", d => d.x)
       .attr("cy", d => d.y)
-      .attr("r", gridRadius)
-      .attr("fill", "#eee")
-      .attr("stroke", "#ccc")
+      .attr("r", d => d.inSubset ? 5 : 3)
+      .attr("fill", d => d.inSubset ? "#000" : "none")
+      .attr("stroke", d => d.inSubset ? "#fff" : "#666")
       .attr("stroke-width", 1);
 
-    // Draw diagonal lines for each slice (SW-NE diagonals at x - y = const)
-    // Draw BEFORE circles so circles appear on top
-    for (let s = 0; s < numSlices; s++) {
-      const k = s - n;
-      const sliceSize = n + 1 - Math.abs(k);
-      // Compute line endpoints directly from k
-      // Line goes from elem=1 to elem=sliceSize
-      const alongStart = 1 - (sliceSize + 1) / 2;
-      const alongEnd = sliceSize - (sliceSize + 1) / 2;
-      const ext = scale * 0.7;  // extension amount
-
-      const x1 = (k + alongStart) * scale - ext;
-      const y1 = (-k + alongStart) * scale - ext;
-      const x2 = (k + alongEnd) * scale + ext;
-      const y2 = (-k + alongEnd) * scale + ext;
-
-      group.append("line")
-        .attr("x1", x1)
-        .attr("y1", y1)
-        .attr("x2", x2)
-        .attr("y2", y2)
-        .attr("stroke", "#cc0000")
-        .attr("stroke-width", 2);
-
-      // Add dashed mark at coordinate 0 (perpendicular tick)
-      // Position for elem = 0 on this diagonal
-      const alongZero = 0 - (sliceSize + 1) / 2;
-      const x0 = (k + alongZero) * scale;
-      const y0 = (-k + alongZero) * scale;
-
-      // Perpendicular to diagonal (1,1) is direction (1,-1)
-      const tickLen = scale * 1.2;
-      group.append("line")
-        .attr("x1", x0 - tickLen * 0.5)
-        .attr("y1", y0 + tickLen * 0.5)
-        .attr("x2", x0 + tickLen * 0.5)
-        .attr("y2", y0 - tickLen * 0.5)
-        .attr("stroke", "#000")
-        .attr("stroke-width", 4)
-        .attr("stroke-dasharray", "6,4");
-    }
-
-    // Map particles to grid positions and draw
-    const particleRadius = 7;
-    if (particles && particles.length > 0) {
-      // Find matching grid positions for each particle
-      const particlePositions = particles.map(p => {
-        const gridPos = gridPositions.find(g => g.slice === p.slice && g.elem === p.elem);
-        return gridPos ? {...gridPos, isParticle: true} : null;
-      }).filter(p => p !== null);
-
-      group.selectAll("circle.particle")
-        .data(particlePositions)
-        .enter()
-        .append("circle")
-        .attr("class", "particle")
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-        .attr("r", particleRadius)
-        .attr("fill", "#E57200")
-        .attr("stroke", "#232D4B")
-        .attr("stroke-width", 2);
-    }
-
-    // Draw slice labels at the SW end of each diagonal (elem=1, which has max y value)
-    for (let s = 0; s < numSlices; s++) {
-      const slicePoints = gridPositions.filter(p => p.slice === s);
-      if (slicePoints.length > 0) {
-        // Find SW point (max y, which is elem=1)
-        const swPoint = slicePoints.reduce((a, b) => a.y > b.y ? a : b);
-        const label = (s % 2 === 0) ? "λ" + (s / 2) : "μ" + Math.ceil(s / 2);
-        group.append("text")
-          .attr("x", swPoint.x)
-          .attr("y", swPoint.y + scale * 0.8)
-          .attr("text-anchor", "end")
-          .attr("dominant-baseline", "middle")
-          .attr("font-size", "10px")
-          .attr("fill", "#666")
-          .text(label);
-      }
+    // Debug: log partition to subset mapping
+    console.log("Growth diagram subsets:");
+    for (let k = -n; k <= n; k++) {
+      const s = k + n;
+      const label = (s % 2 === 0) ? `λ^${s/2}` : `μ^${Math.ceil(s/2)}`;
+      const part = partitions[s] || [];
+      const sub = subsets[k] || [];
+      console.log(`  k=${k} (${label}): partition=${JSON.stringify(part)} → subset={${sub.join(",")}}`);
     }
   }
 
+  // Draw Young diagram as ASCII art
+  function partitionToYoungDiagram(partition) {
+    if (!partition || partition.length === 0) return "∅";
+    let s = "";
+    for (let i = 0; i < partition.length; i++) {
+      s += "█".repeat(partition[i]) + "\n";
+    }
+    return s.trimEnd();
+  }
+
   // Display partitions with subsets for Growth Diagram
-  function displayPartitionsWithSubsets(partitions, subsets, n) {
+  function displayPartitionsWithSubsets(partitions, subsets, n, grid) {
     const subsetsOutput = document.getElementById("subsets-output");
     if (!subsetsOutput) return;
 
@@ -634,7 +590,74 @@ Module.onRuntimeInitialized = async function() {
     }
 
     const lines = [];
-    lines.push("Growth Diagram Sampling:");
+
+    // First: show the full growth diagram grid with Bernoulli values
+    if (grid && grid.length > 0) {
+      const numCells = grid.length;
+      lines.push(`=== Growth Diagram Grid (${numCells} = (${n}+1 choose 2) cells) ===`);
+      lines.push("");
+
+      // Build a map for quick lookup
+      const gridMap = {};
+      grid.forEach(cell => {
+        const key = `${cell.i},${cell.j}`;
+        gridMap[key] = cell;
+      });
+
+      // Display as a grid: rows are i (1 to n), columns are j (1 to n)
+      // Cell (i,j) exists if i + j <= n + 1
+      lines.push("Grid τ[i][j] with Bernoulli B values:");
+      lines.push("(Row i increases downward, Column j increases rightward)");
+      lines.push("");
+
+      // Header row
+      let header = "     ";
+      for (let j = 1; j <= n; j++) {
+        header += `j=${j}`.padEnd(12);
+      }
+      lines.push(header);
+
+      // Data rows
+      for (let i = 1; i <= n; i++) {
+        let row = `i=${i} `;
+        for (let j = 1; j <= n; j++) {
+          if (i + j <= n + 1) {
+            const cell = gridMap[`${i},${j}`];
+            if (cell) {
+              const partStr = cell.partition.length === 0 ? "∅" : `(${cell.partition.join(",")})`;
+              row += `B=${cell.B} ${partStr}`.padEnd(12);
+            } else {
+              row += "?".padEnd(12);
+            }
+          } else {
+            row += "".padEnd(12);
+          }
+        }
+        lines.push(row);
+      }
+      lines.push("");
+
+      // Show Bernoulli matrix separately
+      lines.push("Bernoulli values B[i][j]:");
+      let bHeader = "     ";
+      for (let j = 1; j <= n; j++) bHeader += `j=${j} `;
+      lines.push(bHeader);
+      for (let i = 1; i <= n; i++) {
+        let row = `i=${i}  `;
+        for (let j = 1; j <= n; j++) {
+          if (i + j <= n + 1) {
+            const cell = gridMap[`${i},${j}`];
+            row += (cell ? cell.B : "?") + "    ";
+          } else {
+            row += "     ";
+          }
+        }
+        lines.push(row);
+      }
+      lines.push("");
+    }
+
+    lines.push("=== Boundary Partitions (λ/μ sequence) ===");
     lines.push("");
 
     for (let i = 0; i < partitions.length; i++) {
@@ -653,19 +676,21 @@ Module.onRuntimeInitialized = async function() {
 
     for (let i = 1; i < partitions.length; i++) {
       if (i % 2 === 1) {
+        // Odd index: λ^{k-1} → μ^k transition (DOWN in grid) = VERTICAL strip
         const k = Math.ceil(i / 2);
         const mu_k = partitions[i];
         const lambda_km1 = partitions[i - 1];
-        const isHS = isHorizontalStrip(mu_k, lambda_km1);
-        if (!isHS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horiz: ${isHS ? "✓" : "✗"}`);
+        const isVS = isVerticalStrip(mu_k, lambda_km1);
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} vert: ${isVS ? "✓" : "✗"}`);
       } else {
+        // Even index: μ^k → λ^k transition (LEFT in grid) = HORIZONTAL strip
         const k = i / 2;
         const lambda_k = partitions[i];
         const mu_k = partitions[i - 1];
-        const isVS = isVerticalStrip(mu_k, lambda_k);
-        if (!isVS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} vert: ${isVS ? "✓" : "✗"}`);
+        const isHS = isHorizontalStrip(mu_k, lambda_k);
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} horiz: ${isHS ? "✓" : "✗"}`);
       }
     }
 
@@ -770,34 +795,32 @@ Module.onRuntimeInitialized = async function() {
     }
 
     // Check interlacing conditions
-    // Pattern: λ^(i-1) ⊂ μ^i ⊃ λ^i
-    // μ^i / λ^(i-1) is horizontal strip (μ contains λ^(i-1))
-    // μ^i / λ^i is vertical strip (μ contains λ^i)
+    // Pattern: λ^(k-1) ⊂ μ^k ⊃ λ^k
+    // λ^(k-1) → μ^k: VERTICAL strip (μ contains λ as vertical strip)
+    // μ^k → λ^k: HORIZONTAL strip (μ contains λ as horizontal strip)
     lines.push("");
     lines.push("Interlacing checks:");
     let allValid = true;
 
     for (let i = 1; i < partitions.length; i++) {
       if (i % 2 === 1) {
-        // Odd slice: μ^k where k = (i+1)/2
-        // Check μ^k / λ^(k-1) is horizontal strip
+        // Odd index: λ^(k-1) → μ^k transition = VERTICAL strip
         const k = (i + 1) / 2;
         const mu_k = partitions[i];
         const lambda_km1 = partitions[i - 1];
-        const isHS = isHorizontalStrip(mu_k, lambda_km1);
-        const status = isHS ? "✓" : "✗";
-        if (!isHS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horizontal strip: ${status}`);
+        const isVS = isVerticalStrip(mu_k, lambda_km1);
+        const status = isVS ? "✓" : "✗";
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} vertical strip: ${status}`);
       } else {
-        // Even slice: λ^k where k = i/2
-        // Check μ^k / λ^k is vertical strip (μ^k is previous slice)
+        // Even index: μ^k → λ^k transition = HORIZONTAL strip
         const k = i / 2;
         const lambda_k = partitions[i];
         const mu_k = partitions[i - 1];
-        const isVS = isVerticalStrip(mu_k, lambda_k);  // μ/λ not λ/μ
-        const status = isVS ? "✓" : "✗";
-        if (!isVS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} vertical strip: ${status}`);
+        const isHS = isHorizontalStrip(mu_k, lambda_k);
+        const status = isHS ? "✓" : "✗";
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} horizontal strip: ${status}`);
       }
     }
 
@@ -852,25 +875,23 @@ Module.onRuntimeInitialized = async function() {
 
     for (let i = 1; i < partitions.length; i++) {
       if (i % 2 === 1) {
-        // Odd slice: μ^k where k = (i+1)/2
-        // Check μ^k / λ^(k-1) is horizontal strip
+        // Odd index: λ^(k-1) → μ^k transition = VERTICAL strip
         const k = (i + 1) / 2;
         const mu_k = partitions[i];
         const lambda_km1 = partitions[i - 1];
-        const isHS = isHorizontalStrip(mu_k, lambda_km1);
-        const status = isHS ? "✓" : "✗";
-        if (!isHS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horizontal strip: ${status}`);
+        const isVS = isVerticalStrip(mu_k, lambda_km1);
+        const status = isVS ? "✓" : "✗";
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} vertical strip: ${status}`);
       } else {
-        // Even slice: λ^k where k = i/2
-        // Check μ^k / λ^k is vertical strip
+        // Even index: μ^k → λ^k transition = HORIZONTAL strip
         const k = i / 2;
         const lambda_k = partitions[i];
         const mu_k = partitions[i - 1];
-        const isVS = isVerticalStrip(mu_k, lambda_k);
-        const status = isVS ? "✓" : "✗";
-        if (!isVS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} vertical strip: ${status}`);
+        const isHS = isHorizontalStrip(mu_k, lambda_k);
+        const status = isHS ? "✓" : "✗";
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} horizontal strip: ${status}`);
       }
     }
 
@@ -1057,14 +1078,14 @@ Module.onRuntimeInitialized = async function() {
 
       try {
         const result = JSON.parse(jsonStr);
-        const particles = result.particles || [];
         const partitions = result.partitions || [];
         const subsets = result.subsets || [];
-        displayPartitionsWithSubsets(partitions, subsets, n);
+        const grid = result.grid || [];
+        displayPartitionsWithSubsets(partitions, subsets, n, grid);
 
-        // Render particles
-        if (particles.length > 0) {
-          renderParticles(particles, n);
+        // Render growth diagram with lattice and subset particles
+        if (partitions.length > 0) {
+          renderGrowthDiagram(partitions, n);
         } else {
           svg.selectAll("g").remove();
           const bbox = svg.node().getBoundingClientRect();
@@ -1075,7 +1096,7 @@ Module.onRuntimeInitialized = async function() {
             .attr("text-anchor", "middle")
             .attr("font-size", "16px")
             .attr("fill", "#666")
-            .text("No particles to display");
+            .text("No partitions to display");
         }
       } catch (e) {
         progressElem.innerText = "Error during sampling: " + e.message;
@@ -1126,7 +1147,7 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("growth-btn").addEventListener("click", processInputGrowth);
 
-  // Initial simulation - use Shuffling algorithm
-  updateVisualization(parseInt(inputField.value, 10));
+  // Initial simulation - use Growth Diagram algorithm
+  updateVisualizationGrowth(parseInt(inputField.value, 10));
 };
 </script>

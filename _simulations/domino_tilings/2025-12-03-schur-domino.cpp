@@ -11,7 +11,7 @@ emcc 2025-12-03-schur-domino.cpp -o 2025-12-03-schur-domino.js \
   -s INITIAL_MEMORY=64MB \
   -s ENVIRONMENT=web \
   -s SINGLE_FILE=1 \
-  -O3 -ffast-math
+  -O3 -ffast-math -std=c++17
 
 mv 2025-12-03-schur-domino.js ../../js/
 */
@@ -242,6 +242,49 @@ Partition sampleHV_growth(const Partition& lambda, const Partition& mu,
 }
 
 /*
+ * sampleHV_growth_withB: Same as sampleHV_growth but also returns initial Bernoulli value
+ */
+pair<Partition, int> sampleHV_growth_withB(const Partition& lambda, const Partition& mu,
+                                           const Partition& kappa, double xi) {
+    uniform_real_distribution<double> dist(0.0, 1.0);
+    int initialB = (dist(rng) < xi / (1.0 + xi)) ? 1 : 0;
+    int B = initialB;
+
+    int maxLen = max({(int)lambda.size(), (int)mu.size()}) + 2;
+
+    Partition nu;
+    nu.reserve(maxLen);
+
+    for (int i = 1; i <= maxLen; i++) {
+        int lambda_i = getPart(lambda, i - 1);
+        int lambda_im1 = (i == 1) ? INT_MAX : getPart(lambda, i - 2);
+        int mu_i = getPart(mu, i - 1);
+        int mu_ip1 = getPart(mu, i);
+        int kappa_i = getPart(kappa, i - 1);
+
+        int nu_i;
+
+        if (lambda_i <= mu_i && mu_i < lambda_im1) {
+            nu_i = max(lambda_i, mu_i) + B;
+        } else {
+            nu_i = max(lambda_i, mu_i);
+        }
+
+        if (mu_ip1 < lambda_i && lambda_i <= mu_i) {
+            B = min(lambda_i, mu_i) - kappa_i;
+        }
+
+        if (nu_i > 0) {
+            nu.push_back(nu_i);
+        } else {
+            break;
+        }
+    }
+
+    return {nu, initialB};
+}
+
+/*
  * sampleVH_growth: VH = HV with λ and μ swapped
  * For Aztec diamond with word (⪯', ⪰)^n, we use VH for all cells
  */
@@ -361,6 +404,10 @@ string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y
     // τ[0][j] = τ[i][0] = ∅ (empty by default)
     vector<vector<Partition>> tau(n + 2, vector<Partition>(n + 2));
 
+    // Grid of Bernoulli values B[i][j] for staircase cells
+    // -1 means cell is outside staircase or boundary
+    vector<vector<int>> bernoulli(n + 2, vector<int>(n + 2, -1));
+
     // Fill staircase: for each column j, rows 1 to n-j+1
     // Using HV cells: output ν satisfies λ ⊂ ν (horiz strip) and ν ⊂ μ (vert strip)
     // where λ = left neighbor, μ = above neighbor
@@ -368,8 +415,10 @@ string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y
         for (int i = 1; i <= n - j + 1; i++) {
             double xi = x[i - 1] * y[j - 1];
             // λ = tau[i][j-1] (left), μ = tau[i-1][j] (above), κ = tau[i-1][j-1] (diagonal)
-            tau[i][j] = sampleHV_growth(tau[i][j - 1], tau[i - 1][j],
-                                        tau[i - 1][j - 1], xi);
+            auto [nu, B] = sampleHV_growth_withB(tau[i][j - 1], tau[i - 1][j],
+                                                  tau[i - 1][j - 1], xi);
+            tau[i][j] = nu;
+            bernoulli[i][j] = B;
         }
 
         progressCounter = 10 + (int)(((double)j / n) * 80);
@@ -377,46 +426,15 @@ string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y
     }
 
     // Extract boundary partitions
-    // The boundary goes from (0, n) clockwise to (n, 0) along the staircase edge
-    // This gives us 2n+1 partitions: one at each corner of the boundary
     vector<Partition> boundary;
-
-    // Start at (0, n) - this is τ[0][n] = ∅
-    // Move down along right edge, then along bottom
-    // The staircase boundary has lattice points:
-    // (0, n), (1, n), (1, n-1), (2, n-1), (2, n-2), ..., (n, 1), (n, 0)
-
-    // For the standard Schur process output, we want partitions at the "corners"
-    // which alternate between λ and μ
-
-    // Simpler: collect all boundary partitions in order
-    // The boundary of staircase (n, n-1, ..., 1) from top-left to bottom-right:
-
-    // Top edge: (0, 1), (0, 2), ..., (0, n) → all empty
-    // Right edge going down: (1, n), (1, n-1), (2, n-1), (2, n-2), ...
-
-    // Actually, the output sequence from SchurSample (see paper) is:
-    // Λ = (∅ = τ(l_0), τ(l_1), ..., τ(l_{m+n})) where l_k are boundary points
-
-    // For Aztec diamond with staircase (n, n-1, ..., 1):
-    // Boundary from (0, n) to (n, 0) gives partitions λ^0, μ^1, λ^1, ..., λ^n
-
-    // Let's trace the boundary:
-    // Start at (0, n) and move to (n, 0)
-    // At each step we either go down (i++) or go left (j--)
-
     boundary.push_back(tau[0][n]);  // λ^0 = ∅
 
     int i = 0, j = n;
-    int partIdx = 1;
     while (i < n || j > 0) {
-        // The staircase edge: can go to (i+1, j) if that's inside, else go to (i, j-1)
         if (i < n && j <= n - i) {
-            // Can go down
             i++;
             boundary.push_back(tau[i][j]);
         } else if (j > 0) {
-            // Go left
             j--;
             boundary.push_back(tau[i][j]);
         } else {
@@ -427,7 +445,82 @@ string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y
     progressCounter = 95;
     emscripten_sleep(0);
 
-    return partitionsToGrowthJSON(boundary, n);
+    // Build JSON with full grid
+    char buffer[256];
+    string json = "{";
+
+    // Add grid dimensions
+    json += "\"n\":" + to_string(n) + ",";
+
+    // Add full staircase grid: cells[j][i] with partition and Bernoulli value
+    // Staircase has (n+1 choose 2) = n(n+1)/2 cells
+    json += "\"grid\":[";
+    bool firstCell = true;
+    for (int jj = 1; jj <= n; jj++) {
+        for (int ii = 1; ii <= n - jj + 1; ii++) {
+            if (!firstCell) json += ",";
+            firstCell = false;
+
+            json += "{\"i\":" + to_string(ii) + ",\"j\":" + to_string(jj);
+            json += ",\"B\":" + to_string(bernoulli[ii][jj]);
+            json += ",\"partition\":[";
+            bool firstPart = true;
+            for (int p : tau[ii][jj]) {
+                if (!firstPart) json += ",";
+                firstPart = false;
+                json += to_string(p);
+            }
+            json += "]}";
+        }
+    }
+    json += "],";
+
+    // Add boundary/edge partitions for reference
+    json += "\"boundary\":[";
+    for (int ii = 0; ii <= n; ii++) {
+        if (ii > 0) json += ",";
+        json += "{\"i\":" + to_string(ii) + ",\"j\":0,\"partition\":[]}";
+    }
+    for (int jj = 1; jj <= n; jj++) {
+        json += ",{\"i\":0,\"j\":" + to_string(jj) + ",\"partition\":[]}";
+    }
+    json += "],";
+
+    // Add partitions and subsets for display
+    vector<vector<int>> subsets;
+    for (const auto& p : boundary) {
+        subsets.push_back(partitionToSubset(p));
+    }
+
+    json += "\"partitions\":[";
+    for (int ii = 0; ii < (int)boundary.size(); ii++) {
+        if (ii > 0) json += ",";
+        json += "[";
+        bool firstPart = true;
+        for (int p : boundary[ii]) {
+            if (!firstPart) json += ",";
+            firstPart = false;
+            json += to_string(p);
+        }
+        json += "]";
+    }
+    json += "],";
+
+    json += "\"subsets\":[";
+    for (int ii = 0; ii < (int)subsets.size(); ii++) {
+        if (ii > 0) json += ",";
+        json += "[";
+        bool firstElem = true;
+        for (int e : subsets[ii]) {
+            if (!firstElem) json += ",";
+            firstElem = false;
+            json += to_string(e);
+        }
+        json += "]";
+    }
+    json += "]}";
+
+    return json;
 }
 
 /*
