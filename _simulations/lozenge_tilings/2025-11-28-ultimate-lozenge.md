@@ -6334,27 +6334,24 @@ function initLozengeApp() {
         }, 'image/png');
     });
 
-    document.getElementById('export-pdf').addEventListener('click', () => {
-        // Load jspdf and svg2pdf.js if needed
-        const loadScript = (src) => new Promise((resolve) => {
-            const s = document.createElement('script');
-            s.src = src;
-            s.onload = resolve;
-            document.head.appendChild(s);
-        });
+    document.getElementById('export-pdf').addEventListener('click', async () => {
+        try {
+            // Load jspdf and svg2pdf.js if needed
+            const loadScript = (src) => new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = () => reject(new Error('Failed to load ' + src));
+                document.head.appendChild(s);
+            });
 
-        async function ensureLibraries() {
             if (!window.jspdf) {
                 await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
             }
             if (!window.svg2pdf) {
                 await loadScript('https://cdnjs.cloudflare.com/ajax/libs/svg2pdf.js/2.2.3/svg2pdf.umd.min.js');
             }
-        }
 
-        ensureLibraries().then(exportPDF);
-
-        async function exportPDF() {
             const svgString = createExportSVG();
             const parser = new DOMParser();
             const svgElement = parser.parseFromString(svgString, 'image/svg+xml').documentElement;
@@ -6370,6 +6367,9 @@ function initLozengeApp() {
             await svg2pdf(svgElement, pdf, { x: 0, y: 0, width, height });
             const blob = pdf.output('blob');
             downloadFile(blob, generateExportFilename('pdf'));
+        } catch (err) {
+            console.error('PDF export error:', err);
+            alert('PDF export failed: ' + err.message);
         }
     });
 
