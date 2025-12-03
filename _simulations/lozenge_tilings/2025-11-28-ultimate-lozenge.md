@@ -644,10 +644,10 @@ Cmd-click: complete lasso</div>
     </div>
     <button id="permuteColors" title="Permute colors">Permute</button>
     <button id="customColorsBtn" title="Custom colors">Custom colors</button>
-    <div id="customColorPickers" style="display: none; align-items: center; gap: 4px;">
-      <input type="color" id="customColor1" value="#E57200" title="Color 1">
-      <input type="color" id="customColor2" value="#232D4B" title="Color 2">
-      <input type="color" id="customColor3" value="#F9DCBF" title="Color 3">
+    <div id="customColorPickers" style="display: none; align-items: center; gap: 8px;">
+      <input type="color" id="customColor1" value="#E57200" title="Color 1" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+      <input type="color" id="customColor2" value="#232D4B" title="Color 2" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+      <input type="color" id="customColor3" value="#F9DCBF" title="Color 3" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Outline:</span>
@@ -4705,6 +4705,16 @@ function initLozengeApp() {
     customColor1.addEventListener('input', handleColorChange);
     customColor2.addEventListener('input', handleColorChange);
     customColor3.addEventListener('input', handleColorChange);
+
+    // Firefox workaround: ensure color pickers open reliably
+    [customColor1, customColor2, customColor3].forEach(input => {
+        input.addEventListener('click', (e) => {
+            e.target.focus();
+            if (e.target.showPicker) {
+                try { e.target.showPicker(); } catch (err) {}
+            }
+        });
+    });
 
     // Palette
     el.paletteSelect.addEventListener('change', (e) => {
