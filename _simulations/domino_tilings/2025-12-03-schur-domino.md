@@ -256,11 +256,10 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // Set r-weighted parameters: x_i = y_i = r^i
-  document.getElementById("r-btn").addEventListener("click", function() {
+  function applyRWeighting() {
     const currentN = parseInt(inputField.value, 10);
     const r = parseFloat(document.getElementById("r-input").value);
     if (isNaN(r) || r <= 0) {
-      progressElem.innerText = "Please enter a valid positive r value.";
       return;
     }
     const params = [];
@@ -270,7 +269,10 @@ Module.onRuntimeInitialized = async function() {
     const paramStr = params.join(',');
     xParamsField.value = paramStr;
     yParamsField.value = paramStr;
-  });
+  }
+
+  document.getElementById("r-btn").addEventListener("click", applyRWeighting);
+  document.getElementById("r-input").addEventListener("input", applyRWeighting);
 
   function renderDominoes(dominoes) {
     const minX = d3.min(dominoes, d => d.x);
@@ -285,18 +287,19 @@ Module.onRuntimeInitialized = async function() {
     const svgHeight = bbox.height;
     svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
 
-    const scale = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
-    const translateX = (svgWidth - widthDominoes * scale) / 2 - minX * scale;
-    const translateY = (svgHeight - heightDominoes * scale) / 2 - minY * scale;
+    const scaleView = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+    const translateX = (svgWidth - widthDominoes * scaleView) / 2 - minX * scaleView;
+    const translateY = (svgHeight - heightDominoes * scaleView) / 2 - minY * scaleView;
 
-    initialTransform = { translateX, translateY, scale };
+    initialTransform = { translateX, translateY, scale: scaleView };
     svg.call(zoom.transform, d3.zoomIdentity);
     svg.selectAll("g").remove();
 
     const group = svg.append("g")
       .attr("class", "dominoes")
-      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scale + ")");
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scaleView + ")");
 
+    // Draw dominoes first
     group.selectAll("rect")
       .data(dominoes)
       .enter()
@@ -308,6 +311,263 @@ Module.onRuntimeInitialized = async function() {
       .attr("fill", d => d.color)
       .attr("stroke", "#000")
       .attr("stroke-width", 0.5);
+
+    // Draw 2n+1 SW/NE diagonal lines
+    const numLines = 2 * n + 1;
+    const lineLen = Math.max(widthDominoes, heightDominoes);
+
+    // Lines go from bottom-left to top-right (SW to NE)
+    // Spaced perpendicular to the SW/NE direction
+    // λ⁰ at bottom (i=0), λⁿ at top (i=max)
+    for (let i = 0; i < numLines; i++) {
+      // Offset perpendicular to SW/NE lines (i.e., in NW/SE direction)
+      // λ⁰ at bottom (NW side), λⁿ at top (SE side)
+      const t = (i / (numLines - 1)) - 0.5;  // ranges from -0.5 to 0.5
+
+      // Perpendicular offset: negative = NW (bottom-left), positive = SE (top-right)
+      const offset = -t * widthDominoes * 0.5;  // halved spacing
+
+      // Line endpoints: SW to NE (direction is (+1, -1) in screen coords)
+      // Center line passes through center of domino region
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      const halfLen = Math.max(widthDominoes, heightDominoes) * 0.7;
+
+      // Offset perpendicular to line: SE is (+1, +1), NW is (-1, -1)
+      const x1 = cx + offset - halfLen;  // SW end
+      const y1 = cy + offset + halfLen;
+      const x2 = cx + offset + halfLen;  // NE end
+      const y2 = cy + offset - halfLen;
+
+      group.append("line")
+        .attr("x1", x1)
+        .attr("y1", y1)
+        .attr("x2", x2)
+        .attr("y2", y2)
+        .attr("stroke", "#cc0000")
+        .attr("stroke-width", 1);
+
+      // Label: λ or μ for each line
+      const label = (i % 2 === 0) ? "λ" + (i / 2) : "μ" + Math.floor((i + 1) / 2);
+      group.append("text")
+        .attr("x", x1 - 5)
+        .attr("y", y1)
+        .attr("text-anchor", "end")
+        .attr("font-size", "10px")
+        .attr("fill", "#000")
+        .text(label);
+    }
+  }
+
+  function renderParticles(particles, n) {
+    const scale = 25;
+    const numSlices = 2 * n + 1;
+
+    // SW/NE diagonals at x - y = k for k = -n, ..., n (2n+1 lines total)
+    // Slice s corresponds to diagonal k = s - n
+    // Slice sizes: n + 1 - |k| gives 1,2,3,...,n+1,...,3,2,1
+    // λ⁰ (s=0, k=-n) at bottom-left, λⁿ (s=2n, k=n) at top-right
+    const gridPositions = [];
+    for (let s = 0; s < numSlices; s++) {
+      const k = s - n;  // diagonal index: x - y = k, ranges from -n to n
+      const sliceSize = n + 1 - Math.abs(k);  // number of points on this diagonal
+
+      for (let elem = 1; elem <= sliceSize; elem++) {
+        // Position along diagonal (in x + y direction)
+        const alongDiag = elem - (sliceSize + 1) / 2;
+
+        // Coordinates where x - y = k (SW-NE diagonal)
+        // Moving along diagonal: direction (1, 1)
+        // Moving between diagonals: direction (1, -1)
+        const x = (k + alongDiag) * scale;
+        const y = (-k + alongDiag) * scale;
+        // Check: x - y = (k + alongDiag) - (-k + alongDiag) = 2k ✓
+
+        gridPositions.push({
+          x: x,
+          y: y,
+          slice: s,
+          elem: elem,
+          isGrid: true
+        });
+      }
+    }
+
+    // Compute bounds from actual grid positions
+    const allPoints = [...gridPositions];
+    const minX = d3.min(allPoints, d => d.x) - scale * 1.5;
+    const minY = d3.min(allPoints, d => d.y) - scale * 1.5;
+    const maxX = d3.max(allPoints, d => d.x) + scale * 1.5;
+    const maxY = d3.max(allPoints, d => d.y) + scale * 1.5;
+    const widthData = maxX - minX;
+    const heightData = maxY - minY;
+
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+    const viewScale = Math.min(svgWidth / widthData, svgHeight / heightData) * 0.85;
+    const translateX = (svgWidth - widthData * viewScale) / 2 - minX * viewScale;
+    const translateY = (svgHeight - heightData * viewScale) / 2 - minY * viewScale;
+
+    initialTransform = { translateX, translateY, scale: viewScale };
+    svg.call(zoom.transform, d3.zoomIdentity);
+    svg.selectAll("g").remove();
+
+    const group = svg.append("g")
+      .attr("class", "particles")
+      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + viewScale + ")");
+
+    // Draw Aztec diamond outline - compute from actual grid extent
+    // The outline should be a rotated square enclosing all grid points
+    // Note: In screen coords, max y is at bottom, min y is at top
+    const outlinePoints = [];
+    // Bottom vertex in screen coords (max y, where λ⁰ slice is)
+    outlinePoints.push({x: 0, y: d3.max(gridPositions, d => d.y) + scale * 0.5});
+    // Right vertex (max x)
+    outlinePoints.push({x: d3.max(gridPositions, d => d.x) + scale * 0.5, y: 0});
+    // Top vertex in screen coords (min y, where λⁿ slice is)
+    outlinePoints.push({x: 0, y: d3.min(gridPositions, d => d.y) - scale * 0.5});
+    // Left vertex (min x)
+    outlinePoints.push({x: d3.min(gridPositions, d => d.x) - scale * 0.5, y: 0});
+
+    group.append("polygon")
+      .attr("points", outlinePoints.map(p => p.x + "," + p.y).join(" "))
+      .attr("fill", "none")
+      .attr("stroke", "#999")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "5,5");
+
+    // Draw grid positions as small gray circles
+    const gridRadius = 4;
+    group.selectAll("circle.grid")
+      .data(gridPositions)
+      .enter()
+      .append("circle")
+      .attr("class", "grid")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", gridRadius)
+      .attr("fill", "#eee")
+      .attr("stroke", "#ccc")
+      .attr("stroke-width", 1);
+
+    // Draw diagonal lines for each slice (SW-NE diagonals at x - y = const)
+    // Draw BEFORE circles so circles appear on top
+    for (let s = 0; s < numSlices; s++) {
+      const k = s - n;
+      const sliceSize = n + 1 - Math.abs(k);
+      // Compute line endpoints directly from k
+      // Line goes from elem=1 to elem=sliceSize
+      const alongStart = 1 - (sliceSize + 1) / 2;
+      const alongEnd = sliceSize - (sliceSize + 1) / 2;
+      const ext = scale * 0.7;  // extension amount
+
+      const x1 = (k + alongStart) * scale - ext;
+      const y1 = (-k + alongStart) * scale - ext;
+      const x2 = (k + alongEnd) * scale + ext;
+      const y2 = (-k + alongEnd) * scale + ext;
+
+      group.append("line")
+        .attr("x1", x1)
+        .attr("y1", y1)
+        .attr("x2", x2)
+        .attr("y2", y2)
+        .attr("stroke", "#cc0000")
+        .attr("stroke-width", 2);
+    }
+
+    // Map particles to grid positions and draw
+    const particleRadius = 7;
+    if (particles && particles.length > 0) {
+      // Find matching grid positions for each particle
+      const particlePositions = particles.map(p => {
+        const gridPos = gridPositions.find(g => g.slice === p.slice && g.elem === p.elem);
+        return gridPos ? {...gridPos, isParticle: true} : null;
+      }).filter(p => p !== null);
+
+      group.selectAll("circle.particle")
+        .data(particlePositions)
+        .enter()
+        .append("circle")
+        .attr("class", "particle")
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", particleRadius)
+        .attr("fill", "#E57200")
+        .attr("stroke", "#232D4B")
+        .attr("stroke-width", 2);
+    }
+
+    // Draw slice labels at the SW end of each diagonal (elem=1, which has max y value)
+    for (let s = 0; s < numSlices; s++) {
+      const slicePoints = gridPositions.filter(p => p.slice === s);
+      if (slicePoints.length > 0) {
+        // Find SW point (max y, which is elem=1)
+        const swPoint = slicePoints.reduce((a, b) => a.y > b.y ? a : b);
+        const label = (s % 2 === 0) ? "λ" + (s / 2) : "μ" + Math.ceil(s / 2);
+        group.append("text")
+          .attr("x", swPoint.x - scale * 0.5)
+          .attr("y", swPoint.y + scale * 0.3)
+          .attr("text-anchor", "end")
+          .attr("dominant-baseline", "middle")
+          .attr("font-size", "10px")
+          .attr("fill", "#666")
+          .text(label);
+      }
+    }
+  }
+
+  // Display partitions with subsets for Growth Diagram
+  function displayPartitionsWithSubsets(partitions, subsets, n) {
+    const subsetsOutput = document.getElementById("subsets-output");
+    if (!subsetsOutput) return;
+
+    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    function toSuperscript(num) {
+      if (num < 10) return superscripts[num];
+      return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
+    }
+
+    const lines = [];
+    lines.push("Growth Diagram Sampling:");
+    lines.push("");
+
+    for (let i = 0; i < partitions.length; i++) {
+      const partition = partitions[i];
+      const subset = subsets[i] || [];
+      const partStr = partition.length === 0 ? "∅" : "(" + partition.join(",") + ")";
+      const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+      const label = (i % 2 === 0) ? "λ" + toSuperscript(i / 2) : "μ" + toSuperscript(Math.ceil(i / 2));
+      lines.push(`${label} = ${partStr}  →  subset: ${subsetStr}`);
+    }
+
+    // Check interlacing
+    lines.push("");
+    lines.push("Interlacing checks:");
+    let allValid = true;
+
+    for (let i = 1; i < partitions.length; i++) {
+      if (i % 2 === 1) {
+        const k = Math.ceil(i / 2);
+        const mu_k = partitions[i];
+        const lambda_km1 = partitions[i - 1];
+        const isHS = isHorizontalStrip(mu_k, lambda_km1);
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horiz: ${isHS ? "✓" : "✗"}`);
+      } else {
+        const k = i / 2;
+        const lambda_k = partitions[i];
+        const mu_k = partitions[i - 1];
+        const isVS = isVerticalStrip(mu_k, lambda_k);
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} vert: ${isVS ? "✓" : "✗"}`);
+      }
+    }
+
+    lines.push(allValid ? "\nAll interlacing ✓" : "\nWARNING: Interlacing failed ✗");
+    subsetsOutput.textContent = lines.join("\n");
   }
 
   let currentSubsets = [];
@@ -694,15 +954,15 @@ Module.onRuntimeInitialized = async function() {
 
       try {
         const result = JSON.parse(jsonStr);
-        currentDominoes = result.dominoes || [];
+        const particles = result.particles || [];
         const partitions = result.partitions || [];
-        displayPartitions(partitions, n);
+        const subsets = result.subsets || [];
+        displayPartitionsWithSubsets(partitions, subsets, n);
 
-        // If we have dominoes, render them
-        if (currentDominoes.length > 0) {
-          renderDominoes(currentDominoes);
+        // Render particles
+        if (particles.length > 0) {
+          renderParticles(particles, n);
         } else {
-          // Show message that dominoes not available for this method
           svg.selectAll("g").remove();
           const bbox = svg.node().getBoundingClientRect();
           svg.attr("viewBox", "0 0 " + bbox.width + " " + bbox.height);
@@ -712,7 +972,7 @@ Module.onRuntimeInitialized = async function() {
             .attr("text-anchor", "middle")
             .attr("font-size", "16px")
             .attr("fill", "#666")
-            .text("Growth Diagram: Partition sequence shown below (dominoes not rendered)");
+            .text("No particles to display");
         }
       } catch (e) {
         progressElem.innerText = "Error during sampling: " + e.message;
@@ -763,7 +1023,7 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("growth-btn").addEventListener("click", processInputGrowth);
 
-  // Initial simulation
+  // Initial simulation - use Shuffling algorithm
   updateVisualization(parseInt(inputField.value, 10));
 };
 </script>

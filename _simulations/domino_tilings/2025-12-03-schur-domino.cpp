@@ -267,18 +267,49 @@ vector<int> partitionToSubset(const Partition& lambda) {
 }
 
 /*
- * Convert boundary partitions to JSON output
- * For now, only output partitions - domino reconstruction is complex
- * and requires proper RSK/Fomin correspondence implementation.
- * Use shuffling sampler for visual domino output.
+ * Convert boundary partitions to JSON output with particles on diagonals
+ * Each partition is converted to a subset via Maya diagram encoding.
+ * Particles are placed at positions corresponding to subset elements.
  */
 string partitionsToGrowthJSON(const vector<Partition>& partitions, int n) {
-    // Output partitions only - no domino reconstruction
-    string json = "{\"dominoes\":[]";
+    double scale = 20.0;
+    char buffer[256];
 
-    // Add partitions to JSON
-    json += ",\"partitions\":[";
+    // Convert partitions to subsets
+    vector<vector<int>> subsets;
+    for (const auto& p : partitions) {
+        subsets.push_back(partitionToSubset(p));
+    }
+
+    int numSlices = subsets.size();
+
+    string json = "{\"particles\":[";
     bool first = true;
+
+    // For each slice, place particles at subset positions only
+    for (int s = 0; s < numSlices; s++) {
+        // y = slice index (row)
+        double y = s * scale;
+
+        for (int elem : subsets[s]) {
+            // x = element position
+            double x = elem * scale;
+
+            if (!first) json += ",";
+            else first = false;
+
+            snprintf(buffer, sizeof(buffer),
+                     "{\"x\":%g,\"y\":%g,\"slice\":%d,\"elem\":%d,\"isParticle\":true}",
+                     x, y, s, elem);
+            json += buffer;
+        }
+    }
+
+    json += "]";
+
+    // Add partitions and subsets to JSON for debugging
+    json += ",\"partitions\":[";
+    first = true;
     for (int i = 0; i < (int)partitions.size(); i++) {
         if (!first) json += ",";
         else first = false;
@@ -289,6 +320,24 @@ string partitionsToGrowthJSON(const vector<Partition>& partitions, int n) {
             if (!firstPart) json += ",";
             else firstPart = false;
             json += to_string(p);
+        }
+        json += "]";
+    }
+    json += "]";
+
+    // Add subsets for debugging
+    json += ",\"subsets\":[";
+    first = true;
+    for (int i = 0; i < (int)subsets.size(); i++) {
+        if (!first) json += ",";
+        else first = false;
+
+        json += "[";
+        bool firstElem = true;
+        for (int e : subsets[i]) {
+            if (!firstElem) json += ",";
+            else firstElem = false;
+            json += to_string(e);
         }
         json += "]";
     }
@@ -313,11 +362,13 @@ string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y
     vector<vector<Partition>> tau(n + 2, vector<Partition>(n + 2));
 
     // Fill staircase: for each column j, rows 1 to n-j+1
+    // Using HV cells: output ν satisfies λ ⊂ ν (horiz strip) and ν ⊂ μ (vert strip)
+    // where λ = left neighbor, μ = above neighbor
     for (int j = 1; j <= n; j++) {
         for (int i = 1; i <= n - j + 1; i++) {
             double xi = x[i - 1] * y[j - 1];
-            // τ(i-1, j) = from above, τ(i, j-1) = from left, τ(i-1, j-1) = diagonal
-            tau[i][j] = sampleVH_growth(tau[i - 1][j], tau[i][j - 1],
+            // λ = tau[i][j-1] (left), μ = tau[i-1][j] (above), κ = tau[i-1][j-1] (diagonal)
+            tau[i][j] = sampleHV_growth(tau[i][j - 1], tau[i - 1][j],
                                         tau[i - 1][j - 1], xi);
         }
 
