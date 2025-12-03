@@ -312,65 +312,86 @@ Module.onRuntimeInitialized = async function() {
       .attr("stroke", "#000")
       .attr("stroke-width", 0.5);
 
-    // Draw 2n+1 SW/NE diagonal lines
-    const numLines = 2 * n + 1;
-    const lineLen = Math.max(widthDominoes, heightDominoes);
+    // Draw the half-integer lattice points for Aztec diamond
+    // Each domino covers two adjacent half-integer points
+    // Extract 1x1 square centers from dominoes as lattice points
+    // Yellow/Blue → in subset, Green/Red → not in subset
+    const latticePoints = [];
+    dominoes.forEach(d => {
+      const inSubset = (d.color === "yellow" || d.color === "blue");
+      if (d.w > d.h) {
+        // Horizontal domino (w=40, h=20): two squares side by side
+        latticePoints.push({x: d.x + 10, y: d.y + 10, inSubset});
+        latticePoints.push({x: d.x + 30, y: d.y + 10, inSubset});
+      } else {
+        // Vertical domino (w=20, h=40): two squares stacked
+        latticePoints.push({x: d.x + 10, y: d.y + 10, inSubset});
+        latticePoints.push({x: d.x + 10, y: d.y + 30, inSubset});
+      }
+    });
 
-    // Lines go from bottom-left to top-right (SW to NE)
-    // Spaced perpendicular to the SW/NE direction
-    // λ⁰ at bottom (i=0), λⁿ at top (i=max)
-    for (let i = 0; i < numLines; i++) {
-      // Offset perpendicular to SW/NE lines (i.e., in NW/SE direction)
-      // λ⁰ at bottom (NW side), λⁿ at top (SE side)
-      const t = (i / (numLines - 1)) - 0.5;  // ranges from -0.5 to 0.5
+    // Compute center of diamond
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
 
-      // Perpendicular offset: negative = NW (bottom-left), positive = SE (top-right)
-      const offset = -t * widthDominoes * 0.5;  // halved spacing
+    // Compute diagonal index for each point: x - y in abstract coords
+    // SW-NE diagonals have constant (screen_x + screen_y)
+    // Diagonal spacing is 20 pixels (moving perpendicular to diagonal by 1 unit)
+    latticePoints.forEach(p => {
+      // Diagonal index: (sx + sy - center) / 20, gives values from -n to n
+      p.diag = Math.round((p.x + p.y - cx - cy) / 20);
+    });
 
-      // Line endpoints: SW to NE (direction is (+1, -1) in screen coords)
-      // Center line passes through center of domino region
-      const cx = (minX + maxX) / 2;
-      const cy = (minY + maxY) / 2;
-      const halfLen = Math.max(widthDominoes, heightDominoes) * 0.7;
+    // Group by diagonal to form subsets
+    // x - y = -n is λ^n, x - y = -n+1 is μ^n, etc.
+    const diagonals = {};
+    latticePoints.forEach(p => {
+      if (!diagonals[p.diag]) diagonals[p.diag] = [];
+      diagonals[p.diag].push(p);
+    });
 
-      // Offset perpendicular to line: SE is (+1, +1), NW is (-1, -1)
-      const x1 = cx + offset - halfLen/2;  // SW end
-      const y1 = cy + offset + halfLen/2;
-      const x2 = cx + offset + halfLen/2;  // NE end
-      const y2 = cy + offset - halfLen/2;
-
-      group.append("line")
-        .attr("x1", x1)
-        .attr("y1", y1)
-        .attr("x2", x2)
-        .attr("y2", y2)
-        .attr("stroke", "#cc0000")
-        .attr("stroke-width", 1);
-
-      // Add dashed tick mark at coordinate 0 (center of diagonal)
-      const x0 = cx + offset-halfLen/2;
-      const y0 = cy + offset+halfLen/2;
-      const tickLen = 8;  // perpendicular tick length
-      // Perpendicular to SW-NE diagonal (1,-1) is direction (1,1)
-      group.append("line")
-        .attr("x1", x0 - tickLen * 0.5)
-        .attr("y1", y0 - tickLen * 0.5)
-        .attr("x2", x0 + tickLen * 0.5)
-        .attr("y2", y0 + tickLen * 0.5)
-        .attr("stroke", "#000")
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "3,2");
-
-      // Label: λ or μ for each line (moved 0.25 up and 0.25 left)
-      const label = (i % 2 === 0) ? "λ" + (i / 2) : "μ" + Math.floor((i + 1) / 2);
-      group.append("text")
-        .attr("x", x1 - 2.5)
-        .attr("y", y1 + 7.5)
-        .attr("text-anchor", "end")
-        .attr("font-size", "10px")
-        .attr("fill", "#000")
-        .text(label);
+    // Sort points within each diagonal by position along the diagonal
+    // (by screen_x - screen_y, which increases going NE along the diagonal)
+    for (const d in diagonals) {
+      diagonals[d].sort((a, b) => (a.x - a.y) - (b.x - b.y));
+      // Assign 1-indexed position within diagonal
+      diagonals[d].forEach((p, idx) => {
+        p.posInDiag = idx + 1;
+      });
     }
+
+    // Draw only the points that are IN the subset (yellow/blue dominoes)
+    const subsetPoints = latticePoints.filter(p => p.inSubset);
+    group.selectAll("circle.lattice")
+      .data(subsetPoints)
+      .enter()
+      .append("circle")
+      .attr("class", "lattice")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", 4)
+      .attr("fill", "#000")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 1);
+
+    // Build and log subsets for each diagonal
+    const subsets = {};
+    for (const k in diagonals) {
+      subsets[k] = diagonals[k]
+        .filter(p => p.inSubset)
+        .map(p => p.posInDiag);
+    }
+
+    // Convert diagonal index to λ/μ label
+    const diagKeys = Object.keys(diagonals).map(Number).sort((a, b) => a - b);
+    const subsetLabels = {};
+    diagKeys.forEach((k, idx) => {
+      const label = (idx % 2 === 0) ? "λ" + (n - idx/2) : "μ" + (n - Math.floor(idx/2));
+      subsetLabels[label] = subsets[k];
+    });
+
+    console.log("Subsets by diagonal:", subsets);
+    console.log("Subsets with labels:", subsetLabels);
   }
 
   function renderParticles(particles, n) {
