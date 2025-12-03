@@ -631,10 +631,6 @@ Cmd-click: complete lasso</div>
     <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
     <button id="rotateRightBtn" title="Rotate Right (3D)" disabled>↻</button>
     <button id="resetViewBtn" title="Reset View">Reset View</button>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="autoRotateCheckbox">
-      <label for="autoRotateCheckbox" style="font-size: 12px; color: #555;">Auto-rotate (3D)</label>
-    </div>
   </div>
 </div>
 
@@ -649,7 +645,7 @@ Cmd-click: complete lasso</div>
     <button id="permuteColors" title="Permute colors">Permute</button>
     <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Outline:</span>
-      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="10" step="0.1" class="param-input" style="width: 50px;">
+      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;">
       <span style="font-size: 11px; color: #888;">%</span>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
@@ -2138,7 +2134,7 @@ function initLozengeApp() {
             const colors = this.getPermutedColors();
             const dimerCount = sim.dimers.length || 1;
             const refDimerCount = 100;
-            const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount) * 0.1;
+            const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount);
             const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
 
             for (const dimer of sim.dimers) {
@@ -2591,8 +2587,6 @@ function initLozengeApp() {
 
         setAutoRotate(enabled) {
             this.autoRotate = enabled;
-            this.controls.autoRotate = enabled;
-            this.controls.autoRotateSpeed = 2.0;
         }
 
         // Convert lattice coords (n, j) + height to screen coords for hole labels
@@ -2618,6 +2612,22 @@ function initLozengeApp() {
 
         animate() {
             requestAnimationFrame(() => this.animate());
+
+            // Manual auto-rotate around vertical axis through figure center
+            if (this.autoRotate) {
+                const target = this.controls.target;
+                const offset = new THREE.Vector3();
+                offset.subVectors(this.camera.position, target);
+
+                // Rotate around Z-axis
+                const angle = 0.01; // radians per frame (~0.57 deg)
+                const axis = new THREE.Vector3(0, 0, 1);
+                offset.applyAxisAngle(axis, angle);
+
+                this.camera.position.copy(target).add(offset);
+                this.camera.lookAt(target);
+            }
+
             this.controls.update();
             this.renderer.render(this.scene, this.camera);
         }
@@ -3384,7 +3394,6 @@ function initLozengeApp() {
         cftpSteps: document.getElementById('cftpSteps'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
-        autoRotateCheckbox: document.getElementById('autoRotateCheckbox'),
         averageBtn: document.getElementById('averageBtn'),
         avgSamplesInput: document.getElementById('avgSamplesInput'),
         avgStopBtn: document.getElementById('avgStopBtn'),
@@ -3642,16 +3651,24 @@ function initLozengeApp() {
             }
         }
 
-        // Disable lozenge/dimer/path/rotate toggle in 3D mode (not applicable)
+        // Disable lozenge/dimer/path toggle in 3D mode (not applicable)
         const rotate2DBtn = document.getElementById('rotate2DBtn');
         el.lozengeViewBtn.disabled = use3D;
         el.pathViewBtn.disabled = use3D;
         el.dimerViewBtn.disabled = use3D;
-        if (rotate2DBtn) rotate2DBtn.disabled = use3D;
         el.lozengeViewBtn.style.opacity = use3D ? '0.5' : '1';
         el.pathViewBtn.style.opacity = use3D ? '0.5' : '1';
         el.dimerViewBtn.style.opacity = use3D ? '0.5' : '1';
-        if (rotate2DBtn) rotate2DBtn.style.opacity = use3D ? '0.5' : '1';
+        // rotate2DBtn stays enabled - it toggles 90-deg rotation in 2D and auto-rotate in 3D
+        // Reset button active state when switching views
+        if (rotate2DBtn) {
+            rotate2DBtn.classList.remove('active');
+            if (use3D && renderer3D) {
+                renderer3D.autoRotate = false;
+            } else {
+                renderer.rotated = false;
+            }
+        }
 
         if (use3D) {
             if (!renderer3D) {
@@ -4616,12 +4633,6 @@ function initLozengeApp() {
         tooltip.style.display = tooltip.style.display === 'none' ? 'block' : 'none';
     });
 
-    el.autoRotateCheckbox.addEventListener('change', (e) => {
-        if (renderer3D) {
-            renderer3D.setAutoRotate(e.target.checked);
-        }
-    });
-
     // Palette
     el.paletteSelect.addEventListener('change', (e) => {
         renderer.setPalette(parseInt(e.target.value));
@@ -4682,12 +4693,19 @@ function initLozengeApp() {
         updateHolesUI();
     });
 
-    // 2D rotate button in canvas overlay
+    // 2D rotate button in canvas overlay (also auto-rotate toggle in 3D)
     document.getElementById('rotate2DBtn').addEventListener('click', () => {
-        renderer.rotated = !renderer.rotated;
         const btn = document.getElementById('rotate2DBtn');
-        btn.classList.toggle('active', renderer.rotated);
-        draw();
+        if (is3DView && renderer3D) {
+            // In 3D: toggle auto-rotate
+            renderer3D.autoRotate = !renderer3D.autoRotate;
+            btn.classList.toggle('active', renderer3D.autoRotate);
+        } else {
+            // In 2D: toggle 90-deg rotation
+            renderer.rotated = !renderer.rotated;
+            btn.classList.toggle('active', renderer.rotated);
+            draw();
+        }
     });
 
     // Simulation controls - logarithmic slider with synchronized input
@@ -6013,6 +6031,245 @@ function initLozengeApp() {
         return `lozenge_${mode}_${size}_${measure}_${code}.${extension}`;
     }
 
+    function createExportSVG() {
+        const width = 900, height = 600;
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Temporarily set renderer dimensions for correct transform
+        const origW = renderer.displayWidth, origH = renderer.displayHeight;
+        renderer.displayWidth = width;
+        renderer.displayHeight = height;
+        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+        renderer.displayWidth = origW;
+        renderer.displayHeight = origH;
+
+        const colors = renderer.getPermutedColors();
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+
+        // 1. Background
+        svg += `<rect width="${width}" height="${height}" fill="${isDarkMode ? '#1a1a1a' : '#ffffff'}"/>`;
+
+        // 2. Grid (if enabled)
+        if (renderer.showGrid) {
+            const gridColor = isDarkMode ? 'rgba(200,200,200,0.4)' : 'rgba(200,200,200,0.5)';
+            svg += `<g stroke="${gridColor}" stroke-width="0.5" fill="none">`;
+
+            // Calculate visible range
+            const corners = [
+                renderer.fromCanvas(0, 0, centerX, centerY, scale),
+                renderer.fromCanvas(width, 0, centerX, centerY, scale),
+                renderer.fromCanvas(0, height, centerX, centerY, scale),
+                renderer.fromCanvas(width, height, centerX, centerY, scale),
+            ];
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const c of corners) {
+                minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
+                minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
+            }
+            const viewRange = Math.max(maxX - minX, maxY - minY);
+            const margin = Math.ceil(viewRange * 0.5) + 10;
+            minX -= margin; maxX += margin;
+
+            const minN = Math.floor(minX) - 5;
+            const maxN = Math.ceil(maxX) + 5;
+            const minJ = Math.floor(minY / deltaC) - Math.ceil(viewRange) - 5;
+            const maxJ = Math.ceil(maxY / deltaC) + Math.ceil(viewRange) + 5;
+
+            // Vertical lines
+            for (let n = minN; n <= maxN; n++) {
+                const y1 = slope * n + minJ * deltaC;
+                const y2 = slope * n + maxJ * deltaC;
+                const [x1c, y1c] = renderer.toCanvas(n, y1, centerX, centerY, scale);
+                const [x2c, y2c] = renderer.toCanvas(n, y2, centerX, centerY, scale);
+                svg += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}"/>`;
+            }
+            // +slope lines
+            for (let j = minJ; j <= maxJ; j++) {
+                const [x1c, y1c] = renderer.toCanvas(minN, slope * minN + j * deltaC, centerX, centerY, scale);
+                const [x2c, y2c] = renderer.toCanvas(maxN, slope * maxN + j * deltaC, centerX, centerY, scale);
+                svg += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}"/>`;
+            }
+            // -slope lines
+            for (let j = minJ; j <= maxJ; j++) {
+                const [x1c, y1c] = renderer.toCanvas(minN, -slope * minN + j * deltaC, centerX, centerY, scale);
+                const [x2c, y2c] = renderer.toCanvas(maxN, -slope * maxN + j * deltaC, centerX, centerY, scale);
+                svg += `<line x1="${x1c}" y1="${y1c}" x2="${x2c}" y2="${y2c}"/>`;
+            }
+            svg += '</g>';
+        }
+
+        // 3. Lozenges or Dimers
+        if (isValid && sim.dimers.length > 0) {
+            if (renderer.showDimerView) {
+                // Dimer edges
+                const isLarge = sim.blackTriangles && sim.blackTriangles.length > 1000;
+                const lineW = isLarge ? 1 : 3;
+                svg += `<g stroke="#000" stroke-width="${lineW}" fill="none">`;
+                for (const dimer of sim.dimers) {
+                    const bc = sim.blackTriangles.find(b => b.n === dimer.bn && b.j === dimer.bj);
+                    const wc = sim.whiteTriangles.find(w => w.n === dimer.wn && w.j === dimer.wj);
+                    if (bc && wc) {
+                        const [bcx, bcy] = renderer.toCanvas(bc.cx, bc.cy, centerX, centerY, scale);
+                        const [wcx, wcy] = renderer.toCanvas(wc.cx, wc.cy, centerX, centerY, scale);
+                        svg += `<line x1="${bcx}" y1="${bcy}" x2="${wcx}" y2="${wcy}"/>`;
+                    }
+                }
+                svg += '</g>';
+            } else {
+                // Lozenges
+                const dimerCount = sim.dimers.length || 1;
+                const outlineWidth = renderer.outlineWidthPct * (100 / dimerCount) * 0.1;
+                const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
+
+                for (const dimer of sim.dimers) {
+                    const verts = renderer.getLozengeVertices(dimer);
+                    const pts = verts.map(v => renderer.toCanvas(v.x, v.y, centerX, centerY, scale));
+                    const points = pts.map(p => `${p[0]},${p[1]}`).join(' ');
+                    svg += `<polygon points="${points}" fill="${colors[dimer.t]}"`;
+                    if (outlineWidth > 0) {
+                        svg += ` stroke="${outlineColor}" stroke-width="${outlineWidth}"`;
+                    }
+                    svg += '/>';
+                }
+            }
+
+            // 4. Path overlays
+            if (renderer.pathMode > 0) {
+                const excludedType = renderer.pathMode === 1 ? 2 : (renderer.pathMode === 2 ? 0 : 1);
+                const pathColor = isDarkMode ? '#ffffff' : '#333333';
+                svg += `<g stroke="${pathColor}" stroke-width="${renderer.pathWidthPx}" stroke-linecap="round" fill="none">`;
+
+                for (const dimer of sim.dimers) {
+                    if (dimer.t === excludedType) continue;
+                    const verts = renderer.getLozengeVertices(dimer);
+                    let mid1, mid2;
+                    const t = dimer.t;
+
+                    if (renderer.pathMode === 1) {
+                        mid1 = { x: (verts[1].x + verts[2].x) / 2, y: (verts[1].y + verts[2].y) / 2 };
+                        mid2 = { x: (verts[3].x + verts[0].x) / 2, y: (verts[3].y + verts[0].y) / 2 };
+                    } else if (renderer.pathMode === 2) {
+                        if (t === 1) {
+                            mid1 = { x: (verts[0].x + verts[1].x) / 2, y: (verts[0].y + verts[1].y) / 2 };
+                            mid2 = { x: (verts[2].x + verts[3].x) / 2, y: (verts[2].y + verts[3].y) / 2 };
+                        } else {
+                            mid1 = { x: (verts[1].x + verts[2].x) / 2, y: (verts[1].y + verts[2].y) / 2 };
+                            mid2 = { x: (verts[3].x + verts[0].x) / 2, y: (verts[3].y + verts[0].y) / 2 };
+                        }
+                    } else {
+                        mid1 = { x: (verts[0].x + verts[1].x) / 2, y: (verts[0].y + verts[1].y) / 2 };
+                        mid2 = { x: (verts[2].x + verts[3].x) / 2, y: (verts[2].y + verts[3].y) / 2 };
+                    }
+
+                    const [c1x, c1y] = renderer.toCanvas(mid1.x, mid1.y, centerX, centerY, scale);
+                    const [c2x, c2y] = renderer.toCanvas(mid2.x, mid2.y, centerX, centerY, scale);
+                    svg += `<line x1="${c1x}" y1="${c1y}" x2="${c2x}" y2="${c2y}"/>`;
+                }
+                svg += '</g>';
+            }
+        }
+
+        // 5. Boundaries
+        if (sim.boundaries && sim.boundaries.length > 0) {
+            const borderWidth = Math.max(0.5, renderer.borderWidthPct * scale * 0.1);
+            const borderColor = isDarkMode ? '#cccccc' : '#000000';
+            svg += `<g stroke="${borderColor}" stroke-width="${borderWidth}" fill="none">`;
+            for (const boundary of sim.boundaries) {
+                if (boundary.length < 2) continue;
+                const pts = boundary.map(p => renderer.toCanvas(p.x, p.y, centerX, centerY, scale));
+                const d = `M ${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map(p => `L ${p[0]},${p[1]}`).join(' ') + ' Z';
+                svg += `<path d="${d}"/>`;
+            }
+            svg += '</g>';
+        }
+
+        // 6. Boundary length labels (if enabled)
+        if (renderer.showBoundaryLengths && sim.segments && sim.segments.length > 0) {
+            const baseFontSize = Math.max(13, Math.min(27, scale * 0.4));
+            const fontSize = baseFontSize * renderer.labelSize;
+            const textColor = isDarkMode ? '#ffffff' : '#000000';
+            svg += `<g font-family="Times New Roman, Georgia, serif" font-style="italic" font-size="${fontSize}" fill="${textColor}" text-anchor="middle" dominant-baseline="middle">`;
+
+            // Find outer boundary
+            let outerIdx = 0, maxArea = 0;
+            for (let i = 0; i < sim.boundaries.length; i++) {
+                const b = sim.boundaries[i];
+                let area = 0;
+                for (let j = 0; j < b.length; j++) {
+                    const k = (j + 1) % b.length;
+                    area += b[j].x * b[k].y - b[k].x * b[j].y;
+                }
+                if (Math.abs(area) > maxArea) { maxArea = Math.abs(area); outerIdx = i; }
+            }
+
+            // Helper for point-in-polygon
+            const pointInPolygon = (x, y, polygon) => {
+                if (!polygon || polygon.length < 3) return false;
+                let inside = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                    const xi = polygon[i].x, yi = polygon[i].y;
+                    const xj = polygon[j].x, yj = polygon[j].y;
+                    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+                }
+                return inside;
+            };
+            const isInsideRegion = (x, y) => {
+                let count = 0;
+                for (const boundary of sim.boundaries) if (pointInPolygon(x, y, boundary)) count++;
+                return count % 2 === 1;
+            };
+
+            for (let i = 0; i < sim.segments.length; i++) {
+                const isHole = (i !== outerIdx);
+                if (isHole && !renderer.showHoleLengths) continue;
+                for (const seg of sim.segments[i]) {
+                    let testX = seg.x + seg.nx * 0.8;
+                    let testY = seg.y + seg.ny * 0.8;
+                    let flip = isInsideRegion(testX, testY) ? -1 : 1;
+                    let nx, ny;
+                    if (renderer.rotated) { nx = seg.ny * flip; ny = seg.nx * flip; }
+                    else { nx = seg.nx * flip; ny = -seg.ny * flip; }
+                    const [cx, cy] = renderer.toCanvas(seg.x, seg.y, centerX, centerY, scale);
+                    const canvasOffset = fontSize * renderer.labelOffset;
+                    const labelX = cx + nx * canvasOffset;
+                    const labelY = cy + ny * canvasOffset;
+                    svg += `<text x="${labelX}" y="${labelY}">${seg.len}</text>`;
+                }
+            }
+            svg += '</g>';
+        }
+
+        // 7. Periodic weights (if enabled and not too many)
+        if (renderer.usePeriodicWeights && activeTriangles && !renderer.showDimerView) {
+            const vertices = new Map();
+            for (const [key, tri] of activeTriangles) {
+                const addVertex = (n, j) => { const vkey = `${n},${j}`; if (!vertices.has(vkey)) vertices.set(vkey, { n, j }); };
+                if (tri.type === 1) { addVertex(tri.n, tri.j); addVertex(tri.n, tri.j - 1); addVertex(tri.n + 1, tri.j - 1); }
+                else { addVertex(tri.n, tri.j); addVertex(tri.n + 1, tri.j); addVertex(tri.n + 1, tri.j - 1); }
+            }
+
+            if (vertices.size <= 100) {
+                const fontSize = Math.max(12, Math.min(24, scale * 0.7));
+                const textColor = isDarkMode ? '#ffffff' : '#000000';
+                svg += `<g font-family="sans-serif" font-size="${fontSize}" fill="${textColor}" text-anchor="middle" dominant-baseline="middle">`;
+                for (const [vkey, v] of vertices) {
+                    const k = renderer.periodicK;
+                    const ni = ((v.n % k) + k) % k;
+                    const ji = ((v.j % k) + k) % k;
+                    const q = renderer.periodicQ[ni][ji];
+                    const worldX = v.n;
+                    const worldY = v.n / Math.sqrt(3) + v.j * 2 / Math.sqrt(3);
+                    const [cx, cy] = renderer.toCanvas(worldX, worldY, centerX, centerY, scale);
+                    svg += `<text x="${cx}" y="${cy}">${q}</text>`;
+                }
+                svg += '</g>';
+            }
+        }
+
+        svg += '</svg>';
+        return svg;
+    }
+
     function createExportCanvas() {
         const baseWidth = 900, baseHeight = 600, scale = getExportScale();
         const exportCanvas = document.createElement('canvas');
@@ -6078,25 +6335,39 @@ function initLozengeApp() {
     });
 
     document.getElementById('export-pdf').addEventListener('click', () => {
-        if (!window.jspdf) {
+        // Load jspdf and svg2pdf.js if needed
+        const loadScript = (src) => new Promise((resolve) => {
             const s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            s.onload = exportPDF;
+            s.src = src;
+            s.onload = resolve;
             document.head.appendChild(s);
-        } else {
-            exportPDF();
+        });
+
+        async function ensureLibraries() {
+            if (!window.jspdf) {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+            }
+            if (!window.svg2pdf) {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/svg2pdf.js/2.2.3/svg2pdf.umd.min.js');
+            }
         }
 
-        function exportPDF() {
-            const exportCanvas = createExportCanvas();
-            const imgData = exportCanvas.toDataURL('image/png');
+        ensureLibraries().then(exportPDF);
+
+        async function exportPDF() {
+            const svgString = createExportSVG();
+            const parser = new DOMParser();
+            const svgElement = parser.parseFromString(svgString, 'image/svg+xml').documentElement;
+
+            const width = 900, height = 600;
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({
-                orientation: exportCanvas.width > exportCanvas.height ? 'landscape' : 'portrait',
+                orientation: 'landscape',
                 unit: 'px',
-                format: [exportCanvas.width, exportCanvas.height]
+                format: [width, height]
             });
-            pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
+
+            await svg2pdf(svgElement, pdf, { x: 0, y: 0, width, height });
             const blob = pdf.output('blob');
             downloadFile(blob, generateExportFilename('pdf'));
         }
