@@ -462,6 +462,11 @@ vector<vector<int>> extractDiagonalSubsets(const vector<vector<int>>& grid, int 
         }
     }
 
+    // Reverse so that slice 0 is empty (lambda^0) and slice 2n is full (lambda^n)
+    // Even slices: lambda^0, lambda^1, ..., lambda^n
+    // Odd slices: mu^1, mu^2, ..., mu^n
+    reverse(subsets.begin(), subsets.end());
+
     return subsets;
 }
 

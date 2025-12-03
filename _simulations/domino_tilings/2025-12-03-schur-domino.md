@@ -80,13 +80,8 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
   </div>
 </div>
 
-<div style="margin-top: 15px; margin-bottom: 10px;">
-  <input type="checkbox" id="show-diagonals" checked style="margin-right: 5px;">
-  <label for="show-diagonals">Show NE diagonal slice lines</label>
-</div>
-
 <div style="margin-top: 15px;">
-  <label for="subsets-output" style="font-weight: bold;">Diagonal Subsets (NE slices, yellow = in subset, blue = not in subset):</label>
+  <label for="subsets-output" style="font-weight: bold;">Schur Process Partitions:</label>
   <pre id="subsets-output" style="width: 100%; font-family: monospace; font-size: 12px; margin-top: 5px; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; white-space: pre-wrap;"></pre>
 </div>
 
@@ -314,6 +309,56 @@ Module.onRuntimeInitialized = async function() {
   let currentSubsets = [];
   let currentN = 4;
 
+  // Convert subset S ⊂ {1,...,m} to partition via Maya diagram
+  // λ_i = s_i - i where s_1 < s_2 < ... < s_k are elements of S
+  function subsetToPartition(subset, m) {
+    if (!subset || subset.length === 0) return [];
+    const sorted = [...subset].sort((a, b) => a - b);
+    const parts = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const part = sorted[i] - (i + 1);  // s_{i+1} - (i+1), 0-indexed
+      if (part > 0) parts.push(part);
+    }
+    // Parts are already in increasing order, reverse for standard notation
+    return parts.reverse();
+  }
+
+  // Format partition as string
+  function partitionToString(lambda) {
+    if (!lambda || lambda.length === 0) return "∅";
+    return "(" + lambda.join(",") + ")";
+  }
+
+  // Check if μ/λ is a horizontal strip (at most one box per column)
+  // Equivalently: μ_i ≥ λ_i ≥ μ_{i+1} for all i
+  function isHorizontalStrip(mu, lambda) {
+    const maxLen = Math.max(mu.length, lambda.length) + 1;
+    for (let i = 0; i < maxLen; i++) {
+      const mu_i = i < mu.length ? mu[i] : 0;
+      const mu_ip1 = (i + 1) < mu.length ? mu[i + 1] : 0;
+      const lambda_i = i < lambda.length ? lambda[i] : 0;
+      if (!(mu_i >= lambda_i && lambda_i >= mu_ip1)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Check if λ/μ is a vertical strip (at most one box per row)
+  // Equivalently: λ_i - μ_i ∈ {0, 1} for all i
+  function isVerticalStrip(lambda, mu) {
+    const maxLen = Math.max(lambda.length, mu.length);
+    for (let i = 0; i < maxLen; i++) {
+      const lambda_i = i < lambda.length ? lambda[i] : 0;
+      const mu_i = i < mu.length ? mu[i] : 0;
+      const diff = lambda_i - mu_i;
+      if (diff < 0 || diff > 1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function displaySubsets(subsets, n) {
     currentSubsets = subsets;
     currentN = n;
@@ -326,77 +371,77 @@ Module.onRuntimeInitialized = async function() {
       return;
     }
 
-    // Format subsets as a list, from first (should be full) to last (should be empty)
-    const lines = [];
+    // Superscript helper
+    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    function toSuperscript(num) {
+      if (num < 10) return superscripts[num];
+      return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
+    }
 
+    // Convert all subsets to partitions
+    const partitions = [];
+    for (let i = 0; i < subsets.length; i++) {
+      // Determine slice size (number of elements on this diagonal)
+      const m = subsets[i].length > 0 ? Math.max(...subsets[i]) : (i < subsets.length - 1 && subsets[i+1].length > 0 ? Math.max(...subsets[i+1]) : n);
+      partitions.push(subsetToPartition(subsets[i], m));
+    }
+
+    // Display partitions with λ/μ notation
+    const lines = [];
     for (let i = 0; i < subsets.length; i++) {
       const subset = subsets[i];
-      const setStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
-      lines.push(`Slice ${i}: ${setStr}`);
+      const partition = partitions[i];
+      const partStr = partitionToString(partition);
+      const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+      let label;
+      if (i % 2 === 0) {
+        label = "λ" + toSuperscript(i / 2);
+      } else {
+        label = "μ" + toSuperscript((i + 1) / 2);
+      }
+      lines.push(`${label} = ${partStr}  (subset: ${subsetStr})`);
+    }
+
+    // Check interlacing conditions
+    // Pattern: λ^(i-1) ⊂ μ^i ⊃ λ^i
+    // μ^i / λ^(i-1) is horizontal strip (μ contains λ^(i-1))
+    // μ^i / λ^i is vertical strip (μ contains λ^i)
+    lines.push("");
+    lines.push("Interlacing checks:");
+    let allValid = true;
+
+    for (let i = 1; i < partitions.length; i++) {
+      if (i % 2 === 1) {
+        // Odd slice: μ^k where k = (i+1)/2
+        // Check μ^k / λ^(k-1) is horizontal strip
+        const k = (i + 1) / 2;
+        const mu_k = partitions[i];
+        const lambda_km1 = partitions[i - 1];
+        const isHS = isHorizontalStrip(mu_k, lambda_km1);
+        const status = isHS ? "✓" : "✗";
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horizontal strip: ${status}`);
+      } else {
+        // Even slice: λ^k where k = i/2
+        // Check μ^k / λ^k is vertical strip (μ^k is previous slice)
+        const k = i / 2;
+        const lambda_k = partitions[i];
+        const mu_k = partitions[i - 1];
+        const isVS = isVerticalStrip(mu_k, lambda_k);  // μ/λ not λ/μ
+        const status = isVS ? "✓" : "✗";
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} vertical strip: ${status}`);
+      }
+    }
+
+    if (allValid) {
+      lines.push("All interlacing conditions satisfied ✓");
+    } else {
+      lines.push("WARNING: Some interlacing conditions failed ✗");
     }
 
     subsetsOutput.textContent = lines.join("\n");
   }
-
-  function drawDiagonalLines() {
-    const showDiag = document.getElementById("show-diagonals");
-    if (!showDiag || !showDiag.checked) {
-      svg.selectAll("line.diagonal").remove();
-      return;
-    }
-
-    // Get bounding box of current dominoes
-    if (currentDominoes.length === 0) return;
-
-    const minX = d3.min(currentDominoes, d => d.x);
-    const minY = d3.min(currentDominoes, d => d.y);
-    const maxX = d3.max(currentDominoes, d => d.x + d.w);
-    const maxY = d3.max(currentDominoes, d => d.y + d.h);
-
-    const group = svg.select("g.dominoes");
-    if (group.empty()) return;
-
-    // Remove old diagonal lines
-    group.selectAll("line.diagonal").remove();
-
-    // NE diagonals have constant (x + y) in display coords (since y increases downward in SVG)
-    // A NE line goes from bottom-left to top-right: x + y = constant
-    const scale = 10;
-    // Orthogonal distance between slices = diagonal of 1x1 square = scale * sqrt(2)
-    // For NE lines, orthogonal dist = step / sqrt(2), so step = 2 * scale
-    const step = 2 * scale;
-
-    // Draw diagonal lines from SW to NE (x + y = constant)
-    // Lines at x+y = 20, 40, 60... pass through centers of 20x20 squares
-    const diagonals = [];
-    for (let d = minX + minY; d <= maxX + maxY; d += step) {
-      // NE line: x + y = d
-      // So x = d - y
-      // Line goes from (minX, d - minX) to (maxX, d - maxX)
-      const x1 = minX - 2 * step;
-      const y1 = d - x1;
-      const x2 = maxX + 2 * step;
-      const y2 = d - x2;
-      diagonals.push({x1, y1, x2, y2});
-    }
-
-    group.selectAll("line.diagonal")
-      .data(diagonals)
-      .enter()
-      .append("line")
-      .attr("class", "diagonal")
-      .attr("x1", d => d.x1)
-      .attr("y1", d => d.y1)
-      .attr("x2", d => d.x2)
-      .attr("y2", d => d.y2)
-      .attr("stroke", "#888")
-      .attr("stroke-width", 0.3)
-      .attr("stroke-dasharray", "2,2")
-      .attr("opacity", 0.7);
-  }
-
-  // Event handler for diagonal display
-  document.getElementById("show-diagonals").addEventListener("change", drawDiagonalLines);
 
   async function updateVisualization(newN) {
     n = newN;
@@ -466,7 +511,6 @@ Module.onRuntimeInitialized = async function() {
 
       if (!signal.aborted) {
         renderDominoes(currentDominoes);
-        drawDiagonalLines();  // Draw diagonal lines if checkbox is checked
       }
 
       if (!signal.aborted) {
