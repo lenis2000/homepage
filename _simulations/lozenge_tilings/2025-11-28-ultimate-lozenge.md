@@ -5952,22 +5952,27 @@ function initLozengeApp() {
     }
 
     // Cross-platform file download (iOS doesn't support link.click() downloads)
-    function downloadFile(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        if (isIOS()) {
-            // iOS: open in new tab, user can use Share Sheet to save
-            const newTab = window.open(url, '_blank');
-            if (!newTab) {
-                alert('Popup blocked. Please allow popups for this site to download files.');
+    async function downloadFile(blob, filename) {
+        if (isIOS() && navigator.share && navigator.canShare) {
+            // iOS: use Web Share API for native Share Sheet
+            const file = new File([blob], filename, { type: blob.type });
+            if (navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({ files: [file] });
+                    return;
+                } catch (e) {
+                    if (e.name !== 'AbortError') console.error('Share failed:', e);
+                    return;
+                }
             }
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
-        } else {
-            const link = document.createElement('a');
-            link.download = filename;
-            link.href = url;
-            link.click();
-            URL.revokeObjectURL(url);
         }
+        // Desktop / fallback: standard download
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
     }
 
     function getExportScale() {
