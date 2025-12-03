@@ -650,6 +650,10 @@ Cmd-click: complete lasso</div>
       <input type="color" id="customColor3" value="#F9DCBF" title="Color 3" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 12px; color: #555;">Holes:</span>
+      <input type="color" id="holeColorPicker" value="#FFFFFF" title="Hole color" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Outline:</span>
       <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;">
       <span style="font-size: 11px; color: #888;">%</span>
@@ -1816,6 +1820,7 @@ function initLozengeApp() {
             this.colorPermutation = 0;
             this.useCustomColors = false;
             this.customColors = ['#E57200', '#232D4B', '#F9DCBF'];
+            this.holeColor = '#FFFFFF';
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
             this.gridSize = 100;
             // Pan and zoom state
@@ -2007,6 +2012,11 @@ function initLozengeApp() {
                 }
                 // Draw nonintersecting paths overlay
                 this.drawPaths(ctx, sim, centerX, centerY, scale);
+            }
+
+            // Fill holes with hole color
+            if (isValid && sim.boundaries && sim.boundaries.length > 1) {
+                this.drawHoleFills(ctx, sim.boundaries, centerX, centerY, scale);
             }
 
             // Draw all boundaries (outer + holes + disconnected)
@@ -2361,6 +2371,45 @@ function initLozengeApp() {
             ctx.stroke();
         }
 
+        // Fill holes with hole color
+        drawHoleFills(ctx, boundaries, centerX, centerY, scale) {
+            if (!boundaries || boundaries.length <= 1) return;
+
+            // Find outer boundary index (largest absolute area)
+            let outerIdx = 0;
+            let maxArea = 0;
+            for (let i = 0; i < boundaries.length; i++) {
+                const b = boundaries[i];
+                let area = 0;
+                for (let j = 0; j < b.length; j++) {
+                    const k = (j + 1) % b.length;
+                    area += b[j].x * b[k].y - b[k].x * b[j].y;
+                }
+                if (Math.abs(area) > maxArea) {
+                    maxArea = Math.abs(area);
+                    outerIdx = i;
+                }
+            }
+
+            // Fill all boundaries except the outer one (those are holes)
+            ctx.fillStyle = this.holeColor;
+            for (let i = 0; i < boundaries.length; i++) {
+                if (i === outerIdx) continue; // Skip outer boundary
+                const boundary = boundaries[i];
+                if (boundary.length < 3) continue;
+
+                ctx.beginPath();
+                const [sx, sy] = this.toCanvas(boundary[0].x, boundary[0].y, centerX, centerY, scale);
+                ctx.moveTo(sx, sy);
+                for (let j = 1; j < boundary.length; j++) {
+                    const [px, py] = this.toCanvas(boundary[j].x, boundary[j].y, centerX, centerY, scale);
+                    ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
         // Draw pre-computed boundary segment lengths
         drawBoundaryLengths(ctx, segments, centerX, centerY, scale, isDarkMode, boundaries) {
             if (!segments || segments.length === 0) return;
@@ -2513,6 +2562,7 @@ function initLozengeApp() {
             this.colorPermutation = 0;
             this.useCustomColors = false;
             this.customColors = ['#E57200', '#232D4B', '#F9DCBF'];
+            this.holeColor = '#FFFFFF';
             this.autoRotate = false;
             this.cameraInitialized = false;
 
@@ -4716,6 +4766,22 @@ function initLozengeApp() {
         });
     });
 
+    // Hole color picker
+    const holeColorPicker = document.getElementById('holeColorPicker');
+    holeColorPicker.addEventListener('input', (e) => {
+        renderer.holeColor = e.target.value;
+        if (renderer3D) {
+            renderer3D.holeColor = e.target.value;
+        }
+        draw();
+    });
+    holeColorPicker.addEventListener('click', (e) => {
+        e.target.focus();
+        if (e.target.showPicker) {
+            try { e.target.showPicker(); } catch (err) {}
+        }
+    });
+
     // Palette
     el.paletteSelect.addEventListener('change', (e) => {
         renderer.setPalette(parseInt(e.target.value));
@@ -5835,6 +5901,11 @@ function initLozengeApp() {
             renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true, true);
         }
 
+        // Fill holes with hole color
+        if (sim.boundaries && sim.boundaries.length > 1) {
+            renderer.drawHoleFills(ctx, sim.boundaries, centerX, centerY, scale);
+        }
+
         // Draw all boundaries (outer + holes + disconnected)
         if (sim.boundaries && sim.boundaries.length > 0) {
             for (const boundary of sim.boundaries) {
@@ -6389,6 +6460,11 @@ function initLozengeApp() {
             const isSmallPolygon = !sim.blackTriangles || sim.blackTriangles.length <= 1000;
             if (isSmallPolygon) {
                 renderer.drawActiveTriangles(exportCtx, activeTriangles, centerX, centerY, viewScale, true, true);
+            }
+
+            // Fill holes with hole color
+            if (sim.boundaries && sim.boundaries.length > 1) {
+                renderer.drawHoleFills(exportCtx, sim.boundaries, centerX, centerY, viewScale);
             }
 
             if (sim.boundaries && sim.boundaries.length > 0) {
