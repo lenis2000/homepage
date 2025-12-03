@@ -4656,7 +4656,7 @@ function initLozengeApp() {
     // Shape of the Month button
     el.shapeOfMonthBtn.addEventListener('click', async () => {
         saveState();
-        activeTriangles = await loadLetterTriangles('shape');
+        activeTriangles = await loadLetterTriangles('SHAPE');
         if (activeTriangles.size === 0) {
             console.warn('Shape of the month not found');
         }
