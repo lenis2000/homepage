@@ -6332,7 +6332,35 @@ function initLozengeApp() {
             }
         }
 
-        // 5. Boundaries
+        // 5. Hole fills
+        if (sim.boundaries && sim.boundaries.length > 1) {
+            // Find outer boundary index (largest absolute area)
+            let outerIdx = 0;
+            let maxArea = 0;
+            for (let i = 0; i < sim.boundaries.length; i++) {
+                const b = sim.boundaries[i];
+                let area = 0;
+                for (let j = 0; j < b.length; j++) {
+                    const k = (j + 1) % b.length;
+                    area += b[j].x * b[k].y - b[k].x * b[j].y;
+                }
+                if (Math.abs(area) > maxArea) {
+                    maxArea = Math.abs(area);
+                    outerIdx = i;
+                }
+            }
+            // Fill all boundaries except the outer one (those are holes)
+            for (let i = 0; i < sim.boundaries.length; i++) {
+                if (i === outerIdx) continue;
+                const boundary = sim.boundaries[i];
+                if (boundary.length < 3) continue;
+                const pts = boundary.map(p => renderer.toCanvas(p.x, p.y, centerX, centerY, scale));
+                const d = `M ${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map(p => `L ${p[0]},${p[1]}`).join(' ') + ' Z';
+                svg += `<path d="${d}" fill="${renderer.holeColor}" stroke="none"/>`;
+            }
+        }
+
+        // 6. Boundaries
         if (sim.boundaries && sim.boundaries.length > 0) {
             const borderWidth = Math.max(0.5, renderer.borderWidthPct * scale * 0.1);
             const borderColor = isDarkMode ? '#cccccc' : '#000000';
