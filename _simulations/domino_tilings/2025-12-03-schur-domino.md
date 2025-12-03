@@ -287,7 +287,7 @@ Module.onRuntimeInitialized = async function() {
     const svgHeight = bbox.height;
     svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
 
-    const scaleView = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.9;
+    const scaleView = Math.min(svgWidth / widthDominoes, svgHeight / heightDominoes) * 0.45;
     const translateX = (svgWidth - widthDominoes * scaleView) / 2 - minX * scaleView;
     const translateY = (svgHeight - heightDominoes * scaleView) / 2 - minY * scaleView;
 
@@ -334,10 +334,10 @@ Module.onRuntimeInitialized = async function() {
       const halfLen = Math.max(widthDominoes, heightDominoes) * 0.7;
 
       // Offset perpendicular to line: SE is (+1, +1), NW is (-1, -1)
-      const x1 = cx + offset - halfLen;  // SW end
-      const y1 = cy + offset + halfLen;
-      const x2 = cx + offset + halfLen;  // NE end
-      const y2 = cy + offset - halfLen;
+      const x1 = cx + offset - halfLen/2;  // SW end
+      const y1 = cy + offset + halfLen/2;
+      const x2 = cx + offset + halfLen/2;  // NE end
+      const y2 = cy + offset - halfLen/2;
 
       group.append("line")
         .attr("x1", x1)
@@ -347,11 +347,25 @@ Module.onRuntimeInitialized = async function() {
         .attr("stroke", "#cc0000")
         .attr("stroke-width", 1);
 
-      // Label: λ or μ for each line
+      // Add dashed tick mark at coordinate 0 (center of diagonal)
+      const x0 = cx + offset-halfLen/2;
+      const y0 = cy + offset+halfLen/2;
+      const tickLen = 8;  // perpendicular tick length
+      // Perpendicular to SW-NE diagonal (1,-1) is direction (1,1)
+      group.append("line")
+        .attr("x1", x0 - tickLen * 0.5)
+        .attr("y1", y0 - tickLen * 0.5)
+        .attr("x2", x0 + tickLen * 0.5)
+        .attr("y2", y0 + tickLen * 0.5)
+        .attr("stroke", "#000")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "3,2");
+
+      // Label: λ or μ for each line (moved 0.25 up and 0.25 left)
       const label = (i % 2 === 0) ? "λ" + (i / 2) : "μ" + Math.floor((i + 1) / 2);
       group.append("text")
-        .attr("x", x1 - 5)
-        .attr("y", y1)
+        .attr("x", x1 - 2.5)
+        .attr("y", y1 + 7.5)
         .attr("text-anchor", "end")
         .attr("font-size", "10px")
         .attr("fill", "#000")
@@ -476,6 +490,23 @@ Module.onRuntimeInitialized = async function() {
         .attr("y2", y2)
         .attr("stroke", "#cc0000")
         .attr("stroke-width", 2);
+
+      // Add dashed mark at coordinate 0 (perpendicular tick)
+      // Position for elem = 0 on this diagonal
+      const alongZero = 0 - (sliceSize + 1) / 2;
+      const x0 = (k + alongZero) * scale;
+      const y0 = (-k + alongZero) * scale;
+
+      // Perpendicular to diagonal (1,1) is direction (1,-1)
+      const tickLen = scale * 1.2;
+      group.append("line")
+        .attr("x1", x0 - tickLen * 0.5)
+        .attr("y1", y0 + tickLen * 0.5)
+        .attr("x2", x0 + tickLen * 0.5)
+        .attr("y2", y0 - tickLen * 0.5)
+        .attr("stroke", "#000")
+        .attr("stroke-width", 4)
+        .attr("stroke-dasharray", "6,4");
     }
 
     // Map particles to grid positions and draw
@@ -508,8 +539,8 @@ Module.onRuntimeInitialized = async function() {
         const swPoint = slicePoints.reduce((a, b) => a.y > b.y ? a : b);
         const label = (s % 2 === 0) ? "λ" + (s / 2) : "μ" + Math.ceil(s / 2);
         group.append("text")
-          .attr("x", swPoint.x - scale * 0.5)
-          .attr("y", swPoint.y + scale * 0.3)
+          .attr("x", swPoint.x)
+          .attr("y", swPoint.y + scale * 0.8)
           .attr("text-anchor", "end")
           .attr("dominant-baseline", "middle")
           .attr("font-size", "10px")
