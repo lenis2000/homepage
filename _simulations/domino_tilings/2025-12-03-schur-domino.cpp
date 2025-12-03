@@ -354,29 +354,25 @@ string partitionsToTilingJSON(const vector<Partition>& partitions, int n) {
 /*
  * Extract diagonal subsets from the grid
  * For Aztec diamond of order n, we get 2n+1 slices
- * Even slices: subsets of {1,...,n}
- * Odd slices: subsets of {1,...,n+1}
- * Slices go from left (full set) to right (empty set)
  *
- * Yellow squares indicate element is IN the subset
- * Blue squares indicate element is NOT in the subset
+ * Each domino has 2 balls, one in each 1x1 square:
+ * - Yellow domino → 2 yellow balls (both IN subset)
+ * - Blue domino → 2 blue balls (both NOT in subset)
+ *
+ * Diagonal slices (NE direction) pass through balls.
+ * Element index = position along the diagonal (sorted by cx).
  */
 vector<vector<int>> extractDiagonalSubsets(const vector<vector<int>>& grid, int n) {
     int finalSize = 2 * n + 2;
     double scale = 10.0;
-    double step = 2 * scale;  // 20, matching the JS diagonal spacing
 
-    // For each 1x1 square, compute its center (cx, cy) and cx+cy for slice grouping
-    // Also determine if it's yellow (in subset) or blue (not in subset)
-    // Element index is based on position along the diagonal
-
-    // Collect all 1x1 squares with their properties
-    struct Square {
-        double cx_plus_cy;  // Center x + y for slice grouping
-        double cy;          // Center y for element indexing
-        bool isYellow;      // True if yellow (West), false if blue (North)
+    // Each domino gets TWO balls, one per 1x1 square
+    struct Ball {
+        double cx;          // Center x of the square
+        double cy;          // Center y of the square
+        bool isYellow;      // Yellow = in subset, Blue = not in subset
     };
-    vector<Square> squares;
+    vector<Ball> balls;
 
     for (int i = 0; i < finalSize; i++) {
         for (int j = 0; j < finalSize; j++) {
@@ -384,81 +380,85 @@ vector<vector<int>> extractDiagonalSubsets(const vector<vector<int>>& grid, int 
                 bool oddI = (i & 1), oddJ = (j & 1);
 
                 if (oddI && !oddJ) {
-                    // Yellow (vertical domino) - has 2 squares stacked vertically
+                    // Yellow (West, vertical domino, w=2, h=4) - 2 squares stacked
                     double xc = (j - i - 1) * scale;
                     double yc = (finalSize + 1 - (i + j) - 2) * scale;
-                    // Top square center
-                    double cx1 = xc + scale;  // center x = corner + half width (w=2 -> 20, half=10)
-                    double cy1 = yc + scale;  // center y = corner + half of one square height
-                    squares.push_back({cx1 + cy1, cy1, true});
-                    // Bottom square center
-                    double cy2 = yc + 3 * scale;  // center of bottom square
-                    squares.push_back({cx1 + cy2, cy2, true});
+                    balls.push_back({xc + scale, yc + scale, true});
+                    balls.push_back({xc + scale, yc + 3 * scale, true});
                 } else if (oddI && oddJ) {
-                    // Blue (horizontal domino) - has 2 squares side by side
+                    // Blue (North, horizontal domino, w=4, h=2) - 2 squares side by side
                     double xc = (j - i - 2) * scale;
                     double yc = (finalSize + 1 - (i + j) - 1) * scale;
-                    // Left square center
-                    double cx1 = xc + scale;
-                    double cy1 = yc + scale;
-                    squares.push_back({cx1 + cy1, cy1, false});
-                    // Right square center
-                    double cx2 = xc + 3 * scale;
-                    squares.push_back({cx2 + cy1, cy1, false});
+                    balls.push_back({xc + scale, yc + scale, true});
+                    balls.push_back({xc + 3 * scale, yc + scale, true});
+                } else if (!oddI && !oddJ) {
+                    // Green (South, horizontal domino, w=4, h=2) - 2 squares side by side
+                    double xc = (j - i - 2) * scale;
+                    double yc = (finalSize + 1 - (i + j) - 1) * scale;
+                    balls.push_back({xc + scale, yc + scale, false});
+                    balls.push_back({xc + 3 * scale, yc + scale, false});
+                } else {
+                    // Red (East, vertical domino, w=2, h=4) - 2 squares stacked
+                    double xc = (j - i - 1) * scale;
+                    double yc = (finalSize + 1 - (i + j) - 2) * scale;
+                    balls.push_back({xc + scale, yc + scale, false});
+                    balls.push_back({xc + scale, yc + 3 * scale, false});
                 }
-                // Ignore green and red (they're on the "output" side)
             }
         }
     }
 
-    if (squares.empty()) {
+    if (balls.empty()) {
         vector<vector<int>> result(2*n + 1);
         return result;
     }
 
-    // Find range of cx+cy values
-    double minSum = 1e9, maxSum = -1e9;
-    double minCy = 1e9, maxCy = -1e9;
-    for (auto& sq : squares) {
-        minSum = min(minSum, sq.cx_plus_cy);
-        maxSum = max(maxSum, sq.cx_plus_cy);
-        minCy = min(minCy, sq.cy);
-        maxCy = max(maxCy, sq.cy);
+    // Group balls by distinct cx+cy values (with small tolerance for floating point)
+    map<int, vector<Ball>> ballsBySum;  // key = rounded cx+cy
+    for (auto& b : balls) {
+        int sumKey = (int)round(b.cx + b.cy);
+        ballsBySum[sumKey].push_back(b);
     }
 
-    // Determine number of slices and element range
-    int numSlices = 2 * n + 1;
+    // Get sorted list of distinct cx+cy values
+    vector<int> distinctSums;
+    for (auto& kv : ballsBySum) {
+        distinctSums.push_back(kv.first);
+    }
+    sort(distinctSums.begin(), distinctSums.end());
 
-    // Group squares by slice (based on cx+cy)
-    // Slice index = round((cx_plus_cy - minSum) / step)
-    map<int, vector<Square>> squaresBySlice;
-    for (auto& sq : squares) {
-        int sliceIdx = (int)round((sq.cx_plus_cy - minSum) / step);
-        squaresBySlice[sliceIdx].push_back(sq);
+    // Map each distinct sum to a slice index
+    int numSlices = (int)distinctSums.size();
+    map<int, int> sumToSlice;
+    for (int i = 0; i < numSlices; i++) {
+        sumToSlice[distinctSums[i]] = i;
+    }
+
+    // Group balls by slice
+    map<int, vector<Ball>> ballsBySlice;
+    for (auto& b : balls) {
+        int sumKey = (int)round(b.cx + b.cy);
+        int sliceIdx = sumToSlice[sumKey];
+        ballsBySlice[sliceIdx].push_back(b);
     }
 
     // Build subsets for each slice
     vector<vector<int>> subsets(numSlices);
 
     for (int s = 0; s < numSlices; s++) {
-        // Even slices: universe {1,...,n}
-        // Odd slices: universe {1,...,n+1}
-        int universeSize = (s % 2 == 0) ? n : n + 1;
+        if (!ballsBySlice.count(s)) continue;
 
-        if (squaresBySlice.count(s)) {
-            for (auto& sq : squaresBySlice[s]) {
-                if (sq.isYellow) {
-                    // Map cy to element index
-                    // Higher cy (lower on screen) = higher element number
-                    int elem = (int)round((maxCy - sq.cy) / (2 * scale)) + 1;
-                    if (elem >= 1 && elem <= universeSize) {
-                        subsets[s].push_back(elem);
-                    }
-                }
+        auto& sliceBalls = ballsBySlice[s];
+
+        // Sort by cx (position along diagonal)
+        sort(sliceBalls.begin(), sliceBalls.end(),
+             [](const Ball& a, const Ball& b) { return a.cx < b.cx; });
+
+        // Element index = position in sorted order (1-indexed)
+        for (int i = 0; i < (int)sliceBalls.size(); i++) {
+            if (sliceBalls[i].isYellow) {
+                subsets[s].push_back(i + 1);
             }
-            sort(subsets[s].begin(), subsets[s].end());
-            // Remove duplicates
-            subsets[s].erase(unique(subsets[s].begin(), subsets[s].end()), subsets[s].end());
         }
     }
 

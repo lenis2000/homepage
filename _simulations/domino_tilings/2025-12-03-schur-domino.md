@@ -332,8 +332,7 @@ Module.onRuntimeInitialized = async function() {
     for (let i = 0; i < subsets.length; i++) {
       const subset = subsets[i];
       const setStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
-      const universe = (i % 2 === 0) ? `{1,...,${n}}` : `{1,...,${n+1}}`;
-      lines.push(`Slice ${i} ⊂ ${universe}: ${setStr}`);
+      lines.push(`Slice ${i}: ${setStr}`);
     }
 
     subsetsOutput.textContent = lines.join("\n");
