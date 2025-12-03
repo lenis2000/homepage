@@ -5945,6 +5945,33 @@ function initLozengeApp() {
         document.getElementById('export-quality-val').textContent = e.target.value;
     });
 
+    // iOS Safari detection for download workaround
+    function isIOSSafari() {
+        const ua = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
+        return isIOS && isSafari;
+    }
+
+    // Cross-platform file download (iOS Safari doesn't support link.click() downloads)
+    function downloadFile(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        if (isIOSSafari()) {
+            // iOS Safari: open in new tab, user can use Share Sheet to save
+            const newTab = window.open(url, '_blank');
+            if (!newTab) {
+                window.location.href = url;
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } else {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    }
+
     function getExportScale() {
         return 1 + (parseInt(document.getElementById('export-quality').value) / 100) * 3;
     }
@@ -6043,12 +6070,7 @@ function initLozengeApp() {
 
     document.getElementById('export-png').addEventListener('click', () => {
         createExportCanvas().toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.download = generateExportFilename('png');
-            link.href = url;
-            link.click();
-            URL.revokeObjectURL(url);
+            downloadFile(blob, generateExportFilename('png'));
         }, 'image/png');
     });
 
@@ -6072,7 +6094,8 @@ function initLozengeApp() {
                 format: [exportCanvas.width, exportCanvas.height]
             });
             pdf.addImage(imgData, 'PNG', 0, 0, exportCanvas.width, exportCanvas.height);
-            pdf.save(generateExportFilename('pdf'));
+            const blob = pdf.output('blob');
+            downloadFile(blob, generateExportFilename('pdf'));
         }
     });
 
@@ -6088,12 +6111,7 @@ function initLozengeApp() {
         };
         const json = JSON.stringify(data, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = generateExportFilename('json', 'shape');
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadFile(blob, generateExportFilename('json', 'shape'));
     });
 
     // Height CSV coordinate info - toggle visibility
@@ -6127,12 +6145,7 @@ function initLozengeApp() {
 
         // Download
         const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = generateExportFilename('csv', 'height');
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadFile(blob, generateExportFilename('csv', 'height'));
     });
 
     // Height Mathematica Export - copy height function to clipboard in Mathematica format
