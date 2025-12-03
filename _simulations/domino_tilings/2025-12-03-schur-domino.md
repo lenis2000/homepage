@@ -49,7 +49,8 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
   <input id="n-input" type="number" value="4" min="2" step="2" max="400" size="3">
-  <button id="update-btn">Sample</button>
+  <button id="update-btn">Sample (Shuffling)</button>
+  <button id="growth-btn">Sample (Growth Diagram)</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
@@ -95,6 +96,7 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 <script>
 Module.onRuntimeInitialized = async function() {
   const simulateSchur = Module.cwrap('simulateSchur', 'number', ['number', 'string', 'string'], {async: true});
+  const simulateSchurGrowth = Module.cwrap('simulateSchurGrowth', 'number', ['number', 'string', 'string'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
@@ -156,6 +158,7 @@ Module.onRuntimeInitialized = async function() {
   function startSimulation() {
     simulationActive = true;
     document.getElementById("update-btn").disabled = true;
+    document.getElementById("growth-btn").disabled = true;
     inputField.disabled = true;
     cancelBtn.style.display = 'inline-block';
     simulationAbortController = new AbortController();
@@ -165,6 +168,7 @@ Module.onRuntimeInitialized = async function() {
     simulationActive = false;
     clearInterval(progressInterval);
     document.getElementById("update-btn").disabled = false;
+    document.getElementById("growth-btn").disabled = false;
     inputField.disabled = false;
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
@@ -443,6 +447,81 @@ Module.onRuntimeInitialized = async function() {
     subsetsOutput.textContent = lines.join("\n");
   }
 
+  // Display partitions directly from Growth Diagram output
+  function displayPartitions(partitions, n) {
+    const subsetsOutput = document.getElementById("subsets-output");
+
+    if (!subsetsOutput) return;
+
+    if (!partitions || partitions.length === 0) {
+      subsetsOutput.textContent = "No partition data available.";
+      return;
+    }
+
+    // Superscript helper
+    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    function toSuperscript(num) {
+      if (num < 10) return superscripts[num];
+      return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
+    }
+
+    // Display partitions with λ/μ notation
+    const lines = [];
+    lines.push("Growth Diagram Sampling - Partition Sequence:");
+    lines.push("");
+
+    for (let i = 0; i < partitions.length; i++) {
+      const partition = partitions[i];
+      const partStr = partition.length === 0 ? "∅" : "(" + partition.join(",") + ")";
+      let label;
+      if (i % 2 === 0) {
+        label = "λ" + toSuperscript(i / 2);
+      } else {
+        label = "μ" + toSuperscript((i + 1) / 2);
+      }
+      lines.push(`${label} = ${partStr}`);
+    }
+
+    // Check interlacing conditions
+    lines.push("");
+    lines.push("Interlacing checks:");
+    let allValid = true;
+
+    for (let i = 1; i < partitions.length; i++) {
+      if (i % 2 === 1) {
+        // Odd slice: μ^k where k = (i+1)/2
+        // Check μ^k / λ^(k-1) is horizontal strip
+        const k = (i + 1) / 2;
+        const mu_k = partitions[i];
+        const lambda_km1 = partitions[i - 1];
+        const isHS = isHorizontalStrip(mu_k, lambda_km1);
+        const status = isHS ? "✓" : "✗";
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horizontal strip: ${status}`);
+      } else {
+        // Even slice: λ^k where k = i/2
+        // Check μ^k / λ^k is vertical strip
+        const k = i / 2;
+        const lambda_k = partitions[i];
+        const mu_k = partitions[i - 1];
+        const isVS = isVerticalStrip(mu_k, lambda_k);
+        const status = isVS ? "✓" : "✗";
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} vertical strip: ${status}`);
+      }
+    }
+
+    if (allValid) {
+      lines.push("");
+      lines.push("All interlacing conditions satisfied ✓");
+    } else {
+      lines.push("");
+      lines.push("WARNING: Some interlacing conditions failed ✗");
+    }
+
+    subsetsOutput.textContent = lines.join("\n");
+  }
+
   async function updateVisualization(newN) {
     n = newN;
     if (isProcessing) return;
@@ -527,6 +606,7 @@ Module.onRuntimeInitialized = async function() {
       if (!signal.aborted) {
         simulationActive = false;
         document.getElementById("update-btn").disabled = false;
+        document.getElementById("growth-btn").disabled = false;
         inputField.disabled = false;
         cancelBtn.style.display = 'none';
         isProcessing = false;
@@ -553,6 +633,135 @@ Module.onRuntimeInitialized = async function() {
 
   document.getElementById("update-btn").addEventListener("click", processInput);
   document.getElementById("cancel-btn").addEventListener("click", stopSimulation);
+
+  // Growth Diagram sampling
+  async function updateVisualizationGrowth(newN) {
+    n = newN;
+    if (isProcessing) return;
+
+    isProcessing = true;
+    startSimulation();
+    document.getElementById("growth-btn").disabled = true;
+    const signal = simulationAbortController.signal;
+
+    svg.selectAll("g").remove();
+    const startTime = performance.now();
+    startProgressPolling();
+
+    await sleep(10);
+    if (signal.aborted) {
+      clearInterval(progressInterval);
+      isProcessing = false;
+      document.getElementById("growth-btn").disabled = false;
+      return;
+    }
+
+    try {
+      updateParamsForN(n);
+
+      const xParams = parseCSV(xParamsField.value);
+      const yParams = parseCSV(yParamsField.value);
+      const xJson = JSON.stringify(xParams);
+      const yJson = JSON.stringify(yParams);
+
+      const ptr = await simulateSchurGrowth(n, xJson, yJson);
+
+      if (signal.aborted) {
+        if (ptr) freeString(ptr);
+        clearInterval(progressInterval);
+        isProcessing = false;
+        document.getElementById("growth-btn").disabled = false;
+        return;
+      }
+
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+
+      if (signal.aborted) {
+        clearInterval(progressInterval);
+        isProcessing = false;
+        document.getElementById("growth-btn").disabled = false;
+        return;
+      }
+
+      await sleep(10);
+      if (signal.aborted) {
+        clearInterval(progressInterval);
+        isProcessing = false;
+        document.getElementById("growth-btn").disabled = false;
+        return;
+      }
+
+      try {
+        const result = JSON.parse(jsonStr);
+        currentDominoes = result.dominoes || [];
+        const partitions = result.partitions || [];
+        displayPartitions(partitions, n);
+
+        // If we have dominoes, render them
+        if (currentDominoes.length > 0) {
+          renderDominoes(currentDominoes);
+        } else {
+          // Show message that dominoes not available for this method
+          svg.selectAll("g").remove();
+          const bbox = svg.node().getBoundingClientRect();
+          svg.attr("viewBox", "0 0 " + bbox.width + " " + bbox.height);
+          svg.append("text")
+            .attr("x", bbox.width / 2)
+            .attr("y", bbox.height / 2)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "16px")
+            .attr("fill", "#666")
+            .text("Growth Diagram: Partition sequence shown below (dominoes not rendered)");
+        }
+      } catch (e) {
+        progressElem.innerText = "Error during sampling: " + e.message;
+        clearInterval(progressInterval);
+        isProcessing = false;
+        document.getElementById("growth-btn").disabled = false;
+        return;
+      }
+
+      if (!signal.aborted) {
+        const endTime = performance.now();
+        const elapsed = ((endTime - startTime) / 1000).toFixed(2);
+        progressElem.innerText = "Growth Diagram sampled in " + elapsed + " seconds";
+      }
+    } catch (error) {
+      if (!signal.aborted) {
+        progressElem.innerText = "Error during sampling: " + error.message;
+        clearInterval(progressInterval);
+      }
+    } finally {
+      if (!signal.aborted) {
+        simulationActive = false;
+        document.getElementById("update-btn").disabled = false;
+        document.getElementById("growth-btn").disabled = false;
+        inputField.disabled = false;
+        cancelBtn.style.display = 'none';
+        isProcessing = false;
+      }
+    }
+  }
+
+  function processInputGrowth() {
+    const newN = parseInt(inputField.value, 10);
+    if (isNaN(newN) || newN < 2) {
+      progressElem.innerText = "Please enter a valid positive even number for n (n >= 2).";
+      return;
+    }
+    if (newN % 2 !== 0) {
+      progressElem.innerText = "Please enter an even number for n.";
+      return;
+    }
+    if (newN > 400) {
+      progressElem.innerText = "Please enter a number no greater than 400.";
+      return;
+    }
+    updateVisualizationGrowth(newN);
+  }
+
+  document.getElementById("growth-btn").addEventListener("click", processInputGrowth);
 
   // Initial simulation
   updateVisualization(parseInt(inputField.value, 10));

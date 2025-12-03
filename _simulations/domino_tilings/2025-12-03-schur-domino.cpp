@@ -1,11 +1,11 @@
 /*
 Schur Process Sampling for Aztec Diamond Tilings
-Based on arXiv:1407.3764 - Borodin, Gorin, Rains
+Based on arXiv:1407.3764 - Betea, Boutillier, Bouttier, Chapuy, Corteel, Vuletic
 
 emcc 2025-12-03-schur-domino.cpp -o 2025-12-03-schur-domino.js \
   -s WASM=1 \
   -s ASYNCIFY=1 \
-  -s "EXPORTED_FUNCTIONS=['_simulateSchur','_freeString','_getProgress']" \
+  -s "EXPORTED_FUNCTIONS=['_simulateSchur','_simulateSchurGrowth','_freeString','_getProgress']" \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","stringToUTF8","lengthBytesUTF8"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
@@ -28,6 +28,7 @@ mv 2025-12-03-schur-domino.js ../../js/
 #include <cstdlib>
 #include <cstring>
 #include <map>
+#include <set>
 #include <climits>
 
 using namespace std;
@@ -177,6 +178,205 @@ Partition sampleVH(const Partition& lambda, const Partition& mu,
     }
 
     return nu;
+}
+
+// ============================================================================
+// GROWTH DIAGRAM SAMPLING (from paper arXiv:1407.3764 Section 3)
+// ============================================================================
+
+/*
+ * sampleHV_growth: Exact implementation from paper (lines 505-511)
+ *
+ * def sampleHV(λ, μ, κ, ξ):
+ *     B ~ Bernoulli(ξ/(1+ξ))
+ *     for i = 1 to max(ℓ(λ), ℓ(μ)) + 1:
+ *         if λ_i ≤ μ_i < λ_{i-1}: ν_i = max(λ_i, μ_i) + B
+ *         else: ν_i = max(λ_i, μ_i)
+ *         if μ_{i+1} < λ_i ≤ μ_i: B = min(λ_i, μ_i) - κ_i
+ *     return ν
+ *
+ * Convention: λ_0 = ∞, λ_i = 0 for i > ℓ(λ)
+ */
+Partition sampleHV_growth(const Partition& lambda, const Partition& mu,
+                          const Partition& kappa, double xi) {
+    uniform_real_distribution<double> dist(0.0, 1.0);
+    int B = (dist(rng) < xi / (1.0 + xi)) ? 1 : 0;
+
+    int maxLen = max({(int)lambda.size(), (int)mu.size()}) + 2;
+
+    Partition nu;
+    nu.reserve(maxLen);
+
+    // i is 1-indexed in paper, we use 1-indexed loop
+    for (int i = 1; i <= maxLen; i++) {
+        // λ_i (1-indexed) maps to lambda[i-1] (0-indexed)
+        int lambda_i = getPart(lambda, i - 1);
+        // λ_{i-1}: for i=1, this is λ_0 = ∞
+        int lambda_im1 = (i == 1) ? INT_MAX : getPart(lambda, i - 2);
+        int mu_i = getPart(mu, i - 1);
+        int mu_ip1 = getPart(mu, i);  // μ_{i+1}
+        int kappa_i = getPart(kappa, i - 1);
+
+        int nu_i;
+
+        // Condition: λ_i ≤ μ_i < λ_{i-1}
+        if (lambda_i <= mu_i && mu_i < lambda_im1) {
+            nu_i = max(lambda_i, mu_i) + B;
+        } else {
+            nu_i = max(lambda_i, mu_i);
+        }
+
+        // Update B: condition μ_{i+1} < λ_i ≤ μ_i
+        if (mu_ip1 < lambda_i && lambda_i <= mu_i) {
+            B = min(lambda_i, mu_i) - kappa_i;
+        }
+
+        if (nu_i > 0) {
+            nu.push_back(nu_i);
+        } else {
+            break;
+        }
+    }
+
+    return nu;
+}
+
+/*
+ * sampleVH_growth: VH = HV with λ and μ swapped
+ * For Aztec diamond with word (⪯', ⪰)^n, we use VH for all cells
+ */
+Partition sampleVH_growth(const Partition& lambda, const Partition& mu,
+                          const Partition& kappa, double xi) {
+    return sampleHV_growth(mu, lambda, kappa, xi);
+}
+
+/*
+ * Convert partition to subset (inverse of subset-to-partition Maya diagram encoding)
+ * Given λ = (λ_1 ≥ λ_2 ≥ ... ≥ λ_k), compute S = {s_1 < s_2 < ... < s_k}
+ * where s_j = λ_{k-j+1} + j (using 1-indexed j)
+ */
+vector<int> partitionToSubset(const Partition& lambda) {
+    vector<int> subset;
+    int k = lambda.size();
+    for (int j = 1; j <= k; j++) {
+        // λ is in decreasing order, so λ_{k-j+1} = lambda[k-j] (0-indexed)
+        int part = lambda[k - j];
+        subset.push_back(part + j);
+    }
+    return subset;  // Already sorted since λ is decreasing
+}
+
+/*
+ * Convert boundary partitions to JSON output
+ * For now, only output partitions - domino reconstruction is complex
+ * and requires proper RSK/Fomin correspondence implementation.
+ * Use shuffling sampler for visual domino output.
+ */
+string partitionsToGrowthJSON(const vector<Partition>& partitions, int n) {
+    // Output partitions only - no domino reconstruction
+    string json = "{\"dominoes\":[]";
+
+    // Add partitions to JSON
+    json += ",\"partitions\":[";
+    bool first = true;
+    for (int i = 0; i < (int)partitions.size(); i++) {
+        if (!first) json += ",";
+        else first = false;
+
+        json += "[";
+        bool firstPart = true;
+        for (int p : partitions[i]) {
+            if (!firstPart) json += ",";
+            else firstPart = false;
+            json += to_string(p);
+        }
+        json += "]";
+    }
+    json += "]}";
+
+    return json;
+}
+
+/*
+ * schurSampleGrowth: Main Growth Diagram sampling algorithm
+ *
+ * For Aztec diamond of size n:
+ * - Staircase shape π = (n, n-1, ..., 1)
+ * - Word w = (⪯', ⪰)^n → all cells use type VH
+ * - Fill grid τ[i][j] for j=1..n and i=1..n-j+1
+ * - Extract boundary partitions
+ */
+string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y) {
+    // Grid of partitions τ[i][j]
+    // i = 0..n, j = 0..n
+    // τ[0][j] = τ[i][0] = ∅ (empty by default)
+    vector<vector<Partition>> tau(n + 2, vector<Partition>(n + 2));
+
+    // Fill staircase: for each column j, rows 1 to n-j+1
+    for (int j = 1; j <= n; j++) {
+        for (int i = 1; i <= n - j + 1; i++) {
+            double xi = x[i - 1] * y[j - 1];
+            // τ(i-1, j) = from above, τ(i, j-1) = from left, τ(i-1, j-1) = diagonal
+            tau[i][j] = sampleVH_growth(tau[i - 1][j], tau[i][j - 1],
+                                        tau[i - 1][j - 1], xi);
+        }
+
+        progressCounter = 10 + (int)(((double)j / n) * 80);
+        emscripten_sleep(0);
+    }
+
+    // Extract boundary partitions
+    // The boundary goes from (0, n) clockwise to (n, 0) along the staircase edge
+    // This gives us 2n+1 partitions: one at each corner of the boundary
+    vector<Partition> boundary;
+
+    // Start at (0, n) - this is τ[0][n] = ∅
+    // Move down along right edge, then along bottom
+    // The staircase boundary has lattice points:
+    // (0, n), (1, n), (1, n-1), (2, n-1), (2, n-2), ..., (n, 1), (n, 0)
+
+    // For the standard Schur process output, we want partitions at the "corners"
+    // which alternate between λ and μ
+
+    // Simpler: collect all boundary partitions in order
+    // The boundary of staircase (n, n-1, ..., 1) from top-left to bottom-right:
+
+    // Top edge: (0, 1), (0, 2), ..., (0, n) → all empty
+    // Right edge going down: (1, n), (1, n-1), (2, n-1), (2, n-2), ...
+
+    // Actually, the output sequence from SchurSample (see paper) is:
+    // Λ = (∅ = τ(l_0), τ(l_1), ..., τ(l_{m+n})) where l_k are boundary points
+
+    // For Aztec diamond with staircase (n, n-1, ..., 1):
+    // Boundary from (0, n) to (n, 0) gives partitions λ^0, μ^1, λ^1, ..., λ^n
+
+    // Let's trace the boundary:
+    // Start at (0, n) and move to (n, 0)
+    // At each step we either go down (i++) or go left (j--)
+
+    boundary.push_back(tau[0][n]);  // λ^0 = ∅
+
+    int i = 0, j = n;
+    int partIdx = 1;
+    while (i < n || j > 0) {
+        // The staircase edge: can go to (i+1, j) if that's inside, else go to (i, j-1)
+        if (i < n && j <= n - i) {
+            // Can go down
+            i++;
+            boundary.push_back(tau[i][j]);
+        } else if (j > 0) {
+            // Go left
+            j--;
+            boundary.push_back(tau[i][j]);
+        } else {
+            break;
+        }
+    }
+
+    progressCounter = 95;
+    emscripten_sleep(0);
+
+    return partitionsToGrowthJSON(boundary, n);
 }
 
 /*
@@ -726,6 +926,46 @@ void freeString(char* str) {
 EMSCRIPTEN_KEEPALIVE
 int getProgress() {
     return progressCounter;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* simulateSchurGrowth(int n, const char* x_json, const char* y_json) {
+    try {
+        progressCounter = 0;
+
+        // Parse parameters
+        vector<double> x = parseJsonArray(x_json);
+        vector<double> y = parseJsonArray(y_json);
+
+        // Validate and pad parameters if needed
+        while ((int)x.size() < n) x.push_back(1.0);
+        while ((int)y.size() < n) y.push_back(1.0);
+
+        progressCounter = 5;
+        emscripten_sleep(0);
+
+        // Run the growth diagram sampling algorithm
+        string json = schurSampleGrowth(n, x, y);
+
+        progressCounter = 100;
+
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) {
+            const char* err = "{\"dominoes\":[],\"partitions\":[]}";
+            out = (char*)malloc(strlen(err) + 1);
+            strcpy(out, err);
+            return out;
+        }
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const exception& e) {
+        progressCounter = 100;
+        const char* err = "{\"dominoes\":[],\"partitions\":[]}";
+        char* out = (char*)malloc(strlen(err) + 1);
+        if (out) strcpy(out, err);
+        return out;
+    }
 }
 
 } // extern "C"
