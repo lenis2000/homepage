@@ -6348,8 +6348,9 @@ function initLozengeApp() {
             if (!window.jspdf) {
                 await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
             }
-            if (!window.svg2pdf) {
-                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/svg2pdf.js/2.2.3/svg2pdf.umd.min.js');
+            if (!window.svg2pdfLoaded) {
+                await loadScript('/js/svg2pdf.umd.min.js');
+                window.svg2pdfLoaded = true;
             }
 
             const svgString = createExportSVG();
@@ -6364,7 +6365,7 @@ function initLozengeApp() {
                 format: [width, height]
             });
 
-            await svg2pdf(svgElement, pdf, { x: 0, y: 0, width, height });
+            await pdf.svg(svgElement, { x: 0, y: 0, width, height });
             const blob = pdf.output('blob');
             downloadFile(blob, generateExportFilename('pdf'));
         } catch (err) {
