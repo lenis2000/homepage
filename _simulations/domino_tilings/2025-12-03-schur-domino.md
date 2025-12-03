@@ -47,8 +47,8 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 ---
 
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 200$): </label>
-  <input id="n-input" type="number" value="20" min="2" step="2" max="200" size="3">
+  <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
+  <input id="n-input" type="number" value="20" min="2" step="2" max="400" size="3">
   <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -310,6 +310,7 @@ Module.onRuntimeInitialized = async function() {
     const signal = simulationAbortController.signal;
 
     svg.selectAll("g").remove();
+    const startTime = performance.now();
     startProgressPolling();
 
     await sleep(10);
@@ -368,7 +369,9 @@ Module.onRuntimeInitialized = async function() {
       }
 
       if (!signal.aborted) {
-        progressElem.innerText = "";
+        const endTime = performance.now();
+        const elapsed = ((endTime - startTime) / 1000).toFixed(2);
+        progressElem.innerText = "Sampled in " + elapsed + " seconds";
       }
     } catch (error) {
       if (!signal.aborted) {
@@ -396,8 +399,8 @@ Module.onRuntimeInitialized = async function() {
       progressElem.innerText = "Please enter an even number for n.";
       return;
     }
-    if (newN > 200) {
-      progressElem.innerText = "Please enter a number no greater than 200.";
+    if (newN > 400) {
+      progressElem.innerText = "Please enter a number no greater than 400.";
       return;
     }
     updateVisualization(newN);
