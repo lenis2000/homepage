@@ -1443,7 +1443,8 @@ function initLozengeApp() {
 
     // Load letter triangles from JSON file
     async function loadLetterTriangles(char) {
-        const filename = char.toUpperCase() + '.json';
+        // Special characters like * and *** don't need uppercasing
+        const filename = (char.match(/^[a-zA-Z0-9]$/) ? char.toUpperCase() : char) + '.json';
         try {
             const response = await fetch(`/letters/${filename}`);
             if (!response.ok) return new Map();
@@ -4585,7 +4586,7 @@ function initLozengeApp() {
         reinitialize();
     });
 
-    // Initialize letter/number dropdown - populate with A-Z, 0-9
+    // Initialize letter/number dropdown - populate with A-Z, 0-9, and special shapes
     function initLetterSelector() {
         const select = el.letterSelect;
         // Add A-Z
@@ -4601,6 +4602,17 @@ function initLozengeApp() {
             const opt = document.createElement('option');
             opt.value = i.toString();
             opt.textContent = i.toString();
+            select.appendChild(opt);
+        }
+        // Add special shapes
+        const specialShapes = [
+            { value: '*', label: '*' },
+            { value: '***', label: '***' }
+        ];
+        for (const shape of specialShapes) {
+            const opt = document.createElement('option');
+            opt.value = shape.value;
+            opt.textContent = shape.label;
             select.appendChild(opt);
         }
     }
