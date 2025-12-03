@@ -49,16 +49,16 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 200$): </label>
   <input id="n-input" type="number" value="20" min="2" step="2" max="200" size="3">
-  <button id="update-btn">Update</button>
+  <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
 <div style="margin-bottom: 10px;">
   <button id="uniform-btn">Uniform (all 1s)</button>
   <span style="margin-left: 20px;">
-    <label for="q-input">q-weighting: $x_i=y_i=q^i$, q = </label>
-    <input id="q-input" type="number" value="0.9" min="0.01" max="2" step="0.01" style="width: 60px;">
-    <button id="q-btn">Apply q</button>
+    <label for="r-input">r-weighting: $x_i=y_i=r^i$, r = </label>
+    <input id="r-input" type="number" value="0.9" min="0.01" max="2" step="0.01" style="width: 60px;">
+    <button id="r-btn">Apply r</button>
   </span>
 </div>
 
@@ -79,6 +79,13 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
     <svg id="aztec-svg"></svg>
   </div>
 </div>
+
+<p style="margin-top: 10px; font-size: 0.9em;">See also:
+<ul style="margin-top: 5px; margin-bottom: 0;">
+  <li><a href="https://math.mit.edu/~borodin/aztec_phenomena.html">https://math.mit.edu/~borodin/aztec_phenomena.html</a></li>
+  <li><a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> — D. Betea, C. Boutillier, J. Bouttier, G. Chapuy, S. Corteel, and M. Vuletic, <i>Perfect sampling algorithms for Schur processes</i>, Markov Process. Related Fields 24 (2018), no. 3, 381–418.</li>
+</ul>
+</p>
 
 <script>
 Module.onRuntimeInitialized = async function() {
@@ -237,6 +244,23 @@ Module.onRuntimeInitialized = async function() {
     const currentN = parseInt(inputField.value, 10);
     xParamsField.value = "1^" + currentN;
     yParamsField.value = "1^" + currentN;
+  });
+
+  // Set r-weighted parameters: x_i = y_i = r^i
+  document.getElementById("r-btn").addEventListener("click", function() {
+    const currentN = parseInt(inputField.value, 10);
+    const r = parseFloat(document.getElementById("r-input").value);
+    if (isNaN(r) || r <= 0) {
+      progressElem.innerText = "Please enter a valid positive r value.";
+      return;
+    }
+    const params = [];
+    for (let i = 1; i <= currentN; i++) {
+      params.push(Math.pow(r, i).toFixed(6));
+    }
+    const paramStr = params.join(',');
+    xParamsField.value = paramStr;
+    yParamsField.value = paramStr;
   });
 
   function renderDominoes(dominoes) {
