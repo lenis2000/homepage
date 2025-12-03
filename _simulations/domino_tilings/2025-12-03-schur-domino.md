@@ -299,7 +299,7 @@ Module.onRuntimeInitialized = async function() {
       .attr("class", "dominoes")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scaleView + ")");
 
-    // Draw dominoes first
+    // ========== DRAW DOMINOES FIRST ==========
     group.selectAll("rect")
       .data(dominoes)
       .enter()
@@ -312,86 +312,137 @@ Module.onRuntimeInitialized = async function() {
       .attr("stroke", "#000")
       .attr("stroke-width", 0.5);
 
-    // Draw the half-integer lattice points for Aztec diamond
+    // ========== STEP 1: Extract λ/μ subsets from dominos ==========
     // Each domino covers two adjacent half-integer points
-    // Extract 1x1 square centers from dominoes as lattice points
     // Yellow/Blue → in subset, Green/Red → not in subset
-    const latticePoints = [];
+    const dominoPoints = [];
     dominoes.forEach(d => {
       const inSubset = (d.color === "yellow" || d.color === "blue");
       if (d.w > d.h) {
         // Horizontal domino (w=40, h=20): two squares side by side
-        latticePoints.push({x: d.x + 10, y: d.y + 10, inSubset});
-        latticePoints.push({x: d.x + 30, y: d.y + 10, inSubset});
+        dominoPoints.push({x: d.x + 10, y: d.y + 10, inSubset});
+        dominoPoints.push({x: d.x + 30, y: d.y + 10, inSubset});
       } else {
         // Vertical domino (w=20, h=40): two squares stacked
-        latticePoints.push({x: d.x + 10, y: d.y + 10, inSubset});
-        latticePoints.push({x: d.x + 10, y: d.y + 30, inSubset});
+        dominoPoints.push({x: d.x + 10, y: d.y + 10, inSubset});
+        dominoPoints.push({x: d.x + 10, y: d.y + 30, inSubset});
       }
     });
 
-    // Compute center of diamond
+    // Compute center of diamond from domino bounds
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
 
-    // Compute diagonal index for each point: x - y in abstract coords
-    // SW-NE diagonals have constant (screen_x + screen_y)
-    // Diagonal spacing is 20 pixels (moving perpendicular to diagonal by 1 unit)
-    latticePoints.forEach(p => {
-      // Diagonal index: (sx + sy - center) / 20, gives values from -n to n
+    // Compute diagonal index and position for each domino point
+    dominoPoints.forEach(p => {
       p.diag = Math.round((p.x + p.y - cx - cy) / 20);
     });
 
-    // Group by diagonal to form subsets
-    // x - y = -n is λ^n, x - y = -n+1 is μ^n, etc.
-    const diagonals = {};
-    latticePoints.forEach(p => {
-      if (!diagonals[p.diag]) diagonals[p.diag] = [];
-      diagonals[p.diag].push(p);
+    // Group by diagonal and sort to get positions
+    const dominoDiagonals = {};
+    dominoPoints.forEach(p => {
+      if (!dominoDiagonals[p.diag]) dominoDiagonals[p.diag] = [];
+      dominoDiagonals[p.diag].push(p);
     });
-
-    // Sort points within each diagonal by position along the diagonal
-    // (by screen_x - screen_y, which increases going NE along the diagonal)
-    for (const d in diagonals) {
-      diagonals[d].sort((a, b) => (a.x - a.y) - (b.x - b.y));
-      // Assign 1-indexed position within diagonal
-      diagonals[d].forEach((p, idx) => {
-        p.posInDiag = idx + 1;
-      });
+    for (const d in dominoDiagonals) {
+      dominoDiagonals[d].sort((a, b) => (a.x - a.y) - (b.x - b.y));
+      dominoDiagonals[d].forEach((p, idx) => { p.posInDiag = idx + 1; });
     }
 
-    // Draw only the points that are IN the subset (yellow/blue dominoes)
-    const subsetPoints = latticePoints.filter(p => p.inSubset);
+    // Extract subsets: which positions are "in" for each diagonal
+    const extractedSubsets = {};
+    for (const k in dominoDiagonals) {
+      extractedSubsets[k] = dominoDiagonals[k]
+        .filter(p => p.inSubset)
+        .map(p => p.posInDiag);
+    }
+
+    // ========== STEP 2: Generate lattice from geometry (no dominos) ==========
+    // Half-integer lattice: points (hx, hy) with |hx| + |hy| <= n + 0.5
+    // Screen coords: rotated 45 degrees, so screenX ~ (hx - hy), screenY ~ -(hx + hy)
+    //
+    // From domino rendering (C++): screenX = (j - i) * 10, screenY = (size - (i+j)) * 10
+    // The mapping is: hx = (screenX - screenY) / 20, hy = (-screenX - screenY) / 20 + offset
+    //
+    // Simpler: compute (hx, hy) for each domino point, find the scale/offset
+
+    // Determine scale from domino points: adjacent points differ by 1 in hx or hy
+    // In screen coords, horizontal domino has dx=20, vertical has dy=20
+    // For horizontal: moving +20 in screenX means +1 in (hx - hy), so hx or hy changes
+    // For 45-deg rotation: screenX = k*(hx - hy), screenY = k*(-hx - hy) + c
+    // So: hx = (screenX - screenY)/(2k) + offset, hy = (-screenX - screenY)/(2k) + offset
+
+    const scale = 20;  // 1 unit in abstract coords = 20 pixels
+    const angle = 0;  // 45 degrees clockwise in screen coords
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    // Generate all half-integer points
+    const latticePoints = [];
+    for (let hx = -n - 0.5; hx <= n + 0.5; hx += 1) {
+      for (let hy = -n - 0.5; hy <= n + 0.5; hy += 1) {
+        if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
+        if (Math.abs(hx) + Math.abs(hy) > n + 0.5) continue;
+
+        // Screen coords: rotate 45 CW in screen (y down)
+        const screenX = cx + (hx * cosA + hy * sinA) * scale;
+        const screenY = cy + (-hx * sinA + hy * cosA) * scale;
+
+        // Diagonal for Schur process: use hx + hy (NW-SE diagonals in abstract coords)
+        // These become horizontal lines in the rotated screen view
+        // diag ranges from -(n-0.5) - 0.5 = -n to (n-0.5) + 0.5 = n approximately
+        const diag = Math.round(hx + hy);
+
+        latticePoints.push({
+          hx, hy,
+          x: screenX, y: screenY,
+          diag
+        });
+      }
+    }
+
+    // Sort each diagonal and assign positions (by hx - hy, which is x-position on screen)
+    const geomDiagonals = {};
+    latticePoints.forEach(p => {
+      if (!geomDiagonals[p.diag]) geomDiagonals[p.diag] = [];
+      geomDiagonals[p.diag].push(p);
+    });
+    for (const d in geomDiagonals) {
+      geomDiagonals[d].sort((a, b) => (a.hx - a.hy) - (b.hx - b.hy));
+      geomDiagonals[d].forEach((p, idx) => { p.posInDiag = idx + 1; });
+    }
+
+    // ========== STEP 3: Mark points using extracted subsets ==========
+    latticePoints.forEach(p => {
+      const subset = extractedSubsets[p.diag] || [];
+      p.inSubset = subset.includes(p.posInDiag);
+    });
+
+    // ========== STEP 4: Draw points (no domino reference) ==========
+    // Draw ALL lattice points: subset=black, not in subset=gray outline
     group.selectAll("circle.lattice")
-      .data(subsetPoints)
+      .data(latticePoints)
       .enter()
       .append("circle")
       .attr("class", "lattice")
       .attr("cx", d => d.x)
       .attr("cy", d => d.y)
-      .attr("r", 4)
-      .attr("fill", "#000")
-      .attr("stroke", "#fff")
+      .attr("r", d => d.inSubset ? 5 : 3)
+      .attr("fill", d => d.inSubset ? "#000" : "none")
+      .attr("stroke", d => d.inSubset ? "#fff" : "#666")
       .attr("stroke-width", 1);
 
-    // Build and log subsets for each diagonal
-    const subsets = {};
-    for (const k in diagonals) {
-      subsets[k] = diagonals[k]
-        .filter(p => p.inSubset)
-        .map(p => p.posInDiag);
-    }
+    // Debug: log first few points to compare
+    console.log("Sample lattice points (geom):", latticePoints.slice(0, 5));
+    console.log("Sample domino points:", dominoPoints.slice(0, 5));
 
-    // Convert diagonal index to λ/μ label
-    const diagKeys = Object.keys(diagonals).map(Number).sort((a, b) => a - b);
-    const subsetLabels = {};
+    // Log the extracted subsets with λ/μ labels
+    const diagKeys = Object.keys(extractedSubsets).map(Number).sort((a, b) => a - b);
+    console.log("Extracted subsets from dominos:");
     diagKeys.forEach((k, idx) => {
       const label = (idx % 2 === 0) ? "λ" + (n - idx/2) : "μ" + (n - Math.floor(idx/2));
-      subsetLabels[label] = subsets[k];
+      console.log(`  ${label}: {${extractedSubsets[k].join(", ")}}`);
     });
-
-    console.log("Subsets by diagonal:", subsets);
-    console.log("Subsets with labels:", subsetLabels);
   }
 
   function renderParticles(particles, n) {
