@@ -643,6 +643,12 @@ Cmd-click: complete lasso</div>
       <button id="next-palette" style="padding: 0 8px;">&#9654;</button>
     </div>
     <button id="permuteColors" title="Permute colors">Permute</button>
+    <button id="customColorsBtn" title="Custom colors">Custom colors</button>
+    <div id="customColorPickers" style="display: none; align-items: center; gap: 4px;">
+      <input type="color" id="customColor1" value="#E57200" title="Color 1">
+      <input type="color" id="customColor2" value="#232D4B" title="Color 2">
+      <input type="color" id="customColor3" value="#F9DCBF" title="Color 3">
+    </div>
     <div style="display: flex; align-items: center; gap: 4px;">
       <span style="font-size: 12px; color: #555;">Outline:</span>
       <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;">
@@ -1808,6 +1814,8 @@ function initLozengeApp() {
             ];
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
+            this.useCustomColors = false;
+            this.customColors = ['#E57200', '#232D4B', '#F9DCBF'];
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
             this.gridSize = 100;
             // Pan and zoom state
@@ -1832,6 +1840,13 @@ function initLozengeApp() {
         getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
 
         getPermutedColors() {
+            if (this.useCustomColors) {
+                const permutations = [
+                    [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
+                ];
+                const perm = permutations[this.colorPermutation || 0];
+                return [this.customColors[perm[0]], this.customColors[perm[1]], this.customColors[perm[2]]];
+            }
             const palette = this.getCurrentPalette();
             const permutations = [
                 [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
@@ -2496,6 +2511,8 @@ function initLozengeApp() {
             this.colorPalettes = window.ColorSchemes || [{ name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }];
             this.currentPaletteIndex = 0;
             this.colorPermutation = 0;
+            this.useCustomColors = false;
+            this.customColors = ['#E57200', '#232D4B', '#F9DCBF'];
             this.autoRotate = false;
             this.cameraInitialized = false;
 
@@ -2568,6 +2585,13 @@ function initLozengeApp() {
         getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
 
         getPermutedColors() {
+            if (this.useCustomColors) {
+                const permutations = [
+                    [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
+                ];
+                const perm = permutations[this.colorPermutation || 0];
+                return [this.customColors[perm[0]], this.customColors[perm[1]], this.customColors[perm[2]]];
+            }
             const palette = this.getCurrentPalette();
             const permutations = [
                 [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
@@ -4633,11 +4657,63 @@ function initLozengeApp() {
         tooltip.style.display = tooltip.style.display === 'none' ? 'block' : 'none';
     });
 
+    // Custom colors functionality
+    const customColorsBtn = document.getElementById('customColorsBtn');
+    const customColorPickers = document.getElementById('customColorPickers');
+    const customColor1 = document.getElementById('customColor1');
+    const customColor2 = document.getElementById('customColor2');
+    const customColor3 = document.getElementById('customColor3');
+
+    function updateColorPickersFromPalette() {
+        const palette = renderer.getCurrentPalette();
+        customColor1.value = palette.colors[0];
+        customColor2.value = palette.colors[1];
+        customColor3.value = palette.colors[2];
+        renderer.customColors = [palette.colors[0], palette.colors[1], palette.colors[2]];
+        if (renderer3D) {
+            renderer3D.customColors = [palette.colors[0], palette.colors[1], palette.colors[2]];
+        }
+    }
+
+    function handleColorChange() {
+        renderer.customColors = [customColor1.value, customColor2.value, customColor3.value];
+        if (renderer3D) {
+            renderer3D.customColors = [customColor1.value, customColor2.value, customColor3.value];
+        }
+        draw();
+    }
+
+    customColorsBtn.addEventListener('click', () => {
+        const isVisible = customColorPickers.style.display === 'flex';
+        if (isVisible) {
+            customColorPickers.style.display = 'none';
+            renderer.useCustomColors = false;
+            if (renderer3D) {
+                renderer3D.useCustomColors = false;
+            }
+        } else {
+            updateColorPickersFromPalette();
+            customColorPickers.style.display = 'flex';
+            renderer.useCustomColors = true;
+            if (renderer3D) {
+                renderer3D.useCustomColors = true;
+            }
+        }
+        draw();
+    });
+
+    customColor1.addEventListener('input', handleColorChange);
+    customColor2.addEventListener('input', handleColorChange);
+    customColor3.addEventListener('input', handleColorChange);
+
     // Palette
     el.paletteSelect.addEventListener('change', (e) => {
         renderer.setPalette(parseInt(e.target.value));
         if (renderer3D) {
             renderer3D.setPalette(parseInt(e.target.value));
+        }
+        if (renderer.useCustomColors) {
+            updateColorPickersFromPalette();
         }
         draw();
     });
@@ -4648,6 +4724,9 @@ function initLozengeApp() {
             renderer3D.setPalette(renderer.currentPaletteIndex);
         }
         el.paletteSelect.value = renderer.currentPaletteIndex;
+        if (renderer.useCustomColors) {
+            updateColorPickersFromPalette();
+        }
         draw();
     });
 
@@ -4657,6 +4736,9 @@ function initLozengeApp() {
             renderer3D.setPalette(renderer.currentPaletteIndex);
         }
         el.paletteSelect.value = renderer.currentPaletteIndex;
+        if (renderer.useCustomColors) {
+            updateColorPickersFromPalette();
+        }
         draw();
     });
 

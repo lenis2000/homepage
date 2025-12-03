@@ -48,7 +48,7 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
-  <input id="n-input" type="number" value="20" min="2" step="2" max="400" size="3">
+  <input id="n-input" type="number" value="4" min="2" step="2" max="400" size="3">
   <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
@@ -63,13 +63,13 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 </div>
 
 <div style="margin-bottom: 10px;">
-  <label for="x-params">x parameters (CSV, supports value^count e.g. 1^20):</label>
-  <input id="x-params" type="text" class="param-input" value="1^20">
+  <label for="x-params">x parameters (CSV, supports value^count e.g. 1^4):</label>
+  <input id="x-params" type="text" class="param-input" value="1^4">
 </div>
 
 <div style="margin-bottom: 10px;">
-  <label for="y-params">y parameters (CSV, supports value^count e.g. 1^20):</label>
-  <input id="y-params" type="text" class="param-input" value="1^20">
+  <label for="y-params">y parameters (CSV, supports value^count e.g. 1^4):</label>
+  <input id="y-params" type="text" class="param-input" value="1^4">
 </div>
 
 <div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
@@ -78,6 +78,16 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
   <div class="col-12">
     <svg id="aztec-svg"></svg>
   </div>
+</div>
+
+<div style="margin-top: 15px; margin-bottom: 10px;">
+  <input type="checkbox" id="show-diagonals" checked style="margin-right: 5px;">
+  <label for="show-diagonals">Show NE diagonal slice lines</label>
+</div>
+
+<div style="margin-top: 15px;">
+  <label for="subsets-output" style="font-weight: bold;">Diagonal Subsets (NE slices, yellow = in subset, blue = not in subset):</label>
+  <pre id="subsets-output" style="width: 100%; font-family: monospace; font-size: 12px; margin-top: 5px; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; white-space: pre-wrap;"></pre>
 </div>
 
 <p style="margin-top: 10px; font-size: 0.9em;">See also:
@@ -301,6 +311,94 @@ Module.onRuntimeInitialized = async function() {
       .attr("stroke-width", 0.5);
   }
 
+  let currentSubsets = [];
+  let currentN = 4;
+
+  function displaySubsets(subsets, n) {
+    currentSubsets = subsets;
+    currentN = n;
+    const subsetsOutput = document.getElementById("subsets-output");
+
+    if (!subsetsOutput) return;
+
+    if (!subsets || subsets.length === 0) {
+      subsetsOutput.textContent = "No subset data available.";
+      return;
+    }
+
+    // Format subsets as a list, from first (should be full) to last (should be empty)
+    const lines = [];
+
+    for (let i = 0; i < subsets.length; i++) {
+      const subset = subsets[i];
+      const setStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+      const universe = (i % 2 === 0) ? `{1,...,${n}}` : `{1,...,${n+1}}`;
+      lines.push(`Slice ${i} ⊂ ${universe}: ${setStr}`);
+    }
+
+    subsetsOutput.textContent = lines.join("\n");
+  }
+
+  function drawDiagonalLines() {
+    const showDiag = document.getElementById("show-diagonals");
+    if (!showDiag || !showDiag.checked) {
+      svg.selectAll("line.diagonal").remove();
+      return;
+    }
+
+    // Get bounding box of current dominoes
+    if (currentDominoes.length === 0) return;
+
+    const minX = d3.min(currentDominoes, d => d.x);
+    const minY = d3.min(currentDominoes, d => d.y);
+    const maxX = d3.max(currentDominoes, d => d.x + d.w);
+    const maxY = d3.max(currentDominoes, d => d.y + d.h);
+
+    const group = svg.select("g.dominoes");
+    if (group.empty()) return;
+
+    // Remove old diagonal lines
+    group.selectAll("line.diagonal").remove();
+
+    // NE diagonals have constant (x + y) in display coords (since y increases downward in SVG)
+    // A NE line goes from bottom-left to top-right: x + y = constant
+    const scale = 10;
+    // Orthogonal distance between slices = diagonal of 1x1 square = scale * sqrt(2)
+    // For NE lines, orthogonal dist = step / sqrt(2), so step = 2 * scale
+    const step = 2 * scale;
+
+    // Draw diagonal lines from SW to NE (x + y = constant)
+    // Lines at x+y = 20, 40, 60... pass through centers of 20x20 squares
+    const diagonals = [];
+    for (let d = minX + minY; d <= maxX + maxY; d += step) {
+      // NE line: x + y = d
+      // So x = d - y
+      // Line goes from (minX, d - minX) to (maxX, d - maxX)
+      const x1 = minX - 2 * step;
+      const y1 = d - x1;
+      const x2 = maxX + 2 * step;
+      const y2 = d - x2;
+      diagonals.push({x1, y1, x2, y2});
+    }
+
+    group.selectAll("line.diagonal")
+      .data(diagonals)
+      .enter()
+      .append("line")
+      .attr("class", "diagonal")
+      .attr("x1", d => d.x1)
+      .attr("y1", d => d.y1)
+      .attr("x2", d => d.x2)
+      .attr("y2", d => d.y2)
+      .attr("stroke", "#888")
+      .attr("stroke-width", 0.3)
+      .attr("stroke-dasharray", "2,2")
+      .attr("opacity", 0.7);
+  }
+
+  // Event handler for diagonal display
+  document.getElementById("show-diagonals").addEventListener("change", drawDiagonalLines);
+
   async function updateVisualization(newN) {
     n = newN;
     if (isProcessing) return;
@@ -356,7 +454,10 @@ Module.onRuntimeInitialized = async function() {
       }
 
       try {
-        currentDominoes = JSON.parse(jsonStr);
+        const result = JSON.parse(jsonStr);
+        currentDominoes = result.dominoes || result;  // Handle both old and new format
+        const subsets = result.subsets || [];
+        displaySubsets(subsets, n);
       } catch (e) {
         progressElem.innerText = "Error during sampling";
         clearInterval(progressInterval);
@@ -366,6 +467,7 @@ Module.onRuntimeInitialized = async function() {
 
       if (!signal.aborted) {
         renderDominoes(currentDominoes);
+        drawDiagonalLines();  // Draw diagonal lines if checkbox is checked
       }
 
       if (!signal.aborted) {
