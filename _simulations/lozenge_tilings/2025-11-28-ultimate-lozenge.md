@@ -5945,22 +5945,20 @@ function initLozengeApp() {
         document.getElementById('export-quality-val').textContent = e.target.value;
     });
 
-    // iOS Safari detection for download workaround
-    function isIOSSafari() {
+    // iOS detection for download workaround (all iOS browsers use WebKit)
+    function isIOS() {
         const ua = navigator.userAgent;
-        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
-        return isIOS && isSafari;
+        return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
-    // Cross-platform file download (iOS Safari doesn't support link.click() downloads)
+    // Cross-platform file download (iOS doesn't support link.click() downloads)
     function downloadFile(blob, filename) {
         const url = URL.createObjectURL(blob);
-        if (isIOSSafari()) {
-            // iOS Safari: open in new tab, user can use Share Sheet to save
+        if (isIOS()) {
+            // iOS: open in new tab, user can use Share Sheet to save
             const newTab = window.open(url, '_blank');
             if (!newTab) {
-                window.location.href = url;
+                alert('Popup blocked. Please allow popups for this site to download files.');
             }
             setTimeout(() => URL.revokeObjectURL(url), 60000);
         } else {
