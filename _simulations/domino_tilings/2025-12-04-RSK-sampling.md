@@ -1,5 +1,5 @@
 ---
-title: RSK Sampling for the Aztec Diamond
+title: q-RSK Sampling of Domino Tilings of the Aztec Diamond
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -67,6 +67,12 @@ code:
 </div>
 
 <div style="margin-bottom: 10px;">
+  <label for="q-input">q parameter (0 ≤ q < 1): </label>
+  <input id="q-input" type="number" value="0.5" min="0" max="0.99" step="0.01" style="width: 60px;">
+  <span style="margin-left: 10px; font-style: italic; font-size: 0.9em;">(q=0 is Schur/uniform)</span>
+</div>
+
+<div style="margin-bottom: 10px;">
   <label for="x-params">x parameters (CSV, supports value^count e.g. 1^4):</label>
   <input id="x-params" type="text" class="param-input" value="1^4">
 </div>
@@ -107,6 +113,41 @@ code:
     return (i >= 0 && i < partition.length) ? partition[i] : 0;
   }
 
+  // Compute f_k for the q-deformed probability (equation 5.2 in arXiv:1504.00666)
+  // f_k = (1 - q^(λ_k - ν̄_k + 1)) / (1 - q^(ν̄_{k-1} - ν̄_k + 1))
+  // This is the probability that λ_k is chosen NOT to move within an island.
+  function computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q) {
+    if (q === 0) {
+      // Schur case: λ_k doesn't move iff it's free (not pushed)
+      // λ_k is pushed if λ_k = ν̄_k - 1, i.e., λ_k - ν̄_k + 1 = 0
+      const delta = lam_k - nu_bar_k + 1;
+      return delta > 0 ? 1.0 : 0.0;
+    }
+    const delta_lam = lam_k - nu_bar_k + 1;
+    const delta_nu = nu_bar_k_minus_1 - nu_bar_k + 1;
+    if (delta_nu <= 0) return 1.0;
+    if (delta_lam <= 0) return 0.0;
+    const numerator = 1 - Math.pow(q, delta_lam);
+    const denominator = 1 - Math.pow(q, delta_nu);
+    if (denominator === 0) return 1.0;
+    return numerator / denominator;
+  }
+
+  // Compute g_i for the q-deformed probability
+  // g_i = 1 - q^(λ_i - ν̄_i + 1)
+  // Used in sequential sampling within an island.
+  function computeG(lam_i, nu_bar_i, q) {
+    if (q === 0) {
+      const delta = lam_i - nu_bar_i + 1;
+      return delta > 0 ? 1.0 : 0.0;
+    }
+    const delta = lam_i - nu_bar_i + 1;
+    if (delta <= 0) return 0.0;
+    return 1 - Math.pow(q, delta);
+  }
+
+  // Old q=0 only VH bijection (commented out - now using unified sampleVHq)
+  /*
   // VH bijection for the Aztec diamond growth diagram
   // Based on arXiv:1407.3764
   function sampleVH(lam, mu, kappa, bit) {
@@ -142,10 +183,129 @@ code:
     while (nu.length > 0 && nu[nu.length - 1] === 0) nu.pop();
     return nu;
   }
+  */
+
+  // q-Whittaker version of the VH bijection for the Aztec diamond growth diagram
+  // Implements exact dynamics from arXiv:1504.00666 Section 5.1
+  // For q=0, reduces to the deterministic Schur case
+  function sampleVHq(lam, mu, kappa, bit, q) {
+    const maxLen = Math.max(lam.length, mu.length, kappa.length) + 2;
+
+    // Find islands: consecutive indices where mu_i - kappa_i = 1
+    // These are particles that moved at the lower level (bar_λ → bar_ν)
+    const moved = [];
+    for (let i = 0; i < maxLen; i++) {
+      if (getPart(mu, i) - getPart(kappa, i) === 1) {
+        moved.push(i);
+      }
+    }
+
+    // Group into islands (consecutive indices)
+    const islands = [];
+    if (moved.length > 0) {
+      let currentIsland = [moved[0]];
+      for (let i = 1; i < moved.length; i++) {
+        if (moved[i] === moved[i-1] + 1) {
+          currentIsland.push(moved[i]);
+        } else {
+          islands.push([currentIsland[0], currentIsland[currentIsland.length - 1]]);
+          currentIsland = [moved[i]];
+        }
+      }
+      islands.push([currentIsland[0], currentIsland[currentIsland.length - 1]]);
+    }
+
+    // Initialize nu = lam (particles start at their current positions)
+    const nuParts = [];
+    for (let i = 0; i < maxLen; i++) {
+      nuParts.push(getPart(lam, i));
+    }
+
+    // Step 1: Rightmost particle jumps by bit
+    // ν_1 = λ_1 + V_j (index 0 in 0-indexed)
+    nuParts[0] = getPart(lam, 0) + bit;
+
+    // Step 2: Process each island
+    for (const [k, m] of islands) {
+      const nu_bar_k = getPart(mu, k);
+      const nu_bar_k_minus_1 = k > 0 ? getPart(mu, k - 1) : Infinity;
+
+      // Case 1: bit=1 and k=0 (island contains first particle)
+      // All particles λ_1, ..., λ_{m+1} (indices 1 to m+1) move with prob 1
+      if (bit === 1 && k === 0) {
+        for (let idx = 1; idx <= m + 1; idx++) {
+          nuParts[idx] = getPart(lam, idx) + 1;
+        }
+        continue;
+      }
+
+      // Case 2: bit=0 or k>0
+      // One of λ_k, ..., λ_{m+1} doesn't move; sample which one
+      let stoppedAt;
+      if (q === 0) {
+        // Schur case: deterministic
+        // Find first particle that is "free" (not pushed)
+        // λ_i is pushed if λ_i = bar_ν_i - 1
+        stoppedAt = m + 1;  // default: last one doesn't move
+        for (let idx = k; idx <= m; idx++) {
+          const lam_idx = getPart(lam, idx);
+          const nu_bar_idx = getPart(mu, idx);
+          if (lam_idx > nu_bar_idx - 1) {  // free, doesn't need to move
+            stoppedAt = idx;
+            break;
+          }
+        }
+      } else {
+        // q-Whittaker case: probabilistic sampling using f_k, g_s
+        const lam_k = getPart(lam, k);
+        const f_k = computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q);
+
+        if (Math.random() < f_k) {
+          // λ_k doesn't move
+          stoppedAt = k;
+        } else {
+          // λ_k moves, continue sampling through the island
+          stoppedAt = m + 1;  // default if we don't stop earlier
+          for (let s = k + 1; s <= m; s++) {
+            const lam_s = getPart(lam, s);
+            const nu_bar_s = getPart(mu, s);
+            const g_s = computeG(lam_s, nu_bar_s, q);
+            if (Math.random() < g_s) {
+              // λ_s doesn't move
+              stoppedAt = s;
+              break;
+            }
+          }
+          // If loop completes, stoppedAt = m + 1 (λ_{m+1} doesn't move)
+        }
+      }
+
+      // Apply the moves: all particles in [k, m+1] move except stoppedAt
+      for (let idx = k; idx <= m + 1; idx++) {
+        if (idx !== stoppedAt) {
+          nuParts[idx] = getPart(lam, idx) + 1;
+        }
+        // else: nuParts[idx] stays at lam[idx]
+      }
+    }
+
+    // Ensure nu >= mu (horizontal strip condition)
+    for (let i = 0; i < maxLen; i++) {
+      nuParts[i] = Math.max(nuParts[i], getPart(mu, i));
+    }
+
+    // Trim trailing zeros
+    while (nuParts.length > 0 && nuParts[nuParts.length - 1] === 0) {
+      nuParts.pop();
+    }
+
+    return nuParts;
+  }
 
   // Sample Aztec diamond partition sequence using RSK growth diagram
   // x and y are Schur process parameters (arrays of length n)
-  function aztecDiamondSample(n, x, y) {
+  // q is the q-Whittaker parameter (0 <= q < 1), q=0 is Schur/uniform
+  function aztecDiamondSample(n, x, y, q) {
     if (n === 0) return [[]];
 
     // Ensure x and y have length n, default to 1s
@@ -171,7 +331,7 @@ code:
         const p = xi / (1 + xi);
         const bit = Math.random() < p ? 1 : 0;
 
-        tau[`${i},${j}`] = sampleVH(lam, mu, kappa, bit);
+        tau[`${i},${j}`] = sampleVHq(lam, mu, kappa, bit, q);
       }
     }
 
@@ -677,7 +837,8 @@ code:
     updateParamsForN(currentN);
     const x = parseCSV(document.getElementById("x-params").value);
     const y = parseCSV(document.getElementById("y-params").value);
-    currentPartitions = aztecDiamondSample(currentN, x, y);
+    const q = parseFloat(document.getElementById("q-input").value);
+    currentPartitions = aztecDiamondSample(currentN, x, y, q);
     renderParticles();
     displaySubsets();
   });
@@ -711,7 +872,8 @@ code:
   updateParamsForN(currentN);
   const initX = parseCSV(document.getElementById("x-params").value);
   const initY = parseCSV(document.getElementById("y-params").value);
-  currentPartitions = aztecDiamondSample(currentN, initX, initY);
+  const initQ = parseFloat(document.getElementById("q-input").value);
+  currentPartitions = aztecDiamondSample(currentN, initX, initY, initQ);
   renderParticles();
   displaySubsets();
 })();
