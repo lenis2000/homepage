@@ -59,7 +59,7 @@ console.log('WebGPU:', window.RSK_WEBGPU ? 'available' : 'unavailable');
 <script>
 // Load WebGPU engine if available
 if (window.RSK_WEBGPU) {
-    document.write('<script src="{{site.url}}/js/webgpu-rsk-engine.js"><\/script>');
+    document.write('<script src="{{site.url}}/js/2025-12-04-RSK-sampling-gpu.js"><\/script>');
 }
 </script>
 

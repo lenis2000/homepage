@@ -1,11 +1,12 @@
 /**
- * WebGPU RSK Sampling Engine
+ * WebGPU RSK Sampling Engine (2025-12-04-RSK-sampling-gpu.js)
  *
  * Implements parallel sampleVH computation on GPU for Aztec diamond growth diagrams.
  * Uses anti-diagonal wavefront parallelization where cells (i,j) with i+j = constant
  * can be processed simultaneously.
  *
  * Used by: _simulations/domino_tilings/2025-12-04-RSK-sampling.md
+ * Shader: shaders/2025-12-04-RSK-compute.wgsl
  */
 
 class WebGPURSKEngine {
@@ -44,7 +45,7 @@ class WebGPURSKEngine {
 
         // Load shader code
         try {
-            const response = await fetch('/shaders/rsk_compute.wgsl');
+            const response = await fetch('/shaders/2025-12-04-RSK-compute.wgsl');
             if (!response.ok) {
                 throw new Error(`Failed to load shader: ${response.status}`);
             }

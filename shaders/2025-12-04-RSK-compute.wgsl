@@ -1,6 +1,7 @@
-// RSK Aztec Diamond Sampling - WebGPU Compute Shader
+// RSK Aztec Diamond Sampling - WebGPU Compute Shader (2025-12-04-RSK-compute.wgsl)
 // Implements wavefront parallelization of the growth diagram
 // Each thread processes one cell on the current anti-diagonal
+// Used by: js/2025-12-04-RSK-sampling-gpu.js
 
 // Maximum partition length - adjust based on max n supported
 const MAX_PART_LEN: u32 = 128u;
