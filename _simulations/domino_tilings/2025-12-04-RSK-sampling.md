@@ -51,15 +51,6 @@ code:
 
 <script src="/js/d3.v7.min.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
-<script>
-// GPU detection and dynamic loading (avoiding deprecated document.write)
-window.RSK_WEBGPU = !!navigator.gpu;
-if (window.RSK_WEBGPU) {
-    const gpuScript = document.createElement('script');
-    gpuScript.src = '/js/2025-12-04-RSK-sampling-gpu.js';
-    document.head.appendChild(gpuScript);
-}
-</script>
 
 <!-- Pane 1: Sampling -->
 <fieldset style="border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
@@ -76,7 +67,6 @@ if (window.RSK_WEBGPU) {
       <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
       <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
     </span>
-    <span id="gpu-indicator" style="color: #2e8b57; font-size: 0.85em; display: none;">🚀 GPU</span>
   </div>
 </fieldset>
 
@@ -171,7 +161,6 @@ async function initializeApp() {
   let progressInterval = null;
   const progressElem = document.getElementById("progress-indicator");
   const timingDisplay = document.getElementById("timing-display");
-  const gpuIndicator = document.getElementById("gpu-indicator");
 
   // Canvas zoom/pan state
   let canvasTransform = { x: 0, y: 0, scale: 1 };
@@ -182,38 +171,12 @@ async function initializeApp() {
   let cachedDominoes = null;
   let cachedLatticePoints = null;
 
-  // ========== WebGPU Engine ==========
-  let gpuEngine = null;
-  let useWebGPU = false;
+  // ========== RSK Sampling Function ==========
 
-  // Initialize WebGPU engine if available (with timeout for browsers where init can hang)
-  // This runs in background and doesn't block initial render
-  try {
-    if (window.RSK_WEBGPU && window.WebGPURSKEngine) {
-      (async () => {
-        try {
-          gpuEngine = new WebGPURSKEngine();
-          const initPromise = gpuEngine.init();
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
-          );
-          await Promise.race([initPromise, timeoutPromise]);
-          if (gpuIndicator) gpuIndicator.style.display = 'inline';
-          useWebGPU = true;
-        } catch (e) {
-          console.warn('WebGPU initialization failed:', e);
-          gpuEngine = null;
-        }
-      })();
-    }
-  } catch (e) {
-    console.warn('WebGPU setup error:', e);
-  }
+  async function aztecDiamondSample(n, x, y, q) {
+    if (n === 0) return [[]];
 
-  // ========== RSK Sampling Functions ==========
-
-  // WASM sampling (fallback)
-  async function sampleWithWASM(n, x, y, q) {
+    const startTime = performance.now();
     const xJson = JSON.stringify(x);
     const yJson = JSON.stringify(y);
 
@@ -228,58 +191,18 @@ async function initializeApp() {
       simulationActive = false;
       progressElem.innerText = "";
 
+      const elapsed = performance.now() - startTime;
+      if (timingDisplay) {
+        timingDisplay.innerText = `(${(elapsed / 1000).toFixed(2)}s)`;
+      }
+
       return JSON.parse(jsonStr);
     } catch (e) {
       simulationActive = false;
       progressElem.innerText = "Error!";
-      console.error("WASM sampling error:", e);
+      console.error("Sampling error:", e);
       return [[]];
     }
-  }
-
-  // GPU sampling
-  async function sampleWithGPU(n, x, y, q) {
-    if (!gpuEngine || !gpuEngine.isInitialized()) {
-      return null; // Fall back to WASM
-    }
-
-    try {
-      progressElem.innerText = "GPU sampling...";
-      const xArr = new Float64Array(x);
-      const yArr = new Float64Array(y);
-      const result = await gpuEngine.sampleAztec(n, xArr, yArr, q);
-      progressElem.innerText = "";
-      return result;
-    } catch (e) {
-      console.warn("GPU sampling failed, falling back to WASM:", e);
-      progressElem.innerText = "";
-      return null;
-    }
-  }
-
-  // Main sampling function with GPU/WASM selection (auto-detects GPU)
-  async function aztecDiamondSample(n, x, y, q) {
-    if (n === 0) return [[]];
-
-    const startTime = performance.now();
-    let result = null;
-
-    // Try GPU first if available and initialized
-    if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
-      result = await sampleWithGPU(n, x, y, q);
-    }
-
-    // Fall back to WASM
-    if (!result) {
-      result = await sampleWithWASM(n, x, y, q);
-    }
-
-    const elapsed = performance.now() - startTime;
-    if (timingDisplay) {
-      timingDisplay.innerText = `(${(elapsed / 1000).toFixed(2)}s)`;
-    }
-
-    return result;
   }
 
   function startProgressPolling() {
