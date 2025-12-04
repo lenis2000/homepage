@@ -50,11 +50,26 @@ code:
 </style>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
+<script src="{{site.url}}/js/2025-12-04-RSK-sampling.js"></script>
 
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order n: </label>
   <input id="n-input" type="number" value="4" min="1" max="100" style="width: 60px;">
   <button id="sample-btn">Sample</button>
+  <span id="progress-indicator" style="margin-left: 10px; color: #666;"></span>
+  <span style="margin-left: 20px;">
+    <input type="checkbox" id="show-particles-cb">
+    <label for="show-particles-cb">Show particles</label>
+  </span>
+  <span style="margin-left: 20px;">
+    <input type="checkbox" id="rotate-canvas-cb">
+    <label for="rotate-canvas-cb">Rotate 45°</label>
+  </span>
+  <span style="margin-left: 20px;">
+    <label for="border-slider">Border: </label>
+    <input type="range" id="border-slider" min="0" max="3" step="0.5" value="1" style="width: 80px; vertical-align: middle;">
+    <span id="border-value">1</span>
+  </span>
 </div>
 
 <div style="margin-bottom: 10px;">
@@ -67,9 +82,8 @@ code:
 </div>
 
 <div style="margin-bottom: 10px;">
-  <label for="q-input">q parameter (0 ≤ q < 1): </label>
-  <input id="q-input" type="number" value="0.5" min="0" max="0.99" step="0.01" style="width: 60px;">
-  <span style="margin-left: 10px; font-style: italic; font-size: 0.9em;">(q=0 is Schur/uniform)</span>
+  <label for="q-input">q-Whittaker parameter (0 ≤ q < 1): </label>
+  <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
 </div>
 
 <div style="margin-bottom: 10px;">
@@ -95,259 +109,68 @@ code:
 
 <p style="margin-top: 10px; font-size: 0.9em;">See also:
 <ul style="margin-top: 5px; margin-bottom: 0;">
-  <li><a href="https://math.mit.edu/~borodin/aztec_phenomena.html">https://math.mit.edu/~borodin/aztec_phenomena.html</a></li>
+  <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — K. Matveev, L. Petrov, <i>q-randomized Robinson–Schensted–Knuth correspondences and random polymers</i>, Ann. Inst. Henri Poincaré D 4 (2017), no. 1, 1–123.</li>
   <li><a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> — D. Betea, C. Boutillier, J. Bouttier, G. Chapuy, S. Corteel, and M. Vuletic, <i>Perfect sampling algorithms for Schur processes</i>, Markov Process. Related Fields 24 (2018), no. 3, 381–418.</li>
 </ul>
 </p>
 
 <script>
-(function() {
+Module.onRuntimeInitialized = async function() {
+  // Wrap WASM functions
+  const sampleAztecRSK = Module.cwrap('sampleAztecRSK', 'number', ['number', 'string', 'string', 'number'], {async: true});
+  const freeString = Module.cwrap('freeString', null, ['number']);
+  const getProgress = Module.cwrap('getProgress', 'number', []);
+
   let currentN = 4;
   const svg = d3.select("#aztec-svg");
   let currentPartitions = [];
+  let simulationActive = false;
+  let progressInterval = null;
+  const progressElem = document.getElementById("progress-indicator");
 
-  // ========== RSK Sampling Functions ==========
+  // ========== RSK Sampling Functions (now in C++/WASM) ==========
+  // The sampling logic has been moved to 2025-12-04-RSK-sampling.cpp for performance
 
-  // Get i-th part of partition (0-indexed), return 0 if out of range
-  function getPart(partition, i) {
-    return (i >= 0 && i < partition.length) ? partition[i] : 0;
-  }
-
-  // Compute f_k for the q-deformed probability (equation 5.2 in arXiv:1504.00666)
-  // f_k = (1 - q^(λ_k - ν̄_k + 1)) / (1 - q^(ν̄_{k-1} - ν̄_k + 1))
-  // This is the probability that λ_k is chosen NOT to move within an island.
-  function computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q) {
-    if (q === 0) {
-      // Schur case: λ_k doesn't move iff it's free (not pushed)
-      // λ_k is pushed if λ_k = ν̄_k - 1, i.e., λ_k - ν̄_k + 1 = 0
-      const delta = lam_k - nu_bar_k + 1;
-      return delta > 0 ? 1.0 : 0.0;
-    }
-    const delta_lam = lam_k - nu_bar_k + 1;
-    const delta_nu = nu_bar_k_minus_1 - nu_bar_k + 1;
-    if (delta_nu <= 0) return 1.0;
-    if (delta_lam <= 0) return 0.0;
-    const numerator = 1 - Math.pow(q, delta_lam);
-    const denominator = 1 - Math.pow(q, delta_nu);
-    if (denominator === 0) return 1.0;
-    return numerator / denominator;
-  }
-
-  // Compute g_i for the q-deformed probability
-  // g_i = 1 - q^(λ_i - ν̄_i + 1)
-  // Used in sequential sampling within an island.
-  function computeG(lam_i, nu_bar_i, q) {
-    if (q === 0) {
-      const delta = lam_i - nu_bar_i + 1;
-      return delta > 0 ? 1.0 : 0.0;
-    }
-    const delta = lam_i - nu_bar_i + 1;
-    if (delta <= 0) return 0.0;
-    return 1 - Math.pow(q, delta);
-  }
-
-  // Old q=0 only VH bijection (commented out - now using unified sampleVHq)
-  /*
-  // VH bijection for the Aztec diamond growth diagram
-  // Based on arXiv:1407.3764
-  function sampleVH(lam, mu, kappa, bit) {
-    const maxLen = Math.max(lam.length, mu.length) + 2;
-    const nu = [];
-    let B = bit;
-
-    for (let i = 0; i < maxLen; i++) {
-      const lam_i = getPart(lam, i);
-      const mu_i = getPart(mu, i);
-      const lam_im1 = i > 0 ? getPart(lam, i - 1) : Infinity;
-      const mu_im1 = i > 0 ? getPart(mu, i - 1) : Infinity;
-      const mu_ip1 = getPart(mu, i + 1);
-      const lam_ip1 = getPart(lam, i + 1);
-      const kappa_i = getPart(kappa, i);
-
-      let nu_i;
-      // VH condition: if mu_i <= lam_i < mu_{i-1}
-      if (mu_i <= lam_i && lam_i < mu_im1) {
-        nu_i = Math.max(lam_i, mu_i) + B;
-      } else {
-        nu_i = Math.max(lam_i, mu_i);
-      }
-      nu.push(nu_i);
-
-      // Extract new bit: if lam_{i+1} < mu_i <= lam_i
-      if (lam_ip1 < mu_i && mu_i <= lam_i) {
-        B = Math.min(lam_i, mu_i) - kappa_i;
-      }
-    }
-
-    // Trim trailing zeros
-    while (nu.length > 0 && nu[nu.length - 1] === 0) nu.pop();
-    return nu;
-  }
-  */
-
-  // q-Whittaker version of the VH bijection for the Aztec diamond growth diagram
-  // Implements exact dynamics from arXiv:1504.00666 Section 5.1
-  // For q=0, reduces to the deterministic Schur case
-  function sampleVHq(lam, mu, kappa, bit, q) {
-    const maxLen = Math.max(lam.length, mu.length, kappa.length) + 2;
-
-    // Find islands: consecutive indices where mu_i - kappa_i = 1
-    // These are particles that moved at the lower level (bar_λ → bar_ν)
-    const moved = [];
-    for (let i = 0; i < maxLen; i++) {
-      if (getPart(mu, i) - getPart(kappa, i) === 1) {
-        moved.push(i);
-      }
-    }
-
-    // Group into islands (consecutive indices)
-    const islands = [];
-    if (moved.length > 0) {
-      let currentIsland = [moved[0]];
-      for (let i = 1; i < moved.length; i++) {
-        if (moved[i] === moved[i-1] + 1) {
-          currentIsland.push(moved[i]);
-        } else {
-          islands.push([currentIsland[0], currentIsland[currentIsland.length - 1]]);
-          currentIsland = [moved[i]];
-        }
-      }
-      islands.push([currentIsland[0], currentIsland[currentIsland.length - 1]]);
-    }
-
-    // Initialize nu = lam (particles start at their current positions)
-    const nuParts = [];
-    for (let i = 0; i < maxLen; i++) {
-      nuParts.push(getPart(lam, i));
-    }
-
-    // Step 1: Rightmost particle jumps by bit
-    // ν_1 = λ_1 + V_j (index 0 in 0-indexed)
-    nuParts[0] = getPart(lam, 0) + bit;
-
-    // Step 2: Process each island
-    for (const [k, m] of islands) {
-      const nu_bar_k = getPart(mu, k);
-      const nu_bar_k_minus_1 = k > 0 ? getPart(mu, k - 1) : Infinity;
-
-      // Case 1: bit=1 and k=0 (island contains first particle)
-      // All particles λ_1, ..., λ_{m+1} (indices 1 to m+1) move with prob 1
-      if (bit === 1 && k === 0) {
-        for (let idx = 1; idx <= m + 1; idx++) {
-          nuParts[idx] = getPart(lam, idx) + 1;
-        }
-        continue;
-      }
-
-      // Case 2: bit=0 or k>0
-      // One of λ_k, ..., λ_{m+1} doesn't move; sample which one
-      let stoppedAt;
-      if (q === 0) {
-        // Schur case: deterministic
-        // Find first particle that is "free" (not pushed)
-        // λ_i is pushed if λ_i = bar_ν_i - 1
-        stoppedAt = m + 1;  // default: last one doesn't move
-        for (let idx = k; idx <= m; idx++) {
-          const lam_idx = getPart(lam, idx);
-          const nu_bar_idx = getPart(mu, idx);
-          if (lam_idx > nu_bar_idx - 1) {  // free, doesn't need to move
-            stoppedAt = idx;
-            break;
-          }
-        }
-      } else {
-        // q-Whittaker case: probabilistic sampling using f_k, g_s
-        const lam_k = getPart(lam, k);
-        const f_k = computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q);
-
-        if (Math.random() < f_k) {
-          // λ_k doesn't move
-          stoppedAt = k;
-        } else {
-          // λ_k moves, continue sampling through the island
-          stoppedAt = m + 1;  // default if we don't stop earlier
-          for (let s = k + 1; s <= m; s++) {
-            const lam_s = getPart(lam, s);
-            const nu_bar_s = getPart(mu, s);
-            const g_s = computeG(lam_s, nu_bar_s, q);
-            if (Math.random() < g_s) {
-              // λ_s doesn't move
-              stoppedAt = s;
-              break;
-            }
-          }
-          // If loop completes, stoppedAt = m + 1 (λ_{m+1} doesn't move)
-        }
-      }
-
-      // Apply the moves: all particles in [k, m+1] move except stoppedAt
-      for (let idx = k; idx <= m + 1; idx++) {
-        if (idx !== stoppedAt) {
-          nuParts[idx] = getPart(lam, idx) + 1;
-        }
-        // else: nuParts[idx] stays at lam[idx]
-      }
-    }
-
-    // Ensure nu >= mu (horizontal strip condition)
-    for (let i = 0; i < maxLen; i++) {
-      nuParts[i] = Math.max(nuParts[i], getPart(mu, i));
-    }
-
-    // Trim trailing zeros
-    while (nuParts.length > 0 && nuParts[nuParts.length - 1] === 0) {
-      nuParts.pop();
-    }
-
-    return nuParts;
-  }
-
-  // Sample Aztec diamond partition sequence using RSK growth diagram
-  // x and y are Schur process parameters (arrays of length n)
-  // q is the q-Whittaker parameter (0 <= q < 1), q=0 is Schur/uniform
-  function aztecDiamondSample(n, x, y, q) {
+  // Async wrapper for WASM sampling
+  async function aztecDiamondSample(n, x, y, q) {
     if (n === 0) return [[]];
 
-    // Ensure x and y have length n, default to 1s
-    while (x.length < n) x.push(1);
-    while (y.length < n) y.push(1);
+    const xJson = JSON.stringify(x);
+    const yJson = JSON.stringify(y);
 
-    // Initialize growth diagram with empty partitions on boundaries
-    const tau = {};
-    for (let j = 0; j <= n; j++) tau[`0,${j}`] = [];
-    for (let i = 0; i <= n; i++) tau[`${i},0`] = [];
+    simulationActive = true;
+    startProgressPolling();
 
-    // Fill staircase row by row
-    // At position (i,j), use parameters x[i-1] and y[j-1] (1-indexed to 0-indexed)
-    for (let i = 1; i <= n; i++) {
-      const rowLen = n + 1 - i;
-      for (let j = 1; j <= rowLen; j++) {
-        const lam = tau[`${i-1},${j}`];
-        const mu = tau[`${i},${j-1}`];
-        const kappa = tau[`${i-1},${j-1}`];
+    try {
+      const ptr = await sampleAztecRSK(n, xJson, yJson, q);
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
 
-        // Schur process Bernoulli: p = x_i * y_j / (1 + x_i * y_j)
-        const xi = x[i - 1] * y[j - 1];
-        const p = xi / (1 + xi);
-        const bit = Math.random() < p ? 1 : 0;
+      simulationActive = false;
+      progressElem.innerText = "";
 
-        tau[`${i},${j}`] = sampleVHq(lam, mu, kappa, bit, q);
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      simulationActive = false;
+      progressElem.innerText = "Error!";
+      console.error("Sampling error:", e);
+      return [[]];
+    }
+  }
+
+  function startProgressPolling() {
+    progressElem.innerText = "Sampling... (0%)";
+    progressInterval = setInterval(() => {
+      if (!simulationActive) {
+        clearInterval(progressInterval);
+        return;
       }
-    }
-
-    // Extract output path along staircase boundary
-    // Path goes from (0,n) to (n,0), but we need reverse order for λ⁰, μ¹, λ¹, ...
-    const outputPath = [];
-    let i = 0, j = n;
-    outputPath.push([i, j]);
-    while (i !== n || j !== 0) {
-      if (j <= n - i && i < n) i++;
-      else j--;
-      outputPath.push([i, j]);
-    }
-
-    // Reverse to get correct order: λ⁰ first (empty), then growing, then shrinking back to λⁿ (empty)
-    return outputPath.map(([i, j]) => tau[`${i},${j}`]).reverse();
+      const progress = getProgress();
+      progressElem.innerText = "Sampling... (" + progress + "%)";
+      if (progress >= 100) {
+        clearInterval(progressInterval);
+      }
+    }, 50);
   }
 
   // ========== Parameter Parsing Functions ==========
@@ -436,8 +259,9 @@ code:
       const group = svg.select("g.particles");
       if (!group.empty()) {
         const t = event.transform;
+        const rot = initialTransform.rotation || 0;
         group.attr("transform",
-          `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k})`);
+          `translate(${initialTransform.translateX * t.k + t.x},${initialTransform.translateY * t.k + t.y}) scale(${initialTransform.scale * t.k}) rotate(${rot})`);
       }
     });
 
@@ -641,13 +465,15 @@ code:
     const translateX = (svgWidth - widthPts * scaleView) / 2 - (minX - 20) * scaleView;
     const translateY = (svgHeight - heightPts * scaleView) / 2 - (minY - 20) * scaleView;
 
-    initialTransform = { translateX, translateY, scale: scaleView };
+    const rotateCanvas = document.getElementById("rotate-canvas-cb").checked;
+    const rotation = rotateCanvas ? -45 : 0;
+    initialTransform = { translateX, translateY, scale: scaleView, rotation };
     svg.call(zoom.transform, d3.zoomIdentity);
     svg.selectAll("g").remove();
 
     const group = svg.append("g")
       .attr("class", "particles")
-      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scaleView + ")");
+      .attr("transform", `translate(${translateX},${translateY}) scale(${scaleView}) rotate(${rotation})`);
 
     // Create lookup by (hx, hy) coordinates
     const pointLookup = {};
@@ -732,6 +558,23 @@ code:
     const allDominoes = [...particleDominoes.map(d => ({...d, type: 'particle'})),
                          ...holeDominoes.map(d => ({...d, type: 'hole'}))];
 
+    const showParticles = document.getElementById("show-particles-cb").checked;
+
+    // Domino colors:
+    // Particle (filled) + Horizontal → Green
+    // Particle (filled) + Vertical → Red
+    // Hole (empty) + Horizontal → Blue
+    // Hole (empty) + Vertical → Yellow
+    function getDominoColor(type, isHorizontal) {
+      if (showParticles) return "#ffffff";
+      if (type === 'particle') {
+        return isHorizontal ? "#228B22" : "#DC143C";  // Green : Red
+      } else {
+        return isHorizontal ? "#0057B7" : "#FFCD00";  // Blue : Yellow
+      }
+    }
+
+    const borderWidth = parseFloat(document.getElementById("border-slider").value);
     for (const domino of allDominoes) {
       const { p1, p2, type } = domino;
       const cx = (p1.x + p2.x) / 2;
@@ -747,25 +590,25 @@ code:
         .attr("y", cy - height / 2)
         .attr("width", width)
         .attr("height", height)
-        .attr("rx", 2)
-        .attr("ry", 2)
-        .attr("fill", "#ffffff")
+        .attr("fill", getDominoColor(type, isHorizontal))
+        .attr("stroke", borderWidth > 0 ? "#000" : "none")
+        .attr("stroke-width", borderWidth);
+    }
+
+    // Draw particles on top (only if show particles is checked)
+    if (showParticles) {
+      group.selectAll("circle.particle")
+        .data(latticePoints)
+        .enter()
+        .append("circle")
+        .attr("class", "particle")
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", 5)
+        .attr("fill", d => d.inSubset ? "#000000" : "#ffffff")
         .attr("stroke", "#000")
         .attr("stroke-width", 1);
     }
-
-    // Draw particles on top
-    group.selectAll("circle.particle")
-      .data(latticePoints)
-      .enter()
-      .append("circle")
-      .attr("class", "particle")
-      .attr("cx", d => d.x)
-      .attr("cy", d => d.y)
-      .attr("r", 5)
-      .attr("fill", d => d.inSubset ? "#000000" : "#ffffff")
-      .attr("stroke", "#000")
-      .attr("stroke-width", 1);
   }
 
   // Display subsets and interlacing info
@@ -826,7 +669,7 @@ code:
   }
 
   // Sample button handler
-  document.getElementById("sample-btn").addEventListener("click", function() {
+  document.getElementById("sample-btn").addEventListener("click", async function() {
     const nInput = document.getElementById("n-input");
     const newN = parseInt(nInput.value, 10);
     if (isNaN(newN) || newN < 1) {
@@ -838,7 +681,7 @@ code:
     const x = parseCSV(document.getElementById("x-params").value);
     const y = parseCSV(document.getElementById("y-params").value);
     const q = parseFloat(document.getElementById("q-input").value);
-    currentPartitions = aztecDiamondSample(currentN, x, y, q);
+    currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     renderParticles();
     displaySubsets();
   });
@@ -848,6 +691,32 @@ code:
     const ones = Array(currentN).fill(1);
     document.getElementById("x-params").value = arrayToCSV(ones);
     document.getElementById("y-params").value = arrayToCSV(ones);
+  });
+
+  // Show particles checkbox handler - re-render when toggled
+  document.getElementById("show-particles-cb").addEventListener("change", function() {
+    renderParticles();
+  });
+
+  // q-input change handler - resample when q changes
+  document.getElementById("q-input").addEventListener("change", async function() {
+    const x = parseCSV(document.getElementById("x-params").value);
+    const y = parseCSV(document.getElementById("y-params").value);
+    const q = parseFloat(document.getElementById("q-input").value);
+    currentPartitions = await aztecDiamondSample(currentN, x, y, q);
+    renderParticles();
+    displaySubsets();
+  });
+
+  // Rotate canvas checkbox handler - re-render when toggled
+  document.getElementById("rotate-canvas-cb").addEventListener("change", function() {
+    renderParticles();
+  });
+
+  // Border slider handler - re-render and update display value
+  document.getElementById("border-slider").addEventListener("input", function() {
+    document.getElementById("border-value").innerText = this.value;
+    renderParticles();
   });
 
   // r-weighting button handler - set x_i = y_i = r^i
@@ -873,8 +742,8 @@ code:
   const initX = parseCSV(document.getElementById("x-params").value);
   const initY = parseCSV(document.getElementById("y-params").value);
   const initQ = parseFloat(document.getElementById("q-input").value);
-  currentPartitions = aztecDiamondSample(currentN, initX, initY, initQ);
+  currentPartitions = await aztecDiamondSample(currentN, initX, initY, initQ);
   renderParticles();
   displaySubsets();
-})();
+};
 </script>
