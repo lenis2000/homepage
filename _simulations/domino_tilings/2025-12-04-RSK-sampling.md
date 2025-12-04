@@ -489,7 +489,112 @@ code:
       .attr("class", "particles")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scaleView + ")");
 
-    // Draw particles
+    // Create lookup by (hx, hy) coordinates
+    const pointLookup = {};
+    latticePoints.forEach(p => {
+      pointLookup[`${p.hx},${p.hy}`] = p;
+    });
+
+    // Find adjacent point (horizontal or vertical neighbor)
+    function getNeighbors(p) {
+      const neighbors = [];
+      // Check all 4 directions: right, left, up, down
+      const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (const [dx, dy] of directions) {
+        const key = `${p.hx + dx},${p.hy + dy}`;
+        if (pointLookup[key]) {
+          neighbors.push(pointLookup[key]);
+        }
+      }
+      return neighbors;
+    }
+
+    // Match particles (pink) - start from bottom-left, go up-right
+    const particles = latticePoints.filter(p => p.inSubset);
+    // Sort: bottom-left first means low hx+hy, then low hx-hy (bottom before top on same diagonal)
+    particles.sort((a, b) => {
+      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+      if (sumA !== sumB) return sumA - sumB;
+      return (a.hx - a.hy) - (b.hx - b.hy);
+    });
+
+    const matchedParticles = new Set();
+    const particleDominoes = [];
+
+    for (const p of particles) {
+      if (matchedParticles.has(`${p.hx},${p.hy}`)) continue;
+      const neighbors = getNeighbors(p).filter(n => n.inSubset && !matchedParticles.has(`${n.hx},${n.hy}`));
+      if (neighbors.length > 0) {
+        // Pick neighbor that's most "up-right" (highest hx+hy, then highest hx-hy)
+        neighbors.sort((a, b) => {
+          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+          if (sumA !== sumB) return sumA - sumB;
+          return (a.hx - a.hy) - (b.hx - b.hy);
+        });
+        const neighbor = neighbors[0];
+        matchedParticles.add(`${p.hx},${p.hy}`);
+        matchedParticles.add(`${neighbor.hx},${neighbor.hy}`);
+        particleDominoes.push({ p1: p, p2: neighbor });
+      }
+    }
+
+    // Match holes (white) - start from top-right, go down-left
+    const holes = latticePoints.filter(p => !p.inSubset);
+    // Sort: top-right first means high hx+hy, then high hx-hy
+    holes.sort((a, b) => {
+      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+      if (sumA !== sumB) return sumB - sumA;
+      return (b.hx - b.hy) - (a.hx - a.hy);
+    });
+
+    const matchedHoles = new Set();
+    const holeDominoes = [];
+
+    for (const p of holes) {
+      if (matchedHoles.has(`${p.hx},${p.hy}`)) continue;
+      const neighbors = getNeighbors(p).filter(n => !n.inSubset && !matchedHoles.has(`${n.hx},${n.hy}`));
+      if (neighbors.length > 0) {
+        // Pick neighbor that's most "down-left" (lowest hx+hy, then lowest hx-hy)
+        neighbors.sort((a, b) => {
+          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+          if (sumA !== sumB) return sumB - sumA;
+          return (b.hx - b.hy) - (a.hx - a.hy);
+        });
+        const neighbor = neighbors[0];
+        matchedHoles.add(`${p.hx},${p.hy}`);
+        matchedHoles.add(`${neighbor.hx},${neighbor.hy}`);
+        holeDominoes.push({ p1: p, p2: neighbor });
+      }
+    }
+
+    // Draw dominoes as 2x1 rectangles (in coordinate units where particle spacing = 1)
+    const scale = 20;  // matches the scale used in generateLatticePoints
+    const allDominoes = [...particleDominoes.map(d => ({...d, type: 'particle'})),
+                         ...holeDominoes.map(d => ({...d, type: 'hole'}))];
+
+    for (const domino of allDominoes) {
+      const { p1, p2, type } = domino;
+      const cx = (p1.x + p2.x) / 2;
+      const cy = (p1.y + p2.y) / 2;
+      const isHorizontal = Math.abs(p1.hx - p2.hx) > 0.5;
+
+      // 2x1 domino in coordinate units
+      const width = isHorizontal ? 2 * scale : 1 * scale;
+      const height = isHorizontal ? 1 * scale : 2 * scale;
+
+      group.append("rect")
+        .attr("x", cx - width / 2)
+        .attr("y", cy - height / 2)
+        .attr("width", width)
+        .attr("height", height)
+        .attr("rx", 2)
+        .attr("ry", 2)
+        .attr("fill", "#ffffff")
+        .attr("stroke", "#000")
+        .attr("stroke-width", 1);
+    }
+
+    // Draw particles on top
     group.selectAll("circle.particle")
       .data(latticePoints)
       .enter()
@@ -498,7 +603,7 @@ code:
       .attr("cx", d => d.x)
       .attr("cy", d => d.y)
       .attr("r", 5)
-      .attr("fill", d => d.inSubset ? "#ff00ff" : "#ffffff")
+      .attr("fill", d => d.inSubset ? "#000000" : "#ffffff")
       .attr("stroke", "#000")
       .attr("stroke-width", 1);
   }
