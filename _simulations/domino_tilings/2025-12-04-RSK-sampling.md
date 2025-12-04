@@ -52,10 +52,6 @@ code:
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
 
-RSK sampling for Aztec diamond tilings based on <a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> (Borodin, Gorin, Rains). Parameters $x_1,\ldots,x_n$ and $y_1,\ldots,y_n$ control the measure on tilings.
-
----
-
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 600$): </label>
   <input id="n-input" type="number" value="4" min="2" step="2" max="600" size="3">
@@ -91,7 +87,7 @@ RSK sampling for Aztec diamond tilings based on <a href="https://arxiv.org/abs/1
 </div>
 
 <div style="margin-top: 20px;">
-  <h4>Particle Subsets and Partitions</h4>
+  <h4>Partitions forming the Schur process</h4>
   <div id="subsets-output">No subset data available yet. Click "Sample" to generate.</div>
 </div>
 

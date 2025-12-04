@@ -37,12 +37,22 @@ code:
     margin-top: 5px;
     margin-bottom: 10px;
   }
+  #subsets-output {
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    background-color: #f5f5f5;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
 </style>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-12-03-schur-domino.js"></script>
 
-Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> (Borodin, Gorin, Rains). Parameters $x_1,\ldots,x_n$ and $y_1,\ldots,y_n$ control the measure on tilings.
+Schur process style parameters $x_1,\ldots,x_n$ and $y_1,\ldots,y_n$ determine the probability distribution on domino tilings of the Aztec diamond; the sampling is done via shuffling algorithm by Betea-Boutillier-Bouttier-Chapuy-Corteel-Vuletic.
 
 ---
 
@@ -80,6 +90,10 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
   </div>
 </div>
 
+<details style="margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; padding: 10px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc;">▶ Partitions forming the Schur process (click to expand)</summary>
+  <div id="subsets-output" style="margin-top: 10px;">No subset data available yet. Click "Sample" to generate.</div>
+</details>
 
 <p style="margin-top: 10px; font-size: 0.9em;">See also:
 <ul style="margin-top: 5px; margin-bottom: 0;">
@@ -409,6 +423,138 @@ Module.onRuntimeInitialized = async function() {
       const subset = extractedSubsets[p.diag] || [];
       p.inSubset = subset.includes(p.posInDiag);
     });
+
+    // ========== STEP 4: Display subsets and partitions ==========
+    const subsetsOutput = document.getElementById("subsets-output");
+    if (subsetsOutput) {
+      // Get all diagonal keys and sizes from geomDiagonals
+      const allDiagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
+
+      // For each diagonal, compute subset (positions that are inSubset)
+      const diagData = [];
+      allDiagKeys.forEach(d => {
+        const pts = geomDiagonals[d];  // Already sorted by posInDiag
+        const m = pts.length;  // Ground set size
+        const subset = pts.filter(p => p.inSubset).map(p => p.posInDiag);
+        diagData.push({ diag: d, m, subset, pts });
+      });
+
+      // Superscript helper
+      const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+      function toSuperscript(num) {
+        if (num < 10) return superscripts[num];
+        return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
+      }
+
+      // Build output
+      let output = "Subsets by diagonal:\n";
+      diagData.forEach(({ diag, m, subset }, idx) => {
+        const n_j = subset.length;      // number of particles
+        const m_j = m - subset.length;  // number of holes
+        const groundSetSize = m;        // n_j + m_j
+        const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+
+        // Build walk: R if position is in subset, U otherwise
+        let walk = "";
+        const subsetSet = new Set(subset);
+        for (let pos = 1; pos <= groundSetSize; pos++) {
+          walk += subsetSet.has(pos) ? "R" : "U";
+        }
+
+        // Compute Young diagram: λ_j = number of R steps before the j-th U step
+        let partition = [];
+        let rCount = 0;
+        for (let pos = 1; pos <= groundSetSize; pos++) {
+          if (subsetSet.has(pos)) {
+            rCount++;
+          } else {
+            partition.push(rCount);
+          }
+        }
+        // Reverse to get weakly decreasing order and remove trailing zeros
+        partition = partition.reverse().filter(x => x > 0);
+        const partStr = partition.length === 0 ? "∅" : "(" + partition.join(",") + ")";
+
+        // Label: λ^0, μ^1, λ^1, μ^2, λ^2, ...
+        let label;
+        if (idx % 2 === 0) {
+          label = "λ" + toSuperscript(idx / 2);
+        } else {
+          label = "μ" + toSuperscript((idx + 1) / 2);
+        }
+
+        // Store partition for interlacing checks
+        diagData[idx].partition = partition;
+        diagData[idx].label = label;
+
+        output += `  ${label}: ${subsetStr}  (n=${n_j}, m=${m_j})  walk: ${walk}  ${label}=${partStr}\n`;
+      });
+
+      // Interlacing checks
+      output += "\nInterlacing checks:\n";
+
+      // Helper: get partition part (0 if out of bounds)
+      function getPart(p, i) {
+        return (i >= 0 && i < p.length) ? p[i] : 0;
+      }
+
+      // Check if μ/λ is a horizontal strip: μ_j ≥ λ_j ≥ μ_{j+1} for all j
+      function isHorizontalStrip(mu, lambda) {
+        const maxLen = Math.max(mu.length, lambda.length) + 1;
+        for (let j = 0; j < maxLen; j++) {
+          const mu_j = getPart(mu, j);
+          const mu_jp1 = getPart(mu, j + 1);
+          const lambda_j = getPart(lambda, j);
+          if (!(mu_j >= lambda_j && lambda_j >= mu_jp1)) return false;
+        }
+        return true;
+      }
+
+      // Check if μ/λ is a vertical strip: μ_j - λ_j ∈ {0, 1} for all j
+      function isVerticalStrip(mu, lambda) {
+        const maxLen = Math.max(mu.length, lambda.length);
+        for (let j = 0; j < maxLen; j++) {
+          const mu_j = getPart(mu, j);
+          const lambda_j = getPart(lambda, j);
+          const diff = mu_j - lambda_j;
+          if (diff < 0 || diff > 1) return false;
+        }
+        return true;
+      }
+
+      let allValid = true;
+
+      // Check μ^i / λ^(i-1) is horizontal strip and μ^i / λ^i is vertical strip
+      for (let idx = 1; idx < diagData.length; idx += 2) {
+        // idx is odd → μ^k where k = (idx+1)/2
+        const k = (idx + 1) / 2;
+        const mu_k = diagData[idx].partition;
+        const lambda_km1 = diagData[idx - 1].partition;  // λ^(k-1)
+        const lambda_k = (idx + 1 < diagData.length) ? diagData[idx + 1].partition : [];  // λ^k
+
+        // Check μ^k / λ^(k-1) is horizontal strip
+        const hsCheck = isHorizontalStrip(mu_k, lambda_km1);
+        const hsStatus = hsCheck ? "✓" : "✗";
+        if (!hsCheck) allValid = false;
+        output += `  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horizontal strip: ${hsStatus}\n`;
+
+        // Check μ^k / λ^k is vertical strip (if λ^k exists)
+        if (idx + 1 < diagData.length) {
+          const vsCheck = isVerticalStrip(mu_k, lambda_k);
+          const vsStatus = vsCheck ? "✓" : "✗";
+          if (!vsCheck) allValid = false;
+          output += `  μ${toSuperscript(k)}/λ${toSuperscript(k)} vertical strip: ${vsStatus}\n`;
+        }
+      }
+
+      if (allValid) {
+        output += "All interlacing conditions satisfied ✓\n";
+      } else {
+        output += "WARNING: Some interlacing conditions failed ✗\n";
+      }
+
+      subsetsOutput.textContent = output;
+    }
   }
 
   let currentSubsets = [];
