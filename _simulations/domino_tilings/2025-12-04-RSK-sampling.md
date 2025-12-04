@@ -52,54 +52,80 @@ code:
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="{{site.url}}/js/2025-12-04-RSK-sampling.js"></script>
 
-<div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order n: </label>
-  <input id="n-input" type="number" value="4" min="1" max="100" style="width: 60px;">
-  <button id="sample-btn">Sample</button>
-  <span id="progress-indicator" style="margin-left: 10px; color: #666;"></span>
-  <span style="margin-left: 20px;">
-    <input type="checkbox" id="show-particles-cb">
-    <label for="show-particles-cb">Show particles</label>
+<!-- Pane 1: Sampling -->
+<fieldset style="border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
+  <legend style="font-weight: bold; padding: 0 5px;">Sampling</legend>
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+    <span>
+      <label for="n-input">Aztec Diamond Order n: </label>
+      <input id="n-input" type="number" value="4" min="1" max="1000" style="width: 70px;">
+      <button id="sample-btn" style="margin-left: 10px;">Sample</button>
+      <span id="progress-indicator" style="margin-left: 10px; color: #666;"></span>
+    </span>
+    <span>
+      <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
+      <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
+    </span>
+  </div>
+</fieldset>
+
+<!-- Pane 2: Schur Process Parameters -->
+<fieldset style="border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
+  <legend style="font-weight: bold; padding: 0 5px;">Schur Process Parameters</legend>
+  <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 8px;">
+    <button id="uniform-btn">Uniform (all 1s)</button>
+    <span>
+      <label for="r-input">r-weighting $x_i=y_i=r^i$: r = </label>
+      <input id="r-input" type="number" value="0.9" min="0.01" max="10" step="0.01" style="width: 60px;">
+      <button id="r-btn">Apply r</button>
+    </span>
+  </div>
+  <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 5px;">
+    <label for="x-params" style="width: 20px;">x:</label>
+    <input id="x-params" type="text" class="param-input" value="1^4" style="flex: 1;">
+  </div>
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <label for="y-params" style="width: 20px;">y:</label>
+    <input id="y-params" type="text" class="param-input" value="1^4" style="flex: 1;">
+  </div>
+  <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+    Syntax: <code>1^4</code> = 1,1,1,1 | <code>(1,2)^3</code> = 1,2,1,2,1,2
+  </div>
+</fieldset>
+
+<!-- Zoom Controls (placed above canvas) -->
+<div id="zoom-controls-container" style="margin-bottom: 10px;"></div>
+
+<!-- Canvas -->
+<div class="row">
+  <div class="col-12" style="position: relative; height: 50vh;">
+    <canvas id="aztec-canvas" style="width: 100%; height: 100%; border: 1px solid #ccc; background-color: #fafafa;"></canvas>
+    <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 1px solid #ccc; background-color: #fafafa;"></svg>
+  </div>
+</div>
+
+<!-- Visual Controls -->
+<div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+  <span>
+    <label>Renderer: </label>
+    <input type="radio" id="renderer-canvas" name="renderer" value="canvas" checked>
+    <label for="renderer-canvas">Canvas</label>
+    <input type="radio" id="renderer-svg" name="renderer" value="svg" style="margin-left: 10px;">
+    <label for="renderer-svg">SVG</label>
   </span>
-  <span style="margin-left: 20px;">
+  <span>
     <input type="checkbox" id="rotate-canvas-cb">
     <label for="rotate-canvas-cb">Rotate 45°</label>
   </span>
-  <span style="margin-left: 20px;">
+  <span>
+    <input type="checkbox" id="show-particles-cb">
+    <label for="show-particles-cb">Show particles</label>
+  </span>
+  <span>
     <label for="border-slider">Border: </label>
     <input type="range" id="border-slider" min="0" max="3" step="0.5" value="1" style="width: 80px; vertical-align: middle;">
     <span id="border-value">1</span>
   </span>
-</div>
-
-<div style="margin-bottom: 10px;">
-  <button id="uniform-btn">Uniform (all 1s)</button>
-  <span style="margin-left: 20px;">
-    <label for="r-input">r-weighting: $x_i=y_i=r^i$, r = </label>
-    <input id="r-input" type="number" value="0.9" min="0.01" max="2" step="0.01" style="width: 60px;">
-    <button id="r-btn">Apply r</button>
-  </span>
-</div>
-
-<div style="margin-bottom: 10px;">
-  <label for="q-input">q-Whittaker parameter (0 ≤ q < 1): </label>
-  <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
-</div>
-
-<div style="margin-bottom: 10px;">
-  <label for="x-params">x parameters (CSV, supports value^count e.g. 1^4):</label>
-  <input id="x-params" type="text" class="param-input" value="1^4">
-</div>
-
-<div style="margin-bottom: 10px;">
-  <label for="y-params">y parameters (CSV, supports value^count e.g. 1^4):</label>
-  <input id="y-params" type="text" class="param-input" value="1^4">
-</div>
-
-<div class="row">
-  <div class="col-12">
-    <svg id="aztec-svg"></svg>
-  </div>
 </div>
 
 <details style="margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; padding: 10px;">
@@ -123,10 +149,21 @@ Module.onRuntimeInitialized = async function() {
 
   let currentN = 4;
   const svg = d3.select("#aztec-svg");
+  const canvas = document.getElementById("aztec-canvas");
+  const ctx = canvas.getContext("2d");
   let currentPartitions = [];
   let simulationActive = false;
   let progressInterval = null;
   const progressElem = document.getElementById("progress-indicator");
+
+  // Canvas zoom/pan state
+  let canvasTransform = { x: 0, y: 0, scale: 1 };
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
+
+  // Cache for computed domino data
+  let cachedDominoes = null;
+  let cachedLatticePoints = null;
 
   // ========== RSK Sampling Functions (now in C++/WASM) ==========
   // The sampling logic has been moved to 2025-12-04-RSK-sampling.cpp for performance
@@ -178,12 +215,27 @@ Module.onRuntimeInitialized = async function() {
   // Parse CSV to array with support for value^count notation (e.g., "1^100" = 100 ones)
   function parseCSV(str) {
     const result = [];
-    const tokens = str.split(',');
+
+    // First, handle (pattern)^count notation: e.g., (1,2)^3 = 1,2,1,2,1,2
+    let processed = str;
+    const patternRegex = /\(([^)]+)\)\^(\d+)/g;
+    processed = processed.replace(patternRegex, (match, patternStr, countStr) => {
+      const count = parseInt(countStr, 10);
+      const patternValues = patternStr.split(',').map(v => v.trim()).filter(v => v !== '');
+      const expanded = [];
+      for (let i = 0; i < count; i++) {
+        expanded.push(...patternValues);
+      }
+      return expanded.join(',');
+    });
+
+    // Now parse the expanded string
+    const tokens = processed.split(',');
     for (const token of tokens) {
       const trimmed = token.trim();
       if (trimmed === '') continue;
 
-      // Check for value^count notation
+      // Check for value^count notation (e.g., 1^4)
       if (trimmed.includes('^')) {
         const parts = trimmed.split('^');
         if (parts.length === 2) {
@@ -270,20 +322,37 @@ Module.onRuntimeInitialized = async function() {
     svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
   });
 
-  // Add zoom controls
-  const controlsContainer = d3.select("#aztec-svg").node().parentNode;
-  const zoomDiv = d3.select(controlsContainer)
-    .insert("div", "svg")
-    .attr("class", "zoom-controls")
-    .style("margin-bottom", "10px");
+  // Add zoom controls to dedicated container
+  const zoomDiv = d3.select("#zoom-controls-container");
 
   zoomDiv.append("span").text("Zoom: ").style("font-weight", "bold");
   zoomDiv.append("button").attr("id", "zoom-in-btn").style("margin-left", "5px").text("+")
-    .on("click", () => svg.transition().duration(300).call(zoom.scaleBy, 1.3));
+    .on("click", () => {
+      if (document.getElementById("renderer-canvas").checked) {
+        canvasTransform.scale *= 1.3;
+        redrawOnly();
+      } else {
+        svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+      }
+    });
   zoomDiv.append("button").attr("id", "zoom-out-btn").style("margin-left", "5px").text("-")
-    .on("click", () => svg.transition().duration(300).call(zoom.scaleBy, 0.7));
+    .on("click", () => {
+      if (document.getElementById("renderer-canvas").checked) {
+        canvasTransform.scale *= 0.7;
+        redrawOnly();
+      } else {
+        svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+      }
+    });
   zoomDiv.append("button").attr("id", "zoom-reset-btn").style("margin-left", "5px").text("Reset Zoom")
-    .on("click", () => svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity));
+    .on("click", () => {
+      if (document.getElementById("renderer-canvas").checked) {
+        canvasTransform = { x: 0, y: 0, scale: 1 };
+        redrawOnly();
+      } else {
+        svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+      }
+    });
   zoomDiv.append("span").style("margin-left", "10px").style("font-style", "italic").style("font-size", "0.9em")
     .text("(Mouse wheel to zoom, drag to pan)");
 
@@ -424,11 +493,219 @@ Module.onRuntimeInitialized = async function() {
     return { latticePoints, geomDiagonals };
   }
 
-  // Render particles based on current partitions
+  // Compute dominoes from lattice points (cached for redrawing)
+  function computeDominoes(latticePoints) {
+    // Create lookup by (hx, hy) coordinates
+    const pointLookup = {};
+    latticePoints.forEach(p => {
+      pointLookup[`${p.hx},${p.hy}`] = p;
+    });
+
+    function getNeighbors(p) {
+      const neighbors = [];
+      const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (const [dx, dy] of directions) {
+        const key = `${p.hx + dx},${p.hy + dy}`;
+        if (pointLookup[key]) neighbors.push(pointLookup[key]);
+      }
+      return neighbors;
+    }
+
+    // Match particles - start from bottom-left
+    const particles = latticePoints.filter(p => p.inSubset);
+    particles.sort((a, b) => {
+      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+      if (sumA !== sumB) return sumA - sumB;
+      return (a.hx - a.hy) - (b.hx - b.hy);
+    });
+
+    const matchedParticles = new Set();
+    const particleDominoes = [];
+    for (const p of particles) {
+      if (matchedParticles.has(`${p.hx},${p.hy}`)) continue;
+      const neighbors = getNeighbors(p).filter(n => n.inSubset && !matchedParticles.has(`${n.hx},${n.hy}`));
+      if (neighbors.length > 0) {
+        neighbors.sort((a, b) => {
+          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+          if (sumA !== sumB) return sumA - sumB;
+          return (a.hx - a.hy) - (b.hx - b.hy);
+        });
+        const neighbor = neighbors[0];
+        matchedParticles.add(`${p.hx},${p.hy}`);
+        matchedParticles.add(`${neighbor.hx},${neighbor.hy}`);
+        particleDominoes.push({ p1: p, p2: neighbor });
+      }
+    }
+
+    // Match holes - start from top-right
+    const holes = latticePoints.filter(p => !p.inSubset);
+    holes.sort((a, b) => {
+      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+      if (sumA !== sumB) return sumB - sumA;
+      return (b.hx - b.hy) - (a.hx - a.hy);
+    });
+
+    const matchedHoles = new Set();
+    const holeDominoes = [];
+    for (const p of holes) {
+      if (matchedHoles.has(`${p.hx},${p.hy}`)) continue;
+      const neighbors = getNeighbors(p).filter(n => !n.inSubset && !matchedHoles.has(`${n.hx},${n.hy}`));
+      if (neighbors.length > 0) {
+        neighbors.sort((a, b) => {
+          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+          if (sumA !== sumB) return sumB - sumA;
+          return (b.hx - b.hy) - (a.hx - a.hy);
+        });
+        const neighbor = neighbors[0];
+        matchedHoles.add(`${p.hx},${p.hy}`);
+        matchedHoles.add(`${neighbor.hx},${neighbor.hy}`);
+        holeDominoes.push({ p1: p, p2: neighbor });
+      }
+    }
+
+    const scale = 20;
+    return [...particleDominoes.map(d => {
+      const isHorizontal = Math.abs(d.p1.hx - d.p2.hx) > 0.5;
+      return {
+        cx: (d.p1.x + d.p2.x) / 2,
+        cy: (d.p1.y + d.p2.y) / 2,
+        width: isHorizontal ? 2 * scale : scale,
+        height: isHorizontal ? scale : 2 * scale,
+        type: 'particle',
+        isHorizontal
+      };
+    }), ...holeDominoes.map(d => {
+      const isHorizontal = Math.abs(d.p1.hx - d.p2.hx) > 0.5;
+      return {
+        cx: (d.p1.x + d.p2.x) / 2,
+        cy: (d.p1.y + d.p2.y) / 2,
+        width: isHorizontal ? 2 * scale : scale,
+        height: isHorizontal ? scale : 2 * scale,
+        type: 'hole',
+        isHorizontal
+      };
+    })];
+  }
+
+  // Get domino color based on type and orientation
+  function getDominoColor(type, isHorizontal, showParticles) {
+    if (showParticles) return "#ffffff";
+    if (type === 'particle') {
+      return isHorizontal ? "#228B22" : "#DC143C";
+    } else {
+      return isHorizontal ? "#0057B7" : "#FFCD00";
+    }
+  }
+
+  // Canvas rendering function
+  function renderCanvas(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+    const baseScale = Math.min(rect.width / widthPts, rect.height / heightPts) * 0.9;
+    const baseX = (rect.width - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
+    const baseY = (rect.height - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    ctx.save();
+    ctx.translate(canvasTransform.x + baseX * canvasTransform.scale, canvasTransform.y + baseY * canvasTransform.scale);
+    ctx.scale(baseScale * canvasTransform.scale, baseScale * canvasTransform.scale);
+
+    if (rotation !== 0) {
+      ctx.rotate(rotation * Math.PI / 180);
+    }
+
+    // Draw all dominoes
+    for (const d of dominoes) {
+      ctx.fillStyle = getDominoColor(d.type, d.isHorizontal, showParticles);
+      ctx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+      if (borderWidth > 0) {
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = borderWidth;
+        ctx.strokeRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+      }
+    }
+
+    // Draw particles if enabled
+    if (showParticles) {
+      for (const p of latticePoints) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = p.inSubset ? "#000000" : "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // SVG rendering function (optimized with data binding)
+  function renderSVG(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation) {
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+    const scaleView = Math.min(svgWidth / widthPts, svgHeight / heightPts) * 0.9;
+    const translateX = (svgWidth - widthPts * scaleView) / 2 - (minX - 20) * scaleView;
+    const translateY = (svgHeight - heightPts * scaleView) / 2 - (minY - 20) * scaleView;
+
+    initialTransform = { translateX, translateY, scale: scaleView, rotation };
+    svg.call(zoom.transform, d3.zoomIdentity);
+    svg.selectAll("g").remove();
+
+    const group = svg.append("g")
+      .attr("class", "particles")
+      .attr("transform", `translate(${translateX},${translateY}) scale(${scaleView}) rotate(${rotation})`);
+
+    // Use D3 data binding for batch DOM creation
+    group.selectAll("rect.domino")
+      .data(dominoes)
+      .enter()
+      .append("rect")
+      .attr("class", "domino")
+      .attr("x", d => d.cx - d.width / 2)
+      .attr("y", d => d.cy - d.height / 2)
+      .attr("width", d => d.width)
+      .attr("height", d => d.height)
+      .attr("fill", d => getDominoColor(d.type, d.isHorizontal, showParticles))
+      .attr("stroke", borderWidth > 0 ? "#000" : "none")
+      .attr("stroke-width", borderWidth);
+
+    if (showParticles) {
+      group.selectAll("circle.particle")
+        .data(latticePoints)
+        .enter()
+        .append("circle")
+        .attr("class", "particle")
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", 5)
+        .attr("fill", d => d.inSubset ? "#000000" : "#ffffff")
+        .attr("stroke", "#000")
+        .attr("stroke-width", 1);
+    }
+  }
+
+  // Main render function - dispatches to canvas or SVG
   function renderParticles() {
     const { latticePoints, geomDiagonals } = generateLatticePoints();
-
-    // Get diagonal keys sorted
     const diagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
 
     // Convert partitions to subsets
@@ -442,7 +719,6 @@ Module.onRuntimeInitialized = async function() {
       subsetsByDiag[diagKey] = new Set(subset);
     }
 
-    // Mark points
     latticePoints.forEach(p => {
       const subset = subsetsByDiag[p.diag];
       p.inSubset = subset ? subset.has(p.posInDiag) : false;
@@ -453,161 +729,61 @@ Module.onRuntimeInitialized = async function() {
     const minY = d3.min(latticePoints, d => d.y);
     const maxX = d3.max(latticePoints, d => d.x);
     const maxY = d3.max(latticePoints, d => d.y);
-    const widthPts = maxX - minX + 40;
-    const heightPts = maxY - minY + 40;
+    const bounds = { minX, minY, maxX, maxY };
 
-    const bbox = svg.node().getBoundingClientRect();
-    const svgWidth = bbox.width;
-    const svgHeight = bbox.height;
-    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+    // Compute dominoes
+    const dominoes = computeDominoes(latticePoints);
 
-    const scaleView = Math.min(svgWidth / widthPts, svgHeight / heightPts) * 0.9;
-    const translateX = (svgWidth - widthPts * scaleView) / 2 - (minX - 20) * scaleView;
-    const translateY = (svgHeight - heightPts * scaleView) / 2 - (minY - 20) * scaleView;
-
-    const rotateCanvas = document.getElementById("rotate-canvas-cb").checked;
-    const rotation = rotateCanvas ? -45 : 0;
-    initialTransform = { translateX, translateY, scale: scaleView, rotation };
-    svg.call(zoom.transform, d3.zoomIdentity);
-    svg.selectAll("g").remove();
-
-    const group = svg.append("g")
-      .attr("class", "particles")
-      .attr("transform", `translate(${translateX},${translateY}) scale(${scaleView}) rotate(${rotation})`);
-
-    // Create lookup by (hx, hy) coordinates
-    const pointLookup = {};
-    latticePoints.forEach(p => {
-      pointLookup[`${p.hx},${p.hy}`] = p;
-    });
-
-    // Find adjacent point (horizontal or vertical neighbor)
-    function getNeighbors(p) {
-      const neighbors = [];
-      // Check all 4 directions: right, left, up, down
-      const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-      for (const [dx, dy] of directions) {
-        const key = `${p.hx + dx},${p.hy + dy}`;
-        if (pointLookup[key]) {
-          neighbors.push(pointLookup[key]);
-        }
-      }
-      return neighbors;
-    }
-
-    // Match particles (pink) - start from bottom-left, go up-right
-    const particles = latticePoints.filter(p => p.inSubset);
-    // Sort: bottom-left first means low hx+hy, then low hx-hy (bottom before top on same diagonal)
-    particles.sort((a, b) => {
-      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
-      if (sumA !== sumB) return sumA - sumB;
-      return (a.hx - a.hy) - (b.hx - b.hy);
-    });
-
-    const matchedParticles = new Set();
-    const particleDominoes = [];
-
-    for (const p of particles) {
-      if (matchedParticles.has(`${p.hx},${p.hy}`)) continue;
-      const neighbors = getNeighbors(p).filter(n => n.inSubset && !matchedParticles.has(`${n.hx},${n.hy}`));
-      if (neighbors.length > 0) {
-        // Pick neighbor that's most "up-right" (highest hx+hy, then highest hx-hy)
-        neighbors.sort((a, b) => {
-          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
-          if (sumA !== sumB) return sumA - sumB;
-          return (a.hx - a.hy) - (b.hx - b.hy);
-        });
-        const neighbor = neighbors[0];
-        matchedParticles.add(`${p.hx},${p.hy}`);
-        matchedParticles.add(`${neighbor.hx},${neighbor.hy}`);
-        particleDominoes.push({ p1: p, p2: neighbor });
-      }
-    }
-
-    // Match holes (white) - start from top-right, go down-left
-    const holes = latticePoints.filter(p => !p.inSubset);
-    // Sort: top-right first means high hx+hy, then high hx-hy
-    holes.sort((a, b) => {
-      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
-      if (sumA !== sumB) return sumB - sumA;
-      return (b.hx - b.hy) - (a.hx - a.hy);
-    });
-
-    const matchedHoles = new Set();
-    const holeDominoes = [];
-
-    for (const p of holes) {
-      if (matchedHoles.has(`${p.hx},${p.hy}`)) continue;
-      const neighbors = getNeighbors(p).filter(n => !n.inSubset && !matchedHoles.has(`${n.hx},${n.hy}`));
-      if (neighbors.length > 0) {
-        // Pick neighbor that's most "down-left" (lowest hx+hy, then lowest hx-hy)
-        neighbors.sort((a, b) => {
-          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
-          if (sumA !== sumB) return sumB - sumA;
-          return (b.hx - b.hy) - (a.hx - a.hy);
-        });
-        const neighbor = neighbors[0];
-        matchedHoles.add(`${p.hx},${p.hy}`);
-        matchedHoles.add(`${neighbor.hx},${neighbor.hy}`);
-        holeDominoes.push({ p1: p, p2: neighbor });
-      }
-    }
-
-    // Draw dominoes as 2x1 rectangles (in coordinate units where particle spacing = 1)
-    const scale = 20;  // matches the scale used in generateLatticePoints
-    const allDominoes = [...particleDominoes.map(d => ({...d, type: 'particle'})),
-                         ...holeDominoes.map(d => ({...d, type: 'hole'}))];
+    // Cache for redraw on style changes
+    cachedDominoes = dominoes;
+    cachedLatticePoints = latticePoints;
 
     const showParticles = document.getElementById("show-particles-cb").checked;
-
-    // Domino colors:
-    // Particle (filled) + Horizontal → Green
-    // Particle (filled) + Vertical → Red
-    // Hole (empty) + Horizontal → Blue
-    // Hole (empty) + Vertical → Yellow
-    function getDominoColor(type, isHorizontal) {
-      if (showParticles) return "#ffffff";
-      if (type === 'particle') {
-        return isHorizontal ? "#228B22" : "#DC143C";  // Green : Red
-      } else {
-        return isHorizontal ? "#0057B7" : "#FFCD00";  // Blue : Yellow
-      }
-    }
-
     const borderWidth = parseFloat(document.getElementById("border-slider").value);
-    for (const domino of allDominoes) {
-      const { p1, p2, type } = domino;
-      const cx = (p1.x + p2.x) / 2;
-      const cy = (p1.y + p2.y) / 2;
-      const isHorizontal = Math.abs(p1.hx - p2.hx) > 0.5;
+    const rotateCanvas = document.getElementById("rotate-canvas-cb").checked;
+    const rotation = rotateCanvas ? -45 : 0;
 
-      // 2x1 domino in coordinate units
-      const width = isHorizontal ? 2 * scale : 1 * scale;
-      const height = isHorizontal ? 1 * scale : 2 * scale;
+    const useCanvas = document.getElementById("renderer-canvas").checked;
 
-      group.append("rect")
-        .attr("x", cx - width / 2)
-        .attr("y", cy - height / 2)
-        .attr("width", width)
-        .attr("height", height)
-        .attr("fill", getDominoColor(type, isHorizontal))
-        .attr("stroke", borderWidth > 0 ? "#000" : "none")
-        .attr("stroke-width", borderWidth);
+    if (useCanvas) {
+      canvas.style.display = "block";
+      svg.style("display", "none");
+      renderCanvas(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation);
+    } else {
+      canvas.style.display = "none";
+      svg.style("display", "block").style("pointer-events", "auto");
+      renderSVG(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation);
+    }
+  }
+
+  // Fast redraw for style changes only (no recomputation)
+  function redrawOnly() {
+    if (!cachedDominoes || !cachedLatticePoints) {
+      renderParticles();
+      return;
     }
 
-    // Draw particles on top (only if show particles is checked)
-    if (showParticles) {
-      group.selectAll("circle.particle")
-        .data(latticePoints)
-        .enter()
-        .append("circle")
-        .attr("class", "particle")
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-        .attr("r", 5)
-        .attr("fill", d => d.inSubset ? "#000000" : "#ffffff")
-        .attr("stroke", "#000")
-        .attr("stroke-width", 1);
+    const minX = d3.min(cachedLatticePoints, d => d.x);
+    const minY = d3.min(cachedLatticePoints, d => d.y);
+    const maxX = d3.max(cachedLatticePoints, d => d.x);
+    const maxY = d3.max(cachedLatticePoints, d => d.y);
+    const bounds = { minX, minY, maxX, maxY };
+
+    const showParticles = document.getElementById("show-particles-cb").checked;
+    const borderWidth = parseFloat(document.getElementById("border-slider").value);
+    const rotateCanvas = document.getElementById("rotate-canvas-cb").checked;
+    const rotation = rotateCanvas ? -45 : 0;
+
+    const useCanvas = document.getElementById("renderer-canvas").checked;
+
+    if (useCanvas) {
+      canvas.style.display = "block";
+      svg.style("display", "none");
+      renderCanvas(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
+    } else {
+      canvas.style.display = "none";
+      svg.style("display", "block").style("pointer-events", "auto");
+      renderSVG(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
     }
   }
 
@@ -693,9 +869,9 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("y-params").value = arrayToCSV(ones);
   });
 
-  // Show particles checkbox handler - re-render when toggled
+  // Show particles checkbox handler - fast redraw
   document.getElementById("show-particles-cb").addEventListener("change", function() {
-    renderParticles();
+    redrawOnly();
   });
 
   // q-input change handler - resample when q changes
@@ -708,16 +884,77 @@ Module.onRuntimeInitialized = async function() {
     displaySubsets();
   });
 
-  // Rotate canvas checkbox handler - re-render when toggled
+  // Rotate canvas checkbox handler - fast redraw
   document.getElementById("rotate-canvas-cb").addEventListener("change", function() {
-    renderParticles();
+    redrawOnly();
   });
 
-  // Border slider handler - re-render and update display value
+  // Border slider handler - fast redraw and update display value
   document.getElementById("border-slider").addEventListener("input", function() {
     document.getElementById("border-value").innerText = this.value;
-    renderParticles();
+    redrawOnly();
   });
+
+  // Renderer toggle handlers - switch between canvas and SVG
+  document.getElementById("renderer-canvas").addEventListener("change", function() {
+    if (this.checked) {
+      canvasTransform = { x: 0, y: 0, scale: 1 };
+      redrawOnly();
+    }
+  });
+  document.getElementById("renderer-svg").addEventListener("change", function() {
+    if (this.checked) {
+      redrawOnly();
+    }
+  });
+
+  // Canvas zoom/pan event handlers
+  canvas.addEventListener("wheel", function(e) {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = canvasTransform.scale * zoomFactor;
+
+    // Zoom centered on mouse position
+    canvasTransform.x = mouseX - (mouseX - canvasTransform.x) * zoomFactor;
+    canvasTransform.y = mouseY - (mouseY - canvasTransform.y) * zoomFactor;
+    canvasTransform.scale = newScale;
+
+    redrawOnly();
+  });
+
+  canvas.addEventListener("mousedown", function(e) {
+    isDragging = true;
+    dragStart = { x: e.clientX - canvasTransform.x, y: e.clientY - canvasTransform.y };
+    canvas.style.cursor = "grabbing";
+  });
+
+  canvas.addEventListener("mousemove", function(e) {
+    if (!isDragging) return;
+    canvasTransform.x = e.clientX - dragStart.x;
+    canvasTransform.y = e.clientY - dragStart.y;
+    redrawOnly();
+  });
+
+  canvas.addEventListener("mouseup", function() {
+    isDragging = false;
+    canvas.style.cursor = "grab";
+  });
+
+  canvas.addEventListener("mouseleave", function() {
+    isDragging = false;
+    canvas.style.cursor = "grab";
+  });
+
+  canvas.addEventListener("dblclick", function() {
+    canvasTransform = { x: 0, y: 0, scale: 1 };
+    redrawOnly();
+  });
+
+  canvas.style.cursor = "grab";
 
   // r-weighting button handler - set x_i = y_i = r^i
   document.getElementById("r-btn").addEventListener("click", function() {
