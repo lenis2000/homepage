@@ -51,6 +51,12 @@ code:
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 
+<div style="margin-bottom: 10px;">
+  <label for="n-input">Aztec Diamond Order n: </label>
+  <input id="n-input" type="number" value="4" min="1" max="100" style="width: 60px;">
+  <button id="sample-btn">Sample</button>
+</div>
+
 <div class="row">
   <div class="col-12">
     <svg id="aztec-svg"></svg>
@@ -89,33 +95,110 @@ code:
 
 <script>
 (function() {
-  const n = 4;
+  let currentN = 4;
   const svg = d3.select("#aztec-svg");
+  let currentPartitions = [];
 
-  // Hardcoded partitions for n=4
-  // λ⁰, μ¹, λ¹, μ², λ², μ³, λ³, μ⁴, λ⁴
-  let currentPartitions = [
-    [],        // λ⁰ = ∅
-    [2],       // μ¹ = (2)
-    [2],       // λ¹ = (2)
-    [2, 2],    // μ² = (2,2)
-    [2, 1],    // λ² = (2,1)
-    [2, 2, 1], // μ³ = (2,2,1)
-    [1, 1],    // λ³ = (1,1)
-    [1, 1],    // μ⁴ = (1,1)
-    []         // λ⁴ = ∅
-  ];
+  // ========== RSK Sampling Functions ==========
 
-  // Ground set sizes for each diagonal (index 0 to 2n)
-  // For n=4: sizes are 4, 5, 4, 5, 4, 5, 4, 5, 4
-  // Actually for Aztec diamond of order n, diagonal k has size:
-  // min(k+1, 2n+1-k) for k=0..2n
-  function getGroundSetSize(diagIdx) {
-    return Math.min(diagIdx + 1, 2 * n + 1 - diagIdx);
+  // Get i-th part of partition (0-indexed), return 0 if out of range
+  function getPart(partition, i) {
+    return (i >= 0 && i < partition.length) ? partition[i] : 0;
   }
 
-  // Number of particles on each diagonal (fixed by the original configuration)
-  const originalParticleCounts = [4, 4, 3, 3, 2, 2, 1, 1, 0];
+  // VH bijection for the Aztec diamond growth diagram
+  // Based on arXiv:1407.3764
+  function sampleVH(lam, mu, kappa, bit) {
+    const maxLen = Math.max(lam.length, mu.length) + 2;
+    const nu = [];
+    let B = bit;
+
+    for (let i = 0; i < maxLen; i++) {
+      const lam_i = getPart(lam, i);
+      const mu_i = getPart(mu, i);
+      const lam_im1 = i > 0 ? getPart(lam, i - 1) : Infinity;
+      const mu_im1 = i > 0 ? getPart(mu, i - 1) : Infinity;
+      const mu_ip1 = getPart(mu, i + 1);
+      const lam_ip1 = getPart(lam, i + 1);
+      const kappa_i = getPart(kappa, i);
+
+      let nu_i;
+      // VH condition: if mu_i <= lam_i < mu_{i-1}
+      if (mu_i <= lam_i && lam_i < mu_im1) {
+        nu_i = Math.max(lam_i, mu_i) + B;
+      } else {
+        nu_i = Math.max(lam_i, mu_i);
+      }
+      nu.push(nu_i);
+
+      // Extract new bit: if lam_{i+1} < mu_i <= lam_i
+      if (lam_ip1 < mu_i && mu_i <= lam_i) {
+        B = Math.min(lam_i, mu_i) - kappa_i;
+      }
+    }
+
+    // Trim trailing zeros
+    while (nu.length > 0 && nu[nu.length - 1] === 0) nu.pop();
+    return nu;
+  }
+
+  // Sample Aztec diamond partition sequence using RSK growth diagram
+  function aztecDiamondSample(n) {
+    if (n === 0) return [[]];
+
+    const numBits = n * (n + 1) / 2;
+    const bits = Array.from({length: numBits}, () => Math.random() < 0.5 ? 0 : 1);
+
+    // Initialize growth diagram with empty partitions on boundaries
+    const tau = {};
+    for (let j = 0; j <= n; j++) tau[`0,${j}`] = [];
+    for (let i = 0; i <= n; i++) tau[`${i},0`] = [];
+
+    // Fill staircase row by row
+    let bitIdx = 0;
+    for (let i = 1; i <= n; i++) {
+      const rowLen = n + 1 - i;
+      for (let j = 1; j <= rowLen; j++) {
+        const lam = tau[`${i-1},${j}`];
+        const mu = tau[`${i},${j-1}`];
+        const kappa = tau[`${i-1},${j-1}`];
+        tau[`${i},${j}`] = sampleVH(lam, mu, kappa, bits[bitIdx++]);
+      }
+    }
+
+    // Extract output path along staircase boundary
+    // Path goes from (0,n) to (n,0), but we need reverse order for λ⁰, μ¹, λ¹, ...
+    const outputPath = [];
+    let i = 0, j = n;
+    outputPath.push([i, j]);
+    while (i !== n || j !== 0) {
+      if (j <= n - i && i < n) i++;
+      else j--;
+      outputPath.push([i, j]);
+    }
+
+    // Reverse to get correct order: λ⁰ first (empty), then growing, then shrinking back to λⁿ (empty)
+    return outputPath.map(([i, j]) => tau[`${i},${j}`]).reverse();
+  }
+
+  // ========== Particle Count Functions ==========
+
+  // Ground set sizes for each diagonal (index 0 to 2n)
+  function getGroundSetSize(diagIdx) {
+    return Math.min(diagIdx + 1, 2 * currentN + 1 - diagIdx);
+  }
+
+  // Number of particles on diagonal idx for Aztec diamond of size n
+  // λ^k (even idx): n - k particles
+  // μ^k (odd idx): n - k + 1 particles
+  function getParticleCount(idx) {
+    const k = Math.floor((idx + 1) / 2);
+    if (idx % 2 === 0) {
+      return currentN - k;
+    } else {
+      return currentN - k + 1;
+    }
+  }
 
   // Zoom setup
   let initialTransform = {};
@@ -259,10 +342,10 @@ code:
     const cy = 0;
 
     const latticePoints = [];
-    for (let hx = -n - 0.5; hx <= n + 0.5; hx += 1) {
-      for (let hy = -n - 0.5; hy <= n + 0.5; hy += 1) {
+    for (let hx = -currentN - 0.5; hx <= currentN + 0.5; hx += 1) {
+      for (let hy = -currentN - 0.5; hy <= currentN + 0.5; hy += 1) {
         if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
-        if (Math.abs(hx) + Math.abs(hy) > n + 0.5) continue;
+        if (Math.abs(hx) + Math.abs(hy) > currentN + 0.5) continue;
 
         const screenX = cx + hx * scale;
         const screenY = cy - hy * scale;  // Flip y-axis so positive y is up
@@ -303,7 +386,7 @@ code:
       const diagKey = diagKeys[idx];
       const diagSize = geomDiagonals[diagKey].length;
       const partition = currentPartitions[idx] || [];
-      const numParticles = originalParticleCounts[idx];
+      const numParticles = getParticleCount(idx);
       const subset = partitionToSubset(partition, numParticles, diagSize);
       subsetsByDiag[diagKey] = new Set(subset);
     }
@@ -340,7 +423,7 @@ code:
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scaleView + ")");
 
     // Draw x,y coordinate axes
-    const axisExtent = (n + 1) * 20;
+    const axisExtent = (currentN + 1) * 20;
     // X-axis (horizontal)
     group.append("line")
       .attr("x1", -axisExtent)
@@ -422,12 +505,12 @@ code:
 
     // Add diagonal labels at staircase positions along left edge
     // λ⁰ at (-n,0), μ¹ at (-n,1), λ¹ at (-n+1,1), μ² at (-n+1,2), etc.
-    const scale = 20;
+    const labelScale = 20;
     for (let idx = 0; idx < currentPartitions.length; idx++) {
-      const labelX = -n + Math.floor(idx / 2);
+      const labelX = -currentN + Math.floor(idx / 2);
       const labelY = Math.floor((idx + 1) / 2);
-      const screenLabelX = (labelX + .55) * scale;
-      const screenLabelY = (-labelY-.15) * scale;  // y is flipped
+      const screenLabelX = (labelX + .55) * labelScale;
+      const screenLabelY = (-labelY-.15) * labelScale;  // y is flipped
       group.append("text")
         .attr("x", screenLabelX - 10)
         .attr("y", screenLabelY)
@@ -449,7 +532,7 @@ code:
     for (let idx = 0; idx < currentPartitions.length; idx++) {
       const partition = currentPartitions[idx];
       const groundSetSize = getGroundSetSize(idx);
-      const numParticles = originalParticleCounts[idx];
+      const numParticles = getParticleCount(idx);
       const numHoles = groundSetSize - numParticles;
       const subset = partitionToSubset(partition, numParticles, groundSetSize);
       const walk = buildWalk(subset, groundSetSize);
@@ -604,7 +687,23 @@ code:
     partitionStatus.style.color = "green";
   });
 
-  // Initial render
+  // Sample button handler
+  document.getElementById("sample-btn").addEventListener("click", function() {
+    const nInput = document.getElementById("n-input");
+    const newN = parseInt(nInput.value, 10);
+    if (isNaN(newN) || newN < 1) {
+      alert("Please enter a valid positive integer for n");
+      return;
+    }
+    currentN = newN;
+    currentPartitions = aztecDiamondSample(currentN);
+    populatePartitionDropdown();
+    renderParticles();
+    displaySubsets();
+  });
+
+  // Sample on page load
+  currentPartitions = aztecDiamondSample(currentN);
   populatePartitionDropdown();
   renderParticles();
   displaySubsets();
