@@ -52,10 +52,12 @@ code:
 <script src="/js/d3.v7.min.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
 <script>
-// GPU detection and loading
+// GPU detection and dynamic loading (avoiding deprecated document.write)
 window.RSK_WEBGPU = !!navigator.gpu;
 if (window.RSK_WEBGPU) {
-    document.write('<script src="/js/2025-12-04-RSK-sampling-gpu.js"><\/script>');
+    const gpuScript = document.createElement('script');
+    gpuScript.src = '/js/2025-12-04-RSK-sampling-gpu.js';
+    document.head.appendChild(gpuScript);
 }
 </script>
 
@@ -68,16 +70,13 @@ if (window.RSK_WEBGPU) {
       <input id="n-input" type="number" value="4" min="1" max="1000" style="width: 70px;">
       <button id="sample-btn" style="margin-left: 10px;">Sample</button>
       <span id="progress-indicator" style="margin-left: 10px; color: #666;"></span>
+      <span id="timing-display" style="margin-left: 10px; color: #666; font-size: 0.9em;"></span>
     </span>
     <span>
       <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
       <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
     </span>
     <span id="gpu-indicator" style="color: #2e8b57; font-size: 0.85em; display: none;">🚀 GPU</span>
-  </div>
-  <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
-    <span id="timing-display">Time: --</span>
-    <span id="backend-display" style="margin-left: 15px;">Backend: --</span>
   </div>
 </fieldset>
 
@@ -172,7 +171,6 @@ async function initializeApp() {
   let progressInterval = null;
   const progressElem = document.getElementById("progress-indicator");
   const timingDisplay = document.getElementById("timing-display");
-  const backendDisplay = document.getElementById("backend-display");
   const gpuIndicator = document.getElementById("gpu-indicator");
 
   // Canvas zoom/pan state
@@ -200,7 +198,6 @@ async function initializeApp() {
             setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
           );
           await Promise.race([initPromise, timeoutPromise]);
-          console.log('WebGPU RSK Engine ready');
           if (gpuIndicator) gpuIndicator.style.display = 'inline';
           useWebGPU = true;
         } catch (e) {
@@ -266,28 +263,20 @@ async function initializeApp() {
 
     const startTime = performance.now();
     let result = null;
-    let backend = "WASM";
 
     // Try GPU first if available and initialized
     if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
       result = await sampleWithGPU(n, x, y, q);
-      if (result) {
-        backend = "GPU";
-      }
     }
 
     // Fall back to WASM
     if (!result) {
       result = await sampleWithWASM(n, x, y, q);
-      backend = "WASM";
     }
 
     const elapsed = performance.now() - startTime;
     if (timingDisplay) {
-      timingDisplay.innerText = `Time: ${elapsed.toFixed(1)} ms`;
-    }
-    if (backendDisplay) {
-      backendDisplay.innerText = `Backend: ${backend}`;
+      timingDisplay.innerText = `(${(elapsed / 1000).toFixed(2)}s)`;
     }
 
     return result;
@@ -1022,7 +1011,7 @@ async function initializeApp() {
     canvasTransform.scale = newScale;
 
     redrawOnly();
-  });
+  }, { passive: false });
 
   canvas.addEventListener("mousedown", function(e) {
     isDragging = true;
@@ -1073,32 +1062,24 @@ async function initializeApp() {
   });
 
   // Sample on page load with default parameters
-  console.log('DEBUG: Starting initial sample...');
   try {
     updateParamsForN(currentN);
     const initX = parseCSV(document.getElementById("x-params").value);
     const initY = parseCSV(document.getElementById("y-params").value);
     const initQ = parseFloat(document.getElementById("q-input").value);
-    console.log('DEBUG: initX=', initX, 'initY=', initY, 'initQ=', initQ);
     currentPartitions = await aztecDiamondSample(currentN, initX, initY, initQ);
-    console.log('DEBUG: Got partitions, calling renderParticles...');
     renderParticles();
-    console.log('DEBUG: Calling displaySubsets...');
     displaySubsets();
-    console.log('DEBUG: Initial render complete!');
   } catch (e) {
-    console.error('DEBUG: Initial sample failed:', e);
+    console.error('Initial sample failed:', e);
     document.getElementById("subsets-output").textContent = 'Error: ' + e.message;
   }
 }
 
 // Handle both cases: module already initialized or not yet
 if (Module.calledRun) {
-  console.log('DEBUG: Module already initialized, calling initializeApp directly');
   initializeApp();
 } else {
-  console.log('DEBUG: Registering onRuntimeInitialized callback');
   Module.onRuntimeInitialized = initializeApp;
 }
-console.log('DEBUG: Script block end');
 </script>

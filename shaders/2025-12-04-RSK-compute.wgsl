@@ -26,14 +26,10 @@ struct RSKParams {
 @group(0) @binding(4) var<storage, read> y_params: array<f32>;
 @group(0) @binding(5) var<storage, read> randoms: array<f32>;
 
-// Get cell index in flattened array
+// Get cell index in flattened array (simple 2D grid indexing)
 fn getCellIndex(i: i32, j: i32) -> i32 {
-    // Cells stored row by row, row i has (n+1-i) cells
-    var idx: i32 = 0;
-    for (var row: i32 = 0; row < i; row++) {
-        idx += (params.n + 1 - row);
-    }
-    return idx + j;
+    // Full (n+1) x (n+1) grid, row-major order
+    return i * (params.n + 1) + j;
 }
 
 // Get partition value at position k, returns 0 if k >= length

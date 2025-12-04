@@ -88,15 +88,20 @@ class WebGPURSKEngine {
 
         // For small n, just use CPU (GPU overhead not worth it)
         if (n < 10) {
-            console.log("n too small for GPU, falling back to CPU");
+            return null;
+        }
+
+        // For large n, buffer size exceeds WebGPU limits (~256MB max)
+        // tauSize = (n+1)² * (n+1) * 4 bytes, limit to n ≤ 350
+        if (n > 350) {
+            console.warn("n too large for GPU buffers, falling back to WASM");
             return null;
         }
 
         // Calculate buffer sizes
-        // Growth diagram is triangular: tau[i][j] for i=0..n, j=0..(n-i)
+        // Growth diagram is full (n+1) x (n+1) grid to match C++ indexing
         // Each partition has max length n
-        // Total cells = sum(n+1-i for i=0..n) = (n+1)(n+2)/2
-        const numCells = (n + 1) * (n + 2) / 2;
+        const numCells = (n + 1) * (n + 1);
         const maxPartLen = n + 1;
 
         // tau buffer: numCells * maxPartLen int32 values
@@ -263,15 +268,10 @@ class WebGPURSKEngine {
      * Extract output path partitions from growth diagram
      */
     extractOutputPath(tauData, tauLenData, n, maxPartLen) {
-        // Helper to get cell index in flattened array
+        // Helper to get cell index in flattened array (simple 2D grid)
         const getCellIndex = (i, j) => {
-            // Cells are stored row by row
-            // Row i has (n+1-i) cells for j = 0, 1, ..., n-i
-            let idx = 0;
-            for (let row = 0; row < i; row++) {
-                idx += (n + 1 - row);
-            }
-            return idx + j;
+            // Full (n+1) x (n+1) grid, row-major order
+            return i * (n + 1) + j;
         };
 
         // Helper to get partition at (i, j)
