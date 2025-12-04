@@ -1,5 +1,5 @@
 ---
-title: Schur Process Sampler
+title: RSK Sampling for the Aztec Diamond
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
