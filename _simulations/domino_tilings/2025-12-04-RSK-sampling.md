@@ -49,17 +49,13 @@ code:
   }
 </style>
 
-<script src="{{site.url}}/js/d3.v7.min.js"></script>
-<script src="{{site.url}}/js/2025-12-04-RSK-sampling.js"></script>
+<script src="/js/d3.v7.min.js"></script>
+<script src="/js/2025-12-04-RSK-sampling.js"></script>
 <script>
-// GPU detection
+// GPU detection and loading
 window.RSK_WEBGPU = !!navigator.gpu;
-console.log('WebGPU:', window.RSK_WEBGPU ? 'available' : 'unavailable');
-</script>
-<script>
-// Load WebGPU engine if available
 if (window.RSK_WEBGPU) {
-    document.write('<script src="{{site.url}}/js/2025-12-04-RSK-sampling-gpu.js"><\/script>');
+    document.write('<script src="/js/2025-12-04-RSK-sampling-gpu.js"><\/script>');
 }
 </script>
 
@@ -77,11 +73,7 @@ if (window.RSK_WEBGPU) {
       <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
       <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
     </span>
-    <span>
-      <input type="checkbox" id="use-gpu-cb" checked>
-      <label for="use-gpu-cb">Use GPU</label>
-      <span id="gpu-indicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU</span>
-    </span>
+    <span id="gpu-indicator" style="color: #2e8b57; font-size: 0.85em; display: none;">🚀 GPU</span>
   </div>
   <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
     <span id="timing-display">Time: --</span>
@@ -120,7 +112,7 @@ if (window.RSK_WEBGPU) {
 <div class="row">
   <div class="col-12" style="position: relative; height: 50vh;">
     <canvas id="aztec-canvas" style="width: 100%; height: 100%; border: 1px solid #ccc; background-color: #fafafa;"></canvas>
-    <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 1px solid #ccc; background-color: #fafafa;"></svg>
+    <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;"></svg>
   </div>
 </div>
 
@@ -161,7 +153,11 @@ if (window.RSK_WEBGPU) {
 </p>
 
 <script>
-Module.onRuntimeInitialized = async function() {
+if (typeof Module === 'undefined') {
+  document.getElementById("subsets-output").textContent = 'Error: WASM Module not loaded';
+}
+
+async function initializeApp() {
   // Wrap WASM functions
   const sampleAztecRSK = Module.cwrap('sampleAztecRSK', 'number', ['number', 'string', 'string', 'number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
@@ -178,7 +174,6 @@ Module.onRuntimeInitialized = async function() {
   const timingDisplay = document.getElementById("timing-display");
   const backendDisplay = document.getElementById("backend-display");
   const gpuIndicator = document.getElementById("gpu-indicator");
-  const useGpuCheckbox = document.getElementById("use-gpu-cb");
 
   // Canvas zoom/pan state
   let canvasTransform = { x: 0, y: 0, scale: 1 };
@@ -193,30 +188,29 @@ Module.onRuntimeInitialized = async function() {
   let gpuEngine = null;
   let useWebGPU = false;
 
-  // Initialize WebGPU engine if available
-  if (window.RSK_WEBGPU && window.WebGPURSKEngine) {
-    (async () => {
-      try {
-        gpuEngine = new WebGPURSKEngine();
-        const initPromise = gpuEngine.init();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
-        );
-        await Promise.race([initPromise, timeoutPromise]);
-        console.log('WebGPU RSK Engine ready');
-        if (gpuIndicator) gpuIndicator.style.display = 'inline';
-        useWebGPU = true;
-      } catch (e) {
-        console.warn('WebGPU initialization failed:', e);
-        gpuEngine = null;
-        if (useGpuCheckbox) useGpuCheckbox.checked = false;
-        if (useGpuCheckbox) useGpuCheckbox.disabled = true;
-      }
-    })();
-  } else {
-    // No GPU available
-    if (useGpuCheckbox) useGpuCheckbox.checked = false;
-    if (useGpuCheckbox) useGpuCheckbox.disabled = true;
+  // Initialize WebGPU engine if available (with timeout for browsers where init can hang)
+  // This runs in background and doesn't block initial render
+  try {
+    if (window.RSK_WEBGPU && window.WebGPURSKEngine) {
+      (async () => {
+        try {
+          gpuEngine = new WebGPURSKEngine();
+          const initPromise = gpuEngine.init();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
+          );
+          await Promise.race([initPromise, timeoutPromise]);
+          console.log('WebGPU RSK Engine ready');
+          if (gpuIndicator) gpuIndicator.style.display = 'inline';
+          useWebGPU = true;
+        } catch (e) {
+          console.warn('WebGPU initialization failed:', e);
+          gpuEngine = null;
+        }
+      })();
+    }
+  } catch (e) {
+    console.warn('WebGPU setup error:', e);
   }
 
   // ========== RSK Sampling Functions ==========
@@ -266,7 +260,7 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Main sampling function with GPU/WASM selection
+  // Main sampling function with GPU/WASM selection (auto-detects GPU)
   async function aztecDiamondSample(n, x, y, q) {
     if (n === 0) return [[]];
 
@@ -274,8 +268,8 @@ Module.onRuntimeInitialized = async function() {
     let result = null;
     let backend = "WASM";
 
-    // Try GPU first if enabled
-    if (useGpuCheckbox && useGpuCheckbox.checked && gpuEngine && gpuEngine.isInitialized()) {
+    // Try GPU first if available and initialized
+    if (useWebGPU && gpuEngine && gpuEngine.isInitialized()) {
       result = await sampleWithGPU(n, x, y, q);
       if (result) {
         backend = "GPU";
@@ -1079,12 +1073,32 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // Sample on page load with default parameters
-  updateParamsForN(currentN);
-  const initX = parseCSV(document.getElementById("x-params").value);
-  const initY = parseCSV(document.getElementById("y-params").value);
-  const initQ = parseFloat(document.getElementById("q-input").value);
-  currentPartitions = await aztecDiamondSample(currentN, initX, initY, initQ);
-  renderParticles();
-  displaySubsets();
-};
+  console.log('DEBUG: Starting initial sample...');
+  try {
+    updateParamsForN(currentN);
+    const initX = parseCSV(document.getElementById("x-params").value);
+    const initY = parseCSV(document.getElementById("y-params").value);
+    const initQ = parseFloat(document.getElementById("q-input").value);
+    console.log('DEBUG: initX=', initX, 'initY=', initY, 'initQ=', initQ);
+    currentPartitions = await aztecDiamondSample(currentN, initX, initY, initQ);
+    console.log('DEBUG: Got partitions, calling renderParticles...');
+    renderParticles();
+    console.log('DEBUG: Calling displaySubsets...');
+    displaySubsets();
+    console.log('DEBUG: Initial render complete!');
+  } catch (e) {
+    console.error('DEBUG: Initial sample failed:', e);
+    document.getElementById("subsets-output").textContent = 'Error: ' + e.message;
+  }
+}
+
+// Handle both cases: module already initialized or not yet
+if (Module.calledRun) {
+  console.log('DEBUG: Module already initialized, calling initializeApp directly');
+  initializeApp();
+} else {
+  console.log('DEBUG: Registering onRuntimeInitialized callback');
+  Module.onRuntimeInitialized = initializeApp;
+}
+console.log('DEBUG: Script block end');
 </script>

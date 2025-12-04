@@ -127,21 +127,28 @@ class WebGPURSKEngine {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        // x and y buffers
+        // x and y buffers (f32 to match shader)
+        // Extend to length n with 1.0 defaults (matching WASM behavior)
         this.xBuffer = this.device.createBuffer({
-            size: n * 8, // float64
+            size: n * 4, // float32
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
             mappedAtCreation: true
         });
-        new Float64Array(this.xBuffer.getMappedRange()).set(x.slice(0, n));
+        const xF32 = new Float32Array(n);
+        xF32.fill(1.0); // default value
+        for (let i = 0; i < n && i < x.length; i++) xF32[i] = x[i];
+        new Float32Array(this.xBuffer.getMappedRange()).set(xF32);
         this.xBuffer.unmap();
 
         this.yBuffer = this.device.createBuffer({
-            size: n * 8,
+            size: n * 4, // float32
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
             mappedAtCreation: true
         });
-        new Float64Array(this.yBuffer.getMappedRange()).set(y.slice(0, n));
+        const yF32 = new Float32Array(n);
+        yF32.fill(1.0); // default value
+        for (let i = 0; i < n && i < y.length; i++) yF32[i] = y[i];
+        new Float32Array(this.yBuffer.getMappedRange()).set(yF32);
         this.yBuffer.unmap();
 
         // Random buffer - pre-generate all random numbers needed
