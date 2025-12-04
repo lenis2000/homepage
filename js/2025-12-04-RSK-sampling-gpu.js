@@ -91,18 +91,21 @@ class WebGPURSKEngine {
             return null;
         }
 
-        // For large n, buffer size exceeds WebGPU limits (~256MB max)
-        // tauSize = (n+1)² * (n+1) * 4 bytes, limit to n ≤ 350
-        if (n > 350) {
-            console.warn("n too large for GPU buffers, falling back to WASM");
-            return null;
-        }
-
         // Calculate buffer sizes
         // Growth diagram is full (n+1) x (n+1) grid to match C++ indexing
-        // Each partition has max length n
+        // Partition length capped to match shader's MAX_PART_LEN (128)
         const numCells = (n + 1) * (n + 1);
-        const maxPartLen = n + 1;
+        const maxPartLen = Math.min(n + 1, 128);
+        const maxRandomsPerCell = maxPartLen + 10;
+
+        // Check if largest buffer exceeds WebGPU limit (~256MB)
+        // Largest buffer is randomSize = numCells * maxRandomsPerCell * 4
+        const maxBufferSize = 256 * 1024 * 1024; // 256MB
+        const largestBuffer = numCells * maxRandomsPerCell * 4;
+        if (largestBuffer > maxBufferSize) {
+            console.warn(`GPU buffer would be ${(largestBuffer/1024/1024).toFixed(0)}MB, exceeds 256MB limit. Using WASM.`);
+            return null;
+        }
 
         // tau buffer: numCells * maxPartLen int32 values
         const tauSize = numCells * maxPartLen * 4;
@@ -158,7 +161,6 @@ class WebGPURSKEngine {
 
         // Random buffer - pre-generate all random numbers needed
         // Each cell needs multiple random numbers for sampling
-        const maxRandomsPerCell = maxPartLen + 10; // island decisions + bernoulli
         const randomSize = numCells * maxRandomsPerCell * 4;
         this.randomBuffer = this.device.createBuffer({
             size: randomSize,
