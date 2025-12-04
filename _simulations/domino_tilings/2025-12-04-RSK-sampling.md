@@ -1,5 +1,5 @@
 ---
-title: Partition Interlacing Editor
+title: Schur Process Sampler
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -57,34 +57,35 @@ code:
   <button id="sample-btn">Sample</button>
 </div>
 
+<div style="margin-bottom: 10px;">
+  <button id="uniform-btn">Uniform (all 1s)</button>
+  <span style="margin-left: 20px;">
+    <label for="r-input">r-weighting: $x_i=y_i=r^i$, r = </label>
+    <input id="r-input" type="number" value="0.9" min="0.01" max="2" step="0.01" style="width: 60px;">
+    <button id="r-btn">Apply r</button>
+  </span>
+</div>
+
+<div style="margin-bottom: 10px;">
+  <label for="x-params">x parameters (CSV, supports value^count e.g. 1^4):</label>
+  <input id="x-params" type="text" class="param-input" value="1^4">
+</div>
+
+<div style="margin-bottom: 10px;">
+  <label for="y-params">y parameters (CSV, supports value^count e.g. 1^4):</label>
+  <input id="y-params" type="text" class="param-input" value="1^4">
+</div>
+
 <div class="row">
   <div class="col-12">
     <svg id="aztec-svg"></svg>
   </div>
 </div>
 
-<div style="margin-top: 20px;">
-  <h4>Partitions forming the Schur process</h4>
-  <div id="subsets-output">Loading...</div>
-</div>
-
-<div style="margin-top: 20px; padding: 15px; border: 2px solid #4682B4; border-radius: 8px; background-color: #f0f8ff;">
-  <h4 style="margin-top: 0;">Edit Partition</h4>
-  <div style="margin-bottom: 10px;">
-    <label for="partition-select">Select partition level: </label>
-    <select id="partition-select" style="font-family: monospace; padding: 5px;">
-      <option value="">-- Loading --</option>
-    </select>
-  </div>
-  <div style="margin-bottom: 10px;">
-    <label for="partition-input">Partition (comma-separated, e.g., 4,3,1): </label>
-    <input id="partition-input" type="text" class="param-input" value="" placeholder="e.g., 4,3,1 or empty for empty partition">
-  </div>
-  <div>
-    <button id="apply-partition-btn">Apply Partition</button>
-    <span id="partition-status" style="margin-left: 15px; font-style: italic;"></span>
-  </div>
-</div>
+<details style="margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; padding: 10px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc;">Partitions forming the Schur process (click to expand)</summary>
+  <div id="subsets-output" style="margin-top: 10px;">Loading...</div>
+</details>
 
 <p style="margin-top: 10px; font-size: 0.9em;">See also:
 <ul style="margin-top: 5px; margin-bottom: 0;">
@@ -143,11 +144,13 @@ code:
   }
 
   // Sample Aztec diamond partition sequence using RSK growth diagram
-  function aztecDiamondSample(n) {
+  // x and y are Schur process parameters (arrays of length n)
+  function aztecDiamondSample(n, x, y) {
     if (n === 0) return [[]];
 
-    const numBits = n * (n + 1) / 2;
-    const bits = Array.from({length: numBits}, () => Math.random() < 0.5 ? 0 : 1);
+    // Ensure x and y have length n, default to 1s
+    while (x.length < n) x.push(1);
+    while (y.length < n) y.push(1);
 
     // Initialize growth diagram with empty partitions on boundaries
     const tau = {};
@@ -155,14 +158,20 @@ code:
     for (let i = 0; i <= n; i++) tau[`${i},0`] = [];
 
     // Fill staircase row by row
-    let bitIdx = 0;
+    // At position (i,j), use parameters x[i-1] and y[j-1] (1-indexed to 0-indexed)
     for (let i = 1; i <= n; i++) {
       const rowLen = n + 1 - i;
       for (let j = 1; j <= rowLen; j++) {
         const lam = tau[`${i-1},${j}`];
         const mu = tau[`${i},${j-1}`];
         const kappa = tau[`${i-1},${j-1}`];
-        tau[`${i},${j}`] = sampleVH(lam, mu, kappa, bits[bitIdx++]);
+
+        // Schur process Bernoulli: p = x_i * y_j / (1 + x_i * y_j)
+        const xi = x[i - 1] * y[j - 1];
+        const p = xi / (1 + xi);
+        const bit = Math.random() < p ? 1 : 0;
+
+        tau[`${i},${j}`] = sampleVH(lam, mu, kappa, bit);
       }
     }
 
@@ -179,6 +188,64 @@ code:
 
     // Reverse to get correct order: λ⁰ first (empty), then growing, then shrinking back to λⁿ (empty)
     return outputPath.map(([i, j]) => tau[`${i},${j}`]).reverse();
+  }
+
+  // ========== Parameter Parsing Functions ==========
+
+  // Parse CSV to array with support for value^count notation (e.g., "1^100" = 100 ones)
+  function parseCSV(str) {
+    const result = [];
+    const tokens = str.split(',');
+    for (const token of tokens) {
+      const trimmed = token.trim();
+      if (trimmed === '') continue;
+
+      // Check for value^count notation
+      if (trimmed.includes('^')) {
+        const parts = trimmed.split('^');
+        if (parts.length === 2) {
+          const value = parseFloat(parts[0].trim());
+          const count = parseInt(parts[1].trim(), 10);
+          if (!isNaN(value) && !isNaN(count) && count > 0) {
+            for (let i = 0; i < count; i++) {
+              result.push(value);
+            }
+            continue;
+          }
+        }
+      }
+
+      // Regular number
+      const value = parseFloat(trimmed);
+      if (!isNaN(value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  }
+
+  // Generate CSV from array
+  function arrayToCSV(arr) {
+    return arr.map(x => x.toString()).join(',');
+  }
+
+  // Update parameters display based on n
+  function updateParamsForN(newN) {
+    const xParamsField = document.getElementById("x-params");
+    const yParamsField = document.getElementById("y-params");
+    const currentX = parseCSV(xParamsField.value);
+    const currentY = parseCSV(yParamsField.value);
+
+    // Extend or truncate to match n
+    const newX = [];
+    const newY = [];
+    for (let i = 0; i < newN; i++) {
+      newX.push(i < currentX.length ? currentX[i] : 1.0);
+      newY.push(i < currentY.length ? currentY[i] : 1.0);
+    }
+
+    xParamsField.value = arrayToCSV(newX);
+    yParamsField.value = arrayToCSV(newY);
   }
 
   // ========== Particle Count Functions ==========
@@ -422,61 +489,6 @@ code:
       .attr("class", "particles")
       .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + scaleView + ")");
 
-    // Draw x,y coordinate axes
-    const axisExtent = (currentN + 1) * 20;
-    // X-axis (horizontal)
-    group.append("line")
-      .attr("x1", -axisExtent)
-      .attr("y1", 0)
-      .attr("x2", axisExtent)
-      .attr("y2", 0)
-      .attr("stroke", "#999")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "4,2");
-    group.append("text")
-      .attr("x", axisExtent + 5)
-      .attr("y", 0)
-      .attr("font-size", "10px")
-      .attr("fill", "#666")
-      .attr("dominant-baseline", "middle")
-      .text("x");
-    // Y-axis (vertical, positive y points up)
-    group.append("line")
-      .attr("x1", 0)
-      .attr("y1", -axisExtent)
-      .attr("x2", 0)
-      .attr("y2", axisExtent)
-      .attr("stroke", "#999")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "4,2");
-    group.append("text")
-      .attr("x", 0)
-      .attr("y", -axisExtent - 5)
-      .attr("font-size", "10px")
-      .attr("fill", "#666")
-      .attr("text-anchor", "middle")
-      .text("y");
-    // Origin marker
-    group.append("circle")
-      .attr("cx", 0)
-      .attr("cy", 0)
-      .attr("r", 3)
-      .attr("fill", "#999");
-
-    // Draw diagonal lines (optional, for reference)
-    diagKeys.forEach((diagKey, idx) => {
-      const pts = geomDiagonals[diagKey];
-      if (pts.length > 1) {
-        group.append("line")
-          .attr("x1", pts[0].x)
-          .attr("y1", pts[0].y)
-          .attr("x2", pts[pts.length - 1].x)
-          .attr("y2", pts[pts.length - 1].y)
-          .attr("stroke", "#ddd")
-          .attr("stroke-width", 1);
-      }
-    });
-
     // Draw particles
     group.selectAll("circle.particle")
       .data(latticePoints)
@@ -489,37 +501,6 @@ code:
       .attr("fill", d => d.inSubset ? "#ff00ff" : "#ffffff")
       .attr("stroke", "#000")
       .attr("stroke-width", 1);
-
-    // Add coordinate labels next to particles only (not holes)
-    group.selectAll("text.coord")
-      .data(latticePoints.filter(d => d.inSubset))
-      .enter()
-      .append("text")
-      .attr("class", "coord")
-      .attr("x", d => d.x + 7)
-      .attr("y", d => d.y + 1)
-      .attr("font-size", "1.7px")
-      .attr("fill", "#333")
-      .attr("dominant-baseline", "middle")
-      .text(d => `(${d.hx},${d.hy})`);
-
-    // Add diagonal labels at staircase positions along left edge
-    // λ⁰ at (-n,0), μ¹ at (-n,1), λ¹ at (-n+1,1), μ² at (-n+1,2), etc.
-    const labelScale = 20;
-    for (let idx = 0; idx < currentPartitions.length; idx++) {
-      const labelX = -currentN + Math.floor(idx / 2);
-      const labelY = Math.floor((idx + 1) / 2);
-      const screenLabelX = (labelX + .55) * labelScale;
-      const screenLabelY = (-labelY-.15) * labelScale;  // y is flipped
-      group.append("text")
-        .attr("x", screenLabelX - 10)
-        .attr("y", screenLabelY)
-        .attr("font-size", "8px")
-        .attr("fill", "#666")
-        .attr("text-anchor", "end")
-        .attr("dominant-baseline", "middle")
-        .text(getPartitionLabel(idx));
-    }
   }
 
   // Display subsets and interlacing info
@@ -579,114 +560,6 @@ code:
     subsetsOutput.textContent = lines.join("\n");
   }
 
-  // Populate partition dropdown
-  function populatePartitionDropdown() {
-    const partitionSelect = document.getElementById("partition-select");
-    const partitionInput = document.getElementById("partition-input");
-
-    partitionSelect.innerHTML = '';
-    for (let i = 0; i < currentPartitions.length; i++) {
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = getPartitionLabel(i) + " = " + partitionToString(currentPartitions[i]);
-      partitionSelect.appendChild(opt);
-    }
-    partitionInput.value = currentPartitions.length > 0 ? currentPartitions[0].join(",") : "";
-  }
-
-  // Parse partition from string
-  function parsePartition(str) {
-    if (!str || str.trim() === "" || str.trim() === "∅") return [];
-    const parts = str.split(",").map(s => parseInt(s.trim(), 10)).filter(x => !isNaN(x) && x > 0);
-    parts.sort((a, b) => b - a);
-    return parts;
-  }
-
-  // Validate interlacing for a partition at index idx
-  function validatePartitionAtIndex(idx, newPartition) {
-    const errors = [];
-    const prevPartition = idx > 0 ? currentPartitions[idx - 1] : null;
-    const nextPartition = idx < currentPartitions.length - 1 ? currentPartitions[idx + 1] : null;
-
-    if (idx % 2 === 0) {
-      // This is λ^k where k = idx/2
-      const k = idx / 2;
-      if (prevPartition !== null) {
-        const mu_k = prevPartition;
-        if (!isVerticalStrip(mu_k, newPartition)) {
-          errors.push(`μ${toSuperscript(k)}/λ${toSuperscript(k)} is not a vertical strip`);
-        }
-      }
-      if (nextPartition !== null) {
-        const mu_kp1 = nextPartition;
-        if (!isHorizontalStrip(mu_kp1, newPartition)) {
-          errors.push(`μ${toSuperscript(k+1)}/λ${toSuperscript(k)} is not a horizontal strip`);
-        }
-      }
-    } else {
-      // This is μ^k where k = (idx+1)/2
-      const k = (idx + 1) / 2;
-      if (prevPartition !== null) {
-        const lambda_km1 = prevPartition;
-        if (!isHorizontalStrip(newPartition, lambda_km1)) {
-          errors.push(`μ${toSuperscript(k)}/λ${toSuperscript(k-1)} is not a horizontal strip`);
-        }
-      }
-      if (nextPartition !== null) {
-        const lambda_k = nextPartition;
-        if (!isVerticalStrip(newPartition, lambda_k)) {
-          errors.push(`μ${toSuperscript(k)}/λ${toSuperscript(k)} is not a vertical strip`);
-        }
-      }
-    }
-
-    return errors;
-  }
-
-  // Event handlers
-  const partitionSelect = document.getElementById("partition-select");
-  const partitionInput = document.getElementById("partition-input");
-  const applyPartitionBtn = document.getElementById("apply-partition-btn");
-  const partitionStatus = document.getElementById("partition-status");
-
-  partitionSelect.addEventListener("change", function() {
-    const idx = parseInt(this.value, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < currentPartitions.length) {
-      partitionInput.value = currentPartitions[idx].join(",");
-      partitionStatus.textContent = "";
-    }
-  });
-
-  applyPartitionBtn.addEventListener("click", function() {
-    const idx = parseInt(partitionSelect.value, 10);
-    if (isNaN(idx) || idx < 0 || idx >= currentPartitions.length) {
-      partitionStatus.textContent = "Please select a valid partition level";
-      partitionStatus.style.color = "red";
-      return;
-    }
-
-    const newPartition = parsePartition(partitionInput.value);
-    const errors = validatePartitionAtIndex(idx, newPartition);
-
-    if (errors.length > 0) {
-      partitionStatus.textContent = "Invalid: " + errors.join("; ");
-      partitionStatus.style.color = "red";
-      return;
-    }
-
-    // Update partition
-    currentPartitions[idx] = newPartition;
-
-    // Refresh everything
-    populatePartitionDropdown();
-    partitionSelect.value = idx;
-    renderParticles();
-    displaySubsets();
-
-    partitionStatus.textContent = "Partition updated ✓";
-    partitionStatus.style.color = "green";
-  });
-
   // Sample button handler
   document.getElementById("sample-btn").addEventListener("click", function() {
     const nInput = document.getElementById("n-input");
@@ -696,15 +569,44 @@ code:
       return;
     }
     currentN = newN;
-    currentPartitions = aztecDiamondSample(currentN);
-    populatePartitionDropdown();
+    updateParamsForN(currentN);
+    const x = parseCSV(document.getElementById("x-params").value);
+    const y = parseCSV(document.getElementById("y-params").value);
+    currentPartitions = aztecDiamondSample(currentN, x, y);
     renderParticles();
     displaySubsets();
   });
 
-  // Sample on page load
-  currentPartitions = aztecDiamondSample(currentN);
-  populatePartitionDropdown();
+  // Uniform button handler - set all parameters to 1
+  document.getElementById("uniform-btn").addEventListener("click", function() {
+    const ones = Array(currentN).fill(1);
+    document.getElementById("x-params").value = arrayToCSV(ones);
+    document.getElementById("y-params").value = arrayToCSV(ones);
+  });
+
+  // r-weighting button handler - set x_i = y_i = r^i
+  document.getElementById("r-btn").addEventListener("click", function() {
+    const r = parseFloat(document.getElementById("r-input").value);
+    if (isNaN(r) || r <= 0) {
+      alert("Please enter a valid positive number for r");
+      return;
+    }
+    const xArr = [];
+    const yArr = [];
+    for (let i = 0; i < currentN; i++) {
+      const val = Math.pow(r, i + 1);  // r^1, r^2, ..., r^n
+      xArr.push(val);
+      yArr.push(val);
+    }
+    document.getElementById("x-params").value = arrayToCSV(xArr);
+    document.getElementById("y-params").value = arrayToCSV(yArr);
+  });
+
+  // Sample on page load with default parameters
+  updateParamsForN(currentN);
+  const initX = parseCSV(document.getElementById("x-params").value);
+  const initY = parseCSV(document.getElementById("y-params").value);
+  currentPartitions = aztecDiamondSample(currentN, initX, initY);
   renderParticles();
   displaySubsets();
 })();
