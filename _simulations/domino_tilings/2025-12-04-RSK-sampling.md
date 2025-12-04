@@ -265,7 +265,7 @@ code:
         if (Math.abs(hx) + Math.abs(hy) > n + 0.5) continue;
 
         const screenX = cx + hx * scale;
-        const screenY = cy + hy * scale;
+        const screenY = cy - hy * scale;  // Flip y-axis so positive y is up
         const diag = Math.round(hx + hy);
 
         latticePoints.push({
@@ -357,7 +357,7 @@ code:
       .attr("fill", "#666")
       .attr("dominant-baseline", "middle")
       .text("x");
-    // Y-axis (vertical, pointing down in SVG)
+    // Y-axis (vertical, positive y points up)
     group.append("line")
       .attr("x1", 0)
       .attr("y1", -axisExtent)
@@ -415,26 +415,28 @@ code:
       .attr("class", "coord")
       .attr("x", d => d.x + 7)
       .attr("y", d => d.y + 1)
-      .attr("font-size", "5px")
+      .attr("font-size", "1.7px")
       .attr("fill", "#333")
       .attr("dominant-baseline", "middle")
       .text(d => `(${d.hx},${d.hy})`);
 
-    // Add diagonal labels
-    diagKeys.forEach((diagKey, idx) => {
-      const pts = geomDiagonals[diagKey];
-      if (pts.length > 0) {
-        const firstPt = pts[0];
-        group.append("text")
-          .attr("x", firstPt.x - 15)
-          .attr("y", firstPt.y)
-          .attr("font-size", "8px")
-          .attr("fill", "#666")
-          .attr("text-anchor", "end")
-          .attr("dominant-baseline", "middle")
-          .text(getPartitionLabel(idx));
-      }
-    });
+    // Add diagonal labels at staircase positions along left edge
+    // λ⁰ at (-n,0), μ¹ at (-n,1), λ¹ at (-n+1,1), μ² at (-n+1,2), etc.
+    const scale = 20;
+    for (let idx = 0; idx < currentPartitions.length; idx++) {
+      const labelX = -n + Math.floor(idx / 2);
+      const labelY = Math.floor((idx + 1) / 2);
+      const screenLabelX = (labelX + .55) * scale;
+      const screenLabelY = (-labelY-.15) * scale;  // y is flipped
+      group.append("text")
+        .attr("x", screenLabelX - 10)
+        .attr("y", screenLabelY)
+        .attr("font-size", "8px")
+        .attr("fill", "#666")
+        .attr("text-anchor", "end")
+        .attr("dominant-baseline", "middle")
+        .text(getPartitionLabel(idx));
+    }
   }
 
   // Display subsets and interlacing info
