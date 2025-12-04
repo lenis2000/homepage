@@ -438,29 +438,136 @@ Module.onRuntimeInitialized = async function() {
       .attr("stroke", "#000")
       .attr("stroke-width", 0.5);
 
-    // ========== STEP 5: Display particle coordinates ==========
+    // ========== STEP 5: Display particle coordinates and subsets ==========
     const subsetsOutput = document.getElementById("subsets-output");
     if (subsetsOutput) {
-      // Group particles by diagonal
-      const particlesByDiag = {};
-      latticePoints.filter(p => p.inSubset).forEach(p => {
-        if (!particlesByDiag[p.diag]) particlesByDiag[p.diag] = [];
-        particlesByDiag[p.diag].push(p);
+      // Get all diagonal keys and sizes from geomDiagonals
+      const allDiagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
+
+      // For each diagonal, compute subset (positions that are inSubset)
+      const diagData = [];
+      allDiagKeys.forEach(d => {
+        const pts = geomDiagonals[d];  // Already sorted by posInDiag
+        const m = pts.length;  // Ground set size
+        const subset = pts.filter(p => p.inSubset).map(p => p.posInDiag);
+        diagData.push({ diag: d, m, subset, pts });
       });
 
-      // Sort diagonals
-      const diagKeys = Object.keys(particlesByDiag).map(Number).sort((a, b) => a - b);
+      // Superscript helper
+      const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+      function toSuperscript(num) {
+        if (num < 10) return superscripts[num];
+        return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
+      }
 
-      let coordLines = "Particle coordinates (hx, hy) by diagonal:\n";
-      diagKeys.forEach(d => {
-        const pts = particlesByDiag[d].sort((a, b) => (a.hx - a.hy) - (b.hx - b.hy));
-        const coordStr = pts.map(p => `(${p.hx}, ${-p.hy})`).join(", ");
-        coordLines += `  diag ${d}: ${coordStr}\n`;
+      // Build output
+      let output = "Subsets by diagonal:\n";
+      diagData.forEach(({ diag, m, subset }, idx) => {
+        const n_j = subset.length;      // number of particles
+        const m_j = m - subset.length;  // number of holes
+        const groundSetSize = m;        // n_j + m_j
+        const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+
+        // Build walk: R if position is in subset, U otherwise
+        let walk = "";
+        const subsetSet = new Set(subset);
+        for (let pos = 1; pos <= groundSetSize; pos++) {
+          walk += subsetSet.has(pos) ? "R" : "U";
+        }
+
+        // Compute Young diagram: λ_j = number of R steps before the j-th U step
+        let partition = [];
+        let rCount = 0;
+        for (let pos = 1; pos <= groundSetSize; pos++) {
+          if (subsetSet.has(pos)) {
+            rCount++;
+          } else {
+            partition.push(rCount);
+          }
+        }
+        // Reverse to get weakly decreasing order and remove trailing zeros
+        partition = partition.reverse().filter(x => x > 0);
+        const partStr = partition.length === 0 ? "∅" : "(" + partition.join(",") + ")";
+
+        // Label: λ^0, μ^1, λ^1, μ^2, λ^2, ...
+        let label;
+        if (idx % 2 === 0) {
+          label = "λ" + toSuperscript(idx / 2);
+        } else {
+          label = "μ" + toSuperscript((idx + 1) / 2);
+        }
+
+        // Store partition for interlacing checks
+        diagData[idx].partition = partition;
+        diagData[idx].label = label;
+
+        output += `  ${label}: ${subsetStr}  (n=${n_j}, m=${m_j})  walk: ${walk}  ${label}=${partStr}\n`;
       });
-      coordLines += "\n";
 
-      // Prepend to existing content
-      subsetsOutput.textContent = coordLines + subsetsOutput.textContent;
+      // Interlacing checks
+      output += "\nInterlacing checks:\n";
+
+      // Helper: get partition part (0 if out of bounds)
+      function getPart(p, i) {
+        return (i >= 0 && i < p.length) ? p[i] : 0;
+      }
+
+      // Check if μ/λ is a horizontal strip: μ_j ≥ λ_j ≥ μ_{j+1} for all j
+      function isHorizontalStrip(mu, lambda) {
+        const maxLen = Math.max(mu.length, lambda.length) + 1;
+        for (let j = 0; j < maxLen; j++) {
+          const mu_j = getPart(mu, j);
+          const mu_jp1 = getPart(mu, j + 1);
+          const lambda_j = getPart(lambda, j);
+          if (!(mu_j >= lambda_j && lambda_j >= mu_jp1)) return false;
+        }
+        return true;
+      }
+
+      // Check if μ/λ is a vertical strip: μ_j - λ_j ∈ {0, 1} for all j
+      function isVerticalStrip(mu, lambda) {
+        const maxLen = Math.max(mu.length, lambda.length);
+        for (let j = 0; j < maxLen; j++) {
+          const mu_j = getPart(mu, j);
+          const lambda_j = getPart(lambda, j);
+          const diff = mu_j - lambda_j;
+          if (diff < 0 || diff > 1) return false;
+        }
+        return true;
+      }
+
+      let allValid = true;
+
+      // Check μ^i / λ^(i-1) is horizontal strip and μ^i / λ^i is vertical strip
+      for (let idx = 1; idx < diagData.length; idx += 2) {
+        // idx is odd → μ^k where k = (idx+1)/2
+        const k = (idx + 1) / 2;
+        const mu_k = diagData[idx].partition;
+        const lambda_km1 = diagData[idx - 1].partition;  // λ^(k-1)
+        const lambda_k = (idx + 1 < diagData.length) ? diagData[idx + 1].partition : [];  // λ^k
+
+        // Check μ^k / λ^(k-1) is horizontal strip
+        const hsCheck = isHorizontalStrip(mu_k, lambda_km1);
+        const hsStatus = hsCheck ? "✓" : "✗";
+        if (!hsCheck) allValid = false;
+        output += `  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} horizontal strip: ${hsStatus}\n`;
+
+        // Check μ^k / λ^k is vertical strip (if λ^k exists)
+        if (idx + 1 < diagData.length) {
+          const vsCheck = isVerticalStrip(mu_k, lambda_k);
+          const vsStatus = vsCheck ? "✓" : "✗";
+          if (!vsCheck) allValid = false;
+          output += `  μ${toSuperscript(k)}/λ${toSuperscript(k)} vertical strip: ${vsStatus}\n`;
+        }
+      }
+
+      if (allValid) {
+        output += "All interlacing conditions satisfied ✓\n";
+      } else {
+        output += "WARNING: Some interlacing conditions failed ✗\n";
+      }
+
+      subsetsOutput.textContent = output;
     }
   }
 
