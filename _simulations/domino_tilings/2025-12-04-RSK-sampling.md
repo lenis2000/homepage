@@ -51,6 +51,17 @@ code:
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="{{site.url}}/js/2025-12-04-RSK-sampling.js"></script>
+<script>
+// GPU detection
+window.RSK_WEBGPU = !!navigator.gpu;
+console.log('WebGPU:', window.RSK_WEBGPU ? 'available' : 'unavailable');
+</script>
+<script>
+// Load WebGPU engine if available
+if (window.RSK_WEBGPU) {
+    document.write('<script src="{{site.url}}/js/webgpu-rsk-engine.js"><\/script>');
+}
+</script>
 
 <!-- Pane 1: Sampling -->
 <fieldset style="border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
@@ -66,6 +77,15 @@ code:
       <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
       <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
     </span>
+    <span>
+      <input type="checkbox" id="use-gpu-cb" checked>
+      <label for="use-gpu-cb">Use GPU</label>
+      <span id="gpu-indicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU</span>
+    </span>
+  </div>
+  <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
+    <span id="timing-display">Time: --</span>
+    <span id="backend-display" style="margin-left: 15px;">Backend: --</span>
   </div>
 </fieldset>
 
@@ -155,6 +175,10 @@ Module.onRuntimeInitialized = async function() {
   let simulationActive = false;
   let progressInterval = null;
   const progressElem = document.getElementById("progress-indicator");
+  const timingDisplay = document.getElementById("timing-display");
+  const backendDisplay = document.getElementById("backend-display");
+  const gpuIndicator = document.getElementById("gpu-indicator");
+  const useGpuCheckbox = document.getElementById("use-gpu-cb");
 
   // Canvas zoom/pan state
   let canvasTransform = { x: 0, y: 0, scale: 1 };
@@ -165,13 +189,40 @@ Module.onRuntimeInitialized = async function() {
   let cachedDominoes = null;
   let cachedLatticePoints = null;
 
-  // ========== RSK Sampling Functions (now in C++/WASM) ==========
-  // The sampling logic has been moved to 2025-12-04-RSK-sampling.cpp for performance
+  // ========== WebGPU Engine ==========
+  let gpuEngine = null;
+  let useWebGPU = false;
 
-  // Async wrapper for WASM sampling
-  async function aztecDiamondSample(n, x, y, q) {
-    if (n === 0) return [[]];
+  // Initialize WebGPU engine if available
+  if (window.RSK_WEBGPU && window.WebGPURSKEngine) {
+    (async () => {
+      try {
+        gpuEngine = new WebGPURSKEngine();
+        const initPromise = gpuEngine.init();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
+        );
+        await Promise.race([initPromise, timeoutPromise]);
+        console.log('WebGPU RSK Engine ready');
+        if (gpuIndicator) gpuIndicator.style.display = 'inline';
+        useWebGPU = true;
+      } catch (e) {
+        console.warn('WebGPU initialization failed:', e);
+        gpuEngine = null;
+        if (useGpuCheckbox) useGpuCheckbox.checked = false;
+        if (useGpuCheckbox) useGpuCheckbox.disabled = true;
+      }
+    })();
+  } else {
+    // No GPU available
+    if (useGpuCheckbox) useGpuCheckbox.checked = false;
+    if (useGpuCheckbox) useGpuCheckbox.disabled = true;
+  }
 
+  // ========== RSK Sampling Functions ==========
+
+  // WASM sampling (fallback)
+  async function sampleWithWASM(n, x, y, q) {
     const xJson = JSON.stringify(x);
     const yJson = JSON.stringify(y);
 
@@ -190,9 +241,62 @@ Module.onRuntimeInitialized = async function() {
     } catch (e) {
       simulationActive = false;
       progressElem.innerText = "Error!";
-      console.error("Sampling error:", e);
+      console.error("WASM sampling error:", e);
       return [[]];
     }
+  }
+
+  // GPU sampling
+  async function sampleWithGPU(n, x, y, q) {
+    if (!gpuEngine || !gpuEngine.isInitialized()) {
+      return null; // Fall back to WASM
+    }
+
+    try {
+      progressElem.innerText = "GPU sampling...";
+      const xArr = new Float64Array(x);
+      const yArr = new Float64Array(y);
+      const result = await gpuEngine.sampleAztec(n, xArr, yArr, q);
+      progressElem.innerText = "";
+      return result;
+    } catch (e) {
+      console.warn("GPU sampling failed, falling back to WASM:", e);
+      progressElem.innerText = "";
+      return null;
+    }
+  }
+
+  // Main sampling function with GPU/WASM selection
+  async function aztecDiamondSample(n, x, y, q) {
+    if (n === 0) return [[]];
+
+    const startTime = performance.now();
+    let result = null;
+    let backend = "WASM";
+
+    // Try GPU first if enabled
+    if (useGpuCheckbox && useGpuCheckbox.checked && gpuEngine && gpuEngine.isInitialized()) {
+      result = await sampleWithGPU(n, x, y, q);
+      if (result) {
+        backend = "GPU";
+      }
+    }
+
+    // Fall back to WASM
+    if (!result) {
+      result = await sampleWithWASM(n, x, y, q);
+      backend = "WASM";
+    }
+
+    const elapsed = performance.now() - startTime;
+    if (timingDisplay) {
+      timingDisplay.innerText = `Time: ${elapsed.toFixed(1)} ms`;
+    }
+    if (backendDisplay) {
+      backendDisplay.innerText = `Backend: ${backend}`;
+    }
+
+    return result;
   }
 
   function startProgressPolling() {
