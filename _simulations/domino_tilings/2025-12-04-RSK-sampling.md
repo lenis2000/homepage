@@ -91,6 +91,24 @@ code:
   <div id="subsets-output">No subset data available yet. Click "Sample" to generate.</div>
 </div>
 
+<div style="margin-top: 20px; padding: 15px; border: 2px solid #4682B4; border-radius: 8px; background-color: #f0f8ff;">
+  <h4 style="margin-top: 0;">Edit Partition</h4>
+  <div style="margin-bottom: 10px;">
+    <label for="partition-select">Select partition level: </label>
+    <select id="partition-select" style="font-family: monospace; padding: 5px;">
+      <option value="">-- Sample first --</option>
+    </select>
+  </div>
+  <div style="margin-bottom: 10px;">
+    <label for="partition-input">Partition (comma-separated, e.g., 4,3,1): </label>
+    <input id="partition-input" type="text" class="param-input" value="" placeholder="e.g., 4,3,1 or empty for ∅">
+  </div>
+  <div>
+    <button id="apply-partition-btn">Apply Partition</button>
+    <span id="partition-status" style="margin-left: 15px; font-style: italic;"></span>
+  </div>
+</div>
+
 
 <p style="margin-top: 10px; font-size: 0.9em;">See also:
 <ul style="margin-top: 5px; margin-bottom: 0;">
@@ -360,6 +378,12 @@ Module.onRuntimeInitialized = async function() {
         .map(p => p.posInDiag);
     }
 
+    // Store original particle counts for each diagonal (for inverse bijection)
+    originalParticleCounts = {};
+    for (const k in extractedSubsets) {
+      originalParticleCounts[k] = extractedSubsets[k].length;
+    }
+
     // ========== STEP 2: Generate lattice from geometry (no dominos) ==========
     // Half-integer lattice: points (hx, hy) with |hx| + |hy| <= n + 0.5
     // Screen coords: rotated 45 degrees, so screenX ~ (hx - hy), screenY ~ -(hx + hy)
@@ -564,52 +588,390 @@ Module.onRuntimeInitialized = async function() {
       }
 
       subsetsOutput.textContent = output;
+
+      // Store extracted partitions globally and populate dropdown
+      // This ensures dropdown matches the "Subsets by diagonal" display
+      currentPartitions = diagData.map(d => d.partition);
+      currentN = n;
+      populatePartitionDropdown(currentPartitions);
     }
   }
 
   let currentSubsets = [];
+  let currentPartitions = [];  // Store partitions for editing
   let currentN = 4;
 
-  // Convert subset S ⊂ {1,...,m} to partition via Maya diagram
-  // λ_i = s_i - i where s_1 < s_2 < ... < s_k are elements of S
-  function subsetToPartition(subset, m) {
-    if (!subset || subset.length === 0) return [];
-    const sorted = [...subset].sort((a, b) => a - b);
-    const parts = [];
-    for (let i = 0; i < sorted.length; i++) {
-      const part = sorted[i] - (i + 1);  // s_{i+1} - (i+1), 0-indexed
-      if (part > 0) parts.push(part);
-    }
-    // Parts are already in increasing order, reverse for standard notation
-    return parts.reverse();
+  // Partition editing UI elements
+  const partitionSelect = document.getElementById("partition-select");
+  const partitionInput = document.getElementById("partition-input");
+  const applyPartitionBtn = document.getElementById("apply-partition-btn");
+  const partitionStatus = document.getElementById("partition-status");
+
+  // Superscript helper (global for reuse)
+  const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+  function toSuperscript(num) {
+    if (num < 10) return superscripts[num];
+    return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
   }
 
-  // Convert partition to subset via Maya diagram (INVERSE of subsetToPartition)
-  // Given partition λ and subset size m = ceiling(k/2), compute subset
-  // s_i = λ'_i + i where λ' is partition reversed and zero-padded to length m
-  //
-  // For Aztec diamond: λ diagonals have range {1,...,n}, μ diagonals have range {1,...,n+1}
-  // maxElem parameter caps the subset elements to valid range
-  function partitionToSubsetWithSize(partition, m, maxElem = null) {
-    if (m <= 0) return [];
-    // Reverse partition: (4,3,1) → [1,3,4]
-    const reversed = partition ? [...partition].reverse() : [];
-    // Pad with zeros at the beginning to length m: [0,1,3,4]
-    while (reversed.length < m) {
-      reversed.unshift(0);
+  // Get partition label (λ^k or μ^k) for index
+  function getPartitionLabel(idx) {
+    if (idx % 2 === 0) {
+      return "λ" + toSuperscript(idx / 2);
+    } else {
+      return "μ" + toSuperscript((idx + 1) / 2);
     }
-    // Compute s_i = reversed[i-1] + i for i = 1..m
-    const subset = [];
-    for (let i = 0; i < m; i++) {
-      let elem = reversed[i] + (i + 1);
-      // Cap to valid range if specified
-      if (maxElem !== null && elem > maxElem) {
-        elem = maxElem;
+  }
+
+  // Populate partition dropdown after simulation
+  function populatePartitionDropdown(partitions) {
+    partitionSelect.innerHTML = '';
+    for (let i = 0; i < partitions.length; i++) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = getPartitionLabel(i) + " = " + partitionToString(partitions[i]);
+      partitionSelect.appendChild(opt);
+    }
+    partitionInput.value = partitions.length > 0 ? partitions[0].join(",") : "";
+  }
+
+  // Handle partition selection change
+  partitionSelect.addEventListener("change", function() {
+    const idx = parseInt(this.value, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < currentPartitions.length) {
+      partitionInput.value = currentPartitions[idx].join(",");
+      partitionStatus.textContent = "";
+    }
+  });
+
+  // Parse partition from string
+  function parsePartition(str) {
+    if (!str || str.trim() === "" || str.trim() === "∅") return [];
+    const parts = str.split(",").map(s => parseInt(s.trim(), 10)).filter(x => !isNaN(x) && x > 0);
+    // Sort in decreasing order (partition format)
+    parts.sort((a, b) => b - a);
+    return parts;
+  }
+
+  // Validate interlacing for a partition at index idx
+  function validatePartitionAtIndex(partitions, idx, newPartition) {
+    const errors = [];
+
+    // Get neighbors
+    const prevPartition = idx > 0 ? partitions[idx - 1] : null;
+    const nextPartition = idx < partitions.length - 1 ? partitions[idx + 1] : null;
+
+    if (idx % 2 === 0) {
+      // This is λ^k where k = idx/2
+      const k = idx / 2;
+      // Check with previous μ^k (if exists, idx > 0)
+      if (prevPartition !== null) {
+        const mu_k = prevPartition;
+        // μ^k / λ^k should be VERTICAL strip
+        if (!isVerticalStrip(mu_k, newPartition)) {
+          errors.push(`μ${toSuperscript(k)}/λ${toSuperscript(k)} is not a vertical strip`);
+        }
       }
-      subset.push(elem);
+      // Check with next μ^(k+1) (if exists)
+      if (nextPartition !== null) {
+        const mu_kp1 = nextPartition;
+        // μ^(k+1) / λ^k should be HORIZONTAL strip
+        if (!isHorizontalStrip(mu_kp1, newPartition)) {
+          errors.push(`μ${toSuperscript(k+1)}/λ${toSuperscript(k)} is not a horizontal strip`);
+        }
+      }
+    } else {
+      // This is μ^k where k = (idx+1)/2
+      const k = (idx + 1) / 2;
+      // Check with previous λ^(k-1)
+      if (prevPartition !== null) {
+        const lambda_km1 = prevPartition;
+        // μ^k / λ^(k-1) should be HORIZONTAL strip
+        if (!isHorizontalStrip(newPartition, lambda_km1)) {
+          errors.push(`μ${toSuperscript(k)}/λ${toSuperscript(k-1)} is not a horizontal strip`);
+        }
+      }
+      // Check with next λ^k
+      if (nextPartition !== null) {
+        const lambda_k = nextPartition;
+        // μ^k / λ^k should be VERTICAL strip
+        if (!isVerticalStrip(newPartition, lambda_k)) {
+          errors.push(`μ${toSuperscript(k)}/λ${toSuperscript(k)} is not a vertical strip`);
+        }
+      }
     }
-    // Remove duplicates and sort
-    return [...new Set(subset)].sort((a, b) => a - b);
+
+    return errors;
+  }
+
+  // Apply edited partition - updates particles only, dominoes stay as reference
+  applyPartitionBtn.addEventListener("click", function() {
+    const idx = parseInt(partitionSelect.value, 10);
+    if (isNaN(idx) || idx < 0 || idx >= currentPartitions.length) {
+      partitionStatus.textContent = "Please select a valid partition level";
+      partitionStatus.style.color = "red";
+      return;
+    }
+
+    const newPartition = parsePartition(partitionInput.value);
+
+    // Validate interlacing
+    const errors = validatePartitionAtIndex(currentPartitions, idx, newPartition);
+
+    if (errors.length > 0) {
+      partitionStatus.textContent = "Invalid: " + errors.join("; ");
+      partitionStatus.style.color = "red";
+      return;
+    }
+
+    // Update partition
+    currentPartitions[idx] = newPartition;
+
+    // Update dropdown to show new value
+    populatePartitionDropdown(currentPartitions);
+    partitionSelect.value = idx;
+
+    // Update just the particles, keep original dominoes as reference
+    updateParticlesFromPartitions(currentPartitions, currentN);
+
+    // Update subsets display
+    displaySubsetsFromPartitions(currentPartitions, currentN);
+
+    partitionStatus.textContent = "Partition updated ✓ (particles show new state, dominoes show original)";
+    partitionStatus.style.color = "green";
+  });
+
+  // Store original particle counts per diagonal (set by renderDominoes)
+  let originalParticleCounts = {};
+
+  // Proper inverse bijection: partition → subset
+  // Given partition λ, ground set size m, and number of particles n_p
+  // Returns the subset S ⊆ {1, ..., m}
+  function partitionToSubset(partition, numParticles, groundSetSize) {
+    const m = groundSetSize;
+    const n_p = numParticles;
+    const h = m - n_p;  // number of holes (U's in walk)
+
+    if (h <= 0) {
+      // All positions are particles
+      const subset = [];
+      for (let i = 1; i <= m; i++) subset.push(i);
+      return subset;
+    }
+
+    // Reverse partition and pad with zeros at the beginning to length h
+    const lambda = partition || [];
+    const lambdaReversed = [...lambda].reverse();
+    while (lambdaReversed.length < h) {
+      lambdaReversed.unshift(0);  // pad with zeros at beginning
+    }
+
+    // Compute positions of U's: u_j = lambdaReversed[j-1] + j
+    const holePositions = new Set();
+    for (let j = 1; j <= h; j++) {
+      const u_j = lambdaReversed[j - 1] + j;
+      if (u_j >= 1 && u_j <= m) {
+        holePositions.add(u_j);
+      }
+    }
+
+    // Subset = all positions except holes
+    const subset = [];
+    for (let pos = 1; pos <= m; pos++) {
+      if (!holePositions.has(pos)) {
+        subset.push(pos);
+      }
+    }
+
+    return subset;
+  }
+
+  // Update particle colors based on new partitions (without changing dominoes)
+  function updateParticlesFromPartitions(partitions, n) {
+    const group = svg.select("g.dominoes");
+    if (group.empty()) return;
+
+    const particles = group.selectAll("circle.particle");
+    if (particles.empty()) return;
+
+    // Get diagonal info from existing particles
+    const particleData = [];
+    particles.each(function(d) {
+      particleData.push(d);
+    });
+
+    // Group by diagonal
+    const diagGroups = {};
+    particleData.forEach(p => {
+      if (!diagGroups[p.diag]) diagGroups[p.diag] = [];
+      diagGroups[p.diag].push(p);
+    });
+
+    // Sort diagonal keys
+    const diagKeys = Object.keys(diagGroups).map(Number).sort((a, b) => a - b);
+
+    // Convert partitions to subsets using proper inverse bijection
+    const subsetsByDiag = {};
+    for (let idx = 0; idx < partitions.length && idx < diagKeys.length; idx++) {
+      const diagKey = diagKeys[idx];
+      const diagSize = diagGroups[diagKey].length;
+      const partition = partitions[idx] || [];
+
+      // Use original particle count for this diagonal
+      const numParticles = originalParticleCounts[diagKey] !== undefined
+        ? originalParticleCounts[diagKey]
+        : diagSize - partition.length;  // fallback
+
+      const subset = partitionToSubset(partition, numParticles, diagSize);
+      subsetsByDiag[diagKey] = new Set(subset);
+    }
+
+    // Update particle colors
+    particles.attr("fill", d => {
+      const subset = subsetsByDiag[d.diag];
+      const inSubset = subset ? subset.has(d.posInDiag) : false;
+      return inSubset ? "#ff00ff" : "#ffffff";
+    });
+  }
+
+  // Display subsets computed from partitions (for after editing)
+  function displaySubsetsFromPartitions(partitions, n) {
+    const subsetsOutput = document.getElementById("subsets-output");
+    if (!subsetsOutput) return;
+
+    const lines = [];
+    for (let i = 0; i < partitions.length; i++) {
+      const partition = partitions[i];
+      const partStr = partitionToString(partition);
+      const label = getPartitionLabel(i);
+
+      // Compute subset from partition for display
+      // In walk-based encoding: partition.length = number of holes
+      // numParticles = diagSize - numHoles
+      let diagSize;
+      if (i <= n) {
+        diagSize = i + 1;
+      } else {
+        diagSize = 2 * n + 1 - i;
+      }
+      const numHoles = partition.length;
+      const numParticles = diagSize - numHoles;
+      const subset = partitionToSubsetWithSize(partition, numParticles, diagSize);
+      const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+
+      lines.push(`${label} = ${partStr}  (subset: ${subsetStr})`);
+    }
+
+    // Check interlacing conditions
+    lines.push("");
+    lines.push("Interlacing checks:");
+    let allValid = true;
+
+    for (let i = 1; i < partitions.length; i++) {
+      if (i % 2 === 1) {
+        const k = (i + 1) / 2;
+        const mu_k = partitions[i];
+        const lambda_km1 = partitions[i - 1];
+        const isVS = isVerticalStrip(mu_k, lambda_km1);
+        const status = isVS ? "✓" : "✗";
+        if (!isVS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} vertical strip: ${status}`);
+      } else {
+        const k = i / 2;
+        const lambda_k = partitions[i];
+        const mu_k = partitions[i - 1];
+        const isHS = isHorizontalStrip(mu_k, lambda_k);
+        const status = isHS ? "✓" : "✗";
+        if (!isHS) allValid = false;
+        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} horizontal strip: ${status}`);
+      }
+    }
+
+    if (allValid) {
+      lines.push("All interlacing conditions satisfied ✓");
+    } else {
+      lines.push("WARNING: Some interlacing conditions failed ✗");
+    }
+
+    subsetsOutput.textContent = lines.join("\n");
+  }
+
+  // Convert subset S ⊂ {1,...,m} to partition via walk/ballot path
+  // Walk: R if position is in S, U otherwise
+  // λ_j = number of R steps before the j-th U step
+  // This matches the RSK/Schur process convention used in renderDominoes()
+  function subsetToPartition(subset, m) {
+    if (!subset || m <= 0) return [];
+    const subsetSet = new Set(subset);
+    const partition = [];
+    let rCount = 0;
+
+    for (let pos = 1; pos <= m; pos++) {
+      if (subsetSet.has(pos)) {
+        rCount++;
+      } else {
+        partition.push(rCount);
+      }
+    }
+
+    // Reverse to get weakly decreasing order and remove trailing zeros
+    return partition.reverse().filter(x => x > 0);
+  }
+
+  // Convert partition to subset via walk/ballot path (INVERSE of subsetToPartition)
+  // This inverts the walk-based encoding:
+  // Walk: R if position is in S, U otherwise
+  // λ_j = number of R steps before the j-th U step (after reversal)
+  //
+  // Given partition λ = (λ_1 ≥ λ_2 ≥ ... ≥ λ_k) and ground set size m,
+  // reconstruct the walk and extract subset S
+  function partitionToSubsetWithSize(partition, numParticles, m) {
+    if (m <= 0) return [];
+    if (numParticles <= 0) return [];  // No particles means empty subset
+
+    // Number of holes = m - numParticles
+    const numHoles = m - numParticles;
+    if (numHoles < 0) return [];
+
+    // Reverse partition and pad with zeros to length numHoles
+    const lambda = partition ? [...partition] : [];
+    const lambdaReversed = [...lambda].reverse();
+    while (lambdaReversed.length < numHoles) {
+      lambdaReversed.unshift(0);  // Pad at beginning (these become first holes)
+    }
+
+    // Reconstruct walk: place R's and U's
+    // lambdaReversed[j] = number of R's before (j+1)-th U
+    const walk = [];
+    let rPlaced = 0;
+
+    for (let j = 0; j < numHoles; j++) {
+      const targetR = lambdaReversed[j];
+      // Place R's until we have targetR before this U
+      while (rPlaced < targetR && walk.length < m) {
+        walk.push('R');
+        rPlaced++;
+      }
+      // Place the U
+      if (walk.length < m) {
+        walk.push('U');
+      }
+    }
+
+    // Place remaining R's
+    while (walk.length < m) {
+      walk.push('R');
+    }
+
+    // Extract subset: positions with R
+    const subset = [];
+    for (let pos = 0; pos < walk.length; pos++) {
+      if (walk[pos] === 'R') {
+        subset.push(pos + 1);  // 1-indexed
+      }
+    }
+
+    return subset;
   }
 
   // Format partition as string
@@ -660,20 +1022,23 @@ Module.onRuntimeInitialized = async function() {
       return;
     }
 
-    // Superscript helper
-    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
-    function toSuperscript(num) {
-      if (num < 10) return superscripts[num];
-      return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
-    }
-
     // Convert all subsets to partitions
     const partitions = [];
     for (let i = 0; i < subsets.length; i++) {
       // Determine slice size (number of elements on this diagonal)
-      const m = subsets[i].length > 0 ? Math.max(...subsets[i]) : (i < subsets.length - 1 && subsets[i+1].length > 0 ? Math.max(...subsets[i+1]) : n);
+      // For Aztec diamond order n, diagonal i has size:
+      // i+1 for i <= n, and 2n+1-i for i > n
+      let m;
+      if (i <= n) {
+        m = i + 1;
+      } else {
+        m = 2 * n + 1 - i;
+      }
       partitions.push(subsetToPartition(subsets[i], m));
     }
+
+    // Note: currentPartitions and dropdown are populated by renderDominoes()
+    // which extracts partitions directly from domino colors (the ground truth)
 
     // Display partitions with λ/μ notation
     const lines = [];
@@ -787,8 +1152,7 @@ Module.onRuntimeInitialized = async function() {
       try {
         const result = JSON.parse(jsonStr);
         currentDominoes = result.dominoes || result;  // Handle both old and new format
-        const subsets = result.subsets || [];
-        displaySubsets(subsets, n);
+        // Note: subsets are now extracted from dominoes in renderDominoes()
       } catch (e) {
         progressElem.innerText = "Error during sampling";
         clearInterval(progressInterval);

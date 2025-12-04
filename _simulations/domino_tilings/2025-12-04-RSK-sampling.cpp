@@ -382,125 +382,6 @@ string partitionsToTilingJSON(const vector<Partition>& partitions, int n) {
 }
 
 /*
- * Extract diagonal subsets from the grid
- * For Aztec diamond of order n, we get 2n+1 slices
- *
- * Each domino has 2 balls, one in each 1x1 square:
- * - Yellow domino → 2 yellow balls (both IN subset)
- * - Blue domino → 2 blue balls (both NOT in subset)
- *
- * Diagonal slices (NE direction) pass through balls.
- * Element index = position along the diagonal (sorted by cx).
- */
-vector<vector<int>> extractDiagonalSubsets(const vector<vector<int>>& grid, int n) {
-    int finalSize = 2 * n + 2;
-    double scale = 10.0;
-
-    // Each domino gets TWO balls, one per 1x1 square
-    struct Ball {
-        double cx;          // Center x of the square
-        double cy;          // Center y of the square
-        bool isYellow;      // Yellow = in subset, Blue = not in subset
-    };
-    vector<Ball> balls;
-
-    for (int i = 0; i < finalSize; i++) {
-        for (int j = 0; j < finalSize; j++) {
-            if (grid[i][j] == 1) {
-                bool oddI = (i & 1), oddJ = (j & 1);
-
-                if (oddI && !oddJ) {
-                    // Yellow (West, vertical domino, w=2, h=4) - 2 squares stacked
-                    double xc = (j - i - 1) * scale;
-                    double yc = (finalSize + 1 - (i + j) - 2) * scale;
-                    balls.push_back({xc + scale, yc + scale, true});
-                    balls.push_back({xc + scale, yc + 3 * scale, true});
-                } else if (oddI && oddJ) {
-                    // Blue (North, horizontal domino, w=4, h=2) - 2 squares side by side
-                    double xc = (j - i - 2) * scale;
-                    double yc = (finalSize + 1 - (i + j) - 1) * scale;
-                    balls.push_back({xc + scale, yc + scale, true});
-                    balls.push_back({xc + 3 * scale, yc + scale, true});
-                } else if (!oddI && !oddJ) {
-                    // Green (South, horizontal domino, w=4, h=2) - 2 squares side by side
-                    double xc = (j - i - 2) * scale;
-                    double yc = (finalSize + 1 - (i + j) - 1) * scale;
-                    balls.push_back({xc + scale, yc + scale, false});
-                    balls.push_back({xc + 3 * scale, yc + scale, false});
-                } else {
-                    // Red (East, vertical domino, w=2, h=4) - 2 squares stacked
-                    double xc = (j - i - 1) * scale;
-                    double yc = (finalSize + 1 - (i + j) - 2) * scale;
-                    balls.push_back({xc + scale, yc + scale, false});
-                    balls.push_back({xc + scale, yc + 3 * scale, false});
-                }
-            }
-        }
-    }
-
-    if (balls.empty()) {
-        vector<vector<int>> result(2*n + 1);
-        return result;
-    }
-
-    // Group balls by distinct cx+cy values (with small tolerance for floating point)
-    map<int, vector<Ball>> ballsBySum;  // key = rounded cx+cy
-    for (auto& b : balls) {
-        int sumKey = (int)round(b.cx + b.cy);
-        ballsBySum[sumKey].push_back(b);
-    }
-
-    // Get sorted list of distinct cx+cy values
-    vector<int> distinctSums;
-    for (auto& kv : ballsBySum) {
-        distinctSums.push_back(kv.first);
-    }
-    sort(distinctSums.begin(), distinctSums.end());
-
-    // Map each distinct sum to a slice index
-    int numSlices = (int)distinctSums.size();
-    map<int, int> sumToSlice;
-    for (int i = 0; i < numSlices; i++) {
-        sumToSlice[distinctSums[i]] = i;
-    }
-
-    // Group balls by slice
-    map<int, vector<Ball>> ballsBySlice;
-    for (auto& b : balls) {
-        int sumKey = (int)round(b.cx + b.cy);
-        int sliceIdx = sumToSlice[sumKey];
-        ballsBySlice[sliceIdx].push_back(b);
-    }
-
-    // Build subsets for each slice
-    vector<vector<int>> subsets(numSlices);
-
-    for (int s = 0; s < numSlices; s++) {
-        if (!ballsBySlice.count(s)) continue;
-
-        auto& sliceBalls = ballsBySlice[s];
-
-        // Sort by cx (position along diagonal)
-        sort(sliceBalls.begin(), sliceBalls.end(),
-             [](const Ball& a, const Ball& b) { return a.cx < b.cx; });
-
-        // Element index = position in sorted order (1-indexed)
-        for (int i = 0; i < (int)sliceBalls.size(); i++) {
-            if (sliceBalls[i].isYellow) {
-                subsets[s].push_back(i + 1);
-            }
-        }
-    }
-
-    // Reverse so that slice 0 is empty (lambda^0) and slice 2n is full (lambda^n)
-    // Even slices: lambda^0, lambda^1, ..., lambda^n
-    // Odd slices: mu^1, mu^2, ..., mu^n
-    reverse(subsets.begin(), subsets.end());
-
-    return subsets;
-}
-
-/*
  * Alternative: Use shuffling-style direct sampling
  * This is simpler and matches the existing uniform sampler
  */
@@ -625,10 +506,7 @@ string directSample(int n, const vector<double>& x, const vector<double>& y) {
         emscripten_sleep(0);
     }
 
-    // Extract diagonal subsets
-    vector<vector<int>> subsets = extractDiagonalSubsets(grid, n);
-
-    // Convert grid to JSON
+    // Convert grid to JSON (subsets are extracted by JS from domino colors)
     string json = "{\"dominoes\":[";
     bool first = true;
     double scale = 10.0;
@@ -682,24 +560,6 @@ string directSample(int n, const vector<double>& x, const vector<double>& y) {
                 json += buffer;
             }
         }
-    }
-
-    json += "],\"subsets\":[";
-
-    // Add subsets to JSON
-    first = true;
-    for (const auto& subset : subsets) {
-        if (!first) json += ",";
-        else first = false;
-
-        json += "[";
-        bool firstElem = true;
-        for (int elem : subset) {
-            if (!firstElem) json += ",";
-            else firstElem = false;
-            json += to_string(elem);
-        }
-        json += "]";
     }
 
     json += "]}";
