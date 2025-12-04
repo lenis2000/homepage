@@ -555,9 +555,9 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Stats Row -->
 <div class="control-group">
   <div class="stats-inline">
-    <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span></div>
+    <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;">⚠️ CFTP may take a few minutes</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
-    <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span></div>
+    <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span><span id="gpuIndicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU detected</span></div>
   </div>
 </div>
 
@@ -3391,6 +3391,9 @@ function initLozengeApp() {
                 );
                 await Promise.race([initPromise, timeoutPromise]);
                 console.log('WebGPU Lozenge Engine ready');
+                // Show GPU indicator
+                const gpuIndicator = document.getElementById('gpuIndicator');
+                if (gpuIndicator) gpuIndicator.style.display = 'inline';
                 // Sync grid data if simulation is already valid (async init may complete after reinitRegion)
                 if (isValid && sim) {
                     const gridInfo = sim.getRawGridData();
@@ -3682,6 +3685,12 @@ function initLozengeApp() {
 
     function updateUI() {
         el.dimerCount.textContent = isValid ? sim.dimers.length : 0;
+        // Show warning for large regions (>30K vertices)
+        const dimerWarning = document.getElementById('dimerWarning');
+        if (dimerWarning) {
+            const vertexCount = countVertices();
+            dimerWarning.style.display = (isValid && vertexCount > 30000) ? 'inline' : 'none';
+        }
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
         // Status badge - only show when invalid
@@ -3706,6 +3715,40 @@ function initLozengeApp() {
 
         // Update holes UI
         updateHolesUI();
+
+        // Update scale up button warning
+        updateScaleUpWarning();
+    }
+
+    function countVertices() {
+        // Count unique vertices from active triangles
+        const vertices = new Set();
+        for (const tri of activeTriangles.values()) {
+            const { n, j, t } = tri;
+            if (t === 0) {
+                vertices.add(`${n},${j}`);
+                vertices.add(`${n+1},${j}`);
+                vertices.add(`${n+1},${j-1}`);
+            } else {
+                vertices.add(`${n},${j}`);
+                vertices.add(`${n+1},${j}`);
+                vertices.add(`${n+1},${j-1}`);
+            }
+        }
+        return vertices.size;
+    }
+
+    function updateScaleUpWarning() {
+        const btn = document.getElementById('doubleMeshBtn');
+        if (!btn) return;
+        const vertexCount = countVertices();
+        if (vertexCount > 5000) {
+            btn.textContent = 'Scale Up Region ⚠️';
+            btn.title = 'Double the region size (may take a moment)';
+        } else {
+            btn.textContent = 'Scale Up Region';
+            btn.title = 'Double the region size';
+        }
     }
 
     function setViewMode(use3D) {
@@ -4423,13 +4466,24 @@ function initLozengeApp() {
         if (state) loadState(state);
     });
 
-    document.getElementById('doubleMeshBtn').addEventListener('click', () => {
+    const doubleMeshBtn = document.getElementById('doubleMeshBtn');
+    doubleMeshBtn.addEventListener('click', () => {
         if (activeTriangles.size === 0) return;
+        if (doubleMeshBtn.disabled) return;
+        const dimerCount = sim.dimers ? sim.dimers.length : 0;
         saveState();
         activeTriangles = doubleMesh(activeTriangles);
         reinitialize();
         renderer.fitToRegion(activeTriangles);
         draw();
+        // Prevent multi-clicking for large regions
+        if (dimerCount > 5000) {
+            doubleMeshBtn.disabled = true;
+            setTimeout(() => {
+                doubleMeshBtn.disabled = false;
+                updateScaleUpWarning();
+            }, 1000);
+        }
     });
 
     document.getElementById('halveMeshBtn').addEventListener('click', () => {
@@ -5290,7 +5344,7 @@ function initLozengeApp() {
 
                         // Reset chains to extremal states at start of each epoch
                         gpuEngine.resetCFTPChains(minGridData, maxGridData);
-                        el.cftpSteps.textContent = 'T=' + T + ' (GPU)';
+                        el.cftpSteps.textContent = 'T=' + T;
                         el.cftpBtn.textContent = 'T=' + T;
                         lastDrawnBlock = -1; // Reset for new epoch
 
@@ -5306,7 +5360,7 @@ function initLozengeApp() {
                             coalesced = result.coalesced;
 
                             // Update progress display
-                            el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '') + ' (GPU)';
+                            el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '');
                             el.cftpBtn.textContent = T + ':' + totalStepsRun;
 
                             // Draw min/max bounds every drawInterval steps (like WASM version)

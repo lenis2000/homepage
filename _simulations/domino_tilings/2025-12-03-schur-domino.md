@@ -1,5 +1,5 @@
 ---
-title: Schur Process Sampling for Aztec Diamond
+title: Schur process weights for the Aztec Diamond
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -47,10 +47,9 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 ---
 
 <div style="margin-bottom: 10px;">
-  <label for="n-input">Aztec Diamond Order ($n\le 400$): </label>
-  <input id="n-input" type="number" value="4" min="2" step="2" max="400" size="3">
-  <button id="update-btn">Sample (Shuffling)</button>
-  <button id="growth-btn">Sample (Growth Diagram)</button>
+  <label for="n-input">Aztec Diamond Order ($n\le 600$): </label>
+  <input id="n-input" type="number" value="4" min="2" step="2" max="600" size="3">
+  <button id="update-btn">Sample</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
 </div>
 
@@ -81,10 +80,6 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
   </div>
 </div>
 
-<div style="margin-top: 15px;">
-  <label for="subsets-output" style="font-weight: bold;">Schur Process Partitions:</label>
-  <pre id="subsets-output" style="width: 100%; font-family: monospace; font-size: 12px; margin-top: 5px; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; white-space: pre-wrap;"></pre>
-</div>
 
 <p style="margin-top: 10px; font-size: 0.9em;">See also:
 <ul style="margin-top: 5px; margin-bottom: 0;">
@@ -96,7 +91,6 @@ Schur process sampling for Aztec diamond tilings based on <a href="https://arxiv
 <script>
 Module.onRuntimeInitialized = async function() {
   const simulateSchur = Module.cwrap('simulateSchur', 'number', ['number', 'string', 'string'], {async: true});
-  const simulateSchurGrowth = Module.cwrap('simulateSchurGrowth', 'number', ['number', 'string', 'string'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
@@ -158,7 +152,6 @@ Module.onRuntimeInitialized = async function() {
   function startSimulation() {
     simulationActive = true;
     document.getElementById("update-btn").disabled = true;
-    document.getElementById("growth-btn").disabled = true;
     inputField.disabled = true;
     cancelBtn.style.display = 'inline-block';
     simulationAbortController = new AbortController();
@@ -168,7 +161,6 @@ Module.onRuntimeInitialized = async function() {
     simulationActive = false;
     clearInterval(progressInterval);
     document.getElementById("update-btn").disabled = false;
-    document.getElementById("growth-btn").disabled = false;
     inputField.disabled = false;
     cancelBtn.style.display = 'none';
     progressElem.innerText = "Simulation cancelled";
@@ -417,285 +409,6 @@ Module.onRuntimeInitialized = async function() {
       const subset = extractedSubsets[p.diag] || [];
       p.inSubset = subset.includes(p.posInDiag);
     });
-
-    // ========== STEP 4: Draw points (no domino reference) ==========
-    // Draw ALL lattice points: subset=black, not in subset=gray outline
-    group.selectAll("circle.lattice")
-      .data(latticePoints)
-      .enter()
-      .append("circle")
-      .attr("class", "lattice")
-      .attr("cx", d => d.x)
-      .attr("cy", d => d.y)
-      .attr("r", d => d.inSubset ? 5 : 3)
-      .attr("fill", d => d.inSubset ? "#000" : "none")
-      .attr("stroke", d => d.inSubset ? "#fff" : "#666")
-      .attr("stroke-width", 1);
-
-    // Debug: log first few points to compare
-    console.log("Sample lattice points (geom):", latticePoints.slice(0, 5));
-    console.log("Sample domino points:", dominoPoints.slice(0, 5));
-
-    // Log the extracted subsets with λ/μ labels
-    const diagKeys = Object.keys(extractedSubsets).map(Number).sort((a, b) => a - b);
-    console.log("Extracted subsets from dominos:");
-    diagKeys.forEach((k, idx) => {
-      const label = (idx % 2 === 0) ? "λ" + (n - idx/2) : "μ" + (n - Math.floor(idx/2));
-      console.log(`  ${label}: {${extractedSubsets[k].join(", ")}}`);
-    });
-  }
-
-  function renderGrowthDiagram(partitions, n) {
-    // Generate half-integer lattice: points (hx, hy) with |hx| + |hy| <= n + 0.5
-    const scale = 20;
-    const latticePoints = [];
-
-    for (let hx = -n - 0.5; hx <= n + 0.5; hx += 1) {
-      for (let hy = -n - 0.5; hy <= n + 0.5; hy += 1) {
-        // Must be half-integers
-        if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
-        // Must be inside diamond
-        if (Math.abs(hx) + Math.abs(hy) > n + 0.5) continue;
-
-        // Diagonal k = hx + hy (ranges from -n to n in integer steps)
-        // This matches the shuffling convention where diag = hx + hy
-        const k = Math.round(hx + hy);
-
-        latticePoints.push({ hx, hy, k });
-      }
-    }
-
-    // Group by diagonal and sort by position along diagonal (hx + hy)
-    const diagonals = {};
-    latticePoints.forEach(p => {
-      if (!diagonals[p.k]) diagonals[p.k] = [];
-      diagonals[p.k].push(p);
-    });
-    for (const k in diagonals) {
-      // Sort by position along the diagonal (hx - hy gives position)
-      diagonals[k].sort((a, b) => (a.hx - a.hy) - (b.hx - b.hy));
-      diagonals[k].forEach((p, idx) => { p.posInDiag = idx + 1; });
-    }
-
-    // Map diagonal k to boundary partition index:
-    // k = -n → boundary[0] = λ^0
-    // k = -n+1 → boundary[1] = μ^1
-    // k = -n+2 → boundary[2] = λ^1
-    // General: boundary index s = k + n
-    function partitionToSubset(partition) {
-      // Maya diagram encoding: λ = (λ_1, ..., λ_m) → S = {λ_m + 1, λ_{m-1} + 2, ..., λ_1 + m}
-      const subset = [];
-      const m = partition.length;
-      for (let j = 1; j <= m; j++) {
-        const part = partition[m - j];  // λ_{m-j+1} (0-indexed: partition[m-j])
-        subset.push(part + j);
-      }
-      return subset;
-    }
-
-    // Compute subset for each diagonal from partitions
-    const subsets = {};
-    for (let k = -n; k <= n; k++) {
-      const s = k + n;  // boundary index
-      if (s >= 0 && s < partitions.length) {
-        subsets[k] = partitionToSubset(partitions[s]);
-      } else {
-        subsets[k] = [];
-      }
-    }
-
-    // Mark which lattice points are in the subset
-    latticePoints.forEach(p => {
-      const subset = subsets[p.k] || [];
-      p.inSubset = subset.includes(p.posInDiag);
-    });
-
-    // Screen coordinates: same transform as shuffling visualization
-    // Center at (0, 0) in abstract coords → center of SVG
-    const bbox = svg.node().getBoundingClientRect();
-    const svgWidth = bbox.width;
-    const svgHeight = bbox.height;
-    const cx = svgWidth / 2;
-    const cy = svgHeight / 2;
-
-    latticePoints.forEach(p => {
-      p.x = cx + p.hx * scale;
-      p.y = cy + p.hy * scale;
-    });
-
-    // Compute bounds
-    const minX = d3.min(latticePoints, d => d.x) - scale * 1.5;
-    const maxX = d3.max(latticePoints, d => d.x) + scale * 1.5;
-    const minY = d3.min(latticePoints, d => d.y) - scale * 1.5;
-    const maxY = d3.max(latticePoints, d => d.y) + scale * 1.5;
-    const widthData = maxX - minX;
-    const heightData = maxY - minY;
-
-    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
-    const viewScale = Math.min(svgWidth / widthData, svgHeight / heightData) * 0.85;
-    const translateX = (svgWidth - widthData * viewScale) / 2 - minX * viewScale;
-    const translateY = (svgHeight - heightData * viewScale) / 2 - minY * viewScale;
-
-    initialTransform = { translateX, translateY, scale: viewScale };
-    svg.call(zoom.transform, d3.zoomIdentity);
-    svg.selectAll("g").remove();
-
-    const group = svg.append("g")
-      .attr("class", "growth")
-      .attr("transform", "translate(" + translateX + "," + translateY + ") scale(" + viewScale + ")");
-
-    // Draw all lattice points: subset=black filled, not in subset=gray outline
-    group.selectAll("circle.lattice")
-      .data(latticePoints)
-      .enter()
-      .append("circle")
-      .attr("class", "lattice")
-      .attr("cx", d => d.x)
-      .attr("cy", d => d.y)
-      .attr("r", d => d.inSubset ? 5 : 3)
-      .attr("fill", d => d.inSubset ? "#000" : "none")
-      .attr("stroke", d => d.inSubset ? "#fff" : "#666")
-      .attr("stroke-width", 1);
-
-    // Debug: log partition to subset mapping
-    console.log("Growth diagram subsets:");
-    for (let k = -n; k <= n; k++) {
-      const s = k + n;
-      const label = (s % 2 === 0) ? `λ^${s/2}` : `μ^${Math.ceil(s/2)}`;
-      const part = partitions[s] || [];
-      const sub = subsets[k] || [];
-      console.log(`  k=${k} (${label}): partition=${JSON.stringify(part)} → subset={${sub.join(",")}}`);
-    }
-  }
-
-  // Draw Young diagram as ASCII art
-  function partitionToYoungDiagram(partition) {
-    if (!partition || partition.length === 0) return "∅";
-    let s = "";
-    for (let i = 0; i < partition.length; i++) {
-      s += "█".repeat(partition[i]) + "\n";
-    }
-    return s.trimEnd();
-  }
-
-  // Display partitions with subsets for Growth Diagram
-  function displayPartitionsWithSubsets(partitions, subsets, n, grid) {
-    const subsetsOutput = document.getElementById("subsets-output");
-    if (!subsetsOutput) return;
-
-    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
-    function toSuperscript(num) {
-      if (num < 10) return superscripts[num];
-      return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
-    }
-
-    const lines = [];
-
-    // First: show the full growth diagram grid with Bernoulli values
-    if (grid && grid.length > 0) {
-      const numCells = grid.length;
-      lines.push(`=== Growth Diagram Grid (${numCells} = (${n}+1 choose 2) cells) ===`);
-      lines.push("");
-
-      // Build a map for quick lookup
-      const gridMap = {};
-      grid.forEach(cell => {
-        const key = `${cell.i},${cell.j}`;
-        gridMap[key] = cell;
-      });
-
-      // Display as a grid: rows are i (1 to n), columns are j (1 to n)
-      // Cell (i,j) exists if i + j <= n + 1
-      lines.push("Grid τ[i][j] with Bernoulli B values:");
-      lines.push("(Row i increases downward, Column j increases rightward)");
-      lines.push("");
-
-      // Header row
-      let header = "     ";
-      for (let j = 1; j <= n; j++) {
-        header += `j=${j}`.padEnd(12);
-      }
-      lines.push(header);
-
-      // Data rows
-      for (let i = 1; i <= n; i++) {
-        let row = `i=${i} `;
-        for (let j = 1; j <= n; j++) {
-          if (i + j <= n + 1) {
-            const cell = gridMap[`${i},${j}`];
-            if (cell) {
-              const partStr = cell.partition.length === 0 ? "∅" : `(${cell.partition.join(",")})`;
-              row += `B=${cell.B} ${partStr}`.padEnd(12);
-            } else {
-              row += "?".padEnd(12);
-            }
-          } else {
-            row += "".padEnd(12);
-          }
-        }
-        lines.push(row);
-      }
-      lines.push("");
-
-      // Show Bernoulli matrix separately
-      lines.push("Bernoulli values B[i][j]:");
-      let bHeader = "     ";
-      for (let j = 1; j <= n; j++) bHeader += `j=${j} `;
-      lines.push(bHeader);
-      for (let i = 1; i <= n; i++) {
-        let row = `i=${i}  `;
-        for (let j = 1; j <= n; j++) {
-          if (i + j <= n + 1) {
-            const cell = gridMap[`${i},${j}`];
-            row += (cell ? cell.B : "?") + "    ";
-          } else {
-            row += "     ";
-          }
-        }
-        lines.push(row);
-      }
-      lines.push("");
-    }
-
-    lines.push("=== Boundary Partitions (λ/μ sequence) ===");
-    lines.push("");
-
-    for (let i = 0; i < partitions.length; i++) {
-      const partition = partitions[i];
-      const subset = subsets[i] || [];
-      const partStr = partition.length === 0 ? "∅" : "(" + partition.join(",") + ")";
-      const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
-      const label = (i % 2 === 0) ? "λ" + toSuperscript(i / 2) : "μ" + toSuperscript(Math.ceil(i / 2));
-      lines.push(`${label} = ${partStr}  →  subset: ${subsetStr}`);
-    }
-
-    // Check interlacing
-    lines.push("");
-    lines.push("Interlacing checks:");
-    let allValid = true;
-
-    for (let i = 1; i < partitions.length; i++) {
-      if (i % 2 === 1) {
-        // Odd index: λ^{k-1} → μ^k transition (DOWN in grid) = VERTICAL strip
-        const k = Math.ceil(i / 2);
-        const mu_k = partitions[i];
-        const lambda_km1 = partitions[i - 1];
-        const isVS = isVerticalStrip(mu_k, lambda_km1);
-        if (!isVS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} vert: ${isVS ? "✓" : "✗"}`);
-      } else {
-        // Even index: μ^k → λ^k transition (LEFT in grid) = HORIZONTAL strip
-        const k = i / 2;
-        const lambda_k = partitions[i];
-        const mu_k = partitions[i - 1];
-        const isHS = isHorizontalStrip(mu_k, lambda_k);
-        if (!isHS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} horiz: ${isHS ? "✓" : "✗"}`);
-      }
-    }
-
-    lines.push(allValid ? "\nAll interlacing ✓" : "\nWARNING: Interlacing failed ✗");
-    subsetsOutput.textContent = lines.join("\n");
   }
 
   let currentSubsets = [];
@@ -713,6 +426,34 @@ Module.onRuntimeInitialized = async function() {
     }
     // Parts are already in increasing order, reverse for standard notation
     return parts.reverse();
+  }
+
+  // Convert partition to subset via Maya diagram (INVERSE of subsetToPartition)
+  // Given partition λ and subset size m = ceiling(k/2), compute subset
+  // s_i = λ'_i + i where λ' is partition reversed and zero-padded to length m
+  //
+  // For Aztec diamond: λ diagonals have range {1,...,n}, μ diagonals have range {1,...,n+1}
+  // maxElem parameter caps the subset elements to valid range
+  function partitionToSubsetWithSize(partition, m, maxElem = null) {
+    if (m <= 0) return [];
+    // Reverse partition: (4,3,1) → [1,3,4]
+    const reversed = partition ? [...partition].reverse() : [];
+    // Pad with zeros at the beginning to length m: [0,1,3,4]
+    while (reversed.length < m) {
+      reversed.unshift(0);
+    }
+    // Compute s_i = reversed[i-1] + i for i = 1..m
+    const subset = [];
+    for (let i = 0; i < m; i++) {
+      let elem = reversed[i] + (i + 1);
+      // Cap to valid range if specified
+      if (maxElem !== null && elem > maxElem) {
+        elem = maxElem;
+      }
+      subset.push(elem);
+    }
+    // Remove duplicates and sort
+    return [...new Set(subset)].sort((a, b) => a - b);
   }
 
   // Format partition as string
@@ -833,79 +574,6 @@ Module.onRuntimeInitialized = async function() {
     subsetsOutput.textContent = lines.join("\n");
   }
 
-  // Display partitions directly from Growth Diagram output
-  function displayPartitions(partitions, n) {
-    const subsetsOutput = document.getElementById("subsets-output");
-
-    if (!subsetsOutput) return;
-
-    if (!partitions || partitions.length === 0) {
-      subsetsOutput.textContent = "No partition data available.";
-      return;
-    }
-
-    // Superscript helper
-    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
-    function toSuperscript(num) {
-      if (num < 10) return superscripts[num];
-      return num.toString().split('').map(d => superscripts[parseInt(d)]).join('');
-    }
-
-    // Display partitions with λ/μ notation
-    const lines = [];
-    lines.push("Growth Diagram Sampling - Partition Sequence:");
-    lines.push("");
-
-    for (let i = 0; i < partitions.length; i++) {
-      const partition = partitions[i];
-      const partStr = partition.length === 0 ? "∅" : "(" + partition.join(",") + ")";
-      let label;
-      if (i % 2 === 0) {
-        label = "λ" + toSuperscript(i / 2);
-      } else {
-        label = "μ" + toSuperscript((i + 1) / 2);
-      }
-      lines.push(`${label} = ${partStr}`);
-    }
-
-    // Check interlacing conditions
-    lines.push("");
-    lines.push("Interlacing checks:");
-    let allValid = true;
-
-    for (let i = 1; i < partitions.length; i++) {
-      if (i % 2 === 1) {
-        // Odd index: λ^(k-1) → μ^k transition = VERTICAL strip
-        const k = (i + 1) / 2;
-        const mu_k = partitions[i];
-        const lambda_km1 = partitions[i - 1];
-        const isVS = isVerticalStrip(mu_k, lambda_km1);
-        const status = isVS ? "✓" : "✗";
-        if (!isVS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k-1)} vertical strip: ${status}`);
-      } else {
-        // Even index: μ^k → λ^k transition = HORIZONTAL strip
-        const k = i / 2;
-        const lambda_k = partitions[i];
-        const mu_k = partitions[i - 1];
-        const isHS = isHorizontalStrip(mu_k, lambda_k);
-        const status = isHS ? "✓" : "✗";
-        if (!isHS) allValid = false;
-        lines.push(`  μ${toSuperscript(k)}/λ${toSuperscript(k)} horizontal strip: ${status}`);
-      }
-    }
-
-    if (allValid) {
-      lines.push("");
-      lines.push("All interlacing conditions satisfied ✓");
-    } else {
-      lines.push("");
-      lines.push("WARNING: Some interlacing conditions failed ✗");
-    }
-
-    subsetsOutput.textContent = lines.join("\n");
-  }
-
   async function updateVisualization(newN) {
     n = newN;
     if (isProcessing) return;
@@ -990,7 +658,6 @@ Module.onRuntimeInitialized = async function() {
       if (!signal.aborted) {
         simulationActive = false;
         document.getElementById("update-btn").disabled = false;
-        document.getElementById("growth-btn").disabled = false;
         inputField.disabled = false;
         cancelBtn.style.display = 'none';
         isProcessing = false;
@@ -1008,8 +675,8 @@ Module.onRuntimeInitialized = async function() {
       progressElem.innerText = "Please enter an even number for n.";
       return;
     }
-    if (newN > 400) {
-      progressElem.innerText = "Please enter a number no greater than 400.";
+    if (newN > 600) {
+      progressElem.innerText = "Please enter a number no greater than 600.";
       return;
     }
     updateVisualization(newN);
@@ -1018,136 +685,7 @@ Module.onRuntimeInitialized = async function() {
   document.getElementById("update-btn").addEventListener("click", processInput);
   document.getElementById("cancel-btn").addEventListener("click", stopSimulation);
 
-  // Growth Diagram sampling
-  async function updateVisualizationGrowth(newN) {
-    n = newN;
-    if (isProcessing) return;
-
-    isProcessing = true;
-    startSimulation();
-    document.getElementById("growth-btn").disabled = true;
-    const signal = simulationAbortController.signal;
-
-    svg.selectAll("g").remove();
-    const startTime = performance.now();
-    startProgressPolling();
-
-    await sleep(10);
-    if (signal.aborted) {
-      clearInterval(progressInterval);
-      isProcessing = false;
-      document.getElementById("growth-btn").disabled = false;
-      return;
-    }
-
-    try {
-      updateParamsForN(n);
-
-      const xParams = parseCSV(xParamsField.value);
-      const yParams = parseCSV(yParamsField.value);
-      const xJson = JSON.stringify(xParams);
-      const yJson = JSON.stringify(yParams);
-
-      const ptr = await simulateSchurGrowth(n, xJson, yJson);
-
-      if (signal.aborted) {
-        if (ptr) freeString(ptr);
-        clearInterval(progressInterval);
-        isProcessing = false;
-        document.getElementById("growth-btn").disabled = false;
-        return;
-      }
-
-      const jsonStr = Module.UTF8ToString(ptr);
-      freeString(ptr);
-
-      if (signal.aborted) {
-        clearInterval(progressInterval);
-        isProcessing = false;
-        document.getElementById("growth-btn").disabled = false;
-        return;
-      }
-
-      await sleep(10);
-      if (signal.aborted) {
-        clearInterval(progressInterval);
-        isProcessing = false;
-        document.getElementById("growth-btn").disabled = false;
-        return;
-      }
-
-      try {
-        const result = JSON.parse(jsonStr);
-        const partitions = result.partitions || [];
-        const subsets = result.subsets || [];
-        const grid = result.grid || [];
-        displayPartitionsWithSubsets(partitions, subsets, n, grid);
-
-        // Render growth diagram with lattice and subset particles
-        if (partitions.length > 0) {
-          renderGrowthDiagram(partitions, n);
-        } else {
-          svg.selectAll("g").remove();
-          const bbox = svg.node().getBoundingClientRect();
-          svg.attr("viewBox", "0 0 " + bbox.width + " " + bbox.height);
-          svg.append("text")
-            .attr("x", bbox.width / 2)
-            .attr("y", bbox.height / 2)
-            .attr("text-anchor", "middle")
-            .attr("font-size", "16px")
-            .attr("fill", "#666")
-            .text("No partitions to display");
-        }
-      } catch (e) {
-        progressElem.innerText = "Error during sampling: " + e.message;
-        clearInterval(progressInterval);
-        isProcessing = false;
-        document.getElementById("growth-btn").disabled = false;
-        return;
-      }
-
-      if (!signal.aborted) {
-        const endTime = performance.now();
-        const elapsed = ((endTime - startTime) / 1000).toFixed(2);
-        progressElem.innerText = "Growth Diagram sampled in " + elapsed + " seconds";
-      }
-    } catch (error) {
-      if (!signal.aborted) {
-        progressElem.innerText = "Error during sampling: " + error.message;
-        clearInterval(progressInterval);
-      }
-    } finally {
-      if (!signal.aborted) {
-        simulationActive = false;
-        document.getElementById("update-btn").disabled = false;
-        document.getElementById("growth-btn").disabled = false;
-        inputField.disabled = false;
-        cancelBtn.style.display = 'none';
-        isProcessing = false;
-      }
-    }
-  }
-
-  function processInputGrowth() {
-    const newN = parseInt(inputField.value, 10);
-    if (isNaN(newN) || newN < 2) {
-      progressElem.innerText = "Please enter a valid positive even number for n (n >= 2).";
-      return;
-    }
-    if (newN % 2 !== 0) {
-      progressElem.innerText = "Please enter an even number for n.";
-      return;
-    }
-    if (newN > 400) {
-      progressElem.innerText = "Please enter a number no greater than 400.";
-      return;
-    }
-    updateVisualizationGrowth(newN);
-  }
-
-  document.getElementById("growth-btn").addEventListener("click", processInputGrowth);
-
-  // Initial simulation - use Growth Diagram algorithm
-  updateVisualizationGrowth(parseInt(inputField.value, 10));
+  // Initial simulation
+  updateVisualization(parseInt(inputField.value, 10));
 };
 </script>

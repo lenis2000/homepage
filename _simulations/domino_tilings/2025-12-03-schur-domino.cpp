@@ -5,7 +5,7 @@ Based on arXiv:1407.3764 - Betea, Boutillier, Bouttier, Chapuy, Corteel, Vuletic
 emcc 2025-12-03-schur-domino.cpp -o 2025-12-03-schur-domino.js \
   -s WASM=1 \
   -s ASYNCIFY=1 \
-  -s "EXPORTED_FUNCTIONS=['_simulateSchur','_simulateSchurGrowth','_freeString','_getProgress']" \
+  -s "EXPORTED_FUNCTIONS=['_simulateSchur','_freeString','_getProgress']" \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","stringToUTF8","lengthBytesUTF8"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
@@ -180,347 +180,33 @@ Partition sampleVH(const Partition& lambda, const Partition& mu,
     return nu;
 }
 
-// ============================================================================
-// GROWTH DIAGRAM SAMPLING (from paper arXiv:1407.3764 Section 3)
-// ============================================================================
-
 /*
- * sampleHV_growth: Exact implementation from paper (lines 505-511)
+ * Convert partition to subset with specified size m
+ * Given λ = (λ_1 ≥ λ_2 ≥ ... ≥ λ_l) and subset size m = ceiling(k/2),
+ * compute S = {s_1 < s_2 < ... < s_m}
  *
- * def sampleHV(λ, μ, κ, ξ):
- *     B ~ Bernoulli(ξ/(1+ξ))
- *     for i = 1 to max(ℓ(λ), ℓ(μ)) + 1:
- *         if λ_i ≤ μ_i < λ_{i-1}: ν_i = max(λ_i, μ_i) + B
- *         else: ν_i = max(λ_i, μ_i)
- *         if μ_{i+1} < λ_i ≤ μ_i: B = min(λ_i, μ_i) - κ_i
- *     return ν
- *
- * Convention: λ_0 = ∞, λ_i = 0 for i > ℓ(λ)
+ * Algorithm:
+ * 1. Reverse partition: [λ_l, λ_{l-1}, ..., λ_1]
+ * 2. Pad with zeros at beginning to length m
+ * 3. s_i = padded[i-1] + i
  */
-Partition sampleHV_growth(const Partition& lambda, const Partition& mu,
-                          const Partition& kappa, double xi) {
-    uniform_real_distribution<double> dist(0.0, 1.0);
-    int B = (dist(rng) < xi / (1.0 + xi)) ? 1 : 0;
+vector<int> partitionToSubset(const Partition& lambda, int m) {
+    if (m <= 0) return {};
 
-    int maxLen = max({(int)lambda.size(), (int)mu.size()}) + 2;
+    // Reverse partition
+    vector<int> reversed(lambda.rbegin(), lambda.rend());
 
-    Partition nu;
-    nu.reserve(maxLen);
-
-    // i is 1-indexed in paper, we use 1-indexed loop
-    for (int i = 1; i <= maxLen; i++) {
-        // λ_i (1-indexed) maps to lambda[i-1] (0-indexed)
-        int lambda_i = getPart(lambda, i - 1);
-        // λ_{i-1}: for i=1, this is λ_0 = ∞
-        int lambda_im1 = (i == 1) ? INT_MAX : getPart(lambda, i - 2);
-        int mu_i = getPart(mu, i - 1);
-        int mu_ip1 = getPart(mu, i);  // μ_{i+1}
-        int kappa_i = getPart(kappa, i - 1);
-
-        int nu_i;
-
-        // Condition: λ_i ≤ μ_i < λ_{i-1}
-        if (lambda_i <= mu_i && mu_i < lambda_im1) {
-            nu_i = max(lambda_i, mu_i) + B;
-        } else {
-            nu_i = max(lambda_i, mu_i);
-        }
-
-        // Update B: condition μ_{i+1} < λ_i ≤ μ_i
-        if (mu_ip1 < lambda_i && lambda_i <= mu_i) {
-            B = min(lambda_i, mu_i) - kappa_i;
-        }
-
-        if (nu_i > 0) {
-            nu.push_back(nu_i);
-        } else {
-            break;
-        }
+    // Pad with zeros at the beginning to length m
+    while ((int)reversed.size() < m) {
+        reversed.insert(reversed.begin(), 0);
     }
 
-    return nu;
-}
-
-/*
- * sampleHV_growth_withB: Same as sampleHV_growth but also returns initial Bernoulli value
- */
-pair<Partition, int> sampleHV_growth_withB(const Partition& lambda, const Partition& mu,
-                                           const Partition& kappa, double xi) {
-    uniform_real_distribution<double> dist(0.0, 1.0);
-    int initialB = (dist(rng) < xi / (1.0 + xi)) ? 1 : 0;
-    int B = initialB;
-
-    int maxLen = max({(int)lambda.size(), (int)mu.size()}) + 2;
-
-    Partition nu;
-    nu.reserve(maxLen);
-
-    for (int i = 1; i <= maxLen; i++) {
-        int lambda_i = getPart(lambda, i - 1);
-        int lambda_im1 = (i == 1) ? INT_MAX : getPart(lambda, i - 2);
-        int mu_i = getPart(mu, i - 1);
-        int mu_ip1 = getPart(mu, i);
-        int kappa_i = getPart(kappa, i - 1);
-
-        int nu_i;
-
-        if (lambda_i <= mu_i && mu_i < lambda_im1) {
-            nu_i = max(lambda_i, mu_i) + B;
-        } else {
-            nu_i = max(lambda_i, mu_i);
-        }
-
-        if (mu_ip1 < lambda_i && lambda_i <= mu_i) {
-            B = min(lambda_i, mu_i) - kappa_i;
-        }
-
-        if (nu_i > 0) {
-            nu.push_back(nu_i);
-        } else {
-            break;
-        }
-    }
-
-    return {nu, initialB};
-}
-
-/*
- * sampleVH_growth: VH = HV with λ and μ swapped
- * For Aztec diamond with word (⪯', ⪰)^n, we use VH for all cells
- */
-Partition sampleVH_growth(const Partition& lambda, const Partition& mu,
-                          const Partition& kappa, double xi) {
-    return sampleHV_growth(mu, lambda, kappa, xi);
-}
-
-/*
- * Convert partition to subset (inverse of subset-to-partition Maya diagram encoding)
- * Given λ = (λ_1 ≥ λ_2 ≥ ... ≥ λ_k), compute S = {s_1 < s_2 < ... < s_k}
- * where s_j = λ_{k-j+1} + j (using 1-indexed j)
- */
-vector<int> partitionToSubset(const Partition& lambda) {
+    // Compute subset: s_i = reversed[i-1] + i
     vector<int> subset;
-    int k = lambda.size();
-    for (int j = 1; j <= k; j++) {
-        // λ is in decreasing order, so λ_{k-j+1} = lambda[k-j] (0-indexed)
-        int part = lambda[k - j];
-        subset.push_back(part + j);
+    for (int i = 0; i < m; i++) {
+        subset.push_back(reversed[i] + (i + 1));
     }
-    return subset;  // Already sorted since λ is decreasing
-}
-
-/*
- * Convert boundary partitions to JSON output with particles on diagonals
- * Each partition is converted to a subset via Maya diagram encoding.
- * Particles are placed at positions corresponding to subset elements.
- */
-string partitionsToGrowthJSON(const vector<Partition>& partitions, int n) {
-    double scale = 20.0;
-    char buffer[256];
-
-    // Convert partitions to subsets
-    vector<vector<int>> subsets;
-    for (const auto& p : partitions) {
-        subsets.push_back(partitionToSubset(p));
-    }
-
-    int numSlices = subsets.size();
-
-    string json = "{\"particles\":[";
-    bool first = true;
-
-    // For each slice, place particles at subset positions only
-    for (int s = 0; s < numSlices; s++) {
-        // y = slice index (row)
-        double y = s * scale;
-
-        for (int elem : subsets[s]) {
-            // x = element position
-            double x = elem * scale;
-
-            if (!first) json += ",";
-            else first = false;
-
-            snprintf(buffer, sizeof(buffer),
-                     "{\"x\":%g,\"y\":%g,\"slice\":%d,\"elem\":%d,\"isParticle\":true}",
-                     x, y, s, elem);
-            json += buffer;
-        }
-    }
-
-    json += "]";
-
-    // Add partitions and subsets to JSON for debugging
-    json += ",\"partitions\":[";
-    first = true;
-    for (int i = 0; i < (int)partitions.size(); i++) {
-        if (!first) json += ",";
-        else first = false;
-
-        json += "[";
-        bool firstPart = true;
-        for (int p : partitions[i]) {
-            if (!firstPart) json += ",";
-            else firstPart = false;
-            json += to_string(p);
-        }
-        json += "]";
-    }
-    json += "]";
-
-    // Add subsets for debugging
-    json += ",\"subsets\":[";
-    first = true;
-    for (int i = 0; i < (int)subsets.size(); i++) {
-        if (!first) json += ",";
-        else first = false;
-
-        json += "[";
-        bool firstElem = true;
-        for (int e : subsets[i]) {
-            if (!firstElem) json += ",";
-            else firstElem = false;
-            json += to_string(e);
-        }
-        json += "]";
-    }
-    json += "]}";
-
-    return json;
-}
-
-/*
- * schurSampleGrowth: Main Growth Diagram sampling algorithm
- *
- * For Aztec diamond of size n:
- * - Staircase shape π = (n, n-1, ..., 1)
- * - Word w = (⪯', ⪰)^n → all cells use type VH
- * - Fill grid τ[i][j] for j=1..n and i=1..n-j+1
- * - Extract boundary partitions
- */
-string schurSampleGrowth(int n, const vector<double>& x, const vector<double>& y) {
-    // Grid of partitions τ[i][j]
-    // i = 0..n, j = 0..n
-    // τ[0][j] = τ[i][0] = ∅ (empty by default)
-    vector<vector<Partition>> tau(n + 2, vector<Partition>(n + 2));
-
-    // Grid of Bernoulli values B[i][j] for staircase cells
-    // -1 means cell is outside staircase or boundary
-    vector<vector<int>> bernoulli(n + 2, vector<int>(n + 2, -1));
-
-    // Fill staircase: for each column j, rows 1 to n-j+1
-    // Using HV cells: output ν satisfies λ ⊂ ν (horiz strip) and ν ⊂ μ (vert strip)
-    // where λ = left neighbor, μ = above neighbor
-    for (int j = 1; j <= n; j++) {
-        for (int i = 1; i <= n - j + 1; i++) {
-            double xi = x[i - 1] * y[j - 1];
-            // λ = tau[i][j-1] (left), μ = tau[i-1][j] (above), κ = tau[i-1][j-1] (diagonal)
-            auto [nu, B] = sampleHV_growth_withB(tau[i][j - 1], tau[i - 1][j],
-                                                  tau[i - 1][j - 1], xi);
-            tau[i][j] = nu;
-            bernoulli[i][j] = B;
-        }
-
-        progressCounter = 10 + (int)(((double)j / n) * 80);
-        emscripten_sleep(0);
-    }
-
-    // Extract boundary partitions
-    vector<Partition> boundary;
-    boundary.push_back(tau[0][n]);  // λ^0 = ∅
-
-    int i = 0, j = n;
-    while (i < n || j > 0) {
-        if (i < n && j <= n - i) {
-            i++;
-            boundary.push_back(tau[i][j]);
-        } else if (j > 0) {
-            j--;
-            boundary.push_back(tau[i][j]);
-        } else {
-            break;
-        }
-    }
-
-    progressCounter = 95;
-    emscripten_sleep(0);
-
-    // Build JSON with full grid
-    char buffer[256];
-    string json = "{";
-
-    // Add grid dimensions
-    json += "\"n\":" + to_string(n) + ",";
-
-    // Add full staircase grid: cells[j][i] with partition and Bernoulli value
-    // Staircase has (n+1 choose 2) = n(n+1)/2 cells
-    json += "\"grid\":[";
-    bool firstCell = true;
-    for (int jj = 1; jj <= n; jj++) {
-        for (int ii = 1; ii <= n - jj + 1; ii++) {
-            if (!firstCell) json += ",";
-            firstCell = false;
-
-            json += "{\"i\":" + to_string(ii) + ",\"j\":" + to_string(jj);
-            json += ",\"B\":" + to_string(bernoulli[ii][jj]);
-            json += ",\"partition\":[";
-            bool firstPart = true;
-            for (int p : tau[ii][jj]) {
-                if (!firstPart) json += ",";
-                firstPart = false;
-                json += to_string(p);
-            }
-            json += "]}";
-        }
-    }
-    json += "],";
-
-    // Add boundary/edge partitions for reference
-    json += "\"boundary\":[";
-    for (int ii = 0; ii <= n; ii++) {
-        if (ii > 0) json += ",";
-        json += "{\"i\":" + to_string(ii) + ",\"j\":0,\"partition\":[]}";
-    }
-    for (int jj = 1; jj <= n; jj++) {
-        json += ",{\"i\":0,\"j\":" + to_string(jj) + ",\"partition\":[]}";
-    }
-    json += "],";
-
-    // Add partitions and subsets for display
-    vector<vector<int>> subsets;
-    for (const auto& p : boundary) {
-        subsets.push_back(partitionToSubset(p));
-    }
-
-    json += "\"partitions\":[";
-    for (int ii = 0; ii < (int)boundary.size(); ii++) {
-        if (ii > 0) json += ",";
-        json += "[";
-        bool firstPart = true;
-        for (int p : boundary[ii]) {
-            if (!firstPart) json += ",";
-            firstPart = false;
-            json += to_string(p);
-        }
-        json += "]";
-    }
-    json += "],";
-
-    json += "\"subsets\":[";
-    for (int ii = 0; ii < (int)subsets.size(); ii++) {
-        if (ii > 0) json += ",";
-        json += "[";
-        bool firstElem = true;
-        for (int e : subsets[ii]) {
-            if (!firstElem) json += ",";
-            firstElem = false;
-            json += to_string(e);
-        }
-        json += "]";
-    }
-    json += "]}";
-
-    return json;
+    return subset;
 }
 
 /*
@@ -1070,46 +756,6 @@ void freeString(char* str) {
 EMSCRIPTEN_KEEPALIVE
 int getProgress() {
     return progressCounter;
-}
-
-EMSCRIPTEN_KEEPALIVE
-char* simulateSchurGrowth(int n, const char* x_json, const char* y_json) {
-    try {
-        progressCounter = 0;
-
-        // Parse parameters
-        vector<double> x = parseJsonArray(x_json);
-        vector<double> y = parseJsonArray(y_json);
-
-        // Validate and pad parameters if needed
-        while ((int)x.size() < n) x.push_back(1.0);
-        while ((int)y.size() < n) y.push_back(1.0);
-
-        progressCounter = 5;
-        emscripten_sleep(0);
-
-        // Run the growth diagram sampling algorithm
-        string json = schurSampleGrowth(n, x, y);
-
-        progressCounter = 100;
-
-        char* out = (char*)malloc(json.size() + 1);
-        if (!out) {
-            const char* err = "{\"dominoes\":[],\"partitions\":[]}";
-            out = (char*)malloc(strlen(err) + 1);
-            strcpy(out, err);
-            return out;
-        }
-        strcpy(out, json.c_str());
-        return out;
-
-    } catch (const exception& e) {
-        progressCounter = 100;
-        const char* err = "{\"dominoes\":[],\"partitions\":[]}";
-        char* out = (char*)malloc(strlen(err) + 1);
-        if (out) strcpy(out, err);
-        return out;
-    }
 }
 
 } // extern "C"
