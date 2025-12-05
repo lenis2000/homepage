@@ -51,6 +51,8 @@ code:
 
 <script src="/js/d3.v7.min.js"></script>
 <script src="/js/colorschemes.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
 
 <!-- Pane 1: Sampling -->
@@ -67,6 +69,10 @@ code:
     <span>
       <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
       <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
+    </span>
+    <span>
+      <input type="checkbox" id="high-precision-cb">
+      <label for="high-precision-cb">High precision (50 digits)</label>
     </span>
   </div>
 </fieldset>
@@ -95,8 +101,17 @@ code:
   </div>
 </fieldset>
 
-<!-- Zoom Controls (placed above canvas) -->
-<div id="zoom-controls-container" style="margin-bottom: 10px;"></div>
+<!-- Zoom Controls and Export (placed above canvas) -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+  <div id="zoom-controls-container"></div>
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <button id="export-png-btn">PNG</button>
+    <span style="font-size: 11px; color: #666;">Quality:</span>
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
+    <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
+    <button id="export-pdf-btn">PDF</button>
+  </div>
+</div>
 
 <!-- Canvas -->
 <div class="row">
@@ -140,20 +155,14 @@ code:
   </div>
   <button id="custom-colors-btn">Custom Colors</button>
   <div id="custom-color-pickers" style="display: none; align-items: center; gap: 6px;">
-    <span style="font-size: 12px;">Green:</span>
+    <span style="font-size: 12px;">Particle →</span>
     <input type="color" id="custom-color-1" value="#228B22" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    <span style="font-size: 12px;">Red:</span>
+    <span style="font-size: 12px;">Particle ↑</span>
     <input type="color" id="custom-color-2" value="#DC143C" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    <span style="font-size: 12px;">Blue:</span>
+    <span style="font-size: 12px;">Hole →</span>
     <input type="color" id="custom-color-3" value="#0057B7" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    <span style="font-size: 12px;">Yellow:</span>
+    <span style="font-size: 12px;">Hole ↑</span>
     <input type="color" id="custom-color-4" value="#FFCD00" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-  </div>
-  <div id="color-legend" style="display: flex; gap: 10px; font-size: 12px; margin-left: auto;">
-    <span><span id="legend-green" style="display: inline-block; width: 14px; height: 14px; background: #228B22; border: 1px solid #333; vertical-align: middle;"></span> Particle →</span>
-    <span><span id="legend-red" style="display: inline-block; width: 14px; height: 14px; background: #DC143C; border: 1px solid #333; vertical-align: middle;"></span> Particle ↑</span>
-    <span><span id="legend-blue" style="display: inline-block; width: 14px; height: 14px; background: #0057B7; border: 1px solid #333; vertical-align: middle;"></span> Hole →</span>
-    <span><span id="legend-yellow" style="display: inline-block; width: 14px; height: 14px; background: #FFCD00; border: 1px solid #333; vertical-align: middle;"></span> Hole ↑</span>
   </div>
 </div>
 
@@ -179,6 +188,8 @@ async function initializeApp() {
   const sampleAztecRSK = Module.cwrap('sampleAztecRSK', 'number', ['number', 'string', 'string', 'number'], {async: true});
   const freeString = Module.cwrap('freeString', null, ['number']);
   const getProgress = Module.cwrap('getProgress', 'number', []);
+  const setHighPrecision = Module.cwrap('setHighPrecision', null, ['number']);
+  const getHighPrecision = Module.cwrap('getHighPrecision', 'number', []);
 
   let currentN = 4;
   const svg = d3.select("#aztec-svg");
@@ -213,13 +224,6 @@ async function initializeApp() {
     return colorPalettes[currentPaletteIndex].colors;
   }
 
-  function updateLegend() {
-    const colors = getCurrentColors();
-    document.getElementById('legend-green').style.background = colors[0];
-    document.getElementById('legend-red').style.background = colors[1];
-    document.getElementById('legend-blue').style.background = colors[2];
-    document.getElementById('legend-yellow').style.background = colors[3];
-  }
 
   // ========== RSK Sampling Function ==========
 
@@ -935,6 +939,11 @@ async function initializeApp() {
     redrawOnly();
   });
 
+  // High precision checkbox handler - toggle between Boost (50 digits) and fast (log1p/expm1) modes
+  document.getElementById("high-precision-cb").addEventListener("change", function() {
+    setHighPrecision(this.checked ? 1 : 0);
+  });
+
   // q-input change handler - resample when q changes
   document.getElementById("q-input").addEventListener("change", async function() {
     const x = parseCSV(document.getElementById("x-params").value);
@@ -1069,7 +1078,6 @@ async function initializeApp() {
     currentPaletteIndex = parseInt(this.value);
     useCustomColors = false;
     customColorPickers.style.display = "none";
-    updateLegend();
     redrawOnly();
   });
 
@@ -1078,7 +1086,6 @@ async function initializeApp() {
     paletteSelect.value = currentPaletteIndex;
     useCustomColors = false;
     customColorPickers.style.display = "none";
-    updateLegend();
     redrawOnly();
   });
 
@@ -1087,7 +1094,6 @@ async function initializeApp() {
     paletteSelect.value = currentPaletteIndex;
     useCustomColors = false;
     customColorPickers.style.display = "none";
-    updateLegend();
     redrawOnly();
   });
 
@@ -1101,22 +1107,294 @@ async function initializeApp() {
       customColorPickers.style.display = "flex";
       useCustomColors = true;
     }
-    updateLegend();
     redrawOnly();
   });
 
   colorInputs.forEach((input, i) => {
-    input.addEventListener("input", function() {
+    // Use both input and change for cross-browser compatibility
+    const handler = function() {
       customColors[i] = this.value;
-      updateLegend();
       redrawOnly();
+    };
+    input.addEventListener("input", handler);
+    input.addEventListener("change", handler);
+  });
+
+  // ========== Export Functions ==========
+
+  // Quality slider handler
+  document.getElementById('export-quality').addEventListener('input', (e) => {
+    document.getElementById('export-quality-val').textContent = e.target.value;
+  });
+
+  // Get export scale from quality slider (1x to 4x)
+  function getExportScale() {
+    return 1 + (parseInt(document.getElementById('export-quality').value) / 100) * 3;
+  }
+
+  // Generate export filename
+  function generateExportFilename(extension) {
+    const qVal = parseFloat(document.getElementById("q-input").value);
+    return `aztec-diamond-n${currentN}-q${qVal}.${extension}`;
+  }
+
+  // Create high-resolution export canvas
+  function createExportCanvas() {
+    if (!cachedDominoes || !cachedLatticePoints) {
+      alert("No tiling to export. Please sample first.");
+      return null;
+    }
+
+    const showParticles = document.getElementById("show-particles-cb").checked;
+    const borderWidth = parseFloat(document.getElementById("border-slider").value);
+    const rotateCanvas = document.getElementById("rotate-canvas-cb").checked;
+
+    // Compute bounds from dominoes
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const d of cachedDominoes) {
+      const left = d.cx - d.width / 2;
+      const right = d.cx + d.width / 2;
+      const top = d.cy - d.height / 2;
+      const bottom = d.cy + d.height / 2;
+      if (left < minX) minX = left;
+      if (right > maxX) maxX = right;
+      if (top < minY) minY = top;
+      if (bottom > maxY) maxY = bottom;
+    }
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    // Calculate dimensions with padding
+    const padding = 30;
+    let contentWidth = maxX - minX;
+    let contentHeight = maxY - minY;
+
+    // If rotated, calculate the bounding box of the rotated content
+    let baseWidth, baseHeight;
+    if (rotateCanvas) {
+      const angle = Math.PI / 4;
+      const cos45 = Math.cos(angle);
+      const sin45 = Math.sin(angle);
+      baseWidth = contentWidth * cos45 + contentHeight * sin45 + 2 * padding;
+      baseHeight = contentWidth * sin45 + contentHeight * cos45 + 2 * padding;
+    } else {
+      baseWidth = contentWidth + 2 * padding;
+      baseHeight = contentHeight + 2 * padding;
+    }
+
+    // Create scaled canvas
+    const scale = getExportScale();
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = baseWidth * scale;
+    exportCanvas.height = baseHeight * scale;
+    const exportCtx = exportCanvas.getContext('2d');
+    exportCtx.scale(scale, scale);
+
+    // Fill background
+    exportCtx.fillStyle = "#fafafa";
+    exportCtx.fillRect(0, 0, baseWidth, baseHeight);
+
+    // Apply transform
+    exportCtx.save();
+    if (rotateCanvas) {
+      exportCtx.translate(baseWidth / 2, baseHeight / 2);
+      exportCtx.rotate(-45 * Math.PI / 180);
+      exportCtx.translate(-centerX, -centerY);
+    } else {
+      exportCtx.translate(baseWidth / 2 - centerX, baseHeight / 2 - centerY);
+    }
+
+    // Draw dominoes
+    for (const d of cachedDominoes) {
+      exportCtx.fillStyle = getDominoColor(d.type, d.isHorizontal, showParticles);
+      exportCtx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+      if (borderWidth > 0) {
+        exportCtx.strokeStyle = "#000";
+        exportCtx.lineWidth = borderWidth;
+        exportCtx.strokeRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+      }
+    }
+
+    // Draw particles if enabled
+    if (showParticles) {
+      for (const p of cachedLatticePoints) {
+        exportCtx.beginPath();
+        exportCtx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+        exportCtx.fillStyle = p.inSubset ? "#000000" : "#ffffff";
+        exportCtx.fill();
+        exportCtx.strokeStyle = "#000";
+        exportCtx.lineWidth = 1;
+        exportCtx.stroke();
+      }
+    }
+
+    exportCtx.restore();
+    return exportCanvas;
+  }
+
+  // Export as PNG file
+  document.getElementById("export-png-btn").addEventListener("click", function() {
+    const exportCanvas = createExportCanvas();
+    if (!exportCanvas) return;
+
+    exportCanvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = generateExportFilename('png');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  });
+
+  // Generate SVG for vector PDF export
+  function generateExportSVG() {
+    if (!cachedDominoes || !cachedLatticePoints) {
+      return null;
+    }
+
+    const showParticles = document.getElementById("show-particles-cb").checked;
+    const borderWidth = parseFloat(document.getElementById("border-slider").value);
+    const rotateCanvas = document.getElementById("rotate-canvas-cb").checked;
+
+    // Compute bounds from dominoes
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const d of cachedDominoes) {
+      const left = d.cx - d.width / 2;
+      const right = d.cx + d.width / 2;
+      const top = d.cy - d.height / 2;
+      const bottom = d.cy + d.height / 2;
+      if (left < minX) minX = left;
+      if (right > maxX) maxX = right;
+      if (top < minY) minY = top;
+      if (bottom > maxY) maxY = bottom;
+    }
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const padding = 30;
+    let contentWidth = maxX - minX;
+    let contentHeight = maxY - minY;
+
+    let svgWidth, svgHeight;
+    if (rotateCanvas) {
+      const angle = Math.PI / 4;
+      const cos45 = Math.cos(angle);
+      const sin45 = Math.sin(angle);
+      svgWidth = contentWidth * cos45 + contentHeight * sin45 + 2 * padding;
+      svgHeight = contentWidth * sin45 + contentHeight * cos45 + 2 * padding;
+    } else {
+      svgWidth = contentWidth + 2 * padding;
+      svgHeight = contentHeight + 2 * padding;
+    }
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const exportSvg = document.createElementNS(svgNS, "svg");
+    exportSvg.setAttribute("xmlns", svgNS);
+    exportSvg.setAttribute("width", svgWidth);
+    exportSvg.setAttribute("height", svgHeight);
+    exportSvg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
+
+    const bg = document.createElementNS(svgNS, "rect");
+    bg.setAttribute("width", "100%");
+    bg.setAttribute("height", "100%");
+    bg.setAttribute("fill", "#fafafa");
+    exportSvg.appendChild(bg);
+
+    const g = document.createElementNS(svgNS, "g");
+    if (rotateCanvas) {
+      g.setAttribute("transform",
+        `translate(${svgWidth/2}, ${svgHeight/2}) rotate(-45) translate(${-centerX}, ${-centerY})`);
+    } else {
+      g.setAttribute("transform",
+        `translate(${svgWidth/2 - centerX}, ${svgHeight/2 - centerY})`);
+    }
+
+    for (const d of cachedDominoes) {
+      const rect = document.createElementNS(svgNS, "rect");
+      rect.setAttribute("x", d.cx - d.width / 2);
+      rect.setAttribute("y", d.cy - d.height / 2);
+      rect.setAttribute("width", d.width);
+      rect.setAttribute("height", d.height);
+      rect.setAttribute("fill", getDominoColor(d.type, d.isHorizontal, showParticles));
+      if (borderWidth > 0) {
+        rect.setAttribute("stroke", "#000");
+        rect.setAttribute("stroke-width", borderWidth);
+      }
+      g.appendChild(rect);
+    }
+
+    if (showParticles) {
+      for (const p of cachedLatticePoints) {
+        const circle = document.createElementNS(svgNS, "circle");
+        circle.setAttribute("cx", p.x);
+        circle.setAttribute("cy", p.y);
+        circle.setAttribute("r", 5);
+        circle.setAttribute("fill", p.inSubset ? "#000000" : "#ffffff");
+        circle.setAttribute("stroke", "#000");
+        circle.setAttribute("stroke-width", 1);
+        g.appendChild(circle);
+      }
+    }
+
+    exportSvg.appendChild(g);
+    return exportSvg;
+  }
+
+  // Export as vector PDF file
+  document.getElementById("export-pdf-btn").addEventListener("click", async function() {
+    const exportSvg = generateExportSVG();
+    if (!exportSvg) {
+      alert("No tiling to export. Please sample first.");
+      return;
+    }
+
+    let width = parseFloat(exportSvg.getAttribute("width"));
+    let height = parseFloat(exportSvg.getAttribute("height"));
+
+    // Scale down if too large for PDF (max 14400 pt)
+    const maxPdfSize = 14000;
+    const scale = Math.min(1, maxPdfSize / Math.max(width, height));
+    const pdfWidth = width * scale;
+    const pdfHeight = height * scale;
+
+    const { jsPDF } = window.jspdf;
+    const orientation = pdfWidth > pdfHeight ? "landscape" : "portrait";
+    const pdf = new jsPDF({
+      orientation: orientation,
+      unit: "pt",
+      format: [pdfWidth, pdfHeight]
     });
+
+    try {
+      // Temporarily add SVG to DOM (required by svg2pdf)
+      exportSvg.style.position = "absolute";
+      exportSvg.style.left = "-9999px";
+      document.body.appendChild(exportSvg);
+
+      // Use svg2pdf for vector conversion
+      if (typeof pdf.svg === 'function') {
+        await pdf.svg(exportSvg, { x: 0, y: 0, width: pdfWidth, height: pdfHeight });
+      } else {
+        throw new Error("Vector PDF not available - svg2pdf library not loaded");
+      }
+
+      document.body.removeChild(exportSvg);
+      pdf.save(generateExportFilename('pdf'));
+    } catch (e) {
+      console.error("PDF export error:", e);
+      alert("PDF export failed: " + e.message);
+      if (exportSvg.parentNode) {
+        document.body.removeChild(exportSvg);
+      }
+    }
   });
 
   // Sample on page load with default parameters
   try {
     updateParamsForN(currentN);
-    updateLegend();
     const initX = parseCSV(document.getElementById("x-params").value);
     const initY = parseCSV(document.getElementById("y-params").value);
     const initQ = parseFloat(document.getElementById("q-input").value);

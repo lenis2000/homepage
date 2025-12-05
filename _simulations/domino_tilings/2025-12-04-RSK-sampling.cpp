@@ -4,17 +4,21 @@ q-RSK Sampling of Domino Tilings of the Aztec Diamond
 Uses the RSK-type growth diagram algorithm with q-Whittaker deformation.
 Based on arXiv:1504.00666 "Integrable probability: From representation theory to Macdonald processes"
 
+Uses Boost.Multiprecision for high-precision q computations (50 decimal digits).
+Toggle between high-precision (Boost) and fast (log1p/expm1) modes via setHighPrecision().
+
 Compile with:
 emcc 2025-12-04-RSK-sampling.cpp -o 2025-12-04-RSK-sampling.js \
+ -I/opt/homebrew/include \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_sampleAztecRSK','_freeString','_getProgress']" \
+ -s "EXPORTED_FUNCTIONS=['_sampleAztecRSK','_freeString','_getProgress','_setHighPrecision','_getHighPrecision']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
- -O3 -ffast-math -flto -DNDEBUG \
+ -O3 -flto -DNDEBUG \
  && mv 2025-12-04-RSK-sampling.js ../../js/
 */
 
@@ -26,6 +30,9 @@ emcc 2025-12-04-RSK-sampling.cpp -o 2025-12-04-RSK-sampling.js \
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <boost/multiprecision/cpp_dec_float.hpp>
+
+using mp_float = boost::multiprecision::cpp_dec_float_50;
 
 using namespace std;
 
@@ -58,23 +65,35 @@ inline double fastPow(double base, int exp) {
     return result;
 }
 
-// Precomputed powers of q (filled once per sample)
-static vector<double> qPowers;
-static double cachedQ = -1.0;
+// Precision mode flag (can be toggled from JS)
+static bool useHighPrecision = false;  // Default: use fast log1p/expm1 (~15-16 digits)
 
-inline double getQPower(double q, int exp) {
-    if (exp <= 0) return 1.0;
-    if (q != cachedQ) {
-        // Rebuild cache
-        cachedQ = q;
-        qPowers.resize(256);
-        qPowers[0] = 1.0;
-        for (int i = 1; i < 256; i++) {
-            qPowers[i] = qPowers[i-1] * q;
-        }
-    }
-    if (exp < 256) return qPowers[exp];
-    return fastPow(q, exp);
+// Fast double-precision version using log1p/expm1
+// Accurate to ~15-16 digits, avoids catastrophic cancellation for q close to 1
+inline double oneMinusQtoN_fast(double q, int n) {
+    if (n <= 0) return 0.0;
+    if (q <= 0.0) return 1.0;
+    if (q >= 1.0) return 0.0;
+    // 1 - q^n = 1 - exp(n*log(q)) = -expm1(n*log1p(q-1))
+    return -expm1(static_cast<double>(n) * log1p(q - 1.0));
+}
+
+// High-precision version using Boost (50 decimal digits)
+// Uses local variables to avoid WASM static initialization issues
+inline double oneMinusQtoN_boost(double q, int n) {
+    if (n <= 0) return 0.0;
+    if (q <= 0.0) return 1.0;
+    if (q >= 1.0) return 0.0;
+
+    // Use local mp_float to avoid static initialization issues in WASM
+    mp_float mp_q_local(q);
+    mp_float result = mp_float(1) - boost::multiprecision::pow(mp_q_local, n);
+    return static_cast<double>(result);
+}
+
+// Dispatcher that uses selected precision mode
+inline double oneMinusQtoN(double q, int n) {
+    return useHighPrecision ? oneMinusQtoN_boost(q, n) : oneMinusQtoN_fast(q, n);
 }
 
 // Compute f_k for the q-deformed probability (equation 5.2 in arXiv:1504.00666)
@@ -85,8 +104,9 @@ inline double computeF(int lam_k, int nu_bar_k, int nu_bar_k_minus_1, double q) 
     if (delta_lam <= 0) return 0.0;
     int delta_nu = nu_bar_k_minus_1 - nu_bar_k + 1;
     if (delta_nu <= 0) return 1.0;
-    double numerator = 1.0 - getQPower(q, delta_lam);
-    double denominator = 1.0 - getQPower(q, delta_nu);
+
+    double numerator = oneMinusQtoN(q, delta_lam);
+    double denominator = oneMinusQtoN(q, delta_nu);
     if (denominator == 0.0) return 1.0;
     return numerator / denominator;
 }
@@ -97,7 +117,7 @@ inline double computeF(int lam_k, int nu_bar_k, int nu_bar_k_minus_1, double q) 
 inline double computeG(int lam_i, int nu_bar_i, double q) {
     int delta = lam_i - nu_bar_i + 1;
     if (delta <= 0) return 0.0;
-    return 1.0 - getQPower(q, delta);
+    return oneMinusQtoN(q, delta);
 }
 
 // Static buffers to avoid allocations in inner loop (reused across calls)
@@ -376,6 +396,16 @@ void freeString(char* str) {
 EMSCRIPTEN_KEEPALIVE
 int getProgress() {
     return progressCounter;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setHighPrecision(int enabled) {
+    useHighPrecision = (enabled != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getHighPrecision() {
+    return useHighPrecision ? 1 : 0;
 }
 
 } // extern "C"
