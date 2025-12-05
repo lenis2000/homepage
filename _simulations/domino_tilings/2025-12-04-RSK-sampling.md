@@ -727,20 +727,19 @@ async function initializeApp() {
       const scale = 20;
       ctx.strokeStyle = "rgba(255, 0, 0, 0.4)";
       ctx.lineWidth = 2;
+      // All diagonals same length: extend to full diamond extent
+      const fullExtent = currentN + 0.5;
       for (let d = -currentN; d <= currentN; d++) {
-        // Diagonal line from SW to NE: hx + hy = d
-        // Line endpoints at the diamond boundary
-        const r = currentN + 0.5 - Math.abs(d);
-        if (r > 0) {
-          const x1 = (d / 2 - r / 2) * scale;
-          const y1 = -(d / 2 + r / 2) * scale;
-          const x2 = (d / 2 + r / 2) * scale;
-          const y2 = -(d / 2 - r / 2) * scale;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
-        }
+        // Diagonal line hx + hy = d, all same length
+        // Line from (d/2 - ext, -d/2 - ext) to (d/2 + ext, -d/2 + ext) in screen coords
+        const x1 = (d / 2 - fullExtent) * scale;
+        const y1 = -(d / 2 + fullExtent) * scale;
+        const x2 = (d / 2 + fullExtent) * scale;
+        const y2 = -(d / 2 - fullExtent) * scale;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
       }
     }
 
