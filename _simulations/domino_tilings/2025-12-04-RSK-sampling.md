@@ -5,6 +5,8 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-04-RSK-sampling.md'
     txt: 'This simulation is interactive, written in JavaScript'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-04-RSK-sampling.cpp'
+    txt: 'C++ source code (compiled to WebAssembly)'
 ---
 
 <style>
