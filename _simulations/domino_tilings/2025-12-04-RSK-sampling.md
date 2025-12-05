@@ -50,6 +50,7 @@ code:
 </style>
 
 <script src="/js/d3.v7.min.js"></script>
+<script src="/js/colorschemes.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
 
 <!-- Pane 1: Sampling -->
@@ -129,6 +130,33 @@ code:
   </span>
 </div>
 
+<!-- Color Scheme Controls -->
+<div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <label style="font-weight: bold;">Colors:</label>
+    <button id="prev-palette" style="padding: 0 8px; font-size: 14px;">&#9664;</button>
+    <select id="palette-select" style="width: 140px;"></select>
+    <button id="next-palette" style="padding: 0 8px; font-size: 14px;">&#9654;</button>
+  </div>
+  <button id="custom-colors-btn">Custom Colors</button>
+  <div id="custom-color-pickers" style="display: none; align-items: center; gap: 6px;">
+    <span style="font-size: 12px;">Green:</span>
+    <input type="color" id="custom-color-1" value="#228B22" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+    <span style="font-size: 12px;">Red:</span>
+    <input type="color" id="custom-color-2" value="#DC143C" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+    <span style="font-size: 12px;">Blue:</span>
+    <input type="color" id="custom-color-3" value="#0057B7" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+    <span style="font-size: 12px;">Yellow:</span>
+    <input type="color" id="custom-color-4" value="#FFCD00" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  </div>
+  <div id="color-legend" style="display: flex; gap: 10px; font-size: 12px; margin-left: auto;">
+    <span><span id="legend-green" style="display: inline-block; width: 14px; height: 14px; background: #228B22; border: 1px solid #333; vertical-align: middle;"></span> Particle →</span>
+    <span><span id="legend-red" style="display: inline-block; width: 14px; height: 14px; background: #DC143C; border: 1px solid #333; vertical-align: middle;"></span> Particle ↑</span>
+    <span><span id="legend-blue" style="display: inline-block; width: 14px; height: 14px; background: #0057B7; border: 1px solid #333; vertical-align: middle;"></span> Hole →</span>
+    <span><span id="legend-yellow" style="display: inline-block; width: 14px; height: 14px; background: #FFCD00; border: 1px solid #333; vertical-align: middle;"></span> Hole ↑</span>
+  </div>
+</div>
+
 <details style="margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; padding: 10px;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc;">Partitions forming the Schur process (click to expand)</summary>
   <div id="subsets-output" style="margin-top: 10px;">Loading...</div>
@@ -170,6 +198,28 @@ async function initializeApp() {
   // Cache for computed domino data
   let cachedDominoes = null;
   let cachedLatticePoints = null;
+
+  // Color scheme state
+  const colorPalettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#228B22', '#DC143C', '#0057B7', '#FFCD00'] }];
+  let currentPaletteIndex = colorPalettes.findIndex(p => p.name === 'Domino Default');
+  if (currentPaletteIndex === -1) currentPaletteIndex = 0;
+  let useCustomColors = false;
+  let customColors = ['#228B22', '#DC143C', '#0057B7', '#FFCD00'];
+
+  function getCurrentColors() {
+    if (useCustomColors) {
+      return customColors;
+    }
+    return colorPalettes[currentPaletteIndex].colors;
+  }
+
+  function updateLegend() {
+    const colors = getCurrentColors();
+    document.getElementById('legend-green').style.background = colors[0];
+    document.getElementById('legend-red').style.background = colors[1];
+    document.getElementById('legend-blue').style.background = colors[2];
+    document.getElementById('legend-yellow').style.background = colors[3];
+  }
 
   // ========== RSK Sampling Function ==========
 
@@ -600,10 +650,11 @@ async function initializeApp() {
   // Get domino color based on type and orientation
   function getDominoColor(type, isHorizontal, showParticles) {
     if (showParticles) return "#ffffff";
+    const colors = getCurrentColors();
     if (type === 'particle') {
-      return isHorizontal ? "#228B22" : "#DC143C";
+      return isHorizontal ? colors[0] : colors[1];  // Green (horizontal), Red (vertical)
     } else {
-      return isHorizontal ? "#0057B7" : "#FFCD00";
+      return isHorizontal ? colors[2] : colors[3];  // Blue (horizontal), Yellow (vertical)
     }
   }
 
@@ -984,9 +1035,88 @@ async function initializeApp() {
     document.getElementById("y-params").value = arrayToCSV(yArr);
   });
 
+  // ========== Color Scheme Controls ==========
+
+  const paletteSelect = document.getElementById("palette-select");
+  const customColorsBtn = document.getElementById("custom-colors-btn");
+  const customColorPickers = document.getElementById("custom-color-pickers");
+  const colorInputs = [
+    document.getElementById("custom-color-1"),
+    document.getElementById("custom-color-2"),
+    document.getElementById("custom-color-3"),
+    document.getElementById("custom-color-4")
+  ];
+
+  // Populate palette dropdown
+  colorPalettes.forEach((p, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = p.name;
+    paletteSelect.appendChild(opt);
+  });
+  paletteSelect.value = currentPaletteIndex;
+
+  function updateColorPickersFromPalette() {
+    const colors = colorPalettes[currentPaletteIndex].colors;
+    colorInputs[0].value = colors[0];
+    colorInputs[1].value = colors[1];
+    colorInputs[2].value = colors[2];
+    colorInputs[3].value = colors[3];
+    customColors = [...colors];
+  }
+
+  paletteSelect.addEventListener("change", function() {
+    currentPaletteIndex = parseInt(this.value);
+    useCustomColors = false;
+    customColorPickers.style.display = "none";
+    updateLegend();
+    redrawOnly();
+  });
+
+  document.getElementById("prev-palette").addEventListener("click", function() {
+    currentPaletteIndex = (currentPaletteIndex - 1 + colorPalettes.length) % colorPalettes.length;
+    paletteSelect.value = currentPaletteIndex;
+    useCustomColors = false;
+    customColorPickers.style.display = "none";
+    updateLegend();
+    redrawOnly();
+  });
+
+  document.getElementById("next-palette").addEventListener("click", function() {
+    currentPaletteIndex = (currentPaletteIndex + 1) % colorPalettes.length;
+    paletteSelect.value = currentPaletteIndex;
+    useCustomColors = false;
+    customColorPickers.style.display = "none";
+    updateLegend();
+    redrawOnly();
+  });
+
+  customColorsBtn.addEventListener("click", function() {
+    const isVisible = customColorPickers.style.display === "flex";
+    if (isVisible) {
+      customColorPickers.style.display = "none";
+      useCustomColors = false;
+    } else {
+      updateColorPickersFromPalette();
+      customColorPickers.style.display = "flex";
+      useCustomColors = true;
+    }
+    updateLegend();
+    redrawOnly();
+  });
+
+  colorInputs.forEach((input, i) => {
+    input.addEventListener("input", function() {
+      customColors[i] = this.value;
+      updateLegend();
+      redrawOnly();
+    });
+  });
+
   // Sample on page load with default parameters
   try {
     updateParamsForN(currentN);
+    updateLegend();
     const initX = parseCSV(document.getElementById("x-params").value);
     const initY = parseCSV(document.getElementById("y-params").value);
     const initQ = parseFloat(document.getElementById("q-input").value);

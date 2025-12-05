@@ -13,6 +13,7 @@
  * - _simulations/lozenge_tilings/2025-11-28-c2-Glauber.md
  * - _simulations/lozenge_tilings/2025-11-28-c2-CFTP.md
  * - _simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md
+ * - _simulations/domino_tilings/2025-12-04-RSK-sampling.md
  * - s/domino.md
  */
 
@@ -80,7 +81,10 @@ const ColorSchemes = [
     { name: 'The Ohio State', colors: ['#ba0c2f', '#a7b1b7', '#ffffff', '#212325'] },  // Scarlet, gray, white, and gray dark
 
     // Holiday Themes
-    { name: 'New Year', colors: ['#C41E3A', '#228B22', '#FFFAFA', '#FFD700'] }  // Christmas red, forest green, snow white, gold
+    { name: 'New Year', colors: ['#C41E3A', '#228B22', '#FFFAFA', '#FFD700'] },  // Christmas red, forest green, snow white, gold
+
+    // Domino Tilings Default (4 colors: green, red, blue, yellow for domino types)
+    { name: 'Domino Default', colors: ['#228B22', '#DC143C', '#0057B7', '#FFCD00'] }  // Forest green, crimson, cobalt blue, yellow
 ];
 
 // Export for module systems (if needed)
