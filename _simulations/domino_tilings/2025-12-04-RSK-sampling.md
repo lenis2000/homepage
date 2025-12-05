@@ -57,60 +57,56 @@ code:
 <script src="https://unpkg.com/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
 
-<!-- Pane 1: Sampling -->
-<fieldset style="border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
-  <legend style="font-weight: bold; padding: 0 5px;">Sampling</legend>
-  <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+<!-- Sampling controls -->
+<div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
     <span>
-      <label for="n-input">Aztec Diamond Order n: </label>
-      <input id="n-input" type="number" value="4" min="1" max="1000" style="width: 70px;">
-      <button id="sample-btn" style="margin-left: 10px;">Sample</button>
-      <span id="progress-indicator" style="margin-left: 10px; color: #666;"></span>
-      <span id="timing-display" style="margin-left: 10px; color: #666; font-size: 0.9em;"></span>
+      <label for="n-input">n = </label>
+      <input id="n-input" type="number" value="4" min="1" max="1000" style="width: 60px;">
+      <button id="sample-btn" style="margin-left: 8px;">Sample</button>
+      <span id="progress-indicator" style="margin-left: 8px; color: #666;"></span>
+      <span id="timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;"></span>
     </span>
     <span>
-      <label for="q-input">q-Whittaker (0 ≤ q < 1): </label>
-      <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 80px;">
+      <label for="q-input">q = </label>
+      <input id="q-input" type="number" value="0.5" min="0" max="0.99999999999" step="0.0001" style="width: 70px;">
     </span>
     <span>
       <input type="checkbox" id="high-precision-cb">
-      <label for="high-precision-cb">High precision (50 digits)</label>
+      <label for="high-precision-cb">High precision</label>
     </span>
   </div>
-</fieldset>
+</div>
 
-<!-- Pane 2: Schur Process Parameters -->
-<fieldset style="border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
-  <legend style="font-weight: bold; padding: 0 5px;">Schur Process Parameters</legend>
-  <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 8px;">
-    <button id="uniform-btn">Uniform (all 1s)</button>
+<!-- Schur process parameters -->
+<div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 6px;">
+    <button id="uniform-btn">Uniform</button>
     <span>
-      <label for="r-input">r-weighting $x_i=y_i=r^i$: r = </label>
-      <input id="r-input" type="number" value="0.9" min="0.01" max="10" step="0.01" style="width: 60px;">
-      <button id="r-btn">Apply r</button>
+      <label for="r-input">$x_i=y_i=r^i$: r = </label>
+      <input id="r-input" type="number" value="0.9" min="0.01" max="10" step="0.01" style="width: 55px;">
+      <button id="r-btn">Apply</button>
     </span>
+    <span style="font-size: 0.8em; color: #666;">Syntax: <code>1^4</code> = 1,1,1,1</span>
   </div>
-  <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 5px;">
-    <label for="x-params" style="width: 20px;">x:</label>
+  <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
+    <label for="x-params" style="width: 16px;">x:</label>
     <input id="x-params" type="text" class="param-input" value="1^4" style="flex: 1;">
   </div>
-  <div style="display: flex; gap: 10px; align-items: center;">
-    <label for="y-params" style="width: 20px;">y:</label>
+  <div style="display: flex; gap: 8px; align-items: center;">
+    <label for="y-params" style="width: 16px;">y:</label>
     <input id="y-params" type="text" class="param-input" value="1^4" style="flex: 1;">
   </div>
-  <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
-    Syntax: <code>1^4</code> = 1,1,1,1 | <code>(1,2)^3</code> = 1,2,1,2,1,2
-  </div>
-</fieldset>
+</div>
 
-<!-- Zoom Controls and Export (placed above canvas) -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+<!-- Zoom Controls and Export -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
   <div id="zoom-controls-container"></div>
-  <div style="display: flex; align-items: center; gap: 8px;">
+  <div style="display: flex; align-items: center; gap: 6px; font-size: 0.9em;">
     <button type="button" id="export-png-btn">PNG</button>
-    <span style="font-size: 11px; color: #666;">Quality:</span>
-    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
-    <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
+    <span style="font-size: 10px; color: #666;">Q:</span>
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 50px;">
+    <span id="export-quality-val" style="font-size: 10px; color: #1976d2;">85</span>
     <button type="button" id="export-pdf-btn">PDF</button>
   </div>
 </div>
@@ -124,12 +120,11 @@ code:
 </div>
 
 <!-- Visual Controls -->
-<div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
   <span>
-    <label>Renderer: </label>
     <input type="radio" id="renderer-canvas" name="renderer" value="canvas" checked>
     <label for="renderer-canvas">Canvas</label>
-    <input type="radio" id="renderer-svg" name="renderer" value="svg" style="margin-left: 10px;">
+    <input type="radio" id="renderer-svg" name="renderer" value="svg" style="margin-left: 6px;">
     <label for="renderer-svg">SVG</label>
   </span>
   <span>
@@ -138,47 +133,55 @@ code:
   </span>
   <span>
     <input type="checkbox" id="show-particles-cb">
-    <label for="show-particles-cb">Show particles</label>
+    <label for="show-particles-cb">Particles</label>
   </span>
   <span>
-    <label for="border-slider">Border: </label>
-    <input type="range" id="border-slider" min="0" max="3" step="0.5" value="1" style="width: 80px; vertical-align: middle;">
+    <label for="border-slider">Border:</label>
+    <input type="range" id="border-slider" min="0" max="3" step="0.5" value="1" style="width: 60px; vertical-align: middle;">
     <span id="border-value">1</span>
   </span>
+  <span style="border-left: 1px solid #ccc; padding-left: 10px;">
+    <button id="prev-palette" style="padding: 0 6px; font-size: 12px;">&#9664;</button>
+    <select id="palette-select" style="width: 110px; font-size: 12px;"></select>
+    <button id="next-palette" style="padding: 0 6px; font-size: 12px;">&#9654;</button>
+    <button id="custom-colors-btn" style="margin-left: 4px; font-size: 12px;">Custom</button>
+  </span>
+</div>
+<div id="custom-color-pickers" style="display: none; gap: 6px; align-items: center; margin-top: 6px; padding: 6px 10px; background: #f0f0f0; border-radius: 5px; font-size: 0.85em;">
+  <span>P→</span>
+  <input type="color" id="custom-color-1" value="#228B22" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <span>P↑</span>
+  <input type="color" id="custom-color-2" value="#DC143C" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <span>H→</span>
+  <input type="color" id="custom-color-3" value="#0057B7" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <span>H↑</span>
+  <input type="color" id="custom-color-4" value="#FFCD00" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
 </div>
 
-<!-- Color Scheme Controls -->
-<div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-  <div style="display: flex; align-items: center; gap: 8px;">
-    <label style="font-weight: bold;">Colors:</label>
-    <button id="prev-palette" style="padding: 0 8px; font-size: 14px;">&#9664;</button>
-    <select id="palette-select" style="width: 140px;"></select>
-    <button id="next-palette" style="padding: 0 8px; font-size: 14px;">&#9654;</button>
+<details style="margin-top: 12px; border: 1px solid #ccc; border-radius: 5px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">About the Simulation</summary>
+  <div style="padding: 10px; font-size: 0.95em; line-height: 1.5;">
+    <p><strong>q-RSK Sampling</strong> generates random domino tilings of the Aztec diamond using the q-deformed Robinson-Schensted-Knuth correspondence. At q=0, this gives uniform tilings; as q approaches 1, tilings concentrate near "frozen" configurations.</p>
+    <p><strong>Parameters:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><strong>n</strong>: Size of the Aztec diamond</li>
+      <li><strong>q</strong>: q-Whittaker parameter (0 ≤ q < 1). q=0 gives Schur measure; q>0 gives q-Whittaker measure</li>
+      <li><strong>x, y</strong>: Schur process specialization. Uniform (all 1s) gives standard measure; other weights create non-uniform sampling</li>
+      <li><strong>High precision</strong>: Uses 50-digit arithmetic (slower but stable for q close to 1)</li>
+    </ul>
+    <p>The simulation outputs interlacing partitions that encode the domino tiling.</p>
+    <p style="margin-top: 10px;"><strong>References:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — K. Matveev, L. Petrov, <i>q-randomized Robinson-Schensted-Knuth correspondences and random polymers</i></li>
+      <li><a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> — D. Betea et al., <i>Perfect sampling algorithms for Schur processes</i></li>
+    </ul>
   </div>
-  <button id="custom-colors-btn">Custom Colors</button>
-  <div id="custom-color-pickers" style="display: none; align-items: center; gap: 6px;">
-    <span style="font-size: 12px;">Particle →</span>
-    <input type="color" id="custom-color-1" value="#228B22" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    <span style="font-size: 12px;">Particle ↑</span>
-    <input type="color" id="custom-color-2" value="#DC143C" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    <span style="font-size: 12px;">Hole →</span>
-    <input type="color" id="custom-color-3" value="#0057B7" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    <span style="font-size: 12px;">Hole ↑</span>
-    <input type="color" id="custom-color-4" value="#FFCD00" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-  </div>
-</div>
-
-<details style="margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; padding: 10px;">
-  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc;">Partitions forming the Schur process (click to expand)</summary>
-  <div id="subsets-output" style="margin-top: 10px;">Loading...</div>
 </details>
 
-<p style="margin-top: 10px; font-size: 0.9em;">See also:
-<ul style="margin-top: 5px; margin-bottom: 0;">
-  <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — K. Matveev, L. Petrov, <i>q-randomized Robinson–Schensted–Knuth correspondences and random polymers</i>, Ann. Inst. Henri Poincaré D 4 (2017), no. 1, 1–123.</li>
-  <li><a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> — D. Betea, C. Boutillier, J. Bouttier, G. Chapuy, S. Corteel, and M. Vuletic, <i>Perfect sampling algorithms for Schur processes</i>, Markov Process. Related Fields 24 (2018), no. 3, 381–418.</li>
-</ul>
-</p>
+<details style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">Partitions forming the Schur process</summary>
+  <div id="subsets-output" style="padding: 10px;">Loading...</div>
+</details>
 
 <script>
 if (typeof Module === 'undefined') {
