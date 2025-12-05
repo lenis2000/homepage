@@ -83,8 +83,8 @@ const ColorSchemes = [
     // Holiday Themes
     { name: 'New Year', colors: ['#C41E3A', '#228B22', '#FFFAFA', '#FFD700'] },  // Christmas red, forest green, snow white, gold
 
-    // Domino Tilings Default (4 colors: green, red, blue, yellow for domino types)
-    { name: 'Domino Default', colors: ['#228B22', '#DC143C', '#0057B7', '#FFCD00'] }  // Forest green, crimson, cobalt blue, yellow
+    // Domino Tilings Default (4 colors: yellow, green, blue, red for domino types)
+    { name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }  // Yellow, forest green, cobalt blue, crimson
 ];
 
 // Export for module systems (if needed)

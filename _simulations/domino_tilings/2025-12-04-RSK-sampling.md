@@ -107,11 +107,11 @@ code:
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
   <div id="zoom-controls-container"></div>
   <div style="display: flex; align-items: center; gap: 8px;">
-    <button id="export-png-btn">PNG</button>
+    <button type="button" id="export-png-btn">PNG</button>
     <span style="font-size: 11px; color: #666;">Quality:</span>
     <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
     <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
-    <button id="export-pdf-btn">PDF</button>
+    <button type="button" id="export-pdf-btn">PDF</button>
   </div>
 </div>
 
@@ -1184,11 +1184,21 @@ async function initializeApp() {
       baseHeight = contentHeight + 2 * padding;
     }
 
-    // Create scaled canvas
-    const scale = getExportScale();
+    // Create scaled canvas with max size limit
+    let scale = getExportScale();
+    const maxCanvasSize = 4096;  // Safe limit for iOS Safari
+    const requestedWidth = baseWidth * scale;
+    const requestedHeight = baseHeight * scale;
+
+    // Scale down if exceeding max canvas size
+    if (requestedWidth > maxCanvasSize || requestedHeight > maxCanvasSize) {
+      const maxDim = Math.max(requestedWidth, requestedHeight);
+      scale = scale * (maxCanvasSize / maxDim);
+    }
+
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = baseWidth * scale;
-    exportCanvas.height = baseHeight * scale;
+    exportCanvas.width = Math.round(baseWidth * scale);
+    exportCanvas.height = Math.round(baseHeight * scale);
     const exportCtx = exportCanvas.getContext('2d');
     exportCtx.scale(scale, scale);
 
@@ -1235,7 +1245,8 @@ async function initializeApp() {
   }
 
   // Export as PNG file
-  document.getElementById("export-png-btn").addEventListener("click", function() {
+  document.getElementById("export-png-btn").addEventListener("click", function(e) {
+    e.preventDefault();
     const exportCanvas = createExportCanvas();
     if (!exportCanvas) return;
 
@@ -1346,7 +1357,8 @@ async function initializeApp() {
   }
 
   // Export as vector PDF file
-  document.getElementById("export-pdf-btn").addEventListener("click", async function() {
+  document.getElementById("export-pdf-btn").addEventListener("click", async function(e) {
+    e.preventDefault();
     const exportSvg = generateExportSVG();
     if (!exportSvg) {
       alert("No tiling to export. Please sample first.");
