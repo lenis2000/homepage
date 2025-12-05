@@ -859,6 +859,12 @@ async function initializeApp() {
     const subsetsOutput = document.getElementById("subsets-output");
     if (!subsetsOutput) return;
 
+    // Skip detailed output for large n
+    if (currentN > 50) {
+      subsetsOutput.textContent = `Partition details hidden for n > 50 (current n = ${currentN})`;
+      return;
+    }
+
     const lines = ["Subsets by diagonal:"];
 
     for (let idx = 0; idx < currentPartitions.length; idx++) {
