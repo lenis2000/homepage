@@ -179,7 +179,7 @@ code:
 </details>
 
 <details id="partitions-details" style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
-  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">Partitions forming the Schur process</summary>
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">Partitions forming the Schur/q-Whittaker process</summary>
   <div id="subsets-output" style="padding: 10px;">Loading...</div>
 </details>
 
