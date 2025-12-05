@@ -178,7 +178,7 @@ code:
   </div>
 </details>
 
-<details style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
+<details id="partitions-details" style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">Partitions forming the Schur process</summary>
   <div id="subsets-output" style="padding: 10px;">Loading...</div>
 </details>
@@ -214,6 +214,10 @@ async function initializeApp() {
   // Cache for computed domino data
   let cachedDominoes = null;
   let cachedLatticePoints = null;
+
+  // Diagonal highlight state (when partition details are open)
+  let showDiagonalHighlights = false;
+  let previousParticleState = false;  // to restore when closing
 
   // Color scheme state
   const colorPalettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#228B22', '#DC143C', '#0057B7', '#FFCD00'] }];
@@ -718,6 +722,28 @@ async function initializeApp() {
       }
     }
 
+    // Draw diagonal highlight lines when partition details are open
+    if (showDiagonalHighlights && latticePoints.length > 0) {
+      const scale = 20;
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.4)";
+      ctx.lineWidth = 2;
+      for (let d = -currentN; d <= currentN; d++) {
+        // Diagonal line from SW to NE: hx + hy = d
+        // Line endpoints at the diamond boundary
+        const r = currentN + 0.5 - Math.abs(d);
+        if (r > 0) {
+          const x1 = (d / 2 - r / 2) * scale;
+          const y1 = -(d / 2 + r / 2) * scale;
+          const x2 = (d / 2 + r / 2) * scale;
+          const y2 = -(d / 2 - r / 2) * scale;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      }
+    }
+
     ctx.restore();
   }
 
@@ -868,20 +894,26 @@ async function initializeApp() {
       return;
     }
 
-    const lines = ["Subsets by diagonal:"];
+    const lines = [];
+
+    lines.push("λ in h×k box → boundary walk → subset of {1,...,h+k}");
+    lines.push("");
 
     for (let idx = 0; idx < currentPartitions.length; idx++) {
       const partition = currentPartitions[idx];
-      const groundSetSize = getGroundSetSize(idx);
-      const numParticles = getParticleCount(idx);
-      const numHoles = groundSetSize - numParticles;
-      const subset = partitionToSubset(partition, numParticles, groundSetSize);
-      const walk = buildWalk(subset, groundSetSize);
       const label = getPartitionLabel(idx);
-      const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
       const partStr = partitionToString(partition);
 
-      lines.push(`  ${label}: ${subsetStr}  (n=${numParticles}, m=${numHoles})  walk: ${walk}  ${label}=${partStr}`);
+      // Use SAME formulas as renderParticles (lines 785-788)
+      const diagSize = currentN + ((idx + currentN) % 2);  // alternating n, n+1
+      const numParticles = getParticleCount(idx);
+      const numHoles = diagSize - numParticles;
+
+      // Compute subset using the bijection (same as rendering)
+      const subset = partitionToSubset(partition, numParticles, diagSize);
+      const subsetStr = subset.length === 0 ? "∅" : "{" + subset.join(",") + "}";
+
+      lines.push(`  ${label} = ${partStr}  in ${numHoles}×${numParticles} box  →  S = ${subsetStr}`);
     }
 
     // Interlacing checks
@@ -1036,6 +1068,22 @@ async function initializeApp() {
   });
 
   canvas.style.cursor = "grab";
+
+  // Partition details toggle - switch to particle view and show diagonals
+  document.getElementById("partitions-details").addEventListener("toggle", function(e) {
+    const particlesCb = document.getElementById("show-particles-cb");
+    if (this.open) {
+      // Save current state and switch to particle view with diagonal highlights
+      previousParticleState = particlesCb.checked;
+      particlesCb.checked = true;
+      showDiagonalHighlights = true;
+    } else {
+      // Restore previous state
+      particlesCb.checked = previousParticleState;
+      showDiagonalHighlights = false;
+    }
+    redrawOnly();
+  });
 
   // r-weighting button handler - set x_i = y_i = r^i
   document.getElementById("r-btn").addEventListener("click", function() {
