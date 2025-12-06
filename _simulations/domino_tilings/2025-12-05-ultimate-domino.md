@@ -323,28 +323,6 @@ code:
     border-top: none;
     border-radius: 0 0 4px 4px;
   }
-  .vertex-inputs {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-  }
-  .vertex-inputs label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: 10px;
-    font-weight: bold;
-    color: #666;
-  }
-  .vertex-inputs input[type="number"] {
-    width: 40px;
-    height: 24px;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-    margin: 2px 0;
-  }
 </style>
 
 <!-- Main controls -->
@@ -374,12 +352,7 @@ code:
       <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
     </span>
     <button id="fluctuationsBtn" class="cftp" title="Height Fluctuations Visualization" style="display: none;">Fluctuations</button>
-    <span id="fluctScaleGroup" style="display: none;">
-      <label for="fluctScaleInput" style="font-size: 12px; color: #555;">scale:</label>
-      <input type="number" id="fluctScaleInput" value="10" min="1" max="100" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
-    </span>
     <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;">Resample</button>
-    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;"><input type="checkbox" id="showHeightsCheckbox"> Heights</label>
     <button id="scaleUpBtn" title="Double the region size (2x2 blocks)">Scale Up 2×2</button>
     <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
     <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
@@ -411,6 +384,11 @@ code:
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <div class="view-toggle">
       <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
+      <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
+    </div>
+    <div class="view-toggle">
+      <button id="dominoViewBtn" class="active" title="Domino view">▭</button>
+      <button id="dimerViewBtn" title="Dimer view">•-•</button>
     </div>
   </div>
 
@@ -485,64 +463,9 @@ code:
     <button id="exportJsonBtn">Export Shape</button>
     <button id="importJsonBtn">Import Shape</button>
     <input type="file" id="importJsonInput" accept=".json" style="display: none;">
-    <button id="copyStateBtn" title="Copy 3D vertex state to clipboard">Copy State</button>
   </div>
 </div>
 
-<!-- 3D Vertex Tuning -->
-<details class="control-group" id="vertexTuningSection">
-  <summary style="cursor: pointer; font-weight: bold; padding: 4px 0;">3D Vertex Heights</summary>
-  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
-    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
-      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Horiz Type 0</div>
-      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">UL—UM—UR / LL—LM—LR</div>
-      <div class="vertex-inputs" data-type="0">
-        <label>UR<input type="number" value="1" data-vertex="0"></label>
-        <label>UM<input type="number" value="2" data-vertex="1"></label>
-        <label>UL<input type="number" value="1" data-vertex="2"></label>
-        <label>LL<input type="number" value="0" data-vertex="3"></label>
-        <label>LM<input type="number" value="-1" data-vertex="4"></label>
-        <label>LR<input type="number" value="0" data-vertex="5"></label>
-      </div>
-    </div>
-    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
-      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Horiz Type 1</div>
-      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">UL—UM—UR / LL—LM—LR</div>
-      <div class="vertex-inputs" data-type="1">
-        <label>UR<input type="number" value="0" data-vertex="0"></label>
-        <label>UM<input type="number" value="-1" data-vertex="1"></label>
-        <label>UL<input type="number" value="0" data-vertex="2"></label>
-        <label>LL<input type="number" value="1" data-vertex="3"></label>
-        <label>LM<input type="number" value="2" data-vertex="4"></label>
-        <label>LR<input type="number" value="1" data-vertex="5"></label>
-      </div>
-    </div>
-    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
-      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Vert Type 2</div>
-      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">TL—TR / ML—MR / BL—BR</div>
-      <div class="vertex-inputs" data-type="2">
-        <label>TR<input type="number" value="-1" data-vertex="0"></label>
-        <label>MR<input type="number" value="-2" data-vertex="1"></label>
-        <label>BR<input type="number" value="-1" data-vertex="2"></label>
-        <label>BL<input type="number" value="0" data-vertex="3"></label>
-        <label>ML<input type="number" value="1" data-vertex="4"></label>
-        <label>TL<input type="number" value="0" data-vertex="5"></label>
-      </div>
-    </div>
-    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
-      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Vert Type 3</div>
-      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">TL—TR / ML—MR / BL—BR</div>
-      <div class="vertex-inputs" data-type="3">
-        <label>TR<input type="number" value="0" data-vertex="0"></label>
-        <label>MR<input type="number" value="1" data-vertex="1"></label>
-        <label>BR<input type="number" value="0" data-vertex="2"></label>
-        <label>BL<input type="number" value="-1" data-vertex="3"></label>
-        <label>ML<input type="number" value="-2" data-vertex="4"></label>
-        <label>TL<input type="number" value="-1" data-vertex="5"></label>
-      </div>
-    </div>
-  </div>
-</details>
 
 </div>
 
@@ -607,10 +530,6 @@ code:
     let gpuEngine = null;
     let useWebGPU = false;
 
-    // Debug
-    let showHeights = false;
-    let heightData = [];
-
     // Double Dimer / Fluctuations state
     let doubleDimerCancelled = false;
     let storedSamples = null;  // {sample0, sample1} - the two independent samples
@@ -622,6 +541,9 @@ code:
     let is3DView = false;
     let renderer3D = null;
     let threeContainer = null;
+
+    // Dimer view (show edges instead of colored dominoes)
+    let showDimerView = false;
 
     // 3D Vertex heights per domino type (4 types x 6 vertices)
     // Horizontal: 0=UR, 1=UM, 2=UL, 3=LL, 4=LM, 5=LR
@@ -664,7 +586,6 @@ code:
         startStopBtn: document.getElementById('startStopBtn'),
         cftpBtn: document.getElementById('cftpBtn'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
-        showHeightsCheckbox: document.getElementById('showHeightsCheckbox'),
         scaleUpBtn: document.getElementById('scaleUpBtn'),
         scaleDownBtn: document.getElementById('scaleDownBtn'),
         smoothScaleBtn: document.getElementById('smoothScaleBtn'),
@@ -701,8 +622,10 @@ code:
         exportJsonBtn: document.getElementById('exportJsonBtn'),
         importJsonBtn: document.getElementById('importJsonBtn'),
         importJsonInput: document.getElementById('importJsonInput'),
-        copyStateBtn: document.getElementById('copyStateBtn'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
+        preset3DBtn: document.getElementById('preset3DBtn'),
+        dominoViewBtn: document.getElementById('dominoViewBtn'),
+        dimerViewBtn: document.getElementById('dimerViewBtn'),
         rotateLeftBtn: document.getElementById('rotateLeftBtn'),
         rotateRightBtn: document.getElementById('rotateRightBtn'),
         autoRotateBtn: document.getElementById('autoRotateBtn'),
@@ -711,8 +634,6 @@ code:
         minLoopGroup: document.getElementById('minLoopGroup'),
         minLoopInput: document.getElementById('minLoopInput'),
         fluctuationsBtn: document.getElementById('fluctuationsBtn'),
-        fluctScaleGroup: document.getElementById('fluctScaleGroup'),
-        fluctScaleInput: document.getElementById('fluctScaleInput'),
         resampleBtn: document.getElementById('resampleBtn')
     };
 
@@ -1176,6 +1097,14 @@ code:
         if (!skipDraw) draw();
     }
 
+    // Helper: redraw appropriate view based on current mode
+    function redrawView() {
+        if (inDoubleDimerMode) renderDoubleDimers();
+        else if (inFluctuationMode) renderFluctuations();
+        else if (showDimerView) renderDimerView();
+        else draw();
+    }
+
     function draw() {
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
@@ -1263,29 +1192,6 @@ code:
             }
         }
 
-        // Draw height function
-        if (showHeights && heightData.length > 0) {
-            ctx.font = `${Math.max(8, size * 0.4)}px monospace`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            for (const h of heightData) {
-                // Heights are at vertices (corners), so position at corner
-                const sx = centerX + h.x * size;
-                const sy = centerY + h.y * size;
-
-                // Draw background circle
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                ctx.beginPath();
-                ctx.arc(sx, sy, size * 0.25, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Draw height value
-                ctx.fillStyle = '#000';
-                ctx.fillText(h.h.toString(), sx, sy);
-            }
-        }
-
         // Draw lasso
         if (lassoPoints.length > 0) {
             const isFillMode = (currentTool === 'lassoFill') !== lassoShiftMode;
@@ -1340,15 +1246,75 @@ code:
     // 3D Renderer
     // ========================================================================
 
+    // 3D Visual Presets
+    const VISUAL_PRESETS_3D = [
+        {
+            name: 'Default',
+            icon: '☀️',
+            background: 0xffffff,
+            ambient: { intensity: 0.4 },
+            hemisphere: { sky: 0xffffff, ground: 0x444444, intensity: 0.3 },
+            directional: { intensity: 0.6, position: [10, 10, 15] },
+            fill: { intensity: 0.25, position: [-10, -5, -10] },
+            material: { type: 'standard', roughness: 0.5, metalness: 0.15, flatShading: true },
+            edges: { color: 0x000000, opacity: 0.5 }
+        },
+        {
+            name: 'Clean',
+            icon: '✨',
+            background: 0xfafafa,
+            ambient: { intensity: 0.5 },
+            hemisphere: { sky: 0xffffff, ground: 0xeeeeee, intensity: 0.2 },
+            directional: { intensity: 0.7, position: [5, 15, 10] },
+            fill: { intensity: 0.3, position: [-8, 5, -8] },
+            material: { type: 'phong', shininess: 60, flatShading: true },
+            edges: { color: 0x333333, opacity: 0.3 }
+        },
+        {
+            name: 'Mathematical',
+            icon: '📐',
+            background: 0xffffff,
+            ambient: { intensity: 0.6 },
+            hemisphere: { sky: 0xffffff, ground: 0xffffff, intensity: 0.2 },
+            directional: { intensity: 0.4, position: [0, 20, 0] },
+            fill: { intensity: 0.2, position: [0, -10, 0] },
+            material: { type: 'lambert', flatShading: true },
+            edges: { color: 0x000000, opacity: 1.0 }
+        },
+        {
+            name: 'Dramatic',
+            icon: '🎭',
+            background: 0x1a1a2e,
+            ambient: { intensity: 0.35 },
+            hemisphere: { sky: 0x6666aa, ground: 0x222244, intensity: 0.25 },
+            directional: { intensity: 1.2, position: [15, 20, 5] },
+            fill: { intensity: 0.3, position: [-10, 5, -5] },
+            material: { type: 'standard', roughness: 0.3, metalness: 0.5, flatShading: true },
+            edges: { color: 0x222222, opacity: 0.6 }
+        },
+        {
+            name: 'Playful',
+            icon: '🎨',
+            background: 0xf0f8ff,
+            ambient: { intensity: 0.5 },
+            hemisphere: { sky: 0xaaddff, ground: 0xffddaa, intensity: 0.4 },
+            directional: { intensity: 0.5, position: [10, 15, 10] },
+            fill: { intensity: 0.35, position: [-10, 10, -5] },
+            material: { type: 'phong', shininess: 100, flatShading: false },
+            edges: { color: 0x444444, opacity: 0.2 }
+        }
+    ];
+
     class Domino3DRenderer {
         constructor(container) {
             this.container = container;
             this.autoRotate = false;
-            this.lastDominoCount = 0;  // Track to avoid re-centering on slider changes
+            this.lastDominoCount = 0;
+            this.currentPresetIndex = 0;
 
             // Three.js setup
             this.scene = new THREE.Scene();
-            this.scene.background = new THREE.Color(0xf0f0f0);
+            this.scene.background = new THREE.Color(0xffffff);
 
             // Orthographic camera (top-down initially)
             const w = container.clientWidth || 900;
@@ -1377,24 +1343,21 @@ code:
             this.controls.dampingFactor = 0.25;
             this.controls.touches = { ONE: THREE.TOUCH.ROTATE };
 
-            // Lighting - multi-light setup for better depth perception
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            this.scene.add(ambientLight);
+            // Lighting - store references for preset changes
+            this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            this.scene.add(this.ambientLight);
 
-            // Hemisphere light for subtle sky/ground color variation
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-            hemiLight.position.set(0, 20, 0);
-            this.scene.add(hemiLight);
+            this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+            this.hemiLight.position.set(0, 20, 0);
+            this.scene.add(this.hemiLight);
 
-            // Primary directional light
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            directionalLight.position.set(10, 10, 15);
-            this.scene.add(directionalLight);
+            this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            this.directionalLight.position.set(10, 10, 15);
+            this.scene.add(this.directionalLight);
 
-            // Fill light from opposite side
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
-            fillLight.position.set(-10, -5, -10);
-            this.scene.add(fillLight);
+            this.fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+            this.fillLight.position.set(-10, -5, -10);
+            this.scene.add(this.fillLight);
 
             // Group for dominoes
             this.dominoGroup = new THREE.Group();
@@ -1403,8 +1366,38 @@ code:
             // Handle resize
             window.addEventListener('resize', () => this.handleResize());
 
+            // Apply default preset
+            this.applyPreset(0);
+
             // Start animation loop
             this.animate();
+        }
+
+        applyPreset(index) {
+            this.currentPresetIndex = index % VISUAL_PRESETS_3D.length;
+            const preset = VISUAL_PRESETS_3D[this.currentPresetIndex];
+
+            // Background
+            this.scene.background = new THREE.Color(preset.background);
+
+            // Lights
+            this.ambientLight.intensity = preset.ambient.intensity;
+            this.hemiLight.color.setHex(preset.hemisphere.sky);
+            this.hemiLight.groundColor.setHex(preset.hemisphere.ground);
+            this.hemiLight.intensity = preset.hemisphere.intensity;
+            this.directionalLight.intensity = preset.directional.intensity;
+            this.directionalLight.position.set(...preset.directional.position);
+            this.fillLight.intensity = preset.fill.intensity;
+            this.fillLight.position.set(...preset.fill.position);
+        }
+
+        cyclePreset() {
+            this.applyPreset(this.currentPresetIndex + 1);
+            return VISUAL_PRESETS_3D[this.currentPresetIndex];
+        }
+
+        getCurrentPreset() {
+            return VISUAL_PRESETS_3D[this.currentPresetIndex];
         }
 
         handleResize() {
@@ -1493,7 +1486,7 @@ code:
         }
 
         // Calculate height function from dominoes
-        // Based on s/domino.md implementation
+        // Edge weights derived from vertex height offsets
         calculateHeightFunction(dominoes) {
             if (!dominoes || dominoes.length === 0) return new Map();
 
@@ -1511,48 +1504,49 @@ code:
                 adj.get(v2Key).push([v1Key, -dh]);
             }
 
-            // Process each domino
-            // Format: {x1, y1, x2, y2, type}
-            // type 0: horizontal, black start (+1)
-            // type 1: horizontal, white start (-1)
-            // type 2: vertical, black start (+1)
-            // type 3: vertical, white start (-1)
+            // Process each domino using actual vertex offsets
+            // Horizontal vertex indices: 0=UR, 1=UM, 2=UL, 3=LL, 4=LM, 5=LR
+            // Vertical vertex indices: 0=TR, 1=MR, 2=BR, 3=BL, 4=ML, 5=TL
             for (const d of dominoes) {
                 const isHorizontal = (d.y1 === d.y2);
                 const x = Math.min(d.x1, d.x2);
                 const y = Math.min(d.y1, d.y2);
-
-                // Sign based on type
-                let sign;
-                if (isHorizontal) {
-                    sign = (d.type === 0) ? 1 : -1;
-                } else {
-                    sign = (d.type === 2) ? 1 : -1;
-                }
+                const type = d.type;
+                const h = vertexHeights[type];
 
                 if (isHorizontal) {
                     // Horizontal domino spans (x,y) to (x+2,y+1)
-                    // All 4 corners at same height, midpoints at ±1
                     const TL = [x, y+1], TM = [x+1, y+1], TR = [x+2, y+1];
                     const BL = [x, y], BM = [x+1, y], BR = [x+2, y];
 
-                    // Horizontal edges: corner -> mid -> corner
-                    addEdge(TL, TM, sign);  addEdge(TM, TR, -sign);
-                    addEdge(BL, BM, sign);  addEdge(BM, BR, -sign);
-                    // Vertical edges: all 0 (corners same height)
-                    addEdge(TL, BL, 0);  addEdge(TM, BM, 0);  addEdge(TR, BR, 0);
+                    // Horizontal edges using offset differences
+                    // Top row: UL(2) -> UM(1) -> UR(0)
+                    addEdge(TL, TM, h[1] - h[2]);  // UL -> UM
+                    addEdge(TM, TR, h[0] - h[1]);  // UM -> UR
+                    // Bottom row: LL(3) -> LM(4) -> LR(5)
+                    addEdge(BL, BM, h[4] - h[3]);  // LL -> LM
+                    addEdge(BM, BR, h[5] - h[4]);  // LM -> LR
+                    // Vertical edges: UL-LL, UM-LM, UR-LR
+                    addEdge(TL, BL, h[3] - h[2]);  // UL -> LL
+                    addEdge(TM, BM, h[4] - h[1]);  // UM -> LM
+                    addEdge(TR, BR, h[5] - h[0]);  // UR -> LR
                 } else {
                     // Vertical domino spans (x,y) to (x+1,y+2)
-                    // All 4 corners at same height, midpoints at ±1
                     const TL = [x, y+2], TR = [x+1, y+2];
                     const ML = [x, y+1], MR = [x+1, y+1];
                     const BL = [x, y], BR = [x+1, y];
 
-                    // Vertical edges: corner -> mid -> corner
-                    addEdge(TL, ML, sign);  addEdge(ML, BL, -sign);
-                    addEdge(TR, MR, sign);  addEdge(MR, BR, -sign);
-                    // Horizontal edges: all 0 (corners same height)
-                    addEdge(TL, TR, 0);  addEdge(ML, MR, 0);  addEdge(BL, BR, 0);
+                    // Vertical edges using offset differences
+                    // Left col: TL(5) -> ML(4) -> BL(3)
+                    addEdge(TL, ML, h[4] - h[5]);  // TL -> ML
+                    addEdge(ML, BL, h[3] - h[4]);  // ML -> BL
+                    // Right col: TR(0) -> MR(1) -> BR(2)
+                    addEdge(TR, MR, h[1] - h[0]);  // TR -> MR
+                    addEdge(MR, BR, h[2] - h[1]);  // MR -> BR
+                    // Horizontal edges: TL-TR, ML-MR, BL-BR
+                    addEdge(TL, TR, h[0] - h[5]);  // TL -> TR
+                    addEdge(ML, MR, h[1] - h[4]);  // ML -> MR
+                    addEdge(BL, BR, h[2] - h[3]);  // BL -> BR
                 }
             }
 
@@ -1582,13 +1576,7 @@ code:
                 }
             }
 
-            // Negate heights for proper 3D rendering
-            const finalHeights = new Map();
-            heights.forEach((h, key) => {
-                finalHeights.set(key, -h);
-            });
-
-            return finalHeights;
+            return heights;
         }
 
         renderDominoes(dominoes, colors) {
@@ -1617,8 +1605,10 @@ code:
                     const hOffsets = vertexHeights[type];
 
                     // Get base height from height map (corner position)
+                    // Subtract reference corner offset so baseH + offset[3] = heightMap value
                     const baseKey = `${x},${y}`;
-                    const baseH = heightMap.has(baseKey) ? heightMap.get(baseKey) : 0;
+                    const heightAtRef = heightMap.has(baseKey) ? heightMap.get(baseKey) : 0;
+                    const baseH = heightAtRef - hOffsets[3];
 
                     // Build 6 vertices with positions and heights
                     // Heights = baseH + offset from slider
@@ -1665,20 +1655,45 @@ code:
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
 
-                    // Material with color
+                    // Material with color based on current preset
                     const color = colors[type] || '#888888';
-                    const mat = new THREE.MeshLambertMaterial({
-                        color: color,
-                        side: THREE.DoubleSide,
-                        flatShading: true
-                    });
+                    const preset = this.getCurrentPreset();
+                    const matSettings = preset.material;
+                    let mat;
+                    if (matSettings.type === 'standard') {
+                        mat = new THREE.MeshStandardMaterial({
+                            color: color,
+                            side: THREE.DoubleSide,
+                            flatShading: matSettings.flatShading,
+                            roughness: matSettings.roughness,
+                            metalness: matSettings.metalness
+                        });
+                    } else if (matSettings.type === 'phong') {
+                        mat = new THREE.MeshPhongMaterial({
+                            color: color,
+                            side: THREE.DoubleSide,
+                            flatShading: matSettings.flatShading,
+                            shininess: matSettings.shininess
+                        });
+                    } else {
+                        mat = new THREE.MeshLambertMaterial({
+                            color: color,
+                            side: THREE.DoubleSide,
+                            flatShading: matSettings.flatShading
+                        });
+                    }
 
                     const mesh = new THREE.Mesh(geom, mat);
                     this.dominoGroup.add(mesh);
 
-                    // Add black edges around the domino for visual separation
+                    // Add edges based on preset
                     const edges = new THREE.EdgesGeometry(geom, 15);
-                    const lineMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 });
+                    const lineMat = new THREE.LineBasicMaterial({
+                        color: preset.edges.color,
+                        linewidth: 1,
+                        opacity: preset.edges.opacity,
+                        transparent: preset.edges.opacity < 1
+                    });
                     const wireframe = new THREE.LineSegments(edges, lineMat);
                     this.dominoGroup.add(wireframe);
                 } catch (e) {
@@ -1724,10 +1739,19 @@ code:
         // Update button text
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
 
+        // Show/hide preset button
+        el.preset3DBtn.style.display = use3D ? 'inline-block' : 'none';
+
         // Enable/disable rotation buttons
         el.rotateLeftBtn.disabled = !use3D;
         el.rotateRightBtn.disabled = !use3D;
         el.autoRotateBtn.disabled = !use3D;
+
+        // Disable dimer view buttons in 3D mode
+        el.dominoViewBtn.disabled = use3D;
+        el.dimerViewBtn.disabled = use3D;
+        el.dominoViewBtn.style.opacity = use3D ? '0.5' : '1';
+        el.dimerViewBtn.style.opacity = use3D ? '0.5' : '1';
 
         // Initialize 3D renderer if needed
         if (use3D && !renderer3D && threeContainer) {
@@ -1738,6 +1762,7 @@ code:
         if (use3D && renderer3D && isValid && dominoes.length > 0) {
             const colors = getColors();
             renderer3D.renderDominoes(dominoes, colors);
+            renderer3D.resetView();
         }
     }
 
@@ -1885,7 +1910,7 @@ code:
             panY += dy / zoom;
             lastPanX = e.clientX;
             lastPanY = e.clientY;
-            draw();
+            redrawView();
             return;
         }
 
@@ -1936,7 +1961,7 @@ code:
         e.preventDefault();
         const factor = e.deltaY > 0 ? 0.9 : 1.1;
         zoom = Math.max(0.1, Math.min(10, zoom * factor));
-        draw();
+        redrawView();
     }
 
     // Snap to nearest integer lattice point along an integer slope direction
@@ -2222,7 +2247,7 @@ code:
         return heights;
     }
 
-    async function runDoubleDimer() {
+    async function runDoubleDimer(restoreFluctuations = false) {
         if (!isValid || isCFTPRunning) return;
         if (storedSamples) { inDoubleDimerMode = true; inFluctuationMode = false; renderDoubleDimers(); return; }
         isCFTPRunning = true; doubleDimerCancelled = false;
@@ -2240,9 +2265,16 @@ code:
                 rawFluctuations = new Map();
                 for (const [k, v0] of h0) rawFluctuations.set(k, (v0 - (h1.get(k)||0)) / Math.sqrt(2));
                 el.doubleDimerProgress.textContent = `Done (${((performance.now()-t0)/1000).toFixed(2)}s)`;
-                inDoubleDimerMode = true;
                 el.minLoopGroup.style.display = el.fluctuationsBtn.style.display = el.resampleBtn.style.display = '';
-                resetView(true); renderDoubleDimers(); break;
+                resetView(true);
+                if (restoreFluctuations) {
+                    inFluctuationMode = true; inDoubleDimerMode = false;
+                    renderFluctuations();
+                } else {
+                    inDoubleDimerMode = true; inFluctuationMode = false;
+                    renderDoubleDimers();
+                }
+                break;
             } else { if (res.status === 'timeout') el.doubleDimerProgress.textContent = 'timeout'; break; }
             await new Promise(r => setTimeout(r, 0));
         }
@@ -2261,13 +2293,16 @@ code:
         const s1 = new Set(e1.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const ez = zoom * cellSize, ox = canvas.width/2 + panX, oy = canvas.height/2 + panY;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const cw = rect.width, ch = rect.height;
+        const ez = zoom * cellSize * dpr, ox = (cw/2 + panX) * dpr, oy = (ch/2 + panY) * dpr;
 
         // Clear canvas
-        ctx.save(); ctx.setTransform(1,0,0,1,0,0);
         ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
 
         // Fill cells with light background
         ctx.fillStyle = isDark ? '#2a2a2a' : '#f5f5f5';
@@ -2277,7 +2312,7 @@ code:
 
         // Draw grid lines
         ctx.strokeStyle = isDark ? '#444' : '#ddd';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = dpr;
         for (const [,c] of activeCells) {
             const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
             ctx.strokeRect(cx, cy, ez, ez);
@@ -2285,7 +2320,7 @@ code:
 
         // Draw boundary
         ctx.strokeStyle = isDark ? '#888' : '#333';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * dpr;
         for (const [,c] of activeCells) {
             const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
             if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + ez); ctx.stroke(); }
@@ -2307,25 +2342,30 @@ code:
 
     function renderFluctuations() {
         if (!rawFluctuations) return;
-        const scale = parseFloat(el.fluctScaleInput.value) || 10;
+        // Auto-scale based on data range
         let minF = Infinity, maxF = -Infinity;
-        for (const [,v] of rawFluctuations) { minF = Math.min(minF,v*scale); maxF = Math.max(maxF,v*scale); }
+        for (const [,v] of rawFluctuations) { minF = Math.min(minF, v); maxF = Math.max(maxF, v); }
         const range = Math.max(Math.abs(minF), Math.abs(maxF)) || 1;
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle = isDark ? '#1a1a1a' : '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.restore();
-        const ez = zoom * cellSize, ox = canvas.width/2 + panX, oy = canvas.height/2 + panY;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const cw = rect.width, ch = rect.height;
+        ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const ez = zoom * cellSize * dpr, ox = (cw/2 + panX) * dpr, oy = (ch/2 + panY) * dpr;
         for (const [key] of activeCells) {
             const [x,y] = key.split(',').map(Number);
             let sum=0, cnt=0;
             for (let dx=0;dx<=1;dx++) for (let dy=0;dy<=1;dy++) { const fk=`${x+dx},${y+dy}`; if(rawFluctuations.has(fk)){sum+=rawFluctuations.get(fk);cnt++;} }
-            const avg = cnt>0 ? (sum/cnt)*scale : 0;
+            const avg = cnt>0 ? sum/cnt : 0;
             let r,g,b;
             if (avg >= 0) { const t=Math.min(1,avg/range); r=255; g=b=Math.round(255*(1-t)); }
             else { const t=Math.min(1,-avg/range); r=g=Math.round(255*(1-t)); b=255; }
             ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(ox+x*ez, oy-(y+1)*ez, ez, ez);
         }
-        ctx.strokeStyle = isDark ? '#fff' : '#000'; ctx.lineWidth = 2;
+        ctx.strokeStyle = isDark ? '#fff' : '#000'; ctx.lineWidth = 2 * dpr;
         for (const [,c] of activeCells) {
             const cx = ox+c.x*ez, cy = oy-(c.y+1)*ez;
             if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy+ez); ctx.stroke(); }
@@ -2335,9 +2375,58 @@ code:
         }
     }
 
+    function renderDimerView() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const cw = rect.width, ch = rect.height;
+        const ez = zoom * cellSize * dpr, ox = (cw/2 + panX) * dpr, oy = (ch/2 + panY) * dpr;
+
+        // Clear canvas
+        ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Fill cells with light background
+        ctx.fillStyle = isDark ? '#2a2a2a' : '#f5f5f5';
+        for (const [,c] of activeCells) {
+            ctx.fillRect(ox + c.x * ez, oy - (c.y + 1) * ez, ez, ez);
+        }
+
+        // Draw grid lines
+        ctx.strokeStyle = isDark ? '#444' : '#ddd';
+        ctx.lineWidth = dpr;
+        for (const [,c] of activeCells) {
+            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            ctx.strokeRect(cx, cy, ez, ez);
+        }
+
+        // Draw boundary
+        ctx.strokeStyle = isDark ? '#888' : '#333';
+        ctx.lineWidth = 2 * dpr;
+        for (const [,c] of activeCells) {
+            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x+1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx + ez, cy); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy + ez); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ez, cy); ctx.stroke(); }
+        }
+
+        // Draw dimer edges from current domino state
+        ctx.strokeStyle = isDark ? '#fff' : '#000';
+        ctx.lineWidth = Math.max(3, ez * 0.12);
+        for (const d of dominoes) {
+            // Draw line from center of cell1 to center of cell2
+            const x1 = ox + (d.x1 + 0.5) * ez, y1 = oy - (d.y1 + 0.5) * ez;
+            const x2 = ox + (d.x2 + 0.5) * ez, y2 = oy - (d.y2 + 0.5) * ez;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+    }
+
     function clearDoubleDimerState() {
         storedSamples = rawFluctuations = null; inDoubleDimerMode = inFluctuationMode = false;
-        el.minLoopGroup.style.display = el.fluctuationsBtn.style.display = el.fluctScaleGroup.style.display = el.resampleBtn.style.display = 'none';
+        el.minLoopGroup.style.display = el.fluctuationsBtn.style.display = el.resampleBtn.style.display = 'none';
         el.doubleDimerProgress.textContent = '';
     }
 
@@ -2510,26 +2599,15 @@ code:
             if (!rawFluctuations) return;
             inFluctuationMode = true;
             inDoubleDimerMode = false;
-            el.fluctScaleGroup.style.display = '';
             renderFluctuations();
         });
         el.minLoopInput.addEventListener('change', () => {
             if (inDoubleDimerMode) renderDoubleDimers();
         });
-        el.fluctScaleInput.addEventListener('change', () => {
-            if (inFluctuationMode) renderFluctuations();
-        });
         el.resampleBtn.addEventListener('click', () => {
+            const wasInFluctuationMode = inFluctuationMode;
             clearDoubleDimerState();
-            runDoubleDimer();
-        });
-
-        el.showHeightsCheckbox.addEventListener('change', () => {
-            showHeights = el.showHeightsCheckbox.checked;
-            if (showHeights && wasmReady && isValid) {
-                heightData = sim.getHeights().heights || [];
-            }
-            draw();
+            runDoubleDimer(wasInFluctuationMode);
         });
 
         el.scaleUpBtn.addEventListener('click', () => {
@@ -2937,7 +3015,7 @@ code:
                 renderer3D.zoomIn();
             } else {
                 zoom = Math.min(10, zoom * 1.2);
-                draw();
+                redrawView();
             }
         });
 
@@ -2946,7 +3024,7 @@ code:
                 renderer3D.zoomOut();
             } else {
                 zoom = Math.max(0.1, zoom / 1.2);
-                draw();
+                redrawView();
             }
         });
 
@@ -2955,7 +3033,8 @@ code:
                 renderer3D.resetView();
                 update3DView();
             } else {
-                resetView();
+                resetView(true);
+                redrawView();
             }
         });
 
@@ -3000,34 +3079,38 @@ code:
             }
         });
 
-        // Copy state to clipboard
-        el.copyStateBtn.addEventListener('click', () => {
-            const state = {
-                vertexHeights: vertexHeights,
-                dominoCount: dominoes.length,
-                is3DView: is3DView
-            };
-            navigator.clipboard.writeText(JSON.stringify(state, null, 2))
-                .then(() => alert('State copied to clipboard!'))
-                .catch(err => console.error('Failed to copy:', err));
-        });
-
-        // Vertex height inputs
-        document.querySelectorAll('.vertex-inputs').forEach(container => {
-            const type = parseInt(container.dataset.type);
-            container.querySelectorAll('input[type="number"]').forEach(input => {
-                const vertex = parseInt(input.dataset.vertex);
-                input.addEventListener('change', () => {
-                    const value = parseInt(input.value) || 0;
-                    vertexHeights[type][vertex] = value;
-                    update3DView();
-                });
-            });
-        });
-
         // 3D View Controls
         el.toggle3DBtn.addEventListener('click', () => {
             setViewMode(!is3DView);
+        });
+
+        el.preset3DBtn.addEventListener('click', () => {
+            if (renderer3D) {
+                const preset = renderer3D.cyclePreset();
+                el.preset3DBtn.textContent = preset.icon;
+                el.preset3DBtn.title = `Style: ${preset.name}`;
+                // Re-render with new preset materials
+                if (isValid && dominoes.length > 0) {
+                    const colors = getColors();
+                    renderer3D.renderDominoes(dominoes, colors);
+                }
+            }
+        });
+
+        // Domino/Dimer view toggle
+        el.dominoViewBtn.addEventListener('click', () => {
+            showDimerView = false;
+            clearDoubleDimerState();  // Exit double dimer mode if active
+            el.dominoViewBtn.classList.add('active');
+            el.dimerViewBtn.classList.remove('active');
+            redrawView();
+        });
+
+        el.dimerViewBtn.addEventListener('click', () => {
+            showDimerView = true;
+            el.dimerViewBtn.classList.add('active');
+            el.dominoViewBtn.classList.remove('active');
+            redrawView();
         });
 
         el.rotateLeftBtn.addEventListener('click', () => {

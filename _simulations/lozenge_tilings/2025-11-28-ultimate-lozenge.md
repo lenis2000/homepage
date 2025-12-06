@@ -569,6 +569,7 @@ if (window.LOZENGE_WEBGPU) {
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <div class="view-toggle">
       <button id="toggle3DBtn" title="Toggle 2D/3D">2D</button>
+      <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
     </div>
     <div class="view-toggle">
       <button id="lozengeViewBtn" class="active" title="Lozenge view">&#9670;</button>
@@ -2555,6 +2556,66 @@ function initLozengeApp() {
     // ========================================================================
     // 3D RENDERER
     // ========================================================================
+
+    // 3D Visual Presets
+    const VISUAL_PRESETS_3D = [
+        {
+            name: 'Default',
+            icon: '☀️',
+            background: 0xffffff,
+            ambient: { intensity: 0.4 },
+            hemisphere: { sky: 0xffffff, ground: 0x444444, intensity: 0.3 },
+            directional: { intensity: 0.6, position: [10, 10, 15] },
+            fill: { intensity: 0.25, position: [-10, -5, -10] },
+            material: { type: 'standard', roughness: 0.5, metalness: 0.15, flatShading: true },
+            edges: { color: 0x000000, opacity: 0.5 }
+        },
+        {
+            name: 'Clean',
+            icon: '✨',
+            background: 0xfafafa,
+            ambient: { intensity: 0.5 },
+            hemisphere: { sky: 0xffffff, ground: 0xeeeeee, intensity: 0.2 },
+            directional: { intensity: 0.7, position: [5, 15, 10] },
+            fill: { intensity: 0.3, position: [-8, 5, -8] },
+            material: { type: 'phong', shininess: 60, flatShading: true },
+            edges: { color: 0x333333, opacity: 0.3 }
+        },
+        {
+            name: 'Mathematical',
+            icon: '📐',
+            background: 0xffffff,
+            ambient: { intensity: 0.6 },
+            hemisphere: { sky: 0xffffff, ground: 0xffffff, intensity: 0.2 },
+            directional: { intensity: 0.4, position: [0, 20, 0] },
+            fill: { intensity: 0.2, position: [0, -10, 0] },
+            material: { type: 'lambert', flatShading: true },
+            edges: { color: 0x000000, opacity: 1.0 }
+        },
+        {
+            name: 'Dramatic',
+            icon: '🎭',
+            background: 0x1a1a2e,
+            ambient: { intensity: 0.35 },
+            hemisphere: { sky: 0x6666aa, ground: 0x222244, intensity: 0.25 },
+            directional: { intensity: 1.2, position: [15, 20, 5] },
+            fill: { intensity: 0.3, position: [-10, 5, -5] },
+            material: { type: 'standard', roughness: 0.3, metalness: 0.5, flatShading: true },
+            edges: { color: 0x222222, opacity: 0.6 }
+        },
+        {
+            name: 'Playful',
+            icon: '🎨',
+            background: 0xf0f8ff,
+            ambient: { intensity: 0.5 },
+            hemisphere: { sky: 0xaaddff, ground: 0xffddaa, intensity: 0.4 },
+            directional: { intensity: 0.5, position: [10, 15, 10] },
+            fill: { intensity: 0.35, position: [-10, 10, -5] },
+            material: { type: 'phong', shininess: 100, flatShading: false },
+            edges: { color: 0x444444, opacity: 0.2 }
+        }
+    ];
+
     class Lozenge3DRenderer {
         constructor(container) {
             this.container = container;
@@ -2566,6 +2627,7 @@ function initLozengeApp() {
             this.holeColor = '#FFFFFF';
             this.autoRotate = false;
             this.cameraInitialized = false;
+            this.currentPresetIndex = 0;
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -2603,34 +2665,61 @@ function initLozengeApp() {
                 TWO: THREE.TOUCH.DOLLY_PAN
             };
 
-            // Lighting - multi-light setup for better depth perception
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            this.scene.add(ambientLight);
+            // Lighting - store references for preset changes
+            this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            this.scene.add(this.ambientLight);
 
-            // Hemisphere light for subtle sky/ground color variation
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-            hemiLight.position.set(0, 20, 0);
-            this.scene.add(hemiLight);
+            this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+            this.hemiLight.position.set(0, 20, 0);
+            this.scene.add(this.hemiLight);
 
-            // Primary directional light
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            directionalLight.position.set(10, 10, 15);
-            this.scene.add(directionalLight);
+            this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            this.directionalLight.position.set(10, 10, 15);
+            this.scene.add(this.directionalLight);
 
-            // Fill light from opposite side
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
-            fillLight.position.set(-10, -5, -10);
-            this.scene.add(fillLight);
+            this.fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+            this.fillLight.position.set(-10, -5, -10);
+            this.scene.add(this.fillLight);
 
             // Group for meshes
             this.meshGroup = new THREE.Group();
             this.scene.add(this.meshGroup);
+
+            // Apply default preset
+            this.applyPreset(0);
 
             // Handle window resize
             window.addEventListener('resize', () => this.handleResize());
 
             // Start animation loop
             this.animate();
+        }
+
+        applyPreset(index) {
+            this.currentPresetIndex = index % VISUAL_PRESETS_3D.length;
+            const preset = VISUAL_PRESETS_3D[this.currentPresetIndex];
+
+            // Background
+            this.scene.background = new THREE.Color(preset.background);
+
+            // Lights
+            this.ambientLight.intensity = preset.ambient.intensity;
+            this.hemiLight.color.setHex(preset.hemisphere.sky);
+            this.hemiLight.groundColor.setHex(preset.hemisphere.ground);
+            this.hemiLight.intensity = preset.hemisphere.intensity;
+            this.directionalLight.intensity = preset.directional.intensity;
+            this.directionalLight.position.set(...preset.directional.position);
+            this.fillLight.intensity = preset.fill.intensity;
+            this.fillLight.position.set(...preset.fill.position);
+        }
+
+        cyclePreset() {
+            this.applyPreset(this.currentPresetIndex + 1);
+            return VISUAL_PRESETS_3D[this.currentPresetIndex];
+        }
+
+        getCurrentPreset() {
+            return VISUAL_PRESETS_3D[this.currentPresetIndex];
         }
 
         getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
@@ -2860,18 +2949,42 @@ function initLozengeApp() {
             geometry.setIndex(indices);
             geometry.computeBoundingSphere(); // Helps with camera centering
 
-            const material = new THREE.MeshStandardMaterial({
-                vertexColors: true,
-                side: THREE.DoubleSide,
-                flatShading: true,
-                roughness: 0.5,
-                metalness: 0.15
-            });
+            // Create material based on current preset
+            const preset = this.getCurrentPreset();
+            const matSettings = preset.material;
+            let material;
+            if (matSettings.type === 'standard') {
+                material = new THREE.MeshStandardMaterial({
+                    vertexColors: true,
+                    side: THREE.DoubleSide,
+                    flatShading: matSettings.flatShading,
+                    roughness: matSettings.roughness,
+                    metalness: matSettings.metalness
+                });
+            } else if (matSettings.type === 'phong') {
+                material = new THREE.MeshPhongMaterial({
+                    vertexColors: true,
+                    side: THREE.DoubleSide,
+                    flatShading: matSettings.flatShading,
+                    shininess: matSettings.shininess
+                });
+            } else {
+                material = new THREE.MeshLambertMaterial({
+                    vertexColors: true,
+                    side: THREE.DoubleSide,
+                    flatShading: matSettings.flatShading
+                });
+            }
             const mesh = new THREE.Mesh(geometry, material);
             this.meshGroup.add(mesh);
 
-            const edgesGeometry = new THREE.EdgesGeometry(geometry, 10); // Threshold to show cube edges
-            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2, opacity: 0.5, transparent: true });
+            const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+            const edgesMaterial = new THREE.LineBasicMaterial({
+                color: preset.edges.color,
+                linewidth: 2,
+                opacity: preset.edges.opacity,
+                transparent: preset.edges.opacity < 1
+            });
             const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
             this.meshGroup.add(edges);
 
@@ -2976,11 +3089,27 @@ function initLozengeApp() {
                 geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
                 geometry.setIndex(indices);
                 geometry.computeBoundingSphere();
-                const material = new THREE.MeshStandardMaterial({
-                    vertexColors: true, side: THREE.DoubleSide, flatShading: true,
-                    roughness: 0.5, metalness: 0.15,
-                    transparent: true, opacity: opacity, depthWrite: opacity > 0.9
-                });
+                const preset = this.getCurrentPreset();
+                const matSettings = preset.material;
+                let material;
+                if (matSettings.type === 'standard') {
+                    material = new THREE.MeshStandardMaterial({
+                        vertexColors: true, side: THREE.DoubleSide, flatShading: matSettings.flatShading,
+                        roughness: matSettings.roughness, metalness: matSettings.metalness,
+                        transparent: true, opacity: opacity, depthWrite: opacity > 0.9
+                    });
+                } else if (matSettings.type === 'phong') {
+                    material = new THREE.MeshPhongMaterial({
+                        vertexColors: true, side: THREE.DoubleSide, flatShading: matSettings.flatShading,
+                        shininess: matSettings.shininess,
+                        transparent: true, opacity: opacity, depthWrite: opacity > 0.9
+                    });
+                } else {
+                    material = new THREE.MeshLambertMaterial({
+                        vertexColors: true, side: THREE.DoubleSide, flatShading: matSettings.flatShading,
+                        transparent: true, opacity: opacity, depthWrite: opacity > 0.9
+                    });
+                }
                 return new THREE.Mesh(geometry, material);
             };
 
@@ -3121,10 +3250,26 @@ function initLozengeApp() {
                     glslVersion: THREE.GLSL3
                 });
             } else {
-                material = new THREE.MeshStandardMaterial({
-                    vertexColors: true, side: THREE.DoubleSide, flatShading: options.flatShading || false,
-                    roughness: 0.5, metalness: 0.15
-                });
+                const preset = this.getCurrentPreset();
+                const matSettings = preset.material;
+                if (matSettings.type === 'standard') {
+                    material = new THREE.MeshStandardMaterial({
+                        vertexColors: true, side: THREE.DoubleSide,
+                        flatShading: options.flatShading !== undefined ? options.flatShading : matSettings.flatShading,
+                        roughness: matSettings.roughness, metalness: matSettings.metalness
+                    });
+                } else if (matSettings.type === 'phong') {
+                    material = new THREE.MeshPhongMaterial({
+                        vertexColors: true, side: THREE.DoubleSide,
+                        flatShading: options.flatShading !== undefined ? options.flatShading : matSettings.flatShading,
+                        shininess: matSettings.shininess
+                    });
+                } else {
+                    material = new THREE.MeshLambertMaterial({
+                        vertexColors: true, side: THREE.DoubleSide,
+                        flatShading: options.flatShading !== undefined ? options.flatShading : matSettings.flatShading
+                    });
+                }
             }
             const mesh = new THREE.Mesh(geometry, material);
             this.meshGroup.add(mesh);
@@ -3472,6 +3617,7 @@ function initLozengeApp() {
         cftpSteps: document.getElementById('cftpSteps'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
+        preset3DBtn: document.getElementById('preset3DBtn'),
         averageBtn: document.getElementById('averageBtn'),
         avgSamplesInput: document.getElementById('avgSamplesInput'),
         avgStopBtn: document.getElementById('avgStopBtn'),
@@ -3757,6 +3903,12 @@ function initLozengeApp() {
         threeContainer.style.display = use3D ? 'block' : 'none';
         // Hole overlays are shown in both 2D and 3D views
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
+        // Show/hide preset button
+        el.preset3DBtn.style.display = use3D ? 'inline-block' : 'none';
+        if (use3D && renderer3D) {
+            el.preset3DBtn.textContent = renderer3D.getCurrentPreset().icon;
+            el.preset3DBtn.title = `Style: ${renderer3D.getCurrentPreset().name}`;
+        }
         // Enable/disable rotate buttons based on 3D view
         document.getElementById('rotateLeftBtn').disabled = !use3D;
         document.getElementById('rotateRightBtn').disabled = !use3D;
@@ -3803,6 +3955,7 @@ function initLozengeApp() {
             // Render 3D view
             if (isValid && sim.dimers.length > 0) {
                 renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+                renderer3D.resetCamera();
             }
         } else {
             draw();
@@ -4765,6 +4918,18 @@ function initLozengeApp() {
     // 3D View toggle
     el.toggle3DBtn.addEventListener('click', () => {
         setViewMode(!is3DView);
+    });
+
+    el.preset3DBtn.addEventListener('click', () => {
+        if (renderer3D) {
+            const preset = renderer3D.cyclePreset();
+            el.preset3DBtn.textContent = preset.icon;
+            el.preset3DBtn.title = `Style: ${preset.name}`;
+            // Re-render with new preset
+            if (currentDimers && currentDimers.length > 0) {
+                renderer3D.dimersTo3D(currentDimers);
+            }
+        }
     });
 
     // Help button toggle
