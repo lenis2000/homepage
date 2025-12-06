@@ -4220,6 +4220,13 @@ function initLozengeApp() {
             return;
         }
 
+        // If in 2D fluctuation mode, render heatmap instead
+        if (inFluctuationMode && rawFluctuations && !is3DView) {
+            renderFluctuations2D();
+            updateHoleOverlayPositions();
+            return;
+        }
+
         if (is3DView && renderer3D && isValid && sim.dimers.length > 0 && !inFluctuationMode) {
             renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
         }
