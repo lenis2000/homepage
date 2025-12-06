@@ -26,6 +26,7 @@ Data model:
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <set>
 #include <queue>
 #include <string>
 #include <cmath>
@@ -1607,9 +1608,13 @@ char* initFromVertices(int* data, int count) {
     // Build faces for Glauber
     buildFaces();
 
+    // Detect holes in the region
+    detectHoles();
+
     std::string json = "{\"status\":\"valid\",\"vertexCount\":" + std::to_string(vertexCount) +
                       ",\"edgeCount\":" + std::to_string(matching.size()) +
                       ",\"faceCount\":" + std::to_string(faces.size()) +
+                      ",\"holeCount\":" + std::to_string(detectedHoles.size()) +
                       "," + exportEdgesJson().substr(1);
 
     char* result = (char*)malloc(json.size() + 1);

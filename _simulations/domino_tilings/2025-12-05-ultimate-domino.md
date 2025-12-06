@@ -323,6 +323,65 @@ code:
     border-top: none;
     border-radius: 0 0 4px 4px;
   }
+  /* Hole winding controls */
+  .hole-control {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 4px;
+    padding: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    font-size: 12px;
+    z-index: 100;
+  }
+  .hole-control button {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+  }
+  .hole-control button:hover:not(:disabled) {
+    background: #e0e0e0;
+  }
+  .hole-control button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .hole-control .height-input {
+    width: 36px;
+    height: 22px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    padding: 0;
+  }
+  [data-theme="dark"] .hole-control {
+    background: rgba(40,40,40,0.95);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  [data-theme="dark"] .hole-control button {
+    background: #333;
+    border-color: #555;
+    color: #eee;
+  }
+  [data-theme="dark"] .hole-control button:hover:not(:disabled) {
+    background: #444;
+  }
+  [data-theme="dark"] .hole-control .height-input {
+    background: #333;
+    border-color: #555;
+    color: #eee;
+  }
 </style>
 
 <!-- Main controls -->
@@ -399,6 +458,9 @@ code:
 
   <!-- 3D Container -->
   <div id="three-container"></div>
+
+  <!-- Hole winding overlays -->
+  <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;"></div>
 </div>
 
 <!-- Controls below canvas -->
@@ -686,6 +748,10 @@ code:
             this.exportFluctuationSampleWasm = Module.cwrap('exportFluctuationSample', 'number', ['number']);
             this.loadDimersForLoopsWasm = Module.cwrap('loadDimersForLoops', 'number', ['string', 'string']);
             this.filterLoopsBySizeWasm = Module.cwrap('filterLoopsBySize', 'number', ['number']);
+            // Hole winding functions
+            this.getAllHolesInfoWasm = Module.cwrap('getAllHolesInfo', 'number', []);
+            this.adjustHoleWindingWasm = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
+            this.initHoleWindingsWasm = Module.cwrap('initHoleWindingsExport', null, []);
         }
 
         initFromVertices(verticesArray) {
@@ -930,6 +996,25 @@ code:
             return JSON.parse(jsonStr);
         }
 
+        // Hole winding functions
+        getAllHolesInfo() {
+            const ptr = this.getAllHolesInfoWasm();
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        adjustHoleWinding(holeIdx, delta) {
+            const ptr = this.adjustHoleWindingWasm(holeIdx, delta);
+            const jsonStr = Module.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            return JSON.parse(jsonStr);
+        }
+
+        initHoleWindings() {
+            this.initHoleWindingsWasm();
+        }
+
         // Convert edges {x1,y1,x2,y2} to dominoes with type for coloring
         // Type 0: horizontal, starts at black vertex (x+y even)
         // Type 1: horizontal, starts at white vertex (x+y odd)
@@ -1074,6 +1159,9 @@ code:
             el.doubleDimerBtn.disabled = false;
             el.repairBtn.disabled = true;
             clearDoubleDimerState();
+            // Initialize hole windings from current matching
+            sim.initHoleWindings();
+            updateHolesUI();
         } else if (result.status === 'empty') {
             isValid = false;
             dominoes = [];
@@ -1084,6 +1172,7 @@ code:
             el.doubleDimerBtn.disabled = true;
             el.repairBtn.disabled = true;
             clearDoubleDimerState();
+            holeOverlays.innerHTML = '';
         } else {
             isValid = false;
             dominoes = [];
@@ -1094,6 +1183,7 @@ code:
             el.doubleDimerBtn.disabled = true;
             el.repairBtn.disabled = false;
             clearDoubleDimerState();
+            holeOverlays.innerHTML = '';
         }
 
         updateStats();
@@ -1313,6 +1403,156 @@ code:
                 ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
                 ctx.fill();
             }
+        }
+
+        // Update hole overlays
+        updateHoleOverlayPositions();
+    }
+
+    // ========================================================================
+    // Hole Winding Controls
+    // ========================================================================
+
+    let showHoleLabels = true;
+    const holeOverlays = document.getElementById('hole-overlays');
+
+    // Convert cell coords to screen coords
+    function cellToScreenForHoles(x, y) {
+        const rect = canvas.getBoundingClientRect();
+        const centerX = rect.width / 2 + panX * zoom;
+        const centerY = rect.height / 2 + panY * zoom;
+        const size = cellSize * zoom;
+        return {
+            x: centerX + x * size,
+            y: centerY + y * size
+        };
+    }
+
+    // Update hole overlay positions (call on pan/zoom)
+    function updateHoleOverlayPositions() {
+        const controls = holeOverlays.querySelectorAll('.hole-control');
+        if (controls.length === 0) return;
+        if (!sim || !isValid) return;
+
+        const holesInfo = sim.getAllHolesInfo();
+        const wasmHoles = holesInfo.holes || [];
+
+        controls.forEach((ctrl, h) => {
+            if (h < wasmHoles.length) {
+                const hole = wasmHoles[h];
+                const screen = cellToScreenForHoles(hole.centroidX, hole.centroidY);
+                ctrl.style.left = screen.x + 'px';
+                ctrl.style.top = screen.y + 'px';
+            }
+        });
+    }
+
+    // Update holes UI - creates overlay controls inside each hole
+    function updateHolesUI() {
+        holeOverlays.innerHTML = '';
+
+        if (!showHoleLabels) return;
+        if (!isValid) return;
+        if (!sim) return;
+
+        // Get hole info from WASM
+        const holesInfo = sim.getAllHolesInfo();
+        const wasmHoles = holesInfo.holes || [];
+
+        if (wasmHoles.length === 0) return;
+
+        // Create control for each hole
+        for (let h = 0; h < wasmHoles.length; h++) {
+            const hole = wasmHoles[h];
+            const screen = cellToScreenForHoles(hole.centroidX, hole.centroidY);
+
+            const ctrl = document.createElement('div');
+            ctrl.className = 'hole-control';
+            ctrl.style.left = screen.x + 'px';
+            ctrl.style.top = screen.y + 'px';
+            ctrl.dataset.hole = h;
+
+            // [+] [height] [-] with editable height in center
+            // Display relative height (currentWinding - baseHeight), starts at 0
+            const relativeHeight = hole.currentWinding - hole.baseHeight;
+            ctrl.innerHTML = `
+                <button class="winding-plus">+</button>
+                <input type="number" class="height-input" value="${relativeHeight}" title="Relative height (starts at 0)">
+                <button class="winding-minus">−</button>
+            `;
+            const heightInput = ctrl.querySelector('.height-input');
+            const minusBtn = ctrl.querySelector('.winding-minus');
+            const plusBtn = ctrl.querySelector('.winding-plus');
+
+            // Height input change handler - adjust winding to reach target
+            heightInput.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                const targetRelativeHeight = parseInt(e.target.value) || 0;
+                const currentRelativeHeight = hole.currentWinding - hole.baseHeight;
+                const delta = targetRelativeHeight - currentRelativeHeight;
+                if (delta !== 0) {
+                    heightInput.disabled = true;
+                    minusBtn.disabled = true;
+                    plusBtn.disabled = true;
+                    setTimeout(() => {
+                        sim.adjustHoleWinding(holeIdx, delta);
+                        refreshDimers();
+                        draw();
+                        updateHolesUI();
+                    }, 10);
+                }
+            });
+            heightInput.addEventListener('click', (e) => e.stopPropagation());
+
+            // Winding adjustment buttons
+            minusBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                minusBtn.textContent = '⏳';
+                minusBtn.disabled = true;
+                plusBtn.disabled = true;
+                heightInput.disabled = true;
+                setTimeout(() => {
+                    const result = sim.adjustHoleWinding(holeIdx, -1);
+                    if (result.success) {
+                        refreshDimers();
+                        draw();
+                    }
+                    updateHolesUI();
+                }, 10);
+            });
+
+            plusBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const holeIdx = parseInt(ctrl.dataset.hole);
+                plusBtn.textContent = '⏳';
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                heightInput.disabled = true;
+                setTimeout(() => {
+                    const result = sim.adjustHoleWinding(holeIdx, 1);
+                    if (result.success) {
+                        refreshDimers();
+                        draw();
+                    }
+                    updateHolesUI();
+                }, 10);
+            });
+
+            holeOverlays.appendChild(ctrl);
+        }
+    }
+
+    // Refresh dominoes from current WASM state
+    function refreshDimers() {
+        if (!sim) return;
+        const resultPtr = sim.exportEdgesWasm();
+        const jsonStr = Module.UTF8ToString(resultPtr);
+        sim.freeStringWasm(resultPtr);
+        const result = JSON.parse(jsonStr);
+        if (result.edges) {
+            dominoes = sim.edgesToDominoes(result.edges);
         }
     }
 
@@ -2563,6 +2803,9 @@ code:
                 const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                 const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
                 el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
+                // Update hole windings after CFTP
+                sim.initHoleWindings();
+                updateHolesUI();
                 return true;
             } else if (res.status === 'not_coalesced') {
                 el.cftpSteps.textContent = 'T=' + res.nextT;
@@ -2773,11 +3016,12 @@ code:
         return false;
     }
 
-    // Convert dominoes array to edges format
+    // Convert dominoes array to edges format (includes dir for WASM parser compatibility)
     function dominoesToEdges(dominoes) {
         return dominoes.map(d => ({
             x1: d.x1, y1: d.y1,
-            x2: d.x2, y2: d.y2
+            x2: d.x2, y2: d.y2,
+            dir: (d.x1 === d.x2) ? 1 : 0  // 0=horizontal, 1=vertical
         }));
     }
 
