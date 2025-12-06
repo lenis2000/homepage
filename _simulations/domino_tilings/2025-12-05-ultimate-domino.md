@@ -1488,41 +1488,66 @@ code:
         }
 
         zoomIn() {
-            // For orthographic camera, reduce frustum size
-            const factor = 0.8;
-            this.camera.left *= factor;
-            this.camera.right *= factor;
-            this.camera.top *= factor;
-            this.camera.bottom *= factor;
-            this.camera.updateProjectionMatrix();
+            if (this.usePerspective) {
+                // Perspective: dolly camera towards target
+                const direction = new THREE.Vector3();
+                direction.subVectors(this.camera.position, this.controls.target);
+                direction.multiplyScalar(0.8);  // Move closer
+                this.camera.position.copy(this.controls.target).add(direction);
+                this.controls.update();
+            } else {
+                // Orthographic: reduce frustum size
+                const factor = 0.8;
+                this.camera.left *= factor;
+                this.camera.right *= factor;
+                this.camera.top *= factor;
+                this.camera.bottom *= factor;
+                this.camera.updateProjectionMatrix();
+            }
         }
 
         zoomOut() {
-            // For orthographic camera, increase frustum size
-            const factor = 1.25;
-            this.camera.left *= factor;
-            this.camera.right *= factor;
-            this.camera.top *= factor;
-            this.camera.bottom *= factor;
-            this.camera.updateProjectionMatrix();
+            if (this.usePerspective) {
+                // Perspective: dolly camera away from target
+                const direction = new THREE.Vector3();
+                direction.subVectors(this.camera.position, this.controls.target);
+                direction.multiplyScalar(1.25);  // Move further
+                this.camera.position.copy(this.controls.target).add(direction);
+                this.controls.update();
+            } else {
+                // Orthographic: increase frustum size
+                const factor = 1.25;
+                this.camera.left *= factor;
+                this.camera.right *= factor;
+                this.camera.top *= factor;
+                this.camera.bottom *= factor;
+                this.camera.updateProjectionMatrix();
+            }
         }
 
         resetView() {
             if (this.dominoGroup) {
                 this.dominoGroup.rotation.set(0, 0, 0);
             }
-            // Reset camera frustum
             const w = this.container.clientWidth || 900;
             const h = this.container.clientHeight || 600;
-            const frustum = 100;
-            const aspect = w / h;
-            this.camera.left = -frustum * aspect / 2;
-            this.camera.right = frustum * aspect / 2;
-            this.camera.top = frustum / 2;
-            this.camera.bottom = -frustum / 2;
-            this.camera.position.set(0, 130, 0);
-            this.camera.lookAt(0, 0, 0);
-            this.camera.updateProjectionMatrix();
+
+            if (this.usePerspective) {
+                // Reset perspective camera position
+                this.camera.position.set(60, 80, 100);
+                this.camera.lookAt(0, 0, 0);
+            } else {
+                // Reset orthographic camera frustum
+                const frustum = 100;
+                const aspect = w / h;
+                this.camera.left = -frustum * aspect / 2;
+                this.camera.right = frustum * aspect / 2;
+                this.camera.top = frustum / 2;
+                this.camera.bottom = -frustum / 2;
+                this.camera.position.set(0, 130, 0);
+                this.camera.lookAt(0, 0, 0);
+                this.camera.updateProjectionMatrix();
+            }
             this.controls.target.set(0, 0, 0);
             this.controls.update();
         }
@@ -2263,13 +2288,17 @@ code:
             const x = Math.min(e.x1, e.x2), y = Math.min(e.y1, e.y2);
             edgeSet.add(`${x},${y},${e.x1===e.x2?1:0}`);
         }
-        let minX = Infinity, minY = Infinity;
+        // Start from a vertex of an actual cell (bottom-left corner of first cell)
+        let startX, startY;
         for (const [key] of activeCells) {
             const [x, y] = key.split(',').map(Number);
-            minX = Math.min(minX, x); minY = Math.min(minY, y);
+            if (startX === undefined || y < startY || (y === startY && x < startX)) {
+                startX = x; startY = y;
+            }
         }
-        heights.set(`${minX},${minY}`, 0);
-        const queue = [[minX, minY]], visited = new Set([`${minX},${minY}`]);
+        if (startX === undefined) return new Map();
+        heights.set(`${startX},${startY}`, 0);
+        const queue = [[startX, startY]], visited = new Set([`${startX},${startY}`]);
         while (queue.length > 0) {
             const [cx, cy] = queue.shift(), h = heights.get(`${cx},${cy}`);
             for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
@@ -2303,9 +2332,6 @@ code:
             if (res.status === 'in_progress') { el.doubleDimerProgress.textContent = `T=${res.maxT} (${res.done}/2)`; }
             else if (res.status === 'coalesced') {
                 const s0 = sim.exportFluctuationSample(0), s1 = sim.exportFluctuationSample(1);
-                console.log('CFTP coalesced: s0.edges =', s0.edges?.length, 's1.edges =', s1.edges?.length);
-                if (s0.edges?.length > 0) console.log('First edge sample0:', s0.edges[0]);
-                if (s1.edges?.length > 0) console.log('First edge sample1:', s1.edges[0]);
                 storedSamples = { sample0: s0.edges, sample1: s1.edges, dominoes0: s0.dominoes, dominoes1: s1.dominoes };
                 const h0 = computeHeightFunction(s0.edges), h1 = computeHeightFunction(s1.edges);
                 rawFluctuations = new Map();
@@ -2330,21 +2356,13 @@ code:
     function resetDoubleDimerUI() { isCFTPRunning = false; el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = !isValid; }
 
     function renderDoubleDimers() {
-        if (!storedSamples) { console.log('renderDoubleDimers: no storedSamples'); return; }
-        console.log('renderDoubleDimers: sample0 count =', storedSamples.sample0?.length, 'sample1 count =', storedSamples.sample1?.length);
+        if (!storedSamples) return;
         const minLoop = parseInt(el.minLoopInput.value) || 2;
         const json0 = JSON.stringify(storedSamples.sample0);
         const json1 = JSON.stringify(storedSamples.sample1);
-        console.log('JSON being passed: json0.length =', json0?.length, 'json1.length =', json1?.length);
-        if (json0) console.log('json0 first 200 chars:', json0.substring(0, 200));
-        const loadRes = sim.loadDimersForLoops(json0, json1);
-        console.log('loadDimersForLoops result:', loadRes);
+        sim.loadDimersForLoops(json0, json1);
         const f = sim.filterLoopsBySize(minLoop);
-        console.log('filterLoopsBySize result:', f);
         const e0 = f.indices0.map(i => storedSamples.sample0[i]), e1 = f.indices1.map(i => storedSamples.sample1[i]);
-        console.log('Filtered edges: e0 =', e0.length, 'e1 =', e1.length, 'minLoop =', minLoop);
-        if (e0.length > 0) console.log('First filtered edge e0:', e0[0]);
-        if (e1.length > 0) console.log('First filtered edge e1:', e1[0]);
         const s0 = new Set(e0.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
         const s1 = new Set(e1.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
 
@@ -2389,7 +2407,6 @@ code:
         const all = new Map();
         for (const e of e0) all.set(`${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`, e);
         for (const e of e1) all.set(`${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`, e);
-        console.log('Drawing double dimer: all.size =', all.size, 'zoom =', zoom, 'ez =', ez, 'ox =', ox, 'oy =', oy);
         ctx.lineWidth = Math.max(3, ez * 0.12);
         for (const [k, e] of all) {
             ctx.strokeStyle = (s0.has(k) && s1.has(k)) ? (isDark?'#fff':'#000') : s0.has(k) ? '#F44336' : '#2196F3';
@@ -2398,8 +2415,7 @@ code:
     }
 
     function renderFluctuations() {
-        if (!rawFluctuations) { console.log('renderFluctuations: no rawFluctuations'); return; }
-        console.log('renderFluctuations: rawFluctuations size =', rawFluctuations.size);
+        if (!rawFluctuations) return;
         // Auto-scale based on data range
         let minF = Infinity, maxF = -Infinity;
         for (const [,v] of rawFluctuations) { minF = Math.min(minF, v); maxF = Math.max(maxF, v); }
@@ -2652,7 +2668,7 @@ code:
         el.cftpStopBtn.addEventListener('click', stopCFTP);
 
         // Double Dimer / Fluctuations
-        el.doubleDimerBtn.addEventListener('click', runDoubleDimer);
+        el.doubleDimerBtn.addEventListener('click', () => runDoubleDimer());
         el.fluctuationsBtn.addEventListener('click', () => {
             if (!rawFluctuations) return;
             inFluctuationMode = true;

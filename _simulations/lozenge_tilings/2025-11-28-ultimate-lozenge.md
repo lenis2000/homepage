@@ -3514,12 +3514,22 @@ function initLozengeApp() {
         }
 
         zoom(factor) {
-            // Dolly camera towards/away from target
-            const direction = new THREE.Vector3();
-            direction.subVectors(this.camera.position, this.controls.target);
-            direction.multiplyScalar(1 / factor);
-            this.camera.position.copy(this.controls.target).add(direction);
-            this.controls.update();
+            if (this.usePerspective) {
+                // Perspective: dolly camera towards/away from target
+                const direction = new THREE.Vector3();
+                direction.subVectors(this.camera.position, this.controls.target);
+                direction.multiplyScalar(1 / factor);
+                this.camera.position.copy(this.controls.target).add(direction);
+                this.controls.update();
+            } else {
+                // Orthographic: adjust frustum size
+                const scaleFactor = 1 / factor;  // factor > 1 means zoom in, so shrink frustum
+                this.camera.left *= scaleFactor;
+                this.camera.right *= scaleFactor;
+                this.camera.top *= scaleFactor;
+                this.camera.bottom *= scaleFactor;
+                this.camera.updateProjectionMatrix();
+            }
         }
 
         pan(deltaX, deltaY) {
