@@ -495,6 +495,10 @@ code:
       <input type="checkbox" id="showGridCheckbox" checked>
       Grid
     </label>
+    <label style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="showHoleLabelsCheckbox" checked>
+      Hole UI
+    </label>
     <span style="color: #ccc;">|</span>
     <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
     <button id="rotateRightBtn" title="Rotate Right (3D)" disabled>↻</button>
@@ -687,6 +691,7 @@ code:
         zoomOutBtn: document.getElementById('zoomOutBtn'),
         resetViewBtn: document.getElementById('resetViewBtn'),
         showGridCheckbox: document.getElementById('showGridCheckbox'),
+        showHoleLabelsCheckbox: document.getElementById('showHoleLabelsCheckbox'),
         paletteSelect: document.getElementById('paletteSelect'),
         prevPaletteBtn: document.getElementById('prevPaletteBtn'),
         nextPaletteBtn: document.getElementById('nextPaletteBtn'),
@@ -1416,8 +1421,11 @@ code:
     let showHoleLabels = true;
     const holeOverlays = document.getElementById('hole-overlays');
 
-    // Convert cell coords to screen coords
+    // Convert cell coords to screen coords (handles both 2D and 3D)
     function cellToScreenForHoles(x, y) {
+        if (is3DView && renderer3D) {
+            return renderer3D.worldToScreen3D(x, y, 0);
+        }
         const rect = canvas.getBoundingClientRect();
         const centerX = rect.width / 2 + panX * zoom;
         const centerY = rect.height / 2 + panY * zoom;
@@ -1428,7 +1436,7 @@ code:
         };
     }
 
-    // Update hole overlay positions (call on pan/zoom)
+    // Update hole overlay positions (call on pan/zoom/rotate)
     function updateHoleOverlayPositions() {
         const controls = holeOverlays.querySelectorAll('.hole-control');
         if (controls.length === 0) return;
@@ -1499,6 +1507,7 @@ code:
                         sim.adjustHoleWinding(holeIdx, delta);
                         refreshDimers();
                         draw();
+                        update3DView();
                         updateHolesUI();
                     }, 10);
                 }
@@ -1518,6 +1527,7 @@ code:
                     if (result.success) {
                         refreshDimers();
                         draw();
+                        update3DView();
                     }
                     updateHolesUI();
                 }, 10);
@@ -1535,6 +1545,7 @@ code:
                     if (result.success) {
                         refreshDimers();
                         draw();
+                        update3DView();
                     }
                     updateHolesUI();
                 }, 10);
@@ -1778,6 +1789,11 @@ code:
             }
 
             this.renderer.render(this.scene, this.camera);
+
+            // Call onAnimate callback if set (for updating hole positions)
+            if (this.onAnimate) {
+                this.onAnimate();
+            }
         }
 
         rotateHorizontal(angleDegrees) {
@@ -1882,6 +1898,19 @@ code:
             }
             this.controls.target.copy(center);
             this.controls.update();
+        }
+
+        // Convert world coordinates to screen coordinates (for hole UI overlay)
+        worldToScreen3D(x, y, h = 0) {
+            // In domino 3D, x/y are cell coords, h is height
+            // The 3D scene uses: pos.x = cell x, pos.y = height, pos.z = cell y
+            const pos3d = new THREE.Vector3(x, h, y);
+            pos3d.project(this.camera);
+            const rect = this.container.getBoundingClientRect();
+            return {
+                x: (pos3d.x * 0.5 + 0.5) * rect.width,
+                y: (-pos3d.y * 0.5 + 0.5) * rect.height
+            };
         }
 
         // Calculate height function from dominoes
@@ -2156,6 +2185,8 @@ code:
         // Initialize 3D renderer if needed
         if (use3D && !renderer3D && threeContainer) {
             renderer3D = new Domino3DRenderer(threeContainer);
+            // Set up callback to update hole positions during animation
+            renderer3D.onAnimate = updateHoleOverlayPositions;
         }
 
         // Render 3D if we have valid dominoes
@@ -2164,6 +2195,9 @@ code:
             renderer3D.renderDominoes(dominoes, colors);
             renderer3D.resetView();
         }
+
+        // Update hole UI positions for new view mode
+        updateHolesUI();
     }
 
     function update3DView() {
@@ -2707,6 +2741,23 @@ code:
         // Get extremal tilings from CPU
         const minState = sim.getCFTPMinState();
         const maxState = sim.getCFTPMaxState();
+        console.log('[JS GPU-CFTP] minState edges:', minState.edges?.length || 0);
+        console.log('[JS GPU-CFTP] maxState edges:', maxState.edges?.length || 0);
+        if (minState.edges && maxState.edges) {
+            const minHoriz = minState.edges.filter(e => e.y1 === e.y2).length;
+            const minVert = minState.edges.filter(e => e.x1 === e.x2).length;
+            const maxHoriz = maxState.edges.filter(e => e.y1 === e.y2).length;
+            const maxVert = maxState.edges.filter(e => e.x1 === e.x2).length;
+            console.log(`[JS GPU-CFTP] MIN: horiz=${minHoriz}, vert=${minVert}`);
+            console.log(`[JS GPU-CFTP] MAX: horiz=${maxHoriz}, vert=${maxVert}`);
+            if (minState.edges.length === maxState.edges.length) {
+                const same = minState.edges.every((e, i) => {
+                    const m = maxState.edges[i];
+                    return e.x1 === m.x1 && e.y1 === m.y1 && e.x2 === m.x2 && e.y2 === m.y2;
+                });
+                console.log(`[JS GPU-CFTP] MIN == MAX? ${same}`);
+            }
+        }
         if (!minState.edges || !maxState.edges) {
             console.error('Failed to get extremal tilings from CPU');
             el.cftpSteps.textContent = 'error';
@@ -2770,10 +2821,25 @@ code:
         let lastDrawnBlock = -1;
 
         const initResult = sim.initCFTP();
+        console.log('[JS CPU-CFTP] initResult:', initResult);
         if (initResult.status === 'error') {
             console.error('CFTP init error:', initResult.reason);
             el.cftpSteps.textContent = 'error';
             return false;
+        }
+
+        // Log extremal tilings info
+        const minState = sim.getCFTPMinState();
+        const maxState = sim.getCFTPMaxState();
+        console.log('[JS CPU-CFTP] minState edges:', minState.edges?.length || 0);
+        console.log('[JS CPU-CFTP] maxState edges:', maxState.edges?.length || 0);
+        if (minState.edges && maxState.edges) {
+            const minHoriz = minState.edges.filter(e => e.y1 === e.y2).length;
+            const minVert = minState.edges.filter(e => e.x1 === e.x2).length;
+            const maxHoriz = maxState.edges.filter(e => e.y1 === e.y2).length;
+            const maxVert = maxState.edges.filter(e => e.x1 === e.x2).length;
+            console.log(`[JS CPU-CFTP] MIN: horiz=${minHoriz}, vert=${minVert}`);
+            console.log(`[JS CPU-CFTP] MAX: horiz=${maxHoriz}, vert=${maxVert}`);
         }
 
         el.cftpSteps.textContent = 'T=' + initResult.T;
@@ -3098,36 +3164,38 @@ code:
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
         const cw = rect.width, ch = rect.height;
-        const ez = zoom * cellSize * dpr, ox = (cw/2 + panX) * dpr, oy = (ch/2 + panY) * dpr;
+        // Match draw() coordinate system: centerX + x * size, centerY + y * size
+        const ez = zoom * cellSize, ox = cw/2 + panX * zoom, oy = ch/2 + panY * zoom;
 
         // Clear canvas
         ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, cw, ch);
 
         // Fill cells with light background
         ctx.fillStyle = isDark ? '#2a2a2a' : '#f5f5f5';
         for (const [,c] of activeCells) {
-            ctx.fillRect(ox + c.x * ez, oy - (c.y + 1) * ez, ez, ez);
+            ctx.fillRect(ox + c.x * ez, oy + c.y * ez, ez, ez);
         }
 
         // Draw grid lines
         ctx.strokeStyle = isDark ? '#444' : '#ddd';
-        ctx.lineWidth = dpr;
+        ctx.lineWidth = 1;
         for (const [,c] of activeCells) {
-            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            const cx = ox + c.x * ez, cy = oy + c.y * ez;
             ctx.strokeRect(cx, cy, ez, ez);
         }
 
         // Draw boundary
         ctx.strokeStyle = isDark ? '#888' : '#333';
-        ctx.lineWidth = 2 * dpr;
+        ctx.lineWidth = 2;
         for (const [,c] of activeCells) {
-            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            const cx = ox + c.x * ez, cy = oy + c.y * ez;
             if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + ez); ctx.stroke(); }
             if (!activeCells.has(`${c.x+1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx + ez, cy); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
-            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy + ez); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
-            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ez, cy); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ez, cy); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy + ez); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
         }
 
         // Draw double dimer edges
@@ -3137,7 +3205,7 @@ code:
         ctx.lineWidth = Math.max(3, ez * 0.12);
         for (const [k, e] of all) {
             ctx.strokeStyle = (s0.has(k) && s1.has(k)) ? (isDark?'#fff':'#000') : s0.has(k) ? '#F44336' : '#2196F3';
-            ctx.beginPath(); ctx.moveTo(ox+(e.x1+.5)*ez, oy-(e.y1+.5)*ez); ctx.lineTo(ox+(e.x2+.5)*ez, oy-(e.y2+.5)*ez); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(ox+(e.x1+.5)*ez, oy+(e.y1+.5)*ez); ctx.lineTo(ox+(e.x2+.5)*ez, oy+(e.y2+.5)*ez); ctx.stroke();
         }
     }
 
@@ -3152,27 +3220,30 @@ code:
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
         const cw = rect.width, ch = rect.height;
         ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const ez = zoom * cellSize * dpr, ox = (cw/2 + panX) * dpr, oy = (ch/2 + panY) * dpr;
+        ctx.fillRect(0, 0, cw, ch);
+        // Match draw() coordinate system: centerX + x * size, centerY + y * size
+        const ez = zoom * cellSize, ox = cw/2 + panX * zoom, oy = ch/2 + panY * zoom;
         for (const [key] of activeCells) {
             const [x,y] = key.split(',').map(Number);
             let sum=0, cnt=0;
+            // Look up fluctuations at cell corners (vertices)
             for (let dx=0;dx<=1;dx++) for (let dy=0;dy<=1;dy++) { const fk=`${x+dx},${y+dy}`; if(rawFluctuations.has(fk)){sum+=rawFluctuations.get(fk);cnt++;} }
             const avg = cnt>0 ? sum/cnt : 0;
             let r,g,b;
             if (avg >= 0) { const t=Math.min(1,avg/range); r=255; g=b=Math.round(255*(1-t)); }
             else { const t=Math.min(1,-avg/range); r=g=Math.round(255*(1-t)); b=255; }
-            ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(ox+x*ez, oy-(y+1)*ez, ez, ez);
+            ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(ox+x*ez, oy+y*ez, ez, ez);
         }
-        ctx.strokeStyle = isDark ? '#fff' : '#000'; ctx.lineWidth = 2 * dpr;
+        ctx.strokeStyle = isDark ? '#fff' : '#000'; ctx.lineWidth = 2;
         for (const [,c] of activeCells) {
-            const cx = ox+c.x*ez, cy = oy-(c.y+1)*ez;
+            const cx = ox+c.x*ez, cy = oy+c.y*ez;
             if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy+ez); ctx.stroke(); }
             if (!activeCells.has(`${c.x+1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx+ez,cy); ctx.lineTo(cx+ez,cy+ez); ctx.stroke(); }
-            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx,cy+ez); ctx.lineTo(cx+ez,cy+ez); ctx.stroke(); }
-            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+ez,cy); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+ez,cy); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx,cy+ez); ctx.lineTo(cx+ez,cy+ez); ctx.stroke(); }
         }
     }
 
@@ -3182,36 +3253,38 @@ code:
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
         const cw = rect.width, ch = rect.height;
-        const ez = zoom * cellSize * dpr, ox = (cw/2 + panX) * dpr, oy = (ch/2 + panY) * dpr;
+        // Match draw() coordinate system: centerX + x * size, centerY + y * size
+        const ez = zoom * cellSize, ox = cw/2 + panX * zoom, oy = ch/2 + panY * zoom;
 
         // Clear canvas
         ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, cw, ch);
 
         // Fill cells with light background
         ctx.fillStyle = isDark ? '#2a2a2a' : '#f5f5f5';
         for (const [,c] of activeCells) {
-            ctx.fillRect(ox + c.x * ez, oy - (c.y + 1) * ez, ez, ez);
+            ctx.fillRect(ox + c.x * ez, oy + c.y * ez, ez, ez);
         }
 
         // Draw grid lines
         ctx.strokeStyle = isDark ? '#444' : '#ddd';
-        ctx.lineWidth = dpr;
+        ctx.lineWidth = 1;
         for (const [,c] of activeCells) {
-            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            const cx = ox + c.x * ez, cy = oy + c.y * ez;
             ctx.strokeRect(cx, cy, ez, ez);
         }
 
         // Draw boundary
         ctx.strokeStyle = isDark ? '#888' : '#333';
-        ctx.lineWidth = 2 * dpr;
+        ctx.lineWidth = 2;
         for (const [,c] of activeCells) {
-            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            const cx = ox + c.x * ez, cy = oy + c.y * ez;
             if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + ez); ctx.stroke(); }
             if (!activeCells.has(`${c.x+1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx + ez, cy); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
-            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy + ez); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
-            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ez, cy); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ez, cy); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy + ez); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
         }
 
         // Draw dimer edges from current domino state
@@ -3219,8 +3292,8 @@ code:
         ctx.lineWidth = Math.max(3, ez * 0.12);
         for (const d of dominoes) {
             // Draw line from center of cell1 to center of cell2
-            const x1 = ox + (d.x1 + 0.5) * ez, y1 = oy - (d.y1 + 0.5) * ez;
-            const x2 = ox + (d.x2 + 0.5) * ez, y2 = oy - (d.y2 + 0.5) * ez;
+            const x1 = ox + (d.x1 + 0.5) * ez, y1 = oy + (d.y1 + 0.5) * ez;
+            const x2 = ox + (d.x2 + 0.5) * ez, y2 = oy + (d.y2 + 0.5) * ez;
             ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
         }
     }
@@ -3846,6 +3919,11 @@ code:
 
         el.showGridCheckbox.addEventListener('change', draw);
 
+        el.showHoleLabelsCheckbox.addEventListener('change', () => {
+            showHoleLabels = el.showHoleLabelsCheckbox.checked;
+            updateHolesUI();
+        });
+
         // Display options
         el.paletteSelect.addEventListener('change', () => {
             colorPaletteIndex = parseInt(el.paletteSelect.value);
@@ -3940,12 +4018,14 @@ code:
         el.rotateLeftBtn.addEventListener('click', () => {
             if (renderer3D && is3DView) {
                 renderer3D.rotateHorizontal(-15);
+                updateHoleOverlayPositions();
             }
         });
 
         el.rotateRightBtn.addEventListener('click', () => {
             if (renderer3D && is3DView) {
                 renderer3D.rotateHorizontal(15);
+                updateHoleOverlayPositions();
             }
         });
 

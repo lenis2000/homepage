@@ -595,6 +595,9 @@ void detectHoles() {
     detectedHoles.clear();
     holesComputed = true;
 
+    printf("[CPU detectHoles] Starting, vertices=%zu, bounds=[%d,%d]x[%d,%d]\n",
+           vertices.size(), minX, maxX, minY, maxY);
+
     if (vertices.empty()) return;
 
     // Work in a padded bounding box
@@ -751,9 +754,13 @@ void detectHoles() {
                 hole.baseHeight = 0;
 
                 detectedHoles.push_back(hole);
+                printf("[CPU detectHoles] Found hole %zu: centroid=(%.2f,%.2f), cells=%zu, boundary=%zu\n",
+                       detectedHoles.size()-1, hole.centroidX, hole.centroidY,
+                       holeCells.size(), hole.boundaryCycle.size());
             }
         }
     }
+    printf("[CPU detectHoles] Done, found %zu holes\n", detectedHoles.size());
 }
 
 // Compute monodromy around a hole for a given matching
@@ -1198,6 +1205,7 @@ std::pair<int, int> minCostMaxFlow(int s, int t, int n) {
 // MAX: vertical edges cost 0, horizontal edges cost 1 → minimize total cost
 void makeExtremalTilingMCF(std::unordered_set<long long>& m, int direction) {
     m.clear();
+    printf("[CPU MCF] Starting, direction=%d, vertices=%zu\n", direction, vertices.size());
     if (vertices.empty()) return;
 
     // Separate vertices by color
@@ -1217,7 +1225,11 @@ void makeExtremalTilingMCF(std::unordered_set<long long>& m, int direction) {
         }
     }
 
-    if (blacks.size() != whites.size() || blacks.empty()) return;
+    printf("[CPU MCF] blacks=%zu, whites=%zu\n", blacks.size(), whites.size());
+    if (blacks.size() != whites.size() || blacks.empty()) {
+        printf("[CPU MCF] ERROR: size mismatch or empty!\n");
+        return;
+    }
 
     int numBlack = blacks.size();
     int numWhite = whites.size();
@@ -1274,9 +1286,11 @@ void makeExtremalTilingMCF(std::unordered_set<long long>& m, int direction) {
     }
 
     // Run min-cost max-flow
-    minCostMaxFlow(S, T, numNodes);
+    auto [flow, cost] = minCostMaxFlow(S, T, numNodes);
+    printf("[CPU MCF] MCF result: flow=%d, cost=%d\n", flow, cost);
 
     // Extract matching from flow
+    int horizCount = 0, vertCount = 0;
     for (int i = 0; i < numBlack; i++) {
         int bx = blacks[i].first;
         int by = blacks[i].second;
@@ -1289,17 +1303,22 @@ void makeExtremalTilingMCF(std::unordered_set<long long>& m, int direction) {
 
                 if (wx == bx + 1 && wy == by) {
                     m.insert(ekey(bx, by, 0));
+                    horizCount++;
                 } else if (wx == bx - 1 && wy == by) {
                     m.insert(ekey(wx, wy, 0));
+                    horizCount++;
                 } else if (wy == by + 1 && wx == bx) {
                     m.insert(ekey(bx, by, 1));
+                    vertCount++;
                 } else if (wy == by - 1 && wx == bx) {
                     m.insert(ekey(wx, wy, 1));
+                    vertCount++;
                 }
                 break;
             }
         }
     }
+    printf("[CPU MCF] Done: horiz=%d, vert=%d, total=%zu\n", horizCount, vertCount, m.size());
 }
 
 // Reference tiling for monodromy-constrained extremal search
@@ -1344,6 +1363,9 @@ void makeExtremalTilingFromReference(std::unordered_set<long long>& m,
 // Main entry point for extremal tiling computation
 // Handles both simply-connected (use MCF) and regions with holes (use greedy from reference)
 void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
+    printf("[CPU makeExtremalTiling] direction=%d, holesComputed=%d, numHoles=%zu\n",
+           direction, holesComputed, detectedHoles.size());
+
     // First, detect holes if not already done
     if (!holesComputed) {
         detectHoles();
@@ -1351,18 +1373,23 @@ void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
 
     if (detectedHoles.empty()) {
         // Simply-connected region: use fast min-cost flow
+        printf("[CPU makeExtremalTiling] Using MCF (no holes)\n");
         makeExtremalTilingMCF(m, direction);
+        printf("[CPU makeExtremalTiling] MCF done, edges=%zu\n", m.size());
     } else {
         // Region has holes: need to preserve monodromy
+        printf("[CPU makeExtremalTiling] Using reference tiling (has %zu holes)\n", detectedHoles.size());
         // Use the current matching as reference if valid, otherwise find one
         if (!hasReferenceTiling || referenceTiling.empty()) {
             // Find any valid tiling to use as reference
+            printf("[CPU makeExtremalTiling] Finding reference tiling...\n");
             findPerfectMatching();
             referenceTiling = matching;
             hasReferenceTiling = true;
         }
 
         makeExtremalTilingFromReference(m, referenceTiling, direction);
+        printf("[CPU makeExtremalTiling] Reference method done, edges=%zu\n", m.size());
     }
 }
 
@@ -1608,7 +1635,7 @@ char* initFromVertices(int* data, int count) {
     // Build faces for Glauber
     buildFaces();
 
-    // Detect holes in the region
+    // Detect holes in the region (for UI and monodromy tracking)
     detectHoles();
 
     std::string json = "{\"status\":\"valid\",\"vertexCount\":" + std::to_string(vertexCount) +
@@ -1666,6 +1693,8 @@ int cftpPrevT = 0;
 
 EMSCRIPTEN_KEEPALIVE
 char* initCFTP() {
+    printf("[CPU initCFTP] Starting, vertices=%zu, faces=%zu\n", vertices.size(), faces.size());
+
     if (vertices.empty() || faces.empty()) {
         std::string json = "{\"status\":\"error\",\"reason\":\"empty\"}";
         char* result = (char*)malloc(json.size() + 1);
@@ -1674,8 +1703,51 @@ char* initCFTP() {
     }
 
     // Compute extremal tilings (MIN and MAX height)
+    printf("[CPU initCFTP] Computing MIN tiling...\n");
     makeExtremalTiling(cftpMin, -1);  // Minimize heights
+    printf("[CPU initCFTP] Computing MAX tiling...\n");
     makeExtremalTiling(cftpMax, +1);  // Maximize heights
+    printf("[CPU initCFTP] MIN edges=%zu, MAX edges=%zu\n", cftpMin.size(), cftpMax.size());
+
+    // Count horizontal and vertical in each
+    int minHoriz = 0, minVert = 0, maxHoriz = 0, maxVert = 0;
+    for (long long ek : cftpMin) {
+        int dir = (int)(ek & 1);
+        if (dir == 0) minHoriz++; else minVert++;
+    }
+    for (long long ek : cftpMax) {
+        int dir = (int)(ek & 1);
+        if (dir == 0) maxHoriz++; else maxVert++;
+    }
+    printf("[CPU initCFTP] MIN: horiz=%d, vert=%d\n", minHoriz, minVert);
+    printf("[CPU initCFTP] MAX: horiz=%d, vert=%d\n", maxHoriz, maxVert);
+
+    // Check if MIN == MAX (means only one tiling exists)
+    if (cftpMin == cftpMax) {
+        printf("[CPU initCFTP] WARNING: MIN == MAX (single tiling)\n");
+    } else {
+        // Count shared edges
+        int shared = 0;
+        for (long long ek : cftpMin) {
+            if (cftpMax.count(ek)) shared++;
+        }
+        printf("[CPU initCFTP] Shared edges: %d (%.1f%% of MIN)\n",
+               shared, 100.0 * shared / cftpMin.size());
+    }
+
+    // Check monodromy around each hole for MIN and MAX tilings
+    if (!detectedHoles.empty()) {
+        printf("[CPU initCFTP] Checking monodromy for %zu holes:\n", detectedHoles.size());
+        for (size_t i = 0; i < detectedHoles.size(); i++) {
+            int monoMin = computeMonodromy(cftpMin, detectedHoles[i]);
+            int monoMax = computeMonodromy(cftpMax, detectedHoles[i]);
+            printf("[CPU initCFTP] Hole %zu: MIN monodromy=%d, MAX monodromy=%d\n",
+                   i, monoMin, monoMax);
+            if (monoMin != monoMax) {
+                printf("[CPU initCFTP] ERROR: Monodromy mismatch! CFTP will not converge.\n");
+            }
+        }
+    }
 
     cftpSweepSeeds.clear();
     cftpEpochSize = 1;  // Start with T=1 sweep, doubles each epoch

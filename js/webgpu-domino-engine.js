@@ -140,6 +140,7 @@ class WebGPUDominoEngine {
      * @returns {Promise<boolean>} Success
      */
     async initCFTP(regionMask, minX, maxX, minY, maxY) {
+        console.log(`[GPU] initCFTP called: bounds=[${minX},${maxX}]x[${minY},${maxY}], maskSize=${regionMask.byteLength}`);
         if (!this.isReady) {
             console.error("WebGPU engine not initialized");
             return false;
@@ -153,6 +154,7 @@ class WebGPUDominoEngine {
         this.gridParams = { minX, maxX, minY, maxY, width, height };
         this.numCells = width * height;
         this.numFaces = Math.max(0, (width - 1) * (height - 1));
+        console.log(`[GPU] Grid: ${width}x${height} = ${this.numCells} cells, ${this.numFaces} faces`);
 
         // Create region mask buffer
         this.regionBuffer = this.device.createBuffer({
@@ -247,6 +249,18 @@ class WebGPUDominoEngine {
             ]
         });
 
+        // Separate bind group for coalescence check that only uses read-only buffers
+        // This avoids the storage read-write vs read-only conflict
+        this.coalescenceParamsBindGroup = this.device.createBindGroup({
+            layout: this.bindGroupLayout,
+            entries: [
+                { binding: 0, resource: { buffer: this.lowerGridBuffer } },  // Not actually used in coalescence shader
+                { binding: 1, resource: { buffer: this.randomBuffer } },
+                { binding: 2, resource: { buffer: this.uniformBuffer } },
+                { binding: 3, resource: { buffer: this.regionBuffer } }
+            ]
+        });
+
         // Note: Extremal tilings will be uploaded separately via uploadExtremalTilings()
         // since proper MIN/MAX tilings require min-cut/max-flow (computed on CPU)
 
@@ -297,11 +311,22 @@ class WebGPUDominoEngine {
         const minGrid = this.edgesToGrid(minEdges);
         const maxGrid = this.edgesToGrid(maxEdges);
 
+        // Count edges in grids for debugging
+        let minCount = 0, maxCount = 0;
+        for (let i = 0; i < minGrid.length; i++) {
+            if (minGrid[i] & 1) minCount++;
+            if (minGrid[i] & 2) minCount++;
+            if (maxGrid[i] & 1) maxCount++;
+            if (maxGrid[i] & 2) maxCount++;
+        }
+        console.log(`[GPU] uploadExtremalTilings: minEdges=${minEdges.length}, maxEdges=${maxEdges.length}`);
+        console.log(`[GPU] Grid edge counts: minGrid=${minCount}, maxGrid=${maxCount}`);
+
         this.device.queue.writeBuffer(this.lowerGridBuffer, 0, minGrid);
         this.device.queue.writeBuffer(this.upperGridBuffer, 0, maxGrid);
 
         await this.device.queue.onSubmittedWorkDone();
-        console.log("Extremal tilings uploaded from CPU");
+        console.log("[GPU] Extremal tilings uploaded to buffers");
     }
 
     /**
@@ -392,15 +417,17 @@ class WebGPUDominoEngine {
     }
 
     /**
-     * Check if lower and upper chains have coalesced (FAST - GPU reduction)
-     * Uses GPU shader to count differences, only reads single u32 result
+     * Check if lower and upper chains have coalesced
+     * Uses slow CPU-based check to avoid WebGPU buffer usage conflicts
      * @returns {Promise<boolean>}
      */
     async checkCoalescence() {
         if (!this.cftpInitialized) return false;
 
-        // Use fast GPU-based coalescence check
-        return await this.checkCoalescenceFast();
+        // Use slow CPU-based coalescence check to avoid buffer usage conflicts
+        // The fast GPU check has issues with same buffer being used as both
+        // storage (read-write) in group(0) and read-only-storage in group(1)
+        return await this.checkCoalescenceSlow();
     }
 
     /**
@@ -413,15 +440,20 @@ class WebGPUDominoEngine {
 
         const workgroups = Math.ceil(this.numCells / 256);
 
-        const commandEncoder = this.device.createCommandEncoder();
-
         // Clear the diff count buffer to 0
-        commandEncoder.clearBuffer(this.diffCountBuffer, 0, 4);
+        const clearEncoder = this.device.createCommandEncoder();
+        clearEncoder.clearBuffer(this.diffCountBuffer, 0, 4);
+        this.device.queue.submit([clearEncoder.finish()]);
 
-        // Run coalescence check shader
+        // Wait for clear to complete before running coalescence check
+        await this.device.queue.onSubmittedWorkDone();
+
+        // Run coalescence check shader in separate submission
+        // Use coalescenceParamsBindGroup which doesn't conflict with coalescenceBindGroup
+        const commandEncoder = this.device.createCommandEncoder();
         const pass = commandEncoder.beginComputePass();
         pass.setPipeline(this.coalescencePipeline);
-        pass.setBindGroup(0, this.lowerBindGroup);  // group(0) for params/region
+        pass.setBindGroup(0, this.coalescenceParamsBindGroup);  // group(0) for params/region (no buffer conflict)
         pass.setBindGroup(1, this.coalescenceBindGroup);  // group(1) for coalescence
         pass.dispatchWorkgroups(workgroups);
         pass.end();
@@ -464,15 +496,20 @@ class WebGPUDominoEngine {
 
         // Compare grids - only edge bits matter (bits 0 and 1)
         let differences = 0;
+        let lowerEdges = 0, upperEdges = 0;
         for (let i = 0; i < lowerData.length; i++) {
-            if ((lowerData[i] & 3) !== (upperData[i] & 3)) {
+            const lv = lowerData[i] & 3;
+            const uv = upperData[i] & 3;
+            if (lv & 1) lowerEdges++;
+            if (lv & 2) lowerEdges++;
+            if (uv & 1) upperEdges++;
+            if (uv & 2) upperEdges++;
+            if (lv !== uv) {
                 differences++;
             }
         }
 
-        if (differences > 0) {
-            console.log(`Coalescence check (slow): ${differences}/${lowerData.length} cells differ`);
-        }
+        console.log(`[GPU] Coalescence check: lower=${lowerEdges} edges, upper=${upperEdges} edges, diff=${differences} cells`);
         return differences === 0;
     }
 
@@ -923,18 +960,22 @@ class WebGPUDominoEngine {
      * Clean up CFTP resources
      */
     destroyCFTP() {
+        console.log("[GPU] destroyCFTP called, was initialized:", this.cftpInitialized);
         const buffers = [
             'lowerGridBuffer', 'upperGridBuffer',
             'randomBuffer', 'uniformBuffer', 'regionBuffer',
             'lowerStagingBuffer', 'upperStagingBuffer',
             'diffCountBuffer', 'diffCountStagingBuffer'
         ];
+        let destroyedCount = 0;
         for (const name of buffers) {
             if (this[name]) {
                 this[name].destroy();
                 this[name] = null;
+                destroyedCount++;
             }
         }
+        console.log(`[GPU] Destroyed ${destroyedCount} buffers`);
         this.coalescenceBindGroup = null;
         this.cftpInitialized = false;
     }
