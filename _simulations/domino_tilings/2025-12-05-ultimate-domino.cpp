@@ -1196,17 +1196,17 @@ char* getHeights() {
     return result;
 }
 
-// Find maximum matching and return unmatched vertices
-std::vector<std::pair<int,int>> findUnmatchedVertices() {
+// Find maximum matching and return unmatched vertices for a given vertex set
+std::vector<std::pair<int,int>> findUnmatchedVerticesInSet(const std::unordered_set<long long>& vertexSet) {
     std::vector<std::pair<int,int>> unmatched;
 
-    if (vertices.empty()) return unmatched;
+    if (vertexSet.empty()) return unmatched;
 
     // Separate by color
     std::vector<std::pair<int,int>> blacks, whites;
     std::unordered_map<long long, int> blackIdx, whiteIdx;
 
-    for (long long vk : vertices) {
+    for (long long vk : vertexSet) {
         int x = (int)((vk >> 20) - 100000);
         int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
         if ((x + y) % 2 == 0) {
@@ -1303,16 +1303,9 @@ char* repairRegion() {
         return result;
     }
 
+    // Work with a LOCAL copy of vertices - don't modify the global state
+    std::unordered_set<long long> workingSet = vertices;
     std::vector<std::pair<int,int>> addedVertices;
-
-    // Count colors
-    int blackCount = 0, whiteCount = 0;
-    for (long long vk : vertices) {
-        int x = (int)((vk >> 20) - 100000);
-        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
-        if ((x + y) % 2 == 0) blackCount++;
-        else whiteCount++;
-    }
 
     // Find unmatched vertices and try to extend
     int dx[] = {1, -1, 0, 0};
@@ -1324,7 +1317,7 @@ char* repairRegion() {
     while (iterations < maxIterations) {
         iterations++;
 
-        auto unmatched = findUnmatchedVertices();
+        auto unmatched = findUnmatchedVerticesInSet(workingSet);
         if (unmatched.empty()) break;  // Perfect matching exists!
 
         // Try to add a neighbor for each unmatched vertex
@@ -1336,16 +1329,10 @@ char* repairRegion() {
                 int ny = uy + dy[d];
                 long long nk = vkey(nx, ny);
 
-                if (vertices.count(nk) == 0) {
-                    // Add this neighbor
-                    vertices.insert(nk);
+                if (workingSet.count(nk) == 0) {
+                    // Add this neighbor to working set
+                    workingSet.insert(nk);
                     addedVertices.push_back({nx, ny});
-
-                    // Update bounds
-                    minX = std::min(minX, nx);
-                    maxX = std::max(maxX, nx);
-                    minY = std::min(minY, ny);
-                    maxY = std::max(maxY, ny);
 
                     addedAny = true;
                     break;  // Only add one neighbor per unmatched vertex per iteration

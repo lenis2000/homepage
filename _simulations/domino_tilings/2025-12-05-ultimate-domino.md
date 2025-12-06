@@ -14,35 +14,29 @@ code:
 <summary>About this simulation</summary>
 <div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
 
-<p>This simulator generates <strong>random domino tilings</strong> of arbitrary regions on the square lattice using <strong>uniform</strong> distribution.</p>
+<p><strong>Domino tilings</strong> are coverings of a region on the square lattice by 1×2 or 2×1 dominoes (dimers), where each cell is covered by exactly one domino. They arise in statistical mechanics as dimer models, in combinatorics through connections to Young tableaux and the RSK correspondence, and in probability theory where random tilings exhibit fascinating limit shapes and fluctuations.</p>
+
+<p>This simulator generates <strong>uniformly random domino tilings</strong> of arbitrary regions that you draw.</p>
 
 <p><strong>How to use:</strong></p>
 <ul>
   <li><strong>Draw mode</strong>: Click or drag on the grid to add cells to your region</li>
-  <li><strong>Erase mode</strong>: Remove cells from your region</li>
-  <li><strong>Rectangle preset</strong>: Quickly generate a rectangular region</li>
-  <li><strong>Aztec Diamond preset</strong>: Generate the classic Aztec diamond shape</li>
-  <li><strong>Scale Up/Down</strong>: Double or halve the size of your current region</li>
-  <li><strong>Make Tileable</strong>: If your region is invalid, this adds cells to make it tileable</li>
+  <li><strong>Erase mode</strong>: Remove cells from your region (or hold Shift while drawing)</li>
+  <li><strong>Lasso</strong>: Click points to define a polygon, then fill or erase the interior</li>
+  <li><strong>Rectangle/Aztec Diamond</strong>: Quick presets for common shapes</li>
+  <li><strong>Scale Up/Down</strong>: Double or halve the region size</li>
+  <li><strong>Make Tileable</strong>: Automatically add cells to make an invalid region tileable</li>
 </ul>
 
-<p>A region is <strong>tileable</strong> (valid) if and only if it has equal numbers of black and white cells AND a perfect matching exists. The simulator uses <strong>Hopcroft-Karp algorithm</strong> to find a perfect matching.</p>
+<p>A region is <strong>tileable</strong> if it has equal numbers of black and white cells (checkerboard coloring) and admits a perfect matching. The <strong>Hopcroft-Karp algorithm</strong> verifies this and finds an initial tiling.</p>
 
 <p><strong>Sampling methods:</strong></p>
 <ul>
-  <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local 2x2 plaquette flips. Converges to the uniform distribution over time.</li>
-  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform distribution using height function monotone coupling.</li>
+  <li><strong>Glauber dynamics</strong>: Markov chain Monte Carlo with local 2×2 plaquette flips. Converges to the uniform distribution; good for watching the mixing process.</li>
+  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> produces an <em>exact</em> sample from the uniform distribution using monotone coupling on height functions. No burn-in needed.</li>
 </ul>
 
-<p><strong>Drawing & Editing Tools:</strong></p>
-<ul>
-  <li><strong>Lasso Selection</strong>: Click multiple points to define a polygon, then fill or erase.</li>
-  <li><strong>Undo/Redo</strong>: Full history support for shape modifications.</li>
-</ul>
-
-<p><strong>Color Scheme:</strong> Four colors for four domino types based on orientation (horizontal/vertical) and starting cell color (black/white).</p>
-
-<p><em>Future features (greyed out)</em>: 3D height function view, periodic weights, GPU acceleration, multi-threading.</p>
+<p><strong>Color scheme:</strong> Four colors distinguish four domino types by orientation (horizontal/vertical) and starting cell parity (black/white on the checkerboard).</p>
 
 </div>
 </details>
@@ -308,11 +302,10 @@ code:
     <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
-    <button id="showMinBtn" style="background: #6c757d; color: white;" disabled>Show MIN</button>
-    <button id="showMaxBtn" style="background: #6c757d; color: white;" disabled>Show MAX</button>
     <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;"><input type="checkbox" id="showHeightsCheckbox"> Heights</label>
-    <button id="scaleUpBtn" title="Double the region size">Scale Up Region</button>
-    <button id="scaleDownBtn" title="Halve the region size">Scale Down Region</button>
+    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Scale Up</button>
+    <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
+    <button id="scaleUpBtn" title="Double the region size (2x2 blocks)">Scale Up 2×2</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -321,14 +314,6 @@ code:
     </div>
   </div>
 </div>
-
-<!-- Future: Periodic Weights (greyed out) -->
-<details id="periodic-weights-details" class="greyed-out">
-<summary>Periodic Weights (coming soon)</summary>
-<div class="content">
-  <p style="font-size: 12px; color: #888;">Periodic q-weighting will be available in a future update.</p>
-</div>
-</details>
 
 <!-- Stats Row -->
 <div class="control-group">
@@ -501,11 +486,10 @@ code:
         startStopBtn: document.getElementById('startStopBtn'),
         cftpBtn: document.getElementById('cftpBtn'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
-        showMinBtn: document.getElementById('showMinBtn'),
-        showMaxBtn: document.getElementById('showMaxBtn'),
         showHeightsCheckbox: document.getElementById('showHeightsCheckbox'),
         scaleUpBtn: document.getElementById('scaleUpBtn'),
         scaleDownBtn: document.getElementById('scaleDownBtn'),
+        smoothScaleBtn: document.getElementById('smoothScaleBtn'),
         speedSlider: document.getElementById('speedSlider'),
         speedInput: document.getElementById('speedInput'),
         cellsCount: document.getElementById('cellsCount'),
@@ -736,12 +720,12 @@ code:
 
     function screenToCell(sx, sy) {
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const cx = (sx - rect.left) * dpr;
-        const cy = (sy - rect.top) * dpr;
+        // Use CSS coordinates (no dpr multiplication) since draw() uses ctx.scale
+        const cx = sx - rect.left;
+        const cy = sy - rect.top;
 
-        const centerX = canvas.width / 2 + panX * zoom;
-        const centerY = canvas.height / 2 + panY * zoom;
+        const centerX = rect.width / 2 + panX * zoom;
+        const centerY = rect.height / 2 + panY * zoom;
         const size = cellSize * zoom;
 
         const x = Math.floor((cx - centerX) / size);
@@ -751,8 +735,9 @@ code:
     }
 
     function cellToScreen(x, y) {
-        const centerX = canvas.width / 2 + panX * zoom;
-        const centerY = canvas.height / 2 + panY * zoom;
+        const rect = canvas.getBoundingClientRect();
+        const centerX = rect.width / 2 + panX * zoom;
+        const centerY = rect.height / 2 + panY * zoom;
         const size = cellSize * zoom;
 
         return {
@@ -809,8 +794,6 @@ code:
             el.statusBadge.textContent = 'Valid';
             el.startStopBtn.disabled = false;
             el.cftpBtn.disabled = false;
-            el.showMinBtn.disabled = false;
-            el.showMaxBtn.disabled = false;
             el.repairBtn.disabled = true;
         } else if (result.status === 'empty') {
             isValid = false;
@@ -819,8 +802,6 @@ code:
             el.statusBadge.textContent = 'Empty';
             el.startStopBtn.disabled = true;
             el.cftpBtn.disabled = true;
-            el.showMinBtn.disabled = true;
-            el.showMaxBtn.disabled = true;
             el.repairBtn.disabled = true;
         } else {
             isValid = false;
@@ -829,8 +810,6 @@ code:
             el.statusBadge.textContent = `Invalid (${result.reason || 'no matching'})`;
             el.startStopBtn.disabled = true;
             el.cftpBtn.disabled = true;
-            el.showMinBtn.disabled = true;
-            el.showMaxBtn.disabled = true;
             el.repairBtn.disabled = false;
         }
 
@@ -890,14 +869,14 @@ code:
         const canvasW = rect.width;
         const canvasH = rect.height;
 
-        // Calculate required zoom to fit all cells with some padding
+        // Calculate required zoom to fit all cells with minimal padding
         const regionW = (maxX - minX) * cellSize;
         const regionH = (maxY - minY) * cellSize;
-        const padding = 0.9;  // 90% of canvas
+        const padding = 0.94;  // 94% of canvas - 3% margin on each side
 
         const zoomX = (canvasW * padding) / regionW;
         const zoomY = (canvasH * padding) / regionH;
-        zoom = Math.min(zoomX, zoomY, 2.0);  // Cap at 2x zoom
+        zoom = Math.min(zoomX, zoomY, 4.0);  // Cap at 4x zoom
 
         // Center the region
         const centerCellX = (minX + maxX) / 2;
@@ -914,22 +893,25 @@ code:
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
 
-        ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#1a1a1a' : '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Scale context to handle DPR - all coordinates now in CSS pixels
+        ctx.scale(dpr, dpr);
 
-        const centerX = canvas.width / 2 + panX * zoom;
-        const centerY = canvas.height / 2 + panY * zoom;
+        ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#1a1a1a' : '#ffffff';
+        ctx.fillRect(0, 0, rect.width, rect.height);
+
+        const centerX = rect.width / 2 + panX * zoom;
+        const centerY = rect.height / 2 + panY * zoom;
         const size = cellSize * zoom;
 
         const showGrid = el.showGridCheckbox.checked;
         const borderWidth = parseFloat(el.borderSlider.value) * zoom;
         const colors = getColors();
 
-        // Calculate visible range
+        // Calculate visible range (use rect dimensions since we scaled by dpr)
         const minVisX = Math.floor(-centerX / size) - 1;
-        const maxVisX = Math.ceil((canvas.width - centerX) / size) + 1;
+        const maxVisX = Math.ceil((rect.width - centerX) / size) + 1;
         const minVisY = Math.floor(-centerY / size) - 1;
-        const maxVisY = Math.ceil((canvas.height - centerY) / size) + 1;
+        const maxVisY = Math.ceil((rect.height - centerY) / size) + 1;
 
         // Draw grid
         if (showGrid && size > 5) {
@@ -939,14 +921,14 @@ code:
             for (let x = minVisX; x <= maxVisX; x++) {
                 ctx.beginPath();
                 ctx.moveTo(centerX + x * size, 0);
-                ctx.lineTo(centerX + x * size, canvas.height);
+                ctx.lineTo(centerX + x * size, rect.height);
                 ctx.stroke();
             }
 
             for (let y = minVisY; y <= maxVisY; y++) {
                 ctx.beginPath();
                 ctx.moveTo(0, centerY + y * size);
-                ctx.lineTo(canvas.width, centerY + y * size);
+                ctx.lineTo(rect.width, centerY + y * size);
                 ctx.stroke();
             }
         }
@@ -1256,19 +1238,31 @@ code:
         draw();
     }
 
-    // Snap direction to horizontal or vertical
+    // Snap to nearest integer lattice point along an integer slope direction
     function snapDirectionToGrid(from, to) {
         const dx = to.x - from.x;
         const dy = to.y - from.y;
 
-        // Find which axis-aligned direction is closest
-        if (Math.abs(dx) >= Math.abs(dy)) {
-            // Horizontal
-            return { x: from.x + Math.round(dx), y: from.y };
-        } else {
-            // Vertical
-            return { x: from.x, y: from.y + Math.round(dy) };
+        if (dx === 0 && dy === 0) {
+            return { x: from.x, y: from.y };
         }
+
+        // Find the closest integer point (nx, ny) from 'from' in the direction of 'to'
+        // We want nx = from.x + k*sx, ny = from.y + k*sy for some integer k and coprime (sx, sy)
+
+        // Round to nearest integer point
+        const targetX = Math.round(to.x);
+        const targetY = Math.round(to.y);
+
+        const rdx = targetX - from.x;
+        const rdy = targetY - from.y;
+
+        if (rdx === 0 && rdy === 0) {
+            return { x: from.x, y: from.y };
+        }
+
+        // The point (targetX, targetY) is already on the integer lattice
+        return { x: targetX, y: targetY };
     }
 
     function pointInPolygon(x, y, polygon) {
@@ -1636,10 +1630,12 @@ code:
         // Preset buttons
         el.rectangleBtn.addEventListener('click', () => {
             generateRectangle(parseInt(el.rectWidthInput.value), parseInt(el.rectHeightInput.value));
+            resetView();
         });
 
         el.aztecBtn.addEventListener('click', () => {
             generateAztecDiamond(parseInt(el.aztecNInput.value));
+            resetView();
         });
 
         // Simulation controls
@@ -1653,31 +1649,6 @@ code:
 
         el.cftpBtn.addEventListener('click', runCFTP);
         el.cftpStopBtn.addEventListener('click', stopCFTP);
-
-        // Debug buttons
-        el.showMinBtn.addEventListener('click', () => {
-            if (!wasmReady || !isValid) return;
-            const result = sim.getMinTiling();
-            if (result.dominoes) {
-                dominoes = result.dominoes;
-                if (showHeights) {
-                    heightData = sim.getHeights().heights || [];
-                }
-                draw();
-            }
-        });
-
-        el.showMaxBtn.addEventListener('click', () => {
-            if (!wasmReady || !isValid) return;
-            const result = sim.getMaxTiling();
-            if (result.dominoes) {
-                dominoes = result.dominoes;
-                if (showHeights) {
-                    heightData = sim.getHeights().heights || [];
-                }
-                draw();
-            }
-        });
 
         el.showHeightsCheckbox.addEventListener('change', () => {
             showHeights = el.showHeightsCheckbox.checked;
@@ -1724,6 +1695,231 @@ code:
             resetView();
         });
 
+        // Smooth Scale: scale by 2 while preserving boundary slopes
+        // Aztec diamond order n → order 2n (not chunky 2x2 blocks)
+        // Handles holes and multiple components using even-odd fill
+        el.smoothScaleBtn.addEventListener('click', () => {
+            if (!wasmReady || activeCells.size === 0) return;
+
+            saveState();
+
+            // Step 1: Collect ALL boundary edges
+            const cellSet = new Set(activeCells.keys());
+            const edges = [];
+            for (const [key, cell] of activeCells) {
+                const {x, y} = cell;
+                // Top edge (going right)
+                if (!cellSet.has(`${x},${y-1}`)) {
+                    edges.push({x1: x, y1: y, x2: x+1, y2: y});
+                }
+                // Right edge (going down)
+                if (!cellSet.has(`${x+1},${y}`)) {
+                    edges.push({x1: x+1, y1: y, x2: x+1, y2: y+1});
+                }
+                // Bottom edge (going left)
+                if (!cellSet.has(`${x},${y+1}`)) {
+                    edges.push({x1: x+1, y1: y+1, x2: x, y2: y+1});
+                }
+                // Left edge (going up)
+                if (!cellSet.has(`${x-1},${y}`)) {
+                    edges.push({x1: x, y1: y+1, x2: x, y2: y});
+                }
+            }
+
+            if (edges.length === 0) return;
+
+            // Step 2: Build edge map with ARRAYS (handles multiple edges from same vertex)
+            const edgeMap = new Map();
+            for (const e of edges) {
+                const key = `${e.x1},${e.y1}`;
+                if (!edgeMap.has(key)) edgeMap.set(key, []);
+                edgeMap.get(key).push(e);
+            }
+
+            // Step 3: Trace ALL boundary loops (outer boundary + holes)
+            const allPolygons = [];
+            const usedEdges = new Set();
+
+            for (const startEdge of edges) {
+                const startEdgeKey = `${startEdge.x1},${startEdge.y1}-${startEdge.x2},${startEdge.y2}`;
+                if (usedEdges.has(startEdgeKey)) continue;
+
+                // Start a new loop
+                const polygon = [];
+                let currentKey = `${startEdge.x1},${startEdge.y1}`;
+                const loopStart = currentKey;
+
+                while (true) {
+                    const available = edgeMap.get(currentKey);
+                    if (!available) break;
+
+                    // Find an unused edge from this vertex
+                    const nextEdge = available.find(edge => {
+                        const ek = `${edge.x1},${edge.y1}-${edge.x2},${edge.y2}`;
+                        return !usedEdges.has(ek);
+                    });
+
+                    if (!nextEdge) break;
+
+                    const nextEdgeKey = `${nextEdge.x1},${nextEdge.y1}-${nextEdge.x2},${nextEdge.y2}`;
+                    usedEdges.add(nextEdgeKey);
+                    polygon.push({x: nextEdge.x1, y: nextEdge.y1});
+                    currentKey = `${nextEdge.x2},${nextEdge.y2}`;
+
+                    // Check if loop completed
+                    if (currentKey === loopStart) break;
+                }
+
+                if (polygon.length >= 3) {
+                    allPolygons.push(polygon);
+                }
+            }
+
+            if (allPolygons.length === 0) {
+                console.log('No polygons extracted, falling back to 2x2');
+                // Fallback
+                const newCells = new Map();
+                for (const [key, cell] of activeCells) {
+                    const nx = cell.x * 2;
+                    const ny = cell.y * 2;
+                    newCells.set(`${nx},${ny}`, {x: nx, y: ny});
+                    newCells.set(`${nx+1},${ny}`, {x: nx+1, y: ny});
+                    newCells.set(`${nx},${ny+1}`, {x: nx, y: ny+1});
+                    newCells.set(`${nx+1},${ny+1}`, {x: nx+1, y: ny+1});
+                }
+                activeCells.clear();
+                for (const [k, v] of newCells) activeCells.set(k, v);
+                updateRegion();
+                resetView();
+                return;
+            }
+
+            // Step 4: Simplify polygons (merge collinear edges into single edges)
+            function simplifyPolygon(polygon) {
+                if (polygon.length < 3) return polygon;
+
+                const result = [polygon[0]];
+
+                for (let i = 1; i < polygon.length; i++) {
+                    const prev = result[result.length - 1];
+                    const curr = polygon[i];
+                    const next = polygon[(i + 1) % polygon.length];
+
+                    // Direction from prev to curr
+                    const dx1 = curr.x - prev.x;
+                    const dy1 = curr.y - prev.y;
+
+                    // Direction from curr to next
+                    const dx2 = next.x - curr.x;
+                    const dy2 = next.y - curr.y;
+
+                    // Cross product: 0 means collinear
+                    const cross = dx1 * dy2 - dy1 * dx2;
+
+                    if (cross !== 0) {
+                        // Not collinear, keep this vertex
+                        result.push(curr);
+                    }
+                    // else: collinear, skip (merge edges)
+                }
+
+                return result;
+            }
+
+            // Step 5: Scale and subdivide ALL polygons
+            // Only subdivide SHORT edges (≤8 after scaling = ≤4 original), not long edges
+            const allScaledPolygons = allPolygons.map((poly, polyIdx) => {
+                console.log(`Polygon ${polyIdx}: ${poly.length} vertices before simplify`);
+
+                // First simplify to merge collinear edges
+                const simplified = simplifyPolygon(poly);
+                console.log(`Polygon ${polyIdx}: ${simplified.length} vertices after simplify`);
+                console.log('Simplified vertices:', simplified.map(v => `(${v.x},${v.y})`).join(' → '));
+
+                // Scale by 2
+                const scaled = simplified.map(v => ({x: v.x * 2, y: v.y * 2}));
+                console.log('Scaled vertices:', scaled.map(v => `(${v.x},${v.y})`).join(' → '));
+
+                // Compute edge lengths
+                const edgeLengths = [];
+                for (let i = 0; i < scaled.length; i++) {
+                    const curr = scaled[i];
+                    const next = scaled[(i + 1) % scaled.length];
+                    const len = Math.abs(next.x - curr.x) + Math.abs(next.y - curr.y);
+                    edgeLengths.push(len);
+                }
+                console.log('Edge lengths after scaling:', edgeLengths.join(', '));
+
+                // Subdivide only short edges (≤8 = original ≤4)
+                const subdivided = [];
+                for (let i = 0; i < scaled.length; i++) {
+                    const curr = scaled[i];
+                    const next = scaled[(i + 1) % scaled.length];
+                    subdivided.push(curr);
+
+                    // Edge length (Manhattan distance for axis-aligned edges)
+                    const edgeLen = Math.abs(next.x - curr.x) + Math.abs(next.y - curr.y);
+
+                    if (edgeLen <= 8) {
+                        // Short edge (from staircase, original ≤4), subdivide to unit steps
+                        const steps = edgeLen;
+                        const dx = (next.x - curr.x) / steps;
+                        const dy = (next.y - curr.y) / steps;
+                        for (let s = 1; s < steps; s++) {
+                            subdivided.push({x: curr.x + s * dx, y: curr.y + s * dy});
+                        }
+                    }
+                    // else: long edge (original ≥5), keep as straight boundary
+                }
+                console.log(`Polygon ${polyIdx}: ${subdivided.length} vertices after subdivide`);
+                return subdivided;
+            });
+
+            // Step 5: Find bounding box across all polygons
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            for (const poly of allScaledPolygons) {
+                for (const v of poly) {
+                    minX = Math.min(minX, v.x);
+                    maxX = Math.max(maxX, v.x);
+                    minY = Math.min(minY, v.y);
+                    maxY = Math.max(maxY, v.y);
+                }
+            }
+
+            // Step 6: Fill using even-odd rule across ALL polygons (handles holes!)
+            function countAllCrossings(px, py) {
+                let total = 0;
+                for (const poly of allScaledPolygons) {
+                    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                        const xi = poly[i].x, yi = poly[i].y;
+                        const xj = poly[j].x, yj = poly[j].y;
+                        if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                            total++;
+                        }
+                    }
+                }
+                return total;
+            }
+
+            activeCells.clear();
+            for (let x = Math.floor(minX); x < Math.ceil(maxX); x++) {
+                for (let y = Math.floor(minY); y < Math.ceil(maxY); y++) {
+                    // Even-odd fill: inside if odd number of crossings
+                    if (countAllCrossings(x + 0.5, y + 0.5) % 2 === 1) {
+                        activeCells.set(`${x},${y}`, {x, y});
+                    }
+                }
+            }
+
+            const originalCellCount = cellSet.size;
+            console.log('Smooth scale:', allPolygons.length, 'boundary loops');
+            console.log('Original cells:', originalCellCount, '→ New cells:', activeCells.size);
+            console.log('Ratio:', (activeCells.size / originalCellCount).toFixed(2), '(2x2 would be 4.00)');
+            updateRegion();
+            resetView();
+        });
+
         // Speed control - logarithmic slider with synchronized input
         // Slider 0-100 maps to speed 1 - 100,000,000 (logarithmic)
         function sliderToSpeed(sliderVal) {
@@ -1765,6 +1961,10 @@ code:
         el.clearBtn.addEventListener('click', () => {
             saveState();
             activeCells.clear();
+            // Reset view to default
+            zoom = 1.0;
+            panX = 0;
+            panY = 0;
             updateRegion();
         });
 
@@ -1773,14 +1973,69 @@ code:
 
         el.repairBtn.addEventListener('click', () => {
             if (!wasmReady) return;
-            const result = sim.repair();
-            if (result.vertices && result.vertices.length > 0) {
-                saveState();
-                for (const v of result.vertices) {
-                    activeCells.set(`${v.x},${v.y}`, v);
+
+            // Save state once at the beginning
+            saveState();
+
+            // Keep calling repair until region is valid or no progress
+            const MAX_REPAIR_ITERATIONS = 1000;
+            let totalAdded = 0;
+
+            for (let i = 0; i < MAX_REPAIR_ITERATIONS; i++) {
+                // Re-init the C++ side with current vertices
+                const verticesArray = Array.from(activeCells.values());
+                const initResult = sim.initFromVertices(verticesArray);
+
+                // If region is now valid, we're done
+                if (initResult.status === 'valid') {
+                    console.log('Repair complete! Added', totalAdded, 'vertices in', i, 'iterations');
+                    updateRegion();
+                    return;
                 }
-                updateRegion();
+
+                // Try to repair
+                const result = sim.repair();
+
+                if (result.vertices && result.vertices.length > 0) {
+                    // Add the suggested vertices
+                    for (const v of result.vertices) {
+                        activeCells.set(`${v.x},${v.y}`, v);
+                    }
+                    totalAdded += result.vertices.length;
+                } else {
+                    // No more vertices can be added - try expanding further
+                    // Add neighbors of ALL boundary vertices
+                    const dx = [1, -1, 0, 0];
+                    const dy = [0, 0, 1, -1];
+                    let addedAny = false;
+
+                    for (const [key, cell] of activeCells) {
+                        for (let d = 0; d < 4; d++) {
+                            const nx = cell.x + dx[d];
+                            const ny = cell.y + dy[d];
+                            const nkey = `${nx},${ny}`;
+                            if (!activeCells.has(nkey)) {
+                                activeCells.set(nkey, {x: nx, y: ny});
+                                totalAdded++;
+                                addedAny = true;
+                                // Only add one vertex at a time to let repair algorithm recompute
+                                break;
+                            }
+                        }
+                        if (addedAny) break;
+                    }
+
+                    if (!addedAny) {
+                        // Completely stuck - shouldn't happen normally
+                        console.log('Repair stuck after adding', totalAdded, 'vertices');
+                        updateRegion();
+                        return;
+                    }
+                }
             }
+
+            console.log('Repair reached max iterations, added', totalAdded, 'vertices');
+            updateRegion();
         });
 
         // View controls
