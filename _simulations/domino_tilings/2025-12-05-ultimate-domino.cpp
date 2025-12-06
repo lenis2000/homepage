@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-05-ultimate-domino.cpp -o 2025-12-05-ultimate-domino.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPProgress','_getMinTiling','_getMaxTiling','_getHeights','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_repairRegion','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -382,7 +382,7 @@ void performGlauberStepsInternal(int numSteps) {
 }
 
 // ============================================================================
-// CFTP with Height Function Monotone Coupling
+// CFTP with Height Function Monotone Coupling (Systematic Sweeps)
 // ============================================================================
 //
 // For domino tilings, we use the height function partial order:
@@ -390,11 +390,17 @@ void performGlauberStepsInternal(int numSteps) {
 // - Tiling A ≤ B iff height_A(v) ≤ height_B(v) at all vertices
 // - MIN state: tiling with minimum heights (computed by local optimization)
 // - MAX state: tiling with maximum heights
-// - Monotone coupling: same random face + target applied to both states
+// - Monotone coupling: same random choices applied to both states
+//
+// SYSTEMATIC SWEEPS: Each "step" is a complete pass through ALL faces.
+// - One sweep = visit every face exactly once
+// - For each face, generate random target (horizontal/vertical)
+// - Apply same target to both MIN and MAX chains
+// - T counts number of sweeps, doubling each epoch
 
 std::unordered_set<long long> cftpMin, cftpMax;
-std::vector<uint64_t> cftpSeeds;
-int cftpEpochSize = 1;
+std::vector<uint64_t> cftpSweepSeeds;  // One seed per sweep
+int cftpEpochSize = 1;  // Number of sweeps in current epoch
 int cftpTotalEpochs = 0;
 bool cftpInitialized = false;
 
@@ -719,28 +725,37 @@ bool tilingsEqual(const std::unordered_set<long long>& a,
     return a == b;
 }
 
-// CFTP step: apply same random move to both min and max states
-void cftpStep(uint64_t seed) {
-    if (faces.empty()) return;
+// CFTP systematic sweep: visit ALL faces exactly once with same randomness for both chains
+// Returns number of face operations performed
+int cftpSweep(uint64_t sweepSeed) {
+    if (faces.empty()) return 0;
 
-    rng_state = seed;
-    int idx = getRandomInt(faces.size());
-    const Face& f = faces[idx];
+    rng_state = sweepSeed;
+    int ops = 0;
 
-    // Heat-bath: pick target state uniformly (1=horizontal, 2=vertical)
-    int target = (getRandomInt(2) == 0) ? 1 : 2;
+    // Visit every face in order
+    for (size_t i = 0; i < faces.size(); i++) {
+        const Face& f = faces[i];
 
-    // Apply to min state
-    int stMin = getFaceStateOn(cftpMin, f.x, f.y);
-    if (stMin != 0 && stMin != target) {
-        flipFaceOn(cftpMin, f.x, f.y, stMin);
+        // Heat-bath: pick target state uniformly (1=horizontal, 2=vertical)
+        int target = (getRandomInt(2) == 0) ? 1 : 2;
+
+        // Apply to min state
+        int stMin = getFaceStateOn(cftpMin, f.x, f.y);
+        if (stMin != 0 && stMin != target) {
+            flipFaceOn(cftpMin, f.x, f.y, stMin);
+        }
+
+        // Apply to max state (same face, same target)
+        int stMax = getFaceStateOn(cftpMax, f.x, f.y);
+        if (stMax != 0 && stMax != target) {
+            flipFaceOn(cftpMax, f.x, f.y, stMax);
+        }
+
+        ops++;
     }
 
-    // Apply to max state (same face, same target)
-    int stMax = getFaceStateOn(cftpMax, f.x, f.y);
-    if (stMax != 0 && stMax != target) {
-        flipFaceOn(cftpMax, f.x, f.y, stMax);
-    }
+    return ops;
 }
 
 // ============================================================================
@@ -881,82 +896,132 @@ long long getFlipCount() {
 }
 
 // CFTP state
-long long cftpStepsDone = 0;
-long long cftpTotalStepsThisRun = 0;
-size_t cftpCurrentSeedIdx = 0;
+long long cftpTotalSweeps = 0;      // Total sweeps performed across all epochs
+size_t cftpCurrentSweepIdx = 0;     // Current sweep index within the seed list
+int cftpCurrentT = 0;               // Current epoch size (number of sweeps)
+int cftpPrevT = 0;
 
 EMSCRIPTEN_KEEPALIVE
-void initCFTP() {
-    if (vertices.empty() || faces.empty()) return;
+char* initCFTP() {
+    if (vertices.empty() || faces.empty()) {
+        std::string json = "{\"status\":\"error\",\"reason\":\"empty\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
 
     // Compute extremal tilings (MIN and MAX height)
     makeExtremalTiling(cftpMin, -1);  // Minimize heights
     makeExtremalTiling(cftpMax, +1);  // Maximize heights
 
-    cftpSeeds.clear();
-    cftpEpochSize = std::max(1, (int)faces.size());  // Start with one sweep
+    cftpSweepSeeds.clear();
+    cftpEpochSize = 1;  // Start with T=1 sweep, doubles each epoch
     cftpTotalEpochs = 0;
-    cftpStepsDone = 0;
-    cftpTotalStepsThisRun = 0;
-    cftpCurrentSeedIdx = 0;
+    cftpTotalSweeps = 0;
+    cftpCurrentSweepIdx = 0;
+    cftpCurrentT = 1;
+    cftpPrevT = 0;
     cftpInitialized = true;
+
+    std::string json = "{\"status\":\"initialized\",\"T\":1,\"faces\":" +
+                      std::to_string(faces.size()) + "}";
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
 }
 
 EMSCRIPTEN_KEEPALIVE
-int stepCFTP() {
-    if (!cftpInitialized) return -1;
+char* stepCFTP() {
+    if (!cftpInitialized) {
+        std::string json = "{\"status\":\"error\",\"reason\":\"not_initialized\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
 
     // If we need more seeds (starting new epoch or first call)
-    if (cftpCurrentSeedIdx >= cftpSeeds.size()) {
-        // Generate new seeds for earlier time period
+    if (cftpCurrentSweepIdx >= cftpSweepSeeds.size()) {
+        // Generate new seeds for earlier time period (one seed per sweep)
         std::vector<uint64_t> newSeeds(cftpEpochSize);
         for (int i = 0; i < cftpEpochSize; i++) {
             newSeeds[i] = xorshift64();
         }
 
-        // Prepend new seeds (they represent earlier times)
-        cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
+        // Prepend new seeds (they represent earlier sweeps in time)
+        cftpSweepSeeds.insert(cftpSweepSeeds.begin(), newSeeds.begin(), newSeeds.end());
 
         // RESET to extremal states
         makeExtremalTiling(cftpMin, -1);
         makeExtremalTiling(cftpMax, +1);
 
-        cftpCurrentSeedIdx = 0;
+        cftpCurrentSweepIdx = 0;
         cftpTotalEpochs++;
-        cftpTotalStepsThisRun = cftpSeeds.size();
+        cftpCurrentT = cftpSweepSeeds.size();
 
         // Check if already coalesced (rare edge case)
         if (tilingsEqual(cftpMin, cftpMax)) {
-            return 0;  // Done
+            std::string json = "{\"status\":\"coalesced\",\"T\":" + std::to_string(cftpCurrentT) +
+                              ",\"sweep\":" + std::to_string(cftpCurrentSweepIdx) +
+                              ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
+            char* result = (char*)malloc(json.size() + 1);
+            strcpy(result, json.c_str());
+            return result;
         }
     }
 
-    // Process up to 1000 steps
-    size_t stepsThisBatch = 0;
-    while (cftpCurrentSeedIdx < cftpSeeds.size() && stepsThisBatch < 1000) {
-        cftpStep(cftpSeeds[cftpCurrentSeedIdx]);
-        cftpCurrentSeedIdx++;
-        cftpStepsDone++;
-        stepsThisBatch++;
+    // Process sweeps - each sweep visits ALL faces exactly once
+    // Run up to 1000 sweeps per batch, then check coalescence
+    const int COALESCENCE_CHECK_INTERVAL = 1000;
+    int sweepsThisBatch = 0;
+
+    while (cftpCurrentSweepIdx < cftpSweepSeeds.size() && sweepsThisBatch < COALESCENCE_CHECK_INTERVAL) {
+        cftpSweep(cftpSweepSeeds[cftpCurrentSweepIdx]);
+        cftpCurrentSweepIdx++;
+        cftpTotalSweeps++;
+        sweepsThisBatch++;
     }
 
-    // Check coalescence after each batch
+    // Check coalescence every 1000 sweeps
     if (tilingsEqual(cftpMin, cftpMax)) {
-        return 0;  // Coalesced!
+        std::string json = "{\"status\":\"coalesced\",\"T\":" + std::to_string(cftpCurrentT) +
+                          ",\"sweep\":" + std::to_string(cftpCurrentSweepIdx) +
+                          ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
     }
 
-    // If finished this epoch's seeds
-    if (cftpCurrentSeedIdx >= cftpSeeds.size()) {
+    // If finished this epoch's sweeps without coalescence
+    if (cftpCurrentSweepIdx >= cftpSweepSeeds.size()) {
+        // Safety limit
+        if (cftpTotalEpochs >= 30) {
+            std::string json = "{\"status\":\"timeout\",\"T\":" + std::to_string(cftpCurrentT) +
+                              ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
+            char* result = (char*)malloc(json.size() + 1);
+            strcpy(result, json.c_str());
+            return result;
+        }
+
         // Double epoch size for next iteration
+        cftpPrevT = cftpCurrentT;
         cftpEpochSize *= 2;
 
-        // Safety limit
-        if (cftpTotalEpochs >= 25) {
-            return 0;  // Give up after 2^25 steps
-        }
+        std::string json = "{\"status\":\"not_coalesced\",\"T\":" + std::to_string(cftpCurrentT) +
+                          ",\"prevT\":" + std::to_string(cftpPrevT) +
+                          ",\"nextT\":" + std::to_string(cftpEpochSize) +
+                          ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
     }
 
-    return 1;  // Continue
+    // Still in progress
+    std::string json = "{\"status\":\"in_progress\",\"T\":" + std::to_string(cftpCurrentT) +
+                      ",\"sweep\":" + std::to_string(cftpCurrentSweepIdx) +
+                      ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -973,17 +1038,61 @@ char* finalizeCFTP() {
     cftpInitialized = false;
 
     std::string json = "{\"status\":\"success\",\"epochs\":" + std::to_string(cftpTotalEpochs) +
-                      ",\"steps\":" + std::to_string(cftpStepsDone) +
+                      ",\"sweeps\":" + std::to_string(cftpTotalSweeps) +
                       "," + exportEdgesJson().substr(1);
     char* result = (char*)malloc(json.size() + 1);
     strcpy(result, json.c_str());
     return result;
 }
 
+// Export current CFTP min state (for visualization during CFTP)
 EMSCRIPTEN_KEEPALIVE
-long long getCFTPProgress() {
-    if (!cftpInitialized) return 0;
-    return cftpStepsDone;
+char* getCFTPMinState() {
+    std::string json = "{\"edges\":[";
+    bool first = true;
+    for (long long ek : cftpMin) {
+        int x = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int y = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        if (!first) json += ",";
+        first = false;
+        if (dir == 0) {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x + 1) + ",\"y2\":" + std::to_string(y) + "}";
+        } else {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x) + ",\"y2\":" + std::to_string(y + 1) + "}";
+        }
+    }
+    json += "]}";
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// Export current CFTP max state (for visualization during CFTP)
+EMSCRIPTEN_KEEPALIVE
+char* getCFTPMaxState() {
+    std::string json = "{\"edges\":[";
+    bool first = true;
+    for (long long ek : cftpMax) {
+        int x = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int y = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        if (!first) json += ",";
+        first = false;
+        if (dir == 0) {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x + 1) + ",\"y2\":" + std::to_string(y) + "}";
+        } else {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x) + ",\"y2\":" + std::to_string(y + 1) + "}";
+        }
+    }
+    json += "]}";
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -1087,10 +1196,181 @@ char* getHeights() {
     return result;
 }
 
+// Find maximum matching and return unmatched vertices
+std::vector<std::pair<int,int>> findUnmatchedVertices() {
+    std::vector<std::pair<int,int>> unmatched;
+
+    if (vertices.empty()) return unmatched;
+
+    // Separate by color
+    std::vector<std::pair<int,int>> blacks, whites;
+    std::unordered_map<long long, int> blackIdx, whiteIdx;
+
+    for (long long vk : vertices) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+        if ((x + y) % 2 == 0) {
+            blackIdx[vk] = blacks.size();
+            blacks.push_back({x, y});
+        } else {
+            whiteIdx[vk] = whites.size();
+            whites.push_back({x, y});
+        }
+    }
+
+    int numBlack = blacks.size();
+    int numWhite = whites.size();
+
+    if (numBlack == 0 || numWhite == 0) {
+        // All vertices are one color - return them all
+        for (auto& p : blacks) unmatched.push_back(p);
+        for (auto& p : whites) unmatched.push_back(p);
+        return unmatched;
+    }
+
+    // Run max flow to find maximum matching
+    int S = numBlack + numWhite;
+    int T = S + 1;
+    int numNodes = T + 1;
+
+    flowAdj.assign(numNodes, std::vector<FlowEdge>());
+    level.assign(numNodes, -1);
+    ptr.assign(numNodes, 0);
+
+    for (int i = 0; i < numBlack; i++) {
+        add_flow_edge(S, i, 1);
+    }
+    for (int j = 0; j < numWhite; j++) {
+        add_flow_edge(numBlack + j, T, 1);
+    }
+
+    int dx[] = {1, -1, 0, 0};
+    int dy[] = {0, 0, 1, -1};
+
+    for (int i = 0; i < numBlack; i++) {
+        int bx = blacks[i].first;
+        int by = blacks[i].second;
+        for (int d = 0; d < 4; d++) {
+            int wx = bx + dx[d];
+            int wy = by + dy[d];
+            auto it = whiteIdx.find(vkey(wx, wy));
+            if (it != whiteIdx.end()) {
+                add_flow_edge(i, numBlack + it->second, 1);
+            }
+        }
+    }
+
+    dinic(S, T);
+
+    // Find unmatched black vertices
+    for (int i = 0; i < numBlack; i++) {
+        bool matched = false;
+        for (const auto& e : flowAdj[i]) {
+            if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow > 0) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            unmatched.push_back(blacks[i]);
+        }
+    }
+
+    // Find unmatched white vertices
+    std::vector<bool> whiteMatched(numWhite, false);
+    for (int i = 0; i < numBlack; i++) {
+        for (const auto& e : flowAdj[i]) {
+            if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow > 0) {
+                whiteMatched[e.to - numBlack] = true;
+            }
+        }
+    }
+    for (int j = 0; j < numWhite; j++) {
+        if (!whiteMatched[j]) {
+            unmatched.push_back(whites[j]);
+        }
+    }
+
+    return unmatched;
+}
+
 EMSCRIPTEN_KEEPALIVE
 char* repairRegion() {
-    // For now, just return empty - proper repair would add vertices
-    std::string json = "{\"status\":\"no_repair\",\"addedCount\":0,\"vertices\":[]}";
+    if (vertices.empty()) {
+        std::string json = "{\"status\":\"empty\",\"addedCount\":0,\"vertices\":[]}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    std::vector<std::pair<int,int>> addedVertices;
+
+    // Count colors
+    int blackCount = 0, whiteCount = 0;
+    for (long long vk : vertices) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+        if ((x + y) % 2 == 0) blackCount++;
+        else whiteCount++;
+    }
+
+    // Find unmatched vertices and try to extend
+    int dx[] = {1, -1, 0, 0};
+    int dy[] = {0, 0, 1, -1};
+
+    int maxIterations = 1000;  // Safety limit
+    int iterations = 0;
+
+    while (iterations < maxIterations) {
+        iterations++;
+
+        auto unmatched = findUnmatchedVertices();
+        if (unmatched.empty()) break;  // Perfect matching exists!
+
+        // Try to add a neighbor for each unmatched vertex
+        bool addedAny = false;
+        for (auto& [ux, uy] : unmatched) {
+            // Try each direction
+            for (int d = 0; d < 4; d++) {
+                int nx = ux + dx[d];
+                int ny = uy + dy[d];
+                long long nk = vkey(nx, ny);
+
+                if (vertices.count(nk) == 0) {
+                    // Add this neighbor
+                    vertices.insert(nk);
+                    addedVertices.push_back({nx, ny});
+
+                    // Update bounds
+                    minX = std::min(minX, nx);
+                    maxX = std::max(maxX, nx);
+                    minY = std::min(minY, ny);
+                    maxY = std::max(maxY, ny);
+
+                    addedAny = true;
+                    break;  // Only add one neighbor per unmatched vertex per iteration
+                }
+            }
+            if (addedAny) break;  // Recompute unmatched after each addition
+        }
+
+        if (!addedAny) {
+            // Can't add any more neighbors - stuck
+            break;
+        }
+    }
+
+    // Build JSON response
+    std::string json = "{\"status\":\"repaired\",\"addedCount\":" + std::to_string(addedVertices.size()) +
+                      ",\"vertices\":[";
+    bool first = true;
+    for (auto& [x, y] : addedVertices) {
+        if (!first) json += ",";
+        first = false;
+        json += "{\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + "}";
+    }
+    json += "]}";
+
     char* result = (char*)malloc(json.size() + 1);
     strcpy(result, json.c_str());
     return result;

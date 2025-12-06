@@ -337,7 +337,7 @@ code:
     <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
     <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
-    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP Steps</span><span class="stat-value" id="cftpSteps">0</span></div>
+    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span></div>
   </div>
 </div>
 
@@ -358,6 +358,7 @@ code:
     <span style="color: #ccc;">|</span>
     <button id="lassoFillTool" class="tool-btn" title="Lasso fill">&#x2B55;+</button>
     <button id="lassoEraseTool" class="tool-btn" title="Lasso erase">&#x2B55;-</button>
+    <button id="lassoSnapBtn" class="tool-btn active" title="Snap lasso to grid">📐</button>
     <span style="color: #ccc;">|</span>
     <button id="clearBtn">Clear</button>
     <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
@@ -443,10 +444,13 @@ code:
     // Drawing state
     let currentTool = 'draw';
     let isDrawing = false;
+    let isShiftDraw = false;  // Track if shift was held when drawing started
     let isPanning = false;
     let lastPanX = 0, lastPanY = 0;
     let lassoPoints = [];
     let isLassoing = false;
+    let lassoShiftMode = false;  // Track if shift was held when lasso started
+    let lassoCursor = null;  // Current cursor position for lasso preview
 
     // Undo/Redo
     const undoStack = [];
@@ -515,6 +519,7 @@ code:
         eraseTool: document.getElementById('eraseTool'),
         lassoFillTool: document.getElementById('lassoFillTool'),
         lassoEraseTool: document.getElementById('lassoEraseTool'),
+        lassoSnapBtn: document.getElementById('lassoSnapBtn'),
         clearBtn: document.getElementById('clearBtn'),
         undoBtn: document.getElementById('undoBtn'),
         redoBtn: document.getElementById('redoBtn'),
@@ -551,10 +556,11 @@ code:
             this.getTotalStepsWasm = Module.cwrap('getTotalSteps', 'number', []);
             this.getFlipCountWasm = Module.cwrap('getFlipCount', 'number', []);
             this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
-            this.initCFTPWasm = Module.cwrap('initCFTP', null, []);
+            this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
             this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
-            this.getCFTPProgressWasm = Module.cwrap('getCFTPProgress', 'number', []);
+            this.getCFTPMinStateWasm = Module.cwrap('getCFTPMinState', 'number', []);
+            this.getCFTPMaxStateWasm = Module.cwrap('getCFTPMaxState', 'number', []);
             this.getMinTilingWasm = Module.cwrap('getMinTiling', 'number', []);
             this.getMaxTilingWasm = Module.cwrap('getMaxTiling', 'number', []);
             this.getHeightsWasm = Module.cwrap('getHeights', 'number', []);
@@ -605,15 +611,17 @@ code:
         }
 
         initCFTP() {
-            this.initCFTPWasm();
+            const resultPtr = this.initCFTPWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
         }
 
         stepCFTP() {
-            return this.stepCFTPWasm();
-        }
-
-        getCFTPProgress() {
-            return this.getCFTPProgressWasm();
+            const resultPtr = this.stepCFTPWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
         }
 
         finalizeCFTP() {
@@ -622,6 +630,28 @@ code:
             this.freeStringWasm(resultPtr);
             const result = JSON.parse(jsonStr);
             // Convert edges to dominoes with type for rendering
+            if (result.edges) {
+                result.dominoes = this.edgesToDominoes(result.edges);
+            }
+            return result;
+        }
+
+        getCFTPMinState() {
+            const resultPtr = this.getCFTPMinStateWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            const result = JSON.parse(jsonStr);
+            if (result.edges) {
+                result.dominoes = this.edgesToDominoes(result.edges);
+            }
+            return result;
+        }
+
+        getCFTPMaxState() {
+            const resultPtr = this.getCFTPMaxStateWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            const result = JSON.parse(jsonStr);
             if (result.edges) {
                 result.dominoes = this.edgesToDominoes(result.edges);
             }
@@ -987,7 +1017,8 @@ code:
 
         // Draw lasso
         if (lassoPoints.length > 0) {
-            ctx.strokeStyle = '#ff00ff';
+            const isFillMode = (currentTool === 'lassoFill') !== lassoShiftMode;
+            ctx.strokeStyle = isFillMode ? '#00cc00' : '#ff00ff';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
@@ -1002,8 +1033,35 @@ code:
                 ctx.lineTo(pos.x, pos.y);
             }
 
+            // Draw line to cursor if lassoing
+            if (lassoCursor && isLassoing) {
+                const cursorPos = cellToScreen(lassoCursor.x + 0.5, lassoCursor.y + 0.5);
+                ctx.lineTo(cursorPos.x, cursorPos.y);
+
+                // Draw dashed line back to start if we have enough points
+                if (lassoPoints.length >= 2) {
+                    ctx.setLineDash([2, 4]);
+                    ctx.lineTo(first.x, first.y);
+                }
+            }
+
             ctx.stroke();
             ctx.setLineDash([]);
+
+            // Draw start point marker
+            ctx.fillStyle = isFillMode ? '#00cc00' : '#ff00ff';
+            ctx.beginPath();
+            ctx.arc(first.x, first.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw waypoint markers
+            for (let i = 1; i < lassoPoints.length; i++) {
+                const cell = lassoPoints[i];
+                const pos = cellToScreen(cell.x + 0.5, cell.y + 0.5);
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
@@ -1065,20 +1123,71 @@ code:
         }
 
         if (currentTool === 'lassoFill' || currentTool === 'lassoErase') {
-            lassoPoints.push(cell);
-            draw();
+            const lassoSnap = el.lassoSnapBtn.classList.contains('active');
+
+            // Click-based lasso: click to add points, click near start to close
+            if (!isLassoing) {
+                // Start new lasso
+                isLassoing = true;
+                lassoShiftMode = e.shiftKey;
+                lassoPoints = [cell];
+                lassoCursor = null;
+                draw();
+            } else {
+                const lastPoint = lassoPoints[lassoPoints.length - 1];
+
+                // Apply direction snapping if enabled
+                let pointToAdd = cell;
+                if (lassoSnap && lassoPoints.length > 0) {
+                    pointToAdd = snapDirectionToGrid(lastPoint, cell);
+                }
+
+                // Cmd/Ctrl-click: add point and complete immediately
+                if (e.metaKey || e.ctrlKey) {
+                    if (pointToAdd.x !== lastPoint.x || pointToAdd.y !== lastPoint.y) {
+                        lassoPoints.push(pointToAdd);
+                    }
+                    if (lassoPoints.length >= 3) {
+                        completeLasso();
+                    } else {
+                        lassoPoints = [];
+                        isLassoing = false;
+                        lassoCursor = null;
+                        draw();
+                    }
+                    return;
+                }
+
+                // Check if clicking near start point to close
+                const startPoint = lassoPoints[0];
+                const distToStart = Math.hypot(pointToAdd.x - startPoint.x, pointToAdd.y - startPoint.y);
+                if (lassoPoints.length >= 3 && distToStart < 1.5) {
+                    // Close the lasso
+                    completeLasso();
+                } else {
+                    // Add waypoint (avoid duplicates)
+                    if (pointToAdd.x !== lastPoint.x || pointToAdd.y !== lastPoint.y) {
+                        lassoPoints.push(pointToAdd);
+                    }
+                    draw();
+                }
+            }
             return;
         }
 
         isDrawing = true;
+        isShiftDraw = e.shiftKey;  // Remember shift state at start of drag
         saveState();
 
-        if (currentTool === 'draw') {
+        // Shift+click = erase, regardless of current tool
+        const effectiveTool = isShiftDraw ? 'erase' : currentTool;
+
+        if (effectiveTool === 'draw') {
             const key = `${cell.x},${cell.y}`;
             if (!activeCells.has(key)) {
                 activeCells.set(key, cell);
             }
-        } else if (currentTool === 'erase') {
+        } else if (effectiveTool === 'erase') {
             activeCells.delete(`${cell.x},${cell.y}`);
         }
 
@@ -1097,17 +1206,35 @@ code:
             return;
         }
 
+        // Update lasso cursor preview
+        if (isLassoing) {
+            const cell = screenToCell(e.clientX, e.clientY);
+            const lassoSnap = el.lassoSnapBtn.classList.contains('active');
+
+            if (lassoSnap && lassoPoints.length > 0) {
+                const lastPoint = lassoPoints[lassoPoints.length - 1];
+                lassoCursor = snapDirectionToGrid(lastPoint, cell);
+            } else {
+                lassoCursor = cell;
+            }
+            draw();
+            return;
+        }
+
         if (!isDrawing) return;
 
         const cell = screenToCell(e.clientX, e.clientY);
 
-        if (currentTool === 'draw') {
+        // Use the shift state from when drawing started
+        const effectiveTool = isShiftDraw ? 'erase' : currentTool;
+
+        if (effectiveTool === 'draw') {
             const key = `${cell.x},${cell.y}`;
             if (!activeCells.has(key)) {
                 activeCells.set(key, cell);
                 updateRegion();
             }
-        } else if (currentTool === 'erase') {
+        } else if (effectiveTool === 'erase') {
             const key = `${cell.x},${cell.y}`;
             if (activeCells.has(key)) {
                 activeCells.delete(key);
@@ -1129,6 +1256,21 @@ code:
         draw();
     }
 
+    // Snap direction to horizontal or vertical
+    function snapDirectionToGrid(from, to) {
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+
+        // Find which axis-aligned direction is closest
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            // Horizontal
+            return { x: from.x + Math.round(dx), y: from.y };
+        } else {
+            // Vertical
+            return { x: from.x, y: from.y + Math.round(dy) };
+        }
+    }
+
     function pointInPolygon(x, y, polygon) {
         let inside = false;
         for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -1142,14 +1284,23 @@ code:
         return inside;
     }
 
-    function completeLasso(fill) {
+    function completeLasso() {
         if (lassoPoints.length < 3) {
             lassoPoints = [];
+            isLassoing = false;
             draw();
             return;
         }
 
         saveState();
+
+        // Determine fill mode: shift inverts the tool's default
+        let fill;
+        if (currentTool === 'lassoFill') {
+            fill = !lassoShiftMode;  // shift makes it erase
+        } else {
+            fill = lassoShiftMode;   // shift makes it fill
+        }
 
         // Find bounding box
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -1175,6 +1326,9 @@ code:
         }
 
         lassoPoints = [];
+        isLassoing = false;
+        lassoShiftMode = false;
+        lassoCursor = null;
         updateRegion();
     }
 
@@ -1219,36 +1373,96 @@ code:
     }
 
     function formatNumber(n) {
-        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-        return n.toString();
+        // Convert BigInt to Number if needed
+        const num = typeof n === 'bigint' ? Number(n) : n;
+        if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+        return num.toString();
     }
 
     async function runCFTP() {
         if (!isValid || isCFTPRunning) return;
 
         isCFTPRunning = true;
-        el.cftpBtn.style.display = 'none';
+        const originalText = el.cftpBtn.textContent;
+        el.cftpBtn.disabled = true;
+        el.cftpBtn.textContent = 'Init...';
         el.cftpStopBtn.style.display = '';
         el.cftpStatus.style.display = '';
         el.startStopBtn.disabled = true;
-        el.cftpSteps.textContent = '0';
+        el.cftpSteps.textContent = 'init';
 
-        sim.initCFTP();
+        const cftpStartTime = performance.now();
+        let lastDrawnBlock = -1;  // Track which block we last drew
+
+        const initResult = sim.initCFTP();
+        if (initResult.status === 'error') {
+            console.error('CFTP init error:', initResult.reason);
+            el.cftpSteps.textContent = 'error';
+            el.cftpBtn.textContent = originalText;
+            el.cftpBtn.disabled = false;
+            el.cftpStopBtn.style.display = 'none';
+            el.cftpStatus.style.display = 'none';
+            isCFTPRunning = false;
+            el.startStopBtn.disabled = !isValid;
+            return;
+        }
+
+        el.cftpSteps.textContent = 'T=' + initResult.T;
+        el.cftpBtn.textContent = 'T=' + initResult.T;
 
         while (isCFTPRunning) {
-            const done = sim.stepCFTP();
-            const steps = sim.getCFTPProgress();
-            el.cftpSteps.textContent = formatNumber(steps);
+            const res = sim.stepCFTP();
 
-            if (done === 0) {
-                // Coalesced! Get the perfect sample
+            if (res.status === 'in_progress') {
+                el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.sweep;
+                el.cftpBtn.textContent = res.T + ':' + res.sweep;
+
+                // Draw max state every 4096 sweeps only when T >= 4096
+                if (res.T >= 4096) {
+                    const currentBlock = Math.floor(res.sweep / 4096);
+                    if (currentBlock > lastDrawnBlock) {
+                        lastDrawnBlock = currentBlock;
+                        const maxData = sim.getCFTPMaxState();
+                        if (maxData.dominoes && maxData.dominoes.length > 0) {
+                            dominoes = maxData.dominoes;
+                            draw();
+                        }
+                    }
+                }
+            } else if (res.status === 'coalesced') {
+                // Success! Get the perfect sample
                 const finalResult = sim.finalizeCFTP();
-                dominoes = finalResult.dominoes || edgesToDominoes(finalResult.edges || []);
-                totalSteps = finalResult.totalSteps || 0;
-                flipCount = finalResult.flipCount || 0;
-                console.log('CFTP coalesced after', finalResult.steps, 'steps,', finalResult.epochs, 'epochs');
+                dominoes = finalResult.dominoes || [];
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                // Show total steps and time
+                const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
+                el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
+                console.log('CFTP coalesced: T=' + res.T + ', steps=' + totalStepsDisplay);
+                break;
+            } else if (res.status === 'not_coalesced') {
+                el.cftpSteps.textContent = 'T=' + res.nextT;
+                el.cftpBtn.textContent = 'T=' + res.nextT;
+                lastDrawnBlock = -1;  // Reset for new epoch
+
+                // Draw max state at end of 4k+ epochs
+                if (res.prevT >= 4096) {
+                    const maxData = sim.getCFTPMaxState();
+                    if (maxData.dominoes && maxData.dominoes.length > 0) {
+                        dominoes = maxData.dominoes;
+                        draw();
+                    }
+                }
+            } else if (res.status === 'timeout') {
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
+                console.log('CFTP timeout after', res.totalSweeps, 'sweeps');
+                break;
+            } else {
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                el.cftpSteps.textContent = 'error (' + elapsed + 's)';
+                console.error('CFTP error:', res);
                 break;
             }
 
@@ -1256,9 +1470,18 @@ code:
             await new Promise(resolve => setTimeout(resolve, 0));
         }
 
-        el.cftpStatus.style.display = 'none';
+        // Handle cancellation - but keep status visible with result
+        if (!isCFTPRunning && !el.cftpSteps.textContent.includes('(')) {
+            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+            el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
+        }
+
+        // Keep cftpStatus visible to show the result!
+        // el.cftpStatus.style.display = 'none';  // DON'T hide it
         isCFTPRunning = false;
         el.cftpBtn.style.display = '';
+        el.cftpBtn.textContent = originalText;
+        el.cftpBtn.disabled = false;
         el.cftpStopBtn.style.display = 'none';
         el.startStopBtn.disabled = !isValid;
 
@@ -1384,6 +1607,13 @@ code:
     }
 
     function setTool(tool) {
+        // Clear any in-progress lasso when switching tools
+        if (lassoPoints.length > 0 || isLassoing) {
+            lassoPoints = [];
+            isLassoing = false;
+            lassoCursor = null;
+        }
+
         currentTool = tool;
         el.handTool.classList.toggle('active', tool === 'hand');
         el.drawTool.classList.toggle('active', tool === 'draw');
@@ -1391,10 +1621,7 @@ code:
         el.lassoFillTool.classList.toggle('active', tool === 'lassoFill');
         el.lassoEraseTool.classList.toggle('active', tool === 'lassoErase');
 
-        if (tool !== 'lassoFill' && tool !== 'lassoErase') {
-            lassoPoints = [];
-            draw();
-        }
+        draw();
     }
 
     function setupEventListeners() {
@@ -1405,13 +1632,6 @@ code:
         canvas.addEventListener('mouseleave', handleMouseUp);
         canvas.addEventListener('wheel', handleWheel, { passive: false });
 
-        canvas.addEventListener('dblclick', (e) => {
-            if (currentTool === 'lassoFill') {
-                completeLasso(true);
-            } else if (currentTool === 'lassoErase') {
-                completeLasso(false);
-            }
-        });
 
         // Preset buttons
         el.rectangleBtn.addEventListener('click', () => {
@@ -1538,6 +1758,9 @@ code:
         el.eraseTool.addEventListener('click', () => setTool('erase'));
         el.lassoFillTool.addEventListener('click', () => setTool('lassoFill'));
         el.lassoEraseTool.addEventListener('click', () => setTool('lassoErase'));
+        el.lassoSnapBtn.addEventListener('click', () => {
+            el.lassoSnapBtn.classList.toggle('active');
+        });
 
         el.clearBtn.addEventListener('click', () => {
             saveState();
@@ -1613,6 +1836,17 @@ code:
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
+
+            // Escape to cancel lasso
+            if (e.key === 'Escape') {
+                if (lassoPoints.length > 0 || isLassoing) {
+                    lassoPoints = [];
+                    isLassoing = false;
+                    lassoCursor = null;
+                    draw();
+                }
+                return;
+            }
 
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                 e.preventDefault();
