@@ -1410,6 +1410,99 @@ code:
             }
         }
 
+        // Draw vertical cut lines through holes (for debugging monodromy)
+        if (showHoleLabels && sim && isValid) {
+            try {
+                const holesInfo = sim.getAllHolesInfo();
+                const wasmHoles = holesInfo.holes || [];
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ff00ff';
+
+                for (const hole of wasmHoles) {
+                    // Cut line is at x = round(centroidX), drawn from minY to maxY
+                    const cutX = Math.round(hole.centroidX);
+                    const holeY = hole.centroidY;
+
+                    // Find y range of region
+                    let regionMinY = Infinity, regionMaxY = -Infinity;
+                    for (const [key] of activeCells) {
+                        const [, y] = key.split(',').map(Number);
+                        regionMinY = Math.min(regionMinY, y);
+                        regionMaxY = Math.max(regionMaxY, y + 1);
+                    }
+
+                    // Draw vertical cut line
+                    const topScreen = cellToScreen(cutX, regionMinY);
+                    const botScreen = cellToScreen(cutX, regionMaxY);
+                    ctx.beginPath();
+                    ctx.moveTo(topScreen.x, topScreen.y);
+                    ctx.lineTo(botScreen.x, botScreen.y);
+                    ctx.stroke();
+
+                    // Draw horizontal line at hole centroid Y
+                    ctx.strokeStyle = '#00ffff';
+                    const leftScreen = cellToScreen(cutX - 3, holeY);
+                    const rightScreen = cellToScreen(cutX + 3, holeY);
+                    ctx.beginPath();
+                    ctx.moveTo(leftScreen.x, leftScreen.y);
+                    ctx.lineTo(rightScreen.x, rightScreen.y);
+                    ctx.stroke();
+
+                    // Label the cut
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.font = '12px monospace';
+                    ctx.fillText(`cutX=${cutX}`, topScreen.x + 5, topScreen.y + 15);
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillText(`holeY=${holeY.toFixed(1)}`, rightScreen.x + 5, rightScreen.y);
+
+                    // Mark horizontal edges crossing the cut line
+                    // Crossing edges are horizontal dominoes at x = cutX - 1 (spanning cutX-1 to cutX)
+                    const crossX = cutX - 1;
+                    for (const [key, cells] of edgeGroups) {
+                        // Check if this is a horizontal domino crossing the cut
+                        if (cells.length === 2) {
+                            const [c1, c2] = cells;
+                            // Horizontal domino: same y, consecutive x
+                            if (c1.y === c2.y && Math.abs(c1.x - c2.x) === 1) {
+                                const minX = Math.min(c1.x, c2.x);
+                                if (minX === crossX) {
+                                    // This domino crosses the cut!
+                                    const edgeY = c1.y;
+                                    const isAbove = (edgeY + 0.5) > holeY;
+
+                                    // Draw a marker at the crossing point
+                                    const crossPt = cellToScreen(cutX, edgeY + 0.5);
+                                    ctx.beginPath();
+                                    ctx.arc(crossPt.x, crossPt.y, 6, 0, 2 * Math.PI);
+                                    ctx.fillStyle = isAbove ? '#00ff00' : '#ff0000';  // green=above, red=below
+                                    ctx.fill();
+                                    ctx.strokeStyle = '#000';
+                                    ctx.lineWidth = 1;
+                                    ctx.stroke();
+
+                                    // Label with y coord
+                                    ctx.fillStyle = '#fff';
+                                    ctx.font = '10px monospace';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText(`${edgeY}`, crossPt.x, crossPt.y + 3);
+                                    ctx.textAlign = 'left';
+                                }
+                            }
+                        }
+                    }
+
+                    ctx.setLineDash([4, 4]);
+                    ctx.strokeStyle = '#ff00ff';
+                }
+
+                ctx.setLineDash([]);
+            } catch (e) {
+                console.error('Error drawing cut lines:', e);
+            }
+        }
+
         // Update hole overlays
         updateHoleOverlayPositions();
     }

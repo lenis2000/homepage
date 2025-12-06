@@ -870,6 +870,53 @@ int computeHoleWinding(int holeIdx) {
     return matchedAbove - matchedBelow;
 }
 
+// Compute winding for a hole on a SPECIFIC matching (not global), with logging
+int computeHoleWindingOnMatching(int holeIdx, const std::unordered_set<long long>& m, bool verbose = false) {
+    if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
+
+    int cutX;
+    auto edges = findCrossingEdges(holeIdx, cutX);
+    double holeY = detectedHoles[holeIdx].centroidY;
+
+    if (verbose) {
+        printf("[WINDING] Hole %d: cutX=%d, holeY=%.2f, crossingEdges=%zu\n",
+               holeIdx, cutX, holeY, edges.size());
+    }
+
+    int matchedAbove = 0, matchedBelow = 0;
+    int unmatchedAbove = 0, unmatchedBelow = 0;
+
+    for (auto& e : edges) {
+        bool isMatched = m.count(ekey(e.x, e.y, 0)) > 0;
+        bool isAbove = (e.y + 0.5 > holeY);
+
+        if (verbose) {
+            printf("[WINDING]   Edge at (%d,%d): %s, %s\n",
+                   e.x, e.y,
+                   isMatched ? "MATCHED" : "unmatched",
+                   isAbove ? "ABOVE" : "BELOW");
+        }
+
+        if (isMatched) {
+            if (isAbove) matchedAbove++;
+            else matchedBelow++;
+        } else {
+            if (isAbove) unmatchedAbove++;
+            else unmatchedBelow++;
+        }
+    }
+
+    int winding = matchedAbove - matchedBelow;
+    if (verbose) {
+        printf("[WINDING] Result: matchedAbove=%d, matchedBelow=%d, winding=%d\n",
+               matchedAbove, matchedBelow, winding);
+        printf("[WINDING]         unmatchedAbove=%d, unmatchedBelow=%d\n",
+               unmatchedAbove, unmatchedBelow);
+    }
+
+    return winding;
+}
+
 // Rebuild matching on one partition (left or right of cut)
 // forcedEdgeKeys: edges that MUST be in the matching (crossing edges)
 // Returns true if successful
@@ -1743,8 +1790,19 @@ char* initCFTP() {
             int monoMax = computeMonodromy(cftpMax, detectedHoles[i]);
             printf("[CPU initCFTP] Hole %zu: MIN monodromy=%d, MAX monodromy=%d\n",
                    i, monoMin, monoMax);
+
+            // Also compute winding using vertical cut method with verbose logging
+            printf("[CPU initCFTP] === MIN tiling winding (vertical cut) ===\n");
+            int windingMin = computeHoleWindingOnMatching(i, cftpMin, true);
+            printf("[CPU initCFTP] === MAX tiling winding (vertical cut) ===\n");
+            int windingMax = computeHoleWindingOnMatching(i, cftpMax, true);
+
             if (monoMin != monoMax) {
                 printf("[CPU initCFTP] ERROR: Monodromy mismatch! CFTP will not converge.\n");
+            }
+            if (windingMin != windingMax) {
+                printf("[CPU initCFTP] ERROR: Winding mismatch! MIN winding=%d, MAX winding=%d\n",
+                       windingMin, windingMax);
             }
         }
     }
