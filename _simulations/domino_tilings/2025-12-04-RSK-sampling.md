@@ -119,6 +119,27 @@ code:
   </div>
 </div>
 
+<!-- View Mode Controls -->
+<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #e8f4e8; border: 1px solid #c8e6c9; border-radius: 5px; font-size: 0.9em;">
+  <span style="font-weight: bold;">View:</span>
+  <span>
+    <input type="radio" id="view-dominoes" name="view-mode" value="dominoes" checked>
+    <label for="view-dominoes">Dominoes</label>
+  </span>
+  <span>
+    <input type="radio" id="view-dimer" name="view-mode" value="dimer">
+    <label for="view-dimer">Dimer</label>
+  </span>
+  <span style="border-left: 1px solid #999; padding-left: 10px;">
+    <button id="sample-double-dimer-btn" style="font-size: 0.9em;">Sample Double Dimer</button>
+    <label style="margin-left: 6px; font-size: 0.85em;">Loops≥</label>
+    <input type="number" id="min-loop-size" value="2" min="1" max="100" style="width: 40px;">
+  </span>
+  <span style="border-left: 1px solid #999; padding-left: 10px;">
+    <button id="sample-fluctuations-btn" style="font-size: 0.9em;">Sample Fluctuations</button>
+  </span>
+</div>
+
 <!-- Visual Controls -->
 <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
   <span>
@@ -225,6 +246,19 @@ async function initializeApp() {
   if (currentPaletteIndex === -1) currentPaletteIndex = 0;
   let useCustomColors = false;
   let customColors = ['#228B22', '#DC143C', '#0057B7', '#FFCD00'];
+
+  // View mode state
+  let currentViewMode = 'dominoes';  // 'dominoes' | 'dimer' | 'double-dimer' | 'fluctuations'
+
+  // Two-sample state for double dimer and fluctuations
+  let secondPartitions = null;
+  let cachedDominoes2 = null;
+  let cachedLatticePoints2 = null;
+
+  // Height function and fluctuation caches
+  let cachedActiveCells = null;   // Map of active cells from lattice points
+  let cachedActiveCells2 = null;  // Map of active cells from second sample
+  let rawFluctuations = null;     // Map of vertex fluctuation values (h1 - h2) / sqrt(2)
 
   function getCurrentColors() {
     if (useCustomColors) {
@@ -832,6 +866,7 @@ async function initializeApp() {
     // Cache for redraw on style changes
     cachedDominoes = dominoes;
     cachedLatticePoints = latticePoints;
+    cachedActiveCells = buildActiveCells(latticePoints);
 
     const showParticles = document.getElementById("show-particles-cb").checked;
     const borderWidth = parseFloat(document.getElementById("border-slider").value);
@@ -849,6 +884,709 @@ async function initializeApp() {
       svg.style("display", "block").style("pointer-events", "auto");
       renderSVG(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation);
     }
+  }
+
+  // ========== Dimer Rendering (2-color scheme) ==========
+
+  function getDimerColor(type) {
+    return type === 'particle' ? '#000000' : '#888888';
+  }
+
+  function getDimerEndpoints(d) {
+    const x1 = d.cx - (d.isHorizontal ? d.width / 4 : 0);
+    const y1 = d.cy - (d.isHorizontal ? 0 : d.height / 4);
+    const x2 = d.cx + (d.isHorizontal ? d.width / 4 : 0);
+    const y2 = d.cy + (d.isHorizontal ? 0 : d.height / 4);
+    return { x1, y1, x2, y2 };
+  }
+
+  function renderDimerCanvas(dominoes, bounds, rotation) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+    const baseScale = Math.min(rect.width / widthPts, rect.height / heightPts) * 0.9;
+    const baseX = (rect.width - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
+    const baseY = (rect.height - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    ctx.save();
+    ctx.translate(canvasTransform.x + baseX * canvasTransform.scale, canvasTransform.y + baseY * canvasTransform.scale);
+    ctx.scale(baseScale * canvasTransform.scale, baseScale * canvasTransform.scale);
+
+    if (rotation !== 0) {
+      ctx.rotate(rotation * Math.PI / 180);
+    }
+
+    // Draw dimer edges and endpoints
+    for (const d of dominoes) {
+      const color = getDimerColor(d.type);
+      const { x1, y1, x2, y2 } = getDimerEndpoints(d);
+
+      // Draw line
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // Draw endpoints
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x1, y1, 3.5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x2, y2, 3.5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function renderDimerSVG(dominoes, bounds, rotation) {
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+    const scaleView = Math.min(svgWidth / widthPts, svgHeight / heightPts) * 0.9;
+    const translateX = (svgWidth - widthPts * scaleView) / 2 - (minX - 20) * scaleView;
+    const translateY = (svgHeight - heightPts * scaleView) / 2 - (minY - 20) * scaleView;
+
+    initialTransform = { translateX, translateY, scale: scaleView, rotation };
+    svg.call(zoom.transform, d3.zoomIdentity);
+    svg.selectAll("g").remove();
+
+    const group = svg.append("g")
+      .attr("class", "particles")
+      .attr("transform", `translate(${translateX},${translateY}) scale(${scaleView}) rotate(${rotation})`);
+
+    // Draw dimer lines
+    group.selectAll("line.dimer")
+      .data(dominoes)
+      .enter()
+      .append("line")
+      .attr("class", "dimer")
+      .attr("x1", d => getDimerEndpoints(d).x1)
+      .attr("y1", d => getDimerEndpoints(d).y1)
+      .attr("x2", d => getDimerEndpoints(d).x2)
+      .attr("y2", d => getDimerEndpoints(d).y2)
+      .attr("stroke", d => getDimerColor(d.type))
+      .attr("stroke-width", 3);
+
+    // Draw endpoints
+    const endpoints = dominoes.flatMap(d => {
+      const { x1, y1, x2, y2 } = getDimerEndpoints(d);
+      return [
+        { x: x1, y: y1, type: d.type },
+        { x: x2, y: y2, type: d.type }
+      ];
+    });
+
+    group.selectAll("circle.dimer-endpoint")
+      .data(endpoints)
+      .enter()
+      .append("circle")
+      .attr("class", "dimer-endpoint")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", 3.5)
+      .attr("fill", d => getDimerColor(d.type));
+  }
+
+  // ========== Double Dimer Rendering ==========
+
+  function createEdgeKey(d) {
+    const { x1, y1, x2, y2 } = getDimerEndpoints(d);
+    // Round and normalize to avoid floating point issues
+    const rx1 = Math.round(x1 * 1000) / 1000;
+    const ry1 = Math.round(y1 * 1000) / 1000;
+    const rx2 = Math.round(x2 * 1000) / 1000;
+    const ry2 = Math.round(y2 * 1000) / 1000;
+
+    return `${Math.min(rx1, rx2)},${Math.min(ry1, ry2)}-${Math.max(rx1, rx2)},${Math.max(ry1, ry2)}`;
+  }
+
+  function buildEdgeMap(dominoes1, dominoes2) {
+    const edgeMap = new Map();
+
+    dominoes1.forEach(d => {
+      const key = createEdgeKey(d);
+      edgeMap.set(key, { config1: true, config2: false, domino: d });
+    });
+
+    dominoes2.forEach(d => {
+      const key = createEdgeKey(d);
+      if (edgeMap.has(key)) {
+        edgeMap.get(key).config2 = true;
+      } else {
+        edgeMap.set(key, { config1: false, config2: true, domino: d });
+      }
+    });
+
+    return edgeMap;
+  }
+
+  function getDoubleDimerColor(edgeInfo) {
+    if (edgeInfo.config1 && edgeInfo.config2) return '#800080';  // Purple
+    if (edgeInfo.config1) return '#000000';  // Black
+    return '#cc0000';  // Red
+  }
+
+  // ========== Loop/Cycle Filtering for Double Dimer ==========
+
+  function filterEdgesByLoopSize(edgeMap, minLoopSize) {
+    // Non-double edges form alternating loops/paths through the graph
+    // Build vertex adjacency from non-double edges
+    const vertexAdj = new Map();  // vertex key -> array of {edgeKey, neighbor}
+
+    const addToAdj = (v1, v2, edgeKey) => {
+      if (!vertexAdj.has(v1)) vertexAdj.set(v1, []);
+      if (!vertexAdj.has(v2)) vertexAdj.set(v2, []);
+      vertexAdj.get(v1).push({ edgeKey, neighbor: v2 });
+      vertexAdj.get(v2).push({ edgeKey, neighbor: v1 });
+    };
+
+    // Get non-double edges
+    const nonDoubleEdges = [];
+    edgeMap.forEach((edgeInfo, edgeKey) => {
+      if (!(edgeInfo.config1 && edgeInfo.config2)) {
+        // This is a non-double edge
+        const { x1, y1, x2, y2 } = getDimerEndpoints(edgeInfo.domino);
+        const v1 = `${Math.round(x1 * 1000) / 1000},${Math.round(y1 * 1000) / 1000}`;
+        const v2 = `${Math.round(x2 * 1000) / 1000},${Math.round(y2 * 1000) / 1000}`;
+        addToAdj(v1, v2, edgeKey);
+        nonDoubleEdges.push(edgeKey);
+      }
+    });
+
+    // Find connected components using DFS
+    const visited = new Set();
+    const components = [];  // each component is array of edge keys
+
+    for (const startVertex of vertexAdj.keys()) {
+      if (visited.has(startVertex)) continue;
+
+      const component = [];
+      const stack = [startVertex];
+
+      while (stack.length > 0) {
+        const v = stack.pop();
+        if (visited.has(v)) continue;
+        visited.add(v);
+
+        const neighbors = vertexAdj.get(v) || [];
+        for (const { edgeKey, neighbor } of neighbors) {
+          if (!component.includes(edgeKey)) {
+            component.push(edgeKey);
+          }
+          if (!visited.has(neighbor)) {
+            stack.push(neighbor);
+          }
+        }
+      }
+
+      if (component.length > 0) {
+        components.push(component);
+      }
+    }
+
+    // Filter components by size
+    const keptEdges = new Set();
+    for (const component of components) {
+      // Loop size is the number of edges in the component
+      if (component.length >= minLoopSize) {
+        component.forEach(e => keptEdges.add(e));
+      }
+    }
+
+    // Build filtered edge map
+    const filteredEdgeMap = new Map();
+    edgeMap.forEach((edgeInfo, edgeKey) => {
+      const isDoubleEdge = edgeInfo.config1 && edgeInfo.config2;
+      // Include double edges only if minLoopSize <= 2 (k=2 means show double)
+      // Include non-double edges only if they belong to a loop of size >= k
+      if (isDoubleEdge) {
+        if (minLoopSize <= 2) {
+          filteredEdgeMap.set(edgeKey, edgeInfo);
+        }
+      } else {
+        if (keptEdges.has(edgeKey)) {
+          filteredEdgeMap.set(edgeKey, edgeInfo);
+        }
+      }
+    });
+
+    return filteredEdgeMap;
+  }
+
+  function renderDoubleDimerCanvas(edgeMap, bounds, rotation) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+    const baseScale = Math.min(rect.width / widthPts, rect.height / heightPts) * 0.9;
+    const baseX = (rect.width - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
+    const baseY = (rect.height - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    ctx.save();
+    ctx.translate(canvasTransform.x + baseX * canvasTransform.scale, canvasTransform.y + baseY * canvasTransform.scale);
+    ctx.scale(baseScale * canvasTransform.scale, baseScale * canvasTransform.scale);
+
+    if (rotation !== 0) {
+      ctx.rotate(rotation * Math.PI / 180);
+    }
+
+    // Edge filtering is done before calling this function
+    edgeMap.forEach((edgeInfo) => {
+      const d = edgeInfo.domino;
+      const { x1, y1, x2, y2 } = getDimerEndpoints(d);
+      const color = getDoubleDimerColor(edgeInfo);
+
+      // Draw line
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // Draw endpoints
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x1, y1, 3.5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x2, y2, 3.5, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  }
+
+  function renderDoubleDimerSVG(edgeMap, bounds, rotation) {
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+    const scaleView = Math.min(svgWidth / widthPts, svgHeight / heightPts) * 0.9;
+    const translateX = (svgWidth - widthPts * scaleView) / 2 - (minX - 20) * scaleView;
+    const translateY = (svgHeight - heightPts * scaleView) / 2 - (minY - 20) * scaleView;
+
+    initialTransform = { translateX, translateY, scale: scaleView, rotation };
+    svg.call(zoom.transform, d3.zoomIdentity);
+    svg.selectAll("g").remove();
+
+    const group = svg.append("g")
+      .attr("class", "particles")
+      .attr("transform", `translate(${translateX},${translateY}) scale(${scaleView}) rotate(${rotation})`);
+
+    // Edge filtering is done before calling this function
+    const edgesData = [];
+    edgeMap.forEach((edgeInfo) => {
+      edgesData.push(edgeInfo);
+    });
+
+    // Draw lines
+    group.selectAll("line.double-dimer")
+      .data(edgesData)
+      .enter()
+      .append("line")
+      .attr("class", "double-dimer")
+      .attr("x1", d => getDimerEndpoints(d.domino).x1)
+      .attr("y1", d => getDimerEndpoints(d.domino).y1)
+      .attr("x2", d => getDimerEndpoints(d.domino).x2)
+      .attr("y2", d => getDimerEndpoints(d.domino).y2)
+      .attr("stroke", d => getDoubleDimerColor(d))
+      .attr("stroke-width", 3);
+
+    // Draw endpoints
+    const endpoints = edgesData.flatMap(edgeInfo => {
+      const { x1, y1, x2, y2 } = getDimerEndpoints(edgeInfo.domino);
+      const color = getDoubleDimerColor(edgeInfo);
+      return [
+        { x: x1, y: y1, color },
+        { x: x2, y: y2, color }
+      ];
+    });
+
+    group.selectAll("circle.double-dimer-endpoint")
+      .data(endpoints)
+      .enter()
+      .append("circle")
+      .attr("class", "double-dimer-endpoint")
+      .attr("cx", d => d.x)
+      .attr("cy", d => d.y)
+      .attr("r", 3.5)
+      .attr("fill", d => d.color);
+  }
+
+  // ========== Height Function Computation ==========
+  // Based on pattern from ultimate-domino.md - computes heights at integer VERTICES
+
+  // Build active cells from lattice points (cells at half-integer grid)
+  function buildActiveCells(latticePoints) {
+    const scale = 20;  // pixel scale
+    const activeCells = new Map();
+    for (const p of latticePoints) {
+      // Each lattice point (at pixel position) defines a cell center
+      // Convert to integer cell coordinates
+      const cellX = Math.round(p.x / scale);
+      const cellY = Math.round(p.y / scale);
+      activeCells.set(`${cellX},${cellY}`, { x: cellX, y: cellY });
+    }
+    return activeCells;
+  }
+
+  // Convert dominoes to edges format: array of {x1, y1, x2, y2}
+  function dominoesToEdges(dominoes) {
+    const scale = 20;
+    const edges = [];
+    for (const d of dominoes) {
+      // Each domino covers two unit cells
+      // Extract the two cell centers it connects
+      if (d.isHorizontal) {
+        // Horizontal domino: cells at (cx - scale/2, cy) and (cx + scale/2, cy)
+        const x1 = Math.round((d.cx - scale / 2) / scale);
+        const y1 = Math.round(d.cy / scale);
+        const x2 = Math.round((d.cx + scale / 2) / scale);
+        const y2 = y1;
+        edges.push({ x1, y1, x2, y2 });
+      } else {
+        // Vertical domino: cells at (cx, cy - scale/2) and (cx, cy + scale/2)
+        const x1 = Math.round(d.cx / scale);
+        const y1 = Math.round((d.cy - scale / 2) / scale);
+        const x2 = x1;
+        const y2 = Math.round((d.cy + scale / 2) / scale);
+        edges.push({ x1, y1, x2, y2 });
+      }
+    }
+    return edges;
+  }
+
+  function computeHeightFunction(dominoes, activeCells) {
+    // Height function computed at integer vertices (corners of cells)
+    // Algorithm from ultimate-domino.md: BFS with height changes based on edge crossings
+    const edges = dominoesToEdges(dominoes);
+    if (edges.length === 0) return new Map();
+
+    const heights = new Map();
+    const edgeSet = new Set();
+    for (const e of edges) {
+      const x = Math.min(e.x1, e.x2), y = Math.min(e.y1, e.y2);
+      edgeSet.add(`${x},${y},${e.x1 === e.x2 ? 1 : 0}`);
+    }
+
+    // Start from bottom-left corner vertex of first cell
+    let startX, startY;
+    for (const [key] of activeCells) {
+      const [x, y] = key.split(',').map(Number);
+      if (startX === undefined || y < startY || (y === startY && x < startX)) {
+        startX = x; startY = y;
+      }
+    }
+    if (startX === undefined) return new Map();
+
+    heights.set(`${startX},${startY}`, 0);
+    const queue = [[startX, startY]];
+    const visited = new Set([`${startX},${startY}`]);
+
+    while (queue.length > 0) {
+      const [cx, cy] = queue.shift();
+      const h = heights.get(`${cx},${cy}`);
+
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy, nkey = `${nx},${ny}`;
+        if (visited.has(nkey)) continue;
+
+        // Check if neighbor is adjacent to any active cell
+        let adj = false;
+        for (let ax = nx - 1; ax <= nx; ax++) {
+          for (let ay = ny - 1; ay <= ny; ay++) {
+            if (activeCells.has(`${ax},${ay}`)) adj = true;
+          }
+        }
+        if (!adj) continue;
+
+        // Compute height change based on edge crossing
+        let dh = 0;
+        if (dx === 1) {
+          dh = edgeSet.has(`${cx},${cy - 1},1`) ? ((cx + cy - 1) % 2 === 0 ? -1 : 1) : ((cx + cy - 1) % 2 === 0 ? 1 : -1);
+        } else if (dx === -1) {
+          dh = edgeSet.has(`${cx - 1},${cy - 1},1`) ? ((cx - 1 + cy - 1) % 2 === 0 ? 1 : -1) : ((cx - 1 + cy - 1) % 2 === 0 ? -1 : 1);
+        } else if (dy === 1) {
+          dh = edgeSet.has(`${cx - 1},${cy},0`) ? ((cx - 1 + cy) % 2 === 0 ? -1 : 1) : ((cx - 1 + cy) % 2 === 0 ? 1 : -1);
+        } else {
+          dh = edgeSet.has(`${cx - 1},${cy - 1},0`) ? ((cx - 1 + cy - 1) % 2 === 0 ? 1 : -1) : ((cx - 1 + cy - 1) % 2 === 0 ? -1 : 1);
+        }
+
+        heights.set(nkey, h + dh);
+        visited.add(nkey);
+        queue.push([nx, ny]);
+      }
+    }
+
+    return heights;
+  }
+
+  // ========== Fluctuation Rendering (Filled Heatmap) ==========
+
+  function computeFluctuationDiffs(heights1, heights2) {
+    // Compute raw fluctuation differences at vertices (not scaled yet)
+    const diffs = new Map();
+    for (const [key, h1] of heights1) {
+      const h2 = heights2.get(key) || 0;
+      diffs.set(key, (h1 - h2) / Math.sqrt(2));
+    }
+    return diffs;
+  }
+
+  function getFluctuationColor(avg, range) {
+    // Color based on fluctuation value and auto-scaled range
+    // Red for positive, blue for negative, gray for zero
+    let r, g, b;
+    if (avg >= 0) {
+      const t = Math.min(1, avg / range);
+      r = 255;
+      g = b = Math.round(255 * (1 - t));
+    } else {
+      const t = Math.min(1, -avg / range);
+      r = g = Math.round(255 * (1 - t));
+      b = 255;
+    }
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function renderFluctuationsCanvas(activeCells, rawFluctuations, bounds, rotation) {
+    // Pattern from ultimate-domino.md: fill each cell by averaging corner fluctuations
+    if (!rawFluctuations || rawFluctuations.size === 0) return;
+
+    // Auto-scale based on data range
+    let minF = Infinity, maxF = -Infinity;
+    for (const [, v] of rawFluctuations) {
+      minF = Math.min(minF, v);
+      maxF = Math.max(maxF, v);
+    }
+    const range = Math.max(Math.abs(minF), Math.abs(maxF)) || 1;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+    const baseScale = Math.min(rect.width / widthPts, rect.height / heightPts) * 0.9;
+    const baseX = (rect.width - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
+    const baseY = (rect.height - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    ctx.save();
+    ctx.translate(canvasTransform.x + baseX * canvasTransform.scale, canvasTransform.y + baseY * canvasTransform.scale);
+    ctx.scale(baseScale * canvasTransform.scale, baseScale * canvasTransform.scale);
+
+    if (rotation !== 0) {
+      ctx.rotate(rotation * Math.PI / 180);
+    }
+
+    const cellSize = 20;  // pixel size per cell
+
+    // Fill each cell with averaged corner fluctuations
+    for (const [key, cell] of activeCells) {
+      let sum = 0, cnt = 0;
+      // Average corner vertices (cell corners are at integer coords)
+      for (let dx = 0; dx <= 1; dx++) {
+        for (let dy = 0; dy <= 1; dy++) {
+          const fk = `${cell.x + dx},${cell.y + dy}`;
+          if (rawFluctuations.has(fk)) {
+            sum += rawFluctuations.get(fk);
+            cnt++;
+          }
+        }
+      }
+      const avg = cnt > 0 ? sum / cnt : 0;
+      const color = getFluctuationColor(avg, range);
+
+      // Cell pixel position: cell coords * cellSize
+      const px = cell.x * cellSize;
+      const py = cell.y * cellSize;
+      ctx.fillStyle = color;
+      ctx.fillRect(px, py, cellSize, cellSize);
+    }
+
+    // Draw boundary
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    for (const [key, cell] of activeCells) {
+      const px = cell.x * cellSize, py = cell.y * cellSize;
+      if (!activeCells.has(`${cell.x - 1},${cell.y}`)) {
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + cellSize); ctx.stroke();
+      }
+      if (!activeCells.has(`${cell.x + 1},${cell.y}`)) {
+        ctx.beginPath(); ctx.moveTo(px + cellSize, py); ctx.lineTo(px + cellSize, py + cellSize); ctx.stroke();
+      }
+      if (!activeCells.has(`${cell.x},${cell.y - 1}`)) {
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py); ctx.stroke();
+      }
+      if (!activeCells.has(`${cell.x},${cell.y + 1}`)) {
+        ctx.beginPath(); ctx.moveTo(px, py + cellSize); ctx.lineTo(px + cellSize, py + cellSize); ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function renderFluctuationsSVG(activeCells, rawFluctuations, bounds, rotation) {
+    if (!rawFluctuations || rawFluctuations.size === 0) return;
+
+    // Auto-scale based on data range
+    let minF = Infinity, maxF = -Infinity;
+    for (const [, v] of rawFluctuations) {
+      minF = Math.min(minF, v);
+      maxF = Math.max(maxF, v);
+    }
+    const range = Math.max(Math.abs(minF), Math.abs(maxF)) || 1;
+
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+
+    const bbox = svg.node().getBoundingClientRect();
+    const svgWidth = bbox.width;
+    const svgHeight = bbox.height;
+    svg.attr("viewBox", "0 0 " + svgWidth + " " + svgHeight);
+
+    const scaleView = Math.min(svgWidth / widthPts, svgHeight / heightPts) * 0.9;
+    const translateX = (svgWidth - widthPts * scaleView) / 2 - (minX - 20) * scaleView;
+    const translateY = (svgHeight - heightPts * scaleView) / 2 - (minY - 20) * scaleView;
+
+    initialTransform = { translateX, translateY, scale: scaleView, rotation };
+    svg.call(zoom.transform, d3.zoomIdentity);
+    svg.selectAll("g").remove();
+
+    const group = svg.append("g")
+      .attr("class", "particles")
+      .attr("transform", `translate(${translateX},${translateY}) scale(${scaleView}) rotate(${rotation})`);
+
+    const cellSize = 20;
+
+    // Prepare cell data with averaged fluctuations
+    const cellsData = [];
+    for (const [key, cell] of activeCells) {
+      let sum = 0, cnt = 0;
+      for (let dx = 0; dx <= 1; dx++) {
+        for (let dy = 0; dy <= 1; dy++) {
+          const fk = `${cell.x + dx},${cell.y + dy}`;
+          if (rawFluctuations.has(fk)) {
+            sum += rawFluctuations.get(fk);
+            cnt++;
+          }
+        }
+      }
+      const avg = cnt > 0 ? sum / cnt : 0;
+      cellsData.push({ cell, avg });
+    }
+
+    group.selectAll("rect.fluct-cell")
+      .data(cellsData)
+      .enter()
+      .append("rect")
+      .attr("class", "fluct-cell")
+      .attr("x", d => d.cell.x * cellSize)
+      .attr("y", d => d.cell.y * cellSize)
+      .attr("width", cellSize)
+      .attr("height", cellSize)
+      .attr("fill", d => getFluctuationColor(d.avg, range))
+      .attr("stroke", "none");
+
+    // Draw boundary
+    const boundaryLines = [];
+    for (const [key, cell] of activeCells) {
+      const px = cell.x * cellSize, py = cell.y * cellSize;
+      if (!activeCells.has(`${cell.x - 1},${cell.y}`)) {
+        boundaryLines.push({ x1: px, y1: py, x2: px, y2: py + cellSize });
+      }
+      if (!activeCells.has(`${cell.x + 1},${cell.y}`)) {
+        boundaryLines.push({ x1: px + cellSize, y1: py, x2: px + cellSize, y2: py + cellSize });
+      }
+      if (!activeCells.has(`${cell.x},${cell.y - 1}`)) {
+        boundaryLines.push({ x1: px, y1: py, x2: px + cellSize, y2: py });
+      }
+      if (!activeCells.has(`${cell.x},${cell.y + 1}`)) {
+        boundaryLines.push({ x1: px, y1: py + cellSize, x2: px + cellSize, y2: py + cellSize });
+      }
+    }
+    group.selectAll("line.boundary")
+      .data(boundaryLines)
+      .enter()
+      .append("line")
+      .attr("class", "boundary")
+      .attr("x1", d => d.x1)
+      .attr("y1", d => d.y1)
+      .attr("x2", d => d.x2)
+      .attr("y2", d => d.y2)
+      .attr("stroke", "#333")
+      .attr("stroke-width", 2);
+  }
+
+  // ========== Helper to compute second sample data ==========
+
+  function computeSecondSampleData() {
+    if (!secondPartitions) return;
+
+    const { latticePoints: lp2, geomDiagonals: gd2 } = generateLatticePoints();
+    const diagKeys = Object.keys(gd2).map(Number).sort((a, b) => a - b);
+
+    // Convert partitions to subsets
+    const subsetsByDiag = {};
+    for (let idx = 0; idx < secondPartitions.length && idx < diagKeys.length; idx++) {
+      const diagKey = diagKeys[idx];
+      const diagSize = gd2[diagKey].length;
+      const partition = secondPartitions[idx] || [];
+      const numParticles = getParticleCount(idx);
+      const subset = partitionToSubset(partition, numParticles, diagSize);
+      subsetsByDiag[diagKey] = new Set(subset);
+    }
+
+    lp2.forEach(p => {
+      const subset = subsetsByDiag[p.diag];
+      p.inSubset = subset ? subset.has(p.posInDiag) : false;
+    });
+
+    cachedDominoes2 = computeDominoes(lp2);
+    cachedLatticePoints2 = lp2;
   }
 
   // Fast redraw for style changes only (no recomputation)
@@ -871,14 +1609,64 @@ async function initializeApp() {
 
     const useCanvas = document.getElementById("renderer-canvas").checked;
 
-    if (useCanvas) {
-      canvas.style.display = "block";
-      svg.style("display", "none");
-      renderCanvas(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
-    } else {
-      canvas.style.display = "none";
-      svg.style("display", "block").style("pointer-events", "auto");
-      renderSVG(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
+    // Toggle visibility of canvas vs SVG
+    canvas.style.display = useCanvas ? "block" : "none";
+    svg.style("display", useCanvas ? "none" : "block");
+    if (!useCanvas) svg.style("pointer-events", "auto");
+
+    switch (currentViewMode) {
+      case 'dominoes':
+        if (useCanvas) {
+          renderCanvas(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
+        } else {
+          renderSVG(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
+        }
+        break;
+
+      case 'dimer':
+        if (useCanvas) {
+          renderDimerCanvas(cachedDominoes, bounds, rotation);
+        } else {
+          renderDimerSVG(cachedDominoes, bounds, rotation);
+        }
+        break;
+
+      case 'double-dimer':
+        if (!cachedDominoes2) {
+          // Fallback to dimer view if no second sample
+          if (useCanvas) {
+            renderDimerCanvas(cachedDominoes, bounds, rotation);
+          } else {
+            renderDimerSVG(cachedDominoes, bounds, rotation);
+          }
+          break;
+        }
+        const minLoopSize = parseInt(document.getElementById("min-loop-size").value) || 2;
+        const fullEdgeMap = buildEdgeMap(cachedDominoes, cachedDominoes2);
+        const filteredEdgeMap = filterEdgesByLoopSize(fullEdgeMap, minLoopSize);
+        if (useCanvas) {
+          renderDoubleDimerCanvas(filteredEdgeMap, bounds, rotation);
+        } else {
+          renderDoubleDimerSVG(filteredEdgeMap, bounds, rotation);
+        }
+        break;
+
+      case 'fluctuations':
+        if (!rawFluctuations || !cachedActiveCells) {
+          // Fallback to dominoes view if fluctuations not computed
+          if (useCanvas) {
+            renderCanvas(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
+          } else {
+            renderSVG(cachedDominoes, cachedLatticePoints, bounds, showParticles, borderWidth, rotation);
+          }
+          break;
+        }
+        if (useCanvas) {
+          renderFluctuationsCanvas(cachedActiveCells, rawFluctuations, bounds, rotation);
+        } else {
+          renderFluctuationsSVG(cachedActiveCells, rawFluctuations, bounds, rotation);
+        }
+        break;
     }
   }
 
@@ -961,12 +1749,44 @@ async function initializeApp() {
     }
     currentN = newN;
     updateParamsForN(currentN);
+
+    // Clear second sample caches
+    secondPartitions = null;
+    cachedDominoes2 = null;
+    cachedLatticePoints2 = null;
+    cachedActiveCells = null;
+    cachedActiveCells2 = null;
+    rawFluctuations = null;
+
     const x = parseCSV(document.getElementById("x-params").value);
     const y = parseCSV(document.getElementById("y-params").value);
     const q = parseFloat(document.getElementById("q-input").value);
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     renderParticles();
     displaySubsets();
+
+    // Build active cells for first sample
+    cachedActiveCells = buildActiveCells(cachedLatticePoints);
+
+    // If in double-dimer or fluctuations mode, also sample a second tiling
+    if (currentViewMode === 'double-dimer' || currentViewMode === 'fluctuations') {
+      progressElem.innerText = "Sampling 2nd...";
+      secondPartitions = await aztecDiamondSample(currentN, x, y, q);
+      progressElem.innerText = "";
+      computeSecondSampleData();
+
+      // Build active cells for second sample
+      cachedActiveCells2 = buildActiveCells(cachedLatticePoints2);
+
+      if (currentViewMode === 'fluctuations') {
+        // Compute height functions and fluctuation differences
+        const h1 = computeHeightFunction(cachedDominoes, cachedActiveCells);
+        const h2 = computeHeightFunction(cachedDominoes2, cachedActiveCells2);
+        rawFluctuations = computeFluctuationDiffs(h1, h2);
+      }
+
+      redrawOnly();
+    }
   });
 
   // Uniform button handler - set all parameters to 1
@@ -988,12 +1808,43 @@ async function initializeApp() {
 
   // q-input change handler - resample when q changes
   document.getElementById("q-input").addEventListener("change", async function() {
+    // Clear second sample caches
+    secondPartitions = null;
+    cachedDominoes2 = null;
+    cachedLatticePoints2 = null;
+    cachedActiveCells = null;
+    cachedActiveCells2 = null;
+    rawFluctuations = null;
+
     const x = parseCSV(document.getElementById("x-params").value);
     const y = parseCSV(document.getElementById("y-params").value);
     const q = parseFloat(document.getElementById("q-input").value);
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     renderParticles();
     displaySubsets();
+
+    // Build active cells for first sample
+    cachedActiveCells = buildActiveCells(cachedLatticePoints);
+
+    // If in double-dimer or fluctuations mode, also sample a second tiling
+    if (currentViewMode === 'double-dimer' || currentViewMode === 'fluctuations') {
+      progressElem.innerText = "Sampling 2nd...";
+      secondPartitions = await aztecDiamondSample(currentN, x, y, q);
+      progressElem.innerText = "";
+      computeSecondSampleData();
+
+      // Build active cells for second sample
+      cachedActiveCells2 = buildActiveCells(cachedLatticePoints2);
+
+      if (currentViewMode === 'fluctuations') {
+        // Compute height functions and fluctuation differences
+        const h1 = computeHeightFunction(cachedDominoes, cachedActiveCells);
+        const h2 = computeHeightFunction(cachedDominoes2, cachedActiveCells2);
+        rawFluctuations = computeFluctuationDiffs(h1, h2);
+      }
+
+      redrawOnly();
+    }
   });
 
   // Rotate canvas checkbox handler - fast redraw
@@ -1016,6 +1867,82 @@ async function initializeApp() {
   });
   document.getElementById("renderer-svg").addEventListener("change", function() {
     if (this.checked) {
+      redrawOnly();
+    }
+  });
+
+  // ========== View Mode Event Handlers ==========
+
+  // View mode change handler (for dominoes/dimer radio buttons only)
+  document.querySelectorAll('input[name="view-mode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      currentViewMode = this.value;
+      redrawOnly();
+    });
+  });
+
+  // Sample Double Dimer button
+  document.getElementById("sample-double-dimer-btn").addEventListener("click", async function() {
+    progressElem.innerText = "Sampling pair...";
+
+    // Sample two fresh tilings
+    const x = parseCSV(document.getElementById("x-params").value);
+    const y = parseCSV(document.getElementById("y-params").value);
+    const q = parseFloat(document.getElementById("q-input").value);
+
+    currentPartitions = await aztecDiamondSample(currentN, x, y, q);
+    renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+
+    progressElem.innerText = "Sampling 2nd...";
+    secondPartitions = await aztecDiamondSample(currentN, x, y, q);
+    computeSecondSampleData();
+
+    // Build active cells
+    cachedActiveCells = buildActiveCells(cachedLatticePoints);
+    cachedActiveCells2 = buildActiveCells(cachedLatticePoints2);
+
+    progressElem.innerText = "";
+    currentViewMode = 'double-dimer';
+    document.getElementById("view-dominoes").checked = false;
+    document.getElementById("view-dimer").checked = false;
+    redrawOnly();
+  });
+
+  // Sample Fluctuations button
+  document.getElementById("sample-fluctuations-btn").addEventListener("click", async function() {
+    progressElem.innerText = "Sampling pair...";
+
+    // Sample two fresh tilings
+    const x = parseCSV(document.getElementById("x-params").value);
+    const y = parseCSV(document.getElementById("y-params").value);
+    const q = parseFloat(document.getElementById("q-input").value);
+
+    currentPartitions = await aztecDiamondSample(currentN, x, y, q);
+    renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+
+    progressElem.innerText = "Sampling 2nd...";
+    secondPartitions = await aztecDiamondSample(currentN, x, y, q);
+    computeSecondSampleData();
+
+    // Build active cells
+    cachedActiveCells = buildActiveCells(cachedLatticePoints);
+    cachedActiveCells2 = buildActiveCells(cachedLatticePoints2);
+
+    // Compute height functions and fluctuation differences
+    const h1 = computeHeightFunction(cachedDominoes, cachedActiveCells);
+    const h2 = computeHeightFunction(cachedDominoes2, cachedActiveCells2);
+    rawFluctuations = computeFluctuationDiffs(h1, h2);
+
+    progressElem.innerText = "";
+    currentViewMode = 'fluctuations';
+    document.getElementById("view-dominoes").checked = false;
+    document.getElementById("view-dimer").checked = false;
+    redrawOnly();
+  });
+
+  // Min loop size change handler
+  document.getElementById("min-loop-size").addEventListener("input", function() {
+    if (currentViewMode === 'double-dimer') {
       redrawOnly();
     }
   });

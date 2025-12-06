@@ -3807,19 +3807,21 @@ function initLozengeApp() {
         const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
 
         // Diverging colormap: blue (negative) -> white (zero) -> red (positive)
+        // Use gamma < 1 to boost visibility of small values (make colors more saturated)
+        const gamma = 0.5; // sqrt mapping - small values become more visible
         function valueToColor(val) {
             if (absMax === 0) return 'rgb(255, 255, 255)';
             const t = val / absMax; // -1 to 1
             if (t < 0) {
                 // Blue to white
-                const s = -t; // 0 to 1
+                const s = Math.pow(-t, gamma); // gamma correction for visibility
                 const r = Math.round(255 * (1 - s));
                 const g = Math.round(255 * (1 - s));
                 const b = 255;
                 return `rgb(${r}, ${g}, ${b})`;
             } else {
                 // White to red
-                const s = t; // 0 to 1
+                const s = Math.pow(t, gamma); // gamma correction for visibility
                 const r = 255;
                 const g = Math.round(255 * (1 - s));
                 const b = Math.round(255 * (1 - s));
@@ -3862,6 +3864,61 @@ function initLozengeApp() {
 
             ctx.fillStyle = valueToColor(avgVal);
             ctx.fill();
+        }
+
+        // Fill holes with their constrained height-based colors
+        // Holes are boundaries[1], boundaries[2], ... (index 0 is the outer boundary)
+        if (sim.boundaries && sim.boundaries.length > 1) {
+            const holesInfo = sim.getAllHolesInfo();
+            const wasmHoles = holesInfo.holes || [];
+
+            // Find outer boundary index (largest absolute area)
+            let outerIdx = 0;
+            let maxArea = 0;
+            for (let i = 0; i < sim.boundaries.length; i++) {
+                const b = sim.boundaries[i];
+                let area = 0;
+                for (let k = 0; k < b.length; k++) {
+                    const next = (k + 1) % b.length;
+                    area += b[k].x * b[next].y - b[next].x * b[k].y;
+                }
+                if (Math.abs(area) > maxArea) {
+                    maxArea = Math.abs(area);
+                    outerIdx = i;
+                }
+            }
+
+            // Fill each hole with color based on its height constraint
+            let holeIdx = 0;
+            for (let i = 0; i < sim.boundaries.length; i++) {
+                if (i === outerIdx) continue; // Skip outer boundary
+                const boundary = sim.boundaries[i];
+                if (boundary.length < 3) continue;
+
+                // Get hole's relative height (currentWinding - baseHeight)
+                // For fluctuations field, since both samples respect the same constraints,
+                // the fluctuation value at the hole should be 0
+                let holeFluctValue = 0;
+                if (wasmHoles[holeIdx]) {
+                    // The fluctuation (h1-h2)/sqrt2 at hole should be 0 if constraints match
+                    // But we can show the relative height scaled by the UI scale factor
+                    const relativeHeight = wasmHoles[holeIdx].currentWinding - wasmHoles[holeIdx].baseHeight;
+                    holeFluctValue = relativeHeight * scale; // Use same scale as display
+                }
+
+                ctx.beginPath();
+                const [sx, sy] = renderer.toCanvas(boundary[0].x, boundary[0].y, centerX, centerY, viewScale);
+                ctx.moveTo(sx, sy);
+                for (let j = 1; j < boundary.length; j++) {
+                    const [px, py] = renderer.toCanvas(boundary[j].x, boundary[j].y, centerX, centerY, viewScale);
+                    ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fillStyle = valueToColor(holeFluctValue);
+                ctx.fill();
+
+                holeIdx++;
+            }
         }
 
         // Draw boundary (polygon outline) if enabled
@@ -6354,7 +6411,7 @@ function initLozengeApp() {
         }
     });
 
-    // Toggle outline for fluctuations (both 2D and 3D)
+    // Toggle outline for fluctuations and double dimer views
     el.fluctOutlineCheck.addEventListener('change', () => {
         if (inFluctuationMode && rawFluctuations) {
             if (is3DView) {
@@ -6362,6 +6419,9 @@ function initLozengeApp() {
             } else {
                 renderFluctuations2D();
             }
+        }
+        if (inDoubleDimerMode && storedSamples) {
+            renderDoubleDimers();
         }
     });
 
@@ -6409,9 +6469,9 @@ function initLozengeApp() {
             renderer.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
         }
 
-        // Draw triangle outlines only for small polygons (when shading would be shown)
+        // Draw triangle outlines only for small polygons (when shading would be shown) and outline is enabled
         const isSmallPolygon = !sim.blackTriangles || sim.blackTriangles.length <= 1000;
-        if (isSmallPolygon) {
+        if (isSmallPolygon && el.fluctOutlineCheck.checked) {
             renderer.drawActiveTriangles(ctx, activeTriangles, centerX, centerY, scale, true, true);
         }
 
@@ -6420,15 +6480,16 @@ function initLozengeApp() {
             renderer.drawHoleFills(ctx, sim.boundaries, centerX, centerY, scale);
         }
 
-        // Draw all boundaries (outer + holes + disconnected)
-        if (sim.boundaries && sim.boundaries.length > 0) {
+        // Draw ONLY the double dimer configuration - two samples superimposed
+        renderer.drawDoubleDimerView(ctx, sim, filtered.dimers0, filtered.dimers1, centerX, centerY, scale);
+
+        // Draw all boundaries (outer + holes + disconnected) if outline checkbox is checked
+        // Draw AFTER dimers so boundary is visible on top
+        if (el.fluctOutlineCheck.checked && sim.boundaries && sim.boundaries.length > 0) {
             for (const boundary of sim.boundaries) {
                 renderer.drawBoundary(ctx, boundary, centerX, centerY, scale, isDarkMode);
             }
         }
-
-        // Draw ONLY the double dimer configuration - two samples superimposed
-        renderer.drawDoubleDimerView(ctx, sim, filtered.dimers0, filtered.dimers1, centerX, centerY, scale);
     }
 
     // Double Dimer perfect sampling
