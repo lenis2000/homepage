@@ -524,6 +524,17 @@ code:
     let isRunning = false;
     let stepsPerSecond = 100;
 
+    // Touch state for mobile/tablet
+    let touchState = {
+        lastTouches: [],
+        initialPinchDist: 0,
+        initialZoom: 1,
+        isPinching: false,
+        isTouchPanning: false,
+        touchStartX: 0,
+        touchStartY: 0
+    };
+
     // CFTP
     let isCFTPRunning = false;
     let cftpEpochs = 0;
@@ -2113,6 +2124,186 @@ code:
         redrawView();
     }
 
+    // ========================================================================
+    // Touch Event Handlers (iOS/mobile support)
+    // ========================================================================
+
+    function getTouchDistance(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function getTouchCenter(t1, t2) {
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
+    }
+
+    function handleTouchStart(e) {
+        const touches = e.touches;
+
+        if (touches.length === 1) {
+            // Single finger - draw/pan depending on tool
+            const touch = touches[0];
+            touchState.touchStartX = touch.clientX;
+            touchState.touchStartY = touch.clientY;
+
+            if (currentTool === 'hand') {
+                // Pan mode
+                touchState.isTouchPanning = true;
+                touchState.lastTouches = [{ x: touch.clientX, y: touch.clientY }];
+                canvas.classList.add('panning');
+            } else if (currentTool === 'draw' || currentTool === 'erase') {
+                // Drawing mode - treat like mouse down
+                isDrawing = true;
+                isShiftDraw = false;
+                saveState();
+                const cell = screenToCell(touch.clientX, touch.clientY);
+                const key = `${cell.x},${cell.y}`;
+
+                if (currentTool === 'draw') {
+                    if (!activeCells.has(key)) {
+                        activeCells.set(key, cell);
+                    }
+                } else {
+                    activeCells.delete(key);
+                }
+                updateRegion();
+            } else if (currentTool === 'lassoFill' || currentTool === 'lassoErase') {
+                // Lasso mode
+                const cell = screenToCell(touch.clientX, touch.clientY);
+                if (!isLassoing) {
+                    isLassoing = true;
+                    lassoShiftMode = false;
+                    lassoPoints = [cell];
+                    lassoCursor = null;
+                    draw();
+                } else {
+                    // Add point or close lasso
+                    const startPoint = lassoPoints[0];
+                    const distToStart = Math.hypot(cell.x - startPoint.x, cell.y - startPoint.y);
+                    if (lassoPoints.length >= 3 && distToStart < 1.5) {
+                        completeLasso();
+                    } else {
+                        const lastPoint = lassoPoints[lassoPoints.length - 1];
+                        if (cell.x !== lastPoint.x || cell.y !== lastPoint.y) {
+                            lassoPoints.push(cell);
+                        }
+                        draw();
+                    }
+                }
+            }
+        } else if (touches.length === 2) {
+            // Two fingers - pinch to zoom or two-finger pan
+            e.preventDefault();
+            touchState.isPinching = true;
+            touchState.isTouchPanning = false;
+            isDrawing = false;  // Cancel any drawing
+
+            touchState.initialPinchDist = getTouchDistance(touches[0], touches[1]);
+            touchState.initialZoom = zoom;
+            touchState.lastTouches = [
+                { x: touches[0].clientX, y: touches[0].clientY },
+                { x: touches[1].clientX, y: touches[1].clientY }
+            ];
+            canvas.classList.add('panning');
+        }
+    }
+
+    function handleTouchMove(e) {
+        const touches = e.touches;
+
+        if (touchState.isPinching && touches.length === 2) {
+            e.preventDefault();
+
+            // Pinch zoom
+            const currentDist = getTouchDistance(touches[0], touches[1]);
+            const scale = currentDist / touchState.initialPinchDist;
+            zoom = Math.max(0.1, Math.min(10, touchState.initialZoom * scale));
+
+            // Two-finger pan
+            const currentCenter = getTouchCenter(touches[0], touches[1]);
+            const lastCenter = getTouchCenter(
+                { clientX: touchState.lastTouches[0].x, clientY: touchState.lastTouches[0].y },
+                { clientX: touchState.lastTouches[1].x, clientY: touchState.lastTouches[1].y }
+            );
+
+            panX += (currentCenter.x - lastCenter.x) / zoom;
+            panY += (currentCenter.y - lastCenter.y) / zoom;
+
+            touchState.lastTouches = [
+                { x: touches[0].clientX, y: touches[0].clientY },
+                { x: touches[1].clientX, y: touches[1].clientY }
+            ];
+
+            redrawView();
+        } else if (touches.length === 1) {
+            const touch = touches[0];
+
+            if (touchState.isTouchPanning) {
+                // Single finger pan (hand tool)
+                e.preventDefault();
+                const dx = touch.clientX - touchState.lastTouches[0].x;
+                const dy = touch.clientY - touchState.lastTouches[0].y;
+                panX += dx / zoom;
+                panY += dy / zoom;
+                touchState.lastTouches = [{ x: touch.clientX, y: touch.clientY }];
+                redrawView();
+            } else if (isDrawing) {
+                // Drawing/erasing
+                e.preventDefault();
+                const cell = screenToCell(touch.clientX, touch.clientY);
+                const key = `${cell.x},${cell.y}`;
+
+                if (currentTool === 'draw') {
+                    if (!activeCells.has(key)) {
+                        activeCells.set(key, cell);
+                        updateRegion();
+                    }
+                } else if (currentTool === 'erase') {
+                    if (activeCells.has(key)) {
+                        activeCells.delete(key);
+                        updateRegion();
+                    }
+                }
+            } else if (isLassoing) {
+                // Update lasso cursor preview
+                const cell = screenToCell(touch.clientX, touch.clientY);
+                lassoCursor = cell;
+                draw();
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        const touches = e.touches;
+
+        if (touches.length === 0) {
+            // All fingers lifted
+            touchState.isPinching = false;
+            touchState.isTouchPanning = false;
+            isDrawing = false;
+            canvas.classList.remove('panning');
+        } else if (touches.length === 1 && touchState.isPinching) {
+            // One finger lifted during pinch - transition to single finger mode
+            touchState.isPinching = false;
+            const touch = touches[0];
+            touchState.lastTouches = [{ x: touch.clientX, y: touch.clientY }];
+
+            // Start panning with remaining finger
+            touchState.isTouchPanning = true;
+        }
+    }
+
+    function handleTouchCancel(e) {
+        touchState.isPinching = false;
+        touchState.isTouchPanning = false;
+        isDrawing = false;
+        canvas.classList.remove('panning');
+    }
+
     // Snap to nearest integer lattice point along an integer slope direction
     function snapDirectionToGrid(from, to) {
         const dx = to.x - from.x;
@@ -2935,6 +3126,11 @@ code:
         canvas.addEventListener('mouseleave', handleMouseUp);
         canvas.addEventListener('wheel', handleWheel, { passive: false });
 
+        // Touch events for iOS/mobile
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', handleTouchCancel, { passive: false });
 
         // Preset buttons
         el.rectangleBtn.addEventListener('click', () => {

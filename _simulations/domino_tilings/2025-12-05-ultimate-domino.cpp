@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-05-ultimate-domino.cpp -o 2025-12-05-ultimate-domino.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberStepsBinary','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_initFluctuationsCFTP','_stepFluctuationsCFTP','_exportFluctuationSample','_loadDimersForLoops','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberStepsBinary','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_initFluctuationsCFTP','_stepFluctuationsCFTP','_exportFluctuationSample','_loadDimersForLoops','_filterLoopsBySize','_getAllHolesInfo','_adjustHoleWindingExport','_initHoleWindingsExport','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','HEAP32']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -573,7 +573,16 @@ void flipFaceOn(std::unordered_set<long long>& m, int fx, int fy, int state) {
 
 struct Hole {
     std::vector<std::pair<int,int>> boundaryCycle;  // Vertices forming cycle around hole
-    int monodromy;  // Height change when traversing cycle (multiple of 4)
+    std::vector<std::pair<int,int>> holeCells;      // Cells inside the hole
+    double centroidX, centroidY;                     // For UI positioning
+    int currentWinding;                              // Current monodromy value
+    int baseHeight;                                  // Initial winding (for relative display)
+};
+
+// Structure for edges crossing a vertical cut
+struct DominoCutEdge {
+    int x, y;      // Edge position (lower-left vertex)
+    int dir;       // 0 = horizontal
 };
 
 std::vector<Hole> detectedHoles;
@@ -728,7 +737,18 @@ void detectHoles() {
                     if (!found) break;  // Disconnected boundary (shouldn't happen)
                 }
 
-                hole.monodromy = 0;  // Will be set during CFTP
+                // Store hole cells and compute centroid
+                hole.holeCells = holeCells;
+                double sumX = 0, sumY = 0;
+                for (auto& [hx, hy] : holeCells) {
+                    sumX += hx + 0.5;  // Center of cell
+                    sumY += hy + 0.5;
+                }
+                hole.centroidX = sumX / holeCells.size();
+                hole.centroidY = sumY / holeCells.size();
+                hole.currentWinding = 0;
+                hole.baseHeight = 0;
+
                 detectedHoles.push_back(hole);
             }
         }
@@ -792,6 +812,311 @@ int computeMonodromy(const std::unordered_set<long long>& m, const Hole& hole) {
     }
 
     return totalChange;
+}
+
+// ============================================================================
+// Hole Winding Adjustment via Vertical Cut
+// ============================================================================
+
+// Find horizontal edges crossing vertical line at x = cutX
+// These are edges (x, y, dir=0) connecting (x,y) to (x+1,y) where x < cutX <= x+1
+// i.e., edges where x = cutX - 1
+std::vector<DominoCutEdge> findCrossingEdges(int holeIdx, int& cutX) {
+    std::vector<DominoCutEdge> result;
+    if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return result;
+
+    const Hole& hole = detectedHoles[holeIdx];
+    cutX = (int)std::round(hole.centroidX);
+
+    // Find all horizontal edges at x = cutX - 1 that connect region vertices
+    // Scan the y range of the region
+    for (int y = minY; y <= maxY; y++) {
+        int edgeX = cutX - 1;
+        // Check if both endpoints (edgeX, y) and (edgeX+1, y) are in region
+        if (hasVertex(edgeX, y) && hasVertex(edgeX + 1, y)) {
+            result.push_back({edgeX, y, 0});
+        }
+    }
+
+    return result;
+}
+
+// Compute winding for a hole based on current matching
+// Winding = (matched edges above hole centroid) - (matched edges below)
+int computeHoleWinding(int holeIdx) {
+    if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
+
+    int cutX;
+    auto edges = findCrossingEdges(holeIdx, cutX);
+    double holeY = detectedHoles[holeIdx].centroidY;
+
+    int matchedAbove = 0, matchedBelow = 0;
+    for (auto& e : edges) {
+        bool isMatched = matching.count(ekey(e.x, e.y, 0)) > 0;
+        if (isMatched) {
+            // Edge center is at (e.x + 0.5, e.y + 0.5)
+            if (e.y + 0.5 > holeY) matchedAbove++;
+            else matchedBelow++;
+        }
+    }
+    return matchedAbove - matchedBelow;
+}
+
+// Rebuild matching on one partition (left or right of cut)
+// forcedEdgeKeys: edges that MUST be in the matching (crossing edges)
+// Returns true if successful
+bool rebuildPartition(int cutX, bool isLeftSide,
+                      const std::unordered_set<long long>& forcedEdgeKeys) {
+    // Collect vertices in this partition
+    std::vector<std::pair<int,int>> blacks, whites;
+    std::unordered_map<long long, int> blackIdx, whiteIdx;
+
+    for (long long vk : vertices) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+
+        // Left partition: x < cutX, Right partition: x >= cutX
+        bool inPartition = isLeftSide ? (x < cutX) : (x >= cutX);
+        if (!inPartition) continue;
+
+        if ((x + y) % 2 == 0) {
+            blackIdx[vk] = blacks.size();
+            blacks.push_back({x, y});
+        } else {
+            whiteIdx[vk] = whites.size();
+            whites.push_back({x, y});
+        }
+    }
+
+    if (blacks.empty() && whites.empty()) return true;
+
+    // Find which vertices are already matched by forced edges
+    std::set<int> excludedBlacks, excludedWhites;
+    for (long long ek : forcedEdgeKeys) {
+        int ex = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int ey = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+
+        // Endpoints of this edge
+        int x1 = ex, y1 = ey;
+        int x2 = (dir == 0) ? ex + 1 : ex;
+        int y2 = (dir == 0) ? ey : ey + 1;
+
+        // Check if endpoints are in this partition
+        auto bit1 = blackIdx.find(vkey(x1, y1));
+        auto wit1 = whiteIdx.find(vkey(x1, y1));
+        auto bit2 = blackIdx.find(vkey(x2, y2));
+        auto wit2 = whiteIdx.find(vkey(x2, y2));
+
+        if (bit1 != blackIdx.end()) excludedBlacks.insert(bit1->second);
+        if (wit1 != whiteIdx.end()) excludedWhites.insert(wit1->second);
+        if (bit2 != blackIdx.end()) excludedBlacks.insert(bit2->second);
+        if (wit2 != whiteIdx.end()) excludedWhites.insert(wit2->second);
+    }
+
+    int numBlack = blacks.size();
+    int numWhite = whites.size();
+    int freeBlacks = numBlack - excludedBlacks.size();
+    int freeWhites = numWhite - excludedWhites.size();
+
+    if (freeBlacks != freeWhites) return false;  // Parity mismatch
+    if (freeBlacks == 0) return true;  // Nothing to match
+
+    // Build flow graph for remaining vertices
+    int S = numBlack + numWhite;
+    int T = S + 1;
+    int numNodes = T + 1;
+
+    flowAdj.assign(numNodes, std::vector<FlowEdge>());
+    level.assign(numNodes, -1);
+    ptr.assign(numNodes, 0);
+
+    // Source -> free blacks
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedBlacks.count(i) == 0) {
+            add_flow_edge(S, i, 1);
+        }
+    }
+
+    // Free whites -> sink
+    for (int j = 0; j < numWhite; j++) {
+        if (excludedWhites.count(j) == 0) {
+            add_flow_edge(numBlack + j, T, 1);
+        }
+    }
+
+    // Black -> adjacent White edges (only within partition)
+    int dxArr[] = {1, -1, 0, 0};
+    int dyArr[] = {0, 0, 1, -1};
+
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedBlacks.count(i)) continue;
+
+        int bx = blacks[i].first;
+        int by = blacks[i].second;
+
+        for (int d = 0; d < 4; d++) {
+            int wx = bx + dxArr[d];
+            int wy = by + dyArr[d];
+
+            auto it = whiteIdx.find(vkey(wx, wy));
+            if (it != whiteIdx.end() && excludedWhites.count(it->second) == 0) {
+                add_flow_edge(i, numBlack + it->second, 1);
+            }
+        }
+    }
+
+    // Run Dinic's
+    int matchSize = dinic(S, T);
+    if (matchSize != freeBlacks) return false;  // No perfect matching
+
+    // Extract edges and add to global matching
+    for (int i = 0; i < numBlack; i++) {
+        if (excludedBlacks.count(i)) continue;
+
+        int bx = blacks[i].first;
+        int by = blacks[i].second;
+
+        for (const auto& edge : flowAdj[i]) {
+            if (edge.to >= numBlack && edge.to < numBlack + numWhite && edge.flow > 0) {
+                int j = edge.to - numBlack;
+                int wx = whites[j].first;
+                int wy = whites[j].second;
+
+                // Determine edge type
+                if (wx == bx + 1 && wy == by) {
+                    matching.insert(ekey(bx, by, 0));
+                } else if (wx == bx - 1 && wy == by) {
+                    matching.insert(ekey(wx, wy, 0));
+                } else if (wy == by + 1 && wx == bx) {
+                    matching.insert(ekey(bx, by, 1));
+                } else if (wy == by - 1 && wx == bx) {
+                    matching.insert(ekey(wx, wy, 1));
+                }
+                break;
+            }
+        }
+    }
+
+    return true;
+}
+
+// Adjust winding for a hole by swapping crossing edges
+// Returns number of successful swaps (0 if failed)
+int adjustHoleWinding(int holeIdx, int delta) {
+    if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
+    if (delta == 0) return 0;
+
+    Hole& hole = detectedHoles[holeIdx];
+
+    // Get crossing edges
+    int cutX;
+    auto edges = findCrossingEdges(holeIdx, cutX);
+    if (edges.empty()) return 0;
+
+    double holeY = hole.centroidY;
+
+    // Categorize edges by position and matching status
+    std::vector<int> matchedAbove, matchedBelow;
+    std::vector<int> unmatchedAbove, unmatchedBelow;
+
+    for (size_t i = 0; i < edges.size(); i++) {
+        auto& e = edges[i];
+        bool isMatched = matching.count(ekey(e.x, e.y, 0)) > 0;
+        bool isAbove = (e.y + 0.5 > holeY);
+
+        if (isMatched) {
+            if (isAbove) matchedAbove.push_back(i);
+            else matchedBelow.push_back(i);
+        } else {
+            if (isAbove) unmatchedAbove.push_back(i);
+            else unmatchedBelow.push_back(i);
+        }
+    }
+
+    // Sort by y position
+    auto sortByY = [&](std::vector<int>& v, bool ascending) {
+        std::sort(v.begin(), v.end(), [&](int a, int b) {
+            return ascending ? (edges[a].y < edges[b].y) : (edges[a].y > edges[b].y);
+        });
+    };
+
+    sortByY(matchedAbove, true);   // lowest first
+    sortByY(matchedBelow, false);  // highest first
+    sortByY(unmatchedAbove, true); // lowest first
+    sortByY(unmatchedBelow, false);// highest first
+
+    // Determine how many swaps we can do
+    int absDelta = std::abs(delta);
+    int numSwaps;
+
+    std::vector<int> toUnmatch, toMatch;
+    if (delta > 0) {
+        // Increase winding: unmatch from below, match in above
+        numSwaps = std::min({absDelta, (int)matchedBelow.size(), (int)unmatchedAbove.size()});
+        for (int i = 0; i < numSwaps; i++) {
+            toUnmatch.push_back(matchedBelow[i]);
+            toMatch.push_back(unmatchedAbove[i]);
+        }
+    } else {
+        // Decrease winding: unmatch from above, match in below
+        numSwaps = std::min({absDelta, (int)matchedAbove.size(), (int)unmatchedBelow.size()});
+        for (int i = 0; i < numSwaps; i++) {
+            toUnmatch.push_back(matchedAbove[i]);
+            toMatch.push_back(unmatchedBelow[i]);
+        }
+    }
+
+    if (numSwaps == 0) return 0;
+
+    // Save old matching
+    auto savedMatching = matching;
+
+    // Build new set of forced crossing edges
+    std::unordered_set<long long> forcedEdgeKeys;
+
+    // Add all crossing edges that should be matched (keep + new matches)
+    for (size_t i = 0; i < edges.size(); i++) {
+        auto& e = edges[i];
+        bool wasMatched = savedMatching.count(ekey(e.x, e.y, 0)) > 0;
+        bool shouldUnmatch = std::find(toUnmatch.begin(), toUnmatch.end(), i) != toUnmatch.end();
+        bool shouldMatch = std::find(toMatch.begin(), toMatch.end(), i) != toMatch.end();
+
+        if ((wasMatched && !shouldUnmatch) || shouldMatch) {
+            forcedEdgeKeys.insert(ekey(e.x, e.y, 0));
+        }
+    }
+
+    // Clear matching and add forced crossing edges
+    matching.clear();
+    for (long long ek : forcedEdgeKeys) {
+        matching.insert(ek);
+    }
+
+    // Rebuild left partition (x < cutX)
+    if (!rebuildPartition(cutX, true, forcedEdgeKeys)) {
+        matching = savedMatching;
+        return 0;
+    }
+
+    // Rebuild right partition (x >= cutX)
+    if (!rebuildPartition(cutX, false, forcedEdgeKeys)) {
+        matching = savedMatching;
+        return 0;
+    }
+
+    // Success! Update winding
+    hole.currentWinding += (delta > 0) ? numSwaps : -numSwaps;
+    return numSwaps;
+}
+
+// Initialize hole windings from current matching
+void initHoleWindings() {
+    for (size_t i = 0; i < detectedHoles.size(); i++) {
+        int winding = computeHoleWinding(i);
+        detectedHoles[i].currentWinding = winding;
+        detectedHoles[i].baseHeight = winding;
+    }
 }
 
 // ============================================================================
@@ -2260,6 +2585,57 @@ char* filterLoopsBySize(int minSize) {
     char* result = (char*)malloc(json.size() + 1);
     strcpy(result, json.c_str());
     return result;
+}
+
+// ============================================================================
+// Hole Winding Adjustment Exports
+// ============================================================================
+
+// Get information about all detected holes
+EMSCRIPTEN_KEEPALIVE
+char* getAllHolesInfo() {
+    std::string json = "{\"holes\":[";
+    bool first = true;
+    for (size_t i = 0; i < detectedHoles.size(); i++) {
+        const Hole& h = detectedHoles[i];
+        if (!first) json += ",";
+        first = false;
+        json += "{\"idx\":" + std::to_string(i);
+        json += ",\"centroidX\":" + std::to_string(h.centroidX);
+        json += ",\"centroidY\":" + std::to_string(h.centroidY);
+        json += ",\"currentWinding\":" + std::to_string(h.currentWinding);
+        json += ",\"baseHeight\":" + std::to_string(h.baseHeight);
+        json += ",\"boundaryCells\":" + std::to_string(h.boundaryCycle.size());
+        json += "}";
+    }
+    json += "]}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// Adjust winding for a specific hole
+EMSCRIPTEN_KEEPALIVE
+char* adjustHoleWindingExport(int holeIdx, int delta) {
+    int swaps = adjustHoleWinding(holeIdx, delta);
+
+    std::string json = "{\"success\":" + std::string(swaps > 0 ? "true" : "false");
+    json += ",\"swaps\":" + std::to_string(swaps);
+    if (holeIdx >= 0 && holeIdx < (int)detectedHoles.size()) {
+        json += ",\"newWinding\":" + std::to_string(detectedHoles[holeIdx].currentWinding);
+    }
+    json += "}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// Initialize hole windings from current matching (call after initial tiling)
+EMSCRIPTEN_KEEPALIVE
+void initHoleWindingsExport() {
+    initHoleWindings();
 }
 
 } // extern "C"
