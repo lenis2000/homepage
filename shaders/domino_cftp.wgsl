@@ -235,7 +235,7 @@ fn cftp_step(@builtin(global_invocation_id) gid: vec3<u32>) {
 // ============================================================================
 // EXTREMAL HORIZONTAL KERNEL (MIN tiling)
 // Greedy horizontal preference using diagonal sweep
-// Processes black cells (x+y even) and prefers horizontal dominoes
+// Processes ALL cells on current diagonal and prefers horizontal dominoes
 // ============================================================================
 @compute @workgroup_size(64)
 fn extremal_min(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -256,11 +256,8 @@ fn extremal_min(@builtin(global_invocation_id) gid: vec3<u32>) {
         return;
     }
 
-    // Only process black cells (x+y even) to avoid double counting
-    let parity = ((x + y) % 2 + 2) % 2;
-    if (parity != 0) {
-        return;
-    }
+    // Process ALL cells (not just black) - diagonal sweep ensures no conflicts
+    // since dominoes go to higher diagonals
 
     if (!in_region(x, y)) {
         return;
@@ -290,7 +287,7 @@ fn extremal_min(@builtin(global_invocation_id) gid: vec3<u32>) {
 // ============================================================================
 // EXTREMAL VERTICAL KERNEL (MAX tiling)
 // Greedy vertical preference using diagonal sweep
-// Processes black cells (x+y even) and prefers vertical dominoes
+// Processes ALL cells on current diagonal and prefers vertical dominoes
 // ============================================================================
 @compute @workgroup_size(64)
 fn extremal_max(@builtin(global_invocation_id) gid: vec3<u32>) {
@@ -311,11 +308,8 @@ fn extremal_max(@builtin(global_invocation_id) gid: vec3<u32>) {
         return;
     }
 
-    // Only process black cells (x+y even) to avoid double counting
-    let parity = ((x + y) % 2 + 2) % 2;
-    if (parity != 0) {
-        return;
-    }
+    // Process ALL cells (not just black) - diagonal sweep ensures no conflicts
+    // since dominoes go to higher diagonals
 
     if (!in_region(x, y)) {
         return;

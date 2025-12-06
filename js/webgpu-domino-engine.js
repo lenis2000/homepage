@@ -216,41 +216,61 @@ class WebGPUDominoEngine {
     }
 
     /**
-     * Compute MIN (horizontal) and MAX (vertical) extremal tilings on GPU
+     * Convert edges array (from CPU) to GPU edge grid format
+     * @param {Array} edges - Array of {x1, y1, x2, y2} edge objects
+     * @returns {Int32Array} - Edge grid for GPU
      */
-    async computeExtremalTilings() {
-        const { width, height } = this.gridParams;
-        const workgroupCount = Math.ceil(this.numCells / 64);
+    edgesToGrid(edges) {
+        const { minX, minY, width } = this.gridParams;
+        const grid = new Int32Array(this.numCells);
 
-        // Process diagonals from top-left to bottom-right
-        const numDiagonals = width + height - 1;
-
-        for (let diag = 0; diag < numDiagonals; diag++) {
-            // Write uniform data with current diagonal
-            const uniformData = this.createUniformData(0, diag);
-            this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
-
-            const commandEncoder = this.device.createCommandEncoder();
-
-            // Compute MIN tiling (prefer horizontal) on lower chain
-            const minPass = commandEncoder.beginComputePass();
-            minPass.setPipeline(this.extremalMinPipeline);
-            minPass.setBindGroup(0, this.lowerBindGroup);
-            minPass.dispatchWorkgroups(workgroupCount);
-            minPass.end();
-
-            // Compute MAX tiling (prefer vertical) on upper chain
-            const maxPass = commandEncoder.beginComputePass();
-            maxPass.setPipeline(this.extremalMaxPipeline);
-            maxPass.setBindGroup(0, this.upperBindGroup);
-            maxPass.dispatchWorkgroups(workgroupCount);
-            maxPass.end();
-
-            this.device.queue.submit([commandEncoder.finish()]);
+        for (const edge of edges) {
+            // Determine if horizontal or vertical
+            if (edge.y1 === edge.y2) {
+                // Horizontal edge: from (x1,y1) to (x2,y1)
+                const x = Math.min(edge.x1, edge.x2);
+                const y = edge.y1;
+                const idx = (y - minY) * width + (x - minX);
+                if (idx >= 0 && idx < this.numCells) {
+                    grid[idx] |= 1;  // bit 0 = horizontal
+                }
+            } else {
+                // Vertical edge: from (x1,y1) to (x1,y2)
+                const x = edge.x1;
+                const y = Math.min(edge.y1, edge.y2);
+                const idx = (y - minY) * width + (x - minX);
+                if (idx >= 0 && idx < this.numCells) {
+                    grid[idx] |= 2;  // bit 1 = vertical
+                }
+            }
         }
 
+        return grid;
+    }
+
+    /**
+     * Upload pre-computed extremal tilings from CPU
+     * @param {Array} minEdges - MIN tiling edges from CPU
+     * @param {Array} maxEdges - MAX tiling edges from CPU
+     */
+    async uploadExtremalTilings(minEdges, maxEdges) {
+        const minGrid = this.edgesToGrid(minEdges);
+        const maxGrid = this.edgesToGrid(maxEdges);
+
+        this.device.queue.writeBuffer(this.lowerGridBuffer, 0, minGrid);
+        this.device.queue.writeBuffer(this.upperGridBuffer, 0, maxGrid);
+
         await this.device.queue.onSubmittedWorkDone();
-        console.log("Extremal tilings computed");
+        console.log("Extremal tilings uploaded from CPU");
+    }
+
+    /**
+     * Reset chains using pre-computed extremal tilings
+     * @param {Array} minEdges - MIN tiling edges from CPU
+     * @param {Array} maxEdges - MAX tiling edges from CPU
+     */
+    async resetCFTPChainsWithTilings(minEdges, maxEdges) {
+        await this.uploadExtremalTilings(minEdges, maxEdges);
     }
 
     /**
