@@ -32,8 +32,8 @@ code:
 
 <p><strong>Sampling methods:</strong></p>
 <ul>
-  <li><strong>Glauber dynamics</strong>: Markov chain Monte Carlo with local 2×2 plaquette flips. Converges to the uniform distribution; good for watching the mixing process.</li>
-  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> produces an <em>exact</em> sample from the uniform distribution using monotone coupling on height functions. No burn-in needed.</li>
+  <li><strong>Glauber dynamics</strong>: Markov chain Monte Carlo with local 2×2 plaquette flips. Converges to the uniform distribution; good for watching the mixing process. Works for all regions.</li>
+  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> produces an <em>exact</em> sample from the uniform distribution using monotone coupling on height functions. No burn-in needed. <em>Only available for simply-connected regions (no holes).</em></li>
 </ul>
 
 <p><strong>Color scheme:</strong> Four colors distinguish four domino types by orientation (horizontal/vertical) and starting cell parity (black/white on the checkerboard).</p>
@@ -323,65 +323,6 @@ code:
     border-top: none;
     border-radius: 0 0 4px 4px;
   }
-  /* Hole winding controls */
-  .hole-control {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    background: rgba(255,255,255,0.95);
-    border-radius: 4px;
-    padding: 2px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    font-size: 12px;
-    z-index: 100;
-  }
-  .hole-control button {
-    width: 22px;
-    height: 22px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    background: #f5f5f5;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    padding: 0;
-  }
-  .hole-control button:hover:not(:disabled) {
-    background: #e0e0e0;
-  }
-  .hole-control button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .hole-control .height-input {
-    width: 36px;
-    height: 22px;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-    padding: 0;
-  }
-  [data-theme="dark"] .hole-control {
-    background: rgba(40,40,40,0.95);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  }
-  [data-theme="dark"] .hole-control button {
-    background: #333;
-    border-color: #555;
-    color: #eee;
-  }
-  [data-theme="dark"] .hole-control button:hover:not(:disabled) {
-    background: #444;
-  }
-  [data-theme="dark"] .hole-control .height-input {
-    background: #333;
-    border-color: #555;
-    color: #eee;
-  }
 </style>
 
 <!-- Main controls -->
@@ -458,9 +399,6 @@ code:
 
   <!-- 3D Container -->
   <div id="three-container"></div>
-
-  <!-- Hole winding overlays -->
-  <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;"></div>
 </div>
 
 <!-- Controls below canvas -->
@@ -494,10 +432,6 @@ code:
     <label style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
       <input type="checkbox" id="showGridCheckbox" checked>
       Grid
-    </label>
-    <label style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="showHoleLabelsCheckbox" checked>
-      Hole UI
     </label>
     <span style="color: #ccc;">|</span>
     <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
@@ -691,7 +625,6 @@ code:
         zoomOutBtn: document.getElementById('zoomOutBtn'),
         resetViewBtn: document.getElementById('resetViewBtn'),
         showGridCheckbox: document.getElementById('showGridCheckbox'),
-        showHoleLabelsCheckbox: document.getElementById('showHoleLabelsCheckbox'),
         paletteSelect: document.getElementById('paletteSelect'),
         prevPaletteBtn: document.getElementById('prevPaletteBtn'),
         nextPaletteBtn: document.getElementById('nextPaletteBtn'),
@@ -1157,16 +1090,26 @@ code:
             dominoes = result.dominoes || [];
             totalSteps = 0;
             flipCount = 0;
-            el.statusBadge.className = 'status-valid';
-            el.statusBadge.textContent = 'Valid';
             el.startStopBtn.disabled = false;
-            el.cftpBtn.disabled = false;
-            el.doubleDimerBtn.disabled = false;
             el.repairBtn.disabled = true;
             clearDoubleDimerState();
-            // Initialize hole windings from current matching
-            sim.initHoleWindings();
-            updateHolesUI();
+
+            // Check for holes - disable CFTP for non-simply-connected regions
+            const holesInfo = sim.getAllHolesInfo();
+            const hasHoles = holesInfo.holes && holesInfo.holes.length > 0;
+            el.cftpBtn.disabled = hasHoles;
+            el.doubleDimerBtn.disabled = hasHoles;
+            if (hasHoles) {
+                el.statusBadge.className = 'status-valid';
+                el.statusBadge.textContent = 'Valid (has holes)';
+                el.cftpBtn.title = 'CFTP only available for simply-connected regions (no holes)';
+                el.doubleDimerBtn.title = 'Double Dimer only available for simply-connected regions';
+            } else {
+                el.statusBadge.className = 'status-valid';
+                el.statusBadge.textContent = 'Valid';
+                el.cftpBtn.title = 'Coupling From The Past - Perfect Sample';
+                el.doubleDimerBtn.title = 'Double Dimer - Two independent CFTP samples';
+            }
         } else if (result.status === 'empty') {
             isValid = false;
             dominoes = [];
@@ -1177,7 +1120,6 @@ code:
             el.doubleDimerBtn.disabled = true;
             el.repairBtn.disabled = true;
             clearDoubleDimerState();
-            holeOverlays.innerHTML = '';
         } else {
             isValid = false;
             dominoes = [];
@@ -1188,7 +1130,6 @@ code:
             el.doubleDimerBtn.disabled = true;
             el.repairBtn.disabled = false;
             clearDoubleDimerState();
-            holeOverlays.innerHTML = '';
         }
 
         updateStats();
@@ -1409,244 +1350,11 @@ code:
                 ctx.fill();
             }
         }
-
-        // Draw vertical cut lines through holes (for debugging monodromy)
-        if (showHoleLabels && sim && isValid) {
-            try {
-                const holesInfo = sim.getAllHolesInfo();
-                const wasmHoles = holesInfo.holes || [];
-                ctx.setLineDash([4, 4]);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#ff00ff';
-
-                for (const hole of wasmHoles) {
-                    // Cut line is at x = round(centroidX), drawn from minY to maxY
-                    const cutX = Math.round(hole.centroidX);
-                    const holeY = hole.centroidY;
-
-                    // Find y range of region
-                    let regionMinY = Infinity, regionMaxY = -Infinity;
-                    for (const [key] of activeCells) {
-                        const [, y] = key.split(',').map(Number);
-                        regionMinY = Math.min(regionMinY, y);
-                        regionMaxY = Math.max(regionMaxY, y + 1);
-                    }
-
-                    // Draw vertical cut line
-                    const topScreen = cellToScreen(cutX, regionMinY);
-                    const botScreen = cellToScreen(cutX, regionMaxY);
-                    ctx.beginPath();
-                    ctx.moveTo(topScreen.x, topScreen.y);
-                    ctx.lineTo(botScreen.x, botScreen.y);
-                    ctx.stroke();
-
-                    // Draw horizontal line at hole centroid Y
-                    ctx.strokeStyle = '#00ffff';
-                    const leftScreen = cellToScreen(cutX - 3, holeY);
-                    const rightScreen = cellToScreen(cutX + 3, holeY);
-                    ctx.beginPath();
-                    ctx.moveTo(leftScreen.x, leftScreen.y);
-                    ctx.lineTo(rightScreen.x, rightScreen.y);
-                    ctx.stroke();
-
-                    // Label the cut
-                    ctx.setLineDash([]);
-                    ctx.fillStyle = '#ff00ff';
-                    ctx.font = '12px monospace';
-                    ctx.fillText(`cutX=${cutX}`, topScreen.x + 5, topScreen.y + 15);
-                    ctx.fillStyle = '#00ffff';
-                    ctx.fillText(`holeY=${holeY.toFixed(1)}`, rightScreen.x + 5, rightScreen.y);
-
-                    // Mark horizontal edges crossing the cut line
-                    // Crossing edges are horizontal dominoes at x = cutX - 1 (spanning cutX-1 to cutX)
-                    const crossX = cutX - 1;
-                    for (const [key, cells] of edgeGroups) {
-                        // Check if this is a horizontal domino crossing the cut
-                        if (cells.length === 2) {
-                            const [c1, c2] = cells;
-                            // Horizontal domino: same y, consecutive x
-                            if (c1.y === c2.y && Math.abs(c1.x - c2.x) === 1) {
-                                const minX = Math.min(c1.x, c2.x);
-                                if (minX === crossX) {
-                                    // This domino crosses the cut!
-                                    const edgeY = c1.y;
-                                    const isAbove = (edgeY + 0.5) > holeY;
-
-                                    // Draw a marker at the crossing point
-                                    const crossPt = cellToScreen(cutX, edgeY + 0.5);
-                                    ctx.beginPath();
-                                    ctx.arc(crossPt.x, crossPt.y, 6, 0, 2 * Math.PI);
-                                    ctx.fillStyle = isAbove ? '#00ff00' : '#ff0000';  // green=above, red=below
-                                    ctx.fill();
-                                    ctx.strokeStyle = '#000';
-                                    ctx.lineWidth = 1;
-                                    ctx.stroke();
-
-                                    // Label with y coord
-                                    ctx.fillStyle = '#fff';
-                                    ctx.font = '10px monospace';
-                                    ctx.textAlign = 'center';
-                                    ctx.fillText(`${edgeY}`, crossPt.x, crossPt.y + 3);
-                                    ctx.textAlign = 'left';
-                                }
-                            }
-                        }
-                    }
-
-                    ctx.setLineDash([4, 4]);
-                    ctx.strokeStyle = '#ff00ff';
-                }
-
-                ctx.setLineDash([]);
-            } catch (e) {
-                console.error('Error drawing cut lines:', e);
-            }
-        }
-
-        // Update hole overlays
-        updateHoleOverlayPositions();
     }
 
     // ========================================================================
-    // Hole Winding Controls
+    // Hole Winding Controls (removed - CFTP disabled for non-simply-connected regions)
     // ========================================================================
-
-    let showHoleLabels = true;
-    const holeOverlays = document.getElementById('hole-overlays');
-
-    // Convert cell coords to screen coords (handles both 2D and 3D)
-    function cellToScreenForHoles(x, y) {
-        if (is3DView && renderer3D) {
-            return renderer3D.worldToScreen3D(x, y, 0);
-        }
-        const rect = canvas.getBoundingClientRect();
-        const centerX = rect.width / 2 + panX * zoom;
-        const centerY = rect.height / 2 + panY * zoom;
-        const size = cellSize * zoom;
-        return {
-            x: centerX + x * size,
-            y: centerY + y * size
-        };
-    }
-
-    // Update hole overlay positions (call on pan/zoom/rotate)
-    function updateHoleOverlayPositions() {
-        const controls = holeOverlays.querySelectorAll('.hole-control');
-        if (controls.length === 0) return;
-        if (!sim || !isValid) return;
-
-        const holesInfo = sim.getAllHolesInfo();
-        const wasmHoles = holesInfo.holes || [];
-
-        controls.forEach((ctrl, h) => {
-            if (h < wasmHoles.length) {
-                const hole = wasmHoles[h];
-                const screen = cellToScreenForHoles(hole.centroidX, hole.centroidY);
-                ctrl.style.left = screen.x + 'px';
-                ctrl.style.top = screen.y + 'px';
-            }
-        });
-    }
-
-    // Update holes UI - creates overlay controls inside each hole
-    function updateHolesUI() {
-        holeOverlays.innerHTML = '';
-
-        if (!showHoleLabels) return;
-        if (!isValid) return;
-        if (!sim) return;
-
-        // Get hole info from WASM
-        const holesInfo = sim.getAllHolesInfo();
-        const wasmHoles = holesInfo.holes || [];
-
-        if (wasmHoles.length === 0) return;
-
-        // Create control for each hole
-        for (let h = 0; h < wasmHoles.length; h++) {
-            const hole = wasmHoles[h];
-            const screen = cellToScreenForHoles(hole.centroidX, hole.centroidY);
-
-            const ctrl = document.createElement('div');
-            ctrl.className = 'hole-control';
-            ctrl.style.left = screen.x + 'px';
-            ctrl.style.top = screen.y + 'px';
-            ctrl.dataset.hole = h;
-
-            // [+] [height] [-] with editable height in center
-            // Display relative height (currentWinding - baseHeight), starts at 0
-            const relativeHeight = hole.currentWinding - hole.baseHeight;
-            ctrl.innerHTML = `
-                <button class="winding-plus">+</button>
-                <input type="number" class="height-input" value="${relativeHeight}" title="Relative height (starts at 0)">
-                <button class="winding-minus">−</button>
-            `;
-            const heightInput = ctrl.querySelector('.height-input');
-            const minusBtn = ctrl.querySelector('.winding-minus');
-            const plusBtn = ctrl.querySelector('.winding-plus');
-
-            // Height input change handler - adjust winding to reach target
-            heightInput.addEventListener('change', (e) => {
-                e.stopPropagation();
-                const holeIdx = parseInt(ctrl.dataset.hole);
-                const targetRelativeHeight = parseInt(e.target.value) || 0;
-                const currentRelativeHeight = hole.currentWinding - hole.baseHeight;
-                const delta = targetRelativeHeight - currentRelativeHeight;
-                if (delta !== 0) {
-                    heightInput.disabled = true;
-                    minusBtn.disabled = true;
-                    plusBtn.disabled = true;
-                    setTimeout(() => {
-                        sim.adjustHoleWinding(holeIdx, delta);
-                        refreshDimers();
-                        draw();
-                        update3DView();
-                        updateHolesUI();
-                    }, 10);
-                }
-            });
-            heightInput.addEventListener('click', (e) => e.stopPropagation());
-
-            // Winding adjustment buttons
-            minusBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const holeIdx = parseInt(ctrl.dataset.hole);
-                minusBtn.textContent = '⏳';
-                minusBtn.disabled = true;
-                plusBtn.disabled = true;
-                heightInput.disabled = true;
-                setTimeout(() => {
-                    const result = sim.adjustHoleWinding(holeIdx, -1);
-                    if (result.success) {
-                        refreshDimers();
-                        draw();
-                        update3DView();
-                    }
-                    updateHolesUI();
-                }, 10);
-            });
-
-            plusBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const holeIdx = parseInt(ctrl.dataset.hole);
-                plusBtn.textContent = '⏳';
-                plusBtn.disabled = true;
-                minusBtn.disabled = true;
-                heightInput.disabled = true;
-                setTimeout(() => {
-                    const result = sim.adjustHoleWinding(holeIdx, 1);
-                    if (result.success) {
-                        refreshDimers();
-                        draw();
-                        update3DView();
-                    }
-                    updateHolesUI();
-                }, 10);
-            });
-
-            holeOverlays.appendChild(ctrl);
-        }
-    }
 
     // Refresh dominoes from current WASM state
     function refreshDimers() {
@@ -2288,9 +1996,6 @@ code:
             renderer3D.renderDominoes(dominoes, colors);
             renderer3D.resetView();
         }
-
-        // Update hole UI positions for new view mode
-        updateHolesUI();
     }
 
     function update3DView() {
@@ -2962,9 +2667,6 @@ code:
                 const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                 const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
                 el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
-                // Update hole windings after CFTP
-                sim.initHoleWindings();
-                updateHolesUI();
                 return true;
             } else if (res.status === 'not_coalesced') {
                 el.cftpSteps.textContent = 'T=' + res.nextT;
@@ -4011,11 +3713,6 @@ code:
         });
 
         el.showGridCheckbox.addEventListener('change', draw);
-
-        el.showHoleLabelsCheckbox.addEventListener('change', () => {
-            showHoleLabels = el.showHoleLabelsCheckbox.checked;
-            updateHolesUI();
-        });
 
         // Display options
         el.paletteSelect.addEventListener('change', () => {

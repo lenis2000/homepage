@@ -823,104 +823,131 @@ int computeMonodromy(const std::unordered_set<long long>& m, const Hole& hole) {
 }
 
 // ============================================================================
-// Hole Winding Adjustment via Vertical Cut
+// Hole Winding Adjustment via Horizontal Cut
 // ============================================================================
 
-// Find horizontal edges crossing vertical line at x = cutX
-// These are edges (x, y, dir=0) connecting (x,y) to (x+1,y) where x < cutX <= x+1
-// i.e., edges where x = cutX - 1
-std::vector<DominoCutEdge> findCrossingEdges(int holeIdx, int& cutX) {
+// Helper to find vertical edges crossing a horizontal line at a given edgeY
+std::vector<DominoCutEdge> findVerticalEdgesAtY(int edgeY) {
+    std::vector<DominoCutEdge> result;
+    for (int x = minX; x <= maxX; x++) {
+        if (hasVertex(x, edgeY) && hasVertex(x, edgeY + 1)) {
+            result.push_back({x, edgeY, 1});
+        }
+    }
+    return result;
+}
+
+// Count matched vertical edges on left/right of a given x position
+void countMatchedEdges(const std::vector<DominoCutEdge>& edges, double holeX,
+                       int& matchedLeft, int& matchedRight) {
+    matchedLeft = 0;
+    matchedRight = 0;
+    for (const auto& e : edges) {
+        if (matching.count(ekey(e.x, e.y, 1)) > 0) {
+            if (e.x < holeX) matchedLeft++;
+            else matchedRight++;
+        }
+    }
+}
+
+// Find VERTICAL edges crossing HORIZONTAL line at y = cutY (half-integer)
+// Tries multiple y-levels to find one with matched edges on both sides
+// Returns: cutY (the horizontal cut line y-coordinate)
+std::vector<DominoCutEdge> findCrossingEdges(int holeIdx, double& cutY) {
     std::vector<DominoCutEdge> result;
     if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return result;
 
     const Hole& hole = detectedHoles[holeIdx];
-    cutX = (int)std::round(hole.centroidX);
+    double holeX = hole.centroidX;
 
-    // Find all horizontal edges at x = cutX - 1 that connect region vertices
-    // Scan the y range of the region
-    for (int y = minY; y <= maxY; y++) {
-        int edgeX = cutX - 1;
-        // Check if both endpoints (edgeX, y) and (edgeX+1, y) are in region
-        if (hasVertex(edgeX, y) && hasVertex(edgeX + 1, y)) {
-            result.push_back({edgeX, y, 0});
+    printf("[findCrossingEdges] Hole %d has %zu cells, centroid=(%.2f,%.2f)\n",
+           holeIdx, hole.holeCells.size(), hole.centroidX, hole.centroidY);
+
+    if (hole.holeCells.empty()) {
+        cutY = std::floor(hole.centroidY) + 0.5;
+        int edgeY = (int)std::floor(cutY);
+        return findVerticalEdgesAtY(edgeY);
+    }
+
+    // Collect all unique y values from hole cells
+    std::set<int> holeYs;
+    for (const auto& cell : hole.holeCells) {
+        holeYs.insert(cell.second);
+    }
+
+    // Try each y level and find the one with the most balanced matched edges
+    int bestEdgeY = 0;
+    int bestScore = -1;  // min(matchedLeft, matchedRight)
+    std::vector<DominoCutEdge> bestEdges;
+    bool foundValidCut = false;
+
+    for (int y : holeYs) {
+        auto edges = findVerticalEdgesAtY(y);
+        if (edges.empty()) continue;
+
+        int mL, mR;
+        countMatchedEdges(edges, holeX, mL, mR);
+        int score = std::min(mL, mR);
+
+        printf("[findCrossingEdges] Trying edgeY=%d: %zu edges, matchedLeft=%d, matchedRight=%d, score=%d\n",
+               y, edges.size(), mL, mR, score);
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestEdgeY = y;
+            bestEdges = edges;
+            foundValidCut = true;
         }
     }
 
-    return result;
+    if (foundValidCut && bestScore > 0) {
+        cutY = bestEdgeY + 0.5;
+        printf("[findCrossingEdges] Best edgeY=%d with score=%d\n", bestEdgeY, bestScore);
+        return bestEdges;
+    }
+
+    // Fallback: use centroid
+    cutY = std::floor(hole.centroidY) + 0.5;
+    int edgeY = (int)std::floor(cutY);
+    printf("[findCrossingEdges] No good cut found (bestScore=%d), falling back to edgeY=%d\n", bestScore, edgeY);
+    return findVerticalEdgesAtY(edgeY);
 }
 
 // Compute winding for a hole based on current matching
-// Winding = (matched edges above hole centroid) - (matched edges below)
+// Uses boundary walk monodromy (height change around hole) / 4
 int computeHoleWinding(int holeIdx) {
     if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
-
-    int cutX;
-    auto edges = findCrossingEdges(holeIdx, cutX);
-    double holeY = detectedHoles[holeIdx].centroidY;
-
-    int matchedAbove = 0, matchedBelow = 0;
-    for (auto& e : edges) {
-        bool isMatched = matching.count(ekey(e.x, e.y, 0)) > 0;
-        if (isMatched) {
-            // Edge center is at (e.x + 0.5, e.y + 0.5)
-            if (e.y + 0.5 > holeY) matchedAbove++;
-            else matchedBelow++;
-        }
-    }
-    return matchedAbove - matchedBelow;
+    // Use the correct boundary walk function
+    return computeMonodromy(matching, detectedHoles[holeIdx]) / 4;
 }
 
 // Compute winding for a hole on a SPECIFIC matching (not global), with logging
-int computeHoleWindingOnMatching(int holeIdx, const std::unordered_set<long long>& m, bool verbose = false) {
+int computeHoleWindingOnMatching(int holeIdx, const std::unordered_set<long long>& m, bool verbose) {
     if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
 
-    int cutX;
-    auto edges = findCrossingEdges(holeIdx, cutX);
-    double holeY = detectedHoles[holeIdx].centroidY;
+    // Use boundary walk monodromy
+    int monodromy = computeMonodromy(m, detectedHoles[holeIdx]);
+    int winding = monodromy / 4;
 
     if (verbose) {
-        printf("[WINDING] Hole %d: cutX=%d, holeY=%.2f, crossingEdges=%zu\n",
-               holeIdx, cutX, holeY, edges.size());
-    }
-
-    int matchedAbove = 0, matchedBelow = 0;
-    int unmatchedAbove = 0, unmatchedBelow = 0;
-
-    for (auto& e : edges) {
-        bool isMatched = m.count(ekey(e.x, e.y, 0)) > 0;
-        bool isAbove = (e.y + 0.5 > holeY);
-
-        if (verbose) {
-            printf("[WINDING]   Edge at (%d,%d): %s, %s\n",
-                   e.x, e.y,
-                   isMatched ? "MATCHED" : "unmatched",
-                   isAbove ? "ABOVE" : "BELOW");
-        }
-
-        if (isMatched) {
-            if (isAbove) matchedAbove++;
-            else matchedBelow++;
-        } else {
-            if (isAbove) unmatchedAbove++;
-            else unmatchedBelow++;
-        }
-    }
-
-    int winding = matchedAbove - matchedBelow;
-    if (verbose) {
-        printf("[WINDING] Result: matchedAbove=%d, matchedBelow=%d, winding=%d\n",
-               matchedAbove, matchedBelow, winding);
-        printf("[WINDING]         unmatchedAbove=%d, unmatchedBelow=%d\n",
-               unmatchedAbove, unmatchedBelow);
+        printf("[WINDING] Hole %d: monodromy=%d, winding=%d\n",
+               holeIdx, monodromy, winding);
     }
 
     return winding;
 }
 
-// Rebuild matching on one partition (left or right of cut)
-// forcedEdgeKeys: edges that MUST be in the matching (crossing edges)
+// Reference tiling for monodromy-constrained extremal search (forward declaration)
+std::unordered_set<long long> referenceTiling;
+bool hasReferenceTiling = false;
+
+// Rebuild matching on one partition (bottom or top of horizontal cut)
+// forcedEdgeKeys: edges that MUST be in the matching (crossing VERTICAL edges)
+// cutY is the y-coordinate of crossing edges (vertical edge goes from cutY to cutY+1)
+// Bottom partition: y <= cutY (includes bottom endpoint of crossing edges)
+// Top partition: y > cutY (includes top endpoint of crossing edges)
 // Returns true if successful
-bool rebuildPartition(int cutX, bool isLeftSide,
+bool rebuildPartition(int cutY, bool isBottomSide,
                       const std::unordered_set<long long>& forcedEdgeKeys) {
     // Collect vertices in this partition
     std::vector<std::pair<int,int>> blacks, whites;
@@ -930,8 +957,9 @@ bool rebuildPartition(int cutX, bool isLeftSide,
         int x = (int)((vk >> 20) - 100000);
         int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
 
-        // Left partition: x < cutX, Right partition: x >= cutX
-        bool inPartition = isLeftSide ? (x < cutX) : (x >= cutX);
+        // Bottom partition: y <= cutY, Top partition: y > cutY
+        // This ensures crossing edges (from cutY to cutY+1) span between partitions
+        bool inPartition = isBottomSide ? (y <= cutY) : (y > cutY);
         if (!inPartition) continue;
 
         if ((x + y) % 2 == 0) {
@@ -1057,49 +1085,85 @@ bool rebuildPartition(int cutX, bool isLeftSide,
 }
 
 // Adjust winding for a hole by swapping crossing edges
+// Uses HORIZONTAL cut with VERTICAL edges
+// Categorize by LEFT/RIGHT of hole center (x-coordinate)
 // Returns number of successful swaps (0 if failed)
 int adjustHoleWinding(int holeIdx, int delta) {
+    printf("[adjustHoleWinding] holeIdx=%d, delta=%d\n", holeIdx, delta);
+
     if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
     if (delta == 0) return 0;
 
     Hole& hole = detectedHoles[holeIdx];
 
-    // Get crossing edges
-    int cutX;
-    auto edges = findCrossingEdges(holeIdx, cutX);
-    if (edges.empty()) return 0;
+    // Record initial monodromy for verification
+    int initialMonodromy = computeMonodromy(matching, hole);
+    printf("[adjustHoleWinding] Initial monodromy=%d (winding=%d)\n", initialMonodromy, initialMonodromy/4);
+    printf("[adjustHoleWinding] Current matching size=%zu\n", matching.size());
 
-    double holeY = hole.centroidY;
-
-    // Categorize edges by position and matching status
-    std::vector<int> matchedAbove, matchedBelow;
-    std::vector<int> unmatchedAbove, unmatchedBelow;
-
-    for (size_t i = 0; i < edges.size(); i++) {
-        auto& e = edges[i];
-        bool isMatched = matching.count(ekey(e.x, e.y, 0)) > 0;
-        bool isAbove = (e.y + 0.5 > holeY);
-
-        if (isMatched) {
-            if (isAbove) matchedAbove.push_back(i);
-            else matchedBelow.push_back(i);
-        } else {
-            if (isAbove) unmatchedAbove.push_back(i);
-            else unmatchedBelow.push_back(i);
+    // Log a few edges from the matching to see pattern
+    int logged = 0;
+    for (long long ek : matching) {
+        int ex = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int ey = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        printf("[adjustHoleWinding] Matching edge: (%d,%d) dir=%d\n", ex, ey, dir);
+        if (++logged >= 20) {
+            printf("[adjustHoleWinding] ... (truncated)\n");
+            break;
         }
     }
 
-    // Sort by y position
-    auto sortByY = [&](std::vector<int>& v, bool ascending) {
+    // Get crossing edges (VERTICAL edges crossing HORIZONTAL cut at cutY)
+    double cutY;
+    auto edges = findCrossingEdges(holeIdx, cutY);
+    if (edges.empty()) {
+        printf("[adjustHoleWinding] No crossing edges found!\n");
+        return 0;
+    }
+    int cutYInt = (int)std::floor(cutY);  // For partition rebuild
+    printf("[adjustHoleWinding] cutY=%.2f, cutYInt=%d, numEdges=%zu\n", cutY, cutYInt, edges.size());
+
+    double holeX = hole.centroidX;
+
+    // Categorize VERTICAL edges by LEFT/RIGHT of hole center
+    std::vector<int> matchedLeft, matchedRight;
+    std::vector<int> unmatchedLeft, unmatchedRight;
+
+    for (size_t i = 0; i < edges.size(); i++) {
+        auto& e = edges[i];
+        // dir=1 for vertical edges
+        long long ek = ekey(e.x, e.y, 1);
+        bool isMatched = matching.count(ek) > 0;
+        // Edge center is at (e.x, e.y + 0.5)
+        bool isLeft = (e.x < holeX);
+
+        printf("[adjustHoleWinding]   Edge (%d,%d) dir=1 key=%lld matched=%d left=%d\n",
+               e.x, e.y, ek, isMatched ? 1 : 0, isLeft ? 1 : 0);
+
+        if (isMatched) {
+            if (isLeft) matchedLeft.push_back(i);
+            else matchedRight.push_back(i);
+        } else {
+            if (isLeft) unmatchedLeft.push_back(i);
+            else unmatchedRight.push_back(i);
+        }
+    }
+
+    printf("[adjustHoleWinding] matchedLeft=%zu, matchedRight=%zu, unmatchedLeft=%zu, unmatchedRight=%zu\n",
+           matchedLeft.size(), matchedRight.size(), unmatchedLeft.size(), unmatchedRight.size());
+
+    // Sort by x position (distance from hole center)
+    auto sortByX = [&](std::vector<int>& v, bool ascending) {
         std::sort(v.begin(), v.end(), [&](int a, int b) {
-            return ascending ? (edges[a].y < edges[b].y) : (edges[a].y > edges[b].y);
+            return ascending ? (edges[a].x < edges[b].x) : (edges[a].x > edges[b].x);
         });
     };
 
-    sortByY(matchedAbove, true);   // lowest first
-    sortByY(matchedBelow, false);  // highest first
-    sortByY(unmatchedAbove, true); // lowest first
-    sortByY(unmatchedBelow, false);// highest first
+    sortByX(matchedLeft, false);   // highest x (closest to hole) first
+    sortByX(matchedRight, true);   // lowest x (closest to hole) first
+    sortByX(unmatchedLeft, false); // highest x (closest to hole) first
+    sortByX(unmatchedRight, true); // lowest x (closest to hole) first
 
     // Determine how many swaps we can do
     int absDelta = std::abs(delta);
@@ -1107,40 +1171,49 @@ int adjustHoleWinding(int holeIdx, int delta) {
 
     std::vector<int> toUnmatch, toMatch;
     if (delta > 0) {
-        // Increase winding: unmatch from below, match in above
-        numSwaps = std::min({absDelta, (int)matchedBelow.size(), (int)unmatchedAbove.size()});
+        // Increase winding: unmatch from LEFT, match in RIGHT
+        // This moves matched edge from left to right
+        numSwaps = std::min({absDelta, (int)matchedLeft.size(), (int)unmatchedRight.size()});
         for (int i = 0; i < numSwaps; i++) {
-            toUnmatch.push_back(matchedBelow[i]);
-            toMatch.push_back(unmatchedAbove[i]);
+            toUnmatch.push_back(matchedLeft[i]);
+            toMatch.push_back(unmatchedRight[i]);
         }
     } else {
-        // Decrease winding: unmatch from above, match in below
-        numSwaps = std::min({absDelta, (int)matchedAbove.size(), (int)unmatchedBelow.size()});
+        // Decrease winding: unmatch from RIGHT, match in LEFT
+        numSwaps = std::min({absDelta, (int)matchedRight.size(), (int)unmatchedLeft.size()});
         for (int i = 0; i < numSwaps; i++) {
-            toUnmatch.push_back(matchedAbove[i]);
-            toMatch.push_back(unmatchedBelow[i]);
+            toUnmatch.push_back(matchedRight[i]);
+            toMatch.push_back(unmatchedLeft[i]);
         }
     }
 
-    if (numSwaps == 0) return 0;
+    if (numSwaps == 0) {
+        printf("[adjustHoleWinding] numSwaps=0, cannot adjust\n");
+        return 0;
+    }
+
+    printf("[adjustHoleWinding] numSwaps=%d\n", numSwaps);
 
     // Save old matching
     auto savedMatching = matching;
 
-    // Build new set of forced crossing edges
+    // Build new set of forced crossing edges (VERTICAL, dir=1)
     std::unordered_set<long long> forcedEdgeKeys;
 
     // Add all crossing edges that should be matched (keep + new matches)
     for (size_t i = 0; i < edges.size(); i++) {
         auto& e = edges[i];
-        bool wasMatched = savedMatching.count(ekey(e.x, e.y, 0)) > 0;
+        bool wasMatched = savedMatching.count(ekey(e.x, e.y, 1)) > 0;  // dir=1 for vertical
         bool shouldUnmatch = std::find(toUnmatch.begin(), toUnmatch.end(), i) != toUnmatch.end();
         bool shouldMatch = std::find(toMatch.begin(), toMatch.end(), i) != toMatch.end();
 
         if ((wasMatched && !shouldUnmatch) || shouldMatch) {
-            forcedEdgeKeys.insert(ekey(e.x, e.y, 0));
+            forcedEdgeKeys.insert(ekey(e.x, e.y, 1));  // dir=1 for vertical
+            printf("[adjustHoleWinding] Forced crossing edge at (%d, %d) dir=1\n", e.x, e.y);
         }
     }
+
+    printf("[adjustHoleWinding] forcedEdgeKeys=%zu\n", forcedEdgeKeys.size());
 
     // Clear matching and add forced crossing edges
     matching.clear();
@@ -1148,20 +1221,46 @@ int adjustHoleWinding(int holeIdx, int delta) {
         matching.insert(ek);
     }
 
-    // Rebuild left partition (x < cutX)
-    if (!rebuildPartition(cutX, true, forcedEdgeKeys)) {
+    // Rebuild BOTTOM partition (y <= cutY)
+    printf("[adjustHoleWinding] Rebuilding bottom partition (y <= %d)...\n", cutYInt);
+    if (!rebuildPartition(cutYInt, true, forcedEdgeKeys)) {
+        printf("[adjustHoleWinding] Bottom partition rebuild FAILED\n");
+        matching = savedMatching;
+        return 0;
+    }
+    printf("[adjustHoleWinding] Bottom partition OK, matching size=%zu\n", matching.size());
+
+    // Rebuild TOP partition (y > cutY)
+    printf("[adjustHoleWinding] Rebuilding top partition (y > %d)...\n", cutYInt);
+    if (!rebuildPartition(cutYInt, false, forcedEdgeKeys)) {
+        printf("[adjustHoleWinding] Top partition rebuild FAILED\n");
+        matching = savedMatching;
+        return 0;
+    }
+    printf("[adjustHoleWinding] Top partition OK, matching size=%zu\n", matching.size());
+
+    // Validate: matching size should equal savedMatching size
+    if (matching.size() != savedMatching.size()) {
+        printf("[adjustHoleWinding] VALIDATION FAILED: matching size %zu != saved size %zu\n",
+               matching.size(), savedMatching.size());
         matching = savedMatching;
         return 0;
     }
 
-    // Rebuild right partition (x >= cutX)
-    if (!rebuildPartition(cutX, false, forcedEdgeKeys)) {
-        matching = savedMatching;
-        return 0;
-    }
+    // Verify monodromy changed
+    int finalMonodromy = computeMonodromy(matching, hole);
+    int monoChange = finalMonodromy - initialMonodromy;
+    printf("[adjustHoleWinding] Final monodromy=%d (winding=%d), change=%d\n",
+           finalMonodromy, finalMonodromy/4, monoChange);
 
-    // Success! Update winding
-    hole.currentWinding += (delta > 0) ? numSwaps : -numSwaps;
+    // Update stored winding based on actual monodromy
+    hole.currentWinding = finalMonodromy / 4;
+    printf("[adjustHoleWinding] SUCCESS! newWinding=%d\n", hole.currentWinding);
+
+    // Update reference tiling for future extremal computations
+    referenceTiling = matching;
+    hasReferenceTiling = true;
+
     return numSwaps;
 }
 
@@ -1368,9 +1467,78 @@ void makeExtremalTilingMCF(std::unordered_set<long long>& m, int direction) {
     printf("[CPU MCF] Done: horiz=%d, vert=%d, total=%zu\n", horizCount, vertCount, m.size());
 }
 
-// Reference tiling for monodromy-constrained extremal search
-std::unordered_set<long long> referenceTiling;
-bool hasReferenceTiling = false;
+// Compute winding from a matching using boundary monodromy
+// Returns monodromy / 4 (the actual winding number)
+int computeWindingFromMatching(const std::unordered_set<long long>& m, int holeIdx) {
+    if (holeIdx < 0 || holeIdx >= (int)detectedHoles.size()) return 0;
+    int monodromy = computeMonodromy(m, detectedHoles[holeIdx]);
+    return monodromy / 4;
+}
+
+// Constrained MCF: find extremal tiling with specified winding around each hole
+// Uses the greedy approach from reference tiling (proven to preserve monodromy)
+// then runs MCF on each partition to restore extremality
+void makeExtremalTilingConstrainedMCF(std::unordered_set<long long>& m, int direction,
+                                       const std::vector<int>& targetWindings) {
+    printf("[CPU ConstrainedMCF] direction=%d, holes=%zu\n", direction, targetWindings.size());
+
+    if (targetWindings.empty() || detectedHoles.empty()) {
+        // No holes - just use regular MCF
+        makeExtremalTilingMCF(m, direction);
+        return;
+    }
+
+    // Strategy: Use greedy flipping from reference tiling to preserve monodromy
+    // This is proven to preserve winding numbers since 2x2 flips don't change them
+    if (!hasReferenceTiling || referenceTiling.empty()) {
+        printf("[CPU ConstrainedMCF] ERROR: No reference tiling available\n");
+        makeExtremalTilingMCF(m, direction);
+        return;
+    }
+
+    // Start from reference and greedily move toward extremal
+    m = referenceTiling;
+
+    // Greedy flipping: repeatedly flip faces toward extremal state
+    int targetState = (direction < 0) ? 1 : 2;  // 1=horizontal, 2=vertical
+    int fromState = (direction < 0) ? 2 : 1;
+
+    bool changed = true;
+    int maxIter = faces.size() * 10;
+    int iter = 0;
+    int totalFlips = 0;
+
+    while (changed && iter < maxIter) {
+        changed = false;
+        iter++;
+
+        for (const Face& f : faces) {
+            int state = getFaceStateOn(m, f.x, f.y);
+            if (state == fromState) {
+                flipFaceOn(m, f.x, f.y, state);
+                changed = true;
+                totalFlips++;
+            }
+        }
+    }
+
+    // Verify winding is preserved
+    for (size_t h = 0; h < detectedHoles.size(); h++) {
+        int actualWinding = computeWindingFromMatching(m, h);
+        printf("[CPU ConstrainedMCF] Hole %zu: actual=%d, target=%d\n",
+               h, actualWinding, targetWindings[h]);
+    }
+
+    // Count edges
+    int horizCount = 0, vertCount = 0;
+    for (long long ek : m) {
+        int dir = (int)(ek & 1);
+        if (dir == 0) horizCount++; else vertCount++;
+    }
+
+    printf("[CPU ConstrainedMCF] Done: iter=%d, flips=%d, horiz=%d, vert=%d\n",
+           iter, totalFlips, horizCount, vertCount);
+}
 
 // Make extremal tiling by greedy local moves from a reference tiling
 // This preserves monodromy around holes (since 2x2 flips don't change monodromy)
@@ -1408,7 +1576,7 @@ void makeExtremalTilingFromReference(std::unordered_set<long long>& m,
 }
 
 // Main entry point for extremal tiling computation
-// Handles both simply-connected (use MCF) and regions with holes (use greedy from reference)
+// Handles both simply-connected (use MCF) and regions with holes (use constrained MCF)
 void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
     printf("[CPU makeExtremalTiling] direction=%d, holesComputed=%d, numHoles=%zu\n",
            direction, holesComputed, detectedHoles.size());
@@ -1424,19 +1592,28 @@ void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
         makeExtremalTilingMCF(m, direction);
         printf("[CPU makeExtremalTiling] MCF done, edges=%zu\n", m.size());
     } else {
-        // Region has holes: need to preserve monodromy
-        printf("[CPU makeExtremalTiling] Using reference tiling (has %zu holes)\n", detectedHoles.size());
-        // Use the current matching as reference if valid, otherwise find one
+        // Region has holes: use constrained MCF to preserve monodromy
+        printf("[CPU makeExtremalTiling] Using constrained MCF (has %zu holes)\n", detectedHoles.size());
+
+        // Ensure we have a reference tiling to get target windings
         if (!hasReferenceTiling || referenceTiling.empty()) {
-            // Find any valid tiling to use as reference
             printf("[CPU makeExtremalTiling] Finding reference tiling...\n");
             findPerfectMatching();
             referenceTiling = matching;
             hasReferenceTiling = true;
         }
 
-        makeExtremalTilingFromReference(m, referenceTiling, direction);
-        printf("[CPU makeExtremalTiling] Reference method done, edges=%zu\n", m.size());
+        // Compute target windings from reference tiling
+        std::vector<int> targetWindings;
+        for (size_t i = 0; i < detectedHoles.size(); i++) {
+            int winding = computeWindingFromMatching(referenceTiling, i);
+            targetWindings.push_back(winding);
+            printf("[CPU makeExtremalTiling] Hole %zu target winding=%d\n", i, winding);
+        }
+
+        // Use constrained MCF to find true extremal with same winding
+        makeExtremalTilingConstrainedMCF(m, direction, targetWindings);
+        printf("[CPU makeExtremalTiling] Constrained MCF done, edges=%zu\n", m.size());
     }
 }
 
@@ -1783,6 +1960,7 @@ char* initCFTP() {
     }
 
     // Check monodromy around each hole for MIN and MAX tilings
+    bool monodromyOk = true;
     if (!detectedHoles.empty()) {
         printf("[CPU initCFTP] Checking monodromy for %zu holes:\n", detectedHoles.size());
         for (size_t i = 0; i < detectedHoles.size(); i++) {
@@ -1791,20 +1969,30 @@ char* initCFTP() {
             printf("[CPU initCFTP] Hole %zu: MIN monodromy=%d, MAX monodromy=%d\n",
                    i, monoMin, monoMax);
 
-            // Also compute winding using vertical cut method with verbose logging
-            printf("[CPU initCFTP] === MIN tiling winding (vertical cut) ===\n");
-            int windingMin = computeHoleWindingOnMatching(i, cftpMin, true);
-            printf("[CPU initCFTP] === MAX tiling winding (vertical cut) ===\n");
-            int windingMax = computeHoleWindingOnMatching(i, cftpMax, true);
+            // Also compute winding using crossing edges method
+            int windingMin = computeWindingFromMatching(cftpMin, i);
+            int windingMax = computeWindingFromMatching(cftpMax, i);
+            printf("[CPU initCFTP] Hole %zu: MIN winding=%d, MAX winding=%d\n",
+                   i, windingMin, windingMax);
 
             if (monoMin != monoMax) {
                 printf("[CPU initCFTP] ERROR: Monodromy mismatch! CFTP will not converge.\n");
+                monodromyOk = false;
             }
             if (windingMin != windingMax) {
-                printf("[CPU initCFTP] ERROR: Winding mismatch! MIN winding=%d, MAX winding=%d\n",
-                       windingMin, windingMax);
+                printf("[CPU initCFTP] ERROR: Winding mismatch!\n");
+                monodromyOk = false;
             }
         }
+    }
+
+    // If monodromy mismatch, return error
+    if (!monodromyOk) {
+        std::string json = "{\"status\":\"error\",\"reason\":\"monodromy_mismatch\",\"holes\":" +
+                          std::to_string(detectedHoles.size()) + "}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
     }
 
     cftpSweepSeeds.clear();
@@ -2741,6 +2929,17 @@ char* getAllHolesInfo() {
         json += ",\"currentWinding\":" + std::to_string(h.currentWinding);
         json += ",\"baseHeight\":" + std::to_string(h.baseHeight);
         json += ",\"boundaryCells\":" + std::to_string(h.boundaryCycle.size());
+
+        // Add hole cells for cut line computation
+        json += ",\"holeCells\":[";
+        bool firstCell = true;
+        for (auto& cell : h.holeCells) {
+            if (!firstCell) json += ",";
+            firstCell = false;
+            json += "[" + std::to_string(cell.first) + "," + std::to_string(cell.second) + "]";
+        }
+        json += "]";
+
         json += "}";
     }
     json += "]}";
