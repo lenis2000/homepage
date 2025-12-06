@@ -3766,6 +3766,138 @@ function initLozengeApp() {
         renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true });
     }
 
+    // Render 2D fluctuation field as a heatmap on triangles
+    function renderFluctuations2D() {
+        if (!rawFluctuations) return;
+
+        const ctx = canvas.getContext('2d');
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+        const scale = parseFloat(el.fluctScaleInput.value) || 10;
+
+        // Clear canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = isDarkMode ? '#1a1a1a' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        const { centerX, centerY, scale: viewScale } = renderer.getTransform(activeTriangles);
+
+        // Draw grid background if enabled
+        if (renderer.showGrid) {
+            renderer.drawBackgroundGrid(ctx, centerX, centerY, viewScale, isDarkMode);
+        }
+
+        // Find min/max fluctuation values for color scaling
+        let minVal = Infinity, maxVal = -Infinity;
+        for (const [, raw] of rawFluctuations) {
+            const v = raw * scale;
+            if (v < minVal) minVal = v;
+            if (v > maxVal) maxVal = v;
+        }
+        // Symmetrize around zero for diverging colormap
+        const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
+
+        // Diverging colormap: blue (negative) -> white (zero) -> red (positive)
+        function valueToColor(val) {
+            if (absMax === 0) return 'rgb(255, 255, 255)';
+            const t = val / absMax; // -1 to 1
+            if (t < 0) {
+                // Blue to white
+                const s = -t; // 0 to 1
+                const r = Math.round(255 * (1 - s));
+                const g = Math.round(255 * (1 - s));
+                const b = 255;
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                // White to red
+                const s = t; // 0 to 1
+                const r = 255;
+                const g = Math.round(255 * (1 - s));
+                const b = Math.round(255 * (1 - s));
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        }
+
+        // Helper to get fluctuation value at a vertex
+        function getFluctValue(n, j) {
+            const key = `${n},${j}`;
+            const raw = rawFluctuations.get(key);
+            return raw !== undefined ? raw * scale : 0;
+        }
+
+        // Draw each triangle colored by average vertex fluctuation
+        for (const [, tri] of activeTriangles) {
+            let verts, vertKeys;
+            if (tri.type === 1) {
+                // Black (right-facing): (n,j), (n,j-1), (n+1,j-1)
+                verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
+                vertKeys = [[tri.n, tri.j], [tri.n, tri.j - 1], [tri.n + 1, tri.j - 1]];
+            } else {
+                // White (left-facing): (n,j), (n+1,j), (n+1,j-1)
+                verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
+                vertKeys = [[tri.n, tri.j], [tri.n + 1, tri.j], [tri.n + 1, tri.j - 1]];
+            }
+
+            // Average fluctuation value at triangle vertices
+            const avgVal = (getFluctValue(vertKeys[0][0], vertKeys[0][1]) +
+                           getFluctValue(vertKeys[1][0], vertKeys[1][1]) +
+                           getFluctValue(vertKeys[2][0], vertKeys[2][1])) / 3;
+
+            const canvasVerts = verts.map(v => renderer.toCanvas(v.x, v.y, centerX, centerY, viewScale));
+
+            ctx.beginPath();
+            ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
+            ctx.lineTo(canvasVerts[1][0], canvasVerts[1][1]);
+            ctx.lineTo(canvasVerts[2][0], canvasVerts[2][1]);
+            ctx.closePath();
+
+            ctx.fillStyle = valueToColor(avgVal);
+            ctx.fill();
+
+            // Thin outline for triangle boundaries
+            ctx.strokeStyle = isDarkMode ? 'rgba(100, 100, 100, 0.3)' : 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+
+        // Draw boundary
+        if (sim.boundaries && sim.boundaries.length > 0) {
+            for (const boundary of sim.boundaries) {
+                renderer.drawBoundary(ctx, boundary, centerX, centerY, viewScale, isDarkMode);
+            }
+        }
+
+        // Draw color scale legend
+        const legendX = renderer.displayWidth - 80;
+        const legendY = 20;
+        const legendW = 20;
+        const legendH = 120;
+        const numSteps = 50;
+
+        // Draw gradient bar
+        for (let i = 0; i < numSteps; i++) {
+            const t = 1 - 2 * i / (numSteps - 1); // 1 to -1 (top to bottom)
+            const val = t * absMax;
+            ctx.fillStyle = valueToColor(val);
+            ctx.fillRect(legendX, legendY + i * (legendH / numSteps), legendW, legendH / numSteps + 1);
+        }
+
+        // Legend border
+        ctx.strokeStyle = isDarkMode ? '#666' : '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(legendX, legendY, legendW, legendH);
+
+        // Legend labels
+        ctx.fillStyle = isDarkMode ? '#ccc' : '#333';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`+${absMax.toFixed(1)}`, legendX + legendW + 4, legendY + 10);
+        ctx.fillText('0', legendX + legendW + 4, legendY + legendH / 2 + 4);
+        ctx.fillText(`−${absMax.toFixed(1)}`, legendX + legendW + 4, legendY + legendH);
+    }
+
     // ========================================================================
     // HOLE DETECTION AND WINDING CONSTRAINTS
     // ========================================================================
@@ -4061,13 +4193,20 @@ function initLozengeApp() {
             // Update dark mode
             const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
             renderer3D.updateDarkMode(isDarkMode);
-            // Render 3D view
-            if (isValid && sim.dimers.length > 0) {
+            // Render 3D view - use fluctuations if in that mode
+            if (inFluctuationMode && rawFluctuations) {
+                renderFluctuations();
+            } else if (isValid && sim.dimers.length > 0) {
                 renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
                 renderer3D.resetCamera();
             }
         } else {
-            draw();
+            // 2D view - use fluctuations heatmap if in that mode
+            if (inFluctuationMode && rawFluctuations) {
+                renderFluctuations2D();
+            } else {
+                draw();
+            }
         }
         // Refresh hole overlays for new view mode
         updateHolesUI();
@@ -6195,9 +6334,15 @@ function initLozengeApp() {
         }
     });
 
-    // Dynamic scale update for fluctuations
+    // Dynamic scale update for fluctuations (both 2D and 3D)
     el.fluctScaleInput.addEventListener('input', () => {
-        renderFluctuations();
+        if (inFluctuationMode && rawFluctuations) {
+            if (is3DView) {
+                renderFluctuations();
+            } else {
+                renderFluctuations2D();
+            }
+        }
     });
 
     // Filter loops by minimum size for double dimer display
