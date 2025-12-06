@@ -569,6 +569,7 @@ if (window.LOZENGE_WEBGPU) {
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <div class="view-toggle">
       <button id="toggle3DBtn" title="Toggle 2D/3D">2D</button>
+      <button id="perspectiveBtn" title="Toggle perspective/isometric" style="display: none;">🎯</button>
       <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
     </div>
     <div class="view-toggle">
@@ -2628,6 +2629,7 @@ function initLozengeApp() {
             this.autoRotate = false;
             this.cameraInitialized = false;
             this.currentPresetIndex = 0;
+            this.usePerspective = true;
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -2722,6 +2724,48 @@ function initLozengeApp() {
             return VISUAL_PRESETS_3D[this.currentPresetIndex];
         }
 
+        togglePerspective() {
+            this.usePerspective = !this.usePerspective;
+            const w = this.container.clientWidth;
+            const h = this.container.clientHeight;
+
+            // Save current camera target
+            const target = this.controls.target.clone();
+
+            if (this.usePerspective) {
+                // Switch to perspective camera
+                this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 10000);
+                this.camera.up.set(0, 0, 1);
+                this.camera.position.set(200, 200, 200);
+            } else {
+                // Switch to orthographic camera
+                const frustum = 150;
+                const aspect = w / h;
+                this.camera = new THREE.OrthographicCamera(
+                    -frustum * aspect / 2, frustum * aspect / 2,
+                    frustum / 2, -frustum / 2,
+                    0.1, 10000
+                );
+                this.camera.up.set(0, 0, 1);
+                this.camera.position.set(150, 150, 150);
+            }
+
+            this.camera.lookAt(target);
+            this.controls.dispose();
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.target.copy(target);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enablePan = true;
+            this.controls.panSpeed = 1.0;
+            this.controls.zoomSpeed = 0.5;
+            this.controls.enableZoom = true;
+            this.controls.screenSpacePanning = true;
+            this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+            return this.usePerspective;
+        }
+
         getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
 
         getPermutedColors() {
@@ -2768,8 +2812,17 @@ function initLozengeApp() {
             if (!this.container) return;
             const width = this.container.clientWidth;
             const height = this.container.clientHeight;
+            const aspect = width / height;
 
-            this.camera.aspect = width / height;
+            if (this.usePerspective) {
+                this.camera.aspect = aspect;
+            } else {
+                const frustum = 150;
+                this.camera.left = -frustum * aspect / 2;
+                this.camera.right = frustum * aspect / 2;
+                this.camera.top = frustum / 2;
+                this.camera.bottom = -frustum / 2;
+            }
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(width, height);
         }
@@ -3617,6 +3670,7 @@ function initLozengeApp() {
         cftpSteps: document.getElementById('cftpSteps'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
+        perspectiveBtn: document.getElementById('perspectiveBtn'),
         preset3DBtn: document.getElementById('preset3DBtn'),
         averageBtn: document.getElementById('averageBtn'),
         avgSamplesInput: document.getElementById('avgSamplesInput'),
@@ -3903,7 +3957,8 @@ function initLozengeApp() {
         threeContainer.style.display = use3D ? 'block' : 'none';
         // Hole overlays are shown in both 2D and 3D views
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
-        // Show/hide preset button
+        // Show/hide 3D option buttons
+        el.perspectiveBtn.style.display = use3D ? 'inline-block' : 'none';
         el.preset3DBtn.style.display = use3D ? 'inline-block' : 'none';
         if (use3D && renderer3D) {
             el.preset3DBtn.textContent = renderer3D.getCurrentPreset().icon;
@@ -4918,6 +4973,14 @@ function initLozengeApp() {
     // 3D View toggle
     el.toggle3DBtn.addEventListener('click', () => {
         setViewMode(!is3DView);
+    });
+
+    el.perspectiveBtn.addEventListener('click', () => {
+        if (renderer3D) {
+            const isPerspective = renderer3D.togglePerspective();
+            el.perspectiveBtn.textContent = isPerspective ? '🎯' : '📐';
+            el.perspectiveBtn.title = isPerspective ? 'Perspective view (click for isometric)' : 'Isometric view (click for perspective)';
+        }
     });
 
     el.preset3DBtn.addEventListener('click', () => {

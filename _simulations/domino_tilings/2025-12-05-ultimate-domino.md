@@ -384,6 +384,7 @@ code:
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <div class="view-toggle">
       <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
+      <button id="perspectiveBtn" title="Toggle perspective/isometric" style="display: none;">🎯</button>
       <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
     </div>
     <div class="view-toggle">
@@ -623,6 +624,7 @@ code:
         importJsonBtn: document.getElementById('importJsonBtn'),
         importJsonInput: document.getElementById('importJsonInput'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
+        perspectiveBtn: document.getElementById('perspectiveBtn'),
         preset3DBtn: document.getElementById('preset3DBtn'),
         dominoViewBtn: document.getElementById('dominoViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
@@ -1311,6 +1313,7 @@ code:
             this.autoRotate = false;
             this.lastDominoCount = 0;
             this.currentPresetIndex = 0;
+            this.usePerspective = false;
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -1400,17 +1403,56 @@ code:
             return VISUAL_PRESETS_3D[this.currentPresetIndex];
         }
 
+        togglePerspective() {
+            this.usePerspective = !this.usePerspective;
+            const w = this.container.clientWidth || 900;
+            const h = this.container.clientHeight || 600;
+
+            // Save current camera target
+            const target = this.controls.target.clone();
+
+            if (this.usePerspective) {
+                // Switch to perspective camera
+                this.camera = new THREE.PerspectiveCamera(60, w / h, 1, 2000);
+                this.camera.position.set(60, 80, 100);
+            } else {
+                // Switch back to orthographic camera
+                const frustum = 100;
+                const aspect = w / h;
+                this.camera = new THREE.OrthographicCamera(
+                    -frustum * aspect / 2, frustum * aspect / 2,
+                    frustum / 2, -frustum / 2,
+                    1, 1000
+                );
+                this.camera.position.set(0, 130, 0);
+            }
+
+            this.camera.lookAt(target);
+            this.controls.dispose();
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.target.copy(target);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.25;
+            this.controls.touches = { ONE: THREE.TOUCH.ROTATE };
+
+            return this.usePerspective;
+        }
+
         handleResize() {
             if (!this.container) return;
             const w = this.container.clientWidth;
             const h = this.container.clientHeight;
-            const frustum = 100;
             const aspect = w / h;
 
-            this.camera.left = -frustum * aspect / 2;
-            this.camera.right = frustum * aspect / 2;
-            this.camera.top = frustum / 2;
-            this.camera.bottom = -frustum / 2;
+            if (this.usePerspective) {
+                this.camera.aspect = aspect;
+            } else {
+                const frustum = 100;
+                this.camera.left = -frustum * aspect / 2;
+                this.camera.right = frustum * aspect / 2;
+                this.camera.top = frustum / 2;
+                this.camera.bottom = -frustum / 2;
+            }
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(w, h);
         }
@@ -1739,7 +1781,8 @@ code:
         // Update button text
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
 
-        // Show/hide preset button
+        // Show/hide 3D option buttons
+        el.perspectiveBtn.style.display = use3D ? 'inline-block' : 'none';
         el.preset3DBtn.style.display = use3D ? 'inline-block' : 'none';
 
         // Enable/disable rotation buttons
@@ -2247,9 +2290,9 @@ code:
         return heights;
     }
 
-    async function runDoubleDimer(restoreFluctuations = false) {
+    async function runDoubleDimer(restoreFluctuations = false, forceResample = false) {
         if (!isValid || isCFTPRunning) return;
-        if (storedSamples) { inDoubleDimerMode = true; inFluctuationMode = false; renderDoubleDimers(); return; }
+        if (storedSamples && !forceResample) { inDoubleDimerMode = true; inFluctuationMode = false; renderDoubleDimers(); return; }
         isCFTPRunning = true; doubleDimerCancelled = false;
         el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = true;
         el.doubleDimerProgress.textContent = 'init...';
@@ -2260,6 +2303,9 @@ code:
             if (res.status === 'in_progress') { el.doubleDimerProgress.textContent = `T=${res.maxT} (${res.done}/2)`; }
             else if (res.status === 'coalesced') {
                 const s0 = sim.exportFluctuationSample(0), s1 = sim.exportFluctuationSample(1);
+                console.log('CFTP coalesced: s0.edges =', s0.edges?.length, 's1.edges =', s1.edges?.length);
+                if (s0.edges?.length > 0) console.log('First edge sample0:', s0.edges[0]);
+                if (s1.edges?.length > 0) console.log('First edge sample1:', s1.edges[0]);
                 storedSamples = { sample0: s0.edges, sample1: s1.edges, dominoes0: s0.dominoes, dominoes1: s1.dominoes };
                 const h0 = computeHeightFunction(s0.edges), h1 = computeHeightFunction(s1.edges);
                 rawFluctuations = new Map();
@@ -2284,11 +2330,21 @@ code:
     function resetDoubleDimerUI() { isCFTPRunning = false; el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = !isValid; }
 
     function renderDoubleDimers() {
-        if (!storedSamples) return;
+        if (!storedSamples) { console.log('renderDoubleDimers: no storedSamples'); return; }
+        console.log('renderDoubleDimers: sample0 count =', storedSamples.sample0?.length, 'sample1 count =', storedSamples.sample1?.length);
         const minLoop = parseInt(el.minLoopInput.value) || 2;
-        sim.loadDimersForLoops(JSON.stringify(storedSamples.sample0), JSON.stringify(storedSamples.sample1));
+        const json0 = JSON.stringify(storedSamples.sample0);
+        const json1 = JSON.stringify(storedSamples.sample1);
+        console.log('JSON being passed: json0.length =', json0?.length, 'json1.length =', json1?.length);
+        if (json0) console.log('json0 first 200 chars:', json0.substring(0, 200));
+        const loadRes = sim.loadDimersForLoops(json0, json1);
+        console.log('loadDimersForLoops result:', loadRes);
         const f = sim.filterLoopsBySize(minLoop);
+        console.log('filterLoopsBySize result:', f);
         const e0 = f.indices0.map(i => storedSamples.sample0[i]), e1 = f.indices1.map(i => storedSamples.sample1[i]);
+        console.log('Filtered edges: e0 =', e0.length, 'e1 =', e1.length, 'minLoop =', minLoop);
+        if (e0.length > 0) console.log('First filtered edge e0:', e0[0]);
+        if (e1.length > 0) console.log('First filtered edge e1:', e1[0]);
         const s0 = new Set(e0.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
         const s1 = new Set(e1.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
 
@@ -2333,6 +2389,7 @@ code:
         const all = new Map();
         for (const e of e0) all.set(`${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`, e);
         for (const e of e1) all.set(`${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`, e);
+        console.log('Drawing double dimer: all.size =', all.size, 'zoom =', zoom, 'ez =', ez, 'ox =', ox, 'oy =', oy);
         ctx.lineWidth = Math.max(3, ez * 0.12);
         for (const [k, e] of all) {
             ctx.strokeStyle = (s0.has(k) && s1.has(k)) ? (isDark?'#fff':'#000') : s0.has(k) ? '#F44336' : '#2196F3';
@@ -2341,7 +2398,8 @@ code:
     }
 
     function renderFluctuations() {
-        if (!rawFluctuations) return;
+        if (!rawFluctuations) { console.log('renderFluctuations: no rawFluctuations'); return; }
+        console.log('renderFluctuations: rawFluctuations size =', rawFluctuations.size);
         // Auto-scale based on data range
         let minF = Infinity, maxF = -Infinity;
         for (const [,v] of rawFluctuations) { minF = Math.min(minF, v); maxF = Math.max(maxF, v); }
@@ -2606,8 +2664,8 @@ code:
         });
         el.resampleBtn.addEventListener('click', () => {
             const wasInFluctuationMode = inFluctuationMode;
-            clearDoubleDimerState();
-            runDoubleDimer(wasInFluctuationMode);
+            // Don't clear state yet - runDoubleDimer will handle it after new samples are ready
+            runDoubleDimer(wasInFluctuationMode, true);  // forceResample=true
         });
 
         el.scaleUpBtn.addEventListener('click', () => {
@@ -3084,6 +3142,14 @@ code:
             setViewMode(!is3DView);
         });
 
+        el.perspectiveBtn.addEventListener('click', () => {
+            if (renderer3D) {
+                const isPerspective = renderer3D.togglePerspective();
+                el.perspectiveBtn.textContent = isPerspective ? '📐' : '🎯';
+                el.perspectiveBtn.title = isPerspective ? 'Perspective view (click for isometric)' : 'Isometric view (click for perspective)';
+            }
+        });
+
         el.preset3DBtn.addEventListener('click', () => {
             if (renderer3D) {
                 const preset = renderer3D.cyclePreset();
@@ -3100,6 +3166,10 @@ code:
         // Domino/Dimer view toggle
         el.dominoViewBtn.addEventListener('click', () => {
             showDimerView = false;
+            // If in double dimer mode, copy one sample to dominoes before clearing
+            if (storedSamples && storedSamples.dominoes0) {
+                dominoes = storedSamples.dominoes0;
+            }
             clearDoubleDimerState();  // Exit double dimer mode if active
             el.dominoViewBtn.classList.add('active');
             el.dimerViewBtn.classList.remove('active');
@@ -3108,6 +3178,11 @@ code:
 
         el.dimerViewBtn.addEventListener('click', () => {
             showDimerView = true;
+            // If in double dimer mode, copy one sample to dominoes before clearing
+            if (storedSamples && storedSamples.dominoes0) {
+                dominoes = storedSamples.dominoes0;
+            }
+            clearDoubleDimerState();  // Exit double dimer mode if active
             el.dimerViewBtn.classList.add('active');
             el.dominoViewBtn.classList.remove('active');
             redrawView();
