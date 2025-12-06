@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-05-ultimate-domino.cpp -o 2025-12-05-ultimate-domino.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPProgress','_getMinTiling','_getMaxTiling','_getHeights','_repairRegion','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -382,8 +382,15 @@ void performGlauberStepsInternal(int numSteps) {
 }
 
 // ============================================================================
-// CFTP
+// CFTP with Height Function Monotone Coupling
 // ============================================================================
+//
+// For domino tilings, we use the height function partial order:
+// - Height defined at vertices (corners of cells)
+// - Tiling A ≤ B iff height_A(v) ≤ height_B(v) at all vertices
+// - MIN state: tiling with minimum heights (computed by local optimization)
+// - MAX state: tiling with maximum heights
+// - Monotone coupling: same random face + target applied to both states
 
 std::unordered_set<long long> cftpMin, cftpMax;
 std::vector<uint64_t> cftpSeeds;
@@ -391,17 +398,127 @@ int cftpEpochSize = 1;
 int cftpTotalEpochs = 0;
 bool cftpInitialized = false;
 
+// Height function at vertex (i,j) - corner between cells
+// Convention: going counterclockwise around a BLACK cell (x+y even),
+// height increases by 1 on unmatched edges, decreases by 3 on matched edges
+// (total change = 4 - 4*covered = 0 if covered by domino)
+std::unordered_map<long long, int> heights;
+
+// Compute height at all vertices for a given matching
+void computeHeights(const std::unordered_set<long long>& m,
+                    std::unordered_map<long long, int>& h) {
+    h.clear();
+    if (vertices.empty()) return;
+
+    // BFS from corner (minX, minY), which has height 0
+    h[vkey(minX, minY)] = 0;
+    std::queue<std::pair<int,int>> q;
+    q.push({minX, minY});
+
+    while (!q.empty()) {
+        auto [vx, vy] = q.front();
+        q.pop();
+        int curH = h[vkey(vx, vy)];
+
+        // Try moving to adjacent vertices (corners)
+        // Each move crosses one edge of the cell grid
+
+        // Right: cross vertical edge at (vx, vy-1) to (vx, vy) if exists
+        // or at (vx, vy) to (vx, vy+1)
+        int dirs[4][2] = {{1,0}, {-1,0}, {0,1}, {0,-1}};
+
+        for (int d = 0; d < 4; d++) {
+            int nx = vx + dirs[d][0];
+            int ny = vy + dirs[d][1];
+            long long nk = vkey(nx, ny);
+
+            if (h.count(nk)) continue;
+
+            // Check if this corner is adjacent to our region
+            bool adjacent = false;
+            // Corner (nx,ny) touches cells (nx-1,ny-1), (nx,ny-1), (nx-1,ny), (nx,ny)
+            for (int cx = nx-1; cx <= nx; cx++) {
+                for (int cy = ny-1; cy <= ny; cy++) {
+                    if (hasVertex(cx, cy)) adjacent = true;
+                }
+            }
+            if (!adjacent) continue;
+
+            // Compute height change when crossing from (vx,vy) to (nx,ny)
+            int dh = 0;
+
+            if (dirs[d][0] == 1) { // Moving right
+                // Cross vertical edge. Which cell are we going around?
+                // If vy is even: going around cell (vx, vy) counterclockwise (bottom edge)
+                // Height change: +1 if unmatched, -3 if matched
+                int edgeY = vy - 1; // The cell below the edge
+                bool inMatch = m.count(ekey(vx, edgeY, 1)) > 0;
+                // Going right along bottom of cell (vx, edgeY) which is black if (vx+edgeY) even
+                bool blackCell = ((vx + edgeY) % 2 == 0);
+                if (blackCell) {
+                    dh = inMatch ? -3 : 1;  // counterclockwise around black
+                } else {
+                    dh = inMatch ? 3 : -1;  // clockwise around white
+                }
+            } else if (dirs[d][0] == -1) { // Moving left
+                int edgeY = vy - 1;
+                bool inMatch = m.count(ekey(vx-1, edgeY, 1)) > 0;
+                bool blackCell = ((vx-1 + edgeY) % 2 == 0);
+                if (blackCell) {
+                    dh = inMatch ? 3 : -1;
+                } else {
+                    dh = inMatch ? -3 : 1;
+                }
+            } else if (dirs[d][1] == 1) { // Moving up
+                int edgeX = vx - 1;
+                bool inMatch = m.count(ekey(edgeX, vy, 0)) > 0;
+                bool blackCell = ((edgeX + vy) % 2 == 0);
+                if (blackCell) {
+                    dh = inMatch ? -3 : 1;
+                } else {
+                    dh = inMatch ? 3 : -1;
+                }
+            } else { // Moving down
+                int edgeX = vx - 1;
+                bool inMatch = m.count(ekey(edgeX, vy-1, 0)) > 0;
+                bool blackCell = ((edgeX + vy-1) % 2 == 0);
+                if (blackCell) {
+                    dh = inMatch ? 3 : -1;
+                } else {
+                    dh = inMatch ? -3 : 1;
+                }
+            }
+
+            h[nk] = curH + dh;
+            q.push({nx, ny});
+        }
+    }
+}
+
+// Get total height at face corners (for comparing flip directions)
+int getFaceHeight(const std::unordered_map<long long, int>& h, int fx, int fy) {
+    int total = 0;
+    // Face corners: (fx,fy), (fx+1,fy), (fx,fy+1), (fx+1,fy+1)
+    // But we care about the CENTER vertex which is (fx+1, fy+1) in our convention
+    // Actually for comparing, we just need height at one interior point
+    auto it = h.find(vkey(fx+1, fy+1));
+    if (it != h.end()) return it->second;
+    return 0;
+}
+
+// Check face state on a matching
 int getFaceStateOn(const std::unordered_set<long long>& m, int fx, int fy) {
     bool hasTop = m.count(ekey(fx, fy + 1, 0)) > 0;
     bool hasBot = m.count(ekey(fx, fy, 0)) > 0;
     bool hasLeft = m.count(ekey(fx, fy, 1)) > 0;
     bool hasRight = m.count(ekey(fx + 1, fy, 1)) > 0;
 
-    if (hasTop && hasBot && !hasLeft && !hasRight) return 1;
-    if (hasLeft && hasRight && !hasTop && !hasBot) return 2;
+    if (hasTop && hasBot && !hasLeft && !hasRight) return 1;  // horizontal
+    if (hasLeft && hasRight && !hasTop && !hasBot) return 2;  // vertical
     return 0;
 }
 
+// Flip face on a matching
 void flipFaceOn(std::unordered_set<long long>& m, int fx, int fy, int state) {
     if (state == 1) {
         m.erase(ekey(fx, fy + 1, 0));
@@ -416,29 +533,193 @@ void flipFaceOn(std::unordered_set<long long>& m, int fx, int fy, int state) {
     }
 }
 
-void makeExtremalState(std::unordered_set<long long>& state, int direction) {
-    state = matching;
+// Min-cost max-flow for finding extremal tilings
+// Uses SPFA (Bellman-Ford variant) for shortest path
+struct MCFEdge {
+    int to, cap, flow, cost, rev;
+};
 
-    bool changed = true;
-    int maxIter = 10000;
-    int iter = 0;
+std::vector<std::vector<MCFEdge>> mcfAdj;
+std::vector<int> mcfDist, mcfParent, mcfParentEdge;
+std::vector<bool> mcfInQueue;
 
-    while (changed && iter < maxIter) {
-        changed = false;
-        iter++;
+void mcf_add_edge(int from, int to, int cap, int cost) {
+    mcfAdj[from].push_back({to, cap, 0, cost, (int)mcfAdj[to].size()});
+    mcfAdj[to].push_back({from, 0, 0, -cost, (int)mcfAdj[from].size() - 1});
+}
 
-        for (const Face& f : faces) {
-            int st = getFaceStateOn(state, f.x, f.y);
-            // direction < 0: prefer horizontal (state 1)
-            // direction > 0: prefer vertical (state 2)
-            if ((direction < 0 && st == 2) || (direction > 0 && st == 1)) {
-                flipFaceOn(state, f.x, f.y, st);
-                changed = true;
+bool mcf_spfa(int s, int t, int n) {
+    mcfDist.assign(n, INT_MAX);
+    mcfParent.assign(n, -1);
+    mcfParentEdge.assign(n, -1);
+    mcfInQueue.assign(n, false);
+
+    mcfDist[s] = 0;
+    std::queue<int> q;
+    q.push(s);
+    mcfInQueue[s] = true;
+
+    while (!q.empty()) {
+        int v = q.front();
+        q.pop();
+        mcfInQueue[v] = false;
+
+        for (int i = 0; i < (int)mcfAdj[v].size(); i++) {
+            const auto& e = mcfAdj[v][i];
+            if (e.cap - e.flow > 0 && mcfDist[v] + e.cost < mcfDist[e.to]) {
+                mcfDist[e.to] = mcfDist[v] + e.cost;
+                mcfParent[e.to] = v;
+                mcfParentEdge[e.to] = i;
+                if (!mcfInQueue[e.to]) {
+                    q.push(e.to);
+                    mcfInQueue[e.to] = true;
+                }
+            }
+        }
+    }
+    return mcfDist[t] != INT_MAX;
+}
+
+// Returns {max_flow, min_cost}
+std::pair<int, int> minCostMaxFlow(int s, int t, int n) {
+    int flow = 0, cost = 0;
+    while (mcf_spfa(s, t, n)) {
+        // Find min capacity along path
+        int pushFlow = INT_MAX;
+        for (int v = t; v != s; v = mcfParent[v]) {
+            auto& e = mcfAdj[mcfParent[v]][mcfParentEdge[v]];
+            pushFlow = std::min(pushFlow, e.cap - e.flow);
+        }
+
+        // Apply flow
+        for (int v = t; v != s; v = mcfParent[v]) {
+            auto& e = mcfAdj[mcfParent[v]][mcfParentEdge[v]];
+            e.flow += pushFlow;
+            mcfAdj[v][e.rev].flow -= pushFlow;
+        }
+
+        flow += pushFlow;
+        cost += pushFlow * mcfDist[t];
+    }
+    return {flow, cost};
+}
+
+// Compute extremal tiling using min-cost max-flow
+// MIN: horizontal edges cost 0, vertical edges cost 1 → minimize total cost
+// MAX: vertical edges cost 0, horizontal edges cost 1 → minimize total cost
+void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
+    m.clear();
+    if (vertices.empty()) return;
+
+    // Separate vertices by color
+    std::vector<std::pair<int,int>> blacks, whites;
+    std::unordered_map<long long, int> blackIdx, whiteIdx;
+
+    for (long long vk : vertices) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+
+        if ((x + y) % 2 == 0) {
+            blackIdx[vk] = blacks.size();
+            blacks.push_back({x, y});
+        } else {
+            whiteIdx[vk] = whites.size();
+            whites.push_back({x, y});
+        }
+    }
+
+    if (blacks.size() != whites.size() || blacks.empty()) return;
+
+    int numBlack = blacks.size();
+    int numWhite = whites.size();
+    int S = numBlack + numWhite;
+    int T = S + 1;
+    int numNodes = T + 1;
+
+    mcfAdj.assign(numNodes, std::vector<MCFEdge>());
+
+    // Source -> Black (cost 0)
+    for (int i = 0; i < numBlack; i++) {
+        mcf_add_edge(S, i, 1, 0);
+    }
+
+    // White -> Sink (cost 0)
+    for (int j = 0; j < numWhite; j++) {
+        mcf_add_edge(numBlack + j, T, 1, 0);
+    }
+
+    // Black -> White edges with costs
+    // MIN (direction < 0): horizontal cost 0, vertical cost 1
+    // MAX (direction > 0): vertical cost 0, horizontal cost 1
+    for (int i = 0; i < numBlack; i++) {
+        int bx = blacks[i].first;
+        int by = blacks[i].second;
+
+        // Right neighbor (horizontal)
+        auto it = whiteIdx.find(vkey(bx + 1, by));
+        if (it != whiteIdx.end()) {
+            int cost = (direction < 0) ? 0 : 1;  // MIN: horiz=0, MAX: horiz=1
+            mcf_add_edge(i, numBlack + it->second, 1, cost);
+        }
+
+        // Left neighbor (horizontal)
+        it = whiteIdx.find(vkey(bx - 1, by));
+        if (it != whiteIdx.end()) {
+            int cost = (direction < 0) ? 0 : 1;
+            mcf_add_edge(i, numBlack + it->second, 1, cost);
+        }
+
+        // Up neighbor (vertical)
+        it = whiteIdx.find(vkey(bx, by + 1));
+        if (it != whiteIdx.end()) {
+            int cost = (direction < 0) ? 1 : 0;  // MIN: vert=1, MAX: vert=0
+            mcf_add_edge(i, numBlack + it->second, 1, cost);
+        }
+
+        // Down neighbor (vertical)
+        it = whiteIdx.find(vkey(bx, by - 1));
+        if (it != whiteIdx.end()) {
+            int cost = (direction < 0) ? 1 : 0;
+            mcf_add_edge(i, numBlack + it->second, 1, cost);
+        }
+    }
+
+    // Run min-cost max-flow
+    minCostMaxFlow(S, T, numNodes);
+
+    // Extract matching from flow
+    for (int i = 0; i < numBlack; i++) {
+        int bx = blacks[i].first;
+        int by = blacks[i].second;
+
+        for (const auto& e : mcfAdj[i]) {
+            if (e.to >= numBlack && e.to < numBlack + numWhite && e.flow > 0) {
+                int j = e.to - numBlack;
+                int wx = whites[j].first;
+                int wy = whites[j].second;
+
+                if (wx == bx + 1 && wy == by) {
+                    m.insert(ekey(bx, by, 0));
+                } else if (wx == bx - 1 && wy == by) {
+                    m.insert(ekey(wx, wy, 0));
+                } else if (wy == by + 1 && wx == bx) {
+                    m.insert(ekey(bx, by, 1));
+                } else if (wy == by - 1 && wx == bx) {
+                    m.insert(ekey(wx, wy, 1));
+                }
+                break;
             }
         }
     }
 }
 
+// Check if two tilings are equal
+bool tilingsEqual(const std::unordered_set<long long>& a,
+                  const std::unordered_set<long long>& b) {
+    return a == b;
+}
+
+// CFTP step: apply same random move to both min and max states
 void cftpStep(uint64_t seed) {
     if (faces.empty()) return;
 
@@ -446,19 +727,20 @@ void cftpStep(uint64_t seed) {
     int idx = getRandomInt(faces.size());
     const Face& f = faces[idx];
 
+    // Heat-bath: pick target state uniformly (1=horizontal, 2=vertical)
+    int target = (getRandomInt(2) == 0) ? 1 : 2;
+
+    // Apply to min state
     int stMin = getFaceStateOn(cftpMin, f.x, f.y);
-    if (stMin != 0) {
+    if (stMin != 0 && stMin != target) {
         flipFaceOn(cftpMin, f.x, f.y, stMin);
     }
 
+    // Apply to max state (same face, same target)
     int stMax = getFaceStateOn(cftpMax, f.x, f.y);
-    if (stMax != 0) {
+    if (stMax != 0 && stMax != target) {
         flipFaceOn(cftpMax, f.x, f.y, stMax);
     }
-}
-
-bool cftpCoalesced() {
-    return cftpMin == cftpMax;
 }
 
 // ============================================================================
@@ -598,16 +880,25 @@ long long getFlipCount() {
     return flipCount;
 }
 
+// CFTP state
+long long cftpStepsDone = 0;
+long long cftpTotalStepsThisRun = 0;
+size_t cftpCurrentSeedIdx = 0;
+
 EMSCRIPTEN_KEEPALIVE
 void initCFTP() {
     if (vertices.empty() || faces.empty()) return;
 
-    makeExtremalState(cftpMin, -1);  // Prefer horizontal
-    makeExtremalState(cftpMax, +1);  // Prefer vertical
+    // Compute extremal tilings (MIN and MAX height)
+    makeExtremalTiling(cftpMin, -1);  // Minimize heights
+    makeExtremalTiling(cftpMax, +1);  // Maximize heights
 
     cftpSeeds.clear();
-    cftpEpochSize = 1;
+    cftpEpochSize = std::max(1, (int)faces.size());  // Start with one sweep
     cftpTotalEpochs = 0;
+    cftpStepsDone = 0;
+    cftpTotalStepsThisRun = 0;
+    cftpCurrentSeedIdx = 0;
     cftpInitialized = true;
 }
 
@@ -615,33 +906,56 @@ EMSCRIPTEN_KEEPALIVE
 int stepCFTP() {
     if (!cftpInitialized) return -1;
 
-    // Generate new seeds for the earlier time period
-    // Seeds represent times: new seeds are for -2T to -T, old seeds for -T to 0
-    size_t oldSize = cftpSeeds.size();
-    std::vector<uint64_t> newSeeds(cftpEpochSize);
-    for (size_t i = 0; i < cftpEpochSize; i++) {
-        newSeeds[i] = xorshift64();
+    // If we need more seeds (starting new epoch or first call)
+    if (cftpCurrentSeedIdx >= cftpSeeds.size()) {
+        // Generate new seeds for earlier time period
+        std::vector<uint64_t> newSeeds(cftpEpochSize);
+        for (int i = 0; i < cftpEpochSize; i++) {
+            newSeeds[i] = xorshift64();
+        }
+
+        // Prepend new seeds (they represent earlier times)
+        cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
+
+        // RESET to extremal states
+        makeExtremalTiling(cftpMin, -1);
+        makeExtremalTiling(cftpMax, +1);
+
+        cftpCurrentSeedIdx = 0;
+        cftpTotalEpochs++;
+        cftpTotalStepsThisRun = cftpSeeds.size();
+
+        // Check if already coalesced (rare edge case)
+        if (tilingsEqual(cftpMin, cftpMax)) {
+            return 0;  // Done
+        }
     }
 
-    // Prepend new seeds (they represent earlier times)
-    cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
-
-    // RESET to extremal states before applying the chain
-    makeExtremalState(cftpMin, -1);  // Prefer horizontal
-    makeExtremalState(cftpMax, +1);  // Prefer vertical
-
-    // Apply all seeds from earliest to latest (time -T to 0)
-    for (size_t i = 0; i < cftpSeeds.size(); i++) {
-        cftpStep(cftpSeeds[i]);
+    // Process up to 1000 steps
+    size_t stepsThisBatch = 0;
+    while (cftpCurrentSeedIdx < cftpSeeds.size() && stepsThisBatch < 1000) {
+        cftpStep(cftpSeeds[cftpCurrentSeedIdx]);
+        cftpCurrentSeedIdx++;
+        cftpStepsDone++;
+        stepsThisBatch++;
     }
 
-    cftpTotalEpochs++;
-
-    if (cftpCoalesced()) {
-        return 0;  // Done
+    // Check coalescence after each batch
+    if (tilingsEqual(cftpMin, cftpMax)) {
+        return 0;  // Coalesced!
     }
 
-    cftpEpochSize *= 2;
+    // If finished this epoch's seeds
+    if (cftpCurrentSeedIdx >= cftpSeeds.size()) {
+        // Double epoch size for next iteration
+        cftpEpochSize *= 2;
+
+        // Safety limit
+        if (cftpTotalEpochs >= 25) {
+            return 0;  // Give up after 2^25 steps
+        }
+    }
+
     return 1;  // Continue
 }
 
@@ -654,11 +968,120 @@ char* finalizeCFTP() {
         return result;
     }
 
+    // Use the coalesced tiling (min and max should be equal)
     matching = cftpMin;
     cftpInitialized = false;
 
     std::string json = "{\"status\":\"success\",\"epochs\":" + std::to_string(cftpTotalEpochs) +
+                      ",\"steps\":" + std::to_string(cftpStepsDone) +
                       "," + exportEdgesJson().substr(1);
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+EMSCRIPTEN_KEEPALIVE
+long long getCFTPProgress() {
+    if (!cftpInitialized) return 0;
+    return cftpStepsDone;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getMinTiling() {
+    if (vertices.empty() || faces.empty()) {
+        std::string json = "{\"status\":\"error\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    std::unordered_set<long long> minTiling;
+    makeExtremalTiling(minTiling, -1);
+
+    // Export edges
+    std::string json = "{\"edges\":[";
+    bool first = true;
+    for (long long ek : minTiling) {
+        int x = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int y = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        if (!first) json += ",";
+        first = false;
+        if (dir == 0) {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x + 1) + ",\"y2\":" + std::to_string(y) + "}";
+        } else {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x) + ",\"y2\":" + std::to_string(y + 1) + "}";
+        }
+    }
+    json += "]}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getMaxTiling() {
+    if (vertices.empty() || faces.empty()) {
+        std::string json = "{\"status\":\"error\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    std::unordered_set<long long> maxTiling;
+    makeExtremalTiling(maxTiling, +1);
+
+    // Export edges
+    std::string json = "{\"edges\":[";
+    bool first = true;
+    for (long long ek : maxTiling) {
+        int x = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int y = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        if (!first) json += ",";
+        first = false;
+        if (dir == 0) {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x + 1) + ",\"y2\":" + std::to_string(y) + "}";
+        } else {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x) + ",\"y2\":" + std::to_string(y + 1) + "}";
+        }
+    }
+    json += "]}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getHeights() {
+    if (vertices.empty()) {
+        std::string json = "{\"heights\":[]}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    std::unordered_map<long long, int> h;
+    computeHeights(matching, h);
+
+    std::string json = "{\"heights\":[";
+    bool first = true;
+    for (auto& [vk, hval] : h) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+        if (!first) json += ",";
+        first = false;
+        json += "{\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) +
+                ",\"h\":" + std::to_string(hval) + "}";
+    }
+    json += "]}";
+
     char* result = (char*)malloc(json.size() + 1);
     strcpy(result, json.c_str());
     return result;

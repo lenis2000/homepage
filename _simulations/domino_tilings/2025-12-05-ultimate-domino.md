@@ -308,6 +308,9 @@ code:
     <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
+    <button id="showMinBtn" style="background: #6c757d; color: white;" disabled>Show MIN</button>
+    <button id="showMaxBtn" style="background: #6c757d; color: white;" disabled>Show MAX</button>
+    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;"><input type="checkbox" id="showHeightsCheckbox"> Heights</label>
     <button id="scaleUpBtn" title="Double the region size">Scale Up Region</button>
     <button id="scaleDownBtn" title="Halve the region size">Scale Down Region</button>
     <div style="display: flex; align-items: center; gap: 6px;">
@@ -334,7 +337,7 @@ code:
     <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
     <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
-    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpEpochs">0</span></div>
+    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP Steps</span><span class="stat-value" id="cftpSteps">0</span></div>
   </div>
 </div>
 
@@ -459,6 +462,10 @@ code:
     let isCFTPRunning = false;
     let cftpEpochs = 0;
 
+    // Debug
+    let showHeights = false;
+    let heightData = [];
+
     // Colors
     let colorPaletteIndex = 0;
     let colorPermutation = 0;
@@ -490,6 +497,9 @@ code:
         startStopBtn: document.getElementById('startStopBtn'),
         cftpBtn: document.getElementById('cftpBtn'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
+        showMinBtn: document.getElementById('showMinBtn'),
+        showMaxBtn: document.getElementById('showMaxBtn'),
+        showHeightsCheckbox: document.getElementById('showHeightsCheckbox'),
         scaleUpBtn: document.getElementById('scaleUpBtn'),
         scaleDownBtn: document.getElementById('scaleDownBtn'),
         speedSlider: document.getElementById('speedSlider'),
@@ -499,7 +509,7 @@ code:
         stepsCount: document.getElementById('stepsCount'),
         flipsCount: document.getElementById('flipsCount'),
         cftpStatus: document.getElementById('cftpStatus'),
-        cftpEpochs: document.getElementById('cftpEpochs'),
+        cftpSteps: document.getElementById('cftpSteps'),
         handTool: document.getElementById('handTool'),
         drawTool: document.getElementById('drawTool'),
         eraseTool: document.getElementById('eraseTool'),
@@ -544,6 +554,10 @@ code:
             this.initCFTPWasm = Module.cwrap('initCFTP', null, []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
             this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
+            this.getCFTPProgressWasm = Module.cwrap('getCFTPProgress', 'number', []);
+            this.getMinTilingWasm = Module.cwrap('getMinTiling', 'number', []);
+            this.getMaxTilingWasm = Module.cwrap('getMaxTiling', 'number', []);
+            this.getHeightsWasm = Module.cwrap('getHeights', 'number', []);
             this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
         }
 
@@ -598,6 +612,10 @@ code:
             return this.stepCFTPWasm();
         }
 
+        getCFTPProgress() {
+            return this.getCFTPProgressWasm();
+        }
+
         finalizeCFTP() {
             const resultPtr = this.finalizeCFTPWasm();
             const jsonStr = Module.UTF8ToString(resultPtr);
@@ -612,6 +630,35 @@ code:
 
         repair() {
             const resultPtr = this.repairRegionWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
+        }
+
+        getMinTiling() {
+            const resultPtr = this.getMinTilingWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            const result = JSON.parse(jsonStr);
+            if (result.edges) {
+                result.dominoes = this.edgesToDominoes(result.edges);
+            }
+            return result;
+        }
+
+        getMaxTiling() {
+            const resultPtr = this.getMaxTilingWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            const result = JSON.parse(jsonStr);
+            if (result.edges) {
+                result.dominoes = this.edgesToDominoes(result.edges);
+            }
+            return result;
+        }
+
+        getHeights() {
+            const resultPtr = this.getHeightsWasm();
             const jsonStr = Module.UTF8ToString(resultPtr);
             this.freeStringWasm(resultPtr);
             return JSON.parse(jsonStr);
@@ -732,6 +779,8 @@ code:
             el.statusBadge.textContent = 'Valid';
             el.startStopBtn.disabled = false;
             el.cftpBtn.disabled = false;
+            el.showMinBtn.disabled = false;
+            el.showMaxBtn.disabled = false;
             el.repairBtn.disabled = true;
         } else if (result.status === 'empty') {
             isValid = false;
@@ -740,6 +789,8 @@ code:
             el.statusBadge.textContent = 'Empty';
             el.startStopBtn.disabled = true;
             el.cftpBtn.disabled = true;
+            el.showMinBtn.disabled = true;
+            el.showMaxBtn.disabled = true;
             el.repairBtn.disabled = true;
         } else {
             isValid = false;
@@ -748,6 +799,8 @@ code:
             el.statusBadge.textContent = `Invalid (${result.reason || 'no matching'})`;
             el.startStopBtn.disabled = true;
             el.cftpBtn.disabled = true;
+            el.showMinBtn.disabled = true;
+            el.showMaxBtn.disabled = true;
             el.repairBtn.disabled = false;
         }
 
@@ -782,6 +835,47 @@ code:
         const perm = perms[colorPermutation % perms.length];
 
         return perm.map(i => colors[i]);
+    }
+
+    function resetView() {
+        if (activeCells.size === 0) {
+            zoom = 1.0;
+            panX = 0;
+            panY = 0;
+            draw();
+            return;
+        }
+
+        // Find bounds of active cells
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        for (const [key, cell] of activeCells) {
+            minX = Math.min(minX, cell.x);
+            maxX = Math.max(maxX, cell.x + 1);  // +1 for cell width
+            minY = Math.min(minY, cell.y);
+            maxY = Math.max(maxY, cell.y + 1);  // +1 for cell height
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const canvasW = rect.width;
+        const canvasH = rect.height;
+
+        // Calculate required zoom to fit all cells with some padding
+        const regionW = (maxX - minX) * cellSize;
+        const regionH = (maxY - minY) * cellSize;
+        const padding = 0.9;  // 90% of canvas
+
+        const zoomX = (canvasW * padding) / regionW;
+        const zoomY = (canvasH * padding) / regionH;
+        zoom = Math.min(zoomX, zoomY, 2.0);  // Cap at 2x zoom
+
+        // Center the region
+        const centerCellX = (minX + maxX) / 2;
+        const centerCellY = (minY + maxY) / 2;
+        panX = -centerCellX * cellSize;
+        panY = -centerCellY * cellSize;
+
+        draw();
     }
 
     function draw() {
@@ -865,6 +959,29 @@ code:
                     ctx.lineWidth = borderWidth;
                     ctx.strokeRect(minX, minY, width, height);
                 }
+            }
+        }
+
+        // Draw height function
+        if (showHeights && heightData.length > 0) {
+            ctx.font = `${Math.max(8, size * 0.4)}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (const h of heightData) {
+                // Heights are at vertices (corners), so position at corner
+                const sx = centerX + h.x * size;
+                const sy = centerY + h.y * size;
+
+                // Draw background circle
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.beginPath();
+                ctx.arc(sx, sy, size * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw height value
+                ctx.fillStyle = '#000';
+                ctx.fillText(h.h.toString(), sx, sy);
             }
         }
 
@@ -1101,6 +1218,13 @@ code:
         el.cftpBtn.disabled = !isValid;
     }
 
+    function formatNumber(n) {
+        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+        return n.toString();
+    }
+
     async function runCFTP() {
         if (!isValid || isCFTPRunning) return;
 
@@ -1109,29 +1233,30 @@ code:
         el.cftpStopBtn.style.display = '';
         el.cftpStatus.style.display = '';
         el.startStopBtn.disabled = true;
-        cftpEpochs = 0;
+        el.cftpSteps.textContent = '0';
 
         sim.initCFTP();
 
         while (isCFTPRunning) {
-            const coalesced = sim.stepCFTP();
-            cftpEpochs++;
-            el.cftpEpochs.textContent = cftpEpochs;
+            const done = sim.stepCFTP();
+            const steps = sim.getCFTPProgress();
+            el.cftpSteps.textContent = formatNumber(steps);
 
-            if (coalesced === 0) {
-                // Success!
-                const result = sim.finalizeCFTP();
-                dominoes = result.dominoes;
-                totalSteps = result.totalSteps || 0;
-                flipCount = result.flipCount || 0;
+            if (done === 0) {
+                // Coalesced! Get the perfect sample
+                const finalResult = sim.finalizeCFTP();
+                dominoes = finalResult.dominoes || edgesToDominoes(finalResult.edges || []);
+                totalSteps = finalResult.totalSteps || 0;
+                flipCount = finalResult.flipCount || 0;
+                console.log('CFTP coalesced after', finalResult.steps, 'steps,', finalResult.epochs, 'epochs');
                 break;
             }
 
-            // Yield to UI
+            // Yield to UI every batch
             await new Promise(resolve => setTimeout(resolve, 0));
-            draw();
         }
 
+        el.cftpStatus.style.display = 'none';
         isCFTPRunning = false;
         el.cftpBtn.style.display = '';
         el.cftpStopBtn.style.display = 'none';
@@ -1309,6 +1434,39 @@ code:
         el.cftpBtn.addEventListener('click', runCFTP);
         el.cftpStopBtn.addEventListener('click', stopCFTP);
 
+        // Debug buttons
+        el.showMinBtn.addEventListener('click', () => {
+            if (!wasmReady || !isValid) return;
+            const result = sim.getMinTiling();
+            if (result.dominoes) {
+                dominoes = result.dominoes;
+                if (showHeights) {
+                    heightData = sim.getHeights().heights || [];
+                }
+                draw();
+            }
+        });
+
+        el.showMaxBtn.addEventListener('click', () => {
+            if (!wasmReady || !isValid) return;
+            const result = sim.getMaxTiling();
+            if (result.dominoes) {
+                dominoes = result.dominoes;
+                if (showHeights) {
+                    heightData = sim.getHeights().heights || [];
+                }
+                draw();
+            }
+        });
+
+        el.showHeightsCheckbox.addEventListener('change', () => {
+            showHeights = el.showHeightsCheckbox.checked;
+            if (showHeights && wasmReady && isValid) {
+                heightData = sim.getHeights().heights || [];
+            }
+            draw();
+        });
+
         el.scaleUpBtn.addEventListener('click', () => {
             if (!wasmReady || activeCells.size === 0) return;
             // Scale up: double each cell into 2x2 block
@@ -1325,6 +1483,7 @@ code:
             activeCells.clear();
             for (const [k, v] of newCells) activeCells.set(k, v);
             updateRegion();
+            resetView();
         });
 
         el.scaleDownBtn.addEventListener('click', () => {
@@ -1342,6 +1501,7 @@ code:
             activeCells.clear();
             for (const [k, v] of newCells) activeCells.set(k, v);
             updateRegion();
+            resetView();
         });
 
         // Speed control - logarithmic slider with synchronized input
@@ -1411,12 +1571,7 @@ code:
             draw();
         });
 
-        el.resetViewBtn.addEventListener('click', () => {
-            zoom = 1.0;
-            panX = 0;
-            panY = 0;
-            draw();
-        });
+        el.resetViewBtn.addEventListener('click', resetView);
 
         el.showGridCheckbox.addEventListener('change', draw);
 
