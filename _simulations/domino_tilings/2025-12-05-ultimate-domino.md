@@ -1102,12 +1102,16 @@ code:
             if (hasHoles) {
                 el.statusBadge.className = 'status-valid';
                 el.statusBadge.textContent = 'Valid (has holes)';
-                el.cftpBtn.title = 'CFTP only available for simply-connected regions (no holes)';
-                el.doubleDimerBtn.title = 'Double Dimer only available for simply-connected regions';
+                el.cftpBtn.textContent = 'CFTP N/A (holes)';
+                el.cftpBtn.title = 'CFTP not implemented for regions with holes';
+                el.doubleDimerBtn.textContent = 'Double Dimer N/A';
+                el.doubleDimerBtn.title = 'Double Dimer not implemented for regions with holes';
             } else {
                 el.statusBadge.className = 'status-valid';
                 el.statusBadge.textContent = 'Valid';
+                el.cftpBtn.textContent = 'Perfect Sample';
                 el.cftpBtn.title = 'Coupling From The Past - Perfect Sample';
+                el.doubleDimerBtn.textContent = 'Double Dimer';
                 el.doubleDimerBtn.title = 'Double Dimer - Two independent CFTP samples';
             }
         } else if (result.status === 'empty') {
