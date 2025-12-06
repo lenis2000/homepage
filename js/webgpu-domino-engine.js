@@ -207,8 +207,8 @@ class WebGPUDominoEngine {
             ]
         });
 
-        // Compute extremal tilings
-        await this.computeExtremalTilings();
+        // Note: Extremal tilings will be uploaded separately via uploadExtremalTilings()
+        // since proper MIN/MAX tilings require min-cut/max-flow (computed on CPU)
 
         this.cftpInitialized = true;
         console.log(`WebGPU CFTP initialized: ${this.numCells} cells, ${this.numFaces} faces`);
@@ -567,8 +567,8 @@ class WebGPUDominoEngine {
             ]
         });
 
-        // Compute extremal tilings for all 4 chains
-        await this.computeDoubleDimerExtremalTilings();
+        // Note: Extremal tilings will be uploaded separately via resetDoubleDimerChainsWithTilings()
+        // since proper MIN/MAX tilings require min-cut/max-flow (computed on CPU)
 
         this.doubleDimerInitialized = true;
         console.log(`WebGPU Double Dimer CFTP initialized: 4 chains, ${this.numCells} cells`);
@@ -636,6 +636,26 @@ class WebGPUDominoEngine {
     async resetDoubleDimerChains() {
         if (!this.doubleDimerInitialized) return;
         await this.computeDoubleDimerExtremalTilings();
+    }
+
+    /**
+     * Reset Double Dimer chains using pre-computed extremal tilings from CPU
+     * @param {Array} minEdges - MIN tiling edges from CPU
+     * @param {Array} maxEdges - MAX tiling edges from CPU
+     */
+    async resetDoubleDimerChainsWithTilings(minEdges, maxEdges) {
+        if (!this.doubleDimerInitialized) return;
+
+        const minGrid = this.edgesToGrid(minEdges);
+        const maxGrid = this.edgesToGrid(maxEdges);
+
+        // Both pairs start from same extremal tilings
+        this.device.queue.writeBuffer(this.ddPair0LowerBuffer, 0, minGrid);
+        this.device.queue.writeBuffer(this.ddPair0UpperBuffer, 0, maxGrid);
+        this.device.queue.writeBuffer(this.ddPair1LowerBuffer, 0, minGrid);
+        this.device.queue.writeBuffer(this.ddPair1UpperBuffer, 0, maxGrid);
+
+        await this.device.queue.onSubmittedWorkDone();
     }
 
     /**

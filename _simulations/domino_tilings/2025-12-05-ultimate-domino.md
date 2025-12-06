@@ -373,6 +373,7 @@ code:
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
     <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
     <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span></div>
+    <div class="stat" id="gpuIndicator" style="display: none;"><span style="color: #2e8b57; font-size: 0.9em;">🚀 GPU</span></div>
   </div>
 </div>
 
@@ -909,6 +910,9 @@ code:
                     if (gpuEngine.isReady) {
                         useWebGPU = true;
                         console.log('WebGPU Domino Engine ready');
+                        // Show GPU indicator
+                        const gpuIndicator = document.getElementById('gpuIndicator');
+                        if (gpuIndicator) gpuIndicator.style.display = '';
                     }
                 } catch (e) {
                     console.warn('WebGPU initialization failed:', e);
@@ -2190,7 +2194,7 @@ code:
         return num.toString();
     }
 
-    // GPU CFTP implementation
+    // GPU CFTP implementation (uses CPU for extremal tilings, GPU for CFTP steps)
     async function runGPU_CFTP(cftpStartTime, originalText) {
         // Get region mask from WASM
         const maskResult = sim.getRegionMask();
@@ -2202,7 +2206,26 @@ code:
 
         const { maskBytes, minX, maxX, minY, maxY } = maskResult;
 
-        // Initialize GPU CFTP
+        // Initialize CPU CFTP to get correct extremal tilings (min-cut/max-flow)
+        el.cftpSteps.textContent = 'CPU extremal';
+        el.cftpBtn.textContent = 'CPU ext';
+        const cpuInit = sim.initCFTP();
+        if (cpuInit.status === 'error') {
+            console.error('CPU CFTP init failed:', cpuInit.reason);
+            el.cftpSteps.textContent = 'error';
+            return false;
+        }
+
+        // Get extremal tilings from CPU
+        const minState = sim.getCFTPMinState();
+        const maxState = sim.getCFTPMaxState();
+        if (!minState.edges || !maxState.edges) {
+            console.error('Failed to get extremal tilings from CPU');
+            el.cftpSteps.textContent = 'error';
+            return false;
+        }
+
+        // Initialize GPU buffers
         el.cftpSteps.textContent = 'GPU init';
         el.cftpBtn.textContent = 'GPU init';
         const initOk = await gpuEngine.initCFTP(maskBytes, minX, maxX, minY, maxY);
@@ -2212,6 +2235,9 @@ code:
             return false;
         }
 
+        // Upload CPU-computed extremal tilings to GPU
+        await gpuEngine.uploadExtremalTilings(minState.edges, maxState.edges);
+
         // Epoch doubling loop
         let T = 1;
         const maxEpochs = 30;
@@ -2219,7 +2245,8 @@ code:
         const checkInterval = 1000;
 
         for (let epoch = 0; epoch < maxEpochs && isCFTPRunning; epoch++) {
-            await gpuEngine.resetCFTPChains();
+            // Reset chains to CPU-computed extremal tilings
+            await gpuEngine.resetCFTPChainsWithTilings(minState.edges, maxState.edges);
 
             el.cftpSteps.textContent = `GPU T=${T}`;
             el.cftpBtn.textContent = `GPU:${T}`;
@@ -2404,6 +2431,7 @@ code:
     }
 
     // GPU Double Dimer implementation (4 chains for 2 independent samples)
+    // Uses CPU for extremal tilings, GPU for CFTP steps
     async function runGPU_DoubleDimer(t0, restoreFluctuations) {
         // Get region mask from WASM
         const maskResult = sim.getRegionMask();
@@ -2414,6 +2442,24 @@ code:
         }
 
         const { maskBytes, minX, maxX, minY, maxY } = maskResult;
+
+        // Initialize CPU CFTP to get correct extremal tilings
+        el.doubleDimerProgress.textContent = 'CPU extremal';
+        const cpuInit = sim.initCFTP();
+        if (cpuInit.status === 'error') {
+            console.error('CPU CFTP init failed:', cpuInit.reason);
+            el.doubleDimerProgress.textContent = 'error';
+            return false;
+        }
+
+        // Get extremal tilings from CPU
+        const minState = sim.getCFTPMinState();
+        const maxState = sim.getCFTPMaxState();
+        if (!minState.edges || !maxState.edges) {
+            console.error('Failed to get extremal tilings from CPU');
+            el.doubleDimerProgress.textContent = 'error';
+            return false;
+        }
 
         // Initialize GPU Double Dimer CFTP (4 chains)
         el.doubleDimerProgress.textContent = 'GPU init';
@@ -2430,7 +2476,8 @@ code:
         const checkInterval = 1000;
 
         for (let epoch = 0; epoch < maxEpochs && !doubleDimerCancelled; epoch++) {
-            await gpuEngine.resetDoubleDimerChains();
+            // Reset all 4 chains to CPU-computed extremal tilings
+            await gpuEngine.resetDoubleDimerChainsWithTilings(minState.edges, maxState.edges);
 
             el.doubleDimerProgress.textContent = `GPU T=${T}`;
 
