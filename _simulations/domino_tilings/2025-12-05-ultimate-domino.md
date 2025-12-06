@@ -494,6 +494,7 @@ code:
 
     const activeCells = new Map();  // key: "x,y" -> {x, y}
     let isValid = false;
+    let hasHoles = false;  // Track if region has holes (non-simply-connected)
     let dominoes = [];
     let totalSteps = 0;
     let flipCount = 0;
@@ -1096,7 +1097,7 @@ code:
 
             // Check for holes - disable CFTP for non-simply-connected regions
             const holesInfo = sim.getAllHolesInfo();
-            const hasHoles = holesInfo.holes && holesInfo.holes.length > 0;
+            hasHoles = holesInfo.holes && holesInfo.holes.length > 0;
             el.cftpBtn.disabled = hasHoles;
             el.doubleDimerBtn.disabled = hasHoles;
             if (hasHoles) {
@@ -1116,6 +1117,7 @@ code:
             }
         } else if (result.status === 'empty') {
             isValid = false;
+            hasHoles = false;
             dominoes = [];
             el.statusBadge.className = 'status-empty';
             el.statusBadge.textContent = 'Empty';
@@ -1126,6 +1128,7 @@ code:
             clearDoubleDimerState();
         } else {
             isValid = false;
+            hasHoles = false;
             dominoes = [];
             el.statusBadge.className = 'status-invalid';
             el.statusBadge.textContent = `Invalid (${result.reason || 'no matching'})`;
@@ -2506,7 +2509,8 @@ code:
             animationId = null;
         }
         el.startStopBtn.textContent = 'Start Glauber';
-        el.cftpBtn.disabled = !isValid;
+        el.cftpBtn.disabled = !isValid || hasHoles;
+        el.doubleDimerBtn.disabled = !isValid || hasHoles;
     }
 
     function formatNumber(n) {
@@ -2730,7 +2734,7 @@ code:
         isCFTPRunning = false;
         el.cftpBtn.style.display = '';
         el.cftpBtn.textContent = originalText;
-        el.cftpBtn.disabled = false;
+        el.cftpBtn.disabled = hasHoles;
         el.cftpStopBtn.style.display = 'none';
         el.startStopBtn.disabled = !isValid;
 
@@ -2945,7 +2949,7 @@ code:
         resetDoubleDimerUI();
     }
 
-    function resetDoubleDimerUI() { isCFTPRunning = false; el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = !isValid; }
+    function resetDoubleDimerUI() { isCFTPRunning = false; el.startStopBtn.disabled = !isValid; el.doubleDimerBtn.disabled = el.cftpBtn.disabled = !isValid || hasHoles; }
 
     function renderDoubleDimers() {
         if (!storedSamples) return;
