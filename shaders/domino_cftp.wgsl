@@ -116,14 +116,12 @@ fn rotate(@builtin(global_invocation_id) gid: vec3<u32>) {
     // Get random number for this vertex
     let u = randoms[u32(idx) % params.numCells];
 
-    // Rotate with probability 0.5
-    if (u < 0.5) {
-        if (state == 3) {
-            grid[idx] = 12;  // horizontal -> vertical
-        } else {
-            grid[idx] = 3;   // vertical -> horizontal
-        }
-    }
+    // Heat-bath update: choose target state uniformly, then set to it
+    // This is CRITICAL for CFTP coupling!
+    // u < 0.5 -> target is horizontal (3)
+    // u >= 0.5 -> target is vertical (12)
+    let new_state = select(12, 3, u < 0.5);
+    grid[idx] = new_state;
 }
 
 // ============================================================================
@@ -154,36 +152,38 @@ fn update_neighbors(@builtin(global_invocation_id) gid: vec3<u32>) {
         return;
     }
 
-    // Recompute state from 4 neighbors
-    // North neighbor (x, y-1) contributes S bit if it has N bit set
-    // South neighbor (x, y+1) contributes N bit if it has S bit set
-    // East neighbor (x+1, y) contributes W bit if it has E bit set
-    // West neighbor (x-1, y) contributes E bit if it has W bit set
+    // Recompute state from 4 neighbors (from paper equation)
+    // The key insight: if there's a domino between us and neighbor,
+    // the neighbor's edge bit pointing toward us tells us our edge bit
+    // - North neighbor's S bit → our N bit (domino crosses our N edge)
+    // - South neighbor's N bit → our S bit (domino crosses our S edge)
+    // - East neighbor's W bit → our E bit (domino crosses our E edge)
+    // - West neighbor's E bit → our W bit (domino crosses our W edge)
 
     var new_state: i32 = 0;
 
-    let n_state = get_state(x, y - 1);  // North neighbor
-    let s_state = get_state(x, y + 1);  // South neighbor
+    let n_state = get_state(x, y - 1);  // North neighbor (y-1 is up/north)
+    let s_state = get_state(x, y + 1);  // South neighbor (y+1 is down/south)
     let e_state = get_state(x + 1, y);  // East neighbor
     let w_state = get_state(x - 1, y);  // West neighbor
 
-    // N bit: set if south neighbor has N bit (bit 0)
-    if ((s_state & 1) != 0) {
+    // N bit: set if NORTH neighbor has S bit (bit 1)
+    if ((n_state & 2) != 0) {
         new_state |= 1;
     }
 
-    // S bit: set if north neighbor has S bit (bit 1)
-    if ((n_state & 2) != 0) {
+    // S bit: set if SOUTH neighbor has N bit (bit 0)
+    if ((s_state & 1) != 0) {
         new_state |= 2;
     }
 
-    // E bit: set if west neighbor has E bit (bit 2)
-    if ((w_state & 4) != 0) {
+    // E bit: set if EAST neighbor has W bit (bit 3)
+    if ((e_state & 8) != 0) {
         new_state |= 4;
     }
 
-    // W bit: set if east neighbor has W bit (bit 3)
-    if ((e_state & 8) != 0) {
+    // W bit: set if WEST neighbor has E bit (bit 2)
+    if ((w_state & 4) != 0) {
         new_state |= 8;
     }
 

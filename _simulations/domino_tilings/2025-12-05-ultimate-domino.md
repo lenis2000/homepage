@@ -80,6 +80,49 @@ code:
     background: #1a1a1a;
     border-color: #444;
   }
+  #three-container {
+    width: 100%;
+    max-width: 900px;
+    height: 600px;
+    border: 1px solid #ccc;
+    display: none;
+    margin: 0 auto;
+    background: #f0f0f0;
+    border-radius: 6px;
+  }
+  #three-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  [data-theme="dark"] #three-container {
+    background: #1a1a1a;
+    border-color: #444;
+  }
+  .view-toggle {
+    display: inline-flex;
+    border: 2px solid #1976d2;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .view-toggle button {
+    border: none;
+    border-radius: 0;
+    height: 28px;
+    padding: 0 12px;
+    font-weight: 500;
+    background: white;
+    color: #1976d2;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .view-toggle button.active {
+    background: #1976d2;
+    color: white;
+  }
+  .view-toggle button:hover:not(.active) {
+    background: #e3f2fd;
+  }
   .param-input {
     width: 50px;
     height: 28px;
@@ -303,9 +346,9 @@ code:
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
     <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;"><input type="checkbox" id="showHeightsCheckbox"> Heights</label>
-    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Scale Up</button>
-    <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
+    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
     <button id="scaleUpBtn" title="Double the region size (2x2 blocks)">Scale Up 2×2</button>
+    <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -322,14 +365,27 @@ code:
     <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
     <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
-    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span></div>
+    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span><span id="gpuIndicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU</span></div>
   </div>
 </div>
 
 </div>
 
-<!-- Canvas -->
-<canvas id="domino-canvas"></canvas>
+<!-- Canvas Container with overlay -->
+<div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
+  <!-- View Toggle overlay -->
+  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
+    <div class="view-toggle">
+      <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <canvas id="domino-canvas"></canvas>
+
+  <!-- 3D Container -->
+  <div id="three-container"></div>
+</div>
 
 <!-- Controls below canvas -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
@@ -363,11 +419,10 @@ code:
       <input type="checkbox" id="showGridCheckbox" checked>
       Grid
     </label>
-    <!-- Future: 3D view (greyed out) -->
-    <span class="greyed-out" style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="show3DCheckbox" disabled>
-      3D View (coming soon)
-    </span>
+    <span style="color: #ccc;">|</span>
+    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
+    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled>↻</button>
+    <button id="autoRotateBtn" title="Toggle auto-rotation (3D)" disabled>⟳</button>
   </div>
 </div>
 
@@ -404,8 +459,15 @@ code:
 <!-- Load ColorSchemes -->
 <script src="/js/colorschemes.js"></script>
 
+<!-- Load Three.js for 3D visualization -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+
 <!-- Load WASM Module -->
 <script src="/js/2025-12-05-ultimate-domino.js"></script>
+
+<!-- WebGPU Engine (checks for WebGPU support at runtime) -->
+<script src="/js/webgpu-domino-engine.js"></script>
 
 <script>
 (function() {
@@ -451,9 +513,18 @@ code:
     let isCFTPRunning = false;
     let cftpEpochs = 0;
 
+    // WebGPU
+    let gpuEngine = null;
+    let useWebGPU = false;
+
     // Debug
     let showHeights = false;
     let heightData = [];
+
+    // 3D View
+    let is3DView = false;
+    let renderer3D = null;
+    let threeContainer = null;
 
     // Colors
     let colorPaletteIndex = 0;
@@ -498,6 +569,7 @@ code:
         flipsCount: document.getElementById('flipsCount'),
         cftpStatus: document.getElementById('cftpStatus'),
         cftpSteps: document.getElementById('cftpSteps'),
+        gpuIndicator: document.getElementById('gpuIndicator'),
         handTool: document.getElementById('handTool'),
         drawTool: document.getElementById('drawTool'),
         eraseTool: document.getElementById('eraseTool'),
@@ -522,8 +594,15 @@ code:
         qualitySlider: document.getElementById('qualitySlider'),
         exportJsonBtn: document.getElementById('exportJsonBtn'),
         importJsonBtn: document.getElementById('importJsonBtn'),
-        importJsonInput: document.getElementById('importJsonInput')
+        importJsonInput: document.getElementById('importJsonInput'),
+        toggle3DBtn: document.getElementById('toggle3DBtn'),
+        rotateLeftBtn: document.getElementById('rotateLeftBtn'),
+        rotateRightBtn: document.getElementById('rotateRightBtn'),
+        autoRotateBtn: document.getElementById('autoRotateBtn')
     };
+
+    // Get 3D container
+    threeContainer = document.getElementById('three-container');
 
     // ========================================================================
     // WASM Interface
@@ -549,6 +628,7 @@ code:
             this.getMaxTilingWasm = Module.cwrap('getMaxTiling', 'number', []);
             this.getHeightsWasm = Module.cwrap('getHeights', 'number', []);
             this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
+            this.getRegionMaskWasm = Module.cwrap('getRegionMask', 'number', []);
         }
 
         initFromVertices(verticesArray) {
@@ -678,6 +758,25 @@ code:
             return JSON.parse(jsonStr);
         }
 
+        getRegionMask() {
+            const resultPtr = this.getRegionMaskWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            const result = JSON.parse(jsonStr);
+
+            if (result.status !== 'ok') return result;
+
+            // Decode base64 mask to Uint8Array
+            const base64 = result.mask;
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+                bytes[i] = binaryStr.charCodeAt(i);
+            }
+            result.maskBytes = bytes;
+            return result;
+        }
+
         // Convert edges {x1,y1,x2,y2} to dominoes with type for coloring
         // Type 0: horizontal, starts at black vertex (x+y even)
         // Type 1: horizontal, starts at white vertex (x+y odd)
@@ -712,6 +811,29 @@ code:
         sim = new DominoSampler();
         console.log('WASM module loaded');
         draw();
+
+        // Initialize WebGPU engine if available
+        if (navigator.gpu && window.WebGPUDominoEngine) {
+            (async () => {
+                try {
+                    gpuEngine = new WebGPUDominoEngine();
+                    const initPromise = gpuEngine.init();
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('WebGPU init timeout')), 3000)
+                    );
+                    await Promise.race([initPromise, timeoutPromise]);
+                    if (gpuEngine.isReady) {
+                        useWebGPU = true;
+                        el.gpuIndicator.style.display = 'inline';
+                        console.log('WebGPU Domino Engine ready');
+                    }
+                } catch (e) {
+                    console.warn('WebGPU initialization failed:', e);
+                    gpuEngine = null;
+                    useWebGPU = false;
+                }
+            })();
+        }
     };
 
     // ========================================================================
@@ -815,6 +937,7 @@ code:
 
         updateStats();
         draw();
+        update3DView();  // Update 3D when region changes
     }
 
     function updateStats() {
@@ -1044,6 +1167,398 @@ code:
                 ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
                 ctx.fill();
             }
+        }
+    }
+
+    // ========================================================================
+    // 3D Renderer
+    // ========================================================================
+
+    class Domino3DRenderer {
+        constructor(container) {
+            this.container = container;
+            this.autoRotate = false;
+
+            // Three.js setup
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0xf0f0f0);
+
+            // Orthographic camera (top-down initially)
+            const w = container.clientWidth || 900;
+            const h = container.clientHeight || 600;
+            const frustum = 100;
+            const aspect = w / h;
+
+            this.camera = new THREE.OrthographicCamera(
+                -frustum * aspect / 2, frustum * aspect / 2,
+                frustum / 2, -frustum / 2,
+                1, 1000
+            );
+            this.camera.position.set(0, 130, 0);
+            this.camera.lookAt(0, 0, 0);
+
+            // Renderer
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(w, h);
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+            this.renderer.getContext().getExtension('OES_element_index_uint');
+            container.appendChild(this.renderer.domElement);
+
+            // Controls
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.25;
+            this.controls.touches = { ONE: THREE.TOUCH.ROTATE };
+
+            // Lighting - multi-light setup for better depth perception
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            this.scene.add(ambientLight);
+
+            // Hemisphere light for subtle sky/ground color variation
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+            hemiLight.position.set(0, 20, 0);
+            this.scene.add(hemiLight);
+
+            // Primary directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(10, 10, 15);
+            this.scene.add(directionalLight);
+
+            // Fill light from opposite side
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+            fillLight.position.set(-10, -5, -10);
+            this.scene.add(fillLight);
+
+            // Group for dominoes
+            this.dominoGroup = new THREE.Group();
+            this.scene.add(this.dominoGroup);
+
+            // Handle resize
+            window.addEventListener('resize', () => this.handleResize());
+
+            // Start animation loop
+            this.animate();
+        }
+
+        handleResize() {
+            if (!this.container) return;
+            const w = this.container.clientWidth;
+            const h = this.container.clientHeight;
+            const frustum = 100;
+            const aspect = w / h;
+
+            this.camera.left = -frustum * aspect / 2;
+            this.camera.right = frustum * aspect / 2;
+            this.camera.top = frustum / 2;
+            this.camera.bottom = -frustum / 2;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(w, h);
+        }
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            this.controls.update();
+
+            if (this.autoRotate && this.dominoGroup) {
+                this.dominoGroup.rotation.y += 0.005;
+            }
+
+            this.renderer.render(this.scene, this.camera);
+        }
+
+        rotateHorizontal(angleDegrees) {
+            const angleRadians = angleDegrees * Math.PI / 180;
+            const target = this.controls.target;
+            const offset = new THREE.Vector3();
+            offset.subVectors(this.camera.position, target);
+
+            // Rotate around Y-axis
+            const axis = new THREE.Vector3(0, 1, 0);
+            offset.applyAxisAngle(axis, angleRadians);
+
+            this.camera.position.copy(target).add(offset);
+            this.camera.lookAt(target);
+            this.controls.update();
+        }
+
+        setAutoRotate(enabled) {
+            this.autoRotate = enabled;
+        }
+
+        zoomIn() {
+            // For orthographic camera, reduce frustum size
+            const factor = 0.8;
+            this.camera.left *= factor;
+            this.camera.right *= factor;
+            this.camera.top *= factor;
+            this.camera.bottom *= factor;
+            this.camera.updateProjectionMatrix();
+        }
+
+        zoomOut() {
+            // For orthographic camera, increase frustum size
+            const factor = 1.25;
+            this.camera.left *= factor;
+            this.camera.right *= factor;
+            this.camera.top *= factor;
+            this.camera.bottom *= factor;
+            this.camera.updateProjectionMatrix();
+        }
+
+        resetView() {
+            if (this.dominoGroup) {
+                this.dominoGroup.rotation.set(0, 0, 0);
+            }
+            // Reset camera frustum
+            const w = this.container.clientWidth || 900;
+            const h = this.container.clientHeight || 600;
+            const frustum = 100;
+            const aspect = w / h;
+            this.camera.left = -frustum * aspect / 2;
+            this.camera.right = frustum * aspect / 2;
+            this.camera.top = frustum / 2;
+            this.camera.bottom = -frustum / 2;
+            this.camera.position.set(0, 130, 0);
+            this.camera.lookAt(0, 0, 0);
+            this.camera.updateProjectionMatrix();
+            this.controls.target.set(0, 0, 0);
+            this.controls.update();
+        }
+
+        // Calculate height function from dominoes
+        // Based on s/domino.md implementation
+        calculateHeightFunction(dominoes) {
+            if (!dominoes || dominoes.length === 0) return new Map();
+
+            // Build adjacency graph with height increments
+            const adj = new Map();
+
+            function addEdge(v1, v2, dh) {
+                const v1Key = `${v1[0]},${v1[1]}`;
+                const v2Key = `${v2[0]},${v2[1]}`;
+
+                if (!adj.has(v1Key)) adj.set(v1Key, []);
+                if (!adj.has(v2Key)) adj.set(v2Key, []);
+
+                adj.get(v1Key).push([v2Key, dh]);
+                adj.get(v2Key).push([v1Key, -dh]);
+            }
+
+            // Process each domino
+            // Format: {x1, y1, x2, y2, type}
+            // type 0: horizontal, black start (+1)
+            // type 1: horizontal, white start (-1)
+            // type 2: vertical, black start (+1)
+            // type 3: vertical, white start (-1)
+            for (const d of dominoes) {
+                const isHorizontal = (d.y1 === d.y2);
+                const x = Math.min(d.x1, d.x2);
+                const y = Math.min(d.y1, d.y2);
+
+                // Sign based on type
+                let sign;
+                if (isHorizontal) {
+                    sign = (d.type === 0) ? 1 : -1;
+                } else {
+                    sign = (d.type === 2) ? 1 : -1;
+                }
+
+                if (isHorizontal) {
+                    // Horizontal domino spans (x,y) to (x+2,y+1)
+                    const TL = [x, y+1], TM = [x+1, y+1], TR = [x+2, y+1];
+                    const BL = [x, y], BM = [x+1, y], BR = [x+2, y];
+
+                    addEdge(TL, TM, -sign); addEdge(TM, TR, sign);
+                    addEdge(BL, BM, sign); addEdge(BM, BR, -sign);
+                    addEdge(TL, BL, sign); addEdge(TM, BM, 3*sign);
+                    addEdge(TR, BR, sign);
+                } else {
+                    // Vertical domino spans (x,y) to (x+1,y+2)
+                    const TL = [x, y+2], TR = [x+1, y+2];
+                    const ML = [x, y+1], MR = [x+1, y+1];
+                    const BL = [x, y], BR = [x+1, y];
+
+                    addEdge(TL, TR, -sign); addEdge(ML, MR, -3*sign); addEdge(BL, BR, -sign);
+                    addEdge(TL, ML, sign); addEdge(ML, BL, -sign);
+                    addEdge(TR, MR, -sign); addEdge(MR, BR, sign);
+                }
+            }
+
+            // BFS to compute heights from bottom-left vertex
+            const verts = Array.from(adj.keys()).map(k => {
+                const [gx, gy] = k.split(',').map(Number);
+                return { k, gx, gy };
+            });
+
+            if (verts.length === 0) return new Map();
+
+            // Find bottom-left vertex as root
+            const root = verts.reduce((a, b) =>
+                (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
+            ).k;
+
+            const heights = new Map([[root, 0]]);
+            const queue = [root];
+
+            while (queue.length > 0) {
+                const v = queue.shift();
+                for (const [w, dh] of adj.get(v) || []) {
+                    if (!heights.has(w)) {
+                        heights.set(w, heights.get(v) + dh);
+                        queue.push(w);
+                    }
+                }
+            }
+
+            // Negate heights for proper 3D rendering
+            const finalHeights = new Map();
+            heights.forEach((h, key) => {
+                finalHeights.set(key, -h);
+            });
+
+            return finalHeights;
+        }
+
+        renderDominoes(dominoes, colors) {
+            // Clear previous geometry
+            while (this.dominoGroup.children.length > 0) {
+                const child = this.dominoGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                this.dominoGroup.remove(child);
+            }
+
+            if (!dominoes || dominoes.length === 0) return;
+
+            // Calculate height function
+            const heightMap = this.calculateHeightFunction(dominoes);
+
+            // Create mesh for each domino
+            for (const d of dominoes) {
+                try {
+                    const isHorizontal = (d.y1 === d.y2);
+                    const x = Math.min(d.x1, d.x2);
+                    const y = Math.min(d.y1, d.y2);
+
+                    // Get vertices with heights
+                    let pts;
+                    if (isHorizontal) {
+                        // Horizontal: 4 corners + 2 midpoints
+                        pts = [
+                            [x, y+1],     // TL
+                            [x+2, y+1],   // TR
+                            [x+2, y],     // BR
+                            [x, y],       // BL
+                            [x+1, y+1],   // TM
+                            [x+1, y]      // BM
+                        ];
+                    } else {
+                        // Vertical: 4 corners + 2 midpoints
+                        pts = [
+                            [x, y],       // BL
+                            [x, y+2],     // TL
+                            [x+1, y+2],   // TR
+                            [x+1, y],     // BR
+                            [x, y+1],     // ML
+                            [x+1, y+1]    // MR
+                        ];
+                    }
+
+                    // Map to 3D coordinates
+                    const vertices = [];
+                    for (const [px, py] of pts) {
+                        const key = `${px},${py}`;
+                        const z = heightMap.has(key) ? heightMap.get(key) : 0;
+                        vertices.push(px, z * 0.5, py);  // Scale height for better visualization
+                    }
+
+                    // Create geometry
+                    const geom = new THREE.BufferGeometry();
+                    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+                    // Indices exactly as in s/domino.md
+                    // Both horizontal and vertical use the same pattern
+                    const indices = [0, 1, 3, 3, 2, 1, 0, 1, 4, 3, 2, 5];
+
+                    geom.setIndex(indices);
+                    geom.computeVertexNormals();
+
+                    // Material with color - flat shading for solid colors
+                    const color = colors[d.type] || '#888888';
+                    const mat = new THREE.MeshLambertMaterial({
+                        color: color,
+                        side: THREE.DoubleSide,
+                        flatShading: true
+                    });
+
+                    const mesh = new THREE.Mesh(geom, mat);
+                    this.dominoGroup.add(mesh);
+
+                    // Add black edges around the domino for visual separation
+                    const edges = new THREE.EdgesGeometry(geom, 15);
+                    const lineMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 });
+                    const wireframe = new THREE.LineSegments(edges, lineMat);
+                    this.dominoGroup.add(wireframe);
+                } catch (e) {
+                    console.error('Error creating 3D domino mesh:', e);
+                }
+            }
+
+            // Center and scale the group
+            if (this.dominoGroup.children.length > 0) {
+                const box = new THREE.Box3().setFromObject(this.dominoGroup);
+                const center = box.getCenter(new THREE.Vector3());
+                this.dominoGroup.position.sub(center);
+
+                // Scale to fit view
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.z);
+                if (maxDim > 0) {
+                    const scale = 80 / maxDim;  // Fit within 80% of frustum
+                    this.dominoGroup.scale.setScalar(scale);
+                }
+
+                // Update controls target
+                this.controls.target.set(0, 0, 0);
+            }
+        }
+    }
+
+    // ========================================================================
+    // 3D View Management
+    // ========================================================================
+
+    function setViewMode(use3D) {
+        is3DView = use3D;
+
+        // Toggle canvas visibility
+        canvas.style.display = use3D ? 'none' : 'block';
+        threeContainer.style.display = use3D ? 'block' : 'none';
+
+        // Update button text
+        el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
+
+        // Enable/disable rotation buttons
+        el.rotateLeftBtn.disabled = !use3D;
+        el.rotateRightBtn.disabled = !use3D;
+        el.autoRotateBtn.disabled = !use3D;
+
+        // Initialize 3D renderer if needed
+        if (use3D && !renderer3D && threeContainer) {
+            renderer3D = new Domino3DRenderer(threeContainer);
+        }
+
+        // Render 3D if we have valid dominoes
+        if (use3D && renderer3D && isValid && dominoes.length > 0) {
+            const colors = getColors();
+            renderer3D.renderDominoes(dominoes, colors);
+        }
+    }
+
+    function update3DView() {
+        if (is3DView && renderer3D && isValid && dominoes.length > 0) {
+            const colors = getColors();
+            renderer3D.renderDominoes(dominoes, colors);
         }
     }
 
@@ -1349,6 +1864,7 @@ code:
 
             updateStats();
             draw();
+            update3DView();  // Live 3D updates during Glauber
 
             animationId = requestAnimationFrame(loop);
         }
@@ -1376,6 +1892,7 @@ code:
     }
 
     async function runCFTP() {
+        console.log('=== runCFTP called ===', { isValid, isCFTPRunning, useWebGPU });
         if (!isValid || isCFTPRunning) return;
 
         isCFTPRunning = true;
@@ -1388,90 +1905,188 @@ code:
         el.cftpSteps.textContent = 'init';
 
         const cftpStartTime = performance.now();
-        let lastDrawnBlock = -1;  // Track which block we last drew
+        const useGpuCFTP = useWebGPU && gpuEngine && gpuEngine.isReady;
+        console.log('CFTP path:', useGpuCFTP ? 'GPU' : 'WASM');
 
-        const initResult = sim.initCFTP();
-        if (initResult.status === 'error') {
-            console.error('CFTP init error:', initResult.reason);
-            el.cftpSteps.textContent = 'error';
-            el.cftpBtn.textContent = originalText;
-            el.cftpBtn.disabled = false;
-            el.cftpStopBtn.style.display = 'none';
-            el.cftpStatus.style.display = 'none';
-            isCFTPRunning = false;
-            el.startStopBtn.disabled = !isValid;
-            return;
-        }
+        if (useGpuCFTP) {
+            // ================================================================
+            // GPU CFTP PATH
+            // ================================================================
+            console.log('=== GPU CFTP STARTING ===');
+            try {
+                // Get region mask from WASM
+                const regionData = sim.getRegionMask();
+                if (regionData.status !== 'ok') {
+                    throw new Error('Failed to get region mask');
+                }
 
-        el.cftpSteps.textContent = 'T=' + initResult.T;
-        el.cftpBtn.textContent = 'T=' + initResult.T;
+                // Initialize GPU CFTP (computes extremal tilings on GPU)
+                await gpuEngine.initCFTP(
+                    regionData.maskBytes,
+                    regionData.minX,
+                    regionData.maxX,
+                    regionData.minY,
+                    regionData.maxY
+                );
 
-        while (isCFTPRunning) {
-            const res = sim.stepCFTP();
+                let T = 1;
+                let totalSteps = 0;
+                const maxT = 1 << 24;  // Safety limit
 
-            if (res.status === 'in_progress') {
-                el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.sweep;
-                el.cftpBtn.textContent = res.T + ':' + res.sweep;
+                el.cftpSteps.textContent = 'T=' + T;
+                el.cftpBtn.textContent = 'T=' + T;
 
-                // Draw max state every 4096 sweeps only when T >= 4096
-                if (res.T >= 4096) {
-                    const currentBlock = Math.floor(res.sweep / 4096);
-                    if (currentBlock > lastDrawnBlock) {
-                        lastDrawnBlock = currentBlock;
+                while (isCFTPRunning && T <= maxT) {
+                    console.log(`GPU CFTP epoch: T=${T}`);
+                    // Reset chains to extremal states
+                    await gpuEngine.resetCFTPChains();
+
+                    // Run T coupled steps
+                    const checkInterval = Math.max(1, Math.min(T, 1024));
+                    const result = await gpuEngine.stepCFTP(T, checkInterval);
+                    totalSteps += result.stepsRun;
+                    console.log(`GPU CFTP: T=${T}, coalesced=${result.coalesced}, stepsRun=${result.stepsRun}`);
+
+                    el.cftpSteps.textContent = 'T=' + T;
+                    el.cftpBtn.textContent = 'T=' + T;
+
+                    if (result.coalesced) {
+                        // Success!
+                        await gpuEngine.finalizeCFTP();
+                        const grid = await gpuEngine.getCFTPResult();
+
+                        // Debug: log grid values
+                        const stateCounts = {};
+                        for (let i = 0; i < grid.length; i++) {
+                            stateCounts[grid[i]] = (stateCounts[grid[i]] || 0) + 1;
+                        }
+                        console.log('GPU grid state counts:', stateCounts);
+                        console.log('Grid sample (first 20):', Array.from(grid.slice(0, 20)));
+
+                        // Convert GPU vertex states to dominoes
+                        dominoes = vertexStatesToDominoes(
+                            grid,
+                            regionData.minX,
+                            regionData.maxX,
+                            regionData.minY,
+                            regionData.maxY,
+                            regionData.width
+                        );
+                        console.log('Dominoes found:', dominoes.length);
+
+                        const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                        el.cftpSteps.textContent = formatNumber(totalSteps) + ' (' + elapsed + 's, GPU)';
+                        console.log('GPU CFTP coalesced: T=' + T + ', steps=' + totalSteps);
+                        break;
+                    }
+
+                    // Not coalesced, double T
+                    T *= 2;
+
+                    // Yield to UI
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+
+                if (T > maxT && isCFTPRunning) {
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = 'timeout (' + elapsed + 's, GPU)';
+                }
+
+                gpuEngine.destroyCFTP();
+
+            } catch (e) {
+                console.error('GPU CFTP error:', e);
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                el.cftpSteps.textContent = 'error (' + elapsed + 's)';
+                if (gpuEngine) gpuEngine.destroyCFTP();
+            }
+
+        } else {
+            // ================================================================
+            // WASM CFTP PATH (original)
+            // ================================================================
+            console.log('=== WASM CFTP STARTING ===');
+            let lastDrawnBlock = -1;
+
+            const initResult = sim.initCFTP();
+            console.log('CFTP init:', JSON.stringify(initResult));
+            if (initResult.status === 'error') {
+                console.error('CFTP init error:', initResult.reason);
+                el.cftpSteps.textContent = 'error';
+                el.cftpBtn.textContent = originalText;
+                el.cftpBtn.disabled = false;
+                el.cftpStopBtn.style.display = 'none';
+                el.cftpStatus.style.display = 'none';
+                isCFTPRunning = false;
+                el.startStopBtn.disabled = !isValid;
+                return;
+            }
+
+            el.cftpSteps.textContent = 'T=' + initResult.T;
+            el.cftpBtn.textContent = 'T=' + initResult.T;
+
+            while (isCFTPRunning) {
+                const res = sim.stepCFTP();
+                console.log('CFTP step:', res.status, 'T=' + res.T, 'sweep=' + res.sweep);
+
+                if (res.status === 'in_progress') {
+                    el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.sweep;
+                    el.cftpBtn.textContent = res.T + ':' + res.sweep;
+
+                    if (res.T >= 4096) {
+                        const currentBlock = Math.floor(res.sweep / 4096);
+                        if (currentBlock > lastDrawnBlock) {
+                            lastDrawnBlock = currentBlock;
+                            const maxData = sim.getCFTPMaxState();
+                            if (maxData.dominoes && maxData.dominoes.length > 0) {
+                                dominoes = maxData.dominoes;
+                                draw();
+                            }
+                        }
+                    }
+                } else if (res.status === 'coalesced') {
+                    const finalResult = sim.finalizeCFTP();
+                    dominoes = finalResult.dominoes || [];
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
+                    el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
+                    console.log('CFTP coalesced: T=' + res.T + ', steps=' + totalStepsDisplay);
+                    break;
+                } else if (res.status === 'not_coalesced') {
+                    console.log('CFTP epoch done: prevT=' + res.prevT + ' -> nextT=' + res.nextT);
+                    el.cftpSteps.textContent = 'T=' + res.nextT;
+                    el.cftpBtn.textContent = 'T=' + res.nextT;
+                    lastDrawnBlock = -1;
+
+                    if (res.prevT >= 4096) {
                         const maxData = sim.getCFTPMaxState();
                         if (maxData.dominoes && maxData.dominoes.length > 0) {
                             dominoes = maxData.dominoes;
                             draw();
                         }
                     }
+                } else if (res.status === 'timeout') {
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
+                    console.log('CFTP timeout after', res.totalSweeps, 'sweeps');
+                    break;
+                } else {
+                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    el.cftpSteps.textContent = 'error (' + elapsed + 's)';
+                    console.error('CFTP error:', res);
+                    break;
                 }
-            } else if (res.status === 'coalesced') {
-                // Success! Get the perfect sample
-                const finalResult = sim.finalizeCFTP();
-                dominoes = finalResult.dominoes || [];
-                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                // Show total steps and time
-                const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
-                el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
-                console.log('CFTP coalesced: T=' + res.T + ', steps=' + totalStepsDisplay);
-                break;
-            } else if (res.status === 'not_coalesced') {
-                el.cftpSteps.textContent = 'T=' + res.nextT;
-                el.cftpBtn.textContent = 'T=' + res.nextT;
-                lastDrawnBlock = -1;  // Reset for new epoch
 
-                // Draw max state at end of 4k+ epochs
-                if (res.prevT >= 4096) {
-                    const maxData = sim.getCFTPMaxState();
-                    if (maxData.dominoes && maxData.dominoes.length > 0) {
-                        dominoes = maxData.dominoes;
-                        draw();
-                    }
-                }
-            } else if (res.status === 'timeout') {
-                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
-                console.log('CFTP timeout after', res.totalSweeps, 'sweeps');
-                break;
-            } else {
-                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                el.cftpSteps.textContent = 'error (' + elapsed + 's)';
-                console.error('CFTP error:', res);
-                break;
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
-
-            // Yield to UI every batch
-            await new Promise(resolve => setTimeout(resolve, 0));
         }
 
-        // Handle cancellation - but keep status visible with result
+        // Handle cancellation
         if (!isCFTPRunning && !el.cftpSteps.textContent.includes('(')) {
             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
             el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
         }
 
-        // Keep cftpStatus visible to show the result!
-        // el.cftpStatus.style.display = 'none';  // DON'T hide it
         isCFTPRunning = false;
         el.cftpBtn.style.display = '';
         el.cftpBtn.textContent = originalText;
@@ -1481,6 +2096,41 @@ code:
 
         updateStats();
         draw();
+        update3DView();  // Update 3D after CFTP
+    }
+
+    // Convert GPU vertex states to dominoes with type for coloring
+    function vertexStatesToDominoes(grid, minX, maxX, minY, maxY, width) {
+        const dominoes = [];
+        const height = maxY - minY + 1;
+
+        for (let relY = 0; relY < height; relY++) {
+            for (let relX = 0; relX < width; relX++) {
+                const idx = relY * width + relX;
+                const state = grid[idx];
+                const x = relX + minX;
+                const y = relY + minY;
+
+                // Only process on black cells (x+y even) to avoid double counting
+                if ((x + y) % 2 !== 0) continue;
+
+                if (state === 3) {
+                    // Horizontal domino: this cell and right neighbor
+                    dominoes.push({
+                        x1: x, y1: y, x2: x + 1, y2: y,
+                        type: 0  // horizontal, starts at black
+                    });
+                } else if (state === 12) {
+                    // Vertical domino: this cell and bottom neighbor
+                    dominoes.push({
+                        x1: x, y1: y, x2: x, y2: y + 1,
+                        type: 2  // vertical, starts at black
+                    });
+                }
+            }
+        }
+
+        return dominoes;
     }
 
     function stopCFTP() {
@@ -1696,39 +2346,30 @@ code:
         });
 
         // Smooth Scale: scale by 2 while preserving boundary slopes
-        // Aztec diamond order n → order 2n (not chunky 2x2 blocks)
-        // Handles holes and multiple components using even-odd fill
+        // For Aztec diamonds: uses L1-distance to compute proper scaling
+
+        // Smooth Scale: scale by 2 while preserving boundary slopes
+        // Universal algorithm: trace boundary as unit edges, double each run's length
         el.smoothScaleBtn.addEventListener('click', () => {
             if (!wasmReady || activeCells.size === 0) return;
 
             saveState();
+            const originalCellCount = activeCells.size;
 
-            // Step 1: Collect ALL boundary edges
+            // Step 1: Collect ALL boundary unit edges
             const cellSet = new Set(activeCells.keys());
             const edges = [];
             for (const [key, cell] of activeCells) {
                 const {x, y} = cell;
-                // Top edge (going right)
-                if (!cellSet.has(`${x},${y-1}`)) {
-                    edges.push({x1: x, y1: y, x2: x+1, y2: y});
-                }
-                // Right edge (going down)
-                if (!cellSet.has(`${x+1},${y}`)) {
-                    edges.push({x1: x+1, y1: y, x2: x+1, y2: y+1});
-                }
-                // Bottom edge (going left)
-                if (!cellSet.has(`${x},${y+1}`)) {
-                    edges.push({x1: x+1, y1: y+1, x2: x, y2: y+1});
-                }
-                // Left edge (going up)
-                if (!cellSet.has(`${x-1},${y}`)) {
-                    edges.push({x1: x, y1: y+1, x2: x, y2: y});
-                }
+                if (!cellSet.has(`${x},${y-1}`)) edges.push({x1: x, y1: y, x2: x+1, y2: y});
+                if (!cellSet.has(`${x+1},${y}`)) edges.push({x1: x+1, y1: y, x2: x+1, y2: y+1});
+                if (!cellSet.has(`${x},${y+1}`)) edges.push({x1: x+1, y1: y+1, x2: x, y2: y+1});
+                if (!cellSet.has(`${x-1},${y}`)) edges.push({x1: x, y1: y+1, x2: x, y2: y});
             }
 
             if (edges.length === 0) return;
 
-            // Step 2: Build edge map with ARRAYS (handles multiple edges from same vertex)
+            // Step 2: Build edge map
             const edgeMap = new Map();
             for (const e of edges) {
                 const key = `${e.x1},${e.y1}`;
@@ -1736,16 +2377,15 @@ code:
                 edgeMap.get(key).push(e);
             }
 
-            // Step 3: Trace ALL boundary loops (outer boundary + holes)
-            const allPolygons = [];
+            // Step 3: Trace ALL boundary loops as sequences of directed unit edges
+            const allLoops = [];
             const usedEdges = new Set();
 
             for (const startEdge of edges) {
                 const startEdgeKey = `${startEdge.x1},${startEdge.y1}-${startEdge.x2},${startEdge.y2}`;
                 if (usedEdges.has(startEdgeKey)) continue;
 
-                // Start a new loop
-                const polygon = [];
+                const loop = [];
                 let currentKey = `${startEdge.x1},${startEdge.y1}`;
                 const loopStart = currentKey;
 
@@ -1753,35 +2393,33 @@ code:
                     const available = edgeMap.get(currentKey);
                     if (!available) break;
 
-                    // Find an unused edge from this vertex
                     const nextEdge = available.find(edge => {
                         const ek = `${edge.x1},${edge.y1}-${edge.x2},${edge.y2}`;
                         return !usedEdges.has(ek);
                     });
-
                     if (!nextEdge) break;
 
-                    const nextEdgeKey = `${nextEdge.x1},${nextEdge.y1}-${nextEdge.x2},${nextEdge.y2}`;
-                    usedEdges.add(nextEdgeKey);
-                    polygon.push({x: nextEdge.x1, y: nextEdge.y1});
+                    usedEdges.add(`${nextEdge.x1},${nextEdge.y1}-${nextEdge.x2},${nextEdge.y2}`);
+
+                    // Record direction: R, L, D, U
+                    const dx = nextEdge.x2 - nextEdge.x1;
+                    const dy = nextEdge.y2 - nextEdge.y1;
+                    const dir = dx === 1 ? 'R' : dx === -1 ? 'L' : dy === 1 ? 'D' : 'U';
+
+                    loop.push({x: nextEdge.x1, y: nextEdge.y1, dir});
                     currentKey = `${nextEdge.x2},${nextEdge.y2}`;
 
-                    // Check if loop completed
                     if (currentKey === loopStart) break;
                 }
 
-                if (polygon.length >= 3) {
-                    allPolygons.push(polygon);
-                }
+                if (loop.length >= 4) allLoops.push(loop);
             }
 
-            if (allPolygons.length === 0) {
-                console.log('No polygons extracted, falling back to 2x2');
-                // Fallback
+            if (allLoops.length === 0) {
+                console.log('No loops found, falling back to 2x2');
                 const newCells = new Map();
                 for (const [key, cell] of activeCells) {
-                    const nx = cell.x * 2;
-                    const ny = cell.y * 2;
+                    const nx = cell.x * 2, ny = cell.y * 2;
                     newCells.set(`${nx},${ny}`, {x: nx, y: ny});
                     newCells.set(`${nx+1},${ny}`, {x: nx+1, y: ny});
                     newCells.set(`${nx},${ny+1}`, {x: nx, y: ny+1});
@@ -1794,88 +2432,58 @@ code:
                 return;
             }
 
-            // Step 4: Simplify polygons (merge collinear edges into single edges)
-            function simplifyPolygon(polygon) {
-                if (polygon.length < 3) return polygon;
+            // Step 4: Group consecutive edges with same direction, then double each run
+            const allScaledPolygons = allLoops.map((loop, loopIdx) => {
+                // Group into runs
+                const runs = [];
+                let currentDir = loop[0].dir;
+                let runStart = {x: loop[0].x, y: loop[0].y};
+                let runLength = 1;
 
-                const result = [polygon[0]];
-
-                for (let i = 1; i < polygon.length; i++) {
-                    const prev = result[result.length - 1];
-                    const curr = polygon[i];
-                    const next = polygon[(i + 1) % polygon.length];
-
-                    // Direction from prev to curr
-                    const dx1 = curr.x - prev.x;
-                    const dy1 = curr.y - prev.y;
-
-                    // Direction from curr to next
-                    const dx2 = next.x - curr.x;
-                    const dy2 = next.y - curr.y;
-
-                    // Cross product: 0 means collinear
-                    const cross = dx1 * dy2 - dy1 * dx2;
-
-                    if (cross !== 0) {
-                        // Not collinear, keep this vertex
-                        result.push(curr);
+                for (let i = 1; i < loop.length; i++) {
+                    if (loop[i].dir === currentDir) {
+                        runLength++;
+                    } else {
+                        runs.push({startX: runStart.x, startY: runStart.y, dir: currentDir, length: runLength});
+                        currentDir = loop[i].dir;
+                        runStart = {x: loop[i].x, y: loop[i].y};
+                        runLength = 1;
                     }
-                    // else: collinear, skip (merge edges)
+                }
+                runs.push({startX: runStart.x, startY: runStart.y, dir: currentDir, length: runLength});
+
+                // Merge first and last run if same direction (wrap-around)
+                if (runs.length > 1 && runs[0].dir === runs[runs.length - 1].dir) {
+                    runs[0].length += runs[runs.length - 1].length;
+                    runs[0].startX = runs[runs.length - 1].startX;
+                    runs[0].startY = runs[runs.length - 1].startY;
+                    runs.pop();
                 }
 
-                return result;
-            }
+                console.log(`Loop ${loopIdx}: ${loop.length} edges → ${runs.length} runs`);
 
-            // Step 5: Scale and subdivide ALL polygons
-            // Only subdivide SHORT edges (≤8 after scaling = ≤4 original), not long edges
-            const allScaledPolygons = allPolygons.map((poly, polyIdx) => {
-                console.log(`Polygon ${polyIdx}: ${poly.length} vertices before simplify`);
+                // Generate scaled polygon: each run of length L → length 2L
+                const scaledPoly = [];
+                let cx = runs[0].startX * 2;
+                let cy = runs[0].startY * 2;
 
-                // First simplify to merge collinear edges
-                const simplified = simplifyPolygon(poly);
-                console.log(`Polygon ${polyIdx}: ${simplified.length} vertices after simplify`);
-                console.log('Simplified vertices:', simplified.map(v => `(${v.x},${v.y})`).join(' → '));
+                for (const run of runs) {
+                    const newLen = run.length * 2;
+                    const dx = run.dir === 'R' ? 1 : run.dir === 'L' ? -1 : 0;
+                    const dy = run.dir === 'D' ? 1 : run.dir === 'U' ? -1 : 0;
 
-                // Scale by 2
-                const scaled = simplified.map(v => ({x: v.x * 2, y: v.y * 2}));
-                console.log('Scaled vertices:', scaled.map(v => `(${v.x},${v.y})`).join(' → '));
-
-                // Compute edge lengths
-                const edgeLengths = [];
-                for (let i = 0; i < scaled.length; i++) {
-                    const curr = scaled[i];
-                    const next = scaled[(i + 1) % scaled.length];
-                    const len = Math.abs(next.x - curr.x) + Math.abs(next.y - curr.y);
-                    edgeLengths.push(len);
-                }
-                console.log('Edge lengths after scaling:', edgeLengths.join(', '));
-
-                // Subdivide only short edges (≤8 = original ≤4)
-                const subdivided = [];
-                for (let i = 0; i < scaled.length; i++) {
-                    const curr = scaled[i];
-                    const next = scaled[(i + 1) % scaled.length];
-                    subdivided.push(curr);
-
-                    // Edge length (Manhattan distance for axis-aligned edges)
-                    const edgeLen = Math.abs(next.x - curr.x) + Math.abs(next.y - curr.y);
-
-                    if (edgeLen <= 8) {
-                        // Short edge (from staircase, original ≤4), subdivide to unit steps
-                        const steps = edgeLen;
-                        const dx = (next.x - curr.x) / steps;
-                        const dy = (next.y - curr.y) / steps;
-                        for (let s = 1; s < steps; s++) {
-                            subdivided.push({x: curr.x + s * dx, y: curr.y + s * dy});
-                        }
+                    for (let i = 0; i < newLen; i++) {
+                        scaledPoly.push({x: cx, y: cy});
+                        cx += dx;
+                        cy += dy;
                     }
-                    // else: long edge (original ≥5), keep as straight boundary
                 }
-                console.log(`Polygon ${polyIdx}: ${subdivided.length} vertices after subdivide`);
-                return subdivided;
+
+                console.log(`Loop ${loopIdx}: scaled to ${scaledPoly.length} vertices`);
+                return scaledPoly;
             });
 
-            // Step 5: Find bounding box across all polygons
+            // Step 5: Find bounding box
             let minX = Infinity, maxX = -Infinity;
             let minY = Infinity, maxY = -Infinity;
             for (const poly of allScaledPolygons) {
@@ -1887,7 +2495,7 @@ code:
                 }
             }
 
-            // Step 6: Fill using even-odd rule across ALL polygons (handles holes!)
+            // Step 6: Fill using even-odd rule
             function countAllCrossings(px, py) {
                 let total = 0;
                 for (const poly of allScaledPolygons) {
@@ -1905,22 +2513,24 @@ code:
             activeCells.clear();
             for (let x = Math.floor(minX); x < Math.ceil(maxX); x++) {
                 for (let y = Math.floor(minY); y < Math.ceil(maxY); y++) {
-                    // Even-odd fill: inside if odd number of crossings
                     if (countAllCrossings(x + 0.5, y + 0.5) % 2 === 1) {
                         activeCells.set(`${x},${y}`, {x, y});
                     }
                 }
             }
 
-            const originalCellCount = cellSet.size;
-            console.log('Smooth scale:', allPolygons.length, 'boundary loops');
+            console.log('Smooth scale:', allLoops.length, 'boundary loops');
             console.log('Original cells:', originalCellCount, '→ New cells:', activeCells.size);
-            console.log('Ratio:', (activeCells.size / originalCellCount).toFixed(2), '(2x2 would be 4.00)');
+            console.log('Ratio:', (activeCells.size / originalCellCount).toFixed(2), '(should be ~4.00)');
+
+            // Make tileable after scaling
+            doRepair();
+            console.log('After repair:', activeCells.size, 'cells');
+
             updateRegion();
             resetView();
         });
 
-        // Speed control - logarithmic slider with synchronized input
         // Slider 0-100 maps to speed 1 - 100,000,000 (logarithmic)
         function sliderToSpeed(sliderVal) {
             // 0 -> 1, 100 -> 100M (10^8)
@@ -1971,44 +2581,28 @@ code:
         el.undoBtn.addEventListener('click', undo);
         el.redoBtn.addEventListener('click', redo);
 
-        el.repairBtn.addEventListener('click', () => {
+        // Repair function - makes region tileable by adding cells
+        function doRepair() {
             if (!wasmReady) return;
-
-            // Save state once at the beginning
-            saveState();
-
-            // Keep calling repair until region is valid or no progress
             const MAX_REPAIR_ITERATIONS = 1000;
             let totalAdded = 0;
-
             for (let i = 0; i < MAX_REPAIR_ITERATIONS; i++) {
-                // Re-init the C++ side with current vertices
                 const verticesArray = Array.from(activeCells.values());
                 const initResult = sim.initFromVertices(verticesArray);
-
-                // If region is now valid, we're done
                 if (initResult.status === 'valid') {
-                    console.log('Repair complete! Added', totalAdded, 'vertices in', i, 'iterations');
-                    updateRegion();
+                    if (totalAdded > 0) console.log('Repair: added', totalAdded, 'cells');
                     return;
                 }
-
-                // Try to repair
                 const result = sim.repair();
-
                 if (result.vertices && result.vertices.length > 0) {
-                    // Add the suggested vertices
                     for (const v of result.vertices) {
                         activeCells.set(`${v.x},${v.y}`, v);
                     }
                     totalAdded += result.vertices.length;
                 } else {
-                    // No more vertices can be added - try expanding further
-                    // Add neighbors of ALL boundary vertices
                     const dx = [1, -1, 0, 0];
                     const dy = [0, 0, 1, -1];
                     let addedAny = false;
-
                     for (const [key, cell] of activeCells) {
                         for (let d = 0; d < 4; d++) {
                             const nx = cell.x + dx[d];
@@ -2018,38 +2612,54 @@ code:
                                 activeCells.set(nkey, {x: nx, y: ny});
                                 totalAdded++;
                                 addedAny = true;
-                                // Only add one vertex at a time to let repair algorithm recompute
                                 break;
                             }
                         }
                         if (addedAny) break;
                     }
-
                     if (!addedAny) {
-                        // Completely stuck - shouldn't happen normally
-                        console.log('Repair stuck after adding', totalAdded, 'vertices');
-                        updateRegion();
+                        console.log('Repair stuck after adding', totalAdded, 'cells');
                         return;
                     }
                 }
             }
+            console.log('Repair max iterations, added', totalAdded, 'cells');
+        }
 
-            console.log('Repair reached max iterations, added', totalAdded, 'vertices');
+        el.repairBtn.addEventListener('click', () => {
+            if (!wasmReady) return;
+            saveState();
+            doRepair();
             updateRegion();
         });
 
         // View controls
         el.zoomInBtn.addEventListener('click', () => {
-            zoom = Math.min(10, zoom * 1.2);
-            draw();
+            if (is3DView && renderer3D) {
+                renderer3D.zoomIn();
+            } else {
+                zoom = Math.min(10, zoom * 1.2);
+                draw();
+            }
         });
 
         el.zoomOutBtn.addEventListener('click', () => {
-            zoom = Math.max(0.1, zoom / 1.2);
-            draw();
+            if (is3DView && renderer3D) {
+                renderer3D.zoomOut();
+            } else {
+                zoom = Math.max(0.1, zoom / 1.2);
+                draw();
+            }
         });
 
-        el.resetViewBtn.addEventListener('click', resetView);
+        el.resetViewBtn.addEventListener('click', () => {
+            if (is3DView && renderer3D) {
+                renderer3D.resetView();
+                update3DView();
+            } else {
+                resetView();
+            }
+        });
 
         el.showGridCheckbox.addEventListener('change', draw);
 
@@ -2057,23 +2667,27 @@ code:
         el.paletteSelect.addEventListener('change', () => {
             colorPaletteIndex = parseInt(el.paletteSelect.value);
             draw();
+            update3DView();
         });
 
         el.prevPaletteBtn.addEventListener('click', () => {
             colorPaletteIndex = (colorPaletteIndex - 1 + colorPalettes.length) % colorPalettes.length;
             el.paletteSelect.value = colorPaletteIndex;
             draw();
+            update3DView();
         });
 
         el.nextPaletteBtn.addEventListener('click', () => {
             colorPaletteIndex = (colorPaletteIndex + 1) % colorPalettes.length;
             el.paletteSelect.value = colorPaletteIndex;
             draw();
+            update3DView();
         });
 
         el.permuteColorsBtn.addEventListener('click', () => {
             colorPermutation = (colorPermutation + 1) % 6;
             draw();
+            update3DView();
         });
 
         el.borderSlider.addEventListener('input', draw);
@@ -2085,6 +2699,30 @@ code:
         el.importJsonInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 importJson(e.target.files[0]);
+            }
+        });
+
+        // 3D View Controls
+        el.toggle3DBtn.addEventListener('click', () => {
+            setViewMode(!is3DView);
+        });
+
+        el.rotateLeftBtn.addEventListener('click', () => {
+            if (renderer3D && is3DView) {
+                renderer3D.rotateHorizontal(-15);
+            }
+        });
+
+        el.rotateRightBtn.addEventListener('click', () => {
+            if (renderer3D && is3DView) {
+                renderer3D.rotateHorizontal(15);
+            }
+        });
+
+        el.autoRotateBtn.addEventListener('click', () => {
+            if (renderer3D && is3DView) {
+                renderer3D.autoRotate = !renderer3D.autoRotate;
+                el.autoRotateBtn.classList.toggle('active', renderer3D.autoRotate);
             }
         });
 

@@ -49,24 +49,50 @@ class WebGPUDominoEngine {
             throw e;
         }
 
-        // Create pipelines for different operations
+        // Create explicit bind group layouts for sharing between pipelines
+        // Layout for rotate/update (uses all 4 bindings: grid, randoms, params, region)
+        this.rotateBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+                { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+                { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+                { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }
+            ]
+        });
+        const rotatePipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [this.rotateBindGroupLayout]
+        });
+
+        // Layout for extremal (bindings 0, 2, 3 - no randoms)
+        this.extremalBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+                { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+                { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }
+            ]
+        });
+        const extremalPipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [this.extremalBindGroupLayout]
+        });
+
+        // Create pipelines with explicit layouts
         this.rotatePipeline = this.device.createComputePipeline({
-            layout: 'auto',
+            layout: rotatePipelineLayout,
             compute: { module: this.shaderModule, entryPoint: 'rotate' }
         });
 
         this.updatePipeline = this.device.createComputePipeline({
-            layout: 'auto',
+            layout: rotatePipelineLayout,
             compute: { module: this.shaderModule, entryPoint: 'update_neighbors' }
         });
 
         this.extremalHorizontalPipeline = this.device.createComputePipeline({
-            layout: 'auto',
+            layout: extremalPipelineLayout,
             compute: { module: this.shaderModule, entryPoint: 'extremal_horizontal' }
         });
 
         this.extremalVerticalPipeline = this.device.createComputePipeline({
-            layout: 'auto',
+            layout: extremalPipelineLayout,
             compute: { module: this.shaderModule, entryPoint: 'extremal_vertical' }
         });
 
@@ -176,9 +202,9 @@ class WebGPUDominoEngine {
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
         });
 
-        // Create bind groups for rotate pipeline
+        // Create bind groups for rotate/update pipelines (shared layout)
         this.lowerRotateBindGroup = this.device.createBindGroup({
-            layout: this.rotatePipeline.getBindGroupLayout(0),
+            layout: this.rotateBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: this.lowerGridBuffer } },
                 { binding: 1, resource: { buffer: this.randomBuffer } },
@@ -187,7 +213,7 @@ class WebGPUDominoEngine {
             ]
         });
         this.upperRotateBindGroup = this.device.createBindGroup({
-            layout: this.rotatePipeline.getBindGroupLayout(0),
+            layout: this.rotateBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: this.upperGridBuffer } },
                 { binding: 1, resource: { buffer: this.randomBuffer } },
@@ -196,23 +222,21 @@ class WebGPUDominoEngine {
             ]
         });
 
-        // Update pipeline uses same bind groups as rotate (shares layout)
-
-        // Create bind groups for extremal tiling computation
+        // Create bind groups for extremal tiling computation (shared layout)
         this.lowerExtremalBindGroup = this.device.createBindGroup({
-            layout: this.extremalHorizontalPipeline.getBindGroupLayout(0),
+            layout: this.extremalBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: this.lowerGridBuffer } },
-                { binding: 1, resource: { buffer: this.uniformBuffer } },
-                { binding: 2, resource: { buffer: this.regionBuffer } }
+                { binding: 2, resource: { buffer: this.uniformBuffer } },
+                { binding: 3, resource: { buffer: this.regionBuffer } }
             ]
         });
         this.upperExtremalBindGroup = this.device.createBindGroup({
-            layout: this.extremalVerticalPipeline.getBindGroupLayout(0),
+            layout: this.extremalBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: this.upperGridBuffer } },
-                { binding: 1, resource: { buffer: this.uniformBuffer } },
-                { binding: 2, resource: { buffer: this.regionBuffer } }
+                { binding: 2, resource: { buffer: this.uniformBuffer } },
+                { binding: 3, resource: { buffer: this.regionBuffer } }
             ]
         });
 
@@ -379,8 +403,10 @@ class WebGPUDominoEngine {
             }
         }
 
+        // Final coalescence check at end of epoch
         await this.device.queue.onSubmittedWorkDone();
-        return { coalesced: false, stepsRun };
+        const finalCoalesced = await this.checkCoalescence();
+        return { coalesced: finalCoalesced, stepsRun };
     }
 
     /**
@@ -405,12 +431,24 @@ class WebGPUDominoEngine {
         this.upperStagingBuffer.unmap();
 
         // Compare grids
+        let differences = 0;
         for (let i = 0; i < lowerData.length; i++) {
             if (lowerData[i] !== upperData[i]) {
-                return false;
+                differences++;
             }
         }
-        return true;
+        if (differences > 0) {
+            console.log(`Coalescence check: ${differences}/${lowerData.length} cells differ`);
+            // Log sample of differences
+            let samples = [];
+            for (let i = 0; i < lowerData.length && samples.length < 5; i++) {
+                if (lowerData[i] !== upperData[i]) {
+                    samples.push({ i, lower: lowerData[i], upper: upperData[i] });
+                }
+            }
+            console.log('Sample diffs:', samples);
+        }
+        return differences === 0;
     }
 
     /**

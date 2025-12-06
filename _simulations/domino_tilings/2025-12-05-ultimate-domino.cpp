@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-05-ultimate-domino.cpp -o 2025-12-05-ultimate-domino.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -1190,6 +1190,61 @@ char* getHeights() {
                 ",\"h\":" + std::to_string(hval) + "}";
     }
     json += "]}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// Export region mask for WebGPU CFTP
+// Returns binary array (1=in region, 0=outside) with bounds info
+EMSCRIPTEN_KEEPALIVE
+char* getRegionMask() {
+    if (vertices.empty()) {
+        std::string json = "{\"status\":\"empty\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    int width = maxX - minX + 1;
+    int height = maxY - minY + 1;
+    int numCells = width * height;
+
+    // Build mask array
+    std::vector<uint8_t> mask(numCells, 0);
+    for (long long vk : vertices) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+        int idx = (y - minY) * width + (x - minX);
+        if (idx >= 0 && idx < numCells) {
+            mask[idx] = 1;
+        }
+    }
+
+    // Convert mask to Base64 for efficient transfer
+    static const char* base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string encoded;
+    encoded.reserve(((numCells + 2) / 3) * 4);
+
+    for (int i = 0; i < numCells; i += 3) {
+        uint32_t triple = (mask[i] << 16);
+        if (i + 1 < numCells) triple |= (mask[i + 1] << 8);
+        if (i + 2 < numCells) triple |= mask[i + 2];
+
+        encoded += base64_chars[(triple >> 18) & 0x3F];
+        encoded += base64_chars[(triple >> 12) & 0x3F];
+        encoded += (i + 1 < numCells) ? base64_chars[(triple >> 6) & 0x3F] : '=';
+        encoded += (i + 2 < numCells) ? base64_chars[triple & 0x3F] : '=';
+    }
+
+    std::string json = "{\"status\":\"ok\",\"minX\":" + std::to_string(minX) +
+                      ",\"maxX\":" + std::to_string(maxX) +
+                      ",\"minY\":" + std::to_string(minY) +
+                      ",\"maxY\":" + std::to_string(maxY) +
+                      ",\"width\":" + std::to_string(width) +
+                      ",\"height\":" + std::to_string(height) +
+                      ",\"mask\":\"" + encoded + "\"}";
 
     char* result = (char*)malloc(json.size() + 1);
     strcpy(result, json.c_str());
