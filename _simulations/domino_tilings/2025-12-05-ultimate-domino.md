@@ -323,6 +323,28 @@ code:
     border-top: none;
     border-radius: 0 0 4px 4px;
   }
+  .vertex-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .vertex-inputs label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: #666;
+  }
+  .vertex-inputs input[type="number"] {
+    width: 40px;
+    height: 24px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    margin: 2px 0;
+  }
 </style>
 
 <!-- Main controls -->
@@ -463,8 +485,64 @@ code:
     <button id="exportJsonBtn">Export Shape</button>
     <button id="importJsonBtn">Import Shape</button>
     <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+    <button id="copyStateBtn" title="Copy 3D vertex state to clipboard">Copy State</button>
   </div>
 </div>
+
+<!-- 3D Vertex Tuning -->
+<details class="control-group" id="vertexTuningSection">
+  <summary style="cursor: pointer; font-weight: bold; padding: 4px 0;">3D Vertex Heights</summary>
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
+    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Horiz Type 0</div>
+      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">UL—UM—UR / LL—LM—LR</div>
+      <div class="vertex-inputs" data-type="0">
+        <label>UR<input type="number" value="1" data-vertex="0"></label>
+        <label>UM<input type="number" value="2" data-vertex="1"></label>
+        <label>UL<input type="number" value="1" data-vertex="2"></label>
+        <label>LL<input type="number" value="0" data-vertex="3"></label>
+        <label>LM<input type="number" value="-1" data-vertex="4"></label>
+        <label>LR<input type="number" value="0" data-vertex="5"></label>
+      </div>
+    </div>
+    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Horiz Type 1</div>
+      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">UL—UM—UR / LL—LM—LR</div>
+      <div class="vertex-inputs" data-type="1">
+        <label>UR<input type="number" value="0" data-vertex="0"></label>
+        <label>UM<input type="number" value="-1" data-vertex="1"></label>
+        <label>UL<input type="number" value="0" data-vertex="2"></label>
+        <label>LL<input type="number" value="1" data-vertex="3"></label>
+        <label>LM<input type="number" value="2" data-vertex="4"></label>
+        <label>LR<input type="number" value="1" data-vertex="5"></label>
+      </div>
+    </div>
+    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Vert Type 2</div>
+      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">TL—TR / ML—MR / BL—BR</div>
+      <div class="vertex-inputs" data-type="2">
+        <label>TR<input type="number" value="-1" data-vertex="0"></label>
+        <label>MR<input type="number" value="-2" data-vertex="1"></label>
+        <label>BR<input type="number" value="-1" data-vertex="2"></label>
+        <label>BL<input type="number" value="0" data-vertex="3"></label>
+        <label>ML<input type="number" value="1" data-vertex="4"></label>
+        <label>TL<input type="number" value="0" data-vertex="5"></label>
+      </div>
+    </div>
+    <div style="border: 1px solid #ddd; padding: 8px; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 4px; color: #555;">Vert Type 3</div>
+      <div style="font-size: 10px; color: #888; margin-bottom: 4px;">TL—TR / ML—MR / BL—BR</div>
+      <div class="vertex-inputs" data-type="3">
+        <label>TR<input type="number" value="0" data-vertex="0"></label>
+        <label>MR<input type="number" value="1" data-vertex="1"></label>
+        <label>BR<input type="number" value="0" data-vertex="2"></label>
+        <label>BL<input type="number" value="-1" data-vertex="3"></label>
+        <label>ML<input type="number" value="-2" data-vertex="4"></label>
+        <label>TL<input type="number" value="-1" data-vertex="5"></label>
+      </div>
+    </div>
+  </div>
+</details>
 
 </div>
 
@@ -533,10 +611,27 @@ code:
     let showHeights = false;
     let heightData = [];
 
+    // Double Dimer / Fluctuations state
+    let doubleDimerCancelled = false;
+    let storedSamples = null;  // {sample0, sample1} - the two independent samples
+    let rawFluctuations = null;  // Map<"x,y" -> fluctuation value>
+    let inDoubleDimerMode = false;
+    let inFluctuationMode = false;
+
     // 3D View
     let is3DView = false;
     let renderer3D = null;
     let threeContainer = null;
+
+    // 3D Vertex heights per domino type (4 types x 6 vertices)
+    // Horizontal: 0=UR, 1=UM, 2=UL, 3=LL, 4=LM, 5=LR
+    // Vertical: 0=TR, 1=MR, 2=BR, 3=BL, 4=ML, 5=TL
+    const vertexHeights = {
+        0: [1, 2, 1, 0, -1, 0],    // Horiz type 0
+        1: [0, -1, 0, 1, 2, 1],    // Horiz type 1
+        2: [-1, -2, -1, 0, 1, 0],  // Vert type 2
+        3: [0, 1, 0, -1, -2, -1]   // Vert type 3
+    };
 
     // Colors
     let colorPaletteIndex = 0;
@@ -606,6 +701,7 @@ code:
         exportJsonBtn: document.getElementById('exportJsonBtn'),
         importJsonBtn: document.getElementById('importJsonBtn'),
         importJsonInput: document.getElementById('importJsonInput'),
+        copyStateBtn: document.getElementById('copyStateBtn'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
         rotateLeftBtn: document.getElementById('rotateLeftBtn'),
         rotateRightBtn: document.getElementById('rotateRightBtn'),
@@ -980,7 +1076,9 @@ code:
             el.statusBadge.textContent = 'Valid';
             el.startStopBtn.disabled = false;
             el.cftpBtn.disabled = false;
+            el.doubleDimerBtn.disabled = false;
             el.repairBtn.disabled = true;
+            clearDoubleDimerState();
         } else if (result.status === 'empty') {
             isValid = false;
             dominoes = [];
@@ -988,7 +1086,9 @@ code:
             el.statusBadge.textContent = 'Empty';
             el.startStopBtn.disabled = true;
             el.cftpBtn.disabled = true;
+            el.doubleDimerBtn.disabled = true;
             el.repairBtn.disabled = true;
+            clearDoubleDimerState();
         } else {
             isValid = false;
             dominoes = [];
@@ -996,7 +1096,9 @@ code:
             el.statusBadge.textContent = `Invalid (${result.reason || 'no matching'})`;
             el.startStopBtn.disabled = true;
             el.cftpBtn.disabled = true;
+            el.doubleDimerBtn.disabled = true;
             el.repairBtn.disabled = false;
+            clearDoubleDimerState();
         }
 
         updateStats();
@@ -1033,12 +1135,12 @@ code:
         return perm.map(i => colors[i]);
     }
 
-    function resetView() {
+    function resetView(skipDraw = false) {
         if (activeCells.size === 0) {
             zoom = 1.0;
             panX = 0;
             panY = 0;
-            draw();
+            if (!skipDraw) draw();
             return;
         }
 
@@ -1071,7 +1173,7 @@ code:
         panX = -centerCellX * cellSize;
         panY = -centerCellY * cellSize;
 
-        draw();
+        if (!skipDraw) draw();
     }
 
     function draw() {
@@ -1242,6 +1344,7 @@ code:
         constructor(container) {
             this.container = container;
             this.autoRotate = false;
+            this.lastDominoCount = 0;  // Track to avoid re-centering on slider changes
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -1499,7 +1602,7 @@ code:
 
             if (!dominoes || dominoes.length === 0) return;
 
-            // Calculate height function
+            // Calculate base height function for positioning
             const heightMap = this.calculateHeightFunction(dominoes);
 
             // Create mesh for each domino
@@ -1508,67 +1611,62 @@ code:
                     const isHorizontal = (d.y1 === d.y2);
                     const x = Math.min(d.x1, d.x2);
                     const y = Math.min(d.y1, d.y2);
+                    const type = d.type;
 
-                    // Get vertices with heights
-                    // Vertex ordering for proper stepped surface:
-                    // - Corners on same side are at same height
-                    // - Midpoints are at ±1 height (the step)
+                    // Get vertex height offsets from sliders
+                    const hOffsets = vertexHeights[type];
+
+                    // Get base height from height map (corner position)
+                    const baseKey = `${x},${y}`;
+                    const baseH = heightMap.has(baseKey) ? heightMap.get(baseKey) : 0;
+
+                    // Build 6 vertices with positions and heights
+                    // Heights = baseH + offset from slider
                     let pts;
                     if (isHorizontal) {
-                        // Horizontal domino: step runs vertically through middle
-                        // 2(UL) --- 1(UM) --- 0(UR)
-                        //   |         |         |
-                        // 3(LL) --- 4(LM) --- 5(LR)
+                        // Horizontal: 2(UL)--1(UM)--0(UR) / 3(LL)--4(LM)--5(LR)
                         pts = [
-                            [x+2, y+1],   // 0: up-right
-                            [x+1, y+1],   // 1: up-middle
-                            [x, y+1],     // 2: up-left
-                            [x, y],       // 3: low-left
-                            [x+1, y],     // 4: low-middle
-                            [x+2, y]      // 5: low-right
+                            [x+2, y+1, baseH + hOffsets[0]],  // 0: UR
+                            [x+1, y+1, baseH + hOffsets[1]],  // 1: UM
+                            [x,   y+1, baseH + hOffsets[2]],  // 2: UL
+                            [x,   y,   baseH + hOffsets[3]],  // 3: LL
+                            [x+1, y,   baseH + hOffsets[4]],  // 4: LM
+                            [x+2, y,   baseH + hOffsets[5]]   // 5: LR
                         ];
                     } else {
-                        // Vertical domino: step runs horizontally through middle
-                        // 5(TL) --- 0(TR)
-                        //   |         |
-                        // 4(ML) --- 1(MR)
-                        //   |         |
-                        // 3(BL) --- 2(BR)
+                        // Vertical: 5(TL)--0(TR) / 4(ML)--1(MR) / 3(BL)--2(BR)
                         pts = [
-                            [x+1, y+2],   // 0: top-right
-                            [x+1, y+1],   // 1: mid-right
-                            [x+1, y],     // 2: bottom-right
-                            [x, y],       // 3: bottom-left
-                            [x, y+1],     // 4: mid-left
-                            [x, y+2]      // 5: top-left
+                            [x+1, y+2, baseH + hOffsets[0]],  // 0: TR
+                            [x+1, y+1, baseH + hOffsets[1]],  // 1: MR
+                            [x+1, y,   baseH + hOffsets[2]],  // 2: BR
+                            [x,   y,   baseH + hOffsets[3]],  // 3: BL
+                            [x,   y+1, baseH + hOffsets[4]],  // 4: ML
+                            [x,   y+2, baseH + hOffsets[5]]   // 5: TL
                         ];
                     }
 
-                    // Map to 3D coordinates
+                    // Build vertices array (x, height, z) where z=y in 2D
                     const vertices = [];
-                    for (const [px, py] of pts) {
-                        const key = `${px},${py}`;
-                        const z = heightMap.has(key) ? heightMap.get(key) : 0;
-                        vertices.push(px, z * 0.5, py);  // Scale height for better visualization
+                    for (const [px, py, h] of pts) {
+                        vertices.push(px, h * 0.5, py);
                     }
 
-                    // Create geometry
+                    // Create geometry: 1 rectangle (4 corners) + 2 vertical triangles (at midpoints)
                     const geom = new THREE.BufferGeometry();
                     geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
 
-                    // Indices with consistent CCW winding (viewed from +Y)
-                    // Each half forms a tent/valley shape with step at midpoints
+                    // Indices: rectangle uses corners (0,2,3,5), triangles use edges with midpoints
                     const indices = isHorizontal
-                        // Horizontal: left half CCW [2,3,4,1] + right half CCW [1,4,5,0]
-                        ? [2,3,4, 2,4,1, 1,4,5, 1,5,0]
-                        // Vertical: top half CCW [5,4,1,0] + bottom half CCW [4,3,2,1]
-                        : [5,4,1, 5,1,0, 4,3,2, 4,2,1];
+                        // Horiz: rect[2,0,5,3] + top tri[2,1,0] + bottom tri[3,4,5]
+                        ? [2,0,5, 2,5,3, 2,1,0, 3,4,5]
+                        // Vert: rect[5,0,2,3] + left tri[5,4,3] + right tri[0,1,2]
+                        : [5,0,2, 5,2,3, 5,4,3, 0,1,2];
 
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
 
-                    // Material with color - flat shading for solid colors
-                    const color = colors[d.type] || '#888888';
+                    // Material with color
+                    const color = colors[type] || '#888888';
                     const mat = new THREE.MeshLambertMaterial({
                         color: color,
                         side: THREE.DoubleSide,
@@ -1588,21 +1686,25 @@ code:
                 }
             }
 
-            // Center and scale the group
-            if (this.dominoGroup.children.length > 0) {
+            // Center and scale only when domino count changes (not on slider updates)
+            const currentCount = dominoes.length;
+            if (this.dominoGroup.children.length > 0 && currentCount !== this.lastDominoCount) {
+                this.lastDominoCount = currentCount;
+
+                // Center based on X/Z only (ignore Y so height changes don't shift view)
                 const box = new THREE.Box3().setFromObject(this.dominoGroup);
                 const center = box.getCenter(new THREE.Vector3());
-                this.dominoGroup.position.sub(center);
+                center.y = 0;  // Don't center on Y axis
+                this.dominoGroup.position.set(-center.x, 0, -center.z);
 
-                // Scale to fit view
+                // Scale to fit view based on X/Z extent only
                 const size = box.getSize(new THREE.Vector3());
                 const maxDim = Math.max(size.x, size.z);
                 if (maxDim > 0) {
-                    const scale = 80 / maxDim;  // Fit within 80% of frustum
+                    const scale = 80 / maxDim;
                     this.dominoGroup.scale.setScalar(scale);
                 }
 
-                // Update controls target
                 this.controls.target.set(0, 0, 0);
             }
         }
@@ -2082,6 +2184,164 @@ code:
     }
 
     // ========================================================================
+    // Double Dimer / Fluctuations
+    // ========================================================================
+
+    function computeHeightFunction(edges) {
+        if (!edges || edges.length === 0) return new Map();
+        const heights = new Map();
+        const edgeSet = new Set();
+        for (const e of edges) {
+            const x = Math.min(e.x1, e.x2), y = Math.min(e.y1, e.y2);
+            edgeSet.add(`${x},${y},${e.x1===e.x2?1:0}`);
+        }
+        let minX = Infinity, minY = Infinity;
+        for (const [key] of activeCells) {
+            const [x, y] = key.split(',').map(Number);
+            minX = Math.min(minX, x); minY = Math.min(minY, y);
+        }
+        heights.set(`${minX},${minY}`, 0);
+        const queue = [[minX, minY]], visited = new Set([`${minX},${minY}`]);
+        while (queue.length > 0) {
+            const [cx, cy] = queue.shift(), h = heights.get(`${cx},${cy}`);
+            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+                const nx = cx + dx, ny = cy + dy, nkey = `${nx},${ny}`;
+                if (visited.has(nkey)) continue;
+                let adj = false;
+                for (let ax = nx-1; ax <= nx; ax++) for (let ay = ny-1; ay <= ny; ay++)
+                    if (activeCells.has(`${ax},${ay}`)) adj = true;
+                if (!adj) continue;
+                let dh = 0;
+                if (dx === 1) { dh = edgeSet.has(`${cx},${cy-1},1`) ? ((cx+cy-1)%2===0?-1:1) : ((cx+cy-1)%2===0?1:-1); }
+                else if (dx === -1) { dh = edgeSet.has(`${cx-1},${cy-1},1`) ? ((cx-1+cy-1)%2===0?1:-1) : ((cx-1+cy-1)%2===0?-1:1); }
+                else if (dy === 1) { dh = edgeSet.has(`${cx-1},${cy},0`) ? ((cx-1+cy)%2===0?-1:1) : ((cx-1+cy)%2===0?1:-1); }
+                else { dh = edgeSet.has(`${cx-1},${cy-1},0`) ? ((cx-1+cy-1)%2===0?1:-1) : ((cx-1+cy-1)%2===0?-1:1); }
+                heights.set(nkey, h + dh); visited.add(nkey); queue.push([nx, ny]);
+            }
+        }
+        return heights;
+    }
+
+    async function runDoubleDimer() {
+        if (!isValid || isCFTPRunning) return;
+        if (storedSamples) { inDoubleDimerMode = true; inFluctuationMode = false; renderDoubleDimers(); return; }
+        isCFTPRunning = true; doubleDimerCancelled = false;
+        el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = true;
+        el.doubleDimerProgress.textContent = 'init...';
+        const t0 = performance.now();
+        if (sim.initFluctuationsCFTP().status === 'error') { el.doubleDimerProgress.textContent = 'error'; resetDoubleDimerUI(); return; }
+        while (!doubleDimerCancelled) {
+            const res = sim.stepFluctuationsCFTP();
+            if (res.status === 'in_progress') { el.doubleDimerProgress.textContent = `T=${res.maxT} (${res.done}/2)`; }
+            else if (res.status === 'coalesced') {
+                const s0 = sim.exportFluctuationSample(0), s1 = sim.exportFluctuationSample(1);
+                storedSamples = { sample0: s0.edges, sample1: s1.edges, dominoes0: s0.dominoes, dominoes1: s1.dominoes };
+                const h0 = computeHeightFunction(s0.edges), h1 = computeHeightFunction(s1.edges);
+                rawFluctuations = new Map();
+                for (const [k, v0] of h0) rawFluctuations.set(k, (v0 - (h1.get(k)||0)) / Math.sqrt(2));
+                el.doubleDimerProgress.textContent = `Done (${((performance.now()-t0)/1000).toFixed(2)}s)`;
+                inDoubleDimerMode = true;
+                el.minLoopGroup.style.display = el.fluctuationsBtn.style.display = el.resampleBtn.style.display = '';
+                resetView(true); renderDoubleDimers(); break;
+            } else { if (res.status === 'timeout') el.doubleDimerProgress.textContent = 'timeout'; break; }
+            await new Promise(r => setTimeout(r, 0));
+        }
+        resetDoubleDimerUI();
+    }
+
+    function resetDoubleDimerUI() { isCFTPRunning = false; el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = !isValid; }
+
+    function renderDoubleDimers() {
+        if (!storedSamples) return;
+        const minLoop = parseInt(el.minLoopInput.value) || 2;
+        sim.loadDimersForLoops(JSON.stringify(storedSamples.sample0), JSON.stringify(storedSamples.sample1));
+        const f = sim.filterLoopsBySize(minLoop);
+        const e0 = f.indices0.map(i => storedSamples.sample0[i]), e1 = f.indices1.map(i => storedSamples.sample1[i]);
+        const s0 = new Set(e0.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
+        const s1 = new Set(e1.map(e => `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`));
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const ez = zoom * cellSize, ox = canvas.width/2 + panX, oy = canvas.height/2 + panY;
+
+        // Clear canvas
+        ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+        ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // Fill cells with light background
+        ctx.fillStyle = isDark ? '#2a2a2a' : '#f5f5f5';
+        for (const [,c] of activeCells) {
+            ctx.fillRect(ox + c.x * ez, oy - (c.y + 1) * ez, ez, ez);
+        }
+
+        // Draw grid lines
+        ctx.strokeStyle = isDark ? '#444' : '#ddd';
+        ctx.lineWidth = 1;
+        for (const [,c] of activeCells) {
+            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            ctx.strokeRect(cx, cy, ez, ez);
+        }
+
+        // Draw boundary
+        ctx.strokeStyle = isDark ? '#888' : '#333';
+        ctx.lineWidth = 2;
+        for (const [,c] of activeCells) {
+            const cx = ox + c.x * ez, cy = oy - (c.y + 1) * ez;
+            if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x+1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx + ez, cy); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy + ez); ctx.lineTo(cx + ez, cy + ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ez, cy); ctx.stroke(); }
+        }
+
+        // Draw double dimer edges
+        const all = new Map();
+        for (const e of e0) all.set(`${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`, e);
+        for (const e of e1) all.set(`${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${e.x1===e.x2?1:0}`, e);
+        ctx.lineWidth = Math.max(3, ez * 0.12);
+        for (const [k, e] of all) {
+            ctx.strokeStyle = (s0.has(k) && s1.has(k)) ? (isDark?'#fff':'#000') : s0.has(k) ? '#F44336' : '#2196F3';
+            ctx.beginPath(); ctx.moveTo(ox+(e.x1+.5)*ez, oy-(e.y1+.5)*ez); ctx.lineTo(ox+(e.x2+.5)*ez, oy-(e.y2+.5)*ez); ctx.stroke();
+        }
+    }
+
+    function renderFluctuations() {
+        if (!rawFluctuations) return;
+        const scale = parseFloat(el.fluctScaleInput.value) || 10;
+        let minF = Infinity, maxF = -Infinity;
+        for (const [,v] of rawFluctuations) { minF = Math.min(minF,v*scale); maxF = Math.max(maxF,v*scale); }
+        const range = Math.max(Math.abs(minF), Math.abs(maxF)) || 1;
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = isDark ? '#1a1a1a' : '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.restore();
+        const ez = zoom * cellSize, ox = canvas.width/2 + panX, oy = canvas.height/2 + panY;
+        for (const [key] of activeCells) {
+            const [x,y] = key.split(',').map(Number);
+            let sum=0, cnt=0;
+            for (let dx=0;dx<=1;dx++) for (let dy=0;dy<=1;dy++) { const fk=`${x+dx},${y+dy}`; if(rawFluctuations.has(fk)){sum+=rawFluctuations.get(fk);cnt++;} }
+            const avg = cnt>0 ? (sum/cnt)*scale : 0;
+            let r,g,b;
+            if (avg >= 0) { const t=Math.min(1,avg/range); r=255; g=b=Math.round(255*(1-t)); }
+            else { const t=Math.min(1,-avg/range); r=g=Math.round(255*(1-t)); b=255; }
+            ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(ox+x*ez, oy-(y+1)*ez, ez, ez);
+        }
+        ctx.strokeStyle = isDark ? '#fff' : '#000'; ctx.lineWidth = 2;
+        for (const [,c] of activeCells) {
+            const cx = ox+c.x*ez, cy = oy-(c.y+1)*ez;
+            if (!activeCells.has(`${c.x-1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy+ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x+1},${c.y}`)) { ctx.beginPath(); ctx.moveTo(cx+ez,cy); ctx.lineTo(cx+ez,cy+ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y-1}`)) { ctx.beginPath(); ctx.moveTo(cx,cy+ez); ctx.lineTo(cx+ez,cy+ez); ctx.stroke(); }
+            if (!activeCells.has(`${c.x},${c.y+1}`)) { ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+ez,cy); ctx.stroke(); }
+        }
+    }
+
+    function clearDoubleDimerState() {
+        storedSamples = rawFluctuations = null; inDoubleDimerMode = inFluctuationMode = false;
+        el.minLoopGroup.style.display = el.fluctuationsBtn.style.display = el.fluctScaleGroup.style.display = el.resampleBtn.style.display = 'none';
+        el.doubleDimerProgress.textContent = '';
+    }
+
+    // ========================================================================
     // Export/Import
     // ========================================================================
 
@@ -2243,6 +2503,26 @@ code:
 
         el.cftpBtn.addEventListener('click', runCFTP);
         el.cftpStopBtn.addEventListener('click', stopCFTP);
+
+        // Double Dimer / Fluctuations
+        el.doubleDimerBtn.addEventListener('click', runDoubleDimer);
+        el.fluctuationsBtn.addEventListener('click', () => {
+            if (!rawFluctuations) return;
+            inFluctuationMode = true;
+            inDoubleDimerMode = false;
+            el.fluctScaleGroup.style.display = '';
+            renderFluctuations();
+        });
+        el.minLoopInput.addEventListener('change', () => {
+            if (inDoubleDimerMode) renderDoubleDimers();
+        });
+        el.fluctScaleInput.addEventListener('change', () => {
+            if (inFluctuationMode) renderFluctuations();
+        });
+        el.resampleBtn.addEventListener('click', () => {
+            clearDoubleDimerState();
+            runDoubleDimer();
+        });
 
         el.showHeightsCheckbox.addEventListener('change', () => {
             showHeights = el.showHeightsCheckbox.checked;
@@ -2720,6 +3000,31 @@ code:
             }
         });
 
+        // Copy state to clipboard
+        el.copyStateBtn.addEventListener('click', () => {
+            const state = {
+                vertexHeights: vertexHeights,
+                dominoCount: dominoes.length,
+                is3DView: is3DView
+            };
+            navigator.clipboard.writeText(JSON.stringify(state, null, 2))
+                .then(() => alert('State copied to clipboard!'))
+                .catch(err => console.error('Failed to copy:', err));
+        });
+
+        // Vertex height inputs
+        document.querySelectorAll('.vertex-inputs').forEach(container => {
+            const type = parseInt(container.dataset.type);
+            container.querySelectorAll('input[type="number"]').forEach(input => {
+                const vertex = parseInt(input.dataset.vertex);
+                input.addEventListener('change', () => {
+                    const value = parseInt(input.value) || 0;
+                    vertexHeights[type][vertex] = value;
+                    update3DView();
+                });
+            });
+        });
+
         // 3D View Controls
         el.toggle3DBtn.addEventListener('click', () => {
             setViewMode(!is3DView);
@@ -2774,10 +3079,7 @@ code:
 
     initPaletteSelect();
     setupEventListeners();
-
-    // Generate Aztec diamond of size 4 on load
-    generateAztecDiamond(4);
-    resetView();
+    draw();  // Draw empty canvas
 
 })();
 </script>
