@@ -3510,7 +3510,51 @@ function initLozengeApp() {
         }
 
         resetCamera() {
-            this.cameraInitialized = false;
+            // Get bounding box of the model
+            const box = new THREE.Box3();
+            if (this.meshGroup && this.meshGroup.children.length > 0) {
+                box.setFromObject(this.meshGroup);
+            } else {
+                // Default box if no geometry
+                box.set(new THREE.Vector3(-50, -50, -50), new THREE.Vector3(50, 50, 50));
+            }
+
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z) || 100;
+
+            const w = this.container.clientWidth || 900;
+            const h = this.container.clientHeight || 600;
+            const aspect = w / h;
+
+            if (this.usePerspective) {
+                // Position camera to fit the bounding sphere
+                const fov = this.camera.fov * (Math.PI / 180);
+                const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.8;
+                this.camera.position.set(
+                    center.x - distance * 0.7,
+                    center.y + distance * 0.5,
+                    center.z + distance * 0.5
+                );
+                this.camera.lookAt(center);
+            } else {
+                // Orthographic: set frustum to fit the model with padding
+                const frustum = maxDim * 1.3;
+                this.camera.left = -frustum * aspect / 2;
+                this.camera.right = frustum * aspect / 2;
+                this.camera.top = frustum / 2;
+                this.camera.bottom = -frustum / 2;
+                this.camera.position.set(
+                    center.x - maxDim,
+                    center.y + maxDim,
+                    center.z + maxDim
+                );
+                this.camera.lookAt(center);
+                this.camera.updateProjectionMatrix();
+            }
+            this.controls.target.copy(center);
+            this.controls.update();
+            this.cameraInitialized = true;
         }
 
         zoom(factor) {
@@ -4990,6 +5034,7 @@ function initLozengeApp() {
             const isPerspective = renderer3D.togglePerspective();
             el.perspectiveBtn.textContent = isPerspective ? '🎯' : '📐';
             el.perspectiveBtn.title = isPerspective ? 'Perspective view (click for isometric)' : 'Isometric view (click for perspective)';
+            renderer3D.resetCamera();
         }
     });
 

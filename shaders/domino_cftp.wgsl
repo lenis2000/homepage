@@ -1,15 +1,17 @@
-// Domino CFTP Compute Shader
+// Domino CFTP Compute Shader - Face-Based Algorithm
 // GPU algorithm from arXiv-1804.07250v1
 //
-// Vertex state encoding (4-bit):
-//   state = e_N + 2*e_S + 4*e_E + 8*e_W
-//   where e_i ∈ {0,1} indicates domino crosses edge i
+// Data structure: Edge-based encoding
+//   Each cell stores 2 bits: bit 0 = horizontal edge to right, bit 1 = vertical edge upward
+//   grid[y*width + x] = (h_edge << 0) | (v_edge << 1)
 //
-// Key states:
-//   3 = horizontal pair (N=1, S=1, E=0, W=0) = 1 + 2 = 3
-//   12 = vertical pair (N=0, S=0, E=1, W=1) = 4 + 8 = 12
+// Face-based operations:
+//   Face (fx, fy) is the 2x2 plaquette with corners at (fx,fy), (fx+1,fy), (fx,fy+1), (fx+1,fy+1)
+//   Face state 1: horizontal pair (top and bottom edges covered)
+//   Face state 2: vertical pair (left and right edges covered)
+//   Face state 0: not flippable
 //
-// Rotate operation: 3 ↔ 12 (swap horizontal/vertical)
+// 4-color chromatic sweep: faces with color (fx%2)*2 + (fy%2) don't share vertices
 
 struct Params {
     minX: i32,
@@ -18,12 +20,12 @@ struct Params {
     maxY: i32,
     width: i32,
     height: i32,
-    color: i32,      // 0=black (x+y even), 1=white (x+y odd)
-    diagonal: i32,   // for extremal tiling computation
+    color_pass: i32,    // 0-3 for 4-color sweep
+    diagonal: i32,      // for extremal tiling computation
     numCells: u32,
+    numFaces: u32,
     _pad1: u32,
     _pad2: u32,
-    _pad3: u32,
 }
 
 @group(0) @binding(0) var<storage, read_write> grid: array<i32>;
@@ -31,8 +33,12 @@ struct Params {
 @group(0) @binding(2) var<uniform> params: Params;
 @group(0) @binding(3) var<storage, read> region: array<u32>;
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 // Get linear index from (x, y) coordinates
-fn get_idx(x: i32, y: i32) -> i32 {
+fn cell_idx(x: i32, y: i32) -> i32 {
     if (x < params.minX || x > params.maxX || y < params.minY || y > params.maxY) {
         return -1;
     }
@@ -41,7 +47,7 @@ fn get_idx(x: i32, y: i32) -> i32 {
 
 // Check if cell is in region
 fn in_region(x: i32, y: i32) -> bool {
-    let idx = get_idx(x, y);
+    let idx = cell_idx(x, y);
     if (idx < 0 || idx >= i32(params.numCells)) {
         return false;
     }
@@ -57,159 +63,184 @@ fn in_region(x: i32, y: i32) -> bool {
     return byte_val != 0u;
 }
 
-// Get vertex state at (x, y), returns 0 if out of bounds or not in region
-fn get_state(x: i32, y: i32) -> i32 {
-    let idx = get_idx(x, y);
-    if (idx < 0 || idx >= i32(params.numCells)) {
-        return 0;
-    }
-    if (!in_region(x, y)) {
-        return 0;
-    }
-    return grid[idx];
+// Check if all 4 corners of a face are in region
+fn face_in_region(fx: i32, fy: i32) -> bool {
+    return in_region(fx, fy) && in_region(fx + 1, fy) &&
+           in_region(fx, fy + 1) && in_region(fx + 1, fy + 1);
 }
 
-// Set vertex state at (x, y)
-fn set_state(x: i32, y: i32, state: i32) {
-    let idx = get_idx(x, y);
-    if (idx >= 0 && idx < i32(params.numCells) && in_region(x, y)) {
-        grid[idx] = state;
+// ============================================================================
+// EDGE ACCESS FUNCTIONS
+// Edge convention: horizontal edge at (x,y) connects (x,y) to (x+1,y), stored at cell (x,y) bit 0
+//                  vertical edge at (x,y) connects (x,y) to (x,y+1), stored at cell (x,y) bit 1
+// ============================================================================
+
+fn has_horizontal_edge(x: i32, y: i32) -> bool {
+    let idx = cell_idx(x, y);
+    if (idx < 0 || u32(idx) >= params.numCells) { return false; }
+    return (grid[idx] & 1) != 0;
+}
+
+fn has_vertical_edge(x: i32, y: i32) -> bool {
+    let idx = cell_idx(x, y);
+    if (idx < 0 || u32(idx) >= params.numCells) { return false; }
+    return (grid[idx] & 2) != 0;
+}
+
+fn set_horizontal_edge(x: i32, y: i32) {
+    let idx = cell_idx(x, y);
+    if (idx >= 0 && u32(idx) < params.numCells) {
+        grid[idx] = grid[idx] | 1;
+    }
+}
+
+fn clear_horizontal_edge(x: i32, y: i32) {
+    let idx = cell_idx(x, y);
+    if (idx >= 0 && u32(idx) < params.numCells) {
+        grid[idx] = grid[idx] & (~1);
+    }
+}
+
+fn set_vertical_edge(x: i32, y: i32) {
+    let idx = cell_idx(x, y);
+    if (idx >= 0 && u32(idx) < params.numCells) {
+        grid[idx] = grid[idx] | 2;
+    }
+}
+
+fn clear_vertical_edge(x: i32, y: i32) {
+    let idx = cell_idx(x, y);
+    if (idx >= 0 && u32(idx) < params.numCells) {
+        grid[idx] = grid[idx] & (~2);
+    }
+}
+
+// Check if a cell is covered by any domino
+fn is_covered(x: i32, y: i32) -> bool {
+    // A cell is covered if ANY of its 4 edges has a domino
+    // Right edge at (x, y), Left edge at (x-1, y),
+    // Top edge at (x, y), Bottom edge at (x, y-1)
+    return has_horizontal_edge(x, y) ||      // right edge (domino to right)
+           has_horizontal_edge(x - 1, y) ||  // left edge (domino from left)
+           has_vertical_edge(x, y) ||        // top edge (domino upward)
+           has_vertical_edge(x, y - 1);      // bottom edge (domino from below)
+}
+
+// ============================================================================
+// FACE OPERATIONS
+// Face (fx, fy) has corners at (fx, fy), (fx+1, fy), (fx, fy+1), (fx+1, fy+1)
+// Top edge: horizontal at (fx, fy+1) - but we need edge FROM (fx, fy+1) so check has_horizontal_edge(fx, fy+1)
+// Bottom edge: horizontal at (fx, fy)
+// Left edge: vertical at (fx, fy)
+// Right edge: vertical at (fx+1, fy)
+// ============================================================================
+
+fn get_face_state(fx: i32, fy: i32) -> i32 {
+    // Check which edges of the face are covered by dominoes
+    let hasTop = has_horizontal_edge(fx, fy + 1);    // horizontal edge at top
+    let hasBot = has_horizontal_edge(fx, fy);        // horizontal edge at bottom
+    let hasLeft = has_vertical_edge(fx, fy);         // vertical edge at left
+    let hasRight = has_vertical_edge(fx + 1, fy);    // vertical edge at right
+
+    // State 1: horizontal pair (top and bottom edges covered, left and right free)
+    if (hasTop && hasBot && !hasLeft && !hasRight) { return 1; }
+    // State 2: vertical pair (left and right edges covered, top and bottom free)
+    if (!hasTop && !hasBot && hasLeft && hasRight) { return 2; }
+    // State 0: not flippable (mixed configuration)
+    return 0;
+}
+
+fn flip_face(fx: i32, fy: i32, state: i32) {
+    if (state == 1) {
+        // horizontal → vertical
+        clear_horizontal_edge(fx, fy + 1);  // remove top edge
+        clear_horizontal_edge(fx, fy);      // remove bottom edge
+        set_vertical_edge(fx, fy);          // add left edge
+        set_vertical_edge(fx + 1, fy);      // add right edge
+    } else if (state == 2) {
+        // vertical → horizontal
+        clear_vertical_edge(fx, fy);        // remove left edge
+        clear_vertical_edge(fx + 1, fy);    // remove right edge
+        set_horizontal_edge(fx, fy + 1);    // add top edge
+        set_horizontal_edge(fx, fy);        // add bottom edge
     }
 }
 
 // ============================================================================
-// ROTATE KERNEL
-// Flip rotateable vertices (3 ↔ 12) with probability 0.5
-// Only processes vertices of specified color
+// CFTP STEP KERNEL
+// 4-color chromatic sweep: process faces of one color at a time
+// Color = (fx%2)*2 + (fy%2) ensures no two same-color faces share vertices
 // ============================================================================
 @compute @workgroup_size(64)
-fn rotate(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = i32(gid.x);
-    if (idx >= i32(params.numCells)) {
+fn cftp_step(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let face_idx = i32(gid.x);
+    if (u32(face_idx) >= params.numFaces) {
         return;
     }
 
-    // Compute (x, y) from linear index
-    let rel_y = idx / params.width;
-    let rel_x = idx % params.width;
-    let x = rel_x + params.minX;
-    let y = rel_y + params.minY;
-
-    // Check if in region
-    if (!in_region(x, y)) {
+    // Convert linear face index to face coordinates
+    // Face grid is (width-1) x (height-1)
+    let face_width = params.width - 1;
+    let face_height = params.height - 1;
+    if (face_width <= 0 || face_height <= 0) {
         return;
     }
 
-    // Check color: black if (x+y) even, white if odd
-    let cell_color = ((x + y) % 2 + 2) % 2;  // Handle negative modulo
-    if (cell_color != params.color) {
+    let rel_fy = face_idx / face_width;
+    let rel_fx = face_idx % face_width;
+    let fx = rel_fx + params.minX;
+    let fy = rel_fy + params.minY;
+
+    // 4-color chromatic sweep: only process faces of current color
+    let fx_mod = ((fx % 2) + 2) % 2;  // Handle negative modulo
+    let fy_mod = ((fy % 2) + 2) % 2;
+    let face_color = fx_mod * 2 + fy_mod;
+    if (face_color != params.color_pass) {
         return;
     }
 
-    let state = grid[idx];
-
-    // Only rotate if state is 3 (horizontal) or 12 (vertical)
-    if (state != 3 && state != 12) {
+    // Check if face is interior (all 4 corners in region)
+    if (!face_in_region(fx, fy)) {
         return;
     }
 
-    // Get random number for this vertex
-    let u = randoms[u32(idx) % params.numCells];
-
-    // CONDITIONAL ACCEPTANCE - proper CFTP coupling!
-    // Only flip if random "prefers" the opposite state
-    // This ensures both chains converge when they differ
-    if (u < 0.5) {
-        // Random says "prefer horizontal"
-        if (state == 12) {
-            // Currently vertical → flip to horizontal
-            grid[idx] = 3;
-        }
-        // If already horizontal (3), stay
-    } else {
-        // Random says "prefer vertical"
-        if (state == 3) {
-            // Currently horizontal → flip to vertical
-            grid[idx] = 12;
-        }
-        // If already vertical (12), stay
-    }
-}
-
-// ============================================================================
-// UPDATE KERNEL (for rotate bind group - needs randoms binding)
-// Recompute vertex states from neighbors after rotation
-// Based on paper equation 3
-// ============================================================================
-@compute @workgroup_size(64)
-fn update_neighbors(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = i32(gid.x);
-    if (idx >= i32(params.numCells)) {
-        return;
+    let state = get_face_state(fx, fy);
+    if (state == 0) {
+        return;  // Not flippable
     }
 
-    // Compute (x, y) from linear index
-    let rel_y = idx / params.width;
-    let rel_x = idx % params.width;
-    let x = rel_x + params.minX;
-    let y = rel_y + params.minY;
+    // Get random for monotone coupling
+    let u = randoms[gid.x % params.numFaces];
 
-    if (!in_region(x, y)) {
-        return;
+    // CFTP coupling rule:
+    // state 1 (horizontal) corresponds to LOWER heights (MIN)
+    // state 2 (vertical) corresponds to HIGHER heights (MAX)
+    // u < 0.5 → prefer horizontal (MIN direction)
+    // u >= 0.5 → prefer vertical (MAX direction)
+
+    var should_flip = false;
+    if (u < 0.5 && state == 2) {
+        // Currently vertical, random wants horizontal → flip
+        should_flip = true;
+    } else if (u >= 0.5 && state == 1) {
+        // Currently horizontal, random wants vertical → flip
+        should_flip = true;
     }
 
-    // Only update vertices of opposite color from what was rotated
-    let cell_color = ((x + y) % 2 + 2) % 2;
-    if (cell_color == params.color) {
-        return;
+    if (should_flip) {
+        flip_face(fx, fy, state);
     }
-
-    // Recompute state from 4 neighbors (from paper equation)
-    // The key insight: if there's a domino between us and neighbor,
-    // the neighbor's edge bit pointing toward us tells us our edge bit
-    // - North neighbor's S bit → our N bit (domino crosses our N edge)
-    // - South neighbor's N bit → our S bit (domino crosses our S edge)
-    // - East neighbor's W bit → our E bit (domino crosses our E edge)
-    // - West neighbor's E bit → our W bit (domino crosses our W edge)
-
-    var new_state: i32 = 0;
-
-    let n_state = get_state(x, y - 1);  // North neighbor (y-1 is up/north)
-    let s_state = get_state(x, y + 1);  // South neighbor (y+1 is down/south)
-    let e_state = get_state(x + 1, y);  // East neighbor
-    let w_state = get_state(x - 1, y);  // West neighbor
-
-    // N bit: set if NORTH neighbor has S bit (bit 1)
-    if ((n_state & 2) != 0) {
-        new_state |= 1;
-    }
-
-    // S bit: set if SOUTH neighbor has N bit (bit 0)
-    if ((s_state & 1) != 0) {
-        new_state |= 2;
-    }
-
-    // E bit: set if EAST neighbor has W bit (bit 3)
-    if ((e_state & 8) != 0) {
-        new_state |= 4;
-    }
-
-    // W bit: set if WEST neighbor has E bit (bit 2)
-    if ((w_state & 4) != 0) {
-        new_state |= 8;
-    }
-
-    grid[idx] = new_state;
 }
 
 // ============================================================================
 // EXTREMAL HORIZONTAL KERNEL (MIN tiling)
 // Greedy horizontal preference using diagonal sweep
+// Processes black cells (x+y even) and prefers horizontal dominoes
 // ============================================================================
 @compute @workgroup_size(64)
-fn extremal_horizontal(@builtin(global_invocation_id) gid: vec3<u32>) {
+fn extremal_min(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx = i32(gid.x);
-    if (idx >= i32(params.numCells)) {
+    if (u32(idx) >= params.numCells) {
         return;
     }
 
@@ -218,72 +249,6 @@ fn extremal_horizontal(@builtin(global_invocation_id) gid: vec3<u32>) {
     let rel_x = idx % params.width;
     let x = rel_x + params.minX;
     let y = rel_y + params.minY;
-
-    if (!in_region(x, y)) {
-        return;
-    }
-
-    // Only process cells on current diagonal (x + y - minX - minY = diagonal)
-    let diag = rel_x + rel_y;
-    if (diag != params.diagonal) {
-        return;
-    }
-
-    // Only process black cells (x+y even) to avoid double counting
-    if ((x + y) % 2 != 0) {
-        return;
-    }
-
-    // Check if already covered
-    let current = grid[idx];
-    if (current != 0) {
-        return;
-    }
-
-    // Try horizontal first (prefer MIN = horizontal dominoes)
-    // Check if right neighbor exists, is in region, and uncovered
-    if (in_region(x + 1, y)) {
-        let right_idx = get_idx(x + 1, y);
-        if (right_idx >= 0 && grid[right_idx] == 0) {
-            // Place horizontal domino
-            grid[idx] = 3;  // This cell: N=1, S=1
-            grid[right_idx] = 3;  // Right cell: same state
-            return;
-        }
-    }
-
-    // Try vertical if horizontal failed
-    if (in_region(x, y + 1)) {
-        let down_idx = get_idx(x, y + 1);
-        if (down_idx >= 0 && grid[down_idx] == 0) {
-            // Place vertical domino
-            grid[idx] = 12;  // This cell: E=1, W=1
-            grid[down_idx] = 12;  // Down cell: same state
-            return;
-        }
-    }
-}
-
-// ============================================================================
-// EXTREMAL VERTICAL KERNEL (MAX tiling)
-// Greedy vertical preference using diagonal sweep
-// ============================================================================
-@compute @workgroup_size(64)
-fn extremal_vertical(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = i32(gid.x);
-    if (idx >= i32(params.numCells)) {
-        return;
-    }
-
-    // Compute (x, y) from linear index
-    let rel_y = idx / params.width;
-    let rel_x = idx % params.width;
-    let x = rel_x + params.minX;
-    let y = rel_y + params.minY;
-
-    if (!in_region(x, y)) {
-        return;
-    }
 
     // Only process cells on current diagonal
     let diag = rel_x + rel_y;
@@ -292,35 +257,99 @@ fn extremal_vertical(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     // Only process black cells (x+y even) to avoid double counting
-    if ((x + y) % 2 != 0) {
+    let parity = ((x + y) % 2 + 2) % 2;
+    if (parity != 0) {
+        return;
+    }
+
+    if (!in_region(x, y)) {
         return;
     }
 
     // Check if already covered
-    let current = grid[idx];
-    if (current != 0) {
+    if (is_covered(x, y)) {
+        return;
+    }
+
+    // Try horizontal first (prefer MIN = horizontal dominoes)
+    // Check if right neighbor exists, is in region, and uncovered
+    if (in_region(x + 1, y) && !is_covered(x + 1, y)) {
+        // Place horizontal domino: edge from (x,y) to (x+1,y)
+        set_horizontal_edge(x, y);
+        return;
+    }
+
+    // Try vertical if horizontal failed
+    if (in_region(x, y + 1) && !is_covered(x, y + 1)) {
+        // Place vertical domino: edge from (x,y) to (x,y+1)
+        set_vertical_edge(x, y);
+        return;
+    }
+}
+
+// ============================================================================
+// EXTREMAL VERTICAL KERNEL (MAX tiling)
+// Greedy vertical preference using diagonal sweep
+// Processes black cells (x+y even) and prefers vertical dominoes
+// ============================================================================
+@compute @workgroup_size(64)
+fn extremal_max(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = i32(gid.x);
+    if (u32(idx) >= params.numCells) {
+        return;
+    }
+
+    // Compute (x, y) from linear index
+    let rel_y = idx / params.width;
+    let rel_x = idx % params.width;
+    let x = rel_x + params.minX;
+    let y = rel_y + params.minY;
+
+    // Only process cells on current diagonal
+    let diag = rel_x + rel_y;
+    if (diag != params.diagonal) {
+        return;
+    }
+
+    // Only process black cells (x+y even) to avoid double counting
+    let parity = ((x + y) % 2 + 2) % 2;
+    if (parity != 0) {
+        return;
+    }
+
+    if (!in_region(x, y)) {
+        return;
+    }
+
+    // Check if already covered
+    if (is_covered(x, y)) {
         return;
     }
 
     // Try vertical first (prefer MAX = vertical dominoes)
-    if (in_region(x, y + 1)) {
-        let down_idx = get_idx(x, y + 1);
-        if (down_idx >= 0 && grid[down_idx] == 0) {
-            // Place vertical domino
-            grid[idx] = 12;
-            grid[down_idx] = 12;
-            return;
-        }
+    if (in_region(x, y + 1) && !is_covered(x, y + 1)) {
+        // Place vertical domino: edge from (x,y) to (x,y+1)
+        set_vertical_edge(x, y);
+        return;
     }
 
     // Try horizontal if vertical failed
-    if (in_region(x + 1, y)) {
-        let right_idx = get_idx(x + 1, y);
-        if (right_idx >= 0 && grid[right_idx] == 0) {
-            // Place horizontal domino
-            grid[idx] = 3;
-            grid[right_idx] = 3;
-            return;
-        }
+    if (in_region(x + 1, y) && !is_covered(x + 1, y)) {
+        // Place horizontal domino: edge from (x,y) to (x+1,y)
+        set_horizontal_edge(x, y);
+        return;
     }
+}
+
+// ============================================================================
+// CLEAR GRID KERNEL
+// Reset all edges to 0
+// ============================================================================
+@compute @workgroup_size(64)
+fn clear_grid(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if (idx >= params.numCells) {
+        return;
+    }
+    grid[idx] = 0;
 }

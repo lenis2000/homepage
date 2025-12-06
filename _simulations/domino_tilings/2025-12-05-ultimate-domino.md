@@ -1529,26 +1529,46 @@ code:
             if (this.dominoGroup) {
                 this.dominoGroup.rotation.set(0, 0, 0);
             }
+
+            // Get bounding box of the model
+            const box = new THREE.Box3();
+            if (this.dominoGroup && this.dominoGroup.children.length > 0) {
+                box.setFromObject(this.dominoGroup);
+            } else {
+                // Default box if no geometry
+                box.set(new THREE.Vector3(-50, -50, -50), new THREE.Vector3(50, 50, 50));
+            }
+
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z) || 100;
+
             const w = this.container.clientWidth || 900;
             const h = this.container.clientHeight || 600;
+            const aspect = w / h;
 
             if (this.usePerspective) {
-                // Reset perspective camera position
-                this.camera.position.set(60, 80, 100);
-                this.camera.lookAt(0, 0, 0);
+                // Position camera to fit the bounding sphere
+                const fov = this.camera.fov * (Math.PI / 180);
+                const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5;
+                this.camera.position.set(
+                    center.x + distance * 0.5,
+                    center.y + distance,
+                    center.z + distance * 0.8
+                );
+                this.camera.lookAt(center);
             } else {
-                // Reset orthographic camera frustum
-                const frustum = 100;
-                const aspect = w / h;
+                // Orthographic: set frustum to fit the model with padding
+                const frustum = maxDim * 1.2;
                 this.camera.left = -frustum * aspect / 2;
                 this.camera.right = frustum * aspect / 2;
                 this.camera.top = frustum / 2;
                 this.camera.bottom = -frustum / 2;
-                this.camera.position.set(0, 130, 0);
-                this.camera.lookAt(0, 0, 0);
+                this.camera.position.set(center.x, center.y + maxDim * 2, center.z);
+                this.camera.lookAt(center);
                 this.camera.updateProjectionMatrix();
             }
-            this.controls.target.set(0, 0, 0);
+            this.controls.target.copy(center);
             this.controls.update();
         }
 
@@ -2170,34 +2190,75 @@ code:
         return num.toString();
     }
 
-    async function runCFTP() {
-        if (!isValid || isCFTPRunning) return;
+    // GPU CFTP implementation
+    async function runGPU_CFTP(cftpStartTime, originalText) {
+        // Get region mask from WASM
+        const maskResult = sim.getRegionMask();
+        if (maskResult.status !== 'ok') {
+            console.error('Failed to get region mask:', maskResult);
+            el.cftpSteps.textContent = 'error';
+            return false;
+        }
 
-        isCFTPRunning = true;
-        const originalText = el.cftpBtn.textContent;
-        el.cftpBtn.disabled = true;
-        el.cftpBtn.textContent = 'Init...';
-        el.cftpStopBtn.style.display = '';
-        el.cftpStatus.style.display = '';
-        el.startStopBtn.disabled = true;
-        el.cftpSteps.textContent = 'init';
+        const { maskBytes, minX, maxX, minY, maxY } = maskResult;
 
-        const cftpStartTime = performance.now();
+        // Initialize GPU CFTP
+        el.cftpSteps.textContent = 'GPU init';
+        el.cftpBtn.textContent = 'GPU init';
+        const initOk = await gpuEngine.initCFTP(maskBytes, minX, maxX, minY, maxY);
+        if (!initOk) {
+            console.error('GPU CFTP init failed');
+            el.cftpSteps.textContent = 'GPU error';
+            return false;
+        }
 
-        // WASM CFTP
+        // Epoch doubling loop
+        let T = 1;
+        const maxEpochs = 30;
+        let totalSteps = 0;
+        const checkInterval = 1000;
+
+        for (let epoch = 0; epoch < maxEpochs && isCFTPRunning; epoch++) {
+            await gpuEngine.resetCFTPChains();
+
+            el.cftpSteps.textContent = `GPU T=${T}`;
+            el.cftpBtn.textContent = `GPU:${T}`;
+
+            const result = await gpuEngine.stepCFTP(T, checkInterval);
+            totalSteps += result.stepsRun;
+
+            if (result.coalesced) {
+                dominoes = await gpuEngine.finalizeCFTP();
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                el.cftpSteps.textContent = `${formatNumber(totalSteps)} GPU (${elapsed}s)`;
+                return true;
+            }
+
+            T *= 2;
+
+            // Yield to UI
+            await new Promise(r => setTimeout(r, 0));
+        }
+
+        if (!isCFTPRunning) {
+            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+            el.cftpSteps.textContent = `stopped (${elapsed}s)`;
+        } else {
+            const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+            el.cftpSteps.textContent = `timeout (${elapsed}s)`;
+        }
+        return false;
+    }
+
+    // CPU CFTP implementation (original WASM path)
+    async function runCPU_CFTP(cftpStartTime, originalText) {
         let lastDrawnBlock = -1;
 
         const initResult = sim.initCFTP();
         if (initResult.status === 'error') {
             console.error('CFTP init error:', initResult.reason);
             el.cftpSteps.textContent = 'error';
-            el.cftpBtn.textContent = originalText;
-            el.cftpBtn.disabled = false;
-            el.cftpStopBtn.style.display = 'none';
-            el.cftpStatus.style.display = 'none';
-            isCFTPRunning = false;
-            el.startStopBtn.disabled = !isValid;
-            return;
+            return false;
         }
 
         el.cftpSteps.textContent = 'T=' + initResult.T;
@@ -2227,7 +2288,7 @@ code:
                 const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                 const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
                 el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
-                break;
+                return true;
             } else if (res.status === 'not_coalesced') {
                 el.cftpSteps.textContent = 'T=' + res.nextT;
                 el.cftpBtn.textContent = 'T=' + res.nextT;
@@ -2243,21 +2304,44 @@ code:
             } else if (res.status === 'timeout') {
                 const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                 el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
-                break;
+                return false;
             } else {
                 const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                 el.cftpSteps.textContent = 'error (' + elapsed + 's)';
                 console.error('CFTP error:', res);
-                break;
+                return false;
             }
 
             await new Promise(resolve => setTimeout(resolve, 0));
         }
 
         // Handle cancellation
-        if (!isCFTPRunning && !el.cftpSteps.textContent.includes('(')) {
+        if (!isCFTPRunning) {
             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
             el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
+        }
+        return false;
+    }
+
+    async function runCFTP() {
+        if (!isValid || isCFTPRunning) return;
+
+        isCFTPRunning = true;
+        const originalText = el.cftpBtn.textContent;
+        el.cftpBtn.disabled = true;
+        el.cftpBtn.textContent = 'Init...';
+        el.cftpStopBtn.style.display = '';
+        el.cftpStatus.style.display = '';
+        el.startStopBtn.disabled = true;
+        el.cftpSteps.textContent = 'init';
+
+        const cftpStartTime = performance.now();
+
+        // Try GPU path first if available, otherwise fall back to CPU
+        if (useWebGPU && gpuEngine && gpuEngine.isReady) {
+            await runGPU_CFTP(cftpStartTime, originalText);
+        } else {
+            await runCPU_CFTP(cftpStartTime, originalText);
         }
 
         isCFTPRunning = false;
@@ -2319,18 +2403,101 @@ code:
         return heights;
     }
 
-    async function runDoubleDimer(restoreFluctuations = false, forceResample = false) {
-        if (!isValid || isCFTPRunning) return;
-        if (storedSamples && !forceResample) { inDoubleDimerMode = true; inFluctuationMode = false; renderDoubleDimers(); return; }
-        isCFTPRunning = true; doubleDimerCancelled = false;
-        el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = true;
-        el.doubleDimerProgress.textContent = 'init...';
-        const t0 = performance.now();
-        if (sim.initFluctuationsCFTP().status === 'error') { el.doubleDimerProgress.textContent = 'error'; resetDoubleDimerUI(); return; }
+    // GPU Double Dimer implementation (4 chains for 2 independent samples)
+    async function runGPU_DoubleDimer(t0, restoreFluctuations) {
+        // Get region mask from WASM
+        const maskResult = sim.getRegionMask();
+        if (maskResult.status !== 'ok') {
+            console.error('Failed to get region mask:', maskResult);
+            el.doubleDimerProgress.textContent = 'error';
+            return false;
+        }
+
+        const { maskBytes, minX, maxX, minY, maxY } = maskResult;
+
+        // Initialize GPU Double Dimer CFTP (4 chains)
+        el.doubleDimerProgress.textContent = 'GPU init';
+        const initOk = await gpuEngine.initDoubleDimerCFTP(maskBytes, minX, maxX, minY, maxY);
+        if (!initOk) {
+            console.error('GPU Double Dimer init failed');
+            el.doubleDimerProgress.textContent = 'GPU error';
+            return false;
+        }
+
+        // Epoch doubling loop
+        let T = 1;
+        const maxEpochs = 30;
+        const checkInterval = 1000;
+
+        for (let epoch = 0; epoch < maxEpochs && !doubleDimerCancelled; epoch++) {
+            await gpuEngine.resetDoubleDimerChains();
+
+            el.doubleDimerProgress.textContent = `GPU T=${T}`;
+
+            const result = await gpuEngine.stepDoubleDimerCFTP(T, checkInterval);
+
+            if (result.pair0Coalesced && result.pair1Coalesced) {
+                // Both pairs coalesced - get results
+                const samples = await gpuEngine.finalizeDoubleDimerCFTP();
+
+                // Convert dominoes to edges format for compatibility
+                const edges0 = dominoesToEdges(samples.sample0);
+                const edges1 = dominoesToEdges(samples.sample1);
+
+                storedSamples = {
+                    sample0: edges0,
+                    sample1: edges1,
+                    dominoes0: samples.sample0,
+                    dominoes1: samples.sample1
+                };
+
+                const h0 = computeHeightFunction(edges0);
+                const h1 = computeHeightFunction(edges1);
+                rawFluctuations = new Map();
+                for (const [k, v0] of h0) rawFluctuations.set(k, (v0 - (h1.get(k)||0)) / Math.sqrt(2));
+
+                el.doubleDimerProgress.textContent = `GPU (${((performance.now()-t0)/1000).toFixed(2)}s)`;
+                el.minLoopGroup.style.display = el.fluctuationsBtn.style.display = el.resampleBtn.style.display = '';
+                resetView(true);
+
+                if (restoreFluctuations) {
+                    inFluctuationMode = true; inDoubleDimerMode = false;
+                    renderFluctuations();
+                } else {
+                    inDoubleDimerMode = true; inFluctuationMode = false;
+                    renderDoubleDimers();
+                }
+                return true;
+            }
+
+            T *= 2;
+            await new Promise(r => setTimeout(r, 0));
+        }
+
+        el.doubleDimerProgress.textContent = doubleDimerCancelled ? 'stopped' : 'timeout';
+        return false;
+    }
+
+    // Convert dominoes array to edges format
+    function dominoesToEdges(dominoes) {
+        return dominoes.map(d => ({
+            x1: d.x1, y1: d.y1,
+            x2: d.x2, y2: d.y2
+        }));
+    }
+
+    // CPU Double Dimer implementation (original WASM path)
+    async function runCPU_DoubleDimer(t0, restoreFluctuations) {
+        if (sim.initFluctuationsCFTP().status === 'error') {
+            el.doubleDimerProgress.textContent = 'error';
+            return false;
+        }
+
         while (!doubleDimerCancelled) {
             const res = sim.stepFluctuationsCFTP();
-            if (res.status === 'in_progress') { el.doubleDimerProgress.textContent = `T=${res.maxT} (${res.done}/2)`; }
-            else if (res.status === 'coalesced') {
+            if (res.status === 'in_progress') {
+                el.doubleDimerProgress.textContent = `T=${res.maxT} (${res.done}/2)`;
+            } else if (res.status === 'coalesced') {
                 const s0 = sim.exportFluctuationSample(0), s1 = sim.exportFluctuationSample(1);
                 storedSamples = { sample0: s0.edges, sample1: s1.edges, dominoes0: s0.dominoes, dominoes1: s1.dominoes };
                 const h0 = computeHeightFunction(s0.edges), h1 = computeHeightFunction(s1.edges);
@@ -2346,10 +2513,31 @@ code:
                     inDoubleDimerMode = true; inFluctuationMode = false;
                     renderDoubleDimers();
                 }
-                break;
-            } else { if (res.status === 'timeout') el.doubleDimerProgress.textContent = 'timeout'; break; }
+                return true;
+            } else {
+                if (res.status === 'timeout') el.doubleDimerProgress.textContent = 'timeout';
+                return false;
+            }
             await new Promise(r => setTimeout(r, 0));
         }
+        return false;
+    }
+
+    async function runDoubleDimer(restoreFluctuations = false, forceResample = false) {
+        if (!isValid || isCFTPRunning) return;
+        if (storedSamples && !forceResample) { inDoubleDimerMode = true; inFluctuationMode = false; renderDoubleDimers(); return; }
+        isCFTPRunning = true; doubleDimerCancelled = false;
+        el.doubleDimerBtn.disabled = el.cftpBtn.disabled = el.startStopBtn.disabled = true;
+        el.doubleDimerProgress.textContent = 'init...';
+        const t0 = performance.now();
+
+        // Try GPU path first if available, otherwise fall back to CPU
+        if (useWebGPU && gpuEngine && gpuEngine.isReady) {
+            await runGPU_DoubleDimer(t0, restoreFluctuations);
+        } else {
+            await runCPU_DoubleDimer(t0, restoreFluctuations);
+        }
+
         resetDoubleDimerUI();
     }
 
@@ -3163,6 +3351,7 @@ code:
                 const isPerspective = renderer3D.togglePerspective();
                 el.perspectiveBtn.textContent = isPerspective ? '📐' : '🎯';
                 el.perspectiveBtn.title = isPerspective ? 'Perspective view (click for isometric)' : 'Isometric view (click for perspective)';
+                renderer3D.resetView();
             }
         });
 
