@@ -49,6 +49,16 @@ code:
     border-radius: 4px;
     margin-top: 10px;
   }
+  #three-container {
+    border: 1px solid #ccc;
+    background-color: #fafafa;
+    border-radius: 4px;
+  }
+  #three-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
 </style>
 
 <script src="/js/d3.v7.min.js"></script>
@@ -56,6 +66,9 @@ code:
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 <script src="/js/2025-12-04-RSK-sampling.js"></script>
+<!-- Load Three.js for 3D visualization -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 
 <!-- Sampling controls -->
 <div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
@@ -116,6 +129,12 @@ code:
   <div class="col-12" style="position: relative; height: 50vh;">
     <canvas id="aztec-canvas" style="width: 100%; height: 100%; border: 1px solid #ccc; background-color: #fafafa;"></canvas>
     <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;"></svg>
+    <div id="three-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></div>
+    <div id="loading-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; justify-content: center; align-items: center; z-index: 150; flex-direction: column;">
+      <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Building 3D View...</div>
+      <div id="loading-progress" style="font-size: 14px; color: #666;">0%</div>
+    </div>
+    <button id="toggle3DBtn" style="position: absolute; top: 10px; right: 10px; font-weight: bold; font-size: 14px; padding: 6px 12px; background: #fff; border: 2px solid #333; border-radius: 4px; cursor: pointer; z-index: 100; opacity: 0.9;">3D</button>
   </div>
 </div>
 
@@ -166,6 +185,13 @@ code:
     <select id="palette-select" style="width: 110px; font-size: 12px;"></select>
     <button id="next-palette" style="padding: 0 6px; font-size: 12px;">&#9654;</button>
     <button id="custom-colors-btn" style="margin-left: 4px; font-size: 12px;">Custom</button>
+  </span>
+  <span id="controls-3d" style="border-left: 1px solid #ccc; padding-left: 10px; display: none;">
+    <button id="perspectiveBtn" style="font-size: 12px;" title="Toggle perspective/orthographic">🎯</button>
+    <button id="preset3DBtn" style="font-size: 12px;" title="Cycle visual preset">☀️</button>
+    <button id="rotateLeftBtn" style="font-size: 12px;" title="Rotate left">↺</button>
+    <button id="rotateRightBtn" style="font-size: 12px;" title="Rotate right">↻</button>
+    <button id="autoRotateBtn" style="font-size: 12px;" title="Toggle auto-rotation">⟳</button>
   </span>
 </div>
 <div id="custom-color-pickers" style="display: none; gap: 6px; align-items: center; margin-top: 6px; padding: 6px 10px; background: #f0f0f0; border-radius: 5px; font-size: 0.85em;">
@@ -260,11 +286,685 @@ async function initializeApp() {
   let cachedActiveCells2 = null;  // Map of active cells from second sample
   let rawFluctuations = null;     // Map of vertex fluctuation values (h1 - h2) / sqrt(2)
 
+  // 3D View state
+  let is3DView = false;
+  let renderer3D = null;
+
+  // 3D Vertex heights per domino type (4 types x 6 vertices)
+  // Horizontal: 0=UR, 1=UM, 2=UL, 3=LL, 4=LM, 5=LR
+  // Vertical: 0=TR, 1=MR, 2=BR, 3=BL, 4=ML, 5=TL
+  const vertexHeights = {
+    0: [1, 2, 1, 0, -1, 0],    // Horiz type 0 (black start)
+    1: [0, -1, 0, 1, 2, 1],    // Horiz type 1 (white start)
+    2: [-1, -2, -1, 0, 1, 0],  // Vert type 2 (black start)
+    3: [0, 1, 0, -1, -2, -1]   // Vert type 3 (white start)
+  };
+
+  // 3D Visual Presets
+  const VISUAL_PRESETS_3D = [
+    {
+      name: 'Default',
+      icon: '☀️',
+      background: 0xffffff,
+      ambient: { intensity: 0.4 },
+      hemisphere: { sky: 0xffffff, ground: 0x444444, intensity: 0.3 },
+      directional: { intensity: 0.6, position: [10, 10, 15] },
+      fill: { intensity: 0.25, position: [-10, -5, -10] },
+      material: { type: 'standard', roughness: 0.5, metalness: 0.15, flatShading: true },
+      edges: { color: 0x000000, opacity: 0.5 }
+    },
+    {
+      name: 'Clean',
+      icon: '✨',
+      background: 0xfafafa,
+      ambient: { intensity: 0.5 },
+      hemisphere: { sky: 0xffffff, ground: 0xeeeeee, intensity: 0.2 },
+      directional: { intensity: 0.7, position: [5, 15, 10] },
+      fill: { intensity: 0.3, position: [-8, 5, -8] },
+      material: { type: 'phong', shininess: 60, flatShading: true },
+      edges: { color: 0x333333, opacity: 0.3 }
+    },
+    {
+      name: 'Mathematical',
+      icon: '📐',
+      background: 0xffffff,
+      ambient: { intensity: 0.6 },
+      hemisphere: { sky: 0xffffff, ground: 0xffffff, intensity: 0.2 },
+      directional: { intensity: 0.4, position: [0, 20, 0] },
+      fill: { intensity: 0.2, position: [0, -10, 0] },
+      material: { type: 'lambert', flatShading: true },
+      edges: { color: 0x000000, opacity: 1.0 }
+    },
+    {
+      name: 'Dramatic',
+      icon: '🎭',
+      background: 0x1a1a2e,
+      ambient: { intensity: 0.35 },
+      hemisphere: { sky: 0x6666aa, ground: 0x222244, intensity: 0.25 },
+      directional: { intensity: 1.2, position: [15, 20, 5] },
+      fill: { intensity: 0.3, position: [-10, 5, -5] },
+      material: { type: 'standard', roughness: 0.3, metalness: 0.5, flatShading: true },
+      edges: { color: 0x222222, opacity: 0.6 }
+    },
+    {
+      name: 'Playful',
+      icon: '🎨',
+      background: 0xf0f8ff,
+      ambient: { intensity: 0.5 },
+      hemisphere: { sky: 0xaaddff, ground: 0xffddaa, intensity: 0.4 },
+      directional: { intensity: 0.5, position: [10, 15, 10] },
+      fill: { intensity: 0.35, position: [-10, 10, -5] },
+      material: { type: 'phong', shininess: 100, flatShading: false },
+      edges: { color: 0x444444, opacity: 0.2 }
+    }
+  ];
+
   function getCurrentColors() {
     if (useCustomColors) {
       return customColors;
     }
     return colorPalettes[currentPaletteIndex].colors;
+  }
+
+
+  // ========== 3D Renderer Class ==========
+
+  class Domino3DRenderer {
+    constructor(container) {
+      this.container = container;
+      this.autoRotate = false;
+      this.lastDominoCount = 0;
+      this.currentPresetIndex = 0;
+      this.usePerspective = false;
+
+      // Three.js setup
+      this.scene = new THREE.Scene();
+      this.scene.background = new THREE.Color(0xffffff);
+
+      // Orthographic camera (top-down initially)
+      const w = container.clientWidth || 600;
+      const h = container.clientHeight || 400;
+      const frustum = 100;
+      const aspect = w / h;
+
+      this.camera = new THREE.OrthographicCamera(
+        -frustum * aspect / 2, frustum * aspect / 2,
+        frustum / 2, -frustum / 2,
+        1, 1000
+      );
+      this.camera.position.set(0, 130, 0);
+      this.camera.lookAt(0, 0, 0);
+
+      // Renderer
+      this.renderer = new THREE.WebGLRenderer({ antialias: true });
+      this.renderer.setSize(w, h);
+      this.renderer.setPixelRatio(window.devicePixelRatio);
+      this.renderer.getContext().getExtension('OES_element_index_uint');
+      container.appendChild(this.renderer.domElement);
+
+      // Controls
+      this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+      this.controls.enableDamping = true;
+      this.controls.dampingFactor = 0.25;
+      this.controls.touches = { ONE: THREE.TOUCH.ROTATE };
+
+      // Lighting
+      this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+      this.scene.add(this.ambientLight);
+
+      this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+      this.hemiLight.position.set(0, 20, 0);
+      this.scene.add(this.hemiLight);
+
+      this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+      this.directionalLight.position.set(10, 10, 15);
+      this.scene.add(this.directionalLight);
+
+      this.fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+      this.fillLight.position.set(-10, -5, -10);
+      this.scene.add(this.fillLight);
+
+      // Group for dominoes
+      this.dominoGroup = new THREE.Group();
+      this.scene.add(this.dominoGroup);
+
+      // Handle resize
+      window.addEventListener('resize', () => this.handleResize());
+
+      // Apply default preset
+      this.applyPreset(0);
+
+      // Start animation loop
+      this.animate();
+    }
+
+    applyPreset(index) {
+      this.currentPresetIndex = index % VISUAL_PRESETS_3D.length;
+      const preset = VISUAL_PRESETS_3D[this.currentPresetIndex];
+
+      this.scene.background = new THREE.Color(preset.background);
+      this.ambientLight.intensity = preset.ambient.intensity;
+      this.hemiLight.color.setHex(preset.hemisphere.sky);
+      this.hemiLight.groundColor.setHex(preset.hemisphere.ground);
+      this.hemiLight.intensity = preset.hemisphere.intensity;
+      this.directionalLight.intensity = preset.directional.intensity;
+      this.directionalLight.position.set(...preset.directional.position);
+      this.fillLight.intensity = preset.fill.intensity;
+      this.fillLight.position.set(...preset.fill.position);
+    }
+
+    cyclePreset() {
+      this.applyPreset(this.currentPresetIndex + 1);
+      return VISUAL_PRESETS_3D[this.currentPresetIndex];
+    }
+
+    getCurrentPreset() {
+      return VISUAL_PRESETS_3D[this.currentPresetIndex];
+    }
+
+    togglePerspective() {
+      this.usePerspective = !this.usePerspective;
+      const w = this.container.clientWidth || 600;
+      const h = this.container.clientHeight || 400;
+      const target = this.controls.target.clone();
+
+      if (this.usePerspective) {
+        this.camera = new THREE.PerspectiveCamera(60, w / h, 1, 2000);
+        this.camera.position.set(60, 80, 100);
+      } else {
+        const frustum = 100;
+        const aspect = w / h;
+        this.camera = new THREE.OrthographicCamera(
+          -frustum * aspect / 2, frustum * aspect / 2,
+          frustum / 2, -frustum / 2,
+          1, 1000
+        );
+        this.camera.position.set(0, 130, 0);
+      }
+
+      this.camera.lookAt(target);
+      this.controls.dispose();
+      this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+      this.controls.target.copy(target);
+      this.controls.enableDamping = true;
+      this.controls.dampingFactor = 0.25;
+      this.controls.touches = { ONE: THREE.TOUCH.ROTATE };
+
+      return this.usePerspective;
+    }
+
+    handleResize() {
+      if (!this.container) return;
+      const w = this.container.clientWidth;
+      const h = this.container.clientHeight;
+      const aspect = w / h;
+
+      if (this.usePerspective) {
+        this.camera.aspect = aspect;
+      } else {
+        const frustum = 100;
+        this.camera.left = -frustum * aspect / 2;
+        this.camera.right = frustum * aspect / 2;
+        this.camera.top = frustum / 2;
+        this.camera.bottom = -frustum / 2;
+      }
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(w, h);
+    }
+
+    animate() {
+      requestAnimationFrame(() => this.animate());
+      this.controls.update();
+
+      if (this.autoRotate && this.dominoGroup) {
+        this.dominoGroup.rotation.y += 0.005;
+      }
+
+      this.renderer.render(this.scene, this.camera);
+    }
+
+    rotateHorizontal(angleDegrees) {
+      const angleRadians = angleDegrees * Math.PI / 180;
+      const target = this.controls.target;
+      const offset = new THREE.Vector3();
+      offset.subVectors(this.camera.position, target);
+
+      const axis = new THREE.Vector3(0, 1, 0);
+      offset.applyAxisAngle(axis, angleRadians);
+
+      this.camera.position.copy(target).add(offset);
+      this.camera.lookAt(target);
+      this.controls.update();
+    }
+
+    setAutoRotate(enabled) {
+      this.autoRotate = enabled;
+    }
+
+    zoomIn() {
+      if (this.usePerspective) {
+        const direction = new THREE.Vector3();
+        direction.subVectors(this.camera.position, this.controls.target);
+        direction.multiplyScalar(0.8);
+        this.camera.position.copy(this.controls.target).add(direction);
+        this.controls.update();
+      } else {
+        const factor = 0.8;
+        this.camera.left *= factor;
+        this.camera.right *= factor;
+        this.camera.top *= factor;
+        this.camera.bottom *= factor;
+        this.camera.updateProjectionMatrix();
+      }
+    }
+
+    zoomOut() {
+      if (this.usePerspective) {
+        const direction = new THREE.Vector3();
+        direction.subVectors(this.camera.position, this.controls.target);
+        direction.multiplyScalar(1.25);
+        this.camera.position.copy(this.controls.target).add(direction);
+        this.controls.update();
+      } else {
+        const factor = 1.25;
+        this.camera.left *= factor;
+        this.camera.right *= factor;
+        this.camera.top *= factor;
+        this.camera.bottom *= factor;
+        this.camera.updateProjectionMatrix();
+      }
+    }
+
+    resetView() {
+      if (this.dominoGroup) {
+        this.dominoGroup.rotation.set(0, 0, 0);
+      }
+
+      const box = new THREE.Box3();
+      if (this.dominoGroup && this.dominoGroup.children.length > 0) {
+        box.setFromObject(this.dominoGroup);
+      } else {
+        box.set(new THREE.Vector3(-50, -50, -50), new THREE.Vector3(50, 50, 50));
+      }
+
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z) || 100;
+
+      const w = this.container.clientWidth || 600;
+      const h = this.container.clientHeight || 400;
+      const aspect = w / h;
+
+      if (this.usePerspective) {
+        const fov = this.camera.fov * (Math.PI / 180);
+        const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5;
+        this.camera.position.set(
+          center.x + distance * 0.5,
+          center.y + distance,
+          center.z + distance * 0.8
+        );
+        this.camera.lookAt(center);
+      } else {
+        const frustum = maxDim * 1.2;
+        this.camera.left = -frustum * aspect / 2;
+        this.camera.right = frustum * aspect / 2;
+        this.camera.top = frustum / 2;
+        this.camera.bottom = -frustum / 2;
+        this.camera.position.set(center.x, center.y + maxDim * 2, center.z);
+        this.camera.lookAt(center);
+        this.camera.updateProjectionMatrix();
+      }
+      this.controls.target.copy(center);
+      this.controls.update();
+    }
+
+    calculateHeightFunction(dominoes) {
+      if (!dominoes || dominoes.length === 0) return new Map();
+
+      const adj = new Map();
+
+      function addEdge(v1, v2, dh) {
+        const v1Key = `${v1[0]},${v1[1]}`;
+        const v2Key = `${v2[0]},${v2[1]}`;
+
+        if (!adj.has(v1Key)) adj.set(v1Key, []);
+        if (!adj.has(v2Key)) adj.set(v2Key, []);
+
+        adj.get(v1Key).push([v2Key, dh]);
+        adj.get(v2Key).push([v1Key, -dh]);
+      }
+
+      for (const d of dominoes) {
+        const isHorizontal = (d.y1 === d.y2);
+        const x = Math.min(d.x1, d.x2);
+        const y = Math.min(d.y1, d.y2);
+        const type = d.type;
+        const h = vertexHeights[type];
+
+        if (isHorizontal) {
+          const TL = [x, y+1], TM = [x+1, y+1], TR = [x+2, y+1];
+          const BL = [x, y], BM = [x+1, y], BR = [x+2, y];
+
+          addEdge(TL, TM, h[1] - h[2]);
+          addEdge(TM, TR, h[0] - h[1]);
+          addEdge(BL, BM, h[4] - h[3]);
+          addEdge(BM, BR, h[5] - h[4]);
+          addEdge(TL, BL, h[3] - h[2]);
+          addEdge(TM, BM, h[4] - h[1]);
+          addEdge(TR, BR, h[5] - h[0]);
+        } else {
+          const TL = [x, y+2], TR = [x+1, y+2];
+          const ML = [x, y+1], MR = [x+1, y+1];
+          const BL = [x, y], BR = [x+1, y];
+
+          addEdge(TL, ML, h[4] - h[5]);
+          addEdge(ML, BL, h[3] - h[4]);
+          addEdge(TR, MR, h[1] - h[0]);
+          addEdge(MR, BR, h[2] - h[1]);
+          addEdge(TL, TR, h[0] - h[5]);
+          addEdge(ML, MR, h[1] - h[4]);
+          addEdge(BL, BR, h[2] - h[3]);
+        }
+      }
+
+      const verts = Array.from(adj.keys()).map(k => {
+        const [gx, gy] = k.split(',').map(Number);
+        return { k, gx, gy };
+      });
+
+      if (verts.length === 0) return new Map();
+
+      const root = verts.reduce((a, b) =>
+        (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
+      ).k;
+
+      const heights = new Map([[root, 0]]);
+      const queue = [root];
+
+      while (queue.length > 0) {
+        const v = queue.shift();
+        for (const [w, dh] of adj.get(v) || []) {
+          if (!heights.has(w)) {
+            heights.set(w, heights.get(v) + dh);
+            queue.push(w);
+          }
+        }
+      }
+
+      return heights;
+    }
+
+    async renderDominoes(dominoes, colors, onProgress) {
+      // Clear previous geometry
+      while (this.dominoGroup.children.length > 0) {
+        const child = this.dominoGroup.children[0];
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+        this.dominoGroup.remove(child);
+      }
+
+      if (!dominoes || dominoes.length === 0) return;
+
+      const heightMap = this.calculateHeightFunction(dominoes);
+      const total = dominoes.length;
+      const batchSize = 50; // Process in batches for progress updates
+
+      for (let i = 0; i < total; i++) {
+        const d = dominoes[i];
+        try {
+          const isHorizontal = (d.y1 === d.y2);
+          const x = Math.min(d.x1, d.x2);
+          const y = Math.min(d.y1, d.y2);
+          const type = d.type;
+          const hOffsets = vertexHeights[type];
+
+          const baseKey = `${x},${y}`;
+          const heightAtRef = heightMap.has(baseKey) ? heightMap.get(baseKey) : 0;
+          const baseH = heightAtRef - hOffsets[3];
+
+          let pts;
+          if (isHorizontal) {
+            pts = [
+              [x+2, y+1, baseH + hOffsets[0]],
+              [x+1, y+1, baseH + hOffsets[1]],
+              [x,   y+1, baseH + hOffsets[2]],
+              [x,   y,   baseH + hOffsets[3]],
+              [x+1, y,   baseH + hOffsets[4]],
+              [x+2, y,   baseH + hOffsets[5]]
+            ];
+          } else {
+            pts = [
+              [x+1, y+2, baseH + hOffsets[0]],
+              [x+1, y+1, baseH + hOffsets[1]],
+              [x+1, y,   baseH + hOffsets[2]],
+              [x,   y,   baseH + hOffsets[3]],
+              [x,   y+1, baseH + hOffsets[4]],
+              [x,   y+2, baseH + hOffsets[5]]
+            ];
+          }
+
+          const vertices = [];
+          for (const [px, py, h] of pts) {
+            vertices.push(px, h * 0.5, py);
+          }
+
+          const geom = new THREE.BufferGeometry();
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+          const indices = isHorizontal
+            ? [2,0,5, 2,5,3, 2,1,0, 3,4,5]
+            : [5,0,2, 5,2,3, 5,4,3, 0,1,2];
+
+          geom.setIndex(indices);
+          geom.computeVertexNormals();
+
+          // Use colorIndex for 2D-matching colors, fall back to type if not available
+          const colorIdx = d.colorIndex !== undefined ? d.colorIndex : type;
+          const color = colors[colorIdx] || '#888888';
+          const preset = this.getCurrentPreset();
+          const matSettings = preset.material;
+          let mat;
+
+          if (matSettings.type === 'standard') {
+            mat = new THREE.MeshStandardMaterial({
+              color: color,
+              side: THREE.DoubleSide,
+              flatShading: matSettings.flatShading,
+              roughness: matSettings.roughness,
+              metalness: matSettings.metalness
+            });
+          } else if (matSettings.type === 'phong') {
+            mat = new THREE.MeshPhongMaterial({
+              color: color,
+              side: THREE.DoubleSide,
+              flatShading: matSettings.flatShading,
+              shininess: matSettings.shininess
+            });
+          } else {
+            mat = new THREE.MeshLambertMaterial({
+              color: color,
+              side: THREE.DoubleSide,
+              flatShading: matSettings.flatShading
+            });
+          }
+
+          const mesh = new THREE.Mesh(geom, mat);
+          this.dominoGroup.add(mesh);
+
+          const edges = new THREE.EdgesGeometry(geom, 15);
+          const lineMat = new THREE.LineBasicMaterial({
+            color: preset.edges.color,
+            linewidth: 1,
+            opacity: preset.edges.opacity,
+            transparent: preset.edges.opacity < 1
+          });
+          const wireframe = new THREE.LineSegments(edges, lineMat);
+          this.dominoGroup.add(wireframe);
+        } catch (e) {
+          console.error('Error creating 3D domino mesh:', e);
+        }
+
+        // Report progress and yield for UI updates
+        if (onProgress && (i % batchSize === 0 || i === total - 1)) {
+          onProgress((i + 1) / total * 100);
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+
+      const currentCount = dominoes.length;
+      if (this.dominoGroup.children.length > 0 && currentCount !== this.lastDominoCount) {
+        this.lastDominoCount = currentCount;
+
+        const box = new THREE.Box3().setFromObject(this.dominoGroup);
+        const center = box.getCenter(new THREE.Vector3());
+        center.y = 0;
+        this.dominoGroup.position.set(-center.x, 0, -center.z);
+
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.z);
+        if (maxDim > 0) {
+          const scale = 80 / maxDim;
+          this.dominoGroup.scale.setScalar(scale);
+        }
+
+        this.controls.target.set(0, 0, 0);
+      }
+    }
+  }
+
+  // Convert RSK domino format to 3D-compatible format
+  // RSK uses: {cx, cy, width, height, type: 'particle'|'hole', isHorizontal}
+  // Screen coords: screenX = hx * scale, screenY = -hy * scale
+  // 3D needs: {x1, y1, x2, y2, type: 0-3} where x,y are integer square coords
+  function convertDominoFormatFor3D(d) {
+    const scale = 20;
+    // cx, cy are screen coords of domino center
+    // Convert back to half-integer lattice center coords
+    const centerHx = d.cx / scale;
+    const centerHy = -d.cy / scale;  // flip y back
+
+    let x1, y1, x2, y2;
+    if (d.isHorizontal) {
+      // Horizontal domino: centerHx is integer, centerHy is half-integer
+      x1 = centerHx - 1;
+      y1 = centerHy - 0.5;
+      x2 = centerHx;
+      y2 = y1;
+    } else {
+      // Vertical domino: centerHx is half-integer, centerHy is integer
+      x1 = centerHx - 0.5;
+      y1 = centerHy - 1;
+      x2 = x1;
+      y2 = centerHy;
+    }
+
+    // Round to handle floating point errors
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
+    x2 = Math.round(x2);
+    y2 = Math.round(y2);
+
+    // Flip y to match 2D view orientation (negate y coords)
+    y1 = -y1;
+    y2 = -y2;
+
+    // Determine type based on orientation and starting vertex parity (for height function)
+    const startX = Math.min(x1, x2);
+    const startY = Math.min(y1, y2);
+    const isBlackStart = (startX + startY) % 2 === 0;
+
+    let numericType;
+    if (d.isHorizontal) {
+      numericType = isBlackStart ? 0 : 1;
+    } else {
+      numericType = isBlackStart ? 2 : 3;
+    }
+
+    // colorIndex matches 2D coloring: particle/hole + horizontal/vertical
+    // particle+horiz→0, particle+vert→1, hole+horiz→2, hole+vert→3
+    let colorIndex;
+    if (d.type === 'particle') {
+      colorIndex = d.isHorizontal ? 0 : 1;
+    } else {
+      colorIndex = d.isHorizontal ? 2 : 3;
+    }
+
+    return { x1, y1, x2, y2, type: numericType, colorIndex };
+  }
+
+  // 3D View mode management
+  function setViewMode3D(use3D) {
+    is3DView = use3D;
+
+    const threeContainer = document.getElementById('three-container');
+    const toggle3DBtn = document.getElementById('toggle3DBtn');
+    const controls3D = document.getElementById('controls-3d');
+
+    // Update button text
+    toggle3DBtn.textContent = use3D ? '2D' : '3D';
+
+    // Show/hide 3D control buttons container
+    controls3D.style.display = use3D ? 'inline-flex' : 'none';
+
+    // Disable 2D-specific controls in 3D mode
+    document.getElementById('renderer-canvas').disabled = use3D;
+    document.getElementById('renderer-svg').disabled = use3D;
+    document.getElementById('rotate-canvas-cb').disabled = use3D;
+    document.getElementById('show-particles-cb').disabled = use3D;
+
+    if (use3D) {
+      canvas.style.display = 'none';
+      svg.style('display', 'none');
+      threeContainer.style.display = 'block';
+
+      if (!renderer3D) {
+        renderer3D = new Domino3DRenderer(threeContainer);
+      }
+      update3DView();
+    } else {
+      threeContainer.style.display = 'none';
+      // Restore to current renderer (canvas or svg)
+      if (document.getElementById('renderer-canvas').checked) {
+        canvas.style.display = 'block';
+        svg.style('display', 'none');
+      } else {
+        canvas.style.display = 'none';
+        svg.style('display', 'block').style('pointer-events', 'auto');
+      }
+      redrawOnly();
+    }
+  }
+
+  async function update3DView() {
+    if (!is3DView || !renderer3D || !cachedDominoes || cachedDominoes.length === 0) return;
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingProgress = document.getElementById('loading-progress');
+
+    // Show loading for large tilings
+    const showLoading = cachedDominoes.length > 100;
+    if (showLoading) {
+      loadingOverlay.style.display = 'flex';
+      loadingProgress.textContent = '0%';
+      await new Promise(r => setTimeout(r, 10)); // Allow UI to update
+    }
+
+    // Convert domino format for 3D rendering
+    const convertedDominoes = cachedDominoes.map(convertDominoFormatFor3D);
+    const colors = getCurrentColors();
+
+    // Progress callback
+    const onProgress = (pct) => {
+      if (showLoading) {
+        loadingProgress.textContent = Math.round(pct) + '%';
+      }
+    };
+
+    await renderer3D.renderDominoes(convertedDominoes, colors, onProgress);
+
+    if (showLoading) {
+      loadingOverlay.style.display = 'none';
+    }
   }
 
 
@@ -1764,6 +2464,7 @@ async function initializeApp() {
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     renderParticles();
     displaySubsets();
+    update3DView();  // Update 3D view if active
 
     // Build active cells for first sample
     cachedActiveCells = buildActiveCells(cachedLatticePoints);
@@ -2386,6 +3087,44 @@ async function initializeApp() {
       if (exportSvg.parentNode) {
         document.body.removeChild(exportSvg);
       }
+    }
+  });
+
+  // 3D View Toggle
+  document.getElementById('toggle3DBtn').addEventListener('click', () => {
+    setViewMode3D(!is3DView);
+  });
+
+  // Perspective toggle
+  document.getElementById('perspectiveBtn').addEventListener('click', () => {
+    if (renderer3D) {
+      const isPerspective = renderer3D.togglePerspective();
+      document.getElementById('perspectiveBtn').textContent = isPerspective ? '🎯' : '📐';
+    }
+  });
+
+  // Preset cycle
+  document.getElementById('preset3DBtn').addEventListener('click', () => {
+    if (renderer3D) {
+      const preset = renderer3D.cyclePreset();
+      update3DView();
+    }
+  });
+
+  // Rotation buttons
+  document.getElementById('rotateLeftBtn').addEventListener('click', () => {
+    if (renderer3D) renderer3D.rotateHorizontal(-15);
+  });
+  document.getElementById('rotateRightBtn').addEventListener('click', () => {
+    if (renderer3D) renderer3D.rotateHorizontal(15);
+  });
+
+  // Auto-rotate toggle
+  document.getElementById('autoRotateBtn').addEventListener('click', () => {
+    if (renderer3D) {
+      renderer3D.autoRotate = !renderer3D.autoRotate;
+      const btn = document.getElementById('autoRotateBtn');
+      btn.style.backgroundColor = renderer3D.autoRotate ? '#ddd' : '';
     }
   });
 
