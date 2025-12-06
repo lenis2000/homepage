@@ -705,6 +705,10 @@ Cmd-click: complete lasso</div>
       <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
       <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;">
     </span>
+    <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #555; cursor: pointer;">
+      <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;">
+      Outline
+    </label>
     <button id="doubleDimerBtn" class="cftp" disabled>Double Dimer</button>
     <span id="doubleDimerProgress" style="font-size: 12px; color: #666;"></span>
     <span style="display: flex; align-items: center; gap: 2px;">
@@ -3421,8 +3425,9 @@ function initLozengeApp() {
                 }
             }
 
-            // Draw polygon boundary above or below the surface
-            if (boundaries && boundaries.length > 0) {
+            // Draw polygon boundary above or below the surface (if showOutline is not explicitly false)
+            const drawBoundary = options.showOutline !== false;
+            if (drawBoundary && boundaries && boundaries.length > 0) {
                 let boundaryZ;
                 if (options.boundaryAtZero) {
                     // At z=0 for fluctuations (centered around zero)
@@ -3733,6 +3738,7 @@ function initLozengeApp() {
         fluctuationsBtn: document.getElementById('fluctuationsBtn'),
         fluctProgress: document.getElementById('fluctProgress'),
         fluctScaleInput: document.getElementById('fluctScaleInput'),
+        fluctOutlineCheck: document.getElementById('fluctOutlineCheck'),
         doubleDimerBtn: document.getElementById('doubleDimerBtn'),
         doubleDimerProgress: document.getElementById('doubleDimerProgress'),
         minLoopInput: document.getElementById('minLoopInput'),
@@ -3763,7 +3769,8 @@ function initLozengeApp() {
         for (const [key, raw] of rawFluctuations) {
             fluctHeights.set(key, raw * scale);
         }
-        renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true });
+        const showOutline = el.fluctOutlineCheck.checked;
+        renderer3D.heightFunctionTo3D(fluctHeights, sim.blackTriangles, sim.whiteTriangles, sim.boundaries, { hideZLabels: true, flatShading: true, boundaryAtZero: true, boundaryLineOnly: true, showOutline });
     }
 
     // Render 2D fluctuation field as a heatmap on triangles
@@ -3855,15 +3862,10 @@ function initLozengeApp() {
 
             ctx.fillStyle = valueToColor(avgVal);
             ctx.fill();
-
-            // Thin outline for triangle boundaries
-            ctx.strokeStyle = isDarkMode ? 'rgba(100, 100, 100, 0.3)' : 'rgba(0, 0, 0, 0.1)';
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
         }
 
-        // Draw boundary
-        if (sim.boundaries && sim.boundaries.length > 0) {
+        // Draw boundary (polygon outline) if enabled
+        if (el.fluctOutlineCheck.checked && sim.boundaries && sim.boundaries.length > 0) {
             for (const boundary of sim.boundaries) {
                 renderer.drawBoundary(ctx, boundary, centerX, centerY, viewScale, isDarkMode);
             }
@@ -6129,11 +6131,11 @@ function initLozengeApp() {
         if (storedSamples && rawFluctuations) {
             inFluctuationMode = true;
             inDoubleDimerMode = false;
-            // Fluctuations require 3D view
-            if (!is3DView) {
-                setViewMode(true);
+            // Default to 2D view for fluctuations
+            if (is3DView) {
+                setViewMode(false);
             }
-            renderFluctuations();
+            renderFluctuations2D();
             return;
         }
 
@@ -6311,17 +6313,17 @@ function initLozengeApp() {
                 rawFluctuations.set(key, (h1 - h2) / sqrt2);
             }
 
-            // Switch to 3D view if not already
-            if (!is3DView) {
-                setViewMode(true);
+            // Default to 2D view for fluctuations
+            if (is3DView) {
+                setViewMode(false);
             }
 
             // Lock fluctuation mode to prevent draw() from overwriting
             inFluctuationMode = true;
             inDoubleDimerMode = false;
 
-            // Render with current scale
-            renderFluctuations();
+            // Render with current scale (2D by default)
+            renderFluctuations2D();
 
             // Report timing
             const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
@@ -6343,6 +6345,17 @@ function initLozengeApp() {
 
     // Dynamic scale update for fluctuations (both 2D and 3D)
     el.fluctScaleInput.addEventListener('input', () => {
+        if (inFluctuationMode && rawFluctuations) {
+            if (is3DView) {
+                renderFluctuations();
+            } else {
+                renderFluctuations2D();
+            }
+        }
+    });
+
+    // Toggle outline for fluctuations (both 2D and 3D)
+    el.fluctOutlineCheck.addEventListener('change', () => {
         if (inFluctuationMode && rawFluctuations) {
             if (is3DView) {
                 renderFluctuations();
