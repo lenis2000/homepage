@@ -347,3 +347,28 @@ fn clear_grid(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
     grid[idx] = 0;
 }
+
+// ============================================================================
+// COALESCENCE CHECK KERNEL (uses separate bind group)
+// Compares two grids and atomically counts differences
+// Only compares edge bits (bits 0 and 1)
+// ============================================================================
+@group(1) @binding(0) var<storage, read> grid_lower: array<i32>;
+@group(1) @binding(1) var<storage, read> grid_upper: array<i32>;
+@group(1) @binding(2) var<storage, read_write> diff_count: atomic<u32>;
+
+@compute @workgroup_size(256)
+fn check_coalescence(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    if (idx >= params.numCells) {
+        return;
+    }
+
+    // Compare only edge bits (bits 0 and 1)
+    let lower_val = grid_lower[idx] & 3;
+    let upper_val = grid_upper[idx] & 3;
+
+    if (lower_val != upper_val) {
+        atomicAdd(&diff_count, 1u);
+    }
+}

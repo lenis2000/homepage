@@ -85,6 +85,26 @@ class WebGPUDominoEngine {
             compute: { module: this.shaderModule, entryPoint: 'clear_grid' }
         });
 
+        // Create coalescence check bind group layout (uses group(1) in shader)
+        // Note: The shader uses group(0) for main params and group(1) for coalescence
+        this.coalescenceBindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },  // grid_lower
+                { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },  // grid_upper
+                { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }  // diff_count (atomic)
+            ]
+        });
+
+        // Pipeline layout for coalescence check: group(0) = main params, group(1) = coalescence buffers
+        const coalescencePipelineLayout = this.device.createPipelineLayout({
+            bindGroupLayouts: [this.bindGroupLayout, this.coalescenceBindGroupLayout]
+        });
+
+        this.coalescencePipeline = this.device.createComputePipeline({
+            layout: coalescencePipelineLayout,
+            compute: { module: this.shaderModule, entryPoint: 'check_coalescence' }
+        });
+
         this.isReady = true;
         console.log("WebGPU Domino Engine initialized (face-based algorithm)");
     }
@@ -204,6 +224,26 @@ class WebGPUDominoEngine {
                 { binding: 1, resource: { buffer: this.randomBuffer } },
                 { binding: 2, resource: { buffer: this.uniformBuffer } },
                 { binding: 3, resource: { buffer: this.regionBuffer } }
+            ]
+        });
+
+        // Create coalescence check buffers (GPU-side reduction)
+        this.diffCountBuffer = this.device.createBuffer({
+            size: 4,  // Single u32 for atomic counter
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+        });
+        this.diffCountStagingBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+
+        // Coalescence bind group (group 1)
+        this.coalescenceBindGroup = this.device.createBindGroup({
+            layout: this.coalescenceBindGroupLayout,
+            entries: [
+                { binding: 0, resource: { buffer: this.lowerGridBuffer } },
+                { binding: 1, resource: { buffer: this.upperGridBuffer } },
+                { binding: 2, resource: { buffer: this.diffCountBuffer } }
             ]
         });
 
@@ -352,10 +392,60 @@ class WebGPUDominoEngine {
     }
 
     /**
-     * Check if lower and upper chains have coalesced
+     * Check if lower and upper chains have coalesced (FAST - GPU reduction)
+     * Uses GPU shader to count differences, only reads single u32 result
      * @returns {Promise<boolean>}
      */
     async checkCoalescence() {
+        if (!this.cftpInitialized) return false;
+
+        // Use fast GPU-based coalescence check
+        return await this.checkCoalescenceFast();
+    }
+
+    /**
+     * Fast GPU-based coalescence check using atomic reduction
+     * Dispatches shader to count differences on GPU, only reads 4 bytes back
+     * @returns {Promise<boolean>}
+     */
+    async checkCoalescenceFast() {
+        if (!this.cftpInitialized) return false;
+
+        const workgroups = Math.ceil(this.numCells / 256);
+
+        const commandEncoder = this.device.createCommandEncoder();
+
+        // Clear the diff count buffer to 0
+        commandEncoder.clearBuffer(this.diffCountBuffer, 0, 4);
+
+        // Run coalescence check shader
+        const pass = commandEncoder.beginComputePass();
+        pass.setPipeline(this.coalescencePipeline);
+        pass.setBindGroup(0, this.lowerBindGroup);  // group(0) for params/region
+        pass.setBindGroup(1, this.coalescenceBindGroup);  // group(1) for coalescence
+        pass.dispatchWorkgroups(workgroups);
+        pass.end();
+
+        // Copy result to staging buffer
+        commandEncoder.copyBufferToBuffer(this.diffCountBuffer, 0, this.diffCountStagingBuffer, 0, 4);
+        this.device.queue.submit([commandEncoder.finish()]);
+
+        // Read only 4 bytes (single u32)
+        await this.diffCountStagingBuffer.mapAsync(GPUMapMode.READ);
+        const diff = new Uint32Array(this.diffCountStagingBuffer.getMappedRange())[0];
+        this.diffCountStagingBuffer.unmap();
+
+        if (diff > 0) {
+            console.log(`Coalescence check: ${diff}/${this.numCells} cells differ`);
+        }
+        return diff === 0;
+    }
+
+    /**
+     * Slow coalescence check (CPU fallback) - kept for debugging
+     * @returns {Promise<boolean>}
+     */
+    async checkCoalescenceSlow() {
         if (!this.cftpInitialized) return false;
 
         const commandEncoder = this.device.createCommandEncoder();
@@ -381,7 +471,7 @@ class WebGPUDominoEngine {
         }
 
         if (differences > 0) {
-            console.log(`Coalescence check: ${differences}/${lowerData.length} cells differ`);
+            console.log(`Coalescence check (slow): ${differences}/${lowerData.length} cells differ`);
         }
         return differences === 0;
     }
@@ -836,7 +926,8 @@ class WebGPUDominoEngine {
         const buffers = [
             'lowerGridBuffer', 'upperGridBuffer',
             'randomBuffer', 'uniformBuffer', 'regionBuffer',
-            'lowerStagingBuffer', 'upperStagingBuffer'
+            'lowerStagingBuffer', 'upperStagingBuffer',
+            'diffCountBuffer', 'diffCountStagingBuffer'
         ];
         for (const name of buffers) {
             if (this[name]) {
@@ -844,6 +935,7 @@ class WebGPUDominoEngine {
                 this[name] = null;
             }
         }
+        this.coalescenceBindGroup = null;
         this.cftpInitialized = false;
     }
 

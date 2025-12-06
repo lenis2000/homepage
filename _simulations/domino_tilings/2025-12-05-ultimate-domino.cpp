@@ -1,8 +1,8 @@
 /*
 emcc 2025-12-05-ultimate-domino.cpp -o 2025-12-05-ultimate-domino.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_initFluctuationsCFTP','_stepFluctuationsCFTP','_exportFluctuationSample','_loadDimersForLoops','_filterLoopsBySize','_malloc','_free']" \
-  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberStepsBinary','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_initFluctuationsCFTP','_stepFluctuationsCFTP','_exportFluctuationSample','_loadDimersForLoops','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','HEAP32']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
   -s STACK_SIZE=1MB \
@@ -559,7 +559,244 @@ void flipFaceOn(std::unordered_set<long long>& m, int fx, int fy, int state) {
     }
 }
 
+// ============================================================================
+// Hole Detection and Monodromy
+// ============================================================================
+//
+// For regions with holes, the height function has monodromy: walking around
+// a hole changes the height by ±4. Different monodromy values correspond to
+// different "winding numbers" of the tiling around the hole.
+//
+// For CFTP to work, MIN and MAX tilings must have the SAME monodromy around
+// all holes. We detect holes, pick a canonical monodromy for each, and add
+// constraints to the min-cost flow to enforce this.
+
+struct Hole {
+    std::vector<std::pair<int,int>> boundaryCycle;  // Vertices forming cycle around hole
+    int monodromy;  // Height change when traversing cycle (multiple of 4)
+};
+
+std::vector<Hole> detectedHoles;
+bool holesComputed = false;
+
+// Find holes in the region using flood-fill of the complement
+// A "hole" is a bounded connected component of cells NOT in the region
+void detectHoles() {
+    detectedHoles.clear();
+    holesComputed = true;
+
+    if (vertices.empty()) return;
+
+    // Work in a padded bounding box
+    int padMinX = minX - 1;
+    int padMaxX = maxX + 1;
+    int padMinY = minY - 1;
+    int padMaxY = maxY + 1;
+    int width = padMaxX - padMinX + 1;
+    int height = padMaxY - padMinY + 1;
+
+    // Mark region cells
+    std::vector<bool> isRegion(width * height, false);
+    for (long long vk : vertices) {
+        int x = (int)((vk >> 20) - 100000);
+        int y = (int)((vk & ((1LL << 20) - 1)) - 100000);
+        int idx = (y - padMinY) * width + (x - padMinX);
+        isRegion[idx] = true;
+    }
+
+    // Flood-fill from exterior to mark non-hole cells
+    std::vector<bool> isExterior(width * height, false);
+    std::queue<std::pair<int,int>> q;
+
+    // Start from all boundary cells that are not in region
+    for (int x = padMinX; x <= padMaxX; x++) {
+        for (int y : {padMinY, padMaxY}) {
+            int idx = (y - padMinY) * width + (x - padMinX);
+            if (!isRegion[idx] && !isExterior[idx]) {
+                isExterior[idx] = true;
+                q.push({x, y});
+            }
+        }
+    }
+    for (int y = padMinY; y <= padMaxY; y++) {
+        for (int x : {padMinX, padMaxX}) {
+            int idx = (y - padMinY) * width + (x - padMinX);
+            if (!isRegion[idx] && !isExterior[idx]) {
+                isExterior[idx] = true;
+                q.push({x, y});
+            }
+        }
+    }
+
+    int dx[] = {1, -1, 0, 0};
+    int dy[] = {0, 0, 1, -1};
+
+    while (!q.empty()) {
+        auto [cx, cy] = q.front();
+        q.pop();
+
+        for (int d = 0; d < 4; d++) {
+            int nx = cx + dx[d];
+            int ny = cy + dy[d];
+            if (nx < padMinX || nx > padMaxX || ny < padMinY || ny > padMaxY) continue;
+
+            int nidx = (ny - padMinY) * width + (nx - padMinX);
+            if (!isRegion[nidx] && !isExterior[nidx]) {
+                isExterior[nidx] = true;
+                q.push({nx, ny});
+            }
+        }
+    }
+
+    // Find connected components of interior (holes)
+    std::vector<bool> visited(width * height, false);
+
+    for (int y = padMinY + 1; y < padMaxY; y++) {
+        for (int x = padMinX + 1; x < padMaxX; x++) {
+            int idx = (y - padMinY) * width + (x - padMinX);
+            if (isRegion[idx] || isExterior[idx] || visited[idx]) continue;
+
+            // Found a new hole - BFS to find all cells in this hole
+            Hole hole;
+            std::vector<std::pair<int,int>> holeCells;
+            std::queue<std::pair<int,int>> holeQ;
+
+            visited[idx] = true;
+            holeQ.push({x, y});
+
+            while (!holeQ.empty()) {
+                auto [hx, hy] = holeQ.front();
+                holeQ.pop();
+                holeCells.push_back({hx, hy});
+
+                for (int d = 0; d < 4; d++) {
+                    int nx = hx + dx[d];
+                    int ny = hy + dy[d];
+                    if (nx < padMinX || nx > padMaxX || ny < padMinY || ny > padMaxY) continue;
+
+                    int nidx = (ny - padMinY) * width + (nx - padMinX);
+                    if (!isRegion[nidx] && !isExterior[nidx] && !visited[nidx]) {
+                        visited[nidx] = true;
+                        holeQ.push({nx, ny});
+                    }
+                }
+            }
+
+            // Find boundary cycle around this hole
+            // The boundary consists of region vertices adjacent to hole cells
+            std::unordered_set<long long> boundarySet;
+            for (auto [hx, hy] : holeCells) {
+                for (int d = 0; d < 4; d++) {
+                    int bx = hx + dx[d];
+                    int by = hy + dy[d];
+                    if (hasVertex(bx, by)) {
+                        boundarySet.insert(vkey(bx, by));
+                    }
+                }
+            }
+
+            // Order the boundary into a cycle (BFS walk around hole)
+            if (!boundarySet.empty()) {
+                // Start from any boundary vertex
+                long long startKey = *boundarySet.begin();
+                int startX = (int)((startKey >> 20) - 100000);
+                int startY = (int)((startKey & ((1LL << 20) - 1)) - 100000);
+
+                hole.boundaryCycle.push_back({startX, startY});
+                std::unordered_set<long long> usedInCycle;
+                usedInCycle.insert(startKey);
+
+                int curX = startX, curY = startY;
+
+                // Walk around the boundary
+                while (hole.boundaryCycle.size() < boundarySet.size()) {
+                    bool found = false;
+                    for (int d = 0; d < 4; d++) {
+                        int nx = curX + dx[d];
+                        int ny = curY + dy[d];
+                        long long nk = vkey(nx, ny);
+
+                        if (boundarySet.count(nk) && !usedInCycle.count(nk)) {
+                            hole.boundaryCycle.push_back({nx, ny});
+                            usedInCycle.insert(nk);
+                            curX = nx;
+                            curY = ny;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) break;  // Disconnected boundary (shouldn't happen)
+                }
+
+                hole.monodromy = 0;  // Will be set during CFTP
+                detectedHoles.push_back(hole);
+            }
+        }
+    }
+}
+
+// Compute monodromy around a hole for a given matching
+// Returns the height change when walking counterclockwise around the boundary
+int computeMonodromy(const std::unordered_set<long long>& m, const Hole& hole) {
+    if (hole.boundaryCycle.size() < 2) return 0;
+
+    int totalChange = 0;
+
+    for (size_t i = 0; i < hole.boundaryCycle.size(); i++) {
+        int x1 = hole.boundaryCycle[i].first;
+        int y1 = hole.boundaryCycle[i].second;
+        int x2 = hole.boundaryCycle[(i + 1) % hole.boundaryCycle.size()].first;
+        int y2 = hole.boundaryCycle[(i + 1) % hole.boundaryCycle.size()].second;
+
+        // Compute height change when moving from (x1,y1) to (x2,y2)
+        // This depends on whether the edge between them is in the matching
+        int edgeDir = -1;
+        int edgeX = -1, edgeY = -1;
+
+        if (x2 == x1 + 1 && y2 == y1) {
+            // Moving right - crossing vertical edge below
+            edgeX = x1; edgeY = y1 - 1; edgeDir = 1;
+        } else if (x2 == x1 - 1 && y2 == y1) {
+            // Moving left - crossing vertical edge below
+            edgeX = x1 - 1; edgeY = y1 - 1; edgeDir = 1;
+        } else if (y2 == y1 + 1 && x2 == x1) {
+            // Moving up - crossing horizontal edge to left
+            edgeX = x1 - 1; edgeY = y1; edgeDir = 0;
+        } else if (y2 == y1 - 1 && x2 == x1) {
+            // Moving down - crossing horizontal edge to left
+            edgeX = x1 - 1; edgeY = y1 - 1; edgeDir = 0;
+        }
+
+        if (edgeDir >= 0) {
+            bool inMatch = m.count(ekey(edgeX, edgeY, edgeDir)) > 0;
+            // Height change depends on cell color and match status
+            bool blackCell = ((edgeX + edgeY) % 2 == 0);
+            int dh = 0;
+
+            if (edgeDir == 0) {  // Horizontal edge
+                if (x2 > x1) {  // Moving right along top of cell
+                    dh = blackCell ? (inMatch ? -3 : 1) : (inMatch ? 3 : -1);
+                } else {  // Moving left
+                    dh = blackCell ? (inMatch ? 3 : -1) : (inMatch ? -3 : 1);
+                }
+            } else {  // Vertical edge
+                if (y2 > y1) {  // Moving up along right of cell
+                    dh = blackCell ? (inMatch ? -3 : 1) : (inMatch ? 3 : -1);
+                } else {  // Moving down
+                    dh = blackCell ? (inMatch ? 3 : -1) : (inMatch ? -3 : 1);
+                }
+            }
+
+            totalChange += dh;
+        }
+    }
+
+    return totalChange;
+}
+
+// ============================================================================
 // Min-cost max-flow for finding extremal tilings
+// ============================================================================
 // Uses SPFA (Bellman-Ford variant) for shortest path
 struct MCFEdge {
     int to, cap, flow, cost, rev;
@@ -630,10 +867,10 @@ std::pair<int, int> minCostMaxFlow(int s, int t, int n) {
     return {flow, cost};
 }
 
-// Compute extremal tiling using min-cost max-flow
+// Compute extremal tiling using min-cost max-flow (for simply-connected regions)
 // MIN: horizontal edges cost 0, vertical edges cost 1 → minimize total cost
 // MAX: vertical edges cost 0, horizontal edges cost 1 → minimize total cost
-void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
+void makeExtremalTilingMCF(std::unordered_set<long long>& m, int direction) {
     m.clear();
     if (vertices.empty()) return;
 
@@ -739,6 +976,70 @@ void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
     }
 }
 
+// Reference tiling for monodromy-constrained extremal search
+std::unordered_set<long long> referenceTiling;
+bool hasReferenceTiling = false;
+
+// Make extremal tiling by greedy local moves from a reference tiling
+// This preserves monodromy around holes (since 2x2 flips don't change monodromy)
+// direction < 0: minimize (prefer horizontal)
+// direction > 0: maximize (prefer vertical)
+void makeExtremalTilingFromReference(std::unordered_set<long long>& m,
+                                      const std::unordered_set<long long>& ref,
+                                      int direction) {
+    m = ref;  // Start from reference tiling
+    if (faces.empty()) return;
+
+    // Greedy: repeatedly flip faces that move toward extremal state
+    // For MIN: flip vertical pairs to horizontal (state 2 -> state 1)
+    // For MAX: flip horizontal pairs to vertical (state 1 -> state 2)
+    int targetState = (direction < 0) ? 1 : 2;  // What we want faces to have
+    int fromState = (direction < 0) ? 2 : 1;    // What we flip away from
+
+    bool changed = true;
+    int maxIter = faces.size() * 10;  // Safety limit
+    int iter = 0;
+
+    while (changed && iter < maxIter) {
+        changed = false;
+        iter++;
+
+        for (const Face& f : faces) {
+            int state = getFaceStateOn(m, f.x, f.y);
+            if (state == fromState) {
+                // This face can be flipped toward our target
+                flipFaceOn(m, f.x, f.y, state);
+                changed = true;
+            }
+        }
+    }
+}
+
+// Main entry point for extremal tiling computation
+// Handles both simply-connected (use MCF) and regions with holes (use greedy from reference)
+void makeExtremalTiling(std::unordered_set<long long>& m, int direction) {
+    // First, detect holes if not already done
+    if (!holesComputed) {
+        detectHoles();
+    }
+
+    if (detectedHoles.empty()) {
+        // Simply-connected region: use fast min-cost flow
+        makeExtremalTilingMCF(m, direction);
+    } else {
+        // Region has holes: need to preserve monodromy
+        // Use the current matching as reference if valid, otherwise find one
+        if (!hasReferenceTiling || referenceTiling.empty()) {
+            // Find any valid tiling to use as reference
+            findPerfectMatching();
+            referenceTiling = matching;
+            hasReferenceTiling = true;
+        }
+
+        makeExtremalTilingFromReference(m, referenceTiling, direction);
+    }
+}
+
 // Check if two tilings are equal
 bool tilingsEqual(const std::unordered_set<long long>& a,
                   const std::unordered_set<long long>& b) {
@@ -825,6 +1126,61 @@ int fluctSweep(uint64_t sweepSeed, int pairIdx) {
 // Export
 // ============================================================================
 
+// Static buffer for binary edge export (avoids allocation per call)
+static std::vector<int32_t> binaryEdgeBuffer;
+
+// Compute domino type from edge position and direction
+// Type 0: horizontal, starts at black vertex (x+y even)
+// Type 1: horizontal, starts at white vertex (x+y odd)
+// Type 2: vertical, starts at black vertex (x+y even)
+// Type 3: vertical, starts at white vertex (x+y odd)
+inline int computeDominoType(int x, int y, int dir) {
+    bool isBlack = ((x + y) % 2 == 0);
+    if (dir == 0) {  // horizontal
+        return isBlack ? 0 : 1;
+    } else {  // vertical
+        return isBlack ? 2 : 3;
+    }
+}
+
+// Export edges as binary int32 array: [count, totalSteps_lo, totalSteps_hi, flipCount_lo, flipCount_hi, x1,y1,x2,y2,type, ...]
+// Returns pointer to static buffer (caller should NOT free)
+int32_t* exportEdgesBinaryInternal(const std::unordered_set<long long>& m) {
+    size_t edgeCount = m.size();
+    binaryEdgeBuffer.clear();
+    binaryEdgeBuffer.reserve(5 + edgeCount * 5);
+
+    binaryEdgeBuffer.push_back((int32_t)edgeCount);
+    binaryEdgeBuffer.push_back((int32_t)(totalSteps & 0xFFFFFFFF));
+    binaryEdgeBuffer.push_back((int32_t)(totalSteps >> 32));
+    binaryEdgeBuffer.push_back((int32_t)(flipCount & 0xFFFFFFFF));
+    binaryEdgeBuffer.push_back((int32_t)(flipCount >> 32));
+
+    for (long long ek : m) {
+        int x = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int y = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        int type = computeDominoType(x, y, dir);
+
+        if (dir == 0) {
+            // Horizontal: (x,y) to (x+1,y)
+            binaryEdgeBuffer.push_back(x);
+            binaryEdgeBuffer.push_back(y);
+            binaryEdgeBuffer.push_back(x + 1);
+            binaryEdgeBuffer.push_back(y);
+        } else {
+            // Vertical: (x,y) to (x,y+1)
+            binaryEdgeBuffer.push_back(x);
+            binaryEdgeBuffer.push_back(y);
+            binaryEdgeBuffer.push_back(x);
+            binaryEdgeBuffer.push_back(y + 1);
+        }
+        binaryEdgeBuffer.push_back(type);
+    }
+
+    return binaryEdgeBuffer.data();
+}
+
 std::string exportEdgesJson() {
     std::string json = "{\"edges\":[";
     bool first = true;
@@ -876,6 +1232,12 @@ char* initFromVertices(int* data, int count) {
     totalSteps = 0;
     flipCount = 0;
     cftpInitialized = false;
+
+    // Reset hole detection and reference tiling for new region
+    holesComputed = false;
+    hasReferenceTiling = false;
+    referenceTiling.clear();
+    detectedHoles.clear();
 
     if (count == 0) {
         std::string json = "{\"status\":\"empty\",\"vertexCount\":0}";
@@ -938,6 +1300,14 @@ char* performGlauberSteps(int numSteps) {
     char* result = (char*)malloc(json.size() + 1);
     strcpy(result, json.c_str());
     return result;
+}
+
+// Binary version of performGlauberSteps - returns pointer to static int32 buffer
+// Format: [count, totalSteps_lo, totalSteps_hi, flipCount_lo, flipCount_hi, x1,y1,x2,y2,type, ...]
+EMSCRIPTEN_KEEPALIVE
+int32_t* performGlauberStepsBinary(int numSteps) {
+    performGlauberStepsInternal(numSteps);
+    return exportEdgesBinaryInternal(matching);
 }
 
 EMSCRIPTEN_KEEPALIVE

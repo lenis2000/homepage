@@ -654,6 +654,7 @@ code:
         constructor() {
             this.initFromVerticesWasm = Module.cwrap('initFromVertices', 'number', ['number', 'number']);
             this.performGlauberStepsWasm = Module.cwrap('performGlauberSteps', 'number', ['number']);
+            this.performGlauberStepsBinaryWasm = Module.cwrap('performGlauberStepsBinary', 'number', ['number']);
             this.exportEdgesWasm = Module.cwrap('exportEdges', 'number', []);
             this.getTotalStepsWasm = Module.cwrap('getTotalSteps', 'number', []);
             this.getFlipCountWasm = Module.cwrap('getFlipCount', 'number', []);
@@ -710,6 +711,62 @@ code:
                 result.dominoes = this.edgesToDominoes(result.edges);
             }
             return result;
+        }
+
+        // Fast binary version - reads directly from WASM memory, no JSON parsing
+        // Returns: { dominoes: [{x1,y1,x2,y2,type},...], totalSteps, flipCount }
+        stepBinary(numSteps) {
+            // Check if binary export is available (requires recompiled WASM)
+            if (!this.performGlauberStepsBinaryWasm) {
+                console.warn("Binary export not available, falling back to JSON");
+                return this.step(numSteps);
+            }
+
+            const ptr = this.performGlauberStepsBinaryWasm(numSteps);
+            if (!ptr) {
+                console.warn("Binary export returned null, falling back to JSON");
+                return this.step(numSteps);
+            }
+
+            // Buffer format: [count, totalSteps_lo, totalSteps_hi, flipCount_lo, flipCount_hi, x1,y1,x2,y2,type, ...]
+            // Access WASM memory - try multiple methods for compatibility
+            let heap = Module.HEAP32;
+            if (!heap && Module.HEAPU8) {
+                heap = new Int32Array(Module.HEAPU8.buffer);
+            }
+            if (!heap && Module.wasmMemory) {
+                heap = new Int32Array(Module.wasmMemory.buffer);
+            }
+            if (!heap) {
+                console.warn("Cannot access WASM memory, falling back to JSON");
+                return this.step(numSteps);
+            }
+
+            const base = ptr >> 2;  // Convert byte offset to int32 offset
+
+            const count = heap[base];
+            const totalStepsLo = heap[base + 1] >>> 0;  // unsigned
+            const totalStepsHi = heap[base + 2] >>> 0;
+            const flipCountLo = heap[base + 3] >>> 0;
+            const flipCountHi = heap[base + 4] >>> 0;
+
+            const totalSteps = totalStepsLo + totalStepsHi * 0x100000000;
+            const flipCount = flipCountLo + flipCountHi * 0x100000000;
+
+            const dominoes = new Array(count);
+            let offset = base + 5;
+            for (let i = 0; i < count; i++) {
+                dominoes[i] = {
+                    x1: heap[offset],
+                    y1: heap[offset + 1],
+                    x2: heap[offset + 2],
+                    y2: heap[offset + 3],
+                    type: heap[offset + 4]
+                };
+                offset += 5;
+            }
+
+            return { dominoes, totalSteps, flipCount };
         }
 
         getEdges() {
@@ -2159,7 +2216,7 @@ code:
             if (!isRunning) return;
 
             const stepsPerFrame = Math.ceil(stepsPerSecond / 60);
-            const result = sim.step(stepsPerFrame);
+            const result = sim.stepBinary(stepsPerFrame);  // Use fast binary transfer
 
             dominoes = result.dominoes;
             totalSteps = result.totalSteps;
