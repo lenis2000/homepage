@@ -346,8 +346,8 @@ code:
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
     <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;"><input type="checkbox" id="showHeightsCheckbox"> Heights</label>
-    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
     <button id="scaleUpBtn" title="Double the region size (2x2 blocks)">Scale Up 2×2</button>
+    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
     <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
@@ -1441,26 +1441,37 @@ code:
                     const y = Math.min(d.y1, d.y2);
 
                     // Get vertices with heights
+                    // Vertex ordering for proper stepped surface:
+                    // - Corners on same side are at same height
+                    // - Midpoints are at ±1 height (the step)
                     let pts;
                     if (isHorizontal) {
-                        // Horizontal: 4 corners + 2 midpoints
+                        // Horizontal domino: step runs vertically through middle
+                        // 2(UL) --- 1(UM) --- 0(UR)
+                        //   |         |         |
+                        // 3(LL) --- 4(LM) --- 5(LR)
                         pts = [
-                            [x, y+1],     // TL
-                            [x+2, y+1],   // TR
-                            [x+2, y],     // BR
-                            [x, y],       // BL
-                            [x+1, y+1],   // TM
-                            [x+1, y]      // BM
+                            [x+2, y+1],   // 0: up-right
+                            [x+1, y+1],   // 1: up-middle
+                            [x, y+1],     // 2: up-left
+                            [x, y],       // 3: low-left
+                            [x+1, y],     // 4: low-middle
+                            [x+2, y]      // 5: low-right
                         ];
                     } else {
-                        // Vertical: 4 corners + 2 midpoints
+                        // Vertical domino: step runs horizontally through middle
+                        // 5(TL) --- 0(TR)
+                        //   |         |
+                        // 4(ML) --- 1(MR)
+                        //   |         |
+                        // 3(BL) --- 2(BR)
                         pts = [
-                            [x, y],       // BL
-                            [x, y+2],     // TL
-                            [x+1, y+2],   // TR
-                            [x+1, y],     // BR
-                            [x, y+1],     // ML
-                            [x+1, y+1]    // MR
+                            [x+1, y+2],   // 0: top-right
+                            [x+1, y+1],   // 1: mid-right
+                            [x+1, y],     // 2: bottom-right
+                            [x, y],       // 3: bottom-left
+                            [x, y+1],     // 4: mid-left
+                            [x, y+2]      // 5: top-left
                         ];
                     }
 
@@ -1476,9 +1487,13 @@ code:
                     const geom = new THREE.BufferGeometry();
                     geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
 
-                    // Indices exactly as in s/domino.md
-                    // Both horizontal and vertical use the same pattern
-                    const indices = [0, 1, 3, 3, 2, 1, 0, 1, 4, 3, 2, 5];
+                    // Indices for two flat halves (no diagonal artifacts)
+                    // Each half is coplanar since corners are at same height
+                    const indices = isHorizontal
+                        // Horizontal: left half (2,1,4,3) + right half (1,0,5,4)
+                        ? [2,1,4, 2,4,3, 1,0,5, 1,5,4]
+                        // Vertical: top half (5,0,1,4) + bottom half (4,1,2,3)
+                        : [5,0,1, 5,1,4, 4,1,2, 4,2,3];
 
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
@@ -2432,7 +2447,7 @@ code:
                 return;
             }
 
-            // Step 4: Group consecutive edges with same direction, then double each run
+            // Step 4: Group into runs, identify staircases vs flats, scale appropriately
             const allScaledPolygons = allLoops.map((loop, loopIdx) => {
                 // Group into runs
                 const runs = [];
@@ -2460,22 +2475,96 @@ code:
                     runs.pop();
                 }
 
-                console.log(`Loop ${loopIdx}: ${loop.length} edges → ${runs.length} runs`);
+                // Identify staircase sections: consecutive length-1 runs with perpendicular directions
+                // Mark each run as part of a staircase or not
+                const isHorizontal = d => d === 'R' || d === 'L';
+                const isVertical = d => d === 'U' || d === 'D';
+                const isPerpendicular = (d1, d2) => (isHorizontal(d1) && isVertical(d2)) || (isVertical(d1) && isHorizontal(d2));
 
-                // Generate scaled polygon: each run of length L → length 2L
+                // Find staircase segments: maximal sequences of length-1 runs with alternating H/V
+                const segments = [];
+                let i = 0;
+                while (i < runs.length) {
+                    if (runs[i].length === 1) {
+                        // Potential start of staircase
+                        let j = i;
+                        while (j < runs.length && runs[j].length === 1 &&
+                               (j === i || isPerpendicular(runs[j-1].dir, runs[j].dir))) {
+                            j++;
+                        }
+                        // Check wrap-around for staircase continuation
+                        let staircaseLen = j - i;
+                        if (j === runs.length && i === 0) {
+                            // Don't double-count wrap-around, handled separately
+                        }
+                        if (staircaseLen >= 2) {
+                            // It's a staircase section
+                            segments.push({type: 'staircase', start: i, end: j, runs: runs.slice(i, j)});
+                        } else {
+                            // Single length-1 run, treat as flat
+                            segments.push({type: 'flat', start: i, end: j, runs: runs.slice(i, j)});
+                        }
+                        i = j;
+                    } else {
+                        // Flat section (run length > 1)
+                        // Short flats (length 2-3) are corners - keep same length
+                        // Long flats (length > 3) get doubled
+                        const segType = runs[i].length <= 3 ? 'corner' : 'flat';
+                        segments.push({type: segType, start: i, end: i + 1, runs: [runs[i]]});
+                        i++;
+                    }
+                }
+
+                // Count segment types
+                let staircaseRuns = 0, cornerRuns = 0, flatRuns = 0;
+                for (const seg of segments) {
+                    if (seg.type === 'staircase') staircaseRuns += seg.runs.length;
+                    else if (seg.type === 'corner') cornerRuns += seg.runs.length;
+                    else flatRuns += seg.runs.length;
+                }
+                console.log(`Loop ${loopIdx}: ${loop.length} edges → ${runs.length} runs (${staircaseRuns} staircase, ${cornerRuns} corner, ${flatRuns} flat)`);
+
+                // Generate scaled polygon
                 const scaledPoly = [];
                 let cx = runs[0].startX * 2;
                 let cy = runs[0].startY * 2;
 
-                for (const run of runs) {
-                    const newLen = run.length * 2;
-                    const dx = run.dir === 'R' ? 1 : run.dir === 'L' ? -1 : 0;
-                    const dy = run.dir === 'D' ? 1 : run.dir === 'U' ? -1 : 0;
-
-                    for (let i = 0; i < newLen; i++) {
-                        scaledPoly.push({x: cx, y: cy});
-                        cx += dx;
-                        cy += dy;
+                for (const seg of segments) {
+                    if (seg.type === 'staircase') {
+                        // Staircase: repeat the ENTIRE alternating pattern twice
+                        // Original: R D R D → Scaled: R D R D R D R D
+                        for (let repeat = 0; repeat < 2; repeat++) {
+                            for (const run of seg.runs) {
+                                const dx = run.dir === 'R' ? 1 : run.dir === 'L' ? -1 : 0;
+                                const dy = run.dir === 'D' ? 1 : run.dir === 'U' ? -1 : 0;
+                                scaledPoly.push({x: cx, y: cy});
+                                cx += dx;
+                                cy += dy;
+                            }
+                        }
+                    } else if (seg.type === 'corner') {
+                        // Corner (short flat): keep SAME length - these are polygon vertices
+                        for (const run of seg.runs) {
+                            const dx = run.dir === 'R' ? 1 : run.dir === 'L' ? -1 : 0;
+                            const dy = run.dir === 'D' ? 1 : run.dir === 'U' ? -1 : 0;
+                            for (let k = 0; k < run.length; k++) {
+                                scaledPoly.push({x: cx, y: cy});
+                                cx += dx;
+                                cy += dy;
+                            }
+                        }
+                    } else {
+                        // Flat (long): double the LENGTH of each run
+                        for (const run of seg.runs) {
+                            const dx = run.dir === 'R' ? 1 : run.dir === 'L' ? -1 : 0;
+                            const dy = run.dir === 'D' ? 1 : run.dir === 'U' ? -1 : 0;
+                            const newLen = run.length * 2;
+                            for (let k = 0; k < newLen; k++) {
+                                scaledPoly.push({x: cx, y: cy});
+                                cx += dx;
+                                cy += dy;
+                            }
+                        }
                     }
                 }
 
