@@ -6,7 +6,7 @@ emcc 2025-11-28-ultimate-lozenge-threaded.cpp -o 2025-11-28-ultimate-lozenge-thr
   -pthread \
   -s PTHREAD_POOL_SIZE=4 \
   -s SHARED_MEMORY=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_setUseHeightWeighted','_getUseHeightWeighted','_setHeightS','_getHeightS','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','lengthBytesUTF8','stringToUTF8']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -126,12 +126,27 @@ double qBias_periodic[5][5] = {
 int periodicK = 2; // Default to Period 2
 bool usePeriodicWeights = false; // Disabled by default
 bool useRandomSweeps = false; // Default: systematic sweeps (faster, better cache locality)
+bool useHeightWeighted = false; // Height-weighted flip probability mode
+int heightS = 10; // S parameter for height-weighted mode: weight = q^h + q^(2S-h)
 
 inline double getQAtPosition(int n, int j) {
     if (!usePeriodicWeights) return qBias;
     int ni = ((n % periodicK) + periodicK) % periodicK;  // Handle negative n
     int ji = ((j % periodicK) + periodicK) % periodicK;  // Handle negative j
     return qBias_periodic[ni][ji];
+}
+
+// Compute height-weighted acceptance probability
+// For weight w = q^h + q^(2S-h):
+//   probUp = w / (1 + w)
+//   probDown = 1 / (1 + w)
+inline void getHeightWeightedProbs(double q, int h, float& probUp, float& probDown) {
+    // w = q^h + q^(2S-h)
+    double qh = std::pow(q, h);
+    double q2Smh = std::pow(q, 2 * heightS - h);
+    double w = qh + q2Smh;
+    probUp = static_cast<float>(w / (1.0 + w));
+    probDown = static_cast<float>(1.0 / (1.0 + w));
 }
 
 // Dense grid state for O(1) dimer lookups
@@ -1536,7 +1551,17 @@ void performGlauberStepsInternal(int numSteps) {
             int volumeChange = volumeAfter - volumeBefore;
             if (volumeChange == 0) continue;
 
-            float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+            float acceptProb;
+            if (useHeightWeighted) {
+                // Height-weighted: use w = q^h + q^(2S-h)
+                int h = (volumeChange > 0) ? volumeAfter : volumeBefore;
+                double q = getQAtPosition(v.n, v.j);
+                float probUp, probDown;
+                getHeightWeightedProbs(q, h, probUp, probDown);
+                acceptProb = (volumeChange > 0) ? probUp : probDown;
+            } else {
+                acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+            }
             if (getRandom01() < acceptProb) {
                 tryRotation(v.n, v.j, true);
                 flipCount++;
@@ -1570,7 +1595,17 @@ void performGlauberStepsInternal(int numSteps) {
                     int volumeChange = volumeAfter - volumeBefore;
                     if (volumeChange == 0) continue;
 
-                    float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+                    float acceptProb;
+                    if (useHeightWeighted) {
+                        // Height-weighted: use w = q^h + q^(2S-h)
+                        int h = (volumeChange > 0) ? volumeAfter : volumeBefore;
+                        double q = getQAtPosition(v.n, v.j);
+                        float probUp, probDown;
+                        getHeightWeightedProbs(q, h, probUp, probDown);
+                        acceptProb = (volumeChange > 0) ? probUp : probDown;
+                    } else {
+                        acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+                    }
                     if (getRandom01() < acceptProb) {
                         tryRotation(v.n, v.j, true);
                         flipCount++;
@@ -1635,6 +1670,29 @@ inline int fastCheckRotationTypeLUT(const int8_t* gridData, size_t gridSize,
     return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
 }
 
+// Extended version that also returns volume heights for height-weighted CFTP
+inline int fastCheckRotationTypeLUTWithHeights(const int8_t* gridData, size_t gridSize,
+                                                const CachedHexIndices& hex,
+                                                const HexEdge edges[6],
+                                                int& volumeBefore, int& volumeAfter) {
+    uint8_t state = getEdgeState(hex, gridData, gridSize);
+    const EdgeStateLUT& lut = edgeLUT[state];
+    if (!lut.valid) {
+        volumeBefore = 0;
+        volumeAfter = 0;
+        return 0;
+    }
+
+    volumeBefore = 0;
+    volumeAfter = 0;
+    for (int k = 0; k < 3; k++) {
+        if (edges[lut.covered[k]].type == 0) volumeBefore += edges[lut.covered[k]].blackN;
+        if (edges[lut.uncovered[k]].type == 0) volumeAfter += edges[lut.uncovered[k]].blackN;
+    }
+    int volumeChange = volumeAfter - volumeBefore;
+    return (volumeChange > 0) ? 1 : ((volumeChange < 0) ? -1 : 0);
+}
+
 void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
     uint64_t savedRng = rng_state;
     rng_state = seed;
@@ -1651,14 +1709,24 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             const double u = getRandom01();
             const TriVertex& v = triangularVertices[idx];
             const CachedHexIndices& hex = cachedHexIndices[idx];
-            const float pRemove = cachedProbs[idx].probDown;
 
             HexEdge edges[6];
             getHexEdgesAroundVertex(v.n, v.j, edges);
 
             // Process LOWER with LUT
-            int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
+            int lowerVolBefore, lowerVolAfter;
+            int lowerType = fastCheckRotationTypeLUTWithHeights(lower.grid.data(), gridSize, hex, edges, lowerVolBefore, lowerVolAfter);
             if (lowerType != 0) {
+                float pRemove;
+                if (useHeightWeighted) {
+                    int h = (lowerType > 0) ? lowerVolAfter : lowerVolBefore;
+                    double q = getQAtPosition(v.n, v.j);
+                    float probUp, probDown;
+                    getHeightWeightedProbs(q, h, probUp, probDown);
+                    pRemove = probDown;
+                } else {
+                    pRemove = cachedProbs[idx].probDown;
+                }
                 if (u < pRemove) {
                     if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
                 } else {
@@ -1667,8 +1735,19 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             }
 
             // Process UPPER with LUT (same u!)
-            int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
+            int upperVolBefore, upperVolAfter;
+            int upperType = fastCheckRotationTypeLUTWithHeights(upper.grid.data(), gridSize, hex, edges, upperVolBefore, upperVolAfter);
             if (upperType != 0) {
+                float pRemove;
+                if (useHeightWeighted) {
+                    int h = (upperType > 0) ? upperVolAfter : upperVolBefore;
+                    double q = getQAtPosition(v.n, v.j);
+                    float probUp, probDown;
+                    getHeightWeightedProbs(q, h, probUp, probDown);
+                    pRemove = probDown;
+                } else {
+                    pRemove = cachedProbs[idx].probDown;
+                }
                 if (u < pRemove) {
                     if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
                 } else {
@@ -1686,14 +1765,24 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
 
                 const TriVertex& v = triangularVertices[idx];
                 const CachedHexIndices& hex = cachedHexIndices[idx];
-                const float pRemove = cachedProbs[idx].probDown;
 
                 HexEdge edges[6];
                 getHexEdgesAroundVertex(v.n, v.j, edges);
 
                 // Process LOWER chain
-                int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
+                int lowerVolBefore, lowerVolAfter;
+                int lowerType = fastCheckRotationTypeLUTWithHeights(lower.grid.data(), gridSize, hex, edges, lowerVolBefore, lowerVolAfter);
                 if (lowerType != 0) {
+                    float pRemove;
+                    if (useHeightWeighted) {
+                        int h = (lowerType > 0) ? lowerVolAfter : lowerVolBefore;
+                        double q = getQAtPosition(v.n, v.j);
+                        float probUp, probDown;
+                        getHeightWeightedProbs(q, h, probUp, probDown);
+                        pRemove = probDown;
+                    } else {
+                        pRemove = cachedProbs[idx].probDown;
+                    }
                     if (u < pRemove) {
                         if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
                     } else {
@@ -1702,8 +1791,19 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
                 }
 
                 // Process UPPER chain (same u!)
-                int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
+                int upperVolBefore, upperVolAfter;
+                int upperType = fastCheckRotationTypeLUTWithHeights(upper.grid.data(), gridSize, hex, edges, upperVolBefore, upperVolAfter);
                 if (upperType != 0) {
+                    float pRemove;
+                    if (useHeightWeighted) {
+                        int h = (upperType > 0) ? upperVolAfter : upperVolBefore;
+                        double q = getQAtPosition(v.n, v.j);
+                        float probUp, probDown;
+                        getHeightWeightedProbs(q, h, probUp, probDown);
+                        pRemove = probDown;
+                    } else {
+                        pRemove = cachedProbs[idx].probDown;
+                    }
                     if (u < pRemove) {
                         if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
                     } else {
@@ -2092,6 +2192,26 @@ void setUseRandomSweeps(int use) {
 EMSCRIPTEN_KEEPALIVE
 int getUseRandomSweeps() {
     return useRandomSweeps ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setUseHeightWeighted(int use) {
+    useHeightWeighted = (use != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getUseHeightWeighted() {
+    return useHeightWeighted ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setHeightS(int s) {
+    heightS = s;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getHeightS() {
+    return heightS;
 }
 
 EMSCRIPTEN_KEEPALIVE

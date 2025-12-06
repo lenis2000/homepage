@@ -12,7 +12,9 @@ struct SimulationParams {
     q_bias: f32,        // Global q bias (used when use_weights=0)
     use_weights: u32,   // 0 = use global q_bias, 1 = use per-cell weights buffer
     rand_seed: u32,
-    _pad: u32,          // Padding to 40 bytes (alignment)
+    use_height_weighted: u32,  // 0 = standard q-volume, 1 = height-weighted
+    height_S: i32,      // S parameter for height-weighted mode: weight = q^h + q^(2S-h)
+    _pad: u32,          // Padding for alignment
 }
 
 @group(0) @binding(0) var<storage, read_write> grid: array<i32>;
@@ -176,14 +178,29 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
         q = params.q_bias;
     }
 
-    // Acceptance probability based on q
-    // probUp = q / (1+q) for volume increase
-    // probDown = 1 / (1+q) for volume decrease
+    // Acceptance probability based on q (or height-weighted)
+    // Standard: probUp = q / (1+q), probDown = 1 / (1+q)
+    // Height-weighted: w = q^h + q^(2S-h), probUp = w / (1+w), probDown = 1 / (1+w)
     var accept_prob: f32;
-    if (volume_change > 0) {
-        accept_prob = q / (1.0 + q);
+    if (params.use_height_weighted != 0u) {
+        // Height-weighted mode
+        let h = select(volume_before, volume_after, volume_change > 0);
+        let S = params.height_S;
+        let qh = pow(q, f32(h));
+        let q2Smh = pow(q, f32(2 * S - h));
+        let w = qh + q2Smh;
+        if (volume_change > 0) {
+            accept_prob = w / (1.0 + w);
+        } else {
+            accept_prob = 1.0 / (1.0 + w);
+        }
     } else {
-        accept_prob = 1.0 / (1.0 + q);
+        // Standard q-volume mode
+        if (volume_change > 0) {
+            accept_prob = q / (1.0 + q);
+        } else {
+            accept_prob = 1.0 / (1.0 + q);
+        }
     }
 
     // RNG check
