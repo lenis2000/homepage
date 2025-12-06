@@ -116,12 +116,24 @@ fn rotate(@builtin(global_invocation_id) gid: vec3<u32>) {
     // Get random number for this vertex
     let u = randoms[u32(idx) % params.numCells];
 
-    // Heat-bath update: choose target state uniformly, then set to it
-    // This is CRITICAL for CFTP coupling!
-    // u < 0.5 -> target is horizontal (3)
-    // u >= 0.5 -> target is vertical (12)
-    let new_state = select(12, 3, u < 0.5);
-    grid[idx] = new_state;
+    // CONDITIONAL ACCEPTANCE - proper CFTP coupling!
+    // Only flip if random "prefers" the opposite state
+    // This ensures both chains converge when they differ
+    if (u < 0.5) {
+        // Random says "prefer horizontal"
+        if (state == 12) {
+            // Currently vertical → flip to horizontal
+            grid[idx] = 3;
+        }
+        // If already horizontal (3), stay
+    } else {
+        // Random says "prefer vertical"
+        if (state == 3) {
+            // Currently horizontal → flip to vertical
+            grid[idx] = 12;
+        }
+        // If already vertical (12), stay
+    }
 }
 
 // ============================================================================

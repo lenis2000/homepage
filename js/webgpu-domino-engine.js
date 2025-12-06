@@ -373,23 +373,10 @@ class WebGPUDominoEngine {
 
                 this.device.queue.submit([commandEncoder.finish()]);
 
-                // Update phase: recompute neighbor states
-                // Uses same bind groups as rotate (same layout)
-                const updateEncoder = this.device.createCommandEncoder();
-
-                const lowerUpdatePass = updateEncoder.beginComputePass();
-                lowerUpdatePass.setPipeline(this.updatePipeline);
-                lowerUpdatePass.setBindGroup(0, this.lowerRotateBindGroup);
-                lowerUpdatePass.dispatchWorkgroups(workgroupCount);
-                lowerUpdatePass.end();
-
-                const upperUpdatePass = updateEncoder.beginComputePass();
-                upperUpdatePass.setPipeline(this.updatePipeline);
-                upperUpdatePass.setBindGroup(0, this.upperRotateBindGroup);
-                upperUpdatePass.dispatchWorkgroups(workgroupCount);
-                upperUpdatePass.end();
-
-                this.device.queue.submit([updateEncoder.finish()]);
+                // SKIP update phase - it breaks coupling by creating non-rotateable states
+                // The rotate kernel alone should handle coupling for rotateable vertices
+                // const updateEncoder = this.device.createCommandEncoder();
+                // ...update phase disabled...
             }
 
             stepsRun++;

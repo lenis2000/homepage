@@ -345,6 +345,18 @@ code:
     <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
+    <button id="doubleDimerBtn" class="cftp" title="Double Dimer - Two independent CFTP samples" disabled>Double Dimer</button>
+    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;"></span>
+    <span style="display: none;" id="minLoopGroup">
+      <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
+      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
+    </span>
+    <button id="fluctuationsBtn" class="cftp" title="Height Fluctuations Visualization" style="display: none;">Fluctuations</button>
+    <span id="fluctScaleGroup" style="display: none;">
+      <label for="fluctScaleInput" style="font-size: 12px; color: #555;">scale:</label>
+      <input type="number" id="fluctScaleInput" value="10" min="1" max="100" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
+    </span>
+    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;">Resample</button>
     <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;"><input type="checkbox" id="showHeightsCheckbox"> Heights</label>
     <button id="scaleUpBtn" title="Double the region size (2x2 blocks)">Scale Up 2×2</button>
     <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
@@ -365,7 +377,7 @@ code:
     <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
     <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
-    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span><span id="gpuIndicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU</span></div>
+    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span></div>
   </div>
 </div>
 
@@ -569,7 +581,6 @@ code:
         flipsCount: document.getElementById('flipsCount'),
         cftpStatus: document.getElementById('cftpStatus'),
         cftpSteps: document.getElementById('cftpSteps'),
-        gpuIndicator: document.getElementById('gpuIndicator'),
         handTool: document.getElementById('handTool'),
         drawTool: document.getElementById('drawTool'),
         eraseTool: document.getElementById('eraseTool'),
@@ -598,7 +609,15 @@ code:
         toggle3DBtn: document.getElementById('toggle3DBtn'),
         rotateLeftBtn: document.getElementById('rotateLeftBtn'),
         rotateRightBtn: document.getElementById('rotateRightBtn'),
-        autoRotateBtn: document.getElementById('autoRotateBtn')
+        autoRotateBtn: document.getElementById('autoRotateBtn'),
+        doubleDimerBtn: document.getElementById('doubleDimerBtn'),
+        doubleDimerProgress: document.getElementById('doubleDimerProgress'),
+        minLoopGroup: document.getElementById('minLoopGroup'),
+        minLoopInput: document.getElementById('minLoopInput'),
+        fluctuationsBtn: document.getElementById('fluctuationsBtn'),
+        fluctScaleGroup: document.getElementById('fluctScaleGroup'),
+        fluctScaleInput: document.getElementById('fluctScaleInput'),
+        resampleBtn: document.getElementById('resampleBtn')
     };
 
     // Get 3D container
@@ -629,6 +648,12 @@ code:
             this.getHeightsWasm = Module.cwrap('getHeights', 'number', []);
             this.repairRegionWasm = Module.cwrap('repairRegion', 'number', []);
             this.getRegionMaskWasm = Module.cwrap('getRegionMask', 'number', []);
+            // Fluctuations CFTP (double dimer sampling)
+            this.initFluctuationsCFTPWasm = Module.cwrap('initFluctuationsCFTP', 'number', []);
+            this.stepFluctuationsCFTPWasm = Module.cwrap('stepFluctuationsCFTP', 'number', []);
+            this.exportFluctuationSampleWasm = Module.cwrap('exportFluctuationSample', 'number', ['number']);
+            this.loadDimersForLoopsWasm = Module.cwrap('loadDimersForLoops', 'number', ['string', 'string']);
+            this.filterLoopsBySizeWasm = Module.cwrap('filterLoopsBySize', 'number', ['number']);
         }
 
         initFromVertices(verticesArray) {
@@ -777,6 +802,46 @@ code:
             return result;
         }
 
+        // Fluctuations CFTP methods
+        initFluctuationsCFTP() {
+            const resultPtr = this.initFluctuationsCFTPWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
+        }
+
+        stepFluctuationsCFTP() {
+            const resultPtr = this.stepFluctuationsCFTPWasm();
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
+        }
+
+        exportFluctuationSample(pairIdx) {
+            const resultPtr = this.exportFluctuationSampleWasm(pairIdx);
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            const result = JSON.parse(jsonStr);
+            if (result.edges) {
+                result.dominoes = this.edgesToDominoes(result.edges);
+            }
+            return result;
+        }
+
+        loadDimersForLoops(json0, json1) {
+            const resultPtr = this.loadDimersForLoopsWasm(json0, json1);
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
+        }
+
+        filterLoopsBySize(minSize) {
+            const resultPtr = this.filterLoopsBySizeWasm(minSize);
+            const jsonStr = Module.UTF8ToString(resultPtr);
+            this.freeStringWasm(resultPtr);
+            return JSON.parse(jsonStr);
+        }
+
         // Convert edges {x1,y1,x2,y2} to dominoes with type for coloring
         // Type 0: horizontal, starts at black vertex (x+y even)
         // Type 1: horizontal, starts at white vertex (x+y odd)
@@ -824,7 +889,6 @@ code:
                     await Promise.race([initPromise, timeoutPromise]);
                     if (gpuEngine.isReady) {
                         useWebGPU = true;
-                        el.gpuIndicator.style.display = 'inline';
                         console.log('WebGPU Domino Engine ready');
                     }
                 } catch (e) {
@@ -1365,22 +1429,27 @@ code:
 
                 if (isHorizontal) {
                     // Horizontal domino spans (x,y) to (x+2,y+1)
+                    // All 4 corners at same height, midpoints at ±1
                     const TL = [x, y+1], TM = [x+1, y+1], TR = [x+2, y+1];
                     const BL = [x, y], BM = [x+1, y], BR = [x+2, y];
 
-                    addEdge(TL, TM, -sign); addEdge(TM, TR, sign);
-                    addEdge(BL, BM, sign); addEdge(BM, BR, -sign);
-                    addEdge(TL, BL, sign); addEdge(TM, BM, 3*sign);
-                    addEdge(TR, BR, sign);
+                    // Horizontal edges: corner -> mid -> corner
+                    addEdge(TL, TM, sign);  addEdge(TM, TR, -sign);
+                    addEdge(BL, BM, sign);  addEdge(BM, BR, -sign);
+                    // Vertical edges: all 0 (corners same height)
+                    addEdge(TL, BL, 0);  addEdge(TM, BM, 0);  addEdge(TR, BR, 0);
                 } else {
                     // Vertical domino spans (x,y) to (x+1,y+2)
+                    // All 4 corners at same height, midpoints at ±1
                     const TL = [x, y+2], TR = [x+1, y+2];
                     const ML = [x, y+1], MR = [x+1, y+1];
                     const BL = [x, y], BR = [x+1, y];
 
-                    addEdge(TL, TR, -sign); addEdge(ML, MR, -3*sign); addEdge(BL, BR, -sign);
-                    addEdge(TL, ML, sign); addEdge(ML, BL, -sign);
-                    addEdge(TR, MR, -sign); addEdge(MR, BR, sign);
+                    // Vertical edges: corner -> mid -> corner
+                    addEdge(TL, ML, sign);  addEdge(ML, BL, -sign);
+                    addEdge(TR, MR, sign);  addEdge(MR, BR, -sign);
+                    // Horizontal edges: all 0 (corners same height)
+                    addEdge(TL, TR, 0);  addEdge(ML, MR, 0);  addEdge(BL, BR, 0);
                 }
             }
 
@@ -1487,13 +1556,13 @@ code:
                     const geom = new THREE.BufferGeometry();
                     geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
 
-                    // Indices for two flat halves (no diagonal artifacts)
-                    // Each half is coplanar since corners are at same height
+                    // Indices with consistent CCW winding (viewed from +Y)
+                    // Each half forms a tent/valley shape with step at midpoints
                     const indices = isHorizontal
-                        // Horizontal: left half (2,1,4,3) + right half (1,0,5,4)
-                        ? [2,1,4, 2,4,3, 1,0,5, 1,5,4]
-                        // Vertical: top half (5,0,1,4) + bottom half (4,1,2,3)
-                        : [5,0,1, 5,1,4, 4,1,2, 4,2,3];
+                        // Horizontal: left half CCW [2,3,4,1] + right half CCW [1,4,5,0]
+                        ? [2,3,4, 2,4,1, 1,4,5, 1,5,0]
+                        // Vertical: top half CCW [5,4,1,0] + bottom half CCW [4,3,2,1]
+                        : [5,4,1, 5,1,0, 4,3,2, 4,2,1];
 
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
@@ -1907,7 +1976,6 @@ code:
     }
 
     async function runCFTP() {
-        console.log('=== runCFTP called ===', { isValid, isCFTPRunning, useWebGPU });
         if (!isValid || isCFTPRunning) return;
 
         isCFTPRunning = true;
@@ -1920,180 +1988,75 @@ code:
         el.cftpSteps.textContent = 'init';
 
         const cftpStartTime = performance.now();
-        const useGpuCFTP = useWebGPU && gpuEngine && gpuEngine.isReady;
-        console.log('CFTP path:', useGpuCFTP ? 'GPU' : 'WASM');
 
-        if (useGpuCFTP) {
-            // ================================================================
-            // GPU CFTP PATH
-            // ================================================================
-            console.log('=== GPU CFTP STARTING ===');
-            try {
-                // Get region mask from WASM
-                const regionData = sim.getRegionMask();
-                if (regionData.status !== 'ok') {
-                    throw new Error('Failed to get region mask');
-                }
+        // WASM CFTP
+        let lastDrawnBlock = -1;
 
-                // Initialize GPU CFTP (computes extremal tilings on GPU)
-                await gpuEngine.initCFTP(
-                    regionData.maskBytes,
-                    regionData.minX,
-                    regionData.maxX,
-                    regionData.minY,
-                    regionData.maxY
-                );
+        const initResult = sim.initCFTP();
+        if (initResult.status === 'error') {
+            console.error('CFTP init error:', initResult.reason);
+            el.cftpSteps.textContent = 'error';
+            el.cftpBtn.textContent = originalText;
+            el.cftpBtn.disabled = false;
+            el.cftpStopBtn.style.display = 'none';
+            el.cftpStatus.style.display = 'none';
+            isCFTPRunning = false;
+            el.startStopBtn.disabled = !isValid;
+            return;
+        }
 
-                let T = 1;
-                let totalSteps = 0;
-                const maxT = 1 << 24;  // Safety limit
+        el.cftpSteps.textContent = 'T=' + initResult.T;
+        el.cftpBtn.textContent = 'T=' + initResult.T;
 
-                el.cftpSteps.textContent = 'T=' + T;
-                el.cftpBtn.textContent = 'T=' + T;
+        while (isCFTPRunning) {
+            const res = sim.stepCFTP();
 
-                while (isCFTPRunning && T <= maxT) {
-                    console.log(`GPU CFTP epoch: T=${T}`);
-                    // Reset chains to extremal states
-                    await gpuEngine.resetCFTPChains();
+            if (res.status === 'in_progress') {
+                el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.sweep;
+                el.cftpBtn.textContent = res.T + ':' + res.sweep;
 
-                    // Run T coupled steps
-                    const checkInterval = Math.max(1, Math.min(T, 1024));
-                    const result = await gpuEngine.stepCFTP(T, checkInterval);
-                    totalSteps += result.stepsRun;
-                    console.log(`GPU CFTP: T=${T}, coalesced=${result.coalesced}, stepsRun=${result.stepsRun}`);
-
-                    el.cftpSteps.textContent = 'T=' + T;
-                    el.cftpBtn.textContent = 'T=' + T;
-
-                    if (result.coalesced) {
-                        // Success!
-                        await gpuEngine.finalizeCFTP();
-                        const grid = await gpuEngine.getCFTPResult();
-
-                        // Debug: log grid values
-                        const stateCounts = {};
-                        for (let i = 0; i < grid.length; i++) {
-                            stateCounts[grid[i]] = (stateCounts[grid[i]] || 0) + 1;
-                        }
-                        console.log('GPU grid state counts:', stateCounts);
-                        console.log('Grid sample (first 20):', Array.from(grid.slice(0, 20)));
-
-                        // Convert GPU vertex states to dominoes
-                        dominoes = vertexStatesToDominoes(
-                            grid,
-                            regionData.minX,
-                            regionData.maxX,
-                            regionData.minY,
-                            regionData.maxY,
-                            regionData.width
-                        );
-                        console.log('Dominoes found:', dominoes.length);
-
-                        const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                        el.cftpSteps.textContent = formatNumber(totalSteps) + ' (' + elapsed + 's, GPU)';
-                        console.log('GPU CFTP coalesced: T=' + T + ', steps=' + totalSteps);
-                        break;
-                    }
-
-                    // Not coalesced, double T
-                    T *= 2;
-
-                    // Yield to UI
-                    await new Promise(resolve => setTimeout(resolve, 0));
-                }
-
-                if (T > maxT && isCFTPRunning) {
-                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                    el.cftpSteps.textContent = 'timeout (' + elapsed + 's, GPU)';
-                }
-
-                gpuEngine.destroyCFTP();
-
-            } catch (e) {
-                console.error('GPU CFTP error:', e);
-                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                el.cftpSteps.textContent = 'error (' + elapsed + 's)';
-                if (gpuEngine) gpuEngine.destroyCFTP();
-            }
-
-        } else {
-            // ================================================================
-            // WASM CFTP PATH (original)
-            // ================================================================
-            console.log('=== WASM CFTP STARTING ===');
-            let lastDrawnBlock = -1;
-
-            const initResult = sim.initCFTP();
-            console.log('CFTP init:', JSON.stringify(initResult));
-            if (initResult.status === 'error') {
-                console.error('CFTP init error:', initResult.reason);
-                el.cftpSteps.textContent = 'error';
-                el.cftpBtn.textContent = originalText;
-                el.cftpBtn.disabled = false;
-                el.cftpStopBtn.style.display = 'none';
-                el.cftpStatus.style.display = 'none';
-                isCFTPRunning = false;
-                el.startStopBtn.disabled = !isValid;
-                return;
-            }
-
-            el.cftpSteps.textContent = 'T=' + initResult.T;
-            el.cftpBtn.textContent = 'T=' + initResult.T;
-
-            while (isCFTPRunning) {
-                const res = sim.stepCFTP();
-                console.log('CFTP step:', res.status, 'T=' + res.T, 'sweep=' + res.sweep);
-
-                if (res.status === 'in_progress') {
-                    el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.sweep;
-                    el.cftpBtn.textContent = res.T + ':' + res.sweep;
-
-                    if (res.T >= 4096) {
-                        const currentBlock = Math.floor(res.sweep / 4096);
-                        if (currentBlock > lastDrawnBlock) {
-                            lastDrawnBlock = currentBlock;
-                            const maxData = sim.getCFTPMaxState();
-                            if (maxData.dominoes && maxData.dominoes.length > 0) {
-                                dominoes = maxData.dominoes;
-                                draw();
-                            }
-                        }
-                    }
-                } else if (res.status === 'coalesced') {
-                    const finalResult = sim.finalizeCFTP();
-                    dominoes = finalResult.dominoes || [];
-                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                    const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
-                    el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
-                    console.log('CFTP coalesced: T=' + res.T + ', steps=' + totalStepsDisplay);
-                    break;
-                } else if (res.status === 'not_coalesced') {
-                    console.log('CFTP epoch done: prevT=' + res.prevT + ' -> nextT=' + res.nextT);
-                    el.cftpSteps.textContent = 'T=' + res.nextT;
-                    el.cftpBtn.textContent = 'T=' + res.nextT;
-                    lastDrawnBlock = -1;
-
-                    if (res.prevT >= 4096) {
+                if (res.T >= 4096) {
+                    const currentBlock = Math.floor(res.sweep / 4096);
+                    if (currentBlock > lastDrawnBlock) {
+                        lastDrawnBlock = currentBlock;
                         const maxData = sim.getCFTPMaxState();
                         if (maxData.dominoes && maxData.dominoes.length > 0) {
                             dominoes = maxData.dominoes;
                             draw();
                         }
                     }
-                } else if (res.status === 'timeout') {
-                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                    el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
-                    console.log('CFTP timeout after', res.totalSweeps, 'sweeps');
-                    break;
-                } else {
-                    const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                    el.cftpSteps.textContent = 'error (' + elapsed + 's)';
-                    console.error('CFTP error:', res);
-                    break;
                 }
+            } else if (res.status === 'coalesced') {
+                const finalResult = sim.finalizeCFTP();
+                dominoes = finalResult.dominoes || [];
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                const totalStepsDisplay = res.totalSteps || res.totalSweeps || 0;
+                el.cftpSteps.textContent = formatNumber(totalStepsDisplay) + ' (' + elapsed + 's)';
+                break;
+            } else if (res.status === 'not_coalesced') {
+                el.cftpSteps.textContent = 'T=' + res.nextT;
+                el.cftpBtn.textContent = 'T=' + res.nextT;
+                lastDrawnBlock = -1;
 
-                await new Promise(resolve => setTimeout(resolve, 0));
+                if (res.prevT >= 4096) {
+                    const maxData = sim.getCFTPMaxState();
+                    if (maxData.dominoes && maxData.dominoes.length > 0) {
+                        dominoes = maxData.dominoes;
+                        draw();
+                    }
+                }
+            } else if (res.status === 'timeout') {
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
+                break;
+            } else {
+                const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                el.cftpSteps.textContent = 'error (' + elapsed + 's)';
+                console.error('CFTP error:', res);
+                break;
             }
+
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
 
         // Handle cancellation
@@ -2112,40 +2075,6 @@ code:
         updateStats();
         draw();
         update3DView();  // Update 3D after CFTP
-    }
-
-    // Convert GPU vertex states to dominoes with type for coloring
-    function vertexStatesToDominoes(grid, minX, maxX, minY, maxY, width) {
-        const dominoes = [];
-        const height = maxY - minY + 1;
-
-        for (let relY = 0; relY < height; relY++) {
-            for (let relX = 0; relX < width; relX++) {
-                const idx = relY * width + relX;
-                const state = grid[idx];
-                const x = relX + minX;
-                const y = relY + minY;
-
-                // Only process on black cells (x+y even) to avoid double counting
-                if ((x + y) % 2 !== 0) continue;
-
-                if (state === 3) {
-                    // Horizontal domino: this cell and right neighbor
-                    dominoes.push({
-                        x1: x, y1: y, x2: x + 1, y2: y,
-                        type: 0  // horizontal, starts at black
-                    });
-                } else if (state === 12) {
-                    // Vertical domino: this cell and bottom neighbor
-                    dominoes.push({
-                        x1: x, y1: y, x2: x, y2: y + 1,
-                        type: 2  // vertical, starts at black
-                    });
-                }
-            }
-        }
-
-        return dominoes;
     }
 
     function stopCFTP() {
@@ -2845,7 +2774,10 @@ code:
 
     initPaletteSelect();
     setupEventListeners();
-    draw();
+
+    // Generate Aztec diamond of size 4 on load
+    generateAztecDiamond(4);
+    resetView();
 
 })();
 </script>

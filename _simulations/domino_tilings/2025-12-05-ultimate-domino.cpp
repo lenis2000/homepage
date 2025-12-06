@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-05-ultimate-domino.cpp -o 2025-12-05-ultimate-domino.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportEdges','_getTotalSteps','_getFlipCount','_freeString','_initCFTP','_stepCFTP','_finalizeCFTP','_getCFTPMinState','_getCFTPMaxState','_getMinTiling','_getMaxTiling','_getHeights','_getRegionMask','_repairRegion','_initFluctuationsCFTP','_stepFluctuationsCFTP','_exportFluctuationSample','_loadDimersForLoops','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -404,6 +404,26 @@ int cftpEpochSize = 1;  // Number of sweeps in current epoch
 int cftpTotalEpochs = 0;
 bool cftpInitialized = false;
 
+// ============================================================================
+// Double CFTP for Fluctuations (2 independent pairs)
+// ============================================================================
+// Pair 0: fluctMin0, fluctMax0 with seeds fluctSeeds0
+// Pair 1: fluctMin1, fluctMax1 with seeds fluctSeeds1
+
+std::unordered_set<long long> fluctMin0, fluctMax0;  // Pair 0 chains
+std::unordered_set<long long> fluctMin1, fluctMax1;  // Pair 1 chains
+std::vector<uint64_t> fluctSeeds0, fluctSeeds1;      // Separate seeds for independence
+int fluctEpochSize0 = 1, fluctEpochSize1 = 1;
+int fluctTotalEpochs = 0;
+bool fluctCoalesced0 = false, fluctCoalesced1 = false;
+bool fluctInitialized = false;
+uint64_t fluctRngState0 = 0, fluctRngState1 = 0;     // Separate RNG states
+
+// For loop detection
+std::vector<std::array<int, 3>> loopDimers0, loopDimers1;  // {x, y, dir}
+std::vector<int> loopSizes;  // Size of loop containing each dimer
+bool loopsDetected = false;
+
 // Height function at vertex (i,j) - corner between cells
 // Convention: going counterclockwise around a BLACK cell (x+y even),
 // height increases by 1 on unmatched edges, decreases by 3 on matched edges
@@ -755,6 +775,49 @@ int cftpSweep(uint64_t sweepSeed) {
         ops++;
     }
 
+    return ops;
+}
+
+// Fluctuation sweep: same as CFTP sweep but operates on specified pair
+// Uses its own RNG state for independence
+int fluctSweep(uint64_t sweepSeed, int pairIdx) {
+    if (faces.empty()) return 0;
+
+    std::unordered_set<long long>& minChain = (pairIdx == 0) ? fluctMin0 : fluctMin1;
+    std::unordered_set<long long>& maxChain = (pairIdx == 0) ? fluctMax0 : fluctMax1;
+
+    // Use separate RNG state
+    uint64_t& localRng = (pairIdx == 0) ? fluctRngState0 : fluctRngState1;
+    localRng = sweepSeed;
+
+    auto localXorshift = [&]() -> uint64_t {
+        localRng ^= localRng >> 12;
+        localRng ^= localRng << 25;
+        localRng ^= localRng >> 27;
+        return localRng * 0x2545F4914F6CDD1DULL;
+    };
+
+    auto localRandomInt = [&](int n) -> int {
+        uint64_t random64 = localXorshift();
+        return (int)(((unsigned __int128)random64 * n) >> 64);
+    };
+
+    int ops = 0;
+    for (size_t i = 0; i < faces.size(); i++) {
+        const Face& f = faces[i];
+        int target = (localRandomInt(2) == 0) ? 1 : 2;
+
+        int stMin = getFaceStateOn(minChain, f.x, f.y);
+        if (stMin != 0 && stMin != target) {
+            flipFaceOn(minChain, f.x, f.y, stMin);
+        }
+
+        int stMax = getFaceStateOn(maxChain, f.x, f.y);
+        if (stMax != 0 && stMax != target) {
+            flipFaceOn(maxChain, f.x, f.y, stMax);
+        }
+        ops++;
+    }
     return ops;
 }
 
@@ -1410,6 +1473,417 @@ char* repairRegion() {
         if (!first) json += ",";
         first = false;
         json += "{\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + "}";
+    }
+    json += "]}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// ============================================================================
+// Fluctuations CFTP (2 independent pairs for double dimer sampling)
+// ============================================================================
+
+// State for fluctuations CFTP
+size_t fluctCurrentSweepIdx0 = 0, fluctCurrentSweepIdx1 = 0;
+int fluctCurrentT0 = 0, fluctCurrentT1 = 0;
+long long fluctTotalSweeps = 0;
+
+EMSCRIPTEN_KEEPALIVE
+char* initFluctuationsCFTP() {
+    if (vertices.empty() || faces.empty()) {
+        std::string json = "{\"status\":\"error\",\"reason\":\"empty\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    // Initialize extremal tilings for both pairs
+    makeExtremalTiling(fluctMin0, -1);
+    makeExtremalTiling(fluctMax0, +1);
+    makeExtremalTiling(fluctMin1, -1);
+    makeExtremalTiling(fluctMax1, +1);
+
+    // Clear seed lists
+    fluctSeeds0.clear();
+    fluctSeeds1.clear();
+
+    // Reset state
+    fluctEpochSize0 = 1;
+    fluctEpochSize1 = 1;
+    fluctTotalEpochs = 0;
+    fluctCoalesced0 = false;
+    fluctCoalesced1 = false;
+    fluctCurrentSweepIdx0 = 0;
+    fluctCurrentSweepIdx1 = 0;
+    fluctCurrentT0 = 1;
+    fluctCurrentT1 = 1;
+    fluctTotalSweeps = 0;
+
+    // Initialize separate RNG states
+    fluctRngState0 = xorshift64();
+    fluctRngState1 = xorshift64();
+
+    fluctInitialized = true;
+
+    std::string json = "{\"status\":\"initialized\",\"T\":1,\"faces\":" +
+                      std::to_string(faces.size()) + "}";
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* stepFluctuationsCFTP() {
+    if (!fluctInitialized) {
+        std::string json = "{\"status\":\"error\",\"reason\":\"not_initialized\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    const int COALESCENCE_CHECK_INTERVAL = 1000;
+
+    // Process pair 0 if not coalesced
+    if (!fluctCoalesced0) {
+        if (fluctCurrentSweepIdx0 >= fluctSeeds0.size()) {
+            // Generate new seeds for pair 0
+            std::vector<uint64_t> newSeeds(fluctEpochSize0);
+            for (int i = 0; i < fluctEpochSize0; i++) {
+                newSeeds[i] = xorshift64();
+            }
+            fluctSeeds0.insert(fluctSeeds0.begin(), newSeeds.begin(), newSeeds.end());
+
+            // Reset to extremal states
+            makeExtremalTiling(fluctMin0, -1);
+            makeExtremalTiling(fluctMax0, +1);
+            fluctCurrentSweepIdx0 = 0;
+            fluctCurrentT0 = fluctSeeds0.size();
+        }
+
+        // Run sweeps for pair 0
+        int sweeps0 = 0;
+        while (fluctCurrentSweepIdx0 < fluctSeeds0.size() && sweeps0 < COALESCENCE_CHECK_INTERVAL) {
+            fluctSweep(fluctSeeds0[fluctCurrentSweepIdx0], 0);
+            fluctCurrentSweepIdx0++;
+            fluctTotalSweeps++;
+            sweeps0++;
+        }
+
+        // Check coalescence
+        if (tilingsEqual(fluctMin0, fluctMax0)) {
+            fluctCoalesced0 = true;
+        } else if (fluctCurrentSweepIdx0 >= fluctSeeds0.size()) {
+            fluctEpochSize0 *= 2;
+        }
+    }
+
+    // Process pair 1 if not coalesced
+    if (!fluctCoalesced1) {
+        if (fluctCurrentSweepIdx1 >= fluctSeeds1.size()) {
+            // Generate new seeds for pair 1 (independent from pair 0!)
+            std::vector<uint64_t> newSeeds(fluctEpochSize1);
+            for (int i = 0; i < fluctEpochSize1; i++) {
+                newSeeds[i] = xorshift64();
+            }
+            fluctSeeds1.insert(fluctSeeds1.begin(), newSeeds.begin(), newSeeds.end());
+
+            // Reset to extremal states
+            makeExtremalTiling(fluctMin1, -1);
+            makeExtremalTiling(fluctMax1, +1);
+            fluctCurrentSweepIdx1 = 0;
+            fluctCurrentT1 = fluctSeeds1.size();
+        }
+
+        // Run sweeps for pair 1
+        int sweeps1 = 0;
+        while (fluctCurrentSweepIdx1 < fluctSeeds1.size() && sweeps1 < COALESCENCE_CHECK_INTERVAL) {
+            fluctSweep(fluctSeeds1[fluctCurrentSweepIdx1], 1);
+            fluctCurrentSweepIdx1++;
+            fluctTotalSweeps++;
+            sweeps1++;
+        }
+
+        // Check coalescence
+        if (tilingsEqual(fluctMin1, fluctMax1)) {
+            fluctCoalesced1 = true;
+        } else if (fluctCurrentSweepIdx1 >= fluctSeeds1.size()) {
+            fluctEpochSize1 *= 2;
+        }
+    }
+
+    // Update epoch count when both advance
+    fluctTotalEpochs = std::max(fluctTotalEpochs,
+        std::max((int)std::log2(fluctEpochSize0), (int)std::log2(fluctEpochSize1)));
+
+    // Safety limit
+    if (fluctTotalEpochs >= 30 && (!fluctCoalesced0 || !fluctCoalesced1)) {
+        std::string json = "{\"status\":\"timeout\",\"done\":" +
+                          std::to_string((fluctCoalesced0 ? 1 : 0) + (fluctCoalesced1 ? 1 : 0)) +
+                          ",\"maxT\":" + std::to_string(std::max(fluctCurrentT0, fluctCurrentT1)) + "}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    // Check if both coalesced
+    if (fluctCoalesced0 && fluctCoalesced1) {
+        std::string json = "{\"status\":\"coalesced\",\"done\":2,\"maxT\":" +
+                          std::to_string(std::max(fluctCurrentT0, fluctCurrentT1)) +
+                          ",\"totalSweeps\":" + std::to_string(fluctTotalSweeps) + "}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    // Still in progress
+    std::string json = "{\"status\":\"in_progress\",\"done\":" +
+                      std::to_string((fluctCoalesced0 ? 1 : 0) + (fluctCoalesced1 ? 1 : 0)) +
+                      ",\"T0\":" + std::to_string(fluctCurrentT0) +
+                      ",\"T1\":" + std::to_string(fluctCurrentT1) +
+                      ",\"maxT\":" + std::to_string(std::max(fluctCurrentT0, fluctCurrentT1)) +
+                      ",\"totalSweeps\":" + std::to_string(fluctTotalSweeps) + "}";
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// Export coalesced sample from specified pair (0 or 1)
+EMSCRIPTEN_KEEPALIVE
+char* exportFluctuationSample(int pairIdx) {
+    if (!fluctInitialized) {
+        std::string json = "{\"status\":\"error\",\"reason\":\"not_initialized\"}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    const std::unordered_set<long long>& sample =
+        (pairIdx == 0) ? fluctMin0 : fluctMin1;
+
+    std::string json = "{\"edges\":[";
+    bool first = true;
+    for (long long ek : sample) {
+        int x = (int)(((ek >> 21) & ((1LL << 20) - 1)) - 100000);
+        int y = (int)(((ek >> 1) & ((1LL << 20) - 1)) - 100000);
+        int dir = (int)(ek & 1);
+        if (!first) json += ",";
+        first = false;
+        if (dir == 0) {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x + 1) + ",\"y2\":" + std::to_string(y) +
+                    ",\"dir\":0}";
+        } else {
+            json += "{\"x1\":" + std::to_string(x) + ",\"y1\":" + std::to_string(y) +
+                    ",\"x2\":" + std::to_string(x) + ",\"y2\":" + std::to_string(y + 1) +
+                    ",\"dir\":1}";
+        }
+    }
+    json += "]}";
+
+    char* result = (char*)malloc(json.size() + 1);
+    strcpy(result, json.c_str());
+    return result;
+}
+
+// ============================================================================
+// Loop Detection for Double Dimer View
+// ============================================================================
+
+// Edge key for loop detection (domino position)
+inline long long loopEdgeKey(int x, int y, int dir) {
+    return ((long long)(x + 100000) << 21) | ((long long)(y + 100000) << 1) | dir;
+}
+
+// Vertex key for loop tracing
+inline long long loopVertKey(int x, int y) {
+    return ((long long)(x + 100000) << 20) | (long long)(y + 100000);
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* loadDimersForLoops(const char* json0, const char* json1) {
+    loopDimers0.clear();
+    loopDimers1.clear();
+    loopSizes.clear();
+    loopsDetected = false;
+
+    // Parse JSON arrays - format: [{x1,y1,x2,y2,dir}, ...]
+    auto parseEdges = [](const char* json, std::vector<std::array<int, 3>>& dimers) {
+        const char* p = json;
+        while (*p) {
+            // Find x1
+            const char* x1Start = strstr(p, "\"x1\":");
+            if (!x1Start) break;
+            int x1 = atoi(x1Start + 5);
+
+            const char* y1Start = strstr(x1Start, "\"y1\":");
+            if (!y1Start) break;
+            int y1 = atoi(y1Start + 5);
+
+            const char* dirStart = strstr(y1Start, "\"dir\":");
+            if (!dirStart) break;
+            int dir = atoi(dirStart + 6);
+
+            dimers.push_back({x1, y1, dir});
+
+            // Move past this object
+            p = dirStart + 7;
+        }
+    };
+
+    parseEdges(json0, loopDimers0);
+    parseEdges(json1, loopDimers1);
+
+    std::string result = "{\"status\":\"loaded\",\"count0\":" + std::to_string(loopDimers0.size()) +
+                        ",\"count1\":" + std::to_string(loopDimers1.size()) + "}";
+    char* out = (char*)malloc(result.size() + 1);
+    strcpy(out, result.c_str());
+    return out;
+}
+
+// Detect loop sizes and filter by minimum size
+EMSCRIPTEN_KEEPALIVE
+char* filterLoopsBySize(int minSize) {
+    if (loopDimers0.empty() && loopDimers1.empty()) {
+        std::string json = "{\"indices0\":[],\"indices1\":[]}";
+        char* result = (char*)malloc(json.size() + 1);
+        strcpy(result, json.c_str());
+        return result;
+    }
+
+    // Build edge-to-index maps
+    std::unordered_map<long long, size_t> edge0Map, edge1Map;
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        auto& d = loopDimers0[i];
+        edge0Map[loopEdgeKey(d[0], d[1], d[2])] = i;
+    }
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        auto& d = loopDimers1[i];
+        edge1Map[loopEdgeKey(d[0], d[1], d[2])] = i;
+    }
+
+    // Initialize loop sizes if not detected yet
+    if (!loopsDetected) {
+        size_t totalEdges = loopDimers0.size() + loopDimers1.size();
+        loopSizes.assign(totalEdges, 0);
+
+        // Build adjacency: vertex -> list of (edgeIdx, sample, otherVertex)
+        struct AdjEntry {
+            size_t edgeIdx;
+            int sample;  // 0 or 1
+            long long otherVert;
+        };
+        std::unordered_map<long long, std::vector<AdjEntry>> adj;
+
+        auto addEdgeToAdj = [&](const std::array<int, 3>& d, size_t idx, int sample) {
+            int x = d[0], y = d[1], dir = d[2];
+            long long v1, v2;
+            if (dir == 0) {  // horizontal
+                v1 = loopVertKey(x, y);
+                v2 = loopVertKey(x + 1, y);
+            } else {  // vertical
+                v1 = loopVertKey(x, y);
+                v2 = loopVertKey(x, y + 1);
+            }
+            adj[v1].push_back({idx, sample, v2});
+            adj[v2].push_back({idx, sample, v1});
+        };
+
+        for (size_t i = 0; i < loopDimers0.size(); i++) {
+            addEdgeToAdj(loopDimers0[i], i, 0);
+        }
+        for (size_t i = 0; i < loopDimers1.size(); i++) {
+            addEdgeToAdj(loopDimers1[i], loopDimers0.size() + i, 1);
+        }
+
+        // Mark double dimers (same edge in both samples) as size 2
+        for (size_t i = 0; i < loopDimers0.size(); i++) {
+            auto& d = loopDimers0[i];
+            long long ek = loopEdgeKey(d[0], d[1], d[2]);
+            auto it = edge1Map.find(ek);
+            if (it != edge1Map.end()) {
+                loopSizes[i] = 2;
+                loopSizes[loopDimers0.size() + it->second] = 2;
+            }
+        }
+
+        // Trace alternating cycles for remaining edges
+        std::vector<bool> visited(totalEdges, false);
+        for (size_t i = 0; i < loopDimers0.size(); i++) {
+            if (loopSizes[i] == 2) visited[i] = true;
+        }
+        for (size_t i = 0; i < loopDimers1.size(); i++) {
+            if (loopSizes[loopDimers0.size() + i] == 2) visited[loopDimers0.size() + i] = true;
+        }
+
+        for (size_t startIdx = 0; startIdx < loopDimers0.size(); startIdx++) {
+            if (visited[startIdx]) continue;
+
+            // Trace cycle starting from this edge
+            std::vector<size_t> cycleEdges;
+            cycleEdges.push_back(startIdx);
+            visited[startIdx] = true;
+
+            auto& startDimer = loopDimers0[startIdx];
+            long long startV1 = (startDimer[2] == 0) ?
+                loopVertKey(startDimer[0], startDimer[1]) :
+                loopVertKey(startDimer[0], startDimer[1]);
+            long long startV2 = (startDimer[2] == 0) ?
+                loopVertKey(startDimer[0] + 1, startDimer[1]) :
+                loopVertKey(startDimer[0], startDimer[1] + 1);
+
+            long long currentV = startV2;
+            int lastSample = 0;  // Started with sample 0
+
+            int maxIter = 10000;
+            while (maxIter-- > 0) {
+                // Find next edge at currentV from the OTHER sample
+                int nextSample = 1 - lastSample;
+                bool found = false;
+
+                for (auto& ae : adj[currentV]) {
+                    if (ae.sample == nextSample && !visited[ae.edgeIdx]) {
+                        cycleEdges.push_back(ae.edgeIdx);
+                        visited[ae.edgeIdx] = true;
+                        currentV = ae.otherVert;
+                        lastSample = nextSample;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found || currentV == startV1) break;
+            }
+
+            // Set loop size for all edges in cycle
+            int cycleSize = cycleEdges.size();
+            for (size_t idx : cycleEdges) {
+                loopSizes[idx] = cycleSize;
+            }
+        }
+
+        loopsDetected = true;
+    }
+
+    // Filter indices by minimum size
+    std::string json = "{\"indices0\":[";
+    bool first = true;
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        if (loopSizes[i] >= minSize) {
+            if (!first) json += ",";
+            first = false;
+            json += std::to_string(i);
+        }
+    }
+    json += "],\"indices1\":[";
+    first = true;
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        if (loopSizes[loopDimers0.size() + i] >= minSize) {
+            if (!first) json += ",";
+            first = false;
+            json += std::to_string(i);
+        }
     }
     json += "]}";
 
