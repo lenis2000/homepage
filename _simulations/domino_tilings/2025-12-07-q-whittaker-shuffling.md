@@ -139,42 +139,48 @@ code:
     });
   }
 
-  // Fill empty 2x2 blocks with uniform 1/2 - 1/2 choice
+  // Fill empty 2x2 blocks with uniform random choice
+  // TODO: q-Whittaker deformation will be implemented here
+  // See RSK sampling implementation for the partition-based q-Whittaker algorithm
   function createDominoes(n) {
     const occupied = new Set();
     dominoes.forEach(d => {
       dominoCells(d).forEach(c => occupied.add(`${c.x},${c.y}`));
     });
 
+    // Helper to check if a 2x2 block is still empty
+    function isBlockEmpty(bx, by) {
+      return !occupied.has(`${bx},${by}`) && !occupied.has(`${bx+1},${by}`) &&
+             !occupied.has(`${bx},${by+1}`) && !occupied.has(`${bx+1},${by+1}`);
+    }
+
+    // Helper to fill a block and mark cells as occupied
+    function fillBlock(bx, by, vertical) {
+      if (vertical) {
+        // Vertical EW pair
+        dominoes.push({x: bx, y: by, type: 'W'});
+        dominoes.push({x: bx + 1, y: by, type: 'E'});
+      } else {
+        // Horizontal NS pair
+        dominoes.push({x: bx, y: by, type: 'S'});
+        dominoes.push({x: bx, y: by + 1, type: 'N'});
+      }
+      occupied.add(`${bx},${by}`);
+      occupied.add(`${bx+1},${by}`);
+      occupied.add(`${bx},${by+1}`);
+      occupied.add(`${bx+1},${by+1}`);
+    }
+
+    // Find and fill all empty 2x2 blocks with uniform random choice
+    let filled = 0;
     for (let bx = -n; bx < n; bx++) {
       for (let by = -n; by < n; by++) {
-        // Check if all 4 cells of 2x2 block are in diamond
         if (!inDiamond(bx, by, n) || !inDiamond(bx+1, by, n) ||
             !inDiamond(bx, by+1, n) || !inDiamond(bx+1, by+1, n)) continue;
 
-        const c00 = `${bx},${by}`;
-        const c10 = `${bx+1},${by}`;
-        const c01 = `${bx},${by+1}`;
-        const c11 = `${bx+1},${by+1}`;
-
-        // If all 4 empty, fill with 1/2 - 1/2 choice
-        if (!occupied.has(c00) && !occupied.has(c10) &&
-            !occupied.has(c01) && !occupied.has(c11)) {
-
-          if (Math.random() < 0.5) {
-            // E-W pair (vertical dominoes)
-            dominoes.push({x: bx, y: by, type: 'W'});
-            dominoes.push({x: bx + 1, y: by, type: 'E'});
-          } else {
-            // N-S pair (horizontal dominoes)
-            dominoes.push({x: bx, y: by, type: 'S'});
-            dominoes.push({x: bx, y: by + 1, type: 'N'});
-          }
-
-          occupied.add(c00);
-          occupied.add(c10);
-          occupied.add(c01);
-          occupied.add(c11);
+        if (isBlockEmpty(bx, by)) {
+          fillBlock(bx, by, Math.random() < 0.5);
+          filled++;
         }
       }
     }
@@ -199,11 +205,14 @@ code:
       initN1();
       return;
     }
+
     // 1. Delete bad blocks
     const bad = findBadBlocks(currentN);
     deleteBadDominoes(bad);
+
     // 2. Slide
     slideDominoes();
+
     // 3. Fill holes
     currentN++;
     createDominoes(currentN);
@@ -364,13 +373,30 @@ code:
 <details style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold;">About the Algorithm</summary>
   <div style="padding: 10px;">
-    <p><b>Forward EKLP Shuffling</b> builds uniform random tilings of Aztec diamonds via the map A<sub>n</sub> → A<sub>n+1</sub>:</p>
+    <p><b>Forward EKLP Shuffling</b> builds random tilings of Aztec diamonds via the map A<sub>n</sub> → A<sub>n+1</sub>:</p>
     <ol>
       <li><b>Delete bad blocks:</b> Remove colliding pairs: N-S (N bottom, S top) and E-W (E left, W right)</li>
       <li><b>Slide:</b> Each domino slides one unit in its direction (N↑, S↓, E→, W←)</li>
-      <li><b>Fill holes:</b> Fill each empty 2×2 block with a random domino pair (1/2 horizontal, 1/2 vertical)</li>
+      <li><b>Fill holes:</b> Fill each empty 2×2 block with a random domino pair</li>
     </ol>
     <p>Enable "Granular steps" to see each phase separately. Bad blocks are highlighted in red before deletion.</p>
-    <p><b>Reference:</b> <a href="https://arxiv.org/abs/math/9201305">arXiv:math/9201305</a> — Elkies, Kuperberg, Larsen, Propp</p>
+
+    <hr style="margin: 15px 0;">
+
+    <h4>q-Whittaker Deformation (TODO)</h4>
+    <p>The q-Whittaker deformation of domino shuffling modifies <b>Step 3 (Fill holes)</b> to introduce correlations between adjacent empty blocks based on partition-valued stopping probabilities.</p>
+
+    <p>For a working implementation using the partition-based q-Whittaker algorithm (via RSK growth diagrams), see:</p>
+    <ul>
+      <li><a href="/simulations/domino/2025-12-04-RSK-sampling/">q-RSK Sampling of Domino Tilings</a> — samples from q-Whittaker measure using growth diagram dynamics</li>
+    </ul>
+
+    <p>The challenge for direct shuffling is translating partition indices (where islands are detected as consecutive i with μ<sub>i</sub> − κ<sub>i</sub> = 1) into geometric empty-block positions.</p>
+
+    <p><b>References:</b></p>
+    <ul>
+      <li><a href="https://arxiv.org/abs/math/9201305">arXiv:math/9201305</a> — Elkies, Kuperberg, Larsen, Propp (EKLP shuffling)</li>
+      <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — Matveev, Petrov (q-RSK and q-Whittaker)</li>
+    </ul>
   </div>
 </details>
