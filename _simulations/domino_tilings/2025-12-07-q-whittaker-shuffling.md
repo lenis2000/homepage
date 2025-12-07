@@ -9,6 +9,18 @@ code:
 
 <script src="/js/colorschemes.js"></script>
 
+<div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); border: 2px dashed #856404; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px;">
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+    <span style="font-size: 1.5em;">🚧</span>
+    <strong style="color: #856404; font-size: 1.1em;">q-Whittaker Deformation: Coming Soon</strong>
+  </div>
+  <p style="margin: 0 0 10px 0; color: #664d03;">Currently running <b>uniform shuffling</b> (q = 0). The q &gt; 0 deformation will modify the hole-filling step to introduce correlations based on partition-valued stopping probabilities. For a working q-Whittaker implementation, see <a href="/simulations/2025-12-04-rsk-sampling/" style="color: #0056b3; font-weight: bold;">q-RSK Sampling of Domino Tilings</a>.</p>
+  <div style="display: flex; align-items: center; gap: 15px; opacity: 0.6;">
+    <label style="color: #664d03;">q = <input type="number" value="0" min="0" max="1" step="0.01" style="width: 60px;" disabled></label>
+    <span style="font-size: 0.9em; color: #856404; font-style: italic;">Parameter disabled until implementation</span>
+  </div>
+</div>
+
 <div style="margin-bottom: 10px;">
   <label>Target n: <input id="n-input" type="number" value="10" min="1" max="50" style="width: 60px;"></label>
 </div>
