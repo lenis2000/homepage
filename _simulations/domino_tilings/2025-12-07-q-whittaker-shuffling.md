@@ -37,6 +37,7 @@ code:
 <div style="margin-bottom: 10px;">
   <label><input type="checkbox" id="granular-cb"> Granular steps</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb" checked> Rotate 45°</label>
+  <label style="margin-left: 15px;"><input type="checkbox" id="particles-cb"> Particles</label>
   <select id="palette-select" style="margin-left: 15px;"></select>
 </div>
 
@@ -56,6 +57,7 @@ code:
   let autoInterval = null;
   let rotated = true;
   let granular = false;
+  let showParticles = false;
   let phase = 'complete';  // 'complete', 'badblocks', 'deleted', 'slid'
   let badDominoes = new Set();  // For highlighting bad blocks
 
@@ -350,16 +352,52 @@ code:
       const px = d.x * cellSize;
       const py = -(d.y + (isHoriz ? 1 : 2)) * cellSize;
 
-      // Highlight bad blocks in red during 'badblocks' phase
-      if (phase === 'badblocks' && badDominoes.has(idx)) {
-        ctx.fillStyle = '#FF0000';
+      if (showParticles) {
+        // Particles view: N and E are particles (filled), S and W are holes (empty)
+        const isParticle = (d.type === 'N' || d.type === 'E');
+        const radius = cellSize * 0.35;
+
+        // Get center positions of the two cells in the domino
+        let centers;
+        if (isHoriz) {
+          // Horizontal domino: two cells side by side
+          centers = [
+            { x: px + cellSize / 2, y: py + cellSize / 2 },
+            { x: px + cellSize * 1.5, y: py + cellSize / 2 }
+          ];
+        } else {
+          // Vertical domino: two cells stacked
+          centers = [
+            { x: px + cellSize / 2, y: py + cellSize / 2 },
+            { x: px + cellSize / 2, y: py + cellSize * 1.5 }
+          ];
+        }
+
+        centers.forEach(c => {
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+          if (isParticle) {
+            ctx.fillStyle = '#000';
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = Math.max(1, cellSize / 15);
+            ctx.stroke();
+          }
+        });
       } else {
-        ctx.fillStyle = colors[typeColor[d.type]];
+        // Normal domino view with colors
+        // Highlight bad blocks in red during 'badblocks' phase
+        if (phase === 'badblocks' && badDominoes.has(idx)) {
+          ctx.fillStyle = '#FF0000';
+        } else {
+          ctx.fillStyle = colors[typeColor[d.type]];
+        }
+        ctx.fillRect(px, py, w, h);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = Math.max(1, cellSize / 20);
+        ctx.strokeRect(px, py, w, h);
       }
-      ctx.fillRect(px, py, w, h);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = Math.max(1, cellSize / 20);
-      ctx.strokeRect(px, py, w, h);
     });
 
     ctx.restore();
@@ -374,6 +412,7 @@ code:
   document.getElementById('palette-select').addEventListener('change', e => { paletteIndex = parseInt(e.target.value); render(); });
   document.getElementById('rotate-cb').addEventListener('change', e => { rotated = e.target.checked; render(); });
   document.getElementById('granular-cb').addEventListener('change', e => { granular = e.target.checked; updateUI(); });
+  document.getElementById('particles-cb').addEventListener('change', e => { showParticles = e.target.checked; render(); });
 
   window.addEventListener('resize', render);
 
