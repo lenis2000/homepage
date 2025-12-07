@@ -507,11 +507,6 @@ if (window.LOZENGE_WEBGPU) {
       <label for="useRandomSweepsCheckbox" style="font-size: 12px; color: #555;">Random Sweeps</label>
     </div>
     <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="useHeightWeightedCheckbox">
-      <label for="useHeightWeightedCheckbox" style="font-size: 12px; color: #555;">Height-weighted</label>
-    </div>
-    <span class="param-group"><span class="param-label">S</span><input type="number" class="param-input" id="heightSInput" value="10" min="0" max="100" step="1" style="width: 50px;"></span>
   </div>
 </div>
 
@@ -995,8 +990,6 @@ function initLozengeApp() {
             this.setPeriodicKWasm = Module.cwrap('setPeriodicK', null, ['number']);
             this.setUsePeriodicWeightsWasm = Module.cwrap('setUsePeriodicWeights', null, ['number']);
             this.setUseRandomSweepsWasm = Module.cwrap('setUseRandomSweeps', null, ['number']);
-            this.setUseHeightWeightedWasm = Module.cwrap('setUseHeightWeighted', null, ['number']);
-            this.setHeightSWasm = Module.cwrap('setHeightS', null, ['number']);
             this.runCFTPWasm = Module.cwrap('runCFTP', 'number', []);
             this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
             this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
@@ -1048,22 +1041,6 @@ function initLozengeApp() {
         setPeriodicK(k) { this.setPeriodicKWasm(k); }
         setUsePeriodicWeights(use) { this.setUsePeriodicWeightsWasm(use ? 1 : 0); }
         setUseRandomSweeps(use) { this.setUseRandomSweepsWasm(use ? 1 : 0); }
-        setUseHeightWeighted(use) {
-            this.setUseHeightWeightedWasm(use ? 1 : 0);
-            this.useHeightWeighted = use;
-            // Also update WebGPU engine if available
-            if (window.gpuEngine) {
-                window.gpuEngine.setUseHeightWeighted(use);
-            }
-        }
-        setHeightS(S) {
-            this.setHeightSWasm(S);
-            this.heightS = S;
-            // Also update WebGPU engine if available
-            if (window.gpuEngine) {
-                window.gpuEngine.setHeightS(S);
-            }
-        }
 
         initFromTriangles(trianglesMap) {
             // Convert Map to flat array [n, j, type, n, j, type, ...]
@@ -2042,10 +2019,6 @@ function initLozengeApp() {
                 }
                 // Draw nonintersecting paths overlay
                 this.drawPaths(ctx, sim, centerX, centerY, scale);
-                // Draw height S dashed line if height-weighted mode is active
-                if (sim.useHeightWeighted) {
-                    this.drawHeightSLine(ctx, sim, centerX, centerY, scale, isDarkMode);
-                }
             }
 
             // Fill holes with hole color
@@ -2266,65 +2239,6 @@ function initLozengeApp() {
                 ctx.lineTo(c2x, c2y);
                 ctx.stroke();
             }
-        }
-
-        // Draw a dashed horizontal line at height S when height-weighted mode is active
-        // In the triangular lattice, height h corresponds to the n-coordinate of type-0 lozenges
-        // The line runs horizontally at n = S
-        drawHeightSLine(ctx, sim, centerX, centerY, scale, isDarkMode) {
-            const S = sim.heightS || 10;
-
-            // Find the extent of the tiling in j-coordinates
-            let minJ = Infinity, maxJ = -Infinity;
-            for (const dimer of sim.dimers) {
-                if (dimer.bj < minJ) minJ = dimer.bj;
-                if (dimer.bj > maxJ) maxJ = dimer.bj;
-            }
-
-            if (minJ === Infinity) return;  // No dimers
-
-            // Extend slightly beyond the tiling
-            minJ -= 2;
-            maxJ += 2;
-
-            // The n-coordinate represents the horizontal position on the lattice
-            // For a line at height h = S, we draw along n = S
-            // Convert lattice coordinates to world coordinates
-            // worldX = n
-            // worldY = n / sqrt(3) + j * 2 / sqrt(3) = (n + 2j) / sqrt(3)
-            const slope = 1.0 / Math.sqrt(3.0);
-            const deltaC = 2.0 / Math.sqrt(3.0);
-
-            // Draw the line from (S, minJ) to (S, maxJ)
-            const getWorldCoords = (n, j) => ({
-                x: n,
-                y: slope * n + j * deltaC
-            });
-
-            const start = getWorldCoords(S, minJ);
-            const end = getWorldCoords(S, maxJ);
-
-            const [x1, y1] = this.toCanvas(start.x, start.y, centerX, centerY, scale);
-            const [x2, y2] = this.toCanvas(end.x, end.y, centerX, centerY, scale);
-
-            // Draw dashed line
-            ctx.save();
-            ctx.strokeStyle = isDarkMode ? '#ff8888' : '#cc0000';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([8, 4]);
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Draw label "S=<value>" near the line
-            ctx.font = '12px sans-serif';
-            ctx.fillStyle = isDarkMode ? '#ff8888' : '#cc0000';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(`h=S=${S}`, x2 + 5, y2);
-            ctx.restore();
         }
 
         drawDimerView(ctx, sim, centerX, centerY, scale, activeTriangles) {
@@ -3810,8 +3724,6 @@ function initLozengeApp() {
         cftpBtn2: document.getElementById('cftpBtn2'),
         repairBtn: document.getElementById('repairBtn'),
         qInput: document.getElementById('qInput'),
-        useHeightWeightedCheckbox: document.getElementById('useHeightWeightedCheckbox'),
-        heightSInput: document.getElementById('heightSInput'),
         dimerCount: document.getElementById('dimerCount'),
         stepCount: document.getElementById('stepCount'),
         cftpSteps: document.getElementById('cftpSteps'),
@@ -5540,19 +5452,6 @@ function initLozengeApp() {
         const q = parseFloat(e.target.value) || 1;
         e.target.value = Math.max(0, Math.min(10, q));
         sim.setQBias(parseFloat(e.target.value));
-    });
-
-    // Height-weighted controls
-    el.useHeightWeightedCheckbox.addEventListener('change', (e) => {
-        sim.setUseHeightWeighted(e.target.checked);
-        draw();  // Redraw to show/hide the S=h line
-    });
-
-    el.heightSInput.addEventListener('change', (e) => {
-        const S = parseInt(e.target.value) || 10;
-        e.target.value = Math.max(0, Math.min(100, S));
-        sim.setHeightS(parseInt(e.target.value));
-        draw();  // Redraw to update the S=h line position
     });
 
     // Periodic weights controls
