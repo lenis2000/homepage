@@ -507,6 +507,11 @@ if (window.LOZENGE_WEBGPU) {
       <label for="useRandomSweepsCheckbox" style="font-size: 12px; color: #555;">Random Sweeps</label>
     </div>
     <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <input type="checkbox" id="useQRacahCheckbox">
+      <label for="useQRacahCheckbox" style="font-size: 12px; color: #555;">Imaginary q-Racah q<sup>j</sup>+q<sup>2J−j</sup></label>
+    </div>
+    <span class="param-group"><span class="param-label">J</span><input type="number" class="param-input" id="qRacahJInput" value="0" min="-5000" max="5000" step="1" style="width: 60px;"></span>
   </div>
 </div>
 
@@ -1811,6 +1816,9 @@ function initLozengeApp() {
             this.pathWidthPx = 2;
             this.pathMode = 0; // 0=off, 1=types 0+1, 2=types 1+2, 3=types 0+2
             this.showDimerView = false;
+            this.showHeights = false;
+            this.showQRacahLine = false;
+            this.qRacahJ = 0;
             this.showGrid = true;
             this.showBoundaryLengths = false;
             this.showHoleLengths = true;
@@ -2019,6 +2027,8 @@ function initLozengeApp() {
                 }
                 // Draw nonintersecting paths overlay
                 this.drawPaths(ctx, sim, centerX, centerY, scale);
+                // Draw j=J line for Imaginary q-Racah
+                this.drawQRacahLine(ctx, sim, centerX, centerY, scale, isDarkMode);
             }
 
             // Fill holes with hole color
@@ -2169,6 +2179,12 @@ function initLozengeApp() {
             const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount);
             const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
 
+            // Compute heights if showing
+            let heights = null;
+            if (this.showHeights && sim.dimers.length > 0) {
+                heights = computeHeightFunction(sim.dimers);
+            }
+
             for (const dimer of sim.dimers) {
                 const verts = this.getLozengeVertices(dimer);
                 const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
@@ -2183,6 +2199,57 @@ function initLozengeApp() {
                     ctx.lineWidth = outlineWidth;
                     ctx.stroke();
                 }
+            }
+
+            // Draw height labels if enabled
+            if (this.showHeights && heights) {
+                ctx.save();
+                const fontSize = Math.max(8, Math.min(14, scale * 0.4));
+                ctx.font = `bold ${fontSize}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Draw heights at each vertex
+                const drawnVertices = new Set();
+                for (const dimer of sim.dimers) {
+                    const { bn, bj, t } = dimer;
+                    // Get vertex keys for this lozenge
+                    let vertexKeys;
+                    if (t === 0) {
+                        vertexKeys = [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+                    } else if (t === 1) {
+                        vertexKeys = [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+                    } else {
+                        vertexKeys = [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+                    }
+
+                    for (const [n, j] of vertexKeys) {
+                        const key = `${n},${j}`;
+                        if (drawnVertices.has(key)) continue;
+                        drawnVertices.add(key);
+
+                        const h = heights.get(key);
+                        if (h === undefined) continue;
+
+                        // Convert vertex (n,j) to world coords
+                        const slope = 1.0 / Math.sqrt(3.0);
+                        const deltaC = 2.0 / Math.sqrt(3.0);
+                        const worldX = n;
+                        const worldY = slope * n + j * deltaC;
+                        const [cx, cy] = this.toCanvas(worldX, worldY, centerX, centerY, scale);
+
+                        // Draw background circle
+                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, fontSize * 0.7, 0, 2 * Math.PI);
+                        ctx.fill();
+
+                        // Draw height value
+                        ctx.fillStyle = '#000';
+                        ctx.fillText(h.toString(), cx, cy);
+                    }
+                }
+                ctx.restore();
             }
         }
 
@@ -2239,6 +2306,65 @@ function initLozengeApp() {
                 ctx.lineTo(c2x, c2y);
                 ctx.stroke();
             }
+        }
+
+        // Draw dashed horizontal line at j=J for Imaginary q-Racah visualization
+        drawQRacahLine(ctx, sim, centerX, centerY, scale, isDarkMode) {
+            if (!this.showQRacahLine) return;
+            const J = this.qRacahJ;
+
+            // Find the extent of the tiling in world x-coordinates
+            let minX = Infinity, maxX = -Infinity;
+            const slope = 1.0 / Math.sqrt(3.0);
+            const deltaC = 2.0 / Math.sqrt(3.0);
+
+            for (const dimer of sim.dimers) {
+                // Check all vertices of this lozenge
+                const { bn, bj, t } = dimer;
+                let vertexKeys;
+                if (t === 0) {
+                    vertexKeys = [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+                } else if (t === 1) {
+                    vertexKeys = [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+                } else {
+                    vertexKeys = [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+                }
+                for (const [n, j] of vertexKeys) {
+                    const worldX = n;
+                    if (worldX < minX) minX = worldX;
+                    if (worldX > maxX) maxX = worldX;
+                }
+            }
+            if (minX === Infinity) return;
+
+            // Extend slightly beyond
+            minX -= 1;
+            maxX += 1;
+
+            // j is vertical: y = j * deltaC (horizontal line at constant j)
+            const worldY = J * deltaC;
+
+            const [x1, y1] = this.toCanvas(minX, worldY, centerX, centerY, scale);
+            const [x2, y2] = this.toCanvas(maxX, worldY, centerX, centerY, scale);
+
+            // Draw dashed horizontal line
+            ctx.save();
+            ctx.strokeStyle = isDarkMode ? '#ff8888' : '#cc0000';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw label
+            ctx.font = '12px sans-serif';
+            ctx.fillStyle = isDarkMode ? '#ff8888' : '#cc0000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`j=${J}`, x2 + 5, y2);
+            ctx.restore();
         }
 
         drawDimerView(ctx, sim, centerX, centerY, scale, activeTriangles) {
@@ -5452,6 +5578,19 @@ function initLozengeApp() {
         const q = parseFloat(e.target.value) || 1;
         e.target.value = Math.max(0, Math.min(10, q));
         sim.setQBias(parseFloat(e.target.value));
+    });
+
+    // Imaginary q-Racah controls
+    document.getElementById('useQRacahCheckbox').addEventListener('change', (e) => {
+        renderer.showQRacahLine = e.target.checked;
+        draw();
+    });
+
+    document.getElementById('qRacahJInput').addEventListener('change', (e) => {
+        const J = parseInt(e.target.value) || 0;
+        e.target.value = Math.max(-5000, Math.min(5000, J));
+        renderer.qRacahJ = parseInt(e.target.value);
+        draw();
     });
 
     // Periodic weights controls
