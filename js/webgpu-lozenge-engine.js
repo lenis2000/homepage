@@ -20,8 +20,6 @@ class WebGPULozengeEngine {
         this.gridParams = {};
         this.shaderCode = null;
         this.useWeights = false;    // Whether to use per-cell weights
-        this.useQRacah = false;     // Whether to use q-Racah measure
-        this.qRacahJ = 0;           // J parameter for q-Racah: f(j) = q^j + q^(2J-j)
     }
 
     async init() {
@@ -102,12 +100,12 @@ class WebGPULozengeEngine {
         this.weightsBuffer.unmap();
 
         // Create 4 Uniform Buffers (one per color pass) to enable batching
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, use_q_racah, q_racah_J, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
         this.uniformBuffers = [];
         this.bindGroups = [];
         for (let color = 0; color < 4; color++) {
             const uniformBuffer = this.device.createBuffer({
-                size: 48,  // 12 x 4 bytes
+                size: 40,  // 10 x 4 bytes
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             });
             this.uniformBuffers.push(uniformBuffer);
@@ -192,9 +190,9 @@ class WebGPULozengeEngine {
         const workgroupCount = Math.ceil(this.gridBuffer.size / 4 / 64);
 
         // Pre-write uniform data for all 4 colors
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, use_q_racah, q_racah_J, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
         for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(48);
+            const uniformData = new ArrayBuffer(40);
             const intView = new Int32Array(uniformData);
             const floatView = new Float32Array(uniformData);
             const uintView = new Uint32Array(uniformData);
@@ -208,9 +206,7 @@ class WebGPULozengeEngine {
             floatView[6] = qBias;
             uintView[7] = this.useWeights ? 1 : 0;
             uintView[8] = Math.floor(Math.random() * 4294967295);
-            uintView[9] = this.useQRacah ? 1 : 0;
-            intView[10] = this.qRacahJ;
-            uintView[11] = 0;  // padding
+            uintView[9] = 0;  // padding
 
             this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
         }
@@ -401,11 +397,11 @@ class WebGPULozengeEngine {
         });
 
         // Create 4 CFTP uniform buffers (one per color pass for batching)
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, use_q_racah, q_racah_J, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
         this.cftpUniformBuffers = [];
         for (let color = 0; color < 4; color++) {
             this.cftpUniformBuffers.push(this.device.createBuffer({
-                size: 48,  // 12 x 4 bytes
+                size: 40,  // 10 x 4 bytes
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             }));
         }
@@ -518,9 +514,9 @@ class WebGPULozengeEngine {
         const useWeights = this.cftpUseWeights ? 1 : 0;
 
         // Pre-write uniform data for all 4 colors
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, use_q_racah, q_racah_J, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
         for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(48);
+            const uniformData = new ArrayBuffer(40);
             const intView = new Int32Array(uniformData);
             const floatView = new Float32Array(uniformData);
             const uintView = new Uint32Array(uniformData);
@@ -534,9 +530,7 @@ class WebGPULozengeEngine {
             floatView[6] = qBias;
             uintView[7] = useWeights;
             uintView[8] = this.cftpNumCells;
-            uintView[9] = this.useQRacah ? 1 : 0;
-            intView[10] = this.qRacahJ;
-            uintView[11] = 0;  // padding
+            uintView[9] = 0;  // padding
 
             this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
         }
@@ -770,7 +764,7 @@ class WebGPULozengeEngine {
         this.fluctUniformBuffers = [];
         for (let color = 0; color < 4; color++) {
             this.fluctUniformBuffers.push(this.device.createBuffer({
-                size: 48,  // 12 x 4 bytes (with q-Racah params)
+                size: 40,
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             }));
         }
@@ -875,7 +869,7 @@ class WebGPULozengeEngine {
 
         // Pre-write uniform data for all 4 colors
         for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(48);
+            const uniformData = new ArrayBuffer(40);
             const intView = new Int32Array(uniformData);
             const floatView = new Float32Array(uniformData);
             const uintView = new Uint32Array(uniformData);
@@ -889,9 +883,7 @@ class WebGPULozengeEngine {
             floatView[6] = qBias;
             uintView[7] = useWeights;
             uintView[8] = this.fluctNumCells;
-            uintView[9] = this.useQRacah ? 1 : 0;
-            intView[10] = this.qRacahJ;
-            uintView[11] = 0;
+            uintView[9] = 0;
 
             this.device.queue.writeBuffer(this.fluctUniformBuffers[color], 0, uniformData);
         }

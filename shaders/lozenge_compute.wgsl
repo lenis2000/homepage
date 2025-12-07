@@ -12,9 +12,7 @@ struct SimulationParams {
     q_bias: f32,        // Global q bias (used when use_weights=0)
     use_weights: u32,   // 0 = use global q_bias, 1 = use per-cell weights buffer
     rand_seed: u32,
-    use_q_racah: u32,   // 0 = use q-volume, 1 = use q-Racah measure
-    q_racah_J: i32,     // J parameter for q-Racah: f(j) = q^j + q^(2J-j)
-    _pad: u32,          // Padding for alignment
+    _pad: u32,          // Padding to 40 bytes (alignment)
 }
 
 @group(0) @binding(0) var<storage, read_write> grid: array<i32>;
@@ -178,29 +176,14 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
         q = params.q_bias;
     }
 
-    // Acceptance probability based on measure type
+    // Acceptance probability based on q
+    // probUp = q / (1+q) for volume increase
+    // probDown = 1 / (1+q) for volume decrease
     var accept_prob: f32;
-    if (params.use_q_racah != 0u) {
-        // q-Racah measure: f(j) = q^j + q^(2J-j)
-        // Accept with probability min(1, f(j_new) / f(j))
-        let J = params.q_racah_J;
-        let fj = pow(q, f32(j)) + pow(q, f32(2*J - j));
-        if (volume_change > 0) {
-            let fjp1 = pow(q, f32(j+1)) + pow(q, f32(2*J - j - 1));
-            accept_prob = min(1.0, fjp1 / fj);
-        } else {
-            let fjm1 = pow(q, f32(j-1)) + pow(q, f32(2*J - j + 1));
-            accept_prob = min(1.0, fjm1 / fj);
-        }
+    if (volume_change > 0) {
+        accept_prob = q / (1.0 + q);
     } else {
-        // Standard q-volume measure
-        // probUp = q / (1+q) for volume increase
-        // probDown = 1 / (1+q) for volume decrease
-        if (volume_change > 0) {
-            accept_prob = q / (1.0 + q);
-        } else {
-            accept_prob = 1.0 / (1.0 + q);
-        }
+        accept_prob = 1.0 / (1.0 + q);
     }
 
     // RNG check
