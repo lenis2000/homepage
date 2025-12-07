@@ -217,6 +217,22 @@ code:
       <li><strong>High precision</strong>: Uses 50-digit arithmetic (slower but stable for q close to 1)</li>
     </ul>
     <p>The simulation outputs interlacing partitions that encode the domino tiling.</p>
+    <p style="margin-top: 10px;"><strong>Visualization Modes:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><strong>Dominoes</strong>: Standard flat tiling view with four colors for domino types.</li>
+      <li><strong>Dimer</strong>: Displays the underlying matching on the dual graph as edges.</li>
+      <li><strong>Double Dimer</strong>: Superimposes two independent samples to form loops. Includes a <strong>Min Loop Size</strong> filter.</li>
+      <li><strong>Fluctuations</strong>: Visualizes height difference between two samples, approximating the Gaussian Free Field.</li>
+      <li><strong>3D</strong>: Renders the tiling as a stepped surface in 3D space. Supports rotation, perspective/orthographic toggle, and multiple visual presets.</li>
+    </ul>
+    <p><strong>View Options:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><strong>Rotate 45°</strong>: Rotate the canvas view for alternative perspective.</li>
+      <li><strong>Particles</strong>: Show lattice points forming the Schur/q-Whittaker process.</li>
+      <li><strong>Color Palettes</strong>: Multiple palettes plus custom color pickers.</li>
+      <li><strong>Canvas/SVG</strong>: Toggle between renderers.</li>
+    </ul>
+    <p><strong>Export:</strong> PNG and PDF export with adjustable quality.</p>
     <p style="margin-top: 10px;"><strong>References:</strong></p>
     <ul style="margin: 5px 0;">
       <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — K. Matveev, L. Petrov, <i>q-randomized Robinson-Schensted-Knuth correspondences and random polymers</i></li>

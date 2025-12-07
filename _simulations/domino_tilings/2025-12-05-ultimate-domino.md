@@ -22,10 +22,12 @@ code:
 <ul>
   <li><strong>Draw mode</strong>: Click or drag on the grid to add cells to your region</li>
   <li><strong>Erase mode</strong>: Remove cells from your region (or hold Shift while drawing)</li>
-  <li><strong>Lasso</strong>: Click points to define a polygon, then fill or erase the interior</li>
+  <li><strong>Lasso</strong>: Click points to define a polygon, then fill or erase the interior. Supports <strong>Snap to Grid</strong> for precise lattice alignment.</li>
   <li><strong>Rectangle/Aztec Diamond</strong>: Quick presets for common shapes</li>
   <li><strong>Scale Up/Down</strong>: Double or halve the region size</li>
+  <li><strong>Smooth Scale Up</strong>: Scale preserving boundary slopes (Aztec→Aztec)</li>
   <li><strong>Make Tileable</strong>: Automatically add cells to make an invalid region tileable</li>
+  <li><strong>Undo/Redo</strong>: Full history support for shape modifications</li>
 </ul>
 
 <p>A region is <strong>tileable</strong> if it has equal numbers of black and white cells (checkerboard coloring) and admits a perfect matching. The <strong>Hopcroft-Karp algorithm</strong> verifies this and finds an initial tiling.</p>
@@ -36,7 +38,27 @@ code:
   <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> produces an <em>exact</em> sample from the uniform distribution using monotone coupling on height functions. No burn-in needed. <em>Only available for simply-connected regions (no holes).</em></li>
 </ul>
 
-<p><strong>Color scheme:</strong> Four colors distinguish four domino types by orientation (horizontal/vertical) and starting cell parity (black/white on the checkerboard).</p>
+<p><strong>Visualization Modes:</strong></p>
+<ul>
+  <li><strong>2D Domino</strong>: Standard flat tiling view with four colors for domino types.</li>
+  <li><strong>2D Dimer</strong>: Displays the underlying matching on the dual graph as edges.</li>
+  <li><strong>3D Height Function</strong>: Renders the tiling as a stepped surface in 3D space. Supports rotation, panning, zooming, perspective/orthographic toggle, and multiple visual presets (Default, Clean, Mathematical, Dramatic, Playful).</li>
+  <li><strong>Color Palettes</strong>: Multiple color schemes available, with permutation support to cycle colors.</li>
+</ul>
+
+<p><strong>Sampling & Analysis:</strong></p>
+<ul>
+  <li><strong>Double Dimer</strong>: Superimposes two independent CFTP samples to form loops. Includes a <strong>Min Loop Size</strong> filter to analyze loop statistics.</li>
+  <li><strong>Fluctuations</strong>: Visualizes the height difference between two perfect samples (scaled by √2), approximating the Gaussian Free Field.</li>
+</ul>
+
+<p><strong>Data Export:</strong></p>
+<ul>
+  <li><strong>PNG</strong>: Export high-quality images with adjustable quality settings.</li>
+  <li><strong>JSON</strong>: Import/Export the region shape for sharing or later use.</li>
+</ul>
+
+<p><strong>Performance:</strong> The simulation runs entirely in your browser. When available, it uses <strong>WebGPU</strong> compute shaders for parallel CFTP and Double Dimer sampling. On systems without WebGPU, it falls back to <strong>WebAssembly</strong>.</p>
 
 </div>
 </details>
