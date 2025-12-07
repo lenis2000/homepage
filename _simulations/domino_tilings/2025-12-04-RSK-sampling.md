@@ -372,24 +372,187 @@ code:
     <div id="stopped-decision">Stopping decision: —</div>
   </div>
 
-  <!-- Growth Diagram Cell Lattice (precomputed Bernoulli values) -->
-  <div class="detailed-viz-panel" style="margin-bottom: 15px;">
-    <h4>Growth Diagram Cells (Precomputed Bernoulli Bits)</h4>
-    <canvas id="cell-lattice-canvas" style="height: 200px;"></canvas>
-    <div id="cell-lattice-info" class="partition-display">Staircase cells with precomputed bits: <span style="color: #2e7d32;">&#9632; bit=1</span> | <span style="color: #c62828;">&#9633; bit=0</span> | <span style="background: #ffeb3b; padding: 0 4px;">current</span></div>
-  </div>
-
-  <!-- Two-Panel Visualization -->
+  <!-- Row 1: Growth Diagram Cells and Island Processing side by side -->
   <div id="detailed-visualizations">
     <div class="detailed-viz-panel">
-      <h4>Young Diagrams: &kappa;, &lambda;, &mu; &rarr; &nu;</h4>
-      <canvas id="young-diagram-canvas"></canvas>
-      <div id="partition-labels" class="partition-display"></div>
+      <h4>Growth Diagram Cells (Precomputed Bernoulli Bits)</h4>
+      <canvas id="cell-lattice-canvas" style="height: 200px;"></canvas>
+      <div id="cell-lattice-info" class="partition-display">Staircase cells: <span style="color: #2e7d32;">&#9632; bit=1</span> | <span style="color: #c62828;">&#9633; bit=0</span> | <span style="background: #ffeb3b; padding: 0 4px;">current</span></div>
     </div>
     <div class="detailed-viz-panel">
-      <h4>Current Aztec Diamond (size = completed anti-diagonals)</h4>
-      <canvas id="current-aztec-canvas"></canvas>
-      <div id="current-aztec-info" class="partition-display"></div>
+      <h4>Island Processing Details</h4>
+      <canvas id="island-canvas" style="height: 200px;"></canvas>
+      <div id="island-detail-info" class="partition-display">Shows islands, f<sub>k</sub> stopping probability, g<sub>s</sub> sequential sampling</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Domino Shuffling (Figure 10 style) -->
+  <div class="detailed-viz-panel" style="margin-top: 15px;">
+    <h4>Domino Shuffling / VH Bijection (arXiv:1407.3764 Fig. 10)
+      <span style="float: right; font-size: 0.85em; font-weight: normal;">
+        <button id="shuffle-animate-btn" style="padding: 2px 8px; font-size: 11px;">&#9654; Animate</button>
+        <button id="shuffle-reset-btn" style="padding: 2px 8px; font-size: 11px;">Reset</button>
+        <select id="shuffle-phase-select" style="font-size: 11px; padding: 2px;">
+          <option value="0">Phase 0: Initial</option>
+          <option value="1">Phase 1: Dimers</option>
+          <option value="2">Phase 2: Blocks</option>
+          <option value="3">Phase 3: Slide</option>
+          <option value="4">Phase 4: Final</option>
+        </select>
+      </span>
+    </h4>
+    <canvas id="shuffling-canvas" style="height: 380px;"></canvas>
+    <div id="shuffling-info" class="partition-display">
+      <b>Phases:</b> 0: Initial partitions | 1: Form dimers (&lambda;-&kappa; blue, &kappa;-&mu; orange) | 2: Identify blocks (B markers) | 3: Slide dimers &rarr; AFTER | 4: Final result with &Delta; indicators
+    </div>
+  </div>
+
+  <!-- Row 3: Current Aztec Diamond (built from completed anti-diagonals) -->
+  <div class="detailed-viz-panel" style="margin-top: 15px;">
+    <h4>Current Aztec Diamond</h4>
+    <canvas id="current-aztec-canvas" style="height: 400px;"></canvas>
+    <div id="current-aztec-info" class="partition-display">After completing each anti-diagonal, the corresponding Aztec diamond is shown</div>
+  </div>
+
+  <!-- Row 4: Mathematical Description of Domino Shuffling -->
+  <div class="detailed-viz-panel" style="margin-top: 15px; background: #fffef5;">
+    <h4>Classical Domino Shuffling Algorithm (EKLP 1992)</h4>
+    <div style="padding: 10px; font-size: 0.95em; line-height: 1.6;">
+
+      <p><strong>Setup:</strong> The Aztec diamond $\mathcal{A}_n$ of order $n$ consists of all unit squares $[i, i+1] \times [j, j+1]$ with $|i| + |j| < n$. It contains $2n^2$ unit squares and is tiled by $n^2$ dominoes.</p>
+
+      <p><strong>Domino Types:</strong> Each domino is classified by orientation and parity:
+      <ul style="margin: 5px 0 10px 20px;">
+        <li><strong>North (N):</strong> vertical domino with black square on top</li>
+        <li><strong>South (S):</strong> vertical domino with white square on top</li>
+        <li><strong>East (E):</strong> horizontal domino with black square on right</li>
+        <li><strong>West (W):</strong> horizontal domino with white square on right</li>
+      </ul>
+      </p>
+
+      <p><strong>The Shuffling Map $\mathcal{A}_n \to \mathcal{A}_{n+1}$:</strong></p>
+
+      <ol style="margin-left: 20px;">
+        <li><strong>Deletion:</strong> Find all $2 \times 2$ blocks containing exactly two dominoes that form either:
+          <ul>
+            <li>Two horizontal dominoes stacked (one N, one S), or</li>
+            <li>Two vertical dominoes side-by-side (one E, one W)</li>
+          </ul>
+          These are called <em>bad blocks</em>. Delete all dominoes in bad blocks.
+        </li>
+
+        <li><strong>Sliding:</strong> Each remaining domino slides outward by one unit in its natural direction:
+          $$\begin{aligned}
+          \text{N dominoes} &\to \text{slide up (} +y \text{)} \\
+          \text{S dominoes} &\to \text{slide down (} -y \text{)} \\
+          \text{E dominoes} &\to \text{slide right (} +x \text{)} \\
+          \text{W dominoes} &\to \text{slide left (} -x \text{)}
+          \end{aligned}$$
+        </li>
+
+        <li><strong>Creation:</strong> After sliding, empty $2 \times 2$ blocks appear. Each block is filled with exactly one of two choices:
+          <ul>
+            <li>Two horizontal dominoes (N on top, S on bottom), or</li>
+            <li>Two vertical dominoes (W on left, E on right)</li>
+          </ul>
+          For uniform random tilings, each choice is made independently with probability $\tfrac{1}{2}$.
+        </li>
+      </ol>
+
+      <p><strong>Key Properties:</strong>
+      <ul style="margin: 5px 0 10px 20px;">
+        <li>The map is a $2^{n+1}$-to-1 correspondence from tilings of $\mathcal{A}_{n+1}$ to tilings of $\mathcal{A}_n$</li>
+        <li>Uniform measure on $\mathcal{A}_n$ lifts to uniform measure on $\mathcal{A}_{n+1}$</li>
+        <li>Starting from the unique tiling of $\mathcal{A}_0$ and shuffling $n$ times samples uniformly from $\mathcal{A}_n$</li>
+      </ul>
+      </p>
+
+      <p><strong>Reference:</strong> <a href="https://arxiv.org/abs/math/9201305" target="_blank">arXiv:math/9201305</a> &mdash; Elkies, Kuperberg, Larsen, Propp, <em>"Alternating-Sign Matrices and Domino Tilings"</em> (1992).</p>
+
+      <hr style="margin: 20px 0; border: none; border-top: 2px solid #1976d2;">
+
+      <h4 style="color: #1976d2;">q-Whittaker Deformation (q &gt; 0)</h4>
+
+      <p><strong>Key Insight:</strong> The q-deformation modifies <em>only Step 3 (Creation)</em>. Steps 1 and 2 remain unchanged.</p>
+
+      <p>In the classical case, block-filling is deterministic: geometric constraints force a unique cascade. In the q-Whittaker case, particles have <strong>probabilistic "stickiness"</strong>&mdash;even when a particle <em>could</em> move, it might stay with probability depending on $q$.</p>
+
+      <p><strong>Step 3': q-Weighted Creation</strong></p>
+
+      <p>Empty 2&times;2 blocks form <em>islands</em>&mdash;consecutive positions where new dominoes must be placed. For each island $[k, m]$:</p>
+
+      <ol style="margin-left: 20px;">
+        <li><strong>Sample Bernoulli bit:</strong> $B \sim \text{Bernoulli}\left(\dfrac{x_i y_j}{1 + x_i y_j}\right)$</li>
+
+        <li><strong>Special case:</strong> If $B = 1$ and $k = 0$, all particles jump (fill all blocks with same orientation).</li>
+
+        <li><strong>Otherwise, sample stopping position:</strong>
+          <ul>
+            <li>Compute $f_k = \dfrac{1 - q^{\lambda_k - \bar\nu_k + 1}}{1 - q^{\bar\nu_{k-1} - \bar\nu_k + 1}}$</li>
+            <li>Sample $U \sim \text{Uniform}[0,1]$. If $U &lt; f_k$: <strong>stop at $k$</strong></li>
+            <li>Else, for $s = k+1, \ldots, m$:
+              <ul>
+                <li>Compute $g_s = 1 - q^{\lambda_s - \mu_s + 1}$</li>
+                <li>Sample $U \sim \text{Uniform}[0,1]$. If $U &lt; g_s$: <strong>stop at $s$</strong></li>
+              </ul>
+            </li>
+            <li>If no stop occurs: <strong>all particles jump</strong></li>
+          </ul>
+        </li>
+
+        <li><strong>Fill blocks based on stopping position $s$:</strong>
+          <ul>
+            <li>Blocks at positions $k, \ldots, s-1$: orientation A (e.g., vertical EW pair)</li>
+            <li>Block at position $s$: orientation B (opposite, e.g., horizontal NS pair)</li>
+            <li>Blocks at positions $s+1, \ldots, m$: orientation A</li>
+          </ul>
+        </li>
+      </ol>
+
+      <p><strong>Domino Orientation Mapping:</strong> The stopped particle creates a <em>domain wall</em>:</p>
+      <div style="font-family: monospace; background: #f5f5f5; padding: 8px; margin: 10px 0; border-radius: 4px;">
+        Block: &nbsp; k &nbsp;&nbsp; k+1 &nbsp; ... &nbsp; s-1 &nbsp;&nbsp; <span style="color: #c62828; font-weight: bold;">s</span> &nbsp;&nbsp;&nbsp; s+1 &nbsp; ... &nbsp; m<br>
+        Fill: &nbsp;&nbsp; [A] &nbsp; [A] &nbsp; ... &nbsp; [A] &nbsp; <span style="color: #c62828; font-weight: bold;">[B]</span> &nbsp; [A] &nbsp; ... &nbsp; [A]
+      </div>
+
+      <p><strong>Physical Interpretation:</strong></p>
+      <table style="border-collapse: collapse; margin: 10px 0; font-size: 0.9em;">
+        <tr style="background: #e3f2fd;">
+          <th style="border: 1px solid #ccc; padding: 5px 10px;">$q$ value</th>
+          <th style="border: 1px solid #ccc; padding: 5px 10px;">Behavior</th>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q = 0$</td>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">Free sliding; deterministic cascade; uniform measure</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q$ small</td>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">Slight stickiness; close to uniform</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q \approx 0.5$</td>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">Moderate stickiness; visible q-deformation</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q \to 1$</td>
+          <td style="border: 1px solid #ccc; padding: 5px 10px;">High stickiness; particles rarely move; frozen regions</td>
+        </tr>
+      </table>
+
+      <p><strong>Limit Behaviors:</strong>
+      <ul style="margin: 5px 0 10px 20px;">
+        <li>$q \to 0$: Recovers classical EKLP shuffling (uniform random tilings)</li>
+        <li>$q \to 1$: Particles freeze; tiling concentrates on deterministic "frozen" configuration</li>
+      </ul>
+      </p>
+
+      <p><strong>References:</strong>
+      <ul style="margin: 5px 0 10px 20px;">
+        <li><a href="https://arxiv.org/abs/1407.3764" target="_blank">arXiv:1407.3764</a> &mdash; Betea, Bouttier, Nejjar, Vuletić, <em>"The free boundary Schur process and applications I"</em></li>
+        <li><a href="https://arxiv.org/abs/1504.00666" target="_blank">arXiv:1504.00666</a> &mdash; Matveev, Petrov, <em>"q-randomized Robinson-Schensted-Knuth correspondences and random polymers"</em></li>
+      </ul>
+      </p>
+
     </div>
   </div>
 </div>
@@ -3303,6 +3466,11 @@ async function initializeApp() {
   let detailedState = null;
   let autoPlayInterval = null;
 
+  // Animation state for shuffle visualization
+  let shuffleAnimationPhase = 4;  // 0=initial, 1=dimers, 2=blocks, 3=slide, 4=final
+  let shuffleAnimationInterval = null;
+  let shuffleAnimationProgress = 0;  // 0-1 for smooth transitions
+
   // Elements to hide/show when toggling detailed mode
   const elementsToHideInDetailedMode = [
     '#zoom-controls-container',
@@ -3786,100 +3954,6 @@ async function initializeApp() {
     return extractOutputPartitionsForSize(state, state.n);
   }
 
-  // Draw Young diagram
-  function drawYoungDiagram(ctx, partition, x, y, boxSize, fillColor, label) {
-    ctx.fillStyle = '#333';
-    ctx.font = '11px monospace';
-    ctx.fillText(label + ' = ' + partitionToString(partition), x, y - 5);
-
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-
-    const parts = partition || [];
-    for (let row = 0; row < parts.length; row++) {
-      for (let col = 0; col < parts[row]; col++) {
-        ctx.fillRect(x + col * boxSize, y + row * boxSize, boxSize, boxSize);
-        ctx.strokeRect(x + col * boxSize, y + row * boxSize, boxSize, boxSize);
-      }
-    }
-  }
-
-  // Draw Young diagrams panel
-  function drawYoungDiagramsPanel() {
-    const canvas = document.getElementById('young-diagram-canvas');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-
-    // Set canvas size
-    canvas.width = canvas.clientWidth * dpr;
-    canvas.height = canvas.clientHeight * dpr;
-    ctx.scale(dpr, dpr);
-
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-
-    ctx.clearRect(0, 0, w, h);
-
-    if (!detailedState || !detailedState.lastVHDetails) {
-      ctx.fillStyle = '#666';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('Click "Next" to start stepping', 20, h / 2);
-      return;
-    }
-
-    const d = detailedState.lastVHDetails;
-    const boxSize = Math.min(12, Math.floor(Math.min(w, h) / 30));
-    const margin = 10;
-    const halfW = w / 2;
-    const halfH = h / 2;
-
-    // Draw 4 partitions in 2x2 layout
-    // κ (top-left), λ (top-right), μ (bottom-left), ν (bottom-right)
-    drawYoungDiagram(ctx, d.kappa, margin, margin + 15, boxSize, '#ffdddd', 'κ');
-    drawYoungDiagram(ctx, d.lam, halfW + margin, margin + 15, boxSize, '#ddffdd', 'λ');
-    drawYoungDiagram(ctx, d.mu, margin, halfH + 15, boxSize, '#ddddff', 'μ');
-    drawYoungDiagram(ctx, d.nu, halfW + margin, halfH + 15, boxSize, '#ffffdd', 'ν');
-
-    // Draw arrows showing transitions
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-
-    // κ -> λ (horizontal)
-    ctx.beginPath();
-    ctx.moveTo(halfW - 20, margin + 40);
-    ctx.lineTo(halfW + 5, margin + 40);
-    ctx.stroke();
-
-    // κ -> μ (vertical)
-    ctx.beginPath();
-    ctx.moveTo(margin + 40, halfH - 20);
-    ctx.lineTo(margin + 40, halfH + 5);
-    ctx.stroke();
-
-    // λ -> ν, μ -> ν
-    ctx.beginPath();
-    ctx.moveTo(halfW + margin + 40, halfH - 20);
-    ctx.lineTo(halfW + margin + 40, halfH + 5);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(halfW - 20, halfH + 40);
-    ctx.lineTo(halfW + 5, halfH + 40);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-
-    // Update partition labels
-    const labelsDiv = document.getElementById('partition-labels');
-    if (labelsDiv) {
-      labelsDiv.innerHTML = `κ=${partitionToString(d.kappa)} | λ=${partitionToString(d.lam)}<br>μ=${partitionToString(d.mu)} | ν=${partitionToString(d.nu)}`;
-    }
-  }
-
   // Draw cell lattice panel (growth diagram with precomputed Bernoulli bits)
   function drawCellLatticePanel() {
     const canvas = document.getElementById('cell-lattice-canvas');
@@ -4046,6 +4120,7 @@ async function initializeApp() {
   // Extract output partitions for a smaller Aztec diamond of given size
   // Following the paper arXiv:1407.3764: the boundary path goes from (0, k) to (k, 0)
   // along the staircase boundary, visiting 2k+1 positions
+  // IMPORTANT: Path is traced (0,k)→(k,0) then REVERSED to match C++ output order
   function extractOutputPartitionsForSize(state, size) {
     if (size <= 0) return [[]];
 
@@ -4069,12 +4144,14 @@ async function initializeApp() {
       }
     }
 
-    return partitions;
+    // CRITICAL: Reverse to match the C++ code's output order
+    // The C++ extracts path (0,n)→(n,0) then reverses it
+    return partitions.reverse();
   }
 
-  // Draw current Aztec diamond panel (size = completedAntiDiags)
-  function drawCurrentAztecPanel() {
-    const canvas = document.getElementById('current-aztec-canvas');
+  // Draw domino shuffling panel (Figure 10 style from arXiv:1407.3764)
+  function drawShufflingPanel() {
+    const canvas = document.getElementById('shuffling-canvas');
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
@@ -4089,6 +4166,621 @@ async function initializeApp() {
 
     ctx.clearRect(0, 0, w, h);
 
+    if (!detailedState || !detailedState.lastVHDetails) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Click "Next" to see domino shuffling visualization', 20, h / 2);
+      return;
+    }
+
+    const d = detailedState.lastVHDetails;
+    const vh = d.vhDetails;
+
+    // Get partitions
+    const kappa = d.kappa || [];
+    const lambda = d.lam || [];
+    const mu = d.mu || [];
+    const nu = d.nu || [];
+
+    // Find range for display
+    let minPos = -5, maxPos = 5;
+    [kappa, lambda, mu, nu].forEach(parts => {
+      for (let i = 0; i < (parts.length || 0) + 3; i++) {
+        const pos = (parts[i] || 0) - i;
+        minPos = Math.min(minPos, pos - 1);
+        maxPos = Math.max(maxPos, pos + 1);
+      }
+    });
+
+    const cellWidth = Math.min(25, (w - 100) / (maxPos - minPos + 1));
+    const rowHeight = 35;
+    const startX = 80;
+    const startY = 50;
+
+    // Animation phase (0=initial, 1=dimers, 2=blocks, 3=slide, 4=final)
+    const phase = shuffleAnimationPhase;
+    const phaseNames = ['Initial Partitions', 'Dimer Formation', 'Block Identification', 'Dimer Sliding', 'Final Result'];
+
+    // Draw phase indicator
+    ctx.fillStyle = '#1976d2';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Phase ${phase}: ${phaseNames[phase]}`, 10, 15);
+
+    // Draw progress bar
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(150, 8, 100, 10);
+    ctx.fillStyle = '#1976d2';
+    ctx.fillRect(150, 8, (phase / 4) * 100, 10);
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(150, 8, 100, 10);
+
+    // Helper to get Maya positions
+    function getMayaParticles(parts, count) {
+      const particles = new Set();
+      for (let i = 0; i < count; i++) {
+        particles.add((parts[i] || 0) - i);
+      }
+      return particles;
+    }
+
+    // Draw title sections
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('BEFORE (κ ≺\' λ, κ ≺ μ):', 10, startY - 15);
+    if (phase >= 3) {
+      ctx.fillText('AFTER (λ ≺ ν, μ ≺\' ν):', 10, startY + 4 * rowHeight + 25);
+    }
+
+    // === BEFORE section (3 rows: λ, κ, μ) ===
+    const beforeY = startY;
+    const beforeLabels = ['λ', 'κ', 'μ'];
+    const beforeParts = [lambda, kappa, mu];
+    const beforeColors = ['#ddffdd', '#ffdddd', '#ddddff'];
+
+    // Compute Maya diagrams
+    const lambdaMaya = getMayaParticles(lambda, 10);
+    const kappaMaya = getMayaParticles(kappa, 10);
+    const muMaya = getMayaParticles(mu, 10);
+
+    // Draw before rows
+    beforeParts.forEach((parts, rowIdx) => {
+      const y = beforeY + rowIdx * rowHeight;
+      const maya = [lambdaMaya, kappaMaya, muMaya][rowIdx];
+
+      // Label
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 14px serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(beforeLabels[rowIdx] + ':', startX - 10, y + 8);
+
+      // Background
+      ctx.fillStyle = beforeColors[rowIdx];
+      ctx.fillRect(startX, y - 8, (maxPos - minPos + 1) * cellWidth, 22);
+
+      // Draw particles/holes
+      for (let pos = minPos; pos <= maxPos; pos++) {
+        const x = startX + (pos - minPos + 0.5) * cellWidth;
+        const isParticle = maya.has(pos);
+
+        ctx.beginPath();
+        ctx.arc(x, y + 3, 5, 0, 2 * Math.PI);
+        if (isParticle) {
+          ctx.fillStyle = '#333';
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+          ctx.strokeStyle = '#999';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    });
+
+    // Draw dimers between rows (λ-κ for particles, κ-μ for holes) - Phase 1+
+    if (phase >= 1) {
+      ctx.lineWidth = 2;
+      for (let pos = minPos; pos <= maxPos; pos++) {
+        const x = startX + (pos - minPos + 0.5) * cellWidth;
+        const y1 = beforeY + 3;      // λ row
+        const y2 = beforeY + rowHeight + 3;  // κ row
+        const y3 = beforeY + 2 * rowHeight + 3;  // μ row
+
+        // λ-κ particle matching (blue dimers)
+        if (lambdaMaya.has(pos) && kappaMaya.has(pos)) {
+          ctx.strokeStyle = '#2196f3';
+          ctx.beginPath();
+          ctx.moveTo(x, y1 + 5);
+          ctx.lineTo(x, y2 - 5);
+          ctx.stroke();
+        }
+
+        // κ-μ hole matching (orange dimers)
+        if (!kappaMaya.has(pos) && !muMaya.has(pos)) {
+          ctx.strokeStyle = '#ff9800';
+          ctx.beginPath();
+          ctx.moveTo(x, y2 + 5);
+          ctx.lineTo(x, y3 - 5);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // === Show islands, bit, and q-probabilities ===
+    const islandY = beforeY + 3 * rowHeight + 5;
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+
+    const islandStr = vh.islands.length > 0
+      ? vh.islands.map(isl => `[${isl.start},${isl.end}]`).join(', ')
+      : 'none';
+    ctx.fillText(`Islands: ${islandStr}  |  Bit B = ${d.bit}  |  q = ${detailedState.q}`, startX, islandY);
+
+    // Show q-probability details
+    let probY = islandY + 16;
+    const q = detailedState.q;
+    if (q === 0) {
+      ctx.fillStyle = '#666';
+      ctx.fillText('q=0 (Schur): deterministic - find first λ_i > μ_i - 1 in island', startX, probY);
+    } else if (vh.islands.length > 0) {
+      // Show f_k
+      if (vh.fValues.length > 0) {
+        const f = vh.fValues[0];
+        ctx.fillStyle = '#2e7d32';
+        ctx.fillText(`f_${f.k} = (1-q^${f.delta_lam})/(1-q^${f.delta_nu}) = ${f.f_k.toFixed(4)}  [U=${f.u.toFixed(4)} → ${f.stopped ? 'STOP' : 'pass'}]`, startX, probY);
+        probY += 14;
+      }
+      // Show g_s values
+      if (vh.gValues.length > 0 && vh.gValues[0].values.length > 0) {
+        const gStr = vh.gValues[0].values.map(g =>
+          `g_${g.s}=${g.g_s.toFixed(3)}[${g.stopped ? 'STOP' : 'pass'}]`
+        ).join('  ');
+        ctx.fillStyle = '#ff6f00';
+        ctx.fillText(gStr, startX, probY);
+        probY += 14;
+      }
+    }
+
+    // === AFTER section (3 rows: λ, ν, μ) - Phase 3+ ===
+    const afterY = startY + 4.5 * rowHeight + 45;
+    const nuMaya = getMayaParticles(nu, 10);
+
+    if (phase >= 3) {
+      const afterLabels = ['λ', 'ν', 'μ'];
+      const afterMayas = [lambdaMaya, nuMaya, muMaya];
+      const afterColors = ['#ddffdd', '#ffffdd', '#ddddff'];
+
+      // Draw after rows
+      afterMayas.forEach((maya, rowIdx) => {
+        const y = afterY + rowIdx * rowHeight;
+
+        // Label
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 14px serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(afterLabels[rowIdx] + ':', startX - 10, y + 8);
+
+        // Background
+        ctx.fillStyle = afterColors[rowIdx];
+        ctx.fillRect(startX, y - 8, (maxPos - minPos + 1) * cellWidth, 22);
+
+        // Draw particles/holes
+        for (let pos = minPos; pos <= maxPos; pos++) {
+          const x = startX + (pos - minPos + 0.5) * cellWidth;
+          const isParticle = maya.has(pos);
+
+          ctx.beginPath();
+          ctx.arc(x, y + 3, 5, 0, 2 * Math.PI);
+          if (isParticle) {
+            ctx.fillStyle = '#333';
+            ctx.fill();
+          } else {
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      });
+
+      // Draw dimers for after (λ-ν particles, ν-μ holes) - Phase 4
+      if (phase >= 4) {
+        ctx.lineWidth = 2;
+        for (let pos = minPos; pos <= maxPos; pos++) {
+          const x = startX + (pos - minPos + 0.5) * cellWidth;
+          const y1 = afterY + 3;      // λ row
+          const y2 = afterY + rowHeight + 3;  // ν row
+          const y3 = afterY + 2 * rowHeight + 3;  // μ row
+
+          // λ-ν particle matching (blue)
+          if (lambdaMaya.has(pos) && nuMaya.has(pos)) {
+            ctx.strokeStyle = '#2196f3';
+            ctx.beginPath();
+            ctx.moveTo(x, y1 + 5);
+            ctx.lineTo(x, y2 - 5);
+            ctx.stroke();
+          }
+
+          // ν-μ hole matching (orange)
+          if (!nuMaya.has(pos) && !muMaya.has(pos)) {
+            ctx.strokeStyle = '#ff9800';
+            ctx.beginPath();
+            ctx.moveTo(x, y2 + 5);
+            ctx.lineTo(x, y3 - 5);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // === Enhancement 1: Block Position Highlighting === (Phase 2+)
+    // Draw block indicators in the BEFORE section
+    // κ-block: indices where μ_{i+1} < λ_i ≤ μ_i  (particle can jump or not)
+    // Mark blocks with background highlight
+
+    const maxParticleIndex = Math.max(lambda.length || 0, nu.length || 0, 8);
+
+    if (phase >= 2) {
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+
+      // Identify "moved" indices (where μ_i - κ_i = 1) - these form islands
+      const movedIndices = new Set();
+      for (let i = 0; i < Math.max((mu.length || 0), (kappa.length || 0)) + 2; i++) {
+        if (getPart(mu, i) - getPart(kappa, i) === 1) {
+          movedIndices.add(i);
+        }
+      }
+
+      // Draw block position markers
+      for (let i = 0; i < maxParticleIndex; i++) {
+        if (!movedIndices.has(i)) continue;
+
+        const mayaPos = getPart(kappa, i) - i;
+        if (mayaPos < minPos || mayaPos > maxPos) continue;
+
+        const x = startX + (mayaPos - minPos + 0.5) * cellWidth;
+        const kappaY = beforeY + rowHeight + 3;
+
+        // Draw small block marker above κ row
+        ctx.fillStyle = 'rgba(156, 39, 176, 0.3)';
+        ctx.fillRect(x - cellWidth/2 + 2, kappaY - 12, cellWidth - 4, 8);
+        ctx.fillStyle = '#7b1fa2';
+        ctx.fillText('B', x, kappaY - 6);
+      }
+    }
+
+    // === Enhancement 2: Jump/Stay Indicator Row === (Phase 4 only)
+    // Compare λ and ν partition-by-partition to show which particles jumped or stayed
+    const jumpStayY = afterY + 3 * rowHeight + 15;
+
+    if (phase >= 4) {
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('Δ:', startX - 10, jumpStayY + 3);
+
+      // Find which partition index was "stopped" (if any)
+      let stoppedIndex = null;
+      if (vh.decisions.length > 0) {
+        for (const dec of vh.decisions) {
+          if (dec.stoppedAt !== null && dec.stoppedAt !== undefined && !dec.stoppedAtIsEnd) {
+            stoppedIndex = dec.stoppedAt;
+            break;
+          }
+        }
+      }
+
+      // Determine jump/stay for each particle index
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+
+      for (let i = 0; i < maxParticleIndex; i++) {
+        const lamI = getPart(lambda, i);
+        const nuI = getPart(nu, i);
+        const jumped = nuI > lamI;
+
+        // Convert partition index to Maya position
+        const mayaPos = lamI - i;
+        if (mayaPos < minPos || mayaPos > maxPos) continue;
+
+        const x = startX + (mayaPos - minPos + 0.5) * cellWidth;
+
+        if (i === stoppedIndex) {
+          // Stopped particle - red stop marker
+          ctx.fillStyle = '#c62828';
+          ctx.fillText('🛑', x, jumpStayY + 5);
+        } else if (jumped) {
+          // Jumped particle - green up arrow
+          ctx.fillStyle = '#2e7d32';
+          ctx.fillText('+1', x, jumpStayY + 3);
+          // Draw small arrow
+          ctx.beginPath();
+          ctx.moveTo(x, jumpStayY + 7);
+          ctx.lineTo(x, jumpStayY + 12);
+          ctx.strokeStyle = '#2e7d32';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x - 3, jumpStayY + 9);
+          ctx.lineTo(x, jumpStayY + 6);
+          ctx.lineTo(x + 3, jumpStayY + 9);
+          ctx.stroke();
+        } else if (lambdaMaya.has(mayaPos)) {
+          // Particle that stayed - gray dash
+          ctx.fillStyle = '#999';
+          ctx.fillText('—', x, jumpStayY + 3);
+        }
+      }
+
+      // === All Island Decisions Summary ===
+      // Show summary of all island decisions below jump/stay row
+      const decisionY = jumpStayY + 25;
+      ctx.fillStyle = '#333';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'left';
+
+      if (vh.decisions.length > 0) {
+        let decText = 'Decisions: ';
+        vh.decisions.forEach((dec, idx) => {
+          if (idx > 0) decText += ' | ';
+          const islStr = `[${dec.island.start},${dec.island.end}]`;
+          if (dec.stoppedAt === null) {
+            decText += `${islStr}: all jump`;
+          } else if (dec.stoppedAtIsEnd) {
+            decText += `${islStr}: full jump`;
+          } else {
+            decText += `${islStr}: stop@${dec.stoppedAt}`;
+          }
+        });
+        ctx.fillText(decText, startX, decisionY);
+      }
+    }
+  }
+
+  // Draw island processing details panel with decision tree visualization
+  function drawIslandPanel() {
+    const canvas = document.getElementById('island-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!detailedState || !detailedState.lastVHDetails) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Click "Next" to see island processing', 20, h / 2);
+      return;
+    }
+
+    const d = detailedState.lastVHDetails;
+    const vh = d.vhDetails;
+    const q = detailedState.q;
+
+    const margin = 15;
+    let y = margin;
+
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+
+    // Compact header with partitions
+    ctx.fillText(`VH: λ≻'κ≺μ → λ≺ν≻'μ  |  bit=${d.bit}  |  q=${q}`, margin, y);
+    y += 16;
+
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#555';
+    ctx.fillText(`κ=${partitionToString(d.kappa)}  λ=${partitionToString(d.lam)}  μ=${partitionToString(d.mu)}`, margin, y);
+    y += 16;
+
+    // === Enhancement 3: Decision Tree Visualization ===
+    const treeIndent = 12;
+    const lineHeight = 14;
+
+    // Helper to draw tree connector
+    function drawTreeBranch(x, yPos, toX) {
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, yPos);
+      ctx.lineTo(toX, yPos);
+      ctx.stroke();
+    }
+
+    if (vh.islands.length === 0) {
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#666';
+      ctx.fillText('No islands. ν = λ' + (d.bit === 1 ? ' + (1 at pos 0)' : ''), margin, y);
+      y += lineHeight;
+    } else {
+      // Draw decision tree for each island
+      vh.decisions.forEach((dec, decIdx) => {
+        const island = dec.island;
+        const islX = margin;
+
+        // Island header
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#1565c0';
+        ctx.fillText(`Island [${island.start},${island.end}]:`, islX, y);
+        y += lineHeight;
+
+        const branchX = islX + treeIndent;
+
+        if (q === 0) {
+          // === Schur (q=0) Decision Tree ===
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#666';
+          drawTreeBranch(islX + 4, y - 4, branchX);
+          ctx.fillText('q=0: Deterministic cascade', branchX + 4, y);
+          y += lineHeight;
+
+          if (dec.stoppedAt !== null && !dec.stoppedAtIsEnd) {
+            drawTreeBranch(branchX, y - 4, branchX + treeIndent);
+            ctx.fillStyle = '#c62828';
+            ctx.fillText(`└─ STOP at i=${dec.stoppedAt}: λ[${dec.stoppedAt}] > μ[${dec.stoppedAt}]-1`, branchX + 4, y);
+          } else {
+            drawTreeBranch(branchX, y - 4, branchX + treeIndent);
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillText('└─ All particles free → full jump', branchX + 4, y);
+          }
+          y += lineHeight + 2;
+
+        } else {
+          // === q-Whittaker Decision Tree ===
+          // Find f_k value for this island
+          const fVal = vh.fValues.find(f => f.k === island.start);
+
+          if (fVal) {
+            // Draw f_k branch
+            ctx.font = '10px monospace';
+            drawTreeBranch(islX + 4, y - 4, branchX);
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillText(`├─ f_${fVal.k} = ${fVal.f_k.toFixed(3)}`, branchX + 4, y);
+
+            // Show U comparison
+            const compX = branchX + 95;
+            ctx.fillStyle = '#888';
+            ctx.fillText(`U=${fVal.u.toFixed(3)}`, compX, y);
+
+            // Show result
+            if (fVal.stopped) {
+              ctx.fillStyle = '#c62828';
+              ctx.fillText('→ STOP', compX + 70, y);
+            } else {
+              ctx.fillStyle = '#4caf50';
+              ctx.fillText('→ pass', compX + 70, y);
+            }
+            y += lineHeight;
+
+            // Draw g_s values if f_k passed
+            if (!fVal.stopped) {
+              const gData = vh.gValues.find(g => g.island.start === island.start && g.island.end === island.end);
+              if (gData && gData.values.length > 0) {
+                gData.values.forEach((g, gIdx) => {
+                  const isLast = gIdx === gData.values.length - 1 || g.stopped;
+                  const prefix = isLast ? '└─' : '├─';
+
+                  drawTreeBranch(branchX, y - 4, branchX + treeIndent);
+                  ctx.fillStyle = '#ff6f00';
+                  ctx.fillText(`${prefix} g_${g.s} = ${g.g_s.toFixed(3)}`, branchX + 4, y);
+
+                  ctx.fillStyle = '#888';
+                  ctx.fillText(`U=${g.u.toFixed(3)}`, compX, y);
+
+                  if (g.stopped) {
+                    ctx.fillStyle = '#c62828';
+                    ctx.fillText('→ STOP', compX + 70, y);
+                  } else {
+                    ctx.fillStyle = '#4caf50';
+                    ctx.fillText('→ pass', compX + 70, y);
+                  }
+                  y += lineHeight;
+
+                  if (g.stopped) return; // Break after stop
+                });
+              }
+            }
+          } else if (dec.case && dec.case.includes('bit=1')) {
+            // bit=1 and k=0 case
+            ctx.font = '10px monospace';
+            drawTreeBranch(islX + 4, y - 4, branchX);
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillText('└─ bit=1, k=0: all particles jump', branchX + 4, y);
+            y += lineHeight;
+          }
+
+          y += 2;
+        }
+
+        // Show result for this island
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#333';
+        const resultParts = [];
+        for (let idx = island.start; idx <= island.end + 1; idx++) {
+          const jumped = getPart(d.nu, idx) > getPart(d.lam, idx);
+          resultParts.push(`ν[${idx}]=${jumped ? 'λ+1' : 'λ'}`);
+        }
+        ctx.fillText(`   Result: ${resultParts.join(', ')}`, margin, y);
+        y += lineHeight + 4;
+      });
+    }
+
+    // === Enhancement 7: Physical Interpretation ===
+    y += 4;
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText('Physical Interpretation:', margin, y);
+    y += lineHeight;
+
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#555';
+
+    if (q === 0) {
+      ctx.fillText('• q=0 (Schur/Uniform): particles slide freely', margin + 8, y);
+      y += 11;
+      ctx.fillText('• Cascade stops at first blocked particle', margin + 8, y);
+      y += 11;
+      ctx.fillText('• Equivalent to standard domino shuffling', margin + 8, y);
+    } else if (q < 0.5) {
+      ctx.fillText(`• q=${q.toFixed(2)}: low stickiness, particles mostly slide`, margin + 8, y);
+      y += 11;
+      ctx.fillText('• f_k, g_s small → cascade usually continues', margin + 8, y);
+      y += 11;
+      ctx.fillText('• Similar to uniform, slight q-deformation', margin + 8, y);
+    } else if (q < 0.9) {
+      ctx.fillText(`• q=${q.toFixed(2)}: moderate stickiness`, margin + 8, y);
+      y += 11;
+      ctx.fillText('• Balance between sliding and stopping', margin + 8, y);
+      y += 11;
+      ctx.fillText('• Visible deviation from uniform measure', margin + 8, y);
+    } else {
+      ctx.fillText(`• q=${q.toFixed(3)}: high stickiness, particles resist moving`, margin + 8, y);
+      y += 11;
+      ctx.fillText('• f_k, g_s close to 1 → cascade stops early', margin + 8, y);
+      y += 11;
+      ctx.fillText('• Tiling concentrates near frozen config', margin + 8, y);
+    }
+
+    // Final result
+    y += 6;
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = '#1565c0';
+    ctx.fillText(`ν = ${partitionToString(d.nu)}`, margin, y);
+  }
+
+  // Draw current Aztec diamond panel (from completed anti-diagonals)
+  function drawCurrentAztecDiamondPanel() {
+    const canvas = document.getElementById('current-aztec-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, w, h);
+
     if (!detailedState) {
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
@@ -4096,34 +4788,38 @@ async function initializeApp() {
       return;
     }
 
+    const completedAntiDiags = detailedState.completedAntiDiags;
     const fullN = detailedState.n;
-    const currentSize = detailedState.completedAntiDiags;
+
+    // After completing anti-diagonal t, we can construct Aztec diamond of size t-1
+    // (because the boundary path for size k requires cells on anti-diagonal k+1)
+    const aztecSize = completedAntiDiags - 1;
 
     // Update info
     const infoDiv = document.getElementById('current-aztec-info');
     if (infoDiv) {
-      if (currentSize === 0) {
-        infoDiv.textContent = 'No anti-diagonals completed yet. Click "Next" to start.';
-      } else if (currentSize >= fullN) {
+      if (aztecSize <= 0) {
+        infoDiv.textContent = 'Complete more cells to see the first Aztec diamond (need 2 anti-diagonals).';
+      } else if (aztecSize >= fullN) {
         infoDiv.textContent = `Complete Aztec diamond of size ${fullN}`;
       } else {
-        infoDiv.textContent = `Aztec diamond of size ${currentSize} (${fullN - currentSize} more anti-diagonals to go)`;
+        infoDiv.textContent = `Aztec diamond of size ${aztecSize} (${fullN - aztecSize} more to go)`;
       }
     }
 
-    if (currentSize === 0) {
+    if (aztecSize <= 0) {
       ctx.fillStyle = '#999';
       ctx.font = '14px sans-serif';
-      ctx.fillText('Complete an anti-diagonal to see the first tiling', 20, h / 2);
+      ctx.fillText('Complete 2 anti-diagonals to see size-1 Aztec diamond', 20, h / 2);
       return;
     }
 
-    // Get partitions for current size
-    const partitions = extractOutputPartitionsForSize(detailedState, currentSize);
-    const n = currentSize;
+    // Get partitions for current Aztec size
+    const partitions = extractOutputPartitionsForSize(detailedState, aztecSize);
+    const n = aztecSize;
 
-    // Scale to fit - use the full n for consistent sizing
-    const scale = Math.min(w, h) / (2 * fullN + 3) * 0.9;
+    // Scale to fit
+    const scale = Math.min(w, h) / (2 * n + 3) * 0.85;
     const cx = w / 2;
     const cy = h / 2;
 
@@ -4144,141 +4840,192 @@ async function initializeApp() {
 
     if (latticePoints.length === 0) return;
 
-    // Group by diagonal
-    const diagGroups = {};
+    // Group by diagonal and sort
+    const geomDiagonals = {};
     latticePoints.forEach(p => {
-      if (!diagGroups[p.diag]) diagGroups[p.diag] = [];
-      diagGroups[p.diag].push(p);
+      if (!geomDiagonals[p.diag]) geomDiagonals[p.diag] = [];
+      geomDiagonals[p.diag].push(p);
     });
+    for (const d in geomDiagonals) {
+      geomDiagonals[d].sort((a, b) => (a.hx - a.hy) - (b.hx - b.hy));
+      geomDiagonals[d].forEach((p, idx) => { p.posInDiag = idx + 1; });
+    }
 
-    // Sort each diagonal and assign positions
-    Object.keys(diagGroups).forEach(d => {
-      diagGroups[d].sort((a, b) => a.hy - b.hy);
-      diagGroups[d].forEach((p, idx) => p.posInDiag = idx + 1);
-    });
+    const diagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
 
-    // Mark particles based on partitions
-    const sortedDiags = Object.keys(diagGroups).map(Number).sort((a, b) => a - b);
-
-    sortedDiags.forEach((diag, diagIdx) => {
-      const points = diagGroups[diag];
-      const partition = partitions[diagIdx] || [];
-      const numParticles = points.length - (diagIdx % 2 === 0 ? diagIdx / 2 : (diagIdx + 1) / 2);
-      const groundSetSize = points.length;
-
-      if (numParticles > 0 && groundSetSize > 0) {
-        const subset = partitionToSubset(partition, Math.max(0, numParticles), groundSetSize);
-        const subsetSet = new Set(subset);
-        points.forEach(p => {
-          p.inSubset = subsetSet.has(p.posInDiag);
-        });
+    // Helper: get particle count for diagonal index at given size
+    function getParticleCountForSize(idx, size) {
+      const k = Math.floor((idx + 1) / 2);
+      if (idx % 2 === 0) {
+        return size - k;
       } else {
-        points.forEach(p => p.inSubset = false);
-      }
-    });
-
-    // Match particles (bottom-left first)
-    const dominoes = [];
-    const usedPoints = new Set();
-
-    const allPoints = latticePoints.slice().sort((a, b) => {
-      if (a.hy !== b.hy) return a.hy - b.hy;
-      return a.hx - b.hx;
-    });
-
-    for (const p of allPoints) {
-      if (!p.inSubset || usedPoints.has(`${p.hx},${p.hy}`)) continue;
-
-      const rightNeighbor = allPoints.find(q =>
-        q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
-        q.hx === p.hx + 1 && q.hy === p.hy
-      );
-      const topNeighbor = allPoints.find(q =>
-        q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
-        q.hx === p.hx && q.hy === p.hy + 1
-      );
-
-      if (rightNeighbor) {
-        dominoes.push({
-          cx: (p.x + rightNeighbor.x) / 2,
-          cy: (p.y + rightNeighbor.y) / 2,
-          width: scale,
-          height: scale / 2,
-          type: 'particle',
-          isHorizontal: true
-        });
-        usedPoints.add(`${p.hx},${p.hy}`);
-        usedPoints.add(`${rightNeighbor.hx},${rightNeighbor.hy}`);
-      } else if (topNeighbor) {
-        dominoes.push({
-          cx: (p.x + topNeighbor.x) / 2,
-          cy: (p.y + topNeighbor.y) / 2,
-          width: scale / 2,
-          height: scale,
-          type: 'particle',
-          isHorizontal: false
-        });
-        usedPoints.add(`${p.hx},${p.hy}`);
-        usedPoints.add(`${topNeighbor.hx},${topNeighbor.hy}`);
+        return size - k + 1;
       }
     }
 
-    // Match holes (top-right first)
-    const holePoints = allPoints.filter(p => !p.inSubset).sort((a, b) => {
-      if (a.hy !== b.hy) return b.hy - a.hy;
-      return b.hx - a.hx;
+    // Convert partitions to subsets - assign particles to lattice points
+    const subsetsByDiag = {};
+    for (let idx = 0; idx < partitions.length && idx < diagKeys.length; idx++) {
+      const diagKey = diagKeys[idx];
+      const diagSize = geomDiagonals[diagKey].length;
+      const partition = partitions[idx] || [];
+      const numParticles = getParticleCountForSize(idx, n);
+      const subset = partitionToSubset(partition, numParticles, diagSize);
+      subsetsByDiag[diagKey] = new Set(subset);
+    }
+
+    latticePoints.forEach(p => {
+      const subset = subsetsByDiag[p.diag];
+      p.inSubset = subset ? subset.has(p.posInDiag) : false;
     });
 
-    for (const p of holePoints) {
-      if (usedPoints.has(`${p.hx},${p.hy}`)) continue;
+    // Create lookup for neighbor finding
+    const pointLookup = {};
+    latticePoints.forEach(p => {
+      pointLookup[`${p.hx},${p.hy}`] = p;
+    });
 
-      const leftNeighbor = allPoints.find(q =>
-        !q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
-        q.hx === p.hx - 1 && q.hy === p.hy
-      );
-      const bottomNeighbor = allPoints.find(q =>
-        !q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
-        q.hx === p.hx && q.hy === p.hy - 1
-      );
+    // Draw diagonal lines through lattice points on each diagonal (hx + hy = d)
+    // Points on diagonal d are arranged along direction (1, -1) in hx,hy coords
+    // In screen coords: direction is (+scale, +scale) since screenY = cy - hy*scale
+    ctx.strokeStyle = 'rgba(180, 180, 180, 0.7)';
+    ctx.lineWidth = 1;
 
-      if (leftNeighbor) {
-        dominoes.push({
-          cx: (p.x + leftNeighbor.x) / 2,
-          cy: (p.y + leftNeighbor.y) / 2,
-          width: scale,
-          height: scale / 2,
-          type: 'hole',
-          isHorizontal: true
+    // Group points by diagonal and draw line through each group
+    const pointsByDiag = {};
+    latticePoints.forEach(p => {
+      if (!pointsByDiag[p.diag]) pointsByDiag[p.diag] = [];
+      pointsByDiag[p.diag].push(p);
+    });
+
+    for (const d in pointsByDiag) {
+      const pts = pointsByDiag[d];
+      if (pts.length < 2) continue;
+
+      // Sort by screen x to get endpoints
+      pts.sort((a, b) => a.x - b.x);
+      const first = pts[0];
+      const last = pts[pts.length - 1];
+
+      // Extend slightly beyond the endpoints
+      const dx = last.x - first.x;
+      const dy = last.y - first.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const extend = scale * 0.5;
+      const ux = dx / len, uy = dy / len;
+
+      ctx.beginPath();
+      ctx.moveTo(first.x - ux * extend, first.y - uy * extend);
+      ctx.lineTo(last.x + ux * extend, last.y + uy * extend);
+      ctx.stroke();
+    }
+
+    // Helper to get neighbors
+    function getNeighbors(p) {
+      const neighbors = [];
+      const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (const [dx, dy] of directions) {
+        const key = `${p.hx + dx},${p.hy + dy}`;
+        if (pointLookup[key]) neighbors.push(pointLookup[key]);
+      }
+      return neighbors;
+    }
+
+    // Match particles - start from bottom-left
+    const particles = latticePoints.filter(p => p.inSubset);
+    particles.sort((a, b) => {
+      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+      if (sumA !== sumB) return sumA - sumB;
+      return (a.hx - a.hy) - (b.hx - b.hy);
+    });
+
+    const matchedParticles = new Set();
+    const particleDominoes = [];
+    for (const p of particles) {
+      if (matchedParticles.has(`${p.hx},${p.hy}`)) continue;
+      const neighbors = getNeighbors(p).filter(nb => nb.inSubset && !matchedParticles.has(`${nb.hx},${nb.hy}`));
+      if (neighbors.length > 0) {
+        neighbors.sort((a, b) => {
+          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+          if (sumA !== sumB) return sumA - sumB;
+          return (a.hx - a.hy) - (b.hx - b.hy);
         });
-        usedPoints.add(`${p.hx},${p.hy}`);
-        usedPoints.add(`${leftNeighbor.hx},${leftNeighbor.hy}`);
-      } else if (bottomNeighbor) {
-        dominoes.push({
-          cx: (p.x + bottomNeighbor.x) / 2,
-          cy: (p.y + bottomNeighbor.y) / 2,
-          width: scale / 2,
-          height: scale,
-          type: 'hole',
-          isHorizontal: false
-        });
-        usedPoints.add(`${p.hx},${p.hy}`);
-        usedPoints.add(`${bottomNeighbor.hx},${bottomNeighbor.hy}`);
+        const neighbor = neighbors[0];
+        matchedParticles.add(`${p.hx},${p.hy}`);
+        matchedParticles.add(`${neighbor.hx},${neighbor.hy}`);
+        particleDominoes.push({ p1: p, p2: neighbor });
       }
     }
 
-    // Draw dominoes
-    const colors = getCurrentColors();
-    for (const d of dominoes) {
-      if (d.type === 'particle') {
-        ctx.fillStyle = d.isHorizontal ? colors[0] : colors[1];
-      } else {
-        ctx.fillStyle = d.isHorizontal ? colors[2] : colors[3];
-      }
+    // Match holes - start from top-right
+    const holes = latticePoints.filter(p => !p.inSubset);
+    holes.sort((a, b) => {
+      const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+      if (sumA !== sumB) return sumB - sumA;
+      return (b.hx - b.hy) - (a.hx - a.hy);
+    });
 
-      ctx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+    const matchedHoles = new Set();
+    const holeDominoes = [];
+    for (const p of holes) {
+      if (matchedHoles.has(`${p.hx},${p.hy}`)) continue;
+      const neighbors = getNeighbors(p).filter(nb => !nb.inSubset && !matchedHoles.has(`${nb.hx},${nb.hy}`));
+      if (neighbors.length > 0) {
+        neighbors.sort((a, b) => {
+          const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
+          if (sumA !== sumB) return sumB - sumA;
+          return (b.hx - b.hy) - (a.hx - a.hy);
+        });
+        const neighbor = neighbors[0];
+        matchedHoles.add(`${p.hx},${p.hy}`);
+        matchedHoles.add(`${neighbor.hx},${neighbor.hy}`);
+        holeDominoes.push({ p1: p, p2: neighbor });
+      }
+    }
+
+    const allDominoes = [...particleDominoes, ...holeDominoes];
+
+    // Draw domino outlines (rectangles around each matched pair)
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.6)';
+    ctx.lineWidth = Math.max(1.5, scale * 0.06);
+    for (const d of allDominoes) {
+      const isHorizontal = Math.abs(d.p1.hx - d.p2.hx) > 0.5;
+      const domCx = (d.p1.x + d.p2.x) / 2;
+      const domCy = (d.p1.y + d.p2.y) / 2;
+      const domW = isHorizontal ? scale * 2 : scale;
+      const domH = isHorizontal ? scale : scale * 2;
+      ctx.strokeRect(domCx - domW / 2, domCy - domH / 2, domW, domH);
+    }
+
+    // Draw dimer edges (lines connecting matched pairs)
+    ctx.strokeStyle = 'rgba(80, 80, 80, 0.8)';
+    ctx.lineWidth = Math.max(2, scale * 0.08);
+    for (const d of allDominoes) {
+      ctx.beginPath();
+      ctx.moveTo(d.p1.x, d.p1.y);
+      ctx.lineTo(d.p2.x, d.p2.y);
+      ctx.stroke();
+    }
+
+    // Draw particles (filled circles) and holes (empty circles)
+    const particleRadius = Math.max(4, scale * 0.25);
+
+    for (const p of latticePoints) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, particleRadius, 0, 2 * Math.PI);
+
+      if (p.inSubset) {
+        // Particle: filled black circle
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+      } else {
+        // Hole: empty white circle with black border
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
     }
   }
 
@@ -4367,8 +5114,9 @@ async function initializeApp() {
 
     // Draw all panels
     drawCellLatticePanel();
-    drawYoungDiagramsPanel();
-    drawCurrentAztecPanel();
+    drawShufflingPanel();
+    drawIslandPanel();
+    drawCurrentAztecDiamondPanel();
   }
 
   // Initialize detailed sampler
@@ -4500,6 +5248,53 @@ async function initializeApp() {
       }
       initializeDetailedSampler();
     }
+  });
+
+  // Shuffle animation controls
+  document.getElementById('shuffle-animate-btn').addEventListener('click', function() {
+    if (shuffleAnimationInterval) {
+      // Stop animation
+      clearInterval(shuffleAnimationInterval);
+      shuffleAnimationInterval = null;
+      this.innerHTML = '&#9654; Animate';
+    } else {
+      // Start animation from phase 0
+      shuffleAnimationPhase = 0;
+      this.innerHTML = '&#10074;&#10074; Pause';
+      shuffleAnimationInterval = setInterval(() => {
+        shuffleAnimationPhase++;
+        if (shuffleAnimationPhase > 4) {
+          shuffleAnimationPhase = 4;
+          clearInterval(shuffleAnimationInterval);
+          shuffleAnimationInterval = null;
+          document.getElementById('shuffle-animate-btn').innerHTML = '&#9654; Animate';
+        }
+        document.getElementById('shuffle-phase-select').value = shuffleAnimationPhase;
+        drawShufflingPanel();
+      }, 800);
+      drawShufflingPanel();
+    }
+  });
+
+  document.getElementById('shuffle-reset-btn').addEventListener('click', function() {
+    if (shuffleAnimationInterval) {
+      clearInterval(shuffleAnimationInterval);
+      shuffleAnimationInterval = null;
+      document.getElementById('shuffle-animate-btn').innerHTML = '&#9654; Animate';
+    }
+    shuffleAnimationPhase = 4;  // Show complete view
+    document.getElementById('shuffle-phase-select').value = 4;
+    drawShufflingPanel();
+  });
+
+  document.getElementById('shuffle-phase-select').addEventListener('change', function() {
+    if (shuffleAnimationInterval) {
+      clearInterval(shuffleAnimationInterval);
+      shuffleAnimationInterval = null;
+      document.getElementById('shuffle-animate-btn').innerHTML = '&#9654; Animate';
+    }
+    shuffleAnimationPhase = parseInt(this.value);
+    drawShufflingPanel();
   });
 
   // ========== END DETAILED MODE ==========
