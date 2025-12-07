@@ -14,6 +14,8 @@ struct CFTPParams {
     q_bias: f32,        // Global q bias (used when use_weights=0)
     use_weights: u32,   // 0 = use global q_bias, 1 = use per-cell weights buffer
     num_vertices: u32,
+    use_q_racah: u32,   // 0 = use q-volume, 1 = use q-Racah measure
+    q_racah_J: i32,     // J parameter for q-Racah: f(j) = q^j + q^(2J-j)
     _pad: u32,          // Padding for alignment
 }
 
@@ -175,13 +177,29 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let rot_type = select(-1, 1, volume_change > 0);
 
     // Coupling decision: same random u used for both chains
-    // if u < pRemove: accept removal (rot_type == -1)
-    // if u >= pRemove: accept addition (rot_type == +1)
     var should_flip = false;
-    if (u < pRemove && rot_type == -1) {
-        should_flip = true;
-    } else if (u >= pRemove && rot_type == 1) {
-        should_flip = true;
+    if (params.use_q_racah != 0u) {
+        // q-Racah coupling: compare u to probDown/probUp based on rotation type
+        let J = params.q_racah_J;
+        let fj = pow(q, f32(j)) + pow(q, f32(2*J - j));
+        if (rot_type == -1) {
+            let fjm1 = pow(q, f32(j-1)) + pow(q, f32(2*J - j + 1));
+            let probDown = min(1.0, fjm1 / fj);
+            should_flip = (u < probDown);
+        } else {
+            let fjp1 = pow(q, f32(j+1)) + pow(q, f32(2*J - j - 1));
+            let probUp = min(1.0, fjp1 / fj);
+            should_flip = (u < probUp);
+        }
+    } else {
+        // Standard q-volume coupling
+        // if u < pRemove: accept removal (rot_type == -1)
+        // if u >= pRemove: accept addition (rot_type == +1)
+        if (u < pRemove && rot_type == -1) {
+            should_flip = true;
+        } else if (u >= pRemove && rot_type == 1) {
+            should_flip = true;
+        }
     }
 
     if (!should_flip) {

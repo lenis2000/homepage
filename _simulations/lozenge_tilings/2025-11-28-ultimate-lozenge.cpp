@@ -1,7 +1,7 @@
 /*
 emcc 2025-11-28-ultimate-lozenge.cpp -o 2025-11-28-ultimate-lozenge.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_setUseQRacah','_getUseQRacah','_setQRacahJ','_getQRacahJ','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','lengthBytesUTF8','stringToUTF8']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -116,12 +116,27 @@ double qBias_periodic[5][5] = {
 int periodicK = 2; // Default to Period 2
 bool usePeriodicWeights = false; // Disabled by default
 bool useRandomSweeps = false; // Default: systematic sweeps (faster, better cache locality)
+bool useQRacah = false; // Use q-Racah measure instead of q-volume
+int qRacahJ = 0; // J parameter for q-Racah: f(j) = q^j + q^(2J-j)
 
 inline double getQAtPosition(int n, int j) {
     if (!usePeriodicWeights) return qBias;
     int ni = ((n % periodicK) + periodicK) % periodicK;  // Handle negative n
     int ji = ((j % periodicK) + periodicK) % periodicK;  // Handle negative j
     return qBias_periodic[ni][ji];
+}
+
+// Compute q-Racah acceptance probability
+// f(j) = q^j + q^(2J-j), direction: +1 for add, -1 for remove
+inline float computeQRacahAcceptance(int j, int direction, double q, int J) {
+    double fj = pow(q, (double)j) + pow(q, (double)(2*J - j));
+    double fNew;
+    if (direction > 0) {
+        fNew = pow(q, (double)(j+1)) + pow(q, (double)(2*J - j - 1));
+    } else {
+        fNew = pow(q, (double)(j-1)) + pow(q, (double)(2*J - j + 1));
+    }
+    return std::min(1.0, fNew / fj);
 }
 
 // Dense grid state for O(1) dimer lookups
@@ -1528,7 +1543,12 @@ void performGlauberStepsInternal(int numSteps) {
             int volumeChange = volumeAfter - volumeBefore;
             if (volumeChange == 0) continue;
 
-            float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+            float acceptProb;
+            if (useQRacah) {
+                acceptProb = computeQRacahAcceptance(v.j, volumeChange, qBias, qRacahJ);
+            } else {
+                acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+            }
             if (getRandom01() < acceptProb) {
                 tryRotation(v.n, v.j, true);
                 flipCount++;
@@ -1564,7 +1584,12 @@ void performGlauberStepsInternal(int numSteps) {
                     int volumeChange = volumeAfter - volumeBefore;
                     if (volumeChange == 0) continue;
 
-                    float acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+                    float acceptProb;
+                    if (useQRacah) {
+                        acceptProb = computeQRacahAcceptance(v.j, volumeChange, qBias, qRacahJ);
+                    } else {
+                        acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
+                    }
                     if (getRandom01() < acceptProb) {
                         tryRotation(v.n, v.j, true);
                         flipCount++;
@@ -1645,7 +1670,6 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             const double u = getRandom01();
             const TriVertex& v = triangularVertices[idx];
             const CachedHexIndices& hex = cachedHexIndices[idx];
-            const float pRemove = cachedProbs[idx].probDown;
 
             HexEdge edges[6];
             getHexEdgesAroundVertex(v.n, v.j, edges);
@@ -1653,20 +1677,36 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             // Process LOWER with LUT
             int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
             if (lowerType != 0) {
-                if (u < pRemove) {
-                    if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                if (useQRacah) {
+                    float probDown = computeQRacahAcceptance(v.j, -1, qBias, qRacahJ);
+                    float probUp = computeQRacahAcceptance(v.j, 1, qBias, qRacahJ);
+                    if (lowerType == -1 && u < probDown) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    if (lowerType == 1 && u < probUp) tryRotationOnGrid(lower.grid, v.n, v.j, true);
                 } else {
-                    if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    const float pRemove = cachedProbs[idx].probDown;
+                    if (u < pRemove) {
+                        if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    } else {
+                        if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    }
                 }
             }
 
             // Process UPPER with LUT (same u!)
             int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
             if (upperType != 0) {
-                if (u < pRemove) {
-                    if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                if (useQRacah) {
+                    float probDown = computeQRacahAcceptance(v.j, -1, qBias, qRacahJ);
+                    float probUp = computeQRacahAcceptance(v.j, 1, qBias, qRacahJ);
+                    if (upperType == -1 && u < probDown) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    if (upperType == 1 && u < probUp) tryRotationOnGrid(upper.grid, v.n, v.j, true);
                 } else {
-                    if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    const float pRemove = cachedProbs[idx].probDown;
+                    if (u < pRemove) {
+                        if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    } else {
+                        if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    }
                 }
             }
         }
@@ -1681,7 +1721,6 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
 
                 const TriVertex& v = triangularVertices[idx];
                 const CachedHexIndices& hex = cachedHexIndices[idx];
-                const float pRemove = cachedProbs[idx].probDown;
 
                 HexEdge edges[6];
                 getHexEdgesAroundVertex(v.n, v.j, edges);
@@ -1689,20 +1728,36 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
                 // Process LOWER chain with LUT
                 int lowerType = fastCheckRotationTypeLUT(lower.grid.data(), gridSize, hex, edges);
                 if (lowerType != 0) {
-                    if (u < pRemove) {
-                        if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                    if (useQRacah) {
+                        float probDown = computeQRacahAcceptance(v.j, -1, qBias, qRacahJ);
+                        float probUp = computeQRacahAcceptance(v.j, 1, qBias, qRacahJ);
+                        if (lowerType == -1 && u < probDown) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                        if (lowerType == 1 && u < probUp) tryRotationOnGrid(lower.grid, v.n, v.j, true);
                     } else {
-                        if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                        const float pRemove = cachedProbs[idx].probDown;
+                        if (u < pRemove) {
+                            if (lowerType == -1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                        } else {
+                            if (lowerType == 1) tryRotationOnGrid(lower.grid, v.n, v.j, true);
+                        }
                     }
                 }
 
                 // Process UPPER chain with LUT (same u value!)
                 int upperType = fastCheckRotationTypeLUT(upper.grid.data(), gridSize, hex, edges);
                 if (upperType != 0) {
-                    if (u < pRemove) {
-                        if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                    if (useQRacah) {
+                        float probDown = computeQRacahAcceptance(v.j, -1, qBias, qRacahJ);
+                        float probUp = computeQRacahAcceptance(v.j, 1, qBias, qRacahJ);
+                        if (upperType == -1 && u < probDown) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                        if (upperType == 1 && u < probUp) tryRotationOnGrid(upper.grid, v.n, v.j, true);
                     } else {
-                        if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                        const float pRemove = cachedProbs[idx].probDown;
+                        if (u < pRemove) {
+                            if (upperType == -1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                        } else {
+                            if (upperType == 1) tryRotationOnGrid(upper.grid, v.n, v.j, true);
+                        }
                     }
                 }
             }
@@ -2087,6 +2142,26 @@ void setUseRandomSweeps(int use) {
 EMSCRIPTEN_KEEPALIVE
 int getUseRandomSweeps() {
     return useRandomSweeps ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setUseQRacah(int use) {
+    useQRacah = (use != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getUseQRacah() {
+    return useQRacah ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setQRacahJ(int J) {
+    qRacahJ = J;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getQRacahJ() {
+    return qRacahJ;
 }
 
 EMSCRIPTEN_KEEPALIVE

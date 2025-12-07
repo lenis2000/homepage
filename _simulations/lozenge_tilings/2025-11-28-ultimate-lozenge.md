@@ -5583,7 +5583,37 @@ function initLozengeApp() {
 
     // Imaginary q-Racah controls
     document.getElementById('useQRacahCheckbox').addEventListener('change', (e) => {
-        renderer.showQRacahLine = e.target.checked;
+        const useQRacah = e.target.checked;
+        renderer.showQRacahLine = useQRacah;
+
+        // Mutual exclusivity: disable periodic weighting when q-Racah is enabled
+        const periodicCheckbox = document.getElementById('usePeriodicWeightsCheckbox');
+        if (useQRacah) {
+            // Disable periodic weighting
+            periodicCheckbox.checked = false;
+            periodicCheckbox.disabled = true;
+            renderer.usePeriodicWeights = false;
+            if (Module && Module._setUsePeriodicWeights) {
+                Module._setUsePeriodicWeights(0);
+            }
+
+            // Auto-set q to 0.9 for meaningful q-Racah behavior
+            document.getElementById('qInput').value = '0.9';
+            sim.setQBias(0.9);
+        } else {
+            periodicCheckbox.disabled = false;
+        }
+
+        // Update WASM
+        if (Module && Module._setUseQRacah) {
+            Module._setUseQRacah(useQRacah ? 1 : 0);
+        }
+
+        // Update WebGPU engine
+        if (renderer.webgpuEngine) {
+            renderer.webgpuEngine.useQRacah = useQRacah;
+        }
+
         draw();
     });
 
@@ -5591,6 +5621,17 @@ function initLozengeApp() {
         const J = parseInt(e.target.value) || 0;
         e.target.value = Math.max(-5000, Math.min(5000, J));
         renderer.qRacahJ = parseInt(e.target.value);
+
+        // Update WASM
+        if (Module && Module._setQRacahJ) {
+            Module._setQRacahJ(renderer.qRacahJ);
+        }
+
+        // Update WebGPU engine
+        if (renderer.webgpuEngine) {
+            renderer.webgpuEngine.qRacahJ = renderer.qRacahJ;
+        }
+
         draw();
     });
 
@@ -5720,13 +5761,31 @@ function initLozengeApp() {
     });
 
     usePeriodicCheckbox.addEventListener('change', (e) => {
-        sim.setUsePeriodicWeights(e.target.checked);
-        renderer.usePeriodicWeights = e.target.checked;
+        const usePeriodic = e.target.checked;
+        sim.setUsePeriodicWeights(usePeriodic);
+        renderer.usePeriodicWeights = usePeriodic;
+
+        // Mutual exclusivity: disable q-Racah when periodic weighting is enabled
+        const qRacahCheckbox = document.getElementById('useQRacahCheckbox');
+        if (usePeriodic) {
+            qRacahCheckbox.checked = false;
+            qRacahCheckbox.disabled = true;
+            renderer.showQRacahLine = false;
+            if (Module && Module._setUseQRacah) {
+                Module._setUseQRacah(0);
+            }
+            if (renderer.webgpuEngine) {
+                renderer.webgpuEngine.useQRacah = false;
+            }
+        } else {
+            qRacahCheckbox.disabled = false;
+        }
+
         // Always update GPU weights (either enable or disable periodic)
         if (gpuEngine && gpuEngine.isInitialized()) {
-            gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, e.target.checked);
+            gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, usePeriodic);
         }
-        if (e.target.checked) {
+        if (usePeriodic) {
             updatePeriodicWeights();
         }
         draw();
