@@ -20,6 +20,8 @@ class WebGPULozengeEngine {
         this.gridParams = {};
         this.shaderCode = null;
         this.useWeights = false;    // Whether to use per-cell weights
+        this.useHeightWeighted = false;  // Height-weighted flip probability mode
+        this.heightS = 10;          // S parameter for height-weighted mode
     }
 
     async init() {
@@ -100,12 +102,12 @@ class WebGPULozengeEngine {
         this.weightsBuffer.unmap();
 
         // Create 4 Uniform Buffers (one per color pass) to enable batching
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, use_height_weighted, height_S, _pad
         this.uniformBuffers = [];
         this.bindGroups = [];
         for (let color = 0; color < 4; color++) {
             const uniformBuffer = this.device.createBuffer({
-                size: 40,  // 10 x 4 bytes
+                size: 48,  // 12 x 4 bytes
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             });
             this.uniformBuffers.push(uniformBuffer);
@@ -178,6 +180,22 @@ class WebGPULozengeEngine {
     }
 
     /**
+     * Set height-weighted mode
+     * @param {boolean} useHeightWeighted - Whether to use height-weighted flip probability
+     */
+    setUseHeightWeighted(useHeightWeighted) {
+        this.useHeightWeighted = useHeightWeighted;
+    }
+
+    /**
+     * Set the S parameter for height-weighted mode
+     * @param {number} S - The S parameter (weight = q^h + q^(2S-h))
+     */
+    setHeightS(S) {
+        this.heightS = S;
+    }
+
+    /**
      * Perform simulation steps using chromatic sweep
      * @param {number} numSteps - Number of full sweeps
      * @param {number} qBias - The q-bias parameter (default 1.0 for uniform)
@@ -190,9 +208,9 @@ class WebGPULozengeEngine {
         const workgroupCount = Math.ceil(this.gridBuffer.size / 4 / 64);
 
         // Pre-write uniform data for all 4 colors
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, use_height_weighted, height_S, _pad
         for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
+            const uniformData = new ArrayBuffer(48);
             const intView = new Int32Array(uniformData);
             const floatView = new Float32Array(uniformData);
             const uintView = new Uint32Array(uniformData);
@@ -206,7 +224,9 @@ class WebGPULozengeEngine {
             floatView[6] = qBias;
             uintView[7] = this.useWeights ? 1 : 0;
             uintView[8] = Math.floor(Math.random() * 4294967295);
-            uintView[9] = 0;  // padding
+            uintView[9] = this.useHeightWeighted ? 1 : 0;
+            intView[10] = this.heightS;
+            uintView[11] = 0;  // padding
 
             this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
         }
@@ -397,11 +417,11 @@ class WebGPULozengeEngine {
         });
 
         // Create 4 CFTP uniform buffers (one per color pass for batching)
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, use_height_weighted, height_S, _pad
         this.cftpUniformBuffers = [];
         for (let color = 0; color < 4; color++) {
             this.cftpUniformBuffers.push(this.device.createBuffer({
-                size: 40,  // 10 x 4 bytes
+                size: 48,  // 12 x 4 bytes
                 usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
             }));
         }
@@ -514,9 +534,9 @@ class WebGPULozengeEngine {
         const useWeights = this.cftpUseWeights ? 1 : 0;
 
         // Pre-write uniform data for all 4 colors
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, use_height_weighted, height_S, _pad
         for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
+            const uniformData = new ArrayBuffer(48);
             const intView = new Int32Array(uniformData);
             const floatView = new Float32Array(uniformData);
             const uintView = new Uint32Array(uniformData);
@@ -530,7 +550,9 @@ class WebGPULozengeEngine {
             floatView[6] = qBias;
             uintView[7] = useWeights;
             uintView[8] = this.cftpNumCells;
-            uintView[9] = 0;  // padding
+            uintView[9] = this.useHeightWeighted ? 1 : 0;
+            intView[10] = this.heightS;
+            uintView[11] = 0;  // padding
 
             this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
         }
