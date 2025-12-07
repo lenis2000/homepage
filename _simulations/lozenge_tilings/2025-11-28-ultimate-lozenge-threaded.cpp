@@ -136,17 +136,33 @@ inline double getQAtPosition(int n, int j) {
     return qBias_periodic[ni][ji];
 }
 
-// Compute height-weighted acceptance probability
-// For weight w = q^h + q^(2S-h):
-//   probUp = w / (1 + w)
-//   probDown = 1 / (1 + w)
-inline void getHeightWeightedProbs(double q, int h, float& probUp, float& probDown) {
-    // w = q^h + q^(2S-h)
-    double qh = std::pow(q, h);
-    double q2Smh = std::pow(q, 2 * heightS - h);
-    double w = qh + q2Smh;
-    probUp = static_cast<float>(w / (1.0 + w));
-    probDown = static_cast<float>(1.0 / (1.0 + w));
+// Compute height-weighted acceptance probability using Metropolis ratio
+// f(h) = q^h + q^(2S-h)
+// acceptance = min(1, f(h_after) / f(h_before))
+inline float getHeightWeightedAcceptProb(double q, int hBefore, int hAfter) {
+    // f(h) = q^h + q^(2S-h)
+    double fBefore = std::pow(q, hBefore) + std::pow(q, 2 * heightS - hBefore);
+    double fAfter = std::pow(q, hAfter) + std::pow(q, 2 * heightS - hAfter);
+    double ratio = fAfter / fBefore;
+    return static_cast<float>(std::min(1.0, ratio));
+}
+
+// For CFTP coupling: compute pRemove threshold based on flip type
+// type == 1: up flip possible (h -> h+1), pRemove = 1 - P(accept up)
+// type == -1: down flip possible (h -> h-1), pRemove = P(accept down)
+inline float getHeightWeightedPRemove(double q, int hBefore, int type) {
+    int hAfter = hBefore + type;  // +1 for up, -1 for down
+    double fBefore = std::pow(q, hBefore) + std::pow(q, 2 * heightS - hBefore);
+    double fAfter = std::pow(q, hAfter) + std::pow(q, 2 * heightS - hAfter);
+    double acceptProb = std::min(1.0, fAfter / fBefore);
+
+    if (type == -1) {
+        // For down flip: pRemove = P(accept down)
+        return static_cast<float>(acceptProb);
+    } else {
+        // For up flip: pRemove = 1 - P(accept up), so u >= pRemove means flip
+        return static_cast<float>(1.0 - acceptProb);
+    }
 }
 
 // Dense grid state for O(1) dimer lookups
@@ -1553,12 +1569,10 @@ void performGlauberStepsInternal(int numSteps) {
 
             float acceptProb;
             if (useHeightWeighted) {
-                // Height-weighted: use w = q^h + q^(2S-h)
-                int h = (volumeChange > 0) ? volumeAfter : volumeBefore;
+                // Height-weighted: acceptance = min(1, f(h_after)/f(h_before))
+                // where f(h) = q^h + q^(2S-h)
                 double q = getQAtPosition(v.n, v.j);
-                float probUp, probDown;
-                getHeightWeightedProbs(q, h, probUp, probDown);
-                acceptProb = (volumeChange > 0) ? probUp : probDown;
+                acceptProb = getHeightWeightedAcceptProb(q, volumeBefore, volumeAfter);
             } else {
                 acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
             }
@@ -1597,12 +1611,10 @@ void performGlauberStepsInternal(int numSteps) {
 
                     float acceptProb;
                     if (useHeightWeighted) {
-                        // Height-weighted: use w = q^h + q^(2S-h)
-                        int h = (volumeChange > 0) ? volumeAfter : volumeBefore;
+                        // Height-weighted: acceptance = min(1, f(h_after)/f(h_before))
+                        // where f(h) = q^h + q^(2S-h)
                         double q = getQAtPosition(v.n, v.j);
-                        float probUp, probDown;
-                        getHeightWeightedProbs(q, h, probUp, probDown);
-                        acceptProb = (volumeChange > 0) ? probUp : probDown;
+                        acceptProb = getHeightWeightedAcceptProb(q, volumeBefore, volumeAfter);
                     } else {
                         acceptProb = (volumeChange > 0) ? cachedProbs[idx].probUp : cachedProbs[idx].probDown;
                     }
@@ -1719,11 +1731,8 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             if (lowerType != 0) {
                 float pRemove;
                 if (useHeightWeighted) {
-                    int h = (lowerType > 0) ? lowerVolAfter : lowerVolBefore;
                     double q = getQAtPosition(v.n, v.j);
-                    float probUp, probDown;
-                    getHeightWeightedProbs(q, h, probUp, probDown);
-                    pRemove = probDown;
+                    pRemove = getHeightWeightedPRemove(q, lowerVolBefore, lowerType);
                 } else {
                     pRemove = cachedProbs[idx].probDown;
                 }
@@ -1740,11 +1749,8 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             if (upperType != 0) {
                 float pRemove;
                 if (useHeightWeighted) {
-                    int h = (upperType > 0) ? upperVolAfter : upperVolBefore;
                     double q = getQAtPosition(v.n, v.j);
-                    float probUp, probDown;
-                    getHeightWeightedProbs(q, h, probUp, probDown);
-                    pRemove = probDown;
+                    pRemove = getHeightWeightedPRemove(q, upperVolBefore, upperType);
                 } else {
                     pRemove = cachedProbs[idx].probDown;
                 }
@@ -1775,11 +1781,8 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
                 if (lowerType != 0) {
                     float pRemove;
                     if (useHeightWeighted) {
-                        int h = (lowerType > 0) ? lowerVolAfter : lowerVolBefore;
                         double q = getQAtPosition(v.n, v.j);
-                        float probUp, probDown;
-                        getHeightWeightedProbs(q, h, probUp, probDown);
-                        pRemove = probDown;
+                        pRemove = getHeightWeightedPRemove(q, lowerVolBefore, lowerType);
                     } else {
                         pRemove = cachedProbs[idx].probDown;
                     }
@@ -1796,11 +1799,8 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
                 if (upperType != 0) {
                     float pRemove;
                     if (useHeightWeighted) {
-                        int h = (upperType > 0) ? upperVolAfter : upperVolBefore;
                         double q = getQAtPosition(v.n, v.j);
-                        float probUp, probDown;
-                        getHeightWeightedProbs(q, h, probUp, probDown);
-                        pRemove = probDown;
+                        pRemove = getHeightWeightedPRemove(q, upperVolBefore, upperType);
                     } else {
                         pRemove = cachedProbs[idx].probDown;
                     }

@@ -180,20 +180,14 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
 
     // Acceptance probability based on q (or height-weighted)
     // Standard: probUp = q / (1+q), probDown = 1 / (1+q)
-    // Height-weighted: w = q^h + q^(2S-h), probUp = w / (1+w), probDown = 1 / (1+w)
+    // Height-weighted: acceptance = min(1, f(h_after)/f(h_before)) where f(h) = q^h + q^(2S-h)
     var accept_prob: f32;
     if (params.use_height_weighted != 0u) {
-        // Height-weighted mode
-        let h = select(volume_before, volume_after, volume_change > 0);
+        // Height-weighted mode: Metropolis ratio
         let S = params.height_S;
-        let qh = pow(q, f32(h));
-        let q2Smh = pow(q, f32(2 * S - h));
-        let w = qh + q2Smh;
-        if (volume_change > 0) {
-            accept_prob = w / (1.0 + w);
-        } else {
-            accept_prob = 1.0 / (1.0 + w);
-        }
+        let f_before = pow(q, f32(volume_before)) + pow(q, f32(2 * S - volume_before));
+        let f_after = pow(q, f32(volume_after)) + pow(q, f32(2 * S - volume_after));
+        accept_prob = min(1.0, f_after / f_before);
     } else {
         // Standard q-volume mode
         if (volume_change > 0) {

@@ -177,15 +177,22 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let rot_type = select(-1, 1, volume_change > 0);
 
     // Compute pRemove (height-weighted or standard)
+    // For CFTP coupling: if u < pRemove, apply down flip; if u >= pRemove, apply up flip
     var pRemove: f32;
     if (params.use_height_weighted != 0u) {
-        // Height-weighted: pRemove = 1 / (1 + w) where w = q^h + q^(2S-h)
-        let h = select(volume_before, volume_after, volume_change > 0);
+        // Height-weighted: acceptance = min(1, f(h_after)/f(h_before)) where f(h) = q^h + q^(2S-h)
         let S = params.height_S;
-        let qh = pow(q, f32(h));
-        let q2Smh = pow(q, f32(2 * S - h));
-        let w = qh + q2Smh;
-        pRemove = 1.0 / (1.0 + w);
+        let f_before = pow(q, f32(volume_before)) + pow(q, f32(2 * S - volume_before));
+        if (rot_type == -1) {
+            // Down flip: pRemove = P(accept down) = min(1, f(h-1)/f(h))
+            let f_after = pow(q, f32(volume_before - 1)) + pow(q, f32(2 * S - (volume_before - 1)));
+            pRemove = min(1.0, f_after / f_before);
+        } else {
+            // Up flip: pRemove = 1 - P(accept up) so that u >= pRemove means accept
+            let f_after = pow(q, f32(volume_before + 1)) + pow(q, f32(2 * S - (volume_before + 1)));
+            let accept_up = min(1.0, f_after / f_before);
+            pRemove = 1.0 - accept_up;
+        }
     } else {
         // Standard: pRemove = 1 / (1 + q)
         pRemove = 1.0 / (1.0 + q);
