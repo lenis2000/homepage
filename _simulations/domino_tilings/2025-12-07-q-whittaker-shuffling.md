@@ -17,6 +17,7 @@ code:
   <button id="reset-btn">Reset</button>
   <button id="step-btn">Step</button>
   <button id="auto-btn">Auto</button>
+  <button id="instant-btn">Instant</button>
   <label style="margin-left: 10px;">Speed: <input id="speed-slider" type="range" min="50" max="500" value="150" style="width: 80px; vertical-align: middle;"></label>
   <span id="step-indicator" style="margin-left: 15px; font-weight: bold;">n=0</span>
 </div>
@@ -253,6 +254,18 @@ code:
     render();
   }
 
+  function instant() {
+    stopAuto();
+    currentN = 0;
+    dominoes = [];
+    phase = 'complete';
+    while (currentN < targetN) {
+      shuffleStep();
+    }
+    updateUI();
+    render();
+  }
+
   function updateUI() {
     let phaseText = '';
     if (granular && phase !== 'complete') {
@@ -335,6 +348,7 @@ code:
   document.getElementById('step-btn').addEventListener('click', doStep);
   document.getElementById('reset-btn').addEventListener('click', reset);
   document.getElementById('auto-btn').addEventListener('click', () => autoInterval ? stopAuto() : startAuto());
+  document.getElementById('instant-btn').addEventListener('click', instant);
   document.getElementById('n-input').addEventListener('change', e => { targetN = parseInt(e.target.value) || 10; updateUI(); });
   document.getElementById('palette-select').addEventListener('change', e => { paletteIndex = parseInt(e.target.value); render(); });
   document.getElementById('rotate-cb').addEventListener('change', e => { rotated = e.target.checked; render(); });
