@@ -14,6 +14,8 @@
  * - _simulations/lozenge_tilings/2025-11-28-c2-CFTP.md
  * - _simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md
  * - _simulations/domino_tilings/2025-12-04-RSK-sampling.md
+ * - _simulations/domino_tilings/2025-12-05-ultimate-domino.md
+ * - _simulations/domino_tilings/2025-12-07-q-whittaker-shuffling.md
  * - s/domino.md
  */
 
