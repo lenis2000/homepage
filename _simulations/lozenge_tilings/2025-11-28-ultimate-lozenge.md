@@ -38,6 +38,7 @@ code:
       <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
     </ul>
   </li>
+  <li><strong>Imaginary q-Racah weights</strong>: Height-dependent weighting where flip acceptance uses q<sup>j</sup> + q<sup>2J−j</sup> based on the local height j and a tunable parameter J. This creates non-uniform distributions that depend on the height function value at each position.</li>
 </ul>
 
 <p><strong>Sampling methods:</strong></p>
