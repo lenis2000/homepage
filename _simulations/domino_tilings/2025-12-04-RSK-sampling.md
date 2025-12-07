@@ -59,6 +59,98 @@ code:
     height: 100% !important;
     display: block;
   }
+  /* Detailed Mode Styles */
+  #detailed-mode-panel {
+    background: #f0f7ff;
+    border: 2px solid #1976d2;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  #detailed-step-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+  }
+  #detailed-step-controls button {
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .detailed-info-panel {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .detailed-info-panel h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #333;
+  }
+  #vh-probability-panel {
+    background: #fffef0;
+    border-color: #ddd;
+  }
+  #detailed-visualizations {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  @media (max-width: 900px) {
+    #detailed-visualizations {
+      grid-template-columns: 1fr;
+    }
+  }
+  .detailed-viz-panel {
+    border: 1px solid #ccc;
+    padding: 10px;
+    background: #fff;
+    border-radius: 5px;
+  }
+  .detailed-viz-panel h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #333;
+  }
+  .detailed-viz-panel canvas {
+    width: 100%;
+    height: 280px;
+    border: 1px solid #eee;
+    background: #fafafa;
+  }
+  #toggle-detailed-mode-btn {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 10px 20px;
+    font-size: 1.1em;
+    font-weight: bold;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #toggle-detailed-mode-btn:hover {
+    background: #1565c0;
+  }
+  #toggle-detailed-mode-btn.active {
+    background: #d32f2f;
+  }
+  #toggle-detailed-mode-btn.active:hover {
+    background: #c62828;
+  }
+  .partition-display {
+    font-family: monospace;
+    font-size: 11px;
+    margin-top: 5px;
+    color: #555;
+  }
 </style>
 
 <script src="/js/d3.v7.min.js"></script>
@@ -113,7 +205,7 @@ code:
 </div>
 
 <!-- Zoom Controls and Export -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+<div id="zoom-export-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
   <div id="zoom-controls-container"></div>
   <div style="display: flex; align-items: center; gap: 6px; font-size: 0.9em;">
     <button type="button" id="export-png-btn">PNG</button>
@@ -125,7 +217,7 @@ code:
 </div>
 
 <!-- Canvas -->
-<div class="row">
+<div id="canvas-row" class="row">
   <div class="col-12" style="position: relative; height: 50vh;">
     <canvas id="aztec-canvas" style="width: 100%; height: 100%; border: 1px solid #ccc; background-color: #fafafa;"></canvas>
     <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;"></svg>
@@ -139,7 +231,7 @@ code:
 </div>
 
 <!-- View Mode Controls -->
-<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #e8f4e8; border: 1px solid #c8e6c9; border-radius: 5px; font-size: 0.9em;">
+<div id="view-mode-controls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #e8f4e8; border: 1px solid #c8e6c9; border-radius: 5px; font-size: 0.9em;">
   <span style="font-weight: bold;">View:</span>
   <span>
     <input type="radio" id="view-dominoes" name="view-mode" value="dominoes" checked>
@@ -160,7 +252,7 @@ code:
 </div>
 
 <!-- Visual Controls -->
-<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
+<div id="visual-controls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
   <span>
     <input type="radio" id="renderer-canvas" name="renderer" value="canvas" checked>
     <label for="renderer-canvas">Canvas</label>
@@ -240,6 +332,67 @@ code:
     </ul>
   </div>
 </details>
+
+<!-- Detailed Mode Toggle -->
+<button id="toggle-detailed-mode-btn">Enable Detailed Mode</button>
+
+<!-- Detailed Mode Panel (hidden by default) -->
+<div id="detailed-mode-panel" style="display: none;">
+  <!-- Step Controls -->
+  <div id="detailed-step-controls">
+    <button id="step-reset-btn">Reset</button>
+    <button id="step-prev-btn" disabled>&#9664; Prev</button>
+    <button id="step-next-btn">Next &#9654;</button>
+    <button id="step-auto-btn">Auto-Play</button>
+    <label style="margin-left: 10px;">Speed:
+      <input type="range" id="step-speed" min="100" max="2000" value="500" style="width: 80px; vertical-align: middle;">
+    </label>
+    <label style="margin-left: 15px;">Seed:
+      <input type="number" id="detailed-seed" value="" placeholder="random" style="width: 80px;">
+      <button id="new-seed-btn" title="Generate new random seed" style="padding: 2px 6px;">&#8635;</button>
+    </label>
+    <span id="step-indicator" style="margin-left: 15px; font-weight: bold; color: #1976d2;">Ready to start</span>
+  </div>
+
+  <!-- Bernoulli Trial Info -->
+  <div id="cell-info-panel" class="detailed-info-panel">
+    <h4>Bernoulli Trial at Cell (i, j)</h4>
+    <div id="cell-position">Position: not started</div>
+    <div id="cell-bernoulli">Probability: p = x<sub>i</sub> &middot; y<sub>j</sub> / (1 + x<sub>i</sub> &middot; y<sub>j</sub>)</div>
+    <div id="cell-random">Random U ~ Uniform[0,1]: —</div>
+    <div id="cell-bit">Result bit: —</div>
+  </div>
+
+  <!-- VH Bijection Probabilities -->
+  <div id="vh-probability-panel" class="detailed-info-panel">
+    <h4>q-Whittaker VH Bijection Probabilities</h4>
+    <div id="island-info">Islands (consecutive indices where &mu;<sub>i</sub> - &kappa;<sub>i</sub> = 1): —</div>
+    <div id="f-probability">f<sub>k</sub> = (1 - q<sup>&Delta;&lambda;</sup>) / (1 - q<sup>&Delta;&nu;</sup>): —</div>
+    <div id="g-probabilities">g<sub>s</sub> values: —</div>
+    <div id="stopped-decision">Stopping decision: —</div>
+  </div>
+
+  <!-- Growth Diagram Cell Lattice (precomputed Bernoulli values) -->
+  <div class="detailed-viz-panel" style="margin-bottom: 15px;">
+    <h4>Growth Diagram Cells (Precomputed Bernoulli Bits)</h4>
+    <canvas id="cell-lattice-canvas" style="height: 200px;"></canvas>
+    <div id="cell-lattice-info" class="partition-display">Staircase cells with precomputed bits: <span style="color: #2e7d32;">&#9632; bit=1</span> | <span style="color: #c62828;">&#9633; bit=0</span> | <span style="background: #ffeb3b; padding: 0 4px;">current</span></div>
+  </div>
+
+  <!-- Two-Panel Visualization -->
+  <div id="detailed-visualizations">
+    <div class="detailed-viz-panel">
+      <h4>Young Diagrams: &kappa;, &lambda;, &mu; &rarr; &nu;</h4>
+      <canvas id="young-diagram-canvas"></canvas>
+      <div id="partition-labels" class="partition-display"></div>
+    </div>
+    <div class="detailed-viz-panel">
+      <h4>Current Aztec Diamond (size = completed anti-diagonals)</h4>
+      <canvas id="current-aztec-canvas"></canvas>
+      <div id="current-aztec-info" class="partition-display"></div>
+    </div>
+  </div>
+</div>
 
 <details id="partitions-details" style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">Partitions forming the Schur/q-Whittaker process</summary>
@@ -3143,6 +3296,1213 @@ async function initializeApp() {
       btn.style.backgroundColor = renderer3D.autoRotate ? '#ddd' : '';
     }
   });
+
+  // ========== DETAILED MODE IMPLEMENTATION ==========
+
+  let detailedModeActive = false;
+  let detailedState = null;
+  let autoPlayInterval = null;
+
+  // Elements to hide/show when toggling detailed mode
+  const elementsToHideInDetailedMode = [
+    '#zoom-controls-container',
+    '.row:has(#aztec-canvas)',
+    '#aztec-canvas',
+    '#aztec-svg',
+    '#three-container',
+    '#toggle3DBtn',
+    '#loading-overlay'
+  ];
+
+  // Get i-th part of partition (0-indexed), return 0 if out of range
+  function getPart(partition, i) {
+    return (partition && i >= 0 && i < partition.length) ? partition[i] : 0;
+  }
+
+  // Compute 1 - q^n using log1p/expm1 for numerical stability
+  function oneMinusQtoN(q, n) {
+    if (n <= 0) return 0.0;
+    if (q <= 0.0) return 1.0;
+    if (q >= 1.0) return 0.0;
+    return -Math.expm1(n * Math.log1p(q - 1.0));
+  }
+
+  // Compute f_k probability (equation 5.2 in arXiv:1504.00666)
+  function computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q) {
+    const delta_lam = lam_k - nu_bar_k + 1;
+    if (delta_lam <= 0) return 0.0;
+    const delta_nu = nu_bar_k_minus_1 - nu_bar_k + 1;
+    if (delta_nu <= 0) return 1.0;
+    const numerator = oneMinusQtoN(q, delta_lam);
+    const denominator = oneMinusQtoN(q, delta_nu);
+    if (denominator === 0.0) return 1.0;
+    return numerator / denominator;
+  }
+
+  // Compute g_s probability
+  function computeG(lam_s, mu_s, q) {
+    const delta = lam_s - mu_s + 1;
+    if (delta <= 0) return 0.0;
+    return oneMinusQtoN(q, delta);
+  }
+
+  // Format partition as string
+  function partitionToString(partition) {
+    if (!partition || partition.length === 0) return '()';
+    return '(' + partition.join(', ') + ')';
+  }
+
+  // Seeded random number generator (Mulberry32)
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // Current seeded RNG instance
+  let detailedRNG = null;
+  let currentSeed = null;
+
+  // q-Whittaker VH bijection with detailed output
+  function sampleVHqDetailed(lam, mu, kappa, bit, q) {
+    const maxLen = Math.max(
+      lam ? lam.length : 0,
+      mu ? mu.length : 0,
+      kappa ? kappa.length : 0
+    ) + 2;
+
+    const details = {
+      islands: [],
+      fValues: [],
+      gValues: [],
+      decisions: []
+    };
+
+    // Find moved indices: where mu_i - kappa_i = 1
+    const moved = [];
+    for (let i = 0; i < maxLen; i++) {
+      if (getPart(mu, i) - getPart(kappa, i) === 1) {
+        moved.push(i);
+      }
+    }
+
+    // Group into islands (consecutive indices)
+    const islands = [];
+    if (moved.length > 0) {
+      let islandStart = moved[0];
+      let islandEnd = moved[0];
+      for (let i = 1; i < moved.length; i++) {
+        if (moved[i] === moved[i - 1] + 1) {
+          islandEnd = moved[i];
+        } else {
+          islands.push({ start: islandStart, end: islandEnd });
+          islandStart = moved[i];
+          islandEnd = moved[i];
+        }
+      }
+      islands.push({ start: islandStart, end: islandEnd });
+    }
+    details.islands = islands;
+
+    // Initialize nu = lam
+    const nu = [];
+    for (let i = 0; i < maxLen; i++) {
+      nu[i] = getPart(lam, i);
+    }
+
+    // Step 1: Rightmost particle jumps by bit
+    nu[0] = getPart(lam, 0) + bit;
+
+    // Step 2: Process each island
+    for (const island of islands) {
+      const k = island.start;
+      const m = island.end;
+      const nu_bar_k = getPart(mu, k);
+      const nu_bar_k_minus_1 = (k > 0) ? getPart(mu, k - 1) : 1000000000;
+
+      // Case 1: bit=1 and k=0 (island contains first particle)
+      if (bit === 1 && k === 0) {
+        for (let idx = 1; idx <= m + 1; idx++) {
+          nu[idx] = getPart(lam, idx) + 1;
+        }
+        details.decisions.push({
+          island: island,
+          case: 'bit=1, k=0: all particles in island jump',
+          stoppedAt: null
+        });
+        continue;
+      }
+
+      // Case 2: bit=0 or k>0
+      let stoppedAt;
+      if (q === 0.0) {
+        // Schur case: deterministic - find first free particle
+        stoppedAt = m + 1;
+        for (let idx = k; idx <= m; idx++) {
+          if (getPart(lam, idx) > getPart(mu, idx) - 1) {
+            stoppedAt = idx;
+            break;
+          }
+        }
+        details.decisions.push({
+          island: island,
+          case: 'q=0 (Schur): deterministic',
+          stoppedAt: stoppedAt,
+          stoppedAtIsEnd: stoppedAt === m + 1
+        });
+      } else {
+        // q-Whittaker case: probabilistic sampling
+        const lam_k = getPart(lam, k);
+        const f_k = computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q);
+        const u_f = Math.random();
+
+        details.fValues.push({
+          k: k,
+          lam_k: lam_k,
+          nu_bar_k: nu_bar_k,
+          nu_bar_k_minus_1: nu_bar_k_minus_1,
+          delta_lam: lam_k - nu_bar_k + 1,
+          delta_nu: nu_bar_k_minus_1 - nu_bar_k + 1,
+          f_k: f_k,
+          u: u_f,
+          stopped: u_f < f_k
+        });
+
+        if (u_f < f_k) {
+          stoppedAt = k;
+          details.decisions.push({
+            island: island,
+            case: 'stopped by f_k',
+            f_k: f_k,
+            u: u_f,
+            stoppedAt: stoppedAt
+          });
+        } else {
+          stoppedAt = m + 1;
+          const gVals = [];
+          for (let s = k + 1; s <= m; s++) {
+            const lam_s = getPart(lam, s);
+            const mu_s = getPart(mu, s);
+            const g_s = computeG(lam_s, mu_s, q);
+            const u_g = Math.random();
+            gVals.push({ s: s, lam_s: lam_s, mu_s: mu_s, g_s: g_s, u: u_g, stopped: u_g < g_s });
+            if (u_g < g_s) {
+              stoppedAt = s;
+              details.decisions.push({
+                island: island,
+                case: 'stopped by g_s',
+                s: s,
+                g_s: g_s,
+                u: u_g,
+                stoppedAt: stoppedAt
+              });
+              break;
+            }
+          }
+          details.gValues.push({ island: island, values: gVals });
+          if (stoppedAt === m + 1) {
+            details.decisions.push({
+              island: island,
+              case: 'all passed: full jump',
+              stoppedAt: m + 1,
+              stoppedAtIsEnd: true
+            });
+          }
+        }
+      }
+
+      // Apply the moves: all indices from k to m+1 jump except stoppedAt
+      for (let idx = k; idx <= m + 1; idx++) {
+        if (idx !== stoppedAt) {
+          nu[idx] = getPart(lam, idx) + 1;
+        }
+      }
+    }
+
+    // Ensure nu >= mu (horizontal strip condition)
+    for (let i = 0; i < maxLen; i++) {
+      nu[i] = Math.max(nu[i], getPart(mu, i));
+    }
+
+    // Trim trailing zeros
+    let trimLen = maxLen;
+    while (trimLen > 0 && nu[trimLen - 1] === 0) {
+      trimLen--;
+    }
+
+    return {
+      nu: nu.slice(0, trimLen),
+      details: details
+    };
+  }
+
+  // Detailed sampler state class
+  class DetailedSamplerState {
+    constructor(n, x, y, q, seed) {
+      this.n = n;
+      this.x = x.slice();
+      this.y = y.slice();
+      this.q = q;
+      this.seed = seed;
+
+      // Ensure x and y have length n
+      while (this.x.length < n) this.x.push(1.0);
+      while (this.y.length < n) this.y.push(1.0);
+
+      // Initialize seeded RNG
+      this.rng = mulberry32(seed);
+
+      // Growth diagram: tau[i][j] stores partition at position (i,j)
+      this.tau = this.initializeTau();
+
+      // Precompute all Bernoulli trials using seeded RNG
+      this.bernoulliData = this.precomputeBernoulli();
+
+      // Build anti-diagonal traversal order: cells ordered by i+j
+      // Anti-diagonal t = i+j ranges from 2 to n+1
+      // After completing anti-diagonal t, we have Aztec diamond of size (t-1)
+      this.cellOrder = this.buildAntiDiagonalOrder();
+      this.cellIndex = 0;
+      this.totalCells = n * (n + 1) / 2;
+
+      // Current anti-diagonal being processed (2 to n+1)
+      this.currentAntiDiag = 2;
+      // Index within current anti-diagonal
+      this.indexInAntiDiag = 0;
+      // Size of current anti-diagonal
+      this.antiDiagSize = 1;
+      // Number of completed anti-diagonals (= current Aztec diamond size)
+      this.completedAntiDiags = 0;
+
+      // History for prev/next navigation
+      this.history = [];
+      this.history.push(this.saveState());
+
+      // Last VH bijection details (for display)
+      this.lastVHDetails = null;
+      this.completed = false;
+    }
+
+    initializeTau() {
+      const tau = [];
+      for (let i = 0; i <= this.n; i++) {
+        tau[i] = [];
+        for (let j = 0; j <= this.n + 1; j++) {
+          tau[i][j] = [];  // Empty partition
+        }
+      }
+      return tau;
+    }
+
+    // Build anti-diagonal order: cells (i,j) sorted by i+j, then by i
+    buildAntiDiagonalOrder() {
+      const order = [];
+      // Anti-diagonals t = 2, 3, ..., n+1
+      for (let t = 2; t <= this.n + 1; t++) {
+        // For anti-diagonal t, cells are (i, t-i) where:
+        // 1 <= i <= n, 1 <= j = t-i <= n+1-i
+        for (let i = 1; i < t && i <= this.n; i++) {
+          const j = t - i;
+          if (j >= 1 && j <= this.n + 1 - i) {
+            order.push({ i, j, antiDiag: t });
+          }
+        }
+      }
+      return order;
+    }
+
+    // Precompute all Bernoulli trials for the growth diagram using seeded RNG
+    precomputeBernoulli() {
+      const data = [];
+      for (let i = 0; i <= this.n; i++) {
+        data[i] = [];
+        for (let j = 0; j <= this.n + 1; j++) {
+          data[i][j] = null;
+        }
+      }
+
+      // Fill in anti-diagonal order for consistent RNG usage
+      const order = this.buildAntiDiagonalOrder();
+      for (let cellIdx = 0; cellIdx < order.length; cellIdx++) {
+        const { i, j, antiDiag } = order[cellIdx];
+        const x_i = this.x[i - 1];
+        const y_j = this.y[j - 1];
+        const xi = x_i * y_j;
+        const p = xi / (1.0 + xi);
+        const u = this.rng();  // Use seeded RNG
+        const bit = (u < p) ? 1 : 0;
+
+        data[i][j] = {
+          i: i,
+          j: j,
+          antiDiag: antiDiag,
+          cellIndex: cellIdx,
+          x_i: x_i,
+          y_j: y_j,
+          xi: xi,
+          p: p,
+          u: u,
+          bit: bit
+        };
+      }
+
+      return data;
+    }
+
+    // Get Bernoulli data for cell (i, j)
+    getBernoulli(i, j) {
+      return this.bernoulliData[i] ? this.bernoulliData[i][j] : null;
+    }
+
+    // Get current cell in traversal order
+    getCurrentCell() {
+      if (this.cellIndex < this.cellOrder.length) {
+        return this.cellOrder[this.cellIndex];
+      }
+      return null;
+    }
+
+    saveState() {
+      return {
+        cellIndex: this.cellIndex,
+        currentAntiDiag: this.currentAntiDiag,
+        indexInAntiDiag: this.indexInAntiDiag,
+        antiDiagSize: this.antiDiagSize,
+        completedAntiDiags: this.completedAntiDiags,
+        tau: JSON.parse(JSON.stringify(this.tau)),
+        lastVHDetails: this.lastVHDetails ? JSON.parse(JSON.stringify(this.lastVHDetails)) : null,
+        completed: this.completed
+      };
+    }
+
+    restoreState(state) {
+      this.cellIndex = state.cellIndex;
+      this.currentAntiDiag = state.currentAntiDiag;
+      this.indexInAntiDiag = state.indexInAntiDiag;
+      this.antiDiagSize = state.antiDiagSize;
+      this.completedAntiDiags = state.completedAntiDiags;
+      this.tau = state.tau;
+      this.lastVHDetails = state.lastVHDetails;
+      this.completed = state.completed;
+    }
+  }
+
+  // Step the detailed sampler one cell forward (anti-diagonal order)
+  function stepDetailedSampler() {
+    if (!detailedState || detailedState.completed) {
+      return false;
+    }
+
+    const state = detailedState;
+    const cell = state.getCurrentCell();
+    if (!cell) {
+      state.completed = true;
+      return false;
+    }
+
+    const i = cell.i;
+    const j = cell.j;
+
+    // Get adjacent partitions for VH bijection
+    const kappa = state.tau[i - 1][j - 1];  // diagonal (upper-left)
+    const lam = state.tau[i - 1][j];        // from above
+    const mu = state.tau[i][j - 1];         // from left
+
+    // Use precomputed Bernoulli values
+    const bern = state.getBernoulli(i, j);
+    const x_i = bern.x_i;
+    const y_j = bern.y_j;
+    const xi = bern.xi;
+    const p = bern.p;
+    const u = bern.u;
+    const bit = bern.bit;
+
+    // Sample new partition using VH bijection
+    const result = sampleVHqDetailed(lam, mu, kappa, bit, state.q);
+    state.tau[i][j] = result.nu;
+
+    // Store details for display
+    state.lastVHDetails = {
+      i: i,
+      j: j,
+      antiDiag: cell.antiDiag,
+      x_i: x_i,
+      y_j: y_j,
+      xi: xi,
+      p: p,
+      u: u,
+      bit: bit,
+      kappa: kappa,
+      lam: lam,
+      mu: mu,
+      nu: result.nu,
+      vhDetails: result.details
+    };
+
+    // Advance to next cell
+    state.cellIndex++;
+    state.indexInAntiDiag++;
+
+    // Check if we completed an anti-diagonal
+    if (state.indexInAntiDiag >= state.currentAntiDiag - 1) {
+      // Completed anti-diagonal (currentAntiDiag - 1) cells
+      state.completedAntiDiags++;
+      state.currentAntiDiag++;
+      state.indexInAntiDiag = 0;
+    }
+
+    // Check if completed all cells
+    if (state.cellIndex >= state.totalCells) {
+      state.completed = true;
+    }
+
+    // Save to history
+    state.history.push(state.saveState());
+
+    return true;
+  }
+
+  // Go to previous step
+  function stepDetailedSamplerPrev() {
+    if (!detailedState || detailedState.history.length <= 1) {
+      return false;
+    }
+
+    // Pop current state
+    detailedState.history.pop();
+    // Restore previous state
+    const prevState = detailedState.history[detailedState.history.length - 1];
+    detailedState.restoreState(prevState);
+    return true;
+  }
+
+  // Extract output partitions from current state
+  // Following arXiv:1407.3764: boundary path from (0,n) to (n,0) along staircase
+  function extractOutputPartitions(state) {
+    if (!state) return [];
+    return extractOutputPartitionsForSize(state, state.n);
+  }
+
+  // Draw Young diagram
+  function drawYoungDiagram(ctx, partition, x, y, boxSize, fillColor, label) {
+    ctx.fillStyle = '#333';
+    ctx.font = '11px monospace';
+    ctx.fillText(label + ' = ' + partitionToString(partition), x, y - 5);
+
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+
+    const parts = partition || [];
+    for (let row = 0; row < parts.length; row++) {
+      for (let col = 0; col < parts[row]; col++) {
+        ctx.fillRect(x + col * boxSize, y + row * boxSize, boxSize, boxSize);
+        ctx.strokeRect(x + col * boxSize, y + row * boxSize, boxSize, boxSize);
+      }
+    }
+  }
+
+  // Draw Young diagrams panel
+  function drawYoungDiagramsPanel() {
+    const canvas = document.getElementById('young-diagram-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    // Set canvas size
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!detailedState || !detailedState.lastVHDetails) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Click "Next" to start stepping', 20, h / 2);
+      return;
+    }
+
+    const d = detailedState.lastVHDetails;
+    const boxSize = Math.min(12, Math.floor(Math.min(w, h) / 30));
+    const margin = 10;
+    const halfW = w / 2;
+    const halfH = h / 2;
+
+    // Draw 4 partitions in 2x2 layout
+    // κ (top-left), λ (top-right), μ (bottom-left), ν (bottom-right)
+    drawYoungDiagram(ctx, d.kappa, margin, margin + 15, boxSize, '#ffdddd', 'κ');
+    drawYoungDiagram(ctx, d.lam, halfW + margin, margin + 15, boxSize, '#ddffdd', 'λ');
+    drawYoungDiagram(ctx, d.mu, margin, halfH + 15, boxSize, '#ddddff', 'μ');
+    drawYoungDiagram(ctx, d.nu, halfW + margin, halfH + 15, boxSize, '#ffffdd', 'ν');
+
+    // Draw arrows showing transitions
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+
+    // κ -> λ (horizontal)
+    ctx.beginPath();
+    ctx.moveTo(halfW - 20, margin + 40);
+    ctx.lineTo(halfW + 5, margin + 40);
+    ctx.stroke();
+
+    // κ -> μ (vertical)
+    ctx.beginPath();
+    ctx.moveTo(margin + 40, halfH - 20);
+    ctx.lineTo(margin + 40, halfH + 5);
+    ctx.stroke();
+
+    // λ -> ν, μ -> ν
+    ctx.beginPath();
+    ctx.moveTo(halfW + margin + 40, halfH - 20);
+    ctx.lineTo(halfW + margin + 40, halfH + 5);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(halfW - 20, halfH + 40);
+    ctx.lineTo(halfW + 5, halfH + 40);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // Update partition labels
+    const labelsDiv = document.getElementById('partition-labels');
+    if (labelsDiv) {
+      labelsDiv.innerHTML = `κ=${partitionToString(d.kappa)} | λ=${partitionToString(d.lam)}<br>μ=${partitionToString(d.mu)} | ν=${partitionToString(d.nu)}`;
+    }
+  }
+
+  // Draw cell lattice panel (growth diagram with precomputed Bernoulli bits)
+  function drawCellLatticePanel() {
+    const canvas = document.getElementById('cell-lattice-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!detailedState) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Click "Next" to start stepping', 20, h / 2);
+      return;
+    }
+
+    const n = detailedState.n;
+    const state = detailedState;
+
+    // Calculate cell size to fit the staircase
+    // The staircase has n rows, row i has (n+1-i) cells
+    // Total width needs to fit n cells, height needs to fit n rows
+    const margin = 30;
+    const cellSize = Math.min((w - 2 * margin) / n, (h - 2 * margin) / n);
+    const startX = margin;
+    const startY = margin;
+
+    // Draw axis labels
+    ctx.fillStyle = '#666';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('j →', startX + (n * cellSize) / 2 - 10, startY - 10);
+    ctx.save();
+    ctx.translate(startX - 15, startY + (n * cellSize) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('i →', -10, 0);
+    ctx.restore();
+
+    // Get current cell info
+    const currentCell = state.getCurrentCell();
+
+    // Draw cells in staircase pattern
+    for (let i = 1; i <= n; i++) {
+      const rowLen = n + 1 - i;
+      for (let j = 1; j <= rowLen; j++) {
+        const bern = state.getBernoulli(i, j);
+        if (!bern) continue;
+
+        const x = startX + (j - 1) * cellSize;
+        const y = startY + (i - 1) * cellSize;
+
+        // Determine cell state based on anti-diagonal order
+        const isProcessed = bern.cellIndex < state.cellIndex;
+        const isCurrentCell = currentCell && (i === currentCell.i && j === currentCell.j);
+        const isInCurrentAntiDiag = bern.antiDiag === state.currentAntiDiag;
+        const isInCompletedAntiDiag = bern.antiDiag < state.currentAntiDiag;
+
+        // Draw cell background
+        if (isCurrentCell) {
+          ctx.fillStyle = '#ffeb3b';  // Yellow for current cell
+        } else if (isInCurrentAntiDiag && !isProcessed) {
+          ctx.fillStyle = '#fff3e0';  // Light orange for cells in current anti-diagonal
+        } else if (isProcessed) {
+          ctx.fillStyle = bern.bit === 1 ? '#c8e6c9' : '#ffcdd2';  // Green/red tint for processed
+        } else {
+          ctx.fillStyle = '#f5f5f5';  // Light gray for unprocessed
+        }
+        ctx.fillRect(x, y, cellSize, cellSize);
+
+        // Draw cell border - thicker for anti-diagonal boundaries
+        ctx.strokeStyle = isProcessed ? '#666' : '#ccc';
+        ctx.lineWidth = isCurrentCell ? 2.5 : 1;
+        ctx.strokeRect(x, y, cellSize, cellSize);
+
+        // Draw bit value
+        const fontSize = Math.max(10, Math.min(16, cellSize * 0.5));
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Always show the precomputed bit value
+        if (isProcessed || isCurrentCell) {
+          // Processed/current: bold colored
+          ctx.fillStyle = bern.bit === 1 ? '#2e7d32' : '#c62828';
+        } else {
+          // Unprocessed: lighter color
+          ctx.fillStyle = bern.bit === 1 ? '#81c784' : '#e57373';
+        }
+        ctx.fillText(bern.bit.toString(), x + cellSize / 2, y + cellSize / 2);
+      }
+    }
+
+    // Draw anti-diagonal lines to show grouping
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    for (let t = 2; t <= n + 1; t++) {
+      // Draw line separating anti-diagonal t from t+1
+      const startI = Math.min(t - 1, n);
+      const endJ = Math.min(t - 1, n);
+      if (t <= state.currentAntiDiag) {
+        ctx.beginPath();
+        ctx.moveTo(startX + (t - startI - 1) * cellSize, startY + startI * cellSize);
+        ctx.lineTo(startX + endJ * cellSize, startY);
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+
+    // Draw row/column indices
+    ctx.fillStyle = '#333';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Column indices (j)
+    for (let j = 1; j <= n; j++) {
+      ctx.fillText(j.toString(), startX + (j - 0.5) * cellSize, startY - 5);
+    }
+
+    // Row indices (i)
+    ctx.textAlign = 'right';
+    for (let i = 1; i <= n; i++) {
+      ctx.fillText(i.toString(), startX - 5, startY + (i - 0.5) * cellSize);
+    }
+
+    // Update info
+    const infoDiv = document.getElementById('cell-lattice-info');
+    if (infoDiv) {
+      const processed = state.cellIndex;
+      const total = state.totalCells;
+      const totalOnes = countBits(state, 1, total);
+      const totalZeros = total - totalOnes;
+      const nextCell = state.getCurrentCell();
+      const aztecSize = state.completedAntiDiags;
+      infoDiv.innerHTML = `<b>Seed: ${state.seed}</b> | Cells: ${processed}/${total} | <span style="color: #2e7d32;">1s: ${totalOnes}</span> | <span style="color: #c62828;">0s: ${totalZeros}</span> | ` +
+        `<b>Aztec size: ${aztecSize}</b>` +
+        (nextCell ? ` | <span style="background: #ffeb3b; padding: 0 4px;">Next: (${nextCell.i},${nextCell.j}) in diag ${nextCell.antiDiag}</span>` : ' | <span style="color: #2e7d32;">Complete!</span>');
+    }
+  }
+
+  // Helper: count bits in processed cells
+  function countBits(state, bitValue, upToIndex) {
+    let count = 0;
+    for (let i = 1; i <= state.n; i++) {
+      const rowLen = state.n + 1 - i;
+      for (let j = 1; j <= rowLen; j++) {
+        const bern = state.getBernoulli(i, j);
+        if (bern && bern.cellIndex < upToIndex && bern.bit === bitValue) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  // Extract output partitions for a smaller Aztec diamond of given size
+  // Following the paper arXiv:1407.3764: the boundary path goes from (0, k) to (k, 0)
+  // along the staircase boundary, visiting 2k+1 positions
+  function extractOutputPartitionsForSize(state, size) {
+    if (size <= 0) return [[]];
+
+    const partitions = [];
+    let i = 0, j = size;
+
+    // Path from (0, size) to (size, 0) along staircase boundary
+    // This traces the output of the Schur process for Aztec diamond of this size
+    while (true) {
+      partitions.push(state.tau[i][j] || []);
+      if (i === size && j === 0) break;
+
+      // Follow the staircase boundary:
+      // Move right (i++) if we can, otherwise move down (j--)
+      // The staircase for Aztec diamond has cells (i,j) with i >= 1, j >= 1, i+j <= size+1
+      // We're on the boundary, so we check if (i+1, j) is in the staircase
+      if (j <= size - i && i < size) {
+        i++;
+      } else {
+        j--;
+      }
+    }
+
+    return partitions;
+  }
+
+  // Draw current Aztec diamond panel (size = completedAntiDiags)
+  function drawCurrentAztecPanel() {
+    const canvas = document.getElementById('current-aztec-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!detailedState) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Click "Next" to start stepping', 20, h / 2);
+      return;
+    }
+
+    const fullN = detailedState.n;
+    const currentSize = detailedState.completedAntiDiags;
+
+    // Update info
+    const infoDiv = document.getElementById('current-aztec-info');
+    if (infoDiv) {
+      if (currentSize === 0) {
+        infoDiv.textContent = 'No anti-diagonals completed yet. Click "Next" to start.';
+      } else if (currentSize >= fullN) {
+        infoDiv.textContent = `Complete Aztec diamond of size ${fullN}`;
+      } else {
+        infoDiv.textContent = `Aztec diamond of size ${currentSize} (${fullN - currentSize} more anti-diagonals to go)`;
+      }
+    }
+
+    if (currentSize === 0) {
+      ctx.fillStyle = '#999';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Complete an anti-diagonal to see the first tiling', 20, h / 2);
+      return;
+    }
+
+    // Get partitions for current size
+    const partitions = extractOutputPartitionsForSize(detailedState, currentSize);
+    const n = currentSize;
+
+    // Scale to fit - use the full n for consistent sizing
+    const scale = Math.min(w, h) / (2 * fullN + 3) * 0.9;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // Generate lattice points for Aztec diamond of current size
+    const latticePoints = [];
+    for (let hx = -n - 0.5; hx <= n + 0.5; hx += 1) {
+      for (let hy = -n - 0.5; hy <= n + 0.5; hy += 1) {
+        if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
+        if (Math.abs(hx) + Math.abs(hy) > n + 0.5) continue;
+
+        const screenX = cx + hx * scale;
+        const screenY = cy - hy * scale;
+        const diag = Math.round(hx + hy);
+
+        latticePoints.push({ hx, hy, x: screenX, y: screenY, diag });
+      }
+    }
+
+    if (latticePoints.length === 0) return;
+
+    // Group by diagonal
+    const diagGroups = {};
+    latticePoints.forEach(p => {
+      if (!diagGroups[p.diag]) diagGroups[p.diag] = [];
+      diagGroups[p.diag].push(p);
+    });
+
+    // Sort each diagonal and assign positions
+    Object.keys(diagGroups).forEach(d => {
+      diagGroups[d].sort((a, b) => a.hy - b.hy);
+      diagGroups[d].forEach((p, idx) => p.posInDiag = idx + 1);
+    });
+
+    // Mark particles based on partitions
+    const sortedDiags = Object.keys(diagGroups).map(Number).sort((a, b) => a - b);
+
+    sortedDiags.forEach((diag, diagIdx) => {
+      const points = diagGroups[diag];
+      const partition = partitions[diagIdx] || [];
+      const numParticles = points.length - (diagIdx % 2 === 0 ? diagIdx / 2 : (diagIdx + 1) / 2);
+      const groundSetSize = points.length;
+
+      if (numParticles > 0 && groundSetSize > 0) {
+        const subset = partitionToSubset(partition, Math.max(0, numParticles), groundSetSize);
+        const subsetSet = new Set(subset);
+        points.forEach(p => {
+          p.inSubset = subsetSet.has(p.posInDiag);
+        });
+      } else {
+        points.forEach(p => p.inSubset = false);
+      }
+    });
+
+    // Match particles (bottom-left first)
+    const dominoes = [];
+    const usedPoints = new Set();
+
+    const allPoints = latticePoints.slice().sort((a, b) => {
+      if (a.hy !== b.hy) return a.hy - b.hy;
+      return a.hx - b.hx;
+    });
+
+    for (const p of allPoints) {
+      if (!p.inSubset || usedPoints.has(`${p.hx},${p.hy}`)) continue;
+
+      const rightNeighbor = allPoints.find(q =>
+        q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
+        q.hx === p.hx + 1 && q.hy === p.hy
+      );
+      const topNeighbor = allPoints.find(q =>
+        q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
+        q.hx === p.hx && q.hy === p.hy + 1
+      );
+
+      if (rightNeighbor) {
+        dominoes.push({
+          cx: (p.x + rightNeighbor.x) / 2,
+          cy: (p.y + rightNeighbor.y) / 2,
+          width: scale,
+          height: scale / 2,
+          type: 'particle',
+          isHorizontal: true
+        });
+        usedPoints.add(`${p.hx},${p.hy}`);
+        usedPoints.add(`${rightNeighbor.hx},${rightNeighbor.hy}`);
+      } else if (topNeighbor) {
+        dominoes.push({
+          cx: (p.x + topNeighbor.x) / 2,
+          cy: (p.y + topNeighbor.y) / 2,
+          width: scale / 2,
+          height: scale,
+          type: 'particle',
+          isHorizontal: false
+        });
+        usedPoints.add(`${p.hx},${p.hy}`);
+        usedPoints.add(`${topNeighbor.hx},${topNeighbor.hy}`);
+      }
+    }
+
+    // Match holes (top-right first)
+    const holePoints = allPoints.filter(p => !p.inSubset).sort((a, b) => {
+      if (a.hy !== b.hy) return b.hy - a.hy;
+      return b.hx - a.hx;
+    });
+
+    for (const p of holePoints) {
+      if (usedPoints.has(`${p.hx},${p.hy}`)) continue;
+
+      const leftNeighbor = allPoints.find(q =>
+        !q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
+        q.hx === p.hx - 1 && q.hy === p.hy
+      );
+      const bottomNeighbor = allPoints.find(q =>
+        !q.inSubset && !usedPoints.has(`${q.hx},${q.hy}`) &&
+        q.hx === p.hx && q.hy === p.hy - 1
+      );
+
+      if (leftNeighbor) {
+        dominoes.push({
+          cx: (p.x + leftNeighbor.x) / 2,
+          cy: (p.y + leftNeighbor.y) / 2,
+          width: scale,
+          height: scale / 2,
+          type: 'hole',
+          isHorizontal: true
+        });
+        usedPoints.add(`${p.hx},${p.hy}`);
+        usedPoints.add(`${leftNeighbor.hx},${leftNeighbor.hy}`);
+      } else if (bottomNeighbor) {
+        dominoes.push({
+          cx: (p.x + bottomNeighbor.x) / 2,
+          cy: (p.y + bottomNeighbor.y) / 2,
+          width: scale / 2,
+          height: scale,
+          type: 'hole',
+          isHorizontal: false
+        });
+        usedPoints.add(`${p.hx},${p.hy}`);
+        usedPoints.add(`${bottomNeighbor.hx},${bottomNeighbor.hy}`);
+      }
+    }
+
+    // Draw dominoes
+    const colors = getCurrentColors();
+    for (const d of dominoes) {
+      if (d.type === 'particle') {
+        ctx.fillStyle = d.isHorizontal ? colors[0] : colors[1];
+      } else {
+        ctx.fillStyle = d.isHorizontal ? colors[2] : colors[3];
+      }
+
+      ctx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+    }
+  }
+
+  // Update detailed mode UI
+  function updateDetailedModeUI() {
+    if (!detailedState) return;
+
+    const state = detailedState;
+
+    // Update step indicator
+    const indicator = document.getElementById('step-indicator');
+    if (indicator) {
+      if (state.completed) {
+        indicator.textContent = `Completed! (${state.totalCells} cells)`;
+        indicator.style.color = '#2e7d32';
+      } else if (state.cellIndex === 0) {
+        indicator.textContent = `Ready to start (${state.totalCells} cells)`;
+        indicator.style.color = '#1976d2';
+      } else {
+        indicator.textContent = `Cell ${state.cellIndex} of ${state.totalCells}`;
+        indicator.style.color = '#1976d2';
+      }
+    }
+
+    // Enable/disable buttons
+    document.getElementById('step-prev-btn').disabled = state.history.length <= 1;
+    document.getElementById('step-next-btn').disabled = state.completed;
+
+    // Update info panels
+    if (state.lastVHDetails) {
+      const d = state.lastVHDetails;
+
+      // Cell position
+      document.getElementById('cell-position').innerHTML =
+        `Position: cell (${d.i}, ${d.j}) in growth diagram`;
+
+      // Bernoulli probability
+      document.getElementById('cell-bernoulli').innerHTML =
+        `p = x<sub>${d.i}</sub> &middot; y<sub>${d.j}</sub> / (1 + x<sub>${d.i}</sub> &middot; y<sub>${d.j}</sub>) = ${d.x_i.toFixed(4)} &times; ${d.y_j.toFixed(4)} / ${(1 + d.xi).toFixed(4)} = <b>${d.p.toFixed(6)}</b>`;
+
+      document.getElementById('cell-random').innerHTML =
+        `Random U ~ Uniform[0,1]: U = ${d.u.toFixed(6)}`;
+
+      document.getElementById('cell-bit').innerHTML =
+        `Result bit = ${d.bit} (U ${d.u < d.p ? '<' : '≥'} p)`;
+
+      // VH bijection details
+      const vh = d.vhDetails;
+      const islandStr = vh.islands.length > 0
+        ? vh.islands.map(isl => `[${isl.start}, ${isl.end}]`).join(', ')
+        : 'none';
+      document.getElementById('island-info').innerHTML =
+        `Islands: ${islandStr}`;
+
+      // f_k values
+      if (vh.fValues.length > 0) {
+        const f = vh.fValues[0];
+        document.getElementById('f-probability').innerHTML =
+          `f<sub>${f.k}</sub> = (1 - q<sup>${f.delta_lam}</sup>) / (1 - q<sup>${f.delta_nu}</sup>) = <b>${f.f_k.toFixed(6)}</b> (U=${f.u.toFixed(4)}, ${f.stopped ? 'STOPPED' : 'passed'})`;
+      } else if (state.q === 0) {
+        document.getElementById('f-probability').innerHTML =
+          `q=0 (Schur case): deterministic, no probabilistic sampling`;
+      } else {
+        document.getElementById('f-probability').innerHTML = `f<sub>k</sub>: —`;
+      }
+
+      // g_s values
+      if (vh.gValues.length > 0 && vh.gValues[0].values.length > 0) {
+        const gStr = vh.gValues[0].values.map(g =>
+          `g<sub>${g.s}</sub>=${g.g_s.toFixed(4)} (${g.stopped ? 'STOP' : 'pass'})`
+        ).join(', ');
+        document.getElementById('g-probabilities').innerHTML = `g values: ${gStr}`;
+      } else {
+        document.getElementById('g-probabilities').innerHTML = `g<sub>s</sub> values: —`;
+      }
+
+      // Decision
+      if (vh.decisions.length > 0) {
+        const decision = vh.decisions[vh.decisions.length - 1];
+        document.getElementById('stopped-decision').innerHTML =
+          `Decision: ${decision.case}` + (decision.stoppedAt !== null ? ` at index ${decision.stoppedAt}` : '');
+      } else {
+        document.getElementById('stopped-decision').innerHTML = `Decision: no islands to process`;
+      }
+    }
+
+    // Draw all panels
+    drawCellLatticePanel();
+    drawYoungDiagramsPanel();
+    drawCurrentAztecPanel();
+  }
+
+  // Initialize detailed sampler
+  function initializeDetailedSampler() {
+    const n = parseInt(document.getElementById("n-input").value) || 4;
+    const x = parseCSV(document.getElementById("x-params").value);
+    const y = parseCSV(document.getElementById("y-params").value);
+    const q = parseFloat(document.getElementById("q-input").value) || 0;
+
+    // Get seed from input, or generate random one
+    const seedInput = document.getElementById("detailed-seed");
+    let seed = parseInt(seedInput.value);
+    if (isNaN(seed) || seedInput.value === '') {
+      seed = Math.floor(Math.random() * 2147483647);
+      seedInput.value = seed;
+    }
+    currentSeed = seed;
+
+    if (n > 15) {
+      alert('Detailed mode works best with n ≤ 15 for clarity. Using n=' + Math.min(n, 15));
+    }
+
+    detailedState = new DetailedSamplerState(Math.min(n, 15), x, y, q, seed);
+    updateDetailedModeUI();
+  }
+
+  // Toggle detailed mode
+  document.getElementById('toggle-detailed-mode-btn').addEventListener('click', function() {
+    detailedModeActive = !detailedModeActive;
+
+    const btn = this;
+    const panel = document.getElementById('detailed-mode-panel');
+
+    // Elements to hide when in detailed mode (using IDs for reliability)
+    const elementsToToggle = [
+      'zoom-export-row',
+      'canvas-row',
+      'view-mode-controls',
+      'visual-controls',
+      'custom-color-pickers',
+      'partitions-details'
+    ];
+
+    if (detailedModeActive) {
+      btn.textContent = 'Disable Detailed Mode';
+      btn.classList.add('active');
+      panel.style.display = 'block';
+
+      // Hide normal UI elements
+      elementsToToggle.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+
+      // Initialize sampler
+      initializeDetailedSampler();
+    } else {
+      btn.textContent = 'Enable Detailed Mode';
+      btn.classList.remove('active');
+      panel.style.display = 'none';
+
+      // Stop auto-play if running
+      if (autoPlayInterval) {
+        clearInterval(autoPlayInterval);
+        autoPlayInterval = null;
+        document.getElementById('step-auto-btn').textContent = 'Auto-Play';
+      }
+
+      // Show normal UI elements
+      elementsToToggle.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+      });
+
+      detailedState = null;
+    }
+  });
+
+  // Step controls
+  document.getElementById('step-next-btn').addEventListener('click', function() {
+    if (stepDetailedSampler()) {
+      updateDetailedModeUI();
+    }
+  });
+
+  document.getElementById('step-prev-btn').addEventListener('click', function() {
+    if (stepDetailedSamplerPrev()) {
+      updateDetailedModeUI();
+    }
+  });
+
+  document.getElementById('step-reset-btn').addEventListener('click', function() {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
+      document.getElementById('step-auto-btn').textContent = 'Auto-Play';
+    }
+    initializeDetailedSampler();
+  });
+
+  document.getElementById('step-auto-btn').addEventListener('click', function() {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
+      this.textContent = 'Auto-Play';
+    } else {
+      const speed = 2100 - parseInt(document.getElementById('step-speed').value);
+      autoPlayInterval = setInterval(() => {
+        if (!stepDetailedSampler()) {
+          clearInterval(autoPlayInterval);
+          autoPlayInterval = null;
+          document.getElementById('step-auto-btn').textContent = 'Auto-Play';
+        }
+        updateDetailedModeUI();
+      }, speed);
+      this.textContent = 'Pause';
+    }
+  });
+
+  // New seed button - generates random seed and reinitializes
+  document.getElementById('new-seed-btn').addEventListener('click', function() {
+    const seedInput = document.getElementById("detailed-seed");
+    seedInput.value = Math.floor(Math.random() * 2147483647);
+    if (detailedModeActive) {
+      if (autoPlayInterval) {
+        clearInterval(autoPlayInterval);
+        autoPlayInterval = null;
+        document.getElementById('step-auto-btn').textContent = 'Auto-Play';
+      }
+      initializeDetailedSampler();
+    }
+  });
+
+  // ========== END DETAILED MODE ==========
 
   // Sample on page load with default parameters
   try {
