@@ -5901,6 +5901,8 @@ function initLozengeApp() {
                             await gpuEngine.finalizeCFTP();
                             // Get dimers from GPU result and update sim
                             sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+                            // Sync to WASM so Glauber can continue from this state
+                            sim.setDimers(sim.dimers);
                             draw();
 
                             gpuEngine.destroyCFTP();
