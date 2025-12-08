@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setRandomSweeps','_getRandomSweeps','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -591,8 +591,14 @@ bool tryHexagonFlip(int n0, int n1, int n2, int n3, int n4, int n5) {
 void performOneStep() {
     totalSteps++;
 
-    // Pick random vertex
-    int v = getRandomInt((int)vertices.size());
+    // Pick vertex: systematic (default) or random
+    int v;
+    if (useRandomSweeps) {
+        v = getRandomInt((int)vertices.size());
+    } else {
+        v = systematicIndex;
+        systematicIndex = (systematicIndex + 1) % (int)vertices.size();
+    }
     const CachedNeighbors& cn = cachedNeighbors[v];
 
     // Decide move type: 4-cycle (70%) or 6-cycle (30%)
@@ -778,7 +784,15 @@ bool tryHexagonFlip2(int n0, int n1, int n2, int n3, int n4, int n5) {
 
 void performOneStep2() {
     totalSteps2++;
-    int v = getRandomInt((int)vertices.size());
+
+    // Pick vertex: systematic (default) or random
+    int v;
+    if (useRandomSweeps) {
+        v = getRandomInt((int)vertices.size());
+    } else {
+        v = systematicIndex2;
+        systematicIndex2 = (systematicIndex2 + 1) % (int)vertices.size();
+    }
     const CachedNeighbors& cn = cachedNeighbors[v];
     bool try6cycle = (getRandom01() < 0.3);
 
@@ -855,6 +869,8 @@ int initFromVertices(const char* vertexList) {
     flipCount = 0;
     totalSteps2 = 0;
     flipCount2 = 0;
+    systematicIndex = 0;
+    systematicIndex2 = 0;
 
     // Parse vertex list
     std::string input(vertexList);
@@ -970,6 +986,16 @@ int getPeriodicK() { return periodicK; }
 
 EMSCRIPTEN_KEEPALIVE
 int getPeriodicL() { return periodicL; }
+
+EMSCRIPTEN_KEEPALIVE
+void setRandomSweeps(int use) {
+    useRandomSweeps = (use != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getRandomSweeps() {
+    return useRandomSweeps ? 1 : 0;
+}
 
 EMSCRIPTEN_KEEPALIVE
 int getVertexCount() { return (int)vertices.size(); }
