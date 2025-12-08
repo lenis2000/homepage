@@ -15,7 +15,7 @@ Triangular Lattice Dimer Sampler
 - Dimers (perfect matchings) on the triangular lattice
 - Non-bipartite lattice - no height function, no CFTP
 - Glauber dynamics with 4-cycle (rhombus) and 6-cycle (hexagon) moves
-- Based on Kenyon-Rémila theory, improved by Røising-Zhang (4+6 cycles suffice)
+- Based on Kenyon-Rémila theory: 4+6 cycles suffice for simply-connected domains
 */
 
 #include <emscripten.h>
@@ -122,22 +122,39 @@ struct Dimer {
 
 // Global state
 std::vector<Vertex> vertices;
-std::unordered_map<long long, int> vertexMap; // key -> index
-std::vector<std::vector<int>> adjacency; // For each vertex, list of neighbor indices
+std::unordered_map<long long, int> vertexMap; // key -> index (used only during init)
 std::vector<int> dimerPartner; // dimerPartner[v] = partner vertex index (-1 if none)
 
 // Statistics
 long long totalSteps = 0;
 long long flipCount = 0;
-long long flip4Count = 0;
-long long flip6Count = 0;
 
 // Weight (for future position-dependent weights)
 double globalWeight = 1.0;
 
-// Grid bounds for dense storage
+// ============================================================================
+// OPTIMIZED DATA STRUCTURES (O(1) lookups)
+// ============================================================================
+
+// Dense grid for O(1) vertex lookup
+std::vector<int16_t> vertexGrid;  // -1 if no vertex, else vertex index
 int gridMinN, gridMaxN, gridMinJ, gridMaxJ;
 size_t gridStrideJ;
+
+inline size_t getGridIdx(int n, int j) {
+    return (size_t)(n - gridMinN) * gridStrideJ + (size_t)(j - gridMinJ);
+}
+
+inline int getVertexFromGrid(int n, int j) {
+    if (n < gridMinN || n > gridMaxN || j < gridMinJ || j > gridMaxJ) return -1;
+    return vertexGrid[getGridIdx(n, j)];
+}
+
+// Cached neighbor indices for each vertex (computed once at init)
+struct CachedNeighbors {
+    int16_t neighbors[6];  // Pre-computed neighbor vertex indices (-1 if none)
+};
+std::vector<CachedNeighbors> cachedNeighbors;
 
 // ============================================================================
 // INITIALIZATION
@@ -166,8 +183,54 @@ int getVertexIndex(int n, int j) {
     return -1;
 }
 
-// Build adjacency list (only for vertices in the region)
+// Build dense grid for O(1) vertex lookup
+void buildDenseGrid() {
+    if (vertices.empty()) return;
+
+    // Find bounding box
+    gridMinN = gridMaxN = vertices[0].n;
+    gridMinJ = gridMaxJ = vertices[0].j;
+    for (const auto& v : vertices) {
+        gridMinN = std::min(gridMinN, v.n);
+        gridMaxN = std::max(gridMaxN, v.n);
+        gridMinJ = std::min(gridMinJ, v.j);
+        gridMaxJ = std::max(gridMaxJ, v.j);
+    }
+
+    // Add padding for neighbor lookups
+    gridMinN--; gridMaxN++;
+    gridMinJ--; gridMaxJ++;
+
+    gridStrideJ = (size_t)(gridMaxJ - gridMinJ + 1);
+    size_t gridSize = (size_t)(gridMaxN - gridMinN + 1) * gridStrideJ;
+
+    vertexGrid.assign(gridSize, -1);
+
+    // Populate grid
+    for (size_t i = 0; i < vertices.size(); i++) {
+        vertexGrid[getGridIdx(vertices[i].n, vertices[i].j)] = (int16_t)i;
+    }
+}
+
+// Build cached neighbors for each vertex
+void buildCachedNeighbors() {
+    cachedNeighbors.resize(vertices.size());
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int n = vertices[i].n;
+        int j = vertices[i].j;
+        for (int d = 0; d < 6; d++) {
+            cachedNeighbors[i].neighbors[d] = (int16_t)getVertexFromGrid(n + dir_dn[d], j + dir_dj[d]);
+        }
+    }
+}
+
+// Build adjacency list (only for vertices in the region) - used for initial matching
+std::vector<std::vector<int>> adjacency;
+
 void buildAdjacency() {
+    // Build dense grid first
+    buildDenseGrid();
+
     adjacency.clear();
     adjacency.resize(vertices.size());
 
@@ -177,12 +240,15 @@ void buildAdjacency() {
         for (int d = 0; d < 6; d++) {
             int nn = n + dir_dn[d];
             int nj = j + dir_dj[d];
-            int neighborIdx = getVertexIndex(nn, nj);
+            int neighborIdx = getVertexFromGrid(nn, nj); // Use fast grid lookup
             if (neighborIdx >= 0) {
                 adjacency[i].push_back(neighborIdx);
             }
         }
     }
+
+    // Build cached neighbors for Glauber dynamics
+    buildCachedNeighbors();
 }
 
 // ============================================================================
@@ -321,151 +387,121 @@ bool tryRhombusFlip(int v1, int v2, int v3, int v4) {
 // ============================================================================
 // 6-CYCLE (HEXAGON) MOVES
 // ============================================================================
-// A hexagon has 6 vertices v1-v2-v3-v4-v5-v6-v1
-// If alternating edges (v1,v2), (v3,v4), (v5,v6) are dimers, rotate to others
+// A hexagon has 6 vertices n0-n1-n2-n3-n4-n5-n0 around a center vertex
+// If alternating edges are dimers, rotate to the other alternating pattern
 
-bool tryHexagonFlip(int v1, int v2, int v3, int v4, int v5, int v6) {
-    // Check alternating pattern 1: (v1,v2), (v3,v4), (v5,v6)
-    if (dimerPartner[v1] == v2 && dimerPartner[v3] == v4 && dimerPartner[v5] == v6) {
-        // Flip to (v2,v3), (v4,v5), (v6,v1)
-        dimerPartner[v1] = v6;
-        dimerPartner[v6] = v1;
-        dimerPartner[v2] = v3;
-        dimerPartner[v3] = v2;
-        dimerPartner[v4] = v5;
-        dimerPartner[v5] = v4;
+bool tryHexagonFlip(int n0, int n1, int n2, int n3, int n4, int n5) {
+    // Check alternating pattern 1: (n0,n1), (n2,n3), (n4,n5)
+    if (dimerPartner[n0] == n1 && dimerPartner[n2] == n3 && dimerPartner[n4] == n5) {
+        // Flip to (n1,n2), (n3,n4), (n5,n0)
+        dimerPartner[n0] = n5;
+        dimerPartner[n5] = n0;
+        dimerPartner[n1] = n2;
+        dimerPartner[n2] = n1;
+        dimerPartner[n3] = n4;
+        dimerPartner[n4] = n3;
         return true;
     }
-    // Check alternating pattern 2: (v2,v3), (v4,v5), (v6,v1)
-    if (dimerPartner[v2] == v3 && dimerPartner[v4] == v5 && dimerPartner[v6] == v1) {
-        // Flip to (v1,v2), (v3,v4), (v5,v6)
-        dimerPartner[v1] = v2;
-        dimerPartner[v2] = v1;
-        dimerPartner[v3] = v4;
-        dimerPartner[v4] = v3;
-        dimerPartner[v5] = v6;
-        dimerPartner[v6] = v5;
+    // Check alternating pattern 2: (n1,n2), (n3,n4), (n5,n0)
+    if (dimerPartner[n1] == n2 && dimerPartner[n3] == n4 && dimerPartner[n5] == n0) {
+        // Flip to (n0,n1), (n2,n3), (n4,n5)
+        dimerPartner[n0] = n1;
+        dimerPartner[n1] = n0;
+        dimerPartner[n2] = n3;
+        dimerPartner[n3] = n2;
+        dimerPartner[n4] = n5;
+        dimerPartner[n5] = n4;
         return true;
     }
     return false;
 }
 
 // ============================================================================
-// GLAUBER DYNAMICS
+// GLAUBER DYNAMICS (OPTIMIZED) - 4-CYCLE AND 6-CYCLE MOVES
 // ============================================================================
 
-// Find all valid 4-cycles (rhombi) containing vertex v
-// Rhombus: v and 3 neighbors forming a parallelogram
-std::vector<std::array<int, 4>> findRhombi(int v) {
-    std::vector<std::array<int, 4>> result;
-    int n = vertices[v].n;
-    int j = vertices[v].j;
-
-    // For each pair of adjacent directions, check for rhombus
-    for (int d1 = 0; d1 < 6; d1++) {
-        int d2 = (d1 + 1) % 6; // Adjacent direction
-
-        int n1 = n + dir_dn[d1], j1 = j + dir_dj[d1];
-        int n2 = n + dir_dn[d2], j2 = j + dir_dj[d2];
-        int n3 = n + dir_dn[d1] + dir_dn[d2];
-        int j3 = j + dir_dj[d1] + dir_dj[d2];
-
-        int v1 = getVertexIndex(n1, j1);
-        int v2 = getVertexIndex(n2, j2);
-        int v3 = getVertexIndex(n3, j3);
-
-        if (v1 >= 0 && v2 >= 0 && v3 >= 0) {
-            // Check v1-v3 and v2-v3 edges exist (neighbors in adjacency)
-            bool v1v3 = false, v2v3 = false;
-            for (int nb : adjacency[v1]) if (nb == v3) { v1v3 = true; break; }
-            for (int nb : adjacency[v2]) if (nb == v3) { v2v3 = true; break; }
-
-            if (v1v3 && v2v3) {
-                result.push_back({v, v1, v3, v2}); // Cycle: v -> v1 -> v3 -> v2 -> v
-            }
-        }
-    }
-    return result;
-}
-
-// Find all valid 6-cycles (hexagons) centered at vertex v
-// The hexagon goes through all 6 neighbors of v
-std::vector<std::array<int, 6>> findHexagons(int v) {
-    std::vector<std::array<int, 6>> result;
-    int n = vertices[v].n;
-    int j = vertices[v].j;
-
-    // Collect all 6 neighbors
-    int neighbors[6] = {-1, -1, -1, -1, -1, -1};
-    for (int d = 0; d < 6; d++) {
-        neighbors[d] = getVertexIndex(n + dir_dn[d], j + dir_dj[d]);
-    }
-
-    // Check if all 6 neighbors exist
-    bool allExist = true;
-    for (int d = 0; d < 6; d++) {
-        if (neighbors[d] < 0) {
-            allExist = false;
-            break;
-        }
-    }
-
-    if (allExist) {
-        // Check if consecutive neighbors are connected
-        bool allConnected = true;
-        for (int d = 0; d < 6; d++) {
-            int d2 = (d + 1) % 6;
-            bool connected = false;
-            for (int nb : adjacency[neighbors[d]]) {
-                if (nb == neighbors[d2]) {
-                    connected = true;
-                    break;
-                }
-            }
-            if (!connected) {
-                allConnected = false;
-                break;
-            }
-        }
-
-        if (allConnected) {
-            result.push_back({neighbors[0], neighbors[1], neighbors[2],
-                             neighbors[3], neighbors[4], neighbors[5]});
-        }
-    }
-
-    return result;
-}
-
-// Perform one Glauber step
+// Optimized Glauber step using cached data
 void performOneStep() {
     totalSteps++;
 
     // Pick random vertex
     int v = getRandomInt((int)vertices.size());
+    const CachedNeighbors& cn = cachedNeighbors[v];
 
-    // Decide move type: 4-cycle or 6-cycle
-    // Weight: 4-cycles are more common, so we bias towards them
-    bool try6cycle = (getRandom01() < 0.3); // 30% chance for 6-cycle
+    // Decide move type: 4-cycle (70%) or 6-cycle (30%)
+    bool try6cycle = (getRandom01() < 0.3);
 
     if (try6cycle) {
-        auto hexagons = findHexagons(v);
-        if (!hexagons.empty()) {
-            int idx = getRandomInt((int)hexagons.size());
-            auto& hex = hexagons[idx];
-            if (tryHexagonFlip(hex[0], hex[1], hex[2], hex[3], hex[4], hex[5])) {
-                flipCount++;
-                flip6Count++;
+        // 6-CYCLE (HEXAGON) MOVE
+        // Check if all 6 neighbors exist
+        bool allExist = true;
+        int16_t nb[6];
+        for (int d = 0; d < 6; d++) {
+            nb[d] = cn.neighbors[d];
+            if (nb[d] < 0) {
+                allExist = false;
+                break;
+            }
+        }
+
+        if (allExist) {
+            // Check if consecutive neighbors are connected (form a hexagon)
+            bool allConnected = true;
+            for (int d = 0; d < 6; d++) {
+                int d2 = (d + 1) % 6;
+                const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
+                bool found = false;
+                for (int k = 0; k < 6; k++) {
+                    if (cn_d.neighbors[k] == nb[d2]) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    allConnected = false;
+                    break;
+                }
+            }
+
+            if (allConnected) {
+                if (tryHexagonFlip(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5])) {
+                    flipCount++;
+                }
             }
         }
     } else {
-        auto rhombi = findRhombi(v);
-        if (!rhombi.empty()) {
-            int idx = getRandomInt((int)rhombi.size());
-            auto& rh = rhombi[idx];
-            if (tryRhombusFlip(rh[0], rh[1], rh[2], rh[3])) {
-                flipCount++;
-                flip4Count++;
+        // 4-CYCLE (RHOMBUS) MOVE
+        // Pick a random direction pair (d, d+1 mod 6) and check for rhombus
+        int d1 = getRandomInt(6);
+        int d2 = (d1 + 1) % 6;
+
+        int v1 = cn.neighbors[d1];
+        int v2 = cn.neighbors[d2];
+
+        if (v1 >= 0 && v2 >= 0) {
+            // Compute diagonal vertex position
+            int n = vertices[v].n;
+            int j = vertices[v].j;
+            int n3 = n + dir_dn[d1] + dir_dn[d2];
+            int j3 = j + dir_dj[d1] + dir_dj[d2];
+            int v3 = getVertexFromGrid(n3, j3);
+
+            if (v3 >= 0) {
+                // Check if v1-v3 and v2-v3 edges exist
+                const CachedNeighbors& cn1 = cachedNeighbors[v1];
+                const CachedNeighbors& cn2 = cachedNeighbors[v2];
+                bool v1v3 = false, v2v3 = false;
+                for (int k = 0; k < 6; k++) {
+                    if (cn1.neighbors[k] == v3) v1v3 = true;
+                    if (cn2.neighbors[k] == v3) v2v3 = true;
+                }
+
+                if (v1v3 && v2v3) {
+                    // Rhombus exists: v -> v1 -> v3 -> v2 -> v
+                    if (tryRhombusFlip(v, v1, v3, v2)) {
+                        flipCount++;
+                    }
+                }
             }
         }
     }
@@ -487,8 +523,6 @@ int initFromVertices(const char* vertexList) {
     dimerPartner.clear();
     totalSteps = 0;
     flipCount = 0;
-    flip4Count = 0;
-    flip6Count = 0;
 
     // Parse vertex list
     std::string input(vertexList);

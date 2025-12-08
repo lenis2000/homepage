@@ -13,9 +13,11 @@ code:
 <summary>About / Help</summary>
 <div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
 
-<p>This simulator generates <strong>random dimer coverings</strong> (perfect matchings) on the <strong>triangular lattice</strong>.</p>
+<h4>What is this?</h4>
+<p>This simulator generates <strong>random dimer coverings</strong> (perfect matchings) on the <strong>triangular lattice</strong> using Glauber dynamics.</p>
 
-<p><strong>Key difference from lozenge/domino tilings:</strong> The triangular lattice is <strong>non-bipartite</strong>, which means:</p>
+<h4>Non-bipartite lattice</h4>
+<p>The triangular lattice is <strong>non-bipartite</strong> (cannot be 2-colored), unlike the square lattice (domino tilings) or hexagonal lattice (lozenge tilings). This means:</p>
 <ul>
   <li>No standard height function exists (only height mod 2)</li>
   <li>Correlations decay exponentially with very short correlation length (&lt; 1 lattice constant)</li>
@@ -23,30 +25,43 @@ code:
   <li>CFTP (Coupling From The Past) is not directly applicable</li>
 </ul>
 
+<h4>How to use</h4>
 <p><strong>Drawing tools:</strong></p>
 <ul>
-  <li><strong>Pan</strong>: Click and drag to pan the view. Scroll to zoom.</li>
+  <li><strong>Pan</strong>: Click and drag to move the view. Scroll to zoom in/out.</li>
   <li><strong>Draw</strong>: Click or drag on lattice vertices to add them to your region</li>
   <li><strong>Erase</strong>: Click or drag to remove vertices from your region</li>
-  <li><strong>Lasso Fill/Erase</strong>: Click to place polygon vertices. Close the loop by clicking near the start point, pressing Enter, or Cmd/Ctrl+click.</li>
-  <li><strong>Make Coverable</strong>: Adds minimum vertices to make region have a perfect matching</li>
+  <li><strong>Lasso Fill/Erase</strong>: Click to place polygon vertices. Close the loop by clicking near the start, pressing Enter, or Cmd/Ctrl+click (adds final vertex then closes).</li>
+  <li><strong>Make Coverable</strong>: Adds minimum vertices needed for a perfect matching to exist</li>
 </ul>
 
-<p><strong>Presets:</strong> Parallelogram, Hexagon, Triangle (up/down facing)</p>
+<p><strong>Presets:</strong> Parallelogram, Triangle (up/down facing)</p>
+
+<p><strong>View options:</strong></p>
+<ul>
+  <li><strong>Show grid</strong>: Display the underlying triangular lattice</li>
+  <li><strong>Show vertices</strong>: Display lattice points in the region</li>
+  <li><strong>Show boundary</strong>: Highlight the boundary of the region</li>
+  <li><strong>Color by orientation</strong>: Color dimers by their direction (3 colors for 3 edge orientations)</li>
+  <li><strong>Dimer width</strong>: Adjust the thickness of dimer lines</li>
+</ul>
 
 <p>A region has a <strong>perfect matching</strong> if and only if it has an even number of vertices AND the induced subgraph admits one. The simulator uses augmenting path algorithms to find an initial matching.</p>
 
-<p><strong>Glauber dynamics:</strong> The simulator uses local Markov chain Monte Carlo moves:</p>
+<h4>Glauber dynamics</h4>
+<p>The simulator uses local Markov chain Monte Carlo moves:</p>
 <ul>
-  <li><strong>4-cycle (rhombus) moves</strong>: Flip two dimers around a parallelogram</li>
-  <li><strong>6-cycle (hexagon) moves</strong>: Rotate three dimers around a hexagon</li>
+  <li><strong>4-cycle (rhombus) moves</strong>: Flip two dimers around a parallelogram of 4 vertices</li>
+  <li><strong>6-cycle (hexagon) moves</strong>: Rotate three dimers around a hexagon of 6 vertices</li>
 </ul>
-<p>Based on <a href="https://link.springer.com/article/10.1007/s00454-016-9807-1">Kenyon-Rémila theory</a>, these two move types are sufficient for ergodicity on parallelogram regions.</p>
+<p>For <strong>simply connected domains without holes</strong>, any two dimer configurations can be connected by a linear number of local transformations involving at most 4 edges (<a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon-Rémila 1996</a>). For <strong>parallelogram regions</strong>, 6-cycles alone suffice (<a href="https://ems.press/content/serial-article-files/48377">Theorem 8, Labbé-Lacoin</a>).</p>
 
-<p><strong>References:</strong></p>
+<h4>References</h4>
 <ul>
-  <li><a href="https://arxiv.org/abs/cond-mat/0206159">Fendley, Moessner, Sondhi: Classical dimers on the triangular lattice</a></li>
-  <li><a href="https://arxiv.org/abs/2304.10930">Local dimer dynamics in higher dimensions</a> - proves 4+6 cycles suffice</li>
+  <li>C. Kenyon, E. Rémila: <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Perfect matchings in the triangular lattice</a>, Discrete Math. 152 (1996) — proves 8-cycles suffice for any simply connected domain</li>
+  <li>I. Hartarsky, L. Lichev, F. Toninelli: <a href="https://arxiv.org/abs/2304.10930">Local dimer dynamics in higher dimensions</a>, Ann. Inst. Henri Poincaré (2024) — proves 4+6 cycles suffice for parallelograms</li>
+  <li>S. Labbé, H. Lacoin: <a href="https://ems.press/content/serial-article-files/48377">Mixing time of the adjacent walk on the simplex</a> — Theorem 8 shows 6-cycles alone suffice for parallelograms</li>
+  <li>P. Fendley, R. Moessner, S.L. Sondhi: <a href="https://arxiv.org/abs/cond-mat/0206159">Classical dimers on the triangular lattice</a>, Phys. Rev. B (2002)</li>
 </ul>
 
 </div>
@@ -181,7 +196,6 @@ code:
     <input type="number" id="preset-size" class="param-input" value="6" min="2" max="30">
   </span>
   <button id="btn-parallelogram">Parallelogram</button>
-  <button id="btn-hexagon">Hexagon</button>
   <button id="btn-triangle-up">Triangle ▲</button>
   <button id="btn-triangle-down">Triangle ▼</button>
   <button id="btn-make-coverable">Make Coverable</button>
@@ -734,20 +748,6 @@ code:
         fitView();
     }
 
-    function createHexagon(size) {
-        activeVertices.clear();
-        for (let n = -size; n <= size; n++) {
-            for (let j = -size; j <= size; j++) {
-                if (Math.abs(n) + Math.abs(j) + Math.abs(n + j) <= 2 * size) {
-                    const key = vertexKey(n, j);
-                    activeVertices.set(key, { n, j });
-                }
-            }
-        }
-        reinitialize();
-        fitView();
-    }
-
     function createTriangleUp(size) {
         activeVertices.clear();
         // Upward-facing triangle: n >= 0, j >= 0, n + j <= size
@@ -958,17 +958,23 @@ code:
     }
 
     function handleLassoClick(x, y, forceClose = false) {
-        // Check if clicking near the start to close the polygon, or force close with Cmd/Ctrl
+        // Check if clicking near the start to close the polygon
         if (lassoPoints.length >= 3) {
             const dist = Math.hypot(x - lassoPoints[0].x, y - lassoPoints[0].y);
-            if (dist < 15 || forceClose) {
+            if (dist < 15) {
                 applyLasso(currentTool === 'lasso-fill');
                 return;
             }
         }
 
+        // Add the point
         lassoPoints.push({ x, y });
         draw();
+
+        // If Cmd/Ctrl was held, close after adding this point
+        if (forceClose && lassoPoints.length >= 3) {
+            applyLasso(currentTool === 'lasso-fill');
+        }
     }
 
     // Keyboard shortcut to close lasso
@@ -985,11 +991,6 @@ code:
     document.getElementById('btn-parallelogram').addEventListener('click', () => {
         const size = parseInt(document.getElementById('preset-size').value) || 6;
         createParallelogram(size);
-    });
-
-    document.getElementById('btn-hexagon').addEventListener('click', () => {
-        const size = parseInt(document.getElementById('preset-size').value) || 6;
-        createHexagon(size);
     });
 
     document.getElementById('btn-triangle-up').addEventListener('click', () => {
