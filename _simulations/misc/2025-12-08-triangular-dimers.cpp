@@ -134,6 +134,7 @@ struct Dimer {
 // Global state
 std::vector<Vertex> vertices;
 std::unordered_map<long long, int> vertexMap; // key -> index (used only during init)
+std::vector<int> dimerPartnerInit; // Initial matching (base config)
 std::vector<int> dimerPartner;  // First dimer configuration
 std::vector<int> dimerPartner2; // Second dimer configuration (for double dimer model)
 
@@ -645,6 +646,7 @@ int initFromVertices(const char* vertexList) {
     vertices.clear();
     vertexMap.clear();
     adjacency.clear();
+    dimerPartnerInit.clear();
     dimerPartner.clear();
     dimerPartner2.clear();
     totalSteps = 0;
@@ -684,7 +686,8 @@ int initFromVertices(const char* vertexList) {
         return -3; // No perfect matching exists
     }
 
-    // Don't initialize dimerPartner2 here - only when double dimer is enabled
+    // Save initial matching as base config
+    dimerPartnerInit = dimerPartner;
 
     return (int)vertices.size();
 }
@@ -765,8 +768,8 @@ void performGlauberSteps2(int numSteps) {
 
 EMSCRIPTEN_KEEPALIVE
 void resetDimers2() {
-    // Start fresh: copy current first config to second
-    dimerPartner2 = dimerPartner;
+    // Start fresh: copy initial base config to second
+    dimerPartner2 = dimerPartnerInit;
     totalSteps2 = 0;
     flipCount2 = 0;
 }

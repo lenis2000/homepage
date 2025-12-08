@@ -41,6 +41,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   <li><strong>Dimer width</strong>: Adjust the thickness of dimer lines</li>
 </ul>
 
+<h4>Double dimer model</h4>
+<p>Enable <strong>Double dimer</strong> to superimpose two independent dimer configurations (blue and red). Each configuration evolves via its own independent Glauber dynamics.</p>
+
+<p>The superposition of two perfect matchings decomposes into disjoint <strong>alternating cycles</strong> (loops that alternate between the two configurations). Double edges (where both configurations agree) appear as cycles of length 2.</p>
+
+<p>Use <strong>Min loop</strong> to filter and display only cycles of at least the specified length, hiding double edges and short loops to reveal the large-scale loop structure.</p>
+
 <h4>Ergodicity and local moves</h4>
 <p>The simulator uses two types of local moves:</p>
 <ul>
