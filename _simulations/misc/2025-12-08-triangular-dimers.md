@@ -226,6 +226,10 @@ code:
   <label style="margin-left: 8px;">
     <input type="checkbox" id="color-by-orientation" checked> Color by orientation
   </label>
+  <span style="margin-left: 12px; display: inline-flex; align-items: center; gap: 4px;">
+    <span style="font-size: 12px; color: #666;">Dimer width</span>
+    <input type="range" id="edge-width-slider" min="1" max="100" value="50" style="width: 80px;">
+  </span>
 </div>
 
 <canvas id="dimer-canvas"></canvas>
@@ -474,8 +478,13 @@ code:
         const colorByOrientation = document.getElementById('color-by-orientation').checked;
         const defaultColor = isDark ? '#ffffff' : '#000000';
 
-        // Scale dimer width with zoom - thinner when zoomed out
-        ctx.lineWidth = Math.max(0.5, Math.min(6, viewScale * 0.1));
+        // Width slider: 1-100 with exponential scaling for more extreme ends
+        const widthSlider = parseInt(document.getElementById('edge-width-slider').value) || 50;
+        // Exponential: 1->0.02, 50->1, 100->5
+        const widthMultiplier = Math.pow(10, (widthSlider - 50) / 30);
+
+        // Scale dimer width with zoom and slider
+        ctx.lineWidth = Math.max(0.2, Math.min(20, viewScale * 0.15 * widthMultiplier));
         ctx.lineCap = 'round';
 
         for (const d of currentDimers) {
@@ -1016,6 +1025,7 @@ code:
     document.getElementById('show-vertices').addEventListener('change', draw);
     document.getElementById('show-boundary').addEventListener('change', draw);
     document.getElementById('color-by-orientation').addEventListener('change', draw);
+    document.getElementById('edge-width-slider').addEventListener('input', draw);
 
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
         viewScale = Math.min(100, viewScale * 1.25);
