@@ -515,36 +515,6 @@ code:
         Fill: &nbsp;&nbsp; [A] &nbsp; [A] &nbsp; ... &nbsp; [A] &nbsp; <span style="color: #c62828; font-weight: bold;">[B]</span> &nbsp; [A] &nbsp; ... &nbsp; [A]
       </div>
 
-      <p><strong>Physical Interpretation:</strong></p>
-      <table style="border-collapse: collapse; margin: 10px 0; font-size: 0.9em;">
-        <tr style="background: #e3f2fd;">
-          <th style="border: 1px solid #ccc; padding: 5px 10px;">$q$ value</th>
-          <th style="border: 1px solid #ccc; padding: 5px 10px;">Behavior</th>
-        </tr>
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q = 0$</td>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">Free sliding; deterministic cascade; uniform measure</td>
-        </tr>
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q$ small</td>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">Slight stickiness; close to uniform</td>
-        </tr>
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q \approx 0.5$</td>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">Moderate stickiness; visible q-deformation</td>
-        </tr>
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">$q \to 1$</td>
-          <td style="border: 1px solid #ccc; padding: 5px 10px;">High stickiness; particles rarely move; frozen regions</td>
-        </tr>
-      </table>
-
-      <p><strong>Limit Behaviors:</strong>
-      <ul style="margin: 5px 0 10px 20px;">
-        <li>$q \to 0$: Recovers classical EKLP shuffling (uniform random tilings)</li>
-        <li>$q \to 1$: Particles freeze; tiling concentrates on deterministic "frozen" configuration</li>
-      </ul>
-      </p>
 
       <p><strong>References:</strong>
       <ul style="margin: 5px 0 10px 20px;">
