@@ -7270,13 +7270,13 @@ function initLozengeApp() {
         const faces = [];
 
         // Track edges for side walls (boundary detection)
-        const edgeCount = new Map();
-        const addEdge = (i1, i2, topV1, topV2, botV1, botV2) => {
-            const key = [Math.min(i1, i2), Math.max(i1, i2)].join(',');
-            if (!edgeCount.has(key)) {
-                edgeCount.set(key, { count: 0, topV1, topV2, botV1, botV2 });
+        const edgeData = new Map();
+        const normalizeEdgeKey = (n1, j1, n2, j2) => {
+            // Sort endpoints to get consistent key regardless of direction
+            if (n1 < n2 || (n1 === n2 && j1 < j2)) {
+                return `${n1},${j1}-${n2},${j2}`;
             }
-            edgeCount.get(key).count++;
+            return `${n2},${j2}-${n1},${j1}`;
         };
 
         for (const dimer of dimers) {
@@ -7304,15 +7304,20 @@ function initLozengeApp() {
                 const next = (i + 1) % 4;
                 const [n1, j1] = verts[i];
                 const [n2, j2] = verts[next];
-                const edgeKey = `${n1},${j1}-${n2},${j2}`;
-                addEdge(edgeKey, edgeKey, topVerts[i], topVerts[next], botVerts[i], botVerts[next]);
+                const key = normalizeEdgeKey(n1, j1, n2, j2);
+
+                if (!edgeData.has(key)) {
+                    edgeData.set(key, { count: 0, topV1: topVerts[i], topV2: topVerts[next],
+                                        botV1: botVerts[i], botV2: botVerts[next] });
+                }
+                edgeData.get(key).count++;
             }
         }
 
         // Add side walls for boundary edges (edges with count == 1)
-        for (const [key, data] of edgeCount) {
+        for (const [key, data] of edgeData) {
             if (data.count === 1) {
-                // This is a boundary edge - add side wall
+                // This is a boundary edge - add side wall quad
                 faces.push([data.topV1, data.topV2, data.botV2, data.botV1]);
                 faces.push([data.botV1, data.botV2, data.topV2, data.topV1]); // double-sided
             }
