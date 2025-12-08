@@ -375,7 +375,8 @@ code:
     </span>
     <button id="fluctuationsBtn" class="cftp" title="Height Fluctuations Visualization" style="display: none;">Fluctuations</button>
     <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;">Resample</button>
-    <button id="scaleUpBtn" title="Double the region size (2x2 blocks)">Scale Up 2×2</button>
+    <span class="param-group"><span class="param-label">k</span><input type="number" class="param-input" id="scaleKInput" value="2" min="2" max="10"></span>
+    <button id="scaleUpBtn" title="Scale the region by k×k blocks">Scale k×k</button>
     <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
     <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
     <div style="display: flex; align-items: center; gap: 6px;">
@@ -623,6 +624,7 @@ code:
         cftpBtn: document.getElementById('cftpBtn'),
         cftpStopBtn: document.getElementById('cftpStopBtn'),
         scaleUpBtn: document.getElementById('scaleUpBtn'),
+        scaleKInput: document.getElementById('scaleKInput'),
         scaleDownBtn: document.getElementById('scaleDownBtn'),
         smoothScaleBtn: document.getElementById('smoothScaleBtn'),
         speedSlider: document.getElementById('speedSlider'),
@@ -3316,19 +3318,21 @@ code:
 
         el.scaleUpBtn.addEventListener('click', () => {
             if (!wasmReady || activeCells.size === 0) return;
-            // Scale up: double each cell into 2x2 block
+            const k = parseInt(el.scaleKInput.value, 10) || 2;
+            // Scale up: each cell becomes k×k block
             saveState();
             const newCells = new Map();
             for (const [key, cell] of activeCells) {
-                const nx = cell.x * 2;
-                const ny = cell.y * 2;
-                newCells.set(`${nx},${ny}`, {x: nx, y: ny});
-                newCells.set(`${nx+1},${ny}`, {x: nx+1, y: ny});
-                newCells.set(`${nx},${ny+1}`, {x: nx, y: ny+1});
-                newCells.set(`${nx+1},${ny+1}`, {x: nx+1, y: ny+1});
+                const nx = cell.x * k;
+                const ny = cell.y * k;
+                for (let dx = 0; dx < k; dx++) {
+                    for (let dy = 0; dy < k; dy++) {
+                        newCells.set(`${nx+dx},${ny+dy}`, {x: nx+dx, y: ny+dy});
+                    }
+                }
             }
             activeCells.clear();
-            for (const [k, v] of newCells) activeCells.set(k, v);
+            for (const [key, v] of newCells) activeCells.set(key, v);
             updateRegion();
             resetView();
         });
