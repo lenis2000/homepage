@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -30,6 +30,7 @@ Triangular Lattice Dimer Sampler
 #include <cstring>
 #include <algorithm>
 #include <climits>
+#include <array>
 
 // Fast xorshift random number generator
 static uint64_t rng_state = 12345678901234567ULL;
@@ -105,6 +106,15 @@ inline long long edgeKey(int n1, int j1, int n2, int j2) {
     return -1; // Should never happen for adjacent vertices
 }
 
+// For loop detection: canonicalize edge by coordinate comparison
+inline long long loopEdgeKey(int n1, int j1, int n2, int j2) {
+    if (n1 > n2 || (n1 == n2 && j1 > j2)) {
+        std::swap(n1, n2); std::swap(j1, j2);
+    }
+    return ((long long)(n1 + 10000) << 40) | ((long long)(j1 + 10000) << 20) |
+           ((long long)(n2 + 10000));
+}
+
 // ============================================================================
 // DATA STRUCTURES
 // ============================================================================
@@ -134,6 +144,10 @@ long long flipCount2 = 0;
 
 // Weight (for future position-dependent weights)
 double globalWeight = 1.0;
+
+// Loop detection for double dimer
+std::vector<std::array<int, 4>> loopDimers0, loopDimers1;  // {n1, j1, n2, j2}
+std::vector<int> loopSizes;  // Cycle size for each edge
 
 // ============================================================================
 // OPTIMIZED DATA STRUCTURES (O(1) lookups)
@@ -769,6 +783,151 @@ const char* exportDimers2() {
             }
         }
     }
+
+    return result.c_str();
+}
+
+// ============================================================================
+// LOOP DETECTION FOR DOUBLE DIMER MODEL
+// ============================================================================
+
+EMSCRIPTEN_KEEPALIVE
+const char* filterLoopsBySize(int minSize) {
+    static std::string result;
+
+    // Build edge lists from current configurations
+    loopDimers0.clear();
+    loopDimers1.clear();
+
+    std::unordered_set<long long> seen0;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int p = dimerPartner[i];
+        if (p > (int)i) {
+            long long ek = loopEdgeKey(vertices[i].n, vertices[i].j, vertices[p].n, vertices[p].j);
+            if (seen0.find(ek) == seen0.end()) {
+                seen0.insert(ek);
+                loopDimers0.push_back({vertices[i].n, vertices[i].j, vertices[p].n, vertices[p].j});
+            }
+        }
+    }
+
+    std::unordered_set<long long> seen1;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int p = dimerPartner2[i];
+        if (p > (int)i) {
+            long long ek = loopEdgeKey(vertices[i].n, vertices[i].j, vertices[p].n, vertices[p].j);
+            if (seen1.find(ek) == seen1.end()) {
+                seen1.insert(ek);
+                loopDimers1.push_back({vertices[i].n, vertices[i].j, vertices[p].n, vertices[p].j});
+            }
+        }
+    }
+
+    size_t totalEdges = loopDimers0.size() + loopDimers1.size();
+    loopSizes.assign(totalEdges, 0);
+
+    // Build edge map for sample 1 (for double dimer detection)
+    std::unordered_map<long long, size_t> edge1Map;
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        auto& d = loopDimers1[i];
+        edge1Map[loopEdgeKey(d[0], d[1], d[2], d[3])] = i;
+    }
+
+    // Build adjacency: vertex -> list of {edgeIdx, sample, otherVertex}
+    struct AdjEntry { size_t edgeIdx; int sample; long long otherVert; };
+    std::unordered_map<long long, std::vector<AdjEntry>> adj;
+
+    auto addEdge = [&](int n1, int j1, int n2, int j2, size_t idx, int sample) {
+        long long v1 = vertexKey(n1, j1);
+        long long v2 = vertexKey(n2, j2);
+        adj[v1].push_back({idx, sample, v2});
+        adj[v2].push_back({idx, sample, v1});
+    };
+
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        auto& d = loopDimers0[i];
+        addEdge(d[0], d[1], d[2], d[3], i, 0);
+    }
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        auto& d = loopDimers1[i];
+        addEdge(d[0], d[1], d[2], d[3], loopDimers0.size() + i, 1);
+    }
+
+    // Mark double dimers as size 2
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        auto& d = loopDimers0[i];
+        long long ek = loopEdgeKey(d[0], d[1], d[2], d[3]);
+        auto it = edge1Map.find(ek);
+        if (it != edge1Map.end()) {
+            loopSizes[i] = 2;
+            loopSizes[loopDimers0.size() + it->second] = 2;
+        }
+    }
+
+    // Trace alternating cycles
+    std::vector<bool> visited(totalEdges, false);
+    for (size_t i = 0; i < totalEdges; i++) {
+        if (loopSizes[i] == 2) visited[i] = true;
+    }
+
+    for (size_t startIdx = 0; startIdx < loopDimers0.size(); startIdx++) {
+        if (visited[startIdx]) continue;
+
+        std::vector<size_t> cycleEdges;
+        cycleEdges.push_back(startIdx);
+        visited[startIdx] = true;
+
+        auto& sd = loopDimers0[startIdx];
+        long long startV1 = vertexKey(sd[0], sd[1]);
+        long long startV2 = vertexKey(sd[2], sd[3]);
+        long long currentV = startV2;
+        int lastSample = 0;
+
+        int maxIter = 10000;
+        while (maxIter-- > 0) {
+            int nextSample = 1 - lastSample;
+            bool found = false;
+
+            for (auto& ae : adj[currentV]) {
+                if (ae.sample == nextSample && !visited[ae.edgeIdx]) {
+                    cycleEdges.push_back(ae.edgeIdx);
+                    visited[ae.edgeIdx] = true;
+                    currentV = ae.otherVert;
+                    lastSample = nextSample;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found || currentV == startV1) break;
+        }
+
+        int cycleSize = (int)cycleEdges.size();
+        for (size_t idx : cycleEdges) {
+            loopSizes[idx] = cycleSize;
+        }
+    }
+
+    // Build result JSON with filtered edge indices
+    result = "{\"indices0\":[";
+    bool first = true;
+    for (size_t i = 0; i < loopDimers0.size(); i++) {
+        if (loopSizes[i] >= minSize) {
+            if (!first) result += ",";
+            first = false;
+            result += std::to_string(i);
+        }
+    }
+    result += "],\"indices1\":[";
+    first = true;
+    for (size_t i = 0; i < loopDimers1.size(); i++) {
+        if (loopSizes[loopDimers0.size() + i] >= minSize) {
+            if (!first) result += ",";
+            first = false;
+            result += std::to_string(i);
+        }
+    }
+    result += "]}";
 
     return result.c_str();
 }

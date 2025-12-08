@@ -239,6 +239,10 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   <label style="margin-left: 8px;">
     <input type="checkbox" id="double-dimer"> Double dimer
   </label>
+  <span id="min-loop-container" style="display: none; margin-left: 8px;">
+    <span style="font-size: 12px; color: #666;">Min loop:</span>
+    <input type="number" id="min-loop-size" class="param-input" value="2" min="2" max="99" style="width: 50px;">
+  </span>
   <span style="margin-left: 12px; display: inline-flex; align-items: center; gap: 4px;">
     <span style="font-size: 12px; color: #666;">Dimer width</span>
     <input type="range" id="edge-width-slider" min="1" max="100" value="50" style="width: 80px;">
@@ -506,7 +510,28 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const dimer1Color = '#0066CC';
         const dimer2Color = '#CC3300';
 
-        for (const d of currentDimers) {
+        // Get loop filter if double dimer is enabled
+        let filteredIndices0 = null;
+        let filteredIndices1 = null;
+        if (doubleDimerEnabled && wasmReady) {
+            const minLoop = parseInt(document.getElementById('min-loop-size').value) || 2;
+            const filterResult = wasmModule._filterLoopsBySize(minLoop);
+            if (filterResult) {
+                try {
+                    const parsed = JSON.parse(filterResult);
+                    filteredIndices0 = new Set(parsed.indices0);
+                    filteredIndices1 = new Set(parsed.indices1);
+                } catch (e) {
+                    // Ignore parse errors
+                }
+            }
+        }
+
+        for (let i = 0; i < currentDimers.length; i++) {
+            // Skip if filtering and this edge is not in the filtered set
+            if (filteredIndices0 && !filteredIndices0.has(i)) continue;
+
+            const d = currentDimers[i];
             const p1 = latticeToScreen(d.n1, d.j1);
             const p2 = latticeToScreen(d.n2, d.j2);
 
@@ -530,7 +555,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         // Draw second configuration if double dimer is enabled
         if (doubleDimerEnabled && currentDimers2.length > 0) {
             ctx.strokeStyle = dimer2Color;
-            for (const d of currentDimers2) {
+            for (let i = 0; i < currentDimers2.length; i++) {
+                // Skip if filtering and this edge is not in the filtered set
+                if (filteredIndices1 && !filteredIndices1.has(i)) continue;
+
+                const d = currentDimers2[i];
                 const p1 = latticeToScreen(d.n1, d.j1);
                 const p2 = latticeToScreen(d.n2, d.j2);
 
@@ -769,6 +798,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _exportDimers: Module.cwrap('exportDimers', 'string', []),
                 _performGlauberSteps2: Module.cwrap('performGlauberSteps2', null, ['number']),
                 _exportDimers2: Module.cwrap('exportDimers2', 'string', []),
+                _filterLoopsBySize: Module.cwrap('filterLoopsBySize', 'string', ['number']),
                 _getTotalSteps: Module.cwrap('getTotalSteps', 'number', []),
                 _getFlipCount: Module.cwrap('getFlipCount', 'number', []),
                 _getAcceptRate: Module.cwrap('getAcceptRate', 'number', []),
@@ -1080,6 +1110,12 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     document.getElementById('show-boundary').addEventListener('change', draw);
     document.getElementById('color-by-orientation').addEventListener('change', draw);
     document.getElementById('edge-width-slider').addEventListener('input', draw);
+    document.getElementById('double-dimer').addEventListener('change', () => {
+        const doubleDimerEnabled = document.getElementById('double-dimer').checked;
+        document.getElementById('min-loop-container').style.display = doubleDimerEnabled ? '' : 'none';
+        draw();
+    });
+    document.getElementById('min-loop-size').addEventListener('change', draw);
 
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
         viewScale = Math.min(100, viewScale * 1.25);
