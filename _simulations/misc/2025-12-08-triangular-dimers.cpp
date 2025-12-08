@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -144,8 +144,78 @@ long long flipCount = 0;
 long long totalSteps2 = 0;
 long long flipCount2 = 0;
 
+// Sweep mode: false = systematic (default), true = random
+bool useRandomSweeps = false;
+int systematicIndex = 0;   // Current position in systematic sweep
+int systematicIndex2 = 0;  // For second configuration
+
 // Weight (for future position-dependent weights)
 double globalWeight = 1.0;
+
+// Periodic edge weights: [k][l][3] where 3 = number of edge types (horiz, diag1, diag2)
+// Max dimensions: k=4, l=4
+double edgeWeights_periodic[5][5][3];  // initialized with 1.0 in initPeriodicWeights
+int periodicK = 2;  // Period in n direction (default 2)
+int periodicL = 1;  // Period in j direction (default 1)
+bool usePeriodicWeights = false;
+
+// Initialize periodic weights with defaults
+void initPeriodicWeights() {
+    for (int ni = 0; ni < 5; ni++) {
+        for (int ji = 0; ji < 5; ji++) {
+            for (int t = 0; t < 3; t++) {
+                edgeWeights_periodic[ni][ji][t] = 1.0;
+            }
+        }
+    }
+    // Default non-uniform weights for k=2, l=1
+    // Position (0,0): horiz=1.0, diag1=2.0, diag2=0.5
+    // Position (1,0): horiz=0.5, diag1=1.0, diag2=2.0
+    edgeWeights_periodic[0][0][0] = 1.0;
+    edgeWeights_periodic[0][0][1] = 2.0;
+    edgeWeights_periodic[0][0][2] = 0.5;
+    edgeWeights_periodic[1][0][0] = 0.5;
+    edgeWeights_periodic[1][0][1] = 1.0;
+    edgeWeights_periodic[1][0][2] = 2.0;
+}
+
+// ============================================================================
+// EDGE WEIGHT FUNCTIONS
+// ============================================================================
+
+// Compute edge type from direction delta
+// Type 0: horizontal (dn=±1, dj=0)
+// Type 1: upper-right diagonal (dn=0, dj=±1)
+// Type 2: upper-left diagonal (dn=∓1, dj=±1) - where dn and dj have opposite signs
+inline int getEdgeType(int dn, int dj) {
+    if (dj == 0) return 0;  // horizontal
+    if (dn == 0) return 1;  // upper-right diagonal
+    return 2;               // upper-left diagonal
+}
+
+// Get weight for edge from (n1,j1) to (n2,j2)
+// Uses the lexicographically smaller vertex as the canonical position
+inline double getEdgeWeightFromCoords(int n1, int j1, int n2, int j2) {
+    if (!usePeriodicWeights) return 1.0;
+
+    int dn = n2 - n1;
+    int dj = j2 - j1;
+    int edgeType = getEdgeType(dn, dj);
+
+    // Use the lexicographically smaller vertex for position
+    int n, j;
+    if (n1 < n2 || (n1 == n2 && j1 < j2)) {
+        n = n1; j = j1;
+    } else {
+        n = n2; j = j2;
+    }
+
+    // Handle negative modulo correctly
+    int ni = ((n % periodicK) + periodicK) % periodicK;
+    int ji = ((j % periodicL) + periodicL) % periodicL;
+
+    return edgeWeights_periodic[ni][ji][edgeType];
+}
 
 // Loop detection for double dimer
 std::vector<std::array<int, 4>> loopDimers0, loopDimers1;  // {n1, j1, n2, j2}
@@ -385,10 +455,30 @@ bool initMatching() {
 
 // Check if (v1, v2, v3, v4) form a rhombus where v1-v2-v3-v4-v1 is the cycle
 // Returns true if edges (v1,v2) and (v3,v4) OR (v2,v3) and (v4,v1) are dimers
+// With periodic weights: uses Metropolis-Hastings acceptance
 bool tryRhombusFlip(int v1, int v2, int v3, int v4) {
+    const Vertex& V1 = vertices[v1];
+    const Vertex& V2 = vertices[v2];
+    const Vertex& V3 = vertices[v3];
+    const Vertex& V4 = vertices[v4];
+
     // Check if (v1,v2) and (v3,v4) are both dimers
     if (dimerPartner[v1] == v2 && dimerPartner[v3] == v4) {
-        // Flip to (v2,v3) and (v4,v1)
+        // Current edges: (v1,v2) and (v3,v4)
+        // Proposed edges: (v2,v3) and (v4,v1)
+
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
+            double w_new = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;  // Reject move
+            }
+        }
+
+        // Accept: Flip to (v2,v3) and (v4,v1)
         dimerPartner[v1] = v4;
         dimerPartner[v4] = v1;
         dimerPartner[v2] = v3;
@@ -397,7 +487,21 @@ bool tryRhombusFlip(int v1, int v2, int v3, int v4) {
     }
     // Check if (v2,v3) and (v4,v1) are both dimers
     if (dimerPartner[v2] == v3 && dimerPartner[v4] == v1) {
-        // Flip to (v1,v2) and (v3,v4)
+        // Current edges: (v2,v3) and (v4,v1)
+        // Proposed edges: (v1,v2) and (v3,v4)
+
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
+            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;  // Reject move
+            }
+        }
+
+        // Accept: Flip to (v1,v2) and (v3,v4)
         dimerPartner[v1] = v2;
         dimerPartner[v2] = v1;
         dimerPartner[v3] = v4;
@@ -413,10 +517,34 @@ bool tryRhombusFlip(int v1, int v2, int v3, int v4) {
 // A hexagon has 6 vertices n0-n1-n2-n3-n4-n5-n0 around a center vertex
 // If alternating edges are dimers, rotate to the other alternating pattern
 
+// With periodic weights: uses Metropolis-Hastings acceptance
 bool tryHexagonFlip(int n0, int n1, int n2, int n3, int n4, int n5) {
+    const Vertex& V0 = vertices[n0];
+    const Vertex& V1 = vertices[n1];
+    const Vertex& V2 = vertices[n2];
+    const Vertex& V3 = vertices[n3];
+    const Vertex& V4 = vertices[n4];
+    const Vertex& V5 = vertices[n5];
+
     // Check alternating pattern 1: (n0,n1), (n2,n3), (n4,n5)
     if (dimerPartner[n0] == n1 && dimerPartner[n2] == n3 && dimerPartner[n4] == n5) {
-        // Flip to (n1,n2), (n3,n4), (n5,n0)
+        // Current: (n0,n1), (n2,n3), (n4,n5)
+        // Proposed: (n1,n2), (n3,n4), (n5,n0)
+
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
+            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
+                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;  // Reject move
+            }
+        }
+
+        // Accept: Flip to (n1,n2), (n3,n4), (n5,n0)
         dimerPartner[n0] = n5;
         dimerPartner[n5] = n0;
         dimerPartner[n1] = n2;
@@ -427,7 +555,23 @@ bool tryHexagonFlip(int n0, int n1, int n2, int n3, int n4, int n5) {
     }
     // Check alternating pattern 2: (n1,n2), (n3,n4), (n5,n0)
     if (dimerPartner[n1] == n2 && dimerPartner[n3] == n4 && dimerPartner[n5] == n0) {
-        // Flip to (n0,n1), (n2,n3), (n4,n5)
+        // Current: (n1,n2), (n3,n4), (n5,n0)
+        // Proposed: (n0,n1), (n2,n3), (n4,n5)
+
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
+                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
+            double w_new = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;  // Reject move
+            }
+        }
+
+        // Accept: Flip to (n0,n1), (n2,n3), (n4,n5)
         dimerPartner[n0] = n1;
         dimerPartner[n1] = n0;
         dimerPartner[n2] = n3;
@@ -534,8 +678,24 @@ void performOneStep() {
 // SECOND CONFIGURATION (for double dimer model)
 // ============================================================================
 
+// With periodic weights: uses Metropolis-Hastings acceptance (second configuration)
 bool tryRhombusFlip2(int v1, int v2, int v3, int v4) {
+    const Vertex& V1 = vertices[v1];
+    const Vertex& V2 = vertices[v2];
+    const Vertex& V3 = vertices[v3];
+    const Vertex& V4 = vertices[v4];
+
     if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v4) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
+            double w_new = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
         dimerPartner2[v1] = v4;
         dimerPartner2[v4] = v1;
         dimerPartner2[v2] = v3;
@@ -543,6 +703,16 @@ bool tryRhombusFlip2(int v1, int v2, int v3, int v4) {
         return true;
     }
     if (dimerPartner2[v2] == v3 && dimerPartner2[v4] == v1) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
+            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
         dimerPartner2[v1] = v2;
         dimerPartner2[v2] = v1;
         dimerPartner2[v3] = v4;
@@ -552,8 +722,28 @@ bool tryRhombusFlip2(int v1, int v2, int v3, int v4) {
     return false;
 }
 
+// With periodic weights: uses Metropolis-Hastings acceptance (second configuration)
 bool tryHexagonFlip2(int n0, int n1, int n2, int n3, int n4, int n5) {
+    const Vertex& V0 = vertices[n0];
+    const Vertex& V1 = vertices[n1];
+    const Vertex& V2 = vertices[n2];
+    const Vertex& V3 = vertices[n3];
+    const Vertex& V4 = vertices[n4];
+    const Vertex& V5 = vertices[n5];
+
     if (dimerPartner2[n0] == n1 && dimerPartner2[n2] == n3 && dimerPartner2[n4] == n5) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
+            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
+                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
         dimerPartner2[n0] = n5;
         dimerPartner2[n5] = n0;
         dimerPartner2[n1] = n2;
@@ -563,6 +753,18 @@ bool tryHexagonFlip2(int n0, int n1, int n2, int n3, int n4, int n5) {
         return true;
     }
     if (dimerPartner2[n1] == n2 && dimerPartner2[n3] == n4 && dimerPartner2[n5] == n0) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
+                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
+            double w_new = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
+                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
         dimerPartner2[n0] = n1;
         dimerPartner2[n1] = n0;
         dimerPartner2[n2] = n3;
@@ -737,6 +939,37 @@ double getAcceptRate() {
 
 EMSCRIPTEN_KEEPALIVE
 void setWeight(double w) { globalWeight = w; }
+
+// Set periodic edge weights from flat array
+// Layout: [n=0,j=0,t=0], [n=0,j=0,t=1], [n=0,j=0,t=2], [n=0,j=1,t=0], ...
+EMSCRIPTEN_KEEPALIVE
+void setPeriodicEdgeWeights(double* values, int k, int l) {
+    periodicK = k;
+    periodicL = l;
+    for (int ni = 0; ni < k; ni++) {
+        for (int ji = 0; ji < l; ji++) {
+            for (int t = 0; t < 3; t++) {
+                edgeWeights_periodic[ni][ji][t] = values[(ni * l + ji) * 3 + t];
+            }
+        }
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setUsePeriodicWeights(int use) {
+    usePeriodicWeights = (use != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getUsePeriodicWeights() {
+    return usePeriodicWeights ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getPeriodicK() { return periodicK; }
+
+EMSCRIPTEN_KEEPALIVE
+int getPeriodicL() { return periodicL; }
 
 EMSCRIPTEN_KEEPALIVE
 int getVertexCount() { return (int)vertices.size(); }

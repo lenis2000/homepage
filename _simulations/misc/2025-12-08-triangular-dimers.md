@@ -201,6 +201,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   <button id="btn-parallelogram">Parallelogram</button>
   <button id="btn-triangle-up">Triangle</button>
   <button id="btn-make-coverable">Make Coverable</button>
+  <button id="btn-scale-up">Scale ×2</button>
   <button id="btn-clear" class="danger">Clear</button>
 </div>
 
@@ -255,6 +256,41 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </span>
 </div>
 
+<div class="control-group">
+  <div class="control-group-title">Periodic Edge Weights</div>
+  <label style="display: inline-flex; align-items: center; gap: 4px;">
+    <input type="checkbox" id="use-periodic-weights">
+    <span style="font-size: 12px; color: #555;">Enable periodic weights</span>
+  </label>
+  <span class="param-group" style="margin-left: 12px;">
+    <span class="param-label">k:</span>
+    <select id="periodic-k" class="param-input" style="width: 50px;">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+  </span>
+  <span class="param-group">
+    <span class="param-label">l:</span>
+    <select id="periodic-l" class="param-input" style="width: 50px;">
+      <option value="1" selected>1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+  </span>
+  <div id="weight-diagram-container" style="margin-top: 8px; display: none;">
+    <div style="font-size: 11px; color: #666; margin-bottom: 4px;">
+      k×l fundamental domain with 3 edge types per cell:
+      <span style="color: #E57200;">━ horiz</span>,
+      <span style="color: #232D4B;">╱ diag1</span>,
+      <span style="color: #2E8B57;">╲ diag2</span>
+    </div>
+    <div id="weight-diagram" style="display: inline-block;"></div>
+  </div>
+</div>
+
 <canvas id="dimer-canvas"></canvas>
 
 <div class="status-bar">
@@ -304,6 +340,34 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     // Speed control (steps per second)
     let stepsPerSecond = 100;
     let lastFrameTime = 0;
+
+    // Periodic weights state
+    let currentPeriodicK = 2;
+    let currentPeriodicL = 1;
+    let currentEdgeWeights = null; // [k][l][3] array
+
+    // Initialize default weights for k=2, l=1
+    function initDefaultWeights(k, l) {
+        const weights = [];
+        for (let ni = 0; ni < k; ni++) {
+            weights[ni] = [];
+            for (let ji = 0; ji < l; ji++) {
+                if (k === 2 && l === 1) {
+                    // Default non-uniform weights
+                    if (ni === 0) {
+                        weights[ni][ji] = [1.0, 2.0, 0.5];  // horiz, diag1, diag2
+                    } else {
+                        weights[ni][ji] = [0.5, 1.0, 2.0];
+                    }
+                } else {
+                    weights[ni][ji] = [1.0, 1.0, 1.0];  // uniform
+                }
+            }
+        }
+        return weights;
+    }
+
+    currentEdgeWeights = initDefaultWeights(2, 1);
 
     // ========================================================================
     // CANVAS SETUP
@@ -725,6 +789,39 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     }
 
     // ========================================================================
+    // SCALE UP
+    // ========================================================================
+    function scaleUp() {
+        if (activeVertices.size === 0) return;
+
+        // Collect current vertices
+        const currentVerts = Array.from(activeVertices.values());
+
+        // Clear and rebuild at 2x scale
+        activeVertices.clear();
+
+        // For each original vertex (n, j), add vertices at:
+        // (2n, 2j), (2n+1, 2j), (2n, 2j+1), (2n+1, 2j+1)
+        // This fills in a 2x2 parallelogram for each original vertex
+        for (const v of currentVerts) {
+            const n2 = v.n * 2;
+            const j2 = v.j * 2;
+            for (let dn = 0; dn <= 1; dn++) {
+                for (let dj = 0; dj <= 1; dj++) {
+                    const key = vertexKey(n2 + dn, j2 + dj);
+                    if (!activeVertices.has(key)) {
+                        activeVertices.set(key, { n: n2 + dn, j: j2 + dj });
+                    }
+                }
+            }
+        }
+
+        reinitialize();
+        fitView();
+        updateStatus(`Scaled region to ${activeVertices.size} vertices`);
+    }
+
+    // ========================================================================
     // WASM INTERFACE
     // ========================================================================
     let wasmReady = false;
@@ -816,7 +913,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _getTotalSteps: Module.cwrap('getTotalSteps', 'number', []),
                 _getFlipCount: Module.cwrap('getFlipCount', 'number', []),
                 _getAcceptRate: Module.cwrap('getAcceptRate', 'number', []),
-                _getVertexCount: Module.cwrap('getVertexCount', 'number', [])
+                _getVertexCount: Module.cwrap('getVertexCount', 'number', []),
+                _setUsePeriodicWeights: Module.cwrap('setUsePeriodicWeights', null, ['number']),
+                _getUsePeriodicWeights: Module.cwrap('getUsePeriodicWeights', 'number', []),
+                _getPeriodicK: Module.cwrap('getPeriodicK', 'number', []),
+                _getPeriodicL: Module.cwrap('getPeriodicL', 'number', [])
             };
             updateStatus('WASM loaded. Draw a region or use a preset.');
         };
@@ -1083,10 +1184,16 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     });
 
     document.getElementById('btn-make-coverable').addEventListener('click', makeCoverable);
+    document.getElementById('btn-scale-up').addEventListener('click', scaleUp);
 
     document.getElementById('btn-clear').addEventListener('click', () => {
         activeVertices.clear();
         reinitialize();
+        // Reset view
+        viewOffsetX = 0;
+        viewOffsetY = 0;
+        viewScale = 30;
+        draw();
     });
 
     document.getElementById('btn-start').addEventListener('click', startSimulation);
@@ -1123,6 +1230,155 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         draw();
     });
     document.getElementById('min-loop-size').addEventListener('change', draw);
+
+    // ========================================================================
+    // PERIODIC WEIGHTS
+    // ========================================================================
+
+    function buildWeightDiagram() {
+        const container = document.getElementById('weight-diagram');
+        const k = currentPeriodicK;
+        const l = currentPeriodicL;
+
+        container.innerHTML = '';
+
+        // Build a grid of input cells
+        const gridContainer = document.createElement('div');
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = `repeat(${k}, auto)`;
+        gridContainer.style.gap = '8px';
+
+        const edgeColors = ['#E57200', '#232D4B', '#2E8B57'];
+        const edgeLabels = ['━', '╱', '╲'];
+
+        // Iterate j from l-1 down to 0 so (0,l-1) is top-left visually
+        for (let ji = l - 1; ji >= 0; ji--) {
+            for (let ni = 0; ni < k; ni++) {
+                const cellDiv = document.createElement('div');
+                cellDiv.style.border = '1px solid #ddd';
+                cellDiv.style.padding = '6px';
+                cellDiv.style.borderRadius = '4px';
+                cellDiv.style.background = '#fff';
+
+                const header = document.createElement('div');
+                header.style.fontSize = '10px';
+                header.style.color = '#888';
+                header.style.textAlign = 'center';
+                header.style.marginBottom = '4px';
+                header.textContent = `(${ni},${ji})`;
+                cellDiv.appendChild(header);
+
+                for (let t = 0; t < 3; t++) {
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.gap = '4px';
+                    row.style.marginTop = '2px';
+
+                    const label = document.createElement('span');
+                    label.style.color = edgeColors[t];
+                    label.style.fontWeight = 'bold';
+                    label.style.width = '16px';
+                    label.textContent = edgeLabels[t];
+                    row.appendChild(label);
+
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'param-input';
+                    input.style.width = '55px';
+                    input.style.fontSize = '11px';
+                    input.min = '0.001';
+                    input.max = '1000';
+                    input.step = '0.1';
+                    input.value = currentEdgeWeights[ni]?.[ji]?.[t] ?? 1;
+                    input.dataset.n = ni;
+                    input.dataset.j = ji;
+                    input.dataset.t = t;
+                    input.addEventListener('change', updateEdgeWeights);
+                    row.appendChild(input);
+
+                    cellDiv.appendChild(row);
+                }
+
+                gridContainer.appendChild(cellDiv);
+            }
+        }
+
+        container.appendChild(gridContainer);
+    }
+
+    function updateEdgeWeights() {
+        if (!wasmReady) return;
+
+        const k = currentPeriodicK;
+        const l = currentPeriodicL;
+
+        // Collect weights from inputs
+        const inputs = document.querySelectorAll('#weight-diagram input[data-n]');
+        inputs.forEach(input => {
+            const ni = parseInt(input.dataset.n);
+            const ji = parseInt(input.dataset.j);
+            const t = parseInt(input.dataset.t);
+            const val = Math.max(0.001, parseFloat(input.value) || 1);
+            input.value = val;
+            if (!currentEdgeWeights[ni]) currentEdgeWeights[ni] = [];
+            if (!currentEdgeWeights[ni][ji]) currentEdgeWeights[ni][ji] = [1, 1, 1];
+            currentEdgeWeights[ni][ji][t] = val;
+        });
+
+        // Send to WASM as flat array: [n0j0t0, n0j0t1, n0j0t2, n0j1t0, ...]
+        const flatArray = [];
+        for (let ni = 0; ni < k; ni++) {
+            for (let ji = 0; ji < l; ji++) {
+                for (let t = 0; t < 3; t++) {
+                    flatArray.push(currentEdgeWeights[ni]?.[ji]?.[t] ?? 1);
+                }
+            }
+        }
+
+        // Allocate memory and copy values
+        const dataPtr = Module._malloc(flatArray.length * 8);  // 8 bytes per double
+        for (let i = 0; i < flatArray.length; i++) {
+            Module.setValue(dataPtr + i * 8, flatArray[i], 'double');
+        }
+
+        // Call WASM function
+        Module._setPeriodicEdgeWeights(dataPtr, k, l);
+
+        // Free memory
+        Module._free(dataPtr);
+    }
+
+    // Periodic weights event handlers
+    document.getElementById('use-periodic-weights').addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        if (wasmReady) {
+            wasmModule._setUsePeriodicWeights(enabled ? 1 : 0);
+        }
+        document.getElementById('weight-diagram-container').style.display = enabled ? 'block' : 'none';
+        if (enabled) {
+            buildWeightDiagram();
+            updateEdgeWeights();
+        }
+    });
+
+    document.getElementById('periodic-k').addEventListener('change', (e) => {
+        currentPeriodicK = parseInt(e.target.value);
+        currentEdgeWeights = initDefaultWeights(currentPeriodicK, currentPeriodicL);
+        if (document.getElementById('use-periodic-weights').checked) {
+            buildWeightDiagram();
+            updateEdgeWeights();
+        }
+    });
+
+    document.getElementById('periodic-l').addEventListener('change', (e) => {
+        currentPeriodicL = parseInt(e.target.value);
+        currentEdgeWeights = initDefaultWeights(currentPeriodicK, currentPeriodicL);
+        if (document.getElementById('use-periodic-weights').checked) {
+            buildWeightDiagram();
+            updateEdgeWeights();
+        }
+    });
 
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
         viewScale = Math.min(100, viewScale * 1.25);
