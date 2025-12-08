@@ -14,15 +14,16 @@ code:
 <div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
 
 <h4>What is this?</h4>
-<p>This simulator generates <strong>random dimer coverings</strong> (perfect matchings) on the <strong>triangular lattice</strong> using Glauber dynamics.</p>
+<p>This simulator generates <strong>random dimer coverings</strong> (perfect matchings) on the <strong>triangular lattice</strong> using Glauber dynamics (Markov Chain Monte Carlo).</p>
 
 <h4>Non-bipartite lattice</h4>
-<p>The triangular lattice is <strong>non-bipartite</strong> (cannot be 2-colored), unlike the square lattice (domino tilings) or hexagonal lattice (lozenge tilings). This means:</p>
+<p>The triangular lattice is <strong>non-bipartite</strong> (cannot be 2-colored), unlike the square lattice (domino tilings) or hexagonal lattice (lozenge tilings). This fundamental topological difference means:</p>
 <ul>
   <li>No standard height function exists (only height mod 2)</li>
-  <li>Correlations decay exponentially with very short correlation length (&lt; 1 lattice constant)</li>
-  <li>No arctic circle phenomenon or interesting limit shapes for uniform measure</li>
-  <li>CFTP (Coupling From The Past) is not directly applicable</li>
+  <li>The partition function is computed via a <strong>Pfaffian</strong>, not a determinant</li>
+  <li>Correlations decay exponentially with very short correlation length</li>
+  <li>No arctic circle phenomenon or limit shapes for uniform measure</li>
+  <li>CFTP (Coupling From The Past) is not directly applicable due to lack of monotone coupling</li>
 </ul>
 
 <h4>How to use</h4>
@@ -32,7 +33,7 @@ code:
   <li><strong>Draw</strong>: Click or drag on lattice vertices to add them to your region</li>
   <li><strong>Erase</strong>: Click or drag to remove vertices from your region</li>
   <li><strong>Lasso Fill/Erase</strong>: Click to place polygon vertices. Close the loop by clicking near the start, pressing Enter, or Cmd/Ctrl+click (adds final vertex then closes).</li>
-  <li><strong>Make Coverable</strong>: Adds minimum vertices needed for a perfect matching to exist</li>
+  <li><strong>Make Coverable</strong>: Attempts to add vertices to enable a perfect matching</li>
 </ul>
 
 <p><strong>Presets:</strong> Parallelogram, Triangle (up/down facing)</p>
@@ -46,22 +47,29 @@ code:
   <li><strong>Dimer width</strong>: Adjust the thickness of dimer lines</li>
 </ul>
 
-<p>A region has a <strong>perfect matching</strong> if and only if it has an even number of vertices AND the induced subgraph admits one. The simulator uses augmenting path algorithms to find an initial matching.</p>
+<p><strong>Perfect matchings:</strong> A region admits a perfect matching if and only if it satisfies <a href="https://en.wikipedia.org/wiki/Tutte_theorem">Tutte's theorem</a>. For non-bipartite graphs like the triangular lattice, this is more restrictive than the bipartite case. The simulator uses greedy matching with augmenting paths for initialization.</p>
 
-<h4>Glauber dynamics</h4>
-<p>The simulator uses local Markov chain Monte Carlo moves:</p>
+<h4>Ergodicity and local moves</h4>
+<p>The simulator uses two types of local moves:</p>
 <ul>
-  <li><strong>4-cycle (rhombus) moves</strong>: Flip two dimers around a parallelogram of 4 vertices</li>
-  <li><strong>6-cycle (hexagon) moves</strong>: Rotate three dimers around a hexagon of 6 vertices</li>
+  <li><strong>4-cycle moves</strong>: Flip two dimers around a rhombus (parallelogram of 4 vertices)</li>
+  <li><strong>6-cycle moves</strong>: Rotate three dimers around a hexagon perimeter (6 vertices surrounding a center)</li>
 </ul>
-<p>For <strong>simply connected domains without holes</strong>, any two dimer configurations can be connected by a linear number of local transformations involving at most 4 edges (<a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon-Rémila 1996</a>). For <strong>parallelogram regions</strong>, 6-cycles alone suffice (<a href="https://ems.press/content/serial-article-files/48377">Theorem 8, Labbé-Lacoin</a>).</p>
+
+<p><strong>Ergodicity theorem:</strong> The connectivity of the Markov chain is guaranteed by <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon &amp; Rémila (1996)</a>, who proved that for any <strong>simply connected domain without holes</strong>, the space of perfect matchings is connected via local moves of length at most 8. Any two configurations can be connected by a linear number of such transformations.</p>
+
+<p><a href="https://arxiv.org/abs/2304.10930">Hartarsky, Lichev &amp; Toninelli (2024)</a> improved this result, showing that for <strong>parallelogram-shaped domains</strong>, moves of length 4 and 6 suffice for ergodicity.</p>
+
+<p><strong>Note on topological sectors:</strong> For domains with holes or periodic boundary conditions, the configuration space splits into disjoint <em>topological sectors</em> characterized by winding numbers. The local moves (4-cycle and 6-cycle) preserve these sectors and cannot mix between them.</p>
+
+<h4>Important distinction</h4>
+<p>This model (<strong>triangular lattice bond dimers</strong>) should not be confused with <strong>Lozenge tilings</strong>, which are dimers on the <em>hexagonal</em> (honeycomb) lattice. Lozenge tilings are bipartite and have height functions; the triangular lattice model studied here has fundamentally different mathematical properties.</p>
 
 <h4>References</h4>
 <ul>
-  <li>C. Kenyon, E. Rémila: <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Perfect matchings in the triangular lattice</a>, Discrete Math. 152 (1996) — proves 8-cycles suffice for any simply connected domain</li>
-  <li>I. Hartarsky, L. Lichev, F. Toninelli: <a href="https://arxiv.org/abs/2304.10930">Local dimer dynamics in higher dimensions</a>, Ann. Inst. Henri Poincaré (2024) — proves 4+6 cycles suffice for parallelograms</li>
-  <li>S. Labbé, H. Lacoin: <a href="https://ems.press/content/serial-article-files/48377">Mixing time of the adjacent walk on the simplex</a> — Theorem 8 shows 6-cycles alone suffice for parallelograms</li>
-  <li>P. Fendley, R. Moessner, S.L. Sondhi: <a href="https://arxiv.org/abs/cond-mat/0206159">Classical dimers on the triangular lattice</a>, Phys. Rev. B (2002)</li>
+  <li>C. Kenyon, E. Rémila: <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Perfect matchings in the triangular lattice</a>, Discrete Math. 152 (1996) — ergodicity via 4+6+8 cycles</li>
+  <li>I. Hartarsky, L. Lichev, F. Toninelli: <a href="https://arxiv.org/abs/2304.10930">Local dimer dynamics in higher dimensions</a>, Ann. Inst. Henri Poincaré D (2024) — 4+6 cycles suffice for parallelograms</li>
+  <li>P. Fendley, R. Moessner, S.L. Sondhi: <a href="https://arxiv.org/abs/cond-mat/0206159">Classical dimers on the triangular lattice</a>, Phys. Rev. B 66 (2002)</li>
 </ul>
 
 </div>

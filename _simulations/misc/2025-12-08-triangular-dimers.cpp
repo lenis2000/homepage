@@ -254,8 +254,12 @@ void buildAdjacency() {
 // ============================================================================
 // PERFECT MATCHING INITIALIZATION
 // ============================================================================
-// For non-bipartite graphs, we use a greedy approach with augmenting paths
-// This is simpler than Edmonds' blossom algorithm but works for most cases
+// For non-bipartite graphs, finding a perfect matching requires care.
+// The full solution is Edmonds' Blossom Algorithm which handles odd cycles.
+// We use a simplified approach: greedy matching + BFS augmenting paths.
+// This works for most practical cases on triangular lattice parallelograms,
+// but may fail on pathological domains. If initMatching() returns false,
+// the domain either has odd vertex count or no perfect matching exists.
 
 // Find augmenting path from unmatched vertex using BFS
 bool findAugmentingPath(int start, std::vector<int>& parent) {
