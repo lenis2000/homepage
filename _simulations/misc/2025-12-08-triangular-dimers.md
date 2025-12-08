@@ -30,7 +30,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   <li><strong>Make Coverable</strong>: Attempts to add vertices to enable a perfect matching</li>
 </ul>
 
-<p><strong>Presets:</strong> Parallelogram, Triangle (up/down facing)</p>
+<p><strong>Presets:</strong> Parallelogram, Triangle</p>
 
 <p><strong>View options:</strong></p>
 <ul>
@@ -192,8 +192,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     <input type="number" id="preset-size" class="param-input" value="6" min="2" max="30">
   </span>
   <button id="btn-parallelogram">Parallelogram</button>
-  <button id="btn-triangle-up">Triangle ▲</button>
-  <button id="btn-triangle-down">Triangle ▼</button>
+  <button id="btn-triangle-up">Triangle</button>
   <button id="btn-make-coverable">Make Coverable</button>
   <button id="btn-clear" class="danger">Clear</button>
 </div>
@@ -241,7 +240,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </label>
   <span id="min-loop-container" style="display: none; margin-left: 8px;">
     <span style="font-size: 12px; color: #666;">Min loop:</span>
-    <input type="number" id="min-loop-size" class="param-input" value="2" min="2" max="99" style="width: 50px;">
+    <input type="number" id="min-loop-size" class="param-input" value="2" min="2" style="width: 50px;">
   </span>
   <span style="margin-left: 12px; display: inline-flex; align-items: center; gap: 4px;">
     <span style="font-size: 12px; color: #666;">Dimer width</span>
@@ -745,7 +744,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         isValid = true;
         updateStatus(`Initialized with ${result} vertices`);
         fetchDimers();
-        fetchDimers2();  // Also initialize second configuration for double dimer
+        // Only initialize second config if double dimer is enabled
+        if (document.getElementById('double-dimer').checked) {
+            wasmModule._resetDimers2();
+            fetchDimers2();
+        } else {
+            currentDimers2 = [];
+        }
         return true;
     }
 
@@ -798,6 +803,8 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _exportDimers: Module.cwrap('exportDimers', 'string', []),
                 _performGlauberSteps2: Module.cwrap('performGlauberSteps2', null, ['number']),
                 _exportDimers2: Module.cwrap('exportDimers2', 'string', []),
+                _resetDimers2: Module.cwrap('resetDimers2', null, []),
+                _clearDimers2: Module.cwrap('clearDimers2', null, []),
                 _filterLoopsBySize: Module.cwrap('filterLoopsBySize', 'string', ['number']),
                 _getTotalSteps: Module.cwrap('getTotalSteps', 'number', []),
                 _getFlipCount: Module.cwrap('getFlipCount', 'number', []),
@@ -828,19 +835,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         // Upward-facing triangle: n >= 0, j >= 0, n + j <= size
         for (let n = 0; n <= size; n++) {
             for (let j = 0; j <= size - n; j++) {
-                const key = vertexKey(n, j);
-                activeVertices.set(key, { n, j });
-            }
-        }
-        reinitialize();
-        fitView();
-    }
-
-    function createTriangleDown(size) {
-        activeVertices.clear();
-        // Downward-facing triangle: n <= 0, j <= 0, n + j >= -size
-        for (let n = -size; n <= 0; n++) {
-            for (let j = -size - n; j <= 0; j++) {
                 const key = vertexKey(n, j);
                 activeVertices.set(key, { n, j });
             }
@@ -1081,11 +1075,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         createTriangleUp(size);
     });
 
-    document.getElementById('btn-triangle-down').addEventListener('click', () => {
-        const size = parseInt(document.getElementById('preset-size').value) || 6;
-        createTriangleDown(size);
-    });
-
     document.getElementById('btn-make-coverable').addEventListener('click', makeCoverable);
 
     document.getElementById('btn-clear').addEventListener('click', () => {
@@ -1113,6 +1102,17 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     document.getElementById('double-dimer').addEventListener('change', () => {
         const doubleDimerEnabled = document.getElementById('double-dimer').checked;
         document.getElementById('min-loop-container').style.display = doubleDimerEnabled ? '' : 'none';
+        if (wasmReady && isValid) {
+            if (doubleDimerEnabled) {
+                // Start fresh second config from current first config
+                wasmModule._resetDimers2();
+                fetchDimers2();
+            } else {
+                // Clear second config
+                wasmModule._clearDimers2();
+                currentDimers2 = [];
+            }
+        }
         draw();
     });
     document.getElementById('min-loop-size').addEventListener('change', draw);

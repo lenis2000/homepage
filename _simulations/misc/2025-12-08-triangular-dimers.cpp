@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -111,8 +111,9 @@ inline long long loopEdgeKey(int n1, int j1, int n2, int j2) {
     if (n1 > n2 || (n1 == n2 && j1 > j2)) {
         std::swap(n1, n2); std::swap(j1, j2);
     }
-    return ((long long)(n1 + 10000) << 40) | ((long long)(j1 + 10000) << 20) |
-           ((long long)(n2 + 10000));
+    // Use 16 bits per coordinate to fit all 4 values
+    return ((long long)(n1 + 32768) << 48) | ((long long)(j1 + 32768) << 32) |
+           ((long long)(n2 + 32768) << 16) | ((long long)(j2 + 32768));
 }
 
 // ============================================================================
@@ -683,8 +684,7 @@ int initFromVertices(const char* vertexList) {
         return -3; // No perfect matching exists
     }
 
-    // Initialize second configuration as copy of first (they evolve independently)
-    dimerPartner2 = dimerPartner;
+    // Don't initialize dimerPartner2 here - only when double dimer is enabled
 
     return (int)vertices.size();
 }
@@ -761,6 +761,21 @@ void performGlauberSteps2(int numSteps) {
     for (int i = 0; i < numSteps; i++) {
         performOneStep2();
     }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void resetDimers2() {
+    // Start fresh: copy current first config to second
+    dimerPartner2 = dimerPartner;
+    totalSteps2 = 0;
+    flipCount2 = 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void clearDimers2() {
+    dimerPartner2.clear();
+    totalSteps2 = 0;
+    flipCount2 = 0;
 }
 
 EMSCRIPTEN_KEEPALIVE
