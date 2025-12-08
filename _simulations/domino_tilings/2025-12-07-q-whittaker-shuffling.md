@@ -37,7 +37,7 @@ code:
 <div style="margin-bottom: 10px;">
   <label><input type="checkbox" id="granular-cb"> Granular steps</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb" checked> Rotate 45°</label>
-  <label style="margin-left: 15px;"><input type="checkbox" id="particles-cb"> Particles</label>
+  <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb"> Holes</label>
   <select id="palette-select" style="margin-left: 15px;"></select>
 </div>
 
@@ -57,7 +57,7 @@ code:
   let autoInterval = null;
   let rotated = true;
   let granular = false;
-  let showParticles = false;
+  let showHoles = false;
   let phase = 'complete';  // 'complete', 'badblocks', 'deleted', 'slid'
   let badDominoes = new Set();  // For highlighting bad blocks
 
@@ -352,9 +352,9 @@ code:
       const px = d.x * cellSize;
       const py = -(d.y + (isHoriz ? 1 : 2)) * cellSize;
 
-      if (showParticles) {
-        // Particles view: N and E are particles (filled), S and W are holes (empty)
-        const isParticle = (d.type === 'N' || d.type === 'E');
+      if (showHoles) {
+        // Holes view: S and W are particles (filled), N and E are holes (empty)
+        const isHole = (d.type === 'N' || d.type === 'E');
         const radius = cellSize * 0.35;
 
         // Get center positions of the two cells in the domino
@@ -376,13 +376,13 @@ code:
         centers.forEach(c => {
           ctx.beginPath();
           ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
-          if (isParticle) {
-            ctx.fillStyle = '#000';
-            ctx.fill();
-          } else {
+          if (isHole) {
             ctx.strokeStyle = '#000';
             ctx.lineWidth = Math.max(1, cellSize / 15);
             ctx.stroke();
+          } else {
+            ctx.fillStyle = '#000';
+            ctx.fill();
           }
         });
       } else {
@@ -412,7 +412,7 @@ code:
   document.getElementById('palette-select').addEventListener('change', e => { paletteIndex = parseInt(e.target.value); render(); });
   document.getElementById('rotate-cb').addEventListener('change', e => { rotated = e.target.checked; render(); });
   document.getElementById('granular-cb').addEventListener('change', e => { granular = e.target.checked; updateUI(); });
-  document.getElementById('particles-cb').addEventListener('change', e => { showParticles = e.target.checked; render(); });
+  document.getElementById('holes-cb').addEventListener('change', e => { showHoles = e.target.checked; render(); });
 
   window.addEventListener('resize', render);
 
