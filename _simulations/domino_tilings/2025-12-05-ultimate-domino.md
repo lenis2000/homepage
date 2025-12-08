@@ -3789,7 +3789,12 @@ code:
 
         // 3D View Controls
         el.toggle3DBtn.addEventListener('click', () => {
-            setViewMode(!is3DView);
+            const switching3D = !is3DView;
+            setViewMode(switching3D);
+            // Reset 2D view when switching back to 2D
+            if (!switching3D) {
+                resetView();
+            }
         });
 
         el.perspectiveBtn.addEventListener('click', () => {
@@ -3810,6 +3815,7 @@ code:
                 if (isValid && dominoes.length > 0) {
                     const colors = getColors();
                     renderer3D.renderDominoes(dominoes, colors);
+                    renderer3D.resetView();
                 }
             }
         });
