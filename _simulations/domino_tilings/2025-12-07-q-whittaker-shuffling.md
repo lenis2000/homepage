@@ -37,7 +37,7 @@ code:
 <div style="margin-bottom: 10px;">
   <label><input type="checkbox" id="granular-cb"> Granular steps</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb" checked> Rotate 45°</label>
-  <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb"> Holes</label>
+  <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb"> Particles</label>
   <select id="palette-select" style="margin-left: 15px;"></select>
 </div>
 
