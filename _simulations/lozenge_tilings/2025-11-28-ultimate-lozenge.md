@@ -570,7 +570,7 @@ if (window.LOZENGE_WEBGPU) {
   <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
     <div class="view-toggle">
       <button id="toggle3DBtn" title="Toggle 2D/3D">2D</button>
-      <button id="perspectiveBtn" title="Toggle perspective/isometric" style="display: none;">🎯</button>
+      <button id="perspectiveBtn" title="Isometric view (click for perspective)" style="display: none;">📐</button>
       <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
     </div>
     <div class="view-toggle">
@@ -733,6 +733,9 @@ Cmd-click: complete lasso</div>
     <button id="export-json">Export Shape</button>
     <button id="import-json">Import Shape</button>
     <input type="file" id="import-json-file" accept=".json" style="display: none;">
+    <span style="font-size: 11px; color: #666;">Base:</span>
+    <input type="number" id="obj-base-height" value="2" min="0" step="0.5" style="width: 50px;">
+    <button id="export-obj">OBJ</button>
   </div>
   <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Height CSV Coordinates:
 
@@ -2634,7 +2637,7 @@ function initLozengeApp() {
             this.autoRotate = false;
             this.cameraInitialized = false;
             this.currentPresetIndex = 0;
-            this.usePerspective = true;
+            this.usePerspective = false;
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -7225,6 +7228,118 @@ function initLozengeApp() {
         }).catch(err => {
             alert('Failed to copy to clipboard: ' + err);
         });
+    });
+
+    // OBJ Export - height function surface with z-direction base
+    function generateOBJ(dimers, baseHeight) {
+        const heights = computeHeightFunction(dimers);
+
+        const getVertexKeys = (dimer) => {
+            const { bn, bj, t } = dimer;
+            if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+        };
+
+        const to3D = (n, j, h) => ({ x: h, y: -n - h, z: j - h });
+
+        // Find min z in transformed coordinates
+        let minZ = Infinity;
+        for (const [key, h] of heights) {
+            const [n, j] = key.split(',').map(Number);
+            const pos = to3D(n, j, h);
+            minZ = Math.min(minZ, pos.z);
+        }
+        const baseZ = minZ - baseHeight;
+
+        const vertexMap = new Map();
+        const vertices = [];
+        let vertexIndex = 1;
+
+        const addVertex = (x, y, z) => {
+            const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
+            if (!vertexMap.has(key)) {
+                vertices.push({ x, y, z });
+                vertexMap.set(key, vertexIndex++);
+            }
+            return vertexMap.get(key);
+        };
+
+        const getTopVertex = (n, j) => {
+            const h = heights.get(`${n},${j}`) || 0;
+            const pos = to3D(n, j, h);
+            return addVertex(pos.x, pos.y, pos.z);
+        };
+
+        const getBaseVertex = (n, j) => {
+            const h = heights.get(`${n},${j}`) || 0;
+            const pos = to3D(n, j, h);
+            return addVertex(pos.x, pos.y, baseZ);
+        };
+
+        const faces = [];
+        const edgeMap = new Map();
+
+        const makeEdgeKey = (n1, j1, n2, j2) => {
+            if (n1 < n2 || (n1 === n2 && j1 < j2)) return `${n1},${j1},${n2},${j2}`;
+            return `${n2},${j2},${n1},${j1}`;
+        };
+
+        // Top surface
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+            const indices = verts.map(([n, j]) => getTopVertex(n, j));
+            faces.push(indices);
+
+            for (let i = 0; i < 4; i++) {
+                const [n1, j1] = verts[i];
+                const [n2, j2] = verts[(i + 1) % 4];
+                const key = makeEdgeKey(n1, j1, n2, j2);
+                if (!edgeMap.has(key)) edgeMap.set(key, { count: 0, n1, j1, n2, j2 });
+                edgeMap.get(key).count++;
+            }
+        }
+
+        // Base surface (reversed winding)
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+            const indices = verts.map(([n, j]) => getBaseVertex(n, j));
+            faces.push([indices[3], indices[2], indices[1], indices[0]]);
+        }
+
+        // Walls for boundary edges
+        for (const [, edge] of edgeMap) {
+            if (edge.count === 1) {
+                const { n1, j1, n2, j2 } = edge;
+                const top1 = getTopVertex(n1, j1);
+                const top2 = getTopVertex(n2, j2);
+                const base1 = getBaseVertex(n1, j1);
+                const base2 = getBaseVertex(n2, j2);
+                faces.push([top1, top2, base2, base1]);
+            }
+        }
+
+        let obj = '# Lozenge tiling height function OBJ\n';
+        obj += `# Vertices: ${vertices.length}, Faces: ${faces.length}\n\n`;
+        for (const v of vertices) {
+            obj += `v ${v.x.toFixed(6)} ${v.y.toFixed(6)} ${v.z.toFixed(6)}\n`;
+        }
+        obj += '\n';
+        for (const f of faces) {
+            obj += `f ${f.join(' ')}\n`;
+        }
+        return obj;
+    }
+
+    document.getElementById('export-obj').addEventListener('click', () => {
+        if (!isValid || sim.dimers.length === 0) {
+            alert('No valid tiling to export.');
+            return;
+        }
+        const baseHeight = parseFloat(document.getElementById('obj-base-height').value) || 2;
+        const obj = generateOBJ(sim.dimers, baseHeight);
+        const blob = new Blob([obj], { type: 'model/obj' });
+        downloadFile(blob, generateExportFilename('obj'));
     });
 
     // JSON Import - load shape from file
