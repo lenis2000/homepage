@@ -733,9 +733,9 @@ Cmd-click: complete lasso</div>
     <button id="export-json">Export Shape</button>
     <button id="import-json">Import Shape</button>
     <input type="file" id="import-json-file" accept=".json" style="display: none;">
-    <span style="font-size: 11px; color: #666;">Base:</span>
-    <input type="number" id="obj-base-height" value="2" min="0" step="0.5" style="width: 50px;">
     <button id="export-obj">OBJ</button>
+    <span style="font-size: 11px; color: #666;">Thickness (mm):</span>
+    <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;">
   </div>
   <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Height CSV Coordinates:
 
@@ -7230,8 +7230,8 @@ function initLozengeApp() {
         });
     });
 
-    // OBJ Export - height function surface with z-direction base
-    function generateOBJ(dimers, baseHeight) {
+    // OBJ Export - stepped surface with thickness in (1,-1,-1) direction
+    function generateOBJ(dimers, thickness) {
         const heights = computeHeightFunction(dimers);
 
         const getVertexKeys = (dimer) => {
@@ -7241,16 +7241,18 @@ function initLozengeApp() {
             return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
         };
 
-        const to3D = (n, j, h) => ({ x: h, y: -n - h, z: j - h });
+        // Original 3D renderer coordinates, scaled to mm
+        const scale = 10;
+        const to3D = (n, j, h) => ({
+            x: h * scale,
+            y: (-n - h) * scale,
+            z: (j - h) * scale
+        });
 
-        // Find min z in transformed coordinates
-        let minZ = Infinity;
-        for (const [key, h] of heights) {
-            const [n, j] = key.split(',').map(Number);
-            const pos = to3D(n, j, h);
-            minZ = Math.min(minZ, pos.z);
-        }
-        const baseZ = minZ - baseHeight;
+        // Offset direction (1,-1,-1) normalized * thickness
+        const offsetLen = thickness * scale;
+        const norm = Math.sqrt(3);
+        const offset = { x: offsetLen / norm, y: -offsetLen / norm, z: -offsetLen / norm };
 
         const vertexMap = new Map();
         const vertices = [];
@@ -7265,61 +7267,59 @@ function initLozengeApp() {
             return vertexMap.get(key);
         };
 
-        const getTopVertex = (n, j) => {
-            const h = heights.get(`${n},${j}`) || 0;
-            const pos = to3D(n, j, h);
-            return addVertex(pos.x, pos.y, pos.z);
-        };
-
-        const getBaseVertex = (n, j) => {
-            const h = heights.get(`${n},${j}`) || 0;
-            const pos = to3D(n, j, h);
-            return addVertex(pos.x, pos.y, baseZ);
-        };
-
         const faces = [];
-        const edgeMap = new Map();
 
-        const makeEdgeKey = (n1, j1, n2, j2) => {
-            if (n1 < n2 || (n1 === n2 && j1 < j2)) return `${n1},${j1},${n2},${j2}`;
-            return `${n2},${j2},${n1},${j1}`;
+        // Track edges for side walls (boundary detection)
+        const edgeCount = new Map();
+        const addEdge = (i1, i2, topV1, topV2, botV1, botV2) => {
+            const key = [Math.min(i1, i2), Math.max(i1, i2)].join(',');
+            if (!edgeCount.has(key)) {
+                edgeCount.set(key, { count: 0, topV1, topV2, botV1, botV2 });
+            }
+            edgeCount.get(key).count++;
         };
 
-        // Top surface
         for (const dimer of dimers) {
             const verts = getVertexKeys(dimer);
-            const indices = verts.map(([n, j]) => getTopVertex(n, j));
-            faces.push(indices);
 
+            const topVerts = verts.map(([n, j]) => {
+                const h = heights.get(`${n},${j}`) || 0;
+                const pos = to3D(n, j, h);
+                return addVertex(pos.x, pos.y, pos.z);
+            });
+
+            const botVerts = verts.map(([n, j]) => {
+                const h = heights.get(`${n},${j}`) || 0;
+                const pos = to3D(n, j, h);
+                return addVertex(pos.x + offset.x, pos.y + offset.y, pos.z + offset.z);
+            });
+
+            // Top face
+            faces.push([topVerts[0], topVerts[1], topVerts[2], topVerts[3]]);
+            // Bottom face (reversed winding)
+            faces.push([botVerts[3], botVerts[2], botVerts[1], botVerts[0]]);
+
+            // Track edges for boundary detection
             for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
                 const [n1, j1] = verts[i];
-                const [n2, j2] = verts[(i + 1) % 4];
-                const key = makeEdgeKey(n1, j1, n2, j2);
-                if (!edgeMap.has(key)) edgeMap.set(key, { count: 0, n1, j1, n2, j2 });
-                edgeMap.get(key).count++;
+                const [n2, j2] = verts[next];
+                const edgeKey = `${n1},${j1}-${n2},${j2}`;
+                addEdge(edgeKey, edgeKey, topVerts[i], topVerts[next], botVerts[i], botVerts[next]);
             }
         }
 
-        // Base surface (reversed winding)
-        for (const dimer of dimers) {
-            const verts = getVertexKeys(dimer);
-            const indices = verts.map(([n, j]) => getBaseVertex(n, j));
-            faces.push([indices[3], indices[2], indices[1], indices[0]]);
-        }
-
-        // Walls for boundary edges
-        for (const [, edge] of edgeMap) {
-            if (edge.count === 1) {
-                const { n1, j1, n2, j2 } = edge;
-                const top1 = getTopVertex(n1, j1);
-                const top2 = getTopVertex(n2, j2);
-                const base1 = getBaseVertex(n1, j1);
-                const base2 = getBaseVertex(n2, j2);
-                faces.push([top1, top2, base2, base1]);
+        // Add side walls for boundary edges (edges with count == 1)
+        for (const [key, data] of edgeCount) {
+            if (data.count === 1) {
+                // This is a boundary edge - add side wall
+                faces.push([data.topV1, data.topV2, data.botV2, data.botV1]);
+                faces.push([data.botV1, data.botV2, data.topV2, data.topV1]); // double-sided
             }
         }
 
-        let obj = '# Lozenge tiling height function OBJ\n';
+        let obj = '# Lozenge tiling OBJ\n';
+        obj += '# Units: millimeters (mm)\n';
         obj += `# Vertices: ${vertices.length}, Faces: ${faces.length}\n\n`;
         for (const v of vertices) {
             obj += `v ${v.x.toFixed(6)} ${v.y.toFixed(6)} ${v.z.toFixed(6)}\n`;
@@ -7336,8 +7336,8 @@ function initLozengeApp() {
             alert('No valid tiling to export.');
             return;
         }
-        const baseHeight = parseFloat(document.getElementById('obj-base-height').value) || 2;
-        const obj = generateOBJ(sim.dimers, baseHeight);
+        const thickness = parseFloat(document.getElementById('obj-thickness').value) || 2;
+        const obj = generateOBJ(sim.dimers, thickness);
         const blob = new Blob([obj], { type: 'model/obj' });
         downloadFile(blob, generateExportFilename('obj'));
     });
