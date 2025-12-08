@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_getVertexCount','_getEdgeCount','_freeString','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -123,11 +123,14 @@ struct Dimer {
 // Global state
 std::vector<Vertex> vertices;
 std::unordered_map<long long, int> vertexMap; // key -> index (used only during init)
-std::vector<int> dimerPartner; // dimerPartner[v] = partner vertex index (-1 if none)
+std::vector<int> dimerPartner;  // First dimer configuration
+std::vector<int> dimerPartner2; // Second dimer configuration (for double dimer model)
 
 // Statistics
 long long totalSteps = 0;
 long long flipCount = 0;
+long long totalSteps2 = 0;
+long long flipCount2 = 0;
 
 // Weight (for future position-dependent weights)
 double globalWeight = 1.0;
@@ -512,6 +515,109 @@ void performOneStep() {
 }
 
 // ============================================================================
+// SECOND CONFIGURATION (for double dimer model)
+// ============================================================================
+
+bool tryRhombusFlip2(int v1, int v2, int v3, int v4) {
+    if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v4) {
+        dimerPartner2[v1] = v4;
+        dimerPartner2[v4] = v1;
+        dimerPartner2[v2] = v3;
+        dimerPartner2[v3] = v2;
+        return true;
+    }
+    if (dimerPartner2[v2] == v3 && dimerPartner2[v4] == v1) {
+        dimerPartner2[v1] = v2;
+        dimerPartner2[v2] = v1;
+        dimerPartner2[v3] = v4;
+        dimerPartner2[v4] = v3;
+        return true;
+    }
+    return false;
+}
+
+bool tryHexagonFlip2(int n0, int n1, int n2, int n3, int n4, int n5) {
+    if (dimerPartner2[n0] == n1 && dimerPartner2[n2] == n3 && dimerPartner2[n4] == n5) {
+        dimerPartner2[n0] = n5;
+        dimerPartner2[n5] = n0;
+        dimerPartner2[n1] = n2;
+        dimerPartner2[n2] = n1;
+        dimerPartner2[n3] = n4;
+        dimerPartner2[n4] = n3;
+        return true;
+    }
+    if (dimerPartner2[n1] == n2 && dimerPartner2[n3] == n4 && dimerPartner2[n5] == n0) {
+        dimerPartner2[n0] = n1;
+        dimerPartner2[n1] = n0;
+        dimerPartner2[n2] = n3;
+        dimerPartner2[n3] = n2;
+        dimerPartner2[n4] = n5;
+        dimerPartner2[n5] = n4;
+        return true;
+    }
+    return false;
+}
+
+void performOneStep2() {
+    totalSteps2++;
+    int v = getRandomInt((int)vertices.size());
+    const CachedNeighbors& cn = cachedNeighbors[v];
+    bool try6cycle = (getRandom01() < 0.3);
+
+    if (try6cycle) {
+        bool allExist = true;
+        int16_t nb[6];
+        for (int d = 0; d < 6; d++) {
+            nb[d] = cn.neighbors[d];
+            if (nb[d] < 0) { allExist = false; break; }
+        }
+        if (allExist) {
+            bool allConnected = true;
+            for (int d = 0; d < 6; d++) {
+                int d2 = (d + 1) % 6;
+                const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
+                bool found = false;
+                for (int k = 0; k < 6; k++) {
+                    if (cn_d.neighbors[k] == nb[d2]) { found = true; break; }
+                }
+                if (!found) { allConnected = false; break; }
+            }
+            if (allConnected) {
+                if (tryHexagonFlip2(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5])) {
+                    flipCount2++;
+                }
+            }
+        }
+    } else {
+        int d1 = getRandomInt(6);
+        int d2 = (d1 + 1) % 6;
+        int v1 = cn.neighbors[d1];
+        int v2 = cn.neighbors[d2];
+        if (v1 >= 0 && v2 >= 0) {
+            int n = vertices[v].n;
+            int j = vertices[v].j;
+            int n3 = n + dir_dn[d1] + dir_dn[d2];
+            int j3 = j + dir_dj[d1] + dir_dj[d2];
+            int v3 = getVertexFromGrid(n3, j3);
+            if (v3 >= 0) {
+                const CachedNeighbors& cn1 = cachedNeighbors[v1];
+                const CachedNeighbors& cn2 = cachedNeighbors[v2];
+                bool v1v3 = false, v2v3 = false;
+                for (int k = 0; k < 6; k++) {
+                    if (cn1.neighbors[k] == v3) v1v3 = true;
+                    if (cn2.neighbors[k] == v3) v2v3 = true;
+                }
+                if (v1v3 && v2v3) {
+                    if (tryRhombusFlip2(v, v1, v3, v2)) {
+                        flipCount2++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
 // EXPORTED FUNCTIONS
 // ============================================================================
 
@@ -525,8 +631,11 @@ int initFromVertices(const char* vertexList) {
     vertexMap.clear();
     adjacency.clear();
     dimerPartner.clear();
+    dimerPartner2.clear();
     totalSteps = 0;
     flipCount = 0;
+    totalSteps2 = 0;
+    flipCount2 = 0;
 
     // Parse vertex list
     std::string input(vertexList);
@@ -559,6 +668,9 @@ int initFromVertices(const char* vertexList) {
     if (!initMatching()) {
         return -3; // No perfect matching exists
     }
+
+    // Initialize second configuration as copy of first (they evolve independently)
+    dimerPartner2 = dimerPartner;
 
     return (int)vertices.size();
 }
@@ -624,6 +736,41 @@ int getEdgeCount() {
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* ptr) {
     // No-op for static string
+}
+
+// ============================================================================
+// DOUBLE DIMER EXPORTED FUNCTIONS
+// ============================================================================
+
+EMSCRIPTEN_KEEPALIVE
+void performGlauberSteps2(int numSteps) {
+    for (int i = 0; i < numSteps; i++) {
+        performOneStep2();
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+const char* exportDimers2() {
+    static std::string result;
+    result.clear();
+
+    std::unordered_set<long long> exported;
+
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int partner = dimerPartner2[i];
+        if (partner > (int)i) {
+            long long key = ((long long)i << 20) | partner;
+            if (exported.find(key) == exported.end()) {
+                exported.insert(key);
+                if (!result.empty()) result += ";";
+                result += std::to_string(vertices[i].n) + "," + std::to_string(vertices[i].j);
+                result += ",";
+                result += std::to_string(vertices[partner].n) + "," + std::to_string(vertices[partner].j);
+            }
+        }
+    }
+
+    return result.c_str();
 }
 
 } // extern "C"

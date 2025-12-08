@@ -9,6 +9,7 @@ code:
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
 ---
 
+
 <details id="about-simulation-details">
 <summary>About / Help</summary>
 <div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
@@ -16,15 +17,8 @@ code:
 <h4>What is this?</h4>
 <p>This simulator generates <strong>random dimer coverings</strong> (perfect matchings) on the <strong>triangular lattice</strong> using Glauber dynamics (Markov Chain Monte Carlo).</p>
 
-<h4>Non-bipartite lattice</h4>
-<p>The triangular lattice is <strong>non-bipartite</strong> (cannot be 2-colored), unlike the square lattice (domino tilings) or hexagonal lattice (lozenge tilings). This fundamental topological difference means:</p>
-<ul>
-  <li>No standard height function exists (only height mod 2)</li>
-  <li>The partition function is computed via a <strong>Pfaffian</strong>, not a determinant</li>
-  <li>Correlations decay exponentially with very short correlation length</li>
-  <li>No arctic circle phenomenon or limit shapes for uniform measure</li>
-  <li>CFTP (Coupling From The Past) is not directly applicable due to lack of monotone coupling</li>
-</ul>
+<p>The triangular lattice is <strong>non-bipartite</strong> (cannot be 2-colored), unlike the square lattice (domino tilings) or hexagonal lattice (lozenge tilings).
+CFTP (Coupling From The Past) is not directly applicable due to lack of monotone coupling.</p>
 
 <h4>How to use</h4>
 <p><strong>Drawing tools:</strong></p>
@@ -47,8 +41,6 @@ code:
   <li><strong>Dimer width</strong>: Adjust the thickness of dimer lines</li>
 </ul>
 
-<p><strong>Perfect matchings:</strong> A region admits a perfect matching if and only if it satisfies <a href="https://en.wikipedia.org/wiki/Tutte_theorem">Tutte's theorem</a>. For non-bipartite graphs like the triangular lattice, this is more restrictive than the bipartite case. The simulator uses greedy matching with augmenting paths for initialization.</p>
-
 <h4>Ergodicity and local moves</h4>
 <p>The simulator uses two types of local moves:</p>
 <ul>
@@ -60,10 +52,7 @@ code:
 
 <p><a href="https://arxiv.org/abs/2304.10930">Hartarsky, Lichev &amp; Toninelli (2024)</a> improved this result, showing that for <strong>parallelogram-shaped domains</strong>, moves of length 4 and 6 suffice for ergodicity.</p>
 
-<p><strong>Note on topological sectors:</strong> For domains with holes or periodic boundary conditions, the configuration space splits into disjoint <em>topological sectors</em> characterized by winding numbers. The local moves (4-cycle and 6-cycle) preserve these sectors and cannot mix between them.</p>
-
-<h4>Important distinction</h4>
-<p>This model (<strong>triangular lattice bond dimers</strong>) should not be confused with <strong>Lozenge tilings</strong>, which are dimers on the <em>hexagonal</em> (honeycomb) lattice. Lozenge tilings are bipartite and have height functions; the triangular lattice model studied here has fundamentally different mathematical properties.</p>
+<p><strong>Note on topological sectors:</strong> For domains with holes or periodic boundary conditions, the configuration space splits into disjoint sectors, which Glauber cannot mix between.</p>
 
 <h4>References</h4>
 <ul>
@@ -71,7 +60,6 @@ code:
   <li>I. Hartarsky, L. Lichev, F. Toninelli: <a href="https://arxiv.org/abs/2304.10930">Local dimer dynamics in higher dimensions</a>, Ann. Inst. Henri Poincaré D (2024) — 4+6 cycles suffice for parallelograms</li>
   <li>P. Fendley, R. Moessner, S.L. Sondhi: <a href="https://arxiv.org/abs/cond-mat/0206159">Classical dimers on the triangular lattice</a>, Phys. Rev. B 66 (2002)</li>
 </ul>
-
 </div>
 </details>
 
@@ -248,6 +236,9 @@ code:
   <label style="margin-left: 8px;">
     <input type="checkbox" id="color-by-orientation" checked> Color by orientation
   </label>
+  <label style="margin-left: 8px;">
+    <input type="checkbox" id="double-dimer"> Double dimer
+  </label>
   <span style="margin-left: 12px; display: inline-flex; align-items: center; gap: 4px;">
     <span style="font-size: 12px; color: #666;">Dimer width</span>
     <input type="range" id="edge-width-slider" min="1" max="100" value="50" style="width: 80px;">
@@ -282,6 +273,7 @@ code:
     // ========================================================================
     const activeVertices = new Map(); // key -> {n, j}
     let currentDimers = []; // Array of {n1, j1, n2, j2}
+    let currentDimers2 = []; // Second configuration for double dimer model
     let boundaryEdges = []; // Array of {n1, j1, n2, j2} for boundary outline
     let isValid = false;
     let isRunning = false;
@@ -498,6 +490,7 @@ code:
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const colorByOrientation = document.getElementById('color-by-orientation').checked;
+        const doubleDimerEnabled = document.getElementById('double-dimer').checked;
         const defaultColor = isDark ? '#ffffff' : '#000000';
 
         // Width slider: 1-100 with exponential scaling for more extreme ends
@@ -509,11 +502,17 @@ code:
         ctx.lineWidth = Math.max(0.2, Math.min(20, viewScale * 0.15 * widthMultiplier));
         ctx.lineCap = 'round';
 
+        // Double dimer colors (blue and red)
+        const dimer1Color = '#0066CC';
+        const dimer2Color = '#CC3300';
+
         for (const d of currentDimers) {
             const p1 = latticeToScreen(d.n1, d.j1);
             const p2 = latticeToScreen(d.n2, d.j2);
 
-            if (colorByOrientation) {
+            if (doubleDimerEnabled) {
+                ctx.strokeStyle = dimer1Color;
+            } else if (colorByOrientation) {
                 const dn = d.n2 - d.n1;
                 const dj = d.j2 - d.j1;
                 const orientation = getEdgeOrientation(dn, dj);
@@ -526,6 +525,20 @@ code:
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
             ctx.stroke();
+        }
+
+        // Draw second configuration if double dimer is enabled
+        if (doubleDimerEnabled && currentDimers2.length > 0) {
+            ctx.strokeStyle = dimer2Color;
+            for (const d of currentDimers2) {
+                const p1 = latticeToScreen(d.n1, d.j1);
+                const p2 = latticeToScreen(d.n2, d.j2);
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
         }
     }
 
@@ -696,12 +709,14 @@ code:
             else if (result === -3) updateStatus('Error: No perfect matching exists');
             isValid = false;
             currentDimers = [];
+            currentDimers2 = [];
             return false;
         }
 
         isValid = true;
         updateStatus(`Initialized with ${result} vertices`);
         fetchDimers();
+        fetchDimers2();  // Also initialize second configuration for double dimer
         return true;
     }
 
@@ -725,6 +740,26 @@ code:
         }
     }
 
+    function fetchDimers2() {
+        if (!wasmReady || !isValid) return;
+
+        const dimerStr = wasmModule._exportDimers2();
+        currentDimers2 = [];
+
+        if (dimerStr && dimerStr.length > 0) {
+            const parts = dimerStr.split(';');
+            for (const part of parts) {
+                const coords = part.split(',').map(Number);
+                if (coords.length === 4) {
+                    currentDimers2.push({
+                        n1: coords[0], j1: coords[1],
+                        n2: coords[2], j2: coords[3]
+                    });
+                }
+            }
+        }
+    }
+
     if (typeof Module !== 'undefined') {
         Module.onRuntimeInitialized = function() {
             wasmReady = true;
@@ -732,6 +767,8 @@ code:
                 _initFromVertices: Module.cwrap('initFromVertices', 'number', ['string']),
                 _performGlauberSteps: Module.cwrap('performGlauberSteps', null, ['number']),
                 _exportDimers: Module.cwrap('exportDimers', 'string', []),
+                _performGlauberSteps2: Module.cwrap('performGlauberSteps2', null, ['number']),
+                _exportDimers2: Module.cwrap('exportDimers2', 'string', []),
                 _getTotalSteps: Module.cwrap('getTotalSteps', 'number', []),
                 _getFlipCount: Module.cwrap('getFlipCount', 'number', []),
                 _getAcceptRate: Module.cwrap('getAcceptRate', 'number', []),
@@ -788,6 +825,7 @@ code:
         if (activeVertices.size === 0) {
             isValid = false;
             currentDimers = [];
+            currentDimers2 = [];
             updateStatus('Draw a region or use a preset');
         } else {
             initFromVertices(activeVertices);
@@ -853,6 +891,13 @@ code:
         const stepsThisFrame = Math.max(1, Math.round(stepsPerSecond * deltaTime));
         wasmModule._performGlauberSteps(stepsThisFrame);
         fetchDimers();
+
+        // Run second Glauber if double dimer mode is enabled
+        const doubleDimerEnabled = document.getElementById('double-dimer').checked;
+        if (doubleDimerEnabled) {
+            wasmModule._performGlauberSteps2(stepsThisFrame);
+            fetchDimers2();
+        }
 
         const totalSteps = wasmModule._getTotalSteps();
         const flipCount = wasmModule._getFlipCount();
