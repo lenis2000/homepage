@@ -162,6 +162,42 @@ code:
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 
+<details style="margin-bottom: 12px; border: 1px solid #ccc; border-radius: 5px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">About the Simulation</summary>
+  <div style="padding: 10px; font-size: 0.95em; line-height: 1.5;">
+    <p><strong>q-RSK Sampling</strong> generates random domino tilings of the Aztec diamond using the q-deformed Robinson-Schensted-Knuth correspondence. At q=0, this gives uniform tilings; as q approaches 1, tilings concentrate near "frozen" configurations.</p>
+    <p><strong>Parameters:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><strong>n</strong>: Size of the Aztec diamond</li>
+      <li><strong>q</strong>: q-Whittaker parameter (0 ≤ q < 1). q=0 gives Schur measure; q>0 gives q-Whittaker measure</li>
+      <li><strong>x, y</strong>: Schur process specialization. Uniform (all 1s) gives standard measure; other weights create non-uniform sampling</li>
+      <li><strong>High precision</strong>: Uses 50-digit arithmetic (slower but stable for q close to 1)</li>
+    </ul>
+    <p>The simulation outputs interlacing partitions that encode the domino tiling.</p>
+    <p style="margin-top: 10px;"><strong>Visualization Modes:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><strong>Dominoes</strong>: Standard flat tiling view with four colors for domino types.</li>
+      <li><strong>Dimer</strong>: Displays the underlying matching on the dual graph as edges.</li>
+      <li><strong>Double Dimer</strong>: Superimposes two independent samples to form loops. Includes a <strong>Min Loop Size</strong> filter.</li>
+      <li><strong>Fluctuations</strong>: Visualizes height difference between two samples, approximating the Gaussian Free Field.</li>
+      <li><strong>3D</strong>: Renders the tiling as a stepped surface in 3D space. Supports rotation, perspective/orthographic toggle, and multiple visual presets.</li>
+    </ul>
+    <p><strong>View Options:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><strong>Rotate 45°</strong>: Rotate the canvas view for alternative perspective.</li>
+      <li><strong>Particles</strong>: Show lattice points forming the Schur/q-Whittaker process.</li>
+      <li><strong>Color Palettes</strong>: Multiple palettes plus custom color pickers.</li>
+      <li><strong>Canvas/SVG</strong>: Toggle between renderers.</li>
+    </ul>
+    <p><strong>Export:</strong> PNG and PDF export with adjustable quality.</p>
+    <p style="margin-top: 10px;"><strong>References:</strong></p>
+    <ul style="margin: 5px 0;">
+      <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — K. Matveev, L. Petrov, <i>q-randomized Robinson-Schensted-Knuth correspondences and random polymers</i></li>
+      <li><a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> — D. Betea et al., <i>Perfect sampling algorithms for Schur processes</i></li>
+    </ul>
+  </div>
+</details>
+
 <!-- Sampling controls -->
 <div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
   <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
@@ -296,42 +332,6 @@ code:
   <span>H↑</span>
   <input type="color" id="custom-color-4" value="#FFCD00" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
 </div>
-
-<details style="margin-top: 12px; border: 1px solid #ccc; border-radius: 5px;">
-  <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; color: #0066cc; padding: 10px;">About the Simulation</summary>
-  <div style="padding: 10px; font-size: 0.95em; line-height: 1.5;">
-    <p><strong>q-RSK Sampling</strong> generates random domino tilings of the Aztec diamond using the q-deformed Robinson-Schensted-Knuth correspondence. At q=0, this gives uniform tilings; as q approaches 1, tilings concentrate near "frozen" configurations.</p>
-    <p><strong>Parameters:</strong></p>
-    <ul style="margin: 5px 0;">
-      <li><strong>n</strong>: Size of the Aztec diamond</li>
-      <li><strong>q</strong>: q-Whittaker parameter (0 ≤ q < 1). q=0 gives Schur measure; q>0 gives q-Whittaker measure</li>
-      <li><strong>x, y</strong>: Schur process specialization. Uniform (all 1s) gives standard measure; other weights create non-uniform sampling</li>
-      <li><strong>High precision</strong>: Uses 50-digit arithmetic (slower but stable for q close to 1)</li>
-    </ul>
-    <p>The simulation outputs interlacing partitions that encode the domino tiling.</p>
-    <p style="margin-top: 10px;"><strong>Visualization Modes:</strong></p>
-    <ul style="margin: 5px 0;">
-      <li><strong>Dominoes</strong>: Standard flat tiling view with four colors for domino types.</li>
-      <li><strong>Dimer</strong>: Displays the underlying matching on the dual graph as edges.</li>
-      <li><strong>Double Dimer</strong>: Superimposes two independent samples to form loops. Includes a <strong>Min Loop Size</strong> filter.</li>
-      <li><strong>Fluctuations</strong>: Visualizes height difference between two samples, approximating the Gaussian Free Field.</li>
-      <li><strong>3D</strong>: Renders the tiling as a stepped surface in 3D space. Supports rotation, perspective/orthographic toggle, and multiple visual presets.</li>
-    </ul>
-    <p><strong>View Options:</strong></p>
-    <ul style="margin: 5px 0;">
-      <li><strong>Rotate 45°</strong>: Rotate the canvas view for alternative perspective.</li>
-      <li><strong>Particles</strong>: Show lattice points forming the Schur/q-Whittaker process.</li>
-      <li><strong>Color Palettes</strong>: Multiple palettes plus custom color pickers.</li>
-      <li><strong>Canvas/SVG</strong>: Toggle between renderers.</li>
-    </ul>
-    <p><strong>Export:</strong> PNG and PDF export with adjustable quality.</p>
-    <p style="margin-top: 10px;"><strong>References:</strong></p>
-    <ul style="margin: 5px 0;">
-      <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — K. Matveev, L. Petrov, <i>q-randomized Robinson-Schensted-Knuth correspondences and random polymers</i></li>
-      <li><a href="https://arxiv.org/abs/1407.3764">arXiv:1407.3764</a> — D. Betea et al., <i>Perfect sampling algorithms for Schur processes</i></li>
-    </ul>
-  </div>
-</details>
 
 <!-- Detailed Mode Toggle -->
 <button id="toggle-detailed-mode-btn">Enable Detailed Mode</button>
