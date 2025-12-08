@@ -734,6 +734,7 @@ Cmd-click: complete lasso</div>
     <button id="import-json">Import Shape</button>
     <input type="file" id="import-json-file" accept=".json" style="display: none;">
     <button id="export-obj">OBJ</button>
+    <button id="export-obj2">OBJ2</button>
     <span style="font-size: 11px; color: #666;">Thickness (mm):</span>
     <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;">
   </div>
@@ -7343,6 +7344,131 @@ function initLozengeApp() {
         }
         const thickness = parseFloat(document.getElementById('obj-thickness').value) || 2;
         const obj = generateOBJ(sim.dimers, thickness);
+        const blob = new Blob([obj], { type: 'model/obj' });
+        downloadFile(blob, generateExportFilename('obj'));
+    });
+
+    // OBJ2 Export - rotated coordinate system where (1,-1,-1) is Z axis
+    function generateOBJ2(dimers, thickness) {
+        const heights = computeHeightFunction(dimers);
+
+        const getVertexKeys = (dimer) => {
+            const { bn, bj, t } = dimer;
+            if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+        };
+
+        const scale = 10;
+        // Original 3D coordinates
+        const to3Doriginal = (n, j, h) => ({
+            x: h * scale,
+            y: (-n - h) * scale,
+            z: (j - h) * scale
+        });
+
+        // Rotation: (1,-1,-1) becomes Z axis
+        // new_x = (x + y) / sqrt(2)
+        // new_y = (x - y + 2z) / sqrt(6)
+        // new_z = (x - y - z) / sqrt(3)
+        const sqrt2 = Math.sqrt(2);
+        const sqrt3 = Math.sqrt(3);
+        const sqrt6 = Math.sqrt(6);
+        const rotate = (p) => ({
+            x: (p.x + p.y) / sqrt2,
+            y: (p.x - p.y + 2 * p.z) / sqrt6,
+            z: (p.x - p.y - p.z) / sqrt3
+        });
+
+        const to3D = (n, j, h) => rotate(to3Doriginal(n, j, h));
+
+        // Thickness offset: in rotated coords, (1,-1,-1) is now (0,0,-sqrt3)
+        // So offset is just negative Z direction
+        const offsetLen = thickness * scale;
+        const offset = { x: 0, y: 0, z: -offsetLen };
+
+        const vertexMap = new Map();
+        const vertices = [];
+        let vertexIndex = 1;
+
+        const addVertex = (x, y, z) => {
+            const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
+            if (!vertexMap.has(key)) {
+                vertices.push({ x, y, z });
+                vertexMap.set(key, vertexIndex++);
+            }
+            return vertexMap.get(key);
+        };
+
+        const faces = [];
+
+        const edgeData = new Map();
+        const normalizeEdgeKey = (n1, j1, n2, j2) => {
+            if (n1 < n2 || (n1 === n2 && j1 < j2)) {
+                return `${n1},${j1}-${n2},${j2}`;
+            }
+            return `${n2},${j2}-${n1},${j1}`;
+        };
+
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+
+            const topVerts = verts.map(([n, j]) => {
+                const h = heights.get(`${n},${j}`) || 0;
+                const pos = to3D(n, j, h);
+                return addVertex(pos.x, pos.y, pos.z);
+            });
+
+            const botVerts = verts.map(([n, j]) => {
+                const h = heights.get(`${n},${j}`) || 0;
+                const pos = to3D(n, j, h);
+                return addVertex(pos.x + offset.x, pos.y + offset.y, pos.z + offset.z);
+            });
+
+            faces.push([topVerts[0], topVerts[1], topVerts[2], topVerts[3]]);
+            faces.push([botVerts[3], botVerts[2], botVerts[1], botVerts[0]]);
+
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                const [n1, j1] = verts[i];
+                const [n2, j2] = verts[next];
+                const key = normalizeEdgeKey(n1, j1, n2, j2);
+
+                if (!edgeData.has(key)) {
+                    edgeData.set(key, { count: 0, topV1: topVerts[i], topV2: topVerts[next],
+                                        botV1: botVerts[i], botV2: botVerts[next] });
+                }
+                edgeData.get(key).count++;
+            }
+        }
+
+        for (const [key, data] of edgeData) {
+            if (data.count === 1) {
+                faces.push([data.topV1, data.topV2, data.botV2, data.botV1]);
+                faces.push([data.botV1, data.botV2, data.topV2, data.topV1]);
+            }
+        }
+
+        let obj = '# Lozenge tiling OBJ2 (rotated: Z = (1,-1,-1) direction)\n';
+        obj += '# Units: millimeters (mm)\n';
+        obj += `# Vertices: ${vertices.length}, Faces: ${faces.length}\n\n`;
+        for (const v of vertices) {
+            obj += `v ${v.x.toFixed(6)} ${v.y.toFixed(6)} ${v.z.toFixed(6)}\n`;
+        }
+        obj += '\n';
+        for (const f of faces) {
+            obj += `f ${f.join(' ')}\n`;
+        }
+        return obj;
+    }
+
+    document.getElementById('export-obj2').addEventListener('click', () => {
+        if (!isValid || sim.dimers.length === 0) {
+            alert('No valid tiling to export.');
+            return;
+        }
+        const thickness = parseFloat(document.getElementById('obj-thickness').value) || 2;
+        const obj = generateOBJ2(sim.dimers, thickness);
         const blob = new Blob([obj], { type: 'model/obj' });
         downloadFile(blob, generateExportFilename('obj'));
     });
