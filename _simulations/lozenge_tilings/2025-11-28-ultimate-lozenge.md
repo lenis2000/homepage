@@ -734,7 +734,7 @@ Cmd-click: complete lasso</div>
     <button id="import-json">Import Shape</button>
     <input type="file" id="import-json-file" accept=".json" style="display: none;">
     <button id="export-obj">OBJ</button>
-    <button id="export-obj2">OBJ2</button>
+    <button id="export-obj2">OBJ-orthogonal</button>
     <span style="font-size: 11px; color: #666;">Thickness (mm):</span>
     <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;">
   </div>
@@ -7348,7 +7348,7 @@ function initLozengeApp() {
         downloadFile(blob, generateExportFilename('obj'));
     });
 
-    // OBJ2 Export - rotated coordinate system where (1,-1,-1) is Z axis
+    // OBJ2 Export - rotated coordinate system where (1,-1,-1) is Z axis, flat bottom
     function generateOBJ2(dimers, thickness) {
         const heights = computeHeightFunction(dimers);
 
@@ -7368,9 +7368,6 @@ function initLozengeApp() {
         });
 
         // Rotation: (1,-1,-1) becomes Z axis
-        // new_x = (x + y) / sqrt(2)
-        // new_y = (x - y + 2z) / sqrt(6)
-        // new_z = (x - y - z) / sqrt(3)
         const sqrt2 = Math.sqrt(2);
         const sqrt3 = Math.sqrt(3);
         const sqrt6 = Math.sqrt(6);
@@ -7382,10 +7379,15 @@ function initLozengeApp() {
 
         const to3D = (n, j, h) => rotate(to3Doriginal(n, j, h));
 
-        // Thickness offset: in rotated coords, (1,-1,-1) is now (0,0,-sqrt3)
-        // So offset is just negative Z direction
-        const offsetLen = thickness * scale;
-        const offset = { x: 0, y: 0, z: -offsetLen };
+        // First pass: find minimum Z of top surface
+        let minZ = Infinity;
+        for (const [key, h] of heights) {
+            const [n, j] = key.split(',').map(Number);
+            const pos = to3D(n, j, h);
+            minZ = Math.min(minZ, pos.z);
+        }
+        // Flat bottom at minZ - thickness
+        const bottomZ = minZ - thickness * scale;
 
         const vertexMap = new Map();
         const vertices = [];
@@ -7419,10 +7421,11 @@ function initLozengeApp() {
                 return addVertex(pos.x, pos.y, pos.z);
             });
 
+            // Bottom vertices: same x,y but flat Z
             const botVerts = verts.map(([n, j]) => {
                 const h = heights.get(`${n},${j}`) || 0;
                 const pos = to3D(n, j, h);
-                return addVertex(pos.x + offset.x, pos.y + offset.y, pos.z + offset.z);
+                return addVertex(pos.x, pos.y, bottomZ);
             });
 
             faces.push([topVerts[0], topVerts[1], topVerts[2], topVerts[3]]);
