@@ -595,9 +595,6 @@ void detectHoles() {
     detectedHoles.clear();
     holesComputed = true;
 
-    printf("[CPU detectHoles] Starting, vertices=%zu, bounds=[%d,%d]x[%d,%d]\n",
-           vertices.size(), minX, maxX, minY, maxY);
-
     if (vertices.empty()) return;
 
     // Work in a padded bounding box
@@ -754,13 +751,9 @@ void detectHoles() {
                 hole.baseHeight = 0;
 
                 detectedHoles.push_back(hole);
-                printf("[CPU detectHoles] Found hole %zu: centroid=(%.2f,%.2f), cells=%zu, boundary=%zu\n",
-                       detectedHoles.size()-1, hole.centroidX, hole.centroidY,
-                       holeCells.size(), hole.boundaryCycle.size());
             }
         }
     }
-    printf("[CPU detectHoles] Done, found %zu holes\n", detectedHoles.size());
 }
 
 // Compute monodromy around a hole for a given matching
