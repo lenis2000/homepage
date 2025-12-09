@@ -220,9 +220,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     <input type="number" id="speed-input" class="param-input" value="100" min="1" max="100000000" style="width: 80px;">
     <span style="font-size: 11px; color: #888;">/s</span>
   </div>
-  <label style="margin-left: 12px;">
-    <input type="checkbox" id="random-sweeps"> Random sweeps
-  </label>
 </div>
 
 <div class="control-group">
@@ -1002,8 +999,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _getUsePeriodicWeights: Module.cwrap('getUsePeriodicWeights', 'number', []),
                 _getPeriodicK: Module.cwrap('getPeriodicK', 'number', []),
                 _getPeriodicL: Module.cwrap('getPeriodicL', 'number', []),
-                _setRandomSweeps: Module.cwrap('setRandomSweeps', null, ['number']),
-                _getRandomSweeps: Module.cwrap('getRandomSweeps', 'number', []),
                 _setSeed: Module.cwrap('setSeed', null, ['number'])
             };
             // Seed RNG with random value so each page load is different
@@ -1293,12 +1288,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
     document.getElementById('speed-slider').addEventListener('input', (e) => updateSpeedFromSlider(parseInt(e.target.value)));
     document.getElementById('speed-input').addEventListener('change', (e) => updateSpeedFromInput(e.target.value));
-
-    document.getElementById('random-sweeps').addEventListener('change', (e) => {
-        if (wasmReady) {
-            wasmModule._setRandomSweeps(e.target.checked ? 1 : 0);
-        }
-    });
 
     document.getElementById('btn-pan').addEventListener('click', () => setTool('pan'));
     document.getElementById('btn-draw').addEventListener('click', () => setTool('draw'));
