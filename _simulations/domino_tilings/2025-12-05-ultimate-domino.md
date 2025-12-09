@@ -1387,6 +1387,11 @@ code:
     // Hole Winding Controls (removed - CFTP disabled for non-simply-connected regions)
     // ========================================================================
 
+    // Stub function for hole overlay positions (no longer used but referenced in 3D rotation)
+    function updateHoleOverlayPositions() {
+        // No-op: hole winding UI was removed
+    }
+
     // Refresh dominoes from current WASM state
     function refreshDimers() {
         if (!sim) return;
