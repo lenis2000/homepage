@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setRandomSweeps','_getRandomSweeps','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setRandomSweeps','_getRandomSweeps','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -587,96 +587,104 @@ bool tryHexagonFlip(int n0, int n1, int n2, int n3, int n4, int n5) {
 // GLAUBER DYNAMICS (OPTIMIZED) - 4-CYCLE AND 6-CYCLE MOVES
 // ============================================================================
 
-// Optimized Glauber step using cached data
-void performOneStep() {
-    totalSteps++;
-
-    // Pick vertex: systematic (default) or random
-    int v;
-    if (useRandomSweeps) {
-        v = getRandomInt((int)vertices.size());
-    } else {
-        v = systematicIndex;
-        systematicIndex = (systematicIndex + 1) % (int)vertices.size();
+// Helper: try hexagon flip at vertex v, return true if successful
+inline bool tryHexagonAtVertex(int v, const CachedNeighbors& cn) {
+    // Check if all 6 neighbors exist
+    int16_t nb[6];
+    for (int d = 0; d < 6; d++) {
+        nb[d] = cn.neighbors[d];
+        if (nb[d] < 0) return false;
     }
+
+    // Check if consecutive neighbors are connected (form a hexagon)
+    for (int d = 0; d < 6; d++) {
+        int d2 = (d + 1) % 6;
+        const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
+        bool found = false;
+        for (int k = 0; k < 6; k++) {
+            if (cn_d.neighbors[k] == nb[d2]) { found = true; break; }
+        }
+        if (!found) return false;
+    }
+
+    return tryHexagonFlip(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5]);
+}
+
+// Helper: try rhombus flip at vertex v in direction d1, return true if successful
+inline bool tryRhombusAtVertex(int v, const CachedNeighbors& cn, int d1) {
+    int d2 = (d1 + 1) % 6;
+    int v1 = cn.neighbors[d1];
+    int v2 = cn.neighbors[d2];
+
+    if (v1 < 0 || v2 < 0) return false;
+
+    // Compute diagonal vertex position
+    int n = vertices[v].n;
+    int j = vertices[v].j;
+    int n3 = n + dir_dn[d1] + dir_dn[d2];
+    int j3 = j + dir_dj[d1] + dir_dj[d2];
+    int v3 = getVertexFromGrid(n3, j3);
+
+    if (v3 < 0) return false;
+
+    // Check if v1-v3 and v2-v3 edges exist
+    const CachedNeighbors& cn1 = cachedNeighbors[v1];
+    const CachedNeighbors& cn2 = cachedNeighbors[v2];
+    bool v1v3 = false, v2v3 = false;
+    for (int k = 0; k < 6; k++) {
+        if (cn1.neighbors[k] == v3) v1v3 = true;
+        if (cn2.neighbors[k] == v3) v2v3 = true;
+    }
+
+    if (!v1v3 || !v2v3) return false;
+
+    // Rhombus exists: v -> v1 -> v3 -> v2 -> v
+    return tryRhombusFlip(v, v1, v3, v2);
+}
+
+// Random sweep: probabilistically choose move type and direction
+void performRandomStep() {
+    int v = getRandomInt((int)vertices.size());
     const CachedNeighbors& cn = cachedNeighbors[v];
 
-    // Decide move type: 4-cycle (70%) or 6-cycle (30%)
-    bool try6cycle = (getRandom01() < 0.3);
-
-    if (try6cycle) {
-        // 6-CYCLE (HEXAGON) MOVE
-        // Check if all 6 neighbors exist
-        bool allExist = true;
-        int16_t nb[6];
-        for (int d = 0; d < 6; d++) {
-            nb[d] = cn.neighbors[d];
-            if (nb[d] < 0) {
-                allExist = false;
-                break;
-            }
-        }
-
-        if (allExist) {
-            // Check if consecutive neighbors are connected (form a hexagon)
-            bool allConnected = true;
-            for (int d = 0; d < 6; d++) {
-                int d2 = (d + 1) % 6;
-                const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
-                bool found = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn_d.neighbors[k] == nb[d2]) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    allConnected = false;
-                    break;
-                }
-            }
-
-            if (allConnected) {
-                if (tryHexagonFlip(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5])) {
-                    flipCount++;
-                }
-            }
-        }
+    // 30% hexagon, 70% rhombus
+    if (getRandom01() < 0.3) {
+        if (tryHexagonAtVertex(v, cn)) flipCount++;
     } else {
-        // 4-CYCLE (RHOMBUS) MOVE
-        // Pick a random direction pair (d, d+1 mod 6) and check for rhombus
         int d1 = getRandomInt(6);
-        int d2 = (d1 + 1) % 6;
+        if (tryRhombusAtVertex(v, cn, d1)) flipCount++;
+    }
+}
 
-        int v1 = cn.neighbors[d1];
-        int v2 = cn.neighbors[d2];
+// Systematic sweep: check ALL moves at vertex, stop after first success
+void performSystematicStep() {
+    int v = systematicIndex;
+    systematicIndex = (systematicIndex + 1) % (int)vertices.size();
+    const CachedNeighbors& cn = cachedNeighbors[v];
 
-        if (v1 >= 0 && v2 >= 0) {
-            // Compute diagonal vertex position
-            int n = vertices[v].n;
-            int j = vertices[v].j;
-            int n3 = n + dir_dn[d1] + dir_dn[d2];
-            int j3 = j + dir_dj[d1] + dir_dj[d2];
-            int v3 = getVertexFromGrid(n3, j3);
+    // 1. Try hexagon move first (if geometry allows)
+    if (tryHexagonAtVertex(v, cn)) {
+        flipCount++;
+        return;
+    }
 
-            if (v3 >= 0) {
-                // Check if v1-v3 and v2-v3 edges exist
-                const CachedNeighbors& cn1 = cachedNeighbors[v1];
-                const CachedNeighbors& cn2 = cachedNeighbors[v2];
-                bool v1v3 = false, v2v3 = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn1.neighbors[k] == v3) v1v3 = true;
-                    if (cn2.neighbors[k] == v3) v2v3 = true;
-                }
-
-                if (v1v3 && v2v3) {
-                    // Rhombus exists: v -> v1 -> v3 -> v2 -> v
-                    if (tryRhombusFlip(v, v1, v3, v2)) {
-                        flipCount++;
-                    }
-                }
-            }
+    // 2. Try all 6 rhombus directions (randomize start to avoid bias)
+    int startDir = getRandomInt(6);
+    for (int i = 0; i < 6; i++) {
+        int d1 = (startDir + i) % 6;
+        if (tryRhombusAtVertex(v, cn, d1)) {
+            flipCount++;
+            return;
         }
+    }
+}
+
+void performOneStep() {
+    totalSteps++;
+    if (useRandomSweeps) {
+        performRandomStep();
+    } else {
+        performSystematicStep();
     }
 }
 
@@ -782,70 +790,104 @@ bool tryHexagonFlip2(int n0, int n1, int n2, int n3, int n4, int n5) {
     return false;
 }
 
-void performOneStep2() {
-    totalSteps2++;
-
-    // Pick vertex: systematic (default) or random
-    int v;
-    if (useRandomSweeps) {
-        v = getRandomInt((int)vertices.size());
-    } else {
-        v = systematicIndex2;
-        systematicIndex2 = (systematicIndex2 + 1) % (int)vertices.size();
+// Helper: try hexagon flip at vertex v for config 2, return true if successful
+inline bool tryHexagonAtVertex2(int v, const CachedNeighbors& cn) {
+    // Check if all 6 neighbors exist
+    int16_t nb[6];
+    for (int d = 0; d < 6; d++) {
+        nb[d] = cn.neighbors[d];
+        if (nb[d] < 0) return false;
     }
-    const CachedNeighbors& cn = cachedNeighbors[v];
-    bool try6cycle = (getRandom01() < 0.3);
 
-    if (try6cycle) {
-        bool allExist = true;
-        int16_t nb[6];
-        for (int d = 0; d < 6; d++) {
-            nb[d] = cn.neighbors[d];
-            if (nb[d] < 0) { allExist = false; break; }
+    // Check if consecutive neighbors are connected (form a hexagon)
+    for (int d = 0; d < 6; d++) {
+        int d2 = (d + 1) % 6;
+        const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
+        bool found = false;
+        for (int k = 0; k < 6; k++) {
+            if (cn_d.neighbors[k] == nb[d2]) { found = true; break; }
         }
-        if (allExist) {
-            bool allConnected = true;
-            for (int d = 0; d < 6; d++) {
-                int d2 = (d + 1) % 6;
-                const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
-                bool found = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn_d.neighbors[k] == nb[d2]) { found = true; break; }
-                }
-                if (!found) { allConnected = false; break; }
-            }
-            if (allConnected) {
-                if (tryHexagonFlip2(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5])) {
-                    flipCount2++;
-                }
-            }
-        }
+        if (!found) return false;
+    }
+
+    return tryHexagonFlip2(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5]);
+}
+
+// Helper: try rhombus flip at vertex v in direction d1 for config 2, return true if successful
+inline bool tryRhombusAtVertex2(int v, const CachedNeighbors& cn, int d1) {
+    int d2 = (d1 + 1) % 6;
+    int v1 = cn.neighbors[d1];
+    int v2 = cn.neighbors[d2];
+
+    if (v1 < 0 || v2 < 0) return false;
+
+    // Compute diagonal vertex position
+    int n = vertices[v].n;
+    int j = vertices[v].j;
+    int n3 = n + dir_dn[d1] + dir_dn[d2];
+    int j3 = j + dir_dj[d1] + dir_dj[d2];
+    int v3 = getVertexFromGrid(n3, j3);
+
+    if (v3 < 0) return false;
+
+    // Check if v1-v3 and v2-v3 edges exist
+    const CachedNeighbors& cn1 = cachedNeighbors[v1];
+    const CachedNeighbors& cn2 = cachedNeighbors[v2];
+    bool v1v3 = false, v2v3 = false;
+    for (int k = 0; k < 6; k++) {
+        if (cn1.neighbors[k] == v3) v1v3 = true;
+        if (cn2.neighbors[k] == v3) v2v3 = true;
+    }
+
+    if (!v1v3 || !v2v3) return false;
+
+    // Rhombus exists: v -> v1 -> v3 -> v2 -> v
+    return tryRhombusFlip2(v, v1, v3, v2);
+}
+
+// Random sweep for config 2: probabilistically choose move type and direction
+void performRandomStep2() {
+    int v = getRandomInt((int)vertices.size());
+    const CachedNeighbors& cn = cachedNeighbors[v];
+
+    // 30% hexagon, 70% rhombus
+    if (getRandom01() < 0.3) {
+        if (tryHexagonAtVertex2(v, cn)) flipCount2++;
     } else {
         int d1 = getRandomInt(6);
-        int d2 = (d1 + 1) % 6;
-        int v1 = cn.neighbors[d1];
-        int v2 = cn.neighbors[d2];
-        if (v1 >= 0 && v2 >= 0) {
-            int n = vertices[v].n;
-            int j = vertices[v].j;
-            int n3 = n + dir_dn[d1] + dir_dn[d2];
-            int j3 = j + dir_dj[d1] + dir_dj[d2];
-            int v3 = getVertexFromGrid(n3, j3);
-            if (v3 >= 0) {
-                const CachedNeighbors& cn1 = cachedNeighbors[v1];
-                const CachedNeighbors& cn2 = cachedNeighbors[v2];
-                bool v1v3 = false, v2v3 = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn1.neighbors[k] == v3) v1v3 = true;
-                    if (cn2.neighbors[k] == v3) v2v3 = true;
-                }
-                if (v1v3 && v2v3) {
-                    if (tryRhombusFlip2(v, v1, v3, v2)) {
-                        flipCount2++;
-                    }
-                }
-            }
+        if (tryRhombusAtVertex2(v, cn, d1)) flipCount2++;
+    }
+}
+
+// Systematic sweep for config 2: check ALL moves at vertex, stop after first success
+void performSystematicStep2() {
+    int v = systematicIndex2;
+    systematicIndex2 = (systematicIndex2 + 1) % (int)vertices.size();
+    const CachedNeighbors& cn = cachedNeighbors[v];
+
+    // 1. Try hexagon move first (if geometry allows)
+    if (tryHexagonAtVertex2(v, cn)) {
+        flipCount2++;
+        return;
+    }
+
+    // 2. Try all 6 rhombus directions (randomize start to avoid bias)
+    int startDir = getRandomInt(6);
+    for (int i = 0; i < 6; i++) {
+        int d1 = (startDir + i) % 6;
+        if (tryRhombusAtVertex2(v, cn, d1)) {
+            flipCount2++;
+            return;
         }
+    }
+}
+
+void performOneStep2() {
+    totalSteps2++;
+    if (useRandomSweeps) {
+        performRandomStep2();
+    } else {
+        performSystematicStep2();
     }
 }
 
@@ -995,6 +1037,14 @@ void setRandomSweeps(int use) {
 EMSCRIPTEN_KEEPALIVE
 int getRandomSweeps() {
     return useRandomSweeps ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void setSeed(double seed) {
+    // Cast double (from JS) to uint64
+    rng_state = (uint64_t)seed;
+    // Scramble a bit to avoid bad seeds
+    for (int i = 0; i < 10; i++) xorshift64();
 }
 
 EMSCRIPTEN_KEEPALIVE

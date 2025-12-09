@@ -185,6 +185,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     font-size: 12px;
     color: #666;
   }
+  .status-bar.warning {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+  }
   .tool-btn {
     min-width: 36px;
     padding: 0 8px !important;
@@ -413,10 +418,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     }
 
     // ========================================================================
-    // BOUNDARY COMPUTATION
+    // BOUNDARY COMPUTATION & HOLE DETECTION
     // ========================================================================
+    let hasHoles = false;  // Track if domain has topological holes
+
     function computeBoundary() {
         boundaryEdges = [];
+        hasHoles = false;
         if (activeVertices.size === 0) return;
 
         // For each vertex, check all 6 edges
@@ -436,6 +444,75 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 }
             }
         }
+
+        // Detect holes by counting boundary connected components
+        // More than 1 component means there are holes
+        hasHoles = detectHoles();
+    }
+
+    // Detect holes by counting connected components of the boundary
+    // Uses the inside vertices (n1,j1) of boundary edges
+    function detectHoles() {
+        if (boundaryEdges.length === 0) return false;
+
+        // Build adjacency for boundary traversal
+        // Two boundary edges are connected if they share a vertex
+        const edgeMap = new Map();  // vertex key -> list of boundary edges using it
+
+        for (let i = 0; i < boundaryEdges.length; i++) {
+            const e = boundaryEdges[i];
+            // Use the vertex inside the region (n1, j1)
+            const k1 = vertexKey(e.n1, e.j1);
+            if (!edgeMap.has(k1)) edgeMap.set(k1, []);
+            edgeMap.get(k1).push(i);
+        }
+
+        // Count connected components using BFS on boundary edges
+        const visited = new Set();
+        let components = 0;
+
+        for (let startIdx = 0; startIdx < boundaryEdges.length; startIdx++) {
+            if (visited.has(startIdx)) continue;
+
+            components++;
+            const queue = [startIdx];
+            visited.add(startIdx);
+
+            while (queue.length > 0) {
+                const idx = queue.shift();
+                const e = boundaryEdges[idx];
+
+                // Find adjacent boundary edges (share a vertex)
+                const k1 = vertexKey(e.n1, e.j1);
+                const neighbors = edgeMap.get(k1) || [];
+
+                for (const nIdx of neighbors) {
+                    if (!visited.has(nIdx)) {
+                        visited.add(nIdx);
+                        queue.push(nIdx);
+                    }
+                }
+
+                // Also check neighbors of the inside vertex in other directions
+                for (let d = 0; d < 6; d++) {
+                    const nn = e.n1 + DIR_DN[d];
+                    const nj = e.j1 + DIR_DJ[d];
+                    const nk = vertexKey(nn, nj);
+                    if (activeVertices.has(nk)) {
+                        const adjEdges = edgeMap.get(nk) || [];
+                        for (const nIdx of adjEdges) {
+                            if (!visited.has(nIdx)) {
+                                visited.add(nIdx);
+                                queue.push(nIdx);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // More than 1 component means holes exist
+        return components > 1;
     }
 
     // ========================================================================
@@ -849,7 +926,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         }
 
         isValid = true;
-        updateStatus(`Initialized with ${result} vertices`);
+        if (hasHoles) {
+            updateStatus(`Initialized with ${result} vertices. ⚠️ Domain has holes - Glauber cannot mix topological sectors!`, true);
+        } else {
+            updateStatus(`Initialized with ${result} vertices`);
+        }
         fetchDimers();
         // Only initialize second config if double dimer is enabled
         if (document.getElementById('double-dimer').checked) {
@@ -922,8 +1003,12 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _getPeriodicK: Module.cwrap('getPeriodicK', 'number', []),
                 _getPeriodicL: Module.cwrap('getPeriodicL', 'number', []),
                 _setRandomSweeps: Module.cwrap('setRandomSweeps', null, ['number']),
-                _getRandomSweeps: Module.cwrap('getRandomSweeps', 'number', [])
+                _getRandomSweeps: Module.cwrap('getRandomSweeps', 'number', []),
+                _setSeed: Module.cwrap('setSeed', null, ['number'])
             };
+            // Seed RNG with random value so each page load is different
+            const randomSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+            wasmModule._setSeed(randomSeed);
             updateStatus('WASM loaded. Draw a region or use a preset.');
         };
     }
@@ -1071,8 +1156,10 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     // ========================================================================
     // EVENT HANDLERS
     // ========================================================================
-    function updateStatus(text) {
+    function updateStatus(text, isWarning = false) {
+        const statusBar = document.querySelector('.status-bar');
         document.getElementById('status-text').textContent = text;
+        statusBar.classList.toggle('warning', isWarning);
     }
 
     function setTool(tool) {
