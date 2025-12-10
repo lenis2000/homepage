@@ -1392,9 +1392,9 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const sqrt3_2 = Math.sqrt(3) / 2;
 
         // Layout parameters - scale based on k and l to keep labels readable
-        const baseScale = 80;  // pixels per unit
-        const scale = Math.max(60, baseScale - Math.max(k, l) * 5);  // reduce scale for larger domains
-        const padding = 50;
+        const baseScale = 100;  // pixels per unit
+        const scale = Math.max(70, baseScale - Math.max(k, l) * 8);  // reduce scale for larger domains
+        const padding = 60;
         const vertexRadius = 5;
         const edgeWidth = 4;
 
@@ -1509,10 +1509,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 lineH.setAttribute("stroke-width", edgeWidth);
                 lineH.setAttribute("stroke-linecap", "round");
                 svg.appendChild(lineH);
+                // Label below the horizontal edge (in its own space)
                 labelData.push({
-                    x: p_horiz.x + 8,
-                    y: p_horiz.y + 4,
-                    anchor: "start",
+                    x: p.x + scale * 0.25,
+                    y: p.y + 22,
+                    anchor: "middle",
                     color: edgeColors[0],
                     text: w[0]
                 });
@@ -1528,10 +1529,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 lineD1.setAttribute("stroke-width", edgeWidth);
                 lineD1.setAttribute("stroke-linecap", "round");
                 svg.appendChild(lineD1);
+                // Label above diag1 - stagger y based on n to avoid collision with neighbor
                 labelData.push({
-                    x: p_diag1.x + 6,
-                    y: p_diag1.y - 2,
-                    anchor: "start",
+                    x: p.x + scale * 0.15,
+                    y: p.y - scale * sqrt3_2 * 0.35 - 10,
+                    anchor: "middle",
                     color: edgeColors[1],
                     text: w[1]
                 });
@@ -1547,10 +1549,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 lineD2.setAttribute("stroke-width", edgeWidth);
                 lineD2.setAttribute("stroke-linecap", "round");
                 svg.appendChild(lineD2);
+                // Label above diag2 - higher up than diag1 to separate them
                 labelData.push({
-                    x: p_diag2.x - 6,
-                    y: p_diag2.y - 2,
-                    anchor: "end",
+                    x: p.x - scale * 0.15,
+                    y: p.y - scale * sqrt3_2 * 0.55 - 10,
+                    anchor: "middle",
                     color: edgeColors[2],
                     text: w[2]
                 });
@@ -1571,17 +1574,44 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             }
         }
 
-        // Draw weight labels last so they appear on top
+        // Draw weight labels last so they appear on top, with white background bubbles
         for (const lbl of labelData) {
+            // Create a group for background + text
+            const g = document.createElementNS(svgNS, "g");
+
+            // Create text first to measure it
             const text = document.createElementNS(svgNS, "text");
             text.setAttribute("x", lbl.x);
             text.setAttribute("y", lbl.y);
             text.setAttribute("text-anchor", lbl.anchor);
-            text.setAttribute("font-size", "14px");
+            text.setAttribute("font-size", "13px");
             text.setAttribute("font-weight", "bold");
             text.setAttribute("fill", lbl.color);
             text.textContent = lbl.text;
-            svg.appendChild(text);
+
+            // Estimate text width (roughly 8px per character for this font size)
+            const textLen = String(lbl.text).length * 8;
+            const padX = 4, padY = 3;
+            let rectX = lbl.x - padX;
+            if (lbl.anchor === "middle") rectX = lbl.x - textLen/2 - padX;
+            else if (lbl.anchor === "end") rectX = lbl.x - textLen - padX;
+
+            // White background rounded rect
+            const bg = document.createElementNS(svgNS, "rect");
+            bg.setAttribute("x", rectX);
+            bg.setAttribute("y", lbl.y - 11);
+            bg.setAttribute("width", textLen + padX * 2);
+            bg.setAttribute("height", 16);
+            bg.setAttribute("rx", 3);
+            bg.setAttribute("ry", 3);
+            bg.setAttribute("fill", "white");
+            bg.setAttribute("stroke", lbl.color);
+            bg.setAttribute("stroke-width", "1");
+            bg.setAttribute("opacity", "0.95");
+
+            g.appendChild(bg);
+            g.appendChild(text);
+            svg.appendChild(g);
         }
 
         return svg;
