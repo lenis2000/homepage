@@ -2644,12 +2644,15 @@ function initLozengeApp() {
             this.scene = new THREE.Scene();
             this.scene.background = new THREE.Color(0xffffff);
 
-            // Camera with Z-up
-            this.camera = new THREE.PerspectiveCamera(
-                45,
-                container.clientWidth / container.clientHeight,
-                0.1,
-                10000
+            // Camera with Z-up - start with orthographic since usePerspective is false
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const frustum = 150;
+            const aspect = w / h;
+            this.camera = new THREE.OrthographicCamera(
+                -frustum * aspect / 2, frustum * aspect / 2,
+                frustum / 2, -frustum / 2,
+                0.1, 10000
             );
             this.camera.up.set(0, 0, 1);
 
