@@ -1482,10 +1482,10 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         ];
         const boundary = document.createElementNS(svgNS, "polygon");
         boundary.setAttribute("points", boundaryCorners.map(c => `${c.x},${c.y}`).join(" "));
-        boundary.setAttribute("fill", "rgba(100, 149, 237, 0.05)");
-        boundary.setAttribute("stroke", "#a0b0d0");
-        boundary.setAttribute("stroke-width", 1);
-        boundary.setAttribute("stroke-dasharray", "4,4");
+        boundary.setAttribute("fill", "rgba(100, 149, 237, 0.08)");
+        boundary.setAttribute("stroke", "#7090c0");
+        boundary.setAttribute("stroke-width", 1.5);
+        boundary.setAttribute("stroke-dasharray", "6,4");
         svg.appendChild(boundary);
 
         // Draw colored edges within the fundamental domain
