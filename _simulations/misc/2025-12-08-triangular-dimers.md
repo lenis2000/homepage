@@ -1387,6 +1387,206 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     // PERIODIC WEIGHTS
     // ========================================================================
 
+    function buildFundamentalDomainSVG(k, l, weights) {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const sqrt3_2 = Math.sqrt(3) / 2;
+
+        // Layout parameters - scale based on k and l to keep labels readable
+        const baseScale = 80;  // pixels per unit
+        const scale = Math.max(60, baseScale - Math.max(k, l) * 5);  // reduce scale for larger domains
+        const padding = 50;
+        const vertexRadius = 5;
+        const edgeWidth = 4;
+
+        // Edge colors (same as in main drawing)
+        const edgeColors = ['#E57200', '#232D4B', '#2E8B57'];
+
+        // Calculate bounds - show the k×l domain plus one extra row/col for context
+        const minN = -1, maxN = k;
+        const minJ = -1, maxJ = l;
+
+        // Convert lattice coords to SVG coords
+        function toSVG(n, j) {
+            const x = (n + 0.5 * j - minN - 0.5 * minJ) * scale + padding;
+            const y = ((maxJ - j) * sqrt3_2) * scale + padding;  // flip y so j increases upward
+            return { x, y };
+        }
+
+        // Calculate SVG dimensions
+        const width = (maxN - minN + 0.5 * (maxJ - minJ) + 1) * scale + 2 * padding;
+        const height = (maxJ - minJ + 1) * sqrt3_2 * scale + 2 * padding;
+
+        // Create SVG element
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("width", width);
+        svg.setAttribute("height", height);
+        svg.style.display = "block";
+        svg.style.margin = "8px auto";
+        svg.style.background = "#fafafa";
+        svg.style.borderRadius = "4px";
+        svg.style.border = "1px solid #ddd";
+
+        // Draw background edges (lighter, for context)
+        for (let j = minJ; j <= maxJ; j++) {
+            for (let n = minN; n <= maxN; n++) {
+                const p = toSVG(n, j);
+                // Only draw edges going "forward" to avoid duplicates
+                // Horizontal: (n,j) -> (n+1,j)
+                if (n < maxN) {
+                    const p2 = toSVG(n + 1, j);
+                    const line = document.createElementNS(svgNS, "line");
+                    line.setAttribute("x1", p.x);
+                    line.setAttribute("y1", p.y);
+                    line.setAttribute("x2", p2.x);
+                    line.setAttribute("y2", p2.y);
+                    line.setAttribute("stroke", "#ddd");
+                    line.setAttribute("stroke-width", 1);
+                    svg.appendChild(line);
+                }
+                // Diag1: (n,j) -> (n,j+1)
+                if (j < maxJ) {
+                    const p2 = toSVG(n, j + 1);
+                    const line = document.createElementNS(svgNS, "line");
+                    line.setAttribute("x1", p.x);
+                    line.setAttribute("y1", p.y);
+                    line.setAttribute("x2", p2.x);
+                    line.setAttribute("y2", p2.y);
+                    line.setAttribute("stroke", "#ddd");
+                    line.setAttribute("stroke-width", 1);
+                    svg.appendChild(line);
+                }
+                // Diag2: (n,j) -> (n-1,j+1)
+                if (j < maxJ && n > minN) {
+                    const p2 = toSVG(n - 1, j + 1);
+                    const line = document.createElementNS(svgNS, "line");
+                    line.setAttribute("x1", p.x);
+                    line.setAttribute("y1", p.y);
+                    line.setAttribute("x2", p2.x);
+                    line.setAttribute("y2", p2.y);
+                    line.setAttribute("stroke", "#ddd");
+                    line.setAttribute("stroke-width", 1);
+                    svg.appendChild(line);
+                }
+            }
+        }
+
+        // Draw fundamental domain boundary (subtle dashed parallelogram)
+        // The domain contains vertices (0..k-1) × (0..l-1)
+        // Draw a tight boundary around these vertices with some padding
+        const pad = 0.25;  // padding around vertices
+        const boundaryCorners = [
+            toSVG(-pad, -pad),
+            toSVG(k - 1 + pad, -pad),
+            toSVG(k - 1 + pad, l - 1 + pad),
+            toSVG(-pad, l - 1 + pad)
+        ];
+        const boundary = document.createElementNS(svgNS, "polygon");
+        boundary.setAttribute("points", boundaryCorners.map(c => `${c.x},${c.y}`).join(" "));
+        boundary.setAttribute("fill", "rgba(100, 149, 237, 0.05)");
+        boundary.setAttribute("stroke", "#a0b0d0");
+        boundary.setAttribute("stroke-width", 1);
+        boundary.setAttribute("stroke-dasharray", "4,4");
+        svg.appendChild(boundary);
+
+        // Draw colored edges within the fundamental domain
+        // Each edge type is drawn as short segments from domain vertices
+        const edgeLen = 0.5;  // length of edge indicator (fraction of full edge)
+        const labelData = [];  // Store label info to draw last (on top)
+
+        for (let j = 0; j < l; j++) {
+            for (let n = 0; n < k; n++) {
+                const p = toSVG(n, j);
+                const w = weights[n]?.[j] || [1, 1, 1];
+
+                // Horizontal edge indicator: towards (n+1,j), type 0
+                const p_horiz = toSVG(n + edgeLen, j);
+                const lineH = document.createElementNS(svgNS, "line");
+                lineH.setAttribute("x1", p.x);
+                lineH.setAttribute("y1", p.y);
+                lineH.setAttribute("x2", p_horiz.x);
+                lineH.setAttribute("y2", p_horiz.y);
+                lineH.setAttribute("stroke", edgeColors[0]);
+                lineH.setAttribute("stroke-width", edgeWidth);
+                lineH.setAttribute("stroke-linecap", "round");
+                svg.appendChild(lineH);
+                labelData.push({
+                    x: p_horiz.x + 8,
+                    y: p_horiz.y + 4,
+                    anchor: "start",
+                    color: edgeColors[0],
+                    text: w[0]
+                });
+
+                // Diag1 edge indicator: towards (n,j+1), type 1
+                const p_diag1 = toSVG(n, j + edgeLen);
+                const lineD1 = document.createElementNS(svgNS, "line");
+                lineD1.setAttribute("x1", p.x);
+                lineD1.setAttribute("y1", p.y);
+                lineD1.setAttribute("x2", p_diag1.x);
+                lineD1.setAttribute("y2", p_diag1.y);
+                lineD1.setAttribute("stroke", edgeColors[1]);
+                lineD1.setAttribute("stroke-width", edgeWidth);
+                lineD1.setAttribute("stroke-linecap", "round");
+                svg.appendChild(lineD1);
+                labelData.push({
+                    x: p_diag1.x + 6,
+                    y: p_diag1.y - 2,
+                    anchor: "start",
+                    color: edgeColors[1],
+                    text: w[1]
+                });
+
+                // Diag2 edge indicator: towards (n-1,j+1), type 2
+                const p_diag2 = toSVG(n - edgeLen, j + edgeLen);
+                const lineD2 = document.createElementNS(svgNS, "line");
+                lineD2.setAttribute("x1", p.x);
+                lineD2.setAttribute("y1", p.y);
+                lineD2.setAttribute("x2", p_diag2.x);
+                lineD2.setAttribute("y2", p_diag2.y);
+                lineD2.setAttribute("stroke", edgeColors[2]);
+                lineD2.setAttribute("stroke-width", edgeWidth);
+                lineD2.setAttribute("stroke-linecap", "round");
+                svg.appendChild(lineD2);
+                labelData.push({
+                    x: p_diag2.x - 6,
+                    y: p_diag2.y - 2,
+                    anchor: "end",
+                    color: edgeColors[2],
+                    text: w[2]
+                });
+            }
+        }
+
+        // Draw vertices
+        for (let j = minJ; j <= maxJ; j++) {
+            for (let n = minN; n <= maxN; n++) {
+                const p = toSVG(n, j);
+                const inDomain = (n >= 0 && n < k && j >= 0 && j < l);
+                const circle = document.createElementNS(svgNS, "circle");
+                circle.setAttribute("cx", p.x);
+                circle.setAttribute("cy", p.y);
+                circle.setAttribute("r", inDomain ? vertexRadius : vertexRadius * 0.6);
+                circle.setAttribute("fill", inDomain ? "#333" : "#bbb");
+                svg.appendChild(circle);
+            }
+        }
+
+        // Draw weight labels last so they appear on top
+        for (const lbl of labelData) {
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", lbl.x);
+            text.setAttribute("y", lbl.y);
+            text.setAttribute("text-anchor", lbl.anchor);
+            text.setAttribute("font-size", "14px");
+            text.setAttribute("font-weight", "bold");
+            text.setAttribute("fill", lbl.color);
+            text.textContent = lbl.text;
+            svg.appendChild(text);
+        }
+
+        return svg;
+    }
+
     function buildWeightDiagram() {
         const container = document.getElementById('weight-diagram');
         const k = currentPeriodicK;
@@ -1394,7 +1594,14 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
         container.innerHTML = '';
 
-        // Build a grid of input cells
+        // Create a flex wrapper to put weights on left, SVG on right
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'flex-start';
+        wrapper.style.gap = '20px';
+        wrapper.style.flexWrap = 'wrap';
+
+        // Build a grid of input cells (on the left)
         const gridContainer = document.createElement('div');
         gridContainer.style.display = 'grid';
         gridContainer.style.gridTemplateColumns = `repeat(${k}, auto)`;
@@ -1456,7 +1663,14 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             }
         }
 
-        container.appendChild(gridContainer);
+        wrapper.appendChild(gridContainer);
+
+        // Add the SVG diagram of the fundamental domain (on the right)
+        const svg = buildFundamentalDomainSVG(k, l, currentEdgeWeights);
+        svg.style.margin = '0';  // Remove auto margin since we're using flex
+        wrapper.appendChild(svg);
+
+        container.appendChild(wrapper);
     }
 
     function updateEdgeWeights() {
@@ -1500,6 +1714,14 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         // Free memory
         Module._free(dataPtr);
 
+        // Update the SVG diagram to show new weights
+        const container = document.getElementById('weight-diagram');
+        const oldSvg = container.querySelector('svg');
+        if (oldSvg) {
+            const newSvg = buildFundamentalDomainSVG(k, l, currentEdgeWeights);
+            newSvg.style.margin = '0';  // Remove auto margin since we're using flex
+            oldSvg.parentNode.replaceChild(newSvg, oldSvg);
+        }
     }
 
     // Periodic weights event handlers
