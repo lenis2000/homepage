@@ -49,14 +49,31 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 <p>Use <strong>Min loop</strong> to filter and display only cycles of at least the specified length, hiding double edges and short loops to reveal the large-scale loop structure.</p>
 
 <h4>Local moves (Kenyon-Rémila)</h4>
-<p>The simulator uses <strong>lozenge moves</strong> in three directions. Each lozenge is a parallelogram of 4 vertices. If two opposite edges are covered by dimers, flip to cover the other two opposite edges.</p>
+<p>The simulator uses <strong>lozenge moves</strong> (3 types), <strong>triangle moves</strong> (2 types), and <strong>butterfly moves</strong> (3 types):</p>
+
+<p><strong>Lozenge moves (4-cycle):</strong> Each lozenge is a parallelogram of 4 vertices. If two opposite edges are covered by dimers, flip to cover the other two.</p>
 <ul>
   <li><strong>Type 0 (up-right)</strong>: (n,j) → (n+1,j) → (n+1,j+1) → (n,j+1)</li>
   <li><strong>Type 1 (up)</strong>: (n,j) → (n,j+1) → (n-1,j+2) → (n-1,j+1)</li>
   <li><strong>Type 2 (up-left)</strong>: (n,j) → (n-1,j+1) → (n-2,j+1) → (n-1,j)</li>
 </ul>
 
-<p><strong>Note:</strong> Lozenge moves alone are NOT ergodic on the triangular lattice. Additional moves (triangle/butterfly) are needed for full ergodicity. See <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon &amp; Rémila (1996)</a>.</p>
+<p><strong>Triangle moves (6-cycle):</strong> Each triangle has 6 boundary edges covered by 3 dimers. Rotate the 3 dimers to the other alternating pattern.</p>
+<ul>
+  <li><strong>Type 0 (up-left)</strong>: (n,j) → (n+2,j) → (n,j+2)</li>
+  <li><strong>Type 1 (down-right)</strong>: (n,j) → (n+2,j) → (n+2,j-2)</li>
+</ul>
+
+<p><strong>Butterfly moves (8-cycle):</strong> Each butterfly has 8 boundary edges covered by 4 dimers. Rotate the 4 dimers to the other alternating pattern.</p>
+<ul>
+  <li><strong>Type 0</strong>: (1,0)-(2,0)-(3,-1)-(3,0)-(3,1)-(2,1)-(1,2)-(1,1)</li>
+  <li><strong>Type 1</strong>: (0,0)-(-1,1)-(-2,2)-(-2,1)-(-3,1)-(-3,0)-(-2,0)-(-1,0)</li>
+  <li><strong>Type 2</strong>: (0,0)-(1,0)-(2,0)-(1,1)-(1,2)-(0,2)-(-1,2)-(0,1)</li>
+</ul>
+
+<p><strong>Move selection:</strong> Each step picks a random vertex, then selects one of 8 move types uniformly at random: lozenge (3/8), triangle (2/8), butterfly (3/8). The move is attempted anchored at that vertex and accepted via Metropolis-Hastings when using periodic weights.</p>
+
+<p>See <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon &amp; Rémila (1996)</a> for ergodicity proofs.</p>
 
 <p><strong>Note on topological sectors:</strong> For domains with holes or periodic boundary conditions, the configuration space splits into disjoint sectors, which Glauber cannot mix between.</p>
 
@@ -1030,9 +1047,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _exportDimers2: Module.cwrap('exportDimers2', 'string', []),
                 _resetDimers2: Module.cwrap('resetDimers2', null, []),
                 _clearDimers2: Module.cwrap('clearDimers2', null, []),
+                _getDebugWeights: Module.cwrap('getDebugWeights', 'string', []),
                 _filterLoopsBySize: Module.cwrap('filterLoopsBySize', 'string', ['number']),
                 _getTotalSteps: Module.cwrap('getTotalSteps', 'number', []),
                 _getFlipCount: Module.cwrap('getFlipCount', 'number', []),
+                _getLozengeFlips: Module.cwrap('getLozengeFlips', 'number', []),
+                _getTriangleFlips: Module.cwrap('getTriangleFlips', 'number', []),
+                _getButterflyFlips: Module.cwrap('getButterflyFlips', 'number', []),
                 _getAcceptRate: Module.cwrap('getAcceptRate', 'number', []),
                 _getVertexCount: Module.cwrap('getVertexCount', 'number', []),
                 _setUsePeriodicWeights: Module.cwrap('setUsePeriodicWeights', null, ['number']),
@@ -1158,9 +1179,12 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
         const totalSteps = wasmModule._getTotalSteps();
         const flipCount = wasmModule._getFlipCount();
+        const lozengeFlips = wasmModule._getLozengeFlips();
+        const triangleFlips = wasmModule._getTriangleFlips();
+        const butterflyFlips = wasmModule._getButterflyFlips();
         const acceptRate = wasmModule._getAcceptRate();
 
-        updateStatus(`Steps: ${totalSteps.toLocaleString()} | Flips: ${flipCount.toLocaleString()} | Accept: ${(acceptRate * 100).toFixed(1)}% | Speed: ${stepsPerSecond.toLocaleString()}/s`);
+        updateStatus(`Steps: ${totalSteps.toLocaleString()} | L: ${lozengeFlips.toLocaleString()} | T: ${triangleFlips.toLocaleString()} | B: ${butterflyFlips.toLocaleString()} | Accept: ${(acceptRate * 100).toFixed(1)}%`);
 
         draw();
         animationId = requestAnimationFrame(animate);
@@ -1475,6 +1499,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
         // Free memory
         Module._free(dataPtr);
+
     }
 
     // Periodic weights event handlers

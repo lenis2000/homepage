@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -141,6 +141,9 @@ std::vector<int> dimerPartner2; // Second dimer configuration (for double dimer 
 // Statistics
 long long totalSteps = 0;
 long long flipCount = 0;
+long long lozengeFlips = 0;
+long long triangleFlips = 0;
+long long butterflyFlips = 0;
 long long totalSteps2 = 0;
 long long flipCount2 = 0;
 
@@ -210,6 +213,20 @@ inline double getEdgeWeightFromCoords(int n1, int j1, int n2, int j2) {
     int ji = ((j % periodicL) + periodicL) % periodicL;
 
     return edgeWeights_periodic[ni][ji][edgeType];
+}
+
+// Debug: dump all periodic weights
+std::string debugPeriodicWeights() {
+    std::string result = "Periodic weights (k=" + std::to_string(periodicK) + ", l=" + std::to_string(periodicL) + "):\n";
+    for (int ni = 0; ni < periodicK; ni++) {
+        for (int ji = 0; ji < periodicL; ji++) {
+            result += "  (" + std::to_string(ni) + "," + std::to_string(ji) + "): ";
+            result += "horiz=" + std::to_string(edgeWeights_periodic[ni][ji][0]) + ", ";
+            result += "diag1=" + std::to_string(edgeWeights_periodic[ni][ji][1]) + ", ";
+            result += "diag2=" + std::to_string(edgeWeights_periodic[ni][ji][2]) + "\n";
+        }
+    }
+    return result;
 }
 
 // Loop detection for double dimer
@@ -511,7 +528,321 @@ bool tryLozengeFlip(int v0, int v1, int v2, int v3) {
 }
 
 // ============================================================================
-// GLAUBER DYNAMICS - LOZENGE MOVES (Kenyon-Remila)
+// TRIANGLE MOVES (Kenyon-Remila)
+// ============================================================================
+// Two types of triangles with 6 boundary edges covered by 3 dimers:
+// Type 0: (n,j) - (n+2,j) - (n,j+2)  [pointing up-left]
+// Type 1: (n,j) - (n+2,j) - (n+2,j-2) [pointing down-right]
+//
+// Each triangle boundary has 6 edges. If 3 alternating edges are dimers,
+// we can rotate to the other 3 alternating edges.
+
+// Try triangle flip for triangle type 0: (n,j)-(n+2,j)-(n,j+2)
+// Boundary vertices in order: (n,j)-(n+1,j)-(n+2,j)-(n+1,j+1)-(n,j+2)-(n,j+1)-(n,j)
+// 6 edges: e0=(n,j)-(n+1,j), e1=(n+1,j)-(n+2,j), e2=(n+2,j)-(n+1,j+1),
+//          e3=(n+1,j+1)-(n,j+2), e4=(n,j+2)-(n,j+1), e5=(n,j+1)-(n,j)
+// Pattern A: e0, e2, e4 are dimers
+// Pattern B: e1, e3, e5 are dimers
+bool tryTriangleFlip0(int n, int j) {
+    // Get all 6 boundary vertices
+    int v0 = getVertexFromGrid(n, j);
+    int v1 = getVertexFromGrid(n+1, j);
+    int v2 = getVertexFromGrid(n+2, j);
+    int v3 = getVertexFromGrid(n+1, j+1);
+    int v4 = getVertexFromGrid(n, j+2);
+    int v5 = getVertexFromGrid(n, j+1);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0) {
+        return false;
+    }
+
+    // Check pattern A: (v0-v1), (v2-v3), (v4-v5) are dimers
+    if (dimerPartner[v0] == v1 && dimerPartner[v2] == v3 && dimerPartner[v4] == v5) {
+        // Flip to pattern B: (v1-v2), (v3-v4), (v5-v0)
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+1, j+1)
+                         * getEdgeWeightFromCoords(n, j+2, n, j+1);
+            double w_new = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+1, j+1, n, j+2)
+                         * getEdgeWeightFromCoords(n, j+1, n, j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner[v0] = v5; dimerPartner[v5] = v0;
+        dimerPartner[v1] = v2; dimerPartner[v2] = v1;
+        dimerPartner[v3] = v4; dimerPartner[v4] = v3;
+        return true;
+    }
+
+    // Check pattern B: (v1-v2), (v3-v4), (v5-v0) are dimers
+    if (dimerPartner[v1] == v2 && dimerPartner[v3] == v4 && dimerPartner[v5] == v0) {
+        // Flip to pattern A: (v0-v1), (v2-v3), (v4-v5)
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+1, j+1, n, j+2)
+                         * getEdgeWeightFromCoords(n, j+1, n, j);
+            double w_new = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+1, j+1)
+                         * getEdgeWeightFromCoords(n, j+2, n, j+1);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner[v0] = v1; dimerPartner[v1] = v0;
+        dimerPartner[v2] = v3; dimerPartner[v3] = v2;
+        dimerPartner[v4] = v5; dimerPartner[v5] = v4;
+        return true;
+    }
+
+    return false;
+}
+
+// Try triangle flip for triangle type 1: (n,j)-(n+2,j)-(n+2,j-2)
+// Boundary vertices in order: (n,j)-(n+1,j)-(n+2,j)-(n+2,j-1)-(n+2,j-2)-(n+1,j-1)-(n,j)
+// 6 edges: e0=(n,j)-(n+1,j), e1=(n+1,j)-(n+2,j), e2=(n+2,j)-(n+2,j-1),
+//          e3=(n+2,j-1)-(n+2,j-2), e4=(n+2,j-2)-(n+1,j-1), e5=(n+1,j-1)-(n,j)
+// Pattern A: e0, e2, e4 are dimers
+// Pattern B: e1, e3, e5 are dimers
+bool tryTriangleFlip1(int n, int j) {
+    // Get all 6 boundary vertices
+    int v0 = getVertexFromGrid(n, j);
+    int v1 = getVertexFromGrid(n+1, j);
+    int v2 = getVertexFromGrid(n+2, j);
+    int v3 = getVertexFromGrid(n+2, j-1);
+    int v4 = getVertexFromGrid(n+2, j-2);
+    int v5 = getVertexFromGrid(n+1, j-1);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0) {
+        return false;
+    }
+
+    // Check pattern A: (v0-v1), (v2-v3), (v4-v5) are dimers
+    if (dimerPartner[v0] == v1 && dimerPartner[v2] == v3 && dimerPartner[v4] == v5) {
+        // Flip to pattern B: (v1-v2), (v3-v4), (v5-v0)
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+2, j-1)
+                         * getEdgeWeightFromCoords(n+2, j-2, n+1, j-1);
+            double w_new = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+2, j-1, n+2, j-2)
+                         * getEdgeWeightFromCoords(n+1, j-1, n, j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner[v0] = v5; dimerPartner[v5] = v0;
+        dimerPartner[v1] = v2; dimerPartner[v2] = v1;
+        dimerPartner[v3] = v4; dimerPartner[v4] = v3;
+        return true;
+    }
+
+    // Check pattern B: (v1-v2), (v3-v4), (v5-v0) are dimers
+    if (dimerPartner[v1] == v2 && dimerPartner[v3] == v4 && dimerPartner[v5] == v0) {
+        // Flip to pattern A: (v0-v1), (v2-v3), (v4-v5)
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+2, j-1, n+2, j-2)
+                         * getEdgeWeightFromCoords(n+1, j-1, n, j);
+            double w_new = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+2, j-1)
+                         * getEdgeWeightFromCoords(n+2, j-2, n+1, j-1);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner[v0] = v1; dimerPartner[v1] = v0;
+        dimerPartner[v2] = v3; dimerPartner[v3] = v2;
+        dimerPartner[v4] = v5; dimerPartner[v5] = v4;
+        return true;
+    }
+
+    return false;
+}
+
+// ============================================================================
+// BUTTERFLY MOVES (Kenyon-Remila)
+// ============================================================================
+// Three types of butterflies with 8 boundary edges covered by 4 dimers:
+// Type 0: (n+1,j)-(n+2,j)-(n+3,j-1)-(n+3,j)-(n+3,j+1)-(n+2,j+1)-(n+1,j+2)-(n+1,j+1)
+//         Centered at (n,j), vertices shifted by (1,0)
+// Type 1: (n,j)-(n-1,j+1)-(n-2,j+2)-(n-2,j+1)-(n-3,j+1)-(n-2,j)-(n-1,j+1)-(n-1,j)
+//         Note: the user's path has a repeated vertex, interpreting as 8-cycle
+// Type 2: (n,j)-(n+1,j)-(n+2,j)-(n+1,j+1)-(n+1,j+2)-(n,j+2)-(n-1,j+2)-(n,j+1)
+//
+// Each butterfly boundary has 8 edges. If 4 alternating edges are dimers,
+// we can rotate to the other 4 alternating edges.
+
+// Helper: try butterfly flip given 8 vertices in cycle order
+// v0-v1-v2-v3-v4-v5-v6-v7 form the cycle
+// Pattern A: edges (v0,v1), (v2,v3), (v4,v5), (v6,v7) are dimers
+// Pattern B: edges (v1,v2), (v3,v4), (v5,v6), (v7,v0) are dimers
+bool tryButterflyFlip(int v0, int v1, int v2, int v3, int v4, int v5, int v6, int v7,
+                      int n0, int j0, int n1, int j1, int n2, int j2, int n3, int j3,
+                      int n4, int j4, int n5, int j5, int n6, int j6, int n7, int j7) {
+    // Check pattern A: (v0-v1), (v2-v3), (v4-v5), (v6-v7) are dimers
+    if (dimerPartner[v0] == v1 && dimerPartner[v2] == v3 &&
+        dimerPartner[v4] == v5 && dimerPartner[v6] == v7) {
+        // Flip to pattern B: (v1-v2), (v3-v4), (v5-v6), (v7-v0)
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n0, j0, n1, j1)
+                         * getEdgeWeightFromCoords(n2, j2, n3, j3)
+                         * getEdgeWeightFromCoords(n4, j4, n5, j5)
+                         * getEdgeWeightFromCoords(n6, j6, n7, j7);
+            double w_new = getEdgeWeightFromCoords(n1, j1, n2, j2)
+                         * getEdgeWeightFromCoords(n3, j3, n4, j4)
+                         * getEdgeWeightFromCoords(n5, j5, n6, j6)
+                         * getEdgeWeightFromCoords(n7, j7, n0, j0);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner[v0] = v7; dimerPartner[v7] = v0;
+        dimerPartner[v1] = v2; dimerPartner[v2] = v1;
+        dimerPartner[v3] = v4; dimerPartner[v4] = v3;
+        dimerPartner[v5] = v6; dimerPartner[v6] = v5;
+        return true;
+    }
+
+    // Check pattern B: (v1-v2), (v3-v4), (v5-v6), (v7-v0) are dimers
+    if (dimerPartner[v1] == v2 && dimerPartner[v3] == v4 &&
+        dimerPartner[v5] == v6 && dimerPartner[v7] == v0) {
+        // Flip to pattern A: (v0-v1), (v2-v3), (v4-v5), (v6-v7)
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n1, j1, n2, j2)
+                         * getEdgeWeightFromCoords(n3, j3, n4, j4)
+                         * getEdgeWeightFromCoords(n5, j5, n6, j6)
+                         * getEdgeWeightFromCoords(n7, j7, n0, j0);
+            double w_new = getEdgeWeightFromCoords(n0, j0, n1, j1)
+                         * getEdgeWeightFromCoords(n2, j2, n3, j3)
+                         * getEdgeWeightFromCoords(n4, j4, n5, j5)
+                         * getEdgeWeightFromCoords(n6, j6, n7, j7);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner[v0] = v1; dimerPartner[v1] = v0;
+        dimerPartner[v2] = v3; dimerPartner[v3] = v2;
+        dimerPartner[v4] = v5; dimerPartner[v5] = v4;
+        dimerPartner[v6] = v7; dimerPartner[v7] = v6;
+        return true;
+    }
+
+    return false;
+}
+
+// Butterfly type 0: (1,0)-(2,0)-(3,-1)-(3,0)-(3,1)-(2,1)-(1,2)-(1,1) relative to origin
+// At position (n,j), the 8 vertices are:
+// (n+1,j)-(n+2,j)-(n+3,j-1)-(n+3,j)-(n+3,j+1)-(n+2,j+1)-(n+1,j+2)-(n+1,j+1)
+bool tryButterflyFlip0(int n, int j) {
+    int n0 = n+1, j0 = j;
+    int n1 = n+2, j1 = j;
+    int n2 = n+3, j2 = j-1;
+    int n3 = n+3, j3 = j;
+    int n4 = n+3, j4 = j+1;
+    int n5 = n+2, j5 = j+1;
+    int n6 = n+1, j6 = j+2;
+    int n7 = n+1, j7 = j+1;
+
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+    int v4 = getVertexFromGrid(n4, j4);
+    int v5 = getVertexFromGrid(n5, j5);
+    int v6 = getVertexFromGrid(n6, j6);
+    int v7 = getVertexFromGrid(n7, j7);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0 || v6 < 0 || v7 < 0) {
+        return false;
+    }
+
+    return tryButterflyFlip(v0, v1, v2, v3, v4, v5, v6, v7,
+                            n0, j0, n1, j1, n2, j2, n3, j3, n4, j4, n5, j5, n6, j6, n7, j7);
+}
+
+// Butterfly type 1: (0,0)-(-1,1)-(-2,2)-(-2,1)-(-3,1)-(-2,0)-(-1,0) relative to origin
+// Interpreting the user's path (removing duplicate), 8-cycle at (n,j):
+// (n,j)-(n-1,j+1)-(n-2,j+2)-(n-2,j+1)-(n-3,j+1)-(n-2,j)-(n-1,j)-(n-1,j+1 duplicate? no, should be different)
+// Looking more carefully: (0,0)-(-1,1)-(-2,2)-(-2,1)-(-3,1)-(-2,0)-(-1,1)-(-1,0)-(0,0)
+// This has (-1,1) appearing twice. Let me reinterpret as:
+// v0=(0,0), v1=(-1,1), v2=(-2,2), v3=(-2,1), v4=(-3,1), v5=(-2,0), v6=(-1,1), v7=(-1,0)
+// Since (-1,1) appears at v1 and v6, this seems wrong. Let me re-read...
+// Actually checking adjacencies:
+// (0,0) to (-1,1): valid (up-left)
+// (-1,1) to (-2,2): valid (up-left)
+// (-2,2) to (-2,1): valid (down, j-1)
+// (-2,1) to (-3,1): valid (left, n-1)
+// (-3,1) to (-2,0): valid (down-right, n+1,j-1)
+// (-2,0) to (-1,1): valid (up-right, n+1,j+1) - BUT this is already v1!
+// So this seems like a 6-cycle with a "tail"? Let me assume typo and use:
+// (n,j)-(n-1,j+1)-(n-2,j+2)-(n-2,j+1)-(n-3,j+1)-(n-3,j)-(n-2,j)-(n-1,j)
+bool tryButterflyFlip1(int n, int j) {
+    int n0 = n, j0 = j;
+    int n1 = n-1, j1 = j+1;
+    int n2 = n-2, j2 = j+2;
+    int n3 = n-2, j3 = j+1;
+    int n4 = n-3, j4 = j+1;
+    int n5 = n-3, j5 = j;
+    int n6 = n-2, j6 = j;
+    int n7 = n-1, j7 = j;
+
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+    int v4 = getVertexFromGrid(n4, j4);
+    int v5 = getVertexFromGrid(n5, j5);
+    int v6 = getVertexFromGrid(n6, j6);
+    int v7 = getVertexFromGrid(n7, j7);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0 || v6 < 0 || v7 < 0) {
+        return false;
+    }
+
+    return tryButterflyFlip(v0, v1, v2, v3, v4, v5, v6, v7,
+                            n0, j0, n1, j1, n2, j2, n3, j3, n4, j4, n5, j5, n6, j6, n7, j7);
+}
+
+// Butterfly type 2: (0,0)-(1,0)-(2,0)-(1,1)-(1,2)-(0,2)-(-1,2)-(0,1) relative to origin
+// At position (n,j), the 8 vertices are:
+// (n,j)-(n+1,j)-(n+2,j)-(n+1,j+1)-(n+1,j+2)-(n,j+2)-(n-1,j+2)-(n,j+1)
+bool tryButterflyFlip2(int n, int j) {
+    int n0 = n, j0 = j;
+    int n1 = n+1, j1 = j;
+    int n2 = n+2, j2 = j;
+    int n3 = n+1, j3 = j+1;
+    int n4 = n+1, j4 = j+2;
+    int n5 = n, j5 = j+2;
+    int n6 = n-1, j6 = j+2;
+    int n7 = n, j7 = j+1;
+
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+    int v4 = getVertexFromGrid(n4, j4);
+    int v5 = getVertexFromGrid(n5, j5);
+    int v6 = getVertexFromGrid(n6, j6);
+    int v7 = getVertexFromGrid(n7, j7);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0 || v6 < 0 || v7 < 0) {
+        return false;
+    }
+
+    return tryButterflyFlip(v0, v1, v2, v3, v4, v5, v6, v7,
+                            n0, j0, n1, j1, n2, j2, n3, j3, n4, j4, n5, j5, n6, j6, n7, j7);
+}
+
+// ============================================================================
+// GLAUBER DYNAMICS - LOZENGE + TRIANGLE + BUTTERFLY MOVES (Kenyon-Remila)
 // ============================================================================
 
 void performOneStep() {
@@ -522,52 +853,85 @@ void performOneStep() {
     int n = vertices[v].n;
     int j = vertices[v].j;
 
-    // Pick random lozenge type (0, 1, or 2)
-    int lozengeType = getRandomInt(3);
+    // Pick random move type: 0-2 = lozenge, 3-4 = triangle, 5-7 = butterfly
+    int moveType = getRandomInt(8);
 
-    // Get 4 vertices of the lozenge based on type
-    // Vertex v is always the "bottom-left" corner
-    int n0, j0, n1, j1, n2, j2, n3, j3;
+    if (moveType < 3) {
+        // Lozenge move
+        int n0, j0, n1, j1, n2, j2, n3, j3;
 
-    switch (lozengeType) {
-        case 0:
-            // Type 0 (up-right): (n,j) - (n+1,j) - (n+1,j+1) - (n,j+1)
-            n0 = n;     j0 = j;
-            n1 = n + 1; j1 = j;
-            n2 = n + 1; j2 = j + 1;
-            n3 = n;     j3 = j + 1;
-            break;
-        case 1:
-            // Type 1 (up): (n,j) - (n,j+1) - (n-1,j+2) - (n-1,j+1)
-            n0 = n;     j0 = j;
-            n1 = n;     j1 = j + 1;
-            n2 = n - 1; j2 = j + 2;
-            n3 = n - 1; j3 = j + 1;
-            break;
-        case 2:
-            // Type 2 (up-left): (n,j) - (n-1,j+1) - (n-2,j+1) - (n-1,j)
-            n0 = n;     j0 = j;
-            n1 = n - 1; j1 = j + 1;
-            n2 = n - 2; j2 = j + 1;
-            n3 = n - 1; j3 = j;
-            break;
-        default:
+        switch (moveType) {
+            case 0:
+                // Type 0 (up-right): (n,j) - (n+1,j) - (n+1,j+1) - (n,j+1)
+                n0 = n;     j0 = j;
+                n1 = n + 1; j1 = j;
+                n2 = n + 1; j2 = j + 1;
+                n3 = n;     j3 = j + 1;
+                break;
+            case 1:
+                // Type 1 (up): (n,j) - (n,j+1) - (n-1,j+2) - (n-1,j+1)
+                n0 = n;     j0 = j;
+                n1 = n;     j1 = j + 1;
+                n2 = n - 1; j2 = j + 2;
+                n3 = n - 1; j3 = j + 1;
+                break;
+            case 2:
+                // Type 2 (up-left): (n,j) - (n-1,j+1) - (n-2,j+1) - (n-1,j)
+                n0 = n;     j0 = j;
+                n1 = n - 1; j1 = j + 1;
+                n2 = n - 2; j2 = j + 1;
+                n3 = n - 1; j3 = j;
+                break;
+            default:
+                return;
+        }
+
+        int v0 = getVertexFromGrid(n0, j0);
+        int v1 = getVertexFromGrid(n1, j1);
+        int v2 = getVertexFromGrid(n2, j2);
+        int v3 = getVertexFromGrid(n3, j3);
+
+        if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
             return;
-    }
+        }
 
-    // Get vertex indices (check all 4 exist in region)
-    int v0 = getVertexFromGrid(n0, j0);
-    int v1 = getVertexFromGrid(n1, j1);
-    int v2 = getVertexFromGrid(n2, j2);
-    int v3 = getVertexFromGrid(n3, j3);
-
-    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
-        return;  // Not all vertices in region
-    }
-
-    // Try the lozenge flip
-    if (tryLozengeFlip(v0, v1, v2, v3)) {
-        flipCount++;
+        if (tryLozengeFlip(v0, v1, v2, v3)) {
+            flipCount++;
+            lozengeFlips++;
+        }
+    } else if (moveType < 5) {
+        // Triangle move
+        if (moveType == 3) {
+            // Triangle type 0: (n,j)-(n+2,j)-(n,j+2)
+            if (tryTriangleFlip0(n, j)) {
+                flipCount++;
+                triangleFlips++;
+            }
+        } else {
+            // Triangle type 1: (n,j)-(n+2,j)-(n+2,j-2)
+            if (tryTriangleFlip1(n, j)) {
+                flipCount++;
+                triangleFlips++;
+            }
+        }
+    } else {
+        // Butterfly move
+        bool flipped = false;
+        switch (moveType) {
+            case 5:
+                flipped = tryButterflyFlip0(n, j);
+                break;
+            case 6:
+                flipped = tryButterflyFlip1(n, j);
+                break;
+            case 7:
+                flipped = tryButterflyFlip2(n, j);
+                break;
+        }
+        if (flipped) {
+            flipCount++;
+            butterflyFlips++;
+        }
     }
 }
 
@@ -582,7 +946,6 @@ bool tryLozengeFlip2(int v0, int v1, int v2, int v3) {
     const Vertex& V2 = vertices[v2];
     const Vertex& V3 = vertices[v3];
 
-    // Check if (v0,v1) and (v2,v3) are both dimers
     if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3) {
         if (usePeriodicWeights) {
             double w_old = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
@@ -600,7 +963,6 @@ bool tryLozengeFlip2(int v0, int v1, int v2, int v3) {
         dimerPartner2[v2] = v1;
         return true;
     }
-    // Check if (v1,v2) and (v3,v0) are both dimers
     if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v0) {
         if (usePeriodicWeights) {
             double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
@@ -621,58 +983,325 @@ bool tryLozengeFlip2(int v0, int v1, int v2, int v3) {
     return false;
 }
 
-void performOneStep2() {
-    totalSteps2++;
+// Triangle flip type 0 for second configuration
+bool tryTriangleFlip0_2(int n, int j) {
+    int v0 = getVertexFromGrid(n, j);
+    int v1 = getVertexFromGrid(n+1, j);
+    int v2 = getVertexFromGrid(n+2, j);
+    int v3 = getVertexFromGrid(n+1, j+1);
+    int v4 = getVertexFromGrid(n, j+2);
+    int v5 = getVertexFromGrid(n, j+1);
 
-    // Pick random vertex
-    int v = getRandomInt((int)vertices.size());
-    int n = vertices[v].n;
-    int j = vertices[v].j;
-
-    // Pick random lozenge type (0, 1, or 2)
-    int lozengeType = getRandomInt(3);
-
-    // Get 4 vertices of the lozenge based on type
-    int n0, j0, n1, j1, n2, j2, n3, j3;
-
-    switch (lozengeType) {
-        case 0:
-            // Type 0 (up-right): (n,j) - (n+1,j) - (n+1,j+1) - (n,j+1)
-            n0 = n;     j0 = j;
-            n1 = n + 1; j1 = j;
-            n2 = n + 1; j2 = j + 1;
-            n3 = n;     j3 = j + 1;
-            break;
-        case 1:
-            // Type 1 (up): (n,j) - (n,j+1) - (n-1,j+2) - (n-1,j+1)
-            n0 = n;     j0 = j;
-            n1 = n;     j1 = j + 1;
-            n2 = n - 1; j2 = j + 2;
-            n3 = n - 1; j3 = j + 1;
-            break;
-        case 2:
-            // Type 2 (up-left): (n,j) - (n-1,j+1) - (n-2,j+1) - (n-1,j)
-            n0 = n;     j0 = j;
-            n1 = n - 1; j1 = j + 1;
-            n2 = n - 2; j2 = j + 1;
-            n3 = n - 1; j3 = j;
-            break;
-        default:
-            return;
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0) {
+        return false;
     }
 
-    // Get vertex indices (check all 4 exist in region)
+    if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3 && dimerPartner2[v4] == v5) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+1, j+1)
+                         * getEdgeWeightFromCoords(n, j+2, n, j+1);
+            double w_new = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+1, j+1, n, j+2)
+                         * getEdgeWeightFromCoords(n, j+1, n, j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner2[v0] = v5; dimerPartner2[v5] = v0;
+        dimerPartner2[v1] = v2; dimerPartner2[v2] = v1;
+        dimerPartner2[v3] = v4; dimerPartner2[v4] = v3;
+        return true;
+    }
+
+    if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v4 && dimerPartner2[v5] == v0) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+1, j+1, n, j+2)
+                         * getEdgeWeightFromCoords(n, j+1, n, j);
+            double w_new = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+1, j+1)
+                         * getEdgeWeightFromCoords(n, j+2, n, j+1);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner2[v0] = v1; dimerPartner2[v1] = v0;
+        dimerPartner2[v2] = v3; dimerPartner2[v3] = v2;
+        dimerPartner2[v4] = v5; dimerPartner2[v5] = v4;
+        return true;
+    }
+
+    return false;
+}
+
+// Triangle flip type 1 for second configuration
+bool tryTriangleFlip1_2(int n, int j) {
+    int v0 = getVertexFromGrid(n, j);
+    int v1 = getVertexFromGrid(n+1, j);
+    int v2 = getVertexFromGrid(n+2, j);
+    int v3 = getVertexFromGrid(n+2, j-1);
+    int v4 = getVertexFromGrid(n+2, j-2);
+    int v5 = getVertexFromGrid(n+1, j-1);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0) {
+        return false;
+    }
+
+    if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3 && dimerPartner2[v4] == v5) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+2, j-1)
+                         * getEdgeWeightFromCoords(n+2, j-2, n+1, j-1);
+            double w_new = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+2, j-1, n+2, j-2)
+                         * getEdgeWeightFromCoords(n+1, j-1, n, j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner2[v0] = v5; dimerPartner2[v5] = v0;
+        dimerPartner2[v1] = v2; dimerPartner2[v2] = v1;
+        dimerPartner2[v3] = v4; dimerPartner2[v4] = v3;
+        return true;
+    }
+
+    if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v4 && dimerPartner2[v5] == v0) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n+1, j, n+2, j)
+                         * getEdgeWeightFromCoords(n+2, j-1, n+2, j-2)
+                         * getEdgeWeightFromCoords(n+1, j-1, n, j);
+            double w_new = getEdgeWeightFromCoords(n, j, n+1, j)
+                         * getEdgeWeightFromCoords(n+2, j, n+2, j-1)
+                         * getEdgeWeightFromCoords(n+2, j-2, n+1, j-1);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner2[v0] = v1; dimerPartner2[v1] = v0;
+        dimerPartner2[v2] = v3; dimerPartner2[v3] = v2;
+        dimerPartner2[v4] = v5; dimerPartner2[v5] = v4;
+        return true;
+    }
+
+    return false;
+}
+
+// Butterfly flip helper for second configuration
+bool tryButterflyFlip2_config(int v0, int v1, int v2, int v3, int v4, int v5, int v6, int v7,
+                               int n0, int j0, int n1, int j1, int n2, int j2, int n3, int j3,
+                               int n4, int j4, int n5, int j5, int n6, int j6, int n7, int j7) {
+    if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3 &&
+        dimerPartner2[v4] == v5 && dimerPartner2[v6] == v7) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n0, j0, n1, j1)
+                         * getEdgeWeightFromCoords(n2, j2, n3, j3)
+                         * getEdgeWeightFromCoords(n4, j4, n5, j5)
+                         * getEdgeWeightFromCoords(n6, j6, n7, j7);
+            double w_new = getEdgeWeightFromCoords(n1, j1, n2, j2)
+                         * getEdgeWeightFromCoords(n3, j3, n4, j4)
+                         * getEdgeWeightFromCoords(n5, j5, n6, j6)
+                         * getEdgeWeightFromCoords(n7, j7, n0, j0);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner2[v0] = v7; dimerPartner2[v7] = v0;
+        dimerPartner2[v1] = v2; dimerPartner2[v2] = v1;
+        dimerPartner2[v3] = v4; dimerPartner2[v4] = v3;
+        dimerPartner2[v5] = v6; dimerPartner2[v6] = v5;
+        return true;
+    }
+
+    if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v4 &&
+        dimerPartner2[v5] == v6 && dimerPartner2[v7] == v0) {
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(n1, j1, n2, j2)
+                         * getEdgeWeightFromCoords(n3, j3, n4, j4)
+                         * getEdgeWeightFromCoords(n5, j5, n6, j6)
+                         * getEdgeWeightFromCoords(n7, j7, n0, j0);
+            double w_new = getEdgeWeightFromCoords(n0, j0, n1, j1)
+                         * getEdgeWeightFromCoords(n2, j2, n3, j3)
+                         * getEdgeWeightFromCoords(n4, j4, n5, j5)
+                         * getEdgeWeightFromCoords(n6, j6, n7, j7);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;
+            }
+        }
+        dimerPartner2[v0] = v1; dimerPartner2[v1] = v0;
+        dimerPartner2[v2] = v3; dimerPartner2[v3] = v2;
+        dimerPartner2[v4] = v5; dimerPartner2[v5] = v4;
+        dimerPartner2[v6] = v7; dimerPartner2[v7] = v6;
+        return true;
+    }
+
+    return false;
+}
+
+bool tryButterflyFlip0_2(int n, int j) {
+    int n0 = n+1, j0 = j;
+    int n1 = n+2, j1 = j;
+    int n2 = n+3, j2 = j-1;
+    int n3 = n+3, j3 = j;
+    int n4 = n+3, j4 = j+1;
+    int n5 = n+2, j5 = j+1;
+    int n6 = n+1, j6 = j+2;
+    int n7 = n+1, j7 = j+1;
+
     int v0 = getVertexFromGrid(n0, j0);
     int v1 = getVertexFromGrid(n1, j1);
     int v2 = getVertexFromGrid(n2, j2);
     int v3 = getVertexFromGrid(n3, j3);
+    int v4 = getVertexFromGrid(n4, j4);
+    int v5 = getVertexFromGrid(n5, j5);
+    int v6 = getVertexFromGrid(n6, j6);
+    int v7 = getVertexFromGrid(n7, j7);
 
-    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
-        return;
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0 || v6 < 0 || v7 < 0) {
+        return false;
     }
 
-    if (tryLozengeFlip2(v0, v1, v2, v3)) {
-        flipCount2++;
+    return tryButterflyFlip2_config(v0, v1, v2, v3, v4, v5, v6, v7,
+                                     n0, j0, n1, j1, n2, j2, n3, j3, n4, j4, n5, j5, n6, j6, n7, j7);
+}
+
+bool tryButterflyFlip1_2(int n, int j) {
+    int n0 = n, j0 = j;
+    int n1 = n-1, j1 = j+1;
+    int n2 = n-2, j2 = j+2;
+    int n3 = n-2, j3 = j+1;
+    int n4 = n-3, j4 = j+1;
+    int n5 = n-3, j5 = j;
+    int n6 = n-2, j6 = j;
+    int n7 = n-1, j7 = j;
+
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+    int v4 = getVertexFromGrid(n4, j4);
+    int v5 = getVertexFromGrid(n5, j5);
+    int v6 = getVertexFromGrid(n6, j6);
+    int v7 = getVertexFromGrid(n7, j7);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0 || v6 < 0 || v7 < 0) {
+        return false;
+    }
+
+    return tryButterflyFlip2_config(v0, v1, v2, v3, v4, v5, v6, v7,
+                                     n0, j0, n1, j1, n2, j2, n3, j3, n4, j4, n5, j5, n6, j6, n7, j7);
+}
+
+bool tryButterflyFlip2_2(int n, int j) {
+    int n0 = n, j0 = j;
+    int n1 = n+1, j1 = j;
+    int n2 = n+2, j2 = j;
+    int n3 = n+1, j3 = j+1;
+    int n4 = n+1, j4 = j+2;
+    int n5 = n, j5 = j+2;
+    int n6 = n-1, j6 = j+2;
+    int n7 = n, j7 = j+1;
+
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+    int v4 = getVertexFromGrid(n4, j4);
+    int v5 = getVertexFromGrid(n5, j5);
+    int v6 = getVertexFromGrid(n6, j6);
+    int v7 = getVertexFromGrid(n7, j7);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 || v4 < 0 || v5 < 0 || v6 < 0 || v7 < 0) {
+        return false;
+    }
+
+    return tryButterflyFlip2_config(v0, v1, v2, v3, v4, v5, v6, v7,
+                                     n0, j0, n1, j1, n2, j2, n3, j3, n4, j4, n5, j5, n6, j6, n7, j7);
+}
+
+void performOneStep2() {
+    totalSteps2++;
+
+    int v = getRandomInt((int)vertices.size());
+    int n = vertices[v].n;
+    int j = vertices[v].j;
+
+    // Pick random move type: 0-2 = lozenge, 3-4 = triangle, 5-7 = butterfly
+    int moveType = getRandomInt(8);
+
+    if (moveType < 3) {
+        // Lozenge move
+        int n0, j0, n1, j1, n2, j2, n3, j3;
+
+        switch (moveType) {
+            case 0:
+                n0 = n;     j0 = j;
+                n1 = n + 1; j1 = j;
+                n2 = n + 1; j2 = j + 1;
+                n3 = n;     j3 = j + 1;
+                break;
+            case 1:
+                n0 = n;     j0 = j;
+                n1 = n;     j1 = j + 1;
+                n2 = n - 1; j2 = j + 2;
+                n3 = n - 1; j3 = j + 1;
+                break;
+            case 2:
+                n0 = n;     j0 = j;
+                n1 = n - 1; j1 = j + 1;
+                n2 = n - 2; j2 = j + 1;
+                n3 = n - 1; j3 = j;
+                break;
+            default:
+                return;
+        }
+
+        int v0 = getVertexFromGrid(n0, j0);
+        int v1 = getVertexFromGrid(n1, j1);
+        int v2 = getVertexFromGrid(n2, j2);
+        int v3 = getVertexFromGrid(n3, j3);
+
+        if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
+            return;
+        }
+
+        if (tryLozengeFlip2(v0, v1, v2, v3)) {
+            flipCount2++;
+        }
+    } else if (moveType < 5) {
+        // Triangle move
+        if (moveType == 3) {
+            if (tryTriangleFlip0_2(n, j)) {
+                flipCount2++;
+            }
+        } else {
+            if (tryTriangleFlip1_2(n, j)) {
+                flipCount2++;
+            }
+        }
+    } else {
+        // Butterfly move
+        bool flipped = false;
+        switch (moveType) {
+            case 5:
+                flipped = tryButterflyFlip0_2(n, j);
+                break;
+            case 6:
+                flipped = tryButterflyFlip1_2(n, j);
+                break;
+            case 7:
+                flipped = tryButterflyFlip2_2(n, j);
+                break;
+        }
+        if (flipped) {
+            flipCount2++;
+        }
     }
 }
 
@@ -694,6 +1323,9 @@ int initFromVertices(const char* vertexList) {
     dimerPartner2.clear();
     totalSteps = 0;
     flipCount = 0;
+    lozengeFlips = 0;
+    triangleFlips = 0;
+    butterflyFlips = 0;
     totalSteps2 = 0;
     flipCount2 = 0;
 
@@ -773,6 +1405,15 @@ EMSCRIPTEN_KEEPALIVE
 long long getFlipCount() { return flipCount; }
 
 EMSCRIPTEN_KEEPALIVE
+long long getLozengeFlips() { return lozengeFlips; }
+
+EMSCRIPTEN_KEEPALIVE
+long long getTriangleFlips() { return triangleFlips; }
+
+EMSCRIPTEN_KEEPALIVE
+long long getButterflyFlips() { return butterflyFlips; }
+
+EMSCRIPTEN_KEEPALIVE
 double getAcceptRate() {
     if (totalSteps == 0) return 0.0;
     return (double)flipCount / (double)totalSteps;
@@ -835,6 +1476,13 @@ int getEdgeCount() {
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* ptr) {
     // No-op for static string
+}
+
+EMSCRIPTEN_KEEPALIVE
+const char* getDebugWeights() {
+    static std::string result;
+    result = debugPeriodicWeights();
+    return result.c_str();
 }
 
 // ============================================================================
