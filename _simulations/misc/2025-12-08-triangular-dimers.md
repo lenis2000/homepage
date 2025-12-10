@@ -48,16 +48,15 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
 <p>Use <strong>Min loop</strong> to filter and display only cycles of at least the specified length, hiding double edges and short loops to reveal the large-scale loop structure.</p>
 
-<h4>Ergodicity and local moves</h4>
-<p>The simulator uses two types of local moves:</p>
+<h4>Local moves (Kenyon-Rémila)</h4>
+<p>The simulator uses <strong>lozenge moves</strong> in three directions. Each lozenge is a parallelogram of 4 vertices. If two opposite edges are covered by dimers, flip to cover the other two opposite edges.</p>
 <ul>
-  <li><strong>4-cycle moves</strong>: Flip two dimers around a rhombus (parallelogram of 4 vertices)</li>
-  <li><strong>6-cycle moves</strong>: Rotate three dimers around a hexagon perimeter (6 vertices surrounding a center)</li>
+  <li><strong>Type 0 (up-right)</strong>: (n,j) → (n+1,j) → (n+1,j+1) → (n,j+1)</li>
+  <li><strong>Type 1 (up)</strong>: (n,j) → (n,j+1) → (n-1,j+2) → (n-1,j+1)</li>
+  <li><strong>Type 2 (up-left)</strong>: (n,j) → (n-1,j+1) → (n-2,j+1) → (n-1,j)</li>
 </ul>
 
-<p><strong>Ergodicity theorem:</strong> The connectivity of the Markov chain is guaranteed by <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon &amp; Rémila (1996)</a>, who proved that for any <strong>simply connected domain without holes</strong>, the space of perfect matchings is connected via local moves of length at most 8. Any two configurations can be connected by a linear number of such transformations.</p>
-
-<p><a href="https://arxiv.org/abs/2304.10930">Hartarsky, Lichev &amp; Toninelli (2024)</a> improved this result, showing that for <strong>parallelogram-shaped domains</strong>, moves of length 4 and 6 suffice for ergodicity.</p>
+<p><strong>Note:</strong> Lozenge moves alone are NOT ergodic on the triangular lattice. Additional moves (triangle/butterfly) are needed for full ergodicity. See <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Kenyon &amp; Rémila (1996)</a>.</p>
 
 <p><strong>Note on topological sectors:</strong> For domains with holes or periodic boundary conditions, the configuration space splits into disjoint sectors, which Glauber cannot mix between.</p>
 
@@ -241,6 +240,9 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </label>
   <label style="margin-left: 8px;">
     <input type="checkbox" id="show-vertices"> Vertices
+  </label>
+  <label style="margin-left: 8px;">
+    <input type="checkbox" id="show-coords"> Coords
   </label>
   <label style="margin-left: 8px;">
     <input type="checkbox" id="show-boundary" checked> Boundary
@@ -542,6 +544,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             drawVertices();
         }
 
+        // Draw coordinates if enabled
+        if (document.getElementById('show-coords').checked) {
+            drawCoords();
+        }
+
         // Draw lasso polygon if in progress
         if (lassoPoints.length > 0) {
             drawLasso();
@@ -620,6 +627,39 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             ctx.arc(p.x, p.y, vertexRadius, 0, Math.PI * 2);
             ctx.fillStyle = isDark ? '#888' : '#666';
             ctx.fill();
+        }
+    }
+
+    function drawCoords() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        // Only draw if zoomed in enough
+        if (viewScale < 15) return;
+
+        const fontSize = Math.max(8, Math.min(14, viewScale * 0.35));
+        ctx.font = `${fontSize}px monospace`;
+        ctx.fillStyle = isDark ? '#aaa' : '#333';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Draw coords for all visible grid points, not just active vertices
+        const rect = canvas.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+
+        const margin = 2;
+        const topLeft = screenToLattice(0, 0);
+        const bottomRight = screenToLattice(w, h);
+
+        const minJ = Math.floor(Math.min(topLeft.j, bottomRight.j)) - margin;
+        const maxJ = Math.ceil(Math.max(topLeft.j, bottomRight.j)) + margin;
+        const minN = Math.floor(Math.min(topLeft.n, bottomRight.n)) - margin;
+        const maxN = Math.ceil(Math.max(topLeft.n, bottomRight.n)) + margin;
+
+        for (let j = minJ; j <= maxJ; j++) {
+            for (let n = minN; n <= maxN; n++) {
+                const p = latticeToScreen(n, j);
+                ctx.fillText(`${n},${j}`, p.x, p.y - fontSize * 0.8);
+            }
         }
     }
 
@@ -1297,6 +1337,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
     document.getElementById('show-grid').addEventListener('change', draw);
     document.getElementById('show-vertices').addEventListener('change', draw);
+    document.getElementById('show-coords').addEventListener('change', draw);
     document.getElementById('show-boundary').addEventListener('change', draw);
     document.getElementById('color-by-orientation').addEventListener('change', draw);
     document.getElementById('edge-width-slider').addEventListener('input', draw);

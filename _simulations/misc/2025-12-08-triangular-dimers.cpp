@@ -14,8 +14,8 @@ mv 2025-12-08-triangular-dimers.js ../../js/
 Triangular Lattice Dimer Sampler
 - Dimers (perfect matchings) on the triangular lattice
 - Non-bipartite lattice - no height function, no CFTP
-- Glauber dynamics with 4-cycle (rhombus) and 6-cycle (hexagon) moves
-- Based on Kenyon-Rémila theory: 4+6 cycles suffice for simply-connected domains
+- Glauber dynamics with lozenge moves (3 directions) from Kenyon-Rémila
+- Lozenge moves flip 2 dimers in a parallelogram (4 vertices)
 */
 
 #include <emscripten.h>
@@ -443,143 +443,75 @@ bool initMatching() {
 }
 
 // ============================================================================
-// 4-CYCLE (RHOMBUS) MOVES
+// LOZENGE MOVES (Kenyon-Remila)
 // ============================================================================
-// A rhombus is 4 vertices forming a parallelogram
-// If two opposite edges are dimers, we can flip to the other two
+// Three types of lozenges (parallelograms with 4 vertices):
+// Type 0 (up-right): (n,j) - (n+1,j) - (n+1,j+1) - (n,j+1)
+// Type 1 (up):       (n,j) - (n,j+1) - (n-1,j+2) - (n-1,j+1)
+// Type 2 (up-left):  (n,j) - (n-1,j+1) - (n-2,j+1) - (n-1,j)
+//
+// Each lozenge has 2 pairs of opposite edges. If one pair is covered by dimers,
+// we can flip to cover the other pair.
 
-// Check if (v1, v2, v3, v4) form a rhombus where v1-v2-v3-v4-v1 is the cycle
-// Returns true if edges (v1,v2) and (v3,v4) OR (v2,v3) and (v4,v1) are dimers
-// With periodic weights: uses Metropolis-Hastings acceptance
-bool tryRhombusFlip(int v1, int v2, int v3, int v4) {
+// Try lozenge flip for 4 vertices v0-v1-v2-v3 forming a cycle
+// Returns true if flip was performed
+bool tryLozengeFlip(int v0, int v1, int v2, int v3) {
+    const Vertex& V0 = vertices[v0];
     const Vertex& V1 = vertices[v1];
     const Vertex& V2 = vertices[v2];
     const Vertex& V3 = vertices[v3];
-    const Vertex& V4 = vertices[v4];
 
-    // Check if (v1,v2) and (v3,v4) are both dimers
-    if (dimerPartner[v1] == v2 && dimerPartner[v3] == v4) {
-        // Current edges: (v1,v2) and (v3,v4)
-        // Proposed edges: (v2,v3) and (v4,v1)
+    // Check if (v0,v1) and (v2,v3) are both dimers
+    if (dimerPartner[v0] == v1 && dimerPartner[v2] == v3) {
+        // Current edges: (v0,v1) and (v2,v3)
+        // Proposed edges: (v1,v2) and (v3,v0)
 
         if (usePeriodicWeights) {
-            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
-            double w_new = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
+            double w_old = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j);
+            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V0.n, V0.j);
             double ratio = w_new / w_old;
             if (ratio < 1.0 && getRandom01() >= ratio) {
                 return false;  // Reject move
             }
         }
 
-        // Accept: Flip to (v2,v3) and (v4,v1)
-        dimerPartner[v1] = v4;
-        dimerPartner[v4] = v1;
+        // Accept: Flip to (v1,v2) and (v3,v0)
+        dimerPartner[v0] = v3;
+        dimerPartner[v3] = v0;
+        dimerPartner[v1] = v2;
+        dimerPartner[v2] = v1;
+        return true;
+    }
+    // Check if (v1,v2) and (v3,v0) are both dimers
+    if (dimerPartner[v1] == v2 && dimerPartner[v3] == v0) {
+        // Current edges: (v1,v2) and (v3,v0)
+        // Proposed edges: (v0,v1) and (v2,v3)
+
+        if (usePeriodicWeights) {
+            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V0.n, V0.j);
+            double w_new = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j);
+            double ratio = w_new / w_old;
+            if (ratio < 1.0 && getRandom01() >= ratio) {
+                return false;  // Reject move
+            }
+        }
+
+        // Accept: Flip to (v0,v1) and (v2,v3)
+        dimerPartner[v0] = v1;
+        dimerPartner[v1] = v0;
         dimerPartner[v2] = v3;
         dimerPartner[v3] = v2;
         return true;
     }
-    // Check if (v2,v3) and (v4,v1) are both dimers
-    if (dimerPartner[v2] == v3 && dimerPartner[v4] == v1) {
-        // Current edges: (v2,v3) and (v4,v1)
-        // Proposed edges: (v1,v2) and (v3,v4)
-
-        if (usePeriodicWeights) {
-            double w_old = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
-            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
-            double ratio = w_new / w_old;
-            if (ratio < 1.0 && getRandom01() >= ratio) {
-                return false;  // Reject move
-            }
-        }
-
-        // Accept: Flip to (v1,v2) and (v3,v4)
-        dimerPartner[v1] = v2;
-        dimerPartner[v2] = v1;
-        dimerPartner[v3] = v4;
-        dimerPartner[v4] = v3;
-        return true;
-    }
     return false;
 }
 
 // ============================================================================
-// 6-CYCLE (HEXAGON) MOVES
-// ============================================================================
-// A hexagon has 6 vertices n0-n1-n2-n3-n4-n5-n0 around a center vertex
-// If alternating edges are dimers, rotate to the other alternating pattern
-
-// With periodic weights: uses Metropolis-Hastings acceptance
-bool tryHexagonFlip(int n0, int n1, int n2, int n3, int n4, int n5) {
-    const Vertex& V0 = vertices[n0];
-    const Vertex& V1 = vertices[n1];
-    const Vertex& V2 = vertices[n2];
-    const Vertex& V3 = vertices[n3];
-    const Vertex& V4 = vertices[n4];
-    const Vertex& V5 = vertices[n5];
-
-    // Check alternating pattern 1: (n0,n1), (n2,n3), (n4,n5)
-    if (dimerPartner[n0] == n1 && dimerPartner[n2] == n3 && dimerPartner[n4] == n5) {
-        // Current: (n0,n1), (n2,n3), (n4,n5)
-        // Proposed: (n1,n2), (n3,n4), (n5,n0)
-
-        if (usePeriodicWeights) {
-            double w_old = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
-                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
-            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
-                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
-            double ratio = w_new / w_old;
-            if (ratio < 1.0 && getRandom01() >= ratio) {
-                return false;  // Reject move
-            }
-        }
-
-        // Accept: Flip to (n1,n2), (n3,n4), (n5,n0)
-        dimerPartner[n0] = n5;
-        dimerPartner[n5] = n0;
-        dimerPartner[n1] = n2;
-        dimerPartner[n2] = n1;
-        dimerPartner[n3] = n4;
-        dimerPartner[n4] = n3;
-        return true;
-    }
-    // Check alternating pattern 2: (n1,n2), (n3,n4), (n5,n0)
-    if (dimerPartner[n1] == n2 && dimerPartner[n3] == n4 && dimerPartner[n5] == n0) {
-        // Current: (n1,n2), (n3,n4), (n5,n0)
-        // Proposed: (n0,n1), (n2,n3), (n4,n5)
-
-        if (usePeriodicWeights) {
-            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
-                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
-            double w_new = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
-                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
-            double ratio = w_new / w_old;
-            if (ratio < 1.0 && getRandom01() >= ratio) {
-                return false;  // Reject move
-            }
-        }
-
-        // Accept: Flip to (n0,n1), (n2,n3), (n4,n5)
-        dimerPartner[n0] = n1;
-        dimerPartner[n1] = n0;
-        dimerPartner[n2] = n3;
-        dimerPartner[n3] = n2;
-        dimerPartner[n4] = n5;
-        dimerPartner[n5] = n4;
-        return true;
-    }
-    return false;
-}
-
-// ============================================================================
-// GLAUBER DYNAMICS - 4-CYCLE AND 6-CYCLE MOVES
+// GLAUBER DYNAMICS - LOZENGE MOVES (Kenyon-Remila)
 // ============================================================================
 
 void performOneStep() {
@@ -587,68 +519,55 @@ void performOneStep() {
 
     // Pick random vertex
     int v = getRandomInt((int)vertices.size());
-    const CachedNeighbors& cn = cachedNeighbors[v];
+    int n = vertices[v].n;
+    int j = vertices[v].j;
 
-    // 30% chance: try 6-cycle (hexagon) move
-    // 70% chance: try 4-cycle (rhombus) move
-    bool try6cycle = (getRandom01() < 0.3);
+    // Pick random lozenge type (0, 1, or 2)
+    int lozengeType = getRandomInt(3);
 
-    if (try6cycle) {
-        // Check if all 6 neighbors exist
-        bool allExist = true;
-        int16_t nb[6];
-        for (int d = 0; d < 6; d++) {
-            nb[d] = cn.neighbors[d];
-            if (nb[d] < 0) { allExist = false; break; }
-        }
-        if (allExist) {
-            // Check if consecutive neighbors are connected (form a hexagon)
-            bool allConnected = true;
-            for (int d = 0; d < 6; d++) {
-                int d2 = (d + 1) % 6;
-                const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
-                bool found = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn_d.neighbors[k] == nb[d2]) { found = true; break; }
-                }
-                if (!found) { allConnected = false; break; }
-            }
-            if (allConnected) {
-                if (tryHexagonFlip(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5])) {
-                    flipCount++;
-                }
-            }
-        }
-    } else {
-        // Try 4-cycle: pick random direction pair
-        int d1 = getRandomInt(6);
-        int d2 = (d1 + 1) % 6;
-        int v1 = cn.neighbors[d1];
-        int v2 = cn.neighbors[d2];
-        if (v1 >= 0 && v2 >= 0) {
-            // Compute diagonal vertex position
-            int n = vertices[v].n;
-            int j = vertices[v].j;
-            int n3 = n + dir_dn[d1] + dir_dn[d2];
-            int j3 = j + dir_dj[d1] + dir_dj[d2];
-            int v3 = getVertexFromGrid(n3, j3);
-            if (v3 >= 0) {
-                // Check if v1-v3 and v2-v3 edges exist
-                const CachedNeighbors& cn1 = cachedNeighbors[v1];
-                const CachedNeighbors& cn2 = cachedNeighbors[v2];
-                bool v1v3 = false, v2v3 = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn1.neighbors[k] == v3) v1v3 = true;
-                    if (cn2.neighbors[k] == v3) v2v3 = true;
-                }
-                if (v1v3 && v2v3) {
-                    // Rhombus exists: v -> v1 -> v3 -> v2 -> v
-                    if (tryRhombusFlip(v, v1, v3, v2)) {
-                        flipCount++;
-                    }
-                }
-            }
-        }
+    // Get 4 vertices of the lozenge based on type
+    // Vertex v is always the "bottom-left" corner
+    int n0, j0, n1, j1, n2, j2, n3, j3;
+
+    switch (lozengeType) {
+        case 0:
+            // Type 0 (up-right): (n,j) - (n+1,j) - (n+1,j+1) - (n,j+1)
+            n0 = n;     j0 = j;
+            n1 = n + 1; j1 = j;
+            n2 = n + 1; j2 = j + 1;
+            n3 = n;     j3 = j + 1;
+            break;
+        case 1:
+            // Type 1 (up): (n,j) - (n,j+1) - (n-1,j+2) - (n-1,j+1)
+            n0 = n;     j0 = j;
+            n1 = n;     j1 = j + 1;
+            n2 = n - 1; j2 = j + 2;
+            n3 = n - 1; j3 = j + 1;
+            break;
+        case 2:
+            // Type 2 (up-left): (n,j) - (n-1,j+1) - (n-2,j+1) - (n-1,j)
+            n0 = n;     j0 = j;
+            n1 = n - 1; j1 = j + 1;
+            n2 = n - 2; j2 = j + 1;
+            n3 = n - 1; j3 = j;
+            break;
+        default:
+            return;
+    }
+
+    // Get vertex indices (check all 4 exist in region)
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
+        return;  // Not all vertices in region
+    }
+
+    // Try the lozenge flip
+    if (tryLozengeFlip(v0, v1, v2, v3)) {
+        flipCount++;
     }
 }
 
@@ -656,99 +575,47 @@ void performOneStep() {
 // SECOND CONFIGURATION (for double dimer model)
 // ============================================================================
 
-// With periodic weights: uses Metropolis-Hastings acceptance (second configuration)
-bool tryRhombusFlip2(int v1, int v2, int v3, int v4) {
+// Lozenge flip for second configuration
+bool tryLozengeFlip2(int v0, int v1, int v2, int v3) {
+    const Vertex& V0 = vertices[v0];
     const Vertex& V1 = vertices[v1];
     const Vertex& V2 = vertices[v2];
     const Vertex& V3 = vertices[v3];
-    const Vertex& V4 = vertices[v4];
 
-    if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v4) {
-        if (usePeriodicWeights) {
-            double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
-            double w_new = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
-            double ratio = w_new / w_old;
-            if (ratio < 1.0 && getRandom01() >= ratio) {
-                return false;
-            }
-        }
-        dimerPartner2[v1] = v4;
-        dimerPartner2[v4] = v1;
-        dimerPartner2[v2] = v3;
-        dimerPartner2[v3] = v2;
-        return true;
-    }
-    if (dimerPartner2[v2] == v3 && dimerPartner2[v4] == v1) {
-        if (usePeriodicWeights) {
-            double w_old = getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V1.n, V1.j);
-            double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j);
-            double ratio = w_new / w_old;
-            if (ratio < 1.0 && getRandom01() >= ratio) {
-                return false;
-            }
-        }
-        dimerPartner2[v1] = v2;
-        dimerPartner2[v2] = v1;
-        dimerPartner2[v3] = v4;
-        dimerPartner2[v4] = v3;
-        return true;
-    }
-    return false;
-}
-
-// With periodic weights: uses Metropolis-Hastings acceptance (second configuration)
-bool tryHexagonFlip2(int n0, int n1, int n2, int n3, int n4, int n5) {
-    const Vertex& V0 = vertices[n0];
-    const Vertex& V1 = vertices[n1];
-    const Vertex& V2 = vertices[n2];
-    const Vertex& V3 = vertices[n3];
-    const Vertex& V4 = vertices[n4];
-    const Vertex& V5 = vertices[n5];
-
-    if (dimerPartner2[n0] == n1 && dimerPartner2[n2] == n3 && dimerPartner2[n4] == n5) {
+    // Check if (v0,v1) and (v2,v3) are both dimers
+    if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3) {
         if (usePeriodicWeights) {
             double w_old = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
-                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j);
             double w_new = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
-                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V0.n, V0.j);
             double ratio = w_new / w_old;
             if (ratio < 1.0 && getRandom01() >= ratio) {
                 return false;
             }
         }
-        dimerPartner2[n0] = n5;
-        dimerPartner2[n5] = n0;
-        dimerPartner2[n1] = n2;
-        dimerPartner2[n2] = n1;
-        dimerPartner2[n3] = n4;
-        dimerPartner2[n4] = n3;
+        dimerPartner2[v0] = v3;
+        dimerPartner2[v3] = v0;
+        dimerPartner2[v1] = v2;
+        dimerPartner2[v2] = v1;
         return true;
     }
-    if (dimerPartner2[n1] == n2 && dimerPartner2[n3] == n4 && dimerPartner2[n5] == n0) {
+    // Check if (v1,v2) and (v3,v0) are both dimers
+    if (dimerPartner2[v1] == v2 && dimerPartner2[v3] == v0) {
         if (usePeriodicWeights) {
             double w_old = getEdgeWeightFromCoords(V1.n, V1.j, V2.n, V2.j)
-                         * getEdgeWeightFromCoords(V3.n, V3.j, V4.n, V4.j)
-                         * getEdgeWeightFromCoords(V5.n, V5.j, V0.n, V0.j);
+                         * getEdgeWeightFromCoords(V3.n, V3.j, V0.n, V0.j);
             double w_new = getEdgeWeightFromCoords(V0.n, V0.j, V1.n, V1.j)
-                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j)
-                         * getEdgeWeightFromCoords(V4.n, V4.j, V5.n, V5.j);
+                         * getEdgeWeightFromCoords(V2.n, V2.j, V3.n, V3.j);
             double ratio = w_new / w_old;
             if (ratio < 1.0 && getRandom01() >= ratio) {
                 return false;
             }
         }
-        dimerPartner2[n0] = n1;
-        dimerPartner2[n1] = n0;
-        dimerPartner2[n2] = n3;
-        dimerPartner2[n3] = n2;
-        dimerPartner2[n4] = n5;
-        dimerPartner2[n5] = n4;
+        dimerPartner2[v0] = v1;
+        dimerPartner2[v1] = v0;
+        dimerPartner2[v2] = v3;
+        dimerPartner2[v3] = v2;
         return true;
     }
     return false;
@@ -759,62 +626,53 @@ void performOneStep2() {
 
     // Pick random vertex
     int v = getRandomInt((int)vertices.size());
-    const CachedNeighbors& cn = cachedNeighbors[v];
+    int n = vertices[v].n;
+    int j = vertices[v].j;
 
-    // 30% chance: try 6-cycle (hexagon) move
-    // 70% chance: try 4-cycle (rhombus) move
-    bool try6cycle = (getRandom01() < 0.3);
+    // Pick random lozenge type (0, 1, or 2)
+    int lozengeType = getRandomInt(3);
 
-    if (try6cycle) {
-        bool allExist = true;
-        int16_t nb[6];
-        for (int d = 0; d < 6; d++) {
-            nb[d] = cn.neighbors[d];
-            if (nb[d] < 0) { allExist = false; break; }
-        }
-        if (allExist) {
-            bool allConnected = true;
-            for (int d = 0; d < 6; d++) {
-                int d2 = (d + 1) % 6;
-                const CachedNeighbors& cn_d = cachedNeighbors[nb[d]];
-                bool found = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn_d.neighbors[k] == nb[d2]) { found = true; break; }
-                }
-                if (!found) { allConnected = false; break; }
-            }
-            if (allConnected) {
-                if (tryHexagonFlip2(nb[0], nb[1], nb[2], nb[3], nb[4], nb[5])) {
-                    flipCount2++;
-                }
-            }
-        }
-    } else {
-        int d1 = getRandomInt(6);
-        int d2 = (d1 + 1) % 6;
-        int v1 = cn.neighbors[d1];
-        int v2 = cn.neighbors[d2];
-        if (v1 >= 0 && v2 >= 0) {
-            int n = vertices[v].n;
-            int j = vertices[v].j;
-            int n3 = n + dir_dn[d1] + dir_dn[d2];
-            int j3 = j + dir_dj[d1] + dir_dj[d2];
-            int v3 = getVertexFromGrid(n3, j3);
-            if (v3 >= 0) {
-                const CachedNeighbors& cn1 = cachedNeighbors[v1];
-                const CachedNeighbors& cn2 = cachedNeighbors[v2];
-                bool v1v3 = false, v2v3 = false;
-                for (int k = 0; k < 6; k++) {
-                    if (cn1.neighbors[k] == v3) v1v3 = true;
-                    if (cn2.neighbors[k] == v3) v2v3 = true;
-                }
-                if (v1v3 && v2v3) {
-                    if (tryRhombusFlip2(v, v1, v3, v2)) {
-                        flipCount2++;
-                    }
-                }
-            }
-        }
+    // Get 4 vertices of the lozenge based on type
+    int n0, j0, n1, j1, n2, j2, n3, j3;
+
+    switch (lozengeType) {
+        case 0:
+            // Type 0 (up-right): (n,j) - (n+1,j) - (n+1,j+1) - (n,j+1)
+            n0 = n;     j0 = j;
+            n1 = n + 1; j1 = j;
+            n2 = n + 1; j2 = j + 1;
+            n3 = n;     j3 = j + 1;
+            break;
+        case 1:
+            // Type 1 (up): (n,j) - (n,j+1) - (n-1,j+2) - (n-1,j+1)
+            n0 = n;     j0 = j;
+            n1 = n;     j1 = j + 1;
+            n2 = n - 1; j2 = j + 2;
+            n3 = n - 1; j3 = j + 1;
+            break;
+        case 2:
+            // Type 2 (up-left): (n,j) - (n-1,j+1) - (n-2,j+1) - (n-1,j)
+            n0 = n;     j0 = j;
+            n1 = n - 1; j1 = j + 1;
+            n2 = n - 2; j2 = j + 1;
+            n3 = n - 1; j3 = j;
+            break;
+        default:
+            return;
+    }
+
+    // Get vertex indices (check all 4 exist in region)
+    int v0 = getVertexFromGrid(n0, j0);
+    int v1 = getVertexFromGrid(n1, j1);
+    int v2 = getVertexFromGrid(n2, j2);
+    int v3 = getVertexFromGrid(n3, j3);
+
+    if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
+        return;
+    }
+
+    if (tryLozengeFlip2(v0, v1, v2, v3)) {
+        flipCount2++;
     }
 }
 
