@@ -77,6 +77,9 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
 <p><strong>Note on topological sectors:</strong> For domains with holes or periodic boundary conditions, the configuration space splits into disjoint sectors, which Glauber cannot mix between.</p>
 
+<h4>Acknowledgements</h4>
+<p>Thanks to Alexei Borodin for discussions.</p>
+
 <h4>References</h4>
 <ul>
   <li>C. Kenyon, E. Rémila: <a href="https://www.sciencedirect.com/science/article/pii/0012365X9500288U">Perfect matchings in the triangular lattice</a>, Discrete Math. 152 (1996) — ergodicity via 4+6+8 cycles</li>
