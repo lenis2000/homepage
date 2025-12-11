@@ -192,7 +192,7 @@ inline int getEdgeType(int dn, int dj) {
 }
 
 // Get weight for edge from (n1,j1) to (n2,j2)
-// Uses the lexicographically smaller vertex as the canonical position
+// Uses the edge midpoint for periodicity (so edges tile correctly)
 inline double getEdgeWeightFromCoords(int n1, int j1, int n2, int j2) {
     if (!usePeriodicWeights) return 1.0;
 
@@ -200,17 +200,19 @@ inline double getEdgeWeightFromCoords(int n1, int j1, int n2, int j2) {
     int dj = j2 - j1;
     int edgeType = getEdgeType(dn, dj);
 
-    // Use the lexicographically smaller vertex for position
-    int n, j;
-    if (n1 < n2 || (n1 == n2 && j1 < j2)) {
-        n = n1; j = j1;
-    } else {
-        n = n2; j = j2;
-    }
+    // Use edge midpoint for periodicity (doubled to avoid fractions)
+    // Midpoint = ((n1+n2)/2, (j1+j2)/2)
+    // Doubled: (n1+n2, j1+j2)
+    int midN2 = n1 + n2;  // 2 * midpoint_n
+    int midJ2 = j1 + j2;  // 2 * midpoint_j
 
-    // Handle negative modulo correctly
-    int ni = ((n % periodicK) + periodicK) % periodicK;
-    int ji = ((j % periodicL) + periodicL) % periodicL;
+    // Period is also doubled: 2*k, 2*l
+    int ni = ((midN2 % (2 * periodicK)) + (2 * periodicK)) % (2 * periodicK);
+    int ji = ((midJ2 % (2 * periodicL)) + (2 * periodicL)) % (2 * periodicL);
+
+    // Map back to [0, k) x [0, l)
+    ni = ni / 2;
+    ji = ji / 2;
 
     return edgeWeights_periodic[ni][ji][edgeType];
 }

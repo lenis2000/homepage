@@ -284,7 +284,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   <div class="control-group-title">Periodic Edge Weights</div>
   <label style="display: inline-flex; align-items: center; gap: 4px;">
     <input type="checkbox" id="use-periodic-weights">
-    <span style="font-size: 12px; color: #555;">Enable periodic weights</span>
+    <span style="font-size: 12px; color: #555;">Enable</span>
+  </label>
+  <label style="margin-left: 8px; display: inline-flex; align-items: center; gap: 4px;">
+    <input type="checkbox" id="show-edge-weights">
+    <span style="font-size: 12px; color: #555;">Show weights on grid</span>
   </label>
   <span class="param-group" style="margin-left: 12px;">
     <span class="param-label">k:</span>
@@ -570,6 +574,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         if (lassoPoints.length > 0) {
             drawLasso();
         }
+
+        // Draw edge weights if enabled
+        if (document.getElementById('show-edge-weights').checked) {
+            drawEdgeWeights();
+        }
     }
 
     function drawGrid() {
@@ -682,6 +691,92 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
     // 3 colors for 3 edge orientations (like lozenge types)
     const DIMER_COLORS = ['#E57200', '#232D4B', '#2E8B57']; // Orange, Navy, Green
+
+    // Compute edge weight using midpoint-based periodicity (matches C++ code)
+    function getEdgeWeight(n1, j1, n2, j2) {
+        // If periodic weights not enabled, return 1
+        if (!document.getElementById('use-periodic-weights').checked) {
+            return 1;
+        }
+
+        const k = currentPeriodicK;
+        const l = currentPeriodicL;
+
+        const dn = n2 - n1;
+        const dj = j2 - j1;
+        let edgeType;
+        if (dj === 0) edgeType = 0;       // horizontal
+        else if (dn === 0) edgeType = 1;  // diag1
+        else edgeType = 2;                 // diag2
+
+        // Use edge midpoint (doubled to avoid fractions)
+        const midN2 = n1 + n2;
+        const midJ2 = j1 + j2;
+
+        // Positive modulo with doubled period
+        let ni = ((midN2 % (2 * k)) + (2 * k)) % (2 * k);
+        let ji = ((midJ2 % (2 * l)) + (2 * l)) % (2 * l);
+
+        // Map back to [0, k) x [0, l)
+        ni = Math.floor(ni / 2);
+        ji = Math.floor(ji / 2);
+
+        return currentEdgeWeights[ni]?.[ji]?.[edgeType] ?? 1;
+    }
+
+    function drawEdgeWeights() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (viewScale < 20) return; // Too zoomed out
+
+        const rect = canvas.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+
+        const margin = 2;
+        const topLeft = screenToLattice(0, 0);
+        const bottomRight = screenToLattice(w, h);
+
+        const minJ = Math.floor(Math.min(topLeft.j, bottomRight.j)) - margin;
+        const maxJ = Math.ceil(Math.max(topLeft.j, bottomRight.j)) + margin;
+        const minN = Math.floor(Math.min(topLeft.n, bottomRight.n)) - margin;
+        const maxN = Math.ceil(Math.max(topLeft.n, bottomRight.n)) + margin;
+
+        const fontSize = Math.max(8, Math.min(11, viewScale * 0.25));
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Draw weights for all 3 edge types from each vertex
+        for (let j = minJ; j <= maxJ; j++) {
+            for (let n = minN; n <= maxN; n++) {
+                const p = latticeToScreen(n, j);
+
+                // Edge type 0: horizontal (n,j) -> (n+1,j)
+                const p_h = latticeToScreen(n + 1, j);
+                const midX_h = (p.x + p_h.x) / 2;
+                const midY_h = (p.y + p_h.y) / 2;
+                const w0 = getEdgeWeight(n, j, n + 1, j);
+                ctx.fillStyle = DIMER_COLORS[0];
+                ctx.fillText(w0.toFixed(1), midX_h, midY_h + fontSize * 0.7);
+
+                // Edge type 1: diag1 (n,j) -> (n,j+1)
+                const p_d1 = latticeToScreen(n, j + 1);
+                const midX_d1 = (p.x + p_d1.x) / 2;
+                const midY_d1 = (p.y + p_d1.y) / 2;
+                const w1 = getEdgeWeight(n, j, n, j + 1);
+                ctx.fillStyle = DIMER_COLORS[1];
+                ctx.fillText(w1.toFixed(1), midX_d1 + fontSize * 0.8, midY_d1);
+
+                // Edge type 2: diag2 (n,j) -> (n-1,j+1)
+                const p_d2 = latticeToScreen(n - 1, j + 1);
+                const midX_d2 = (p.x + p_d2.x) / 2;
+                const midY_d2 = (p.y + p_d2.y) / 2;
+                const w2 = getEdgeWeight(n, j, n - 1, j + 1);
+                ctx.fillStyle = DIMER_COLORS[2];
+                ctx.fillText(w2.toFixed(1), midX_d2 - fontSize * 0.8, midY_d2);
+            }
+        }
+    }
 
     function getEdgeOrientation(dn, dj) {
         // 3 edge orientations in triangular lattice:
@@ -1365,6 +1460,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     document.getElementById('show-boundary').addEventListener('change', draw);
     document.getElementById('color-by-orientation').addEventListener('change', draw);
     document.getElementById('edge-width-slider').addEventListener('input', draw);
+    document.getElementById('show-edge-weights').addEventListener('change', draw);
     document.getElementById('double-dimer').addEventListener('change', () => {
         const doubleDimerEnabled = document.getElementById('double-dimer').checked;
         document.getElementById('min-loop-container').style.display = doubleDimerEnabled ? '' : 'none';
@@ -1752,6 +1848,9 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             newSvg.style.margin = '0';  // Remove auto margin since we're using flex
             oldSvg.parentNode.replaceChild(newSvg, oldSvg);
         }
+
+        // Redraw canvas to update weight labels
+        draw();
     }
 
     // Periodic weights event handlers
@@ -1765,6 +1864,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             buildWeightDiagram();
             updateEdgeWeights();
         }
+        draw(); // Update grid weights display
     });
 
     document.getElementById('periodic-k').addEventListener('change', (e) => {
@@ -1774,6 +1874,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             buildWeightDiagram();
             updateEdgeWeights();
         }
+        draw();
     });
 
     document.getElementById('periodic-l').addEventListener('change', (e) => {
@@ -1783,6 +1884,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             buildWeightDiagram();
             updateEdgeWeights();
         }
+        draw();
     });
 
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
