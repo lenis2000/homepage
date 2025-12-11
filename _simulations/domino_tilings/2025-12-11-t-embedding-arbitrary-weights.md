@@ -17,9 +17,18 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 <div style="margin-bottom: 10px;">
   <label>n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;"></label>
   <button id="draw-btn" style="margin-left: 10px;">Draw</button>
+  <button id="fold-btn" style="margin-left: 10px;">Urban renewal (n&nbsp;→&nbsp;n-1)</button>
+  <button id="temb-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="zoom-in-btn" style="margin-left: 10px;">+</button>
   <button id="zoom-out-btn">−</button>
   <button id="reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
+</div>
+
+<div style="margin-bottom: 10px;">
+  <label><input type="checkbox" id="granular-chk"> Granular urban renewal:</label>
+  <button id="step1-btn" style="margin-left: 10px;" disabled>Step 1: Transform weights</button>
+  <button id="step2-btn" style="opacity: 0.4;" disabled>Step 2: Strip boundary</button>
+  <button id="step3-btn" style="opacity: 0.4;" disabled>Step 3: Swap colors</button>
 </div>
 
 <div style="margin-bottom: 10px;">
@@ -27,7 +36,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     <label style="margin-left: 10px;">k: <input id="k-input" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
     <label>l: <input id="l-input" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
   </label>
-  <button id="edit-weights-btn" style="margin-left: 10px;">Edit Weights</button>
+  <button id="edit-weights-btn" style="margin-left: 10px;">Edit periodic weights</button>
+  <button id="uniform-btn" style="margin-left: 10px;">Uniform (all 1s)</button>
+  <button id="random-btn">Random</button>
 </div>
 
 <div id="weights-editor" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; max-height: 300px; overflow-y: auto;">
@@ -39,7 +50,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   Loading WASM module...
 </div>
 
-<canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+<canvas id="temb-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+
+<details style="margin-top: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f0f0; border: 1px solid #ccc;">Show original Aztec diamond with edge weights</summary>
+  <canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab; margin-top: 10px;"></canvas>
+</details>
 
 <style>
 #aztec-canvas.panning { cursor: grabbing; }
@@ -55,6 +71,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 (function() {
   const canvas = document.getElementById('aztec-canvas');
   const ctx = canvas.getContext('2d');
+  const tembCanvas = document.getElementById('temb-canvas');
+  const tembCtx = tembCanvas.getContext('2d');
   const loadingMsg = document.getElementById('loading-msg');
 
   // UI state
@@ -63,10 +81,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let isPanning = false;
   let lastPanX = 0, lastPanY = 0;
 
+  // T-embedding canvas state
+  let tembZoom = 1.0;
+  let tembPanX = 0, tembPanY = 0;
+  let tembIsPanning = false;
+  let tembLastPanX = 0, tembLastPanY = 0;
+
   // Data from WASM (source of truth)
   let edges = [];
   let faces = [];
   let weights = { k: 2, l: 2, n: 5, alpha: [[1,1],[1,1]], beta: [[1,1],[1,1]], gamma: [[1,1],[1,1]] };
+
+  // T-embedding data
+  let tembData = null;
 
   // Highlighting state
   let highlightedEdges = new Set();
@@ -75,7 +102,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // WASM module interface
   let wasmReady = false;
-  let setN, setPeriodicParams, initWeights, setWeight, getWeightsJSON, getEdgesJSON, getFacesJSON, freeString;
+  let setN, setPeriodicParams, initWeights, setWeight, getWeightsJSON, getEdgesJSON, getFacesJSON, freeString, foldWeights;
+  let urbanRenewalStep1, urbanRenewalStep2, urbanRenewalStep3;
+  let computeTembedding, getTembeddingJSON;
 
   // Initialize when Module is ready
   function initWasm() {
@@ -96,6 +125,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getEdgesJSON = Module.cwrap('getEdgesJSON', 'number', []);
       getFacesJSON = Module.cwrap('getFacesJSON', 'number', []);
       freeString = Module.cwrap('freeString', null, ['number']);
+      foldWeights = Module.cwrap('foldWeights', null, []);
+      urbanRenewalStep1 = Module.cwrap('urbanRenewalStep1', null, []);
+      urbanRenewalStep2 = Module.cwrap('urbanRenewalStep2', null, []);
+      urbanRenewalStep3 = Module.cwrap('urbanRenewalStep3', null, []);
+      computeTembedding = Module.cwrap('computeTembedding', null, ['number']);
+      getTembeddingJSON = Module.cwrap('getTembeddingJSON', 'number', []);
 
       wasmReady = true;
       loadingMsg.style.display = 'none';
@@ -112,6 +147,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Load data from WASM
       loadFromWasm();
       render();
+
+      // Automatically compute and display T-embedding on load
+      setTimeout(() => {
+        computeAndDisplayTembedding();
+      }, 100);
     };
 
     // If already initialized (e.g., page reload with cached module)
@@ -169,18 +209,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     ctx.save();
     ctx.translate(cx, cy);
 
-    // Draw checkerboard faces
-    for (let i = -n; i <= n; i++) {
-      for (let j = -n; j <= n; j++) {
-        if (!inDiamond(i - 0.5, j - 0.5) || !inDiamond(i + 0.5, j - 0.5) ||
-            !inDiamond(i - 0.5, j + 0.5) || !inDiamond(i + 0.5, j + 0.5)) continue;
-
-        const x = (i - 0.5) * scale;
-        const y = -(j + 0.5) * scale;
-
-        ctx.fillStyle = (i + j) % 2 === 0 ? '#e8e8e8' : '#ffffff';
-        ctx.fillRect(x, y, scale, scale);
-      }
+    // Draw checkerboard faces using WASM face data for correct coloring
+    for (const f of faces) {
+      const x = (f.x - 0.5) * scale;
+      const y = -(f.y + 0.5) * scale;
+      ctx.fillStyle = f.isBlack ? '#e8e8e8' : '#ffffff';
+      ctx.fillRect(x, y, scale, scale);
     }
 
     // Draw face weights from WASM data
@@ -281,6 +315,123 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     ctx.restore();
+  }
+
+  // Render T-embedding
+  function renderTemb() {
+    if (!tembData || !tembData.vertices || tembData.vertices.length === 0) {
+      return;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = tembCanvas.getBoundingClientRect();
+    tembCanvas.width = rect.width * dpr;
+    tembCanvas.height = rect.height * dpr;
+    tembCtx.scale(dpr, dpr);
+
+    tembCtx.fillStyle = '#fafafa';
+    tembCtx.fillRect(0, 0, rect.width, rect.height);
+
+    // Find bounds of T-embedding
+    let minReal = Infinity, maxReal = -Infinity;
+    let minImag = Infinity, maxImag = -Infinity;
+    for (const v of tembData.vertices) {
+      minReal = Math.min(minReal, v.tReal);
+      maxReal = Math.max(maxReal, v.tReal);
+      minImag = Math.min(minImag, v.tImag);
+      maxImag = Math.max(maxImag, v.tImag);
+    }
+
+    const rangeReal = maxReal - minReal || 1;
+    const rangeImag = maxImag - minImag || 1;
+    const centerReal = (minReal + maxReal) / 2;
+    const centerImag = (minImag + maxImag) / 2;
+
+    // Scale to fit canvas
+    const padding = 50;
+    const scaleX = (rect.width - 2 * padding) / rangeReal;
+    const scaleY = (rect.height - 2 * padding) / rangeImag;
+    const baseScale = Math.min(scaleX, scaleY);
+    const scale = baseScale * tembZoom;
+
+    const cx = rect.width / 2 + tembPanX * tembZoom;
+    const cy = rect.height / 2 + tembPanY * tembZoom;
+
+    tembCtx.save();
+    tembCtx.translate(cx, cy);
+
+    // Create a map for quick vertex lookup
+    const vertexMap = {};
+    for (const v of tembData.vertices) {
+      vertexMap[v.key] = v;
+    }
+
+    // Draw faces as quadrilaterals
+    // Faces are indexed by their center (fx, fy)
+    // The four corners are: (fx-0.5, fy-0.5), (fx+0.5, fy-0.5), (fx+0.5, fy+0.5), (fx-0.5, fy+0.5)
+    // These correspond to neighboring face centers in the T-embedding
+    const n = tembData.originalN;
+
+    // Draw face quadrilaterals
+    for (const v of tembData.vertices) {
+      const fx = v.x;
+      const fy = v.y;
+
+      // Determine if this is a black or white face
+      const isBlack = (fx + fy) % 2 === 0;
+
+      // Get the 4 neighboring vertices to form the quadrilateral
+      // The T-embedding maps face centers, so we draw edges between adjacent face centers
+      const neighbors = [
+        `${fx-1},${fy}`,
+        `${fx},${fy+1}`,
+        `${fx+1},${fy}`,
+        `${fx},${fy-1}`
+      ];
+
+      // Draw edges to neighbors that exist
+      tembCtx.strokeStyle = '#333';
+      tembCtx.lineWidth = Math.max(1, scale / 30);
+
+      for (const nKey of neighbors) {
+        if (vertexMap[nKey]) {
+          const nv = vertexMap[nKey];
+          tembCtx.beginPath();
+          tembCtx.moveTo((v.tReal - centerReal) * scale, -(v.tImag - centerImag) * scale);
+          tembCtx.lineTo((nv.tReal - centerReal) * scale, -(nv.tImag - centerImag) * scale);
+          tembCtx.stroke();
+        }
+      }
+    }
+
+    // Draw vertices
+    const vertexRadius = Math.max(3, scale / 20);
+    for (const v of tembData.vertices) {
+      const x = (v.tReal - centerReal) * scale;
+      const y = -(v.tImag - centerImag) * scale;
+
+      const isBlack = (v.x + v.y) % 2 === 0;
+
+      tembCtx.beginPath();
+      tembCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
+      if (isBlack) {
+        tembCtx.fillStyle = '#000';
+        tembCtx.fill();
+      } else {
+        tembCtx.fillStyle = '#fff';
+        tembCtx.fill();
+        tembCtx.strokeStyle = '#000';
+        tembCtx.lineWidth = Math.max(1, scale / 40);
+        tembCtx.stroke();
+      }
+    }
+
+    tembCtx.restore();
+
+    // Draw info text
+    tembCtx.fillStyle = '#333';
+    tembCtx.font = '12px sans-serif';
+    tembCtx.fillText(`T-embedding (n=${tembData.originalN}, ${tembData.numLevels} levels folded)`, 10, 20);
   }
 
   function resetZoom() {
@@ -446,6 +597,130 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     resetZoom();
   });
 
+  document.getElementById('fold-btn').addEventListener('click', () => {
+    if (!wasmReady) return;
+    if (weights.n <= 1) return;
+    foldWeights();
+    loadFromWasm();
+    document.getElementById('n-input').value = weights.n;
+    render();
+  });
+
+  // Function to compute and display T-embedding from current weights
+  function computeAndDisplayTembedding() {
+    if (!wasmReady) return;
+
+    // Compute T-embedding using current n and weights
+    // (WASM function handles folding internally)
+    const n = weights.n;
+    computeTembedding(n);
+
+    // Get T-embedding data
+    let ptr = getTembeddingJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    tembData = JSON.parse(jsonStr);
+
+    // Reload from WASM to restore original n (T-embedding computation may have folded)
+    loadFromWasm();
+    document.getElementById('n-input').value = weights.n;
+
+    // Show T-embedding canvas and render
+    tembCanvas.style.display = 'block';
+    tembZoom = 1.0;
+    tembPanX = 0;
+    tembPanY = 0;
+    renderTemb();
+  }
+
+  document.getElementById('temb-btn').addEventListener('click', computeAndDisplayTembedding);
+
+  // T-embedding canvas mouse handlers
+  tembCanvas.addEventListener('mousedown', (e) => {
+    tembIsPanning = true;
+    tembLastPanX = e.clientX;
+    tembLastPanY = e.clientY;
+    tembCanvas.style.cursor = 'grabbing';
+  });
+
+  tembCanvas.addEventListener('mousemove', (e) => {
+    if (!tembIsPanning) return;
+    const dx = e.clientX - tembLastPanX;
+    const dy = e.clientY - tembLastPanY;
+    tembPanX += dx / tembZoom;
+    tembPanY += dy / tembZoom;
+    tembLastPanX = e.clientX;
+    tembLastPanY = e.clientY;
+    renderTemb();
+  });
+
+  tembCanvas.addEventListener('mouseup', () => {
+    tembIsPanning = false;
+    tembCanvas.style.cursor = 'grab';
+  });
+
+  tembCanvas.addEventListener('mouseleave', () => {
+    tembIsPanning = false;
+    tembCanvas.style.cursor = 'grab';
+  });
+
+  tembCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    tembZoom = Math.max(0.1, Math.min(20, tembZoom * factor));
+    renderTemb();
+  }, { passive: false });
+
+  // Granular urban renewal controls
+  let urbanRenewalStep = 1;  // Track current step (1, 2, or 3)
+
+  function updateStepButtons() {
+    const enabled = document.getElementById('granular-chk').checked;
+    const btn1 = document.getElementById('step1-btn');
+    const btn2 = document.getElementById('step2-btn');
+    const btn3 = document.getElementById('step3-btn');
+
+    btn1.disabled = !enabled || urbanRenewalStep !== 1;
+    btn2.disabled = !enabled || urbanRenewalStep !== 2;
+    btn3.disabled = !enabled || urbanRenewalStep !== 3;
+
+    btn1.style.opacity = (enabled && urbanRenewalStep === 1) ? '1' : '0.4';
+    btn2.style.opacity = (enabled && urbanRenewalStep === 2) ? '1' : '0.4';
+    btn3.style.opacity = (enabled && urbanRenewalStep === 3) ? '1' : '0.4';
+  }
+
+  document.getElementById('granular-chk').addEventListener('change', () => {
+    updateStepButtons();
+  });
+
+  document.getElementById('step1-btn').addEventListener('click', () => {
+    if (!wasmReady || weights.n <= 1) return;
+    urbanRenewalStep1();
+    loadFromWasm();
+    render();
+    urbanRenewalStep = 2;
+    updateStepButtons();
+  });
+
+  document.getElementById('step2-btn').addEventListener('click', () => {
+    if (!wasmReady || weights.n <= 1) return;
+    urbanRenewalStep2();
+    loadFromWasm();
+    document.getElementById('n-input').value = weights.n;
+    render();
+    urbanRenewalStep = 3;
+    updateStepButtons();
+  });
+
+  document.getElementById('step3-btn').addEventListener('click', () => {
+    if (!wasmReady) return;
+    urbanRenewalStep3();
+    loadFromWasm();
+    render();
+    urbanRenewalStep = 1;  // Reset to step 1 for next cycle
+    updateStepButtons();
+  });
+
   document.getElementById('reset-zoom-btn').addEventListener('click', resetZoom);
 
   document.getElementById('zoom-in-btn').addEventListener('click', () => {
@@ -506,7 +781,44 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     document.getElementById('weights-editor').style.display = 'none';
   });
 
-  window.addEventListener('resize', render);
+  document.getElementById('uniform-btn').addEventListener('click', () => {
+    if (!wasmReady) return;
+    // Set all weights to 1
+    for (let j = 0; j < weights.k; j++) {
+      for (let i = 0; i < weights.l; i++) {
+        setWeight(0, j, i, 1);  // alpha
+        setWeight(1, j, i, 1);  // beta
+        setWeight(2, j, i, 1);  // gamma
+      }
+    }
+    loadFromWasm();
+    if (document.getElementById('weights-editor').style.display !== 'none') {
+      buildWeightsEditor();
+    }
+    render();
+  });
+
+  document.getElementById('random-btn').addEventListener('click', () => {
+    if (!wasmReady) return;
+    // Set random weights between 0.1 and 2.0
+    for (let j = 0; j < weights.k; j++) {
+      for (let i = 0; i < weights.l; i++) {
+        setWeight(0, j, i, 0.1 + Math.random() * 1.9);  // alpha
+        setWeight(1, j, i, 0.1 + Math.random() * 1.9);  // beta
+        setWeight(2, j, i, 0.1 + Math.random() * 1.9);  // gamma
+      }
+    }
+    loadFromWasm();
+    if (document.getElementById('weights-editor').style.display !== 'none') {
+      buildWeightsEditor();
+    }
+    render();
+  });
+
+  window.addEventListener('resize', () => {
+    render();
+    if (tembData) renderTemb();
+  });
 
   // Initialize WASM
   initWasm();

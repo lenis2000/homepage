@@ -9,22 +9,13 @@
   - Face weights: X = α/(βγ) for black faces, X = βγ/α for white faces
   - Periodicity: k×l periodic weights with indices j=0..k-1, i=0..l-1
 
-  Compile command:
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js \
-     -s WASM=1 \
-     -s ASYNCIFY=1 \
-     -s "EXPORTED_FUNCTIONS=['_initWeights','_setWeight','_getWeightsJSON','_getEdgesJSON','_getFacesJSON','_setN','_setPeriodicParams','_freeString','_getProgress','_resetProgress']" \
-     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
-     -s ALLOW_MEMORY_GROWTH=1 \
-     -s INITIAL_MEMORY=64MB \
-     -s ENVIRONMENT=web \
-     -s SINGLE_FILE=1 \
-     -O3 -ffast-math \
-     && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+  Compile command (AI agent: use single line for auto-approval):
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_initWeights','_setWeight','_getWeightsJSON','_getEdgesJSON','_getFacesJSON','_setN','_setPeriodicParams','_freeString','_getProgress','_resetProgress','_foldWeights','_urbanRenewalStep1','_urbanRenewalStep2','_urbanRenewalStep3','_computeTembedding','_getTembeddingJSON']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
 #include <cmath>
+#include <complex>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -73,13 +64,36 @@ struct Face {
 static std::map<std::string, Edge> g_edges;
 static std::map<std::string, Face> g_faces;
 
+// After folding, we use arbitrary edge weights instead of periodic
+static bool g_useArbitraryWeights = false;
+static std::map<std::string, HighPrecFloat> g_arbitraryEdgeWeights;
+
+// Track color swap: after each fold, black<->white swap
+static bool g_colorsSwapped = false;
+
+// T-embedding computation storage
+static int g_originalN = 0;  // Store original n before folding
+static std::vector<std::map<std::string, HighPrecFloat>> g_faceWeightsHistory;  // Face weights at each level
+static std::vector<bool> g_colorSwapHistory;  // Color swap state at each level
+
+// T-embedding results: complex numbers stored as pairs (real, imag)
+struct TVertex {
+    double x, y;  // Original grid position
+    double tReal, tImag;  // T-embedded position (complex number)
+};
+static std::map<std::string, TVertex> g_tEmbedding;
+
 // Helper functions
 static bool inDiamond(double x, double y, int n) {
     return std::abs(x) + std::abs(y) <= n + 0.5;
 }
 
 static bool isBlackFace(int fx, int fy) {
-    return (fx + fy) % 2 == 0;
+    // Simple formula: g_colorsSwapped handles everything
+    // At init, g_colorsSwapped is set based on initial n parity
+    // After each fold step 3, it toggles
+    bool baseBlack = (fx + fy) % 2 == 0;
+    return g_colorsSwapped ? !baseBlack : baseBlack;
 }
 
 // Convert high precision float to string
@@ -115,10 +129,29 @@ static void initWeightArrays() {
     }
 }
 
+// Generate edge key from coordinates
+static std::string makeEdgeKey(double x1, double y1, double x2, double y2) {
+    std::ostringstream keyss;
+    keyss << x1 << "," << y1 << "-" << x2 << "," << y2;
+    return keyss.str();
+}
+
 // Get edge weight and direction based on position
 static void getEdgeWeightAndDir(double x1, double y1, double x2, double y2,
                                  HighPrecFloat& weight, std::string& dir,
                                  int& periodicI, int& periodicJ) {
+    // Check for arbitrary weight first
+    if (g_useArbitraryWeights) {
+        std::string key = makeEdgeKey(x1, y1, x2, y2);
+        auto it = g_arbitraryEdgeWeights.find(key);
+        if (it != g_arbitraryEdgeWeights.end()) {
+            weight = it->second;
+            dir = "arbitrary";
+            periodicI = periodicJ = 0;
+            return;
+        }
+    }
+
     bool isHorizontal = (y1 == y2);
     int faceX, faceY;
 
@@ -264,23 +297,329 @@ static void buildFaces() {
             if (lit != g_edges.end()) wLeft = lit->second.weight;
             if (rit != g_edges.end()) wRight = rit->second.weight;
 
-            // Compute face weight
-            // Black face: X = α/(βγ) = bottom / (right * left)
-            // White face: X = βγ/α = (right * left) / top
+            // Compute face weight using all 4 edges
+            // Black face: X = (α * δ) / (β * γ) = (bottom * top) / (right * left)
+            // White face: X = (β * γ) / (α * δ) = (right * left) / (bottom * top)
+            // Initially δ (top for black, bottom for white) = 1, but after folding it's not
             Face f;
             f.x = fx;
             f.y = fy;
             f.isBlack = isBlackFace(fx, fy);
 
             if (f.isBlack) {
-                f.weight = wBottom / (wRight * wLeft);
+                f.weight = (wBottom * wTop) / (wRight * wLeft);
             } else {
-                f.weight = (wRight * wLeft) / wTop;
+                f.weight = (wRight * wLeft) / (wBottom * wTop);
             }
 
             std::ostringstream fkey;
             fkey << fx << "," << fy;
             g_faces[fkey.str()] = f;
+        }
+    }
+}
+
+// Step 1: Transform edge weights on black cells
+static void doUrbanRenewalStep1() {
+    if (g_n <= 1) return;
+
+    // Store new edge weights
+    std::map<std::string, HighPrecFloat> newWeights;
+
+    // For each BLACK face, apply urban renewal transformation
+    for (int fx = -g_n; fx <= g_n; fx++) {
+        for (int fy = -g_n; fy <= g_n; fy++) {
+            if (!isBlackFace(fx, fy)) continue;
+
+            // Check all 4 corners are in diamond
+            if (!inDiamond(fx - 0.5, fy - 0.5, g_n) ||
+                !inDiamond(fx + 0.5, fy - 0.5, g_n) ||
+                !inDiamond(fx - 0.5, fy + 0.5, g_n) ||
+                !inDiamond(fx + 0.5, fy + 0.5, g_n)) continue;
+
+            // Edge keys for this black face:
+            // w = top (horizontal edge at y = fy + 0.5)
+            // z = bottom (horizontal edge at y = fy - 0.5)
+            // x = left (vertical edge at x = fx - 0.5)
+            // y = right (vertical edge at x = fx + 0.5)
+            std::string wKey = makeEdgeKey(fx - 0.5, fy + 0.5, fx + 0.5, fy + 0.5);
+            std::string zKey = makeEdgeKey(fx - 0.5, fy - 0.5, fx + 0.5, fy - 0.5);
+            std::string xKey = makeEdgeKey(fx - 0.5, fy - 0.5, fx - 0.5, fy + 0.5);
+            std::string yKey = makeEdgeKey(fx + 0.5, fy - 0.5, fx + 0.5, fy + 0.5);
+
+            // Get current weights
+            HighPrecFloat w = 1.0, x = 1.0, y = 1.0, z = 1.0;
+            auto wit = g_edges.find(wKey);
+            auto zit = g_edges.find(zKey);
+            auto xit = g_edges.find(xKey);
+            auto yit = g_edges.find(yKey);
+
+            if (wit != g_edges.end()) w = wit->second.weight;
+            if (zit != g_edges.end()) z = zit->second.weight;
+            if (xit != g_edges.end()) x = xit->second.weight;
+            if (yit != g_edges.end()) y = yit->second.weight;
+
+            // Urban renewal formula
+            HighPrecFloat cellWeight = w * z + x * y;
+            if (cellWeight < 1e-15) cellWeight = 1e-15; // Avoid division by zero
+
+            HighPrecFloat wNew = z / cellWeight;
+            HighPrecFloat xNew = y / cellWeight;
+            HighPrecFloat yNew = x / cellWeight;
+            HighPrecFloat zNew = w / cellWeight;
+
+            // Store new weights
+            newWeights[wKey] = wNew;
+            newWeights[zKey] = zNew;
+            newWeights[xKey] = xNew;
+            newWeights[yKey] = yNew;
+        }
+    }
+
+    // Switch to arbitrary weights mode
+    g_useArbitraryWeights = true;
+    g_arbitraryEdgeWeights = newWeights;
+
+    buildEdges();
+    buildFaces();
+}
+
+// Step 2: Strip boundary (decrease n)
+static void doUrbanRenewalStep2() {
+    if (g_n <= 1) return;
+    g_n--;
+    buildEdges();
+    buildFaces();
+}
+
+// Step 3: Swap black<->white colors
+static void doUrbanRenewalStep3() {
+    g_colorsSwapped = !g_colorsSwapped;
+    buildEdges();
+    buildFaces();
+}
+
+// Store current face weights to history
+static void storeFaceWeightsToHistory() {
+    std::map<std::string, HighPrecFloat> currentFaceWeights;
+    for (const auto& pair : g_faces) {
+        currentFaceWeights[pair.first] = pair.second.weight;
+    }
+    g_faceWeightsHistory.push_back(currentFaceWeights);
+    g_colorSwapHistory.push_back(g_colorsSwapped);
+}
+
+// Fold all the way to n=1, storing face weights at each level
+static void computeAllFolds() {
+    // Clear history
+    g_faceWeightsHistory.clear();
+    g_colorSwapHistory.clear();
+    g_originalN = g_n;
+
+    // Store initial face weights at level n
+    storeFaceWeightsToHistory();
+
+    // Fold repeatedly until n=1
+    while (g_n > 1) {
+        doUrbanRenewalStep1();
+        doUrbanRenewalStep2();
+        doUrbanRenewalStep3();
+        storeFaceWeightsToHistory();
+    }
+}
+
+// Get face weight from history at a given level for position (fx, fy)
+// Level 0 = original size n, level 1 = n-1, etc.
+static HighPrecFloat getFaceWeightFromHistory(int level, int fx, int fy) {
+    if (level < 0 || level >= (int)g_faceWeightsHistory.size()) {
+        return 1.0;
+    }
+    std::ostringstream key;
+    key << fx << "," << fy;
+    auto it = g_faceWeightsHistory[level].find(key.str());
+    if (it != g_faceWeightsHistory[level].end()) {
+        return it->second;
+    }
+    return 1.0;  // Default
+}
+
+// Compute T-embedding using the recurrence formula from Berggren-Nicoletti-Russkikh
+// Following the structure of 2025-03-27-t-emb-a-json.cpp (uniform case)
+//
+// The boundary rhombus is fixed for ALL levels m=1..n:
+//   T(-m,0) = -1,  T(m,0) = +1,  T(0,-m) = i*a,  T(0,m) = -i*a
+//
+// For arbitrary weights, we use face weights c_{j,k,m} from the folding history
+// instead of the uniform α, β, γ formulas.
+static void computeTembeddingRecurrence() {
+    g_tEmbedding.clear();
+
+    if (g_faceWeightsHistory.empty()) {
+        return;
+    }
+
+    int n = g_originalN;  // Original diamond size
+    int numLevels = (int)g_faceWeightsHistory.size();
+
+    // Get the final face weight (at n=1, there's one face)
+    // The parameter a = sqrt(final_face_weight)
+    HighPrecFloat finalFaceWeight = 1.0;
+    if (!g_faceWeightsHistory.back().empty()) {
+        finalFaceWeight = g_faceWeightsHistory.back().begin()->second;
+    }
+    double a = std::sqrt(std::abs(static_cast<double>(finalFaceWeight)));
+    if (a < 0.001) a = 1.0;
+
+    // Use complex numbers like the uniform implementation
+    typedef std::complex<double> Complex;
+
+    // Tarray[m][k+n][j+n] for k,j in [-n..n]
+    std::vector<std::vector<std::vector<Complex>>> Tarray(
+        n + 1,
+        std::vector<std::vector<Complex>>(2*n + 1,
+            std::vector<Complex>(2*n + 1, Complex(0, 0))
+        )
+    );
+
+    // Helper to get face weight c_{j,k} at level m
+    // faceWeightsHistory[0] = original size n
+    // faceWeightsHistory[k] = size n-k
+    // Level m corresponds to faceWeightsHistory[n - m]
+    auto getFaceWeight = [&](int j, int k, int m) -> double {
+        int histIdx = n - m;
+        if (histIdx < 0 || histIdx >= numLevels) return 1.0;
+
+        std::ostringstream key;
+        key << j << "," << k;
+        auto it = g_faceWeightsHistory[histIdx].find(key.str());
+        if (it != g_faceWeightsHistory[histIdx].end()) {
+            return static_cast<double>(it->second);
+        }
+        return 1.0;
+    };
+
+    // 1) Initialize boundary for all levels m=1..n
+    // Boundary rhombus vertices (same as uniform case):
+    //   T(-m,0) = -1,  T(m,0) = +1,  T(0,-m) = i*a,  T(0,m) = -i*a
+    for (int m = 1; m <= n; m++) {
+        Tarray[m][(-m + n)][(0 + n)] = Complex(-1.0, 0.0);
+        Tarray[m][(m + n)][(0 + n)] = Complex(1.0, 0.0);
+        Tarray[m][(0 + n)][(-m + n)] = Complex(0.0, a);
+        Tarray[m][(0 + n)][(m + n)] = Complex(0.0, -a);
+    }
+
+    // 2) Fill T for m=1..(n-1) via the recursive rule
+    for (int m = 1; m < n; m++) {
+        // Pass 1: Boundary edges and pass-through
+        for (int k = -m; k <= m; k++) {
+            for (int j = -m; j <= m; j++) {
+                if (std::abs(k) + std::abs(j) <= m) {
+                    // Get face weight for this position at level m
+                    double c = getFaceWeight(j, k, m);
+                    Complex cVal(c, 0.0);
+                    Complex one(1.0, 0.0);
+
+                    // Boundary edge updates (4 corners of the diamond)
+                    // Left edge: j = -m, k = 0
+                    if (j == -m && k == 0) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (Tarray[m][(-m + n)][(0 + n)] + cVal * Tarray[m][(-m+1 + n)][(0 + n)])
+                            / (one + cVal);
+                    }
+                    // Right edge: j = m, k = 0
+                    if (j == m && k == 0) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (Tarray[m][(m + n)][(0 + n)] + cVal * Tarray[m][(m-1 + n)][(0 + n)])
+                            / (one + cVal);
+                    }
+                    // Bottom edge: j = 0, k = -m
+                    if (j == 0 && k == -m) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (cVal * Tarray[m][(0 + n)][(-m + n)] + Tarray[m][(0 + n)][(-m+1 + n)])
+                            / (one + cVal);
+                    }
+                    // Top edge: j = 0, k = m
+                    if (j == 0 && k == m) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (cVal * Tarray[m][(0 + n)][(m + n)] + Tarray[m][(0 + n)][(m-1 + n)])
+                            / (one + cVal);
+                    }
+
+                    // Diagonal edges (corners of the square boundary)
+                    // Use face weights from adjacent faces
+                    double cEdge = getFaceWeight(j, k, m);
+                    Complex cEdgeVal(cEdge, 0.0);
+
+                    // Upper-right diagonal: k = m - j, 1 <= j <= m-1
+                    if ((1 <= j && j <= m-1) && (k == m - j)) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (Tarray[m][(j-1 + n)][(m-j + n)] + cEdgeVal * Tarray[m][(j + n)][(m-j-1 + n)])
+                            / (one + cEdgeVal);
+                    }
+                    // Lower-right diagonal: k = -m + j, 1 <= j <= m-1
+                    if ((1 <= j && j <= m-1) && (k == -m + j)) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (Tarray[m][(j-1 + n)][(-m+j + n)] + cEdgeVal * Tarray[m][(j + n)][(-m+j+1 + n)])
+                            / (one + cEdgeVal);
+                    }
+                    // Upper-left diagonal: k = m + j, 1-m <= j <= -1
+                    if (((1-m) <= j && j <= -1) && (k == m + j)) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (cEdgeVal * Tarray[m][(j + n)][(m+j-1 + n)] + Tarray[m][(j+1 + n)][(m+j + n)])
+                            / (one + cEdgeVal);
+                    }
+                    // Lower-left diagonal: k = -m - j, 1-m <= j <= -1
+                    if (((1-m) <= j && j <= -1) && (k == -m - j)) {
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            (cEdgeVal * Tarray[m][(j + n)][(-m-j+1 + n)] + Tarray[m][(j+1 + n)][(-m-j + n)])
+                            / (one + cEdgeVal);
+                    }
+
+                    // Interior pass-through (for positions where (j+k+m) % 2 == 0)
+                    if ((std::abs(k) + std::abs(j) < m) && (((j + k + m) % 2) == 0)) {
+                        Tarray[m+1][(j + n)][(k + n)] = Tarray[m][(j + n)][(k + n)];
+                    }
+                }
+            }
+        }
+
+        // Pass 2: Interior recurrence (for positions where (j+k+m) % 2 == 1)
+        for (int k = -m; k <= m; k++) {
+            for (int j = -m; j <= m; j++) {
+                if (std::abs(k) + std::abs(j) <= m) {
+                    if ((std::abs(k) + std::abs(j) < m) && (((j + k + m) % 2) == 1)) {
+                        double c = getFaceWeight(j, k, m);
+                        Complex cVal(c, 0.0);
+                        Complex one(1.0, 0.0);
+
+                        // T[m+1](j,k) = -T[m](j,k) + (T[m+1](j-1,k) + T[m+1](j+1,k) + c*T[m+1](j,k+1) + c*T[m+1](j,k-1)) / (1+c)
+                        Tarray[m+1][(j + n)][(k + n)] =
+                            -Tarray[m][(j + n)][(k + n)]
+                            + (Tarray[m+1][(j-1 + n)][(k + n)]
+                               + Tarray[m+1][(j+1 + n)][(k + n)]
+                               + cVal * Tarray[m+1][(j + n)][(k+1 + n)]
+                               + cVal * Tarray[m+1][(j + n)][(k-1 + n)]
+                              ) / (one + cVal);
+                    }
+                }
+            }
+        }
+    }
+
+    // Store the T-embedding result for the final level n
+    for (int k = -n; k <= n; k++) {
+        for (int j = -n; j <= n; j++) {
+            if (std::abs(k) + std::abs(j) <= n) {
+                std::ostringstream key;
+                key << j << "," << k;
+
+                TVertex v;
+                v.x = j;
+                v.y = k;
+                v.tReal = Tarray[n][(j + n)][(k + n)].real();
+                v.tImag = Tarray[n][(j + n)][(k + n)].imag();
+                g_tEmbedding[key.str()] = v;
+            }
         }
     }
 }
@@ -297,12 +636,19 @@ void resetProgress() {
     g_progress = 0;
 }
 
-// Set the diamond size
+// Set the diamond size (resets to periodic weights)
 EMSCRIPTEN_KEEPALIVE
 void setN(int n) {
     if (n < 1) n = 1;
     if (n > 100) n = 100;
     g_n = n;
+    g_useArbitraryWeights = false;
+    g_arbitraryEdgeWeights.clear();
+    // Set initial color swap based on n parity so leftmost face is always black
+    // Leftmost face at (-(n-1), 0) has sum -(n-1)
+    // For n odd: sum even → baseBlack=true → no swap needed
+    // For n even: sum odd → baseBlack=false → swap needed
+    g_colorsSwapped = (n % 2 == 0);
     buildEdges();
     buildFaces();
 }
@@ -321,12 +667,43 @@ void setPeriodicParams(int k, int l) {
     buildFaces();
 }
 
-// Initialize weights with default values
+// Initialize weights with default values (resets to periodic weights)
 EMSCRIPTEN_KEEPALIVE
 void initWeights() {
+    g_useArbitraryWeights = false;
+    g_arbitraryEdgeWeights.clear();
+    // Set initial color swap based on n parity so leftmost face is always black
+    g_colorsSwapped = (g_n % 2 == 0);
     initWeightArrays();
     buildEdges();
     buildFaces();
+}
+
+// Full urban renewal: all 3 steps combined
+EMSCRIPTEN_KEEPALIVE
+void foldWeights() {
+    if (g_n <= 1) return;
+    doUrbanRenewalStep1();
+    doUrbanRenewalStep2();
+    doUrbanRenewalStep3();
+}
+
+// Step 1 of urban renewal: transform edge weights on black cells
+EMSCRIPTEN_KEEPALIVE
+void urbanRenewalStep1() {
+    doUrbanRenewalStep1();
+}
+
+// Step 2 of urban renewal: strip boundary (decrease n)
+EMSCRIPTEN_KEEPALIVE
+void urbanRenewalStep2() {
+    doUrbanRenewalStep2();
+}
+
+// Step 3 of urban renewal: swap black<->white colors
+EMSCRIPTEN_KEEPALIVE
+void urbanRenewalStep3() {
+    doUrbanRenewalStep3();
 }
 
 // Set a specific weight value
@@ -461,6 +838,70 @@ char* getFacesJSON() {
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) {
     std::free(str);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void computeTembedding(int n) {
+    // Reset to given n and current weights, then compute T-embedding
+    int originalN = g_n;
+    bool originalUseArbitrary = g_useArbitraryWeights;
+    std::map<std::string, HighPrecFloat> originalArbitraryWeights = g_arbitraryEdgeWeights;
+    bool originalColorsSwapped = g_colorsSwapped;
+
+    // Initialize fresh at n
+    g_n = n;
+    g_colorsSwapped = (n % 2 == 0);
+    g_useArbitraryWeights = originalUseArbitrary;
+    g_arbitraryEdgeWeights = originalArbitraryWeights;
+    buildEdges();
+    buildFaces();
+
+    // Compute all folds and T-embedding
+    computeAllFolds();
+    computeTembeddingRecurrence();
+
+    // Restore original state
+    g_n = originalN;
+    g_colorsSwapped = originalColorsSwapped;
+    g_useArbitraryWeights = originalUseArbitrary;
+    g_arbitraryEdgeWeights = originalArbitraryWeights;
+    buildEdges();
+    buildFaces();
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getTembeddingJSON() {
+    std::ostringstream oss;
+    oss << "{";
+
+    // Output original n
+    oss << "\"originalN\":" << g_originalN;
+
+    // Output T-embedded vertices
+    oss << ",\"vertices\":[";
+    bool first = true;
+    for (const auto& pair : g_tEmbedding) {
+        if (!first) oss << ",";
+        first = false;
+        const TVertex& v = pair.second;
+        oss << "{\"key\":\"" << pair.first << "\""
+            << ",\"x\":" << v.x
+            << ",\"y\":" << v.y
+            << ",\"tReal\":" << v.tReal
+            << ",\"tImag\":" << v.tImag
+            << "}";
+    }
+    oss << "]";
+
+    // Also output face weights history for debugging
+    oss << ",\"numLevels\":" << g_faceWeightsHistory.size();
+
+    oss << "}";
+
+    std::string result = oss.str();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
 }
 
 } // extern "C"
