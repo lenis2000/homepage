@@ -84,6 +84,9 @@ struct TVertex {
 static std::map<std::string, TVertex> g_tEmbedding;
 static int g_debugZeroCount = 0;
 
+// Store T-embedding at each level for step-by-step visualization
+static std::vector<std::map<std::string, TVertex>> g_tEmbeddingHistory;
+
 // Helper functions
 static bool inDiamond(double x, double y, int n) {
     return std::abs(x) + std::abs(y) <= n + 0.5;
@@ -454,6 +457,7 @@ static HighPrecFloat getFaceWeightFromHistory(int level, int fx, int fy) {
 // instead of the uniform α, β, γ formulas.
 static void computeTembeddingRecurrence() {
     g_tEmbedding.clear();
+    g_tEmbeddingHistory.clear();
 
     if (g_faceWeightsHistory.empty()) {
         return;
@@ -463,15 +467,20 @@ static void computeTembeddingRecurrence() {
     int numLevels = (int)g_faceWeightsHistory.size();
 
     // Get the final face weight (at n=1, there's one face)
+    // This is 'a' in the paper notation
     HighPrecFloat finalFaceWeight = 1.0;
     if (!g_faceWeightsHistory.back().empty()) {
         finalFaceWeight = g_faceWeightsHistory.back().begin()->second;
     }
-    double c = std::abs(static_cast<double>(finalFaceWeight));
-    if (c < 0.001) c = 1.0;
+    double a = std::abs(static_cast<double>(finalFaceWeight));
+    if (a < 0.001) a = 1.0;
 
-    // Parameter a = sqrt(c) for the boundary rhombus
-    double a = std::sqrt(c);
+    // Boundary rhombus parameters from the paper:
+    // Horizontal direction: from -a*sqrt(a^2+1) to +a*sqrt(a^2+1)
+    // Vertical direction: from -sqrt(a^2+1) to +sqrt(a^2+1)
+    double sqrtTerm = std::sqrt(a * a + 1.0);
+    double horizScale = a * sqrtTerm;   // horizontal half-width
+    double vertScale = sqrtTerm;        // vertical half-height
 
     // Use complex numbers like the uniform implementation
     typedef std::complex<double> Complex;
@@ -501,15 +510,42 @@ static void computeTembeddingRecurrence() {
         return 1.0;
     };
 
+    // Helper to store T-embedding at a given level m
+    auto storeTembeddingAtLevel = [&](int m) {
+        std::map<std::string, TVertex> levelMap;
+        for (int k = -m; k <= m; k++) {
+            for (int j = -m; j <= m; j++) {
+                bool isInterior = (std::abs(k) + std::abs(j) < m);
+                bool isCorner = (j == -m && k == 0) || (j == m && k == 0) ||
+                               (j == 0 && k == -m) || (j == 0 && k == m);
+                if (isInterior || isCorner) {
+                    std::ostringstream key;
+                    key << j << "," << k;
+                    TVertex v;
+                    v.x = j;
+                    v.y = k;
+                    v.tReal = Tarray[m][(j + n)][(k + n)].real();
+                    v.tImag = Tarray[m][(j + n)][(k + n)].imag();
+                    levelMap[key.str()] = v;
+                }
+            }
+        }
+        g_tEmbeddingHistory.push_back(levelMap);
+    };
+
     // 1) Initialize boundary for all levels m=1..n
-    // Boundary rhombus vertices (same as uniform case):
-    //   T(-m,0) = -1,  T(m,0) = +1,  T(0,-m) = i*a,  T(0,m) = -i*a
+    // Boundary rhombus vertices with correct scaling:
+    //   T(-m,0) = -horizScale,  T(m,0) = +horizScale
+    //   T(0,-m) = i*vertScale,  T(0,m) = -i*vertScale
     for (int m = 1; m <= n; m++) {
-        Tarray[m][(-m + n)][(0 + n)] = Complex(-1.0, 0.0);
-        Tarray[m][(m + n)][(0 + n)] = Complex(1.0, 0.0);
-        Tarray[m][(0 + n)][(-m + n)] = Complex(0.0, a);
-        Tarray[m][(0 + n)][(m + n)] = Complex(0.0, -a);
+        Tarray[m][(-m + n)][(0 + n)] = Complex(-horizScale, 0.0);
+        Tarray[m][(m + n)][(0 + n)] = Complex(horizScale, 0.0);
+        Tarray[m][(0 + n)][(-m + n)] = Complex(0.0, vertScale);
+        Tarray[m][(0 + n)][(m + n)] = Complex(0.0, -vertScale);
     }
+
+    // Store level 1 (just the boundary rhombus)
+    storeTembeddingAtLevel(1);
 
     // 2) Fill T for m=1..(n-1) via the recursive rule
     // Use face weights at level m for all updates from m -> m+1
@@ -517,10 +553,10 @@ static void computeTembeddingRecurrence() {
         Complex one(1.0, 0.0);
 
         // Ensure boundary corners for level m+1 are set (safety reset)
-        Tarray[m+1][(-(m+1) + n)][(0 + n)] = Complex(-1.0, 0.0);
-        Tarray[m+1][((m+1) + n)][(0 + n)] = Complex(1.0, 0.0);
-        Tarray[m+1][(0 + n)][(-(m+1) + n)] = Complex(0.0, a);
-        Tarray[m+1][(0 + n)][((m+1) + n)] = Complex(0.0, -a);
+        Tarray[m+1][(-(m+1) + n)][(0 + n)] = Complex(-horizScale, 0.0);
+        Tarray[m+1][((m+1) + n)][(0 + n)] = Complex(horizScale, 0.0);
+        Tarray[m+1][(0 + n)][(-(m+1) + n)] = Complex(0.0, vertScale);
+        Tarray[m+1][(0 + n)][((m+1) + n)] = Complex(0.0, -vertScale);
 
         // Pass 1: Boundary edges and pass-through
         for (int k = -m; k <= m; k++) {
@@ -610,6 +646,9 @@ static void computeTembeddingRecurrence() {
                 }
             }
         }
+
+        // Store T-embedding at level m+1
+        storeTembeddingAtLevel(m + 1);
     }
 
     // Debug: count how many zeros at level n
@@ -926,25 +965,66 @@ char* getTembeddingJSON() {
     // Also output face weights history for debugging
     oss << ",\"numLevels\":" << g_faceWeightsHistory.size();
 
-    // Debug: output face weights at first level
-    oss << ",\"faceWeightsLevel0\":[";
-    first = true;
-    if (!g_faceWeightsHistory.empty()) {
-        for (const auto& kv : g_faceWeightsHistory[0]) {
-            if (!first) oss << ",";
-            first = false;
-            oss << "{\"key\":\"" << kv.first << "\",\"w\":" << kv.second << "}";
+    // Output ALL face weights at ALL levels
+    oss << ",\"faceWeightsHistory\":[";
+    for (size_t level = 0; level < g_faceWeightsHistory.size(); level++) {
+        if (level > 0) oss << ",";
+        oss << "{\"level\":" << level;
+        oss << ",\"diamondSize\":" << (g_originalN - (int)level);
+        oss << ",\"colorsSwapped\":" << (g_colorSwapHistory.size() > level ? (g_colorSwapHistory[level] ? "true" : "false") : "false");
+        oss << ",\"faces\":[";
+        bool firstFace = true;
+        for (const auto& kv : g_faceWeightsHistory[level]) {
+            if (!firstFace) oss << ",";
+            firstFace = false;
+            // Parse key to get x,y coordinates
+            int fx = 0, fy = 0;
+            sscanf(kv.first.c_str(), "%d,%d", &fx, &fy);
+            // Determine if black at this level (need to account for color swap)
+            bool swapped = (g_colorSwapHistory.size() > level) ? g_colorSwapHistory[level] : false;
+            bool baseBlack = (fx + fy) % 2 == 0;
+            bool isBlack = swapped ? !baseBlack : baseBlack;
+            oss << "{\"key\":\"" << kv.first << "\",\"x\":" << fx << ",\"y\":" << fy
+                << ",\"w\":" << kv.second << ",\"isBlack\":" << (isBlack ? "true" : "false") << "}";
         }
+        oss << "]}";
     }
     oss << "]";
 
-    // Debug: output parameter a
+    // Output T-embedding at ALL levels for step-by-step visualization
+    oss << ",\"tembHistory\":[";
+    for (size_t level = 0; level < g_tEmbeddingHistory.size(); level++) {
+        if (level > 0) oss << ",";
+        int m = level + 1;  // T-embedding levels are m=1,2,...,n
+        oss << "{\"level\":" << m << ",\"vertices\":[";
+        bool firstV = true;
+        for (const auto& kv : g_tEmbeddingHistory[level]) {
+            if (!firstV) oss << ",";
+            firstV = false;
+            const TVertex& v = kv.second;
+            oss << "{\"key\":\"" << kv.first << "\""
+                << ",\"x\":" << v.x
+                << ",\"y\":" << v.y
+                << ",\"tReal\":" << v.tReal
+                << ",\"tImag\":" << v.tImag
+                << "}";
+        }
+        oss << "]}";
+    }
+    oss << "]";
+
+    // Debug: output parameter a and boundary scaling
     HighPrecFloat finalFaceWeight = 1.0;
     if (!g_faceWeightsHistory.empty() && !g_faceWeightsHistory.back().empty()) {
         finalFaceWeight = g_faceWeightsHistory.back().begin()->second;
     }
-    double a = std::sqrt(std::abs(static_cast<double>(finalFaceWeight)));
-    oss << ",\"paramA\":" << a;
+    double aParam = std::abs(static_cast<double>(finalFaceWeight));
+    double sqrtTerm = std::sqrt(aParam * aParam + 1.0);
+    double horizScale = aParam * sqrtTerm;
+    double vertScale = sqrtTerm;
+    oss << ",\"paramA\":" << aParam;
+    oss << ",\"horizScale\":" << horizScale;
+    oss << ",\"vertScale\":" << vertScale;
     oss << ",\"debugZeroCount\":" << g_debugZeroCount;
 
     // Debug: output corner vertices

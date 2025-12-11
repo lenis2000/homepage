@@ -58,6 +58,34 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   </div>
 </details>
 
+<details id="stepwise-section" style="margin-top: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step T-embedding construction (n ≤ 15)</summary>
+  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+    <div style="margin-bottom: 10px;">
+      <label>Step m = <span id="step-value">1</span></label>
+      <input id="step-slider" type="range" min="1" max="5" value="1" style="width: 200px; margin-left: 10px;">
+      <span id="step-info" style="margin-left: 10px; color: #666;"></span>
+    </div>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 300px;">
+        <h4 style="margin: 0 0 10px 0;">Face weights c<sub>j,k</sub> at level m</h4>
+        <div id="face-weights-display" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 11px; background: #fff; padding: 5px; border: 1px solid #ddd;"></div>
+      </div>
+      <div style="flex: 2; min-width: 400px;">
+        <h4 style="margin: 0 0 10px 0;">T-embedding at level m (with face shading)</h4>
+        <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+      </div>
+    </div>
+    <div style="margin-top: 10px;">
+      <button id="stepwise-zoom-in-btn">+</button>
+      <button id="stepwise-zoom-out-btn">−</button>
+      <button id="stepwise-reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
+      <label style="margin-left: 20px;"><input type="checkbox" id="show-faces-chk" checked> Show face shading</label>
+      <label style="margin-left: 10px;"><input type="checkbox" id="show-weights-chk"> Show weights on faces</label>
+    </div>
+  </div>
+</details>
+
 <style>
 #aztec-canvas.panning { cursor: grabbing; }
 .weight-tables-row { display: flex; flex-wrap: wrap; gap: 15px; }
@@ -918,7 +946,370 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   window.addEventListener('resize', () => {
     render();
     if (tembData) renderTemb();
+    renderStepwiseTemb();
   });
+
+  // ========== STEP-BY-STEP T-EMBEDDING VISUALIZATION ==========
+  const stepwiseCanvas = document.getElementById('stepwise-temb-canvas');
+  const stepwiseCtx = stepwiseCanvas.getContext('2d');
+  const stepSlider = document.getElementById('step-slider');
+  const stepValue = document.getElementById('step-value');
+  const stepInfo = document.getElementById('step-info');
+  const faceWeightsDisplay = document.getElementById('face-weights-display');
+
+  // Stepwise canvas state
+  let stepwiseZoom = 1.0;
+  let stepwisePanX = 0, stepwisePanY = 0;
+  let stepwiseIsPanning = false;
+  let stepwiseLastPanX = 0, stepwiseLastPanY = 0;
+
+  // Update slider range when T-embedding is computed
+  function updateDebugSlider() {
+    if (!tembData || !tembData.tembHistory) return;
+    const maxLevel = tembData.tembHistory.length;
+    stepSlider.max = maxLevel;
+    stepSlider.value = Math.min(parseInt(stepSlider.value), maxLevel);
+    stepValue.textContent = stepSlider.value;
+  }
+
+  // Display face weights for current level
+  function displayFaceWeights(level) {
+    if (!tembData || !tembData.faceWeightsHistory) {
+      faceWeightsDisplay.innerHTML = '<em>No data available</em>';
+      return;
+    }
+
+    // Face weights history is indexed by fold level (0 = n, 1 = n-1, etc.)
+    // T-embedding level m corresponds to faceWeightsHistory[n - m]
+    const n = tembData.originalN;
+    const histIdx = n - level;
+
+    if (histIdx < 0 || histIdx >= tembData.faceWeightsHistory.length) {
+      faceWeightsDisplay.innerHTML = '<em>Level out of range</em>';
+      return;
+    }
+
+    const levelData = tembData.faceWeightsHistory[histIdx];
+    if (!levelData || !levelData.faces || levelData.faces.length === 0) {
+      faceWeightsDisplay.innerHTML = '<em>No faces at this level</em>';
+      return;
+    }
+
+    // Sort faces by position for nice display
+    const faces = [...levelData.faces].sort((a, b) => {
+      if (a.y !== b.y) return b.y - a.y;  // top to bottom
+      return a.x - b.x;  // left to right
+    });
+
+    let html = `<div style="margin-bottom: 5px;"><strong>Diamond size: ${levelData.diamondSize}</strong> (colors ${levelData.colorsSwapped ? 'swapped' : 'normal'})</div>`;
+    html += '<table style="border-collapse: collapse; font-size: 10px;">';
+
+    // Group by y coordinate
+    let currentY = null;
+    for (const f of faces) {
+      if (f.y !== currentY) {
+        if (currentY !== null) html += '</tr>';
+        html += '<tr>';
+        currentY = f.y;
+      }
+      const wStr = f.w === 1 ? '1' : f.w.toFixed(3).replace(/\.?0+$/, '');
+      const bgColor = f.isBlack ? '#e0e0e0' : '#fff';
+      html += `<td style="border: 1px solid #ccc; padding: 2px 4px; background: ${bgColor}; text-align: center;" title="(${f.x},${f.y})">${wStr}</td>`;
+    }
+    html += '</tr></table>';
+
+    faceWeightsDisplay.innerHTML = html;
+  }
+
+  // Render stepwise T-embedding at specific level with face shading
+  function renderStepwiseTemb() {
+    if (!tembData || !tembData.tembHistory || tembData.originalN > 15) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = stepwiseCanvas.getBoundingClientRect();
+      stepwiseCanvas.width = rect.width * dpr;
+      stepwiseCanvas.height = rect.height * dpr;
+      stepwiseCtx.scale(dpr, dpr);
+      stepwiseCtx.fillStyle = '#fafafa';
+      stepwiseCtx.fillRect(0, 0, rect.width, rect.height);
+      stepwiseCtx.fillStyle = '#666';
+      stepwiseCtx.font = '14px sans-serif';
+      stepwiseCtx.textAlign = 'center';
+      if (tembData && tembData.originalN > 15) {
+        stepwiseCtx.fillText('Step-by-step visualization disabled for n > 15', rect.width / 2, rect.height / 2);
+      } else {
+        stepwiseCtx.fillText('Compute T-embedding first', rect.width / 2, rect.height / 2);
+      }
+      return;
+    }
+
+    const level = parseInt(stepSlider.value);
+    const levelIdx = level - 1;  // tembHistory[0] is level 1
+
+    if (levelIdx < 0 || levelIdx >= tembData.tembHistory.length) return;
+
+    const levelData = tembData.tembHistory[levelIdx];
+    if (!levelData || !levelData.vertices || levelData.vertices.length === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = stepwiseCanvas.getBoundingClientRect();
+    stepwiseCanvas.width = rect.width * dpr;
+    stepwiseCanvas.height = rect.height * dpr;
+    stepwiseCtx.scale(dpr, dpr);
+
+    stepwiseCtx.fillStyle = '#fafafa';
+    stepwiseCtx.fillRect(0, 0, rect.width, rect.height);
+
+    // Use the same bounds as final T-embedding for consistent view
+    let minReal = Infinity, maxReal = -Infinity;
+    let minImag = Infinity, maxImag = -Infinity;
+
+    // Use final level bounds
+    const finalLevel = tembData.tembHistory[tembData.tembHistory.length - 1];
+    for (const v of finalLevel.vertices) {
+      minReal = Math.min(minReal, v.tReal);
+      maxReal = Math.max(maxReal, v.tReal);
+      minImag = Math.min(minImag, v.tImag);
+      maxImag = Math.max(maxImag, v.tImag);
+    }
+
+    const rangeReal = maxReal - minReal || 1;
+    const rangeImag = maxImag - minImag || 1;
+    const centerReal = (minReal + maxReal) / 2;
+    const centerImag = (minImag + maxImag) / 2;
+
+    const padding = 40;
+    const scaleX = (rect.width - 2 * padding) / rangeReal;
+    const scaleY = (rect.height - 2 * padding) / rangeImag;
+    const baseScale = Math.min(scaleX, scaleY);
+    const scale = baseScale * stepwiseZoom;
+
+    const cx = rect.width / 2 + stepwisePanX * stepwiseZoom;
+    const cy = rect.height / 2 + stepwisePanY * stepwiseZoom;
+
+    stepwiseCtx.save();
+    stepwiseCtx.translate(cx, cy);
+
+    // Create vertex map
+    const vertexMap = {};
+    for (const v of levelData.vertices) {
+      vertexMap[v.key] = v;
+    }
+
+    const showFaces = document.getElementById('show-faces-chk').checked;
+    const showWeights = document.getElementById('show-weights-chk').checked;
+
+    // Get face weights for this level
+    const n = tembData.originalN;
+    const histIdx = n - level;
+    let faceWeightMap = {};
+    if (tembData.faceWeightsHistory && histIdx >= 0 && histIdx < tembData.faceWeightsHistory.length) {
+      const fwData = tembData.faceWeightsHistory[histIdx];
+      for (const f of fwData.faces) {
+        faceWeightMap[f.key] = f;
+      }
+    }
+
+    // Draw faces as quadrilaterals (faces of the dual graph are vertices of original)
+    // Each face in the T-embedding corresponds to a vertex (j,k) in the original
+    // The face is bounded by neighbors (j-1,k), (j+1,k), (j,k-1), (j,k+1)
+    if (showFaces) {
+      for (const v of levelData.vertices) {
+        // Skip boundary corners - they don't form interior faces
+        const m = level;
+        if ((v.x === -m && v.y === 0) || (v.x === m && v.y === 0) ||
+            (v.x === 0 && v.y === -m) || (v.x === 0 && v.y === m)) continue;
+
+        // Get the 4 neighboring vertices that bound this face
+        const neighbors = [
+          vertexMap[`${v.x-1},${v.y}`],
+          vertexMap[`${v.x},${v.y+1}`],
+          vertexMap[`${v.x+1},${v.y}`],
+          vertexMap[`${v.x},${v.y-1}`]
+        ];
+
+        // Only draw if all 4 neighbors exist
+        if (neighbors.every(n => n)) {
+          stepwiseCtx.beginPath();
+          stepwiseCtx.moveTo((neighbors[0].tReal - centerReal) * scale, -(neighbors[0].tImag - centerImag) * scale);
+          for (let i = 1; i < 4; i++) {
+            stepwiseCtx.lineTo((neighbors[i].tReal - centerReal) * scale, -(neighbors[i].tImag - centerImag) * scale);
+          }
+          stepwiseCtx.closePath();
+
+          // Color based on face weight or black/white
+          const faceData = faceWeightMap[v.key];
+          if (faceData) {
+            // Use color intensity based on weight
+            const w = faceData.w;
+            const intensity = Math.min(255, Math.max(100, 200 - Math.log(w) * 30));
+            if (faceData.isBlack) {
+              stepwiseCtx.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity + 20})`;
+            } else {
+              stepwiseCtx.fillStyle = `rgb(255, ${intensity + 40}, ${intensity + 20})`;
+            }
+          } else {
+            stepwiseCtx.fillStyle = '#eee';
+          }
+          stepwiseCtx.fill();
+          stepwiseCtx.strokeStyle = '#aaa';
+          stepwiseCtx.lineWidth = 0.5;
+          stepwiseCtx.stroke();
+
+          // Draw weight text on face
+          if (showWeights && faceData) {
+            const centroidX = (neighbors[0].tReal + neighbors[1].tReal + neighbors[2].tReal + neighbors[3].tReal) / 4;
+            const centroidY = (neighbors[0].tImag + neighbors[1].tImag + neighbors[2].tImag + neighbors[3].tImag) / 4;
+            const fontSize = Math.max(6, Math.min(12, scale / 50));
+            stepwiseCtx.font = `${fontSize}px sans-serif`;
+            stepwiseCtx.fillStyle = '#333';
+            stepwiseCtx.textAlign = 'center';
+            stepwiseCtx.textBaseline = 'middle';
+            const wStr = faceData.w === 1 ? '1' : faceData.w.toFixed(2).replace(/\.?0+$/, '');
+            stepwiseCtx.fillText(wStr, (centroidX - centerReal) * scale, -(centroidY - centerImag) * scale);
+          }
+        }
+      }
+    }
+
+    // Draw edges
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
+
+    for (const v of levelData.vertices) {
+      const neighbors = [
+        `${v.x-1},${v.y}`,
+        `${v.x},${v.y+1}`,
+        `${v.x+1},${v.y}`,
+        `${v.x},${v.y-1}`
+      ];
+
+      for (const nKey of neighbors) {
+        if (vertexMap[nKey]) {
+          const nv = vertexMap[nKey];
+          stepwiseCtx.beginPath();
+          stepwiseCtx.moveTo((v.tReal - centerReal) * scale, -(v.tImag - centerImag) * scale);
+          stepwiseCtx.lineTo((nv.tReal - centerReal) * scale, -(nv.tImag - centerImag) * scale);
+          stepwiseCtx.stroke();
+        }
+      }
+    }
+
+    // Draw outer boundary rhombus
+    const m = level;
+    const corners = [
+      vertexMap[`${-m},0`],
+      vertexMap[`0,${m}`],
+      vertexMap[`${m},0`],
+      vertexMap[`0,${-m}`]
+    ];
+
+    if (corners.every(c => c)) {
+      stepwiseCtx.strokeStyle = '#333';
+      stepwiseCtx.lineWidth = Math.max(1, scale / 100);
+      stepwiseCtx.beginPath();
+      stepwiseCtx.moveTo((corners[0].tReal - centerReal) * scale, -(corners[0].tImag - centerImag) * scale);
+      for (let i = 1; i < 4; i++) {
+        stepwiseCtx.lineTo((corners[i].tReal - centerReal) * scale, -(corners[i].tImag - centerImag) * scale);
+      }
+      stepwiseCtx.closePath();
+      stepwiseCtx.stroke();
+    }
+
+    // Draw vertices
+    const vertexRadius = Math.max(1.5, scale / 200);
+    for (const v of levelData.vertices) {
+      const x = (v.tReal - centerReal) * scale;
+      const y = -(v.tImag - centerImag) * scale;
+
+      stepwiseCtx.beginPath();
+      stepwiseCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
+      stepwiseCtx.fillStyle = '#000';
+      stepwiseCtx.fill();
+    }
+
+    stepwiseCtx.restore();
+
+    // Draw level info
+    stepwiseCtx.fillStyle = '#333';
+    stepwiseCtx.font = '11px sans-serif';
+    stepwiseCtx.fillText(`Level m=${level}, ${levelData.vertices.length} vertices`, 10, 15);
+  }
+
+  // Update display when slider changes
+  stepSlider.addEventListener('input', () => {
+    const level = parseInt(stepSlider.value);
+    stepValue.textContent = level;
+    stepInfo.textContent = `(diamond size at this level: ${tembData ? tembData.originalN - (tembData.originalN - level) : '?'})`;
+    displayFaceWeights(level);
+    renderStepwiseTemb();
+  });
+
+  // Checkbox handlers
+  document.getElementById('show-faces-chk').addEventListener('change', renderStepwiseTemb);
+  document.getElementById('show-weights-chk').addEventListener('change', renderStepwiseTemb);
+
+  // Debug canvas mouse handlers
+  stepwiseCanvas.addEventListener('mousedown', (e) => {
+    stepwiseIsPanning = true;
+    stepwiseLastPanX = e.clientX;
+    stepwiseLastPanY = e.clientY;
+    stepwiseCanvas.style.cursor = 'grabbing';
+  });
+
+  stepwiseCanvas.addEventListener('mousemove', (e) => {
+    if (!stepwiseIsPanning) return;
+    const dx = e.clientX - stepwiseLastPanX;
+    const dy = e.clientY - stepwiseLastPanY;
+    stepwisePanX += dx / stepwiseZoom;
+    stepwisePanY += dy / stepwiseZoom;
+    stepwiseLastPanX = e.clientX;
+    stepwiseLastPanY = e.clientY;
+    renderStepwiseTemb();
+  });
+
+  stepwiseCanvas.addEventListener('mouseup', () => {
+    stepwiseIsPanning = false;
+    stepwiseCanvas.style.cursor = 'grab';
+  });
+
+  stepwiseCanvas.addEventListener('mouseleave', () => {
+    stepwiseIsPanning = false;
+    stepwiseCanvas.style.cursor = 'grab';
+  });
+
+  stepwiseCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    stepwiseZoom = Math.max(0.1, Math.min(20, stepwiseZoom * factor));
+    renderStepwiseTemb();
+  }, { passive: false });
+
+  document.getElementById('stepwise-zoom-in-btn').addEventListener('click', () => {
+    stepwiseZoom = Math.min(20, stepwiseZoom * 1.3);
+    renderStepwiseTemb();
+  });
+
+  document.getElementById('stepwise-zoom-out-btn').addEventListener('click', () => {
+    stepwiseZoom = Math.max(0.1, stepwiseZoom / 1.3);
+    renderStepwiseTemb();
+  });
+
+  document.getElementById('stepwise-reset-zoom-btn').addEventListener('click', () => {
+    stepwiseZoom = 1.0;
+    stepwisePanX = 0;
+    stepwisePanY = 0;
+    renderStepwiseTemb();
+  });
+
+  // Update the computeAndDisplayTembedding function to also update debug view
+  const originalComputeAndDisplay = computeAndDisplayTembedding;
+  computeAndDisplayTembedding = function() {
+    originalComputeAndDisplay();
+    updateDebugSlider();
+    const level = parseInt(stepSlider.value);
+    displayFaceWeights(level);
+    renderStepwiseTemb();
+  };
 
   // Initialize WASM
   initWasm();
