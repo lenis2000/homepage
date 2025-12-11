@@ -7,6 +7,11 @@ code:
     txt: 'JavaScript implementation'
 ---
 
+<p style="font-size: 0.9em; color: #555; margin-bottom: 15px;">
+<b>Acknowledgement:</b> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
+I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
+</p>
+
 <div style="margin-bottom: 10px;">
   <label>n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;"></label>
   <button id="draw-btn" style="margin-left: 10px;">Draw</button>
