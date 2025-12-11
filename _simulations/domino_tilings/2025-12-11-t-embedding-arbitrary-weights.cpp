@@ -82,6 +82,7 @@ struct TVertex {
     double tReal, tImag;  // T-embedded position (complex number)
 };
 static std::map<std::string, TVertex> g_tEmbedding;
+static int g_debugZeroCount = 0;
 
 // Helper functions
 static bool inDiamond(double x, double y, int n) {
@@ -473,7 +474,7 @@ static void computeTembeddingRecurrence() {
     // Use complex numbers like the uniform implementation
     typedef std::complex<double> Complex;
 
-    // Tarray[m][k+n][j+n] for k,j in [-n..n]
+    // Tarray[m][j+n][k+n] for j,k in [-n..n], m in [0..n]
     std::vector<std::vector<std::vector<Complex>>> Tarray(
         n + 1,
         std::vector<std::vector<Complex>>(2*n + 1,
@@ -509,17 +510,19 @@ static void computeTembeddingRecurrence() {
     }
 
     // 2) Fill T for m=1..(n-1) via the recursive rule
+    // Use face weights at level m for all updates from m -> m+1
     for (int m = 1; m < n; m++) {
+        Complex one(1.0, 0.0);
+
         // Pass 1: Boundary edges and pass-through
         for (int k = -m; k <= m; k++) {
             for (int j = -m; j <= m; j++) {
                 if (std::abs(k) + std::abs(j) <= m) {
-                    // Get face weight for this position at level m
+                    // Get face weight at this position at level m
                     double c = getFaceWeight(j, k, m);
                     Complex cVal(c, 0.0);
-                    Complex one(1.0, 0.0);
 
-                    // Boundary edge updates (4 corners of the diamond)
+                    // Boundary edge updates (4 corners of the diamond along axes)
                     // Left edge: j = -m, k = 0
                     if (j == -m && k == 0) {
                         Tarray[m+1][(j + n)][(k + n)] =
@@ -546,33 +549,29 @@ static void computeTembeddingRecurrence() {
                     }
 
                     // Diagonal edges (corners of the square boundary)
-                    // Use face weights from adjacent faces
-                    double cEdge = getFaceWeight(j, k, m);
-                    Complex cEdgeVal(cEdge, 0.0);
-
                     // Upper-right diagonal: k = m - j, 1 <= j <= m-1
                     if ((1 <= j && j <= m-1) && (k == m - j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
-                            (Tarray[m][(j-1 + n)][(m-j + n)] + cEdgeVal * Tarray[m][(j + n)][(m-j-1 + n)])
-                            / (one + cEdgeVal);
+                            (Tarray[m][(j-1 + n)][(m-j + n)] + cVal * Tarray[m][(j + n)][(m-j-1 + n)])
+                            / (one + cVal);
                     }
                     // Lower-right diagonal: k = -m + j, 1 <= j <= m-1
                     if ((1 <= j && j <= m-1) && (k == -m + j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
-                            (Tarray[m][(j-1 + n)][(-m+j + n)] + cEdgeVal * Tarray[m][(j + n)][(-m+j+1 + n)])
-                            / (one + cEdgeVal);
+                            (Tarray[m][(j-1 + n)][(-m+j + n)] + cVal * Tarray[m][(j + n)][(-m+j+1 + n)])
+                            / (one + cVal);
                     }
                     // Upper-left diagonal: k = m + j, 1-m <= j <= -1
                     if (((1-m) <= j && j <= -1) && (k == m + j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
-                            (cEdgeVal * Tarray[m][(j + n)][(m+j-1 + n)] + Tarray[m][(j+1 + n)][(m+j + n)])
-                            / (one + cEdgeVal);
+                            (cVal * Tarray[m][(j + n)][(m+j-1 + n)] + Tarray[m][(j+1 + n)][(m+j + n)])
+                            / (one + cVal);
                     }
                     // Lower-left diagonal: k = -m - j, 1-m <= j <= -1
                     if (((1-m) <= j && j <= -1) && (k == -m - j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
-                            (cEdgeVal * Tarray[m][(j + n)][(-m-j+1 + n)] + Tarray[m][(j+1 + n)][(-m-j + n)])
-                            / (one + cEdgeVal);
+                            (cVal * Tarray[m][(j + n)][(-m-j+1 + n)] + Tarray[m][(j+1 + n)][(-m-j + n)])
+                            / (one + cVal);
                     }
 
                     // Interior pass-through (for positions where (j+k+m) % 2 == 0)
@@ -590,7 +589,6 @@ static void computeTembeddingRecurrence() {
                     if ((std::abs(k) + std::abs(j) < m) && (((j + k + m) % 2) == 1)) {
                         double c = getFaceWeight(j, k, m);
                         Complex cVal(c, 0.0);
-                        Complex one(1.0, 0.0);
 
                         // T[m+1](j,k) = -T[m](j,k) + (T[m+1](j-1,k) + T[m+1](j+1,k) + c*T[m+1](j,k+1) + c*T[m+1](j,k-1)) / (1+c)
                         Tarray[m+1][(j + n)][(k + n)] =
@@ -606,10 +604,31 @@ static void computeTembeddingRecurrence() {
         }
     }
 
-    // Store the T-embedding result for the final level n
+    // Debug: count how many zeros at level n
+    int zeroCount = 0;
     for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
             if (std::abs(k) + std::abs(j) <= n) {
+                Complex val = Tarray[n][(j + n)][(k + n)];
+                if (std::abs(val.real()) < 0.0001 && std::abs(val.imag()) < 0.0001) {
+                    zeroCount++;
+                }
+            }
+        }
+    }
+
+    // Store the T-embedding result for the final level n
+    // The augmented graph has a 4-edge outer face, so we only include:
+    // - Interior points: |j|+|k| < n
+    // - The 4 corner points: (-n,0), (n,0), (0,-n), (0,n)
+    // The diagonal boundary points (|j|+|k| = n with j≠0 and k≠0) are NOT part of the T-embedding
+    for (int k = -n; k <= n; k++) {
+        for (int j = -n; j <= n; j++) {
+            bool isInterior = (std::abs(k) + std::abs(j) < n);
+            bool isCorner = (j == -n && k == 0) || (j == n && k == 0) ||
+                           (j == 0 && k == -n) || (j == 0 && k == n);
+
+            if (isInterior || isCorner) {
                 std::ostringstream key;
                 key << j << "," << k;
 
@@ -622,6 +641,9 @@ static void computeTembeddingRecurrence() {
             }
         }
     }
+
+    // Store debug info
+    g_debugZeroCount = zeroCount;
 }
 
 extern "C" {
@@ -895,6 +917,48 @@ char* getTembeddingJSON() {
 
     // Also output face weights history for debugging
     oss << ",\"numLevels\":" << g_faceWeightsHistory.size();
+
+    // Debug: output face weights at first level
+    oss << ",\"faceWeightsLevel0\":[";
+    first = true;
+    if (!g_faceWeightsHistory.empty()) {
+        for (const auto& kv : g_faceWeightsHistory[0]) {
+            if (!first) oss << ",";
+            first = false;
+            oss << "{\"key\":\"" << kv.first << "\",\"w\":" << kv.second << "}";
+        }
+    }
+    oss << "]";
+
+    // Debug: output parameter a
+    HighPrecFloat finalFaceWeight = 1.0;
+    if (!g_faceWeightsHistory.empty() && !g_faceWeightsHistory.back().empty()) {
+        finalFaceWeight = g_faceWeightsHistory.back().begin()->second;
+    }
+    double a = std::sqrt(std::abs(static_cast<double>(finalFaceWeight)));
+    oss << ",\"paramA\":" << a;
+    oss << ",\"debugZeroCount\":" << g_debugZeroCount;
+
+    // Debug: output corner vertices
+    oss << ",\"corners\":{";
+    auto corners = {
+        std::make_pair("-n,0", std::make_pair(-g_originalN, 0)),
+        std::make_pair("n,0", std::make_pair(g_originalN, 0)),
+        std::make_pair("0,-n", std::make_pair(0, -g_originalN)),
+        std::make_pair("0,n", std::make_pair(0, g_originalN))
+    };
+    first = true;
+    for (const auto& c : corners) {
+        std::ostringstream key;
+        key << c.second.first << "," << c.second.second;
+        auto it = g_tEmbedding.find(key.str());
+        if (it != g_tEmbedding.end()) {
+            if (!first) oss << ",";
+            first = false;
+            oss << "\"" << c.first << "\":{\"re\":" << it->second.tReal << ",\"im\":" << it->second.tImag << "}";
+        }
+    }
+    oss << "}";
 
     oss << "}";
 

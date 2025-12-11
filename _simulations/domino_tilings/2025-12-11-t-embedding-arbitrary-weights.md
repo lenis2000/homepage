@@ -16,19 +16,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
 <div style="margin-bottom: 10px;">
   <label>n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;"></label>
-  <button id="draw-btn" style="margin-left: 10px;">Draw</button>
-  <button id="fold-btn" style="margin-left: 10px;">Urban renewal (n&nbsp;→&nbsp;n-1)</button>
+  <button id="draw-btn" style="margin-left: 10px;">Set</button>
   <button id="temb-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="zoom-in-btn" style="margin-left: 10px;">+</button>
   <button id="zoom-out-btn">−</button>
   <button id="reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
-</div>
-
-<div style="margin-bottom: 10px;">
-  <label><input type="checkbox" id="granular-chk"> Granular urban renewal:</label>
-  <button id="step1-btn" style="margin-left: 10px;" disabled>Step 1: Transform weights</button>
-  <button id="step2-btn" style="opacity: 0.4;" disabled>Step 2: Strip boundary</button>
-  <button id="step3-btn" style="opacity: 0.4;" disabled>Step 3: Swap colors</button>
 </div>
 
 <div style="margin-bottom: 10px;">
@@ -55,6 +47,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 <details style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f0f0; border: 1px solid #ccc;">Show original Aztec diamond with edge weights</summary>
   <canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab; margin-top: 10px;"></canvas>
+  <div style="margin-top: 10px;">
+    <button id="fold-btn">Urban renewal (n&nbsp;→&nbsp;n-1)</button>
+  </div>
+  <div style="margin-top: 10px;">
+    <label><input type="checkbox" id="granular-chk"> Granular urban renewal:</label>
+    <button id="step1-btn" style="margin-left: 10px;" disabled>Step 1: Transform weights</button>
+    <button id="step2-btn" style="opacity: 0.4;" disabled>Step 2: Strip boundary</button>
+    <button id="step3-btn" style="opacity: 0.4;" disabled>Step 3: Swap colors</button>
+  </div>
 </details>
 
 <style>
@@ -149,9 +150,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       render();
 
       // Automatically compute and display T-embedding on load
+      // Use longer delay to ensure WASM state is fully initialized
       setTimeout(() => {
+        // Re-init to ensure clean state
+        setPeriodicParams(k, l);
+        setN(n);
+        initWeights();
+        loadFromWasm();
         computeAndDisplayTembedding();
-      }, 100);
+      }, 200);
     };
 
     // If already initialized (e.g., page reload with cached module)
@@ -201,6 +208,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     if (!wasmReady || weights.n === 0) return;
 
     const n = weights.n;
+
+    // Only render the detailed Aztec diamond for n <= 15
+    if (n > 15) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Aztec diamond rendering disabled for n > 15 (current n = ${n})`, rect.width / 2, rect.height / 2);
+      return;
+    }
     const baseScale = Math.min(rect.width, rect.height) / (2 * n + 4);
     const scale = baseScale * zoom;
     const cx = rect.width / 2 + panX * zoom;
@@ -372,26 +388,80 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // These correspond to neighboring face centers in the T-embedding
     const n = tembData.originalN;
 
-    // Draw face quadrilaterals
+    // Get corner vertices
+    const corners = [
+      vertexMap[`${-n},0`],  // left
+      vertexMap[`0,${n}`],   // top
+      vertexMap[`${n},0`],   // right
+      vertexMap[`0,${-n}`]   // bottom
+    ];
+
+    // Draw outer rhombus connecting the 4 corners
+    tembCtx.strokeStyle = '#333';
+    tembCtx.lineWidth = Math.max(0.5, scale / 150);
+    if (corners.every(c => c)) {
+      tembCtx.beginPath();
+      tembCtx.moveTo((corners[0].tReal - centerReal) * scale, -(corners[0].tImag - centerImag) * scale);
+      for (let i = 1; i < 4; i++) {
+        tembCtx.lineTo((corners[i].tReal - centerReal) * scale, -(corners[i].tImag - centerImag) * scale);
+      }
+      tembCtx.closePath();
+      tembCtx.stroke();
+    }
+
+    // Draw boundary chain connecting outer spikes
+    // Boundary vertices are those with |x| + |y| = n-1 (the outermost interior ring)
+    // They should be connected in order around the boundary
+    const boundaryVertices = [];
+    for (let i = 0; i < n; i++) {
+      // Upper-right edge: from (0, n-1) to (n-1, 0)
+      if (vertexMap[`${i},${n-1-i}`]) boundaryVertices.push(vertexMap[`${i},${n-1-i}`]);
+    }
+    for (let i = 1; i < n; i++) {
+      // Lower-right edge: from (n-1, 0) to (0, -(n-1))
+      if (vertexMap[`${n-1-i},${-i}`]) boundaryVertices.push(vertexMap[`${n-1-i},${-i}`]);
+    }
+    for (let i = 1; i < n; i++) {
+      // Lower-left edge: from (0, -(n-1)) to (-(n-1), 0)
+      if (vertexMap[`${-i},${-(n-1-i)}`]) boundaryVertices.push(vertexMap[`${-i},${-(n-1-i)}`]);
+    }
+    for (let i = 1; i < n; i++) {
+      // Upper-left edge: from (-(n-1), 0) to (0, n-1)
+      if (vertexMap[`${-(n-1-i)},${i}`]) boundaryVertices.push(vertexMap[`${-(n-1-i)},${i}`]);
+    }
+
+    // Draw boundary chain
+    if (boundaryVertices.length > 0) {
+      tembCtx.strokeStyle = '#333';
+      tembCtx.lineWidth = Math.max(0.3, scale / 200);
+      tembCtx.beginPath();
+      tembCtx.moveTo((boundaryVertices[0].tReal - centerReal) * scale, -(boundaryVertices[0].tImag - centerImag) * scale);
+      for (let i = 1; i < boundaryVertices.length; i++) {
+        tembCtx.lineTo((boundaryVertices[i].tReal - centerReal) * scale, -(boundaryVertices[i].tImag - centerImag) * scale);
+      }
+      tembCtx.closePath();
+      tembCtx.stroke();
+    }
+
+    // Draw interior edges
+    tembCtx.strokeStyle = '#333';
+    tembCtx.lineWidth = Math.max(0.3, scale / 200);
+
     for (const v of tembData.vertices) {
       const fx = v.x;
       const fy = v.y;
 
-      // Determine if this is a black or white face
-      const isBlack = (fx + fy) % 2 === 0;
+      // Skip corners - they connect to the boundary chain differently
+      if ((fx === -n && fy === 0) || (fx === n && fy === 0) ||
+          (fx === 0 && fy === -n) || (fx === 0 && fy === n)) continue;
 
-      // Get the 4 neighboring vertices to form the quadrilateral
-      // The T-embedding maps face centers, so we draw edges between adjacent face centers
+      // Get the 4 neighboring vertices
       const neighbors = [
         `${fx-1},${fy}`,
         `${fx},${fy+1}`,
         `${fx+1},${fy}`,
         `${fx},${fy-1}`
       ];
-
-      // Draw edges to neighbors that exist
-      tembCtx.strokeStyle = '#333';
-      tembCtx.lineWidth = Math.max(1, scale / 30);
 
       for (const nKey of neighbors) {
         if (vertexMap[nKey]) {
@@ -404,26 +474,46 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       }
     }
 
-    // Draw vertices
-    const vertexRadius = Math.max(3, scale / 20);
+    // Draw edges from corners to adjacent boundary vertices
+    if (corners.every(c => c)) {
+      // Left corner (-n, 0) connects to (-(n-1), 1) and (-(n-1), -1)
+      const leftAdj = [vertexMap[`${-(n-1)},1`], vertexMap[`${-(n-1)},-1`]];
+      // Right corner (n, 0) connects to (n-1, 1) and (n-1, -1)
+      const rightAdj = [vertexMap[`${n-1},1`], vertexMap[`${n-1},-1`]];
+      // Top corner (0, n) connects to (1, n-1) and (-1, n-1)
+      const topAdj = [vertexMap[`1,${n-1}`], vertexMap[`-1,${n-1}`]];
+      // Bottom corner (0, -n) connects to (1, -(n-1)) and (-1, -(n-1))
+      const bottomAdj = [vertexMap[`1,${-(n-1)}`], vertexMap[`-1,${-(n-1)}`]];
+
+      const cornerEdges = [
+        [corners[0], leftAdj],
+        [corners[1], topAdj],
+        [corners[2], rightAdj],
+        [corners[3], bottomAdj]
+      ];
+
+      for (const [corner, adjs] of cornerEdges) {
+        for (const adj of adjs) {
+          if (corner && adj) {
+            tembCtx.beginPath();
+            tembCtx.moveTo((corner.tReal - centerReal) * scale, -(corner.tImag - centerImag) * scale);
+            tembCtx.lineTo((adj.tReal - centerReal) * scale, -(adj.tImag - centerImag) * scale);
+            tembCtx.stroke();
+          }
+        }
+      }
+    }
+
+    // Draw vertices (all as small black dots)
+    const vertexRadius = Math.max(0.5, scale / 300);
     for (const v of tembData.vertices) {
       const x = (v.tReal - centerReal) * scale;
       const y = -(v.tImag - centerImag) * scale;
 
-      const isBlack = (v.x + v.y) % 2 === 0;
-
       tembCtx.beginPath();
       tembCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
-      if (isBlack) {
-        tembCtx.fillStyle = '#000';
-        tembCtx.fill();
-      } else {
-        tembCtx.fillStyle = '#fff';
-        tembCtx.fill();
-        tembCtx.strokeStyle = '#000';
-        tembCtx.lineWidth = Math.max(1, scale / 40);
-        tembCtx.stroke();
-      }
+      tembCtx.fillStyle = '#000';
+      tembCtx.fill();
     }
 
     tembCtx.restore();
@@ -620,6 +710,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     let jsonStr = Module.UTF8ToString(ptr);
     freeString(ptr);
     tembData = JSON.parse(jsonStr);
+    // Debug info (can be removed later)
+    const zeroVertices = tembData.vertices?.filter(v => Math.abs(v.tReal) < 0.001 && Math.abs(v.tImag) < 0.001);
+    if (zeroVertices?.length > 0) {
+      console.log("T-embedding warning: vertices at zero:", zeroVertices.map(v => `(${v.x},${v.y})`).join(', '));
+    }
 
     // Reload from WASM to restore original n (T-embedding computation may have folded)
     loadFromWasm();
@@ -721,16 +816,21 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     updateStepButtons();
   });
 
-  document.getElementById('reset-zoom-btn').addEventListener('click', resetZoom);
+  document.getElementById('reset-zoom-btn').addEventListener('click', () => {
+    tembZoom = 1.0;
+    tembPanX = 0;
+    tembPanY = 0;
+    renderTemb();
+  });
 
   document.getElementById('zoom-in-btn').addEventListener('click', () => {
-    zoom = Math.min(20, zoom * 1.3);
-    render();
+    tembZoom = Math.min(20, tembZoom * 1.3);
+    renderTemb();
   });
 
   document.getElementById('zoom-out-btn').addEventListener('click', () => {
-    zoom = Math.max(0.1, zoom / 1.3);
-    render();
+    tembZoom = Math.max(0.1, tembZoom / 1.3);
+    renderTemb();
   });
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
