@@ -18,14 +18,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   <label>n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;"></label>
   <button id="draw-btn" style="margin-left: 10px;">Set</button>
   <button id="temb-btn" style="margin-left: 10px;">Compute T-embedding</button>
-  <label style="margin-left: 15px;">a =
-    <select id="a-formula-select">
-      <option value="0">√c</option>
-      <option value="1">c</option>
-      <option value="2">1/√c</option>
-      <option value="3">1/c</option>
-    </select>
-  </label>
   <button id="zoom-in-btn" style="margin-left: 10px;">+</button>
   <button id="zoom-out-btn">−</button>
   <button id="reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
@@ -140,7 +132,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       urbanRenewalStep3 = Module.cwrap('urbanRenewalStep3', null, []);
       computeTembedding = Module.cwrap('computeTembedding', null, ['number']);
       getTembeddingJSON = Module.cwrap('getTembeddingJSON', 'number', []);
-      setAFormulaChoice = Module.cwrap('setAFormulaChoice', null, ['number']);
 
       wasmReady = true;
       loadingMsg.style.display = 'none';
@@ -708,10 +699,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Function to compute and display T-embedding from current weights
   function computeAndDisplayTembedding() {
     if (!wasmReady) return;
-
-    // Set the formula choice for parameter a
-    const aChoice = parseInt(document.getElementById('a-formula-select').value) || 0;
-    setAFormulaChoice(aChoice);
 
     // Compute T-embedding using current n and weights
     // (WASM function handles folding internally)

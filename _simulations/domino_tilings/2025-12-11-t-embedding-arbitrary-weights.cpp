@@ -10,7 +10,7 @@
   - Periodicity: k×l periodic weights with indices j=0..k-1, i=0..l-1
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_initWeights','_setWeight','_getWeightsJSON','_getEdgesJSON','_getFacesJSON','_setN','_setPeriodicParams','_freeString','_getProgress','_resetProgress','_foldWeights','_urbanRenewalStep1','_urbanRenewalStep2','_urbanRenewalStep3','_computeTembedding','_getTembeddingJSON','_setAFormulaChoice']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_initWeights','_setWeight','_getWeightsJSON','_getEdgesJSON','_getFacesJSON','_setN','_setPeriodicParams','_freeString','_getProgress','_resetProgress','_foldWeights','_urbanRenewalStep1','_urbanRenewalStep2','_urbanRenewalStep3','_computeTembedding','_getTembeddingJSON']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -83,9 +83,6 @@ struct TVertex {
 };
 static std::map<std::string, TVertex> g_tEmbedding;
 static int g_debugZeroCount = 0;
-
-// Parameter a formula selection: 0=sqrt(c), 1=c, 2=1/sqrt(c), 3=1/c
-static int g_aFormulaChoice = 0;
 
 // Helper functions
 static bool inDiamond(double x, double y, int n) {
@@ -473,15 +470,8 @@ static void computeTembeddingRecurrence() {
     double c = std::abs(static_cast<double>(finalFaceWeight));
     if (c < 0.001) c = 1.0;
 
-    // Compute parameter a based on formula choice
-    double a;
-    switch (g_aFormulaChoice) {
-        case 0: a = std::sqrt(c); break;      // sqrt(c)
-        case 1: a = c; break;                  // c
-        case 2: a = 1.0 / std::sqrt(c); break; // 1/sqrt(c)
-        case 3: a = 1.0 / c; break;            // 1/c
-        default: a = std::sqrt(c); break;
-    }
+    // Parameter a = sqrt(c) for the boundary rhombus
+    double a = std::sqrt(c);
 
     // Use complex numbers like the uniform implementation
     typedef std::complex<double> Complex;
@@ -878,13 +868,6 @@ char* getFacesJSON() {
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) {
     std::free(str);
-}
-
-EMSCRIPTEN_KEEPALIVE
-void setAFormulaChoice(int choice) {
-    if (choice >= 0 && choice <= 3) {
-        g_aFormulaChoice = choice;
-    }
 }
 
 EMSCRIPTEN_KEEPALIVE
