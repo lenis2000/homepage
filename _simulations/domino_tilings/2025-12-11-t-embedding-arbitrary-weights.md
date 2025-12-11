@@ -10,6 +10,8 @@ code:
 <div style="margin-bottom: 10px;">
   <label>n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;"></label>
   <button id="draw-btn" style="margin-left: 10px;">Draw</button>
+  <button id="zoom-in-btn" style="margin-left: 10px;">+</button>
+  <button id="zoom-out-btn">−</button>
   <button id="reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
 </div>
 
@@ -91,6 +93,7 @@ code:
   // type: 'h' for horizontal, 'v' for vertical
   let edges = {};
   let highlightedEdges = new Set(); // Edges to highlight in red
+  let highlightedFaces = new Set(); // Faces to highlight
   let highlightTimeout = null;
 
   function inDiamond(x, y, n) {
@@ -189,6 +192,10 @@ code:
     return { weight, dir: edgeDir, i, j };
   }
 
+  // Face storage: faces[faceKey] = { x, y, weight }
+  // Face centered at (x, y) has corners at (x±0.5, y±0.5)
+  let faces = {};
+
   function buildEdges() {
     edges = {};
     const coords = [];
@@ -224,6 +231,53 @@ code:
             type: 'v'
           };
         }
+      }
+    }
+
+    // Build faces and compute face weights (product of 4 edge weights)
+    buildFaces();
+  }
+
+  function buildFaces() {
+    faces = {};
+    for (let fx = -n; fx <= n; fx++) {
+      for (let fy = -n; fy <= n; fy++) {
+        // Check all 4 corners are in diamond
+        if (!inDiamond(fx - 0.5, fy - 0.5, n) || !inDiamond(fx + 0.5, fy - 0.5, n) ||
+            !inDiamond(fx - 0.5, fy + 0.5, n) || !inDiamond(fx + 0.5, fy + 0.5, n)) continue;
+
+        // Get the 4 edge weights
+        const bottomKey = `${fx - 0.5},${fy - 0.5}-${fx + 0.5},${fy - 0.5}`;
+        const topKey = `${fx - 0.5},${fy + 0.5}-${fx + 0.5},${fy + 0.5}`;
+        const leftKey = `${fx - 0.5},${fy - 0.5}-${fx - 0.5},${fy + 0.5}`;
+        const rightKey = `${fx + 0.5},${fy - 0.5}-${fx + 0.5},${fy + 0.5}`;
+
+        const wBottom = edges[bottomKey] ? edges[bottomKey].weight : 1;
+        const wTop = edges[topKey] ? edges[topKey].weight : 1;
+        const wLeft = edges[leftKey] ? edges[leftKey].weight : 1;
+        const wRight = edges[rightKey] ? edges[rightKey].weight : 1;
+
+        // Face weight formula from Kenyon-Lam-Ramassamy-Russkikh "Dimers and Circle patterns"
+        // Black face: X = α/(βγ)
+        //   where α = bottom, β = right, γ = left, 1 = top
+        // White face: X = βγ/α
+        //   where edges come from adjacent black faces: top = α, bottom = 1, left = γ, right = β
+        let faceWeight;
+        if (isBlackFace(fx, fy)) {
+          // Black face: X = α/(βγ) = bottom / (right * left)
+          faceWeight = wBottom / (wRight * wLeft);
+        } else {
+          // White face: X = βγ/α = (right * left) / top
+          // top = α from black face above, right = β, left = γ
+          faceWeight = (wRight * wLeft) / wTop;
+        }
+
+        faces[`${fx},${fy}`] = {
+          x: fx,
+          y: fy,
+          weight: faceWeight,
+          isBlack: isBlackFace(fx, fy)
+        };
       }
     }
   }
@@ -262,6 +316,35 @@ code:
       }
     }
 
+    // Draw face weights in center of each face
+    const faceFontSize = Math.max(5, scale / 8);
+    ctx.font = `${faceFontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const key in faces) {
+      const f = faces[key];
+      const fx = f.x * scale;
+      const fy = -f.y * scale;
+
+      const wText = f.weight === 1 ? '1' : f.weight.toFixed(2).replace(/\.?0+$/, '');
+      const textWidth = ctx.measureText(wText).width;
+      const padX = 2, padY = 1;
+      const boxW = textWidth + padX * 2;
+      const boxH = faceFontSize + padY * 2;
+
+      // Highlight background if face is highlighted
+      const isHighlighted = highlightedFaces.has(key);
+      ctx.fillStyle = isHighlighted ? '#ffffcc' : (f.isBlack ? '#d8d8d8' : '#f8f8f8');
+      ctx.fillRect(fx - boxW / 2, fy - boxH / 2, boxW, boxH);
+      ctx.strokeStyle = isHighlighted ? '#cc9900' : '#aaa';
+      ctx.lineWidth = isHighlighted ? 1 : 0.3;
+      ctx.strokeRect(fx - boxW / 2, fy - boxH / 2, boxW, boxH);
+
+      ctx.fillStyle = '#555';
+      ctx.fillText(wText, fx, fy);
+    }
+
     // Draw edges
     ctx.strokeStyle = '#333';
     ctx.lineWidth = Math.max(1, scale / 15);
@@ -285,8 +368,21 @@ code:
       const midX = ((e.x1 + e.x2) / 2) * scale;
       const midY = -((e.y1 + e.y2) / 2) * scale;
 
-      const wText = e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, '');
-      const textWidth = ctx.measureText(wText).width;
+      // Build label: "α=1.2" or just "1" for direction 'one'
+      let label;
+      if (e.dir === 'one') {
+        label = '1';
+      } else if (e.dir === 'alpha') {
+        label = 'α=' + (e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, ''));
+      } else if (e.dir === 'beta') {
+        label = 'β=' + (e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, ''));
+      } else if (e.dir === 'gamma') {
+        label = 'γ=' + (e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, ''));
+      } else {
+        label = e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, '');
+      }
+
+      const textWidth = ctx.measureText(label).width;
       const padX = 2, padY = 1;
       const boxW = textWidth + padX * 2;
       const boxH = fontSize + padY * 2;
@@ -299,9 +395,9 @@ code:
       ctx.lineWidth = isHighlighted ? 1 : 0.5;
       ctx.strokeRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
 
-      // Draw weight text
+      // Draw label text
       ctx.fillStyle = '#333';
-      ctx.fillText(wText, midX, midY);
+      ctx.fillText(label, midX, midY);
     }
 
     // Draw vertices (bipartite coloring: black and white)
@@ -444,6 +540,7 @@ code:
       // Clear previous highlight timeout
       if (highlightTimeout) clearTimeout(highlightTimeout);
       highlightedEdges.clear();
+      highlightedFaces.clear();
 
       // Rebuild edges first to get new weights
       buildEdges();
@@ -454,6 +551,20 @@ code:
         const wd = getEdgeWeightAndDir(e.x1, e.y1, e.x2, e.y2);
         if (wd.dir === changedParam && wd.j === changedJ && wd.i === changedI) {
           highlightedEdges.add(key);
+          // Also highlight adjacent faces
+          if (e.type === 'h') {
+            // Horizontal edge: faces above and below
+            const faceAbove = `${Math.round((e.x1 + e.x2) / 2)},${Math.round(e.y1 + 0.5)}`;
+            const faceBelow = `${Math.round((e.x1 + e.x2) / 2)},${Math.round(e.y1 - 0.5)}`;
+            if (faces[faceAbove]) highlightedFaces.add(faceAbove);
+            if (faces[faceBelow]) highlightedFaces.add(faceBelow);
+          } else {
+            // Vertical edge: faces left and right
+            const faceRight = `${Math.round(e.x1 + 0.5)},${Math.round((e.y1 + e.y2) / 2)}`;
+            const faceLeft = `${Math.round(e.x1 - 0.5)},${Math.round((e.y1 + e.y2) / 2)}`;
+            if (faces[faceRight]) highlightedFaces.add(faceRight);
+            if (faces[faceLeft]) highlightedFaces.add(faceLeft);
+          }
         }
       }
 
@@ -462,6 +573,7 @@ code:
       // Fade out after 3 seconds
       highlightTimeout = setTimeout(() => {
         highlightedEdges.clear();
+        highlightedFaces.clear();
         render();
       }, 3000);
     } else {
@@ -488,6 +600,16 @@ code:
   });
 
   document.getElementById('reset-zoom-btn').addEventListener('click', resetZoom);
+
+  document.getElementById('zoom-in-btn').addEventListener('click', () => {
+    zoom = Math.min(20, zoom * 1.3);
+    render();
+  });
+
+  document.getElementById('zoom-out-btn').addEventListener('click', () => {
+    zoom = Math.max(0.1, zoom / 1.3);
+    render();
+  });
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
