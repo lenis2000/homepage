@@ -373,19 +373,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const midX = ((e.x1 + e.x2) / 2) * scale;
       const midY = -((e.y1 + e.y2) / 2) * scale;
 
-      // Build label: "α=1.2" or just "1" for direction 'one'
-      let label;
-      if (e.dir === 'one') {
-        label = '1';
-      } else if (e.dir === 'alpha') {
-        label = 'α=' + (e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, ''));
-      } else if (e.dir === 'beta') {
-        label = 'β=' + (e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, ''));
-      } else if (e.dir === 'gamma') {
-        label = 'γ=' + (e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, ''));
-      } else {
-        label = e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, '');
-      }
+      // Build label: just the weight value
+      const label = e.weight === 1 ? '1' : e.weight.toFixed(2).replace(/\.?0+$/, '');
 
       const textWidth = ctx.measureText(label).width;
       const padX = 2, padY = 1;
