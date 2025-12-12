@@ -1365,93 +1365,176 @@ static void aztecStep5_WhiteContraction() {
     g_aztecReductionStep = 5;
 }
 
-// STEP 6: Mark vertices diagonally between two black faces
-// Black faces = faces with BLACK vertex at top-left
-static void aztecStep6_MarkDiagonalVertices() {
+// STEP 6: Shading - mark faces for grey/black rendering (Folding step 1)
+// This is a visual step - grey faces have white at top-left, black faces have black at top-left
+static void aztecStep6_Shading() {
     if (g_aztecReductionStep != 5) return;
+    pushAztecState();
+    // No structural changes - just advance step to enable shading in rendering
+    g_aztecReductionStep = 6;
+}
+
+// STEP 7: Mark diagonal vertices (Folding step 2)
+// Rule: highlight vertices where |x| + |y| <= n - 3
+static void aztecStep7_MarkDiagonalVertices() {
+    if (g_aztecReductionStep != 6) return;
 
     pushAztecState();
 
-    // Build vertex position map
-    std::map<std::string, int> vertexIndex;
-    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
-        std::ostringstream oss;
-        oss << g_aztecVertices[idx].x << "," << g_aztecVertices[idx].y;
-        vertexIndex[oss.str()] = (int)idx;
-    }
+    int n = g_aztecLevel;
 
-    // Build edge set for quick lookup
-    std::set<std::string> edgeSet;
-    for (const auto& e : g_aztecEdges) {
-        double x1 = g_aztecVertices[e.v1].x, y1 = g_aztecVertices[e.v1].y;
-        double x2 = g_aztecVertices[e.v2].x, y2 = g_aztecVertices[e.v2].y;
-        std::ostringstream oss1, oss2;
-        oss1 << x1 << "," << y1 << "-" << x2 << "," << y2;
-        oss2 << x2 << "," << y2 << "-" << x1 << "," << y1;
-        edgeSet.insert(oss1.str());
-        edgeSet.insert(oss2.str());
-    }
+    for (size_t vIdx = 0; vIdx < g_aztecVertices.size(); vIdx++) {
+        double x = g_aztecVertices[vIdx].x;
+        double y = g_aztecVertices[vIdx].y;
 
-    // Helper to check if edge exists
-    auto hasEdge = [&](double x1, double y1, double x2, double y2) -> bool {
-        std::ostringstream oss;
-        oss << x1 << "," << y1 << "-" << x2 << "," << y2;
-        return edgeSet.count(oss.str()) > 0;
-    };
-
-    // Helper to get vertex at position
-    auto getVertex = [&](double x, double y) -> int {
-        std::ostringstream oss;
-        oss << x << "," << y;
-        auto it = vertexIndex.find(oss.str());
-        return (it != vertexIndex.end()) ? it->second : -1;
-    };
-
-    // Check if a face exists and is a "black face" (black at top-left)
-    auto isBlackFace = [&](double blX, double blY) -> bool {
-        // Face corners: bl=(blX,blY), br=(blX+1,blY), tl=(blX,blY+1), tr=(blX+1,blY+1)
-        int bl = getVertex(blX, blY);
-        int br = getVertex(blX + 1, blY);
-        int tl = getVertex(blX, blY + 1);
-        int tr = getVertex(blX + 1, blY + 1);
-
-        if (bl < 0 || br < 0 || tl < 0 || tr < 0) return false;
-
-        // Check all 4 edges exist
-        if (!hasEdge(blX, blY, blX + 1, blY)) return false;  // bottom
-        if (!hasEdge(blX, blY + 1, blX + 1, blY + 1)) return false;  // top
-        if (!hasEdge(blX, blY, blX, blY + 1)) return false;  // left
-        if (!hasEdge(blX + 1, blY, blX + 1, blY + 1)) return false;  // right
-
-        // Check if top-left is BLACK
-        return !g_aztecVertices[tl].isWhite;
-    };
-
-    // For each vertex, check if it's diagonally between two black faces
-    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
-        double x = g_aztecVertices[idx].x;
-        double y = g_aztecVertices[idx].y;
-
-        // Vertex is at corner of faces:
-        // - Face with bl at (x-1, y-1): vertex is top-right
-        // - Face with bl at (x, y): vertex is bottom-left
-        // These two faces are diagonal to each other
-
-        bool face1 = isBlackFace(x - 1, y - 1);  // vertex is top-right corner
-        bool face2 = isBlackFace(x, y);          // vertex is bottom-left corner
-
-        // Also check the other diagonal pair:
-        // - Face with bl at (x-1, y): vertex is bottom-right
-        // - Face with bl at (x, y-1): vertex is top-left
-        bool face3 = isBlackFace(x - 1, y);      // vertex is bottom-right corner
-        bool face4 = isBlackFace(x, y - 1);      // vertex is top-left corner
-
-        if ((face1 && face2) || (face3 && face4)) {
-            g_aztecVertices[idx].inVgauge = true;  // Reuse inVgauge for green highlighting
+        // Highlight if |x| + |y| <= n - 3
+        if (std::abs(x) + std::abs(y) <= n - 3 + 0.01) {  // small epsilon for float comparison
+            g_aztecVertices[vIdx].inVgauge = true;
         }
     }
 
-    g_aztecReductionStep = 6;
+    g_aztecReductionStep = 7;
+}
+
+// STEP 8: Split green vertices into pairs with weight-1 edges (Folding step 3)
+// Each green vertex is split into two vertices with an edge of weight 1 between them
+// Black faces shrink slightly to accommodate
+static void aztecStep8_SplitVertices() {
+    if (g_aztecReductionStep != 7) return;
+
+    pushAztecState();
+
+    // Build adjacency list
+    std::map<int, std::vector<std::pair<int, int>>> adjacency;  // vertex -> [(neighbor, edgeIdx)]
+    for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
+        adjacency[g_aztecEdges[eIdx].v1].push_back({g_aztecEdges[eIdx].v2, (int)eIdx});
+        adjacency[g_aztecEdges[eIdx].v2].push_back({g_aztecEdges[eIdx].v1, (int)eIdx});
+    }
+
+    // Find green vertices (inVgauge == true)
+    std::vector<int> greenVertices;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (g_aztecVertices[idx].inVgauge) {
+            greenVertices.push_back((int)idx);
+        }
+    }
+
+    // For each green vertex, split into two vertices
+    // The split creates two vertices slightly offset from the original position
+    // with a weight-1 edge between them
+    const double splitOffset = 0.15;  // How much to offset the split vertices
+
+    std::vector<AztecVertex> newVertices = g_aztecVertices;
+    std::vector<AztecEdge> newEdges = g_aztecEdges;
+
+    // Map from old vertex index to pair of new vertex indices (for split vertices)
+    std::map<int, std::pair<int, int>> splitMap;
+
+    for (int greenIdx : greenVertices) {
+        double x = g_aztecVertices[greenIdx].x;
+        double y = g_aztecVertices[greenIdx].y;
+
+        // Determine split direction based on which diagonal the black faces are on
+        // If faces are NE-SW, split along that diagonal
+        // If faces are NW-SE, split along that diagonal
+
+        // Create two new vertices
+        int newIdx1 = (int)newVertices.size();
+        int newIdx2 = (int)newVertices.size() + 1;
+
+        AztecVertex v1 = g_aztecVertices[greenIdx];
+        AztecVertex v2 = g_aztecVertices[greenIdx];
+
+        // Offset along the diagonal between black faces
+        v1.x = x - splitOffset;
+        v1.y = y - splitOffset;
+        v2.x = x + splitOffset;
+        v2.y = y + splitOffset;
+
+        v1.inVgauge = false;
+        v2.inVgauge = false;
+
+        newVertices.push_back(v1);
+        newVertices.push_back(v2);
+
+        // Add edge between split vertices with weight 1
+        AztecEdge splitEdge;
+        splitEdge.v1 = newIdx1;
+        splitEdge.v2 = newIdx2;
+        splitEdge.weight = 1.0;
+        splitEdge.isHorizontal = false;
+        splitEdge.gaugeTransformed = false;
+        newEdges.push_back(splitEdge);
+
+        splitMap[greenIdx] = {newIdx1, newIdx2};
+    }
+
+    // Redirect edges from original green vertices to split vertices
+    // Edges going "up-right" go to newIdx2, edges going "down-left" go to newIdx1
+    for (auto& e : newEdges) {
+        // Check if v1 was split
+        if (splitMap.count(e.v1)) {
+            auto [newIdx1, newIdx2] = splitMap[e.v1];
+            double ox = g_aztecVertices[e.v1].x;
+            double oy = g_aztecVertices[e.v1].y;
+            double nx = newVertices[e.v2].x;
+            double ny = newVertices[e.v2].y;
+            // If neighbor is up-right, connect to newIdx2
+            if (nx > ox || ny > oy) {
+                e.v1 = newIdx2;
+            } else {
+                e.v1 = newIdx1;
+            }
+        }
+        // Check if v2 was split
+        if (splitMap.count(e.v2)) {
+            auto [newIdx1, newIdx2] = splitMap[e.v2];
+            double ox = g_aztecVertices[e.v2].x;
+            double oy = g_aztecVertices[e.v2].y;
+            double nx = newVertices[e.v1].x;
+            double ny = newVertices[e.v1].y;
+            // If neighbor is up-right, connect to newIdx2
+            if (nx > ox || ny > oy) {
+                e.v2 = newIdx2;
+            } else {
+                e.v2 = newIdx1;
+            }
+        }
+    }
+
+    // Remove original green vertices
+    std::vector<AztecVertex> finalVertices;
+    std::map<int, int> oldToNew;
+    for (size_t idx = 0; idx < newVertices.size(); idx++) {
+        if (idx < g_aztecVertices.size() && splitMap.count((int)idx)) {
+            continue;  // Skip original green vertex
+        }
+        oldToNew[(int)idx] = (int)finalVertices.size();
+        finalVertices.push_back(newVertices[idx]);
+    }
+
+    // Remap edge indices
+    std::vector<AztecEdge> finalEdges;
+    for (auto& e : newEdges) {
+        if (oldToNew.count(e.v1) && oldToNew.count(e.v2)) {
+            e.v1 = oldToNew[e.v1];
+            e.v2 = oldToNew[e.v2];
+            if (e.v1 != e.v2) {
+                finalEdges.push_back(e);
+            }
+        }
+    }
+
+    g_aztecVertices = finalVertices;
+    g_aztecEdges = finalEdges;
+
+    // Clear highlighting
+    for (auto& v : g_aztecVertices) {
+        v.inVgauge = false;
+        v.toContract = false;
+    }
+
+    g_aztecReductionStep = 8;
 }
 
 // Step down: advance to next reduction step
@@ -1462,7 +1545,9 @@ static void aztecStepDown() {
         case 2: aztecStep3_Contract(); break;
         case 3: aztecStep4_BlackContraction(); break;
         case 4: aztecStep5_WhiteContraction(); break;
-        case 5: aztecStep6_MarkDiagonalVertices(); break;
+        case 5: aztecStep6_Shading(); break;
+        case 6: aztecStep7_MarkDiagonalVertices(); break;
+        case 7: aztecStep8_SplitVertices(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -1668,7 +1753,7 @@ int canAztecStepUp() {
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
     // Allow stepping down through all implemented steps
-    return (g_aztecReductionStep < 6) ? 1 : 0;
+    return (g_aztecReductionStep < 8) ? 1 : 0;
 }
 
 } // extern "C"

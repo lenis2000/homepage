@@ -31,11 +31,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
       <!-- LEFT: Aztec diamond graph -->
       <div style="flex: 1; min-width: 350px;">
-        <h4 style="margin: 0 0 10px 0;">Aztec diamond graph G<sub>k</sub></h4>
-        <div style="margin-bottom: 10px;">
-          <button id="aztec-down-btn">← Step down</button>
-          <span style="margin: 0 10px;"><span id="aztec-graph-label">A<sub>6</sub></span></span>
-          <button id="aztec-up-btn">Step up →</button>
+        <h4 style="margin: 0 0 5px 0;">Aztec diamond graph G<sub>k</sub></h4>
+        <div style="margin-bottom: 5px; text-align: center;"><span id="aztec-graph-label">A<sub>6</sub></span></div>
+        <div style="margin-bottom: 10px; text-align: center;">
+          <button id="aztec-down-btn" style="width: 100px;">← Step down</button>
+          <button id="aztec-up-btn" style="width: 100px; margin-left: 10px;">Step up →</button>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -253,26 +253,21 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // Update Aztec UI state (graph label, button states)
   function updateAztecUI() {
-    // Step labels: 0=original, 1=black gauge done, 2=white gauge done, 3=contracted
-    let label;
-    if (aztecReductionStep === 0) {
-      label = `A<sub>${aztecLevel}</sub>`;
-    } else if (aztecReductionStep === 1) {
-      label = `A<sub>${aztecLevel}</sub> (black gauge done)`;
-    } else if (aztecReductionStep === 2) {
-      label = `A<sub>${aztecLevel}</sub> (white gauge done)`;
-    } else if (aztecReductionStep === 3) {
-      label = `A'<sub>${aztecLevel}</sub> (contracted)`;
-    } else if (aztecReductionStep === 4) {
-      label = `A'<sub>${aztecLevel}</sub> (black contraction)`;
-    } else if (aztecReductionStep === 5) {
-      label = `A'<sub>${aztecLevel}</sub> (white contraction)`;
-    } else if (aztecReductionStep === 6) {
-      label = `A'<sub>${aztecLevel}</sub> (diagonal vertices marked)`;
-    } else {
-      label = `A<sub>${aztecLevel}</sub> (step ${aztecReductionStep})`;
-    }
-    document.getElementById('aztec-graph-label').innerHTML = label;
+    // Step labels
+    const stepNames = [
+      'original',           // 0
+      'black gauge',        // 1
+      'white gauge',        // 2
+      'contracted',         // 3
+      'black contr.',       // 4
+      'white contr.',       // 5
+      'fold 1: shaded',     // 6
+      'fold 2: diagonal',   // 7
+      'fold 3: split'       // 8
+    ];
+    const stepName = stepNames[aztecReductionStep] || `step ${aztecReductionStep}`;
+    const prefix = aztecReductionStep >= 3 ? "A'" : "A";
+    document.getElementById('aztec-graph-label').innerHTML = `${prefix}<sub>${aztecLevel}</sub> (${stepName})`;
 
     // Update button states
     if (wasmReady) {
@@ -332,8 +327,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     const showWeights = document.getElementById('show-aztec-weights-chk').checked;
 
-    // Draw grey quadrangular faces (white vertex at top-left) for step 5+
-    if (aztecReductionStep >= 5) {
+    // Draw grey quadrangular faces (white vertex at top-left) for step 6+ (fold 1: shaded)
+    if (aztecReductionStep >= 6) {
       // Build vertex position map
       const vertexMap = new Map();
       for (const v of aztecVertices) {
@@ -509,9 +504,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Draw level info
     aztecCtx.fillStyle = '#333';
     aztecCtx.font = '11px sans-serif';
-    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contraction', 'white contraction', 'diagonal marked'];
+    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contr.', 'white contr.', 'fold 1', 'fold 2', 'fold 3'];
     const stepLabel = stepLabels[aztecReductionStep] || 'unknown';
-    aztecCtx.fillText(`A_${k} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
+    const prefix = aztecReductionStep >= 3 ? "A'" : "A";
+    aztecCtx.fillText(`${prefix}_${k} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
   }
 
   // Aztec graph step down: advance reduction step
