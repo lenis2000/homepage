@@ -1016,14 +1016,20 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         stepwiseCtx.stroke();
       }
 
-      // Draw T(j,k) label
+      // Draw T(j,k) label only for valid T_m graph vertices:
+      // Interior vertices (|i|+|j| < m) or the 4 corner vertices (±m, 0) and (0, ±m)
       if (showLabels) {
-        const fontSize = Math.max(8, Math.min(11, scale / 80));
-        stepwiseCtx.font = `${fontSize}px sans-serif`;
-        stepwiseCtx.fillStyle = isSelected ? '#cc0000' : (isDep ? '#0044cc' : '#333');
-        stepwiseCtx.textAlign = 'center';
-        stepwiseCtx.textBaseline = 'bottom';
-        stepwiseCtx.fillText(`T(${v.x},${v.y})`, x, y - vertexRadius - 2);
+        const absSum = Math.abs(v.x) + Math.abs(v.y);
+        const isInterior = absSum < m;
+        const isCorner = (absSum === m) && (v.x === 0 || v.y === 0);
+        if (isInterior || isCorner) {
+          const fontSize = Math.max(8, Math.min(11, scale / 80));
+          stepwiseCtx.font = `${fontSize}px sans-serif`;
+          stepwiseCtx.fillStyle = isSelected ? '#cc0000' : (isDep ? '#0044cc' : '#333');
+          stepwiseCtx.textAlign = 'center';
+          stepwiseCtx.textBaseline = 'bottom';
+          stepwiseCtx.fillText(`T(${v.x},${v.y})`, x, y - vertexRadius - 2);
+        }
       }
     }
 
