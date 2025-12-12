@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 #include <map>
 #include <set>
 #include <algorithm>
@@ -841,14 +842,26 @@ static void aztecStep1_GaugeTransform() {
         }
     }
 
+    // Log all edges after black gauge
+    printf("=== AFTER BLACK GAUGE (Step 1) ===\n");
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        int v1 = g_aztecEdges[i].v1;
+        int v2 = g_aztecEdges[i].v2;
+        double x1 = g_aztecVertices[v1].x, y1 = g_aztecVertices[v1].y;
+        double x2 = g_aztecVertices[v2].x, y2 = g_aztecVertices[v2].y;
+        printf("Edge (%.1f,%.1f)-(%.1f,%.1f): w=%.10f %s\n",
+               x1, y1, x2, y2, g_aztecEdges[i].weight,
+               g_aztecEdges[i].gaugeTransformed ? "[T]" : "");
+    }
+
     g_aztecReductionStep = 1;
 }
 
 // STEP 2: WHITE gauge transform
-// WHITE vertices on diagonals i + j = ±(n-1), excluding endpoints:
-// - Positive: i + j = n-1, with 0 < i < n-1
-// - Negative: i + j = -(n-1), with -(n-1) < i < 0
-// For n=4: 2 vertices per diagonal (n-2 total per side)
+// Goal: Equalize edges at BLACK boundary vertices on x+y = ±n (where x,y are half-integer coords)
+// In integer coords (i,j) where x=i+0.5, y=j+0.5: these are vertices with i+j = n-1 or i+j = -(n+1)
+// For A_{n+1}: boundary BLACK vertices have x+y = n, i.e., i+j+1 = n, i.e., i+j = n-1
+// Each BLACK boundary vertex has 2 WHITE neighbors; we gauge one to equalize its two edges.
 static void aztecStep2_WhiteGaugeTransform() {
     if (g_aztecReductionStep != 1) return;
 
@@ -873,48 +886,53 @@ static void aztecStep2_WhiteGaugeTransform() {
 
     // Build edge lookup: vertex -> [(neighbor, edgeIdx)]
     std::map<int, std::vector<std::pair<int, int>>> adjacency;
-    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        int v1 = g_aztecEdges[i].v1;
-        int v2 = g_aztecEdges[i].v2;
-        adjacency[v1].push_back({v2, (int)i});
-        adjacency[v2].push_back({v1, (int)i});
+    for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
+        int v1 = g_aztecEdges[eIdx].v1;
+        int v2 = g_aztecEdges[eIdx].v2;
+        adjacency[v1].push_back({v2, (int)eIdx});
+        adjacency[v2].push_back({v1, (int)eIdx});
     }
 
-    // Find WHITE reference vertices for "white" gauge transform (Step 2)
-    // These are WHITE vertices where we want pairs of edges to become equal
-    // Positive diagonal: i + j = n-2, with 0 <= i <= n-2
-    // Negative diagonal: i + j = -n, with -(n-1) <= i <= -1
-    // For n=4: i+j=2 (3 vertices) and i+j=-4 (3 vertices) = 2(n-1) total
-    struct WhiteRefVertex {
+    // Find BLACK boundary vertices on x+y = n (positive) and x+y = -n (negative)
+    // x+y = n means (i+0.5) + (j+0.5) = n, i.e., i+j = n-1
+    // x+y = -n means i+j = -n-1
+    struct BlackBoundaryVertex {
         int idx;
         int i, j;
         bool isPositiveDiag;
     };
-    std::vector<WhiteRefVertex> positiveDiagVertices, negativeDiagVertices;
+    std::vector<BlackBoundaryVertex> positiveDiagVertices, negativeDiagVertices;
+
+    printf("Looking for BLACK boundary vertices on x+y = %d and x+y = %d\n", n, -n);
 
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
-        if (!g_aztecVertices[idx].isWhite) continue;  // Only WHITE vertices
+        if (g_aztecVertices[idx].isWhite) continue;  // Only BLACK vertices
 
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
+        double x = g_aztecVertices[idx].x;
+        double y = g_aztecVertices[idx].y;
+        double sum = x + y;
 
-        // Positive diagonal: i + j = n-2, with 0 <= i <= n-2
-        if (i + j == (n - 2) && i >= 0 && i <= (n - 2)) {
+        // Positive diagonal: x + y = n
+        if (std::abs(sum - n) < 0.01) {
             positiveDiagVertices.push_back({(int)idx, i, j, true});
             g_aztecVertices[idx].inVgauge = true;
+            printf("  Found positive: (%d,%d) = (%.1f,%.1f), x+y=%.1f\n", i, j, x, y, sum);
         }
-        // Negative diagonal: i + j = -n, with -(n-1) <= i <= -1
-        else if (i + j == -n && i >= -(n - 1) && i <= -1) {
+        // Negative diagonal: x + y = -n
+        else if (std::abs(sum + n) < 0.01) {
             negativeDiagVertices.push_back({(int)idx, i, j, false});
             g_aztecVertices[idx].inVgauge = true;
+            printf("  Found negative: (%d,%d) = (%.1f,%.1f), x+y=%.1f\n", i, j, x, y, sum);
         }
     }
 
-    // Sort: positive by i ascending, negative by i descending
+    // Sort: positive by i ascending (from corner to corner), negative by i descending
     std::sort(positiveDiagVertices.begin(), positiveDiagVertices.end(),
-              [](const WhiteRefVertex& a, const WhiteRefVertex& b) { return a.i < b.i; });
+              [](const BlackBoundaryVertex& a, const BlackBoundaryVertex& b) { return a.i < b.i; });
     std::sort(negativeDiagVertices.begin(), negativeDiagVertices.end(),
-              [](const WhiteRefVertex& a, const WhiteRefVertex& b) { return a.i > b.i; });
+              [](const BlackBoundaryVertex& a, const BlackBoundaryVertex& b) { return a.i > b.i; });
 
     // Helper to find edge index
     auto findEdge = [&adjacency](int v1, int v2) -> int {
@@ -924,94 +942,198 @@ static void aztecStep2_WhiteGaugeTransform() {
         return -1;
     };
 
-    // Process positive diagonal (i + j = n-2)
-    // For white vertex at (i, j), we want edge to (i+1, j) = edge to (i, j+1)
-    // Reference edge: white—(i, j+1) vertical up
-    // Edge to equalize: white—(i+1, j) horizontal right
-    // Apply gauge to BLACK vertex at (i+1, j)
-    for (const auto& wv : positiveDiagVertices) {
-        int wIdx = wv.idx;  // white reference vertex
-        int i = wv.i, j = wv.j;
+    // Process positive diagonal (x + y = n)
+    // For BLACK vertex at (i, j), its two WHITE neighbors are at (i-1, j) and (i, j-1)
+    // Both are on x+y = n-1 (one step toward interior)
+    // Reference = edge to (i-1, j) (toward left/previous)
+    // Equalize = edge to (i, j-1) (toward bottom)
+    // Gauge vertex = (i, j-1)
+    printf("Processing %zu positive diagonal BLACK boundary vertices\n", positiveDiagVertices.size());
+    for (const auto& bv : positiveDiagVertices) {
+        int bIdx = bv.idx;
+        int i = bv.i, j = bv.j;
 
-        // Reference: edge from white to (i, j+1)
-        int refNeighborI = i, refNeighborJ = j + 1;
-        auto refIt = vertexIndex.find(makeIntKey(refNeighborI, refNeighborJ));
-        if (refIt == vertexIndex.end()) continue;
-        int refNeighborIdx = refIt->second;
+        printf("Processing BLACK boundary vertex (%d,%d) = (%.1f,%.1f)\n", i, j, i+0.5, j+0.5);
 
-        int refEdgeIdx = findEdge(wIdx, refNeighborIdx);
-        if (refEdgeIdx < 0) continue;
+        // Two neighbors: (i-1, j) and (i, j-1)
+        int n1i = i - 1, n1j = j;     // neighbor 1 (left)
+        int n2i = i, n2j = j - 1;     // neighbor 2 (bottom)
 
-        // Edge to equalize: from white to (i+1, j)
-        int gaugeNeighborI = i + 1, gaugeNeighborJ = j;
-        auto gaugeIt = vertexIndex.find(makeIntKey(gaugeNeighborI, gaugeNeighborJ));
-        if (gaugeIt == vertexIndex.end()) continue;
-        int gaugeNeighborIdx = gaugeIt->second;
+        auto n1It = vertexIndex.find(makeIntKey(n1i, n1j));
+        auto n2It = vertexIndex.find(makeIntKey(n2i, n2j));
 
-        int edgeToEqualizeIdx = findEdge(wIdx, gaugeNeighborIdx);
-        if (edgeToEqualizeIdx < 0) continue;
+        if (n1It == vertexIndex.end()) {
+            printf("  Neighbor 1 (%d,%d) not found\n", n1i, n1j);
+            continue;
+        }
+        if (n2It == vertexIndex.end()) {
+            printf("  Neighbor 2 (%d,%d) not found\n", n2i, n2j);
+            continue;
+        }
 
-        // Skip if edge was already transformed
-        if (g_aztecEdges[edgeToEqualizeIdx].gaugeTransformed) continue;
+        int n1Idx = n1It->second;
+        int n2Idx = n2It->second;
 
-        double refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
-        double edgeToEqualizeWeight = g_aztecEdges[edgeToEqualizeIdx].weight;
+        int edge1Idx = findEdge(bIdx, n1Idx);
+        int edge2Idx = findEdge(bIdx, n2Idx);
 
-        if (edgeToEqualizeWeight < 1e-10) continue;
-        double lambda = refEdgeWeight / edgeToEqualizeWeight;
+        if (edge1Idx < 0 || edge2Idx < 0) {
+            printf("  Edge not found: edge1=%d, edge2=%d\n", edge1Idx, edge2Idx);
+            continue;
+        }
 
-        // Apply λ to all edges at the BLACK gauge neighbor, skip already-transformed
+        double edge1Weight = g_aztecEdges[edge1Idx].weight;
+        double edge2Weight = g_aztecEdges[edge2Idx].weight;
+
+        printf("  Edge to (%d,%d): w=%.6f %s\n", n1i, n1j, edge1Weight,
+               g_aztecEdges[edge1Idx].gaugeTransformed ? "[T]" : "");
+        printf("  Edge to (%d,%d): w=%.6f %s\n", n2i, n2j, edge2Weight,
+               g_aztecEdges[edge2Idx].gaugeTransformed ? "[T]" : "");
+
+        // Determine which edge to use as reference (already transformed) and which to equalize
+        bool edge1Trans = g_aztecEdges[edge1Idx].gaugeTransformed;
+        bool edge2Trans = g_aztecEdges[edge2Idx].gaugeTransformed;
+
+        int refEdgeIdx, eqEdgeIdx, gaugeNeighborIdx;
+        if (edge1Trans && !edge2Trans) {
+            // Edge 1 is reference, gauge neighbor 2
+            refEdgeIdx = edge1Idx;
+            eqEdgeIdx = edge2Idx;
+            gaugeNeighborIdx = n2Idx;
+            printf("  Using edge1 as reference, gauging neighbor2 (%d,%d)\n", n2i, n2j);
+        } else if (edge2Trans && !edge1Trans) {
+            // Edge 2 is reference, gauge neighbor 1
+            refEdgeIdx = edge2Idx;
+            eqEdgeIdx = edge1Idx;
+            gaugeNeighborIdx = n1Idx;
+            printf("  Using edge2 as reference, gauging neighbor1 (%d,%d)\n", n1i, n1j);
+        } else if (!edge1Trans && !edge2Trans) {
+            // Neither transformed: use edge1 as reference, gauge neighbor 2
+            refEdgeIdx = edge1Idx;
+            eqEdgeIdx = edge2Idx;
+            gaugeNeighborIdx = n2Idx;
+            printf("  Neither transformed, using edge1 as ref, gauging neighbor2 (%d,%d)\n", n2i, n2j);
+        } else {
+            // Both already transformed - skip
+            printf("  Both edges already transformed, skipping\n");
+            continue;
+        }
+
+        double refWeight = g_aztecEdges[refEdgeIdx].weight;
+        double eqWeight = g_aztecEdges[eqEdgeIdx].weight;
+
+        if (eqWeight < 1e-10) continue;
+        double lambda = refWeight / eqWeight;
+
+        printf("  lambda = %.6f / %.6f = %.6f\n", refWeight, eqWeight, lambda);
+
+        // Apply λ to all edges at the gauge neighbor
         for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
             if (!g_aztecEdges[eIdx].gaugeTransformed) {
+                printf("    Multiplying edge %d by %.6f\n", eIdx, lambda);
                 g_aztecEdges[eIdx].weight *= lambda;
                 g_aztecEdges[eIdx].gaugeTransformed = true;
+            } else {
+                printf("    Skipping edge %d (already transformed)\n", eIdx);
             }
         }
     }
 
-    // Process negative diagonal (i + j = -n)
-    // For white vertex at (i, j), we want edge to (i-1, j) = edge to (i, j-1)
-    // Reference edge: white—(i, j-1) vertical down
-    // Edge to equalize: white—(i-1, j) horizontal left
-    // Apply gauge to BLACK vertex at (i-1, j)
-    for (const auto& wv : negativeDiagVertices) {
-        int wIdx = wv.idx;  // white reference vertex
-        int i = wv.i, j = wv.j;
+    // Process negative diagonal (x + y = -n)
+    // For BLACK vertex at (i, j), its two WHITE neighbors are at (i+1, j) and (i, j+1)
+    printf("Processing %zu negative diagonal BLACK boundary vertices\n", negativeDiagVertices.size());
+    for (const auto& bv : negativeDiagVertices) {
+        int bIdx = bv.idx;
+        int i = bv.i, j = bv.j;
 
-        // Reference: edge from white to (i, j-1)
-        int refNeighborI = i, refNeighborJ = j - 1;
-        auto refIt = vertexIndex.find(makeIntKey(refNeighborI, refNeighborJ));
-        if (refIt == vertexIndex.end()) continue;
-        int refNeighborIdx = refIt->second;
+        printf("Processing BLACK boundary vertex (%d,%d) = (%.1f,%.1f)\n", i, j, i+0.5, j+0.5);
 
-        int refEdgeIdx = findEdge(wIdx, refNeighborIdx);
-        if (refEdgeIdx < 0) continue;
+        // Two neighbors: (i+1, j) and (i, j+1)
+        int n1i = i + 1, n1j = j;     // neighbor 1 (right)
+        int n2i = i, n2j = j + 1;     // neighbor 2 (top)
 
-        // Edge to equalize: from white to (i-1, j)
-        int gaugeNeighborI = i - 1, gaugeNeighborJ = j;
-        auto gaugeIt = vertexIndex.find(makeIntKey(gaugeNeighborI, gaugeNeighborJ));
-        if (gaugeIt == vertexIndex.end()) continue;
-        int gaugeNeighborIdx = gaugeIt->second;
+        auto n1It = vertexIndex.find(makeIntKey(n1i, n1j));
+        auto n2It = vertexIndex.find(makeIntKey(n2i, n2j));
 
-        int edgeToEqualizeIdx = findEdge(wIdx, gaugeNeighborIdx);
-        if (edgeToEqualizeIdx < 0) continue;
+        if (n1It == vertexIndex.end() || n2It == vertexIndex.end()) {
+            printf("  Neighbor not found\n");
+            continue;
+        }
 
-        // Skip if edge was already transformed
-        if (g_aztecEdges[edgeToEqualizeIdx].gaugeTransformed) continue;
+        int n1Idx = n1It->second;
+        int n2Idx = n2It->second;
 
-        double refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
-        double edgeToEqualizeWeight = g_aztecEdges[edgeToEqualizeIdx].weight;
+        int edge1Idx = findEdge(bIdx, n1Idx);
+        int edge2Idx = findEdge(bIdx, n2Idx);
 
-        if (edgeToEqualizeWeight < 1e-10) continue;
-        double lambda = refEdgeWeight / edgeToEqualizeWeight;
+        if (edge1Idx < 0 || edge2Idx < 0) continue;
 
-        // Apply λ to all edges at the BLACK gauge neighbor, skip already-transformed
+        double edge1Weight = g_aztecEdges[edge1Idx].weight;
+        double edge2Weight = g_aztecEdges[edge2Idx].weight;
+
+        printf("  Edge to (%d,%d): w=%.6f %s\n", n1i, n1j, edge1Weight,
+               g_aztecEdges[edge1Idx].gaugeTransformed ? "[T]" : "");
+        printf("  Edge to (%d,%d): w=%.6f %s\n", n2i, n2j, edge2Weight,
+               g_aztecEdges[edge2Idx].gaugeTransformed ? "[T]" : "");
+
+        bool edge1Trans = g_aztecEdges[edge1Idx].gaugeTransformed;
+        bool edge2Trans = g_aztecEdges[edge2Idx].gaugeTransformed;
+
+        int refEdgeIdx, eqEdgeIdx, gaugeNeighborIdx;
+        if (edge1Trans && !edge2Trans) {
+            refEdgeIdx = edge1Idx;
+            eqEdgeIdx = edge2Idx;
+            gaugeNeighborIdx = n2Idx;
+        } else if (edge2Trans && !edge1Trans) {
+            refEdgeIdx = edge2Idx;
+            eqEdgeIdx = edge1Idx;
+            gaugeNeighborIdx = n1Idx;
+        } else if (!edge1Trans && !edge2Trans) {
+            refEdgeIdx = edge1Idx;
+            eqEdgeIdx = edge2Idx;
+            gaugeNeighborIdx = n2Idx;
+        } else {
+            printf("  Both edges already transformed, skipping\n");
+            continue;
+        }
+
+        double refWeight = g_aztecEdges[refEdgeIdx].weight;
+        double eqWeight = g_aztecEdges[eqEdgeIdx].weight;
+
+        if (eqWeight < 1e-10) continue;
+        double lambda = refWeight / eqWeight;
+
+        printf("  lambda = %.6f\n", lambda);
+
         for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
             if (!g_aztecEdges[eIdx].gaugeTransformed) {
+                printf("    Multiplying edge %d by %.6f\n", eIdx, lambda);
                 g_aztecEdges[eIdx].weight *= lambda;
                 g_aztecEdges[eIdx].gaugeTransformed = true;
+            } else {
+                printf("    Skipping edge %d (already transformed)\n", eIdx);
             }
         }
+    }
+
+    // Log all edges after white gauge
+    printf("=== AFTER WHITE GAUGE (Step 2) ===\n");
+    printf("BLACK boundary vertices on x+y=%d and x+y=%d:\n", n, -n);
+    for (const auto& bv : positiveDiagVertices) {
+        printf("  Positive: (%d,%d) = (%.1f,%.1f)\n", bv.i, bv.j, bv.i+0.5, bv.j+0.5);
+    }
+    for (const auto& bv : negativeDiagVertices) {
+        printf("  Negative: (%d,%d) = (%.1f,%.1f)\n", bv.i, bv.j, bv.i+0.5, bv.j+0.5);
+    }
+    printf("All edges:\n");
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        int v1 = g_aztecEdges[i].v1;
+        int v2 = g_aztecEdges[i].v2;
+        double x1 = g_aztecVertices[v1].x, y1 = g_aztecVertices[v1].y;
+        double x2 = g_aztecVertices[v2].x, y2 = g_aztecVertices[v2].y;
+        printf("Edge (%.1f,%.1f)-(%.1f,%.1f): w=%.10f %s\n",
+               x1, y1, x2, y2, g_aztecEdges[i].weight,
+               g_aztecEdges[i].gaugeTransformed ? "[T]" : "");
     }
 
     g_aztecReductionStep = 2;
