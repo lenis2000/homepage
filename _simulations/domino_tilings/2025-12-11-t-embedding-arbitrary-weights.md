@@ -14,6 +14,44 @@ code:
 I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
 </p>
 
+<details style="margin-bottom: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f8ff; border: 1px solid #9cf;">Definition of Perfect T-embedding</summary>
+  <div style="margin-top: 10px; padding: 15px; background: #fff; border: 1px solid #ddd; font-size: 14px; line-height: 1.6;">
+
+<p>The notion of a <em>t-embedding</em> (also known as a <em>Coulomb gauge</em>) was introduced in
+<a href="https://arxiv.org/abs/1810.05616">[KLRR]</a> and further developed in
+<a href="https://arxiv.org/abs/2001.11871">[CLR1]</a>, <a href="https://arxiv.org/abs/2109.06272">[CLR2]</a>.</p>
+
+<h5>Definition (T-embedding)</h5>
+<p>Let $\mathcal{G}$ be a weighted, finite, bipartite, planar graph with a marked outer face $f_{\mathrm{out}}$,
+and let $\mathcal{G}^*$ denote its <em>augmented dual graph</em>. A <strong>t-embedding</strong> of $\mathcal{G}$ is an
+embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
+<ol type="a">
+  <li>$\mathcal{T}$ is a proper embedding: edges are non-degenerate straight segments, inner faces are convex and do not overlap;</li>
+  <li><strong>Angle condition:</strong> For each inner vertex $v^*$ of $\mathcal{T}(\mathcal{G}^*)$, the sum of angles at corners corresponding to black faces equals $\pi$ (and similarly for white faces);</li>
+  <li><strong>Weight condition:</strong> For each inner face $f$ of $\mathcal{G}$ with face weight $X_f$, if $v^*$ denotes the corresponding dual vertex with neighbors $v^*_1, \ldots, v^*_{2d}$ listed in counterclockwise order, then
+    $$X_f = (-1)^{d+1} \prod_{k=1}^d \frac{\mathcal{T}(v^*) - \mathcal{T}(v^*_{2k-1})}{\mathcal{T}(v^*_{2k}) - \mathcal{T}(v^*)}.$$
+  </li>
+</ol>
+
+<h5>Definition (Perfect T-embedding) <a href="https://arxiv.org/abs/2109.06272">[CLR2]</a></h5>
+<p>A t-embedding $\mathcal{T}$ of a finite weighted planar bipartite graph $\mathcal{G}$ is called
+<strong>perfect</strong> if the following additional boundary conditions are satisfied:</p>
+<ol type="i">
+  <li>The outer face of $\mathcal{T}(\mathcal{G}^*)$ is a <em>tangential polygon</em>, i.e., it admits an inscribed circle;</li>
+  <li>For each outer vertex $v_k$ of $\mathcal{G}^*$, the edge connecting $v_k$ to its unique inner neighbor $v_{\mathrm{in},k}$ lies on the <em>angle bisector</em> of the corresponding corner of the tangential polygon. Equivalently, the line containing this edge passes through the center of the inscribed circle.</li>
+</ol>
+
+<h5>References</h5>
+<ul style="font-size: 13px;">
+  <li><strong>[CLR2]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Bipartite dimer model: perfect t-embeddings and Lorentz-minimal surfaces.</em> <a href="https://arxiv.org/abs/2109.06272">arXiv:2109.06272</a> (2021).</li>
+  <li><strong>[CLR1]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Dimer model and holomorphic functions on t-embeddings of planar graphs.</em> Proc. Lond. Math. Soc. 126(5):1656–1739 (2023). <a href="https://arxiv.org/abs/2001.11871">arXiv:2001.11871</a>.</li>
+  <li><strong>[KLRR]</strong> R. Kenyon, W. Y. Lam, S. Ramassamy, M. Russkikh. <em>Dimers and circle patterns.</em> Ann. Sci. Éc. Norm. Supér. 55(3):863–901 (2022). <a href="https://arxiv.org/abs/1810.05616">arXiv:1810.05616</a>.</li>
+</ul>
+
+  </div>
+</details>
+
 <div style="margin-bottom: 10px;">
   <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
