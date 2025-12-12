@@ -467,7 +467,7 @@ static HighPrecFloat getFaceWeightFromHistory(int level, int fx, int fy) {
 // The boundary rhombus is fixed for ALL levels m=1..n:
 //   T(-m,0) = -1,  T(m,0) = +1,  T(0,-m) = i*a,  T(0,m) = -i*a
 //
-// For arbitrary weights, we use face weights c_{j,k,m} from the folding history
+// For arbitrary weights, we use face weights c_{j,k}^{(m)} from the folding history
 // instead of the uniform α, β, γ formulas.
 static void computeTembeddingRecurrence() {
     g_tEmbedding.clear();
@@ -507,15 +507,15 @@ static void computeTembeddingRecurrence() {
         )
     );
 
-    // Helper to get face weight c_{j,k} at level m
+    // Helper to get face weight c_{j,k}^{(m)} for the recurrence T_m -> T_{m+1}
     // faceWeightsHistory[0] = original size n
     // faceWeightsHistory[k] = size n-k
-    // When computing T at level m+1, we use face weights from the size-(m+1) diamond
-    // which is faceWeightsHistory[n - (m+1)] = faceWeightsHistory[n - m - 1]
+    // When computing T_{m+1}, we use face weights from the size-m diamond
+    // These are denoted c_{j,k}^{(m)} and stored at histIdx = n - m
     auto getFaceWeight = [&](int j, int k, int m) -> double {
-        // m is the source level, we're computing level m+1
-        // Face weights for level m+1 are at histIdx = n - (m+1)
-        int histIdx = n - m - 1;
+        // m is the source level, we're computing T_{m+1}
+        // c_{j,k}^{(m)} is stored at histIdx = n - m
+        int histIdx = n - m;
         if (histIdx < 0 || histIdx >= numLevels) return 1.0;
 
         std::ostringstream key;
@@ -611,7 +611,7 @@ static void computeTembeddingRecurrence() {
     storeTembeddingAtLevel(1);
 
     // 2) Fill T for m=1..(n-1) via the Berggren-Russkikh recurrence
-    // Using face weights c_{j,k,m} instead of α, β, γ
+    // Using face weights c_{j,k}^{(m)} from size-m diamond instead of α, β, γ
     for (int m = 1; m < n; m++) {
         Complex one(1.0, 0.0);
 

@@ -79,6 +79,50 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     <div id="vertex-info" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; min-height: 60px; font-family: monospace; font-size: 12px;">
       <em>Click on a vertex to see its formula and dependencies</em>
     </div>
+    <details style="margin-top: 15px;">
+      <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f5f5f5; border: 1px solid #ddd;">Recurrence formulas for T-embedding</summary>
+      <div style="margin-top: 10px; padding: 15px; background: #fff; border: 1px solid #ddd; font-size: 14px; line-height: 1.6;">
+        <p>The T-embedding $T_n$ is computed recursively from $T_1$ to $T_n$. At each level $m$, the graph $T_m$ has:</p>
+        <ul>
+          <li><strong>Interior vertices:</strong> $(j,k)$ with $|j|+|k| < m$</li>
+          <li><strong>Boundary corners:</strong> $(\pm m, 0)$ and $(0, \pm m)$</li>
+        </ul>
+
+        <h5 style="margin-top: 15px;">Boundary rhombus (fixed for all levels)</h5>
+        <p>Let $a = c_{0,0}^{(1)}$ be the final face weight at level 1. Define:</p>
+        $$h = a\sqrt{a^2+1}, \quad v = \sqrt{a^2+1}$$
+        <p>The four corners are fixed:</p>
+        $$T_m(-m,0) = -h, \quad T_m(m,0) = h, \quad T_m(0,-m) = iv, \quad T_m(0,m) = -iv$$
+
+        <h5 style="margin-top: 15px;">Recurrence: $T_{m+1}$ from $T_m$</h5>
+        <p>Face weight notation: $c = c_{j,k}^{(m)}$ is the face weight at position $(j,k)$ from the diamond of size $m$.</p>
+
+        <p><strong>Rule 1: Boundary corners</strong> ($|j|+|k| = m+1$, on axes)<br>
+        Fixed at the boundary rhombus vertices above.</p>
+
+        <p><strong>Rule 2: Axis boundary</strong> ($|j|=m$ or $|k|=m$, on axes)</p>
+        $$T_{m+1}(m, 0) = \frac{T_m(m, 0) + c \cdot T_m(m-1, 0)}{1+c}$$
+        $$T_{m+1}(-m, 0) = \frac{T_m(-m, 0) + c \cdot T_m(-m+1, 0)}{1+c}$$
+        $$T_{m+1}(0, m) = \frac{c \cdot T_m(0, m) + T_m(0, m-1)}{1+c}$$
+        $$T_{m+1}(0, -m) = \frac{c \cdot T_m(0, -m) + T_m(0, -m+1)}{1+c}$$
+
+        <p><strong>Rule 3: Diagonal boundary</strong> ($|j|+|k|=m$, $j\neq 0$, $k\neq 0$)</p>
+        <p>Upper-right ($j>0$, $k=m-j$):</p>
+        $$T_{m+1}(j,k) = \frac{T_m(j-1,k) + c \cdot T_m(j,k-1)}{1+c}$$
+        <p>Lower-right ($j>0$, $k=-(m-j)$):</p>
+        $$T_{m+1}(j,k) = \frac{T_m(j-1,k) + c \cdot T_m(j,k+1)}{1+c}$$
+        <p>Upper-left ($j<0$, $k=m+j$):</p>
+        $$T_{m+1}(j,k) = \frac{c \cdot T_m(j,k-1) + T_m(j+1,k)}{1+c}$$
+        <p>Lower-left ($j<0$, $k=-(m+j)$):</p>
+        $$T_{m+1}(j,k) = \frac{c \cdot T_m(j,k+1) + T_m(j+1,k)}{1+c}$$
+
+        <p><strong>Rule 4: Interior pass-through</strong> ($|j|+|k| < m$, $j+k+m$ even)</p>
+        $$T_{m+1}(j,k) = T_m(j,k)$$
+
+        <p><strong>Rule 5: Interior recurrence</strong> ($|j|+|k| < m$, $j+k+m$ odd)</p>
+        $$T_{m+1}(j,k) = -T_m(j,k) + \frac{T_{m+1}(j-1,k) + T_{m+1}(j+1,k) + c\bigl(T_{m+1}(j,k+1) + T_{m+1}(j,k-1)\bigr)}{1+c}$$
+      </div>
+    </details>
   </div>
 </details>
 
@@ -1056,33 +1100,33 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
       // Rule 2: Axis boundary - positions on the axes (j=±m, k=0) or (j=0, k=±m)
       // Left: T_{m+1}(-m, 0) = (T_m(-m, 0) + c·T_m(-m+1, 0)) / (1+c)
-      'boundary_left': `<strong>Left axis boundary</strong> (j = -m)<br>T<sub>${level}</sub>(${j},0) = (T<sub>${m}</sub>(${j},0) + c·T<sub>${m}</sub>(${j+1},0)) / (1+c)<br>c = c<sub>${j},0,${m}</sub> = ${c}`,
+      'boundary_left': `<strong>Left axis boundary</strong> (j = -m)<br>T<sub>${level}</sub>(${j},0) = (T<sub>${m}</sub>(${j},0) + c·T<sub>${m}</sub>(${j+1},0)) / (1+c)<br>c = c<sub>${j},0</sub><sup>(${m})</sup> = ${c}`,
 
       // Right: T_{m+1}(m, 0) = (T_m(m, 0) + c·T_m(m-1, 0)) / (1+c)
-      'boundary_right': `<strong>Right axis boundary</strong> (j = m)<br>T<sub>${level}</sub>(${j},0) = (T<sub>${m}</sub>(${j},0) + c·T<sub>${m}</sub>(${j-1},0)) / (1+c)<br>c = c<sub>${j},0,${m}</sub> = ${c}`,
+      'boundary_right': `<strong>Right axis boundary</strong> (j = m)<br>T<sub>${level}</sub>(${j},0) = (T<sub>${m}</sub>(${j},0) + c·T<sub>${m}</sub>(${j-1},0)) / (1+c)<br>c = c<sub>${j},0</sub><sup>(${m})</sup> = ${c}`,
 
       // Top: T_{m+1}(0, m) = (c·T_m(0, m) + T_m(0, m-1)) / (1+c)
-      'boundary_top': `<strong>Top axis boundary</strong> (k = m)<br>T<sub>${level}</sub>(0,${k}) = (c·T<sub>${m}</sub>(0,${k}) + T<sub>${m}</sub>(0,${k-1})) / (1+c)<br>c = c<sub>0,${k},${m}</sub> = ${c}`,
+      'boundary_top': `<strong>Top axis boundary</strong> (k = m)<br>T<sub>${level}</sub>(0,${k}) = (c·T<sub>${m}</sub>(0,${k}) + T<sub>${m}</sub>(0,${k-1})) / (1+c)<br>c = c<sub>0,${k}</sub><sup>(${m})</sup> = ${c}`,
 
       // Bottom: T_{m+1}(0, -m) = (c·T_m(0, -m) + T_m(0, -m+1)) / (1+c)
-      'boundary_bottom': `<strong>Bottom axis boundary</strong> (k = -m)<br>T<sub>${level}</sub>(0,${k}) = (c·T<sub>${m}</sub>(0,${k}) + T<sub>${m}</sub>(0,${k+1})) / (1+c)<br>c = c<sub>0,${k},${m}</sub> = ${c}`,
+      'boundary_bottom': `<strong>Bottom axis boundary</strong> (k = -m)<br>T<sub>${level}</sub>(0,${k}) = (c·T<sub>${m}</sub>(0,${k}) + T<sub>${m}</sub>(0,${k+1})) / (1+c)<br>c = c<sub>0,${k}</sub><sup>(${m})</sup> = ${c}`,
 
       // Rule 3: Diagonal boundary - positions where |j|+|k|=m (excluding axes)
       // Upper-right: j > 0, k = m - j
       // T_{m+1}(j, m-j) = (T_m(j-1, m-j) + c·T_m(j, m-j-1)) / (1+c)
-      'diag_upper_right': `<strong>Diagonal boundary (upper-right)</strong><br>|j|+|k| = ${m}, j > 0, k > 0<br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k-1})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+      'diag_upper_right': `<strong>Diagonal boundary (upper-right)</strong><br>|j|+|k| = ${m}, j > 0, k > 0<br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k-1})) / (1+c)<br>c = c<sub>${j},${k}</sub><sup>(${m})</sup> = ${c}`,
 
       // Lower-right: j > 0, k = -(m - j)
       // T_{m+1}(j, -(m-j)) = (T_m(j-1, -(m-j)) + c·T_m(j, -(m-j)+1)) / (1+c)
-      'diag_lower_right': `<strong>Diagonal boundary (lower-right)</strong><br>|j|+|k| = ${m}, j > 0, k < 0<br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k+1})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+      'diag_lower_right': `<strong>Diagonal boundary (lower-right)</strong><br>|j|+|k| = ${m}, j > 0, k < 0<br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k+1})) / (1+c)<br>c = c<sub>${j},${k}</sub><sup>(${m})</sup> = ${c}`,
 
       // Upper-left: j < 0, k = m + j
       // T_{m+1}(j, m+j) = (c·T_m(j, m+j-1) + T_m(j+1, m+j)) / (1+c)
-      'diag_upper_left': `<strong>Diagonal boundary (upper-left)</strong><br>|j|+|k| = ${m}, j < 0, k > 0<br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k-1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+      'diag_upper_left': `<strong>Diagonal boundary (upper-left)</strong><br>|j|+|k| = ${m}, j < 0, k > 0<br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k-1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = c<sub>${j},${k}</sub><sup>(${m})</sup> = ${c}`,
 
       // Lower-left: j < 0, k = -(m + j)
       // T_{m+1}(j, -(m+j)) = (c·T_m(j, -(m+j)+1) + T_m(j+1, -(m+j))) / (1+c)
-      'diag_lower_left': `<strong>Diagonal boundary (lower-left)</strong><br>|j|+|k| = ${m}, j < 0, k < 0<br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k+1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+      'diag_lower_left': `<strong>Diagonal boundary (lower-left)</strong><br>|j|+|k| = ${m}, j < 0, k < 0<br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k+1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = c<sub>${j},${k}</sub><sup>(${m})</sup> = ${c}`,
 
       // Rule 4: Interior pass-through for j+k+m even
       // T_{m+1}(j,k) = T_m(j,k)
@@ -1090,7 +1134,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
       // Rule 5: Interior recurrence for j+k+m odd
       // T_{m+1}(j,k) = -T_m(j,k) + (T_{m+1}(j-1,k) + T_{m+1}(j+1,k) + c·(T_{m+1}(j,k+1) + T_{m+1}(j,k-1))) / (1+c)
-      'interior_recurrence': `<strong>Interior recurrence</strong> (j+k+m = ${j}+${k}+${m} = ${j+k+m} odd)<br>T<sub>${level}</sub>(${j},${k}) = -T<sub>${m}</sub>(${j},${k}) + (T<sub>${level}</sub>(${j-1},${k}) + T<sub>${level}</sub>(${j+1},${k}) + c·(T<sub>${level}</sub>(${j},${k+1}) + T<sub>${level}</sub>(${j},${k-1}))) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`
+      'interior_recurrence': `<strong>Interior recurrence</strong> (j+k+m = ${j}+${k}+${m} = ${j+k+m} odd)<br>T<sub>${level}</sub>(${j},${k}) = -T<sub>${m}</sub>(${j},${k}) + (T<sub>${level}</sub>(${j-1},${k}) + T<sub>${level}</sub>(${j+1},${k}) + c·(T<sub>${level}</sub>(${j},${k+1}) + T<sub>${level}</sub>(${j},${k-1}))) / (1+c)<br>c = c<sub>${j},${k}</sub><sup>(${m})</sup> = ${c}`
     };
 
     let html = typeDescriptions[v.type] || `Unknown type: ${v.type}`;
@@ -1108,11 +1152,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const clickY = (e.clientY - rect.top) * dpr;
 
     // Find closest vertex within threshold
+    // Only consider valid T_m graph vertices: interior (|i|+|j| < m) or corners (±m,0), (0,±m)
     const threshold = 15 * dpr;
     let closestVertex = null;
     let closestDist = Infinity;
+    const m = currentStep;
 
     for (const vp of vertexScreenPositions) {
+      // Filter to valid T_m graph vertices
+      const absSum = Math.abs(vp.vertex.x) + Math.abs(vp.vertex.y);
+      const isInterior = absSum < m;
+      const isCorner = (absSum === m) && (vp.vertex.x === 0 || vp.vertex.y === 0);
+      if (!isInterior && !isCorner) continue;
+
       const dx = clickX - vp.screenX * dpr;
       const dy = clickY - vp.screenY * dpr;
       const dist = Math.sqrt(dx * dx + dy * dy);
