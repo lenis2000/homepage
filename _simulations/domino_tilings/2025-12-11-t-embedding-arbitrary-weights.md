@@ -265,7 +265,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       'white contr.',       // 5
       'fold 1: shaded',     // 6
       'fold 2: diagonal',   // 7
-      'fold 3: split'       // 8
+      'fold 3: split',      // 8
+      'fold 4: renewal'     // 9
     ];
     const stepName = stepNames[aztecReductionStep] || `step ${aztecReductionStep}`;
     const prefix = aztecReductionStep >= 3 ? "A'" : "A";
@@ -389,54 +390,105 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw edges and store positions for click detection
-    aztecEdgeScreenPositions = [];
+    // Group edges by vertex pair to detect multi-edges
+    const edgeGroups = new Map();
     for (let i = 0; i < aztecEdges.length; i++) {
       const e = aztecEdges[i];
-      // Highlight gauge-transformed edges
-      if (e.gaugeTransformed) {
-        aztecCtx.strokeStyle = '#ff6600';
-        aztecCtx.lineWidth = Math.max(2, scale / 15);
-      } else {
-        aztecCtx.strokeStyle = '#333';
-        aztecCtx.lineWidth = Math.max(1, scale / 30);
-      }
-      aztecCtx.beginPath();
-      aztecCtx.moveTo(e.x1 * scale, -e.y1 * scale);
-      aztecCtx.lineTo(e.x2 * scale, -e.y2 * scale);
-      aztecCtx.stroke();
+      // Create canonical key for the vertex pair
+      const key = e.x1 < e.x2 || (e.x1 === e.x2 && e.y1 < e.y2)
+        ? `${e.x1},${e.y1}-${e.x2},${e.y2}`
+        : `${e.x2},${e.y2}-${e.x1},${e.y1}`;
+      if (!edgeGroups.has(key)) edgeGroups.set(key, []);
+      edgeGroups.get(key).push({idx: i, edge: e});
+    }
 
-      const midX = ((e.x1 + e.x2) / 2) * scale;
-      const midY = -((e.y1 + e.y2) / 2) * scale;
+    aztecEdgeScreenPositions = [];
 
-      // Store edge midpoint for click detection
-      aztecEdgeScreenPositions.push({
-        idx: i,
-        screenX: midX + cx,
-        screenY: midY + cy,
-        edge: e
-      });
+    for (const [key, edges] of edgeGroups) {
+      const numEdges = edges.length;
 
-      // Draw weight label in rectangular bubble
-      if (showWeights) {
-        const label = e.weight.toFixed(1);
+      for (let j = 0; j < numEdges; j++) {
+        const {idx, edge: e} = edges[j];
 
-        const fontSize = Math.max(8, Math.min(11, scale / 4));
-        aztecCtx.font = `${fontSize}px sans-serif`;
-        const textWidth = aztecCtx.measureText(label).width;
-        const padX = 3, padY = 2;
-        const boxW = textWidth + padX * 2;
-        const boxH = fontSize + padY * 2;
+        // Highlight gauge-transformed edges
+        if (e.gaugeTransformed) {
+          aztecCtx.strokeStyle = '#ff6600';
+          aztecCtx.lineWidth = Math.max(2, scale / 15);
+        } else {
+          aztecCtx.strokeStyle = '#333';
+          aztecCtx.lineWidth = Math.max(1, scale / 30);
+        }
 
-        aztecCtx.fillStyle = '#fff';
-        aztecCtx.fillRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
-        aztecCtx.strokeStyle = '#999';
-        aztecCtx.lineWidth = 0.5;
-        aztecCtx.strokeRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
+        const x1 = e.x1 * scale, y1 = -e.y1 * scale;
+        const x2 = e.x2 * scale, y2 = -e.y2 * scale;
 
-        aztecCtx.fillStyle = '#333';
-        aztecCtx.textAlign = 'center';
-        aztecCtx.textBaseline = 'middle';
-        aztecCtx.fillText(label, midX, midY);
+        aztecCtx.beginPath();
+
+        if (numEdges === 1) {
+          // Single edge: draw straight line
+          aztecCtx.moveTo(x1, y1);
+          aztecCtx.lineTo(x2, y2);
+        } else {
+          // Multi-edge: draw as curved arc
+          // Offset perpendicular to edge direction
+          const dx = x2 - x1, dy = y2 - y1;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          const perpX = -dy / len, perpY = dx / len;
+
+          // Distribute curves symmetrically around the straight line
+          const curveOffset = (j - (numEdges - 1) / 2) * Math.max(32, scale * 0.8);
+          const ctrlX = (x1 + x2) / 2 + perpX * curveOffset;
+          const ctrlY = (y1 + y2) / 2 + perpY * curveOffset;
+
+          aztecCtx.moveTo(x1, y1);
+          aztecCtx.quadraticCurveTo(ctrlX, ctrlY, x2, y2);
+        }
+        aztecCtx.stroke();
+
+        // Compute midpoint (on curve for multi-edges)
+        let midX, midY;
+        if (numEdges === 1) {
+          midX = (x1 + x2) / 2;
+          midY = (y1 + y2) / 2;
+        } else {
+          const dx = x2 - x1, dy = y2 - y1;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          const perpX = -dy / len, perpY = dx / len;
+          const curveOffset = (j - (numEdges - 1) / 2) * Math.max(32, scale * 0.8);
+          midX = (x1 + x2) / 2 + perpX * curveOffset * 0.5;
+          midY = (y1 + y2) / 2 + perpY * curveOffset * 0.5;
+        }
+
+        // Store edge midpoint for click detection
+        aztecEdgeScreenPositions.push({
+          idx: idx,
+          screenX: midX + cx,
+          screenY: midY + cy,
+          edge: e
+        });
+
+        // Draw weight label in rectangular bubble
+        if (showWeights) {
+          const label = e.weight.toFixed(2);
+
+          const fontSize = Math.max(8, Math.min(11, scale / 4));
+          aztecCtx.font = `${fontSize}px sans-serif`;
+          const textWidth = aztecCtx.measureText(label).width;
+          const padX = 3, padY = 2;
+          const boxW = textWidth + padX * 2;
+          const boxH = fontSize + padY * 2;
+
+          aztecCtx.fillStyle = '#fff';
+          aztecCtx.fillRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
+          aztecCtx.strokeStyle = '#999';
+          aztecCtx.lineWidth = 0.5;
+          aztecCtx.strokeRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
+
+          aztecCtx.fillStyle = '#333';
+          aztecCtx.textAlign = 'center';
+          aztecCtx.textBaseline = 'middle';
+          aztecCtx.fillText(label, midX, midY);
+        }
       }
     }
 
@@ -510,7 +562,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Draw level info
     aztecCtx.fillStyle = '#333';
     aztecCtx.font = '11px sans-serif';
-    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contr.', 'white contr.', 'fold 1', 'fold 2', 'fold 3'];
+    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contr.', 'white contr.', 'fold 1', 'fold 2', 'fold 3', 'fold 4'];
     const stepLabel = stepLabels[aztecReductionStep] || 'unknown';
     const prefix = aztecReductionStep >= 3 ? "A'" : "A";
     aztecCtx.fillText(`${prefix}_${k} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);

@@ -1771,6 +1771,185 @@ static void aztecStep8_SplitVertices() {
     g_aztecReductionStep = 8;
 }
 
+// STEP 9: Urban Renewal (Folding step 4)
+// For each black quad: remove 4 inner vertices and 8 edges,
+// add 4 new edges connecting outer diagonal vertices with transformed weights
+static void aztecStep9_UrbanRenewal() {
+    if (g_aztecReductionStep != 8) return;
+    pushAztecState();
+
+    // Build adjacency list: vertex index -> list of (neighbor index, edge index)
+    std::map<int, std::vector<std::pair<int, int>>> adj;
+    for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
+        int v1 = g_aztecEdges[eIdx].v1;
+        int v2 = g_aztecEdges[eIdx].v2;
+        adj[v1].push_back({v2, (int)eIdx});
+        adj[v2].push_back({v1, (int)eIdx});
+    }
+
+    // Track vertices and edges to remove
+    std::set<int> verticesToRemove;
+    std::set<int> edgesToRemove;
+
+    // New edges to add
+    std::vector<AztecEdge> newEdges;
+
+    // Process each black quad
+    for (const auto& center : g_blackQuadCenters) {
+        // Find the 4 inner vertices (closest to center)
+        std::vector<std::pair<double, int>> vertsWithDist;
+        for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+            double d = std::hypot(g_aztecVertices[i].x - center.first,
+                                  g_aztecVertices[i].y - center.second);
+            vertsWithDist.push_back({d, (int)i});
+        }
+        std::sort(vertsWithDist.begin(), vertsWithDist.end());
+
+        std::set<int> innerSet;
+        std::vector<int> innerVerts;
+        for (int i = 0; i < 4 && i < (int)vertsWithDist.size(); i++) {
+            innerVerts.push_back(vertsWithDist[i].second);
+            innerSet.insert(vertsWithDist[i].second);
+        }
+
+        if (innerVerts.size() != 4) continue;
+
+        // Sort inner vertices by angle around center for consistent ordering
+        std::sort(innerVerts.begin(), innerVerts.end(), [&](int a, int b) {
+            double angleA = std::atan2(g_aztecVertices[a].y - center.second,
+                                       g_aztecVertices[a].x - center.first);
+            double angleB = std::atan2(g_aztecVertices[b].y - center.second,
+                                       g_aztecVertices[b].x - center.first);
+            return angleA < angleB;
+        });
+
+        // For each inner vertex, find the outer diagonal vertex (neighbor not in inner set)
+        std::vector<int> outerVerts(4, -1);
+        std::vector<int> diagEdgeIdx(4, -1);  // Edge indices for diagonal edges
+
+        for (int i = 0; i < 4; i++) {
+            int innerIdx = innerVerts[i];
+            for (const auto& [neighborIdx, edgeIdx] : adj[innerIdx]) {
+                if (innerSet.find(neighborIdx) == innerSet.end()) {
+                    // This neighbor is outside the quad - it's the diagonal vertex
+                    outerVerts[i] = neighborIdx;
+                    diagEdgeIdx[i] = edgeIdx;
+                    break;
+                }
+            }
+        }
+
+        // Verify we found all 4 outer vertices
+        bool valid = true;
+        for (int i = 0; i < 4; i++) {
+            if (outerVerts[i] == -1) {
+                valid = false;
+                break;
+            }
+        }
+        if (!valid) continue;
+
+        // Find quad edges (edges between inner vertices) and their weights
+        // Order: edge from innerVerts[i] to innerVerts[(i+1)%4]
+        std::vector<double> quadWeights(4, 1.0);
+        std::vector<int> quadEdgeIdx(4, -1);
+
+        for (int i = 0; i < 4; i++) {
+            int v1 = innerVerts[i];
+            int v2 = innerVerts[(i + 1) % 4];
+            for (const auto& [neighborIdx, edgeIdx] : adj[v1]) {
+                if (neighborIdx == v2) {
+                    quadEdgeIdx[i] = edgeIdx;
+                    quadWeights[i] = g_aztecEdges[edgeIdx].weight;
+                    break;
+                }
+            }
+        }
+
+        // Get diagonal edge weights
+        std::vector<double> diagWeights(4, 1.0);
+        for (int i = 0; i < 4; i++) {
+            if (diagEdgeIdx[i] >= 0) {
+                diagWeights[i] = g_aztecEdges[diagEdgeIdx[i]].weight;
+            }
+        }
+
+        // Apply urban renewal weight transformation
+        // Quad edges in cyclic order: x=quadWeights[0], y=quadWeights[1], z=quadWeights[2], w=quadWeights[3]
+        // D = x*z + w*y
+        // New weights: (z/D, w/D, x/D, y/D)
+        double x = quadWeights[0], y = quadWeights[1], z = quadWeights[2], w = quadWeights[3];
+        double D = x * z + w * y;
+        if (std::abs(D) < 1e-10) D = 1.0;  // Avoid division by zero
+
+        std::vector<double> newWeights = {z / D, w / D, x / D, y / D};
+
+        // Mark inner vertices for removal
+        for (int i = 0; i < 4; i++) {
+            verticesToRemove.insert(innerVerts[i]);
+        }
+
+        // Mark all 8 edges for removal (4 quad + 4 diagonal)
+        for (int i = 0; i < 4; i++) {
+            if (quadEdgeIdx[i] >= 0) edgesToRemove.insert(quadEdgeIdx[i]);
+            if (diagEdgeIdx[i] >= 0) edgesToRemove.insert(diagEdgeIdx[i]);
+        }
+
+        // Add 4 new edges connecting outer vertices
+        // Edge i connects outerVerts[i] to outerVerts[(i+1)%4] with weight newWeights[i]
+        for (int i = 0; i < 4; i++) {
+            AztecEdge newEdge;
+            newEdge.v1 = outerVerts[i];
+            newEdge.v2 = outerVerts[(i + 1) % 4];
+            newEdge.weight = newWeights[i];
+            newEdge.isHorizontal = false;
+            newEdge.gaugeTransformed = true;  // Mark as transformed
+            newEdges.push_back(newEdge);
+        }
+    }
+
+    // Remove edges marked for removal (in reverse order to preserve indices)
+    std::vector<int> edgesToRemoveVec(edgesToRemove.begin(), edgesToRemove.end());
+    std::sort(edgesToRemoveVec.rbegin(), edgesToRemoveVec.rend());
+    for (int idx : edgesToRemoveVec) {
+        g_aztecEdges.erase(g_aztecEdges.begin() + idx);
+    }
+
+    // Build vertex index remapping (old index -> new index)
+    std::map<int, int> vertexRemap;
+    int newIdx = 0;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        if (verticesToRemove.find((int)i) == verticesToRemove.end()) {
+            vertexRemap[(int)i] = newIdx++;
+        }
+    }
+
+    // Remove vertices marked for removal (in reverse order)
+    std::vector<int> verticesToRemoveVec(verticesToRemove.begin(), verticesToRemove.end());
+    std::sort(verticesToRemoveVec.rbegin(), verticesToRemoveVec.rend());
+    for (int idx : verticesToRemoveVec) {
+        g_aztecVertices.erase(g_aztecVertices.begin() + idx);
+    }
+
+    // Update edge vertex indices using remap
+    for (auto& e : g_aztecEdges) {
+        e.v1 = vertexRemap[e.v1];
+        e.v2 = vertexRemap[e.v2];
+    }
+
+    // Remap and add new edges
+    for (auto& e : newEdges) {
+        e.v1 = vertexRemap[e.v1];
+        e.v2 = vertexRemap[e.v2];
+        g_aztecEdges.push_back(e);
+    }
+
+    // Clear black quad centers (they've been collapsed)
+    g_blackQuadCenters.clear();
+
+    g_aztecReductionStep = 9;
+}
+
 // Step down: advance to next reduction step
 static void aztecStepDown() {
     switch (g_aztecReductionStep) {
@@ -1782,6 +1961,7 @@ static void aztecStepDown() {
         case 5: aztecStep6_Shading(); break;
         case 6: aztecStep7_MarkDiagonalVertices(); break;
         case 7: aztecStep8_SplitVertices(); break;
+        case 8: aztecStep9_UrbanRenewal(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -1996,7 +2176,7 @@ int canAztecStepUp() {
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
     // Allow stepping down through all implemented steps
-    return (g_aztecReductionStep < 8) ? 1 : 0;
+    return (g_aztecReductionStep < 9) ? 1 : 0;
 }
 
 } // extern "C"
