@@ -15,7 +15,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 </p>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="5" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -33,9 +33,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       <div style="flex: 1; min-width: 350px;">
         <h4 style="margin: 0 0 10px 0;">Aztec diamond graph G<sub>k</sub></h4>
         <div style="margin-bottom: 10px;">
-          <button id="aztec-down-btn">↓ (k → k-1)</button>
-          <span style="margin: 0 10px;">Level k = <span id="aztec-level">5</span></span>
-          <button id="aztec-up-btn">↑ (k-1 → k)</button>
+          <button id="aztec-down-btn">← Step down</button>
+          <span style="margin: 0 10px;"><span id="aztec-graph-label">A<sub>6</sub></span></span>
+          <button id="aztec-up-btn">Step up →</button>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -125,6 +125,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
   let generateAztecGraph, getAztecGraphJSON, randomizeAztecWeights, setAztecGraphLevel;
+  let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
 
   // Step-by-step state
   let currentStep = 1;
@@ -142,7 +143,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let stepwiseLastPanX = 0, stepwiseLastPanY = 0;
 
   // ========== AZTEC DIAMOND GRAPH STATE ==========
-  let aztecLevel = 5;
+  let aztecLevel = 4;
+  let aztecReductionStep = 0;  // 0=original, 1=gauge, 2=contracted, 3=finalized
   let aztecVertices = [];
   let aztecEdges = [];
   let aztecZoom = 1.0;
@@ -214,7 +216,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       aztecLevel = k;
       aztecVertices = generateAztecVertices(k);
       aztecEdges = generateAztecEdges(aztecVertices);
-      document.getElementById('aztec-level').textContent = k;
+      updateAztecUI();
       renderAztecGraph();
       return;
     }
@@ -229,6 +231,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     let graphData = JSON.parse(jsonStr);
 
     aztecLevel = graphData.level;
+    aztecReductionStep = graphData.reductionStep || 0;
     aztecVertices = graphData.vertices;
 
     // Convert edges from index-based to coordinate-based for rendering
@@ -238,10 +241,49 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       x2: aztecVertices[e.v2].x,
       y2: aztecVertices[e.v2].y,
       weight: e.weight,
-      isHorizontal: e.isHorizontal
+      isHorizontal: e.isHorizontal,
+      gaugeTransformed: e.gaugeTransformed || false
     }));
 
-    document.getElementById('aztec-level').textContent = aztecLevel;
+    updateAztecUI();
+    renderAztecGraph();
+  }
+
+  // Update Aztec UI state (graph label, button states)
+  function updateAztecUI() {
+    const stepNames = ['A', "A (gauge)", "A'", "A'"];
+    const stepName = stepNames[aztecReductionStep] || 'A';
+    const label = `${stepName}<sub>${aztecLevel + 1}</sub> (step ${aztecReductionStep}/3)`;
+    document.getElementById('aztec-graph-label').innerHTML = label;
+
+    // Update button states
+    if (wasmReady) {
+      document.getElementById('aztec-up-btn').disabled = !canAztecStepUp();
+      document.getElementById('aztec-down-btn').disabled = !canAztecStepDown();
+    }
+  }
+
+  // Refresh Aztec graph state from C++
+  function refreshAztecFromCpp() {
+    let ptr = getAztecGraphJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let graphData = JSON.parse(jsonStr);
+
+    aztecLevel = graphData.level;
+    aztecReductionStep = graphData.reductionStep || 0;
+    aztecVertices = graphData.vertices;
+    aztecEdges = graphData.edges.map(e => ({
+      x1: aztecVertices[e.v1].x,
+      y1: aztecVertices[e.v1].y,
+      x2: aztecVertices[e.v2].x,
+      y2: aztecVertices[e.v2].y,
+      weight: e.weight,
+      isHorizontal: e.isHorizontal,
+      gaugeTransformed: e.gaugeTransformed || false
+    }));
+
+    updateAztecUI();
     renderAztecGraph();
   }
 
@@ -273,10 +315,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const showWeights = document.getElementById('show-aztec-weights-chk').checked;
 
     // Draw edges
-    aztecCtx.strokeStyle = '#333';
-    aztecCtx.lineWidth = Math.max(1, scale / 30);
-
     for (const e of aztecEdges) {
+      // Highlight gauge-transformed edges
+      if (e.gaugeTransformed) {
+        aztecCtx.strokeStyle = '#ff6600';
+        aztecCtx.lineWidth = Math.max(2, scale / 15);
+      } else {
+        aztecCtx.strokeStyle = '#333';
+        aztecCtx.lineWidth = Math.max(1, scale / 30);
+      }
       aztecCtx.beginPath();
       aztecCtx.moveTo(e.x1 * scale, -e.y1 * scale);
       aztecCtx.lineTo(e.x2 * scale, -e.y2 * scale);
@@ -326,9 +373,16 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       });
 
       const isSelected = (selectedAztecVertex === i);
+      const inVgauge = v.inVgauge || false;
+      const toContract = v.toContract || false;
+
+      // Determine vertex size
+      let radius = vertexRadius;
+      if (isSelected) radius *= 1.5;
+      if (toContract) radius *= 1.3;
 
       aztecCtx.beginPath();
-      aztecCtx.arc(x, y, isSelected ? vertexRadius * 1.5 : vertexRadius, 0, Math.PI * 2);
+      aztecCtx.arc(x, y, radius, 0, Math.PI * 2);
 
       if (isSelected) {
         // Selected vertex: red highlight
@@ -336,6 +390,20 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         aztecCtx.fill();
         aztecCtx.strokeStyle = '#cc0000';
         aztecCtx.lineWidth = 2;
+        aztecCtx.stroke();
+      } else if (toContract) {
+        // Vertex to be contracted: orange fill
+        aztecCtx.fillStyle = '#ff6600';
+        aztecCtx.fill();
+        aztecCtx.strokeStyle = '#cc4400';
+        aztecCtx.lineWidth = 2;
+        aztecCtx.stroke();
+      } else if (inVgauge) {
+        // V_gauge vertex: green ring
+        aztecCtx.fillStyle = v.isWhite ? '#fff' : '#000';
+        aztecCtx.fill();
+        aztecCtx.strokeStyle = '#00cc00';
+        aztecCtx.lineWidth = 3;
         aztecCtx.stroke();
       } else if (v.isWhite) {
         // White vertex: hollow with black outline
@@ -356,24 +424,23 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Draw level info
     aztecCtx.fillStyle = '#333';
     aztecCtx.font = '11px sans-serif';
-    aztecCtx.fillText(`G_${k}: ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
+    const stepLabels = ['original', 'gauge marked', 'contracted', 'reduced'];
+    const stepLabel = stepLabels[aztecReductionStep] || 'unknown';
+    aztecCtx.fillText(`A_${k+1} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
   }
 
-  // Aztec graph transform down (placeholder)
+  // Aztec graph step down: advance reduction step
   function aztecTransformDown() {
-    if (aztecLevel <= 1) return;
-    // TODO: Implement actual urban renewal transformation
-    // For now, just reduce level and regenerate
-    initAztecGraph(aztecLevel - 1);
+    if (!wasmReady) return;
+    aztecGraphStepDown();
+    refreshAztecFromCpp();
   }
 
-  // Aztec graph transform up (placeholder)
+  // Aztec graph step up: restore previous state
   function aztecTransformUp() {
-    const n = parseInt(document.getElementById('n-input').value) || 5;
-    if (aztecLevel >= n) return;
-    // TODO: Implement actual inverse transformation
-    // For now, just increase level and regenerate
-    initAztecGraph(aztecLevel + 1);
+    if (!wasmReady) return;
+    aztecGraphStepUp();
+    refreshAztecFromCpp();
   }
 
   // Randomize all edge weights (calls C++ via WASM)
@@ -478,6 +545,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
+      aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
+      aztecGraphStepUp = Module.cwrap('aztecGraphStepUp', null, []);
+      getAztecReductionStep = Module.cwrap('getAztecReductionStep', 'number', []);
+      canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
+      canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
 
       wasmReady = true;
       loadingMsg.style.display = 'none';
