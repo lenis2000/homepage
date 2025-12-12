@@ -56,14 +56,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     <button id="step2-btn" style="opacity: 0.4;" disabled>Step 2: Strip boundary</button>
     <button id="step3-btn" style="opacity: 0.4;" disabled>Step 3: Swap colors</button>
   </div>
+  <div style="margin-top: 10px;">
+    <label><input type="checkbox" id="show-dual-chk"> Show augmented dual graph</label>
+    <label style="margin-left: 15px;"><input type="checkbox" id="show-dual-labels-chk"> Show T-indices on dual</label>
+  </div>
 </details>
 
-<details id="stepwise-section" style="margin-top: 15px;">
+<details id="stepwise-section" style="margin-top: 15px;" open>
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step T-embedding construction (n ≤ 15)</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <div style="margin-bottom: 10px;">
-      <label>Step m = <span id="step-value">1</span></label>
-      <input id="step-slider" type="range" min="1" max="5" value="1" style="width: 200px; margin-left: 10px;">
+      <button id="step-prev-btn" style="width: 30px;">&lt;</button>
+      <label style="margin: 0 10px;">Step m = <span id="step-value">1</span></label>
+      <button id="step-next-btn" style="width: 30px;">&gt;</button>
       <span id="step-info" style="margin-left: 10px; color: #666;"></span>
     </div>
     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -81,7 +86,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       <button id="stepwise-zoom-out-btn">−</button>
       <button id="stepwise-reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
       <label style="margin-left: 20px;"><input type="checkbox" id="show-faces-chk" checked> Show face shading</label>
-      <label style="margin-left: 10px;"><input type="checkbox" id="show-weights-chk"> Show weights on faces</label>
+      <label style="margin-left: 10px;"><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
+    </div>
+    <div id="vertex-info" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; min-height: 60px; font-family: monospace; font-size: 12px;">
+      <em>Click on a vertex to see its formula and dependencies</em>
     </div>
   </div>
 </details>
@@ -354,6 +362,176 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           ctx.strokeStyle = '#000';
           ctx.lineWidth = Math.max(1, scale / 20);
           ctx.stroke();
+        }
+      }
+    }
+
+    // Draw augmented dual graph if checkbox is checked
+    const showDual = document.getElementById('show-dual-chk').checked;
+    const showDualLabels = document.getElementById('show-dual-labels-chk').checked;
+
+    if (showDual) {
+      // The REDUCED Aztec diamond A'_{n+1} and its augmented dual graph G*
+      // From Chelkak-Ramassamy paper (arXiv:2002.07540), Figure 2:
+      // - Inner faces of A'_{n+1} are indexed by (j,k) with |j|+|k| < n
+      // - 4 outer "corner" vertices at corners of outer rhombus
+      // - For arbitrary weights: boundary edges get gauged weights before reduction
+
+      // Create a map of face centers for quick lookup
+      const faceMap = {};
+      for (const f of faces) {
+        faceMap[`${f.x},${f.y}`] = f;
+      }
+
+      // The 4 outer corner vertices positioned at the tips of the rhombus
+      // Matching the image you showed: corners at the 4 tips of the diamond
+      const cornerPositions = [
+        {x: 0, y: n, label: 'v*_N', isBlack: true},    // top
+        {x: n, y: 0, label: 'v*_E', isBlack: false},   // right
+        {x: 0, y: -n, label: 'v*_S', isBlack: true},   // bottom
+        {x: -n, y: 0, label: 'v*_W', isBlack: false}   // left
+      ];
+
+      // Draw the outer rhombus connecting the 4 corner vertices
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = Math.max(2, scale / 12);
+      ctx.beginPath();
+      ctx.moveTo(cornerPositions[0].x * scale, -cornerPositions[0].y * scale);
+      for (let i = 1; i <= 4; i++) {
+        const cp = cornerPositions[i % 4];
+        ctx.lineTo(cp.x * scale, -cp.y * scale);
+      }
+      ctx.stroke();
+
+      // Draw edges between adjacent face centers (axis-aligned neighbors)
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = Math.max(1, scale / 20);
+      const drawnEdges = new Set();
+      for (const f of faces) {
+        const neighbors = [
+          {x: f.x + 1, y: f.y},
+          {x: f.x - 1, y: f.y},
+          {x: f.x, y: f.y + 1},
+          {x: f.x, y: f.y - 1}
+        ];
+
+        for (const nb of neighbors) {
+          if (faceMap[`${nb.x},${nb.y}`]) {
+            const edgeKey = `${Math.min(f.x, nb.x)},${Math.min(f.y, nb.y)},${Math.max(f.x, nb.x)},${Math.max(f.y, nb.y)}`;
+            if (!drawnEdges.has(edgeKey)) {
+              drawnEdges.add(edgeKey);
+              ctx.beginPath();
+              ctx.moveTo(f.x * scale, -f.y * scale);
+              ctx.lineTo(nb.x * scale, -nb.y * scale);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      // Draw diagonal edges from corner vertices to boundary faces
+      // Each corner connects to faces on the boundary |j|+|k| = n-1 that are in its quadrant
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = Math.max(2, scale / 12);
+
+      for (const f of faces) {
+        const dist = Math.abs(f.x) + Math.abs(f.y);
+        if (dist === n - 1) {
+          // Top corner (0, n) connects to faces with y > 0 on the boundary
+          if (f.y > 0 || (f.y === 0 && Math.abs(f.x) === n - 1)) {
+            if (f.x >= 0 && f.y >= 0 && f.x + f.y === n - 1) {
+              ctx.beginPath();
+              ctx.moveTo(cornerPositions[0].x * scale, -cornerPositions[0].y * scale);
+              ctx.lineTo(f.x * scale, -f.y * scale);
+              ctx.stroke();
+            }
+            if (f.x <= 0 && f.y >= 0 && -f.x + f.y === n - 1) {
+              ctx.beginPath();
+              ctx.moveTo(cornerPositions[0].x * scale, -cornerPositions[0].y * scale);
+              ctx.lineTo(f.x * scale, -f.y * scale);
+              ctx.stroke();
+            }
+          }
+          // Right corner (n, 0) connects to faces with x > 0 on the boundary
+          if (f.x >= 0 && f.y >= 0 && f.x + f.y === n - 1) {
+            ctx.beginPath();
+            ctx.moveTo(cornerPositions[1].x * scale, -cornerPositions[1].y * scale);
+            ctx.lineTo(f.x * scale, -f.y * scale);
+            ctx.stroke();
+          }
+          if (f.x >= 0 && f.y <= 0 && f.x - f.y === n - 1) {
+            ctx.beginPath();
+            ctx.moveTo(cornerPositions[1].x * scale, -cornerPositions[1].y * scale);
+            ctx.lineTo(f.x * scale, -f.y * scale);
+            ctx.stroke();
+          }
+          // Bottom corner (0, -n) connects to faces with y < 0 on the boundary
+          if (f.x >= 0 && f.y <= 0 && f.x - f.y === n - 1) {
+            ctx.beginPath();
+            ctx.moveTo(cornerPositions[2].x * scale, -cornerPositions[2].y * scale);
+            ctx.lineTo(f.x * scale, -f.y * scale);
+            ctx.stroke();
+          }
+          if (f.x <= 0 && f.y <= 0 && -f.x - f.y === n - 1) {
+            ctx.beginPath();
+            ctx.moveTo(cornerPositions[2].x * scale, -cornerPositions[2].y * scale);
+            ctx.lineTo(f.x * scale, -f.y * scale);
+            ctx.stroke();
+          }
+          // Left corner (-n, 0) connects to faces with x < 0 on the boundary
+          if (f.x <= 0 && f.y >= 0 && -f.x + f.y === n - 1) {
+            ctx.beginPath();
+            ctx.moveTo(cornerPositions[3].x * scale, -cornerPositions[3].y * scale);
+            ctx.lineTo(f.x * scale, -f.y * scale);
+            ctx.stroke();
+          }
+          if (f.x <= 0 && f.y <= 0 && -f.x - f.y === n - 1) {
+            ctx.beginPath();
+            ctx.moveTo(cornerPositions[3].x * scale, -cornerPositions[3].y * scale);
+            ctx.lineTo(f.x * scale, -f.y * scale);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw dual vertices at face centers with checkerboard coloring
+      const dualRadius = Math.max(4, scale / 8);
+      for (const f of faces) {
+        const isBlack = (f.x + f.y) % 2 === 0;
+        ctx.beginPath();
+        ctx.arc(f.x * scale, -f.y * scale, dualRadius, 0, Math.PI * 2);
+        ctx.fillStyle = isBlack ? '#000' : '#fff';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Draw corner vertices (alternating black/white around the boundary)
+      for (const c of cornerPositions) {
+        ctx.beginPath();
+        ctx.arc(c.x * scale, -c.y * scale, dualRadius * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = c.isBlack ? '#000' : '#fff';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Draw labels if checkbox is checked
+      if (showDualLabels) {
+        const labelFontSize = Math.max(8, scale / 10);
+        ctx.font = `bold ${labelFontSize}px sans-serif`;
+        ctx.fillStyle = '#003366';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        for (const f of faces) {
+          ctx.fillText(`(${f.x},${f.y})`, f.x * scale, -f.y * scale - dualRadius - 2);
+        }
+
+        for (const c of cornerPositions) {
+          ctx.fillText(c.label, c.x * scale, -c.y * scale - dualRadius * 1.5 - 2);
         }
       }
     }
@@ -816,6 +994,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     updateStepButtons();
   });
 
+  document.getElementById('show-dual-chk').addEventListener('change', render);
+  document.getElementById('show-dual-labels-chk').addEventListener('change', render);
+
   document.getElementById('step1-btn').addEventListener('click', () => {
     if (!wasmReady || weights.n <= 1) return;
     urbanRenewalStep1();
@@ -952,10 +1133,21 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // ========== STEP-BY-STEP T-EMBEDDING VISUALIZATION ==========
   const stepwiseCanvas = document.getElementById('stepwise-temb-canvas');
   const stepwiseCtx = stepwiseCanvas.getContext('2d');
-  const stepSlider = document.getElementById('step-slider');
+  const stepPrevBtn = document.getElementById('step-prev-btn');
+  const stepNextBtn = document.getElementById('step-next-btn');
   const stepValue = document.getElementById('step-value');
   const stepInfo = document.getElementById('step-info');
   const faceWeightsDisplay = document.getElementById('face-weights-display');
+  const vertexInfoDiv = document.getElementById('vertex-info');
+  let currentStep = 1;
+  let maxStep = 5;
+
+  // Vertex highlighting state
+  let selectedVertex = null;  // Currently selected vertex key
+  let highlightedDeps = new Set();  // Set of dependency keys to highlight
+
+  // Store vertex screen positions for hit testing
+  let vertexScreenPositions = [];  // [{key, x, y, vertex}]
 
   // Stepwise canvas state
   let stepwiseZoom = 1.0;
@@ -963,13 +1155,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let stepwiseIsPanning = false;
   let stepwiseLastPanX = 0, stepwiseLastPanY = 0;
 
-  // Update slider range when T-embedding is computed
-  function updateDebugSlider() {
+  // Update step range when T-embedding is computed
+  function updateStepRange() {
     if (!tembData || !tembData.tembHistory) return;
-    const maxLevel = tembData.tembHistory.length;
-    stepSlider.max = maxLevel;
-    stepSlider.value = Math.min(parseInt(stepSlider.value), maxLevel);
-    stepValue.textContent = stepSlider.value;
+    maxStep = tembData.tembHistory.length;
+    currentStep = Math.min(currentStep, maxStep);
+    updateStepDisplay();
+  }
+
+  function updateStepDisplay() {
+    stepValue.textContent = currentStep;
+    stepPrevBtn.disabled = (currentStep <= 1);
+    stepNextBtn.disabled = (currentStep >= maxStep);
+    stepInfo.textContent = `(diamond size at this level: ${currentStep})`;
   }
 
   // Display face weights for current level
@@ -1042,7 +1240,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       return;
     }
 
-    const level = parseInt(stepSlider.value);
+    const level = currentStep;
     const levelIdx = level - 1;  // tembHistory[0] is level 1
 
     if (levelIdx < 0 || levelIdx >= tembData.tembHistory.length) return;
@@ -1096,7 +1294,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     const showFaces = document.getElementById('show-faces-chk').checked;
-    const showWeights = document.getElementById('show-weights-chk').checked;
 
     // Get face weights for this level
     const n = tembData.originalN;
@@ -1136,37 +1333,14 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           }
           stepwiseCtx.closePath();
 
-          // Color based on face weight or black/white
-          const faceData = faceWeightMap[v.key];
-          if (faceData) {
-            // Use color intensity based on weight
-            const w = faceData.w;
-            const intensity = Math.min(255, Math.max(100, 200 - Math.log(w) * 30));
-            if (faceData.isBlack) {
-              stepwiseCtx.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity + 20})`;
-            } else {
-              stepwiseCtx.fillStyle = `rgb(255, ${intensity + 40}, ${intensity + 20})`;
-            }
-          } else {
-            stepwiseCtx.fillStyle = '#eee';
-          }
+          // Simple checkerboard coloring based on (j+k) parity
+          // Black faces: (j+k) even, White faces: (j+k) odd
+          const isBlack = (v.x + v.y) % 2 === 0;
+          stepwiseCtx.fillStyle = isBlack ? '#d0d0d0' : '#ffffff';
           stepwiseCtx.fill();
-          stepwiseCtx.strokeStyle = '#aaa';
+          stepwiseCtx.strokeStyle = '#888';
           stepwiseCtx.lineWidth = 0.5;
           stepwiseCtx.stroke();
-
-          // Draw weight text on face
-          if (showWeights && faceData) {
-            const centroidX = (neighbors[0].tReal + neighbors[1].tReal + neighbors[2].tReal + neighbors[3].tReal) / 4;
-            const centroidY = (neighbors[0].tImag + neighbors[1].tImag + neighbors[2].tImag + neighbors[3].tImag) / 4;
-            const fontSize = Math.max(6, Math.min(12, scale / 50));
-            stepwiseCtx.font = `${fontSize}px sans-serif`;
-            stepwiseCtx.fillStyle = '#333';
-            stepwiseCtx.textAlign = 'center';
-            stepwiseCtx.textBaseline = 'middle';
-            const wStr = faceData.w === 1 ? '1' : faceData.w.toFixed(2).replace(/\.?0+$/, '');
-            stepwiseCtx.fillText(wStr, (centroidX - centerReal) * scale, -(centroidY - centerImag) * scale);
-          }
         }
       }
     }
@@ -1215,16 +1389,55 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       stepwiseCtx.stroke();
     }
 
-    // Draw vertices
-    const vertexRadius = Math.max(1.5, scale / 200);
+    // Draw vertices and collect screen positions
+    const vertexRadius = Math.max(3, scale / 100);
+    const showLabels = document.getElementById('show-labels-chk').checked;
+    vertexScreenPositions = [];
+
     for (const v of levelData.vertices) {
       const x = (v.tReal - centerReal) * scale;
       const y = -(v.tImag - centerImag) * scale;
 
+      // Store screen position for hit testing (in canvas coords after transform)
+      vertexScreenPositions.push({
+        key: v.key,
+        screenX: x + cx,
+        screenY: y + cy,
+        vertex: v
+      });
+
+      // Determine vertex color based on selection/highlight state
+      const vertexKey = `T${level}(${v.x},${v.y})`;
+      const isSelected = (selectedVertex === v.key);
+      const isDep = highlightedDeps.has(vertexKey);
+
       stepwiseCtx.beginPath();
-      stepwiseCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
-      stepwiseCtx.fillStyle = '#000';
+      stepwiseCtx.arc(x, y, isSelected ? vertexRadius * 1.5 : vertexRadius, 0, Math.PI * 2);
+
+      if (isSelected) {
+        stepwiseCtx.fillStyle = '#ff0000';
+      } else if (isDep) {
+        stepwiseCtx.fillStyle = '#0066ff';
+      } else {
+        stepwiseCtx.fillStyle = '#000';
+      }
       stepwiseCtx.fill();
+
+      if (isSelected || isDep) {
+        stepwiseCtx.strokeStyle = isSelected ? '#cc0000' : '#0044cc';
+        stepwiseCtx.lineWidth = 2;
+        stepwiseCtx.stroke();
+      }
+
+      // Draw T(j,k) label
+      if (showLabels) {
+        const fontSize = Math.max(8, Math.min(11, scale / 80));
+        stepwiseCtx.font = `${fontSize}px sans-serif`;
+        stepwiseCtx.fillStyle = isSelected ? '#cc0000' : (isDep ? '#0044cc' : '#333');
+        stepwiseCtx.textAlign = 'center';
+        stepwiseCtx.textBaseline = 'bottom';
+        stepwiseCtx.fillText(`T(${v.x},${v.y})`, x, y - vertexRadius - 2);
+      }
     }
 
     stepwiseCtx.restore();
@@ -1235,18 +1448,95 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     stepwiseCtx.fillText(`Level m=${level}, ${levelData.vertices.length} vertices`, 10, 15);
   }
 
-  // Update display when slider changes
-  stepSlider.addEventListener('input', () => {
-    const level = parseInt(stepSlider.value);
-    stepValue.textContent = level;
-    stepInfo.textContent = `(diamond size at this level: ${tembData ? tembData.originalN - (tembData.originalN - level) : '?'})`;
-    displayFaceWeights(level);
+  // Generate formula explanation for a vertex
+  function getVertexFormulaHTML(v, level) {
+    const c = v.faceWeight.toFixed(3).replace(/\.?0+$/, '');
+    const j = v.x, k = v.y;
+    const m = v.sourceLevel;
+
+    const typeDescriptions = {
+      'boundary_corner': `<strong>Boundary corner</strong> (fixed)<br>T<sub>${level}</sub>(${j},${k}) is fixed at the boundary.`,
+      'boundary_left': `<strong>Left boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${-m},0) + c·T<sub>${m}</sub>(${-m+1},0)) / (1+c)<br>c = ${c}`,
+      'boundary_right': `<strong>Right boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${m},0) + c·T<sub>${m}</sub>(${m-1},0)) / (1+c)<br>c = ${c}`,
+      'boundary_bottom': `<strong>Bottom boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(0,${-m}) + T<sub>${m}</sub>(0,${-m+1})) / (1+c)<br>c = ${c}`,
+      'boundary_top': `<strong>Top boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(0,${m}) + T<sub>${m}</sub>(0,${m-1})) / (1+c)<br>c = ${c}`,
+      'diag_upper_right': `<strong>Upper-right diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k-1})) / (1+c)<br>c = ${c}`,
+      'diag_lower_right': `<strong>Lower-right diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k+1})) / (1+c)<br>c = ${c}`,
+      'diag_upper_left': `<strong>Upper-left diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k-1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = ${c}`,
+      'diag_lower_left': `<strong>Lower-left diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k+1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = ${c}`,
+      'interior_passthrough': `<strong>Interior pass-through</strong><br>T<sub>${level}</sub>(${j},${k}) = T<sub>${m}</sub>(${j},${k})`,
+      'interior_recurrence': `<strong>Interior recurrence</strong><br>T<sub>${level}</sub>(${j},${k}) = -T<sub>${m}</sub>(${j},${k}) + (T<sub>${level}</sub>(${j-1},${k}) + T<sub>${level}</sub>(${j+1},${k}) + c·(T<sub>${level}</sub>(${j},${k+1}) + T<sub>${level}</sub>(${j},${k-1}))) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`
+    };
+
+    let html = typeDescriptions[v.type] || `Unknown type: ${v.type}`;
+    html += `<br><br><strong>Value:</strong> ${v.tReal.toFixed(4)} + ${v.tImag.toFixed(4)}i`;
+    html += `<br><strong>Dependencies:</strong> ${v.deps.length > 0 ? v.deps.join(', ') : 'none (fixed)'}`;
+
+    return html;
+  }
+
+  // Handle click on canvas to select vertex
+  function handleStepwiseCanvasClick(e) {
+    const rect = stepwiseCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const clickX = (e.clientX - rect.left) * dpr;
+    const clickY = (e.clientY - rect.top) * dpr;
+
+    // Find closest vertex within threshold
+    const threshold = 15 * dpr;
+    let closestVertex = null;
+    let closestDist = Infinity;
+
+    for (const vp of vertexScreenPositions) {
+      const dx = clickX - vp.screenX * dpr;
+      const dy = clickY - vp.screenY * dpr;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < threshold && dist < closestDist) {
+        closestDist = dist;
+        closestVertex = vp;
+      }
+    }
+
+    if (closestVertex) {
+      selectedVertex = closestVertex.key;
+      highlightedDeps = new Set(closestVertex.vertex.deps || []);
+
+      // Show formula
+      const level = currentStep;
+      vertexInfoDiv.innerHTML = getVertexFormulaHTML(closestVertex.vertex, level);
+    } else {
+      selectedVertex = null;
+      highlightedDeps.clear();
+      vertexInfoDiv.innerHTML = '<em>Click on a vertex to see its formula and dependencies</em>';
+    }
+
     renderStepwiseTemb();
+  }
+
+  stepwiseCanvas.addEventListener('click', handleStepwiseCanvasClick);
+
+  // Update display when step buttons are clicked
+  stepPrevBtn.addEventListener('click', () => {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStepDisplay();
+      displayFaceWeights(currentStep);
+      renderStepwiseTemb();
+    }
+  });
+
+  stepNextBtn.addEventListener('click', () => {
+    if (currentStep < maxStep) {
+      currentStep++;
+      updateStepDisplay();
+      displayFaceWeights(currentStep);
+      renderStepwiseTemb();
+    }
   });
 
   // Checkbox handlers
   document.getElementById('show-faces-chk').addEventListener('change', renderStepwiseTemb);
-  document.getElementById('show-weights-chk').addEventListener('change', renderStepwiseTemb);
+  document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
 
   // Debug canvas mouse handlers
   stepwiseCanvas.addEventListener('mousedown', (e) => {
@@ -1301,13 +1591,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderStepwiseTemb();
   });
 
-  // Update the computeAndDisplayTembedding function to also update debug view
+  // Update the computeAndDisplayTembedding function to also update stepwise view
   const originalComputeAndDisplay = computeAndDisplayTembedding;
   computeAndDisplayTembedding = function() {
     originalComputeAndDisplay();
-    updateDebugSlider();
-    const level = parseInt(stepSlider.value);
-    displayFaceWeights(level);
+    updateStepRange();
+    displayFaceWeights(currentStep);
     renderStepwiseTemb();
   };
 

@@ -76,10 +76,30 @@ static int g_originalN = 0;  // Store original n before folding
 static std::vector<std::map<std::string, HighPrecFloat>> g_faceWeightsHistory;  // Face weights at each level
 static std::vector<bool> g_colorSwapHistory;  // Color swap state at each level
 
+// Vertex type enum for T-embedding formula tracking
+enum VertexType {
+    VT_BOUNDARY_CORNER,    // Fixed boundary corner: T(-m,0), T(m,0), T(0,-m), T(0,m)
+    VT_BOUNDARY_LEFT,      // Left axis: j=-m, k=0
+    VT_BOUNDARY_RIGHT,     // Right axis: j=m, k=0
+    VT_BOUNDARY_BOTTOM,    // Bottom axis: j=0, k=-m
+    VT_BOUNDARY_TOP,       // Top axis: j=0, k=m
+    VT_DIAG_UPPER_RIGHT,   // Upper-right diagonal: k=m-j, 1<=j<=m-1
+    VT_DIAG_LOWER_RIGHT,   // Lower-right diagonal: k=-m+j, 1<=j<=m-1
+    VT_DIAG_UPPER_LEFT,    // Upper-left diagonal: k=m+j, 1-m<=j<=-1
+    VT_DIAG_LOWER_LEFT,    // Lower-left diagonal: k=-m-j, 1-m<=j<=-1
+    VT_INTERIOR_PASSTHROUGH, // Interior pass-through: (j+k+m)%2==0
+    VT_INTERIOR_RECURRENCE   // Interior recurrence: (j+k+m)%2==1
+};
+
 // T-embedding results: complex numbers stored as pairs (real, imag)
 struct TVertex {
-    double x, y;  // Original grid position
+    double x, y;  // Original grid position (j, k)
     double tReal, tImag;  // T-embedded position (complex number)
+    VertexType type;  // How this vertex was computed
+    int sourceLevel;  // Level m from which this was computed (m -> m+1)
+    double faceWeight;  // Face weight c used in the formula
+    // Dependencies: keys of vertices this depends on
+    std::vector<std::string> deps;
 };
 static std::map<std::string, TVertex> g_tEmbedding;
 static int g_debugZeroCount = 0;
@@ -510,6 +530,39 @@ static void computeTembeddingRecurrence() {
         return 1.0;
     };
 
+    // Storage for vertex metadata at each level
+    std::vector<std::vector<std::vector<VertexType>>> vertexTypes(
+        n + 1,
+        std::vector<std::vector<VertexType>>(2*n + 1,
+            std::vector<VertexType>(2*n + 1, VT_BOUNDARY_CORNER)
+        )
+    );
+    std::vector<std::vector<std::vector<double>>> vertexFaceWeights(
+        n + 1,
+        std::vector<std::vector<double>>(2*n + 1,
+            std::vector<double>(2*n + 1, 1.0)
+        )
+    );
+    std::vector<std::vector<std::vector<std::vector<std::string>>>> vertexDeps(
+        n + 1,
+        std::vector<std::vector<std::vector<std::string>>>(2*n + 1,
+            std::vector<std::vector<std::string>>(2*n + 1)
+        )
+    );
+    std::vector<std::vector<std::vector<int>>> vertexSourceLevel(
+        n + 1,
+        std::vector<std::vector<int>>(2*n + 1,
+            std::vector<int>(2*n + 1, 0)
+        )
+    );
+
+    // Helper to make dependency key with level prefix
+    auto makeDepKey = [](int level, int j, int k) -> std::string {
+        std::ostringstream ss;
+        ss << "T" << level << "(" << j << "," << k << ")";
+        return ss.str();
+    };
+
     // Helper to store T-embedding at a given level m
     auto storeTembeddingAtLevel = [&](int m) {
         std::map<std::string, TVertex> levelMap;
@@ -526,6 +579,10 @@ static void computeTembeddingRecurrence() {
                     v.y = k;
                     v.tReal = Tarray[m][(j + n)][(k + n)].real();
                     v.tImag = Tarray[m][(j + n)][(k + n)].imag();
+                    v.type = vertexTypes[m][(j + n)][(k + n)];
+                    v.sourceLevel = vertexSourceLevel[m][(j + n)][(k + n)];
+                    v.faceWeight = vertexFaceWeights[m][(j + n)][(k + n)];
+                    v.deps = vertexDeps[m][(j + n)][(k + n)];
                     levelMap[key.str()] = v;
                 }
             }
@@ -542,6 +599,12 @@ static void computeTembeddingRecurrence() {
         Tarray[m][(m + n)][(0 + n)] = Complex(horizScale, 0.0);
         Tarray[m][(0 + n)][(-m + n)] = Complex(0.0, vertScale);
         Tarray[m][(0 + n)][(m + n)] = Complex(0.0, -vertScale);
+
+        // Mark boundary corners
+        vertexTypes[m][(-m + n)][(0 + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[m][(m + n)][(0 + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[m][(0 + n)][(-m + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[m][(0 + n)][(m + n)] = VT_BOUNDARY_CORNER;
     }
 
     // Store level 1 (just the boundary rhombus)
@@ -572,24 +635,40 @@ static void computeTembeddingRecurrence() {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (Tarray[m][(-m + n)][(0 + n)] + cVal * Tarray[m][(-m+1 + n)][(0 + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_LEFT;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, -m, 0), makeDepKey(m, -m+1, 0)};
                     }
                     // Right edge: j = m, k = 0
                     if (j == m && k == 0) {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (Tarray[m][(m + n)][(0 + n)] + cVal * Tarray[m][(m-1 + n)][(0 + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_RIGHT;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, m, 0), makeDepKey(m, m-1, 0)};
                     }
                     // Bottom edge: j = 0, k = -m
                     if (j == 0 && k == -m) {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (cVal * Tarray[m][(0 + n)][(-m + n)] + Tarray[m][(0 + n)][(-m+1 + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_BOTTOM;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, 0, -m), makeDepKey(m, 0, -m+1)};
                     }
                     // Top edge: j = 0, k = m
                     if (j == 0 && k == m) {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (cVal * Tarray[m][(0 + n)][(m + n)] + Tarray[m][(0 + n)][(m-1 + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_TOP;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, 0, m), makeDepKey(m, 0, m-1)};
                     }
 
                     // Diagonal edges (corners of the square boundary)
@@ -598,35 +677,57 @@ static void computeTembeddingRecurrence() {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (Tarray[m][(j-1 + n)][(m-j + n)] + cVal * Tarray[m][(j + n)][(m-j-1 + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_RIGHT;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, m-j), makeDepKey(m, j, m-j-1)};
                     }
                     // Lower-right diagonal: k = -m + j, 1 <= j <= m-1
                     if ((1 <= j && j <= m-1) && (k == -m + j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (Tarray[m][(j-1 + n)][(-m+j + n)] + cVal * Tarray[m][(j + n)][(-m+j+1 + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_RIGHT;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, -m+j), makeDepKey(m, j, -m+j+1)};
                     }
                     // Upper-left diagonal: k = m + j, 1-m <= j <= -1
                     if (((1-m) <= j && j <= -1) && (k == m + j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (cVal * Tarray[m][(j + n)][(m+j-1 + n)] + Tarray[m][(j+1 + n)][(m+j + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_LEFT;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, m+j-1), makeDepKey(m, j+1, m+j)};
                     }
                     // Lower-left diagonal: k = -m - j, 1-m <= j <= -1
                     if (((1-m) <= j && j <= -1) && (k == -m - j)) {
                         Tarray[m+1][(j + n)][(k + n)] =
                             (cVal * Tarray[m][(j + n)][(-m-j+1 + n)] + Tarray[m][(j+1 + n)][(-m-j + n)])
                             / (one + cVal);
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_LEFT;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, -m-j+1), makeDepKey(m, j+1, -m-j)};
                     }
 
                     // Interior pass-through (for positions where (j+k+m) % 2 == 0)
                     if ((std::abs(k) + std::abs(j) < m) && (((j + k + m) % 2) == 0)) {
                         Tarray[m+1][(j + n)][(k + n)] = Tarray[m][(j + n)][(k + n)];
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_PASSTHROUGH;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = 1.0;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k)};
                     }
                 }
             }
         }
 
         // Pass 2: Interior recurrence (for positions where (j+k+m) % 2 == 1)
+        // Original formula (axis-aligned neighbors):
+        // T[m+1](j,k) = -T[m](j,k) + (T[m+1](j-1,k) + T[m+1](j+1,k) + c*T[m+1](j,k+1) + c*T[m+1](j,k-1)) / (1+c)
         for (int k = -m; k <= m; k++) {
             for (int j = -m; j <= m; j++) {
                 if (std::abs(k) + std::abs(j) <= m) {
@@ -634,7 +735,6 @@ static void computeTembeddingRecurrence() {
                         double c = getFaceWeight(j, k, m);
                         Complex cVal(c, 0.0);
 
-                        // T[m+1](j,k) = -T[m](j,k) + (T[m+1](j-1,k) + T[m+1](j+1,k) + c*T[m+1](j,k+1) + c*T[m+1](j,k-1)) / (1+c)
                         Tarray[m+1][(j + n)][(k + n)] =
                             -Tarray[m][(j + n)][(k + n)]
                             + (Tarray[m+1][(j-1 + n)][(k + n)]
@@ -642,6 +742,17 @@ static void computeTembeddingRecurrence() {
                                + cVal * Tarray[m+1][(j + n)][(k+1 + n)]
                                + cVal * Tarray[m+1][(j + n)][(k-1 + n)]
                               ) / (one + cVal);
+
+                        vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_RECURRENCE;
+                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                        vertexDeps[m+1][(j + n)][(k + n)] = {
+                            makeDepKey(m, j, k),
+                            makeDepKey(m+1, j-1, k),
+                            makeDepKey(m+1, j+1, k),
+                            makeDepKey(m+1, j, k+1),
+                            makeDepKey(m+1, j, k-1)
+                        };
                     }
                 }
             }
@@ -991,6 +1102,13 @@ char* getTembeddingJSON() {
     }
     oss << "]";
 
+    // Vertex type names for JSON
+    const char* vertexTypeNames[] = {
+        "boundary_corner", "boundary_left", "boundary_right", "boundary_bottom", "boundary_top",
+        "diag_upper_right", "diag_lower_right", "diag_upper_left", "diag_lower_left",
+        "interior_passthrough", "interior_recurrence"
+    };
+
     // Output T-embedding at ALL levels for step-by-step visualization
     oss << ",\"tembHistory\":[";
     for (size_t level = 0; level < g_tEmbeddingHistory.size(); level++) {
@@ -1007,7 +1125,17 @@ char* getTembeddingJSON() {
                 << ",\"y\":" << v.y
                 << ",\"tReal\":" << v.tReal
                 << ",\"tImag\":" << v.tImag
-                << "}";
+                << ",\"type\":\"" << vertexTypeNames[v.type] << "\""
+                << ",\"sourceLevel\":" << v.sourceLevel
+                << ",\"faceWeight\":" << v.faceWeight
+                << ",\"deps\":[";
+            bool firstDep = true;
+            for (const auto& dep : v.deps) {
+                if (!firstDep) oss << ",";
+                firstDep = false;
+                oss << "\"" << dep << "\"";
+            }
+            oss << "]}";
         }
         oss << "]}";
     }
