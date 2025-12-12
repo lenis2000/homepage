@@ -30,7 +30,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-static int g_n = 5;           // Diamond size parameter
+static int g_n = 4;           // Diamond size parameter
 static double g_a = 1.0;      // Boundary parameter (computed or set)
 
 // Coefficients for T-embedding recurrence (Proposition from paper)

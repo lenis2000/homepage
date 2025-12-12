@@ -15,7 +15,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 </p>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -747,7 +747,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       loadingMsg.style.display = 'none';
 
       // Auto-compute on load
-      const n = parseInt(document.getElementById('n-input').value) || 5;
+      const n = parseInt(document.getElementById('n-input').value) || 4;
       setN(n);
       initAztecGraph(n);
       computeAndDisplay();
@@ -761,7 +761,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   function computeAndDisplay() {
     if (!wasmReady) return;
 
-    const n = parseInt(document.getElementById('n-input').value) || 5;
+    const n = parseInt(document.getElementById('n-input').value) || 4;
     setN(n);
     computeTembedding();
 
@@ -1035,7 +1035,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // Main buttons
   document.getElementById('compute-btn').addEventListener('click', () => {
-    const n = parseInt(document.getElementById('n-input').value) || 5;
+    const n = parseInt(document.getElementById('n-input').value) || 4;
     initAztecGraph(n);
     computeAndDisplay();
   });
@@ -1044,7 +1044,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      const n = parseInt(e.target.value) || 5;
+      const n = parseInt(e.target.value) || 4;
       initAztecGraph(n);
       computeAndDisplay();
     }
