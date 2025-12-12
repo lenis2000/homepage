@@ -1,16 +1,15 @@
 /*
   2025-12-11-t-embedding-arbitrary-weights.cpp
 
-  High-precision weight management for T-embeddings of Aztec diamond with arbitrary periodic weights.
-  Uses Boost multiprecision for 100+ digit precision computations.
+  T-embedding of Aztec diamond using Berggren-Russkikh Proposition recurrence.
+  Uses arbitrary coefficients α_n, β_{j,n}, γ_{j,k,n} for the recurrence formulas.
 
-  Following Berggren-Borodin convention:
-  - Each black face has edges with weights α (bottom), β (right), γ (left), 1 (top)
-  - Face weights: X = α/(βγ) for black faces, X = βγ/α for white faces
-  - Periodicity: k×l periodic weights with indices j=0..k-1, i=0..l-1
+  Two-phase algorithm:
+  1. Going DOWN (n → 1): Compute coefficients from edge weights (TODO - for now all 1s)
+  2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_initWeights','_setWeight','_getWeightsJSON','_getEdgesJSON','_getFacesJSON','_setN','_setPeriodicParams','_freeString','_getProgress','_resetProgress','_foldWeights','_urbanRenewalStep1','_urbanRenewalStep2','_urbanRenewalStep3','_computeTembedding','_getTembeddingJSON']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -24,802 +23,428 @@
 #include <cstring>
 #include <map>
 
-// For now using double precision - Boost multiprecision can be added later
-// when higher precision is needed for specific computations
-// #include <boost/multiprecision/cpp_dec_float.hpp>
-// typedef boost::multiprecision::cpp_dec_float_100 HighPrecFloat;
+// =============================================================================
+// GLOBAL STATE
+// =============================================================================
 
-typedef double HighPrecFloat;
-
-// Global state
 static int g_n = 5;           // Diamond size parameter
-static int g_k = 2;           // Vertical period
-static int g_l = 2;           // Horizontal period
+static double g_a = 1.0;      // Boundary parameter (computed or set)
 
-// Weight arrays: alpha[j][i], beta[j][i], gamma[j][i] for j=0..k-1, i=0..l-1
-static std::vector<std::vector<HighPrecFloat>> g_alpha;
-static std::vector<std::vector<HighPrecFloat>> g_beta;
-static std::vector<std::vector<HighPrecFloat>> g_gamma;
+// Coefficients for T-embedding recurrence (Proposition from paper)
+// α_n for n = 1..N (axis boundary formula)
+static std::vector<double> g_alpha;  // g_alpha[n] = α_n
+
+// β_{j,n} for diagonal boundary formula
+// g_beta[n][j] = β_{j,n}
+static std::vector<std::map<int, double>> g_beta;
+
+// γ_{j,k,n} for interior recurrence formula
+// g_gamma[n]["j,k"] = γ_{j,k,n}
+static std::vector<std::map<std::string, double>> g_gamma;
 
 // Progress tracking
 static int g_progress = 0;
 
-// Edge structure
-struct Edge {
-    double x1, y1, x2, y2;
-    HighPrecFloat weight;
-    std::string dir;  // "alpha", "beta", "gamma", "one"
-    int periodicI, periodicJ;
-    bool isHorizontal;
-};
-
-// Face structure
-struct Face {
-    int x, y;
-    HighPrecFloat weight;
-    bool isBlack;
-};
-
-// Storage
-static std::map<std::string, Edge> g_edges;
-static std::map<std::string, Face> g_faces;
-
-// After folding, we use arbitrary edge weights instead of periodic
-static bool g_useArbitraryWeights = false;
-static std::map<std::string, HighPrecFloat> g_arbitraryEdgeWeights;
-
-// Track color swap: after each fold, black<->white swap
-static bool g_colorsSwapped = false;
-
-// T-embedding computation storage
-static int g_originalN = 0;  // Store original n before folding
-static std::vector<std::map<std::string, HighPrecFloat>> g_faceWeightsHistory;  // Face weights at each level
-static std::vector<bool> g_colorSwapHistory;  // Color swap state at each level
-
 // Vertex type enum for T-embedding formula tracking
 enum VertexType {
-    VT_BOUNDARY_CORNER,    // Fixed boundary corner: T(-m,0), T(m,0), T(0,-m), T(0,m)
-    VT_BOUNDARY_LEFT,      // Left axis: j=-m, k=0
-    VT_BOUNDARY_RIGHT,     // Right axis: j=m, k=0
-    VT_BOUNDARY_BOTTOM,    // Bottom axis: j=0, k=-m
-    VT_BOUNDARY_TOP,       // Top axis: j=0, k=m
-    VT_DIAG_UPPER_RIGHT,   // Upper-right diagonal: k=m-j, 1<=j<=m-1
-    VT_DIAG_LOWER_RIGHT,   // Lower-right diagonal: k=-m+j, 1<=j<=m-1
-    VT_DIAG_UPPER_LEFT,    // Upper-left diagonal: k=m+j, 1-m<=j<=-1
-    VT_DIAG_LOWER_LEFT,    // Lower-left diagonal: k=-m-j, 1-m<=j<=-1
-    VT_INTERIOR_PASSTHROUGH, // Interior pass-through: (j+k+m)%2==0
-    VT_INTERIOR_RECURRENCE   // Interior recurrence: (j+k+m)%2==1
+    VT_BOUNDARY_CORNER,      // Fixed boundary corner: T(±(n+1),0) and T(0,±(n+1))
+    VT_AXIS_HORIZONTAL,      // Axis boundary: T(±n, 0)
+    VT_AXIS_VERTICAL,        // Axis boundary: T(0, ±n)
+    VT_DIAG_POSITIVE_J,      // Diagonal boundary: j > 0
+    VT_DIAG_NEGATIVE_J,      // Diagonal boundary: j < 0
+    VT_INTERIOR_PASSTHROUGH, // Interior pass-through: j+k+n even
+    VT_INTERIOR_RECURRENCE   // Interior recurrence: j+k+n odd
 };
 
-// T-embedding results: complex numbers stored as pairs (real, imag)
+// T-embedding vertex structure
 struct TVertex {
-    double x, y;  // Original grid position (j, k)
-    double tReal, tImag;  // T-embedded position (complex number)
-    VertexType type;  // How this vertex was computed
-    int sourceLevel;  // Level m from which this was computed (m -> m+1)
-    double faceWeight;  // Face weight c used in the formula
-    // Dependencies: keys of vertices this depends on
-    std::vector<std::string> deps;
+    int x, y;                 // Grid position (j, k)
+    double tReal, tImag;      // T-embedded position (complex number)
+    VertexType type;          // How this vertex was computed
+    int sourceLevel;          // Level n from which this was computed
+    double coeff;             // Coefficient used (α, β, or γ)
+    std::vector<std::string> deps;  // Dependencies
 };
-static std::map<std::string, TVertex> g_tEmbedding;
-static int g_debugZeroCount = 0;
 
-// Store T-embedding at each level for step-by-step visualization
+// T-embedding storage
+static std::map<std::string, TVertex> g_tEmbedding;
 static std::vector<std::map<std::string, TVertex>> g_tEmbeddingHistory;
 
-// Helper functions
-static bool inDiamond(double x, double y, int n) {
-    return std::abs(x) + std::abs(y) <= n + 0.5;
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+static std::string makeKey(int j, int k) {
+    std::ostringstream ss;
+    ss << j << "," << k;
+    return ss.str();
 }
 
-static bool isBlackFace(int fx, int fy) {
-    // Simple formula: g_colorsSwapped handles everything
-    // At init, g_colorsSwapped is set based on initial n parity
-    // After each fold step 3, it toggles
-    bool baseBlack = (fx + fy) % 2 == 0;
-    return g_colorsSwapped ? !baseBlack : baseBlack;
+static std::string makeDepKey(int level, int j, int k) {
+    std::ostringstream ss;
+    ss << "T" << level << "(" << j << "," << k << ")";
+    return ss.str();
 }
 
-// Convert high precision float to string
-static std::string hpToString(HighPrecFloat val) {
-    std::ostringstream oss;
-    oss << std::setprecision(15) << static_cast<double>(val);
-    return oss.str();
+// Get α_n coefficient
+static double getAlpha(int n) {
+    if (n >= 1 && n < (int)g_alpha.size()) {
+        return g_alpha[n];
+    }
+    return 1.0;  // default
 }
 
-// Initialize weight arrays with default values
-static void initWeightArrays() {
+// Get β_{j,n} coefficient
+static double getBeta(int j, int n) {
+    if (n >= 1 && n < (int)g_beta.size()) {
+        auto it = g_beta[n].find(j);
+        if (it != g_beta[n].end()) {
+            return it->second;
+        }
+    }
+    return 1.0;  // default
+}
+
+// Get γ_{j,k,n} coefficient
+static double getGamma(int j, int k, int n) {
+    if (n >= 1 && n < (int)g_gamma.size()) {
+        std::string key = makeKey(j, k);
+        auto it = g_gamma[n].find(key);
+        if (it != g_gamma[n].end()) {
+            return it->second;
+        }
+    }
+    return 1.0;  // default
+}
+
+// =============================================================================
+// COEFFICIENT INITIALIZATION
+// =============================================================================
+
+// Initialize all coefficients to 1.0 (uniform case)
+static void initUniformCoefficients() {
+    int N = g_n;
+
+    // Initialize α_n for n = 1..N
     g_alpha.clear();
+    g_alpha.resize(N + 1, 1.0);
+
+    // Initialize β_{j,n} for n = 1..N
     g_beta.clear();
+    g_beta.resize(N + 1);
+    for (int n = 1; n <= N; n++) {
+        // j ranges for diagonal boundary: 1 ≤ |j| ≤ n-1
+        for (int j = -(n-1); j <= n-1; j++) {
+            if (j != 0) {
+                g_beta[n][j] = 1.0;
+            }
+        }
+    }
+
+    // Initialize γ_{j,k,n} for n = 1..N
     g_gamma.clear();
-
-    g_alpha.resize(g_k);
-    g_beta.resize(g_k);
-    g_gamma.resize(g_k);
-
-    for (int j = 0; j < g_k; j++) {
-        g_alpha[j].resize(g_l, 1.0);
-        g_beta[j].resize(g_l, 1.0);
-        g_gamma[j].resize(g_l, 1.0);
-    }
-
-    // Default is uniform (all 1s) - already set above
-    // For non-uniform 2x2 example, use the "Edit periodic weights" button
-}
-
-// Generate edge key from coordinates
-static std::string makeEdgeKey(double x1, double y1, double x2, double y2) {
-    std::ostringstream keyss;
-    keyss << x1 << "," << y1 << "-" << x2 << "," << y2;
-    return keyss.str();
-}
-
-// Get edge weight and direction based on position
-static void getEdgeWeightAndDir(double x1, double y1, double x2, double y2,
-                                 HighPrecFloat& weight, std::string& dir,
-                                 int& periodicI, int& periodicJ) {
-    // Check for arbitrary weight first
-    if (g_useArbitraryWeights) {
-        std::string key = makeEdgeKey(x1, y1, x2, y2);
-        auto it = g_arbitraryEdgeWeights.find(key);
-        if (it != g_arbitraryEdgeWeights.end()) {
-            weight = it->second;
-            dir = "arbitrary";
-            periodicI = periodicJ = 0;
-            return;
-        }
-    }
-
-    bool isHorizontal = (y1 == y2);
-    int faceX, faceY;
-
-    if (isHorizontal) {
-        // Horizontal edge
-        int faceAboveX = static_cast<int>(std::round((x1 + x2) / 2.0));
-        int faceAboveY = static_cast<int>(std::round(y1 + 0.5));
-        int faceBelowX = static_cast<int>(std::round((x1 + x2) / 2.0));
-        int faceBelowY = static_cast<int>(std::round(y1 - 0.5));
-
-        if (isBlackFace(faceAboveX, faceAboveY)) {
-            faceX = faceAboveX;
-            faceY = faceAboveY;
-            dir = "alpha";  // bottom edge of black face
-        } else if (isBlackFace(faceBelowX, faceBelowY)) {
-            faceX = faceBelowX;
-            faceY = faceBelowY;
-            dir = "one";  // top edge of black face = 1
-            weight = 1.0;
-            periodicI = periodicJ = 0;
-            return;
-        } else {
-            weight = 1.0;
-            dir = "error";
-            periodicI = periodicJ = 0;
-            return;
-        }
-    } else {
-        // Vertical edge
-        int faceRightX = static_cast<int>(std::round(x1 + 0.5));
-        int faceRightY = static_cast<int>(std::round((y1 + y2) / 2.0));
-        int faceLeftX = static_cast<int>(std::round(x1 - 0.5));
-        int faceLeftY = static_cast<int>(std::round((y1 + y2) / 2.0));
-
-        if (isBlackFace(faceRightX, faceRightY)) {
-            faceX = faceRightX;
-            faceY = faceRightY;
-            dir = "gamma";  // left edge of black face
-        } else if (isBlackFace(faceLeftX, faceLeftY)) {
-            faceX = faceLeftX;
-            faceY = faceLeftY;
-            dir = "beta";  // right edge of black face
-        } else {
-            weight = 1.0;
-            dir = "error";
-            periodicI = periodicJ = 0;
-            return;
-        }
-    }
-
-    // Compute periodic indices using diagonal coordinates
-    int diagI = (faceX + faceY) / 2;
-    int diagJ = (faceX - faceY) / 2;
-
-    periodicI = ((diagI % g_l) + g_l) % g_l;
-    periodicJ = ((diagJ % g_k) + g_k) % g_k;
-
-    // Get weight from arrays
-    if (dir == "alpha") {
-        weight = g_alpha[periodicJ][periodicI];
-    } else if (dir == "beta") {
-        weight = g_beta[periodicJ][periodicI];
-    } else if (dir == "gamma") {
-        weight = g_gamma[periodicJ][periodicI];
-    } else {
-        weight = 1.0;
-    }
-}
-
-// Build all edges in the diamond
-static void buildEdges() {
-    g_edges.clear();
-
-    std::vector<double> coords;
-    for (int kk = -g_n; kk <= g_n; kk++) {
-        coords.push_back(kk - 0.5);
-        coords.push_back(kk + 0.5);
-    }
-
-    for (double i : coords) {
-        for (double j : coords) {
-            if (!inDiamond(i, j, g_n)) continue;
-
-            // Horizontal edge to the right
-            if (inDiamond(i + 1, j, g_n)) {
-                std::ostringstream keyss;
-                keyss << i << "," << j << "-" << (i+1) << "," << j;
-                std::string key = keyss.str();
-
-                Edge e;
-                e.x1 = i; e.y1 = j;
-                e.x2 = i + 1; e.y2 = j;
-                e.isHorizontal = true;
-                getEdgeWeightAndDir(i, j, i + 1, j, e.weight, e.dir, e.periodicI, e.periodicJ);
-                g_edges[key] = e;
-            }
-
-            // Vertical edge upward
-            if (inDiamond(i, j + 1, g_n)) {
-                std::ostringstream keyss;
-                keyss << i << "," << j << "-" << i << "," << (j+1);
-                std::string key = keyss.str();
-
-                Edge e;
-                e.x1 = i; e.y1 = j;
-                e.x2 = i; e.y2 = j + 1;
-                e.isHorizontal = false;
-                getEdgeWeightAndDir(i, j, i, j + 1, e.weight, e.dir, e.periodicI, e.periodicJ);
-                g_edges[key] = e;
+    g_gamma.resize(N + 1);
+    for (int n = 1; n <= N; n++) {
+        // Interior positions: |j|+|k| < n and j+k+n odd
+        for (int j = -(n-1); j <= n-1; j++) {
+            for (int k = -(n-1); k <= n-1; k++) {
+                if (std::abs(j) + std::abs(k) < n && ((j + k + n) % 2 == 1)) {
+                    g_gamma[n][makeKey(j, k)] = 1.0;
+                }
             }
         }
     }
+
+    // Set a = 1 for uniform case
+    g_a = 1.0;
 }
 
-// Build all faces and compute face weights
-static void buildFaces() {
-    g_faces.clear();
+// =============================================================================
+// T-EMBEDDING COMPUTATION (Going UP: 1 → n)
+// =============================================================================
 
-    for (int fx = -g_n; fx <= g_n; fx++) {
-        for (int fy = -g_n; fy <= g_n; fy++) {
-            // Check all 4 corners are in diamond
-            if (!inDiamond(fx - 0.5, fy - 0.5, g_n) ||
-                !inDiamond(fx + 0.5, fy - 0.5, g_n) ||
-                !inDiamond(fx - 0.5, fy + 0.5, g_n) ||
-                !inDiamond(fx + 0.5, fy + 0.5, g_n)) continue;
-
-            // Get the 4 edge keys
-            std::ostringstream bkey, tkey, lkey, rkey;
-            bkey << (fx - 0.5) << "," << (fy - 0.5) << "-" << (fx + 0.5) << "," << (fy - 0.5);
-            tkey << (fx - 0.5) << "," << (fy + 0.5) << "-" << (fx + 0.5) << "," << (fy + 0.5);
-            lkey << (fx - 0.5) << "," << (fy - 0.5) << "-" << (fx - 0.5) << "," << (fy + 0.5);
-            rkey << (fx + 0.5) << "," << (fy - 0.5) << "-" << (fx + 0.5) << "," << (fy + 0.5);
-
-            HighPrecFloat wBottom = 1.0, wTop = 1.0, wLeft = 1.0, wRight = 1.0;
-
-            auto bit = g_edges.find(bkey.str());
-            auto tit = g_edges.find(tkey.str());
-            auto lit = g_edges.find(lkey.str());
-            auto rit = g_edges.find(rkey.str());
-
-            if (bit != g_edges.end()) wBottom = bit->second.weight;
-            if (tit != g_edges.end()) wTop = tit->second.weight;
-            if (lit != g_edges.end()) wLeft = lit->second.weight;
-            if (rit != g_edges.end()) wRight = rit->second.weight;
-
-            // Compute face weight using all 4 edges
-            // Black face: X = (α * δ) / (β * γ) = (bottom * top) / (right * left)
-            // White face: X = (β * γ) / (α * δ) = (right * left) / (bottom * top)
-            // Initially δ (top for black, bottom for white) = 1, but after folding it's not
-            Face f;
-            f.x = fx;
-            f.y = fy;
-            f.isBlack = isBlackFace(fx, fy);
-
-            if (f.isBlack) {
-                f.weight = (wBottom * wTop) / (wRight * wLeft);
-            } else {
-                f.weight = (wRight * wLeft) / (wBottom * wTop);
-            }
-
-            std::ostringstream fkey;
-            fkey << fx << "," << fy;
-            g_faces[fkey.str()] = f;
-        }
-    }
-}
-
-// Step 1: Transform edge weights on black cells
-static void doUrbanRenewalStep1() {
-    if (g_n <= 1) return;
-
-    // Store new edge weights
-    std::map<std::string, HighPrecFloat> newWeights;
-
-    // For each BLACK face, apply urban renewal transformation
-    for (int fx = -g_n; fx <= g_n; fx++) {
-        for (int fy = -g_n; fy <= g_n; fy++) {
-            if (!isBlackFace(fx, fy)) continue;
-
-            // Check all 4 corners are in diamond
-            if (!inDiamond(fx - 0.5, fy - 0.5, g_n) ||
-                !inDiamond(fx + 0.5, fy - 0.5, g_n) ||
-                !inDiamond(fx - 0.5, fy + 0.5, g_n) ||
-                !inDiamond(fx + 0.5, fy + 0.5, g_n)) continue;
-
-            // Edge keys for this black face:
-            // w = top (horizontal edge at y = fy + 0.5)
-            // z = bottom (horizontal edge at y = fy - 0.5)
-            // x = left (vertical edge at x = fx - 0.5)
-            // y = right (vertical edge at x = fx + 0.5)
-            std::string wKey = makeEdgeKey(fx - 0.5, fy + 0.5, fx + 0.5, fy + 0.5);
-            std::string zKey = makeEdgeKey(fx - 0.5, fy - 0.5, fx + 0.5, fy - 0.5);
-            std::string xKey = makeEdgeKey(fx - 0.5, fy - 0.5, fx - 0.5, fy + 0.5);
-            std::string yKey = makeEdgeKey(fx + 0.5, fy - 0.5, fx + 0.5, fy + 0.5);
-
-            // Get current weights
-            HighPrecFloat w = 1.0, x = 1.0, y = 1.0, z = 1.0;
-            auto wit = g_edges.find(wKey);
-            auto zit = g_edges.find(zKey);
-            auto xit = g_edges.find(xKey);
-            auto yit = g_edges.find(yKey);
-
-            if (wit != g_edges.end()) w = wit->second.weight;
-            if (zit != g_edges.end()) z = zit->second.weight;
-            if (xit != g_edges.end()) x = xit->second.weight;
-            if (yit != g_edges.end()) y = yit->second.weight;
-
-            // Urban renewal formula
-            HighPrecFloat cellWeight = w * z + x * y;
-            if (cellWeight < 1e-15) cellWeight = 1e-15; // Avoid division by zero
-
-            HighPrecFloat wNew = z / cellWeight;
-            HighPrecFloat xNew = y / cellWeight;
-            HighPrecFloat yNew = x / cellWeight;
-            HighPrecFloat zNew = w / cellWeight;
-
-            // Store new weights
-            newWeights[wKey] = wNew;
-            newWeights[zKey] = zNew;
-            newWeights[xKey] = xNew;
-            newWeights[yKey] = yNew;
-        }
-    }
-
-    // Switch to arbitrary weights mode
-    g_useArbitraryWeights = true;
-    g_arbitraryEdgeWeights = newWeights;
-
-    buildEdges();
-    buildFaces();
-}
-
-// Step 2: Strip boundary (decrease n)
-static void doUrbanRenewalStep2() {
-    if (g_n <= 1) return;
-    g_n--;
-    buildEdges();
-    buildFaces();
-}
-
-// Step 3: Swap black<->white colors
-static void doUrbanRenewalStep3() {
-    g_colorsSwapped = !g_colorsSwapped;
-    buildEdges();
-    buildFaces();
-}
-
-// Store current face weights to history
-static void storeFaceWeightsToHistory() {
-    std::map<std::string, HighPrecFloat> currentFaceWeights;
-    for (const auto& pair : g_faces) {
-        currentFaceWeights[pair.first] = pair.second.weight;
-    }
-    g_faceWeightsHistory.push_back(currentFaceWeights);
-    g_colorSwapHistory.push_back(g_colorsSwapped);
-}
-
-// Fold all the way to n=1, storing face weights at each level
-static void computeAllFolds() {
-    // Clear history
-    g_faceWeightsHistory.clear();
-    g_colorSwapHistory.clear();
-    g_originalN = g_n;
-
-    // Store initial face weights at level n
-    storeFaceWeightsToHistory();
-
-    // Fold repeatedly until n=1
-    while (g_n > 1) {
-        doUrbanRenewalStep1();
-        doUrbanRenewalStep2();
-        doUrbanRenewalStep3();
-        storeFaceWeightsToHistory();
-    }
-}
-
-// Get face weight from history at a given level for position (fx, fy)
-// Level 0 = original size n, level 1 = n-1, etc.
-static HighPrecFloat getFaceWeightFromHistory(int level, int fx, int fy) {
-    if (level < 0 || level >= (int)g_faceWeightsHistory.size()) {
-        return 1.0;
-    }
-    std::ostringstream key;
-    key << fx << "," << fy;
-    auto it = g_faceWeightsHistory[level].find(key.str());
-    if (it != g_faceWeightsHistory[level].end()) {
-        return it->second;
-    }
-    return 1.0;  // Default
-}
-
-// Compute T-embedding using the recurrence formula from Berggren-Nicoletti-Russkikh
-// Following the structure of 2025-03-27-t-emb-a-json.cpp (uniform case)
-//
-// The boundary rhombus is fixed for ALL levels m=1..n:
-//   T(-m,0) = -1,  T(m,0) = +1,  T(0,-m) = i*a,  T(0,m) = -i*a
-//
-// For arbitrary weights, we use face weights c_{j,k}^{(m)} from the folding history
-// instead of the uniform α, β, γ formulas.
 static void computeTembeddingRecurrence() {
     g_tEmbedding.clear();
     g_tEmbeddingHistory.clear();
 
-    if (g_faceWeightsHistory.empty()) {
-        return;
-    }
+    int N = g_n;
+    double a = g_a;
 
-    int n = g_originalN;  // Original diamond size
-    int numLevels = (int)g_faceWeightsHistory.size();
-
-    // Get the final face weight (at n=1, there's one face)
-    // This is 'a' in the paper notation
-    HighPrecFloat finalFaceWeight = 1.0;
-    if (!g_faceWeightsHistory.back().empty()) {
-        finalFaceWeight = g_faceWeightsHistory.back().begin()->second;
-    }
-    double a = std::abs(static_cast<double>(finalFaceWeight));
-    if (a < 0.001) a = 1.0;
-
-    // Boundary rhombus parameters from the paper:
-    // Horizontal direction: from -a*sqrt(a^2+1) to +a*sqrt(a^2+1)
-    // Vertical direction: from -sqrt(a^2+1) to +sqrt(a^2+1)
-    double sqrtTerm = std::sqrt(a * a + 1.0);
-    double horizScale = a * sqrtTerm;   // horizontal half-width
-    double vertScale = sqrtTerm;        // vertical half-height
-
-    // Use complex numbers like the uniform implementation
+    // Use complex numbers
     typedef std::complex<double> Complex;
 
-    // Tarray[m][j+n][k+n] for j,k in [-n..n], m in [0..n]
-    std::vector<std::vector<std::vector<Complex>>> Tarray(
-        n + 1,
-        std::vector<std::vector<Complex>>(2*n + 1,
-            std::vector<Complex>(2*n + 1, Complex(0, 0))
+    // T array: Tarray[level][j+N][k+N]
+    // Levels go from 1 to N
+    std::vector<std::vector<std::vector<Complex>>> T(
+        N + 2,  // levels 0..N+1 (we only use 1..N)
+        std::vector<std::vector<Complex>>(2*N + 3,
+            std::vector<Complex>(2*N + 3, Complex(0, 0))
         )
     );
 
-    // Helper to get face weight c_{j,k}^{(m)} for the recurrence T_m -> T_{m+1}
-    // faceWeightsHistory[0] = original size n
-    // faceWeightsHistory[k] = size n-k
-    // When computing T_{m+1}, we use face weights from the size-m diamond
-    // These are denoted c_{j,k}^{(m)} and stored at histIdx = n - m
-    auto getFaceWeight = [&](int j, int k, int m) -> double {
-        // m is the source level, we're computing T_{m+1}
-        // c_{j,k}^{(m)} is stored at histIdx = n - m
-        int histIdx = n - m;
-        if (histIdx < 0 || histIdx >= numLevels) return 1.0;
-
-        std::ostringstream key;
-        key << j << "," << k;
-        auto it = g_faceWeightsHistory[histIdx].find(key.str());
-        if (it != g_faceWeightsHistory[histIdx].end()) {
-            return static_cast<double>(it->second);
-        }
-        return 1.0;
-    };
-
-    // Storage for vertex metadata at each level
+    // Storage for vertex metadata
     std::vector<std::vector<std::vector<VertexType>>> vertexTypes(
-        n + 1,
-        std::vector<std::vector<VertexType>>(2*n + 1,
-            std::vector<VertexType>(2*n + 1, VT_BOUNDARY_CORNER)
+        N + 2,
+        std::vector<std::vector<VertexType>>(2*N + 3,
+            std::vector<VertexType>(2*N + 3, VT_BOUNDARY_CORNER)
         )
     );
-    std::vector<std::vector<std::vector<double>>> vertexFaceWeights(
-        n + 1,
-        std::vector<std::vector<double>>(2*n + 1,
-            std::vector<double>(2*n + 1, 1.0)
-        )
-    );
-    std::vector<std::vector<std::vector<std::vector<std::string>>>> vertexDeps(
-        n + 1,
-        std::vector<std::vector<std::vector<std::string>>>(2*n + 1,
-            std::vector<std::vector<std::string>>(2*n + 1)
+    std::vector<std::vector<std::vector<double>>> vertexCoeffs(
+        N + 2,
+        std::vector<std::vector<double>>(2*N + 3,
+            std::vector<double>(2*N + 3, 1.0)
         )
     );
     std::vector<std::vector<std::vector<int>>> vertexSourceLevel(
-        n + 1,
-        std::vector<std::vector<int>>(2*n + 1,
-            std::vector<int>(2*n + 1, 0)
+        N + 2,
+        std::vector<std::vector<int>>(2*N + 3,
+            std::vector<int>(2*N + 3, 0)
+        )
+    );
+    std::vector<std::vector<std::vector<std::vector<std::string>>>> vertexDeps(
+        N + 2,
+        std::vector<std::vector<std::vector<std::string>>>(2*N + 3,
+            std::vector<std::vector<std::string>>(2*N + 3)
         )
     );
 
-    // Helper to make dependency key with level prefix
-    auto makeDepKey = [](int level, int j, int k) -> std::string {
-        std::ostringstream ss;
-        ss << "T" << level << "(" << j << "," << k << ")";
-        return ss.str();
-    };
+    // Offset for array indexing (j,k can be negative)
+    int off = N + 1;
 
-    // Helper to store T-embedding at a given level m
-    auto storeTembeddingAtLevel = [&](int m) {
+    // Helper to store T-embedding at a given level
+    // T_m graph has: interior vertices (|j|+|k| < m) and 4 corners (±m,0), (0,±m)
+    auto storeTembeddingAtLevel = [&](int level) {
         std::map<std::string, TVertex> levelMap;
+        int m = level;
         for (int k = -m; k <= m; k++) {
             for (int j = -m; j <= m; j++) {
-                // Include ALL vertices with |j|+|k| <= m for intermediate levels
-                // This includes:
-                // - Interior vertices: |j|+|k| < m
-                // - Boundary corners: (±m, 0) and (0, ±m)
-                // - Diagonal boundary: |j|+|k| = m with j≠0 and k≠0
-                bool isInDiamond = (std::abs(k) + std::abs(j) <= m);
-                if (isInDiamond) {
-                    std::ostringstream key;
-                    key << j << "," << k;
+                int absSum = std::abs(j) + std::abs(k);
+                bool isInterior = absSum < m;
+                bool isCorner = (absSum == m) && (j == 0 || k == 0);
+                if (isInterior || isCorner) {
                     TVertex v;
                     v.x = j;
                     v.y = k;
-                    v.tReal = Tarray[m][(j + n)][(k + n)].real();
-                    v.tImag = Tarray[m][(j + n)][(k + n)].imag();
-                    v.type = vertexTypes[m][(j + n)][(k + n)];
-                    v.sourceLevel = vertexSourceLevel[m][(j + n)][(k + n)];
-                    v.faceWeight = vertexFaceWeights[m][(j + n)][(k + n)];
-                    v.deps = vertexDeps[m][(j + n)][(k + n)];
-                    levelMap[key.str()] = v;
+                    v.tReal = T[m][j + off][k + off].real();
+                    v.tImag = T[m][j + off][k + off].imag();
+                    v.type = vertexTypes[m][j + off][k + off];
+                    v.sourceLevel = vertexSourceLevel[m][j + off][k + off];
+                    v.coeff = vertexCoeffs[m][j + off][k + off];
+                    v.deps = vertexDeps[m][j + off][k + off];
+                    levelMap[makeKey(j, k)] = v;
                 }
             }
         }
         g_tEmbeddingHistory.push_back(levelMap);
     };
 
-    // 1) Initialize boundary for all levels m=1..n
-    // Boundary rhombus vertices with correct scaling:
-    //   T(-m,0) = -horizScale,  T(m,0) = +horizScale
-    //   T(0,-m) = i*vertScale,  T(0,m) = -i*vertScale
-    for (int m = 1; m <= n; m++) {
-        Tarray[m][(-m + n)][(0 + n)] = Complex(-horizScale, 0.0);
-        Tarray[m][(m + n)][(0 + n)] = Complex(horizScale, 0.0);
-        Tarray[m][(0 + n)][(-m + n)] = Complex(0.0, vertScale);
-        Tarray[m][(0 + n)][(m + n)] = Complex(0.0, -vertScale);
+    // ==========================================================================
+    // BASE CASE: T_1
+    // ==========================================================================
+    // T_1 has vertices at (±1, 0), (0, ±1), and (0, 0)
+    // Boundary corners: T_1(±1, 0) = ±1, T_1(0, ±1) = ∓ia
+    // Center: T_1(0, 0) = 0 (by symmetry)
 
-        // Mark boundary corners
-        vertexTypes[m][(-m + n)][(0 + n)] = VT_BOUNDARY_CORNER;
-        vertexTypes[m][(m + n)][(0 + n)] = VT_BOUNDARY_CORNER;
-        vertexTypes[m][(0 + n)][(-m + n)] = VT_BOUNDARY_CORNER;
-        vertexTypes[m][(0 + n)][(m + n)] = VT_BOUNDARY_CORNER;
-    }
+    T[1][1 + off][0 + off] = Complex(1.0, 0.0);      // T_1(1, 0) = 1
+    T[1][-1 + off][0 + off] = Complex(-1.0, 0.0);   // T_1(-1, 0) = -1
+    T[1][0 + off][1 + off] = Complex(0.0, -a);      // T_1(0, 1) = -ia
+    T[1][0 + off][-1 + off] = Complex(0.0, a);      // T_1(0, -1) = ia
+    T[1][0 + off][0 + off] = Complex(0.0, 0.0);     // T_1(0, 0) = 0
 
-    // Store level 1 (just the boundary rhombus)
+    vertexTypes[1][1 + off][0 + off] = VT_BOUNDARY_CORNER;
+    vertexTypes[1][-1 + off][0 + off] = VT_BOUNDARY_CORNER;
+    vertexTypes[1][0 + off][1 + off] = VT_BOUNDARY_CORNER;
+    vertexTypes[1][0 + off][-1 + off] = VT_BOUNDARY_CORNER;
+    vertexTypes[1][0 + off][0 + off] = VT_INTERIOR_PASSTHROUGH;
+
     storeTembeddingAtLevel(1);
 
-    // 2) Fill T for m=1..(n-1) via the Berggren-Russkikh recurrence
-    // Using face weights c_{j,k}^{(m)} from size-m diamond instead of α, β, γ
-    for (int m = 1; m < n; m++) {
+    // ==========================================================================
+    // RECURRENCE: T_{n+1} from T_n for n = 1..N-1
+    // ==========================================================================
+
+    for (int n = 1; n < N; n++) {
         Complex one(1.0, 0.0);
+        Complex ia(0.0, a);
 
-        // Rule 1: Boundary corners for level m+1 are fixed
-        Tarray[m+1][(-(m+1) + n)][(0 + n)] = Complex(-horizScale, 0.0);
-        Tarray[m+1][((m+1) + n)][(0 + n)] = Complex(horizScale, 0.0);
-        Tarray[m+1][(0 + n)][(-(m+1) + n)] = Complex(0.0, vertScale);
-        Tarray[m+1][(0 + n)][((m+1) + n)] = Complex(0.0, -vertScale);
+        // Rule 1: Boundary corners for level n+1
+        // T_{n+1}(±(n+1), 0) = ±1
+        // T_{n+1}(0, ±(n+1)) = ∓ia
+        T[n+1][(n+1) + off][0 + off] = Complex(1.0, 0.0);
+        T[n+1][-(n+1) + off][0 + off] = Complex(-1.0, 0.0);
+        T[n+1][0 + off][(n+1) + off] = Complex(0.0, -a);
+        T[n+1][0 + off][-(n+1) + off] = Complex(0.0, a);
 
-        vertexTypes[m+1][(-(m+1) + n)][(0 + n)] = VT_BOUNDARY_CORNER;
-        vertexTypes[m+1][((m+1) + n)][(0 + n)] = VT_BOUNDARY_CORNER;
-        vertexTypes[m+1][(0 + n)][(-(m+1) + n)] = VT_BOUNDARY_CORNER;
-        vertexTypes[m+1][(0 + n)][((m+1) + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[n+1][(n+1) + off][0 + off] = VT_BOUNDARY_CORNER;
+        vertexTypes[n+1][-(n+1) + off][0 + off] = VT_BOUNDARY_CORNER;
+        vertexTypes[n+1][0 + off][(n+1) + off] = VT_BOUNDARY_CORNER;
+        vertexTypes[n+1][0 + off][-(n+1) + off] = VT_BOUNDARY_CORNER;
 
-        // Rule 2: For {|j|,|k|} = {0,m} (axis positions at boundary of level m)
-        // T_{m+1}(±m, 0) = (T_m(±m, 0) + c * T_m(±(m-1), 0)) / (1+c)
-        // T_{m+1}(0, ±m) = (c * T_m(0, ±m) + T_m(0, ±(m-1))) / (1+c)
+        // Rule 2: Axis boundary (|j|, |k| = {0, n})
+        // T_{n+1}(±n, 0) = (T_n(±n,0) + α_n·T_n(±(n-1),0)) / (α_n + 1)
+        // T_{n+1}(0, ±n) = (α_n·T_n(0,±n) + T_n(0,±(n-1))) / (α_n + 1)
         {
-            double c = getFaceWeight(m, 0, m);
-            Complex cVal(c, 0.0);
-            // Right: T_{m+1}(m, 0)
-            Tarray[m+1][(m + n)][(0 + n)] =
-                (Tarray[m][(m + n)][(0 + n)] + cVal * Tarray[m][(m-1 + n)][(0 + n)]) / (one + cVal);
-            vertexTypes[m+1][(m + n)][(0 + n)] = VT_BOUNDARY_RIGHT;
-            vertexSourceLevel[m+1][(m + n)][(0 + n)] = m;
-            vertexFaceWeights[m+1][(m + n)][(0 + n)] = c;
-            vertexDeps[m+1][(m + n)][(0 + n)] = {makeDepKey(m, m, 0), makeDepKey(m, m-1, 0)};
-        }
-        {
-            double c = getFaceWeight(-m, 0, m);
-            Complex cVal(c, 0.0);
-            // Left: T_{m+1}(-m, 0)
-            Tarray[m+1][(-m + n)][(0 + n)] =
-                (Tarray[m][(-m + n)][(0 + n)] + cVal * Tarray[m][(-m+1 + n)][(0 + n)]) / (one + cVal);
-            vertexTypes[m+1][(-m + n)][(0 + n)] = VT_BOUNDARY_LEFT;
-            vertexSourceLevel[m+1][(-m + n)][(0 + n)] = m;
-            vertexFaceWeights[m+1][(-m + n)][(0 + n)] = c;
-            vertexDeps[m+1][(-m + n)][(0 + n)] = {makeDepKey(m, -m, 0), makeDepKey(m, -m+1, 0)};
-        }
-        {
-            double c = getFaceWeight(0, m, m);
-            Complex cVal(c, 0.0);
-            // Top: T_{m+1}(0, m)
-            Tarray[m+1][(0 + n)][(m + n)] =
-                (cVal * Tarray[m][(0 + n)][(m + n)] + Tarray[m][(0 + n)][(m-1 + n)]) / (one + cVal);
-            vertexTypes[m+1][(0 + n)][(m + n)] = VT_BOUNDARY_TOP;
-            vertexSourceLevel[m+1][(0 + n)][(m + n)] = m;
-            vertexFaceWeights[m+1][(0 + n)][(m + n)] = c;
-            vertexDeps[m+1][(0 + n)][(m + n)] = {makeDepKey(m, 0, m), makeDepKey(m, 0, m-1)};
-        }
-        {
-            double c = getFaceWeight(0, -m, m);
-            Complex cVal(c, 0.0);
-            // Bottom: T_{m+1}(0, -m)
-            Tarray[m+1][(0 + n)][(-m + n)] =
-                (cVal * Tarray[m][(0 + n)][(-m + n)] + Tarray[m][(0 + n)][(-m+1 + n)]) / (one + cVal);
-            vertexTypes[m+1][(0 + n)][(-m + n)] = VT_BOUNDARY_BOTTOM;
-            vertexSourceLevel[m+1][(0 + n)][(-m + n)] = m;
-            vertexFaceWeights[m+1][(0 + n)][(-m + n)] = c;
-            vertexDeps[m+1][(0 + n)][(-m + n)] = {makeDepKey(m, 0, -m), makeDepKey(m, 0, -m+1)};
+            double alpha = getAlpha(n);
+            Complex alphaC(alpha, 0.0);
+
+            // T_{n+1}(n, 0)
+            T[n+1][n + off][0 + off] =
+                (T[n][n + off][0 + off] + alphaC * T[n][(n-1) + off][0 + off]) / (alphaC + one);
+            vertexTypes[n+1][n + off][0 + off] = VT_AXIS_HORIZONTAL;
+            vertexSourceLevel[n+1][n + off][0 + off] = n;
+            vertexCoeffs[n+1][n + off][0 + off] = alpha;
+            vertexDeps[n+1][n + off][0 + off] = {makeDepKey(n, n, 0), makeDepKey(n, n-1, 0)};
+
+            // T_{n+1}(-n, 0)
+            T[n+1][-n + off][0 + off] =
+                (T[n][-n + off][0 + off] + alphaC * T[n][-(n-1) + off][0 + off]) / (alphaC + one);
+            vertexTypes[n+1][-n + off][0 + off] = VT_AXIS_HORIZONTAL;
+            vertexSourceLevel[n+1][-n + off][0 + off] = n;
+            vertexCoeffs[n+1][-n + off][0 + off] = alpha;
+            vertexDeps[n+1][-n + off][0 + off] = {makeDepKey(n, -n, 0), makeDepKey(n, -(n-1), 0)};
+
+            // T_{n+1}(0, n)
+            T[n+1][0 + off][n + off] =
+                (alphaC * T[n][0 + off][n + off] + T[n][0 + off][(n-1) + off]) / (alphaC + one);
+            vertexTypes[n+1][0 + off][n + off] = VT_AXIS_VERTICAL;
+            vertexSourceLevel[n+1][0 + off][n + off] = n;
+            vertexCoeffs[n+1][0 + off][n + off] = alpha;
+            vertexDeps[n+1][0 + off][n + off] = {makeDepKey(n, 0, n), makeDepKey(n, 0, n-1)};
+
+            // T_{n+1}(0, -n)
+            T[n+1][0 + off][-n + off] =
+                (alphaC * T[n][0 + off][-n + off] + T[n][0 + off][-(n-1) + off]) / (alphaC + one);
+            vertexTypes[n+1][0 + off][-n + off] = VT_AXIS_VERTICAL;
+            vertexSourceLevel[n+1][0 + off][-n + off] = n;
+            vertexCoeffs[n+1][0 + off][-n + off] = alpha;
+            vertexDeps[n+1][0 + off][-n + off] = {makeDepKey(n, 0, -n), makeDepKey(n, 0, -(n-1))};
         }
 
-        // Rule 3: For 1 ≤ |j| ≤ m-1, |j|+|k|=m (diagonal boundary)
-        // Upper-right: T_{m+1}(j, m-j) = (T_m(j-1, m-j) + c * T_m(j, m-j-1)) / (1+c)  for j > 0
-        // Lower-right: T_{m+1}(j, -(m-j)) = (T_m(j-1, -(m-j)) + c * T_m(j, -(m-j)+1)) / (1+c)  for j > 0
-        // Upper-left: T_{m+1}(j, m+j) = (c * T_m(j, m+j-1) + T_m(j+1, m+j)) / (1+c)  for j < 0
-        // Lower-left: T_{m+1}(j, -(m+j)) = (c * T_m(j, -(m+j)+1) + T_m(j+1, -(m+j))) / (1+c)  for j < 0
-        for (int j = 1; j <= m - 1; j++) {
-            // Upper-right diagonal: k = m - j
-            {
-                int k = m - j;
-                double c = getFaceWeight(j, k, m);
-                Complex cVal(c, 0.0);
-                Tarray[m+1][(j + n)][(k + n)] =
-                    (Tarray[m][(j-1 + n)][(k + n)] + cVal * Tarray[m][(j + n)][(k-1 + n)]) / (one + cVal);
-                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_RIGHT;
-                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, k), makeDepKey(m, j, k-1)};
-            }
-            // Lower-right diagonal: k = -(m - j)
-            {
-                int k = -(m - j);
-                double c = getFaceWeight(j, k, m);
-                Complex cVal(c, 0.0);
-                Tarray[m+1][(j + n)][(k + n)] =
-                    (Tarray[m][(j-1 + n)][(k + n)] + cVal * Tarray[m][(j + n)][(k+1 + n)]) / (one + cVal);
-                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_RIGHT;
-                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, k), makeDepKey(m, j, k+1)};
-            }
-        }
-        for (int j = -(m - 1); j <= -1; j++) {
-            // Upper-left diagonal: k = m + j
-            {
-                int k = m + j;
-                double c = getFaceWeight(j, k, m);
-                Complex cVal(c, 0.0);
-                Tarray[m+1][(j + n)][(k + n)] =
-                    (cVal * Tarray[m][(j + n)][(k-1 + n)] + Tarray[m][(j+1 + n)][(k + n)]) / (one + cVal);
-                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_LEFT;
-                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k-1), makeDepKey(m, j+1, k)};
-            }
-            // Lower-left diagonal: k = -(m + j)
-            {
-                int k = -(m + j);
-                double c = getFaceWeight(j, k, m);
-                Complex cVal(c, 0.0);
-                Tarray[m+1][(j + n)][(k + n)] =
-                    (cVal * Tarray[m][(j + n)][(k+1 + n)] + Tarray[m][(j+1 + n)][(k + n)]) / (one + cVal);
-                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_LEFT;
-                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k+1), makeDepKey(m, j+1, k)};
-            }
+        // Rule 3: Diagonal boundary (|j|+|k|=n, j≠0, k≠0)
+        // For j > 0: T_{n+1}(j, ±(n-j)) = (T_n(j-1,±(n-j)) + β·T_n(j,±(n-j-1))) / (β + 1)
+        // For j < 0: T_{n+1}(j, ±(n+j)) = (β·T_n(j,±(n+j-1)) + T_n(j+1,±(n+j))) / (β + 1)
+
+        for (int j = 1; j <= n - 1; j++) {
+            double beta = getBeta(j, n);
+            Complex betaC(beta, 0.0);
+
+            // Upper-right: k = n - j > 0
+            int k = n - j;
+            T[n+1][j + off][k + off] =
+                (T[n][(j-1) + off][k + off] + betaC * T[n][j + off][(k-1) + off]) / (betaC + one);
+            vertexTypes[n+1][j + off][k + off] = VT_DIAG_POSITIVE_J;
+            vertexSourceLevel[n+1][j + off][k + off] = n;
+            vertexCoeffs[n+1][j + off][k + off] = beta;
+            vertexDeps[n+1][j + off][k + off] = {makeDepKey(n, j-1, k), makeDepKey(n, j, k-1)};
+
+            // Lower-right: k = -(n - j) < 0
+            k = -(n - j);
+            T[n+1][j + off][k + off] =
+                (T[n][(j-1) + off][k + off] + betaC * T[n][j + off][(k+1) + off]) / (betaC + one);
+            vertexTypes[n+1][j + off][k + off] = VT_DIAG_POSITIVE_J;
+            vertexSourceLevel[n+1][j + off][k + off] = n;
+            vertexCoeffs[n+1][j + off][k + off] = beta;
+            vertexDeps[n+1][j + off][k + off] = {makeDepKey(n, j-1, k), makeDepKey(n, j, k+1)};
         }
 
-        // Rule 4: For |j|+|k| < m and j+k+m even: pass-through
-        for (int k = -m + 1; k <= m - 1; k++) {
-            for (int j = -m + 1; j <= m - 1; j++) {
-                if (std::abs(j) + std::abs(k) < m && ((j + k + m) % 2 == 0)) {
-                    Tarray[m+1][(j + n)][(k + n)] = Tarray[m][(j + n)][(k + n)];
-                    vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_PASSTHROUGH;
-                    vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                    vertexFaceWeights[m+1][(j + n)][(k + n)] = 1.0;
-                    vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k)};
-                }
+        for (int j = -(n - 1); j <= -1; j++) {
+            double beta = getBeta(j, n);
+            Complex betaC(beta, 0.0);
+
+            // Upper-left: k = n + j > 0
+            int k = n + j;
+            T[n+1][j + off][k + off] =
+                (betaC * T[n][j + off][(k-1) + off] + T[n][(j+1) + off][k + off]) / (betaC + one);
+            vertexTypes[n+1][j + off][k + off] = VT_DIAG_NEGATIVE_J;
+            vertexSourceLevel[n+1][j + off][k + off] = n;
+            vertexCoeffs[n+1][j + off][k + off] = beta;
+            vertexDeps[n+1][j + off][k + off] = {makeDepKey(n, j, k-1), makeDepKey(n, j+1, k)};
+
+            // Lower-left: k = -(n + j) < 0
+            k = -(n + j);
+            T[n+1][j + off][k + off] =
+                (betaC * T[n][j + off][(k+1) + off] + T[n][(j+1) + off][k + off]) / (betaC + one);
+            vertexTypes[n+1][j + off][k + off] = VT_DIAG_NEGATIVE_J;
+            vertexSourceLevel[n+1][j + off][k + off] = n;
+            vertexCoeffs[n+1][j + off][k + off] = beta;
+            vertexDeps[n+1][j + off][k + off] = {makeDepKey(n, j, k+1), makeDepKey(n, j+1, k)};
+        }
+
+        // Rule 4: Interior pass-through (|j|+|k| < n, j+k+n even)
+        // Must be done BEFORE Rule 5 so T_{n+1} neighbors are available
+        for (int k = -(n - 1); k <= n - 1; k++) {
+            for (int j = -(n - 1); j <= n - 1; j++) {
+                if (std::abs(j) + std::abs(k) >= n) continue;  // not interior
+                if ((j + k + n) % 2 != 0) continue;  // not even parity
+
+                T[n+1][j + off][k + off] = T[n][j + off][k + off];
+                vertexTypes[n+1][j + off][k + off] = VT_INTERIOR_PASSTHROUGH;
+                vertexSourceLevel[n+1][j + off][k + off] = n;
+                vertexCoeffs[n+1][j + off][k + off] = 1.0;
+                vertexDeps[n+1][j + off][k + off] = {makeDepKey(n, j, k)};
             }
         }
 
-        // Rule 5: For |j|+|k| < m and j+k+m odd: recurrence with AXIS-ALIGNED neighbors
-        // T_{m+1}(j,k) + T_m(j,k) = (T_{m+1}(j-1,k) + T_{m+1}(j+1,k) + c*(T_{m+1}(j,k+1) + T_{m+1}(j,k-1))) / (1+c)
-        for (int k = -m + 1; k <= m - 1; k++) {
-            for (int j = -m + 1; j <= m - 1; j++) {
-                if (std::abs(j) + std::abs(k) < m && ((j + k + m) % 2 == 1)) {
-                    double c = getFaceWeight(j, k, m);
-                    Complex cVal(c, 0.0);
+        // Rule 5: Interior recurrence (|j|+|k| < n, j+k+n odd)
+        // Now all T_{n+1} neighbors are available (boundary from Rules 1-3, interior from Rule 4)
+        for (int k = -(n - 1); k <= n - 1; k++) {
+            for (int j = -(n - 1); j <= n - 1; j++) {
+                if (std::abs(j) + std::abs(k) >= n) continue;  // not interior
+                if ((j + k + n) % 2 == 0) continue;  // not odd parity
 
-                    Tarray[m+1][(j + n)][(k + n)] =
-                        -Tarray[m][(j + n)][(k + n)]
-                        + (Tarray[m+1][(j-1 + n)][(k + n)]
-                           + Tarray[m+1][(j+1 + n)][(k + n)]
-                           + cVal * Tarray[m+1][(j + n)][(k+1 + n)]
-                           + cVal * Tarray[m+1][(j + n)][(k-1 + n)]
-                          ) / (one + cVal);
+                // T_{n+1}(j,k) = -T_n(j,k) + (T_{n+1}(j-1,k) + T_{n+1}(j+1,k)
+                //                + γ·(T_{n+1}(j,k+1) + T_{n+1}(j,k-1))) / (γ + 1)
+                double gamma = getGamma(j, k, n);
+                Complex gammaC(gamma, 0.0);
 
-                    vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_RECURRENCE;
-                    vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                    vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                    vertexDeps[m+1][(j + n)][(k + n)] = {
-                        makeDepKey(m, j, k),
-                        makeDepKey(m+1, j-1, k),
-                        makeDepKey(m+1, j+1, k),
-                        makeDepKey(m+1, j, k+1),
-                        makeDepKey(m+1, j, k-1)
-                    };
-                }
+                T[n+1][j + off][k + off] =
+                    -T[n][j + off][k + off]
+                    + (T[n+1][(j-1) + off][k + off] + T[n+1][(j+1) + off][k + off]
+                       + gammaC * (T[n+1][j + off][(k+1) + off] + T[n+1][j + off][(k-1) + off])
+                      ) / (gammaC + one);
+
+                vertexTypes[n+1][j + off][k + off] = VT_INTERIOR_RECURRENCE;
+                vertexSourceLevel[n+1][j + off][k + off] = n;
+                vertexCoeffs[n+1][j + off][k + off] = gamma;
+                vertexDeps[n+1][j + off][k + off] = {
+                    makeDepKey(n, j, k),
+                    makeDepKey(n+1, j-1, k),
+                    makeDepKey(n+1, j+1, k),
+                    makeDepKey(n+1, j, k+1),
+                    makeDepKey(n+1, j, k-1)
+                };
             }
         }
 
-        // Store T-embedding at level m+1
-        storeTembeddingAtLevel(m + 1);
+        // Store T-embedding at level n+1
+        storeTembeddingAtLevel(n + 1);
     }
 
-    // Debug: count how many zeros at level n
-    int zeroCount = 0;
-    for (int k = -n; k <= n; k++) {
-        for (int j = -n; j <= n; j++) {
-            if (std::abs(k) + std::abs(j) <= n) {
-                Complex val = Tarray[n][(j + n)][(k + n)];
-                if (std::abs(val.real()) < 0.0001 && std::abs(val.imag()) < 0.0001) {
-                    zeroCount++;
-                }
-            }
-        }
-    }
-
-    // Store the T-embedding result for the final level n
-    // Include ALL vertices with |j|+|k| <= n:
-    // - Interior points: |j|+|k| < n
-    // - Boundary corners: (±n,0), (0,±n)
-    // - Diagonal boundary: |j|+|k| = n with j≠0 and k≠0
-    // Note: mathematically, the augmented graph only uses corners + interior,
-    // but we include diagonal boundary for complete visualization
-    for (int k = -n; k <= n; k++) {
-        for (int j = -n; j <= n; j++) {
-            bool isInDiamond = (std::abs(k) + std::abs(j) <= n);
-
-            if (isInDiamond) {
-                std::ostringstream key;
-                key << j << "," << k;
-
+    // Store final T-embedding (level N) - only valid T_N vertices
+    for (int k = -N; k <= N; k++) {
+        for (int j = -N; j <= N; j++) {
+            int absSum = std::abs(j) + std::abs(k);
+            bool isInterior = absSum < N;
+            bool isCorner = (absSum == N) && (j == 0 || k == 0);
+            if (isInterior || isCorner) {
                 TVertex v;
                 v.x = j;
                 v.y = k;
-                v.tReal = Tarray[n][(j + n)][(k + n)].real();
-                v.tImag = Tarray[n][(j + n)][(k + n)].imag();
-                g_tEmbedding[key.str()] = v;
+                v.tReal = T[N][j + off][k + off].real();
+                v.tImag = T[N][j + off][k + off].imag();
+                v.type = vertexTypes[N][j + off][k + off];
+                v.sourceLevel = vertexSourceLevel[N][j + off][k + off];
+                v.coeff = vertexCoeffs[N][j + off][k + off];
+                v.deps = vertexDeps[N][j + off][k + off];
+                g_tEmbedding[makeKey(j, k)] = v;
             }
         }
     }
-
-    // Store debug info
-    g_debugZeroCount = zeroCount;
 }
+
+// =============================================================================
+// EXPORTED FUNCTIONS
+// =============================================================================
 
 extern "C" {
 
@@ -833,300 +458,42 @@ void resetProgress() {
     g_progress = 0;
 }
 
-// Set the diamond size (resets to periodic weights)
 EMSCRIPTEN_KEEPALIVE
 void setN(int n) {
     if (n < 1) n = 1;
-    if (n > 100) n = 100;
+    if (n > 50) n = 50;
     g_n = n;
-    g_useArbitraryWeights = false;
-    g_arbitraryEdgeWeights.clear();
-    // Set initial color swap based on n parity so leftmost face is always black
-    // Leftmost face at (-(n-1), 0) has sum -(n-1)
-    // For n odd: sum even → baseBlack=true → no swap needed
-    // For n even: sum odd → baseBlack=false → swap needed
-    g_colorsSwapped = (n % 2 == 0);
-    buildEdges();
-    buildFaces();
-}
-
-// Set periodic parameters k and l
-EMSCRIPTEN_KEEPALIVE
-void setPeriodicParams(int k, int l) {
-    if (k < 1) k = 1;
-    if (k > 10) k = 10;
-    if (l < 1) l = 1;
-    if (l > 10) l = 10;
-    g_k = k;
-    g_l = l;
-    initWeightArrays();
-    buildEdges();
-    buildFaces();
-}
-
-// Initialize weights with default values (resets to periodic weights)
-EMSCRIPTEN_KEEPALIVE
-void initWeights() {
-    g_useArbitraryWeights = false;
-    g_arbitraryEdgeWeights.clear();
-    // Set initial color swap based on n parity so leftmost face is always black
-    g_colorsSwapped = (g_n % 2 == 0);
-    initWeightArrays();
-    buildEdges();
-    buildFaces();
-}
-
-// Full urban renewal: all 3 steps combined
-EMSCRIPTEN_KEEPALIVE
-void foldWeights() {
-    if (g_n <= 1) return;
-    doUrbanRenewalStep1();
-    doUrbanRenewalStep2();
-    doUrbanRenewalStep3();
-}
-
-// Step 1 of urban renewal: transform edge weights on black cells
-EMSCRIPTEN_KEEPALIVE
-void urbanRenewalStep1() {
-    doUrbanRenewalStep1();
-}
-
-// Step 2 of urban renewal: strip boundary (decrease n)
-EMSCRIPTEN_KEEPALIVE
-void urbanRenewalStep2() {
-    doUrbanRenewalStep2();
-}
-
-// Step 3 of urban renewal: swap black<->white colors
-EMSCRIPTEN_KEEPALIVE
-void urbanRenewalStep3() {
-    doUrbanRenewalStep3();
-}
-
-// Set a specific weight value
-// param: 0=alpha, 1=beta, 2=gamma
-EMSCRIPTEN_KEEPALIVE
-void setWeight(int param, int j, int i, double value) {
-    if (j < 0 || j >= g_k || i < 0 || i >= g_l) return;
-    if (value <= 0) value = 0.01;
-
-    switch (param) {
-        case 0: g_alpha[j][i] = value; break;
-        case 1: g_beta[j][i] = value; break;
-        case 2: g_gamma[j][i] = value; break;
-    }
-
-    buildEdges();
-    buildFaces();
-}
-
-// Get all weights as JSON
-EMSCRIPTEN_KEEPALIVE
-char* getWeightsJSON() {
-    std::ostringstream oss;
-    oss << "{\"k\":" << g_k << ",\"l\":" << g_l << ",\"n\":" << g_n;
-
-    // Alpha
-    oss << ",\"alpha\":[";
-    for (int j = 0; j < g_k; j++) {
-        if (j > 0) oss << ",";
-        oss << "[";
-        for (int i = 0; i < g_l; i++) {
-            if (i > 0) oss << ",";
-            oss << hpToString(g_alpha[j][i]);
-        }
-        oss << "]";
-    }
-    oss << "]";
-
-    // Beta
-    oss << ",\"beta\":[";
-    for (int j = 0; j < g_k; j++) {
-        if (j > 0) oss << ",";
-        oss << "[";
-        for (int i = 0; i < g_l; i++) {
-            if (i > 0) oss << ",";
-            oss << hpToString(g_beta[j][i]);
-        }
-        oss << "]";
-    }
-    oss << "]";
-
-    // Gamma
-    oss << ",\"gamma\":[";
-    for (int j = 0; j < g_k; j++) {
-        if (j > 0) oss << ",";
-        oss << "[";
-        for (int i = 0; i < g_l; i++) {
-            if (i > 0) oss << ",";
-            oss << hpToString(g_gamma[j][i]);
-        }
-        oss << "]";
-    }
-    oss << "]}";
-
-    std::string result = oss.str();
-    char* out = (char*)std::malloc(result.size() + 1);
-    std::strcpy(out, result.c_str());
-    return out;
-}
-
-// Get all edges as JSON
-EMSCRIPTEN_KEEPALIVE
-char* getEdgesJSON() {
-    std::ostringstream oss;
-    oss << "[";
-
-    bool first = true;
-    for (const auto& pair : g_edges) {
-        const Edge& e = pair.second;
-        if (!first) oss << ",";
-        first = false;
-
-        oss << "{\"key\":\"" << pair.first << "\""
-            << ",\"x1\":" << e.x1
-            << ",\"y1\":" << e.y1
-            << ",\"x2\":" << e.x2
-            << ",\"y2\":" << e.y2
-            << ",\"weight\":" << hpToString(e.weight)
-            << ",\"dir\":\"" << e.dir << "\""
-            << ",\"i\":" << e.periodicI
-            << ",\"j\":" << e.periodicJ
-            << ",\"horizontal\":" << (e.isHorizontal ? "true" : "false")
-            << "}";
-    }
-
-    oss << "]";
-
-    std::string result = oss.str();
-    char* out = (char*)std::malloc(result.size() + 1);
-    std::strcpy(out, result.c_str());
-    return out;
-}
-
-// Get all faces as JSON
-EMSCRIPTEN_KEEPALIVE
-char* getFacesJSON() {
-    std::ostringstream oss;
-    oss << "[";
-
-    bool first = true;
-    for (const auto& pair : g_faces) {
-        const Face& f = pair.second;
-        if (!first) oss << ",";
-        first = false;
-
-        oss << "{\"key\":\"" << pair.first << "\""
-            << ",\"x\":" << f.x
-            << ",\"y\":" << f.y
-            << ",\"weight\":" << hpToString(f.weight)
-            << ",\"isBlack\":" << (f.isBlack ? "true" : "false")
-            << "}";
-    }
-
-    oss << "]";
-
-    std::string result = oss.str();
-    char* out = (char*)std::malloc(result.size() + 1);
-    std::strcpy(out, result.c_str());
-    return out;
 }
 
 EMSCRIPTEN_KEEPALIVE
-void freeString(char* str) {
-    std::free(str);
+void initCoefficients() {
+    initUniformCoefficients();
 }
 
 EMSCRIPTEN_KEEPALIVE
-void computeTembedding(int n) {
-    // Reset to given n and current weights, then compute T-embedding
-    int originalN = g_n;
-    bool originalUseArbitrary = g_useArbitraryWeights;
-    std::map<std::string, HighPrecFloat> originalArbitraryWeights = g_arbitraryEdgeWeights;
-    bool originalColorsSwapped = g_colorsSwapped;
-
-    // Initialize fresh at n
-    g_n = n;
-    g_colorsSwapped = (n % 2 == 0);
-    g_useArbitraryWeights = originalUseArbitrary;
-    g_arbitraryEdgeWeights = originalArbitraryWeights;
-    buildEdges();
-    buildFaces();
-
-    // Compute all folds and T-embedding
-    computeAllFolds();
+void computeTembedding() {
+    initUniformCoefficients();  // For now, always use uniform coefficients
     computeTembeddingRecurrence();
-
-    // Restore original state
-    g_n = originalN;
-    g_colorsSwapped = originalColorsSwapped;
-    g_useArbitraryWeights = originalUseArbitrary;
-    g_arbitraryEdgeWeights = originalArbitraryWeights;
-    buildEdges();
-    buildFaces();
 }
 
 EMSCRIPTEN_KEEPALIVE
 char* getTembeddingJSON() {
     std::ostringstream oss;
+    oss << std::setprecision(10);
     oss << "{";
 
-    // Output original n
-    oss << "\"originalN\":" << g_originalN;
+    // Output parameters
+    oss << "\"n\":" << g_n;
+    oss << ",\"a\":" << g_a;
 
-    // Output T-embedded vertices
-    oss << ",\"vertices\":[";
-    bool first = true;
-    for (const auto& pair : g_tEmbedding) {
-        if (!first) oss << ",";
-        first = false;
-        const TVertex& v = pair.second;
-        oss << "{\"key\":\"" << pair.first << "\""
-            << ",\"x\":" << v.x
-            << ",\"y\":" << v.y
-            << ",\"tReal\":" << v.tReal
-            << ",\"tImag\":" << v.tImag
-            << "}";
-    }
-    oss << "]";
-
-    // Also output face weights history for debugging
-    oss << ",\"numLevels\":" << g_faceWeightsHistory.size();
-
-    // Output ALL face weights at ALL levels
-    oss << ",\"faceWeightsHistory\":[";
-    for (size_t level = 0; level < g_faceWeightsHistory.size(); level++) {
-        if (level > 0) oss << ",";
-        oss << "{\"level\":" << level;
-        oss << ",\"diamondSize\":" << (g_originalN - (int)level);
-        oss << ",\"colorsSwapped\":" << (g_colorSwapHistory.size() > level ? (g_colorSwapHistory[level] ? "true" : "false") : "false");
-        oss << ",\"faces\":[";
-        bool firstFace = true;
-        for (const auto& kv : g_faceWeightsHistory[level]) {
-            if (!firstFace) oss << ",";
-            firstFace = false;
-            // Parse key to get x,y coordinates
-            int fx = 0, fy = 0;
-            sscanf(kv.first.c_str(), "%d,%d", &fx, &fy);
-            // Determine if black at this level (need to account for color swap)
-            bool swapped = (g_colorSwapHistory.size() > level) ? g_colorSwapHistory[level] : false;
-            bool baseBlack = (fx + fy) % 2 == 0;
-            bool isBlack = swapped ? !baseBlack : baseBlack;
-            oss << "{\"key\":\"" << kv.first << "\",\"x\":" << fx << ",\"y\":" << fy
-                << ",\"w\":" << kv.second << ",\"isBlack\":" << (isBlack ? "true" : "false") << "}";
-        }
-        oss << "]}";
-    }
-    oss << "]";
-
-    // Vertex type names for JSON
+    // Vertex type names
     const char* vertexTypeNames[] = {
-        "boundary_corner", "boundary_left", "boundary_right", "boundary_bottom", "boundary_top",
-        "diag_upper_right", "diag_lower_right", "diag_upper_left", "diag_lower_left",
+        "boundary_corner", "axis_horizontal", "axis_vertical",
+        "diag_positive_j", "diag_negative_j",
         "interior_passthrough", "interior_recurrence"
     };
 
-    // Output T-embedding at ALL levels for step-by-step visualization
+    // Output T-embedding at all levels for step-by-step visualization
     oss << ",\"tembHistory\":[";
     for (size_t level = 0; level < g_tEmbeddingHistory.size(); level++) {
         if (level > 0) oss << ",";
@@ -1144,7 +511,7 @@ char* getTembeddingJSON() {
                 << ",\"tImag\":" << v.tImag
                 << ",\"type\":\"" << vertexTypeNames[v.type] << "\""
                 << ",\"sourceLevel\":" << v.sourceLevel
-                << ",\"faceWeight\":" << v.faceWeight
+                << ",\"coeff\":" << v.coeff
                 << ",\"deps\":[";
             bool firstDep = true;
             for (const auto& dep : v.deps) {
@@ -1158,40 +525,13 @@ char* getTembeddingJSON() {
     }
     oss << "]";
 
-    // Debug: output parameter a and boundary scaling
-    HighPrecFloat finalFaceWeight = 1.0;
-    if (!g_faceWeightsHistory.empty() && !g_faceWeightsHistory.back().empty()) {
-        finalFaceWeight = g_faceWeightsHistory.back().begin()->second;
+    // Output coefficient arrays for display
+    oss << ",\"alpha\":[";
+    for (size_t i = 1; i < g_alpha.size(); i++) {
+        if (i > 1) oss << ",";
+        oss << g_alpha[i];
     }
-    double aParam = std::abs(static_cast<double>(finalFaceWeight));
-    double sqrtTerm = std::sqrt(aParam * aParam + 1.0);
-    double horizScale = aParam * sqrtTerm;
-    double vertScale = sqrtTerm;
-    oss << ",\"paramA\":" << aParam;
-    oss << ",\"horizScale\":" << horizScale;
-    oss << ",\"vertScale\":" << vertScale;
-    oss << ",\"debugZeroCount\":" << g_debugZeroCount;
-
-    // Debug: output corner vertices
-    oss << ",\"corners\":{";
-    auto corners = {
-        std::make_pair("-n,0", std::make_pair(-g_originalN, 0)),
-        std::make_pair("n,0", std::make_pair(g_originalN, 0)),
-        std::make_pair("0,-n", std::make_pair(0, -g_originalN)),
-        std::make_pair("0,n", std::make_pair(0, g_originalN))
-    };
-    first = true;
-    for (const auto& c : corners) {
-        std::ostringstream key;
-        key << c.second.first << "," << c.second.second;
-        auto it = g_tEmbedding.find(key.str());
-        if (it != g_tEmbedding.end()) {
-            if (!first) oss << ",";
-            first = false;
-            oss << "\"" << c.first << "\":{\"re\":" << it->second.tReal << ",\"im\":" << it->second.tImag << "}";
-        }
-    }
-    oss << "}";
+    oss << "]";
 
     oss << "}";
 
@@ -1199,6 +539,11 @@ char* getTembeddingJSON() {
     char* out = (char*)std::malloc(result.size() + 1);
     std::strcpy(out, result.c_str());
     return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void freeString(char* str) {
+    std::free(str);
 }
 
 } // extern "C"
