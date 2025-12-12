@@ -1051,13 +1051,20 @@ static void aztecStep3_Contract() {
     // Find vertices to remove (all 4 boundary diagonals):
     // - i-j = n (SE boundary) and i-j = -n (NW boundary)
     // - i+j = n-1 (NE boundary) and i+j = -(n+1) (SW boundary)
+    // BUT keep two black corner vertices: (n-1, 0) and (-n, -1)
     std::set<int> verticesToRemove;
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
         int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
         int diff = i - j;
         int sum = i + j;
-        if (diff == n || diff == -n || sum == (n - 1) || sum == -(n + 1)) {
+
+        // Check if this is one of the two black vertices to keep
+        bool keepVertex = false;
+        if (i == (n - 1) && j == 0) keepVertex = true;  // (3.5, 0.5) for n=4
+        if (i == -n && j == -1) keepVertex = true;       // (-3.5, -0.5) for n=4
+
+        if (!keepVertex && (diff == n || diff == -n || sum == (n - 1) || sum == -(n + 1))) {
             verticesToRemove.insert((int)idx);
         }
     }
@@ -1102,12 +1109,270 @@ static void aztecStep3_Contract() {
     g_aztecReductionStep = 3;
 }
 
+// STEP 4: Black contraction - merge black vertices on i-j = -(n-1) and i-j = (n-1) into single vertices
+// Double edges between pairs get summed weights
+static void aztecStep4_BlackContraction() {
+    if (g_aztecReductionStep != 3) return;
+
+    pushAztecState();
+
+    int n = g_aztecLevel;
+
+    // Build vertex index for quick lookup
+    std::map<std::string, int> vertexIndex;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
+        int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
+        vertexIndex[makeKey(i, j)] = (int)idx;
+    }
+
+    // Find black vertices on i-j = -(n-1) (negative diagonal)
+    std::vector<int> negDiagBlack;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (g_aztecVertices[idx].isWhite) continue;
+        int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
+        int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
+        if (i - j == -(n - 1)) {
+            negDiagBlack.push_back((int)idx);
+        }
+    }
+
+    // Find black vertices on i-j = (n-1) (positive diagonal)
+    std::vector<int> posDiagBlack;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (g_aztecVertices[idx].isWhite) continue;
+        int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
+        int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
+        if (i - j == (n - 1)) {
+            posDiagBlack.push_back((int)idx);
+        }
+    }
+
+    // Contract each diagonal: keep first vertex, redirect edges from others, set position
+    auto contractDiagonal = [&](std::vector<int>& diagVertices, double newX, double newY) {
+        if (diagVertices.size() == 0) return;
+
+        int keepIdx = diagVertices[0];  // Keep the first vertex
+
+        // Set the contracted vertex position
+        g_aztecVertices[keepIdx].x = newX;
+        g_aztecVertices[keepIdx].y = newY;
+
+        // Map from old vertex index to new (redirected) index
+        std::map<int, int> redirect;
+        for (size_t i = 1; i < diagVertices.size(); i++) {
+            redirect[diagVertices[i]] = keepIdx;
+        }
+
+        // Redirect edges
+        for (auto& e : g_aztecEdges) {
+            if (redirect.count(e.v1)) e.v1 = redirect[e.v1];
+            if (redirect.count(e.v2)) e.v2 = redirect[e.v2];
+        }
+
+        // Mark vertices for removal (all except first)
+        for (size_t i = 1; i < diagVertices.size(); i++) {
+            g_aztecVertices[diagVertices[i]].toContract = true;  // Mark for removal
+        }
+    };
+
+    // Contract negative diagonal (i-j = -(n-1)) to position (-n+0.5, n-0.5)
+    contractDiagonal(negDiagBlack, -n + 0.5, n - 0.5);
+    // Contract positive diagonal (i-j = n-1) to position (n-0.5, -n+0.5)
+    contractDiagonal(posDiagBlack, n - 0.5, -n + 0.5);
+
+    // Remove marked vertices
+    std::vector<AztecVertex> newVertices;
+    std::map<int, int> oldToNew;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (!g_aztecVertices[idx].toContract) {
+            oldToNew[(int)idx] = (int)newVertices.size();
+            newVertices.push_back(g_aztecVertices[idx]);
+        }
+    }
+
+    // Remap edge indices and collect edges
+    std::vector<AztecEdge> remappedEdges;
+    for (auto& e : g_aztecEdges) {
+        if (oldToNew.count(e.v1) && oldToNew.count(e.v2)) {
+            AztecEdge newEdge = e;
+            newEdge.v1 = oldToNew[e.v1];
+            newEdge.v2 = oldToNew[e.v2];
+            // Skip self-loops
+            if (newEdge.v1 != newEdge.v2) {
+                remappedEdges.push_back(newEdge);
+            }
+        }
+    }
+
+    // Merge double edges: sum weights of edges between same vertex pairs
+    std::map<std::pair<int,int>, double> edgeWeights;
+    std::map<std::pair<int,int>, bool> edgeHorizontal;
+    for (const auto& e : remappedEdges) {
+        int v1 = std::min(e.v1, e.v2);
+        int v2 = std::max(e.v1, e.v2);
+        auto key = std::make_pair(v1, v2);
+        edgeWeights[key] += e.weight;  // Sum weights
+        edgeHorizontal[key] = e.isHorizontal;
+    }
+
+    // Build final edge list
+    std::vector<AztecEdge> newEdges;
+    for (const auto& [key, weight] : edgeWeights) {
+        AztecEdge e;
+        e.v1 = key.first;
+        e.v2 = key.second;
+        e.weight = weight;
+        e.isHorizontal = edgeHorizontal[key];
+        e.gaugeTransformed = false;
+        newEdges.push_back(e);
+    }
+
+    // Update global state
+    g_aztecVertices = newVertices;
+    g_aztecEdges = newEdges;
+
+    // Clear highlighting
+    for (auto& v : g_aztecVertices) {
+        v.inVgauge = false;
+        v.toContract = false;
+    }
+
+    g_aztecReductionStep = 4;
+}
+
+// STEP 5: White contraction - merge white vertices on i+j = -n and i+j = n-2 into single vertices
+// Double edges between pairs get summed weights
+static void aztecStep5_WhiteContraction() {
+    if (g_aztecReductionStep != 4) return;
+
+    pushAztecState();
+
+    int n = g_aztecLevel;
+
+    // Find white vertices on i+j = -n (SW diagonal)
+    std::vector<int> negDiagWhite;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (!g_aztecVertices[idx].isWhite) continue;  // Only WHITE vertices
+        int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
+        int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
+        if (i + j == -n) {
+            negDiagWhite.push_back((int)idx);
+        }
+    }
+
+    // Find white vertices on i+j = n-2 (NE diagonal)
+    std::vector<int> posDiagWhite;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (!g_aztecVertices[idx].isWhite) continue;  // Only WHITE vertices
+        int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
+        int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
+        if (i + j == n - 2) {
+            posDiagWhite.push_back((int)idx);
+        }
+    }
+
+    // Contract each diagonal: keep first vertex, redirect edges from others, set position
+    auto contractDiagonal = [&](std::vector<int>& diagVertices, double newX, double newY) {
+        if (diagVertices.size() == 0) return;
+
+        int keepIdx = diagVertices[0];  // Keep the first vertex
+
+        // Set the contracted vertex position
+        g_aztecVertices[keepIdx].x = newX;
+        g_aztecVertices[keepIdx].y = newY;
+
+        // Map from old vertex index to new (redirected) index
+        std::map<int, int> redirect;
+        for (size_t i = 1; i < diagVertices.size(); i++) {
+            redirect[diagVertices[i]] = keepIdx;
+        }
+
+        // Redirect edges
+        for (auto& e : g_aztecEdges) {
+            if (redirect.count(e.v1)) e.v1 = redirect[e.v1];
+            if (redirect.count(e.v2)) e.v2 = redirect[e.v2];
+        }
+
+        // Mark vertices for removal (all except first)
+        for (size_t i = 1; i < diagVertices.size(); i++) {
+            g_aztecVertices[diagVertices[i]].toContract = true;
+        }
+    };
+
+    // Contract SW diagonal (i+j = -n) to position (-(n-0.5), -(n-0.5)) = (-n+0.5, -n+0.5)
+    contractDiagonal(negDiagWhite, -n + 0.5, -n + 0.5);
+    // Contract NE diagonal (i+j = n-2) to position (n-0.5, n-0.5)
+    contractDiagonal(posDiagWhite, n - 0.5, n - 0.5);
+
+    // Remove marked vertices
+    std::vector<AztecVertex> newVertices;
+    std::map<int, int> oldToNew;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (!g_aztecVertices[idx].toContract) {
+            oldToNew[(int)idx] = (int)newVertices.size();
+            newVertices.push_back(g_aztecVertices[idx]);
+        }
+    }
+
+    // Remap edge indices and collect edges
+    std::vector<AztecEdge> remappedEdges;
+    for (auto& e : g_aztecEdges) {
+        if (oldToNew.count(e.v1) && oldToNew.count(e.v2)) {
+            AztecEdge newEdge = e;
+            newEdge.v1 = oldToNew[e.v1];
+            newEdge.v2 = oldToNew[e.v2];
+            // Skip self-loops
+            if (newEdge.v1 != newEdge.v2) {
+                remappedEdges.push_back(newEdge);
+            }
+        }
+    }
+
+    // Merge double edges: sum weights of edges between same vertex pairs
+    std::map<std::pair<int,int>, double> edgeWeights;
+    std::map<std::pair<int,int>, bool> edgeHorizontal;
+    for (const auto& e : remappedEdges) {
+        int v1 = std::min(e.v1, e.v2);
+        int v2 = std::max(e.v1, e.v2);
+        auto key = std::make_pair(v1, v2);
+        edgeWeights[key] += e.weight;  // Sum weights
+        edgeHorizontal[key] = e.isHorizontal;
+    }
+
+    // Build final edge list
+    std::vector<AztecEdge> newEdges;
+    for (const auto& [key, weight] : edgeWeights) {
+        AztecEdge e;
+        e.v1 = key.first;
+        e.v2 = key.second;
+        e.weight = weight;
+        e.isHorizontal = edgeHorizontal[key];
+        e.gaugeTransformed = false;
+        newEdges.push_back(e);
+    }
+
+    // Update global state
+    g_aztecVertices = newVertices;
+    g_aztecEdges = newEdges;
+
+    // Clear highlighting
+    for (auto& v : g_aztecVertices) {
+        v.inVgauge = false;
+        v.toContract = false;
+    }
+
+    g_aztecReductionStep = 5;
+}
+
 // Step down: advance to next reduction step
 static void aztecStepDown() {
     switch (g_aztecReductionStep) {
         case 0: aztecStep1_GaugeTransform(); break;
         case 1: aztecStep2_WhiteGaugeTransform(); break;
         case 2: aztecStep3_Contract(); break;
+        case 3: aztecStep4_BlackContraction(); break;
+        case 4: aztecStep5_WhiteContraction(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -1312,7 +1577,8 @@ int canAztecStepUp() {
 
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
-    return (g_aztecReductionStep < 3) ? 1 : 0;
+    // Allow stepping down through all implemented steps (0-4, with step 5 coming)
+    return (g_aztecReductionStep < 5) ? 1 : 0;
 }
 
 } // extern "C"

@@ -256,16 +256,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Step labels: 0=original, 1=black gauge done, 2=white gauge done, 3=contracted
     let label;
     if (aztecReductionStep === 0) {
-      label = `A<sub>${aztecLevel + 1}</sub>`;
+      label = `A<sub>${aztecLevel}</sub>`;
     } else if (aztecReductionStep === 1) {
-      label = `A<sub>${aztecLevel + 1}</sub> (black gauge done)`;
+      label = `A<sub>${aztecLevel}</sub> (black gauge done)`;
     } else if (aztecReductionStep === 2) {
-      label = `A<sub>${aztecLevel + 1}</sub> (white gauge done)`;
+      label = `A<sub>${aztecLevel}</sub> (white gauge done)`;
     } else if (aztecReductionStep === 3) {
-      // Contracted graph - still A'_{n+1}, level unchanged
-      label = `A'<sub>${aztecLevel + 1}</sub> (contracted)`;
+      label = `A'<sub>${aztecLevel}</sub> (contracted)`;
+    } else if (aztecReductionStep === 4) {
+      label = `A'<sub>${aztecLevel}</sub> (black contraction)`;
+    } else if (aztecReductionStep === 5) {
+      label = `A'<sub>${aztecLevel}</sub> (white contraction)`;
     } else {
-      label = `A<sub>${aztecLevel + 1}</sub> (step ${aztecReductionStep})`;
+      label = `A<sub>${aztecLevel}</sub> (step ${aztecReductionStep})`;
     }
     document.getElementById('aztec-graph-label').innerHTML = label;
 
@@ -448,9 +451,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Draw level info
     aztecCtx.fillStyle = '#333';
     aztecCtx.font = '11px sans-serif';
-    const stepLabels = ['original', 'gauge marked', 'contracted', 'reduced'];
+    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contraction', 'white contraction'];
     const stepLabel = stepLabels[aztecReductionStep] || 'unknown';
-    aztecCtx.fillText(`A_${k+1} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
+    aztecCtx.fillText(`A_${k} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
   }
 
   // Aztec graph step down: advance reduction step
