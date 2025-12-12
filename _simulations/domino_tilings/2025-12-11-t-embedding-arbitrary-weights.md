@@ -15,7 +15,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 </p>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="4" min="1" max="50" style="width: 60px;"></label>
   <button id="draw-btn" style="margin-left: 10px;">Set</button>
   <button id="temb-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="zoom-in-btn" style="margin-left: 10px;">+</button>
@@ -42,10 +42,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   Loading WASM module...
 </div>
 
-<canvas id="temb-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+<details style="margin-top: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e0e8f0; border: 1px solid #99c;">T-embedding visualization</summary>
+  <canvas id="temb-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab; margin-top: 10px;"></canvas>
+</details>
 
 <details style="margin-top: 15px;">
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f0f0; border: 1px solid #ccc;">Show original Aztec diamond with edge weights</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f0f0; border: 1px solid #ccc;">Original Aztec diamond with edge weights</summary>
   <canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab; margin-top: 10px;"></canvas>
   <div style="margin-top: 10px;">
     <button id="fold-btn">Urban renewal (n&nbsp;→&nbsp;n-1)</button>
@@ -55,10 +58,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     <button id="step1-btn" style="margin-left: 10px;" disabled>Step 1: Transform weights</button>
     <button id="step2-btn" style="opacity: 0.4;" disabled>Step 2: Strip boundary</button>
     <button id="step3-btn" style="opacity: 0.4;" disabled>Step 3: Swap colors</button>
-  </div>
-  <div style="margin-top: 10px;">
-    <label><input type="checkbox" id="show-dual-chk"> Show augmented dual graph</label>
-    <label style="margin-left: 15px;"><input type="checkbox" id="show-dual-labels-chk"> Show T-indices on dual</label>
   </div>
 </details>
 
@@ -113,7 +112,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   const loadingMsg = document.getElementById('loading-msg');
 
   // UI state
-  let zoom = 1.0;
+  let zoom = 1.6;
   let panX = 0, panY = 0;
   let isPanning = false;
   let lastPanX = 0, lastPanY = 0;
@@ -270,7 +269,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw face weights from WASM data
-    const faceFontSize = Math.max(5, scale / 8);
+    const faceFontSize = Math.max(8, scale / 5);
     ctx.font = `${faceFontSize}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -308,7 +307,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw weight labels on edges
-    const fontSize = Math.max(6, scale / 6);
+    const fontSize = Math.max(9, scale / 4);
     ctx.font = `${fontSize}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -362,176 +361,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           ctx.strokeStyle = '#000';
           ctx.lineWidth = Math.max(1, scale / 20);
           ctx.stroke();
-        }
-      }
-    }
-
-    // Draw augmented dual graph if checkbox is checked
-    const showDual = document.getElementById('show-dual-chk').checked;
-    const showDualLabels = document.getElementById('show-dual-labels-chk').checked;
-
-    if (showDual) {
-      // The REDUCED Aztec diamond A'_{n+1} and its augmented dual graph G*
-      // From Chelkak-Ramassamy paper (arXiv:2002.07540), Figure 2:
-      // - Inner faces of A'_{n+1} are indexed by (j,k) with |j|+|k| < n
-      // - 4 outer "corner" vertices at corners of outer rhombus
-      // - For arbitrary weights: boundary edges get gauged weights before reduction
-
-      // Create a map of face centers for quick lookup
-      const faceMap = {};
-      for (const f of faces) {
-        faceMap[`${f.x},${f.y}`] = f;
-      }
-
-      // The 4 outer corner vertices positioned at the tips of the rhombus
-      // Matching the image you showed: corners at the 4 tips of the diamond
-      const cornerPositions = [
-        {x: 0, y: n, label: 'v*_N', isBlack: true},    // top
-        {x: n, y: 0, label: 'v*_E', isBlack: false},   // right
-        {x: 0, y: -n, label: 'v*_S', isBlack: true},   // bottom
-        {x: -n, y: 0, label: 'v*_W', isBlack: false}   // left
-      ];
-
-      // Draw the outer rhombus connecting the 4 corner vertices
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = Math.max(2, scale / 12);
-      ctx.beginPath();
-      ctx.moveTo(cornerPositions[0].x * scale, -cornerPositions[0].y * scale);
-      for (let i = 1; i <= 4; i++) {
-        const cp = cornerPositions[i % 4];
-        ctx.lineTo(cp.x * scale, -cp.y * scale);
-      }
-      ctx.stroke();
-
-      // Draw edges between adjacent face centers (axis-aligned neighbors)
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = Math.max(1, scale / 20);
-      const drawnEdges = new Set();
-      for (const f of faces) {
-        const neighbors = [
-          {x: f.x + 1, y: f.y},
-          {x: f.x - 1, y: f.y},
-          {x: f.x, y: f.y + 1},
-          {x: f.x, y: f.y - 1}
-        ];
-
-        for (const nb of neighbors) {
-          if (faceMap[`${nb.x},${nb.y}`]) {
-            const edgeKey = `${Math.min(f.x, nb.x)},${Math.min(f.y, nb.y)},${Math.max(f.x, nb.x)},${Math.max(f.y, nb.y)}`;
-            if (!drawnEdges.has(edgeKey)) {
-              drawnEdges.add(edgeKey);
-              ctx.beginPath();
-              ctx.moveTo(f.x * scale, -f.y * scale);
-              ctx.lineTo(nb.x * scale, -nb.y * scale);
-              ctx.stroke();
-            }
-          }
-        }
-      }
-
-      // Draw diagonal edges from corner vertices to boundary faces
-      // Each corner connects to faces on the boundary |j|+|k| = n-1 that are in its quadrant
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = Math.max(2, scale / 12);
-
-      for (const f of faces) {
-        const dist = Math.abs(f.x) + Math.abs(f.y);
-        if (dist === n - 1) {
-          // Top corner (0, n) connects to faces with y > 0 on the boundary
-          if (f.y > 0 || (f.y === 0 && Math.abs(f.x) === n - 1)) {
-            if (f.x >= 0 && f.y >= 0 && f.x + f.y === n - 1) {
-              ctx.beginPath();
-              ctx.moveTo(cornerPositions[0].x * scale, -cornerPositions[0].y * scale);
-              ctx.lineTo(f.x * scale, -f.y * scale);
-              ctx.stroke();
-            }
-            if (f.x <= 0 && f.y >= 0 && -f.x + f.y === n - 1) {
-              ctx.beginPath();
-              ctx.moveTo(cornerPositions[0].x * scale, -cornerPositions[0].y * scale);
-              ctx.lineTo(f.x * scale, -f.y * scale);
-              ctx.stroke();
-            }
-          }
-          // Right corner (n, 0) connects to faces with x > 0 on the boundary
-          if (f.x >= 0 && f.y >= 0 && f.x + f.y === n - 1) {
-            ctx.beginPath();
-            ctx.moveTo(cornerPositions[1].x * scale, -cornerPositions[1].y * scale);
-            ctx.lineTo(f.x * scale, -f.y * scale);
-            ctx.stroke();
-          }
-          if (f.x >= 0 && f.y <= 0 && f.x - f.y === n - 1) {
-            ctx.beginPath();
-            ctx.moveTo(cornerPositions[1].x * scale, -cornerPositions[1].y * scale);
-            ctx.lineTo(f.x * scale, -f.y * scale);
-            ctx.stroke();
-          }
-          // Bottom corner (0, -n) connects to faces with y < 0 on the boundary
-          if (f.x >= 0 && f.y <= 0 && f.x - f.y === n - 1) {
-            ctx.beginPath();
-            ctx.moveTo(cornerPositions[2].x * scale, -cornerPositions[2].y * scale);
-            ctx.lineTo(f.x * scale, -f.y * scale);
-            ctx.stroke();
-          }
-          if (f.x <= 0 && f.y <= 0 && -f.x - f.y === n - 1) {
-            ctx.beginPath();
-            ctx.moveTo(cornerPositions[2].x * scale, -cornerPositions[2].y * scale);
-            ctx.lineTo(f.x * scale, -f.y * scale);
-            ctx.stroke();
-          }
-          // Left corner (-n, 0) connects to faces with x < 0 on the boundary
-          if (f.x <= 0 && f.y >= 0 && -f.x + f.y === n - 1) {
-            ctx.beginPath();
-            ctx.moveTo(cornerPositions[3].x * scale, -cornerPositions[3].y * scale);
-            ctx.lineTo(f.x * scale, -f.y * scale);
-            ctx.stroke();
-          }
-          if (f.x <= 0 && f.y <= 0 && -f.x - f.y === n - 1) {
-            ctx.beginPath();
-            ctx.moveTo(cornerPositions[3].x * scale, -cornerPositions[3].y * scale);
-            ctx.lineTo(f.x * scale, -f.y * scale);
-            ctx.stroke();
-          }
-        }
-      }
-
-      // Draw dual vertices at face centers with checkerboard coloring
-      const dualRadius = Math.max(4, scale / 8);
-      for (const f of faces) {
-        const isBlack = (f.x + f.y) % 2 === 0;
-        ctx.beginPath();
-        ctx.arc(f.x * scale, -f.y * scale, dualRadius, 0, Math.PI * 2);
-        ctx.fillStyle = isBlack ? '#000' : '#fff';
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      // Draw corner vertices (alternating black/white around the boundary)
-      for (const c of cornerPositions) {
-        ctx.beginPath();
-        ctx.arc(c.x * scale, -c.y * scale, dualRadius * 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = c.isBlack ? '#000' : '#fff';
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-
-      // Draw labels if checkbox is checked
-      if (showDualLabels) {
-        const labelFontSize = Math.max(8, scale / 10);
-        ctx.font = `bold ${labelFontSize}px sans-serif`;
-        ctx.fillStyle = '#003366';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-
-        for (const f of faces) {
-          ctx.fillText(`(${f.x},${f.y})`, f.x * scale, -f.y * scale - dualRadius - 2);
-        }
-
-        for (const c of cornerPositions) {
-          ctx.fillText(c.label, c.x * scale, -c.y * scale - dualRadius * 1.5 - 2);
         }
       }
     }
@@ -607,9 +436,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     tembCtx.lineWidth = Math.max(0.5, scale / 150);
     if (corners.every(c => c)) {
       tembCtx.beginPath();
-      tembCtx.moveTo((corners[0].tReal - centerReal) * scale, -(corners[0].tImag - centerImag) * scale);
+      tembCtx.moveTo((corners[0].tReal - centerReal) * scale, (corners[0].tImag - centerImag) * scale);
       for (let i = 1; i < 4; i++) {
-        tembCtx.lineTo((corners[i].tReal - centerReal) * scale, -(corners[i].tImag - centerImag) * scale);
+        tembCtx.lineTo((corners[i].tReal - centerReal) * scale, (corners[i].tImag - centerImag) * scale);
       }
       tembCtx.closePath();
       tembCtx.stroke();
@@ -641,9 +470,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       tembCtx.strokeStyle = '#333';
       tembCtx.lineWidth = Math.max(0.3, scale / 200);
       tembCtx.beginPath();
-      tembCtx.moveTo((boundaryVertices[0].tReal - centerReal) * scale, -(boundaryVertices[0].tImag - centerImag) * scale);
+      tembCtx.moveTo((boundaryVertices[0].tReal - centerReal) * scale, (boundaryVertices[0].tImag - centerImag) * scale);
       for (let i = 1; i < boundaryVertices.length; i++) {
-        tembCtx.lineTo((boundaryVertices[i].tReal - centerReal) * scale, -(boundaryVertices[i].tImag - centerImag) * scale);
+        tembCtx.lineTo((boundaryVertices[i].tReal - centerReal) * scale, (boundaryVertices[i].tImag - centerImag) * scale);
       }
       tembCtx.closePath();
       tembCtx.stroke();
@@ -673,8 +502,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         if (vertexMap[nKey]) {
           const nv = vertexMap[nKey];
           tembCtx.beginPath();
-          tembCtx.moveTo((v.tReal - centerReal) * scale, -(v.tImag - centerImag) * scale);
-          tembCtx.lineTo((nv.tReal - centerReal) * scale, -(nv.tImag - centerImag) * scale);
+          tembCtx.moveTo((v.tReal - centerReal) * scale, (v.tImag - centerImag) * scale);
+          tembCtx.lineTo((nv.tReal - centerReal) * scale, (nv.tImag - centerImag) * scale);
           tembCtx.stroke();
         }
       }
@@ -702,8 +531,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         for (const adj of adjs) {
           if (corner && adj) {
             tembCtx.beginPath();
-            tembCtx.moveTo((corner.tReal - centerReal) * scale, -(corner.tImag - centerImag) * scale);
-            tembCtx.lineTo((adj.tReal - centerReal) * scale, -(adj.tImag - centerImag) * scale);
+            tembCtx.moveTo((corner.tReal - centerReal) * scale, (corner.tImag - centerImag) * scale);
+            tembCtx.lineTo((adj.tReal - centerReal) * scale, (adj.tImag - centerImag) * scale);
             tembCtx.stroke();
           }
         }
@@ -714,7 +543,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const vertexRadius = Math.max(0.5, scale / 300);
     for (const v of tembData.vertices) {
       const x = (v.tReal - centerReal) * scale;
-      const y = -(v.tImag - centerImag) * scale;
+      const y = (v.tImag - centerImag) * scale;
 
       tembCtx.beginPath();
       tembCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
@@ -731,7 +560,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   }
 
   function resetZoom() {
-    zoom = 1.0;
+    zoom = 1.6;
     panX = 0;
     panY = 0;
     render();
@@ -994,8 +823,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     updateStepButtons();
   });
 
-  document.getElementById('show-dual-chk').addEventListener('change', render);
-  document.getElementById('show-dual-labels-chk').addEventListener('change', render);
 
   document.getElementById('step1-btn').addEventListener('click', () => {
     if (!wasmReady || weights.n <= 1) return;
@@ -1109,12 +936,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   document.getElementById('random-btn').addEventListener('click', () => {
     if (!wasmReady) return;
-    // Set random weights between 0.1 and 2.0
+    // Set random weights between 0.5 and 2.0
     for (let j = 0; j < weights.k; j++) {
       for (let i = 0; i < weights.l; i++) {
-        setWeight(0, j, i, 0.1 + Math.random() * 1.9);  // alpha
-        setWeight(1, j, i, 0.1 + Math.random() * 1.9);  // beta
-        setWeight(2, j, i, 0.1 + Math.random() * 1.9);  // gamma
+        setWeight(0, j, i, 0.5 + Math.random() * 1.5);  // alpha
+        setWeight(1, j, i, 0.5 + Math.random() * 1.5);  // beta
+        setWeight(2, j, i, 0.5 + Math.random() * 1.5);  // gamma
       }
     }
     loadFromWasm();
@@ -1193,28 +1020,48 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       return;
     }
 
-    // Sort faces by position for nice display
-    const faces = [...levelData.faces].sort((a, b) => {
-      if (a.y !== b.y) return b.y - a.y;  // top to bottom
-      return a.x - b.x;  // left to right
-    });
+    // Build a lookup map for faces by (x,y)
+    const faceMap = {};
+    for (const f of levelData.faces) {
+      faceMap[`${f.x},${f.y}`] = f;
+    }
 
-    let html = `<div style="margin-bottom: 5px;"><strong>Diamond size: ${levelData.diamondSize}</strong> (colors ${levelData.colorsSwapped ? 'swapped' : 'normal'})</div>`;
+    const m = levelData.diamondSize;
+    let html = `<div style="margin-bottom: 5px;"><strong>Diamond size: ${m}</strong> (colors ${levelData.colorsSwapped ? 'swapped' : 'normal'})</div>`;
     html += '<table style="border-collapse: collapse; font-size: 10px;">';
 
-    // Group by y coordinate
-    let currentY = null;
-    for (const f of faces) {
-      if (f.y !== currentY) {
-        if (currentY !== null) html += '</tr>';
-        html += '<tr>';
-        currentY = f.y;
+    // Display diamond shape properly: rows from y = m-1 down to -(m-1)
+    // Each row has faces where |x| + |y| < m
+    for (let y = m - 1; y >= -(m - 1); y--) {
+      html += '<tr>';
+      // Calculate how many empty cells to pad on left for diamond centering
+      const rowWidth = m - Math.abs(y);  // number of faces in this row
+      const maxRowWidth = m;  // max faces in any row (at y=0)
+      const leftPad = maxRowWidth - rowWidth;
+
+      // Add empty cells for centering
+      for (let p = 0; p < leftPad; p++) {
+        html += '<td style="border: none; width: 40px;"></td>';
       }
-      const wStr = f.w === 1 ? '1' : f.w.toFixed(3).replace(/\.?0+$/, '');
-      const bgColor = f.isBlack ? '#e0e0e0' : '#fff';
-      html += `<td style="border: 1px solid #ccc; padding: 2px 4px; background: ${bgColor}; text-align: center;" title="(${f.x},${f.y})">${wStr}</td>`;
+
+      // Add faces for this row: x from -(rowWidth-1) to (rowWidth-1) stepping by 2 for checkerboard
+      const minX = -(m - 1 - Math.abs(y));
+      const maxX = m - 1 - Math.abs(y);
+      for (let x = minX; x <= maxX; x++) {
+        // Faces exist where (x+y) has correct parity
+        const f = faceMap[`${x},${y}`];
+        if (f) {
+          const wStr = f.w === 1 ? '1' : f.w.toFixed(3).replace(/\.?0+$/, '');
+          const bgColor = f.isBlack ? '#d0d0d0' : '#fff';
+          html += `<td style="border: 1px solid #999; padding: 2px 4px; background: ${bgColor}; text-align: center; min-width: 40px;" title="c(${f.x},${f.y})">${wStr}</td>`;
+        } else {
+          // Empty cell for the other checkerboard color
+          html += '<td style="border: none; width: 40px;"></td>';
+        }
+      }
+      html += '</tr>';
     }
-    html += '</tr></table>';
+    html += '</table>';
 
     faceWeightsDisplay.innerHTML = html;
   }
@@ -1327,9 +1174,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         // Only draw if all 4 neighbors exist
         if (neighbors.every(n => n)) {
           stepwiseCtx.beginPath();
-          stepwiseCtx.moveTo((neighbors[0].tReal - centerReal) * scale, -(neighbors[0].tImag - centerImag) * scale);
+          stepwiseCtx.moveTo((neighbors[0].tReal - centerReal) * scale, (neighbors[0].tImag - centerImag) * scale);
           for (let i = 1; i < 4; i++) {
-            stepwiseCtx.lineTo((neighbors[i].tReal - centerReal) * scale, -(neighbors[i].tImag - centerImag) * scale);
+            stepwiseCtx.lineTo((neighbors[i].tReal - centerReal) * scale, (neighbors[i].tImag - centerImag) * scale);
           }
           stepwiseCtx.closePath();
 
@@ -1361,8 +1208,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         if (vertexMap[nKey]) {
           const nv = vertexMap[nKey];
           stepwiseCtx.beginPath();
-          stepwiseCtx.moveTo((v.tReal - centerReal) * scale, -(v.tImag - centerImag) * scale);
-          stepwiseCtx.lineTo((nv.tReal - centerReal) * scale, -(nv.tImag - centerImag) * scale);
+          stepwiseCtx.moveTo((v.tReal - centerReal) * scale, (v.tImag - centerImag) * scale);
+          stepwiseCtx.lineTo((nv.tReal - centerReal) * scale, (nv.tImag - centerImag) * scale);
           stepwiseCtx.stroke();
         }
       }
@@ -1381,9 +1228,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       stepwiseCtx.strokeStyle = '#333';
       stepwiseCtx.lineWidth = Math.max(1, scale / 100);
       stepwiseCtx.beginPath();
-      stepwiseCtx.moveTo((corners[0].tReal - centerReal) * scale, -(corners[0].tImag - centerImag) * scale);
+      stepwiseCtx.moveTo((corners[0].tReal - centerReal) * scale, (corners[0].tImag - centerImag) * scale);
       for (let i = 1; i < 4; i++) {
-        stepwiseCtx.lineTo((corners[i].tReal - centerReal) * scale, -(corners[i].tImag - centerImag) * scale);
+        stepwiseCtx.lineTo((corners[i].tReal - centerReal) * scale, (corners[i].tImag - centerImag) * scale);
       }
       stepwiseCtx.closePath();
       stepwiseCtx.stroke();
@@ -1396,7 +1243,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     for (const v of levelData.vertices) {
       const x = (v.tReal - centerReal) * scale;
-      const y = -(v.tImag - centerImag) * scale;
+      const y = (v.tImag - centerImag) * scale;
 
       // Store screen position for hit testing (in canvas coords after transform)
       vertexScreenPositions.push({

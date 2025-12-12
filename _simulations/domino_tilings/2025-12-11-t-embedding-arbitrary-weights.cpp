@@ -145,11 +145,17 @@ static void initWeightArrays() {
 
     // Set interesting default values for 2x2 case
     if (g_k == 2 && g_l == 2) {
-        g_alpha[1][1] = 1.5;
-        g_beta[0][0] = 0.95;
-        g_beta[1][1] = 0.1;
-        g_gamma[1][0] = 0.95;
-        g_gamma[0][1] = 0.1;
+        // α (bottom): all 1s (already default)
+        // β (right): β[0][0]=1, β[0][1]=4, β[1][0]=4, β[1][1]=1
+        g_beta[0][0] = 1.0;
+        g_beta[0][1] = 4.0;
+        g_beta[1][0] = 4.0;
+        g_beta[1][1] = 1.0;
+        // γ (left): γ[0][0]=4, γ[0][1]=1, γ[1][0]=4, γ[1][1]=1
+        g_gamma[0][0] = 4.0;
+        g_gamma[0][1] = 1.0;
+        g_gamma[1][0] = 4.0;
+        g_gamma[1][1] = 1.0;
     }
 }
 
