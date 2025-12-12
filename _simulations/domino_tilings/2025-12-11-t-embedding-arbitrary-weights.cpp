@@ -1771,11 +1771,66 @@ static void aztecStep8_SplitVertices() {
     g_aztecReductionStep = 8;
 }
 
-// STEP 9: Urban Renewal (Folding step 4)
+// STEP 9: Diagonal Gauge Transform (Folding step 3b)
+// Gauge transform trivalent vertices connected to outer boundary vertices (n-1/2, n-1/2)
+// to make all diagonal edge weights equal to 1 before urban renewal
+static void aztecStep9_DiagonalGauge() {
+    if (g_aztecReductionStep != 8) return;
+    pushAztecState();
+
+    int n = g_aztecLevel;
+    double outerCoord = n - 0.5;  // Outer boundary coordinate
+
+    // Find the 4 outer boundary vertices at corners (±(n-0.5), ±(n-0.5))
+    std::set<int> outerBoundaryVerts;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        double x = g_aztecVertices[i].x;
+        double y = g_aztecVertices[i].y;
+        if ((std::abs(std::abs(x) - outerCoord) < 0.01) &&
+            (std::abs(std::abs(y) - outerCoord) < 0.01)) {
+            outerBoundaryVerts.insert((int)i);
+        }
+    }
+
+    // Build adjacency list
+    std::map<int, std::vector<std::pair<int, int>>> adj;
+    for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
+        int v1 = g_aztecEdges[eIdx].v1;
+        int v2 = g_aztecEdges[eIdx].v2;
+        adj[v1].push_back({v2, (int)eIdx});
+        adj[v2].push_back({v1, (int)eIdx});
+    }
+
+    // Find trivalent vertices connected to outer boundary vertices
+    // These are the n-2 vertices per corner that need gauge transform
+    for (int outerIdx : outerBoundaryVerts) {
+        // Find neighbors of the outer boundary vertex
+        for (const auto& [neighborIdx, diagEdgeIdx] : adj[outerIdx]) {
+            // This neighbor is a trivalent vertex connected to the outer boundary
+            // Check if it's trivalent (degree 3)
+            if (adj[neighborIdx].size() == 3) {
+                // Get the diagonal edge weight (edge to outer boundary)
+                double diagWeight = g_aztecEdges[diagEdgeIdx].weight;
+
+                if (std::abs(diagWeight) > 1e-10 && std::abs(diagWeight - 1.0) > 1e-10) {
+                    // Gauge transform: divide all edges at this vertex by diagWeight
+                    for (const auto& [_, edgeIdx] : adj[neighborIdx]) {
+                        g_aztecEdges[edgeIdx].weight /= diagWeight;
+                        g_aztecEdges[edgeIdx].gaugeTransformed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    g_aztecReductionStep = 9;
+}
+
+// STEP 10: Urban Renewal (Folding step 4)
 // For each black quad: remove 4 inner vertices and 8 edges,
 // add 4 new edges connecting outer diagonal vertices with transformed weights
-static void aztecStep9_UrbanRenewal() {
-    if (g_aztecReductionStep != 8) return;
+static void aztecStep10_UrbanRenewal() {
+    if (g_aztecReductionStep != 9) return;
     pushAztecState();
 
     // Build adjacency list: vertex index -> list of (neighbor index, edge index)
@@ -1960,7 +2015,7 @@ static void aztecStep9_UrbanRenewal() {
     // Clear black quad centers (they've been collapsed)
     g_blackQuadCenters.clear();
 
-    g_aztecReductionStep = 9;
+    g_aztecReductionStep = 10;
 }
 
 // Step down: advance to next reduction step
@@ -1974,7 +2029,8 @@ static void aztecStepDown() {
         case 5: aztecStep6_Shading(); break;
         case 6: aztecStep7_MarkDiagonalVertices(); break;
         case 7: aztecStep8_SplitVertices(); break;
-        case 8: aztecStep9_UrbanRenewal(); break;
+        case 8: aztecStep9_DiagonalGauge(); break;
+        case 9: aztecStep10_UrbanRenewal(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -2189,7 +2245,7 @@ int canAztecStepUp() {
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
     // Allow stepping down through all implemented steps
-    return (g_aztecReductionStep < 9) ? 1 : 0;
+    return (g_aztecReductionStep < 10) ? 1 : 0;
 }
 
 } // extern "C"

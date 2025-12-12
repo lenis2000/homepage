@@ -266,7 +266,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       'fold 1: shaded',     // 6
       'fold 2: diagonal',   // 7
       'fold 3: split',      // 8
-      'fold 4: renewal'     // 9
+      'fold 3b: diag gauge',// 9
+      'fold 4: renewal'     // 10
     ];
     const stepName = stepNames[aztecReductionStep] || `step ${aztecReductionStep}`;
     const prefix = aztecReductionStep >= 3 ? "A'" : "A";
