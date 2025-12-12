@@ -253,9 +253,20 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // Update Aztec UI state (graph label, button states)
   function updateAztecUI() {
-    const stepNames = ['A', "A (gauge)", "A'", "A'"];
-    const stepName = stepNames[aztecReductionStep] || 'A';
-    const label = `${stepName}<sub>${aztecLevel + 1}</sub> (step ${aztecReductionStep}/3)`;
+    // Step labels: 0=original, 1=black gauge done, 2=white gauge done, 3=contracted
+    let label;
+    if (aztecReductionStep === 0) {
+      label = `A<sub>${aztecLevel + 1}</sub>`;
+    } else if (aztecReductionStep === 1) {
+      label = `A<sub>${aztecLevel + 1}</sub> (black gauge done)`;
+    } else if (aztecReductionStep === 2) {
+      label = `A<sub>${aztecLevel + 1}</sub> (white gauge done)`;
+    } else if (aztecReductionStep === 3) {
+      // Contracted graph - still A'_{n+1}, level unchanged
+      label = `A'<sub>${aztecLevel + 1}</sub> (contracted)`;
+    } else {
+      label = `A<sub>${aztecLevel + 1}</sub> (step ${aztecReductionStep})`;
+    }
     document.getElementById('aztec-graph-label').innerHTML = label;
 
     // Update button states
