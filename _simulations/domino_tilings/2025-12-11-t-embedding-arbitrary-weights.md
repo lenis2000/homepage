@@ -17,6 +17,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 <div style="margin-bottom: 10px;">
   <label>n: <input id="n-input" type="number" value="5" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
+  <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
 
 <div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; margin-bottom: 10px;">
@@ -24,20 +25,40 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 </div>
 
 <details id="stepwise-section" style="margin-top: 15px;" open>
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step T-embedding construction</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-    <div style="margin-bottom: 10px;">
-      <button id="step-prev-btn" style="width: 30px;">&lt;</button>
-      <label style="margin: 0 10px;">Level m = <span id="step-value">1</span></label>
-      <button id="step-next-btn" style="width: 30px;">&gt;</button>
-      <span id="step-info" style="margin-left: 10px; color: #666;"></span>
+    <!-- Side-by-side layout -->
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+      <!-- LEFT: Aztec diamond graph -->
+      <div style="flex: 1; min-width: 350px;">
+        <h4 style="margin: 0 0 10px 0;">Aztec diamond graph G<sub>k</sub></h4>
+        <div style="margin-bottom: 10px;">
+          <button id="aztec-down-btn">↓ (k → k-1)</button>
+          <span style="margin: 0 10px;">Level k = <span id="aztec-level">5</span></span>
+          <button id="aztec-up-btn">↑ (k-1 → k)</button>
+        </div>
+        <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+        <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
+          <em>Click on a vertex to see its coordinates</em>
+        </div>
+      </div>
+
+      <!-- RIGHT: T-embedding canvas -->
+      <div style="flex: 1; min-width: 350px;">
+        <h4 style="margin: 0 0 10px 0;">T-embedding at level m</h4>
+        <div style="margin-bottom: 10px;">
+          <button id="step-prev-btn" style="width: 30px;">&lt;</button>
+          <span style="margin: 0 10px;">Level m = <span id="step-value">1</span></span>
+          <button id="step-next-btn" style="width: 30px;">&gt;</button>
+          <span id="step-info" style="margin-left: 10px; color: #666;"></span>
+        </div>
+        <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+      </div>
     </div>
-    <div style="flex: 1; min-width: 400px;">
-      <h4 style="margin: 0 0 10px 0;">T-embedding at level m</h4>
-      <canvas id="stepwise-temb-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
-    </div>
+
     <div style="margin-top: 10px;">
       <label><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
+      <label style="margin-left: 20px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Show edge weights</label>
     </div>
     <div id="vertex-info" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; min-height: 60px; font-family: monospace; font-size: 12px;">
       <em>Click on a vertex to see its formula and dependencies</em>
@@ -84,7 +105,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 </details>
 
 <style>
-#stepwise-temb-canvas.panning { cursor: grabbing; }
+#stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
 </style>
 
 <script src="/js/2025-12-11-t-embedding-arbitrary-weights.js"></script>
@@ -94,6 +115,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   const loadingMsg = document.getElementById('loading-msg');
   const stepwiseCanvas = document.getElementById('stepwise-temb-canvas');
   const stepwiseCtx = stepwiseCanvas.getContext('2d');
+  const aztecCanvas = document.getElementById('aztec-graph-canvas');
+  const aztecCtx = aztecCanvas.getContext('2d');
 
   // T-embedding data
   let tembData = null;
@@ -101,6 +124,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
+  let generateAztecGraph, getAztecGraphJSON, randomizeAztecWeights, setAztecGraphLevel;
 
   // Step-by-step state
   let currentStep = 1;
@@ -111,13 +135,329 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let highlightedDeps = new Set();
   let vertexScreenPositions = [];
 
-  // Canvas pan/zoom
+  // Canvas pan/zoom for T-embedding
   let stepwiseZoom = 1.0;
   let stepwisePanX = 0, stepwisePanY = 0;
   let stepwiseIsPanning = false;
   let stepwiseLastPanX = 0, stepwiseLastPanY = 0;
 
-  // Initialize WASM
+  // ========== AZTEC DIAMOND GRAPH STATE ==========
+  let aztecLevel = 5;
+  let aztecVertices = [];
+  let aztecEdges = [];
+  let aztecZoom = 1.0;
+  let aztecPanX = 0, aztecPanY = 0;
+  let aztecIsPanning = false;
+  let aztecDidPan = false;
+  let aztecLastPanX = 0, aztecLastPanY = 0;
+  let aztecVertexScreenPositions = [];
+  let selectedAztecVertex = null;
+
+  // Generate random weight from 0.5 to 2.0 with step 0.1
+  function randomWeight() {
+    const steps = Math.floor(Math.random() * 16); // 0-15 steps
+    return 0.5 + steps * 0.1;
+  }
+
+  // Generate Aztec diamond graph vertices for level k
+  function generateAztecVertices(k) {
+    const vertices = [];
+    // Vertices at half-integer coordinates where |x| + |y| <= k + 0.5
+    for (let i = -k; i <= k; i++) {
+      for (let j = -k; j <= k; j++) {
+        const x = i + 0.5;
+        const y = j + 0.5;
+        if (Math.abs(x) + Math.abs(y) <= k + 0.5) {
+          // Bipartite coloring depends on i + j + k
+          const isWhite = ((i + j + k) % 2 === 0);
+          vertices.push({ x, y, isWhite, key: `${x},${y}` });
+        }
+      }
+    }
+    return vertices;
+  }
+
+  // Generate edges between adjacent vertices
+  function generateAztecEdges(vertices) {
+    const vertexSet = new Set(vertices.map(v => v.key));
+    const edges = [];
+
+    for (const v of vertices) {
+      // Right neighbor (x+1, y)
+      const rightKey = `${v.x + 1},${v.y}`;
+      if (vertexSet.has(rightKey)) {
+        edges.push({
+          x1: v.x, y1: v.y,
+          x2: v.x + 1, y2: v.y,
+          weight: randomWeight(),
+          key: `h:${v.x},${v.y}`
+        });
+      }
+      // Top neighbor (x, y+1)
+      const topKey = `${v.x},${v.y + 1}`;
+      if (vertexSet.has(topKey)) {
+        edges.push({
+          x1: v.x, y1: v.y,
+          x2: v.x, y2: v.y + 1,
+          weight: randomWeight(),
+          key: `v:${v.x},${v.y}`
+        });
+      }
+    }
+    return edges;
+  }
+
+  // Initialize Aztec graph (calls C++ via WASM)
+  function initAztecGraph(k) {
+    if (!wasmReady) {
+      // Fallback to JS generation if WASM not ready
+      aztecLevel = k;
+      aztecVertices = generateAztecVertices(k);
+      aztecEdges = generateAztecEdges(aztecVertices);
+      document.getElementById('aztec-level').textContent = k;
+      renderAztecGraph();
+      return;
+    }
+
+    // Generate graph in C++
+    generateAztecGraph(k);
+
+    // Get JSON from C++
+    let ptr = getAztecGraphJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let graphData = JSON.parse(jsonStr);
+
+    aztecLevel = graphData.level;
+    aztecVertices = graphData.vertices;
+
+    // Convert edges from index-based to coordinate-based for rendering
+    aztecEdges = graphData.edges.map(e => ({
+      x1: aztecVertices[e.v1].x,
+      y1: aztecVertices[e.v1].y,
+      x2: aztecVertices[e.v2].x,
+      y2: aztecVertices[e.v2].y,
+      weight: e.weight,
+      isHorizontal: e.isHorizontal
+    }));
+
+    document.getElementById('aztec-level').textContent = aztecLevel;
+    renderAztecGraph();
+  }
+
+  // Render Aztec diamond graph
+  function renderAztecGraph() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = aztecCanvas.getBoundingClientRect();
+    aztecCanvas.width = rect.width * dpr;
+    aztecCanvas.height = rect.height * dpr;
+    aztecCtx.scale(dpr, dpr);
+
+    aztecCtx.fillStyle = '#fafafa';
+    aztecCtx.fillRect(0, 0, rect.width, rect.height);
+
+    if (aztecVertices.length === 0) return;
+
+    const k = aztecLevel;
+    const padding = 40;
+    const range = 2 * k + 2;
+    const baseScale = Math.min(rect.width - 2 * padding, rect.height - 2 * padding) / range;
+    const scale = baseScale * aztecZoom;
+
+    const cx = rect.width / 2 + aztecPanX * aztecZoom;
+    const cy = rect.height / 2 + aztecPanY * aztecZoom;
+
+    aztecCtx.save();
+    aztecCtx.translate(cx, cy);
+
+    const showWeights = document.getElementById('show-aztec-weights-chk').checked;
+
+    // Draw edges
+    aztecCtx.strokeStyle = '#333';
+    aztecCtx.lineWidth = Math.max(1, scale / 30);
+
+    for (const e of aztecEdges) {
+      aztecCtx.beginPath();
+      aztecCtx.moveTo(e.x1 * scale, -e.y1 * scale);
+      aztecCtx.lineTo(e.x2 * scale, -e.y2 * scale);
+      aztecCtx.stroke();
+
+      // Draw weight label in rectangular bubble
+      if (showWeights) {
+        const midX = ((e.x1 + e.x2) / 2) * scale;
+        const midY = -((e.y1 + e.y2) / 2) * scale;
+        const label = e.weight.toFixed(1);
+
+        const fontSize = Math.max(8, Math.min(11, scale / 4));
+        aztecCtx.font = `${fontSize}px sans-serif`;
+        const textWidth = aztecCtx.measureText(label).width;
+        const padX = 3, padY = 2;
+        const boxW = textWidth + padX * 2;
+        const boxH = fontSize + padY * 2;
+
+        aztecCtx.fillStyle = '#fff';
+        aztecCtx.fillRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
+        aztecCtx.strokeStyle = '#999';
+        aztecCtx.lineWidth = 0.5;
+        aztecCtx.strokeRect(midX - boxW / 2, midY - boxH / 2, boxW, boxH);
+
+        aztecCtx.fillStyle = '#333';
+        aztecCtx.textAlign = 'center';
+        aztecCtx.textBaseline = 'middle';
+        aztecCtx.fillText(label, midX, midY);
+      }
+    }
+
+    // Draw vertices
+    const vertexRadius = Math.max(4, scale / 8);
+    aztecVertexScreenPositions = [];
+
+    for (let i = 0; i < aztecVertices.length; i++) {
+      const v = aztecVertices[i];
+      const x = v.x * scale;
+      const y = -v.y * scale;
+
+      // Store screen position for click detection
+      aztecVertexScreenPositions.push({
+        idx: i,
+        screenX: x + cx,
+        screenY: y + cy,
+        vertex: v
+      });
+
+      const isSelected = (selectedAztecVertex === i);
+
+      aztecCtx.beginPath();
+      aztecCtx.arc(x, y, isSelected ? vertexRadius * 1.5 : vertexRadius, 0, Math.PI * 2);
+
+      if (isSelected) {
+        // Selected vertex: red highlight
+        aztecCtx.fillStyle = '#ff0000';
+        aztecCtx.fill();
+        aztecCtx.strokeStyle = '#cc0000';
+        aztecCtx.lineWidth = 2;
+        aztecCtx.stroke();
+      } else if (v.isWhite) {
+        // White vertex: hollow with black outline
+        aztecCtx.fillStyle = '#fff';
+        aztecCtx.fill();
+        aztecCtx.strokeStyle = '#000';
+        aztecCtx.lineWidth = Math.max(1, scale / 30);
+        aztecCtx.stroke();
+      } else {
+        // Black vertex: filled
+        aztecCtx.fillStyle = '#000';
+        aztecCtx.fill();
+      }
+    }
+
+    aztecCtx.restore();
+
+    // Draw level info
+    aztecCtx.fillStyle = '#333';
+    aztecCtx.font = '11px sans-serif';
+    aztecCtx.fillText(`G_${k}: ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
+  }
+
+  // Aztec graph transform down (placeholder)
+  function aztecTransformDown() {
+    if (aztecLevel <= 1) return;
+    // TODO: Implement actual urban renewal transformation
+    // For now, just reduce level and regenerate
+    initAztecGraph(aztecLevel - 1);
+  }
+
+  // Aztec graph transform up (placeholder)
+  function aztecTransformUp() {
+    const n = parseInt(document.getElementById('n-input').value) || 5;
+    if (aztecLevel >= n) return;
+    // TODO: Implement actual inverse transformation
+    // For now, just increase level and regenerate
+    initAztecGraph(aztecLevel + 1);
+  }
+
+  // Randomize all edge weights (calls C++ via WASM)
+  function randomizeWeights() {
+    if (!wasmReady) {
+      // Fallback to JS randomization
+      for (const e of aztecEdges) {
+        e.weight = randomWeight();
+      }
+      renderAztecGraph();
+      return;
+    }
+
+    // Randomize in C++
+    randomizeAztecWeights();
+
+    // Re-fetch graph data
+    let ptr = getAztecGraphJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let graphData = JSON.parse(jsonStr);
+
+    // Update edges with new weights
+    aztecEdges = graphData.edges.map(e => ({
+      x1: aztecVertices[e.v1].x,
+      y1: aztecVertices[e.v1].y,
+      x2: aztecVertices[e.v2].x,
+      y2: aztecVertices[e.v2].y,
+      weight: e.weight,
+      isHorizontal: e.isHorizontal
+    }));
+
+    renderAztecGraph();
+  }
+
+  // Handle click on Aztec graph canvas
+  function handleAztecCanvasClick(e) {
+    // Ignore click if we just panned
+    if (aztecDidPan) {
+      aztecDidPan = false;
+      return;
+    }
+
+    const rect = aztecCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const clickX = (e.clientX - rect.left) * dpr;
+    const clickY = (e.clientY - rect.top) * dpr;
+
+    const threshold = 15 * dpr;
+    let closestVertex = null;
+    let closestDist = Infinity;
+
+    for (const vp of aztecVertexScreenPositions) {
+      const dx = clickX - vp.screenX * dpr;
+      const dy = clickY - vp.screenY * dpr;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < threshold && dist < closestDist) {
+        closestDist = dist;
+        closestVertex = vp;
+      }
+    }
+
+    const infoDiv = document.getElementById('aztec-vertex-info');
+
+    if (closestVertex) {
+      selectedAztecVertex = closestVertex.idx;
+      const v = closestVertex.vertex;
+      // i + j + k parity determines color
+      const i = Math.round(v.x - 0.5);
+      const j = Math.round(v.y - 0.5);
+      const parity = (i + j + aztecLevel) % 2;
+      const colorType = v.isWhite ? `white (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} even)`
+                                  : `black (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} odd)`;
+      infoDiv.innerHTML = `<strong>Vertex:</strong> (${v.x}, ${v.y}) &nbsp; | &nbsp; <strong>Color:</strong> ${colorType}`;
+    } else {
+      selectedAztecVertex = null;
+      infoDiv.innerHTML = '<em>Click on a vertex to see its coordinates</em>';
+    }
+
+    renderAztecGraph();
+  }
+
+  // ========== T-EMBEDDING CODE (unchanged) ==========
+
   function initWasm() {
     if (typeof Module === 'undefined') {
       setTimeout(initWasm, 100);
@@ -133,12 +473,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getTembeddingJSON = Module.cwrap('getTembeddingJSON', 'number', []);
       freeString = Module.cwrap('freeString', null, ['number']);
 
+      // Aztec graph functions
+      generateAztecGraph = Module.cwrap('generateAztecGraph', null, ['number']);
+      getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
+      randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
+      setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
+
       wasmReady = true;
       loadingMsg.style.display = 'none';
 
       // Auto-compute on load
       const n = parseInt(document.getElementById('n-input').value) || 5;
       setN(n);
+      initAztecGraph(n);
       computeAndDisplay();
     };
 
@@ -420,13 +767,30 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderStepwiseTemb();
   }
 
-  // Event listeners
-  document.getElementById('compute-btn').addEventListener('click', computeAndDisplay);
+  // ========== EVENT LISTENERS ==========
 
-  document.getElementById('n-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') computeAndDisplay();
+  // Main buttons
+  document.getElementById('compute-btn').addEventListener('click', () => {
+    const n = parseInt(document.getElementById('n-input').value) || 5;
+    initAztecGraph(n);
+    computeAndDisplay();
   });
 
+  document.getElementById('randomize-weights-btn').addEventListener('click', randomizeWeights);
+
+  document.getElementById('n-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const n = parseInt(e.target.value) || 5;
+      initAztecGraph(n);
+      computeAndDisplay();
+    }
+  });
+
+  // Aztec graph buttons
+  document.getElementById('aztec-down-btn').addEventListener('click', aztecTransformDown);
+  document.getElementById('aztec-up-btn').addEventListener('click', aztecTransformUp);
+
+  // T-embedding step buttons
   document.getElementById('step-prev-btn').addEventListener('click', () => {
     if (currentStep > 1) {
       currentStep--;
@@ -443,8 +807,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
   });
 
+  // Checkboxes
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
+  document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
 
+  // T-embedding canvas pan/zoom
   stepwiseCanvas.addEventListener('click', handleStepwiseCanvasClick);
 
   stepwiseCanvas.addEventListener('mousedown', (e) => {
@@ -482,7 +849,53 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderStepwiseTemb();
   }, { passive: false });
 
-  window.addEventListener('resize', renderStepwiseTemb);
+  // Aztec canvas click and pan/zoom
+  aztecCanvas.addEventListener('click', handleAztecCanvasClick);
+
+  aztecCanvas.addEventListener('mousedown', (e) => {
+    aztecIsPanning = true;
+    aztecDidPan = false;
+    aztecLastPanX = e.clientX;
+    aztecLastPanY = e.clientY;
+    aztecCanvas.style.cursor = 'grabbing';
+  });
+
+  aztecCanvas.addEventListener('mousemove', (e) => {
+    if (!aztecIsPanning) return;
+    const dx = e.clientX - aztecLastPanX;
+    const dy = e.clientY - aztecLastPanY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      aztecDidPan = true;
+    }
+    aztecPanX += dx / aztecZoom;
+    aztecPanY += dy / aztecZoom;
+    aztecLastPanX = e.clientX;
+    aztecLastPanY = e.clientY;
+    renderAztecGraph();
+  });
+
+  aztecCanvas.addEventListener('mouseup', () => {
+    aztecIsPanning = false;
+    aztecCanvas.style.cursor = 'grab';
+  });
+
+  aztecCanvas.addEventListener('mouseleave', () => {
+    aztecIsPanning = false;
+    aztecCanvas.style.cursor = 'grab';
+  });
+
+  aztecCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    aztecZoom = Math.max(0.1, Math.min(20, aztecZoom * factor));
+    renderAztecGraph();
+  }, { passive: false });
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    renderStepwiseTemb();
+    renderAztecGraph();
+  });
 
   // Initialize
   initWasm();

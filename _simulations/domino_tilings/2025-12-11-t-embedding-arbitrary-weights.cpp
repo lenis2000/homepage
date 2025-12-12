@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_randomizeAztecWeights','_setAztecGraphLevel','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -69,6 +69,32 @@ struct TVertex {
 // T-embedding storage
 static std::map<std::string, TVertex> g_tEmbedding;
 static std::vector<std::map<std::string, TVertex>> g_tEmbeddingHistory;
+
+// =============================================================================
+// AZTEC DIAMOND GRAPH STRUCTURE
+// =============================================================================
+
+// NOTE: In the Berggren-Russkikh paper, an Aztec diamond with k vertices along
+// each edge of the outer rhombus is called A_{k+1}. So our "level k" graph
+// corresponds to A_{k+1} in the paper notation.
+
+// Aztec diamond graph vertex (at half-integer coordinates)
+struct AztecVertex {
+    double x, y;      // Half-integer coordinates (e.g., 0.5, -1.5)
+    bool isWhite;     // Bipartite coloring: white if (i+j+k) is even, where x=i+0.5, y=j+0.5
+};
+
+// Aztec diamond graph edge with weight
+struct AztecEdge {
+    int v1, v2;       // Indices into vertex array
+    double weight;    // Edge weight (0.5 to 2.0)
+    bool isHorizontal; // True if horizontal edge, false if vertical
+};
+
+// Global Aztec graph storage
+static int g_aztecLevel = 5;  // Current graph level k
+static std::vector<AztecVertex> g_aztecVertices;
+static std::vector<AztecEdge> g_aztecEdges;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -443,6 +469,131 @@ static void computeTembeddingRecurrence() {
 }
 
 // =============================================================================
+// AZTEC GRAPH GENERATION
+// =============================================================================
+
+// Random number generator state (simple LCG)
+static unsigned int g_rngState = 12345;
+
+static double randomWeight() {
+    // LCG: next = (a * current + c) mod m
+    g_rngState = g_rngState * 1103515245 + 12345;
+    int steps = (g_rngState >> 16) % 16;  // 0-15 steps
+    return 0.5 + steps * 0.1;  // 0.5 to 2.0 in steps of 0.1
+}
+
+// Generate Aztec diamond graph for level k
+// Vertices at half-integer coordinates (i+0.5, j+0.5) where |x| + |y| <= k + 0.5
+static void generateAztecGraphInternal(int k) {
+    g_aztecVertices.clear();
+    g_aztecEdges.clear();
+    g_aztecLevel = k;
+
+    // Map from (x,y) key to vertex index
+    std::map<std::string, int> vertexIndex;
+
+    // Generate vertices
+    for (int i = -k; i <= k; i++) {
+        for (int j = -k; j <= k; j++) {
+            double x = i + 0.5;
+            double y = j + 0.5;
+            if (std::abs(x) + std::abs(y) <= k + 0.5) {
+                AztecVertex v;
+                v.x = x;
+                v.y = y;
+                // Bipartite coloring depends on i + j + k
+                // where x = i + 0.5, y = j + 0.5
+                // isWhite when (i + j + k) is even
+                v.isWhite = ((i + j + k) % 2 == 0);
+
+                std::ostringstream keyss;
+                keyss << x << "," << y;
+                vertexIndex[keyss.str()] = (int)g_aztecVertices.size();
+                g_aztecVertices.push_back(v);
+            }
+        }
+    }
+
+    // Generate edges (connect adjacent vertices)
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        double x = g_aztecVertices[idx].x;
+        double y = g_aztecVertices[idx].y;
+
+        // Check right neighbor (x+1, y)
+        {
+            std::ostringstream keyss;
+            keyss << (x + 1.0) << "," << y;
+            auto it = vertexIndex.find(keyss.str());
+            if (it != vertexIndex.end()) {
+                AztecEdge e;
+                e.v1 = (int)idx;
+                e.v2 = it->second;
+                e.weight = randomWeight();
+                e.isHorizontal = true;
+                g_aztecEdges.push_back(e);
+            }
+        }
+
+        // Check top neighbor (x, y+1)
+        {
+            std::ostringstream keyss;
+            keyss << x << "," << (y + 1.0);
+            auto it = vertexIndex.find(keyss.str());
+            if (it != vertexIndex.end()) {
+                AztecEdge e;
+                e.v1 = (int)idx;
+                e.v2 = it->second;
+                e.weight = randomWeight();
+                e.isHorizontal = false;
+                g_aztecEdges.push_back(e);
+            }
+        }
+    }
+}
+
+// Randomize all edge weights
+static void randomizeAztecWeightsInternal() {
+    g_rngState = (unsigned int)(g_rngState * 1103515245 + 12345);  // Change seed
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        g_aztecEdges[i].weight = randomWeight();
+    }
+}
+
+// Generate JSON for Aztec graph
+static std::string getAztecGraphJSONInternal() {
+    std::ostringstream oss;
+    oss << std::setprecision(10);
+    oss << "{";
+    oss << "\"level\":" << g_aztecLevel;
+
+    // Output vertices
+    oss << ",\"vertices\":[";
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        if (i > 0) oss << ",";
+        oss << "{\"x\":" << g_aztecVertices[i].x
+            << ",\"y\":" << g_aztecVertices[i].y
+            << ",\"isWhite\":" << (g_aztecVertices[i].isWhite ? "true" : "false")
+            << "}";
+    }
+    oss << "]";
+
+    // Output edges
+    oss << ",\"edges\":[";
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        if (i > 0) oss << ",";
+        oss << "{\"v1\":" << g_aztecEdges[i].v1
+            << ",\"v2\":" << g_aztecEdges[i].v2
+            << ",\"weight\":" << g_aztecEdges[i].weight
+            << ",\"isHorizontal\":" << (g_aztecEdges[i].isHorizontal ? "true" : "false")
+            << "}";
+    }
+    oss << "]";
+
+    oss << "}";
+    return oss.str();
+}
+
+// =============================================================================
 // EXPORTED FUNCTIONS
 // =============================================================================
 
@@ -544,6 +695,37 @@ char* getTembeddingJSON() {
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) {
     std::free(str);
+}
+
+// -----------------------------------------------------------------------------
+// AZTEC GRAPH EXPORTED FUNCTIONS
+// -----------------------------------------------------------------------------
+
+EMSCRIPTEN_KEEPALIVE
+void setAztecGraphLevel(int k) {
+    if (k < 1) k = 1;
+    if (k > 20) k = 20;
+    g_aztecLevel = k;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void generateAztecGraph(int k) {
+    if (k < 1) k = 1;
+    if (k > 20) k = 20;
+    generateAztecGraphInternal(k);
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getAztecGraphJSON() {
+    std::string result = getAztecGraphJSONInternal();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void randomizeAztecWeights() {
+    randomizeAztecWeightsInternal();
 }
 
 } // extern "C"
