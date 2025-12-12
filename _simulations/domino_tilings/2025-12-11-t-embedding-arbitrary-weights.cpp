@@ -903,8 +903,6 @@ static void aztecStep2_WhiteGaugeTransform() {
     };
     std::vector<BlackBoundaryVertex> positiveDiagVertices, negativeDiagVertices;
 
-    printf("Looking for BLACK boundary vertices on x+y = %d and x+y = %d\n", n, -n);
-
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         if (g_aztecVertices[idx].isWhite) continue;  // Only BLACK vertices
 
@@ -917,14 +915,10 @@ static void aztecStep2_WhiteGaugeTransform() {
         // Positive diagonal: x + y = n
         if (std::abs(sum - n) < 0.01) {
             positiveDiagVertices.push_back({(int)idx, i, j, true});
-            g_aztecVertices[idx].inVgauge = true;
-            printf("  Found positive: (%d,%d) = (%.1f,%.1f), x+y=%.1f\n", i, j, x, y, sum);
         }
         // Negative diagonal: x + y = -n
         else if (std::abs(sum + n) < 0.01) {
             negativeDiagVertices.push_back({(int)idx, i, j, false});
-            g_aztecVertices[idx].inVgauge = true;
-            printf("  Found negative: (%d,%d) = (%.1f,%.1f), x+y=%.1f\n", i, j, x, y, sum);
         }
     }
 
@@ -1027,6 +1021,9 @@ static void aztecStep2_WhiteGaugeTransform() {
 
         printf("  lambda = %.6f / %.6f = %.6f\n", refWeight, eqWeight, lambda);
 
+        // Highlight the WHITE gauge vertex
+        g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
+
         // Apply λ to all edges at the gauge neighbor
         for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
             if (!g_aztecEdges[eIdx].gaugeTransformed) {
@@ -1104,6 +1101,9 @@ static void aztecStep2_WhiteGaugeTransform() {
         double lambda = refWeight / eqWeight;
 
         printf("  lambda = %.6f\n", lambda);
+
+        // Highlight the WHITE gauge vertex
+        g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
 
         for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
             if (!g_aztecEdges[eIdx].gaugeTransformed) {
