@@ -2018,6 +2018,46 @@ static void aztecStep10_UrbanRenewal() {
     g_aztecReductionStep = 10;
 }
 
+// STEP 11: Combine Double Edges (Folding step 5)
+// Replace each pair of double edges with a single edge, summing their weights
+static void aztecStep11_CombineDoubleEdges() {
+    if (g_aztecReductionStep != 10) return;
+    pushAztecState();
+
+    // Group edges by vertex pair (normalized so smaller index first)
+    std::map<std::pair<int,int>, std::vector<size_t>> edgeGroups;
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        int v1 = std::min(g_aztecEdges[i].v1, g_aztecEdges[i].v2);
+        int v2 = std::max(g_aztecEdges[i].v1, g_aztecEdges[i].v2);
+        edgeGroups[{v1, v2}].push_back(i);
+    }
+
+    // Build new edge list with combined weights
+    std::vector<AztecEdge> newEdges;
+    for (const auto& [vertPair, indices] : edgeGroups) {
+        // Sum weights of all edges in this group
+        double totalWeight = 0.0;
+        bool isHoriz = g_aztecEdges[indices[0]].isHorizontal;
+        bool gaugeT = g_aztecEdges[indices[0]].gaugeTransformed;
+        for (size_t idx : indices) {
+            totalWeight += g_aztecEdges[idx].weight;
+            gaugeT = gaugeT || g_aztecEdges[idx].gaugeTransformed;
+        }
+
+        // Create single combined edge
+        AztecEdge combined;
+        combined.v1 = vertPair.first;
+        combined.v2 = vertPair.second;
+        combined.weight = totalWeight;
+        combined.isHorizontal = isHoriz;
+        combined.gaugeTransformed = gaugeT;
+        newEdges.push_back(combined);
+    }
+
+    g_aztecEdges = newEdges;
+    g_aztecReductionStep = 11;
+}
+
 // Step down: advance to next reduction step
 static void aztecStepDown() {
     switch (g_aztecReductionStep) {
@@ -2031,6 +2071,7 @@ static void aztecStepDown() {
         case 7: aztecStep8_SplitVertices(); break;
         case 8: aztecStep9_DiagonalGauge(); break;
         case 9: aztecStep10_UrbanRenewal(); break;
+        case 10: aztecStep11_CombineDoubleEdges(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -2245,7 +2286,7 @@ int canAztecStepUp() {
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
     // Allow stepping down through all implemented steps
-    return (g_aztecReductionStep < 10) ? 1 : 0;
+    return (g_aztecReductionStep < 11) ? 1 : 0;
 }
 
 } // extern "C"

@@ -36,6 +36,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         <div style="margin-bottom: 10px; text-align: center;">
           <button id="aztec-down-btn" style="width: 100px;">← Step down</button>
           <button id="aztec-up-btn" style="width: 100px; margin-left: 10px;">Step up →</button>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Show weights</label>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -51,17 +52,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           <span style="margin: 0 10px;">Level m = <span id="step-value">1</span></span>
           <button id="step-next-btn" style="width: 30px;">&gt;</button>
           <span id="step-info" style="margin-left: 10px; color: #666;"></span>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk" checked> Show labels</label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+        <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
+          <em>Click on a vertex to see its formula and dependencies</em>
+        </div>
       </div>
-    </div>
-
-    <div style="margin-top: 10px;">
-      <label><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
-      <label style="margin-left: 20px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Show edge weights</label>
-    </div>
-    <div id="vertex-info" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; min-height: 60px; font-family: monospace; font-size: 12px;">
-      <em>Click on a vertex to see its formula and dependencies</em>
     </div>
     <details style="margin-top: 15px;">
       <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f5f5f5; border: 1px solid #ddd;">Recurrence formulas for T-embedding</summary>
@@ -267,7 +264,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       'fold 2: diagonal',   // 7
       'fold 3: split',      // 8
       'fold 3b: diag gauge',// 9
-      'fold 4: renewal'     // 10
+      'fold 4: renewal',    // 10
+      'fold 5: combine'     // 11
     ];
     const stepName = stepNames[aztecReductionStep] || `step ${aztecReductionStep}`;
     const prefix = aztecReductionStep >= 3 ? "A'" : "A";
