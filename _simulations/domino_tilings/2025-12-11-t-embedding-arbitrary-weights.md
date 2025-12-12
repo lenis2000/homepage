@@ -327,56 +327,99 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     const showWeights = document.getElementById('show-aztec-weights-chk').checked;
 
-    // Draw grey quadrangular faces (white vertex at top-left) for step 6+ (fold 1: shaded)
+    // Draw grey faces for steps 6-7, or faces with flagged vertices for step 8+
     if (aztecReductionStep >= 6) {
-      // Build vertex position map
-      const vertexMap = new Map();
-      for (const v of aztecVertices) {
-        vertexMap.set(`${v.x},${v.y}`, v);
-      }
+      if (aztecReductionStep < 8) {
+        // Steps 6-7: use unit square detection for grey faces (white at top-left)
+        const vertexMap = new Map();
+        for (const v of aztecVertices) {
+          vertexMap.set(`${v.x},${v.y}`, v);
+        }
+        const edgeSet = new Set();
+        for (const e of aztecEdges) {
+          edgeSet.add(`${e.x1},${e.y1}-${e.x2},${e.y2}`);
+          edgeSet.add(`${e.x2},${e.y2}-${e.x1},${e.y1}`);
+        }
 
-      // Build edge set for quick lookup
-      const edgeSet = new Set();
-      for (const e of aztecEdges) {
-        const key1 = `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${Math.max(e.x1,e.x2)},${Math.max(e.y1,e.y2)}`;
-        edgeSet.add(`${e.x1},${e.y1}-${e.x2},${e.y2}`);
-        edgeSet.add(`${e.x2},${e.y2}-${e.x1},${e.y1}`);
-      }
+        const drawnFaces = new Set();
+        for (const v of aztecVertices) {
+          const x = v.x, y = v.y;
+          const faceKey = `${x},${y}`;
+          if (drawnFaces.has(faceKey)) continue;
 
-      // Find quadrangular faces: check all possible unit squares
-      const checkedFaces = new Set();
-      for (const v of aztecVertices) {
-        // Try v as bottom-left corner of a face
-        const x = v.x, y = v.y;
-        const faceKey = `${x},${y}`;
-        if (checkedFaces.has(faceKey)) continue;
-        checkedFaces.add(faceKey);
+          const bl = vertexMap.get(`${x},${y}`);
+          const br = vertexMap.get(`${x+1},${y}`);
+          const tl = vertexMap.get(`${x},${y+1}`);
+          const tr = vertexMap.get(`${x+1},${y+1}`);
 
-        // Check if all 4 corners exist
-        const bl = vertexMap.get(`${x},${y}`);
-        const br = vertexMap.get(`${x+1},${y}`);
-        const tl = vertexMap.get(`${x},${y+1}`);
-        const tr = vertexMap.get(`${x+1},${y+1}`);
+          if (bl && br && tl && tr) {
+            const hasBottom = edgeSet.has(`${x},${y}-${x+1},${y}`);
+            const hasTop = edgeSet.has(`${x},${y+1}-${x+1},${y+1}`);
+            const hasLeft = edgeSet.has(`${x},${y}-${x},${y+1}`);
+            const hasRight = edgeSet.has(`${x+1},${y}-${x+1},${y+1}`);
 
-        if (bl && br && tl && tr) {
-          // Check if all 4 edges exist
-          const hasBottom = edgeSet.has(`${x},${y}-${x+1},${y}`);
-          const hasTop = edgeSet.has(`${x},${y+1}-${x+1},${y+1}`);
-          const hasLeft = edgeSet.has(`${x},${y}-${x},${y+1}`);
-          const hasRight = edgeSet.has(`${x+1},${y}-${x+1},${y+1}`);
+            if (hasBottom && hasTop && hasLeft && hasRight) {
+              drawnFaces.add(faceKey);
+              if (tl.isWhite) {
+                aztecCtx.fillStyle = 'rgba(150, 150, 150, 0.3)';
+                aztecCtx.beginPath();
+                aztecCtx.moveTo(x * scale, -y * scale);
+                aztecCtx.lineTo((x+1) * scale, -y * scale);
+                aztecCtx.lineTo((x+1) * scale, -(y+1) * scale);
+                aztecCtx.lineTo(x * scale, -(y+1) * scale);
+                aztecCtx.closePath();
+                aztecCtx.fill();
+              }
+            }
+          }
+        }
+      } else {
+        // Step 8+: same unit-square detection, shade BLACK faces (TL is black)
+        // Original vertices at half-integer positions still exist with their edges
+        // (outer vertices are at offset positions and won't form unit squares)
+        // Note: at step 8, original vertex colors are flipped, so isWhite means originally black
+        const vertexMap8 = new Map();
+        for (const v of aztecVertices) {
+          vertexMap8.set(`${v.x},${v.y}`, v);
+        }
+        const edgeSet8 = new Set();
+        for (const e of aztecEdges) {
+          edgeSet8.add(`${e.x1},${e.y1}-${e.x2},${e.y2}`);
+          edgeSet8.add(`${e.x2},${e.y2}-${e.x1},${e.y1}`);
+        }
 
-          if (hasBottom && hasTop && hasLeft && hasRight) {
-            // Top-left vertex is tl - check if white
-            if (tl.isWhite) {
-              // Draw grey filled quad
-              aztecCtx.fillStyle = 'rgba(150, 150, 150, 0.3)';
-              aztecCtx.beginPath();
-              aztecCtx.moveTo(x * scale, -y * scale);
-              aztecCtx.lineTo((x+1) * scale, -y * scale);
-              aztecCtx.lineTo((x+1) * scale, -(y+1) * scale);
-              aztecCtx.lineTo(x * scale, -(y+1) * scale);
-              aztecCtx.closePath();
-              aztecCtx.fill();
+        const drawnFaces8 = new Set();
+        for (const v of aztecVertices) {
+          const x = v.x, y = v.y;
+          // Only check half-integer positions (original vertices)
+          if (Math.abs(x - Math.round(x)) > 0.01 || Math.abs(y - Math.round(y)) > 0.01) continue;
+
+          const faceKey = `${x},${y}`;
+          if (drawnFaces8.has(faceKey)) continue;
+
+          const bl = vertexMap8.get(`${x},${y}`);
+          const br = vertexMap8.get(`${x+1},${y}`);
+          const tl = vertexMap8.get(`${x},${y+1}`);
+          const tr = vertexMap8.get(`${x+1},${y+1}`);
+
+          if (bl && br && tl && tr) {
+            const hasBottom = edgeSet8.has(`${x},${y}-${x+1},${y}`);
+            const hasTop = edgeSet8.has(`${x},${y+1}-${x+1},${y+1}`);
+            const hasLeft = edgeSet8.has(`${x},${y}-${x},${y+1}`);
+            const hasRight = edgeSet8.has(`${x+1},${y}-${x+1},${y+1}`);
+
+            if (hasBottom && hasTop && hasLeft && hasRight) {
+              drawnFaces8.add(faceKey);
+              // At step 8, colors are flipped: isWhite now means originally BLACK
+              if (tl.isWhite) {
+                aztecCtx.fillStyle = 'rgba(128, 0, 128, 0.4)';  // Purple for black faces
+                aztecCtx.beginPath();
+                aztecCtx.moveTo(x * scale, -y * scale);
+                aztecCtx.lineTo((x+1) * scale, -y * scale);
+                aztecCtx.lineTo((x+1) * scale, -(y+1) * scale);
+                aztecCtx.closePath();
+                aztecCtx.fill();
+              }
             }
           }
         }

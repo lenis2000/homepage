@@ -1370,7 +1370,53 @@ static void aztecStep5_WhiteContraction() {
 static void aztecStep6_Shading() {
     if (g_aztecReductionStep != 5) return;
     pushAztecState();
-    // No structural changes - just advance step to enable shading in rendering
+
+    int n = g_aztecLevel;
+
+    // Build vertex position map
+    std::map<std::pair<int,int>, int> vertexIndex;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        int ix = (int)std::round(g_aztecVertices[idx].x * 2);
+        int iy = (int)std::round(g_aztecVertices[idx].y * 2);
+        vertexIndex[{ix, iy}] = (int)idx;
+    }
+
+    // Build edge set
+    std::set<std::pair<std::pair<int,int>, std::pair<int,int>>> edgeSet;
+    for (const auto& e : g_aztecEdges) {
+        int x1 = (int)std::round(g_aztecVertices[e.v1].x * 2);
+        int y1 = (int)std::round(g_aztecVertices[e.v1].y * 2);
+        int x2 = (int)std::round(g_aztecVertices[e.v2].x * 2);
+        int y2 = (int)std::round(g_aztecVertices[e.v2].y * 2);
+        edgeSet.insert({{std::min(x1,x2), std::min(y1,y2)}, {std::max(x1,x2), std::max(y1,y2)}});
+    }
+
+    auto hasEdge = [&](int x1, int y1, int x2, int y2) -> bool {
+        return edgeSet.count({{std::min(x1,x2), std::min(y1,y2)}, {std::max(x1,x2), std::max(y1,y2)}}) > 0;
+    };
+
+    // Mark vertices of BLACK faces (faces where top-left is BLACK)
+    for (const auto& v : g_aztecVertices) {
+        int blX = (int)std::round(v.x * 2);  // bottom-left x (in 2x coords)
+        int blY = (int)std::round(v.y * 2);  // bottom-left y
+
+        // Face corners in 2x coords: bl, br=bl+(2,0), tl=bl+(0,2), tr=bl+(2,2)
+        auto itBL = vertexIndex.find({blX, blY});
+        auto itBR = vertexIndex.find({blX + 2, blY});
+        auto itTL = vertexIndex.find({blX, blY + 2});
+        auto itTR = vertexIndex.find({blX + 2, blY + 2});
+
+        if (itBL != vertexIndex.end() && itBR != vertexIndex.end() &&
+            itTL != vertexIndex.end() && itTR != vertexIndex.end()) {
+            // Check all 4 edges exist
+            if (hasEdge(blX, blY, blX+2, blY) && hasEdge(blX, blY+2, blX+2, blY+2) &&
+                hasEdge(blX, blY, blX, blY+2) && hasEdge(blX+2, blY, blX+2, blY+2)) {
+                // Black faces have BLACK vertex at top-left
+                // (shading computed in JS based on face geometry)
+            }
+        }
+    }
+
     g_aztecReductionStep = 6;
 }
 
@@ -1399,192 +1445,165 @@ static void aztecStep7_MarkDiagonalVertices() {
 // STEP 8: Split green vertices into 3-vertex segments (Folding step 3)
 // BLACK vertex -> black-white-black (3 vertices, 2 weight-1 edges)
 // WHITE vertex -> white-black-white (3 vertices, 2 weight-1 edges)
-// The split goes BETWEEN the two black faces (perpendicular to the black face diagonal)
-// Black faces stay as they were; new edges bridge between separate black faces
+// Black quads stay exactly as they were; chains connect diagonally between them
 static void aztecStep8_SplitVertices() {
     if (g_aztecReductionStep != 7) return;
 
     pushAztecState();
 
-    const double splitOffset = 0.15;  // Offset for split vertices
-    int n = g_aztecLevel;
-
-    // Find green vertices (inVgauge == true)
-    std::vector<int> greenVertices;
-    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
-        if (g_aztecVertices[idx].inVgauge) {
-            greenVertices.push_back((int)idx);
-        }
+    // First, find all black quad centers
+    // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
+    std::map<std::string, int> vertexIndex;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        std::ostringstream key;
+        key << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
+        vertexIndex[key.str()] = (int)i;
     }
 
-    std::vector<AztecVertex> newVertices = g_aztecVertices;
-    std::vector<AztecEdge> newEdges = g_aztecEdges;
+    // Build edge lookup
+    std::set<std::string> edgeSet;
+    for (const auto& e : g_aztecEdges) {
+        double x1 = g_aztecVertices[e.v1].x;
+        double y1 = g_aztecVertices[e.v1].y;
+        double x2 = g_aztecVertices[e.v2].x;
+        double y2 = g_aztecVertices[e.v2].y;
+        std::ostringstream k1, k2;
+        k1 << x1 << "," << y1 << "-" << x2 << "," << y2;
+        k2 << x2 << "," << y2 << "-" << x1 << "," << y1;
+        edgeSet.insert(k1.str());
+        edgeSet.insert(k2.str());
+    }
 
-    // Map from old vertex index to triplet of new vertex indices
-    // {outerIdx1, middleIdx, outerIdx2} where outer vertices have original color
-    // Also store the split direction: true = NW-SE split, false = NE-SW split
-    struct SplitInfo {
-        int outerIdx1, middleIdx, outerIdx2;
-        bool splitNWSE;  // true: split goes NW-SE (black faces are NE-SW)
-    };
-    std::map<int, SplitInfo> splitMap;
+    std::vector<std::pair<double, double>> blackQuadCenters;
+    std::set<std::string> visitedFaces;
 
-    for (int greenIdx : greenVertices) {
-        double x = g_aztecVertices[greenIdx].x;
-        double y = g_aztecVertices[greenIdx].y;
-        bool isWhite = g_aztecVertices[greenIdx].isWhite;
+    for (const auto& v : g_aztecVertices) {
+        double x = v.x, y = v.y;
+        std::ostringstream faceKey;
+        faceKey << x << "," << y;
+        if (visitedFaces.count(faceKey.str())) continue;
 
-        // Determine which diagonal the BLACK faces are on
-        // If (x + y + n) is odd, black faces are on NE-SW diagonal -> split NW-SE
-        // If (x + y + n) is even, black faces are on NW-SE diagonal -> split NE-SW
-        int sum = (int)std::round(x + y + n);
-        bool blackOnNESW = (sum % 2 != 0);
-        bool splitNWSE = blackOnNESW;  // Split perpendicular to black face diagonal
+        // Look for face with BL at (x, y)
+        std::ostringstream blKey, brKey, tlKey, trKey;
+        blKey << x << "," << y;
+        brKey << (x+1) << "," << y;
+        tlKey << x << "," << (y+1);
+        trKey << (x+1) << "," << (y+1);
 
-        // Create 3 new vertices: outer1 - middle - outer2
-        int outerIdx1 = (int)newVertices.size();
-        int middleIdx = (int)newVertices.size() + 1;
-        int outerIdx2 = (int)newVertices.size() + 2;
+        if (vertexIndex.count(blKey.str()) && vertexIndex.count(brKey.str()) &&
+            vertexIndex.count(tlKey.str()) && vertexIndex.count(trKey.str())) {
+            // Check all 4 edges exist
+            std::ostringstream e1, e2, e3, e4;
+            e1 << x << "," << y << "-" << (x+1) << "," << y;
+            e2 << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
+            e3 << x << "," << y << "-" << x << "," << (y+1);
+            e4 << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
 
-        AztecVertex outer1, middle, outer2;
+            if (edgeSet.count(e1.str()) && edgeSet.count(e2.str()) &&
+                edgeSet.count(e3.str()) && edgeSet.count(e4.str())) {
+                visitedFaces.insert(faceKey.str());
+
+                // Get TL (NW) and BR (SE) vertices
+                int tlIdx = vertexIndex[tlKey.str()];
+                int brIdx = vertexIndex[brKey.str()];
+                bool tlWhite = g_aztecVertices[tlIdx].isWhite;
+                bool brWhite = g_aztecVertices[brIdx].isWhite;
+
+                // Black quad: WHITE at NW and SE
+                if (tlWhite && brWhite) {
+                    // Compute center by averaging all 4 vertices
+                    double blX = g_aztecVertices[vertexIndex[blKey.str()]].x;
+                    double blY = g_aztecVertices[vertexIndex[blKey.str()]].y;
+                    double brX = g_aztecVertices[vertexIndex[brKey.str()]].x;
+                    double brY = g_aztecVertices[vertexIndex[brKey.str()]].y;
+                    double tlX = g_aztecVertices[tlIdx].x;
+                    double tlY = g_aztecVertices[tlIdx].y;
+                    double trX = g_aztecVertices[vertexIndex[trKey.str()]].x;
+                    double trY = g_aztecVertices[vertexIndex[trKey.str()]].y;
+
+                    double cx = (blX + brX + tlX + trX) / 4.0;
+                    double cy = (blY + brY + tlY + trY) / 4.0;
+                    blackQuadCenters.push_back({cx, cy});
+                    std::printf("Black quad center: (%.2f, %.2f)\n", cx, cy);
+                }
+            }
+        }
+    }
+    std::printf("Total black quads: %zu\n", blackQuadCenters.size());
+
+    const double splitOffset = 0.15;  // Offset for split vertices
+
+    // For each green vertex V:
+    // - V stays in place with ALL original edges (black quads preserved!)
+    // - Add outer1 and outer2 at offset positions
+    // - V becomes the middle (color flipped)
+    // - Add chain edges: outer1 -- V -- outer2
+    // Result: black quads stay exactly where they were
+
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        if (!g_aztecVertices[idx].inVgauge) continue;
+
+        double x = g_aztecVertices[idx].x;
+        double y = g_aztecVertices[idx].y;
+        bool isWhite = g_aztecVertices[idx].isWhite;
+
+        // Split direction based on vertex color (user specified):
+        // WHITE vertices split NW-SE: outer1=NW, outer2=SE
+        // BLACK vertices split SW-NE: outer1=SW, outer2=NE
+        bool splitNWSE = isWhite;  // WHITE -> NW-SE, BLACK -> SW-NE
+
+        AztecVertex outer1, outer2;
 
         if (splitNWSE) {
-            // Split goes NW to SE: outer1 at NW, outer2 at SE
+            // WHITE: outer1 at NW, outer2 at SE
             outer1.x = x - splitOffset;
             outer1.y = y + splitOffset;
             outer2.x = x + splitOffset;
             outer2.y = y - splitOffset;
         } else {
-            // Split goes NE to SW: outer1 at SW, outer2 at NE
+            // BLACK: outer1 at SW, outer2 at NE
             outer1.x = x - splitOffset;
             outer1.y = y - splitOffset;
             outer2.x = x + splitOffset;
             outer2.y = y + splitOffset;
         }
 
+        // Outer vertices have SAME color as original V
         outer1.isWhite = isWhite;
         outer1.inVgauge = false;
         outer1.toContract = false;
-
-        middle.x = x;
-        middle.y = y;
-        middle.isWhite = !isWhite;  // Opposite color
-        middle.inVgauge = false;
-        middle.toContract = false;
 
         outer2.isWhite = isWhite;
         outer2.inVgauge = false;
         outer2.toContract = false;
 
-        newVertices.push_back(outer1);
-        newVertices.push_back(middle);
-        newVertices.push_back(outer2);
+        // V becomes the middle - flip its color
+        g_aztecVertices[idx].isWhite = !isWhite;
+        g_aztecVertices[idx].inVgauge = false;
 
-        // Add two weight-1 edges: outer1-middle and middle-outer2
+        int outerIdx1 = (int)g_aztecVertices.size();
+        int outerIdx2 = (int)g_aztecVertices.size() + 1;
+
+        g_aztecVertices.push_back(outer1);
+        g_aztecVertices.push_back(outer2);
+
+        // Add chain edges: outer1 -- V -- outer2 (V is the middle)
         AztecEdge edge1, edge2;
         edge1.v1 = outerIdx1;
-        edge1.v2 = middleIdx;
+        edge1.v2 = (int)idx;
         edge1.weight = 1.0;
         edge1.isHorizontal = false;
         edge1.gaugeTransformed = false;
 
-        edge2.v1 = middleIdx;
+        edge2.v1 = (int)idx;
         edge2.v2 = outerIdx2;
         edge2.weight = 1.0;
         edge2.isHorizontal = false;
         edge2.gaugeTransformed = false;
 
-        newEdges.push_back(edge1);
-        newEdges.push_back(edge2);
-
-        splitMap[greenIdx] = {outerIdx1, middleIdx, outerIdx2, splitNWSE};
+        g_aztecEdges.push_back(edge1);
+        g_aztecEdges.push_back(edge2);
     }
-
-    // Redirect edges from original green vertices to outer split vertices
-    // Edges to neighbors in the NE or SW black face go to one end
-    // Edges to neighbors in the NW or SE grey face go to the other end
-    for (auto& e : newEdges) {
-        // Check if v1 was split
-        if (splitMap.count(e.v1)) {
-            auto& info = splitMap[e.v1];
-            double ox = g_aztecVertices[e.v1].x;
-            double oy = g_aztecVertices[e.v1].y;
-            double nx = newVertices[e.v2].x;
-            double ny = newVertices[e.v2].y;
-            double dx = nx - ox;
-            double dy = ny - oy;
-
-            if (info.splitNWSE) {
-                // Split is NW-SE, black faces are NE-SW
-                // Neighbors in NE direction (dx>0 or dy>0 roughly) go to outer2 (SE end)
-                // Neighbors in SW direction go to outer1 (NW end)
-                if (dx + dy > 0) {
-                    e.v1 = info.outerIdx2;  // SE end
-                } else {
-                    e.v1 = info.outerIdx1;  // NW end
-                }
-            } else {
-                // Split is NE-SW, black faces are NW-SE
-                // Neighbors in NW direction (dx<0, dy>0) go to outer1 (SW end)
-                // Neighbors in SE direction (dx>0, dy<0) go to outer2 (NE end)
-                if (dx - dy > 0) {
-                    e.v1 = info.outerIdx2;  // NE end
-                } else {
-                    e.v1 = info.outerIdx1;  // SW end
-                }
-            }
-        }
-        // Check if v2 was split
-        if (splitMap.count(e.v2)) {
-            auto& info = splitMap[e.v2];
-            double ox = g_aztecVertices[e.v2].x;
-            double oy = g_aztecVertices[e.v2].y;
-            double nx = newVertices[e.v1].x;
-            double ny = newVertices[e.v1].y;
-            double dx = nx - ox;
-            double dy = ny - oy;
-
-            if (info.splitNWSE) {
-                if (dx + dy > 0) {
-                    e.v2 = info.outerIdx2;
-                } else {
-                    e.v2 = info.outerIdx1;
-                }
-            } else {
-                if (dx - dy > 0) {
-                    e.v2 = info.outerIdx2;
-                } else {
-                    e.v2 = info.outerIdx1;
-                }
-            }
-        }
-    }
-
-    // Remove original green vertices and build final vertex list
-    std::vector<AztecVertex> finalVertices;
-    std::map<int, int> oldToNew;
-    for (size_t idx = 0; idx < newVertices.size(); idx++) {
-        if (idx < g_aztecVertices.size() && splitMap.count((int)idx)) {
-            continue;  // Skip original green vertex
-        }
-        oldToNew[(int)idx] = (int)finalVertices.size();
-        finalVertices.push_back(newVertices[idx]);
-    }
-
-    // Remap edge indices
-    std::vector<AztecEdge> finalEdges;
-    for (auto& e : newEdges) {
-        if (oldToNew.count(e.v1) && oldToNew.count(e.v2)) {
-            e.v1 = oldToNew[e.v1];
-            e.v2 = oldToNew[e.v2];
-            if (e.v1 != e.v2) {
-                finalEdges.push_back(e);
-            }
-        }
-    }
-
-    g_aztecVertices = finalVertices;
-    g_aztecEdges = finalEdges;
 
     // Clear highlighting
     for (auto& v : g_aztecVertices) {
