@@ -143,20 +143,8 @@ static void initWeightArrays() {
         g_gamma[j].resize(g_l, 1.0);
     }
 
-    // Set interesting default values for 2x2 case
-    if (g_k == 2 && g_l == 2) {
-        // α (bottom): all 1s (already default)
-        // β (right): β[0][0]=1, β[0][1]=4, β[1][0]=4, β[1][1]=1
-        g_beta[0][0] = 1.0;
-        g_beta[0][1] = 4.0;
-        g_beta[1][0] = 4.0;
-        g_beta[1][1] = 1.0;
-        // γ (left): γ[0][0]=4, γ[0][1]=1, γ[1][0]=4, γ[1][1]=1
-        g_gamma[0][0] = 4.0;
-        g_gamma[0][1] = 1.0;
-        g_gamma[1][0] = 4.0;
-        g_gamma[1][1] = 1.0;
-    }
+    // Default is uniform (all 1s) - already set above
+    // For non-uniform 2x2 example, use the "Edit periodic weights" button
 }
 
 // Generate edge key from coordinates
@@ -577,10 +565,13 @@ static void computeTembeddingRecurrence() {
         std::map<std::string, TVertex> levelMap;
         for (int k = -m; k <= m; k++) {
             for (int j = -m; j <= m; j++) {
-                bool isInterior = (std::abs(k) + std::abs(j) < m);
-                bool isCorner = (j == -m && k == 0) || (j == m && k == 0) ||
-                               (j == 0 && k == -m) || (j == 0 && k == m);
-                if (isInterior || isCorner) {
+                // Include ALL vertices with |j|+|k| <= m for intermediate levels
+                // This includes:
+                // - Interior vertices: |j|+|k| < m
+                // - Boundary corners: (±m, 0) and (0, ±m)
+                // - Diagonal boundary: |j|+|k| = m with j≠0 and k≠0
+                bool isInDiamond = (std::abs(k) + std::abs(j) <= m);
+                if (isInDiamond) {
                     std::ostringstream key;
                     key << j << "," << k;
                     TVertex v;
@@ -619,150 +610,167 @@ static void computeTembeddingRecurrence() {
     // Store level 1 (just the boundary rhombus)
     storeTembeddingAtLevel(1);
 
-    // 2) Fill T for m=1..(n-1) via the recursive rule
-    // Use face weights at level m for all updates from m -> m+1
+    // 2) Fill T for m=1..(n-1) via the Berggren-Russkikh recurrence
+    // Using face weights c_{j,k,m} instead of α, β, γ
     for (int m = 1; m < n; m++) {
         Complex one(1.0, 0.0);
 
-        // Ensure boundary corners for level m+1 are set (safety reset)
+        // Rule 1: Boundary corners for level m+1 are fixed
         Tarray[m+1][(-(m+1) + n)][(0 + n)] = Complex(-horizScale, 0.0);
         Tarray[m+1][((m+1) + n)][(0 + n)] = Complex(horizScale, 0.0);
         Tarray[m+1][(0 + n)][(-(m+1) + n)] = Complex(0.0, vertScale);
         Tarray[m+1][(0 + n)][((m+1) + n)] = Complex(0.0, -vertScale);
 
-        // Pass 1: Boundary edges and pass-through
-        for (int k = -m; k <= m; k++) {
-            for (int j = -m; j <= m; j++) {
-                if (std::abs(k) + std::abs(j) <= m) {
-                    // Get face weight at this position at level m
-                    double c = getFaceWeight(j, k, m);
-                    Complex cVal(c, 0.0);
+        vertexTypes[m+1][(-(m+1) + n)][(0 + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[m+1][((m+1) + n)][(0 + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[m+1][(0 + n)][(-(m+1) + n)] = VT_BOUNDARY_CORNER;
+        vertexTypes[m+1][(0 + n)][((m+1) + n)] = VT_BOUNDARY_CORNER;
 
-                    // Boundary edge updates (4 corners of the diamond along axes)
-                    // Left edge: j = -m, k = 0
-                    if (j == -m && k == 0) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (Tarray[m][(-m + n)][(0 + n)] + cVal * Tarray[m][(-m+1 + n)][(0 + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_LEFT;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, -m, 0), makeDepKey(m, -m+1, 0)};
-                    }
-                    // Right edge: j = m, k = 0
-                    if (j == m && k == 0) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (Tarray[m][(m + n)][(0 + n)] + cVal * Tarray[m][(m-1 + n)][(0 + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_RIGHT;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, m, 0), makeDepKey(m, m-1, 0)};
-                    }
-                    // Bottom edge: j = 0, k = -m
-                    if (j == 0 && k == -m) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (cVal * Tarray[m][(0 + n)][(-m + n)] + Tarray[m][(0 + n)][(-m+1 + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_BOTTOM;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, 0, -m), makeDepKey(m, 0, -m+1)};
-                    }
-                    // Top edge: j = 0, k = m
-                    if (j == 0 && k == m) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (cVal * Tarray[m][(0 + n)][(m + n)] + Tarray[m][(0 + n)][(m-1 + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_BOUNDARY_TOP;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, 0, m), makeDepKey(m, 0, m-1)};
-                    }
+        // Rule 2: For {|j|,|k|} = {0,m} (axis positions at boundary of level m)
+        // T_{m+1}(±m, 0) = (T_m(±m, 0) + c * T_m(±(m-1), 0)) / (1+c)
+        // T_{m+1}(0, ±m) = (c * T_m(0, ±m) + T_m(0, ±(m-1))) / (1+c)
+        {
+            double c = getFaceWeight(m, 0, m);
+            Complex cVal(c, 0.0);
+            // Right: T_{m+1}(m, 0)
+            Tarray[m+1][(m + n)][(0 + n)] =
+                (Tarray[m][(m + n)][(0 + n)] + cVal * Tarray[m][(m-1 + n)][(0 + n)]) / (one + cVal);
+            vertexTypes[m+1][(m + n)][(0 + n)] = VT_BOUNDARY_RIGHT;
+            vertexSourceLevel[m+1][(m + n)][(0 + n)] = m;
+            vertexFaceWeights[m+1][(m + n)][(0 + n)] = c;
+            vertexDeps[m+1][(m + n)][(0 + n)] = {makeDepKey(m, m, 0), makeDepKey(m, m-1, 0)};
+        }
+        {
+            double c = getFaceWeight(-m, 0, m);
+            Complex cVal(c, 0.0);
+            // Left: T_{m+1}(-m, 0)
+            Tarray[m+1][(-m + n)][(0 + n)] =
+                (Tarray[m][(-m + n)][(0 + n)] + cVal * Tarray[m][(-m+1 + n)][(0 + n)]) / (one + cVal);
+            vertexTypes[m+1][(-m + n)][(0 + n)] = VT_BOUNDARY_LEFT;
+            vertexSourceLevel[m+1][(-m + n)][(0 + n)] = m;
+            vertexFaceWeights[m+1][(-m + n)][(0 + n)] = c;
+            vertexDeps[m+1][(-m + n)][(0 + n)] = {makeDepKey(m, -m, 0), makeDepKey(m, -m+1, 0)};
+        }
+        {
+            double c = getFaceWeight(0, m, m);
+            Complex cVal(c, 0.0);
+            // Top: T_{m+1}(0, m)
+            Tarray[m+1][(0 + n)][(m + n)] =
+                (cVal * Tarray[m][(0 + n)][(m + n)] + Tarray[m][(0 + n)][(m-1 + n)]) / (one + cVal);
+            vertexTypes[m+1][(0 + n)][(m + n)] = VT_BOUNDARY_TOP;
+            vertexSourceLevel[m+1][(0 + n)][(m + n)] = m;
+            vertexFaceWeights[m+1][(0 + n)][(m + n)] = c;
+            vertexDeps[m+1][(0 + n)][(m + n)] = {makeDepKey(m, 0, m), makeDepKey(m, 0, m-1)};
+        }
+        {
+            double c = getFaceWeight(0, -m, m);
+            Complex cVal(c, 0.0);
+            // Bottom: T_{m+1}(0, -m)
+            Tarray[m+1][(0 + n)][(-m + n)] =
+                (cVal * Tarray[m][(0 + n)][(-m + n)] + Tarray[m][(0 + n)][(-m+1 + n)]) / (one + cVal);
+            vertexTypes[m+1][(0 + n)][(-m + n)] = VT_BOUNDARY_BOTTOM;
+            vertexSourceLevel[m+1][(0 + n)][(-m + n)] = m;
+            vertexFaceWeights[m+1][(0 + n)][(-m + n)] = c;
+            vertexDeps[m+1][(0 + n)][(-m + n)] = {makeDepKey(m, 0, -m), makeDepKey(m, 0, -m+1)};
+        }
 
-                    // Diagonal edges (corners of the square boundary)
-                    // Upper-right diagonal: k = m - j, 1 <= j <= m-1
-                    if ((1 <= j && j <= m-1) && (k == m - j)) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (Tarray[m][(j-1 + n)][(m-j + n)] + cVal * Tarray[m][(j + n)][(m-j-1 + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_RIGHT;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, m-j), makeDepKey(m, j, m-j-1)};
-                    }
-                    // Lower-right diagonal: k = -m + j, 1 <= j <= m-1
-                    if ((1 <= j && j <= m-1) && (k == -m + j)) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (Tarray[m][(j-1 + n)][(-m+j + n)] + cVal * Tarray[m][(j + n)][(-m+j+1 + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_RIGHT;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, -m+j), makeDepKey(m, j, -m+j+1)};
-                    }
-                    // Upper-left diagonal: k = m + j, 1-m <= j <= -1
-                    if (((1-m) <= j && j <= -1) && (k == m + j)) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (cVal * Tarray[m][(j + n)][(m+j-1 + n)] + Tarray[m][(j+1 + n)][(m+j + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_LEFT;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, m+j-1), makeDepKey(m, j+1, m+j)};
-                    }
-                    // Lower-left diagonal: k = -m - j, 1-m <= j <= -1
-                    if (((1-m) <= j && j <= -1) && (k == -m - j)) {
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            (cVal * Tarray[m][(j + n)][(-m-j+1 + n)] + Tarray[m][(j+1 + n)][(-m-j + n)])
-                            / (one + cVal);
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_LEFT;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, -m-j+1), makeDepKey(m, j+1, -m-j)};
-                    }
+        // Rule 3: For 1 ≤ |j| ≤ m-1, |j|+|k|=m (diagonal boundary)
+        // Upper-right: T_{m+1}(j, m-j) = (T_m(j-1, m-j) + c * T_m(j, m-j-1)) / (1+c)  for j > 0
+        // Lower-right: T_{m+1}(j, -(m-j)) = (T_m(j-1, -(m-j)) + c * T_m(j, -(m-j)+1)) / (1+c)  for j > 0
+        // Upper-left: T_{m+1}(j, m+j) = (c * T_m(j, m+j-1) + T_m(j+1, m+j)) / (1+c)  for j < 0
+        // Lower-left: T_{m+1}(j, -(m+j)) = (c * T_m(j, -(m+j)+1) + T_m(j+1, -(m+j))) / (1+c)  for j < 0
+        for (int j = 1; j <= m - 1; j++) {
+            // Upper-right diagonal: k = m - j
+            {
+                int k = m - j;
+                double c = getFaceWeight(j, k, m);
+                Complex cVal(c, 0.0);
+                Tarray[m+1][(j + n)][(k + n)] =
+                    (Tarray[m][(j-1 + n)][(k + n)] + cVal * Tarray[m][(j + n)][(k-1 + n)]) / (one + cVal);
+                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_RIGHT;
+                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, k), makeDepKey(m, j, k-1)};
+            }
+            // Lower-right diagonal: k = -(m - j)
+            {
+                int k = -(m - j);
+                double c = getFaceWeight(j, k, m);
+                Complex cVal(c, 0.0);
+                Tarray[m+1][(j + n)][(k + n)] =
+                    (Tarray[m][(j-1 + n)][(k + n)] + cVal * Tarray[m][(j + n)][(k+1 + n)]) / (one + cVal);
+                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_RIGHT;
+                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j-1, k), makeDepKey(m, j, k+1)};
+            }
+        }
+        for (int j = -(m - 1); j <= -1; j++) {
+            // Upper-left diagonal: k = m + j
+            {
+                int k = m + j;
+                double c = getFaceWeight(j, k, m);
+                Complex cVal(c, 0.0);
+                Tarray[m+1][(j + n)][(k + n)] =
+                    (cVal * Tarray[m][(j + n)][(k-1 + n)] + Tarray[m][(j+1 + n)][(k + n)]) / (one + cVal);
+                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_UPPER_LEFT;
+                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k-1), makeDepKey(m, j+1, k)};
+            }
+            // Lower-left diagonal: k = -(m + j)
+            {
+                int k = -(m + j);
+                double c = getFaceWeight(j, k, m);
+                Complex cVal(c, 0.0);
+                Tarray[m+1][(j + n)][(k + n)] =
+                    (cVal * Tarray[m][(j + n)][(k+1 + n)] + Tarray[m][(j+1 + n)][(k + n)]) / (one + cVal);
+                vertexTypes[m+1][(j + n)][(k + n)] = VT_DIAG_LOWER_LEFT;
+                vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k+1), makeDepKey(m, j+1, k)};
+            }
+        }
 
-                    // Interior pass-through (for positions where (j+k+m) % 2 == 0)
-                    if ((std::abs(k) + std::abs(j) < m) && (((j + k + m) % 2) == 0)) {
-                        Tarray[m+1][(j + n)][(k + n)] = Tarray[m][(j + n)][(k + n)];
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_PASSTHROUGH;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = 1.0;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k)};
-                    }
+        // Rule 4: For |j|+|k| < m and j+k+m even: pass-through
+        for (int k = -m + 1; k <= m - 1; k++) {
+            for (int j = -m + 1; j <= m - 1; j++) {
+                if (std::abs(j) + std::abs(k) < m && ((j + k + m) % 2 == 0)) {
+                    Tarray[m+1][(j + n)][(k + n)] = Tarray[m][(j + n)][(k + n)];
+                    vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_PASSTHROUGH;
+                    vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                    vertexFaceWeights[m+1][(j + n)][(k + n)] = 1.0;
+                    vertexDeps[m+1][(j + n)][(k + n)] = {makeDepKey(m, j, k)};
                 }
             }
         }
 
-        // Pass 2: Interior recurrence (for positions where (j+k+m) % 2 == 1)
-        // Original formula (axis-aligned neighbors):
-        // T[m+1](j,k) = -T[m](j,k) + (T[m+1](j-1,k) + T[m+1](j+1,k) + c*T[m+1](j,k+1) + c*T[m+1](j,k-1)) / (1+c)
-        for (int k = -m; k <= m; k++) {
-            for (int j = -m; j <= m; j++) {
-                if (std::abs(k) + std::abs(j) <= m) {
-                    if ((std::abs(k) + std::abs(j) < m) && (((j + k + m) % 2) == 1)) {
-                        double c = getFaceWeight(j, k, m);
-                        Complex cVal(c, 0.0);
+        // Rule 5: For |j|+|k| < m and j+k+m odd: recurrence with AXIS-ALIGNED neighbors
+        // T_{m+1}(j,k) + T_m(j,k) = (T_{m+1}(j-1,k) + T_{m+1}(j+1,k) + c*(T_{m+1}(j,k+1) + T_{m+1}(j,k-1))) / (1+c)
+        for (int k = -m + 1; k <= m - 1; k++) {
+            for (int j = -m + 1; j <= m - 1; j++) {
+                if (std::abs(j) + std::abs(k) < m && ((j + k + m) % 2 == 1)) {
+                    double c = getFaceWeight(j, k, m);
+                    Complex cVal(c, 0.0);
 
-                        Tarray[m+1][(j + n)][(k + n)] =
-                            -Tarray[m][(j + n)][(k + n)]
-                            + (Tarray[m+1][(j-1 + n)][(k + n)]
-                               + Tarray[m+1][(j+1 + n)][(k + n)]
-                               + cVal * Tarray[m+1][(j + n)][(k+1 + n)]
-                               + cVal * Tarray[m+1][(j + n)][(k-1 + n)]
-                              ) / (one + cVal);
+                    Tarray[m+1][(j + n)][(k + n)] =
+                        -Tarray[m][(j + n)][(k + n)]
+                        + (Tarray[m+1][(j-1 + n)][(k + n)]
+                           + Tarray[m+1][(j+1 + n)][(k + n)]
+                           + cVal * Tarray[m+1][(j + n)][(k+1 + n)]
+                           + cVal * Tarray[m+1][(j + n)][(k-1 + n)]
+                          ) / (one + cVal);
 
-                        vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_RECURRENCE;
-                        vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
-                        vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
-                        vertexDeps[m+1][(j + n)][(k + n)] = {
-                            makeDepKey(m, j, k),
-                            makeDepKey(m+1, j-1, k),
-                            makeDepKey(m+1, j+1, k),
-                            makeDepKey(m+1, j, k+1),
-                            makeDepKey(m+1, j, k-1)
-                        };
-                    }
+                    vertexTypes[m+1][(j + n)][(k + n)] = VT_INTERIOR_RECURRENCE;
+                    vertexSourceLevel[m+1][(j + n)][(k + n)] = m;
+                    vertexFaceWeights[m+1][(j + n)][(k + n)] = c;
+                    vertexDeps[m+1][(j + n)][(k + n)] = {
+                        makeDepKey(m, j, k),
+                        makeDepKey(m+1, j-1, k),
+                        makeDepKey(m+1, j+1, k),
+                        makeDepKey(m+1, j, k+1),
+                        makeDepKey(m+1, j, k-1)
+                    };
                 }
             }
         }
@@ -785,17 +793,17 @@ static void computeTembeddingRecurrence() {
     }
 
     // Store the T-embedding result for the final level n
-    // The augmented graph has a 4-edge outer face, so we only include:
+    // Include ALL vertices with |j|+|k| <= n:
     // - Interior points: |j|+|k| < n
-    // - The 4 corner points: (-n,0), (n,0), (0,-n), (0,n)
-    // The diagonal boundary points (|j|+|k| = n with j≠0 and k≠0) are NOT part of the T-embedding
+    // - Boundary corners: (±n,0), (0,±n)
+    // - Diagonal boundary: |j|+|k| = n with j≠0 and k≠0
+    // Note: mathematically, the augmented graph only uses corners + interior,
+    // but we include diagonal boundary for complete visualization
     for (int k = -n; k <= n; k++) {
         for (int j = -n; j <= n; j++) {
-            bool isInterior = (std::abs(k) + std::abs(j) < n);
-            bool isCorner = (j == -n && k == 0) || (j == n && k == 0) ||
-                           (j == 0 && k == -n) || (j == 0 && k == n);
+            bool isInDiamond = (std::abs(k) + std::abs(j) <= n);
 
-            if (isInterior || isCorner) {
+            if (isInDiamond) {
                 std::ostringstream key;
                 key << j << "," << k;
 

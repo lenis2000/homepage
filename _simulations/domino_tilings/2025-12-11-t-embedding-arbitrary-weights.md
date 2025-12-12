@@ -18,9 +18,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   <label>n: <input id="n-input" type="number" value="4" min="1" max="50" style="width: 60px;"></label>
   <button id="draw-btn" style="margin-left: 10px;">Set</button>
   <button id="temb-btn" style="margin-left: 10px;">Compute T-embedding</button>
-  <button id="zoom-in-btn" style="margin-left: 10px;">+</button>
-  <button id="zoom-out-btn">−</button>
-  <button id="reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
 </div>
 
 <div style="margin-bottom: 10px;">
@@ -29,6 +26,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     <label>l: <input id="l-input" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
   </label>
   <button id="edit-weights-btn" style="margin-left: 10px;">Edit periodic weights</button>
+  <button id="example-2x2-btn" style="margin-left: 10px;">2×2 Example</button>
   <button id="uniform-btn" style="margin-left: 10px;">Uniform (all 1s)</button>
   <button id="random-btn">Random</button>
 </div>
@@ -41,11 +39,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 <div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; margin-bottom: 10px;">
   Loading WASM module...
 </div>
-
-<details style="margin-top: 15px;">
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e0e8f0; border: 1px solid #99c;">T-embedding visualization</summary>
-  <canvas id="temb-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa; cursor: grab; margin-top: 10px;"></canvas>
-</details>
 
 <details style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f0f0; border: 1px solid #ccc;">Original Aztec diamond with edge weights</summary>
@@ -81,10 +74,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       </div>
     </div>
     <div style="margin-top: 10px;">
-      <button id="stepwise-zoom-in-btn">+</button>
-      <button id="stepwise-zoom-out-btn">−</button>
-      <button id="stepwise-reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
-      <label style="margin-left: 20px;"><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
+      <label><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
     </div>
     <div id="vertex-info" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; min-height: 60px; font-family: monospace; font-size: 12px;">
       <em>Click on a vertex to see its formula and dependencies</em>
@@ -106,8 +96,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 (function() {
   const canvas = document.getElementById('aztec-canvas');
   const ctx = canvas.getContext('2d');
-  const tembCanvas = document.getElementById('temb-canvas');
-  const tembCtx = tembCanvas.getContext('2d');
   const loadingMsg = document.getElementById('loading-msg');
 
   // UI state
@@ -115,12 +103,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let panX = 0, panY = 0;
   let isPanning = false;
   let lastPanX = 0, lastPanY = 0;
-
-  // T-embedding canvas state
-  let tembZoom = 1.0;
-  let tembPanX = 0, tembPanY = 0;
-  let tembIsPanning = false;
-  let tembLastPanX = 0, tembLastPanY = 0;
 
   // Data from WASM (source of truth)
   let edges = [];
@@ -367,197 +349,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     ctx.restore();
   }
 
-  // Render T-embedding
-  function renderTemb() {
-    if (!tembData || !tembData.vertices || tembData.vertices.length === 0) {
-      return;
-    }
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = tembCanvas.getBoundingClientRect();
-    tembCanvas.width = rect.width * dpr;
-    tembCanvas.height = rect.height * dpr;
-    tembCtx.scale(dpr, dpr);
-
-    tembCtx.fillStyle = '#fafafa';
-    tembCtx.fillRect(0, 0, rect.width, rect.height);
-
-    // Find bounds of T-embedding
-    let minReal = Infinity, maxReal = -Infinity;
-    let minImag = Infinity, maxImag = -Infinity;
-    for (const v of tembData.vertices) {
-      minReal = Math.min(minReal, v.tReal);
-      maxReal = Math.max(maxReal, v.tReal);
-      minImag = Math.min(minImag, v.tImag);
-      maxImag = Math.max(maxImag, v.tImag);
-    }
-
-    const rangeReal = maxReal - minReal || 1;
-    const rangeImag = maxImag - minImag || 1;
-    const centerReal = (minReal + maxReal) / 2;
-    const centerImag = (minImag + maxImag) / 2;
-
-    // Scale to fit canvas
-    const padding = 50;
-    const scaleX = (rect.width - 2 * padding) / rangeReal;
-    const scaleY = (rect.height - 2 * padding) / rangeImag;
-    const baseScale = Math.min(scaleX, scaleY);
-    const scale = baseScale * tembZoom;
-
-    const cx = rect.width / 2 + tembPanX * tembZoom;
-    const cy = rect.height / 2 + tembPanY * tembZoom;
-
-    tembCtx.save();
-    tembCtx.translate(cx, cy);
-
-    // Create a map for quick vertex lookup
-    const vertexMap = {};
-    for (const v of tembData.vertices) {
-      vertexMap[v.key] = v;
-    }
-
-    // Draw faces as quadrilaterals
-    // Faces are indexed by their center (fx, fy)
-    // The four corners are: (fx-0.5, fy-0.5), (fx+0.5, fy-0.5), (fx+0.5, fy+0.5), (fx-0.5, fy+0.5)
-    // These correspond to neighboring face centers in the T-embedding
-    const n = tembData.originalN;
-
-    // Get corner vertices
-    const corners = [
-      vertexMap[`${-n},0`],  // left
-      vertexMap[`0,${n}`],   // top
-      vertexMap[`${n},0`],   // right
-      vertexMap[`0,${-n}`]   // bottom
-    ];
-
-    // Draw outer rhombus connecting the 4 corners
-    tembCtx.strokeStyle = '#333';
-    tembCtx.lineWidth = Math.max(0.5, scale / 150);
-    if (corners.every(c => c)) {
-      tembCtx.beginPath();
-      tembCtx.moveTo((corners[0].tReal - centerReal) * scale, (corners[0].tImag - centerImag) * scale);
-      for (let i = 1; i < 4; i++) {
-        tembCtx.lineTo((corners[i].tReal - centerReal) * scale, (corners[i].tImag - centerImag) * scale);
-      }
-      tembCtx.closePath();
-      tembCtx.stroke();
-    }
-
-    // Draw boundary chain connecting outer spikes
-    // Boundary vertices are those with |x| + |y| = n-1 (the outermost interior ring)
-    // They should be connected in order around the boundary
-    const boundaryVertices = [];
-    for (let i = 0; i < n; i++) {
-      // Upper-right edge: from (0, n-1) to (n-1, 0)
-      if (vertexMap[`${i},${n-1-i}`]) boundaryVertices.push(vertexMap[`${i},${n-1-i}`]);
-    }
-    for (let i = 1; i < n; i++) {
-      // Lower-right edge: from (n-1, 0) to (0, -(n-1))
-      if (vertexMap[`${n-1-i},${-i}`]) boundaryVertices.push(vertexMap[`${n-1-i},${-i}`]);
-    }
-    for (let i = 1; i < n; i++) {
-      // Lower-left edge: from (0, -(n-1)) to (-(n-1), 0)
-      if (vertexMap[`${-i},${-(n-1-i)}`]) boundaryVertices.push(vertexMap[`${-i},${-(n-1-i)}`]);
-    }
-    for (let i = 1; i < n; i++) {
-      // Upper-left edge: from (-(n-1), 0) to (0, n-1)
-      if (vertexMap[`${-(n-1-i)},${i}`]) boundaryVertices.push(vertexMap[`${-(n-1-i)},${i}`]);
-    }
-
-    // Draw boundary chain
-    if (boundaryVertices.length > 0) {
-      tembCtx.strokeStyle = '#333';
-      tembCtx.lineWidth = Math.max(0.3, scale / 200);
-      tembCtx.beginPath();
-      tembCtx.moveTo((boundaryVertices[0].tReal - centerReal) * scale, (boundaryVertices[0].tImag - centerImag) * scale);
-      for (let i = 1; i < boundaryVertices.length; i++) {
-        tembCtx.lineTo((boundaryVertices[i].tReal - centerReal) * scale, (boundaryVertices[i].tImag - centerImag) * scale);
-      }
-      tembCtx.closePath();
-      tembCtx.stroke();
-    }
-
-    // Draw interior edges
-    tembCtx.strokeStyle = '#333';
-    tembCtx.lineWidth = Math.max(0.3, scale / 200);
-
-    for (const v of tembData.vertices) {
-      const fx = v.x;
-      const fy = v.y;
-
-      // Skip corners - they connect to the boundary chain differently
-      if ((fx === -n && fy === 0) || (fx === n && fy === 0) ||
-          (fx === 0 && fy === -n) || (fx === 0 && fy === n)) continue;
-
-      // Get the 4 neighboring vertices
-      const neighbors = [
-        `${fx-1},${fy}`,
-        `${fx},${fy+1}`,
-        `${fx+1},${fy}`,
-        `${fx},${fy-1}`
-      ];
-
-      for (const nKey of neighbors) {
-        if (vertexMap[nKey]) {
-          const nv = vertexMap[nKey];
-          tembCtx.beginPath();
-          tembCtx.moveTo((v.tReal - centerReal) * scale, (v.tImag - centerImag) * scale);
-          tembCtx.lineTo((nv.tReal - centerReal) * scale, (nv.tImag - centerImag) * scale);
-          tembCtx.stroke();
-        }
-      }
-    }
-
-    // Draw edges from corners to adjacent boundary vertices
-    if (corners.every(c => c)) {
-      // Left corner (-n, 0) connects to (-(n-1), 1) and (-(n-1), -1)
-      const leftAdj = [vertexMap[`${-(n-1)},1`], vertexMap[`${-(n-1)},-1`]];
-      // Right corner (n, 0) connects to (n-1, 1) and (n-1, -1)
-      const rightAdj = [vertexMap[`${n-1},1`], vertexMap[`${n-1},-1`]];
-      // Top corner (0, n) connects to (1, n-1) and (-1, n-1)
-      const topAdj = [vertexMap[`1,${n-1}`], vertexMap[`-1,${n-1}`]];
-      // Bottom corner (0, -n) connects to (1, -(n-1)) and (-1, -(n-1))
-      const bottomAdj = [vertexMap[`1,${-(n-1)}`], vertexMap[`-1,${-(n-1)}`]];
-
-      const cornerEdges = [
-        [corners[0], leftAdj],
-        [corners[1], topAdj],
-        [corners[2], rightAdj],
-        [corners[3], bottomAdj]
-      ];
-
-      for (const [corner, adjs] of cornerEdges) {
-        for (const adj of adjs) {
-          if (corner && adj) {
-            tembCtx.beginPath();
-            tembCtx.moveTo((corner.tReal - centerReal) * scale, (corner.tImag - centerImag) * scale);
-            tembCtx.lineTo((adj.tReal - centerReal) * scale, (adj.tImag - centerImag) * scale);
-            tembCtx.stroke();
-          }
-        }
-      }
-    }
-
-    // Draw vertices (all as small black dots)
-    const vertexRadius = Math.max(0.5, scale / 300);
-    for (const v of tembData.vertices) {
-      const x = (v.tReal - centerReal) * scale;
-      const y = (v.tImag - centerImag) * scale;
-
-      tembCtx.beginPath();
-      tembCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
-      tembCtx.fillStyle = '#000';
-      tembCtx.fill();
-    }
-
-    tembCtx.restore();
-
-    // Draw info text
-    tembCtx.fillStyle = '#333';
-    tembCtx.font = '12px sans-serif';
-    tembCtx.fillText(`T-embedding (n=${tembData.originalN}, ${tembData.numLevels} levels folded)`, 10, 20);
-  }
-
   function resetZoom() {
     zoom = 1.6;
     panX = 0;
@@ -744,61 +535,17 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     let jsonStr = Module.UTF8ToString(ptr);
     freeString(ptr);
     tembData = JSON.parse(jsonStr);
-    // Debug info (can be removed later)
-    const zeroVertices = tembData.vertices?.filter(v => Math.abs(v.tReal) < 0.001 && Math.abs(v.tImag) < 0.001);
-    if (zeroVertices?.length > 0) {
-      console.log("T-embedding warning: vertices at zero:", zeroVertices.map(v => `(${v.x},${v.y})`).join(', '));
-    }
-
     // Reload from WASM to restore original n (T-embedding computation may have folded)
     loadFromWasm();
     document.getElementById('n-input').value = weights.n;
 
-    // Show T-embedding canvas and render
-    tembCanvas.style.display = 'block';
-    tembZoom = 1.0;
-    tembPanX = 0;
-    tembPanY = 0;
-    renderTemb();
+    // Update step-by-step visualization
+    updateStepRange();
+    displayFaceWeights(currentStep);
+    renderStepwiseTemb();
   }
 
   document.getElementById('temb-btn').addEventListener('click', computeAndDisplayTembedding);
-
-  // T-embedding canvas mouse handlers
-  tembCanvas.addEventListener('mousedown', (e) => {
-    tembIsPanning = true;
-    tembLastPanX = e.clientX;
-    tembLastPanY = e.clientY;
-    tembCanvas.style.cursor = 'grabbing';
-  });
-
-  tembCanvas.addEventListener('mousemove', (e) => {
-    if (!tembIsPanning) return;
-    const dx = e.clientX - tembLastPanX;
-    const dy = e.clientY - tembLastPanY;
-    tembPanX += dx / tembZoom;
-    tembPanY += dy / tembZoom;
-    tembLastPanX = e.clientX;
-    tembLastPanY = e.clientY;
-    renderTemb();
-  });
-
-  tembCanvas.addEventListener('mouseup', () => {
-    tembIsPanning = false;
-    tembCanvas.style.cursor = 'grab';
-  });
-
-  tembCanvas.addEventListener('mouseleave', () => {
-    tembIsPanning = false;
-    tembCanvas.style.cursor = 'grab';
-  });
-
-  tembCanvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    tembZoom = Math.max(0.1, Math.min(20, tembZoom * factor));
-    renderTemb();
-  }, { passive: false });
 
   // Granular urban renewal controls
   let urbanRenewalStep = 1;  // Track current step (1, 2, or 3)
@@ -849,23 +596,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     render();
     urbanRenewalStep = 1;  // Reset to step 1 for next cycle
     updateStepButtons();
-  });
-
-  document.getElementById('reset-zoom-btn').addEventListener('click', () => {
-    tembZoom = 1.0;
-    tembPanX = 0;
-    tembPanY = 0;
-    renderTemb();
-  });
-
-  document.getElementById('zoom-in-btn').addEventListener('click', () => {
-    tembZoom = Math.min(20, tembZoom * 1.3);
-    renderTemb();
-  });
-
-  document.getElementById('zoom-out-btn').addEventListener('click', () => {
-    tembZoom = Math.max(0.1, tembZoom / 1.3);
-    renderTemb();
   });
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
@@ -950,9 +680,34 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     render();
   });
 
+  document.getElementById('example-2x2-btn').addEventListener('click', () => {
+    if (!wasmReady) return;
+    // Set periodicity to 2x2
+    document.getElementById('k-input').value = 2;
+    document.getElementById('l-input').value = 2;
+    setPeriodicParams(2, 2);
+    initWeights();
+    // Set the interesting 2x2 example weights:
+    // α (bottom): all 1s
+    // β (right): β[0][0]=1, β[0][1]=4, β[1][0]=4, β[1][1]=1
+    // γ (left): γ[0][0]=4, γ[0][1]=1, γ[1][0]=4, γ[1][1]=1
+    setWeight(1, 0, 0, 1);  // beta[0][0]
+    setWeight(1, 0, 1, 4);  // beta[0][1]
+    setWeight(1, 1, 0, 4);  // beta[1][0]
+    setWeight(1, 1, 1, 1);  // beta[1][1]
+    setWeight(2, 0, 0, 4);  // gamma[0][0]
+    setWeight(2, 0, 1, 1);  // gamma[0][1]
+    setWeight(2, 1, 0, 4);  // gamma[1][0]
+    setWeight(2, 1, 1, 1);  // gamma[1][1]
+    loadFromWasm();
+    if (document.getElementById('weights-editor').style.display !== 'none') {
+      buildWeightsEditor();
+    }
+    render();
+  });
+
   window.addEventListener('resize', () => {
     render();
-    if (tembData) renderTemb();
     renderStepwiseTemb();
   });
 
@@ -1141,97 +896,83 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     const m = level;
 
-    // Draw edges
+    // ==========================================================================
+    // HARDCODED T-EMBEDDING GRAPH STRUCTURE -- DON'T TOUCH THESE EDGE DEFINITIONS!
+    // ==========================================================================
+    // T_m graph structure:
+    // - Interior vertices: all (i,j) with |i|+|j| < m
+    // - Exterior vertices (4 corners): (±m, 0) and (0, ±m)
+    //
+    // Edges:
+    // 1. Interior edges: grid connections (±1 in one coordinate) between interior vertices
+    // 2. Exterior rhombus: connect 4 corners to each other
+    // 3. Corner-to-axis: (m,0)↔(m-1,0), (-m,0)↔(-m+1,0), (0,m)↔(0,m-1), (0,-m)↔(0,-m+1)
+    // 4. Exterior face diagonals: (m-1,0)↔(m-2,1)↔...↔(0,m-1) and 3 symmetric sides
+    // ==========================================================================
+
     stepwiseCtx.strokeStyle = '#333';
     stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
 
-    for (const v of levelData.vertices) {
-      // Axis-aligned neighbors (interior edges)
-      const axisNeighbors = [
-        `${v.x-1},${v.y}`,
-        `${v.x},${v.y+1}`,
-        `${v.x+1},${v.y}`,
-        `${v.x},${v.y-1}`
-      ];
-
-      for (const nKey of axisNeighbors) {
-        if (vertexMap[nKey]) {
-          const nv = vertexMap[nKey];
-          stepwiseCtx.beginPath();
-          stepwiseCtx.moveTo((v.tReal - centerReal) * scale, (v.tImag - centerImag) * scale);
-          stepwiseCtx.lineTo((nv.tReal - centerReal) * scale, (nv.tImag - centerImag) * scale);
-          stepwiseCtx.stroke();
-        }
+    // Helper to draw edge between two vertices by key
+    function drawEdge(key1, key2) {
+      const v1 = vertexMap[key1];
+      const v2 = vertexMap[key2];
+      if (v1 && v2) {
+        stepwiseCtx.beginPath();
+        stepwiseCtx.moveTo((v1.tReal - centerReal) * scale, (v1.tImag - centerImag) * scale);
+        stepwiseCtx.lineTo((v2.tReal - centerReal) * scale, (v2.tImag - centerImag) * scale);
+        stepwiseCtx.stroke();
       }
+    }
 
-      // Diagonal neighbors (boundary edges where |x|+|y| = m-1)
-      // These connect vertices on the boundary ring
-      if (Math.abs(v.x) + Math.abs(v.y) === m - 1) {
-        const diagNeighbors = [
-          `${v.x-1},${v.y+1}`,
-          `${v.x+1},${v.y+1}`,
-          `${v.x+1},${v.y-1}`,
-          `${v.x-1},${v.y-1}`
-        ];
-
-        for (const nKey of diagNeighbors) {
-          if (vertexMap[nKey]) {
-            const nv = vertexMap[nKey];
-            // Only draw if neighbor is also on boundary ring
-            if (Math.abs(nv.x) + Math.abs(nv.y) === m - 1) {
-              stepwiseCtx.beginPath();
-              stepwiseCtx.moveTo((v.tReal - centerReal) * scale, (v.tImag - centerImag) * scale);
-              stepwiseCtx.lineTo((nv.tReal - centerReal) * scale, (nv.tImag - centerImag) * scale);
-              stepwiseCtx.stroke();
-            }
-          }
+    // 1. Interior edges: grid connections between all interior vertices (|i|+|j| < m)
+    for (let i = -(m-1); i <= m-1; i++) {
+      for (let j = -(m-1); j <= m-1; j++) {
+        if (Math.abs(i) + Math.abs(j) >= m) continue;  // not interior
+        // Connect to right neighbor (i+1, j) if also interior
+        if (Math.abs(i+1) + Math.abs(j) < m) {
+          drawEdge(`${i},${j}`, `${i+1},${j}`);
+        }
+        // Connect to top neighbor (i, j+1) if also interior
+        if (Math.abs(i) + Math.abs(j+1) < m) {
+          drawEdge(`${i},${j}`, `${i},${j+1}`);
         }
       }
     }
 
-    // Draw outer boundary rhombus
-    const corners = [
-      vertexMap[`${-m},0`],
-      vertexMap[`0,${m}`],
-      vertexMap[`${m},0`],
-      vertexMap[`0,${-m}`]
-    ];
+    // 2. Exterior rhombus: connect 4 corners
+    stepwiseCtx.lineWidth = Math.max(1, scale / 100);
+    drawEdge(`${-m},0`, `0,${m}`);   // left to top
+    drawEdge(`0,${m}`, `${m},0`);    // top to right
+    drawEdge(`${m},0`, `0,${-m}`);   // right to bottom
+    drawEdge(`0,${-m}`, `${-m},0`);  // bottom to left
 
-    if (corners.every(c => c)) {
-      stepwiseCtx.strokeStyle = '#333';
-      stepwiseCtx.lineWidth = Math.max(1, scale / 100);
-      stepwiseCtx.beginPath();
-      stepwiseCtx.moveTo((corners[0].tReal - centerReal) * scale, (corners[0].tImag - centerImag) * scale);
-      for (let i = 1; i < 4; i++) {
-        stepwiseCtx.lineTo((corners[i].tReal - centerReal) * scale, (corners[i].tImag - centerImag) * scale);
-      }
-      stepwiseCtx.closePath();
-      stepwiseCtx.stroke();
-    }
+    // 3. Corner-to-axis edges (connect each corner to the nearest interior vertex on the axis)
+    // For m=1: corners connect to (0,0); for m>1: corners connect to (±(m-1),0) and (0,±(m-1))
+    stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
+    drawEdge(`${m},0`, `${m-1},0`);     // right corner to interior
+    drawEdge(`${-m},0`, `${-m+1},0`);   // left corner to interior
+    drawEdge(`0,${m}`, `0,${m-1}`);     // top corner to interior
+    drawEdge(`0,${-m}`, `0,${-m+1}`);   // bottom corner to interior
 
-    // Draw edges from corners to nearest interior vertices
-    // Corner (-m, 0) connects to (-(m-1), 0)
-    // Corner (m, 0) connects to (m-1, 0)
-    // Corner (0, m) connects to (0, m-1)
-    // Corner (0, -m) connects to (0, -(m-1))
+    // 4. Exterior face diagonal edges along |i|+|j| = m-1
+    // These form the inner boundary of the 4 exterior triangular faces
     if (m > 1) {
-      stepwiseCtx.strokeStyle = '#333';
-      stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
-
-      const cornerToInterior = [
-        [corners[0], vertexMap[`${-(m-1)},0`]],  // left corner to interior
-        [corners[1], vertexMap[`0,${m-1}`]],     // top corner to interior
-        [corners[2], vertexMap[`${m-1},0`]],     // right corner to interior
-        [corners[3], vertexMap[`0,${-(m-1)}`]]   // bottom corner to interior
-      ];
-
-      for (const [corner, interior] of cornerToInterior) {
-        if (corner && interior) {
-          stepwiseCtx.beginPath();
-          stepwiseCtx.moveTo((corner.tReal - centerReal) * scale, (corner.tImag - centerImag) * scale);
-          stepwiseCtx.lineTo((interior.tReal - centerReal) * scale, (interior.tImag - centerImag) * scale);
-          stepwiseCtx.stroke();
-        }
+      // Upper-right face: (m-1,0) -- (m-2,1) -- ... -- (1,m-2) -- (0,m-1)
+      for (let k = 0; k < m-1; k++) {
+        drawEdge(`${m-1-k},${k}`, `${m-2-k},${k+1}`);
+      }
+      // Upper-left face: (0,m-1) -- (-1,m-2) -- ... -- (-m+2,1) -- (-m+1,0)
+      for (let k = 0; k < m-1; k++) {
+        drawEdge(`${-k},${m-1-k}`, `${-k-1},${m-2-k}`);
+      }
+      // Lower-left face: (-m+1,0) -- (-m+2,-1) -- ... -- (-1,-m+2) -- (0,-m+1)
+      for (let k = 0; k < m-1; k++) {
+        drawEdge(`${-m+1+k},${-k}`, `${-m+2+k},${-k-1}`);
+      }
+      // Lower-right face: (0,-m+1) -- (1,-m+2) -- ... -- (m-2,-1) -- (m-1,0)
+      for (let k = 0; k < m-1; k++) {
+        drawEdge(`${k},${-m+1+k}`, `${k+1},${-m+2+k}`);
       }
     }
 
@@ -1295,23 +1036,55 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   }
 
   // Generate formula explanation for a vertex
+  // Formulas match the Berggren-Russkikh recurrence (Proposition 2.4)
   function getVertexFormulaHTML(v, level) {
     const c = v.faceWeight.toFixed(3).replace(/\.?0+$/, '');
     const j = v.x, k = v.y;
-    const m = v.sourceLevel;
+    const m = v.sourceLevel;  // level = m + 1
 
+    // Note: level = m + 1 in the recurrence formulas
+    // T_{m+1}(...) is computed from T_m(...) values
     const typeDescriptions = {
-      'boundary_corner': `<strong>Boundary corner</strong> (fixed)<br>T<sub>${level}</sub>(${j},${k}) is fixed at the boundary.`,
-      'boundary_left': `<strong>Left boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${-m},0) + c·T<sub>${m}</sub>(${-m+1},0)) / (1+c)<br>c = ${c}`,
-      'boundary_right': `<strong>Right boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${m},0) + c·T<sub>${m}</sub>(${m-1},0)) / (1+c)<br>c = ${c}`,
-      'boundary_bottom': `<strong>Bottom boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(0,${-m}) + T<sub>${m}</sub>(0,${-m+1})) / (1+c)<br>c = ${c}`,
-      'boundary_top': `<strong>Top boundary</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(0,${m}) + T<sub>${m}</sub>(0,${m-1})) / (1+c)<br>c = ${c}`,
-      'diag_upper_right': `<strong>Upper-right diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k-1})) / (1+c)<br>c = ${c}`,
-      'diag_lower_right': `<strong>Lower-right diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k+1})) / (1+c)<br>c = ${c}`,
-      'diag_upper_left': `<strong>Upper-left diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k-1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = ${c}`,
-      'diag_lower_left': `<strong>Lower-left diagonal</strong><br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k+1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = ${c}`,
-      'interior_passthrough': `<strong>Interior pass-through</strong><br>T<sub>${level}</sub>(${j},${k}) = T<sub>${m}</sub>(${j},${k})`,
-      'interior_recurrence': `<strong>Interior recurrence</strong><br>T<sub>${level}</sub>(${j},${k}) = -T<sub>${m}</sub>(${j},${k}) + (T<sub>${level}</sub>(${j-1},${k}) + T<sub>${level}</sub>(${j+1},${k}) + c·(T<sub>${level}</sub>(${j},${k+1}) + T<sub>${level}</sub>(${j},${k-1}))) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`
+      // Rule 1: Boundary corners are fixed at the 4 corners of level m+1
+      'boundary_corner': `<strong>Boundary corner</strong> (fixed)<br>T<sub>${level}</sub>(${j},${k}) is fixed at the boundary rhombus corner`,
+
+      // Rule 2: Axis boundary - positions on the axes (j=±m, k=0) or (j=0, k=±m)
+      // Left: T_{m+1}(-m, 0) = (T_m(-m, 0) + c·T_m(-m+1, 0)) / (1+c)
+      'boundary_left': `<strong>Left axis boundary</strong> (j = -m)<br>T<sub>${level}</sub>(${j},0) = (T<sub>${m}</sub>(${j},0) + c·T<sub>${m}</sub>(${j+1},0)) / (1+c)<br>c = c<sub>${j},0,${m}</sub> = ${c}`,
+
+      // Right: T_{m+1}(m, 0) = (T_m(m, 0) + c·T_m(m-1, 0)) / (1+c)
+      'boundary_right': `<strong>Right axis boundary</strong> (j = m)<br>T<sub>${level}</sub>(${j},0) = (T<sub>${m}</sub>(${j},0) + c·T<sub>${m}</sub>(${j-1},0)) / (1+c)<br>c = c<sub>${j},0,${m}</sub> = ${c}`,
+
+      // Top: T_{m+1}(0, m) = (c·T_m(0, m) + T_m(0, m-1)) / (1+c)
+      'boundary_top': `<strong>Top axis boundary</strong> (k = m)<br>T<sub>${level}</sub>(0,${k}) = (c·T<sub>${m}</sub>(0,${k}) + T<sub>${m}</sub>(0,${k-1})) / (1+c)<br>c = c<sub>0,${k},${m}</sub> = ${c}`,
+
+      // Bottom: T_{m+1}(0, -m) = (c·T_m(0, -m) + T_m(0, -m+1)) / (1+c)
+      'boundary_bottom': `<strong>Bottom axis boundary</strong> (k = -m)<br>T<sub>${level}</sub>(0,${k}) = (c·T<sub>${m}</sub>(0,${k}) + T<sub>${m}</sub>(0,${k+1})) / (1+c)<br>c = c<sub>0,${k},${m}</sub> = ${c}`,
+
+      // Rule 3: Diagonal boundary - positions where |j|+|k|=m (excluding axes)
+      // Upper-right: j > 0, k = m - j
+      // T_{m+1}(j, m-j) = (T_m(j-1, m-j) + c·T_m(j, m-j-1)) / (1+c)
+      'diag_upper_right': `<strong>Diagonal boundary (upper-right)</strong><br>|j|+|k| = ${m}, j > 0, k > 0<br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k-1})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+
+      // Lower-right: j > 0, k = -(m - j)
+      // T_{m+1}(j, -(m-j)) = (T_m(j-1, -(m-j)) + c·T_m(j, -(m-j)+1)) / (1+c)
+      'diag_lower_right': `<strong>Diagonal boundary (lower-right)</strong><br>|j|+|k| = ${m}, j > 0, k < 0<br>T<sub>${level}</sub>(${j},${k}) = (T<sub>${m}</sub>(${j-1},${k}) + c·T<sub>${m}</sub>(${j},${k+1})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+
+      // Upper-left: j < 0, k = m + j
+      // T_{m+1}(j, m+j) = (c·T_m(j, m+j-1) + T_m(j+1, m+j)) / (1+c)
+      'diag_upper_left': `<strong>Diagonal boundary (upper-left)</strong><br>|j|+|k| = ${m}, j < 0, k > 0<br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k-1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+
+      // Lower-left: j < 0, k = -(m + j)
+      // T_{m+1}(j, -(m+j)) = (c·T_m(j, -(m+j)+1) + T_m(j+1, -(m+j))) / (1+c)
+      'diag_lower_left': `<strong>Diagonal boundary (lower-left)</strong><br>|j|+|k| = ${m}, j < 0, k < 0<br>T<sub>${level}</sub>(${j},${k}) = (c·T<sub>${m}</sub>(${j},${k+1}) + T<sub>${m}</sub>(${j+1},${k})) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`,
+
+      // Rule 4: Interior pass-through for j+k+m even
+      // T_{m+1}(j,k) = T_m(j,k)
+      'interior_passthrough': `<strong>Interior pass-through</strong> (j+k+m = ${j}+${k}+${m} = ${j+k+m} even)<br>T<sub>${level}</sub>(${j},${k}) = T<sub>${m}</sub>(${j},${k})`,
+
+      // Rule 5: Interior recurrence for j+k+m odd
+      // T_{m+1}(j,k) = -T_m(j,k) + (T_{m+1}(j-1,k) + T_{m+1}(j+1,k) + c·(T_{m+1}(j,k+1) + T_{m+1}(j,k-1))) / (1+c)
+      'interior_recurrence': `<strong>Interior recurrence</strong> (j+k+m = ${j}+${k}+${m} = ${j+k+m} odd)<br>T<sub>${level}</sub>(${j},${k}) = -T<sub>${m}</sub>(${j},${k}) + (T<sub>${level}</sub>(${j-1},${k}) + T<sub>${level}</sub>(${j+1},${k}) + c·(T<sub>${level}</sub>(${j},${k+1}) + T<sub>${level}</sub>(${j},${k-1}))) / (1+c)<br>c = c<sub>${j},${k},${m}</sub> = ${c}`
     };
 
     let html = typeDescriptions[v.type] || `Unknown type: ${v.type}`;
@@ -1419,31 +1192,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderStepwiseTemb();
   }, { passive: false });
 
-  document.getElementById('stepwise-zoom-in-btn').addEventListener('click', () => {
-    stepwiseZoom = Math.min(20, stepwiseZoom * 1.3);
-    renderStepwiseTemb();
-  });
-
-  document.getElementById('stepwise-zoom-out-btn').addEventListener('click', () => {
-    stepwiseZoom = Math.max(0.1, stepwiseZoom / 1.3);
-    renderStepwiseTemb();
-  });
-
-  document.getElementById('stepwise-reset-zoom-btn').addEventListener('click', () => {
-    stepwiseZoom = 1.0;
-    stepwisePanX = 0;
-    stepwisePanY = 0;
-    renderStepwiseTemb();
-  });
-
-  // Update the computeAndDisplayTembedding function to also update stepwise view
-  const originalComputeAndDisplay = computeAndDisplayTembedding;
-  computeAndDisplayTembedding = function() {
-    originalComputeAndDisplay();
-    updateStepRange();
-    displayFaceWeights(currentStep);
-    renderStepwiseTemb();
-  };
 
   // Initialize WASM
   initWasm();
