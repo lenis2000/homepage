@@ -147,6 +147,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let aztecReductionStep = 0;  // 0=original, 1=gauge, 2=contracted, 3=finalized
   let aztecVertices = [];
   let aztecEdges = [];
+  let aztecBlackQuadCenters = [];  // Centers of black quads (for shading at step 8+)
   let aztecZoom = 1.4;
   let aztecPanX = 0, aztecPanY = 0;
   let aztecIsPanning = false;
@@ -235,6 +236,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     aztecLevel = graphData.level;
     aztecReductionStep = graphData.reductionStep || 0;
     aztecVertices = graphData.vertices;
+    aztecBlackQuadCenters = graphData.blackQuadCenters || [];
 
     // Convert edges from index-based to coordinate-based for rendering
     aztecEdges = graphData.edges.map(e => ({
@@ -286,6 +288,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     aztecLevel = graphData.level;
     aztecReductionStep = graphData.reductionStep || 0;
     aztecVertices = graphData.vertices;
+    aztecBlackQuadCenters = graphData.blackQuadCenters || [];
     aztecEdges = graphData.edges.map(e => ({
       x1: aztecVertices[e.v1].x,
       y1: aztecVertices[e.v1].y,
@@ -327,102 +330,61 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     const showWeights = document.getElementById('show-aztec-weights-chk').checked;
 
-    // Draw grey faces for steps 6-7, or faces with flagged vertices for step 8+
+    // Draw shaded black quads (faces containing purple stars)
     if (aztecReductionStep >= 6) {
-      if (aztecReductionStep < 8) {
-        // Steps 6-7: use unit square detection for grey faces (white at top-left)
-        const vertexMap = new Map();
-        for (const v of aztecVertices) {
-          vertexMap.set(`${v.x},${v.y}`, v);
+      // For each black quad center, find the 4 closest vertices and draw as quad
+      for (const center of aztecBlackQuadCenters) {
+        // Get all vertices with their distances to center
+        const vertsWithDist = aztecVertices.map(v => ({
+          x: v.x, y: v.y,
+          dist: Math.hypot(v.x - center.x, v.y - center.y)
+        }));
+
+        // Sort by distance and take the 4 closest
+        vertsWithDist.sort((a, b) => a.dist - b.dist);
+        const quadVerts = vertsWithDist.slice(0, 4);
+
+        // Sort by angle around center to get correct winding order
+        quadVerts.sort((a, b) => {
+          const angleA = Math.atan2(a.y - center.y, a.x - center.x);
+          const angleB = Math.atan2(b.y - center.y, b.x - center.x);
+          return angleA - angleB;
+        });
+
+        // Draw the shaded quad
+        aztecCtx.fillStyle = 'rgba(100, 100, 100, 0.35)';
+        aztecCtx.beginPath();
+        aztecCtx.moveTo(quadVerts[0].x * scale, -quadVerts[0].y * scale);
+        for (let i = 1; i < quadVerts.length; i++) {
+          aztecCtx.lineTo(quadVerts[i].x * scale, -quadVerts[i].y * scale);
         }
-        const edgeSet = new Set();
-        for (const e of aztecEdges) {
-          edgeSet.add(`${e.x1},${e.y1}-${e.x2},${e.y2}`);
-          edgeSet.add(`${e.x2},${e.y2}-${e.x1},${e.y1}`);
+        aztecCtx.closePath();
+        aztecCtx.fill();
+      }
+
+      // Draw purple stars at black quad centers
+      const drawStar = (cx, cy, r, points) => {
+        aztecCtx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+          const radius = i % 2 === 0 ? r : r * 0.4;
+          const angle = (i * Math.PI / points) - Math.PI / 2;
+          const x = cx + radius * Math.cos(angle);
+          const y = cy + radius * Math.sin(angle);
+          if (i === 0) aztecCtx.moveTo(x, y);
+          else aztecCtx.lineTo(x, y);
         }
+        aztecCtx.closePath();
+      };
 
-        const drawnFaces = new Set();
-        for (const v of aztecVertices) {
-          const x = v.x, y = v.y;
-          const faceKey = `${x},${y}`;
-          if (drawnFaces.has(faceKey)) continue;
-
-          const bl = vertexMap.get(`${x},${y}`);
-          const br = vertexMap.get(`${x+1},${y}`);
-          const tl = vertexMap.get(`${x},${y+1}`);
-          const tr = vertexMap.get(`${x+1},${y+1}`);
-
-          if (bl && br && tl && tr) {
-            const hasBottom = edgeSet.has(`${x},${y}-${x+1},${y}`);
-            const hasTop = edgeSet.has(`${x},${y+1}-${x+1},${y+1}`);
-            const hasLeft = edgeSet.has(`${x},${y}-${x},${y+1}`);
-            const hasRight = edgeSet.has(`${x+1},${y}-${x+1},${y+1}`);
-
-            if (hasBottom && hasTop && hasLeft && hasRight) {
-              drawnFaces.add(faceKey);
-              if (tl.isWhite) {
-                aztecCtx.fillStyle = 'rgba(150, 150, 150, 0.3)';
-                aztecCtx.beginPath();
-                aztecCtx.moveTo(x * scale, -y * scale);
-                aztecCtx.lineTo((x+1) * scale, -y * scale);
-                aztecCtx.lineTo((x+1) * scale, -(y+1) * scale);
-                aztecCtx.lineTo(x * scale, -(y+1) * scale);
-                aztecCtx.closePath();
-                aztecCtx.fill();
-              }
-            }
-          }
-        }
-      } else {
-        // Step 8+: same unit-square detection, shade BLACK faces (TL is black)
-        // Original vertices at half-integer positions still exist with their edges
-        // (outer vertices are at offset positions and won't form unit squares)
-        // Note: at step 8, original vertex colors are flipped, so isWhite means originally black
-        const vertexMap8 = new Map();
-        for (const v of aztecVertices) {
-          vertexMap8.set(`${v.x},${v.y}`, v);
-        }
-        const edgeSet8 = new Set();
-        for (const e of aztecEdges) {
-          edgeSet8.add(`${e.x1},${e.y1}-${e.x2},${e.y2}`);
-          edgeSet8.add(`${e.x2},${e.y2}-${e.x1},${e.y1}`);
-        }
-
-        const drawnFaces8 = new Set();
-        for (const v of aztecVertices) {
-          const x = v.x, y = v.y;
-          // Only check half-integer positions (original vertices)
-          if (Math.abs(x - Math.round(x)) > 0.01 || Math.abs(y - Math.round(y)) > 0.01) continue;
-
-          const faceKey = `${x},${y}`;
-          if (drawnFaces8.has(faceKey)) continue;
-
-          const bl = vertexMap8.get(`${x},${y}`);
-          const br = vertexMap8.get(`${x+1},${y}`);
-          const tl = vertexMap8.get(`${x},${y+1}`);
-          const tr = vertexMap8.get(`${x+1},${y+1}`);
-
-          if (bl && br && tl && tr) {
-            const hasBottom = edgeSet8.has(`${x},${y}-${x+1},${y}`);
-            const hasTop = edgeSet8.has(`${x},${y+1}-${x+1},${y+1}`);
-            const hasLeft = edgeSet8.has(`${x},${y}-${x},${y+1}`);
-            const hasRight = edgeSet8.has(`${x+1},${y}-${x+1},${y+1}`);
-
-            if (hasBottom && hasTop && hasLeft && hasRight) {
-              drawnFaces8.add(faceKey);
-              // At step 8, colors are flipped: isWhite now means originally BLACK
-              if (tl.isWhite) {
-                aztecCtx.fillStyle = 'rgba(128, 0, 128, 0.4)';  // Purple for black faces
-                aztecCtx.beginPath();
-                aztecCtx.moveTo(x * scale, -y * scale);
-                aztecCtx.lineTo((x+1) * scale, -y * scale);
-                aztecCtx.lineTo((x+1) * scale, -(y+1) * scale);
-                aztecCtx.closePath();
-                aztecCtx.fill();
-              }
-            }
-          }
-        }
+      for (const center of aztecBlackQuadCenters) {
+        const sx = center.x * scale;
+        const sy = -center.y * scale;
+        aztecCtx.fillStyle = 'rgba(128, 0, 128, 0.8)';
+        drawStar(sx, sy, 8, 5);
+        aztecCtx.fill();
+        aztecCtx.strokeStyle = '#400040';
+        aztecCtx.lineWidth = 1;
+        aztecCtx.stroke();
       }
     }
 
