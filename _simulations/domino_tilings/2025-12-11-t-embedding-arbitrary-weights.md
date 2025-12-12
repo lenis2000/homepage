@@ -84,8 +84,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       <button id="stepwise-zoom-in-btn">+</button>
       <button id="stepwise-zoom-out-btn">−</button>
       <button id="stepwise-reset-zoom-btn" style="margin-left: 10px;">Reset Zoom</button>
-      <label style="margin-left: 20px;"><input type="checkbox" id="show-faces-chk" checked> Show face shading</label>
-      <label style="margin-left: 10px;"><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
+      <label style="margin-left: 20px;"><input type="checkbox" id="show-labels-chk" checked> Show T(j,k) labels</label>
     </div>
     <div id="vertex-info" style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; min-height: 60px; font-family: monospace; font-size: 12px;">
       <em>Click on a vertex to see its formula and dependencies</em>
@@ -1140,71 +1139,22 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       vertexMap[v.key] = v;
     }
 
-    const showFaces = document.getElementById('show-faces-chk').checked;
-
-    // Get face weights for this level
-    const n = tembData.originalN;
-    const histIdx = n - level;
-    let faceWeightMap = {};
-    if (tembData.faceWeightsHistory && histIdx >= 0 && histIdx < tembData.faceWeightsHistory.length) {
-      const fwData = tembData.faceWeightsHistory[histIdx];
-      for (const f of fwData.faces) {
-        faceWeightMap[f.key] = f;
-      }
-    }
-
-    // Draw faces as quadrilaterals (faces of the dual graph are vertices of original)
-    // Each face in the T-embedding corresponds to a vertex (j,k) in the original
-    // The face is bounded by neighbors (j-1,k), (j+1,k), (j,k-1), (j,k+1)
-    if (showFaces) {
-      for (const v of levelData.vertices) {
-        // Skip boundary corners - they don't form interior faces
-        const m = level;
-        if ((v.x === -m && v.y === 0) || (v.x === m && v.y === 0) ||
-            (v.x === 0 && v.y === -m) || (v.x === 0 && v.y === m)) continue;
-
-        // Get the 4 neighboring vertices that bound this face
-        const neighbors = [
-          vertexMap[`${v.x-1},${v.y}`],
-          vertexMap[`${v.x},${v.y+1}`],
-          vertexMap[`${v.x+1},${v.y}`],
-          vertexMap[`${v.x},${v.y-1}`]
-        ];
-
-        // Only draw if all 4 neighbors exist
-        if (neighbors.every(n => n)) {
-          stepwiseCtx.beginPath();
-          stepwiseCtx.moveTo((neighbors[0].tReal - centerReal) * scale, (neighbors[0].tImag - centerImag) * scale);
-          for (let i = 1; i < 4; i++) {
-            stepwiseCtx.lineTo((neighbors[i].tReal - centerReal) * scale, (neighbors[i].tImag - centerImag) * scale);
-          }
-          stepwiseCtx.closePath();
-
-          // Simple checkerboard coloring based on (j+k) parity
-          // Black faces: (j+k) even, White faces: (j+k) odd
-          const isBlack = (v.x + v.y) % 2 === 0;
-          stepwiseCtx.fillStyle = isBlack ? '#d0d0d0' : '#ffffff';
-          stepwiseCtx.fill();
-          stepwiseCtx.strokeStyle = '#888';
-          stepwiseCtx.lineWidth = 0.5;
-          stepwiseCtx.stroke();
-        }
-      }
-    }
+    const m = level;
 
     // Draw edges
     stepwiseCtx.strokeStyle = '#333';
     stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
 
     for (const v of levelData.vertices) {
-      const neighbors = [
+      // Axis-aligned neighbors (interior edges)
+      const axisNeighbors = [
         `${v.x-1},${v.y}`,
         `${v.x},${v.y+1}`,
         `${v.x+1},${v.y}`,
         `${v.x},${v.y-1}`
       ];
 
-      for (const nKey of neighbors) {
+      for (const nKey of axisNeighbors) {
         if (vertexMap[nKey]) {
           const nv = vertexMap[nKey];
           stepwiseCtx.beginPath();
@@ -1213,10 +1163,33 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           stepwiseCtx.stroke();
         }
       }
+
+      // Diagonal neighbors (boundary edges where |x|+|y| = m-1)
+      // These connect vertices on the boundary ring
+      if (Math.abs(v.x) + Math.abs(v.y) === m - 1) {
+        const diagNeighbors = [
+          `${v.x-1},${v.y+1}`,
+          `${v.x+1},${v.y+1}`,
+          `${v.x+1},${v.y-1}`,
+          `${v.x-1},${v.y-1}`
+        ];
+
+        for (const nKey of diagNeighbors) {
+          if (vertexMap[nKey]) {
+            const nv = vertexMap[nKey];
+            // Only draw if neighbor is also on boundary ring
+            if (Math.abs(nv.x) + Math.abs(nv.y) === m - 1) {
+              stepwiseCtx.beginPath();
+              stepwiseCtx.moveTo((v.tReal - centerReal) * scale, (v.tImag - centerImag) * scale);
+              stepwiseCtx.lineTo((nv.tReal - centerReal) * scale, (nv.tImag - centerImag) * scale);
+              stepwiseCtx.stroke();
+            }
+          }
+        }
+      }
     }
 
     // Draw outer boundary rhombus
-    const m = level;
     const corners = [
       vertexMap[`${-m},0`],
       vertexMap[`0,${m}`],
@@ -1234,6 +1207,32 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       }
       stepwiseCtx.closePath();
       stepwiseCtx.stroke();
+    }
+
+    // Draw edges from corners to nearest interior vertices
+    // Corner (-m, 0) connects to (-(m-1), 0)
+    // Corner (m, 0) connects to (m-1, 0)
+    // Corner (0, m) connects to (0, m-1)
+    // Corner (0, -m) connects to (0, -(m-1))
+    if (m > 1) {
+      stepwiseCtx.strokeStyle = '#333';
+      stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
+
+      const cornerToInterior = [
+        [corners[0], vertexMap[`${-(m-1)},0`]],  // left corner to interior
+        [corners[1], vertexMap[`0,${m-1}`]],     // top corner to interior
+        [corners[2], vertexMap[`${m-1},0`]],     // right corner to interior
+        [corners[3], vertexMap[`0,${-(m-1)}`]]   // bottom corner to interior
+      ];
+
+      for (const [corner, interior] of cornerToInterior) {
+        if (corner && interior) {
+          stepwiseCtx.beginPath();
+          stepwiseCtx.moveTo((corner.tReal - centerReal) * scale, (corner.tImag - centerImag) * scale);
+          stepwiseCtx.lineTo((interior.tReal - centerReal) * scale, (interior.tImag - centerImag) * scale);
+          stepwiseCtx.stroke();
+        }
+      }
     }
 
     // Draw vertices and collect screen positions
@@ -1382,7 +1381,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   });
 
   // Checkbox handlers
-  document.getElementById('show-faces-chk').addEventListener('change', renderStepwiseTemb);
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
 
   // Debug canvas mouse handlers

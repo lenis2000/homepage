@@ -522,9 +522,12 @@ static void computeTembeddingRecurrence() {
     // Helper to get face weight c_{j,k} at level m
     // faceWeightsHistory[0] = original size n
     // faceWeightsHistory[k] = size n-k
-    // Level m corresponds to faceWeightsHistory[n - m]
+    // When computing T at level m+1, we use face weights from the size-(m+1) diamond
+    // which is faceWeightsHistory[n - (m+1)] = faceWeightsHistory[n - m - 1]
     auto getFaceWeight = [&](int j, int k, int m) -> double {
-        int histIdx = n - m;
+        // m is the source level, we're computing level m+1
+        // Face weights for level m+1 are at histIdx = n - (m+1)
+        int histIdx = n - m - 1;
         if (histIdx < 0 || histIdx >= numLevels) return 1.0;
 
         std::ostringstream key;
