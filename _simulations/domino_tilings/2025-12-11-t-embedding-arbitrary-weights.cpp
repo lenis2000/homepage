@@ -690,6 +690,11 @@ static void aztecStep1_GaugeTransform() {
 
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     int n = g_aztecLevel;
 
     // Build vertex lookup map using integer coordinates (i,j) to avoid float precision issues
@@ -864,9 +869,14 @@ static void aztecStep2_WhiteGaugeTransform() {
 
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     int n = g_aztecLevel;
 
-    // Clear previous vertex highlights (but keep edge gaugeTransformed flags!)
+    // Clear previous vertex highlights
     for (auto& v : g_aztecVertices) {
         v.inVgauge = false;
         v.toContract = false;
@@ -1055,6 +1065,11 @@ static void aztecStep3_Contract() {
 
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     int n = g_aztecLevel;
 
     // Find vertices to remove (all 4 boundary diagonals):
@@ -1124,6 +1139,11 @@ static void aztecStep4_BlackContraction() {
     if (g_aztecReductionStep != 3) return;
 
     pushAztecState();
+
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
 
     int n = g_aztecLevel;
 
@@ -1257,6 +1277,11 @@ static void aztecStep5_WhiteContraction() {
 
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     int n = g_aztecLevel;
 
     // Find white vertices on i+j = -n (SW diagonal)
@@ -1381,6 +1406,11 @@ static void aztecStep6_Shading() {
     if (g_aztecReductionStep != 5) return;
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     // Build vertex index by coordinate string
     std::map<std::string, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
@@ -1464,6 +1494,11 @@ static void aztecStep7_MarkDiagonalVertices() {
 
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     int n = g_aztecLevel;
 
     for (size_t vIdx = 0; vIdx < g_aztecVertices.size(); vIdx++) {
@@ -1487,6 +1522,11 @@ static void aztecStep8_SplitVertices() {
     if (g_aztecReductionStep != 7) return;
 
     pushAztecState();
+
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
 
     const double shiftAmount = 0.2;  // Shift towards center for non-selected vertices
 
@@ -1781,6 +1821,11 @@ static void aztecStep9_DiagonalGauge() {
     if (g_aztecReductionStep != 8) return;
     pushAztecState();
 
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
+
     int n = g_aztecLevel;
     double outerCoord = n - 0.5;  // Outer boundary coordinate
 
@@ -1835,6 +1880,11 @@ static void aztecStep9_DiagonalGauge() {
 static void aztecStep10_UrbanRenewal() {
     if (g_aztecReductionStep != 9) return;
     pushAztecState();
+
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
 
     // Build adjacency list: vertex index -> list of (neighbor index, edge index)
     std::map<int, std::vector<std::pair<int, int>>> adj;
@@ -2026,6 +2076,11 @@ static void aztecStep10_UrbanRenewal() {
 static void aztecStep11_CombineDoubleEdges() {
     if (g_aztecReductionStep != 10) return;
     pushAztecState();
+
+    // Clear previous step's highlighting - only show edges modified in THIS step
+    for (auto& e : g_aztecEdges) {
+        e.gaugeTransformed = false;
+    }
 
     // Group edges by vertex pair (normalized so smaller index first)
     std::map<std::pair<int,int>, std::vector<size_t>> edgeGroups;
