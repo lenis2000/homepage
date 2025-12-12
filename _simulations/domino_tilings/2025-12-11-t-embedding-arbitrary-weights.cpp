@@ -1944,6 +1944,19 @@ static void aztecStep9_UrbanRenewal() {
         g_aztecEdges.push_back(e);
     }
 
+    // Debug: count duplicate edges
+    std::map<std::pair<int,int>, int> edgeCount;
+    for (const auto& e : g_aztecEdges) {
+        int v1 = std::min(e.v1, e.v2);
+        int v2 = std::max(e.v1, e.v2);
+        edgeCount[{v1, v2}]++;
+    }
+    int multiEdges = 0;
+    for (const auto& kv : edgeCount) {
+        if (kv.second > 1) multiEdges += kv.second;
+    }
+    printf("Urban renewal: %zu new edges, %d multi-edges\n", newEdges.size(), multiEdges);
+
     // Clear black quad centers (they've been collapsed)
     g_blackQuadCenters.clear();
 

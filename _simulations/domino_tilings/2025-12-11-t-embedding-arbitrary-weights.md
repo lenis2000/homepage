@@ -404,6 +404,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     aztecEdgeScreenPositions = [];
 
+    // Debug: count multi-edges
+    let multiEdgeCount = 0;
+    for (const [key, edges] of edgeGroups) {
+      if (edges.length > 1) multiEdgeCount += edges.length;
+    }
+    if (multiEdgeCount > 0) console.log(`Multi-edges: ${multiEdgeCount} edges in ${[...edgeGroups.values()].filter(e => e.length > 1).length} groups`);
+
     for (const [key, edges] of edgeGroups) {
       const numEdges = edges.length;
 
@@ -430,18 +437,32 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           aztecCtx.lineTo(x2, y2);
         } else {
           // Multi-edge: draw as curved arc
-          // Offset perpendicular to edge direction
-          const dx = x2 - x1, dy = y2 - y1;
+          // Use consistent direction (normalize so "smaller" endpoint is first)
+          let ex1 = x1, ey1 = y1, ex2 = x2, ey2 = y2;
+          if (x1 > x2 || (x1 === x2 && y1 > y2)) {
+            ex1 = x2; ey1 = y2; ex2 = x1; ey2 = y1;
+          }
+          const dx = ex2 - ex1, dy = ey2 - ey1;
           const len = Math.sqrt(dx * dx + dy * dy);
-          const perpX = -dy / len, perpY = dx / len;
+          if (len < 0.001) {
+            // Skip degenerate edges
+            aztecCtx.moveTo(x1, y1);
+            aztecCtx.lineTo(x2, y2);
+          } else {
+            const perpX = -dy / len, perpY = dx / len;
 
-          // Distribute curves symmetrically around the straight line
-          const curveOffset = (j - (numEdges - 1) / 2) * Math.max(32, scale * 0.8);
-          const ctrlX = (x1 + x2) / 2 + perpX * curveOffset;
-          const ctrlY = (y1 + y2) / 2 + perpY * curveOffset;
+            // Distribute curves symmetrically around the straight line
+            const curveOffset = (j - (numEdges - 1) / 2) * Math.max(32, scale * 0.8);
+            const ctrlX = (ex1 + ex2) / 2 + perpX * curveOffset;
+            const ctrlY = (ey1 + ey2) / 2 + perpY * curveOffset;
 
-          aztecCtx.moveTo(x1, y1);
-          aztecCtx.quadraticCurveTo(ctrlX, ctrlY, x2, y2);
+            // Draw curved edge with distinct color for visibility
+            aztecCtx.strokeStyle = ['#ff0000', '#0000ff', '#00ff00', '#ff00ff'][j % 4];
+            aztecCtx.lineWidth = 3;
+
+            aztecCtx.moveTo(x1, y1);
+            aztecCtx.quadraticCurveTo(ctrlX, ctrlY, x2, y2);
+          }
         }
         aztecCtx.stroke();
 
@@ -451,7 +472,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           midX = (x1 + x2) / 2;
           midY = (y1 + y2) / 2;
         } else {
-          const dx = x2 - x1, dy = y2 - y1;
+          // Use same normalized direction as curve drawing
+          let ex1 = x1, ey1 = y1, ex2 = x2, ey2 = y2;
+          if (x1 > x2 || (x1 === x2 && y1 > y2)) {
+            ex1 = x2; ey1 = y2; ex2 = x1; ey2 = y1;
+          }
+          const dx = ex2 - ex1, dy = ey2 - ey1;
           const len = Math.sqrt(dx * dx + dy * dy);
           const perpX = -dy / len, perpY = dx / len;
           const curveOffset = (j - (numEdges - 1) / 2) * Math.max(32, scale * 0.8);
