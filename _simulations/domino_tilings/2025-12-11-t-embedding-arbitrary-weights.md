@@ -75,6 +75,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
           <button id="aztec-down-btn" style="width: 100px;">← Step down</button>
           <button id="aztec-up-btn" style="width: 100px; margin-left: 10px;">Step up →</button>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Show weights</label>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> Show face weights</label>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -159,7 +160,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
-  let generateAztecGraph, getAztecGraphJSON, randomizeAztecWeights, setAztecGraphLevel;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
 
   // Step-by-step state
@@ -190,8 +191,10 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
   let aztecLastPanX = 0, aztecLastPanY = 0;
   let aztecVertexScreenPositions = [];
   let aztecEdgeScreenPositions = [];
+  let aztecFaceScreenPositions = [];
   let selectedAztecVertex = null;
   let selectedAztecEdge = null;
+  let selectedAztecFace = null;
 
   // Generate random weight from 0.5 to 2.0 with step 0.1
   function randomWeight() {
@@ -245,6 +248,96 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
       }
     }
     return edges;
+  }
+
+  // Compute face weights for all faces in the Aztec diamond
+  // Face weight formula: X = (w1→b1 × w2→b2) / (w2→b1 × w1→b2)
+  // where w1, b1, w2, b2 are vertices in clockwise order starting from white
+  function computeFaceWeights() {
+    if (aztecVertices.length === 0 || aztecEdges.length === 0) return [];
+
+    // Build vertex lookup map: "x,y" -> vertex object
+    const vertexMap = new Map();
+    for (const v of aztecVertices) {
+      vertexMap.set(`${v.x},${v.y}`, v);
+    }
+
+    // Build edge lookup map: canonical key -> edge weight
+    const edgeMap = new Map();
+    for (const e of aztecEdges) {
+      // Canonical key: smaller coordinate pair first
+      const key = e.x1 < e.x2 || (e.x1 === e.x2 && e.y1 < e.y2)
+        ? `${e.x1},${e.y1}-${e.x2},${e.y2}`
+        : `${e.x2},${e.y2}-${e.x1},${e.y1}`;
+      edgeMap.set(key, e.weight);
+    }
+
+    // Helper to get edge weight between two vertices
+    function getEdgeWeight(x1, y1, x2, y2) {
+      const key = x1 < x2 || (x1 === x2 && y1 < y2)
+        ? `${x1},${y1}-${x2},${y2}`
+        : `${x2},${y2}-${x1},${y1}`;
+      return edgeMap.get(key);
+    }
+
+    const faceWeights = [];
+    const k = aztecLevel;
+
+    // Iterate over all possible face positions (integer coordinates)
+    for (let i = -k; i < k; i++) {
+      for (let j = -k; j < k; j++) {
+        // Face corners at half-integer coordinates
+        const blX = i + 0.5, blY = j + 0.5;      // bottom-left
+        const brX = i + 1.5, brY = j + 0.5;      // bottom-right
+        const tlX = i + 0.5, tlY = j + 1.5;      // top-left
+        const trX = i + 1.5, trY = j + 1.5;      // top-right
+
+        // Check if all 4 vertices exist
+        const blV = vertexMap.get(`${blX},${blY}`);
+        const brV = vertexMap.get(`${brX},${brY}`);
+        const tlV = vertexMap.get(`${tlX},${tlY}`);
+        const trV = vertexMap.get(`${trX},${trY}`);
+
+        if (!blV || !brV || !tlV || !trV) continue;
+
+        // Check if all 4 edges exist
+        const bottom = getEdgeWeight(blX, blY, brX, brY);
+        const right = getEdgeWeight(brX, brY, trX, trY);
+        const top = getEdgeWeight(tlX, tlY, trX, trY);
+        const left = getEdgeWeight(blX, blY, tlX, tlY);
+
+        if (bottom === undefined || right === undefined ||
+            top === undefined || left === undefined) continue;
+
+        // Compute face weight based on which diagonal is white
+        // BL and TR have same parity, BR and TL have same parity
+        let faceWeight;
+        if (blV.isWhite) {
+          // Type A: white at BL/TR, clockwise from BL: w1=BL, b1=BR, w2=TR, b2=TL
+          // X = (w1→b1 × w2→b2) / (w2→b1 × w1→b2) = (bottom × top) / (right × left)
+          faceWeight = (bottom * top) / (right * left);
+        } else {
+          // Type B: white at BR/TL, clockwise from BR: w1=BR, b1=TR, w2=TL, b2=BL
+          // X = (w1→b1 × w2→b2) / (w2→b1 × w1→b2) = (right × left) / (top × bottom)
+          faceWeight = (right * left) / (top * bottom);
+        }
+
+        // Compute centroid (at integer coordinates i+1, j+1)
+        const cx = (blX + brX + tlX + trX) / 4;
+        const cy = (blY + brY + tlY + trY) / 4;
+
+        // Store face with index coordinates and type
+        faceWeights.push({
+          cx, cy,
+          weight: faceWeight,
+          faceI: i,           // Face index (BL corner at i+0.5, j+0.5)
+          faceJ: j,
+          isTypeA: blV.isWhite  // Type A if BL is white
+        });
+      }
+    }
+
+    return faceWeights;
   }
 
   // Initialize Aztec graph (calls C++ via WASM)
@@ -441,12 +534,6 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
 
     aztecEdgeScreenPositions = [];
 
-    // Debug: count multi-edges
-    let multiEdgeCount = 0;
-    for (const [key, edges] of edgeGroups) {
-      if (edges.length > 1) multiEdgeCount += edges.length;
-    }
-    if (multiEdgeCount > 0) console.log(`Multi-edges: ${multiEdgeCount} edges in ${[...edgeGroups.values()].filter(e => e.length > 1).length} groups`);
 
     for (const [key, edges] of edgeGroups) {
       const numEdges = edges.length;
@@ -552,6 +639,63 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
           aztecCtx.textBaseline = 'middle';
           aztecCtx.fillText(label, midX, midY);
         }
+      }
+    }
+
+    // Draw face weights
+    const showFaceWeights = document.getElementById('show-face-weights-chk').checked;
+    aztecFaceScreenPositions = [];  // Reset for click detection
+    if (showFaceWeights) {
+      // Get face weights from C++ if WASM is ready, otherwise fall back to JS
+      let faceWeights = [];
+      if (wasmReady && getAztecFacesJSON) {
+        let ptr = getAztecFacesJSON();
+        let jsonStr = Module.UTF8ToString(ptr);
+        freeString(ptr);
+        faceWeights = JSON.parse(jsonStr);
+        console.log('C++ faces:', faceWeights.length, faceWeights.slice(0, 3));
+      } else {
+        faceWeights = computeFaceWeights();
+        console.log('JS faces:', faceWeights.length, faceWeights.slice(0, 3));
+      }
+
+      for (let idx = 0; idx < faceWeights.length; idx++) {
+        const face = faceWeights[idx];
+        const x = face.cx * scale;
+        const y = -face.cy * scale;
+
+        // Store screen position for click detection
+        aztecFaceScreenPositions.push({
+          idx: idx,
+          screenX: x + cx,
+          screenY: y + cy,
+          face: face
+        });
+
+        // Check if this face is selected (compare by centroid since structure may differ)
+        const isSelected = (selectedAztecFace !== null &&
+                           Math.abs(selectedAztecFace.cx - face.cx) < 0.01 &&
+                           Math.abs(selectedAztecFace.cy - face.cy) < 0.01);
+
+        const label = face.weight.toFixed(2);
+        const fontSize = Math.max(8, Math.min(11, scale / 4));
+        aztecCtx.font = `${fontSize}px sans-serif`;
+        const textWidth = aztecCtx.measureText(label).width;
+        const padX = 3, padY = 2;
+        const boxW = textWidth + padX * 2;
+        const boxH = fontSize + padY * 2;
+
+        // Light blue background (red if selected) to distinguish from edge weights
+        aztecCtx.fillStyle = isSelected ? '#ffcccc' : '#e6f3ff';
+        aztecCtx.fillRect(x - boxW / 2, y - boxH / 2, boxW, boxH);
+        aztecCtx.strokeStyle = isSelected ? '#cc0000' : '#6699cc';
+        aztecCtx.lineWidth = isSelected ? 1.5 : 0.5;
+        aztecCtx.strokeRect(x - boxW / 2, y - boxH / 2, boxW, boxH);
+
+        aztecCtx.fillStyle = isSelected ? '#cc0000' : '#003366';
+        aztecCtx.textAlign = 'center';
+        aztecCtx.textBaseline = 'middle';
+        aztecCtx.fillText(label, x, y);
       }
     }
 
@@ -693,12 +837,15 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
 
     const vertexThreshold = 15 * dpr;
     const edgeThreshold = 20 * dpr;
+    const faceThreshold = 18 * dpr;
     let closestVertex = null;
     let closestVertexDist = Infinity;
     let closestEdge = null;
     let closestEdgeDist = Infinity;
+    let closestFace = null;
+    let closestFaceDist = Infinity;
 
-    // Check vertices first (higher priority)
+    // Check vertices first (highest priority)
     for (const vp of aztecVertexScreenPositions) {
       const dx = clickX - vp.screenX * dpr;
       const dy = clickY - vp.screenY * dpr;
@@ -709,8 +856,21 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
       }
     }
 
-    // Check edges if no vertex clicked
+    // Check faces if no vertex clicked (medium priority)
     if (!closestVertex) {
+      for (const fp of aztecFaceScreenPositions) {
+        const dx = clickX - fp.screenX * dpr;
+        const dy = clickY - fp.screenY * dpr;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < faceThreshold && dist < closestFaceDist) {
+          closestFaceDist = dist;
+          closestFace = fp;
+        }
+      }
+    }
+
+    // Check edges if no vertex or face clicked
+    if (!closestVertex && !closestFace) {
       for (const ep of aztecEdgeScreenPositions) {
         const dx = clickX - ep.screenX * dpr;
         const dy = clickY - ep.screenY * dpr;
@@ -727,6 +887,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
     if (closestVertex) {
       selectedAztecVertex = closestVertex.idx;
       selectedAztecEdge = null;
+      selectedAztecFace = null;
       const v = closestVertex.vertex;
       // i + j + k parity determines color
       const i = Math.round(v.x - 0.5);
@@ -735,9 +896,22 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
       const colorType = v.isWhite ? `white (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} even)`
                                   : `black (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} odd)`;
       infoDiv.innerHTML = `<strong>Vertex:</strong> (${v.x}, ${v.y}) &nbsp; | &nbsp; <strong>Color:</strong> ${colorType}`;
+    } else if (closestFace) {
+      selectedAztecFace = closestFace.face;
+      selectedAztecVertex = null;
+      selectedAztecEdge = null;
+      const face = closestFace.face;
+      const faceType = face.isTypeA ? 'A (starts white)' : 'B (starts black)';
+      const preciseWeight = face.weight.toFixed(10);
+      const numVerts = face.numVertices || face.vertices?.length || '?';
+      infoDiv.innerHTML = `<strong>Face:</strong> center=(${face.cx.toFixed(2)}, ${face.cy.toFixed(2)}) &nbsp; | &nbsp; ` +
+                         `<strong>n:</strong> ${aztecLevel} &nbsp; | &nbsp; ` +
+                         `<strong>Vertices:</strong> ${numVerts} &nbsp; | &nbsp; ` +
+                         `<strong>Weight:</strong> ${preciseWeight}`;
     } else if (closestEdge) {
       selectedAztecEdge = closestEdge.idx;
       selectedAztecVertex = null;
+      selectedAztecFace = null;
       const edge = closestEdge.edge;
       const preciseWeight = edge.weight.toFixed(10);
       const orient = edge.isHorizontal ? 'horizontal' : 'vertical';
@@ -746,7 +920,8 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
     } else {
       selectedAztecVertex = null;
       selectedAztecEdge = null;
-      infoDiv.innerHTML = '<em>Click on a vertex or edge to see details</em>';
+      selectedAztecFace = null;
+      infoDiv.innerHTML = '<em>Click on a vertex, edge, or face weight to see details</em>';
     }
 
     renderAztecGraph();
@@ -772,6 +947,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
       // Aztec graph functions
       generateAztecGraph = Module.cwrap('generateAztecGraph', null, ['number']);
       getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
+      getAztecFacesJSON = Module.cwrap('getAztecFacesJSON', 'number', []);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
@@ -1111,6 +1287,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
   // Checkboxes
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
   document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
+  document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
 
   // T-embedding canvas pan/zoom
   stepwiseCanvas.addEventListener('click', handleStepwiseCanvasClick);

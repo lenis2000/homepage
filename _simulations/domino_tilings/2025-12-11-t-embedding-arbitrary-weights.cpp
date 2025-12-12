@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -2242,6 +2242,191 @@ static void aztecStepUp() {
     popAztecState();
 }
 
+// =============================================================================
+// FACE DETECTION AND FACE WEIGHTS
+// =============================================================================
+
+// Structure to represent a face with its weight
+struct AztecFace {
+    std::vector<int> vertexIndices;  // Vertices around face in order
+    std::vector<int> edgeIndices;    // Edges around face in order
+    double cx, cy;                   // Centroid
+    double weight;                   // Face weight (cross-ratio)
+};
+
+// Global face storage
+static std::vector<AztecFace> g_aztecFaces;
+
+// Find the edge connecting two vertices (returns edge index or -1)
+static int findEdge(int v1, int v2) {
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        if ((g_aztecEdges[i].v1 == v1 && g_aztecEdges[i].v2 == v2) ||
+            (g_aztecEdges[i].v1 == v2 && g_aztecEdges[i].v2 == v1)) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+// Compute angle from vertex v1 to vertex v2
+static double edgeAngle(int v1, int v2) {
+    double dx = g_aztecVertices[v2].x - g_aztecVertices[v1].x;
+    double dy = g_aztecVertices[v2].y - g_aztecVertices[v1].y;
+    return std::atan2(dy, dx);
+}
+
+// Find all faces using half-edge traversal
+static void computeFaces() {
+    g_aztecFaces.clear();
+    if (g_aztecVertices.empty() || g_aztecEdges.empty()) return;
+
+    int nV = (int)g_aztecVertices.size();
+    int nE = (int)g_aztecEdges.size();
+
+    // Build adjacency: adj[v] = list of (angle, neighbor_vertex, edge_index)
+    std::vector<std::vector<std::tuple<double, int, int>>> adj(nV);
+    for (int ei = 0; ei < nE; ei++) {
+        int u = g_aztecEdges[ei].v1;
+        int v = g_aztecEdges[ei].v2;
+        double dx_uv = g_aztecVertices[v].x - g_aztecVertices[u].x;
+        double dy_uv = g_aztecVertices[v].y - g_aztecVertices[u].y;
+        double dx_vu = -dx_uv, dy_vu = -dy_uv;
+        adj[u].push_back({std::atan2(dy_uv, dx_uv), v, ei});
+        adj[v].push_back({std::atan2(dy_vu, dx_vu), u, ei});
+    }
+    for (int v = 0; v < nV; v++) {
+        std::sort(adj[v].begin(), adj[v].end());
+    }
+
+    // For half-edge (u->v), find next half-edge (v->w) in CCW order around face
+    std::map<std::pair<int,int>, std::pair<int,int>> nextHE;
+    for (int v = 0; v < nV; v++) {
+        int deg = (int)adj[v].size();
+        for (int i = 0; i < deg; i++) {
+            int u = std::get<1>(adj[v][i]);  // outgoing edge v->u at position i
+            // Half-edge (u->v): next is (v -> adj[v][(i+1) % deg])
+            int nextNeighbor = std::get<1>(adj[v][(i + 1) % deg]);
+            nextHE[{u, v}] = {v, nextNeighbor};
+        }
+    }
+
+    // Edge index lookup
+    auto findEdgeIdx = [&](int u, int v) -> int {
+        for (int ei = 0; ei < nE; ei++) {
+            if ((g_aztecEdges[ei].v1 == u && g_aztecEdges[ei].v2 == v) ||
+                (g_aztecEdges[ei].v1 == v && g_aztecEdges[ei].v2 == u)) return ei;
+        }
+        return -1;
+    };
+
+    std::set<std::pair<int,int>> visited;
+
+    for (int ei = 0; ei < nE; ei++) {
+        for (int dir = 0; dir < 2; dir++) {
+            int startU = (dir == 0) ? g_aztecEdges[ei].v1 : g_aztecEdges[ei].v2;
+            int startV = (dir == 0) ? g_aztecEdges[ei].v2 : g_aztecEdges[ei].v1;
+            if (visited.count({startU, startV})) continue;
+
+            std::vector<int> faceV, faceE;
+            int curU = startU, curV = startV;
+
+            for (int iter = 0; iter < (int)g_aztecVertices.size() + 10; iter++) {
+                if (visited.count({curU, curV})) break;
+                visited.insert({curU, curV});
+                faceV.push_back(curU);
+                int edgeIdx = findEdgeIdx(curU, curV);
+                if (edgeIdx >= 0) faceE.push_back(edgeIdx);
+
+                auto it = nextHE.find({curU, curV});
+                if (it == nextHE.end()) break;
+                curU = it->second.first;
+                curV = it->second.second;
+                if (curU == startU && curV == startV) break;
+            }
+
+            if (faceV.size() >= 3 && faceE.size() >= 3) {
+                // Compute centroid
+                double cx = 0, cy = 0;
+                for (int vi : faceV) {
+                    cx += g_aztecVertices[vi].x;
+                    cy += g_aztecVertices[vi].y;
+                }
+                cx /= faceV.size();
+                cy /= faceV.size();
+
+                // Compute face weight for ALL faces (no filtering)
+                double weight = 1.0;
+                int n = (int)faceV.size();
+
+                if (n >= 4 && n % 2 == 0) {
+                    // Find first white vertex
+                    int startIdx = 0;
+                    for (int i = 0; i < n; i++) {
+                        if (g_aztecVertices[faceV[i]].isWhite) { startIdx = i; break; }
+                    }
+                    std::vector<int> ordV(n);
+                    for (int i = 0; i < n; i++) ordV[i] = faceV[(startIdx + i) % n];
+
+                    int d = n / 2;
+                    for (int s = 0; s < d; s++) {
+                        int ws = ordV[2*s], bs = ordV[2*s+1], wnext = ordV[(2*s+2) % n];
+                        double wt1 = 1.0, wt2 = 1.0;
+                        for (int e = 0; e < nE; e++) {
+                            int a = g_aztecEdges[e].v1, b = g_aztecEdges[e].v2;
+                            if ((a==ws && b==bs) || (a==bs && b==ws)) wt1 = g_aztecEdges[e].weight;
+                            if ((a==wnext && b==bs) || (a==bs && b==wnext)) wt2 = g_aztecEdges[e].weight;
+                        }
+                        weight *= wt1 / wt2;
+                    }
+                }
+
+                AztecFace face;
+                face.vertexIndices = faceV;
+                face.edgeIndices = faceE;
+                face.cx = cx;
+                face.cy = cy;
+                face.weight = weight;
+                g_aztecFaces.push_back(face);
+            }
+        }
+    }
+}
+
+// Generate JSON string for faces
+static std::string getFacesJSON() {
+    computeFaces();
+
+    std::ostringstream oss;
+    oss << std::setprecision(10);
+    oss << "[";
+
+    for (size_t i = 0; i < g_aztecFaces.size(); i++) {
+        if (i > 0) oss << ",";
+        const AztecFace& f = g_aztecFaces[i];
+
+        // Determine face type based on first vertex color
+        bool isTypeA = !g_aztecFaces.empty() &&
+                       f.vertexIndices.size() > 0 &&
+                       g_aztecVertices[f.vertexIndices[0]].isWhite;
+
+        oss << "{\"cx\":" << f.cx
+            << ",\"cy\":" << f.cy
+            << ",\"weight\":" << f.weight
+            << ",\"numVertices\":" << f.vertexIndices.size()
+            << ",\"isTypeA\":" << (isTypeA ? "true" : "false")
+            << ",\"vertices\":[";
+
+        for (size_t j = 0; j < f.vertexIndices.size(); j++) {
+            if (j > 0) oss << ",";
+            oss << f.vertexIndices[j];
+        }
+        oss << "]}";
+    }
+
+    oss << "]";
+    return oss.str();
+}
+
 // Generate JSON for Aztec graph
 static std::string getAztecGraphJSONInternal() {
     std::ostringstream oss;
@@ -2450,6 +2635,14 @@ int canAztecStepDown() {
     if (g_aztecReductionStep < 11) return 1;
     if (g_aztecReductionStep == 11 && g_aztecLevel > 1) return 1;
     return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getAztecFacesJSON() {
+    std::string result = getFacesJSON();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
 }
 
 } // extern "C"
