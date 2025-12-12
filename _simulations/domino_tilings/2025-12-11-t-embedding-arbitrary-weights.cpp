@@ -112,6 +112,7 @@ struct AztecGraphState {
     std::vector<AztecEdge> edges;
     std::vector<std::pair<double, double>> blackQuadCenters;
     int step;
+    int level;
 };
 static std::vector<AztecGraphState> g_aztecHistory;
 
@@ -603,6 +604,7 @@ static void pushAztecState() {
     state.edges = g_aztecEdges;
     state.blackQuadCenters = g_blackQuadCenters;
     state.step = g_aztecReductionStep;
+    state.level = g_aztecLevel;
     g_aztecHistory.push_back(state);
 }
 
@@ -615,6 +617,7 @@ static bool popAztecState() {
     g_aztecEdges = state.edges;
     g_blackQuadCenters = state.blackQuadCenters;
     g_aztecReductionStep = state.step;
+    g_aztecLevel = state.level;
     return true;
 }
 
@@ -2058,6 +2061,108 @@ static void aztecStep11_CombineDoubleEdges() {
     g_aztecReductionStep = 11;
 }
 
+// STEP 12: Start Next Iteration (decrease level, back to fold 1)
+static void aztecStep12_StartNextIteration() {
+    if (g_aztecReductionStep != 11) return;
+    if (g_aztecLevel <= 1) return;  // Can't reduce further
+
+    pushAztecState();
+
+    int oldLevel = g_aztecLevel;
+    g_aztecLevel--;
+    int newLevel = g_aztecLevel;
+
+    // Move the 4 outer boundary vertices inward to match new level
+    // Old boundary: ±(oldLevel - 0.5), New boundary: ±(newLevel - 0.5)
+    double oldBound = oldLevel - 0.5;
+    double newBound = newLevel - 0.5;
+
+    for (auto& v : g_aztecVertices) {
+        // Check if this is an outer corner vertex
+        if (std::abs(std::abs(v.x) - oldBound) < 0.01 && std::abs(std::abs(v.y) - oldBound) < 0.01) {
+            // Move to new boundary position (preserve sign)
+            v.x = (v.x > 0) ? newBound : -newBound;
+            v.y = (v.y > 0) ? newBound : -newBound;
+        }
+    }
+
+    // Re-compute black quad centers for new level using current graph structure
+    // Build vertex index by coordinate string
+    std::map<std::string, int> vertexIndex;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        std::ostringstream key;
+        key << std::setprecision(10) << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
+        vertexIndex[key.str()] = (int)i;
+    }
+
+    // Build edge lookup
+    std::set<std::string> edgeSet;
+    for (const auto& e : g_aztecEdges) {
+        double x1 = g_aztecVertices[e.v1].x;
+        double y1 = g_aztecVertices[e.v1].y;
+        double x2 = g_aztecVertices[e.v2].x;
+        double y2 = g_aztecVertices[e.v2].y;
+        std::ostringstream k1, k2;
+        k1 << std::setprecision(10) << x1 << "," << y1 << "-" << x2 << "," << y2;
+        k2 << std::setprecision(10) << x2 << "," << y2 << "-" << x1 << "," << y1;
+        edgeSet.insert(k1.str());
+        edgeSet.insert(k2.str());
+    }
+
+    // Find all black quad centers in current graph
+    // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
+    g_blackQuadCenters.clear();
+    std::set<std::string> visitedFaces;
+
+    for (const auto& v : g_aztecVertices) {
+        double x = v.x, y = v.y;
+        std::ostringstream faceKey;
+        faceKey << std::setprecision(10) << x << "," << y;
+        if (visitedFaces.count(faceKey.str())) continue;
+
+        // Look for face with BL at (x, y)
+        std::ostringstream blKey, brKey, tlKey, trKey;
+        blKey << std::setprecision(10) << x << "," << y;
+        brKey << std::setprecision(10) << (x+1) << "," << y;
+        tlKey << std::setprecision(10) << x << "," << (y+1);
+        trKey << std::setprecision(10) << (x+1) << "," << (y+1);
+
+        if (vertexIndex.count(blKey.str()) && vertexIndex.count(brKey.str()) &&
+            vertexIndex.count(tlKey.str()) && vertexIndex.count(trKey.str())) {
+            // Check all 4 edges exist
+            std::ostringstream e1, e2, e3, e4;
+            e1 << std::setprecision(10) << x << "," << y << "-" << (x+1) << "," << y;
+            e2 << std::setprecision(10) << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
+            e3 << std::setprecision(10) << x << "," << y << "-" << x << "," << (y+1);
+            e4 << std::setprecision(10) << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
+
+            if (edgeSet.count(e1.str()) && edgeSet.count(e2.str()) &&
+                edgeSet.count(e3.str()) && edgeSet.count(e4.str())) {
+                visitedFaces.insert(faceKey.str());
+
+                int blIdx = vertexIndex[blKey.str()];
+                int brIdx = vertexIndex[brKey.str()];
+                int tlIdx = vertexIndex[tlKey.str()];
+                int trIdx = vertexIndex[trKey.str()];
+
+                bool tlWhite = g_aztecVertices[tlIdx].isWhite;
+                bool brWhite = g_aztecVertices[brIdx].isWhite;
+
+                // Black quad: WHITE at NW and SE
+                if (tlWhite && brWhite) {
+                    double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
+                                 g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
+                    double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
+                                 g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
+                    g_blackQuadCenters.push_back({cx, cy});
+                }
+            }
+        }
+    }
+
+    g_aztecReductionStep = 6;  // Back to fold 1: shaded
+}
+
 // Step down: advance to next reduction step
 static void aztecStepDown() {
     switch (g_aztecReductionStep) {
@@ -2072,6 +2177,7 @@ static void aztecStepDown() {
         case 8: aztecStep9_DiagonalGauge(); break;
         case 9: aztecStep10_UrbanRenewal(); break;
         case 10: aztecStep11_CombineDoubleEdges(); break;
+        case 11: aztecStep12_StartNextIteration(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -2285,8 +2391,10 @@ int canAztecStepUp() {
 
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
-    // Allow stepping down through all implemented steps
-    return (g_aztecReductionStep < 11) ? 1 : 0;
+    // Allow stepping if not at final state (step 11 with level 1)
+    if (g_aztecReductionStep < 11) return 1;
+    if (g_aztecReductionStep == 11 && g_aztecLevel > 1) return 1;
+    return 0;
 }
 
 } // extern "C"
