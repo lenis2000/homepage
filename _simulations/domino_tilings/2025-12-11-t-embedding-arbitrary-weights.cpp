@@ -1396,20 +1396,18 @@ static void aztecStep7_MarkDiagonalVertices() {
     g_aztecReductionStep = 7;
 }
 
-// STEP 8: Split green vertices into pairs with weight-1 edges (Folding step 3)
-// Each green vertex is split into two vertices with an edge of weight 1 between them
-// Black faces shrink slightly to accommodate
+// STEP 8: Split green vertices into 3-vertex segments (Folding step 3)
+// BLACK vertex -> black-white-black (3 vertices, 2 weight-1 edges)
+// WHITE vertex -> white-black-white (3 vertices, 2 weight-1 edges)
+// The split goes BETWEEN the two black faces (perpendicular to the black face diagonal)
+// Black faces stay as they were; new edges bridge between separate black faces
 static void aztecStep8_SplitVertices() {
     if (g_aztecReductionStep != 7) return;
 
     pushAztecState();
 
-    // Build adjacency list
-    std::map<int, std::vector<std::pair<int, int>>> adjacency;  // vertex -> [(neighbor, edgeIdx)]
-    for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
-        adjacency[g_aztecEdges[eIdx].v1].push_back({g_aztecEdges[eIdx].v2, (int)eIdx});
-        adjacency[g_aztecEdges[eIdx].v2].push_back({g_aztecEdges[eIdx].v1, (int)eIdx});
-    }
+    const double splitOffset = 0.15;  // Offset for split vertices
+    int n = g_aztecLevel;
 
     // Find green vertices (inVgauge == true)
     std::vector<int> greenVertices;
@@ -1419,90 +1417,150 @@ static void aztecStep8_SplitVertices() {
         }
     }
 
-    // For each green vertex, split into two vertices
-    // The split creates two vertices slightly offset from the original position
-    // with a weight-1 edge between them
-    const double splitOffset = 0.15;  // How much to offset the split vertices
-
     std::vector<AztecVertex> newVertices = g_aztecVertices;
     std::vector<AztecEdge> newEdges = g_aztecEdges;
 
-    // Map from old vertex index to pair of new vertex indices (for split vertices)
-    std::map<int, std::pair<int, int>> splitMap;
+    // Map from old vertex index to triplet of new vertex indices
+    // {outerIdx1, middleIdx, outerIdx2} where outer vertices have original color
+    // Also store the split direction: true = NW-SE split, false = NE-SW split
+    struct SplitInfo {
+        int outerIdx1, middleIdx, outerIdx2;
+        bool splitNWSE;  // true: split goes NW-SE (black faces are NE-SW)
+    };
+    std::map<int, SplitInfo> splitMap;
 
     for (int greenIdx : greenVertices) {
         double x = g_aztecVertices[greenIdx].x;
         double y = g_aztecVertices[greenIdx].y;
+        bool isWhite = g_aztecVertices[greenIdx].isWhite;
 
-        // Determine split direction based on which diagonal the black faces are on
-        // If faces are NE-SW, split along that diagonal
-        // If faces are NW-SE, split along that diagonal
+        // Determine which diagonal the BLACK faces are on
+        // If (x + y + n) is odd, black faces are on NE-SW diagonal -> split NW-SE
+        // If (x + y + n) is even, black faces are on NW-SE diagonal -> split NE-SW
+        int sum = (int)std::round(x + y + n);
+        bool blackOnNESW = (sum % 2 != 0);
+        bool splitNWSE = blackOnNESW;  // Split perpendicular to black face diagonal
 
-        // Create two new vertices
-        int newIdx1 = (int)newVertices.size();
-        int newIdx2 = (int)newVertices.size() + 1;
+        // Create 3 new vertices: outer1 - middle - outer2
+        int outerIdx1 = (int)newVertices.size();
+        int middleIdx = (int)newVertices.size() + 1;
+        int outerIdx2 = (int)newVertices.size() + 2;
 
-        AztecVertex v1 = g_aztecVertices[greenIdx];
-        AztecVertex v2 = g_aztecVertices[greenIdx];
+        AztecVertex outer1, middle, outer2;
 
-        // Offset along the diagonal between black faces
-        v1.x = x - splitOffset;
-        v1.y = y - splitOffset;
-        v2.x = x + splitOffset;
-        v2.y = y + splitOffset;
+        if (splitNWSE) {
+            // Split goes NW to SE: outer1 at NW, outer2 at SE
+            outer1.x = x - splitOffset;
+            outer1.y = y + splitOffset;
+            outer2.x = x + splitOffset;
+            outer2.y = y - splitOffset;
+        } else {
+            // Split goes NE to SW: outer1 at SW, outer2 at NE
+            outer1.x = x - splitOffset;
+            outer1.y = y - splitOffset;
+            outer2.x = x + splitOffset;
+            outer2.y = y + splitOffset;
+        }
 
-        v1.inVgauge = false;
-        v2.inVgauge = false;
+        outer1.isWhite = isWhite;
+        outer1.inVgauge = false;
+        outer1.toContract = false;
 
-        newVertices.push_back(v1);
-        newVertices.push_back(v2);
+        middle.x = x;
+        middle.y = y;
+        middle.isWhite = !isWhite;  // Opposite color
+        middle.inVgauge = false;
+        middle.toContract = false;
 
-        // Add edge between split vertices with weight 1
-        AztecEdge splitEdge;
-        splitEdge.v1 = newIdx1;
-        splitEdge.v2 = newIdx2;
-        splitEdge.weight = 1.0;
-        splitEdge.isHorizontal = false;
-        splitEdge.gaugeTransformed = false;
-        newEdges.push_back(splitEdge);
+        outer2.isWhite = isWhite;
+        outer2.inVgauge = false;
+        outer2.toContract = false;
 
-        splitMap[greenIdx] = {newIdx1, newIdx2};
+        newVertices.push_back(outer1);
+        newVertices.push_back(middle);
+        newVertices.push_back(outer2);
+
+        // Add two weight-1 edges: outer1-middle and middle-outer2
+        AztecEdge edge1, edge2;
+        edge1.v1 = outerIdx1;
+        edge1.v2 = middleIdx;
+        edge1.weight = 1.0;
+        edge1.isHorizontal = false;
+        edge1.gaugeTransformed = false;
+
+        edge2.v1 = middleIdx;
+        edge2.v2 = outerIdx2;
+        edge2.weight = 1.0;
+        edge2.isHorizontal = false;
+        edge2.gaugeTransformed = false;
+
+        newEdges.push_back(edge1);
+        newEdges.push_back(edge2);
+
+        splitMap[greenIdx] = {outerIdx1, middleIdx, outerIdx2, splitNWSE};
     }
 
-    // Redirect edges from original green vertices to split vertices
-    // Edges going "up-right" go to newIdx2, edges going "down-left" go to newIdx1
+    // Redirect edges from original green vertices to outer split vertices
+    // Edges to neighbors in the NE or SW black face go to one end
+    // Edges to neighbors in the NW or SE grey face go to the other end
     for (auto& e : newEdges) {
         // Check if v1 was split
         if (splitMap.count(e.v1)) {
-            auto [newIdx1, newIdx2] = splitMap[e.v1];
+            auto& info = splitMap[e.v1];
             double ox = g_aztecVertices[e.v1].x;
             double oy = g_aztecVertices[e.v1].y;
             double nx = newVertices[e.v2].x;
             double ny = newVertices[e.v2].y;
-            // If neighbor is up-right, connect to newIdx2
-            if (nx > ox || ny > oy) {
-                e.v1 = newIdx2;
+            double dx = nx - ox;
+            double dy = ny - oy;
+
+            if (info.splitNWSE) {
+                // Split is NW-SE, black faces are NE-SW
+                // Neighbors in NE direction (dx>0 or dy>0 roughly) go to outer2 (SE end)
+                // Neighbors in SW direction go to outer1 (NW end)
+                if (dx + dy > 0) {
+                    e.v1 = info.outerIdx2;  // SE end
+                } else {
+                    e.v1 = info.outerIdx1;  // NW end
+                }
             } else {
-                e.v1 = newIdx1;
+                // Split is NE-SW, black faces are NW-SE
+                // Neighbors in NW direction (dx<0, dy>0) go to outer1 (SW end)
+                // Neighbors in SE direction (dx>0, dy<0) go to outer2 (NE end)
+                if (dx - dy > 0) {
+                    e.v1 = info.outerIdx2;  // NE end
+                } else {
+                    e.v1 = info.outerIdx1;  // SW end
+                }
             }
         }
         // Check if v2 was split
         if (splitMap.count(e.v2)) {
-            auto [newIdx1, newIdx2] = splitMap[e.v2];
+            auto& info = splitMap[e.v2];
             double ox = g_aztecVertices[e.v2].x;
             double oy = g_aztecVertices[e.v2].y;
             double nx = newVertices[e.v1].x;
             double ny = newVertices[e.v1].y;
-            // If neighbor is up-right, connect to newIdx2
-            if (nx > ox || ny > oy) {
-                e.v2 = newIdx2;
+            double dx = nx - ox;
+            double dy = ny - oy;
+
+            if (info.splitNWSE) {
+                if (dx + dy > 0) {
+                    e.v2 = info.outerIdx2;
+                } else {
+                    e.v2 = info.outerIdx1;
+                }
             } else {
-                e.v2 = newIdx1;
+                if (dx - dy > 0) {
+                    e.v2 = info.outerIdx2;
+                } else {
+                    e.v2 = info.outerIdx1;
+                }
             }
         }
     }
 
-    // Remove original green vertices
+    // Remove original green vertices and build final vertex list
     std::vector<AztecVertex> finalVertices;
     std::map<int, int> oldToNew;
     for (size_t idx = 0; idx < newVertices.size(); idx++) {

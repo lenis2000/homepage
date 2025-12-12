@@ -436,7 +436,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw vertices
-    const vertexRadius = Math.max(4, scale / 8);
+    let vertexRadius = Math.max(4, scale / 8);
+    if (aztecReductionStep == 8) vertexRadius /= 3;  // Smaller vertices at split step
     aztecVertexScreenPositions = [];
 
     for (let i = 0; i < aztecVertices.length; i++) {
