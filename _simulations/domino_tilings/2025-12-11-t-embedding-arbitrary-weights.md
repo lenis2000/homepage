@@ -153,7 +153,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let aztecDidPan = false;
   let aztecLastPanX = 0, aztecLastPanY = 0;
   let aztecVertexScreenPositions = [];
+  let aztecEdgeScreenPositions = [];
   let selectedAztecVertex = null;
+  let selectedAztecEdge = null;
 
   // Generate random weight from 0.5 to 2.0 with step 0.1
   function randomWeight() {
@@ -314,8 +316,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     const showWeights = document.getElementById('show-aztec-weights-chk').checked;
 
-    // Draw edges
-    for (const e of aztecEdges) {
+    // Draw edges and store positions for click detection
+    aztecEdgeScreenPositions = [];
+    for (let i = 0; i < aztecEdges.length; i++) {
+      const e = aztecEdges[i];
       // Highlight gauge-transformed edges
       if (e.gaugeTransformed) {
         aztecCtx.strokeStyle = '#ff6600';
@@ -329,10 +333,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       aztecCtx.lineTo(e.x2 * scale, -e.y2 * scale);
       aztecCtx.stroke();
 
+      const midX = ((e.x1 + e.x2) / 2) * scale;
+      const midY = -((e.y1 + e.y2) / 2) * scale;
+
+      // Store edge midpoint for click detection
+      aztecEdgeScreenPositions.push({
+        idx: i,
+        screenX: midX + cx,
+        screenY: midY + cy,
+        edge: e
+      });
+
       // Draw weight label in rectangular bubble
       if (showWeights) {
-        const midX = ((e.x1 + e.x2) / 2) * scale;
-        const midY = -((e.y1 + e.y2) / 2) * scale;
         const label = e.weight.toFixed(1);
 
         const fontSize = Math.max(8, Math.min(11, scale / 4));
@@ -489,17 +502,34 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const clickX = (e.clientX - rect.left) * dpr;
     const clickY = (e.clientY - rect.top) * dpr;
 
-    const threshold = 15 * dpr;
+    const vertexThreshold = 15 * dpr;
+    const edgeThreshold = 20 * dpr;
     let closestVertex = null;
-    let closestDist = Infinity;
+    let closestVertexDist = Infinity;
+    let closestEdge = null;
+    let closestEdgeDist = Infinity;
 
+    // Check vertices first (higher priority)
     for (const vp of aztecVertexScreenPositions) {
       const dx = clickX - vp.screenX * dpr;
       const dy = clickY - vp.screenY * dpr;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < threshold && dist < closestDist) {
-        closestDist = dist;
+      if (dist < vertexThreshold && dist < closestVertexDist) {
+        closestVertexDist = dist;
         closestVertex = vp;
+      }
+    }
+
+    // Check edges if no vertex clicked
+    if (!closestVertex) {
+      for (const ep of aztecEdgeScreenPositions) {
+        const dx = clickX - ep.screenX * dpr;
+        const dy = clickY - ep.screenY * dpr;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < edgeThreshold && dist < closestEdgeDist) {
+          closestEdgeDist = dist;
+          closestEdge = ep;
+        }
       }
     }
 
@@ -507,6 +537,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     if (closestVertex) {
       selectedAztecVertex = closestVertex.idx;
+      selectedAztecEdge = null;
       const v = closestVertex.vertex;
       // i + j + k parity determines color
       const i = Math.round(v.x - 0.5);
@@ -515,9 +546,18 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const colorType = v.isWhite ? `white (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} even)`
                                   : `black (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} odd)`;
       infoDiv.innerHTML = `<strong>Vertex:</strong> (${v.x}, ${v.y}) &nbsp; | &nbsp; <strong>Color:</strong> ${colorType}`;
+    } else if (closestEdge) {
+      selectedAztecEdge = closestEdge.idx;
+      selectedAztecVertex = null;
+      const edge = closestEdge.edge;
+      const preciseWeight = edge.weight.toFixed(10);
+      const orient = edge.isHorizontal ? 'horizontal' : 'vertical';
+      const status = edge.gaugeTransformed ? ' (gauge transformed)' : '';
+      infoDiv.innerHTML = `<strong>Edge:</strong> (${edge.x1}, ${edge.y1}) — (${edge.x2}, ${edge.y2}) &nbsp; | &nbsp; <strong>Weight:</strong> ${preciseWeight}${status}`;
     } else {
       selectedAztecVertex = null;
-      infoDiv.innerHTML = '<em>Click on a vertex to see its coordinates</em>';
+      selectedAztecEdge = null;
+      infoDiv.innerHTML = '<em>Click on a vertex or edge to see details</em>';
     }
 
     renderAztecGraph();

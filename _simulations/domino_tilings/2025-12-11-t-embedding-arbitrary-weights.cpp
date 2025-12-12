@@ -841,126 +841,173 @@ static void aztecStep1_GaugeTransform() {
         }
     }
 
-    // Also mark vertices that will be contracted (for visualization)
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        double x = g_aztecVertices[i].x;
-        double y = g_aztecVertices[i].y;
-        g_aztecVertices[i].toContract = shouldContract(x, y, n, g_aztecVertices[i].isWhite);
-    }
-
     g_aztecReductionStep = 1;
 }
 
-// STEP 2: Contract degree-2 vertices
-static void aztecStep2_ContractVertices() {
+// STEP 2: WHITE gauge transform
+// WHITE vertices on diagonals i + j = ±(n-1), excluding endpoints:
+// - Positive: i + j = n-1, with 0 < i < n-1
+// - Negative: i + j = -(n-1), with -(n-1) < i < 0
+// For n=4: 2 vertices per diagonal (n-2 total per side)
+static void aztecStep2_WhiteGaugeTransform() {
     if (g_aztecReductionStep != 1) return;
 
     pushAztecState();
 
     int n = g_aztecLevel;
 
-    // Build adjacency
-    std::map<int, std::vector<std::pair<int, double>>> adjacency;
-    for (const auto& e : g_aztecEdges) {
-        adjacency[e.v1].push_back({e.v2, e.weight});
-        adjacency[e.v2].push_back({e.v1, e.weight});
+    // Clear previous vertex highlights (but keep edge gaugeTransformed flags!)
+    for (auto& v : g_aztecVertices) {
+        v.inVgauge = false;
+        v.toContract = false;
     }
 
-    // Find vertices to contract (already marked in step 1)
-    std::vector<bool> toContract(g_aztecVertices.size(), false);
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        toContract[i] = g_aztecVertices[i].toContract;
+    // Build vertex lookup map using integer coordinates
+    auto makeIntKey = [](int i, int j) { return i * 10000 + j; };
+    std::map<int, int> vertexIndex;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        int i, j;
+        getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
+        vertexIndex[makeIntKey(i, j)] = (int)idx;
     }
 
-    // Build new vertex list (excluding contracted)
-    std::vector<AztecVertex> newVertices;
-    std::map<int, int> oldToNew;
+    // Build edge lookup: vertex -> [(neighbor, edgeIdx)]
+    std::map<int, std::vector<std::pair<int, int>>> adjacency;
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        int v1 = g_aztecEdges[i].v1;
+        int v2 = g_aztecEdges[i].v2;
+        adjacency[v1].push_back({v2, (int)i});
+        adjacency[v2].push_back({v1, (int)i});
+    }
 
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        if (!toContract[i]) {
-            oldToNew[i] = (int)newVertices.size();
-            AztecVertex v = g_aztecVertices[i];
-            v.toContract = false;
-            v.inVgauge = false;
-            newVertices.push_back(v);
+    // Find gauge vertices for "white" gauge transform (Step 2)
+    // Note: these vertices are on i + j = ±(n-1) diagonals
+    // They are actually BLACK in bipartite coloring but called "white gauge" in the reduction
+    struct GaugeVertex {
+        int idx;
+        int i, j;
+        bool isPositiveDiag;
+    };
+    std::vector<GaugeVertex> positiveDiagVertices, negativeDiagVertices;
+
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        int i, j;
+        getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
+
+        // Positive diagonal: i + j = n-1, with 0 < i < n-1
+        if (i + j == (n - 1) && i > 0 && i < (n - 1)) {
+            positiveDiagVertices.push_back({(int)idx, i, j, true});
+            g_aztecVertices[idx].inVgauge = true;
+        }
+        // Negative diagonal: i + j = -(n-1), with -(n-1) < i < 0
+        else if (i + j == -(n - 1) && i > -(n - 1) && i < 0) {
+            negativeDiagVertices.push_back({(int)idx, i, j, false});
+            g_aztecVertices[idx].inVgauge = true;
         }
     }
 
-    // Build new edge list
-    std::vector<AztecEdge> newEdges;
-    std::map<std::string, std::pair<double, bool>> edgeMap;  // key -> (weight, gaugeTransformed)
+    // Sort: positive by i ascending, negative by i descending
+    std::sort(positiveDiagVertices.begin(), positiveDiagVertices.end(),
+              [](const GaugeVertex& a, const GaugeVertex& b) { return a.i < b.i; });
+    std::sort(negativeDiagVertices.begin(), negativeDiagVertices.end(),
+              [](const GaugeVertex& a, const GaugeVertex& b) { return a.i > b.i; });
 
-    // For contracted vertices, merge their edges
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        if (!toContract[i]) continue;
+    // Helper to find edge index
+    auto findEdge = [&adjacency](int v1, int v2) -> int {
+        for (const auto& [neighbor, edgeIdx] : adjacency[v1]) {
+            if (neighbor == v2) return edgeIdx;
+        }
+        return -1;
+    };
 
-        const auto& neighbors = adjacency[i];
-        if (neighbors.size() == 2) {
-            int n1 = neighbors[0].first;
-            int n2 = neighbors[1].first;
-            double w1 = neighbors[0].second;
-            double w2 = neighbors[1].second;
+    // Process positive diagonal (i + j = n-1)
+    // Boundary vertex is at (i, j+1), reference at (i-1, j+1)
+    for (const auto& gv : positiveDiagVertices) {
+        int vIdx = gv.idx;
+        int i = gv.i, j = gv.j;
 
-            if (toContract[n1] || toContract[n2]) continue;
+        // Boundary vertex at (i, j+1)
+        int bi = i, bj = j + 1;
+        auto bit = vertexIndex.find(makeIntKey(bi, bj));
+        if (bit == vertexIndex.end()) continue;
+        int bIdx = bit->second;
 
-            // Series reduction: w1*w2/(w1+w2)
-            double mergedWeight = (w1 * w2) / (w1 + w2);
+        // Reference vertex at (i-1, j+1)
+        int ri = i - 1, rj = j + 1;
+        auto rit = vertexIndex.find(makeIntKey(ri, rj));
+        if (rit == vertexIndex.end()) continue;
+        int rIdx = rit->second;
 
-            int newN1 = oldToNew[n1];
-            int newN2 = oldToNew[n2];
-            int minIdx = std::min(newN1, newN2);
-            int maxIdx = std::max(newN1, newN2);
+        // Edge from gauge to boundary
+        int edgeToBoundaryIdx = findEdge(vIdx, bIdx);
+        if (edgeToBoundaryIdx < 0) continue;
 
-            std::ostringstream keyss;
-            keyss << minIdx << "," << maxIdx;
-            std::string edgeKey = keyss.str();
+        // Reference edge (boundary to reference)
+        int refEdgeIdx = findEdge(bIdx, rIdx);
+        if (refEdgeIdx < 0) continue;
 
-            if (edgeMap.find(edgeKey) != edgeMap.end()) {
-                edgeMap[edgeKey].first += mergedWeight;  // Parallel: add weights
-            } else {
-                edgeMap[edgeKey] = {mergedWeight, false};
+        // Skip if edge to boundary was already transformed in black step
+        if (g_aztecEdges[edgeToBoundaryIdx].gaugeTransformed) continue;
+
+        double edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
+        double refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
+
+        if (edgeToBoundaryWeight < 1e-10) continue;
+        double lambda = refEdgeWeight / edgeToBoundaryWeight;
+
+        // Apply λ to edges at this vertex, but skip already-transformed edges
+        for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
+            if (!g_aztecEdges[eIdx].gaugeTransformed) {
+                g_aztecEdges[eIdx].weight *= lambda;
+                g_aztecEdges[eIdx].gaugeTransformed = true;
             }
         }
     }
 
-    // Add edges between non-contracted vertices
-    for (const auto& e : g_aztecEdges) {
-        if (toContract[e.v1] || toContract[e.v2]) continue;
+    // Process negative diagonal (i + j = -(n-1))
+    // Boundary vertex is at (i, j-1), reference at (i+1, j-1)
+    for (const auto& gv : negativeDiagVertices) {
+        int vIdx = gv.idx;
+        int i = gv.i, j = gv.j;
 
-        int newV1 = oldToNew[e.v1];
-        int newV2 = oldToNew[e.v2];
-        int minIdx = std::min(newV1, newV2);
-        int maxIdx = std::max(newV1, newV2);
+        // Boundary vertex at (i, j-1)
+        int bi = i, bj = j - 1;
+        auto bit = vertexIndex.find(makeIntKey(bi, bj));
+        if (bit == vertexIndex.end()) continue;
+        int bIdx = bit->second;
 
-        std::ostringstream keyss;
-        keyss << minIdx << "," << maxIdx;
-        std::string edgeKey = keyss.str();
+        // Reference vertex at (i+1, j-1)
+        int ri = i + 1, rj = j - 1;
+        auto rit = vertexIndex.find(makeIntKey(ri, rj));
+        if (rit == vertexIndex.end()) continue;
+        int rIdx = rit->second;
 
-        if (edgeMap.find(edgeKey) != edgeMap.end()) {
-            edgeMap[edgeKey].first += e.weight;
-        } else {
-            edgeMap[edgeKey] = {e.weight, e.gaugeTransformed};
+        // Edge from gauge to boundary
+        int edgeToBoundaryIdx = findEdge(vIdx, bIdx);
+        if (edgeToBoundaryIdx < 0) continue;
+
+        // Reference edge (boundary to reference)
+        int refEdgeIdx = findEdge(bIdx, rIdx);
+        if (refEdgeIdx < 0) continue;
+
+        // Skip if edge to boundary was already transformed in black step
+        if (g_aztecEdges[edgeToBoundaryIdx].gaugeTransformed) continue;
+
+        double edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
+        double refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
+
+        if (edgeToBoundaryWeight < 1e-10) continue;
+        double lambda = refEdgeWeight / edgeToBoundaryWeight;
+
+        // Apply λ to edges at this vertex, but skip already-transformed edges
+        for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
+            if (!g_aztecEdges[eIdx].gaugeTransformed) {
+                g_aztecEdges[eIdx].weight *= lambda;
+                g_aztecEdges[eIdx].gaugeTransformed = true;
+            }
         }
     }
 
-    // Convert map to vector
-    for (const auto& kv : edgeMap) {
-        int v1, v2;
-        char comma;
-        std::istringstream iss(kv.first);
-        iss >> v1 >> comma >> v2;
-
-        AztecEdge e;
-        e.v1 = v1;
-        e.v2 = v2;
-        e.weight = kv.second.first;
-        e.isHorizontal = (std::abs(newVertices[v1].y - newVertices[v2].y) < 0.1);
-        e.gaugeTransformed = kv.second.second;
-        newEdges.push_back(e);
-    }
-
-    g_aztecVertices = newVertices;
-    g_aztecEdges = newEdges;
     g_aztecReductionStep = 2;
 }
 
@@ -986,7 +1033,7 @@ static void aztecStep3_Finalize() {
 static void aztecStepDown() {
     switch (g_aztecReductionStep) {
         case 0: aztecStep1_GaugeTransform(); break;
-        case 1: aztecStep2_ContractVertices(); break;
+        case 1: aztecStep2_WhiteGaugeTransform(); break;
         case 2: aztecStep3_Finalize(); break;
         default: break;  // Already fully reduced
     }
