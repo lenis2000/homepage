@@ -98,7 +98,7 @@ struct AztecEdge {
 };
 
 // Global Aztec graph storage
-static int g_aztecLevel = 4;  // Current graph level k (default n=4)
+static int g_aztecLevel = 6;  // Current graph level k (default n=6)
 static int g_aztecReductionStep = 0;  // 0=original, 1=gauge transformed, 2=degree-2 removed, 3=parallel merged
 static std::vector<AztecVertex> g_aztecVertices;
 static std::vector<AztecEdge> g_aztecEdges;
@@ -1365,6 +1365,95 @@ static void aztecStep5_WhiteContraction() {
     g_aztecReductionStep = 5;
 }
 
+// STEP 6: Mark vertices diagonally between two black faces
+// Black faces = faces with BLACK vertex at top-left
+static void aztecStep6_MarkDiagonalVertices() {
+    if (g_aztecReductionStep != 5) return;
+
+    pushAztecState();
+
+    // Build vertex position map
+    std::map<std::string, int> vertexIndex;
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        std::ostringstream oss;
+        oss << g_aztecVertices[idx].x << "," << g_aztecVertices[idx].y;
+        vertexIndex[oss.str()] = (int)idx;
+    }
+
+    // Build edge set for quick lookup
+    std::set<std::string> edgeSet;
+    for (const auto& e : g_aztecEdges) {
+        double x1 = g_aztecVertices[e.v1].x, y1 = g_aztecVertices[e.v1].y;
+        double x2 = g_aztecVertices[e.v2].x, y2 = g_aztecVertices[e.v2].y;
+        std::ostringstream oss1, oss2;
+        oss1 << x1 << "," << y1 << "-" << x2 << "," << y2;
+        oss2 << x2 << "," << y2 << "-" << x1 << "," << y1;
+        edgeSet.insert(oss1.str());
+        edgeSet.insert(oss2.str());
+    }
+
+    // Helper to check if edge exists
+    auto hasEdge = [&](double x1, double y1, double x2, double y2) -> bool {
+        std::ostringstream oss;
+        oss << x1 << "," << y1 << "-" << x2 << "," << y2;
+        return edgeSet.count(oss.str()) > 0;
+    };
+
+    // Helper to get vertex at position
+    auto getVertex = [&](double x, double y) -> int {
+        std::ostringstream oss;
+        oss << x << "," << y;
+        auto it = vertexIndex.find(oss.str());
+        return (it != vertexIndex.end()) ? it->second : -1;
+    };
+
+    // Check if a face exists and is a "black face" (black at top-left)
+    auto isBlackFace = [&](double blX, double blY) -> bool {
+        // Face corners: bl=(blX,blY), br=(blX+1,blY), tl=(blX,blY+1), tr=(blX+1,blY+1)
+        int bl = getVertex(blX, blY);
+        int br = getVertex(blX + 1, blY);
+        int tl = getVertex(blX, blY + 1);
+        int tr = getVertex(blX + 1, blY + 1);
+
+        if (bl < 0 || br < 0 || tl < 0 || tr < 0) return false;
+
+        // Check all 4 edges exist
+        if (!hasEdge(blX, blY, blX + 1, blY)) return false;  // bottom
+        if (!hasEdge(blX, blY + 1, blX + 1, blY + 1)) return false;  // top
+        if (!hasEdge(blX, blY, blX, blY + 1)) return false;  // left
+        if (!hasEdge(blX + 1, blY, blX + 1, blY + 1)) return false;  // right
+
+        // Check if top-left is BLACK
+        return !g_aztecVertices[tl].isWhite;
+    };
+
+    // For each vertex, check if it's diagonally between two black faces
+    for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
+        double x = g_aztecVertices[idx].x;
+        double y = g_aztecVertices[idx].y;
+
+        // Vertex is at corner of faces:
+        // - Face with bl at (x-1, y-1): vertex is top-right
+        // - Face with bl at (x, y): vertex is bottom-left
+        // These two faces are diagonal to each other
+
+        bool face1 = isBlackFace(x - 1, y - 1);  // vertex is top-right corner
+        bool face2 = isBlackFace(x, y);          // vertex is bottom-left corner
+
+        // Also check the other diagonal pair:
+        // - Face with bl at (x-1, y): vertex is bottom-right
+        // - Face with bl at (x, y-1): vertex is top-left
+        bool face3 = isBlackFace(x - 1, y);      // vertex is bottom-right corner
+        bool face4 = isBlackFace(x, y - 1);      // vertex is top-left corner
+
+        if ((face1 && face2) || (face3 && face4)) {
+            g_aztecVertices[idx].inVgauge = true;  // Reuse inVgauge for green highlighting
+        }
+    }
+
+    g_aztecReductionStep = 6;
+}
+
 // Step down: advance to next reduction step
 static void aztecStepDown() {
     switch (g_aztecReductionStep) {
@@ -1373,6 +1462,7 @@ static void aztecStepDown() {
         case 2: aztecStep3_Contract(); break;
         case 3: aztecStep4_BlackContraction(); break;
         case 4: aztecStep5_WhiteContraction(); break;
+        case 5: aztecStep6_MarkDiagonalVertices(); break;
         default: break;  // Already fully reduced
     }
 }
@@ -1577,8 +1667,8 @@ int canAztecStepUp() {
 
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
-    // Allow stepping down through all implemented steps (0-4, with step 5 coming)
-    return (g_aztecReductionStep < 5) ? 1 : 0;
+    // Allow stepping down through all implemented steps
+    return (g_aztecReductionStep < 6) ? 1 : 0;
 }
 
 } // extern "C"

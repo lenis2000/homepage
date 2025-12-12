@@ -15,7 +15,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 </p>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -147,7 +147,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let aztecReductionStep = 0;  // 0=original, 1=gauge, 2=contracted, 3=finalized
   let aztecVertices = [];
   let aztecEdges = [];
-  let aztecZoom = 1.0;
+  let aztecZoom = 1.4;
   let aztecPanX = 0, aztecPanY = 0;
   let aztecIsPanning = false;
   let aztecDidPan = false;
@@ -267,6 +267,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       label = `A'<sub>${aztecLevel}</sub> (black contraction)`;
     } else if (aztecReductionStep === 5) {
       label = `A'<sub>${aztecLevel}</sub> (white contraction)`;
+    } else if (aztecReductionStep === 6) {
+      label = `A'<sub>${aztecLevel}</sub> (diagonal vertices marked)`;
     } else {
       label = `A<sub>${aztecLevel}</sub> (step ${aztecReductionStep})`;
     }
@@ -329,6 +331,62 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     aztecCtx.translate(cx, cy);
 
     const showWeights = document.getElementById('show-aztec-weights-chk').checked;
+
+    // Draw grey quadrangular faces (white vertex at top-left) for step 5+
+    if (aztecReductionStep >= 5) {
+      // Build vertex position map
+      const vertexMap = new Map();
+      for (const v of aztecVertices) {
+        vertexMap.set(`${v.x},${v.y}`, v);
+      }
+
+      // Build edge set for quick lookup
+      const edgeSet = new Set();
+      for (const e of aztecEdges) {
+        const key1 = `${Math.min(e.x1,e.x2)},${Math.min(e.y1,e.y2)},${Math.max(e.x1,e.x2)},${Math.max(e.y1,e.y2)}`;
+        edgeSet.add(`${e.x1},${e.y1}-${e.x2},${e.y2}`);
+        edgeSet.add(`${e.x2},${e.y2}-${e.x1},${e.y1}`);
+      }
+
+      // Find quadrangular faces: check all possible unit squares
+      const checkedFaces = new Set();
+      for (const v of aztecVertices) {
+        // Try v as bottom-left corner of a face
+        const x = v.x, y = v.y;
+        const faceKey = `${x},${y}`;
+        if (checkedFaces.has(faceKey)) continue;
+        checkedFaces.add(faceKey);
+
+        // Check if all 4 corners exist
+        const bl = vertexMap.get(`${x},${y}`);
+        const br = vertexMap.get(`${x+1},${y}`);
+        const tl = vertexMap.get(`${x},${y+1}`);
+        const tr = vertexMap.get(`${x+1},${y+1}`);
+
+        if (bl && br && tl && tr) {
+          // Check if all 4 edges exist
+          const hasBottom = edgeSet.has(`${x},${y}-${x+1},${y}`);
+          const hasTop = edgeSet.has(`${x},${y+1}-${x+1},${y+1}`);
+          const hasLeft = edgeSet.has(`${x},${y}-${x},${y+1}`);
+          const hasRight = edgeSet.has(`${x+1},${y}-${x+1},${y+1}`);
+
+          if (hasBottom && hasTop && hasLeft && hasRight) {
+            // Top-left vertex is tl - check if white
+            if (tl.isWhite) {
+              // Draw grey filled quad
+              aztecCtx.fillStyle = 'rgba(150, 150, 150, 0.3)';
+              aztecCtx.beginPath();
+              aztecCtx.moveTo(x * scale, -y * scale);
+              aztecCtx.lineTo((x+1) * scale, -y * scale);
+              aztecCtx.lineTo((x+1) * scale, -(y+1) * scale);
+              aztecCtx.lineTo(x * scale, -(y+1) * scale);
+              aztecCtx.closePath();
+              aztecCtx.fill();
+            }
+          }
+        }
+      }
+    }
 
     // Draw edges and store positions for click detection
     aztecEdgeScreenPositions = [];
@@ -451,7 +509,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Draw level info
     aztecCtx.fillStyle = '#333';
     aztecCtx.font = '11px sans-serif';
-    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contraction', 'white contraction'];
+    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contraction', 'white contraction', 'diagonal marked'];
     const stepLabel = stepLabels[aztecReductionStep] || 'unknown';
     aztecCtx.fillText(`A_${k} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
   }
