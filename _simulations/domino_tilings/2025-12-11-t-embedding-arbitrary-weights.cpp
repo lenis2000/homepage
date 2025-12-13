@@ -30,7 +30,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-static int g_n = 4;           // Diamond size parameter
+static int g_n = 6;           // Diamond size parameter (default n=6)
 static double g_a = 1.0;      // Boundary parameter (computed or set)
 
 // Coefficients for T-embedding recurrence (Proposition from paper)
@@ -2477,12 +2477,236 @@ static void verifyT0() {
     std::printf("========================\n");
 }
 
+// =============================================================================
+// T_K COMPUTATION FROM T_{K-1} USING RECURRENCE
+// =============================================================================
+//
+// T_k vertices:
+//   - 4 external corners: (±(k+1), 0), (0, ±(k+1))
+//   - 4 alpha vertices: (±k, 0), (0, ±k) — at |i|+|j| = k, on axis
+//   - Beta vertices: |i|+|j| = k, off-axis (i≠0 AND j≠0)
+//   - Interior: |i|+|j| ≤ k-1
+//
+// T_k edges:
+//   1. External corners connect to their corresponding alpha
+//   2. Beta vertices form diagonals
+//   3. Interior connects like a lattice
+//
+// Recurrence formulas (TODO: currently all weights set to 1 for testing):
+//   1. T_k(k+1,0) = T_{k-1}(k,0)  (external corners stay same)
+//   2. T_k(k,0) = 1/(α+1) * (T_{k-1}(k,0) + T_{k-1}(k-1,0))  (alpha update)
+//   3. Beta update for diagonal boundary
+//   4. Interior pass-through/recurrence
+
+// Helper to get T value from a TembLevel
+static std::complex<double> getTembValue(const TembLevel& level, int i, int j) {
+    for (const auto& v : level.vertices) {
+        if (v.i == i && v.j == j) {
+            return std::complex<double>(v.re, v.im);
+        }
+    }
+    // Return 0 if not found (shouldn't happen if used correctly)
+    return std::complex<double>(0, 0);
+}
+
+// Compute T_k from T_{k-1} using recurrence formulas
+// Requires T_{k-1} to already be computed and stored in g_tembLevels
+static void computeTk(int k) {
+    if (k < 1) return;  // T_0 is computed separately
+
+    // Check if already computed
+    for (const auto& level : g_tembLevels) {
+        if (level.k == k) return;  // Already exists
+    }
+
+    // Find T_{k-1}
+    const TembLevel* prevLevel = nullptr;
+    for (const auto& l : g_tembLevels) {
+        if (l.k == k - 1) {
+            prevLevel = &l;
+            break;
+        }
+    }
+
+    if (!prevLevel) {
+        std::printf("computeTk(%d): T_{%d} not found, computing recursively\n", k, k-1);
+        computeTk(k - 1);
+        for (const auto& l : g_tembLevels) {
+            if (l.k == k - 1) {
+                prevLevel = &l;
+                break;
+            }
+        }
+    }
+
+    if (!prevLevel) {
+        std::printf("computeTk(%d): ERROR - could not find T_{%d}\n", k, k-1);
+        return;
+    }
+
+    // TODO: For now, all weights are set to 1.0
+    // This should be changed to use stored face weights
+    const double alpha = 1.0;  // TODO: use actual alpha weight
+    const double beta = 1.0;   // TODO: use actual beta weights
+    const double gamma = 1.0;  // TODO: use actual gamma weights
+
+    TembLevel tk;
+    tk.k = k;
+
+    // Build a map for quick T_{k-1} lookup
+    std::map<std::pair<int,int>, std::complex<double>> Tprev;
+    for (const auto& v : prevLevel->vertices) {
+        Tprev[{v.i, v.j}] = std::complex<double>(v.re, v.im);
+    }
+
+    // Map for T_k values (build incrementally)
+    std::map<std::pair<int,int>, std::complex<double>> Tcurr;
+
+    // ==========================================================================
+    // Rule 1: External corners (stay the same as previous level's corners)
+    // T_k(k+1,0) = T_{k-1}(k,0), etc.
+    // ==========================================================================
+    Tcurr[{k+1, 0}] = Tprev[{k, 0}];
+    Tcurr[{-(k+1), 0}] = Tprev[{-k, 0}];
+    Tcurr[{0, k+1}] = Tprev[{0, k}];
+    Tcurr[{0, -(k+1)}] = Tprev[{0, -k}];
+
+    // ==========================================================================
+    // Rule 2: Alpha vertices (axis boundary at |i|+|j|=k, on-axis)
+    // T_k(k,0) = 1/(α+1) * (T_{k-1}(k,0) + T_{k-1}(k-1,0))
+    // ==========================================================================
+    double alphaFactor = 1.0 / (alpha + 1.0);
+
+    // Right: (k, 0)
+    Tcurr[{k, 0}] = alphaFactor * (Tprev[{k, 0}] + Tprev[{k-1, 0}]);
+    // Left: (-k, 0)
+    Tcurr[{-k, 0}] = alphaFactor * (Tprev[{-k, 0}] + Tprev[{-(k-1), 0}]);
+    // Top: (0, k)
+    Tcurr[{0, k}] = alphaFactor * (Tprev[{0, k}] + Tprev[{0, k-1}]);
+    // Bottom: (0, -k)
+    Tcurr[{0, -k}] = alphaFactor * (Tprev[{0, -k}] + Tprev[{0, -(k-1)}]);
+
+    // ==========================================================================
+    // Rule 3: Beta vertices (diagonal boundary at |i|+|j|=k, off-axis)
+    // T_k(j, k-j) = 1/(β+1) * (T_{k-1}(j-1, k-j) + β * T_{k-1}(j, k-j-1))
+    // For j = 1, 2, ..., k-1 (positive j quadrants)
+    // ==========================================================================
+    double betaFactor = 1.0 / (beta + 1.0);
+
+    for (int j = 1; j <= k - 1; j++) {
+        int kj = k - j;  // So (j, kj) has |j| + |kj| = k
+
+        // Upper-right quadrant: (j, k-j) where j > 0, k-j > 0
+        Tcurr[{j, kj}] = betaFactor * (Tprev[{j-1, kj}] + beta * Tprev[{j, kj-1}]);
+
+        // Lower-right quadrant: (j, -(k-j)) where j > 0, k-j > 0
+        Tcurr[{j, -kj}] = betaFactor * (Tprev[{j-1, -kj}] + beta * Tprev[{j, -(kj-1)}]);
+    }
+
+    for (int j = 1; j <= k - 1; j++) {
+        int kj = k - j;
+
+        // Upper-left quadrant: (-j, k-j) where j > 0, k-j > 0
+        Tcurr[{-j, kj}] = betaFactor * (beta * Tprev[{-j, kj-1}] + Tprev[{-(j-1), kj}]);
+
+        // Lower-left quadrant: (-j, -(k-j)) where j > 0, k-j > 0
+        Tcurr[{-j, -kj}] = betaFactor * (beta * Tprev[{-j, -(kj-1)}] + Tprev[{-(j-1), -kj}]);
+    }
+
+    // ==========================================================================
+    // Rule 4a: Interior pass-through (|i|+|j| < k, i+j+k even)
+    // T_k(i,j) = T_{k-1}(i,j)
+    // ==========================================================================
+    for (int i = -(k-1); i <= k-1; i++) {
+        for (int j = -(k-1); j <= k-1; j++) {
+            if (std::abs(i) + std::abs(j) >= k) continue;  // Not interior
+            if ((i + j + k) % 2 != 0) continue;  // Not even parity (handled in 4b)
+
+            // Check if exists in T_{k-1}
+            auto it = Tprev.find({i, j});
+            if (it != Tprev.end()) {
+                Tcurr[{i, j}] = it->second;
+            }
+        }
+    }
+
+    // ==========================================================================
+    // Rule 4b: Interior recurrence (|i|+|j| < k, i+j+k odd)
+    // T_k(i,j) = 1/(γ+1) * (T_k(i-1,j) + T_k(i+1,j) + γ*(T_k(i,j+1) + T_k(i,j-1))) - T_{k-1}(i,j)
+    // Note: neighbors are already computed via 4a (even parity) or boundary rules
+    // ==========================================================================
+    double gammaFactor = 1.0 / (gamma + 1.0);
+
+    for (int i = -(k-1); i <= k-1; i++) {
+        for (int j = -(k-1); j <= k-1; j++) {
+            if (std::abs(i) + std::abs(j) >= k) continue;  // Not interior
+            if ((i + j + k) % 2 == 0) continue;  // Not odd parity (handled in 4a)
+
+            // Get T_{k-1}(i,j)
+            std::complex<double> Tprev_ij = Tprev[{i, j}];
+
+            // Get T_k neighbors (should all be computed by now due to parity)
+            std::complex<double> T_im1_j = Tcurr[{i-1, j}];
+            std::complex<double> T_ip1_j = Tcurr[{i+1, j}];
+            std::complex<double> T_i_jm1 = Tcurr[{i, j-1}];
+            std::complex<double> T_i_jp1 = Tcurr[{i, j+1}];
+
+            Tcurr[{i, j}] = gammaFactor * (T_im1_j + T_ip1_j + gamma * (T_i_jp1 + T_i_jm1)) - Tprev_ij;
+        }
+    }
+
+    // ==========================================================================
+    // Convert map to TembLevel vertices
+    // ==========================================================================
+    for (const auto& kv : Tcurr) {
+        TembVertex v;
+        v.i = kv.first.first;
+        v.j = kv.first.second;
+        v.re = kv.second.real();
+        v.im = kv.second.imag();
+        tk.vertices.push_back(v);
+    }
+
+    // Store the level
+    g_tembLevels.push_back(tk);
+
+    std::printf("computeTk(%d): computed %zu vertices\n", k, tk.vertices.size());
+}
+
+// Compute all T_k levels from 0 to maxK
+static void computeAllTembLevels(int maxK) {
+    // First compute T_0
+    computeT0();
+
+    // Then compute T_1, T_2, ..., T_maxK using recurrence
+    for (int k = 1; k <= maxK; k++) {
+        computeTk(k);
+    }
+}
+
 // Get T-embedding JSON for a specific level
 static std::string getTembLevelJSON(int k) {
-    // Ensure T_0 is computed if k=0 requested
-    if (k == 0) {
+    // Ensure T_k is computed
+    // First check if it exists
+    bool found = false;
+    for (const auto& l : g_tembLevels) {
+        if (l.k == k) {
+            found = true;
+            break;
+        }
+    }
+
+    // If not found, compute from T_0 up to T_k
+    if (!found) {
+        // Clear and recompute all levels up to k
+        g_tembLevels.clear();
         computeT0();
-        verifyT0();  // Output verification to console
+        if (k == 0) {
+            verifyT0();  // Output verification to console
+        }
+        for (int level = 1; level <= k; level++) {
+            computeTk(level);
+        }
     }
 
     std::ostringstream oss;

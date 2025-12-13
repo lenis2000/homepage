@@ -58,7 +58,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="3" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -269,19 +269,53 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       }
     }
 
-    // For T_0: edges from center (0,0) to (±1,0) and (0,±1)
-    if (k === 0) {
-      drawTembEdge(0, 0, 1, 0);
-      drawTembEdge(0, 0, -1, 0);
-      drawTembEdge(0, 0, 0, 1);
-      drawTembEdge(0, 0, 0, -1);
-      // Boundary rhombus
-      stepwiseCtx.strokeStyle = '#666';
-      stepwiseCtx.lineWidth = Math.max(2, scale / 50);
-      drawTembEdge(1, 0, 0, 1);
-      drawTembEdge(0, 1, -1, 0);
-      drawTembEdge(-1, 0, 0, -1);
-      drawTembEdge(0, -1, 1, 0);
+    // Draw T_k edges - same logic as renderStepwiseTemb
+    // Interior lattice edges
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
+
+    for (const v of vertices) {
+      const ii = v.i, jj = v.j;
+      const absSum = Math.abs(ii) + Math.abs(jj);
+
+      if (vertexMap[`${ii+1},${jj}`]) {
+        const nAbsSum = Math.abs(ii+1) + Math.abs(jj);
+        if (absSum <= k && nAbsSum <= k) {
+          drawTembEdge(ii, jj, ii+1, jj);
+        }
+      }
+      if (vertexMap[`${ii},${jj+1}`]) {
+        const nAbsSum = Math.abs(ii) + Math.abs(jj+1);
+        if (absSum <= k && nAbsSum <= k) {
+          drawTembEdge(ii, jj, ii, jj+1);
+        }
+      }
+    }
+
+    // Boundary rhombus
+    stepwiseCtx.strokeStyle = '#666';
+    stepwiseCtx.lineWidth = Math.max(2, scale / 50);
+    drawTembEdge(k+1, 0, 0, k+1);
+    drawTembEdge(0, k+1, -(k+1), 0);
+    drawTembEdge(-(k+1), 0, 0, -(k+1));
+    drawTembEdge(0, -(k+1), k+1, 0);
+
+    // External corners to alpha
+    stepwiseCtx.strokeStyle = '#999';
+    stepwiseCtx.lineWidth = Math.max(1.5, scale / 60);
+    drawTembEdge(k+1, 0, k, 0);
+    drawTembEdge(-(k+1), 0, -k, 0);
+    drawTembEdge(0, k+1, 0, k);
+    drawTembEdge(0, -(k+1), 0, -k);
+
+    // Diagonal boundary
+    stepwiseCtx.strokeStyle = '#555';
+    stepwiseCtx.lineWidth = Math.max(1, scale / 70);
+    for (let s = 0; s < k; s++) {
+      drawTembEdge(k-s, s, k-s-1, s+1);
+      drawTembEdge(-s, k-s, -(s+1), k-s-1);
+      drawTembEdge(-(k-s), -s, -(k-s-1), -(s+1));
+      drawTembEdge(s, -(k-s), s+1, -(k-s-1));
     }
 
     // Draw vertices
@@ -1254,19 +1288,82 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       }
     }
 
-    // For T_0: edges from center (0,0) to (±1,0) and (0,±1)
-    if (k === 0) {
-      drawTembEdge(0, 0, 1, 0);
-      drawTembEdge(0, 0, -1, 0);
-      drawTembEdge(0, 0, 0, 1);
-      drawTembEdge(0, 0, 0, -1);
-      // Boundary rhombus
-      stepwiseCtx.strokeStyle = '#666';
-      stepwiseCtx.lineWidth = Math.max(2, scale / 50);
-      drawTembEdge(1, 0, 0, 1);
-      drawTembEdge(0, 1, -1, 0);
-      drawTembEdge(-1, 0, 0, -1);
-      drawTembEdge(0, -1, 1, 0);
+    // Draw T_k edges based on graph structure
+    // T_k has:
+    //   - External corners: (±(k+1), 0), (0, ±(k+1))
+    //   - Alpha vertices: (±k, 0), (0, ±k) (on axis, |i|+|j|=k)
+    //   - Beta vertices: |i|+|j|=k, off-axis
+    //   - Interior: |i|+|j| < k
+    //
+    // Edge rules:
+    //   1. External corners connect to alpha and to each other (boundary rhombus)
+    //   2. Alpha/Beta form the diagonal boundary
+    //   3. Interior connects like a lattice
+
+    // Draw interior edges (lattice connections)
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
+
+    for (const v of vertices) {
+      const i = v.i, j = v.j;
+      const absSum = Math.abs(i) + Math.abs(j);
+
+      // Connect to right neighbor (i+1, j) if both interior/boundary
+      if (vertexMap[`${i+1},${j}`]) {
+        const nAbsSum = Math.abs(i+1) + Math.abs(j);
+        // Draw if both are interior (|i|+|j| <= k)
+        if (absSum <= k && nAbsSum <= k) {
+          drawTembEdge(i, j, i+1, j);
+        }
+      }
+
+      // Connect to top neighbor (i, j+1) if both interior/boundary
+      if (vertexMap[`${i},${j+1}`]) {
+        const nAbsSum = Math.abs(i) + Math.abs(j+1);
+        if (absSum <= k && nAbsSum <= k) {
+          drawTembEdge(i, j, i, j+1);
+        }
+      }
+    }
+
+    // Draw boundary rhombus (external corners)
+    stepwiseCtx.strokeStyle = '#666';
+    stepwiseCtx.lineWidth = Math.max(2, scale / 50);
+
+    // Connect external corners: (k+1,0) -> (0,k+1) -> (-(k+1),0) -> (0,-(k+1)) -> (k+1,0)
+    drawTembEdge(k+1, 0, 0, k+1);
+    drawTembEdge(0, k+1, -(k+1), 0);
+    drawTembEdge(-(k+1), 0, 0, -(k+1));
+    drawTembEdge(0, -(k+1), k+1, 0);
+
+    // Connect external corners to alpha vertices
+    stepwiseCtx.strokeStyle = '#999';
+    stepwiseCtx.lineWidth = Math.max(1.5, scale / 60);
+    drawTembEdge(k+1, 0, k, 0);
+    drawTembEdge(-(k+1), 0, -k, 0);
+    drawTembEdge(0, k+1, 0, k);
+    drawTembEdge(0, -(k+1), 0, -k);
+
+    // Connect diagonal boundary vertices (beta and alpha on boundary)
+    // These form the edges along the diagonal |i|+|j|=k
+    stepwiseCtx.strokeStyle = '#555';
+    stepwiseCtx.lineWidth = Math.max(1, scale / 70);
+
+    // Right-top diagonal: (k,0) -> (k-1,1) -> ... -> (1,k-1) -> (0,k)
+    for (let s = 0; s < k; s++) {
+      drawTembEdge(k-s, s, k-s-1, s+1);
+    }
+    // Left-top diagonal: (0,k) -> (-1,k-1) -> ... -> (-(k-1),1) -> (-k,0)
+    for (let s = 0; s < k; s++) {
+      drawTembEdge(-s, k-s, -(s+1), k-s-1);
+    }
+    // Left-bottom diagonal: (-k,0) -> (-(k-1),-1) -> ... -> (-1,-(k-1)) -> (0,-k)
+    for (let s = 0; s < k; s++) {
+      drawTembEdge(-(k-s), -s, -(k-s-1), -(s+1));
+    }
+    // Right-bottom diagonal: (0,-k) -> (1,-(k-1)) -> ... -> (k-1,-1) -> (k,0)
+    for (let s = 0; s < k; s++) {
+      drawTembEdge(s, -(k-s), s+1, -(k-s-1));
     }
 
     // Draw vertices
