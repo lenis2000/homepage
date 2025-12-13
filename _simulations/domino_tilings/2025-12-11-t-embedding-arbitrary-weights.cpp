@@ -30,7 +30,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-static int g_n = 6;           // Diamond size parameter (default n=6)
+static int g_n = 4;           // Diamond size parameter (default n=4)
 static double g_a = 1.0;      // Boundary parameter (computed or set)
 
 // Coefficients for T-embedding recurrence (Proposition from paper)
@@ -2293,7 +2293,33 @@ static int checkFaceCountFormula(int n) {
     return -1;
 }
 
-// Categorize and store face weights for level k
+// Build face adjacency: two faces are adjacent if they share an edge
+static std::vector<std::set<int>> buildFaceAdjacency() {
+    int nFaces = (int)g_aztecFaces.size();
+    std::vector<std::set<int>> adj(nFaces);
+
+    // Build edge-to-face map
+    std::map<int, std::vector<int>> edgeToFaces;
+    for (int fi = 0; fi < nFaces; fi++) {
+        for (int ei : g_aztecFaces[fi].edgeIndices) {
+            edgeToFaces[ei].push_back(fi);
+        }
+    }
+
+    // Faces sharing an edge are adjacent
+    for (const auto& kv : edgeToFaces) {
+        const auto& faces = kv.second;
+        for (size_t i = 0; i < faces.size(); i++) {
+            for (size_t j = i + 1; j < faces.size(); j++) {
+                adj[faces[i]].insert(faces[j]);
+                adj[faces[j]].insert(faces[i]);
+            }
+        }
+    }
+    return adj;
+}
+
+// Categorize and store face weights for level k using CONNECTIVITY
 static void storeFaceWeightsForK(int k) {
     if (g_capturedKValues.count(k)) return;  // Already captured
 
@@ -2302,41 +2328,97 @@ static void storeFaceWeightsForK(int k) {
     sw.root = 0;
     sw.alpha_top = sw.alpha_bottom = sw.alpha_left = sw.alpha_right = 0;
 
+    int nFaces = (int)g_aztecFaces.size();
+    std::printf("storeFaceWeightsForK(%d): %d faces to process\n", k, nFaces);
+
     if (k == 0) {
         // Special case: just one ROOT face
         if (!g_aztecFaces.empty()) {
             sw.root = g_aztecFaces[0].weight;
         }
     } else {
-        // k >= 1: categorize faces by their centroid position
-        // BIG SQUARE has vertices at (±(k+3/2), ±(k+3/2))
-        // Actually, looking at Aztec diamond structure:
-        // - max coordinate for face centers is around k
-        double maxCoord = k;  // Approximate max coordinate for face centers
+        // Build face adjacency
+        auto adj = buildFaceAdjacency();
 
-        for (const auto& face : g_aztecFaces) {
-            double fx = face.cx;
-            double fy = face.cy;
-            int ix = (int)std::round(fx);
-            int iy = (int)std::round(fy);
-
-            // Check for alpha (extreme) faces
-            // These are at (0, ±maxCoord) and (±maxCoord, 0)
-            if (std::abs(ix) + std::abs(iy) == k && (ix == 0 || iy == 0)) {
-                if (iy > 0 && ix == 0) sw.alpha_top = face.weight;
-                else if (iy < 0 && ix == 0) sw.alpha_bottom = face.weight;
-                else if (ix > 0 && iy == 0) sw.alpha_right = face.weight;
-                else if (ix < 0 && iy == 0) sw.alpha_left = face.weight;
-            }
-            // Check for beta (diagonal) faces: |i|+|j|=k, i≠0, j≠0, i≠±k, j≠±k
-            else if (std::abs(ix) + std::abs(iy) == k && ix != 0 && iy != 0) {
-                sw.beta[{ix, iy}] = face.weight;
-            }
-            // Check for gamma (inner) faces: |i|+|j| <= k-1
-            else if (std::abs(ix) + std::abs(iy) <= k - 1) {
-                sw.gamma[{ix, iy}] = face.weight;
+        // Assign T-graph coordinates using BFS from center
+        // First, find the face closest to centroid origin (will be our (0,0))
+        int centerFace = 0;
+        double minDist = 1e9;
+        for (int fi = 0; fi < nFaces; fi++) {
+            double d = std::abs(g_aztecFaces[fi].cx) + std::abs(g_aztecFaces[fi].cy);
+            if (d < minDist) {
+                minDist = d;
+                centerFace = fi;
             }
         }
+
+        // BFS to assign (i,j) coordinates based on connectivity
+        std::map<int, std::pair<int,int>> faceCoords;  // face index -> (i,j)
+        faceCoords[centerFace] = {0, 0};
+
+        std::vector<int> queue;
+        queue.push_back(centerFace);
+        std::set<int> visited;
+        visited.insert(centerFace);
+
+        while (!queue.empty()) {
+            int cur = queue.front();
+            queue.erase(queue.begin());
+            auto [ci, cj] = faceCoords[cur];
+
+            // For each neighbor, assign coordinates based on relative centroid direction
+            for (int nb : adj[cur]) {
+                if (visited.count(nb)) continue;
+                visited.insert(nb);
+
+                double dx = g_aztecFaces[nb].cx - g_aztecFaces[cur].cx;
+                double dy = g_aztecFaces[nb].cy - g_aztecFaces[cur].cy;
+
+                int ni, nj;
+                if (std::abs(dx) > std::abs(dy)) {
+                    // Horizontal neighbor
+                    ni = ci + (dx > 0 ? 1 : -1);
+                    nj = cj;
+                } else {
+                    // Vertical neighbor
+                    ni = ci;
+                    nj = cj + (dy > 0 ? 1 : -1);
+                }
+
+                faceCoords[nb] = {ni, nj};
+                queue.push_back(nb);
+            }
+        }
+
+        // Now categorize faces by their assigned coordinates
+        for (const auto& kv : faceCoords) {
+            int fi = kv.first;
+            int i = kv.second.first;
+            int j = kv.second.second;
+            double weight = g_aztecFaces[fi].weight;
+            int absSum = std::abs(i) + std::abs(j);
+
+            std::printf("  Face %d at T(%d,%d) weight=%.4f\n", fi, i, j, weight);
+
+            // Alpha faces: |i|+|j|=k and on axis
+            if (absSum == k && (i == 0 || j == 0)) {
+                if (j > 0 && i == 0) sw.alpha_top = weight;
+                else if (j < 0 && i == 0) sw.alpha_bottom = weight;
+                else if (i > 0 && j == 0) sw.alpha_right = weight;
+                else if (i < 0 && j == 0) sw.alpha_left = weight;
+            }
+            // Beta faces: |i|+|j|=k, off-axis
+            else if (absSum == k && i != 0 && j != 0) {
+                sw.beta[{i, j}] = weight;
+            }
+            // Gamma faces: |i|+|j| <= k-1
+            else if (absSum <= k - 1) {
+                sw.gamma[{i, j}] = weight;
+            }
+        }
+
+        std::printf("  Captured alphas: T=%.4f B=%.4f L=%.4f R=%.4f\n",
+                    sw.alpha_top, sw.alpha_bottom, sw.alpha_left, sw.alpha_right);
     }
 
     g_storedWeights.push_back(sw);
@@ -2544,11 +2626,38 @@ static void computeTk(int k) {
         return;
     }
 
-    // TODO: For now, all weights are set to 1.0
-    // This should be changed to use stored face weights
-    const double alpha = 1.0;  // TODO: use actual alpha weight
-    const double beta = 1.0;   // TODO: use actual beta weights
-    const double gamma = 1.0;  // TODO: use actual gamma weights
+    // Find stored face weights for level k
+    const StoredFaceWeights* storedWeights = nullptr;
+    for (const auto& sw : g_storedWeights) {
+        if (sw.k == k) {
+            storedWeights = &sw;
+            break;
+        }
+    }
+
+    // DEBUG: Print current Aztec faces at alpha positions for level k
+    std::printf("computeTk(%d): Current Aztec faces (%d total):\n", k, (int)g_aztecFaces.size());
+    for (const auto& face : g_aztecFaces) {
+        int ix = (int)std::round(face.cx);
+        int iy = (int)std::round(face.cy);
+        int absSum = std::abs(ix) + std::abs(iy);
+        if (absSum == k && (ix == 0 || iy == 0)) {
+            std::printf("  ALPHA at (%d,%d) cx=%.2f cy=%.2f weight=%.4f\n", ix, iy, face.cx, face.cy, face.weight);
+        }
+    }
+
+    // If no stored weights found, use default 1.0
+    double alpha_right = 1.0, alpha_left = 1.0, alpha_top = 1.0, alpha_bottom = 1.0;
+    if (storedWeights) {
+        alpha_right = storedWeights->alpha_right > 0 ? storedWeights->alpha_right : 1.0;
+        alpha_left = storedWeights->alpha_left > 0 ? storedWeights->alpha_left : 1.0;
+        alpha_top = storedWeights->alpha_top > 0 ? storedWeights->alpha_top : 1.0;
+        alpha_bottom = storedWeights->alpha_bottom > 0 ? storedWeights->alpha_bottom : 1.0;
+        std::printf("computeTk(%d): using stored weights - alpha_R=%.4f, alpha_L=%.4f, alpha_T=%.4f, alpha_B=%.4f\n",
+                    k, alpha_right, alpha_left, alpha_top, alpha_bottom);
+    } else {
+        std::printf("computeTk(%d): WARNING - no stored weights found, using default 1.0\n", k);
+    }
 
     TembLevel tk;
     tk.k = k;
@@ -2573,44 +2682,79 @@ static void computeTk(int k) {
 
     // ==========================================================================
     // Rule 2: Alpha vertices (axis boundary at |i|+|j|=k, on-axis)
-    // T_k(k,0) = 1/(α+1) * (T_{k-1}(k,0) + T_{k-1}(k-1,0))
+    // T_k(k,0) = (T_{k-1}(k,0) + α * T_{k-1}(k-1,0)) / (α + 1)
+    // Each axis direction uses its own alpha weight
     // ==========================================================================
-    double alphaFactor = 1.0 / (alpha + 1.0);
 
-    // Right: (k, 0)
-    Tcurr[{k, 0}] = alphaFactor * (Tprev[{k, 0}] + Tprev[{k-1, 0}]);
-    // Left: (-k, 0)
-    Tcurr[{-k, 0}] = alphaFactor * (Tprev[{-k, 0}] + Tprev[{-(k-1), 0}]);
-    // Top: (0, k)
-    Tcurr[{0, k}] = alphaFactor * (Tprev[{0, k}] + Tprev[{0, k-1}]);
-    // Bottom: (0, -k)
-    Tcurr[{0, -k}] = alphaFactor * (Tprev[{0, -k}] + Tprev[{0, -(k-1)}]);
+    // Right: (k, 0) uses alpha_right
+    {
+        double alphaR = alpha_right;
+        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alphaR * Tprev[{k-1, 0}]) / (alphaR + 1.0);
+    }
+    // Left: (-k, 0) uses alpha_left
+    {
+        double alphaL = alpha_left;
+        Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alphaL * Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
+    }
+    // Top: (0, k) uses alpha_top
+    {
+        double alphaT = alpha_top;
+        Tcurr[{0, k}] = (Tprev[{0, k}] + alphaT * Tprev[{0, k-1}]) / (alphaT + 1.0);
+    }
+    // Bottom: (0, -k) uses alpha_bottom
+    {
+        double alphaB = alpha_bottom;
+        Tcurr[{0, -k}] = (Tprev[{0, -k}] + alphaB * Tprev[{0, -(k-1)}]) / (alphaB + 1.0);
+    }
 
     // ==========================================================================
     // Rule 3: Beta vertices (diagonal boundary at |i|+|j|=k, off-axis)
     // T_k(j, k-j) = 1/(β+1) * (T_{k-1}(j-1, k-j) + β * T_{k-1}(j, k-j-1))
     // For j = 1, 2, ..., k-1 (positive j quadrants)
+    // Each diagonal vertex uses its own beta weight from stored face weights
     // ==========================================================================
-    double betaFactor = 1.0 / (beta + 1.0);
+
+    // Helper lambda to get beta weight for position (i, j)
+    auto getBetaWeight = [&](int i, int j) -> double {
+        if (storedWeights) {
+            auto it = storedWeights->beta.find({i, j});
+            if (it != storedWeights->beta.end() && it->second > 0) {
+                return it->second;
+            }
+        }
+        return 1.0;  // Default
+    };
 
     for (int j = 1; j <= k - 1; j++) {
         int kj = k - j;  // So (j, kj) has |j| + |kj| = k
 
         // Upper-right quadrant: (j, k-j) where j > 0, k-j > 0
-        Tcurr[{j, kj}] = betaFactor * (Tprev[{j-1, kj}] + beta * Tprev[{j, kj-1}]);
+        {
+            double beta_ij = getBetaWeight(j, kj);
+            Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + 1.0);
+        }
 
         // Lower-right quadrant: (j, -(k-j)) where j > 0, k-j > 0
-        Tcurr[{j, -kj}] = betaFactor * (Tprev[{j-1, -kj}] + beta * Tprev[{j, -(kj-1)}]);
+        {
+            double beta_ij = getBetaWeight(j, -kj);
+            Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + 1.0);
+        }
     }
 
     for (int j = 1; j <= k - 1; j++) {
         int kj = k - j;
 
         // Upper-left quadrant: (-j, k-j) where j > 0, k-j > 0
-        Tcurr[{-j, kj}] = betaFactor * (beta * Tprev[{-j, kj-1}] + Tprev[{-(j-1), kj}]);
+        {
+            double beta_ij = getBetaWeight(-j, kj);
+            Tcurr[{-j, kj}] = (beta_ij * Tprev[{-j, kj-1}] + Tprev[{-(j-1), kj}]) / (beta_ij + 1.0);
+        }
 
         // Lower-left quadrant: (-j, -(k-j)) where j > 0, k-j > 0
-        Tcurr[{-j, -kj}] = betaFactor * (beta * Tprev[{-j, -(kj-1)}] + Tprev[{-(j-1), -kj}]);
+        {
+            double beta_ij = getBetaWeight(-j, -kj);
+            Tcurr[{-j, -kj}] = (beta_ij * Tprev[{-j, -(kj-1)}] + Tprev[{-(j-1), -kj}]) / (beta_ij + 1.0);
+        }
     }
 
     // ==========================================================================
@@ -2634,13 +2778,27 @@ static void computeTk(int k) {
     // Rule 4b: Interior recurrence (|i|+|j| < k, i+j+k odd)
     // T_k(i,j) = 1/(γ+1) * (T_k(i-1,j) + T_k(i+1,j) + γ*(T_k(i,j+1) + T_k(i,j-1))) - T_{k-1}(i,j)
     // Note: neighbors are already computed via 4a (even parity) or boundary rules
+    // Each interior vertex uses its own gamma weight from stored face weights
     // ==========================================================================
-    double gammaFactor = 1.0 / (gamma + 1.0);
+
+    // Helper lambda to get gamma weight for position (i, j)
+    auto getGammaWeight = [&](int i, int j) -> double {
+        if (storedWeights) {
+            auto it = storedWeights->gamma.find({i, j});
+            if (it != storedWeights->gamma.end() && it->second > 0) {
+                return it->second;
+            }
+        }
+        return 1.0;  // Default
+    };
 
     for (int i = -(k-1); i <= k-1; i++) {
         for (int j = -(k-1); j <= k-1; j++) {
             if (std::abs(i) + std::abs(j) >= k) continue;  // Not interior
             if ((i + j + k) % 2 == 0) continue;  // Not odd parity (handled in 4a)
+
+            // Get gamma weight for this position
+            double gamma_ij = getGammaWeight(i, j);
 
             // Get T_{k-1}(i,j)
             std::complex<double> Tprev_ij = Tprev[{i, j}];
@@ -2651,7 +2809,7 @@ static void computeTk(int k) {
             std::complex<double> T_i_jm1 = Tcurr[{i, j-1}];
             std::complex<double> T_i_jp1 = Tcurr[{i, j+1}];
 
-            Tcurr[{i, j}] = gammaFactor * (T_im1_j + T_ip1_j + gamma * (T_i_jp1 + T_i_jm1)) - Tprev_ij;
+            Tcurr[{i, j}] = (T_im1_j + T_ip1_j + gamma_ij * (T_i_jp1 + T_i_jm1)) / (gamma_ij + 1.0) - Tprev_ij;
         }
     }
 
@@ -2671,6 +2829,128 @@ static void computeTk(int k) {
     g_tembLevels.push_back(tk);
 
     std::printf("computeTk(%d): computed %zu vertices\n", k, tk.vertices.size());
+}
+
+// =============================================================================
+// T-EMBEDDING VERIFICATION
+// =============================================================================
+// Verify T_k by checking face weight formula for all faces at level k:
+// X_f = (-1)^{d+1} * prod_{s=1}^{d} (T(center) - T(v_{2s-1})) / (T(v_{2s}) - T(center))
+// For degree-4 faces (d=2): X = -1 * (T_c - T_1)/(T_2 - T_c) * (T_c - T_3)/(T_4 - T_c)
+// Neighbors in CCW order: (i+1,j), (i,j+1), (i-1,j), (i,j-1)
+
+static void verifyTk(int k) {
+    // Find T_k level
+    const TembLevel* tk = nullptr;
+    for (const auto& l : g_tembLevels) {
+        if (l.k == k) {
+            tk = &l;
+            break;
+        }
+    }
+    if (!tk) {
+        std::printf("verifyTk(%d): T_%d not computed yet\n", k, k);
+        return;
+    }
+
+    // Build vertex lookup map
+    std::map<std::pair<int,int>, std::complex<double>> T;
+    for (const auto& v : tk->vertices) {
+        T[{v.i, v.j}] = std::complex<double>(v.re, v.im);
+    }
+
+    // Find stored weights for level k
+    const StoredFaceWeights* storedWeights = nullptr;
+    for (const auto& sw : g_storedWeights) {
+        if (sw.k == k) {
+            storedWeights = &sw;
+            break;
+        }
+    }
+
+    std::printf("=== T_%d Verification ===\n", k);
+
+    // For k=0, verify the ROOT face
+    if (k == 0) {
+        // Face at (0,0) with neighbors (1,0), (0,1), (-1,0), (0,-1) in CCW order
+        std::complex<double> Tc = T[{0, 0}];
+        std::complex<double> T1 = T[{1, 0}];
+        std::complex<double> T2 = T[{0, 1}];
+        std::complex<double> T3 = T[{-1, 0}];
+        std::complex<double> T4 = T[{0, -1}];
+
+        // X = -1 * (Tc - T1)/(T2 - Tc) * (Tc - T3)/(T4 - Tc)
+        std::complex<double> computed = -1.0 * (Tc - T1) / (T2 - Tc) * (Tc - T3) / (T4 - Tc);
+
+        double expected = storedWeights ? storedWeights->root : 1.0;
+        std::printf("ROOT face (0,0): computed = %.6f + %.6fi, expected = %.6f\n",
+                    computed.real(), computed.imag(), expected);
+        std::printf("  Match: %s (diff = %.2e)\n",
+                    std::abs(computed.real() - expected) < 1e-6 ? "YES" : "NO",
+                    std::abs(computed.real() - expected));
+    }
+
+    // For k >= 1, verify all faces at level k
+    if (k >= 1) {
+        int numChecked = 0;
+        int numPassed = 0;
+        double maxError = 0;
+
+        // Iterate over all possible face positions at level k
+        // Faces exist where all 4 neighbors exist in T_k
+        for (int fi = -k; fi <= k; fi++) {
+            for (int fj = -k; fj <= k; fj++) {
+                // Check if all 4 neighbors exist
+                if (T.find({fi+1, fj}) == T.end()) continue;
+                if (T.find({fi, fj+1}) == T.end()) continue;
+                if (T.find({fi-1, fj}) == T.end()) continue;
+                if (T.find({fi, fj-1}) == T.end()) continue;
+                // Center must also exist
+                if (T.find({fi, fj}) == T.end()) continue;
+
+                std::complex<double> Tc = T[{fi, fj}];
+                std::complex<double> T1 = T[{fi+1, fj}];
+                std::complex<double> T2 = T[{fi, fj+1}];
+                std::complex<double> T3 = T[{fi-1, fj}];
+                std::complex<double> T4 = T[{fi, fj-1}];
+
+                // X = -1 * (Tc - T1)/(T2 - Tc) * (Tc - T3)/(T4 - Tc)
+                std::complex<double> computed = -1.0 * (Tc - T1) / (T2 - Tc) * (Tc - T3) / (T4 - Tc);
+
+                // Look up expected weight
+                double expected = 1.0;
+                int absSum = std::abs(fi) + std::abs(fj);
+                if (storedWeights) {
+                    if (absSum == k && fi == 0 && fj > 0) expected = storedWeights->alpha_top;
+                    else if (absSum == k && fi == 0 && fj < 0) expected = storedWeights->alpha_bottom;
+                    else if (absSum == k && fi > 0 && fj == 0) expected = storedWeights->alpha_right;
+                    else if (absSum == k && fi < 0 && fj == 0) expected = storedWeights->alpha_left;
+                    else if (absSum == k && fi != 0 && fj != 0) {
+                        auto it = storedWeights->beta.find({fi, fj});
+                        if (it != storedWeights->beta.end()) expected = it->second;
+                    }
+                    else if (absSum < k) {
+                        auto it = storedWeights->gamma.find({fi, fj});
+                        if (it != storedWeights->gamma.end()) expected = it->second;
+                    }
+                }
+
+                double error = std::abs(computed.real() - expected);
+                maxError = std::max(maxError, error);
+                numChecked++;
+                if (error < 1e-4) numPassed++;
+
+                if (error >= 1e-4) {
+                    std::printf("  Face (%d,%d): computed=%.6f, expected=%.6f, error=%.2e\n",
+                                fi, fj, computed.real(), expected, error);
+                }
+            }
+        }
+
+        std::printf("Checked %d faces, %d passed (max error = %.2e)\n", numChecked, numPassed, maxError);
+    }
+
+    std::printf("========================\n");
 }
 
 // Compute all T_k levels from 0 to maxK
@@ -2701,12 +2981,16 @@ static std::string getTembLevelJSON(int k) {
         // Clear and recompute all levels up to k
         g_tembLevels.clear();
         computeT0();
-        if (k == 0) {
-            verifyT0();  // Output verification to console
-        }
         for (int level = 1; level <= k; level++) {
             computeTk(level);
         }
+    }
+
+    // Always verify when accessing a level
+    if (k == 0) {
+        verifyT0();  // Output verification to console
+    } else {
+        verifyTk(k);  // Verify T-embedding for requested level
     }
 
     std::ostringstream oss;

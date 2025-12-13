@@ -58,7 +58,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -293,24 +293,24 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     }
 
     // Boundary rhombus
-    stepwiseCtx.strokeStyle = '#666';
-    stepwiseCtx.lineWidth = Math.max(2, scale / 50);
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
     drawTembEdge(k+1, 0, 0, k+1);
     drawTembEdge(0, k+1, -(k+1), 0);
     drawTembEdge(-(k+1), 0, 0, -(k+1));
     drawTembEdge(0, -(k+1), k+1, 0);
 
     // External corners to alpha
-    stepwiseCtx.strokeStyle = '#999';
-    stepwiseCtx.lineWidth = Math.max(1.5, scale / 60);
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
     drawTembEdge(k+1, 0, k, 0);
     drawTembEdge(-(k+1), 0, -k, 0);
     drawTembEdge(0, k+1, 0, k);
     drawTembEdge(0, -(k+1), 0, -k);
 
     // Diagonal boundary
-    stepwiseCtx.strokeStyle = '#555';
-    stepwiseCtx.lineWidth = Math.max(1, scale / 70);
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
     for (let s = 0; s < k; s++) {
       drawTembEdge(k-s, s, k-s-1, s+1);
       drawTembEdge(-s, k-s, -(s+1), k-s-1);
@@ -319,7 +319,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     }
 
     // Draw vertices
-    const vertexRadius = Math.max(4, scale / 40);
+    const vertexRadius = Math.max(0.5, scale / 800);  // 20x smaller
     for (const v of vertices) {
       const x = (v.re - centerRe) * scale;
       const y = -(v.im - centerIm) * scale;  // Flip y for standard math orientation
@@ -387,6 +387,10 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   let selectedVertex = null;
   let highlightedDeps = new Set();
   let vertexScreenPositions = [];
+
+  // T-embedding vertex screen positions for click detection
+  let tembVertexScreenPositions = [];
+  let tembCurrentVertices = [];  // Store current vertices data
 
   // Canvas pan/zoom for T-embedding
   let stepwiseZoom = 1.0;
@@ -1302,7 +1306,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
     // Draw interior edges (lattice connections)
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
+    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
 
     for (const v of vertices) {
       const i = v.i, j = v.j;
@@ -1366,13 +1370,22 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       drawTembEdge(s, -(k-s), s+1, -(k-s-1));
     }
 
-    // Draw vertices
-    const vertexRadius = Math.max(4, scale / 40);
+    // Draw vertices and store positions for click detection
+    const vertexRadius = Math.max(0.5, scale / 800);  // 20x smaller
     const showLabels = document.getElementById('show-labels-chk').checked;
+    tembVertexScreenPositions = [];  // Reset
+    tembCurrentVertices = vertices;  // Store for click handler
 
     for (const v of vertices) {
       const x = (v.re - centerRe) * scale;
       const y = -(v.im - centerIm) * scale;  // Flip y for standard math orientation
+
+      // Store screen position for click detection
+      tembVertexScreenPositions.push({
+        screenX: x + cx,
+        screenY: y + cy,
+        vertex: v
+      });
 
       stepwiseCtx.beginPath();
       stepwiseCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
@@ -1422,9 +1435,67 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   }
 
   function handleStepwiseCanvasClick(e) {
-    // Simplified click handler for T_k from face weights
+    const rect = stepwiseCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const clickX = (e.clientX - rect.left) * dpr;
+    const clickY = (e.clientY - rect.top) * dpr;
+
+    // 20x bigger detection area (was ~15, now 300)
+    const clickThreshold = 300 * dpr;
+    let closestVertex = null;
+    let closestDist = Infinity;
+
+    for (const vp of tembVertexScreenPositions) {
+      const dx = clickX - vp.screenX * dpr;
+      const dy = clickY - vp.screenY * dpr;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < clickThreshold && dist < closestDist) {
+        closestDist = dist;
+        closestVertex = vp.vertex;
+      }
+    }
+
     const vertexInfoDiv = document.getElementById('vertex-info');
-    vertexInfoDiv.innerHTML = `<em>T_${currentK} from face weights (vertices: ${4 + 2*currentK*currentK + 2*currentK + 1})</em>`;
+    const k = currentK;
+
+    if (closestVertex) {
+      const v = closestVertex;
+      const i = v.i, j = v.j;
+      const re = v.re.toFixed(6);
+      const im = v.im.toFixed(6);
+      const imSign = v.im >= 0 ? '+' : '';
+
+      // Determine formula based on vertex position
+      let formula = '';
+      const absSum = Math.abs(i) + Math.abs(j);
+
+      if (absSum === k + 1) {
+        // External corner - inherited from previous level
+        formula = `T_${k}(${i},${j}) = T_${k-1}(${i > 0 ? k : -k},${j > 0 ? k : (j < 0 ? -k : 0)})`;
+        if (i !== 0) formula = `T_${k}(${i},${j}) = T_${k-1}(${i > 0 ? k : -k},0)`;
+        else formula = `T_${k}(${i},${j}) = T_${k-1}(0,${j > 0 ? k : -k})`;
+      } else if (absSum === k && (i === 0 || j === 0)) {
+        // Alpha vertex (on axis)
+        const dir = i > 0 ? 'right' : (i < 0 ? 'left' : (j > 0 ? 'top' : 'bottom'));
+        formula = `T_${k}(${i},${j}) = (T_${k-1}(${i},${j}) + α_${dir} · T_${k-1}(${i===0 ? 0 : (i>0 ? k-1 : -(k-1))},${j===0 ? 0 : (j>0 ? k-1 : -(k-1))})) / (α_${dir} + 1)`;
+      } else if (absSum === k && i !== 0 && j !== 0) {
+        // Beta vertex (diagonal)
+        formula = `T_${k}(${i},${j}) = (T_${k-1}(...) + β(${i},${j}) · T_${k-1}(...)) / (β(${i},${j}) + 1)`;
+      } else if (absSum < k) {
+        // Interior
+        if ((i + j + k) % 2 === 0) {
+          // Pass-through
+          formula = `T_${k}(${i},${j}) = T_${k-1}(${i},${j})  [pass-through, i+j+k even]`;
+        } else {
+          // Recurrence
+          formula = `T_${k}(${i},${j}) = (T_${k}(${i-1},${j}) + T_${k}(${i+1},${j}) + γ·(T_${k}(${i},${j+1}) + T_${k}(${i},${j-1}))) / (γ+1) - T_${k-1}(${i},${j})`;
+        }
+      }
+
+      vertexInfoDiv.innerHTML = `<strong>T_${k}(${i},${j})</strong> = ${re} ${imSign} ${im}i<br><small>${formula}</small>`;
+    } else {
+      vertexInfoDiv.innerHTML = `<em>Click on a vertex to see its formula (T_${k}, ${tembVertexScreenPositions.length} vertices)</em>`;
+    }
   }
 
   // ========== EVENT LISTENERS ==========
