@@ -155,7 +155,10 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 
 <details id="stepwise-section" style="margin-top: 15px;" open>
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
-  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+  <div id="stepwise-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
+    <strong>Note:</strong> Step-by-step visualization is only available for n ≤ 20. For larger n, use the main T-embedding visualization above.
+  </div>
+  <div id="stepwise-content" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Side-by-side layout -->
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
       <!-- LEFT: Aztec diamond graph -->
@@ -180,6 +183,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
           <button id="step-next-btn" style="width: 60px; margin-left: 10px;">→</button>
           <span style="margin-left: 15px;">k = <span id="step-value">0</span></span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
+          <label style="margin-left: 15px;">Vertex: <input type="number" id="temb-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 10px;">Edge: <input type="number" id="temb-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -189,9 +194,12 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   </div>
 </details>
 
-<details style="margin-top: 15px;">
+<details id="mathematica-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8e8f4; border: 1px solid #99c;">Mathematica verification code for small n</summary>
-  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+  <div id="mathematica-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
+    <strong>Note:</strong> Mathematica verification is only available for n ≤ 20.
+  </div>
+  <div id="mathematica-content" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <p style="font-size: 12px; margin-bottom: 10px;">
       The XX verification formula checks that each interior white vertex satisfies:
     </p>
@@ -246,6 +254,37 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // T-embedding data
   let tembData = null;
   let wasmReady = false;
+
+  // Step-by-step visualization is only available for n <= this threshold
+  const STEP_BY_STEP_MAX_N = 20;
+
+  // Update stepwise and Mathematica section visibility based on n
+  function updateStepwiseSectionForN(n) {
+    const stepSection = document.getElementById('stepwise-section');
+    const stepContent = document.getElementById('stepwise-content');
+    const stepMsg = document.getElementById('stepwise-large-n-msg');
+    const mathSection = document.getElementById('mathematica-section');
+    const mathContent = document.getElementById('mathematica-content');
+    const mathMsg = document.getElementById('mathematica-large-n-msg');
+
+    if (n > STEP_BY_STEP_MAX_N) {
+      // Large n: collapse sections, show messages, hide content
+      stepSection.removeAttribute('open');
+      stepMsg.style.display = 'block';
+      stepContent.style.display = 'none';
+
+      mathSection.removeAttribute('open');
+      mathMsg.style.display = 'block';
+      mathContent.style.display = 'none';
+    } else {
+      // Small n: allow sections to be open, hide messages, show content
+      stepMsg.style.display = 'none';
+      stepContent.style.display = 'block';
+
+      mathMsg.style.display = 'none';
+      mathContent.style.display = 'block';
+    }
+  }
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
@@ -380,9 +419,14 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       vertexMap[`${v.i},${v.j}`] = v;
     }
 
+    // Get control values for vertex size and edge thickness
+    const tembVertexSizeControl = parseFloat(document.getElementById('temb-vertex-size').value) || 1.5;
+    const tembEdgeThicknessControl = parseFloat(document.getElementById('temb-edge-thickness').value) || 1.5;
+    const uniformEdgeWidth = Math.max(tembEdgeThicknessControl, scale / 300 * tembEdgeThicknessControl);
+
     // Draw edges based on T_k structure
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
 
     function drawTembEdge(i1, j1, i2, j2) {
       const v1 = vertexMap[`${i1},${j1}`];
@@ -398,7 +442,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Draw T_k edges - same logic as renderStepwiseTemb
     // Interior lattice edges
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
 
     for (const v of vertices) {
       const ii = v.i, jj = v.j;
@@ -420,7 +464,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     // Boundary rhombus
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
     drawTembEdge(k+1, 0, 0, k+1);
     drawTembEdge(0, k+1, -(k+1), 0);
     drawTembEdge(-(k+1), 0, 0, -(k+1));
@@ -428,7 +472,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     // External corners to alpha
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
     drawTembEdge(k+1, 0, k, 0);
     drawTembEdge(-(k+1), 0, -k, 0);
     drawTembEdge(0, k+1, 0, k);
@@ -436,7 +480,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     // Diagonal boundary
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
     for (let s = 0; s < k; s++) {
       drawTembEdge(k-s, s, k-s-1, s+1);
       drawTembEdge(-s, k-s, -(s+1), k-s-1);
@@ -445,7 +489,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw vertices
-    const vertexRadius = Math.max(0.5, scale / 800);  // 20x smaller
+    const vertexRadius = Math.max(tembVertexSizeControl, scale / 800 * tembVertexSizeControl);
     for (const v of vertices) {
       const x = (v.re - centerRe) * scale;
       const y = -(v.im - centerIm) * scale;  // Flip y for standard math orientation
@@ -1388,14 +1432,21 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Auto-compute on load with randomized weights
       const n = parseInt(document.getElementById('n-input').value) || 6;
       setN(n);
-      initAztecGraph(n);
-      randomizeAztecWeights();  // Randomize on load
-      computeAndDisplay();
 
-      // Precompute all T-embedding levels before showing UI
-      for (let k = 0; k <= maxK; k++) {
-        let ptr = getTembeddingLevelJSON(k);
-        freeString(ptr);
+      // Update stepwise section visibility based on n
+      updateStepwiseSectionForN(n);
+
+      // Only do expensive computation for small n
+      if (n <= STEP_BY_STEP_MAX_N) {
+        initAztecGraph(n);
+        randomizeAztecWeights();  // Randomize on load
+        computeAndDisplay();
+
+        // Precompute all T-embedding levels before showing UI
+        for (let k = 0; k <= maxK; k++) {
+          let ptr = getTembeddingLevelJSON(k);
+          freeString(ptr);
+        }
       }
 
       // Now hide loading message
@@ -1412,6 +1463,17 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     const n = parseInt(document.getElementById('n-input').value) || 6;
 
+    // Update stepwise section visibility
+    updateStepwiseSectionForN(n);
+
+    // For large n: skip all expensive computation (will be handled by separate large-n module later)
+    if (n > STEP_BY_STEP_MAX_N) {
+      maxK = 0;
+      currentK = 0;
+      return;
+    }
+
+    // Small n: do full computation
     // Initialize Aztec graph at level n
     generateAztecGraph(n);
 
@@ -1831,9 +1893,14 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     //   2. Alpha/Beta form the diagonal boundary
     //   3. Interior connects like a lattice
 
+    // Get control values for vertex size and edge thickness
+    const tembVertexSizeControl = parseFloat(document.getElementById('temb-vertex-size').value) || 1.5;
+    const tembEdgeThicknessControl = parseFloat(document.getElementById('temb-edge-thickness').value) || 1.5;
+    const uniformEdgeWidth = Math.max(tembEdgeThicknessControl, scale / 300 * tembEdgeThicknessControl);
+
     // Draw interior edges (lattice connections)
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(0.3, scale / 300);  // uniform thickness
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
 
     for (const v of vertices) {
       const i = v.i, j = v.j;
@@ -1859,7 +1926,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     // Draw boundary rhombus (external corners)
     stepwiseCtx.strokeStyle = '#666';
-    stepwiseCtx.lineWidth = Math.max(2, scale / 50);
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
 
     // Connect external corners: (k+1,0) -> (0,k+1) -> (-(k+1),0) -> (0,-(k+1)) -> (k+1,0)
     drawTembEdge(k+1, 0, 0, k+1);
@@ -1869,7 +1936,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     // Connect external corners to alpha vertices
     stepwiseCtx.strokeStyle = '#999';
-    stepwiseCtx.lineWidth = Math.max(1.5, scale / 60);
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
     drawTembEdge(k+1, 0, k, 0);
     drawTembEdge(-(k+1), 0, -k, 0);
     drawTembEdge(0, k+1, 0, k);
@@ -1878,7 +1945,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Connect diagonal boundary vertices (beta and alpha on boundary)
     // These form the edges along the diagonal |i|+|j|=k
     stepwiseCtx.strokeStyle = '#555';
-    stepwiseCtx.lineWidth = Math.max(1, scale / 70);
+    stepwiseCtx.lineWidth = uniformEdgeWidth;
 
     // Right-top diagonal: (k,0) -> (k-1,1) -> ... -> (1,k-1) -> (0,k)
     for (let s = 0; s < k; s++) {
@@ -1898,7 +1965,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw vertices and store positions for click detection
-    const vertexRadius = Math.max(0.5, scale / 800);  // 20x smaller
+    const vertexRadius = Math.max(tembVertexSizeControl, scale / 800 * tembVertexSizeControl);
     const showLabels = document.getElementById('show-labels-chk').checked;
     tembVertexScreenPositions = [];  // Reset
     tembCurrentVertices = vertices;  // Store for click handler
@@ -2030,7 +2097,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Main buttons
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
-    initAztecGraph(n);
+    if (n <= STEP_BY_STEP_MAX_N) {
+      initAztecGraph(n);
+    }
     computeAndDisplay();
   });
 
@@ -2039,7 +2108,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const n = parseInt(e.target.value) || 6;
-      initAztecGraph(n);
+      if (n <= STEP_BY_STEP_MAX_N) {
+        initAztecGraph(n);
+      }
       computeAndDisplay();
     }
   });
@@ -2071,6 +2142,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
   document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
+
+  // T-embedding size controls
+  document.getElementById('temb-vertex-size').addEventListener('input', renderStepwiseTemb);
+  document.getElementById('temb-edge-thickness').addEventListener('input', renderStepwiseTemb);
 
   // T-embedding canvas pan/zoom
   stepwiseCanvas.addEventListener('click', handleStepwiseCanvasClick);
