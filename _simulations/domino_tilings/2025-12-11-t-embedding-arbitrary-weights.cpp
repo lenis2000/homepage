@@ -2897,7 +2897,7 @@ static void computeTk(int k) {
             }
 
             // Recurrence: T_k(i,j) = (Tl + Tr + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
-            Tcurr[{i, j}] = (Tl + Tr + gamma * (Tt + Tb)) / (gamma + 1.0) - Tprev_ij;
+            Tcurr[{i, j}] = ( (Tl + Tr) * gamma + (Tt + Tb)) / (gamma + 1.0) - Tprev_ij;
         }
     }
 
