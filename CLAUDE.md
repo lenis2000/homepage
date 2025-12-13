@@ -1,5 +1,2 @@
 - color patterns are defined in @js/colorschemes.js and used in lozenge drawing files. this file contains the links to the files which use these color patterns.
 - for cpp compile look at their preambles
-- remeber, aztec is indexed by A_{n+1}
-- remeber, aztec is indexed by A_{n+1}
-- remeber, aztec is indexed by A_{n+1}
