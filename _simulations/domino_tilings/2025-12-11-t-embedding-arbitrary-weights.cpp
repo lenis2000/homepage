@@ -116,6 +116,16 @@ struct AztecGraphState {
 };
 static std::vector<AztecGraphState> g_aztecHistory;
 
+// Double edge ratios for T-embedding alpha values (captured from step 11)
+struct DoubleEdgeRatios {
+    int k;                // Level when captured
+    double ratio_top;     // Top edge pair ratio (red/blue)
+    double ratio_bottom;  // Bottom edge pair ratio
+    double ratio_left;    // Left edge pair ratio
+    double ratio_right;   // Right edge pair ratio
+};
+static std::vector<DoubleEdgeRatios> g_doubleEdgeRatios;
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -1857,15 +1867,18 @@ static void aztecStep9_DiagonalGauge() {
 
     // Find trivalent vertices connected to outer boundary vertices
     // These are the n-2 vertices per corner that need gauge transform
+    // IMPORTANT: Skip vertices that are themselves outer boundary corners
     for (int outerIdx : outerBoundaryVerts) {
         // Find neighbors of the outer boundary vertex
         for (const auto& [neighborIdx, diagEdgeIdx] : adj[outerIdx]) {
-            // This neighbor is a trivalent vertex connected to the outer boundary
+            // Skip if this neighbor is itself an outer boundary corner
+            if (outerBoundaryVerts.count(neighborIdx)) {
+                continue;
+            }
+
             // Check if it's trivalent (degree 3)
             if (adj[neighborIdx].size() == 3) {
-                // Get the diagonal edge weight (edge to outer boundary)
                 double diagWeight = g_aztecEdges[diagEdgeIdx].weight;
-
                 if (std::abs(diagWeight) > 1e-10 && std::abs(diagWeight - 1.0) > 1e-10) {
                     // Gauge transform: divide all edges at this vertex by diagWeight
                     for (const auto& [_, edgeIdx] : adj[neighborIdx]) {
@@ -2094,6 +2107,65 @@ static void aztecStep11_CombineDoubleEdges() {
         int v1 = std::min(g_aztecEdges[i].v1, g_aztecEdges[i].v2);
         int v2 = std::max(g_aztecEdges[i].v1, g_aztecEdges[i].v2);
         edgeGroups[{v1, v2}].push_back(i);
+    }
+
+    // Capture double edge ratios for T-embedding alpha values
+    // This happens when we have exactly 4 corner vertices with double edges
+    printf("Step11: checking for ratio capture - %zu vertices, %zu edges, level=%d\n",
+           g_aztecVertices.size(), g_aztecEdges.size(), g_aztecLevel);
+    if (g_aztecVertices.size() == 4) {
+        DoubleEdgeRatios ratios;
+        // When we have 4 vertices at level L, these ratios are for computing T_{L-2}
+        // e.g., level=3 with 4 vertices → ratios for k=1
+        ratios.k = g_aztecLevel - 2;
+        ratios.ratio_top = 1.0;
+        ratios.ratio_bottom = 1.0;
+        ratios.ratio_left = 1.0;
+        ratios.ratio_right = 1.0;
+
+        printf("=== Capturing double edge ratios at level=%d for k=%d ===\n", g_aztecLevel, ratios.k);
+
+        for (const auto& [vertPair, indices] : edgeGroups) {
+            if (indices.size() == 2) {
+                double w0 = g_aztecEdges[indices[0]].weight;  // "red" edge
+                double w1 = g_aztecEdges[indices[1]].weight;  // "blue" edge
+                double ratio = w1 / w0;
+
+                // Get vertex coordinates
+                double x1 = g_aztecVertices[vertPair.first].x;
+                double y1 = g_aztecVertices[vertPair.first].y;
+                double x2 = g_aztecVertices[vertPair.second].x;
+                double y2 = g_aztecVertices[vertPair.second].y;
+
+                // Determine edge type by position
+                bool sameY = std::abs(y1 - y2) < 0.1;  // Horizontal edge (same y)
+                bool sameX = std::abs(x1 - x2) < 0.1;  // Vertical edge (same x)
+
+                printf("  Edge (%+.2f,%+.2f)-(%+.2f,%+.2f): w0=%.4f, w1=%.4f, ratio=%.4f",
+                       x1, y1, x2, y2, w0, w1, ratio);
+
+                if (sameY && (y1 + y2) / 2 > 0) {
+                    ratios.ratio_top = ratio;
+                    printf(" -> TOP\n");
+                } else if (sameY && (y1 + y2) / 2 < 0) {
+                    ratios.ratio_bottom = ratio;
+                    printf(" -> BOTTOM\n");
+                } else if (sameX && (x1 + x2) / 2 < 0) {
+                    ratios.ratio_left = ratio;
+                    printf(" -> LEFT\n");
+                } else if (sameX && (x1 + x2) / 2 > 0) {
+                    ratios.ratio_right = ratio;
+                    printf(" -> RIGHT\n");
+                } else {
+                    printf(" -> DIAGONAL (ignored)\n");
+                }
+            }
+        }
+
+        printf("  Final ratios: top=%.4f, bottom=%.4f, left=%.4f, right=%.4f\n",
+               ratios.ratio_top, ratios.ratio_bottom, ratios.ratio_left, ratios.ratio_right);
+
+        g_doubleEdgeRatios.push_back(ratios);
     }
 
     // Build new edge list with combined weights
@@ -2429,6 +2501,7 @@ static void storeFaceWeightsForK(int k) {
 static void clearStoredWeights() {
     g_storedWeights.clear();
     g_capturedKValues.clear();
+    g_doubleEdgeRatios.clear();
 }
 
 // Try to capture face weights if current face count matches formula
@@ -2591,6 +2664,60 @@ static std::complex<double> getTembValue(const TembLevel& level, int i, int j) {
     return std::complex<double>(0, 0);
 }
 
+// =============================================================================
+// QUADRATIC SOLVER FOR T-EMBEDDING WEIGHT CONDITION
+// =============================================================================
+//
+// From KLRR paper: The weight condition for a degree-4 face with center z and
+// CCW neighbors n1, n2, n3, n4 (alternating odd/even indices) is:
+//
+//   X = -[(z - n1)(z - n3)] / [(n2 - z)(n4 - z)]
+//
+// Rearranging gives the quadratic equation:
+//   (1 + X)z² - ((n2 + n4) + X(n1 + n3))z + (n2·n4 + X·n1·n3) = 0
+//
+// Both roots lie strictly inside the convex hull of neighbors (KLRR Lemma 4.7).
+// We select the root closer to the centroid for consistency with uniform case.
+
+static std::complex<double> solveWeightConditionQuadratic(
+    std::complex<double> n1, std::complex<double> n2,
+    std::complex<double> n3, std::complex<double> n4,
+    double X)
+{
+    // Coefficients: Az² + Bz + C = 0
+    std::complex<double> A = 1.0 + X;
+    std::complex<double> B = -((n2 + n4) + X * (n1 + n3));
+    std::complex<double> C = n2 * n4 + X * n1 * n3;
+
+    // Solve quadratic
+    std::complex<double> discriminant = B * B - 4.0 * A * C;
+    std::complex<double> sqrtDisc = std::sqrt(discriminant);
+
+    std::complex<double> z1 = (-B + sqrtDisc) / (2.0 * A);
+    std::complex<double> z2 = (-B - sqrtDisc) / (2.0 * A);
+
+    // Select root closer to centroid of neighbors
+    std::complex<double> centroid = (n1 + n2 + n3 + n4) / 4.0;
+
+    double dist1 = std::abs(z1 - centroid);
+    double dist2 = std::abs(z2 - centroid);
+
+    return (dist1 < dist2) ? z1 : z2;
+}
+
+// Verify that a position z satisfies the weight condition
+static double computeFaceWeight(
+    std::complex<double> z,
+    std::complex<double> n1, std::complex<double> n2,
+    std::complex<double> n3, std::complex<double> n4)
+{
+    // X = -[(z - n1)(z - n3)] / [(n2 - z)(n4 - z)]
+    std::complex<double> num = (z - n1) * (z - n3);
+    std::complex<double> den = (n2 - z) * (n4 - z);
+    std::complex<double> X = -num / den;
+    return X.real();  // Should be purely real for valid t-embedding
+}
+
 // Compute T_k from T_{k-1} using recurrence formulas
 // Requires T_{k-1} to already be computed and stored in g_tembLevels
 static void computeTk(int k) {
@@ -2646,17 +2773,29 @@ static void computeTk(int k) {
         }
     }
 
-    // If no stored weights found, use default 1.0
+    // Get alpha values from double edge ratios (captured in step 11)
     double alpha_right = 1.0, alpha_left = 1.0, alpha_top = 1.0, alpha_bottom = 1.0;
-    if (storedWeights) {
-        alpha_right = storedWeights->alpha_right > 0 ? storedWeights->alpha_right : 1.0;
-        alpha_left = storedWeights->alpha_left > 0 ? storedWeights->alpha_left : 1.0;
-        alpha_top = storedWeights->alpha_top > 0 ? storedWeights->alpha_top : 1.0;
-        alpha_bottom = storedWeights->alpha_bottom > 0 ? storedWeights->alpha_bottom : 1.0;
-        std::printf("computeTk(%d): using stored weights - alpha_R=%.4f, alpha_L=%.4f, alpha_T=%.4f, alpha_B=%.4f\n",
+    bool foundRatios = false;
+
+    std::printf("computeTk(%d): looking for ratios, g_doubleEdgeRatios has %zu entries\n",
+                k, g_doubleEdgeRatios.size());
+    for (const auto& der : g_doubleEdgeRatios) {
+        std::printf("  - stored entry: k=%d, T=%.4f, B=%.4f, L=%.4f, R=%.4f\n",
+                    der.k, der.ratio_top, der.ratio_bottom, der.ratio_left, der.ratio_right);
+        if (der.k == k) {
+            alpha_right = der.ratio_right;
+            alpha_left = der.ratio_left;
+            alpha_top = der.ratio_top;
+            alpha_bottom = der.ratio_bottom;
+            foundRatios = true;
+            break;
+        }
+    }
+    if (foundRatios) {
+        std::printf("computeTk(%d): using double edge ratios - alpha_R=%.4f, alpha_L=%.4f, alpha_T=%.4f, alpha_B=%.4f\n",
                     k, alpha_right, alpha_left, alpha_top, alpha_bottom);
     } else {
-        std::printf("computeTk(%d): WARNING - no stored weights found, using default 1.0\n", k);
+        std::printf("computeTk(%d): WARNING - no double edge ratios found for k=%d, using default 1.0\n", k, k);
     }
 
     TembLevel tk;
@@ -2689,12 +2828,12 @@ static void computeTk(int k) {
     // Right: (k, 0) uses alpha_right
     {
         double alphaR = alpha_right;
-        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alphaR *  Tprev[{k-1, 0}]) / (alphaR + 1.0);
+        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alphaR*  Tprev[{k-1, 0}]) / (alphaR + 1.0);
     }
     // Left: (-k, 0) uses alpha_left
     {
         double alphaL = alpha_left;
-        Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alphaL * Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
+        Tcurr[{-k, 0}] = ( Tprev[{-k, 0}] + alphaL * Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
     }
     // Top: (0, k) uses alpha_top
     {
