@@ -30,7 +30,7 @@
 // GLOBAL STATE
 // =============================================================================
 
-static int g_n = 4;           // Diamond size parameter (default n=4)
+static int g_n = 6;           // Diamond size parameter (default n=6)
 static double g_a = 1.0;      // Boundary parameter (computed or set)
 
 // Coefficients for T-embedding recurrence (Proposition from paper)
@@ -98,7 +98,7 @@ struct AztecEdge {
 };
 
 // Global Aztec graph storage
-static int g_aztecLevel = 6;  // Current graph level k (default n=6)
+static int g_aztecLevel = 4;  // Current graph level k (default n=4)
 static int g_aztecReductionStep = 0;  // 0=original, 1=gauge transformed, 2=degree-2 removed, 3=parallel merged
 static std::vector<AztecVertex> g_aztecVertices;
 static std::vector<AztecEdge> g_aztecEdges;
@@ -2694,12 +2694,12 @@ static void computeTk(int k) {
     // Left: (-k, 0) uses alpha_left
     {
         double alphaL = alpha_left;
-        Tcurr[{-k, 0}] = (alphaL * Tprev[{-k, 0}] + Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
+        Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alphaL * Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
     }
     // Top: (0, k) uses alpha_top
     {
         double alphaT = alpha_top;
-        Tcurr[{0, k}] = (alphaT * Tprev[{0, k}] + Tprev[{0, k-1}]) / (alphaT + 1.0);
+        Tcurr[{0, k}] = (Tprev[{0, k}] + alphaT * Tprev[{0, k-1}]) / (alphaT + 1.0);
     }
     // Bottom: (0, -k) uses alpha_bottom
     {
