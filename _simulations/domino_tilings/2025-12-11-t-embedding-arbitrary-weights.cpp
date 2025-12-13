@@ -2689,7 +2689,7 @@ static void computeTk(int k) {
     // Right: (k, 0) uses alpha_right
     {
         double alphaR = alpha_right;
-        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alphaR * Tprev[{k-1, 0}]) / (alphaR + 1.0);
+        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alphaR *  Tprev[{k-1, 0}]) / (alphaR + 1.0);
     }
     // Left: (-k, 0) uses alpha_left
     {
@@ -2837,7 +2837,90 @@ static void computeTk(int k) {
 // Verify T_k by checking face weight formula for all faces at level k:
 // X_f = (-1)^{d+1} * prod_{s=1}^{d} (T(center) - T(v_{2s-1})) / (T(v_{2s}) - T(center))
 // For degree-4 faces (d=2): X = -1 * (T_c - T_1)/(T_2 - T_c) * (T_c - T_3)/(T_4 - T_c)
-// Neighbors in CCW order: (i+1,j), (i,j+1), (i-1,j), (i,j-1)
+// IMPORTANT: Neighbors must be actual T_k graph neighbors, NOT grid neighbors!
+
+// Build T_k edge list
+static std::vector<std::pair<std::pair<int,int>, std::pair<int,int>>> buildTkEdges(int k) {
+    std::vector<std::pair<std::pair<int,int>, std::pair<int,int>>> edges;
+
+    // 1. Interior lattice edges: connect (i,j) to (i+1,j) and (i,j+1) when both have |i|+|j| <= k
+    for (int i = -k; i <= k; i++) {
+        for (int j = -k; j <= k; j++) {
+            int absSum = std::abs(i) + std::abs(j);
+            if (absSum > k) continue;
+
+            // Right neighbor
+            int ni = i + 1, nj = j;
+            int nAbsSum = std::abs(ni) + std::abs(nj);
+            if (nAbsSum <= k) {
+                edges.push_back({{i, j}, {ni, nj}});
+            }
+
+            // Top neighbor
+            ni = i; nj = j + 1;
+            nAbsSum = std::abs(ni) + std::abs(nj);
+            if (nAbsSum <= k) {
+                edges.push_back({{i, j}, {ni, nj}});
+            }
+        }
+    }
+
+    // 2. External corners to alpha vertices
+    edges.push_back({{k+1, 0}, {k, 0}});
+    edges.push_back({{-(k+1), 0}, {-k, 0}});
+    edges.push_back({{0, k+1}, {0, k}});
+    edges.push_back({{0, -(k+1)}, {0, -k}});
+
+    // 3. Boundary rhombus (connects external corners)
+    edges.push_back({{k+1, 0}, {0, k+1}});
+    edges.push_back({{0, k+1}, {-(k+1), 0}});
+    edges.push_back({{-(k+1), 0}, {0, -(k+1)}});
+    edges.push_back({{0, -(k+1)}, {k+1, 0}});
+
+    // 4. Diagonal boundary edges
+    for (int s = 0; s < k; s++) {
+        // Right-top: (k-s, s) - (k-s-1, s+1)
+        edges.push_back({{k-s, s}, {k-s-1, s+1}});
+        // Left-top: (-s, k-s) - (-(s+1), k-s-1)
+        edges.push_back({{-s, k-s}, {-(s+1), k-s-1}});
+        // Left-bottom: (-(k-s), -s) - (-(k-s-1), -(s+1))
+        edges.push_back({{-(k-s), -s}, {-(k-s-1), -(s+1)}});
+        // Right-bottom: (s, -(k-s)) - (s+1, -(k-s-1))
+        edges.push_back({{s, -(k-s)}, {s+1, -(k-s-1)}});
+    }
+
+    return edges;
+}
+
+// Get neighbors of vertex (i,j) in T_k graph, sorted CCW by angle in the T-embedded plane
+static std::vector<std::pair<int,int>> getTkNeighborsCCW(
+    int i, int j, int k,
+    const std::vector<std::pair<std::pair<int,int>, std::pair<int,int>>>& edges,
+    const std::map<std::pair<int,int>, std::complex<double>>& T
+) {
+    std::vector<std::pair<int,int>> neighbors;
+
+    // Find all neighbors from edge list
+    for (const auto& e : edges) {
+        if (e.first.first == i && e.first.second == j) {
+            neighbors.push_back(e.second);
+        } else if (e.second.first == i && e.second.second == j) {
+            neighbors.push_back(e.first);
+        }
+    }
+
+    // Sort by angle in the T-embedded plane (CCW from positive real axis)
+    std::complex<double> Tc = T.at({i, j});
+    std::sort(neighbors.begin(), neighbors.end(), [&](const std::pair<int,int>& a, const std::pair<int,int>& b) {
+        std::complex<double> Ta = T.at(a);
+        std::complex<double> Tb = T.at(b);
+        double angleA = std::arg(Ta - Tc);
+        double angleB = std::arg(Tb - Tc);
+        return angleA < angleB;
+    });
+
+    return neighbors;
+}
 
 static void verifyTk(int k) {
     // Find T_k level
@@ -2890,36 +2973,42 @@ static void verifyTk(int k) {
                     std::abs(computed.real() - expected));
     }
 
-    // For k >= 1, verify all faces at level k
+    // For k >= 1, verify all inner faces using ACTUAL T_k graph neighbors
     if (k >= 1) {
+        // Build T_k edge list
+        auto edges = buildTkEdges(k);
+
         int numChecked = 0;
         int numPassed = 0;
         double maxError = 0;
 
-        // Iterate over all possible face positions at level k
-        // Faces exist where all 4 neighbors exist in T_k
+        // Inner vertices: |i|+|j| <= k (not external corners)
         for (int fi = -k; fi <= k; fi++) {
             for (int fj = -k; fj <= k; fj++) {
-                // Check if all 4 neighbors exist
-                if (T.find({fi+1, fj}) == T.end()) continue;
-                if (T.find({fi, fj+1}) == T.end()) continue;
-                if (T.find({fi-1, fj}) == T.end()) continue;
-                if (T.find({fi, fj-1}) == T.end()) continue;
-                // Center must also exist
+                int absSum = std::abs(fi) + std::abs(fj);
+                if (absSum > k) continue;  // Skip external corners
                 if (T.find({fi, fj}) == T.end()) continue;
 
+                // Get actual neighbors in CCW order
+                auto neighbors = getTkNeighborsCCW(fi, fj, k, edges, T);
+
+                if (neighbors.size() != 4) {
+                    std::printf("  Face (%d,%d): SKIP - has %zu neighbors (expected 4)\n",
+                                fi, fj, neighbors.size());
+                    continue;
+                }
+
                 std::complex<double> Tc = T[{fi, fj}];
-                std::complex<double> T1 = T[{fi+1, fj}];
-                std::complex<double> T2 = T[{fi, fj+1}];
-                std::complex<double> T3 = T[{fi-1, fj}];
-                std::complex<double> T4 = T[{fi, fj-1}];
+                std::complex<double> T1 = T[neighbors[0]];
+                std::complex<double> T2 = T[neighbors[1]];
+                std::complex<double> T3 = T[neighbors[2]];
+                std::complex<double> T4 = T[neighbors[3]];
 
                 // X = -1 * (Tc - T1)/(T2 - Tc) * (Tc - T3)/(T4 - Tc)
                 std::complex<double> computed = -1.0 * (Tc - T1) / (T2 - Tc) * (Tc - T3) / (T4 - Tc);
 
                 // Look up expected weight
                 double expected = 1.0;
-                int absSum = std::abs(fi) + std::abs(fj);
                 if (storedWeights) {
                     if (absSum == k && fi == 0 && fj > 0) expected = storedWeights->alpha_top;
                     else if (absSum == k && fi == 0 && fj < 0) expected = storedWeights->alpha_bottom;
@@ -2940,10 +3029,15 @@ static void verifyTk(int k) {
                 numChecked++;
                 if (error < 1e-4) numPassed++;
 
-                if (error >= 1e-4) {
-                    std::printf("  Face (%d,%d): computed=%.6f, expected=%.6f, error=%.2e\n",
-                                fi, fj, computed.real(), expected, error);
-                }
+                // Print details for all vertices
+                std::printf("  Face (%d,%d): neighbors=[(%d,%d),(%d,%d),(%d,%d),(%d,%d)] computed=%.6f expected=%.6f %s\n",
+                            fi, fj,
+                            neighbors[0].first, neighbors[0].second,
+                            neighbors[1].first, neighbors[1].second,
+                            neighbors[2].first, neighbors[2].second,
+                            neighbors[3].first, neighbors[3].second,
+                            computed.real(), expected,
+                            error < 1e-4 ? "OK" : "FAIL");
             }
         }
 
