@@ -90,14 +90,14 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       <div style="flex: 1; min-width: 350px;">
         <div style="margin-bottom: 10px;">
           <button id="step-prev-btn" style="width: 30px;">&lt;</button>
-          <span style="margin: 0 10px;">m = <span id="step-value">1</span></span>
+          <span style="margin: 0 10px;">k = <span id="step-value">0</span></span>
           <button id="step-next-btn" style="width: 30px;">&gt;</button>
-          <span id="step-info" style="margin-left: 10px; color: #666;"></span>
+          <span id="step-info" style="margin-left: 10px; color: #666;">(T_0 graph)</span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk" checked> Labels</label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
-          <em>Click on a vertex to see its formula and dependencies</em>
+          <em>T_k from face weights (step through Aztec reduction first)</em>
         </div>
       </div>
     </div>
@@ -124,7 +124,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
-  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getTembeddingLevelJSON;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
 
@@ -184,9 +184,170 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     return {type: 'unknown', k, i, j};
   }
 
-  // Step-by-step state
-  let currentStep = 1;
-  let maxStep = 5;
+  // T-embedding from face weights state
+  let currentTembLevelData = null;  // Data from getTembeddingLevelJSON
+  let tembFromFaceWeightsK = -1;    // Current k level computed
+
+  // Check if face count corresponds to a checkpoint: numFaces = 2k² + 2k + 1
+  function faceCountToK(numFaces) {
+    for (let k = 0; k <= 20; k++) {
+      if (2*k*k + 2*k + 1 === numFaces) return k;
+    }
+    return -1;  // Not a checkpoint
+  }
+
+  // Render T-embedding level from face weights on stepwise canvas
+  function renderTembFromFaceWeights() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = stepwiseCanvas.getBoundingClientRect();
+    stepwiseCanvas.width = rect.width * dpr;
+    stepwiseCanvas.height = rect.height * dpr;
+    stepwiseCtx.scale(dpr, dpr);
+
+    stepwiseCtx.fillStyle = '#fafafa';
+    stepwiseCtx.fillRect(0, 0, rect.width, rect.height);
+
+    if (!currentTembLevelData || !currentTembLevelData.vertices || currentTembLevelData.vertices.length === 0) {
+      stepwiseCtx.fillStyle = '#666';
+      stepwiseCtx.font = '14px sans-serif';
+      stepwiseCtx.textAlign = 'center';
+      const msg = tembFromFaceWeightsK >= 0 ?
+        `T_${tembFromFaceWeightsK} not yet computed` :
+        'Not at a weight checkpoint';
+      stepwiseCtx.fillText(msg, rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    const vertices = currentTembLevelData.vertices;
+    const k = currentTembLevelData.k;
+
+    // Find bounds
+    let minRe = Infinity, maxRe = -Infinity;
+    let minIm = Infinity, maxIm = -Infinity;
+    for (const v of vertices) {
+      minRe = Math.min(minRe, v.re);
+      maxRe = Math.max(maxRe, v.re);
+      minIm = Math.min(minIm, v.im);
+      maxIm = Math.max(maxIm, v.im);
+    }
+
+    const rangeRe = maxRe - minRe || 1;
+    const rangeIm = maxIm - minIm || 1;
+    const centerRe = (minRe + maxRe) / 2;
+    const centerIm = (minIm + maxIm) / 2;
+
+    const padding = 60;
+    const scaleX = (rect.width - 2 * padding) / rangeRe;
+    const scaleY = (rect.height - 2 * padding) / rangeIm;
+    const baseScale = Math.min(scaleX, scaleY);
+    const scale = baseScale * stepwiseZoom;
+
+    const cx = rect.width / 2 + stepwisePanX * stepwiseZoom;
+    const cy = rect.height / 2 + stepwisePanY * stepwiseZoom;
+
+    stepwiseCtx.save();
+    stepwiseCtx.translate(cx, cy);
+
+    // Create vertex map by (i,j)
+    const vertexMap = {};
+    for (const v of vertices) {
+      vertexMap[`${v.i},${v.j}`] = v;
+    }
+
+    // Draw edges based on T_k structure
+    stepwiseCtx.strokeStyle = '#333';
+    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
+
+    function drawTembEdge(i1, j1, i2, j2) {
+      const v1 = vertexMap[`${i1},${j1}`];
+      const v2 = vertexMap[`${i2},${j2}`];
+      if (v1 && v2) {
+        stepwiseCtx.beginPath();
+        stepwiseCtx.moveTo((v1.re - centerRe) * scale, -(v1.im - centerIm) * scale);
+        stepwiseCtx.lineTo((v2.re - centerRe) * scale, -(v2.im - centerIm) * scale);
+        stepwiseCtx.stroke();
+      }
+    }
+
+    // For T_0: edges from center (0,0) to (±1,0) and (0,±1)
+    if (k === 0) {
+      drawTembEdge(0, 0, 1, 0);
+      drawTembEdge(0, 0, -1, 0);
+      drawTembEdge(0, 0, 0, 1);
+      drawTembEdge(0, 0, 0, -1);
+      // Boundary rhombus
+      stepwiseCtx.strokeStyle = '#666';
+      stepwiseCtx.lineWidth = Math.max(2, scale / 50);
+      drawTembEdge(1, 0, 0, 1);
+      drawTembEdge(0, 1, -1, 0);
+      drawTembEdge(-1, 0, 0, -1);
+      drawTembEdge(0, -1, 1, 0);
+    }
+
+    // Draw vertices
+    const vertexRadius = Math.max(4, scale / 40);
+    for (const v of vertices) {
+      const x = (v.re - centerRe) * scale;
+      const y = -(v.im - centerIm) * scale;  // Flip y for standard math orientation
+
+      stepwiseCtx.beginPath();
+      stepwiseCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
+      stepwiseCtx.fillStyle = (v.i === 0 && v.j === 0) ? '#ff0000' : '#000';
+      stepwiseCtx.fill();
+
+      // Label vertices
+      stepwiseCtx.fillStyle = '#333';
+      stepwiseCtx.font = `${Math.max(10, scale / 15)}px sans-serif`;
+      stepwiseCtx.textAlign = 'center';
+      stepwiseCtx.textBaseline = 'bottom';
+      const label = `(${v.i},${v.j})`;
+      stepwiseCtx.fillText(label, x, y - vertexRadius - 2);
+    }
+
+    stepwiseCtx.restore();
+
+    // Title
+    stepwiseCtx.fillStyle = '#333';
+    stepwiseCtx.font = '14px sans-serif';
+    stepwiseCtx.textAlign = 'left';
+    stepwiseCtx.fillText(`T_${k} from face weights`, 10, 20);
+  }
+
+  // Update T-embedding display based on current face count
+  function updateTembFromFaceWeights() {
+    if (!wasmReady || !getTembeddingLevelJSON) {
+      currentTembLevelData = null;
+      tembFromFaceWeightsK = -1;
+      renderTembFromFaceWeights();
+      return;
+    }
+
+    // Get face count from the current Aztec graph
+    let ptr = getAztecFacesJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let facesData = JSON.parse(jsonStr);
+    const numFaces = facesData.faces ? facesData.faces.length : 0;
+
+    const k = faceCountToK(numFaces);
+    tembFromFaceWeightsK = k;
+
+    if (k >= 0) {
+      // At a checkpoint - compute T_k
+      ptr = getTembeddingLevelJSON(k);
+      jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+      currentTembLevelData = JSON.parse(jsonStr);
+    } else {
+      currentTembLevelData = null;
+    }
+
+    renderTembFromFaceWeights();
+  }
+
+  // T-embedding k level state (for face weights based T_k)
+  let currentK = 0;
+  let maxK = 0;  // Updated based on stored face weights
 
   // Vertex selection state
   let selectedVertex = null;
@@ -944,6 +1105,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
       getAztecFacesJSON = Module.cwrap('getAztecFacesJSON', 'number', []);
       getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
+      getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
@@ -971,56 +1133,45 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     if (!wasmReady) return;
 
     const n = parseInt(document.getElementById('n-input').value) || 4;
-    setN(n);
-    computeTembedding();
 
-    let ptr = getTembeddingJSON();
-    let jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
-    tembData = JSON.parse(jsonStr);
+    // Initialize Aztec graph at level n
+    generateAztecGraph(n);
 
-    updateStepRange();
+    // Silently step down through all reduction steps to capture face weights
+    // This stores face weights at each checkpoint (k=0 is ROOT)
+    while (canAztecStepDown()) {
+      aztecGraphStepDown();
+    }
+
+    // Step back up to restore to original Aztec graph
+    while (canAztecStepUp()) {
+      aztecGraphStepUp();
+    }
+
+    // Display the original Aztec graph
+    refreshAztecFromCpp();
+
+    // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
+    maxK = Math.max(0, n - 2);
+
+    // Start at k=0
+    currentK = 0;
+    updateStepDisplay();
     renderStepwiseTemb();
   }
 
   function updateStepRange() {
-    if (!tembData || !tembData.tembHistory) return;
-    maxStep = tembData.tembHistory.length;
-    currentStep = Math.min(currentStep, maxStep);
-    updateStepDisplay();
+    // Legacy - not used anymore
   }
 
   function updateStepDisplay() {
-    document.getElementById('step-value').textContent = currentStep;
-    document.getElementById('step-prev-btn').disabled = (currentStep <= 1);
-    document.getElementById('step-next-btn').disabled = (currentStep >= maxStep);
-    document.getElementById('step-info').textContent = `(T_${currentStep} graph)`;
+    document.getElementById('step-value').textContent = currentK;
+    document.getElementById('step-prev-btn').disabled = (currentK <= 0);
+    document.getElementById('step-next-btn').disabled = (currentK >= maxK);
+    document.getElementById('step-info').textContent = `(T_${currentK} graph)`;
   }
 
   function renderStepwiseTemb() {
-    if (!tembData || !tembData.tembHistory) {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = stepwiseCanvas.getBoundingClientRect();
-      stepwiseCanvas.width = rect.width * dpr;
-      stepwiseCanvas.height = rect.height * dpr;
-      stepwiseCtx.scale(dpr, dpr);
-      stepwiseCtx.fillStyle = '#fafafa';
-      stepwiseCtx.fillRect(0, 0, rect.width, rect.height);
-      stepwiseCtx.fillStyle = '#666';
-      stepwiseCtx.font = '14px sans-serif';
-      stepwiseCtx.textAlign = 'center';
-      stepwiseCtx.fillText('Click "Compute T-embedding" to start', rect.width / 2, rect.height / 2);
-      return;
-    }
-
-    const level = currentStep;
-    const levelIdx = level - 1;
-
-    if (levelIdx < 0 || levelIdx >= tembData.tembHistory.length) return;
-
-    const levelData = tembData.tembHistory[levelIdx];
-    if (!levelData || !levelData.vertices || levelData.vertices.length === 0) return;
-
     const dpr = window.devicePixelRatio || 1;
     const rect = stepwiseCanvas.getBoundingClientRect();
     stepwiseCanvas.width = rect.width * dpr;
@@ -1030,26 +1181,49 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     stepwiseCtx.fillStyle = '#fafafa';
     stepwiseCtx.fillRect(0, 0, rect.width, rect.height);
 
-    // Use final level bounds for consistent view
-    let minReal = Infinity, maxReal = -Infinity;
-    let minImag = Infinity, maxImag = -Infinity;
-
-    const finalLevel = tembData.tembHistory[tembData.tembHistory.length - 1];
-    for (const v of finalLevel.vertices) {
-      minReal = Math.min(minReal, v.tReal);
-      maxReal = Math.max(maxReal, v.tReal);
-      minImag = Math.min(minImag, v.tImag);
-      maxImag = Math.max(maxImag, v.tImag);
+    // Get T_k from face weights
+    if (!wasmReady || !getTembeddingLevelJSON) {
+      stepwiseCtx.fillStyle = '#666';
+      stepwiseCtx.font = '14px sans-serif';
+      stepwiseCtx.textAlign = 'center';
+      stepwiseCtx.fillText('Loading...', rect.width / 2, rect.height / 2);
+      return;
     }
 
-    const rangeReal = maxReal - minReal || 1;
-    const rangeImag = maxImag - minImag || 1;
-    const centerReal = (minReal + maxReal) / 2;
-    const centerImag = (minImag + maxImag) / 2;
+    let ptr = getTembeddingLevelJSON(currentK);
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    const tembLevel = JSON.parse(jsonStr);
 
-    const padding = 40;
-    const scaleX = (rect.width - 2 * padding) / rangeReal;
-    const scaleY = (rect.height - 2 * padding) / rangeImag;
+    if (!tembLevel || !tembLevel.vertices || tembLevel.vertices.length === 0) {
+      stepwiseCtx.fillStyle = '#666';
+      stepwiseCtx.font = '14px sans-serif';
+      stepwiseCtx.textAlign = 'center';
+      stepwiseCtx.fillText(`T_${currentK} not computed yet`, rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    const vertices = tembLevel.vertices;
+    const k = tembLevel.k;
+
+    // Find bounds
+    let minRe = Infinity, maxRe = -Infinity;
+    let minIm = Infinity, maxIm = -Infinity;
+    for (const v of vertices) {
+      minRe = Math.min(minRe, v.re);
+      maxRe = Math.max(maxRe, v.re);
+      minIm = Math.min(minIm, v.im);
+      maxIm = Math.max(maxIm, v.im);
+    }
+
+    const rangeRe = maxRe - minRe || 1;
+    const rangeIm = maxIm - minIm || 1;
+    const centerRe = (minRe + maxRe) / 2;
+    const centerIm = (minIm + maxIm) / 2;
+
+    const padding = 60;
+    const scaleX = (rect.width - 2 * padding) / rangeRe;
+    const scaleY = (rect.height - 2 * padding) / rangeIm;
     const baseScale = Math.min(scaleX, scaleY);
     const scale = baseScale * stepwiseZoom;
 
@@ -1059,122 +1233,73 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     stepwiseCtx.save();
     stepwiseCtx.translate(cx, cy);
 
-    // Create vertex map
+    // Create vertex map by (i,j)
     const vertexMap = {};
-    for (const v of levelData.vertices) {
-      vertexMap[v.key] = v;
+    for (const v of vertices) {
+      vertexMap[`${v.i},${v.j}`] = v;
     }
 
-    const m = level;
-
-    // Draw edges
+    // Draw edges based on T_k structure
     stepwiseCtx.strokeStyle = '#333';
-    stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
+    stepwiseCtx.lineWidth = Math.max(1, scale / 80);
 
-    function drawEdge(key1, key2) {
-      const v1 = vertexMap[key1];
-      const v2 = vertexMap[key2];
+    function drawTembEdge(i1, j1, i2, j2) {
+      const v1 = vertexMap[`${i1},${j1}`];
+      const v2 = vertexMap[`${i2},${j2}`];
       if (v1 && v2) {
         stepwiseCtx.beginPath();
-        stepwiseCtx.moveTo((v1.tReal - centerReal) * scale, (v1.tImag - centerImag) * scale);
-        stepwiseCtx.lineTo((v2.tReal - centerReal) * scale, (v2.tImag - centerImag) * scale);
+        stepwiseCtx.moveTo((v1.re - centerRe) * scale, -(v1.im - centerIm) * scale);
+        stepwiseCtx.lineTo((v2.re - centerRe) * scale, -(v2.im - centerIm) * scale);
         stepwiseCtx.stroke();
       }
     }
 
-    // Interior edges
-    for (let i = -(m-1); i <= m-1; i++) {
-      for (let j = -(m-1); j <= m-1; j++) {
-        if (Math.abs(i) + Math.abs(j) >= m) continue;
-        if (Math.abs(i+1) + Math.abs(j) < m) drawEdge(`${i},${j}`, `${i+1},${j}`);
-        if (Math.abs(i) + Math.abs(j+1) < m) drawEdge(`${i},${j}`, `${i},${j+1}`);
-      }
-    }
-
-    // Exterior rhombus
-    stepwiseCtx.lineWidth = Math.max(1, scale / 100);
-    drawEdge(`${-m},0`, `0,${m}`);
-    drawEdge(`0,${m}`, `${m},0`);
-    drawEdge(`${m},0`, `0,${-m}`);
-    drawEdge(`0,${-m}`, `${-m},0`);
-
-    // Corner-to-axis edges
-    stepwiseCtx.lineWidth = Math.max(0.5, scale / 150);
-    drawEdge(`${m},0`, `${m-1},0`);
-    drawEdge(`${-m},0`, `${-m+1},0`);
-    drawEdge(`0,${m}`, `0,${m-1}`);
-    drawEdge(`0,${-m}`, `0,${-m+1}`);
-
-    // Exterior face diagonal edges
-    if (m > 1) {
-      for (let k = 0; k < m-1; k++) {
-        drawEdge(`${m-1-k},${k}`, `${m-2-k},${k+1}`);
-        drawEdge(`${-k},${m-1-k}`, `${-k-1},${m-2-k}`);
-        drawEdge(`${-m+1+k},${-k}`, `${-m+2+k},${-k-1}`);
-        drawEdge(`${k},${-m+1+k}`, `${k+1},${-m+2+k}`);
-      }
+    // For T_0: edges from center (0,0) to (±1,0) and (0,±1)
+    if (k === 0) {
+      drawTembEdge(0, 0, 1, 0);
+      drawTembEdge(0, 0, -1, 0);
+      drawTembEdge(0, 0, 0, 1);
+      drawTembEdge(0, 0, 0, -1);
+      // Boundary rhombus
+      stepwiseCtx.strokeStyle = '#666';
+      stepwiseCtx.lineWidth = Math.max(2, scale / 50);
+      drawTembEdge(1, 0, 0, 1);
+      drawTembEdge(0, 1, -1, 0);
+      drawTembEdge(-1, 0, 0, -1);
+      drawTembEdge(0, -1, 1, 0);
     }
 
     // Draw vertices
-    const vertexRadius = Math.max(3, scale / 100);
+    const vertexRadius = Math.max(4, scale / 40);
     const showLabels = document.getElementById('show-labels-chk').checked;
-    vertexScreenPositions = [];
 
-    for (const v of levelData.vertices) {
-      const x = (v.tReal - centerReal) * scale;
-      const y = (v.tImag - centerImag) * scale;
-
-      vertexScreenPositions.push({
-        key: v.key,
-        screenX: x + cx,
-        screenY: y + cy,
-        vertex: v
-      });
-
-      const vertexKey = `T${level}(${v.x},${v.y})`;
-      const isSelected = (selectedVertex === v.key);
-      const isDep = highlightedDeps.has(vertexKey);
+    for (const v of vertices) {
+      const x = (v.re - centerRe) * scale;
+      const y = -(v.im - centerIm) * scale;  // Flip y for standard math orientation
 
       stepwiseCtx.beginPath();
-      stepwiseCtx.arc(x, y, isSelected ? vertexRadius * 1.5 : vertexRadius, 0, Math.PI * 2);
-
-      if (isSelected) {
-        stepwiseCtx.fillStyle = '#ff0000';
-      } else if (isDep) {
-        stepwiseCtx.fillStyle = '#0066ff';
-      } else {
-        stepwiseCtx.fillStyle = '#000';
-      }
+      stepwiseCtx.arc(x, y, vertexRadius, 0, Math.PI * 2);
+      stepwiseCtx.fillStyle = (v.i === 0 && v.j === 0) ? '#ff0000' : '#000';
       stepwiseCtx.fill();
 
-      if (isSelected || isDep) {
-        stepwiseCtx.strokeStyle = isSelected ? '#cc0000' : '#0044cc';
-        stepwiseCtx.lineWidth = 2;
-        stepwiseCtx.stroke();
-      }
-
-      // Draw labels only for valid T_m vertices
+      // Label vertices
       if (showLabels) {
-        const absSum = Math.abs(v.x) + Math.abs(v.y);
-        const isInterior = absSum < m;
-        const isCorner = (absSum === m) && (v.x === 0 || v.y === 0);
-        if (isInterior || isCorner) {
-          const fontSize = Math.max(8, Math.min(11, scale / 80));
-          stepwiseCtx.font = `${fontSize}px sans-serif`;
-          stepwiseCtx.fillStyle = isSelected ? '#cc0000' : (isDep ? '#0044cc' : '#333');
-          stepwiseCtx.textAlign = 'center';
-          stepwiseCtx.textBaseline = 'bottom';
-          stepwiseCtx.fillText(`T(${v.x},${v.y})`, x, y - vertexRadius - 2);
-        }
+        stepwiseCtx.fillStyle = '#333';
+        stepwiseCtx.font = `${Math.max(10, scale / 15)}px sans-serif`;
+        stepwiseCtx.textAlign = 'center';
+        stepwiseCtx.textBaseline = 'bottom';
+        const label = `(${v.i},${v.j})`;
+        stepwiseCtx.fillText(label, x, y - vertexRadius - 2);
       }
     }
 
     stepwiseCtx.restore();
 
-    // Draw level info
+    // Title
     stepwiseCtx.fillStyle = '#333';
-    stepwiseCtx.font = '11px sans-serif';
-    stepwiseCtx.fillText(`Level m=${level}, a=${tembData.a.toFixed(3)}, ${levelData.vertices.length} vertices`, 10, 15);
+    stepwiseCtx.font = '12px sans-serif';
+    stepwiseCtx.textAlign = 'left';
+    stepwiseCtx.fillText(`T_${k}: ${vertices.length} vertices`, 10, 18);
   }
 
   function getVertexFormulaHTML(v, level) {
@@ -1200,44 +1325,9 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   }
 
   function handleStepwiseCanvasClick(e) {
-    const rect = stepwiseCanvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const clickX = (e.clientX - rect.left) * dpr;
-    const clickY = (e.clientY - rect.top) * dpr;
-
-    const threshold = 15 * dpr;
-    let closestVertex = null;
-    let closestDist = Infinity;
-    const m = currentStep;
-
-    for (const vp of vertexScreenPositions) {
-      const absSum = Math.abs(vp.vertex.x) + Math.abs(vp.vertex.y);
-      const isInterior = absSum < m;
-      const isCorner = (absSum === m) && (vp.vertex.x === 0 || vp.vertex.y === 0);
-      if (!isInterior && !isCorner) continue;
-
-      const dx = clickX - vp.screenX * dpr;
-      const dy = clickY - vp.screenY * dpr;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < threshold && dist < closestDist) {
-        closestDist = dist;
-        closestVertex = vp;
-      }
-    }
-
+    // Simplified click handler for T_k from face weights
     const vertexInfoDiv = document.getElementById('vertex-info');
-
-    if (closestVertex) {
-      selectedVertex = closestVertex.key;
-      highlightedDeps = new Set(closestVertex.vertex.deps || []);
-      vertexInfoDiv.innerHTML = getVertexFormulaHTML(closestVertex.vertex, currentStep);
-    } else {
-      selectedVertex = null;
-      highlightedDeps.clear();
-      vertexInfoDiv.innerHTML = '<em>Click on a vertex to see its formula and dependencies</em>';
-    }
-
-    renderStepwiseTemb();
+    vertexInfoDiv.innerHTML = `<em>T_${currentK} from face weights (vertices: ${4 + 2*currentK*currentK + 2*currentK + 1})</em>`;
   }
 
   // ========== EVENT LISTENERS ==========
@@ -1265,16 +1355,16 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // T-embedding step buttons
   document.getElementById('step-prev-btn').addEventListener('click', () => {
-    if (currentStep > 1) {
-      currentStep--;
+    if (currentK > 0) {
+      currentK--;
       updateStepDisplay();
       renderStepwiseTemb();
     }
   });
 
   document.getElementById('step-next-btn').addEventListener('click', () => {
-    if (currentStep < maxStep) {
-      currentStep++;
+    if (currentK < maxK) {
+      currentK++;
       updateStepDisplay();
       renderStepwiseTemb();
     }

@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -502,8 +502,10 @@ static double randomWeight() {
     return 0.5 + steps * 0.1;  // 0.5 to 2.0 in steps of 0.1
 }
 
-// Forward declaration for stored weights (defined later in face detection section)
+// Forward declarations for face detection and weight storage (defined later)
 static void clearStoredWeights();
+static void computeFaces();
+static void tryCaptureFaceWeights();
 
 // Generate Aztec diamond graph for level k
 // Vertices at half-integer coordinates (i+0.5, j+0.5) where |x| + |y| <= k + 0.5
@@ -2239,6 +2241,10 @@ static void aztecStepDown() {
         case 11: aztecStep12_StartNextIteration(); break;
         default: break;  // Already fully reduced
     }
+
+    // After each step, compute faces and try to capture face weights at checkpoints
+    computeFaces();
+    tryCaptureFaceWeights();
 }
 
 // Step up: restore previous state
@@ -2350,6 +2356,163 @@ static void tryCaptureFaceWeights() {
     if (k >= 0 && !g_capturedKValues.count(k)) {
         storeFaceWeightsForK(k);
     }
+}
+
+// =============================================================================
+// T-EMBEDDING COMPUTATION (using stored face weights)
+// =============================================================================
+
+struct TembVertex {
+    int i, j;           // Integer indices
+    double re, im;      // Complex coordinates T(i,j) = re + i*im
+};
+
+struct TembLevel {
+    int k;                          // Generation level
+    std::vector<TembVertex> vertices;
+};
+
+static std::vector<TembLevel> g_tembLevels;
+
+// Compute T_0 using ROOT weight
+// T_0(0,0) = 0
+// T_0(1,0) = 1, T_0(-1,0) = -1
+// T_0(0,1) = i/sqrt(X_ROOT), T_0(0,-1) = -i/sqrt(X_ROOT)
+static void computeT0() {
+    // Find k=0 stored weights
+    double rootWeight = 1.0;
+    for (const auto& sw : g_storedWeights) {
+        if (sw.k == 0) {
+            rootWeight = sw.root;
+            break;
+        }
+    }
+
+    TembLevel t0;
+    t0.k = 0;
+
+    // Center vertex
+    t0.vertices.push_back({0, 0, 0.0, 0.0});
+
+    // Boundary vertices on real axis
+    t0.vertices.push_back({1, 0, 1.0, 0.0});
+    t0.vertices.push_back({-1, 0, -1.0, 0.0});
+
+    // Boundary vertices on imaginary axis: i/sqrt(X_ROOT)
+    double invSqrtRoot = 1.0 / std::sqrt(rootWeight);
+    t0.vertices.push_back({0, 1, 0.0, invSqrtRoot});
+    t0.vertices.push_back({0, -1, 0.0, -invSqrtRoot});
+
+    // Store or update T_0
+    bool found = false;
+    for (auto& level : g_tembLevels) {
+        if (level.k == 0) {
+            level = t0;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        g_tembLevels.push_back(t0);
+    }
+}
+
+// Verify T-embedding weight condition for T_0
+// Formula: X_f = (-1)^{d+1} * prod_{k=1}^{d} (T(v*) - T(v*_{2k-1})) / (T(v*_{2k}) - T(v*))
+// For ROOT face with 4 neighbors (d=2), T(0,0)=0:
+// X_ROOT = (-1)^3 * (0 - T(1,0))/(T(0,1) - 0) * (0 - T(-1,0))/(T(0,-1) - 0)
+static void verifyT0() {
+    // Find T_0 level
+    const TembLevel* t0 = nullptr;
+    for (const auto& l : g_tembLevels) {
+        if (l.k == 0) {
+            t0 = &l;
+            break;
+        }
+    }
+    if (!t0 || t0->vertices.size() < 5) {
+        std::printf("verifyT0: T_0 not computed yet\n");
+        return;
+    }
+
+    // Find vertices by index
+    std::complex<double> T00(0, 0), T10(0, 0), Tm10(0, 0), T01(0, 0), T0m1(0, 0);
+    for (const auto& v : t0->vertices) {
+        std::complex<double> z(v.re, v.im);
+        if (v.i == 0 && v.j == 0) T00 = z;
+        else if (v.i == 1 && v.j == 0) T10 = z;
+        else if (v.i == -1 && v.j == 0) Tm10 = z;
+        else if (v.i == 0 && v.j == 1) T01 = z;
+        else if (v.i == 0 && v.j == -1) T0m1 = z;
+    }
+
+    // Compute weight from T-embedding
+    // Neighbors in CCW order: (1,0), (0,1), (-1,0), (0,-1)
+    // v*_1 = T(1,0), v*_2 = T(0,1), v*_3 = T(-1,0), v*_4 = T(0,-1)
+    // X = (-1)^3 * (T00 - T10)/(T01 - T00) * (T00 - Tm10)/(T0m1 - T00)
+    std::complex<double> term1 = (T00 - T10) / (T01 - T00);
+    std::complex<double> term2 = (T00 - Tm10) / (T0m1 - T00);
+    std::complex<double> computed = -1.0 * term1 * term2;  // (-1)^3 = -1
+
+    // Get expected ROOT weight
+    double expectedWeight = 1.0;
+    for (const auto& sw : g_storedWeights) {
+        if (sw.k == 0) {
+            expectedWeight = sw.root;
+            break;
+        }
+    }
+
+    std::printf("=== T_0 Verification ===\n");
+    std::printf("T_0(0,0) = %.6f + %.6fi\n", T00.real(), T00.imag());
+    std::printf("T_0(1,0) = %.6f + %.6fi\n", T10.real(), T10.imag());
+    std::printf("T_0(-1,0) = %.6f + %.6fi\n", Tm10.real(), Tm10.imag());
+    std::printf("T_0(0,1) = %.6f + %.6fi\n", T01.real(), T01.imag());
+    std::printf("T_0(0,-1) = %.6f + %.6fi\n", T0m1.real(), T0m1.imag());
+    std::printf("Computed X_ROOT from T-embedding: %.10f + %.10fi\n", computed.real(), computed.imag());
+    std::printf("Expected X_ROOT (stored): %.10f\n", expectedWeight);
+    std::printf("Match: %s (diff = %.2e)\n",
+                std::abs(computed.real() - expectedWeight) < 1e-6 ? "YES" : "NO",
+                std::abs(computed.real() - expectedWeight));
+    std::printf("========================\n");
+}
+
+// Get T-embedding JSON for a specific level
+static std::string getTembLevelJSON(int k) {
+    // Ensure T_0 is computed if k=0 requested
+    if (k == 0) {
+        computeT0();
+        verifyT0();  // Output verification to console
+    }
+
+    std::ostringstream oss;
+    oss << std::setprecision(10);
+    oss << "{\"k\":" << k;
+
+    // Find the level
+    const TembLevel* level = nullptr;
+    for (const auto& l : g_tembLevels) {
+        if (l.k == k) {
+            level = &l;
+            break;
+        }
+    }
+
+    if (level) {
+        oss << ",\"vertices\":[";
+        for (size_t i = 0; i < level->vertices.size(); i++) {
+            if (i > 0) oss << ",";
+            const auto& v = level->vertices[i];
+            oss << "{\"i\":" << v.i << ",\"j\":" << v.j
+                << ",\"re\":" << v.re << ",\"im\":" << v.im << "}";
+        }
+        oss << "]";
+    } else {
+        oss << ",\"vertices\":[]";
+    }
+
+    oss << "}";
+    return oss.str();
 }
 
 // Find the edge connecting two vertices (returns edge index or -1)
@@ -2827,6 +2990,14 @@ char* getAztecFacesJSON() {
 EMSCRIPTEN_KEEPALIVE
 char* getStoredFaceWeightsJSON() {
     std::string result = getStoredWeightsJSON();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getTembeddingLevelJSON(int k) {
+    std::string result = getTembLevelJSON(k);
     char* out = (char*)std::malloc(result.size() + 1);
     std::strcpy(out, result.c_str());
     return out;
