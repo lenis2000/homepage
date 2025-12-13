@@ -85,6 +85,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <em>Click on a vertex to see its coordinates</em>
         </div>
         <div style="margin-top: 5px; position: relative;">
+          <button id="recompute-face-weights-btn" style="position: absolute; top: 2px; right: 42px; font-size: 10px; padding: 2px 6px;">Recompute</button>
           <button id="copy-face-weights-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
           <div id="face-weights-output" style="padding: 8px; background: #fff8e8; border: 1px solid #d4a017; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
             <em>Face weights will appear here after reduction</em>
@@ -113,6 +114,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <em>T_k from face weights (step through Aztec reduction first)</em>
         </div>
         <div style="margin-top: 5px; position: relative;">
+          <button id="recompute-mathematica-btn" style="position: absolute; top: 2px; right: 42px; font-size: 10px; padding: 2px 6px;">Recompute</button>
           <button id="copy-mathematica-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
           <div id="mathematica-output" style="padding: 8px; background: #f5f5f5; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
             <em>Mathematica output will appear here</em>
@@ -1997,6 +1999,22 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   });
   document.getElementById('copy-beta-btn').addEventListener('click', function() {
     copyToClipboard('beta-output', this);
+  });
+
+  // Recompute buttons
+  document.getElementById('recompute-face-weights-btn').addEventListener('click', function() {
+    updateFaceWeightsOutput();
+    this.textContent = 'Done!';
+    setTimeout(() => { this.textContent = 'Recompute'; }, 1000);
+  });
+  document.getElementById('recompute-mathematica-btn').addEventListener('click', function() {
+    clearTembLevels();  // Clear T-embedding cache to force recomputation
+    renderStepwiseTemb();  // Recompute T from stored face weights
+    updateMathematicaOutput();
+    updateBetaOutput();
+    updateVerifyOutput();
+    this.textContent = 'Done!';
+    setTimeout(() => { this.textContent = 'Recompute'; }, 1000);
   });
 
   // Beta swap checkboxes - recompute T-embedding when changed
