@@ -102,18 +102,6 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <span id="step-info" style="margin-left: 10px; color: #666;">(T_0 graph)</span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
         </div>
-        <div style="margin-bottom: 8px; padding: 5px; background: #fffef0; border: 1px solid #d4a017; border-radius: 3px;">
-          <span style="font-size: 12px; font-weight: bold;">β position swap:</span>
-          <label style="margin-left: 10px; font-size: 12px;"><input type="checkbox" id="beta-swap-ur"> UR</label>
-          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-lr"> LR</label>
-          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-ul" checked> UL</label>
-          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-ll" checked> LL</label>
-        </div>
-        <div style="margin-bottom: 8px; padding: 5px; background: #f0fff0; border: 1px solid #4a7; border-radius: 3px;">
-          <span style="font-size: 12px; font-weight: bold;">Invert for even k:</span>
-          <label style="margin-left: 10px; font-size: 12px;"><input type="checkbox" id="invert-alpha-even"> 1/α</label>
-          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="invert-beta-even"> 1/β</label>
-        </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
           <em>T_k from face weights (step through Aztec reduction first)</em>
@@ -165,7 +153,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getTembDebugOutput;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
-  let setBetaSwaps, setInvertFlags, clearTembLevels;
+  let clearTembLevels;
 
   // Classify face type based on centroid coordinates and current face count
   // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
@@ -1196,24 +1184,10 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getAztecReductionStep = Module.cwrap('getAztecReductionStep', 'number', []);
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
-      setBetaSwaps = Module.cwrap('setBetaSwaps', null, ['number', 'number', 'number', 'number']);
-      setInvertFlags = Module.cwrap('setInvertFlags', null, ['number', 'number']);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
 
       wasmReady = true;
       loadingMsg.style.display = 'none';
-
-      // Set initial beta swaps from checkbox states
-      const urInit = document.getElementById('beta-swap-ur').checked ? 1 : 0;
-      const lrInit = document.getElementById('beta-swap-lr').checked ? 1 : 0;
-      const ulInit = document.getElementById('beta-swap-ul').checked ? 1 : 0;
-      const llInit = document.getElementById('beta-swap-ll').checked ? 1 : 0;
-      setBetaSwaps(urInit, lrInit, ulInit, llInit);
-
-      // Set initial invert flags from checkbox states
-      const invertAlphaInit = document.getElementById('invert-alpha-even').checked ? 1 : 0;
-      const invertBetaInit = document.getElementById('invert-beta-even').checked ? 1 : 0;
-      setInvertFlags(invertAlphaInit, invertBetaInit);
 
       // Auto-compute on load with randomized weights
       const n = parseInt(document.getElementById('n-input').value) || 15;
@@ -2031,38 +2005,6 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     this.textContent = 'Done!';
     setTimeout(() => { this.textContent = 'Recompute'; }, 1000);
   });
-
-  // Beta swap checkboxes - recompute T-embedding when changed
-  function onBetaSwapChange() {
-    if (!wasmReady) return;
-    const ur = document.getElementById('beta-swap-ur').checked ? 1 : 0;
-    const lr = document.getElementById('beta-swap-lr').checked ? 1 : 0;
-    const ul = document.getElementById('beta-swap-ul').checked ? 1 : 0;
-    const ll = document.getElementById('beta-swap-ll').checked ? 1 : 0;
-    setBetaSwaps(ur, lr, ul, ll);
-    clearTembLevels();  // Clear cache to force recomputation
-    renderStepwiseTemb();  // Re-render with new computation
-    updateMathematicaOutput();
-    updateVerifyOutput();
-  }
-  document.getElementById('beta-swap-ur').addEventListener('change', onBetaSwapChange);
-  document.getElementById('beta-swap-lr').addEventListener('change', onBetaSwapChange);
-  document.getElementById('beta-swap-ul').addEventListener('change', onBetaSwapChange);
-  document.getElementById('beta-swap-ll').addEventListener('change', onBetaSwapChange);
-
-  // Invert flags checkboxes - recompute T-embedding when changed
-  function onInvertFlagsChange() {
-    if (!wasmReady) return;
-    const invertAlpha = document.getElementById('invert-alpha-even').checked ? 1 : 0;
-    const invertBeta = document.getElementById('invert-beta-even').checked ? 1 : 0;
-    setInvertFlags(invertAlpha, invertBeta);
-    clearTembLevels();  // Clear cache to force recomputation
-    renderStepwiseTemb();  // Re-render with new computation
-    updateMathematicaOutput();
-    updateVerifyOutput();
-  }
-  document.getElementById('invert-alpha-even').addEventListener('change', onInvertFlagsChange);
-  document.getElementById('invert-beta-even').addEventListener('change', onInvertFlagsChange);
 
   // Resize handler
   window.addEventListener('resize', () => {

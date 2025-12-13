@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_setBetaSwaps','_setInvertFlags','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -151,17 +151,11 @@ static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 // Debug output for T-embedding computation
 static std::string g_tembDebugOutput;
 
-// Beta position swap flags for T-embedding recurrence
-// When true, swap which term beta multiplies in the corresponding quadrant
-static bool g_betaSwapUR = false;  // Upper-right quadrant
-static bool g_betaSwapLR = false;  // Lower-right quadrant
-static bool g_betaSwapUL = false;  // Upper-left quadrant
-static bool g_betaSwapLL = false;  // Lower-left quadrant
-
-// Invert flags for parity-dependent alpha/beta
-// When true, use 1/alpha or 1/beta for transitions k-1 → k where k is even
-static bool g_invertAlphaEvenK = false;
-static bool g_invertBetaEvenK = false;
+// Beta position swap flags for T-embedding recurrence (hard-coded working config)
+static const bool g_betaSwapUR = false;  // Upper-right quadrant
+static const bool g_betaSwapLR = false;  // Lower-right quadrant
+static const bool g_betaSwapUL = true;   // Upper-left quadrant (swapped)
+static const bool g_betaSwapLL = true;   // Lower-left quadrant (swapped)
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -179,33 +173,23 @@ static std::string makeDepKey(int level, int j, int k) {
     return ss.str();
 }
 
-// Get α_n coefficient (applies inversion for even n if flag set)
+// Get α_n coefficient
 static double getAlpha(int n) {
-    double alpha = 1.0;  // default
     if (n >= 1 && n < (int)g_alpha.size()) {
-        alpha = g_alpha[n];
+        return g_alpha[n];
     }
-    // Apply inversion for even n if flag is set
-    if (g_invertAlphaEvenK && (n % 2 == 0) && alpha != 0) {
-        alpha = 1.0 / alpha;
-    }
-    return alpha;
+    return 1.0;  // default
 }
 
-// Get β_{j,n} coefficient (applies inversion for even n if flag set)
+// Get β_{j,n} coefficient
 static double getBeta(int j, int n) {
-    double beta = 1.0;  // default
     if (n >= 1 && n < (int)g_beta.size()) {
         auto it = g_beta[n].find(j);
         if (it != g_beta[n].end()) {
-            beta = it->second;
+            return it->second;
         }
     }
-    // Apply inversion for even n if flag is set
-    if (g_invertBetaEvenK && (n % 2 == 0) && beta != 0) {
-        beta = 1.0 / beta;
-    }
-    return beta;
+    return 1.0;  // default
 }
 
 // Get γ_{j,k,n} coefficient
@@ -2251,9 +2235,6 @@ static void aztecStep11_CombineDoubleEdges() {
 
         if (foundAnyAlpha) {
             g_doubleEdgeRatios.push_back(ratios);
-            std::printf("Captured alpha ratios for k=%d: R=%g L=%g T=%g B=%g\n",
-                ratios.k, (double)ratios.ratio_right, (double)ratios.ratio_left,
-                (double)ratios.ratio_top, (double)ratios.ratio_bottom);
         }
     }
 
@@ -2919,22 +2900,6 @@ static void computeTk(int k) {
         }
     }
 
-    // Debug: print alpha values and invert flag status
-    std::printf("computeTk(k=%d): flag=%d, k%%2=%d, alphas: R=%g L=%g T=%g B=%g\n",
-        k, (int)g_invertAlphaEvenK, k % 2,
-        (double)alpha_right, (double)alpha_left, (double)alpha_top, (double)alpha_bottom);
-
-    // Apply alpha inversion for even k if flag is set
-    if (g_invertAlphaEvenK && (k % 2 == 0)) {
-        std::printf("  -> INVERTING alphas for k=%d\n", k);
-        if (alpha_right != 0) alpha_right = mp_real(1) / alpha_right;
-        if (alpha_left != 0) alpha_left = mp_real(1) / alpha_left;
-        if (alpha_top != 0) alpha_top = mp_real(1) / alpha_top;
-        if (alpha_bottom != 0) alpha_bottom = mp_real(1) / alpha_bottom;
-        std::printf("  -> After inversion: R=%g L=%g T=%g B=%g\n",
-            (double)alpha_right, (double)alpha_left, (double)alpha_top, (double)alpha_bottom);
-    }
-
     TembLevel tk;
     tk.k = k;
 
@@ -3020,11 +2985,6 @@ static void computeTk(int k) {
             if (it != storedWeights->beta.end() && it->second > 0) {
                 beta = it->second;
             }
-        }
-
-        // Apply beta inversion for even k if flag is set
-        if (g_invertBetaEvenK && (k % 2 == 0) && beta != 0) {
-            beta = mp_real(1) / beta;
         }
 
         return beta;
@@ -3672,20 +3632,6 @@ static std::string getAztecGraphJSONInternal() {
 // =============================================================================
 
 extern "C" {
-
-EMSCRIPTEN_KEEPALIVE
-void setBetaSwaps(int ur, int lr, int ul, int ll) {
-    g_betaSwapUR = (ur != 0);
-    g_betaSwapLR = (lr != 0);
-    g_betaSwapUL = (ul != 0);
-    g_betaSwapLL = (ll != 0);
-}
-
-EMSCRIPTEN_KEEPALIVE
-void setInvertFlags(int invertAlphaEven, int invertBetaEven) {
-    g_invertAlphaEvenK = (invertAlphaEven != 0);
-    g_invertBetaEvenK = (invertBetaEven != 0);
-}
 
 EMSCRIPTEN_KEEPALIVE
 void clearTembLevels() {
