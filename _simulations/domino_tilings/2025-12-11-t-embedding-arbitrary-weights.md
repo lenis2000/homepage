@@ -49,6 +49,54 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
 $$X_{v^*}:=\prod_{s=1}^d\frac{\chi_{b_s w_s}}{\chi_{b_s w_{s+1}}},$$
 where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots , w_d, b_d$ in counterclockwise order (white vertices $w_i$, black vertices $b_i$, and $w_{d+1}:=w_1$).</p>
 
+<h5>Recurrence algorithm for computing $\mathcal{T}_k$</h5>
+<p>The T-embedding $\mathcal{T}$ of the Aztec diamond of size $n$ is computed iteratively as a sequence of embeddings $\mathcal{T}_0, \mathcal{T}_1, \ldots, \mathcal{T}_{n-2}$, where $\mathcal{T}_k$ has vertices at integer points $(i,j)$ with $|i|+|j| \leq k+1$.</p>
+
+<p><strong>Base case ($k=0$):</strong> The initial embedding $\mathcal{T}_0$ has 5 vertices:</p>
+$$\mathcal{T}_0(0,0) = 0, \quad \mathcal{T}_0(\pm 1, 0) = \pm 1, \quad \mathcal{T}_0(0, \pm 1) = \pm \frac{i}{\sqrt{X_{\mathrm{root}}}}$$
+<p>where $X_{\mathrm{root}}$ is the face weight of the central (root) face.</p>
+
+<p><strong>Recurrence ($k \geq 1$):</strong> Given $\mathcal{T}_{k-1}$, compute $\mathcal{T}_k$ using the following rules:</p>
+
+<ol>
+<li><strong>External corners</strong> (vertices at distance $k+1$ from origin, on axes):
+$$\mathcal{T}_k(\pm(k+1), 0) = \mathcal{T}_{k-1}(\pm k, 0), \qquad \mathcal{T}_k(0, \pm(k+1)) = \mathcal{T}_{k-1}(0, \pm k)$$
+</li>
+
+<li><strong>Alpha vertices</strong> (on-axis boundary, $|i|+|j|=k$, either $i=0$ or $j=0$):
+$$\mathcal{T}_k(k, 0) = \frac{\mathcal{T}_{k-1}(k, 0) + \alpha_R \cdot \mathcal{T}_{k-1}(k-1, 0)}{\alpha_R + 1}$$
+$$\mathcal{T}_k(-k, 0) = \frac{\mathcal{T}_{k-1}(-k, 0) + \alpha_L \cdot \mathcal{T}_{k-1}(-(k-1), 0)}{\alpha_L + 1}$$
+$$\mathcal{T}_k(0, k) = \frac{\mathcal{T}_{k-1}(0, k) + \alpha_T \cdot \mathcal{T}_{k-1}(0, k-1)}{\alpha_T + 1}$$
+$$\mathcal{T}_k(0, -k) = \frac{\mathcal{T}_{k-1}(0, -k) + \alpha_B \cdot \mathcal{T}_{k-1}(0, -(k-1))}{\alpha_B + 1}$$
+</li>
+
+<li><strong>Beta vertices</strong> (off-axis boundary, $|i|+|j|=k$, $i \neq 0$ and $j \neq 0$). For $1 \leq m \leq k-1$:
+
+<em>Upper-right quadrant</em> $(i,j) = (m, k-m)$:
+$$\mathcal{T}_k(m, k-m) = \frac{\mathcal{T}_{k-1}(m-1, k-m) + \beta_{m,k-m} \cdot \mathcal{T}_{k-1}(m, k-m-1)}{\beta_{m,k-m} + 1}$$
+
+<em>Lower-right quadrant</em> $(i,j) = (m, -(k-m))$:
+$$\mathcal{T}_k(m, -(k-m)) = \frac{\mathcal{T}_{k-1}(m-1, -(k-m)) + \beta_{m,-(k-m)} \cdot \mathcal{T}_{k-1}(m, -(k-m-1))}{\beta_{m,-(k-m)} + 1}$$
+
+<em>Upper-left quadrant</em> $(i,j) = (-m, k-m)$:
+$$\mathcal{T}_k(-m, k-m) = \frac{\mathcal{T}_{k-1}(-(m-1), k-m) + \beta_{-m,k-m} \cdot \mathcal{T}_{k-1}(-m, k-m-1)}{\beta_{-m,k-m} + 1}$$
+
+<em>Lower-left quadrant</em> $(i,j) = (-m, -(k-m))$:
+$$\mathcal{T}_k(-m, -(k-m)) = \frac{\beta_{-m,-(k-m)} \cdot \mathcal{T}_{k-1}(-m, -(k-m-1)) + \mathcal{T}_{k-1}(-(m-1), -(k-m))}{\beta_{-m,-(k-m)} + 1}$$
+</li>
+
+<li><strong>Interior pass-through</strong> ($|i|+|j| < k$, $i+j+k$ even):
+$$\mathcal{T}_k(i,j) = \mathcal{T}_{k-1}(i,j)$$
+</li>
+
+<li><strong>Interior recurrence</strong> ($|i|+|j| < k$, $i+j+k$ odd):
+$$\mathcal{T}_k(i,j) = \frac{\gamma_{i,j}(\mathcal{T}_k(i-1,j) + \mathcal{T}_k(i+1,j)) + \mathcal{T}_k(i,j-1) + \mathcal{T}_k(i,j+1)}{\gamma_{i,j} + 1} - \mathcal{T}_{k-1}(i,j)$$
+where $\gamma_{i,j}$ is the face weight at position $(i,j)$.
+</li>
+</ol>
+
+<p>The weights $\alpha$, $\beta$, $\gamma$ are extracted from the Aztec diamond edge weights via a sequence of gauge transformations and graph reductions (displayed in the step-by-step visualization).</p>
+
 <h5>References</h5>
 <ul style="font-size: 13px;">
   <li><strong>[CLR2]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Bipartite dimer model: perfect t-embeddings and Lorentz-minimal surfaces.</em> <a href="https://arxiv.org/abs/2109.06272">arXiv:2109.06272</a> (2021).</li>
@@ -77,8 +125,10 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       <!-- LEFT: Aztec diamond graph -->
       <div style="flex: 1; min-width: 350px;">
         <div style="margin-bottom: 10px; text-align: center;">
-          <button id="aztec-down-btn" style="width: 60px;">←</button>
-          <button id="aztec-up-btn" style="width: 60px; margin-left: 10px;">→</button>
+          <button id="aztec-fast-down-btn" style="width: 32px;">«</button>
+          <button id="aztec-down-btn" style="width: 32px;">←</button>
+          <button id="aztec-up-btn" style="width: 32px;">→</button>
+          <button id="aztec-fast-up-btn" style="width: 32px;">»</button>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Weights</label>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> Faces</label>
         </div>
@@ -104,7 +154,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <details style="margin-top: 15px;">
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8e8f4; border: 1px solid #99c;">Mathematica Verification</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8e8f4; border: 1px solid #99c;">Mathematica verification code for small n</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <p style="font-size: 12px; margin-bottom: 10px;">
       The XX verification formula checks that each interior white vertex satisfies:
@@ -647,6 +697,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     if (wasmReady) {
       document.getElementById('aztec-up-btn').disabled = !canAztecStepUp();
       document.getElementById('aztec-down-btn').disabled = !canAztecStepDown();
+      document.getElementById('aztec-fast-down-btn').disabled = !canAztecStepDown();
+      document.getElementById('aztec-fast-up-btn').disabled = !canAztecStepUp();
     }
   }
 
@@ -1036,17 +1088,77 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     aztecCtx.restore();
   }
 
-  // Aztec graph step down: advance reduction step
+  // Aztec graph step down: advance reduction step (slow, single step)
   function aztecTransformDown() {
     if (!wasmReady) return;
     aztecGraphStepDown();
     refreshAztecFromCpp();
   }
 
-  // Aztec graph step up: restore previous state
+  // Aztec graph step up: restore previous state (slow, single step)
   function aztecTransformUp() {
     if (!wasmReady) return;
     aztecGraphStepUp();
+    refreshAztecFromCpp();
+  }
+
+  // Fast forward: jump to next key state
+  // Key states: Original(0) -> Step5 -> Fold5(11) -> next level Fold5 -> ... -> Level2 Fold1(6)
+  function aztecFastForward() {
+    if (!wasmReady) return;
+    if (!canAztecStepDown()) return;
+
+    const currentStep = getAztecReductionStep();
+
+    if (currentStep < 5) {
+      // Jump to step 5
+      while (getAztecReductionStep() < 5 && canAztecStepDown()) {
+        aztecGraphStepDown();
+      }
+    } else if (currentStep < 11) {
+      // Jump to step 11 (Fold 5)
+      while (getAztecReductionStep() < 11 && canAztecStepDown()) {
+        aztecGraphStepDown();
+      }
+    } else {
+      // At step 11, jump to next level's Fold 5 (or Level 2 Fold 1 if at level 3)
+      // Step from 11 takes us to next level step 0, then continue to step 11 (or 6)
+      if (canAztecStepDown()) {
+        aztecGraphStepDown();  // Now at next level step 0
+        // Check current level by refreshing
+        refreshAztecFromCpp();
+        const targetStep = (aztecLevel === 2) ? 6 : 11;
+        while (getAztecReductionStep() < targetStep && canAztecStepDown()) {
+          aztecGraphStepDown();
+        }
+      }
+    }
+    refreshAztecFromCpp();
+  }
+
+  // Fast backward: jump to previous key state
+  function aztecFastBackward() {
+    if (!wasmReady) return;
+    if (!canAztecStepUp()) return;
+
+    const currentStep = getAztecReductionStep();
+
+    if (currentStep === 0) {
+      // At original, go back to previous level's Fold 5 (step 11)
+      if (canAztecStepUp()) {
+        aztecGraphStepUp();  // Goes to previous level step 11
+      }
+    } else if (currentStep <= 5) {
+      // Go back to step 0
+      while (getAztecReductionStep() > 0 && canAztecStepUp()) {
+        aztecGraphStepUp();
+      }
+    } else if (currentStep <= 11) {
+      // Go back to step 5
+      while (getAztecReductionStep() > 5 && canAztecStepUp()) {
+        aztecGraphStepUp();
+      }
+    }
     refreshAztecFromCpp();
   }
 
@@ -1889,6 +2001,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Aztec graph buttons
   document.getElementById('aztec-down-btn').addEventListener('click', aztecTransformDown);
   document.getElementById('aztec-up-btn').addEventListener('click', aztecTransformUp);
+  document.getElementById('aztec-fast-down-btn').addEventListener('click', aztecFastForward);
+  document.getElementById('aztec-fast-up-btn').addEventListener('click', aztecFastBackward);
 
   // T-embedding step buttons
   document.getElementById('step-prev-btn').addEventListener('click', () => {
