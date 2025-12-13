@@ -2694,12 +2694,12 @@ static void computeTk(int k) {
     // Left: (-k, 0) uses alpha_left
     {
         double alphaL = alpha_left;
-        Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alphaL * Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
+        Tcurr[{-k, 0}] = (alphaL * Tprev[{-k, 0}] + Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
     }
     // Top: (0, k) uses alpha_top
     {
         double alphaT = alpha_top;
-        Tcurr[{0, k}] = (Tprev[{0, k}] + alphaT * Tprev[{0, k-1}]) / (alphaT + 1.0);
+        Tcurr[{0, k}] = (alphaT * Tprev[{0, k}] + Tprev[{0, k-1}]) / (alphaT + 1.0);
     }
     // Bottom: (0, -k) uses alpha_bottom
     {
@@ -2797,19 +2797,23 @@ static void computeTk(int k) {
             if (std::abs(i) + std::abs(j) >= k) continue;  // Not interior
             if ((i + j + k) % 2 == 0) continue;  // Not odd parity (handled in 4a)
 
-            // Get gamma weight for this position
-            double gamma_ij = getGammaWeight(i, j);
+            double gamma = getGammaWeight(i, j);
 
-            // Get T_{k-1}(i,j)
-            std::complex<double> Tprev_ij = Tprev[{i, j}];
+            // Get neighbors (should all exist by now from Rule 4a or boundary rules)
+            std::complex<double> Tl = Tcurr[{i-1, j}];  // left
+            std::complex<double> Tr = Tcurr[{i+1, j}];  // right
+            std::complex<double> Tt = Tcurr[{i, j+1}];  // top
+            std::complex<double> Tb = Tcurr[{i, j-1}];  // bottom
 
-            // Get T_k neighbors (should all be computed by now due to parity)
-            std::complex<double> T_im1_j = Tcurr[{i-1, j}];
-            std::complex<double> T_ip1_j = Tcurr[{i+1, j}];
-            std::complex<double> T_i_jm1 = Tcurr[{i, j-1}];
-            std::complex<double> T_i_jp1 = Tcurr[{i, j+1}];
+            // T_{k-1}(i,j) - should exist for interior vertices
+            std::complex<double> Tprev_ij(0.0, 0.0);
+            auto it = Tprev.find({i, j});
+            if (it != Tprev.end()) {
+                Tprev_ij = it->second;
+            }
 
-            Tcurr[{i, j}] = (T_im1_j + T_ip1_j + gamma_ij * (T_i_jp1 + T_i_jm1)) / (gamma_ij + 1.0) - Tprev_ij;
+            // Recurrence: T_k(i,j) = (Tl + Tr + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
+            Tcurr[{i, j}] = (Tl + Tr + gamma * (Tt + Tb)) / (gamma + 1.0) - Tprev_ij;
         }
     }
 
@@ -2829,6 +2833,13 @@ static void computeTk(int k) {
     g_tembLevels.push_back(tk);
 
     std::printf("computeTk(%d): computed %zu vertices\n", k, tk.vertices.size());
+
+    // Debug: print all vertex positions
+    std::printf("  T_%d vertices:\n", k);
+    for (const auto& kv : Tcurr) {
+        std::printf("    T_%d(%d,%d) = %.6f + %.6fi\n", k, kv.first.first, kv.first.second,
+                    kv.second.real(), kv.second.imag());
+    }
 }
 
 // =============================================================================
@@ -3042,6 +3053,64 @@ static void verifyTk(int k) {
         }
 
         std::printf("Checked %d faces, %d passed (max error = %.2e)\n", numChecked, numPassed, maxError);
+
+        // =======================================================================
+        // ANGLE CONDITION VERIFICATION
+        // For T-embeddings: around each vertex, opposite angles sum to π (180°)
+        // If angles are θ₁, θ₂, θ₃, θ₄ (CCW between consecutive edges):
+        //   θ₁ + θ₃ = π  and  θ₂ + θ₄ = π
+        // =======================================================================
+        std::printf("\n--- Angle Condition Check ---\n");
+        int angleChecked = 0, anglePassed = 0;
+        double maxAngleError = 0;
+
+        for (int vi = -k; vi <= k; vi++) {
+            for (int vj = -k; vj <= k; vj++) {
+                int absSum = std::abs(vi) + std::abs(vj);
+                if (absSum > k) continue;  // Skip external corners
+                if (T.find({vi, vj}) == T.end()) continue;
+
+                auto neighbors = getTkNeighborsCCW(vi, vj, k, edges, T);
+                if (neighbors.size() != 4) continue;
+
+                std::complex<double> Tc = T[{vi, vj}];
+
+                // Compute angles between consecutive edges
+                std::vector<double> angles(4);
+                for (int s = 0; s < 4; s++) {
+                    std::complex<double> Ta = T[neighbors[s]];
+                    std::complex<double> Tb = T[neighbors[(s+1)%4]];
+                    // Angle from edge (Tc->Ta) to edge (Tc->Tb)
+                    double angleA = std::arg(Ta - Tc);
+                    double angleB = std::arg(Tb - Tc);
+                    double diff = angleB - angleA;
+                    // Normalize to [0, 2π)
+                    while (diff < 0) diff += 2 * M_PI;
+                    while (diff >= 2 * M_PI) diff -= 2 * M_PI;
+                    angles[s] = diff;
+                }
+
+                // Check θ₁ + θ₃ = π and θ₂ + θ₄ = π
+                double sum02 = angles[0] + angles[2];
+                double sum13 = angles[1] + angles[3];
+                double err02 = std::abs(sum02 - M_PI);
+                double err13 = std::abs(sum13 - M_PI);
+                double maxErr = std::max(err02, err13);
+                maxAngleError = std::max(maxAngleError, maxErr);
+
+                angleChecked++;
+                if (maxErr < 0.01) anglePassed++;
+
+                std::printf("  Vertex (%d,%d): θ=[%.2f°,%.2f°,%.2f°,%.2f°] sum02=%.2f° sum13=%.2f° %s\n",
+                            vi, vj,
+                            angles[0] * 180 / M_PI, angles[1] * 180 / M_PI,
+                            angles[2] * 180 / M_PI, angles[3] * 180 / M_PI,
+                            sum02 * 180 / M_PI, sum13 * 180 / M_PI,
+                            maxErr < 0.01 ? "OK" : "FAIL");
+            }
+        }
+        std::printf("Angle check: %d/%d passed (max error = %.4f rad = %.2f°)\n",
+                    anglePassed, angleChecked, maxAngleError, maxAngleError * 180 / M_PI);
     }
 
     std::printf("========================\n");
