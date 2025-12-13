@@ -1474,8 +1474,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Small n: do full computation
-    // Initialize Aztec graph at level n
-    generateAztecGraph(n);
+    // Note: graph should already exist with weights set - don't regenerate here!
+
+    // Clear any previous T-embedding cache
+    clearTembLevels();
 
     // Silently step down through all reduction steps to capture face weights
     // This stores face weights at each checkpoint (k=0 is ROOT)
@@ -1494,7 +1496,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
     maxK = Math.max(0, n - 2);
 
-    // Start at k=11 or maxK if smaller
+    // Start at k=0 or keep current if valid
     currentK = Math.min(currentK, maxK);
     if (currentK < 0) currentK = 0;
     updateStepDisplay();
@@ -2097,19 +2099,31 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Main buttons
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
-    if (n <= STEP_BY_STEP_MAX_N) {
+    // Only regenerate graph if n changed
+    if (n <= STEP_BY_STEP_MAX_N && n !== aztecLevel) {
       initAztecGraph(n);
+      randomizeAztecWeights();
     }
     computeAndDisplay();
   });
 
-  document.getElementById('randomize-weights-btn').addEventListener('click', randomizeWeights);
+  document.getElementById('randomize-weights-btn').addEventListener('click', () => {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    if (n > STEP_BY_STEP_MAX_N) return;
+    // Ensure graph exists for current n
+    if (n !== aztecLevel) {
+      initAztecGraph(n);
+    }
+    randomizeWeights();
+  });
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const n = parseInt(e.target.value) || 6;
+      // Always regenerate when n changes via Enter
       if (n <= STEP_BY_STEP_MAX_N) {
         initAztecGraph(n);
+        randomizeAztecWeights();
       }
       computeAndDisplay();
     }
