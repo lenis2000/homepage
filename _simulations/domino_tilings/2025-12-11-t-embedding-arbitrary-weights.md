@@ -1406,6 +1406,52 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       if (!vertices) continue;
 
       const lines = [];
+
+      // Alpha faces (boundary) - neighbors based on T_k graph structure
+      // alphaR at (k,0): neighbors are (k+1,0), (k-1,1), (k-1,0), (k-1,-1)
+      // alphaT at (0,k): neighbors are (1,k-1), (0,k+1), (-1,k-1), (0,k-1)
+      // alphaL at (-k,0): neighbors are (-k-1,0), (-k+1,-1), (-k+1,0), (-k+1,1)
+      // alphaB at (0,-k): neighbors are (1,-k+1), (0,-k+1), (-1,-k+1), (0,-k-1)
+      if (k >= 1) {
+        // alphaR[k]
+        lines.push(`XX[T[${k}][${k+1},0], T[${k}][${k-1},1], T[${k}][${k-1},0], T[${k}][${k-1},-1]][T[${k}][${k},0]] + alphaR[${k}]`);
+        lines.push(`XX[T[${k}][${k-1},1], T[${k}][${k-1},0], T[${k}][${k-1},-1], T[${k}][${k+1},0]][T[${k}][${k},0]] + alphaR[${k}]`);
+
+        // alphaT[k]
+        lines.push(`XX[T[${k}][1,${k-1}], T[${k}][0,${k+1}], T[${k}][-1,${k-1}], T[${k}][0,${k-1}]][T[${k}][0,${k}]] + alphaT[${k}]`);
+        lines.push(`XX[T[${k}][0,${k+1}], T[${k}][-1,${k-1}], T[${k}][0,${k-1}], T[${k}][1,${k-1}]][T[${k}][0,${k}]] + alphaT[${k}]`);
+
+        // alphaL[k]
+        lines.push(`XX[T[${k}][${-k-1},0], T[${k}][${-k+1},-1], T[${k}][${-k+1},0], T[${k}][${-k+1},1]][T[${k}][${-k},0]] + alphaL[${k}]`);
+        lines.push(`XX[T[${k}][${-k+1},-1], T[${k}][${-k+1},0], T[${k}][${-k+1},1], T[${k}][${-k-1},0]][T[${k}][${-k},0]] + alphaL[${k}]`);
+
+        // alphaB[k]
+        lines.push(`XX[T[${k}][1,${-k+1}], T[${k}][0,${-k+1}], T[${k}][-1,${-k+1}], T[${k}][0,${-k-1}]][T[${k}][0,${-k}]] + alphaB[${k}]`);
+        lines.push(`XX[T[${k}][0,${-k+1}], T[${k}][-1,${-k+1}], T[${k}][0,${-k-1}], T[${k}][1,${-k+1}]][T[${k}][0,${-k}]] + alphaB[${k}]`);
+
+        // Beta faces - at (i,j) where |i|+|j|=k, i≠0, j≠0
+        // For beta(i,j) in quadrant i>0,j>0: neighbors (i+1,j-1), (i-1,j+1), (i-1,j), (i,j-1)
+        for (let i = 1; i < k; i++) {
+          const j = k - i;
+          // First quadrant: (i, j)
+          lines.push(`XX[T[${k}][${i+1},${j-1}], T[${k}][${i-1},${j+1}], T[${k}][${i-1},${j}], T[${k}][${i},${j-1}]][T[${k}][${i},${j}]] + beta[${k}][${i},${j}]`);
+          lines.push(`XX[T[${k}][${i-1},${j+1}], T[${k}][${i-1},${j}], T[${k}][${i},${j-1}], T[${k}][${i+1},${j-1}]][T[${k}][${i},${j}]] + beta[${k}][${i},${j}]`);
+
+          // Second quadrant: (-i, j)
+          lines.push(`XX[T[${k}][${-i-1},${j-1}], T[${k}][${-i+1},${j+1}], T[${k}][${-i},${j-1}], T[${k}][${-i+1},${j}]][T[${k}][${-i},${j}]] + beta[${k}][${-i},${j}]`);
+          lines.push(`XX[T[${k}][${-i+1},${j+1}], T[${k}][${-i},${j-1}], T[${k}][${-i+1},${j}], T[${k}][${-i-1},${j-1}]][T[${k}][${-i},${j}]] + beta[${k}][${-i},${j}]`);
+
+          // Third quadrant: (-i, -j)
+          lines.push(`XX[T[${k}][${-i-1},${-j+1}], T[${k}][${-i+1},${-j-1}], T[${k}][${-i+1},${-j}], T[${k}][${-i},${-j+1}]][T[${k}][${-i},${-j}]] + beta[${k}][${-i},${-j}]`);
+          lines.push(`XX[T[${k}][${-i+1},${-j-1}], T[${k}][${-i+1},${-j}], T[${k}][${-i},${-j+1}], T[${k}][${-i-1},${-j+1}]][T[${k}][${-i},${-j}]] + beta[${k}][${-i},${-j}]`);
+
+          // Fourth quadrant: (i, -j)
+          lines.push(`XX[T[${k}][${i+1},${-j+1}], T[${k}][${i-1},${-j-1}], T[${k}][${i},${-j+1}], T[${k}][${i-1},${-j}]][T[${k}][${i},${-j}]] + beta[${k}][${i},${-j}]`);
+          lines.push(`XX[T[${k}][${i-1},${-j-1}], T[${k}][${i},${-j+1}], T[${k}][${i-1},${-j}], T[${k}][${i+1},${-j+1}]][T[${k}][${i},${-j}]] + beta[${k}][${i},${-j}]`);
+        }
+      }
+
+      // Gamma faces (interior) - axis-aligned neighbors
       for (const key of Object.keys(vertices)) {
         const [iStr, jStr] = key.split(',');
         const i = parseInt(iStr), j = parseInt(jStr);
