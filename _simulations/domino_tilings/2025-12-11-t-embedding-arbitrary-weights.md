@@ -124,8 +124,65 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
-  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, randomizeAztecWeights, setAztecGraphLevel;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON;
+  let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
+
+  // Classify face type based on centroid coordinates and current face count
+  // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
+  function classifyFace(cx, cy, numFaces) {
+    // Determine k from face count: numFaces = 2k² + 2k + 1
+    // Solve: k = (-1 + sqrt(2*numFaces - 1)) / 2
+    let k = -1;
+    for (let testK = 0; testK <= 20; testK++) {
+      if (2*testK*testK + 2*testK + 1 === numFaces) {
+        k = testK;
+        break;
+      }
+    }
+
+    // Use raw coordinates for classification (may be non-integer)
+    const i = Math.round(cx);
+    const j = Math.round(cy);
+    const absI = Math.abs(cx);
+    const absJ = Math.abs(cy);
+    const absSumRaw = absI + absJ;
+    const absSum = Math.abs(i) + Math.abs(j);
+
+    if (k < 0) return {type: 'unknown', k: -1, i, j};
+
+    // For k=0, only ROOT (single face near origin)
+    if (k === 0) {
+      return {type: 'ROOT', k: 0, i, j};
+    }
+
+    // For k >= 1, classify based on position
+    // Alpha: on axes, at distance k from origin (|i|+|j| ≈ k with i≈0 or j≈0)
+    const tol = 0.6;
+    if (absI < tol && absJ > k - tol) {
+      return {type: cy > 0 ? 'alpha_top' : 'alpha_bottom', k, i, j};
+    }
+    if (absJ < tol && absI > k - tol) {
+      return {type: cx > 0 ? 'alpha_right' : 'alpha_left', k, i, j};
+    }
+
+    // Beta: diagonal positions, |i|+|j| ≈ k, both i and j non-zero
+    if (Math.abs(absSumRaw - k) < tol && absI > tol && absJ > tol) {
+      return {type: 'beta', k, i, j};
+    }
+
+    // Gamma: inner positions, |i|+|j| < k
+    if (absSumRaw < k - tol) {
+      return {type: 'gamma', k, i, j};
+    }
+
+    // If close to boundary but not matching other types, likely beta
+    if (Math.abs(absSumRaw - k) < 1.0) {
+      return {type: 'beta', k, i, j};
+    }
+
+    return {type: 'unknown', k, i, j};
+  }
 
   // Step-by-step state
   let currentStep = 1;
@@ -838,14 +895,14 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       selectedAztecVertex = null;
       selectedAztecEdge = null;
       const face = closestFace.face;
-      const faceIdx = face.idx !== undefined ? face.idx : closestFace.idx;
-      const fstep = aztecReductionStep;
-      const fi = face.fi !== undefined ? face.fi : Math.round(face.cx);
-      const fj = face.fj !== undefined ? face.fj : Math.round(face.cy);
-      const preciseWeight = face.weight.toFixed(10);
-      const numVerts = face.numVertices || face.vertices?.length || '?';
-      infoDiv.innerHTML = `<strong>Face [${fstep},${fi},${fj}] (idx ${faceIdx}):</strong> ${preciseWeight} &nbsp; | &nbsp; ` +
-                         `<strong>Vertices:</strong> ${numVerts}`;
+      const numFaces = aztecFaceScreenPositions.length;
+      const faceClass = classifyFace(face.cx, face.cy, numFaces);
+      let typeStr = faceClass.type;
+      if (faceClass.type === 'beta' || faceClass.type === 'gamma') {
+        typeStr = `${faceClass.type}(${faceClass.i},${faceClass.j})`;
+      }
+      const genStr = faceClass.k >= 0 ? `k=${faceClass.k}` : '';
+      infoDiv.innerHTML = `<strong>Type:</strong> ${typeStr} &nbsp; | &nbsp; <strong>Gen:</strong> ${genStr} &nbsp; | &nbsp; <strong>Center:</strong> (${face.cx.toFixed(2)}, ${face.cy.toFixed(2)})`;
     } else if (closestEdge) {
       selectedAztecEdge = closestEdge.idx;
       selectedAztecVertex = null;
@@ -886,6 +943,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       generateAztecGraph = Module.cwrap('generateAztecGraph', null, ['number']);
       getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
       getAztecFacesJSON = Module.cwrap('getAztecFacesJSON', 'number', []);
+      getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);

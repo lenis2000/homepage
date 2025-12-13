@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -502,12 +502,16 @@ static double randomWeight() {
     return 0.5 + steps * 0.1;  // 0.5 to 2.0 in steps of 0.1
 }
 
+// Forward declaration for stored weights (defined later in face detection section)
+static void clearStoredWeights();
+
 // Generate Aztec diamond graph for level k
 // Vertices at half-integer coordinates (i+0.5, j+0.5) where |x| + |y| <= k + 0.5
 static void generateAztecGraphInternal(int k) {
     g_aztecVertices.clear();
     g_aztecEdges.clear();
     g_aztecLevel = k;
+    clearStoredWeights();  // Clear stored face weights when graph changes
 
     // Map from (x,y) key to vertex index
     std::map<std::string, int> vertexIndex;
@@ -2257,6 +2261,97 @@ struct AztecFace {
 // Global face storage
 static std::vector<AztecFace> g_aztecFaces;
 
+// =============================================================================
+// STORED FACE WEIGHTS (checkpointed at 2k²+2k+1 face counts)
+// =============================================================================
+
+struct StoredFaceWeights {
+    int k;                                      // Level index
+    double root;                                // k=0 only: single ROOT weight
+    double alpha_top, alpha_bottom;             // Extreme weights at (0,max), (0,-max)
+    double alpha_left, alpha_right;             // Extreme weights at (-max,0), (max,0)
+    std::map<std::pair<int,int>, double> beta;  // Diagonal weights beta(i,j), |i|+|j|=k
+    std::map<std::pair<int,int>, double> gamma; // Inner weights gamma(i,j), |i|+|j|<=k-1
+};
+
+static std::vector<StoredFaceWeights> g_storedWeights;
+static std::set<int> g_capturedKValues;  // Track which k values we've captured
+
+// Check if n = 2k²+2k+1 for some non-negative integer k, return k or -1
+static int checkFaceCountFormula(int n) {
+    // 2k²+2k+1 = n => k = (-2 + sqrt(4 + 8(n-1))) / 4 = (-1 + sqrt(2n-1)) / 2
+    // For k=0: n=1, k=1: n=5, k=2: n=13, k=3: n=25, k=4: n=41, ...
+    for (int k = 0; k <= 20; k++) {
+        if (2*k*k + 2*k + 1 == n) return k;
+    }
+    return -1;
+}
+
+// Categorize and store face weights for level k
+static void storeFaceWeightsForK(int k) {
+    if (g_capturedKValues.count(k)) return;  // Already captured
+
+    StoredFaceWeights sw;
+    sw.k = k;
+    sw.root = 0;
+    sw.alpha_top = sw.alpha_bottom = sw.alpha_left = sw.alpha_right = 0;
+
+    if (k == 0) {
+        // Special case: just one ROOT face
+        if (!g_aztecFaces.empty()) {
+            sw.root = g_aztecFaces[0].weight;
+        }
+    } else {
+        // k >= 1: categorize faces by their centroid position
+        // BIG SQUARE has vertices at (±(k+3/2), ±(k+3/2))
+        // Actually, looking at Aztec diamond structure:
+        // - max coordinate for face centers is around k
+        double maxCoord = k;  // Approximate max coordinate for face centers
+
+        for (const auto& face : g_aztecFaces) {
+            double fx = face.cx;
+            double fy = face.cy;
+            int ix = (int)std::round(fx);
+            int iy = (int)std::round(fy);
+
+            // Check for alpha (extreme) faces
+            // These are at (0, ±maxCoord) and (±maxCoord, 0)
+            if (std::abs(ix) + std::abs(iy) == k && (ix == 0 || iy == 0)) {
+                if (iy > 0 && ix == 0) sw.alpha_top = face.weight;
+                else if (iy < 0 && ix == 0) sw.alpha_bottom = face.weight;
+                else if (ix > 0 && iy == 0) sw.alpha_right = face.weight;
+                else if (ix < 0 && iy == 0) sw.alpha_left = face.weight;
+            }
+            // Check for beta (diagonal) faces: |i|+|j|=k, i≠0, j≠0, i≠±k, j≠±k
+            else if (std::abs(ix) + std::abs(iy) == k && ix != 0 && iy != 0) {
+                sw.beta[{ix, iy}] = face.weight;
+            }
+            // Check for gamma (inner) faces: |i|+|j| <= k-1
+            else if (std::abs(ix) + std::abs(iy) <= k - 1) {
+                sw.gamma[{ix, iy}] = face.weight;
+            }
+        }
+    }
+
+    g_storedWeights.push_back(sw);
+    g_capturedKValues.insert(k);
+}
+
+// Clear stored weights (call when n changes)
+static void clearStoredWeights() {
+    g_storedWeights.clear();
+    g_capturedKValues.clear();
+}
+
+// Try to capture face weights if current face count matches formula
+static void tryCaptureFaceWeights() {
+    int numFaces = (int)g_aztecFaces.size();
+    int k = checkFaceCountFormula(numFaces);
+    if (k >= 0 && !g_capturedKValues.count(k)) {
+        storeFaceWeightsForK(k);
+    }
+}
+
 // Find the edge connecting two vertices (returns edge index or -1)
 static int findEdge(int v1, int v2) {
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
@@ -2412,6 +2507,7 @@ static void computeFaces() {
 // Generate JSON string for faces
 static std::string getFacesJSON() {
     computeFaces();
+    tryCaptureFaceWeights();  // Capture if face count matches 2k²+2k+1
 
     std::ostringstream oss;
     oss << std::setprecision(10);
@@ -2451,6 +2547,60 @@ static std::string getFacesJSON() {
     }
 
     oss << "]";
+    return oss.str();
+}
+
+// Generate JSON for stored face weights
+static std::string getStoredWeightsJSON() {
+    std::ostringstream oss;
+    oss << std::setprecision(10);
+    oss << "{";
+    oss << "\"capturedLevels\":[";
+
+    bool first = true;
+    for (const auto& sw : g_storedWeights) {
+        if (!first) oss << ",";
+        first = false;
+
+        oss << "{\"k\":" << sw.k;
+
+        if (sw.k == 0) {
+            oss << ",\"root\":" << sw.root;
+        } else {
+            oss << ",\"alpha_top\":" << sw.alpha_top;
+            oss << ",\"alpha_bottom\":" << sw.alpha_bottom;
+            oss << ",\"alpha_left\":" << sw.alpha_left;
+            oss << ",\"alpha_right\":" << sw.alpha_right;
+
+            // Beta weights
+            oss << ",\"beta\":[";
+            bool firstBeta = true;
+            for (const auto& kv : sw.beta) {
+                if (!firstBeta) oss << ",";
+                firstBeta = false;
+                oss << "{\"i\":" << kv.first.first
+                    << ",\"j\":" << kv.first.second
+                    << ",\"weight\":" << kv.second << "}";
+            }
+            oss << "]";
+
+            // Gamma weights
+            oss << ",\"gamma\":[";
+            bool firstGamma = true;
+            for (const auto& kv : sw.gamma) {
+                if (!firstGamma) oss << ",";
+                firstGamma = false;
+                oss << "{\"i\":" << kv.first.first
+                    << ",\"j\":" << kv.first.second
+                    << ",\"weight\":" << kv.second << "}";
+            }
+            oss << "]";
+        }
+
+        oss << "}";
+    }
+
+    oss << "]}";
     return oss.str();
 }
 
@@ -2669,6 +2819,14 @@ int canAztecStepDown() {
 EMSCRIPTEN_KEEPALIVE
 char* getAztecFacesJSON() {
     std::string result = getFacesJSON();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getStoredFaceWeightsJSON() {
+    std::string result = getStoredWeightsJSON();
     char* out = (char*)std::malloc(result.size() + 1);
     std::strcpy(out, result.c_str());
     return out;
