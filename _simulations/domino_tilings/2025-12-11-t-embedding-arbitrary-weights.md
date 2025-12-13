@@ -53,7 +53,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="3" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -69,13 +69,11 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
       <!-- LEFT: Aztec diamond graph -->
       <div style="flex: 1; min-width: 350px;">
-        <h4 style="margin: 0 0 5px 0;">Aztec diamond graph G<sub>k</sub></h4>
-        <div style="margin-bottom: 5px; text-align: center;"><span id="aztec-graph-label">A<sub>6</sub></span></div>
         <div style="margin-bottom: 10px; text-align: center;">
-          <button id="aztec-down-btn" style="width: 100px;">← Step down</button>
-          <button id="aztec-up-btn" style="width: 100px; margin-left: 10px;">Step up →</button>
-          <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Show weights</label>
-          <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> Show face weights</label>
+          <button id="aztec-down-btn" style="width: 60px;">←</button>
+          <button id="aztec-up-btn" style="width: 60px; margin-left: 10px;">→</button>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Weights</label>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> Faces</label>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -85,13 +83,12 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
 
       <!-- RIGHT: T-embedding canvas -->
       <div style="flex: 1; min-width: 350px;">
-        <h4 style="margin: 0 0 10px 0;">T-embedding at level m</h4>
         <div style="margin-bottom: 10px;">
           <button id="step-prev-btn" style="width: 30px;">&lt;</button>
-          <span style="margin: 0 10px;">Level m = <span id="step-value">1</span></span>
+          <span style="margin: 0 10px;">m = <span id="step-value">1</span></span>
           <button id="step-next-btn" style="width: 30px;">&gt;</button>
           <span id="step-info" style="margin-left: 10px; color: #666;"></span>
-          <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk" checked> Show labels</label>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk" checked> Labels</label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -99,44 +96,6 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
         </div>
       </div>
     </div>
-    <details style="margin-top: 15px;">
-      <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f5f5f5; border: 1px solid #ddd;">Recurrence formulas for T-embedding</summary>
-      <div style="margin-top: 10px; padding: 15px; background: #fff; border: 1px solid #ddd; font-size: 14px; line-height: 1.6;">
-        <p>The T-embedding $T_n$ is computed recursively from $T_1$ to $T_n$ using the Berggren-Russkikh recurrence. At each level $m$, the graph $T_m$ has:</p>
-        <ul>
-          <li><strong>Interior vertices:</strong> $(j,k)$ with $|j|+|k| < m$</li>
-          <li><strong>Boundary corners:</strong> $(\pm m, 0)$ and $(0, \pm m)$</li>
-        </ul>
-
-        <h5 style="margin-top: 15px;">Base case: T_1</h5>
-        <p>The initial T-embedding is the boundary rhombus with parameter $a$:</p>
-        $$T_1(-1,0) = -1, \quad T_1(1,0) = 1, \quad T_1(0,-1) = ia, \quad T_1(0,1) = -ia, \quad T_1(0,0) = 0$$
-
-        <h5 style="margin-top: 15px;">Recurrence: $T_{m+1}$ from $T_m$</h5>
-        <p>Coefficients: $\alpha_n$ (axis), $\beta_{j,n}$ (diagonal), $\gamma_{j,k,n}$ (interior). Currently all set to 1.</p>
-
-        <p><strong>Rule 1: Boundary corners</strong> ($|j|+|k| = m+1$, on axes)<br>
-        $$T_{m+1}(\pm(m+1), 0) = \pm 1, \quad T_{m+1}(0, \pm(m+1)) = \mp ia$$</p>
-
-        <p><strong>Rule 2: Axis boundary</strong> ($j=\pm m$, $k=0$ or $j=0$, $k=\pm m$)</p>
-        $$T_{m+1}(m, 0) = \frac{T_m(m, 0) + \alpha_m \cdot T_m(m-1, 0)}{1+\alpha_m}$$
-        $$T_{m+1}(-m, 0) = \frac{T_m(-m, 0) + \alpha_m \cdot T_m(-m+1, 0)}{1+\alpha_m}$$
-        $$T_{m+1}(0, m) = \frac{\alpha_m \cdot T_m(0, m) + T_m(0, m-1)}{1+\alpha_m}$$
-        $$T_{m+1}(0, -m) = \frac{\alpha_m \cdot T_m(0, -m) + T_m(0, -m+1)}{1+\alpha_m}$$
-
-        <p><strong>Rule 3: Diagonal boundary</strong> ($|j|+|k|=m$, $j\neq 0$, $k\neq 0$)</p>
-        <p>For $j>0$:</p>
-        $$T_{m+1}(j,k) = \frac{T_m(j-1,k) + \beta_{j,m} \cdot T_m(j,k\mp 1)}{1+\beta_{j,m}}$$
-        <p>For $j<0$:</p>
-        $$T_{m+1}(j,k) = \frac{\beta_{j,m} \cdot T_m(j,k\mp 1) + T_m(j+1,k)}{1+\beta_{j,m}}$$
-
-        <p><strong>Rule 4: Interior pass-through</strong> ($|j|+|k| < m$, $j+k+m$ even)</p>
-        $$T_{m+1}(j,k) = T_m(j,k)$$
-
-        <p><strong>Rule 5: Interior recurrence</strong> ($|j|+|k| < m$, $j+k+m$ odd)</p>
-        $$T_{m+1}(j,k) = -T_m(j,k) + \frac{T_{m+1}(j-1,k) + T_{m+1}(j+1,k) + \gamma_{j,k,m}\bigl(T_{m+1}(j,k+1) + T_{m+1}(j,k-1)\bigr)}{1+\gamma_{j,k,m}}$$
-      </div>
-    </details>
   </div>
 </details>
 
@@ -179,7 +138,7 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
   let stepwiseLastPanX = 0, stepwiseLastPanY = 0;
 
   // ========== AZTEC DIAMOND GRAPH STATE ==========
-  let aztecLevel = 4;
+  let aztecLevel = 3;
   let aztecReductionStep = 0;  // 0=original, 1=gauge, 2=contracted, 3=finalized
   let aztecVertices = [];
   let aztecEdges = [];
@@ -381,27 +340,8 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
     renderAztecGraph();
   }
 
-  // Update Aztec UI state (graph label, button states)
+  // Update Aztec UI state (button states)
   function updateAztecUI() {
-    // Step labels
-    const stepNames = [
-      'original',           // 0
-      'black gauge',        // 1
-      'white gauge',        // 2
-      'contracted',         // 3
-      'black contr.',       // 4
-      'white contr.',       // 5
-      'fold 1: shaded',     // 6
-      'fold 2: diagonal',   // 7
-      'fold 3: split',      // 8
-      'fold 3b: diag gauge',// 9
-      'fold 4: renewal',    // 10
-      'fold 5: combine'     // 11
-    ];
-    const stepName = stepNames[aztecReductionStep] || `step ${aztecReductionStep}`;
-    const prefix = aztecReductionStep >= 3 ? "A'" : "A";
-    document.getElementById('aztec-graph-label').innerHTML = `${prefix}<sub>${aztecLevel}</sub> (${stepName})`;
-
     // Update button states
     if (wasmReady) {
       document.getElementById('aztec-up-btn').disabled = !canAztecStepUp();
@@ -765,14 +705,6 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
     }
 
     aztecCtx.restore();
-
-    // Draw level info
-    aztecCtx.fillStyle = '#333';
-    aztecCtx.font = '11px sans-serif';
-    const stepLabels = ['original', 'black gauge', 'white gauge', 'contracted', 'black contr.', 'white contr.', 'fold 1', 'fold 2', 'fold 3', 'fold 4'];
-    const stepLabel = stepLabels[aztecReductionStep] || 'unknown';
-    const prefix = aztecReductionStep >= 3 ? "A'" : "A";
-    aztecCtx.fillText(`${prefix}_${k} (${stepLabel}): ${aztecVertices.length} vertices, ${aztecEdges.length} edges`, 10, 15);
   }
 
   // Aztec graph step down: advance reduction step

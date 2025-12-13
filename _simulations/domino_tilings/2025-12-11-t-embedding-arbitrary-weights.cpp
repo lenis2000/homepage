@@ -2631,6 +2631,8 @@ int canAztecStepUp() {
 
 EMSCRIPTEN_KEEPALIVE
 int canAztecStepDown() {
+    // Stop at A'_2 (fold 1: shaded) - step 6 with level 2
+    if (g_aztecReductionStep == 6 && g_aztecLevel == 2) return 0;
     // Allow stepping if not at final state (step 11 with level 1)
     if (g_aztecReductionStep < 11) return 1;
     if (g_aztecReductionStep == 11 && g_aztecLevel > 1) return 1;
