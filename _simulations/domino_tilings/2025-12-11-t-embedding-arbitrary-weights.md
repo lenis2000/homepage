@@ -1137,26 +1137,36 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   }
 
   // Fast backward: jump to previous key state
+  // Key states: Level2 Fold1 <- ... <- LevelN-1 Fold5 <- LevelN Fold5 <- LevelN Step5 <- Original
   function aztecFastBackward() {
     if (!wasmReady) return;
     if (!canAztecStepUp()) return;
 
     const currentStep = getAztecReductionStep();
+    const originalLevel = maxK + 2;  // The original Aztec diamond level
 
     if (currentStep === 0) {
-      // At original, go back to previous level's Fold 5 (step 11)
-      if (canAztecStepUp()) {
-        aztecGraphStepUp();  // Goes to previous level step 11
-      }
-    } else if (currentStep <= 5) {
-      // Go back to step 0
+      // At step 0 of original level - can't go back further
+      // (shouldn't happen since canAztecStepUp would be false)
+      return;
+    } else if (currentStep <= 5 && aztecLevel === originalLevel) {
+      // At original level steps 1-5: go back to step 0
       while (getAztecReductionStep() > 0 && canAztecStepUp()) {
         aztecGraphStepUp();
       }
-    } else if (currentStep <= 11) {
-      // Go back to step 5
+    } else if (currentStep <= 11 && aztecLevel === originalLevel) {
+      // At original level steps 6-11: go back to step 5
       while (getAztecReductionStep() > 5 && canAztecStepUp()) {
         aztecGraphStepUp();
+      }
+    } else {
+      // At a reduced level: go back to previous (higher) level's step 11
+      // Keep stepping up until we reach step 11 at a higher level
+      const targetLevel = aztecLevel + 1;
+      while (canAztecStepUp()) {
+        aztecGraphStepUp();
+        refreshAztecFromCpp();  // Update aztecLevel
+        if (aztecLevel === targetLevel && getAztecReductionStep() === 11) break;
       }
     }
     refreshAztecFromCpp();
