@@ -42,6 +42,11 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
   <li>For each outer vertex $v_k$ of $\mathcal{G}^*$, the edge connecting $v_k$ to its unique inner neighbor $v_{\mathrm{in},k}$ lies on the <em>angle bisector</em> of the corresponding corner of the tangential polygon. Equivalently, the line containing this edge passes through the center of the inscribed circle.</li>
 </ol>
 
+<h5>Definition (Face weight)</h5>
+<p>Given edge weights $\chi$ on a bipartite graph $\mathcal{G}$, one can associate a <strong>face weight</strong> $X_{v^*}$ to each face of $\mathcal{G}$ by
+$$X_{v^*}:=\prod_{s=1}^d\frac{\chi_{b_s w_s}}{\chi_{b_s w_{s+1}}},$$
+where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots , w_d, b_d$ in counterclockwise order (white vertices $w_i$, black vertices $b_i$, and $w_{d+1}:=w_1$).</p>
+
 <h5>References</h5>
 <ul style="font-size: 13px;">
   <li><strong>[CLR2]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Bipartite dimer model: perfect t-embeddings and Lorentz-minimal surfaces.</em> <a href="https://arxiv.org/abs/2109.06272">arXiv:2109.06272</a> (2021).</li>
@@ -833,13 +838,14 @@ embedding $\mathcal{T}: \mathcal{G}^* \to \mathbb{C}$ such that:</p>
       selectedAztecVertex = null;
       selectedAztecEdge = null;
       const face = closestFace.face;
-      const faceType = face.isTypeA ? 'A (starts white)' : 'B (starts black)';
+      const faceIdx = face.idx !== undefined ? face.idx : closestFace.idx;
+      const fstep = aztecReductionStep;
+      const fi = face.fi !== undefined ? face.fi : Math.round(face.cx);
+      const fj = face.fj !== undefined ? face.fj : Math.round(face.cy);
       const preciseWeight = face.weight.toFixed(10);
       const numVerts = face.numVertices || face.vertices?.length || '?';
-      infoDiv.innerHTML = `<strong>Face:</strong> center=(${face.cx.toFixed(2)}, ${face.cy.toFixed(2)}) &nbsp; | &nbsp; ` +
-                         `<strong>n:</strong> ${aztecLevel} &nbsp; | &nbsp; ` +
-                         `<strong>Vertices:</strong> ${numVerts} &nbsp; | &nbsp; ` +
-                         `<strong>Weight:</strong> ${preciseWeight}`;
+      infoDiv.innerHTML = `<strong>Face [${fstep},${fi},${fj}] (idx ${faceIdx}):</strong> ${preciseWeight} &nbsp; | &nbsp; ` +
+                         `<strong>Vertices:</strong> ${numVerts}`;
     } else if (closestEdge) {
       selectedAztecEdge = closestEdge.idx;
       selectedAztecVertex = null;

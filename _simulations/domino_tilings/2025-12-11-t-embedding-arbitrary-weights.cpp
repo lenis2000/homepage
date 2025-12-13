@@ -2345,6 +2345,23 @@ static void computeFaces() {
             }
 
             if (faceV.size() >= 3 && faceE.size() >= 3) {
+                // Compute signed area to determine orientation
+                double signedArea = 0;
+                int nv = (int)faceV.size();
+                for (int i = 0; i < nv; i++) {
+                    int j = (i + 1) % nv;
+                    double xi = g_aztecVertices[faceV[i]].x;
+                    double yi = g_aztecVertices[faceV[i]].y;
+                    double xj = g_aztecVertices[faceV[j]].x;
+                    double yj = g_aztecVertices[faceV[j]].y;
+                    signedArea += (xi * yj - xj * yi);
+                }
+                signedArea *= 0.5;
+
+                // Keep only CW faces (negative area) - these are inner faces
+                // Skip CCW faces (positive area) - outer boundary or duplicates
+                if (signedArea > 0) continue;
+
                 // Compute centroid
                 double cx = 0, cy = 0;
                 for (int vi : faceV) {
@@ -2354,7 +2371,7 @@ static void computeFaces() {
                 cx /= faceV.size();
                 cy /= faceV.size();
 
-                // Compute face weight for ALL faces (no filtering)
+                // Compute face weight
                 double weight = 1.0;
                 int n = (int)faceV.size();
 
@@ -2409,12 +2426,22 @@ static std::string getFacesJSON() {
                        f.vertexIndices.size() > 0 &&
                        g_aztecVertices[f.vertexIndices[0]].isWhite;
 
-        oss << "{\"cx\":" << f.cx
+        // Compute spatial indices from centroid (round to nearest integer)
+        int fi = (int)std::round(f.cx);
+        int fj = (int)std::round(f.cy);
+
+        oss << "{\"idx\":" << i
+            << ",\"step\":" << g_aztecReductionStep
+            << ",\"n\":" << g_aztecLevel
+            << ",\"fi\":" << fi
+            << ",\"fj\":" << fj
+            << ",\"cx\":" << f.cx
             << ",\"cy\":" << f.cy
             << ",\"weight\":" << f.weight
             << ",\"numVertices\":" << f.vertexIndices.size()
             << ",\"isTypeA\":" << (isTypeA ? "true" : "false")
             << ",\"vertices\":[";
+
 
         for (size_t j = 0; j < f.vertexIndices.size(); j++) {
             if (j > 0) oss << ",";
