@@ -95,7 +95,43 @@ where $\gamma_{i,j}$ is the face weight at position $(i,j)$.
 </li>
 </ol>
 
-<p>The weights $\alpha$, $\beta$, $\gamma$ are extracted from the Aztec diamond edge weights via a sequence of gauge transformations and graph reductions (displayed in the step-by-step visualization).</p>
+<h5>Classification of weights: α, β, γ</h5>
+
+<p>Given an Aztec diamond with arbitrary edge weights, the T-embedding recurrence uses three types of weights classified by their position in the reduced graph at each level $k$:</p>
+
+<ul>
+<li><strong>α (alpha) weights</strong> — <em>On-axis boundary weights</em>: These correspond to faces at positions $(i,j)$ where $|i|+|j| = k$ and either $i=0$ or $j=0$. That is, the four cardinal positions:
+$$\alpha_R \leftrightarrow (k, 0), \quad \alpha_L \leftrightarrow (-k, 0), \quad \alpha_T \leftrightarrow (0, k), \quad \alpha_B \leftrightarrow (0, -k).$$
+</li>
+
+<li><strong>β (beta) weights</strong> — <em>Off-axis boundary weights</em>: These correspond to faces at positions $(i,j)$ where $|i|+|j| = k$ with $i \neq 0$ and $j \neq 0$. These are the diagonal boundary positions:
+$$\beta_{m, k-m} \text{ for } 1 \leq m \leq k-1 \text{ in each quadrant.}$$
+</li>
+
+<li><strong>γ (gamma) weights</strong> — <em>Interior weights</em>: These correspond to faces at positions $(i,j)$ where $|i|+|j| \leq k-1$. These are the interior face weights of the reduced graph.
+</li>
+</ul>
+
+<h5>Extraction from double edges</h5>
+
+<p>The α and β weights are extracted during the <em>urban renewal</em> and <em>double edge combination</em> steps of the Aztec diamond graph reduction. After performing:</p>
+<ol>
+<li>Gauge transformations (to equalize edges along the boundary)</li>
+<li>Degree-2 vertex removal and edge contraction</li>
+<li>Urban renewal on the 4-valent faces</li>
+</ol>
+
+<p>the graph develops <em>double edges</em> (pairs of edges connecting the same two vertices). The α and β weights are then computed as ratios of these double edge weights:</p>
+
+$$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{black}}}$$
+
+<p>where:</p>
+<ul>
+<li><strong>Alpha edges</strong>: Double edges where <em>both</em> endpoints lie on the boundary (at maximal distance from the origin).</li>
+<li><strong>Beta edges</strong>: Double edges where <em>exactly one</em> endpoint lies on the boundary and one is interior.</li>
+</ul>
+
+<p>The γ weights are simply the face weights at interior positions, stored during the reduction process.</p>
 
 <h5>References</h5>
 <ul style="font-size: 13px;">
