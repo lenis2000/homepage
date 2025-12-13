@@ -102,6 +102,9 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
         <div id="mathematica-output" style="margin-top: 5px; padding: 8px; background: #f5f5f5; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
           <em>Mathematica output will appear here</em>
         </div>
+        <div id="beta-output" style="margin-top: 5px; padding: 8px; background: #f0f8ff; border: 1px solid #4682b4; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
+          <em>Beta ratios will appear here after reduction</em>
+        </div>
       </div>
     </div>
   </div>
@@ -127,7 +130,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
-  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getTembeddingLevelJSON;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
 
@@ -636,6 +639,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
     updateAztecUI();
     renderAztecGraph();
+    updateBetaOutput();
   }
 
   // Render Aztec diamond graph
@@ -1146,6 +1150,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
       getAztecFacesJSON = Module.cwrap('getAztecFacesJSON', 'number', []);
       getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
+      getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
@@ -1211,6 +1216,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     document.getElementById('step-next-btn').disabled = (currentK >= maxK);
     document.getElementById('step-info').textContent = `(T_${currentK} graph)`;
     updateMathematicaOutput();
+    updateBetaOutput();
   }
 
   // Generate Mathematica array output for current T_k level
@@ -1260,6 +1266,46 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     });
 
     mathDiv.textContent = lines.join('\n');
+  }
+
+  // Generate Mathematica output for captured beta ratios
+  function updateBetaOutput() {
+    const betaDiv = document.getElementById('beta-output');
+    if (!wasmReady || !getBetaRatiosJSON) {
+      betaDiv.innerHTML = '<em>Loading...</em>';
+      return;
+    }
+
+    let ptr = getBetaRatiosJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    const betaData = JSON.parse(jsonStr);
+
+    if (!betaData || betaData.length === 0) {
+      betaDiv.innerHTML = '<em>No beta ratios captured yet (step through reduction)</em>';
+      return;
+    }
+
+    // Generate Mathematica definitions
+    const lines = [];
+    for (const ber of betaData) {
+      for (const r of ber.ratios) {
+        lines.push(`beta[${ber.k}][${r.i},${r.j}]:=${r.ratio.toFixed(6)}`);
+      }
+    }
+
+    // Sort by k, then i, then j
+    lines.sort((a, b) => {
+      const matchA = a.match(/beta\[(\d+)\]\[(-?\d+),(-?\d+)\]/);
+      const matchB = b.match(/beta\[(\d+)\]\[(-?\d+),(-?\d+)\]/);
+      const kA = parseInt(matchA[1]), iA = parseInt(matchA[2]), jA = parseInt(matchA[3]);
+      const kB = parseInt(matchB[1]), iB = parseInt(matchB[2]), jB = parseInt(matchB[3]);
+      if (kA !== kB) return kA - kB;
+      if (iA !== iB) return iA - iB;
+      return jA - jB;
+    });
+
+    betaDiv.textContent = lines.length > 0 ? lines.join('\n') : '<em>No beta ratios</em>';
   }
 
   function renderStepwiseTemb() {

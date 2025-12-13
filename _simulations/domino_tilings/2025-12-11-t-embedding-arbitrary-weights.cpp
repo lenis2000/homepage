@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -125,6 +125,14 @@ struct DoubleEdgeRatios {
     double ratio_right;   // Right edge pair ratio
 };
 static std::vector<DoubleEdgeRatios> g_doubleEdgeRatios;
+
+// Beta edge ratios for T-embedding beta values (captured from step 11)
+// These are from double edges connecting external (boundary) to inner vertices
+struct BetaEdgeRatios {
+    int k;  // Level for T_{k-1} → T_k computation
+    std::map<std::pair<int,int>, double> ratios;  // (i,j) → ratio for position
+};
+static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -2152,6 +2160,57 @@ static void aztecStep11_CombineDoubleEdges() {
         g_doubleEdgeRatios.push_back(ratios);
     }
 
+    // Capture beta double edge ratios when we have more than 4 vertices
+    // Beta edges connect an external (boundary) vertex to an inner vertex
+    if (g_aztecVertices.size() > 4) {
+        // Find the boundary distance (max coordinate value)
+        double maxCoord = 0;
+        for (const auto& v : g_aztecVertices) {
+            maxCoord = std::max(maxCoord, std::max(std::abs(v.x), std::abs(v.y)));
+        }
+
+        BetaEdgeRatios betaRatios;
+        // When we have N > 4 vertices at level L, these ratios are for computing T_{L-2}
+        betaRatios.k = g_aztecLevel - 2;
+
+        for (const auto& [vertPair, indices] : edgeGroups) {
+            if (indices.size() == 2) {  // Double edge
+                const auto& v1 = g_aztecVertices[vertPair.first];
+                const auto& v2 = g_aztecVertices[vertPair.second];
+
+                // Determine which is external (on boundary) vs inner
+                double dist1 = std::max(std::abs(v1.x), std::abs(v1.y));
+                double dist2 = std::max(std::abs(v2.x), std::abs(v2.y));
+
+                // Alpha edges: both vertices on boundary (max distance)
+                bool isAlphaEdge = (std::abs(dist1 - maxCoord) < 0.1 &&
+                                    std::abs(dist2 - maxCoord) < 0.1);
+                // Beta edges: exactly one vertex on boundary, one inner
+                bool isBetaEdge = !isAlphaEdge &&
+                                  ((std::abs(dist1 - maxCoord) < 0.1) !=
+                                   (std::abs(dist2 - maxCoord) < 0.1));
+
+                if (isBetaEdge) {
+                    // Find the inner vertex (smaller max-distance from origin)
+                    const auto& inner = (dist1 < dist2) ? v1 : v2;
+
+                    // Map inner vertex coords to (i,j) via rounding
+                    int i = (int)std::round(inner.x);
+                    int j = (int)std::round(inner.y);
+
+                    // Compute ratio of the two edge weights
+                    double w0 = g_aztecEdges[indices[0]].weight;
+                    double w1 = g_aztecEdges[indices[1]].weight;
+                    betaRatios.ratios[{i, j}] = w0 / w1;
+                }
+            }
+        }
+
+        if (!betaRatios.ratios.empty()) {
+            g_betaEdgeRatios.push_back(betaRatios);
+        }
+    }
+
     // Build new edge list with combined weights
     std::vector<AztecEdge> newEdges;
     for (const auto& [vertPair, indices] : edgeGroups) {
@@ -2482,6 +2541,7 @@ static void clearStoredWeights() {
     g_storedWeights.clear();
     g_capturedKValues.clear();
     g_doubleEdgeRatios.clear();
+    g_betaEdgeRatios.clear();
 }
 
 // Try to capture face weights if current face count matches formula
@@ -2799,7 +2859,18 @@ static void computeTk(int k) {
     // ==========================================================================
 
     // Helper lambda to get beta weight for position (i, j)
+    // First check beta edge ratios (from double edges), then fall back to stored face weights
     auto getBetaWeight = [&](int i, int j) -> double {
+        // First check beta edge ratios (from double edges)
+        for (const auto& ber : g_betaEdgeRatios) {
+            if (ber.k == k) {
+                auto it = ber.ratios.find({i, j});
+                if (it != ber.ratios.end()) {
+                    return it->second;
+                }
+            }
+        }
+        // Fall back to stored face weights
         if (storedWeights) {
             auto it = storedWeights->beta.find({i, j});
             if (it != storedWeights->beta.end() && it->second > 0) {
@@ -3558,6 +3629,31 @@ char* getAztecFacesJSON() {
 EMSCRIPTEN_KEEPALIVE
 char* getStoredFaceWeightsJSON() {
     std::string result = getStoredWeightsJSON();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getBetaRatiosJSON() {
+    std::ostringstream oss;
+    oss << "[";
+    bool first = true;
+    for (const auto& ber : g_betaEdgeRatios) {
+        if (!first) oss << ",";
+        first = false;
+        oss << "{\"k\":" << ber.k << ",\"ratios\":[";
+        bool firstRatio = true;
+        for (const auto& [pos, ratio] : ber.ratios) {
+            if (!firstRatio) oss << ",";
+            firstRatio = false;
+            oss << "{\"i\":" << pos.first << ",\"j\":" << pos.second
+                << ",\"ratio\":" << std::setprecision(10) << ratio << "}";
+        }
+        oss << "]}";
+    }
+    oss << "]";
+    std::string result = oss.str();
     char* out = (char*)std::malloc(result.size() + 1);
     std::strcpy(out, result.c_str());
     return out;
