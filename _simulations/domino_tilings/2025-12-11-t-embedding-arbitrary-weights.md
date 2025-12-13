@@ -99,6 +99,9 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
           <em>T_k from face weights (step through Aztec reduction first)</em>
         </div>
+        <div id="mathematica-output" style="margin-top: 5px; padding: 8px; background: #f5f5f5; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+          <em>Mathematica output will appear here</em>
+        </div>
       </div>
     </div>
   </div>
@@ -1207,6 +1210,56 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     document.getElementById('step-prev-btn').disabled = (currentK <= 0);
     document.getElementById('step-next-btn').disabled = (currentK >= maxK);
     document.getElementById('step-info').textContent = `(T_${currentK} graph)`;
+    updateMathematicaOutput();
+  }
+
+  // Generate Mathematica array output for current T_k level
+  function updateMathematicaOutput() {
+    const mathDiv = document.getElementById('mathematica-output');
+    if (!wasmReady || !getTembeddingLevelJSON) {
+      mathDiv.innerHTML = '<em>Loading...</em>';
+      return;
+    }
+
+    let ptr = getTembeddingLevelJSON(currentK);
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    const tembLevel = JSON.parse(jsonStr);
+
+    if (!tembLevel || !tembLevel.vertices || tembLevel.vertices.length === 0) {
+      mathDiv.innerHTML = `<em>T_${currentK} not computed yet</em>`;
+      return;
+    }
+
+    // Format complex number for Mathematica
+    function formatComplex(re, im) {
+      if (Math.abs(im) < 1e-10) {
+        return re.toFixed(6);
+      } else if (Math.abs(re) < 1e-10) {
+        return `${im.toFixed(6)}*I`;
+      } else {
+        const sign = im >= 0 ? '+' : '';
+        return `${re.toFixed(6)}${sign}${im.toFixed(6)}*I`;
+      }
+    }
+
+    // Generate Mathematica definitions
+    const lines = [];
+    for (const v of tembLevel.vertices) {
+      lines.push(`T[${currentK}][${v.i},${v.j}]:=${formatComplex(v.re, v.im)}`);
+    }
+
+    // Sort by i, then j for consistent ordering
+    lines.sort((a, b) => {
+      const matchA = a.match(/T\[\d+\]\[(-?\d+),(-?\d+)\]/);
+      const matchB = b.match(/T\[\d+\]\[(-?\d+),(-?\d+)\]/);
+      const iA = parseInt(matchA[1]), jA = parseInt(matchA[2]);
+      const iB = parseInt(matchB[1]), jB = parseInt(matchB[2]);
+      if (iA !== iB) return iA - iB;
+      return jA - jB;
+    });
+
+    mathDiv.textContent = lines.join('\n');
   }
 
   function renderStepwiseTemb() {

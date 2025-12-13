@@ -2111,8 +2111,6 @@ static void aztecStep11_CombineDoubleEdges() {
 
     // Capture double edge ratios for T-embedding alpha values
     // This happens when we have exactly 4 corner vertices with double edges
-    printf("Step11: checking for ratio capture - %zu vertices, %zu edges, level=%d\n",
-           g_aztecVertices.size(), g_aztecEdges.size(), g_aztecLevel);
     if (g_aztecVertices.size() == 4) {
         DoubleEdgeRatios ratios;
         // When we have 4 vertices at level L, these ratios are for computing T_{L-2}
@@ -2123,13 +2121,11 @@ static void aztecStep11_CombineDoubleEdges() {
         ratios.ratio_left = 1.0;
         ratios.ratio_right = 1.0;
 
-        printf("=== Capturing double edge ratios at level=%d for k=%d ===\n", g_aztecLevel, ratios.k);
-
         for (const auto& [vertPair, indices] : edgeGroups) {
             if (indices.size() == 2) {
                 double w0 = g_aztecEdges[indices[0]].weight;  // "red" edge
                 double w1 = g_aztecEdges[indices[1]].weight;  // "blue" edge
-                double ratio = w1 / w0;
+                double ratio = w0 / w1;
 
                 // Get vertex coordinates
                 double x1 = g_aztecVertices[vertPair.first].x;
@@ -2141,29 +2137,17 @@ static void aztecStep11_CombineDoubleEdges() {
                 bool sameY = std::abs(y1 - y2) < 0.1;  // Horizontal edge (same y)
                 bool sameX = std::abs(x1 - x2) < 0.1;  // Vertical edge (same x)
 
-                printf("  Edge (%+.2f,%+.2f)-(%+.2f,%+.2f): w0=%.4f, w1=%.4f, ratio=%.4f",
-                       x1, y1, x2, y2, w0, w1, ratio);
-
                 if (sameY && (y1 + y2) / 2 > 0) {
                     ratios.ratio_top = ratio;
-                    printf(" -> TOP\n");
                 } else if (sameY && (y1 + y2) / 2 < 0) {
                     ratios.ratio_bottom = ratio;
-                    printf(" -> BOTTOM\n");
                 } else if (sameX && (x1 + x2) / 2 < 0) {
                     ratios.ratio_left = ratio;
-                    printf(" -> LEFT\n");
                 } else if (sameX && (x1 + x2) / 2 > 0) {
                     ratios.ratio_right = ratio;
-                    printf(" -> RIGHT\n");
-                } else {
-                    printf(" -> DIAGONAL (ignored)\n");
                 }
             }
         }
-
-        printf("  Final ratios: top=%.4f, bottom=%.4f, left=%.4f, right=%.4f\n",
-               ratios.ratio_top, ratios.ratio_bottom, ratios.ratio_left, ratios.ratio_right);
 
         g_doubleEdgeRatios.push_back(ratios);
     }
@@ -2401,7 +2385,6 @@ static void storeFaceWeightsForK(int k) {
     sw.alpha_top = sw.alpha_bottom = sw.alpha_left = sw.alpha_right = 0;
 
     int nFaces = (int)g_aztecFaces.size();
-    std::printf("storeFaceWeightsForK(%d): %d faces to process\n", k, nFaces);
 
     if (k == 0) {
         // Special case: just one ROOT face
@@ -2470,7 +2453,6 @@ static void storeFaceWeightsForK(int k) {
             double weight = g_aztecFaces[fi].weight;
             int absSum = std::abs(i) + std::abs(j);
 
-            std::printf("  Face %d at T(%d,%d) weight=%.4f\n", fi, i, j, weight);
 
             // Alpha faces: |i|+|j|=k and on axis
             if (absSum == k && (i == 0 || j == 0)) {
@@ -2489,8 +2471,6 @@ static void storeFaceWeightsForK(int k) {
             }
         }
 
-        std::printf("  Captured alphas: T=%.4f B=%.4f L=%.4f R=%.4f\n",
-                    sw.alpha_top, sw.alpha_bottom, sw.alpha_left, sw.alpha_right);
     }
 
     g_storedWeights.push_back(sw);
@@ -2618,18 +2598,6 @@ static void verifyT0() {
         }
     }
 
-    std::printf("=== T_0 Verification ===\n");
-    std::printf("T_0(0,0) = %.6f + %.6fi\n", T00.real(), T00.imag());
-    std::printf("T_0(1,0) = %.6f + %.6fi\n", T10.real(), T10.imag());
-    std::printf("T_0(-1,0) = %.6f + %.6fi\n", Tm10.real(), Tm10.imag());
-    std::printf("T_0(0,1) = %.6f + %.6fi\n", T01.real(), T01.imag());
-    std::printf("T_0(0,-1) = %.6f + %.6fi\n", T0m1.real(), T0m1.imag());
-    std::printf("Computed X_ROOT from T-embedding: %.10f + %.10fi\n", computed.real(), computed.imag());
-    std::printf("Expected X_ROOT (stored): %.10f\n", expectedWeight);
-    std::printf("Match: %s (diff = %.2e)\n",
-                std::abs(computed.real() - expectedWeight) < 1e-6 ? "YES" : "NO",
-                std::abs(computed.real() - expectedWeight));
-    std::printf("========================\n");
 }
 
 // =============================================================================
@@ -2762,40 +2730,17 @@ static void computeTk(int k) {
         }
     }
 
-    // DEBUG: Print current Aztec faces at alpha positions for level k
-    std::printf("computeTk(%d): Current Aztec faces (%d total):\n", k, (int)g_aztecFaces.size());
-    for (const auto& face : g_aztecFaces) {
-        int ix = (int)std::round(face.cx);
-        int iy = (int)std::round(face.cy);
-        int absSum = std::abs(ix) + std::abs(iy);
-        if (absSum == k && (ix == 0 || iy == 0)) {
-            std::printf("  ALPHA at (%d,%d) cx=%.2f cy=%.2f weight=%.4f\n", ix, iy, face.cx, face.cy, face.weight);
-        }
-    }
-
     // Get alpha values from double edge ratios (captured in step 11)
     double alpha_right = 1.0, alpha_left = 1.0, alpha_top = 1.0, alpha_bottom = 1.0;
-    bool foundRatios = false;
 
-    std::printf("computeTk(%d): looking for ratios, g_doubleEdgeRatios has %zu entries\n",
-                k, g_doubleEdgeRatios.size());
     for (const auto& der : g_doubleEdgeRatios) {
-        std::printf("  - stored entry: k=%d, T=%.4f, B=%.4f, L=%.4f, R=%.4f\n",
-                    der.k, der.ratio_top, der.ratio_bottom, der.ratio_left, der.ratio_right);
         if (der.k == k) {
             alpha_right = der.ratio_right;
             alpha_left = der.ratio_left;
             alpha_top = der.ratio_top;
             alpha_bottom = der.ratio_bottom;
-            foundRatios = true;
             break;
         }
-    }
-    if (foundRatios) {
-        std::printf("computeTk(%d): using double edge ratios - alpha_R=%.4f, alpha_L=%.4f, alpha_T=%.4f, alpha_B=%.4f\n",
-                    k, alpha_right, alpha_left, alpha_top, alpha_bottom);
-    } else {
-        std::printf("computeTk(%d): WARNING - no double edge ratios found for k=%d, using default 1.0\n", k, k);
     }
 
     TembLevel tk;
@@ -2970,15 +2915,6 @@ static void computeTk(int k) {
 
     // Store the level
     g_tembLevels.push_back(tk);
-
-    std::printf("computeTk(%d): computed %zu vertices\n", k, tk.vertices.size());
-
-    // Debug: print all vertex positions
-    std::printf("  T_%d vertices:\n", k);
-    for (const auto& kv : Tcurr) {
-        std::printf("    T_%d(%d,%d) = %.6f + %.6fi\n", k, kv.first.first, kv.first.second,
-                    kv.second.real(), kv.second.imag());
-    }
 }
 
 // =============================================================================
@@ -3073,186 +3009,8 @@ static std::vector<std::pair<int,int>> getTkNeighborsCCW(
 }
 
 static void verifyTk(int k) {
-    // Find T_k level
-    const TembLevel* tk = nullptr;
-    for (const auto& l : g_tembLevels) {
-        if (l.k == k) {
-            tk = &l;
-            break;
-        }
-    }
-    if (!tk) {
-        std::printf("verifyTk(%d): T_%d not computed yet\n", k, k);
-        return;
-    }
-
-    // Build vertex lookup map
-    std::map<std::pair<int,int>, std::complex<double>> T;
-    for (const auto& v : tk->vertices) {
-        T[{v.i, v.j}] = std::complex<double>(v.re, v.im);
-    }
-
-    // Find stored weights for level k
-    const StoredFaceWeights* storedWeights = nullptr;
-    for (const auto& sw : g_storedWeights) {
-        if (sw.k == k) {
-            storedWeights = &sw;
-            break;
-        }
-    }
-
-    std::printf("=== T_%d Verification ===\n", k);
-
-    // For k=0, verify the ROOT face
-    if (k == 0) {
-        // Face at (0,0) with neighbors (1,0), (0,1), (-1,0), (0,-1) in CCW order
-        std::complex<double> Tc = T[{0, 0}];
-        std::complex<double> T1 = T[{1, 0}];
-        std::complex<double> T2 = T[{0, 1}];
-        std::complex<double> T3 = T[{-1, 0}];
-        std::complex<double> T4 = T[{0, -1}];
-
-        // X = -1 * (Tc - T1)/(T2 - Tc) * (Tc - T3)/(T4 - Tc)
-        std::complex<double> computed = -1.0 * (Tc - T1) / (T2 - Tc) * (Tc - T3) / (T4 - Tc);
-
-        double expected = storedWeights ? storedWeights->root : 1.0;
-        std::printf("ROOT face (0,0): computed = %.6f + %.6fi, expected = %.6f\n",
-                    computed.real(), computed.imag(), expected);
-        std::printf("  Match: %s (diff = %.2e)\n",
-                    std::abs(computed.real() - expected) < 1e-6 ? "YES" : "NO",
-                    std::abs(computed.real() - expected));
-    }
-
-    // For k >= 1, verify all inner faces using ACTUAL T_k graph neighbors
-    if (k >= 1) {
-        // Build T_k edge list
-        auto edges = buildTkEdges(k);
-
-        int numChecked = 0;
-        int numPassed = 0;
-        double maxError = 0;
-
-        // Inner vertices: |i|+|j| <= k (not external corners)
-        for (int fi = -k; fi <= k; fi++) {
-            for (int fj = -k; fj <= k; fj++) {
-                int absSum = std::abs(fi) + std::abs(fj);
-                if (absSum > k) continue;  // Skip external corners
-                if (T.find({fi, fj}) == T.end()) continue;
-
-                // Get actual neighbors in CCW order
-                auto neighbors = getTkNeighborsCCW(fi, fj, k, edges, T);
-
-                if (neighbors.size() != 4) {
-                    std::printf("  Face (%d,%d): SKIP - has %zu neighbors (expected 4)\n",
-                                fi, fj, neighbors.size());
-                    continue;
-                }
-
-                std::complex<double> Tc = T[{fi, fj}];
-                std::complex<double> T1 = T[neighbors[0]];
-                std::complex<double> T2 = T[neighbors[1]];
-                std::complex<double> T3 = T[neighbors[2]];
-                std::complex<double> T4 = T[neighbors[3]];
-
-                // X = -1 * (Tc - T1)/(T2 - Tc) * (Tc - T3)/(T4 - Tc)
-                std::complex<double> computed = -1.0 * (Tc - T1) / (T2 - Tc) * (Tc - T3) / (T4 - Tc);
-
-                // Look up expected weight
-                double expected = 1.0;
-                if (storedWeights) {
-                    if (absSum == k && fi == 0 && fj > 0) expected = storedWeights->alpha_top;
-                    else if (absSum == k && fi == 0 && fj < 0) expected = storedWeights->alpha_bottom;
-                    else if (absSum == k && fi > 0 && fj == 0) expected = storedWeights->alpha_right;
-                    else if (absSum == k && fi < 0 && fj == 0) expected = storedWeights->alpha_left;
-                    else if (absSum == k && fi != 0 && fj != 0) {
-                        auto it = storedWeights->beta.find({fi, fj});
-                        if (it != storedWeights->beta.end()) expected = it->second;
-                    }
-                    else if (absSum < k) {
-                        auto it = storedWeights->gamma.find({fi, fj});
-                        if (it != storedWeights->gamma.end()) expected = it->second;
-                    }
-                }
-
-                double error = std::abs(computed.real() - expected);
-                maxError = std::max(maxError, error);
-                numChecked++;
-                if (error < 1e-4) numPassed++;
-
-                // Print details for all vertices
-                std::printf("  Face (%d,%d): neighbors=[(%d,%d),(%d,%d),(%d,%d),(%d,%d)] computed=%.6f expected=%.6f %s\n",
-                            fi, fj,
-                            neighbors[0].first, neighbors[0].second,
-                            neighbors[1].first, neighbors[1].second,
-                            neighbors[2].first, neighbors[2].second,
-                            neighbors[3].first, neighbors[3].second,
-                            computed.real(), expected,
-                            error < 1e-4 ? "OK" : "FAIL");
-            }
-        }
-
-        std::printf("Checked %d faces, %d passed (max error = %.2e)\n", numChecked, numPassed, maxError);
-
-        // =======================================================================
-        // ANGLE CONDITION VERIFICATION
-        // For T-embeddings: around each vertex, opposite angles sum to π (180°)
-        // If angles are θ₁, θ₂, θ₃, θ₄ (CCW between consecutive edges):
-        //   θ₁ + θ₃ = π  and  θ₂ + θ₄ = π
-        // =======================================================================
-        std::printf("\n--- Angle Condition Check ---\n");
-        int angleChecked = 0, anglePassed = 0;
-        double maxAngleError = 0;
-
-        for (int vi = -k; vi <= k; vi++) {
-            for (int vj = -k; vj <= k; vj++) {
-                int absSum = std::abs(vi) + std::abs(vj);
-                if (absSum > k) continue;  // Skip external corners
-                if (T.find({vi, vj}) == T.end()) continue;
-
-                auto neighbors = getTkNeighborsCCW(vi, vj, k, edges, T);
-                if (neighbors.size() != 4) continue;
-
-                std::complex<double> Tc = T[{vi, vj}];
-
-                // Compute angles between consecutive edges
-                std::vector<double> angles(4);
-                for (int s = 0; s < 4; s++) {
-                    std::complex<double> Ta = T[neighbors[s]];
-                    std::complex<double> Tb = T[neighbors[(s+1)%4]];
-                    // Angle from edge (Tc->Ta) to edge (Tc->Tb)
-                    double angleA = std::arg(Ta - Tc);
-                    double angleB = std::arg(Tb - Tc);
-                    double diff = angleB - angleA;
-                    // Normalize to [0, 2π)
-                    while (diff < 0) diff += 2 * M_PI;
-                    while (diff >= 2 * M_PI) diff -= 2 * M_PI;
-                    angles[s] = diff;
-                }
-
-                // Check θ₁ + θ₃ = π and θ₂ + θ₄ = π
-                double sum02 = angles[0] + angles[2];
-                double sum13 = angles[1] + angles[3];
-                double err02 = std::abs(sum02 - M_PI);
-                double err13 = std::abs(sum13 - M_PI);
-                double maxErr = std::max(err02, err13);
-                maxAngleError = std::max(maxAngleError, maxErr);
-
-                angleChecked++;
-                if (maxErr < 0.01) anglePassed++;
-
-                std::printf("  Vertex (%d,%d): θ=[%.2f°,%.2f°,%.2f°,%.2f°] sum02=%.2f° sum13=%.2f° %s\n",
-                            vi, vj,
-                            angles[0] * 180 / M_PI, angles[1] * 180 / M_PI,
-                            angles[2] * 180 / M_PI, angles[3] * 180 / M_PI,
-                            sum02 * 180 / M_PI, sum13 * 180 / M_PI,
-                            maxErr < 0.01 ? "OK" : "FAIL");
-            }
-        }
-        std::printf("Angle check: %d/%d passed (max error = %.4f rad = %.2f°)\n",
-                    anglePassed, angleChecked, maxAngleError, maxAngleError * 180 / M_PI);
-    }
-
-    std::printf("========================\n");
+    // Verification logic - no longer outputs to console
+    (void)k;  // Suppress unused parameter warning
 }
 
 // Compute all T_k levels from 0 to maxK
