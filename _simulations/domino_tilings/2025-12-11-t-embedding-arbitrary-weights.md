@@ -9,13 +9,15 @@ code:
     txt: 'C++ source (WASM)'
 ---
 
-<p style="font-size: 0.9em; color: #555; margin-bottom: 15px;">
-<b>Acknowledgement:</b> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
-I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
-</p>
+<details style="margin-bottom: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #fff8e8; border: 1px solid #d4a017;">About this simulation</summary>
+  <div style="margin-top: 10px; padding: 15px; background: #fff; border: 1px solid #ddd; font-size: 14px; line-height: 1.6;">
+    <p><em>TODO: Technical overview and help. See "Perfect T-embeddings and their computation" below for mathematical background.</em></p>
+  </div>
+</details>
 
 <details style="margin-bottom: 15px;">
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f8ff; border: 1px solid #9cf;">Definition of Perfect T-embedding</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0f8ff; border: 1px solid #9cf;">Perfect T-embeddings and their computation</summary>
   <div style="margin-top: 10px; padding: 15px; background: #fff; border: 1px solid #ddd; font-size: 14px; line-height: 1.6;">
 
 <p>The notion of a <em>t-embedding</em> (also known as a <em>Coulomb gauge</em>) was introduced in
@@ -58,7 +60,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="15" min="1" max="50" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="50" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -68,7 +70,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </div>
 
 <details id="stepwise-section" style="margin-top: 15px;" open>
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Side-by-side layout -->
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
@@ -81,54 +83,65 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> Faces</label>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
-        <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
-          <em>Click on a vertex to see its coordinates</em>
-        </div>
-        <div style="margin-top: 5px; position: relative;">
-          <button id="recompute-face-weights-btn" style="position: absolute; top: 2px; right: 42px; font-size: 10px; padding: 2px 6px;">Recompute</button>
-          <button id="copy-face-weights-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
-          <div id="face-weights-output" style="padding: 8px; background: #fff8e8; border: 1px solid #d4a017; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
-            <em>Face weights will appear here after reduction</em>
-          </div>
+        <div id="aztec-vertex-info" style="margin-top: 3px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
         </div>
       </div>
 
       <!-- RIGHT: T-embedding canvas -->
       <div style="flex: 1; min-width: 350px;">
-        <div style="margin-bottom: 10px;">
-          <button id="step-prev-btn" style="width: 30px;">&lt;</button>
-          <span style="margin: 0 10px;">k = <span id="step-value">11</span></span>
-          <button id="step-next-btn" style="width: 30px;">&gt;</button>
-          <span id="step-info" style="margin-left: 10px; color: #666;">(T_0 graph)</span>
+        <div style="margin-bottom: 10px; text-align: center;">
+          <button id="step-prev-btn" style="width: 60px;">←</button>
+          <button id="step-next-btn" style="width: 60px; margin-left: 10px;">→</button>
+          <span style="margin-left: 15px;">k = <span id="step-value">0</span></span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
-          <em>T_k from face weights (step through Aztec reduction first)</em>
-        </div>
-        <div style="margin-top: 5px; position: relative;">
-          <button id="recompute-mathematica-btn" style="position: absolute; top: 2px; right: 42px; font-size: 10px; padding: 2px 6px;">Recompute</button>
-          <button id="copy-mathematica-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
-          <div id="mathematica-output" style="padding: 8px; background: #f5f5f5; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
-            <em>Mathematica output will appear here</em>
-          </div>
-        </div>
-        <div style="margin-top: 5px; position: relative;">
-          <button id="copy-beta-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
-          <div id="beta-output" style="padding: 8px; background: #f0f8ff; border: 1px solid #4682b4; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
-            <em>Beta ratios will appear here after reduction</em>
-          </div>
-        </div>
-        <div id="verify-container" style="margin-top: 5px;">
-          <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">XX Verification (by level):</div>
-          <div id="verify-levels" style="display: flex; flex-direction: column; gap: 5px;">
-            <em style="font-size: 11px;">XX verification checks will appear here</em>
-          </div>
         </div>
       </div>
     </div>
   </div>
 </details>
+
+<details style="margin-top: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8e8f4; border: 1px solid #99c;">Mathematica Verification</summary>
+  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+    <p style="font-size: 12px; margin-bottom: 10px;">
+      The XX verification formula checks that each interior white vertex satisfies:
+    </p>
+    <pre style="background: #f5f5f5; padding: 8px; border: 1px solid #ccc; font-size: 11px; margin-bottom: 10px;">XX[n1, n2, n3, n4][z] = ((z - n1)(z - n3)) / ((n2 - z)(n4 - z))</pre>
+    <p style="font-size: 11px; color: #666; margin-bottom: 10px;">
+      where n1, n2, n3, n4 are the four neighbors going counterclockwise around z, with n1 chosen so that edge z→n1 has the BLACK face on the right.
+    </p>
+    <div style="margin-bottom: 10px; position: relative;">
+      <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">α/β parameters:</div>
+      <button id="recompute-face-weights-btn" style="position: absolute; top: 0px; right: 42px; font-size: 10px; padding: 2px 6px;">Recompute</button>
+      <button id="copy-face-weights-btn" style="position: absolute; top: 0px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
+      <div id="face-weights-output" style="padding: 8px; background: #fff8e8; border: 1px solid #d4a017; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
+        <em>α/β parameters will appear here</em>
+      </div>
+    </div>
+    <div style="margin-bottom: 10px; position: relative;">
+      <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">T coordinates:</div>
+      <button id="recompute-mathematica-btn" style="position: absolute; top: 0px; right: 42px; font-size: 10px; padding: 2px 6px;">Recompute</button>
+      <button id="copy-mathematica-btn" style="position: absolute; top: 0px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
+      <div id="mathematica-output" style="padding: 8px; background: #fff; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+        <em>T coordinates will appear here</em>
+      </div>
+    </div>
+    <div id="verify-container" style="margin-top: 10px;">
+      <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">XX Verification (by level):</div>
+      <div id="verify-levels" style="display: flex; flex-direction: column; gap: 5px;">
+        <em style="font-size: 11px;">XX verification checks will appear here</em>
+      </div>
+    </div>
+  </div>
+</details>
+
+<p style="font-size: 0.9em; color: #555; margin-top: 15px;">
+<b>Acknowledgement:</b> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
+I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
+</p>
 
 <style>
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
@@ -150,7 +163,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
-  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getTembDebugOutput;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
@@ -407,7 +420,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   }
 
   // T-embedding k level state (for face weights based T_k)
-  let currentK = 11;
+  let currentK = 0;
   let maxK = 0;  // Updated based on stored face weights
 
   // Vertex selection state
@@ -431,7 +444,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   let aztecVertices = [];
   let aztecEdges = [];
   let aztecBlackQuadCenters = [];  // Centers of black quads (for shading at step 8+)
-  let aztecZoom = 1.4;
+  let aztecZoom = 1.33;
   let aztecPanX = 0, aztecPanY = 0;
   let aztecIsPanning = false;
   let aztecDidPan = false;
@@ -628,13 +641,32 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     renderAztecGraph();
   }
 
-  // Update Aztec UI state (button states)
+  // Update Aztec UI state (button states and step description)
   function updateAztecUI() {
     // Update button states
     if (wasmReady) {
       document.getElementById('aztec-up-btn').disabled = !canAztecStepUp();
       document.getElementById('aztec-down-btn').disabled = !canAztecStepDown();
     }
+  }
+
+  // Get step description text
+  function getAztecStepDesc() {
+    const stepDescs = {
+      0: `Level ${aztecLevel}: Original Aztec diamond graph`,
+      1: `Level ${aztecLevel}: Step 1 — Black gauge transform`,
+      2: `Level ${aztecLevel}: Step 2 — White gauge transform`,
+      3: `Level ${aztecLevel}: Step 3 — Contract boundary vertices`,
+      4: `Level ${aztecLevel}: Step 4 — Black contraction (merge diagonal)`,
+      5: `Level ${aztecLevel}: Step 5 — White contraction (merge diagonal)`,
+      6: `Level ${aztecLevel}: Fold 1 — Shading (mark faces)`,
+      7: `Level ${aztecLevel}: Fold 2 — Mark diagonal vertices`,
+      8: `Level ${aztecLevel}: Fold 3 — Split green vertices`,
+      9: `Level ${aztecLevel}: Fold 3b — Diagonal gauge transform`,
+      10: `Level ${aztecLevel}: Fold 4 — Urban renewal`,
+      11: `Level ${aztecLevel}: Fold 5 — Combine double edges`
+    };
+    return stepDescs[aztecReductionStep] || `Level ${aztecLevel}: Step ${aztecReductionStep}`;
   }
 
   // Refresh Aztec graph state from C++
@@ -661,7 +693,6 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     updateAztecUI();
     renderAztecGraph();
     updateFaceWeightsOutput();
-    updateBetaOutput();
   }
 
   // Render Aztec diamond graph
@@ -674,6 +705,14 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
     aztecCtx.fillStyle = '#fafafa';
     aztecCtx.fillRect(0, 0, rect.width, rect.height);
+
+    // Draw step description floating on canvas (upper left corner)
+    const stepDesc = getAztecStepDesc();
+    aztecCtx.font = '11px sans-serif';
+    aztecCtx.fillStyle = 'rgba(100, 100, 100, 0.9)';
+    aztecCtx.textAlign = 'left';
+    aztecCtx.textBaseline = 'top';
+    aztecCtx.fillText(stepDesc, 8, 8);
 
     if (aztecVertices.length === 0) return;
 
@@ -1130,7 +1169,8 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
         typeStr = `${faceClass.type}(${faceClass.i},${faceClass.j})`;
       }
       const genStr = faceClass.k >= 0 ? `k=${faceClass.k}` : '';
-      infoDiv.innerHTML = `<strong>Type:</strong> ${typeStr} &nbsp; | &nbsp; <strong>Gen:</strong> ${genStr} &nbsp; | &nbsp; <strong>Center:</strong> (${face.cx.toFixed(2)}, ${face.cy.toFixed(2)})`;
+      const weightStr = face.weight !== undefined ? face.weight.toFixed(6) : '?';
+      infoDiv.innerHTML = `<strong>Type:</strong> ${typeStr} &nbsp; | &nbsp; <strong>Gen:</strong> ${genStr} &nbsp; | &nbsp; <strong>Center:</strong> (${face.cx.toFixed(2)}, ${face.cy.toFixed(2)}) &nbsp; | &nbsp; <strong>Weight:</strong> ${weightStr}`;
     } else if (closestEdge) {
       selectedAztecEdge = closestEdge.idx;
       selectedAztecVertex = null;
@@ -1174,10 +1214,9 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
-      getTembDebugOutput = Module.cwrap('getTembDebugOutput', 'number', []);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       const seedRng = Module.cwrap('seedRng', null, ['number']);
-      seedRng(Date.now() & 0xFFFFFFFF);  // Seed RNG with current time on load
+      seedRng(42);  // Fixed seed for reproducible results on load
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
       aztecGraphStepUp = Module.cwrap('aztecGraphStepUp', null, []);
@@ -1187,14 +1226,22 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
 
       wasmReady = true;
-      loadingMsg.style.display = 'none';
 
       // Auto-compute on load with randomized weights
-      const n = parseInt(document.getElementById('n-input').value) || 15;
+      const n = parseInt(document.getElementById('n-input').value) || 6;
       setN(n);
       initAztecGraph(n);
       randomizeAztecWeights();  // Randomize on load
       computeAndDisplay();
+
+      // Precompute all T-embedding levels before showing UI
+      for (let k = 0; k <= maxK; k++) {
+        let ptr = getTembeddingLevelJSON(k);
+        freeString(ptr);
+      }
+
+      // Now hide loading message
+      loadingMsg.style.display = 'none';
     };
 
     if (Module.calledRun) {
@@ -1205,7 +1252,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   function computeAndDisplay() {
     if (!wasmReady) return;
 
-    const n = parseInt(document.getElementById('n-input').value) || 4;
+    const n = parseInt(document.getElementById('n-input').value) || 6;
 
     // Initialize Aztec graph at level n
     generateAztecGraph(n);
@@ -1229,7 +1276,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
     // Start at k=11 or maxK if smaller
     currentK = Math.min(currentK, maxK);
-    if (currentK < 0) currentK = Math.min(11, maxK);
+    if (currentK < 0) currentK = 0;
     updateStepDisplay();
     renderStepwiseTemb();
   }
@@ -1242,9 +1289,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     document.getElementById('step-value').textContent = currentK;
     document.getElementById('step-prev-btn').disabled = (currentK <= 0);
     document.getElementById('step-next-btn').disabled = (currentK >= maxK);
-    document.getElementById('step-info').textContent = `(T_${currentK} graph)`;
     updateMathematicaOutput();
-    updateBetaOutput();
     updateVerifyOutput();
   }
 
@@ -1313,26 +1358,6 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     });
 
     mathDiv.textContent = lines.join('\n');
-  }
-
-  // Show debug output for T-embedding computation
-  function updateBetaOutput() {
-    const betaDiv = document.getElementById('beta-output');
-    if (!wasmReady || !getTembDebugOutput) {
-      betaDiv.innerHTML = '<em>Loading...</em>';
-      return;
-    }
-
-    let ptr = getTembDebugOutput();
-    let debugStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
-
-    if (!debugStr || debugStr.length === 0) {
-      betaDiv.innerHTML = '<em>No debug output yet</em>';
-      return;
-    }
-
-    betaDiv.textContent = debugStr;
   }
 
   // Generate Mathematica verification code for XX formula
@@ -1846,7 +1871,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // Main buttons
   document.getElementById('compute-btn').addEventListener('click', () => {
-    const n = parseInt(document.getElementById('n-input').value) || 4;
+    const n = parseInt(document.getElementById('n-input').value) || 6;
     initAztecGraph(n);
     computeAndDisplay();
   });
@@ -1855,7 +1880,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      const n = parseInt(e.target.value) || 4;
+      const n = parseInt(e.target.value) || 6;
       initAztecGraph(n);
       computeAndDisplay();
     }
@@ -1986,9 +2011,6 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   document.getElementById('copy-mathematica-btn').addEventListener('click', function() {
     copyToClipboard('mathematica-output', this);
   });
-  document.getElementById('copy-beta-btn').addEventListener('click', function() {
-    copyToClipboard('beta-output', this);
-  });
 
   // Recompute buttons
   document.getElementById('recompute-face-weights-btn').addEventListener('click', function() {
@@ -2000,7 +2022,6 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     clearTembLevels();  // Clear T-embedding cache to force recomputation
     renderStepwiseTemb();  // Recompute T from stored face weights
     updateMathematicaOutput();
-    updateBetaOutput();
     updateVerifyOutput();
     this.textContent = 'Done!';
     setTimeout(() => { this.textContent = 'Recompute'; }, 1000);

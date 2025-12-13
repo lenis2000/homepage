@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -2120,8 +2120,6 @@ static void aztecStep10_UrbanRenewal() {
     for (const auto& kv : edgeCount) {
         if (kv.second > 1) multiEdges += kv.second;
     }
-    printf("Urban renewal: %zu new edges, %d multi-edges\n", newEdges.size(), multiEdges);
-
     // Clear black quad centers (they've been collapsed)
     g_blackQuadCenters.clear();
 
@@ -2927,32 +2925,14 @@ static void computeTk(int k) {
     // Each axis direction uses its own alpha weight
     // ==========================================================================
 
-    dbg << "\nAlphas for k=" << k << ":\n";
-    dbg << "  alpha_right=" << std::fixed << std::setprecision(6) << alpha_right
-        << "  alpha_left=" << alpha_left
-        << "  alpha_top=" << alpha_top
-        << "  alpha_bottom=" << alpha_bottom << "\n";
-
     // Right: (k, 0) uses alpha_right
-    {
-        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alpha_right * Tprev[{k-1, 0}]) / (alpha_right + mp_real(1));
-        dbg << "  T(" << k << ",0) = (T_prev(" << k << ",0) + " << alpha_right << "*T_prev(" << k-1 << ",0)) / " << (alpha_right+1) << "\n";
-    }
+    Tcurr[{k, 0}] = (Tprev[{k, 0}] + alpha_right * Tprev[{k-1, 0}]) / (alpha_right + mp_real(1));
     // Left: (-k, 0) uses alpha_left
-    {
-        Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alpha_left * Tprev[{-(k-1), 0}]) / (alpha_left + mp_real(1));
-        dbg << "  T(" << -k << ",0) = (T_prev(" << -k << ",0) + " << alpha_left << "*T_prev(" << -(k-1) << ",0)) / " << (alpha_left+1) << "\n";
-    }
+    Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alpha_left * Tprev[{-(k-1), 0}]) / (alpha_left + mp_real(1));
     // Top: (0, k) uses alpha_top
-    {
-        Tcurr[{0, k}] = (Tprev[{0, k}] + alpha_top * Tprev[{0, k-1}]) / (alpha_top + mp_real(1));
-        dbg << "  T(0," << k << ") = (T_prev(0," << k << ") + " << alpha_top << "*T_prev(0," << k-1 << ")) / " << (alpha_top+1) << "\n";
-    }
+    Tcurr[{0, k}] = (Tprev[{0, k}] + alpha_top * Tprev[{0, k-1}]) / (alpha_top + mp_real(1));
     // Bottom: (0, -k) uses alpha_bottom
-    {
-        Tcurr[{0, -k}] = (Tprev[{0, -k}] + alpha_bottom * Tprev[{0, -(k-1)}]) / (alpha_bottom + mp_real(1));
-        dbg << "  T(0," << -k << ") = (T_prev(0," << -k << ") + " << alpha_bottom << "*T_prev(0," << -(k-1) << ")) / " << (alpha_bottom+1) << "\n";
-    }
+    Tcurr[{0, -k}] = (Tprev[{0, -k}] + alpha_bottom * Tprev[{0, -(k-1)}]) / (alpha_bottom + mp_real(1));
 
     // ==========================================================================
     // Rule 3: Beta vertices (diagonal boundary at |i|+|j|=k, off-axis)
@@ -2990,8 +2970,6 @@ static void computeTk(int k) {
         return beta;
     };
 
-    dbg << "\nBetas for k=" << k << ":\n";
-
     for (int j = 1; j <= k - 1; j++) {
         int kj = k - j;  // So (j, kj) has |j| + |kj| = k
 
@@ -3003,7 +2981,6 @@ static void computeTk(int k) {
             } else {
                 Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
             }
-            dbg << "  UR T(" << j << "," << kj << "): beta=" << beta_ij << (g_betaSwapUR ? " [SWAPPED]" : "") << "\n";
         }
 
         // Lower-right quadrant: (j, -(k-j)) where j > 0, k-j > 0
@@ -3014,7 +2991,6 @@ static void computeTk(int k) {
             } else {
                 Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
             }
-            dbg << "  LR T(" << j << "," << -kj << "): beta=" << beta_ij << (g_betaSwapLR ? " [SWAPPED]" : "") << "\n";
         }
     }
 
@@ -3029,7 +3005,6 @@ static void computeTk(int k) {
             } else {
                 Tcurr[{-j, kj}] = (beta_ij * Tprev[{-(j-1), kj}] + Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
             }
-            dbg << "  UL T(" << -j << "," << kj << "): beta=" << beta_ij << (g_betaSwapUL ? " [SWAPPED]" : "") << "\n";
         }
 
         // Lower-left quadrant: (-j, -(k-j)) where j > 0, k-j > 0
@@ -3040,7 +3015,6 @@ static void computeTk(int k) {
             } else {
                 Tcurr[{-j, -kj}] = (Tprev[{-j, -(kj-1)}] + beta_ij * Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
             }
-            dbg << "  LL T(" << -j << "," << -kj << "): beta=" << beta_ij << (g_betaSwapLL ? " [SWAPPED]" : "") << "\n";
         }
     }
 
