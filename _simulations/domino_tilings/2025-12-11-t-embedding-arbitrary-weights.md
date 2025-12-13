@@ -58,7 +58,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="4" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="15" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -84,6 +84,12 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
         <div id="aztec-vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
           <em>Click on a vertex to see its coordinates</em>
         </div>
+        <div style="margin-top: 5px; position: relative;">
+          <button id="copy-face-weights-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
+          <div id="face-weights-output" style="padding: 8px; background: #fff8e8; border: 1px solid #d4a017; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+            <em>Face weights will appear here after reduction</em>
+          </div>
+        </div>
       </div>
 
       <!-- RIGHT: T-embedding canvas -->
@@ -93,17 +99,23 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <span style="margin: 0 10px;">k = <span id="step-value">0</span></span>
           <button id="step-next-btn" style="width: 30px;">&gt;</button>
           <span id="step-info" style="margin-left: 10px; color: #666;">(T_0 graph)</span>
-          <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk" checked> Labels</label>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
         </div>
-        <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+                <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
           <em>T_k from face weights (step through Aztec reduction first)</em>
         </div>
-        <div id="mathematica-output" style="margin-top: 5px; padding: 8px; background: #f5f5f5; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
-          <em>Mathematica output will appear here</em>
+        <div style="margin-top: 5px; position: relative;">
+          <button id="copy-mathematica-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
+          <div id="mathematica-output" style="padding: 8px; background: #f5f5f5; border: 1px solid #ccc; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+            <em>Mathematica output will appear here</em>
+          </div>
         </div>
-        <div id="beta-output" style="margin-top: 5px; padding: 8px; background: #f0f8ff; border: 1px solid #4682b4; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
-          <em>Beta ratios will appear here after reduction</em>
+        <div style="margin-top: 5px; position: relative;">
+          <button id="copy-beta-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
+          <div id="beta-output" style="padding: 8px; background: #f0f8ff; border: 1px solid #4682b4; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
+            <em>Beta ratios will appear here after reduction</em>
+          </div>
         </div>
       </div>
     </div>
@@ -130,7 +142,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
-  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getTembDebugOutput;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
 
@@ -639,6 +651,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 
     updateAztecUI();
     renderAztecGraph();
+    updateFaceWeightsOutput();
     updateBetaOutput();
   }
 
@@ -1152,6 +1165,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
+      getTembDebugOutput = Module.cwrap('getTembDebugOutput', 'number', []);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
@@ -1164,7 +1178,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       loadingMsg.style.display = 'none';
 
       // Auto-compute on load
-      const n = parseInt(document.getElementById('n-input').value) || 4;
+      const n = parseInt(document.getElementById('n-input').value) || 6;
       setN(n);
       initAztecGraph(n);
       computeAndDisplay();
@@ -1240,12 +1254,12 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     // Format complex number for Mathematica
     function formatComplex(re, im) {
       if (Math.abs(im) < 1e-10) {
-        return re.toFixed(6);
-      } else if (Math.abs(re) < 1e-10) {
-        return `${im.toFixed(6)}*I`;
+        return re.toFixed(12);
+      } else if (Math.abs(re) < 1e-14) {
+        return `${im.toFixed(12)}*I`;
       } else {
         const sign = im >= 0 ? '+' : '';
-        return `${re.toFixed(6)}${sign}${im.toFixed(6)}*I`;
+        return `${re.toFixed(12)}${sign}${im.toFixed(12)}*I`;
       }
     }
 
@@ -1268,44 +1282,75 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     mathDiv.textContent = lines.join('\n');
   }
 
-  // Generate Mathematica output for captured beta ratios
+  // Show debug output for T-embedding computation
   function updateBetaOutput() {
     const betaDiv = document.getElementById('beta-output');
-    if (!wasmReady || !getBetaRatiosJSON) {
+    if (!wasmReady || !getTembDebugOutput) {
       betaDiv.innerHTML = '<em>Loading...</em>';
       return;
     }
 
-    let ptr = getBetaRatiosJSON();
-    let jsonStr = Module.UTF8ToString(ptr);
+    let ptr = getTembDebugOutput();
+    let debugStr = Module.UTF8ToString(ptr);
     freeString(ptr);
-    const betaData = JSON.parse(jsonStr);
 
-    if (!betaData || betaData.length === 0) {
-      betaDiv.innerHTML = '<em>No beta ratios captured yet (step through reduction)</em>';
+    if (!debugStr || debugStr.length === 0) {
+      betaDiv.innerHTML = '<em>No debug output yet</em>';
       return;
     }
 
-    // Generate Mathematica definitions
-    const lines = [];
-    for (const ber of betaData) {
-      for (const r of ber.ratios) {
-        lines.push(`beta[${ber.k}][${r.i},${r.j}]:=${r.ratio.toFixed(6)}`);
-      }
+    betaDiv.textContent = debugStr;
+  }
+
+  // Display stored face weights near Aztec graph
+  function updateFaceWeightsOutput() {
+    const faceDiv = document.getElementById('face-weights-output');
+    if (!wasmReady || !getStoredFaceWeightsJSON) {
+      faceDiv.innerHTML = '<em>Loading...</em>';
+      return;
     }
 
-    // Sort by k, then i, then j
-    lines.sort((a, b) => {
-      const matchA = a.match(/beta\[(\d+)\]\[(-?\d+),(-?\d+)\]/);
-      const matchB = b.match(/beta\[(\d+)\]\[(-?\d+),(-?\d+)\]/);
-      const kA = parseInt(matchA[1]), iA = parseInt(matchA[2]), jA = parseInt(matchA[3]);
-      const kB = parseInt(matchB[1]), iB = parseInt(matchB[2]), jB = parseInt(matchB[3]);
-      if (kA !== kB) return kA - kB;
-      if (iA !== iB) return iA - iB;
-      return jA - jB;
-    });
+    let ptr = getStoredFaceWeightsJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
 
-    betaDiv.textContent = lines.length > 0 ? lines.join('\n') : '<em>No beta ratios</em>';
+    try {
+      const data = JSON.parse(jsonStr);
+      const levels = data.capturedLevels || [];
+
+      if (levels.length === 0) {
+        faceDiv.innerHTML = '<em>No face weights captured yet. Step through reduction.</em>';
+        return;
+      }
+
+      let lines = [];
+      for (const sw of levels) {
+        const k = sw.k;
+        if (k === 0 && sw.root !== undefined) {
+          lines.push(`root[${k}]:=${sw.root.toFixed(12)}`);
+        } else {
+          lines.push(`alphaR[${k}]:=${sw.alpha_right.toFixed(12)}`);
+          lines.push(`alphaL[${k}]:=${sw.alpha_left.toFixed(12)}`);
+          lines.push(`alphaT[${k}]:=${sw.alpha_top.toFixed(12)}`);
+          lines.push(`alphaB[${k}]:=${sw.alpha_bottom.toFixed(12)}`);
+
+          if (sw.beta && sw.beta.length > 0) {
+            for (const b of sw.beta) {
+              lines.push(`beta[${k}][${b.i},${b.j}]:=${b.weight.toFixed(12)}`);
+            }
+          }
+
+          if (sw.gamma && sw.gamma.length > 0) {
+            for (const g of sw.gamma) {
+              lines.push(`gamma[${k}][${g.i},${g.j}]:=${g.weight.toFixed(12)}`);
+            }
+          }
+        }
+      }
+      faceDiv.textContent = lines.join('\n');
+    } catch (e) {
+      faceDiv.innerHTML = '<em>Error parsing face weights: ' + e.message + '</em>';
+    }
   }
 
   function renderStepwiseTemb() {
@@ -1721,6 +1766,29 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     aztecZoom = Math.max(0.1, Math.min(20, aztecZoom * factor));
     renderAztecGraph();
   }, { passive: false });
+
+  // Copy to clipboard buttons
+  function copyToClipboard(elementId, btn) {
+    const el = document.getElementById(elementId);
+    const text = el.textContent || el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1000);
+    }).catch(err => {
+      console.error('Copy failed:', err);
+    });
+  }
+
+  document.getElementById('copy-face-weights-btn').addEventListener('click', function() {
+    copyToClipboard('face-weights-output', this);
+  });
+  document.getElementById('copy-mathematica-btn').addEventListener('click', function() {
+    copyToClipboard('mathematica-output', this);
+  });
+  document.getElementById('copy-beta-btn').addEventListener('click', function() {
+    copyToClipboard('beta-output', this);
+  });
 
   // Resize handler
   window.addEventListener('resize', () => {

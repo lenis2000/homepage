@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -25,6 +25,13 @@
 #include <map>
 #include <set>
 #include <algorithm>
+
+// Boost multiprecision for 100-digit precision
+#include <boost/multiprecision/cpp_bin_float.hpp>
+
+// Define 100-digit precision types (using cpp_bin_float)
+using mp_real = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>>;
+using mp_complex = std::complex<mp_real>;
 
 // =============================================================================
 // GLOBAL STATE
@@ -92,7 +99,7 @@ struct AztecVertex {
 // Aztec diamond graph edge with weight
 struct AztecEdge {
     int v1, v2;       // Indices into vertex array
-    double weight;    // Edge weight (0.5 to 2.0)
+    mp_real weight;   // Edge weight (100-digit precision)
     bool isHorizontal; // True if horizontal edge, false if vertical
     bool gaugeTransformed; // True if this edge was modified by gauge transform
 };
@@ -118,11 +125,16 @@ static std::vector<AztecGraphState> g_aztecHistory;
 
 // Double edge ratios for T-embedding alpha values (captured from step 11)
 struct DoubleEdgeRatios {
-    int k;                // Level when captured
-    double ratio_top;     // Top edge pair ratio (red/blue)
-    double ratio_bottom;  // Bottom edge pair ratio
-    double ratio_left;    // Left edge pair ratio
-    double ratio_right;   // Right edge pair ratio
+    int k;                 // Level when captured
+    mp_real ratio_top;     // Top edge pair ratio (red/blue)
+    mp_real ratio_bottom;  // Bottom edge pair ratio
+    mp_real ratio_left;    // Left edge pair ratio
+    mp_real ratio_right;   // Right edge pair ratio
+    // Store numerator and denominator separately for display
+    mp_real num_top, den_top;
+    mp_real num_bottom, den_bottom;
+    mp_real num_left, den_left;
+    mp_real num_right, den_right;
 };
 static std::vector<DoubleEdgeRatios> g_doubleEdgeRatios;
 
@@ -130,9 +142,14 @@ static std::vector<DoubleEdgeRatios> g_doubleEdgeRatios;
 // These are from double edges connecting external (boundary) to inner vertices
 struct BetaEdgeRatios {
     int k;  // Level for T_{k-1} → T_k computation
-    std::map<std::pair<int,int>, double> ratios;  // (i,j) → ratio for position
+    std::map<std::pair<int,int>, mp_real> ratios;  // (i,j) → ratio for position
+    std::map<std::pair<int,int>, mp_real> numerators;   // (i,j) → numerator
+    std::map<std::pair<int,int>, mp_real> denominators; // (i,j) → denominator
 };
 static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
+
+// Debug output for T-embedding computation
+static std::string g_tembDebugOutput;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -353,7 +370,7 @@ static void computeTembeddingRecurrence() {
 
             // T_{n+1}(n, 0)
             T[n+1][n + off][0 + off] =
-                (T[n][n + off][0 + off] + alphaC * T[n][(n-1) + off][0 + off]) / (alphaC + one);
+                (alphaC *T[n][n + off][0 + off] +  T[n][(n-1) + off][0 + off]) / (alphaC + one);
             vertexTypes[n+1][n + off][0 + off] = VT_AXIS_HORIZONTAL;
             vertexSourceLevel[n+1][n + off][0 + off] = n;
             vertexCoeffs[n+1][n + off][0 + off] = alpha;
@@ -361,7 +378,7 @@ static void computeTembeddingRecurrence() {
 
             // T_{n+1}(-n, 0)
             T[n+1][-n + off][0 + off] =
-                (T[n][-n + off][0 + off] + alphaC * T[n][-(n-1) + off][0 + off]) / (alphaC + one);
+                (alphaC * T[n][-n + off][0 + off] + T[n][-(n-1) + off][0 + off]) / (alphaC + one);
             vertexTypes[n+1][-n + off][0 + off] = VT_AXIS_HORIZONTAL;
             vertexSourceLevel[n+1][-n + off][0 + off] = n;
             vertexCoeffs[n+1][-n + off][0 + off] = alpha;
@@ -369,7 +386,7 @@ static void computeTembeddingRecurrence() {
 
             // T_{n+1}(0, n)
             T[n+1][0 + off][n + off] =
-                (alphaC * T[n][0 + off][n + off] + T[n][0 + off][(n-1) + off]) / (alphaC + one);
+                ( T[n][0 + off][n + off] + alphaC *T[n][0 + off][(n-1) + off]) / (alphaC + one);
             vertexTypes[n+1][0 + off][n + off] = VT_AXIS_VERTICAL;
             vertexSourceLevel[n+1][0 + off][n + off] = n;
             vertexCoeffs[n+1][0 + off][n + off] = alpha;
@@ -377,7 +394,7 @@ static void computeTembeddingRecurrence() {
 
             // T_{n+1}(0, -n)
             T[n+1][0 + off][-n + off] =
-                (alphaC * T[n][0 + off][-n + off] + T[n][0 + off][-(n-1) + off]) / (alphaC + one);
+                ( T[n][0 + off][-n + off] + alphaC *T[n][0 + off][-(n-1) + off]) / (alphaC + one);
             vertexTypes[n+1][0 + off][-n + off] = VT_AXIS_VERTICAL;
             vertexSourceLevel[n+1][0 + off][-n + off] = n;
             vertexCoeffs[n+1][0 + off][-n + off] = alpha;
@@ -826,12 +843,12 @@ static void aztecStep1_GaugeTransform() {
         if (refEdgeIdx < 0) continue;
 
         // Read CURRENT weights (not cached!)
-        double edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
-        double refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
+        mp_real edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
+        mp_real refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
 
         // Compute gauge factor λ = refEdgeWeight / edgeToBoundaryWeight
         if (edgeToBoundaryWeight < 1e-10) continue;
-        double lambda = refEdgeWeight / edgeToBoundaryWeight;
+        mp_real lambda = refEdgeWeight / edgeToBoundaryWeight;
 
         // Apply λ to all edges adjacent to this gauge vertex
         for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
@@ -866,12 +883,12 @@ static void aztecStep1_GaugeTransform() {
         if (refEdgeIdx < 0) continue;
 
         // Read CURRENT weights (not cached!)
-        double edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
-        double refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
+        mp_real edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
+        mp_real refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
 
         // Compute gauge factor λ = refEdgeWeight / edgeToBoundaryWeight
         if (edgeToBoundaryWeight < 1e-10) continue;
-        double lambda = refEdgeWeight / edgeToBoundaryWeight;
+        mp_real lambda = refEdgeWeight / edgeToBoundaryWeight;
 
         // Apply λ to all edges adjacent to this gauge vertex
         for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
@@ -1008,10 +1025,10 @@ static void aztecStep2_WhiteGaugeTransform() {
             continue;  // Both already transformed
         }
 
-        double refWeight = g_aztecEdges[refEdgeIdx].weight;
-        double eqWeight = g_aztecEdges[eqEdgeIdx].weight;
-        if (eqWeight < 1e-10) continue;
-        double lambda = refWeight / eqWeight;
+        mp_real refWeight = g_aztecEdges[refEdgeIdx].weight;
+        mp_real eqWeight = g_aztecEdges[eqEdgeIdx].weight;
+        if (eqWeight < mp_real("1e-10")) continue;
+        mp_real lambda = refWeight / eqWeight;
 
         // Highlight the WHITE gauge vertex
         g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
@@ -1064,10 +1081,10 @@ static void aztecStep2_WhiteGaugeTransform() {
             continue;  // Both already transformed
         }
 
-        double refWeight = g_aztecEdges[refEdgeIdx].weight;
-        double eqWeight = g_aztecEdges[eqEdgeIdx].weight;
-        if (eqWeight < 1e-10) continue;
-        double lambda = refWeight / eqWeight;
+        mp_real refWeight = g_aztecEdges[refEdgeIdx].weight;
+        mp_real eqWeight = g_aztecEdges[eqEdgeIdx].weight;
+        if (eqWeight < mp_real("1e-10")) continue;
+        mp_real lambda = refWeight / eqWeight;
 
         // Highlight the WHITE gauge vertex
         g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
@@ -1259,7 +1276,7 @@ static void aztecStep4_BlackContraction() {
     }
 
     // Merge double edges: sum weights of edges between same vertex pairs
-    std::map<std::pair<int,int>, double> edgeWeights;
+    std::map<std::pair<int,int>, mp_real> edgeWeights;
     std::map<std::pair<int,int>, bool> edgeHorizontal;
     for (const auto& e : remappedEdges) {
         int v1 = std::min(e.v1, e.v2);
@@ -1388,7 +1405,7 @@ static void aztecStep5_WhiteContraction() {
     }
 
     // Merge double edges: sum weights of edges between same vertex pairs
-    std::map<std::pair<int,int>, double> edgeWeights;
+    std::map<std::pair<int,int>, mp_real> edgeWeights;
     std::map<std::pair<int,int>, bool> edgeHorizontal;
     for (const auto& e : remappedEdges) {
         int v1 = std::min(e.v1, e.v2);
@@ -1886,8 +1903,8 @@ static void aztecStep9_DiagonalGauge() {
 
             // Check if it's trivalent (degree 3)
             if (adj[neighborIdx].size() == 3) {
-                double diagWeight = g_aztecEdges[diagEdgeIdx].weight;
-                if (std::abs(diagWeight) > 1e-10 && std::abs(diagWeight - 1.0) > 1e-10) {
+                mp_real diagWeight = g_aztecEdges[diagEdgeIdx].weight;
+                if (abs(diagWeight) > mp_real("1e-10") && abs(diagWeight - mp_real(1)) > mp_real("1e-10")) {
                     // Gauge transform: divide all edges at this vertex by diagWeight
                     for (const auto& [_, edgeIdx] : adj[neighborIdx]) {
                         g_aztecEdges[edgeIdx].weight /= diagWeight;
@@ -1986,7 +2003,7 @@ static void aztecStep10_UrbanRenewal() {
 
         // Find quad edges (edges between inner vertices) and their weights
         // Order: edge from innerVerts[i] to innerVerts[(i+1)%4]
-        std::vector<double> quadWeights(4, 1.0);
+        std::vector<mp_real> quadWeights(4, mp_real(1));
         std::vector<int> quadEdgeIdx(4, -1);
 
         for (int i = 0; i < 4; i++) {
@@ -2002,7 +2019,7 @@ static void aztecStep10_UrbanRenewal() {
         }
 
         // Get diagonal edge weights
-        std::vector<double> diagWeights(4, 1.0);
+        std::vector<mp_real> diagWeights(4, mp_real(1));
         for (int i = 0; i < 4; i++) {
             if (diagEdgeIdx[i] >= 0) {
                 diagWeights[i] = g_aztecEdges[diagEdgeIdx[i]].weight;
@@ -2013,11 +2030,11 @@ static void aztecStep10_UrbanRenewal() {
         // Quad edges in cyclic order: x=quadWeights[0], y=quadWeights[1], z=quadWeights[2], w=quadWeights[3]
         // D = x*z + w*y
         // New weights: (z/D, w/D, x/D, y/D)
-        double x = quadWeights[0], y = quadWeights[1], z = quadWeights[2], w = quadWeights[3];
-        double D = x * z + w * y;
-        if (std::abs(D) < 1e-10) D = 1.0;  // Avoid division by zero
+        mp_real x = quadWeights[0], y = quadWeights[1], z = quadWeights[2], w = quadWeights[3];
+        mp_real D = x * z + w * y;
+        if (abs(D) < mp_real("1e-10")) D = mp_real(1);  // Avoid division by zero
 
-        std::vector<double> newWeights = {z / D, w / D, x / D, y / D};
+        std::vector<mp_real> newWeights = {z / D, w / D, x / D, y / D};
 
         // Mark inner vertices for removal
         for (int i = 0; i < 4; i++) {
@@ -2124,22 +2141,45 @@ static void aztecStep11_CombineDoubleEdges() {
         // When we have 4 vertices at level L, these ratios are for computing T_{L-2}
         // e.g., level=3 with 4 vertices → ratios for k=1
         ratios.k = g_aztecLevel - 2;
-        ratios.ratio_top = 1.0;
-        ratios.ratio_bottom = 1.0;
-        ratios.ratio_left = 1.0;
-        ratios.ratio_right = 1.0;
+        ratios.ratio_top = 1; ratios.num_top = 1; ratios.den_top = 1;
+        ratios.ratio_bottom = 1; ratios.num_bottom = 1; ratios.den_bottom = 1;
+        ratios.ratio_left = 1; ratios.num_left = 1; ratios.den_left = 1;
+        ratios.ratio_right = 1; ratios.num_right = 1; ratios.den_right = 1;
 
         for (const auto& [vertPair, indices] : edgeGroups) {
             if (indices.size() == 2) {
-                double w0 = g_aztecEdges[indices[0]].weight;  // "red" edge
-                double w1 = g_aztecEdges[indices[1]].weight;  // "blue" edge
-                double ratio = w0 / w1;
+                // Get the two edges
+                const auto& e0 = g_aztecEdges[indices[0]];
+                const auto& e1 = g_aztecEdges[indices[1]];
 
-                // Get vertex coordinates
-                double x1 = g_aztecVertices[vertPair.first].x;
-                double y1 = g_aztecVertices[vertPair.first].y;
-                double x2 = g_aztecVertices[vertPair.second].x;
-                double y2 = g_aztecVertices[vertPair.second].y;
+                // Get vertex info
+                const auto& v1 = g_aztecVertices[vertPair.first];
+                const auto& v2 = g_aztecVertices[vertPair.second];
+
+                // For each edge, check if it goes from black to white (v1->v2)
+                bool e0_fromBlackToWhite = (g_aztecVertices[e0.v1].isWhite == false);
+                bool e1_fromBlackToWhite = (g_aztecVertices[e1.v1].isWhite == false);
+
+                // Compute ratio: black->white edge weight / white->black edge weight
+                mp_real ratio, numerator, denominator;
+                if (e0_fromBlackToWhite && !e1_fromBlackToWhite) {
+                    numerator = e0.weight;
+                    denominator = e1.weight;
+                } else if (!e0_fromBlackToWhite && e1_fromBlackToWhite) {
+                    numerator = e1.weight;
+                    denominator = e0.weight;
+                } else {
+                    // Both same direction - use default
+                    numerator = e0.weight;
+                    denominator = e1.weight;
+                }
+                ratio = numerator / denominator;
+
+                // Get vertex coordinates for position classification
+                double x1 = v1.x;
+                double y1 = v1.y;
+                double x2 = v2.x;
+                double y2 = v2.y;
 
                 // Determine edge type by position
                 bool sameY = std::abs(y1 - y2) < 0.1;  // Horizontal edge (same y)
@@ -2147,12 +2187,20 @@ static void aztecStep11_CombineDoubleEdges() {
 
                 if (sameY && (y1 + y2) / 2 > 0) {
                     ratios.ratio_top = ratio;
+                    ratios.num_top = numerator;
+                    ratios.den_top = denominator;
                 } else if (sameY && (y1 + y2) / 2 < 0) {
                     ratios.ratio_bottom = ratio;
+                    ratios.num_bottom = numerator;
+                    ratios.den_bottom = denominator;
                 } else if (sameX && (x1 + x2) / 2 < 0) {
                     ratios.ratio_left = ratio;
+                    ratios.num_left = numerator;
+                    ratios.den_left = denominator;
                 } else if (sameX && (x1 + x2) / 2 > 0) {
                     ratios.ratio_right = ratio;
+                    ratios.num_right = numerator;
+                    ratios.den_right = denominator;
                 }
             }
         }
@@ -2198,10 +2246,29 @@ static void aztecStep11_CombineDoubleEdges() {
                     int i = (int)std::round(inner.x);
                     int j = (int)std::round(inner.y);
 
-                    // Compute ratio of the two edge weights
-                    double w0 = g_aztecEdges[indices[0]].weight;
-                    double w1 = g_aztecEdges[indices[1]].weight;
-                    betaRatios.ratios[{i, j}] = w0 / w1;
+                    // Compute ratio based on white/black coloring
+                    // Face weight formula uses edges from black to white
+                    const auto& e0 = g_aztecEdges[indices[0]];
+                    const auto& e1 = g_aztecEdges[indices[1]];
+
+                    bool e0_fromBlackToWhite = (g_aztecVertices[e0.v1].isWhite == false);
+                    bool e1_fromBlackToWhite = (g_aztecVertices[e1.v1].isWhite == false);
+
+                    mp_real ratio, numerator, denominator;
+                    if (e0_fromBlackToWhite && !e1_fromBlackToWhite) {
+                        numerator = e0.weight;
+                        denominator = e1.weight;
+                    } else if (!e0_fromBlackToWhite && e1_fromBlackToWhite) {
+                        numerator = e1.weight;
+                        denominator = e0.weight;
+                    } else {
+                        numerator = e0.weight;
+                        denominator = e1.weight;
+                    }
+                    ratio = numerator / denominator;
+                    betaRatios.ratios[{i, j}] = ratio;
+                    betaRatios.numerators[{i, j}] = numerator;
+                    betaRatios.denominators[{i, j}] = denominator;
                 }
             }
         }
@@ -2215,7 +2282,7 @@ static void aztecStep11_CombineDoubleEdges() {
     std::vector<AztecEdge> newEdges;
     for (const auto& [vertPair, indices] : edgeGroups) {
         // Sum weights of all edges in this group
-        double totalWeight = 0.0;
+        mp_real totalWeight = 0;
         bool isHoriz = g_aztecEdges[indices[0]].isHorizontal;
         bool gaugeT = g_aztecEdges[indices[0]].gaugeTransformed;
         for (size_t idx : indices) {
@@ -2267,7 +2334,7 @@ static void aztecStep12_StartNextIteration() {
     std::map<std::string, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
         std::ostringstream key;
-        key << std::setprecision(10) << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
+        key << std::setprecision(15) << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
         vertexIndex[key.str()] = (int)i;
     }
 
@@ -2279,8 +2346,8 @@ static void aztecStep12_StartNextIteration() {
         double x2 = g_aztecVertices[e.v2].x;
         double y2 = g_aztecVertices[e.v2].y;
         std::ostringstream k1, k2;
-        k1 << std::setprecision(10) << x1 << "," << y1 << "-" << x2 << "," << y2;
-        k2 << std::setprecision(10) << x2 << "," << y2 << "-" << x1 << "," << y1;
+        k1 << std::setprecision(15) << x1 << "," << y1 << "-" << x2 << "," << y2;
+        k2 << std::setprecision(15) << x2 << "," << y2 << "-" << x1 << "," << y1;
         edgeSet.insert(k1.str());
         edgeSet.insert(k2.str());
     }
@@ -2293,24 +2360,24 @@ static void aztecStep12_StartNextIteration() {
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;
         std::ostringstream faceKey;
-        faceKey << std::setprecision(10) << x << "," << y;
+        faceKey << std::setprecision(15) << x << "," << y;
         if (visitedFaces.count(faceKey.str())) continue;
 
         // Look for face with BL at (x, y)
         std::ostringstream blKey, brKey, tlKey, trKey;
-        blKey << std::setprecision(10) << x << "," << y;
-        brKey << std::setprecision(10) << (x+1) << "," << y;
-        tlKey << std::setprecision(10) << x << "," << (y+1);
-        trKey << std::setprecision(10) << (x+1) << "," << (y+1);
+        blKey << std::setprecision(15) << x << "," << y;
+        brKey << std::setprecision(15) << (x+1) << "," << y;
+        tlKey << std::setprecision(15) << x << "," << (y+1);
+        trKey << std::setprecision(15) << (x+1) << "," << (y+1);
 
         if (vertexIndex.count(blKey.str()) && vertexIndex.count(brKey.str()) &&
             vertexIndex.count(tlKey.str()) && vertexIndex.count(trKey.str())) {
             // Check all 4 edges exist
             std::ostringstream e1, e2, e3, e4;
-            e1 << std::setprecision(10) << x << "," << y << "-" << (x+1) << "," << y;
-            e2 << std::setprecision(10) << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
-            e3 << std::setprecision(10) << x << "," << y << "-" << x << "," << (y+1);
-            e4 << std::setprecision(10) << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
+            e1 << std::setprecision(15) << x << "," << y << "-" << (x+1) << "," << y;
+            e2 << std::setprecision(15) << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
+            e3 << std::setprecision(15) << x << "," << y << "-" << x << "," << (y+1);
+            e4 << std::setprecision(15) << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
 
             if (edgeSet.count(e1.str()) && edgeSet.count(e2.str()) &&
                 edgeSet.count(e3.str()) && edgeSet.count(e4.str())) {
@@ -2376,7 +2443,7 @@ struct AztecFace {
     std::vector<int> vertexIndices;  // Vertices around face in order
     std::vector<int> edgeIndices;    // Edges around face in order
     double cx, cy;                   // Centroid
-    double weight;                   // Face weight (cross-ratio)
+    mp_real weight;                  // Face weight (cross-ratio, 100-digit precision)
 };
 
 // Global face storage
@@ -2387,12 +2454,12 @@ static std::vector<AztecFace> g_aztecFaces;
 // =============================================================================
 
 struct StoredFaceWeights {
-    int k;                                      // Level index
-    double root;                                // k=0 only: single ROOT weight
-    double alpha_top, alpha_bottom;             // Extreme weights at (0,max), (0,-max)
-    double alpha_left, alpha_right;             // Extreme weights at (-max,0), (max,0)
-    std::map<std::pair<int,int>, double> beta;  // Diagonal weights beta(i,j), |i|+|j|=k
-    std::map<std::pair<int,int>, double> gamma; // Inner weights gamma(i,j), |i|+|j|<=k-1
+    int k;                                        // Level index
+    mp_real root;                                 // k=0 only: single ROOT weight
+    mp_real alpha_top, alpha_bottom;              // Extreme weights at (0,max), (0,-max)
+    mp_real alpha_left, alpha_right;              // Extreme weights at (-max,0), (max,0)
+    std::map<std::pair<int,int>, mp_real> beta;   // Diagonal weights beta(i,j), |i|+|j|=k
+    std::map<std::pair<int,int>, mp_real> gamma;  // Inner weights gamma(i,j), |i|+|j|<=k-1
 };
 
 static std::vector<StoredFaceWeights> g_storedWeights;
@@ -2509,7 +2576,7 @@ static void storeFaceWeightsForK(int k) {
             int fi = kv.first;
             int i = kv.second.first;
             int j = kv.second.second;
-            double weight = g_aztecFaces[fi].weight;
+            mp_real weight = g_aztecFaces[fi].weight;
             int absSum = std::abs(i) + std::abs(j);
 
 
@@ -2575,7 +2642,7 @@ static std::vector<TembLevel> g_tembLevels;
 // T_0(0,1) = i/sqrt(X_ROOT), T_0(0,-1) = -i/sqrt(X_ROOT)
 static void computeT0() {
     // Find k=0 stored weights
-    double rootWeight = 1.0;
+    mp_real rootWeight = 1;
     for (const auto& sw : g_storedWeights) {
         if (sw.k == 0) {
             rootWeight = sw.root;
@@ -2594,7 +2661,7 @@ static void computeT0() {
     t0.vertices.push_back({-1, 0, -1.0, 0.0});
 
     // Boundary vertices on imaginary axis: i/sqrt(X_ROOT)
-    double invSqrtRoot = 1.0 / std::sqrt(rootWeight);
+    double invSqrtRoot = 1.0 / std::sqrt(static_cast<double>(rootWeight));
     t0.vertices.push_back({0, 1, 0.0, invSqrtRoot});
     t0.vertices.push_back({0, -1, 0.0, -invSqrtRoot});
 
@@ -2650,7 +2717,7 @@ static void verifyT0() {
     std::complex<double> computed = -1.0 * term1 * term2;  // (-1)^3 = -1
 
     // Get expected ROOT weight
-    double expectedWeight = 1.0;
+    mp_real expectedWeight = 1;
     for (const auto& sw : g_storedWeights) {
         if (sw.k == 0) {
             expectedWeight = sw.root;
@@ -2751,6 +2818,10 @@ static double computeFaceWeight(
 static void computeTk(int k) {
     if (k < 1) return;  // T_0 is computed separately
 
+    // Clear and start debug output for this level
+    std::ostringstream dbg;
+    dbg << "=== T_" << k << " computation ===\n";
+
     // Check if already computed
     for (const auto& level : g_tembLevels) {
         if (level.k == k) return;  // Already exists
@@ -2791,7 +2862,7 @@ static void computeTk(int k) {
     }
 
     // Get alpha values from double edge ratios (captured in step 11)
-    double alpha_right = 1.0, alpha_left = 1.0, alpha_top = 1.0, alpha_bottom = 1.0;
+    mp_real alpha_right = 1, alpha_left = 1, alpha_top = 1, alpha_bottom = 1;
 
     for (const auto& der : g_doubleEdgeRatios) {
         if (der.k == k) {
@@ -2806,14 +2877,14 @@ static void computeTk(int k) {
     TembLevel tk;
     tk.k = k;
 
-    // Build a map for quick T_{k-1} lookup
-    std::map<std::pair<int,int>, std::complex<double>> Tprev;
+    // Build a map for quick T_{k-1} lookup (using 100-digit precision)
+    std::map<std::pair<int,int>, mp_complex> Tprev;
     for (const auto& v : prevLevel->vertices) {
-        Tprev[{v.i, v.j}] = std::complex<double>(v.re, v.im);
+        Tprev[{v.i, v.j}] = mp_complex(mp_real(v.re), mp_real(v.im));
     }
 
-    // Map for T_k values (build incrementally)
-    std::map<std::pair<int,int>, std::complex<double>> Tcurr;
+    // Map for T_k values (build incrementally, using 100-digit precision)
+    std::map<std::pair<int,int>, mp_complex> Tcurr;
 
     // ==========================================================================
     // Rule 1: External corners (stay the same as previous level's corners)
@@ -2830,25 +2901,31 @@ static void computeTk(int k) {
     // Each axis direction uses its own alpha weight
     // ==========================================================================
 
+    dbg << "\nAlphas for k=" << k << ":\n";
+    dbg << "  alpha_right=" << std::fixed << std::setprecision(6) << alpha_right
+        << "  alpha_left=" << alpha_left
+        << "  alpha_top=" << alpha_top
+        << "  alpha_bottom=" << alpha_bottom << "\n";
+
     // Right: (k, 0) uses alpha_right
     {
-        double alphaR = alpha_right;
-        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alphaR*  Tprev[{k-1, 0}]) / (alphaR + 1.0);
+        Tcurr[{k, 0}] = (Tprev[{k, 0}] + alpha_right * Tprev[{k-1, 0}]) / (alpha_right + mp_real(1));
+        dbg << "  T(" << k << ",0) = (T_prev(" << k << ",0) + " << alpha_right << "*T_prev(" << k-1 << ",0)) / " << (alpha_right+1) << "\n";
     }
     // Left: (-k, 0) uses alpha_left
     {
-        double alphaL = alpha_left;
-        Tcurr[{-k, 0}] = ( Tprev[{-k, 0}] + alphaL * Tprev[{-(k-1), 0}]) / (alphaL + 1.0);
+        Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alpha_left * Tprev[{-(k-1), 0}]) / (alpha_left + mp_real(1));
+        dbg << "  T(" << -k << ",0) = (T_prev(" << -k << ",0) + " << alpha_left << "*T_prev(" << -(k-1) << ",0)) / " << (alpha_left+1) << "\n";
     }
     // Top: (0, k) uses alpha_top
     {
-        double alphaT = alpha_top;
-        Tcurr[{0, k}] = (Tprev[{0, k}] + alphaT * Tprev[{0, k-1}]) / (alphaT + 1.0);
+        Tcurr[{0, k}] = (Tprev[{0, k}] + alpha_top * Tprev[{0, k-1}]) / (alpha_top + mp_real(1));
+        dbg << "  T(0," << k << ") = (T_prev(0," << k << ") + " << alpha_top << "*T_prev(0," << k-1 << ")) / " << (alpha_top+1) << "\n";
     }
     // Bottom: (0, -k) uses alpha_bottom
     {
-        double alphaB = alpha_bottom;
-        Tcurr[{0, -k}] = (Tprev[{0, -k}] + alphaB * Tprev[{0, -(k-1)}]) / (alphaB + 1.0);
+        Tcurr[{0, -k}] = (Tprev[{0, -k}] + alpha_bottom * Tprev[{0, -(k-1)}]) / (alpha_bottom + mp_real(1));
+        dbg << "  T(0," << -k << ") = (T_prev(0," << -k << ") + " << alpha_bottom << "*T_prev(0," << -(k-1) << ")) / " << (alpha_bottom+1) << "\n";
     }
 
     // ==========================================================================
@@ -2860,7 +2937,7 @@ static void computeTk(int k) {
 
     // Helper lambda to get beta weight for position (i, j)
     // First check beta edge ratios (from double edges), then fall back to stored face weights
-    auto getBetaWeight = [&](int i, int j) -> double {
+    auto getBetaWeight = [&](int i, int j) -> mp_real {
         // First check beta edge ratios (from double edges)
         for (const auto& ber : g_betaEdgeRatios) {
             if (ber.k == k) {
@@ -2877,22 +2954,28 @@ static void computeTk(int k) {
                 return it->second;
             }
         }
-        return 1.0;  // Default
+        return mp_real(1);  // Default
     };
+
+    dbg << "\nBetas for k=" << k << ":\n";
 
     for (int j = 1; j <= k - 1; j++) {
         int kj = k - j;  // So (j, kj) has |j| + |kj| = k
 
         // Upper-right quadrant: (j, k-j) where j > 0, k-j > 0
         {
-            double beta_ij = getBetaWeight(j, kj);
-            Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + 1.0);
+            mp_real beta_ij = getBetaWeight(j, kj);
+            Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+            dbg << "  UR T(" << j << "," << kj << "): beta=" << beta_ij
+                << " = (T_prev(" << j-1 << "," << kj << ") + " << beta_ij << "*T_prev(" << j << "," << kj-1 << ")) / " << (beta_ij+1) << "\n";
         }
 
         // Lower-right quadrant: (j, -(k-j)) where j > 0, k-j > 0
         {
-            double beta_ij = getBetaWeight(j, -kj);
-            Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + 1.0);
+            mp_real beta_ij = getBetaWeight(j, -kj);
+            Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+            dbg << "  LR T(" << j << "," << -kj << "): beta=" << beta_ij
+                << " = (T_prev(" << j-1 << "," << -kj << ") + " << beta_ij << "*T_prev(" << j << "," << -(kj-1) << ")) / " << (beta_ij+1) << "\n";
         }
     }
 
@@ -2901,14 +2984,18 @@ static void computeTk(int k) {
 
         // Upper-left quadrant: (-j, k-j) where j > 0, k-j > 0
         {
-            double beta_ij = getBetaWeight(-j, kj);
-            Tcurr[{-j, kj}] = (beta_ij * Tprev[{-j, kj-1}] + Tprev[{-(j-1), kj}]) / (beta_ij + 1.0);
+            mp_real beta_ij = getBetaWeight(-j, kj);
+            Tcurr[{-j, kj}] = (beta_ij * Tprev[{-(j-1), kj}] + Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+            dbg << "  UL T(" << -j << "," << kj << "): beta=" << beta_ij
+                << " = (" << beta_ij << "*T_prev(" << -(j-1) << "," << kj << ") + T_prev(" << -j << "," << kj-1 << ")) / " << (beta_ij+1) << "\n";
         }
 
         // Lower-left quadrant: (-j, -(k-j)) where j > 0, k-j > 0
         {
-            double beta_ij = getBetaWeight(-j, -kj);
-            Tcurr[{-j, -kj}] = (beta_ij * Tprev[{-j, -(kj-1)}] + Tprev[{-(j-1), -kj}]) / (beta_ij + 1.0);
+            mp_real beta_ij = getBetaWeight(-j, -kj);
+            Tcurr[{-j, -kj}] = (Tprev[{-j, -(kj-1)}] + beta_ij * Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+            dbg << "  LL T(" << -j << "," << -kj << "): beta=" << beta_ij
+                << " = (T_prev(" << -j << "," << -(kj-1) << ") + " << beta_ij << "*T_prev(" << -(j-1) << "," << -kj << ")) / " << (beta_ij+1) << "\n";
         }
     }
 
@@ -2937,14 +3024,14 @@ static void computeTk(int k) {
     // ==========================================================================
 
     // Helper lambda to get gamma weight for position (i, j)
-    auto getGammaWeight = [&](int i, int j) -> double {
+    auto getGammaWeight = [&](int i, int j) -> mp_real {
         if (storedWeights) {
             auto it = storedWeights->gamma.find({i, j});
             if (it != storedWeights->gamma.end() && it->second > 0) {
                 return it->second;
             }
         }
-        return 1.0;  // Default
+        return mp_real(1);  // Default
     };
 
     for (int i = -(k-1); i <= k-1; i++) {
@@ -2952,40 +3039,43 @@ static void computeTk(int k) {
             if (std::abs(i) + std::abs(j) >= k) continue;  // Not interior
             if ((i + j + k) % 2 == 0) continue;  // Not odd parity (handled in 4a)
 
-            double gamma = getGammaWeight(i, j);
+            mp_real gamma = getGammaWeight(i, j);
 
             // Get neighbors (should all exist by now from Rule 4a or boundary rules)
-            std::complex<double> Tl = Tcurr[{i-1, j}];  // left
-            std::complex<double> Tr = Tcurr[{i+1, j}];  // right
-            std::complex<double> Tt = Tcurr[{i, j+1}];  // top
-            std::complex<double> Tb = Tcurr[{i, j-1}];  // bottom
+            mp_complex Tl = Tcurr[{i-1, j}];  // left
+            mp_complex Tr = Tcurr[{i+1, j}];  // right
+            mp_complex Tt = Tcurr[{i, j+1}];  // top
+            mp_complex Tb = Tcurr[{i, j-1}];  // bottom
 
             // T_{k-1}(i,j) - should exist for interior vertices
-            std::complex<double> Tprev_ij(0.0, 0.0);
+            mp_complex Tprev_ij(0, 0);
             auto it = Tprev.find({i, j});
             if (it != Tprev.end()) {
                 Tprev_ij = it->second;
             }
 
             // Recurrence: T_k(i,j) = (Tl + Tr + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
-            Tcurr[{i, j}] = ( (Tl + Tr) * gamma + (Tt + Tb)) / (gamma + 1.0) - Tprev_ij;
+            Tcurr[{i, j}] = ( (Tl + Tr) * gamma + (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij;
         }
     }
 
     // ==========================================================================
-    // Convert map to TembLevel vertices
+    // Convert map to TembLevel vertices (convert from 100-digit to double for storage)
     // ==========================================================================
     for (const auto& kv : Tcurr) {
         TembVertex v;
         v.i = kv.first.first;
         v.j = kv.first.second;
-        v.re = kv.second.real();
-        v.im = kv.second.imag();
+        v.re = static_cast<double>(kv.second.real());
+        v.im = static_cast<double>(kv.second.imag());
         tk.vertices.push_back(v);
     }
 
     // Store the level
     g_tembLevels.push_back(tk);
+
+    // Save debug output
+    g_tembDebugOutput = dbg.str();
 }
 
 // =============================================================================
@@ -3125,7 +3215,7 @@ static std::string getTembLevelJSON(int k) {
     }
 
     std::ostringstream oss;
-    oss << std::setprecision(10);
+    oss << std::setprecision(15);
     oss << "{\"k\":" << k;
 
     // Find the level
@@ -3269,7 +3359,7 @@ static void computeFaces() {
                 cy /= faceV.size();
 
                 // Compute face weight
-                double weight = 1.0;
+                mp_real weight = 1;
                 int n = (int)faceV.size();
 
                 if (n >= 4 && n % 2 == 0) {
@@ -3284,7 +3374,7 @@ static void computeFaces() {
                     int d = n / 2;
                     for (int s = 0; s < d; s++) {
                         int ws = ordV[2*s], bs = ordV[2*s+1], wnext = ordV[(2*s+2) % n];
-                        double wt1 = 1.0, wt2 = 1.0;
+                        mp_real wt1 = 1, wt2 = 1;
                         for (int e = 0; e < nE; e++) {
                             int a = g_aztecEdges[e].v1, b = g_aztecEdges[e].v2;
                             if ((a==ws && b==bs) || (a==bs && b==ws)) wt1 = g_aztecEdges[e].weight;
@@ -3312,7 +3402,7 @@ static std::string getFacesJSON() {
     tryCaptureFaceWeights();  // Capture if face count matches 2k²+2k+1
 
     std::ostringstream oss;
-    oss << std::setprecision(10);
+    oss << std::setprecision(15);
     oss << "[";
 
     for (size_t i = 0; i < g_aztecFaces.size(); i++) {
@@ -3355,7 +3445,7 @@ static std::string getFacesJSON() {
 // Generate JSON for stored face weights
 static std::string getStoredWeightsJSON() {
     std::ostringstream oss;
-    oss << std::setprecision(10);
+    oss << std::setprecision(15);
     oss << "{";
     oss << "\"capturedLevels\":[";
 
@@ -3402,14 +3492,53 @@ static std::string getStoredWeightsJSON() {
         oss << "}";
     }
 
-    oss << "]}";
+    oss << "]";
+
+    // Add double edge ratios with numerator/denominator
+    oss << ",\"doubleEdgeRatios\":[";
+    first = true;
+    for (const auto& der : g_doubleEdgeRatios) {
+        if (!first) oss << ",";
+        first = false;
+        oss << "{\"k\":" << der.k;
+        oss << ",\"top\":{\"num\":" << der.num_top << ",\"den\":" << der.den_top << ",\"ratio\":" << der.ratio_top << "}";
+        oss << ",\"bottom\":{\"num\":" << der.num_bottom << ",\"den\":" << der.den_bottom << ",\"ratio\":" << der.ratio_bottom << "}";
+        oss << ",\"left\":{\"num\":" << der.num_left << ",\"den\":" << der.den_left << ",\"ratio\":" << der.ratio_left << "}";
+        oss << ",\"right\":{\"num\":" << der.num_right << ",\"den\":" << der.den_right << ",\"ratio\":" << der.ratio_right << "}";
+        oss << "}";
+    }
+    oss << "]";
+
+    // Add beta edge ratios with numerator/denominator
+    oss << ",\"betaEdgeRatios\":[";
+    first = true;
+    for (const auto& ber : g_betaEdgeRatios) {
+        if (!first) oss << ",";
+        first = false;
+        oss << "{\"k\":" << ber.k << ",\"ratios\":[";
+        bool firstRatio = true;
+        for (const auto& [pos, ratio] : ber.ratios) {
+            if (!firstRatio) oss << ",";
+            firstRatio = false;
+            auto numIt = ber.numerators.find(pos);
+            auto denIt = ber.denominators.find(pos);
+            mp_real num = (numIt != ber.numerators.end()) ? numIt->second : mp_real(1);
+            mp_real den = (denIt != ber.denominators.end()) ? denIt->second : mp_real(1);
+            oss << "{\"i\":" << pos.first << ",\"j\":" << pos.second
+                << ",\"num\":" << num << ",\"den\":" << den << ",\"ratio\":" << ratio << "}";
+        }
+        oss << "]}";
+    }
+    oss << "]";
+
+    oss << "}";
     return oss.str();
 }
 
 // Generate JSON for Aztec graph
 static std::string getAztecGraphJSONInternal() {
     std::ostringstream oss;
-    oss << std::setprecision(10);
+    oss << std::setprecision(15);
     oss << "{";
     oss << "\"level\":" << g_aztecLevel;
     oss << ",\"reductionStep\":" << g_aztecReductionStep;
@@ -3470,6 +3599,13 @@ void resetProgress() {
 }
 
 EMSCRIPTEN_KEEPALIVE
+char* getTembDebugOutput() {
+    char* out = (char*)std::malloc(g_tembDebugOutput.size() + 1);
+    std::strcpy(out, g_tembDebugOutput.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
 void setN(int n) {
     if (n < 1) n = 1;
     if (n > 50) n = 50;
@@ -3490,7 +3626,7 @@ void computeTembedding() {
 EMSCRIPTEN_KEEPALIVE
 char* getTembeddingJSON() {
     std::ostringstream oss;
-    oss << std::setprecision(10);
+    oss << std::setprecision(15);
     oss << "{";
 
     // Output parameters
@@ -3648,7 +3784,7 @@ char* getBetaRatiosJSON() {
             if (!firstRatio) oss << ",";
             firstRatio = false;
             oss << "{\"i\":" << pos.first << ",\"j\":" << pos.second
-                << ",\"ratio\":" << std::setprecision(10) << ratio << "}";
+                << ",\"ratio\":" << std::setprecision(15) << ratio << "}";
         }
         oss << "]}";
     }
