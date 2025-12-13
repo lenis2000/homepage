@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_setBetaSwaps','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -150,6 +150,13 @@ static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 
 // Debug output for T-embedding computation
 static std::string g_tembDebugOutput;
+
+// Beta position swap flags for T-embedding recurrence
+// When true, swap which term beta multiplies in the corresponding quadrant
+static bool g_betaSwapUR = false;  // Upper-right quadrant
+static bool g_betaSwapLR = false;  // Lower-right quadrant
+static bool g_betaSwapUL = false;  // Upper-left quadrant
+static bool g_betaSwapLL = false;  // Lower-left quadrant
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -2469,7 +2476,7 @@ static std::set<int> g_capturedKValues;  // Track which k values we've captured
 static int checkFaceCountFormula(int n) {
     // 2k²+2k+1 = n => k = (-2 + sqrt(4 + 8(n-1))) / 4 = (-1 + sqrt(2n-1)) / 2
     // For k=0: n=1, k=1: n=5, k=2: n=13, k=3: n=25, k=4: n=41, ...
-    for (int k = 0; k <= 20; k++) {
+    for (int k = 0; k <= 50; k++) {
         if (2*k*k + 2*k + 1 == n) return k;
     }
     return -1;
@@ -2965,17 +2972,23 @@ static void computeTk(int k) {
         // Upper-right quadrant: (j, k-j) where j > 0, k-j > 0
         {
             mp_real beta_ij = getBetaWeight(j, kj);
-            Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
-            dbg << "  UR T(" << j << "," << kj << "): beta=" << beta_ij
-                << " = (T_prev(" << j-1 << "," << kj << ") + " << beta_ij << "*T_prev(" << j << "," << kj-1 << ")) / " << (beta_ij+1) << "\n";
+            if (g_betaSwapUR) {
+                Tcurr[{j, kj}] = (beta_ij * Tprev[{j-1, kj}] + Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+            } else {
+                Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+            }
+            dbg << "  UR T(" << j << "," << kj << "): beta=" << beta_ij << (g_betaSwapUR ? " [SWAPPED]" : "") << "\n";
         }
 
         // Lower-right quadrant: (j, -(k-j)) where j > 0, k-j > 0
         {
             mp_real beta_ij = getBetaWeight(j, -kj);
-            Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
-            dbg << "  LR T(" << j << "," << -kj << "): beta=" << beta_ij
-                << " = (T_prev(" << j-1 << "," << -kj << ") + " << beta_ij << "*T_prev(" << j << "," << -(kj-1) << ")) / " << (beta_ij+1) << "\n";
+            if (g_betaSwapLR) {
+                Tcurr[{j, -kj}] = (beta_ij * Tprev[{j-1, -kj}] + Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+            } else {
+                Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+            }
+            dbg << "  LR T(" << j << "," << -kj << "): beta=" << beta_ij << (g_betaSwapLR ? " [SWAPPED]" : "") << "\n";
         }
     }
 
@@ -2985,17 +2998,23 @@ static void computeTk(int k) {
         // Upper-left quadrant: (-j, k-j) where j > 0, k-j > 0
         {
             mp_real beta_ij = getBetaWeight(-j, kj);
-            Tcurr[{-j, kj}] = (beta_ij * Tprev[{-(j-1), kj}] + Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
-            dbg << "  UL T(" << -j << "," << kj << "): beta=" << beta_ij
-                << " = (" << beta_ij << "*T_prev(" << -(j-1) << "," << kj << ") + T_prev(" << -j << "," << kj-1 << ")) / " << (beta_ij+1) << "\n";
+            if (g_betaSwapUL) {
+                Tcurr[{-j, kj}] = (Tprev[{-(j-1), kj}] + beta_ij * Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+            } else {
+                Tcurr[{-j, kj}] = (beta_ij * Tprev[{-(j-1), kj}] + Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+            }
+            dbg << "  UL T(" << -j << "," << kj << "): beta=" << beta_ij << (g_betaSwapUL ? " [SWAPPED]" : "") << "\n";
         }
 
         // Lower-left quadrant: (-j, -(k-j)) where j > 0, k-j > 0
         {
             mp_real beta_ij = getBetaWeight(-j, -kj);
-            Tcurr[{-j, -kj}] = (Tprev[{-j, -(kj-1)}] + beta_ij * Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
-            dbg << "  LL T(" << -j << "," << -kj << "): beta=" << beta_ij
-                << " = (T_prev(" << -j << "," << -(kj-1) << ") + " << beta_ij << "*T_prev(" << -(j-1) << "," << -kj << ")) / " << (beta_ij+1) << "\n";
+            if (g_betaSwapLL) {
+                Tcurr[{-j, -kj}] = (beta_ij * Tprev[{-j, -(kj-1)}] + Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+            } else {
+                Tcurr[{-j, -kj}] = (Tprev[{-j, -(kj-1)}] + beta_ij * Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+            }
+            dbg << "  LL T(" << -j << "," << -kj << "): beta=" << beta_ij << (g_betaSwapLL ? " [SWAPPED]" : "") << "\n";
         }
     }
 
@@ -3589,6 +3608,19 @@ static std::string getAztecGraphJSONInternal() {
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
+void setBetaSwaps(int ur, int lr, int ul, int ll) {
+    g_betaSwapUR = (ur != 0);
+    g_betaSwapLR = (lr != 0);
+    g_betaSwapUL = (ul != 0);
+    g_betaSwapLL = (ll != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void clearTembLevels() {
+    g_tembLevels.clear();
+}
+
+EMSCRIPTEN_KEEPALIVE
 int getProgress() {
     return g_progress;
 }
@@ -3700,14 +3732,14 @@ void freeString(char* str) {
 EMSCRIPTEN_KEEPALIVE
 void setAztecGraphLevel(int k) {
     if (k < 1) k = 1;
-    if (k > 20) k = 20;
+    if (k > 50) k = 50;
     g_aztecLevel = k;
 }
 
 EMSCRIPTEN_KEEPALIVE
 void generateAztecGraph(int k) {
     if (k < 1) k = 1;
-    if (k > 20) k = 20;
+    if (k > 50) k = 50;
     generateAztecGraphInternal(k);
 }
 

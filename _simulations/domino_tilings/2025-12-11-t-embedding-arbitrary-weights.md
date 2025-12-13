@@ -58,7 +58,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="15" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="50" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -101,7 +101,14 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <span id="step-info" style="margin-left: 10px; color: #666;">(T_0 graph)</span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
         </div>
-                <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+        <div style="margin-bottom: 8px; padding: 5px; background: #fffef0; border: 1px solid #d4a017; border-radius: 3px;">
+          <span style="font-size: 12px; font-weight: bold;">β position swap:</span>
+          <label style="margin-left: 10px; font-size: 12px;"><input type="checkbox" id="beta-swap-ur"> UR</label>
+          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-lr"> LR</label>
+          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-ul" checked> UL</label>
+          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-ll" checked> LL</label>
+        </div>
+        <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
           <em>T_k from face weights (step through Aztec reduction first)</em>
         </div>
@@ -115,6 +122,12 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <button id="copy-beta-btn" style="position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;">Copy</button>
           <div id="beta-output" style="padding: 8px; background: #f0f8ff; border: 1px solid #4682b4; min-height: 30px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
             <em>Beta ratios will appear here after reduction</em>
+          </div>
+        </div>
+        <div id="verify-container" style="margin-top: 5px;">
+          <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">XX Verification (by level):</div>
+          <div id="verify-levels" style="display: flex; flex-direction: column; gap: 5px;">
+            <em style="font-size: 11px;">XX verification checks will appear here</em>
           </div>
         </div>
       </div>
@@ -145,6 +158,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getTembDebugOutput;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
+  let setBetaSwaps, clearTembLevels;
 
   // Classify face type based on centroid coordinates and current face count
   // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
@@ -1173,9 +1187,18 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getAztecReductionStep = Module.cwrap('getAztecReductionStep', 'number', []);
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
+      setBetaSwaps = Module.cwrap('setBetaSwaps', null, ['number', 'number', 'number', 'number']);
+      clearTembLevels = Module.cwrap('clearTembLevels', null, []);
 
       wasmReady = true;
       loadingMsg.style.display = 'none';
+
+      // Set initial beta swaps from checkbox states
+      const urInit = document.getElementById('beta-swap-ur').checked ? 1 : 0;
+      const lrInit = document.getElementById('beta-swap-lr').checked ? 1 : 0;
+      const ulInit = document.getElementById('beta-swap-ul').checked ? 1 : 0;
+      const llInit = document.getElementById('beta-swap-ll').checked ? 1 : 0;
+      setBetaSwaps(urInit, lrInit, ulInit, llInit);
 
       // Auto-compute on load
       const n = parseInt(document.getElementById('n-input').value) || 6;
@@ -1231,23 +1254,14 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     document.getElementById('step-info').textContent = `(T_${currentK} graph)`;
     updateMathematicaOutput();
     updateBetaOutput();
+    updateVerifyOutput();
   }
 
-  // Generate Mathematica array output for current T_k level
+  // Generate Mathematica array output for ALL T levels (T_0 through T_maxK)
   function updateMathematicaOutput() {
     const mathDiv = document.getElementById('mathematica-output');
     if (!wasmReady || !getTembeddingLevelJSON) {
       mathDiv.innerHTML = '<em>Loading...</em>';
-      return;
-    }
-
-    let ptr = getTembeddingLevelJSON(currentK);
-    let jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
-    const tembLevel = JSON.parse(jsonStr);
-
-    if (!tembLevel || !tembLevel.vertices || tembLevel.vertices.length === 0) {
-      mathDiv.innerHTML = `<em>T_${currentK} not computed yet</em>`;
       return;
     }
 
@@ -1263,18 +1277,46 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       }
     }
 
-    // Generate Mathematica definitions
+    // Get max K from stored face weights
+    let maxK = currentK;
+    let ptr = getStoredFaceWeightsJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    try {
+      const data = JSON.parse(jsonStr);
+      const levels = data.capturedLevels || [];
+      for (const sw of levels) {
+        if (sw.k > maxK) maxK = sw.k;
+      }
+    } catch (e) {}
+
+    // Generate Mathematica definitions for ALL levels
     const lines = [];
-    for (const v of tembLevel.vertices) {
-      lines.push(`T[${currentK}][${v.i},${v.j}]:=${formatComplex(v.re, v.im)}`);
+    for (let k = 0; k <= maxK; k++) {
+      ptr = getTembeddingLevelJSON(k);
+      jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+      const tembLevel = JSON.parse(jsonStr);
+
+      if (tembLevel && tembLevel.vertices && tembLevel.vertices.length > 0) {
+        for (const v of tembLevel.vertices) {
+          lines.push(`T[${k}][${v.i},${v.j}]:=${formatComplex(v.re, v.im)}`);
+        }
+      }
     }
 
-    // Sort by i, then j for consistent ordering
+    if (lines.length === 0) {
+      mathDiv.innerHTML = `<em>No T-embedding computed yet</em>`;
+      return;
+    }
+
+    // Sort by k, then i, then j for consistent ordering
     lines.sort((a, b) => {
-      const matchA = a.match(/T\[\d+\]\[(-?\d+),(-?\d+)\]/);
-      const matchB = b.match(/T\[\d+\]\[(-?\d+),(-?\d+)\]/);
-      const iA = parseInt(matchA[1]), jA = parseInt(matchA[2]);
-      const iB = parseInt(matchB[1]), jB = parseInt(matchB[2]);
+      const matchA = a.match(/T\[(\d+)\]\[(-?\d+),(-?\d+)\]/);
+      const matchB = b.match(/T\[(\d+)\]\[(-?\d+),(-?\d+)\]/);
+      const kA = parseInt(matchA[1]), iA = parseInt(matchA[2]), jA = parseInt(matchA[3]);
+      const kB = parseInt(matchB[1]), iB = parseInt(matchB[2]), jB = parseInt(matchB[3]);
+      if (kA !== kB) return kA - kB;
       if (iA !== iB) return iA - iB;
       return jA - jB;
     });
@@ -1300,6 +1342,127 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     }
 
     betaDiv.textContent = debugStr;
+  }
+
+  // Generate Mathematica verification code for XX formula
+  // XX[n1,n2,n3,n4][z] = (z-n1)(z-n3) / ((n2-z)(n4-z))
+  // n1,n2,n3,n4 go counterclockwise around z, with n1 such that edge z->n1 has BLACK on right
+  function updateVerifyOutput() {
+    const container = document.getElementById('verify-levels');
+    if (!wasmReady || !getTembeddingLevelJSON || !getStoredFaceWeightsJSON) {
+      container.innerHTML = '<em style="font-size: 11px;">Loading...</em>';
+      return;
+    }
+
+    // Get weight variable name based on face position
+    function getWeightName(k, i, j) {
+      if (k === 0) return `root[0]`;
+      const absI = Math.abs(i), absJ = Math.abs(j);
+      const absSum = absI + absJ;
+      if (i === 0 && j === k) return `alphaT[${k}]`;
+      if (i === 0 && j === -k) return `alphaB[${k}]`;
+      if (j === 0 && i === k) return `alphaR[${k}]`;
+      if (j === 0 && i === -k) return `alphaL[${k}]`;
+      if (absSum === k && absI > 0 && absJ > 0) return `beta[${k}][${i},${j}]`;
+      if (absSum < k) return `gamma[${k}][${i},${j}]`;
+      return `face[${k}][${i},${j}]`;
+    }
+
+    // Get max K from stored face weights
+    let ptr = getStoredFaceWeightsJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let maxK = 0;
+    try {
+      const data = JSON.parse(jsonStr);
+      for (const lv of (data.capturedLevels || [])) {
+        if (lv.k > maxK) maxK = lv.k;
+      }
+    } catch (e) {}
+
+    // Collect T-embedding vertices by level
+    const tembByLevel = {};
+    for (let k = 0; k <= maxK; k++) {
+      ptr = getTembeddingLevelJSON(k);
+      jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+      try {
+        const tembLevel = JSON.parse(jsonStr);
+        if (tembLevel && tembLevel.vertices) {
+          tembByLevel[k] = {};
+          for (const v of tembLevel.vertices) {
+            tembByLevel[k][`${v.i},${v.j}`] = true;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Build verification code per level
+    const maxCheckK = Math.min(maxK, 5);
+    const levelData = [];
+
+    for (let k = 0; k <= maxCheckK; k++) {
+      const vertices = tembByLevel[k];
+      if (!vertices) continue;
+
+      const lines = [];
+      for (const key of Object.keys(vertices)) {
+        const [iStr, jStr] = key.split(',');
+        const i = parseInt(iStr), j = parseInt(jStr);
+
+        const dirs = [[1,0], [0,1], [-1,0], [0,-1]];
+        let allExist = true;
+        for (const [di, dj] of dirs) {
+          if (!vertices[`${i+di},${j+dj}`]) { allExist = false; break; }
+        }
+        if (!allExist) continue;
+
+        const z = `T[${k}][${i},${j}]`;
+        const nR = `T[${k}][${i+1},${j}]`;
+        const nU = `T[${k}][${i},${j+1}]`;
+        const nL = `T[${k}][${i-1},${j}]`;
+        const nD = `T[${k}][${i},${j-1}]`;
+        const wt = getWeightName(k, i, j);
+
+        lines.push(`XX[${nR}, ${nU}, ${nL}, ${nD}][${z}] + ${wt}`);
+        lines.push(`XX[${nU}, ${nL}, ${nD}, ${nR}][${z}] + ${wt}`);
+      }
+
+      if (lines.length > 0) {
+        levelData.push({ k, lines });
+      }
+    }
+
+    if (levelData.length === 0) {
+      container.innerHTML = '<em style="font-size: 11px;">No interior vertices (need vertices with all 4 neighbors)</em>';
+      return;
+    }
+
+    // Create divs for each level
+    container.innerHTML = '';
+    for (const { k, lines } of levelData) {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position: relative;';
+
+      const btn = document.createElement('button');
+      btn.textContent = 'Copy';
+      btn.style.cssText = 'position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;';
+
+      const content = document.createElement('div');
+      content.style.cssText = 'padding: 8px; background: #f0fff0; border: 1px solid #228b22; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 120px; overflow-y: auto;';
+      content.textContent = `(* k=${k} *)\n` + lines.join('\n');
+
+      btn.addEventListener('click', function() {
+        navigator.clipboard.writeText(content.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        });
+      });
+
+      wrapper.appendChild(btn);
+      wrapper.appendChild(content);
+      container.appendChild(wrapper);
+    }
   }
 
   // Display stored face weights near Aztec graph
@@ -1789,6 +1952,24 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   document.getElementById('copy-beta-btn').addEventListener('click', function() {
     copyToClipboard('beta-output', this);
   });
+
+  // Beta swap checkboxes - recompute T-embedding when changed
+  function onBetaSwapChange() {
+    if (!wasmReady) return;
+    const ur = document.getElementById('beta-swap-ur').checked ? 1 : 0;
+    const lr = document.getElementById('beta-swap-lr').checked ? 1 : 0;
+    const ul = document.getElementById('beta-swap-ul').checked ? 1 : 0;
+    const ll = document.getElementById('beta-swap-ll').checked ? 1 : 0;
+    setBetaSwaps(ur, lr, ul, ll);
+    clearTembLevels();  // Clear cache to force recomputation
+    renderStepwiseTemb();  // Re-render with new computation
+    updateMathematicaOutput();
+    updateVerifyOutput();
+  }
+  document.getElementById('beta-swap-ur').addEventListener('change', onBetaSwapChange);
+  document.getElementById('beta-swap-lr').addEventListener('change', onBetaSwapChange);
+  document.getElementById('beta-swap-ul').addEventListener('change', onBetaSwapChange);
+  document.getElementById('beta-swap-ll').addEventListener('change', onBetaSwapChange);
 
   // Resize handler
   window.addEventListener('resize', () => {
