@@ -58,7 +58,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="50" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="15" min="1" max="50" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
   <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
 </div>
@@ -97,7 +97,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       <div style="flex: 1; min-width: 350px;">
         <div style="margin-bottom: 10px;">
           <button id="step-prev-btn" style="width: 30px;">&lt;</button>
-          <span style="margin: 0 10px;">k = <span id="step-value">0</span></span>
+          <span style="margin: 0 10px;">k = <span id="step-value">11</span></span>
           <button id="step-next-btn" style="width: 30px;">&gt;</button>
           <span id="step-info" style="margin-left: 10px; color: #666;">(T_0 graph)</span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
@@ -108,6 +108,11 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
           <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-lr"> LR</label>
           <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-ul" checked> UL</label>
           <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="beta-swap-ll" checked> LL</label>
+        </div>
+        <div style="margin-bottom: 8px; padding: 5px; background: #f0fff0; border: 1px solid #4a7; border-radius: 3px;">
+          <span style="font-size: 12px; font-weight: bold;">Invert for even k:</span>
+          <label style="margin-left: 10px; font-size: 12px;"><input type="checkbox" id="invert-alpha-even"> 1/α</label>
+          <label style="margin-left: 8px; font-size: 12px;"><input type="checkbox" id="invert-beta-even"> 1/β</label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -160,7 +165,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getTembDebugOutput;
   let randomizeAztecWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
-  let setBetaSwaps, clearTembLevels;
+  let setBetaSwaps, setInvertFlags, clearTembLevels;
 
   // Classify face type based on centroid coordinates and current face count
   // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
@@ -414,7 +419,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   }
 
   // T-embedding k level state (for face weights based T_k)
-  let currentK = 0;
+  let currentK = 11;
   let maxK = 0;  // Updated based on stored face weights
 
   // Vertex selection state
@@ -1183,6 +1188,8 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       getTembDebugOutput = Module.cwrap('getTembDebugOutput', 'number', []);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
+      const seedRng = Module.cwrap('seedRng', null, ['number']);
+      seedRng(Date.now() & 0xFFFFFFFF);  // Seed RNG with current time on load
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
       aztecGraphStepUp = Module.cwrap('aztecGraphStepUp', null, []);
@@ -1190,6 +1197,7 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
       setBetaSwaps = Module.cwrap('setBetaSwaps', null, ['number', 'number', 'number', 'number']);
+      setInvertFlags = Module.cwrap('setInvertFlags', null, ['number', 'number']);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
 
       wasmReady = true;
@@ -1202,10 +1210,16 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
       const llInit = document.getElementById('beta-swap-ll').checked ? 1 : 0;
       setBetaSwaps(urInit, lrInit, ulInit, llInit);
 
-      // Auto-compute on load
-      const n = parseInt(document.getElementById('n-input').value) || 6;
+      // Set initial invert flags from checkbox states
+      const invertAlphaInit = document.getElementById('invert-alpha-even').checked ? 1 : 0;
+      const invertBetaInit = document.getElementById('invert-beta-even').checked ? 1 : 0;
+      setInvertFlags(invertAlphaInit, invertBetaInit);
+
+      // Auto-compute on load with randomized weights
+      const n = parseInt(document.getElementById('n-input').value) || 15;
       setN(n);
       initAztecGraph(n);
+      randomizeAztecWeights();  // Randomize on load
       computeAndDisplay();
     };
 
@@ -1239,8 +1253,9 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
     // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
     maxK = Math.max(0, n - 2);
 
-    // Start at k=0
-    currentK = 0;
+    // Start at k=11 or maxK if smaller
+    currentK = Math.min(currentK, maxK);
+    if (currentK < 0) currentK = Math.min(11, maxK);
     updateStepDisplay();
     renderStepwiseTemb();
   }
@@ -2034,6 +2049,20 @@ where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots 
   document.getElementById('beta-swap-lr').addEventListener('change', onBetaSwapChange);
   document.getElementById('beta-swap-ul').addEventListener('change', onBetaSwapChange);
   document.getElementById('beta-swap-ll').addEventListener('change', onBetaSwapChange);
+
+  // Invert flags checkboxes - recompute T-embedding when changed
+  function onInvertFlagsChange() {
+    if (!wasmReady) return;
+    const invertAlpha = document.getElementById('invert-alpha-even').checked ? 1 : 0;
+    const invertBeta = document.getElementById('invert-beta-even').checked ? 1 : 0;
+    setInvertFlags(invertAlpha, invertBeta);
+    clearTembLevels();  // Clear cache to force recomputation
+    renderStepwiseTemb();  // Re-render with new computation
+    updateMathematicaOutput();
+    updateVerifyOutput();
+  }
+  document.getElementById('invert-alpha-even').addEventListener('change', onInvertFlagsChange);
+  document.getElementById('invert-beta-even').addEventListener('change', onInvertFlagsChange);
 
   // Resize handler
   window.addEventListener('resize', () => {

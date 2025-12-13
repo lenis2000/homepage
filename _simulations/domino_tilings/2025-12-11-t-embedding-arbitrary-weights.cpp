@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_setBetaSwaps','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_setBetaSwaps','_setInvertFlags','_clearTembLevels','_initCoefficients','_computeTembedding','_getTembeddingJSON','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getTembDebugOutput','_randomizeAztecWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString','_getProgress','_resetProgress']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -158,6 +158,11 @@ static bool g_betaSwapLR = false;  // Lower-right quadrant
 static bool g_betaSwapUL = false;  // Upper-left quadrant
 static bool g_betaSwapLL = false;  // Lower-left quadrant
 
+// Invert flags for parity-dependent alpha/beta
+// When true, use 1/alpha or 1/beta for transitions k-1 → k where k is even
+static bool g_invertAlphaEvenK = false;
+static bool g_invertBetaEvenK = false;
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -174,23 +179,33 @@ static std::string makeDepKey(int level, int j, int k) {
     return ss.str();
 }
 
-// Get α_n coefficient
+// Get α_n coefficient (applies inversion for even n if flag set)
 static double getAlpha(int n) {
+    double alpha = 1.0;  // default
     if (n >= 1 && n < (int)g_alpha.size()) {
-        return g_alpha[n];
+        alpha = g_alpha[n];
     }
-    return 1.0;  // default
+    // Apply inversion for even n if flag is set
+    if (g_invertAlphaEvenK && (n % 2 == 0) && alpha != 0) {
+        alpha = 1.0 / alpha;
+    }
+    return alpha;
 }
 
-// Get β_{j,n} coefficient
+// Get β_{j,n} coefficient (applies inversion for even n if flag set)
 static double getBeta(int j, int n) {
+    double beta = 1.0;  // default
     if (n >= 1 && n < (int)g_beta.size()) {
         auto it = g_beta[n].find(j);
         if (it != g_beta[n].end()) {
-            return it->second;
+            beta = it->second;
         }
     }
-    return 1.0;  // default
+    // Apply inversion for even n if flag is set
+    if (g_invertBetaEvenK && (n % 2 == 0) && beta != 0) {
+        beta = 1.0 / beta;
+    }
+    return beta;
 }
 
 // Get γ_{j,k,n} coefficient
@@ -536,6 +551,13 @@ static void computeTembeddingRecurrence() {
 
 // Random number generator state (simple LCG)
 static unsigned int g_rngState = 12345;
+
+extern "C" {
+EMSCRIPTEN_KEEPALIVE
+void seedRng(unsigned int seed) {
+    g_rngState = seed;
+}
+}
 
 static double randomWeight() {
     // LCG: next = (a * current + c) mod m
@@ -2141,29 +2163,44 @@ static void aztecStep11_CombineDoubleEdges() {
         edgeGroups[{v1, v2}].push_back(i);
     }
 
+    // Find the boundary distance (max coordinate value) for ALL captures
+    double maxCoord = 0;
+    for (const auto& v : g_aztecVertices) {
+        maxCoord = std::max(maxCoord, std::max(std::abs(v.x), std::abs(v.y)));
+    }
+
     // Capture double edge ratios for T-embedding alpha values
-    // This happens when we have exactly 4 corner vertices with double edges
-    if (g_aztecVertices.size() == 4) {
+    // Alpha edges: BOTH vertices on boundary (at max distance from origin)
+    // This now works for any number of vertices, not just 4
+    {
         DoubleEdgeRatios ratios;
-        // When we have 4 vertices at level L, these ratios are for computing T_{L-2}
-        // e.g., level=3 with 4 vertices → ratios for k=1
+        // Ratios are for computing T_k where k = g_aztecLevel - 2
         ratios.k = g_aztecLevel - 2;
         ratios.ratio_top = 1; ratios.num_top = 1; ratios.den_top = 1;
         ratios.ratio_bottom = 1; ratios.num_bottom = 1; ratios.den_bottom = 1;
         ratios.ratio_left = 1; ratios.num_left = 1; ratios.den_left = 1;
         ratios.ratio_right = 1; ratios.num_right = 1; ratios.den_right = 1;
 
+        bool foundAnyAlpha = false;
+
         for (const auto& [vertPair, indices] : edgeGroups) {
-            if (indices.size() == 2) {
+            if (indices.size() == 2) {  // Double edge
+                const auto& v1 = g_aztecVertices[vertPair.first];
+                const auto& v2 = g_aztecVertices[vertPair.second];
+
+                // Check if BOTH vertices are on the boundary (alpha edge)
+                double dist1 = std::max(std::abs(v1.x), std::abs(v1.y));
+                double dist2 = std::max(std::abs(v2.x), std::abs(v2.y));
+                bool isAlphaEdge = (std::abs(dist1 - maxCoord) < 0.1 &&
+                                    std::abs(dist2 - maxCoord) < 0.1);
+
+                if (!isAlphaEdge) continue;
+
                 // Get the two edges
                 const auto& e0 = g_aztecEdges[indices[0]];
                 const auto& e1 = g_aztecEdges[indices[1]];
 
-                // Get vertex info
-                const auto& v1 = g_aztecVertices[vertPair.first];
-                const auto& v2 = g_aztecVertices[vertPair.second];
-
-                // For each edge, check if it goes from black to white (v1->v2)
+                // For each edge, check if it goes from black to white
                 bool e0_fromBlackToWhite = (g_aztecVertices[e0.v1].isWhite == false);
                 bool e1_fromBlackToWhite = (g_aztecVertices[e1.v1].isWhite == false);
 
@@ -2182,47 +2219,48 @@ static void aztecStep11_CombineDoubleEdges() {
                 }
                 ratio = numerator / denominator;
 
-                // Get vertex coordinates for position classification
-                double x1 = v1.x;
-                double y1 = v1.y;
-                double x2 = v2.x;
-                double y2 = v2.y;
-
-                // Determine edge type by position
-                bool sameY = std::abs(y1 - y2) < 0.1;  // Horizontal edge (same y)
-                bool sameX = std::abs(x1 - x2) < 0.1;  // Vertical edge (same x)
+                // Determine edge type by position (top/bottom/left/right)
+                double x1 = v1.x, y1 = v1.y;
+                double x2 = v2.x, y2 = v2.y;
+                bool sameY = std::abs(y1 - y2) < 0.1;  // Horizontal edge
+                bool sameX = std::abs(x1 - x2) < 0.1;  // Vertical edge
 
                 if (sameY && (y1 + y2) / 2 > 0) {
                     ratios.ratio_top = ratio;
                     ratios.num_top = numerator;
                     ratios.den_top = denominator;
+                    foundAnyAlpha = true;
                 } else if (sameY && (y1 + y2) / 2 < 0) {
                     ratios.ratio_bottom = ratio;
                     ratios.num_bottom = numerator;
                     ratios.den_bottom = denominator;
+                    foundAnyAlpha = true;
                 } else if (sameX && (x1 + x2) / 2 < 0) {
                     ratios.ratio_left = ratio;
                     ratios.num_left = numerator;
                     ratios.den_left = denominator;
+                    foundAnyAlpha = true;
                 } else if (sameX && (x1 + x2) / 2 > 0) {
                     ratios.ratio_right = ratio;
                     ratios.num_right = numerator;
                     ratios.den_right = denominator;
+                    foundAnyAlpha = true;
                 }
             }
         }
 
-        g_doubleEdgeRatios.push_back(ratios);
+        if (foundAnyAlpha) {
+            g_doubleEdgeRatios.push_back(ratios);
+            std::printf("Captured alpha ratios for k=%d: R=%g L=%g T=%g B=%g\n",
+                ratios.k, (double)ratios.ratio_right, (double)ratios.ratio_left,
+                (double)ratios.ratio_top, (double)ratios.ratio_bottom);
+        }
     }
 
-    // Capture beta double edge ratios when we have more than 4 vertices
-    // Beta edges connect an external (boundary) vertex to an inner vertex
+    // Capture beta double edge ratios
+    // Beta edges: one vertex on boundary, one inner
     if (g_aztecVertices.size() > 4) {
-        // Find the boundary distance (max coordinate value)
-        double maxCoord = 0;
-        for (const auto& v : g_aztecVertices) {
-            maxCoord = std::max(maxCoord, std::max(std::abs(v.x), std::abs(v.y)));
-        }
+        // maxCoord already computed above
 
         BetaEdgeRatios betaRatios;
         // When we have N > 4 vertices at level L, these ratios are for computing T_{L-2}
@@ -2881,6 +2919,22 @@ static void computeTk(int k) {
         }
     }
 
+    // Debug: print alpha values and invert flag status
+    std::printf("computeTk(k=%d): flag=%d, k%%2=%d, alphas: R=%g L=%g T=%g B=%g\n",
+        k, (int)g_invertAlphaEvenK, k % 2,
+        (double)alpha_right, (double)alpha_left, (double)alpha_top, (double)alpha_bottom);
+
+    // Apply alpha inversion for even k if flag is set
+    if (g_invertAlphaEvenK && (k % 2 == 0)) {
+        std::printf("  -> INVERTING alphas for k=%d\n", k);
+        if (alpha_right != 0) alpha_right = mp_real(1) / alpha_right;
+        if (alpha_left != 0) alpha_left = mp_real(1) / alpha_left;
+        if (alpha_top != 0) alpha_top = mp_real(1) / alpha_top;
+        if (alpha_bottom != 0) alpha_bottom = mp_real(1) / alpha_bottom;
+        std::printf("  -> After inversion: R=%g L=%g T=%g B=%g\n",
+            (double)alpha_right, (double)alpha_left, (double)alpha_top, (double)alpha_bottom);
+    }
+
     TembLevel tk;
     tk.k = k;
 
@@ -2944,24 +2998,36 @@ static void computeTk(int k) {
 
     // Helper lambda to get beta weight for position (i, j)
     // First check beta edge ratios (from double edges), then fall back to stored face weights
+    // Applies inversion for even k if flag is set
     auto getBetaWeight = [&](int i, int j) -> mp_real {
+        mp_real beta = mp_real(1);  // Default
+
         // First check beta edge ratios (from double edges)
+        bool found = false;
         for (const auto& ber : g_betaEdgeRatios) {
             if (ber.k == k) {
                 auto it = ber.ratios.find({i, j});
                 if (it != ber.ratios.end()) {
-                    return it->second;
+                    beta = it->second;
+                    found = true;
+                    break;
                 }
             }
         }
         // Fall back to stored face weights
-        if (storedWeights) {
+        if (!found && storedWeights) {
             auto it = storedWeights->beta.find({i, j});
             if (it != storedWeights->beta.end() && it->second > 0) {
-                return it->second;
+                beta = it->second;
             }
         }
-        return mp_real(1);  // Default
+
+        // Apply beta inversion for even k if flag is set
+        if (g_invertBetaEvenK && (k % 2 == 0) && beta != 0) {
+            beta = mp_real(1) / beta;
+        }
+
+        return beta;
     };
 
     dbg << "\nBetas for k=" << k << ":\n";
@@ -3616,8 +3682,16 @@ void setBetaSwaps(int ur, int lr, int ul, int ll) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void setInvertFlags(int invertAlphaEven, int invertBetaEven) {
+    g_invertAlphaEvenK = (invertAlphaEven != 0);
+    g_invertBetaEvenK = (invertBetaEven != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE
 void clearTembLevels() {
     g_tembLevels.clear();
+    g_tEmbeddingHistory.clear();  // Also clear the main T-embedding cache
+    g_tEmbedding.clear();
 }
 
 EMSCRIPTEN_KEEPALIVE
