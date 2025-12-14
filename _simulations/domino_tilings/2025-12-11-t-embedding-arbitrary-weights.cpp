@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -2328,6 +2328,9 @@ struct TembLevel {
 
 static std::vector<TembLevel> g_tembLevels;
 
+// Storage for origami map (same structure as T-embedding)
+static std::vector<TembLevel> g_origamiLevels;
+
 // Compute T_0 using ROOT weight
 // T_0(0,0) = 0
 // T_0(1,0) = 1, T_0(-1,0) = -1
@@ -2829,6 +2832,331 @@ static void computeAllTembLevels(int maxK) {
     }
 }
 
+// =============================================================================
+// ORIGAMI MAP COMPUTATION
+// =============================================================================
+// The origami map uses the SAME recurrence rules as T-embedding but with
+// DIFFERENT initial conditions (see Berggren-Russkikh Proposition):
+// O_0(0,0) = 0
+// O_0(1,0) = 1, O_0(-1,0) = 1    (note: NOT -1 like T-embedding!)
+// O_0(0,1) = i/sqrt(X_ROOT), O_0(0,-1) = i/sqrt(X_ROOT)  (note: NOT -i/sqrt!)
+
+// Compute O_0 using ROOT weight (origami map base case)
+static void computeO0() {
+    // Find k=0 stored weights
+    mp_real rootWeight = 1;
+    for (const auto& sw : g_storedWeights) {
+        if (sw.k == 0) {
+            rootWeight = sw.root;
+            break;
+        }
+    }
+
+    TembLevel o0;
+    o0.k = 0;
+
+    // Center vertex (same as T-embedding)
+    o0.vertices.push_back({0, 0, 0.0, 0.0});
+
+    // Boundary vertices on real axis: BOTH are 1 (different from T-embedding!)
+    o0.vertices.push_back({1, 0, 1.0, 0.0});
+    o0.vertices.push_back({-1, 0, 1.0, 0.0});  // Note: 1.0, not -1.0!
+
+    // Boundary vertices on imaginary axis: BOTH are +i/sqrt(X_ROOT)
+    double invSqrtRoot = 1.0 / std::sqrt(static_cast<double>(rootWeight));
+    o0.vertices.push_back({0, 1, 0.0, invSqrtRoot});
+    o0.vertices.push_back({0, -1, 0.0, invSqrtRoot});  // Note: +invSqrtRoot, not -invSqrtRoot!
+
+    // Store or update O_0
+    bool found = false;
+    for (auto& level : g_origamiLevels) {
+        if (level.k == 0) {
+            level = o0;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        g_origamiLevels.push_back(o0);
+    }
+}
+
+// Compute O_k from O_{k-1} using the same recurrence as T-embedding
+static void computeOk(int k) {
+    if (k < 1) return;  // O_0 is computed separately
+
+    // Check if already computed
+    for (const auto& level : g_origamiLevels) {
+        if (level.k == k) return;  // Already exists
+    }
+
+    // Find O_{k-1}
+    const TembLevel* prevLevel = nullptr;
+    for (const auto& l : g_origamiLevels) {
+        if (l.k == k - 1) {
+            prevLevel = &l;
+            break;
+        }
+    }
+
+    if (!prevLevel) {
+        computeOk(k - 1);
+        for (const auto& l : g_origamiLevels) {
+            if (l.k == k - 1) {
+                prevLevel = &l;
+                break;
+            }
+        }
+    }
+
+    if (!prevLevel) {
+        std::printf("computeOk(%d): ERROR - could not find O_{%d}\n", k, k-1);
+        return;
+    }
+
+    // Find stored face weights for level k
+    const StoredFaceWeights* storedWeights = nullptr;
+    for (const auto& sw : g_storedWeights) {
+        if (sw.k == k) {
+            storedWeights = &sw;
+            break;
+        }
+    }
+
+    // Get alpha values from double edge ratios (same as T-embedding)
+    mp_real alpha_right = 1, alpha_left = 1, alpha_top = 1, alpha_bottom = 1;
+
+    for (const auto& der : g_doubleEdgeRatios) {
+        if (der.k == k) {
+            alpha_right = der.ratio_right;
+            alpha_left = der.ratio_left;
+            alpha_top = der.ratio_top;
+            alpha_bottom = der.ratio_bottom;
+            break;
+        }
+    }
+
+    TembLevel ok;
+    ok.k = k;
+
+    // Build a map for quick O_{k-1} lookup
+    std::map<std::pair<int,int>, mp_complex> Oprev;
+    for (const auto& v : prevLevel->vertices) {
+        Oprev[{v.i, v.j}] = mp_complex(mp_real(v.re), mp_real(v.im));
+    }
+
+    // Map for O_k values
+    std::map<std::pair<int,int>, mp_complex> Ocurr;
+
+    // Rule 1: External corners
+    Ocurr[{k+1, 0}] = Oprev[{k, 0}];
+    Ocurr[{-(k+1), 0}] = Oprev[{-k, 0}];
+    Ocurr[{0, k+1}] = Oprev[{0, k}];
+    Ocurr[{0, -(k+1)}] = Oprev[{0, -k}];
+
+    // Rule 2: Alpha vertices (same formulas as T-embedding)
+    Ocurr[{k, 0}] = (Oprev[{k, 0}] + alpha_right * Oprev[{k-1, 0}]) / (alpha_right + mp_real(1));
+    Ocurr[{-k, 0}] = (Oprev[{-k, 0}] + alpha_left * Oprev[{-(k-1), 0}]) / (alpha_left + mp_real(1));
+    Ocurr[{0, k}] = (Oprev[{0, k}] + alpha_top * Oprev[{0, k-1}]) / (alpha_top + mp_real(1));
+    Ocurr[{0, -k}] = (Oprev[{0, -k}] + alpha_bottom * Oprev[{0, -(k-1)}]) / (alpha_bottom + mp_real(1));
+
+    // Helper lambda to get beta weight for position (i, j) - same as T-embedding
+    auto getBetaWeight = [&](int i, int j) -> mp_real {
+        mp_real beta = mp_real(1);
+
+        bool found = false;
+        for (const auto& ber : g_betaEdgeRatios) {
+            if (ber.k == k) {
+                auto it = ber.ratios.find({i, j});
+                if (it != ber.ratios.end()) {
+                    beta = it->second;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found && storedWeights) {
+            auto it = storedWeights->beta.find({i, j});
+            if (it != storedWeights->beta.end() && it->second > 0) {
+                beta = it->second;
+            }
+        }
+
+        return beta;
+    };
+
+    // Rule 3: Beta vertices (same formulas as T-embedding)
+    for (int j = 1; j <= k - 1; j++) {
+        int kj = k - j;
+
+        // Upper-right quadrant
+        {
+            mp_real beta_ij = getBetaWeight(j, kj);
+            if (g_betaSwapUR) {
+                Ocurr[{j, kj}] = (beta_ij * Oprev[{j-1, kj}] + Oprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+            } else {
+                Ocurr[{j, kj}] = (Oprev[{j-1, kj}] + beta_ij * Oprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+            }
+        }
+
+        // Lower-right quadrant
+        {
+            mp_real beta_ij = getBetaWeight(j, -kj);
+            if (g_betaSwapLR) {
+                Ocurr[{j, -kj}] = (beta_ij * Oprev[{j-1, -kj}] + Oprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+            } else {
+                Ocurr[{j, -kj}] = (Oprev[{j-1, -kj}] + beta_ij * Oprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+            }
+        }
+    }
+
+    for (int j = 1; j <= k - 1; j++) {
+        int kj = k - j;
+
+        // Upper-left quadrant
+        {
+            mp_real beta_ij = getBetaWeight(-j, kj);
+            if (g_betaSwapUL) {
+                Ocurr[{-j, kj}] = (Oprev[{-(j-1), kj}] + beta_ij * Oprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+            } else {
+                Ocurr[{-j, kj}] = (beta_ij * Oprev[{-(j-1), kj}] + Oprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+            }
+        }
+
+        // Lower-left quadrant
+        {
+            mp_real beta_ij = getBetaWeight(-j, -kj);
+            if (g_betaSwapLL) {
+                Ocurr[{-j, -kj}] = (beta_ij * Oprev[{-j, -(kj-1)}] + Oprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+            } else {
+                Ocurr[{-j, -kj}] = (Oprev[{-j, -(kj-1)}] + beta_ij * Oprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+            }
+        }
+    }
+
+    // Rule 4a: Interior pass-through
+    for (int i = -(k-1); i <= k-1; i++) {
+        for (int j = -(k-1); j <= k-1; j++) {
+            if (std::abs(i) + std::abs(j) >= k) continue;
+            if ((i + j + k) % 2 != 0) continue;
+
+            auto it = Oprev.find({i, j});
+            if (it != Oprev.end()) {
+                Ocurr[{i, j}] = it->second;
+            }
+        }
+    }
+
+    // Rule 4b: Interior recurrence
+    // Get gamma weights from stored face weights
+    std::map<std::pair<int,int>, mp_real> gammaMap;
+    if (storedWeights) {
+        for (const auto& kv : storedWeights->gamma) {
+            gammaMap[kv.first] = kv.second;
+        }
+    }
+
+    for (int i = -(k-1); i <= k-1; i++) {
+        for (int j = -(k-1); j <= k-1; j++) {
+            if (std::abs(i) + std::abs(j) >= k) continue;
+            if ((i + j + k) % 2 == 0) continue;  // Skip even parity
+
+            // Get gamma for this position
+            mp_real gamma = mp_real(1);
+            auto git = gammaMap.find({i, j});
+            if (git != gammaMap.end()) {
+                gamma = git->second;
+            }
+
+            // Get neighbors from O_k (already computed via pass-through or boundary)
+            mp_complex O_left = Ocurr[{i-1, j}];
+            mp_complex O_right = Ocurr[{i+1, j}];
+            mp_complex O_down = Ocurr[{i, j-1}];
+            mp_complex O_up = Ocurr[{i, j+1}];
+
+            // Get O_{k-1}(i,j) if it exists
+            mp_complex O_prev_ij(0, 0);
+            auto pit = Oprev.find({i, j});
+            if (pit != Oprev.end()) {
+                O_prev_ij = pit->second;
+            }
+
+            // Interior recurrence formula (same as T-embedding)
+            Ocurr[{i, j}] = (gamma * (O_left + O_right) + O_down + O_up) / (gamma + mp_real(1)) - O_prev_ij;
+        }
+    }
+
+    // Store vertices
+    for (const auto& kv : Ocurr) {
+        TembVertex v;
+        v.i = kv.first.first;
+        v.j = kv.first.second;
+        v.re = static_cast<double>(kv.second.real());
+        v.im = static_cast<double>(kv.second.imag());
+        ok.vertices.push_back(v);
+    }
+
+    g_origamiLevels.push_back(ok);
+}
+
+// Compute all O_k levels from 0 to maxK
+static void computeAllOrigamiLevels(int maxK) {
+    computeO0();
+    for (int k = 1; k <= maxK; k++) {
+        computeOk(k);
+    }
+}
+
+// Get origami map JSON for a specific level (internal function)
+static std::string getOrigamiLevelJSONInternal(int k) {
+    // Ensure O_k is computed
+    bool found = false;
+    for (const auto& l : g_origamiLevels) {
+        if (l.k == k) {
+            found = true;
+            break;
+        }
+    }
+
+    // If not found, compute from O_0 up to O_k
+    if (!found) {
+        g_origamiLevels.clear();
+        computeO0();
+        for (int level = 1; level <= k; level++) {
+            computeOk(level);
+        }
+    }
+
+    std::ostringstream oss;
+    oss << std::setprecision(15);
+    oss << "{\"k\":" << k;
+
+    // Find the level
+    const TembLevel* level = nullptr;
+    for (const auto& l : g_origamiLevels) {
+        if (l.k == k) {
+            level = &l;
+            break;
+        }
+    }
+
+    if (level) {
+        oss << ",\"vertices\":[";
+        for (size_t i = 0; i < level->vertices.size(); i++) {
+            if (i > 0) oss << ",";
+            const auto& v = level->vertices[i];
+            oss << "{\"i\":" << v.i << ",\"j\":" << v.j
+                << ",\"re\":" << v.re << ",\"im\":" << v.im << "}";
+        }
+        oss << "]";
+    } else {
+        oss << ",\"vertices\":[]";
+    }
+
+    oss << "}";
+    return oss.str();
+}
+
 // Get T-embedding JSON for a specific level
 static std::string getTembLevelJSON(int k) {
     // Ensure T_k is computed
@@ -3239,6 +3567,7 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE
 void clearTembLevels() {
     g_tembLevels.clear();
+    g_origamiLevels.clear();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -3257,9 +3586,12 @@ EMSCRIPTEN_KEEPALIVE
 void computeTembedding() {
     // Clear previous results
     g_tembLevels.clear();
+    g_origamiLevels.clear();
 
     // Compute T_0 (base case)
     computeT0();
+    // Compute O_0 (origami map base case)
+    computeO0();
 
     // Find max K from stored weights
     int maxK = 0;
@@ -3270,6 +3602,7 @@ void computeTembedding() {
     // Compute T_1 through T_maxK based on captured face weights
     for (int k = 1; k <= maxK; k++) {
         computeTk(k);
+        computeOk(k);  // Also compute origami map
     }
 }
 
@@ -3467,6 +3800,14 @@ char* getBetaRatiosJSON() {
 EMSCRIPTEN_KEEPALIVE
 char* getTembeddingLevelJSON(int k) {
     std::string result = getTembLevelJSON(k);
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* getOrigamiLevelJSON(int k) {
+    std::string result = getOrigamiLevelJSONInternal(k);
     char* out = (char*)std::malloc(result.size() + 1);
     std::strcpy(out, result.c_str());
     return out;

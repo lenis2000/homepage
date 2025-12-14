@@ -174,6 +174,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
     <div style="margin-bottom: 10px; text-align: center;">
       <label>V: <input type="number" id="main-2d-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
       <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="show-origami-chk" checked> Origami</label>
     </div>
 
     <!-- Canvas container with floating buttons -->
@@ -193,10 +194,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 
       <!-- 3D Canvas (hidden by default) -->
       <div id="main-3d-container" style="display: none;">
-        <canvas id="main-temb-3d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #f0f0f0;"></canvas>
-        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #888; font-style: italic;">
-          3D visualization coming soon
-        </div>
+        <canvas id="main-temb-3d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
       </div>
     </div>
   </div>
@@ -299,6 +297,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   const stepwiseCtx = stepwiseCanvas.getContext('2d');
   const aztecCanvas = document.getElementById('aztec-graph-canvas');
   const aztecCtx = aztecCanvas.getContext('2d');
+  const main3DCanvas = document.getElementById('main-temb-3d-canvas');
+  const main3DCtx = main3DCanvas.getContext('2d');
+
+  // 3D view state (rotation angles in radians, zoom)
+  let view3DRotX = -0.6;  // Rotation around X axis (tilt)
+  let view3DRotZ = 0.5;   // Rotation around Z axis (spin)
+  let view3DZoom = 1.0;
+  let view3DIsDragging = false;
+  let view3DLastX = 0, view3DLastY = 0;
 
   // T-embedding data
   let tembData = null;
@@ -349,7 +356,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, freeString;
-  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON;
+  let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getOrigamiLevelJSON;
   let randomizeAztecWeights, setAztecWeightMode, resetAztecGraphPreservingWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
@@ -1482,6 +1489,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
+      getOrigamiLevelJSON = Module.cwrap('getOrigamiLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
       resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
@@ -2090,7 +2098,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       drawEdge(s, -(k-s), s+1, -(k-s-1));
     }
 
-    // Draw vertices
+    // Draw vertices (T-embedding in black)
     ctx.fillStyle = '#333';
     const radius = Math.max(vertexSizeControl, scale / 800 * vertexSizeControl);
     for (const v of data.vertices) {
@@ -2100,6 +2108,414 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       ctx.arc(x, y, radius, 0, 2 * Math.PI);
       ctx.fill();
     }
+
+    // ========== ORIGAMI MAP (in blue) ==========
+    const showOrigami = document.getElementById('show-origami-chk').checked;
+    if (showOrigami && getOrigamiLevelJSON) {
+      const origamiPtr = getOrigamiLevelJSON(finalK);
+      const origamiJson = Module.UTF8ToString(origamiPtr);
+      freeString(origamiPtr);
+
+      let origamiData;
+      try {
+        origamiData = JSON.parse(origamiJson);
+      } catch (e) {
+        origamiData = null;
+      }
+
+      if (origamiData && origamiData.vertices && origamiData.vertices.length > 0) {
+        // Build origami vertex map
+        const origamiVertexMap = new Map();
+        for (const v of origamiData.vertices) {
+          origamiVertexMap.set(`${v.i},${v.j}`, v);
+        }
+
+        // Helper to draw origami edge
+        function drawOrigamiEdge(i1, j1, i2, j2) {
+          const v1 = origamiVertexMap.get(`${i1},${j1}`);
+          const v2 = origamiVertexMap.get(`${i2},${j2}`);
+          if (v1 && v2) {
+            const x1 = centerX + (v1.re - centerRe) * scale;
+            const y1 = centerY - (v1.im - centerIm) * scale;
+            const x2 = centerX + (v2.re - centerRe) * scale;
+            const y2 = centerY - (v2.im - centerIm) * scale;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+        }
+
+        // Draw origami edges in blue
+        ctx.strokeStyle = '#0066cc';
+        ctx.lineWidth = uniformEdgeWidth * 0.8;
+
+        // Interior edges
+        for (const v of origamiData.vertices) {
+          const i = v.i, j = v.j;
+          const absSum = Math.abs(i) + Math.abs(j);
+          if (origamiVertexMap.has(`${i+1},${j}`)) {
+            const nAbsSum = Math.abs(i+1) + Math.abs(j);
+            if (absSum <= k && nAbsSum <= k) {
+              drawOrigamiEdge(i, j, i+1, j);
+            }
+          }
+          if (origamiVertexMap.has(`${i},${j+1}`)) {
+            const nAbsSum = Math.abs(i) + Math.abs(j+1);
+            if (absSum <= k && nAbsSum <= k) {
+              drawOrigamiEdge(i, j, i, j+1);
+            }
+          }
+        }
+
+        // Boundary rhombus
+        ctx.strokeStyle = '#3399ff';
+        drawOrigamiEdge(k+1, 0, 0, k+1);
+        drawOrigamiEdge(0, k+1, -(k+1), 0);
+        drawOrigamiEdge(-(k+1), 0, 0, -(k+1));
+        drawOrigamiEdge(0, -(k+1), k+1, 0);
+
+        // External corners to alpha
+        ctx.strokeStyle = '#66b3ff';
+        drawOrigamiEdge(k+1, 0, k, 0);
+        drawOrigamiEdge(-(k+1), 0, -k, 0);
+        drawOrigamiEdge(0, k+1, 0, k);
+        drawOrigamiEdge(0, -(k+1), 0, -k);
+
+        // Diagonal boundary
+        ctx.strokeStyle = '#4da6ff';
+        for (let s = 0; s < k; s++) {
+          drawOrigamiEdge(k-s, s, k-s-1, s+1);
+          drawOrigamiEdge(-s, k-s, -(s+1), k-s-1);
+          drawOrigamiEdge(-(k-s), -s, -(k-s-1), -(s+1));
+          drawOrigamiEdge(s, -(k-s), s+1, -(k-s-1));
+        }
+
+        // Draw origami vertices in blue
+        ctx.fillStyle = '#0066cc';
+        for (const v of origamiData.vertices) {
+          const x = centerX + (v.re - centerRe) * scale;
+          const y = centerY - (v.im - centerIm) * scale;
+          ctx.beginPath();
+          ctx.arc(x, y, radius * 0.8, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  // ========== MAIN 3D T-SURFACE RENDERING ==========
+  // Base (x,y) = T-embedding, height z = Re[O(i,j)] from origami map
+
+  function renderMain3D() {
+    if (!main3DCanvas) return;
+    const ctx = main3DCtx;
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+
+    // Handle DPI scaling
+    const dpr = window.devicePixelRatio || 1;
+    const rect = main3DCanvas.getBoundingClientRect();
+    main3DCanvas.width = rect.width * dpr;
+    main3DCanvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    // White background
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Loading...', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    // Get final level (k = n-2)
+    const finalK = Math.max(0, n - 2);
+
+    // Get T-embedding data for (x, y) coordinates
+    let ptr = getTembeddingLevelJSON(finalK);
+    let json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let tembData;
+    try {
+      tembData = JSON.parse(json);
+    } catch (e) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error parsing T-embedding', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    // Get origami data for z = Re[O(i,j)]
+    ptr = getOrigamiLevelJSON(finalK);
+    json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let origamiData;
+    try {
+      origamiData = JSON.parse(json);
+    } catch (e) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error parsing origami data', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    if (!tembData.vertices || tembData.vertices.length === 0 ||
+        !origamiData.vertices || origamiData.vertices.length === 0) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No data. Click "Compute".', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    const k = tembData.k;
+
+    // Build vertex maps
+    const tembMap = new Map();
+    for (const v of tembData.vertices) {
+      tembMap.set(`${v.i},${v.j}`, v);
+    }
+    const origamiMap = new Map();
+    for (const v of origamiData.vertices) {
+      origamiMap.set(`${v.i},${v.j}`, v);
+    }
+
+    // Build 3D points: x = T.re, y = T.im, z = O.re
+    const points3D = [];
+    for (const v of tembData.vertices) {
+      const key = `${v.i},${v.j}`;
+      const origV = origamiMap.get(key);
+      if (origV) {
+        points3D.push({
+          i: v.i, j: v.j,
+          x: v.re,
+          y: v.im,
+          z: origV.re  // Height = real part of origami
+        });
+      }
+    }
+
+    if (points3D.length === 0) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No matching vertices', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    // Compute bounds for normalization
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    for (const p of points3D) {
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+    }
+
+    const rangeX = maxX - minX || 1;
+    const rangeY = maxY - minY || 1;
+    const rangeZ = maxZ - minZ || 1;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    const maxRange = Math.max(rangeX, rangeY, rangeZ);
+
+    // 3D to 2D projection with rotation
+    const cosX = Math.cos(view3DRotX), sinX = Math.sin(view3DRotX);
+    const cosZ = Math.cos(view3DRotZ), sinZ = Math.sin(view3DRotZ);
+
+    function project(x, y, z) {
+      // Normalize to [-0.5, 0.5]
+      const nx = (x - centerX) / maxRange;
+      const ny = (y - centerY) / maxRange;
+      const nz = (z - centerZ) / maxRange;
+
+      // Rotate around Z axis first (spin)
+      const rz_x = nx * cosZ - ny * sinZ;
+      const rz_y = nx * sinZ + ny * cosZ;
+      const rz_z = nz;
+
+      // Then rotate around X axis (tilt)
+      const rx_x = rz_x;
+      const rx_y = rz_y * cosX - rz_z * sinX;
+      const rx_z = rz_y * sinX + rz_z * cosX;
+
+      // Orthographic projection (x, y -> screen)
+      const scale = Math.min(rect.width, rect.height) * 0.7 * view3DZoom;
+      const screenX = rect.width / 2 + rx_x * scale;
+      const screenY = rect.height / 2 - rx_y * scale;  // Flip Y for screen coords
+
+      return { screenX, screenY, depth: rx_z };
+    }
+
+    // Project all vertices
+    const projected = [];
+    const pointMap = new Map();
+    for (const p of points3D) {
+      const proj = project(p.x, p.y, p.z);
+      const entry = { ...p, ...proj };
+      projected.push(entry);
+      pointMap.set(`${p.i},${p.j}`, entry);
+    }
+
+    // Build edge list (same structure as T-embedding graph)
+    const edges = [];
+
+    // Interior lattice edges
+    for (const p of points3D) {
+      const i = p.i, j = p.j;
+      const absSum = Math.abs(i) + Math.abs(j);
+
+      // Right neighbor
+      const rightKey = `${i+1},${j}`;
+      if (pointMap.has(rightKey)) {
+        const nAbsSum = Math.abs(i+1) + Math.abs(j);
+        if (absSum <= k && nAbsSum <= k) {
+          edges.push({ from: `${i},${j}`, to: rightKey, type: 'interior' });
+        }
+      }
+      // Top neighbor
+      const topKey = `${i},${j+1}`;
+      if (pointMap.has(topKey)) {
+        const nAbsSum = Math.abs(i) + Math.abs(j+1);
+        if (absSum <= k && nAbsSum <= k) {
+          edges.push({ from: `${i},${j}`, to: topKey, type: 'interior' });
+        }
+      }
+    }
+
+    // Boundary rhombus
+    edges.push({ from: `${k+1},0`, to: `0,${k+1}`, type: 'boundary' });
+    edges.push({ from: `0,${k+1}`, to: `${-(k+1)},0`, type: 'boundary' });
+    edges.push({ from: `${-(k+1)},0`, to: `0,${-(k+1)}`, type: 'boundary' });
+    edges.push({ from: `0,${-(k+1)}`, to: `${k+1},0`, type: 'boundary' });
+
+    // External corners to alpha
+    edges.push({ from: `${k+1},0`, to: `${k},0`, type: 'corner' });
+    edges.push({ from: `${-(k+1)},0`, to: `${-k},0`, type: 'corner' });
+    edges.push({ from: `0,${k+1}`, to: `0,${k}`, type: 'corner' });
+    edges.push({ from: `0,${-(k+1)}`, to: `0,${-k}`, type: 'corner' });
+
+    // Diagonal boundary
+    for (let s = 0; s < k; s++) {
+      edges.push({ from: `${k-s},${s}`, to: `${k-s-1},${s+1}`, type: 'diagonal' });
+      edges.push({ from: `${-s},${k-s}`, to: `${-(s+1)},${k-s-1}`, type: 'diagonal' });
+      edges.push({ from: `${-(k-s)},${-s}`, to: `${-(k-s-1)},${-(s+1)}`, type: 'diagonal' });
+      edges.push({ from: `${s},${-(k-s)}`, to: `${s+1},${-(k-s-1)}`, type: 'diagonal' });
+    }
+
+    // Sort edges by average depth (back to front)
+    edges.sort((a, b) => {
+      const pa = pointMap.get(a.from), pb = pointMap.get(b.from);
+      const pa2 = pointMap.get(a.to), pb2 = pointMap.get(b.to);
+      if (!pa || !pa2 || !pb || !pb2) return 0;
+      const depthA = (pa.depth + pa2.depth) / 2;
+      const depthB = (pb.depth + pb2.depth) / 2;
+      return depthA - depthB;  // Back to front
+    });
+
+    // Get vertex/edge size controls
+    const vertexSizeControl = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
+    const edgeThicknessControl = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
+
+    // Draw edges (darker colors for white background)
+    for (const edge of edges) {
+      const p1 = pointMap.get(edge.from);
+      const p2 = pointMap.get(edge.to);
+      if (!p1 || !p2) continue;
+
+      // Depth-based opacity (further = lighter/more transparent)
+      const avgDepth = (p1.depth + p2.depth) / 2;
+      const depthFactor = Math.max(0.3, Math.min(1, 0.6 + avgDepth * 0.5));
+
+      // All edges in dark gray/black with depth-based opacity
+      ctx.strokeStyle = `rgba(60, 60, 60, ${0.3 + depthFactor * 0.5})`;
+      ctx.lineWidth = Math.max(0.5, edgeThicknessControl * depthFactor);
+      ctx.beginPath();
+      ctx.moveTo(p1.screenX, p1.screenY);
+      ctx.lineTo(p2.screenX, p2.screenY);
+      ctx.stroke();
+    }
+
+    // Sort vertices by depth (back to front)
+    projected.sort((a, b) => a.depth - b.depth);
+
+    // Draw vertices
+    for (const p of projected) {
+      const depthFactor = Math.max(0.4, Math.min(1, 0.6 + p.depth * 0.5));
+      const radius = Math.max(1.5, vertexSizeControl * (0.6 + depthFactor * 0.4));
+
+      // Color based on height (z value): blue (low) -> green (mid) -> red (high)
+      const heightNorm = (p.z - minZ) / rangeZ;  // 0 to 1
+      let r, g, b;
+      if (heightNorm < 0.5) {
+        // Blue to green
+        const t = heightNorm * 2;
+        r = Math.floor(30 * t);
+        g = Math.floor(100 + 155 * t);
+        b = Math.floor(200 - 100 * t);
+      } else {
+        // Green to red
+        const t = (heightNorm - 0.5) * 2;
+        r = Math.floor(30 + 200 * t);
+        g = Math.floor(255 - 155 * t);
+        b = Math.floor(100 - 80 * t);
+      }
+
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.7 + depthFactor * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(p.screenX, p.screenY, radius, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Add thin black outline for better visibility
+      ctx.strokeStyle = `rgba(0, 0, 0, ${0.2 + depthFactor * 0.3})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // Draw axes indicator in corner (darker colors for white bg)
+    const axisLen = 40;
+    const axisOrigin = { x: 60, y: rect.height - 60 };
+    const axes = [
+      { dir: [1, 0, 0], color: '#cc0000', label: 'T.re' },
+      { dir: [0, 1, 0], color: '#009900', label: 'T.im' },
+      { dir: [0, 0, 1], color: '#0000cc', label: 'O.re' }
+    ];
+
+    for (const axis of axes) {
+      const [dx, dy, dz] = axis.dir;
+      // Apply same rotation
+      const rz_x = dx * cosZ - dy * sinZ;
+      const rz_y = dx * sinZ + dy * cosZ;
+      const rz_z = dz;
+      const rx_x = rz_x;
+      const rx_y = rz_y * cosX - rz_z * sinX;
+
+      ctx.strokeStyle = axis.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(axisOrigin.x, axisOrigin.y);
+      ctx.lineTo(axisOrigin.x + rx_x * axisLen, axisOrigin.y - rx_y * axisLen);
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = axis.color;
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(axis.label, axisOrigin.x + rx_x * (axisLen + 12), axisOrigin.y - rx_y * (axisLen + 12));
+    }
+
+    // Instructions (dark text for white background)
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Drag to rotate', 10, 20);
   }
 
   function renderStepwiseTemb() {
@@ -2474,6 +2890,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
   document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
+  document.getElementById('show-origami-chk').addEventListener('change', renderMain2DTemb);
 
   // Main 2D T-embedding size controls
   document.getElementById('main-2d-vertex-size').addEventListener('input', renderMain2DTemb);
@@ -2491,7 +2908,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       btn.textContent = '3D';
       container2D.style.display = 'none';
       container3D.style.display = 'block';
-      // TODO: render 3D when implemented
+      renderMain3D();
     } else {
       btn.textContent = '2D';
       container2D.style.display = 'block';
@@ -2500,22 +2917,39 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
   });
 
-  // Main 2D canvas zoom buttons
+  // Main canvas zoom buttons (works for both 2D and 3D modes)
   document.getElementById('main-zoom-in-btn').addEventListener('click', () => {
-    main2DZoom = Math.min(20, main2DZoom * 1.25);
-    renderMain2DTemb();
+    if (mainViewIs3D) {
+      view3DZoom = Math.min(5, view3DZoom * 1.25);
+      renderMain3D();
+    } else {
+      main2DZoom = Math.min(20, main2DZoom * 1.25);
+      renderMain2DTemb();
+    }
   });
 
   document.getElementById('main-zoom-out-btn').addEventListener('click', () => {
-    main2DZoom = Math.max(0.1, main2DZoom / 1.25);
-    renderMain2DTemb();
+    if (mainViewIs3D) {
+      view3DZoom = Math.max(0.2, view3DZoom / 1.25);
+      renderMain3D();
+    } else {
+      main2DZoom = Math.max(0.1, main2DZoom / 1.25);
+      renderMain2DTemb();
+    }
   });
 
   document.getElementById('main-zoom-reset-btn').addEventListener('click', () => {
-    main2DZoom = 1.0;
-    main2DPanX = 0;
-    main2DPanY = 0;
-    renderMain2DTemb();
+    if (mainViewIs3D) {
+      view3DZoom = 1.0;
+      view3DRotX = -0.6;
+      view3DRotZ = 0.5;
+      renderMain3D();
+    } else {
+      main2DZoom = 1.0;
+      main2DPanX = 0;
+      main2DPanY = 0;
+      renderMain2DTemb();
+    }
   });
 
   // Main 2D canvas pan/zoom handlers
@@ -2554,6 +2988,44 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
     main2DZoom = Math.max(0.1, Math.min(20, main2DZoom * factor));
     renderMain2DTemb();
+  }, { passive: false });
+
+  // 3D canvas rotation handlers
+  main3DCanvas.addEventListener('mousedown', (e) => {
+    view3DIsDragging = true;
+    view3DLastX = e.clientX;
+    view3DLastY = e.clientY;
+    main3DCanvas.style.cursor = 'grabbing';
+  });
+
+  main3DCanvas.addEventListener('mousemove', (e) => {
+    if (!view3DIsDragging) return;
+    const dx = e.clientX - view3DLastX;
+    const dy = e.clientY - view3DLastY;
+    view3DRotZ += dx * 0.01;  // Horizontal drag = spin around Z
+    view3DRotX += dy * 0.01;  // Vertical drag = tilt around X
+    // Clamp tilt to avoid flipping
+    view3DRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, view3DRotX));
+    view3DLastX = e.clientX;
+    view3DLastY = e.clientY;
+    renderMain3D();
+  });
+
+  main3DCanvas.addEventListener('mouseup', () => {
+    view3DIsDragging = false;
+    main3DCanvas.style.cursor = 'grab';
+  });
+
+  main3DCanvas.addEventListener('mouseleave', () => {
+    view3DIsDragging = false;
+    main3DCanvas.style.cursor = 'grab';
+  });
+
+  main3DCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    view3DZoom = Math.max(0.2, Math.min(5, view3DZoom * factor));
+    renderMain3D();
   }, { passive: false });
 
   // T-embedding size controls
