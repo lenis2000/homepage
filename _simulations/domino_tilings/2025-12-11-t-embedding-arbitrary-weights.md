@@ -1,5 +1,5 @@
 ---
-title: T-embeddings of the Aztec diamond with arbitrary weights
+title: T-embeddings of the Aztec diamond with random weights
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -144,53 +144,26 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="500" style="width: 60px;"></label>
-  <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="30" style="width: 60px;"></label>
 
   <!-- Weight Preset Dropdown -->
   <label style="margin-left: 15px;">Weights:
     <select id="weight-preset-select" style="margin-left: 5px;">
-      <option value="uniform">Uniform</option>
       <option value="random" selected>Random</option>
-      <option value="periodic-lattice">Periodic (Lattice)</option>
-      <option value="periodic-diagonal">Periodic (Diagonal)</option>
+      <option value="uniform">Uniform</option>
     </select>
   </label>
-  <button id="apply-weights-btn" style="margin-left: 10px;">Apply Weights</button>
-</div>
+  <label id="seed-label" style="margin-left: 10px;">Seed: <input id="random-seed" type="number" value="42" style="width: 60px;"></label>
 
-<!-- Dynamic Parameters Container -->
-<div id="weight-params-container" style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; display: none;">
-
-  <!-- Random Distribution Options -->
-  <div id="random-params" style="display: none;">
-    <label>Distribution:
-      <select id="random-distribution-select">
-        <option value="uniform-range">Uniform [0.5, 2.0]</option>
-        <option value="log-normal">Log-normal</option>
-        <option value="exponential">Exponential</option>
-      </select>
-    </label>
-    <label style="margin-left: 15px;">Seed: <input id="random-seed" type="number" value="42" style="width: 60px;"></label>
-  </div>
-
-  <!-- Periodic Parameters -->
-  <div id="periodic-params" style="display: none;">
-    <div style="margin-bottom: 10px;">
-      <label>k: <input id="periodic-k" type="number" value="2" min="1" max="4" style="width: 40px;"></label>
-      <label style="margin-left: 10px;">l: <input id="periodic-l" type="number" value="2" min="1" max="4" style="width: 40px;"></label>
-      <button id="periodic-update-grid-btn" style="margin-left: 10px;">Update Grid</button>
-    </div>
-
-    <!-- Dynamic grid container - populated by JS -->
-    <div id="periodic-grid-container" style="display: grid; gap: 5px;">
-      <!-- Grid cells with a_ij, b_ij, c_ij inputs will be generated here -->
-    </div>
-  </div>
+  <button id="compute-btn" style="margin-left: 15px;">Compute</button>
 </div>
 
 <div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; margin-bottom: 10px;">
   Loading WASM module...
+</div>
+
+<div id="computing-msg" style="display: none; padding: 10px; background: #e8f4ff; border: 1px solid #4a90d9; margin-bottom: 10px;">
+  <span id="computing-text">Computing T-embedding...</span>
 </div>
 
 <!-- Main T-embedding Visualization Section -->
@@ -232,7 +205,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 <details id="stepwise-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
   <div id="stepwise-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
-    <strong>Note:</strong> Step-by-step visualization is only available for n ≤ 20. For larger n, use the main T-embedding visualization above.
+    <strong>Note:</strong> Step-by-step visualization is only available for n ≤ 15. For larger n, use the main T-embedding visualization above.
   </div>
   <div id="stepwise-content" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Side-by-side layout -->
@@ -273,7 +246,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 <details id="mathematica-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8e8f4; border: 1px solid #99c;">Mathematica verification code for small n</summary>
   <div id="mathematica-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
-    <strong>Note:</strong> Mathematica verification is only available for n ≤ 20.
+    <strong>Note:</strong> Mathematica verification is only available for n ≤ 15.
   </div>
   <div id="mathematica-content" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <p style="font-size: 12px; margin-bottom: 10px;">
@@ -332,8 +305,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let wasmReady = false;
   let isComputing = false;  // Flag to prevent re-entrancy during computation
 
+  // Hard cap on n
+  const MAX_N = 30;
+
   // Step-by-step visualization is only available for n <= this threshold
-  const STEP_BY_STEP_MAX_N = 20;
+  const STEP_BY_STEP_MAX_N = 15;
+
+  // Helper to parse and clamp n input
+  function parseN() {
+    let n = parseInt(document.getElementById('n-input').value) || 6;
+    n = Math.max(1, Math.min(MAX_N, n));
+    document.getElementById('n-input').value = n;  // Update input to show clamped value
+    return n;
+  }
 
   // Update stepwise and Mathematica section visibility based on n
   function updateStepwiseSectionForN(n) {
@@ -1515,20 +1499,20 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       wasmReady = true;
 
       // Auto-compute on load with randomized weights
-      const n = parseInt(document.getElementById('n-input').value) || 6;
+      const n = parseN();
       currentSimulationN = n;  // Sync state on load
       setN(n);
 
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
-      // Only do expensive computation for small n
-      if (n <= STEP_BY_STEP_MAX_N) {
-        initAztecGraph(n);
-        randomizeAztecWeights();  // Randomize on load
-        computeAndDisplay();
+      // Initialize and compute
+      initAztecGraph(n);
+      randomizeAztecWeights();  // Randomize on load
+      computeAndDisplay();
 
-        // Precompute all T-embedding levels before showing UI
+      // Precompute all T-embedding levels for stepwise UI (only needed for small n)
+      if (n <= STEP_BY_STEP_MAX_N) {
         for (let k = 0; k <= maxK; k++) {
           let ptr = getTembeddingLevelJSON(k);
           freeString(ptr);
@@ -1544,38 +1528,35 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
   }
 
-  function computeAndDisplay() {
+  const computingMsg = document.getElementById('computing-msg');
+  const computingText = document.getElementById('computing-text');
+
+  // Helper for async progress updates
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function computeAndDisplay() {
     if (!wasmReady) return;
     if (isComputing) return;  // Prevent re-entrancy
 
     isComputing = true;
+    const n = parseN();
+    computingMsg.style.display = 'block';
 
     try {
-      const n = parseInt(document.getElementById('n-input').value) || 6;
-
       // Update stepwise section visibility
       updateStepwiseSectionForN(n);
-
-      // For large n: skip step-by-step computation, just render main 2D placeholder
-      if (n > STEP_BY_STEP_MAX_N) {
-        maxK = 0;
-        currentK = 0;
-        renderMain2DTemb();  // Will show Speed Demon placeholder
-        return;
-      }
-
-      // Small n: do full computation
-      // Note: graph should already exist with weights set - don't regenerate here!
 
       // Clear any previous T-embedding cache
       clearTembLevels();
 
       // Clear stale stored face weights before capturing fresh ones
-      // This prevents contamination from previous manual stepping sessions
       clearStoredWeightsExport();
 
-      // Silently step down through all reduction steps to capture face weights
-      // This stores face weights at each checkpoint (k=0 is ROOT)
+      // Phase 1: Folding - step down through all reduction steps
+      computingText.textContent = `Folding Aztec diamond graph...`;
+      await delay(0);  // Yield to allow UI update
       while (canAztecStepDown()) {
         aztecGraphStepDown();
       }
@@ -1588,11 +1569,18 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Display the original Aztec graph
       refreshAztecFromCpp();
 
-      // Pre-compute all T-embedding levels after weights are captured
-      computeTembedding();
+      // Phase 2: Computing T-embeddings
+      const finalK = Math.max(0, n - 2);
+      for (let k = 0; k <= finalK; k++) {
+        computingText.textContent = `Computing T-embedding T_${k} of T_${finalK}...`;
+        await delay(0);  // Yield to allow UI update
+        // Trigger computation for level k
+        let ptr = getTembeddingLevelJSON(k);
+        freeString(ptr);
+      }
 
       // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
-      maxK = Math.max(0, n - 2);
+      maxK = finalK;
 
       // Start at k=0 or keep current if valid
       currentK = Math.min(currentK, maxK);
@@ -1603,6 +1591,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Also render the main 2D visualization
       renderMain2DTemb();
     } finally {
+      computingMsg.style.display = 'none';
       isComputing = false;
     }
   }
@@ -1948,13 +1937,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     ctx.fillStyle = '#fafafa';
     ctx.fillRect(0, 0, rect.width, rect.height);
 
-    if (n <= STEP_BY_STEP_MAX_N) {
-      // Use existing T-embedding data from g_tembLevels
-      renderMain2DFromTembLevels(ctx, rect, n);
-    } else {
-      // Placeholder for Speed Demon matrix engine
-      renderMain2DSpeedDemon(ctx, rect, n);
-    }
+    // Use existing T-embedding data from g_tembLevels
+    renderMain2DFromTembLevels(ctx, rect, n);
   }
 
   function renderMain2DFromTembLevels(ctx, rect, n) {
@@ -2117,19 +2101,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       ctx.arc(x, y, radius, 0, 2 * Math.PI);
       ctx.fill();
     }
-  }
-
-  function renderMain2DSpeedDemon(ctx, rect, n) {
-    // Placeholder for Speed Demon integration (n > 20)
-    ctx.fillStyle = '#888';
-    ctx.font = '16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`n = ${n} (Speed Demon mode)`, rect.width / 2, rect.height / 2 - 20);
-    ctx.font = '14px sans-serif';
-    ctx.fillText('High-performance engine for large n', rect.width / 2, rect.height / 2 + 10);
-    ctx.fillStyle = '#666';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('Coming soon...', rect.width / 2, rect.height / 2 + 35);
   }
 
   function renderStepwiseTemb() {
@@ -2432,120 +2403,49 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   function handlePotentialNChange(newN) {
     if (newN !== currentSimulationN) {
       // Dimension changed: Regenerate graph with uniform weights (user sets weights via Apply)
-      if (newN <= STEP_BY_STEP_MAX_N) {
-        initAztecGraph(newN);
-        // Weights are uniform by default - user can change via "Apply Weights" button
-      }
+      initAztecGraph(newN);
+      // Weights are uniform by default - user can change via "Apply Weights" button
       currentSimulationN = newN;
       currentK = 0;  // Reset K to 0 when dimension changes
     } else {
       // Same dimension: Preserve weights, just recompute T-embedding
-      if (newN <= STEP_BY_STEP_MAX_N) {
-        resetAztecGraphPreservingWeights();
-      }
+      resetAztecGraphPreservingWeights();
     }
   }
-
-  // Main buttons
-  document.getElementById('compute-btn').addEventListener('click', () => {
-    const n = parseInt(document.getElementById('n-input').value) || 6;
-    handlePotentialNChange(n);
-    computeAndDisplay();
-  });
 
   // ========== WEIGHT PRESET HANDLING ==========
 
   const weightPresetSelect = document.getElementById('weight-preset-select');
-  const weightParamsContainer = document.getElementById('weight-params-container');
-  const randomParamsDiv = document.getElementById('random-params');
-  const periodicParamsDiv = document.getElementById('periodic-params');
+  const seedLabel = document.getElementById('seed-label');
 
-  // Handle weight preset dropdown change
+  // Handle weight preset dropdown change - show/hide seed input
   weightPresetSelect.addEventListener('change', () => {
     const preset = weightPresetSelect.value;
-
-    // Hide all param sections
-    weightParamsContainer.style.display = 'none';
-    randomParamsDiv.style.display = 'none';
-    periodicParamsDiv.style.display = 'none';
-
-    if (preset === 'uniform') {
-      // No params needed
-    } else if (preset === 'random') {
-      weightParamsContainer.style.display = 'block';
-      randomParamsDiv.style.display = 'block';
-    } else if (preset.startsWith('periodic')) {
-      weightParamsContainer.style.display = 'block';
-      periodicParamsDiv.style.display = 'block';
-      updatePeriodicGrid();
-    }
+    seedLabel.style.display = (preset === 'random') ? 'inline' : 'none';
   });
 
-  // Generate periodic weight grid
-  function updatePeriodicGrid() {
-    const k = parseInt(document.getElementById('periodic-k').value) || 2;
-    const l = parseInt(document.getElementById('periodic-l').value) || 2;
-    const container = document.getElementById('periodic-grid-container');
+  // Initialize seed visibility
+  seedLabel.style.display = (weightPresetSelect.value === 'random') ? 'inline' : 'none';
 
-    container.innerHTML = '';
-    container.style.gridTemplateColumns = `repeat(${l}, 1fr)`;
-
-    for (let i = 1; i <= k; i++) {
-      for (let j = 1; j <= l; j++) {
-        const cell = document.createElement('div');
-        cell.style.cssText = 'padding: 5px; background: #fff; border: 1px solid #ccc; border-radius: 3px;';
-        cell.innerHTML = `
-          <div style="font-size: 11px; color: #666; margin-bottom: 3px;">(${i},${j})</div>
-          <input type="number" id="a_${i}_${j}" value="1" step="0.1" style="width: 45px;" placeholder="a">
-          <input type="number" id="b_${i}_${j}" value="1" step="0.1" style="width: 45px;" placeholder="b">
-          <input type="number" id="c_${i}_${j}" value="1" step="0.1" style="width: 45px;" placeholder="c">
-        `;
-        container.appendChild(cell);
-      }
-    }
-  }
-
-  document.getElementById('periodic-update-grid-btn').addEventListener('click', updatePeriodicGrid);
-
-  // Apply weights button
-  document.getElementById('apply-weights-btn').addEventListener('click', () => {
-    const n = parseInt(document.getElementById('n-input').value) || 6;
+  // Main compute button - initializes graph with weights and computes
+  document.getElementById('compute-btn').addEventListener('click', () => {
+    const n = parseN();
     const preset = weightPresetSelect.value;
 
-    // Always treat apply as a fresh simulation state
+    // Always treat as fresh simulation state
     currentSimulationN = n;
     currentK = 0;
 
-    if (n <= STEP_BY_STEP_MAX_N) {
-      initAztecGraph(n);
+    initAztecGraph(n);
 
-      // Set weight mode: 0=uniform, 1=random, 2=periodic-lattice, 3=periodic-diagonal
-      if (preset === 'uniform') {
-        setAztecWeightMode(0);
-      } else if (preset === 'random') {
-        setAztecWeightMode(1);
-      } else if (preset === 'periodic-lattice') {
-        setAztecWeightMode(2);  // TODO: pass k,l parameters
-      } else if (preset === 'periodic-diagonal') {
-        setAztecWeightMode(3);  // TODO: pass k,l parameters
-      }
-
-      computeAndDisplay();
-    } else {
-      // Large n: show Speed Demon placeholder
-      renderMain2DTemb();
+    // Set weight mode: 0=uniform, 1=random
+    if (preset === 'uniform') {
+      setAztecWeightMode(0);
+    } else if (preset === 'random') {
+      setAztecWeightMode(1);
     }
-  });
 
-  // Initialize weight preset UI on load
-  weightPresetSelect.dispatchEvent(new Event('change'));
-
-  document.getElementById('n-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const n = parseInt(e.target.value) || 6;
-      handlePotentialNChange(n);
-      computeAndDisplay();
-    }
+    computeAndDisplay();
   });
 
   // Aztec graph buttons
