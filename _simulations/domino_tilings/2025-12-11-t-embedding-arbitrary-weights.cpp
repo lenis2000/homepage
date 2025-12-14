@@ -29,8 +29,8 @@
 // Boost multiprecision for 100-digit precision
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-// Define 100-digit precision types (using cpp_bin_float)
-using mp_real = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>>;
+// Define 200-digit precision types (using cpp_bin_float)
+using mp_real = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>;
 using mp_complex = std::complex<mp_real>;
 
 // =============================================================================
@@ -69,12 +69,21 @@ struct AztecVertex {
     bool toContract;  // True if vertex will be contracted in next step
 };
 
-// Aztec diamond graph edge with weight
+// Aztec diamond graph edge with weight stored in LOG SPACE for numerical stability
 struct AztecEdge {
     int v1, v2;       // Indices into vertex array
-    mp_real weight;   // Edge weight (100-digit precision)
+    mp_real logWeight;   // LOG of edge weight (100-digit precision) - use exp() to get actual weight
     bool isHorizontal; // True if horizontal edge, false if vertical
     bool gaugeTransformed; // True if this edge was modified by gauge transform
+
+    // Helper to get actual weight
+    mp_real weight() const { return exp(logWeight); }
+    // Helper to set weight from actual value
+    void setWeight(const mp_real& w) { logWeight = log(w); }
+    // Helper for gauge transform: multiply by lambda
+    void multiplyWeight(const mp_real& lambda) { logWeight += log(lambda); }
+    // Helper for division: divide by d
+    void divideWeight(const mp_real& d) { logWeight -= log(d); }
 };
 
 // Global Aztec graph storage
@@ -213,7 +222,7 @@ static void generateAztecGraphInternal(int k) {
                 AztecEdge e;
                 e.v1 = (int)idx;
                 e.v2 = it->second;
-                e.weight = mp_real(1);  // Default uniform weight
+                e.setWeight(mp_real(1));  // Default uniform weight
                 e.isHorizontal = true;
                 e.gaugeTransformed = false;
                 g_aztecEdges.push_back(e);
@@ -229,7 +238,7 @@ static void generateAztecGraphInternal(int k) {
                 AztecEdge e;
                 e.v1 = (int)idx;
                 e.v2 = it->second;
-                e.weight = mp_real(1);  // Default uniform weight
+                e.setWeight(mp_real(1));  // Default uniform weight
                 e.isHorizontal = false;
                 e.gaugeTransformed = false;
                 g_aztecEdges.push_back(e);
@@ -246,14 +255,14 @@ static void generateAztecGraphInternal(int k) {
 static void randomizeAztecWeightsInternal() {
     g_rngState = (unsigned int)(g_rngState * 1103515245 + 12345);  // Change seed
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        g_aztecEdges[i].weight = randomWeight();
+        g_aztecEdges[i].setWeight(mp_real(randomWeight()));
     }
 }
 
 // Set all edge weights to 1 (uniform)
 static void setUniformWeightsInternal() {
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        g_aztecEdges[i].weight = mp_real(1);
+        g_aztecEdges[i].setWeight(mp_real(1));
     }
 }
 
@@ -471,17 +480,12 @@ static void aztecStep1_GaugeTransform() {
         int refEdgeIdx = findEdge(bIdx, rIdx);
         if (refEdgeIdx < 0) continue;
 
-        // Read CURRENT weights (not cached!)
-        mp_real edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
-        mp_real refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
+        // Compute gauge factor in LOG SPACE: log(λ) = log(ref) - log(boundary)
+        mp_real logLambda = g_aztecEdges[refEdgeIdx].logWeight - g_aztecEdges[edgeToBoundaryIdx].logWeight;
 
-        // Compute gauge factor λ = refEdgeWeight / edgeToBoundaryWeight
-        if (edgeToBoundaryWeight < 1e-10) continue;
-        mp_real lambda = refEdgeWeight / edgeToBoundaryWeight;
-
-        // Apply λ to all edges adjacent to this gauge vertex
+        // Apply λ to all edges adjacent to this gauge vertex (add log(λ) to logWeight)
         for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
-            g_aztecEdges[eIdx].weight *= lambda;
+            g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
     }
@@ -511,17 +515,12 @@ static void aztecStep1_GaugeTransform() {
         int refEdgeIdx = findEdge(bIdx, rIdx);
         if (refEdgeIdx < 0) continue;
 
-        // Read CURRENT weights (not cached!)
-        mp_real edgeToBoundaryWeight = g_aztecEdges[edgeToBoundaryIdx].weight;
-        mp_real refEdgeWeight = g_aztecEdges[refEdgeIdx].weight;
+        // Compute gauge factor in LOG SPACE: log(λ) = log(ref) - log(boundary)
+        mp_real logLambda = g_aztecEdges[refEdgeIdx].logWeight - g_aztecEdges[edgeToBoundaryIdx].logWeight;
 
-        // Compute gauge factor λ = refEdgeWeight / edgeToBoundaryWeight
-        if (edgeToBoundaryWeight < 1e-10) continue;
-        mp_real lambda = refEdgeWeight / edgeToBoundaryWeight;
-
-        // Apply λ to all edges adjacent to this gauge vertex
+        // Apply λ to all edges adjacent to this gauge vertex (add log(λ) to logWeight)
         for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
-            g_aztecEdges[eIdx].weight *= lambda;
+            g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
     }
@@ -654,17 +653,15 @@ static void aztecStep2_WhiteGaugeTransform() {
             continue;  // Both already transformed
         }
 
-        mp_real refWeight = g_aztecEdges[refEdgeIdx].weight;
-        mp_real eqWeight = g_aztecEdges[eqEdgeIdx].weight;
-        if (eqWeight < mp_real("1e-10")) continue;
-        mp_real lambda = refWeight / eqWeight;
+        // Compute gauge factor in LOG SPACE: log(λ) = log(ref) - log(eq)
+        mp_real logLambda = g_aztecEdges[refEdgeIdx].logWeight - g_aztecEdges[eqEdgeIdx].logWeight;
 
         // Highlight the WHITE gauge vertex
         g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
 
-        // Apply λ to ALL edges at the gauge neighbor (gauge touches all edges)
+        // Apply λ to ALL edges at the gauge neighbor (add log(λ) to logWeight)
         for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
-            g_aztecEdges[eIdx].weight *= lambda;
+            g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
     }
@@ -710,17 +707,15 @@ static void aztecStep2_WhiteGaugeTransform() {
             continue;  // Both already transformed
         }
 
-        mp_real refWeight = g_aztecEdges[refEdgeIdx].weight;
-        mp_real eqWeight = g_aztecEdges[eqEdgeIdx].weight;
-        if (eqWeight < mp_real("1e-10")) continue;
-        mp_real lambda = refWeight / eqWeight;
+        // Compute gauge factor in LOG SPACE: log(λ) = log(ref) - log(eq)
+        mp_real logLambda = g_aztecEdges[refEdgeIdx].logWeight - g_aztecEdges[eqEdgeIdx].logWeight;
 
         // Highlight the WHITE gauge vertex
         g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
 
-        // Apply λ to ALL edges at the gauge neighbor (gauge touches all edges)
+        // Apply λ to ALL edges at the gauge neighbor (add log(λ) to logWeight)
         for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
-            g_aztecEdges[eIdx].weight *= lambda;
+            g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
     }
@@ -904,24 +899,36 @@ static void aztecStep4_BlackContraction() {
         }
     }
 
-    // Merge double edges: sum weights of edges between same vertex pairs
-    std::map<std::pair<int,int>, mp_real> edgeWeights;
+    // Merge double edges: sum weights using log-sum-exp for numerical stability
+    // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+    std::map<std::pair<int,int>, mp_real> edgeLogWeights;  // Store LOG of summed weights
     std::map<std::pair<int,int>, bool> edgeHorizontal;
+    std::map<std::pair<int,int>, bool> edgeSeen;
     for (const auto& e : remappedEdges) {
         int v1 = std::min(e.v1, e.v2);
         int v2 = std::max(e.v1, e.v2);
         auto key = std::make_pair(v1, v2);
-        edgeWeights[key] += e.weight;  // Sum weights
+        if (!edgeSeen[key]) {
+            edgeLogWeights[key] = e.logWeight;
+            edgeSeen[key] = true;
+        } else {
+            // Log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+            mp_real a = edgeLogWeights[key];
+            mp_real b = e.logWeight;
+            mp_real maxAB = (a > b) ? a : b;
+            mp_real diff = abs(a - b);
+            edgeLogWeights[key] = maxAB + log(mp_real(1) + exp(-diff));
+        }
         edgeHorizontal[key] = e.isHorizontal;
     }
 
     // Build final edge list
     std::vector<AztecEdge> newEdges;
-    for (const auto& [key, weight] : edgeWeights) {
+    for (const auto& [key, logWeight] : edgeLogWeights) {
         AztecEdge e;
         e.v1 = key.first;
         e.v2 = key.second;
-        e.weight = weight;
+        e.logWeight = logWeight;  // Already in log space
         e.isHorizontal = edgeHorizontal[key];
         e.gaugeTransformed = false;
         newEdges.push_back(e);
@@ -1033,24 +1040,36 @@ static void aztecStep5_WhiteContraction() {
         }
     }
 
-    // Merge double edges: sum weights of edges between same vertex pairs
-    std::map<std::pair<int,int>, mp_real> edgeWeights;
+    // Merge double edges: sum weights using log-sum-exp for numerical stability
+    // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+    std::map<std::pair<int,int>, mp_real> edgeLogWeights;  // Store LOG of summed weights
     std::map<std::pair<int,int>, bool> edgeHorizontal;
+    std::map<std::pair<int,int>, bool> edgeSeen;
     for (const auto& e : remappedEdges) {
         int v1 = std::min(e.v1, e.v2);
         int v2 = std::max(e.v1, e.v2);
         auto key = std::make_pair(v1, v2);
-        edgeWeights[key] += e.weight;  // Sum weights
+        if (!edgeSeen[key]) {
+            edgeLogWeights[key] = e.logWeight;
+            edgeSeen[key] = true;
+        } else {
+            // Log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+            mp_real a = edgeLogWeights[key];
+            mp_real b = e.logWeight;
+            mp_real maxAB = (a > b) ? a : b;
+            mp_real diff = abs(a - b);
+            edgeLogWeights[key] = maxAB + log(mp_real(1) + exp(-diff));
+        }
         edgeHorizontal[key] = e.isHorizontal;
     }
 
     // Build final edge list
     std::vector<AztecEdge> newEdges;
-    for (const auto& [key, weight] : edgeWeights) {
+    for (const auto& [key, logWeight] : edgeLogWeights) {
         AztecEdge e;
         e.v1 = key.first;
         e.v2 = key.second;
-        e.weight = weight;
+        e.logWeight = logWeight;  // Already in log space
         e.isHorizontal = edgeHorizontal[key];
         e.gaugeTransformed = false;
         newEdges.push_back(e);
@@ -1461,13 +1480,13 @@ static void aztecStep8_SplitVertices() {
         AztecEdge edge1, edge2;
         edge1.v1 = outerIdx1;
         edge1.v2 = idx;
-        edge1.weight = 1.0;
+        edge1.logWeight = 0;  // log(1) = 0
         edge1.isHorizontal = false;
         edge1.gaugeTransformed = false;
 
         edge2.v1 = idx;
         edge2.v2 = outerIdx2;
-        edge2.weight = 1.0;
+        edge2.logWeight = 0;  // log(1) = 0
         edge2.isHorizontal = false;
         edge2.gaugeTransformed = false;
 
@@ -1532,11 +1551,14 @@ static void aztecStep9_DiagonalGauge() {
 
             // Check if it's trivalent (degree 3)
             if (adj[neighborIdx].size() == 3) {
-                mp_real diagWeight = g_aztecEdges[diagEdgeIdx].weight;
-                if (abs(diagWeight) > mp_real("1e-10") && abs(diagWeight - mp_real(1)) > mp_real("1e-10")) {
+                // Work in LOG SPACE: divide becomes subtract
+                mp_real logDiagWeight = g_aztecEdges[diagEdgeIdx].logWeight;
+                // Skip if already ~1 (log(1) = 0)
+                if (abs(logDiagWeight) > mp_real("1e-10")) {
                     // Gauge transform: divide all edges at this vertex by diagWeight
+                    // In log space: logW -= logDiagWeight
                     for (const auto& [_, edgeIdx] : adj[neighborIdx]) {
-                        g_aztecEdges[edgeIdx].weight /= diagWeight;
+                        g_aztecEdges[edgeIdx].logWeight -= logDiagWeight;
                         g_aztecEdges[edgeIdx].gaugeTransformed = true;
                     }
                 }
@@ -1630,9 +1652,9 @@ static void aztecStep10_UrbanRenewal() {
         }
         if (!valid) continue;
 
-        // Find quad edges (edges between inner vertices) and their weights
+        // Find quad edges (edges between inner vertices) and their LOG weights
         // Order: edge from innerVerts[i] to innerVerts[(i+1)%4]
-        std::vector<mp_real> quadWeights(4, mp_real(1));
+        std::vector<mp_real> logQuadWeights(4, mp_real(0));  // log(1) = 0 as default
         std::vector<int> quadEdgeIdx(4, -1);
 
         for (int i = 0; i < 4; i++) {
@@ -1641,29 +1663,43 @@ static void aztecStep10_UrbanRenewal() {
             for (const auto& [neighborIdx, edgeIdx] : adj[v1]) {
                 if (neighborIdx == v2) {
                     quadEdgeIdx[i] = edgeIdx;
-                    quadWeights[i] = g_aztecEdges[edgeIdx].weight;
+                    logQuadWeights[i] = g_aztecEdges[edgeIdx].logWeight;
                     break;
                 }
             }
         }
 
-        // Get diagonal edge weights
-        std::vector<mp_real> diagWeights(4, mp_real(1));
+        // Get diagonal edge LOG weights
+        std::vector<mp_real> logDiagWeights(4, mp_real(0));
         for (int i = 0; i < 4; i++) {
             if (diagEdgeIdx[i] >= 0) {
-                diagWeights[i] = g_aztecEdges[diagEdgeIdx[i]].weight;
+                logDiagWeights[i] = g_aztecEdges[diagEdgeIdx[i]].logWeight;
             }
         }
 
-        // Apply urban renewal weight transformation
+        // Apply urban renewal weight transformation IN LOG SPACE
         // Quad edges in cyclic order: x=quadWeights[0], y=quadWeights[1], z=quadWeights[2], w=quadWeights[3]
-        // D = x*z + w*y
+        // D = x*z + w*y = e^(log_x + log_z) + e^(log_w + log_y)
         // New weights: (z/D, w/D, x/D, y/D)
-        mp_real x = quadWeights[0], y = quadWeights[1], z = quadWeights[2], w = quadWeights[3];
-        mp_real D = x * z + w * y;
-        if (abs(D) < mp_real("1e-10")) D = mp_real(1);  // Avoid division by zero
+        // In log space: log(z/D) = log_z - log_D
+        mp_real log_x = logQuadWeights[0], log_y = logQuadWeights[1];
+        mp_real log_z = logQuadWeights[2], log_w = logQuadWeights[3];
 
-        std::vector<mp_real> newWeights = {z / D, w / D, x / D, y / D};
+        // log_D = log(e^(log_x + log_z) + e^(log_w + log_y))
+        // Use log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+        mp_real term1 = log_x + log_z;  // log(x*z)
+        mp_real term2 = log_w + log_y;  // log(w*y)
+        mp_real maxTerm = (term1 > term2) ? term1 : term2;
+        mp_real diffTerm = abs(term1 - term2);
+        mp_real log_D = maxTerm + log(mp_real(1) + exp(-diffTerm));
+
+        // New log weights: log(z/D) = log_z - log_D, etc.
+        std::vector<mp_real> newLogWeights = {
+            log_z - log_D,  // log(z/D)
+            log_w - log_D,  // log(w/D)
+            log_x - log_D,  // log(x/D)
+            log_y - log_D   // log(y/D)
+        };
 
         // Mark inner vertices for removal
         for (int i = 0; i < 4; i++) {
@@ -1677,12 +1713,12 @@ static void aztecStep10_UrbanRenewal() {
         }
 
         // Add 4 new edges connecting outer vertices
-        // Edge i connects outerVerts[i] to outerVerts[(i+1)%4] with weight newWeights[i]
+        // Edge i connects outerVerts[i] to outerVerts[(i+1)%4] with logWeight newLogWeights[i]
         for (int i = 0; i < 4; i++) {
             AztecEdge newEdge;
             newEdge.v1 = outerVerts[i];
             newEdge.v2 = outerVerts[(i + 1) % 4];
-            newEdge.weight = newWeights[i];
+            newEdge.logWeight = newLogWeights[i];  // Already in log space
             newEdge.isHorizontal = false;
             newEdge.gaugeTransformed = true;  // Mark as transformed
             newEdges.push_back(newEdge);
@@ -1803,19 +1839,23 @@ static void aztecStep11_CombineDoubleEdges() {
                 bool e1_fromBlackToWhite = (g_aztecVertices[e1.v1].isWhite == false);
 
                 // Compute ratio: black->white edge weight / white->black edge weight
-                mp_real ratio, numerator, denominator;
+                // In log space: log(ratio) = logWeight_num - logWeight_den
+                mp_real logNum, logDen;
                 if (e0_fromBlackToWhite && !e1_fromBlackToWhite) {
-                    numerator = e0.weight;
-                    denominator = e1.weight;
+                    logNum = e0.logWeight;
+                    logDen = e1.logWeight;
                 } else if (!e0_fromBlackToWhite && e1_fromBlackToWhite) {
-                    numerator = e1.weight;
-                    denominator = e0.weight;
+                    logNum = e1.logWeight;
+                    logDen = e0.logWeight;
                 } else {
                     // Both same direction - use default
-                    numerator = e0.weight;
-                    denominator = e1.weight;
+                    logNum = e0.logWeight;
+                    logDen = e1.logWeight;
                 }
-                ratio = numerator / denominator;
+                // Convert back to actual values for storage (ratio is bounded)
+                mp_real numerator = exp(logNum);
+                mp_real denominator = exp(logDen);
+                mp_real ratio = exp(logNum - logDen);
 
                 // Determine edge type by position (top/bottom/left/right)
                 double x1 = v1.x, y1 = v1.y;
@@ -1894,18 +1934,22 @@ static void aztecStep11_CombineDoubleEdges() {
                     bool e0_fromBlackToWhite = (g_aztecVertices[e0.v1].isWhite == false);
                     bool e1_fromBlackToWhite = (g_aztecVertices[e1.v1].isWhite == false);
 
-                    mp_real ratio, numerator, denominator;
+                    // Compute ratio in log space
+                    mp_real logNum, logDen;
                     if (e0_fromBlackToWhite && !e1_fromBlackToWhite) {
-                        numerator = e0.weight;
-                        denominator = e1.weight;
+                        logNum = e0.logWeight;
+                        logDen = e1.logWeight;
                     } else if (!e0_fromBlackToWhite && e1_fromBlackToWhite) {
-                        numerator = e1.weight;
-                        denominator = e0.weight;
+                        logNum = e1.logWeight;
+                        logDen = e0.logWeight;
                     } else {
-                        numerator = e0.weight;
-                        denominator = e1.weight;
+                        logNum = e0.logWeight;
+                        logDen = e1.logWeight;
                     }
-                    ratio = numerator / denominator;
+                    // Convert back to actual values for storage
+                    mp_real numerator = exp(logNum);
+                    mp_real denominator = exp(logDen);
+                    mp_real ratio = exp(logNum - logDen);
                     betaRatios.ratios[{i, j}] = ratio;
                     betaRatios.numerators[{i, j}] = numerator;
                     betaRatios.denominators[{i, j}] = denominator;
@@ -1918,15 +1962,23 @@ static void aztecStep11_CombineDoubleEdges() {
         }
     }
 
-    // Build new edge list with combined weights
+    // Build new edge list with combined weights using log-sum-exp
     std::vector<AztecEdge> newEdges;
     for (const auto& [vertPair, indices] : edgeGroups) {
-        // Sum weights of all edges in this group
-        mp_real totalWeight = 0;
         bool isHoriz = g_aztecEdges[indices[0]].isHorizontal;
         bool gaugeT = g_aztecEdges[indices[0]].gaugeTransformed;
-        for (size_t idx : indices) {
-            totalWeight += g_aztecEdges[idx].weight;
+
+        // Sum weights in log space using log-sum-exp
+        // Start with first edge's logWeight
+        mp_real logTotalWeight = g_aztecEdges[indices[0]].logWeight;
+        for (size_t i = 1; i < indices.size(); i++) {
+            size_t idx = indices[i];
+            // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+            mp_real a = logTotalWeight;
+            mp_real b = g_aztecEdges[idx].logWeight;
+            mp_real maxAB = (a > b) ? a : b;
+            mp_real diff = abs(a - b);
+            logTotalWeight = maxAB + log(mp_real(1) + exp(-diff));
             gaugeT = gaugeT || g_aztecEdges[idx].gaugeTransformed;
         }
 
@@ -1934,7 +1986,7 @@ static void aztecStep11_CombineDoubleEdges() {
         AztecEdge combined;
         combined.v1 = vertPair.first;
         combined.v2 = vertPair.second;
-        combined.weight = totalWeight;
+        combined.logWeight = logTotalWeight;
         combined.isHorizontal = isHoriz;
         combined.gaugeTransformed = gaugeT;
         newEdges.push_back(combined);
@@ -2950,8 +3002,9 @@ static void computeFaces() {
                 cx /= faceV.size();
                 cy /= faceV.size();
 
-                // Compute face weight
-                mp_real weight = 1;
+                // Compute face weight (cross-ratio) in LOG SPACE
+                // weight = product of (wt1/wt2) = exp(sum of (logWt1 - logWt2))
+                mp_real logWeight = 0;  // log(1) = 0
                 int n = (int)faceV.size();
 
                 if (n >= 4 && n % 2 == 0) {
@@ -2966,15 +3019,18 @@ static void computeFaces() {
                     int d = n / 2;
                     for (int s = 0; s < d; s++) {
                         int ws = ordV[2*s], bs = ordV[2*s+1], wnext = ordV[(2*s+2) % n];
-                        mp_real wt1 = 1, wt2 = 1;
+                        mp_real logWt1 = 0, logWt2 = 0;  // log(1) = 0 as default
                         for (int e = 0; e < nE; e++) {
                             int a = g_aztecEdges[e].v1, b = g_aztecEdges[e].v2;
-                            if ((a==ws && b==bs) || (a==bs && b==ws)) wt1 = g_aztecEdges[e].weight;
-                            if ((a==wnext && b==bs) || (a==bs && b==wnext)) wt2 = g_aztecEdges[e].weight;
+                            if ((a==ws && b==bs) || (a==bs && b==ws)) logWt1 = g_aztecEdges[e].logWeight;
+                            if ((a==wnext && b==bs) || (a==bs && b==wnext)) logWt2 = g_aztecEdges[e].logWeight;
                         }
-                        weight *= wt1 / wt2;
+                        // In log space: multiply by ratio = add log(ratio) = add (logWt1 - logWt2)
+                        logWeight += logWt1 - logWt2;
                     }
                 }
+                // Convert back to actual weight for storage
+                mp_real weight = exp(logWeight);
 
                 AztecFace face;
                 face.vertexIndices = faceV;
@@ -3148,13 +3204,13 @@ static std::string getAztecGraphJSONInternal() {
     }
     oss << "]";
 
-    // Output edges
+    // Output edges (convert from log space using weight() helper)
     oss << ",\"edges\":[";
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         if (i > 0) oss << ",";
         oss << "{\"v1\":" << g_aztecEdges[i].v1
             << ",\"v2\":" << g_aztecEdges[i].v2
-            << ",\"weight\":" << g_aztecEdges[i].weight
+            << ",\"weight\":" << g_aztecEdges[i].weight()  // Convert from log space
             << ",\"isHorizontal\":" << (g_aztecEdges[i].isHorizontal ? "true" : "false")
             << ",\"gaugeTransformed\":" << (g_aztecEdges[i].gaugeTransformed ? "true" : "false")
             << "}";
@@ -3311,7 +3367,7 @@ void resetAztecGraphPreservingWeights() {
         } else {
             oss << x2 << "," << y2 << "," << x1 << "," << y1;
         }
-        savedWeights[oss.str()] = e.weight;
+        savedWeights[oss.str()] = e.logWeight;  // Save log weight directly
     }
 
     // Regenerate graph (clears history and cached data including g_storedWeights)
@@ -3332,7 +3388,7 @@ void resetAztecGraphPreservingWeights() {
         }
         auto it = savedWeights.find(oss.str());
         if (it != savedWeights.end()) {
-            e.weight = it->second;
+            e.logWeight = it->second;  // Restore log weight directly
         }
     }
 }

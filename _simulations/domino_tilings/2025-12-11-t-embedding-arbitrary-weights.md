@@ -1851,6 +1851,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   }
 
   // Display stored face weights near Aztec graph
+  // Uses double edge ratios for alpha and beta, captured face weights for gamma
   function updateFaceWeightsOutput() {
     const faceDiv = document.getElementById('face-weights-output');
     if (!wasmReady || !getStoredFaceWeightsJSON) {
@@ -1865,10 +1866,31 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     try {
       const data = JSON.parse(jsonStr);
       const levels = data.capturedLevels || [];
+      const doubleEdgeRatios = data.doubleEdgeRatios || [];
+      const betaEdgeRatios = data.betaEdgeRatios || [];
 
       if (levels.length === 0) {
         faceDiv.innerHTML = '<em>No face weights captured yet. Step through reduction.</em>';
         return;
+      }
+
+      // Build lookup maps for double edge ratios
+      const alphaByK = {};
+      for (const der of doubleEdgeRatios) {
+        alphaByK[der.k] = {
+          right: der.right?.ratio ?? 1,
+          left: der.left?.ratio ?? 1,
+          top: der.top?.ratio ?? 1,
+          bottom: der.bottom?.ratio ?? 1
+        };
+      }
+
+      const betaByK = {};
+      for (const ber of betaEdgeRatios) {
+        betaByK[ber.k] = {};
+        for (const r of (ber.ratios || [])) {
+          betaByK[ber.k][`${r.i},${r.j}`] = r.ratio;
+        }
       }
 
       let lines = [];
@@ -1877,17 +1899,24 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         if (k === 0 && sw.root !== undefined) {
           lines.push(`root[${k}]:=${sw.root.toFixed(12)}`);
         } else {
-          lines.push(`alphaR[${k}]:=${sw.alpha_right.toFixed(12)}`);
-          lines.push(`alphaL[${k}]:=${sw.alpha_left.toFixed(12)}`);
-          lines.push(`alphaT[${k}]:=${sw.alpha_top.toFixed(12)}`);
-          lines.push(`alphaB[${k}]:=${sw.alpha_bottom.toFixed(12)}`);
+          // Use double edge ratios for alpha values
+          const alpha = alphaByK[k] || { right: 1, left: 1, top: 1, bottom: 1 };
+          lines.push(`alphaR[${k}]:=${alpha.right.toFixed(12)}`);
+          lines.push(`alphaL[${k}]:=${alpha.left.toFixed(12)}`);
+          lines.push(`alphaT[${k}]:=${alpha.top.toFixed(12)}`);
+          lines.push(`alphaB[${k}]:=${alpha.bottom.toFixed(12)}`);
 
+          // Use beta edge ratios (from double edges) for beta values
+          const betaMap = betaByK[k] || {};
           if (sw.beta && sw.beta.length > 0) {
             for (const b of sw.beta) {
-              lines.push(`beta[${k}][${b.i},${b.j}]:=${b.weight.toFixed(12)}`);
+              const key = `${b.i},${b.j}`;
+              const betaVal = betaMap[key] ?? b.weight;
+              lines.push(`beta[${k}][${b.i},${b.j}]:=${betaVal.toFixed(12)}`);
             }
           }
 
+          // Gamma values come from captured face weights (unchanged)
           if (sw.gamma && sw.gamma.length > 0) {
             for (const g of sw.gamma) {
               lines.push(`gamma[${k}][${g.i},${g.j}]:=${g.weight.toFixed(12)}`);
