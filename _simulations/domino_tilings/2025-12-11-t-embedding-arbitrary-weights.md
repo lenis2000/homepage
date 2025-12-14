@@ -1139,10 +1139,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         let jsonStr = Module.UTF8ToString(ptr);
         freeString(ptr);
         faceWeights = JSON.parse(jsonStr);
-        console.log('C++ faces:', faceWeights.length, faceWeights.slice(0, 3));
       } else {
         faceWeights = computeFaceWeights();
-        console.log('JS faces:', faceWeights.length, faceWeights.slice(0, 3));
       }
 
       for (let idx = 0; idx < faceWeights.length; idx++) {
