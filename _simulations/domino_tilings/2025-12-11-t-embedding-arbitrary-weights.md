@@ -183,8 +183,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
           <button id="step-next-btn" style="width: 60px; margin-left: 10px;">→</button>
           <span style="margin-left: 15px;">k = <span id="step-value">0</span></span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
-          <label style="margin-left: 15px;">Vertex: <input type="number" id="temb-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
-          <label style="margin-left: 10px;">Edge: <input type="number" id="temb-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 15px;">V: <input type="number" id="temb-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 10px;">E: <input type="number" id="temb-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -254,6 +254,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // T-embedding data
   let tembData = null;
   let wasmReady = false;
+  let isComputing = false;  // Flag to prevent re-entrancy during computation
 
   // Step-by-step visualization is only available for n <= this threshold
   const STEP_BY_STEP_MAX_N = 20;
@@ -287,9 +288,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   }
 
   // WASM function wrappers
-  let setN, initCoefficients, computeTembedding, getTembeddingJSON, freeString;
+  let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON;
-  let randomizeAztecWeights, setAztecGraphLevel;
+  let randomizeAztecWeights, resetAztecGraphPreservingWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
 
@@ -1358,7 +1359,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const parity = (i + j + aztecLevel) % 2;
       const colorType = v.isWhite ? `white (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} even)`
                                   : `black (i+j+k = ${i}+${j}+${aztecLevel} = ${i+j+aztecLevel} odd)`;
-      infoDiv.innerHTML = `<strong>Vertex:</strong> (${v.x}, ${v.y}) &nbsp; | &nbsp; <strong>Color:</strong> ${colorType}`;
+      infoDiv.innerHTML = `<strong>V:</strong> (${v.x}, ${v.y}) &nbsp; | &nbsp; <strong>Color:</strong> ${colorType}`;
     } else if (closestFace) {
       selectedAztecFace = closestFace.face;
       selectedAztecVertex = null;
@@ -1381,7 +1382,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const preciseWeight = edge.weight.toFixed(10);
       const orient = edge.isHorizontal ? 'horizontal' : 'vertical';
       const status = edge.gaugeTransformed ? ' (gauge transformed)' : '';
-      infoDiv.innerHTML = `<strong>Edge:</strong> (${edge.x1}, ${edge.y1}) — (${edge.x2}, ${edge.y2}) &nbsp; | &nbsp; <strong>Weight:</strong> ${preciseWeight}${status}`;
+      infoDiv.innerHTML = `<strong>E:</strong> (${edge.x1}, ${edge.y1}) — (${edge.x2}, ${edge.y2}) &nbsp; | &nbsp; <strong>Weight:</strong> ${preciseWeight}${status}`;
     } else {
       selectedAztecVertex = null;
       selectedAztecEdge = null;
@@ -1406,7 +1407,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       setN = Module.cwrap('setN', null, ['number']);
       initCoefficients = Module.cwrap('initCoefficients', null, []);
       computeTembedding = Module.cwrap('computeTembedding', null, []);
-      getTembeddingJSON = Module.cwrap('getTembeddingJSON', 'number', []);
       freeString = Module.cwrap('freeString', null, ['number']);
 
       // Aztec graph functions
@@ -1417,6 +1417,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
+      resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
       const seedRng = Module.cwrap('seedRng', null, ['number']);
       seedRng(42);  // Fixed seed for reproducible results on load
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
@@ -1460,52 +1461,59 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   function computeAndDisplay() {
     if (!wasmReady) return;
+    if (isComputing) return;  // Prevent re-entrancy
 
-    const n = parseInt(document.getElementById('n-input').value) || 6;
+    isComputing = true;
 
-    // Update stepwise section visibility
-    updateStepwiseSectionForN(n);
+    try {
+      const n = parseInt(document.getElementById('n-input').value) || 6;
 
-    // For large n: skip all expensive computation (will be handled by separate large-n module later)
-    if (n > STEP_BY_STEP_MAX_N) {
-      maxK = 0;
-      currentK = 0;
-      return;
+      // Update stepwise section visibility
+      updateStepwiseSectionForN(n);
+
+      // For large n: skip all expensive computation (will be handled by separate large-n module later)
+      if (n > STEP_BY_STEP_MAX_N) {
+        maxK = 0;
+        currentK = 0;
+        return;
+      }
+
+      // Small n: do full computation
+      // Note: graph should already exist with weights set - don't regenerate here!
+
+      // Clear any previous T-embedding cache
+      clearTembLevels();
+
+      // Silently step down through all reduction steps to capture face weights
+      // This stores face weights at each checkpoint (k=0 is ROOT)
+      while (canAztecStepDown()) {
+        aztecGraphStepDown();
+      }
+
+      // Step back up to restore to original Aztec graph
+      while (canAztecStepUp()) {
+        aztecGraphStepUp();
+      }
+
+      // Display the original Aztec graph
+      refreshAztecFromCpp();
+
+      // Pre-compute all T-embedding levels after weights are captured
+      computeTembedding();
+
+      // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
+      maxK = Math.max(0, n - 2);
+
+      // Start at k=0 or keep current if valid
+      currentK = Math.min(currentK, maxK);
+      if (currentK < 0) currentK = 0;
+      updateStepDisplay();
+      renderStepwiseTemb();
+    } finally {
+      isComputing = false;
     }
-
-    // Small n: do full computation
-    // Note: graph should already exist with weights set - don't regenerate here!
-
-    // Clear any previous T-embedding cache
-    clearTembLevels();
-
-    // Silently step down through all reduction steps to capture face weights
-    // This stores face weights at each checkpoint (k=0 is ROOT)
-    while (canAztecStepDown()) {
-      aztecGraphStepDown();
-    }
-
-    // Step back up to restore to original Aztec graph
-    while (canAztecStepUp()) {
-      aztecGraphStepUp();
-    }
-
-    // Display the original Aztec graph
-    refreshAztecFromCpp();
-
-    // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
-    maxK = Math.max(0, n - 2);
-
-    // Start at k=0 or keep current if valid
-    currentK = Math.min(currentK, maxK);
-    if (currentK < 0) currentK = 0;
-    updateStepDisplay();
-    renderStepwiseTemb();
   }
 
-  function updateStepRange() {
-    // Legacy - not used anymore
-  }
 
   function updateStepDisplay() {
     document.getElementById('step-value').textContent = currentK;
@@ -2099,10 +2107,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Main buttons
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
-    // Only regenerate graph if n changed
-    if (n <= STEP_BY_STEP_MAX_N && n !== aztecLevel) {
-      initAztecGraph(n);
-      randomizeAztecWeights();
+    if (n <= STEP_BY_STEP_MAX_N) {
+      // Reset graph preserving current weights, flush all caches
+      resetAztecGraphPreservingWeights();
     }
     computeAndDisplay();
   });
@@ -2110,17 +2117,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('randomize-weights-btn').addEventListener('click', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
     if (n > STEP_BY_STEP_MAX_N) return;
-    // Ensure graph exists for current n
-    if (n !== aztecLevel) {
-      initAztecGraph(n);
-    }
-    randomizeWeights();
+    // Generate new random weights and recompute everything
+    initAztecGraph(n);
+    randomizeAztecWeights();
+    computeAndDisplay();
   });
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const n = parseInt(e.target.value) || 6;
-      // Always regenerate when n changes via Enter
       if (n <= STEP_BY_STEP_MAX_N) {
         initAztecGraph(n);
         randomizeAztecWeights();
