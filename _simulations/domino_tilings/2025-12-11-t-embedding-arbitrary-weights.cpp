@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -3215,6 +3215,11 @@ void freeString(char* str) {
     std::free(str);
 }
 
+EMSCRIPTEN_KEEPALIVE
+void clearStoredWeightsExport() {
+    clearStoredWeights();
+}
+
 // -----------------------------------------------------------------------------
 // AZTEC GRAPH EXPORTED FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -3250,6 +3255,13 @@ void randomizeAztecWeights() {
 // This clears all history, cached coefficients, and T-embedding caches but keeps the weights
 EMSCRIPTEN_KEEPALIVE
 void resetAztecGraphPreservingWeights() {
+    // [FIX]: Unwind history to return to Step 0 (original state) before capturing weights.
+    // If we capture weights from a reduced step (e.g. Step 5), we apply transformed weights
+    // to a fresh graph, causing corruption.
+    while (!g_aztecHistory.empty()) {
+        popAztecState();
+    }
+
     if (g_aztecEdges.empty()) return;
 
     // Clear T-embedding caches
@@ -3273,7 +3285,7 @@ void resetAztecGraphPreservingWeights() {
         savedWeights[oss.str()] = e.weight;
     }
 
-    // Regenerate graph (clears history and cached data)
+    // Regenerate graph (clears history and cached data including g_storedWeights)
     int n = g_aztecLevel;
     generateAztecGraphInternal(n);
 

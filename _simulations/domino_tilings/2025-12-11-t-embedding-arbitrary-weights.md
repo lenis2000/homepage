@@ -293,6 +293,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let randomizeAztecWeights, resetAztecGraphPreservingWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
+  let clearStoredWeightsExport;
 
   // Classify face type based on centroid coordinates and current face count
   // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
@@ -553,6 +554,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // T-embedding k level state (for face weights based T_k)
   let currentK = 0;
   let maxK = 0;  // Updated based on stored face weights
+  let currentSimulationN = 6;  // Track current simulation dimension for change detection
 
   // Vertex selection state
   let selectedVertex = null;
@@ -1427,11 +1429,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
+      clearStoredWeightsExport = Module.cwrap('clearStoredWeightsExport', null, []);
 
       wasmReady = true;
 
       // Auto-compute on load with randomized weights
       const n = parseInt(document.getElementById('n-input').value) || 6;
+      currentSimulationN = n;  // Sync state on load
       setN(n);
 
       // Update stepwise section visibility based on n
@@ -1483,6 +1487,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
       // Clear any previous T-embedding cache
       clearTembLevels();
+
+      // Clear stale stored face weights before capturing fresh ones
+      // This prevents contamination from previous manual stepping sessions
+      clearStoredWeightsExport();
 
       // Silently step down through all reduction steps to capture face weights
       // This stores face weights at each checkpoint (k=0 is ROOT)
@@ -2104,20 +2112,37 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   // ========== EVENT LISTENERS ==========
 
+  // Helper to handle N changes - detects dimension change vs same-dimension recompute
+  function handlePotentialNChange(newN) {
+    if (newN !== currentSimulationN) {
+      // Dimension changed: Full Reset with new random weights
+      if (newN <= STEP_BY_STEP_MAX_N) {
+        initAztecGraph(newN);
+        randomizeAztecWeights();
+      }
+      currentSimulationN = newN;
+      currentK = 0;  // Reset K to 0 when dimension changes
+    } else {
+      // Same dimension: Preserve weights, just recompute T-embedding
+      if (newN <= STEP_BY_STEP_MAX_N) {
+        resetAztecGraphPreservingWeights();
+      }
+    }
+  }
+
   // Main buttons
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
-    if (n <= STEP_BY_STEP_MAX_N) {
-      // Reset graph preserving current weights, flush all caches
-      resetAztecGraphPreservingWeights();
-    }
+    handlePotentialNChange(n);
     computeAndDisplay();
   });
 
   document.getElementById('randomize-weights-btn').addEventListener('click', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
     if (n > STEP_BY_STEP_MAX_N) return;
-    // Generate new random weights and recompute everything
+    // Always treat randomize as a fresh simulation state
+    currentSimulationN = n;
+    currentK = 0;  // Reset K
     initAztecGraph(n);
     randomizeAztecWeights();
     computeAndDisplay();
@@ -2126,10 +2151,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const n = parseInt(e.target.value) || 6;
-      if (n <= STEP_BY_STEP_MAX_N) {
-        initAztecGraph(n);
-        randomizeAztecWeights();
-      }
+      handlePotentialNChange(n);
       computeAndDisplay();
     }
   });
