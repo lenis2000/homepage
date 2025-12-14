@@ -244,8 +244,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
           <button id="aztec-down-btn" style="width: 32px;">←</button>
           <button id="aztec-up-btn" style="width: 32px;">→</button>
           <button id="aztec-fast-up-btn" style="width: 32px;">»</button>
-          <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> Weights</label>
-          <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> Faces</label>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> E wts</label>
+          <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> F wts</label>
         </div>
         <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 3px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
