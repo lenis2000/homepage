@@ -1556,7 +1556,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
       // Phase 1: Folding - step down through all reduction steps
       computingText.textContent = `Folding Aztec diamond graph...`;
-      await delay(0);  // Yield to allow UI update
       while (canAztecStepDown()) {
         aztecGraphStepDown();
       }
