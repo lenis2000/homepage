@@ -144,16 +144,92 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="50" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="500" style="width: 60px;"></label>
   <button id="compute-btn" style="margin-left: 10px;">Compute T-embedding</button>
-  <button id="randomize-weights-btn" style="margin-left: 10px;">Randomize weights</button>
+
+  <!-- Weight Preset Dropdown -->
+  <label style="margin-left: 15px;">Weights:
+    <select id="weight-preset-select" style="margin-left: 5px;">
+      <option value="uniform">Uniform</option>
+      <option value="random" selected>Random</option>
+      <option value="periodic-lattice">Periodic (Lattice)</option>
+      <option value="periodic-diagonal">Periodic (Diagonal)</option>
+    </select>
+  </label>
+  <button id="apply-weights-btn" style="margin-left: 10px;">Apply Weights</button>
+</div>
+
+<!-- Dynamic Parameters Container -->
+<div id="weight-params-container" style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; display: none;">
+
+  <!-- Random Distribution Options -->
+  <div id="random-params" style="display: none;">
+    <label>Distribution:
+      <select id="random-distribution-select">
+        <option value="uniform-range">Uniform [0.5, 2.0]</option>
+        <option value="log-normal">Log-normal</option>
+        <option value="exponential">Exponential</option>
+      </select>
+    </label>
+    <label style="margin-left: 15px;">Seed: <input id="random-seed" type="number" value="42" style="width: 60px;"></label>
+  </div>
+
+  <!-- Periodic Parameters -->
+  <div id="periodic-params" style="display: none;">
+    <div style="margin-bottom: 10px;">
+      <label>k: <input id="periodic-k" type="number" value="2" min="1" max="4" style="width: 40px;"></label>
+      <label style="margin-left: 10px;">l: <input id="periodic-l" type="number" value="2" min="1" max="4" style="width: 40px;"></label>
+      <button id="periodic-update-grid-btn" style="margin-left: 10px;">Update Grid</button>
+    </div>
+
+    <!-- Dynamic grid container - populated by JS -->
+    <div id="periodic-grid-container" style="display: grid; gap: 5px;">
+      <!-- Grid cells with a_ij, b_ij, c_ij inputs will be generated here -->
+    </div>
+  </div>
 </div>
 
 <div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; margin-bottom: 10px;">
   Loading WASM module...
 </div>
 
-<details id="stepwise-section" style="margin-top: 15px;" open>
+<!-- Main T-embedding Visualization Section -->
+<details id="main-visualization-section" style="margin-top: 15px;" open>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0e8ff; border: 1px solid #c9f;">T-embedding Visualization</summary>
+  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+    <!-- Controls row -->
+    <div style="margin-bottom: 10px; text-align: center;">
+      <label>V: <input type="number" id="main-2d-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
+      <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+    </div>
+
+    <!-- Canvas container with floating buttons -->
+    <div id="main-canvas-wrapper" style="position: relative;">
+      <!-- Floating controls row -->
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px;">
+        <button id="main-zoom-out-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">−</button>
+        <button id="main-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
+        <button id="main-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
+        <button id="toggle-2d-3d-btn" style="padding: 5px 15px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">2D</button>
+      </div>
+
+      <!-- 2D Canvas -->
+      <div id="main-2d-container">
+        <canvas id="main-temb-2d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+      </div>
+
+      <!-- 3D Canvas (hidden by default) -->
+      <div id="main-3d-container" style="display: none;">
+        <canvas id="main-temb-3d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #f0f0f0;"></canvas>
+        <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #888; font-style: italic;">
+          3D visualization coming soon
+        </div>
+      </div>
+    </div>
+  </div>
+</details>
+
+<details id="stepwise-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
   <div id="stepwise-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
     <strong>Note:</strong> Step-by-step visualization is only available for n ≤ 20. For larger n, use the main T-embedding visualization above.
@@ -290,7 +366,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON;
-  let randomizeAztecWeights, resetAztecGraphPreservingWeights, setAztecGraphLevel;
+  let randomizeAztecWeights, setAztecWeightMode, resetAztecGraphPreservingWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
   let clearStoredWeightsExport;
@@ -565,11 +641,17 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let tembVertexScreenPositions = [];
   let tembCurrentVertices = [];  // Store current vertices data
 
-  // Canvas pan/zoom for T-embedding
+  // Canvas pan/zoom for T-embedding (stepwise)
   let stepwiseZoom = 1.0;
   let stepwisePanX = 0, stepwisePanY = 0;
   let stepwiseIsPanning = false;
   let stepwiseLastPanX = 0, stepwiseLastPanY = 0;
+
+  // Canvas pan/zoom for main 2D T-embedding
+  let main2DZoom = 1.0;
+  let main2DPanX = 0, main2DPanY = 0;
+  let main2DIsPanning = false;
+  let main2DLastPanX = 0, main2DLastPanY = 0;
 
   // ========== AZTEC DIAMOND GRAPH STATE ==========
   let aztecLevel = 3;
@@ -1419,6 +1501,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
+      setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
       resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
       const seedRng = Module.cwrap('seedRng', null, ['number']);
       seedRng(42);  // Fixed seed for reproducible results on load
@@ -1475,10 +1558,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Update stepwise section visibility
       updateStepwiseSectionForN(n);
 
-      // For large n: skip all expensive computation (will be handled by separate large-n module later)
+      // For large n: skip step-by-step computation, just render main 2D placeholder
       if (n > STEP_BY_STEP_MAX_N) {
         maxK = 0;
         currentK = 0;
+        renderMain2DTemb();  // Will show Speed Demon placeholder
         return;
       }
 
@@ -1517,6 +1601,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       if (currentK < 0) currentK = 0;
       updateStepDisplay();
       renderStepwiseTemb();
+
+      // Also render the main 2D visualization
+      renderMain2DTemb();
     } finally {
       isComputing = false;
     }
@@ -1814,6 +1901,208 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     } catch (e) {
       faceDiv.innerHTML = '<em>Error parsing face weights: ' + e.message + '</em>';
     }
+  }
+
+  // ========== MAIN 2D T-EMBEDDING RENDERING ==========
+
+  function renderMain2DTemb() {
+    const canvas = document.getElementById('main-temb-2d-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+
+    // Handle DPI scaling
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    if (n <= STEP_BY_STEP_MAX_N) {
+      // Use existing T-embedding data from g_tembLevels
+      renderMain2DFromTembLevels(ctx, rect, n);
+    } else {
+      // Placeholder for Speed Demon matrix engine
+      renderMain2DSpeedDemon(ctx, rect, n);
+    }
+  }
+
+  function renderMain2DFromTembLevels(ctx, rect, n) {
+    if (!wasmReady || !getTembeddingLevelJSON) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Loading...', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    // Get final T-embedding level (k = n-2)
+    const finalK = Math.max(0, n - 2);
+    const ptr = getTembeddingLevelJSON(finalK);
+    const json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+
+    let data;
+    try {
+      data = JSON.parse(json);
+    } catch (e) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error parsing T-embedding data', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    if (!data.vertices || data.vertices.length === 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No T-embedding data. Click "Compute T-embedding".', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    // Compute bounds
+    let minRe = Infinity, maxRe = -Infinity;
+    let minIm = Infinity, maxIm = -Infinity;
+    for (const v of data.vertices) {
+      minRe = Math.min(minRe, v.re);
+      maxRe = Math.max(maxRe, v.re);
+      minIm = Math.min(minIm, v.im);
+      maxIm = Math.max(maxIm, v.im);
+    }
+
+    const padding = 20;
+    const rangeRe = maxRe - minRe || 1;
+    const rangeIm = maxIm - minIm || 1;
+    const baseScale = Math.min(
+      (rect.width - 2 * padding) / rangeRe,
+      (rect.height - 2 * padding) / rangeIm
+    );
+    const scale = baseScale * main2DZoom;
+
+    const centerX = rect.width / 2 + main2DPanX;
+    const centerY = rect.height / 2 + main2DPanY;
+    const centerRe = (minRe + maxRe) / 2;
+    const centerIm = (minIm + maxIm) / 2;
+
+    // Build vertex map for edge lookup
+    const vertexMap = new Map();
+    for (const v of data.vertices) {
+      vertexMap.set(`${v.i},${v.j}`, v);
+    }
+
+    // Get size controls
+    const edgeThicknessControl = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
+    const vertexSizeControl = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
+    const uniformEdgeWidth = Math.max(edgeThicknessControl, scale / 300 * edgeThicknessControl);
+
+    // Get k from the final level
+    const k = data.k;
+
+    // Helper to draw edge between two vertices by (i,j)
+    function drawEdge(i1, j1, i2, j2) {
+      const v1 = vertexMap.get(`${i1},${j1}`);
+      const v2 = vertexMap.get(`${i2},${j2}`);
+      if (v1 && v2) {
+        const x1 = centerX + (v1.re - centerRe) * scale;
+        const y1 = centerY - (v1.im - centerIm) * scale;
+        const x2 = centerX + (v2.re - centerRe) * scale;
+        const y2 = centerY - (v2.im - centerIm) * scale;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    }
+
+    // Draw edges
+
+    // 1. Interior edges (lattice connections for |i|+|j| <= k)
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = uniformEdgeWidth;
+    for (const v of data.vertices) {
+      const i = v.i, j = v.j;
+      const absSum = Math.abs(i) + Math.abs(j);
+
+      // Connect to right neighbor
+      if (vertexMap.has(`${i+1},${j}`)) {
+        const nAbsSum = Math.abs(i+1) + Math.abs(j);
+        if (absSum <= k && nAbsSum <= k) {
+          drawEdge(i, j, i+1, j);
+        }
+      }
+      // Connect to top neighbor
+      if (vertexMap.has(`${i},${j+1}`)) {
+        const nAbsSum = Math.abs(i) + Math.abs(j+1);
+        if (absSum <= k && nAbsSum <= k) {
+          drawEdge(i, j, i, j+1);
+        }
+      }
+    }
+
+    // 2. Boundary rhombus (external corners)
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = uniformEdgeWidth;
+    drawEdge(k+1, 0, 0, k+1);
+    drawEdge(0, k+1, -(k+1), 0);
+    drawEdge(-(k+1), 0, 0, -(k+1));
+    drawEdge(0, -(k+1), k+1, 0);
+
+    // 3. External corners to alpha vertices
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = uniformEdgeWidth;
+    drawEdge(k+1, 0, k, 0);
+    drawEdge(-(k+1), 0, -k, 0);
+    drawEdge(0, k+1, 0, k);
+    drawEdge(0, -(k+1), 0, -k);
+
+    // 4. Diagonal boundary edges (along |i|+|j|=k)
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = uniformEdgeWidth;
+
+    // Right-top diagonal: (k,0) -> (k-1,1) -> ... -> (1,k-1) -> (0,k)
+    for (let s = 0; s < k; s++) {
+      drawEdge(k-s, s, k-s-1, s+1);
+    }
+    // Left-top diagonal: (0,k) -> (-1,k-1) -> ... -> (-(k-1),1) -> (-k,0)
+    for (let s = 0; s < k; s++) {
+      drawEdge(-s, k-s, -(s+1), k-s-1);
+    }
+    // Left-bottom diagonal: (-k,0) -> (-(k-1),-1) -> ... -> (-1,-(k-1)) -> (0,-k)
+    for (let s = 0; s < k; s++) {
+      drawEdge(-(k-s), -s, -(k-s-1), -(s+1));
+    }
+    // Right-bottom diagonal: (0,-k) -> (1,-(k-1)) -> ... -> (k-1,-1) -> (k,0)
+    for (let s = 0; s < k; s++) {
+      drawEdge(s, -(k-s), s+1, -(k-s-1));
+    }
+
+    // Draw vertices
+    ctx.fillStyle = '#333';
+    const radius = Math.max(vertexSizeControl, scale / 800 * vertexSizeControl);
+    for (const v of data.vertices) {
+      const x = centerX + (v.re - centerRe) * scale;
+      const y = centerY - (v.im - centerIm) * scale;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+
+  function renderMain2DSpeedDemon(ctx, rect, n) {
+    // Placeholder for Speed Demon integration (n > 20)
+    ctx.fillStyle = '#888';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`n = ${n} (Speed Demon mode)`, rect.width / 2, rect.height / 2 - 20);
+    ctx.font = '14px sans-serif';
+    ctx.fillText('High-performance engine for large n', rect.width / 2, rect.height / 2 + 10);
+    ctx.fillStyle = '#666';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('Coming soon...', rect.width / 2, rect.height / 2 + 35);
   }
 
   function renderStepwiseTemb() {
@@ -2115,10 +2404,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Helper to handle N changes - detects dimension change vs same-dimension recompute
   function handlePotentialNChange(newN) {
     if (newN !== currentSimulationN) {
-      // Dimension changed: Full Reset with new random weights
+      // Dimension changed: Regenerate graph with uniform weights (user sets weights via Apply)
       if (newN <= STEP_BY_STEP_MAX_N) {
         initAztecGraph(newN);
-        randomizeAztecWeights();
+        // Weights are uniform by default - user can change via "Apply Weights" button
       }
       currentSimulationN = newN;
       currentK = 0;  // Reset K to 0 when dimension changes
@@ -2137,16 +2426,92 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     computeAndDisplay();
   });
 
-  document.getElementById('randomize-weights-btn').addEventListener('click', () => {
-    const n = parseInt(document.getElementById('n-input').value) || 6;
-    if (n > STEP_BY_STEP_MAX_N) return;
-    // Always treat randomize as a fresh simulation state
-    currentSimulationN = n;
-    currentK = 0;  // Reset K
-    initAztecGraph(n);
-    randomizeAztecWeights();
-    computeAndDisplay();
+  // ========== WEIGHT PRESET HANDLING ==========
+
+  const weightPresetSelect = document.getElementById('weight-preset-select');
+  const weightParamsContainer = document.getElementById('weight-params-container');
+  const randomParamsDiv = document.getElementById('random-params');
+  const periodicParamsDiv = document.getElementById('periodic-params');
+
+  // Handle weight preset dropdown change
+  weightPresetSelect.addEventListener('change', () => {
+    const preset = weightPresetSelect.value;
+
+    // Hide all param sections
+    weightParamsContainer.style.display = 'none';
+    randomParamsDiv.style.display = 'none';
+    periodicParamsDiv.style.display = 'none';
+
+    if (preset === 'uniform') {
+      // No params needed
+    } else if (preset === 'random') {
+      weightParamsContainer.style.display = 'block';
+      randomParamsDiv.style.display = 'block';
+    } else if (preset.startsWith('periodic')) {
+      weightParamsContainer.style.display = 'block';
+      periodicParamsDiv.style.display = 'block';
+      updatePeriodicGrid();
+    }
   });
+
+  // Generate periodic weight grid
+  function updatePeriodicGrid() {
+    const k = parseInt(document.getElementById('periodic-k').value) || 2;
+    const l = parseInt(document.getElementById('periodic-l').value) || 2;
+    const container = document.getElementById('periodic-grid-container');
+
+    container.innerHTML = '';
+    container.style.gridTemplateColumns = `repeat(${l}, 1fr)`;
+
+    for (let i = 1; i <= k; i++) {
+      for (let j = 1; j <= l; j++) {
+        const cell = document.createElement('div');
+        cell.style.cssText = 'padding: 5px; background: #fff; border: 1px solid #ccc; border-radius: 3px;';
+        cell.innerHTML = `
+          <div style="font-size: 11px; color: #666; margin-bottom: 3px;">(${i},${j})</div>
+          <input type="number" id="a_${i}_${j}" value="1" step="0.1" style="width: 45px;" placeholder="a">
+          <input type="number" id="b_${i}_${j}" value="1" step="0.1" style="width: 45px;" placeholder="b">
+          <input type="number" id="c_${i}_${j}" value="1" step="0.1" style="width: 45px;" placeholder="c">
+        `;
+        container.appendChild(cell);
+      }
+    }
+  }
+
+  document.getElementById('periodic-update-grid-btn').addEventListener('click', updatePeriodicGrid);
+
+  // Apply weights button
+  document.getElementById('apply-weights-btn').addEventListener('click', () => {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const preset = weightPresetSelect.value;
+
+    // Always treat apply as a fresh simulation state
+    currentSimulationN = n;
+    currentK = 0;
+
+    if (n <= STEP_BY_STEP_MAX_N) {
+      initAztecGraph(n);
+
+      // Set weight mode: 0=uniform, 1=random, 2=periodic-lattice, 3=periodic-diagonal
+      if (preset === 'uniform') {
+        setAztecWeightMode(0);
+      } else if (preset === 'random') {
+        setAztecWeightMode(1);
+      } else if (preset === 'periodic-lattice') {
+        setAztecWeightMode(2);  // TODO: pass k,l parameters
+      } else if (preset === 'periodic-diagonal') {
+        setAztecWeightMode(3);  // TODO: pass k,l parameters
+      }
+
+      computeAndDisplay();
+    } else {
+      // Large n: show Speed Demon placeholder
+      renderMain2DTemb();
+    }
+  });
+
+  // Initialize weight preset UI on load
+  weightPresetSelect.dispatchEvent(new Event('change'));
 
   document.getElementById('n-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -2183,6 +2548,87 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
   document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
+
+  // Main 2D T-embedding size controls
+  document.getElementById('main-2d-vertex-size').addEventListener('input', renderMain2DTemb);
+  document.getElementById('main-2d-edge-thickness').addEventListener('input', renderMain2DTemb);
+
+  // 2D/3D toggle button
+  let mainViewIs3D = false;
+  document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
+    mainViewIs3D = !mainViewIs3D;
+    const btn = document.getElementById('toggle-2d-3d-btn');
+    const container2D = document.getElementById('main-2d-container');
+    const container3D = document.getElementById('main-3d-container');
+
+    if (mainViewIs3D) {
+      btn.textContent = '3D';
+      container2D.style.display = 'none';
+      container3D.style.display = 'block';
+      // TODO: render 3D when implemented
+    } else {
+      btn.textContent = '2D';
+      container2D.style.display = 'block';
+      container3D.style.display = 'none';
+      renderMain2DTemb();
+    }
+  });
+
+  // Main 2D canvas zoom buttons
+  document.getElementById('main-zoom-in-btn').addEventListener('click', () => {
+    main2DZoom = Math.min(20, main2DZoom * 1.25);
+    renderMain2DTemb();
+  });
+
+  document.getElementById('main-zoom-out-btn').addEventListener('click', () => {
+    main2DZoom = Math.max(0.1, main2DZoom / 1.25);
+    renderMain2DTemb();
+  });
+
+  document.getElementById('main-zoom-reset-btn').addEventListener('click', () => {
+    main2DZoom = 1.0;
+    main2DPanX = 0;
+    main2DPanY = 0;
+    renderMain2DTemb();
+  });
+
+  // Main 2D canvas pan/zoom handlers
+  const main2DCanvas = document.getElementById('main-temb-2d-canvas');
+
+  main2DCanvas.addEventListener('mousedown', (e) => {
+    main2DIsPanning = true;
+    main2DLastPanX = e.clientX;
+    main2DLastPanY = e.clientY;
+    main2DCanvas.style.cursor = 'grabbing';
+  });
+
+  main2DCanvas.addEventListener('mousemove', (e) => {
+    if (!main2DIsPanning) return;
+    const dx = e.clientX - main2DLastPanX;
+    const dy = e.clientY - main2DLastPanY;
+    main2DPanX += dx;
+    main2DPanY += dy;
+    main2DLastPanX = e.clientX;
+    main2DLastPanY = e.clientY;
+    renderMain2DTemb();
+  });
+
+  main2DCanvas.addEventListener('mouseup', () => {
+    main2DIsPanning = false;
+    main2DCanvas.style.cursor = 'grab';
+  });
+
+  main2DCanvas.addEventListener('mouseleave', () => {
+    main2DIsPanning = false;
+    main2DCanvas.style.cursor = 'grab';
+  });
+
+  main2DCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    main2DZoom = Math.max(0.1, Math.min(20, main2DZoom * factor));
+    renderMain2DTemb();
+  }, { passive: false });
 
   // T-embedding size controls
   document.getElementById('temb-vertex-size').addEventListener('input', renderStepwiseTemb);

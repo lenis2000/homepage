@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -213,7 +213,7 @@ static void generateAztecGraphInternal(int k) {
                 AztecEdge e;
                 e.v1 = (int)idx;
                 e.v2 = it->second;
-                e.weight = randomWeight();
+                e.weight = mp_real(1);  // Default uniform weight
                 e.isHorizontal = true;
                 e.gaugeTransformed = false;
                 g_aztecEdges.push_back(e);
@@ -229,7 +229,7 @@ static void generateAztecGraphInternal(int k) {
                 AztecEdge e;
                 e.v1 = (int)idx;
                 e.v2 = it->second;
-                e.weight = randomWeight();
+                e.weight = mp_real(1);  // Default uniform weight
                 e.isHorizontal = false;
                 e.gaugeTransformed = false;
                 g_aztecEdges.push_back(e);
@@ -247,6 +247,13 @@ static void randomizeAztecWeightsInternal() {
     g_rngState = (unsigned int)(g_rngState * 1103515245 + 12345);  // Change seed
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         g_aztecEdges[i].weight = randomWeight();
+    }
+}
+
+// Set all edge weights to 1 (uniform)
+static void setUniformWeightsInternal() {
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        g_aztecEdges[i].weight = mp_real(1);
     }
 }
 
@@ -3249,6 +3256,28 @@ char* getAztecGraphJSON() {
 EMSCRIPTEN_KEEPALIVE
 void randomizeAztecWeights() {
     randomizeAztecWeightsInternal();
+}
+
+// Set weights based on mode:
+// 0 = Uniform (all 1s)
+// 1 = Random
+// 2 = Periodic Lattice (TODO)
+// 3 = Periodic Diagonal (TODO)
+EMSCRIPTEN_KEEPALIVE
+void setAztecWeightMode(int mode) {
+    if (mode == 0) {
+        // Uniform: all weights = 1
+        setUniformWeightsInternal();
+    } else if (mode == 1) {
+        // Random
+        randomizeAztecWeightsInternal();
+    } else if (mode == 2) {
+        // Periodic Lattice - TODO: implement with k x l parameters
+        setUniformWeightsInternal();  // Placeholder
+    } else if (mode == 3) {
+        // Periodic Diagonal - TODO: implement with k x l parameters
+        setUniformWeightsInternal();  // Placeholder
+    }
 }
 
 // Reset graph to step 0 while preserving current edge weights
