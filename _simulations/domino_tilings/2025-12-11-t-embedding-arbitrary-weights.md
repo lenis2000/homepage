@@ -319,6 +319,20 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
         <canvas id="main-temb-3d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
       </div>
     </div>
+
+    <!-- Export Controls -->
+    <div style="margin-top: 10px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: bold; color: #555;">Export:</span>
+      <button id="export-pdf-btn" style="padding: 2px 8px;">PDF</button>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <input type="checkbox" id="pdf-include-origami" checked>
+        <span style="font-size: 11px;">Origami</span>
+      </label>
+      <span style="color: #ccc;">|</span>
+      <button id="export-png-btn" style="padding: 2px 8px;">PNG</button>
+      <span style="font-size: 11px; color: #666;">Quality:</span>
+      <input type="range" id="png-quality-slider" min="1" max="100" value="85" style="width: 60px;">
+    </div>
   </div>
 </details>
 
@@ -3813,6 +3827,343 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     aztecIsPanning = false;
     aztecTouchStartDist = 0;
   }, { passive: true });
+
+  // ========== EXPORT FUNCTIONS ==========
+
+  // Generate export filename with n and weight parameters
+  function generateExportFilename(extension) {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const weightPreset = document.getElementById('weight-preset-select').value || 'unknown';
+
+    let weightStr = weightPreset;
+    if (weightPreset === 'random-iid') {
+      const a = document.getElementById('iid-min').value;
+      const b = document.getElementById('iid-max').value;
+      weightStr = `iid-uniform-${a}-${b}`;
+    } else if (weightPreset === 'random-gamma') {
+      const alpha = document.getElementById('gamma-alpha').value;
+      const beta = document.getElementById('gamma-beta').value;
+      weightStr = `gamma-${alpha}-${beta}`;
+    } else if (weightPreset === 'random-layered') {
+      const regime = document.querySelector('input[name="layered-regime"]:checked');
+      const regimeNum = regime ? regime.value : '?';
+      weightStr = `layered-${regimeNum}`;
+    } else if (weightPreset === 'periodic') {
+      const k = document.getElementById('periodic-k').value;
+      const l = document.getElementById('periodic-l').value;
+      weightStr = `periodic-${k}x${l}`;
+    } else if (weightPreset === 'all-ones') {
+      weightStr = 'ones';
+    }
+
+    return `t-embedding-n${n}-${weightStr}.${extension}`;
+  }
+
+  // Generate SVG from T-embedding data
+  function generateSVG(includeOrigami) {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const finalK = Math.max(0, n - 2);
+
+    if (!wasmReady || !getTembeddingLevelJSON) {
+      return null;
+    }
+
+    // Get T-embedding data
+    const ptr = getTembeddingLevelJSON(finalK);
+    const json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+
+    let data;
+    try {
+      data = JSON.parse(json);
+    } catch (e) {
+      return null;
+    }
+
+    if (!data.vertices || data.vertices.length === 0) {
+      return null;
+    }
+
+    // Compute bounds
+    let minRe = Infinity, maxRe = -Infinity;
+    let minIm = Infinity, maxIm = -Infinity;
+    for (const v of data.vertices) {
+      minRe = Math.min(minRe, v.re);
+      maxRe = Math.max(maxRe, v.re);
+      minIm = Math.min(minIm, v.im);
+      maxIm = Math.max(maxIm, v.im);
+    }
+
+    // SVG dimensions and padding
+    const padding = 40;
+    const svgWidth = 800;
+    const rangeRe = maxRe - minRe || 1;
+    const rangeIm = maxIm - minIm || 1;
+    const scale = (svgWidth - 2 * padding) / Math.max(rangeRe, rangeIm);
+    const svgHeight = rangeIm * scale + 2 * padding;
+
+    const centerX = svgWidth / 2;
+    const centerY = svgHeight / 2;
+    const centerRe = (minRe + maxRe) / 2;
+    const centerIm = (minIm + maxIm) / 2;
+
+    // Get size controls
+    const edgeThicknessControl = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
+    const vertexSizeControl = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
+    const uniformEdgeWidth = Math.max(edgeThicknessControl, scale / 300 * edgeThicknessControl);
+    const radius = Math.max(vertexSizeControl, scale / 800 * vertexSizeControl);
+
+    // Build vertex map
+    const vertexMap = new Map();
+    for (const v of data.vertices) {
+      vertexMap.set(`${v.i},${v.j}`, v);
+    }
+    const k = data.k;
+
+    // SVG elements array
+    const svgElements = [];
+
+    // Helper to get screen coordinates
+    function toScreen(re, im) {
+      const x = centerX + (re - centerRe) * scale;
+      const y = centerY - (im - centerIm) * scale;  // Flip Y for SVG
+      return { x, y };
+    }
+
+    // Helper to add edge line
+    function addEdge(i1, j1, i2, j2, color, width) {
+      const v1 = vertexMap.get(`${i1},${j1}`);
+      const v2 = vertexMap.get(`${i2},${j2}`);
+      if (v1 && v2) {
+        const p1 = toScreen(v1.re, v1.im);
+        const p2 = toScreen(v2.re, v2.im);
+        svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="${color}" stroke-width="${width.toFixed(2)}" stroke-linecap="round"/>`);
+      }
+    }
+
+    // Draw T-embedding edges (in #333)
+    const tembColor = '#333333';
+
+    // 1. Interior edges
+    for (const v of data.vertices) {
+      const i = v.i, j = v.j;
+      const absSum = Math.abs(i) + Math.abs(j);
+      if (vertexMap.has(`${i+1},${j}`)) {
+        const nAbsSum = Math.abs(i+1) + Math.abs(j);
+        if (absSum <= k && nAbsSum <= k) {
+          addEdge(i, j, i+1, j, tembColor, uniformEdgeWidth);
+        }
+      }
+      if (vertexMap.has(`${i},${j+1}`)) {
+        const nAbsSum = Math.abs(i) + Math.abs(j+1);
+        if (absSum <= k && nAbsSum <= k) {
+          addEdge(i, j, i, j+1, tembColor, uniformEdgeWidth);
+        }
+      }
+    }
+
+    // 2. Boundary rhombus
+    addEdge(k+1, 0, 0, k+1, tembColor, uniformEdgeWidth);
+    addEdge(0, k+1, -(k+1), 0, tembColor, uniformEdgeWidth);
+    addEdge(-(k+1), 0, 0, -(k+1), tembColor, uniformEdgeWidth);
+    addEdge(0, -(k+1), k+1, 0, tembColor, uniformEdgeWidth);
+
+    // 3. External corners to alpha vertices
+    addEdge(k+1, 0, k, 0, tembColor, uniformEdgeWidth);
+    addEdge(-(k+1), 0, -k, 0, tembColor, uniformEdgeWidth);
+    addEdge(0, k+1, 0, k, tembColor, uniformEdgeWidth);
+    addEdge(0, -(k+1), 0, -k, tembColor, uniformEdgeWidth);
+
+    // 4. Diagonal boundary edges
+    for (let s = 0; s < k; s++) {
+      addEdge(k-s, s, k-s-1, s+1, tembColor, uniformEdgeWidth);
+      addEdge(-s, k-s, -(s+1), k-s-1, tembColor, uniformEdgeWidth);
+      addEdge(-(k-s), -s, -(k-s-1), -(s+1), tembColor, uniformEdgeWidth);
+      addEdge(s, -(k-s), s+1, -(k-s-1), tembColor, uniformEdgeWidth);
+    }
+
+    // Draw T-embedding vertices
+    for (const v of data.vertices) {
+      const p = toScreen(v.re, v.im);
+      svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${radius.toFixed(2)}" fill="${tembColor}"/>`);
+    }
+
+    // Origami overlay (if enabled)
+    if (includeOrigami && getOrigamiLevelJSON) {
+      const origPtr = getOrigamiLevelJSON(finalK);
+      const origJson = Module.UTF8ToString(origPtr);
+      freeString(origPtr);
+
+      let origamiData;
+      try {
+        origamiData = JSON.parse(origJson);
+      } catch (e) {
+        origamiData = null;
+      }
+
+      if (origamiData && origamiData.vertices && origamiData.vertices.length > 0) {
+        const origamiVertexMap = new Map();
+        for (const v of origamiData.vertices) {
+          origamiVertexMap.set(`${v.i},${v.j}`, v);
+        }
+
+        const origamiColor = '#0066cc';
+        const origamiEdgeWidth = uniformEdgeWidth * 0.8;
+        const origamiRadius = radius * 0.8;
+
+        // Helper for origami edges
+        function addOrigamiEdge(i1, j1, i2, j2) {
+          const v1 = origamiVertexMap.get(`${i1},${j1}`);
+          const v2 = origamiVertexMap.get(`${i2},${j2}`);
+          if (v1 && v2) {
+            const p1 = toScreen(v1.re, v1.im);
+            const p2 = toScreen(v2.re, v2.im);
+            svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="${origamiColor}" stroke-width="${origamiEdgeWidth.toFixed(2)}" stroke-linecap="round"/>`);
+          }
+        }
+
+        // Interior edges
+        for (const v of origamiData.vertices) {
+          const i = v.i, j = v.j;
+          const absSum = Math.abs(i) + Math.abs(j);
+          if (origamiVertexMap.has(`${i+1},${j}`)) {
+            const nAbsSum = Math.abs(i+1) + Math.abs(j);
+            if (absSum <= k && nAbsSum <= k) {
+              addOrigamiEdge(i, j, i+1, j);
+            }
+          }
+          if (origamiVertexMap.has(`${i},${j+1}`)) {
+            const nAbsSum = Math.abs(i) + Math.abs(j+1);
+            if (absSum <= k && nAbsSum <= k) {
+              addOrigamiEdge(i, j, i, j+1);
+            }
+          }
+        }
+
+        // Boundary rhombus
+        addOrigamiEdge(k+1, 0, 0, k+1);
+        addOrigamiEdge(0, k+1, -(k+1), 0);
+        addOrigamiEdge(-(k+1), 0, 0, -(k+1));
+        addOrigamiEdge(0, -(k+1), k+1, 0);
+
+        // External corners to alpha
+        addOrigamiEdge(k+1, 0, k, 0);
+        addOrigamiEdge(-(k+1), 0, -k, 0);
+        addOrigamiEdge(0, k+1, 0, k);
+        addOrigamiEdge(0, -(k+1), 0, -k);
+
+        // Diagonal boundary
+        for (let s = 0; s < k; s++) {
+          addOrigamiEdge(k-s, s, k-s-1, s+1);
+          addOrigamiEdge(-s, k-s, -(s+1), k-s-1);
+          addOrigamiEdge(-(k-s), -s, -(k-s-1), -(s+1));
+          addOrigamiEdge(s, -(k-s), s+1, -(k-s-1));
+        }
+
+        // Origami vertices
+        for (const v of origamiData.vertices) {
+          const p = toScreen(v.re, v.im);
+          svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${origamiRadius.toFixed(2)}" fill="${origamiColor}"/>`);
+        }
+      }
+    }
+
+    // Build SVG string
+    const svgString = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight.toFixed(0)}" viewBox="0 0 ${svgWidth} ${svgHeight.toFixed(0)}">
+  <rect width="100%" height="100%" fill="white"/>
+  ${svgElements.join('\n  ')}
+</svg>`;
+
+    return svgString;
+  }
+
+  // Export PDF (via SVG - vector quality)
+  async function exportPdf() {
+    const includeOrigami = document.getElementById('pdf-include-origami').checked;
+    const svgString = generateSVG(includeOrigami);
+
+    if (!svgString) {
+      alert('No T-embedding data to export. Please compute a T-embedding first.');
+      return;
+    }
+
+    try {
+      // Load jspdf and svg2pdf.js dynamically if needed
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+
+      if (!window.jspdf) {
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      }
+      if (!window.svg2pdfLoaded) {
+        await loadScript('/js/svg2pdf.umd.min.js');
+        window.svg2pdfLoaded = true;
+      }
+
+      // Parse SVG
+      const parser = new DOMParser();
+      const svgElement = parser.parseFromString(svgString, 'image/svg+xml').documentElement;
+      const width = parseFloat(svgElement.getAttribute('width'));
+      const height = parseFloat(svgElement.getAttribute('height'));
+
+      // Create PDF
+      const { jsPDF } = window.jspdf;
+      const orientation = width > height ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ orientation, unit: 'pt', format: [width, height] });
+
+      // Render SVG to PDF
+      await pdf.svg(svgElement, { x: 0, y: 0, width, height });
+      pdf.save(generateExportFilename('pdf'));
+    } catch (e) {
+      console.error('PDF export error:', e);
+      alert('PDF export failed: ' + e.message);
+    }
+  }
+
+  // Export PNG (canvas capture)
+  function exportPng() {
+    const quality = parseInt(document.getElementById('png-quality-slider').value) || 85;
+    // Map quality 1-100 to scale factor 0.5-4.0
+    const scale = 0.5 + (quality / 100) * 3.5;
+
+    // Get the currently visible canvas
+    const sourceCanvas = mainViewIs3D
+      ? document.getElementById('main-temb-3d-canvas')
+      : document.getElementById('main-temb-2d-canvas');
+
+    if (!sourceCanvas) return;
+
+    const rect = sourceCanvas.getBoundingClientRect();
+
+    // Create export canvas at scaled resolution
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = rect.width * scale;
+    exportCanvas.height = rect.height * scale;
+    const exportCtx = exportCanvas.getContext('2d');
+
+    // Draw white background
+    exportCtx.fillStyle = '#ffffff';
+    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+    // Draw the source canvas scaled
+    exportCtx.drawImage(sourceCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = generateExportFilename('png');
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+  }
+
+  // Export button event listeners
+  document.getElementById('export-pdf-btn').addEventListener('click', exportPdf);
+  document.getElementById('export-png-btn').addEventListener('click', exportPng);
 
   // Copy to clipboard buttons
   function copyToClipboard(elementId, btn) {
