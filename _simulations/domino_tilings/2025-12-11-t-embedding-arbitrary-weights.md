@@ -307,6 +307,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
         <button id="toggle-2d-3d-btn" style="padding: 5px 15px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">2D</button>
         <button id="toggle-projection-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle orthographic/perspective">🎯</button>
         <button id="cycle-preset-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Cycle visual preset">☀️</button>
+        <button id="auto-rotate-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle auto-rotate">🔄</button>
       </div>
 
       <!-- 2D Canvas -->
@@ -332,6 +333,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
       <button id="export-png-btn" style="padding: 2px 8px;">PNG</button>
       <span style="font-size: 11px; color: #666;">Quality:</span>
       <input type="range" id="png-quality-slider" min="1" max="100" value="85" style="width: 60px;">
+      <span style="color: #ccc;">|</span>
+      <button id="export-obj-btn" style="padding: 2px 8px;">OBJ</button>
     </div>
   </div>
 </details>
@@ -447,6 +450,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let mainViewIs3D = false;  // Toggle between 2D and 3D view
   let view3DPerspective = false;  // false = orthographic, true = perspective
   let view3DPresetIndex = 0;  // Current visual preset index
+  let view3DAutoRotate = false;  // Auto-rotate mode
+  let view3DAutoRotateId = null;  // Animation frame ID
 
   // 3D Visual Presets
   const VISUAL_PRESETS_3D = [
@@ -2685,19 +2690,75 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // ========== BUILD FACES (quadrilaterals and triangles) ==========
     const faces = [];
 
+    // Helper to add a face if all vertices exist
+    function tryAddFace(keys) {
+      const corners = keys.map(key => pointMap.get(key));
+      if (corners.every(c => c !== undefined)) {
+        faces.push({ corners, keys, type: keys.length === 3 ? 'tri' : 'quad' });
+      }
+    }
+
     // Interior quadrilateral faces: (i,j), (i+1,j), (i+1,j+1), (i,j+1)
     // Include all faces where all 4 corners exist in pointMap
     for (let i = -k; i < k; i++) {
       for (let j = -k; j < k; j++) {
-        const keys = [
-          `${i},${j}`, `${i+1},${j}`, `${i+1},${j+1}`, `${i},${j+1}`
-        ];
-        const corners = keys.map(key => pointMap.get(key));
-        if (corners.every(c => c !== undefined)) {
-          faces.push({ corners, keys, type: 'quad' });
-        }
+        tryAddFace([`${i},${j}`, `${i+1},${j}`, `${i+1},${j+1}`, `${i},${j+1}`]);
       }
     }
+
+    // Boundary triangular faces - fan from external corners to diagonal
+    // Right side: from (k+1,0) to diagonal vertices (k,0)→(k-1,1)→...→(0,k) to (0,k+1)
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`${k+1},0`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
+    }
+    tryAddFace([`${k+1},0`, `0,${k}`, `0,${k+1}`]);
+
+    // Top side: from (0,k+1) to diagonal vertices (0,k)→(-1,k-1)→...→(-k,0) to (-(k+1),0)
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`0,${k+1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
+    }
+    tryAddFace([`0,${k+1}`, `${-k},0`, `${-(k+1)},0`]);
+
+    // Left side: from (-(k+1),0) to diagonal vertices (-k,0)→(-k+1,-1)→...→(0,-k) to (0,-(k+1))
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`${-(k+1)},0`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
+    }
+    tryAddFace([`${-(k+1)},0`, `0,${-k}`, `0,${-(k+1)}`]);
+
+    // Bottom side: from (0,-(k+1)) to diagonal vertices (0,-k)→(1,-k+1)→...→(k,0) to (k+1,0)
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`0,${-(k+1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
+    }
+    tryAddFace([`0,${-(k+1)}`, `${k},0`, `${k+1},0`]);
+
+    // Beta-beta-inner triangles - between adjacent beta vertices and interior vertex
+    // Right-top quadrant: triangles like (interior)-(beta)-(beta)
+    for (let s = 1; s < k; s++) {
+      // Triangle: (k-s-1,s) [inner] - (k-s,s) [beta] - (k-s-1,s+1) [beta]
+      tryAddFace([`${k-s-1},${s}`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
+    }
+    // Top-left quadrant
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${-s},${k-s-1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
+    }
+    // Bottom-left quadrant
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${-(k-s-1)},${-s}`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
+    }
+    // Bottom-right quadrant
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${s},${-(k-s-1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
+    }
+
+    // Alpha-beta-inner triangles - at corners where alpha meets first beta and interior
+    // Right alpha (k,0) - beta (k-1,1) - inner (k-1,0)
+    tryAddFace([`${k-1},0`, `${k},0`, `${k-1},1`]);
+    // Top alpha (0,k) - beta (-1,k-1) - inner (0,k-1)
+    tryAddFace([`0,${k-1}`, `0,${k}`, `-1,${k-1}`]);
+    // Left alpha (-k,0) - beta (-k+1,-1) - inner (-k+1,0)
+    tryAddFace([`${-k+1},0`, `${-k},0`, `${-k+1},-1`]);
+    // Bottom alpha (0,-k) - beta (1,-k+1) - inner (0,-k+1)
+    tryAddFace([`0,${-k+1}`, `0,${-k}`, `1,${-k+1}`]);
 
     // ========== BUILD ALL DRAWABLE OBJECTS WITH DEPTH ==========
     const drawables = [];
@@ -3406,6 +3467,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const container3D = document.getElementById('main-3d-container');
     const projBtn = document.getElementById('toggle-projection-btn');
     const presetBtn = document.getElementById('cycle-preset-btn');
+    const rotateBtn = document.getElementById('auto-rotate-btn');
 
     if (mainViewIs3D) {
       btn.textContent = '3D';
@@ -3413,6 +3475,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       container3D.style.display = 'block';
       projBtn.style.display = '';
       presetBtn.style.display = '';
+      rotateBtn.style.display = '';
       renderMain3D();
     } else {
       btn.textContent = '2D';
@@ -3420,6 +3483,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       container3D.style.display = 'none';
       projBtn.style.display = 'none';
       presetBtn.style.display = 'none';
+      rotateBtn.style.display = 'none';
+      // Stop auto-rotate when switching to 2D
+      if (view3DAutoRotate) {
+        view3DAutoRotate = false;
+        if (view3DAutoRotateId) cancelAnimationFrame(view3DAutoRotateId);
+        rotateBtn.style.background = 'rgba(255,255,255,0.9)';
+      }
       renderMain2DTemb();
     }
   });
@@ -3441,6 +3511,29 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     btn.textContent = preset.icon;
     btn.title = `Preset: ${preset.name}`;
     renderMain3D();
+  });
+
+  // Auto-rotate animation
+  function autoRotateStep() {
+    if (!view3DAutoRotate) return;
+    view3DRotZ += 0.01;  // Rotate around Z axis
+    renderMain3D();
+    view3DAutoRotateId = requestAnimationFrame(autoRotateStep);
+  }
+
+  // Auto-rotate toggle
+  document.getElementById('auto-rotate-btn').addEventListener('click', () => {
+    view3DAutoRotate = !view3DAutoRotate;
+    const btn = document.getElementById('auto-rotate-btn');
+    if (view3DAutoRotate) {
+      btn.style.background = 'rgba(100,200,100,0.9)';
+      btn.title = 'Stop auto-rotate';
+      autoRotateStep();
+    } else {
+      btn.style.background = 'rgba(255,255,255,0.9)';
+      btn.title = 'Toggle auto-rotate';
+      if (view3DAutoRotateId) cancelAnimationFrame(view3DAutoRotateId);
+    }
   });
 
   // Main canvas zoom buttons (works for both 2D and 3D modes)
@@ -4161,9 +4254,176 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     link.click();
   }
 
+  // Export OBJ (3D model with all faces, double-sided)
+  function exportOBJ() {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const finalK = Math.max(0, n - 2);
+
+    if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) {
+      alert('WASM not ready. Please wait and try again.');
+      return;
+    }
+
+    // Get T-embedding data
+    let ptr = getTembeddingLevelJSON(finalK);
+    let json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let tembData;
+    try {
+      tembData = JSON.parse(json);
+    } catch (e) {
+      alert('Error parsing T-embedding data');
+      return;
+    }
+
+    // Get origami data
+    ptr = getOrigamiLevelJSON(finalK);
+    json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let origamiData;
+    try {
+      origamiData = JSON.parse(json);
+    } catch (e) {
+      alert('Error parsing origami data');
+      return;
+    }
+
+    if (!tembData.vertices || !origamiData.vertices || tembData.vertices.length === 0) {
+      alert('No data to export. Please compute a T-embedding first.');
+      return;
+    }
+
+    const k = tembData.k;
+
+    // Build vertex maps
+    const tembMap = new Map();
+    for (const v of tembData.vertices) {
+      tembMap.set(`${v.i},${v.j}`, v);
+    }
+    const origamiMap = new Map();
+    for (const v of origamiData.vertices) {
+      origamiMap.set(`${v.i},${v.j}`, v);
+    }
+
+    // Build 3D points: x = T.re, y = T.im, z = O.re
+    const points3D = [];
+    const vertexIndex = new Map(); // key -> 1-based index for OBJ
+    let idx = 1;
+
+    for (const v of tembData.vertices) {
+      const key = `${v.i},${v.j}`;
+      const origV = origamiMap.get(key);
+      if (origV) {
+        points3D.push({
+          i: v.i, j: v.j,
+          x: v.re,
+          y: v.im,
+          z: origV.re
+        });
+        vertexIndex.set(key, idx++);
+      }
+    }
+
+    if (points3D.length === 0) {
+      alert('No matching vertices between T-embedding and origami.');
+      return;
+    }
+
+    // Build ALL faces
+    const faces = [];
+
+    // Helper to add a face if all vertices exist
+    function tryAddFace(keys) {
+      if (keys.every(k => vertexIndex.has(k))) {
+        faces.push(keys.map(k => vertexIndex.get(k)));
+      }
+    }
+
+    // 1. Interior quadrilateral faces
+    for (let i = -k; i < k; i++) {
+      for (let j = -k; j < k; j++) {
+        // Standard quad: (i,j), (i+1,j), (i+1,j+1), (i,j+1)
+        tryAddFace([`${i},${j}`, `${i+1},${j}`, `${i+1},${j+1}`, `${i},${j+1}`]);
+      }
+    }
+
+    // 2. Boundary triangular faces - fan from external corners to diagonal
+    // Right side
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`${k+1},0`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
+    }
+    tryAddFace([`${k+1},0`, `0,${k}`, `0,${k+1}`]);
+
+    // Top side
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`0,${k+1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
+    }
+    tryAddFace([`0,${k+1}`, `${-k},0`, `${-(k+1)},0`]);
+
+    // Left side
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`${-(k+1)},0`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
+    }
+    tryAddFace([`${-(k+1)},0`, `0,${-k}`, `0,${-(k+1)}`]);
+
+    // Bottom side
+    for (let s = 0; s < k; s++) {
+      tryAddFace([`0,${-(k+1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
+    }
+    tryAddFace([`0,${-(k+1)}`, `${k},0`, `${k+1},0`]);
+
+    // 3. Beta-beta-inner triangles
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${k-s-1},${s}`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
+    }
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${-s},${k-s-1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
+    }
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${-(k-s-1)},${-s}`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
+    }
+    for (let s = 1; s < k; s++) {
+      tryAddFace([`${s},${-(k-s-1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
+    }
+
+    // 4. Alpha-beta-inner triangles
+    tryAddFace([`${k-1},0`, `${k},0`, `${k-1},1`]);
+    tryAddFace([`0,${k-1}`, `0,${k}`, `-1,${k-1}`]);
+    tryAddFace([`${-k+1},0`, `${-k},0`, `${-k+1},-1`]);
+    tryAddFace([`0,${-k+1}`, `0,${-k}`, `1,${-k+1}`]);
+
+    // Generate OBJ string
+    let obj = '# T-embedding 3D surface\n';
+    obj += `# n=${n}, k=${k}\n`;
+    obj += `# Vertices: ${points3D.length}, Faces: ${faces.length} (doubled for double-sided)\n\n`;
+
+    // Vertices (swap y and z for standard 3D orientation: x=right, y=up, z=forward)
+    for (const p of points3D) {
+      obj += `v ${p.x.toFixed(6)} ${p.z.toFixed(6)} ${p.y.toFixed(6)}\n`;
+    }
+    obj += '\n';
+
+    // Faces - output each face twice (normal and reversed) for double-sided rendering
+    for (const indices of faces) {
+      // Front face
+      obj += `f ${indices.join(' ')}\n`;
+      // Back face (reversed winding)
+      obj += `f ${indices.slice().reverse().join(' ')}\n`;
+    }
+
+    // Download
+    const blob = new Blob([obj], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.download = generateExportFilename('obj');
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
   // Export button event listeners
   document.getElementById('export-pdf-btn').addEventListener('click', exportPdf);
   document.getElementById('export-png-btn').addEventListener('click', exportPng);
+  document.getElementById('export-obj-btn').addEventListener('click', exportOBJ);
 
   // Copy to clipboard buttons
   function copyToClipboard(elementId, btn) {
