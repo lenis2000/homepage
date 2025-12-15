@@ -423,6 +423,17 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
 </p>
 
+<!-- Benchmark Section -->
+<div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
+  <h3 style="margin-top: 0;">Performance Benchmark</h3>
+  <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
+  <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
+  <div id="benchmark-results" style="display: none; margin-top: 15px;">
+    <canvas id="benchmark-canvas" width="500" height="300" style="border: 1px solid #ddd; background: white;"></canvas>
+    <div id="benchmark-fit" style="margin-top: 10px; font-family: monospace; font-size: 14px;"></div>
+  </div>
+</div>
+
 <style>
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
 </style>
@@ -4431,61 +4442,16 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
     obj += '\n';
 
-    // Side walls - 4 flat walls, each triangulated from external corners to base
-    // Each wall connects surface boundary to the flat wall between two external corners
-    obj += '# Side walls\n';
-
-    // Helper: boundary vertices for each side (from one ext corner to next)
-    const sides = [
-      { from: 0, to: 1, boundaryFn: s => `${k-s},${s}` },      // Right: (k+1,0) to (0,k+1)
-      { from: 1, to: 2, boundaryFn: s => `${-s},${k-s}` },     // Top: (0,k+1) to (-(k+1),0)
-      { from: 2, to: 3, boundaryFn: s => `${-(k-s)},${-s}` },  // Left: (-(k+1),0) to (0,-(k+1))
-      { from: 3, to: 0, boundaryFn: s => `${s},${-(k-s)}` }    // Bottom: (0,-(k+1)) to (k+1,0)
-    ];
-
-    for (const side of sides) {
-      const extTop1 = extCornerSurfIdx[side.from];
-      const extTop2 = extCornerSurfIdx[side.to];
-      const baseBot1 = baseCornerStart + side.from;
-      const baseBot2 = baseCornerStart + side.to;
-
-      // Get boundary vertices along this side (diagonal from one ext corner to other)
-      const boundaryVerts = [];
-      for (let s = 0; s <= k; s++) {
-        const key = side.boundaryFn(s);
-        const idx = vertexIndex.get(key);
-        if (idx) boundaryVerts.push(idx);
-      }
-
-      // Triangles from ext corner 1 to boundary vertices to base corner 1
-      for (let i = 0; i < boundaryVerts.length; i++) {
-        const curr = boundaryVerts[i];
-        if (i === 0) {
-          // Triangle: extTop1 -> boundary[0] -> baseBot1
-          obj += `f ${extTop1} ${curr} ${baseBot1}\n`;
-        } else {
-          // Triangle: boundary[i-1] -> boundary[i] -> baseBot1
-          obj += `f ${boundaryVerts[i-1]} ${curr} ${baseBot1}\n`;
-        }
-      }
-
-      // Triangles from ext corner 2 to boundary vertices to base corner 2
-      for (let i = 0; i < boundaryVerts.length; i++) {
-        const curr = boundaryVerts[i];
-        if (i === boundaryVerts.length - 1) {
-          // Triangle: boundary[last] -> extTop2 -> baseBot2
-          obj += `f ${curr} ${extTop2} ${baseBot2}\n`;
-        } else {
-          // Triangle: boundary[i] -> boundary[i+1] -> baseBot2
-          obj += `f ${curr} ${boundaryVerts[i+1]} ${baseBot2}\n`;
-        }
-      }
-
-      // Quad connecting the two base corners through the last boundary vertex
-      // Triangle: baseBot1 -> boundary[last] -> baseBot2
-      if (boundaryVerts.length > 0) {
-        obj += `f ${baseBot1} ${boundaryVerts[boundaryVerts.length - 1]} ${baseBot2}\n`;
-      }
+    // Side walls - 4 trapezoid quads connecting external corners to base corners
+    obj += '# Side walls (4 trapezoids)\n';
+    for (let i = 0; i < 4; i++) {
+      const next = (i + 1) % 4;
+      const top1 = extCornerSurfIdx[i];
+      const top2 = extCornerSurfIdx[next];
+      const bot1 = baseCornerStart + i;
+      const bot2 = baseCornerStart + next;
+      // Quad: top1 -> top2 -> bot2 -> bot1
+      obj += `f ${top1} ${top2} ${bot2} ${bot1}\n`;
     }
     obj += '\n';
 
