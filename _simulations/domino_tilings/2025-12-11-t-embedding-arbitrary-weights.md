@@ -4392,23 +4392,110 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     tryAddFace([`${-k+1},0`, `${-k},0`, `${-k+1},-1`]);
     tryAddFace([`0,${-k+1}`, `0,${-k}`, `1,${-k+1}`]);
 
-    // Generate OBJ string
-    let obj = '# T-embedding 3D surface\n';
-    obj += `# n=${n}, k=${k}\n`;
-    obj += `# Vertices: ${points3D.length}, Faces: ${faces.length} (doubled for double-sided)\n\n`;
+    // Find min Z for base level
+    let minZ = Infinity;
+    for (const p of points3D) {
+      minZ = Math.min(minZ, p.z);
+    }
+    const baseZ = minZ - 0.2;  // 0.2 below minimum surface for base thickness
 
-    // Vertices (swap y and z for standard 3D orientation: x=right, y=up, z=forward)
+    // External corner keys and their surface indices
+    const extCornerKeys = [`${k+1},0`, `0,${k+1}`, `${-(k+1)},0`, `0,${-(k+1)}`];
+    const extCornerSurfIdx = extCornerKeys.map(key => vertexIndex.get(key));
+    const extCornerPoints = extCornerSurfIdx.map(idx => points3D[idx - 1]);
+
+    // Generate OBJ string
+    let obj = '# T-embedding 3D surface (solid for 3D printing)\n';
+    obj += `# n=${n}, k=${k}\n`;
+    obj += `# Surface vertices: ${points3D.length}\n\n`;
+
+    // Surface vertices (swap y and z for standard 3D orientation: x=right, y=up, z=forward)
     for (const p of points3D) {
       obj += `v ${p.x.toFixed(6)} ${p.z.toFixed(6)} ${p.y.toFixed(6)}\n`;
     }
+
+    // Add 4 base corner vertices (below external corners)
+    const baseCornerStart = points3D.length + 1;
+    for (const p of extCornerPoints) {
+      obj += `v ${p.x.toFixed(6)} ${baseZ.toFixed(6)} ${p.y.toFixed(6)}\n`;
+    }
+    // Add base center vertex
+    const baseCenterIdx = baseCornerStart + 4;
+    obj += `v 0.000000 ${baseZ.toFixed(6)} 0.000000\n`;
     obj += '\n';
 
-    // Faces - output each face twice (normal and reversed) for double-sided rendering
+    // Surface faces (top)
+    obj += '# Surface faces\n';
     for (const indices of faces) {
-      // Front face
       obj += `f ${indices.join(' ')}\n`;
-      // Back face (reversed winding)
-      obj += `f ${indices.slice().reverse().join(' ')}\n`;
+    }
+    obj += '\n';
+
+    // Side walls - 4 flat walls, each triangulated from external corners to base
+    // Each wall connects surface boundary to the flat wall between two external corners
+    obj += '# Side walls\n';
+
+    // Helper: boundary vertices for each side (from one ext corner to next)
+    const sides = [
+      { from: 0, to: 1, boundaryFn: s => `${k-s},${s}` },      // Right: (k+1,0) to (0,k+1)
+      { from: 1, to: 2, boundaryFn: s => `${-s},${k-s}` },     // Top: (0,k+1) to (-(k+1),0)
+      { from: 2, to: 3, boundaryFn: s => `${-(k-s)},${-s}` },  // Left: (-(k+1),0) to (0,-(k+1))
+      { from: 3, to: 0, boundaryFn: s => `${s},${-(k-s)}` }    // Bottom: (0,-(k+1)) to (k+1,0)
+    ];
+
+    for (const side of sides) {
+      const extTop1 = extCornerSurfIdx[side.from];
+      const extTop2 = extCornerSurfIdx[side.to];
+      const baseBot1 = baseCornerStart + side.from;
+      const baseBot2 = baseCornerStart + side.to;
+
+      // Get boundary vertices along this side (diagonal from one ext corner to other)
+      const boundaryVerts = [];
+      for (let s = 0; s <= k; s++) {
+        const key = side.boundaryFn(s);
+        const idx = vertexIndex.get(key);
+        if (idx) boundaryVerts.push(idx);
+      }
+
+      // Triangles from ext corner 1 to boundary vertices to base corner 1
+      for (let i = 0; i < boundaryVerts.length; i++) {
+        const curr = boundaryVerts[i];
+        if (i === 0) {
+          // Triangle: extTop1 -> boundary[0] -> baseBot1
+          obj += `f ${extTop1} ${curr} ${baseBot1}\n`;
+        } else {
+          // Triangle: boundary[i-1] -> boundary[i] -> baseBot1
+          obj += `f ${boundaryVerts[i-1]} ${curr} ${baseBot1}\n`;
+        }
+      }
+
+      // Triangles from ext corner 2 to boundary vertices to base corner 2
+      for (let i = 0; i < boundaryVerts.length; i++) {
+        const curr = boundaryVerts[i];
+        if (i === boundaryVerts.length - 1) {
+          // Triangle: boundary[last] -> extTop2 -> baseBot2
+          obj += `f ${curr} ${extTop2} ${baseBot2}\n`;
+        } else {
+          // Triangle: boundary[i] -> boundary[i+1] -> baseBot2
+          obj += `f ${curr} ${boundaryVerts[i+1]} ${baseBot2}\n`;
+        }
+      }
+
+      // Quad connecting the two base corners through the last boundary vertex
+      // Triangle: baseBot1 -> boundary[last] -> baseBot2
+      if (boundaryVerts.length > 0) {
+        obj += `f ${baseBot1} ${boundaryVerts[boundaryVerts.length - 1]} ${baseBot2}\n`;
+      }
+    }
+    obj += '\n';
+
+    // Base face (rhombus with 4 corners, triangulated from center)
+    obj += '# Base\n';
+    for (let i = 0; i < 4; i++) {
+      const next = (i + 1) % 4;
+      const v1 = baseCornerStart + i;
+      const v2 = baseCornerStart + next;
+      obj += `f ${baseCenterIdx} ${v1} ${v2}\n`;
     }
 
     // Download
