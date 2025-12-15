@@ -404,8 +404,8 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Controls row -->
     <div style="margin-bottom: 10px; text-align: center;">
-      <label>V: <input type="number" id="main-2d-vertex-size" value="3" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
-      <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+      <label>V: <input type="number" id="main-2d-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 3em;"></label>
+      <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 3em;"></label>
       <label style="margin-left: 15px;"><input type="checkbox" id="show-origami-chk" checked> Origami</label>
     </div>
 
@@ -486,8 +486,8 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <button id="step-next-btn" style="width: 60px; margin-left: 10px;">→</button>
           <span style="margin-left: 15px;">k = <span id="step-value">0</span></span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
-          <label style="margin-left: 15px;">V: <input type="number" id="temb-vertex-size" value="3" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
-          <label style="margin-left: 10px;">E: <input type="number" id="temb-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 15px;">V: <input type="number" id="temb-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 10px;">E: <input type="number" id="temb-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 3em;"></label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -3884,9 +3884,7 @@ Part of this research was performed while the author was visiting the Institute 
       view3DPanY += dy;
     } else {
       view3DRotZ += dx * 0.01;  // Horizontal drag = spin around Z
-      view3DRotX += dy * 0.01;  // Vertical drag = tilt around X
-      // Clamp tilt to avoid flipping
-      view3DRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, view3DRotX));
+      view3DRotX += dy * 0.01;  // Vertical drag = tilt around X (no clamping - allow view from below)
     }
     view3DLastX = e.clientX;
     view3DLastY = e.clientY;
@@ -3936,8 +3934,7 @@ Part of this research was performed while the author was visiting the Institute 
       const dx = e.touches[0].clientX - view3DLastX;
       const dy = e.touches[0].clientY - view3DLastY;
       view3DRotZ += dx * 0.01;
-      view3DRotX += dy * 0.01;
-      view3DRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, view3DRotX));
+      view3DRotX += dy * 0.01;  // No clamping - allow view from below
       view3DLastX = e.touches[0].clientX;
       view3DLastY = e.touches[0].clientY;
       renderMain3D();
