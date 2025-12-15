@@ -4,7 +4,7 @@
   Weighted EKLP shuffling for T-embedding page.
   Based on 2025-11-18-double-dimer-gamma.cpp (the correct slim functions).
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaEdges','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecWithEdgeWeights','_simulateAztecGammaEdges','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
@@ -320,6 +320,34 @@ MatrixDouble computeGammaFaceWeights(int n, double alpha, double beta) {
     return faceWeights;
 }
 
+// Compute face weights from edge weights using cross-ratio formulas
+// hEdge: horizontal edges, size (dim+1) x dim, row-major
+// vEdge: vertical edges, size (dim+1) x (dim+1), row-major
+// Returns face weight matrix
+MatrixDouble computeCrossRatios(int dim, double* hEdge, double* vEdge) {
+    MatrixDouble faceWeights(dim, dim, 1.0);
+
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            double bottom = hEdge[i * dim + j];
+            double top = hEdge[(i + 1) * dim + j];
+            double left = vEdge[i * (dim + 1) + j];
+            double right = vEdge[i * (dim + 1) + (j + 1)];
+
+            // Face type depends on checkerboard position
+            if ((i + j) % 2 == 0) {
+                // Type A: (bottom * top) / (right * left)
+                faceWeights.at(i, j) = (bottom * top) / (right * left);
+            } else {
+                // Type B: (right * left) / (top * bottom)
+                faceWeights.at(i, j) = (right * left) / (top * bottom);
+            }
+        }
+    }
+
+    return faceWeights;
+}
+
 extern "C" {
 
 // Simulate with gamma-distributed edge weights converted to face weights via cross-ratio
@@ -477,6 +505,105 @@ char* simulateAztecWithWeightMatrix(int n, double* weights) {
 
                     if (!first) oss << ",";
                     else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+
+        oss << "]";
+        progressCounter = 100;
+        emscripten_sleep(0);
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecWithEdgeWeights(int n, double* hEdge, double* vEdge) {
+    try {
+        progressCounter = 0;
+
+        // Hard limit: N <= 300
+        if (n > 300) n = 300;
+
+        int dim = 2 * n;
+
+        // Compute face weights from edge weights using cross-ratios
+        MatrixDouble A1a = computeCrossRatios(dim, hEdge, vEdge);
+
+        emscripten_sleep(0);
+
+        // Compute probability matrices using slim version
+        vector<MatrixDouble> prob;
+        try {
+            prob = probsslim(A1a);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error computing probability matrices");
+        }
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        // Generate domino configuration using slim version
+        MatrixInt dominoConfig;
+        try {
+            dominoConfig = aztecgenslim(prob);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error generating domino configuration");
+        }
+
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        // Build JSON output
+        ostringstream oss;
+        oss << "[";
+        int size = dominoConfig.size();
+        bool first = true;
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig.at(i, j) == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+
+                    if (oddI && oddJ) {
+                        color = "blue";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4; h = 2;
+                    } else if (oddI && !oddJ) {
+                        color = "yellow";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2; h = 4;
+                    } else if (!oddI && !oddJ) {
+                        color = "green";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4; h = 2;
+                    } else {
+                        color = "red";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2; h = 4;
+                    }
+
+                    if (!first) oss << ",";
+                    first = false;
                     oss << "{\"x\":" << x << ",\"y\":" << y
                         << ",\"w\":" << w << ",\"h\":" << h
                         << ",\"color\":\"" << color << "\"}";
