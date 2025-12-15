@@ -282,9 +282,6 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   Loading WASM module...
 </div>
 
-<div id="computing-msg" style="display: none; padding: 10px; background: #e8f4ff; border: 1px solid #4a90d9; margin-bottom: 10px;">
-  <span id="computing-text">Computing T-embedding...</span>
-</div>
 
 <!-- Main T-embedding Visualization Section -->
 <details id="main-visualization-section" style="margin-top: 15px;" open>
@@ -427,7 +424,7 @@ Part of this research was performed while the author was visiting the Institute 
 <!-- Benchmark Section -->
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">Performance Benchmark</h3>
-  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) ~ n<sup>α</sup> to determine the computational complexity exponent α. Uses the current weight selection.</p>
+  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) = c · n<sup>α</sup>. The exponent α determines computational complexity; the constant c (in nanoseconds) captures machine-specific overhead. Uses the current weight selection.</p>
   <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
@@ -1796,8 +1793,7 @@ Part of this research was performed while the author was visiting the Institute 
     }
   }
 
-  const computingMsg = document.getElementById('computing-msg');
-  const computingText = document.getElementById('computing-text');
+  const computeTimeSpan = document.getElementById('compute-time');
 
   // Helper for async progress updates
   function delay(ms) {
@@ -1810,7 +1806,6 @@ Part of this research was performed while the author was visiting the Institute 
 
     isComputing = true;
     const n = parseN();
-    computingMsg.style.display = 'block';
 
     try {
       // Update stepwise section visibility
@@ -1824,7 +1819,7 @@ Part of this research was performed while the author was visiting the Institute 
 
       // --- PHASE 1: FOLDING ---
       // NOTE: Do NOT call refreshAztecFromCpp() inside loops - it's extremely expensive
-      computingText.textContent = "Folding Aztec diamond...";
+      computeTimeSpan.textContent = "Folding...";
       await delay(10);  // Yield to render text
 
       while (canAztecStepDown()) {
@@ -1839,7 +1834,7 @@ Part of this research was performed while the author was visiting the Institute 
       refreshAztecFromCpp();
 
       // --- PHASE 2: COMPUTING T AND O MAPS ---
-      computingText.textContent = "Computing T and O maps...";
+      computeTimeSpan.textContent = "Computing T...";
       await delay(10);  // Yield to render text
 
       const finalK = Math.max(0, n - 2);
@@ -1867,9 +1862,8 @@ Part of this research was performed while the author was visiting the Institute 
       // Display compute time
       const timeMs = getComputeTimeMs();
       const timeSec = (timeMs / 1000).toFixed(2);
-      document.getElementById('compute-time').textContent = `${timeSec}s`;
+      computeTimeSpan.textContent = `${timeSec}s`;
     } finally {
-      computingMsg.style.display = 'none';
       isComputing = false;
     }
   }
@@ -4527,8 +4521,8 @@ Part of this research was performed while the author was visiting the Institute 
 
   function fitPowerLaw(results) {
     // Linear regression on log-log scale: log(t) = log(c) + alpha * log(n)
-    // Returns alpha (the exponent)
-    if (results.length < 2) return 0;
+    // Returns { alpha, c } where t(n) ~ c * n^alpha
+    if (results.length < 2) return { alpha: 0, c: 0 };
 
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
     let count = 0;
@@ -4542,13 +4536,15 @@ Part of this research was performed while the author was visiting the Institute 
       sumX2 += x * x;
       count++;
     }
-    if (count < 2) return 0;
+    if (count < 2) return { alpha: 0, c: 0 };
 
     const alpha = (count * sumXY - sumX * sumY) / (count * sumX2 - sumX * sumX);
-    return alpha;
+    const logC = (sumY - alpha * sumX) / count;
+    const c = Math.exp(logC);
+    return { alpha, c };
   }
 
-  function plotBenchmarkResults(results, alpha) {
+  function plotBenchmarkResults(results, alpha, c) {
     const canvas = document.getElementById('benchmark-canvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
@@ -4592,7 +4588,7 @@ Part of this research was performed while the author was visiting the Institute 
     ctx.save();
     ctx.translate(15, H / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('time (ms)', 0, 0);
+    ctx.fillText('time (ns)', 0, 0);
     ctx.restore();
 
     // X-axis ticks
@@ -4615,29 +4611,30 @@ Part of this research was performed while the author was visiting the Institute 
         ctx.moveTo(padding - 5, y);
         ctx.lineTo(padding, y);
         ctx.stroke();
-        ctx.fillText(t >= 1000 ? (t/1000).toFixed(0) + 's' : t.toFixed(0) + 'ms', padding - 8, y + 4);
+        // Format nanoseconds: 1e9 ns = 1s, 1e6 ns = 1ms, 1e3 ns = 1μs
+        let label;
+        if (t >= 1e9) label = (t/1e9).toFixed(0) + 's';
+        else if (t >= 1e6) label = (t/1e6).toFixed(0) + 'ms';
+        else if (t >= 1e3) label = (t/1e3).toFixed(0) + 'μs';
+        else label = t.toFixed(0) + 'ns';
+        ctx.fillText(label, padding - 8, y + 4);
       }
     }
 
-    // Draw fit line if we have alpha
-    if (alpha && results.length >= 2) {
+    // Draw fit line if we have alpha and c
+    if (alpha && c && results.length >= 2) {
       ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      // Use first point to compute c: log(t) = log(c) + alpha*log(n) => c = t / n^alpha
-      const r0 = results.find(r => r.time > 0);
-      if (r0) {
-        const c = r0.time / Math.pow(r0.n, alpha);
-        for (let n = nMin; n <= nMax; n++) {
-          const t = c * Math.pow(n, alpha);
-          const x = mapX(n);
-          const y = mapY(t);
-          if (n === nMin) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+      for (let n = nMin; n <= nMax; n++) {
+        const t = c * Math.pow(n, alpha);
+        const x = mapX(n);
+        const y = mapY(t);
+        if (n === nMin) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
+      ctx.stroke();
       ctx.setLineDash([]);
     }
 
@@ -4689,22 +4686,23 @@ Part of this research was performed while the author was visiting the Institute 
           aztecGraphStepUp();
         }
 
-        // Get compute time
+        // Get compute time in nanoseconds for more readable constant
         const timeMs = getComputeTimeMs();
-        results.push({ n, time: timeMs });
+        const timeNs = timeMs * 1e6;
+        results.push({ n, time: timeNs });
 
         // Update plot
-        const alpha = fitPowerLaw(results);
-        plotBenchmarkResults(results, alpha);
+        const fit = fitPowerLaw(results);
+        plotBenchmarkResults(results, fit.alpha, fit.c);
         fitDiv.textContent = results.length >= 3
-          ? `Fit: t(n) ~ n^${alpha.toFixed(2)} (${results.length} points)`
+          ? `Fit: t(n) = ${fit.c.toFixed(1)} ns * n^${fit.alpha.toFixed(2)} (${results.length} points)`
           : 'Collecting data...';
       }
 
       // Final fit
-      const alpha = fitPowerLaw(results);
-      plotBenchmarkResults(results, alpha);
-      fitDiv.textContent = `Fit: t(n) ~ n^${alpha.toFixed(2)}`;
+      const fit = fitPowerLaw(results);
+      plotBenchmarkResults(results, fit.alpha, fit.c);
+      fitDiv.textContent = `Fit: t(n) = ${fit.c.toFixed(1)} ns * n^${fit.alpha.toFixed(2)}`;
       status.textContent = 'Done!';
     } catch (err) {
       status.textContent = `Error: ${err.message}`;
