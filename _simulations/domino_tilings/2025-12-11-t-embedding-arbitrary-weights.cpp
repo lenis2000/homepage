@@ -2392,9 +2392,13 @@ static void aztecStepDown() {
         default: break;  // Already fully reduced
     }
 
-    // After each step, compute faces and try to capture face weights at checkpoints
-    computeFaces();
-    tryCaptureFaceWeights();
+    // Only compute faces when needed for weight capture:
+    // - Steps 1 and 3 only occur at initial level (subsequent levels start at step 6)
+    // - Step 11 occurs at every level
+    if (g_aztecReductionStep == 1 || g_aztecReductionStep == 3 || g_aztecReductionStep == 11) {
+        computeFaces();
+        tryCaptureFaceWeights();
+    }
 }
 
 // Step up: restore previous state
