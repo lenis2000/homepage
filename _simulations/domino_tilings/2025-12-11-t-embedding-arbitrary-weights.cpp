@@ -1128,12 +1128,10 @@ static void aztecStep4_BlackContraction() {
 
     int n = g_aztecLevel;
 
-    // Build vertex index for quick lookup
-    std::map<std::string, int> vertexIndex;
+    // Build vertex index for quick lookup using int64_t keys (much faster than strings)
+    std::map<int64_t, int> vertexIndex;
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
-        int i = (int)std::round(g_aztecVertices[idx].x - 0.5);
-        int j = (int)std::round(g_aztecVertices[idx].y - 0.5);
-        vertexIndex[makeKey(i, j)] = (int)idx;
+        vertexIndex[makePosKey(g_aztecVertices[idx].x, g_aztecVertices[idx].y)] = (int)idx;
     }
 
     // Find black vertices on i-j = -(n-1) (negative diagonal)
@@ -1159,6 +1157,9 @@ static void aztecStep4_BlackContraction() {
     }
 
     // Contract each diagonal: keep first vertex, redirect edges from others, set position
+    // Use vector for O(1) redirect lookup (-1 means no redirect)
+    std::vector<int> redirect(g_aztecVertices.size(), -1);
+
     auto contractDiagonal = [&](std::vector<int>& diagVertices, double newX, double newY) {
         if (diagVertices.size() == 0) return;
 
@@ -1169,15 +1170,8 @@ static void aztecStep4_BlackContraction() {
         g_aztecVertices[keepIdx].y = newY;
 
         // Map from old vertex index to new (redirected) index
-        std::map<int, int> redirect;
         for (size_t i = 1; i < diagVertices.size(); i++) {
             redirect[diagVertices[i]] = keepIdx;
-        }
-
-        // Redirect edges
-        for (auto& e : g_aztecEdges) {
-            if (redirect.count(e.v1)) e.v1 = redirect[e.v1];
-            if (redirect.count(e.v2)) e.v2 = redirect[e.v2];
         }
 
         // Mark vertices for removal (all except first)
@@ -1191,12 +1185,18 @@ static void aztecStep4_BlackContraction() {
     // Contract positive diagonal (i-j = n-1) to position (n-0.5, -n+0.5)
     contractDiagonal(posDiagBlack, n - 0.5, -n + 0.5);
 
-    // Remove marked vertices
+    // Redirect edges using O(1) vector lookup
+    for (auto& e : g_aztecEdges) {
+        if (redirect[e.v1] != -1) e.v1 = redirect[e.v1];
+        if (redirect[e.v2] != -1) e.v2 = redirect[e.v2];
+    }
+
+    // Remove marked vertices - use vector for O(1) lookup
     std::vector<AztecVertex> newVertices;
-    std::map<int, int> oldToNew;
+    std::vector<int> oldToNew(g_aztecVertices.size(), -1);
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         if (!g_aztecVertices[idx].toContract) {
-            oldToNew[(int)idx] = (int)newVertices.size();
+            oldToNew[idx] = (int)newVertices.size();
             newVertices.push_back(g_aztecVertices[idx]);
         }
     }
@@ -1204,7 +1204,7 @@ static void aztecStep4_BlackContraction() {
     // Remap edge indices and collect edges
     std::vector<AztecEdge> remappedEdges;
     for (auto& e : g_aztecEdges) {
-        if (oldToNew.count(e.v1) && oldToNew.count(e.v2)) {
+        if (oldToNew[e.v1] != -1 && oldToNew[e.v2] != -1) {
             AztecEdge newEdge = e;
             newEdge.v1 = oldToNew[e.v1];
             newEdge.v2 = oldToNew[e.v2];
@@ -1301,6 +1301,9 @@ static void aztecStep5_WhiteContraction() {
     }
 
     // Contract each diagonal: keep first vertex, redirect edges from others, set position
+    // Use vector for O(1) redirect lookup (-1 means no redirect)
+    std::vector<int> redirect(g_aztecVertices.size(), -1);
+
     auto contractDiagonal = [&](std::vector<int>& diagVertices, double newX, double newY) {
         if (diagVertices.size() == 0) return;
 
@@ -1311,15 +1314,8 @@ static void aztecStep5_WhiteContraction() {
         g_aztecVertices[keepIdx].y = newY;
 
         // Map from old vertex index to new (redirected) index
-        std::map<int, int> redirect;
         for (size_t i = 1; i < diagVertices.size(); i++) {
             redirect[diagVertices[i]] = keepIdx;
-        }
-
-        // Redirect edges
-        for (auto& e : g_aztecEdges) {
-            if (redirect.count(e.v1)) e.v1 = redirect[e.v1];
-            if (redirect.count(e.v2)) e.v2 = redirect[e.v2];
         }
 
         // Mark vertices for removal (all except first)
@@ -1333,12 +1329,18 @@ static void aztecStep5_WhiteContraction() {
     // Contract NE diagonal (i+j = n-2) to position (n-0.5, n-0.5)
     contractDiagonal(posDiagWhite, n - 0.5, n - 0.5);
 
-    // Remove marked vertices
+    // Redirect edges using O(1) vector lookup
+    for (auto& e : g_aztecEdges) {
+        if (redirect[e.v1] != -1) e.v1 = redirect[e.v1];
+        if (redirect[e.v2] != -1) e.v2 = redirect[e.v2];
+    }
+
+    // Remove marked vertices - use vector for O(1) lookup
     std::vector<AztecVertex> newVertices;
-    std::map<int, int> oldToNew;
+    std::vector<int> oldToNew(g_aztecVertices.size(), -1);
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         if (!g_aztecVertices[idx].toContract) {
-            oldToNew[(int)idx] = (int)newVertices.size();
+            oldToNew[idx] = (int)newVertices.size();
             newVertices.push_back(g_aztecVertices[idx]);
         }
     }
@@ -1346,7 +1348,7 @@ static void aztecStep5_WhiteContraction() {
     // Remap edge indices and collect edges
     std::vector<AztecEdge> remappedEdges;
     for (auto& e : g_aztecEdges) {
-        if (oldToNew.count(e.v1) && oldToNew.count(e.v2)) {
+        if (oldToNew[e.v1] != -1 && oldToNew[e.v2] != -1) {
             AztecEdge newEdge = e;
             newEdge.v1 = oldToNew[e.v1];
             newEdge.v2 = oldToNew[e.v2];

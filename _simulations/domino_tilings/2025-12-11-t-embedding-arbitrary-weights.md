@@ -424,7 +424,7 @@ Part of this research was performed while the author was visiting the Institute 
 <!-- Benchmark Section -->
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">Performance Benchmark</h3>
-  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) = c · n<sup>α</sup>. The exponent α determines computational complexity; the constant c (in nanoseconds) captures machine-specific overhead. Uses the current weight selection.</p>
+  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
   <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
