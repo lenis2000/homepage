@@ -158,19 +158,17 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   <span id="periodic-params" style="display: none; margin-left: 10px;">
     <label>k: <input id="periodic-k" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
     <label style="margin-left: 5px;">l: <input id="periodic-l" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
-    <button id="edit-weights-btn" style="margin-left: 5px;">Edit</button>
   </span>
 
   <button id="compute-btn" style="margin-left: 15px;">Compute</button>
 </div>
 
-<!-- Periodic Weights Editor (hidden by default) -->
+<!-- Periodic Weights Editor (shown when periodic mode selected) -->
 <div id="weights-editor" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #c9f; background: #f8f0ff; border-radius: 4px;">
   <div style="margin-bottom: 8px; font-weight: bold;">Periodic Weights (k×l = <span id="weights-editor-dims">2×2</span>)</div>
   <div id="weights-tables" style="display: flex; flex-wrap: wrap; gap: 15px;"></div>
   <div style="margin-top: 10px;">
-    <button id="apply-weights-btn">Apply & Compute</button>
-    <button id="close-weights-btn" style="margin-left: 10px;">Close</button>
+    <button id="close-weights-btn">Close</button>
   </div>
 </div>
 
@@ -2998,7 +2996,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const preset = weightPresetSelect.value;
     seedLabel.style.display = (preset === 'random') ? 'inline' : 'none';
     periodicParams.style.display = (preset === 'periodic') ? 'inline' : 'none';
-    if (preset !== 'periodic') {
+    if (preset === 'periodic') {
+      // Auto-open weights editor when periodic is selected
+      buildWeightsEditor();
+      weightsEditor.style.display = 'block';
+    } else {
       weightsEditor.style.display = 'none';
     }
   });
@@ -3006,6 +3008,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // Initialize visibility
   seedLabel.style.display = (weightPresetSelect.value === 'random') ? 'inline' : 'none';
   periodicParams.style.display = (weightPresetSelect.value === 'periodic') ? 'inline' : 'none';
+  if (weightPresetSelect.value === 'periodic') {
+    // Show editor on page load if periodic is selected
+    setTimeout(() => {
+      if (wasmReady) {
+        buildWeightsEditor();
+        weightsEditor.style.display = 'block';
+      }
+    }, 100);
+  }
 
   // Build periodic weights editor UI
   function buildWeightsEditor() {
@@ -3062,6 +3073,16 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
           input.dataset.type = t;
           input.dataset.j = j;
           input.dataset.i = i;
+          // Update C++ immediately when value changes
+          input.addEventListener('input', () => {
+            const type = parseInt(input.dataset.type);
+            const jIdx = parseInt(input.dataset.j);
+            const iIdx = parseInt(input.dataset.i);
+            const value = parseFloat(input.value) || 1;
+            if (wasmReady && setPeriodicWeight) {
+              setPeriodicWeight(type, jIdx, iIdx, value);
+            }
+          });
           grid.appendChild(input);
         }
       }
@@ -3070,40 +3091,21 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
   }
 
-  // Edit weights button
-  document.getElementById('edit-weights-btn').addEventListener('click', () => {
-    buildWeightsEditor();
-    weightsEditor.style.display = 'block';
+  // Rebuild editor when k or l changes
+  document.getElementById('periodic-k').addEventListener('change', () => {
+    if (weightPresetSelect.value === 'periodic') {
+      buildWeightsEditor();
+    }
+  });
+  document.getElementById('periodic-l').addEventListener('change', () => {
+    if (weightPresetSelect.value === 'periodic') {
+      buildWeightsEditor();
+    }
   });
 
   // Close weights editor
   document.getElementById('close-weights-btn').addEventListener('click', () => {
     weightsEditor.style.display = 'none';
-  });
-
-  // Apply weights and compute
-  document.getElementById('apply-weights-btn').addEventListener('click', () => {
-    // Read all weight values from inputs and send to C++
-    const inputs = weightsTables.querySelectorAll('input');
-    for (const input of inputs) {
-      const type = parseInt(input.dataset.type);
-      const j = parseInt(input.dataset.j);
-      const i = parseInt(input.dataset.i);
-      const value = parseFloat(input.value) || 1;
-      if (wasmReady && setPeriodicWeight) {
-        setPeriodicWeight(type, j, i, value);
-      }
-    }
-
-    weightsEditor.style.display = 'none';
-
-    // Trigger compute with periodic mode
-    const n = parseN();
-    currentSimulationN = n;
-    currentK = 0;
-    initAztecGraph(n);
-    setAztecWeightMode(2);  // Periodic mode
-    computeAndDisplay();
   });
 
   // Main compute button - initializes graph with weights and computes
@@ -3123,10 +3125,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     } else if (preset === 'random') {
       setAztecWeightMode(1);
     } else if (preset === 'periodic') {
-      // Initialize periodic period if needed
-      const k = parseInt(document.getElementById('periodic-k').value) || 2;
-      const l = parseInt(document.getElementById('periodic-l').value) || 2;
-      setPeriodicPeriod(k, l);
+      // Weights are already set by the editor UI via setPeriodicWeight calls
+      // Just apply periodic mode - don't re-initialize period which would reset weights
       setAztecWeightMode(2);
     }
 
