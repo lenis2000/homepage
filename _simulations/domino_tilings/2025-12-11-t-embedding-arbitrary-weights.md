@@ -459,18 +459,12 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <details id="random-sample-section" style="margin-top: 15px;" open>
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;">Random Domino Tiling Sample (EKLP Shuffling)</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-    <!-- Controls row -->
+    <!-- Top controls row -->
     <div style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
       <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="300" style="width: 60px;"></label>
       <label>Border: <input type="number" id="sample-border-input" value="0.1" min="0" max="10" step="0.1" style="width: 50px;"></label>
       <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
       <span id="sample-time" style="color: #666;"></span>
-      <span style="color: #ccc;">|</span>
-      <span style="font-size: 12px; font-weight: bold; color: #555;">Export:</span>
-      <button id="sample-export-png-btn" style="padding: 2px 8px;">PNG</button>
-      <span style="font-size: 11px; color: #666;">Quality:</span>
-      <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;">
-      <button id="sample-export-pdf-btn" style="padding: 2px 8px;">PDF</button>
     </div>
     <!-- Canvas with floating controls -->
     <div id="sample-canvas-wrapper" style="position: relative;">
@@ -480,6 +474,16 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <button id="sample-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
       </div>
       <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+    </div>
+    <!-- Bottom controls: Colors and Export -->
+    <div style="margin-top: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
+      <label>Colors: <select id="sample-palette-select" style="padding: 2px 4px;"></select></label>
+      <span style="color: #ccc;">|</span>
+      <span style="font-size: 12px; font-weight: bold; color: #555;">Export:</span>
+      <button id="sample-export-png-btn" style="padding: 2px 8px;">PNG</button>
+      <span style="font-size: 11px; color: #666;">Quality:</span>
+      <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;">
+      <button id="sample-export-pdf-btn" style="padding: 2px 8px;">PDF</button>
     </div>
   </div>
 </details>
@@ -585,6 +589,7 @@ Part of this research was performed while the author was visiting the Institute 
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
 </style>
 
+<script src="/js/colorschemes.js"></script>
 <script src="/js/2025-12-11-t-embedding-arbitrary-weights.js"></script>
 
 <script>
@@ -1978,9 +1983,38 @@ Part of this research was performed while the author was visiting the Institute 
   let sampleDominoes = [];
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
+  let samplePaletteIndex = 0;  // Default to first palette
 
-  // Sample canvas
+  // Sample canvas and palette
   const sampleCanvas = document.getElementById('sample-canvas');
+  const samplePaletteSelect = document.getElementById('sample-palette-select');
+
+  // Initialize palette dropdown
+  function initSamplePalette() {
+    const palettes = window.ColorSchemes || [];
+    samplePaletteSelect.innerHTML = '';
+    // Find 'Domino Default' index
+    let defaultIdx = palettes.findIndex(p => p.name === 'Domino Default');
+    if (defaultIdx === -1) defaultIdx = 0;
+    samplePaletteIndex = defaultIdx;
+
+    palettes.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = p.name;
+      if (i === defaultIdx) opt.selected = true;
+      samplePaletteSelect.appendChild(opt);
+    });
+  }
+
+  // Initialize palette on load
+  if (samplePaletteSelect) {
+    initSamplePalette();
+    samplePaletteSelect.addEventListener('change', () => {
+      samplePaletteIndex = parseInt(samplePaletteSelect.value);
+      renderSample();
+    });
+  }
   const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
 
   function loadShufflingModule(tembModule) {
@@ -2412,13 +2446,11 @@ Part of this research was performed while the author was visiting the Institute 
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    // Get colors from ColorSchemes
+    // Get colors from ColorSchemes using selected palette
     const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
-    let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
-    if (paletteIdx === -1) paletteIdx = 0;
-    const colors = palettes[paletteIdx].colors;
+    const colors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
 
-    // Color mapping: yellow=0, green=2, blue=1, red=3
+    // Color mapping: yellow=0, green=1, blue=2, red=3
     const colorMap = {
       'yellow': colors[0],
       'green': colors[1],
