@@ -164,6 +164,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   </span>
 
   <button id="compute-btn" style="margin-left: 15px;">Compute</button>
+  <span id="compute-time" style="margin-left: 10px; color: #666;"></span>
   <div id="n-warning" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404; font-size: 12px;">⚠️ <strong>Warning:</strong> n &gt; 40 may take several minutes to compute</div>
 </div>
 
@@ -576,6 +577,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
   let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
+  let getComputeTimeMs;
   let clearTembLevels;
   let clearStoredWeightsExport;
 
@@ -1724,6 +1726,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getAztecReductionStep = Module.cwrap('getAztecReductionStep', 'number', []);
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
+      getComputeTimeMs = Module.cwrap('getComputeTimeMs', 'number', []);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
       clearStoredWeightsExport = Module.cwrap('clearStoredWeightsExport', null, []);
 
@@ -1828,6 +1831,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       } else {
         renderMain2DTemb();
       }
+
+      // Display compute time
+      const timeMs = getComputeTimeMs();
+      const timeSec = (timeMs / 1000).toFixed(2);
+      document.getElementById('compute-time').textContent = `${timeSec}s`;
     } finally {
       computingMsg.style.display = 'none';
       isComputing = false;

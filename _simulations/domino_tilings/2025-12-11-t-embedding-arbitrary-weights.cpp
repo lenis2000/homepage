@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setRandomIIDParams','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setRandomIIDParams','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -35,6 +35,8 @@ using mp_complex = std::complex<double>;
 // =============================================================================
 
 static const int MAX_N = 100;  // Maximum supported n value (change this to increase limit)
+
+static double g_totalComputeTimeMs = 0.0;  // Cumulative computation time in milliseconds
 
 static int g_n = 6;           // Diamond size parameter (default n=6)
 static double g_a = 1.0;      // Boundary parameter (computed or set)
@@ -3978,6 +3980,7 @@ EMSCRIPTEN_KEEPALIVE
 void generateAztecGraph(int k) {
     if (k < 1) k = 1;
     if (k > MAX_N) k = MAX_N;
+    g_totalComputeTimeMs = 0.0;  // Reset timer on new graph
     generateAztecGraphInternal(k);
 }
 
@@ -4174,7 +4177,9 @@ void resetAztecGraphPreservingWeights() {
 
 EMSCRIPTEN_KEEPALIVE
 void aztecGraphStepDown() {
+    double t0 = emscripten_get_now();
     aztecStepDown();
+    g_totalComputeTimeMs += emscripten_get_now() - t0;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -4200,6 +4205,11 @@ int canAztecStepDown() {
     if (g_aztecReductionStep < 11) return 1;
     if (g_aztecReductionStep == 11 && g_aztecLevel > 1) return 1;
     return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+double getComputeTimeMs() {
+    return g_totalComputeTimeMs;
 }
 
 EMSCRIPTEN_KEEPALIVE
