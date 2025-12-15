@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -286,6 +286,116 @@ static void randomizeAztecWeightsInternal() {
 static void setUniformWeightsInternal() {
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         g_aztecEdges[i].setWeight(mp_real(1));
+    }
+}
+
+// Periodic weight storage: alpha[j][i], beta[j][i], gamma[j][i] for period k x l
+static int g_periodicK = 2, g_periodicL = 2;
+static std::vector<std::vector<double>> g_periodicAlpha, g_periodicBeta, g_periodicGamma;
+
+// Initialize periodic weight arrays with default interesting values
+static void initPeriodicWeights(int k, int l) {
+    g_periodicK = k;
+    g_periodicL = l;
+    g_periodicAlpha.assign(k, std::vector<double>(l, 1.0));
+    g_periodicBeta.assign(k, std::vector<double>(l, 1.0));
+    g_periodicGamma.assign(k, std::vector<double>(l, 1.0));
+
+    // Set interesting default values for 2x2 case
+    if (k == 2 && l == 2) {
+        g_periodicAlpha[1][1] = 1.5;
+        g_periodicBeta[0][0] = 0.95;
+        g_periodicBeta[1][1] = 0.1;
+        g_periodicGamma[1][0] = 0.95;
+        g_periodicGamma[0][1] = 0.1;
+    }
+}
+
+// Check if a face at integer coordinates (fx, fy) is black
+// Black face: (fx + fy) is even
+static bool isBlackFace(int fx, int fy) {
+    return (fx + fy) % 2 == 0;
+}
+
+// Set periodic weights based on Berggren-Borodin convention:
+// - Each BLACK face has 4 edges with weights α, β, γ, 1
+// - α = bottom edge, β = right edge, γ = left edge, 1 = top edge
+// - Periodic indices computed from diagonal coordinates of face center
+static void setPeriodicWeightsInternal() {
+    if (g_periodicAlpha.empty()) {
+        initPeriodicWeights(2, 2);
+    }
+
+    int k = g_periodicK;
+    int l = g_periodicL;
+
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        AztecEdge& edge = g_aztecEdges[i];
+        double x1 = g_aztecVertices[edge.v1].x;
+        double y1 = g_aztecVertices[edge.v1].y;
+        double x2 = g_aztecVertices[edge.v2].x;
+        double y2 = g_aztecVertices[edge.v2].y;
+
+        // Find which black face this edge belongs to
+        int faceX, faceY;
+        char edgeDir; // 'a'=alpha, 'b'=beta, 'g'=gamma, '1'=one
+
+        if (edge.isHorizontal) {
+            // Horizontal edge from (x1,y1) to (x2,y1)
+            // Face above: center at (round(midX), round(y1 + 0.5))
+            // Face below: center at (round(midX), round(y1 - 0.5))
+            double midX = (x1 + x2) / 2.0;
+            int faceAboveX = (int)std::round(midX);
+            int faceAboveY = (int)std::round(y1 + 0.5);
+            int faceBelowX = (int)std::round(midX);
+            int faceBelowY = (int)std::round(y1 - 0.5);
+
+            if (isBlackFace(faceAboveX, faceAboveY)) {
+                faceX = faceAboveX; faceY = faceAboveY;
+                edgeDir = 'a'; // bottom edge of black face = alpha
+            } else if (isBlackFace(faceBelowX, faceBelowY)) {
+                faceX = faceBelowX; faceY = faceBelowY;
+                edgeDir = '1'; // top edge of black face = 1
+            } else {
+                edge.setWeight(mp_real(1));
+                continue;
+            }
+        } else {
+            // Vertical edge from (x1,y1) to (x1,y2)
+            double midY = (y1 + y2) / 2.0;
+            int faceRightX = (int)std::round(x1 + 0.5);
+            int faceRightY = (int)std::round(midY);
+            int faceLeftX = (int)std::round(x1 - 0.5);
+            int faceLeftY = (int)std::round(midY);
+
+            if (isBlackFace(faceRightX, faceRightY)) {
+                faceX = faceRightX; faceY = faceRightY;
+                edgeDir = 'g'; // left edge of black face = gamma
+            } else if (isBlackFace(faceLeftX, faceLeftY)) {
+                faceX = faceLeftX; faceY = faceLeftY;
+                edgeDir = 'b'; // right edge of black face = beta
+            } else {
+                edge.setWeight(mp_real(1));
+                continue;
+            }
+        }
+
+        // Compute periodic indices using diagonal coordinates
+        // diagI = (faceX + faceY) / 2, diagJ = (faceX - faceY) / 2
+        int diagI = (faceX + faceY) / 2;
+        int diagJ = (faceX - faceY) / 2;
+
+        // Map to periodic indices [0, l-1] and [0, k-1]
+        int pi = ((diagI % l) + l) % l;
+        int pj = ((diagJ % k) + k) % k;
+
+        double weight = 1.0;
+        if (edgeDir == 'a') weight = g_periodicAlpha[pj][pi];
+        else if (edgeDir == 'b') weight = g_periodicBeta[pj][pi];
+        else if (edgeDir == 'g') weight = g_periodicGamma[pj][pi];
+        // edgeDir == '1' stays at weight = 1.0
+
+        edge.setWeight(mp_real(weight));
     }
 }
 
@@ -3688,8 +3798,7 @@ void randomizeAztecWeights() {
 // Set weights based on mode:
 // 0 = Uniform (all 1s)
 // 1 = Random
-// 2 = Periodic Lattice (TODO)
-// 3 = Periodic Diagonal (TODO)
+// 2 = Periodic (k x l periodicity)
 EMSCRIPTEN_KEEPALIVE
 void setAztecWeightMode(int mode) {
     if (mode == 0) {
@@ -3699,12 +3808,75 @@ void setAztecWeightMode(int mode) {
         // Random
         randomizeAztecWeightsInternal();
     } else if (mode == 2) {
-        // Periodic Lattice - TODO: implement with k x l parameters
-        setUniformWeightsInternal();  // Placeholder
-    } else if (mode == 3) {
-        // Periodic Diagonal - TODO: implement with k x l parameters
-        setUniformWeightsInternal();  // Placeholder
+        // Periodic weights
+        setPeriodicWeightsInternal();
     }
+}
+
+// Set periodic weight parameters (k x l period)
+EMSCRIPTEN_KEEPALIVE
+void setPeriodicPeriod(int k, int l) {
+    if (k < 1) k = 1;
+    if (l < 1) l = 1;
+    if (k > 10) k = 10;
+    if (l > 10) l = 10;
+    initPeriodicWeights(k, l);
+}
+
+// Set a specific periodic weight value
+// type: 0=alpha, 1=beta, 2=gamma
+// j, i: periodic indices (0-indexed)
+EMSCRIPTEN_KEEPALIVE
+void setPeriodicWeight(int type, int j, int i, double value) {
+    if (j < 0 || j >= g_periodicK || i < 0 || i >= g_periodicL) return;
+    if (value <= 0) value = 0.001;  // Weights must be positive
+
+    if (type == 0) g_periodicAlpha[j][i] = value;
+    else if (type == 1) g_periodicBeta[j][i] = value;
+    else if (type == 2) g_periodicGamma[j][i] = value;
+}
+
+// Get current periodic parameters as JSON
+EMSCRIPTEN_KEEPALIVE
+char* getPeriodicParams() {
+    std::ostringstream ss;
+    ss << "{\"k\":" << g_periodicK << ",\"l\":" << g_periodicL;
+    ss << ",\"alpha\":[";
+    for (int j = 0; j < g_periodicK; j++) {
+        if (j > 0) ss << ",";
+        ss << "[";
+        for (int i = 0; i < g_periodicL; i++) {
+            if (i > 0) ss << ",";
+            ss << g_periodicAlpha[j][i];
+        }
+        ss << "]";
+    }
+    ss << "],\"beta\":[";
+    for (int j = 0; j < g_periodicK; j++) {
+        if (j > 0) ss << ",";
+        ss << "[";
+        for (int i = 0; i < g_periodicL; i++) {
+            if (i > 0) ss << ",";
+            ss << g_periodicBeta[j][i];
+        }
+        ss << "]";
+    }
+    ss << "],\"gamma\":[";
+    for (int j = 0; j < g_periodicK; j++) {
+        if (j > 0) ss << ",";
+        ss << "[";
+        for (int i = 0; i < g_periodicL; i++) {
+            if (i > 0) ss << ",";
+            ss << g_periodicGamma[j][i];
+        }
+        ss << "]";
+    }
+    ss << "]}";
+
+    std::string result = ss.str();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
 }
 
 // Reset graph to step 0 while preserving current edge weights

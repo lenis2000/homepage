@@ -151,11 +151,27 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
     <select id="weight-preset-select" style="margin-left: 5px;">
       <option value="random" selected>Random</option>
       <option value="uniform">Uniform</option>
+      <option value="periodic">Periodic</option>
     </select>
   </label>
   <label id="seed-label" style="margin-left: 10px;">Seed: <input id="random-seed" type="number" value="42" style="width: 60px;"></label>
+  <span id="periodic-params" style="display: none; margin-left: 10px;">
+    <label>k: <input id="periodic-k" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
+    <label style="margin-left: 5px;">l: <input id="periodic-l" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
+    <button id="edit-weights-btn" style="margin-left: 5px;">Edit</button>
+  </span>
 
   <button id="compute-btn" style="margin-left: 15px;">Compute</button>
+</div>
+
+<!-- Periodic Weights Editor (hidden by default) -->
+<div id="weights-editor" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #c9f; background: #f8f0ff; border-radius: 4px;">
+  <div style="margin-bottom: 8px; font-weight: bold;">Periodic Weights (k×l = <span id="weights-editor-dims">2×2</span>)</div>
+  <div id="weights-tables" style="display: flex; flex-wrap: wrap; gap: 15px;"></div>
+  <div style="margin-top: 10px;">
+    <button id="apply-weights-btn">Apply & Compute</button>
+    <button id="close-weights-btn" style="margin-left: 10px;">Close</button>
+  </div>
 </div>
 
 <div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; margin-bottom: 10px;">
@@ -437,7 +453,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getOrigamiLevelJSON;
-  let randomizeAztecWeights, setAztecWeightMode, resetAztecGraphPreservingWeights, setAztecGraphLevel;
+  let randomizeAztecWeights, setAztecWeightMode, setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
+  let resetAztecGraphPreservingWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
   let clearStoredWeightsExport;
@@ -1572,6 +1589,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getOrigamiLevelJSON = Module.cwrap('getOrigamiLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
+      setPeriodicPeriod = Module.cwrap('setPeriodicPeriod', null, ['number', 'number']);
+      setPeriodicWeight = Module.cwrap('setPeriodicWeight', null, ['number', 'number', 'number', 'number']);
+      getPeriodicParams = Module.cwrap('getPeriodicParams', 'number', []);
       resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
       const seedRng = Module.cwrap('seedRng', null, ['number']);
       seedRng(42);  // Fixed seed for reproducible results on load
@@ -2969,15 +2989,122 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   const weightPresetSelect = document.getElementById('weight-preset-select');
   const seedLabel = document.getElementById('seed-label');
+  const periodicParams = document.getElementById('periodic-params');
+  const weightsEditor = document.getElementById('weights-editor');
+  const weightsTables = document.getElementById('weights-tables');
 
-  // Handle weight preset dropdown change - show/hide seed input
+  // Handle weight preset dropdown change - show/hide relevant params
   weightPresetSelect.addEventListener('change', () => {
     const preset = weightPresetSelect.value;
     seedLabel.style.display = (preset === 'random') ? 'inline' : 'none';
+    periodicParams.style.display = (preset === 'periodic') ? 'inline' : 'none';
+    if (preset !== 'periodic') {
+      weightsEditor.style.display = 'none';
+    }
   });
 
-  // Initialize seed visibility
+  // Initialize visibility
   seedLabel.style.display = (weightPresetSelect.value === 'random') ? 'inline' : 'none';
+  periodicParams.style.display = (weightPresetSelect.value === 'periodic') ? 'inline' : 'none';
+
+  // Build periodic weights editor UI
+  function buildWeightsEditor() {
+    const k = parseInt(document.getElementById('periodic-k').value) || 2;
+    const l = parseInt(document.getElementById('periodic-l').value) || 2;
+    document.getElementById('weights-editor-dims').textContent = `${k}×${l}`;
+
+    // Initialize periodic params in C++
+    if (wasmReady && setPeriodicPeriod) {
+      setPeriodicPeriod(k, l);
+    }
+
+    // Get current values from C++
+    let params = { k: k, l: l, alpha: [], beta: [], gamma: [] };
+    if (wasmReady && getPeriodicParams) {
+      const ptr = getPeriodicParams();
+      const json = Module.UTF8ToString(ptr);
+      freeString(ptr);
+      params = JSON.parse(json);
+    }
+
+    // Initialize default arrays if needed
+    for (let j = 0; j < k; j++) {
+      if (!params.alpha[j]) params.alpha[j] = [];
+      if (!params.beta[j]) params.beta[j] = [];
+      if (!params.gamma[j]) params.gamma[j] = [];
+      for (let i = 0; i < l; i++) {
+        if (params.alpha[j][i] === undefined) params.alpha[j][i] = 1;
+        if (params.beta[j][i] === undefined) params.beta[j][i] = 1;
+        if (params.gamma[j][i] === undefined) params.gamma[j][i] = 1;
+      }
+    }
+
+    // Build tables for alpha, beta, gamma
+    weightsTables.innerHTML = '';
+    const names = ['α (bottom)', 'β (right)', 'γ (left)'];
+    const arrays = [params.alpha, params.beta, params.gamma];
+
+    for (let t = 0; t < 3; t++) {
+      const table = document.createElement('div');
+      table.style.cssText = 'background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;';
+      table.innerHTML = `<div style="font-weight: bold; margin-bottom: 5px; font-size: 12px;">${names[t]}</div>`;
+
+      const grid = document.createElement('div');
+      grid.style.cssText = `display: grid; grid-template-columns: repeat(${l}, 1fr); gap: 3px;`;
+
+      for (let j = 0; j < k; j++) {
+        for (let i = 0; i < l; i++) {
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.step = '0.1';
+          input.value = arrays[t][j][i].toFixed(2);
+          input.style.cssText = 'width: 50px; padding: 2px; font-size: 11px;';
+          input.dataset.type = t;
+          input.dataset.j = j;
+          input.dataset.i = i;
+          grid.appendChild(input);
+        }
+      }
+      table.appendChild(grid);
+      weightsTables.appendChild(table);
+    }
+  }
+
+  // Edit weights button
+  document.getElementById('edit-weights-btn').addEventListener('click', () => {
+    buildWeightsEditor();
+    weightsEditor.style.display = 'block';
+  });
+
+  // Close weights editor
+  document.getElementById('close-weights-btn').addEventListener('click', () => {
+    weightsEditor.style.display = 'none';
+  });
+
+  // Apply weights and compute
+  document.getElementById('apply-weights-btn').addEventListener('click', () => {
+    // Read all weight values from inputs and send to C++
+    const inputs = weightsTables.querySelectorAll('input');
+    for (const input of inputs) {
+      const type = parseInt(input.dataset.type);
+      const j = parseInt(input.dataset.j);
+      const i = parseInt(input.dataset.i);
+      const value = parseFloat(input.value) || 1;
+      if (wasmReady && setPeriodicWeight) {
+        setPeriodicWeight(type, j, i, value);
+      }
+    }
+
+    weightsEditor.style.display = 'none';
+
+    // Trigger compute with periodic mode
+    const n = parseN();
+    currentSimulationN = n;
+    currentK = 0;
+    initAztecGraph(n);
+    setAztecWeightMode(2);  // Periodic mode
+    computeAndDisplay();
+  });
 
   // Main compute button - initializes graph with weights and computes
   document.getElementById('compute-btn').addEventListener('click', () => {
@@ -2990,11 +3117,17 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     initAztecGraph(n);
 
-    // Set weight mode: 0=uniform, 1=random
+    // Set weight mode: 0=uniform, 1=random, 2=periodic
     if (preset === 'uniform') {
       setAztecWeightMode(0);
     } else if (preset === 'random') {
       setAztecWeightMode(1);
+    } else if (preset === 'periodic') {
+      // Initialize periodic period if needed
+      const k = parseInt(document.getElementById('periodic-k').value) || 2;
+      const l = parseInt(document.getElementById('periodic-l').value) || 2;
+      setPeriodicPeriod(k, l);
+      setAztecWeightMode(2);
     }
 
     computeAndDisplay();
