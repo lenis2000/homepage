@@ -918,12 +918,12 @@ static void aztecStep3_Contract() {
         }
     }
 
-    // Build new vertex list and mapping from old to new indices
+    // Build new vertex list and mapping from old to new indices using vector for O(1) lookup
     std::vector<AztecVertex> newVertices;
-    std::map<int, int> oldToNew;
+    std::vector<int> oldToNew(g_aztecVertices.size(), -1);
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         if (verticesToRemove.find((int)idx) == verticesToRemove.end()) {
-            oldToNew[(int)idx] = (int)newVertices.size();
+            oldToNew[idx] = (int)newVertices.size();
             newVertices.push_back(g_aztecVertices[idx]);
         }
     }
@@ -931,9 +931,8 @@ static void aztecStep3_Contract() {
     // Build new edge list, removing edges connected to removed vertices
     std::vector<AztecEdge> newEdges;
     for (const auto& e : g_aztecEdges) {
-        bool v1Removed = (verticesToRemove.find(e.v1) != verticesToRemove.end());
-        bool v2Removed = (verticesToRemove.find(e.v2) != verticesToRemove.end());
-        if (!v1Removed && !v2Removed) {
+        // O(1) check using vector instead of O(log n) set lookup
+        if (oldToNew[e.v1] != -1 && oldToNew[e.v2] != -1) {
             AztecEdge newEdge = e;
             newEdge.v1 = oldToNew[e.v1];
             newEdge.v2 = oldToNew[e.v2];
@@ -1877,23 +1876,26 @@ static void aztecStep10_UrbanRenewal() {
         g_aztecEdges.erase(g_aztecEdges.begin() + idx);
     }
 
-    // Build vertex index remapping (old index -> new index)
-    std::map<int, int> vertexRemap;
+    // Build vertex index remapping using vector for O(1) lookup
+    std::vector<int> vertexRemap(g_aztecVertices.size(), -1);
     int newIdx = 0;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
         if (verticesToRemove.find((int)i) == verticesToRemove.end()) {
-            vertexRemap[(int)i] = newIdx++;
+            vertexRemap[i] = newIdx++;
         }
     }
 
-    // Remove vertices marked for removal (in reverse order)
-    std::vector<int> verticesToRemoveVec(verticesToRemove.begin(), verticesToRemove.end());
-    std::sort(verticesToRemoveVec.rbegin(), verticesToRemoveVec.rend());
-    for (int idx : verticesToRemoveVec) {
-        g_aztecVertices.erase(g_aztecVertices.begin() + idx);
+    // Build new vertex list directly, skipping removals (more efficient than erase)
+    std::vector<AztecVertex> finalVertices;
+    finalVertices.reserve(newIdx);
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        if (vertexRemap[i] != -1) {
+            finalVertices.push_back(g_aztecVertices[i]);
+        }
     }
+    g_aztecVertices = std::move(finalVertices);
 
-    // Update edge vertex indices using remap
+    // Update edge vertex indices using remap (O(1) vector lookup)
     for (auto& e : g_aztecEdges) {
         e.v1 = vertexRemap[e.v1];
         e.v2 = vertexRemap[e.v2];
