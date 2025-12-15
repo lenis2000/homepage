@@ -462,7 +462,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <!-- Controls row -->
     <div style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
       <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="100" style="width: 60px;"></label>
-      <label>Border: <input type="number" id="sample-border-input" value="1" min="0" max="10" step="0.1" style="width: 50px;"></label>
+      <label>Border: <input type="number" id="sample-border-input" value="0.1" min="0" max="10" step="0.1" style="width: 50px;"></label>
       <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
       <span id="sample-time" style="color: #666;"></span>
       <span style="color: #ccc;">|</span>
@@ -2051,12 +2051,22 @@ Part of this research was performed while the author was visiting the Institute 
       } else if (preset === 'random-gamma') {
         const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
         const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+        // Match ab_gamma from double-dimer-gamma.cpp:
+        // Even rows (i % 2 == 0): even cols get Gamma(beta), odd cols get Gamma(alpha)
+        // Odd rows (i % 2 == 1): all 1.0
         for (let i = 0; i < dim; i++) {
           for (let j = 0; j < dim; j++) {
-            // Gamma weights: alpha edges (bottom) and beta edges (right)
-            // Use a simple approach: weight depends on position parity
-            const useAlpha = (i + j) % 2 === 0;
-            weights[i * dim + j] = useAlpha ? gammaRandom(alpha, 1, rng) : gammaRandom(beta, 1, rng);
+            if (i % 2 === 0) {
+              // Even row
+              if (j % 2 === 0) {
+                weights[i * dim + j] = gammaRandom(beta, 1, rng);
+              } else {
+                weights[i * dim + j] = gammaRandom(alpha, 1, rng);
+              }
+            } else {
+              // Odd row - all 1.0
+              weights[i * dim + j] = 1.0;
+            }
           }
         }
       }
@@ -2399,84 +2409,40 @@ Part of this research was performed while the author was visiting the Institute 
       renderSample();
     });
 
-    // Export PNG
+    // Export PNG (canvas capture like T-embedding)
     document.getElementById('sample-export-png-btn').addEventListener('click', () => {
       if (sampleDominoes.length === 0) return;
 
       const N = parseInt(document.getElementById('sample-N-input').value) || 6;
-      const scale = 3;  // High resolution export
+      const quality = parseInt(document.getElementById('sample-png-quality').value) || 85;
+      // Map quality 1-100 to scale factor 0.5-4.0
+      const scale = 0.5 + (quality / 100) * 3.5;
 
-      // Find bounds
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (const d of sampleDominoes) {
-        minX = Math.min(minX, d.x);
-        maxX = Math.max(maxX, d.x + d.w);
-        minY = Math.min(minY, d.y);
-        maxY = Math.max(maxY, d.y + d.h);
-      }
+      const rect = sampleCanvas.getBoundingClientRect();
 
-      const regionW = maxX - minX;
-      const regionH = maxY - minY;
-      const padding = 10;
-      const pixelsPerUnit = 20 * scale;
-
+      // Create export canvas at scaled resolution
       const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = regionW * pixelsPerUnit + padding * 2;
-      exportCanvas.height = regionH * pixelsPerUnit + padding * 2;
-      const ctx = exportCanvas.getContext('2d');
+      exportCanvas.width = rect.width * scale;
+      exportCanvas.height = rect.height * scale;
+      const exportCtx = exportCanvas.getContext('2d');
 
-      // White background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      // Draw white background
+      exportCtx.fillStyle = '#ffffff';
+      exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-      // Get colors
-      const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
-      let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
-      if (paletteIdx === -1) paletteIdx = 0;
-      const colors = palettes[paletteIdx].colors;
-      const colorMap = { 'yellow': colors[0], 'green': colors[1], 'blue': colors[2], 'red': colors[3] };
+      // Draw the source canvas scaled
+      exportCtx.drawImage(sampleCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
 
-      const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
-      const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
-
-      // Draw dominoes
-      for (const d of sampleDominoes) {
-        const sx = (d.x - minX) * pixelsPerUnit + padding;
-        const sy = (maxY - d.y - d.h) * pixelsPerUnit + padding;
-        const sw = d.w * pixelsPerUnit;
-        const sh = d.h * pixelsPerUnit;
-
-        ctx.fillStyle = colorMap[d.color] || '#888';
-        ctx.fillRect(sx, sy, sw, sh);
-
-        if (borderWidth > 0) {
-          ctx.strokeStyle = '#000';
-          ctx.lineWidth = borderWidth * scale;
-          ctx.strokeRect(sx, sy, sw, sh);
-        }
-      }
-
+      // Download
       const link = document.createElement('a');
       link.download = `domino-sample-N${N}.png`;
       link.href = exportCanvas.toDataURL('image/png');
       link.click();
     });
 
-    // Export PDF
-    document.getElementById('sample-export-pdf-btn').addEventListener('click', async () => {
-      if (sampleDominoes.length === 0) return;
-
-      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
-
-      // Load jsPDF if not loaded
-      if (typeof jspdf === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-        document.head.appendChild(script);
-        await new Promise(resolve => script.onload = resolve);
-      }
-
-      const { jsPDF } = jspdf;
+    // Generate SVG for domino sample
+    function generateDominoSVG() {
+      if (sampleDominoes.length === 0) return null;
 
       // Find bounds
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -2490,16 +2456,10 @@ Part of this research was performed while the author was visiting the Institute 
       const regionW = maxX - minX;
       const regionH = maxY - minY;
       const padding = 10;
-      const scale = 5;  // mm per unit
+      const scale = 10;  // pixels per unit
 
-      const pdfW = regionW * scale + padding * 2;
-      const pdfH = regionH * scale + padding * 2;
-
-      const doc = new jsPDF({
-        orientation: pdfW > pdfH ? 'landscape' : 'portrait',
-        unit: 'mm',
-        format: [pdfW, pdfH]
-      });
+      const svgW = regionW * scale + padding * 2;
+      const svgH = regionH * scale + padding * 2;
 
       // Get colors
       const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
@@ -2511,31 +2471,72 @@ Part of this research was performed while the author was visiting the Institute 
       const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
       const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
 
-      // Helper to parse hex color
-      const hexToRgb = (hex) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [128, 128, 128];
-      };
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">`;
+      svg += `<rect width="${svgW}" height="${svgH}" fill="white"/>`;
 
-      // Draw dominoes
       for (const d of sampleDominoes) {
         const sx = (d.x - minX) * scale + padding;
         const sy = (maxY - d.y - d.h) * scale + padding;
         const sw = d.w * scale;
         const sh = d.h * scale;
-
-        const rgb = hexToRgb(colorMap[d.color] || '#888888');
-        doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-        doc.rect(sx, sy, sw, sh, 'F');
+        const fill = colorMap[d.color] || '#888';
 
         if (borderWidth > 0) {
-          doc.setDrawColor(0, 0, 0);
-          doc.setLineWidth(borderWidth * 0.2);
-          doc.rect(sx, sy, sw, sh, 'S');
+          svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}" stroke="#000" stroke-width="${borderWidth}"/>`;
+        } else {
+          svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}"/>`;
         }
       }
 
-      doc.save(`domino-sample-N${N}.pdf`);
+      svg += '</svg>';
+      return svg;
+    }
+
+    // Export PDF (via SVG - vector quality, like T-embedding)
+    document.getElementById('sample-export-pdf-btn').addEventListener('click', async () => {
+      if (sampleDominoes.length === 0) return;
+
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      const svgString = generateDominoSVG();
+
+      if (!svgString) return;
+
+      try {
+        // Load jspdf and svg2pdf.js dynamically if needed
+        const loadScript = (src) => new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+
+        if (!window.jspdf) {
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        }
+        if (!window.svg2pdfLoaded) {
+          await loadScript('/js/svg2pdf.umd.min.js');
+          window.svg2pdfLoaded = true;
+        }
+
+        // Parse SVG
+        const parser = new DOMParser();
+        const svgElement = parser.parseFromString(svgString, 'image/svg+xml').documentElement;
+        const width = parseFloat(svgElement.getAttribute('width'));
+        const height = parseFloat(svgElement.getAttribute('height'));
+
+        // Create PDF
+        const { jsPDF } = window.jspdf;
+        const orientation = width > height ? 'landscape' : 'portrait';
+        const pdf = new jsPDF({ orientation, unit: 'pt', format: [width, height] });
+
+        // Render SVG to PDF
+        await pdf.svg(svgElement, { x: 0, y: 0, width, height });
+        pdf.save(`domino-sample-N${N}.pdf`);
+      } catch (e) {
+        console.error('PDF export error:', e);
+        alert('PDF export failed: ' + e.message);
+      }
     });
 
     sampleCanvas.style.cursor = 'grab';
