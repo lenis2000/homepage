@@ -144,7 +144,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="30" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="50" style="width: 60px;"></label>
 
   <!-- Weight Preset Dropdown -->
   <label style="margin-left: 15px;">Weights:
@@ -306,6 +306,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let view3DZoom = 1.0;
   let view3DIsDragging = false;
   let view3DLastX = 0, view3DLastY = 0;
+  let mainViewIs3D = false;  // Toggle between 2D and 3D view
 
   // T-embedding data
   let tembData = null;
@@ -313,7 +314,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let isComputing = false;  // Flag to prevent re-entrancy during computation
 
   // Hard cap on n
-  const MAX_N = 30;
+  const MAX_N = 50;
 
   // Step-by-step visualization is only available for n <= this threshold
   const STEP_BY_STEP_MAX_N = 15;
@@ -1595,8 +1596,12 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       updateStepDisplay();
       renderStepwiseTemb();
 
-      // Also render the main 2D visualization
-      renderMain2DTemb();
+      // Also render the main visualization (2D or 3D)
+      if (mainViewIs3D) {
+        renderMain3D();
+      } else {
+        renderMain2DTemb();
+      }
     } finally {
       computingMsg.style.display = 'none';
       isComputing = false;
@@ -2219,6 +2224,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     main3DCanvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
+    // Reset canvas context state to ensure no transparency
+    ctx.globalAlpha = 1.0;
+    ctx.globalCompositeOperation = 'source-over';
+
     // White background
     ctx.fillStyle = '#fafafa';
     ctx.fillRect(0, 0, rect.width, rect.height);
@@ -2410,76 +2419,112 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       edges.push({ from: `${s},${-(k-s)}`, to: `${s+1},${-(k-s-1)}`, type: 'diagonal' });
     }
 
-    // Sort edges by average depth (back to front)
-    edges.sort((a, b) => {
-      const pa = pointMap.get(a.from), pb = pointMap.get(b.from);
-      const pa2 = pointMap.get(a.to), pb2 = pointMap.get(b.to);
-      if (!pa || !pa2 || !pb || !pb2) return 0;
-      const depthA = (pa.depth + pa2.depth) / 2;
-      const depthB = (pb.depth + pb2.depth) / 2;
-      return depthA - depthB;  // Back to front
-    });
-
     // Get vertex/edge size controls
     const vertexSizeControl = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
     const edgeThicknessControl = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
 
-    // Draw edges (darker colors for white background)
+    // ========== BUILD FACES (quadrilaterals and triangles) ==========
+    const faces = [];
+
+    // Interior quadrilateral faces: (i,j), (i+1,j), (i+1,j+1), (i,j+1)
+    // Include all faces where all 4 corners exist in pointMap
+    for (let i = -k; i < k; i++) {
+      for (let j = -k; j < k; j++) {
+        const keys = [
+          `${i},${j}`, `${i+1},${j}`, `${i+1},${j+1}`, `${i},${j+1}`
+        ];
+        const corners = keys.map(key => pointMap.get(key));
+        if (corners.every(c => c !== undefined)) {
+          faces.push({ corners, keys, type: 'quad' });
+        }
+      }
+    }
+
+    // ========== BUILD ALL DRAWABLE OBJECTS WITH DEPTH ==========
+    const drawables = [];
+
+    // Add faces with normals
+    for (const face of faces) {
+      const corners = face.corners;
+      const avgDepth = corners.reduce((sum, p) => sum + p.depth, 0) / corners.length;
+
+      // Compute normal for lighting
+      const p0 = corners[0], p1 = corners[1], p2 = corners[2];
+      const e1 = { x: p1.x - p0.x, y: p1.y - p0.y, z: p1.z - p0.z };
+      const e2 = { x: p2.x - p0.x, y: p2.y - p0.y, z: p2.z - p0.z };
+      const normal = {
+        x: e1.y * e2.z - e1.z * e2.y,
+        y: e1.z * e2.x - e1.x * e2.z,
+        z: e1.x * e2.y - e1.y * e2.x
+      };
+      const normLen = Math.sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z) || 1;
+      normal.x /= normLen; normal.y /= normLen; normal.z /= normLen;
+
+      drawables.push({ type: 'face', corners, normal, depth: avgDepth });
+    }
+
+    // Add edges
     for (const edge of edges) {
       const p1 = pointMap.get(edge.from);
       const p2 = pointMap.get(edge.to);
       if (!p1 || !p2) continue;
-
-      // Depth-based opacity (further = lighter/more transparent)
       const avgDepth = (p1.depth + p2.depth) / 2;
-      const depthFactor = Math.max(0.3, Math.min(1, 0.6 + avgDepth * 0.5));
-
-      // All edges in dark gray/black with depth-based opacity
-      ctx.strokeStyle = `rgba(60, 60, 60, ${0.3 + depthFactor * 0.5})`;
-      ctx.lineWidth = Math.max(0.5, edgeThicknessControl * depthFactor);
-      ctx.beginPath();
-      ctx.moveTo(p1.screenX, p1.screenY);
-      ctx.lineTo(p2.screenX, p2.screenY);
-      ctx.stroke();
+      drawables.push({ type: 'edge', p1, p2, depth: avgDepth });
     }
 
-    // Sort vertices by depth (back to front)
-    projected.sort((a, b) => a.depth - b.depth);
-
-    // Draw vertices
+    // Add vertices
     for (const p of projected) {
-      const depthFactor = Math.max(0.4, Math.min(1, 0.6 + p.depth * 0.5));
-      const radius = Math.max(1.5, vertexSizeControl * (0.6 + depthFactor * 0.4));
-
-      // Color based on height (z value): blue (low) -> green (mid) -> red (high)
-      const heightNorm = (p.z - minZ) / rangeZ;  // 0 to 1
-      let r, g, b;
-      if (heightNorm < 0.5) {
-        // Blue to green
-        const t = heightNorm * 2;
-        r = Math.floor(30 * t);
-        g = Math.floor(100 + 155 * t);
-        b = Math.floor(200 - 100 * t);
-      } else {
-        // Green to red
-        const t = (heightNorm - 0.5) * 2;
-        r = Math.floor(30 + 200 * t);
-        g = Math.floor(255 - 155 * t);
-        b = Math.floor(100 - 80 * t);
-      }
-
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.7 + depthFactor * 0.3})`;
-      ctx.beginPath();
-      ctx.arc(p.screenX, p.screenY, radius, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Add thin black outline for better visibility
-      ctx.strokeStyle = `rgba(0, 0, 0, ${0.2 + depthFactor * 0.3})`;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
+      drawables.push({ type: 'vertex', p, depth: p.depth });
     }
 
-    // Draw axes indicator in corner (darker colors for white bg)
+    // Sort all drawables back to front (smaller depth = further from camera = draw first)
+    drawables.sort((a, b) => a.depth - b.depth);
+
+    // Light direction (from upper-right-front)
+    const lightDir = { x: 0.4, y: 0.5, z: 0.7 };
+    const lightLen = Math.sqrt(lightDir.x*lightDir.x + lightDir.y*lightDir.y + lightDir.z*lightDir.z);
+    lightDir.x /= lightLen; lightDir.y /= lightLen; lightDir.z /= lightLen;
+
+    // ========== DRAW ALL OBJECTS IN DEPTH ORDER ==========
+    for (const obj of drawables) {
+      if (obj.type === 'face') {
+        const corners = obj.corners;
+        const dot = obj.normal.x * lightDir.x + obj.normal.y * lightDir.y + obj.normal.z * lightDir.z;
+        const facing = Math.abs(obj.normal.z);
+        const specular = Math.pow(Math.max(0, dot), 8);
+
+        const baseGray = 140 + dot * 60;
+        const highlight = specular * 100;
+        const fresnel = (1 - facing) * 30;
+
+        const r = Math.min(255, Math.max(60, Math.floor(baseGray + highlight + fresnel)));
+        const g = Math.min(255, Math.max(60, Math.floor(baseGray + highlight + fresnel)));
+        const b = Math.min(255, Math.max(70, Math.floor(baseGray + highlight * 1.1 + fresnel * 1.2)));
+
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.beginPath();
+        ctx.moveTo(corners[0].screenX, corners[0].screenY);
+        for (let i = 1; i < corners.length; i++) {
+          ctx.lineTo(corners[i].screenX, corners[i].screenY);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (obj.type === 'edge') {
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = edgeThicknessControl * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(obj.p1.screenX, obj.p1.screenY);
+        ctx.lineTo(obj.p2.screenX, obj.p2.screenY);
+        ctx.stroke();
+      } else if (obj.type === 'vertex') {
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(obj.p.screenX, obj.p.screenY, vertexSizeControl, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    // Draw axes indicator in corner
     const axisLen = 40;
     const axisOrigin = { x: 60, y: rect.height - 60 };
     const axes = [
@@ -2490,7 +2535,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     for (const axis of axes) {
       const [dx, dy, dz] = axis.dir;
-      // Apply same rotation
       const rz_x = dx * cosZ - dy * sinZ;
       const rz_y = dx * sinZ + dy * cosZ;
       const rz_z = dz;
@@ -2504,14 +2548,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       ctx.lineTo(axisOrigin.x + rx_x * axisLen, axisOrigin.y - rx_y * axisLen);
       ctx.stroke();
 
-      // Label
       ctx.fillStyle = axis.color;
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(axis.label, axisOrigin.x + rx_x * (axisLen + 12), axisOrigin.y - rx_y * (axisLen + 12));
     }
 
-    // Instructions (dark text for white background)
+    // Instructions
     ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
@@ -2897,7 +2940,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('main-2d-edge-thickness').addEventListener('input', renderMain2DTemb);
 
   // 2D/3D toggle button
-  let mainViewIs3D = false;
   document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
     mainViewIs3D = !mainViewIs3D;
     const btn = document.getElementById('toggle-2d-3d-btn');

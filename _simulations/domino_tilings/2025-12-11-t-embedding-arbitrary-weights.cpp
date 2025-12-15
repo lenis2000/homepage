@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -I/opt/homebrew/opt/boost/include -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -26,12 +26,9 @@
 #include <set>
 #include <algorithm>
 
-// Boost multiprecision for 100-digit precision
-#include <boost/multiprecision/cpp_bin_float.hpp>
-
-// Define 200-digit precision types (using cpp_bin_float)
-using mp_real = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<200>>;
-using mp_complex = std::complex<mp_real>;
+// Use standard double precision
+using mp_real = double;
+using mp_complex = std::complex<double>;
 
 // =============================================================================
 // GLOBAL STATE
@@ -1554,7 +1551,7 @@ static void aztecStep9_DiagonalGauge() {
                 // Work in LOG SPACE: divide becomes subtract
                 mp_real logDiagWeight = g_aztecEdges[diagEdgeIdx].logWeight;
                 // Skip if already ~1 (log(1) = 0)
-                if (abs(logDiagWeight) > mp_real("1e-10")) {
+                if (std::abs(logDiagWeight) > 1e-10) {
                     // Gauge transform: divide all edges at this vertex by diagWeight
                     // In log space: logW -= logDiagWeight
                     for (const auto& [_, edgeIdx] : adj[neighborIdx]) {
