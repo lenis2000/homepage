@@ -24,11 +24,19 @@
 #include <cstdio>
 #include <map>
 #include <set>
+#include <unordered_map>
 #include <algorithm>
 
 // Use standard double precision
 using mp_real = double;
 using mp_complex = std::complex<double>;
+
+// Hash function for std::pair<int,int> to use with unordered_map
+struct PairHash {
+    size_t operator()(const std::pair<int,int>& p) const {
+        return std::hash<int64_t>()((int64_t)p.first << 32 | (uint32_t)p.second);
+    }
+};
 
 // =============================================================================
 // GLOBAL STATE
@@ -1874,7 +1882,8 @@ static void aztecStep10_UrbanRenewal() {
     }
 
     // Build adjacency list: vertex index -> list of (neighbor index, edge index)
-    std::map<int, std::vector<std::pair<int, int>>> adj;
+    // Using vector instead of map for O(1) access
+    std::vector<std::vector<std::pair<int, int>>> adj(g_aztecVertices.size());
     for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
         int v1 = g_aztecEdges[eIdx].v1;
         int v2 = g_aztecEdges[eIdx].v2;
