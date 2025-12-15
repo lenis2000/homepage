@@ -456,6 +456,27 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </details>
 
+<details id="random-sample-section" style="margin-top: 15px;" open>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;">Random Domino Tiling Sample (EKLP Shuffling)</summary>
+  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+    <!-- Controls row -->
+    <div style="margin-bottom: 10px; text-align: center;">
+      <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="100" style="width: 60px;"></label>
+      <button id="sample-btn" style="margin-left: 15px; padding: 5px 15px;">Random Sample by Shuffling</button>
+      <span id="sample-time" style="margin-left: 10px; color: #666;"></span>
+    </div>
+    <!-- Canvas with floating controls -->
+    <div id="sample-canvas-wrapper" style="position: relative;">
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px;">
+        <button id="sample-zoom-out-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">−</button>
+        <button id="sample-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
+        <button id="sample-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
+      </div>
+      <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+    </div>
+  </div>
+</details>
+
 <details id="stepwise-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
   <div id="stepwise-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
