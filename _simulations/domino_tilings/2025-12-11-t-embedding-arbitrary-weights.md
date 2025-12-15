@@ -2719,7 +2719,7 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Define surface colors
     const reColor = { r: preset.baseColor.r, g: preset.baseColor.g, b: preset.baseColor.b };
-    const imColor = (showRe && showIm) ? { r: 100, g: 150, b: 255 } : reColor;  // Blue tint only when both shown
+    const imColor = { r: 100, g: 150, b: 255 };  // Im origami always blue tint
 
     // Build 3D points for each surface
     const surfaceData = [];
