@@ -4659,53 +4659,63 @@ Part of this research was performed while the author was visiting the Institute 
     const resultsDiv = document.getElementById('benchmark-results');
     const fitDiv = document.getElementById('benchmark-fit');
 
+    if (!wasmReady) {
+      status.textContent = 'WASM not ready yet. Please wait...';
+      return;
+    }
+
     btn.disabled = true;
     resultsDiv.style.display = 'block';
 
     const results = [];
 
-    for (let n = 10; n <= 35; n++) {
-      status.textContent = `Running n=${n}...`;
-      await delay(50);  // Yield to UI
+    try {
+      for (let n = 10; n <= 35; n++) {
+        status.textContent = `Running n=${n}...`;
+        await delay(50);  // Yield to UI
 
-      // Set n and run full computation
-      document.getElementById('n-input').value = n;
-      setN(n);
+        // Set n and run full computation
+        document.getElementById('n-input').value = n;
+        setN(n);
 
-      // Generate graph
-      generateAztecGraph(n);
-      randomizeAztecWeights();
+        // Generate graph
+        generateAztecGraph(n);
+        randomizeAztecWeights();
 
-      // Run all reduction steps
-      while (canAztecStepDown()) {
-        aztecGraphStepDown();
+        // Run all reduction steps
+        while (canAztecStepDown()) {
+          aztecGraphStepDown();
+        }
+        while (canAztecStepUp()) {
+          aztecGraphStepUp();
+        }
+
+        // Get compute time
+        const timeMs = getComputeTimeMs();
+        results.push({ n, time: timeMs });
+
+        // Update plot
+        const alpha = fitPowerLaw(results);
+        plotBenchmarkResults(results, alpha);
+        fitDiv.textContent = results.length >= 3
+          ? `Fit: t(n) ~ n^${alpha.toFixed(2)} (${results.length} points)`
+          : 'Collecting data...';
       }
-      while (canAztecStepUp()) {
-        aztecGraphStepUp();
-      }
 
-      // Get compute time
-      const timeMs = getComputeTimeMs();
-      results.push({ n, time: timeMs });
-
-      // Update plot
+      // Final fit
       const alpha = fitPowerLaw(results);
       plotBenchmarkResults(results, alpha);
-      fitDiv.textContent = results.length >= 3
-        ? `Fit: t(n) ~ n^${alpha.toFixed(2)} (${results.length} points)`
-        : 'Collecting data...';
+      fitDiv.textContent = `Fit: t(n) ~ n^${alpha.toFixed(2)}`;
+      status.textContent = 'Done!';
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+      console.error('Benchmark error:', err);
     }
 
-    // Final fit
-    const alpha = fitPowerLaw(results);
-    plotBenchmarkResults(results, alpha);
-    fitDiv.textContent = `Fit: t(n) ~ n^${alpha.toFixed(2)}`;
-    status.textContent = 'Done!';
     btn.disabled = false;
 
     // Log results to console
     console.log('Benchmark results:', results);
-    console.log('Power law exponent alpha:', alpha);
   }
 
   document.getElementById('benchmark-btn').addEventListener('click', runBenchmark);
