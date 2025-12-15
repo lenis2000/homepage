@@ -461,7 +461,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Controls row -->
     <div style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
-      <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="100" style="width: 60px;"></label>
+      <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="300" style="width: 60px;"></label>
       <label>Border: <input type="number" id="sample-border-input" value="0.1" min="0" max="10" step="0.1" style="width: 50px;"></label>
       <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
       <span id="sample-time" style="color: #666;"></span>
@@ -2309,9 +2309,20 @@ Part of this research was performed while the author was visiting the Institute 
   async function generateRandomSample() {
     if (!shufflingWasmReady) return;
 
-    const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+    let N = parseInt(document.getElementById('sample-N-input').value) || 6;
     const timeSpan = document.getElementById('sample-time');
-    timeSpan.textContent = 'Sampling...';
+
+    // Hard limit (memory constraint: algorithm uses O(N³) memory)
+    if (N > 300) {
+      N = 300;
+      document.getElementById('sample-N-input').value = 300;
+      timeSpan.textContent = 'N capped to 300 (memory limit). Sampling...';
+    } else if (N > 200) {
+      // Warning for large N
+      timeSpan.textContent = 'Sampling (large N, may be slow)...';
+    } else {
+      timeSpan.textContent = 'Sampling...';
+    }
 
     const startTime = performance.now();
 
@@ -2460,6 +2471,11 @@ Part of this research was performed while the author was visiting the Institute 
     // Border width input - re-render on change
     document.getElementById('sample-border-input').addEventListener('input', () => {
       renderSample();
+    });
+
+    // Clear status message when N input changes
+    document.getElementById('sample-N-input').addEventListener('input', () => {
+      document.getElementById('sample-time').textContent = '';
     });
 
     // Pan with mouse drag

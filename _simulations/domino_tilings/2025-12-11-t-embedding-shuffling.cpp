@@ -402,11 +402,12 @@ EMSCRIPTEN_KEEPALIVE
 char* simulateAztecWithWeightMatrix(int n, double* weights) {
     try {
         progressCounter = 0;
-        int dim = 2 * n;
 
-        if (dim > 1000) {
-            throw std::runtime_error("Input size too large");
-        }
+        // Hard limit: N <= 300 (enforced in JS, but cap here as safety)
+        // Memory constraint: algorithm uses O(N³) memory
+        if (n > 300) n = 300;
+
+        int dim = 2 * n;
 
         // Copy weights into MatrixDouble
         MatrixDouble A1a(dim, dim, 1.0);
