@@ -2088,11 +2088,16 @@ static void aztecStep10_UrbanRenewal() {
 
     // 4. Commit Changes (Batched Removal/Update)
 
-    // Remove edges (reverse order)
-    std::vector<int> edgesToRemoveVec(edgesToRemove.begin(), edgesToRemove.end());
-    std::sort(edgesToRemoveVec.rbegin(), edgesToRemoveVec.rend());
-    for (int idx : edgesToRemoveVec) {
-        g_aztecEdges.erase(g_aztecEdges.begin() + idx);
+    // Remove edges (filter idiom - O(E) instead of O(E²))
+    {
+        std::vector<AztecEdge> keptEdges;
+        keptEdges.reserve(g_aztecEdges.size() - edgesToRemove.size());
+        for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+            if (edgesToRemove.find((int)i) == edgesToRemove.end()) {
+                keptEdges.push_back(g_aztecEdges[i]);
+            }
+        }
+        g_aztecEdges = std::move(keptEdges);
     }
 
     // Remap vertices (Compact array)
