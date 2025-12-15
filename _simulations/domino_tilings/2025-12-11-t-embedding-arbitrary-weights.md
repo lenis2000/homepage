@@ -1979,6 +1979,7 @@ Part of this research was performed while the author was visiting the Institute 
   let shufflingModule = null;
   let simulateAztecWithWeightMatrix = null;
   let simulateAztecWithEdgeWeights = null;
+  let simulateAztecGammaDirect = null;
   let shufflingFreeString = null;
   let shufflingGetProgress = null;
   let sampleDominoes = [];
@@ -2035,7 +2036,7 @@ Part of this research was performed while the author was visiting the Institute 
       ['number', 'number'], {async: true});
     simulateAztecWithEdgeWeights = shufflingModule.cwrap('simulateAztecWithEdgeWeights', 'number',
       ['number', 'number', 'number'], {async: true});
-    simulateAztecGammaEdges = shufflingModule.cwrap('simulateAztecGammaEdges', 'number',
+    simulateAztecGammaDirect = shufflingModule.cwrap('simulateAztecGammaDirect', 'number',
       ['number', 'number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
@@ -2321,32 +2322,42 @@ Part of this research was performed while the author was visiting the Institute 
     const startTime = performance.now();
 
     try {
-      // Generate edge weights
-      const { hEdge, vEdge } = generateEdgeWeights(N);
-      const dim = 2 * N;
+      const preset = document.getElementById('weight-preset-select').value;
+      let resultPtr;
 
-      // Allocate WASM memory for edge weights
-      // hEdge: (dim+1) rows x dim cols
-      // vEdge: (dim+1) rows x (dim+1) cols
-      const hEdgeSize = (dim + 1) * dim;
-      const vEdgeSize = (dim + 1) * (dim + 1);
+      // For gamma preset, use the direct ab_gamma function (Duits-Van Peski model)
+      if (preset === 'random-gamma') {
+        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
+        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+        resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
+      } else {
+        // For other presets, generate edge weights and compute cross-ratios in C++
+        const { hEdge, vEdge } = generateEdgeWeights(N);
+        const dim = 2 * N;
 
-      const hPtr = shufflingModule._malloc(hEdgeSize * 8);
-      const vPtr = shufflingModule._malloc(vEdgeSize * 8);
+        // Allocate WASM memory for edge weights
+        // hEdge: (dim+1) rows x dim cols
+        // vEdge: (dim+1) rows x (dim+1) cols
+        const hEdgeSize = (dim + 1) * dim;
+        const vEdgeSize = (dim + 1) * (dim + 1);
 
-      for (let i = 0; i < hEdgeSize; i++) {
-        shufflingModule.setValue(hPtr + i * 8, hEdge[i], 'double');
+        const hPtr = shufflingModule._malloc(hEdgeSize * 8);
+        const vPtr = shufflingModule._malloc(vEdgeSize * 8);
+
+        for (let i = 0; i < hEdgeSize; i++) {
+          shufflingModule.setValue(hPtr + i * 8, hEdge[i], 'double');
+        }
+        for (let i = 0; i < vEdgeSize; i++) {
+          shufflingModule.setValue(vPtr + i * 8, vEdge[i], 'double');
+        }
+
+        // Call shuffling function with edge weights (cross-ratios computed in C++)
+        resultPtr = await simulateAztecWithEdgeWeights(N, hPtr, vPtr);
+
+        // Free edge weight memory
+        shufflingModule._free(hPtr);
+        shufflingModule._free(vPtr);
       }
-      for (let i = 0; i < vEdgeSize; i++) {
-        shufflingModule.setValue(vPtr + i * 8, vEdge[i], 'double');
-      }
-
-      // Call shuffling function with edge weights (cross-ratios computed in C++)
-      const resultPtr = await simulateAztecWithEdgeWeights(N, hPtr, vPtr);
-
-      // Free edge weight memory
-      shufflingModule._free(hPtr);
-      shufflingModule._free(vPtr);
 
       // Parse result
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);

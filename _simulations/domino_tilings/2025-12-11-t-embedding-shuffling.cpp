@@ -4,7 +4,7 @@
   Weighted EKLP shuffling for T-embedding page.
   Based on 2025-11-18-double-dimer-gamma.cpp (the correct slim functions).
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecWithEdgeWeights','_simulateAztecGammaEdges','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecWithEdgeWeights','_simulateAztecGammaDirect','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
@@ -256,68 +256,31 @@ MatrixInt aztecgenslim(const vector<MatrixDouble>& x0) {
     return a1;
 }
 
-// Compute face weight matrix from edge weights
-// For T-embedding convention: black faces have edges α (bottom), β (right), γ (left), 1 (top)
-// Cross-ratio = (bottom * top) / (left * right) = α / (γ * β) = α / (βγ)
-// But the exact formula depends on conventions - this implements the standard one
-MatrixDouble computeFaceWeightsFromEdges(int n,
-    const std::function<double(int,int,char)>& getEdgeWeight) {
-    // getEdgeWeight(i, j, dir) returns the edge weight at face (i,j) in direction dir
-    // dir: 'N'=north/top, 'E'=east/right, 'S'=south/bottom, 'W'=west/left
-
-    int dim = 2 * n;
-    MatrixDouble faceWeights(dim, dim, 1.0);
-
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            // Only non-trivial weights on even rows (matching ab_gamma pattern)
-            if (i % 2 == 0) {
-                double wN = getEdgeWeight(i, j, 'N');
-                double wE = getEdgeWeight(i, j, 'E');
-                double wS = getEdgeWeight(i, j, 'S');
-                double wW = getEdgeWeight(i, j, 'W');
-
-                // Cross-ratio: (wS * wN) / (wW * wE)
-                // With wN = 1 typically: wS / (wW * wE)
-                double denom = wW * wE;
-                if (denom < 1e-12) denom = 1e-12;
-                faceWeights.at(i, j) = (wS * wN) / denom;
-            }
-        }
-    }
-
-    return faceWeights;
-}
-
-// Simple gamma-distributed edge weights matching T-embedding gamma preset
-// α-edges get Gamma(alpha), β-edges get Gamma(beta), others get 1
-MatrixDouble computeGammaFaceWeights(int n, double alpha, double beta) {
+// ab_gamma: generates face weight matrix with Gamma distribution for EKLP shuffling
+// This is the correct pattern from the Duits-Van Peski "Gamma-disordered Aztec diamond"
+// The face weights matrix for EKLP has:
+// - Even rows (i%2==0): even cols get Gamma(beta), odd cols get Gamma(alpha)
+// - Odd rows: all 1.0
+MatrixDouble ab_gamma(int n, double alpha, double beta) {
     std::gamma_distribution<> gamma_a(alpha, 1.0);
     std::gamma_distribution<> gamma_b(beta, 1.0);
 
     int dim = 2 * n;
-    MatrixDouble faceWeights(dim, dim, 1.0);
-
-    // For each face, compute cross-ratio from edge weights
-    // T-embedding pattern: black faces have α (S), β (E), γ (W), 1 (N)
-    // For gamma preset: α-edges ~ Gamma(alpha), β-edges ~ Gamma(beta), γ=1, top=1
+    MatrixDouble A(dim, dim, 1.0);  // Initialize all to 1.0
 
     for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if (i % 2 == 0) {
-                // This face has edge weights
-                double alpha_edge = gamma_a(rng);  // α edge (bottom/south)
-                double beta_edge = gamma_b(rng);   // β edge (right/east)
-                double gamma_edge = 1.0;           // γ edge (left/west)
-                double one_edge = 1.0;             // 1 edge (top/north)
-
-                // Cross-ratio = (α * 1) / (γ * β) = α / (γβ) = α / β (since γ=1)
-                faceWeights.at(i, j) = alpha_edge / beta_edge;
+        if (i % 2 == 0) {  // Even rows only
+            for (int j = 0; j < dim; j++) {
+                if (j % 2 == 0) {
+                    A.at(i, j) = gamma_b(rng);  // beta
+                } else {
+                    A.at(i, j) = gamma_a(rng);  // alpha
+                }
             }
         }
+        // Odd rows stay 1.0 (already initialized)
     }
-
-    return faceWeights;
+    return A;
 }
 
 // Compute face weights from edge weights using cross-ratio formulas
@@ -350,19 +313,17 @@ MatrixDouble computeCrossRatios(int dim, double* hEdge, double* vEdge) {
 
 extern "C" {
 
-// Simulate with gamma-distributed edge weights converted to face weights via cross-ratio
+// Simulate with Gamma weights using the correct ab_gamma pattern (Duits-Van Peski)
 EMSCRIPTEN_KEEPALIVE
-char* simulateAztecGammaEdges(int n, double alpha, double beta) {
+char* simulateAztecGammaDirect(int n, double alpha, double beta) {
     try {
         progressCounter = 0;
-        int dim = 2 * n;
 
-        if (dim > 1000) {
-            throw std::runtime_error("Input size too large");
-        }
+        // Hard limit: N <= 300
+        if (n > 300) n = 300;
 
-        // Compute face weights from gamma-distributed edge weights
-        MatrixDouble A1a = computeGammaFaceWeights(n, alpha, beta);
+        // Generate face weights using ab_gamma pattern
+        MatrixDouble A1a = ab_gamma(n, alpha, beta);
 
         emscripten_sleep(0);
 
