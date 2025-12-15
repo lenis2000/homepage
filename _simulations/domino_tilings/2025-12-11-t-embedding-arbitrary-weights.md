@@ -421,6 +421,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 <p style="font-size: 0.9em; color: #555; margin-top: 15px;">
 <b>Acknowledgement:</b> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
 I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
+Part of this research was performed while the author was visiting the Institute for Pure and Applied Mathematics (IPAM), which is supported by the National Science Foundation (Grant No. DMS-1925919).
 </p>
 
 <!-- Benchmark Section -->
