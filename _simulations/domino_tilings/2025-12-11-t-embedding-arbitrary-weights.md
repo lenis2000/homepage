@@ -458,7 +458,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 </details>
 
 <details id="random-sample-section" style="margin-top: 15px;" open>
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;">Random Domino Tiling Sample (EKLP Shuffling)</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;">Random Domino Tiling</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Top controls row -->
     <div style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
@@ -1979,9 +1979,9 @@ Part of this research was performed while the author was visiting the Institute 
   let shufflingWasmReady = false;
   let shufflingModule = null;
   let simulateAztecWithWeightMatrix = null;
-  let simulateAztecWithEdgeWeights = null;
   let simulateAztecGammaDirect = null;
   let simulateAztecPeriodicDirect = null;
+  let simulateAztecIIDDirect = null;
   let shufflingFreeString = null;
   let shufflingGetProgress = null;
   let sampleDominoes = [];
@@ -2036,12 +2036,12 @@ Part of this research was performed while the author was visiting the Institute 
   function initShufflingFunctions() {
     simulateAztecWithWeightMatrix = shufflingModule.cwrap('simulateAztecWithWeightMatrix', 'number',
       ['number', 'number'], {async: true});
-    simulateAztecWithEdgeWeights = shufflingModule.cwrap('simulateAztecWithEdgeWeights', 'number',
-      ['number', 'number', 'number'], {async: true});
     simulateAztecGammaDirect = shufflingModule.cwrap('simulateAztecGammaDirect', 'number',
       ['number', 'number', 'number'], {async: true});
     simulateAztecPeriodicDirect = shufflingModule.cwrap('simulateAztecPeriodicDirect', 'number',
       ['number', 'number', 'number', 'number'], {async: true});
+    simulateAztecIIDDirect = shufflingModule.cwrap('simulateAztecIIDDirect', 'number',
+      ['number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
 
@@ -2050,102 +2050,6 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Generate initial sample with default weights
     generateRandomSample();
-  }
-
-  // Generate edge weights for C++ cross-ratio computation
-  // Returns {hEdge, vEdge} as flat Float64Arrays
-  function generateEdgeWeights(N) {
-    const dim = 2 * N;
-    const preset = document.getElementById('weight-preset-select').value;
-    const seed = getSampleSeed();
-    const rng = createSeededRNG(seed);
-
-    // hEdge: (dim+1) rows x dim cols, row-major
-    // vEdge: (dim+1) rows x (dim+1) cols, row-major
-    const hEdge = new Float64Array((dim + 1) * dim);
-    const vEdge = new Float64Array((dim + 1) * (dim + 1));
-
-    // Initialize all edges to 1
-    hEdge.fill(1.0);
-    vEdge.fill(1.0);
-
-    if (preset === 'all-ones') {
-      return { hEdge, vEdge };
-    }
-
-    // Helper to access edge arrays
-    const setH = (i, j, val) => { hEdge[i * dim + j] = val; };
-    const setV = (i, j, val) => { vEdge[i * (dim + 1) + j] = val; };
-    const getH = (i, j) => hEdge[i * dim + j];
-    const getV = (i, j) => vEdge[i * (dim + 1) + j];
-
-    if (preset === 'periodic') {
-      const k = parseInt(document.getElementById('periodic-k').value) || 2;
-      const l = parseInt(document.getElementById('periodic-l').value) || 2;
-      const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
-
-      // Horizontal edges
-      for (let i = 0; i <= dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          const pi = ((i % k) + k) % k;
-          const pj = ((j % l) + l) % l;
-          setH(i, j, periodicWeights.gamma[pi][pj]);
-        }
-      }
-      // Vertical edges
-      for (let i = 0; i <= dim; i++) {
-        for (let j = 0; j <= dim; j++) {
-          const pi = ((i % k) + k) % k;
-          const pj = ((j % l) + l) % l;
-          if ((i + j) % 2 === 0) {
-            setV(i, j, periodicWeights.alpha[pi][pj]);
-          } else {
-            setV(i, j, periodicWeights.beta[pi][pj]);
-          }
-        }
-      }
-    } else if (preset === 'random-iid') {
-      const distType = document.getElementById('iid-distribution-select').value;
-      for (let i = 0; i <= dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          setH(i, j, generateIIDWeight(distType, rng));
-        }
-      }
-      for (let i = 0; i <= dim; i++) {
-        for (let j = 0; j <= dim; j++) {
-          setV(i, j, generateIIDWeight(distType, rng));
-        }
-      }
-    } else if (preset === 'random-layered') {
-      const regime = getLayeredRegime();
-      for (let i = 0; i <= dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          setH(i, j, generateLayeredWeight(regime, i + j, N, rng));
-        }
-      }
-      for (let i = 0; i <= dim; i++) {
-        for (let j = 0; j <= dim; j++) {
-          setV(i, j, generateLayeredWeight(regime, i + j, N, rng));
-        }
-      }
-    } else if (preset === 'random-gamma') {
-      const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
-      const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-
-      // For each black face (i+j even), set bottom=α and right=β
-      for (let i = 0; i < dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          if ((i + j) % 2 === 0) {
-            const a = gammaRandom(alpha, 1, rng);
-            const b = gammaRandom(beta, 1, rng);
-            setH(i, j, a);       // bottom edge
-            setV(i, j + 1, b);   // right edge
-          }
-        }
-      }
-    }
-
-    return { hEdge, vEdge };
   }
 
   // Get periodic edge weights from UI (alpha, beta, gamma tables)
@@ -2358,33 +2262,54 @@ Part of this research was performed while the author was visiting the Institute 
         resultPtr = await simulateAztecPeriodicDirect(N, k, l, weightsPtr);
 
         shufflingModule._free(weightsPtr);
-      } else {
-        // For other presets, generate edge weights and compute cross-ratios in C++
-        const { hEdge, vEdge } = generateEdgeWeights(N);
+      } else if (preset === 'all-ones') {
+        // Uniform weights: use gamma with alpha=beta=1 (gives Gamma(1)=Exp(1) which averages to 1)
+        // Or just use IID with all 1s
         const dim = 2 * N;
+        const numEvenRowWeights = N * dim;  // N even rows, each with dim columns
+        const edgeWeights = new Float64Array(numEvenRowWeights);
+        edgeWeights.fill(1.0);
 
-        // Allocate WASM memory for edge weights
-        // hEdge: (dim+1) rows x dim cols
-        // vEdge: (dim+1) rows x (dim+1) cols
-        const hEdgeSize = (dim + 1) * dim;
-        const vEdgeSize = (dim + 1) * (dim + 1);
-
-        const hPtr = shufflingModule._malloc(hEdgeSize * 8);
-        const vPtr = shufflingModule._malloc(vEdgeSize * 8);
-
-        for (let i = 0; i < hEdgeSize; i++) {
-          shufflingModule.setValue(hPtr + i * 8, hEdge[i], 'double');
+        const weightsPtr = shufflingModule._malloc(numEvenRowWeights * 8);
+        for (let i = 0; i < numEvenRowWeights; i++) {
+          shufflingModule.setValue(weightsPtr + i * 8, 1.0, 'double');
         }
-        for (let i = 0; i < vEdgeSize; i++) {
-          shufflingModule.setValue(vPtr + i * 8, vEdge[i], 'double');
+        resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        shufflingModule._free(weightsPtr);
+
+      } else if (preset === 'random-iid' || preset === 'random-layered') {
+        // Generate edge weights in ab_gamma format:
+        // - Even rows (i % 2 == 0): random edge weights
+        // - Odd rows: all 1.0 (handled by C++)
+        const dim = 2 * N;
+        const seed = getSampleSeed();
+        const rng = createSeededRNG(seed);
+
+        // Only pass weights for even rows - C++ handles the pattern
+        const numEvenRowWeights = N * dim;  // N even rows (0, 2, 4, ..., 2N-2), each with dim columns
+        const edgeWeights = new Float64Array(numEvenRowWeights);
+
+        if (preset === 'random-iid') {
+          // IID: each weight is independent random
+          for (let i = 0; i < numEvenRowWeights; i++) {
+            edgeWeights[i] = 0.5 + rng() * 1.5;  // Random in [0.5, 2.0]
+          }
+        } else {
+          // Layered: weights depend on row only
+          for (let row = 0; row < N; row++) {
+            const rowWeight = 0.5 + rng() * 1.5;
+            for (let j = 0; j < dim; j++) {
+              edgeWeights[row * dim + j] = rowWeight;
+            }
+          }
         }
 
-        // Call shuffling function with edge weights (cross-ratios computed in C++)
-        resultPtr = await simulateAztecWithEdgeWeights(N, hPtr, vPtr);
-
-        // Free edge weight memory
-        shufflingModule._free(hPtr);
-        shufflingModule._free(vPtr);
+        const weightsPtr = shufflingModule._malloc(numEvenRowWeights * 8);
+        for (let i = 0; i < numEvenRowWeights; i++) {
+          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
+        }
+        resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        shufflingModule._free(weightsPtr);
       }
 
       // Parse result
