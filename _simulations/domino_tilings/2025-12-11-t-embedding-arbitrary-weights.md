@@ -133,8 +133,22 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 
 <p>The γ weights are simply the face weights at interior positions, stored during the reduction process.</p>
 
+<h5>3D Visualization: Origami Map</h5>
+<p>The <strong>origami map</strong> $\mathcal{O}$ is a companion to the T-embedding. Together, $\mathcal{T}$ and $\mathcal{O}$ define a <strong>t-surface</strong>
+$\bigl(\mathrm{Re}(\mathcal{T}), \mathrm{Im}(\mathcal{T}), \mathrm{Re}(\mathcal{O}), \mathrm{Im}(\mathcal{O})\bigr)$
+in the Minkowski space $\mathbb{R}^{2,2}$. For uniform weights, the surface lies in $\mathbb{R}^{2,1}$ [CLR2]; for periodic weights with gas regions, it is genuinely four-dimensional and converges to a <em>space-like maximal surface</em> [BNR].
+The scaling limit for arbitrary (non-periodic) weights remains an open question.</p>
+
+<p>The <strong>3D view</strong> shows a projection: the T-embedding as the $(x,y)$ base and $\mathrm{Re}(\mathcal{O})$ as height $z$.</p>
+
+<p><strong>Im(Origami), matched:</strong> The imaginary part $\mathrm{Im}(\mathcal{O})$ gives a second height function, but with different boundary conditions than $\mathrm{Re}(\mathcal{O})$.
+To compare them, we apply a linear transformation $z = \alpha \cdot \mathrm{Im}(\mathcal{O}) + \beta$
+where $\alpha, \beta$ are chosen via least squares to match $\mathrm{Re}(\mathcal{O})$ at the four external corners.
+This "matched" Im surface can be overlaid with Re to visualize how the two components relate.</p>
+
 <h5>References</h5>
 <ul style="font-size: 13px;">
+  <li><strong>[BNR]</strong> T. Berggren, M. Nicoletti, M. Russkikh. <em>Perfect t-embeddings of doubly periodic Aztec diamonds.</em> <a href="https://arxiv.org/abs/2508.04938">arXiv:2508.04938</a> (2025).</li>
   <li><strong>[CLR2]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Bipartite dimer model: perfect t-embeddings and Lorentz-minimal surfaces.</em> <a href="https://arxiv.org/abs/2109.06272">arXiv:2109.06272</a> (2021).</li>
   <li><strong>[CLR1]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Dimer model and holomorphic functions on t-embeddings of planar graphs.</em> Proc. Lond. Math. Soc. 126(5):1656–1739 (2023). <a href="https://arxiv.org/abs/2001.11871">arXiv:2001.11871</a>.</li>
   <li><strong>[KLRR]</strong> R. Kenyon, W. Y. Lam, S. Ramassamy, M. Russkikh. <em>Dimers and circle patterns.</em> Ann. Sci. Éc. Norm. Supér. 55(3):863–901 (2022). <a href="https://arxiv.org/abs/1810.05616">arXiv:1810.05616</a>.</li>
