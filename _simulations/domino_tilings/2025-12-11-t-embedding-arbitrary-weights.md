@@ -466,7 +466,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
       <span id="sample-time" style="color: #666;"></span>
       <span style="color: #ccc;">|</span>
+      <span style="font-size: 12px; font-weight: bold; color: #555;">Export:</span>
       <button id="sample-export-png-btn" style="padding: 2px 8px;">PNG</button>
+      <span style="font-size: 11px; color: #666;">Quality:</span>
+      <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;">
       <button id="sample-export-pdf-btn" style="padding: 2px 8px;">PDF</button>
     </div>
     <!-- Canvas with floating controls -->
@@ -1969,7 +1972,6 @@ Part of this research was performed while the author was visiting the Institute 
   // Sample state
   let shufflingWasmReady = false;
   let shufflingModule = null;
-  let simulateAztec = null;
   let simulateAztecWithWeightMatrix = null;
   let shufflingFreeString = null;
   let shufflingGetProgress = null;
@@ -1994,9 +1996,6 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   function initShufflingFunctions() {
-    simulateAztec = shufflingModule.cwrap('simulateAztec', 'number',
-      ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-      {async: true});
     simulateAztecWithWeightMatrix = shufflingModule.cwrap('simulateAztecWithWeightMatrix', 'number',
       ['number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
