@@ -1654,13 +1654,13 @@ static void aztecStep8_SplitVertices() {
     }
 
     // For each selected vertex, create mapping of which new vertex gets which edges
-    std::map<int, int> oldToNW;  // selected idx -> new NW/SW vertex idx
-    std::map<int, int> oldToSE;  // selected idx -> new SE/NE vertex idx
-    std::map<int, int> oldToMid; // selected idx -> middle vertex idx (stays at original idx)
+    std::unordered_map<int, int> oldToNW;  // selected idx -> new NW/SW vertex idx
+    std::unordered_map<int, int> oldToSE;  // selected idx -> new SE/NE vertex idx
+    std::unordered_map<int, int> oldToMid; // selected idx -> middle vertex idx (stays at original idx)
 
     // Store original positions before any modification
-    std::map<int, std::pair<double, double>> originalPos;
-    std::map<int, bool> originalColor;
+    std::unordered_map<int, std::pair<double, double>> originalPos;
+    std::unordered_map<int, bool> originalColor;
     for (int idx : selectedVertices) {
         originalPos[idx] = {g_aztecVertices[idx].x, g_aztecVertices[idx].y};
         originalColor[idx] = g_aztecVertices[idx].isWhite;
@@ -2331,13 +2331,13 @@ static void aztecStep12_StartNextIteration() {
 
     // Re-compute black quad centers for new level using current graph structure
     // Build vertex index using 64-bit integer keys
-    std::map<int64_t, int> vertexIndex;
+    std::unordered_map<int64_t, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
         vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
     }
 
     // Build edge lookup using ordered pairs of vertex keys
-    std::set<std::pair<int64_t, int64_t>> edgeSet;
+    std::unordered_set<std::pair<int64_t, int64_t>, PairHash64> edgeSet;
     for (const auto& e : g_aztecEdges) {
         int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
         int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
@@ -2352,7 +2352,7 @@ static void aztecStep12_StartNextIteration() {
     // Find all black quad centers in current graph
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
     g_blackQuadCenters.clear();
-    std::set<int64_t> visitedFaces;
+    std::unordered_set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;

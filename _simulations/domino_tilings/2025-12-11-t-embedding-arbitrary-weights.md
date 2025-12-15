@@ -424,7 +424,7 @@ Part of this research was performed while the author was visiting the Institute 
 <!-- Benchmark Section -->
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">Performance Benchmark</h3>
-  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
+  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=40, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
   <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
@@ -4557,7 +4557,7 @@ Part of this research was performed while the author was visiting the Institute 
     if (results.length === 0) return;
 
     // Find ranges
-    const nMin = 10, nMax = 35;
+    const nMin = 10, nMax = 40;
     const times = results.map(r => r.time).filter(t => t > 0);
     if (times.length === 0) return;
     const tMin = Math.min(...times) * 0.8;
@@ -4592,7 +4592,7 @@ Part of this research was performed while the author was visiting the Institute 
     ctx.restore();
 
     // X-axis ticks
-    for (let n = 10; n <= 35; n += 5) {
+    for (let n = 10; n <= 40; n += 5) {
       const x = mapX(n);
       ctx.beginPath();
       ctx.moveTo(x, H - padding);
@@ -4667,7 +4667,7 @@ Part of this research was performed while the author was visiting the Institute 
     const results = [];
 
     try {
-      for (let n = 10; n <= 35; n++) {
+      for (let n = 10; n <= 40; n++) {
         status.textContent = `Running n=${n}...`;
         await delay(50);  // Yield to UI
 
