@@ -12,7 +12,87 @@ code:
 <details style="margin-bottom: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #fff8e8; border: 1px solid #d4a017;">About this simulation</summary>
   <div style="margin-top: 10px; padding: 15px; background: #fff; border: 1px solid #ddd; font-size: 14px; line-height: 1.6;">
-    <p><em>TODO: Technical overview and help. See "Perfect T-embeddings and their computation" below for mathematical background.</em></p>
+
+<p>This simulation computes and visualizes <strong>perfect T-embeddings</strong> of the Aztec diamond graph with arbitrary edge weights. For the mathematical definitions and recurrence formulas, see the <em>"Perfect T-embeddings and their computation"</em> section below.</p>
+
+<h5>Controls</h5>
+<ul>
+  <li><strong>n</strong>: Size of the Aztec diamond (number of domino rows). Values above 60 may take noticeable time.</li>
+  <li><strong>Weights</strong>: Select a weight preset (see below for details).</li>
+  <li><strong>Compute</strong>: Runs the T-embedding recurrence with the current parameters.</li>
+</ul>
+
+<h5>Weight Presets</h5>
+<ol>
+  <li><strong>Uniform</strong>: All edge weights equal 1 (the classical uniformly weighted Aztec diamond). Computation is faster because all coefficients are 1, so the folding phase is skipped.</li>
+  <li><strong>i.i.d. random</strong>: Independent identically distributed random edge weights. Choose a distribution:
+    <ul>
+      <li><em>Uniform [a, b]</em>: Uniformly distributed on interval [a, b].</li>
+      <li><em>Exponential (λ)</em>: Exponential distribution with rate λ.</li>
+      <li><em>Pareto (α, x_min)</em>: Pareto distribution with shape α and scale x_min.</li>
+      <li><em>Geometric (p)</em>: Geometric distribution with success probability p (integer-valued).</li>
+    </ul>
+  </li>
+  <li><strong>Gamma i.i.d.</strong>: Edge weights drawn from Gamma(α, β) distribution.</li>
+  <li><strong>Layered</strong>: Layered (row-dependent) weights with 5 regimes:
+    <ul>
+      <li><em>Regime 1 (Critical Scaling)</em>: Weights vary as Val1 + 2/√n or Val2 − 1/√n with given probabilities.</li>
+      <li><em>Regime 2 (Rare Event Scaling)</em>: Weight = Val1 with probability 1/√n, otherwise Val2.</li>
+      <li><em>Regime 3 (Bernoulli)</em>: Weight = Val1 (prob p₁) or Val2 (prob p₂). Default regime.</li>
+      <li><em>Regime 4 (Deterministic Periodic)</em>: Alternates between w₁ and w₂ by row.</li>
+      <li><em>Regime 5 (Continuous Uniform)</em>: Weights uniform on [a, b], varying by row.</li>
+    </ul>
+  </li>
+  <li><strong>Periodic (k×l)</strong>: k-by-l periodic pattern of face weights. Opens an editor to set individual weights.</li>
+</ol>
+
+<h5>Main Visualization</h5>
+<ul>
+  <li><strong>2D/3D toggle</strong>: Switch between 2D T-embedding view and 3D origami surface view.</li>
+  <li><strong>V / E sliders</strong>: Adjust vertex size and edge thickness.</li>
+  <li><strong>Origami checkbox</strong>: Show/hide the origami map overlay (2D mode only).</li>
+  <li><strong>Zoom buttons</strong>: +, −, and reset (⟲) for zooming the canvas.</li>
+  <li><strong>Mouse/touch controls</strong>:
+    <ul>
+      <li>2D: Drag to pan, scroll/pinch to zoom.</li>
+      <li>3D: Drag to rotate, Cmd/Ctrl+drag to pan, scroll/pinch to zoom.</li>
+    </ul>
+  </li>
+</ul>
+
+<h5>3D Mode Options</h5>
+<ul>
+  <li><strong>Re(Origami) / Im(Origami), matched</strong>: Select which surface(s) to display. When both are shown, they are rendered together with depth sorting. The Im surface is transformed to match the Re surface at boundary corners.</li>
+  <li><strong>Projection toggle (🎯)</strong>: Switch between orthographic and perspective projection.</li>
+  <li><strong>Preset cycle (☀️)</strong>: Cycle through visual presets (lighting, colors).</li>
+  <li><strong>Auto-rotate (🔄)</strong>: Enable continuous rotation animation.</li>
+</ul>
+
+<h5>Export Options</h5>
+<ul>
+  <li><strong>PDF</strong>: Vector export of the T-embedding. Optional origami overlay checkbox.</li>
+  <li><strong>PNG</strong>: Raster image export with quality slider (1–100).</li>
+  <li><strong>OBJ</strong>: 3D mesh export for external 3D viewers/software.</li>
+</ul>
+
+<h5>Step-by-Step Visualization (n ≤ 15)</h5>
+<p>For small n, explore the T-embedding recurrence level by level:</p>
+<ul>
+  <li><strong>Left panel (Aztec diamond graph)</strong>: Shows the weighted bipartite graph. Arrow buttons (« ← → ») navigate between steps of the domino shuffling / urban renewal. Toggle edge weights (E wts) and face weights (F wts). Click on vertices or edges for details.</li>
+  <li><strong>Right panel (T-embedding)</strong>: Shows the T-embedding at level k. Buttons (← →) step through the recurrence. Toggle vertex labels with the Labels checkbox.</li>
+</ul>
+
+<h5>Mathematica Verification (n ≤ 15)</h5>
+<p>For small n, this section provides:</p>
+<ul>
+  <li><strong>α/β parameters</strong>: The computed boundary parameters at each level.</li>
+  <li><strong>T coordinates</strong>: The explicit T-embedding coordinates in Mathematica format.</li>
+  <li><strong>XX Verification</strong>: Checks that each interior white vertex satisfies the face weight formula. Green = passed, red = numerical discrepancy.</li>
+</ul>
+
+<h5>Performance Benchmark</h5>
+<p>Measures computation time for n = 10 to 40 and fits a power law t(n) = c·n<sup>α</sup>. Uses the currently selected weight preset.</p>
+
   </div>
 </details>
 
@@ -465,7 +545,7 @@ Part of this research was performed while the author was visiting the Institute 
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">Performance Benchmark</h3>
   <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=40, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
-  <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
+  <button id="benchmark-btn">Benchmark (takes about a minute)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
     <canvas id="benchmark-canvas" width="500" height="300" style="border: 1px solid #ddd; background: white;"></canvas>
@@ -665,6 +745,9 @@ Part of this research was performed while the author was visiting the Institute 
   let getComputeTimeMs;
   let clearTembLevels;
   let clearStoredWeightsExport;
+
+  // Track current weight mode: 0=All 1's (uniform), 1=Random IID, 2=Layered, 3=Gamma, 4=Periodic
+  let currentWeightMode = 1;  // Default to Random IID
 
   // Classify face type based on centroid coordinates and current face count
   // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
@@ -1875,20 +1958,28 @@ Part of this research was performed while the author was visiting the Institute 
       clearStoredWeightsExport();
 
       // --- PHASE 1: FOLDING ---
-      // NOTE: Do NOT call refreshAztecFromCpp() inside loops - it's extremely expensive
-      computeTimeSpan.textContent = "Folding...";
-      await delay(10);  // Yield to render text
+      // Skip folding for uniform weights (all 1's) - all coefficients are 1
+      if (currentWeightMode === 0) {
+        computeTimeSpan.textContent = "Uniform weights (skip folding)...";
+        await delay(10);
+        // No folding needed - coefficients are all 1
+        refreshAztecFromCpp();
+      } else {
+        // NOTE: Do NOT call refreshAztecFromCpp() inside loops - it's extremely expensive
+        computeTimeSpan.textContent = "Folding...";
+        await delay(10);  // Yield to render text
 
-      while (canAztecStepDown()) {
-        aztecGraphStepDown();
+        while (canAztecStepDown()) {
+          aztecGraphStepDown();
+        }
+
+        while (canAztecStepUp()) {
+          aztecGraphStepUp();
+        }
+
+        // Update UI once after folding/unfolding is done
+        refreshAztecFromCpp();
       }
-
-      while (canAztecStepUp()) {
-        aztecGraphStepUp();
-      }
-
-      // Update UI once after folding/unfolding is done
-      refreshAztecFromCpp();
 
       // --- PHASE 2: COMPUTING T AND O MAPS ---
       computeTimeSpan.textContent = "Computing T...";
@@ -3478,6 +3569,7 @@ Part of this research was performed while the author was visiting the Institute 
     // Set weight mode and parameters
     // Mode: 0=All 1's, 1=Random IID, 2=Random Layered, 3=Random Gamma, 4=Periodic
     if (preset === 'all-ones') {
+      currentWeightMode = 0;
       setAztecWeightMode(0);
     } else if (preset === 'random-iid') {
       const seed = parseInt(document.getElementById('random-seed').value) || 42;
@@ -3498,12 +3590,14 @@ Part of this research was performed while the author was visiting the Institute 
         const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
         setIIDDistribution(3, p, 0);  // dist=3, p1=p
       }
+      currentWeightMode = 1;
       setAztecWeightMode(1);
     } else if (preset === 'random-layered') {
       const seed = parseInt(document.getElementById('layered-seed').value) || 42;
       seedRng(seed);
       const params = getLayeredParams();
       setLayeredParams(params.regime, params.p1, params.p2, params.prob1, params.prob2);
+      currentWeightMode = 2;
       setAztecWeightMode(2);
     } else if (preset === 'random-gamma') {
       const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
@@ -3511,10 +3605,12 @@ Part of this research was performed while the author was visiting the Institute 
       const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
       seedRng(seed);
       setGammaParams(alpha, beta);
+      currentWeightMode = 3;
       setAztecWeightMode(3);
     } else if (preset === 'periodic') {
       // Weights are already set by the editor UI via setPeriodicWeight calls
       // Just apply periodic mode - don't re-initialize period which would reset weights
+      currentWeightMode = 4;
       setAztecWeightMode(4);
     }
 
