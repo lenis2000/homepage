@@ -606,7 +606,7 @@ Part of this research was performed while the author was visiting the Institute 
   let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
   let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
-  let getComputeTimeMs;
+  let getComputeTimeMs, getStepProfile, resetStepProfile;
   let clearTembLevels;
   let clearStoredWeightsExport;
 
@@ -1756,6 +1756,8 @@ Part of this research was performed while the author was visiting the Institute 
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
       getComputeTimeMs = Module.cwrap('getComputeTimeMs', 'number', []);
+      getStepProfile = Module.cwrap('getStepProfile', 'number', []);
+      resetStepProfile = Module.cwrap('resetStepProfile', null, []);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
       clearStoredWeightsExport = Module.cwrap('clearStoredWeightsExport', null, []);
 
@@ -4664,6 +4666,9 @@ Part of this research was performed while the author was visiting the Institute 
     btn.disabled = true;
     resultsDiv.style.display = 'block';
 
+    // Reset step profile for fresh timing
+    if (resetStepProfile) resetStepProfile();
+
     const results = [];
 
     try {
@@ -4713,6 +4718,18 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Log results to console
     console.log('Benchmark results:', results);
+
+    // Show step profile (cumulative time per step across all n values)
+    if (getStepProfile) {
+      const ptr = getStepProfile();
+      const profileJson = Module.UTF8ToString(ptr);
+      freeString(ptr);
+      console.log('Step profile (cumulative ms):', profileJson);
+      const profile = JSON.parse(profileJson);
+      // Find the slowest steps
+      const sorted = Object.entries(profile).sort((a,b) => b[1] - a[1]);
+      console.log('Slowest steps:', sorted.slice(0, 5));
+    }
   }
 
   const benchmarkBtn = document.getElementById('benchmark-btn');

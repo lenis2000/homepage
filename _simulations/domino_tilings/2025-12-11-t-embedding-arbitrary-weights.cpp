@@ -1882,19 +1882,17 @@ static void aztecStep9_DiagonalGauge() {
 }
 
 // STEP 10: Urban Renewal (Folding step 4)
-// For each black quad: remove 4 inner vertices and 8 edges,
-// add 4 new edges connecting outer diagonal vertices with transformed weights
+// Optimized with Spatial Hashing: O(n^2) instead of O(n^4)
 static void aztecStep10_UrbanRenewal() {
     if (g_aztecReductionStep != 9) return;
     pushAztecState();
 
-    // Clear previous step's highlighting - only show edges modified in THIS step
+    // Clear previous step's highlighting
     for (auto& e : g_aztecEdges) {
         e.gaugeTransformed = false;
     }
 
-    // Build adjacency list: vertex index -> list of (neighbor index, edge index)
-    // Using vector instead of map for O(1) access
+    // 1. Build Adjacency List (O(E) ~ O(n^2))
     std::vector<std::vector<std::pair<int, int>>> adj(g_aztecVertices.size());
     for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
         int v1 = g_aztecEdges[eIdx].v1;
@@ -1903,22 +1901,55 @@ static void aztecStep10_UrbanRenewal() {
         adj[v2].push_back({v1, (int)eIdx});
     }
 
+    // 2. Build Transient Spatial Grid (O(V) ~ O(n^2))
+    // We use a simple integer coordinate key. Since vertices are roughly unit distance,
+    // a 1x1 grid is efficient.
+    std::unordered_map<int64_t, std::vector<int>> spatialGrid;
+    auto getGridKey = [](double x, double y) -> int64_t {
+        // Floor guarantees correct bucket for negatives
+        int gx = static_cast<int>(std::floor(x));
+        int gy = static_cast<int>(std::floor(y));
+        // Pack into int64: High 32 bits X, Low 32 bits Y
+        return (static_cast<int64_t>(gx) << 32) | (static_cast<uint32_t>(gy));
+    };
+
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        spatialGrid[getGridKey(g_aztecVertices[i].x, g_aztecVertices[i].y)].push_back((int)i);
+    }
+
     // Track vertices and edges to remove
     std::set<int> verticesToRemove;
     std::set<int> edgesToRemove;
-
-    // New edges to add
     std::vector<AztecEdge> newEdges;
 
-    // Process each black quad
+    // 3. Process each black quad (O(Q) ~ O(n^2))
     for (const auto& center : g_blackQuadCenters) {
-        // Find the 4 inner vertices (closest to center)
+        // Find the 4 inner vertices using the Grid (Constant time lookup vs Linear scan)
         std::vector<std::pair<double, int>> vertsWithDist;
-        for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-            double d = std::hypot(g_aztecVertices[i].x - center.first,
-                                  g_aztecVertices[i].y - center.second);
-            vertsWithDist.push_back({d, (int)i});
+
+        int cx = static_cast<int>(std::floor(center.first));
+        int cy = static_cast<int>(std::floor(center.second));
+
+        // Check 3x3 grid cells around the center
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                int64_t key = (static_cast<int64_t>(cx + dx) << 32) | (static_cast<uint32_t>(cy + dy));
+                auto it = spatialGrid.find(key);
+                if (it != spatialGrid.end()) {
+                    for (int idx : it->second) {
+                        double d = std::hypot(g_aztecVertices[idx].x - center.first,
+                                              g_aztecVertices[idx].y - center.second);
+                        // Optimization: Inner vertices are usually ~0.707 units away.
+                        // Threshold 1.5 safely captures them without false positives.
+                        if (d < 1.5) {
+                            vertsWithDist.push_back({d, idx});
+                        }
+                    }
+                }
+            }
         }
+
+        // Sort by distance to find the closest 4
         std::sort(vertsWithDist.begin(), vertsWithDist.end());
 
         std::set<int> innerSet;
@@ -1939,15 +1970,14 @@ static void aztecStep10_UrbanRenewal() {
             return angleA < angleB;
         });
 
-        // For each inner vertex, find the outer diagonal vertex (neighbor not in inner set)
+        // For each inner vertex, find the outer diagonal vertex
         std::vector<int> outerVerts(4, -1);
-        std::vector<int> diagEdgeIdx(4, -1);  // Edge indices for diagonal edges
+        std::vector<int> diagEdgeIdx(4, -1);
 
         for (int i = 0; i < 4; i++) {
             int innerIdx = innerVerts[i];
             for (const auto& [neighborIdx, edgeIdx] : adj[innerIdx]) {
                 if (innerSet.find(neighborIdx) == innerSet.end()) {
-                    // This neighbor is outside the quad - it's the diagonal vertex
                     outerVerts[i] = neighborIdx;
                     diagEdgeIdx[i] = edgeIdx;
                     break;
@@ -1958,16 +1988,12 @@ static void aztecStep10_UrbanRenewal() {
         // Verify we found all 4 outer vertices
         bool valid = true;
         for (int i = 0; i < 4; i++) {
-            if (outerVerts[i] == -1) {
-                valid = false;
-                break;
-            }
+            if (outerVerts[i] == -1) { valid = false; break; }
         }
         if (!valid) continue;
 
-        // Find quad edges (edges between inner vertices) and their LOG weights
-        // Order: edge from innerVerts[i] to innerVerts[(i+1)%4]
-        std::vector<mp_real> logQuadWeights(4, mp_real(0));  // log(1) = 0 as default
+        // Find quad edges and weights
+        std::vector<mp_real> logQuadWeights(4, mp_real(0));
         std::vector<int> quadEdgeIdx(4, -1);
 
         for (int i = 0; i < 4; i++) {
@@ -1982,113 +2008,77 @@ static void aztecStep10_UrbanRenewal() {
             }
         }
 
-        // Get diagonal edge LOG weights
-        std::vector<mp_real> logDiagWeights(4, mp_real(0));
-        for (int i = 0; i < 4; i++) {
-            if (diagEdgeIdx[i] >= 0) {
-                logDiagWeights[i] = g_aztecEdges[diagEdgeIdx[i]].logWeight;
-            }
-        }
-
-        // Apply urban renewal weight transformation IN LOG SPACE
-        // Quad edges in cyclic order: x=quadWeights[0], y=quadWeights[1], z=quadWeights[2], w=quadWeights[3]
-        // D = x*z + w*y = e^(log_x + log_z) + e^(log_w + log_y)
-        // New weights: (z/D, w/D, x/D, y/D)
-        // In log space: log(z/D) = log_z - log_D
+        // Compute urban renewal transformation (Standard Logic)
         mp_real log_x = logQuadWeights[0], log_y = logQuadWeights[1];
         mp_real log_z = logQuadWeights[2], log_w = logQuadWeights[3];
 
-        // log_D = log(e^(log_x + log_z) + e^(log_w + log_y))
-        // Use log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
-        mp_real term1 = log_x + log_z;  // log(x*z)
-        mp_real term2 = log_w + log_y;  // log(w*y)
+        mp_real term1 = log_x + log_z;
+        mp_real term2 = log_w + log_y;
         mp_real maxTerm = (term1 > term2) ? term1 : term2;
         mp_real diffTerm = abs(term1 - term2);
         mp_real log_D = maxTerm + log(mp_real(1) + exp(-diffTerm));
 
-        // New log weights: log(z/D) = log_z - log_D, etc.
         std::vector<mp_real> newLogWeights = {
-            log_z - log_D,  // log(z/D)
-            log_w - log_D,  // log(w/D)
-            log_x - log_D,  // log(x/D)
-            log_y - log_D   // log(y/D)
+            log_z - log_D, log_w - log_D,
+            log_x - log_D, log_y - log_D
         };
 
-        // Mark inner vertices for removal
-        for (int i = 0; i < 4; i++) {
-            verticesToRemove.insert(innerVerts[i]);
-        }
-
-        // Mark all 8 edges for removal (4 quad + 4 diagonal)
+        // Mark for removal
+        for (int i = 0; i < 4; i++) verticesToRemove.insert(innerVerts[i]);
         for (int i = 0; i < 4; i++) {
             if (quadEdgeIdx[i] >= 0) edgesToRemove.insert(quadEdgeIdx[i]);
             if (diagEdgeIdx[i] >= 0) edgesToRemove.insert(diagEdgeIdx[i]);
         }
 
-        // Add 4 new edges connecting outer vertices
-        // Edge i connects outerVerts[i] to outerVerts[(i+1)%4] with logWeight newLogWeights[i]
+        // Add 4 new edges
         for (int i = 0; i < 4; i++) {
             AztecEdge newEdge;
             newEdge.v1 = outerVerts[i];
             newEdge.v2 = outerVerts[(i + 1) % 4];
-            newEdge.logWeight = newLogWeights[i];  // Already in log space
+            newEdge.logWeight = newLogWeights[i];
             newEdge.isHorizontal = false;
-            newEdge.gaugeTransformed = true;  // Mark as transformed
+            newEdge.gaugeTransformed = true;
             newEdges.push_back(newEdge);
         }
     }
 
-    // Remove edges marked for removal (in reverse order to preserve indices)
+    // 4. Commit Changes (Batched Removal/Update)
+
+    // Remove edges (reverse order)
     std::vector<int> edgesToRemoveVec(edgesToRemove.begin(), edgesToRemove.end());
     std::sort(edgesToRemoveVec.rbegin(), edgesToRemoveVec.rend());
     for (int idx : edgesToRemoveVec) {
         g_aztecEdges.erase(g_aztecEdges.begin() + idx);
     }
 
-    // Build vertex index remapping using vector for O(1) lookup
+    // Remap vertices (Compact array)
     std::vector<int> vertexRemap(g_aztecVertices.size(), -1);
+    std::vector<AztecVertex> finalVertices;
     int newIdx = 0;
+
+    // Reserve to prevent reallocations
+    finalVertices.reserve(g_aztecVertices.size() - verticesToRemove.size());
+
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
         if (verticesToRemove.find((int)i) == verticesToRemove.end()) {
             vertexRemap[i] = newIdx++;
-        }
-    }
-
-    // Build new vertex list directly, skipping removals (more efficient than erase)
-    std::vector<AztecVertex> finalVertices;
-    finalVertices.reserve(newIdx);
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        if (vertexRemap[i] != -1) {
             finalVertices.push_back(g_aztecVertices[i]);
         }
     }
     g_aztecVertices = std::move(finalVertices);
 
-    // Update edge vertex indices using remap (O(1) vector lookup)
+    // Update edge indices
     for (auto& e : g_aztecEdges) {
         e.v1 = vertexRemap[e.v1];
         e.v2 = vertexRemap[e.v2];
     }
-
-    // Remap and add new edges
     for (auto& e : newEdges) {
         e.v1 = vertexRemap[e.v1];
         e.v2 = vertexRemap[e.v2];
         g_aztecEdges.push_back(e);
     }
 
-    // Debug: count duplicate edges
-    std::map<std::pair<int,int>, int> edgeCount;
-    for (const auto& e : g_aztecEdges) {
-        int v1 = std::min(e.v1, e.v2);
-        int v2 = std::max(e.v1, e.v2);
-        edgeCount[{v1, v2}]++;
-    }
-    int multiEdges = 0;
-    for (const auto& kv : edgeCount) {
-        if (kv.second > 1) multiEdges += kv.second;
-    }
-    // Clear black quad centers (they've been collapsed)
+    // Clear black quad centers
     g_blackQuadCenters.clear();
 
     g_aztecReductionStep = 10;
