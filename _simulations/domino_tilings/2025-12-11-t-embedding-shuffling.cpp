@@ -4,7 +4,7 @@
   Weighted EKLP shuffling for T-embedding page.
   Based on 2025-11-18-double-dimer-gamma.cpp (the correct slim functions).
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaEdges','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
@@ -16,6 +16,7 @@
 #include <string>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include "matrix_optimized.h"
 
 using namespace std;
@@ -255,7 +256,147 @@ MatrixInt aztecgenslim(const vector<MatrixDouble>& x0) {
     return a1;
 }
 
+// Compute face weight matrix from edge weights
+// For T-embedding convention: black faces have edges α (bottom), β (right), γ (left), 1 (top)
+// Cross-ratio = (bottom * top) / (left * right) = α / (γ * β) = α / (βγ)
+// But the exact formula depends on conventions - this implements the standard one
+MatrixDouble computeFaceWeightsFromEdges(int n,
+    const std::function<double(int,int,char)>& getEdgeWeight) {
+    // getEdgeWeight(i, j, dir) returns the edge weight at face (i,j) in direction dir
+    // dir: 'N'=north/top, 'E'=east/right, 'S'=south/bottom, 'W'=west/left
+
+    int dim = 2 * n;
+    MatrixDouble faceWeights(dim, dim, 1.0);
+
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            // Only non-trivial weights on even rows (matching ab_gamma pattern)
+            if (i % 2 == 0) {
+                double wN = getEdgeWeight(i, j, 'N');
+                double wE = getEdgeWeight(i, j, 'E');
+                double wS = getEdgeWeight(i, j, 'S');
+                double wW = getEdgeWeight(i, j, 'W');
+
+                // Cross-ratio: (wS * wN) / (wW * wE)
+                // With wN = 1 typically: wS / (wW * wE)
+                double denom = wW * wE;
+                if (denom < 1e-12) denom = 1e-12;
+                faceWeights.at(i, j) = (wS * wN) / denom;
+            }
+        }
+    }
+
+    return faceWeights;
+}
+
+// Simple gamma-distributed edge weights matching T-embedding gamma preset
+// α-edges get Gamma(alpha), β-edges get Gamma(beta), others get 1
+MatrixDouble computeGammaFaceWeights(int n, double alpha, double beta) {
+    std::gamma_distribution<> gamma_a(alpha, 1.0);
+    std::gamma_distribution<> gamma_b(beta, 1.0);
+
+    int dim = 2 * n;
+    MatrixDouble faceWeights(dim, dim, 1.0);
+
+    // For each face, compute cross-ratio from edge weights
+    // T-embedding pattern: black faces have α (S), β (E), γ (W), 1 (N)
+    // For gamma preset: α-edges ~ Gamma(alpha), β-edges ~ Gamma(beta), γ=1, top=1
+
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            if (i % 2 == 0) {
+                // This face has edge weights
+                double alpha_edge = gamma_a(rng);  // α edge (bottom/south)
+                double beta_edge = gamma_b(rng);   // β edge (right/east)
+                double gamma_edge = 1.0;           // γ edge (left/west)
+                double one_edge = 1.0;             // 1 edge (top/north)
+
+                // Cross-ratio = (α * 1) / (γ * β) = α / (γβ) = α / β (since γ=1)
+                faceWeights.at(i, j) = alpha_edge / beta_edge;
+            }
+        }
+    }
+
+    return faceWeights;
+}
+
 extern "C" {
+
+// Simulate with gamma-distributed edge weights converted to face weights via cross-ratio
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecGammaEdges(int n, double alpha, double beta) {
+    try {
+        progressCounter = 0;
+        int dim = 2 * n;
+
+        if (dim > 1000) {
+            throw std::runtime_error("Input size too large");
+        }
+
+        // Compute face weights from gamma-distributed edge weights
+        MatrixDouble A1a = computeGammaFaceWeights(n, alpha, beta);
+
+        emscripten_sleep(0);
+
+        // Compute probability matrices
+        vector<MatrixDouble> prob = probsslim(A1a);
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        // Generate domino configuration
+        MatrixInt dominoConfig = aztecgenslim(prob);
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        // Build JSON output
+        ostringstream oss;
+        oss << "[";
+        int size = dominoConfig.size();
+        bool first = true;
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig.at(i, j) == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+
+                    if (oddI && oddJ) {
+                        color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                    } else if (oddI && !oddJ) {
+                        color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                    } else if (!oddI && !oddJ) {
+                        color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                    } else {
+                        color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                    }
+
+                    if (!first) oss << ",";
+                    else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+
+        oss << "]";
+        progressCounter = 100;
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
+}
 
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztecWithWeightMatrix(int n, double* weights) {

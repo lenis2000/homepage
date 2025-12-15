@@ -1998,6 +1998,8 @@ Part of this research was performed while the author was visiting the Institute 
   function initShufflingFunctions() {
     simulateAztecWithWeightMatrix = shufflingModule.cwrap('simulateAztecWithWeightMatrix', 'number',
       ['number', 'number'], {async: true});
+    simulateAztecGammaEdges = shufflingModule.cwrap('simulateAztecGammaEdges', 'number',
+      ['number', 'number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
 
@@ -2009,70 +2011,166 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   // Generate weight matrix based on current T-embedding preset and params
+  // Uses cross-ratio formula: face_weight = (bottom × top) / (left × right)
+  // where edges are generated according to the T-embedding edge weight distribution
   function generateWeightMatrix(N) {
     const dim = 2 * N;
     const weights = new Float64Array(dim * dim);
     const preset = document.getElementById('weight-preset-select').value;
+    const seed = getSampleSeed();
+    const rng = createSeededRNG(seed);
 
     if (preset === 'all-ones') {
+      // All edge weights = 1, so all cross-ratios = 1
       weights.fill(1.0);
-    } else if (preset === 'periodic') {
+      return weights;
+    }
+
+    // Generate edge weights first, then compute cross-ratios
+    // hEdge[i][j] = horizontal edge at row i, between columns j and j+1
+    // vEdge[i][j] = vertical edge at column j, between rows i and i+1
+    // For dim faces: we need (dim+1) horizontal edges per row, (dim+1) vertical edges per column
+
+    const hEdge = [];  // [row][col] -> weight of horizontal edge
+    const vEdge = [];  // [row][col] -> weight of vertical edge
+
+    // Initialize edge arrays
+    // hEdge[i][j] = horizontal edge at row i, column j (dim rows need dim+1 horizontal edge rows)
+    // vEdge[i][j] = vertical edge at row i, column j (each row needs dim+1 vertical edges)
+    for (let i = 0; i <= dim; i++) {
+      hEdge[i] = new Float64Array(dim);      // horizontal edges at row i
+      vEdge[i] = new Float64Array(dim + 1);  // vertical edges at row i (need dim+1 columns)
+    }
+
+    // Generate edge weights based on preset
+    if (preset === 'periodic') {
       const k = parseInt(document.getElementById('periodic-k').value) || 2;
       const l = parseInt(document.getElementById('periodic-l').value) || 2;
-      // Get periodic weights from the editor
-      const periodicWeights = getPeriodicWeightsFromUI(k, l);
-      for (let i = 0; i < dim; i++) {
+      const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
+
+      // Horizontal edges
+      for (let i = 0; i <= dim; i++) {
         for (let j = 0; j < dim; j++) {
-          // Use modular indexing for periodic pattern
+          // Use the gamma (horizontal) weight from the periodic pattern
           const pi = ((i % k) + k) % k;
           const pj = ((j % l) + l) % l;
-          weights[i * dim + j] = periodicWeights[pi][pj];
+          hEdge[i][j] = periodicWeights.gamma[pi][pj];
         }
       }
-    } else {
-      // IID, Layered, Gamma - generate using seeded random
-      const seed = getSampleSeed();
-      const rng = createSeededRNG(seed);
-
-      if (preset === 'random-iid') {
-        const distType = document.getElementById('iid-distribution-select').value;
-        for (let i = 0; i < dim * dim; i++) {
-          weights[i] = generateIIDWeight(distType, rng);
-        }
-      } else if (preset === 'random-layered') {
-        // Layered weights - same weight for each diagonal
-        const regime = getLayeredRegime();
-        for (let i = 0; i < dim; i++) {
-          for (let j = 0; j < dim; j++) {
-            const diag = i + j;  // Diagonal index
-            weights[i * dim + j] = generateLayeredWeight(regime, diag, N, rng);
+      // Vertical edges
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j <= dim; j++) {
+          // Use alpha/beta weights alternating based on position
+          const pi = ((i % k) + k) % k;
+          const pj = ((j % l) + l) % l;
+          // Left edges use alpha, right edges use beta (checkerboard pattern)
+          if ((i + j) % 2 === 0) {
+            vEdge[i][j] = periodicWeights.alpha[pi][pj];
+          } else {
+            vEdge[i][j] = periodicWeights.beta[pi][pj];
           }
         }
-      } else if (preset === 'random-gamma') {
-        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
-        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-        // Match ab_gamma from double-dimer-gamma.cpp:
-        // Even rows (i % 2 == 0): even cols get Gamma(beta), odd cols get Gamma(alpha)
-        // Odd rows (i % 2 == 1): all 1.0
-        for (let i = 0; i < dim; i++) {
-          for (let j = 0; j < dim; j++) {
-            if (i % 2 === 0) {
-              // Even row
-              if (j % 2 === 0) {
-                weights[i * dim + j] = gammaRandom(beta, 1, rng);
-              } else {
-                weights[i * dim + j] = gammaRandom(alpha, 1, rng);
-              }
-            } else {
-              // Odd row - all 1.0
-              weights[i * dim + j] = 1.0;
-            }
+      }
+    } else if (preset === 'random-iid') {
+      const distType = document.getElementById('iid-distribution-select').value;
+      // Generate IID edge weights
+      for (let i = 0; i <= dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          hEdge[i][j] = generateIIDWeight(distType, rng);
+        }
+      }
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j <= dim; j++) {
+          vEdge[i][j] = generateIIDWeight(distType, rng);
+        }
+      }
+    } else if (preset === 'random-layered') {
+      const regime = getLayeredRegime();
+      // Layered: edges on the same diagonal have the same weight
+      for (let i = 0; i <= dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          const diag = i + j;
+          hEdge[i][j] = generateLayeredWeight(regime, diag, N, rng);
+        }
+      }
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j <= dim; j++) {
+          const diag = i + j;
+          vEdge[i][j] = generateLayeredWeight(regime, diag, N, rng);
+        }
+      }
+    } else if (preset === 'random-gamma') {
+      const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
+      const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+      // Gamma weights: around black faces, edges are α(bottom), β(right), 1(top), 1(left)
+      // Black faces are at positions where (i + j) % 2 == 0 (checkerboard pattern)
+      // For cross-ratio = α/β at black faces, 1 at white faces
+
+      // Initialize all edges to 1
+      for (let i = 0; i <= dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          hEdge[i][j] = 1.0;
+        }
+      }
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j <= dim; j++) {
+          vEdge[i][j] = 1.0;
+        }
+      }
+
+      // For each black face, set its bottom edge to α and right edge to β
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          if ((i + j) % 2 === 0) {
+            // Black face at (i, j)
+            const a = gammaRandom(alpha, 1, rng);
+            const b = gammaRandom(beta, 1, rng);
+            hEdge[i][j] = a;       // bottom edge
+            vEdge[i][j + 1] = b;   // right edge
           }
         }
       }
     }
 
+    // Compute face weights as cross-ratios
+    // For face (i, j): cross-ratio = (bottom × top) / (left × right)
+    // bottom = hEdge[i][j], top = hEdge[i+1][j]
+    // left = vEdge[i][j], right = vEdge[i][j+1]
+    for (let i = 0; i < dim; i++) {
+      for (let j = 0; j < dim; j++) {
+        const bottom = hEdge[i][j];
+        const top = hEdge[i + 1][j];
+        const left = vEdge[i][j];
+        const right = vEdge[i][j + 1];
+        weights[i * dim + j] = (bottom * top) / (left * right);
+      }
+    }
+
     return weights;
+  }
+
+  // Get periodic edge weights from UI (alpha, beta, gamma tables)
+  function getPeriodicEdgeWeightsFromUI(k, l) {
+    const alpha = [], beta = [], gamma = [];
+    for (let j = 0; j < k; j++) {
+      alpha[j] = new Float64Array(l).fill(1.0);
+      beta[j] = new Float64Array(l).fill(1.0);
+      gamma[j] = new Float64Array(l).fill(1.0);
+    }
+    // Get from the editor inputs
+    const inputs = document.querySelectorAll('#weights-tables input');
+    inputs.forEach(input => {
+      const type = parseInt(input.dataset.type);  // 0=alpha, 1=beta, 2=gamma
+      const jIdx = parseInt(input.dataset.j);
+      const iIdx = parseInt(input.dataset.i);
+      if (jIdx < k && iIdx < l) {
+        const val = parseFloat(input.value) || 1.0;
+        if (type === 0) alpha[jIdx][iIdx] = val;
+        else if (type === 1) beta[jIdx][iIdx] = val;
+        else if (type === 2) gamma[jIdx][iIdx] = val;
+      }
+    });
+    return { alpha, beta, gamma };
   }
 
   function getPeriodicWeightsFromUI(k, l) {
