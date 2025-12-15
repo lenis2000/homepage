@@ -1828,8 +1828,8 @@ static void aztecStep9_DiagonalGauge() {
         }
     }
 
-    // Build adjacency list
-    std::map<int, std::vector<std::pair<int, int>>> adj;
+    // Build adjacency list - using vector for O(1) access
+    std::vector<std::vector<std::pair<int, int>>> adj(g_aztecVertices.size());
     for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
         int v1 = g_aztecEdges[eIdx].v1;
         int v2 = g_aztecEdges[eIdx].v2;
