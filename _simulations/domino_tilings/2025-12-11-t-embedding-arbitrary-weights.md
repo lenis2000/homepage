@@ -1,5 +1,5 @@
 ---
-title: T-embeddings of the Aztec diamond with random weights
+title: T-embeddings of the Aztec diamond with arbitrary weights
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -149,18 +149,122 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   <!-- Weight Preset Dropdown -->
   <label style="margin-left: 15px;">Weights:
     <select id="weight-preset-select" style="margin-left: 5px;">
-      <option value="random" selected>Random</option>
-      <option value="uniform">Uniform</option>
-      <option value="periodic">Periodic</option>
+      <option value="random-iid" selected>Random IID</option>
+      <option value="random-layered">Random Layered</option>
+      <option value="random-gamma">Random Gamma</option>
+      <option value="all-ones">All 1's</option>
+      <option value="periodic">k × l Periodic</option>
     </select>
   </label>
-  <label id="seed-label" style="margin-left: 10px;">Seed: <input id="random-seed" type="number" value="42" style="width: 60px;"></label>
+
+  <!-- Periodic params (inline) -->
   <span id="periodic-params" style="display: none; margin-left: 10px;">
     <label>k: <input id="periodic-k" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
     <label style="margin-left: 5px;">l: <input id="periodic-l" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
   </span>
 
   <button id="compute-btn" style="margin-left: 15px;">Compute</button>
+</div>
+
+<!-- Random IID params (collapsible panel) -->
+<div id="iid-params" style="display: block; margin-bottom: 10px; padding: 10px; border: 1px solid #99c; background: #f0f0ff; border-radius: 4px;">
+  <div style="margin-bottom: 8px; font-weight: bold;">IID Distribution</div>
+
+  <div style="margin-bottom: 8px;">
+    <label>Distribution:
+      <select id="iid-distribution-select" style="margin-left: 5px;">
+        <option value="uniform" selected>Uniform [a, b]</option>
+        <!-- Future distributions can be added here -->
+      </select>
+    </label>
+  </div>
+
+  <!-- Uniform distribution params -->
+  <div id="iid-uniform-params" style="margin-bottom: 8px;">
+    <small>Each edge weight ~ Uniform[a, b]</small><br>
+    a: <input type="number" id="iid-min" value="0.5" step="0.1" style="width: 60px;">
+    b: <input type="number" id="iid-max" value="2.0" step="0.1" style="width: 60px;">
+  </div>
+
+  <div style="margin-top: 8px;">
+    Seed: <input id="random-seed" type="number" value="42" style="width: 60px;">
+  </div>
+</div>
+
+<!-- Random Gamma params (collapsible panel) -->
+<div id="gamma-params" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #c99; background: #fff0f0; border-radius: 4px;">
+  <div style="margin-bottom: 8px; font-weight: bold;">Gamma Distribution <span style="font-weight: normal; font-size: 0.85em;">(Duits, Van Peski <a href="https://arxiv.org/abs/2512.03033" target="_blank">[arXiv:2512.03033]</a>)</span></div>
+  <small>α edges (bottom of faces) ~ Γ(α, 1), β edges (right of faces) ~ Γ(β, 1)</small>
+  <div style="margin-top: 8px;">
+    α: <input id="gamma-alpha" type="number" value="0.2" min="0.01" max="50" step="0.01" style="width: 60px;">
+    β: <input id="gamma-beta" type="number" value="0.25" min="0.01" max="50" step="0.01" style="width: 60px;">
+  </div>
+  <div style="margin-top: 8px;">
+    Seed: <input id="gamma-seed" type="number" value="42" style="width: 60px;">
+  </div>
+</div>
+
+<!-- Random Layered params (collapsible) -->
+<div id="layered-params" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #9c9; background: #f0fff0; border-radius: 4px;">
+  <div style="margin-bottom: 8px; font-weight: bold;">Layered Weight Regime <span style="font-weight: normal; font-size: 0.85em;">(Bufetov, Petrov, Zografos <a href="https://arxiv.org/abs/2507.08560" target="_blank">[arXiv:2507.08560]</a>)</span></div>
+
+  <div style="margin-bottom: 8px;">
+    <input type="radio" id="layered-regime1" name="layered-regime" value="1">
+    <label for="layered-regime1"><strong>Regime 1: Critical Scaling</strong></label>
+    <div id="layered-regime1-params" style="margin-left: 25px; display: none; margin-top: 5px;">
+      <small>Weight = Val1 + 2/√n (prob p₁) or Val2 - 1/√n (prob p₂)</small><br>
+      Val1: <input type="number" id="layered1-val1" value="1" step="0.1" style="width: 50px;">
+      Val2: <input type="number" id="layered1-val2" value="1" step="0.1" style="width: 50px;">
+      p₁: <input type="number" id="layered1-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
+      p₂: <input type="number" id="layered1-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
+    </div>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    <input type="radio" id="layered-regime2" name="layered-regime" value="2">
+    <label for="layered-regime2"><strong>Regime 2: Rare Event Scaling</strong></label>
+    <div id="layered-regime2-params" style="margin-left: 25px; display: none; margin-top: 5px;">
+      <small>Weight = Val1 (prob 1/√n) or Val2 (prob (√n-1)/√n)</small><br>
+      Val1: <input type="number" id="layered2-val1" value="2" step="0.1" style="width: 50px;">
+      Val2: <input type="number" id="layered2-val2" value="1" step="0.1" style="width: 50px;">
+    </div>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    <input type="radio" id="layered-regime3" name="layered-regime" value="3" checked>
+    <label for="layered-regime3"><strong>Regime 3: Bernoulli (Default)</strong></label>
+    <div id="layered-regime3-params" style="margin-left: 25px; display: block; margin-top: 5px;">
+      <small>Weight = Val1 (prob p₁) or Val2 (prob p₂)</small><br>
+      Val1: <input type="number" id="layered3-val1" value="2" step="0.1" style="width: 50px;">
+      Val2: <input type="number" id="layered3-val2" value="0.5" step="0.1" style="width: 50px;">
+      p₁: <input type="number" id="layered3-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
+      p₂: <input type="number" id="layered3-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
+    </div>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    <input type="radio" id="layered-regime4" name="layered-regime" value="4">
+    <label for="layered-regime4"><strong>Regime 4: Deterministic Periodic</strong></label>
+    <div id="layered-regime4-params" style="margin-left: 25px; display: none; margin-top: 5px;">
+      <small>Pattern: w₁, w₂, w₁, w₂, ... by diagonal</small><br>
+      w₁: <input type="number" id="layered4-w1" value="2" step="0.1" style="width: 50px;">
+      w₂: <input type="number" id="layered4-w2" value="0.5" step="0.1" style="width: 50px;">
+    </div>
+  </div>
+
+  <div style="margin-bottom: 8px;">
+    <input type="radio" id="layered-regime5" name="layered-regime" value="5">
+    <label for="layered-regime5"><strong>Regime 5: Continuous Uniform [a,b]</strong></label>
+    <div id="layered-regime5-params" style="margin-left: 25px; display: none; margin-top: 5px;">
+      <small>Weight ~ Uniform[a, b]</small><br>
+      a: <input type="number" id="layered5-min" value="0.5" step="0.1" style="width: 50px;">
+      b: <input type="number" id="layered5-max" value="2.0" step="0.1" style="width: 50px;">
+    </div>
+  </div>
+
+  <div style="margin-top: 8px;">
+    Seed: <input id="layered-seed" type="number" value="42" style="width: 60px;">
+  </div>
 </div>
 
 <!-- Periodic Weights Editor (shown when periodic mode selected) -->
@@ -451,8 +555,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getOrigamiLevelJSON;
-  let randomizeAztecWeights, setAztecWeightMode, setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
-  let resetAztecGraphPreservingWeights, setAztecGraphLevel;
+  let randomizeAztecWeights, setAztecWeightMode, setRandomIIDParams, setLayeredParams, setGammaParams;
+  let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
+  let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let clearTembLevels;
   let clearStoredWeightsExport;
@@ -1587,11 +1692,14 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       getOrigamiLevelJSON = Module.cwrap('getOrigamiLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
+      setRandomIIDParams = Module.cwrap('setRandomIIDParams', null, ['number', 'number']);
+      setLayeredParams = Module.cwrap('setLayeredParams', null, ['number', 'number', 'number', 'number', 'number']);
+      setGammaParams = Module.cwrap('setGammaParams', null, ['number', 'number']);
       setPeriodicPeriod = Module.cwrap('setPeriodicPeriod', null, ['number', 'number']);
       setPeriodicWeight = Module.cwrap('setPeriodicWeight', null, ['number', 'number', 'number', 'number']);
       getPeriodicParams = Module.cwrap('getPeriodicParams', 'number', []);
       resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
-      const seedRng = Module.cwrap('seedRng', null, ['number']);
+      seedRng = Module.cwrap('seedRng', null, ['number']);
       seedRng(42);  // Fixed seed for reproducible results on load
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
@@ -1612,9 +1720,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
-      // Initialize and compute
+      // Initialize and compute with default Random IID weights
       initAztecGraph(n);
-      randomizeAztecWeights();  // Randomize on load
+      seedRng(42);
+      setRandomIIDParams(0.5, 2.0);
+      setAztecWeightMode(1);  // Random IID mode
       computeAndDisplay();
 
       // Precompute all T-embedding levels for stepwise UI (only needed for small n)
@@ -2986,37 +3096,48 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   // ========== WEIGHT PRESET HANDLING ==========
 
   const weightPresetSelect = document.getElementById('weight-preset-select');
-  const seedLabel = document.getElementById('seed-label');
+  const iidParams = document.getElementById('iid-params');
+  const layeredParams = document.getElementById('layered-params');
+  const gammaParams = document.getElementById('gamma-params');
   const periodicParams = document.getElementById('periodic-params');
   const weightsEditor = document.getElementById('weights-editor');
   const weightsTables = document.getElementById('weights-tables');
 
-  // Handle weight preset dropdown change - show/hide relevant params
-  weightPresetSelect.addEventListener('change', () => {
-    const preset = weightPresetSelect.value;
-    seedLabel.style.display = (preset === 'random') ? 'inline' : 'none';
+  // Helper function to update visibility of parameter panels
+  function updateParamVisibility(preset) {
+    iidParams.style.display = (preset === 'random-iid') ? 'block' : 'none';
+    layeredParams.style.display = (preset === 'random-layered') ? 'block' : 'none';
+    gammaParams.style.display = (preset === 'random-gamma') ? 'block' : 'none';
     periodicParams.style.display = (preset === 'periodic') ? 'inline' : 'none';
     if (preset === 'periodic') {
-      // Auto-open weights editor when periodic is selected
       buildWeightsEditor();
       weightsEditor.style.display = 'block';
     } else {
       weightsEditor.style.display = 'none';
     }
+  }
+
+  // Handle weight preset dropdown change - show/hide relevant params
+  weightPresetSelect.addEventListener('change', () => {
+    updateParamVisibility(weightPresetSelect.value);
+  });
+
+  // Layered regime radio button handlers
+  document.querySelectorAll('input[name="layered-regime"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      // Hide all layered regime param divs
+      for (let i = 1; i <= 5; i++) {
+        const paramDiv = document.getElementById(`layered-regime${i}-params`);
+        if (paramDiv) paramDiv.style.display = 'none';
+      }
+      // Show the selected regime's params
+      const selectedDiv = document.getElementById(`layered-regime${this.value}-params`);
+      if (selectedDiv) selectedDiv.style.display = 'block';
+    });
   });
 
   // Initialize visibility
-  seedLabel.style.display = (weightPresetSelect.value === 'random') ? 'inline' : 'none';
-  periodicParams.style.display = (weightPresetSelect.value === 'periodic') ? 'inline' : 'none';
-  if (weightPresetSelect.value === 'periodic') {
-    // Show editor on page load if periodic is selected
-    setTimeout(() => {
-      if (wasmReady) {
-        buildWeightsEditor();
-        weightsEditor.style.display = 'block';
-      }
-    }, 100);
-  }
+  updateParamVisibility(weightPresetSelect.value);
 
   // Build periodic weights editor UI
   function buildWeightsEditor() {
@@ -3108,6 +3229,43 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     weightsEditor.style.display = 'none';
   });
 
+  // Helper function to get layered regime parameters from UI
+  function getLayeredParams() {
+    const selectedRegime = document.querySelector('input[name="layered-regime"]:checked');
+    const regime = selectedRegime ? parseInt(selectedRegime.value) : 3;
+
+    let p1 = 1, p2 = 1, prob1 = 0.5, prob2 = 0.5;
+
+    switch (regime) {
+      case 1:
+        p1 = parseFloat(document.getElementById('layered1-val1').value) || 1;
+        p2 = parseFloat(document.getElementById('layered1-val2').value) || 1;
+        prob1 = parseFloat(document.getElementById('layered1-prob1').value) || 0.5;
+        prob2 = parseFloat(document.getElementById('layered1-prob2').value) || 0.5;
+        break;
+      case 2:
+        p1 = parseFloat(document.getElementById('layered2-val1').value) || 2;
+        p2 = parseFloat(document.getElementById('layered2-val2').value) || 1;
+        break;
+      case 3:
+        p1 = parseFloat(document.getElementById('layered3-val1').value) || 2;
+        p2 = parseFloat(document.getElementById('layered3-val2').value) || 0.5;
+        prob1 = parseFloat(document.getElementById('layered3-prob1').value) || 0.5;
+        prob2 = parseFloat(document.getElementById('layered3-prob2').value) || 0.5;
+        break;
+      case 4:
+        p1 = parseFloat(document.getElementById('layered4-w1').value) || 2;
+        p2 = parseFloat(document.getElementById('layered4-w2').value) || 0.5;
+        break;
+      case 5:
+        p1 = parseFloat(document.getElementById('layered5-min').value) || 0.5;
+        p2 = parseFloat(document.getElementById('layered5-max').value) || 2.0;
+        break;
+    }
+
+    return { regime, p1, p2, prob1, prob2 };
+  }
+
   // Main compute button - initializes graph with weights and computes
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseN();
@@ -3119,15 +3277,34 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     initAztecGraph(n);
 
-    // Set weight mode: 0=uniform, 1=random, 2=periodic
-    if (preset === 'uniform') {
+    // Set weight mode and parameters
+    // Mode: 0=All 1's, 1=Random IID, 2=Random Layered, 3=Random Gamma, 4=Periodic
+    if (preset === 'all-ones') {
       setAztecWeightMode(0);
-    } else if (preset === 'random') {
+    } else if (preset === 'random-iid') {
+      const minVal = parseFloat(document.getElementById('iid-min').value) || 0.5;
+      const maxVal = parseFloat(document.getElementById('iid-max').value) || 2.0;
+      const seed = parseInt(document.getElementById('random-seed').value) || 42;
+      seedRng(seed);
+      setRandomIIDParams(minVal, maxVal);
       setAztecWeightMode(1);
+    } else if (preset === 'random-layered') {
+      const seed = parseInt(document.getElementById('layered-seed').value) || 42;
+      seedRng(seed);
+      const params = getLayeredParams();
+      setLayeredParams(params.regime, params.p1, params.p2, params.prob1, params.prob2);
+      setAztecWeightMode(2);
+    } else if (preset === 'random-gamma') {
+      const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
+      const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+      const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
+      seedRng(seed);
+      setGammaParams(alpha, beta);
+      setAztecWeightMode(3);
     } else if (preset === 'periodic') {
       // Weights are already set by the editor UI via setPeriodicWeight calls
       // Just apply periodic mode - don't re-initialize period which would reset weights
-      setAztecWeightMode(2);
+      setAztecWeightMode(4);
     }
 
     computeAndDisplay();

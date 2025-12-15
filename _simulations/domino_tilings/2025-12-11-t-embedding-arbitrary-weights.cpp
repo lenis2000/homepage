@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setRandomIIDParams','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -207,10 +207,26 @@ inline int64_t makeIntKey64(int i, int j) {
 // Random number generator state (simple LCG)
 static unsigned int g_rngState = 12345;
 
+// Mersenne Twister RNG for gamma distribution
+#include <random>
+static std::mt19937 g_mt_rng(12345);
+
+// Random IID parameters
+static double g_iidMin = 0.5, g_iidMax = 2.0;
+
+// Layered regime parameters
+static int g_layeredRegime = 3;  // Default: Bernoulli
+static double g_layeredP1 = 2.0, g_layeredP2 = 0.5;
+static double g_layeredProb1 = 0.5, g_layeredProb2 = 0.5;
+
+// Gamma distribution parameters
+static double g_gammaAlpha = 0.2, g_gammaBeta = 0.25;
+
 extern "C" {
 EMSCRIPTEN_KEEPALIVE
 void seedRng(unsigned int seed) {
     g_rngState = seed;
+    g_mt_rng.seed(seed);
 }
 }
 
@@ -315,6 +331,127 @@ static void randomizeAztecWeightsInternal() {
 static void setUniformWeightsInternal() {
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         g_aztecEdges[i].setWeight(mp_real(1));
+    }
+}
+
+// Helper: uniform random in [0,1)
+static double uniformRandom() {
+    g_rngState = g_rngState * 1103515245 + 12345;
+    return (g_rngState >> 16) / 65536.0;
+}
+
+// Random IID weights with configurable range
+static void setRandomIIDWeightsInternal() {
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        double u = uniformRandom();
+        g_aztecEdges[i].setWeight(mp_real(g_iidMin + u * (g_iidMax - g_iidMin)));
+    }
+}
+
+// Compute layered weight based on diagonal index and regime
+static double computeLayeredWeight(int diagIndex) {
+    double sqrtN = std::sqrt((double)g_aztecLevel);
+    double u = uniformRandom();
+
+    switch (g_layeredRegime) {
+        case 1:  // Critical Scaling
+            return (u < g_layeredProb1)
+                ? g_layeredP1 + 2.0/sqrtN
+                : g_layeredP2 - 1.0/sqrtN;
+        case 2:  // Rare Event
+            return (u < 1.0/sqrtN)
+                ? g_layeredP1
+                : g_layeredP2;
+        case 3:  // Bernoulli
+            return (u < g_layeredProb1)
+                ? g_layeredP1
+                : g_layeredP2;
+        case 4:  // Deterministic Periodic
+            return (diagIndex % 2 == 0) ? g_layeredP1 : g_layeredP2;
+        case 5:  // Continuous Uniform
+            return g_layeredP1 + u * (g_layeredP2 - g_layeredP1);
+        default:
+            return 1.0;
+    }
+}
+
+// Set layered weights by diagonal
+static void setLayeredWeightsInternal() {
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        AztecEdge& edge = g_aztecEdges[i];
+        double x1 = g_aztecVertices[edge.v1].x;
+        double y1 = g_aztecVertices[edge.v1].y;
+        double x2 = g_aztecVertices[edge.v2].x;
+        double y2 = g_aztecVertices[edge.v2].y;
+        double midX = (x1 + x2) / 2.0;
+        double midY = (y1 + y2) / 2.0;
+        int diagIndex = (int)std::round(midX + midY);
+
+        double w = computeLayeredWeight(diagIndex);
+        edge.setWeight(mp_real(w));
+    }
+}
+
+// Gamma random number generator using Mersenne Twister
+static double gammaRandom(double shape) {
+    if (shape <= 0) return 1.0;
+    std::gamma_distribution<double> dist(shape, 1.0);
+    return dist(g_mt_rng);
+}
+
+// Forward declaration for isBlackFace (defined below)
+static bool isBlackFace(int fx, int fy);
+
+// Classify edge as 'a' (alpha), 'b' (beta), 'g' (gamma), or '1' (one)
+static char classifyEdge(const AztecEdge& edge) {
+    double x1 = g_aztecVertices[edge.v1].x;
+    double y1 = g_aztecVertices[edge.v1].y;
+    double x2 = g_aztecVertices[edge.v2].x;
+    double y2 = g_aztecVertices[edge.v2].y;
+
+    if (edge.isHorizontal) {
+        double midX = (x1 + x2) / 2.0;
+        int faceAboveX = (int)std::round(midX);
+        int faceAboveY = (int)std::round(y1 + 0.5);
+        int faceBelowX = (int)std::round(midX);
+        int faceBelowY = (int)std::round(y1 - 0.5);
+
+        if (isBlackFace(faceAboveX, faceAboveY)) {
+            return 'a';  // bottom edge of black face = alpha
+        } else if (isBlackFace(faceBelowX, faceBelowY)) {
+            return '1';  // top edge of black face = 1
+        }
+    } else {
+        double midY = (y1 + y2) / 2.0;
+        int faceRightX = (int)std::round(x1 + 0.5);
+        int faceRightY = (int)std::round(midY);
+        int faceLeftX = (int)std::round(x1 - 0.5);
+        int faceLeftY = (int)std::round(midY);
+
+        if (isBlackFace(faceRightX, faceRightY)) {
+            return 'g';  // left edge of black face = gamma
+        } else if (isBlackFace(faceLeftX, faceLeftY)) {
+            return 'b';  // right edge of black face = beta
+        }
+    }
+    return '1';  // default
+}
+
+// Set gamma-distributed weights (alpha edges get Gamma(alpha), beta edges get Gamma(beta))
+static void setGammaWeightsInternal() {
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        AztecEdge& edge = g_aztecEdges[i];
+        char edgeType = classifyEdge(edge);
+
+        double weight = 1.0;
+        if (edgeType == 'a') {
+            weight = gammaRandom(g_gammaAlpha);
+        } else if (edgeType == 'b') {
+            weight = gammaRandom(g_gammaBeta);
+        }
+        // 'g' and '1' stay at 1.0
+
+        edge.setWeight(mp_real(weight));
     }
 }
 
@@ -3825,21 +3962,58 @@ void randomizeAztecWeights() {
 }
 
 // Set weights based on mode:
-// 0 = Uniform (all 1s)
-// 1 = Random
-// 2 = Periodic (k x l periodicity)
+// 0 = All 1's (uniform)
+// 1 = Random IID
+// 2 = Random Layered
+// 3 = Random Gamma
+// 4 = Periodic (k x l periodicity)
 EMSCRIPTEN_KEEPALIVE
 void setAztecWeightMode(int mode) {
     if (mode == 0) {
-        // Uniform: all weights = 1
+        // All 1's: all weights = 1
         setUniformWeightsInternal();
     } else if (mode == 1) {
-        // Random
-        randomizeAztecWeightsInternal();
+        // Random IID
+        setRandomIIDWeightsInternal();
     } else if (mode == 2) {
+        // Random Layered
+        setLayeredWeightsInternal();
+    } else if (mode == 3) {
+        // Random Gamma
+        setGammaWeightsInternal();
+    } else if (mode == 4) {
         // Periodic weights
         setPeriodicWeightsInternal();
     }
+}
+
+// Set Random IID parameters (min and max range)
+EMSCRIPTEN_KEEPALIVE
+void setRandomIIDParams(double minVal, double maxVal) {
+    if (minVal <= 0) minVal = 0.001;
+    if (maxVal <= minVal) maxVal = minVal + 0.1;
+    g_iidMin = minVal;
+    g_iidMax = maxVal;
+}
+
+// Set Layered regime parameters
+// regime: 1=Critical, 2=RareEvent, 3=Bernoulli, 4=DetPeriodic, 5=Uniform
+EMSCRIPTEN_KEEPALIVE
+void setLayeredParams(int regime, double p1, double p2, double prob1, double prob2) {
+    g_layeredRegime = regime;
+    g_layeredP1 = p1;
+    g_layeredP2 = p2;
+    g_layeredProb1 = prob1;
+    g_layeredProb2 = prob2;
+}
+
+// Set Gamma distribution parameters
+EMSCRIPTEN_KEEPALIVE
+void setGammaParams(double alpha, double beta) {
+    if (alpha <= 0) alpha = 0.01;
+    if (beta <= 0) beta = 0.01;
+    g_gammaAlpha = alpha;
+    g_gammaBeta = beta;
 }
 
 // Set periodic weight parameters (k x l period)
