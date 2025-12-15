@@ -300,11 +300,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   const main3DCanvas = document.getElementById('main-temb-3d-canvas');
   const main3DCtx = main3DCanvas.getContext('2d');
 
-  // 3D view state (rotation angles in radians, zoom)
+  // 3D view state (rotation angles in radians, zoom, pan)
   let view3DRotX = -0.6;  // Rotation around X axis (tilt)
   let view3DRotZ = 0.5;   // Rotation around Z axis (spin)
   let view3DZoom = 1.0;
+  let view3DPanX = 0, view3DPanY = 0;  // Pan offset in screen pixels
   let view3DIsDragging = false;
+  let view3DIsPanning = false;  // Cmd+drag panning mode
   let view3DLastX = 0, view3DLastY = 0;
   let mainViewIs3D = false;  // Toggle between 2D and 3D view
 
@@ -1564,18 +1566,28 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       clearStoredWeightsExport();
 
       // Phase 1: Folding - step down through all reduction steps
-      computingText.textContent = `Folding Aztec diamond graph...`;
+      let lastLevel = -1;
       while (canAztecStepDown()) {
         aztecGraphStepDown();
+        refreshAztecFromCpp();
+        if (aztecLevel !== lastLevel) {
+          lastLevel = aztecLevel;
+          computingText.textContent = `Folding: Level ${aztecLevel}`;
+          await delay(0);
+        }
       }
 
       // Step back up to restore to original Aztec graph
+      lastLevel = -1;
       while (canAztecStepUp()) {
         aztecGraphStepUp();
+        refreshAztecFromCpp();
+        if (aztecLevel !== lastLevel) {
+          lastLevel = aztecLevel;
+          computingText.textContent = `Restoring: Level ${aztecLevel}`;
+          await delay(0);
+        }
       }
-
-      // Display the original Aztec graph
-      refreshAztecFromCpp();
 
       // Phase 2: Computing T-embeddings
       const finalK = Math.max(0, n - 2);
@@ -2355,10 +2367,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const rx_y = rz_y * cosX - rz_z * sinX;
       const rx_z = rz_y * sinX + rz_z * cosX;
 
-      // Orthographic projection (x, y -> screen)
+      // Orthographic projection (x, y -> screen) with pan offset
       const scale = Math.min(rect.width, rect.height) * 0.7 * view3DZoom;
-      const screenX = rect.width / 2 + rx_x * scale;
-      const screenY = rect.height / 2 - rx_y * scale;  // Flip Y for screen coords
+      const screenX = rect.width / 2 + rx_x * scale + view3DPanX;
+      const screenY = rect.height / 2 - rx_y * scale + view3DPanY;  // Flip Y for screen coords
 
       return { screenX, screenY, depth: rx_z };
     }
@@ -2480,26 +2492,38 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Sort all drawables back to front (smaller depth = further from camera = draw first)
     drawables.sort((a, b) => a.depth - b.depth);
 
-    // Light direction (from upper-right-front)
-    const lightDir = { x: 0.4, y: 0.5, z: 0.7 };
-    const lightLen = Math.sqrt(lightDir.x*lightDir.x + lightDir.y*lightDir.y + lightDir.z*lightDir.z);
-    lightDir.x /= lightLen; lightDir.y /= lightLen; lightDir.z /= lightLen;
+    // 4 light sources for uniform flat shading (similar to domino 3D presets)
+    const lights = [
+      { dir: { x: 0.5, y: 0.7, z: 0.5 }, intensity: 0.35 },   // Main light (upper-right-front)
+      { dir: { x: -0.6, y: 0.3, z: -0.4 }, intensity: 0.20 }, // Fill light (left-back)
+      { dir: { x: 0.0, y: 1.0, z: 0.0 }, intensity: 0.15 },   // Top light
+      { dir: { x: 0.3, y: -0.5, z: 0.6 }, intensity: 0.10 }   // Rim light (lower-front)
+    ];
+    // Normalize light directions
+    for (const light of lights) {
+      const len = Math.sqrt(light.dir.x**2 + light.dir.y**2 + light.dir.z**2);
+      light.dir.x /= len; light.dir.y /= len; light.dir.z /= len;
+    }
+    const ambientIntensity = 0.25;
 
     // ========== DRAW ALL OBJECTS IN DEPTH ORDER ==========
     for (const obj of drawables) {
       if (obj.type === 'face') {
         const corners = obj.corners;
-        const dot = obj.normal.x * lightDir.x + obj.normal.y * lightDir.y + obj.normal.z * lightDir.z;
-        const facing = Math.abs(obj.normal.z);
-        const specular = Math.pow(Math.max(0, dot), 8);
 
-        const baseGray = 140 + dot * 60;
-        const highlight = specular * 100;
-        const fresnel = (1 - facing) * 30;
+        // Compute lighting from all 4 sources (flat shading - no gradients)
+        let totalLight = ambientIntensity;
+        for (const light of lights) {
+          const dot = obj.normal.x * light.dir.x + obj.normal.y * light.dir.y + obj.normal.z * light.dir.z;
+          totalLight += Math.max(0, dot) * light.intensity;
+        }
+        totalLight = Math.min(1.0, totalLight);
 
-        const r = Math.min(255, Math.max(60, Math.floor(baseGray + highlight + fresnel)));
-        const g = Math.min(255, Math.max(60, Math.floor(baseGray + highlight + fresnel)));
-        const b = Math.min(255, Math.max(70, Math.floor(baseGray + highlight * 1.1 + fresnel * 1.2)));
+        // Uniform flat color per face (slight blue tint for cooler look)
+        const baseR = 180, baseG = 185, baseB = 195;
+        const r = Math.floor(baseR * totalLight);
+        const g = Math.floor(baseG * totalLight);
+        const b = Math.floor(baseB * totalLight);
 
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         ctx.beginPath();
@@ -3032,22 +3056,75 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderMain2DTemb();
   }, { passive: false });
 
-  // 3D canvas rotation handlers
+  // Main 2D canvas touch handlers for iOS
+  let main2DTouchStartDist = 0;
+  let main2DTouchStartZoom = 1;
+  main2DCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      main2DIsPanning = true;
+      main2DLastPanX = e.touches[0].clientX;
+      main2DLastPanY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      main2DIsPanning = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      main2DTouchStartDist = Math.sqrt(dx * dx + dy * dy);
+      main2DTouchStartZoom = main2DZoom;
+    }
+  }, { passive: true });
+
+  main2DCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && main2DIsPanning) {
+      const dx = e.touches[0].clientX - main2DLastPanX;
+      const dy = e.touches[0].clientY - main2DLastPanY;
+      main2DPanX += dx;
+      main2DPanY += dy;
+      main2DLastPanX = e.touches[0].clientX;
+      main2DLastPanY = e.touches[0].clientY;
+      renderMain2DTemb();
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (main2DTouchStartDist > 0) {
+        main2DZoom = Math.max(0.1, Math.min(20, main2DTouchStartZoom * (dist / main2DTouchStartDist)));
+        renderMain2DTemb();
+      }
+    }
+  }, { passive: false });
+
+  main2DCanvas.addEventListener('touchend', () => {
+    main2DIsPanning = false;
+    main2DTouchStartDist = 0;
+  }, { passive: true });
+
+  // 3D canvas rotation/pan handlers
   main3DCanvas.addEventListener('mousedown', (e) => {
-    view3DIsDragging = true;
     view3DLastX = e.clientX;
     view3DLastY = e.clientY;
-    main3DCanvas.style.cursor = 'grabbing';
+    if (e.metaKey || e.ctrlKey) {
+      view3DIsPanning = true;
+      main3DCanvas.style.cursor = 'move';
+    } else {
+      view3DIsDragging = true;
+      main3DCanvas.style.cursor = 'grabbing';
+    }
   });
 
   main3DCanvas.addEventListener('mousemove', (e) => {
-    if (!view3DIsDragging) return;
+    if (!view3DIsDragging && !view3DIsPanning) return;
     const dx = e.clientX - view3DLastX;
     const dy = e.clientY - view3DLastY;
-    view3DRotZ += dx * 0.01;  // Horizontal drag = spin around Z
-    view3DRotX += dy * 0.01;  // Vertical drag = tilt around X
-    // Clamp tilt to avoid flipping
-    view3DRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, view3DRotX));
+    if (view3DIsPanning) {
+      view3DPanX += dx;
+      view3DPanY += dy;
+    } else {
+      view3DRotZ += dx * 0.01;  // Horizontal drag = spin around Z
+      view3DRotX += dy * 0.01;  // Vertical drag = tilt around X
+      // Clamp tilt to avoid flipping
+      view3DRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, view3DRotX));
+    }
     view3DLastX = e.clientX;
     view3DLastY = e.clientY;
     renderMain3D();
@@ -3055,11 +3132,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   main3DCanvas.addEventListener('mouseup', () => {
     view3DIsDragging = false;
+    view3DIsPanning = false;
     main3DCanvas.style.cursor = 'grab';
   });
 
   main3DCanvas.addEventListener('mouseleave', () => {
     view3DIsDragging = false;
+    view3DIsPanning = false;
     main3DCanvas.style.cursor = 'grab';
   });
 
@@ -3069,6 +3148,51 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     view3DZoom = Math.max(0.2, Math.min(5, view3DZoom * factor));
     renderMain3D();
   }, { passive: false });
+
+  // 3D canvas touch handlers for iOS
+  let view3DTouchStartDist = 0;
+  let view3DTouchStartZoom = 1;
+  main3DCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      view3DIsDragging = true;
+      view3DLastX = e.touches[0].clientX;
+      view3DLastY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      // Pinch to zoom
+      view3DIsDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      view3DTouchStartDist = Math.sqrt(dx * dx + dy * dy);
+      view3DTouchStartZoom = view3DZoom;
+    }
+  }, { passive: true });
+
+  main3DCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && view3DIsDragging) {
+      const dx = e.touches[0].clientX - view3DLastX;
+      const dy = e.touches[0].clientY - view3DLastY;
+      view3DRotZ += dx * 0.01;
+      view3DRotX += dy * 0.01;
+      view3DRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, view3DRotX));
+      view3DLastX = e.touches[0].clientX;
+      view3DLastY = e.touches[0].clientY;
+      renderMain3D();
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (view3DTouchStartDist > 0) {
+        view3DZoom = Math.max(0.2, Math.min(5, view3DTouchStartZoom * (dist / view3DTouchStartDist)));
+        renderMain3D();
+      }
+    }
+  }, { passive: false });
+
+  main3DCanvas.addEventListener('touchend', () => {
+    view3DIsDragging = false;
+    view3DTouchStartDist = 0;
+  }, { passive: true });
 
   // T-embedding size controls
   document.getElementById('temb-vertex-size').addEventListener('input', renderStepwiseTemb);
@@ -3112,6 +3236,49 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderStepwiseTemb();
   }, { passive: false });
 
+  // Stepwise canvas touch handlers for iOS
+  let stepwiseTouchStartDist = 0;
+  let stepwiseTouchStartZoom = 1;
+  stepwiseCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      stepwiseIsPanning = true;
+      stepwiseLastPanX = e.touches[0].clientX;
+      stepwiseLastPanY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      stepwiseIsPanning = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      stepwiseTouchStartDist = Math.sqrt(dx * dx + dy * dy);
+      stepwiseTouchStartZoom = stepwiseZoom;
+    }
+  }, { passive: true });
+
+  stepwiseCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && stepwiseIsPanning) {
+      const dx = e.touches[0].clientX - stepwiseLastPanX;
+      const dy = e.touches[0].clientY - stepwiseLastPanY;
+      stepwisePanX += dx / stepwiseZoom;
+      stepwisePanY += dy / stepwiseZoom;
+      stepwiseLastPanX = e.touches[0].clientX;
+      stepwiseLastPanY = e.touches[0].clientY;
+      renderStepwiseTemb();
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (stepwiseTouchStartDist > 0) {
+        stepwiseZoom = Math.max(0.1, Math.min(20, stepwiseTouchStartZoom * (dist / stepwiseTouchStartDist)));
+        renderStepwiseTemb();
+      }
+    }
+  }, { passive: false });
+
+  stepwiseCanvas.addEventListener('touchend', () => {
+    stepwiseIsPanning = false;
+    stepwiseTouchStartDist = 0;
+  }, { passive: true });
+
   // Aztec canvas click and pan/zoom
   aztecCanvas.addEventListener('click', handleAztecCanvasClick);
 
@@ -3153,6 +3320,51 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     aztecZoom = Math.max(0.1, Math.min(20, aztecZoom * factor));
     renderAztecGraph();
   }, { passive: false });
+
+  // Aztec canvas touch handlers for iOS
+  let aztecTouchStartDist = 0;
+  let aztecTouchStartZoom = 1;
+  aztecCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      aztecIsPanning = true;
+      aztecDidPan = false;
+      aztecLastPanX = e.touches[0].clientX;
+      aztecLastPanY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      aztecIsPanning = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      aztecTouchStartDist = Math.sqrt(dx * dx + dy * dy);
+      aztecTouchStartZoom = aztecZoom;
+    }
+  }, { passive: true });
+
+  aztecCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && aztecIsPanning) {
+      const dx = e.touches[0].clientX - aztecLastPanX;
+      const dy = e.touches[0].clientY - aztecLastPanY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) aztecDidPan = true;
+      aztecPanX += dx / aztecZoom;
+      aztecPanY += dy / aztecZoom;
+      aztecLastPanX = e.touches[0].clientX;
+      aztecLastPanY = e.touches[0].clientY;
+      renderAztecGraph();
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (aztecTouchStartDist > 0) {
+        aztecZoom = Math.max(0.1, Math.min(20, aztecTouchStartZoom * (dist / aztecTouchStartDist)));
+        renderAztecGraph();
+      }
+    }
+  }, { passive: false });
+
+  aztecCanvas.addEventListener('touchend', () => {
+    aztecIsPanning = false;
+    aztecTouchStartDist = 0;
+  }, { passive: true });
 
   // Copy to clipboard buttons
   function copyToClipboard(elementId, btn) {

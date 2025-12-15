@@ -89,6 +89,9 @@ static int g_aztecReductionStep = 0;  // 0=original, 1=gauge transformed, 2=degr
 static std::vector<AztecVertex> g_aztecVertices;
 static std::vector<AztecEdge> g_aztecEdges;
 
+// Global adjacency cache: g_adj[vertex_idx] = list of edge indices incident to that vertex
+static std::vector<std::vector<int>> g_adj;
+
 // Black quad centers (preserved across transformations)
 static std::vector<std::pair<double, double>> g_blackQuadCenters;
 
@@ -144,6 +147,30 @@ static std::string makeKey(int j, int k) {
     return ss.str();
 }
 
+// Rebuild the global adjacency cache from current vertices and edges
+static void rebuildAdjacency() {
+    g_adj.assign(g_aztecVertices.size(), std::vector<int>());
+    for (size_t i = 0; i < g_aztecEdges.size(); ++i) {
+        int v1 = g_aztecEdges[i].v1;
+        int v2 = g_aztecEdges[i].v2;
+        if (v1 >= 0 && v1 < (int)g_adj.size()) g_adj[v1].push_back((int)i);
+        if (v2 >= 0 && v2 < (int)g_adj.size()) g_adj[v2].push_back((int)i);
+    }
+}
+
+// Pack half-integer coordinates (x,y) into a unique 64-bit key
+// For vertex at x = i + 0.5, y = j + 0.5, packs (i, j) into int64_t
+inline int64_t makePosKey(double x, double y) {
+    int i = static_cast<int>(std::round(x - 0.5));
+    int j = static_cast<int>(std::round(y - 0.5));
+    return (static_cast<int64_t>(i) << 32) | (static_cast<uint32_t>(j));
+}
+
+// Pack integer coordinates (i,j) directly into a 64-bit key
+inline int64_t makeIntKey64(int i, int j) {
+    return (static_cast<int64_t>(i) << 32) | (static_cast<uint32_t>(j));
+}
+
 // =============================================================================
 // AZTEC GRAPH GENERATION
 // =============================================================================
@@ -178,8 +205,8 @@ static void generateAztecGraphInternal(int k) {
     g_aztecLevel = k;
     clearStoredWeights();  // Clear stored face weights when graph changes
 
-    // Map from (x,y) key to vertex index
-    std::map<std::string, int> vertexIndex;
+    // Map from (i,j) integer key to vertex index (using 64-bit key for efficiency)
+    std::map<int64_t, int> vertexIndex;
 
     // Generate vertices
     for (int i = -k; i <= k; i++) {
@@ -197,9 +224,7 @@ static void generateAztecGraphInternal(int k) {
                 v.inVgauge = false;
                 v.toContract = false;
 
-                std::ostringstream keyss;
-                keyss << x << "," << y;
-                vertexIndex[keyss.str()] = (int)g_aztecVertices.size();
+                vertexIndex[makeIntKey64(i, j)] = (int)g_aztecVertices.size();
                 g_aztecVertices.push_back(v);
             }
         }
@@ -209,12 +234,12 @@ static void generateAztecGraphInternal(int k) {
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         double x = g_aztecVertices[idx].x;
         double y = g_aztecVertices[idx].y;
+        int i = static_cast<int>(std::round(x - 0.5));
+        int j = static_cast<int>(std::round(y - 0.5));
 
-        // Check right neighbor (x+1, y)
+        // Check right neighbor (i+1, j)
         {
-            std::ostringstream keyss;
-            keyss << (x + 1.0) << "," << y;
-            auto it = vertexIndex.find(keyss.str());
+            auto it = vertexIndex.find(makeIntKey64(i + 1, j));
             if (it != vertexIndex.end()) {
                 AztecEdge e;
                 e.v1 = (int)idx;
@@ -226,11 +251,9 @@ static void generateAztecGraphInternal(int k) {
             }
         }
 
-        // Check top neighbor (x, y+1)
+        // Check top neighbor (i, j+1)
         {
-            std::ostringstream keyss;
-            keyss << x << "," << (y + 1.0);
-            auto it = vertexIndex.find(keyss.str());
+            auto it = vertexIndex.find(makeIntKey64(i, j + 1));
             if (it != vertexIndex.end()) {
                 AztecEdge e;
                 e.v1 = (int)idx;
@@ -246,6 +269,9 @@ static void generateAztecGraphInternal(int k) {
     // Reset reduction step
     g_aztecReductionStep = 0;
     g_aztecHistory.clear();
+
+    // Rebuild adjacency cache
+    rebuildAdjacency();
 }
 
 // Randomize all edge weights
@@ -294,6 +320,7 @@ static bool popAztecState() {
     g_blackQuadCenters = state.blackQuadCenters;
     g_aztecReductionStep = state.step;
     g_aztecLevel = state.level;
+    rebuildAdjacency();  // Rebuild adjacency after restoring state
     return true;
 }
 
@@ -373,14 +400,12 @@ static void aztecStep1_GaugeTransform() {
 
     int n = g_aztecLevel;
 
-    // Build vertex lookup map using integer coordinates (i,j) to avoid float precision issues
-    // Key: i * 10000 + j (assumes |i|, |j| < 5000)
-    auto makeIntKey = [](int i, int j) { return i * 10000 + j; };
-    std::map<int, int> vertexIndex;  // intKey -> vertex index
+    // Build vertex lookup map using integer coordinates (i,j) with 64-bit key
+    std::map<int64_t, int> vertexIndex;  // int64 key -> vertex index
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
-        vertexIndex[makeIntKey(i, j)] = (int)idx;
+        vertexIndex[makeIntKey64(i, j)] = (int)idx;
     }
 
     // Build edge lookup: for each vertex, list of (neighbor_idx, edge_idx)
@@ -416,13 +441,13 @@ static void aztecStep1_GaugeTransform() {
         if (i - j == -(n - 1)) {
             // Left diagonal: boundary at (i, j+1), check if it exists
             int bi = i, bj = j + 1;
-            if (vertexIndex.count(makeIntKey(bi, bj))) {
+            if (vertexIndex.count(makeIntKey64(bi, bj))) {
                 leftDiagVertices.push_back({(int)idx, i, j, true});
             }
         } else if (i - j == (n - 1)) {
             // Right diagonal: boundary at (i, j-1), check if it exists
             int bi = i, bj = j - 1;
-            if (vertexIndex.count(makeIntKey(bi, bj))) {
+            if (vertexIndex.count(makeIntKey64(bi, bj))) {
                 rightDiagVertices.push_back({(int)idx, i, j, false});
             }
         }
@@ -459,13 +484,13 @@ static void aztecStep1_GaugeTransform() {
 
         // Boundary vertex at (i, j+1)
         int bi = i, bj = j + 1;
-        auto bit = vertexIndex.find(makeIntKey(bi, bj));
+        auto bit = vertexIndex.find(makeIntKey64(bi, bj));
         if (bit == vertexIndex.end()) continue;
         int bIdx = bit->second;
 
         // Reference vertex at (i+1, j+1) - either corner or previous gauge vertex
         int ri = i + 1, rj = j + 1;
-        auto rit = vertexIndex.find(makeIntKey(ri, rj));
+        auto rit = vertexIndex.find(makeIntKey64(ri, rj));
         if (rit == vertexIndex.end()) continue;
         int rIdx = rit->second;
 
@@ -494,13 +519,13 @@ static void aztecStep1_GaugeTransform() {
 
         // Boundary vertex at (i, j-1)
         int bi = i, bj = j - 1;
-        auto bit = vertexIndex.find(makeIntKey(bi, bj));
+        auto bit = vertexIndex.find(makeIntKey64(bi, bj));
         if (bit == vertexIndex.end()) continue;
         int bIdx = bit->second;
 
         // Reference vertex at (i-1, j-1) - either corner or previous gauge vertex
         int ri = i - 1, rj = j - 1;
-        auto rit = vertexIndex.find(makeIntKey(ri, rj));
+        auto rit = vertexIndex.find(makeIntKey64(ri, rj));
         if (rit == vertexIndex.end()) continue;
         int rIdx = rit->second;
 
@@ -523,6 +548,7 @@ static void aztecStep1_GaugeTransform() {
     }
 
     g_aztecReductionStep = 1;
+    rebuildAdjacency();
 }
 
 // STEP 2: WHITE gauge transform
@@ -548,13 +574,12 @@ static void aztecStep2_WhiteGaugeTransform() {
         v.toContract = false;
     }
 
-    // Build vertex lookup map using integer coordinates
-    auto makeIntKey = [](int i, int j) { return i * 10000 + j; };
-    std::map<int, int> vertexIndex;
+    // Build vertex lookup map using integer coordinates with 64-bit key
+    std::map<int64_t, int> vertexIndex;
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
-        vertexIndex[makeIntKey(i, j)] = (int)idx;
+        vertexIndex[makeIntKey64(i, j)] = (int)idx;
     }
 
     // Build edge lookup: vertex -> [(neighbor, edgeIdx)]
@@ -619,8 +644,8 @@ static void aztecStep2_WhiteGaugeTransform() {
         int n1i = i - 1, n1j = j;
         int n2i = i, n2j = j - 1;
 
-        auto n1It = vertexIndex.find(makeIntKey(n1i, n1j));
-        auto n2It = vertexIndex.find(makeIntKey(n2i, n2j));
+        auto n1It = vertexIndex.find(makeIntKey64(n1i, n1j));
+        auto n2It = vertexIndex.find(makeIntKey64(n2i, n2j));
         if (n1It == vertexIndex.end() || n2It == vertexIndex.end()) continue;
 
         int n1Idx = n1It->second;
@@ -673,8 +698,8 @@ static void aztecStep2_WhiteGaugeTransform() {
         int n1i = i + 1, n1j = j;
         int n2i = i, n2j = j + 1;
 
-        auto n1It = vertexIndex.find(makeIntKey(n1i, n1j));
-        auto n2It = vertexIndex.find(makeIntKey(n2i, n2j));
+        auto n1It = vertexIndex.find(makeIntKey64(n1i, n1j));
+        auto n2It = vertexIndex.find(makeIntKey64(n2i, n2j));
         if (n1It == vertexIndex.end() || n2It == vertexIndex.end()) continue;
 
         int n1Idx = n1It->second;
@@ -718,6 +743,7 @@ static void aztecStep2_WhiteGaugeTransform() {
     }
 
     g_aztecReductionStep = 2;
+    rebuildAdjacency();
 }
 
 // STEP 3: Contract boundary - remove all boundary vertices and their edges
@@ -793,6 +819,7 @@ static void aztecStep3_Contract() {
     // Level stays the same - this is A'_{n+1} (contracted), not A_n
     // g_aztecLevel stays unchanged
     g_aztecReductionStep = 3;
+    rebuildAdjacency();
 }
 
 // STEP 4: Black contraction - merge black vertices on i-j = -(n-1) and i-j = (n-1) into single vertices
@@ -942,6 +969,7 @@ static void aztecStep4_BlackContraction() {
     }
 
     g_aztecReductionStep = 4;
+    rebuildAdjacency();
 }
 
 // STEP 5: White contraction - merge white vertices on i+j = -n and i+j = n-2 into single vertices
@@ -1083,6 +1111,7 @@ static void aztecStep5_WhiteContraction() {
     }
 
     g_aztecReductionStep = 5;
+    rebuildAdjacency();
 }
 
 // STEP 6: Shading - mark faces for grey/black rendering (Folding step 1)
@@ -1097,63 +1126,52 @@ static void aztecStep6_Shading() {
         e.gaugeTransformed = false;
     }
 
-    // Build vertex index by coordinate string
-    std::map<std::string, int> vertexIndex;
+    // Build vertex index using 64-bit integer keys
+    std::map<int64_t, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        std::ostringstream key;
-        key << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
-        vertexIndex[key.str()] = (int)i;
+        vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
     }
 
-    // Build edge lookup
-    std::set<std::string> edgeSet;
+    // Build edge lookup using ordered pairs of vertex keys
+    std::set<std::pair<int64_t, int64_t>> edgeSet;
     for (const auto& e : g_aztecEdges) {
-        double x1 = g_aztecVertices[e.v1].x;
-        double y1 = g_aztecVertices[e.v1].y;
-        double x2 = g_aztecVertices[e.v2].x;
-        double y2 = g_aztecVertices[e.v2].y;
-        std::ostringstream k1, k2;
-        k1 << x1 << "," << y1 << "-" << x2 << "," << y2;
-        k2 << x2 << "," << y2 << "-" << x1 << "," << y1;
-        edgeSet.insert(k1.str());
-        edgeSet.insert(k2.str());
+        int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
+        int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
+        edgeSet.insert(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1));
     }
+
+    // Helper to check if edge exists
+    auto hasEdge = [&](int64_t k1, int64_t k2) {
+        return edgeSet.count(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1)) > 0;
+    };
 
     // Find all black quad centers
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
     g_blackQuadCenters.clear();
-    std::set<std::string> visitedFaces;
+    std::set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;
-        std::ostringstream faceKey;
-        faceKey << x << "," << y;
-        if (visitedFaces.count(faceKey.str())) continue;
+        int64_t faceKey = makePosKey(x, y);
+        if (visitedFaces.count(faceKey)) continue;
 
         // Look for face with BL at (x, y)
-        std::ostringstream blKey, brKey, tlKey, trKey;
-        blKey << x << "," << y;
-        brKey << (x+1) << "," << y;
-        tlKey << x << "," << (y+1);
-        trKey << (x+1) << "," << (y+1);
+        int64_t blKey = makePosKey(x, y);
+        int64_t brKey = makePosKey(x + 1, y);
+        int64_t tlKey = makePosKey(x, y + 1);
+        int64_t trKey = makePosKey(x + 1, y + 1);
 
-        if (vertexIndex.count(blKey.str()) && vertexIndex.count(brKey.str()) &&
-            vertexIndex.count(tlKey.str()) && vertexIndex.count(trKey.str())) {
+        if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
+            vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
             // Check all 4 edges exist
-            std::ostringstream e1, e2, e3, e4;
-            e1 << x << "," << y << "-" << (x+1) << "," << y;
-            e2 << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
-            e3 << x << "," << y << "-" << x << "," << (y+1);
-            e4 << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
+            if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
+                hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
+                visitedFaces.insert(faceKey);
 
-            if (edgeSet.count(e1.str()) && edgeSet.count(e2.str()) &&
-                edgeSet.count(e3.str()) && edgeSet.count(e4.str())) {
-                visitedFaces.insert(faceKey.str());
-
-                int blIdx = vertexIndex[blKey.str()];
-                int brIdx = vertexIndex[brKey.str()];
-                int tlIdx = vertexIndex[tlKey.str()];
-                int trIdx = vertexIndex[trKey.str()];
+                int blIdx = vertexIndex[blKey];
+                int brIdx = vertexIndex[brKey];
+                int tlIdx = vertexIndex[tlKey];
+                int trIdx = vertexIndex[trKey];
 
                 bool tlWhite = g_aztecVertices[tlIdx].isWhite;
                 bool brWhite = g_aztecVertices[brIdx].isWhite;
@@ -1171,6 +1189,7 @@ static void aztecStep6_Shading() {
     }
 
     g_aztecReductionStep = 6;
+    rebuildAdjacency();
 }
 
 // STEP 7: Mark diagonal vertices (Folding step 2)
@@ -1198,6 +1217,7 @@ static void aztecStep7_MarkDiagonalVertices() {
     }
 
     g_aztecReductionStep = 7;
+    rebuildAdjacency();
 }
 
 // STEP 8: Split green vertices into 3-vertex chains (Folding step 3)
@@ -1216,27 +1236,24 @@ static void aztecStep8_SplitVertices() {
 
     const double shiftAmount = 0.2;  // Shift towards center for non-selected vertices
 
-    // Build vertex index by coordinate
-    std::map<std::string, int> vertexIndex;
+    // Build vertex index using 64-bit integer keys
+    std::map<int64_t, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        std::ostringstream key;
-        key << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
-        vertexIndex[key.str()] = (int)i;
+        vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
     }
 
-    // Build edge lookup
-    std::set<std::string> edgeSet;
+    // Build edge lookup using ordered pairs of vertex keys
+    std::set<std::pair<int64_t, int64_t>> edgeSet;
     for (const auto& e : g_aztecEdges) {
-        double x1 = g_aztecVertices[e.v1].x;
-        double y1 = g_aztecVertices[e.v1].y;
-        double x2 = g_aztecVertices[e.v2].x;
-        double y2 = g_aztecVertices[e.v2].y;
-        std::ostringstream k1, k2;
-        k1 << x1 << "," << y1 << "-" << x2 << "," << y2;
-        k2 << x2 << "," << y2 << "-" << x1 << "," << y1;
-        edgeSet.insert(k1.str());
-        edgeSet.insert(k2.str());
+        int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
+        int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
+        edgeSet.insert(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1));
     }
+
+    // Helper to check if edge exists
+    auto hasEdge = [&](int64_t k1, int64_t k2) {
+        return edgeSet.count(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1)) > 0;
+    };
 
     // Find all black quads and their vertex indices
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
@@ -1246,38 +1263,30 @@ static void aztecStep8_SplitVertices() {
     };
     std::vector<BlackQuad> blackQuads;
     std::set<int> verticesInBlackQuads;  // indices of vertices belonging to black quads
-    std::set<std::string> visitedFaces;
+    std::set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;
-        std::ostringstream faceKey;
-        faceKey << x << "," << y;
-        if (visitedFaces.count(faceKey.str())) continue;
+        int64_t faceKey = makePosKey(x, y);
+        if (visitedFaces.count(faceKey)) continue;
 
         // Look for face with BL at (x, y)
-        std::ostringstream blKey, brKey, tlKey, trKey;
-        blKey << x << "," << y;
-        brKey << (x+1) << "," << y;
-        tlKey << x << "," << (y+1);
-        trKey << (x+1) << "," << (y+1);
+        int64_t blKey = makePosKey(x, y);
+        int64_t brKey = makePosKey(x + 1, y);
+        int64_t tlKey = makePosKey(x, y + 1);
+        int64_t trKey = makePosKey(x + 1, y + 1);
 
-        if (vertexIndex.count(blKey.str()) && vertexIndex.count(brKey.str()) &&
-            vertexIndex.count(tlKey.str()) && vertexIndex.count(trKey.str())) {
+        if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
+            vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
             // Check all 4 edges exist
-            std::ostringstream e1, e2, e3, e4;
-            e1 << x << "," << y << "-" << (x+1) << "," << y;
-            e2 << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
-            e3 << x << "," << y << "-" << x << "," << (y+1);
-            e4 << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
+            if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
+                hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
+                visitedFaces.insert(faceKey);
 
-            if (edgeSet.count(e1.str()) && edgeSet.count(e2.str()) &&
-                edgeSet.count(e3.str()) && edgeSet.count(e4.str())) {
-                visitedFaces.insert(faceKey.str());
-
-                int blIdx = vertexIndex[blKey.str()];
-                int brIdx = vertexIndex[brKey.str()];
-                int tlIdx = vertexIndex[tlKey.str()];
-                int trIdx = vertexIndex[trKey.str()];
+                int blIdx = vertexIndex[blKey];
+                int brIdx = vertexIndex[brKey];
+                int tlIdx = vertexIndex[tlKey];
+                int trIdx = vertexIndex[trKey];
 
                 bool tlWhite = g_aztecVertices[tlIdx].isWhite;
                 bool brWhite = g_aztecVertices[brIdx].isWhite;
@@ -1498,6 +1507,7 @@ static void aztecStep8_SplitVertices() {
     }
 
     g_aztecReductionStep = 8;
+    rebuildAdjacency();
 }
 
 // STEP 9: Diagonal Gauge Transform (Folding step 3b)
@@ -1564,6 +1574,7 @@ static void aztecStep9_DiagonalGauge() {
     }
 
     g_aztecReductionStep = 9;
+    rebuildAdjacency();
 }
 
 // STEP 10: Urban Renewal (Folding step 4)
@@ -1773,6 +1784,7 @@ static void aztecStep10_UrbanRenewal() {
     g_blackQuadCenters.clear();
 
     g_aztecReductionStep = 10;
+    rebuildAdjacency();
 }
 
 // STEP 11: Combine Double Edges (Folding step 5)
@@ -1991,6 +2003,7 @@ static void aztecStep11_CombineDoubleEdges() {
 
     g_aztecEdges = newEdges;
     g_aztecReductionStep = 11;
+    rebuildAdjacency();
 }
 
 // STEP 12: Start Next Iteration (decrease level, back to fold 1)
@@ -2019,63 +2032,52 @@ static void aztecStep12_StartNextIteration() {
     }
 
     // Re-compute black quad centers for new level using current graph structure
-    // Build vertex index by coordinate string
-    std::map<std::string, int> vertexIndex;
+    // Build vertex index using 64-bit integer keys
+    std::map<int64_t, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        std::ostringstream key;
-        key << std::setprecision(15) << g_aztecVertices[i].x << "," << g_aztecVertices[i].y;
-        vertexIndex[key.str()] = (int)i;
+        vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
     }
 
-    // Build edge lookup
-    std::set<std::string> edgeSet;
+    // Build edge lookup using ordered pairs of vertex keys
+    std::set<std::pair<int64_t, int64_t>> edgeSet;
     for (const auto& e : g_aztecEdges) {
-        double x1 = g_aztecVertices[e.v1].x;
-        double y1 = g_aztecVertices[e.v1].y;
-        double x2 = g_aztecVertices[e.v2].x;
-        double y2 = g_aztecVertices[e.v2].y;
-        std::ostringstream k1, k2;
-        k1 << std::setprecision(15) << x1 << "," << y1 << "-" << x2 << "," << y2;
-        k2 << std::setprecision(15) << x2 << "," << y2 << "-" << x1 << "," << y1;
-        edgeSet.insert(k1.str());
-        edgeSet.insert(k2.str());
+        int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
+        int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
+        edgeSet.insert(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1));
     }
+
+    // Helper to check if edge exists
+    auto hasEdge = [&](int64_t k1, int64_t k2) {
+        return edgeSet.count(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1)) > 0;
+    };
 
     // Find all black quad centers in current graph
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
     g_blackQuadCenters.clear();
-    std::set<std::string> visitedFaces;
+    std::set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;
-        std::ostringstream faceKey;
-        faceKey << std::setprecision(15) << x << "," << y;
-        if (visitedFaces.count(faceKey.str())) continue;
+        int64_t faceKey = makePosKey(x, y);
+        if (visitedFaces.count(faceKey)) continue;
 
         // Look for face with BL at (x, y)
-        std::ostringstream blKey, brKey, tlKey, trKey;
-        blKey << std::setprecision(15) << x << "," << y;
-        brKey << std::setprecision(15) << (x+1) << "," << y;
-        tlKey << std::setprecision(15) << x << "," << (y+1);
-        trKey << std::setprecision(15) << (x+1) << "," << (y+1);
+        int64_t blKey = makePosKey(x, y);
+        int64_t brKey = makePosKey(x + 1, y);
+        int64_t tlKey = makePosKey(x, y + 1);
+        int64_t trKey = makePosKey(x + 1, y + 1);
 
-        if (vertexIndex.count(blKey.str()) && vertexIndex.count(brKey.str()) &&
-            vertexIndex.count(tlKey.str()) && vertexIndex.count(trKey.str())) {
+        if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
+            vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
             // Check all 4 edges exist
-            std::ostringstream e1, e2, e3, e4;
-            e1 << std::setprecision(15) << x << "," << y << "-" << (x+1) << "," << y;
-            e2 << std::setprecision(15) << x << "," << (y+1) << "-" << (x+1) << "," << (y+1);
-            e3 << std::setprecision(15) << x << "," << y << "-" << x << "," << (y+1);
-            e4 << std::setprecision(15) << (x+1) << "," << y << "-" << (x+1) << "," << (y+1);
+            if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
+                hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
+                visitedFaces.insert(faceKey);
 
-            if (edgeSet.count(e1.str()) && edgeSet.count(e2.str()) &&
-                edgeSet.count(e3.str()) && edgeSet.count(e4.str())) {
-                visitedFaces.insert(faceKey.str());
-
-                int blIdx = vertexIndex[blKey.str()];
-                int brIdx = vertexIndex[brKey.str()];
-                int tlIdx = vertexIndex[tlKey.str()];
-                int trIdx = vertexIndex[trKey.str()];
+                int blIdx = vertexIndex[blKey];
+                int brIdx = vertexIndex[brKey];
+                int tlIdx = vertexIndex[tlKey];
+                int trIdx = vertexIndex[trKey];
 
                 bool tlWhite = g_aztecVertices[tlIdx].isWhite;
                 bool brWhite = g_aztecVertices[brIdx].isWhite;
@@ -2093,6 +2095,7 @@ static void aztecStep12_StartNextIteration() {
     }
 
     g_aztecReductionStep = 6;  // Back to fold 1: shaded
+    rebuildAdjacency();
 }
 
 // Step down: advance to next reduction step
@@ -2528,23 +2531,44 @@ static void computeTk(int k) {
     TembLevel tk;
     tk.k = k;
 
-    // Build a map for quick T_{k-1} lookup (using 100-digit precision)
-    std::map<std::pair<int,int>, mp_complex> Tprev;
+    // Use flat arrays for O(1) lookup instead of O(log n) maps
+    // Indices range from -(k+1) to (k+1), so dimension is 2*(k+1)+3 for safety
+    int dim = 2 * k + 5;
+    int offset = k + 2;
+    auto idx = [dim, offset](int i, int j) { return (i + offset) * dim + (j + offset); };
+
+    // Flat arrays for T_{k-1} (Tprev)
+    std::vector<mp_complex> Tprev_vec(dim * dim, mp_complex(0, 0));
+    std::vector<bool> Tprev_exists(dim * dim, false);
+
+    // Populate Tprev from prevLevel
     for (const auto& v : prevLevel->vertices) {
-        Tprev[{v.i, v.j}] = mp_complex(mp_real(v.re), mp_real(v.im));
+        int index = idx(v.i, v.j);
+        Tprev_vec[index] = mp_complex(mp_real(v.re), mp_real(v.im));
+        Tprev_exists[index] = true;
     }
 
-    // Map for T_k values (build incrementally, using 100-digit precision)
-    std::map<std::pair<int,int>, mp_complex> Tcurr;
+    // Flat arrays for T_k (Tcurr)
+    std::vector<mp_complex> Tcurr_vec(dim * dim, mp_complex(0, 0));
+    std::vector<bool> Tcurr_set(dim * dim, false);
+
+    // Helper lambdas for cleaner access
+    auto Tprev = [&](int i, int j) -> mp_complex { return Tprev_vec[idx(i, j)]; };
+    auto setTcurr = [&](int i, int j, const mp_complex& val) {
+        int index = idx(i, j);
+        Tcurr_vec[index] = val;
+        Tcurr_set[index] = true;
+    };
+    auto Tcurr = [&](int i, int j) -> mp_complex { return Tcurr_vec[idx(i, j)]; };
 
     // ==========================================================================
     // Rule 1: External corners (stay the same as previous level's corners)
     // T_k(k+1,0) = T_{k-1}(k,0), etc.
     // ==========================================================================
-    Tcurr[{k+1, 0}] = Tprev[{k, 0}];
-    Tcurr[{-(k+1), 0}] = Tprev[{-k, 0}];
-    Tcurr[{0, k+1}] = Tprev[{0, k}];
-    Tcurr[{0, -(k+1)}] = Tprev[{0, -k}];
+    setTcurr(k+1, 0, Tprev(k, 0));
+    setTcurr(-(k+1), 0, Tprev(-k, 0));
+    setTcurr(0, k+1, Tprev(0, k));
+    setTcurr(0, -(k+1), Tprev(0, -k));
 
     // ==========================================================================
     // Rule 2: Alpha vertices (axis boundary at |i|+|j|=k, on-axis)
@@ -2553,13 +2577,13 @@ static void computeTk(int k) {
     // ==========================================================================
 
     // Right: (k, 0) uses alpha_right
-    Tcurr[{k, 0}] = (Tprev[{k, 0}] + alpha_right * Tprev[{k-1, 0}]) / (alpha_right + mp_real(1));
+    setTcurr(k, 0, (Tprev(k, 0) + alpha_right * Tprev(k-1, 0)) / (alpha_right + mp_real(1)));
     // Left: (-k, 0) uses alpha_left
-    Tcurr[{-k, 0}] = (Tprev[{-k, 0}] + alpha_left * Tprev[{-(k-1), 0}]) / (alpha_left + mp_real(1));
+    setTcurr(-k, 0, (Tprev(-k, 0) + alpha_left * Tprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
     // Top: (0, k) uses alpha_top
-    Tcurr[{0, k}] = (Tprev[{0, k}] + alpha_top * Tprev[{0, k-1}]) / (alpha_top + mp_real(1));
+    setTcurr(0, k, (Tprev(0, k) + alpha_top * Tprev(0, k-1)) / (alpha_top + mp_real(1)));
     // Bottom: (0, -k) uses alpha_bottom
-    Tcurr[{0, -k}] = (Tprev[{0, -k}] + alpha_bottom * Tprev[{0, -(k-1)}]) / (alpha_bottom + mp_real(1));
+    setTcurr(0, -k, (Tprev(0, -k) + alpha_bottom * Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
 
     // ==========================================================================
     // Rule 3: Beta vertices (diagonal boundary at |i|+|j|=k, off-axis)
@@ -2604,9 +2628,9 @@ static void computeTk(int k) {
         {
             mp_real beta_ij = getBetaWeight(j, kj);
             if (g_betaSwapUR) {
-                Tcurr[{j, kj}] = (beta_ij * Tprev[{j-1, kj}] + Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+                setTcurr(j, kj, (beta_ij * Tprev(j-1, kj) + Tprev(j, kj-1)) / (beta_ij + mp_real(1)));
             } else {
-                Tcurr[{j, kj}] = (Tprev[{j-1, kj}] + beta_ij * Tprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+                setTcurr(j, kj, (Tprev(j-1, kj) + beta_ij * Tprev(j, kj-1)) / (beta_ij + mp_real(1)));
             }
         }
 
@@ -2614,9 +2638,9 @@ static void computeTk(int k) {
         {
             mp_real beta_ij = getBetaWeight(j, -kj);
             if (g_betaSwapLR) {
-                Tcurr[{j, -kj}] = (beta_ij * Tprev[{j-1, -kj}] + Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+                setTcurr(j, -kj, (beta_ij * Tprev(j-1, -kj) + Tprev(j, -(kj-1))) / (beta_ij + mp_real(1)));
             } else {
-                Tcurr[{j, -kj}] = (Tprev[{j-1, -kj}] + beta_ij * Tprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+                setTcurr(j, -kj, (Tprev(j-1, -kj) + beta_ij * Tprev(j, -(kj-1))) / (beta_ij + mp_real(1)));
             }
         }
     }
@@ -2628,9 +2652,9 @@ static void computeTk(int k) {
         {
             mp_real beta_ij = getBetaWeight(-j, kj);
             if (g_betaSwapUL) {
-                Tcurr[{-j, kj}] = (Tprev[{-(j-1), kj}] + beta_ij * Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+                setTcurr(-j, kj, (Tprev(-(j-1), kj) + beta_ij * Tprev(-j, kj-1)) / (beta_ij + mp_real(1)));
             } else {
-                Tcurr[{-j, kj}] = (beta_ij * Tprev[{-(j-1), kj}] + Tprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+                setTcurr(-j, kj, (beta_ij * Tprev(-(j-1), kj) + Tprev(-j, kj-1)) / (beta_ij + mp_real(1)));
             }
         }
 
@@ -2638,9 +2662,9 @@ static void computeTk(int k) {
         {
             mp_real beta_ij = getBetaWeight(-j, -kj);
             if (g_betaSwapLL) {
-                Tcurr[{-j, -kj}] = (beta_ij * Tprev[{-j, -(kj-1)}] + Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+                setTcurr(-j, -kj, (beta_ij * Tprev(-j, -(kj-1)) + Tprev(-(j-1), -kj)) / (beta_ij + mp_real(1)));
             } else {
-                Tcurr[{-j, -kj}] = (Tprev[{-j, -(kj-1)}] + beta_ij * Tprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+                setTcurr(-j, -kj, (Tprev(-j, -(kj-1)) + beta_ij * Tprev(-(j-1), -kj)) / (beta_ij + mp_real(1)));
             }
         }
     }
@@ -2655,9 +2679,8 @@ static void computeTk(int k) {
             if ((i + j + k) % 2 != 0) continue;  // Not even parity (handled in 4b)
 
             // Check if exists in T_{k-1}
-            auto it = Tprev.find({i, j});
-            if (it != Tprev.end()) {
-                Tcurr[{i, j}] = it->second;
+            if (Tprev_exists[idx(i, j)]) {
+                setTcurr(i, j, Tprev(i, j));
             }
         }
     }
@@ -2688,33 +2711,33 @@ static void computeTk(int k) {
             mp_real gamma = getGammaWeight(i, j);
 
             // Get neighbors (should all exist by now from Rule 4a or boundary rules)
-            mp_complex Tl = Tcurr[{i-1, j}];  // left
-            mp_complex Tr = Tcurr[{i+1, j}];  // right
-            mp_complex Tt = Tcurr[{i, j+1}];  // top
-            mp_complex Tb = Tcurr[{i, j-1}];  // bottom
+            mp_complex Tl = Tcurr(i-1, j);  // left
+            mp_complex Tr = Tcurr(i+1, j);  // right
+            mp_complex Tt = Tcurr(i, j+1);  // top
+            mp_complex Tb = Tcurr(i, j-1);  // bottom
 
             // T_{k-1}(i,j) - should exist for interior vertices
-            mp_complex Tprev_ij(0, 0);
-            auto it = Tprev.find({i, j});
-            if (it != Tprev.end()) {
-                Tprev_ij = it->second;
-            }
+            mp_complex Tprev_ij = Tprev_exists[idx(i, j)] ? Tprev(i, j) : mp_complex(0, 0);
 
             // Recurrence: T_k(i,j) = (Tl + Tr + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
-            Tcurr[{i, j}] = ( (Tl + Tr) * gamma + (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij;
+            setTcurr(i, j, ((Tl + Tr) * gamma + (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij);
         }
     }
 
     // ==========================================================================
-    // Convert map to TembLevel vertices (convert from 100-digit to double for storage)
+    // Convert flat array to TembLevel vertices (convert from 100-digit to double for storage)
     // ==========================================================================
-    for (const auto& kv : Tcurr) {
-        TembVertex v;
-        v.i = kv.first.first;
-        v.j = kv.first.second;
-        v.re = static_cast<double>(kv.second.real());
-        v.im = static_cast<double>(kv.second.imag());
-        tk.vertices.push_back(v);
+    for (int i = -(k+1); i <= k+1; i++) {
+        for (int j = -(k+1); j <= k+1; j++) {
+            if (Tcurr_set[idx(i, j)]) {
+                TembVertex v;
+                v.i = i;
+                v.j = j;
+                v.re = static_cast<double>(Tcurr_vec[idx(i, j)].real());
+                v.im = static_cast<double>(Tcurr_vec[idx(i, j)].imag());
+                tk.vertices.push_back(v);
+            }
+        }
     }
 
     // Store the level
@@ -2936,26 +2959,46 @@ static void computeOk(int k) {
     TembLevel ok;
     ok.k = k;
 
-    // Build a map for quick O_{k-1} lookup
-    std::map<std::pair<int,int>, mp_complex> Oprev;
+    // Use flat arrays for O(1) lookup instead of O(log n) maps
+    int dim = 2 * k + 5;
+    int offset = k + 2;
+    auto idx = [dim, offset](int i, int j) { return (i + offset) * dim + (j + offset); };
+
+    // Flat arrays for O_{k-1}
+    std::vector<mp_complex> Oprev_vec(dim * dim, mp_complex(0, 0));
+    std::vector<bool> Oprev_exists(dim * dim, false);
+
+    // Populate Oprev from prevLevel
     for (const auto& v : prevLevel->vertices) {
-        Oprev[{v.i, v.j}] = mp_complex(mp_real(v.re), mp_real(v.im));
+        int index = idx(v.i, v.j);
+        Oprev_vec[index] = mp_complex(mp_real(v.re), mp_real(v.im));
+        Oprev_exists[index] = true;
     }
 
-    // Map for O_k values
-    std::map<std::pair<int,int>, mp_complex> Ocurr;
+    // Flat arrays for O_k
+    std::vector<mp_complex> Ocurr_vec(dim * dim, mp_complex(0, 0));
+    std::vector<bool> Ocurr_set(dim * dim, false);
+
+    // Helper lambdas for cleaner access
+    auto Oprev = [&](int i, int j) -> mp_complex { return Oprev_vec[idx(i, j)]; };
+    auto setOcurr = [&](int i, int j, const mp_complex& val) {
+        int index = idx(i, j);
+        Ocurr_vec[index] = val;
+        Ocurr_set[index] = true;
+    };
+    auto Ocurr = [&](int i, int j) -> mp_complex { return Ocurr_vec[idx(i, j)]; };
 
     // Rule 1: External corners
-    Ocurr[{k+1, 0}] = Oprev[{k, 0}];
-    Ocurr[{-(k+1), 0}] = Oprev[{-k, 0}];
-    Ocurr[{0, k+1}] = Oprev[{0, k}];
-    Ocurr[{0, -(k+1)}] = Oprev[{0, -k}];
+    setOcurr(k+1, 0, Oprev(k, 0));
+    setOcurr(-(k+1), 0, Oprev(-k, 0));
+    setOcurr(0, k+1, Oprev(0, k));
+    setOcurr(0, -(k+1), Oprev(0, -k));
 
     // Rule 2: Alpha vertices (same formulas as T-embedding)
-    Ocurr[{k, 0}] = (Oprev[{k, 0}] + alpha_right * Oprev[{k-1, 0}]) / (alpha_right + mp_real(1));
-    Ocurr[{-k, 0}] = (Oprev[{-k, 0}] + alpha_left * Oprev[{-(k-1), 0}]) / (alpha_left + mp_real(1));
-    Ocurr[{0, k}] = (Oprev[{0, k}] + alpha_top * Oprev[{0, k-1}]) / (alpha_top + mp_real(1));
-    Ocurr[{0, -k}] = (Oprev[{0, -k}] + alpha_bottom * Oprev[{0, -(k-1)}]) / (alpha_bottom + mp_real(1));
+    setOcurr(k, 0, (Oprev(k, 0) + alpha_right * Oprev(k-1, 0)) / (alpha_right + mp_real(1)));
+    setOcurr(-k, 0, (Oprev(-k, 0) + alpha_left * Oprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
+    setOcurr(0, k, (Oprev(0, k) + alpha_top * Oprev(0, k-1)) / (alpha_top + mp_real(1)));
+    setOcurr(0, -k, (Oprev(0, -k) + alpha_bottom * Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
 
     // Helper lambda to get beta weight for position (i, j) - same as T-embedding
     auto getBetaWeight = [&](int i, int j) -> mp_real {
@@ -2990,9 +3033,9 @@ static void computeOk(int k) {
         {
             mp_real beta_ij = getBetaWeight(j, kj);
             if (g_betaSwapUR) {
-                Ocurr[{j, kj}] = (beta_ij * Oprev[{j-1, kj}] + Oprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+                setOcurr(j, kj, (beta_ij * Oprev(j-1, kj) + Oprev(j, kj-1)) / (beta_ij + mp_real(1)));
             } else {
-                Ocurr[{j, kj}] = (Oprev[{j-1, kj}] + beta_ij * Oprev[{j, kj-1}]) / (beta_ij + mp_real(1));
+                setOcurr(j, kj, (Oprev(j-1, kj) + beta_ij * Oprev(j, kj-1)) / (beta_ij + mp_real(1)));
             }
         }
 
@@ -3000,9 +3043,9 @@ static void computeOk(int k) {
         {
             mp_real beta_ij = getBetaWeight(j, -kj);
             if (g_betaSwapLR) {
-                Ocurr[{j, -kj}] = (beta_ij * Oprev[{j-1, -kj}] + Oprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+                setOcurr(j, -kj, (beta_ij * Oprev(j-1, -kj) + Oprev(j, -(kj-1))) / (beta_ij + mp_real(1)));
             } else {
-                Ocurr[{j, -kj}] = (Oprev[{j-1, -kj}] + beta_ij * Oprev[{j, -(kj-1)}]) / (beta_ij + mp_real(1));
+                setOcurr(j, -kj, (Oprev(j-1, -kj) + beta_ij * Oprev(j, -(kj-1))) / (beta_ij + mp_real(1)));
             }
         }
     }
@@ -3014,9 +3057,9 @@ static void computeOk(int k) {
         {
             mp_real beta_ij = getBetaWeight(-j, kj);
             if (g_betaSwapUL) {
-                Ocurr[{-j, kj}] = (Oprev[{-(j-1), kj}] + beta_ij * Oprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+                setOcurr(-j, kj, (Oprev(-(j-1), kj) + beta_ij * Oprev(-j, kj-1)) / (beta_ij + mp_real(1)));
             } else {
-                Ocurr[{-j, kj}] = (beta_ij * Oprev[{-(j-1), kj}] + Oprev[{-j, kj-1}]) / (beta_ij + mp_real(1));
+                setOcurr(-j, kj, (beta_ij * Oprev(-(j-1), kj) + Oprev(-j, kj-1)) / (beta_ij + mp_real(1)));
             }
         }
 
@@ -3024,9 +3067,9 @@ static void computeOk(int k) {
         {
             mp_real beta_ij = getBetaWeight(-j, -kj);
             if (g_betaSwapLL) {
-                Ocurr[{-j, -kj}] = (beta_ij * Oprev[{-j, -(kj-1)}] + Oprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+                setOcurr(-j, -kj, (beta_ij * Oprev(-j, -(kj-1)) + Oprev(-(j-1), -kj)) / (beta_ij + mp_real(1)));
             } else {
-                Ocurr[{-j, -kj}] = (Oprev[{-j, -(kj-1)}] + beta_ij * Oprev[{-(j-1), -kj}]) / (beta_ij + mp_real(1));
+                setOcurr(-j, -kj, (Oprev(-j, -(kj-1)) + beta_ij * Oprev(-(j-1), -kj)) / (beta_ij + mp_real(1)));
             }
         }
     }
@@ -3037,60 +3080,57 @@ static void computeOk(int k) {
             if (std::abs(i) + std::abs(j) >= k) continue;
             if ((i + j + k) % 2 != 0) continue;
 
-            auto it = Oprev.find({i, j});
-            if (it != Oprev.end()) {
-                Ocurr[{i, j}] = it->second;
+            if (Oprev_exists[idx(i, j)]) {
+                setOcurr(i, j, Oprev(i, j));
             }
         }
     }
 
     // Rule 4b: Interior recurrence
-    // Get gamma weights from stored face weights
-    std::map<std::pair<int,int>, mp_real> gammaMap;
-    if (storedWeights) {
-        for (const auto& kv : storedWeights->gamma) {
-            gammaMap[kv.first] = kv.second;
+    // Get gamma weights helper
+    auto getGammaWeight = [&](int i, int j) -> mp_real {
+        if (storedWeights) {
+            auto it = storedWeights->gamma.find({i, j});
+            if (it != storedWeights->gamma.end() && it->second > 0) {
+                return it->second;
+            }
         }
-    }
+        return mp_real(1);
+    };
 
     for (int i = -(k-1); i <= k-1; i++) {
         for (int j = -(k-1); j <= k-1; j++) {
             if (std::abs(i) + std::abs(j) >= k) continue;
             if ((i + j + k) % 2 == 0) continue;  // Skip even parity
 
-            // Get gamma for this position
-            mp_real gamma = mp_real(1);
-            auto git = gammaMap.find({i, j});
-            if (git != gammaMap.end()) {
-                gamma = git->second;
-            }
+            mp_real gamma = getGammaWeight(i, j);
 
             // Get neighbors from O_k (already computed via pass-through or boundary)
-            mp_complex O_left = Ocurr[{i-1, j}];
-            mp_complex O_right = Ocurr[{i+1, j}];
-            mp_complex O_down = Ocurr[{i, j-1}];
-            mp_complex O_up = Ocurr[{i, j+1}];
+            mp_complex O_left = Ocurr(i-1, j);
+            mp_complex O_right = Ocurr(i+1, j);
+            mp_complex O_down = Ocurr(i, j-1);
+            mp_complex O_up = Ocurr(i, j+1);
 
             // Get O_{k-1}(i,j) if it exists
-            mp_complex O_prev_ij(0, 0);
-            auto pit = Oprev.find({i, j});
-            if (pit != Oprev.end()) {
-                O_prev_ij = pit->second;
-            }
+            mp_complex O_prev_ij = Oprev_exists[idx(i, j)] ? Oprev(i, j) : mp_complex(0, 0);
 
             // Interior recurrence formula (same as T-embedding)
-            Ocurr[{i, j}] = (gamma * (O_left + O_right) + O_down + O_up) / (gamma + mp_real(1)) - O_prev_ij;
+            setOcurr(i, j, (gamma * (O_left + O_right) + O_down + O_up) / (gamma + mp_real(1)) - O_prev_ij);
         }
     }
 
-    // Store vertices
-    for (const auto& kv : Ocurr) {
-        TembVertex v;
-        v.i = kv.first.first;
-        v.j = kv.first.second;
-        v.re = static_cast<double>(kv.second.real());
-        v.im = static_cast<double>(kv.second.imag());
-        ok.vertices.push_back(v);
+    // Store vertices from flat array
+    for (int i = -(k+1); i <= k+1; i++) {
+        for (int j = -(k+1); j <= k+1; j++) {
+            if (Ocurr_set[idx(i, j)]) {
+                TembVertex v;
+                v.i = i;
+                v.j = j;
+                v.re = static_cast<double>(Ocurr_vec[idx(i, j)].real());
+                v.im = static_cast<double>(Ocurr_vec[idx(i, j)].imag());
+                ok.vertices.push_back(v);
+            }
+        }
     }
 
     g_origamiLevels.push_back(ok);
@@ -3214,12 +3254,13 @@ static std::string getTembLevelJSON(int k) {
 }
 
 // Find the edge connecting two vertices (returns edge index or -1)
+// Uses global adjacency cache g_adj for O(degree) lookup instead of O(E)
 static int findEdge(int v1, int v2) {
-    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        if ((g_aztecEdges[i].v1 == v1 && g_aztecEdges[i].v2 == v2) ||
-            (g_aztecEdges[i].v1 == v2 && g_aztecEdges[i].v2 == v1)) {
-            return (int)i;
-        }
+    if (v1 < 0 || v1 >= (int)g_adj.size()) return -1;
+    for (int eIdx : g_adj[v1]) {
+        const auto& e = g_aztecEdges[eIdx];
+        if ((e.v1 == v1 && e.v2 == v2) || (e.v1 == v2 && e.v2 == v1))
+            return eIdx;
     }
     return -1;
 }
