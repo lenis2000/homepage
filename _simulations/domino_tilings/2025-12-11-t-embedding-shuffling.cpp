@@ -4,7 +4,7 @@
   Weighted EKLP shuffling for T-embedding page.
   Based on 2025-11-18-double-dimer-gamma.cpp (the correct slim functions).
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaDirect','_simulateAztecPeriodicDirect','_simulateAztecIIDDirect','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaDirect','_simulateAztecPeriodicDirect','_simulateAztecIIDDirect','_simulateAztecDoubleDimer','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
@@ -562,6 +562,97 @@ char* simulateAztecGammaDirect(int n, double alpha, double beta) {
         }
 
         oss << "]";
+        progressCounter = 100;
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
+}
+
+// Double dimer simulation: generates two independent configurations from the same weights
+// Returns JSON: {"config1": [...], "config2": [...]}
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecDoubleDimer(int n, double* edgeWeights) {
+    try {
+        progressCounter = 0;
+        if (n > 300) n = 300;
+
+        int dim = 2 * n;
+
+        // Copy weights into MatrixDouble
+        MatrixDouble A1a(dim, dim, 1.0);
+        for (int i = 0; i < dim; ++i) {
+            for (int j = 0; j < dim; ++j) {
+                A1a.at(i, j) = edgeWeights[i * dim + j];
+            }
+        }
+
+        emscripten_sleep(0);
+
+        // Compute probability matrices (once, for both configs)
+        vector<MatrixDouble> prob = probsslim(A1a);
+        progressCounter = 5;
+        emscripten_sleep(0);
+
+        // Generate first domino configuration
+        MatrixInt dominoConfig1 = aztecgenslim(prob);
+        progressCounter = 45;
+        emscripten_sleep(0);
+
+        // Generate second independent domino configuration (same probabilities)
+        MatrixInt dominoConfig2 = aztecgenslim(prob);
+        progressCounter = 85;
+        emscripten_sleep(0);
+
+        // Helper lambda to append config to JSON
+        auto appendConfig = [](ostringstream& oss, const MatrixInt& config, int size, bool& first) {
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (config.at(i, j) == 1) {
+                        double x, y, w, h;
+                        string color;
+                        bool oddI = (i & 1), oddJ = (j & 1);
+
+                        if (oddI && oddJ) {
+                            color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                        } else if (oddI && !oddJ) {
+                            color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                        } else if (!oddI && !oddJ) {
+                            color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                        } else {
+                            color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                        }
+
+                        if (!first) oss << ",";
+                        else first = false;
+                        oss << "{\"x\":" << x << ",\"y\":" << y
+                            << ",\"w\":" << w << ",\"h\":" << h
+                            << ",\"color\":\"" << color << "\"}";
+                    }
+                }
+            }
+        };
+
+        // Build JSON output with both configs
+        ostringstream oss;
+        oss << "{\"config1\":[";
+        bool first = true;
+        appendConfig(oss, dominoConfig1, dominoConfig1.size(), first);
+        oss << "],\"config2\":[";
+        first = true;
+        appendConfig(oss, dominoConfig2, dominoConfig2.size(), first);
+        oss << "]}";
+
         progressCounter = 100;
 
         string json = oss.str();

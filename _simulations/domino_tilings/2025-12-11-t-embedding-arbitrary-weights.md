@@ -467,19 +467,24 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
       <span id="sample-time" style="color: #666;"></span>
     </div>
+    <!-- Double dimer controls (hidden by default) -->
+    <div id="double-dimer-controls" style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
+      <label style="cursor: pointer;"><input type="checkbox" id="sample-double-dimer-chk"> Double Dimer</label>
+      <span id="double-dimer-options" style="display: none;">
+        <label style="margin-left: 10px; cursor: pointer;"><input type="checkbox" id="sample-show-double-edges-chk" checked> Show double edges (purple)</label>
+        <label style="margin-left: 15px;">Min loop length: <input type="number" id="sample-min-loop-length" value="0" min="0" max="100" style="width: 50px;"></label>
+      </span>
+    </div>
     <!-- Canvas with floating controls -->
     <div id="sample-canvas-wrapper" style="position: relative;">
       <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; align-items: center;">
         <button id="sample-zoom-out-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">−</button>
         <button id="sample-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
         <button id="sample-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
-        <span style="color: #ccc; margin: 0 3px;">|</span>
-        <div class="sample-view-toggle">
-          <button id="sample-toggle-3d-btn" title="Toggle 2D/3D view">3D</button>
-          <button id="sample-perspective-btn" title="Toggle perspective/isometric" style="display: none;">🎯</button>
-          <button id="sample-preset-btn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
-          <button id="sample-rotate-btn" title="Toggle auto-rotation" style="display: none;">🔄</button>
-        </div>
+        <button id="sample-toggle-3d-btn" style="padding: 5px 15px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle 2D/3D view">3D</button>
+        <button id="sample-perspective-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle perspective/isometric">🎯</button>
+        <button id="sample-preset-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Cycle 3D visual preset">☀️</button>
+        <button id="sample-rotate-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle auto-rotation">🔄</button>
       </div>
       <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
       <div id="sample-3d-container"></div>
@@ -608,31 +613,6 @@ Part of this research was performed while the author was visiting the Institute 
   width: 100% !important;
   height: 100% !important;
   display: block;
-}
-.sample-view-toggle {
-  display: inline-flex;
-  border: 2px solid #1976d2;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-left: 8px;
-}
-.sample-view-toggle button {
-  border: none;
-  border-radius: 0;
-  height: 24px;
-  padding: 0 8px;
-  font-weight: 500;
-  background: white;
-  color: #1976d2;
-  cursor: pointer;
-  font-size: 11px;
-}
-.sample-view-toggle button.active {
-  background: #1976d2;
-  color: white;
-}
-.sample-view-toggle button:hover:not(.active) {
-  background: #e3f2fd;
 }
 </style>
 
@@ -2032,9 +2012,14 @@ Part of this research was performed while the author was visiting the Institute 
   let simulateAztecGammaDirect = null;
   let simulateAztecPeriodicDirect = null;
   let simulateAztecIIDDirect = null;
+  let simulateAztecDoubleDimer = null;
   let shufflingFreeString = null;
   let shufflingGetProgress = null;
   let sampleDominoes = [];
+  let sampleDominoes2 = [];  // Second configuration for double dimer mode
+  let doubleDimerMode = false;
+  let showDoubleEdges = true;
+  let minLoopLength = 0;
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
@@ -2112,6 +2097,8 @@ Part of this research was performed while the author was visiting the Institute 
   let sample3DAutoRotate = false;
   let sample3DPresetIndex = 0;
   let sample3DAmbientLight, sample3DHemisphereLight, sample3DDirectionalLight, sample3DFillLight;
+  let sample3DPerspective = false;  // false = orthographic, true = perspective
+  let sample3DOrthoCamera, sample3DPerspCamera;  // Both camera types
 
   function applySample3DPreset(presetIndex) {
     if (!sample3DScene) return;
@@ -2140,12 +2127,21 @@ Part of this research was performed while the author was visiting the Institute 
     const h = container.clientHeight || 400;
     const frustum = 100, aspect = w / h;
 
-    sample3DCamera = new THREE.OrthographicCamera(
+    // Create orthographic camera
+    sample3DOrthoCamera = new THREE.OrthographicCamera(
       -frustum * aspect / 2, frustum * aspect / 2,
       frustum / 2, -frustum / 2, 1, 1000
     );
-    sample3DCamera.position.set(0, 130, 0);
-    sample3DCamera.lookAt(0, 0, 0);
+    sample3DOrthoCamera.position.set(0, 130, 0);
+    sample3DOrthoCamera.lookAt(0, 0, 0);
+
+    // Create perspective camera
+    sample3DPerspCamera = new THREE.PerspectiveCamera(45, aspect, 1, 2000);
+    sample3DPerspCamera.position.set(0, 130, 130);
+    sample3DPerspCamera.lookAt(0, 0, 0);
+
+    // Set active camera
+    sample3DCamera = sample3DPerspective ? sample3DPerspCamera : sample3DOrthoCamera;
 
     sample3DRenderer = new THREE.WebGLRenderer({ antialias: true });
     sample3DRenderer.setSize(w, h);
@@ -2194,14 +2190,22 @@ Part of this research was performed while the author was visiting the Institute 
 
   function sample3DHandleResize() {
     const container = document.getElementById('sample-3d-container');
-    if (!container || !sample3DCamera || !sample3DRenderer) return;
+    if (!container || !sample3DRenderer) return;
     const w = container.clientWidth, h = container.clientHeight;
     const frustum = 100, aspect = w / h;
-    sample3DCamera.left = -frustum * aspect / 2;
-    sample3DCamera.right = frustum * aspect / 2;
-    sample3DCamera.top = frustum / 2;
-    sample3DCamera.bottom = -frustum / 2;
-    sample3DCamera.updateProjectionMatrix();
+    // Update orthographic camera
+    if (sample3DOrthoCamera) {
+      sample3DOrthoCamera.left = -frustum * aspect / 2;
+      sample3DOrthoCamera.right = frustum * aspect / 2;
+      sample3DOrthoCamera.top = frustum / 2;
+      sample3DOrthoCamera.bottom = -frustum / 2;
+      sample3DOrthoCamera.updateProjectionMatrix();
+    }
+    // Update perspective camera
+    if (sample3DPerspCamera) {
+      sample3DPerspCamera.aspect = aspect;
+      sample3DPerspCamera.updateProjectionMatrix();
+    }
     sample3DRenderer.setSize(w, h);
   }
 
@@ -2385,29 +2389,51 @@ Part of this research was performed while the author was visiting the Institute 
     }
     handleResize() { sample3DHandleResize(); }
     zoomIn() {
-      if (!sample3DCamera) return;
       const factor = 0.8;
-      sample3DCamera.left *= factor;
-      sample3DCamera.right *= factor;
-      sample3DCamera.top *= factor;
-      sample3DCamera.bottom *= factor;
-      sample3DCamera.updateProjectionMatrix();
+      if (sample3DPerspective && sample3DPerspCamera) {
+        // For perspective, move camera closer
+        sample3DPerspCamera.position.multiplyScalar(factor);
+      } else if (sample3DOrthoCamera) {
+        // For orthographic, shrink frustum
+        sample3DOrthoCamera.left *= factor;
+        sample3DOrthoCamera.right *= factor;
+        sample3DOrthoCamera.top *= factor;
+        sample3DOrthoCamera.bottom *= factor;
+        sample3DOrthoCamera.updateProjectionMatrix();
+      }
     }
     zoomOut() {
-      if (!sample3DCamera) return;
       const factor = 1.25;
-      sample3DCamera.left *= factor;
-      sample3DCamera.right *= factor;
-      sample3DCamera.top *= factor;
-      sample3DCamera.bottom *= factor;
-      sample3DCamera.updateProjectionMatrix();
+      if (sample3DPerspective && sample3DPerspCamera) {
+        // For perspective, move camera further
+        sample3DPerspCamera.position.multiplyScalar(factor);
+      } else if (sample3DOrthoCamera) {
+        // For orthographic, expand frustum
+        sample3DOrthoCamera.left *= factor;
+        sample3DOrthoCamera.right *= factor;
+        sample3DOrthoCamera.top *= factor;
+        sample3DOrthoCamera.bottom *= factor;
+        sample3DOrthoCamera.updateProjectionMatrix();
+      }
     }
     resetView() {
       if (sample3DDominoGroup) sample3DDominoGroup.rotation.set(0, 0, 0);
+      // Reset camera positions
+      if (sample3DOrthoCamera) sample3DOrthoCamera.position.set(0, 130, 0);
+      if (sample3DPerspCamera) sample3DPerspCamera.position.set(0, 130, 130);
       sample3DHandleResize();
       if (sample3DControls) sample3DControls.target.set(0, 0, 0);
     }
-    togglePerspective() { return false; }
+    togglePerspective() {
+      sample3DPerspective = !sample3DPerspective;
+      const newCamera = sample3DPerspective ? sample3DPerspCamera : sample3DOrthoCamera;
+      if (newCamera && sample3DControls && sample3DRenderer) {
+        sample3DCamera = newCamera;
+        sample3DControls.object = newCamera;
+        sample3DControls.update();
+      }
+      return sample3DPerspective;
+    }
     cyclePreset() {
       sample3DPresetIndex = (sample3DPresetIndex + 1) % SAMPLE_3D_PRESETS.length;
       applySample3DPreset(sample3DPresetIndex);
@@ -2519,6 +2545,8 @@ Part of this research was performed while the author was visiting the Institute 
     simulateAztecPeriodicDirect = shufflingModule.cwrap('simulateAztecPeriodicDirect', 'number',
       ['number', 'number', 'number', 'number', 'number', 'number'], {async: true});
     simulateAztecIIDDirect = shufflingModule.cwrap('simulateAztecIIDDirect', 'number',
+      ['number', 'number'], {async: true});
+    simulateAztecDoubleDimer = shufflingModule.cwrap('simulateAztecDoubleDimer', 'number',
       ['number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
@@ -2715,7 +2743,40 @@ Part of this research was performed while the author was visiting the Institute 
       if (preset === 'random-gamma') {
         const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
         const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-        resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
+
+        if (doubleDimerMode) {
+          // Generate gamma weights in JS for double dimer mode
+          const dim = 2 * N;
+          const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
+          const rng = createSeededRNG(seed);
+          const numWeights = dim * dim;
+          const edgeWeights = new Float64Array(numWeights);
+
+          // ab_gamma pattern: for i even (0-indexed), j even: Gamma(beta), j odd: Gamma(alpha)
+          // Everything else: 1.0
+          for (let i = 0; i < dim; i++) {
+            for (let j = 0; j < dim; j++) {
+              if (i % 2 === 0) {
+                if (j % 2 === 0) {
+                  edgeWeights[i * dim + j] = gammaRandom(beta, 1.0, rng);
+                } else {
+                  edgeWeights[i * dim + j] = gammaRandom(alpha, 1.0, rng);
+                }
+              } else {
+                edgeWeights[i * dim + j] = 1.0;
+              }
+            }
+          }
+
+          const weightsPtr = shufflingModule._malloc(numWeights * 8);
+          for (let i = 0; i < numWeights; i++) {
+            shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
+          }
+          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
+          shufflingModule._free(weightsPtr);
+        } else {
+          resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
+        }
       } else if (preset === 'periodic') {
         // For periodic preset, pass all three weight tables (alpha, beta, gamma)
         const k = parseInt(document.getElementById('periodic-k').value) || 2;
@@ -2735,35 +2796,71 @@ Part of this research was performed while the author was visiting the Institute 
           }
         }
 
-        // Allocate WASM memory for all three tables
-        const alphaPtr = shufflingModule._malloc(k * l * 8);
-        const betaPtr = shufflingModule._malloc(k * l * 8);
-        const gammaPtr = shufflingModule._malloc(k * l * 8);
+        if (doubleDimerMode) {
+          // Generate full periodic weight matrix in JS for double dimer mode
+          const dim = 2 * N;
+          const numWeights = dim * dim;
+          const edgeWeights = new Float64Array(numWeights);
+          edgeWeights.fill(1.0);
 
-        for (let i = 0; i < k * l; i++) {
-          shufflingModule.setValue(alphaPtr + i * 8, alphaArray[i], 'double');
-          shufflingModule.setValue(betaPtr + i * 8, betaArray[i], 'double');
-          shufflingModule.setValue(gammaPtr + i * 8, gammaArray[i], 'double');
+          for (let i = 0; i < dim; i++) {
+            if (i % 2 === 0) {  // Even rows only
+              for (let j = 0; j < dim; j++) {
+                const diagI = Math.floor(i / 2);
+                const diagJ = Math.floor(j / 2);
+                const pi = ((diagI % k) + k) % k;
+                const pj = ((diagJ % l) + l) % l;
+
+                if (j % 2 === 0) {
+                  edgeWeights[i * dim + j] = betaArray[pi * l + pj];
+                } else {
+                  edgeWeights[i * dim + j] = alphaArray[pi * l + pj];
+                }
+              }
+            }
+          }
+
+          const weightsPtr = shufflingModule._malloc(numWeights * 8);
+          for (let i = 0; i < numWeights; i++) {
+            shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
+          }
+          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
+          shufflingModule._free(weightsPtr);
+        } else {
+          // Allocate WASM memory for all three tables
+          const alphaPtr = shufflingModule._malloc(k * l * 8);
+          const betaPtr = shufflingModule._malloc(k * l * 8);
+          const gammaPtr = shufflingModule._malloc(k * l * 8);
+
+          for (let i = 0; i < k * l; i++) {
+            shufflingModule.setValue(alphaPtr + i * 8, alphaArray[i], 'double');
+            shufflingModule.setValue(betaPtr + i * 8, betaArray[i], 'double');
+            shufflingModule.setValue(gammaPtr + i * 8, gammaArray[i], 'double');
+          }
+
+          resultPtr = await simulateAztecPeriodicDirect(N, k, l, alphaPtr, betaPtr, gammaPtr);
+
+          shufflingModule._free(alphaPtr);
+          shufflingModule._free(betaPtr);
+          shufflingModule._free(gammaPtr);
         }
-
-        resultPtr = await simulateAztecPeriodicDirect(N, k, l, alphaPtr, betaPtr, gammaPtr);
-
-        shufflingModule._free(alphaPtr);
-        shufflingModule._free(betaPtr);
-        shufflingModule._free(gammaPtr);
       } else if (preset === 'all-ones') {
         // Uniform weights: use gamma with alpha=beta=1 (gives Gamma(1)=Exp(1) which averages to 1)
         // Or just use IID with all 1s
         const dim = 2 * N;
-        const numEvenRowWeights = N * dim;  // N even rows, each with dim columns
-        const edgeWeights = new Float64Array(numEvenRowWeights);
+        const numWeights = dim * dim;
+        const edgeWeights = new Float64Array(numWeights);
         edgeWeights.fill(1.0);
 
-        const weightsPtr = shufflingModule._malloc(numEvenRowWeights * 8);
-        for (let i = 0; i < numEvenRowWeights; i++) {
+        const weightsPtr = shufflingModule._malloc(numWeights * 8);
+        for (let i = 0; i < numWeights; i++) {
           shufflingModule.setValue(weightsPtr + i * 8, 1.0, 'double');
         }
-        resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        if (doubleDimerMode) {
+          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
+        } else {
+          resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        }
         shufflingModule._free(weightsPtr);
 
       } else if (preset === 'random-iid') {
@@ -2782,7 +2879,11 @@ Part of this research was performed while the author was visiting the Institute 
         for (let i = 0; i < numWeights; i++) {
           shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
         }
-        resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        if (doubleDimerMode) {
+          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
+        } else {
+          resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        }
         shufflingModule._free(weightsPtr);
 
       } else if (preset === 'random-layered') {
@@ -2858,7 +2959,11 @@ Part of this research was performed while the author was visiting the Institute 
         for (let i = 0; i < numWeights; i++) {
           shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
         }
-        resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        if (doubleDimerMode) {
+          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
+        } else {
+          resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        }
         shufflingModule._free(weightsPtr);
       }
 
@@ -2866,7 +2971,16 @@ Part of this research was performed while the author was visiting the Institute 
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);
       shufflingFreeString(resultPtr);
 
-      sampleDominoes = JSON.parse(jsonStr);
+      const result = JSON.parse(jsonStr);
+
+      // Handle double dimer mode: result has config1 and config2
+      if (doubleDimerMode && result.config1) {
+        sampleDominoes = result.config1;
+        sampleDominoes2 = result.config2;
+      } else {
+        sampleDominoes = Array.isArray(result) ? result : [];
+        sampleDominoes2 = [];
+      }
 
       const elapsed = performance.now() - startTime;
       timeSpan.textContent = `${elapsed.toFixed(0)} ms`;
@@ -2948,7 +3062,13 @@ Part of this research was performed while the author was visiting the Institute 
     const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
     const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
 
-    // Draw dominoes
+    // Double dimer mode: render loops
+    if (doubleDimerMode && sampleDominoes2.length > 0) {
+      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY);
+      return;
+    }
+
+    // Standard domino rendering
     for (const d of sampleDominoes) {
       const sx = centerX + (d.x + samplePanX) * sampleZoom;
       const sy = centerY - (d.y + d.h + samplePanY) * sampleZoom;  // Flip Y
@@ -2965,6 +3085,166 @@ Part of this research was performed while the author was visiting the Institute 
         sampleCtx.strokeRect(sx, sy, sw, sh);
       }
     }
+  }
+
+  // Render double dimer configuration as loops
+  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY) {
+    // Create edge key from domino
+    const edgeKey = (d) => {
+      const cx = d.x + d.w / 2;
+      const cy = d.y + d.h / 2;
+      const horiz = d.w > d.h;
+      let x1, y1, x2, y2;
+      if (horiz) {
+        x1 = cx - d.w / 4;
+        x2 = cx + d.w / 4;
+        y1 = y2 = cy;
+      } else {
+        x1 = x2 = cx;
+        y1 = cy - d.h / 4;
+        y2 = cy + d.h / 4;
+      }
+      const q = v => Math.round(v * 1000);
+      return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
+    };
+
+    // Build edge map
+    const edgeMap = new Map();
+    const addEdges = (list, type) => {
+      for (const d of list) {
+        const k = edgeKey(d);
+        if (!edgeMap.has(k)) {
+          edgeMap.set(k, { d, types: new Set() });
+        }
+        edgeMap.get(k).types.add(type);
+      }
+    };
+
+    addEdges(sampleDominoes, 1);
+    addEdges(sampleDominoes2, 2);
+
+    // Compute loop lengths by tracing connected components
+    // Build adjacency structure for loop detection
+    const vertexToEdges = new Map();
+    const allEdges = [];
+
+    edgeMap.forEach((val, key) => {
+      const d = val.d;
+      const cx = d.x + d.w / 2;
+      const cy = d.y + d.h / 2;
+      const horiz = d.w > d.h;
+      let x1, y1, x2, y2;
+      if (horiz) {
+        x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy;
+      } else {
+        x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4;
+      }
+
+      const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
+      const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
+
+      const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
+      allEdges.push(edgeInfo);
+
+      if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
+      if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
+      vertexToEdges.get(v1Key).push(edgeInfo);
+      vertexToEdges.get(v2Key).push(edgeInfo);
+    });
+
+    // Find loops (connected components of non-double edges)
+    let loopId = 0;
+    const loopSizes = new Map();
+
+    for (const edge of allEdges) {
+      if (edge.loopId >= 0) continue;
+      const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
+      if (isDouble) {
+        edge.loopId = -2; // Mark as double edge
+        continue;
+      }
+
+      // BFS to find connected non-double edges
+      const queue = [edge];
+      const visited = new Set();
+      visited.add(edge.key);
+      edge.loopId = loopId;
+      let loopSize = 1;
+
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        for (const vKey of [curr.v1Key, curr.v2Key]) {
+          const neighbors = vertexToEdges.get(vKey) || [];
+          for (const neighbor of neighbors) {
+            if (visited.has(neighbor.key)) continue;
+            const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
+            if (neighborIsDouble) continue;
+            visited.add(neighbor.key);
+            neighbor.loopId = loopId;
+            loopSize++;
+            queue.push(neighbor);
+          }
+        }
+      }
+
+      loopSizes.set(loopId, loopSize);
+      loopId++;
+    }
+
+    // Draw edges
+    const lineWidth = Math.max(1.5, 3.5 * zoom / 10);
+    const circleRadius = Math.max(1.5, 3.5 * zoom / 10);
+
+    for (const edge of allEdges) {
+      const { x1, y1, x2, y2, val } = edge;
+      const isDouble = val.types.has(1) && val.types.has(2);
+
+      // Skip double edges if checkbox unchecked
+      if (isDouble && !showDoubleEdges) continue;
+
+      // Skip edges in loops smaller than minLoopLength
+      if (!isDouble && edge.loopId >= 0) {
+        const loopSize = loopSizes.get(edge.loopId) || 0;
+        if (loopSize < minLoopLength) continue;
+      }
+
+      let color, opacity;
+      if (isDouble) {
+        color = 'purple';
+        opacity = 1.0;
+      } else if (val.types.has(1)) {
+        color = 'black';
+        opacity = 1.0;
+      } else {
+        color = 'red';
+        opacity = 0.8;
+      }
+
+      // Transform to screen coordinates
+      const sx1 = centerX + (x1 + panX) * zoom;
+      const sy1 = centerY - (y1 + panY) * zoom;
+      const sx2 = centerX + (x2 + panX) * zoom;
+      const sy2 = centerY - (y2 + panY) * zoom;
+
+      ctx.globalAlpha = opacity;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(sx1, sy1);
+      ctx.lineTo(sx2, sy2);
+      ctx.stroke();
+
+      // Draw endpoint circles
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(sx1, sy1, circleRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx2, sy2, circleRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1.0;
   }
 
   // Sample canvas event handlers
@@ -3002,6 +3282,37 @@ Part of this research was performed while the author was visiting the Institute 
     document.getElementById('sample-border-input').addEventListener('input', () => {
       renderSample();
     });
+
+    // Double dimer controls
+    const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
+    const doubleDimerOptions = document.getElementById('double-dimer-options');
+    const showDoubleEdgesChk = document.getElementById('sample-show-double-edges-chk');
+    const minLoopLengthInput = document.getElementById('sample-min-loop-length');
+
+    if (doubleDimerChk) {
+      doubleDimerChk.addEventListener('change', function() {
+        doubleDimerMode = this.checked;
+        if (doubleDimerOptions) {
+          doubleDimerOptions.style.display = this.checked ? 'inline' : 'none';
+        }
+        // Re-sample when toggling double dimer mode (need to get two configs)
+        generateRandomSample();
+      });
+    }
+
+    if (showDoubleEdgesChk) {
+      showDoubleEdgesChk.addEventListener('change', function() {
+        showDoubleEdges = this.checked;
+        renderSample();
+      });
+    }
+
+    if (minLoopLengthInput) {
+      minLoopLengthInput.addEventListener('input', function() {
+        minLoopLength = parseInt(this.value) || 0;
+        renderSample();
+      });
+    }
 
     // Clear status message when N input changes
     document.getElementById('sample-N-input').addEventListener('input', () => {
