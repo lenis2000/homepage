@@ -431,7 +431,6 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <!-- 2D Canvas -->
       <div id="main-2d-container">
         <canvas id="main-temb-2d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
-        <div id="main-2d-status" style="height: 20px; font-size: 12px; color: #666; text-align: center; padding: 2px 0;"></div>
       </div>
 
       <!-- 3D Canvas (hidden by default) -->
@@ -1114,6 +1113,7 @@ Part of this research was performed while the author was visiting the Institute 
   let main2DIsPanning = false;
   let main2DLastPanX = 0, main2DLastPanY = 0;
   let main2DVertexScreenPositions = [];  // Store vertex positions for click detection
+  let main2DSelectedVertex = null;  // Currently selected vertex for display
 
   // ========== AZTEC DIAMOND GRAPH STATE ==========
   let aztecLevel = 3;
@@ -2110,10 +2110,31 @@ Part of this research was performed while the author was visiting the Institute 
   let sample3DScene, sample3DCamera, sample3DRenderer, sample3DControls, sample3DDominoGroup;
   let sample3DAnimating = false;
   let sample3DAutoRotate = false;
+  let sample3DPresetIndex = 0;
+  let sample3DAmbientLight, sample3DHemisphereLight, sample3DDirectionalLight, sample3DFillLight;
+
+  function applySample3DPreset(presetIndex) {
+    if (!sample3DScene) return;
+    const preset = SAMPLE_3D_PRESETS[presetIndex];
+    sample3DScene.background = new THREE.Color(preset.background);
+    if (sample3DAmbientLight) sample3DAmbientLight.intensity = preset.ambient.intensity;
+    if (sample3DHemisphereLight) {
+      sample3DHemisphereLight.color.setHex(preset.hemisphere.sky);
+      sample3DHemisphereLight.groundColor.setHex(preset.hemisphere.ground);
+      sample3DHemisphereLight.intensity = preset.hemisphere.intensity;
+    }
+    if (sample3DDirectionalLight) {
+      sample3DDirectionalLight.intensity = preset.directional.intensity;
+      sample3DDirectionalLight.position.set(...preset.directional.position);
+    }
+    if (sample3DFillLight) {
+      sample3DFillLight.intensity = preset.fill.intensity;
+      sample3DFillLight.position.set(...preset.fill.position);
+    }
+  }
 
   function initSample3D(container) {
     sample3DScene = new THREE.Scene();
-    sample3DScene.background = new THREE.Color(0xf0f0f0);
 
     const w = container.clientWidth || 800;
     const h = container.clientHeight || 400;
@@ -2132,13 +2153,18 @@ Part of this research was performed while the author was visiting the Institute 
     sample3DRenderer.getContext().getExtension('OES_element_index_uint');
     container.appendChild(sample3DRenderer.domElement);
 
-    sample3DScene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const dir1 = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir1.position.set(0.5, 1, 0.5).normalize();
-    sample3DScene.add(dir1);
-    const dir2 = new THREE.DirectionalLight(0xffffff, 0.6);
-    dir2.position.set(-0.5, 1, -0.5).normalize();
-    sample3DScene.add(dir2);
+    // Create lights (configured by preset)
+    sample3DAmbientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    sample3DScene.add(sample3DAmbientLight);
+    sample3DHemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+    sample3DScene.add(sample3DHemisphereLight);
+    sample3DDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    sample3DScene.add(sample3DDirectionalLight);
+    sample3DFillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    sample3DScene.add(sample3DFillLight);
+
+    // Apply initial preset
+    applySample3DPreset(sample3DPresetIndex);
 
     sample3DControls = new THREE.OrbitControls(sample3DCamera, sample3DRenderer.domElement);
     sample3DControls.enableDamping = true;
@@ -2382,7 +2408,11 @@ Part of this research was performed while the author was visiting the Institute 
       if (sample3DControls) sample3DControls.target.set(0, 0, 0);
     }
     togglePerspective() { return false; }
-    cyclePreset() { return { icon: '☀️' }; }
+    cyclePreset() {
+      sample3DPresetIndex = (sample3DPresetIndex + 1) % SAMPLE_3D_PRESETS.length;
+      applySample3DPreset(sample3DPresetIndex);
+      return SAMPLE_3D_PRESETS[sample3DPresetIndex];
+    }
     set autoRotate(val) { sample3DAutoRotate = val; }
     get autoRotate() { return sample3DAutoRotate; }
     renderDominoes(dominoes) { renderSample3DDominoes(dominoes); }
@@ -3172,7 +3202,9 @@ Part of this research was performed while the author was visiting the Institute 
     document.getElementById('sample-preset-btn').addEventListener('click', () => {
       if (sampleRenderer3D) {
         const preset = sampleRenderer3D.cyclePreset();
-        document.getElementById('sample-preset-btn').textContent = preset.icon;
+        const btn = document.getElementById('sample-preset-btn');
+        btn.textContent = preset.icon;
+        btn.title = `Preset: ${preset.name}`;
         updateSample3DView();
       }
     });
@@ -3761,15 +3793,17 @@ Part of this research was performed while the author was visiting the Institute 
       drawEdge(s, -(k-s), s+1, -(k-s-1));
     }
 
-    // Draw vertices (T-embedding in black)
+    // Draw vertices (T-embedding in black) and store positions for click detection
     ctx.fillStyle = '#333';
     const radius = Math.max(vertexSizeControl, scale / 800 * vertexSizeControl);
+    main2DVertexScreenPositions = [];
     for (const v of data.vertices) {
       const x = centerX + (v.re - centerRe) * scale;
       const y = centerY - (v.im - centerIm) * scale;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, 2 * Math.PI);
       ctx.fill();
+      main2DVertexScreenPositions.push({ screenX: x, screenY: y, vertex: v });
     }
 
     // ========== ORIGAMI MAP (in blue) ==========
@@ -3861,6 +3895,18 @@ Part of this research was performed while the author was visiting the Institute 
           ctx.fill();
         }
       }
+    }
+
+    // Draw selected vertex info overlay in upper left
+    if (main2DSelectedVertex) {
+      const v = main2DSelectedVertex;
+      ctx.font = 'bold 24px monospace';
+      ctx.fillStyle = '#000';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const imSign = v.im >= 0 ? '+' : '-';
+      const imAbs = Math.abs(v.im).toFixed(4);
+      ctx.fillText(`T(${v.i},${v.j}) = ${v.re.toFixed(4)} ${imSign} ${imAbs}i`, 15, 15);
     }
   }
 
@@ -5196,6 +5242,41 @@ Part of this research was performed while the author was visiting the Institute 
     main2DZoom = Math.max(0.02, Math.min(50, main2DZoom * factor));
     renderMain2DTemb();
   }, { passive: false });
+
+  // Main 2D canvas click handler for vertex info
+  let main2DClickStartX = 0, main2DClickStartY = 0;
+  main2DCanvas.addEventListener('mousedown', (e) => {
+    main2DClickStartX = e.clientX;
+    main2DClickStartY = e.clientY;
+  }, true);
+
+  main2DCanvas.addEventListener('click', (e) => {
+    // Only handle click if mouse didn't move much (not a drag)
+    const dx = e.clientX - main2DClickStartX;
+    const dy = e.clientY - main2DClickStartY;
+    if (Math.sqrt(dx * dx + dy * dy) > 5) return;
+
+    const rect = main2DCanvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    const clickThreshold = 20;
+    let closestVertex = null;
+    let closestDist = Infinity;
+
+    for (const vp of main2DVertexScreenPositions) {
+      const vdx = clickX - vp.screenX;
+      const vdy = clickY - vp.screenY;
+      const dist = Math.sqrt(vdx * vdx + vdy * vdy);
+      if (dist < clickThreshold && dist < closestDist) {
+        closestDist = dist;
+        closestVertex = vp.vertex;
+      }
+    }
+
+    main2DSelectedVertex = closestVertex;
+    renderMain2DTemb();
+  });
 
   // Main 2D canvas touch handlers for iOS
   let main2DTouchStartDist = 0;
