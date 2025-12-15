@@ -25,6 +25,7 @@
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <algorithm>
 
 // Use standard double precision
@@ -35,6 +36,15 @@ using mp_complex = std::complex<double>;
 struct PairHash {
     size_t operator()(const std::pair<int,int>& p) const {
         return std::hash<int64_t>()((int64_t)p.first << 32 | (uint32_t)p.second);
+    }
+};
+
+// Hash function for std::pair<int64_t,int64_t>
+struct PairHash64 {
+    size_t operator()(const std::pair<int64_t,int64_t>& p) const {
+        size_t h1 = std::hash<int64_t>()(p.first);
+        size_t h2 = std::hash<int64_t>()(p.second);
+        return h1 ^ (h2 * 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
     }
 };
 
@@ -1420,14 +1430,14 @@ static void aztecStep6_Shading() {
         e.gaugeTransformed = false;
     }
 
-    // Build vertex index using 64-bit integer keys
-    std::map<int64_t, int> vertexIndex;
+    // Build vertex index using 64-bit integer keys (unordered for O(1) lookup)
+    std::unordered_map<int64_t, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
         vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
     }
 
-    // Build edge lookup using ordered pairs of vertex keys
-    std::set<std::pair<int64_t, int64_t>> edgeSet;
+    // Build edge lookup using ordered pairs of vertex keys (unordered for O(1) lookup)
+    std::unordered_set<std::pair<int64_t, int64_t>, PairHash64> edgeSet;
     for (const auto& e : g_aztecEdges) {
         int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
         int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
@@ -1442,7 +1452,7 @@ static void aztecStep6_Shading() {
     // Find all black quad centers
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
     g_blackQuadCenters.clear();
-    std::set<int64_t> visitedFaces;
+    std::unordered_set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;
@@ -1530,14 +1540,14 @@ static void aztecStep8_SplitVertices() {
 
     const double shiftAmount = 0.2;  // Shift towards center for non-selected vertices
 
-    // Build vertex index using 64-bit integer keys
-    std::map<int64_t, int> vertexIndex;
+    // Build vertex index using 64-bit integer keys (unordered for O(1) lookup)
+    std::unordered_map<int64_t, int> vertexIndex;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
         vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
     }
 
-    // Build edge lookup using ordered pairs of vertex keys
-    std::set<std::pair<int64_t, int64_t>> edgeSet;
+    // Build edge lookup using ordered pairs of vertex keys (unordered for O(1) lookup)
+    std::unordered_set<std::pair<int64_t, int64_t>, PairHash64> edgeSet;
     for (const auto& e : g_aztecEdges) {
         int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
         int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
@@ -1556,8 +1566,8 @@ static void aztecStep8_SplitVertices() {
         double cx, cy;  // center
     };
     std::vector<BlackQuad> blackQuads;
-    std::set<int> verticesInBlackQuads;  // indices of vertices belonging to black quads
-    std::set<int64_t> visitedFaces;
+    std::unordered_set<int> verticesInBlackQuads;  // indices of vertices belonging to black quads
+    std::unordered_set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
         double x = v.x, y = v.y;
