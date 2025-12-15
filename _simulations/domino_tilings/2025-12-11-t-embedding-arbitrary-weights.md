@@ -327,6 +327,11 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
         <button id="cycle-preset-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Cycle visual preset">☀️</button>
         <button id="auto-rotate-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle auto-rotate">🔄</button>
       </div>
+      <!-- Floating 3D surface selection (hidden by default, shown in 3D mode) -->
+      <div id="surface-select-controls" style="display: none; position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; padding: 5px 10px; font-size: 12px;">
+        <label style="margin-right: 10px;"><input type="checkbox" id="show-re-surface-chk" checked> Re(Origami)</label>
+        <label><input type="checkbox" id="show-im-surface-chk"> Im(Origami), matched</label>
+      </div>
 
       <!-- 2D Canvas -->
       <div id="main-2d-container">
@@ -2501,7 +2506,7 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   // ========== MAIN 3D T-SURFACE RENDERING ==========
-  // Base (x,y) = T-embedding, height z = Re[O(i,j)] from origami map
+  // Base (x,y) = T-embedding, height z = Re[O(i,j)] or Im[O(i,j)] from origami map
 
   function renderMain3D() {
     if (!main3DCanvas) return;
@@ -2511,9 +2516,9 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Handle DPI scaling
     const dpr = window.devicePixelRatio || 1;
-    const rect = main3DCanvas.getBoundingClientRect();
-    main3DCanvas.width = rect.width * dpr;
-    main3DCanvas.height = rect.height * dpr;
+    const fullRect = main3DCanvas.getBoundingClientRect();
+    main3DCanvas.width = fullRect.width * dpr;
+    main3DCanvas.height = fullRect.height * dpr;
     ctx.scale(dpr, dpr);
 
     // Reset canvas context state to ensure no transparency
@@ -2525,13 +2530,25 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Background from preset
     ctx.fillStyle = preset.background;
-    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillRect(0, 0, fullRect.width, fullRect.height);
+
+    // Check which surfaces to show
+    const showRe = document.getElementById('show-re-surface-chk').checked;
+    const showIm = document.getElementById('show-im-surface-chk').checked;
+
+    if (!showRe && !showIm) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Select Re O or Im O to display', fullRect.width / 2, fullRect.height / 2);
+      return;
+    }
 
     if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) {
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Loading...', rect.width / 2, rect.height / 2);
+      ctx.fillText('Loading...', fullRect.width / 2, fullRect.height / 2);
       return;
     }
 
@@ -2549,11 +2566,11 @@ Part of this research was performed while the author was visiting the Institute 
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Error parsing T-embedding', rect.width / 2, rect.height / 2);
+      ctx.fillText('Error parsing T-embedding', fullRect.width / 2, fullRect.height / 2);
       return;
     }
 
-    // Get origami data for z = Re[O(i,j)]
+    // Get origami data for z = Re[O(i,j)] or Im[O(i,j)]
     ptr = getOrigamiLevelJSON(finalK);
     json = Module.UTF8ToString(ptr);
     freeString(ptr);
@@ -2564,7 +2581,7 @@ Part of this research was performed while the author was visiting the Institute 
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Error parsing origami data', rect.width / 2, rect.height / 2);
+      ctx.fillText('Error parsing origami data', fullRect.width / 2, fullRect.height / 2);
       return;
     }
 
@@ -2573,7 +2590,7 @@ Part of this research was performed while the author was visiting the Institute 
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('No data. Click "Compute".', rect.width / 2, rect.height / 2);
+      ctx.fillText('No data. Click "Compute".', fullRect.width / 2, fullRect.height / 2);
       return;
     }
 
@@ -2589,22 +2606,81 @@ Part of this research was performed while the author was visiting the Institute 
       origamiMap.set(`${v.i},${v.j}`, v);
     }
 
-    // Build 3D points: x = T.re, y = T.im, z = O.re
-    const points3D = [];
-    for (const v of tembData.vertices) {
-      const key = `${v.i},${v.j}`;
-      const origV = origamiMap.get(key);
-      if (origV) {
-        points3D.push({
-          i: v.i, j: v.j,
-          x: v.re,
-          y: v.im,
-          z: origV.re  // Height = real part of origami
-        });
+    // Get vertex/edge size controls
+    const vertexSizeControl = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
+    const edgeThicknessControl = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
+
+    const rect = { x: 0, y: 0, width: fullRect.width, height: fullRect.height };
+
+    // Define surface colors
+    const reColor = { r: preset.baseColor.r, g: preset.baseColor.g, b: preset.baseColor.b };
+    const imColor = (showRe && showIm) ? { r: 100, g: 150, b: 255 } : reColor;  // Blue tint only when both shown
+
+    // Build 3D points for each surface
+    const surfaceData = [];
+
+    if (showRe) {
+      const points = [];
+      for (const v of tembData.vertices) {
+        const key = `${v.i},${v.j}`;
+        const origV = origamiMap.get(key);
+        if (origV) {
+          points.push({ i: v.i, j: v.j, x: v.re, y: v.im, z: origV.re });
+        }
       }
+      surfaceData.push({ points, color: reColor, label: 'O.re', isRe: true });
     }
 
-    if (points3D.length === 0) {
+    if (showIm) {
+      // Transform Im to match Re at the boundary corners
+      // External corners: (k+1,0), (0,k+1), (-(k+1),0), (0,-(k+1))
+      const corner1 = origamiMap.get(`${k+1},0`);   // Right
+      const corner2 = origamiMap.get(`0,${k+1}`);   // Top
+      const corner3 = origamiMap.get(`${-(k+1)},0`); // Left
+      const corner4 = origamiMap.get(`0,${-(k+1)}`); // Bottom
+
+      // Re values at corners
+      const reCorner1 = corner1 ? corner1.re : 1;
+      const reCorner2 = corner2 ? corner2.re : 1;
+      const reCorner3 = corner3 ? corner3.re : 1;
+      const reCorner4 = corner4 ? corner4.re : 1;
+
+      // Im values at corners
+      const imCorner1 = corner1 ? corner1.im : 0;
+      const imCorner2 = corner2 ? corner2.im : 0;
+      const imCorner3 = corner3 ? corner3.im : 0;
+      const imCorner4 = corner4 ? corner4.im : 0;
+
+      // Compute linear transformation: transformedIm = scale * im + offset
+      // to match Re at corners using least squares fit
+      const imVals = [imCorner1, imCorner2, imCorner3, imCorner4];
+      const reVals = [reCorner1, reCorner2, reCorner3, reCorner4];
+
+      const n = 4;
+      const sumIm = imVals.reduce((a, b) => a + b, 0);
+      const sumRe = reVals.reduce((a, b) => a + b, 0);
+      const sumImIm = imVals.reduce((a, b) => a + b * b, 0);
+      const sumImRe = imVals.reduce((sum, im, i) => sum + im * reVals[i], 0);
+
+      const denom = n * sumImIm - sumIm * sumIm;
+      let scale = 1, offset = 0;
+      if (Math.abs(denom) > 1e-10) {
+        scale = (n * sumImRe - sumIm * sumRe) / denom;
+        offset = (sumRe - scale * sumIm) / n;
+      }
+
+      const points = [];
+      for (const v of tembData.vertices) {
+        const key = `${v.i},${v.j}`;
+        const origV = origamiMap.get(key);
+        if (origV) {
+          points.push({ i: v.i, j: v.j, x: v.re, y: v.im, z: scale * origV.im + offset });
+        }
+      }
+      surfaceData.push({ points, color: imColor, label: 'Im (scaled)', isRe: false });
+    }
+
+    if (surfaceData.length === 0 || surfaceData.every(s => s.points.length === 0)) {
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
@@ -2612,14 +2688,16 @@ Part of this research was performed while the author was visiting the Institute 
       return;
     }
 
-    // Compute bounds for normalization
+    // Compute unified bounds across all surfaces
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
     let minZ = Infinity, maxZ = -Infinity;
-    for (const p of points3D) {
-      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
-      minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+    for (const surf of surfaceData) {
+      for (const p of surf.points) {
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+        minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+      }
     }
 
     const rangeX = maxX - minX || 1;
@@ -2631,42 +2709,35 @@ Part of this research was performed while the author was visiting the Institute 
     const maxRange = Math.max(rangeX, rangeY, rangeZ);
 
     // 3D to 2D projection with rotation
-    const cosX = Math.cos(view3DRotX), sinX = Math.sin(view3DRotX);
-    const cosZ = Math.cos(view3DRotZ), sinZ = Math.sin(view3DRotZ);
+    const cosRX = Math.cos(view3DRotX), sinRX = Math.sin(view3DRotX);
+    const cosRZ = Math.cos(view3DRotZ), sinRZ = Math.sin(view3DRotZ);
 
-    // Perspective parameters
-    const perspectiveFOV = 60;  // Field of view in degrees
-    const perspectiveDist = 3.0;  // Camera distance (in normalized units)
+    const perspectiveFOV = 60;
+    const perspectiveDist = 3.0;
 
     function project(x, y, z) {
-      // Normalize to [-0.5, 0.5]
       const nx = (x - centerX) / maxRange;
       const ny = (y - centerY) / maxRange;
       const nz = (z - centerZ) / maxRange;
 
-      // Rotate around Z axis first (spin)
-      const rz_x = nx * cosZ - ny * sinZ;
-      const rz_y = nx * sinZ + ny * cosZ;
+      const rz_x = nx * cosRZ - ny * sinRZ;
+      const rz_y = nx * sinRZ + ny * cosRZ;
       const rz_z = nz;
 
-      // Then rotate around X axis (tilt)
       const rx_x = rz_x;
-      const rx_y = rz_y * cosX - rz_z * sinX;
-      const rx_z = rz_y * sinX + rz_z * cosX;
+      const rx_y = rz_y * cosRX - rz_z * sinRX;
+      const rx_z = rz_y * sinRX + rz_z * cosRX;
 
-      // Base scale
       const baseScale = Math.min(rect.width, rect.height) * 0.7 * view3DZoom;
 
       let screenX, screenY;
       if (view3DPerspective) {
-        // Perspective projection
         const fovRad = perspectiveFOV * Math.PI / 180;
-        const zOffset = perspectiveDist - rx_z;  // Distance from camera
+        const zOffset = perspectiveDist - rx_z;
         const perspectiveScale = (zOffset > 0.1) ? (1 / Math.tan(fovRad / 2)) / zOffset : 10;
         screenX = rect.width / 2 + rx_x * baseScale * perspectiveScale + view3DPanX;
         screenY = rect.height / 2 - rx_y * baseScale * perspectiveScale + view3DPanY;
       } else {
-        // Orthographic projection
         screenX = rect.width / 2 + rx_x * baseScale + view3DPanX;
         screenY = rect.height / 2 - rx_y * baseScale + view3DPanY;
       }
@@ -2674,180 +2745,10 @@ Part of this research was performed while the author was visiting the Institute 
       return { screenX, screenY, depth: rx_z };
     }
 
-    // Project all vertices
-    const projected = [];
-    const pointMap = new Map();
-    for (const p of points3D) {
-      const proj = project(p.x, p.y, p.z);
-      const entry = { ...p, ...proj };
-      projected.push(entry);
-      pointMap.set(`${p.i},${p.j}`, entry);
-    }
+    // Build all drawables for all surfaces
+    const allDrawables = [];
 
-    // Build edge list (same structure as T-embedding graph)
-    const edges = [];
-
-    // Interior lattice edges
-    for (const p of points3D) {
-      const i = p.i, j = p.j;
-      const absSum = Math.abs(i) + Math.abs(j);
-
-      // Right neighbor
-      const rightKey = `${i+1},${j}`;
-      if (pointMap.has(rightKey)) {
-        const nAbsSum = Math.abs(i+1) + Math.abs(j);
-        if (absSum <= k && nAbsSum <= k) {
-          edges.push({ from: `${i},${j}`, to: rightKey, type: 'interior' });
-        }
-      }
-      // Top neighbor
-      const topKey = `${i},${j+1}`;
-      if (pointMap.has(topKey)) {
-        const nAbsSum = Math.abs(i) + Math.abs(j+1);
-        if (absSum <= k && nAbsSum <= k) {
-          edges.push({ from: `${i},${j}`, to: topKey, type: 'interior' });
-        }
-      }
-    }
-
-    // Boundary rhombus
-    edges.push({ from: `${k+1},0`, to: `0,${k+1}`, type: 'boundary' });
-    edges.push({ from: `0,${k+1}`, to: `${-(k+1)},0`, type: 'boundary' });
-    edges.push({ from: `${-(k+1)},0`, to: `0,${-(k+1)}`, type: 'boundary' });
-    edges.push({ from: `0,${-(k+1)}`, to: `${k+1},0`, type: 'boundary' });
-
-    // External corners to alpha
-    edges.push({ from: `${k+1},0`, to: `${k},0`, type: 'corner' });
-    edges.push({ from: `${-(k+1)},0`, to: `${-k},0`, type: 'corner' });
-    edges.push({ from: `0,${k+1}`, to: `0,${k}`, type: 'corner' });
-    edges.push({ from: `0,${-(k+1)}`, to: `0,${-k}`, type: 'corner' });
-
-    // Diagonal boundary
-    for (let s = 0; s < k; s++) {
-      edges.push({ from: `${k-s},${s}`, to: `${k-s-1},${s+1}`, type: 'diagonal' });
-      edges.push({ from: `${-s},${k-s}`, to: `${-(s+1)},${k-s-1}`, type: 'diagonal' });
-      edges.push({ from: `${-(k-s)},${-s}`, to: `${-(k-s-1)},${-(s+1)}`, type: 'diagonal' });
-      edges.push({ from: `${s},${-(k-s)}`, to: `${s+1},${-(k-s-1)}`, type: 'diagonal' });
-    }
-
-    // Get vertex/edge size controls
-    const vertexSizeControl = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
-    const edgeThicknessControl = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
-
-    // ========== BUILD FACES (quadrilaterals and triangles) ==========
-    const faces = [];
-
-    // Helper to add a face if all vertices exist
-    function tryAddFace(keys) {
-      const corners = keys.map(key => pointMap.get(key));
-      if (corners.every(c => c !== undefined)) {
-        faces.push({ corners, keys, type: keys.length === 3 ? 'tri' : 'quad' });
-      }
-    }
-
-    // Interior quadrilateral faces: (i,j), (i+1,j), (i+1,j+1), (i,j+1)
-    // Include all faces where all 4 corners exist in pointMap
-    for (let i = -k; i < k; i++) {
-      for (let j = -k; j < k; j++) {
-        tryAddFace([`${i},${j}`, `${i+1},${j}`, `${i+1},${j+1}`, `${i},${j+1}`]);
-      }
-    }
-
-    // Boundary triangular faces - fan from external corners to diagonal
-    // Right side: from (k+1,0) to diagonal vertices (k,0)→(k-1,1)→...→(0,k) to (0,k+1)
-    for (let s = 0; s < k; s++) {
-      tryAddFace([`${k+1},0`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
-    }
-    tryAddFace([`${k+1},0`, `0,${k}`, `0,${k+1}`]);
-
-    // Top side: from (0,k+1) to diagonal vertices (0,k)→(-1,k-1)→...→(-k,0) to (-(k+1),0)
-    for (let s = 0; s < k; s++) {
-      tryAddFace([`0,${k+1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
-    }
-    tryAddFace([`0,${k+1}`, `${-k},0`, `${-(k+1)},0`]);
-
-    // Left side: from (-(k+1),0) to diagonal vertices (-k,0)→(-k+1,-1)→...→(0,-k) to (0,-(k+1))
-    for (let s = 0; s < k; s++) {
-      tryAddFace([`${-(k+1)},0`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
-    }
-    tryAddFace([`${-(k+1)},0`, `0,${-k}`, `0,${-(k+1)}`]);
-
-    // Bottom side: from (0,-(k+1)) to diagonal vertices (0,-k)→(1,-k+1)→...→(k,0) to (k+1,0)
-    for (let s = 0; s < k; s++) {
-      tryAddFace([`0,${-(k+1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
-    }
-    tryAddFace([`0,${-(k+1)}`, `${k},0`, `${k+1},0`]);
-
-    // Beta-beta-inner triangles - between adjacent beta vertices and interior vertex
-    // Right-top quadrant: triangles like (interior)-(beta)-(beta)
-    for (let s = 1; s < k; s++) {
-      // Triangle: (k-s-1,s) [inner] - (k-s,s) [beta] - (k-s-1,s+1) [beta]
-      tryAddFace([`${k-s-1},${s}`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
-    }
-    // Top-left quadrant
-    for (let s = 1; s < k; s++) {
-      tryAddFace([`${-s},${k-s-1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
-    }
-    // Bottom-left quadrant
-    for (let s = 1; s < k; s++) {
-      tryAddFace([`${-(k-s-1)},${-s}`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
-    }
-    // Bottom-right quadrant
-    for (let s = 1; s < k; s++) {
-      tryAddFace([`${s},${-(k-s-1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
-    }
-
-    // Alpha-beta-inner triangles - at corners where alpha meets first beta and interior
-    // Right alpha (k,0) - beta (k-1,1) - inner (k-1,0)
-    tryAddFace([`${k-1},0`, `${k},0`, `${k-1},1`]);
-    // Top alpha (0,k) - beta (-1,k-1) - inner (0,k-1)
-    tryAddFace([`0,${k-1}`, `0,${k}`, `-1,${k-1}`]);
-    // Left alpha (-k,0) - beta (-k+1,-1) - inner (-k+1,0)
-    tryAddFace([`${-k+1},0`, `${-k},0`, `${-k+1},-1`]);
-    // Bottom alpha (0,-k) - beta (1,-k+1) - inner (0,-k+1)
-    tryAddFace([`0,${-k+1}`, `0,${-k}`, `1,${-k+1}`]);
-
-    // ========== BUILD ALL DRAWABLE OBJECTS WITH DEPTH ==========
-    const drawables = [];
-
-    // Add faces with normals
-    for (const face of faces) {
-      const corners = face.corners;
-      const avgDepth = corners.reduce((sum, p) => sum + p.depth, 0) / corners.length;
-
-      // Compute normal for lighting
-      const p0 = corners[0], p1 = corners[1], p2 = corners[2];
-      const e1 = { x: p1.x - p0.x, y: p1.y - p0.y, z: p1.z - p0.z };
-      const e2 = { x: p2.x - p0.x, y: p2.y - p0.y, z: p2.z - p0.z };
-      const normal = {
-        x: e1.y * e2.z - e1.z * e2.y,
-        y: e1.z * e2.x - e1.x * e2.z,
-        z: e1.x * e2.y - e1.y * e2.x
-      };
-      const normLen = Math.sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z) || 1;
-      normal.x /= normLen; normal.y /= normLen; normal.z /= normLen;
-
-      drawables.push({ type: 'face', corners, normal, depth: avgDepth });
-    }
-
-    // Add edges
-    for (const edge of edges) {
-      const p1 = pointMap.get(edge.from);
-      const p2 = pointMap.get(edge.to);
-      if (!p1 || !p2) continue;
-      const avgDepth = (p1.depth + p2.depth) / 2;
-      drawables.push({ type: 'edge', p1, p2, depth: avgDepth });
-    }
-
-    // Add vertices
-    for (const p of projected) {
-      drawables.push({ type: 'vertex', p, depth: p.depth });
-    }
-
-    // Sort all drawables back to front (smaller depth = further from camera = draw first)
-    drawables.sort((a, b) => a.depth - b.depth);
-
-    // Lights from preset (deep copy and normalize)
+    // Lights from preset
     const lights = preset.lights.map(l => ({
       dir: { ...l.dir },
       intensity: l.intensity
@@ -2857,68 +2758,177 @@ Part of this research was performed while the author was visiting the Institute 
       light.dir.x /= len; light.dir.y /= len; light.dir.z /= len;
     }
     const ambientIntensity = preset.ambient;
-    const baseR = preset.baseColor.r, baseG = preset.baseColor.g, baseB = preset.baseColor.b;
 
-    // ========== DRAW ALL OBJECTS IN DEPTH ORDER ==========
-    for (const obj of drawables) {
-      if (obj.type === 'face') {
-        // Skip faces if preset has showFaces: false
-        if (preset.showFaces === false) continue;
+    for (const surf of surfaceData) {
+      const points3D = surf.points;
+      const baseR = surf.color.r, baseG = surf.color.g, baseB = surf.color.b;
+      const isTinted = !surf.isRe && showRe;  // Im surface when Re also shown
 
-        const corners = obj.corners;
+      // Project all vertices
+      const pointMap = new Map();
+      const projected = [];
+      for (const p of points3D) {
+        const proj = project(p.x, p.y, p.z);
+        const entry = { ...p, ...proj };
+        projected.push(entry);
+        pointMap.set(`${p.i},${p.j}`, entry);
+      }
 
-        // Compute lighting from all sources (flat shading - no gradients)
-        let totalLight = ambientIntensity;
-        for (const light of lights) {
-          const dot = obj.normal.x * light.dir.x + obj.normal.y * light.dir.y + obj.normal.z * light.dir.z;
-          totalLight += Math.max(0, dot) * light.intensity;
+      // Build edges
+      const edges = [];
+      for (const p of points3D) {
+        const i = p.i, j = p.j;
+        const absSum = Math.abs(i) + Math.abs(j);
+        const rightKey = `${i+1},${j}`;
+        if (pointMap.has(rightKey)) {
+          const nAbsSum = Math.abs(i+1) + Math.abs(j);
+          if (absSum <= k && nAbsSum <= k) {
+            edges.push({ from: `${i},${j}`, to: rightKey });
+          }
         }
-        totalLight = Math.min(1.0, totalLight);
+        const topKey = `${i},${j+1}`;
+        if (pointMap.has(topKey)) {
+          const nAbsSum = Math.abs(i) + Math.abs(j+1);
+          if (absSum <= k && nAbsSum <= k) {
+            edges.push({ from: `${i},${j}`, to: topKey });
+          }
+        }
+      }
+      edges.push({ from: `${k+1},0`, to: `0,${k+1}` });
+      edges.push({ from: `0,${k+1}`, to: `${-(k+1)},0` });
+      edges.push({ from: `${-(k+1)},0`, to: `0,${-(k+1)}` });
+      edges.push({ from: `0,${-(k+1)}`, to: `${k+1},0` });
+      edges.push({ from: `${k+1},0`, to: `${k},0` });
+      edges.push({ from: `${-(k+1)},0`, to: `${-k},0` });
+      edges.push({ from: `0,${k+1}`, to: `0,${k}` });
+      edges.push({ from: `0,${-(k+1)}`, to: `0,${-k}` });
+      for (let s = 0; s < k; s++) {
+        edges.push({ from: `${k-s},${s}`, to: `${k-s-1},${s+1}` });
+        edges.push({ from: `${-s},${k-s}`, to: `${-(s+1)},${k-s-1}` });
+        edges.push({ from: `${-(k-s)},${-s}`, to: `${-(k-s-1)},${-(s+1)}` });
+        edges.push({ from: `${s},${-(k-s)}`, to: `${s+1},${-(k-s-1)}` });
+      }
 
-        // Uniform flat color per face from preset
-        const r = Math.floor(baseR * totalLight);
-        const g = Math.floor(baseG * totalLight);
-        const b = Math.floor(baseB * totalLight);
+      // Build faces
+      function tryAddFace(keys) {
+        const corners = keys.map(key => pointMap.get(key));
+        if (corners.every(c => c !== undefined)) {
+          const avgDepth = corners.reduce((sum, p) => sum + p.depth, 0) / corners.length;
+          const p0 = corners[0], p1 = corners[1], p2 = corners[2];
+          const e1 = { x: p1.x - p0.x, y: p1.y - p0.y, z: p1.z - p0.z };
+          const e2 = { x: p2.x - p0.x, y: p2.y - p0.y, z: p2.z - p0.z };
+          const normal = {
+            x: e1.y * e2.z - e1.z * e2.y,
+            y: e1.z * e2.x - e1.x * e2.z,
+            z: e1.x * e2.y - e1.y * e2.x
+          };
+          const normLen = Math.sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z) || 1;
+          normal.x /= normLen; normal.y /= normLen; normal.z /= normLen;
 
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          let totalLight = ambientIntensity;
+          for (const light of lights) {
+            const dot = normal.x * light.dir.x + normal.y * light.dir.y + normal.z * light.dir.z;
+            totalLight += Math.max(0, dot) * light.intensity;
+          }
+          totalLight = Math.min(1.0, totalLight);
+
+          const r = Math.floor(baseR * totalLight);
+          const g = Math.floor(baseG * totalLight);
+          const b = Math.floor(baseB * totalLight);
+
+          allDrawables.push({ type: 'face', corners, depth: avgDepth, color: `rgb(${r},${g},${b})` });
+        }
+      }
+
+      // Interior quadrilateral faces
+      for (let i = -k; i < k; i++) {
+        for (let j = -k; j < k; j++) {
+          tryAddFace([`${i},${j}`, `${i+1},${j}`, `${i+1},${j+1}`, `${i},${j+1}`]);
+        }
+      }
+      // Boundary triangular faces
+      for (let s = 0; s < k; s++) tryAddFace([`${k+1},0`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
+      tryAddFace([`${k+1},0`, `0,${k}`, `0,${k+1}`]);
+      for (let s = 0; s < k; s++) tryAddFace([`0,${k+1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
+      tryAddFace([`0,${k+1}`, `${-k},0`, `${-(k+1)},0`]);
+      for (let s = 0; s < k; s++) tryAddFace([`${-(k+1)},0`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
+      tryAddFace([`${-(k+1)},0`, `0,${-k}`, `0,${-(k+1)}`]);
+      for (let s = 0; s < k; s++) tryAddFace([`0,${-(k+1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
+      tryAddFace([`0,${-(k+1)}`, `${k},0`, `${k+1},0`]);
+      // Beta-beta-inner triangles
+      for (let s = 1; s < k; s++) tryAddFace([`${k-s-1},${s}`, `${k-s},${s}`, `${k-s-1},${s+1}`]);
+      for (let s = 1; s < k; s++) tryAddFace([`${-s},${k-s-1}`, `${-s},${k-s}`, `${-(s+1)},${k-s-1}`]);
+      for (let s = 1; s < k; s++) tryAddFace([`${-(k-s-1)},${-s}`, `${-(k-s)},${-s}`, `${-(k-s-1)},${-(s+1)}`]);
+      for (let s = 1; s < k; s++) tryAddFace([`${s},${-(k-s-1)}`, `${s},${-(k-s)}`, `${s+1},${-(k-s-1)}`]);
+      // Alpha-beta-inner triangles
+      tryAddFace([`${k-1},0`, `${k},0`, `${k-1},1`]);
+      tryAddFace([`0,${k-1}`, `0,${k}`, `-1,${k-1}`]);
+      tryAddFace([`${-k+1},0`, `${-k},0`, `${-k+1},-1`]);
+      tryAddFace([`0,${-k+1}`, `0,${-k}`, `1,${-k+1}`]);
+
+      // Add edges
+      const edgeColor = isTinted ? `rgb(${Math.floor(baseR * 0.3)},${Math.floor(baseG * 0.3)},${Math.floor(baseB * 0.3)})` : preset.edgeColor;
+      for (const edge of edges) {
+        const p1 = pointMap.get(edge.from);
+        const p2 = pointMap.get(edge.to);
+        if (!p1 || !p2) continue;
+        const avgDepth = (p1.depth + p2.depth) / 2;
+        allDrawables.push({ type: 'edge', p1, p2, depth: avgDepth, color: edgeColor });
+      }
+
+      // Add vertices
+      const vertexColor = isTinted ? `rgb(${Math.floor(baseR * 0.5)},${Math.floor(baseG * 0.5)},${Math.floor(baseB * 0.5)})` : preset.vertexColor;
+      for (const p of projected) {
+        allDrawables.push({ type: 'vertex', p, depth: p.depth, color: vertexColor });
+      }
+    }
+
+    // Sort ALL drawables from both surfaces by depth (back to front)
+    allDrawables.sort((a, b) => a.depth - b.depth);
+
+    // Draw all objects in depth order
+    for (const obj of allDrawables) {
+      if (obj.type === 'face') {
+        if (preset.showFaces === false) continue;
+        ctx.fillStyle = obj.color;
         ctx.beginPath();
-        ctx.moveTo(corners[0].screenX, corners[0].screenY);
-        for (let i = 1; i < corners.length; i++) {
-          ctx.lineTo(corners[i].screenX, corners[i].screenY);
+        ctx.moveTo(obj.corners[0].screenX, obj.corners[0].screenY);
+        for (let i = 1; i < obj.corners.length; i++) {
+          ctx.lineTo(obj.corners[i].screenX, obj.corners[i].screenY);
         }
         ctx.closePath();
         ctx.fill();
       } else if (obj.type === 'edge') {
-        ctx.strokeStyle = preset.edgeColor;
+        ctx.strokeStyle = obj.color;
         ctx.lineWidth = edgeThicknessControl * 0.8;
         ctx.beginPath();
         ctx.moveTo(obj.p1.screenX, obj.p1.screenY);
         ctx.lineTo(obj.p2.screenX, obj.p2.screenY);
         ctx.stroke();
       } else if (obj.type === 'vertex') {
-        ctx.fillStyle = preset.vertexColor;
+        ctx.fillStyle = obj.color;
         ctx.beginPath();
         ctx.arc(obj.p.screenX, obj.p.screenY, vertexSizeControl, 0, 2 * Math.PI);
         ctx.fill();
       }
     }
 
-    // Draw axes indicator in corner
+    // Draw axes indicator
     const axisLen = 40;
     const axisOrigin = { x: 60, y: rect.height - 60 };
+    const zLabel = showRe ? 'O.re' : 'O.im';
     const axes = [
       { dir: [1, 0, 0], color: '#cc0000', label: 'T.re' },
       { dir: [0, 1, 0], color: '#009900', label: 'T.im' },
-      { dir: [0, 0, 1], color: '#0000cc', label: 'O.re' }
+      { dir: [0, 0, 1], color: '#0000cc', label: zLabel }
     ];
 
     for (const axis of axes) {
       const [dx, dy, dz] = axis.dir;
-      const rz_x = dx * cosZ - dy * sinZ;
-      const rz_y = dx * sinZ + dy * cosZ;
-      const rz_z = dz;
+      const rz_x = dx * cosRZ - dy * sinRZ;
+      const rz_y = dx * sinRZ + dy * cosRZ;
       const rx_x = rz_x;
-      const rx_y = rz_y * cosX - rz_z * sinX;
+      const rx_y = rz_y * cosRX - dz * sinRX;
 
       ctx.strokeStyle = axis.color;
       ctx.lineWidth = 2;
@@ -3526,6 +3536,14 @@ Part of this research was performed while the author was visiting the Institute 
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-origami-chk').addEventListener('change', renderMain2DTemb);
 
+  // Re/Im surface checkboxes (3D mode)
+  document.getElementById('show-re-surface-chk').addEventListener('change', () => {
+    if (mainViewIs3D) renderMain3D();
+  });
+  document.getElementById('show-im-surface-chk').addEventListener('change', () => {
+    if (mainViewIs3D) renderMain3D();
+  });
+
   // Main 2D/3D T-embedding size controls
   document.getElementById('main-2d-vertex-size').addEventListener('input', () => {
     if (mainViewIs3D) renderMain3D();
@@ -3545,6 +3563,7 @@ Part of this research was performed while the author was visiting the Institute 
     const projBtn = document.getElementById('toggle-projection-btn');
     const presetBtn = document.getElementById('cycle-preset-btn');
     const rotateBtn = document.getElementById('auto-rotate-btn');
+    const surfaceSelectControls = document.getElementById('surface-select-controls');
 
     if (mainViewIs3D) {
       btn.textContent = '3D';
@@ -3553,6 +3572,7 @@ Part of this research was performed while the author was visiting the Institute 
       projBtn.style.display = '';
       presetBtn.style.display = '';
       rotateBtn.style.display = '';
+      surfaceSelectControls.style.display = '';
       renderMain3D();
     } else {
       btn.textContent = '2D';
@@ -3561,6 +3581,7 @@ Part of this research was performed while the author was visiting the Institute 
       projBtn.style.display = 'none';
       presetBtn.style.display = 'none';
       rotateBtn.style.display = 'none';
+      surfaceSelectControls.style.display = 'none';
       // Stop auto-rotate when switching to 2D
       if (view3DAutoRotate) {
         view3DAutoRotate = false;
