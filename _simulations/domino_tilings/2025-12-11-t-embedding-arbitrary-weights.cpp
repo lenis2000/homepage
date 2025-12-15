@@ -141,6 +141,35 @@ static const bool g_betaSwapLL = true;   // Lower-left quadrant (swapped)
 // HELPER FUNCTIONS
 // =============================================================================
 
+// Optimization: Flat 2D grid for O(1) vertex lookups
+// Max N=50 implies coordinates roughly [-55, 55].
+// A 128x128 grid is sufficient and fits in L1/L2 cache.
+struct FastGrid {
+    std::vector<int> grid;
+    int offset;
+    int dim;
+
+    FastGrid(int maxCoord = 60) {
+        dim = 2 * maxCoord + 1;
+        offset = maxCoord;
+        grid.assign(dim * dim, -1);
+    }
+
+    void clear() {
+        std::fill(grid.begin(), grid.end(), -1);
+    }
+
+    // Map integer coords (i,j) to index
+    inline int& at(int i, int j) {
+        return grid[(i + offset) * dim + (j + offset)];
+    }
+
+    // Check bounds (optional, for safety)
+    inline bool inBounds(int i, int j) const {
+        return (std::abs(i) < offset && std::abs(j) < offset);
+    }
+};
+
 static std::string makeKey(int j, int k) {
     std::ostringstream ss;
     ss << j << "," << k;
@@ -510,17 +539,19 @@ static void aztecStep1_GaugeTransform() {
 
     int n = g_aztecLevel;
 
-    // Build vertex lookup map using integer coordinates (i,j) with 64-bit key
-    std::map<int64_t, int> vertexIndex;  // int64 key -> vertex index
+    // Build vertex lookup using FastGrid for O(1) lookups
+    FastGrid vertexGrid(n + 5);
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
-        vertexIndex[makeIntKey64(i, j)] = (int)idx;
+        if (vertexGrid.inBounds(i, j)) {
+            vertexGrid.at(i, j) = (int)idx;
+        }
     }
 
     // Build edge lookup: for each vertex, list of (neighbor_idx, edge_idx)
-    // Note: we'll read current weights from g_aztecEdges, not cached values
-    std::map<int, std::vector<std::pair<int, int>>> adjacency;  // vertex -> [(neighbor, edgeIdx)]
+    // Use vector of vectors for O(1) access by vertex index
+    std::vector<std::vector<std::pair<int, int>>> adjacency(g_aztecVertices.size());
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         int v1 = g_aztecEdges[i].v1;
         int v2 = g_aztecEdges[i].v2;
@@ -551,13 +582,13 @@ static void aztecStep1_GaugeTransform() {
         if (i - j == -(n - 1)) {
             // Left diagonal: boundary at (i, j+1), check if it exists
             int bi = i, bj = j + 1;
-            if (vertexIndex.count(makeIntKey64(bi, bj))) {
+            if (vertexGrid.inBounds(bi, bj) && vertexGrid.at(bi, bj) != -1) {
                 leftDiagVertices.push_back({(int)idx, i, j, true});
             }
         } else if (i - j == (n - 1)) {
             // Right diagonal: boundary at (i, j-1), check if it exists
             int bi = i, bj = j - 1;
-            if (vertexIndex.count(makeIntKey64(bi, bj))) {
+            if (vertexGrid.inBounds(bi, bj) && vertexGrid.at(bi, bj) != -1) {
                 rightDiagVertices.push_back({(int)idx, i, j, false});
             }
         }
@@ -594,15 +625,13 @@ static void aztecStep1_GaugeTransform() {
 
         // Boundary vertex at (i, j+1)
         int bi = i, bj = j + 1;
-        auto bit = vertexIndex.find(makeIntKey64(bi, bj));
-        if (bit == vertexIndex.end()) continue;
-        int bIdx = bit->second;
+        if (!vertexGrid.inBounds(bi, bj) || vertexGrid.at(bi, bj) == -1) continue;
+        int bIdx = vertexGrid.at(bi, bj);
 
         // Reference vertex at (i+1, j+1) - either corner or previous gauge vertex
         int ri = i + 1, rj = j + 1;
-        auto rit = vertexIndex.find(makeIntKey64(ri, rj));
-        if (rit == vertexIndex.end()) continue;
-        int rIdx = rit->second;
+        if (!vertexGrid.inBounds(ri, rj) || vertexGrid.at(ri, rj) == -1) continue;
+        int rIdx = vertexGrid.at(ri, rj);
 
         // Find edge from gauge vertex to boundary
         int edgeToBoundaryIdx = findEdge(vIdx, bIdx);
@@ -629,15 +658,13 @@ static void aztecStep1_GaugeTransform() {
 
         // Boundary vertex at (i, j-1)
         int bi = i, bj = j - 1;
-        auto bit = vertexIndex.find(makeIntKey64(bi, bj));
-        if (bit == vertexIndex.end()) continue;
-        int bIdx = bit->second;
+        if (!vertexGrid.inBounds(bi, bj) || vertexGrid.at(bi, bj) == -1) continue;
+        int bIdx = vertexGrid.at(bi, bj);
 
         // Reference vertex at (i-1, j-1) - either corner or previous gauge vertex
         int ri = i - 1, rj = j - 1;
-        auto rit = vertexIndex.find(makeIntKey64(ri, rj));
-        if (rit == vertexIndex.end()) continue;
-        int rIdx = rit->second;
+        if (!vertexGrid.inBounds(ri, rj) || vertexGrid.at(ri, rj) == -1) continue;
+        int rIdx = vertexGrid.at(ri, rj);
 
         // Find edge from gauge vertex to boundary
         int edgeToBoundaryIdx = findEdge(vIdx, bIdx);
@@ -684,16 +711,18 @@ static void aztecStep2_WhiteGaugeTransform() {
         v.toContract = false;
     }
 
-    // Build vertex lookup map using integer coordinates with 64-bit key
-    std::map<int64_t, int> vertexIndex;
+    // Build vertex lookup using FastGrid for O(1) lookups
+    FastGrid vertexGrid(n + 5);
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
-        vertexIndex[makeIntKey64(i, j)] = (int)idx;
+        if (vertexGrid.inBounds(i, j)) {
+            vertexGrid.at(i, j) = (int)idx;
+        }
     }
 
-    // Build edge lookup: vertex -> [(neighbor, edgeIdx)]
-    std::map<int, std::vector<std::pair<int, int>>> adjacency;
+    // Build edge lookup: vertex -> [(neighbor, edgeIdx)] using vector for O(1) access
+    std::vector<std::vector<std::pair<int, int>>> adjacency(g_aztecVertices.size());
     for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
         int v1 = g_aztecEdges[eIdx].v1;
         int v2 = g_aztecEdges[eIdx].v2;
@@ -754,12 +783,11 @@ static void aztecStep2_WhiteGaugeTransform() {
         int n1i = i - 1, n1j = j;
         int n2i = i, n2j = j - 1;
 
-        auto n1It = vertexIndex.find(makeIntKey64(n1i, n1j));
-        auto n2It = vertexIndex.find(makeIntKey64(n2i, n2j));
-        if (n1It == vertexIndex.end() || n2It == vertexIndex.end()) continue;
+        if (!vertexGrid.inBounds(n1i, n1j) || vertexGrid.at(n1i, n1j) == -1) continue;
+        if (!vertexGrid.inBounds(n2i, n2j) || vertexGrid.at(n2i, n2j) == -1) continue;
 
-        int n1Idx = n1It->second;
-        int n2Idx = n2It->second;
+        int n1Idx = vertexGrid.at(n1i, n1j);
+        int n2Idx = vertexGrid.at(n2i, n2j);
 
         int edge1Idx = findEdge(bIdx, n1Idx);
         int edge2Idx = findEdge(bIdx, n2Idx);
@@ -808,12 +836,11 @@ static void aztecStep2_WhiteGaugeTransform() {
         int n1i = i + 1, n1j = j;
         int n2i = i, n2j = j + 1;
 
-        auto n1It = vertexIndex.find(makeIntKey64(n1i, n1j));
-        auto n2It = vertexIndex.find(makeIntKey64(n2i, n2j));
-        if (n1It == vertexIndex.end() || n2It == vertexIndex.end()) continue;
+        if (!vertexGrid.inBounds(n1i, n1j) || vertexGrid.at(n1i, n1j) == -1) continue;
+        if (!vertexGrid.inBounds(n2i, n2j) || vertexGrid.at(n2i, n2j) == -1) continue;
 
-        int n1Idx = n1It->second;
-        int n2Idx = n2It->second;
+        int n1Idx = vertexGrid.at(n1i, n1j);
+        int n2Idx = vertexGrid.at(n2i, n2j);
 
         int edge1Idx = findEdge(bIdx, n1Idx);
         int edge2Idx = findEdge(bIdx, n2Idx);
