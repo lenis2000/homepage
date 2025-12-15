@@ -90,7 +90,7 @@ code:
   <li><strong>XX Verification</strong>: Checks that each interior white vertex satisfies the face weight formula. Green = passed, red = numerical discrepancy.</li>
 </ul>
 
-<h5>Performance Benchmark</h5>
+<h5>T-embedding Performance Benchmark</h5>
 <p>Measures computation time for n = 10 to 40 and fits a power law t(n) = c·n<sup>α</sup>. Uses the currently selected weight preset.</p>
 
   </div>
@@ -431,6 +431,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <!-- 2D Canvas -->
       <div id="main-2d-container">
         <canvas id="main-temb-2d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+        <div id="main-2d-status" style="height: 20px; font-size: 12px; color: #666; text-align: center; padding: 2px 0;"></div>
       </div>
 
       <!-- 3D Canvas (hidden by default) -->
@@ -469,12 +470,20 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     </div>
     <!-- Canvas with floating controls -->
     <div id="sample-canvas-wrapper" style="position: relative;">
-      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px;">
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; align-items: center;">
         <button id="sample-zoom-out-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">−</button>
         <button id="sample-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
         <button id="sample-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
+        <span style="color: #ccc; margin: 0 3px;">|</span>
+        <div class="sample-view-toggle">
+          <button id="sample-toggle-3d-btn" title="Toggle 2D/3D view">3D</button>
+          <button id="sample-perspective-btn" title="Toggle perspective/isometric" style="display: none;">🎯</button>
+          <button id="sample-preset-btn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
+          <button id="sample-rotate-btn" title="Toggle auto-rotation" style="display: none;">🔄</button>
+        </div>
       </div>
       <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+      <div id="sample-3d-container"></div>
     </div>
     <!-- Bottom controls: Colors and Export -->
     <div style="margin-top: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
@@ -576,7 +585,7 @@ Part of this research was performed while the author was visiting the Institute 
 
 <!-- Benchmark Section -->
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
-  <h3 style="margin-top: 0;">Performance Benchmark</h3>
+  <h3 style="margin-top: 0;">T-embedding Performance Benchmark</h3>
   <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=40, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
   <button id="benchmark-btn">Benchmark (takes about a minute)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
@@ -588,9 +597,49 @@ Part of this research was performed while the author was visiting the Institute 
 
 <style>
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
+#sample-3d-container {
+  width: 100%;
+  height: 50vh;
+  border: 1px solid #ccc;
+  display: none;
+  background: #f0f0f0;
+  border-radius: 6px;
+}
+#sample-3d-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+.sample-view-toggle {
+  display: inline-flex;
+  border: 2px solid #1976d2;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-left: 8px;
+}
+.sample-view-toggle button {
+  border: none;
+  border-radius: 0;
+  height: 24px;
+  padding: 0 8px;
+  font-weight: 500;
+  background: white;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 11px;
+}
+.sample-view-toggle button.active {
+  background: #1976d2;
+  color: white;
+}
+.sample-view-toggle button:hover:not(.active) {
+  background: #e3f2fd;
+}
 </style>
 
 <script src="/js/colorschemes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="/js/2025-12-11-t-embedding-arbitrary-weights.js"></script>
 
 <script>
@@ -1064,6 +1113,7 @@ Part of this research was performed while the author was visiting the Institute 
   let main2DPanX = 0, main2DPanY = 0;
   let main2DIsPanning = false;
   let main2DLastPanX = 0, main2DLastPanY = 0;
+  let main2DVertexScreenPositions = [];  // Store vertex positions for click detection
 
   // ========== AZTEC DIAMOND GRAPH STATE ==========
   let aztecLevel = 3;
@@ -1989,6 +2039,403 @@ Part of this research was performed while the author was visiting the Institute 
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
 
+  // Sample 3D view state
+  let sampleIs3DView = false;
+  let sampleRenderer3D = null;
+  const sample3DContainer = document.getElementById('sample-3d-container');
+
+  // 3D Vertex heights per domino type (4 types x 6 vertices)
+  const vertexHeights = {
+    0: [1, 2, 1, 0, -1, 0],    // Horiz type 0
+    1: [0, -1, 0, 1, 2, 1],    // Horiz type 1
+    2: [-1, -2, -1, 0, 1, 0],  // Vert type 2
+    3: [0, 1, 0, -1, -2, -1]   // Vert type 3
+  };
+
+  // 3D Visual Presets for sample domino view (Three.js format, from ultimate-domino.md)
+  const SAMPLE_3D_PRESETS = [
+    {
+      name: 'Default', icon: '☀️',
+      background: 0xffffff,
+      ambient: { intensity: 0.4 },
+      hemisphere: { sky: 0xffffff, ground: 0x444444, intensity: 0.3 },
+      directional: { intensity: 0.6, position: [10, 10, 15] },
+      fill: { intensity: 0.25, position: [-10, -5, -10] },
+      material: { type: 'standard', roughness: 0.5, metalness: 0.15, flatShading: true },
+      edges: { color: 0x000000, opacity: 0.5 }
+    },
+    {
+      name: 'Clean', icon: '✨',
+      background: 0xfafafa,
+      ambient: { intensity: 0.5 },
+      hemisphere: { sky: 0xffffff, ground: 0xeeeeee, intensity: 0.2 },
+      directional: { intensity: 0.7, position: [5, 15, 10] },
+      fill: { intensity: 0.3, position: [-8, 5, -8] },
+      material: { type: 'phong', shininess: 60, flatShading: true },
+      edges: { color: 0x333333, opacity: 0.3 }
+    },
+    {
+      name: 'Mathematical', icon: '📐',
+      background: 0xffffff,
+      ambient: { intensity: 0.6 },
+      hemisphere: { sky: 0xffffff, ground: 0xffffff, intensity: 0.2 },
+      directional: { intensity: 0.4, position: [0, 20, 0] },
+      fill: { intensity: 0.2, position: [0, -10, 0] },
+      material: { type: 'lambert', flatShading: true },
+      edges: { color: 0x000000, opacity: 1.0 }
+    },
+    {
+      name: 'Dramatic', icon: '🎭',
+      background: 0x1a1a2e,
+      ambient: { intensity: 0.35 },
+      hemisphere: { sky: 0x6666aa, ground: 0x222244, intensity: 0.25 },
+      directional: { intensity: 1.2, position: [15, 20, 5] },
+      fill: { intensity: 0.3, position: [-10, 5, -5] },
+      material: { type: 'standard', roughness: 0.3, metalness: 0.5, flatShading: true },
+      edges: { color: 0x222222, opacity: 0.6 }
+    },
+    {
+      name: 'Playful', icon: '🎨',
+      background: 0xf0f8ff,
+      ambient: { intensity: 0.5 },
+      hemisphere: { sky: 0xaaddff, ground: 0xffddaa, intensity: 0.4 },
+      directional: { intensity: 0.5, position: [10, 15, 10] },
+      fill: { intensity: 0.35, position: [-10, 10, -5] },
+      material: { type: 'phong', shininess: 100, flatShading: false },
+      edges: { color: 0x444444, opacity: 0.2 }
+    }
+  ];
+
+  // Simple 3D renderer for sample dominoes (based on domino.md approach)
+  let sample3DScene, sample3DCamera, sample3DRenderer, sample3DControls, sample3DDominoGroup;
+  let sample3DAnimating = false;
+  let sample3DAutoRotate = false;
+
+  function initSample3D(container) {
+    sample3DScene = new THREE.Scene();
+    sample3DScene.background = new THREE.Color(0xf0f0f0);
+
+    const w = container.clientWidth || 800;
+    const h = container.clientHeight || 400;
+    const frustum = 100, aspect = w / h;
+
+    sample3DCamera = new THREE.OrthographicCamera(
+      -frustum * aspect / 2, frustum * aspect / 2,
+      frustum / 2, -frustum / 2, 1, 1000
+    );
+    sample3DCamera.position.set(0, 130, 0);
+    sample3DCamera.lookAt(0, 0, 0);
+
+    sample3DRenderer = new THREE.WebGLRenderer({ antialias: true });
+    sample3DRenderer.setSize(w, h);
+    sample3DRenderer.setPixelRatio(window.devicePixelRatio);
+    sample3DRenderer.getContext().getExtension('OES_element_index_uint');
+    container.appendChild(sample3DRenderer.domElement);
+
+    sample3DScene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const dir1 = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir1.position.set(0.5, 1, 0.5).normalize();
+    sample3DScene.add(dir1);
+    const dir2 = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir2.position.set(-0.5, 1, -0.5).normalize();
+    sample3DScene.add(dir2);
+
+    sample3DControls = new THREE.OrbitControls(sample3DCamera, sample3DRenderer.domElement);
+    sample3DControls.enableDamping = true;
+    sample3DControls.dampingFactor = 0.25;
+    sample3DControls.touches = { ONE: THREE.TOUCH.ROTATE };
+
+    sample3DDominoGroup = new THREE.Group();
+    sample3DScene.add(sample3DDominoGroup);
+
+    if (!sample3DAnimating) {
+      sample3DAnimating = true;
+      animateSample3D();
+    }
+  }
+
+  function animateSample3D() {
+    if (!sample3DAnimating) return;
+    requestAnimationFrame(animateSample3D);
+    if (sample3DControls) sample3DControls.update();
+    if (sample3DAutoRotate && sample3DDominoGroup) {
+      sample3DDominoGroup.rotation.y += 0.005;
+    }
+    if (sample3DRenderer && sample3DScene && sample3DCamera) {
+      sample3DRenderer.render(sample3DScene, sample3DCamera);
+    }
+  }
+
+  function sample3DHandleResize() {
+    const container = document.getElementById('sample-3d-container');
+    if (!container || !sample3DCamera || !sample3DRenderer) return;
+    const w = container.clientWidth, h = container.clientHeight;
+    const frustum = 100, aspect = w / h;
+    sample3DCamera.left = -frustum * aspect / 2;
+    sample3DCamera.right = frustum * aspect / 2;
+    sample3DCamera.top = frustum / 2;
+    sample3DCamera.bottom = -frustum / 2;
+    sample3DCamera.updateProjectionMatrix();
+    sample3DRenderer.setSize(w, h);
+  }
+
+  // Height function calculation (from domino.md)
+  function calculateSampleHeightFunction(dominoes) {
+    if (!dominoes || dominoes.length === 0) return new Map();
+
+    const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
+    const unit = minSidePx / 2;
+    if (unit <= 0) return new Map();
+
+    const dominoData = dominoes.map(d => {
+      const horiz = d.w > d.h;
+      const orient = horiz ? 0 : 1;
+      const sign = horiz
+        ? (d.color === "green" ? -1 : 1)
+        : (d.color === "yellow" ? -1 : 1);
+      const gx = Math.round(d.x / unit);
+      const gy = Math.round(d.y / unit);
+      return [orient, sign, gx, gy];
+    });
+
+    const adj = new Map();
+    function addEdge(v1, v2, dh) {
+      const v1Key = `${v1[0]},${v1[1]}`;
+      const v2Key = `${v2[0]},${v2[1]}`;
+      if (!adj.has(v1Key)) adj.set(v1Key, []);
+      if (!adj.has(v2Key)) adj.set(v2Key, []);
+      adj.get(v1Key).push([v2Key, dh]);
+      adj.get(v2Key).push([v1Key, -dh]);
+    }
+
+    dominoData.forEach(([o, s, x, y]) => {
+      if (o === 0) {
+        const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
+        const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
+        addEdge(TL, TM, -s); addEdge(TM, TR, s);
+        addEdge(BL, BM, s); addEdge(BM, BR, -s);
+        addEdge(TL, BL, s); addEdge(TM, BM, 3*s);
+        addEdge(TR, BR, s);
+      } else {
+        const TL = [x, y+4], TR = [x+2, y+4];
+        const ML = [x, y+2], MR = [x+2, y+2];
+        const BL = [x, y], BR = [x+2, y];
+        addEdge(TL, TR, -s); addEdge(ML, MR, -3*s); addEdge(BL, BR, -s);
+        addEdge(TL, ML, s); addEdge(ML, BL, -s);
+        addEdge(TR, MR, -s); addEdge(MR, BR, s);
+      }
+    });
+
+    const verts = Array.from(adj.keys()).map(k => {
+      const [gx, gy] = k.split(',').map(Number);
+      return { k, gx, gy };
+    });
+    if (verts.length === 0) return new Map();
+
+    const root = verts.reduce((a, b) =>
+      (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
+    ).k;
+
+    const heights = new Map([[root, 0]]);
+    const queue = [root];
+    while (queue.length > 0) {
+      const v = queue.shift();
+      for (const [w, dh] of adj.get(v) || []) {
+        if (!heights.has(w)) {
+          heights.set(w, heights.get(v) + dh);
+          queue.push(w);
+        }
+      }
+    }
+    return heights;
+  }
+
+  // Create domino face (from domino.md)
+  function createSampleDominoFace(domino, heightMap) {
+    const isHorizontal = domino.w > domino.h;
+    const minSidePx = Math.min(domino.w, domino.h);
+    const unit = minSidePx / 2;
+
+    let pts;
+    if (isHorizontal) {
+      const w = 4, h = 2;
+      const x = domino.x, y = domino.y;
+      pts = [
+        [x, y+h], [x+w, y+h], [x+w, y], [x, y], [x+w/2, y+h], [x+w/2, y]
+      ];
+    } else {
+      const w = 2, h = 4;
+      const x = domino.x, y = domino.y;
+      pts = [
+        [x, y], [x, y+h], [x+w, y+h], [x+w, y], [x, y+h/2], [x+w, y+h/2]
+      ];
+    }
+
+    const vertices = [];
+    for (const [px, py] of pts) {
+      const gridX = Math.round(px / unit);
+      const gridY = Math.round(py / unit);
+      const key = `${gridX},${gridY}`;
+      let z = heightMap.has(key) ? heightMap.get(key) : 0;
+      vertices.push([px / 2.0, z, py / 2.0]);
+    }
+
+    return { color: domino.color, vertices };
+  }
+
+  function hexToThreeColor(hex) {
+    return new THREE.Color(hex).getHex();
+  }
+
+  function renderSample3DDominoes(dominoes) {
+    if (!sample3DDominoGroup) return;
+
+    while (sample3DDominoGroup.children.length > 0) {
+      const m = sample3DDominoGroup.children[0];
+      sample3DDominoGroup.remove(m);
+      if (m.geometry) m.geometry.dispose();
+      if (m.material) m.material.dispose();
+    }
+
+    if (!dominoes || dominoes.length === 0) return;
+
+    const heightMap = calculateSampleHeightFunction(dominoes);
+    const palettes = window.ColorSchemes || [{ colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+    const paletteColors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
+    const colors = {
+      yellow: hexToThreeColor(paletteColors[0]),
+      green: hexToThreeColor(paletteColors[1]),
+      blue: hexToThreeColor(paletteColors[2]),
+      red: hexToThreeColor(paletteColors[3])
+    };
+
+    // Find N for scaling
+    let maxCoord = 0;
+    for (const d of dominoes) {
+      maxCoord = Math.max(maxCoord, Math.abs(d.x + d.w), Math.abs(d.y + d.h));
+    }
+    const scale = 60 / Math.max(maxCoord, 1);
+
+    for (const domino of dominoes) {
+      const faceData = createSampleDominoFace(domino, heightMap);
+      if (!faceData || !faceData.vertices) continue;
+
+      try {
+        const geom = new THREE.BufferGeometry();
+        const pos = [];
+        faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+
+        const isH = (faceData.color === 'blue' || faceData.color === 'green');
+        const indices = [0,1,3, 3,2,1, 0,1,4, 3,2,5];
+        geom.setIndex(indices);
+        geom.computeVertexNormals();
+
+        const colorValue = colors[faceData.color] || 0x808080;
+        const mat = new THREE.MeshStandardMaterial({
+          color: colorValue,
+          side: THREE.DoubleSide,
+          flatShading: true
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        sample3DDominoGroup.add(mesh);
+      } catch (e) {
+        console.error("Error creating 3D mesh:", e);
+      }
+    }
+
+    if (sample3DDominoGroup.children.length > 0) {
+      const box = new THREE.Box3().setFromObject(sample3DDominoGroup);
+      const center = box.getCenter(new THREE.Vector3());
+      sample3DDominoGroup.position.sub(center);
+    }
+  }
+
+  // Wrapper class for compatibility with existing event handlers
+  class SampleDomino3DRenderer {
+    constructor(container) {
+      initSample3D(container);
+      window.addEventListener('resize', sample3DHandleResize);
+    }
+    handleResize() { sample3DHandleResize(); }
+    zoomIn() {
+      if (!sample3DCamera) return;
+      const factor = 0.8;
+      sample3DCamera.left *= factor;
+      sample3DCamera.right *= factor;
+      sample3DCamera.top *= factor;
+      sample3DCamera.bottom *= factor;
+      sample3DCamera.updateProjectionMatrix();
+    }
+    zoomOut() {
+      if (!sample3DCamera) return;
+      const factor = 1.25;
+      sample3DCamera.left *= factor;
+      sample3DCamera.right *= factor;
+      sample3DCamera.top *= factor;
+      sample3DCamera.bottom *= factor;
+      sample3DCamera.updateProjectionMatrix();
+    }
+    resetView() {
+      if (sample3DDominoGroup) sample3DDominoGroup.rotation.set(0, 0, 0);
+      sample3DHandleResize();
+      if (sample3DControls) sample3DControls.target.set(0, 0, 0);
+    }
+    togglePerspective() { return false; }
+    cyclePreset() { return { icon: '☀️' }; }
+    set autoRotate(val) { sample3DAutoRotate = val; }
+    get autoRotate() { return sample3DAutoRotate; }
+    renderDominoes(dominoes) { renderSample3DDominoes(dominoes); }
+  }
+
+  // 3D View Management Functions
+  function setSampleViewMode(use3D) {
+    sampleIs3DView = use3D;
+    const canvas2D = document.getElementById('sample-canvas');
+    const container3D = document.getElementById('sample-3d-container');
+    const toggle3DBtn = document.getElementById('sample-toggle-3d-btn');
+    const perspectiveBtn = document.getElementById('sample-perspective-btn');
+    const presetBtn = document.getElementById('sample-preset-btn');
+    const rotateBtn = document.getElementById('sample-rotate-btn');
+
+    if (use3D) {
+      canvas2D.style.display = 'none';
+      container3D.style.display = 'block';
+      toggle3DBtn.textContent = '2D';
+      toggle3DBtn.title = 'Switch to 2D view';
+      perspectiveBtn.style.display = 'inline-block';
+      presetBtn.style.display = 'inline-block';
+      rotateBtn.style.display = 'inline-block';
+
+      // Create 3D renderer if not exists, with slight delay to ensure container has dimensions
+      setTimeout(() => {
+        if (!sampleRenderer3D) {
+          sampleRenderer3D = new SampleDomino3DRenderer(container3D);
+        } else {
+          sampleRenderer3D.handleResize();
+        }
+        updateSample3DView();
+      }, 50);
+    } else {
+      canvas2D.style.display = 'block';
+      container3D.style.display = 'none';
+      toggle3DBtn.textContent = '3D';
+      toggle3DBtn.title = 'Switch to 3D view';
+      perspectiveBtn.style.display = 'none';
+      presetBtn.style.display = 'none';
+      rotateBtn.style.display = 'none';
+      renderSample();
+    }
+  }
+
+  function updateSample3DView() {
+    if (!sampleIs3DView || !sampleRenderer3D) return;
+    if (!sampleDominoes || sampleDominoes.length === 0) return;
+
+    // Pass dominoes directly - renderer uses {x, y, w, h, color} format
+    sampleRenderer3D.renderDominoes(sampleDominoes);
+  }
+
   // Sample canvas and palette
   const sampleCanvas = document.getElementById('sample-canvas');
   const samplePaletteSelect = document.getElementById('sample-palette-select');
@@ -2017,6 +2464,7 @@ Part of this research was performed while the author was visiting the Institute 
     samplePaletteSelect.addEventListener('change', () => {
       samplePaletteIndex = parseInt(samplePaletteSelect.value);
       renderSample();
+      updateSample3DView();
     });
   }
   const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
@@ -2396,6 +2844,7 @@ Part of this research was performed while the author was visiting the Institute 
       // Reset view and render
       resetSampleView();
       renderSample();
+      updateSample3DView();
 
     } catch (e) {
       console.error('Shuffling error:', e);
@@ -2493,18 +2942,30 @@ Part of this research was performed while the author was visiting the Institute 
     document.getElementById('sample-btn').addEventListener('click', generateRandomSample);
 
     document.getElementById('sample-zoom-in-btn').addEventListener('click', () => {
-      sampleZoom *= 1.3;
-      renderSample();
+      if (sampleIs3DView && sampleRenderer3D) {
+        sampleRenderer3D.zoomIn();
+      } else {
+        sampleZoom *= 1.3;
+        renderSample();
+      }
     });
 
     document.getElementById('sample-zoom-out-btn').addEventListener('click', () => {
-      sampleZoom /= 1.3;
-      renderSample();
+      if (sampleIs3DView && sampleRenderer3D) {
+        sampleRenderer3D.zoomOut();
+      } else {
+        sampleZoom /= 1.3;
+        renderSample();
+      }
     });
 
     document.getElementById('sample-zoom-reset-btn').addEventListener('click', () => {
-      resetSampleView();
-      renderSample();
+      if (sampleIs3DView && sampleRenderer3D) {
+        sampleRenderer3D.resetView();
+      } else {
+        resetSampleView();
+        renderSample();
+      }
     });
 
     // Border width input - re-render on change
@@ -2693,6 +3154,37 @@ Part of this research was performed while the author was visiting the Institute 
     });
 
     sampleCanvas.style.cursor = 'grab';
+
+    // 3D toggle button
+    document.getElementById('sample-toggle-3d-btn').addEventListener('click', () => {
+      setSampleViewMode(!sampleIs3DView);
+    });
+
+    // Perspective toggle
+    document.getElementById('sample-perspective-btn').addEventListener('click', () => {
+      if (sampleRenderer3D) {
+        const isPerspective = sampleRenderer3D.togglePerspective();
+        document.getElementById('sample-perspective-btn').textContent = isPerspective ? '📐' : '🎯';
+      }
+    });
+
+    // Preset cycle
+    document.getElementById('sample-preset-btn').addEventListener('click', () => {
+      if (sampleRenderer3D) {
+        const preset = sampleRenderer3D.cyclePreset();
+        document.getElementById('sample-preset-btn').textContent = preset.icon;
+        updateSample3DView();
+      }
+    });
+
+    // Auto-rotate toggle
+    document.getElementById('sample-rotate-btn').addEventListener('click', () => {
+      if (sampleRenderer3D) {
+        sampleRenderer3D.autoRotate = !sampleRenderer3D.autoRotate;
+        const btn = document.getElementById('sample-rotate-btn');
+        btn.style.background = sampleRenderer3D.autoRotate ? '#e0e0e0' : '';
+      }
+    });
   }
 
   const computeTimeSpan = document.getElementById('compute-time');
