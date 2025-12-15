@@ -4654,7 +4654,6 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   async function runBenchmark() {
-    console.log('runBenchmark called, wasmReady:', wasmReady);
     const btn = document.getElementById('benchmark-btn');
     const status = document.getElementById('benchmark-status');
     const resultsDiv = document.getElementById('benchmark-results');
@@ -4722,9 +4721,6 @@ Part of this research was performed while the author was visiting the Institute 
   const benchmarkBtn = document.getElementById('benchmark-btn');
   if (benchmarkBtn) {
     benchmarkBtn.addEventListener('click', runBenchmark);
-    console.log('Benchmark button event listener attached');
-  } else {
-    console.error('benchmark-btn element not found!');
   }
 
   // Initialize
