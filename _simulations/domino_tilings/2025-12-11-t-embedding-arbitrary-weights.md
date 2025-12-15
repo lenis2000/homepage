@@ -4713,18 +4713,6 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Log results to console
     console.log('Benchmark results:', results);
-
-    // Show step profile (cumulative time per step across all n values)
-    if (getStepProfile) {
-      const ptr = getStepProfile();
-      const profileJson = Module.UTF8ToString(ptr);
-      freeString(ptr);
-      console.log('Step profile (cumulative ms):', profileJson);
-      const profile = JSON.parse(profileJson);
-      // Find the slowest steps
-      const sorted = Object.entries(profile).sort((a,b) => b[1] - a[1]);
-      console.log('Slowest steps:', sorted.slice(0, 5));
-    }
   }
 
   const benchmarkBtn = document.getElementById('benchmark-btn');
