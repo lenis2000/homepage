@@ -176,7 +176,9 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
     <label>Distribution:
       <select id="iid-distribution-select" style="margin-left: 5px;">
         <option value="uniform" selected>Uniform [a, b]</option>
-        <!-- Future distributions can be added here -->
+        <option value="exponential">Exponential (1)</option>
+        <option value="pareto">Pareto (α, x_min)</option>
+        <option value="geometric">Geometric (p), X≥1</option>
       </select>
     </label>
   </div>
@@ -184,8 +186,27 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   <!-- Uniform distribution params -->
   <div id="iid-uniform-params" style="margin-bottom: 8px;">
     <small>Each edge weight ~ Uniform[a, b]</small><br>
-    a: <input type="number" id="iid-min" value="0.5" step="0.1" style="width: 60px;">
-    b: <input type="number" id="iid-max" value="2.0" step="0.1" style="width: 60px;">
+    a: <input type="number" id="iid-min" value="0.5" step="0.1" min="0.001" style="width: 60px;">
+    b: <input type="number" id="iid-max" value="2.0" step="0.1" min="0.001" style="width: 60px;">
+  </div>
+
+  <!-- Exponential distribution params -->
+  <div id="iid-exponential-params" style="display: none; margin-bottom: 8px;">
+    <small>Each edge weight ~ Exp(1). Mean = 1</small><br>
+    <small style="color: #666;">(General Exp(λ) only scales weights, which doesn't affect T-embeddings)</small>
+  </div>
+
+  <!-- Pareto distribution params -->
+  <div id="iid-pareto-params" style="display: none; margin-bottom: 8px;">
+    <small>Each edge weight ~ Pareto(α, x_min). Heavy tail.</small><br>
+    α: <input type="number" id="iid-pareto-alpha" value="2.0" step="0.1" min="0.1" style="width: 60px;">
+    x_min: <input type="number" id="iid-pareto-xmin" value="1.0" step="0.1" min="0.01" style="width: 60px;">
+  </div>
+
+  <!-- Geometric distribution params -->
+  <div id="iid-geometric-params" style="display: none; margin-bottom: 8px;">
+    <small>Each edge weight ~ Geometric(p), X ≥ 1. Mean = 1/p</small><br>
+    p: <input type="number" id="iid-geom-p" value="0.5" step="0.05" min="0.01" max="0.99" style="width: 60px;">
   </div>
 
   <div style="margin-top: 8px;">
@@ -1741,6 +1762,7 @@ Part of this research was performed while the author was visiting the Institute 
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
       setRandomIIDParams = Module.cwrap('setRandomIIDParams', null, ['number', 'number']);
+      setIIDDistribution = Module.cwrap('setIIDDistribution', null, ['number', 'number', 'number']);
       setLayeredParams = Module.cwrap('setLayeredParams', null, ['number', 'number', 'number', 'number', 'number']);
       setGammaParams = Module.cwrap('setGammaParams', null, ['number', 'number']);
       setPeriodicPeriod = Module.cwrap('setPeriodicPeriod', null, ['number', 'number']);
@@ -3248,6 +3270,18 @@ Part of this research was performed while the author was visiting the Institute 
     });
   });
 
+  // IID distribution type handler - toggle parameter visibility
+  const iidDistributionSelect = document.getElementById('iid-distribution-select');
+  function updateIIDDistributionParams() {
+    const dist = iidDistributionSelect.value;
+    document.getElementById('iid-uniform-params').style.display = (dist === 'uniform') ? 'block' : 'none';
+    document.getElementById('iid-exponential-params').style.display = (dist === 'exponential') ? 'block' : 'none';
+    document.getElementById('iid-pareto-params').style.display = (dist === 'pareto') ? 'block' : 'none';
+    document.getElementById('iid-geometric-params').style.display = (dist === 'geometric') ? 'block' : 'none';
+  }
+  iidDistributionSelect.addEventListener('change', updateIIDDistributionParams);
+  updateIIDDistributionParams();  // Initialize on load
+
   // Initialize visibility
   updateParamVisibility(weightPresetSelect.value);
 
@@ -3401,11 +3435,24 @@ Part of this research was performed while the author was visiting the Institute 
     if (preset === 'all-ones') {
       setAztecWeightMode(0);
     } else if (preset === 'random-iid') {
-      const minVal = parseFloat(document.getElementById('iid-min').value) || 0.5;
-      const maxVal = parseFloat(document.getElementById('iid-max').value) || 2.0;
       const seed = parseInt(document.getElementById('random-seed').value) || 42;
       seedRng(seed);
-      setRandomIIDParams(minVal, maxVal);
+      const distType = document.getElementById('iid-distribution-select').value;
+      if (distType === 'uniform') {
+        const minVal = parseFloat(document.getElementById('iid-min').value) || 0.5;
+        const maxVal = parseFloat(document.getElementById('iid-max').value) || 2.0;
+        setIIDDistribution(0, 0, 0);  // dist=0 for uniform
+        setRandomIIDParams(minVal, maxVal);
+      } else if (distType === 'exponential') {
+        setIIDDistribution(1, 1.0, 0);  // dist=1, lambda=1 (other values just scale, no effect on T-emb)
+      } else if (distType === 'pareto') {
+        const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
+        const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+        setIIDDistribution(2, alpha, xmin);  // dist=2, p1=alpha, p2=xmin
+      } else if (distType === 'geometric') {
+        const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+        setIIDDistribution(3, p, 0);  // dist=3, p1=p
+      }
       setAztecWeightMode(1);
     } else if (preset === 'random-layered') {
       const seed = parseInt(document.getElementById('layered-seed').value) || 42;
@@ -3939,9 +3986,21 @@ Part of this research was performed while the author was visiting the Institute 
 
     let weightStr = weightPreset;
     if (weightPreset === 'random-iid') {
-      const a = document.getElementById('iid-min').value;
-      const b = document.getElementById('iid-max').value;
-      weightStr = `iid-uniform-${a}-${b}`;
+      const distType = document.getElementById('iid-distribution-select').value;
+      if (distType === 'uniform') {
+        const a = document.getElementById('iid-min').value;
+        const b = document.getElementById('iid-max').value;
+        weightStr = `iid-uniform-${a}-${b}`;
+      } else if (distType === 'exponential') {
+        weightStr = `iid-exp1`;
+      } else if (distType === 'pareto') {
+        const alpha = document.getElementById('iid-pareto-alpha').value;
+        const xmin = document.getElementById('iid-pareto-xmin').value;
+        weightStr = `iid-pareto-${alpha}-${xmin}`;
+      } else if (distType === 'geometric') {
+        const p = document.getElementById('iid-geom-p').value;
+        weightStr = `iid-geom-${p}`;
+      }
     } else if (weightPreset === 'random-gamma') {
       const alpha = document.getElementById('gamma-alpha').value;
       const beta = document.getElementById('gamma-beta').value;

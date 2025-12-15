@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setRandomIIDParams','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -242,6 +242,10 @@ static std::mt19937 g_mt_rng(12345);
 
 // Random IID parameters
 static double g_iidMin = 0.5, g_iidMax = 2.0;
+static int g_iidDistribution = 0;  // 0=uniform, 1=exponential, 2=pareto, 3=geometric
+static double g_iidLambda = 1.0;   // Exponential parameter
+static double g_iidParetoAlpha = 2.0, g_iidParetoXmin = 1.0;  // Pareto parameters
+static double g_iidGeomP = 0.5;    // Geometric parameter
 
 // Layered regime parameters
 static int g_layeredRegime = 3;  // Default: Bernoulli
@@ -369,11 +373,51 @@ static double uniformRandom() {
     return (g_rngState >> 16) / 65536.0;
 }
 
-// Random IID weights with configurable range
+// Exponential distribution: X ~ Exp(λ), using inverse transform
+static double exponentialRandom(double lambda) {
+    double u = uniformRandom();
+    if (u < 1e-10) u = 1e-10;  // Avoid log(0)
+    return -std::log(u) / lambda;
+}
+
+// Pareto distribution: X ~ Pareto(α, x_min)
+static double paretoRandom(double alpha, double xmin) {
+    double u = uniformRandom();
+    if (u < 1e-10) u = 1e-10;
+    return xmin / std::pow(u, 1.0 / alpha);
+}
+
+// Geometric distribution with X >= 1: P(X = k) = (1-p)^(k-1) * p
+static double geometricRandom(double p) {
+    double u = uniformRandom();
+    if (u < 1e-10) u = 1e-10;
+    return std::floor(std::log(u) / std::log(1.0 - p)) + 1.0;
+}
+
+// Random IID weights with configurable distribution
 static void setRandomIIDWeightsInternal() {
+    const double MIN_WEIGHT = 1e-6;  // Ensure strictly positive
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        double u = uniformRandom();
-        g_aztecEdges[i].setWeight(mp_real(g_iidMin + u * (g_iidMax - g_iidMin)));
+        double w;
+        switch (g_iidDistribution) {
+            case 1:  // Exponential
+                w = exponentialRandom(g_iidLambda);
+                break;
+            case 2:  // Pareto
+                w = paretoRandom(g_iidParetoAlpha, g_iidParetoXmin);
+                break;
+            case 3:  // Geometric
+                w = geometricRandom(g_iidGeomP);
+                break;
+            default: {  // Uniform
+                double u = uniformRandom();
+                w = g_iidMin + u * (g_iidMax - g_iidMin);
+                break;
+            }
+        }
+        // Ensure weight is strictly positive
+        if (w < MIN_WEIGHT) w = MIN_WEIGHT;
+        g_aztecEdges[i].setWeight(mp_real(w));
     }
 }
 
@@ -4034,13 +4078,33 @@ void setAztecWeightMode(int mode) {
     }
 }
 
-// Set Random IID parameters (min and max range)
+// Set Random IID parameters (min and max range for uniform distribution)
 EMSCRIPTEN_KEEPALIVE
 void setRandomIIDParams(double minVal, double maxVal) {
     if (minVal <= 0) minVal = 0.001;
     if (maxVal <= minVal) maxVal = minVal + 0.1;
     g_iidMin = minVal;
     g_iidMax = maxVal;
+}
+
+// Set IID distribution type and parameters
+// dist: 0=uniform, 1=exponential, 2=pareto, 3=geometric
+// p1, p2 meaning depends on distribution:
+//   uniform: unused (use setRandomIIDParams)
+//   exponential: p1=lambda
+//   pareto: p1=alpha (shape), p2=xmin (scale)
+//   geometric: p1=p (success probability)
+EMSCRIPTEN_KEEPALIVE
+void setIIDDistribution(int dist, double p1, double p2) {
+    g_iidDistribution = dist;
+    if (dist == 1) {  // Exponential
+        g_iidLambda = (p1 > 0) ? p1 : 1.0;
+    } else if (dist == 2) {  // Pareto
+        g_iidParetoAlpha = (p1 > 0) ? p1 : 2.0;
+        g_iidParetoXmin = (p2 > 0) ? p2 : 1.0;
+    } else if (dist == 3) {  // Geometric
+        g_iidGeomP = (p1 > 0 && p1 < 1) ? p1 : 0.5;
+    }
 }
 
 // Set Layered regime parameters
