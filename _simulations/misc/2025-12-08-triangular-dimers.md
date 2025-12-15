@@ -283,6 +283,29 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </span>
 </div>
 
+<div class="control-group" id="topo-stats-group" style="display: none;">
+  <div class="control-group-title">Topological Stats</div>
+  <div style="margin-bottom: 6px; font-size: 12px; color: #555;">
+    Separation loops ⟨e<sup>2πiuL</sup>⟩ <span style="font-size: 10px; color: #999;">(sampled per frame)</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+    <button id="btn-set-p1" class="tool-btn" style="width:auto; padding: 0 8px;">Set A</button>
+    <button id="btn-set-p2" class="tool-btn" style="width:auto; padding: 0 8px;">Set B</button>
+    <span id="probe-coords" style="font-size: 11px; font-family: monospace; color: #666;">(None)</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+    <span style="font-size: 12px;">u:</span>
+    <input type="number" id="param-u" class="param-input" value="0.5" step="0.05" min="0" max="1" style="width: 50px;">
+    <span style="font-size: 12px; margin-left: 8px;">Sample every:</span>
+    <input type="range" id="sample-interval-slider" min="0" max="100" value="38" style="width: 80px;">
+    <input type="number" id="sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;">
+    <button id="btn-reset-stats" style="font-size: 11px; padding: 0 6px; height: 24px;">Reset</button>
+  </div>
+  <div id="stats-output" style="margin-top: 6px; font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px; cursor: pointer;" title="Click for debug info">
+    Loops: - | L: - | Avg: - | Samples: 0
+  </div>
+</div>
+
 <div class="control-group">
   <div class="control-group-title">Periodic Edge Weights</div>
   <label style="display: inline-flex; align-items: center; gap: 4px;">
@@ -377,6 +400,18 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     let currentPeriodicL = 1;
     let currentEdgeWeights = null; // [k][l][3] array
 
+    // Probe vertices for topological stats
+    let probeA = null; // {n, j}
+    let probeB = null; // {n, j}
+    let selectingProbe = null; // 'A' or 'B'
+
+    // Stats accumulators for <e^{2πiuL}>
+    let statsCount = 0;
+    let sumCos = 0;
+    let sumSin = 0;
+    let sampleInterval = 1000;  // Sample every N Glauber steps
+    let stepsSinceLastSample = 0;
+
     // Initialize default weights for k=2, l=1
     function initDefaultWeights(k, l) {
         const weights = [];
@@ -399,6 +434,65 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     }
 
     currentEdgeWeights = initDefaultWeights(2, 1);
+
+    // ========================================================================
+    // PROBE POINTS AND STATS
+    // ========================================================================
+    function updateProbeUI() {
+        const formatCoord = (c) => Number.isInteger(c) ? c : c.toFixed(2);
+        let text = '';
+        if (probeA) text += `A:(${formatCoord(probeA.n)},${formatCoord(probeA.j)})`;
+        if (probeA && probeB) text += ' ';
+        if (probeB) text += `B:(${formatCoord(probeB.n)},${formatCoord(probeB.j)})`;
+        if (!probeA && !probeB) text = '(None)';
+        document.getElementById('probe-coords').textContent = text;
+    }
+
+    function resetStats() {
+        statsCount = 0;
+        sumCos = 0;
+        sumSin = 0;
+        stepsSinceLastSample = 0;
+        updateStatsDisplay(-1, 0);
+    }
+
+    // Log scale conversion for sample interval (1 to 100,000,000)
+    function sliderToSampleInterval(sliderVal) {
+        return Math.round(Math.pow(10, sliderVal * 0.08));
+    }
+
+    function sampleIntervalToSlider(interval) {
+        if (interval <= 1) return 0;
+        return Math.round(Math.log10(interval) / 0.08);
+    }
+
+    function updateSampleIntervalFromSlider(sliderVal) {
+        sampleInterval = sliderToSampleInterval(sliderVal);
+        document.getElementById('sample-interval-slider').value = sliderVal;
+        document.getElementById('sample-interval-input').value = sampleInterval;
+    }
+
+    function updateSampleIntervalFromInput(val) {
+        sampleInterval = Math.max(1, Math.min(100000000, parseInt(val) || 1000));
+        document.getElementById('sample-interval-input').value = sampleInterval;
+        document.getElementById('sample-interval-slider').value = sampleIntervalToSlider(sampleInterval);
+    }
+
+    function updateStatsDisplay(separationL, loopCount) {
+        const statsDiv = document.getElementById('stats-output');
+        if (statsCount === 0) {
+            statsDiv.textContent = `Loops: ${loopCount >= 0 ? loopCount : '-'} | L: ${separationL >= 0 ? separationL : '-'} | Avg: - | n=0`;
+            return;
+        }
+
+        const avgCos = sumCos / statsCount;
+        const avgSin = sumSin / statsCount;
+        const magnitude = Math.sqrt(avgCos * avgCos + avgSin * avgSin);
+        const phase = Math.atan2(avgSin, avgCos) / (2 * Math.PI);
+
+        const sign = avgSin >= 0 ? '+' : '-';
+        statsDiv.textContent = `L=${separationL} | ⟨e^{2πiuL}⟩: ${avgCos.toFixed(4)} ${sign} ${Math.abs(avgSin).toFixed(4)}i | n=${statsCount}`;
+    }
 
     // ========================================================================
     // CANVAS SETUP
@@ -434,6 +528,33 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const j = y / SQRT3_2;
         const n = x - 0.5 * j;
         return { n: Math.round(n), j: Math.round(j) };
+    }
+
+    // Find the nearest triangle center to a screen position
+    // Triangle centers are at (n + 1/3, j + 1/3) for up-triangles
+    // and (n + 2/3, j + 2/3) for down-triangles
+    function screenToTriangleCenter(sx, sy) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (sx - rect.width / 2) / viewScale + viewOffsetX;
+        const y = viewOffsetY - (sy - rect.height / 2) / viewScale;
+        const jFloat = y / SQRT3_2;
+        const nFloat = x - 0.5 * jFloat;
+
+        // Find nearest Type A center (n + 1/3, j + 1/3)
+        const nA = Math.round(nFloat - 1/3);
+        const jA = Math.round(jFloat - 1/3);
+        const centerA = { n: nA + 1/3, j: jA + 1/3 };
+
+        // Find nearest Type B center (n + 2/3, j + 2/3)
+        const nB = Math.round(nFloat - 2/3);
+        const jB = Math.round(jFloat - 2/3);
+        const centerB = { n: nB + 2/3, j: jB + 2/3 };
+
+        // Convert to screen coords and compare distances
+        const distA = Math.hypot(nFloat - centerA.n, jFloat - centerA.j);
+        const distB = Math.hypot(nFloat - centerB.n, jFloat - centerB.j);
+
+        return distA < distB ? centerA : centerB;
     }
 
     function vertexKey(n, j) {
@@ -582,6 +703,38 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         if (document.getElementById('show-edge-weights').checked) {
             drawEdgeWeights();
         }
+
+        // Draw probe points if set
+        drawProbePoints();
+    }
+
+    function drawProbePoints() {
+        const probeRadius = Math.max(6, Math.min(12, viewScale * 0.3));
+        const fontSize = Math.max(10, Math.min(16, viewScale * 0.4));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        const drawProbe = (probe, label) => {
+            if (!probe) return;
+            const p = latticeToScreen(probe.n, probe.j);
+
+            // Draw black circle with white border
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, probeRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#000000';
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw label text above
+            ctx.fillStyle = '#000000';
+            ctx.fillText(label, p.x, p.y - probeRadius - 2);
+        };
+
+        drawProbe(probeA, 'A');
+        drawProbe(probeB, 'B');
     }
 
     function drawGrid() {
@@ -815,6 +968,8 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         // Get loop filter if double dimer is enabled
         let filteredIndices0 = null;
         let filteredIndices1 = null;
+        let separatingIndices0 = null;
+        let separatingIndices1 = null;
         if (doubleDimerEnabled && wasmReady) {
             const minLoop = parseInt(document.getElementById('min-loop-size').value) || 2;
             const filterResult = wasmModule._filterLoopsBySize(minLoop);
@@ -827,7 +982,23 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                     // Ignore parse errors
                 }
             }
+            // Get separating loop edges when paused and both probes set
+            if (animationId === null && probeA && probeB) {
+                const sepResult = wasmModule._getSeparatingLoopEdges();
+                if (sepResult) {
+                    try {
+                        const parsed = JSON.parse(sepResult);
+                        separatingIndices0 = new Set(parsed.indices0);
+                        separatingIndices1 = new Set(parsed.indices1);
+                    } catch (e) {
+                        // Ignore parse errors
+                    }
+                }
+            }
         }
+
+        const separatingColor = '#FFD700';  // Gold for separating loops
+        const defaultLineWidth = ctx.lineWidth;
 
         for (let i = 0; i < currentDimers.length; i++) {
             // Skip if filtering and this edge is not in the filtered set
@@ -837,15 +1008,22 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             const p1 = latticeToScreen(d.n1, d.j1);
             const p2 = latticeToScreen(d.n2, d.j2);
 
-            if (doubleDimerEnabled) {
+            const isSeparating = separatingIndices0 && separatingIndices0.has(i);
+            if (isSeparating) {
+                ctx.strokeStyle = separatingColor;
+                ctx.lineWidth = defaultLineWidth * 2;
+            } else if (doubleDimerEnabled) {
                 ctx.strokeStyle = dimer1Color;
+                ctx.lineWidth = defaultLineWidth;
             } else if (colorByOrientation) {
                 const dn = d.n2 - d.n1;
                 const dj = d.j2 - d.j1;
                 const orientation = getEdgeOrientation(dn, dj);
                 ctx.strokeStyle = DIMER_COLORS[orientation];
+                ctx.lineWidth = defaultLineWidth;
             } else {
                 ctx.strokeStyle = defaultColor;
+                ctx.lineWidth = defaultLineWidth;
             }
 
             ctx.beginPath();
@@ -856,7 +1034,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
         // Draw second configuration if double dimer is enabled
         if (doubleDimerEnabled && currentDimers2.length > 0) {
-            ctx.strokeStyle = dimer2Color;
             for (let i = 0; i < currentDimers2.length; i++) {
                 // Skip if filtering and this edge is not in the filtered set
                 if (filteredIndices1 && !filteredIndices1.has(i)) continue;
@@ -865,12 +1042,22 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 const p1 = latticeToScreen(d.n1, d.j1);
                 const p2 = latticeToScreen(d.n2, d.j2);
 
+                const isSeparating = separatingIndices1 && separatingIndices1.has(i);
+                if (isSeparating) {
+                    ctx.strokeStyle = separatingColor;
+                    ctx.lineWidth = defaultLineWidth * 2;
+                } else {
+                    ctx.strokeStyle = dimer2Color;
+                    ctx.lineWidth = defaultLineWidth;
+                }
+
                 ctx.beginPath();
                 ctx.moveTo(p1.x, p1.y);
                 ctx.lineTo(p2.x, p2.y);
                 ctx.stroke();
             }
         }
+        ctx.lineWidth = defaultLineWidth;
     }
 
     function drawLasso() {
@@ -1048,6 +1235,18 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             }
         }
 
+        // Scale probe points proportionally
+        if (probeA) {
+            probeA = { n: probeA.n * 2, j: probeA.j * 2 };
+        }
+        if (probeB) {
+            probeB = { n: probeB.n * 2, j: probeB.j * 2 };
+        }
+        if (probeA && probeB && wasmReady) {
+            wasmModule._setProbePoints(probeA.n, probeA.j, probeB.n, probeB.j);
+        }
+        updateProbeUI();
+
         reinitialize();
         fitView();
         updateStatus(`Scaled region to ${activeVertices.size} vertices`);
@@ -1158,7 +1357,12 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _getUsePeriodicWeights: Module.cwrap('getUsePeriodicWeights', 'number', []),
                 _getPeriodicK: Module.cwrap('getPeriodicK', 'number', []),
                 _getPeriodicL: Module.cwrap('getPeriodicL', 'number', []),
-                _setSeed: Module.cwrap('setSeed', null, ['number'])
+                _setSeed: Module.cwrap('setSeed', null, ['number']),
+                _setProbePoints: Module.cwrap('setProbePoints', null, ['number', 'number', 'number', 'number']),  // doubles
+                _getSeparationCount: Module.cwrap('getSeparationCount', 'number', []),
+                _getSeparatingLoopEdges: Module.cwrap('getSeparatingLoopEdges', 'string', []),
+                _getLoopCount: Module.cwrap('getLoopCount', 'number', []),
+                _getProbeDebugInfo: Module.cwrap('getProbeDebugInfo', 'string', [])
             };
             // Seed RNG with random value so each page load is different
             const randomSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -1254,6 +1458,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         }
         document.getElementById('btn-start').disabled = false;
         document.getElementById('btn-stop').disabled = true;
+        draw();  // Redraw to show separating loop highlighting
     }
 
     function animate(currentTime) {
@@ -1283,6 +1488,29 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const acceptRate = wasmModule._getAcceptRate();
 
         updateStatus(`Steps: ${totalSteps.toLocaleString()} | L: ${lozengeFlips.toLocaleString()} | T: ${triangleFlips.toLocaleString()} | B: ${butterflyFlips.toLocaleString()} | Accept: ${(acceptRate * 100).toFixed(1)}%`);
+
+        // Compute topological separation stats if both probes are set and double dimer is active
+        if (doubleDimerEnabled && probeA && probeB) {
+            stepsSinceLastSample += stepsThisFrame;
+
+            // Sample when we've accumulated enough steps
+            while (stepsSinceLastSample >= sampleInterval) {
+                stepsSinceLastSample -= sampleInterval;
+
+                const separationL = wasmModule._getSeparationCount();
+                const loopCount = wasmModule._getLoopCount();
+
+                if (separationL >= 0) {
+                    const u = parseFloat(document.getElementById('param-u').value) || 0.5;
+                    const angle = 2 * Math.PI * u * separationL;
+                    sumCos += Math.cos(angle);
+                    sumSin += Math.sin(angle);
+                    statsCount++;
+
+                    updateStatsDisplay(separationL, loopCount);
+                }
+            }
+        }
 
         draw();
         animationId = requestAnimationFrame(animate);
@@ -1335,6 +1563,28 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const rect = canvas.getBoundingClientRect();
         lastMouseX = e.clientX - rect.left;
         lastMouseY = e.clientY - rect.top;
+
+        // Handle probe point selection (snap to triangle centers)
+        if (selectingProbe) {
+            const center = screenToTriangleCenter(lastMouseX, lastMouseY);
+            if (selectingProbe === 'A') {
+                probeA = {n: center.n, j: center.j};
+                document.getElementById('btn-set-p1').classList.remove('active');
+            } else {
+                probeB = {n: center.n, j: center.j};
+                document.getElementById('btn-set-p2').classList.remove('active');
+            }
+            selectingProbe = null;
+            updateProbeUI();
+
+            // Send to WASM if both points are set
+            if (probeA && probeB && wasmReady) {
+                wasmModule._setProbePoints(probeA.n, probeA.j, probeB.n, probeB.j);
+                resetStats();
+            }
+            draw();
+            return;
+        }
 
         if (currentTool === 'pan') {
             isPanning = true;
@@ -1467,6 +1717,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     document.getElementById('double-dimer').addEventListener('change', () => {
         const doubleDimerEnabled = document.getElementById('double-dimer').checked;
         document.getElementById('min-loop-container').style.display = doubleDimerEnabled ? '' : 'none';
+        document.getElementById('topo-stats-group').style.display = doubleDimerEnabled ? '' : 'none';
         if (wasmReady && isValid) {
             if (doubleDimerEnabled) {
                 // Start fresh second config from current first config
@@ -1478,9 +1729,44 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 currentDimers2 = [];
             }
         }
+        // Reset stats when toggling double dimer mode
+        resetStats();
         draw();
     });
     document.getElementById('min-loop-size').addEventListener('change', draw);
+
+    // Topological stats event handlers
+    document.getElementById('btn-set-p1').addEventListener('click', () => {
+        selectingProbe = 'A';
+        document.getElementById('btn-set-p1').classList.add('active');
+        document.getElementById('btn-set-p2').classList.remove('active');
+    });
+
+    document.getElementById('btn-set-p2').addEventListener('click', () => {
+        selectingProbe = 'B';
+        document.getElementById('btn-set-p2').classList.add('active');
+        document.getElementById('btn-set-p1').classList.remove('active');
+    });
+
+    document.getElementById('btn-reset-stats').addEventListener('click', () => {
+        resetStats();
+    });
+
+    document.getElementById('stats-output').addEventListener('click', () => {
+        if (wasmReady && probeA && probeB) {
+            const debugInfo = wasmModule._getProbeDebugInfo();
+            console.log(debugInfo);
+            alert(debugInfo);
+        }
+    });
+
+    document.getElementById('sample-interval-slider').addEventListener('input', (e) => {
+        updateSampleIntervalFromSlider(parseInt(e.target.value));
+    });
+
+    document.getElementById('sample-interval-input').addEventListener('change', (e) => {
+        updateSampleIntervalFromInput(e.target.value);
+    });
 
     // ========================================================================
     // PERIODIC WEIGHTS

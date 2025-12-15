@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -234,6 +234,15 @@ std::string debugPeriodicWeights() {
 // Loop detection for double dimer
 std::vector<std::array<int, 4>> loopDimers0, loopDimers1;  // {n1, j1, n2, j2}
 std::vector<int> loopSizes;  // Cycle size for each edge
+
+// Distinct cycles: each cycle is a list of edges {n1, j1, n2, j2}
+std::vector<std::vector<std::array<int, 4>>> distinctCycles;
+// Edge indices for each distinct cycle (parallel to distinctCycles)
+std::vector<std::vector<size_t>> distinctCycleIndices;
+
+// Probe points for topological stats (triangle centers, so fractional coords)
+double probeN1 = -10000, probeJ1 = -10000;
+double probeN2 = -10000, probeJ2 = -10000;
 
 // ============================================================================
 // OPTIMIZED DATA STRUCTURES (O(1) lookups)
@@ -1541,13 +1550,13 @@ const char* exportDimers2() {
 // LOOP DETECTION FOR DOUBLE DIMER MODEL
 // ============================================================================
 
-EMSCRIPTEN_KEEPALIVE
-const char* filterLoopsBySize(int minSize) {
-    static std::string result;
-
+// Build loops from the two dimer configurations and populate distinctCycles
+void buildLoops() {
     // Build edge lists from current configurations
     loopDimers0.clear();
     loopDimers1.clear();
+    distinctCycles.clear();
+    distinctCycleIndices.clear();
 
     std::unordered_set<long long> seen0;
     for (size_t i = 0; i < vertices.size(); i++) {
@@ -1623,8 +1632,10 @@ const char* filterLoopsBySize(int minSize) {
     for (size_t startIdx = 0; startIdx < loopDimers0.size(); startIdx++) {
         if (visited[startIdx]) continue;
 
-        std::vector<size_t> cycleEdges;
-        cycleEdges.push_back(startIdx);
+        std::vector<size_t> cycleEdgeIndices;
+        std::vector<std::array<int, 4>> cycleEdges;
+        cycleEdgeIndices.push_back(startIdx);
+        cycleEdges.push_back(loopDimers0[startIdx]);
         visited[startIdx] = true;
 
         auto& sd = loopDimers0[startIdx];
@@ -1640,8 +1651,14 @@ const char* filterLoopsBySize(int minSize) {
 
             for (auto& ae : adj[currentV]) {
                 if (ae.sample == nextSample && !visited[ae.edgeIdx]) {
-                    cycleEdges.push_back(ae.edgeIdx);
+                    cycleEdgeIndices.push_back(ae.edgeIdx);
                     visited[ae.edgeIdx] = true;
+                    // Get the actual edge coordinates
+                    if (ae.edgeIdx < loopDimers0.size()) {
+                        cycleEdges.push_back(loopDimers0[ae.edgeIdx]);
+                    } else {
+                        cycleEdges.push_back(loopDimers1[ae.edgeIdx - loopDimers0.size()]);
+                    }
                     currentV = ae.otherVert;
                     lastSample = nextSample;
                     found = true;
@@ -1652,11 +1669,64 @@ const char* filterLoopsBySize(int minSize) {
             if (!found || currentV == startV1) break;
         }
 
-        int cycleSize = (int)cycleEdges.size();
-        for (size_t idx : cycleEdges) {
-            loopSizes[idx] = cycleSize;
+        // Only add properly closed cycles (must return to startV1)
+        bool isClosed = (currentV == startV1);
+        int cycleSize = (int)cycleEdgeIndices.size();
+
+        for (size_t idx : cycleEdgeIndices) {
+            loopSizes[idx] = isClosed ? cycleSize : 0;
+        }
+
+        // Store the distinct cycle only if closed and not trivial
+        if (isClosed && cycleSize > 2) {
+            distinctCycles.push_back(cycleEdges);
+            distinctCycleIndices.push_back(cycleEdgeIndices);
         }
     }
+}
+
+// Check if a point (n, j) is inside a loop using ray casting
+// Casts a horizontal ray to the right (n -> +infinity) at fixed j
+// Works with fractional coordinates (triangle centers)
+bool isPointInsideLoop(double n, double j, const std::vector<std::array<int, 4>>& loop) {
+    bool inside = false;
+
+    for (const auto& edge : loop) {
+        double n1 = edge[0], j1 = edge[1];
+        double n2 = edge[2], j2 = edge[3];
+
+        // Skip horizontal edges (they don't cross horizontal rays)
+        if (j1 == j2) continue;
+
+        // Ensure j1 < j2 for consistent handling
+        if (j1 > j2) {
+            std::swap(n1, n2);
+            std::swap(j1, j2);
+        }
+
+        // Check if the ray at height j crosses this edge
+        // Using half-open interval [j1, j2) to avoid double-counting vertices
+        if (j >= j1 && j < j2) {
+            // Calculate the n-coordinate of intersection
+            // Linear interpolation: n_intersect = n1 + (j - j1) * (n2 - n1) / (j2 - j1)
+            double n_intersect = n1 + (j - j1) * (n2 - n1) / (j2 - j1);
+
+            // Ray goes to the right, so count intersections where n_intersect > n
+            if (n_intersect > n) {
+                inside = !inside;
+            }
+        }
+    }
+
+    return inside;
+}
+
+EMSCRIPTEN_KEEPALIVE
+const char* filterLoopsBySize(int minSize) {
+    static std::string result;
+
+    // Use the refactored buildLoops() function
+    buildLoops();
 
     // Build result JSON with filtered edge indices
     result = "{\"indices0\":[";
@@ -1680,6 +1750,132 @@ const char* filterLoopsBySize(int minSize) {
     result += "]}";
 
     return result.c_str();
+}
+
+// ============================================================================
+// TOPOLOGICAL SEPARATION STATS
+// ============================================================================
+
+// Set the two probe points for separation calculation (triangle centers)
+EMSCRIPTEN_KEEPALIVE
+void setProbePoints(double n1, double j1, double n2, double j2) {
+    probeN1 = n1; probeJ1 = j1;
+    probeN2 = n2; probeJ2 = j2;
+}
+
+// Get the number of loops separating the two probe points
+// Returns -1 if probe points are not set
+EMSCRIPTEN_KEEPALIVE
+int getSeparationCount() {
+    if (probeN1 < -9000 || probeN2 < -9000) return -1;
+    if (dimerPartner2.empty()) return -1;  // Double dimer not active
+
+    // Build loops from current configurations
+    buildLoops();
+
+    int separationCount = 0;
+
+    // For each distinct cycle, check if it separates the two probe points
+    for (const auto& cycle : distinctCycles) {
+        bool in1 = isPointInsideLoop(probeN1, probeJ1, cycle);
+        bool in2 = isPointInsideLoop(probeN2, probeJ2, cycle);
+
+        // The loop separates the points if exactly one is inside
+        if (in1 != in2) {
+            separationCount++;
+        }
+    }
+
+    return separationCount;
+}
+
+// Get edge indices for loops that separate the two probe points
+// Returns JSON: {"indices0":[...],"indices1":[...]}
+EMSCRIPTEN_KEEPALIVE
+const char* getSeparatingLoopEdges() {
+    static std::string result;
+
+    if (probeN1 < -9000 || probeN2 < -9000) {
+        result = "{\"indices0\":[],\"indices1\":[]}";
+        return result.c_str();
+    }
+    if (dimerPartner2.empty()) {
+        result = "{\"indices0\":[],\"indices1\":[]}";
+        return result.c_str();
+    }
+
+    buildLoops();
+
+    std::vector<size_t> sepIndices0, sepIndices1;
+    size_t n0 = loopDimers0.size();
+
+    for (size_t i = 0; i < distinctCycles.size(); i++) {
+        const auto& cycle = distinctCycles[i];
+        bool in1 = isPointInsideLoop(probeN1, probeJ1, cycle);
+        bool in2 = isPointInsideLoop(probeN2, probeJ2, cycle);
+
+        if (in1 != in2) {
+            // This loop separates - collect its edge indices
+            for (size_t idx : distinctCycleIndices[i]) {
+                if (idx < n0) {
+                    sepIndices0.push_back(idx);
+                } else {
+                    sepIndices1.push_back(idx - n0);
+                }
+            }
+        }
+    }
+
+    // Build JSON result
+    result = "{\"indices0\":[";
+    for (size_t i = 0; i < sepIndices0.size(); i++) {
+        if (i > 0) result += ",";
+        result += std::to_string(sepIndices0[i]);
+    }
+    result += "],\"indices1\":[";
+    for (size_t i = 0; i < sepIndices1.size(); i++) {
+        if (i > 0) result += ",";
+        result += std::to_string(sepIndices1[i]);
+    }
+    result += "]}";
+
+    return result.c_str();
+}
+
+// Debug: get detailed info about probe points and loops
+EMSCRIPTEN_KEEPALIVE
+const char* getProbeDebugInfo() {
+    static std::string result;
+    result.clear();
+
+    if (probeN1 < -9000 || probeN2 < -9000) {
+        result = "Probes not set";
+        return result.c_str();
+    }
+
+    buildLoops();
+
+    result = "A:(" + std::to_string(probeN1) + "," + std::to_string(probeJ1) + ") ";
+    result += "B:(" + std::to_string(probeN2) + "," + std::to_string(probeJ2) + ")\n";
+    result += "Loops: " + std::to_string(distinctCycles.size()) + "\n";
+
+    for (size_t i = 0; i < distinctCycles.size(); i++) {
+        const auto& cycle = distinctCycles[i];
+        bool in1 = isPointInsideLoop(probeN1, probeJ1, cycle);
+        bool in2 = isPointInsideLoop(probeN2, probeJ2, cycle);
+        result += "Loop " + std::to_string(i) + " (edges:" + std::to_string(cycle.size()) + "): ";
+        result += "A=" + std::string(in1 ? "IN" : "OUT") + " B=" + std::string(in2 ? "IN" : "OUT");
+        if (in1 != in2) result += " [SEPARATES]";
+        result += "\n";
+    }
+
+    return result.c_str();
+}
+
+// Get number of distinct loops (for debugging/display)
+EMSCRIPTEN_KEEPALIVE
+int getLoopCount() {
+    return (int)distinctCycles.size();
 }
 
 } // extern "C"
