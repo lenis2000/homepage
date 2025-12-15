@@ -310,8 +310,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Controls row -->
     <div style="margin-bottom: 10px; text-align: center;">
-      <label>V: <input type="number" id="main-2d-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
-      <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+      <label>V: <input type="number" id="main-2d-vertex-size" value="3" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
+      <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
       <label style="margin-left: 15px;"><input type="checkbox" id="show-origami-chk" checked> Origami</label>
     </div>
 
@@ -387,8 +387,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
           <button id="step-next-btn" style="width: 60px; margin-left: 10px;">→</button>
           <span style="margin-left: 15px;">k = <span id="step-value">0</span></span>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-labels-chk"> Labels</label>
-          <label style="margin-left: 15px;">V: <input type="number" id="temb-vertex-size" value="1.5" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
-          <label style="margin-left: 10px;">E: <input type="number" id="temb-edge-thickness" value="1.5" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 15px;">V: <input type="number" id="temb-vertex-size" value="3" min="0.1" max="20" step="0.1" style="width: 3em;"></label>
+          <label style="margin-left: 10px;">E: <input type="number" id="temb-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 3em;"></label>
         </div>
         <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
@@ -618,6 +618,22 @@ Part of this research was performed while the author was visiting the Institute 
       mathMsg.style.display = 'none';
       mathContent.style.display = 'block';
     }
+  }
+
+  // Update V/E controls based on n for appropriate sizing
+  // Reference: n=6, V=3, E=2 work well; scale inversely with n
+  function updateVEForN(n) {
+    const baseN = 6;
+    const baseV = 3;
+    const baseE = 2;
+
+    const newV = (baseV * baseN / n).toFixed(1);
+    const newE = (baseE * baseN / n).toFixed(1);
+
+    document.getElementById('main-2d-vertex-size').value = newV;
+    document.getElementById('main-2d-edge-thickness').value = newE;
+    document.getElementById('temb-vertex-size').value = newV;
+    document.getElementById('temb-edge-thickness').value = newE;
   }
 
   // WASM function wrappers
@@ -3412,17 +3428,22 @@ Part of this research was performed while the author was visiting the Institute 
     return { regime, p1, p2, prob1, prob2 };
   }
 
-  // Show/hide warning as user types n value
+  // Show/hide warning and update V/E defaults as user types n value
   document.getElementById('n-input').addEventListener('input', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
     const warning = document.getElementById('n-warning');
     if (warning) warning.style.display = (n > 60) ? 'inline' : 'none';
+    // Update V/E controls to scale with n
+    updateVEForN(n);
   });
 
   // Main compute button - initializes graph with weights and computes
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseN();
     const preset = weightPresetSelect.value;
+
+    // Update V/E defaults based on n
+    updateVEForN(n);
 
     // Always treat as fresh simulation state
     currentSimulationN = n;
