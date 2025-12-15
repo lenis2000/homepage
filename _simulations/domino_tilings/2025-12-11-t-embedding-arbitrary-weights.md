@@ -185,6 +185,8 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
         <button id="main-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
         <button id="main-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
         <button id="toggle-2d-3d-btn" style="padding: 5px 15px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">2D</button>
+        <button id="toggle-projection-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle orthographic/perspective">🎯</button>
+        <button id="cycle-preset-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Cycle visual preset">☀️</button>
       </div>
 
       <!-- 2D Canvas -->
@@ -309,6 +311,81 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let view3DIsPanning = false;  // Cmd+drag panning mode
   let view3DLastX = 0, view3DLastY = 0;
   let mainViewIs3D = false;  // Toggle between 2D and 3D view
+  let view3DPerspective = false;  // false = orthographic, true = perspective
+  let view3DPresetIndex = 0;  // Current visual preset index
+
+  // 3D Visual Presets
+  const VISUAL_PRESETS_3D = [
+    {
+      name: 'Default',
+      icon: '☀️',
+      background: '#fafafa',
+      baseColor: { r: 220, g: 225, b: 235 },
+      ambient: 0.25,
+      lights: [
+        { dir: { x: 0.5, y: 0.7, z: 0.5 }, intensity: 0.35 },
+        { dir: { x: -0.6, y: 0.3, z: -0.4 }, intensity: 0.20 },
+        { dir: { x: 0.0, y: 1.0, z: 0.0 }, intensity: 0.15 },
+        { dir: { x: 0.3, y: -0.5, z: 0.6 }, intensity: 0.10 }
+      ],
+      edgeColor: '#000',
+      vertexColor: '#000'
+    },
+    {
+      name: 'Clean',
+      icon: '✨',
+      background: '#ffffff',
+      baseColor: { r: 245, g: 245, b: 250 },
+      ambient: 0.35,
+      lights: [
+        { dir: { x: 0.0, y: 1.0, z: 0.3 }, intensity: 0.45 },
+        { dir: { x: -0.5, y: 0.3, z: -0.5 }, intensity: 0.15 }
+      ],
+      edgeColor: '#333',
+      vertexColor: '#333'
+    },
+    {
+      name: 'Mathematical',
+      icon: '📐',
+      background: '#ffffff',
+      baseColor: { r: 255, g: 255, b: 255 },
+      ambient: 0.5,
+      lights: [
+        { dir: { x: 0.0, y: 1.0, z: 0.0 }, intensity: 0.35 },
+        { dir: { x: 0.5, y: 0.5, z: 0.5 }, intensity: 0.15 }
+      ],
+      edgeColor: '#000',
+      vertexColor: '#000'
+    },
+    {
+      name: 'Dramatic',
+      icon: '🎭',
+      background: '#1a1a2e',
+      baseColor: { r: 180, g: 190, b: 220 },
+      ambient: 0.15,
+      lights: [
+        { dir: { x: 0.7, y: 0.5, z: 0.3 }, intensity: 0.60 },
+        { dir: { x: -0.3, y: 0.8, z: -0.2 }, intensity: 0.20 },
+        { dir: { x: -0.5, y: -0.3, z: 0.5 }, intensity: 0.10 }
+      ],
+      edgeColor: '#444',
+      vertexColor: '#666'
+    },
+    {
+      name: 'Warm',
+      icon: '🌅',
+      background: '#fff8f0',
+      baseColor: { r: 255, g: 235, b: 220 },
+      ambient: 0.30,
+      lights: [
+        { dir: { x: 0.6, y: 0.6, z: 0.4 }, intensity: 0.40 },
+        { dir: { x: -0.4, y: 0.5, z: -0.3 }, intensity: 0.20 },
+        { dir: { x: 0.0, y: 1.0, z: 0.0 }, intensity: 0.10 }
+      ],
+      edgeColor: '#664433',
+      vertexColor: '#553322'
+    }
+  ];
 
   // T-embedding data
   let tembData = null;
@@ -2224,8 +2301,11 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     ctx.globalAlpha = 1.0;
     ctx.globalCompositeOperation = 'source-over';
 
-    // White background
-    ctx.fillStyle = '#fafafa';
+    // Get current preset
+    const preset = VISUAL_PRESETS_3D[view3DPresetIndex];
+
+    // Background from preset
+    ctx.fillStyle = preset.background;
     ctx.fillRect(0, 0, rect.width, rect.height);
 
     if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) {
@@ -2335,6 +2415,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const cosX = Math.cos(view3DRotX), sinX = Math.sin(view3DRotX);
     const cosZ = Math.cos(view3DRotZ), sinZ = Math.sin(view3DRotZ);
 
+    // Perspective parameters
+    const perspectiveFOV = 60;  // Field of view in degrees
+    const perspectiveDist = 3.0;  // Camera distance (in normalized units)
+
     function project(x, y, z) {
       // Normalize to [-0.5, 0.5]
       const nx = (x - centerX) / maxRange;
@@ -2351,10 +2435,22 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const rx_y = rz_y * cosX - rz_z * sinX;
       const rx_z = rz_y * sinX + rz_z * cosX;
 
-      // Orthographic projection (x, y -> screen) with pan offset
-      const scale = Math.min(rect.width, rect.height) * 0.7 * view3DZoom;
-      const screenX = rect.width / 2 + rx_x * scale + view3DPanX;
-      const screenY = rect.height / 2 - rx_y * scale + view3DPanY;  // Flip Y for screen coords
+      // Base scale
+      const baseScale = Math.min(rect.width, rect.height) * 0.7 * view3DZoom;
+
+      let screenX, screenY;
+      if (view3DPerspective) {
+        // Perspective projection
+        const fovRad = perspectiveFOV * Math.PI / 180;
+        const zOffset = perspectiveDist - rx_z;  // Distance from camera
+        const perspectiveScale = (zOffset > 0.1) ? (1 / Math.tan(fovRad / 2)) / zOffset : 10;
+        screenX = rect.width / 2 + rx_x * baseScale * perspectiveScale + view3DPanX;
+        screenY = rect.height / 2 - rx_y * baseScale * perspectiveScale + view3DPanY;
+      } else {
+        // Orthographic projection
+        screenX = rect.width / 2 + rx_x * baseScale + view3DPanX;
+        screenY = rect.height / 2 - rx_y * baseScale + view3DPanY;
+      }
 
       return { screenX, screenY, depth: rx_z };
     }
@@ -2476,26 +2572,24 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // Sort all drawables back to front (smaller depth = further from camera = draw first)
     drawables.sort((a, b) => a.depth - b.depth);
 
-    // 4 light sources for uniform flat shading (similar to domino 3D presets)
-    const lights = [
-      { dir: { x: 0.5, y: 0.7, z: 0.5 }, intensity: 0.35 },   // Main light (upper-right-front)
-      { dir: { x: -0.6, y: 0.3, z: -0.4 }, intensity: 0.20 }, // Fill light (left-back)
-      { dir: { x: 0.0, y: 1.0, z: 0.0 }, intensity: 0.15 },   // Top light
-      { dir: { x: 0.3, y: -0.5, z: 0.6 }, intensity: 0.10 }   // Rim light (lower-front)
-    ];
-    // Normalize light directions
+    // Lights from preset (deep copy and normalize)
+    const lights = preset.lights.map(l => ({
+      dir: { ...l.dir },
+      intensity: l.intensity
+    }));
     for (const light of lights) {
       const len = Math.sqrt(light.dir.x**2 + light.dir.y**2 + light.dir.z**2);
       light.dir.x /= len; light.dir.y /= len; light.dir.z /= len;
     }
-    const ambientIntensity = 0.25;
+    const ambientIntensity = preset.ambient;
+    const baseR = preset.baseColor.r, baseG = preset.baseColor.g, baseB = preset.baseColor.b;
 
     // ========== DRAW ALL OBJECTS IN DEPTH ORDER ==========
     for (const obj of drawables) {
       if (obj.type === 'face') {
         const corners = obj.corners;
 
-        // Compute lighting from all 4 sources (flat shading - no gradients)
+        // Compute lighting from all sources (flat shading - no gradients)
         let totalLight = ambientIntensity;
         for (const light of lights) {
           const dot = obj.normal.x * light.dir.x + obj.normal.y * light.dir.y + obj.normal.z * light.dir.z;
@@ -2503,8 +2597,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         }
         totalLight = Math.min(1.0, totalLight);
 
-        // Uniform flat color per face (light gray with slight blue tint)
-        const baseR = 220, baseG = 225, baseB = 235;
+        // Uniform flat color per face from preset
         const r = Math.floor(baseR * totalLight);
         const g = Math.floor(baseG * totalLight);
         const b = Math.floor(baseB * totalLight);
@@ -2518,14 +2611,14 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         ctx.closePath();
         ctx.fill();
       } else if (obj.type === 'edge') {
-        ctx.strokeStyle = '#000';
+        ctx.strokeStyle = preset.edgeColor;
         ctx.lineWidth = edgeThicknessControl * 0.8;
         ctx.beginPath();
         ctx.moveTo(obj.p1.screenX, obj.p1.screenY);
         ctx.lineTo(obj.p2.screenX, obj.p2.screenY);
         ctx.stroke();
       } else if (obj.type === 'vertex') {
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = preset.vertexColor;
         ctx.beginPath();
         ctx.arc(obj.p.screenX, obj.p.screenY, vertexSizeControl, 0, 2 * Math.PI);
         ctx.fill();
@@ -2952,18 +3045,43 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const btn = document.getElementById('toggle-2d-3d-btn');
     const container2D = document.getElementById('main-2d-container');
     const container3D = document.getElementById('main-3d-container');
+    const projBtn = document.getElementById('toggle-projection-btn');
+    const presetBtn = document.getElementById('cycle-preset-btn');
 
     if (mainViewIs3D) {
       btn.textContent = '3D';
       container2D.style.display = 'none';
       container3D.style.display = 'block';
+      projBtn.style.display = '';
+      presetBtn.style.display = '';
       renderMain3D();
     } else {
       btn.textContent = '2D';
       container2D.style.display = 'block';
       container3D.style.display = 'none';
+      projBtn.style.display = 'none';
+      presetBtn.style.display = 'none';
       renderMain2DTemb();
     }
+  });
+
+  // 3D projection toggle (ortho/perspective)
+  document.getElementById('toggle-projection-btn').addEventListener('click', () => {
+    view3DPerspective = !view3DPerspective;
+    const btn = document.getElementById('toggle-projection-btn');
+    btn.textContent = view3DPerspective ? '📦' : '🎯';  // 📦 = perspective, 🎯 = ortho
+    btn.title = view3DPerspective ? 'Switch to orthographic' : 'Switch to perspective';
+    renderMain3D();
+  });
+
+  // 3D preset cycle
+  document.getElementById('cycle-preset-btn').addEventListener('click', () => {
+    view3DPresetIndex = (view3DPresetIndex + 1) % VISUAL_PRESETS_3D.length;
+    const preset = VISUAL_PRESETS_3D[view3DPresetIndex];
+    const btn = document.getElementById('cycle-preset-btn');
+    btn.textContent = preset.icon;
+    btn.title = `Preset: ${preset.name}`;
+    renderMain3D();
   });
 
   // Main canvas zoom buttons (works for both 2D and 3D modes)
