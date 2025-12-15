@@ -1565,36 +1565,28 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       // Clear stale stored face weights before capturing fresh ones
       clearStoredWeightsExport();
 
-      // Phase 1: Folding - step down through all reduction steps
-      let lastLevel = -1;
+      // --- PHASE 1: FOLDING ---
+      // NOTE: Do NOT call refreshAztecFromCpp() inside loops - it's extremely expensive
+      computingText.textContent = "Folding Aztec diamond...";
+      await delay(10);  // Yield to render text
+
       while (canAztecStepDown()) {
         aztecGraphStepDown();
-        refreshAztecFromCpp();
-        if (aztecLevel !== lastLevel) {
-          lastLevel = aztecLevel;
-          computingText.textContent = `Folding: Level ${aztecLevel}`;
-          await delay(0);
-        }
       }
 
-      // Step back up to restore to original Aztec graph
-      lastLevel = -1;
       while (canAztecStepUp()) {
         aztecGraphStepUp();
-        refreshAztecFromCpp();
-        if (aztecLevel !== lastLevel) {
-          lastLevel = aztecLevel;
-          computingText.textContent = `Restoring: Level ${aztecLevel}`;
-          await delay(0);
-        }
       }
 
-      // Phase 2: Computing T-embeddings
+      // Update UI once after folding/unfolding is done
+      refreshAztecFromCpp();
+
+      // --- PHASE 2: COMPUTING T AND O MAPS ---
+      computingText.textContent = "Computing T and O maps...";
+      await delay(10);  // Yield to render text
+
       const finalK = Math.max(0, n - 2);
       for (let k = 0; k <= finalK; k++) {
-        computingText.textContent = `Computing T-embedding T_${k} of T_${finalK}...`;
-        await delay(0);  // Yield to allow UI update
-        // Trigger computation for level k
         let ptr = getTembeddingLevelJSON(k);
         freeString(ptr);
       }
@@ -2078,25 +2070,20 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       }
     }
 
-    // 2. Boundary rhombus (external corners)
-    ctx.strokeStyle = '#666';
+    // 2. Boundary rhombus (external corners) - same color as interior
     ctx.lineWidth = uniformEdgeWidth;
     drawEdge(k+1, 0, 0, k+1);
     drawEdge(0, k+1, -(k+1), 0);
     drawEdge(-(k+1), 0, 0, -(k+1));
     drawEdge(0, -(k+1), k+1, 0);
 
-    // 3. External corners to alpha vertices
-    ctx.strokeStyle = '#999';
-    ctx.lineWidth = uniformEdgeWidth;
+    // 3. External corners to alpha vertices - same color
     drawEdge(k+1, 0, k, 0);
     drawEdge(-(k+1), 0, -k, 0);
     drawEdge(0, k+1, 0, k);
     drawEdge(0, -(k+1), 0, -k);
 
-    // 4. Diagonal boundary edges (along |i|+|j|=k)
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = uniformEdgeWidth;
+    // 4. Diagonal boundary edges (along |i|+|j|=k) - same color
 
     // Right-top diagonal: (k,0) -> (k-1,1) -> ... -> (1,k-1) -> (0,k)
     for (let s = 0; s < k; s++) {
@@ -2186,21 +2173,18 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         }
 
         // Boundary rhombus
-        ctx.strokeStyle = '#3399ff';
         drawOrigamiEdge(k+1, 0, 0, k+1);
         drawOrigamiEdge(0, k+1, -(k+1), 0);
         drawOrigamiEdge(-(k+1), 0, 0, -(k+1));
         drawOrigamiEdge(0, -(k+1), k+1, 0);
 
         // External corners to alpha
-        ctx.strokeStyle = '#66b3ff';
         drawOrigamiEdge(k+1, 0, k, 0);
         drawOrigamiEdge(-(k+1), 0, -k, 0);
         drawOrigamiEdge(0, k+1, 0, k);
         drawOrigamiEdge(0, -(k+1), 0, -k);
 
         // Diagonal boundary
-        ctx.strokeStyle = '#4da6ff';
         for (let s = 0; s < k; s++) {
           drawOrigamiEdge(k-s, s, k-s-1, s+1);
           drawOrigamiEdge(-s, k-s, -(s+1), k-s-1);
@@ -2519,8 +2503,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
         }
         totalLight = Math.min(1.0, totalLight);
 
-        // Uniform flat color per face (slight blue tint for cooler look)
-        const baseR = 180, baseG = 185, baseB = 195;
+        // Uniform flat color per face (light gray with slight blue tint)
+        const baseR = 220, baseG = 225, baseB = 235;
         const r = Math.floor(baseR * totalLight);
         const g = Math.floor(baseG * totalLight);
         const b = Math.floor(baseB * totalLight);
@@ -2712,9 +2696,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     }
 
     // Draw boundary rhombus (external corners)
-    stepwiseCtx.strokeStyle = '#666';
-    stepwiseCtx.lineWidth = uniformEdgeWidth;
-
     // Connect external corners: (k+1,0) -> (0,k+1) -> (-(k+1),0) -> (0,-(k+1)) -> (k+1,0)
     drawTembEdge(k+1, 0, 0, k+1);
     drawTembEdge(0, k+1, -(k+1), 0);
@@ -2722,8 +2703,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     drawTembEdge(0, -(k+1), k+1, 0);
 
     // Connect external corners to alpha vertices
-    stepwiseCtx.strokeStyle = '#999';
-    stepwiseCtx.lineWidth = uniformEdgeWidth;
     drawTembEdge(k+1, 0, k, 0);
     drawTembEdge(-(k+1), 0, -k, 0);
     drawTembEdge(0, k+1, 0, k);
@@ -2731,8 +2710,6 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     // Connect diagonal boundary vertices (beta and alpha on boundary)
     // These form the edges along the diagonal |i|+|j|=k
-    stepwiseCtx.strokeStyle = '#555';
-    stepwiseCtx.lineWidth = uniformEdgeWidth;
 
     // Right-top diagonal: (k,0) -> (k-1,1) -> ... -> (1,k-1) -> (0,k)
     for (let s = 0; s < k; s++) {
@@ -2959,9 +2936,15 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-origami-chk').addEventListener('change', renderMain2DTemb);
 
-  // Main 2D T-embedding size controls
-  document.getElementById('main-2d-vertex-size').addEventListener('input', renderMain2DTemb);
-  document.getElementById('main-2d-edge-thickness').addEventListener('input', renderMain2DTemb);
+  // Main 2D/3D T-embedding size controls
+  document.getElementById('main-2d-vertex-size').addEventListener('input', () => {
+    if (mainViewIs3D) renderMain3D();
+    else renderMain2DTemb();
+  });
+  document.getElementById('main-2d-edge-thickness').addEventListener('input', () => {
+    if (mainViewIs3D) renderMain3D();
+    else renderMain2DTemb();
+  });
 
   // 2D/3D toggle button
   document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
@@ -2996,10 +2979,10 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
   document.getElementById('main-zoom-out-btn').addEventListener('click', () => {
     if (mainViewIs3D) {
-      view3DZoom = Math.max(0.2, view3DZoom / 1.25);
+      view3DZoom = Math.max(0.05, view3DZoom / 1.25);
       renderMain3D();
     } else {
-      main2DZoom = Math.max(0.1, main2DZoom / 1.25);
+      main2DZoom = Math.max(0.02, main2DZoom / 1.25);
       renderMain2DTemb();
     }
   });
@@ -3009,6 +2992,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       view3DZoom = 1.0;
       view3DRotX = -0.6;
       view3DRotZ = 0.5;
+      view3DPanX = 0;
+      view3DPanY = 0;
       renderMain3D();
     } else {
       main2DZoom = 1.0;
@@ -3052,7 +3037,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   main2DCanvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    main2DZoom = Math.max(0.1, Math.min(20, main2DZoom * factor));
+    main2DZoom = Math.max(0.02, Math.min(50, main2DZoom * factor));
     renderMain2DTemb();
   }, { passive: false });
 
@@ -3088,7 +3073,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (main2DTouchStartDist > 0) {
-        main2DZoom = Math.max(0.1, Math.min(20, main2DTouchStartZoom * (dist / main2DTouchStartDist)));
+        main2DZoom = Math.max(0.02, Math.min(50, main2DTouchStartZoom * (dist / main2DTouchStartDist)));
         renderMain2DTemb();
       }
     }
@@ -3145,7 +3130,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   main3DCanvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    view3DZoom = Math.max(0.2, Math.min(5, view3DZoom * factor));
+    view3DZoom = Math.max(0.05, Math.min(20, view3DZoom * factor));
     renderMain3D();
   }, { passive: false });
 
@@ -3183,7 +3168,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (view3DTouchStartDist > 0) {
-        view3DZoom = Math.max(0.2, Math.min(5, view3DTouchStartZoom * (dist / view3DTouchStartDist)));
+        view3DZoom = Math.max(0.05, Math.min(20, view3DTouchStartZoom * (dist / view3DTouchStartDist)));
         renderMain3D();
       }
     }
@@ -3232,7 +3217,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   stepwiseCanvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    stepwiseZoom = Math.max(0.1, Math.min(20, stepwiseZoom * factor));
+    stepwiseZoom = Math.max(0.02, Math.min(50, stepwiseZoom * factor));
     renderStepwiseTemb();
   }, { passive: false });
 
@@ -3268,7 +3253,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (stepwiseTouchStartDist > 0) {
-        stepwiseZoom = Math.max(0.1, Math.min(20, stepwiseTouchStartZoom * (dist / stepwiseTouchStartDist)));
+        stepwiseZoom = Math.max(0.02, Math.min(50, stepwiseTouchStartZoom * (dist / stepwiseTouchStartDist)));
         renderStepwiseTemb();
       }
     }
@@ -3317,7 +3302,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   aztecCanvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    aztecZoom = Math.max(0.1, Math.min(20, aztecZoom * factor));
+    aztecZoom = Math.max(0.02, Math.min(50, aztecZoom * factor));
     renderAztecGraph();
   }, { passive: false });
 
@@ -3355,7 +3340,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (aztecTouchStartDist > 0) {
-        aztecZoom = Math.max(0.1, Math.min(20, aztecTouchStartZoom * (dist / aztecTouchStartDist)));
+        aztecZoom = Math.max(0.02, Math.min(50, aztecTouchStartZoom * (dist / aztecTouchStartDist)));
         renderAztecGraph();
       }
     }
