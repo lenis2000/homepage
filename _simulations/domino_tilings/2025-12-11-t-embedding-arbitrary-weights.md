@@ -2288,39 +2288,90 @@ Part of this research was performed while the author was visiting the Institute 
         resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
         shufflingModule._free(weightsPtr);
 
-      } else if (preset === 'random-iid' || preset === 'random-layered') {
-        // Generate edge weights for ALL positions (all four edge types: α, β, γ, δ)
+      } else if (preset === 'random-iid') {
+        // IID: each edge weight is independent random
         const dim = 2 * N;
         const seed = getSampleSeed();
         const rng = createSeededRNG(seed);
-
-        // All dim×dim positions get random values
         const numWeights = dim * dim;
         const edgeWeights = new Float64Array(numWeights);
 
-        if (preset === 'random-iid') {
-          // IID: each weight is independent random
-          for (let i = 0; i < numWeights; i++) {
-            edgeWeights[i] = 0.5 + rng() * 1.5;  // Random in [0.5, 2.0]
-          }
-        } else {
-          // Layered: weight W_j for positions where i%2==0 AND j%2==0
-          // One random weight per even column index
-          const numLayers = Math.ceil(dim / 2);  // number of even j values
-          const layerWeights = new Float64Array(numLayers);
-          for (let l = 0; l < numLayers; l++) {
-            layerWeights[l] = 0.5 + rng() * 1.5;
-          }
+        for (let i = 0; i < numWeights; i++) {
+          edgeWeights[i] = 0.5 + rng() * 1.5;  // Random in [0.5, 2.0]
+        }
 
-          for (let i = 0; i < dim; i++) {
-            for (let j = 0; j < dim; j++) {
-              if (i % 2 === 0 && j % 2 === 0) {
-                // Even row AND even column: layer weight W_j
-                edgeWeights[i * dim + j] = layerWeights[j / 2];
+        const weightsPtr = shufflingModule._malloc(numWeights * 8);
+        for (let i = 0; i < numWeights; i++) {
+          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
+        }
+        resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        shufflingModule._free(weightsPtr);
+
+      } else if (preset === 'random-layered') {
+        // Layered: exactly like 2025-06-25-random-edges.cpp
+        // Weight at (i,j) where (i+j)%2==0 AND i%2==0 → random_variables[i/2]
+        const dim = 2 * N;
+        const seed = getSampleSeed();
+        const rng = createSeededRNG(seed);
+        const numWeights = dim * dim;
+        const edgeWeights = new Float64Array(numWeights);
+
+        // Get regime and parameters from UI
+        const params = getLayeredParams();
+        const { regime, p1, p2, prob1, prob2 } = params;
+        const sqrtN = Math.sqrt(N);
+
+        const numLayers = N;
+        const layerWeights = new Float64Array(numLayers);
+
+        // Generate layer weights based on regime (matching 2025-06-25-random-edges.cpp)
+        for (let k = 0; k < numLayers; k++) {
+          const r = rng();
+          switch (regime) {
+            case 1:
+              // Regime 1 (Critical Scaling): p1 + 2/sqrt(N) with prob prob1, p2 - 1/sqrt(N) otherwise
+              if (r < prob1) {
+                layerWeights[k] = p1 + 2.0 / sqrtN;
               } else {
-                // All other positions: 1.0
-                edgeWeights[i * dim + j] = 1.0;
+                layerWeights[k] = p2 - 1.0 / sqrtN;
               }
+              break;
+            case 2:
+              // Regime 2 (Rare Event): p1 with prob 1/sqrt(N), p2 otherwise
+              if (r < 1.0 / sqrtN) {
+                layerWeights[k] = p1;
+              } else {
+                layerWeights[k] = p2;
+              }
+              break;
+            case 3:
+              // Regime 3 (Bernoulli): p1 with prob prob1, p2 otherwise
+              if (r < prob1) {
+                layerWeights[k] = p1;
+              } else {
+                layerWeights[k] = p2;
+              }
+              break;
+            case 4:
+              // Regime 4 (Deterministic Periodic): alternating p1, p2
+              layerWeights[k] = (k % 2 === 0) ? p1 : p2;
+              break;
+            case 5:
+              // Regime 5 (Continuous Uniform): uniform on [p1, p2]
+              layerWeights[k] = p1 + r * (p2 - p1);
+              break;
+            default:
+              // Default: 0.2 or 5.0 with equal probability
+              layerWeights[k] = (r < 0.5) ? 0.2 : 5.0;
+          }
+        }
+
+        for (let i = 0; i < dim; i++) {
+          for (let j = 0; j < dim; j++) {
+            if ((i + j) % 2 === 0 && i % 2 === 0) {
+              edgeWeights[i * dim + j] = layerWeights[Math.floor(i / 2)];
+            } else {
+              edgeWeights[i * dim + j] = 1.0;
             }
           }
         }
