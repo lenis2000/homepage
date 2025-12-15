@@ -460,10 +460,14 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;">Random Domino Tiling Sample (EKLP Shuffling)</summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Controls row -->
-    <div style="margin-bottom: 10px; text-align: center;">
+    <div style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
       <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="100" style="width: 60px;"></label>
-      <button id="sample-btn" style="margin-left: 15px; padding: 5px 15px;">Random Sample by Shuffling</button>
-      <span id="sample-time" style="margin-left: 10px; color: #666;"></span>
+      <label>Border: <input type="number" id="sample-border-input" value="1" min="0" max="10" step="0.1" style="width: 50px;"></label>
+      <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
+      <span id="sample-time" style="color: #666;"></span>
+      <span style="color: #ccc;">|</span>
+      <button id="sample-export-png-btn" style="padding: 2px 8px;">PNG</button>
+      <button id="sample-export-pdf-btn" style="padding: 2px 8px;">PDF</button>
     </div>
     <!-- Canvas with floating controls -->
     <div id="sample-canvas-wrapper" style="position: relative;">
@@ -1947,11 +1951,595 @@ Part of this research was performed while the author was visiting the Institute 
 
       // Now hide loading message
       loadingMsg.style.display = 'none';
+
+      // Store T-embedding Module reference before loading shuffling module
+      const tembModule = Module;
+
+      // Load shuffling WASM module dynamically
+      loadShufflingModule(tembModule);
     };
 
     if (Module.calledRun) {
       Module.onRuntimeInitialized();
     }
+  }
+
+  // ========== RANDOM SAMPLE SHUFFLING ==========
+
+  // Sample state
+  let shufflingWasmReady = false;
+  let shufflingModule = null;
+  let simulateAztec = null;
+  let simulateAztecWithWeightMatrix = null;
+  let shufflingFreeString = null;
+  let shufflingGetProgress = null;
+  let sampleDominoes = [];
+  let sampleZoom = 1.0;
+  let samplePanX = 0, samplePanY = 0;
+
+  // Sample canvas
+  const sampleCanvas = document.getElementById('sample-canvas');
+  const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
+
+  function loadShufflingModule(tembModule) {
+    // Create script element to load shuffling WASM (modularized build)
+    const script = document.createElement('script');
+    script.src = '/js/2025-12-11-t-embedding-shuffling.js';
+    script.onload = async function() {
+      // createShufflingModule is a factory function that returns a Promise
+      shufflingModule = await createShufflingModule();
+      initShufflingFunctions();
+    };
+    document.head.appendChild(script);
+  }
+
+  function initShufflingFunctions() {
+    simulateAztec = shufflingModule.cwrap('simulateAztec', 'number',
+      ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+      {async: true});
+    simulateAztecWithWeightMatrix = shufflingModule.cwrap('simulateAztecWithWeightMatrix', 'number',
+      ['number', 'number'], {async: true});
+    shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
+    shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
+
+    shufflingWasmReady = true;
+    console.log('Shuffling WASM module ready');
+
+    // Generate initial sample with default weights
+    generateRandomSample();
+  }
+
+  // Generate weight matrix based on current T-embedding preset and params
+  function generateWeightMatrix(N) {
+    const dim = 2 * N;
+    const weights = new Float64Array(dim * dim);
+    const preset = document.getElementById('weight-preset-select').value;
+
+    if (preset === 'all-ones') {
+      weights.fill(1.0);
+    } else if (preset === 'periodic') {
+      const k = parseInt(document.getElementById('periodic-k').value) || 2;
+      const l = parseInt(document.getElementById('periodic-l').value) || 2;
+      // Get periodic weights from the editor
+      const periodicWeights = getPeriodicWeightsFromUI(k, l);
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          // Use modular indexing for periodic pattern
+          const pi = ((i % k) + k) % k;
+          const pj = ((j % l) + l) % l;
+          weights[i * dim + j] = periodicWeights[pi][pj];
+        }
+      }
+    } else {
+      // IID, Layered, Gamma - generate using seeded random
+      const seed = getSampleSeed();
+      const rng = createSeededRNG(seed);
+
+      if (preset === 'random-iid') {
+        const distType = document.getElementById('iid-distribution-select').value;
+        for (let i = 0; i < dim * dim; i++) {
+          weights[i] = generateIIDWeight(distType, rng);
+        }
+      } else if (preset === 'random-layered') {
+        // Layered weights - same weight for each diagonal
+        const regime = getLayeredRegime();
+        for (let i = 0; i < dim; i++) {
+          for (let j = 0; j < dim; j++) {
+            const diag = i + j;  // Diagonal index
+            weights[i * dim + j] = generateLayeredWeight(regime, diag, N, rng);
+          }
+        }
+      } else if (preset === 'random-gamma') {
+        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
+        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+        for (let i = 0; i < dim; i++) {
+          for (let j = 0; j < dim; j++) {
+            // Gamma weights: alpha edges (bottom) and beta edges (right)
+            // Use a simple approach: weight depends on position parity
+            const useAlpha = (i + j) % 2 === 0;
+            weights[i * dim + j] = useAlpha ? gammaRandom(alpha, 1, rng) : gammaRandom(beta, 1, rng);
+          }
+        }
+      }
+    }
+
+    return weights;
+  }
+
+  function getPeriodicWeightsFromUI(k, l) {
+    // Extract periodic weights from the UI editor
+    const weights = [];
+    for (let j = 0; j < k; j++) {
+      weights[j] = [];
+      for (let i = 0; i < l; i++) {
+        // Default to 1.0 if not found
+        weights[j][i] = 1.0;
+      }
+    }
+    // Try to get from the editor inputs
+    const inputs = document.querySelectorAll('#weights-tables input[data-type="2"]');  // gamma weights
+    inputs.forEach(input => {
+      const jIdx = parseInt(input.dataset.j);
+      const iIdx = parseInt(input.dataset.i);
+      if (jIdx < k && iIdx < l) {
+        weights[jIdx][iIdx] = parseFloat(input.value) || 1.0;
+      }
+    });
+    return weights;
+  }
+
+  function getSampleSeed() {
+    const preset = document.getElementById('weight-preset-select').value;
+    if (preset === 'random-iid') {
+      return parseInt(document.getElementById('random-seed').value) || 42;
+    } else if (preset === 'random-layered') {
+      return parseInt(document.getElementById('layered-seed').value) || 42;
+    } else if (preset === 'random-gamma') {
+      return parseInt(document.getElementById('gamma-seed').value) || 42;
+    }
+    return 42;
+  }
+
+  function getLayeredRegime() {
+    const selected = document.querySelector('input[name="layered-regime"]:checked');
+    return selected ? parseInt(selected.value) : 3;
+  }
+
+  // Simple seeded PRNG (xorshift)
+  function createSeededRNG(seed) {
+    let state = seed >>> 0;
+    if (state === 0) state = 1;
+    return function() {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      return (state >>> 0) / 4294967296;
+    };
+  }
+
+  function generateIIDWeight(distType, rng) {
+    if (distType === 'uniform') {
+      const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
+      const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
+      return a + rng() * (b - a);
+    } else if (distType === 'exponential') {
+      return -Math.log(1 - rng());
+    } else if (distType === 'pareto') {
+      const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
+      const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+      return xmin / Math.pow(1 - rng(), 1 / alpha);
+    } else if (distType === 'geometric') {
+      const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+      return Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
+    }
+    return 1.0;
+  }
+
+  function generateLayeredWeight(regime, diag, N, rng) {
+    const sqrtN = Math.sqrt(N);
+    switch (regime) {
+      case 1: {
+        const val1 = parseFloat(document.getElementById('layered1-val1').value) || 1;
+        const val2 = parseFloat(document.getElementById('layered1-val2').value) || 1;
+        const p1 = parseFloat(document.getElementById('layered1-prob1').value) || 0.5;
+        return rng() < p1 ? val1 + 2/sqrtN : val2 - 1/sqrtN;
+      }
+      case 2: {
+        const val1 = parseFloat(document.getElementById('layered2-val1').value) || 2;
+        const val2 = parseFloat(document.getElementById('layered2-val2').value) || 1;
+        return rng() < 1/sqrtN ? val1 : val2;
+      }
+      case 3: {
+        const val1 = parseFloat(document.getElementById('layered3-val1').value) || 2;
+        const val2 = parseFloat(document.getElementById('layered3-val2').value) || 0.5;
+        const p1 = parseFloat(document.getElementById('layered3-prob1').value) || 0.5;
+        return rng() < p1 ? val1 : val2;
+      }
+      case 4: {
+        const w1 = parseFloat(document.getElementById('layered4-w1').value) || 2;
+        const w2 = parseFloat(document.getElementById('layered4-w2').value) || 0.5;
+        return diag % 2 === 0 ? w1 : w2;
+      }
+      case 5: {
+        const a = parseFloat(document.getElementById('layered5-min').value) || 0.5;
+        const b = parseFloat(document.getElementById('layered5-max').value) || 2.0;
+        return a + rng() * (b - a);
+      }
+    }
+    return 1.0;
+  }
+
+  // Gamma random using Marsaglia and Tsang's method
+  function gammaRandom(shape, scale, rng) {
+    if (shape < 1) {
+      return gammaRandom(shape + 1, scale, rng) * Math.pow(rng(), 1 / shape);
+    }
+    const d = shape - 1/3;
+    const c = 1 / Math.sqrt(9 * d);
+    while (true) {
+      let x, v;
+      do {
+        x = normalRandom(rng);
+        v = 1 + c * x;
+      } while (v <= 0);
+      v = v * v * v;
+      const u = rng();
+      if (u < 1 - 0.0331 * x * x * x * x) return d * v * scale;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v * scale;
+    }
+  }
+
+  function normalRandom(rng) {
+    let u, v, s;
+    do {
+      u = rng() * 2 - 1;
+      v = rng() * 2 - 1;
+      s = u * u + v * v;
+    } while (s >= 1 || s === 0);
+    return u * Math.sqrt(-2 * Math.log(s) / s);
+  }
+
+  async function generateRandomSample() {
+    if (!shufflingWasmReady) return;
+
+    const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+    const timeSpan = document.getElementById('sample-time');
+    timeSpan.textContent = 'Sampling...';
+
+    const startTime = performance.now();
+
+    try {
+      // Generate weight matrix
+      const weights = generateWeightMatrix(N);
+      const dim = 2 * N;
+
+      // Allocate WASM memory for weights
+      const ptr = shufflingModule._malloc(dim * dim * 8);  // 8 bytes per double
+      for (let i = 0; i < dim * dim; i++) {
+        shufflingModule.setValue(ptr + i * 8, weights[i], 'double');
+      }
+
+      // Call shuffling function
+      const resultPtr = await simulateAztecWithWeightMatrix(N, ptr);
+
+      // Free weight memory
+      shufflingModule._free(ptr);
+
+      // Parse result
+      const jsonStr = shufflingModule.UTF8ToString(resultPtr);
+      shufflingFreeString(resultPtr);
+
+      sampleDominoes = JSON.parse(jsonStr);
+
+      const elapsed = performance.now() - startTime;
+      timeSpan.textContent = `${elapsed.toFixed(0)} ms`;
+
+      // Reset view and render
+      resetSampleView();
+      renderSample();
+
+    } catch (e) {
+      console.error('Shuffling error:', e);
+      timeSpan.textContent = 'Error';
+    }
+  }
+
+  function resetSampleView() {
+    if (sampleDominoes.length === 0) {
+      sampleZoom = 1.0;
+      samplePanX = 0;
+      samplePanY = 0;
+      return;
+    }
+
+    // Find bounds
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const d of sampleDominoes) {
+      minX = Math.min(minX, d.x);
+      maxX = Math.max(maxX, d.x + d.w);
+      minY = Math.min(minY, d.y);
+      maxY = Math.max(maxY, d.y + d.h);
+    }
+
+    const rect = sampleCanvas.getBoundingClientRect();
+    const regionW = maxX - minX;
+    const regionH = maxY - minY;
+    const padding = 0.9;
+
+    const zoomX = (rect.width * padding) / regionW;
+    const zoomY = (rect.height * padding) / regionH;
+    sampleZoom = Math.min(zoomX, zoomY, 50);
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    samplePanX = -centerX;
+    samplePanY = -centerY;
+  }
+
+  function renderSample() {
+    if (!sampleCanvas || !sampleCtx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = sampleCanvas.getBoundingClientRect();
+    sampleCanvas.width = rect.width * dpr;
+    sampleCanvas.height = rect.height * dpr;
+    sampleCtx.scale(dpr, dpr);
+
+    // Clear
+    sampleCtx.fillStyle = '#fafafa';
+    sampleCtx.fillRect(0, 0, rect.width, rect.height);
+
+    if (sampleDominoes.length === 0) return;
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    // Get colors from ColorSchemes
+    const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+    let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
+    if (paletteIdx === -1) paletteIdx = 0;
+    const colors = palettes[paletteIdx].colors;
+
+    // Color mapping: yellow=0, green=2, blue=1, red=3
+    const colorMap = {
+      'yellow': colors[0],
+      'green': colors[1],
+      'blue': colors[2],
+      'red': colors[3]
+    };
+
+    // Get border width from input
+    const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
+    const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
+
+    // Draw dominoes
+    for (const d of sampleDominoes) {
+      const sx = centerX + (d.x + samplePanX) * sampleZoom;
+      const sy = centerY - (d.y + d.h + samplePanY) * sampleZoom;  // Flip Y
+      const sw = d.w * sampleZoom;
+      const sh = d.h * sampleZoom;
+
+      sampleCtx.fillStyle = colorMap[d.color] || '#888';
+      sampleCtx.fillRect(sx, sy, sw, sh);
+
+      // Border
+      if (borderWidth > 0) {
+        sampleCtx.strokeStyle = '#000';
+        sampleCtx.lineWidth = borderWidth;
+        sampleCtx.strokeRect(sx, sy, sw, sh);
+      }
+    }
+  }
+
+  // Sample canvas event handlers
+  if (sampleCanvas) {
+    document.getElementById('sample-btn').addEventListener('click', generateRandomSample);
+
+    document.getElementById('sample-zoom-in-btn').addEventListener('click', () => {
+      sampleZoom *= 1.3;
+      renderSample();
+    });
+
+    document.getElementById('sample-zoom-out-btn').addEventListener('click', () => {
+      sampleZoom /= 1.3;
+      renderSample();
+    });
+
+    document.getElementById('sample-zoom-reset-btn').addEventListener('click', () => {
+      resetSampleView();
+      renderSample();
+    });
+
+    // Border width input - re-render on change
+    document.getElementById('sample-border-input').addEventListener('input', () => {
+      renderSample();
+    });
+
+    // Pan with mouse drag
+    let sampleIsPanning = false;
+    let sampleLastX = 0, sampleLastY = 0;
+
+    sampleCanvas.addEventListener('mousedown', (e) => {
+      sampleIsPanning = true;
+      sampleLastX = e.clientX;
+      sampleLastY = e.clientY;
+      sampleCanvas.style.cursor = 'grabbing';
+    });
+
+    sampleCanvas.addEventListener('mousemove', (e) => {
+      if (!sampleIsPanning) return;
+      const dx = e.clientX - sampleLastX;
+      const dy = e.clientY - sampleLastY;
+      samplePanX += dx / sampleZoom;
+      samplePanY -= dy / sampleZoom;  // Flip Y
+      sampleLastX = e.clientX;
+      sampleLastY = e.clientY;
+      renderSample();
+    });
+
+    sampleCanvas.addEventListener('mouseup', () => {
+      sampleIsPanning = false;
+      sampleCanvas.style.cursor = 'grab';
+    });
+
+    sampleCanvas.addEventListener('mouseleave', () => {
+      sampleIsPanning = false;
+      sampleCanvas.style.cursor = 'grab';
+    });
+
+    // Zoom with wheel
+    sampleCanvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      sampleZoom *= factor;
+      renderSample();
+    });
+
+    // Responsive: re-render on window resize
+    window.addEventListener('resize', () => {
+      renderSample();
+    });
+
+    // Export PNG
+    document.getElementById('sample-export-png-btn').addEventListener('click', () => {
+      if (sampleDominoes.length === 0) return;
+
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      const scale = 3;  // High resolution export
+
+      // Find bounds
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const d of sampleDominoes) {
+        minX = Math.min(minX, d.x);
+        maxX = Math.max(maxX, d.x + d.w);
+        minY = Math.min(minY, d.y);
+        maxY = Math.max(maxY, d.y + d.h);
+      }
+
+      const regionW = maxX - minX;
+      const regionH = maxY - minY;
+      const padding = 10;
+      const pixelsPerUnit = 20 * scale;
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = regionW * pixelsPerUnit + padding * 2;
+      exportCanvas.height = regionH * pixelsPerUnit + padding * 2;
+      const ctx = exportCanvas.getContext('2d');
+
+      // White background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+      // Get colors
+      const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+      let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
+      if (paletteIdx === -1) paletteIdx = 0;
+      const colors = palettes[paletteIdx].colors;
+      const colorMap = { 'yellow': colors[0], 'green': colors[1], 'blue': colors[2], 'red': colors[3] };
+
+      const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
+      const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
+
+      // Draw dominoes
+      for (const d of sampleDominoes) {
+        const sx = (d.x - minX) * pixelsPerUnit + padding;
+        const sy = (maxY - d.y - d.h) * pixelsPerUnit + padding;
+        const sw = d.w * pixelsPerUnit;
+        const sh = d.h * pixelsPerUnit;
+
+        ctx.fillStyle = colorMap[d.color] || '#888';
+        ctx.fillRect(sx, sy, sw, sh);
+
+        if (borderWidth > 0) {
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = borderWidth * scale;
+          ctx.strokeRect(sx, sy, sw, sh);
+        }
+      }
+
+      const link = document.createElement('a');
+      link.download = `domino-sample-N${N}.png`;
+      link.href = exportCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // Export PDF
+    document.getElementById('sample-export-pdf-btn').addEventListener('click', async () => {
+      if (sampleDominoes.length === 0) return;
+
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+
+      // Load jsPDF if not loaded
+      if (typeof jspdf === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+      }
+
+      const { jsPDF } = jspdf;
+
+      // Find bounds
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const d of sampleDominoes) {
+        minX = Math.min(minX, d.x);
+        maxX = Math.max(maxX, d.x + d.w);
+        minY = Math.min(minY, d.y);
+        maxY = Math.max(maxY, d.y + d.h);
+      }
+
+      const regionW = maxX - minX;
+      const regionH = maxY - minY;
+      const padding = 10;
+      const scale = 5;  // mm per unit
+
+      const pdfW = regionW * scale + padding * 2;
+      const pdfH = regionH * scale + padding * 2;
+
+      const doc = new jsPDF({
+        orientation: pdfW > pdfH ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: [pdfW, pdfH]
+      });
+
+      // Get colors
+      const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+      let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
+      if (paletteIdx === -1) paletteIdx = 0;
+      const colors = palettes[paletteIdx].colors;
+      const colorMap = { 'yellow': colors[0], 'green': colors[1], 'blue': colors[2], 'red': colors[3] };
+
+      const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
+      const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
+
+      // Helper to parse hex color
+      const hexToRgb = (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [128, 128, 128];
+      };
+
+      // Draw dominoes
+      for (const d of sampleDominoes) {
+        const sx = (d.x - minX) * scale + padding;
+        const sy = (maxY - d.y - d.h) * scale + padding;
+        const sw = d.w * scale;
+        const sh = d.h * scale;
+
+        const rgb = hexToRgb(colorMap[d.color] || '#888888');
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+        doc.rect(sx, sy, sw, sh, 'F');
+
+        if (borderWidth > 0) {
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(borderWidth * 0.2);
+          doc.rect(sx, sy, sw, sh, 'S');
+        }
+      }
+
+      doc.save(`domino-sample-N${N}.pdf`);
+    });
+
+    sampleCanvas.style.cursor = 'grab';
   }
 
   const computeTimeSpan = document.getElementById('compute-time');

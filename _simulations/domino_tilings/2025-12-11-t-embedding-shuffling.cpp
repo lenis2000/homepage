@@ -4,7 +4,7 @@
   Weighted EKLP shuffling for T-embedding page.
   Based on s/domino.cpp with added support for arbitrary weight matrices.
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecWithWeightMatrix','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecWithWeightMatrix','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 
 Features:
 - 3x3 periodic weights for random domino tilings of Aztec diamond
@@ -954,6 +954,124 @@ char* performGlauberSteps(
 EMSCRIPTEN_KEEPALIVE
 bool wasGlauberActive() {
     return g_glauber_active;
+}
+
+// ---------------------------------------------------------------------
+// simulateAztecWithWeightMatrix
+//
+// Takes a full weight matrix as a flat array of size (2n)*(2n).
+// This allows arbitrary (non-periodic) weights like IID, layered, gamma.
+// The weight matrix is passed via WASM memory (caller allocates with _malloc).
+// ---------------------------------------------------------------------
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecWithWeightMatrix(int n, double* weights) {
+    try {
+        progressCounter = 0;
+        int dim = 2 * n;
+
+        if (dim > 1000) {
+            throw std::runtime_error("Input size too large");
+        }
+
+        // Copy weights into MatrixDouble
+        MatrixDouble A1a(dim, vector<double>(dim, 1.0));
+        for (int i = 0; i < dim; ++i) {
+            for (int j = 0; j < dim; ++j) {
+                A1a[i][j] = weights[i * dim + j];
+            }
+        }
+
+        emscripten_sleep(0);
+
+        // Compute probability matrices
+        vector<MatrixDouble> prob;
+        try {
+            prob = probs2(A1a);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error computing probability matrices");
+        }
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        // Generate domino configuration
+        MatrixInt dominoConfig;
+        try {
+            dominoConfig = aztecgen(prob);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Error generating domino configuration");
+        }
+
+        // Store globally for potential Glauber follow-up
+        g_conf = dominoConfig;
+        g_W = A1a;
+        g_N = dim;
+        g_periodicity = "arbitrary";
+        g_glauber_active = false;
+
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        // Build JSON output
+        ostringstream oss;
+        oss << "[";
+        int size = (int)dominoConfig.size();
+        bool first = true;
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig[i][j] == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+
+                    if (oddI && oddJ) {
+                        color = "blue";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4; h = 2;
+                    } else if (oddI && !oddJ) {
+                        color = "yellow";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2; h = 4;
+                    } else if (!oddI && !oddJ) {
+                        color = "green";
+                        x = j - i - 2;
+                        y = size + 1 - (i + j) - 1;
+                        w = 4; h = 2;
+                    } else {
+                        color = "red";
+                        x = j - i - 1;
+                        y = size + 1 - (i + j) - 2;
+                        w = 2; h = 4;
+                    }
+
+                    if (!first) oss << ",";
+                    else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+
+        oss << "]";
+        progressCounter = 100;
+        emscripten_sleep(0);
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
 }
 
 } // extern "C"
