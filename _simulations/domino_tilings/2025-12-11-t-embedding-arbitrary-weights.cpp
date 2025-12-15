@@ -64,6 +64,7 @@ struct AztecVertex {
     bool isWhite;     // Bipartite coloring: white if (i+j+k) is even, where x=i+0.5, y=j+0.5
     bool inVgauge;    // True if vertex is in V_gauge set (for highlighting)
     bool toContract;  // True if vertex will be contracted in next step
+    bool active = true;  // Soft deletion: false means vertex is logically removed
 };
 
 // Aztec diamond graph edge with weight stored in LOG SPACE for numerical stability
@@ -72,6 +73,7 @@ struct AztecEdge {
     mp_real logWeight;   // LOG of edge weight (100-digit precision) - use exp() to get actual weight
     bool isHorizontal; // True if horizontal edge, false if vertical
     bool gaugeTransformed; // True if this edge was modified by gauge transform
+    bool active = true;  // Soft deletion: false means edge is logically removed
 
     // Helper to get actual weight
     mp_real weight() const { return exp(logWeight); }
@@ -177,13 +179,19 @@ static std::string makeKey(int j, int k) {
 }
 
 // Rebuild the global adjacency cache from current vertices and edges
+// Only includes active edges connecting active vertices
 static void rebuildAdjacency() {
     g_adj.assign(g_aztecVertices.size(), std::vector<int>());
     for (size_t i = 0; i < g_aztecEdges.size(); ++i) {
+        if (!g_aztecEdges[i].active) continue;  // Skip inactive edges
         int v1 = g_aztecEdges[i].v1;
         int v2 = g_aztecEdges[i].v2;
-        if (v1 >= 0 && v1 < (int)g_adj.size()) g_adj[v1].push_back((int)i);
-        if (v2 >= 0 && v2 < (int)g_adj.size()) g_adj[v2].push_back((int)i);
+        // Only add if both endpoints are active
+        if (v1 >= 0 && v1 < (int)g_aztecVertices.size() && g_aztecVertices[v1].active &&
+            v2 >= 0 && v2 < (int)g_aztecVertices.size() && g_aztecVertices[v2].active) {
+            g_adj[v1].push_back((int)i);
+            g_adj[v2].push_back((int)i);
+        }
     }
 }
 
@@ -3837,10 +3845,22 @@ static std::string getAztecGraphJSONInternal() {
     oss << "\"level\":" << g_aztecLevel;
     oss << ",\"reductionStep\":" << g_aztecReductionStep;
 
-    // Output vertices
-    oss << ",\"vertices\":[";
+    // Build vertex index remapping (old index -> new compact index)
+    std::vector<int> vertexRemap(g_aztecVertices.size(), -1);
+    int newVertexIdx = 0;
     for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        if (i > 0) oss << ",";
+        if (g_aztecVertices[i].active) {
+            vertexRemap[i] = newVertexIdx++;
+        }
+    }
+
+    // Output only active vertices
+    oss << ",\"vertices\":[";
+    bool firstVertex = true;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        if (!g_aztecVertices[i].active) continue;
+        if (!firstVertex) oss << ",";
+        firstVertex = false;
         oss << "{\"x\":" << g_aztecVertices[i].x
             << ",\"y\":" << g_aztecVertices[i].y
             << ",\"isWhite\":" << (g_aztecVertices[i].isWhite ? "true" : "false")
@@ -3850,12 +3870,20 @@ static std::string getAztecGraphJSONInternal() {
     }
     oss << "]";
 
-    // Output edges (convert from log space using weight() helper)
+    // Output only active edges with remapped vertex indices
     oss << ",\"edges\":[";
+    bool firstEdge = true;
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        if (i > 0) oss << ",";
-        oss << "{\"v1\":" << g_aztecEdges[i].v1
-            << ",\"v2\":" << g_aztecEdges[i].v2
+        if (!g_aztecEdges[i].active) continue;
+        int v1 = g_aztecEdges[i].v1;
+        int v2 = g_aztecEdges[i].v2;
+        // Skip edges with inactive endpoints
+        if (v1 < 0 || v1 >= (int)vertexRemap.size() || vertexRemap[v1] < 0) continue;
+        if (v2 < 0 || v2 >= (int)vertexRemap.size() || vertexRemap[v2] < 0) continue;
+        if (!firstEdge) oss << ",";
+        firstEdge = false;
+        oss << "{\"v1\":" << vertexRemap[v1]
+            << ",\"v2\":" << vertexRemap[v2]
             << ",\"weight\":" << g_aztecEdges[i].weight()  // Convert from log space
             << ",\"isHorizontal\":" << (g_aztecEdges[i].isHorizontal ? "true" : "false")
             << ",\"gaugeTransformed\":" << (g_aztecEdges[i].gaugeTransformed ? "true" : "false")

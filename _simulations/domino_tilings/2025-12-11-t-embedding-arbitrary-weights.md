@@ -502,6 +502,19 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
       ],
       edgeColor: '#664433',
       vertexColor: '#553322'
+    },
+    {
+      name: 'Wireframe',
+      icon: '🔲',
+      background: '#ffffff',
+      baseColor: { r: 200, g: 200, b: 200 },
+      ambient: 0.5,
+      lights: [
+        { dir: { x: 0.0, y: 1.0, z: 0.0 }, intensity: 0.5 }
+      ],
+      edgeColor: '#000000',
+      vertexColor: '#333333',
+      showFaces: false
     }
   ];
 
@@ -2715,6 +2728,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     // ========== DRAW ALL OBJECTS IN DEPTH ORDER ==========
     for (const obj of drawables) {
       if (obj.type === 'face') {
+        // Skip faces if preset has showFaces: false
+        if (preset.showFaces === false) continue;
+
         const corners = obj.corners;
 
         // Compute lighting from all sources (flat shading - no gradients)
