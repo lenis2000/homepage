@@ -144,7 +144,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="100" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="200" style="width: 60px;"></label>
 
   <!-- Weight Preset Dropdown -->
   <label style="margin-left: 15px;">Weights:
@@ -165,7 +165,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 
   <button id="compute-btn" style="margin-left: 15px;">Compute</button>
   <span id="compute-time" style="margin-left: 10px; color: #666;"></span>
-  <div id="n-warning" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404; font-size: 12px;">⚠️ <strong>Warning:</strong> n &gt; 40 may take several minutes to compute</div>
+  <div id="n-warning" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404; font-size: 12px;">⚠️ <strong>Warning:</strong> n &gt; 60 may take several dozen seconds to compute</div>
 </div>
 
 <!-- Random IID params (collapsible panel) -->
@@ -555,7 +555,7 @@ Part of this research was performed while the author was visiting the Institute 
   let isComputing = false;  // Flag to prevent re-entrancy during computation
 
   // Hard cap on n
-  const MAX_N = 100;
+  const MAX_N = 200;
 
   // Step-by-step visualization is only available for n <= this threshold
   const STEP_BY_STEP_MAX_N = 15;
@@ -567,7 +567,7 @@ Part of this research was performed while the author was visiting the Institute 
     document.getElementById('n-input').value = n;  // Update input to show clamped value
     // Show warning for large n
     const warning = document.getElementById('n-warning');
-    if (warning) warning.style.display = (n > 40) ? 'inline' : 'none';
+    if (warning) warning.style.display = (n > 60) ? 'inline' : 'none';
     return n;
   }
 
@@ -606,7 +606,7 @@ Part of this research was performed while the author was visiting the Institute 
   let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
   let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
-  let getComputeTimeMs, getStepProfile, resetStepProfile;
+  let getComputeTimeMs;
   let clearTembLevels;
   let clearStoredWeightsExport;
 
@@ -1756,8 +1756,6 @@ Part of this research was performed while the author was visiting the Institute 
       canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
       canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
       getComputeTimeMs = Module.cwrap('getComputeTimeMs', 'number', []);
-      getStepProfile = Module.cwrap('getStepProfile', 'number', []);
-      resetStepProfile = Module.cwrap('resetStepProfile', null, []);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
       clearStoredWeightsExport = Module.cwrap('clearStoredWeightsExport', null, []);
 
@@ -3384,7 +3382,7 @@ Part of this research was performed while the author was visiting the Institute 
   document.getElementById('n-input').addEventListener('input', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
     const warning = document.getElementById('n-warning');
-    if (warning) warning.style.display = (n > 40) ? 'inline' : 'none';
+    if (warning) warning.style.display = (n > 60) ? 'inline' : 'none';
   });
 
   // Main compute button - initializes graph with weights and computes
@@ -4665,9 +4663,6 @@ Part of this research was performed while the author was visiting the Institute 
 
     btn.disabled = true;
     resultsDiv.style.display = 'block';
-
-    // Reset step profile for fresh timing
-    if (resetStepProfile) resetStepProfile();
 
     const results = [];
 
