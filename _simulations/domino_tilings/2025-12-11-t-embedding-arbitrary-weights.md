@@ -427,7 +427,7 @@ Part of this research was performed while the author was visiting the Institute 
 <!-- Benchmark Section -->
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">Performance Benchmark</h3>
-  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) ~ n<sup>α</sup> to determine the computational complexity exponent α.</p>
+  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) ~ n<sup>α</sup> to determine the computational complexity exponent α. Uses the current weight selection.</p>
   <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
@@ -4678,9 +4678,8 @@ Part of this research was performed while the author was visiting the Institute 
         document.getElementById('n-input').value = n;
         setN(n);
 
-        // Generate graph
+        // Generate graph with current weight selection
         generateAztecGraph(n);
-        randomizeAztecWeights();
 
         // Run all reduction steps
         while (canAztecStepDown()) {
