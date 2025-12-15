@@ -34,6 +34,8 @@ using mp_complex = std::complex<double>;
 // GLOBAL STATE
 // =============================================================================
 
+static const int MAX_N = 100;  // Maximum supported n value (change this to increase limit)
+
 static int g_n = 6;           // Diamond size parameter (default n=6)
 static double g_a = 1.0;      // Boundary parameter (computed or set)
 
@@ -144,14 +146,13 @@ static const bool g_betaSwapLL = true;   // Lower-left quadrant (swapped)
 // =============================================================================
 
 // Optimization: Flat 2D grid for O(1) vertex lookups
-// Max N=50 implies coordinates roughly [-55, 55].
-// A 128x128 grid is sufficient and fits in L1/L2 cache.
+// Grid size based on MAX_N (coordinates roughly [-MAX_N-5, MAX_N+5]).
 struct FastGrid {
     std::vector<int> grid;
     int offset;
     int dim;
 
-    FastGrid(int maxCoord = 60) {
+    FastGrid(int maxCoord = MAX_N + 20) {
         dim = 2 * maxCoord + 1;
         offset = maxCoord;
         grid.assign(dim * dim, -1);
@@ -2449,7 +2450,7 @@ static std::set<int> g_capturedKValues;  // Track which k values we've captured
 static int checkFaceCountFormula(int n) {
     // 2k²+2k+1 = n => k = (-2 + sqrt(4 + 8(n-1))) / 4 = (-1 + sqrt(2n-1)) / 2
     // For k=0: n=1, k=1: n=5, k=2: n=13, k=3: n=25, k=4: n=41, ...
-    for (int k = 0; k <= 50; k++) {
+    for (int k = 0; k <= MAX_N; k++) {
         if (2*k*k + 2*k + 1 == n) return k;
     }
     return -1;
@@ -3919,7 +3920,7 @@ void clearTembLevels() {
 EMSCRIPTEN_KEEPALIVE
 void setN(int n) {
     if (n < 1) n = 1;
-    if (n > 50) n = 50;
+    if (n > MAX_N) n = MAX_N;
     g_n = n;
 }
 
@@ -3969,14 +3970,14 @@ void clearStoredWeightsExport() {
 EMSCRIPTEN_KEEPALIVE
 void setAztecGraphLevel(int k) {
     if (k < 1) k = 1;
-    if (k > 50) k = 50;
+    if (k > MAX_N) k = MAX_N;
     g_aztecLevel = k;
 }
 
 EMSCRIPTEN_KEEPALIVE
 void generateAztecGraph(int k) {
     if (k < 1) k = 1;
-    if (k > 50) k = 50;
+    if (k > MAX_N) k = MAX_N;
     generateAztecGraphInternal(k);
 }
 

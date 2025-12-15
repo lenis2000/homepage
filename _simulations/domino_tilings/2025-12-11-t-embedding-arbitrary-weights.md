@@ -144,7 +144,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </details>
 
 <div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="50" style="width: 60px;"></label>
+  <label>n: <input id="n-input" type="number" value="6" min="1" max="100" style="width: 60px;"></label>
 
   <!-- Weight Preset Dropdown -->
   <label style="margin-left: 15px;">Weights:
@@ -164,6 +164,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   </span>
 
   <button id="compute-btn" style="margin-left: 15px;">Compute</button>
+  <div id="n-warning" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404; font-size: 12px;">⚠️ <strong>Warning:</strong> n &gt; 40 may take several minutes to compute</div>
 </div>
 
 <!-- Random IID params (collapsible panel) -->
@@ -524,7 +525,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   let isComputing = false;  // Flag to prevent re-entrancy during computation
 
   // Hard cap on n
-  const MAX_N = 50;
+  const MAX_N = 100;
 
   // Step-by-step visualization is only available for n <= this threshold
   const STEP_BY_STEP_MAX_N = 15;
@@ -534,6 +535,9 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     let n = parseInt(document.getElementById('n-input').value) || 6;
     n = Math.max(1, Math.min(MAX_N, n));
     document.getElementById('n-input').value = n;  // Update input to show clamped value
+    // Show warning for large n
+    const warning = document.getElementById('n-warning');
+    if (warning) warning.style.display = (n > 40) ? 'inline' : 'none';
     return n;
   }
 
@@ -3281,6 +3285,13 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 
     return { regime, p1, p2, prob1, prob2 };
   }
+
+  // Show/hide warning as user types n value
+  document.getElementById('n-input').addEventListener('input', () => {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const warning = document.getElementById('n-warning');
+    if (warning) warning.style.display = (n > 40) ? 'inline' : 'none';
+  });
 
   // Main compute button - initializes graph with weights and computes
   document.getElementById('compute-btn').addEventListener('click', () => {
