@@ -2039,7 +2039,7 @@ Part of this research was performed while the author was visiting the Institute 
     simulateAztecGammaDirect = shufflingModule.cwrap('simulateAztecGammaDirect', 'number',
       ['number', 'number', 'number'], {async: true});
     simulateAztecPeriodicDirect = shufflingModule.cwrap('simulateAztecPeriodicDirect', 'number',
-      ['number', 'number', 'number', 'number'], {async: true});
+      ['number', 'number', 'number', 'number', 'number', 'number'], {async: true});
     simulateAztecIIDDirect = shufflingModule.cwrap('simulateAztecIIDDirect', 'number',
       ['number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
@@ -2239,29 +2239,40 @@ Part of this research was performed while the author was visiting the Institute 
         const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
         resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
       } else if (preset === 'periodic') {
-        // For periodic preset, use direct face weights (not edge weights / cross-ratios)
+        // For periodic preset, pass all three weight tables (alpha, beta, gamma)
         const k = parseInt(document.getElementById('periodic-k').value) || 2;
         const l = parseInt(document.getElementById('periodic-l').value) || 2;
         const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
 
-        // Build flat array of face weights from alpha table (the main face weights)
-        // For EKLP, we use the alpha weights as the face weight pattern
-        const weightsArray = new Float64Array(k * l);
+        // Build flat arrays for alpha, beta, gamma
+        const alphaArray = new Float64Array(k * l);
+        const betaArray = new Float64Array(k * l);
+        const gammaArray = new Float64Array(k * l);
+
         for (let j = 0; j < k; j++) {
           for (let i = 0; i < l; i++) {
-            weightsArray[j * l + i] = periodicWeights.alpha[j][i];
+            alphaArray[j * l + i] = periodicWeights.alpha[j][i];
+            betaArray[j * l + i] = periodicWeights.beta[j][i];
+            gammaArray[j * l + i] = periodicWeights.gamma[j][i];
           }
         }
 
-        // Allocate WASM memory
-        const weightsPtr = shufflingModule._malloc(k * l * 8);
+        // Allocate WASM memory for all three tables
+        const alphaPtr = shufflingModule._malloc(k * l * 8);
+        const betaPtr = shufflingModule._malloc(k * l * 8);
+        const gammaPtr = shufflingModule._malloc(k * l * 8);
+
         for (let i = 0; i < k * l; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, weightsArray[i], 'double');
+          shufflingModule.setValue(alphaPtr + i * 8, alphaArray[i], 'double');
+          shufflingModule.setValue(betaPtr + i * 8, betaArray[i], 'double');
+          shufflingModule.setValue(gammaPtr + i * 8, gammaArray[i], 'double');
         }
 
-        resultPtr = await simulateAztecPeriodicDirect(N, k, l, weightsPtr);
+        resultPtr = await simulateAztecPeriodicDirect(N, k, l, alphaPtr, betaPtr, gammaPtr);
 
-        shufflingModule._free(weightsPtr);
+        shufflingModule._free(alphaPtr);
+        shufflingModule._free(betaPtr);
+        shufflingModule._free(gammaPtr);
       } else if (preset === 'all-ones') {
         // Uniform weights: use gamma with alpha=beta=1 (gives Gamma(1)=Exp(1) which averages to 1)
         // Or just use IID with all 1s
@@ -2278,34 +2289,44 @@ Part of this research was performed while the author was visiting the Institute 
         shufflingModule._free(weightsPtr);
 
       } else if (preset === 'random-iid' || preset === 'random-layered') {
-        // Generate edge weights in ab_gamma format:
-        // - Even rows (i % 2 == 0): random edge weights
-        // - Odd rows: all 1.0 (handled by C++)
+        // Generate edge weights for ALL positions (all four edge types: α, β, γ, δ)
         const dim = 2 * N;
         const seed = getSampleSeed();
         const rng = createSeededRNG(seed);
 
-        // Only pass weights for even rows - C++ handles the pattern
-        const numEvenRowWeights = N * dim;  // N even rows (0, 2, 4, ..., 2N-2), each with dim columns
-        const edgeWeights = new Float64Array(numEvenRowWeights);
+        // All dim×dim positions get random values
+        const numWeights = dim * dim;
+        const edgeWeights = new Float64Array(numWeights);
 
         if (preset === 'random-iid') {
           // IID: each weight is independent random
-          for (let i = 0; i < numEvenRowWeights; i++) {
+          for (let i = 0; i < numWeights; i++) {
             edgeWeights[i] = 0.5 + rng() * 1.5;  // Random in [0.5, 2.0]
           }
         } else {
-          // Layered: weights depend on row only
-          for (let row = 0; row < N; row++) {
-            const rowWeight = 0.5 + rng() * 1.5;
+          // Layered: weight W_j for positions where i%2==0 AND j%2==0
+          // One random weight per even column index
+          const numLayers = Math.ceil(dim / 2);  // number of even j values
+          const layerWeights = new Float64Array(numLayers);
+          for (let l = 0; l < numLayers; l++) {
+            layerWeights[l] = 0.5 + rng() * 1.5;
+          }
+
+          for (let i = 0; i < dim; i++) {
             for (let j = 0; j < dim; j++) {
-              edgeWeights[row * dim + j] = rowWeight;
+              if (i % 2 === 0 && j % 2 === 0) {
+                // Even row AND even column: layer weight W_j
+                edgeWeights[i * dim + j] = layerWeights[j / 2];
+              } else {
+                // All other positions: 1.0
+                edgeWeights[i * dim + j] = 1.0;
+              }
             }
           }
         }
 
-        const weightsPtr = shufflingModule._malloc(numEvenRowWeights * 8);
-        for (let i = 0; i < numEvenRowWeights; i++) {
+        const weightsPtr = shufflingModule._malloc(numWeights * 8);
+        for (let i = 0; i < numWeights; i++) {
           shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
         }
         resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
