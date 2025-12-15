@@ -387,6 +387,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <!-- Periodic Weights Editor (shown when periodic mode selected) -->
 <div id="weights-editor" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #c9f; background: #f8f0ff; border-radius: 4px;">
   <div style="margin-bottom: 8px; font-weight: bold;">Periodic Weights (k×l = <span id="weights-editor-dims">2×2</span>)</div>
+  <div style="margin-bottom: 6px; font-size: 11px; color: #666;" id="periodic-preset-desc">Preset loaded for this k×l</div>
   <div id="weights-tables" style="display: flex; flex-wrap: wrap; gap: 15px;"></div>
   <div style="margin-top: 10px;">
     <button id="close-weights-btn">Close</button>
@@ -1980,6 +1981,7 @@ Part of this research was performed while the author was visiting the Institute 
   let simulateAztecWithWeightMatrix = null;
   let simulateAztecWithEdgeWeights = null;
   let simulateAztecGammaDirect = null;
+  let simulateAztecPeriodicDirect = null;
   let shufflingFreeString = null;
   let shufflingGetProgress = null;
   let sampleDominoes = [];
@@ -2038,6 +2040,8 @@ Part of this research was performed while the author was visiting the Institute 
       ['number', 'number', 'number'], {async: true});
     simulateAztecGammaDirect = shufflingModule.cwrap('simulateAztecGammaDirect', 'number',
       ['number', 'number', 'number'], {async: true});
+    simulateAztecPeriodicDirect = shufflingModule.cwrap('simulateAztecPeriodicDirect', 'number',
+      ['number', 'number', 'number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
 
@@ -2330,6 +2334,30 @@ Part of this research was performed while the author was visiting the Institute 
         const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
         const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
         resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
+      } else if (preset === 'periodic') {
+        // For periodic preset, use direct face weights (not edge weights / cross-ratios)
+        const k = parseInt(document.getElementById('periodic-k').value) || 2;
+        const l = parseInt(document.getElementById('periodic-l').value) || 2;
+        const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
+
+        // Build flat array of face weights from alpha table (the main face weights)
+        // For EKLP, we use the alpha weights as the face weight pattern
+        const weightsArray = new Float64Array(k * l);
+        for (let j = 0; j < k; j++) {
+          for (let i = 0; i < l; i++) {
+            weightsArray[j * l + i] = periodicWeights.alpha[j][i];
+          }
+        }
+
+        // Allocate WASM memory
+        const weightsPtr = shufflingModule._malloc(k * l * 8);
+        for (let i = 0; i < k * l; i++) {
+          shufflingModule.setValue(weightsPtr + i * 8, weightsArray[i], 'double');
+        }
+
+        resultPtr = await simulateAztecPeriodicDirect(N, k, l, weightsPtr);
+
+        shufflingModule._free(weightsPtr);
       } else {
         // For other presets, generate edge weights and compute cross-ratios in C++
         const { hEdge, vEdge } = generateEdgeWeights(N);
@@ -4226,17 +4254,141 @@ Part of this research was performed while the author was visiting the Institute 
     }
   }
 
-  // Rebuild editor when k or l changes
+  // Predefined presets for each (k, l) combination - pronounced gas patterns
+  // Based on two-periodic model from Chhita-Johansson and extensions
+  function getDefaultPeriodicPreset(k, l) {
+    const presets = {
+      '1_1': { desc: 'Uniform', alpha: [[1]], beta: [[1]], gamma: [[1]] },
+      '1_2': { desc: 'a=0.3 stripe', alpha: [[0.3, 1]], beta: [[1, 0.3]], gamma: [[1, 1]] },
+      '1_3': { desc: 'Wave pattern', alpha: [[0.2, 1, 0.5]], beta: [[1, 0.5, 0.2]], gamma: [[1, 1, 1]] },
+      '1_4': { desc: 'Alternating', alpha: [[0.2, 1, 0.2, 1]], beta: [[1, 0.2, 1, 0.2]], gamma: [[1, 1, 1, 1]] },
+      '1_5': { desc: 'Gradient', alpha: [[0.1, 0.3, 0.5, 0.8, 1]], beta: [[1, 0.8, 0.5, 0.3, 0.1]], gamma: [[1, 1, 1, 1, 1]] },
+      '2_1': { desc: 'a=0.3 stripe', alpha: [[0.3], [1]], beta: [[1], [0.3]], gamma: [[1], [1]] },
+      '2_2': { desc: 'Chhita-Johansson a=0.3', alpha: [[0.3, 1], [1, 0.3]], beta: [[0.3, 1], [1, 0.3]], gamma: [[1, 1], [1, 1]] },
+      '2_3': { desc: '2×3 checkerboard a=0.25', alpha: [[0.25, 1, 0.25], [1, 0.25, 1]], beta: [[0.25, 1, 0.25], [1, 0.25, 1]], gamma: [[1, 1, 1], [1, 1, 1]] },
+      '2_4': { desc: '2×4 wave', alpha: [[0.2, 0.5, 1, 0.5], [0.5, 1, 0.5, 0.2]], beta: [[0.2, 0.5, 1, 0.5], [0.5, 1, 0.5, 0.2]], gamma: [[1, 1, 1, 1], [1, 1, 1, 1]] },
+      '2_5': { desc: '2×5 gradient', alpha: [[0.1, 0.2, 0.4, 0.7, 1], [1, 0.7, 0.4, 0.2, 0.1]], beta: [[0.1, 0.2, 0.4, 0.7, 1], [1, 0.7, 0.4, 0.2, 0.1]], gamma: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1]] },
+      '3_1': { desc: 'Wave pattern', alpha: [[0.2], [1], [0.5]], beta: [[1], [0.5], [0.2]], gamma: [[1], [1], [1]] },
+      '3_2': { desc: '3×2 checkerboard a=0.25', alpha: [[0.25, 1], [1, 0.25], [0.25, 1]], beta: [[0.25, 1], [1, 0.25], [0.25, 1]], gamma: [[1, 1], [1, 1], [1, 1]] },
+      '3_3': { desc: '3×3 center focus a=0.15', alpha: [[0.4, 0.25, 0.4], [0.25, 0.15, 0.25], [0.4, 0.25, 0.4]], beta: [[0.4, 0.25, 0.4], [0.25, 0.15, 0.25], [0.4, 0.25, 0.4]], gamma: [[1, 1, 1], [1, 1, 1], [1, 1, 1]] },
+      '3_4': { desc: '3×4 diagonal', alpha: [[0.15, 0.3, 0.6, 1], [0.3, 0.15, 0.3, 0.6], [0.6, 0.3, 0.15, 0.3]], beta: [[0.15, 0.3, 0.6, 1], [0.3, 0.15, 0.3, 0.6], [0.6, 0.3, 0.15, 0.3]], gamma: [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]] },
+      '3_5': { desc: '3×5 wave', alpha: [[0.1, 0.3, 0.6, 0.3, 0.1], [0.3, 0.6, 1, 0.6, 0.3], [0.1, 0.3, 0.6, 0.3, 0.1]], beta: [[0.1, 0.3, 0.6, 0.3, 0.1], [0.3, 0.6, 1, 0.6, 0.3], [0.1, 0.3, 0.6, 0.3, 0.1]], gamma: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]] },
+      '4_1': { desc: 'Alternating', alpha: [[0.2], [1], [0.2], [1]], beta: [[1], [0.2], [1], [0.2]], gamma: [[1], [1], [1], [1]] },
+      '4_2': { desc: '4×2 wave', alpha: [[0.2, 0.5], [0.5, 1], [1, 0.5], [0.5, 0.2]], beta: [[0.2, 0.5], [0.5, 1], [1, 0.5], [0.5, 0.2]], gamma: [[1, 1], [1, 1], [1, 1], [1, 1]] },
+      '4_3': { desc: '4×3 diagonal', alpha: [[0.15, 0.3, 0.6], [0.3, 0.15, 0.3], [0.6, 0.3, 0.15], [1, 0.6, 0.3]], beta: [[0.15, 0.3, 0.6], [0.3, 0.15, 0.3], [0.6, 0.3, 0.15], [1, 0.6, 0.3]], gamma: [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]] },
+      '4_4': { desc: '4×4 center focus a=0.1', alpha: [[0.5, 0.3, 0.3, 0.5], [0.3, 0.1, 0.1, 0.3], [0.3, 0.1, 0.1, 0.3], [0.5, 0.3, 0.3, 0.5]], beta: [[0.5, 0.3, 0.3, 0.5], [0.3, 0.1, 0.1, 0.3], [0.3, 0.1, 0.1, 0.3], [0.5, 0.3, 0.3, 0.5]], gamma: [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]] },
+      '4_5': { desc: '4×5 wave', alpha: [[0.1, 0.2, 0.4, 0.2, 0.1], [0.2, 0.4, 0.7, 0.4, 0.2], [0.4, 0.7, 1, 0.7, 0.4], [0.2, 0.4, 0.7, 0.4, 0.2]], beta: [[0.1, 0.2, 0.4, 0.2, 0.1], [0.2, 0.4, 0.7, 0.4, 0.2], [0.4, 0.7, 1, 0.7, 0.4], [0.2, 0.4, 0.7, 0.4, 0.2]], gamma: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]] },
+      '5_1': { desc: 'Gradient', alpha: [[0.1], [0.3], [0.5], [0.8], [1]], beta: [[1], [0.8], [0.5], [0.3], [0.1]], gamma: [[1], [1], [1], [1], [1]] },
+      '5_2': { desc: '5×2 gradient', alpha: [[0.1, 1], [0.2, 0.7], [0.4, 0.4], [0.7, 0.2], [1, 0.1]], beta: [[0.1, 1], [0.2, 0.7], [0.4, 0.4], [0.7, 0.2], [1, 0.1]], gamma: [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1]] },
+      '5_3': { desc: '5×3 wave', alpha: [[0.1, 0.3, 0.1], [0.3, 0.6, 0.3], [0.6, 1, 0.6], [0.3, 0.6, 0.3], [0.1, 0.3, 0.1]], beta: [[0.1, 0.3, 0.1], [0.3, 0.6, 0.3], [0.6, 1, 0.6], [0.3, 0.6, 0.3], [0.1, 0.3, 0.1]], gamma: [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]] },
+      '5_4': { desc: '5×4 wave', alpha: [[0.1, 0.2, 0.2, 0.1], [0.2, 0.4, 0.4, 0.2], [0.4, 0.7, 0.7, 0.4], [0.2, 0.4, 0.4, 0.2], [0.1, 0.2, 0.2, 0.1]], beta: [[0.1, 0.2, 0.2, 0.1], [0.2, 0.4, 0.4, 0.2], [0.4, 0.7, 0.7, 0.4], [0.2, 0.4, 0.4, 0.2], [0.1, 0.2, 0.2, 0.1]], gamma: [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]] },
+      '5_5': { desc: '5×5 center focus a=0.08', alpha: [[0.5, 0.35, 0.25, 0.35, 0.5], [0.35, 0.2, 0.12, 0.2, 0.35], [0.25, 0.12, 0.08, 0.12, 0.25], [0.35, 0.2, 0.12, 0.2, 0.35], [0.5, 0.35, 0.25, 0.35, 0.5]], beta: [[0.5, 0.35, 0.25, 0.35, 0.5], [0.35, 0.2, 0.12, 0.2, 0.35], [0.25, 0.12, 0.08, 0.12, 0.25], [0.35, 0.2, 0.12, 0.2, 0.35], [0.5, 0.35, 0.25, 0.35, 0.5]], gamma: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]] }
+    };
+
+    const key = `${k}_${l}`;
+    if (presets[key]) return presets[key];
+
+    // Fallback: generate checkerboard pattern for unlisted k×l
+    const alpha = [], beta = [], gamma = [];
+    for (let j = 0; j < k; j++) {
+      alpha[j] = []; beta[j] = []; gamma[j] = [];
+      for (let i = 0; i < l; i++) {
+        alpha[j][i] = (i + j) % 2 === 0 ? 0.3 : 1;
+        beta[j][i] = (i + j) % 2 === 0 ? 0.3 : 1;
+        gamma[j][i] = 1;
+      }
+    }
+    return { desc: 'Checkerboard a=0.3', alpha, beta, gamma };
+  }
+
+  // Rebuild editor with default preset when k or l changes
   document.getElementById('periodic-k').addEventListener('change', () => {
     if (weightPresetSelect.value === 'periodic') {
-      buildWeightsEditor();
+      applyDefaultPeriodicPreset();
     }
   });
   document.getElementById('periodic-l').addEventListener('change', () => {
     if (weightPresetSelect.value === 'periodic') {
-      buildWeightsEditor();
+      applyDefaultPeriodicPreset();
     }
   });
+
+  // Apply default preset for current k, l
+  function applyDefaultPeriodicPreset() {
+    const k = parseInt(document.getElementById('periodic-k').value) || 2;
+    const l = parseInt(document.getElementById('periodic-l').value) || 2;
+    const preset = getDefaultPeriodicPreset(k, l);
+
+    // Update description
+    document.getElementById('periodic-preset-desc').textContent = preset.desc;
+    document.getElementById('weights-editor-dims').textContent = `${k}×${l}`;
+
+    // Update C++
+    if (wasmReady && setPeriodicPeriod) {
+      setPeriodicPeriod(k, l);
+    }
+
+    // Set the weights in C++
+    if (wasmReady && setPeriodicWeight) {
+      for (let j = 0; j < k; j++) {
+        for (let i = 0; i < l; i++) {
+          setPeriodicWeight(0, j, i, preset.alpha[j][i]);
+          setPeriodicWeight(1, j, i, preset.beta[j][i]);
+          setPeriodicWeight(2, j, i, preset.gamma[j][i]);
+        }
+      }
+    }
+
+    // Rebuild the UI table with preset values
+    rebuildWeightsTables(k, l, preset);
+  }
+
+  // Build the weights tables UI from preset
+  function rebuildWeightsTables(k, l, preset) {
+    weightsTables.innerHTML = '';
+    const names = ['α (bottom)', 'β (right)', 'γ (left)'];
+    const arrays = [preset.alpha, preset.beta, preset.gamma];
+
+    for (let t = 0; t < 3; t++) {
+      const table = document.createElement('div');
+      table.style.cssText = 'background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;';
+      table.innerHTML = `<div style="font-weight: bold; margin-bottom: 5px; font-size: 12px;">${names[t]}</div>`;
+
+      const grid = document.createElement('div');
+      grid.style.cssText = `display: grid; grid-template-columns: repeat(${l}, 1fr); gap: 3px;`;
+
+      for (let j = 0; j < k; j++) {
+        for (let i = 0; i < l; i++) {
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.step = '0.1';
+          input.value = arrays[t][j][i].toFixed(2);
+          input.style.cssText = 'width: 50px; padding: 2px; font-size: 11px;';
+          input.dataset.type = t;
+          input.dataset.j = j;
+          input.dataset.i = i;
+          input.addEventListener('input', () => {
+            const type = parseInt(input.dataset.type);
+            const jIdx = parseInt(input.dataset.j);
+            const iIdx = parseInt(input.dataset.i);
+            const value = parseFloat(input.value) || 1;
+            if (wasmReady && setPeriodicWeight) {
+              setPeriodicWeight(type, jIdx, iIdx, value);
+            }
+          });
+          grid.appendChild(input);
+        }
+      }
+      table.appendChild(grid);
+      weightsTables.appendChild(table);
+    }
+  }
+
+  // Override buildWeightsEditor to apply default preset
+  const originalBuildWeightsEditor = buildWeightsEditor;
+  buildWeightsEditor = function() {
+    applyDefaultPeriodicPreset();
+  };
 
   // Close weights editor
   document.getElementById('close-weights-btn').addEventListener('click', () => {

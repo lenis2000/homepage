@@ -4,7 +4,7 @@
   Weighted EKLP shuffling for T-embedding page.
   Based on 2025-11-18-double-dimer-gamma.cpp (the correct slim functions).
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecWithEdgeWeights','_simulateAztecGammaDirect','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaDirect','_simulateAztecPeriodicDirect','_simulateAztecIIDDirect','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
@@ -256,12 +256,56 @@ MatrixInt aztecgenslim(const vector<MatrixDouble>& x0) {
     return a1;
 }
 
-// ab_gamma: generates face weight matrix with Gamma distribution for EKLP shuffling
-// This is the correct pattern from the Duits-Van Peski "Gamma-disordered Aztec diamond"
-// The face weights matrix for EKLP has:
-// - Even rows (i%2==0): even cols get Gamma(beta), odd cols get Gamma(alpha)
-// - Odd rows: all 1.0
-MatrixDouble ab_gamma(int n, double alpha, double beta) {
+// Compute BLACK face weights from edge weights using cross-ratios
+// For EKLP shuffling, we only need weights on black faces (checkerboard: (i+j) % 2 == 0)
+// White faces get weight 1.0
+//
+// Edge weight convention for T-embedding:
+// - Each face has 4 edges: bottom (S), right (E), top (N), left (W)
+// - Cross-ratio for black face = (S * N) / (E * W)
+//
+// For Gamma model (Duits-Van Peski):
+// - a_{i,j} edges ~ Gamma(alpha) on certain edges
+// - b_{i,j} edges ~ Gamma(beta) on certain edges
+// - Other edges = 1
+MatrixDouble computeBlackFaceWeights(int n, double* edgeWeights, int numEdges) {
+    int dim = 2 * n;
+    MatrixDouble A(dim, dim, 1.0);  // Initialize all to 1.0
+
+    // edgeWeights is a flat array of all edge weights
+    // We compute cross-ratios only for black faces
+    int idx = 0;
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            if ((i + j) % 2 == 0) {  // Black face
+                // Get the 4 edge weights for this face
+                double S = edgeWeights[idx++];  // bottom
+                double E = edgeWeights[idx++];  // right
+                double N = edgeWeights[idx++];  // top
+                double W = edgeWeights[idx++];  // left
+
+                // Cross-ratio
+                double denom = E * W;
+                if (denom < 1e-12) denom = 1e-12;
+                A.at(i, j) = (S * N) / denom;
+            }
+            // White faces stay 1.0
+        }
+    }
+    return A;
+}
+
+// Generate Gamma face weights for EKLP shuffling (Duits-Van Peski model)
+// EXACTLY matches ab_gamma from 2025-11-18-double-dimer-gamma.cpp
+//
+// Pattern (ROW-BASED, not checkerboard):
+//   - Even rows (i % 2 == 0): alternating Gamma(beta), Gamma(alpha), ...
+//   - Odd rows (i % 2 == 1): all 1.0
+//
+// For even rows:
+//   - j even → Gamma(beta)
+//   - j odd → Gamma(alpha)
+MatrixDouble generateGammaFaceWeights(int n, double alpha, double beta) {
     std::gamma_distribution<> gamma_a(alpha, 1.0);
     std::gamma_distribution<> gamma_b(beta, 1.0);
 
@@ -269,7 +313,7 @@ MatrixDouble ab_gamma(int n, double alpha, double beta) {
     MatrixDouble A(dim, dim, 1.0);  // Initialize all to 1.0
 
     for (int i = 0; i < dim; i++) {
-        if (i % 2 == 0) {  // Even rows only
+        if (i % 2 == 0) {  // EVEN ROWS ONLY (matching ab_gamma exactly)
             for (int j = 0; j < dim; j++) {
                 if (j % 2 == 0) {
                     A.at(i, j) = gamma_b(rng);  // beta
@@ -279,6 +323,41 @@ MatrixDouble ab_gamma(int n, double alpha, double beta) {
             }
         }
         // Odd rows stay 1.0 (already initialized)
+    }
+    return A;
+}
+
+// Generate k×l periodic face weights for EKLP shuffling
+// Pattern: even rows get weights from periodicWeights table, odd rows stay 1.0
+MatrixDouble generatePeriodicFaceWeights(int n, int k, int l, double* weights) {
+    int dim = 2 * n;
+    MatrixDouble A(dim, dim, 1.0);
+
+    for (int i = 0; i < dim; i++) {
+        if (i % 2 == 0) {  // Only even rows (EKLP convention)
+            for (int j = 0; j < dim; j++) {
+                int pi = (i / 2) % k;
+                int pj = j % l;
+                A.at(i, j) = weights[pi * l + pj];
+            }
+        }
+    }
+    return A;
+}
+
+// Generate IID face weights for EKLP shuffling
+// Even rows: random weights, odd rows: 1.0
+MatrixDouble generateIIDFaceWeights(int n, double* randomValues) {
+    int dim = 2 * n;
+    MatrixDouble A(dim, dim, 1.0);
+    int idx = 0;
+
+    for (int i = 0; i < dim; i++) {
+        if (i % 2 == 0) {  // Only even rows
+            for (int j = 0; j < dim; j++) {
+                A.at(i, j) = randomValues[idx++];
+            }
+        }
     }
     return A;
 }
@@ -313,7 +392,150 @@ MatrixDouble computeCrossRatios(int dim, double* hEdge, double* vEdge) {
 
 extern "C" {
 
-// Simulate with Gamma weights using the correct ab_gamma pattern (Duits-Van Peski)
+// Simulate with IID face weights (pre-generated in JS)
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecIIDDirect(int n, double* faceWeights) {
+    try {
+        progressCounter = 0;
+        if (n > 300) n = 300;
+
+        // Generate face weight matrix from pre-generated random values
+        MatrixDouble A1a = generateIIDFaceWeights(n, faceWeights);
+
+        emscripten_sleep(0);
+
+        vector<MatrixDouble> prob = probsslim(A1a);
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        MatrixInt dominoConfig = aztecgenslim(prob);
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        ostringstream oss;
+        oss << "[";
+        int size = dominoConfig.size();
+        bool first = true;
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig.at(i, j) == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+
+                    if (oddI && oddJ) {
+                        color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                    } else if (oddI && !oddJ) {
+                        color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                    } else if (!oddI && !oddJ) {
+                        color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                    } else {
+                        color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                    }
+
+                    if (!first) oss << ",";
+                    else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+
+        oss << "]";
+        progressCounter = 100;
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
+}
+
+// Simulate with k×l periodic face weights
+EMSCRIPTEN_KEEPALIVE
+char* simulateAztecPeriodicDirect(int n, int k, int l, double* weights) {
+    try {
+        progressCounter = 0;
+
+        // Hard limit: N <= 300
+        if (n > 300) n = 300;
+
+        // Generate periodic face weights directly
+        MatrixDouble A1a = generatePeriodicFaceWeights(n, k, l, weights);
+
+        emscripten_sleep(0);
+
+        // Compute probability matrices
+        vector<MatrixDouble> prob = probsslim(A1a);
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        // Generate domino configuration
+        MatrixInt dominoConfig = aztecgenslim(prob);
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        // Build JSON output
+        ostringstream oss;
+        oss << "[";
+        int size = dominoConfig.size();
+        bool first = true;
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (dominoConfig.at(i, j) == 1) {
+                    double x, y, w, h;
+                    string color;
+                    bool oddI = (i & 1), oddJ = (j & 1);
+
+                    if (oddI && oddJ) {
+                        color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                    } else if (oddI && !oddJ) {
+                        color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                    } else if (!oddI && !oddJ) {
+                        color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
+                    } else {
+                        color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
+                    }
+
+                    if (!first) oss << ",";
+                    else first = false;
+                    oss << "{\"x\":" << x << ",\"y\":" << y
+                        << ",\"w\":" << w << ",\"h\":" << h
+                        << ",\"color\":\"" << color << "\"}";
+                }
+            }
+        }
+
+        oss << "]";
+        progressCounter = 100;
+
+        string json = oss.str();
+        char* out = (char*)malloc(json.size() + 1);
+        if (!out) throw std::runtime_error("Memory allocation failed");
+        strcpy(out, json.c_str());
+        return out;
+
+    } catch (const std::exception& e) {
+        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
+        char* out = (char*)malloc(errorMsg.size() + 1);
+        if (out) strcpy(out, errorMsg.c_str());
+        progressCounter = 100;
+        return out;
+    }
+}
+
+// Simulate with Gamma weights using black face cross-ratios (Duits-Van Peski)
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztecGammaDirect(int n, double alpha, double beta) {
     try {
@@ -322,8 +544,8 @@ char* simulateAztecGammaDirect(int n, double alpha, double beta) {
         // Hard limit: N <= 300
         if (n > 300) n = 300;
 
-        // Generate face weights using ab_gamma pattern
-        MatrixDouble A1a = ab_gamma(n, alpha, beta);
+        // Generate face weights: black faces get cross-ratio a/b, white faces get 1
+        MatrixDouble A1a = generateGammaFaceWeights(n, alpha, beta);
 
         emscripten_sleep(0);
 
