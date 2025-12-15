@@ -1,21 +1,15 @@
 /*
+  2025-12-11-t-embedding-shuffling.cpp
 
-emcc domino.cpp -o domino.js\
- -s WASM=1 \
- -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztec6x2','_performGlauberSteps','_simulateAztecVertical','_simulateAztecHorizontal','_wasGlauberActive','_freeString','_getProgress']" \
- -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
- -s ALLOW_MEMORY_GROWTH=1 \
- -s INITIAL_MEMORY=64MB \
- -s ENVIRONMENT=web \
- -s SINGLE_FILE=1 \
- -O3 -ffast-math
+  Weighted EKLP shuffling for T-embedding page.
+  Based on s/domino.cpp with added support for arbitrary weight matrices.
 
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztecWithWeightMatrix','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 
 Features:
 - 3x3 periodic weights for random domino tilings of Aztec diamond
 - 2x2 periodic weights support added (May 2025)
-- Memory efficient implementation
+- Arbitrary weight matrix support for T-embedding integration
 
 */
 
