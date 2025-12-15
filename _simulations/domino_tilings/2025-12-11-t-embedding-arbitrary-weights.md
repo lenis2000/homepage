@@ -426,6 +426,7 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
 <!-- Benchmark Section -->
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">Performance Benchmark</h3>
+  <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=35, measures time for each, and fits a power law t(n) ~ n<sup>α</sup> to determine the computational complexity exponent α.</p>
   <button id="benchmark-btn">Benchmark (takes a few minutes)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
@@ -2201,7 +2202,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     const canvas = document.getElementById('main-temb-2d-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const n = parseInt(document.getElementById('n-input').value) || 6;
+    // Use currentSimulationN (the computed n), not the input value
+    const n = currentSimulationN;
 
     // Handle DPI scaling
     const dpr = window.devicePixelRatio || 1;
@@ -2471,7 +2473,8 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
   function renderMain3D() {
     if (!main3DCanvas) return;
     const ctx = main3DCtx;
-    const n = parseInt(document.getElementById('n-input').value) || 6;
+    // Use currentSimulationN (the computed n), not the input value
+    const n = currentSimulationN;
 
     // Handle DPI scaling
     const dpr = window.devicePixelRatio || 1;
@@ -4518,6 +4521,193 @@ I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discuss
     renderStepwiseTemb();
     renderAztecGraph();
   });
+
+  // ========== BENCHMARK FUNCTIONS ==========
+
+  function fitPowerLaw(results) {
+    // Linear regression on log-log scale: log(t) = log(c) + alpha * log(n)
+    // Returns alpha (the exponent)
+    if (results.length < 2) return 0;
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    let count = 0;
+    for (const r of results) {
+      if (r.time <= 0) continue;
+      const x = Math.log(r.n);
+      const y = Math.log(r.time);
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+      count++;
+    }
+    if (count < 2) return 0;
+
+    const alpha = (count * sumXY - sumX * sumY) / (count * sumX2 - sumX * sumX);
+    return alpha;
+  }
+
+  function plotBenchmarkResults(results, alpha) {
+    const canvas = document.getElementById('benchmark-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const padding = 50;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, W, H);
+
+    if (results.length === 0) return;
+
+    // Find ranges
+    const nMin = 10, nMax = 35;
+    const times = results.map(r => r.time).filter(t => t > 0);
+    if (times.length === 0) return;
+    const tMin = Math.min(...times) * 0.8;
+    const tMax = Math.max(...times) * 1.2;
+
+    // Log scale for y-axis
+    const logTMin = Math.log10(Math.max(tMin, 1));
+    const logTMax = Math.log10(tMax);
+
+    // Map functions
+    const mapX = n => padding + (n - nMin) / (nMax - nMin) * (W - 2 * padding);
+    const mapY = t => H - padding - (Math.log10(Math.max(t, 1)) - logTMin) / (logTMax - logTMin) * (H - 2 * padding);
+
+    // Draw axes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, H - padding);
+    ctx.lineTo(W - padding, H - padding);
+    ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('n', W / 2, H - 10);
+    ctx.save();
+    ctx.translate(15, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('time (ms)', 0, 0);
+    ctx.restore();
+
+    // X-axis ticks
+    for (let n = 10; n <= 35; n += 5) {
+      const x = mapX(n);
+      ctx.beginPath();
+      ctx.moveTo(x, H - padding);
+      ctx.lineTo(x, H - padding + 5);
+      ctx.stroke();
+      ctx.fillText(n.toString(), x, H - padding + 18);
+    }
+
+    // Y-axis ticks (log scale)
+    ctx.textAlign = 'right';
+    for (let logT = Math.ceil(logTMin); logT <= Math.floor(logTMax); logT++) {
+      const t = Math.pow(10, logT);
+      const y = mapY(t);
+      if (y > padding && y < H - padding) {
+        ctx.beginPath();
+        ctx.moveTo(padding - 5, y);
+        ctx.lineTo(padding, y);
+        ctx.stroke();
+        ctx.fillText(t >= 1000 ? (t/1000).toFixed(0) + 's' : t.toFixed(0) + 'ms', padding - 8, y + 4);
+      }
+    }
+
+    // Draw fit line if we have alpha
+    if (alpha && results.length >= 2) {
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      // Use first point to compute c: log(t) = log(c) + alpha*log(n) => c = t / n^alpha
+      const r0 = results.find(r => r.time > 0);
+      if (r0) {
+        const c = r0.time / Math.pow(r0.n, alpha);
+        for (let n = nMin; n <= nMax; n++) {
+          const t = c * Math.pow(n, alpha);
+          const x = mapX(n);
+          const y = mapY(t);
+          if (n === nMin) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    // Draw data points
+    ctx.fillStyle = '#2196F3';
+    for (const r of results) {
+      if (r.time <= 0) continue;
+      const x = mapX(r.n);
+      const y = mapY(r.time);
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+
+  async function runBenchmark() {
+    const btn = document.getElementById('benchmark-btn');
+    const status = document.getElementById('benchmark-status');
+    const resultsDiv = document.getElementById('benchmark-results');
+    const fitDiv = document.getElementById('benchmark-fit');
+
+    btn.disabled = true;
+    resultsDiv.style.display = 'block';
+
+    const results = [];
+
+    for (let n = 10; n <= 35; n++) {
+      status.textContent = `Running n=${n}...`;
+      await delay(50);  // Yield to UI
+
+      // Set n and run full computation
+      document.getElementById('n-input').value = n;
+      setN(n);
+
+      // Generate graph
+      generateAztecGraph(n);
+      randomizeAztecWeights();
+
+      // Run all reduction steps
+      while (canAztecStepDown()) {
+        aztecGraphStepDown();
+      }
+      while (canAztecStepUp()) {
+        aztecGraphStepUp();
+      }
+
+      // Get compute time
+      const timeMs = getComputeTimeMs();
+      results.push({ n, time: timeMs });
+
+      // Update plot
+      const alpha = fitPowerLaw(results);
+      plotBenchmarkResults(results, alpha);
+      fitDiv.textContent = results.length >= 3
+        ? `Fit: t(n) ~ n^${alpha.toFixed(2)} (${results.length} points)`
+        : 'Collecting data...';
+    }
+
+    // Final fit
+    const alpha = fitPowerLaw(results);
+    plotBenchmarkResults(results, alpha);
+    fitDiv.textContent = `Fit: t(n) ~ n^${alpha.toFixed(2)}`;
+    status.textContent = 'Done!';
+    btn.disabled = false;
+
+    // Log results to console
+    console.log('Benchmark results:', results);
+    console.log('Power law exponent alpha:', alpha);
+  }
+
+  document.getElementById('benchmark-btn').addEventListener('click', runBenchmark);
 
   // Initialize
   initWasm();
