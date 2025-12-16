@@ -265,148 +265,216 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     </span>
 
     <button id="compute-btn"
-            style="padding: 10px 24px; font-size: 15px; font-weight: bold; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;"
+            style="padding: 10px 24px; font-size: 15px; font-weight: bold; background: #E57200; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;"
             aria-label="Compute T-embedding with current parameters">
       ▶ Compute
     </button>
   </div>
 
-  <div id="compute-time" style="margin-bottom: 8px; color: #2e7d32; font-weight: 500; min-height: 20px;"></div>
+  <div id="compute-time" style="margin-bottom: 8px; color: #E57200; font-weight: 500; min-height: 20px;"></div>
 
   <div id="n-warning" style="display: none; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-left-width: 4px; border-radius: 4px; color: #856404; font-size: 12px;">
     ⚠️ <strong>Note:</strong> n &gt; 60 may take several dozen seconds to compute
   </div>
 </div>
 
-<!-- Random IID params (collapsible panel) -->
-<div id="iid-params" style="display: block; margin-bottom: 10px; padding: 10px; border: 1px solid #99c; background: #f0f0ff; border-radius: 4px;">
-  <div style="margin-bottom: 8px; font-weight: bold;">IID Distribution</div>
+<!-- Random IID params panel -->
+<div id="iid-params" style="display: block; margin-bottom: 12px; padding: 12px; border: 1px solid #232D4B; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
+  <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">📊 IID Distribution</div>
 
-  <div style="margin-bottom: 8px;">
-    <label>Distribution:
-      <select id="iid-distribution-select" style="margin-left: 5px;">
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <strong>Distribution:</strong>
+      <select id="iid-distribution-select" style="min-width: 140px;" aria-label="Select IID distribution type">
         <option value="uniform" selected>Uniform [a, b]</option>
         <option value="exponential">Exponential (1)</option>
         <option value="pareto">Pareto (α, x_min)</option>
         <option value="geometric">Geometric (p), X≥1</option>
       </select>
     </label>
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <strong>Seed:</strong>
+      <input id="random-seed" type="number" value="42" style="width: 70px;" aria-label="Random seed for IID weights">
+    </label>
   </div>
 
   <!-- Uniform distribution params -->
-  <div id="iid-uniform-params" style="margin-bottom: 8px;">
-    <small>Each edge weight ~ Uniform[a, b]</small><br>
-    a: <input type="number" id="iid-min" value="0.5" step="0.1" min="0.001" style="width: 60px;">
-    b: <input type="number" id="iid-max" value="2.0" step="0.1" min="0.001" style="width: 60px;">
+  <div id="iid-uniform-params" style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Each edge weight ~ Uniform[a, b]</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>a:</span>
+        <input type="number" id="iid-min" value="0.5" step="0.1" min="0.001" style="width: 70px;" aria-label="Uniform distribution minimum">
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>b:</span>
+        <input type="number" id="iid-max" value="2.0" step="0.1" min="0.001" style="width: 70px;" aria-label="Uniform distribution maximum">
+      </label>
+    </div>
   </div>
 
   <!-- Exponential distribution params -->
-  <div id="iid-exponential-params" style="display: none; margin-bottom: 8px;">
-    <small>Each edge weight ~ Exp(1). Mean = 1</small><br>
-    <small style="color: #666;">(General Exp(λ) only scales weights, which doesn't affect T-embeddings)</small>
+  <div id="iid-exponential-params" style="display: none; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666;">Each edge weight ~ Exp(1). Mean = 1</div>
+    <div style="font-size: 11px; color: #999; margin-top: 4px;">(General Exp(λ) only scales weights, which doesn't affect T-embeddings)</div>
   </div>
 
   <!-- Pareto distribution params -->
-  <div id="iid-pareto-params" style="display: none; margin-bottom: 8px;">
-    <small>Each edge weight ~ Pareto(α, x_min). Heavy tail.</small><br>
-    α: <input type="number" id="iid-pareto-alpha" value="2.0" step="0.1" min="0.1" style="width: 60px;">
-    x_min: <input type="number" id="iid-pareto-xmin" value="1.0" step="0.1" min="0.01" style="width: 60px;">
+  <div id="iid-pareto-params" style="display: none; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Each edge weight ~ Pareto(α, x_min). Heavy tail.</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>α:</span>
+        <input type="number" id="iid-pareto-alpha" value="2.0" step="0.1" min="0.1" style="width: 70px;" aria-label="Pareto shape parameter">
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>x_min:</span>
+        <input type="number" id="iid-pareto-xmin" value="1.0" step="0.1" min="0.01" style="width: 70px;" aria-label="Pareto scale parameter">
+      </label>
+    </div>
   </div>
 
   <!-- Geometric distribution params -->
-  <div id="iid-geometric-params" style="display: none; margin-bottom: 8px;">
-    <small>Each edge weight ~ Geometric(p), X ≥ 1. Mean = 1/p</small><br>
-    p: <input type="number" id="iid-geom-p" value="0.5" step="0.05" min="0.01" max="0.99" style="width: 60px;">
-  </div>
-
-  <div style="margin-top: 8px;">
-    Seed: <input id="random-seed" type="number" value="42" style="width: 60px;">
+  <div id="iid-geometric-params" style="display: none; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Each edge weight ~ Geometric(p), X ≥ 1. Mean = 1/p</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>p:</span>
+        <input type="number" id="iid-geom-p" value="0.5" step="0.05" min="0.01" max="0.99" style="width: 70px;" aria-label="Geometric distribution probability">
+      </label>
+    </div>
   </div>
 </div>
 
-<!-- Random Gamma params (collapsible panel) -->
-<div id="gamma-params" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #c99; background: #fff0f0; border-radius: 4px;">
-  <div style="margin-bottom: 8px; font-weight: bold;">Gamma Distribution <span style="font-weight: normal; font-size: 0.85em;">(Duits, Van Peski <a href="https://arxiv.org/abs/2512.03033" target="_blank">[arXiv:2512.03033]</a>)</span></div>
-  <small>α edges (bottom of faces) ~ Γ(α, 1), β edges (right of faces) ~ Γ(β, 1)</small>
-  <div style="margin-top: 8px;">
-    α: <input id="gamma-alpha" type="number" value="0.2" min="0.01" max="50" step="0.01" style="width: 60px;">
-    β: <input id="gamma-beta" type="number" value="0.25" min="0.01" max="50" step="0.01" style="width: 60px;">
+<!-- Random Gamma params panel -->
+<div id="gamma-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #E57200; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
+  <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+    📈 Gamma Distribution
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(Duits, Van Peski <a href="https://arxiv.org/abs/2512.03033" target="_blank">[arXiv:2512.03033]</a>)</span>
   </div>
-  <div style="margin-top: 8px;">
-    Seed: <input id="gamma-seed" type="number" value="42" style="width: 60px;">
+
+  <div style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 8px;">α edges (bottom of faces) ~ Γ(α, 1), β edges (right of faces) ~ Γ(β, 1)</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>α:</span>
+        <input id="gamma-alpha" type="number" value="0.2" min="0.01" max="50" step="0.01" style="width: 70px;" aria-label="Gamma alpha parameter">
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>β:</span>
+        <input id="gamma-beta" type="number" value="0.25" min="0.01" max="50" step="0.01" style="width: 70px;" aria-label="Gamma beta parameter">
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px;">
+        <strong>Seed:</strong>
+        <input id="gamma-seed" type="number" value="42" style="width: 70px;" aria-label="Random seed for Gamma weights">
+      </label>
+    </div>
   </div>
 </div>
 
-<!-- Random Layered params (collapsible) -->
-<div id="layered-params" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #9c9; background: #f0fff0; border-radius: 4px;">
-  <div style="margin-bottom: 8px; font-weight: bold;">Layered Weight Regime <span style="font-weight: normal; font-size: 0.85em;">(Bufetov, Petrov, Zografos <a href="https://arxiv.org/abs/2507.08560" target="_blank">[arXiv:2507.08560]</a>)</span></div>
-
-  <div style="margin-bottom: 8px;">
-    <input type="radio" id="layered-regime1" name="layered-regime" value="1">
-    <label for="layered-regime1"><strong>Regime 1: Critical Scaling</strong></label>
-    <div id="layered-regime1-params" style="margin-left: 25px; display: none; margin-top: 5px;">
-      <small>Weight = Val1 + 2/√n (prob p₁) or Val2 - 1/√n (prob p₂)</small><br>
-      Val1: <input type="number" id="layered1-val1" value="1" step="0.1" style="width: 50px;">
-      Val2: <input type="number" id="layered1-val2" value="1" step="0.1" style="width: 50px;">
-      p₁: <input type="number" id="layered1-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
-      p₂: <input type="number" id="layered1-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
-    </div>
+<!-- Random Layered params panel -->
+<div id="layered-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #2A69A6; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
+  <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+    📶 Layered Weight Regime
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(Bufetov, Petrov, Zografos <a href="https://arxiv.org/abs/2507.08560" target="_blank">[arXiv:2507.08560]</a>)</span>
   </div>
 
-  <div style="margin-bottom: 8px;">
-    <input type="radio" id="layered-regime2" name="layered-regime" value="2">
-    <label for="layered-regime2"><strong>Regime 2: Rare Event Scaling</strong></label>
-    <div id="layered-regime2-params" style="margin-left: 25px; display: none; margin-top: 5px;">
-      <small>Weight = Val1 (prob 1/√n) or Val2 (prob (√n-1)/√n)</small><br>
-      Val1: <input type="number" id="layered2-val1" value="2" step="0.1" style="width: 50px;">
-      Val2: <input type="number" id="layered2-val2" value="1" step="0.1" style="width: 50px;">
-    </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <strong>Seed:</strong>
+      <input id="layered-seed" type="number" value="42" style="width: 70px;" aria-label="Random seed for layered weights">
+    </label>
   </div>
 
-  <div style="margin-bottom: 8px;">
-    <input type="radio" id="layered-regime3" name="layered-regime" value="3" checked>
-    <label for="layered-regime3"><strong>Regime 3: Bernoulli (Default)</strong></label>
-    <div id="layered-regime3-params" style="margin-left: 25px; display: block; margin-top: 5px;">
-      <small>Weight = Val1 (prob p₁) or Val2 (prob p₂)</small><br>
-      Val1: <input type="number" id="layered3-val1" value="2" step="0.1" style="width: 50px;">
-      Val2: <input type="number" id="layered3-val2" value="0.5" step="0.1" style="width: 50px;">
-      p₁: <input type="number" id="layered3-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
-      p₂: <input type="number" id="layered3-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 50px;">
+  <div style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <!-- Regime 1 -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="layered-regime1" name="layered-regime" value="1" aria-label="Select Regime 1">
+        <strong>Regime 1: Critical Scaling</strong>
+      </label>
+      <div id="layered-regime1-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = Val1 + 2/√n (prob p₁) or Val2 - 1/√n (prob p₂)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">Val1: <input type="number" id="layered1-val1" value="1" step="0.1" style="width: 60px;" aria-label="Value 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">Val2: <input type="number" id="layered1-val2" value="1" step="0.1" style="width: 60px;" aria-label="Value 2"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₁: <input type="number" id="layered1-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₂: <input type="number" id="layered1-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 2"></label>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div style="margin-bottom: 8px;">
-    <input type="radio" id="layered-regime4" name="layered-regime" value="4">
-    <label for="layered-regime4"><strong>Regime 4: Deterministic Periodic</strong></label>
-    <div id="layered-regime4-params" style="margin-left: 25px; display: none; margin-top: 5px;">
-      <small>Pattern: w₁, w₂, w₁, w₂, ... by diagonal</small><br>
-      w₁: <input type="number" id="layered4-w1" value="2" step="0.1" style="width: 50px;">
-      w₂: <input type="number" id="layered4-w2" value="0.5" step="0.1" style="width: 50px;">
+    <!-- Regime 2 -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="layered-regime2" name="layered-regime" value="2" aria-label="Select Regime 2">
+        <strong>Regime 2: Rare Event Scaling</strong>
+      </label>
+      <div id="layered-regime2-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = Val1 (prob 1/√n) or Val2 (prob (√n-1)/√n)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">Val1: <input type="number" id="layered2-val1" value="2" step="0.1" style="width: 60px;" aria-label="Value 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">Val2: <input type="number" id="layered2-val2" value="1" step="0.1" style="width: 60px;" aria-label="Value 2"></label>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div style="margin-bottom: 8px;">
-    <input type="radio" id="layered-regime5" name="layered-regime" value="5">
-    <label for="layered-regime5"><strong>Regime 5: Continuous Uniform [a,b]</strong></label>
-    <div id="layered-regime5-params" style="margin-left: 25px; display: none; margin-top: 5px;">
-      <small>Weight ~ Uniform[a, b]</small><br>
-      a: <input type="number" id="layered5-min" value="0.5" step="0.1" style="width: 50px;">
-      b: <input type="number" id="layered5-max" value="2.0" step="0.1" style="width: 50px;">
+    <!-- Regime 3 (default) -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="layered-regime3" name="layered-regime" value="3" checked aria-label="Select Regime 3">
+        <strong>Regime 3: Bernoulli (Default)</strong>
+      </label>
+      <div id="layered-regime3-params" style="display: block; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = Val1 (prob p₁) or Val2 (prob p₂)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">Val1: <input type="number" id="layered3-val1" value="2" step="0.1" style="width: 60px;" aria-label="Value 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">Val2: <input type="number" id="layered3-val2" value="0.5" step="0.1" style="width: 60px;" aria-label="Value 2"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₁: <input type="number" id="layered3-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₂: <input type="number" id="layered3-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 2"></label>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div style="margin-top: 8px;">
-    Seed: <input id="layered-seed" type="number" value="42" style="width: 60px;">
+    <!-- Regime 4 -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="layered-regime4" name="layered-regime" value="4" aria-label="Select Regime 4">
+        <strong>Regime 4: Deterministic Periodic</strong>
+      </label>
+      <div id="layered-regime4-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Pattern: w₁, w₂, w₁, w₂, ... by diagonal</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">w₁: <input type="number" id="layered4-w1" value="2" step="0.1" style="width: 60px;" aria-label="Weight 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">w₂: <input type="number" id="layered4-w2" value="0.5" step="0.1" style="width: 60px;" aria-label="Weight 2"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 5 -->
+    <div>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="layered-regime5" name="layered-regime" value="5" aria-label="Select Regime 5">
+        <strong>Regime 5: Continuous Uniform [a,b]</strong>
+      </label>
+      <div id="layered-regime5-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight ~ Uniform[a, b]</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">a: <input type="number" id="layered5-min" value="0.5" step="0.1" style="width: 60px;" aria-label="Minimum value"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">b: <input type="number" id="layered5-max" value="2.0" step="0.1" style="width: 60px;" aria-label="Maximum value"></label>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- Periodic Weights Editor (shown when periodic mode selected) -->
-<div id="weights-editor" style="display: none; margin-bottom: 10px; padding: 10px; border: 1px solid #c9f; background: #f8f0ff; border-radius: 4px;">
-  <div style="margin-bottom: 8px; font-weight: bold;">Periodic Weights (k×l = <span id="weights-editor-dims">2×2</span>)</div>
-  <div style="margin-bottom: 6px; font-size: 11px; color: #666;" id="periodic-preset-desc">Preset loaded for this k×l</div>
-  <div id="weights-tables" style="display: flex; flex-wrap: wrap; gap: 15px;"></div>
-  <div style="margin-top: 10px;">
-    <button id="close-weights-btn">Close</button>
+<!-- Periodic Weights Editor panel -->
+<div id="weights-editor" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #002f6c; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
+  <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">🔲 Periodic Weights (k×l = <span id="weights-editor-dims">2×2</span>)</div>
+  <div style="font-size: 12px; color: #666; margin-bottom: 10px;" id="periodic-preset-desc">Preset loaded for this k×l</div>
+  <div id="weights-tables" style="display: flex; flex-wrap: wrap; gap: 15px; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;"></div>
+  <div style="margin-top: 12px;">
+    <button id="close-weights-btn" style="padding: 6px 16px; background: #232D4B; color: white; border: none; border-radius: 4px; cursor: pointer;" aria-label="Close weights editor">Close Editor</button>
   </div>
 </div>
 
@@ -501,7 +569,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">💾 Export Options</div>
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;" role="group" aria-label="Export options">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="export-pdf-btn" style="padding: 6px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
+          <button id="export-pdf-btn" style="padding: 6px 14px; background: #E57200; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
             <input type="checkbox" id="pdf-include-origami" checked aria-label="Include origami in PDF export">
             <span>+Origami</span>
@@ -509,7 +577,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         </div>
         <span style="color: #dee2e6;">|</span>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="export-png-btn" style="padding: 6px 14px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
+          <button id="export-png-btn" style="padding: 6px 14px; background: #2A69A6; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
             <span>Quality:</span>
             <input type="range" id="png-quality-slider" min="1" max="100" value="85" style="width: 70px;" aria-label="PNG quality">
@@ -517,7 +585,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           </label>
         </div>
         <span style="color: #dee2e6;">|</span>
-        <button id="export-obj-btn" style="padding: 6px 14px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export 3D model as OBJ">OBJ (3D)</button>
+        <button id="export-obj-btn" style="padding: 6px 14px; background: #002f6c; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export 3D model as OBJ">OBJ (3D)</button>
       </div>
     </div>
   </div>
@@ -550,11 +618,11 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           </label>
         </span>
         <button id="sample-btn"
-                style="padding: 8px 20px; font-weight: bold; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                style="padding: 8px 20px; font-weight: bold; background: #232D4B; color: white; border: none; border-radius: 4px; cursor: pointer;"
                 aria-label="Generate random domino tiling">
           🎲 Sample
         </button>
-        <span id="sample-time" style="color: #0056b3; font-weight: 500;"></span>
+        <span id="sample-time" style="color: #232D4B; font-weight: 500;"></span>
       </div>
     </div>
     <!-- Canvas with floating controls -->
@@ -603,13 +671,13 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <span style="color: #dee2e6;">|</span>
         <div style="display: flex; align-items: center; gap: 8px;" role="group" aria-label="Export options">
           <strong style="font-size: 13px;">💾 Export:</strong>
-          <button id="sample-export-png-btn" style="padding: 6px 14px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
+          <button id="sample-export-png-btn" style="padding: 6px 14px; background: #2A69A6; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
             <span>Q:</span>
             <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;" aria-label="PNG quality">
             <span style="font-family: monospace; min-width: 30px;">85</span>
           </label>
-          <button id="sample-export-pdf-btn" style="padding: 6px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
+          <button id="sample-export-pdf-btn" style="padding: 6px 14px; background: #E57200; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
         </div>
       </div>
     </div>
@@ -705,7 +773,7 @@ Part of this research was performed while the author was visiting the Institute 
 <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
   <h3 style="margin-top: 0;">T-embedding Performance Benchmark</h3>
   <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=40, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
-  <button id="benchmark-btn">Benchmark (takes about a minute)</button>
+  <button id="benchmark-btn" style="padding: 8px 16px; background: #232D4B; color: white; border: none; border-radius: 4px; font-weight: 500; cursor: pointer;">Benchmark (takes about a minute)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
     <canvas id="benchmark-canvas" width="500" height="300" style="border: 1px solid #ddd; background: white;"></canvas>
