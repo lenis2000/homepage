@@ -745,6 +745,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <strong>Color Scheme:</strong>
           <select id="sample-palette-select" style="padding: 4px 8px;" aria-label="Select color scheme"></select>
         </label>
+        <label style="display: flex; align-items: center; gap: 4px; margin-left: 8px;">
+          <input type="checkbox" id="sample-grayscale-checkbox">
+          <span style="font-size: 13px;">Grayscale (8-tone)</span>
+        </label>
         <span style="color: #dee2e6;">|</span>
         <div style="display: flex; align-items: center; gap: 8px;" role="group" aria-label="Export options">
           <strong style="font-size: 13px;">💾 Export:</strong>
@@ -2279,6 +2283,42 @@ Part of this research was performed while the author was visiting the Institute 
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
 
+  // 8-tone grayscale helper functions (for gas phase visualization)
+  // Each color gets 2 shades based on coordinate parity (8 total shades)
+  function grayHex(brightness) {
+    let hex = Math.round(brightness).toString(16);
+    if (hex.length < 2) hex = "0" + hex;
+    return "#" + hex + hex + hex;
+  }
+
+  // Grayscale values: 2 shades per color (p0 and p1)
+  const grayscaleValues = {
+    blue: { p0: 100, p1: 253 },
+    green: { p0: 243, p1: 80 },
+    red: { p0: 150, p1: 10 },
+    yellow: { p0: 20, p1: 170 }
+  };
+
+  function getGrayscaleColor(colorName, d) {
+    const isHorizontal = d.w > d.h;
+
+    // Horizontal dominoes (blue/green): use y coordinate parity
+    // Vertical dominoes (red/yellow): use x coordinate parity
+    if (isHorizontal) {
+      const yParity = Math.floor(d.y) % 4 === 0 ? 0 : 1;
+      if (grayscaleValues[colorName]) {
+        return grayHex(grayscaleValues[colorName]["p" + yParity]);
+      }
+    } else {
+      const xParity = Math.floor(d.x) % 4 === 0 ? 0 : 1;
+      if (grayscaleValues[colorName]) {
+        return grayHex(grayscaleValues[colorName]["p" + xParity]);
+      }
+    }
+    // Fallback: return a mid-gray
+    return grayHex(128);
+  }
+
   // T-embedding double dimer state
   let tembDoubleDimerConfig1 = [];
   let tembDoubleDimerConfig2 = [];
@@ -2599,6 +2639,9 @@ Part of this research was performed while the author was visiting the Institute 
       red: hexToThreeColor(paletteColors[3])
     };
 
+    // Check grayscale mode
+    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
+
     // Find N for scaling
     let maxCoord = 0;
     for (const d of dominoes) {
@@ -2621,7 +2664,15 @@ Part of this research was performed while the author was visiting the Institute 
         geom.setIndex(indices);
         geom.computeVertexNormals();
 
-        const colorValue = colors[faceData.color] || 0x808080;
+        // Use grayscale or palette colors
+        let colorValue;
+        if (useGrayscale) {
+          const grayHexColor = getGrayscaleColor(faceData.color, domino);
+          colorValue = hexToThreeColor(grayHexColor);
+        } else {
+          colorValue = colors[faceData.color] || 0x808080;
+        }
+
         const mat = new THREE.MeshStandardMaterial({
           color: colorValue,
           side: THREE.DoubleSide,
@@ -2783,6 +2834,16 @@ Part of this research was performed while the author was visiting the Institute 
       updateSample3DView();
     });
   }
+
+  // Grayscale checkbox listener
+  const grayscaleCheckbox = document.getElementById('sample-grayscale-checkbox');
+  if (grayscaleCheckbox) {
+    grayscaleCheckbox.addEventListener('change', () => {
+      renderSample();
+      updateSample3DView();
+    });
+  }
+
   const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
 
   function loadShufflingModule(tembModule) {
@@ -3532,6 +3593,9 @@ Part of this research was performed while the author was visiting the Institute 
     const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
     const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
 
+    // Check grayscale mode
+    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
+
     // Double dimer mode: render loops
     if (doubleDimerMode && sampleDominoes2.length > 0) {
       renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY, borderWidth);
@@ -3545,7 +3609,8 @@ Part of this research was performed while the author was visiting the Institute 
       const sw = d.w * sampleZoom;
       const sh = d.h * sampleZoom;
 
-      sampleCtx.fillStyle = colorMap[d.color] || '#888';
+      // Use grayscale or palette colors
+      sampleCtx.fillStyle = useGrayscale ? getGrayscaleColor(d.color, d) : (colorMap[d.color] || '#888');
       sampleCtx.fillRect(sx, sy, sw, sh);
 
       // Border
@@ -4221,17 +4286,16 @@ Part of this research was performed while the author was visiting the Institute 
       } else {
         // Normal domino rendering
         const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
-        let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
-        if (paletteIdx === -1) paletteIdx = 0;
-        const colors = palettes[paletteIdx].colors;
+        const colors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
         const colorMap = { 'yellow': colors[0], 'green': colors[1], 'blue': colors[2], 'red': colors[3] };
+        const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
 
         for (const d of sampleDominoes) {
           const sx = (d.x - minX) * scale + padding;
           const sy = (maxY - d.y - d.h) * scale + padding;
           const sw = d.w * scale;
           const sh = d.h * scale;
-          const fill = colorMap[d.color] || '#888';
+          const fill = useGrayscale ? getGrayscaleColor(d.color, d) : (colorMap[d.color] || '#888');
 
           if (borderWidth > 0) {
             svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}" stroke="#000" stroke-width="${borderWidth}"/>`;
