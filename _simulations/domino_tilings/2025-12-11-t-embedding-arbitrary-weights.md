@@ -5375,6 +5375,155 @@ Part of this research was performed while the author was visiting the Institute 
       }
     }
 
+    // Add dimer/double dimer lines if active (only on Re surface)
+    if (tembDoubleDimerActive && tembDoubleDimerConfig1.length > 0 && showRe) {
+      const N = currentSimulationN;
+      const finalK = Math.max(0, N - 2);
+
+      // Build vertex map for 3D coordinates (T-embedding x,y + origami z)
+      const vertex3DMap = new Map();
+      for (const v of tembData.vertices) {
+        const key = `${v.i},${v.j}`;
+        const origV = origamiMap.get(key);
+        if (origV) {
+          vertex3DMap.set(key, { re: v.re, im: v.im, z: origV.re });
+        }
+      }
+
+      // Face incenter with z interpolation
+      function getFaceIncenter3D(faceKey) {
+        const [fi, fj] = faceKey.split(',').map(Number);
+        const corners = [
+          vertex3DMap.get(`${fi},${fj}`),
+          vertex3DMap.get(`${fi+1},${fj}`),
+          vertex3DMap.get(`${fi+1},${fj+1}`),
+          vertex3DMap.get(`${fi},${fj+1}`)
+        ];
+        if (!corners.every(c => c)) return null;
+
+        const dist = (a, b) => Math.sqrt((a.re - b.re) ** 2 + (a.im - b.im) ** 2);
+        const a0 = dist(corners[0], corners[1]);
+        const a1 = dist(corners[1], corners[2]);
+        const a2 = dist(corners[2], corners[3]);
+        const a3 = dist(corners[3], corners[0]);
+        const w0 = a3 + a0, w1 = a0 + a1, w2 = a1 + a2, w3 = a2 + a3;
+        const totalW = w0 + w1 + w2 + w3;
+
+        const x = (w0 * corners[0].re + w1 * corners[1].re + w2 * corners[2].re + w3 * corners[3].re) / totalW;
+        const y = (w0 * corners[0].im + w1 * corners[1].im + w2 * corners[2].im + w3 * corners[3].im) / totalW;
+        const z = (w0 * corners[0].z + w1 * corners[1].z + w2 * corners[2].z + w3 * corners[3].z) / totalW;
+        return { x, y, z };
+      }
+
+      // Coordinate mapping for Aztec diamond to T-graph faces
+      const xOffset = 0, yOffset = -2;
+      function aztecVertexToFace(vx, vy) {
+        const i = Math.floor(Math.round(vx + xOffset) / 2);
+        const j = Math.floor(Math.round(vy + yOffset) / 2);
+        return `${i},${j}`;
+      }
+
+      function dominoToFaces(d) {
+        const faces = [];
+        if (d.w > d.h) {
+          const cy = d.y + d.h / 2;
+          const cx1 = d.x + d.w / 4;
+          const cx2 = d.x + 3 * d.w / 4;
+          faces.push(aztecVertexToFace(cx1, cy));
+          faces.push(aztecVertexToFace(cx2, cy));
+        } else {
+          const cx = d.x + d.w / 2;
+          const cy1 = d.y + d.h / 4;
+          const cy2 = d.y + 3 * d.h / 4;
+          faces.push(aztecVertexToFace(cx, cy1));
+          faces.push(aztecVertexToFace(cx, cy2));
+        }
+        return faces;
+      }
+
+      function dominoKey(d) {
+        return `${d.x},${d.y},${d.w},${d.h}`;
+      }
+
+      // Build domino sets
+      const dominoSet1 = new Map();
+      const dominoSet2 = new Map();
+      for (const d of tembDoubleDimerConfig1) dominoSet1.set(dominoKey(d), d);
+      for (const d of tembDoubleDimerConfig2) dominoSet2.set(dominoKey(d), d);
+
+      // Determine what to draw based on view mode
+      const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
+      let xorDominoes = [];
+      let doubleDominoes = [];
+
+      if (viewMode === 'single') {
+        xorDominoes = tembDoubleDimerConfig1;
+      } else {
+        for (const [key, d] of dominoSet1) {
+          if (dominoSet2.has(key)) {
+            doubleDominoes.push(d);
+          } else {
+            xorDominoes.push(d);
+          }
+        }
+        for (const [key, d] of dominoSet2) {
+          if (!dominoSet1.has(key)) {
+            xorDominoes.push(d);
+          }
+        }
+      }
+
+      // Get thickness
+      const ddInput = document.getElementById('dd-edge-thickness');
+      const ddThickness = ddInput ? parseFloat(ddInput.value) || 2 : 2;
+
+      // Add XOR dimer lines (red)
+      for (const d of xorDominoes) {
+        const faces = dominoToFaces(d);
+        if (faces.length !== 2) continue;
+
+        const c1 = getFaceIncenter3D(faces[0]);
+        const c2 = getFaceIncenter3D(faces[1]);
+        if (!c1 || !c2) continue;
+
+        const proj1 = project(c1.x, c1.y, c1.z);
+        const proj2 = project(c2.x, c2.y, c2.z);
+        const avgDepth = (proj1.depth + proj2.depth) / 2;
+
+        allDrawables.push({
+          type: 'dimer',
+          p1: { screenX: proj1.screenX, screenY: proj1.screenY },
+          p2: { screenX: proj2.screenX, screenY: proj2.screenY },
+          depth: avgDepth + 0.001,  // Slightly in front
+          color: '#cc0000',
+          thickness: ddThickness
+        });
+      }
+
+      // Add double edge dimer lines (purple)
+      for (const d of doubleDominoes) {
+        const faces = dominoToFaces(d);
+        if (faces.length !== 2) continue;
+
+        const c1 = getFaceIncenter3D(faces[0]);
+        const c2 = getFaceIncenter3D(faces[1]);
+        if (!c1 || !c2) continue;
+
+        const proj1 = project(c1.x, c1.y, c1.z);
+        const proj2 = project(c2.x, c2.y, c2.z);
+        const avgDepth = (proj1.depth + proj2.depth) / 2;
+
+        allDrawables.push({
+          type: 'dimer',
+          p1: { screenX: proj1.screenX, screenY: proj1.screenY },
+          p2: { screenX: proj2.screenX, screenY: proj2.screenY },
+          depth: avgDepth + 0.001,
+          color: '#8B008B',
+          thickness: ddThickness
+        });
+      }
+    }
+
     // Sort ALL drawables from both surfaces by depth (back to front)
     allDrawables.sort((a, b) => a.depth - b.depth);
 
@@ -5402,6 +5551,14 @@ Part of this research was performed while the author was visiting the Institute 
         ctx.beginPath();
         ctx.arc(obj.p.screenX, obj.p.screenY, vertexSizeControl, 0, 2 * Math.PI);
         ctx.fill();
+      } else if (obj.type === 'dimer') {
+        ctx.strokeStyle = obj.color;
+        ctx.lineWidth = obj.thickness;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(obj.p1.screenX, obj.p1.screenY);
+        ctx.lineTo(obj.p2.screenX, obj.p2.screenY);
+        ctx.stroke();
       }
     }
 
