@@ -158,8 +158,8 @@ code:
   }
   .param-input:focus {
     outline: none;
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    border-color: #E57200;
+    box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.2);
   }
   .param-label {
     font-size: 13px;
@@ -197,12 +197,12 @@ code:
     border-color: #ccc;
   }
   .control-group button.primary {
-    background: #4CAF50;
+    background: #E57200;
     color: white;
-    border-color: #4CAF50;
+    border-color: #E57200;
   }
   .control-group button.primary:hover {
-    background: #45a049;
+    background: #c96300;
   }
   .control-group button.primary:disabled {
     background: #ccc;
@@ -210,27 +210,27 @@ code:
     cursor: not-allowed;
   }
   .control-group button.running {
-    background: linear-gradient(135deg, #ff5722, #ff9800);
+    background: linear-gradient(135deg, #E57200, #f08c30);
     color: white;
-    border-color: #ff5722;
+    border-color: #E57200;
   }
   .control-group button.cftp {
-    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    background: linear-gradient(135deg, #232D4B, #3a4a6b);
     color: white;
-    border-color: #9c27b0;
+    border-color: #232D4B;
   }
   .control-group button.cftp:hover {
-    background: linear-gradient(135deg, #7b1fa2, #6a1b9a);
+    background: linear-gradient(135deg, #1a2238, #232D4B);
   }
   .control-group button.cftp:disabled {
-    background: #ccc;
-    border-color: #ccc;
+    background: #8a9ab8;
+    border-color: #8a9ab8;
     cursor: not-allowed;
   }
   /* Tool toggle buttons */
   .tool-toggle {
     display: inline-flex;
-    border: 2px solid #1976d2;
+    border: 2px solid #232D4B;
     border-radius: 6px;
     overflow: hidden;
   }
@@ -241,19 +241,19 @@ code:
     padding: 0 16px;
     font-weight: 500;
     background: white;
-    color: #1976d2;
+    color: #232D4B;
   }
   .tool-toggle button.active {
-    background: #1976d2;
+    background: #232D4B;
     color: white;
   }
   .tool-toggle button:hover:not(.active) {
-    background: #e3f2fd;
+    background: #F9DCBF;
   }
   /* View toggle buttons */
   .view-toggle {
     display: inline-flex;
-    border: 2px solid #1976d2;
+    border: 2px solid #232D4B;
     border-radius: 6px;
     overflow: hidden;
   }
@@ -264,14 +264,14 @@ code:
     padding: 0 16px;
     font-weight: 500;
     background: white;
-    color: #1976d2;
+    color: #232D4B;
   }
   .view-toggle button.active {
-    background: #1976d2;
+    background: #232D4B;
     color: white;
   }
   .view-toggle button:hover:not(.active) {
-    background: #e3f2fd;
+    background: #F9DCBF;
   }
   .stats-inline {
     display: flex;
@@ -290,7 +290,7 @@ code:
     font-size: 10px;
   }
   .stats-inline .stat-value {
-    color: #1976d2;
+    color: #232D4B;
     font-weight: 600;
     font-family: 'SF Mono', Monaco, monospace;
   }
@@ -339,7 +339,7 @@ code:
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    background: linear-gradient(135deg, #E57200, #f08c30);
     cursor: pointer;
   }
   details {
@@ -385,26 +385,35 @@ code:
   [data-theme="dark"] .status-empty { background: #e65100; color: #ffe0b2; }
   /* Accessibility improvements */
   button:focus, input:focus, select:focus {
-    outline: 3px solid #4CAF50;
+    outline: 3px solid #E57200;
     outline-offset: 2px;
   }
   .tool-toggle button:focus, .view-toggle button:focus {
-    outline: 3px solid #1976d2;
+    outline: 3px solid #232D4B;
     outline-offset: 2px;
   }
-  /* Skip to main content link */
+  /* Skip to main content link - hidden until focused */
   .skip-link {
     position: absolute;
-    top: -40px;
-    left: 0;
-    background: #4CAF50;
-    color: white;
-    padding: 8px;
-    text-decoration: none;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
     z-index: 1000;
+    background: #E57200;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
   }
   .skip-link:focus {
-    top: 0;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+    overflow: visible;
   }
   /* Improved button contrast and touch targets */
   .control-group button {
@@ -612,32 +621,32 @@ if (window.LOZENGE_WEBGPU) {
 </div>
 
 <!-- Simulation Controls -->
-<div class="control-group">
-  <div class="control-group-title">Sampling & Dynamics</div>
+<div class="control-group" role="region" aria-labelledby="sampling-title">
+  <div class="control-group-title" id="sampling-title">Sampling & Dynamics</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
-    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
-    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
+    <button id="startStopBtn" class="primary" disabled aria-label="Start or stop Glauber dynamics simulation">Start Glauber</button>
+    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled aria-label="Generate perfect sample using CFTP algorithm">Perfect Sample</button>
+    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop CFTP sampling">Stop CFTP</button>
     <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 12px; color: #666;">Speed</span>
-      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
-      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;">
-      <span style="font-size: 11px; color: #888;">/s</span>
+      <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
+      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;" aria-label="Simulation speed slider">
+      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;" aria-label="Simulation speed in steps per second">
+      <span style="font-size: 11px; color: #888;" aria-hidden="true">/s</span>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="useRandomSweepsCheckbox">
+      <input type="checkbox" id="useRandomSweepsCheckbox" aria-label="Enable random sweeps mode">
       <label for="useRandomSweepsCheckbox" style="font-size: 12px; color: #555;">Random Sweeps</label>
     </div>
-    <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
+    <span class="param-group"><label for="qInput" class="param-label">q</label><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;" aria-label="q-volume weight parameter"></span>
   </div>
 </div>
 
 <!-- Region Scaling -->
-<div class="control-group">
-  <div class="control-group-title">Region Scaling</div>
+<div class="control-group" role="region" aria-labelledby="scaling-title">
+  <div class="control-group-title" id="scaling-title">Region Scaling</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="doubleMeshBtn" title="Double the region size">Scale Up Region</button>
-    <button id="halveMeshBtn" title="Halve the region size">Scale Down Region</button>
+    <button id="doubleMeshBtn" title="Double the region size" aria-label="Scale up region by doubling size">Scale Up Region</button>
+    <button id="halveMeshBtn" title="Halve the region size" aria-label="Scale down region by halving size">Scale Down Region</button>
   </div>
 </div>
 
@@ -684,10 +693,10 @@ if (window.LOZENGE_WEBGPU) {
 </details>
 
 <!-- Stats Row -->
-<div class="control-group">
-  <div class="control-group-title">Statistics</div>
-  <div class="stats-inline">
-    <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;">⚠️ CFTP may take a few minutes</span></div>
+<div class="control-group" role="region" aria-labelledby="stats-title">
+  <div class="control-group-title" id="stats-title">Statistics</div>
+  <div class="stats-inline" role="status" aria-live="polite">
+    <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;" role="alert">⚠️ CFTP may take a few minutes</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
     <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span><span id="gpuIndicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU detected</span></div>
   </div>
@@ -720,159 +729,159 @@ Cmd-click: complete lasso</div>
   </div>
 
   <!-- Canvas -->
-  <canvas id="lozenge-canvas"></canvas>
+  <canvas id="lozenge-canvas" role="img" aria-label="Interactive lozenge tiling canvas. Use drawing tools below to create and modify regions."></canvas>
 
   <!-- 3D Container -->
-  <div id="three-container"></div>
+  <div id="three-container" role="img" aria-label="3D visualization of lozenge tiling height function"></div>
 
   <!-- Hole winding overlays -->
-  <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;"></div>
+  <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;" aria-hidden="true"></div>
 </div>
 
 <!-- Controls below canvas -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
 
 <!-- Drawing Tools -->
-<div class="control-group">
-  <div class="control-group-title">Drawing Tools</div>
+<div class="control-group" role="region" aria-labelledby="drawing-tools-title">
+  <div class="control-group-title" id="drawing-tools-title">Drawing Tools</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div class="tool-toggle">
-      <button id="handBtn" title="Pan view">🤚</button>
-      <button id="drawBtn" class="active" title="Draw triangles">✏️</button>
-      <button id="eraseBtn" title="Erase triangles">🧹</button>
+    <div class="tool-toggle" role="group" aria-label="Drawing mode selection">
+      <button id="handBtn" title="Pan view" aria-label="Hand tool - Pan view" aria-pressed="false">🤚</button>
+      <button id="drawBtn" class="active" title="Draw triangles" aria-label="Draw tool - Add triangles to region" aria-pressed="true">✏️</button>
+      <button id="eraseBtn" title="Erase triangles" aria-label="Erase tool - Remove triangles from region" aria-pressed="false">🧹</button>
     </div>
-    <div class="tool-toggle">
-      <button id="lassoFillBtn" title="Lasso fill: click to add points, click near start to close">⭕+</button>
-      <button id="lassoEraseBtn" title="Lasso erase: click to add points, click near start to close">⭕−</button>
-      <button id="lassoSnapBtn" class="active" title="Snap to triangular grid">📐</button>
+    <div class="tool-toggle" role="group" aria-label="Lasso selection mode">
+      <button id="lassoFillBtn" title="Lasso fill: click to add points, click near start to close" aria-label="Lasso fill - Click points to define polygon to fill" aria-pressed="false">⭕+</button>
+      <button id="lassoEraseBtn" title="Lasso erase: click to add points, click near start to close" aria-label="Lasso erase - Click points to define polygon to erase" aria-pressed="false">⭕−</button>
+      <button id="lassoSnapBtn" class="active" title="Snap to triangular grid" aria-label="Snap lasso to grid" aria-pressed="true">📐</button>
     </div>
-    <button id="resetBtn">Clear</button>
-    <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
-    <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="repairBtn" title="Add triangles to make region tileable" disabled>Make Tileable</button>
-    <span id="statusBadge" class="status-empty">Empty</span>
+    <button id="resetBtn" aria-label="Clear all triangles from region">Clear</button>
+    <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
+    <button id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
+    <button id="repairBtn" title="Add triangles to make region tileable" disabled aria-label="Make region tileable by adding triangles">Make Tileable</button>
+    <span id="statusBadge" class="status-empty" role="status" aria-live="polite">Empty</span>
   </div>
 </div>
 
 <!-- View Controls -->
-<div class="control-group">
-  <div class="control-group-title">View Controls</div>
+<div class="control-group" role="region" aria-labelledby="view-controls-title">
+  <div class="control-group-title" id="view-controls-title">View Controls</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="zoomInBtn" title="Zoom In">+</button>
-    <button id="zoomOutBtn" title="Zoom Out">−</button>
-    <button id="panLeftBtn" title="Pan Left">←</button>
-    <button id="panRightBtn" title="Pan Right">→</button>
-    <button id="panUpBtn" title="Pan Up">↑</button>
-    <button id="panDownBtn" title="Pan Down">↓</button>
-    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
-    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled>↻</button>
-    <button id="resetViewBtn" title="Reset View">Reset View</button>
+    <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in">+</button>
+    <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out">−</button>
+    <button id="panLeftBtn" title="Pan Left" aria-label="Pan view left">←</button>
+    <button id="panRightBtn" title="Pan Right" aria-label="Pan view right">→</button>
+    <button id="panUpBtn" title="Pan Up" aria-label="Pan view up">↑</button>
+    <button id="panDownBtn" title="Pan Down" aria-label="Pan view down">↓</button>
+    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
+    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
+    <button id="resetViewBtn" title="Reset View" aria-label="Reset view to default">Reset View</button>
   </div>
 </div>
 
 <!-- Display Options -->
-<div class="control-group">
-  <div class="control-group-title">Display Options</div>
+<div class="control-group" role="region" aria-labelledby="display-options-title">
+  <div class="control-group-title" id="display-options-title">Display Options</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
-      <select id="palette-select" style="width: 120px;"></select>
-      <button id="next-palette" style="padding: 0 8px;">&#9654;</button>
+    <div style="display: flex; align-items: center; gap: 4px;" role="group" aria-label="Color palette selection">
+      <button id="prev-palette" style="padding: 0 8px;" aria-label="Previous color palette">&#9664;</button>
+      <select id="palette-select" style="width: 120px;" aria-label="Select color palette"></select>
+      <button id="next-palette" style="padding: 0 8px;" aria-label="Next color palette">&#9654;</button>
     </div>
-    <button id="permuteColors" title="Permute colors">Permute</button>
-    <button id="customColorsBtn" title="Custom colors">Custom colors</button>
-    <div id="customColorPickers" style="display: none; align-items: center; gap: 8px;">
-      <input type="color" id="customColor1" value="#E57200" title="Color 1" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-      <input type="color" id="customColor2" value="#232D4B" title="Color 2" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-      <input type="color" id="customColor3" value="#F9DCBF" title="Color 3" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Holes:</span>
-      <input type="color" id="holeColorPicker" value="#FFFFFF" title="Hole color" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+    <button id="permuteColors" title="Permute colors" aria-label="Cycle through color permutations">Permute</button>
+    <button id="customColorsBtn" title="Custom colors" aria-label="Toggle custom color pickers">Custom colors</button>
+    <div id="customColorPickers" style="display: none; align-items: center; gap: 8px;" role="group" aria-label="Custom color pickers">
+      <input type="color" id="customColor1" value="#E57200" title="Color 1" aria-label="Custom lozenge color 1" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+      <input type="color" id="customColor2" value="#232D4B" title="Color 2" aria-label="Custom lozenge color 2" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+      <input type="color" id="customColor3" value="#F9DCBF" title="Color 3" aria-label="Custom lozenge color 3" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Outline:</span>
-      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;">
-      <span style="font-size: 11px; color: #888;">%</span>
+      <label for="holeColorPicker" style="font-size: 12px; color: #555;">Holes:</label>
+      <input type="color" id="holeColorPicker" value="#FFFFFF" title="Hole color" aria-label="Color for holes in the region" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Border:</span>
-      <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;">
-      <span style="font-size: 11px; color: #888;">%</span>
+      <label for="outlineWidthPct" style="font-size: 12px; color: #555;">Outline:</label>
+      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;" aria-label="Outline width percentage">
+      <span style="font-size: 11px; color: #888;" aria-hidden="true">%</span>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Path:</span>
-      <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 50px;">
-      <span style="font-size: 11px; color: #888;">px</span>
+      <label for="borderWidthPct" style="font-size: 12px; color: #555;">Border:</label>
+      <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width percentage">
+      <span style="font-size: 11px; color: #888;" aria-hidden="true">%</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <label for="pathWidthPx" style="font-size: 12px; color: #555;">Path:</label>
+      <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 50px;" aria-label="Path width in pixels">
+      <span style="font-size: 11px; color: #888;" aria-hidden="true">px</span>
     </div>
     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-      <input type="checkbox" id="showGridCheckbox" checked> Grid
+      <input type="checkbox" id="showGridCheckbox" checked aria-label="Show grid lines"> Grid
     </label>
     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-      <input type="checkbox" id="showBoundaryLengthsCheckbox"> Length Labels
+      <input type="checkbox" id="showBoundaryLengthsCheckbox" aria-label="Show boundary length labels"> Length Labels
     </label>
-    <span id="labelControls" style="display: none; align-items: center; gap: 4px;">
+    <span id="labelControls" style="display: none; align-items: center; gap: 4px;" role="group" aria-label="Label display settings">
       <label for="labelSizeInput" style="font-size: 11px; color: #888;">size:</label>
-      <input type="number" id="labelSizeInput" value="1.0" min="0.3" max="3" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;">
+      <input type="number" id="labelSizeInput" value="1.0" min="0.3" max="3" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;" aria-label="Label font size multiplier">
       <label for="labelOffsetInput" style="font-size: 11px; color: #888;">offset:</label>
-      <input type="number" id="labelOffsetInput" value="1.5" min="0.5" max="5" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;">
+      <input type="number" id="labelOffsetInput" value="1.5" min="0.5" max="5" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;" aria-label="Label offset distance">
       <label style="display: flex; align-items: center; gap: 2px; font-size: 11px; color: #888; cursor: pointer; margin-left: 4px;">
-        <input type="checkbox" id="showHoleLengthsCheckbox" checked style="margin: 0;"> holes
+        <input type="checkbox" id="showHoleLengthsCheckbox" checked style="margin: 0;" aria-label="Show hole length labels"> holes
       </label>
     </span>
     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-      <input type="checkbox" id="showHoleLabelsCheckbox" checked> Hole Labels
+      <input type="checkbox" id="showHoleLabelsCheckbox" checked aria-label="Show hole winding labels"> Hole Labels
     </label>
   </div>
 </div>
 
 <!-- Advanced Sampling & Analysis -->
-<div class="control-group">
-  <div class="control-group-title">Advanced Sampling & Analysis</div>
+<div class="control-group" role="region" aria-labelledby="advanced-sampling-title">
+  <div class="control-group-title" id="advanced-sampling-title">Advanced Sampling & Analysis</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="cftpBtn2" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Individual Sample with CFTP</button>
-    <button id="averageBtn" class="cftp" disabled>Get Averaged Sample</button>
-    <span class="param-group"><span class="param-label">Samples</span><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 60px;"></span>
-    <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop</button>
-    <span id="avgProgress" style="font-size: 12px; color: #666;"></span>
-    <button id="fluctuationsBtn" class="cftp" disabled>Fluctuations</button>
-    <span id="fluctProgress" style="font-size: 12px; color: #666;"></span>
+    <button id="cftpBtn2" class="cftp" title="Coupling From The Past - Perfect Sample" disabled aria-label="Generate individual perfect sample using CFTP">Individual Sample with CFTP</button>
+    <button id="averageBtn" class="cftp" disabled aria-label="Compute averaged height function from multiple samples">Get Averaged Sample</button>
+    <span class="param-group"><label for="avgSamplesInput" class="param-label">Samples</label><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 60px;" aria-label="Number of samples to average"></span>
+    <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop averaging process">Stop</button>
+    <span id="avgProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+    <button id="fluctuationsBtn" class="cftp" disabled aria-label="Visualize height function fluctuations between two samples">Fluctuations</button>
+    <span id="fluctProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
     <span style="display: flex; align-items: center; gap: 2px;">
       <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
-      <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;">
+      <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;" aria-label="Fluctuation scale multiplier">
     </span>
     <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #555; cursor: pointer;">
-      <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;">
+      <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;" aria-label="Show outline in fluctuations view">
       Outline
     </label>
-    <button id="doubleDimerBtn" class="cftp" disabled>Double Dimer</button>
-    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;"></span>
+    <button id="doubleDimerBtn" class="cftp" disabled aria-label="Generate double dimer loop visualization">Double Dimer</button>
+    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
     <span style="display: flex; align-items: center; gap: 2px;">
       <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
-      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
+      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size to display">
     </span>
-    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;">Resample</button>
+    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Generate new sample">Resample</button>
   </div>
 </div>
 
 <!-- Export -->
-<div class="control-group">
-  <div class="control-group-title">Export</div>
+<div class="control-group" role="region" aria-labelledby="export-title">
+  <div class="control-group-title" id="export-title">Export</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="export-png">PNG</button>
-    <span style="font-size: 11px; color: #666;">Quality:</span>
-    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;">
-    <span id="export-quality-val" style="font-size: 11px; color: #1976d2;">85</span>
-    <button id="export-pdf">PDF</button>
-    <button id="export-height-csv">Height CSV</button><button id="height-csv-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;">?</button>
-    <button id="export-height-mma">Copy Height as Mathematica Array</button><button id="height-mma-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;">?</button>
-    <button id="export-json">Export Shape</button>
-    <button id="import-json">Import Shape</button>
-    <input type="file" id="import-json-file" accept=".json" style="display: none;">
-    <button id="export-obj">OBJ</button>
-    <button id="export-obj2">OBJ-orthogonal</button>
-    <span style="font-size: 11px; color: #666;">Thickness (mm):</span>
-    <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;">
+    <button id="export-png" aria-label="Export as PNG image">PNG</button>
+    <label for="export-quality" style="font-size: 11px; color: #666;">Quality:</label>
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;" aria-label="PNG export quality">
+    <span id="export-quality-val" style="font-size: 11px; color: #232D4B;" aria-hidden="true">85</span>
+    <button id="export-pdf" aria-label="Export as PDF document">PDF</button>
+    <button id="export-height-csv" aria-label="Export height function as CSV file">Height CSV</button><button id="height-csv-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show height CSV format information">?</button>
+    <button id="export-height-mma" aria-label="Copy height function as Mathematica array to clipboard">Copy Height as Mathematica Array</button><button id="height-mma-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show Mathematica array format information">?</button>
+    <button id="export-json" aria-label="Export region shape as JSON file">Export Shape</button>
+    <button id="import-json" aria-label="Import region shape from JSON file">Import Shape</button>
+    <input type="file" id="import-json-file" accept=".json" style="display: none;" aria-label="JSON file input">
+    <button id="export-obj" aria-label="Export 3D model as OBJ file">OBJ</button>
+    <button id="export-obj2" aria-label="Export 3D model as OBJ with orthogonal axes">OBJ-orthogonal</button>
+    <label for="obj-thickness" style="font-size: 11px; color: #666;">Thickness (mm):</label>
+    <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;" aria-label="OBJ export thickness in millimeters">
   </div>
   <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Height CSV Coordinates:
 
@@ -5038,11 +5047,17 @@ function initLozengeApp() {
             draw();
         }
         currentTool = tool;
+        // Update active class and aria-pressed state for accessibility
         el.handBtn.classList.toggle('active', tool === 'hand');
+        el.handBtn.setAttribute('aria-pressed', tool === 'hand');
         el.drawBtn.classList.toggle('active', tool === 'draw');
+        el.drawBtn.setAttribute('aria-pressed', tool === 'draw');
         el.eraseBtn.classList.toggle('active', tool === 'erase');
+        el.eraseBtn.setAttribute('aria-pressed', tool === 'erase');
         el.lassoFillBtn.classList.toggle('active', tool === 'lassoFill');
+        el.lassoFillBtn.setAttribute('aria-pressed', tool === 'lassoFill');
         el.lassoEraseBtn.classList.toggle('active', tool === 'lassoErase');
+        el.lassoEraseBtn.setAttribute('aria-pressed', tool === 'lassoErase');
     }
 
     el.handBtn.addEventListener('click', () => { cmdHeld = false; setTool('hand'); });
@@ -5054,6 +5069,7 @@ function initLozengeApp() {
     document.getElementById('lassoSnapBtn').addEventListener('click', () => {
         const btn = document.getElementById('lassoSnapBtn');
         btn.classList.toggle('active');
+        btn.setAttribute('aria-pressed', btn.classList.contains('active'));
     });
 
     el.resetBtn.addEventListener('click', () => {

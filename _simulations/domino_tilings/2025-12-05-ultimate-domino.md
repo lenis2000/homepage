@@ -123,7 +123,7 @@ code:
   }
   .view-toggle {
     display: inline-flex;
-    border: 2px solid #1976d2;
+    border: 2px solid #232D4B;
     border-radius: 6px;
     overflow: hidden;
   }
@@ -134,20 +134,20 @@ code:
     padding: 0 12px;
     font-weight: 500;
     background: white;
-    color: #1976d2;
+    color: #232D4B;
     cursor: pointer;
     font-size: 12px;
   }
   .view-toggle button.active {
-    background: #1976d2;
+    background: #232D4B;
     color: white;
   }
   .view-toggle button:hover:not(.active) {
-    background: #e3f2fd;
+    background: #F9DCBF;
   }
   .tool-toggle {
     display: inline-flex;
-    border: 2px solid #1976d2;
+    border: 2px solid #232D4B;
     border-radius: 6px;
     overflow: hidden;
   }
@@ -158,16 +158,16 @@ code:
     padding: 0 16px;
     font-weight: 500;
     background: white;
-    color: #1976d2;
+    color: #232D4B;
     cursor: pointer;
     font-size: 14px;
   }
   .tool-toggle button.active {
-    background: #1976d2;
+    background: #232D4B;
     color: white;
   }
   .tool-toggle button:hover:not(.active) {
-    background: #e3f2fd;
+    background: #F9DCBF;
   }
   .param-input {
     width: 50px;
@@ -180,8 +180,8 @@ code:
   }
   .param-input:focus {
     outline: none;
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    border-color: #E57200;
+    box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.2);
   }
   .param-label {
     font-size: 13px;
@@ -219,29 +219,29 @@ code:
     border-color: #ccc;
   }
   .control-group button.primary {
-    background: #4CAF50;
+    background: #E57200;
     color: white;
-    border-color: #4CAF50;
+    border-color: #E57200;
   }
   .control-group button.primary:hover {
-    background: #45a049;
+    background: #c96300;
   }
   .control-group button.primary:disabled {
-    background: #a5d6a7;
-    border-color: #a5d6a7;
+    background: #f0b87c;
+    border-color: #f0b87c;
     color: white;
   }
   .control-group button.cftp {
-    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    background: linear-gradient(135deg, #232D4B, #3a4a6b);
     color: white;
-    border-color: #9c27b0;
+    border-color: #232D4B;
   }
   .control-group button.cftp:hover {
-    background: linear-gradient(135deg, #7b1fa2, #6a1b9a);
+    background: linear-gradient(135deg, #1a2238, #232D4B);
   }
   .control-group button.cftp:disabled {
-    background: #ccc;
-    border-color: #ccc;
+    background: #8a9ab8;
+    border-color: #8a9ab8;
     cursor: not-allowed;
   }
   .tool-btn {
@@ -254,9 +254,9 @@ code:
     justify-content: center;
   }
   .tool-btn.active {
-    background: #4CAF50;
+    background: #E57200;
     color: white;
-    border-color: #4CAF50;
+    border-color: #E57200;
   }
   .status-valid {
     background: #e8f5e9;
@@ -299,7 +299,7 @@ code:
     font-size: 10px;
   }
   .stats-inline .stat-value {
-    color: #1976d2;
+    color: #232D4B;
     font-weight: 600;
     font-family: 'SF Mono', Monaco, monospace;
   }
@@ -331,7 +331,7 @@ code:
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    background: linear-gradient(135deg, #E57200, #f08c30);
     cursor: pointer;
   }
   [data-theme="dark"] .control-group {
@@ -371,26 +371,35 @@ code:
   }
   /* Accessibility improvements */
   button:focus, input:focus, select:focus {
-    outline: 3px solid #4CAF50;
+    outline: 3px solid #E57200;
     outline-offset: 2px;
   }
   .tool-toggle button:focus, .view-toggle button:focus {
-    outline: 3px solid #1976d2;
+    outline: 3px solid #232D4B;
     outline-offset: 2px;
   }
-  /* Skip to main content link */
+  /* Skip to main content link - hidden until focused */
   .skip-link {
     position: absolute;
-    top: -40px;
-    left: 0;
-    background: #4CAF50;
-    color: white;
-    padding: 8px;
-    text-decoration: none;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
     z-index: 1000;
+    background: #E57200;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
   }
   .skip-link:focus {
-    top: 0;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+    overflow: visible;
   }
   /* Improved button contrast */
   .control-group button {
