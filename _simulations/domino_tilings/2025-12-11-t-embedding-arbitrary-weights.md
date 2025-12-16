@@ -237,29 +237,45 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </details>
 
-<div style="margin-bottom: 10px;">
-  <label>n: <input id="n-input" type="number" value="6" min="1" max="200" style="width: 60px;"></label>
+<!-- ========== MAIN PARAMETERS ========== -->
+<div style="margin-bottom: 15px; padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+  <div style="font-weight: bold; margin-bottom: 10px; font-size: 14px;">⚙️ Configuration</div>
 
-  <!-- Weight Preset Dropdown -->
-  <label style="margin-left: 15px;">Weights:
-    <select id="weight-preset-select" style="margin-left: 5px;">
-      <option value="random-iid" selected>Random IID</option>
-      <option value="random-layered">Random Layered</option>
-      <option value="random-gamma">Random Gamma</option>
-      <option value="all-ones">All 1's</option>
-      <option value="periodic">k × l Periodic</option>
-    </select>
-  </label>
+  <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 12px;">
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <strong>Size (n):</strong>
+      <input id="n-input" type="number" value="6" min="1" max="200" style="width: 70px;" aria-label="Aztec diamond size">
+    </label>
 
-  <!-- Periodic params (inline) -->
-  <span id="periodic-params" style="display: none; margin-left: 10px;">
-    <label>k: <input id="periodic-k" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
-    <label style="margin-left: 5px;">l: <input id="periodic-l" type="number" value="2" min="1" max="5" style="width: 40px;"></label>
-  </span>
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <strong>Weight Type:</strong>
+      <select id="weight-preset-select" style="min-width: 140px;" aria-label="Weight type selection">
+        <option value="random-iid" selected>Random IID</option>
+        <option value="random-layered">Random Layered</option>
+        <option value="random-gamma">Random Gamma</option>
+        <option value="all-ones">All 1's (Uniform)</option>
+        <option value="periodic">k × l Periodic</option>
+      </select>
+    </label>
 
-  <button id="compute-btn" style="margin-left: 15px;">Compute</button>
-  <span id="compute-time" style="margin-left: 10px; color: #666;"></span>
-  <div id="n-warning" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404; font-size: 12px;">⚠️ <strong>Warning:</strong> n &gt; 60 may take several dozen seconds to compute</div>
+    <!-- Periodic params (inline) -->
+    <span id="periodic-params" style="display: none;">
+      <label style="margin-right: 8px;">k: <input id="periodic-k" type="number" value="2" min="1" max="5" style="width: 50px;" aria-label="Periodic pattern width"></label>
+      <label>l: <input id="periodic-l" type="number" value="2" min="1" max="5" style="width: 50px;" aria-label="Periodic pattern height"></label>
+    </span>
+
+    <button id="compute-btn"
+            style="padding: 10px 24px; font-size: 15px; font-weight: bold; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;"
+            aria-label="Compute T-embedding with current parameters">
+      ▶ Compute
+    </button>
+  </div>
+
+  <div id="compute-time" style="margin-bottom: 8px; color: #2e7d32; font-weight: 500; min-height: 20px;"></div>
+
+  <div id="n-warning" style="display: none; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-left-width: 4px; border-radius: 4px; color: #856404; font-size: 12px;">
+    ⚠️ <strong>Note:</strong> n &gt; 60 may take several dozen seconds to compute
+  </div>
 </div>
 
 <!-- Random IID params (collapsible panel) -->
@@ -394,38 +410,79 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </div>
 
-<div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; margin-bottom: 10px;">
-  Loading WASM module...
+<div id="loading-msg" style="display: none; padding: 10px; background: #ffe; border: 1px solid #cc0; border-left-width: 4px; margin-bottom: 10px; border-radius: 4px;">
+  ⏳ Loading WASM module...
 </div>
 
 
 <!-- Main T-embedding Visualization Section -->
 <details id="main-visualization-section" style="margin-top: 15px;" open>
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0e8ff; border: 1px solid #c9f;">T-embedding Visualization</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0e8ff; border: 1px solid #c9f;" aria-label="T-embedding visualization section">
+    📊 T-embedding Visualization
+  </summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-    <!-- Controls row -->
-    <div style="margin-bottom: 10px; text-align: center;">
-      <label>V: <input type="number" id="main-2d-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 3em;"></label>
-      <label style="margin-left: 10px;">E: <input type="number" id="main-2d-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 3em;"></label>
-      <label style="margin-left: 15px;"><input type="checkbox" id="show-origami-chk" checked> Origami</label>
+    <!-- Display Controls -->
+    <div style="margin-bottom: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">Display Settings</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-weight: 500;">Vertex Size:</span>
+          <input type="number" id="main-2d-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 4em;" aria-label="Vertex size">
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-weight: 500;">Edge Thickness:</span>
+          <input type="number" id="main-2d-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 4em;" aria-label="Edge thickness">
+        </label>
+        <label style="display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" id="show-origami-chk" checked aria-label="Show origami overlay">
+          <span style="font-weight: 500;">Show Origami</span>
+        </label>
+      </div>
     </div>
 
     <!-- Canvas container with floating buttons -->
     <div id="main-canvas-wrapper" style="position: relative;">
-      <!-- Floating controls row -->
-      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px;">
-        <button id="main-zoom-out-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">−</button>
-        <button id="main-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
-        <button id="main-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
-        <button id="toggle-2d-3d-btn" style="padding: 5px 15px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">2D</button>
-        <button id="toggle-projection-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle orthographic/perspective">🎯</button>
-        <button id="cycle-preset-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Cycle visual preset">☀️</button>
-        <button id="auto-rotate-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle auto-rotate">🔄</button>
+      <!-- Floating view controls -->
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px;" role="toolbar" aria-label="View controls">
+        <button id="main-zoom-out-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Zoom out"
+                title="Zoom out">−</button>
+        <button id="main-zoom-reset-btn"
+                style="padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Reset zoom"
+                title="Reset zoom">⟲</button>
+        <button id="main-zoom-in-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Zoom in"
+                title="Zoom in">+</button>
+        <button id="toggle-2d-3d-btn"
+                style="padding: 6px 16px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer;"
+                aria-label="Toggle 2D/3D view"
+                title="Toggle 2D/3D view">2D</button>
+        <button id="toggle-projection-btn"
+                style="display: none; padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Toggle orthographic/perspective projection"
+                title="Toggle projection">🎯</button>
+        <button id="cycle-preset-btn"
+                style="display: none; padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Cycle visual preset"
+                title="Cycle visual preset">☀️</button>
+        <button id="auto-rotate-btn"
+                style="display: none; padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Toggle auto-rotation"
+                title="Toggle auto-rotation">🔄</button>
       </div>
       <!-- Floating 3D surface selection (hidden by default, shown in 3D mode) -->
-      <div id="surface-select-controls" style="display: none; position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; padding: 5px 10px; font-size: 12px;">
-        <label style="margin-right: 10px;"><input type="checkbox" id="show-re-surface-chk" checked> Re(Origami)</label>
-        <label><input type="checkbox" id="show-im-surface-chk"> Im(Origami), matched</label>
+      <div id="surface-select-controls" style="display: none; position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; padding: 8px 12px; font-size: 12px;" role="group" aria-label="Surface selection">
+        <label style="margin-right: 12px; display: inline-flex; align-items: center; gap: 4px;">
+          <input type="checkbox" id="show-re-surface-chk" checked aria-label="Show real part of origami">
+          <span>Re(Origami)</span>
+        </label>
+        <label style="display: inline-flex; align-items: center; gap: 4px;">
+          <input type="checkbox" id="show-im-surface-chk" aria-label="Show imaginary part of origami">
+          <span>Im(Origami), matched</span>
+        </label>
       </div>
 
       <!-- 2D Canvas -->
@@ -440,64 +497,121 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     </div>
 
     <!-- Export Controls -->
-    <div style="margin-top: 10px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;">
-      <span style="font-size: 12px; font-weight: bold; color: #555;">Export:</span>
-      <button id="export-pdf-btn" style="padding: 2px 8px;">PDF</button>
-      <label style="display: flex; align-items: center; gap: 4px;">
-        <input type="checkbox" id="pdf-include-origami" checked>
-        <span style="font-size: 11px;">Origami</span>
-      </label>
-      <span style="color: #ccc;">|</span>
-      <button id="export-png-btn" style="padding: 2px 8px;">PNG</button>
-      <span style="font-size: 11px; color: #666;">Quality:</span>
-      <input type="range" id="png-quality-slider" min="1" max="100" value="85" style="width: 60px;">
-      <span style="color: #ccc;">|</span>
-      <button id="export-obj-btn" style="padding: 2px 8px;">OBJ</button>
+    <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">💾 Export Options</div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;" role="group" aria-label="Export options">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button id="export-pdf-btn" style="padding: 6px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+            <input type="checkbox" id="pdf-include-origami" checked aria-label="Include origami in PDF export">
+            <span>+Origami</span>
+          </label>
+        </div>
+        <span style="color: #dee2e6;">|</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button id="export-png-btn" style="padding: 6px 14px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+            <span>Quality:</span>
+            <input type="range" id="png-quality-slider" min="1" max="100" value="85" style="width: 70px;" aria-label="PNG quality">
+            <span style="font-family: monospace; min-width: 30px;">85</span>
+          </label>
+        </div>
+        <span style="color: #dee2e6;">|</span>
+        <button id="export-obj-btn" style="padding: 6px 14px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export 3D model as OBJ">OBJ (3D)</button>
+      </div>
     </div>
   </div>
 </details>
 
 <details id="random-sample-section" style="margin-top: 15px;" open>
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;">Random Domino Tiling</summary>
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;" aria-label="Random domino tiling section">
+    🎲 Random Domino Tiling
+  </summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-    <!-- Top controls row -->
-    <div style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
-      <label>N: <input type="number" id="sample-N-input" value="6" min="1" max="300" style="width: 60px;"></label>
-      <label>Border: <input type="number" id="sample-border-input" value="0.1" min="0" max="10" step="0.1" style="width: 50px;"></label>
-      <button id="sample-btn" style="padding: 5px 15px;">Random Sample by Shuffling</button>
-      <span id="sample-time" style="color: #666;"></span>
-    </div>
-    <!-- Double dimer controls (hidden by default) -->
-    <div id="double-dimer-controls" style="margin-bottom: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
-      <label style="cursor: pointer;"><input type="checkbox" id="sample-double-dimer-chk"> Double Dimer</label>
-      <span id="double-dimer-options" style="display: none;">
-        <label style="margin-left: 10px; cursor: pointer;"><input type="checkbox" id="sample-show-double-edges-chk" checked> Show double edges (purple)</label>
-        <label style="margin-left: 15px;">Min loop length: <input type="number" id="sample-min-loop-length" value="0" min="0" max="100" style="width: 50px;"></label>
-      </span>
+    <!-- Sampling controls -->
+    <div style="margin-bottom: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
+        <label style="display: flex; align-items: center; gap: 6px;">
+          <strong>Size (N):</strong>
+          <input type="number" id="sample-N-input" value="6" min="1" max="300" style="width: 70px;" aria-label="Domino tiling size">
+        </label>
+        <label style="display: flex; align-items: center; gap: 6px;">
+          <strong>Border:</strong>
+          <input type="number" id="sample-border-input" value="0.1" min="0" max="10" step="0.1" style="width: 60px;" aria-label="Border size">
+        </label>
+        <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;" id="double-dimer-controls">
+          <input type="checkbox" id="sample-double-dimer-chk" aria-label="Enable double dimer mode">
+          <span style="font-weight: 500;">Double Dimer</span>
+        </label>
+        <span id="double-dimer-options" style="display: none;">
+          <label style="display: flex; align-items: center; gap: 6px;">
+            <span>Min loop:</span>
+            <input type="number" id="sample-min-loop-length" value="0" min="0" max="100" style="width: 60px;" aria-label="Minimum loop length">
+          </label>
+        </span>
+        <button id="sample-btn"
+                style="padding: 8px 20px; font-weight: bold; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                aria-label="Generate random domino tiling">
+          🎲 Sample
+        </button>
+        <span id="sample-time" style="color: #0056b3; font-weight: 500;"></span>
+      </div>
     </div>
     <!-- Canvas with floating controls -->
     <div id="sample-canvas-wrapper" style="position: relative;">
-      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; align-items: center;">
-        <button id="sample-zoom-out-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">−</button>
-        <button id="sample-zoom-reset-btn" style="padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">⟲</button>
-        <button id="sample-zoom-in-btn" style="padding: 5px 10px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;">+</button>
-        <button id="sample-toggle-3d-btn" style="padding: 5px 15px; font-weight: bold; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle 2D/3D view">3D</button>
-        <button id="sample-perspective-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle perspective/isometric">🎯</button>
-        <button id="sample-preset-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Cycle 3D visual preset">☀️</button>
-        <button id="sample-rotate-btn" style="display: none; padding: 5px 10px; background: rgba(255,255,255,0.9); border: 1px solid #999; border-radius: 4px; cursor: pointer;" title="Toggle auto-rotation">🔄</button>
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px;" role="toolbar" aria-label="View controls for domino tiling">
+        <button id="sample-zoom-out-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Zoom out"
+                title="Zoom out">−</button>
+        <button id="sample-zoom-reset-btn"
+                style="padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Reset zoom"
+                title="Reset zoom">⟲</button>
+        <button id="sample-zoom-in-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Zoom in"
+                title="Zoom in">+</button>
+        <button id="sample-toggle-3d-btn"
+                style="padding: 6px 16px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer;"
+                aria-label="Toggle 3D view"
+                title="Toggle 3D view">3D</button>
+        <button id="sample-perspective-btn"
+                style="display: none; padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Toggle perspective"
+                title="Toggle perspective">🎯</button>
+        <button id="sample-preset-btn"
+                style="display: none; padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Cycle visual preset"
+                title="Cycle visual preset">☀️</button>
+        <button id="sample-rotate-btn"
+                style="display: none; padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Toggle auto-rotation"
+                title="Toggle auto-rotation">🔄</button>
       </div>
-      <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+      <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;" aria-label="Domino tiling visualization canvas"></canvas>
       <div id="sample-3d-container"></div>
     </div>
-    <!-- Bottom controls: Colors and Export -->
-    <div style="margin-top: 10px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
-      <label>Colors: <select id="sample-palette-select" style="padding: 2px 4px;"></select></label>
-      <span style="color: #ccc;">|</span>
-      <span style="font-size: 12px; font-weight: bold; color: #555;">Export:</span>
-      <button id="sample-export-png-btn" style="padding: 2px 8px;">PNG</button>
-      <span style="font-size: 11px; color: #666;">Quality:</span>
-      <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;">
-      <button id="sample-export-pdf-btn" style="padding: 2px 8px;">PDF</button>
+
+    <!-- Display and Export Controls -->
+    <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
+        <label style="display: flex; align-items: center; gap: 6px;">
+          <strong>Color Scheme:</strong>
+          <select id="sample-palette-select" style="padding: 4px 8px;" aria-label="Select color scheme"></select>
+        </label>
+        <span style="color: #dee2e6;">|</span>
+        <div style="display: flex; align-items: center; gap: 8px;" role="group" aria-label="Export options">
+          <strong style="font-size: 13px;">💾 Export:</strong>
+          <button id="sample-export-png-btn" style="padding: 6px 14px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+            <span>Q:</span>
+            <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;" aria-label="PNG quality">
+            <span style="font-family: monospace; min-width: 30px;">85</span>
+          </label>
+          <button id="sample-export-pdf-btn" style="padding: 6px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
+        </div>
+      </div>
     </div>
   </div>
 </details>
@@ -2018,7 +2132,6 @@ Part of this research was performed while the author was visiting the Institute 
   let sampleDominoes = [];
   let sampleDominoes2 = [];  // Second configuration for double dimer mode
   let doubleDimerMode = false;
-  let showDoubleEdges = true;
   let minLoopLength = 0;
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
@@ -3064,7 +3177,7 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Double dimer mode: render loops
     if (doubleDimerMode && sampleDominoes2.length > 0) {
-      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY);
+      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY, borderWidth);
       return;
     }
 
@@ -3088,7 +3201,7 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   // Render double dimer configuration as loops
-  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY) {
+  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY, borderWidth = 1) {
     // Create edge key from domino
     const edgeKey = (d) => {
       const cx = d.x + d.w / 2;
@@ -3192,15 +3305,16 @@ Part of this research was performed while the author was visiting the Institute 
     }
 
     // Draw edges
-    const lineWidth = Math.max(1.5, 3.5 * zoom / 10);
-    const circleRadius = Math.max(1.5, 3.5 * zoom / 10);
+    const baseLineWidth = Math.max(1.5, 3.5 * zoom / 10);
+    const lineWidth = baseLineWidth * Math.max(0.5, borderWidth);
+    const circleRadius = baseLineWidth * Math.max(0.5, borderWidth);
 
     for (const edge of allEdges) {
       const { x1, y1, x2, y2, val } = edge;
       const isDouble = val.types.has(1) && val.types.has(2);
 
-      // Skip double edges if checkbox unchecked
-      if (isDouble && !showDoubleEdges) continue;
+      // Skip double edges (loops of length 2) if minLoopLength > 2
+      if (isDouble && minLoopLength > 2) continue;
 
       // Skip edges in loops smaller than minLoopLength
       if (!isDouble && edge.loopId >= 0) {
@@ -3286,7 +3400,6 @@ Part of this research was performed while the author was visiting the Institute 
     // Double dimer controls
     const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
     const doubleDimerOptions = document.getElementById('double-dimer-options');
-    const showDoubleEdgesChk = document.getElementById('sample-show-double-edges-chk');
     const minLoopLengthInput = document.getElementById('sample-min-loop-length');
 
     if (doubleDimerChk) {
@@ -3297,13 +3410,6 @@ Part of this research was performed while the author was visiting the Institute 
         }
         // Re-sample when toggling double dimer mode (need to get two configs)
         generateRandomSample();
-      });
-    }
-
-    if (showDoubleEdgesChk) {
-      showDoubleEdgesChk.addEventListener('change', function() {
-        showDoubleEdges = this.checked;
-        renderSample();
       });
     }
 
@@ -3395,13 +3501,14 @@ Part of this research was performed while the author was visiting the Institute 
       link.click();
     });
 
-    // Generate SVG for domino sample
+    // Generate SVG for domino sample (handles both normal and double dimer modes)
     function generateDominoSVG() {
       if (sampleDominoes.length === 0) return null;
 
-      // Find bounds
+      // Find bounds from both domino sets
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (const d of sampleDominoes) {
+      const allDominoes = doubleDimerMode ? [...sampleDominoes, ...sampleDominoes2] : sampleDominoes;
+      for (const d of allDominoes) {
         minX = Math.min(minX, d.x);
         maxX = Math.max(maxX, d.x + d.w);
         minY = Math.min(minY, d.y);
@@ -3416,30 +3523,129 @@ Part of this research was performed while the author was visiting the Institute 
       const svgW = regionW * scale + padding * 2;
       const svgH = regionH * scale + padding * 2;
 
-      // Get colors
-      const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
-      let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
-      if (paletteIdx === -1) paletteIdx = 0;
-      const colors = palettes[paletteIdx].colors;
-      const colorMap = { 'yellow': colors[0], 'green': colors[1], 'blue': colors[2], 'red': colors[3] };
-
       const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
       const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
 
       let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">`;
       svg += `<rect width="${svgW}" height="${svgH}" fill="white"/>`;
 
-      for (const d of sampleDominoes) {
-        const sx = (d.x - minX) * scale + padding;
-        const sy = (maxY - d.y - d.h) * scale + padding;
-        const sw = d.w * scale;
-        const sh = d.h * scale;
-        const fill = colorMap[d.color] || '#888';
+      // Double dimer mode: draw edge lines
+      if (doubleDimerMode && sampleDominoes2.length > 0) {
+        // Build edge map (same logic as renderDoubleDimerLoops)
+        const edgeKey = (d) => {
+          const cx = d.x + d.w / 2;
+          const cy = d.y + d.h / 2;
+          const horiz = d.w > d.h;
+          let x1, y1, x2, y2;
+          if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
+          else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
+          const q = v => Math.round(v * 1000);
+          return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
+        };
 
-        if (borderWidth > 0) {
-          svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}" stroke="#000" stroke-width="${borderWidth}"/>`;
-        } else {
-          svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}"/>`;
+        const edgeMap = new Map();
+        const addEdges = (list, type) => {
+          for (const d of list) {
+            const k = edgeKey(d);
+            if (!edgeMap.has(k)) edgeMap.set(k, { d, types: new Set() });
+            edgeMap.get(k).types.add(type);
+          }
+        };
+        addEdges(sampleDominoes, 1);
+        addEdges(sampleDominoes2, 2);
+
+        // Build adjacency for loop detection
+        const vertexToEdges = new Map();
+        const allEdges = [];
+        edgeMap.forEach((val, key) => {
+          const d = val.d;
+          const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+          const horiz = d.w > d.h;
+          let x1, y1, x2, y2;
+          if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
+          else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
+          const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
+          const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
+          const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
+          allEdges.push(edgeInfo);
+          if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
+          if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
+          vertexToEdges.get(v1Key).push(edgeInfo);
+          vertexToEdges.get(v2Key).push(edgeInfo);
+        });
+
+        // Detect loops via BFS
+        let loopId = 0;
+        const loopSizes = new Map();
+        for (const edge of allEdges) {
+          if (edge.loopId >= 0) continue;
+          const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
+          if (isDouble) { edge.loopId = -2; continue; }
+          const queue = [edge];
+          const visited = new Set([edge.key]);
+          edge.loopId = loopId;
+          let loopSize = 1;
+          while (queue.length > 0) {
+            const curr = queue.shift();
+            for (const vKey of [curr.v1Key, curr.v2Key]) {
+              for (const neighbor of (vertexToEdges.get(vKey) || [])) {
+                if (visited.has(neighbor.key)) continue;
+                const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
+                if (neighborIsDouble) continue;
+                visited.add(neighbor.key);
+                neighbor.loopId = loopId;
+                loopSize++;
+                queue.push(neighbor);
+              }
+            }
+          }
+          loopSizes.set(loopId, loopSize);
+          loopId++;
+        }
+
+        // Draw edges as SVG lines
+        const lineWidth = 2 * Math.max(0.5, borderWidth);
+        for (const edge of allEdges) {
+          const { x1, y1, x2, y2, val } = edge;
+          const isDouble = val.types.has(1) && val.types.has(2);
+          if (isDouble && minLoopLength > 2) continue;
+          if (!isDouble && edge.loopId >= 0) {
+            const loopSize = loopSizes.get(edge.loopId) || 0;
+            if (loopSize < minLoopLength) continue;
+          }
+          let color;
+          if (isDouble) color = 'purple';
+          else if (val.types.has(1)) color = 'black';
+          else color = 'red';
+
+          const sx1 = (x1 - minX) * scale + padding;
+          const sy1 = (maxY - y1) * scale + padding;
+          const sx2 = (x2 - minX) * scale + padding;
+          const sy2 = (maxY - y2) * scale + padding;
+          svg += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
+          svg += `<circle cx="${sx1}" cy="${sy1}" r="${lineWidth/2}" fill="${color}"/>`;
+          svg += `<circle cx="${sx2}" cy="${sy2}" r="${lineWidth/2}" fill="${color}"/>`;
+        }
+      } else {
+        // Normal domino rendering
+        const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+        let paletteIdx = palettes.findIndex(p => p.name === 'Domino Default');
+        if (paletteIdx === -1) paletteIdx = 0;
+        const colors = palettes[paletteIdx].colors;
+        const colorMap = { 'yellow': colors[0], 'green': colors[1], 'blue': colors[2], 'red': colors[3] };
+
+        for (const d of sampleDominoes) {
+          const sx = (d.x - minX) * scale + padding;
+          const sy = (maxY - d.y - d.h) * scale + padding;
+          const sw = d.w * scale;
+          const sh = d.h * scale;
+          const fill = colorMap[d.color] || '#888';
+
+          if (borderWidth > 0) {
+            svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}" stroke="#000" stroke-width="${borderWidth}"/>`;
+          } else {
+            svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="${fill}"/>`;
+          }
         }
       }
 
