@@ -60,23 +60,22 @@ code:
   </li>
 </ul>
 
-<h5>Double Dimer on T-Graph</h5>
-<p>The <strong>Sample Double Dimers</strong> button generates two independent dimer configurations
-on an Aztec diamond of size N = n − 2 using the same edge weights as the T-embedding.
-The symmetric difference of these two configurations forms a collection of disjoint loops.</p>
-
-<p>These loops are displayed on the T-graph by interpreting domino positions as T-graph edges.
-The T-graph vertices T(i,j) use half-integer coordinates, and each domino corresponds to an edge
-connecting adjacent vertices. Only loops of length ≥ 4 are shown (double edges are filtered out).</p>
+<h5>Dimer Covering on T-Graph</h5>
+<p>The <strong>Dimer covering</strong> button samples dimer configurations on an Aztec diamond of size N = n − 3, where n is the T-embedding order. The key correspondence is:</p>
 
 <ul>
-  <li><strong>Uncovered edges</strong>: Drawn thin (width 0.1), shown in gray.</li>
-  <li><strong>Covered edges</strong>: Drawn with the E: width control (default 0.7). Black edges are from config 1, red from config 2.</li>
+  <li><strong>T-graph faces</strong> (quadrilateral cells) correspond to <strong>Aztec diamond vertices</strong>.</li>
+  <li>A <strong>domino</strong> covering two adjacent Aztec vertices corresponds to an edge connecting two adjacent T-graph face centers.</li>
+  <li>The face centers are computed as <strong>incenters</strong> (centers of inscribed circles) since T-graph faces are tangential polygons.</li>
 </ul>
 
-<p><em>Note:</em> This visualization is illustrative. The coordinate mapping between Aztec diamond
-dominoes and T-graph edges is approximate and serves to demonstrate the double dimer structure
-on the T-embedding geometry.</p>
+<p>Two view modes are available:</p>
+<ul>
+  <li><strong>Single</strong>: Shows one dimer configuration as edges between face incenters.</li>
+  <li><strong>Double (XOR)</strong>: Shows the symmetric difference of two independent dimer configurations, which forms disjoint closed loops.</li>
+</ul>
+
+<p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary). It is intended as an illustration of the double dimer model on the T-graph geometry, not as a precise mathematical correspondence.</p>
 
 <h5>3D Mode Options</h5>
 <ul>
@@ -92,6 +91,16 @@ on the T-embedding geometry.</p>
   <li><strong>PNG</strong>: Raster image export with quality slider (1–100).</li>
   <li><strong>OBJ</strong>: 3D mesh export for external 3D viewers/software.</li>
 </ul>
+
+<h5>Random Domino Sampler</h5>
+<p>The <strong>🎲 Sample</strong> button generates random domino tilings of the Aztec diamond using the domino shuffling algorithm with the currently selected edge weights.</p>
+<ul>
+  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 300).</li>
+  <li><strong>Border</strong>: Gap between dominoes for visual clarity.</li>
+  <li><strong>Double Dimer</strong>: When checked, samples two independent dimer configurations and displays their symmetric difference as colored loops. Dominoes shared by both configurations are hidden; the remaining dominoes form disjoint closed loops.</li>
+  <li><strong>Min loop</strong>: Filter to show only loops of at least this length (useful for hiding short loops).</li>
+</ul>
+<p><em>Tip:</em> Press Enter in the Size or Border fields to quickly re-sample.</p>
 
 <h5>Step-by-Step Visualization (n ≤ 15)</h5>
 <p>For small n, explore the T-embedding recurrence level by level:</p>
@@ -508,35 +517,38 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <!-- Display Controls -->
-    <div style="margin-bottom: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
-      <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">Display Settings</div>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-        <label style="display: flex; align-items: center; gap: 4px;">
-          <span style="font-weight: 500;">Vertex Size:</span>
-          <input type="number" id="main-2d-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 4em;" aria-label="Vertex size">
+    <div style="margin-bottom: 12px; padding: 12px 14px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 5px;">
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Vertex</span>
+          <input type="number" id="main-2d-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Vertex size">
         </label>
-        <label style="display: flex; align-items: center; gap: 4px;">
-          <span style="font-weight: 500;">Edge Thickness:</span>
-          <input type="number" id="main-2d-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 4em;" aria-label="Edge thickness">
+        <label style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Edge</span>
+          <input type="number" id="main-2d-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Edge thickness">
         </label>
-        <label style="display: flex; align-items: center; gap: 6px;">
-          <input type="checkbox" id="show-origami-chk" checked aria-label="Show origami overlay">
-          <span style="font-weight: 500;">Show Origami</span>
+        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 3px 6px; border-radius: 3px;">
+          <input type="checkbox" id="show-origami-chk" checked style="accent-color: #E57200;" aria-label="Show origami overlay">
+          <span style="font-size: 12px; font-weight: 500; color: #444;">Origami</span>
         </label>
-        <span style="color: #dee2e6;">|</span>
+        <span style="width: 1px; height: 20px; background: #ccc;"></span>
         <button id="sample-double-dimer-temb-btn"
-                style="padding: 4px 10px; font-size: 12px; background: #E57200; color: white; border: none; border-radius: 4px; cursor: pointer;"
-                aria-label="Sample double dimer configuration">
-          Sample Double Dimers
+                style="padding: 5px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; background: #E57200; color: white; border: none; border-radius: 3px; cursor: pointer;"
+                aria-label="Sample dimer covering">
+          Dimer covering
         </button>
-        <span id="dd-thickness-control" style="display: none; flex-wrap: wrap; align-items: center; gap: 8px;">
-          <select id="dd-view-mode" style="padding: 2px 4px; font-size: 12px;" aria-label="Dimer view mode">
+        <span id="dd-thickness-control" style="display: none; align-items: center; gap: 8px; padding: 4px 8px; background: rgba(229,114,0,0.08); border-radius: 3px; border: 1px solid rgba(229,114,0,0.2);">
+          <select id="dd-view-mode" style="padding: 3px 6px; font-size: 11px; font-weight: 500; border: 1px solid #ccc; border-radius: 3px; background: #fff;" aria-label="Dimer view mode">
             <option value="double">Double (XOR)</option>
             <option value="single">Single</option>
           </select>
-          <label style="display: flex; align-items: center; gap: 4px;">
-            <span style="font-weight: 500;">W:</span>
-            <input type="number" id="dd-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 4em;" aria-label="Dimer loop thickness">
+          <label style="display: flex; align-items: center; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Width</span>
+            <input type="number" id="dd-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dimer loop thickness">
+          </label>
+          <label id="dd-min-loop-label" style="display: none; align-items: center; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Min loop</span>
+            <input type="number" id="dd-min-loop-length" value="4" min="2" max="100" step="2" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Minimum loop length">
           </label>
         </span>
       </div>
@@ -3114,12 +3126,23 @@ Part of this research was performed while the author was visiting the Institute 
       if (result.config1) {
         tembDoubleDimerConfig1 = result.config1;
         tembDoubleDimerConfig2 = result.config2;
-        tembDoubleDimerActive = true;
 
-        // Show DD: thickness control with default = 2 * edge thickness
-        const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 2;
-        document.getElementById('dd-edge-thickness').value = (2 * edgeThickness).toFixed(1);
-        document.getElementById('dd-thickness-control').style.display = 'flex';
+        // Only set default width on first activation (preserve user settings on re-sample)
+        const controlsEl = document.getElementById('dd-thickness-control');
+        if (!tembDoubleDimerActive) {
+          const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 2;
+          document.getElementById('dd-edge-thickness').value = (6 * edgeThickness).toFixed(1);
+        }
+
+        tembDoubleDimerActive = true;
+        controlsEl.style.display = 'flex';
+
+        // Show min loop control if in double mode
+        const viewMode = document.getElementById('dd-view-mode').value;
+        const minLoopLabel = document.getElementById('dd-min-loop-label');
+        if (minLoopLabel) {
+          minLoopLabel.style.display = (viewMode === 'double') ? 'flex' : 'none';
+        }
 
         // Re-render T-embedding with double dimer loops
         renderMain2DTemb();
@@ -3744,7 +3767,55 @@ Part of this research was performed while the author was visiting the Institute 
           xorDominoes.push(d);
         }
       }
-      dominosToDraw = xorDominoes;
+
+      // Get min loop length filter
+      const minLoopInput = document.getElementById('dd-min-loop-length');
+      const minLoopLength = minLoopInput ? parseInt(minLoopInput.value) || 4 : 4;
+
+      // Build adjacency graph: face -> list of adjacent faces via XOR dominoes
+      const faceAdj = new Map();  // face -> [{ face, domino }]
+      for (const d of xorDominoes) {
+        const faces = dominoToFaces(d);
+        if (faces.length !== 2) continue;
+        const [f1, f2] = faces;
+        if (!faceAdj.has(f1)) faceAdj.set(f1, []);
+        if (!faceAdj.has(f2)) faceAdj.set(f2, []);
+        faceAdj.get(f1).push({ face: f2, domino: d });
+        faceAdj.get(f2).push({ face: f1, domino: d });
+      }
+
+      // Find connected components (loops) using BFS
+      const visited = new Set();
+      const loops = [];  // each loop = array of dominoes
+
+      for (const startFace of faceAdj.keys()) {
+        if (visited.has(startFace)) continue;
+
+        const loopDominoes = [];
+        const queue = [startFace];
+        visited.add(startFace);
+
+        while (queue.length > 0) {
+          const face = queue.shift();
+          for (const { face: neighbor, domino } of (faceAdj.get(face) || [])) {
+            // Add domino if not already added (check by reference)
+            if (!loopDominoes.includes(domino)) {
+              loopDominoes.push(domino);
+            }
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push(neighbor);
+            }
+          }
+        }
+
+        if (loopDominoes.length >= minLoopLength) {
+          loops.push(loopDominoes);
+        }
+      }
+
+      // Flatten filtered loops into dominosToDraw
+      dominosToDraw = loops.flat();
     }
 
     // Helper to convert T-vertex to screen coords
@@ -3815,6 +3886,14 @@ Part of this research was performed while the author was visiting the Institute 
   // Sample canvas event handlers
   if (sampleCanvas) {
     document.getElementById('sample-btn').addEventListener('click', generateRandomSample);
+
+    // Enter key on sample inputs triggers sample
+    document.getElementById('sample-N-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); generateRandomSample(); }
+    });
+    document.getElementById('sample-border-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); generateRandomSample(); }
+    });
 
     document.getElementById('sample-zoom-in-btn').addEventListener('click', () => {
       if (sampleIs3DView && sampleRenderer3D) {
@@ -5950,6 +6029,14 @@ Part of this research was performed while the author was visiting the Institute 
     updateVEForN(n);
   });
 
+  // Enter key on n-input triggers compute
+  document.getElementById('n-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('compute-btn').click();
+    }
+  });
+
   // Main compute button - initializes graph with weights and computes
   document.getElementById('compute-btn').addEventListener('click', () => {
     const n = parseN();
@@ -6085,6 +6172,20 @@ Part of this research was performed while the author was visiting the Institute 
 
   // DD view mode toggle
   document.getElementById('dd-view-mode').addEventListener('change', () => {
+    // Show/hide min loop control based on mode
+    const minLoopLabel = document.getElementById('dd-min-loop-label');
+    const viewMode = document.getElementById('dd-view-mode').value;
+    if (minLoopLabel) {
+      minLoopLabel.style.display = (viewMode === 'double') ? 'flex' : 'none';
+    }
+    if (tembDoubleDimerActive) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // DD min loop control re-render
+  document.getElementById('dd-min-loop-length').addEventListener('input', () => {
     if (tembDoubleDimerActive) {
       if (mainViewIs3D) renderMain3D();
       else renderMain2DTemb();
