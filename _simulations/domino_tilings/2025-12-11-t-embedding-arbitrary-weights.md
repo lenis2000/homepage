@@ -532,7 +532,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <span id="dd-thickness-control" style="display: none;">
           <label style="display: flex; align-items: center; gap: 4px;">
             <span style="font-weight: 500;">DD:</span>
-            <input type="number" id="dd-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 4em;" aria-label="Double dimer edge thickness">
+            <input type="number" id="dd-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 4em;" aria-label="Double dimer loop thickness">
           </label>
         </span>
       </div>
@@ -2933,12 +2933,7 @@ Part of this research was performed while the author was visiting the Institute 
 
   // Sample double dimer configuration for T-embedding visualization
   async function sampleTembDoubleDimer() {
-    console.log('sampleTembDoubleDimer called');
-    console.log('shufflingWasmReady:', shufflingWasmReady);
-    console.log('currentSimulationN:', currentSimulationN);
-
     if (!shufflingWasmReady) {
-      console.warn('Shuffling WASM not ready');
       alert('WASM module not ready. Please wait a moment and try again.');
       return;
     }
@@ -2946,18 +2941,12 @@ Part of this research was performed while the author was visiting the Institute 
     // Get N = n - 2 (where n is T-embedding order)
     const n = currentSimulationN;
     if (!n || n < 3) {
-      console.log('n < 3, showing alert');
       alert('Please compute a T-embedding first (n >= 3).');
       return;
     }
 
     const N = Math.max(1, n - 2);
-    console.log('N for double dimer:', N);
-
-    if (N < 1) {
-      console.warn('N too small for double dimer sampling');
-      return;
-    }
+    if (N < 1) return;
 
     try {
       const preset = document.getElementById('weight-preset-select').value;
@@ -3114,30 +3103,22 @@ Part of this research was performed while the author was visiting the Institute 
       }
 
       // Parse result
-      console.log('Got resultPtr:', resultPtr);
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);
-      console.log('JSON string length:', jsonStr.length);
       shufflingFreeString(resultPtr);
       const result = JSON.parse(jsonStr);
-      console.log('Parsed result, config1 length:', result.config1?.length, 'config2 length:', result.config2?.length);
 
       if (result.config1) {
         tembDoubleDimerConfig1 = result.config1;
         tembDoubleDimerConfig2 = result.config2;
         tembDoubleDimerActive = true;
-        console.log('Double dimer configs set, rendering...');
 
-        // Set E: to 0.2 for thin T-graph edges
-        const edgeInput = document.getElementById('main-2d-edge-thickness');
-        if (edgeInput) edgeInput.value = '0.2';
+        // Show DD: thickness control with default = 2 * edge thickness
+        const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 2;
+        document.getElementById('dd-edge-thickness').value = (2 * edgeThickness).toFixed(1);
+        document.getElementById('dd-thickness-control').style.display = '';
 
-        // Show DD: control
-        const ddControl = document.getElementById('dd-thickness-control');
-        if (ddControl) ddControl.style.display = 'inline';
-
-        // Re-render T-embedding
+        // Re-render T-embedding with double dimer loops
         renderMain2DTemb();
-        console.log('renderMain2DTemb completed');
       }
 
     } catch (e) {
@@ -3678,233 +3659,130 @@ Part of this research was performed while the author was visiting the Institute 
     ctx.globalAlpha = 1.0;
   }
 
-  // Render double dimer loops on T-graph
-  // Uses the same approach as renderDoubleDimerLoops but draws on T-embedding coordinates
-  function renderTembDoubleDimerLoops(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k, edgeThickness) {
-    console.log('renderTembDoubleDimerLoops START, config1:', tembDoubleDimerConfig1.length, 'config2:', tembDoubleDimerConfig2.length);
+  // Render double dimer loops on T-graph using FACE shading
+  // T-graph faces correspond to Aztec diamond vertices
+  // A domino covers 2 adjacent vertices → 2 adjacent faces
+  function renderTembDoubleDimerFaces(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k) {
     if (!tembDoubleDimerConfig1 || tembDoubleDimerConfig1.length === 0) return;
     if (!tembDoubleDimerConfig2 || tembDoubleDimerConfig2.length === 0) return;
 
     const N = Math.max(1, currentSimulationN - 2);
-    console.log('N =', N, 'k =', k);
 
-    // Create edge key from domino (same as renderDoubleDimerLoops)
-    const edgeKey = (d) => {
-      const cx = d.x + d.w / 2;
-      const cy = d.y + d.h / 2;
-      const horiz = d.w > d.h;
-      let x1, y1, x2, y2;
-      if (horiz) {
-        x1 = cx - d.w / 4;
-        x2 = cx + d.w / 4;
-        y1 = y2 = cy;
+    // Map Aztec diamond vertex (unit square center) to T-graph face lower-left corner
+    // Faces are at half-integer coords (i+0.5, j+0.5), referenced by lower-left corner (i,j)
+    // Domino coords are already centered around 0, no offset needed
+    function aztecVertexToFace(vx, vy) {
+      const i = Math.floor(vx / 2);
+      const j = Math.floor(vy / 2);  // No N offset - coords are already centered
+      return `${i},${j}`;
+    }
+
+    // Extract the two unit square centers covered by a domino
+    function dominoToFaces(d) {
+      const faces = [];
+      if (d.w > d.h) {
+        // Horizontal domino: covers (x+1, y+1) and (x+3, y+1) if w=4, h=2
+        // Or in unit coords: left square at (x + w/4, y + h/2), right at (x + 3w/4, y + h/2)
+        const cy = d.y + d.h / 2;
+        const cx1 = d.x + d.w / 4;
+        const cx2 = d.x + 3 * d.w / 4;
+        faces.push(aztecVertexToFace(cx1, cy));
+        faces.push(aztecVertexToFace(cx2, cy));
       } else {
-        x1 = x2 = cx;
-        y1 = cy - d.h / 4;
-        y2 = cy + d.h / 4;
+        // Vertical domino: covers (x+1, y+1) and (x+1, y+3) if w=2, h=4
+        const cx = d.x + d.w / 2;
+        const cy1 = d.y + d.h / 4;
+        const cy2 = d.y + 3 * d.h / 4;
+        faces.push(aztecVertexToFace(cx, cy1));
+        faces.push(aztecVertexToFace(cx, cy2));
       }
-      const q = v => Math.round(v * 1000);
-      return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
-    };
+      return faces;
+    }
 
-    // Build edge map from both configurations
-    const edgeMap = new Map();
-    const addEdges = (list, type) => {
-      for (const d of list) {
-        const k = edgeKey(d);
-        if (!edgeMap.has(k)) {
-          edgeMap.set(k, { d, types: new Set() });
-        }
-        edgeMap.get(k).types.add(type);
+    // Create domino key for edge identification
+    function dominoKey(d) {
+      // Use domino position and size as unique identifier
+      return `${d.x},${d.y},${d.w},${d.h}`;
+    }
+
+    // Build domino (edge) sets for both configurations
+    const dominoSet1 = new Map();  // key -> domino
+    const dominoSet2 = new Map();
+
+    for (const d of tembDoubleDimerConfig1) {
+      dominoSet1.set(dominoKey(d), d);
+    }
+    for (const d of tembDoubleDimerConfig2) {
+      dominoSet2.set(dominoKey(d), d);
+    }
+
+    // XOR: dominoes (edges) in exactly one configuration
+    // Collect XOR dominoes - these form the double dimer loops
+    const xorDominoes = [];
+
+    // Dominoes only in config1
+    for (const [key, d] of dominoSet1) {
+      if (!dominoSet2.has(key)) {
+        xorDominoes.push(d);
       }
-    };
-
-    addEdges(tembDoubleDimerConfig1, 1);
-    addEdges(tembDoubleDimerConfig2, 2);
-
-    // Build adjacency structure for loop detection
-    const vertexToEdges = new Map();
-    const allEdges = [];
-
-    edgeMap.forEach((val, key) => {
-      const d = val.d;
-      const cx = d.x + d.w / 2;
-      const cy = d.y + d.h / 2;
-      const horiz = d.w > d.h;
-      let x1, y1, x2, y2;
-      if (horiz) {
-        x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy;
-      } else {
-        x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4;
+    }
+    // Dominoes only in config2
+    for (const [key, d] of dominoSet2) {
+      if (!dominoSet1.has(key)) {
+        xorDominoes.push(d);
       }
+    }
 
-      const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
-      const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
+    if (xorDominoes.length === 0) return;  // Identical configurations (rare)
 
-      const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
-      allEdges.push(edgeInfo);
-
-      if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
-      if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
-      vertexToEdges.get(v1Key).push(edgeInfo);
-      vertexToEdges.get(v2Key).push(edgeInfo);
+    // Helper to convert T-vertex to screen coords
+    const toScreen = (v) => ({
+      x: centerX + (v.re - centerRe) * scale,
+      y: centerY - (v.im - centerIm) * scale
     });
 
-    // Find loops (connected components of non-double edges)
-    let loopId = 0;
-    const loopSizes = new Map();
+    // Compute face barycenter (average of 4 corners)
+    function getFaceBarycenter(faceKey) {
+      const [fi, fj] = faceKey.split(',').map(Number);
+      const corners = [
+        vertexMap.get(`${fi},${fj}`),
+        vertexMap.get(`${fi+1},${fj}`),
+        vertexMap.get(`${fi+1},${fj+1}`),
+        vertexMap.get(`${fi},${fj+1}`)
+      ];
+      if (!corners.every(c => c)) return null;
 
-    for (const edge of allEdges) {
-      if (edge.loopId >= 0) continue;
-      const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
-      if (isDouble) {
-        edge.loopId = -2;  // Double edge
-        continue;
-      }
-
-      // BFS to find connected non-double edges
-      const queue = [edge];
-      const visited = new Set();
-      visited.add(edge.key);
-      edge.loopId = loopId;
-      let loopSize = 1;
-
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        for (const vKey of [curr.v1Key, curr.v2Key]) {
-          const neighbors = vertexToEdges.get(vKey) || [];
-          for (const neighbor of neighbors) {
-            if (visited.has(neighbor.key)) continue;
-            const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
-            if (neighborIsDouble) continue;
-            visited.add(neighbor.key);
-            neighbor.loopId = loopId;
-            loopSize++;
-            queue.push(neighbor);
-          }
-        }
-      }
-
-      loopSizes.set(loopId, loopSize);
-      loopId++;
+      const re = (corners[0].re + corners[1].re + corners[2].re + corners[3].re) / 4;
+      const im = (corners[0].im + corners[1].im + corners[2].im + corners[3].im) / 4;
+      return { re, im };
     }
 
-    console.log('Loop detection: found', loopId, 'loops, sizes:', Array.from(loopSizes.values()));
-    console.log('Total edges:', allEdges.length, 'Double edges:', allEdges.filter(e => e.loopId === -2).length);
+    // Get DD thickness
+    const ddInput = document.getElementById('dd-edge-thickness');
+    const ddThickness = ddInput ? parseFloat(ddInput.value) || 2 : 2;
 
-    // Transform domino coordinates to T-graph coordinates
-    // Domino edge endpoints are at integer positions
-    // T-graph vertices T(i,j) with |i|+|j| <= k+1 = N+1
-    // The mapping: ti = floor(dx/2), tj = floor((dy - 2*N)/2)
-    // Using floor ensures adjacent vertices for edges that are 2 units apart
-    function dominoToTGraphVertex(dx, dy) {
-      const ti = Math.floor(dx / 2);
-      const tj = Math.floor((dy - 2 * N) / 2);
-      return { ti, tj };
-    }
-
-    // T-graph edges use fixed thin width
-    const fixedTGraphThickness = 0.2;
-    const baseScale = scale / 300;
-
-    // First pass: draw all T-graph edges with fixed thin width (0.2)
-    const tGraphLineWidth = Math.max(fixedTGraphThickness * 0.5, baseScale * fixedTGraphThickness);
-    ctx.strokeStyle = '#cccccc';
-    ctx.lineWidth = tGraphLineWidth;
-    ctx.globalAlpha = 0.5;
-
-    for (const v of Array.from(vertexMap.values())) {
-      const i = v.i, j = v.j;
-      // Draw edge to right neighbor
-      const rightKey = `${i+1},${j}`;
-      if (vertexMap.has(rightKey)) {
-        const v2 = vertexMap.get(rightKey);
-        const x1 = centerX + (v.re - centerRe) * scale;
-        const y1 = centerY - (v.im - centerIm) * scale;
-        const x2 = centerX + (v2.re - centerRe) * scale;
-        const y2 = centerY - (v2.im - centerIm) * scale;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-      // Draw edge to top neighbor
-      const topKey = `${i},${j+1}`;
-      if (vertexMap.has(topKey)) {
-        const v2 = vertexMap.get(topKey);
-        const x1 = centerX + (v.re - centerRe) * scale;
-        const y1 = centerY - (v.im - centerIm) * scale;
-        const x2 = centerX + (v2.re - centerRe) * scale;
-        const y2 = centerY - (v2.im - centerIm) * scale;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-    }
-
-    // Second pass: draw loop edges (double dimer) with DD: control thickness
-    // Double the uniformEdgeWidth formula, with minimum 0.7
-    const ddThicknessInput = document.getElementById('dd-edge-thickness');
-    const ddControlValue = ddThicknessInput ? parseFloat(ddThicknessInput.value) || 2 : 2;
-    const baseThickness = Math.max(ddControlValue, scale / 300 * ddControlValue);
-    const doubleDimerLineWidth = Math.max(0.7, 2 * baseThickness);
-    ctx.globalAlpha = 1.0;
-    ctx.lineWidth = doubleDimerLineWidth;
+    // Draw each XOR domino as a line between its two face barycenters
+    ctx.strokeStyle = '#cc0000';  // Single color for all
+    ctx.lineWidth = ddThickness;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    let drawnEdges = 0;
-    let skippedNoVertex = 0;
-    let skippedNotAdjacent = 0;
+    for (const d of xorDominoes) {
+      const faces = dominoToFaces(d);
+      if (faces.length !== 2) continue;
 
-    for (const edge of allEdges) {
-      if (edge.loopId < 0) continue;  // Skip double edges
-      const loopSize = loopSizes.get(edge.loopId) || 0;
-      if (loopSize < 4) continue;  // Skip loops shorter than 4
+      const bary1 = getFaceBarycenter(faces[0]);
+      const bary2 = getFaceBarycenter(faces[1]);
+      if (!bary1 || !bary2) continue;
 
-      // Transform domino edge endpoints to T-graph vertices
-      const v1idx = dominoToTGraphVertex(edge.x1, edge.y1);
-      const v2idx = dominoToTGraphVertex(edge.x2, edge.y2);
+      const p1 = toScreen(bary1);
+      const p2 = toScreen(bary2);
 
-      const v1 = vertexMap.get(`${v1idx.ti},${v1idx.tj}`);
-      const v2 = vertexMap.get(`${v2idx.ti},${v2idx.tj}`);
-
-      if (!v1 || !v2) {
-        skippedNoVertex++;
-        if (skippedNoVertex <= 3) {
-          console.log('No vertex for:', v1idx, v2idx, 'from edge', edge.x1, edge.y1, '->', edge.x2, edge.y2);
-        }
-        continue;
-      }
-
-      // Verify this is a valid T-graph edge (adjacent vertices)
-      const di = Math.abs(v1idx.ti - v2idx.ti);
-      const dj = Math.abs(v1idx.tj - v2idx.tj);
-      if ((di === 1 && dj === 0) || (di === 0 && dj === 1)) {
-        const sx1 = centerX + (v1.re - centerRe) * scale;
-        const sy1 = centerY - (v1.im - centerIm) * scale;
-        const sx2 = centerX + (v2.re - centerRe) * scale;
-        const sy2 = centerY - (v2.im - centerIm) * scale;
-
-        // Color by which configuration the edge belongs to
-        ctx.strokeStyle = edge.val.types.has(1) && !edge.val.types.has(2) ? '#000000' : '#cc0000';
-
-        ctx.beginPath();
-        ctx.moveTo(sx1, sy1);
-        ctx.lineTo(sx2, sy2);
-        ctx.stroke();
-        drawnEdges++;
-      } else {
-        skippedNotAdjacent++;
-        if (skippedNotAdjacent <= 3) {
-          console.log('Not adjacent:', v1idx, v2idx, 'di=', di, 'dj=', dj);
-        }
-      }
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
     }
-
-    console.log('Drew', drawnEdges, 'edges, skipped:', skippedNoVertex, 'no vertex,', skippedNotAdjacent, 'not adjacent');
-
-    ctx.globalAlpha = 1.0;
   }
 
   // Sample canvas event handlers
@@ -4964,11 +4842,9 @@ Part of this research was performed while the author was visiting the Institute 
       }
     }
 
-    // ========== DOUBLE DIMER LOOPS (on T-graph) ==========
-    console.log('Checking double dimer render: active=', tembDoubleDimerActive, 'config1.length=', tembDoubleDimerConfig1.length);
+    // ========== DOUBLE DIMER FACES (on T-graph) ==========
     if (tembDoubleDimerActive && tembDoubleDimerConfig1.length > 0) {
-      console.log('Calling renderTembDoubleDimerLoops with k=', k);
-      renderTembDoubleDimerLoops(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k, uniformEdgeWidth);
+      renderTembDoubleDimerFaces(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k);
     }
 
     // Draw selected vertex info overlay in upper left
@@ -6153,20 +6029,8 @@ Part of this research was performed while the author was visiting the Institute 
 
   // Double dimer on T-graph
   const doubleDimerTembBtn = document.getElementById('sample-double-dimer-temb-btn');
-  console.log('doubleDimerTembBtn element:', doubleDimerTembBtn);
   if (doubleDimerTembBtn) {
     doubleDimerTembBtn.addEventListener('click', sampleTembDoubleDimer);
-    console.log('Double dimer button event listener attached');
-  } else {
-    console.error('Double dimer button NOT FOUND!');
-  }
-
-  // DD: thickness control for double dimers
-  const ddThicknessInput = document.getElementById('dd-edge-thickness');
-  if (ddThicknessInput) {
-    ddThicknessInput.addEventListener('input', () => {
-      if (tembDoubleDimerActive) renderMain2DTemb();
-    });
   }
 
   // Re/Im surface checkboxes (3D mode)
@@ -6185,6 +6049,14 @@ Part of this research was performed while the author was visiting the Institute 
   document.getElementById('main-2d-edge-thickness').addEventListener('input', () => {
     if (mainViewIs3D) renderMain3D();
     else renderMain2DTemb();
+  });
+
+  // DD thickness control re-render
+  document.getElementById('dd-edge-thickness').addEventListener('input', () => {
+    if (tembDoubleDimerActive) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
   });
 
   // 2D/3D toggle button
@@ -6936,149 +6808,90 @@ Part of this research was performed while the author was visiting the Institute 
       }
     }
 
-    // Double dimer loops on T-graph (if active)
+    // Double dimer XOR on T-graph (if active)
     if (tembDoubleDimerActive && tembDoubleDimerConfig1.length > 0 && tembDoubleDimerConfig2.length > 0) {
-      const N = Math.max(1, currentSimulationN - 2);
-
-      // Same edge key logic as renderTembDoubleDimerLoops
-      const edgeKey = (d) => {
-        const cx = d.x + d.w / 2;
-        const cy = d.y + d.h / 2;
-        const horiz = d.w > d.h;
-        let x1, y1, x2, y2;
-        if (horiz) {
-          x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy;
-        } else {
-          x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4;
-        }
-        const q = v => Math.round(v * 1000);
-        return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
-      };
-
-      // Build edge map from both configurations
-      const edgeMap = new Map();
-      const addEdges = (list, type) => {
-        for (const d of list) {
-          const ek = edgeKey(d);
-          if (!edgeMap.has(ek)) {
-            edgeMap.set(ek, { d, types: new Set() });
-          }
-          edgeMap.get(ek).types.add(type);
-        }
-      };
-      addEdges(tembDoubleDimerConfig1, 1);
-      addEdges(tembDoubleDimerConfig2, 2);
-
-      // Build adjacency for loop detection
-      const vertexToEdges = new Map();
-      const allEdges = [];
-
-      edgeMap.forEach((val, key) => {
-        const d = val.d;
-        const cx = d.x + d.w / 2;
-        const cy = d.y + d.h / 2;
-        const horiz = d.w > d.h;
-        let x1, y1, x2, y2;
-        if (horiz) {
-          x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy;
-        } else {
-          x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4;
-        }
-        const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
-        const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
-        const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
-        allEdges.push(edgeInfo);
-        if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
-        if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
-        vertexToEdges.get(v1Key).push(edgeInfo);
-        vertexToEdges.get(v2Key).push(edgeInfo);
-      });
-
-      // Find loops
-      let loopId = 0;
-      const loopSizes = new Map();
-      for (const edge of allEdges) {
-        if (edge.loopId >= 0) continue;
-        const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
-        if (isDouble) { edge.loopId = -2; continue; }
-
-        const queue = [edge];
-        const visited = new Set([edge.key]);
-        edge.loopId = loopId;
-        let loopSize = 1;
-        while (queue.length > 0) {
-          const curr = queue.shift();
-          for (const vKey of [curr.v1Key, curr.v2Key]) {
-            for (const neighbor of (vertexToEdges.get(vKey) || [])) {
-              if (visited.has(neighbor.key)) continue;
-              if (neighbor.val.types.has(1) && neighbor.val.types.has(2)) continue;
-              visited.add(neighbor.key);
-              neighbor.loopId = loopId;
-              loopSize++;
-              queue.push(neighbor);
-            }
-          }
-        }
-        loopSizes.set(loopId, loopSize);
-        loopId++;
+      // Map Aztec diamond vertex (unit square center) to T-graph face lower-left corner
+      function aztecVertexToFace(vx, vy) {
+        const i = Math.floor(vx / 2);
+        const j = Math.floor(vy / 2);
+        return `${i},${j}`;
       }
 
-      // Coordinate mapping: domino coords to T-graph vertex indices
-      function dominoToTGraphVertex(dx, dy) {
-        const ti = Math.floor(dx / 2);
-        const tj = Math.floor((dy - 2 * N) / 2);
-        return { ti, tj };
+      // Extract the two unit square centers covered by a domino
+      function dominoToFaces(d) {
+        const faces = [];
+        if (d.w > d.h) {
+          const cy = d.y + d.h / 2;
+          const cx1 = d.x + d.w / 4;
+          const cx2 = d.x + 3 * d.w / 4;
+          faces.push(aztecVertexToFace(cx1, cy));
+          faces.push(aztecVertexToFace(cx2, cy));
+        } else {
+          const cx = d.x + d.w / 2;
+          const cy1 = d.y + d.h / 4;
+          const cy2 = d.y + 3 * d.h / 4;
+          faces.push(aztecVertexToFace(cx, cy1));
+          faces.push(aztecVertexToFace(cx, cy2));
+        }
+        return faces;
       }
 
-      // DD: control is for double dimer edges; T-graph edges use fixed 0.2
+      // Create domino key for edge identification
+      function dominoKey(d) {
+        return `${d.x},${d.y},${d.w},${d.h}`;
+      }
+
+      // Build domino (edge) sets for both configurations
+      const dominoSet1 = new Map();
+      const dominoSet2 = new Map();
+      for (const d of tembDoubleDimerConfig1) {
+        dominoSet1.set(dominoKey(d), d);
+      }
+      for (const d of tembDoubleDimerConfig2) {
+        dominoSet2.set(dominoKey(d), d);
+      }
+
+      // XOR: dominoes in exactly one configuration
+      const xorDominoes = [];
+      for (const [key, d] of dominoSet1) {
+        if (!dominoSet2.has(key)) xorDominoes.push(d);
+      }
+      for (const [key, d] of dominoSet2) {
+        if (!dominoSet1.has(key)) xorDominoes.push(d);
+      }
+
+      // Compute face barycenter (average of 4 corners)
+      function getFaceBarycenter(faceKey) {
+        const [fi, fj] = faceKey.split(',').map(Number);
+        const corners = [
+          vertexMap.get(`${fi},${fj}`),
+          vertexMap.get(`${fi+1},${fj}`),
+          vertexMap.get(`${fi+1},${fj+1}`),
+          vertexMap.get(`${fi},${fj+1}`)
+        ];
+        if (!corners.every(c => c)) return null;
+        const re = (corners[0].re + corners[1].re + corners[2].re + corners[3].re) / 4;
+        const im = (corners[0].im + corners[1].im + corners[2].im + corners[3].im) / 4;
+        return { re, im };
+      }
+
+      // Get DD thickness
       const ddInput = document.getElementById('dd-edge-thickness');
-      const doubleDimerThickness = ddInput ? parseFloat(ddInput.value) || 0.7 : 0.7;
-      const fixedTGraphThickness = 0.2;
-      const baseScale = scale / 300;
+      const ddThickness = ddInput ? parseFloat(ddInput.value) || 2 : 2;
 
-      // First pass: draw all T-graph edges with fixed thin width (0.2)
-      const tGraphLineWidth = Math.max(fixedTGraphThickness * 0.5, baseScale * fixedTGraphThickness);
-      for (const v of data.vertices) {
-        const i = v.i, j = v.j;
-        const rightKey = `${i+1},${j}`;
-        if (vertexMap.has(rightKey)) {
-          const v2 = vertexMap.get(rightKey);
-          const p1 = toScreen(v.re, v.im);
-          const p2 = toScreen(v2.re, v2.im);
-          svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="#cccccc" stroke-width="${tGraphLineWidth.toFixed(2)}" opacity="0.5"/>`);
-        }
-        const topKey = `${i},${j+1}`;
-        if (vertexMap.has(topKey)) {
-          const v2 = vertexMap.get(topKey);
-          const p1 = toScreen(v.re, v.im);
-          const p2 = toScreen(v2.re, v2.im);
-          svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="#cccccc" stroke-width="${tGraphLineWidth.toFixed(2)}" opacity="0.5"/>`);
-        }
-      }
+      // Draw each XOR domino as a line between its two face barycenters
+      for (const d of xorDominoes) {
+        const faces = dominoToFaces(d);
+        if (faces.length !== 2) continue;
 
-      // Second pass: draw loop edges with DD: control thickness
-      // Double the uniformEdgeWidth formula, with minimum 0.7
-      const baseThickness = Math.max(doubleDimerThickness, scale / 300 * doubleDimerThickness);
-      const doubleDimerLineWidth = Math.max(0.7, 2 * baseThickness);
-      for (const edge of allEdges) {
-        if (edge.loopId < 0) continue;
-        const loopSize = loopSizes.get(edge.loopId) || 0;
-        if (loopSize < 4) continue;
+        const bary1 = getFaceBarycenter(faces[0]);
+        const bary2 = getFaceBarycenter(faces[1]);
+        if (!bary1 || !bary2) continue;
 
-        const v1idx = dominoToTGraphVertex(edge.x1, edge.y1);
-        const v2idx = dominoToTGraphVertex(edge.x2, edge.y2);
-        const v1 = vertexMap.get(`${v1idx.ti},${v1idx.tj}`);
-        const v2 = vertexMap.get(`${v2idx.ti},${v2idx.tj}`);
-        if (!v1 || !v2) continue;
+        const p1 = toScreen(bary1.re, bary1.im);
+        const p2 = toScreen(bary2.re, bary2.im);
 
-        const di = Math.abs(v1idx.ti - v2idx.ti);
-        const dj = Math.abs(v1idx.tj - v2idx.tj);
-        if ((di === 1 && dj === 0) || (di === 0 && dj === 1)) {
-          const p1 = toScreen(v1.re, v1.im);
-          const p2 = toScreen(v2.re, v2.im);
-          const color = edge.val.types.has(1) && !edge.val.types.has(2) ? '#000000' : '#cc0000';
-          svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="${color}" stroke-width="${doubleDimerLineWidth.toFixed(2)}" stroke-linecap="round"/>`);
-        }
+        svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="#cc0000" stroke-width="${ddThickness}" stroke-linecap="round"/>`);
       }
     }
 
