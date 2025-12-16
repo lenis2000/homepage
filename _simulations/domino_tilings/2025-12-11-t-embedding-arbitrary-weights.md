@@ -6235,6 +6235,13 @@ Part of this research was performed while the author was visiting the Institute 
               setPeriodicWeight(type, jIdx, iIdx, value);
             }
           });
+          // Enter key triggers compute
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              document.getElementById('compute-btn').click();
+            }
+          });
           grid.appendChild(input);
         }
       }
