@@ -96,7 +96,7 @@ code:
       <li><em>skip</em>: Export every k-th frame (e.g., skip=4 exports n=1,5,9,...).</li>
       <li><em>show n</em>: Toggle display of "n = X" label on each frame.</li>
     </ul>
-    The GIF uses the currently selected weight preset and respects the Origami checkbox and V/E size sliders. <strong>Note:</strong> For visual consistency across frames, each T-embedding is affine transformed so that the four external corners map exactly to the fixed square with vertices at (±1, 0) and (0, ±1).
+    The GIF uses the currently selected weight preset and respects the Origami checkbox and V/E size sliders.
   </li>
 </ul>
 
@@ -7842,54 +7842,38 @@ Part of this research was performed while the author was visiting the Institute 
           vertexMap.set(`${v.i},${v.j}`, v);
         }
 
-        // Normalize T-embedding via affine transform so corners map to (±1, 0), (0, ±1)
-        const cornerR = vertexMap.get(`${k+1},0`);   // maps to (1, 0)
-        const cornerT = vertexMap.get(`0,${k+1}`);   // maps to (0, 1)
-        const cornerL = vertexMap.get(`${-(k+1)},0`); // maps to (-1, 0)
-        const cornerB = vertexMap.get(`0,${-(k+1)}`); // maps to (0, -1)
-
-        // Compute affine transform using corner positions
-        // Center is average of corners, basis vectors from center to R and T corners
-        let cx = 0, cy = 0;
-        let ax = 1, ay = 0; // basis vector for x (toward R)
-        let bx = 0, by = 1; // basis vector for y (toward T)
-
-        if (cornerR && cornerT && cornerL && cornerB) {
-          cx = (cornerR.re + cornerT.re + cornerL.re + cornerB.re) / 4;
-          cy = (cornerR.im + cornerT.im + cornerL.im + cornerB.im) / 4;
-          // Basis vectors: R-center maps to (1,0), T-center maps to (0,1)
-          ax = cornerR.re - cx;
-          ay = cornerR.im - cy;
-          bx = cornerT.re - cx;
-          by = cornerT.im - cy;
+        // Compute bounds
+        let minRe = Infinity, maxRe = -Infinity;
+        let minIm = Infinity, maxIm = -Infinity;
+        for (const v of data.vertices) {
+          minRe = Math.min(minRe, v.re);
+          maxRe = Math.max(maxRe, v.re);
+          minIm = Math.min(minIm, v.im);
+          maxIm = Math.max(maxIm, v.im);
         }
 
-        // Inverse transform matrix: [ax bx; ay by]^(-1)
-        const det = ax * by - bx * ay;
-        const invAx = by / det, invBx = -bx / det;
-        const invAy = -ay / det, invBy = ax / det;
-
-        // Canvas mapping: normalized [-1,1] -> canvas pixels
         const padding = 40;
-        const canvasScale = (Math.min(gifWidth, gifHeight) - 2 * padding) / 2;
+        const rangeRe = maxRe - minRe || 1;
+        const rangeIm = maxIm - minIm || 1;
+        const scale = Math.min(
+          (gifWidth - 2 * padding) / rangeRe,
+          (gifHeight - 2 * padding) / rangeIm
+        );
+
         const centerX = gifWidth / 2;
         const centerY = gifHeight / 2;
+        const centerRe = (minRe + maxRe) / 2;
+        const centerIm = (minIm + maxIm) / 2;
 
-        // Transform: T-embedding coords -> normalized -> canvas pixels
+        // Transform: T-embedding coords -> canvas pixels
         function toCanvas(re, im) {
-          // Translate to center
-          const dx = re - cx;
-          const dy = im - cy;
-          // Apply inverse basis transform to get normalized coords
-          const nx = invAx * dx + invBx * dy;
-          const ny = invAy * dx + invBy * dy;
           return {
-            x: centerX + nx * canvasScale,
-            y: centerY - ny * canvasScale
+            x: centerX + (re - centerRe) * scale,
+            y: centerY - (im - centerIm) * scale
           };
         }
 
-        const uniformEdgeWidth = Math.max(edgeThickness, canvasScale / 150 * edgeThickness);
+        const uniformEdgeWidth = Math.max(edgeThickness, scale / 300 * edgeThickness);
 
         // Helper to draw edge
         function drawEdge(i1, j1, i2, j2, color) {
@@ -7985,7 +7969,7 @@ Part of this research was performed while the author was visiting the Institute 
 
         // Draw vertices
         offCtx.fillStyle = '#333';
-        const radius = Math.max(vertexSize, canvasScale / 400 * vertexSize);
+        const radius = Math.max(vertexSize, scale / 800 * vertexSize);
         for (const v of data.vertices) {
           const p = toCanvas(v.re, v.im);
           offCtx.beginPath();
