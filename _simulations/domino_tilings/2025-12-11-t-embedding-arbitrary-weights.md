@@ -7776,39 +7776,53 @@ Part of this research was performed while the author was visiting the Institute 
       // Save current state
       const savedN = currentSimulationN;
 
-      // Process each n value (with skip)
-      for (let n = minN; n <= maxN; n += skipCount) {
-        progressEl.textContent = `Computing n=${n}/${maxN}...`;
+      // Calculate actual max n that will be rendered (accounting for skip)
+      const actualMaxN = minN + Math.floor((maxN - minN) / skipCount) * skipCount;
+
+      // IMPORTANT: Initialize graph ONCE for actualMaxN, apply weights, fold, then compute all levels
+      // This ensures random weights are consistent across all frames
+      progressEl.textContent = `Initializing for n=${actualMaxN}...`;
+      await new Promise(r => setTimeout(r, 10));
+
+      initAztecGraph(actualMaxN);
+      setAztecWeightMode(currentWeightMode);
+      clearTembLevels();
+
+      // Run folding for non-uniform weights (once for the full graph)
+      if (currentWeightMode !== 0) {
+        progressEl.textContent = `Folding...`;
+        await new Promise(r => setTimeout(r, 10));
+        while (canAztecStepDown()) {
+          aztecGraphStepDown();
+        }
+        while (canAztecStepUp()) {
+          aztecGraphStepUp();
+        }
+      }
+
+      // Compute ALL T-embedding levels up to maxK = actualMaxN - 2
+      progressEl.textContent = `Computing T-embedding levels...`;
+      await new Promise(r => setTimeout(r, 10));
+      const maxK = Math.max(0, actualMaxN - 2);
+      for (let k = 0; k <= maxK; k++) {
+        let ptr = getTembeddingLevelJSON(k);
+        freeString(ptr);
+      }
+
+      // Now render frames for each requested n value
+      for (let n = minN; n <= actualMaxN; n += skipCount) {
+        progressEl.textContent = `Rendering n=${n}/${actualMaxN}...`;
         await new Promise(r => setTimeout(r, 10)); // Yield for UI update
 
-        // Initialize graph for this n with current weight settings
-        initAztecGraph(n);
-        setAztecWeightMode(currentWeightMode);
-        clearTembLevels();
-
-        // Run folding for non-uniform weights
-        if (currentWeightMode !== 0) {
-          while (canAztecStepDown()) {
-            aztecGraphStepDown();
-          }
-          while (canAztecStepUp()) {
-            aztecGraphStepUp();
-          }
-        }
-
-        // Compute T-embedding
-        const finalK = Math.max(0, n - 2);
-        for (let k = 0; k <= finalK; k++) {
-          let ptr = getTembeddingLevelJSON(k);
-          freeString(ptr);
-        }
+        // Get T-embedding at level k = n - 2 (already computed)
+        const frameK = Math.max(0, n - 2);
 
         // Render frame to offscreen canvas
         offCtx.fillStyle = '#fafafa';
         offCtx.fillRect(0, 0, gifWidth, gifHeight);
 
-        // Get T-embedding data for final level
-        let ptr = getTembeddingLevelJSON(finalK);
+        // Get T-embedding data for this frame's level
+        let ptr = getTembeddingLevelJSON(frameK);
         let json = Module.UTF8ToString(ptr);
         freeString(ptr);
         let data;
@@ -7927,7 +7941,7 @@ Part of this research was performed while the author was visiting the Institute 
 
         // Draw origami if enabled
         if (showOrigami && getOrigamiLevelJSON) {
-          ptr = getOrigamiLevelJSON(finalK);
+          ptr = getOrigamiLevelJSON(frameK);
           json = Module.UTF8ToString(ptr);
           freeString(ptr);
           let origamiData;
@@ -8022,7 +8036,7 @@ Part of this research was performed while the author was visiting the Institute 
         }
 
         const link = document.createElement('a');
-        link.download = `t-embedding-n${minN}-${maxN}-${weightStr}.gif`;
+        link.download = `t-embedding-n${minN}-${actualMaxN}-${weightStr}.gif`;
         link.href = URL.createObjectURL(blob);
         link.click();
         URL.revokeObjectURL(link.href);
