@@ -537,6 +537,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <input type="checkbox" id="show-origami-chk" checked style="accent-color: #E57200;" aria-label="Show origami overlay">
           <span style="font-size: 12px; font-weight: 500; color: #444;">Origami</span>
         </label>
+        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 3px 6px; border-radius: 3px;">
+          <input type="checkbox" id="show-checkerboard-chk" style="accent-color: #E57200;" aria-label="Checkerboard coloring of faces">
+          <span style="font-size: 12px; font-weight: 500; color: #444;">Checkerboard</span>
+        </label>
         <span style="width: 1px; height: 20px; background: #ccc;"></span>
         <button id="sample-double-dimer-temb-btn"
                 style="padding: 5px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; background: #E57200; color: white; border: none; border-radius: 3px; cursor: pointer;"
@@ -4910,6 +4914,87 @@ Part of this research was performed while the author was visiting the Institute 
       }
     }
 
+    // ========== CHECKERBOARD FACE COLORING ==========
+    const showCheckerboard = document.getElementById('show-checkerboard-chk')?.checked;
+    if (showCheckerboard) {
+      // Black/white checkerboard: only fill one bipartite class
+      const fillColor = 'rgba(0, 0, 0, 0.3)';
+
+      // Helper to get screen coords from vertex
+      const toScreen = (v) => ({
+        x: centerX + (v.re - centerRe) * scale,
+        y: centerY - (v.im - centerIm) * scale
+      });
+
+      // Build list of all valid faces (3 or 4 corners present)
+      const allFaces = new Map();  // "fi,fj" -> { corners: [...], cornerCoords: [...] }
+      for (let fi = -(k+1); fi <= k; fi++) {
+        for (let fj = -(k+1); fj <= k; fj++) {
+          const c00 = vertexMap.get(`${fi},${fj}`);
+          const c10 = vertexMap.get(`${fi+1},${fj}`);
+          const c11 = vertexMap.get(`${fi+1},${fj+1}`);
+          const c01 = vertexMap.get(`${fi},${fj+1}`);
+
+          const corners = [];
+          const cornerCoords = [];
+          if (c00) { corners.push(c00); cornerCoords.push([fi, fj]); }
+          if (c10) { corners.push(c10); cornerCoords.push([fi+1, fj]); }
+          if (c11) { corners.push(c11); cornerCoords.push([fi+1, fj+1]); }
+          if (c01) { corners.push(c01); cornerCoords.push([fi, fj+1]); }
+
+          if (corners.length >= 3) {
+            allFaces.set(`${fi},${fj}`, { corners, cornerCoords, fi, fj });
+          }
+        }
+      }
+
+      // Track parity for each face
+      const faceParity = new Map();  // "fi,fj" -> 0 or 1
+
+      // Seed: assign parity to center face (0,0) or first available
+      const seedKey = allFaces.has('0,0') ? '0,0' : allFaces.keys().next().value;
+      if (seedKey) {
+        const [seedFi, seedFj] = seedKey.split(',').map(Number);
+        faceParity.set(seedKey, (seedFi + seedFj) % 2 === 0 ? 0 : 1);
+      }
+
+      // BFS flood fill to propagate parity to all faces
+      const queue = [seedKey];
+      while (queue.length > 0) {
+        const currentKey = queue.shift();
+        const currentParity = faceParity.get(currentKey);
+        const [fi, fj] = currentKey.split(',').map(Number);
+
+        // Check all 4 adjacent faces
+        const neighbors = [
+          [fi-1, fj], [fi+1, fj], [fi, fj-1], [fi, fj+1]
+        ];
+        for (const [ni, nj] of neighbors) {
+          const neighborKey = `${ni},${nj}`;
+          if (allFaces.has(neighborKey) && !faceParity.has(neighborKey)) {
+            // Adjacent face gets opposite parity
+            faceParity.set(neighborKey, 1 - currentParity);
+            queue.push(neighborKey);
+          }
+        }
+      }
+
+      // Draw all faces with parity 1
+      for (const [faceKey, faceData] of allFaces) {
+        if (faceParity.get(faceKey) === 1) {
+          const sc = faceData.corners.map(toScreen);
+          ctx.fillStyle = fillColor;
+          ctx.beginPath();
+          ctx.moveTo(sc[0].x, sc[0].y);
+          for (let i = 1; i < sc.length; i++) {
+            ctx.lineTo(sc[i].x, sc[i].y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+
     // Draw edges
 
     // 1. Interior edges (lattice connections for |i|+|j| <= k)
@@ -6541,6 +6626,7 @@ Part of this research was performed while the author was visiting the Institute 
   document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-origami-chk').addEventListener('change', renderMain2DTemb);
+  document.getElementById('show-checkerboard-chk').addEventListener('change', renderMain2DTemb);
 
   // Double dimer on T-graph
   const doubleDimerTembBtn = document.getElementById('sample-double-dimer-temb-btn');
