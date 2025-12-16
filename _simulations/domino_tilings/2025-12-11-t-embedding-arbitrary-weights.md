@@ -3144,6 +3144,10 @@ Part of this research was performed while the author was visiting the Institute 
           minLoopLabel.style.display = (viewMode === 'double') ? 'flex' : 'none';
         }
 
+        // Disable origami overlay when showing dimer covering
+        const origamiChk = document.getElementById('show-origami-chk');
+        if (origamiChk) origamiChk.checked = false;
+
         // Re-render T-embedding with double dimer loops
         renderMain2DTemb();
       }
