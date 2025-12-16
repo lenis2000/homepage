@@ -3865,7 +3865,7 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Draw each XOR domino as a line between its two face barycenters
     ctx.strokeStyle = '#cc0000';  // Single color for all
-    ctx.lineWidth = ddThickness;
+    ctx.lineWidth = Math.max(ddThickness, scale / 300 * ddThickness);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
