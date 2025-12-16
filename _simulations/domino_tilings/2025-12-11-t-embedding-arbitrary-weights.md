@@ -96,7 +96,7 @@ code:
       <li><em>skip</em>: Export every k-th frame (e.g., skip=4 exports n=1,5,9,...).</li>
       <li><em>show n</em>: Toggle display of "n = X" label on each frame.</li>
     </ul>
-    The GIF uses the currently selected weight preset and respects the Origami checkbox and V/E size sliders. <strong>Note:</strong> For visual consistency across frames, each T-embedding is affine transformed so that the four external corners map exactly to the fixed square with vertices at (±1, 0) and (0, ±1). This normalization ensures the boundary shape remains constant while the internal structure evolves with n.
+    The GIF uses the currently selected weight preset and respects the Origami checkbox and V/E size sliders. <strong>Note:</strong> For visual consistency across frames, each T-embedding is affine transformed so that the four external corners map exactly to the fixed square with vertices at (±1, 0) and (0, ±1).
   </li>
 </ul>
 
