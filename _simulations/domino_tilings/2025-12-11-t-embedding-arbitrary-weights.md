@@ -629,21 +629,29 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         </div>
         <span style="color: #dee2e6;">|</span>
         <button id="export-obj-btn" style="padding: 6px 14px; background: #002f6c; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export 3D model as OBJ">OBJ (3D)</button>
-        <span style="color: #dee2e6;">|</span>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button id="export-gif-btn" style="padding: 6px 14px; background: linear-gradient(135deg, #6B4C9A 0%, #4A6B8A 100%); color: white; border: none; border-radius: 4px; font-weight: 500; box-shadow: 0 1px 3px rgba(107,76,154,0.3); transition: all 0.2s ease;" aria-label="Export as GIF animation" onmouseover="this.style.boxShadow='0 2px 6px rgba(107,76,154,0.4)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.boxShadow='0 1px 3px rgba(107,76,154,0.3)'; this.style.transform='translateY(0)';">
-            <span style="display: inline-flex; align-items: center; gap: 5px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              GIF
-            </span>
-          </button>
-          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
-            <span>n=1..</span>
-            <input type="number" id="gif-max-n" value="20" min="2" max="100" style="width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Maximum n for GIF">
-          </label>
-          <span style="font-size: 10px; color: #8b7355; font-style: italic;">may take minutes</span>
-        </div>
-        <span id="gif-progress" style="display: none; margin-left: 8px; font-size: 12px; color: #6B4C9A; font-weight: 600; background: #f0ebf5; padding: 4px 10px; border-radius: 4px;"></span>
+      </div>
+      <!-- GIF export on second line -->
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+        <button id="export-gif-btn" style="padding: 6px 14px; background: linear-gradient(135deg, #6B4C9A 0%, #4A6B8A 100%); color: white; border: none; border-radius: 4px; font-weight: 500; box-shadow: 0 1px 3px rgba(107,76,154,0.3); transition: all 0.2s ease;" aria-label="Export as GIF animation" onmouseover="this.style.boxShadow='0 2px 6px rgba(107,76,154,0.4)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.boxShadow='0 1px 3px rgba(107,76,154,0.3)'; this.style.transform='translateY(0)';">
+          <span style="display: inline-flex; align-items: center; gap: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            GIF
+          </span>
+        </button>
+        <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+          <span>n=1..</span>
+          <input type="number" id="gif-max-n" value="20" min="2" max="100" style="width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Maximum n for GIF">
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+          <span>skip:</span>
+          <input type="number" id="gif-skip" value="1" min="1" max="10" style="width: 40px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Skip count for GIF frames">
+        </label>
+        <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+          <input type="checkbox" id="gif-show-n" checked style="margin: 0;">
+          <span>show n</span>
+        </label>
+        <span style="font-size: 10px; color: #8b7355; font-style: italic;">may take minutes</span>
+        <span id="gif-progress" style="display: none; font-size: 12px; color: #6B4C9A; font-weight: 600; background: #f0ebf5; padding: 4px 10px; border-radius: 4px;"></span>
       </div>
     </div>
   </div>
@@ -6090,6 +6098,13 @@ Part of this research was performed while the author was visiting the Institute 
               setPeriodicWeight(type, jIdx, iIdx, value);
             }
           });
+          // Enter key triggers compute
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              document.getElementById('compute-btn').click();
+            }
+          });
           grid.appendChild(input);
         }
       }
@@ -6318,11 +6333,29 @@ Part of this research was performed while the author was visiting the Institute 
     updateTimeEstimate();
   });
 
-  // Enter key on n-input triggers compute
-  document.getElementById('n-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('compute-btn').click();
+  // Enter key on parameter inputs triggers compute
+  const paramInputIds = [
+    'n-input',
+    'periodic-k', 'periodic-l',
+    'random-seed',
+    'iid-min', 'iid-max', 'iid-pareto-alpha', 'iid-pareto-xmin', 'iid-geom-p',
+    'gamma-alpha', 'gamma-beta', 'gamma-seed',
+    'layered-seed',
+    'layered1-val1', 'layered1-val2', 'layered1-prob1', 'layered1-prob2',
+    'layered2-val1', 'layered2-val2',
+    'layered3-val1', 'layered3-val2', 'layered3-prob1', 'layered3-prob2',
+    'layered4-w1', 'layered4-w2',
+    'layered5-min', 'layered5-max'
+  ];
+  paramInputIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('compute-btn').click();
+        }
+      });
     }
   });
 
@@ -7690,6 +7723,8 @@ Part of this research was performed while the author was visiting the Institute 
     const showOrigami = document.getElementById('show-origami-chk').checked;
     const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
     const vertexSize = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
+    const skipCount = Math.max(1, parseInt(document.getElementById('gif-skip').value) || 1);
+    const showNLabel = document.getElementById('gif-show-n').checked;
 
     try {
       // Load gif.js dynamically
@@ -7723,8 +7758,8 @@ Part of this research was performed while the author was visiting the Institute 
       // Save current state
       const savedN = currentSimulationN;
 
-      // Process each n value
-      for (let n = 1; n <= maxN; n++) {
+      // Process each n value (with skip)
+      for (let n = 1; n <= maxN; n += skipCount) {
         progressEl.textContent = `Computing n=${n}/${maxN}...`;
         await new Promise(r => setTimeout(r, 10)); // Yield for UI update
 
@@ -7767,28 +7802,7 @@ Part of this research was performed while the author was visiting the Institute 
 
         if (!data.vertices || data.vertices.length === 0) continue;
 
-        // Compute bounds
-        let minRe = Infinity, maxRe = -Infinity;
-        let minIm = Infinity, maxIm = -Infinity;
-        for (const v of data.vertices) {
-          minRe = Math.min(minRe, v.re);
-          maxRe = Math.max(maxRe, v.re);
-          minIm = Math.min(minIm, v.im);
-          maxIm = Math.max(maxIm, v.im);
-        }
-
-        const padding = 40;
-        const rangeRe = maxRe - minRe || 1;
-        const rangeIm = maxIm - minIm || 1;
-        const scale = Math.min(
-          (gifWidth - 2 * padding) / rangeRe,
-          (gifHeight - 2 * padding) / rangeIm
-        );
-
-        const centerX = gifWidth / 2;
-        const centerY = gifHeight / 2;
-        const centerRe = (minRe + maxRe) / 2;
-        const centerIm = (minIm + maxIm) / 2;
+        const k = data.k;
 
         // Build vertex map
         const vertexMap = new Map();
@@ -7796,22 +7810,66 @@ Part of this research was performed while the author was visiting the Institute 
           vertexMap.set(`${v.i},${v.j}`, v);
         }
 
-        const uniformEdgeWidth = Math.max(edgeThickness, scale / 300 * edgeThickness);
-        const k = data.k;
+        // Normalize T-embedding via affine transform so corners map to (±1, 0), (0, ±1)
+        const cornerR = vertexMap.get(`${k+1},0`);   // maps to (1, 0)
+        const cornerT = vertexMap.get(`0,${k+1}`);   // maps to (0, 1)
+        const cornerL = vertexMap.get(`${-(k+1)},0`); // maps to (-1, 0)
+        const cornerB = vertexMap.get(`0,${-(k+1)}`); // maps to (0, -1)
+
+        // Compute affine transform using corner positions
+        // Center is average of corners, basis vectors from center to R and T corners
+        let cx = 0, cy = 0;
+        let ax = 1, ay = 0; // basis vector for x (toward R)
+        let bx = 0, by = 1; // basis vector for y (toward T)
+
+        if (cornerR && cornerT && cornerL && cornerB) {
+          cx = (cornerR.re + cornerT.re + cornerL.re + cornerB.re) / 4;
+          cy = (cornerR.im + cornerT.im + cornerL.im + cornerB.im) / 4;
+          // Basis vectors: R-center maps to (1,0), T-center maps to (0,1)
+          ax = cornerR.re - cx;
+          ay = cornerR.im - cy;
+          bx = cornerT.re - cx;
+          by = cornerT.im - cy;
+        }
+
+        // Inverse transform matrix: [ax bx; ay by]^(-1)
+        const det = ax * by - bx * ay;
+        const invAx = by / det, invBx = -bx / det;
+        const invAy = -ay / det, invBy = ax / det;
+
+        // Canvas mapping: normalized [-1,1] -> canvas pixels
+        const padding = 40;
+        const canvasScale = (Math.min(gifWidth, gifHeight) - 2 * padding) / 2;
+        const centerX = gifWidth / 2;
+        const centerY = gifHeight / 2;
+
+        // Transform: T-embedding coords -> normalized -> canvas pixels
+        function toCanvas(re, im) {
+          // Translate to center
+          const dx = re - cx;
+          const dy = im - cy;
+          // Apply inverse basis transform to get normalized coords
+          const nx = invAx * dx + invBx * dy;
+          const ny = invAy * dx + invBy * dy;
+          return {
+            x: centerX + nx * canvasScale,
+            y: centerY - ny * canvasScale
+          };
+        }
+
+        const uniformEdgeWidth = Math.max(edgeThickness, canvasScale / 150 * edgeThickness);
 
         // Helper to draw edge
         function drawEdge(i1, j1, i2, j2, color) {
           const v1 = vertexMap.get(`${i1},${j1}`);
           const v2 = vertexMap.get(`${i2},${j2}`);
           if (v1 && v2) {
-            const x1 = centerX + (v1.re - centerRe) * scale;
-            const y1 = centerY - (v1.im - centerIm) * scale;
-            const x2 = centerX + (v2.re - centerRe) * scale;
-            const y2 = centerY - (v2.im - centerIm) * scale;
+            const p1 = toCanvas(v1.re, v1.im);
+            const p2 = toCanvas(v2.re, v2.im);
             offCtx.strokeStyle = color;
             offCtx.beginPath();
-            offCtx.moveTo(x1, y1);
-            offCtx.lineTo(x2, y2);
+            offCtx.moveTo(p1.x, p1.y);
+            offCtx.lineTo(p2.x, p2.y);
             offCtx.stroke();
           }
         }
@@ -7867,13 +7925,11 @@ Part of this research was performed while the author was visiting the Institute 
               const v1 = origamiMap.get(`${i1},${j1}`);
               const v2 = origamiMap.get(`${i2},${j2}`);
               if (v1 && v2) {
-                const x1 = centerX + (v1.re - centerRe) * scale;
-                const y1 = centerY - (v1.im - centerIm) * scale;
-                const x2 = centerX + (v2.re - centerRe) * scale;
-                const y2 = centerY - (v2.im - centerIm) * scale;
+                const p1 = toCanvas(v1.re, v1.im);
+                const p2 = toCanvas(v2.re, v2.im);
                 offCtx.beginPath();
-                offCtx.moveTo(x1, y1);
-                offCtx.lineTo(x2, y2);
+                offCtx.moveTo(p1.x, p1.y);
+                offCtx.lineTo(p2.x, p2.y);
                 offCtx.stroke();
               }
             }
@@ -7897,20 +7953,21 @@ Part of this research was performed while the author was visiting the Institute 
 
         // Draw vertices
         offCtx.fillStyle = '#333';
-        const radius = Math.max(vertexSize, scale / 800 * vertexSize);
+        const radius = Math.max(vertexSize, canvasScale / 400 * vertexSize);
         for (const v of data.vertices) {
-          const x = centerX + (v.re - centerRe) * scale;
-          const y = centerY - (v.im - centerIm) * scale;
+          const p = toCanvas(v.re, v.im);
           offCtx.beginPath();
-          offCtx.arc(x, y, radius, 0, 2 * Math.PI);
+          offCtx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
           offCtx.fill();
         }
 
-        // Draw n label
-        offCtx.fillStyle = '#333';
-        offCtx.font = 'bold 24px sans-serif';
-        offCtx.textAlign = 'left';
-        offCtx.fillText(`n = ${n}`, 20, 35);
+        // Draw n label (if enabled)
+        if (showNLabel) {
+          offCtx.fillStyle = '#333';
+          offCtx.font = 'bold 24px sans-serif';
+          offCtx.textAlign = 'left';
+          offCtx.fillText(`n = ${n}`, 20, 35);
+        }
 
         // Add frame to GIF (700ms delay)
         gif.addFrame(offCtx, { copy: true, delay: 700 });
