@@ -639,8 +639,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           </span>
         </button>
         <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
-          <span>n=1..</span>
-          <input type="number" id="gif-max-n" value="20" min="2" max="100" style="width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Maximum n for GIF">
+          <span>n=</span>
+          <input type="number" id="gif-min-n" value="1" min="1" max="99" style="width: 45px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Starting n for GIF">
+          <span>..</span>
+          <input type="number" id="gif-max-n" value="20" min="2" max="100" style="width: 45px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Maximum n for GIF">
         </label>
         <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
           <span>skip:</span>
@@ -7711,9 +7713,10 @@ Part of this research was performed while the author was visiting the Institute 
       return;
     }
 
+    const minN = Math.max(1, parseInt(document.getElementById('gif-min-n').value) || 1);
     const maxN = parseInt(document.getElementById('gif-max-n').value) || 50;
-    if (maxN < 2 || maxN > 100) {
-      alert('Please enter a valid max n between 2 and 100.');
+    if (maxN < minN || maxN > 100) {
+      alert('Please enter valid n range (min < max, max <= 100).');
       return;
     }
 
@@ -7766,7 +7769,7 @@ Part of this research was performed while the author was visiting the Institute 
       const savedN = currentSimulationN;
 
       // Process each n value (with skip)
-      for (let n = 1; n <= maxN; n += skipCount) {
+      for (let n = minN; n <= maxN; n += skipCount) {
         progressEl.textContent = `Computing n=${n}/${maxN}...`;
         await new Promise(r => setTimeout(r, 10)); // Yield for UI update
 
@@ -8011,7 +8014,7 @@ Part of this research was performed while the author was visiting the Institute 
         }
 
         const link = document.createElement('a');
-        link.download = `t-embedding-n1-${maxN}-${weightStr}.gif`;
+        link.download = `t-embedding-n${minN}-${maxN}-${weightStr}.gif`;
         link.href = URL.createObjectURL(blob);
         link.click();
         URL.revokeObjectURL(link.href);
