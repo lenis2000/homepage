@@ -529,10 +529,14 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
                 aria-label="Sample double dimer configuration">
           Sample Double Dimers
         </button>
-        <span id="dd-thickness-control" style="display: none;">
+        <span id="dd-thickness-control" style="display: none; flex-wrap: wrap; align-items: center; gap: 8px;">
+          <select id="dd-view-mode" style="padding: 2px 4px; font-size: 12px;" aria-label="Dimer view mode">
+            <option value="double">Double (XOR)</option>
+            <option value="single">Single</option>
+          </select>
           <label style="display: flex; align-items: center; gap: 4px;">
-            <span style="font-weight: 500;">DD:</span>
-            <input type="number" id="dd-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 4em;" aria-label="Double dimer loop thickness">
+            <span style="font-weight: 500;">W:</span>
+            <input type="number" id="dd-edge-thickness" value="2" min="0.1" max="10" step="0.1" style="width: 4em;" aria-label="Dimer loop thickness">
           </label>
         </span>
       </div>
@@ -2768,7 +2772,6 @@ Part of this research was performed while the author was visiting the Institute 
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
 
     shufflingWasmReady = true;
-    console.log('Shuffling WASM module ready');
 
     // Generate initial sample with default weights
     generateRandomSample();
@@ -2938,14 +2941,15 @@ Part of this research was performed while the author was visiting the Institute 
       return;
     }
 
-    // Get N = n - 2 (where n is T-embedding order)
+    // Get N from n (where n is T-embedding order)
+    // T_{k} where k = n-2 has faces that correspond to Aztec diamond of size N = n-3
     const n = currentSimulationN;
-    if (!n || n < 3) {
-      alert('Please compute a T-embedding first (n >= 3).');
+    if (!n || n < 4) {
+      alert('Please compute a T-embedding with n >= 4 first.');
       return;
     }
 
-    const N = Math.max(1, n - 2);
+    const N = n - 3;
     if (N < 1) return;
 
     try {
@@ -3115,7 +3119,7 @@ Part of this research was performed while the author was visiting the Institute 
         // Show DD: thickness control with default = 2 * edge thickness
         const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 2;
         document.getElementById('dd-edge-thickness').value = (2 * edgeThickness).toFixed(1);
-        document.getElementById('dd-thickness-control').style.display = '';
+        document.getElementById('dd-thickness-control').style.display = 'flex';
 
         // Re-render T-embedding with double dimer loops
         renderMain2DTemb();
@@ -3666,14 +3670,17 @@ Part of this research was performed while the author was visiting the Institute 
     if (!tembDoubleDimerConfig1 || tembDoubleDimerConfig1.length === 0) return;
     if (!tembDoubleDimerConfig2 || tembDoubleDimerConfig2.length === 0) return;
 
-    const N = Math.max(1, currentSimulationN - 2);
+    const N = currentSimulationN;
+
+    // Offset to align domino coords with T-graph face indices
+    // Found empirically: X=0, Y=-2 works for various n values
+    const xOffset = 0;
+    const yOffset = -2;
 
     // Map Aztec diamond vertex (unit square center) to T-graph face lower-left corner
-    // Faces are at half-integer coords (i+0.5, j+0.5), referenced by lower-left corner (i,j)
-    // Domino coords are already centered around 0, no offset needed
     function aztecVertexToFace(vx, vy) {
-      const i = Math.floor(vx / 2);
-      const j = Math.floor(vy / 2);  // No N offset - coords are already centered
+      const i = Math.floor(Math.round(vx + xOffset) / 2);
+      const j = Math.floor(Math.round(vy + yOffset) / 2);
       return `${i},${j}`;
     }
 
@@ -3716,24 +3723,29 @@ Part of this research was performed while the author was visiting the Institute 
       dominoSet2.set(dominoKey(d), d);
     }
 
-    // XOR: dominoes (edges) in exactly one configuration
-    // Collect XOR dominoes - these form the double dimer loops
-    const xorDominoes = [];
+    // Check view mode: single (config1 only) or double (XOR)
+    const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
+    let dominosToDraw;
 
-    // Dominoes only in config1
-    for (const [key, d] of dominoSet1) {
-      if (!dominoSet2.has(key)) {
-        xorDominoes.push(d);
+    if (viewMode === 'single') {
+      // Single dimer: show just config1
+      dominosToDraw = tembDoubleDimerConfig1;
+    } else {
+      // Double dimer: XOR of both configs (symmetric difference)
+      // These form closed loops in the double dimer model
+      const xorDominoes = [];
+      for (const [key, d] of dominoSet1) {
+        if (!dominoSet2.has(key)) {
+          xorDominoes.push(d);
+        }
       }
-    }
-    // Dominoes only in config2
-    for (const [key, d] of dominoSet2) {
-      if (!dominoSet1.has(key)) {
-        xorDominoes.push(d);
+      for (const [key, d] of dominoSet2) {
+        if (!dominoSet1.has(key)) {
+          xorDominoes.push(d);
+        }
       }
+      dominosToDraw = xorDominoes;
     }
-
-    if (xorDominoes.length === 0) return;  // Identical configurations (rare)
 
     // Helper to convert T-vertex to screen coords
     const toScreen = (v) => ({
@@ -3741,8 +3753,9 @@ Part of this research was performed while the author was visiting the Institute 
       y: centerY - (v.im - centerIm) * scale
     });
 
-    // Compute face barycenter (average of 4 corners)
-    function getFaceBarycenter(faceKey) {
+    // Compute face incenter (center of inscribed circle for tangential polygon)
+    // For T-graph faces, which are tangential quadrilaterals
+    function getFaceIncenter(faceKey) {
       const [fi, fj] = faceKey.split(',').map(Number);
       const corners = [
         vertexMap.get(`${fi},${fj}`),
@@ -3752,8 +3765,22 @@ Part of this research was performed while the author was visiting the Institute 
       ];
       if (!corners.every(c => c)) return null;
 
-      const re = (corners[0].re + corners[1].re + corners[2].re + corners[3].re) / 4;
-      const im = (corners[0].im + corners[1].im + corners[2].im + corners[3].im) / 4;
+      // Compute side lengths
+      const dist = (a, b) => Math.sqrt((a.re - b.re) ** 2 + (a.im - b.im) ** 2);
+      const a0 = dist(corners[0], corners[1]);  // v0 to v1
+      const a1 = dist(corners[1], corners[2]);  // v1 to v2
+      const a2 = dist(corners[2], corners[3]);  // v2 to v3
+      const a3 = dist(corners[3], corners[0]);  // v3 to v0
+
+      // Weights for incenter: w_i = a_{i-1} + a_i (adjacent side lengths)
+      const w0 = a3 + a0;
+      const w1 = a0 + a1;
+      const w2 = a1 + a2;
+      const w3 = a2 + a3;
+      const totalW = w0 + w1 + w2 + w3;
+
+      const re = (w0 * corners[0].re + w1 * corners[1].re + w2 * corners[2].re + w3 * corners[3].re) / totalW;
+      const im = (w0 * corners[0].im + w1 * corners[1].im + w2 * corners[2].im + w3 * corners[3].im) / totalW;
       return { re, im };
     }
 
@@ -3767,12 +3794,12 @@ Part of this research was performed while the author was visiting the Institute 
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    for (const d of xorDominoes) {
+    for (const d of dominosToDraw) {
       const faces = dominoToFaces(d);
       if (faces.length !== 2) continue;
 
-      const bary1 = getFaceBarycenter(faces[0]);
-      const bary2 = getFaceBarycenter(faces[1]);
+      const bary1 = getFaceIncenter(faces[0]);
+      const bary2 = getFaceIncenter(faces[1]);
       if (!bary1 || !bary2) continue;
 
       const p1 = toScreen(bary1);
@@ -4590,9 +4617,7 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   function renderMain2DFromTembLevels(ctx, rect, n) {
-    console.log('renderMain2DFromTembLevels called, n=', n, 'wasmReady=', wasmReady);
     if (!wasmReady || !getTembeddingLevelJSON) {
-      console.log('Early return: wasmReady=', wasmReady, 'getTembeddingLevelJSON=', !!getTembeddingLevelJSON);
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
@@ -4625,7 +4650,6 @@ Part of this research was performed while the author was visiting the Institute 
       ctx.fillText('No T-embedding data. Click "Compute T-embedding".', rect.width / 2, rect.height / 2);
       return;
     }
-    console.log('T-embedding has', data.vertices.length, 'vertices');
 
     // Compute bounds
     let minRe = Infinity, maxRe = -Infinity;
@@ -6059,6 +6083,14 @@ Part of this research was performed while the author was visiting the Institute 
     }
   });
 
+  // DD view mode toggle
+  document.getElementById('dd-view-mode').addEventListener('change', () => {
+    if (tembDoubleDimerActive) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
   // 2D/3D toggle button
   document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
     mainViewIs3D = !mainViewIs3D;
@@ -6810,10 +6842,17 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Double dimer XOR on T-graph (if active)
     if (tembDoubleDimerActive && tembDoubleDimerConfig1.length > 0 && tembDoubleDimerConfig2.length > 0) {
+      const N = currentSimulationN;
+
+      // Offset to align domino coords with T-graph face indices
+      // Found empirically: X=0, Y=-2 works for various n values
+      const xOffset = 0;
+      const yOffset = -2;
+
       // Map Aztec diamond vertex (unit square center) to T-graph face lower-left corner
       function aztecVertexToFace(vx, vy) {
-        const i = Math.floor(vx / 2);
-        const j = Math.floor(vy / 2);
+        const i = Math.floor(Math.round(vx + xOffset) / 2);
+        const j = Math.floor(Math.round(vy + yOffset) / 2);
         return `${i},${j}`;
       }
 
@@ -6851,17 +6890,30 @@ Part of this research was performed while the author was visiting the Institute 
         dominoSet2.set(dominoKey(d), d);
       }
 
-      // XOR: dominoes in exactly one configuration
-      const xorDominoes = [];
-      for (const [key, d] of dominoSet1) {
-        if (!dominoSet2.has(key)) xorDominoes.push(d);
-      }
-      for (const [key, d] of dominoSet2) {
-        if (!dominoSet1.has(key)) xorDominoes.push(d);
+      // Check view mode: single (config1 only) or double (XOR)
+      const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
+      let dominosToDraw;
+
+      if (viewMode === 'single') {
+        dominosToDraw = tembDoubleDimerConfig1;
+      } else {
+        // XOR: dominoes in exactly one configuration (symmetric difference)
+        const xorDominoes = [];
+        for (const [key, d] of dominoSet1) {
+          if (!dominoSet2.has(key)) {
+            xorDominoes.push(d);
+          }
+        }
+        for (const [key, d] of dominoSet2) {
+          if (!dominoSet1.has(key)) {
+            xorDominoes.push(d);
+          }
+        }
+        dominosToDraw = xorDominoes;
       }
 
-      // Compute face barycenter (average of 4 corners)
-      function getFaceBarycenter(faceKey) {
+      // Compute face incenter (center of inscribed circle for tangential polygon)
+      function getFaceIncenter(faceKey) {
         const [fi, fj] = faceKey.split(',').map(Number);
         const corners = [
           vertexMap.get(`${fi},${fj}`),
@@ -6870,8 +6922,16 @@ Part of this research was performed while the author was visiting the Institute 
           vertexMap.get(`${fi},${fj+1}`)
         ];
         if (!corners.every(c => c)) return null;
-        const re = (corners[0].re + corners[1].re + corners[2].re + corners[3].re) / 4;
-        const im = (corners[0].im + corners[1].im + corners[2].im + corners[3].im) / 4;
+
+        const dist = (a, b) => Math.sqrt((a.re - b.re) ** 2 + (a.im - b.im) ** 2);
+        const a0 = dist(corners[0], corners[1]);
+        const a1 = dist(corners[1], corners[2]);
+        const a2 = dist(corners[2], corners[3]);
+        const a3 = dist(corners[3], corners[0]);
+        const w0 = a3 + a0, w1 = a0 + a1, w2 = a1 + a2, w3 = a2 + a3;
+        const totalW = w0 + w1 + w2 + w3;
+        const re = (w0 * corners[0].re + w1 * corners[1].re + w2 * corners[2].re + w3 * corners[3].re) / totalW;
+        const im = (w0 * corners[0].im + w1 * corners[1].im + w2 * corners[2].im + w3 * corners[3].im) / totalW;
         return { re, im };
       }
 
@@ -6880,12 +6940,12 @@ Part of this research was performed while the author was visiting the Institute 
       const ddThickness = ddInput ? parseFloat(ddInput.value) || 2 : 2;
 
       // Draw each XOR domino as a line between its two face barycenters
-      for (const d of xorDominoes) {
+      for (const d of dominosToDraw) {
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
-        const bary1 = getFaceBarycenter(faces[0]);
-        const bary2 = getFaceBarycenter(faces[1]);
+        const bary1 = getFaceIncenter(faces[0]);
+        const bary2 = getFaceIncenter(faces[1]);
         if (!bary1 || !bary2) continue;
 
         const p1 = toScreen(bary1.re, bary1.im);
