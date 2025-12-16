@@ -300,10 +300,6 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 
   <div id="compute-time" style="margin-bottom: 8px; color: #E57200; font-weight: 500; min-height: 20px;"></div>
-
-  <div id="n-warning" style="display: none; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffc107; border-left-width: 4px; border-radius: 4px; color: #856404; font-size: 12px;">
-    ⚠️ <strong>Note:</strong> n &gt; 60 may take several dozen seconds to compute
-  </div>
 </div>
 
 <!-- Random IID params panel -->
@@ -976,9 +972,6 @@ Part of this research was performed while the author was visiting the Institute 
     let n = parseInt(document.getElementById('n-input').value) || 6;
     n = Math.max(1, Math.min(MAX_N, n));
     document.getElementById('n-input').value = n;  // Update input to show clamped value
-    // Show warning for large n
-    const warning = document.getElementById('n-warning');
-    if (warning) warning.style.display = (n > 60) ? 'inline' : 'none';
     return n;
   }
 
@@ -6268,9 +6261,10 @@ Part of this research was performed while the author was visiting the Institute 
     return { regime, p1, p2, prob1, prob2 };
   }
 
-  // Time estimate display: t(n) = 1000 ns * n^3.8
+  // Time estimate display: t(n) = 1000 ns * n^3.8 where n is T-embedding order
   function updateTimeEstimate() {
-    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const aztecN = parseInt(document.getElementById('n-input').value) || 6;
+    const n = aztecN + 3;  // T-embedding order = Aztec size + 3
     const preset = document.getElementById('weight-preset-select').value;
     const estimateSpan = document.getElementById('time-estimate');
     if (!estimateSpan) return;
@@ -6281,7 +6275,7 @@ Part of this research was performed while the author was visiting the Institute 
       return;
     }
 
-    // Formula: t(n) = 1000 ns * n^3.8 = 1000 * n^3.8 nanoseconds
+    // Formula: t(n) = 1000 ns * n^3.8 (n = T-embedding order)
     const timeNs = 1000 * Math.pow(n, 3.8);
     const timeSec = timeNs / 1e9;
 
@@ -6301,11 +6295,9 @@ Part of this research was performed while the author was visiting the Institute 
   // Initialize time estimate on page load
   updateTimeEstimate();
 
-  // Show/hide warning and update V/E defaults as user types n value
+  // Update V/E defaults and time estimate as user types n value
   document.getElementById('n-input').addEventListener('input', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
-    const warning = document.getElementById('n-warning');
-    if (warning) warning.style.display = (n > 60) ? 'inline' : 'none';
     // Update V/E controls to scale with n
     updateVEForN(n);
     // Update time estimate
