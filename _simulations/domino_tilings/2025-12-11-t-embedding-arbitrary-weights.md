@@ -6274,8 +6274,8 @@ Part of this research was performed while the author was visiting the Institute 
       return;
     }
 
-    // Formula: t(n) = 1000 ns * n^3.8
-    const timeNs = 1000 * Math.pow(n, 3.8);
+    // Formula: t(n) = 1000 ns * n^4
+    const timeNs = 1000 * Math.pow(n, 4);
     const timeSec = timeNs / 1e9;
 
     if (timeSec < 10) {
