@@ -296,6 +296,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
             aria-label="Compute T-embedding with current parameters">
       ▶ Compute
     </button>
+    <span id="time-estimate" style="margin-left: 12px; font-size: 13px; color: #666; align-self: center;"></span>
   </div>
 
   <div id="compute-time" style="margin-bottom: 8px; color: #E57200; font-weight: 500; min-height: 20px;"></div>
@@ -5453,12 +5454,14 @@ Part of this research was performed while the author was visiting the Institute 
 
       // Determine what to draw based on view mode
       const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
-      let xorDominoes = [];
+      let dominosToDraw = [];
       let doubleDominoes = [];
 
       if (viewMode === 'single') {
-        xorDominoes = tembDoubleDimerConfig1;
+        dominosToDraw = tembDoubleDimerConfig1;
       } else {
+        // Collect XOR and double edges
+        const xorDominoes = [];
         for (const [key, d] of dominoSet1) {
           if (dominoSet2.has(key)) {
             doubleDominoes.push(d);
@@ -5471,6 +5474,58 @@ Part of this research was performed while the author was visiting the Institute 
             xorDominoes.push(d);
           }
         }
+
+        // Get min loop length filter
+        const minLoopInput = document.getElementById('dd-min-loop-length');
+        const minLoopLength = minLoopInput ? parseInt(minLoopInput.value) || 2 : 2;
+
+        // Build adjacency graph for loop detection
+        const faceAdj = new Map();
+        for (const d of xorDominoes) {
+          const faces = dominoToFaces(d);
+          if (faces.length !== 2) continue;
+          const [f1, f2] = faces;
+          if (!faceAdj.has(f1)) faceAdj.set(f1, []);
+          if (!faceAdj.has(f2)) faceAdj.set(f2, []);
+          faceAdj.get(f1).push({ face: f2, domino: d });
+          faceAdj.get(f2).push({ face: f1, domino: d });
+        }
+
+        // Find loops using BFS and filter by min length
+        const visited = new Set();
+        const loops = [];
+
+        for (const startFace of faceAdj.keys()) {
+          if (visited.has(startFace)) continue;
+
+          const loopDominoes = [];
+          const queue = [startFace];
+          visited.add(startFace);
+
+          while (queue.length > 0) {
+            const face = queue.shift();
+            for (const { face: neighbor, domino } of (faceAdj.get(face) || [])) {
+              if (!loopDominoes.includes(domino)) {
+                loopDominoes.push(domino);
+              }
+              if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                queue.push(neighbor);
+              }
+            }
+          }
+
+          if (loopDominoes.length >= minLoopLength) {
+            loops.push(loopDominoes);
+          }
+        }
+
+        dominosToDraw = loops.flat();
+
+        // Filter double edges by min loop (they form 2-loops)
+        if (minLoopLength > 2) {
+          doubleDominoes = [];
+        }
       }
 
       // Get thickness
@@ -5478,7 +5533,7 @@ Part of this research was performed while the author was visiting the Institute 
       const ddThickness = ddInput ? parseFloat(ddInput.value) || 2 : 2;
 
       // Add XOR dimer lines (red)
-      for (const d of xorDominoes) {
+      for (const d of dominosToDraw) {
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
@@ -5929,6 +5984,8 @@ Part of this research was performed while the author was visiting the Institute 
   // Handle weight preset dropdown change - show/hide relevant params
   weightPresetSelect.addEventListener('change', () => {
     updateParamVisibility(weightPresetSelect.value);
+    // Update time estimate based on new preset
+    if (typeof updateTimeEstimate === 'function') updateTimeEstimate();
   });
 
   // Layered regime radio button handlers
@@ -6211,6 +6268,39 @@ Part of this research was performed while the author was visiting the Institute 
     return { regime, p1, p2, prob1, prob2 };
   }
 
+  // Time estimate display: t(n) = 1000 ns * n^3.8
+  function updateTimeEstimate() {
+    const n = parseInt(document.getElementById('n-input').value) || 6;
+    const preset = document.getElementById('weight-preset-select').value;
+    const estimateSpan = document.getElementById('time-estimate');
+    if (!estimateSpan) return;
+
+    // All 1's preset is much faster - skip the heavy folding computation
+    if (preset === 'all-ones') {
+      estimateSpan.textContent = '(ready in a few seconds)';
+      return;
+    }
+
+    // Formula: t(n) = 1000 ns * n^3.8 = 1000 * n^3.8 nanoseconds
+    const timeNs = 1000 * Math.pow(n, 3.8);
+    const timeSec = timeNs / 1e9;
+
+    if (timeSec < 10) {
+      estimateSpan.textContent = '(ready in a few seconds)';
+    } else if (timeSec <= 60) {
+      // Round up to next 10s
+      const rounded = Math.ceil(timeSec / 10) * 10;
+      estimateSpan.textContent = `(will take about ${rounded}s)`;
+    } else {
+      // Round up to next minute
+      const minutes = Math.ceil(timeSec / 60);
+      estimateSpan.textContent = `(will take about ${minutes} min)`;
+    }
+  }
+
+  // Initialize time estimate on page load
+  updateTimeEstimate();
+
   // Show/hide warning and update V/E defaults as user types n value
   document.getElementById('n-input').addEventListener('input', () => {
     const n = parseInt(document.getElementById('n-input').value) || 6;
@@ -6218,6 +6308,8 @@ Part of this research was performed while the author was visiting the Institute 
     if (warning) warning.style.display = (n > 60) ? 'inline' : 'none';
     // Update V/E controls to scale with n
     updateVEForN(n);
+    // Update time estimate
+    updateTimeEstimate();
   });
 
   // Enter key on n-input triggers compute
