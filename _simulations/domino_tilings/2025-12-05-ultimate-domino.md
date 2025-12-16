@@ -145,6 +145,30 @@ code:
   .view-toggle button:hover:not(.active) {
     background: #e3f2fd;
   }
+  .tool-toggle {
+    display: inline-flex;
+    border: 2px solid #1976d2;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tool-toggle button {
+    border: none;
+    border-radius: 0;
+    height: 32px;
+    padding: 0 16px;
+    font-weight: 500;
+    background: white;
+    color: #1976d2;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .tool-toggle button.active {
+    background: #1976d2;
+    color: white;
+  }
+  .tool-toggle button:hover:not(.active) {
+    background: #e3f2fd;
+  }
   .param-input {
     width: 50px;
     height: 28px;
@@ -345,52 +369,188 @@ code:
     border-top: none;
     border-radius: 0 0 4px 4px;
   }
+  /* Accessibility improvements */
+  button:focus, input:focus, select:focus {
+    outline: 3px solid #4CAF50;
+    outline-offset: 2px;
+  }
+  .tool-toggle button:focus, .view-toggle button:focus {
+    outline: 3px solid #1976d2;
+    outline-offset: 2px;
+  }
+  /* Skip to main content link */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #4CAF50;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 1000;
+  }
+  .skip-link:focus {
+    top: 0;
+  }
+  /* Improved button contrast */
+  .control-group button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Better touch targets for mobile */
+  @media (max-width: 767px) {
+    /* Larger touch targets */
+    .control-group button {
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: 13px;
+    }
+    .tool-toggle button {
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: 15px;
+    }
+    .view-toggle button {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+    #domino-canvas, #three-container {
+      height: 400px;
+    }
+    .control-group {
+      padding: 8px 12px;
+      margin-bottom: 10px;
+    }
+    .control-group-title {
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .param-input {
+      width: 48px;
+      height: 44px;
+      font-size: 14px;
+    }
+    .param-label {
+      font-size: 13px;
+    }
+    .param-group {
+      margin-right: 10px;
+      margin-bottom: 8px;
+    }
+    select {
+      min-height: 44px;
+      font-size: 14px;
+      padding: 0 12px;
+    }
+    .stats-inline {
+      font-size: 12px;
+      gap: 12px;
+    }
+    #view-overlay {
+      top: 6px;
+      right: 6px;
+      gap: 6px;
+    }
+    #helpBtn {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+    }
+    /* Better spacing for controls */
+    .control-group > div {
+      gap: 10px;
+    }
+    /* Stack controls vertically on very small screens */
+    @media (max-width: 480px) {
+      .control-group > div {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .control-group button:not(.tool-toggle button):not(.view-toggle button) {
+        width: 100%;
+      }
+    }
+  }
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .control-group button {
+      border-width: 2px;
+    }
+    .tool-toggle, .view-toggle {
+      border-width: 3px;
+    }
+  }
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
+
+<!-- Skip to main content for accessibility -->
+<a href="#domino-canvas" class="skip-link">Skip to simulation canvas</a>
 
 <!-- Main controls -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
 
 <!-- Preset Shapes -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="preset-shapes-title">
+  <div class="control-group-title" id="preset-shapes-title">Preset Shapes</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="rectangleBtn">Rectangle</button>
-    <span class="param-group"><span class="param-label">W</span><input type="number" class="param-input" id="rectWidthInput" value="8" min="2" max="100"></span>
-    <span class="param-group"><span class="param-label">H</span><input type="number" class="param-input" id="rectHeightInput" value="6" min="2" max="100"></span>
-    <button id="aztecBtn">Aztec Diamond</button>
-    <span class="param-group"><span class="param-label">n</span><input type="number" class="param-input" id="aztecNInput" value="4" min="1" max="50"></span>
+    <button id="rectangleBtn" aria-label="Create rectangle region">Rectangle</button>
+    <span class="param-group"><label for="rectWidthInput" class="param-label">W</label><input type="number" class="param-input" id="rectWidthInput" value="8" min="2" max="100" aria-label="Rectangle width"></span>
+    <span class="param-group"><label for="rectHeightInput" class="param-label">H</label><input type="number" class="param-input" id="rectHeightInput" value="6" min="2" max="100" aria-label="Rectangle height"></span>
+    <button id="aztecBtn" aria-label="Create Aztec diamond region">Aztec Diamond</button>
+    <span class="param-group"><label for="aztecNInput" class="param-label">n</label><input type="number" class="param-input" id="aztecNInput" value="4" min="1" max="50" aria-label="Aztec diamond size parameter"></span>
   </div>
 </div>
 
 <!-- Simulation Controls -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="sampling-title">
+  <div class="control-group-title" id="sampling-title">Sampling & Dynamics</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
-    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
-    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
-    <button id="doubleDimerBtn" class="cftp" title="Double Dimer - Two independent CFTP samples" disabled>Double Dimer</button>
-    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;"></span>
+    <button id="startStopBtn" class="primary" disabled aria-label="Start or stop Glauber dynamics simulation">Start Glauber</button>
+    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled aria-label="Generate perfect sample using CFTP algorithm">Perfect Sample</button>
+    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop CFTP sampling">Stop CFTP</button>
+    <button id="doubleDimerBtn" class="cftp" title="Double Dimer - Two independent CFTP samples" disabled aria-label="Generate double dimer sample">Double Dimer</button>
+    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
     <span style="display: none;" id="minLoopGroup">
       <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
-      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;">
+      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size for filtering">
     </span>
-    <button id="fluctuationsBtn" class="cftp" title="Height Fluctuations Visualization" style="display: none;">Fluctuations</button>
-    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;">Resample</button>
-    <span class="param-group"><span class="param-label">k</span><input type="number" class="param-input" id="scaleKInput" value="2" min="2" max="10"></span>
-    <button id="scaleUpBtn" title="Scale the region by k×k blocks">Scale k×k</button>
-    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)">Smooth Scale Up</button>
-    <button id="scaleDownBtn" title="Halve the region size">Scale Down</button>
+    <button id="fluctuationsBtn" class="cftp" title="Height Fluctuations Visualization" style="display: none;" aria-label="Visualize height fluctuations">Fluctuations</button>
+    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Resample the tiling">Resample</button>
     <div style="display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 12px; color: #666;">Speed</span>
-      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
-      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;">
+      <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
+      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;" aria-label="Simulation speed slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="29">
+      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;" aria-label="Simulation speed in steps per second">
       <span style="font-size: 11px; color: #888;">/s</span>
     </div>
   </div>
 </div>
 
+<!-- Region Scaling -->
+<div class="control-group" role="region" aria-labelledby="scaling-title">
+  <div class="control-group-title" id="scaling-title">Region Scaling</div>
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <span class="param-group"><label for="scaleKInput" class="param-label">k</label><input type="number" class="param-input" id="scaleKInput" value="2" min="2" max="10" aria-label="Scaling factor k"></span>
+    <button id="scaleUpBtn" title="Scale the region by k×k blocks" aria-label="Scale up region by k times k blocks">Scale k×k</button>
+    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)" aria-label="Smooth scale up preserving boundary slopes">Smooth Scale Up</button>
+    <button id="scaleDownBtn" title="Halve the region size" aria-label="Scale down region by half">Scale Down</button>
+  </div>
+</div>
+
 <!-- Stats Row -->
-<div class="control-group">
-  <div class="stats-inline">
+<div class="control-group" role="region" aria-labelledby="stats-title">
+  <div class="control-group-title" id="stats-title">Statistics</div>
+  <div class="stats-inline" role="status" aria-live="polite">
     <div class="stat"><span class="stat-label">Vertices</span><span class="stat-value" id="cellsCount">0</span></div>
     <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
@@ -415,79 +575,93 @@ code:
       <button id="dominoViewBtn" class="active" title="Domino view">▭</button>
       <button id="dimerViewBtn" title="Dimer view">•-•</button>
     </div>
+    <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
+    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">🤚 pan · ✏️ draw · 🧹 erase
+⭕+ lasso fill · ⭕− lasso erase
+📐 snap to grid
+─────────
+Shift: toggle draw↔erase
+Cmd-click: complete lasso</div>
   </div>
 
   <!-- Canvas -->
-  <canvas id="domino-canvas"></canvas>
+  <canvas id="domino-canvas" role="img" aria-label="Interactive domino tiling canvas. Use drawing tools below to create and modify regions."></canvas>
 
   <!-- 3D Container -->
-  <div id="three-container"></div>
+  <div id="three-container" role="img" aria-label="3D visualization of domino tiling height function"></div>
 </div>
 
 <!-- Controls below canvas -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
 
 <!-- Drawing Tools -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="drawing-tools-title">
+  <div class="control-group-title" id="drawing-tools-title">Drawing Tools</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="handTool" class="tool-btn" title="Pan (drag to move view)">&#x1F91A;</button>
-    <button id="drawTool" class="tool-btn active" title="Draw cells">&#x270F;&#xFE0F;</button>
-    <button id="eraseTool" class="tool-btn" title="Erase cells">&#x1F9F9;</button>
-    <span style="color: #ccc;">|</span>
-    <button id="lassoFillTool" class="tool-btn" title="Lasso fill">&#x2B55;+</button>
-    <button id="lassoEraseTool" class="tool-btn" title="Lasso erase">&#x2B55;-</button>
-    <button id="lassoSnapBtn" class="tool-btn active" title="Snap lasso to grid">📐</button>
-    <span style="color: #ccc;">|</span>
-    <button id="clearBtn">Clear</button>
-    <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
-    <button id="redoBtn" title="Redo (Ctrl+Y)">Redo</button>
-    <button id="repairBtn" title="Add cells to make region tileable" disabled>Make Tileable</button>
-    <span id="statusBadge" class="status-empty">Empty</span>
+    <div class="tool-toggle" role="group" aria-label="Drawing mode selection">
+      <button id="handTool" title="Pan view" aria-label="Hand tool - Pan view" aria-pressed="false">🤚</button>
+      <button id="drawTool" class="active" title="Draw cells" aria-label="Draw tool - Add cells to region" aria-pressed="true">✏️</button>
+      <button id="eraseTool" title="Erase cells" aria-label="Erase tool - Remove cells from region" aria-pressed="false">🧹</button>
+    </div>
+    <div class="tool-toggle" role="group" aria-label="Lasso selection mode">
+      <button id="lassoFillTool" title="Lasso fill: click to add points, click near start to close" aria-label="Lasso fill - Click points to define polygon to fill" aria-pressed="false">⭕+</button>
+      <button id="lassoEraseTool" title="Lasso erase: click to add points, click near start to close" aria-label="Lasso erase - Click points to define polygon to erase" aria-pressed="false">⭕−</button>
+      <button id="lassoSnapBtn" class="active" title="Snap to grid" aria-label="Snap lasso to grid" aria-pressed="true">📐</button>
+    </div>
+    <button id="clearBtn" aria-label="Clear all cells from region">Clear</button>
+    <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
+    <button id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
+    <button id="repairBtn" title="Add cells to make region tileable" disabled aria-label="Make region tileable by adding cells">Make Tileable</button>
+    <span id="statusBadge" class="status-empty" role="status" aria-live="polite">Empty</span>
   </div>
 </div>
 
 <!-- View Controls -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="view-controls-title">
+  <div class="control-group-title" id="view-controls-title">View Controls</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="zoomInBtn">+</button>
-    <button id="zoomOutBtn">−</button>
-    <button id="resetViewBtn">Reset View</button>
-    <label style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="showGridCheckbox" checked>
+    <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in">+</button>
+    <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out">−</button>
+    <button id="resetViewBtn" title="Reset View" aria-label="Reset view to default">Reset View</button>
+    <label style="font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+      <input type="checkbox" id="showGridCheckbox" checked aria-label="Toggle grid display">
       Grid
     </label>
-    <span style="color: #ccc;">|</span>
-    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled>↺</button>
-    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled>↻</button>
-    <button id="autoRotateBtn" title="Toggle auto-rotation (3D)" disabled>⟳</button>
+    <span style="color: #ccc;" aria-hidden="true">|</span>
+    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
+    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
+    <button id="autoRotateBtn" title="Toggle auto-rotation (3D)" disabled aria-label="Toggle automatic 3D rotation" aria-pressed="false">⟳</button>
   </div>
 </div>
 
 <!-- Display Options -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="display-options-title">
+  <div class="control-group-title" id="display-options-title">Display Options</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <button id="prevPaletteBtn" style="padding: 0 8px;">&#9664;</button>
-      <select id="paletteSelect" style="padding: 4px 8px; font-size: 12px; min-width: 120px;"></select>
-      <button id="nextPaletteBtn" style="padding: 0 8px;">&#9654;</button>
+    <div style="display: flex; align-items: center; gap: 4px;" role="group" aria-label="Color palette selection">
+      <button id="prevPaletteBtn" style="padding: 0 8px;" aria-label="Previous color palette">&#9664;</button>
+      <select id="paletteSelect" style="padding: 4px 8px; font-size: 12px; min-width: 120px;" aria-label="Select color palette"></select>
+      <button id="nextPaletteBtn" style="padding: 0 8px;" aria-label="Next color palette">&#9654;</button>
     </div>
-    <button id="permuteColorsBtn">Permute</button>
+    <button id="permuteColorsBtn" title="Permute colors" aria-label="Permute color order">Permute</button>
     <div style="display: flex; align-items: center; gap: 4px;">
-      <span style="font-size: 12px; color: #555;">Border:</span>
-      <input type="number" id="borderSlider" value="1" min="0" max="5" step="0.5" class="param-input" style="width: 50px;">
+      <label for="borderSlider" style="font-size: 12px; color: #555;">Border:</label>
+      <input type="number" id="borderSlider" value="1" min="0" max="5" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width">
     </div>
   </div>
 </div>
 
 <!-- Export -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="export-title">
+  <div class="control-group-title" id="export-title">Export</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="exportPngBtn">PNG</button>
-    <span style="font-size: 11px; color: #666;">Quality:</span>
-    <input type="range" id="qualitySlider" min="1" max="4" value="2" style="width: 60px;">
-    <button id="exportJsonBtn">Export Shape</button>
-    <button id="importJsonBtn">Import Shape</button>
-    <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+    <button id="exportPngBtn" aria-label="Export as PNG image">PNG</button>
+    <label for="qualitySlider" style="font-size: 11px; color: #666;">Quality:</label>
+    <input type="range" id="qualitySlider" min="1" max="4" value="2" style="width: 60px;" aria-label="PNG export quality" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2">
+    <span id="qualityValue" style="font-size: 11px; color: #1976d2;" aria-live="polite">2x</span>
+    <button id="exportJsonBtn" aria-label="Export region shape as JSON">Export Shape</button>
+    <button id="importJsonBtn" aria-label="Import region shape from JSON file">Import Shape</button>
+    <input type="file" id="importJsonInput" accept=".json" style="display: none;" aria-label="JSON file input">
   </div>
 </div>
 
@@ -657,9 +831,12 @@ code:
         borderSlider: document.getElementById('borderSlider'),
         exportPngBtn: document.getElementById('exportPngBtn'),
         qualitySlider: document.getElementById('qualitySlider'),
+        qualityValue: document.getElementById('qualityValue'),
         exportJsonBtn: document.getElementById('exportJsonBtn'),
         importJsonBtn: document.getElementById('importJsonBtn'),
         importJsonInput: document.getElementById('importJsonInput'),
+        helpBtn: document.getElementById('helpBtn'),
+        toolTooltip: document.getElementById('tool-tooltip'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
         perspectiveBtn: document.getElementById('perspectiveBtn'),
         preset3DBtn: document.getElementById('preset3DBtn'),
@@ -3258,11 +3435,22 @@ code:
         }
 
         currentTool = tool;
+
+        // Update visual state and ARIA attributes
         el.handTool.classList.toggle('active', tool === 'hand');
+        el.handTool.setAttribute('aria-pressed', tool === 'hand');
+
         el.drawTool.classList.toggle('active', tool === 'draw');
+        el.drawTool.setAttribute('aria-pressed', tool === 'draw');
+
         el.eraseTool.classList.toggle('active', tool === 'erase');
+        el.eraseTool.setAttribute('aria-pressed', tool === 'erase');
+
         el.lassoFillTool.classList.toggle('active', tool === 'lassoFill');
+        el.lassoFillTool.setAttribute('aria-pressed', tool === 'lassoFill');
+
         el.lassoEraseTool.classList.toggle('active', tool === 'lassoErase');
+        el.lassoEraseTool.setAttribute('aria-pressed', tool === 'lassoErase');
 
         draw();
     }
@@ -3781,6 +3969,33 @@ code:
         });
 
         el.borderSlider.addEventListener('input', draw);
+
+        // Help button tooltip
+        if (el.helpBtn && el.toolTooltip) {
+            el.helpBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = el.toolTooltip.style.display !== 'none';
+                el.toolTooltip.style.display = isVisible ? 'none' : 'block';
+                // Position tooltip below button
+                const rect = el.helpBtn.getBoundingClientRect();
+                el.toolTooltip.style.position = 'absolute';
+                el.toolTooltip.style.top = (rect.bottom + 4) + 'px';
+                el.toolTooltip.style.right = '8px';
+            });
+            // Click anywhere else to hide tooltip
+            document.addEventListener('click', (e) => {
+                if (el.toolTooltip && el.toolTooltip.style.display !== 'none' && !el.helpBtn.contains(e.target)) {
+                    el.toolTooltip.style.display = 'none';
+                }
+            });
+        }
+
+        // Quality slider value display
+        if (el.qualitySlider && el.qualityValue) {
+            el.qualitySlider.addEventListener('input', (e) => {
+                el.qualityValue.textContent = e.target.value + 'x';
+            });
+        }
 
         // Export
         el.exportPngBtn.addEventListener('click', exportPng);

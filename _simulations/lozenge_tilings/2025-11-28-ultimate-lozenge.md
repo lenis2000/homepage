@@ -383,10 +383,128 @@ code:
   [data-theme="dark"] .status-valid { background: #1b5e20; color: #a5d6a7; }
   [data-theme="dark"] .status-invalid { background: #b71c1c; color: #ffcdd2; }
   [data-theme="dark"] .status-empty { background: #e65100; color: #ffe0b2; }
+  /* Accessibility improvements */
+  button:focus, input:focus, select:focus {
+    outline: 3px solid #4CAF50;
+    outline-offset: 2px;
+  }
+  .tool-toggle button:focus, .view-toggle button:focus {
+    outline: 3px solid #1976d2;
+    outline-offset: 2px;
+  }
+  /* Skip to main content link */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #4CAF50;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 1000;
+  }
+  .skip-link:focus {
+    top: 0;
+  }
+  /* Improved button contrast and touch targets */
+  .control-group button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Better touch targets for mobile */
   @media (max-width: 767px) {
-    #lozenge-canvas { height: 450px; }
-    .param-group { margin-right: 8px; margin-bottom: 6px; }
-    .param-input { width: 40px; }
+    /* Larger touch targets */
+    .control-group button {
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: 13px;
+    }
+    .tool-toggle button {
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: 15px;
+    }
+    .view-toggle button {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+    #lozenge-canvas, #three-container {
+      height: 400px;
+    }
+    .control-group {
+      padding: 8px 12px;
+      margin-bottom: 10px;
+    }
+    .control-group-title {
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .param-input {
+      width: 48px;
+      height: 44px;
+      font-size: 14px;
+    }
+    .param-label {
+      font-size: 13px;
+    }
+    .param-group {
+      margin-right: 10px;
+      margin-bottom: 8px;
+    }
+    select {
+      min-height: 44px;
+      font-size: 14px;
+      padding: 0 12px;
+    }
+    .stats-inline {
+      font-size: 12px;
+      gap: 12px;
+    }
+    #view-overlay {
+      top: 6px;
+      right: 6px;
+      gap: 6px;
+    }
+    #helpBtn {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+    }
+    /* Better spacing for controls */
+    .control-group > div {
+      gap: 10px;
+    }
+    /* Stack controls vertically on very small screens */
+    @media (max-width: 480px) {
+      .control-group > div {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .control-group button:not(.tool-toggle button):not(.view-toggle button) {
+        width: 100%;
+      }
+    }
+  }
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .control-group button {
+      border-width: 2px;
+    }
+    .tool-toggle, .view-toggle {
+      border-width: 3px;
+    }
+  }
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
   /* Hole winding controls */
   .hole-control {
@@ -472,18 +590,22 @@ if (window.LOZENGE_WEBGPU) {
 }
 </script>
 
+<!-- Skip to main content for accessibility -->
+<a href="#lozenge-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Main controls -->
 <div style="max-width: 900px; margin: 0 auto; padding: 8px;">
 
 <!-- Preset Shapes -->
-<div class="control-group">
+<div class="control-group" role="region" aria-labelledby="preset-shapes-title">
+  <div class="control-group-title" id="preset-shapes-title">Preset Shapes</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="shapeOfMonthBtn" style="background: #ff5555; color: white; border-color: #ff5555;">Shape of the Month</button>
-    <button id="hexagonBtn">Hexagon</button>
-    <span class="param-group"><span class="param-label">a</span><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30"></span>
-    <span class="param-group"><span class="param-label">b</span><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30"></span>
-    <span class="param-group"><span class="param-label">c</span><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30"></span>
-    <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;">
+    <button id="shapeOfMonthBtn" style="background: #ff5555; color: white; border-color: #ff5555;" aria-label="Load shape of the month preset">Shape of the Month</button>
+    <button id="hexagonBtn" aria-label="Create hexagonal region">Hexagon</button>
+    <span class="param-group"><label for="hexAInput" class="param-label">a</label><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30" aria-label="Hexagon side a"></span>
+    <span class="param-group"><label for="hexBInput" class="param-label">b</label><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30" aria-label="Hexagon side b"></span>
+    <span class="param-group"><label for="hexCInput" class="param-label">c</label><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30" aria-label="Hexagon side c"></span>
+    <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;" aria-label="Select letter or number shape">
       <option value="">Letters and Numbers (under construction)</option>
     </select>
   </div>
@@ -491,12 +613,11 @@ if (window.LOZENGE_WEBGPU) {
 
 <!-- Simulation Controls -->
 <div class="control-group">
+  <div class="control-group-title">Sampling & Dynamics</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <button id="startStopBtn" class="primary" disabled>Start Glauber</button>
     <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Perfect Sample</button>
     <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;">Stop CFTP</button>
-    <button id="doubleMeshBtn" title="Double the region size">Scale Up Region</button>
-    <button id="halveMeshBtn" title="Halve the region size">Scale Down Region</button>
     <div style="display: flex; align-items: center; gap: 6px;">
       <span style="font-size: 12px; color: #666;">Speed</span>
       <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;">
@@ -508,6 +629,15 @@ if (window.LOZENGE_WEBGPU) {
       <label for="useRandomSweepsCheckbox" style="font-size: 12px; color: #555;">Random Sweeps</label>
     </div>
     <span class="param-group"><span class="param-label">q</span><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;"></span>
+  </div>
+</div>
+
+<!-- Region Scaling -->
+<div class="control-group">
+  <div class="control-group-title">Region Scaling</div>
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <button id="doubleMeshBtn" title="Double the region size">Scale Up Region</button>
+    <button id="halveMeshBtn" title="Halve the region size">Scale Down Region</button>
   </div>
 </div>
 
@@ -555,6 +685,7 @@ if (window.LOZENGE_WEBGPU) {
 
 <!-- Stats Row -->
 <div class="control-group">
+  <div class="control-group-title">Statistics</div>
   <div class="stats-inline">
     <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;">⚠️ CFTP may take a few minutes</span></div>
     <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
@@ -603,6 +734,7 @@ Cmd-click: complete lasso</div>
 
 <!-- Drawing Tools -->
 <div class="control-group">
+  <div class="control-group-title">Drawing Tools</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <div class="tool-toggle">
       <button id="handBtn" title="Pan view">🤚</button>
@@ -624,6 +756,7 @@ Cmd-click: complete lasso</div>
 
 <!-- View Controls -->
 <div class="control-group">
+  <div class="control-group-title">View Controls</div>
   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
     <button id="zoomInBtn" title="Zoom In">+</button>
     <button id="zoomOutBtn" title="Zoom Out">−</button>
@@ -639,6 +772,7 @@ Cmd-click: complete lasso</div>
 
 <!-- Display Options -->
 <div class="control-group">
+  <div class="control-group-title">Display Options</div>
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <div style="display: flex; align-items: center; gap: 4px;">
       <button id="prev-palette" style="padding: 0 8px;">&#9664;</button>
@@ -692,8 +826,9 @@ Cmd-click: complete lasso</div>
   </div>
 </div>
 
-<!-- Limit Shape -->
+<!-- Advanced Sampling & Analysis -->
 <div class="control-group">
+  <div class="control-group-title">Advanced Sampling & Analysis</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
     <button id="cftpBtn2" class="cftp" title="Coupling From The Past - Perfect Sample" disabled>Individual Sample with CFTP</button>
     <button id="averageBtn" class="cftp" disabled>Get Averaged Sample</button>
@@ -722,6 +857,7 @@ Cmd-click: complete lasso</div>
 
 <!-- Export -->
 <div class="control-group">
+  <div class="control-group-title">Export</div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
     <button id="export-png">PNG</button>
     <span style="font-size: 11px; color: #666;">Quality:</span>
