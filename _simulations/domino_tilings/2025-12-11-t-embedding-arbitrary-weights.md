@@ -3757,12 +3757,16 @@ Part of this research was performed while the author was visiting the Institute 
     if (viewMode === 'single') {
       // Single dimer: show just config1
       dominosToDraw = tembDoubleDimerConfig1;
+      window._tembDoubleDominoes = [];  // Clear double edges in single mode
     } else {
-      // Double dimer: XOR of both configs (symmetric difference)
-      // These form closed loops in the double dimer model
+      // Double dimer: XOR of both configs (symmetric difference) + double edges
+      // XOR dominoes form closed loops, double edges are shown separately
       const xorDominoes = [];
+      const doubleDominoes = [];  // edges appearing in both configs
       for (const [key, d] of dominoSet1) {
-        if (!dominoSet2.has(key)) {
+        if (dominoSet2.has(key)) {
+          doubleDominoes.push(d);  // in both configs
+        } else {
           xorDominoes.push(d);
         }
       }
@@ -3819,7 +3823,11 @@ Part of this research was performed while the author was visiting the Institute 
       }
 
       // Flatten filtered loops into dominosToDraw
+      // Include double edges if minLoopLength <= 2 (they form 2-loops)
       dominosToDraw = loops.flat();
+
+      // Store double dominoes for separate rendering
+      window._tembDoubleDominoes = (minLoopLength <= 2) ? doubleDominoes : [];
     }
 
     // Helper to convert T-vertex to screen coords
@@ -3884,6 +3892,28 @@ Part of this research was performed while the author was visiting the Institute 
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
+    }
+
+    // Draw double edges (edges in both configs) in purple
+    const doubleDominoes = window._tembDoubleDominoes || [];
+    if (doubleDominoes.length > 0) {
+      ctx.strokeStyle = '#8B008B';  // Purple for double edges
+      for (const d of doubleDominoes) {
+        const faces = dominoToFaces(d);
+        if (faces.length !== 2) continue;
+
+        const bary1 = getFaceIncenter(faces[0]);
+        const bary2 = getFaceIncenter(faces[1]);
+        if (!bary1 || !bary2) continue;
+
+        const p1 = toScreen(bary1);
+        const p2 = toScreen(bary2);
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
     }
   }
 
@@ -6999,13 +7029,16 @@ Part of this research was performed while the author was visiting the Institute 
       const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
       let dominosToDraw;
 
+      let doubleDominoes = [];  // edges appearing in both configs
       if (viewMode === 'single') {
         dominosToDraw = tembDoubleDimerConfig1;
       } else {
         // XOR: dominoes in exactly one configuration (symmetric difference)
         const xorDominoes = [];
         for (const [key, d] of dominoSet1) {
-          if (!dominoSet2.has(key)) {
+          if (dominoSet2.has(key)) {
+            doubleDominoes.push(d);  // in both configs
+          } else {
             xorDominoes.push(d);
           }
         }
@@ -7057,6 +7090,21 @@ Part of this research was performed while the author was visiting the Institute 
         const p2 = toScreen(bary2.re, bary2.im);
 
         svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="#cc0000" stroke-width="${ddThickness}" stroke-linecap="round"/>`);
+      }
+
+      // Draw double edges (edges in both configs) in purple
+      for (const d of doubleDominoes) {
+        const faces = dominoToFaces(d);
+        if (faces.length !== 2) continue;
+
+        const bary1 = getFaceIncenter(faces[0]);
+        const bary2 = getFaceIncenter(faces[1]);
+        if (!bary1 || !bary2) continue;
+
+        const p1 = toScreen(bary1.re, bary1.im);
+        const p2 = toScreen(bary2.re, bary2.im);
+
+        svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="#8B008B" stroke-width="${ddThickness}" stroke-linecap="round"/>`);
       }
     }
 
