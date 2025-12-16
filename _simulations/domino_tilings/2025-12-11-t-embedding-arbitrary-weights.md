@@ -629,6 +629,21 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         </div>
         <span style="color: #dee2e6;">|</span>
         <button id="export-obj-btn" style="padding: 6px 14px; background: #002f6c; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export 3D model as OBJ">OBJ (3D)</button>
+        <span style="color: #dee2e6;">|</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="export-gif-btn" style="padding: 6px 14px; background: linear-gradient(135deg, #6B4C9A 0%, #4A6B8A 100%); color: white; border: none; border-radius: 4px; font-weight: 500; box-shadow: 0 1px 3px rgba(107,76,154,0.3); transition: all 0.2s ease;" aria-label="Export as GIF animation" onmouseover="this.style.boxShadow='0 2px 6px rgba(107,76,154,0.4)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.boxShadow='0 1px 3px rgba(107,76,154,0.3)'; this.style.transform='translateY(0)';">
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              GIF
+            </span>
+          </button>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+            <span>n=1..</span>
+            <input type="number" id="gif-max-n" value="20" min="2" max="100" style="width: 50px; padding: 2px 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;" aria-label="Maximum n for GIF">
+          </label>
+          <span style="font-size: 10px; color: #8b7355; font-style: italic;">may take minutes</span>
+        </div>
+        <span id="gif-progress" style="display: none; margin-left: 8px; font-size: 12px; color: #6B4C9A; font-weight: 600; background: #f0ebf5; padding: 4px 10px; border-radius: 4px;"></span>
       </div>
     </div>
   </div>
@@ -7649,10 +7664,319 @@ Part of this research was performed while the author was visiting the Institute 
     URL.revokeObjectURL(link.href);
   }
 
+  // Export GIF (animated T-embeddings for n=1..maxN)
+  async function exportGif() {
+    if (!wasmReady) {
+      alert('WASM not ready. Please wait and try again.');
+      return;
+    }
+
+    const maxN = parseInt(document.getElementById('gif-max-n').value) || 50;
+    if (maxN < 2 || maxN > 100) {
+      alert('Please enter a valid max n between 2 and 100.');
+      return;
+    }
+
+    const gifBtn = document.getElementById('export-gif-btn');
+    const progressEl = document.getElementById('gif-progress');
+
+    // Disable button and show progress
+    gifBtn.disabled = true;
+    gifBtn.style.opacity = '0.6';
+    progressEl.style.display = 'inline';
+    progressEl.textContent = 'Loading GIF library...';
+
+    // Get current display settings
+    const showOrigami = document.getElementById('show-origami-chk').checked;
+    const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
+    const vertexSize = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
+
+    try {
+      // Load gif.js dynamically
+      if (!window.GIF) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = '/js/gif.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      // Create offscreen canvas (800x800 for good quality)
+      const gifWidth = 800;
+      const gifHeight = 800;
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = gifWidth;
+      offCanvas.height = gifHeight;
+      const offCtx = offCanvas.getContext('2d');
+
+      // Initialize GIF encoder
+      const gif = new GIF({
+        workers: 2,
+        quality: 2,
+        width: gifWidth,
+        height: gifHeight,
+        workerScript: '/js/gif.worker.js'
+      });
+
+      // Save current state
+      const savedN = currentSimulationN;
+
+      // Process each n value
+      for (let n = 1; n <= maxN; n++) {
+        progressEl.textContent = `Computing n=${n}/${maxN}...`;
+        await new Promise(r => setTimeout(r, 10)); // Yield for UI update
+
+        // Initialize graph for this n with current weight settings
+        initAztecGraph(n);
+        setAztecWeightMode(currentWeightMode);
+        clearTembLevels();
+
+        // Run folding for non-uniform weights
+        if (currentWeightMode !== 0) {
+          while (canAztecStepDown()) {
+            aztecGraphStepDown();
+          }
+          while (canAztecStepUp()) {
+            aztecGraphStepUp();
+          }
+        }
+
+        // Compute T-embedding
+        const finalK = Math.max(0, n - 2);
+        for (let k = 0; k <= finalK; k++) {
+          let ptr = getTembeddingLevelJSON(k);
+          freeString(ptr);
+        }
+
+        // Render frame to offscreen canvas
+        offCtx.fillStyle = '#fafafa';
+        offCtx.fillRect(0, 0, gifWidth, gifHeight);
+
+        // Get T-embedding data for final level
+        let ptr = getTembeddingLevelJSON(finalK);
+        let json = Module.UTF8ToString(ptr);
+        freeString(ptr);
+        let data;
+        try {
+          data = JSON.parse(json);
+        } catch (e) {
+          continue;
+        }
+
+        if (!data.vertices || data.vertices.length === 0) continue;
+
+        // Compute bounds
+        let minRe = Infinity, maxRe = -Infinity;
+        let minIm = Infinity, maxIm = -Infinity;
+        for (const v of data.vertices) {
+          minRe = Math.min(minRe, v.re);
+          maxRe = Math.max(maxRe, v.re);
+          minIm = Math.min(minIm, v.im);
+          maxIm = Math.max(maxIm, v.im);
+        }
+
+        const padding = 40;
+        const rangeRe = maxRe - minRe || 1;
+        const rangeIm = maxIm - minIm || 1;
+        const scale = Math.min(
+          (gifWidth - 2 * padding) / rangeRe,
+          (gifHeight - 2 * padding) / rangeIm
+        );
+
+        const centerX = gifWidth / 2;
+        const centerY = gifHeight / 2;
+        const centerRe = (minRe + maxRe) / 2;
+        const centerIm = (minIm + maxIm) / 2;
+
+        // Build vertex map
+        const vertexMap = new Map();
+        for (const v of data.vertices) {
+          vertexMap.set(`${v.i},${v.j}`, v);
+        }
+
+        const uniformEdgeWidth = Math.max(edgeThickness, scale / 300 * edgeThickness);
+        const k = data.k;
+
+        // Helper to draw edge
+        function drawEdge(i1, j1, i2, j2, color) {
+          const v1 = vertexMap.get(`${i1},${j1}`);
+          const v2 = vertexMap.get(`${i2},${j2}`);
+          if (v1 && v2) {
+            const x1 = centerX + (v1.re - centerRe) * scale;
+            const y1 = centerY - (v1.im - centerIm) * scale;
+            const x2 = centerX + (v2.re - centerRe) * scale;
+            const y2 = centerY - (v2.im - centerIm) * scale;
+            offCtx.strokeStyle = color;
+            offCtx.beginPath();
+            offCtx.moveTo(x1, y1);
+            offCtx.lineTo(x2, y2);
+            offCtx.stroke();
+          }
+        }
+
+        // Draw T-embedding edges
+        offCtx.lineWidth = uniformEdgeWidth;
+        for (const v of data.vertices) {
+          const i = v.i, j = v.j;
+          const absSum = Math.abs(i) + Math.abs(j);
+          if (vertexMap.has(`${i+1},${j}`)) {
+            const nAbsSum = Math.abs(i+1) + Math.abs(j);
+            if (absSum <= k && nAbsSum <= k) drawEdge(i, j, i+1, j, '#333');
+          }
+          if (vertexMap.has(`${i},${j+1}`)) {
+            const nAbsSum = Math.abs(i) + Math.abs(j+1);
+            if (absSum <= k && nAbsSum <= k) drawEdge(i, j, i, j+1, '#333');
+          }
+        }
+
+        // Boundary edges
+        drawEdge(k+1, 0, 0, k+1, '#333');
+        drawEdge(0, k+1, -(k+1), 0, '#333');
+        drawEdge(-(k+1), 0, 0, -(k+1), '#333');
+        drawEdge(0, -(k+1), k+1, 0, '#333');
+        drawEdge(k+1, 0, k, 0, '#333');
+        drawEdge(-(k+1), 0, -k, 0, '#333');
+        drawEdge(0, k+1, 0, k, '#333');
+        drawEdge(0, -(k+1), 0, -k, '#333');
+
+        // Diagonal boundary edges
+        for (let s = 0; s < k; s++) {
+          drawEdge(k-s, s, k-s-1, s+1, '#333');
+          drawEdge(-s, k-s, -(s+1), k-s-1, '#333');
+          drawEdge(-(k-s), -s, -(k-s-1), -(s+1), '#333');
+          drawEdge(s, -(k-s), s+1, -(k-s-1), '#333');
+        }
+
+        // Draw origami if enabled
+        if (showOrigami && getOrigamiLevelJSON) {
+          ptr = getOrigamiLevelJSON(finalK);
+          json = Module.UTF8ToString(ptr);
+          freeString(ptr);
+          let origamiData;
+          try { origamiData = JSON.parse(json); } catch (e) { origamiData = null; }
+
+          if (origamiData && origamiData.vertices && origamiData.vertices.length > 0) {
+            const origamiMap = new Map();
+            for (const v of origamiData.vertices) {
+              origamiMap.set(`${v.i},${v.j}`, v);
+            }
+
+            function drawOrigamiEdge(i1, j1, i2, j2) {
+              const v1 = origamiMap.get(`${i1},${j1}`);
+              const v2 = origamiMap.get(`${i2},${j2}`);
+              if (v1 && v2) {
+                const x1 = centerX + (v1.re - centerRe) * scale;
+                const y1 = centerY - (v1.im - centerIm) * scale;
+                const x2 = centerX + (v2.re - centerRe) * scale;
+                const y2 = centerY - (v2.im - centerIm) * scale;
+                offCtx.beginPath();
+                offCtx.moveTo(x1, y1);
+                offCtx.lineTo(x2, y2);
+                offCtx.stroke();
+              }
+            }
+
+            offCtx.strokeStyle = 'rgba(41, 98, 255, 0.5)';
+            offCtx.lineWidth = uniformEdgeWidth * 0.7;
+            for (const v of origamiData.vertices) {
+              const i = v.i, j = v.j;
+              const absSum = Math.abs(i) + Math.abs(j);
+              if (origamiMap.has(`${i+1},${j}`)) {
+                const nAbsSum = Math.abs(i+1) + Math.abs(j);
+                if (absSum <= k && nAbsSum <= k) drawOrigamiEdge(i, j, i+1, j);
+              }
+              if (origamiMap.has(`${i},${j+1}`)) {
+                const nAbsSum = Math.abs(i) + Math.abs(j+1);
+                if (absSum <= k && nAbsSum <= k) drawOrigamiEdge(i, j, i, j+1);
+              }
+            }
+          }
+        }
+
+        // Draw vertices
+        offCtx.fillStyle = '#333';
+        const radius = Math.max(vertexSize, scale / 800 * vertexSize);
+        for (const v of data.vertices) {
+          const x = centerX + (v.re - centerRe) * scale;
+          const y = centerY - (v.im - centerIm) * scale;
+          offCtx.beginPath();
+          offCtx.arc(x, y, radius, 0, 2 * Math.PI);
+          offCtx.fill();
+        }
+
+        // Draw n label
+        offCtx.fillStyle = '#333';
+        offCtx.font = 'bold 24px sans-serif';
+        offCtx.textAlign = 'left';
+        offCtx.fillText(`n = ${n}`, 20, 35);
+
+        // Add frame to GIF (700ms delay)
+        gif.addFrame(offCtx, { copy: true, delay: 700 });
+      }
+
+      progressEl.textContent = 'Rendering GIF...';
+      await new Promise(r => setTimeout(r, 10));
+
+      // Render and download
+      gif.on('finished', function(blob) {
+        // Generate descriptive filename similar to other exports
+        const weightPreset = document.getElementById('weight-preset-select').value || 'unknown';
+        let weightStr = weightPreset;
+        if (weightPreset === 'random-iid') {
+          const distType = document.getElementById('iid-distribution-select').value;
+          if (distType === 'uniform') {
+            weightStr = `iid-uniform-${document.getElementById('iid-min').value}-${document.getElementById('iid-max').value}`;
+          } else if (distType === 'exponential') {
+            weightStr = `iid-exp1`;
+          } else if (distType === 'pareto') {
+            weightStr = `iid-pareto-${document.getElementById('iid-pareto-alpha').value}-${document.getElementById('iid-pareto-xmin').value}`;
+          } else if (distType === 'geometric') {
+            weightStr = `iid-geom-${document.getElementById('iid-geom-p').value}`;
+          }
+        } else if (weightPreset === 'random-gamma') {
+          weightStr = `gamma-${document.getElementById('gamma-alpha').value}-${document.getElementById('gamma-beta').value}`;
+        } else if (weightPreset === 'random-layered') {
+          const regime = document.querySelector('input[name="layered-regime"]:checked');
+          weightStr = `layered-${regime ? regime.value : '?'}`;
+        } else if (weightPreset === 'periodic') {
+          weightStr = `periodic-${document.getElementById('periodic-k').value}x${document.getElementById('periodic-l').value}`;
+        } else if (weightPreset === 'all-ones') {
+          weightStr = 'uniform';
+        }
+
+        const link = document.createElement('a');
+        link.download = `t-embedding-n1-${maxN}-${weightStr}.gif`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+
+        // Restore state
+        initAztecGraph(savedN);
+        currentSimulationN = savedN;
+
+        progressEl.style.display = 'none';
+        gifBtn.disabled = false;
+        gifBtn.style.opacity = '1';
+      });
+
+      gif.render();
+
+    } catch (e) {
+      console.error('GIF export error:', e);
+      alert('GIF export failed: ' + e.message);
+      progressEl.style.display = 'none';
+      gifBtn.disabled = false;
+      gifBtn.style.opacity = '1';
+    }
+  }
+
   // Export button event listeners
   document.getElementById('export-pdf-btn').addEventListener('click', exportPdf);
   document.getElementById('export-png-btn').addEventListener('click', exportPng);
   document.getElementById('export-obj-btn').addEventListener('click', exportOBJ);
+  document.getElementById('export-gif-btn').addEventListener('click', exportGif);
 
   // Copy to clipboard buttons
   function copyToClipboard(elementId, btn) {
