@@ -6261,10 +6261,9 @@ Part of this research was performed while the author was visiting the Institute 
     return { regime, p1, p2, prob1, prob2 };
   }
 
-  // Time estimate display: t(n) = 1000 ns * n^3.8 where n is T-embedding order
+  // Time estimate display: t(n) = 1000 ns * n^3.8
   function updateTimeEstimate() {
-    const aztecN = parseInt(document.getElementById('n-input').value) || 6;
-    const n = aztecN + 3;  // T-embedding order = Aztec size + 3
+    const n = parseInt(document.getElementById('n-input').value) || 6;
     const preset = document.getElementById('weight-preset-select').value;
     const estimateSpan = document.getElementById('time-estimate');
     if (!estimateSpan) return;
@@ -6275,20 +6274,20 @@ Part of this research was performed while the author was visiting the Institute 
       return;
     }
 
-    // Formula: t(n) = 1000 ns * n^3.8 (n = T-embedding order)
+    // Formula: t(n) = 1000 ns * n^3.8
     const timeNs = 1000 * Math.pow(n, 3.8);
     const timeSec = timeNs / 1e9;
 
     if (timeSec < 10) {
-      estimateSpan.textContent = '(ready in a few seconds)';
+      estimateSpan.textContent = `(~${timeSec.toFixed(1)}s)`;
     } else if (timeSec <= 60) {
       // Round up to next 10s
       const rounded = Math.ceil(timeSec / 10) * 10;
-      estimateSpan.textContent = `(will take about ${rounded}s)`;
+      estimateSpan.textContent = `(~${rounded}s)`;
     } else {
       // Round up to next minute
       const minutes = Math.ceil(timeSec / 60);
-      estimateSpan.textContent = `(will take about ${minutes} min)`;
+      estimateSpan.textContent = `(~${minutes} min)`;
     }
   }
 
