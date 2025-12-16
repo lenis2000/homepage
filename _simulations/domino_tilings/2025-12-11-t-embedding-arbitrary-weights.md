@@ -548,7 +548,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           </label>
           <label id="dd-min-loop-label" style="display: none; align-items: center; gap: 5px;">
             <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Min loop</span>
-            <input type="number" id="dd-min-loop-length" value="4" min="2" max="100" step="2" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Minimum loop length">
+            <input type="number" id="dd-min-loop-length" value="2" min="2" max="100" step="2" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Minimum loop length">
           </label>
         </span>
       </div>
@@ -3770,7 +3770,7 @@ Part of this research was performed while the author was visiting the Institute 
 
       // Get min loop length filter
       const minLoopInput = document.getElementById('dd-min-loop-length');
-      const minLoopLength = minLoopInput ? parseInt(minLoopInput.value) || 4 : 4;
+      const minLoopLength = minLoopInput ? parseInt(minLoopInput.value) || 2 : 2;
 
       // Build adjacency graph: face -> list of adjacent faces via XOR dominoes
       const faceAdj = new Map();  // face -> [{ face, domino }]
