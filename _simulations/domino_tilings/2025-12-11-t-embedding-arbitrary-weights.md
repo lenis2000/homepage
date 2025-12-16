@@ -66,7 +66,8 @@ code:
 <ul>
   <li><strong>T-graph faces</strong> (quadrilateral cells) correspond to <strong>Aztec diamond vertices</strong>.</li>
   <li>A <strong>domino</strong> covering two adjacent Aztec vertices corresponds to an edge connecting two adjacent T-graph face centers.</li>
-  <li>The face centers are computed as <strong>incenters</strong> (centers of inscribed circles) since T-graph faces are tangential polygons.</li>
+  <li>The face centers are computed as <strong>incenters</strong> (centers of inscribed circles) since T-graph faces are tangential polygons. This simplification is sufficient to show the 
+  loop locations and shapes, even though it does not correspond to the "right" embedding of the dual graph.</li>
 </ul>
 
 <p>Two view modes are available:</p>
