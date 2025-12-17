@@ -8,7 +8,7 @@ emcc 2025-12-17-inverse-rsk.cpp -o 2025-12-17-inverse-rsk.js \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
- -s ENVIRONMENT=web \
+ -s ENVIRONMENT=web,worker \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
 mv 2025-12-17-inverse-rsk.js ../../js/
