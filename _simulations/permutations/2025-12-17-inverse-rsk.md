@@ -91,8 +91,10 @@ code:
 .input-group button,
 #generate-permutation,
 #generate-large-permutation,
+#generate-heatmap,
 #download-shape,
-#download-sigma {
+#download-sigma,
+#download-heatmap {
   padding: 10px 20px;
   background: var(--accent-secondary);
   color: #ffffff;
@@ -108,19 +110,23 @@ code:
 .input-group button:hover,
 #generate-permutation:hover,
 #generate-large-permutation:hover,
+#generate-heatmap:hover,
 #download-shape:hover,
-#download-sigma:hover {
+#download-sigma:hover,
+#download-heatmap:hover {
   background: var(--accent-color);
   border-color: var(--accent-color);
   color: #ffffff;
 }
 
-#generate-permutation {
+#generate-permutation,
+#generate-heatmap {
   background: var(--accent-color);
   border-color: var(--accent-color);
 }
 
-#generate-permutation:hover {
+#generate-permutation:hover,
+#generate-heatmap:hover {
   background: #c66200;
   border-color: #c66200;
 }
@@ -457,6 +463,16 @@ h2, h3, h4 {
 <div class="input-group" style="margin-top: 16px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border-color);">
   <button id="generate-permutation">Generate permutation σ</button>
   <button id="generate-large-permutation">Generate σ with N=30,000</button>
+  <span style="margin: 0 12px; color: var(--text-secondary);">|</span>
+  <label style="margin-right: 6px; color: var(--text-primary);">R=</label>
+  <input type="number" id="heatmap-iterations" value="10" min="1" max="10000" style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
+  <select id="heatmap-scaling" style="padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 14px;">
+    <option value="log">Log</option>
+    <option value="sqrt">Sqrt</option>
+    <option value="linear">Linear</option>
+    <option value="power">Power (0.3)</option>
+  </select>
+  <button id="generate-heatmap" style="margin-left: 8px;">Generate Heatmap</button>
   <span id="wasm-status"></span>
 </div>
 
@@ -465,12 +481,25 @@ h2, h3, h4 {
   <div id="progress-text" class="progress-text"></div>
 </div>
 
-<h3 style="margin-top: 28px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); color: var(--text-primary);">Permutation</h3>
-<div id="perm-matrix" style="background: var(--bg-secondary); padding: 20px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block; min-width: 450px;"></div>
-<div id="perm-display" class="permutation-display"></div>
+<h3 style="margin-top: 28px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); color: var(--text-primary);">Permutation & Permuton Heatmap</h3>
+<div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+  <div>
+    <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">Permutation Matrix</h4>
+    <div id="perm-matrix" style="background: var(--bg-secondary); padding: 20px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block; min-width: 450px; min-height: 450px;"></div>
+    <div id="perm-display" class="permutation-display"></div>
+  </div>
+  <div>
+    <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">Permuton Heatmap</h4>
+    <div id="heatmap-canvas-wrapper" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block;">
+      <canvas id="heatmap-canvas" width="450" height="450" style="display: block;"></canvas>
+    </div>
+    <div id="heatmap-info" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);"></div>
+  </div>
+</div>
 <div class="input-group" style="margin-top: 16px;">
   <button id="download-shape">Download Shape λ</button>
   <button id="download-sigma">Download Permutation σ</button>
+  <button id="download-heatmap">Download Heatmap (Mathematica)</button>
 </div>
 
 <h3 style="margin-top: 28px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); color: var(--text-primary);">Standard Young Tableaux</h3>
@@ -1261,7 +1290,7 @@ h2, h3, h4 {
     ctx.scale(dpr, dpr);
 
     const cellSize = (fixedSize - 2 * margin) / N;
-    const dotRadius = Math.max(0.5, cellSize * 0.3);
+    const dotRadius = Math.max(1.2, cellSize * 0.35);
     const actualSize = N * cellSize;
 
     // Get colors from CSS variables
@@ -1428,6 +1457,7 @@ h2, h3, h4 {
       this.wasm = null;
       this.currentShape = null;
       this.currentPermutation = null;
+      this.currentHeatmap = null;
       this.initWASM();
       document.getElementById('generate-permutation')
         .addEventListener('click', () => this.run());
@@ -1437,6 +1467,12 @@ h2, h3, h4 {
         .addEventListener('click', () => this.downloadShape());
       document.getElementById('download-sigma')
         .addEventListener('click', () => this.downloadPermutation());
+      document.getElementById('generate-heatmap')
+        .addEventListener('click', () => this.runHeatmap());
+      document.getElementById('download-heatmap')
+        .addEventListener('click', () => this.downloadHeatmap());
+      document.getElementById('heatmap-scaling')
+        .addEventListener('change', () => this.reRenderHeatmap());
     }
 
     async initWASM() {
@@ -1501,6 +1537,224 @@ h2, h3, h4 {
       const a = document.createElement('a');
       a.href = url;
       a.download = `permutation_sigma_N${size}_${timestamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async runHeatmap() {
+      if (!this.wasm) {
+        alert('WASM not loaded. Please wait for initialization.');
+        return;
+      }
+
+      let shape;
+      try {
+        shape = this.shapeUI.parseShape();
+      } catch (error) {
+        shape = null;
+      }
+
+      if (!shape || shape.length === 0) {
+        alert('Please draw or input a valid Young diagram shape first.');
+        return;
+      }
+      const N = shape.reduce((a, b) => a + b, 0);
+      const R = parseInt(document.getElementById('heatmap-iterations').value, 10) || 10;
+
+      this.currentShape = [...shape];
+      const shapeStr = shape.join(',');
+
+      this.showProgress(0, `Running ${R} iterations for N=${N}...`);
+      await yieldFrame();
+
+      try {
+        const clearHeatmap = this.wasm.cwrap('clearHeatmap', null, []);
+        const runSim = this.wasm.cwrap('runHeatmapSimulation', 'string', ['string', 'number']);
+        const getBuffer = this.wasm.cwrap('getHeatmapBuffer', 'number', []);
+        const getSize = this.wasm.cwrap('getHeatmapSize', 'number', []);
+        const getMax = this.wasm.cwrap('getHeatmapMax', 'number', []);
+        const getPermSize = this.wasm.cwrap('getPermutationSize', 'number', []);
+        const getPermEntry = this.wasm.cwrap('getPermutationEntry', 'number', ['number']);
+
+        // Clear heatmap before starting
+        clearHeatmap();
+
+        // Run in batches: update every 10% OR every 100 iterations, whichever is smaller
+        const batchSize = Math.max(1, Math.min(100, Math.floor(R / 10)));
+        let completed = 0;
+
+        while (completed < R) {
+          const thisRun = Math.min(batchSize, R - completed);
+          const status = runSim(shapeStr, thisRun);
+          if (status !== 'OK') {
+            throw new Error('Heatmap simulation failed: ' + status);
+          }
+          completed += thisRun;
+
+          const pct = Math.round((completed / R) * 80);  // Reserve 80% for simulation
+          this.showProgress(pct, `Running iteration ${completed}/${R}...`);
+          await yieldFrame();
+        }
+
+        this.showProgress(85, 'Rendering heatmap...');
+        await yieldFrame();
+
+        // Get heatmap data
+        const heatmapSize = getSize();
+        const heatmapMax = getMax();
+        const bufferPtr = getBuffer();
+        console.log('Heatmap size:', heatmapSize, 'max:', heatmapMax, 'bufferPtr:', bufferPtr);
+
+        // Create view directly on WASM heap (zero-copy)
+        const heatmapData = new Uint32Array(this.wasm.HEAPU32.buffer, bufferPtr, heatmapSize * heatmapSize);
+        console.log('First 10 heatmap values:', Array.from(heatmapData.slice(0, 10)));
+
+        // Store for download
+        this.currentHeatmap = {
+          data: Array.from(heatmapData),
+          size: heatmapSize,
+          max: heatmapMax,
+          N: N,
+          R: R
+        };
+
+        // Render heatmap
+        this.renderHeatmap(heatmapData, heatmapSize, heatmapMax);
+
+        // Get last permutation
+        const permSize = getPermSize();
+        const perm = new Array(permSize);
+        for (let i = 0; i < permSize; i++) {
+          perm[i] = getPermEntry(i);
+        }
+        this.currentPermutation = perm;
+
+        // Draw permutation
+        drawPermutation(perm, 'perm-matrix');
+        if (N <= 200) {
+          document.getElementById('perm-display').textContent = `σ = [${perm.join(', ')}]`;
+        } else {
+          document.getElementById('perm-display').textContent = `σ of size ${N} (showing first 20): [${perm.slice(0, 20).join(', ')}...]`;
+        }
+
+        document.getElementById('heatmap-info').textContent =
+          `Heatmap: R=${R} iteration${R > 1 ? 's' : ''}, N=${N}, max density=${heatmapMax}`;
+
+        this.showProgress(100, 'Complete!');
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      } finally {
+        this.hideProgress();
+      }
+    }
+
+    // Re-render heatmap with current scaling (no recomputation)
+    reRenderHeatmap() {
+      if (!this.currentHeatmap) return;
+      const { data, size, max } = this.currentHeatmap;
+      this.renderHeatmap(new Uint32Array(data), size, max);
+    }
+
+    renderHeatmap(data, size, max) {
+      const canvas = document.getElementById('heatmap-canvas');
+      const canvasSize = canvas.width; // 450
+      const ctx = canvas.getContext('2d');
+      const cellSize = canvasSize / size;
+      const scaling = document.getElementById('heatmap-scaling').value;
+
+      // Clear canvas
+      ctx.fillStyle = '#1a1a2e';  // Dark background
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+      // Traditional hot colormap: dark blue -> blue -> cyan -> green -> yellow -> orange -> red -> white
+      function hotColor(t) {
+        // t is 0 to 1
+        let r, g, b;
+        if (t < 0.25) {
+          // Dark blue to blue
+          const t2 = t / 0.25;
+          r = 0;
+          g = 0;
+          b = Math.round(64 + t2 * (255 - 64));
+        } else if (t < 0.5) {
+          // Blue to cyan
+          const t2 = (t - 0.25) / 0.25;
+          r = 0;
+          g = Math.round(t2 * 255);
+          b = 255;
+        } else if (t < 0.75) {
+          // Cyan to yellow
+          const t2 = (t - 0.5) / 0.25;
+          r = Math.round(t2 * 255);
+          g = 255;
+          b = Math.round(255 * (1 - t2));
+        } else {
+          // Yellow to red to white
+          const t2 = (t - 0.75) / 0.25;
+          r = 255;
+          g = Math.round(255 * (1 - t2 * 0.7));  // Keep some green for brightness
+          b = Math.round(t2 * 200);  // Add blue for white-ish at max
+        }
+        return `rgb(${r},${g},${b})`;
+      }
+
+      // Normalization functions
+      const logMax = Math.log(max + 1);
+      function normalize(value) {
+        if (max === 0) return 0;
+        switch (scaling) {
+          case 'linear': return value / max;
+          case 'sqrt': return Math.sqrt(value / max);
+          case 'log': return Math.log(value + 1) / logMax;
+          case 'power': return Math.pow(value / max, 0.3);
+          default: return Math.log(value + 1) / logMax;
+        }
+      }
+
+      // Draw each cell as a filled rectangle
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const idx = y * size + x;
+          const value = data[idx];
+
+          if (value > 0) {
+            const t = normalize(value);
+            ctx.fillStyle = hotColor(t);
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    downloadHeatmap() {
+      if (!this.currentHeatmap) {
+        alert('No heatmap data available. Please generate a heatmap first.');
+        return;
+      }
+
+      const { data, size, N, R } = this.currentHeatmap;
+
+      // Convert to Mathematica matrix format: { {row1}, {row2}, ... }
+      let content = '{';
+      for (let y = 0; y < size; y++) {
+        if (y > 0) content += ',\n';
+        content += '{';
+        for (let x = 0; x < size; x++) {
+          if (x > 0) content += ',';
+          content += data[y * size + x];
+        }
+        content += '}';
+      }
+      content += '}';
+
+      const timestamp = new Date().toISOString().replace(/[:]/g, '-').split('.')[0];
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `heatmap_N${N}_R${R}_${timestamp}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1585,11 +1839,46 @@ h2, h3, h4 {
         } else {
           document.getElementById('perm-display').textContent = `σ of size ${N} (showing first 20): [${perm.slice(0, 20).join(', ')}...]`;
         }
+
+        // Generate heatmap from single permutation (R=1)
+        this.generateHeatmapFromPermutation(perm, N, 1);
+
       } catch (err) {
         alert(`Error: ${err.message}`);
       } finally {
         this.hideProgress();
       }
+    }
+
+    // Generate heatmap from a single permutation (for R=1 case)
+    generateHeatmapFromPermutation(perm, N, R) {
+      const HEATMAP_SIZE = 64;  // Match C++ coarse grid
+      const heatmapData = new Uint32Array(HEATMAP_SIZE * HEATMAP_SIZE);
+
+      for (let t = 1; t <= N; t++) {
+        let x = Math.floor(((t - 1) / N) * HEATMAP_SIZE);
+        let y = Math.floor(((perm[t - 1] - 1) / N) * HEATMAP_SIZE);
+        if (x >= HEATMAP_SIZE) x = HEATMAP_SIZE - 1;
+        if (y >= HEATMAP_SIZE) y = HEATMAP_SIZE - 1;
+        heatmapData[y * HEATMAP_SIZE + x]++;
+      }
+
+      let heatmapMax = 0;
+      for (let i = 0; i < heatmapData.length; i++) {
+        if (heatmapData[i] > heatmapMax) heatmapMax = heatmapData[i];
+      }
+
+      this.currentHeatmap = {
+        data: Array.from(heatmapData),
+        size: HEATMAP_SIZE,
+        max: heatmapMax,
+        N: N,
+        R: R
+      };
+
+      this.renderHeatmap(heatmapData, HEATMAP_SIZE, heatmapMax);
+      document.getElementById('heatmap-info').textContent =
+        `Heatmap: R=${R} iteration${R > 1 ? 's' : ''}, N=${N}, max density=${heatmapMax}`;
     }
   }
 
