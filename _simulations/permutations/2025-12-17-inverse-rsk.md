@@ -1024,6 +1024,92 @@ h2, h3, h4 {
   }
 
   /* ---------------------------------- 2. Hook-walk sampler ---------------------------------- */
+
+  /* Web Worker code for parallel WASM sampling */
+  const workerCode = `
+    let wasmModule = null;
+
+    self.onmessage = async function(e) {
+      const { shape, wasmUrl } = e.data;
+
+      try {
+        // Load WASM module if not already loaded
+        if (!wasmModule) {
+          importScripts(wasmUrl);
+          await HookModule.ready;
+          wasmModule = HookModule;
+        }
+
+        const sample = wasmModule.cwrap('sampleHookWalk', 'string', ['string']);
+        const getEntry = wasmModule.cwrap('getTableauEntry', 'number', ['number', 'number']);
+
+        const status = sample(shape.join(','));
+        if (status !== 'OK') {
+          self.postMessage({ error: 'WASM hook-walk failed' });
+          return;
+        }
+
+        // Extract tableau
+        const T = [];
+        for (let r = 0; r < shape.length; r++) {
+          const row = [];
+          for (let c = 0; c < shape[r]; c++) {
+            row.push(getEntry(r, c));
+          }
+          T.push(row);
+        }
+
+        self.postMessage({ tableau: T });
+      } catch (err) {
+        self.postMessage({ error: err.message });
+      }
+    };
+  `;
+
+  let workerBlobUrl = null;
+
+  function getWorkerUrl() {
+    if (!workerBlobUrl) {
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      workerBlobUrl = URL.createObjectURL(blob);
+    }
+    return workerBlobUrl;
+  }
+
+  /* Sample SYT using Web Worker (for parallel execution) */
+  function sampleSYTWorker(shape) {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(getWorkerUrl());
+      const wasmUrl = new URL('/js/2025-12-17-inverse-rsk.js', location.origin).href;
+
+      worker.onmessage = function(e) {
+        worker.terminate();
+        if (e.data.error) {
+          reject(new Error(e.data.error));
+        } else {
+          resolve(e.data.tableau);
+        }
+      };
+
+      worker.onerror = function(err) {
+        worker.terminate();
+        reject(new Error('Worker error: ' + err.message));
+      };
+
+      worker.postMessage({ shape, wasmUrl });
+    });
+  }
+
+  /* Sample two SYTs in parallel using Web Workers */
+  async function sampleSYTParallel(shape) {
+    const [P, Q] = await Promise.all([
+      sampleSYTWorker(shape),
+      sampleSYTWorker(shape)
+    ]);
+    return { P, Q };
+  }
+
+  /* Original single-threaded sampler (fallback for small N or no Worker support) */
   async function sampleSYT(shape, wasm) {
     const N = shape.reduce((a, b) => a + b, 0);
 
@@ -1385,11 +1471,25 @@ h2, h3, h4 {
           await (this.showProgress(0, `Initialising simulation for ${N} elements…`), yieldFrame());
         }
 
-        await (this.showProgress(5, 'Sampling P tableau'), yieldFrame());
-        const P = await sampleSYT(shape, this.wasm);
+        let P, Q;
 
-        await (this.showProgress(55, 'Sampling Q tableau'), yieldFrame());
-        const Q = await sampleSYT(shape, this.wasm);
+        // Use parallel Web Workers for large N (each worker loads its own WASM instance)
+        const useParallel = N > 500 && typeof Worker !== 'undefined';
+
+        if (useParallel) {
+          await (this.showProgress(5, 'Sampling P and Q tableaux in parallel...'), yieldFrame());
+          const result = await sampleSYTParallel(shape);
+          P = result.P;
+          Q = result.Q;
+        } else {
+          await (this.showProgress(5, 'Sampling P tableau'), yieldFrame());
+          P = await sampleSYT(shape, this.wasm);
+
+          await (this.showProgress(55, 'Sampling Q tableau'), yieldFrame());
+          Q = await sampleSYT(shape, this.wasm);
+        }
+
+        await (this.showProgress(50, 'Drawing tableaux...'), yieldFrame());
 
         // Draw the tableaux before inverse RSK (for all sizes)
         drawTableau('p-tableau', P, 'P');
@@ -1399,7 +1499,7 @@ h2, h3, h4 {
         const Pcopy = P.map(r => r.slice());
         const Qcopy = Q.map(r => r.slice());
 
-        await (this.showProgress(75, 'Computing inverse RSK'), yieldFrame());
+        await (this.showProgress(60, 'Computing inverse RSK'), yieldFrame());
         const perm = await inverseRSK(Pcopy, Qcopy);
 
         // Store current permutation for downloads
