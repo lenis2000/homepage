@@ -16,149 +16,263 @@ code:
 <script src="{{site.url}}/js/2025-12-17-inverse-rsk.js"></script>
 
 <style>
-/* Reuse all the CSS from hookwalk-tableau for consistent UI */
+/* UVA-themed design system for inverse RSK visualization */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #F1F1EF;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --link-color: #2A69A6;
+  --link-hover: #e57200;
+  --accent-color: #e57200;
+  --accent-secondary: #002f6c;
+  --border-color: #DADADA;
+  --success-color: #28a745;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #e8e8e8;
+  --text-secondary: #a0a0a0;
+  --link-color: #66b3ff;
+  --link-hover: #ff9933;
+  --accent-color: #ff9933;
+  --accent-secondary: #4a7ab8;
+  --border-color: #4a4a4a;
+}
+
+/* Controls panel */
 .controls {
   margin: 20px 0;
-  padding: 15px;
-  background: var(--background-secondary, #f8f9fa);
-  border-radius: 8px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
 }
 
 .input-group {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .input-group label {
-  font-weight: 500;
+  font-family: "franklingothic-demi", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: fit-content;
 }
 
 .input-group input {
   padding: 8px 12px;
-  border: 1px solid var(--border-color, #ccc);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  font-family: monospace;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+  font-size: 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.input-group button {
-  padding: 8px 16px;
-  background: var(--accent-color, #007bff);
-  color: white;
-  border: none;
+.input-group input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.15);
+}
+
+[data-theme="dark"] .input-group input:focus {
+  box-shadow: 0 0 0 2px rgba(255, 153, 51, 0.2);
+}
+
+/* Primary action buttons */
+.input-group button,
+#generate-permutation,
+#generate-large-permutation,
+#download-shape,
+#download-sigma {
+  padding: 10px 20px;
+  background: var(--accent-secondary);
+  color: #ffffff;
+  border: 2px solid var(--accent-secondary);
   border-radius: 4px;
   cursor: pointer;
+  font-family: "franklingothic-book", Arial, "Helvetica Neue", Helvetica, sans-serif;
   font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
-.input-group button:hover {
-  background: var(--accent-hover, #0056b3);
+.input-group button:hover,
+#generate-permutation:hover,
+#generate-large-permutation:hover,
+#download-shape:hover,
+#download-sigma:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #ffffff;
 }
 
-.mode-toggle {
+#generate-permutation {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+#generate-permutation:hover {
+  background: #c66200;
+  border-color: #c66200;
+}
+
+/* Toggle buttons (mode switches) */
+.mode-toggle,
+.shape-toggle {
   padding: 8px 16px;
-  border: 1px solid var(--border-color, #ccc);
-  background: var(--background-primary, white);
+  border: 2px solid var(--accent-secondary);
+  background: var(--bg-primary);
+  color: var(--accent-secondary);
   cursor: pointer;
-  margin-right: 5px;
+  margin-right: 6px;
+  border-radius: 4px;
+  font-family: "franklingothic-book", Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
-.mode-toggle.active {
-  background: var(--accent-color, #007bff);
-  color: white;
+.mode-toggle:hover,
+.shape-toggle:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
+.mode-toggle.active,
+.shape-toggle.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #ffffff;
+}
+
+/* Input sections */
 .input-section {
   margin: 15px 0;
-  padding: 15px;
-  border: 1px solid var(--border-color, #ddd);
-  border-radius: 5px;
-  background: var(--background-secondary, #f9f9f9);
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
 }
 
+[data-theme="dark"] .input-section {
+  background: var(--bg-secondary);
+}
+
+/* Drawing area */
 .drawing-container {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .drawing-info {
-  min-width: 200px;
-  font-family: monospace;
+  min-width: 180px;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
   font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  padding: 12px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
 }
 
 .drawing-info div {
-  margin: 5px 0;
+  margin: 6px 0;
 }
 
+.drawing-info span {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+/* Grid cells for drawing */
 .grid-cell {
-  fill: white;
-  stroke: #ccc;
+  fill: var(--bg-primary);
+  stroke: var(--border-color);
   stroke-width: 1;
   cursor: pointer;
+  transition: fill 0.1s ease;
 }
 
 .grid-cell.filled {
-  fill: #e8f4ff;
+  fill: rgba(229, 114, 0, 0.15);
+}
+
+[data-theme="dark"] .grid-cell.filled {
+  fill: rgba(255, 153, 51, 0.2);
 }
 
 .grid-cell:hover {
-  fill: #d0e8ff;
+  fill: rgba(229, 114, 0, 0.25);
 }
 
-.shape-toggle {
-  padding: 6px 12px;
-  border: 1px solid var(--border-color, #ccc);
-  background: var(--background-primary, white);
-  cursor: pointer;
-  margin-right: 5px;
-  font-size: 14px;
+[data-theme="dark"] .grid-cell:hover {
+  fill: rgba(255, 153, 51, 0.3);
 }
 
-.shape-toggle.active {
-  background: var(--accent-color, #007bff);
-  color: white;
-}
-
+/* Shape input sections */
 .shape-input-section {
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .info-text {
-  font-size: 12px;
-  color: var(--text-secondary, #666);
+  font-size: 13px;
+  color: var(--text-secondary);
   font-style: italic;
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
+/* Progress bar */
 .progress-bar {
   width: 100%;
-  height: 20px;
-  background-color: var(--background-secondary, #f0f0f0);
-  border: 1px solid var(--border-color, #ccc);
-  border-radius: 10px;
+  height: 24px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-color, #007bff), #0056b3);
+  background: linear-gradient(90deg, var(--accent-color), #c66200);
   width: 0%;
   transition: width 0.3s ease;
+  border-radius: 12px;
+}
+
+[data-theme="dark"] .progress-fill {
+  background: linear-gradient(90deg, var(--accent-color), #cc7700);
 }
 
 .progress-text {
   text-align: center;
   font-size: 14px;
-  margin-top: 5px;
-  color: var(--text-primary, #333);
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-family: "franklingothic-book", Arial, "Helvetica Neue", Helvetica, sans-serif;
 }
 
+/* Permutation display */
 .permutation-display {
-  font-family: monospace;
-  margin: 10px 0;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+  font-size: 14px;
+  margin: 12px 0;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  overflow-x: auto;
 }
 
 #perm-matrix svg {
@@ -167,44 +281,116 @@ code:
 }
 
 .summary-box {
-  font-family: monospace;
-  color: var(--text-primary, #333);
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+  color: var(--text-primary);
   margin: 8px 0;
 }
 
+/* Tableau styling */
 .tableau-cell {
-  fill: white;
-  stroke: #333;
+  fill: var(--bg-primary);
+  stroke: var(--text-primary);
   stroke-width: 1;
 }
 
 .tableau-cell.filled {
-  fill: #e8f4ff;
+  fill: rgba(229, 114, 0, 0.12);
+}
+
+[data-theme="dark"] .tableau-cell.filled {
+  fill: rgba(255, 153, 51, 0.15);
 }
 
 .tableau-text {
   text-anchor: middle;
   dominant-baseline: middle;
-  font-family: monospace;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
   font-size: 14px;
-  fill: #333;
+  fill: var(--text-primary);
+}
+
+/* Section headings */
+h2, h3, h4 {
+  color: var(--text-primary);
+}
+
+/* Details/Summary styling */
+#algorithm-description-details summary {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.2s ease;
+}
+
+#algorithm-description-details summary:hover {
+  background-color: var(--border-color) !important;
+}
+
+#algorithm-description-details > div {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+#algorithm-description-details code {
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+  font-size: 13px;
+  color: var(--accent-color);
+  border: 1px solid var(--border-color);
+}
+
+/* Canvas styling */
+#shape-canvas canvas {
+  border-color: var(--border-color) !important;
+  background: var(--bg-primary);
+}
+
+[data-theme="dark"] #shape-canvas canvas {
+  filter: invert(0.85) hue-rotate(180deg);
+}
+
+/* WASM status indicator */
+#wasm-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .input-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .drawing-container {
+    flex-direction: column;
+  }
+
+  .mode-toggle,
+  .shape-toggle {
+    margin-bottom: 6px;
+  }
 }
 </style>
 
 <h2>Random permutation via inverse RSK</h2>
 
 <details id="algorithm-description-details" style="margin-bottom: 20px;">
-    <summary style="cursor: pointer; padding: 15px; border: 1px solid var(--border-color, #ddd); border-radius: 5px; background-color: var(--bg-secondary, #f9f9f9); font-weight: bold; font-size: 1.1em; color: var(--text-primary, #212529);">
+    <summary style="cursor: pointer; padding: 14px 18px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--bg-secondary); font-family: 'franklingothic-demi', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 600; font-size: 1em; color: var(--text-primary); transition: background-color 0.2s ease;">
         About the Inverse RSK Algorithm
     </summary>
-    <div style="padding: 15px; border: 1px solid var(--border-color, #ddd); border-top: none; border-radius: 0 0 5px 5px; background-color: var(--bg-secondary, #f9f9f9); color: var(--text-primary, #212529);">
+    <div style="padding: 18px; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 6px 6px; background-color: var(--bg-secondary); color: var(--text-primary); line-height: 1.6;">
         <p>The <strong>inverse Robinson-Schensted-Knuth (RSK) correspondence</strong> takes a pair of Standard Young Tableaux (P, Q) of the same shape and recovers the permutation that generated them through the forward RSK algorithm.</p>
 
-        <h4>How it works:</h4>
-        <ol>
+        <h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--accent-color);">How it works:</h4>
+        <ol style="margin-left: 20px;">
             <li>Sample two independent random Standard Young Tableaux P and Q of the same shape using the hook-walk algorithm</li>
             <li>Apply the inverse RSK procedure:
-                <ul>
+                <ul style="margin: 8px 0 8px 16px;">
                     <li>For each time step t = N down to 1, find t in the Q-tableau</li>
                     <li>Extract the corresponding entry from the P-tableau</li>
                     <li>Perform reverse bumping through the rows to recover the original inserted value</li>
@@ -213,11 +399,11 @@ code:
             <li>The sequence of extracted values forms the permutation σ</li>
         </ol>
 
-        <h4>Shape Input Methods:</h4>
-        <ul>
+        <h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--accent-color);">Shape Input Methods:</h4>
+        <ul style="margin-left: 20px;">
             <li><strong>Draw Mode:</strong> Draw the outline of a Young diagram and specify target number of boxes</li>
-            <li><strong>Text Input:</strong>
-                <ul>
+            <li><strong>Text Input & Presets:</strong>
+                <ul style="margin: 8px 0 8px 16px;">
                     <li><strong>Manual:</strong> Enter comma-separated row lengths (e.g., <code>5,4,3,2,1</code>) or use exponential notation (e.g., <code>50^50,1^50</code> for 50 rows of length 50 followed by 50 rows of length 1)</li>
                     <li><strong>Plancherel:</strong> Sample random partition with given number of boxes using Plancherel measure</li>
                     <li><strong>Staircase:</strong> Generate staircase shape k, k-1, ..., 1</li>
@@ -225,24 +411,24 @@ code:
             </li>
         </ul>
 
-        <h4>Output Formats:</h4>
-        <ul>
+        <h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--accent-color);">Output Formats:</h4>
+        <ul style="margin-left: 20px;">
             <li><strong>Small permutations (N ≤ 200):</strong>
-                <ul>
+                <ul style="margin: 8px 0 8px 16px;">
                     <li>Full permutation array display: <code>σ = [3, 1, 4, 2, ...]</code></li>
                     <li>Detailed tableaux with numbered entries</li>
                     <li>Permutation matrix with dots</li>
                 </ul>
             </li>
             <li><strong>Medium permutations (200 < N ≤ 600):</strong>
-                <ul>
+                <ul style="margin: 8px 0 8px 16px;">
                     <li>Truncated array display: <code>σ of size N (showing first 20): [σ(1), σ(2), ..., σ(20), ...]</code></li>
                     <li>Permutation matrix visualization with dots</li>
                     <li>Color-coded tableaux (heat map style)</li>
                 </ul>
             </li>
             <li><strong>Large permutations (N > 600):</strong>
-                <ul>
+                <ul style="margin: 8px 0 8px 16px;">
                     <li>Truncated array display with first 20 elements</li>
                     <li>Summary statistics only for visualization</li>
                     <li>Color-coded tableaux using UVA color scheme (orange to blue gradient)</li>
@@ -250,15 +436,15 @@ code:
             </li>
         </ul>
 
-        <h4>Download Options:</h4>
-        <ul>
+        <h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--accent-color);">Download Options:</h4>
+        <ul style="margin-left: 20px;">
             <li><strong>Download Shape λ:</strong> Saves the Young diagram as comma-separated row lengths in a text file</li>
             <li><strong>Download Permutation σ:</strong> Saves the complete permutation as comma-separated values in a text file</li>
             <li>Files are timestamped with format: <code>shape_lambda_N{size}_{timestamp}.txt</code> and <code>permutation_sigma_N{size}_{timestamp}.txt</code></li>
         </ul>
 
-        <h4>Properties:</h4>
-        <ul>
+        <h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--accent-color);">Properties:</h4>
+        <ul style="margin-left: 20px;">
             <li><strong>Uniform distribution:</strong> Generates uniformly random permutations with given RSK shape</li>
             <li><strong>Bijective:</strong> Perfect correspondence between permutations and SYT pairs</li>
             <li><strong>Scalable:</strong> Uses WASM for large shapes (N > 500 boxes) with pure JS implementation for smaller cases</li>
@@ -268,35 +454,35 @@ code:
 </details>
 
 <div id="shape-ui"></div>
-<div class="input-group">
+<div class="input-group" style="margin-top: 16px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border-color);">
   <button id="generate-permutation">Generate permutation σ</button>
   <button id="generate-large-permutation">Generate σ with N=30,000</button>
-  <span id="wasm-status" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
+  <span id="wasm-status"></span>
 </div>
 
-<div id="progress-area" style="display:none;margin-top:10px;">
+<div id="progress-area" style="display:none; margin-top: 16px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border-color);">
   <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
   <div id="progress-text" class="progress-text"></div>
 </div>
 
-<h3>Standard Young Tableaux</h3>
-<div style="display: flex; gap: 20px; flex-wrap: wrap;">
-  <div>
-    <h4>P-tableau</h4>
-    <div id="p-tableau"></div>
-  </div>
-  <div>
-    <h4>Q-tableau</h4>
-    <div id="q-tableau"></div>
-  </div>
-</div>
-
-<h3>Permutation</h3>
-<div id="perm-matrix"></div>
+<h3 style="margin-top: 28px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); color: var(--text-primary);">Permutation</h3>
+<div id="perm-matrix" style="background: var(--bg-secondary); padding: 20px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block; min-width: 450px;"></div>
 <div id="perm-display" class="permutation-display"></div>
-<div class="input-group" style="margin-top: 10px;">
+<div class="input-group" style="margin-top: 16px;">
   <button id="download-shape">Download Shape λ</button>
   <button id="download-sigma">Download Permutation σ</button>
+</div>
+
+<h3 style="margin-top: 28px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); color: var(--text-primary);">Standard Young Tableaux</h3>
+<div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+  <div style="flex: 1; min-width: 280px;">
+    <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">P-tableau</h4>
+    <div id="p-tableau" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); min-height: 100px;"></div>
+  </div>
+  <div style="flex: 1; min-width: 280px;">
+    <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">Q-tableau</h4>
+    <div id="q-tableau" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); min-height: 100px;"></div>
+  </div>
 </div>
 
 <script>
@@ -351,7 +537,7 @@ code:
           <div class="input-group">
             <label>Input method:</label>
             <button id="toggle-draw-mode" class="mode-toggle active">Draw Shape</button>
-            <button id="toggle-text-mode" class="mode-toggle">Text Input</button>
+            <button id="toggle-text-mode" class="mode-toggle">Text Input & Presets</button>
           </div>
 
           <!-- Drawing interface -->
@@ -941,7 +1127,7 @@ code:
     container.innerHTML = '';
 
     const N = perm.length;
-    const fixedSize = 300; // Fixed size for the visualization
+    const fixedSize = 450; // Fixed size for the visualization
     const margin = 20;
     const cellSize = Math.min(30, (fixedSize - 2 * margin) / N);
     const dotRadius = Math.max(1, cellSize * 0.3);
