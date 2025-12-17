@@ -1920,7 +1920,7 @@ h2, h3, h4 {
 
     // Generate heatmap from a single permutation (for R=1 case)
     generateHeatmapFromPermutation(perm, N, R) {
-      const HEATMAP_SIZE = Math.min(N, 512);  // Display size = min(N, 512)
+      const HEATMAP_SIZE = Math.min(N, 128);  // Display size = min(N, 128)
       const heatmapData = new Uint32Array(HEATMAP_SIZE * HEATMAP_SIZE);
 
       for (let t = 1; t <= N; t++) {

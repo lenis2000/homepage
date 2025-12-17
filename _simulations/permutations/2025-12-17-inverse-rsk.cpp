@@ -297,7 +297,7 @@ int getPermutationEntry(int i) {
 
 // ----------- Heatmap Simulation (Fat WASM) --------------
 
-static const int MAX_DISPLAY_SIZE = 512;
+static const int MAX_DISPLAY_SIZE = 128;
 static int displayHeatmapSize = 64;  // Actual display size = min(N, 512)
 static vector<uint32_t> heatmapGrid;
 static uint32_t heatmapMax = 0;
