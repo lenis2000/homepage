@@ -1236,8 +1236,57 @@ h2, h3, h4 {
     container.innerHTML = '';
 
     const N = perm.length;
-    const fixedSize = 450; // Fixed size for the visualization
+    const fixedSize = 450;
     const margin = 20;
+
+    // Use Canvas for large N (much faster than SVG with thousands of elements)
+    if (N > 500) {
+      drawPermutationCanvas(perm, container, fixedSize, margin);
+    } else {
+      drawPermutationSVG(perm, container, fixedSize, margin);
+    }
+  }
+
+  function drawPermutationCanvas(perm, container, fixedSize, margin) {
+    const N = perm.length;
+    const canvas = document.createElement('canvas');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = fixedSize * dpr;
+    canvas.height = fixedSize * dpr;
+    canvas.style.width = fixedSize + 'px';
+    canvas.style.height = fixedSize + 'px';
+    container.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const cellSize = (fixedSize - 2 * margin) / N;
+    const dotRadius = Math.max(0.5, cellSize * 0.3);
+    const actualSize = N * cellSize;
+
+    // Get colors from CSS variables
+    const style = getComputedStyle(document.documentElement);
+    const strokeColor = style.getPropertyValue('--text-primary').trim() || '#333';
+
+    // Draw border
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(margin, margin, actualSize, actualSize);
+
+    // Draw dots
+    ctx.fillStyle = strokeColor;
+    for (let j = 0; j < N; j++) {
+      const i = perm[j] - 1;
+      const cx = margin + j * cellSize + cellSize / 2;
+      const cy = margin + i * cellSize + cellSize / 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, dotRadius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+
+  function drawPermutationSVG(perm, container, fixedSize, margin) {
+    const N = perm.length;
     const cellSize = Math.min(30, (fixedSize - 2 * margin) / N);
     const dotRadius = Math.max(1, cellSize * 0.3);
 
