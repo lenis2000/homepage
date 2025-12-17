@@ -4,7 +4,7 @@
 emcc 2025-12-17-inverse-rsk.cpp -o 2025-12-17-inverse-rsk.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_sampleHookWalk','_getTableauShape','_getTableauEntry','_freeString','_inverseRSK','_getPermutationEntry','_getPermutationSize','_clearHeatmap','_runHeatmapSimulation','_getHeatmapBuffer','_getHeatmapSize','_getHeatmapMax']" \
+ -s "EXPORTED_FUNCTIONS=['_sampleHookWalk','_getTableauShape','_getTableauEntry','_freeString','_inverseRSK','_getPermutationEntry','_getPermutationSize','_initHeatmap','_runHeatmapSimulation','_getHeatmapBuffer','_getHeatmapSize','_getHeatmapMax','_getStoredPermutationCount','_getStoredN','_getStoredPermEntry']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","HEAPU32"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -297,9 +297,13 @@ int getPermutationEntry(int i) {
 
 // ----------- Heatmap Simulation (Fat WASM) --------------
 
-static const int HEATMAP_SIZE = 64;  // Coarse grid for visible cells (like Mathematica MatrixPlot)
-static vector<uint32_t> heatmapGrid(HEATMAP_SIZE * HEATMAP_SIZE, 0);
+static const int DISPLAY_HEATMAP_SIZE = 128;  // Fixed size for display only
+static vector<uint32_t> heatmapGrid;
 static uint32_t heatmapMax = 0;
+
+// Store all permutations for full-resolution Mathematica export
+static vector<vector<int>> allPermutations;
+static int storedN = 0;  // Size of each permutation
 
 // Internal hook-walk that writes directly to provided tableau
 static void internalHookWalk(const vector<int>& shapeVec, vector<vector<int>>& tableau, mt19937_64& rng) {
@@ -396,11 +400,13 @@ static bool internalInverseRSK(vector<vector<int>>& P, vector<vector<int>>& Q, v
     return true;
 }
 
-// Clear heatmap grid (call before starting batch runs)
+// Initialize heatmap (call before starting batch runs)
 EMSCRIPTEN_KEEPALIVE
-void clearHeatmap() {
-    fill(heatmapGrid.begin(), heatmapGrid.end(), 0);
+void initHeatmap(int n) {
+    heatmapGrid.assign(DISPLAY_HEATMAP_SIZE * DISPLAY_HEATMAP_SIZE, 0);
     heatmapMax = 0;
+    allPermutations.clear();
+    storedN = n;
 }
 
 /*
@@ -453,13 +459,16 @@ char* runHeatmapSimulation(const char* shapeStr, int iterations) {
             char* err = (char*)malloc(4); strcpy(err, "ERR"); return err;
         }
 
-        // Accumulate into heatmap
+        // Store permutation for full-resolution export
+        allPermutations.push_back(perm);
+
+        // Accumulate into display heatmap (fixed low resolution)
         for (int t = 1; t <= totalN; ++t) {
-            int x = (int)(((t - 1) / (double)totalN) * HEATMAP_SIZE);
-            int y = (int)(((perm[t - 1] - 1) / (double)totalN) * HEATMAP_SIZE);
-            if (x >= HEATMAP_SIZE) x = HEATMAP_SIZE - 1;
-            if (y >= HEATMAP_SIZE) y = HEATMAP_SIZE - 1;
-            heatmapGrid[y * HEATMAP_SIZE + x]++;
+            int x = (int)(((t - 1) / (double)totalN) * DISPLAY_HEATMAP_SIZE);
+            int y = (int)(((perm[t - 1] - 1) / (double)totalN) * DISPLAY_HEATMAP_SIZE);
+            if (x >= DISPLAY_HEATMAP_SIZE) x = DISPLAY_HEATMAP_SIZE - 1;
+            if (y >= DISPLAY_HEATMAP_SIZE) y = DISPLAY_HEATMAP_SIZE - 1;
+            heatmapGrid[y * DISPLAY_HEATMAP_SIZE + x]++;
         }
     }
 
@@ -482,12 +491,33 @@ uint32_t* getHeatmapBuffer() {
 
 EMSCRIPTEN_KEEPALIVE
 int getHeatmapSize() {
-    return HEATMAP_SIZE;
+    return DISPLAY_HEATMAP_SIZE;
 }
 
 EMSCRIPTEN_KEEPALIVE
 uint32_t getHeatmapMax() {
     return heatmapMax;
+}
+
+// Full-resolution export: get number of stored permutations
+EMSCRIPTEN_KEEPALIVE
+int getStoredPermutationCount() {
+    return (int)allPermutations.size();
+}
+
+// Full-resolution export: get N (size of each permutation)
+EMSCRIPTEN_KEEPALIVE
+int getStoredN() {
+    return storedN;
+}
+
+// Full-resolution export: get entry from stored permutation
+// permIdx: which permutation (0 to R-1), pos: position in permutation (0 to N-1)
+EMSCRIPTEN_KEEPALIVE
+int getStoredPermEntry(int permIdx, int pos) {
+    if (permIdx < 0 || permIdx >= (int)allPermutations.size()) return -1;
+    if (pos < 0 || pos >= (int)allPermutations[permIdx].size()) return -1;
+    return allPermutations[permIdx][pos];
 }
 
 } // extern "C"

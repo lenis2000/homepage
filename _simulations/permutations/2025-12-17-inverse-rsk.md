@@ -1570,7 +1570,7 @@ h2, h3, h4 {
       await yieldFrame();
 
       try {
-        const clearHeatmap = this.wasm.cwrap('clearHeatmap', null, []);
+        const initHeatmap = this.wasm.cwrap('initHeatmap', null, ['number']);
         const runSim = this.wasm.cwrap('runHeatmapSimulation', 'string', ['string', 'number']);
         const getBuffer = this.wasm.cwrap('getHeatmapBuffer', 'number', []);
         const getSize = this.wasm.cwrap('getHeatmapSize', 'number', []);
@@ -1578,8 +1578,8 @@ h2, h3, h4 {
         const getPermSize = this.wasm.cwrap('getPermutationSize', 'number', []);
         const getPermEntry = this.wasm.cwrap('getPermutationEntry', 'number', ['number']);
 
-        // Clear heatmap before starting
-        clearHeatmap();
+        // Initialize heatmap with size = min(N, 512) for full resolution export
+        initHeatmap(N);
 
         // Run in batches: update every 10% OR every 100 iterations, whichever is smaller
         const batchSize = Math.max(1, Math.min(100, Math.floor(R / 10)));
@@ -1728,24 +1728,90 @@ h2, h3, h4 {
       }
     }
 
-    downloadHeatmap() {
+    async downloadHeatmap() {
       if (!this.currentHeatmap) {
         alert('No heatmap data available. Please generate a heatmap first.');
         return;
       }
 
-      const { data, size, N, R } = this.currentHeatmap;
+      const { N } = this.currentHeatmap;
+      let permutations = [];
+      let storedN = N;
 
-      // Convert to Mathematica matrix format: { {row1}, {row2}, ... }
+      // Check if we have JS-stored permutations (from single permutation case)
+      if (this.currentHeatmap.permutations && this.currentHeatmap.permutations.length > 0) {
+        permutations = this.currentHeatmap.permutations;
+        storedN = permutations[0].length;
+      } else if (this.wasm) {
+        // Get from WASM storage
+        const getPermCount = this.wasm.cwrap('getStoredPermutationCount', 'number', []);
+        const getStoredN = this.wasm.cwrap('getStoredN', 'number', []);
+        const getEntry = this.wasm.cwrap('getStoredPermEntry', 'number', ['number', 'number']);
+
+        const permCount = getPermCount();
+        storedN = getStoredN();
+
+        if (permCount === 0 || storedN === 0) {
+          alert('No permutation data stored. Please generate a heatmap first.');
+          return;
+        }
+
+        // Fetch all permutations from WASM
+        this.showProgress(0, 'Fetching permutations from WASM...');
+        await yieldFrame();
+
+        for (let p = 0; p < permCount; p++) {
+          const perm = new Array(storedN);
+          for (let t = 0; t < storedN; t++) {
+            perm[t] = getEntry(p, t);
+          }
+          permutations.push(perm);
+          if (p % 10 === 0) {
+            this.showProgress(Math.round((p / permCount) * 30), `Fetching permutation ${p}/${permCount}...`);
+            await yieldFrame();
+          }
+        }
+      } else {
+        alert('No permutation data available.');
+        return;
+      }
+
+      this.showProgress(30, 'Building full N×N matrix...');
+      await yieldFrame();
+
+      // Build full N×N matrix from permutations using sparse Map
+      const counts = new Map();
+
+      for (let p = 0; p < permutations.length; p++) {
+        const perm = permutations[p];
+        for (let t = 0; t < storedN; t++) {
+          const sigma = perm[t];  // sigma(t+1), 1-indexed value
+          const y = sigma - 1;    // 0-indexed row
+          const x = t;            // 0-indexed col
+          const key = y * storedN + x;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+
+      this.showProgress(50, 'Writing Mathematica matrix...');
+      await yieldFrame();
+
+      // Build Mathematica format: { {row1}, {row2}, ... }
+      // Full N×N with raw integer counts
       let content = '{';
-      for (let y = 0; y < size; y++) {
+      for (let y = 0; y < storedN; y++) {
         if (y > 0) content += ',\n';
         content += '{';
-        for (let x = 0; x < size; x++) {
+        for (let x = 0; x < storedN; x++) {
           if (x > 0) content += ',';
-          content += data[y * size + x];
+          const key = y * storedN + x;
+          content += (counts.get(key) || 0);
         }
         content += '}';
+        if (y % 100 === 0) {
+          this.showProgress(50 + Math.round((y / storedN) * 50), `Writing row ${y}/${storedN}...`);
+          await yieldFrame();
+        }
       }
       content += '}';
 
@@ -1754,11 +1820,13 @@ h2, h3, h4 {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `heatmap_N${N}_R${R}_${timestamp}.txt`;
+      a.download = `heatmap_N${storedN}_R${permutations.length}_${timestamp}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      this.hideProgress();
     }
 
     async run() {
@@ -1852,7 +1920,7 @@ h2, h3, h4 {
 
     // Generate heatmap from a single permutation (for R=1 case)
     generateHeatmapFromPermutation(perm, N, R) {
-      const HEATMAP_SIZE = 64;  // Match C++ coarse grid
+      const HEATMAP_SIZE = 128;  // Fixed display size (matches C++)
       const heatmapData = new Uint32Array(HEATMAP_SIZE * HEATMAP_SIZE);
 
       for (let t = 1; t <= N; t++) {
@@ -1873,7 +1941,8 @@ h2, h3, h4 {
         size: HEATMAP_SIZE,
         max: heatmapMax,
         N: N,
-        R: R
+        R: R,
+        permutations: [perm]  // Store for full-res export
       };
 
       this.renderHeatmap(heatmapData, HEATMAP_SIZE, heatmapMax);
