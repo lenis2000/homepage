@@ -297,7 +297,8 @@ int getPermutationEntry(int i) {
 
 // ----------- Heatmap Simulation (Fat WASM) --------------
 
-static const int DISPLAY_HEATMAP_SIZE = 128;  // Fixed size for display only
+static const int MAX_DISPLAY_SIZE = 512;
+static int displayHeatmapSize = 64;  // Actual display size = min(N, 512)
 static vector<uint32_t> heatmapGrid;
 static uint32_t heatmapMax = 0;
 
@@ -403,10 +404,11 @@ static bool internalInverseRSK(vector<vector<int>>& P, vector<vector<int>>& Q, v
 // Initialize heatmap (call before starting batch runs)
 EMSCRIPTEN_KEEPALIVE
 void initHeatmap(int n) {
-    heatmapGrid.assign(DISPLAY_HEATMAP_SIZE * DISPLAY_HEATMAP_SIZE, 0);
+    displayHeatmapSize = min(n, MAX_DISPLAY_SIZE);  // min(N, 512) for display
+    heatmapGrid.assign(displayHeatmapSize * displayHeatmapSize, 0);
     heatmapMax = 0;
     allPermutations.clear();
-    storedN = n;
+    storedN = n;  // Full N for Mathematica export
 }
 
 /*
@@ -462,13 +464,13 @@ char* runHeatmapSimulation(const char* shapeStr, int iterations) {
         // Store permutation for full-resolution export
         allPermutations.push_back(perm);
 
-        // Accumulate into display heatmap (fixed low resolution)
+        // Accumulate into display heatmap (min(N, 512) resolution)
         for (int t = 1; t <= totalN; ++t) {
-            int x = (int)(((t - 1) / (double)totalN) * DISPLAY_HEATMAP_SIZE);
-            int y = (int)(((perm[t - 1] - 1) / (double)totalN) * DISPLAY_HEATMAP_SIZE);
-            if (x >= DISPLAY_HEATMAP_SIZE) x = DISPLAY_HEATMAP_SIZE - 1;
-            if (y >= DISPLAY_HEATMAP_SIZE) y = DISPLAY_HEATMAP_SIZE - 1;
-            heatmapGrid[y * DISPLAY_HEATMAP_SIZE + x]++;
+            int x = (int)(((t - 1) / (double)totalN) * displayHeatmapSize);
+            int y = (int)(((perm[t - 1] - 1) / (double)totalN) * displayHeatmapSize);
+            if (x >= displayHeatmapSize) x = displayHeatmapSize - 1;
+            if (y >= displayHeatmapSize) y = displayHeatmapSize - 1;
+            heatmapGrid[y * displayHeatmapSize + x]++;
         }
     }
 
@@ -491,7 +493,7 @@ uint32_t* getHeatmapBuffer() {
 
 EMSCRIPTEN_KEEPALIVE
 int getHeatmapSize() {
-    return DISPLAY_HEATMAP_SIZE;
+    return displayHeatmapSize;
 }
 
 EMSCRIPTEN_KEEPALIVE
