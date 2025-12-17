@@ -633,12 +633,59 @@ h2, h3, h4 {
     }
 
     setDrawMode(isDraw) {
+      // If switching TO draw mode, transfer current text shape to canvas
+      if (isDraw && !this.drawMode) {
+        this.transferShapeToCanvas();
+      }
       this.drawMode = isDraw;
       document.getElementById('toggle-draw-mode').classList.toggle('active', isDraw);
       document.getElementById('toggle-text-mode').classList.toggle('active', !isDraw);
       document.getElementById('draw-interface').style.display = isDraw ? 'block' : 'none';
       document.getElementById('text-interface').style.display = isDraw ? 'none' : 'block';
       document.getElementById('generate-large-permutation').style.display = isDraw ? 'inline-block' : 'none';
+    }
+
+    // Transfer shape from text input to drawing canvas
+    transferShapeToCanvas() {
+      let shape = null;
+      try {
+        // Temporarily set drawMode false to get text shape
+        const oldDrawMode = this.drawMode;
+        this.drawMode = false;
+        shape = this.parseShape();
+        this.drawMode = oldDrawMode;
+      } catch (e) {
+        return; // No valid shape to transfer
+      }
+      if (!shape || shape.length === 0) return;
+
+      // Clear the canvas first
+      for (let r = 0; r < this.gridResolution; r++) {
+        for (let c = 0; c < this.gridResolution; c++) {
+          this.borderGrid[r][c] = false;
+        }
+      }
+
+      // Scale shape to fit in grid
+      const maxRow = shape.length;
+      const maxCol = Math.max(...shape);
+      const scale = Math.min(this.gridResolution / maxRow, this.gridResolution / maxCol) * 0.9;
+
+      // Draw the outline (bottom-right corner of each row)
+      for (let r = 0; r < shape.length; r++) {
+        const gridRow = Math.floor(r * scale);
+        const gridCol = Math.floor(shape[r] * scale) - 1;
+        if (gridRow < this.gridResolution && gridCol >= 0 && gridCol < this.gridResolution) {
+          this.borderGrid[gridRow][gridCol] = true;
+        }
+      }
+
+      // Update target boxes
+      const totalBoxes = shape.reduce((a, b) => a + b, 0);
+      document.getElementById('target-boxes').value = totalBoxes;
+
+      this.drawCanvas();
+      this.updateDrawingInfo();
     }
 
     setShapeMode(mode) {
@@ -695,12 +742,13 @@ h2, h3, h4 {
     }
 
     setupCanvasEvents() {
-      const start = (x, y) => {
+      const start = (x, y, shiftKey) => {
         const {row, col} = this.xy2rc(x, y);
         if (row < 0) return;
         this.isDrawing = true;
 
-        if (this.eraserMode) {
+        // Shift-click = erase mode
+        if (this.eraserMode || shiftKey) {
           this.eraseDownAndRight(row, col);
         } else {
           this.drawAction = !this.borderGrid[row][col];
@@ -709,12 +757,13 @@ h2, h3, h4 {
         }
       };
 
-      const move = (x, y) => {
+      const move = (x, y, shiftKey) => {
         if (!this.isDrawing) return;
         const {row, col} = this.xy2rc(x, y);
         if (row === this.prevRow && col === this.prevCol) return;
 
-        if (this.eraserMode) {
+        // Shift = erase mode
+        if (this.eraserMode || shiftKey) {
           this.eraseDownAndRight(row, col);
         } else {
           if (this.drawAction) this.drawLine(this.prevRow, this.prevCol, row, col, true);
@@ -730,8 +779,8 @@ h2, h3, h4 {
         this.prevRow = this.prevCol = null;
       };
 
-      this.canvas.addEventListener('mousedown', e => start(e.offsetX, e.offsetY));
-      this.canvas.addEventListener('mousemove', e => move(e.offsetX, e.offsetY));
+      this.canvas.addEventListener('mousedown', e => start(e.offsetX, e.offsetY, e.shiftKey));
+      this.canvas.addEventListener('mousemove', e => move(e.offsetX, e.offsetY, e.shiftKey));
       window.addEventListener('mouseup', stop);
 
       this.canvas.addEventListener('touchstart', e => {
