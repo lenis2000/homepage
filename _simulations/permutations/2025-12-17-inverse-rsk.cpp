@@ -16,7 +16,7 @@ mv 2025-12-17-inverse-rsk.js ../../js/
 Features:
 - Hook-walk algorithm for sampling uniform random Standard Young Tableaux
 - Supports any Young diagram shape up to 100,000 boxes
-- Efficient C++ implementation with O(N√N) complexity
+- Efficient C++ implementation with O(N) cell removal via swap-and-pop
 - Returns tableau entries accessible via getTableauEntry(row, col)
 */
 
@@ -56,6 +56,10 @@ void freeString(char* s) { free(s); }
  *   "ERR"  on failure / bad input
  *
  * Resulting tableau available through getTableauShape / getTableauEntry.
+ *
+ * OPTIMIZATION: O(1) swap-and-pop for cell removal instead of O(N) rebuild.
+ * Since the hook-walk always lands on a corner (rightmost cell in its row),
+ * only that single cell becomes invalid when we decrement activeRow[r].
  */
 EMSCRIPTEN_KEEPALIVE
 char* sampleHookWalk(const char* shapeStr) {
@@ -77,22 +81,38 @@ char* sampleHookWalk(const char* shapeStr) {
         char* err = (char*)malloc(4); strcpy(err,"ERR"); return err;
     }
 
-    // init tableau with zeros
-    T.assign(shape.size(), vector<int>());
-    for (size_t r = 0; r < shape.size(); ++r) T[r].resize(shape[r], 0);
+    int numRows = (int)shape.size();
 
-    /* ----------- uniform GNW hook-walk ----------- */
+    // init tableau with zeros
+    T.assign(numRows, vector<int>());
+    for (int r = 0; r < numRows; ++r) T[r].resize(shape[r], 0);
+
+    /* ----------- uniform GNW hook-walk with O(1) cell removal ----------- */
     std::mt19937_64 rng((uint64_t)emscripten_get_now());
     std::vector<int> activeRow = shape;                       // mutable row lengths
-    std::vector<std::pair<int,int>> cells;                    // active squares
+
+    // cells vector + index map for O(1) swap-and-pop
+    std::vector<std::pair<int,int>> cells;
     cells.reserve(N);
-    for (int r = 0; r < (int)shape.size(); ++r)
-      for (int c = 0; c < shape[r]; ++c) cells.emplace_back(r,c);
+
+    // cellIndex[r][c] = index in cells vector, or -1 if not present
+    std::vector<std::vector<int>> cellIndex(numRows);
+    for (int r = 0; r < numRows; ++r) {
+        cellIndex[r].resize(shape[r], -1);
+    }
+
+    // populate cells and index map
+    for (int r = 0; r < numRows; ++r) {
+        for (int c = 0; c < shape[r]; ++c) {
+            cellIndex[r][c] = (int)cells.size();
+            cells.emplace_back(r, c);
+        }
+    }
 
     for (int k = N; k >= 1; --k) {
 
         /* 1. choose starting cell uniformly among empty squares */
-        std::uniform_int_distribution<int> pickCell(0, (int)cells.size()-1);
+        std::uniform_int_distribution<int> pickCell(0, (int)cells.size() - 1);
         int idx = pickCell(rng);
         int r = cells[idx].first, c = cells[idx].second;
 
@@ -100,7 +120,7 @@ char* sampleHookWalk(const char* shapeStr) {
         while (true) {
             int arm = activeRow[r] - c - 1;                   // to the right
             int leg = 0;                                      // below
-            for (int rr = r + 1; rr < (int)activeRow.size() && c < activeRow[rr]; ++rr) ++leg;
+            for (int rr = r + 1; rr < numRows && c < activeRow[rr]; ++rr) ++leg;
 
             if (arm == 0 && leg == 0) break;                  // reached corner
 
@@ -114,16 +134,18 @@ char* sampleHookWalk(const char* shapeStr) {
         T[r][c] = k;
         activeRow[r]--;
 
-        /* 4. compact the active-cell vector in O(#rows)       */
-        std::vector<std::pair<int,int>> tmp;
-        tmp.reserve(cells.size()-1);
-        for (auto &p : cells) {
-            int rr = p.first, cc = p.second;
-            if (rr == r && cc == c) continue;                 // removed corner
-            if (cc >= activeRow[rr])  continue;               // now outside Ferrers
-            tmp.emplace_back(rr, cc);
+        /* 4. O(1) swap-and-pop to remove corner cell (r, c) */
+        int cornerIdx = cellIndex[r][c];
+        int lastIdx = (int)cells.size() - 1;
+
+        if (cornerIdx != lastIdx) {
+            // swap corner with last element
+            auto& lastCell = cells[lastIdx];
+            cells[cornerIdx] = lastCell;
+            cellIndex[lastCell.first][lastCell.second] = cornerIdx;
         }
-        cells.swap(tmp);                                      // ready for next k
+        cells.pop_back();
+        cellIndex[r][c] = -1;  // mark as removed
     }
 
     char* ok = (char*)malloc(3); strcpy(ok,"OK"); return ok;

@@ -1,5 +1,5 @@
 ---
-title: Permutation from a given shape via inverse RSK
+title: Permutation from a given shape via inverse RSK (v2)
 model: permutations
 author: 'Leonid Petrov'
 code:
