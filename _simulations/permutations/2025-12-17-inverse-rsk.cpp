@@ -4,10 +4,11 @@
 emcc 2025-12-17-inverse-rsk.cpp -o 2025-12-17-inverse-rsk.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_sampleHookWalk','_getTableauShape','_getTableauEntry','_freeString']" \
+ -s "EXPORTED_FUNCTIONS=['_sampleHookWalk','_getTableauShape','_getTableauEntry','_freeString','_inverseRSK','_getPermutationEntry','_getPermutationSize']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
+ -s STACK_SIZE=2MB \
  -s ENVIRONMENT=web,worker \
  -s MODULARIZE=1 \
  -s EXPORT_NAME='createHookModule' \
@@ -166,6 +167,131 @@ char* getTableauShape() {
 EMSCRIPTEN_KEEPALIVE
 int getTableauEntry(int r,int c){          // 0-based
     if(r<(int)T.size() && c<(int)T[r].size()) return T[r][c];
+    return -1;
+}
+
+// ----------- Inverse RSK (exact port from JS) --------------
+
+static vector<int> permutation;  // result of inverse RSK
+
+/*
+ * Inverse RSK algorithm - exact port of the working JS implementation.
+ * Takes P and Q tableaux as comma-separated strings (row-major, semicolon between rows).
+ * Format: "1,2,3;4,5;6" means [[1,2,3],[4,5],[6]]
+ *
+ * No JS<->WASM progress callbacks - runs entirely in C++ for speed.
+ */
+// Simple parser without stringstream (avoids stack issues)
+static vector<vector<int>> parseTableau(const char* str) {
+    vector<vector<int>> T;
+    vector<int> row;
+    int num = 0;
+    bool inNum = false;
+
+    for (const char* p = str; ; ++p) {
+        char c = *p;
+        if (c >= '0' && c <= '9') {
+            num = num * 10 + (c - '0');
+            inNum = true;
+        } else {
+            if (inNum) {
+                row.push_back(num);
+                num = 0;
+                inNum = false;
+            }
+            if (c == ';' || c == '\0') {
+                if (!row.empty()) {
+                    T.push_back(row);
+                    row.clear();
+                }
+                if (c == '\0') break;
+            }
+        }
+    }
+    return T;
+}
+
+EMSCRIPTEN_KEEPALIVE
+char* inverseRSK(const char* pStr, const char* qStr) {
+    permutation.clear();
+
+    // Parse tableaux using simple parser
+    vector<vector<int>> P = parseTableau(pStr);
+    vector<vector<int>> Q = parseTableau(qStr);
+
+    if (P.empty() || Q.empty()) {
+        char* err = (char*)malloc(4); strcpy(err, "ERR"); return err;
+    }
+
+    // Count total boxes
+    int totalN = 0;
+    for (auto& row : P) totalN += (int)row.size();
+
+    permutation.resize(totalN);
+
+    // Main inverse RSK loop
+    // NOTE: Cannot pre-compute Q positions because row deletion shifts indices.
+    // Search for t each iteration - O(N²) total but correct and still fast in C++.
+    for (int t = totalN; t >= 1; --t) {
+        // Find position of t in Q (always at a corner)
+        int r = -1, c = -1;
+        for (int row = 0; row < (int)Q.size() && r == -1; ++row) {
+            for (int col = 0; col < (int)Q[row].size(); ++col) {
+                if (Q[row][col] == t) {
+                    r = row;
+                    c = col;
+                    break;
+                }
+            }
+        }
+        if (r == -1) {
+            char* err = (char*)malloc(4); strcpy(err, "ERR"); return err;
+        }
+
+        // Get value from P at same position
+        int val = P[r][c];
+
+        // Erase cells from both tableaux (like JS splice)
+        Q[r].erase(Q[r].begin() + c);
+        P[r].erase(P[r].begin() + c);
+
+        // Remove empty rows (like JS: if (Q[r].length === 0) { Q.splice(r, 1); P.splice(r, 1); })
+        if (Q[r].empty()) {
+            Q.erase(Q.begin() + r);
+            P.erase(P.begin() + r);
+        }
+
+        // Bump up through P - find rightmost element < currentVal in each row above
+        int currentVal = val;
+        for (int row = r - 1; row >= 0; --row) {
+            int best = -1;
+            for (int col = (int)P[row].size() - 1; col >= 0; --col) {
+                if (P[row][col] < currentVal) {
+                    best = col;
+                    break;
+                }
+            }
+            if (best == -1) break;
+
+            int tmp = P[row][best];
+            P[row][best] = currentVal;
+            currentVal = tmp;
+        }
+
+        permutation[t - 1] = currentVal;
+    }
+
+    char* ok = (char*)malloc(3); strcpy(ok, "OK"); return ok;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getPermutationSize() {
+    return (int)permutation.size();
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getPermutationEntry(int i) {
+    if (i >= 0 && i < (int)permutation.size()) return permutation[i];
     return -1;
 }
 

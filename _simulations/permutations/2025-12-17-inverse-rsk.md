@@ -1162,16 +1162,44 @@ h2, h3, h4 {
   }
 
   /* ---------------------------------- 3. Inverse RSK ---------------------------------- */
-  async function inverseRSK(P, Q) {
+
+  /* Serialize tableau to string format for C++: "1,2,3;4,5;6" */
+  function tableauToString(T) {
+    return T.map(row => row.join(',')).join(';');
+  }
+
+  /* WASM-based inverse RSK - no progress callbacks, runs entirely in C++ */
+  function inverseRSKWasm(P, Q, wasm) {
+    const pStr = tableauToString(P);
+    const qStr = tableauToString(Q);
+
+    const doInverseRSK = wasm.cwrap('inverseRSK', 'string', ['string', 'string']);
+    const getSize = wasm.cwrap('getPermutationSize', 'number', []);
+    const getEntry = wasm.cwrap('getPermutationEntry', 'number', ['number']);
+
+    const status = doInverseRSK(pStr, qStr);
+    if (status !== 'OK') throw new Error('WASM inverse RSK failed: ' + status);
+
+    const N = getSize();
+    const perm = new Array(N);
+    for (let i = 0; i < N; i++) {
+      perm[i] = getEntry(i);
+    }
+    return perm;
+  }
+
+  /* Inverse RSK - uses WASM for large N, pure JS for small N */
+  async function inverseRSK(P, Q, wasm) {
     const N = P.flat().length;
+
+    // Use WASM for large N (faster, no JS<->WASM progress overhead)
+    if (wasm && N > 500) {
+      return inverseRSKWasm(P, Q, wasm);
+    }
+
+    // Pure JS fallback for small N
     const perm = Array(N);
 
-    /*
-     * OPTIMIZATION: Pre-compute Q lookup table - O(N) instead of O(N²)
-     * qLoc[t] = {r, c} gives the position of value t in Q.
-     * This works because we remove cells in reverse order of addition,
-     * always removing "corners" which don't shift interior positions.
-     */
     const qLoc = new Array(N + 1);
     for (let r = 0; r < Q.length; r++) {
       for (let c = 0; c < Q[r].length; c++) {
@@ -1180,20 +1208,6 @@ h2, h3, h4 {
     }
 
     for (let t = N; t >= 1; --t) {
-      // Progress update for large simulations
-      if (N > 5000 && (t & 0x3F) === 0) {
-        const progressFill = document.getElementById('progress-fill');
-        const progressText = document.getElementById('progress-text');
-        if (progressFill && progressText) {
-          const pct = Math.floor(((N - t + 1) / N) * 100);
-          progressFill.style.width = `${pct}%`;
-          progressText.textContent = `Progress: ${N - t + 1} / ${N} (${pct}%)`;
-        }
-      }
-
-      if ((N - t) % 1024 === 0) await yieldFrame();   // let the browser paint every ~1k steps
-
-      // O(1) lookup instead of O(N) scan
       const { r, c } = qLoc[t];
 
       const val = P[r][c];
@@ -1201,7 +1215,6 @@ h2, h3, h4 {
       P[r].splice(c, 1);
       if (Q[r].length === 0) { Q.splice(r, 1); P.splice(r, 1); }
 
-      /* bump up */
       let currentVal = val;
       for (let row = r - 1; row >= 0; --row) {
         let best = -1;
@@ -1509,7 +1522,7 @@ h2, h3, h4 {
         const Qcopy = Q.map(r => r.slice());
 
         await (this.showProgress(60, 'Computing inverse RSK'), yieldFrame());
-        const perm = await inverseRSK(Pcopy, Qcopy);
+        const perm = await inverseRSK(Pcopy, Qcopy, this.wasm);
 
         // Store current permutation for downloads
         this.currentPermutation = [...perm];
