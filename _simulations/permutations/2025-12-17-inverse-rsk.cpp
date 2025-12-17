@@ -1,7 +1,7 @@
 // !!!AI AGENT: run the build command in one line for auto-approval!!!
 
 /*
-emcc 2025-12-17-hookwalk-tableau.cpp -o 2025-12-17-hookwalk-tableau.js \
+emcc 2025-12-17-inverse-rsk.cpp -o 2025-12-17-inverse-rsk.js \
  -s WASM=1 \
  -s ASYNCIFY=1 \
  -s "EXPORTED_FUNCTIONS=['_sampleHookWalk','_getTableauShape','_getTableauEntry','_freeString']" \
@@ -11,7 +11,7 @@ emcc 2025-12-17-hookwalk-tableau.cpp -o 2025-12-17-hookwalk-tableau.js \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
-mv 2025-12-17-hookwalk-tableau.js ../../js/
+mv 2025-12-17-inverse-rsk.js ../../js/
 
 Features:
 - Hook-walk algorithm for sampling uniform random Standard Young Tableaux

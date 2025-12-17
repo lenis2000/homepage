@@ -5,15 +5,15 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-12-17-inverse-rsk.md'
     txt : 'Interactive JS – see source'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-12-17-hookwalk-tableau.cpp'
-    txt : 'WASM sampler for a single SYT (already exists)'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-12-17-inverse-rsk.cpp'
+    txt : 'WASM sampler for a single SYT'
 ---
 
 **Conjecture (L.P.)**: If a Young diagram has a limit shape on the scale $\sqrt{n}$, then random permutations have a limit in the sense of permutons.
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <!-- hook-walk WASM (already compiled, single-file) -->
-<script src="{{site.url}}/js/2025-12-17-hookwalk-tableau.js"></script>
+<script src="{{site.url}}/js/2025-12-17-inverse-rsk.js"></script>
 
 <style>
 /* Reuse all the CSS from hookwalk-tableau for consistent UI */
