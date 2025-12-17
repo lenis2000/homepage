@@ -486,7 +486,7 @@ h2, h3, h4 {
 </div>
 
 <script>
-/* global HookModule */
+/* global createHookModule */
 /* eslint-disable no-await-in-loop, max-lines */
 
 (function () {
@@ -1166,6 +1166,19 @@ h2, h3, h4 {
     const N = P.flat().length;
     const perm = Array(N);
 
+    /*
+     * OPTIMIZATION: Pre-compute Q lookup table - O(N) instead of O(N²)
+     * qLoc[t] = {r, c} gives the position of value t in Q.
+     * This works because we remove cells in reverse order of addition,
+     * always removing "corners" which don't shift interior positions.
+     */
+    const qLoc = new Array(N + 1);
+    for (let r = 0; r < Q.length; r++) {
+      for (let c = 0; c < Q[r].length; c++) {
+        qLoc[Q[r][c]] = { r, c };
+      }
+    }
+
     for (let t = N; t >= 1; --t) {
       // Progress update for large simulations
       if (N > 5000 && (t & 0x3F) === 0) {
@@ -1180,11 +1193,8 @@ h2, h3, h4 {
 
       if ((N - t) % 1024 === 0) await yieldFrame();   // let the browser paint every ~1k steps
 
-      let r = -1, c = -1;
-      for (let i = 0; i < Q.length && r === -1; ++i) {
-        const j = Q[i].indexOf(t);
-        if (j !== -1) { r = i; c = j; }
-      }
+      // O(1) lookup instead of O(N) scan
+      const { r, c } = qLoc[t];
 
       const val = P[r][c];
       Q[r].splice(c, 1);
@@ -1368,9 +1378,8 @@ h2, h3, h4 {
     }
 
     async initWASM() {
-      if (typeof HookModule !== 'undefined') {
-        await HookModule.ready;
-        this.wasm = HookModule;
+      if (typeof createHookModule !== 'undefined') {
+        this.wasm = await createHookModule();
         document.getElementById('wasm-status')
           .textContent = '(WASM ready for N>500)';
       } else {
