@@ -9,6 +9,8 @@ emcc 2025-12-17-inverse-rsk.cpp -o 2025-12-17-inverse-rsk.js \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web,worker \
+ -s MODULARIZE=1 \
+ -s EXPORT_NAME='createHookModule' \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
 mv 2025-12-17-inverse-rsk.js ../../js/

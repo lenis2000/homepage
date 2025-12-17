@@ -1036,15 +1036,8 @@ h2, h3, h4 {
         // Load WASM module if not already loaded
         if (!wasmModule) {
           importScripts(wasmUrl);
-          // Find the module - emscripten may export as HookModule, Module, or on self
-          const mod = (typeof HookModule !== 'undefined') ? HookModule :
-                      (typeof Module !== 'undefined') ? Module :
-                      self.HookModule || self.Module;
-          if (!mod) {
-            throw new Error('WASM module not found after importScripts');
-          }
-          if (mod.ready) await mod.ready;
-          wasmModule = mod;
+          // MODULARIZE exports a factory function 'createHookModule'
+          wasmModule = await createHookModule();
         }
 
         const sample = wasmModule.cwrap('sampleHookWalk', 'string', ['string']);
