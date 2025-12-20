@@ -66,17 +66,16 @@ code:
 <ul>
   <li><strong>T-graph faces</strong> (quadrilateral cells) correspond to <strong>Aztec diamond vertices</strong>.</li>
   <li>A <strong>domino</strong> covering two adjacent Aztec vertices corresponds to an edge connecting two adjacent T-graph face centers.</li>
-  <li>The face centers are computed as <strong>incenters</strong> (centers of inscribed circles) since T-graph faces are tangential polygons. This simplification is sufficient to show the 
-  loop locations and shapes, even though it does not correspond to the "right" embedding of the dual graph.</li>
+  <li><strong>Face centers:</strong> Computed as weighted centroids, where each vertex is weighted by the sum of its two adjacent edge lengths. This does not correspond to the "right" embedding of the dual graph (which would require the origami map construction).</li>
 </ul>
 
 <p>Two view modes are available:</p>
 <ul>
-  <li><strong>Single</strong>: Shows one dimer configuration as edges between face incenters.</li>
+  <li><strong>Single</strong>: Shows one dimer configuration as edges between face centers.</li>
   <li><strong>Double (XOR)</strong>: Shows the symmetric difference of two independent dimer configurations, which forms disjoint closed loops.</li>
 </ul>
 
-<p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary). It is intended as an illustration of the double dimer model on the T-graph geometry, not as a precise mathematical correspondence.</p>
+<p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary). It is intended as an illustration of the double dimer model on the T-graph geometry.</p>
 
 <h5>3D Mode Options</h5>
 <ul>
@@ -3933,9 +3932,9 @@ Part of this research was performed while the author was visiting the Institute 
       y: centerY - (v.im - centerIm) * scale
     });
 
-    // Compute face incenter (center of inscribed circle for tangential polygon)
-    // For T-graph faces, which are tangential quadrilaterals
-    function getFaceIncenter(faceKey) {
+    // Compute face center as weighted centroid
+    // Each vertex weighted by sum of its two adjacent edge lengths
+    function getFaceCenter(faceKey) {
       const [fi, fj] = faceKey.split(',').map(Number);
       const corners = [
         vertexMap.get(`${fi},${fj}`),
@@ -3952,7 +3951,7 @@ Part of this research was performed while the author was visiting the Institute 
       const a2 = dist(corners[2], corners[3]);  // v2 to v3
       const a3 = dist(corners[3], corners[0]);  // v3 to v0
 
-      // Weights for incenter: w_i = a_{i-1} + a_i (adjacent side lengths)
+      // Weights: w_i = a_{i-1} + a_i (sum of adjacent side lengths)
       const w0 = a3 + a0;
       const w1 = a0 + a1;
       const w2 = a1 + a2;
@@ -3978,8 +3977,8 @@ Part of this research was performed while the author was visiting the Institute 
       const faces = dominoToFaces(d);
       if (faces.length !== 2) continue;
 
-      const bary1 = getFaceIncenter(faces[0]);
-      const bary2 = getFaceIncenter(faces[1]);
+      const bary1 = getFaceCenter(faces[0]);
+      const bary2 = getFaceCenter(faces[1]);
       if (!bary1 || !bary2) continue;
 
       const p1 = toScreen(bary1);
@@ -3999,8 +3998,8 @@ Part of this research was performed while the author was visiting the Institute 
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
-        const bary1 = getFaceIncenter(faces[0]);
-        const bary2 = getFaceIncenter(faces[1]);
+        const bary1 = getFaceCenter(faces[0]);
+        const bary2 = getFaceCenter(faces[1]);
         if (!bary1 || !bary2) continue;
 
         const p1 = toScreen(bary1);
@@ -5567,8 +5566,8 @@ Part of this research was performed while the author was visiting the Institute 
         }
       }
 
-      // Face incenter with z interpolation
-      function getFaceIncenter3D(faceKey) {
+      // Face center (weighted centroid) with z interpolation
+      function getFaceCenter3D(faceKey) {
         const [fi, fj] = faceKey.split(',').map(Number);
         const corners = [
           vertex3DMap.get(`${fi},${fj}`),
@@ -5713,8 +5712,8 @@ Part of this research was performed while the author was visiting the Institute 
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
-        const c1 = getFaceIncenter3D(faces[0]);
-        const c2 = getFaceIncenter3D(faces[1]);
+        const c1 = getFaceCenter3D(faces[0]);
+        const c2 = getFaceCenter3D(faces[1]);
         if (!c1 || !c2) continue;
 
         const proj1 = project(c1.x, c1.y, c1.z);
@@ -5736,8 +5735,8 @@ Part of this research was performed while the author was visiting the Institute 
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
-        const c1 = getFaceIncenter3D(faces[0]);
-        const c2 = getFaceIncenter3D(faces[1]);
+        const c1 = getFaceCenter3D(faces[0]);
+        const c2 = getFaceCenter3D(faces[1]);
         if (!c1 || !c2) continue;
 
         const proj1 = project(c1.x, c1.y, c1.z);
@@ -7506,8 +7505,9 @@ Part of this research was performed while the author was visiting the Institute 
         dominosToDraw = xorDominoes;
       }
 
-      // Compute face incenter (center of inscribed circle for tangential polygon)
-      function getFaceIncenter(faceKey) {
+      // Compute face center as weighted centroid
+      // Each vertex weighted by sum of its two adjacent edge lengths
+      function getFaceCenter(faceKey) {
         const [fi, fj] = faceKey.split(',').map(Number);
         const corners = [
           vertexMap.get(`${fi},${fj}`),
@@ -7538,8 +7538,8 @@ Part of this research was performed while the author was visiting the Institute 
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
-        const bary1 = getFaceIncenter(faces[0]);
-        const bary2 = getFaceIncenter(faces[1]);
+        const bary1 = getFaceCenter(faces[0]);
+        const bary2 = getFaceCenter(faces[1]);
         if (!bary1 || !bary2) continue;
 
         const p1 = toScreen(bary1.re, bary1.im);
@@ -7553,8 +7553,8 @@ Part of this research was performed while the author was visiting the Institute 
         const faces = dominoToFaces(d);
         if (faces.length !== 2) continue;
 
-        const bary1 = getFaceIncenter(faces[0]);
-        const bary2 = getFaceIncenter(faces[1]);
+        const bary1 = getFaceCenter(faces[0]);
+        const bary2 = getFaceCenter(faces[1]);
         if (!bary1 || !bary2) continue;
 
         const p1 = toScreen(bary1.re, bary1.im);
