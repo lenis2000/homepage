@@ -75,7 +75,7 @@ code:
   <li><strong>Double (XOR)</strong>: Shows the symmetric difference of two independent dimer configurations, which forms disjoint closed loops.</li>
 </ul>
 
-<p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary).</p>
+<p><em>Note:</em> Boundary faces are not used. This is just a smaller-size sample (Aztec diamond of size N = n−3) placed onto only the interior quadrilateral faces, for illustration purposes.</p>
 
 <h5>Dual Graph Embedding</h5>
 <p>The <strong>Dual</strong> checkbox shows the dual graph of the T-embedding, with vertices at face centers and edges connecting adjacent faces. Two embedding modes are available:</p>
@@ -584,6 +584,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           Dimer covering
         </button>
         <span id="dd-thickness-control" style="display: none; align-items: center; gap: 8px; padding: 4px 8px; background: rgba(229,114,0,0.08); border-radius: 3px; border: 1px solid rgba(229,114,0,0.2);">
+          <span style="font-size: 10px; color: #666; font-style: italic; max-width: 180px;">Interior faces only (smaller Aztec diamond for illustration)</span>
           <select id="dd-view-mode" style="padding: 3px 6px; font-size: 11px; font-weight: 500; border: 1px solid #ccc; border-radius: 3px; background: #fff;" aria-label="Dimer view mode">
             <option value="double">Double (XOR)</option>
             <option value="single">Single</option>
@@ -3197,6 +3198,7 @@ Part of this research was performed while the author was visiting the Institute 
   }
 
   // Sample double dimer configuration for T-embedding visualization
+  // Note: This visualization covers only interior quadrilateral faces (boundary excluded for visualization purposes)
   async function sampleTembDoubleDimer() {
     if (!shufflingWasmReady) {
       alert('WASM module not ready. Please wait a moment and try again.');
