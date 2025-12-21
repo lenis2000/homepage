@@ -82,6 +82,7 @@ code:
 <ul>
   <li><strong>Proper embedding</strong> (default): Uses the reflection algorithm (Lemma 2.3 from [KLRR]). Starting from w₀ (shown in orange), face centers are computed by reflecting across shared T-embedding edges. The position of w₀ can be dragged or adjusted via offset controls.</li>
   <li><strong>Naive embedding</strong>: Uses approximate incenters of each face independently. For triangles, this is the true incenter (weighted by opposite edge lengths). For quadrilaterals, vertices are weighted by opposite diagonal lengths. This gives a simpler embedding that doesn't depend on a starting position.</li>
+  <li><strong>Circle patterns</strong> (proper embedding only): Displays circumcircles at each T-embedding vertex. By the circle pattern property (Lemma 2.3 from CLR), all adjacent dual vertices lie on a single circle centered at that T-embedding vertex. Shown in gold.</li>
 </ul>
 <p>The <strong>V</strong> and <strong>E</strong> controls adjust vertex size and edge thickness for the dual graph independently of the T-embedding.</p>
 
@@ -561,6 +562,11 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
             <span style="font-size: 10px; font-weight: 600; color: #8B008B; text-transform: uppercase; letter-spacing: 0.3px;">Naive</span>
           </label>
           <span style="width: 1px; height: 14px; background: rgba(139,0,139,0.3);"></span>
+          <label id="circle-pattern-label" style="display: flex; align-items: center; gap: 4px; cursor: pointer;" title="Show circumcircles at T-embedding vertices (circle pattern property from Lemma 2.3)">
+            <input type="checkbox" id="circle-pattern-chk" style="cursor: pointer;" aria-label="Show circle patterns">
+            <span style="font-size: 10px; font-weight: 600; color: #DAA520; text-transform: uppercase; letter-spacing: 0.3px;">Circles</span>
+          </label>
+          <span style="width: 1px; height: 14px; background: rgba(139,0,139,0.3);"></span>
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
             <input type="checkbox" id="drag-w0-chk" style="cursor: pointer;" aria-label="Enable dragging w0">
             <span style="font-size: 10px; font-weight: 600; color: #8B008B; text-transform: uppercase; letter-spacing: 0.3px;">Drag w₀</span>
@@ -576,6 +582,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <input type="number" id="dual-vertex-size" value="3" min="0.5" max="20" step="0.5" style="width: 45px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual vertex size">
           <span style="font-size: 10px; color: #666;">E:</span>
           <input type="number" id="dual-edge-thickness" value="1.5" min="0.5" max="10" step="0.5" style="width: 45px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual edge thickness">
+          <span id="circle-width-control" style="display: inline-flex; align-items: center; gap: 2px;">
+            <span style="font-size: 10px; color: #DAA520;">C:</span>
+            <input type="number" id="circle-line-width" value="1.5" min="0.5" max="10" step="0.5" style="width: 45px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #DAA520; border-radius: 3px;" aria-label="Circle line width">
+          </span>
         </span>
         <span style="width: 1px; height: 20px; background: #ccc;"></span>
         <button id="sample-double-dimer-temb-btn"
@@ -4529,6 +4539,125 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return embedding;
   }
 
+  // Compute circumcircles at T-embedding vertices for circle pattern visualization
+  // For each T-embedding vertex v, all adjacent dual vertices C(face) lie on a circumcircle
+  // This is the circle pattern property from Lemma 2.3 of CLR paper
+  function computeCirclePatterns(vertexMap, dualEmbedding, k) {
+    const circles = new Map();  // vertexKey -> { center, radius, vertexPos }
+
+    // Circumcircle through 3 points
+    function circumcircle(p1, p2, p3) {
+      const ax = p1.re, ay = p1.im;
+      const bx = p2.re, by = p2.im;
+      const cx = p3.re, cy = p3.im;
+      const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+      if (Math.abs(d) < 1e-12) return null;  // Collinear points
+      const sq1 = ax * ax + ay * ay;
+      const sq2 = bx * bx + by * by;
+      const sq3 = cx * cx + cy * cy;
+      const ux = (sq1 * (by - cy) + sq2 * (cy - ay) + sq3 * (ay - by)) / d;
+      const uy = (sq1 * (cx - bx) + sq2 * (ax - cx) + sq3 * (bx - ax)) / d;
+      const r = Math.sqrt((ax - ux) ** 2 + (ay - uy) ** 2);
+      return { center: { re: ux, im: uy }, radius: r };
+    }
+
+    // For each T-embedding vertex, find adjacent dual faces
+    for (const [vertexKey, vertexPos] of vertexMap) {
+      const [i, j] = vertexKey.split(',').map(Number);
+
+      // Adjacent faces to vertex (i,j):
+      // - Quad faces: q:i,j (upper-right), q:i-1,j (upper-left), q:i-1,j-1 (lower-left), q:i,j-1 (lower-right)
+      // - Triangle faces at same positions if quad doesn't exist
+      const adjacentFaceKeys = [];
+
+      // Check each of the 4 potential adjacent faces
+      const potentialFaces = [
+        { qi: i, qj: j },       // upper-right
+        { qi: i - 1, qj: j },   // upper-left
+        { qi: i - 1, qj: j - 1 }, // lower-left
+        { qi: i, qj: j - 1 }    // lower-right
+      ];
+
+      for (const { qi, qj } of potentialFaces) {
+        const quadKey = `q:${qi},${qj}`;
+        const triKey = `t:${qi},${qj}`;
+        if (dualEmbedding.has(quadKey)) {
+          adjacentFaceKeys.push(quadKey);
+        } else if (dualEmbedding.has(triKey)) {
+          adjacentFaceKeys.push(triKey);
+        }
+      }
+
+      // Check boundary faces for vertices on the boundary
+      // NE boundary: vertices with i + j = k
+      if (i + j === k && i >= 0 && j >= 0 && dualEmbedding.has('b:NE')) {
+        adjacentFaceKeys.push('b:NE');
+      }
+      // NW boundary: vertices with -i + j = k
+      if (-i + j === k && i <= 0 && j >= 0 && dualEmbedding.has('b:NW')) {
+        adjacentFaceKeys.push('b:NW');
+      }
+      // SW boundary: vertices with -i - j = k
+      if (-i - j === k && i <= 0 && j <= 0 && dualEmbedding.has('b:SW')) {
+        adjacentFaceKeys.push('b:SW');
+      }
+      // SE boundary: vertices with i - j = k
+      if (i - j === k && i >= 0 && j <= 0 && dualEmbedding.has('b:SE')) {
+        adjacentFaceKeys.push('b:SE');
+      }
+
+      // Need at least 3 points for a circumcircle
+      if (adjacentFaceKeys.length < 3) continue;
+
+      // Get positions of adjacent dual vertices
+      const points = adjacentFaceKeys
+        .map(key => dualEmbedding.get(key))
+        .filter(p => p);
+
+      if (points.length < 3) continue;
+
+      // Compute circumcircle using first 3 points
+      const circle = circumcircle(points[0], points[1], points[2]);
+      if (circle) {
+        circles.set(vertexKey, {
+          center: circle.center,
+          radius: circle.radius,
+          vertexPos: vertexPos
+        });
+      }
+    }
+
+    return circles;
+  }
+
+  // Render circle patterns (circumcircles at T-embedding vertices)
+  function renderCirclePatterns(ctx, circlePatterns, scale, centerX, centerY, centerRe, centerIm) {
+    if (!circlePatterns || circlePatterns.size === 0) return;
+
+    const circleWidth = parseFloat(document.getElementById('circle-line-width').value) || 1.5;
+    ctx.strokeStyle = '#DAA520';  // Goldenrod color
+    ctx.lineWidth = Math.max(circleWidth, scale / 300 * circleWidth);
+    ctx.globalAlpha = 0.7;
+
+    for (const [vertexKey, circleData] of circlePatterns) {
+      const { center, radius } = circleData;
+
+      // Transform to canvas coordinates
+      const canvasX = centerX + (center.re - centerRe) * scale;
+      const canvasY = centerY - (center.im - centerIm) * scale;
+      const canvasRadius = radius * scale;
+
+      // Skip tiny or huge circles
+      if (canvasRadius < 1 || canvasRadius > 2000) continue;
+
+      ctx.beginPath();
+      ctx.arc(canvasX, canvasY, canvasRadius, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 1.0;
+  }
+
   function renderTembDoubleDimerFaces(ctx, dualEmbedding, scale, centerX, centerY, centerRe, centerIm) {
     if (!tembDoubleDimerConfig1 || tembDoubleDimerConfig1.length === 0) return;
     if (!tembDoubleDimerConfig2 || tembDoubleDimerConfig2.length === 0) return;
@@ -6080,6 +6209,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           ctx.stroke();
         }
       }
+    }
+
+    // ========== CIRCLE PATTERNS (only for proper embedding) ==========
+    const showCirclePatterns = document.getElementById('circle-pattern-chk').checked;
+    if (showCirclePatterns && !useNaiveEmbedding && dualEmbedding && dualEmbedding.size > 0) {
+      const circlePatterns = computeCirclePatterns(vertexMap, dualEmbedding, k);
+      renderCirclePatterns(ctx, circlePatterns, scale, centerX, centerY, centerRe, centerIm);
     }
 
     // ========== DOUBLE DIMER FACES (on T-graph) ==========
@@ -7658,14 +7794,22 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const isNaive = document.getElementById('dual-naive-chk').checked;
     // Gray out drag and offset controls when naive
     const dragLabel = document.getElementById('drag-w0-chk').parentElement;
+    const circleLabel = document.getElementById('circle-pattern-label');
     const offsetControls = [
       document.getElementById('dual-start-re'),
       document.getElementById('dual-start-im')
     ];
+    const circleWidthControl = document.getElementById('circle-width-control');
     if (isNaive) {
       dragLabel.style.opacity = '0.4';
       dragLabel.style.pointerEvents = 'none';
       document.getElementById('drag-w0-chk').checked = false;
+      // Disable circle patterns when naive (circles only valid for reflection embedding)
+      circleLabel.style.opacity = '0.4';
+      circleLabel.style.pointerEvents = 'none';
+      document.getElementById('circle-pattern-chk').checked = false;
+      circleWidthControl.style.opacity = '0.4';
+      document.getElementById('circle-line-width').disabled = true;
       offsetControls.forEach(el => {
         el.style.opacity = '0.4';
         el.disabled = true;
@@ -7673,12 +7817,33 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else {
       dragLabel.style.opacity = '1';
       dragLabel.style.pointerEvents = 'auto';
+      // Re-enable circle patterns
+      circleLabel.style.opacity = '1';
+      circleLabel.style.pointerEvents = 'auto';
+      circleWidthControl.style.opacity = '1';
+      document.getElementById('circle-line-width').disabled = false;
       offsetControls.forEach(el => {
         el.style.opacity = '1';
         el.disabled = false;
       });
     }
     if (wasmReady && getTembeddingLevelJSON) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Circle pattern checkbox
+  document.getElementById('circle-pattern-chk').addEventListener('change', () => {
+    if (wasmReady && getTembeddingLevelJSON && document.getElementById('show-dual-graph-chk').checked) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Circle line width control
+  document.getElementById('circle-line-width').addEventListener('input', () => {
+    if (wasmReady && getTembeddingLevelJSON && document.getElementById('circle-pattern-chk').checked) {
       if (mainViewIs3D) renderMain3D();
       else renderMain2DTemb();
     }
