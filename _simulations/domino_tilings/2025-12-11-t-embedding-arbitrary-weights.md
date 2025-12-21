@@ -8696,26 +8696,90 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Checkerboard overlay (if enabled) - draw first so it's behind everything
+    // Use same logic as canvas rendering: black/white, only fill parity=1 faces
     if (showCheckerboard) {
       const checkerElements = [];
-      // Draw quad faces
-      for (let fi = -k; fi < k; fi++) {
-        for (let fj = -k; fj < k; fj++) {
-          const c0 = vertexMap.get(`${fi},${fj}`);
-          const c1 = vertexMap.get(`${fi+1},${fj}`);
-          const c2 = vertexMap.get(`${fi+1},${fj+1}`);
-          const c3 = vertexMap.get(`${fi},${fj+1}`);
-          if (c0 && c1 && c2 && c3) {
-            const parity = (fi + fj) % 2;
-            const color = parity === 0 ? 'rgba(229, 114, 0, 0.15)' : 'rgba(35, 45, 75, 0.15)';
-            const p0 = toScreen(c0.re, c0.im);
-            const p1 = toScreen(c1.re, c1.im);
-            const p2 = toScreen(c2.re, c2.im);
-            const p3 = toScreen(c3.re, c3.im);
-            checkerElements.push(`<polygon points="${p0.x.toFixed(2)},${p0.y.toFixed(2)} ${p1.x.toFixed(2)},${p1.y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)} ${p3.x.toFixed(2)},${p3.y.toFixed(2)}" fill="${color}" stroke="none"/>`);
+      const fillColor = 'rgba(0, 0, 0, 0.3)';
+      const n = finalK + 2;  // n = k + 2
+
+      const tips = {
+        right: vertexMap.get(`${k+1},0`),
+        left: vertexMap.get(`${-(k+1)},0`),
+        top: vertexMap.get(`0,${k+1}`),
+        bottom: vertexMap.get(`0,${-(k+1)}`)
+      };
+
+      // Interior faces: quadrilaterals and triangles
+      const allFaces = [];
+      for (let fi = -k; fi <= k; fi++) {
+        for (let fj = -k; fj <= k; fj++) {
+          const corners = [];
+          const isInterior = [
+            Math.abs(fi) + Math.abs(fj) <= k,
+            Math.abs(fi+1) + Math.abs(fj) <= k,
+            Math.abs(fi+1) + Math.abs(fj+1) <= k,
+            Math.abs(fi) + Math.abs(fj+1) <= k
+          ];
+          const verts = [
+            vertexMap.get(`${fi},${fj}`),
+            vertexMap.get(`${fi+1},${fj}`),
+            vertexMap.get(`${fi+1},${fj+1}`),
+            vertexMap.get(`${fi},${fj+1}`)
+          ];
+          for (let i = 0; i < 4; i++) {
+            if (isInterior[i] && verts[i]) corners.push(verts[i]);
+          }
+          if (corners.length >= 3) {
+            allFaces.push({ corners, parity: (fi + fj + n) % 2 });
           }
         }
       }
+
+      // 4 boundary faces
+      if (tips.right && tips.top) {
+        const neCorners = [tips.right, tips.top];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${s},${k-s}`);
+          if (v) neCorners.push(v);
+        }
+        allFaces.push({ corners: neCorners, parity: (k + n) % 2 });
+      }
+      if (tips.top && tips.left) {
+        const nwCorners = [tips.top, tips.left];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${-k+s},${s}`);
+          if (v) nwCorners.push(v);
+        }
+        allFaces.push({ corners: nwCorners, parity: (k + 1 + n) % 2 });
+      }
+      if (tips.left && tips.bottom) {
+        const swCorners = [tips.left, tips.bottom];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${-s},${-k+s}`);
+          if (v) swCorners.push(v);
+        }
+        allFaces.push({ corners: swCorners, parity: (k + n) % 2 });
+      }
+      if (tips.bottom && tips.right) {
+        const seCorners = [tips.bottom, tips.right];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${k-s},${-s}`);
+          if (v) seCorners.push(v);
+        }
+        allFaces.push({ corners: seCorners, parity: (k + 1 + n) % 2 });
+      }
+
+      // Draw faces with parity 1
+      for (const face of allFaces) {
+        if (face.parity === 1) {
+          const points = face.corners.map(v => {
+            const p = toScreen(v.re, v.im);
+            return `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+          }).join(' ');
+          checkerElements.push(`<polygon points="${points}" fill="${fillColor}" stroke="none"/>`);
+        }
+      }
+
       // Insert at beginning so faces are behind edges
       svgElements.unshift(...checkerElements);
     }
