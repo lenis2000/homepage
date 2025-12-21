@@ -96,8 +96,8 @@ code:
 
 <h5>Export Options</h5>
 <ul>
-  <li><strong>PDF</strong>: Vector export of the T-embedding. Optional origami overlay checkbox.</li>
-  <li><strong>PNG</strong>: Raster image export with quality slider (1–100).</li>
+  <li><strong>PDF</strong>: Vector export respecting all current overlays (T-embedding, origami, checkerboard, dual graph, circle patterns, dimer loops).</li>
+  <li><strong>PNG</strong>: Raster image export with quality slider (1–100). Captures all visible overlays.</li>
   <li><strong>OBJ</strong>: 3D mesh export for external 3D viewers/software.</li>
   <li><strong>GIF</strong>: Animated GIF showing T-embeddings for a range of n values. Options:
     <ul>
@@ -8859,6 +8859,23 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         if (w0) {
           const p = toScreen(w0.re, w0.im);
           svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${dualVertexRadius.toFixed(2)}" fill="${dualColor}"/>`);
+        }
+      }
+
+      // Circle patterns (if enabled and not naive)
+      const showCirclePatterns = document.getElementById('circle-pattern-chk').checked;
+      if (showCirclePatterns && !useNaiveEmbedding) {
+        const circlePatterns = computeCirclePatterns(vertexMap, dualEmbedding, k);
+        const circleWidth = parseFloat(document.getElementById('circle-line-width').value) || 1.5;
+        const circleLineWidth = Math.max(circleWidth, scale / 300 * circleWidth);
+
+        for (const [vertexKey, circleData] of circlePatterns) {
+          const { center, radius } = circleData;
+          const p = toScreen(center.re, center.im);
+          const svgRadius = radius * scale;
+          if (svgRadius > 1 && svgRadius < 2000) {
+            svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${svgRadius.toFixed(2)}" fill="none" stroke="#DAA520" stroke-width="${circleLineWidth.toFixed(2)}" opacity="0.7"/>`);
+          }
         }
       }
 
