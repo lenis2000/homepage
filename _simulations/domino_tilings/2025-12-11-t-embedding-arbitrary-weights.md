@@ -7044,22 +7044,6 @@ Part of this research was performed while the author was visiting the Institute 
     }
   });
 
-  // Dual graph checkbox re-render - works whenever T-embedding is displayed
-  document.getElementById('show-dual-graph-chk').addEventListener('change', () => {
-    if (wasmReady && getTembeddingLevelJSON) {
-      if (mainViewIs3D) renderMain3D();
-      else renderMain2DTemb();
-    }
-  });
-
-  // Circles checkbox re-render - works whenever T-embedding is displayed
-  document.getElementById('show-circles-chk').addEventListener('change', () => {
-    if (wasmReady && getTembeddingLevelJSON) {
-      if (mainViewIs3D) renderMain3D();
-      else renderMain2DTemb();
-    }
-  });
-
   // 2D/3D toggle button
   document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
     mainViewIs3D = !mainViewIs3D;
@@ -7608,8 +7592,8 @@ Part of this research was performed while the author was visiting the Institute 
     // Read current 2D overlay controls
     const showOrigami = document.getElementById('show-origami-chk').checked;
     const showCheckerboard = document.getElementById('show-checkerboard-chk').checked;
-    const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
-    const showCircles = document.getElementById('show-circles-chk').checked;
+    const showDualGraph = document.getElementById('show-dual-graph-chk')?.checked || false;
+    const showCircles = document.getElementById('show-circles-chk')?.checked || false;
 
     if (!wasmReady || !getTembeddingLevelJSON) {
       return null;
