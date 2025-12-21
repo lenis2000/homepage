@@ -898,13 +898,67 @@ Part of this research was performed while the author was visiting the Institute 
 </div>
 
 <style>
+/* === T-embedding Simulation UI Styles === */
+
+/* Details/Summary refinements */
+details {
+  border-radius: 4px;
+  transition: box-shadow 0.2s ease;
+}
+details[open] {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+details > summary {
+  transition: background-color 0.15s ease;
+  border-radius: 4px;
+  user-select: none;
+}
+details > summary:hover {
+  filter: brightness(0.97);
+}
+details > summary::-webkit-details-marker {
+  color: #002f6c;
+}
+
+/* Button styling - UVA palette */
+button {
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+button:hover:not(:disabled) {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Input field refinements */
+input[type="number"], input[type="text"], select {
+  border: 1px solid #DADADA;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input[type="number"]:focus, input[type="text"]:focus, select:focus {
+  outline: none;
+  border-color: #2A69A6;
+  box-shadow: 0 0 0 2px rgba(42, 105, 166, 0.15);
+}
+
+/* Canvas containers */
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
 #sample-3d-container {
   width: 100%;
   height: 50vh;
-  border: 1px solid #ccc;
+  border: 1px solid #DADADA;
   display: none;
-  background: #f0f0f0;
+  background: #F1F1EF;
   border-radius: 6px;
 }
 #sample-3d-container canvas {
@@ -912,21 +966,110 @@ Part of this research was performed while the author was visiting the Institute 
   height: 100% !important;
   display: block;
 }
+
 /* Overlay toggle buttons */
 .overlay-toggle:hover {
   background: rgba(0, 0, 0, 0.06);
 }
 .overlay-toggle.active {
-  background: #8B008B;  /* Dark magenta for Dual/Circles */
+  background: #8B008B;
 }
 .overlay-toggle.active span {
   color: #fff;
 }
 .overlay-toggle.active-alt {
-  background: #e57200;  /* UVA Orange for Origami/Checkerboard */
+  background: #e57200;
 }
 .overlay-toggle.active-alt span {
   color: #fff;
+}
+
+/* Panel hover effects */
+#iid-params, #gamma-params, #layered-params, #weights-editor {
+  transition: box-shadow 0.2s ease;
+}
+#iid-params:hover, #gamma-params:hover, #layered-params:hover, #weights-editor:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* Dark mode support */
+[data-theme="dark"] details > summary {
+  background-color: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+  color: #e8e8e8;
+}
+[data-theme="dark"] details > div {
+  background-color: #1a1a1a !important;
+  border-color: #4a4a4a !important;
+  color: #e8e8e8;
+}
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] select {
+  background-color: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+  color: #e8e8e8 !important;
+}
+[data-theme="dark"] input[type="number"]:focus,
+[data-theme="dark"] input[type="text"]:focus,
+[data-theme="dark"] select:focus {
+  border-color: #66b3ff !important;
+  box-shadow: 0 0 0 2px rgba(102, 179, 255, 0.2);
+}
+[data-theme="dark"] canvas {
+  background-color: #1a1a1a !important;
+}
+[data-theme="dark"] #sample-3d-container {
+  background: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+}
+/* Dark mode panels - override inline styles */
+[data-theme="dark"] div[style*="background: #f8f9fa"],
+[data-theme="dark"] div[style*="background: #fff"],
+[data-theme="dark"] div[style*="background: #f9f9f9"],
+[data-theme="dark"] div[style*="background: #fafafa"],
+[data-theme="dark"] div[style*="background: #f5f5f5"],
+[data-theme="dark"] div[style*="background: white"] {
+  background-color: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+  color: #e8e8e8;
+}
+[data-theme="dark"] div[style*="background: #fff8e8"],
+[data-theme="dark"] div[style*="background: #f0f8ff"],
+[data-theme="dark"] div[style*="background: #f0e8ff"],
+[data-theme="dark"] div[style*="background: #ffe8f0"],
+[data-theme="dark"] div[style*="background: #e8f4e8"],
+[data-theme="dark"] div[style*="background: #e8e8f4"],
+[data-theme="dark"] div[style*="background: #fff3cd"] {
+  background-color: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+  color: #e8e8e8;
+}
+/* Specific panel IDs for reliable dark mode */
+[data-theme="dark"] #iid-uniform-params,
+[data-theme="dark"] #iid-exponential-params,
+[data-theme="dark"] #iid-pareto-params,
+[data-theme="dark"] #iid-geometric-params,
+[data-theme="dark"] #weights-tables,
+[data-theme="dark"] #aztec-vertex-info,
+[data-theme="dark"] #vertex-info,
+[data-theme="dark"] #mathematica-output,
+[data-theme="dark"] #face-weights-output {
+  background-color: #2d2d2d !important;
+  border-color: #4a4a4a !important;
+  color: #e8e8e8;
+}
+[data-theme="dark"] span[style*="color: #666"],
+[data-theme="dark"] span[style*="color: #555"],
+[data-theme="dark"] div[style*="color: #666"],
+[data-theme="dark"] div[style*="color: #555"] {
+  color: #aaa !important;
+}
+[data-theme="dark"] strong {
+  color: #e8e8e8;
+}
+[data-theme="dark"] label {
+  color: #e8e8e8;
 }
 </style>
 
