@@ -551,6 +551,18 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
             <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Circles</span>
           </label>
         </div>
+        <span id="dual-start-controls" style="display: none; align-items: center; gap: 6px; padding: 3px 8px; background: rgba(139,0,139,0.08); border-radius: 3px; border: 1px solid rgba(139,0,139,0.2);">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            <input type="checkbox" id="drag-w0-chk" style="cursor: pointer;" aria-label="Enable dragging w0">
+            <span style="font-size: 10px; font-weight: 600; color: #8B008B; text-transform: uppercase; letter-spacing: 0.3px;">Drag w₀</span>
+          </label>
+          <span style="width: 1px; height: 14px; background: rgba(139,0,139,0.3);"></span>
+          <span style="font-size: 10px; color: #666;">Offset:</span>
+          <input type="number" id="dual-start-re" value="0" step="0.1" style="width: 55px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual offset real part">
+          <span style="font-size: 11px; color: #666;">+</span>
+          <input type="number" id="dual-start-im" value="0" step="0.1" style="width: 55px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual offset imaginary part">
+          <span style="font-size: 11px; color: #666;">i</span>
+        </span>
         <span style="width: 1px; height: 20px; background: #ccc;"></span>
         <button id="sample-double-dimer-temb-btn"
                 style="padding: 5px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; background: #E57200; color: white; border: none; border-radius: 3px; cursor: pointer;"
@@ -1378,6 +1390,7 @@ Part of this research was performed while the author was visiting the Institute 
   let main2DLastPanX = 0, main2DLastPanY = 0;
   let main2DVertexScreenPositions = [];  // Store vertex positions for click detection
   let main2DSelectedVertex = null;  // Currently selected vertex for display
+  let lastDragRenderParams = null;  // Store render params for w₀ dragging
 
   // ========== AZTEC DIAMOND GRAPH STATE ==========
   let aztecLevel = 3;
@@ -3981,6 +3994,181 @@ Part of this research was performed while the author was visiting the Institute 
     return circlePattern;
   }
 
+  // Compute dual graph embedding C(w) via reflection algorithm (Lemma 2.3)
+  // C(b) and C(w) are symmetric with respect to the T-embedding edge separating them
+  function computeDualEmbedding(vertexMap, k, startRe, startIm) {
+    // First build face structure (like buildCirclePattern but we'll compute positions differently)
+    const faces = new Map();  // faceKey -> { type }
+
+    // Collect all faces
+    for (const [key, v] of vertexMap) {
+      const [i, j] = key.split(',').map(Number);
+      const c0 = vertexMap.get(`${i},${j}`);
+      const c1 = vertexMap.get(`${i+1},${j}`);
+      const c2 = vertexMap.get(`${i+1},${j+1}`);
+      const c3 = vertexMap.get(`${i},${j+1}`);
+      if (c0 && c1 && c2 && c3) {
+        faces.set(`q:${i},${j}`, { type: 'quad', i, j });
+      }
+    }
+
+    // Add triangular boundary faces
+    for (let fi = -k - 1; fi <= k; fi++) {
+      for (let fj = -k - 1; fj <= k; fj++) {
+        if (faces.has(`q:${fi},${fj}`)) continue;
+        const corners = [
+          vertexMap.has(`${fi},${fj}`),
+          vertexMap.has(`${fi+1},${fj}`),
+          vertexMap.has(`${fi+1},${fj+1}`),
+          vertexMap.has(`${fi},${fj+1}`)
+        ];
+        const count = corners.filter(c => c).length;
+        if (count === 3) {
+          faces.set(`t:${fi},${fj}`, { type: 'tri', fi, fj });
+        }
+      }
+    }
+
+    // Add 4 boundary polygon faces
+    faces.set('b:NE', { type: 'boundary' });
+    faces.set('b:NW', { type: 'boundary' });
+    faces.set('b:SW', { type: 'boundary' });
+    faces.set('b:SE', { type: 'boundary' });
+
+    // Build adjacency: for each T-embedding edge, which faces share it
+    const edgeToFaces = new Map();
+    const addFaceToEdge = (i1, j1, i2, j2, faceKey) => {
+      const v1 = `${i1},${j1}`, v2 = `${i2},${j2}`;
+      const edgeKey = v1 < v2 ? `${v1}|${v2}` : `${v2}|${v1}`;
+      if (!edgeToFaces.has(edgeKey)) edgeToFaces.set(edgeKey, []);
+      edgeToFaces.get(edgeKey).push(faceKey);
+    };
+
+    // Register faces with their T-embedding edges
+    for (const [faceKey, faceData] of faces) {
+      if (faceKey.startsWith('q:')) {
+        const { i, j } = faceData;
+        addFaceToEdge(i, j, i+1, j, faceKey);
+        addFaceToEdge(i+1, j, i+1, j+1, faceKey);
+        addFaceToEdge(i+1, j+1, i, j+1, faceKey);
+        addFaceToEdge(i, j+1, i, j, faceKey);
+      } else if (faceKey.startsWith('t:')) {
+        const { fi, fj } = faceData;
+        const c00 = vertexMap.has(`${fi},${fj}`);
+        const c10 = vertexMap.has(`${fi+1},${fj}`);
+        const c11 = vertexMap.has(`${fi+1},${fj+1}`);
+        const c01 = vertexMap.has(`${fi},${fj+1}`);
+        if (c00 && c10) addFaceToEdge(fi, fj, fi+1, fj, faceKey);
+        if (c10 && c11) addFaceToEdge(fi+1, fj, fi+1, fj+1, faceKey);
+        if (c11 && c01) addFaceToEdge(fi+1, fj+1, fi, fj+1, faceKey);
+        if (c01 && c00) addFaceToEdge(fi, fj+1, fi, fj, faceKey);
+        // Diagonal edges (needed for dual graph connectivity to boundary polygons)
+        if (c10 && c01 && (c00 !== c11)) addFaceToEdge(fi+1, fj, fi, fj+1, faceKey);
+        if (c00 && c11 && (c10 !== c01)) addFaceToEdge(fi, fj, fi+1, fj+1, faceKey);
+      } else if (faceKey === 'b:NE') {
+        // Diagonal chain: (k,0) -> (k-1,1) -> ... -> (0,k)
+        for (let s = 0; s < k; s++) addFaceToEdge(k-s, s, k-s-1, s+1, faceKey);
+        // Spoke edges to tips
+        addFaceToEdge(k+1, 0, k, 0, faceKey);
+        addFaceToEdge(0, k+1, 0, k, faceKey);
+      } else if (faceKey === 'b:NW') {
+        // Diagonal chain: (0,k) -> (-1,k-1) -> ... -> (-k,0)
+        for (let s = 0; s < k; s++) addFaceToEdge(-s, k-s, -s-1, k-s-1, faceKey);
+        // Spoke edges to tips
+        addFaceToEdge(0, k+1, 0, k, faceKey);
+        addFaceToEdge(-(k+1), 0, -k, 0, faceKey);
+      } else if (faceKey === 'b:SW') {
+        // Diagonal chain: (-k,0) -> (-k+1,-1) -> ... -> (0,-k)
+        for (let s = 0; s < k; s++) addFaceToEdge(-k+s, -s, -k+s+1, -s-1, faceKey);
+        // Spoke edges to tips
+        addFaceToEdge(-(k+1), 0, -k, 0, faceKey);
+        addFaceToEdge(0, -(k+1), 0, -k, faceKey);
+      } else if (faceKey === 'b:SE') {
+        // Diagonal chain: (0,-k) -> (1,-k+1) -> ... -> (k,0)
+        for (let s = 0; s < k; s++) addFaceToEdge(s, -k+s, s+1, -k+s+1, faceKey);
+        // Spoke edges to tips
+        addFaceToEdge(0, -(k+1), 0, -k, faceKey);
+        addFaceToEdge(k+1, 0, k, 0, faceKey);
+      }
+    }
+
+    // Build face adjacency from edge info
+    const faceNeighbors = new Map();  // faceKey -> [{neighbor, edge: [v1, v2]}]
+    for (const [faceKey] of faces) {
+      faceNeighbors.set(faceKey, []);
+    }
+    for (const [edgeKey, facesOnEdge] of edgeToFaces) {
+      if (facesOnEdge.length === 2) {
+        const [f1, f2] = facesOnEdge;
+        const [v1str, v2str] = edgeKey.split('|');
+        const [i1, j1] = v1str.split(',').map(Number);
+        const [i2, j2] = v2str.split(',').map(Number);
+        faceNeighbors.get(f1).push({ neighbor: f2, v1: {i: i1, j: j1}, v2: {i: i2, j: j2} });
+        faceNeighbors.get(f2).push({ neighbor: f1, v1: {i: i1, j: j1}, v2: {i: i2, j: j2} });
+      }
+    }
+
+    // Reflection function: reflect point z across line through T-embedding edge
+    function reflectAcrossEdge(z, v1coords, v2coords) {
+      const p1 = vertexMap.get(`${v1coords.i},${v1coords.j}`);
+      const p2 = vertexMap.get(`${v2coords.i},${v2coords.j}`);
+      if (!p1 || !p2) return z;  // Fallback
+
+      // Line direction d = p2 - p1
+      const dRe = p2.re - p1.re;
+      const dIm = p2.im - p1.im;
+      const dNormSq = dRe * dRe + dIm * dIm;
+      if (dNormSq < 1e-12) return z;  // Degenerate edge
+
+      // d² in complex: (dRe + i*dIm)² = dRe² - dIm² + 2i*dRe*dIm
+      const d2Re = dRe * dRe - dIm * dIm;
+      const d2Im = 2 * dRe * dIm;
+
+      // conj(z - p1)
+      const diffRe = z.re - p1.re;
+      const diffIm = z.im - p1.im;
+      const conjDiffRe = diffRe;
+      const conjDiffIm = -diffIm;
+
+      // d² / |d|² * conj(z - p1)
+      const scaledRe = (d2Re * conjDiffRe - d2Im * conjDiffIm) / dNormSq;
+      const scaledIm = (d2Re * conjDiffIm + d2Im * conjDiffRe) / dNormSq;
+
+      // Result = p1 + scaled
+      return {
+        re: p1.re + scaledRe,
+        im: p1.im + scaledIm
+      };
+    }
+
+    // BFS to compute embedding starting from boundary face b:NE
+    const embedding = new Map();
+    const startFace = 'b:NE';
+
+    embedding.set(startFace, { re: startRe, im: startIm });
+
+    const queue = [embedding.keys().next().value];
+    const visited = new Set(queue);
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const currentPos = embedding.get(current);
+      const neighbors = faceNeighbors.get(current) || [];
+
+      for (const { neighbor, v1, v2 } of neighbors) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          // Reflect current position across the shared edge
+          const neighborPos = reflectAcrossEdge(currentPos, v1, v2);
+          embedding.set(neighbor, neighborPos);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    return embedding;
+  }
+
   function renderTembDoubleDimerFaces(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k) {
     if (!tembDoubleDimerConfig1 || tembDoubleDimerConfig1.length === 0) return;
     if (!tembDoubleDimerConfig2 || tembDoubleDimerConfig2.length === 0) return;
@@ -5067,6 +5255,18 @@ Part of this research was performed while the author was visiting the Institute 
     // Get k from the final level
     const k = data.k;
 
+    // Compute default w₀ position: midpoint of edge between T(0,k+1) and T(k+1,0)
+    let defaultW0Re = 0, defaultW0Im = 0;
+    const topTipForDrag = vertexMap.get(`0,${k+1}`);
+    const rightTipForDrag = vertexMap.get(`${k+1},0`);
+    if (topTipForDrag && rightTipForDrag) {
+      defaultW0Re = (topTipForDrag.re + rightTipForDrag.re) / 2;
+      defaultW0Im = (topTipForDrag.im + rightTipForDrag.im) / 2;
+    }
+
+    // Store render params for w₀ dragging
+    lastDragRenderParams = { scale, centerX, centerY, centerRe, centerIm, defaultW0Re, defaultW0Im };
+
     // Helper to draw edge between two vertices by (i,j)
     function drawEdge(i1, j1, i2, j2) {
       const v1 = vertexMap.get(`${i1},${j1}`);
@@ -5359,10 +5559,29 @@ Part of this research was performed while the author was visiting the Institute 
     const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
     const showCircles = document.getElementById('show-circles-chk').checked;
 
-    // Build circle pattern if either is enabled
+    // Build circle pattern (centroids) for circles display
     let circlePattern = null;
-    if (showDualGraph || showCircles) {
+    if (showCircles) {
       circlePattern = buildCirclePattern(vertexMap, k);
+    }
+
+    // Compute dual embedding via reflection algorithm (Lemma 2.3)
+    let dualEmbedding = null;
+    if (showDualGraph) {
+      // Default position: midpoint of edge between T(0,k+1) and T(k+1,0)
+      let defaultRe = 0, defaultIm = 0;
+      const topTip = vertexMap.get(`0,${k+1}`);
+      const rightTip = vertexMap.get(`${k+1},0`);
+      if (topTip && rightTip) {
+        defaultRe = (topTip.re + rightTip.re) / 2;
+        defaultIm = (topTip.im + rightTip.im) / 2;
+      }
+
+      // Offset from default position
+      const offsetRe = parseFloat(document.getElementById('dual-start-re').value) || 0;
+      const offsetIm = parseFloat(document.getElementById('dual-start-im').value) || 0;
+
+      dualEmbedding = computeDualEmbedding(vertexMap, k, defaultRe + offsetRe, defaultIm + offsetIm);
     }
 
     // Helper to convert complex coords to screen
@@ -5371,8 +5590,8 @@ Part of this research was performed while the author was visiting the Institute 
       y: centerY - (c.im - centerIm) * scale
     });
 
-    // Draw dual graph (if enabled)
-    if (showDualGraph && circlePattern && circlePattern.size > 0) {
+    // Draw dual graph (if enabled) using reflection-based embedding
+    if (showDualGraph && dualEmbedding && dualEmbedding.size > 0) {
       ctx.strokeStyle = '#8B008B';  // Dark magenta (distinct from blue origami)
       ctx.lineWidth = uniformEdgeWidth;
       ctx.lineCap = 'round';
@@ -5387,7 +5606,7 @@ Part of this research was performed while the author was visiting the Institute 
       };
 
       // Register faces with their T-embedding edges
-      for (const [faceKey, c] of circlePattern) {
+      for (const [faceKey, c] of dualEmbedding) {
         if (faceKey.startsWith('q:')) {
           const m = faceKey.match(/q:(-?\d+),(-?\d+)/);
           if (m) {
@@ -5446,8 +5665,8 @@ Part of this research was performed while the author was visiting the Institute 
           const [f1, f2] = faces;
           const dualEdgeId = [f1, f2].sort().join('|');
           if (!drawnEdges.has(dualEdgeId)) {
-            const c1 = circlePattern.get(f1);
-            const c2 = circlePattern.get(f2);
+            const c1 = dualEmbedding.get(f1);
+            const c2 = dualEmbedding.get(f2);
             if (c1 && c2) {
               const p1 = toScreenDual(c1), p2 = toScreenDual(c2);
               ctx.beginPath();
@@ -5460,14 +5679,28 @@ Part of this research was performed while the author was visiting the Institute 
         }
       }
 
-      // Draw dual vertices
-      ctx.fillStyle = '#8B008B';
+      // Draw dual vertices (regular ones first)
       const dualVertexRadius = Math.max(vertexSizeControl, scale / 300 * vertexSizeControl);
-      for (const [faceKey, c] of circlePattern) {
+      ctx.fillStyle = '#8B008B';
+      for (const [faceKey, c] of dualEmbedding) {
+        if (faceKey === 'b:NE') continue;  // Draw w₀ last
         const p = toScreenDual(c);
         ctx.beginPath();
         ctx.arc(p.x, p.y, dualVertexRadius, 0, 2 * Math.PI);
         ctx.fill();
+      }
+
+      // Draw w₀ (starting face b:NE) highlighted on top
+      const w0 = dualEmbedding.get('b:NE');
+      if (w0) {
+        const p = toScreenDual(w0);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dualVertexRadius * 4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#E57200';  // UVA Orange
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
     }
 
@@ -7069,11 +7302,32 @@ Part of this research was performed while the author was visiting the Institute 
 
   // Dual graph checkbox re-render - works whenever T-embedding is displayed
   document.getElementById('show-dual-graph-chk').addEventListener('change', () => {
+    const dualControls = document.getElementById('dual-start-controls');
+    const isChecked = document.getElementById('show-dual-graph-chk').checked;
+    dualControls.style.display = isChecked ? 'flex' : 'none';
     if (wasmReady && getTembeddingLevelJSON) {
       if (mainViewIs3D) renderMain3D();
       else renderMain2DTemb();
     }
   });
+
+  // Dual start position controls
+  document.getElementById('dual-start-re').addEventListener('input', () => {
+    if (wasmReady && getTembeddingLevelJSON && document.getElementById('show-dual-graph-chk').checked) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+  document.getElementById('dual-start-im').addEventListener('input', () => {
+    if (wasmReady && getTembeddingLevelJSON && document.getElementById('show-dual-graph-chk').checked) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Initialize dual controls visibility
+  document.getElementById('dual-start-controls').style.display =
+    document.getElementById('show-dual-graph-chk').checked ? 'flex' : 'none';
 
   // Circles checkbox re-render - works whenever T-embedding is displayed
   document.getElementById('show-circles-chk').addEventListener('change', () => {
@@ -7082,6 +7336,72 @@ Part of this research was performed while the author was visiting the Institute 
       else renderMain2DTemb();
     }
   });
+
+  // ========== DRAG w₀ FUNCTIONALITY ==========
+  let isDraggingW0 = false;
+
+  const main2DCanvasForDrag = document.getElementById('main-temb-2d-canvas');
+
+  main2DCanvasForDrag.addEventListener('mousedown', (e) => {
+    if (!document.getElementById('drag-w0-chk').checked) return;
+    if (!document.getElementById('show-dual-graph-chk').checked) return;
+
+    isDraggingW0 = true;
+    main2DCanvasForDrag.style.cursor = 'grabbing';
+    handleW0Drag(e);
+  });
+
+  main2DCanvasForDrag.addEventListener('mousemove', (e) => {
+    if (!isDraggingW0) return;
+    handleW0Drag(e);
+  });
+
+  main2DCanvasForDrag.addEventListener('mouseup', () => {
+    if (isDraggingW0) {
+      isDraggingW0 = false;
+      main2DCanvasForDrag.style.cursor = document.getElementById('drag-w0-chk').checked ? 'crosshair' : 'default';
+    }
+  });
+
+  main2DCanvasForDrag.addEventListener('mouseleave', () => {
+    if (isDraggingW0) {
+      isDraggingW0 = false;
+      main2DCanvasForDrag.style.cursor = document.getElementById('drag-w0-chk').checked ? 'crosshair' : 'default';
+    }
+  });
+
+  // Update cursor when drag mode is toggled
+  document.getElementById('drag-w0-chk').addEventListener('change', () => {
+    const dragEnabled = document.getElementById('drag-w0-chk').checked;
+    main2DCanvasForDrag.style.cursor = dragEnabled ? 'crosshair' : 'default';
+  });
+
+  function handleW0Drag(e) {
+    if (!lastDragRenderParams) return;
+
+    // Use offsetX/offsetY which gives position relative to target element (more reliable across browsers)
+    const mouseX = e.offsetX;
+    const mouseY = e.offsetY;
+
+    const { scale, centerX, centerY, centerRe, centerIm, defaultW0Re, defaultW0Im } = lastDragRenderParams;
+
+    // Convert screen coordinates to complex coordinates
+    const re = centerRe + (mouseX - centerX) / scale;
+    const im = centerIm - (mouseY - centerY) / scale;
+
+    // Compute offset from default position
+    const offsetRe = re - defaultW0Re;
+    const offsetIm = im - defaultW0Im;
+
+    // Update input fields with offset
+    document.getElementById('dual-start-re').value = offsetRe.toFixed(3);
+    document.getElementById('dual-start-im').value = offsetIm.toFixed(3);
+
+    // Re-render
+    if (wasmReady && getTembeddingLevelJSON) {
+      renderMain2DTemb();
+    }
+  }
 
   // 2D/3D toggle button
   document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
@@ -7204,6 +7524,8 @@ Part of this research was performed while the author was visiting the Institute 
   const main2DCanvas = document.getElementById('main-temb-2d-canvas');
 
   main2DCanvas.addEventListener('mousedown', (e) => {
+    // Skip panning if w₀ drag mode is active
+    if (document.getElementById('drag-w0-chk')?.checked) return;
     main2DIsPanning = true;
     main2DLastPanX = e.clientX;
     main2DLastPanY = e.clientY;
@@ -7212,6 +7534,8 @@ Part of this research was performed while the author was visiting the Institute 
 
   main2DCanvas.addEventListener('mousemove', (e) => {
     if (!main2DIsPanning) return;
+    // Skip panning if w₀ drag mode is active
+    if (document.getElementById('drag-w0-chk')?.checked) return;
     const dx = e.clientX - main2DLastPanX;
     const dy = e.clientY - main2DLastPanY;
     main2DPanX += dx;
@@ -7223,12 +7547,16 @@ Part of this research was performed while the author was visiting the Institute 
 
   main2DCanvas.addEventListener('mouseup', () => {
     main2DIsPanning = false;
-    main2DCanvas.style.cursor = 'grab';
+    // Restore appropriate cursor
+    const dragMode = document.getElementById('drag-w0-chk')?.checked;
+    main2DCanvas.style.cursor = dragMode ? 'crosshair' : 'grab';
   });
 
   main2DCanvas.addEventListener('mouseleave', () => {
     main2DIsPanning = false;
-    main2DCanvas.style.cursor = 'grab';
+    // Restore appropriate cursor
+    const dragMode = document.getElementById('drag-w0-chk')?.checked;
+    main2DCanvas.style.cursor = dragMode ? 'crosshair' : 'grab';
   });
 
   main2DCanvas.addEventListener('wheel', (e) => {
@@ -7870,14 +8198,31 @@ Part of this research was performed while the author was visiting the Institute 
     const dualEdgeWidth = uniformEdgeWidth;
     const dualVertexRadius = Math.max(vertexSizeControl, scale / 300 * vertexSizeControl);
 
-    // Build circle pattern if either dual graph or circles are enabled
+    // Build circle pattern for circles (centroid-based, used only for circles)
     let circlePattern = null;
-    if (showDualGraph || showCircles) {
+    if (showCircles) {
       circlePattern = buildCirclePattern(vertexMap, k);
     }
 
+    // Compute dual embedding via reflection algorithm (Lemma 2.3) for dual graph
+    let dualEmbedding = null;
+    if (showDualGraph) {
+      let startRe = parseFloat(document.getElementById('dual-start-re').value) || 0;
+      let startIm = parseFloat(document.getElementById('dual-start-im').value) || 0;
+      // Default: midpoint of edge between T(0,k+1) and T(k+1,0)
+      if (startRe === 0 && startIm === 0) {
+        const topTip = vertexMap.get(`0,${k+1}`);
+        const rightTip = vertexMap.get(`${k+1},0`);
+        if (topTip && rightTip) {
+          startRe = (topTip.re + rightTip.re) / 2;
+          startIm = (topTip.im + rightTip.im) / 2;
+        }
+      }
+      dualEmbedding = computeDualEmbedding(vertexMap, k, startRe, startIm);
+    }
+
     // Draw dual graph (if enabled)
-    if (showDualGraph && circlePattern) {
+    if (showDualGraph && dualEmbedding) {
       // Build edge-to-face adjacency and draw dual edges
       const edgeToFaces = new Map();
       const addFaceToEdge = (i1, j1, i2, j2, faceKey) => {
@@ -7888,7 +8233,7 @@ Part of this research was performed while the author was visiting the Institute 
       };
 
       // Register faces with edges (simplified - quads and triangles)
-      for (const [faceKey, c] of circlePattern) {
+      for (const [faceKey, c] of dualEmbedding) {
         if (faceKey.startsWith('q:')) {
           const m = faceKey.match(/q:(-?\d+),(-?\d+)/);
           if (m) {
@@ -7947,8 +8292,8 @@ Part of this research was performed while the author was visiting the Institute 
           const [f1, f2] = faces;
           const dualEdgeId = [f1, f2].sort().join('|');
           if (!drawnEdges.has(dualEdgeId)) {
-            const c1 = circlePattern.get(f1);
-            const c2 = circlePattern.get(f2);
+            const c1 = dualEmbedding.get(f1);
+            const c2 = dualEmbedding.get(f2);
             if (c1 && c2) {
               const p1 = toScreen(c1.re, c1.im);
               const p2 = toScreen(c2.re, c2.im);
@@ -7960,10 +8305,11 @@ Part of this research was performed while the author was visiting the Institute 
       }
 
       // Draw dual vertices
-      for (const [faceKey, c] of circlePattern) {
+      for (const [faceKey, c] of dualEmbedding) {
         const p = toScreen(c.re, c.im);
         svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${dualVertexRadius.toFixed(2)}" fill="${dualColor}"/>`);
       }
+
     }
 
     // Draw circles (independent of dual graph)
