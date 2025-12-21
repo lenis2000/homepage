@@ -66,7 +66,7 @@ code:
 <ul>
   <li><strong>T-graph faces</strong> (quadrilateral cells) correspond to <strong>Aztec diamond vertices</strong>.</li>
   <li>A <strong>domino</strong> covering two adjacent Aztec vertices corresponds to an edge connecting two adjacent T-graph face centers.</li>
-  <li><strong>Face centers:</strong> Computed as weighted centroids, where each vertex is weighted by the sum of its two adjacent edge lengths. This does not correspond to the "right" embedding of the dual graph (which would require the origami map construction).</li>
+  <li><strong>Face centers:</strong> Computed via the circle pattern construction: pick a starting face, set its center to the centroid, then propagate to adjacent faces by reflecting across the shared T-embedding edge. This gives the correct dual graph embedding (circle pattern vertices).</li>
 </ul>
 
 <p>Two view modes are available:</p>
@@ -75,7 +75,7 @@ code:
   <li><strong>Double (XOR)</strong>: Shows the symmetric difference of two independent dimer configurations, which forms disjoint closed loops.</li>
 </ul>
 
-<p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary). It is intended as an illustration of the double dimer model on the T-graph geometry.</p>
+<p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary).</p>
 
 <h5>3D Mode Options</h5>
 <ul>
@@ -532,14 +532,16 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Edge</span>
           <input type="number" id="main-2d-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Edge thickness">
         </label>
-        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 3px 6px; border-radius: 3px;">
-          <input type="checkbox" id="show-origami-chk" checked style="accent-color: #E57200;" aria-label="Show origami overlay">
-          <span style="font-size: 12px; font-weight: 500; color: #444;">Origami</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 3px 6px; border-radius: 3px;">
-          <input type="checkbox" id="show-checkerboard-chk" style="accent-color: #E57200;" aria-label="Checkerboard coloring of faces">
-          <span style="font-size: 12px; font-weight: 500; color: #444;">Checkerboard</span>
-        </label>
+        <div style="display: inline-flex; background: #f5f5f5; border-radius: 4px; padding: 2px; gap: 2px;">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-origami-chk">
+            <input type="checkbox" id="show-origami-chk" style="display: none;" aria-label="Show origami overlay">
+            <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Origami</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-checkerboard-chk">
+            <input type="checkbox" id="show-checkerboard-chk" style="display: none;" aria-label="Checkerboard coloring">
+            <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Checkerboard</span>
+          </label>
+        </div>
         <span style="width: 1px; height: 20px; background: #ccc;"></span>
         <button id="sample-double-dimer-temb-btn"
                 style="padding: 5px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; background: #E57200; color: white; border: none; border-radius: 3px; cursor: pointer;"
@@ -623,13 +625,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
       <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">💾 Export Options</div>
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;" role="group" aria-label="Export options">
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="export-pdf-btn" style="padding: 6px 14px; background: #E57200; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
-          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
-            <input type="checkbox" id="pdf-include-origami" checked aria-label="Include origami in PDF export">
-            <span>+Origami</span>
-          </label>
-        </div>
+        <button id="export-pdf-btn" style="padding: 6px 14px; background: #E57200; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
         <span style="color: #dee2e6;">|</span>
         <div style="display: flex; align-items: center; gap: 6px;">
           <button id="export-png-btn" style="padding: 6px 14px; background: #2A69A6; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PNG">PNG</button>
@@ -879,6 +875,22 @@ Part of this research was performed while the author was visiting the Institute 
   width: 100% !important;
   height: 100% !important;
   display: block;
+}
+/* Overlay toggle buttons */
+.overlay-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.overlay-toggle.active {
+  background: #8B008B;  /* Dark magenta for Dual/Circles */
+}
+.overlay-toggle.active span {
+  color: #fff;
+}
+.overlay-toggle.active-alt {
+  background: #e57200;  /* UVA Orange for Origami/Checkerboard */
+}
+.overlay-toggle.active-alt span {
+  color: #fff;
 }
 </style>
 
@@ -3789,11 +3801,187 @@ Part of this research was performed while the author was visiting the Institute 
   // Render double dimer loops on T-graph using FACE shading
   // T-graph faces correspond to Aztec diamond vertices
   // A domino covers 2 adjacent vertices → 2 adjacent faces
+
+  // ============================================================
+  // Circle Pattern Construction via Reflection
+  // Given T-embedding, construct circle pattern C where:
+  //   C(face) = position of dual graph vertex for that face
+  // Algorithm: Pick starting face, set C = centroid, then propagate
+  // by reflecting across shared T-embedding edges (BFS)
+  // ============================================================
+
+  function reflectAcrossLine(p, a, b) {
+    // Reflect point p across line through a and b
+    // Formula: P' = 2*Q - P where Q is the projection of P onto the line
+    const dx = b.re - a.re;
+    const dy = b.im - a.im;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq < 1e-24) return p;  // Degenerate edge
+
+    // Vector from a to p
+    const px = p.re - a.re;
+    const py = p.im - a.im;
+
+    // Parameter t for projection Q = a + t*(b-a)
+    const t = (px * dx + py * dy) / lenSq;
+
+    // Q = projection of P onto line
+    const qx = a.re + t * dx;
+    const qy = a.im + t * dy;
+
+    // Reflection: P' = 2Q - P
+    return {
+      re: 2 * qx - p.re,
+      im: 2 * qy - p.im
+    };
+  }
+
+  function buildCirclePattern(vertexMap, k) {
+    // Returns Map: faceKey -> {re, im, type} for circle pattern vertex C
+    // Handles both quadrilateral (interior) and triangular (boundary) faces
+    const circlePattern = new Map();
+
+    // Collect all quad faces (those with all 4 corners present)
+    for (const [key, v] of vertexMap) {
+      const [i, j] = key.split(',').map(Number);
+      const c0 = vertexMap.get(`${i},${j}`);
+      const c1 = vertexMap.get(`${i+1},${j}`);
+      const c2 = vertexMap.get(`${i+1},${j+1}`);
+      const c3 = vertexMap.get(`${i},${j+1}`);
+      if (c0 && c1 && c2 && c3) {
+        circlePattern.set(`q:${i},${j}`, {
+          re: (c0.re + c1.re + c2.re + c3.re) / 4,
+          im: (c0.im + c1.im + c2.im + c3.im) / 4,
+          type: 'quad',
+          i, j
+        });
+      }
+    }
+
+    // Add triangular boundary faces
+    // For Aztec diamond T-embedding, triangles are at the 4 corner regions
+    // We need to find all triangular faces by looking at the boundary structure
+
+    // Get all vertices and find the boundary
+    const vertices = Array.from(vertexMap.values());
+    if (vertices.length === 0) return circlePattern;
+
+    // Find k from the vertex range (vertices go from -k-1 to k+1 on axes)
+    let maxCoord = 0;
+    for (const [key, v] of vertexMap) {
+      const [i, j] = key.split(',').map(Number);
+      maxCoord = Math.max(maxCoord, Math.abs(i), Math.abs(j));
+    }
+    const kVal = k !== undefined ? k : maxCoord - 1;
+
+    // Add triangular faces on the boundary
+    // The boundary triangles connect the "alpha" vertices (on axes at distance k+1)
+    // to the adjacent "beta" vertices
+
+    // Helper to add triangle centroid
+    function addTriangle(key, v0, v1, v2) {
+      if (v0 && v1 && v2) {
+        circlePattern.set(key, {
+          re: (v0.re + v1.re + v2.re) / 3,
+          im: (v0.im + v1.im + v2.im) / 3,
+          type: 'tri'
+        });
+      }
+    }
+
+    // Add ALL triangular faces by iterating through face positions
+    // A face at (fi, fj) has corners (fi,fj), (fi+1,fj), (fi+1,fj+1), (fi,fj+1)
+    // If exactly 3 corners exist, it's a triangle
+    for (let fi = -kVal - 1; fi <= kVal; fi++) {
+      for (let fj = -kVal - 1; fj <= kVal; fj++) {
+        // Skip if already a quad
+        if (circlePattern.has(`q:${fi},${fj}`)) continue;
+
+        const corners = [
+          vertexMap.get(`${fi},${fj}`),
+          vertexMap.get(`${fi+1},${fj}`),
+          vertexMap.get(`${fi+1},${fj+1}`),
+          vertexMap.get(`${fi},${fj+1}`)
+        ];
+        const existing = corners.filter(c => c);
+
+        if (existing.length === 3) {
+          // Triangle face
+          const sumRe = existing.reduce((s, v) => s + v.re, 0);
+          const sumIm = existing.reduce((s, v) => s + v.im, 0);
+          circlePattern.set(`t:${fi},${fj}`, {
+            re: sumRe / 3,
+            im: sumIm / 3,
+            type: 'tri',
+            corners: existing,
+            fi, fj
+          });
+        }
+      }
+    }
+
+    // 4 large boundary polygon faces (NE, NW, SW, SE)
+    // These are bounded by boundary edge + interior diagonal chain
+    function addPolygonCentroid(key, vertices) {
+      if (vertices.length < 3) return;
+      let sumRe = 0, sumIm = 0, count = 0;
+      for (const v of vertices) {
+        if (v) { sumRe += v.re; sumIm += v.im; count++; }
+      }
+      if (count >= 3) {
+        circlePattern.set(key, {
+          re: sumRe / count,
+          im: sumIm / count,
+          type: 'boundary'
+        });
+      }
+    }
+
+    // Get the 4 tip vertices (alpha vertices at distance k+1 from origin)
+    const rightTip = vertexMap.get(`${kVal+1},0`);
+    const topTip = vertexMap.get(`0,${kVal+1}`);
+    const leftTip = vertexMap.get(`${-(kVal+1)},0`);
+    const bottomTip = vertexMap.get(`0,${-(kVal+1)}`);
+
+    // NE face: right tip -> top tip -> interior chain back
+    const neVerts = [rightTip, topTip];
+    for (let s = 0; s <= kVal; s++) {
+      neVerts.push(vertexMap.get(`${s},${kVal-s}`));
+    }
+    addPolygonCentroid('b:NE', neVerts);
+
+    // NW face: top tip -> left tip -> interior chain back
+    const nwVerts = [topTip, leftTip];
+    for (let s = 0; s <= kVal; s++) {
+      nwVerts.push(vertexMap.get(`${-kVal+s},${s}`));
+    }
+    addPolygonCentroid('b:NW', nwVerts);
+
+    // SW face: left tip -> bottom tip -> interior chain back
+    const swVerts = [leftTip, bottomTip];
+    for (let s = 0; s <= kVal; s++) {
+      swVerts.push(vertexMap.get(`${-s},${-kVal+s}`));
+    }
+    addPolygonCentroid('b:SW', swVerts);
+
+    // SE face: bottom tip -> right tip -> interior chain back
+    const seVerts = [bottomTip, rightTip];
+    for (let s = 0; s <= kVal; s++) {
+      seVerts.push(vertexMap.get(`${kVal-s},${-s}`));
+    }
+    addPolygonCentroid('b:SE', seVerts);
+
+    return circlePattern;
+  }
+
   function renderTembDoubleDimerFaces(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k) {
     if (!tembDoubleDimerConfig1 || tembDoubleDimerConfig1.length === 0) return;
     if (!tembDoubleDimerConfig2 || tembDoubleDimerConfig2.length === 0) return;
 
     const N = currentSimulationN;
+
+    // Build circle pattern (dual graph vertices)
+    const circlePattern = buildCirclePattern(vertexMap, k);
 
     // Offset to align domino coords with T-graph face indices
     // Found empirically: X=0, Y=-2 works for various n values
@@ -3932,35 +4120,9 @@ Part of this research was performed while the author was visiting the Institute 
       y: centerY - (v.im - centerIm) * scale
     });
 
-    // Compute face center as weighted centroid
-    // Each vertex weighted by sum of its two adjacent edge lengths
+    // Get face center from precomputed circle pattern
     function getFaceCenter(faceKey) {
-      const [fi, fj] = faceKey.split(',').map(Number);
-      const corners = [
-        vertexMap.get(`${fi},${fj}`),
-        vertexMap.get(`${fi+1},${fj}`),
-        vertexMap.get(`${fi+1},${fj+1}`),
-        vertexMap.get(`${fi},${fj+1}`)
-      ];
-      if (!corners.every(c => c)) return null;
-
-      // Compute side lengths
-      const dist = (a, b) => Math.sqrt((a.re - b.re) ** 2 + (a.im - b.im) ** 2);
-      const a0 = dist(corners[0], corners[1]);  // v0 to v1
-      const a1 = dist(corners[1], corners[2]);  // v1 to v2
-      const a2 = dist(corners[2], corners[3]);  // v2 to v3
-      const a3 = dist(corners[3], corners[0]);  // v3 to v0
-
-      // Weights: w_i = a_{i-1} + a_i (sum of adjacent side lengths)
-      const w0 = a3 + a0;
-      const w1 = a0 + a1;
-      const w2 = a1 + a2;
-      const w3 = a2 + a3;
-      const totalW = w0 + w1 + w2 + w3;
-
-      const re = (w0 * corners[0].re + w1 * corners[1].re + w2 * corners[2].re + w3 * corners[3].re) / totalW;
-      const im = (w0 * corners[0].im + w1 * corners[1].im + w2 * corners[2].im + w3 * corners[3].im) / totalW;
-      return { re, im };
+      return circlePattern.get(faceKey) || null;
     }
 
     // Get DD thickness
@@ -4011,6 +4173,7 @@ Part of this research was performed while the author was visiting the Institute 
         ctx.stroke();
       }
     }
+    // Note: dual graph is now drawn in main renderMain2DFromTembLevels function
   }
 
   // Sample canvas event handlers
@@ -4925,63 +5088,93 @@ Part of this research was performed while the author was visiting the Institute 
         y: centerY - (v.im - centerIm) * scale
       });
 
-      // Build list of all valid faces (3 or 4 corners present)
-      const allFaces = new Map();  // "fi,fj" -> { corners: [...], cornerCoords: [...] }
-      for (let fi = -(k+1); fi <= k; fi++) {
-        for (let fj = -(k+1); fj <= k; fj++) {
-          const c00 = vertexMap.get(`${fi},${fj}`);
-          const c10 = vertexMap.get(`${fi+1},${fj}`);
-          const c11 = vertexMap.get(`${fi+1},${fj+1}`);
-          const c01 = vertexMap.get(`${fi},${fj+1}`);
+      const tips = {
+        right: vertexMap.get(`${k+1},0`),
+        left: vertexMap.get(`${-(k+1)},0`),
+        top: vertexMap.get(`0,${k+1}`),
+        bottom: vertexMap.get(`0,${-(k+1)}`)
+      };
 
+      // Interior faces: quadrilaterals and triangles
+      const allFaces = [];  // { corners: [...], parity: 0|1 }
+      for (let fi = -k; fi <= k; fi++) {
+        for (let fj = -k; fj <= k; fj++) {
+          // Face (fi,fj) has corners at (fi,fj), (fi+1,fj), (fi+1,fj+1), (fi,fj+1)
           const corners = [];
-          const cornerCoords = [];
-          if (c00) { corners.push(c00); cornerCoords.push([fi, fj]); }
-          if (c10) { corners.push(c10); cornerCoords.push([fi+1, fj]); }
-          if (c11) { corners.push(c11); cornerCoords.push([fi+1, fj+1]); }
-          if (c01) { corners.push(c01); cornerCoords.push([fi, fj+1]); }
-
+          const isInterior = [
+            Math.abs(fi) + Math.abs(fj) <= k,
+            Math.abs(fi+1) + Math.abs(fj) <= k,
+            Math.abs(fi+1) + Math.abs(fj+1) <= k,
+            Math.abs(fi) + Math.abs(fj+1) <= k
+          ];
+          const verts = [
+            vertexMap.get(`${fi},${fj}`),
+            vertexMap.get(`${fi+1},${fj}`),
+            vertexMap.get(`${fi+1},${fj+1}`),
+            vertexMap.get(`${fi},${fj+1}`)
+          ];
+          for (let i = 0; i < 4; i++) {
+            if (isInterior[i] && verts[i]) corners.push(verts[i]);
+          }
+          // Need at least 3 interior corners to form a face
           if (corners.length >= 3) {
-            allFaces.set(`${fi},${fj}`, { corners, cornerCoords, fi, fj });
+            allFaces.push({
+              corners: corners,
+              parity: (fi + fj + n) % 2
+            });
           }
         }
       }
 
-      // Track parity for each face
-      const faceParity = new Map();  // "fi,fj" -> 0 or 1
-
-      // Seed: assign parity to center face (0,0) or first available
-      const seedKey = allFaces.has('0,0') ? '0,0' : allFaces.keys().next().value;
-      if (seedKey) {
-        const [seedFi, seedFj] = seedKey.split(',').map(Number);
-        faceParity.set(seedKey, (seedFi + seedFj) % 2 === 0 ? 0 : 1);
+      // 4 boundary faces: large polygons bounded by boundary edge + interior chain
+      // NE face: from right tip (k+1,0) along boundary to top tip (0,k+1),
+      //          then back through interior vertices (0,k) -> (1,k-1) -> ... -> (k,0)
+      if (tips.right && tips.top) {
+        const neCorners = [tips.right, tips.top];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${s},${k-s}`);
+          if (v) neCorners.push(v);
+        }
+        allFaces.push({ corners: neCorners, parity: (k + n) % 2 });
       }
 
-      // BFS flood fill to propagate parity to all faces
-      const queue = [seedKey];
-      while (queue.length > 0) {
-        const currentKey = queue.shift();
-        const currentParity = faceParity.get(currentKey);
-        const [fi, fj] = currentKey.split(',').map(Number);
-
-        // Check all 4 adjacent faces
-        const neighbors = [
-          [fi-1, fj], [fi+1, fj], [fi, fj-1], [fi, fj+1]
-        ];
-        for (const [ni, nj] of neighbors) {
-          const neighborKey = `${ni},${nj}`;
-          if (allFaces.has(neighborKey) && !faceParity.has(neighborKey)) {
-            // Adjacent face gets opposite parity
-            faceParity.set(neighborKey, 1 - currentParity);
-            queue.push(neighborKey);
-          }
+      // NW face: from top tip (0,k+1) to left tip (-(k+1),0),
+      //          then back through interior (-k,0) -> (-k+1,1) -> ... -> (0,k)
+      if (tips.top && tips.left) {
+        const nwCorners = [tips.top, tips.left];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${-k+s},${s}`);
+          if (v) nwCorners.push(v);
         }
+        allFaces.push({ corners: nwCorners, parity: (k + 1 + n) % 2 });
+      }
+
+      // SW face: from left tip (-(k+1),0) to bottom tip (0,-(k+1)),
+      //          then back through interior (0,-k) -> (-1,-k+1) -> ... -> (-k,0)
+      if (tips.left && tips.bottom) {
+        const swCorners = [tips.left, tips.bottom];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${-s},${-k+s}`);
+          if (v) swCorners.push(v);
+        }
+        allFaces.push({ corners: swCorners, parity: (k + n) % 2 });
+      }
+
+      // SE face: from bottom tip (0,-(k+1)) to right tip (k+1,0),
+      //          then back through interior (k,0) -> (k-1,-1) -> ... -> (0,-k)
+      if (tips.bottom && tips.right) {
+        const seCorners = [tips.bottom, tips.right];
+        for (let s = 0; s <= k; s++) {
+          const v = vertexMap.get(`${k-s},${-s}`);
+          if (v) seCorners.push(v);
+        }
+        allFaces.push({ corners: seCorners, parity: (k + 1 + n) % 2 });
       }
 
       // Draw all faces with parity 1
-      for (const [faceKey, faceData] of allFaces) {
-        if (faceParity.get(faceKey) === 1) {
-          const sc = faceData.corners.map(toScreen);
+      for (const face of allFaces) {
+        if (face.parity === 1) {
+          const sc = face.corners.map(toScreen);
           ctx.fillStyle = fillColor;
           ctx.beginPath();
           ctx.moveTo(sc[0].x, sc[0].y);
@@ -5151,6 +5344,157 @@ Part of this research was performed while the author was visiting the Institute 
           ctx.beginPath();
           ctx.arc(x, y, radius * 0.8, 0, 2 * Math.PI);
           ctx.fill();
+        }
+      }
+    }
+
+    // ========== DUAL GRAPH AND CIRCLES (independent toggles) ==========
+    const showDualGraph = document.getElementById('show-dual-graph-chk')?.checked;
+    const showCircles = document.getElementById('show-circles-chk')?.checked;
+
+    // Build circle pattern if either is enabled
+    let circlePattern = null;
+    if (showDualGraph || showCircles) {
+      circlePattern = buildCirclePattern(vertexMap, k);
+    }
+
+    // Helper to convert complex coords to screen
+    const toScreenDual = (c) => ({
+      x: centerX + (c.re - centerRe) * scale,
+      y: centerY - (c.im - centerIm) * scale
+    });
+
+    // Draw dual graph (if enabled)
+    if (showDualGraph && circlePattern && circlePattern.size > 0) {
+      ctx.strokeStyle = '#8B008B';  // Dark magenta (distinct from blue origami)
+      ctx.lineWidth = uniformEdgeWidth;
+      ctx.lineCap = 'round';
+
+      // Map from T-embedding edge to list of adjacent faces
+      const edgeToFaces = new Map();
+      const addFaceToEdge = (i1, j1, i2, j2, faceKey) => {
+        const v1 = `${i1},${j1}`, v2 = `${i2},${j2}`;
+        const edgeKey = v1 < v2 ? `${v1}|${v2}` : `${v2}|${v1}`;
+        if (!edgeToFaces.has(edgeKey)) edgeToFaces.set(edgeKey, []);
+        edgeToFaces.get(edgeKey).push(faceKey);
+      };
+
+      // Register faces with their T-embedding edges
+      for (const [faceKey, c] of circlePattern) {
+        if (faceKey.startsWith('q:')) {
+          const m = faceKey.match(/q:(-?\d+),(-?\d+)/);
+          if (m) {
+            const i = parseInt(m[1]), j = parseInt(m[2]);
+            addFaceToEdge(i, j, i+1, j, faceKey);
+            addFaceToEdge(i+1, j, i+1, j+1, faceKey);
+            addFaceToEdge(i+1, j+1, i, j+1, faceKey);
+            addFaceToEdge(i, j+1, i, j, faceKey);
+          }
+        } else if (faceKey.startsWith('t:')) {
+          const m = faceKey.match(/t:(-?\d+),(-?\d+)/);
+          if (m) {
+            const fi = parseInt(m[1]), fj = parseInt(m[2]);
+            const c00 = vertexMap.has(`${fi},${fj}`);
+            const c10 = vertexMap.has(`${fi+1},${fj}`);
+            const c11 = vertexMap.has(`${fi+1},${fj+1}`);
+            const c01 = vertexMap.has(`${fi},${fj+1}`);
+            if (c00 && c10) addFaceToEdge(fi, fj, fi+1, fj, faceKey);
+            if (c10 && c11) addFaceToEdge(fi+1, fj, fi+1, fj+1, faceKey);
+            if (c11 && c01) addFaceToEdge(fi+1, fj+1, fi, fj+1, faceKey);
+            if (c01 && c00) addFaceToEdge(fi, fj+1, fi, fj, faceKey);
+            if (c10 && c01 && (c00 !== c11)) addFaceToEdge(fi+1, fj, fi, fj+1, faceKey);
+            if (c00 && c11 && (c10 !== c01)) addFaceToEdge(fi, fj, fi+1, fj+1, faceKey);
+          }
+        } else if (faceKey === 'b:NE') {
+          for (let s = 0; s <= k; s++) addFaceToEdge(s, k-s+1, s+1, k-s, faceKey);
+        } else if (faceKey === 'b:NW') {
+          for (let s = 0; s <= k; s++) addFaceToEdge(-s-1, k-s, -s, k-s+1, faceKey);
+        } else if (faceKey === 'b:SW') {
+          for (let s = 0; s <= k; s++) addFaceToEdge(-s, -k+s-1, -s-1, -k+s, faceKey);
+        } else if (faceKey === 'b:SE') {
+          for (let s = 0; s <= k; s++) addFaceToEdge(s+1, -k+s, s, -k+s-1, faceKey);
+        }
+      }
+
+      // Draw dual edges
+      const drawnEdges = new Set();
+      for (const [edgeKey, faces] of edgeToFaces) {
+        if (faces.length === 2) {
+          const [f1, f2] = faces;
+          const dualEdgeId = [f1, f2].sort().join('|');
+          if (!drawnEdges.has(dualEdgeId)) {
+            const c1 = circlePattern.get(f1);
+            const c2 = circlePattern.get(f2);
+            if (c1 && c2) {
+              const p1 = toScreenDual(c1), p2 = toScreenDual(c2);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+              drawnEdges.add(dualEdgeId);
+            }
+          }
+        }
+      }
+
+      // Draw dual vertices
+      ctx.fillStyle = '#8B008B';
+      const dualVertexRadius = Math.max(vertexSizeControl, scale / 300 * vertexSizeControl);
+      for (const [faceKey, c] of circlePattern) {
+        const p = toScreenDual(c);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, dualVertexRadius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    // Draw circles (independent of dual graph)
+    if (showCircles && circlePattern && circlePattern.size > 0) {
+      ctx.strokeStyle = 'rgba(139, 0, 139, 0.4)';  // Semi-transparent magenta
+      ctx.lineWidth = uniformEdgeWidth * 0.5;
+      for (const [faceKey, c] of circlePattern) {
+        const p = toScreenDual(c);
+        let radius = 0;
+        if (faceKey.startsWith('q:')) {
+          const match = faceKey.match(/q:(-?\d+),(-?\d+)/);
+          if (match) {
+            const fi = parseInt(match[1]), fj = parseInt(match[2]);
+            const corner = vertexMap.get(`${fi},${fj}`);
+            if (corner) {
+              const dx = corner.re - c.re;
+              const dy = corner.im - c.im;
+              radius = Math.sqrt(dx * dx + dy * dy) * scale;
+            }
+          }
+        } else if (faceKey.startsWith('t:')) {
+          const match = faceKey.match(/t:(-?\d+),(-?\d+)/);
+          if (match) {
+            const fi = parseInt(match[1]), fj = parseInt(match[2]);
+            const v = vertexMap.get(`${fi},${fj}`) || vertexMap.get(`${fi+1},${fj}`) ||
+                      vertexMap.get(`${fi+1},${fj+1}`) || vertexMap.get(`${fi},${fj+1}`);
+            if (v) {
+              const dx = v.re - c.re;
+              const dy = v.im - c.im;
+              radius = Math.sqrt(dx * dx + dy * dy) * scale;
+            }
+          }
+        } else if (faceKey.startsWith('b:')) {
+          let tipKey = '';
+          if (faceKey === 'b:NE') tipKey = `${k+1},0`;
+          else if (faceKey === 'b:NW') tipKey = `0,${k+1}`;
+          else if (faceKey === 'b:SW') tipKey = `${-(k+1)},0`;
+          else if (faceKey === 'b:SE') tipKey = `0,${-(k+1)}`;
+          const v = vertexMap.get(tipKey);
+          if (v) {
+            const dx = v.re - c.re;
+            const dy = v.im - c.im;
+            radius = Math.sqrt(dx * dx + dy * dy) * scale;
+          }
+        }
+        if (radius > 0) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
+          ctx.stroke();
         }
       }
     }
@@ -5556,39 +5900,39 @@ Part of this research was performed while the author was visiting the Institute 
       const N = currentSimulationN;
       const finalK = Math.max(0, N - 2);
 
-      // Build vertex map for 3D coordinates (T-embedding x,y + origami z)
-      const vertex3DMap = new Map();
+      // Build 2D vertex map for circle pattern construction
+      const vertexMap2D = new Map();
+      for (const v of tembData.vertices) {
+        vertexMap2D.set(`${v.i},${v.j}`, { re: v.re, im: v.im });
+      }
+
+      // Build circle pattern (2D positions)
+      const circlePattern = buildCirclePattern(vertexMap2D, finalK);
+
+      // Build z-coordinate map from origami
+      const zMap = new Map();
       for (const v of tembData.vertices) {
         const key = `${v.i},${v.j}`;
         const origV = origamiMap.get(key);
         if (origV) {
-          vertex3DMap.set(key, { re: v.re, im: v.im, z: origV.re });
+          zMap.set(key, origV.re);
         }
       }
 
-      // Face center (weighted centroid) with z interpolation
+      // Face center: x,y from circle pattern, z from centroid of corner z-values
       function getFaceCenter3D(faceKey) {
+        const cp = circlePattern.get(faceKey);
+        if (!cp) return null;
+
+        // Get z from corner centroid
         const [fi, fj] = faceKey.split(',').map(Number);
-        const corners = [
-          vertex3DMap.get(`${fi},${fj}`),
-          vertex3DMap.get(`${fi+1},${fj}`),
-          vertex3DMap.get(`${fi+1},${fj+1}`),
-          vertex3DMap.get(`${fi},${fj+1}`)
-        ];
-        if (!corners.every(c => c)) return null;
+        const z0 = zMap.get(`${fi},${fj}`);
+        const z1 = zMap.get(`${fi+1},${fj}`);
+        const z2 = zMap.get(`${fi+1},${fj+1}`);
+        const z3 = zMap.get(`${fi},${fj+1}`);
+        if (z0 === undefined || z1 === undefined || z2 === undefined || z3 === undefined) return null;
 
-        const dist = (a, b) => Math.sqrt((a.re - b.re) ** 2 + (a.im - b.im) ** 2);
-        const a0 = dist(corners[0], corners[1]);
-        const a1 = dist(corners[1], corners[2]);
-        const a2 = dist(corners[2], corners[3]);
-        const a3 = dist(corners[3], corners[0]);
-        const w0 = a3 + a0, w1 = a0 + a1, w2 = a1 + a2, w3 = a2 + a3;
-        const totalW = w0 + w1 + w2 + w3;
-
-        const x = (w0 * corners[0].re + w1 * corners[1].re + w2 * corners[2].re + w3 * corners[3].re) / totalW;
-        const y = (w0 * corners[0].im + w1 * corners[1].im + w2 * corners[2].im + w3 * corners[3].im) / totalW;
-        const z = (w0 * corners[0].z + w1 * corners[1].z + w2 * corners[2].z + w3 * corners[3].z) / totalW;
-        return { x, y, z };
+        return { x: cp.re, y: cp.im, z: (z0 + z1 + z2 + z3) / 4 };
       }
 
       // Coordinate mapping for Aztec diamond to T-graph faces
@@ -6620,6 +6964,25 @@ Part of this research was performed while the author was visiting the Institute 
     }
   });
 
+  // Overlay toggle visual state sync
+  function syncOverlayToggles() {
+    document.querySelectorAll('.overlay-toggle').forEach(label => {
+      const checkbox = label.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        const isAlt = checkbox.id === 'show-origami-chk' || checkbox.id === 'show-checkerboard-chk';
+        label.classList.remove('active', 'active-alt');
+        if (checkbox.checked) {
+          label.classList.add(isAlt ? 'active-alt' : 'active');
+        }
+      }
+    });
+  }
+  // Initial sync and wire up change events
+  syncOverlayToggles();
+  document.querySelectorAll('.overlay-toggle input[type="checkbox"]').forEach(chk => {
+    chk.addEventListener('change', syncOverlayToggles);
+  });
+
   // Checkboxes
   document.getElementById('show-labels-chk').addEventListener('change', renderStepwiseTemb);
   document.getElementById('show-aztec-weights-chk').addEventListener('change', renderAztecGraph);
@@ -6676,6 +7039,22 @@ Part of this research was performed while the author was visiting the Institute 
   // DD min loop control re-render
   document.getElementById('dd-min-loop-length').addEventListener('input', () => {
     if (tembDoubleDimerActive) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Dual graph checkbox re-render - works whenever T-embedding is displayed
+  document.getElementById('show-dual-graph-chk').addEventListener('change', () => {
+    if (wasmReady && getTembeddingLevelJSON) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Circles checkbox re-render - works whenever T-embedding is displayed
+  document.getElementById('show-circles-chk').addEventListener('change', () => {
+    if (wasmReady && getTembeddingLevelJSON) {
       if (mainViewIs3D) renderMain3D();
       else renderMain2DTemb();
     }
@@ -7221,10 +7600,16 @@ Part of this research was performed while the author was visiting the Institute 
     return `t-embedding-n${n}-${weightStr}.${extension}`;
   }
 
-  // Generate SVG from T-embedding data
-  function generateSVG(includeOrigami) {
+  // Generate SVG from T-embedding data (respects current 2D controls)
+  function generateSVG() {
     const n = parseInt(document.getElementById('n-input').value) || 6;
     const finalK = Math.max(0, n - 2);
+
+    // Read current 2D overlay controls
+    const showOrigami = document.getElementById('show-origami-chk').checked;
+    const showCheckerboard = document.getElementById('show-checkerboard-chk').checked;
+    const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
+    const showCircles = document.getElementById('show-circles-chk').checked;
 
     if (!wasmReady || !getTembeddingLevelJSON) {
       return null;
@@ -7351,7 +7736,7 @@ Part of this research was performed while the author was visiting the Institute 
     }
 
     // Origami overlay (if enabled)
-    if (includeOrigami && getOrigamiLevelJSON) {
+    if (showOrigami && getOrigamiLevelJSON) {
       const origPtr = getOrigamiLevelJSON(finalK);
       const origJson = Module.UTF8ToString(origPtr);
       freeString(origPtr);
@@ -7430,6 +7815,145 @@ Part of this research was performed while the author was visiting the Institute 
       }
     }
 
+    // Checkerboard overlay (if enabled) - draw first so it's behind everything
+    if (showCheckerboard) {
+      const checkerElements = [];
+      // Draw quad faces
+      for (let fi = -k; fi < k; fi++) {
+        for (let fj = -k; fj < k; fj++) {
+          const c0 = vertexMap.get(`${fi},${fj}`);
+          const c1 = vertexMap.get(`${fi+1},${fj}`);
+          const c2 = vertexMap.get(`${fi+1},${fj+1}`);
+          const c3 = vertexMap.get(`${fi},${fj+1}`);
+          if (c0 && c1 && c2 && c3) {
+            const parity = (fi + fj) % 2;
+            const color = parity === 0 ? 'rgba(229, 114, 0, 0.15)' : 'rgba(35, 45, 75, 0.15)';
+            const p0 = toScreen(c0.re, c0.im);
+            const p1 = toScreen(c1.re, c1.im);
+            const p2 = toScreen(c2.re, c2.im);
+            const p3 = toScreen(c3.re, c3.im);
+            checkerElements.push(`<polygon points="${p0.x.toFixed(2)},${p0.y.toFixed(2)} ${p1.x.toFixed(2)},${p1.y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)} ${p3.x.toFixed(2)},${p3.y.toFixed(2)}" fill="${color}" stroke="none"/>`);
+          }
+        }
+      }
+      // Insert at beginning so faces are behind edges
+      svgElements.unshift(...checkerElements);
+    }
+
+    // Dual graph and circles overlay (independent toggles)
+    // Use purple/magenta for dual graph to distinguish from blue origami
+    const dualColor = '#8B008B';  // Dark magenta
+    const circleColor = 'rgba(139, 0, 139, 0.4)';  // Semi-transparent magenta
+    const dualEdgeWidth = uniformEdgeWidth;
+    const dualVertexRadius = Math.max(vertexSizeControl, scale / 300 * vertexSizeControl);
+
+    // Build circle pattern if either dual graph or circles are enabled
+    let circlePattern = null;
+    if (showDualGraph || showCircles) {
+      circlePattern = buildCirclePattern(vertexMap, k);
+    }
+
+    // Draw dual graph (if enabled)
+    if (showDualGraph && circlePattern) {
+      // Build edge-to-face adjacency and draw dual edges
+      const edgeToFaces = new Map();
+      const addFaceToEdge = (i1, j1, i2, j2, faceKey) => {
+        const v1 = `${i1},${j1}`, v2 = `${i2},${j2}`;
+        const edgeKey = v1 < v2 ? `${v1}|${v2}` : `${v2}|${v1}`;
+        if (!edgeToFaces.has(edgeKey)) edgeToFaces.set(edgeKey, []);
+        edgeToFaces.get(edgeKey).push(faceKey);
+      };
+
+      // Register faces with edges (simplified - quads and triangles)
+      for (const [faceKey, c] of circlePattern) {
+        if (faceKey.startsWith('q:')) {
+          const m = faceKey.match(/q:(-?\d+),(-?\d+)/);
+          if (m) {
+            const i = parseInt(m[1]), j = parseInt(m[2]);
+            addFaceToEdge(i, j, i+1, j, faceKey);
+            addFaceToEdge(i+1, j, i+1, j+1, faceKey);
+            addFaceToEdge(i+1, j+1, i, j+1, faceKey);
+            addFaceToEdge(i, j+1, i, j, faceKey);
+          }
+        } else if (faceKey.startsWith('t:')) {
+          const m = faceKey.match(/t:(-?\d+),(-?\d+)/);
+          if (m) {
+            const fi = parseInt(m[1]), fj = parseInt(m[2]);
+            const c00 = vertexMap.has(`${fi},${fj}`);
+            const c10 = vertexMap.has(`${fi+1},${fj}`);
+            const c11 = vertexMap.has(`${fi+1},${fj+1}`);
+            const c01 = vertexMap.has(`${fi},${fj+1}`);
+            if (c00 && c10) addFaceToEdge(fi, fj, fi+1, fj, faceKey);
+            if (c10 && c11) addFaceToEdge(fi+1, fj, fi+1, fj+1, faceKey);
+            if (c11 && c01) addFaceToEdge(fi+1, fj+1, fi, fj+1, faceKey);
+            if (c01 && c00) addFaceToEdge(fi, fj+1, fi, fj, faceKey);
+            if (c10 && c01 && (c00 !== c11)) addFaceToEdge(fi+1, fj, fi, fj+1, faceKey);
+            if (c00 && c11 && (c10 !== c01)) addFaceToEdge(fi, fj, fi+1, fj+1, faceKey);
+          }
+        }
+      }
+
+      // Draw dual edges
+      const drawnEdges = new Set();
+      for (const [edgeKey, faces] of edgeToFaces) {
+        if (faces.length === 2) {
+          const [f1, f2] = faces;
+          const dualEdgeId = [f1, f2].sort().join('|');
+          if (!drawnEdges.has(dualEdgeId)) {
+            const c1 = circlePattern.get(f1);
+            const c2 = circlePattern.get(f2);
+            if (c1 && c2) {
+              const p1 = toScreen(c1.re, c1.im);
+              const p2 = toScreen(c2.re, c2.im);
+              svgElements.push(`<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" stroke="${dualColor}" stroke-width="${dualEdgeWidth.toFixed(2)}" stroke-linecap="round"/>`);
+              drawnEdges.add(dualEdgeId);
+            }
+          }
+        }
+      }
+
+      // Draw dual vertices
+      for (const [faceKey, c] of circlePattern) {
+        const p = toScreen(c.re, c.im);
+        svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${dualVertexRadius.toFixed(2)}" fill="${dualColor}"/>`);
+      }
+    }
+
+    // Draw circles (independent of dual graph)
+    if (showCircles && circlePattern) {
+      for (const [faceKey, c] of circlePattern) {
+        const p = toScreen(c.re, c.im);
+        let circleRadius = 0;
+        if (faceKey.startsWith('q:')) {
+          const match = faceKey.match(/q:(-?\d+),(-?\d+)/);
+          if (match) {
+            const fi = parseInt(match[1]), fj = parseInt(match[2]);
+            const corner = vertexMap.get(`${fi},${fj}`);
+            if (corner) {
+              const dx = corner.re - c.re;
+              const dy = corner.im - c.im;
+              circleRadius = Math.sqrt(dx * dx + dy * dy) * scale;
+            }
+          }
+        } else if (faceKey.startsWith('t:')) {
+          const match = faceKey.match(/t:(-?\d+),(-?\d+)/);
+          if (match) {
+            const fi = parseInt(match[1]), fj = parseInt(match[2]);
+            const v = vertexMap.get(`${fi},${fj}`) || vertexMap.get(`${fi+1},${fj}`) ||
+                      vertexMap.get(`${fi+1},${fj+1}`) || vertexMap.get(`${fi},${fj+1}`);
+            if (v) {
+              const dx = v.re - c.re;
+              const dy = v.im - c.im;
+              circleRadius = Math.sqrt(dx * dx + dy * dy) * scale;
+            }
+          }
+        }
+        if (circleRadius > 0) {
+          svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${circleRadius.toFixed(2)}" fill="none" stroke="${circleColor}" stroke-width="${(dualEdgeWidth * 0.5).toFixed(2)}"/>`);
+        }
+      }
+    }
+
     // Double dimer XOR on T-graph (if active)
     if (tembDoubleDimerActive && tembDoubleDimerConfig1.length > 0 && tembDoubleDimerConfig2.length > 0) {
       const N = currentSimulationN;
@@ -7480,6 +8004,9 @@ Part of this research was performed while the author was visiting the Institute 
         dominoSet2.set(dominoKey(d), d);
       }
 
+      // Build circle pattern (dual graph vertices via reflection)
+      const circlePattern = buildCirclePattern(vertexMap);
+
       // Check view mode: single (config1 only) or double (XOR)
       const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
       let dominosToDraw;
@@ -7505,28 +8032,9 @@ Part of this research was performed while the author was visiting the Institute 
         dominosToDraw = xorDominoes;
       }
 
-      // Compute face center as weighted centroid
-      // Each vertex weighted by sum of its two adjacent edge lengths
+      // Get face center from precomputed circle pattern
       function getFaceCenter(faceKey) {
-        const [fi, fj] = faceKey.split(',').map(Number);
-        const corners = [
-          vertexMap.get(`${fi},${fj}`),
-          vertexMap.get(`${fi+1},${fj}`),
-          vertexMap.get(`${fi+1},${fj+1}`),
-          vertexMap.get(`${fi},${fj+1}`)
-        ];
-        if (!corners.every(c => c)) return null;
-
-        const dist = (a, b) => Math.sqrt((a.re - b.re) ** 2 + (a.im - b.im) ** 2);
-        const a0 = dist(corners[0], corners[1]);
-        const a1 = dist(corners[1], corners[2]);
-        const a2 = dist(corners[2], corners[3]);
-        const a3 = dist(corners[3], corners[0]);
-        const w0 = a3 + a0, w1 = a0 + a1, w2 = a1 + a2, w3 = a2 + a3;
-        const totalW = w0 + w1 + w2 + w3;
-        const re = (w0 * corners[0].re + w1 * corners[1].re + w2 * corners[2].re + w3 * corners[3].re) / totalW;
-        const im = (w0 * corners[0].im + w1 * corners[1].im + w2 * corners[2].im + w3 * corners[3].im) / totalW;
-        return { re, im };
+        return circlePattern.get(faceKey) || null;
       }
 
       // Get DD thickness
@@ -7574,10 +8082,9 @@ Part of this research was performed while the author was visiting the Institute 
     return svgString;
   }
 
-  // Export PDF (via SVG - vector quality)
+  // Export PDF (via SVG - vector quality, respects 2D controls)
   async function exportPdf() {
-    const includeOrigami = document.getElementById('pdf-include-origami').checked;
-    const svgString = generateSVG(includeOrigami);
+    const svgString = generateSVG();
 
     if (!svgString) {
       alert('No T-embedding data to export. Please compute a T-embedding first.');
@@ -7890,6 +8397,7 @@ Part of this research was performed while the author was visiting the Institute 
 
     // Get current display settings
     const showOrigami = document.getElementById('show-origami-chk').checked;
+    const showCheckerboard = document.getElementById('show-checkerboard-chk').checked;
     const edgeThickness = parseFloat(document.getElementById('main-2d-edge-thickness').value) || 1.5;
     const vertexSize = parseFloat(document.getElementById('main-2d-vertex-size').value) || 1.5;
     const skipCount = Math.max(1, parseInt(document.getElementById('gif-skip').value) || 1);
@@ -8025,6 +8533,99 @@ Part of this research was performed while the author was visiting the Institute 
         }
 
         const uniformEdgeWidth = Math.max(edgeThickness, scale / 300 * edgeThickness);
+
+        // Draw checkerboard if enabled (before edges so it's behind)
+        if (showCheckerboard) {
+          const fillColor = 'rgba(0, 0, 0, 0.3)';
+
+          const tips = {
+            right: vertexMap.get(`${k+1},0`),
+            left: vertexMap.get(`${-(k+1)},0`),
+            top: vertexMap.get(`0,${k+1}`),
+            bottom: vertexMap.get(`0,${-(k+1)}`)
+          };
+
+          // Interior faces: quadrilaterals and triangles
+          const allFaces = [];
+          for (let fi = -k; fi <= k; fi++) {
+            for (let fj = -k; fj <= k; fj++) {
+              const corners = [];
+              const isInterior = [
+                Math.abs(fi) + Math.abs(fj) <= k,
+                Math.abs(fi+1) + Math.abs(fj) <= k,
+                Math.abs(fi+1) + Math.abs(fj+1) <= k,
+                Math.abs(fi) + Math.abs(fj+1) <= k
+              ];
+              const verts = [
+                vertexMap.get(`${fi},${fj}`),
+                vertexMap.get(`${fi+1},${fj}`),
+                vertexMap.get(`${fi+1},${fj+1}`),
+                vertexMap.get(`${fi},${fj+1}`)
+              ];
+              for (let i = 0; i < 4; i++) {
+                if (isInterior[i] && verts[i]) corners.push(verts[i]);
+              }
+              if (corners.length >= 3) {
+                allFaces.push({
+                  corners: corners,
+                  parity: (fi + fj + n) % 2
+                });
+              }
+            }
+          }
+
+          // 4 boundary faces: large polygons
+          if (tips.right && tips.top) {
+            const neCorners = [tips.right, tips.top];
+            for (let s = 0; s <= k; s++) {
+              const v = vertexMap.get(`${s},${k-s}`);
+              if (v) neCorners.push(v);
+            }
+            allFaces.push({ corners: neCorners, parity: (k + n) % 2 });
+          }
+
+          if (tips.top && tips.left) {
+            const nwCorners = [tips.top, tips.left];
+            for (let s = 0; s <= k; s++) {
+              const v = vertexMap.get(`${-k+s},${s}`);
+              if (v) nwCorners.push(v);
+            }
+            allFaces.push({ corners: nwCorners, parity: (k + 1 + n) % 2 });
+          }
+
+          if (tips.left && tips.bottom) {
+            const swCorners = [tips.left, tips.bottom];
+            for (let s = 0; s <= k; s++) {
+              const v = vertexMap.get(`${-s},${-k+s}`);
+              if (v) swCorners.push(v);
+            }
+            allFaces.push({ corners: swCorners, parity: (k + n) % 2 });
+          }
+
+          if (tips.bottom && tips.right) {
+            const seCorners = [tips.bottom, tips.right];
+            for (let s = 0; s <= k; s++) {
+              const v = vertexMap.get(`${k-s},${-s}`);
+              if (v) seCorners.push(v);
+            }
+            allFaces.push({ corners: seCorners, parity: (k + 1 + n) % 2 });
+          }
+
+          // Draw all faces with parity 1
+          for (const face of allFaces) {
+            if (face.parity === 1) {
+              const sc = face.corners.map(v => toCanvas(v.re, v.im));
+              offCtx.fillStyle = fillColor;
+              offCtx.beginPath();
+              offCtx.moveTo(sc[0].x, sc[0].y);
+              for (let i = 1; i < sc.length; i++) {
+                offCtx.lineTo(sc[i].x, sc[i].y);
+              }
+              offCtx.closePath();
+              offCtx.fill();
+            }
+          }
+        }
 
         // Helper to draw edge
         function drawEdge(i1, j1, i2, j2, color) {
