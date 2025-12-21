@@ -4112,7 +4112,7 @@ Part of this research was performed while the author was visiting the Institute 
     function reflectAcrossEdge(z, v1coords, v2coords) {
       const p1 = vertexMap.get(`${v1coords.i},${v1coords.j}`);
       const p2 = vertexMap.get(`${v2coords.i},${v2coords.j}`);
-      if (!p1 || !p2) return z;  // Fallback
+      if (!p1 || !p2) return z;  // Fallback if vertex not found
 
       // Line direction d = p2 - p1
       const dRe = p2.re - p1.re;
@@ -5255,13 +5255,20 @@ Part of this research was performed while the author was visiting the Institute 
     // Get k from the final level
     const k = data.k;
 
-    // Compute default w₀ position: midpoint of edge between T(0,k+1) and T(k+1,0)
+    // Compute default w₀ position: centroid of NE diagonal chain vertices
     let defaultW0Re = 0, defaultW0Im = 0;
-    const topTipForDrag = vertexMap.get(`0,${k+1}`);
-    const rightTipForDrag = vertexMap.get(`${k+1},0`);
-    if (topTipForDrag && rightTipForDrag) {
-      defaultW0Re = (topTipForDrag.re + rightTipForDrag.re) / 2;
-      defaultW0Im = (topTipForDrag.im + rightTipForDrag.im) / 2;
+    let defaultCount = 0;
+    for (let s = 0; s <= k; s++) {
+      const v = vertexMap.get(`${k-s},${s}`);
+      if (v) {
+        defaultW0Re += v.re;
+        defaultW0Im += v.im;
+        defaultCount++;
+      }
+    }
+    if (defaultCount > 0) {
+      defaultW0Re /= defaultCount;
+      defaultW0Im /= defaultCount;
     }
 
     // Store render params for w₀ dragging
@@ -5568,13 +5575,21 @@ Part of this research was performed while the author was visiting the Institute 
     // Compute dual embedding via reflection algorithm (Lemma 2.3)
     let dualEmbedding = null;
     if (showDualGraph) {
-      // Default position: midpoint of edge between T(0,k+1) and T(k+1,0)
+      // Default position: centroid of NE diagonal chain vertices T(k,0), T(k-1,1), ..., T(0,k)
+      // This is closer to the diagonal edges than the tip midpoint, giving better reflections
       let defaultRe = 0, defaultIm = 0;
-      const topTip = vertexMap.get(`0,${k+1}`);
-      const rightTip = vertexMap.get(`${k+1},0`);
-      if (topTip && rightTip) {
-        defaultRe = (topTip.re + rightTip.re) / 2;
-        defaultIm = (topTip.im + rightTip.im) / 2;
+      let count = 0;
+      for (let s = 0; s <= k; s++) {
+        const v = vertexMap.get(`${k-s},${s}`);
+        if (v) {
+          defaultRe += v.re;
+          defaultIm += v.im;
+          count++;
+        }
+      }
+      if (count > 0) {
+        defaultRe /= count;
+        defaultIm /= count;
       }
 
       // Offset from default position
@@ -8207,18 +8222,25 @@ Part of this research was performed while the author was visiting the Institute 
     // Compute dual embedding via reflection algorithm (Lemma 2.3) for dual graph
     let dualEmbedding = null;
     if (showDualGraph) {
-      let startRe = parseFloat(document.getElementById('dual-start-re').value) || 0;
-      let startIm = parseFloat(document.getElementById('dual-start-im').value) || 0;
-      // Default: midpoint of edge between T(0,k+1) and T(k+1,0)
-      if (startRe === 0 && startIm === 0) {
-        const topTip = vertexMap.get(`0,${k+1}`);
-        const rightTip = vertexMap.get(`${k+1},0`);
-        if (topTip && rightTip) {
-          startRe = (topTip.re + rightTip.re) / 2;
-          startIm = (topTip.im + rightTip.im) / 2;
+      // Default position: centroid of NE diagonal chain vertices T(k,0), T(k-1,1), ..., T(0,k)
+      let defaultRe = 0, defaultIm = 0;
+      let defaultCount = 0;
+      for (let s = 0; s <= k; s++) {
+        const v = vertexMap.get(`${k-s},${s}`);
+        if (v) {
+          defaultRe += v.re;
+          defaultIm += v.im;
+          defaultCount++;
         }
       }
-      dualEmbedding = computeDualEmbedding(vertexMap, k, startRe, startIm);
+      if (defaultCount > 0) {
+        defaultRe /= defaultCount;
+        defaultIm /= defaultCount;
+      }
+      // Offset from default position
+      const offsetRe = parseFloat(document.getElementById('dual-start-re').value) || 0;
+      const offsetIm = parseFloat(document.getElementById('dual-start-im').value) || 0;
+      dualEmbedding = computeDualEmbedding(vertexMap, k, defaultRe + offsetRe, defaultIm + offsetIm);
     }
 
     // Draw dual graph (if enabled)
