@@ -66,7 +66,7 @@ code:
 <ul>
   <li><strong>T-graph faces</strong> (quadrilateral cells) correspond to <strong>Aztec diamond vertices</strong>.</li>
   <li>A <strong>domino</strong> covering two adjacent Aztec vertices corresponds to an edge connecting two adjacent T-graph face centers.</li>
-  <li><strong>Face centers:</strong> Computed via the circle pattern construction: pick a starting face, set its center to the centroid, then propagate to adjacent faces by reflecting across the shared T-embedding edge. This gives the correct dual graph embedding (circle pattern vertices).</li>
+  <li><strong>Face centers:</strong> Computed via circumcenter construction: pick a starting face, set its center to the circumcenter (equidistant from all vertices), then propagate to adjacent faces by reflecting across the shared T-embedding edge. This gives the dual graph embedding.</li>
 </ul>
 
 <p>Two view modes are available:</p>
@@ -76,6 +76,14 @@ code:
 </ul>
 
 <p><em>Note:</em> This visualization covers only the interior quadrilateral faces of the T-embedding (not the boundary).</p>
+
+<h5>Dual Graph Embedding</h5>
+<p>The <strong>Dual</strong> checkbox shows the dual graph of the T-embedding, with vertices at face centers and edges connecting adjacent faces. Two embedding modes are available:</p>
+<ul>
+  <li><strong>Proper embedding</strong> (default): Uses the reflection algorithm (Lemma 2.3 from [KLRR]). Starting from w₀ (shown in orange), face centers are computed by reflecting across shared T-embedding edges. The position of w₀ can be dragged or adjusted via offset controls.</li>
+  <li><strong>Naive embedding</strong>: Uses approximate incenters of each face independently. For triangles, this is the true incenter (weighted by opposite edge lengths). For quadrilaterals, vertices are weighted by opposite diagonal lengths. This gives a simpler embedding that doesn't depend on a starting position.</li>
+</ul>
+<p>The <strong>V</strong> and <strong>E</strong> controls adjust vertex size and edge thickness for the dual graph independently of the T-embedding.</p>
 
 <h5>3D Mode Options</h5>
 <ul>
@@ -285,8 +293,8 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <label style="display: flex; align-items: center; gap: 6px;">
       <strong>Weight Type:</strong>
       <select id="weight-preset-select" style="min-width: 140px;" aria-label="Weight type selection">
-        <option value="all-ones" selected>All 1's (Uniform)</option>
-        <option value="random-iid">Random IID</option>
+        <option value="all-ones">All 1's (Uniform)</option>
+        <option value="random-iid" selected>Random IID</option>
         <option value="random-layered">Random Layered</option>
         <option value="random-gamma">Random Gamma</option>
         <option value="periodic">k × l Periodic</option>
@@ -538,20 +546,21 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
             <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Origami</span>
           </label>
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-checkerboard-chk">
-            <input type="checkbox" id="show-checkerboard-chk" style="display: none;" aria-label="Checkerboard coloring">
+            <input type="checkbox" id="show-checkerboard-chk" style="display: none;" checked aria-label="Checkerboard coloring">
             <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Checkerboard</span>
           </label>
           <span style="width: 1px; background: #ddd; margin: 2px 0;"></span>
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-dual-graph-chk">
-            <input type="checkbox" id="show-dual-graph-chk" style="display: none;" checked aria-label="Show dual graph">
+            <input type="checkbox" id="show-dual-graph-chk" style="display: none;" aria-label="Show dual graph">
             <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Dual</span>
-          </label>
-          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-circles-chk">
-            <input type="checkbox" id="show-circles-chk" style="display: none;" aria-label="Show circles">
-            <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Circles</span>
           </label>
         </div>
         <span id="dual-start-controls" style="display: none; align-items: center; gap: 6px; padding: 3px 8px; background: rgba(139,0,139,0.08); border-radius: 3px; border: 1px solid rgba(139,0,139,0.2);">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;" title="Use simple incenter approximation instead of reflection-based embedding">
+            <input type="checkbox" id="dual-naive-chk" style="cursor: pointer;" aria-label="Use naive embedding">
+            <span style="font-size: 10px; font-weight: 600; color: #8B008B; text-transform: uppercase; letter-spacing: 0.3px;">Naive</span>
+          </label>
+          <span style="width: 1px; height: 14px; background: rgba(139,0,139,0.3);"></span>
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
             <input type="checkbox" id="drag-w0-chk" style="cursor: pointer;" aria-label="Enable dragging w0">
             <span style="font-size: 10px; font-weight: 600; color: #8B008B; text-transform: uppercase; letter-spacing: 0.3px;">Drag w₀</span>
@@ -562,6 +571,11 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <span style="font-size: 11px; color: #666;">+</span>
           <input type="number" id="dual-start-im" value="0" step="0.1" style="width: 55px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual offset imaginary part">
           <span style="font-size: 11px; color: #666;">i</span>
+          <span style="width: 1px; height: 14px; background: rgba(139,0,139,0.3);"></span>
+          <span style="font-size: 10px; color: #666;">V:</span>
+          <input type="number" id="dual-vertex-size" value="3" min="0.5" max="20" step="0.5" style="width: 45px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual vertex size">
+          <span style="font-size: 10px; color: #666;">E:</span>
+          <input type="number" id="dual-edge-thickness" value="1.5" min="0.5" max="10" step="0.5" style="width: 45px; padding: 3px 5px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="Dual edge thickness">
         </span>
         <span style="width: 1px; height: 20px; background: #ccc;"></span>
         <button id="sample-double-dimer-temb-btn"
@@ -2262,7 +2276,7 @@ Part of this research was performed while the author was visiting the Institute 
 
       wasmReady = true;
 
-      // Auto-compute on load with randomized weights
+      // Auto-compute on load with selected preset weights
       const n = parseN();
       currentSimulationN = n;  // Sync state on load
       setN(n);
@@ -2270,9 +2284,55 @@ Part of this research was performed while the author was visiting the Institute 
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
-      // Initialize and compute with default All 1's (uniform) weights
+      // Initialize with selected preset (default is random-iid)
       initAztecGraph(n);
-      setAztecWeightMode(0);  // All 1's mode
+      const preset = document.getElementById('weight-preset-select').value;
+      if (preset === 'all-ones') {
+        currentWeightMode = 0;
+        setAztecWeightMode(0);
+      } else if (preset === 'random-iid') {
+        const seed = parseInt(document.getElementById('random-seed').value) || 42;
+        seedRng(seed);
+        const distType = document.getElementById('iid-distribution-select').value;
+        if (distType === 'uniform') {
+          const minVal = parseFloat(document.getElementById('iid-min').value) || 0.5;
+          const maxVal = parseFloat(document.getElementById('iid-max').value) || 2.0;
+          setIIDDistribution(0, 0, 0);
+          setRandomIIDParams(minVal, maxVal);
+        } else if (distType === 'exponential') {
+          setIIDDistribution(1, 1.0, 0);
+        } else if (distType === 'pareto') {
+          const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
+          const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+          setIIDDistribution(2, alpha, xmin);
+        } else if (distType === 'geometric') {
+          const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+          setIIDDistribution(3, p, 0);
+        }
+        currentWeightMode = 1;
+        setAztecWeightMode(1);
+      } else if (preset === 'random-layered') {
+        const seed = parseInt(document.getElementById('layered-seed').value) || 42;
+        seedRng(seed);
+        const params = getLayeredParams();
+        setLayeredParams(params.regime, params.p1, params.p2, params.prob1, params.prob2);
+        currentWeightMode = 2;
+        setAztecWeightMode(2);
+      } else if (preset === 'random-gamma') {
+        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
+        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+        const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
+        seedRng(seed);
+        setGammaParams(alpha, beta);
+        currentWeightMode = 3;
+        setAztecWeightMode(3);
+      } else if (preset === 'periodic') {
+        currentWeightMode = 4;
+        setAztecWeightMode(4);
+      } else {
+        currentWeightMode = 0;
+        setAztecWeightMode(0);
+      }
       computeAndDisplay();
 
       // Precompute all T-embedding levels for stepwise UI (only needed for small n)
@@ -2317,6 +2377,65 @@ Part of this research was performed while the author was visiting the Institute 
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
+
+  // Cached IID weights - precomputed to avoid regenerating on each render
+  let cachedIIDWeights = null;
+  let cachedIIDKey = null;  // Key to check if cache is valid
+
+  function getIIDWeightsCacheKey(N) {
+    const seed = parseInt(document.getElementById('random-seed').value) || 42;
+    const distType = document.getElementById('iid-distribution-select').value;
+    let params = '';
+    if (distType === 'uniform') {
+      const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
+      const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
+      params = `${a},${b}`;
+    } else if (distType === 'pareto') {
+      const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
+      const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+      params = `${alpha},${xmin}`;
+    } else if (distType === 'geometric') {
+      const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+      params = `${p}`;
+    }
+    return `${N}:${seed}:${distType}:${params}`;
+  }
+
+  function getOrComputeIIDWeights(N) {
+    const key = getIIDWeightsCacheKey(N);
+    if (cachedIIDWeights && cachedIIDKey === key) {
+      return cachedIIDWeights;
+    }
+    // Compute new weights
+    const dim = 2 * N;
+    const seed = parseInt(document.getElementById('random-seed').value) || 42;
+    const rng = createSeededRNG(seed);
+    const numWeights = dim * dim;
+    const edgeWeights = new Float64Array(numWeights);
+    const distType = document.getElementById('iid-distribution-select').value;
+
+    for (let i = 0; i < numWeights; i++) {
+      if (distType === 'uniform') {
+        const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
+        const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
+        edgeWeights[i] = a + rng() * (b - a);
+      } else if (distType === 'exponential') {
+        edgeWeights[i] = -Math.log(1 - rng());
+      } else if (distType === 'pareto') {
+        const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
+        const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+        edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
+      } else if (distType === 'geometric') {
+        const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+        edgeWeights[i] = Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
+      } else {
+        edgeWeights[i] = 0.5 + rng() * 1.5;
+      }
+    }
+    cachedIIDWeights = edgeWeights;
+    cachedIIDKey = key;
+    return edgeWeights;
+  }
 
   // 8-tone grayscale helper functions (for gas phase visualization)
   // Each color gets 2 shades based on coordinate parity (8 total shades)
@@ -2909,6 +3028,13 @@ Part of this research was performed while the author was visiting the Institute 
 
     shufflingWasmReady = true;
 
+    // Precompute IID weights on load (since random-iid is default)
+    const preset = document.getElementById('weight-preset-select').value;
+    if (preset === 'random-iid') {
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      getOrComputeIIDWeights(N);
+    }
+
     // Generate initial sample with default weights
     generateRandomSample();
   }
@@ -3159,31 +3285,8 @@ Part of this research was performed while the author was visiting the Institute 
 
       } else if (preset === 'random-iid') {
         const dim = 2 * N;
-        const seed = parseInt(document.getElementById('random-seed').value) || 42;
-        const rng = createSeededRNG(seed);
         const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-
-        // Get IID distribution parameters
-        const distType = document.getElementById('iid-distribution-select').value;
-        for (let i = 0; i < numWeights; i++) {
-          if (distType === 'uniform') {
-            const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-            const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
-            edgeWeights[i] = a + rng() * (b - a);
-          } else if (distType === 'exponential') {
-            edgeWeights[i] = -Math.log(1 - rng());
-          } else if (distType === 'pareto') {
-            const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-            const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-            edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
-          } else if (distType === 'geometric') {
-            const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-            edgeWeights[i] = Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
-          } else {
-            edgeWeights[i] = 0.5 + rng() * 1.5;
-          }
-        }
+        const edgeWeights = getOrComputeIIDWeights(N);
 
         const weightsPtr = shufflingModule._malloc(numWeights * 8);
         for (let i = 0; i < numWeights; i++) {
@@ -3430,16 +3533,10 @@ Part of this research was performed while the author was visiting the Institute 
         shufflingModule._free(weightsPtr);
 
       } else if (preset === 'random-iid') {
-        // IID: each edge weight is independent random
+        // IID: each edge weight is independent random (using cached weights)
         const dim = 2 * N;
-        const seed = getSampleSeed();
-        const rng = createSeededRNG(seed);
         const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-
-        for (let i = 0; i < numWeights; i++) {
-          edgeWeights[i] = 0.5 + rng() * 1.5;  // Random in [0.5, 2.0]
-        }
+        const edgeWeights = getOrComputeIIDWeights(N);
 
         const weightsPtr = shufflingModule._malloc(numWeights * 8);
         for (let i = 0; i < numWeights; i++) {
@@ -3858,10 +3955,27 @@ Part of this research was performed while the author was visiting the Institute 
 
   function buildCirclePattern(vertexMap, k) {
     // Returns Map: faceKey -> {re, im, type} for circle pattern vertex C
-    // Handles both quadrilateral (interior) and triangular (boundary) faces
+    // Uses CIRCUMCENTERS (equidistant from all vertices), not centroids
     const circlePattern = new Map();
 
+    // Circumcenter of triangle with vertices (x1,y1), (x2,y2), (x3,y3)
+    function triangleCircumcenter(v0, v1, v2) {
+      const x1 = v0.re, y1 = v0.im;
+      const x2 = v1.re, y2 = v1.im;
+      const x3 = v2.re, y3 = v2.im;
+      const D = 2 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+      if (Math.abs(D) < 1e-12) return null; // Collinear points
+      const sq1 = x1 * x1 + y1 * y1;
+      const sq2 = x2 * x2 + y2 * y2;
+      const sq3 = x3 * x3 + y3 * y3;
+      return {
+        re: (sq1 * (y2 - y3) + sq2 * (y3 - y1) + sq3 * (y1 - y2)) / D,
+        im: (sq1 * (x3 - x2) + sq2 * (x1 - x3) + sq3 * (x2 - x1)) / D
+      };
+    }
+
     // Collect all quad faces (those with all 4 corners present)
+    // For cyclic quads, use any 3 vertices to compute circumcenter
     for (const [key, v] of vertexMap) {
       const [i, j] = key.split(',').map(Number);
       const c0 = vertexMap.get(`${i},${j}`);
@@ -3869,18 +3983,18 @@ Part of this research was performed while the author was visiting the Institute 
       const c2 = vertexMap.get(`${i+1},${j+1}`);
       const c3 = vertexMap.get(`${i},${j+1}`);
       if (c0 && c1 && c2 && c3) {
-        circlePattern.set(`q:${i},${j}`, {
-          re: (c0.re + c1.re + c2.re + c3.re) / 4,
-          im: (c0.im + c1.im + c2.im + c3.im) / 4,
-          type: 'quad',
-          i, j
-        });
+        // Use first 3 vertices for circumcenter (for cyclic quad, all give same result)
+        const cc = triangleCircumcenter(c0, c1, c2);
+        if (cc) {
+          circlePattern.set(`q:${i},${j}`, {
+            re: cc.re,
+            im: cc.im,
+            type: 'quad',
+            i, j
+          });
+        }
       }
     }
-
-    // Add triangular boundary faces
-    // For Aztec diamond T-embedding, triangles are at the 4 corner regions
-    // We need to find all triangular faces by looking at the boundary structure
 
     // Get all vertices and find the boundary
     const vertices = Array.from(vertexMap.values());
@@ -3893,21 +4007,6 @@ Part of this research was performed while the author was visiting the Institute 
       maxCoord = Math.max(maxCoord, Math.abs(i), Math.abs(j));
     }
     const kVal = k !== undefined ? k : maxCoord - 1;
-
-    // Add triangular faces on the boundary
-    // The boundary triangles connect the "alpha" vertices (on axes at distance k+1)
-    // to the adjacent "beta" vertices
-
-    // Helper to add triangle centroid
-    function addTriangle(key, v0, v1, v2) {
-      if (v0 && v1 && v2) {
-        circlePattern.set(key, {
-          re: (v0.re + v1.re + v2.re) / 3,
-          im: (v0.im + v1.im + v2.im) / 3,
-          type: 'tri'
-        });
-      }
-    }
 
     // Add ALL triangular faces by iterating through face positions
     // A face at (fi, fj) has corners (fi,fj), (fi+1,fj), (fi+1,fj+1), (fi,fj+1)
@@ -3926,32 +4025,32 @@ Part of this research was performed while the author was visiting the Institute 
         const existing = corners.filter(c => c);
 
         if (existing.length === 3) {
-          // Triangle face
-          const sumRe = existing.reduce((s, v) => s + v.re, 0);
-          const sumIm = existing.reduce((s, v) => s + v.im, 0);
-          circlePattern.set(`t:${fi},${fj}`, {
-            re: sumRe / 3,
-            im: sumIm / 3,
-            type: 'tri',
-            corners: existing,
-            fi, fj
-          });
+          // Triangle face - compute circumcenter
+          const cc = triangleCircumcenter(existing[0], existing[1], existing[2]);
+          if (cc) {
+            circlePattern.set(`t:${fi},${fj}`, {
+              re: cc.re,
+              im: cc.im,
+              type: 'tri',
+              corners: existing,
+              fi, fj
+            });
+          }
         }
       }
     }
 
     // 4 large boundary polygon faces (NE, NW, SW, SE)
-    // These are bounded by boundary edge + interior diagonal chain
-    function addPolygonCentroid(key, vertices) {
-      if (vertices.length < 3) return;
-      let sumRe = 0, sumIm = 0, count = 0;
-      for (const v of vertices) {
-        if (v) { sumRe += v.re; sumIm += v.im; count++; }
-      }
-      if (count >= 3) {
+    // For cyclic polygons, use first 3 non-collinear vertices for circumcenter
+    function addPolygonCircumcenter(key, verts) {
+      const valid = verts.filter(v => v);
+      if (valid.length < 3) return;
+      // Use first 3 vertices for circumcenter
+      const cc = triangleCircumcenter(valid[0], valid[1], valid[2]);
+      if (cc) {
         circlePattern.set(key, {
-          re: sumRe / count,
-          im: sumIm / count,
+          re: cc.re,
+          im: cc.im,
           type: 'boundary'
         });
       }
@@ -3992,6 +4091,122 @@ Part of this research was performed while the author was visiting the Institute 
     addPolygonCentroid('b:SE', seVerts);
 
     return circlePattern;
+  }
+
+  // Compute simple incenter-based dual embedding (approximate incenters for each face)
+  function computeIncenterEmbedding(vertexMap, k) {
+    const embedding = new Map();
+
+    // Helper: compute incenter of a triangle (weighted by opposite edge lengths)
+    function triangleIncenter(v0, v1, v2) {
+      const a = Math.sqrt((v1.re - v2.re) ** 2 + (v1.im - v2.im) ** 2); // opposite v0
+      const b = Math.sqrt((v0.re - v2.re) ** 2 + (v0.im - v2.im) ** 2); // opposite v1
+      const c = Math.sqrt((v0.re - v1.re) ** 2 + (v0.im - v1.im) ** 2); // opposite v2
+      const sum = a + b + c;
+      if (sum < 1e-12) return { re: (v0.re + v1.re + v2.re) / 3, im: (v0.im + v1.im + v2.im) / 3 };
+      return {
+        re: (a * v0.re + b * v1.re + c * v2.re) / sum,
+        im: (a * v0.im + b * v1.im + c * v2.im) / sum
+      };
+    }
+
+    // Helper: compute approximate incenter of a quadrilateral (weighted by diagonal edge lengths)
+    function quadIncenter(v0, v1, v2, v3) {
+      // Weight each vertex by length of opposite diagonal
+      const d02 = Math.sqrt((v0.re - v2.re) ** 2 + (v0.im - v2.im) ** 2);
+      const d13 = Math.sqrt((v1.re - v3.re) ** 2 + (v1.im - v3.im) ** 2);
+      // v0 and v2 get weight from d13, v1 and v3 get weight from d02
+      const sum = 2 * (d02 + d13);
+      if (sum < 1e-12) return { re: (v0.re + v1.re + v2.re + v3.re) / 4, im: (v0.im + v1.im + v2.im + v3.im) / 4 };
+      return {
+        re: (d13 * v0.re + d02 * v1.re + d13 * v2.re + d02 * v3.re) / sum,
+        im: (d13 * v0.im + d02 * v1.im + d13 * v2.im + d02 * v3.im) / sum
+      };
+    }
+
+    // Helper: polygon incenter approximation
+    function polygonIncenter(verts) {
+      const valid = verts.filter(v => v);
+      if (valid.length < 3) return null;
+      if (valid.length === 3) return triangleIncenter(valid[0], valid[1], valid[2]);
+      // For larger polygons, use edge-length weighted average
+      let sumRe = 0, sumIm = 0, totalWeight = 0;
+      for (let i = 0; i < valid.length; i++) {
+        const prev = valid[(i - 1 + valid.length) % valid.length];
+        const curr = valid[i];
+        const next = valid[(i + 1) % valid.length];
+        const w1 = Math.sqrt((curr.re - prev.re) ** 2 + (curr.im - prev.im) ** 2);
+        const w2 = Math.sqrt((curr.re - next.re) ** 2 + (curr.im - next.im) ** 2);
+        const weight = w1 + w2;
+        sumRe += weight * curr.re;
+        sumIm += weight * curr.im;
+        totalWeight += weight;
+      }
+      if (totalWeight < 1e-12) {
+        sumRe = valid.reduce((s, v) => s + v.re, 0) / valid.length;
+        sumIm = valid.reduce((s, v) => s + v.im, 0) / valid.length;
+        return { re: sumRe, im: sumIm };
+      }
+      return { re: sumRe / totalWeight, im: sumIm / totalWeight };
+    }
+
+    // Quad faces
+    for (const [key, v] of vertexMap) {
+      const [i, j] = key.split(',').map(Number);
+      const c0 = vertexMap.get(`${i},${j}`);
+      const c1 = vertexMap.get(`${i+1},${j}`);
+      const c2 = vertexMap.get(`${i+1},${j+1}`);
+      const c3 = vertexMap.get(`${i},${j+1}`);
+      if (c0 && c1 && c2 && c3) {
+        embedding.set(`q:${i},${j}`, quadIncenter(c0, c1, c2, c3));
+      }
+    }
+
+    // Triangle faces
+    for (let fi = -k - 1; fi <= k; fi++) {
+      for (let fj = -k - 1; fj <= k; fj++) {
+        if (embedding.has(`q:${fi},${fj}`)) continue;
+        const corners = [
+          vertexMap.get(`${fi},${fj}`),
+          vertexMap.get(`${fi+1},${fj}`),
+          vertexMap.get(`${fi+1},${fj+1}`),
+          vertexMap.get(`${fi},${fj+1}`)
+        ];
+        const existing = corners.filter(c => c);
+        if (existing.length === 3) {
+          embedding.set(`t:${fi},${fj}`, triangleIncenter(existing[0], existing[1], existing[2]));
+        }
+      }
+    }
+
+    // Boundary polygon faces
+    const kVal = k;
+    const rightTip = vertexMap.get(`${kVal+1},0`);
+    const topTip = vertexMap.get(`0,${kVal+1}`);
+    const leftTip = vertexMap.get(`${-(kVal+1)},0`);
+    const bottomTip = vertexMap.get(`0,${-(kVal+1)}`);
+
+    const neVerts = [rightTip, topTip];
+    for (let s = 0; s <= kVal; s++) neVerts.push(vertexMap.get(`${s},${kVal-s}`));
+    const neInc = polygonIncenter(neVerts);
+    if (neInc) embedding.set('b:NE', neInc);
+
+    const nwVerts = [topTip, leftTip];
+    for (let s = 0; s <= kVal; s++) nwVerts.push(vertexMap.get(`${-s},${kVal-s}`));
+    const nwInc = polygonIncenter(nwVerts);
+    if (nwInc) embedding.set('b:NW', nwInc);
+
+    const swVerts = [leftTip, bottomTip];
+    for (let s = 0; s <= kVal; s++) swVerts.push(vertexMap.get(`${-kVal+s},${-s}`));
+    const swInc = polygonIncenter(swVerts);
+    if (swInc) embedding.set('b:SW', swInc);
+
+    const seVerts = [bottomTip, rightTip];
+    for (let s = 0; s <= kVal; s++) seVerts.push(vertexMap.get(`${kVal-s},${-s}`));
+    const seInc = polygonIncenter(seVerts);
+    if (seInc) embedding.set('b:SE', seInc);
+
+    return embedding;
   }
 
   // Compute dual graph embedding C(w) via reflection algorithm (Lemma 2.3)
@@ -4169,14 +4384,12 @@ Part of this research was performed while the author was visiting the Institute 
     return embedding;
   }
 
-  function renderTembDoubleDimerFaces(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k) {
+  function renderTembDoubleDimerFaces(ctx, dualEmbedding, scale, centerX, centerY, centerRe, centerIm) {
     if (!tembDoubleDimerConfig1 || tembDoubleDimerConfig1.length === 0) return;
     if (!tembDoubleDimerConfig2 || tembDoubleDimerConfig2.length === 0) return;
+    if (!dualEmbedding || dualEmbedding.size === 0) return;
 
     const N = currentSimulationN;
-
-    // Build circle pattern (dual graph vertices)
-    const circlePattern = buildCirclePattern(vertexMap, k);
 
     // Offset to align domino coords with T-graph face indices
     // Found empirically: X=0, Y=-2 works for various n values
@@ -4315,9 +4528,10 @@ Part of this research was performed while the author was visiting the Institute 
       y: centerY - (v.im - centerIm) * scale
     });
 
-    // Get face center from precomputed circle pattern
+    // Get face center from dual embedding
+    // faceKey is "i,j" but dualEmbedding uses "q:i,j" for quads
     function getFaceCenter(faceKey) {
-      return circlePattern.get(faceKey) || null;
+      return dualEmbedding.get(`q:${faceKey}`) || null;
     }
 
     // Get DD thickness
@@ -5562,21 +5776,19 @@ Part of this research was performed while the author was visiting the Institute 
       }
     }
 
-    // ========== DUAL GRAPH AND CIRCLES (independent toggles) ==========
+    // ========== DUAL GRAPH ==========
     const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
-    const showCircles = document.getElementById('show-circles-chk').checked;
+    const useNaiveEmbedding = document.getElementById('dual-naive-chk').checked;
 
-    // Build circle pattern (centroids) for circles display
-    let circlePattern = null;
-    if (showCircles) {
-      circlePattern = buildCirclePattern(vertexMap, k);
-    }
-
-    // Compute dual embedding via reflection algorithm (Lemma 2.3)
-    let dualEmbedding = null;
-    if (showDualGraph) {
+    // Compute dual embedding - either naive (incenter) or proper (reflection-based)
+    // Always compute (needed for dimer covering even if dual graph not shown)
+    let dualEmbedding;
+    if (useNaiveEmbedding) {
+      // Simple incenter-based embedding
+      dualEmbedding = computeIncenterEmbedding(vertexMap, k);
+    } else {
+      // Proper reflection-based embedding (Lemma 2.3)
       // Default position: centroid of NE diagonal chain vertices T(k,0), T(k-1,1), ..., T(0,k)
-      // This is closer to the diagonal edges than the tip midpoint, giving better reflections
       let defaultRe = 0, defaultIm = 0;
       let count = 0;
       for (let s = 0; s <= k; s++) {
@@ -5599,16 +5811,20 @@ Part of this research was performed while the author was visiting the Institute 
       dualEmbedding = computeDualEmbedding(vertexMap, k, defaultRe + offsetRe, defaultIm + offsetIm);
     }
 
+    // Dual graph V/E controls
+    const dualVertexSize = parseFloat(document.getElementById('dual-vertex-size').value) || 3;
+    const dualEdgeThickness = parseFloat(document.getElementById('dual-edge-thickness').value) || 1.5;
+
     // Helper to convert complex coords to screen
     const toScreenDual = (c) => ({
       x: centerX + (c.re - centerRe) * scale,
       y: centerY - (c.im - centerIm) * scale
     });
 
-    // Draw dual graph (if enabled) using reflection-based embedding
+    // Draw dual graph (if enabled)
     if (showDualGraph && dualEmbedding && dualEmbedding.size > 0) {
       ctx.strokeStyle = '#8B008B';  // Dark magenta (distinct from blue origami)
-      ctx.lineWidth = uniformEdgeWidth;
+      ctx.lineWidth = Math.max(dualEdgeThickness, scale / 300 * dualEdgeThickness);
       ctx.lineCap = 'round';
 
       // Map from T-embedding edge to list of adjacent faces
@@ -5695,7 +5911,7 @@ Part of this research was performed while the author was visiting the Institute 
       }
 
       // Draw dual vertices (regular ones first)
-      const dualVertexRadius = Math.max(vertexSizeControl, scale / 300 * vertexSizeControl);
+      const dualVertexRadius = Math.max(dualVertexSize, scale / 300 * dualVertexSize);
       ctx.fillStyle = '#8B008B';
       for (const [faceKey, c] of dualEmbedding) {
         if (faceKey === 'b:NE') continue;  // Draw w₀ last
@@ -5705,66 +5921,17 @@ Part of this research was performed while the author was visiting the Institute 
         ctx.fill();
       }
 
-      // Draw w₀ (starting face b:NE) highlighted on top
-      const w0 = dualEmbedding.get('b:NE');
-      if (w0) {
-        const p = toScreenDual(w0);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, dualVertexRadius * 4, 0, 2 * Math.PI);
-        ctx.fillStyle = '#E57200';  // UVA Orange
-        ctx.fill();
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
-
-    // Draw circles (independent of dual graph)
-    if (showCircles && circlePattern && circlePattern.size > 0) {
-      ctx.strokeStyle = 'rgba(139, 0, 139, 0.4)';  // Semi-transparent magenta
-      ctx.lineWidth = uniformEdgeWidth * 0.5;
-      for (const [faceKey, c] of circlePattern) {
-        const p = toScreenDual(c);
-        let radius = 0;
-        if (faceKey.startsWith('q:')) {
-          const match = faceKey.match(/q:(-?\d+),(-?\d+)/);
-          if (match) {
-            const fi = parseInt(match[1]), fj = parseInt(match[2]);
-            const corner = vertexMap.get(`${fi},${fj}`);
-            if (corner) {
-              const dx = corner.re - c.re;
-              const dy = corner.im - c.im;
-              radius = Math.sqrt(dx * dx + dy * dy) * scale;
-            }
-          }
-        } else if (faceKey.startsWith('t:')) {
-          const match = faceKey.match(/t:(-?\d+),(-?\d+)/);
-          if (match) {
-            const fi = parseInt(match[1]), fj = parseInt(match[2]);
-            const v = vertexMap.get(`${fi},${fj}`) || vertexMap.get(`${fi+1},${fj}`) ||
-                      vertexMap.get(`${fi+1},${fj+1}`) || vertexMap.get(`${fi},${fj+1}`);
-            if (v) {
-              const dx = v.re - c.re;
-              const dy = v.im - c.im;
-              radius = Math.sqrt(dx * dx + dy * dy) * scale;
-            }
-          }
-        } else if (faceKey.startsWith('b:')) {
-          let tipKey = '';
-          if (faceKey === 'b:NE') tipKey = `${k+1},0`;
-          else if (faceKey === 'b:NW') tipKey = `0,${k+1}`;
-          else if (faceKey === 'b:SW') tipKey = `${-(k+1)},0`;
-          else if (faceKey === 'b:SE') tipKey = `0,${-(k+1)}`;
-          const v = vertexMap.get(tipKey);
-          if (v) {
-            const dx = v.re - c.re;
-            const dy = v.im - c.im;
-            radius = Math.sqrt(dx * dx + dy * dy) * scale;
-          }
-        }
-        if (radius > 0) {
+      // Draw w₀ (starting face b:NE) highlighted on top - only for proper embedding
+      if (!useNaiveEmbedding) {
+        const w0 = dualEmbedding.get('b:NE');
+        if (w0) {
+          const p = toScreenDual(w0);
           ctx.beginPath();
-          ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
+          ctx.arc(p.x, p.y, dualVertexRadius * 4, 0, 2 * Math.PI);
+          ctx.fillStyle = '#E57200';  // UVA Orange
+          ctx.fill();
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 2;
           ctx.stroke();
         }
       }
@@ -5772,7 +5939,7 @@ Part of this research was performed while the author was visiting the Institute 
 
     // ========== DOUBLE DIMER FACES (on T-graph) ==========
     if (tembDoubleDimerActive && tembDoubleDimerConfig1.length > 0) {
-      renderTembDoubleDimerFaces(ctx, vertexMap, scale, centerX, centerY, centerRe, centerIm, k);
+      renderTembDoubleDimerFaces(ctx, dualEmbedding, scale, centerX, centerY, centerRe, centerIm);
     }
 
     // Draw selected vertex info overlay in upper left
@@ -6171,14 +6338,14 @@ Part of this research was performed while the author was visiting the Institute 
       const N = currentSimulationN;
       const finalK = Math.max(0, N - 2);
 
-      // Build 2D vertex map for circle pattern construction
+      // Build 2D vertex map for dual embedding
       const vertexMap2D = new Map();
       for (const v of tembData.vertices) {
         vertexMap2D.set(`${v.i},${v.j}`, { re: v.re, im: v.im });
       }
 
-      // Build circle pattern (2D positions)
-      const circlePattern = buildCirclePattern(vertexMap2D, finalK);
+      // 3D always uses naive (incenter) embedding for dimer face centers
+      const dualEmbedding = computeIncenterEmbedding(vertexMap2D, finalK);
 
       // Build z-coordinate map from origami
       const zMap = new Map();
@@ -6190,9 +6357,10 @@ Part of this research was performed while the author was visiting the Institute 
         }
       }
 
-      // Face center: x,y from circle pattern, z from centroid of corner z-values
+      // Face center: x,y from dual embedding, z from centroid of corner z-values
+      // faceKey is "i,j" but dualEmbedding uses "q:i,j" for quads
       function getFaceCenter3D(faceKey) {
-        const cp = circlePattern.get(faceKey);
+        const cp = dualEmbedding.get(`q:${faceKey}`);
         if (!cp) return null;
 
         // Get z from corner centroid
@@ -7340,17 +7508,54 @@ Part of this research was performed while the author was visiting the Institute 
     }
   });
 
-  // Initialize dual controls visibility
-  document.getElementById('dual-start-controls').style.display =
-    document.getElementById('show-dual-graph-chk').checked ? 'flex' : 'none';
-
-  // Circles checkbox re-render - works whenever T-embedding is displayed
-  document.getElementById('show-circles-chk').addEventListener('change', () => {
+  // Naive embedding checkbox
+  document.getElementById('dual-naive-chk').addEventListener('change', () => {
+    const isNaive = document.getElementById('dual-naive-chk').checked;
+    // Gray out drag and offset controls when naive
+    const dragLabel = document.getElementById('drag-w0-chk').parentElement;
+    const offsetControls = [
+      document.getElementById('dual-start-re'),
+      document.getElementById('dual-start-im')
+    ];
+    if (isNaive) {
+      dragLabel.style.opacity = '0.4';
+      dragLabel.style.pointerEvents = 'none';
+      document.getElementById('drag-w0-chk').checked = false;
+      offsetControls.forEach(el => {
+        el.style.opacity = '0.4';
+        el.disabled = true;
+      });
+    } else {
+      dragLabel.style.opacity = '1';
+      dragLabel.style.pointerEvents = 'auto';
+      offsetControls.forEach(el => {
+        el.style.opacity = '1';
+        el.disabled = false;
+      });
+    }
     if (wasmReady && getTembeddingLevelJSON) {
       if (mainViewIs3D) renderMain3D();
       else renderMain2DTemb();
     }
   });
+
+  // Dual V/E controls
+  document.getElementById('dual-vertex-size').addEventListener('input', () => {
+    if (wasmReady && getTembeddingLevelJSON && document.getElementById('show-dual-graph-chk').checked) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+  document.getElementById('dual-edge-thickness').addEventListener('input', () => {
+    if (wasmReady && getTembeddingLevelJSON && document.getElementById('show-dual-graph-chk').checked) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Initialize dual controls visibility
+  document.getElementById('dual-start-controls').style.display =
+    document.getElementById('show-dual-graph-chk').checked ? 'flex' : 'none';
 
   // ========== DRAG w₀ FUNCTIONALITY ==========
   let isDraggingW0 = false;
@@ -7975,7 +8180,6 @@ Part of this research was performed while the author was visiting the Institute 
     const showOrigami = document.getElementById('show-origami-chk').checked;
     const showCheckerboard = document.getElementById('show-checkerboard-chk').checked;
     const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
-    const showCircles = document.getElementById('show-circles-chk').checked;
 
     if (!wasmReady || !getTembeddingLevelJSON) {
       return null;
@@ -8206,22 +8410,20 @@ Part of this research was performed while the author was visiting the Institute 
       svgElements.unshift(...checkerElements);
     }
 
-    // Dual graph and circles overlay (independent toggles)
+    // Dual graph overlay
     // Use purple/magenta for dual graph to distinguish from blue origami
     const dualColor = '#8B008B';  // Dark magenta
-    const circleColor = 'rgba(139, 0, 139, 0.4)';  // Semi-transparent magenta
-    const dualEdgeWidth = uniformEdgeWidth;
-    const dualVertexRadius = Math.max(vertexSizeControl, scale / 300 * vertexSizeControl);
+    const dualVertexSizeVal = parseFloat(document.getElementById('dual-vertex-size').value) || 3;
+    const dualEdgeThicknessVal = parseFloat(document.getElementById('dual-edge-thickness').value) || 1.5;
+    const dualEdgeWidth = Math.max(dualEdgeThicknessVal, scale / 300 * dualEdgeThicknessVal);
+    const dualVertexRadius = Math.max(dualVertexSizeVal, scale / 300 * dualVertexSizeVal);
+    const useNaiveEmbedding = document.getElementById('dual-naive-chk').checked;
 
-    // Build circle pattern for circles (centroid-based, used only for circles)
-    let circlePattern = null;
-    if (showCircles) {
-      circlePattern = buildCirclePattern(vertexMap, k);
-    }
-
-    // Compute dual embedding via reflection algorithm (Lemma 2.3) for dual graph
-    let dualEmbedding = null;
-    if (showDualGraph) {
+    // Compute dual embedding - either naive (incenter) or proper (reflection-based)
+    let dualEmbedding;
+    if (useNaiveEmbedding) {
+      dualEmbedding = computeIncenterEmbedding(vertexMap, k);
+    } else {
       // Default position: centroid of NE diagonal chain vertices T(k,0), T(k-1,1), ..., T(0,k)
       let defaultRe = 0, defaultIm = 0;
       let defaultCount = 0;
@@ -8326,47 +8528,30 @@ Part of this research was performed while the author was visiting the Institute 
         }
       }
 
-      // Draw dual vertices
+      // Draw dual vertices (regular ones first)
       for (const [faceKey, c] of dualEmbedding) {
+        if (faceKey === 'b:NE') continue;  // Draw w₀ last if not naive
         const p = toScreen(c.re, c.im);
         svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${dualVertexRadius.toFixed(2)}" fill="${dualColor}"/>`);
       }
 
-    }
-
-    // Draw circles (independent of dual graph)
-    if (showCircles && circlePattern) {
-      for (const [faceKey, c] of circlePattern) {
-        const p = toScreen(c.re, c.im);
-        let circleRadius = 0;
-        if (faceKey.startsWith('q:')) {
-          const match = faceKey.match(/q:(-?\d+),(-?\d+)/);
-          if (match) {
-            const fi = parseInt(match[1]), fj = parseInt(match[2]);
-            const corner = vertexMap.get(`${fi},${fj}`);
-            if (corner) {
-              const dx = corner.re - c.re;
-              const dy = corner.im - c.im;
-              circleRadius = Math.sqrt(dx * dx + dy * dy) * scale;
-            }
-          }
-        } else if (faceKey.startsWith('t:')) {
-          const match = faceKey.match(/t:(-?\d+),(-?\d+)/);
-          if (match) {
-            const fi = parseInt(match[1]), fj = parseInt(match[2]);
-            const v = vertexMap.get(`${fi},${fj}`) || vertexMap.get(`${fi+1},${fj}`) ||
-                      vertexMap.get(`${fi+1},${fj+1}`) || vertexMap.get(`${fi},${fj+1}`);
-            if (v) {
-              const dx = v.re - c.re;
-              const dy = v.im - c.im;
-              circleRadius = Math.sqrt(dx * dx + dy * dy) * scale;
-            }
-          }
+      // Draw w₀ (starting face b:NE) highlighted - only for proper embedding
+      if (!useNaiveEmbedding) {
+        const w0 = dualEmbedding.get('b:NE');
+        if (w0) {
+          const p = toScreen(w0.re, w0.im);
+          const w0Radius = dualVertexRadius * 4;
+          svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${w0Radius.toFixed(2)}" fill="#E57200" stroke="#000" stroke-width="2"/>`);
         }
-        if (circleRadius > 0) {
-          svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${circleRadius.toFixed(2)}" fill="none" stroke="${circleColor}" stroke-width="${(dualEdgeWidth * 0.5).toFixed(2)}"/>`);
+      } else {
+        // For naive, just draw b:NE as a regular vertex
+        const w0 = dualEmbedding.get('b:NE');
+        if (w0) {
+          const p = toScreen(w0.re, w0.im);
+          svgElements.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${dualVertexRadius.toFixed(2)}" fill="${dualColor}"/>`);
         }
       }
+
     }
 
     // Double dimer XOR on T-graph (if active)
@@ -8419,9 +8604,6 @@ Part of this research was performed while the author was visiting the Institute 
         dominoSet2.set(dominoKey(d), d);
       }
 
-      // Build circle pattern (dual graph vertices via reflection)
-      const circlePattern = buildCirclePattern(vertexMap);
-
       // Check view mode: single (config1 only) or double (XOR)
       const viewMode = document.getElementById('dd-view-mode')?.value || 'double';
       let dominosToDraw;
@@ -8447,9 +8629,10 @@ Part of this research was performed while the author was visiting the Institute 
         dominosToDraw = xorDominoes;
       }
 
-      // Get face center from precomputed circle pattern
+      // Get face center from dual embedding
+      // faceKey is "i,j" but dualEmbedding uses "q:i,j" for quads
       function getFaceCenter(faceKey) {
-        return circlePattern.get(faceKey) || null;
+        return dualEmbedding.get(`q:${faceKey}`) || null;
       }
 
       // Get DD thickness
