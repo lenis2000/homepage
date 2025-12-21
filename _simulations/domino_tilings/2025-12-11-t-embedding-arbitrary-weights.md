@@ -285,10 +285,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <label style="display: flex; align-items: center; gap: 6px;">
       <strong>Weight Type:</strong>
       <select id="weight-preset-select" style="min-width: 140px;" aria-label="Weight type selection">
-        <option value="random-iid" selected>Random IID</option>
+        <option value="all-ones" selected>All 1's (Uniform)</option>
+        <option value="random-iid">Random IID</option>
         <option value="random-layered">Random Layered</option>
         <option value="random-gamma">Random Gamma</option>
-        <option value="all-ones">All 1's (Uniform)</option>
         <option value="periodic">k × l Periodic</option>
       </select>
     </label>
@@ -540,6 +540,15 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-checkerboard-chk">
             <input type="checkbox" id="show-checkerboard-chk" style="display: none;" aria-label="Checkerboard coloring">
             <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Checkerboard</span>
+          </label>
+          <span style="width: 1px; background: #ddd; margin: 2px 0;"></span>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-dual-graph-chk">
+            <input type="checkbox" id="show-dual-graph-chk" style="display: none;" checked aria-label="Show dual graph">
+            <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Dual</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: background 0.15s;" class="overlay-toggle" data-for="show-circles-chk">
+            <input type="checkbox" id="show-circles-chk" style="display: none;" aria-label="Show circles">
+            <span style="font-size: 11px; font-weight: 600; color: #666; letter-spacing: 0.02em; user-select: none;">Circles</span>
           </label>
         </div>
         <span style="width: 1px; height: 20px; background: #ccc;"></span>
@@ -2248,11 +2257,9 @@ Part of this research was performed while the author was visiting the Institute 
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
-      // Initialize and compute with default Random IID weights
+      // Initialize and compute with default All 1's (uniform) weights
       initAztecGraph(n);
-      seedRng(42);
-      setRandomIIDParams(0.5, 2.0);
-      setAztecWeightMode(1);  // Random IID mode
+      setAztecWeightMode(0);  // All 1's mode
       computeAndDisplay();
 
       // Precompute all T-embedding levels for stepwise UI (only needed for small n)
@@ -5349,8 +5356,8 @@ Part of this research was performed while the author was visiting the Institute 
     }
 
     // ========== DUAL GRAPH AND CIRCLES (independent toggles) ==========
-    const showDualGraph = document.getElementById('show-dual-graph-chk')?.checked;
-    const showCircles = document.getElementById('show-circles-chk')?.checked;
+    const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
+    const showCircles = document.getElementById('show-circles-chk').checked;
 
     // Build circle pattern if either is enabled
     let circlePattern = null;
@@ -5406,13 +5413,29 @@ Part of this research was performed while the author was visiting the Institute 
             if (c00 && c11 && (c10 !== c01)) addFaceToEdge(fi, fj, fi+1, fj+1, faceKey);
           }
         } else if (faceKey === 'b:NE') {
-          for (let s = 0; s <= k; s++) addFaceToEdge(s, k-s+1, s+1, k-s, faceKey);
+          // Interior diagonal chain: (k,0) -> (k-1,1) -> ... -> (0,k)
+          for (let s = 0; s < k; s++) addFaceToEdge(k-s, s, k-s-1, s+1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(k+1, 0, k, 0, faceKey);  // rightTip to (k,0) - shared with b:SE
+          addFaceToEdge(0, k+1, 0, k, faceKey);  // topTip to (0,k) - shared with b:NW
         } else if (faceKey === 'b:NW') {
-          for (let s = 0; s <= k; s++) addFaceToEdge(-s-1, k-s, -s, k-s+1, faceKey);
+          // Interior diagonal chain: (0,k) -> (-1,k-1) -> ... -> (-k,0)
+          for (let s = 0; s < k; s++) addFaceToEdge(-s, k-s, -s-1, k-s-1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(0, k+1, 0, k, faceKey);  // topTip to (0,k) - shared with b:NE
+          addFaceToEdge(-(k+1), 0, -k, 0, faceKey);  // leftTip to (-k,0) - shared with b:SW
         } else if (faceKey === 'b:SW') {
-          for (let s = 0; s <= k; s++) addFaceToEdge(-s, -k+s-1, -s-1, -k+s, faceKey);
+          // Interior diagonal chain: (-k,0) -> (-k+1,-1) -> ... -> (0,-k)
+          for (let s = 0; s < k; s++) addFaceToEdge(-k+s, -s, -k+s+1, -s-1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(-(k+1), 0, -k, 0, faceKey);  // leftTip to (-k,0) - shared with b:NW
+          addFaceToEdge(0, -(k+1), 0, -k, faceKey);  // bottomTip to (0,-k) - shared with b:SE
         } else if (faceKey === 'b:SE') {
-          for (let s = 0; s <= k; s++) addFaceToEdge(s+1, -k+s, s, -k+s-1, faceKey);
+          // Interior diagonal chain: (0,-k) -> (1,-k+1) -> ... -> (k,0)
+          for (let s = 0; s < k; s++) addFaceToEdge(s, -k+s, s+1, -k+s+1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(0, -(k+1), 0, -k, faceKey);  // bottomTip to (0,-k) - shared with b:SW
+          addFaceToEdge(k+1, 0, k, 0, faceKey);  // rightTip to (k,0) - shared with b:NE
         }
       }
 
@@ -7044,6 +7067,22 @@ Part of this research was performed while the author was visiting the Institute 
     }
   });
 
+  // Dual graph checkbox re-render - works whenever T-embedding is displayed
+  document.getElementById('show-dual-graph-chk').addEventListener('change', () => {
+    if (wasmReady && getTembeddingLevelJSON) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
+  // Circles checkbox re-render - works whenever T-embedding is displayed
+  document.getElementById('show-circles-chk').addEventListener('change', () => {
+    if (wasmReady && getTembeddingLevelJSON) {
+      if (mainViewIs3D) renderMain3D();
+      else renderMain2DTemb();
+    }
+  });
+
   // 2D/3D toggle button
   document.getElementById('toggle-2d-3d-btn').addEventListener('click', () => {
     mainViewIs3D = !mainViewIs3D;
@@ -7592,8 +7631,8 @@ Part of this research was performed while the author was visiting the Institute 
     // Read current 2D overlay controls
     const showOrigami = document.getElementById('show-origami-chk').checked;
     const showCheckerboard = document.getElementById('show-checkerboard-chk').checked;
-    const showDualGraph = document.getElementById('show-dual-graph-chk')?.checked || false;
-    const showCircles = document.getElementById('show-circles-chk')?.checked || false;
+    const showDualGraph = document.getElementById('show-dual-graph-chk').checked;
+    const showCircles = document.getElementById('show-circles-chk').checked;
 
     if (!wasmReady || !getTembeddingLevelJSON) {
       return null;
@@ -7874,6 +7913,30 @@ Part of this research was performed while the author was visiting the Institute 
             if (c10 && c01 && (c00 !== c11)) addFaceToEdge(fi+1, fj, fi, fj+1, faceKey);
             if (c00 && c11 && (c10 !== c01)) addFaceToEdge(fi, fj, fi+1, fj+1, faceKey);
           }
+        } else if (faceKey === 'b:NE') {
+          // Interior diagonal chain: (k,0) -> (k-1,1) -> ... -> (0,k)
+          for (let s = 0; s < k; s++) addFaceToEdge(k-s, s, k-s-1, s+1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(k+1, 0, k, 0, faceKey);  // rightTip to (k,0) - shared with b:SE
+          addFaceToEdge(0, k+1, 0, k, faceKey);  // topTip to (0,k) - shared with b:NW
+        } else if (faceKey === 'b:NW') {
+          // Interior diagonal chain: (0,k) -> (-1,k-1) -> ... -> (-k,0)
+          for (let s = 0; s < k; s++) addFaceToEdge(-s, k-s, -s-1, k-s-1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(0, k+1, 0, k, faceKey);  // topTip to (0,k) - shared with b:NE
+          addFaceToEdge(-(k+1), 0, -k, 0, faceKey);  // leftTip to (-k,0) - shared with b:SW
+        } else if (faceKey === 'b:SW') {
+          // Interior diagonal chain: (-k,0) -> (-k+1,-1) -> ... -> (0,-k)
+          for (let s = 0; s < k; s++) addFaceToEdge(-k+s, -s, -k+s+1, -s-1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(-(k+1), 0, -k, 0, faceKey);  // leftTip to (-k,0) - shared with b:NW
+          addFaceToEdge(0, -(k+1), 0, -k, faceKey);  // bottomTip to (0,-k) - shared with b:SE
+        } else if (faceKey === 'b:SE') {
+          // Interior diagonal chain: (0,-k) -> (1,-k+1) -> ... -> (k,0)
+          for (let s = 0; s < k; s++) addFaceToEdge(s, -k+s, s+1, -k+s+1, faceKey);
+          // Spoke edges to tips (shared with adjacent boundary polygons)
+          addFaceToEdge(0, -(k+1), 0, -k, faceKey);  // bottomTip to (0,-k) - shared with b:SW
+          addFaceToEdge(k+1, 0, k, 0, faceKey);  // rightTip to (k,0) - shared with b:NE
         }
       }
 
