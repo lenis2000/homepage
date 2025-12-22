@@ -7,8 +7,8 @@ coauthors:
   - name: Jeanne Scott
     noweb: true
 comments: false
-categories: blog math preprint
-# journal-ref: submitted to Forum Sigma
+categories: blog math paper
+journal-ref: Forum Math. Sigma, to appear
 # journal-web:
 image: __STORAGE_URL__/img/papers/YF.png
 image-alt: The Young-Fibonacci lattice and cotransition weights defined by an arbitrary harmonic function
