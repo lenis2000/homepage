@@ -858,11 +858,11 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
   <div id="mathematica-content" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <p style="font-size: 12px; margin-bottom: 10px;">
-      The XX verification formula checks that each interior white vertex satisfies:
+      The XX verification formula checks that <strong>all</strong> interior vertices satisfy XX + γ = 0:
     </p>
-    <pre style="background: #f5f5f5; padding: 8px; border: 1px solid #ccc; font-size: 11px; margin-bottom: 10px;">XX[n1, n2, n3, n4][z] = ((z - n1)(z - n3)) / ((n2 - z)(n4 - z))</pre>
+    <pre style="background: #f5f5f5; padding: 8px; border: 1px solid #ccc; font-size: 11px; margin-bottom: 10px;">XX[n1_, n2_, n3_, n4_][z_] := ((z - n1)(z - n3)) / ((n2 - z)(n4 - z))</pre>
     <p style="font-size: 11px; color: #666; margin-bottom: 10px;">
-      where n1, n2, n3, n4 are the four neighbors going counterclockwise around z, with n1 chosen so that edge z→n1 has the BLACK face on the right.
+      where n1, n2, n3, n4 are neighbors in CCW order. The γ level depends on parity: <strong>odd parity</strong> (i+j+k odd) uses γ[k], <strong>even parity</strong> uses γ[k+1].
     </p>
     <div style="margin-bottom: 10px; position: relative;">
       <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">α/β parameters:</div>
@@ -2439,18 +2439,19 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
+      // DISABLED FOR DEBUGGING - auto-compute on load
       // Initialize with selected preset using Master Weight Buffer
-      initAztecGraph(n);
-      applyMasterWeightsToGeometry(n);
-      computeAndDisplay();
+      // initAztecGraph(n);
+      // applyMasterWeightsToGeometry(n);
+      // computeAndDisplay();
 
       // Precompute all T-embedding levels for stepwise UI (only needed for small n)
-      if (n <= STEP_BY_STEP_MAX_N) {
-        for (let k = 0; k <= maxK; k++) {
-          let ptr = getTembeddingLevelJSON(k);
-          freeString(ptr);
-        }
-      }
+      // if (n <= STEP_BY_STEP_MAX_N) {
+      //   for (let k = 0; k <= maxK; k++) {
+      //     let ptr = getTembeddingLevelJSON(k);
+      //     freeString(ptr);
+      //   }
+      // }
 
       // Now hide loading message
       loadingMsg.style.display = 'none';
@@ -5300,63 +5301,28 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Build verification code per level
+    // Match Python: only check interior vertices (|i|+|j| < k) with axis-aligned neighbors
+    // Alpha/beta boundary checks are not part of the weight condition verification
     const maxCheckK = Math.min(maxK, 5);
     const levelData = [];
 
-    for (let k = 0; k <= maxCheckK; k++) {
+    // Start at k=1 (k=0 has no interior vertices since |i|+|j| < 0 is impossible)
+    for (let k = 1; k <= maxCheckK; k++) {
       const vertices = tembByLevel[k];
       if (!vertices) continue;
 
       const lines = [];
 
-      // Alpha faces (boundary) - neighbors based on T_k graph structure
-      // alphaR at (k,0): neighbors are (k+1,0), (k-1,1), (k-1,0), (k-1,-1)
-      // alphaT at (0,k): neighbors are (1,k-1), (0,k+1), (-1,k-1), (0,k-1)
-      // alphaL at (-k,0): neighbors are (-k-1,0), (-k+1,-1), (-k+1,0), (-k+1,1)
-      // alphaB at (0,-k): neighbors are (1,-k+1), (0,-k+1), (-1,-k+1), (0,-k-1)
-      if (k >= 1) {
-        // alphaR[k]
-        lines.push(`XX[T[${k}][${k+1},0], T[${k}][${k-1},1], T[${k}][${k-1},0], T[${k}][${k-1},-1]][T[${k}][${k},0]] + alphaR[${k}]`);
-        lines.push(`XX[T[${k}][${k-1},1], T[${k}][${k-1},0], T[${k}][${k-1},-1], T[${k}][${k+1},0]][T[${k}][${k},0]] + alphaR[${k}]`);
-
-        // alphaT[k]
-        lines.push(`XX[T[${k}][1,${k-1}], T[${k}][0,${k+1}], T[${k}][-1,${k-1}], T[${k}][0,${k-1}]][T[${k}][0,${k}]] + alphaT[${k}]`);
-        lines.push(`XX[T[${k}][0,${k+1}], T[${k}][-1,${k-1}], T[${k}][0,${k-1}], T[${k}][1,${k-1}]][T[${k}][0,${k}]] + alphaT[${k}]`);
-
-        // alphaL[k]
-        lines.push(`XX[T[${k}][${-k-1},0], T[${k}][${-k+1},-1], T[${k}][${-k+1},0], T[${k}][${-k+1},1]][T[${k}][${-k},0]] + alphaL[${k}]`);
-        lines.push(`XX[T[${k}][${-k+1},-1], T[${k}][${-k+1},0], T[${k}][${-k+1},1], T[${k}][${-k-1},0]][T[${k}][${-k},0]] + alphaL[${k}]`);
-
-        // alphaB[k]
-        lines.push(`XX[T[${k}][1,${-k+1}], T[${k}][0,${-k+1}], T[${k}][-1,${-k+1}], T[${k}][0,${-k-1}]][T[${k}][0,${-k}]] + alphaB[${k}]`);
-        lines.push(`XX[T[${k}][0,${-k+1}], T[${k}][-1,${-k+1}], T[${k}][0,${-k-1}], T[${k}][1,${-k+1}]][T[${k}][0,${-k}]] + alphaB[${k}]`);
-
-        // Beta faces - at (i,j) where |i|+|j|=k, i≠0, j≠0
-        // For beta(i,j) in quadrant i>0,j>0: neighbors (i+1,j-1), (i-1,j+1), (i-1,j), (i,j-1)
-        for (let i = 1; i < k; i++) {
-          const j = k - i;
-          // First quadrant: (i, j)
-          lines.push(`XX[T[${k}][${i+1},${j-1}], T[${k}][${i-1},${j+1}], T[${k}][${i-1},${j}], T[${k}][${i},${j-1}]][T[${k}][${i},${j}]] + beta[${k}][${i},${j}]`);
-          lines.push(`XX[T[${k}][${i-1},${j+1}], T[${k}][${i-1},${j}], T[${k}][${i},${j-1}], T[${k}][${i+1},${j-1}]][T[${k}][${i},${j}]] + beta[${k}][${i},${j}]`);
-
-          // Second quadrant: (-i, j)
-          lines.push(`XX[T[${k}][${-i-1},${j-1}], T[${k}][${-i+1},${j+1}], T[${k}][${-i},${j-1}], T[${k}][${-i+1},${j}]][T[${k}][${-i},${j}]] + beta[${k}][${-i},${j}]`);
-          lines.push(`XX[T[${k}][${-i+1},${j+1}], T[${k}][${-i},${j-1}], T[${k}][${-i+1},${j}], T[${k}][${-i-1},${j-1}]][T[${k}][${-i},${j}]] + beta[${k}][${-i},${j}]`);
-
-          // Third quadrant: (-i, -j)
-          lines.push(`XX[T[${k}][${-i-1},${-j+1}], T[${k}][${-i+1},${-j-1}], T[${k}][${-i+1},${-j}], T[${k}][${-i},${-j+1}]][T[${k}][${-i},${-j}]] + beta[${k}][${-i},${-j}]`);
-          lines.push(`XX[T[${k}][${-i+1},${-j-1}], T[${k}][${-i+1},${-j}], T[${k}][${-i},${-j+1}], T[${k}][${-i-1},${-j+1}]][T[${k}][${-i},${-j}]] + beta[${k}][${-i},${-j}]`);
-
-          // Fourth quadrant: (i, -j)
-          lines.push(`XX[T[${k}][${i+1},${-j+1}], T[${k}][${i-1},${-j-1}], T[${k}][${i},${-j+1}], T[${k}][${i-1},${-j}]][T[${k}][${i},${-j}]] + beta[${k}][${i},${-j}]`);
-          lines.push(`XX[T[${k}][${i-1},${-j-1}], T[${k}][${i},${-j+1}], T[${k}][${i-1},${-j}], T[${k}][${i+1},${-j+1}]][T[${k}][${i},${-j}]] + beta[${k}][${i},${-j}]`);
-        }
-      }
-
       // Gamma faces (interior) - axis-aligned neighbors
+      // Key insight: gamma level depends on parity:
+      // - Odd parity (i+j+k odd): use gamma[k][i,j]
+      // - Even parity (i+j+k even): use gamma[k+1][i,j]
       for (const key of Object.keys(vertices)) {
         const [iStr, jStr] = key.split(',');
         const i = parseInt(iStr), j = parseInt(jStr);
+
+        // Only check interior vertices (match Python: abs(i) + abs(j) < k)
+        if (Math.abs(i) + Math.abs(j) >= k) continue;
 
         const dirs = [[1,0], [0,1], [-1,0], [0,-1]];
         let allExist = true;
@@ -5365,15 +5331,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         }
         if (!allExist) continue;
 
+        // Determine correct gamma level based on parity
+        const parity = (i + j + k) % 2;
+        const gammaLevel = (parity === 1) ? k : k + 1;
+
         const z = `T[${k}][${i},${j}]`;
         const nR = `T[${k}][${i+1},${j}]`;
         const nU = `T[${k}][${i},${j+1}]`;
         const nL = `T[${k}][${i-1},${j}]`;
         const nD = `T[${k}][${i},${j-1}]`;
-        const wt = getWeightName(k, i, j);
+        const wt = `gamma[${gammaLevel}][${i},${j}]`;
 
         lines.push(`XX[${nR}, ${nU}, ${nL}, ${nD}][${z}] + ${wt}`);
-        lines.push(`XX[${nU}, ${nL}, ${nD}, ${nR}][${z}] + ${wt}`);
       }
 
       if (lines.length > 0) {
