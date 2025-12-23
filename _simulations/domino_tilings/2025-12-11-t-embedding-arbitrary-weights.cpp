@@ -4175,14 +4175,15 @@ void randomizeAztecWeights() {
 }
 
 // Apply external weights from JS Master Weight Buffer
-// Buffer is (2*N) x (2*N) array in row-major order, indexed as buffer[i * dim + j]
-// Maps edge midpoint (x, y) to matrix index: i = floor(y + N), j = floor(x + N)
+// Buffer is (4*N) x (4*N) array in row-major order, indexed as buffer[i * dim + j]
+// Maps edge midpoint (x, y) to matrix index: i = floor(2*(y + N)), j = floor(2*(x + N))
+// Using 2x multiplier preserves half-integer distinctions (horizontal vs vertical edges)
 EMSCRIPTEN_KEEPALIVE
 void applyExternalWeights(double* weightBuffer, int bufferSize) {
     if (g_aztecEdges.empty() || weightBuffer == nullptr) return;
 
     int N = g_aztecLevel;
-    int dim = 2 * N;
+    int dim = 4 * N;  // 4N x 4N matrix to preserve half-integer distinctions
 
     // Validate buffer size
     if (bufferSize < dim * dim) return;
@@ -4201,11 +4202,12 @@ void applyExternalWeights(double* weightBuffer, int bufferSize) {
         double midX = (x1 + x2) / 2.0;
         double midY = (y1 + y2) / 2.0;
 
-        // Map to matrix indices (matching Engine B convention)
-        // Engine B uses 0-indexed (2N x 2N) matrix
-        // Geometry coords: midX, midY in range approx [-N, N]
-        int i = static_cast<int>(std::floor(midY + N));
-        int j = static_cast<int>(std::floor(midX + N));
+        // Map to matrix indices using 2x multiplier
+        // This preserves half-integer vs integer distinction:
+        //   midY = 5.5 -> floor(2*11.5) = 23
+        //   midY = 5.0 -> floor(2*11.0) = 22
+        int i = static_cast<int>(std::floor(2.0 * (midY + N)));
+        int j = static_cast<int>(std::floor(2.0 * (midX + N)));
 
         // Clamp to valid range
         if (i < 0) i = 0;

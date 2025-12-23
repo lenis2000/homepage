@@ -3316,7 +3316,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Returns: Float64Array of length dim*dim, indexed as weights[i * dim + j]
   //
   function generateMasterWeights(N, mode, params = {}) {
-    const dim = 2 * N;
+    // Use 4N x 4N matrix to preserve half-integer distinctions
+    // C++ uses: i = floor(2*(midY + N)), j = floor(2*(midX + N))
+    const dim = 4 * N;
     const weights = new Float64Array(dim * dim);
     const seed = params.seed || 42;
     const rng = createSeededRNG(seed);
@@ -3342,26 +3344,30 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const regime = params.regime || 3;
       for (let i = 0; i < dim; i++) {
         for (let j = 0; j < dim; j++) {
-          // Diagonal index: map (i,j) to diagonal in [-N+1, N-1]
-          const diagIndex = (i - N) + (j - N);
+          // Diagonal index: map (i,j) to diagonal
+          // With 4N grid, divide by 2 to get back to 2N scale for diagonal calculation
+          const diagIndex = (i/2 - N) + (j/2 - N);
           weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
         }
       }
 
     } else if (mode === 'gamma') {
-      // Gamma: Engine B convention - even rows have weights, odd rows = 1.0
+      // Gamma: Engine B convention - even rows (in 2N scale) have weights
+      // In 4N scale, rows 0,1 -> old row 0, rows 2,3 -> old row 1, etc.
       const alpha = params.alpha || 0.2;
       const beta = params.beta || 0.25;
       for (let i = 0; i < dim; i++) {
-        if (i % 2 === 0) {
+        const oldRow = Math.floor(i / 2);
+        if (oldRow % 2 === 0) {
           for (let j = 0; j < dim; j++) {
-            // j even → beta, j odd → alpha
-            weights[i * dim + j] = (j % 2 === 0)
+            const oldCol = Math.floor(j / 2);
+            // oldCol even → beta, oldCol odd → alpha
+            weights[i * dim + j] = (oldCol % 2 === 0)
               ? gammaRandom(beta, 1.0, rng)
               : gammaRandom(alpha, 1.0, rng);
           }
         }
-        // Odd rows stay 1.0
+        // Odd old-rows stay 1.0
       }
 
     } else if (mode === 'periodic') {
@@ -3370,17 +3376,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const l = params.l || 2;
       const alphaW = params.alphaWeights || [[1, 1], [1, 1]];
       const betaW = params.betaWeights || [[1, 1], [1, 1]];
-      // Note: gammaWeights affect T-embedding but not the ab_gamma matrix format directly
 
       for (let i = 0; i < dim; i++) {
-        if (i % 2 === 0) {
+        const oldRow = Math.floor(i / 2);
+        if (oldRow % 2 === 0) {
           for (let j = 0; j < dim; j++) {
-            const diagI = Math.floor(i / 2);
-            const diagJ = Math.floor(j / 2);
+            const oldCol = Math.floor(j / 2);
+            const diagI = Math.floor(oldRow / 2);
+            const diagJ = Math.floor(oldCol / 2);
             const pi = ((diagI % k) + k) % k;
             const pj = ((diagJ % l) + l) % l;
 
-            if (j % 2 === 0) {
+            if (oldCol % 2 === 0) {
               // beta weight
               weights[i * dim + j] = betaW[pi][pj];
             } else {
@@ -3389,7 +3396,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
             }
           }
         }
-        // Odd rows stay 1.0
+        // Odd old-rows stay 1.0
       }
     }
 
