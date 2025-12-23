@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_applyExternalWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -4055,6 +4055,55 @@ char* getAztecGraphJSON() {
 EMSCRIPTEN_KEEPALIVE
 void randomizeAztecWeights() {
     randomizeAztecWeightsInternal();
+}
+
+// Apply external weights from JS Master Weight Buffer
+// Buffer is (2*N) x (2*N) array in row-major order, indexed as buffer[i * dim + j]
+// Maps edge midpoint (x, y) to matrix index: i = floor(y + N), j = floor(x + N)
+EMSCRIPTEN_KEEPALIVE
+void applyExternalWeights(double* weightBuffer, int bufferSize) {
+    if (g_aztecEdges.empty() || weightBuffer == nullptr) return;
+
+    int N = g_aztecLevel;
+    int dim = 2 * N;
+
+    // Validate buffer size
+    if (bufferSize < dim * dim) return;
+
+    const double MIN_WEIGHT = 1e-10;  // Ensure strictly positive
+
+    for (size_t edgeIdx = 0; edgeIdx < g_aztecEdges.size(); edgeIdx++) {
+        AztecEdge& edge = g_aztecEdges[edgeIdx];
+        if (!edge.active) continue;
+
+        // Get edge midpoint from vertex coordinates
+        double x1 = g_aztecVertices[edge.v1].x;
+        double y1 = g_aztecVertices[edge.v1].y;
+        double x2 = g_aztecVertices[edge.v2].x;
+        double y2 = g_aztecVertices[edge.v2].y;
+        double midX = (x1 + x2) / 2.0;
+        double midY = (y1 + y2) / 2.0;
+
+        // Map to matrix indices (matching Engine B convention)
+        // Engine B uses 0-indexed (2N x 2N) matrix
+        // Geometry coords: midX, midY in range approx [-N, N]
+        int i = static_cast<int>(std::floor(midY + N));
+        int j = static_cast<int>(std::floor(midX + N));
+
+        // Clamp to valid range
+        if (i < 0) i = 0;
+        if (i >= dim) i = dim - 1;
+        if (j < 0) j = 0;
+        if (j >= dim) j = dim - 1;
+
+        int idx = i * dim + j;
+        double w = weightBuffer[idx];
+
+        // Ensure weight is strictly positive
+        if (w < MIN_WEIGHT) w = MIN_WEIGHT;
+
+        edge.setWeight(mp_real(w));
+    }
 }
 
 // Set weights based on mode:

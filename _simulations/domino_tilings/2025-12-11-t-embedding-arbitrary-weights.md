@@ -1264,7 +1264,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getOrigamiLevelJSON;
-  let randomizeAztecWeights, setAztecWeightMode, setRandomIIDParams, setLayeredParams, setGammaParams;
+  let randomizeAztecWeights, applyExternalWeights, setAztecWeightMode, setRandomIIDParams, setLayeredParams, setGammaParams;
   let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
   let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
@@ -2407,6 +2407,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       getOrigamiLevelJSON = Module.cwrap('getOrigamiLevelJSON', 'number', ['number']);
       randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
+      applyExternalWeights = Module.cwrap('applyExternalWeights', null, ['number', 'number']);
       setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
       setRandomIIDParams = Module.cwrap('setRandomIIDParams', null, ['number', 'number']);
       setIIDDistribution = Module.cwrap('setIIDDistribution', null, ['number', 'number', 'number']);
@@ -2438,55 +2439,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
-      // Initialize with selected preset (default is random-iid)
+      // Initialize with selected preset using Master Weight Buffer
       initAztecGraph(n);
-      const preset = document.getElementById('weight-preset-select').value;
-      if (preset === 'all-ones') {
-        currentWeightMode = 0;
-        setAztecWeightMode(0);
-      } else if (preset === 'random-iid') {
-        const seed = parseInt(document.getElementById('random-seed').value) || 42;
-        seedRng(seed);
-        const distType = document.getElementById('iid-distribution-select').value;
-        if (distType === 'uniform') {
-          const minVal = parseFloat(document.getElementById('iid-min').value) || 0.5;
-          const maxVal = parseFloat(document.getElementById('iid-max').value) || 2.0;
-          setIIDDistribution(0, 0, 0);
-          setRandomIIDParams(minVal, maxVal);
-        } else if (distType === 'exponential') {
-          setIIDDistribution(1, 1.0, 0);
-        } else if (distType === 'pareto') {
-          const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-          const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-          setIIDDistribution(2, alpha, xmin);
-        } else if (distType === 'geometric') {
-          const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-          setIIDDistribution(3, p, 0);
-        }
-        currentWeightMode = 1;
-        setAztecWeightMode(1);
-      } else if (preset === 'random-layered') {
-        const seed = parseInt(document.getElementById('layered-seed').value) || 42;
-        seedRng(seed);
-        const params = getLayeredParams();
-        setLayeredParams(params.regime, params.p1, params.p2, params.prob1, params.prob2);
-        currentWeightMode = 2;
-        setAztecWeightMode(2);
-      } else if (preset === 'random-gamma') {
-        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
-        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-        const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
-        seedRng(seed);
-        setGammaParams(alpha, beta);
-        currentWeightMode = 3;
-        setAztecWeightMode(3);
-      } else if (preset === 'periodic') {
-        currentWeightMode = 4;
-        setAztecWeightMode(4);
-      } else {
-        currentWeightMode = 0;
-        setAztecWeightMode(0);
-      }
+      applyMasterWeightsToGeometry(n);
       computeAndDisplay();
 
       // Precompute all T-embedding levels for stepwise UI (only needed for small n)
@@ -3510,6 +3465,30 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       : await simulateAztecIIDDirect(N, weightsPtr);
     shufflingModule._free(weightsPtr);
     return resultPtr;
+  }
+
+  // Helper: Apply master weights to geometry engine (Engine A)
+  // Uses generateMasterWeights() as single source of truth
+  function applyMasterWeightsToGeometry(N) {
+    if (!wasmReady) return;
+
+    const { mode, params } = getCurrentWeightParams();
+    const masterWeights = generateMasterWeights(N, mode, params);
+
+    // Allocate memory in geometry engine WASM heap
+    const numWeights = masterWeights.length;
+    const ptr = Module._malloc(numWeights * 8);
+
+    // Copy weights to WASM heap
+    for (let i = 0; i < numWeights; i++) {
+      Module.setValue(ptr + i * 8, masterWeights[i], 'double');
+    }
+
+    // Apply to geometry engine
+    applyExternalWeights(ptr, numWeights);
+
+    // Free memory
+    Module._free(ptr);
   }
 
   // Sample double dimer configuration for T-embedding visualization
@@ -7477,53 +7456,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     initAztecGraph(n);
 
-    // Set weight mode and parameters
-    // Mode: 0=All 1's, 1=Random IID, 2=Random Layered, 3=Random Gamma, 4=Periodic
-    if (preset === 'all-ones') {
-      currentWeightMode = 0;
-      setAztecWeightMode(0);
-    } else if (preset === 'random-iid') {
-      const seed = parseInt(document.getElementById('random-seed').value) || 42;
-      seedRng(seed);
-      const distType = document.getElementById('iid-distribution-select').value;
-      if (distType === 'uniform') {
-        const minVal = parseFloat(document.getElementById('iid-min').value) || 0.5;
-        const maxVal = parseFloat(document.getElementById('iid-max').value) || 2.0;
-        setIIDDistribution(0, 0, 0);  // dist=0 for uniform
-        setRandomIIDParams(minVal, maxVal);
-      } else if (distType === 'exponential') {
-        setIIDDistribution(1, 1.0, 0);  // dist=1, lambda=1 (other values just scale, no effect on T-emb)
-      } else if (distType === 'pareto') {
-        const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-        const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-        setIIDDistribution(2, alpha, xmin);  // dist=2, p1=alpha, p2=xmin
-      } else if (distType === 'geometric') {
-        const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-        setIIDDistribution(3, p, 0);  // dist=3, p1=p
-      }
-      currentWeightMode = 1;
-      setAztecWeightMode(1);
-    } else if (preset === 'random-layered') {
-      const seed = parseInt(document.getElementById('layered-seed').value) || 42;
-      seedRng(seed);
-      const params = getLayeredParams();
-      setLayeredParams(params.regime, params.p1, params.p2, params.prob1, params.prob2);
-      currentWeightMode = 2;
-      setAztecWeightMode(2);
-    } else if (preset === 'random-gamma') {
-      const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
-      const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-      const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
-      seedRng(seed);
-      setGammaParams(alpha, beta);
-      currentWeightMode = 3;
-      setAztecWeightMode(3);
-    } else if (preset === 'periodic') {
-      // Weights are already set by the editor UI via setPeriodicWeight calls
-      // Just apply periodic mode - don't re-initialize period which would reset weights
-      currentWeightMode = 4;
-      setAztecWeightMode(4);
-    }
+    // Apply weights using Master Weight Buffer (single source of truth)
+    applyMasterWeightsToGeometry(n);
 
     computeAndDisplay();
   });
@@ -9300,11 +9234,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       await new Promise(r => setTimeout(r, 10));
 
       initAztecGraph(actualMaxN);
-      setAztecWeightMode(currentWeightMode);
+      applyMasterWeightsToGeometry(actualMaxN);
       clearTembLevels();
 
       // Run folding for non-uniform weights (once for the full graph)
-      if (currentWeightMode !== 0) {
+      const preset = document.getElementById('weight-preset-select').value;
+      if (preset !== 'all-ones' && preset !== 'uniform') {
         progressEl.textContent = `Folding...`;
         await new Promise(r => setTimeout(r, 10));
         while (canAztecStepDown()) {
