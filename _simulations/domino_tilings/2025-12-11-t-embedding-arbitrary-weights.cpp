@@ -156,10 +156,10 @@ static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 
 
 // Beta position swap flags for T-embedding recurrence (hard-coded working config)
-static const bool g_betaSwapUR = false;  // Upper-right quadrant
-static const bool g_betaSwapLR = false;  // Lower-right quadrant
-static const bool g_betaSwapUL = true;   // Upper-left quadrant (swapped)
-static const bool g_betaSwapLL = true;   // Lower-left quadrant (swapped)
+static const bool g_betaSwapUR = true;   // Upper-right quadrant - (β·left + down)
+static const bool g_betaSwapLR = true;   // Lower-right quadrant - (β·left + up)
+static const bool g_betaSwapUL = true;   // Upper-left quadrant - (down + β·right)
+static const bool g_betaSwapLL = true;   // Lower-left quadrant - (up + β·right)
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -3040,18 +3040,18 @@ static void computeTk(int k) {
 
     // ==========================================================================
     // Rule 2: Alpha vertices (axis boundary at |i|+|j|=k, on-axis)
-    // T_k(k,0) = (T_{k-1}(k,0) + α * T_{k-1}(k-1,0)) / (α + 1)
-    // Each axis direction uses its own alpha weight
+    // Right/Left: (T_outer + α · T_inner) / (α + 1)
+    // Top/Bottom: (α · T_outer + T_inner) / (α + 1)  [different pattern!]
     // ==========================================================================
 
     // Right: (k, 0) uses alpha_right
     setTcurr(k, 0, (Tprev(k, 0) + alpha_right * Tprev(k-1, 0)) / (alpha_right + mp_real(1)));
     // Left: (-k, 0) uses alpha_left
     setTcurr(-k, 0, (Tprev(-k, 0) + alpha_left * Tprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
-    // Top: (0, k) uses alpha_top
-    setTcurr(0, k, (Tprev(0, k) + alpha_top * Tprev(0, k-1)) / (alpha_top + mp_real(1)));
-    // Bottom: (0, -k) uses alpha_bottom
-    setTcurr(0, -k, (Tprev(0, -k) + alpha_bottom * Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    // Top: (0, k) uses alpha_top - NOTE: different formula pattern
+    setTcurr(0, k, (alpha_top * Tprev(0, k) + Tprev(0, k-1)) / (alpha_top + mp_real(1)));
+    // Bottom: (0, -k) uses alpha_bottom - NOTE: different formula pattern
+    setTcurr(0, -k, (alpha_bottom * Tprev(0, -k) + Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
 
     // ==========================================================================
     // Rule 3: Beta vertices (diagonal boundary at |i|+|j|=k, off-axis)
@@ -3187,8 +3187,9 @@ static void computeTk(int k) {
             // T_{k-1}(i,j) - should exist for interior vertices
             mp_complex Tprev_ij = Tprev_exists[idx(i, j)] ? Tprev(i, j) : mp_complex(0, 0);
 
-            // Recurrence: T_k(i,j) = (Tl + Tr + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
-            setTcurr(i, j, ((Tl + Tr) * gamma + (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij);
+            // Recurrence: T_k(i,j) = ((Tl + Tr) + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
+            // Note: γ multiplies vertical (top+bottom) neighbors
+            setTcurr(i, j, ((Tl + Tr) + gamma * (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij);
         }
     }
 
@@ -3462,11 +3463,13 @@ static void computeOk(int k) {
     setOcurr(0, k+1, Oprev(0, k));
     setOcurr(0, -(k+1), Oprev(0, -k));
 
-    // Rule 2: Alpha vertices (same formulas as T-embedding)
+    // Rule 2: Alpha vertices (matching T-embedding)
+    // Right/Left: (outer + α·inner)/(α+1)
+    // Top/Bottom: (α·outer + inner)/(α+1)
     setOcurr(k, 0, (Oprev(k, 0) + alpha_right * Oprev(k-1, 0)) / (alpha_right + mp_real(1)));
     setOcurr(-k, 0, (Oprev(-k, 0) + alpha_left * Oprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
-    setOcurr(0, k, (Oprev(0, k) + alpha_top * Oprev(0, k-1)) / (alpha_top + mp_real(1)));
-    setOcurr(0, -k, (Oprev(0, -k) + alpha_bottom * Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    setOcurr(0, k, (alpha_top * Oprev(0, k) + Oprev(0, k-1)) / (alpha_top + mp_real(1)));
+    setOcurr(0, -k, (alpha_bottom * Oprev(0, -k) + Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
 
     // Helper lambda to get beta weight for position (i, j) - same as T-embedding
     auto getBetaWeight = [&](int i, int j) -> mp_real {
@@ -3582,8 +3585,8 @@ static void computeOk(int k) {
             // Get O_{k-1}(i,j) if it exists
             mp_complex O_prev_ij = Oprev_exists[idx(i, j)] ? Oprev(i, j) : mp_complex(0, 0);
 
-            // Interior recurrence formula (same as T-embedding)
-            setOcurr(i, j, (gamma * (O_left + O_right) + O_down + O_up) / (gamma + mp_real(1)) - O_prev_ij);
+            // Interior recurrence formula: ((left+right) + γ*(up+down))/(γ+1) - prev
+            setOcurr(i, j, ((O_left + O_right) + gamma * (O_up + O_down)) / (gamma + mp_real(1)) - O_prev_ij);
         }
     }
 

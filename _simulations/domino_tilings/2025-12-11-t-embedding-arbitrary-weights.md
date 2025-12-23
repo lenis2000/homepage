@@ -188,25 +188,29 @@ $$\mathcal{T}_k(\pm(k+1), 0) = \mathcal{T}_{k-1}(\pm k, 0), \qquad \mathcal{T}_k
 </li>
 
 <li><strong>Alpha vertices</strong> (on-axis boundary, $|i|+|j|=k$, either $i=0$ or $j=0$):
+
+<em>Right/Left</em> (horizontal axis): $(\text{outer} + \alpha \cdot \text{inner})/(\alpha + 1)$
 $$\mathcal{T}_k(k, 0) = \frac{\mathcal{T}_{k-1}(k, 0) + \alpha_R \cdot \mathcal{T}_{k-1}(k-1, 0)}{\alpha_R + 1}$$
 $$\mathcal{T}_k(-k, 0) = \frac{\mathcal{T}_{k-1}(-k, 0) + \alpha_L \cdot \mathcal{T}_{k-1}(-(k-1), 0)}{\alpha_L + 1}$$
-$$\mathcal{T}_k(0, k) = \frac{\mathcal{T}_{k-1}(0, k) + \alpha_T \cdot \mathcal{T}_{k-1}(0, k-1)}{\alpha_T + 1}$$
-$$\mathcal{T}_k(0, -k) = \frac{\mathcal{T}_{k-1}(0, -k) + \alpha_B \cdot \mathcal{T}_{k-1}(0, -(k-1))}{\alpha_B + 1}$$
+
+<em>Top/Bottom</em> (vertical axis): $(\alpha \cdot \text{outer} + \text{inner})/(\alpha + 1)$
+$$\mathcal{T}_k(0, k) = \frac{\alpha_T \cdot \mathcal{T}_{k-1}(0, k) + \mathcal{T}_{k-1}(0, k-1)}{\alpha_T + 1}$$
+$$\mathcal{T}_k(0, -k) = \frac{\alpha_B \cdot \mathcal{T}_{k-1}(0, -k) + \mathcal{T}_{k-1}(0, -(k-1))}{\alpha_B + 1}$$
 </li>
 
 <li><strong>Beta vertices</strong> (off-axis boundary, $|i|+|j|=k$, $i \neq 0$ and $j \neq 0$). For $1 \leq m \leq k-1$:
 
-<em>Upper-right quadrant</em> $(i,j) = (m, k-m)$:
-$$\mathcal{T}_k(m, k-m) = \frac{\mathcal{T}_{k-1}(m-1, k-m) + \beta_{m,k-m} \cdot \mathcal{T}_{k-1}(m, k-m-1)}{\beta_{m,k-m} + 1}$$
+<em>Upper-right quadrant</em> $(i,j) = (m, k-m)$: $(\beta \cdot \text{left} + \text{down})/(\beta + 1)$
+$$\mathcal{T}_k(m, k-m) = \frac{\beta_{m,k-m} \cdot \mathcal{T}_{k-1}(m-1, k-m) + \mathcal{T}_{k-1}(m, k-m-1)}{\beta_{m,k-m} + 1}$$
 
-<em>Lower-right quadrant</em> $(i,j) = (m, -(k-m))$:
-$$\mathcal{T}_k(m, -(k-m)) = \frac{\mathcal{T}_{k-1}(m-1, -(k-m)) + \beta_{m,-(k-m)} \cdot \mathcal{T}_{k-1}(m, -(k-m-1))}{\beta_{m,-(k-m)} + 1}$$
+<em>Lower-right quadrant</em> $(i,j) = (m, -(k-m))$: $(\beta \cdot \text{left} + \text{up})/(\beta + 1)$
+$$\mathcal{T}_k(m, -(k-m)) = \frac{\beta_{m,-(k-m)} \cdot \mathcal{T}_{k-1}(m-1, -(k-m)) + \mathcal{T}_{k-1}(m, -(k-m)+1)}{\beta_{m,-(k-m)} + 1}$$
 
-<em>Upper-left quadrant</em> $(i,j) = (-m, k-m)$:
-$$\mathcal{T}_k(-m, k-m) = \frac{\mathcal{T}_{k-1}(-(m-1), k-m) + \beta_{-m,k-m} \cdot \mathcal{T}_{k-1}(-m, k-m-1)}{\beta_{-m,k-m} + 1}$$
+<em>Upper-left quadrant</em> $(i,j) = (-m, k-m)$: $(\text{down} + \beta \cdot \text{right})/(\beta + 1)$
+$$\mathcal{T}_k(-m, k-m) = \frac{\mathcal{T}_{k-1}(-m, k-m-1) + \beta_{-m,k-m} \cdot \mathcal{T}_{k-1}(-m+1, k-m)}{\beta_{-m,k-m} + 1}$$
 
-<em>Lower-left quadrant</em> $(i,j) = (-m, -(k-m))$:
-$$\mathcal{T}_k(-m, -(k-m)) = \frac{\beta_{-m,-(k-m)} \cdot \mathcal{T}_{k-1}(-m, -(k-m-1)) + \mathcal{T}_{k-1}(-(m-1), -(k-m))}{\beta_{-m,-(k-m)} + 1}$$
+<em>Lower-left quadrant</em> $(i,j) = (-m, -(k-m))$: $(\text{up} + \beta \cdot \text{right})/(\beta + 1)$
+$$\mathcal{T}_k(-m, -(k-m)) = \frac{\mathcal{T}_{k-1}(-m, -(k-m)+1) + \beta_{-m,-(k-m)} \cdot \mathcal{T}_{k-1}(-m+1, -(k-m))}{\beta_{-m,-(k-m)} + 1}$$
 </li>
 
 <li><strong>Interior pass-through</strong> ($|i|+|j| < k$, $i+j+k$ even):
@@ -214,8 +218,8 @@ $$\mathcal{T}_k(i,j) = \mathcal{T}_{k-1}(i,j)$$
 </li>
 
 <li><strong>Interior recurrence</strong> ($|i|+|j| < k$, $i+j+k$ odd):
-$$\mathcal{T}_k(i,j) = \frac{\gamma_{i,j}(\mathcal{T}_k(i-1,j) + \mathcal{T}_k(i+1,j)) + \mathcal{T}_k(i,j-1) + \mathcal{T}_k(i,j+1)}{\gamma_{i,j} + 1} - \mathcal{T}_{k-1}(i,j)$$
-where $\gamma_{i,j}$ is the face weight at position $(i,j)$.
+$$\mathcal{T}_k(i,j) = \frac{(\mathcal{T}_k(i-1,j) + \mathcal{T}_k(i+1,j)) + \gamma_{i,j}(\mathcal{T}_k(i,j-1) + \mathcal{T}_k(i,j+1))}{\gamma_{i,j} + 1} - \mathcal{T}_{k-1}(i,j)$$
+where $\gamma_{i,j}$ is the face weight at position $(i,j)$. Note: $\gamma$ multiplies the vertical (top/bottom) neighbors.
 </li>
 </ol>
 
