@@ -525,7 +525,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 
 
 <!-- Main T-embedding Visualization Section -->
-<details id="main-visualization-section" style="margin-top: 15px;" open>
+<details id="main-visualization-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0e8ff; border: 1px solid #c9f;" aria-label="T-embedding visualization section">
     📊 T-embedding Visualization
   </summary>
@@ -713,7 +713,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </details>
 
-<details id="random-sample-section" style="margin-top: 15px;" open>
+<details id="random-sample-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;" aria-label="Random domino tiling section">
     🎲 Random Domino Tiling
   </summary>
@@ -810,7 +810,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </details>
 
-<details id="stepwise-section" style="margin-top: 15px;">
+<details id="stepwise-section" style="margin-top: 15px;" open>
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
   <div id="stepwise-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
     <strong>Note:</strong> Step-by-step visualization is only available for n ≤ 15. For larger n, use the main T-embedding visualization above.
@@ -3350,6 +3350,168 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return u * Math.sqrt(-2 * Math.log(s) / s);
   }
 
+  // =============================================================================
+  // MASTER WEIGHT BUFFER - Single Source of Truth
+  // =============================================================================
+  // Generates a (2N)×(2N) Float64Array using Engine B's convention:
+  // - For structured modes (gamma, periodic): even rows have weights, odd rows = 1.0
+  // - For IID/layered: all positions get random weights
+  //
+  // Returns: Float64Array of length dim*dim, indexed as weights[i * dim + j]
+  //
+  function generateMasterWeights(N, mode, params = {}) {
+    const dim = 2 * N;
+    const weights = new Float64Array(dim * dim);
+    const seed = params.seed || 42;
+    const rng = createSeededRNG(seed);
+
+    // Initialize all to 1.0
+    weights.fill(1.0);
+
+    if (mode === 'uniform') {
+      // All weights = 1.0, already done
+      return weights;
+
+    } else if (mode === 'iid') {
+      // IID: ALL positions get random weights
+      const distType = params.distType || 'uniform';
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          weights[i * dim + j] = generateIIDWeight(distType, rng);
+        }
+      }
+
+    } else if (mode === 'layered') {
+      // Layered: weight depends on diagonal index
+      const regime = params.regime || 3;
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          // Diagonal index: map (i,j) to diagonal in [-N+1, N-1]
+          const diagIndex = (i - N) + (j - N);
+          weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
+        }
+      }
+
+    } else if (mode === 'gamma') {
+      // Gamma: Engine B convention - even rows have weights, odd rows = 1.0
+      const alpha = params.alpha || 0.2;
+      const beta = params.beta || 0.25;
+      for (let i = 0; i < dim; i++) {
+        if (i % 2 === 0) {
+          for (let j = 0; j < dim; j++) {
+            // j even → beta, j odd → alpha
+            weights[i * dim + j] = (j % 2 === 0)
+              ? gammaRandom(beta, 1.0, rng)
+              : gammaRandom(alpha, 1.0, rng);
+          }
+        }
+        // Odd rows stay 1.0
+      }
+
+    } else if (mode === 'periodic') {
+      // Periodic k×l: Engine B convention
+      const k = params.k || 2;
+      const l = params.l || 2;
+      const alphaW = params.alphaWeights || [[1, 1], [1, 1]];
+      const betaW = params.betaWeights || [[1, 1], [1, 1]];
+      // Note: gammaWeights affect T-embedding but not the ab_gamma matrix format directly
+
+      for (let i = 0; i < dim; i++) {
+        if (i % 2 === 0) {
+          for (let j = 0; j < dim; j++) {
+            const diagI = Math.floor(i / 2);
+            const diagJ = Math.floor(j / 2);
+            const pi = ((diagI % k) + k) % k;
+            const pj = ((diagJ % l) + l) % l;
+
+            if (j % 2 === 0) {
+              // beta weight
+              weights[i * dim + j] = betaW[pi][pj];
+            } else {
+              // alpha weight
+              weights[i * dim + j] = alphaW[pi][pj];
+            }
+          }
+        }
+        // Odd rows stay 1.0
+      }
+    }
+
+    return weights;
+  }
+
+  // Helper: Get current weight mode and params from UI
+  function getCurrentWeightParams() {
+    const preset = document.getElementById('weight-preset-select').value;
+
+    if (preset === 'uniform') {
+      return { mode: 'uniform', params: {} };
+
+    } else if (preset === 'random-iid') {
+      const seed = parseInt(document.getElementById('random-seed')?.value) || 42;
+      const distType = document.getElementById('iid-distribution-select')?.value || 'uniform';
+      return { mode: 'iid', params: { seed, distType } };
+
+    } else if (preset === 'random-layered') {
+      const seed = parseInt(document.getElementById('layered-seed')?.value) || 42;
+      const lp = typeof getLayeredParams === 'function' ? getLayeredParams() : { regime: 3 };
+      return { mode: 'layered', params: { seed, regime: lp.regime } };
+
+    } else if (preset === 'random-gamma') {
+      const seed = parseInt(document.getElementById('gamma-seed')?.value) || 42;
+      const alpha = parseFloat(document.getElementById('gamma-alpha')?.value) || 0.2;
+      const beta = parseFloat(document.getElementById('gamma-beta')?.value) || 0.25;
+      return { mode: 'gamma', params: { seed, alpha, beta } };
+
+    } else if (preset === 'periodic') {
+      const k = parseInt(document.getElementById('periodic-k')?.value) || 2;
+      const l = parseInt(document.getElementById('periodic-l')?.value) || 2;
+      // Use getPeriodicEdgeWeightsFromUI if available, else fall back
+      let alphaWeights, betaWeights, gammaWeights;
+      if (typeof getPeriodicEdgeWeightsFromUI === 'function') {
+        const pw = getPeriodicEdgeWeightsFromUI(k, l);
+        alphaWeights = pw.alpha;
+        betaWeights = pw.beta;
+        gammaWeights = pw.gamma;
+      } else {
+        alphaWeights = getPeriodicWeightsArray('alpha', k, l);
+        betaWeights = getPeriodicWeightsArray('beta', k, l);
+        gammaWeights = getPeriodicWeightsArray('gamma', k, l);
+      }
+      return { mode: 'periodic', params: { k, l, alphaWeights, betaWeights, gammaWeights } };
+    }
+
+    return { mode: 'uniform', params: {} };
+  }
+
+  // Helper: Extract periodic weights from UI into 2D array
+  function getPeriodicWeightsArray(type, k, l) {
+    const arr = [];
+    for (let i = 0; i < k; i++) {
+      arr[i] = [];
+      for (let j = 0; j < l; j++) {
+        const el = document.getElementById(`periodic-${type}-${i}-${j}`);
+        arr[i][j] = el ? parseFloat(el.value) || 1.0 : 1.0;
+      }
+    }
+    return arr;
+  }
+
+  // Helper: Send master weights to shuffling WASM and run simulation
+  // Returns resultPtr (caller must free with shufflingFreeString)
+  async function runShufflingWithWeights(N, masterWeights, doubleDimer = true) {
+    const numWeights = masterWeights.length;
+    const weightsPtr = shufflingModule._malloc(numWeights * 8);
+    for (let i = 0; i < numWeights; i++) {
+      shufflingModule.setValue(weightsPtr + i * 8, masterWeights[i], 'double');
+    }
+    const resultPtr = doubleDimer
+      ? await simulateAztecDoubleDimer(N, weightsPtr)
+      : await simulateAztecIIDDirect(N, weightsPtr);
+    shufflingModule._free(weightsPtr);
+    return resultPtr;
+  }
+
   // Sample double dimer configuration for T-embedding visualization
   // Note: This visualization covers only interior quadrilateral faces (boundary excluded for visualization purposes)
   async function sampleTembDoubleDimer() {
@@ -3370,135 +3532,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (N < 1) return;
 
     try {
-      const preset = document.getElementById('weight-preset-select').value;
-      let resultPtr;
-
-      // Generate weights based on preset (same logic as generateRandomSample but always double dimer)
-      if (preset === 'random-gamma') {
-        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
-        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-        const dim = 2 * N;
-        const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
-        const rng = createSeededRNG(seed);
-        const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-
-        for (let i = 0; i < dim; i++) {
-          for (let j = 0; j < dim; j++) {
-            if (i % 2 === 0) {
-              edgeWeights[i * dim + j] = (j % 2 === 0) ? gammaRandom(beta, 1.0, rng) : gammaRandom(alpha, 1.0, rng);
-            } else {
-              edgeWeights[i * dim + j] = 1.0;
-            }
-          }
-        }
-
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-        }
-        resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        shufflingModule._free(weightsPtr);
-
-      } else if (preset === 'periodic') {
-        const k = parseInt(document.getElementById('periodic-k').value) || 2;
-        const l = parseInt(document.getElementById('periodic-l').value) || 2;
-        const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
-        const alphaArray = new Float64Array(k * l);
-        const betaArray = new Float64Array(k * l);
-
-        for (let j = 0; j < k; j++) {
-          for (let i = 0; i < l; i++) {
-            alphaArray[j * l + i] = periodicWeights.alpha[j][i];
-            betaArray[j * l + i] = periodicWeights.beta[j][i];
-          }
-        }
-
-        const dim = 2 * N;
-        const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-        edgeWeights.fill(1.0);
-
-        for (let i = 0; i < dim; i++) {
-          if (i % 2 === 0) {
-            for (let j = 0; j < dim; j++) {
-              const diagI = Math.floor(i / 2);
-              const diagJ = Math.floor(j / 2);
-              const pi = ((diagI % k) + k) % k;
-              const pj = ((diagJ % l) + l) % l;
-              edgeWeights[i * dim + j] = (j % 2 === 0) ? betaArray[pi * l + pj] : alphaArray[pi * l + pj];
-            }
-          }
-        }
-
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-        }
-        resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        shufflingModule._free(weightsPtr);
-
-      } else if (preset === 'random-iid') {
-        const dim = 2 * N;
-        const numWeights = dim * dim;
-        const edgeWeights = getOrComputeIIDWeights(N);
-
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-        }
-        resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        shufflingModule._free(weightsPtr);
-
-      } else if (preset === 'random-layered') {
-        const dim = 2 * N;
-        const seed = parseInt(document.getElementById('layered-seed').value) || 42;
-        const rng = createSeededRNG(seed);
-        const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-
-        const params = getLayeredParams();
-        const { regime, p1, p2, prob1, prob2 } = params;
-        const sqrtN = Math.sqrt(N);
-        const numLayers = N;
-        const layerWeights = new Float64Array(numLayers);
-
-        for (let k = 0; k < numLayers; k++) {
-          const r = rng();
-          switch (regime) {
-            case 1: layerWeights[k] = (r < prob1) ? (p1 + 2.0 / sqrtN) : (p2 - 1.0 / sqrtN); break;
-            case 2: layerWeights[k] = (r < 1.0 / sqrtN) ? p1 : p2; break;
-            case 3: layerWeights[k] = (r < prob1) ? p1 : p2; break;
-            case 4: layerWeights[k] = (k % 2 === 0) ? p1 : p2; break;
-            case 5: layerWeights[k] = p1 + r * (p2 - p1); break;
-            default: layerWeights[k] = (r < 0.5) ? 0.2 : 5.0;
-          }
-        }
-
-        for (let i = 0; i < dim; i++) {
-          for (let j = 0; j < dim; j++) {
-            edgeWeights[i * dim + j] = ((i + j) % 2 === 0 && i % 2 === 0) ? layerWeights[Math.floor(i / 2)] : 1.0;
-          }
-        }
-
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-        }
-        resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        shufflingModule._free(weightsPtr);
-
-      } else {
-        // Default: uniform weights
-        const dim = 2 * N;
-        const numWeights = dim * dim;
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, 1.0, 'double');
-        }
-        resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        shufflingModule._free(weightsPtr);
-      }
+      // Use Master Weight Buffer - single source of truth
+      const { mode, params } = getCurrentWeightParams();
+      const masterWeights = generateMasterWeights(N, mode, params);
+      const resultPtr = await runShufflingWithWeights(N, masterWeights, true);
 
       // Parse result
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);
@@ -3563,51 +3600,23 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const preset = document.getElementById('weight-preset-select').value;
       let resultPtr;
 
-      // For gamma preset, use the direct ab_gamma function (Duits-Van Peski model)
-      if (preset === 'random-gamma') {
+      // Use Master Weight Buffer for double dimer mode (unified path)
+      if (doubleDimerMode) {
+        const { mode, params } = getCurrentWeightParams();
+        const masterWeights = generateMasterWeights(N, mode, params);
+        resultPtr = await runShufflingWithWeights(N, masterWeights, true);
+
+      // Non-double-dimer: use specialized C++ functions for gamma/periodic
+      } else if (preset === 'random-gamma') {
         const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
         const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
+        resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
 
-        if (doubleDimerMode) {
-          // Generate gamma weights in JS for double dimer mode
-          const dim = 2 * N;
-          const seed = parseInt(document.getElementById('gamma-seed').value) || 42;
-          const rng = createSeededRNG(seed);
-          const numWeights = dim * dim;
-          const edgeWeights = new Float64Array(numWeights);
-
-          // ab_gamma pattern: for i even (0-indexed), j even: Gamma(beta), j odd: Gamma(alpha)
-          // Everything else: 1.0
-          for (let i = 0; i < dim; i++) {
-            for (let j = 0; j < dim; j++) {
-              if (i % 2 === 0) {
-                if (j % 2 === 0) {
-                  edgeWeights[i * dim + j] = gammaRandom(beta, 1.0, rng);
-                } else {
-                  edgeWeights[i * dim + j] = gammaRandom(alpha, 1.0, rng);
-                }
-              } else {
-                edgeWeights[i * dim + j] = 1.0;
-              }
-            }
-          }
-
-          const weightsPtr = shufflingModule._malloc(numWeights * 8);
-          for (let i = 0; i < numWeights; i++) {
-            shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-          }
-          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-          shufflingModule._free(weightsPtr);
-        } else {
-          resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
-        }
       } else if (preset === 'periodic') {
-        // For periodic preset, pass all three weight tables (alpha, beta, gamma)
         const k = parseInt(document.getElementById('periodic-k').value) || 2;
         const l = parseInt(document.getElementById('periodic-l').value) || 2;
         const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
 
-        // Build flat arrays for alpha, beta, gamma
         const alphaArray = new Float64Array(k * l);
         const betaArray = new Float64Array(k * l);
         const gammaArray = new Float64Array(k * l);
@@ -3620,169 +3629,27 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           }
         }
 
-        if (doubleDimerMode) {
-          // Generate full periodic weight matrix in JS for double dimer mode
-          const dim = 2 * N;
-          const numWeights = dim * dim;
-          const edgeWeights = new Float64Array(numWeights);
-          edgeWeights.fill(1.0);
+        const alphaPtr = shufflingModule._malloc(k * l * 8);
+        const betaPtr = shufflingModule._malloc(k * l * 8);
+        const gammaPtr = shufflingModule._malloc(k * l * 8);
 
-          for (let i = 0; i < dim; i++) {
-            if (i % 2 === 0) {  // Even rows only
-              for (let j = 0; j < dim; j++) {
-                const diagI = Math.floor(i / 2);
-                const diagJ = Math.floor(j / 2);
-                const pi = ((diagI % k) + k) % k;
-                const pj = ((diagJ % l) + l) % l;
-
-                if (j % 2 === 0) {
-                  edgeWeights[i * dim + j] = betaArray[pi * l + pj];
-                } else {
-                  edgeWeights[i * dim + j] = alphaArray[pi * l + pj];
-                }
-              }
-            }
-          }
-
-          const weightsPtr = shufflingModule._malloc(numWeights * 8);
-          for (let i = 0; i < numWeights; i++) {
-            shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-          }
-          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-          shufflingModule._free(weightsPtr);
-        } else {
-          // Allocate WASM memory for all three tables
-          const alphaPtr = shufflingModule._malloc(k * l * 8);
-          const betaPtr = shufflingModule._malloc(k * l * 8);
-          const gammaPtr = shufflingModule._malloc(k * l * 8);
-
-          for (let i = 0; i < k * l; i++) {
-            shufflingModule.setValue(alphaPtr + i * 8, alphaArray[i], 'double');
-            shufflingModule.setValue(betaPtr + i * 8, betaArray[i], 'double');
-            shufflingModule.setValue(gammaPtr + i * 8, gammaArray[i], 'double');
-          }
-
-          resultPtr = await simulateAztecPeriodicDirect(N, k, l, alphaPtr, betaPtr, gammaPtr);
-
-          shufflingModule._free(alphaPtr);
-          shufflingModule._free(betaPtr);
-          shufflingModule._free(gammaPtr);
-        }
-      } else if (preset === 'all-ones') {
-        // Uniform weights: use gamma with alpha=beta=1 (gives Gamma(1)=Exp(1) which averages to 1)
-        // Or just use IID with all 1s
-        const dim = 2 * N;
-        const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-        edgeWeights.fill(1.0);
-
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, 1.0, 'double');
-        }
-        if (doubleDimerMode) {
-          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        } else {
-          resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
-        }
-        shufflingModule._free(weightsPtr);
-
-      } else if (preset === 'random-iid') {
-        // IID: each edge weight is independent random (using cached weights)
-        const dim = 2 * N;
-        const numWeights = dim * dim;
-        const edgeWeights = getOrComputeIIDWeights(N);
-
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-        }
-        if (doubleDimerMode) {
-          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        } else {
-          resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
-        }
-        shufflingModule._free(weightsPtr);
-
-      } else if (preset === 'random-layered') {
-        // Layered: exactly like 2025-06-25-random-edges.cpp
-        // Weight at (i,j) where (i+j)%2==0 AND i%2==0 → random_variables[i/2]
-        const dim = 2 * N;
-        const seed = getSampleSeed();
-        const rng = createSeededRNG(seed);
-        const numWeights = dim * dim;
-        const edgeWeights = new Float64Array(numWeights);
-
-        // Get regime and parameters from UI
-        const params = getLayeredParams();
-        const { regime, p1, p2, prob1, prob2 } = params;
-        const sqrtN = Math.sqrt(N);
-
-        const numLayers = N;
-        const layerWeights = new Float64Array(numLayers);
-
-        // Generate layer weights based on regime (matching 2025-06-25-random-edges.cpp)
-        for (let k = 0; k < numLayers; k++) {
-          const r = rng();
-          switch (regime) {
-            case 1:
-              // Regime 1 (Critical Scaling): p1 + 2/sqrt(N) with prob prob1, p2 - 1/sqrt(N) otherwise
-              if (r < prob1) {
-                layerWeights[k] = p1 + 2.0 / sqrtN;
-              } else {
-                layerWeights[k] = p2 - 1.0 / sqrtN;
-              }
-              break;
-            case 2:
-              // Regime 2 (Rare Event): p1 with prob 1/sqrt(N), p2 otherwise
-              if (r < 1.0 / sqrtN) {
-                layerWeights[k] = p1;
-              } else {
-                layerWeights[k] = p2;
-              }
-              break;
-            case 3:
-              // Regime 3 (Bernoulli): p1 with prob prob1, p2 otherwise
-              if (r < prob1) {
-                layerWeights[k] = p1;
-              } else {
-                layerWeights[k] = p2;
-              }
-              break;
-            case 4:
-              // Regime 4 (Deterministic Periodic): alternating p1, p2
-              layerWeights[k] = (k % 2 === 0) ? p1 : p2;
-              break;
-            case 5:
-              // Regime 5 (Continuous Uniform): uniform on [p1, p2]
-              layerWeights[k] = p1 + r * (p2 - p1);
-              break;
-            default:
-              // Default: 0.2 or 5.0 with equal probability
-              layerWeights[k] = (r < 0.5) ? 0.2 : 5.0;
-          }
+        for (let i = 0; i < k * l; i++) {
+          shufflingModule.setValue(alphaPtr + i * 8, alphaArray[i], 'double');
+          shufflingModule.setValue(betaPtr + i * 8, betaArray[i], 'double');
+          shufflingModule.setValue(gammaPtr + i * 8, gammaArray[i], 'double');
         }
 
-        for (let i = 0; i < dim; i++) {
-          for (let j = 0; j < dim; j++) {
-            if ((i + j) % 2 === 0 && i % 2 === 0) {
-              edgeWeights[i * dim + j] = layerWeights[Math.floor(i / 2)];
-            } else {
-              edgeWeights[i * dim + j] = 1.0;
-            }
-          }
-        }
+        resultPtr = await simulateAztecPeriodicDirect(N, k, l, alphaPtr, betaPtr, gammaPtr);
 
-        const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, edgeWeights[i], 'double');
-        }
-        if (doubleDimerMode) {
-          resultPtr = await simulateAztecDoubleDimer(N, weightsPtr);
-        } else {
-          resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
-        }
-        shufflingModule._free(weightsPtr);
+        shufflingModule._free(alphaPtr);
+        shufflingModule._free(betaPtr);
+        shufflingModule._free(gammaPtr);
+
+      } else {
+        // Non-double-dimer IID/layered/uniform: use Master Weight Buffer
+        const { mode, params } = getCurrentWeightParams();
+        const masterWeights = generateMasterWeights(N, mode, params);
+        resultPtr = await runShufflingWithWeights(N, masterWeights, false);
       }
 
       // Parse result
