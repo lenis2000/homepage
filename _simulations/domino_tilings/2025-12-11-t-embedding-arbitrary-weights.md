@@ -5304,33 +5304,36 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       return;
     }
 
-    // Get weight variable name based on face position
-    function getWeightName(k, i, j) {
-      if (k === 0) return `root[0]`;
-      const absI = Math.abs(i), absJ = Math.abs(j);
-      const absSum = absI + absJ;
-      if (i === 0 && j === k) return `alphaT[${k}]`;
-      if (i === 0 && j === -k) return `alphaB[${k}]`;
-      if (j === 0 && i === k) return `alphaR[${k}]`;
-      if (j === 0 && i === -k) return `alphaL[${k}]`;
-      if (absSum === k && absI > 0 && absJ > 0) return `beta[${k}][${i},${j}]`;
-      if (absSum < k) return `gamma[${k}][${i},${j}]`;
-      return `face[${k}][${i},${j}]`;
+    // Complex number helpers
+    function cplx(re, im) { return { re, im }; }
+    function csub(a, b) { return { re: a.re - b.re, im: a.im - b.im }; }
+    function cmul(a, b) { return { re: a.re*b.re - a.im*b.im, im: a.re*b.im + a.im*b.re }; }
+    function cdiv(a, b) {
+      const d = b.re*b.re + b.im*b.im;
+      return { re: (a.re*b.re + a.im*b.im)/d, im: (a.im*b.re - a.re*b.im)/d };
     }
+    function cabs(a) { return Math.sqrt(a.re*a.re + a.im*a.im); }
 
-    // Get max K from stored face weights
+    // Get stored face weights and parse gamma values
     let ptr = getStoredFaceWeightsJSON();
     let jsonStr = Module.UTF8ToString(ptr);
     freeString(ptr);
     let maxK = 0;
+    const gammaByLevel = {};
     try {
       const data = JSON.parse(jsonStr);
       for (const lv of (data.capturedLevels || [])) {
         if (lv.k > maxK) maxK = lv.k;
+        gammaByLevel[lv.k] = {};
+        if (lv.gamma) {
+          for (const g of lv.gamma) {
+            gammaByLevel[lv.k][`${g.i},${g.j}`] = g.weight;
+          }
+        }
       }
     } catch (e) {}
 
-    // Collect T-embedding vertices by level
+    // Collect T-embedding vertices with actual coordinates by level
     const tembByLevel = {};
     for (let k = 0; k <= maxK; k++) {
       ptr = getTembeddingLevelJSON(k);
@@ -5341,92 +5344,162 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         if (tembLevel && tembLevel.vertices) {
           tembByLevel[k] = {};
           for (const v of tembLevel.vertices) {
-            tembByLevel[k][`${v.i},${v.j}`] = true;
+            tembByLevel[k][`${v.i},${v.j}`] = cplx(v.re, v.im);
           }
         }
       } catch (e) {}
     }
 
-    // Build verification code per level
-    // Match Python: only check interior vertices (|i|+|j| < k) with axis-aligned neighbors
-    // Alpha/beta boundary checks are not part of the weight condition verification
-    const maxCheckK = Math.min(maxK, 5);
+    // Build verification results per level
+    // Note: skip k = maxK (which is n-1) because gamma values are incomplete at the boundary level
+    // For n=6, maxK=5, so we check k=1..4 (n-2)
+    const maxCheckK = Math.max(0, Math.min(maxK - 1, 5));
     const levelData = [];
 
-    // Start at k=1 (k=0 has no interior vertices since |i|+|j| < 0 is impossible)
     for (let k = 1; k <= maxCheckK; k++) {
       const vertices = tembByLevel[k];
+      const gammas = gammaByLevel[k] || {};
       if (!vertices) continue;
 
-      const lines = [];
+      const results = [];
 
-      // Gamma faces (interior) - axis-aligned neighbors
-      // Key insight: gamma level depends on parity:
-      // - Odd parity (i+j+k odd): use gamma[k][i,j]
-      // - Even parity (i+j+k even): use gamma[k+1][i,j]
       for (const key of Object.keys(vertices)) {
         const [iStr, jStr] = key.split(',');
         const i = parseInt(iStr), j = parseInt(jStr);
 
-        // Only check interior vertices (match Python: abs(i) + abs(j) < k)
+        // Only check interior vertices
         if (Math.abs(i) + Math.abs(j) >= k) continue;
 
-        const dirs = [[1,0], [0,1], [-1,0], [0,-1]];
-        let allExist = true;
-        for (const [di, dj] of dirs) {
-          if (!vertices[`${i+di},${j+dj}`]) { allExist = false; break; }
-        }
-        if (!allExist) continue;
+        // Check all 4 neighbors exist
+        const nRkey = `${i+1},${j}`, nUkey = `${i},${j+1}`;
+        const nLkey = `${i-1},${j}`, nDkey = `${i},${j-1}`;
+        if (!vertices[nRkey] || !vertices[nUkey] || !vertices[nLkey] || !vertices[nDkey]) continue;
 
-        // Determine correct gamma level based on parity
+        const z = vertices[key];
+        const nR = vertices[nRkey], nU = vertices[nUkey];
+        const nL = vertices[nLkey], nD = vertices[nDkey];
+
+        // XX[R,U,L,D][z] = (z-R)(z-L) / ((U-z)(D-z))
+        const num = cmul(csub(z, nR), csub(z, nL));
+        const den = cmul(csub(nU, z), csub(nD, z));
+        const XX = cdiv(num, den);
+
+        const gamma = (gammas[key] !== undefined && gammas[key] !== null) ? gammas[key] : 1;
+        const gammaNum = typeof gamma === 'number' ? gamma : 1;
+
+        // Parity determines which formula applies:
+        // - Odd parity (i+j+k odd): vertex computed via recurrence → XX * γ + 1 = 0
+        // - Even parity (i+j+k even): vertex passed through → XX + γ = 0
         const parity = (i + j + k) % 2;
-        const gammaLevel = (parity === 1) ? k : k + 1;
+        const isOdd = parity === 1;
 
-        const z = `T[${k}][${i},${j}]`;
-        const nR = `T[${k}][${i+1},${j}]`;
-        const nU = `T[${k}][${i},${j+1}]`;
-        const nL = `T[${k}][${i-1},${j}]`;
-        const nD = `T[${k}][${i},${j-1}]`;
-        const wt = `gamma[${gammaLevel}][${i},${j}]`;
+        // Compute the check value (should be ≈ 0)
+        const check = isOdd ? (XX.re * gammaNum + 1) : (XX.re + gammaNum);
 
-        lines.push(`XX[${nR}, ${nU}, ${nL}, ${nD}][${z}] + ${wt}`);
+        results.push({
+          i, j,
+          pos: `(${i},${j})`,
+          parity: isOdd ? 'odd' : 'even',
+          XX_re: XX.re.toFixed(6),
+          gamma: gammaNum.toFixed(6),
+          formula: isOdd ? 'XX*γ+1' : 'XX+γ',
+          check: check.toFixed(8)
+        });
       }
 
-      if (lines.length > 0) {
-        levelData.push({ k, lines });
+      if (results.length > 0) {
+        levelData.push({ k, results });
       }
     }
 
     if (levelData.length === 0) {
-      container.innerHTML = '<em style="font-size: 11px;">No interior vertices (need vertices with all 4 neighbors)</em>';
+      container.innerHTML = '<em style="font-size: 11px;">No interior vertices</em>';
       return;
     }
 
-    // Create divs for each level
-    container.innerHTML = '';
-    for (const { k, lines } of levelData) {
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'position: relative;';
-
-      const btn = document.createElement('button');
-      btn.textContent = 'Copy';
-      btn.style.cssText = 'position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;';
-
-      const content = document.createElement('div');
-      content.style.cssText = 'padding: 8px; background: #f0fff0; border: 1px solid #228b22; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 120px; overflow-y: auto;';
-      content.textContent = `(* k=${k} *)\n` + lines.join('\n');
-
-      btn.addEventListener('click', function() {
-        navigator.clipboard.writeText(content.textContent).then(() => {
-          btn.textContent = 'Copied!';
-          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-        });
-      });
-
-      wrapper.appendChild(btn);
-      wrapper.appendChild(content);
-      container.appendChild(wrapper);
+    // Count total checks and passes
+    let totalChecks = 0, passedChecks = 0;
+    for (const { results } of levelData) {
+      for (const r of results) {
+        totalChecks++;
+        if (Math.abs(parseFloat(r.check)) < 1e-6) passedChecks++;
+      }
     }
+    const allPassed = passedChecks === totalChecks;
+
+    // Debug: check gamma counts per level (for levels being verified)
+    let gammaCounts = [];
+    for (let k = 1; k <= maxCheckK; k++) {
+      const gammas = gammaByLevel[k] || {};
+      const count = Object.keys(gammas).length;
+      // For gamma with |i|+|j|<=k-1, expected = 2(k-1)^2+2(k-1)+1
+      const expectedCalc = 2*(k-1)*(k-1) + 2*(k-1) + 1;
+      gammaCounts.push(`k=${k}: ${count}/${expectedCalc}`);
+    }
+
+    // Build Mathematica verification code
+    let mathCode = `(* Cross-ratio verification for T-embedding *)\n`;
+    mathCode += `XX[n1_, n2_, n3_, n4_][z_] := ((z - n1)(z - n3))/((n2 - z)(n4 - z))\n\n`;
+    mathCode += `(* Parity rule: odd (i+j+k odd) -> XX*γ+1=0, even -> XX+γ=0 *)\n`;
+    for (const { k, results } of levelData) {
+      mathCode += `(* k=${k} *)\n`;
+      for (const r of results) {
+        const {i, j, parity} = r;
+        const z = `T[${k}][${i},${j}]`;
+        const nR = `T[${k}][${i+1},${j}]`, nU = `T[${k}][${i},${j+1}]`;
+        const nL = `T[${k}][${i-1},${j}]`, nD = `T[${k}][${i},${j-1}]`;
+        const gam = `gamma[${k}][${i},${j}]`;
+        if (parity === 'odd') {
+          mathCode += `XX[${nR}, ${nU}, ${nL}, ${nD}][${z}] * ${gam} + 1\n`;
+        } else {
+          mathCode += `XX[${nR}, ${nU}, ${nL}, ${nD}][${z}] + ${gam}\n`;
+        }
+      }
+    }
+
+    // Display success/failure message and Mathematica code
+    container.innerHTML = '';
+
+    // Status message
+    const statusDiv = document.createElement('div');
+    statusDiv.style.cssText = `padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 12px; ${allPassed ? 'background: #e8f5e9; border: 1px solid #4caf50; color: #2e7d32;' : 'background: #ffebee; border: 1px solid #f44336; color: #c62828;'}`;
+    statusDiv.innerHTML = allPassed
+      ? `<b>✓ JavaScript cross-ratio check successful</b> (${passedChecks}/${totalChecks} vertices, k=1..${levelData[levelData.length-1].k})`
+      : `<b>✗ Cross-ratio check failed</b> (${passedChecks}/${totalChecks} passed)`;
+    container.appendChild(statusDiv);
+
+    // Parity rule explanation
+    const ruleDiv = document.createElement('div');
+    ruleDiv.style.cssText = 'font-size:10px; color:#666; margin-bottom:8px;';
+    ruleDiv.innerHTML = `<b>Parity rule:</b> odd (i+j+k odd) → XX·γ+1=0 | even → XX+γ=0`;
+    container.appendChild(ruleDiv);
+
+    // Show gamma counts per level (debug info)
+    if (gammaCounts.length > 0) {
+      const countDiv = document.createElement('div');
+      countDiv.style.cssText = 'font-size:10px; color:#333; margin-bottom:4px; background:#e3f2fd; padding:4px; border:1px solid #64b5f6;';
+      countDiv.innerHTML = `<b>γ counts:</b> ${gammaCounts.join(' | ')}`;
+      container.appendChild(countDiv);
+    }
+
+    // Mathematica code block with copy button
+    const mathWrapper = document.createElement('div');
+    mathWrapper.style.cssText = 'position: relative;';
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.style.cssText = 'position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 6px;';
+    const mathPre = document.createElement('pre');
+    mathPre.style.cssText = 'padding: 8px; background: #f5f5f5; border: 1px solid #ccc; font-size: 10px; max-height: 200px; overflow: auto; white-space: pre-wrap;';
+    mathPre.textContent = mathCode;
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(mathCode).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+      });
+    });
+    mathWrapper.appendChild(copyBtn);
+    mathWrapper.appendChild(mathPre);
+    container.appendChild(mathWrapper);
   }
 
   // Display stored face weights near Aztec graph
