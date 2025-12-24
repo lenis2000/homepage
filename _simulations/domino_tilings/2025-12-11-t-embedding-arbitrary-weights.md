@@ -613,19 +613,6 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           </label>
         </span>
       </div>
-      <!-- Alpha/beta swap debug checkboxes -->
-      <div style="margin-top: 8px; text-align: center; font-size: 11px; background: #fff8dc; padding: 6px; border: 1px dashed #ccc; border-radius: 4px;">
-        <span style="margin-right: 8px; font-weight: 600;">α swap:</span>
-        <label><input type="checkbox" id="alpha-swap-r"> R</label>
-        <label style="margin-left: 6px;"><input type="checkbox" id="alpha-swap-l"> L</label>
-        <label style="margin-left: 6px;"><input type="checkbox" id="alpha-swap-t"> T</label>
-        <label style="margin-left: 6px;"><input type="checkbox" id="alpha-swap-b"> B</label>
-        <span style="margin-left: 15px; margin-right: 8px; font-weight: 600;">β swap:</span>
-        <label><input type="checkbox" id="beta-swap-ur" checked> UR</label>
-        <label style="margin-left: 6px;"><input type="checkbox" id="beta-swap-lr" checked> LR</label>
-        <label style="margin-left: 6px;"><input type="checkbox" id="beta-swap-ul" checked> UL</label>
-        <label style="margin-left: 6px;"><input type="checkbox" id="beta-swap-ll" checked> LL</label>
-      </div>
     </div>
 
     <!-- Canvas container with floating buttons -->
@@ -1288,8 +1275,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let getComputeTimeMs;
   let clearTembLevels;
   let clearStoredWeightsExport;
-  let setAlphaSwapR, setAlphaSwapL, setAlphaSwapT, setAlphaSwapB;
-  let setBetaSwapUR, setBetaSwapLR, setBetaSwapUL, setBetaSwapLL;
   let setIIDDistribution;
 
   // Track current weight mode: 0=All 1's (uniform), 1=Random IID, 2=Layered, 3=Gamma, 4=Periodic
@@ -2448,16 +2433,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       getComputeTimeMs = Module.cwrap('getComputeTimeMs', 'number', []);
       clearTembLevels = Module.cwrap('clearTembLevels', null, []);
       clearStoredWeightsExport = Module.cwrap('clearStoredWeightsExport', null, []);
-
-      // Alpha/beta swap setters for debugging T-embedding formulas
-      setAlphaSwapR = Module.cwrap('setAlphaSwapR', null, ['number']);
-      setAlphaSwapL = Module.cwrap('setAlphaSwapL', null, ['number']);
-      setAlphaSwapT = Module.cwrap('setAlphaSwapT', null, ['number']);
-      setAlphaSwapB = Module.cwrap('setAlphaSwapB', null, ['number']);
-      setBetaSwapUR = Module.cwrap('setBetaSwapUR', null, ['number']);
-      setBetaSwapLR = Module.cwrap('setBetaSwapLR', null, ['number']);
-      setBetaSwapUL = Module.cwrap('setBetaSwapUL', null, ['number']);
-      setBetaSwapLL = Module.cwrap('setBetaSwapLL', null, ['number']);
 
       wasmReady = true;
 
@@ -7515,30 +7490,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-origami-chk').addEventListener('change', renderMain2DTemb);
   document.getElementById('show-checkerboard-chk').addEventListener('change', renderMain2DTemb);
-
-  // Alpha/beta swap checkboxes for debugging T-embedding formulas
-  const swapSetters = {
-    'alpha-swap-r': () => setAlphaSwapR,
-    'alpha-swap-l': () => setAlphaSwapL,
-    'alpha-swap-t': () => setAlphaSwapT,
-    'alpha-swap-b': () => setAlphaSwapB,
-    'beta-swap-ur': () => setBetaSwapUR,
-    'beta-swap-lr': () => setBetaSwapLR,
-    'beta-swap-ul': () => setBetaSwapUL,
-    'beta-swap-ll': () => setBetaSwapLL
-  };
-  Object.keys(swapSetters).forEach(id => {
-    const chk = document.getElementById(id);
-    if (chk) {
-      chk.addEventListener('change', function() {
-        const setter = swapSetters[id]();
-        if (setter) {
-          setter(this.checked ? 1 : 0);
-          computeAndDisplay();
-        }
-      });
-    }
-  });
 
   // Double dimer on T-graph
   const doubleDimerTembBtn = document.getElementById('sample-double-dimer-temb-btn');
