@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_applyExternalWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_applyExternalWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_setAlphaSwapR','_setAlphaSwapL','_setAlphaSwapT','_setAlphaSwapB','_setBetaSwapUR','_setBetaSwapLR','_setBetaSwapUL','_setBetaSwapLL','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -155,11 +155,17 @@ struct BetaEdgeRatios {
 static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 
 
-// Beta position swap flags for T-embedding recurrence (hard-coded working config)
-static const bool g_betaSwapUR = true;   // Upper-right quadrant - (β·left + down)
-static const bool g_betaSwapLR = true;   // Lower-right quadrant - (β·left + up)
-static const bool g_betaSwapUL = true;   // Upper-left quadrant - (down + β·right)
-static const bool g_betaSwapLL = true;   // Lower-left quadrant - (up + β·right)
+// Alpha position swap flags for T-embedding recurrence (for debugging)
+static bool g_alphaSwapR = false;  // Right
+static bool g_alphaSwapL = false;  // Left
+static bool g_alphaSwapT = false;  // Top
+static bool g_alphaSwapB = false;  // Bottom
+
+// Beta position swap flags for T-embedding recurrence
+static bool g_betaSwapUR = true;   // Upper-right quadrant - (β·left + down)
+static bool g_betaSwapLR = true;   // Lower-right quadrant - (β·left + up)
+static bool g_betaSwapUL = true;   // Upper-left quadrant - (down + β·right)
+static bool g_betaSwapLL = true;   // Lower-left quadrant - (up + β·right)
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -261,6 +267,16 @@ void seedRng(unsigned int seed) {
     g_rngState = seed;
     g_mt_rng.seed(seed);
 }
+
+// Alpha/beta swap setters for debugging T-embedding formulas
+EMSCRIPTEN_KEEPALIVE void setAlphaSwapR(int v) { g_alphaSwapR = v; }
+EMSCRIPTEN_KEEPALIVE void setAlphaSwapL(int v) { g_alphaSwapL = v; }
+EMSCRIPTEN_KEEPALIVE void setAlphaSwapT(int v) { g_alphaSwapT = v; }
+EMSCRIPTEN_KEEPALIVE void setAlphaSwapB(int v) { g_alphaSwapB = v; }
+EMSCRIPTEN_KEEPALIVE void setBetaSwapUR(int v) { g_betaSwapUR = v; }
+EMSCRIPTEN_KEEPALIVE void setBetaSwapLR(int v) { g_betaSwapLR = v; }
+EMSCRIPTEN_KEEPALIVE void setBetaSwapUL(int v) { g_betaSwapUL = v; }
+EMSCRIPTEN_KEEPALIVE void setBetaSwapLL(int v) { g_betaSwapLL = v; }
 }
 
 static double randomWeight() {
@@ -2937,13 +2953,29 @@ static void computeTk(int k) {
     // ==========================================================================
 
     // Right: (k, 0) uses alpha_right
-    setTcurr(k, 0, (Tprev(k, 0) + alpha_right * Tprev(k-1, 0)) / (alpha_right + mp_real(1)));
+    if (g_alphaSwapR) {
+        setTcurr(k, 0, (alpha_right * Tprev(k, 0) + Tprev(k-1, 0)) / (alpha_right + mp_real(1)));
+    } else {
+        setTcurr(k, 0, (Tprev(k, 0) + alpha_right * Tprev(k-1, 0)) / (alpha_right + mp_real(1)));
+    }
     // Left: (-k, 0) uses alpha_left
-    setTcurr(-k, 0, (Tprev(-k, 0) + alpha_left * Tprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
-    // Top: (0, k) uses alpha_top - NOTE: different formula pattern
-    setTcurr(0, k, (alpha_top * Tprev(0, k) + Tprev(0, k-1)) / (alpha_top + mp_real(1)));
-    // Bottom: (0, -k) uses alpha_bottom - NOTE: different formula pattern
-    setTcurr(0, -k, (alpha_bottom * Tprev(0, -k) + Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    if (g_alphaSwapL) {
+        setTcurr(-k, 0, (alpha_left * Tprev(-k, 0) + Tprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
+    } else {
+        setTcurr(-k, 0, (Tprev(-k, 0) + alpha_left * Tprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
+    }
+    // Top: (0, k) uses alpha_top
+    if (g_alphaSwapT) {
+        setTcurr(0, k, (Tprev(0, k) + alpha_top * Tprev(0, k-1)) / (alpha_top + mp_real(1)));
+    } else {
+        setTcurr(0, k, (alpha_top * Tprev(0, k) + Tprev(0, k-1)) / (alpha_top + mp_real(1)));
+    }
+    // Bottom: (0, -k) uses alpha_bottom
+    if (g_alphaSwapB) {
+        setTcurr(0, -k, (Tprev(0, -k) + alpha_bottom * Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    } else {
+        setTcurr(0, -k, (alpha_bottom * Tprev(0, -k) + Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    }
 
     // ==========================================================================
     // Rule 3: Beta vertices (diagonal boundary at |i|+|j|=k, off-axis)
