@@ -895,7 +895,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 
 <p style="font-size: 0.9em; color: #555; margin-top: 15px;">
 <b>Acknowledgement:</b> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
-I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions.
+I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions. I also thank Matthew Nicoletti for providing face-based T-embedding code.
 Part of this research was performed while the author was visiting the Institute for Pure and Applied Mathematics (IPAM), which is supported by the National Science Foundation (Grant No. DMS-1925919).
 </p>
 
@@ -5523,7 +5523,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     if (!data.vertices || data.vertices.length === 0) {
-      console.log('Early return: no vertices');
       ctx.fillStyle = '#888';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
@@ -9808,9 +9807,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     btn.disabled = false;
-
-    // Log results to console
-    console.log('Benchmark results:', results);
   }
 
   const benchmarkBtn = document.getElementById('benchmark-btn');

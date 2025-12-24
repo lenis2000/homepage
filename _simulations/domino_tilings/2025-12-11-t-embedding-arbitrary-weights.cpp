@@ -2450,93 +2450,8 @@ static void aztecStep12_StartNextIteration() {
     rebuildAdjacency();
 }
 
-// Debug: print all edge weights to JS console
-static void debugLogEdgeWeights(const char* label) {
-    // Get unique weights
-    std::set<double> uniqueWeights;
-    for (const auto& e : g_aztecEdges) {
-        if (e.active) {
-            double w = std::round(std::exp(e.logWeight) * 1000000) / 1000000;
-            uniqueWeights.insert(w);
-        }
-    }
-
-    // Build string
-    std::ostringstream oss;
-    oss << label << " Edge weights (unique): [";
-    bool first = true;
-    for (double w : uniqueWeights) {
-        if (!first) oss << ", ";
-        oss << std::fixed << std::setprecision(6) << w;
-        first = false;
-    }
-    oss << "] (";
-
-    // Count active edges
-    int activeEdges = 0;
-    for (const auto& e : g_aztecEdges) {
-        if (e.active) activeEdges++;
-    }
-    oss << activeEdges << " edges, " << g_aztecVertices.size() << " verts)";
-
-    // Print to JS console
-    EM_ASM({
-        console.log(UTF8ToString($0));
-    }, oss.str().c_str());
-}
-
-// Debug: print all edge weights with positions
-static void debugLogAllEdgeWeights(const char* label) {
-    EM_ASM({ console.log(UTF8ToString($0) + " ALL edge weights:"); }, label);
-
-    for (size_t ei = 0; ei < g_aztecEdges.size(); ei++) {
-        const auto& e = g_aztecEdges[ei];
-        if (!e.active) continue;
-
-        const auto& v1 = g_aztecVertices[e.v1];
-        const auto& v2 = g_aztecVertices[e.v2];
-        double w = std::exp(e.logWeight);
-        char c1 = v1.isWhite ? 'W' : 'B';
-        char c2 = v2.isWhite ? 'W' : 'B';
-        char hv = e.isHorizontal ? 'H' : 'V';
-
-        std::ostringstream oss;
-        oss << "  e" << ei << ": ("
-            << std::fixed << std::setprecision(1) << v1.x << "," << v1.y << ")" << c1
-            << "-(" << v2.x << "," << v2.y << ")" << c2 << " " << hv
-            << " w=" << std::setprecision(6) << w;
-
-        EM_ASM({ console.log(UTF8ToString($0)); }, oss.str().c_str());
-    }
-}
-
 // Step down: advance to next reduction step
 static void aztecStepDown() {
-    // Log before step
-    static const char* stepNames[] = {
-        "Before Step 1: BLACK gauge",
-        "Before Step 2: WHITE gauge",
-        "Before Step 3: Remove boundary",
-        "Before Step 4: BLACK contraction",
-        "Before Step 5: WHITE contraction",
-        "Before Step 6: Shading",
-        "Before Step 7: Mark diagonal",
-        "Before Step 8: Split vertices",
-        "Before Step 9: Diagonal gauge",
-        "Before Step 10: Urban renewal",
-        "Before Step 11: Combine edges",
-        "Before Step 12: Next iteration"
-    };
-
-    if (g_aztecReductionStep < 12) {
-        // For small graphs, show all weights; otherwise just unique
-        if (g_aztecVertices.size() <= 20) {
-            debugLogAllEdgeWeights(stepNames[g_aztecReductionStep]);
-        } else {
-            debugLogEdgeWeights(stepNames[g_aztecReductionStep]);
-        }
-    }
-
     switch (g_aztecReductionStep) {
         case 0: aztecStep1_GaugeTransform(); break;
         case 1: aztecStep2_WhiteGaugeTransform(); break;
@@ -2551,29 +2466,6 @@ static void aztecStepDown() {
         case 10: aztecStep11_CombineDoubleEdges(); break;
         case 11: aztecStep12_StartNextIteration(); break;
         default: break;  // Already fully reduced
-    }
-
-    // Log after step
-    static const char* afterStepNames[] = {
-        "After Step 1: BLACK gauge",
-        "After Step 2: WHITE gauge",
-        "After Step 3: Remove boundary",
-        "After Step 4: BLACK contraction",
-        "After Step 5: WHITE contraction",
-        "After Step 6: Shading",
-        "After Step 7: Mark diagonal",
-        "After Step 8: Split vertices",
-        "After Step 9: Diagonal gauge",
-        "After Step 10: Urban renewal",
-        "After Step 11: Combine edges",
-        "After Step 12: Next iteration"
-    };
-
-    int prevStep = g_aztecReductionStep > 0 ? g_aztecReductionStep - 1 : 11;
-    if (g_aztecVertices.size() <= 20) {
-        debugLogAllEdgeWeights(afterStepNames[prevStep]);
-    } else {
-        debugLogEdgeWeights(afterStepNames[prevStep]);
     }
 
     // Only compute faces when needed for weight capture:
