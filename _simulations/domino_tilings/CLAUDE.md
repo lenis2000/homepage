@@ -1,5 +1,29 @@
 # Domino Tilings Project Guide
 
+## T-Graph Structure
+
+For a T-embedding at level k, the T_k graph has the following structure:
+
+### T_k Vertices
+- **4 external corners**: (±(k+1), 0), (0, ±(k+1))
+- **4 alpha vertices**: (±k, 0), (0, ±k) — at |i|+|j| = k, on axis
+- **Beta vertices**: |i|+|j| = k, off-axis (i≠0 AND j≠0)
+- **Interior**: |i|+|j| ≤ k-1
+
+### T_k Edges
+1. **External corners** connect to their corresponding alpha: (k+1,0) ↔ (k,0), and to each other forming the outer rhombus
+2. **Beta vertices** connect to each other and to alpha correspondingly, forming diagonals i+j=k
+3. **Interior** (|i|+|j| ≤ k-1) connects like a lattice: 4 neighbors (i±1, j), (i, j±1)
+
+### XX Cross-Ratio Property
+For interior face (j, k) with |j|+|k| < n, the cross-ratio satisfies:
+```
+XX(R, T, L, B, z) + gamma = 0
+```
+where R, T, L, B are the 4 neighbors and gamma is the face weight.
+
+Note: For boundary-adjacent faces (|j|+|k| = n-1), some neighbors are alpha/beta vertices.
+
 ## Project Structure
 - Source files are stored in: `/Users/leo/Homepage/_simulations/domino_tilings/`
 - Compiled JS files are moved to: `/Users/leo/Homepage/js/`
