@@ -2256,16 +2256,6 @@ static void aztecStep11_CombineDoubleEdges() {
 
         if (foundAnyAlpha) {
             g_doubleEdgeRatios.push_back(ratios);
-            // DEBUG: Log captured alpha double edge ratios
-            EM_ASM({ console.log('  Alpha double-edge ratios for k=' + $0 + ':'); }, ratios.k);
-            EM_ASM({ console.log('    R: ' + $0 + '/' + $1 + '=' + $2); },
-                   (double)ratios.num_right, (double)ratios.den_right, (double)ratios.ratio_right);
-            EM_ASM({ console.log('    L: ' + $0 + '/' + $1 + '=' + $2); },
-                   (double)ratios.num_left, (double)ratios.den_left, (double)ratios.ratio_left);
-            EM_ASM({ console.log('    T: ' + $0 + '/' + $1 + '=' + $2); },
-                   (double)ratios.num_top, (double)ratios.den_top, (double)ratios.ratio_top);
-            EM_ASM({ console.log('    B: ' + $0 + '/' + $1 + '=' + $2); },
-                   (double)ratios.num_bottom, (double)ratios.den_bottom, (double)ratios.ratio_bottom);
         }
     }
 
@@ -2336,12 +2326,6 @@ static void aztecStep11_CombineDoubleEdges() {
 
         if (!betaRatios.ratios.empty()) {
             g_betaEdgeRatios.push_back(betaRatios);
-            // DEBUG: Log captured beta double edge ratios
-            EM_ASM({ console.log('  Beta double-edge ratios for k=' + $0 + ':'); }, betaRatios.k);
-            for (const auto& kv : betaRatios.ratios) {
-                EM_ASM({ console.log('    beta(' + $0 + ',' + $1 + ')=' + $2); },
-                       kv.first.first, kv.first.second, (double)kv.second);
-            }
         }
     }
 
@@ -2494,10 +2478,6 @@ static void aztecStepDown() {
     // - Steps 1 and 3 only occur at initial level (subsequent levels start at step 6)
     // - Step 11 occurs at every level
     if (g_aztecReductionStep == 1 || g_aztecReductionStep == 3 || g_aztecReductionStep == 11) {
-        int activeEdges = 0;
-        for (const auto& e : g_aztecEdges) if (e.active) activeEdges++;
-        EM_ASM({ console.log('Computing faces at step ' + $0 + ', verts=' + $1 + ', edges=' + $2); },
-               g_aztecReductionStep, (int)g_aztecVertices.size(), activeEdges);
         computeFaces();
         tryCaptureFaceWeights();
     }
@@ -2674,14 +2654,6 @@ static void storeFaceWeightsForK(int k) {
     }
 
     g_storedWeights.push_back(sw);
-
-    // DEBUG: Log captured gamma face weights (alphas/betas come from double edge ratios)
-    EM_ASM({ console.log('  Gamma face weights for k=' + $0 + ':'); }, k);
-    for (const auto& kv : sw.gamma) {
-        EM_ASM({ console.log('    gamma(' + $0 + ',' + $1 + ')=' + $2); },
-               kv.first.first, kv.first.second, (double)kv.second);
-    }
-
     g_capturedKValues.insert(k);
 }
 
@@ -2697,14 +2669,7 @@ static void clearStoredWeights() {
 static void tryCaptureFaceWeights() {
     int numFaces = (int)g_aztecFaces.size();
     int k = checkFaceCountFormula(numFaces);
-
-    // DEBUG: Log capture attempt
-    EM_ASM({
-        console.log('Weight capture: numFaces=' + $0 + ', k=' + $1 + ', step=' + $2);
-    }, numFaces, k, g_aztecReductionStep);
-
     if (k >= 0 && !g_capturedKValues.count(k)) {
-        EM_ASM({ console.log('  -> CAPTURING weights for k=' + $0); }, k);
         storeFaceWeightsForK(k);
     }
 }
@@ -3098,8 +3063,9 @@ static void computeTk(int k) {
 
     // ==========================================================================
     // Rule 4b: Interior recurrence (|i|+|j| < k, i+j+k odd)
-    // T_k(i,j) = 1/(γ+1) * (T_k(i-1,j) + T_k(i+1,j) + γ*(T_k(i,j+1) + T_k(i,j-1))) - T_{k-1}(i,j)
-    // Note: neighbors are already computed via 4a (even parity) or boundary rules
+    // T_k(i,j) = 1/(γ+1) * (γ*(T_k(i-1,j) + T_k(i+1,j)) + (T_k(i,j+1) + T_k(i,j-1))) - T_{k-1}(i,j)
+    // Note: γ multiplies horizontal (left/right) neighbors
+    // Neighbors are already computed via 4a (even parity) or boundary rules
     // Each interior vertex uses its own gamma weight from stored face weights
     // ==========================================================================
 

@@ -218,8 +218,8 @@ $$\mathcal{T}_k(i,j) = \mathcal{T}_{k-1}(i,j)$$
 </li>
 
 <li><strong>Interior recurrence</strong> ($|i|+|j| < k$, $i+j+k$ odd):
-$$\mathcal{T}_k(i,j) = \frac{(\mathcal{T}_k(i-1,j) + \mathcal{T}_k(i+1,j)) + \gamma_{i,j}(\mathcal{T}_k(i,j-1) + \mathcal{T}_k(i,j+1))}{\gamma_{i,j} + 1} - \mathcal{T}_{k-1}(i,j)$$
-where $\gamma_{i,j}$ is the face weight at position $(i,j)$. Note: $\gamma$ multiplies the vertical (top/bottom) neighbors.
+$$\mathcal{T}_k(i,j) = \frac{\gamma_{i,j}(\mathcal{T}_k(i-1,j) + \mathcal{T}_k(i+1,j)) + (\mathcal{T}_k(i,j-1) + \mathcal{T}_k(i,j+1))}{\gamma_{i,j} + 1} - \mathcal{T}_{k-1}(i,j)$$
+where $\gamma_{i,j}$ is the face weight at position $(i,j)$. Note: $\gamma$ multiplies the horizontal (left/right) neighbors.
 </li>
 </ol>
 
@@ -875,11 +875,11 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
   <div id="mathematica-content" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
     <p style="font-size: 12px; margin-bottom: 10px;">
-      The XX verification formula checks that <strong>all</strong> interior vertices satisfy XX + γ = 0:
+      The XX verification formula checks that <strong>all</strong> interior vertices satisfy XX · γ + 1 = 0:
     </p>
     <pre style="background: #f5f5f5; padding: 8px; border: 1px solid #ccc; font-size: 11px; margin-bottom: 10px;">XX[n1_, n2_, n3_, n4_][z_] := ((z - n1)(z - n3)) / ((n2 - z)(n4 - z))</pre>
     <p style="font-size: 11px; color: #666; margin-bottom: 10px;">
-      where n1, n2, n3, n4 are neighbors in CCW order. The γ level depends on parity: <strong>odd parity</strong> (i+j+k odd) uses γ[k], <strong>even parity</strong> uses γ[k+1].
+      where n1, n2, n3, n4 are neighbors in CCW order (R, U, L, D). For T_k, always use γ[k] (the face weight at that level).
     </p>
     <div style="margin-bottom: 10px; position: relative;">
       <div style="font-size: 11px; font-weight: bold; margin-bottom: 3px;">α/β parameters:</div>
@@ -5294,9 +5294,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     mathDiv.textContent = lines.join('\n');
   }
 
-  // Generate Mathematica verification code for XX formula
+  // Compute and display XX cross-ratios vs gamma values
   // XX[n1,n2,n3,n4][z] = (z-n1)(z-n3) / ((n2-z)(n4-z))
-  // n1,n2,n3,n4 go counterclockwise around z, with n1 such that edge z->n1 has BLACK on right
+  // n1,n2,n3,n4 go counterclockwise: R, U, L, D
   function updateVerifyOutput() {
     const container = document.getElementById('verify-levels');
     if (!wasmReady || !getTembeddingLevelJSON || !getStoredFaceWeightsJSON) {
