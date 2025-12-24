@@ -155,17 +155,17 @@ struct BetaEdgeRatios {
 static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 
 
-// Alpha position swap flags for T-embedding recurrence (for debugging)
-static bool g_alphaSwapR = false;  // Right
+// Alpha position swap flags for T-embedding recurrence
+static bool g_alphaSwapR = true;   // Right (swapped)
 static bool g_alphaSwapL = false;  // Left
-static bool g_alphaSwapT = false;  // Top
+static bool g_alphaSwapT = true;   // Top (swapped)
 static bool g_alphaSwapB = false;  // Bottom
 
 // Beta position swap flags for T-embedding recurrence
-static bool g_betaSwapUR = true;   // Upper-right quadrant - (β·left + down)
-static bool g_betaSwapLR = true;   // Lower-right quadrant - (β·left + up)
-static bool g_betaSwapUL = true;   // Upper-left quadrant - (down + β·right)
-static bool g_betaSwapLL = true;   // Lower-left quadrant - (up + β·right)
+static bool g_betaSwapUR = false;  // Upper-right quadrant
+static bool g_betaSwapLR = false;  // Lower-right quadrant
+static bool g_betaSwapUL = true;   // Upper-left quadrant (swapped)
+static bool g_betaSwapLL = true;   // Lower-left quadrant (swapped)
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -2758,18 +2758,14 @@ static void computeT0() {
     // Center vertex
     t0.vertices.push_back({0, 0, 0.0, 0.0});
 
-    // Following original generic_weights.py convention:
-    // T(±1, 0) = ±sqrt(root)  (real axis scaled by sqrt(root))
-    // T(0, ±1) = ∓i           (imaginary axis is just ±i)
-    double sqrtRoot = std::sqrt(static_cast<double>(rootWeight));
+    // Boundary vertices on real axis
+    t0.vertices.push_back({1, 0, 1.0, 0.0});
+    t0.vertices.push_back({-1, 0, -1.0, 0.0});
 
-    // Boundary vertices on real axis: T(±1, 0) = ±sqrt(root)
-    t0.vertices.push_back({1, 0, sqrtRoot, 0.0});
-    t0.vertices.push_back({-1, 0, -sqrtRoot, 0.0});
-
-    // Boundary vertices on imaginary axis: T(0, ±1) = ∓i
-    t0.vertices.push_back({0, 1, 0.0, -1.0});   // T(0,1) = -i
-    t0.vertices.push_back({0, -1, 0.0, 1.0});   // T(0,-1) = +i
+    // Boundary vertices on imaginary axis: i/sqrt(X_ROOT)
+    double invSqrtRoot = 1.0 / std::sqrt(static_cast<double>(rootWeight));
+    t0.vertices.push_back({0, 1, 0.0, invSqrtRoot});
+    t0.vertices.push_back({0, -1, 0.0, -invSqrtRoot});
 
     // Store or update T_0
     bool found = false;
@@ -2983,8 +2979,7 @@ static void computeTk(int k) {
 
     // ==========================================================================
     // Rule 2: Alpha vertices (axis boundary at |i|+|j|=k, on-axis)
-    // Right/Left: (T_outer + α · T_inner) / (α + 1)
-    // Top/Bottom: (α · T_outer + T_inner) / (α + 1)  [different pattern!]
+    // swap=false: (outer + α·inner)/(α+1), swap=true: (α·outer + inner)/(α+1)
     // ==========================================================================
 
     // Right: (k, 0) uses alpha_right
@@ -3001,15 +2996,15 @@ static void computeTk(int k) {
     }
     // Top: (0, k) uses alpha_top
     if (g_alphaSwapT) {
-        setTcurr(0, k, (Tprev(0, k) + alpha_top * Tprev(0, k-1)) / (alpha_top + mp_real(1)));
-    } else {
         setTcurr(0, k, (alpha_top * Tprev(0, k) + Tprev(0, k-1)) / (alpha_top + mp_real(1)));
+    } else {
+        setTcurr(0, k, (Tprev(0, k) + alpha_top * Tprev(0, k-1)) / (alpha_top + mp_real(1)));
     }
     // Bottom: (0, -k) uses alpha_bottom
     if (g_alphaSwapB) {
-        setTcurr(0, -k, (Tprev(0, -k) + alpha_bottom * Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
-    } else {
         setTcurr(0, -k, (alpha_bottom * Tprev(0, -k) + Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    } else {
+        setTcurr(0, -k, (Tprev(0, -k) + alpha_bottom * Tprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
     }
 
     // ==========================================================================
@@ -3020,12 +3015,24 @@ static void computeTk(int k) {
     // ==========================================================================
 
     // Helper lambda to get beta weight for position (i, j)
-    // Uses stored face weights (old betas)
+    // First check beta edge ratios (from double edges), then fall back to stored face weights
     auto getBetaWeight = [&](int i, int j) -> mp_real {
         mp_real beta = mp_real(1);  // Default
 
-        // Use stored face weights for beta
-        if (storedWeights) {
+        // First check beta edge ratios (from double edges)
+        bool found = false;
+        for (const auto& ber : g_betaEdgeRatios) {
+            if (ber.k == k) {
+                auto it = ber.ratios.find({i, j});
+                if (it != ber.ratios.end()) {
+                    beta = it->second;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        // Fall back to stored face weights
+        if (!found && storedWeights) {
             auto it = storedWeights->beta.find({i, j});
             if (it != storedWeights->beta.end() && it->second > 0) {
                 beta = it->second;
@@ -3133,9 +3140,8 @@ static void computeTk(int k) {
             // T_{k-1}(i,j) - should exist for interior vertices
             mp_complex Tprev_ij = Tprev_exists[idx(i, j)] ? Tprev(i, j) : mp_complex(0, 0);
 
-            // Recurrence: T_k(i,j) = ((Tl + Tr) + γ*(Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
-            // Note: γ multiplies vertical (top+bottom) neighbors
-            setTcurr(i, j, ((Tl + Tr) + gamma * (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij);
+            // Recurrence: T_k(i,j) = (γ*(Tl + Tr) + (Tt + Tb)) / (γ + 1) - T_{k-1}(i,j)
+            setTcurr(i, j, ((Tl + Tr) * gamma + (Tt + Tb)) / (gamma + mp_real(1)) - Tprev_ij);
         }
     }
 
@@ -3409,21 +3415,31 @@ static void computeOk(int k) {
     setOcurr(0, k+1, Oprev(0, k));
     setOcurr(0, -(k+1), Oprev(0, -k));
 
-    // Rule 2: Alpha vertices (matching T-embedding)
-    // Right/Left: (outer + α·inner)/(α+1)
-    // Top/Bottom: (α·outer + inner)/(α+1)
+    // Rule 2: Alpha vertices (same formulas as T-embedding)
     setOcurr(k, 0, (Oprev(k, 0) + alpha_right * Oprev(k-1, 0)) / (alpha_right + mp_real(1)));
     setOcurr(-k, 0, (Oprev(-k, 0) + alpha_left * Oprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
-    setOcurr(0, k, (alpha_top * Oprev(0, k) + Oprev(0, k-1)) / (alpha_top + mp_real(1)));
-    setOcurr(0, -k, (alpha_bottom * Oprev(0, -k) + Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    setOcurr(0, k, (Oprev(0, k) + alpha_top * Oprev(0, k-1)) / (alpha_top + mp_real(1)));
+    setOcurr(0, -k, (Oprev(0, -k) + alpha_bottom * Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
 
     // Helper lambda to get beta weight for position (i, j) - same as T-embedding
-    // Uses stored face weights (old betas)
+    // First check beta edge ratios (from double edges), then fall back to stored face weights
     auto getBetaWeight = [&](int i, int j) -> mp_real {
         mp_real beta = mp_real(1);
 
-        // Use stored face weights for beta
-        if (storedWeights) {
+        // First check beta edge ratios (from double edges)
+        bool found = false;
+        for (const auto& ber : g_betaEdgeRatios) {
+            if (ber.k == k) {
+                auto it = ber.ratios.find({i, j});
+                if (it != ber.ratios.end()) {
+                    beta = it->second;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        // Fall back to stored face weights
+        if (!found && storedWeights) {
             auto it = storedWeights->beta.find({i, j});
             if (it != storedWeights->beta.end() && it->second > 0) {
                 beta = it->second;
@@ -3522,8 +3538,8 @@ static void computeOk(int k) {
             // Get O_{k-1}(i,j) if it exists
             mp_complex O_prev_ij = Oprev_exists[idx(i, j)] ? Oprev(i, j) : mp_complex(0, 0);
 
-            // Interior recurrence formula: ((left+right) + γ*(up+down))/(γ+1) - prev
-            setOcurr(i, j, ((O_left + O_right) + gamma * (O_up + O_down)) / (gamma + mp_real(1)) - O_prev_ij);
+            // Interior recurrence formula: (γ*(left+right) + (up+down))/(γ+1) - prev
+            setOcurr(i, j, ((O_left + O_right) * gamma + (O_up + O_down)) / (gamma + mp_real(1)) - O_prev_ij);
         }
     }
 
