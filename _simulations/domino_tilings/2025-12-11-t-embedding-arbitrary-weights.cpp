@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_applyExternalWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getFirstReductionJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_randomizeAztecWeights','_applyExternalWeights','_setAztecWeightMode','_setRandomIIDParams','_setIIDDistribution','_setLayeredParams','_setGammaParams','_setPeriodicPeriod','_setPeriodicWeight','_getPeriodicParams','_resetAztecGraphPreservingWeights','_seedRng','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -4110,6 +4110,88 @@ void generateAztecGraph(int k) {
 EMSCRIPTEN_KEEPALIVE
 char* getAztecGraphJSON() {
     std::string result = getAztecGraphJSONInternal();
+    char* out = (char*)std::malloc(result.size() + 1);
+    std::strcpy(out, result.c_str());
+    return out;
+}
+
+// Get reduced graph after first 5 steps (before Fold 1)
+// Runs steps 0-5 if not already done, then exports the graph state
+// Returns JSON with vertices, edges (with weights), and level info
+EMSCRIPTEN_KEEPALIVE
+char* getFirstReductionJSON() {
+    // Run reduction steps 0-5 if needed
+    while (g_aztecReductionStep < 5) {
+        switch (g_aztecReductionStep) {
+            case 0: aztecStep1_GaugeTransform(); break;
+            case 1: aztecStep2_WhiteGaugeTransform(); break;
+            case 2: aztecStep3_Contract(); break;
+            case 3: aztecStep4_BlackContraction(); break;
+            case 4: aztecStep5_WhiteContraction(); break;
+        }
+    }
+
+    // Build JSON output
+    std::ostringstream oss;
+    oss << std::setprecision(15);
+    oss << "{";
+    oss << "\"level\":" << g_aztecLevel;
+    oss << ",\"reductionStep\":" << g_aztecReductionStep;
+
+    // Build vertex index remapping (old index -> new compact index)
+    std::vector<int> vertexRemap(g_aztecVertices.size(), -1);
+    int newVertexIdx = 0;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        if (g_aztecVertices[i].active) {
+            vertexRemap[i] = newVertexIdx++;
+        }
+    }
+
+    // Output only active vertices with their coordinates
+    oss << ",\"vertices\":[";
+    bool firstVertex = true;
+    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
+        if (!g_aztecVertices[i].active) continue;
+        if (!firstVertex) oss << ",";
+        firstVertex = false;
+        oss << "{\"x\":" << g_aztecVertices[i].x
+            << ",\"y\":" << g_aztecVertices[i].y
+            << ",\"isWhite\":" << (g_aztecVertices[i].isWhite ? "true" : "false")
+            << "}";
+    }
+    oss << "]";
+
+    // Output edges with weights (converted from log space)
+    oss << ",\"edges\":[";
+    bool firstEdge = true;
+    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
+        if (!g_aztecEdges[i].active) continue;
+        int v1 = g_aztecEdges[i].v1;
+        int v2 = g_aztecEdges[i].v2;
+        if (v1 < 0 || v1 >= (int)vertexRemap.size() || vertexRemap[v1] < 0) continue;
+        if (v2 < 0 || v2 >= (int)vertexRemap.size() || vertexRemap[v2] < 0) continue;
+        if (!firstEdge) oss << ",";
+        firstEdge = false;
+
+        // Get vertex coordinates for edge endpoints
+        double x1 = g_aztecVertices[g_aztecEdges[i].v1].x;
+        double y1 = g_aztecVertices[g_aztecEdges[i].v1].y;
+        double x2 = g_aztecVertices[g_aztecEdges[i].v2].x;
+        double y2 = g_aztecVertices[g_aztecEdges[i].v2].y;
+
+        oss << "{\"v1\":" << vertexRemap[v1]
+            << ",\"v2\":" << vertexRemap[v2]
+            << ",\"weight\":" << g_aztecEdges[i].weight()
+            << ",\"x1\":" << x1 << ",\"y1\":" << y1
+            << ",\"x2\":" << x2 << ",\"y2\":" << y2
+            << ",\"isHorizontal\":" << (g_aztecEdges[i].isHorizontal ? "true" : "false")
+            << "}";
+    }
+    oss << "]";
+
+    oss << "}";
+
+    std::string result = oss.str();
     char* out = (char*)std::malloc(result.size() + 1);
     std::strcpy(out, result.c_str());
     return out;

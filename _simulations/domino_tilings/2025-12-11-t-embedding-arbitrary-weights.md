@@ -312,8 +312,21 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <label>l: <input id="periodic-l" type="number" value="2" min="1" max="5" style="width: 50px;" aria-label="Periodic pattern height"></label>
     </span>
 
+    <!-- Export/Import edge weights -->
+    <button id="export-weights-btn"
+            style="padding: 6px 12px; font-size: 13px; font-weight: 600; background: transparent; color: #232D4B; border: 1.5px solid #232D4B; border-radius: 4px; cursor: pointer; margin-left: auto;"
+            aria-label="Export edge weights to JSON">
+      ↓ Export
+    </button>
+    <button id="import-weights-btn"
+            style="padding: 6px 12px; font-size: 13px; font-weight: 600; background: transparent; color: #232D4B; border: 1.5px solid #232D4B; border-radius: 4px; cursor: pointer; margin-left: 8px;"
+            aria-label="Import edge weights from JSON">
+      ↑ Import
+    </button>
+    <input type="file" id="import-weights-file" accept=".json" style="display: none;">
+
     <button id="compute-btn"
-            style="padding: 10px 24px; font-size: 15px; font-weight: bold; background: #E57200; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: auto;"
+            style="padding: 10px 24px; font-size: 15px; font-weight: bold; background: #E57200; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 12px;"
             aria-label="Compute T-embedding with current parameters">
       ▶ Compute
     </button>
@@ -717,7 +730,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </details>
 
-<details id="random-sample-section" style="margin-top: 15px;">
+<details id="random-sample-section" style="margin-top: 15px;" open>
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #ffe8f0; border: 1px solid #f9c;" aria-label="Random domino tiling section">
     🎲 Random Domino Tiling
   </summary>
@@ -814,7 +827,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 </details>
 
-<details id="stepwise-section" style="margin-top: 15px;" open>
+<details id="stepwise-section" style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8f4e8; border: 1px solid #9c9;">Step-by-step visualization and explicit edge and face weights</summary>
   <div id="stepwise-large-n-msg" style="display: none; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; margin: 10px 0; border-radius: 4px;">
     <strong>Note:</strong> Step-by-step visualization is only available for n ≤ 15. For larger n, use the main T-embedding visualization above.
@@ -949,6 +962,13 @@ button:active:not(:disabled) {
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Export/Import buttons - outlined secondary style */
+#export-weights-btn:hover, #import-weights-btn:hover {
+  background: #232D4B !important;
+  color: white !important;
+  filter: none;
 }
 
 /* Input field refinements */
@@ -1268,6 +1288,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // WASM function wrappers
   let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getOrigamiLevelJSON;
+  let getFirstReductionJSON;  // Export reduced graph after first 5 steps
   let randomizeAztecWeights, applyExternalWeights, setAztecWeightMode, setRandomIIDParams, setLayeredParams, setGammaParams;
   let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
   let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
@@ -1823,6 +1844,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     renderAztecGraph();
     updateFaceWeightsOutput();
   }
+
+  // Get the reduced graph after first 5 steps (gauge transforms + contractions)
+  // Returns: { level, reductionStep, vertices: [{x, y, isWhite}], edges: [{v1, v2, weight, x1, y1, x2, y2, isHorizontal}] }
+  // This is the graph state before the "Fold" steps begin
+  function getFirstReduction() {
+    if (!wasmReady) return null;
+    let ptr = getFirstReductionJSON();
+    let jsonStr = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    return JSON.parse(jsonStr);
+  }
+
+  // Expose getFirstReduction globally for console access
+  window.getFirstReduction = getFirstReduction;
 
   // Render Aztec diamond graph
   function renderAztecGraph() {
@@ -2406,6 +2441,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Aztec graph functions
       generateAztecGraph = Module.cwrap('generateAztecGraph', null, ['number']);
       getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
+      getFirstReductionJSON = Module.cwrap('getFirstReductionJSON', 'number', []);
       getAztecFacesJSON = Module.cwrap('getAztecFacesJSON', 'number', []);
       getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
@@ -2444,11 +2480,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Update stepwise section visibility based on n
       updateStepwiseSectionForN(n);
 
-      // DISABLED FOR DEBUGGING - auto-compute on load
-      // Initialize with selected preset using Master Weight Buffer
-      // initAztecGraph(n);
-      // applyMasterWeightsToGeometry(n);
-      // computeAndDisplay();
+      // Auto-compute T-embedding on load
+      initAztecGraph(n);
+      applyMasterWeightsToGeometry(n);
+      computeAndDisplay();
 
       // Precompute all T-embedding levels for stepwise UI (only needed for small n)
       // if (n <= STEP_BY_STEP_MAX_N) {
@@ -7440,6 +7475,106 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     applyMasterWeightsToGeometry(n);
 
     computeAndDisplay();
+  });
+
+  // Export edge weights to JSON
+  document.getElementById('export-weights-btn').addEventListener('click', () => {
+    const n = parseN();
+    const N = n;  // Aztec diamond size
+    const { mode, params } = getCurrentWeightParams();
+    const masterWeights = generateMasterWeights(N, mode, params);
+    const dim = 4 * N;
+
+    // Create export object
+    const exportData = {
+      format: 'aztec-edge-weights-v1',
+      n: n,
+      dim: dim,
+      mode: mode,
+      params: params,
+      weights: Array.from(masterWeights)
+    };
+
+    // Download as JSON
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aztec-weights-n${n}-${mode}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // Import edge weights from JSON
+  document.getElementById('import-weights-btn').addEventListener('click', () => {
+    document.getElementById('import-weights-file').click();
+  });
+
+  document.getElementById('import-weights-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+
+        // Validate format
+        if (!data.weights || !Array.isArray(data.weights)) {
+          alert('Invalid file format: missing weights array');
+          return;
+        }
+
+        const n = data.n || Math.round(Math.sqrt(data.weights.length) / 4);
+        const dim = data.dim || 4 * n;
+
+        if (data.weights.length !== dim * dim) {
+          alert(`Weight array size mismatch: expected ${dim * dim}, got ${data.weights.length}`);
+          return;
+        }
+
+        // Update n input to match imported data
+        document.getElementById('sample-N-input').value = n;
+
+        // Convert to Float64Array
+        const masterWeights = new Float64Array(data.weights);
+
+        // Initialize Aztec graph with correct size
+        currentSimulationN = n;
+        currentK = 0;
+        updateVEForN(n);
+        initAztecGraph(n);
+
+        // Apply imported weights to geometry engine
+        if (wasmReady) {
+          const numWeights = masterWeights.length;
+          const ptr = Module._malloc(numWeights * 8);
+          for (let i = 0; i < numWeights; i++) {
+            Module.setValue(ptr + i * 8, masterWeights[i], 'double');
+          }
+          applyExternalWeights(ptr, numWeights);
+          Module._free(ptr);
+        }
+
+        // Switch to "All 1's" preset so manual weights aren't overwritten on next compute
+        weightPresetSelect.value = 'all-ones';
+        updateWeightParamsVisibility();
+
+        // Store imported weights for future use
+        window._importedWeights = masterWeights;
+        window._importedN = n;
+
+        computeAndDisplay();
+      } catch (err) {
+        alert('Error parsing JSON file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset file input so same file can be re-imported
+    e.target.value = '';
   });
 
   // Aztec graph buttons
