@@ -158,7 +158,7 @@ static std::vector<BetaEdgeRatios> g_betaEdgeRatios;
 // Alpha position swap flags for T-embedding recurrence (hardcoded)
 static const bool g_alphaSwapR = true;   // Right (swapped)
 static const bool g_alphaSwapL = false;  // Left
-static const bool g_alphaSwapT = true;   // Top (swapped)
+static const bool g_alphaSwapT = false;  // Top
 static const bool g_alphaSwapB = false;  // Bottom
 
 // Beta position swap flags for T-embedding recurrence (hardcoded)
