@@ -3380,14 +3380,36 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
 
     } else if (mode === 'layered') {
-      // Layered: weight depends on diagonal index
+      // Layered: face-based classification
+      // Black face (CW from top): 1 - w_i - 1 - 1 (only RIGHT edge gets w_i)
+      // White face (CW from top): 1 - 1 - 1 - w_j (only LEFT edge gets w_j)
+      // All horizontal edges = 1, only certain vertical edges get w
+      // w_i = w_j along same diagonal slice
       const regime = params.regime || 3;
+
       for (let i = 0; i < dim; i++) {
         for (let j = 0; j < dim; j++) {
-          // Diagonal index: map (i,j) to diagonal
-          // With 4N grid, divide by 2 to get back to 2N scale for diagonal calculation
-          const diagIndex = (i/2 - N) + (j/2 - N);
-          weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
+          const midY = i / 2 - N;
+          const midX = j / 2 - N;
+
+          // Only vertical edges can have non-trivial weight
+          if (i % 2 === 0 && j % 2 === 1) {
+            // Vertical edge at (midX, midY)
+            // Check if this is RIGHT of BLACK face (i.e., face to LEFT is black)
+            const faceX = Math.round(midX - 0.5);  // Face to left of edge
+            const faceY = Math.round(midY);
+            const isBlackLeft = ((faceX + faceY) % 2) !== 0;
+
+            if (isBlackLeft) {
+              // This edge is RIGHT of BLACK face → gets layered weight
+              // Diagonal index based on the face position
+              const diagIndex = faceX + faceY;
+              weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
+            }
+            // else: edge is RIGHT of WHITE face → stays 1.0
+          }
+          // Horizontal edges (i odd, j even) stay at 1.0
+          // Other positions stay at 1.0
         }
       }
 
