@@ -300,7 +300,8 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <select id="weight-preset-select" style="min-width: 140px;" aria-label="Weight type selection">
         <option value="all-ones">All 1's (Uniform)</option>
         <option value="random-iid" selected>Random IID</option>
-        <option value="random-layered">Random Layered</option>
+        <option value="random-layered">Random Layered (diagonal)</option>
+        <option value="random-straight-layered">Random Layered (straight)</option>
         <option value="random-gamma">Random Gamma</option>
         <option value="periodic">k × l Periodic</option>
       </select>
@@ -520,6 +521,102 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
           <label style="display: flex; align-items: center; gap: 4px;">a: <input type="number" id="layered5-min" value="0.5" step="0.1" style="width: 60px;" aria-label="Minimum value"></label>
           <label style="display: flex; align-items: center; gap: 4px;">b: <input type="number" id="layered5-max" value="2.0" step="0.1" style="width: 60px;" aria-label="Maximum value"></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Random Straight Layered params panel -->
+<div id="straight-layered-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #28a745; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
+  <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+    📏 Straight Layered Weight Regime
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(layers at y = const, varying in x-direction)</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <strong>Seed:</strong>
+      <input id="straight-layered-seed" type="number" value="42" style="width: 70px;" aria-label="Random seed for straight layered weights">
+    </label>
+  </div>
+
+  <div style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <!-- Regime 1 -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="straight-layered-regime1" name="straight-layered-regime" value="1" aria-label="Select Regime 1">
+        <strong>Regime 1: Critical Scaling</strong>
+      </label>
+      <div id="straight-layered-regime1-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = Val1 + 2/√n (prob p₁) or Val2 - 1/√n (prob p₂)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">Val1: <input type="number" id="straight-layered1-val1" value="1" step="0.1" style="width: 60px;" aria-label="Value 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">Val2: <input type="number" id="straight-layered1-val2" value="1" step="0.1" style="width: 60px;" aria-label="Value 2"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₁: <input type="number" id="straight-layered1-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₂: <input type="number" id="straight-layered1-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 2"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 2 -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="straight-layered-regime2" name="straight-layered-regime" value="2" aria-label="Select Regime 2">
+        <strong>Regime 2: Rare Event Scaling</strong>
+      </label>
+      <div id="straight-layered-regime2-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = Val1 (prob 1/√n) or Val2 (prob (√n-1)/√n)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">Val1: <input type="number" id="straight-layered2-val1" value="2" step="0.1" style="width: 60px;" aria-label="Value 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">Val2: <input type="number" id="straight-layered2-val2" value="1" step="0.1" style="width: 60px;" aria-label="Value 2"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 3 (default) -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="straight-layered-regime3" name="straight-layered-regime" value="3" checked aria-label="Select Regime 3">
+        <strong>Regime 3: Bernoulli (Default)</strong>
+      </label>
+      <div id="straight-layered-regime3-params" style="display: block; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = Val1 (prob p₁) or Val2 (prob p₂)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">Val1: <input type="number" id="straight-layered3-val1" value="2" step="0.1" style="width: 60px;" aria-label="Value 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">Val2: <input type="number" id="straight-layered3-val2" value="0.5" step="0.1" style="width: 60px;" aria-label="Value 2"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₁: <input type="number" id="straight-layered3-prob1" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">p₂: <input type="number" id="straight-layered3-prob2" value="0.5" step="0.1" min="0" max="1" style="width: 60px;" aria-label="Probability 2"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 4 -->
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="straight-layered-regime4" name="straight-layered-regime" value="4" aria-label="Select Regime 4">
+        <strong>Regime 4: Deterministic Periodic</strong>
+      </label>
+      <div id="straight-layered-regime4-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Pattern: w₁, w₂, w₁, w₂, ... by row</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">w₁: <input type="number" id="straight-layered4-w1" value="2" step="0.1" style="width: 60px;" aria-label="Weight 1"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">w₂: <input type="number" id="straight-layered4-w2" value="0.5" step="0.1" style="width: 60px;" aria-label="Weight 2"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 5 -->
+    <div>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="straight-layered-regime5" name="straight-layered-regime" value="5" aria-label="Select Regime 5">
+        <strong>Regime 5: Continuous Uniform [a,b]</strong>
+      </label>
+      <div id="straight-layered-regime5-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight ~ Uniform[a, b]</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">a: <input type="number" id="straight-layered5-min" value="0.5" step="0.1" style="width: 60px;" aria-label="Minimum value"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">b: <input type="number" id="straight-layered5-max" value="2.0" step="0.1" style="width: 60px;" aria-label="Maximum value"></label>
         </div>
       </div>
     </div>
@@ -3317,6 +3414,41 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return 1.0;
   }
 
+  // Generate weight for straight-layered mode (horizontal layers, indexed by faceY)
+  function generateStraightLayeredWeight(regime, row, N, rng) {
+    const sqrtN = Math.sqrt(N);
+    switch (regime) {
+      case 1: {
+        const val1 = parseFloat(document.getElementById('straight-layered1-val1').value) || 1;
+        const val2 = parseFloat(document.getElementById('straight-layered1-val2').value) || 1;
+        const p1 = parseFloat(document.getElementById('straight-layered1-prob1').value) || 0.5;
+        return rng() < p1 ? val1 + 2/sqrtN : val2 - 1/sqrtN;
+      }
+      case 2: {
+        const val1 = parseFloat(document.getElementById('straight-layered2-val1').value) || 2;
+        const val2 = parseFloat(document.getElementById('straight-layered2-val2').value) || 1;
+        return rng() < 1/sqrtN ? val1 : val2;
+      }
+      case 3: {
+        const val1 = parseFloat(document.getElementById('straight-layered3-val1').value) || 2;
+        const val2 = parseFloat(document.getElementById('straight-layered3-val2').value) || 0.5;
+        const p1 = parseFloat(document.getElementById('straight-layered3-prob1').value) || 0.5;
+        return rng() < p1 ? val1 : val2;
+      }
+      case 4: {
+        const w1 = parseFloat(document.getElementById('straight-layered4-w1').value) || 2;
+        const w2 = parseFloat(document.getElementById('straight-layered4-w2').value) || 0.5;
+        return row % 2 === 0 ? w1 : w2;
+      }
+      case 5: {
+        const a = parseFloat(document.getElementById('straight-layered5-min').value) || 0.5;
+        const b = parseFloat(document.getElementById('straight-layered5-max').value) || 2.0;
+        return a + rng() * (b - a);
+      }
+    }
+    return 1.0;
+  }
+
   // Gamma random using Marsaglia and Tsang's method
   function gammaRandom(shape, scale, rng) {
     if (shape < 1) {
@@ -3378,6 +3510,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
     }
 
+    // Pre-generate row weights for straight-layered mode (horizontal layers)
+    let rowWeights = null;
+    if (mode === 'straight-layered') {
+      const regime = params.regime || 3;
+      rowWeights = {};
+      for (let r = -N; r <= N; r++) {
+        rowWeights[r] = generateStraightLayeredWeight(regime, r, N, rng);
+      }
+    }
+
     // Generate vertices: at (i + 0.5, j + 0.5) where |i+0.5| + |j+0.5| <= N + 0.5
     // Simplified: i, j in [-N, N], constraint |i| + |j| <= N
     const vertexSet = new Set();
@@ -3401,14 +3543,14 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         // Right neighbor (horizontal edge)
         const rightKey = `${x + 1},${y}`;
         if (vertexSet.has(rightKey)) {
-          const weight = computeEdgeWeight(x, y, x + 1, y, true, mode, params, rng, diagWeights, N);
+          const weight = computeEdgeWeight(x, y, x + 1, y, true, mode, params, rng, diagWeights, rowWeights, N);
           edges.push({ x1: x, y1: y, x2: x + 1, y2: y, weight, isHorizontal: true });
         }
 
         // Top neighbor (vertical edge)
         const topKey = `${x},${y + 1}`;
         if (vertexSet.has(topKey)) {
-          const weight = computeEdgeWeight(x, y, x, y + 1, false, mode, params, rng, diagWeights, N);
+          const weight = computeEdgeWeight(x, y, x, y + 1, false, mode, params, rng, diagWeights, rowWeights, N);
           edges.push({ x1: x, y1: y, x2: x, y2: y + 1, weight, isHorizontal: false });
         }
       }
@@ -3418,7 +3560,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   // Compute weight for a single edge based on mode
-  function computeEdgeWeight(x1, y1, x2, y2, isHorizontal, mode, params, rng, diagWeights, N) {
+  function computeEdgeWeight(x1, y1, x2, y2, isHorizontal, mode, params, rng, diagWeights, rowWeights, N) {
     if (mode === 'uniform') {
       return 1.0;
     }
@@ -3500,6 +3642,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           const pi = ((faceY % k) + k) % k;
           const pj = ((faceX % l) + l) % l;
           return betaW[pi][pj];
+        }
+      }
+      return 1.0;
+    }
+
+    if (mode === 'straight-layered') {
+      // Only vertical edges on RIGHT of black face get straight-layered weight
+      // Layer index is faceY (horizontal layers)
+      if (!isHorizontal) {
+        const faceX = Math.floor(midX);  // Face to left
+        const faceY = Math.round(midY);
+        const isBlackLeft = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlackLeft && isInterior) {
+          return rowWeights[faceY] || 1.0;
         }
       }
       return 1.0;
@@ -3645,6 +3802,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         gammaWeights = getPeriodicWeightsArray('gamma', k, l);
       }
       return { mode: 'periodic', params: { k, l, alphaWeights, betaWeights, gammaWeights } };
+
+    } else if (preset === 'random-straight-layered') {
+      const seed = parseInt(document.getElementById('straight-layered-seed')?.value) || 42;
+      const slp = typeof getStraightLayeredParams === 'function' ? getStraightLayeredParams() : { regime: 3 };
+      return { mode: 'straight-layered', params: { seed, regime: slp.regime } };
     }
 
     return { mode: 'uniform', params: {} };
@@ -7252,6 +7414,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   const weightPresetSelect = document.getElementById('weight-preset-select');
   const iidParams = document.getElementById('iid-params');
   const layeredParams = document.getElementById('layered-params');
+  const straightLayeredParams = document.getElementById('straight-layered-params');
   const gammaParams = document.getElementById('gamma-params');
   const periodicParams = document.getElementById('periodic-params');
   const weightsEditor = document.getElementById('weights-editor');
@@ -7261,6 +7424,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   function updateParamVisibility(preset) {
     iidParams.style.display = (preset === 'random-iid') ? 'block' : 'none';
     layeredParams.style.display = (preset === 'random-layered') ? 'block' : 'none';
+    straightLayeredParams.style.display = (preset === 'random-straight-layered') ? 'block' : 'none';
     gammaParams.style.display = (preset === 'random-gamma') ? 'block' : 'none';
     periodicParams.style.display = (preset === 'periodic') ? 'inline' : 'none';
     if (preset === 'periodic') {
@@ -7288,6 +7452,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
       // Show the selected regime's params
       const selectedDiv = document.getElementById(`layered-regime${this.value}-params`);
+      if (selectedDiv) selectedDiv.style.display = 'block';
+    });
+  });
+
+  // Straight-layered regime radio button handlers
+  document.querySelectorAll('input[name="straight-layered-regime"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      // Hide all straight-layered regime param divs
+      for (let i = 1; i <= 5; i++) {
+        const paramDiv = document.getElementById(`straight-layered-regime${i}-params`);
+        if (paramDiv) paramDiv.style.display = 'none';
+      }
+      // Show the selected regime's params
+      const selectedDiv = document.getElementById(`straight-layered-regime${this.value}-params`);
       if (selectedDiv) selectedDiv.style.display = 'block';
     });
   });
@@ -7566,6 +7744,43 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       case 5:
         p1 = parseFloat(document.getElementById('layered5-min').value) || 0.5;
         p2 = parseFloat(document.getElementById('layered5-max').value) || 2.0;
+        break;
+    }
+
+    return { regime, p1, p2, prob1, prob2 };
+  }
+
+  // Helper function to get straight-layered regime parameters from UI
+  function getStraightLayeredParams() {
+    const selectedRegime = document.querySelector('input[name="straight-layered-regime"]:checked');
+    const regime = selectedRegime ? parseInt(selectedRegime.value) : 3;
+
+    let p1 = 1, p2 = 1, prob1 = 0.5, prob2 = 0.5;
+
+    switch (regime) {
+      case 1:
+        p1 = parseFloat(document.getElementById('straight-layered1-val1').value) || 1;
+        p2 = parseFloat(document.getElementById('straight-layered1-val2').value) || 1;
+        prob1 = parseFloat(document.getElementById('straight-layered1-prob1').value) || 0.5;
+        prob2 = parseFloat(document.getElementById('straight-layered1-prob2').value) || 0.5;
+        break;
+      case 2:
+        p1 = parseFloat(document.getElementById('straight-layered2-val1').value) || 2;
+        p2 = parseFloat(document.getElementById('straight-layered2-val2').value) || 1;
+        break;
+      case 3:
+        p1 = parseFloat(document.getElementById('straight-layered3-val1').value) || 2;
+        p2 = parseFloat(document.getElementById('straight-layered3-val2').value) || 0.5;
+        prob1 = parseFloat(document.getElementById('straight-layered3-prob1').value) || 0.5;
+        prob2 = parseFloat(document.getElementById('straight-layered3-prob2').value) || 0.5;
+        break;
+      case 4:
+        p1 = parseFloat(document.getElementById('straight-layered4-w1').value) || 2;
+        p2 = parseFloat(document.getElementById('straight-layered4-w2').value) || 0.5;
+        break;
+      case 5:
+        p1 = parseFloat(document.getElementById('straight-layered5-min').value) || 0.5;
+        p2 = parseFloat(document.getElementById('straight-layered5-max').value) || 2.0;
         break;
     }
 
